@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99c168f2190fb4ed892dd06fd9bf3be6, type: 3}
+  m_Name: TileIconLibrary_Main
+  m_EditorClassIdentifier: Assembly-CSharp::TileIconLibrary
+  gear: {fileID: 2396312373429694203, guid: de8064d1565dc4bd78c67c17045b89b7, type: 3}
+  core: {fileID: 5278624802581484837, guid: de8064d1565dc4bd78c67c17045b89b7, type: 3}
+  bolt: {fileID: -4929963794152825930, guid: de8064d1565dc4bd78c67c17045b89b7, type: 3}
+  plate: {fileID: -7695863546071805274, guid: de8064d1565dc4bd78c67c17045b89b7, type: 3}
+  lineH: {fileID: -1864291419074630407, guid: b77f3bf70ccdbfe4991f3b64171f1b2f, type: 3}
+  lineV: {fileID: -4581343914166058437, guid: de8c61c175f385c46b5b2c7070d7d7e5, type: 3}
+  patchBot: {fileID: 6553379424239023069, guid: fc95b24f6b35f409eb40e07fd12e0be8, type: 3}
+  pulseCore: {fileID: -8280514975844272236, guid: e9edfc8e4556642aeba87bf62d997eb2, type: 3}
+  systemOverride: {fileID: 9183809610743405187, guid: e86ae0cb3018b4f9dbdf7e62cee342b0, type: 3}
