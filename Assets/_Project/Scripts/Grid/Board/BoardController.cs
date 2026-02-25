@@ -551,7 +551,13 @@ public class BoardController : MonoBehaviour
         }
         else if (!result.didHit && patchBotForcedHit)
         {
-            result = obstacleStateService.TryDamageAtIgnoringRule(x, y, ObstacleHitContext.SpecialActivation);
+            result = TryFallback(ObstacleHitContext.SpecialActivation);
+            if (!result.didHit)
+                result = TryFallback(ObstacleHitContext.Booster);
+            if (!result.didHit)
+                result = TryFallback(ObstacleHitContext.NormalMatch);
+            if (!result.didHit)
+                result = TryFallback(ObstacleHitContext.Scripted);
         }
         else if (!result.didHit && IsCrossContextFallbackAllowedAt(x, y))
         {
