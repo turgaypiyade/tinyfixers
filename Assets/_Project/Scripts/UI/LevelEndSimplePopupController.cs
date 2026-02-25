@@ -84,7 +84,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void OnEnable()
     {
-        ResolveSerializedReferences();
         failPopupShown = false;
         successPopupShown = false;
         HideAllPopups();
