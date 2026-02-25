@@ -9,6 +9,7 @@ public class SpecialResolver
     private readonly BoardAnimator boardAnimator;
     private readonly PulseCoreImpactService pulseCoreImpactService;
     private HashSet<Vector2Int> specialAffectedCells;
+    private readonly List<TopHudController.ActiveGoal> activeGoalsBuffer = new();
 
     public SpecialResolver(BoardController board, MatchFinder matchFinder, BoardAnimator boardAnimator, PulseCoreImpactService pulseCoreImpactService)
     {
@@ -283,7 +284,7 @@ public class SpecialResolver
                 break;
             case TileSpecial.PatchBot:
                 if (partnerTile != null)
-                    ApplyPatchBotTeleport(matches, specialTile, partnerTile, lightningVisualTargets);
+                    ApplyPatchBotTeleportHit(matches, specialTile, partnerTile, lightningVisualTargets);
                 break;
         }
     }
@@ -297,45 +298,88 @@ public class SpecialResolver
             AddCol(matches, origin.X);
     }
 
-    void ApplyPatchBotTeleport(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile, HashSet<TileView> lightningVisualTargets = null)
+    void ApplyPatchBotTeleportHit(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile, HashSet<TileView> lightningVisualTargets = null)
     {
-        var target = FindPatchBotTarget(patchBotTile, partnerTile, null);
-        if (target.tile == null) return;
+        if (patchBotTile == null || partnerTile == null) return;
 
-        TeleportTile(partnerTile, target.x, target.y);
-        matches.Add(partnerTile);
-        MarkAffectedCell(partnerTile);
-        TriggerPartnerEffect(matches, patchBotTile, partnerTile, lightningVisualTargets);
+        var target = FindPatchBotTarget(patchBotTile, partnerTile, null);
+        if (!target.hasCell) return;
+
+        bool partnerIsSpecial = partnerTile.GetSpecial() != TileSpecial.None;
+        PlayTeleportMarkers(patchBotTile, target.x, target.y);
+
+        if (partnerIsSpecial)
+        {
+            TriggerPartnerEffectAt(matches, patchBotTile, partnerTile, target.x, target.y, lightningVisualTargets);
+            return;
+        }
+
+        ApplyPatchBotTeleportToCell(matches, patchBotTile, target.x, target.y);
     }
 
-    void TriggerPartnerEffect(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile, HashSet<TileView> lightningVisualTargets = null)
+    void ApplyPatchBotTeleportToCell(HashSet<TileView> matches, TileView patchBotTile, int targetX, int targetY)
+    {
+        if (patchBotTile == null) return;
+        if (targetX < 0 || targetX >= board.Width || targetY < 0 || targetY >= board.Height) return;
+        if (board.Holes[targetX, targetY]) return;
+
+        int sourceX = patchBotTile.X;
+        int sourceY = patchBotTile.Y;
+        var tileAtTarget = board.Tiles[targetX, targetY];
+
+        board.Tiles[sourceX, sourceY] = null;
+        board.Tiles[targetX, targetY] = patchBotTile;
+        patchBotTile.SetCoords(targetX, targetY);
+        patchBotTile.SnapToGrid(board.TileSize);
+
+        HitCellOnce(matches, targetX, targetY, tileAtTarget);
+
+        MarkAffectedCell(sourceX, sourceY);
+        MarkAffectedCell(targetX, targetY);
+        board.RefreshTileObstacleVisual(patchBotTile);
+    }
+
+    void TriggerPartnerEffectAt(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile, int originX, int originY, HashSet<TileView> lightningVisualTargets = null)
     {
         if (partnerTile == null) return;
         var special = partnerTile.GetSpecial();
         if (special == TileSpecial.None) return;
 
-        switch (special)
+        if (special == TileSpecial.LineH || special == TileSpecial.LineV)
         {
-            case TileSpecial.LineH:
-            case TileSpecial.LineV:
-                AddLineEffect(matches, partnerTile, special);
-                if (lightningVisualTargets != null)
-                    AddLineEffect(lightningVisualTargets, partnerTile, special);
-                break;
-            case TileSpecial.PulseCore:
-                AddSquare(matches, partnerTile.X, partnerTile.Y, 2);
-                break;
-            case TileSpecial.SystemOverride:
-                AddAllOfType(matches, patchBotTile != null ? patchBotTile.GetTileType() : partnerTile.GetTileType());
-                break;
+            if (special == TileSpecial.LineH)
+                AddRow(matches, originY);
+            else
+                AddCol(matches, originX);
+
+            if (lightningVisualTargets != null)
+            {
+                if (special == TileSpecial.LineH)
+                    AddRow(lightningVisualTargets, originY);
+                else
+                    AddCol(lightningVisualTargets, originX);
+            }
+
+            return;
+        }
+
+        if (special == TileSpecial.PulseCore)
+        {
+            AddSquare(matches, originX, originY, 2);
+            return;
+        }
+
+        if (special == TileSpecial.SystemOverride)
+        {
+            TriggerSystemOverridePatchBotConversion(matches, patchBotTile, partnerTile);
         }
     }
 
-    (TileView tile, int x, int y) FindPatchBotTarget(TileView patchBotTile, TileView partnerTile, HashSet<TileView> excluded)
+    void TriggerSystemOverridePatchBotConversion(HashSet<TileView> matches, TileView patchBotTile, TileView systemOverrideTile)
     {
-        TileView bestPriority = null;
-        TileView bestSpecial = null;
-        TileView bestNormal = null;
+        if (systemOverrideTile == null) return;
+
+        TileType baseType = systemOverrideTile.GetOverrideBaseType(out var storedType) ? storedType : systemOverrideTile.GetTileType();
 
         for (int x = 0; x < board.Width; x++)
             for (int y = 0; y < board.Height; y++)
@@ -343,29 +387,159 @@ public class SpecialResolver
                 if (board.Holes[x, y]) continue;
                 var tile = board.Tiles[x, y];
                 if (tile == null) continue;
-                if (tile == patchBotTile || tile == partnerTile) continue;
-                if (excluded != null && excluded.Contains(tile)) continue;
+                if (tile == patchBotTile || tile == systemOverrideTile) continue;
+                if (!tile.GetTileType().Equals(baseType)) continue;
+                if (tile.GetSpecial() != TileSpecial.None) continue;
 
-                if (bestPriority == null && IsObstacleOrGoalCell(x, y))
+                tile.SetSpecial(TileSpecial.PatchBot);
+                AutoPatchBotTeleportHitAndVanish(matches, tile, patchBotTile, systemOverrideTile);
+            }
+    }
+
+    void AutoPatchBotTeleportHitAndVanish(HashSet<TileView> matches, TileView autoPatchBot, TileView patchBotTile, TileView systemOverrideTile)
+    {
+        if (autoPatchBot == null) return;
+
+        matches.Add(autoPatchBot);
+        MarkAffectedCell(autoPatchBot);
+
+        var target = FindPatchBotTarget(autoPatchBot, patchBotTile, null, systemOverrideTile);
+        if (!target.hasCell) return;
+
+        PlayTeleportMarkers(autoPatchBot, target.x, target.y);
+        HitCellOnce(matches, target.x, target.y, target.tile);
+    }
+
+    void HitCellOnce(HashSet<TileView> matches, int x, int y, TileView tileAtCell = null)
+    {
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return;
+        if (board.Holes[x, y] && (board.ObstacleStateService == null || !board.ObstacleStateService.HasObstacleAt(x, y))) return;
+
+        var obstacleService = board.ObstacleStateService;
+        if (obstacleService != null && obstacleService.GetObstacleIdAt(x, y) != ObstacleId.None)
+        {
+            MarkAffectedCell(x, y);
+            return;
+        }
+
+        var tile = tileAtCell ?? board.Tiles[x, y];
+        if (tile == null) return;
+
+        matches.Add(tile);
+        MarkAffectedCell(tile);
+    }
+
+    (TileView tile, int x, int y, bool hasCell) FindPatchBotTarget(TileView patchBotTile, TileView partnerTile, HashSet<TileView> excluded, params TileView[] additionalExcluded)
+    {
+        var goalCells = new List<(int x, int y, TileView tile)>();
+        var obstacleCells = new List<(int x, int y, TileView tile)>();
+        var normalCells = new List<(int x, int y, TileView tile)>();
+
+        var activeGoals = board.TopHud;
+        activeGoalsBuffer.Clear();
+        activeGoals?.GetActiveGoals(activeGoalsBuffer);
+
+        bool IsExcluded(TileView tile)
+        {
+            if (tile == null) return true;
+            if (tile == patchBotTile || tile == partnerTile) return true;
+            if (excluded != null && excluded.Contains(tile)) return true;
+            if (additionalExcluded != null)
+            {
+                for (int i = 0; i < additionalExcluded.Length; i++)
                 {
-                    bestPriority = tile;
+                    if (tile == additionalExcluded[i]) return true;
+                }
+            }
+            return false;
+        }
+
+        bool IsGoalCell(int x, int y, TileView tile)
+        {
+            for (int i = 0; i < activeGoalsBuffer.Count; i++)
+            {
+                var goal = activeGoalsBuffer[i];
+                if (goal.targetType == LevelGoalTargetType.Tile)
+                {
+                    if (tile != null && tile.GetTileType() == goal.tileType)
+                        return true;
                     continue;
                 }
 
-                if (tile.GetSpecial() != TileSpecial.None)
-                {
-                    bestSpecial = tile;
-                    break;
-                }
+                if (board.ObstacleStateService != null && board.ObstacleStateService.GetObstacleIdAt(x, y) == goal.obstacleId)
+                    return true;
+            }
+            return false;
+        }
 
-                if (bestNormal == null)
-                    bestNormal = tile;
+        for (int x = 0; x < board.Width; x++)
+            for (int y = 0; y < board.Height; y++)
+            {
+                if (board.Holes[x, y] && (board.ObstacleStateService == null || !board.ObstacleStateService.HasObstacleAt(x, y))) continue;
+
+                var tile = board.Tiles[x, y];
+                if (tile != null && IsExcluded(tile)) continue;
+
+                if (IsGoalCell(x, y, tile))
+                    goalCells.Add((x, y, tile));
+
+                if (board.ObstacleStateService != null && board.ObstacleStateService.GetObstacleIdAt(x, y) != ObstacleId.None)
+                    obstacleCells.Add((x, y, tile));
+                else if (tile != null)
+                    normalCells.Add((x, y, tile));
             }
 
-        if (bestPriority != null) return (bestPriority, bestPriority.X, bestPriority.Y);
-        if (bestSpecial != null) return (bestSpecial, bestSpecial.X, bestSpecial.Y);
-        if (bestNormal != null) return (bestNormal, bestNormal.X, bestNormal.Y);
-        return (null, -1, -1);
+        if (goalCells.Count > 0)
+        {
+            var pick = goalCells[Random.Range(0, goalCells.Count)];
+            return (pick.tile, pick.x, pick.y, true);
+        }
+
+        if (obstacleCells.Count > 0)
+        {
+            var pick = obstacleCells[Random.Range(0, obstacleCells.Count)];
+            return (pick.tile, pick.x, pick.y, true);
+        }
+
+        if (normalCells.Count > 0)
+        {
+            var pick = normalCells[Random.Range(0, normalCells.Count)];
+            return (pick.tile, pick.x, pick.y, true);
+        }
+
+        return (null, -1, -1, false);
+    }
+
+    void PlayTeleportMarkers(TileView sourceTile, int targetX, int targetY)
+    {
+        if (board.BoardVfxPlayer == null || sourceTile == null) return;
+
+        static Vector3 WorldCenter(TileView tv)
+        {
+            if (tv == null) return Vector3.zero;
+            var rt = tv.GetComponent<RectTransform>();
+            if (rt != null) return rt.TransformPoint(rt.rect.center);
+            return tv.transform.position;
+        }
+
+        Vector3 CellWorldCenterVia(Transform reference, int x, int y, float ts)
+        {
+            var local = new Vector3(x * ts + ts * 0.5f, -y * ts - ts * 0.5f, 0f);
+            return reference.TransformPoint(local);
+        }
+
+        var fromWorld = WorldCenter(sourceTile);
+        var targetTile = board.Tiles[targetX, targetY];
+        Vector3 toWorld;
+        if (targetTile != null)
+            toWorld = WorldCenter(targetTile);
+        else
+        {
+            var reference = sourceTile.transform.parent != null ? sourceTile.transform.parent : sourceTile.transform;
+            toWorld = CellWorldCenterVia(reference, targetX, targetY, board.TileSize);
+        }
+
+        board.BoardVfxPlayer.PlayTeleportMarkers(toWorld, fromWorld);
     }
 
     void TeleportTile(TileView tile, int targetX, int targetY)
@@ -378,39 +552,7 @@ public class SpecialResolver
         var targetTile = board.Tiles[targetX, targetY];
         int sourceX = tile.X;
         int sourceY = tile.Y;
-        // ✅ TELEPORT MARKERS
-        // Use TileView/RectTransform world centers to avoid drift (e.g., starting from spawn cell).
-        // BoardVfxPlayer is implemented as (inPos, outPos), so pass (to, from) to get:
-        //   OUT at source, IN at destination.
-        if (board.BoardVfxPlayer != null)
-        {
-            static Vector3 WorldCenter(TileView tv)
-            {
-                if (tv == null) return Vector3.zero;
-                var rt = tv.GetComponent<RectTransform>();
-                if (rt != null) return rt.TransformPoint(rt.rect.center);
-                return tv.transform.position;
-            }
-
-            Vector3 CellWorldCenterVia(Transform reference, int x, int y, float ts)
-            {
-                var local = new Vector3(x * ts + ts * 0.5f, -y * ts - ts * 0.5f, 0f);
-                return reference.TransformPoint(local);
-            }
-
-            var fromWorld = WorldCenter(tile);
-
-            Vector3 toWorld;
-            if (targetTile != null)
-                toWorld = WorldCenter(targetTile);
-            else
-            {
-                var reference = tile.transform.parent != null ? tile.transform.parent : tile.transform;
-                toWorld = CellWorldCenterVia(reference, targetX, targetY, board.TileSize);
-            }
-
-            board.BoardVfxPlayer.PlayTeleportMarkers(toWorld, fromWorld);
-        }
+        PlayTeleportMarkers(tile, targetX, targetY);
 
 
         board.Tiles[sourceX, sourceY] = targetTile;
@@ -428,10 +570,6 @@ public class SpecialResolver
         board.RefreshTileObstacleVisual(targetTile);
     }
 
-    bool IsObstacleOrGoalCell(int x, int y)
-    {
-        return board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
-    }
 
     bool CanSpecialAffectCell(int x, int y)
     {
@@ -468,7 +606,6 @@ public class SpecialResolver
 
             TileType baseType = overrideTile.GetOverrideBaseType(out var storedType) ? storedType : overrideTile.GetTileType();
             TileSpecial targetSpecial = otherTile.GetSpecial();
-            TileView partnerForConverted = targetSpecial == TileSpecial.PatchBot ? overrideTile : otherTile;
 
             for (int x = 0; x < board.Width; x++)
                 for (int y = 0; y < board.Height; y++)
@@ -479,10 +616,17 @@ public class SpecialResolver
                     if (!tile.GetTileType().Equals(baseType)) continue;
                     if (tile.GetSpecial() != TileSpecial.None) continue;
 
+                    if (targetSpecial == TileSpecial.PatchBot)
+                    {
+                        tile.SetSpecial(TileSpecial.PatchBot);
+                        AutoPatchBotTeleportHitAndVanish(matches, tile, otherTile, overrideTile);
+                        continue;
+                    }
+
                     tile.SetSpecial(targetSpecial);
                     matches.Add(tile);
                     MarkAffectedCell(tile);
-                    EnqueueActivation(queue, queued, tile, partnerForConverted);
+                    EnqueueActivation(queue, queued, tile, otherTile);
                 }
 
             return;
@@ -505,7 +649,7 @@ public class SpecialResolver
             var lineTile = IsLine(sa) ? a : b;
             var patchBotTile = IsPatchBot(sa) ? a : b;
             var target = FindPatchBotTarget(patchBotTile, lineTile, null);
-            if (target.tile != null)
+            if (target.hasCell)
             {
                 TeleportTile(lineTile, target.x, target.y);
                 AddLineEffect(matches, lineTile, lineTile.GetSpecial());
@@ -542,11 +686,12 @@ public class SpecialResolver
             for (int i = 0; i < 3; i++)
             {
                 var target = FindPatchBotTarget(a, b, usedTargets);
-                if (target.tile == null) break;
-                usedTargets.Add(target.tile);
-                matches.Add(target.tile);
-                MarkAffectedCell(target.tile);
-                TriggerPartnerEffect(matches, a, target.tile);
+                if (!target.hasCell) break;
+                if (target.tile != null)
+                    usedTargets.Add(target.tile);
+                PlayTeleportMarkers(a, target.x, target.y);
+                HitCellOnce(matches, target.x, target.y, target.tile);
+                TriggerPartnerEffectAt(matches, a, b, target.x, target.y);
             }
             return;
         }
@@ -556,7 +701,7 @@ public class SpecialResolver
             var pulseTile = IsPulse(sa) ? a : b;
             var patchBotTile = IsPatchBot(sa) ? a : b;
             var target = FindPatchBotTarget(patchBotTile, pulseTile, null);
-            if (target.tile != null)
+            if (target.hasCell)
             {
                 TeleportTile(pulseTile, target.x, target.y);
                 AddSquareEven(matches, pulseTile.X, pulseTile.Y, board.PatchBotPulseComboSize);

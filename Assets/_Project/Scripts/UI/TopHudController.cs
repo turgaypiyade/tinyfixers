@@ -6,6 +6,22 @@ using UnityEngine;
 
 public class TopHudController : MonoBehaviour
 {
+    public readonly struct ActiveGoal
+    {
+        public readonly LevelGoalTargetType targetType;
+        public readonly TileType tileType;
+        public readonly ObstacleId obstacleId;
+        public readonly int remaining;
+
+        public ActiveGoal(LevelGoalTargetType targetType, TileType tileType, ObstacleId obstacleId, int remaining)
+        {
+            this.targetType = targetType;
+            this.tileType = tileType;
+            this.obstacleId = obstacleId;
+            this.remaining = remaining;
+        }
+    }
+
     [Header("References")]
     [SerializeField] private BoardController board;
     [SerializeField] private TMP_Text movesText;
@@ -261,6 +277,27 @@ public class TopHudController : MonoBehaviour
             return rect != null;
         }
         return false;
+    }
+
+    public void GetActiveGoals(List<ActiveGoal> result)
+    {
+        if (result == null)
+            return;
+
+        result.Clear();
+
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var goal = runtimeGoals[i];
+            if (goal == null || goal.definition == null) continue;
+            if (goal.remaining <= 0) continue;
+
+            result.Add(new ActiveGoal(
+                goal.definition.targetType,
+                goal.definition.tileType,
+                goal.definition.obstacleId,
+                goal.remaining));
+        }
     }
 
 }
