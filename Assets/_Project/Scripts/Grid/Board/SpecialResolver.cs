@@ -339,20 +339,13 @@ public class SpecialResolver
 
     void ResolvePatchBotTargetImpact(HashSet<TileView> matches, int targetX, int targetY, bool hasObstacleAtTarget)
     {
-        Debug.Log($"[PatchBotDebug][ResolveTargetImpact] target=({targetX},{targetY}) hasObstacle={hasObstacleAtTarget} hole={board.Holes[targetX, targetY]}");
-
         if (hasObstacleAtTarget)
         {
-            // Obstacle hedefinde tile clear yerine hedef hücreyi obstacle damage turuna zorunlu dahil ederiz.
             board.MarkPatchBotForcedObstacleHit(targetX, targetY);
-            MarkAffectedCell(targetX, targetY);
-            Debug.Log($"[PatchBotDebug][ResolveTargetImpact] obstacle-target queued-for-damage cell=({targetX},{targetY})");
             return;
         }
 
-        var tile = board.Tiles[targetX, targetY];
-        Debug.Log($"[PatchBotDebug][ResolveTargetImpact] tile-target tileNull={(tile == null)}");
-        HitCellOnce(matches, targetX, targetY, tile);
+        HitCellOnce(matches, targetX, targetY, board.Tiles[targetX, targetY]);
     }
 
     void TriggerPartnerEffectAt(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile, int originX, int originY, HashSet<TileView> lightningVisualTargets = null)
@@ -364,7 +357,6 @@ public class SpecialResolver
         if (special == TileSpecial.LineH || special == TileSpecial.LineV)
         {
             PlayTeleportMarkers(partnerTile, originX, originY);
-            PlayTransientSpecialVisualAt(partnerTile, originX, originY);
 
             if (special == TileSpecial.LineH)
                 AddRow(matches, originY);
@@ -385,7 +377,6 @@ public class SpecialResolver
         if (special == TileSpecial.PulseCore)
         {
             PlayTeleportMarkers(partnerTile, originX, originY);
-            PlayTransientSpecialVisualAt(partnerTile, originX, originY);
             AddSquare(matches, originX, originY, 2);
             return;
         }
@@ -393,7 +384,6 @@ public class SpecialResolver
         if (special == TileSpecial.SystemOverride)
         {
             PlayTeleportMarkers(partnerTile, originX, originY);
-            PlayTransientSpecialVisualAt(partnerTile, originX, originY);
             TriggerSystemOverridePatchBotConversion(matches, patchBotTile, partnerTile);
         }
     }
@@ -629,13 +619,12 @@ public class SpecialResolver
         var sprite = sourceTile.GetIconSprite();
         if (sprite == null) return;
 
-        var parent = ResolveTransientSpecialOverlayParent(sourceTile);
+        var parent = board.Parent != null ? board.Parent : sourceTile.transform.parent as RectTransform;
         if (parent == null) return;
 
         var ghostGo = new GameObject("PatchBotSpecialGhost", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
         var ghostRt = ghostGo.GetComponent<RectTransform>();
         ghostRt.SetParent(parent, false);
-        ghostRt.SetAsLastSibling();
         ghostRt.anchorMin = new Vector2(0.5f, 0.5f);
         ghostRt.anchorMax = new Vector2(0.5f, 0.5f);
         ghostRt.pivot = new Vector2(0.5f, 0.5f);
@@ -649,53 +638,10 @@ public class SpecialResolver
 
         bool hasObstacleAtTarget = board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(targetX, targetY);
         float yOffset = hasObstacleAtTarget ? board.TileSize * 0.22f : 0f;
+        ghostRt.anchoredPosition = new Vector2(targetX * board.TileSize + board.TileSize * 0.5f, -targetY * board.TileSize - board.TileSize * 0.5f + yOffset);
+        ghostRt.localScale = hasObstacleAtTarget ? Vector3.one * 1.08f : Vector3.one;
 
-        Vector3 targetWorld = GetCellWorldCenter(sourceTile, targetX, targetY);
-        if (!TryWorldToAnchoredPosition(parent, targetWorld, out var anchoredPos))
-            anchoredPos = new Vector2(targetX * board.TileSize + board.TileSize * 0.5f, -targetY * board.TileSize - board.TileSize * 0.5f);
-
-        ghostRt.anchoredPosition = new Vector2(anchoredPos.x, anchoredPos.y + yOffset);
-        ghostRt.localScale = hasObstacleAtTarget ? Vector3.one * 1.12f : Vector3.one;
-
-        board.StartCoroutine(FadeAndDestroySpecialGhost(image, ghostRt, 0.36f));
-    }
-
-    RectTransform ResolveTransientSpecialOverlayParent(TileView sourceTile)
-    {
-        var canvas = board.GetComponentInParent<Canvas>();
-        if (canvas != null)
-        {
-            var overlay = canvas.transform.Find("GoalFlyOverlayRoot") as RectTransform;
-            if (overlay != null)
-                return overlay;
-        }
-
-        if (board.Parent != null)
-            return board.Parent;
-
-        return sourceTile.transform.parent as RectTransform;
-    }
-
-    Vector3 GetCellWorldCenter(TileView sourceTile, int x, int y)
-    {
-        var reference = sourceTile.transform.parent != null ? sourceTile.transform.parent : sourceTile.transform;
-        var local = new Vector3(x * board.TileSize + board.TileSize * 0.5f, -y * board.TileSize - board.TileSize * 0.5f, 0f);
-        return reference.TransformPoint(local);
-    }
-
-    bool TryWorldToAnchoredPosition(RectTransform targetParent, Vector3 worldPos, out Vector2 anchoredPos)
-    {
-        anchoredPos = default;
-        if (targetParent == null)
-            return false;
-
-        var canvas = targetParent.GetComponentInParent<Canvas>();
-        Camera cam = null;
-        if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
-            cam = canvas.worldCamera;
-
-        Vector2 screen = RectTransformUtility.WorldToScreenPoint(cam, worldPos);
-        return RectTransformUtility.ScreenPointToLocalPointInRectangle(targetParent, screen, cam, out anchoredPos);
+        board.StartCoroutine(FadeAndDestroySpecialGhost(image, ghostRt, 0.24f));
     }
 
     IEnumerator FadeAndDestroySpecialGhost(UnityEngine.UI.Image image, RectTransform ghostRt, float duration)
@@ -838,7 +784,6 @@ public class SpecialResolver
             {
                 PlayTeleportMarkers(patchBotTile, target.x, target.y);
                 PlayTeleportMarkers(lineTile, target.x, target.y);
-                PlayTransientSpecialVisualAt(lineTile, target.x, target.y);
                 if (lineTile.GetSpecial() == TileSpecial.LineH)
                     AddRow(matches, target.y);
                 else
@@ -900,7 +845,6 @@ public class SpecialResolver
             {
                 PlayTeleportMarkers(patchBotTile, target.x, target.y);
                 PlayTeleportMarkers(pulseTile, target.x, target.y);
-                PlayTransientSpecialVisualAt(pulseTile, target.x, target.y);
                 AddSquareEven(matches, target.x, target.y, board.PatchBotPulseComboSize);
             }
             return;

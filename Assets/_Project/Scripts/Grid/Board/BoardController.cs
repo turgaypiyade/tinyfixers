@@ -221,7 +221,6 @@ public class BoardController : MonoBehaviour
     private readonly List<Vector3> lightningTargetPositionsBuffer = new List<Vector3>(32);
     private bool didLogMissingLightningSpawner;
     private readonly HashSet<int> patchBotForcedObstacleHits = new();
-    private const bool PatchBotDebugLogging = true;
 
     public event System.Action<ObstacleVisualChange> ObstacleVisualChanged;
 
@@ -383,7 +382,6 @@ public class BoardController : MonoBehaviour
         // Artık Vector2.zero değil, swap midpoint
         pulseEmitterComboVfx.PlayAt(localMid, boardSize);
 
-        Debug.Log($"[PulseEmitterCombo] Played at swap midpoint local={localMid} boardSize={boardSize}");
     }
 
     public void PlayPulsePulseExplosionVfxAtCell(int x, int y)
@@ -438,7 +436,6 @@ public class BoardController : MonoBehaviour
         // Efekt bitince temizle
         Destroy(go, pulsePulseExplosionLifetime);
 
-        Debug.Log($"[PulsePulseCombo] Played at local={localMid}");
     }
 
     public Vector3 GetTileWorldCenter(TileView tile)
@@ -461,8 +458,6 @@ public class BoardController : MonoBehaviour
         if (lightningSpawner == null && transform.parent != null)
             lightningSpawner = transform.parent.GetComponentInChildren<LightningSpawner>(true);
 
-        if (lightningSpawner != null)
-            Debug.Log($"[Lightning][BoardController] lightningSpawner auto-resolved: {lightningSpawner.name}");
     }
 
     void EnsureServices()
@@ -531,9 +526,6 @@ public class BoardController : MonoBehaviour
 
         bool patchBotForcedHit = ConsumePatchBotForcedObstacleHit(x, y);
 
-        if (PatchBotDebugLogging)
-            Debug.Log($"[PatchBotDebug][ApplyObstacleDamageAt] cell=({x},{y}) context={context} forcedConsumed={patchBotForcedHit}");
-
         var result = obstacleStateService.TryDamageAt(x, y, context);
 
         if (PatchBotDebugLogging)
@@ -600,8 +592,6 @@ public class BoardController : MonoBehaviour
             return;
 
         patchBotForcedObstacleHits.Add(y * width + x);
-        if (PatchBotDebugLogging)
-            Debug.Log($"[PatchBotDebug][MarkForcedHit] cell=({x},{y}) marked=true");
     }
 
     private bool ConsumePatchBotForcedObstacleHit(int x, int y)
@@ -727,7 +717,6 @@ public class BoardController : MonoBehaviour
 
     public void ActivateBooster(int boosterIndex)
     {
-        Debug.Log($"[Lightning][BoardController] ActivateBooster called boosterIndex={boosterIndex}");
         switch (boosterIndex)
         {
             case 0: SetBoosterMode(BoosterMode.Single); break;
@@ -745,7 +734,6 @@ public class BoardController : MonoBehaviour
     void SetBoosterMode(BoosterMode mode)
     {
         activeBooster = mode;
-        Debug.Log($"[Lightning][BoardController] SetBoosterMode -> {activeBooster}");
         OnBoosterTargetingChanged?.Invoke(activeBooster != BoosterMode.None);
     }
 
@@ -756,13 +744,11 @@ public class BoardController : MonoBehaviour
 
         if (tile == null)
         {
-            Debug.Log("[Lightning][BoardController] TryUseBooster blocked: tile is null.");
             return true;
         }
 
         if (IsBusy || InputLocked)
         {
-            Debug.Log("[Lightning][BoardController] TryUseBooster blocked: board is busy or input locked.");
             return true;
         }
 
@@ -776,18 +762,15 @@ public class BoardController : MonoBehaviour
 
         if (IsBusy || InputLocked)
         {
-            Debug.Log("[Lightning][BoardController] TryUseBoosterAtCell blocked: board is busy or input locked.");
             return true;
         }
 
         if (x < 0 || x >= width || y < 0 || y >= height)
         {
-            Debug.Log($"[Lightning][BoardController] TryUseBoosterAtCell blocked: out of bounds ({x},{y}).");
             return true;
         }
 
         var mode = activeBooster;
-        Debug.Log($"[Lightning][BoardController] TryUseBoosterAtCell accepted mode={mode} at ({x},{y})");
         SetBoosterMode(BoosterMode.None);
         selected = null;
 
@@ -826,7 +809,6 @@ public class BoardController : MonoBehaviour
     {
         BeginBusy();
         isSpecialActivationPhase = true;
-        Debug.Log($"[Lightning][BoardController] ApplyBoosterRoutine start mode={mode}, targetTile={(target != null ? target.name : "null")}, targetCell={(targetCell.HasValue ? targetCell.Value.ToString() : "null")}");
 
         bool hasValidTargetCell = targetCell.HasValue
                                   && targetCell.Value.x >= 0 && targetCell.Value.x < width
@@ -915,7 +897,6 @@ public class BoardController : MonoBehaviour
 
         if (matches == null || matches.Count == 0)
         {
-            Debug.Log("[Lightning][BoardController] No match targets found for lightning.");
             return 0f;
         }
 
@@ -994,7 +975,6 @@ public class BoardController : MonoBehaviour
 
     if (lightningTargetPositionsBuffer.Count == 0)
     {
-        Debug.Log("[Lightning][BoardController] All lightning targets were null, skipping.");
         return 0f;
     }
 
@@ -1005,7 +985,6 @@ public class BoardController : MonoBehaviour
         Debug.LogWarning($"[Lightning][BoardController] Spawner playbackDuration was <= 0. Using fallback lead time {playbackDuration:0.000}s.");
     }
 
-    Debug.Log($"[Lightning][BoardController] origin={originWorldPos} validTargets={lightningTargetPositionsBuffer.Count} playback={playbackDuration:0.000}s");
     lightningSpawner.PlayEmitterLightning(originWorldPos, lightningTargetPositionsBuffer);
     return playbackDuration;
 }
@@ -1120,8 +1099,6 @@ public class BoardController : MonoBehaviour
         pendingCreationService.Clear();
         if (pendingCreationService.CapturePendingCreation(a, b))
         {
-            var pending = pendingCreationService.LastCaptured;
-            Debug.Log($"[SwapSnapshot] Pending {pending.special} at ({pending.x},{pending.y})");
         }
 
         // Power swap: zaten “big” his -> shake
@@ -1223,13 +1200,11 @@ public class BoardController : MonoBehaviour
     private void ResolveProfBegin(string tag)
     {
         _resolveProfT0 = Time.realtimeSinceStartup;
-        Debug.Log($"[ResolveProf] {tag}");
     }
 
     private void ResolveProfStep(string label)
     {
         float ms = (Time.realtimeSinceStartup - _resolveProfT0) * 1000f;
-        Debug.Log($"[ResolveProf] {label} = {ms:0.0}ms");
         _resolveProfT0 = Time.realtimeSinceStartup;
     }
 #endif
