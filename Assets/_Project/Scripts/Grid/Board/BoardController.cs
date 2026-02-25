@@ -11,6 +11,7 @@ public class BoardController : MonoBehaviour
     public int CurrentResolvePass { get; private set; } = 0;
 
     private const float MinLightningLeadTime = 0.05f;
+    private const bool PatchBotDebugLogging = false;
 
     public enum BoosterMode
     {
@@ -528,6 +529,9 @@ public class BoardController : MonoBehaviour
 
         var result = obstacleStateService.TryDamageAt(x, y, context);
 
+        if (PatchBotDebugLogging)
+            Debug.Log($"[PatchBotDebug][ApplyObstacleDamageAt] primaryTry didHit={result.didHit} rejectedByRule={result.rejectedByRule}");
+
         ObstacleStateService.ObstacleHitResult TryFallback(ObstacleHitContext fallbackContext)
         {
             if (fallbackContext == context)
@@ -565,7 +569,14 @@ public class BoardController : MonoBehaviour
         }
 
         if (!result.didHit)
+        {
+            if (PatchBotDebugLogging)
+                Debug.LogWarning($"[PatchBotDebug][ApplyObstacleDamageAt] NO_HIT cell=({x},{y}) context={context} forcedConsumed={patchBotForcedHit}");
             return false;
+        }
+
+        if (PatchBotDebugLogging)
+            Debug.Log($"[PatchBotDebug][ApplyObstacleDamageAt] HIT cell=({x},{y}) cleared={result.visualChange.cleared} remaining={result.visualChange.remainingHits} spriteNull={(result.visualChange.sprite == null)}");
 
         ConsumeObstacleStageTransition(result);
 
@@ -575,12 +586,13 @@ public class BoardController : MonoBehaviour
 
     internal void MarkPatchBotForcedObstacleHit(int x, int y)
     {
-        bool isInBounds = x >= 0 && x < width && y >= 0 && y < height;
-        if (!isInBounds || obstacleStateService == null)
-            return;
+        bool canMarkForcedHit = x >= 0 && x < width
+                                && y >= 0 && y < height
+                                && obstacleStateService != null
+                                && obstacleStateService.HasObstacleAt(x, y);
 
-        // Caller already verifies target obstacle presence; avoid re-query drift before consume.
-        patchBotForcedObstacleHits.Add(y * width + x);
+        if (canMarkForcedHit)
+            patchBotForcedObstacleHits.Add(y * width + x);
     }
 
     private bool ConsumePatchBotForcedObstacleHit(int x, int y)
