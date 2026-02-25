@@ -586,13 +586,13 @@ public class BoardController : MonoBehaviour
 
     internal void MarkPatchBotForcedObstacleHit(int x, int y)
     {
-        bool canMarkForcedHit = x >= 0 && x < width
-                                && y >= 0 && y < height
-                                && obstacleStateService != null
-                                && obstacleStateService.HasObstacleAt(x, y);
+        if (obstacleStateService == null || !obstacleStateService.HasObstacleAt(x, y))
+            return;
 
-        if (canMarkForcedHit)
-            patchBotForcedObstacleHits.Add(y * width + x);
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            return;
+
+        patchBotForcedObstacleHits.Add(y * width + x);
     }
 
     private bool ConsumePatchBotForcedObstacleHit(int x, int y)
