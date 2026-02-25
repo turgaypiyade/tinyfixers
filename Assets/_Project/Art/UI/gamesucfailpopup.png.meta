@@ -75,7 +75,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 2048
+    maxTextureSize: 1024
     resizeAlgorithm: 0
     textureFormat: 4
     textureCompression: 1
@@ -134,11 +134,11 @@ TextureImporter:
         serializedVersion: 2
         x: 30
         y: 83
-        width: 720
-        height: 895
+        width: 708
+        height: 893
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 8, z: 5, w: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
@@ -151,7 +151,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: SucceedPopu
+      name: SucceedPopup
       rect:
         serializedVersion: 2
         x: 796
@@ -187,7 +187,7 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       FailPopup: 6970639920718016779
-      SucceedPopu: 6844448033786026713
+      SucceedPopup: 6844448033786026713
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
