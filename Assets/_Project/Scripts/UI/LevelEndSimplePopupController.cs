@@ -93,7 +93,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (buyMovesButton != null)
             buyMovesButton.onClick.AddListener(HandleBuyMovesClicked);
         if (failCloseButton != null)
-            failCloseButton.onClick.AddListener(HideAllPopups);
+            failCloseButton.onClick.AddListener(HandleFailCloseClicked);
         if (successCloseButton != null)
             successCloseButton.onClick.AddListener(HandleSuccessCloseClicked);
 
@@ -109,7 +109,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (buyMovesButton != null)
             buyMovesButton.onClick.RemoveListener(HandleBuyMovesClicked);
         if (failCloseButton != null)
-            failCloseButton.onClick.RemoveListener(HideAllPopups);
+            failCloseButton.onClick.RemoveListener(HandleFailCloseClicked);
         if (successCloseButton != null)
             successCloseButton.onClick.RemoveListener(HandleSuccessCloseClicked);
         if (successContinueButton != null)
@@ -135,6 +135,14 @@ public class LevelEndSimplePopupController : MonoBehaviour
         SetBlockerVisible(false);
         RequestEvaluateLevelEndState();
     }
+
+    private void HandleFailCloseClicked()
+    {
+        HideAllPopups();
+        // Ana Menü'ye dön
+        SceneManager.LoadScene(mainMenuSceneName);
+    }
+
     private void HandleSuccessCloseClicked()
     {
         HideAllPopups();
@@ -201,12 +209,14 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (endCheckQueued)
             return;
 
+        Debug.Log("[LevelEnd] RequestEvaluate queued. Waiting idle...");
         endCheckQueued = true;
 
         // If board is still resolving cascades (fall/spawn/matches/specials), wait.
         // When it becomes idle, we re-check the conditions and only then show the popup.
         board.RunAfterIdle(() =>
         {
+            Debug.Log("[LevelEnd] Board idle -> Evaluate");
             endCheckQueued = false;
             EvaluateAndShowIfEnded();
         });
@@ -239,6 +249,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void ShowFailPopup()
     {
+        Debug.Log("[LevelEnd] ShowFailPopup CALLED");
         if (failPopupShown)
             return;
 
@@ -246,9 +257,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
         successPopupShown = false;
 
         if (failPopupRoot != null)
+        {
             failPopupRoot.SetActive(true);
+            Debug.Log("[Level end fail popu set active true");
+        }    
         else
             Debug.LogError("[LevelEndSimplePopupController] failPopupRoot is NULL. Fail popup cannot be shown.");
+       
         if (successPopupRoot != null)
             successPopupRoot.SetActive(false);
 
