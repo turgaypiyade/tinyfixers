@@ -43,6 +43,45 @@ public class LevelEndSimplePopupController : MonoBehaviour
     // This gate ensures we only evaluate & show end popups after the board becomes idle.
     private bool endCheckQueued;
 
+    private void ResolveSerializedReferences()
+    {
+        // Prefer deterministic lookup by object name under this popup root.
+        // This protects us from broken scene override references on prefab instances.
+        var failRootByName = transform.Find("FailPopupRoot");
+        if (failRootByName != null)
+            failPopupRoot = failRootByName.gameObject;
+
+        var successRootByName = transform.Find("SuccessPopupRoot");
+        if (successRootByName != null)
+            successPopupRoot = successRootByName.gameObject;
+
+        var blockerByName = transform.Find("Blocker") ?? transform.Find("blocker");
+        if (blockerByName != null)
+            blockerRoot = blockerByName.gameObject;
+
+        if (failPopupRoot != null)
+        {
+            var failContinue = failPopupRoot.transform.Find("UI/BtnContinue");
+            if (failContinue != null)
+                buyMovesButton = failContinue.GetComponent<Button>();
+
+            var failClose = failPopupRoot.transform.Find("UI/BtnClose");
+            if (failClose != null)
+                failCloseButton = failClose.GetComponent<Button>();
+        }
+
+        if (successPopupRoot != null)
+        {
+            var successClose = successPopupRoot.transform.Find("UIS/BtnSClose");
+            if (successClose != null)
+                successCloseButton = successClose.GetComponent<Button>();
+
+            var successContinue = successPopupRoot.transform.Find("UIS/BtnsContinue");
+            if (successContinue != null)
+                successContinueButton = successContinue.GetComponent<Button>();
+        }
+    }
+
     private void OnEnable()
     {
         failPopupShown = false;
@@ -80,10 +119,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private IEnumerator InitializeWhenReady()
     {
         if (board == null)
-            board = FindFirstObjectByType<BoardController>();
+            board = FindFirstObjectByType<BoardController>()
+                ?? FindFirstObjectByType<BoardController>(FindObjectsInactive.Include);
 
         if (topHud == null)
-            topHud = FindFirstObjectByType<TopHudController>();
+            topHud = FindFirstObjectByType<TopHudController>()
+                ?? FindFirstObjectByType<TopHudController>(FindObjectsInactive.Include);
 
         while (board == null || topHud == null || board.ActiveLevelData == null)
             yield return null;
@@ -187,7 +228,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         if (board.RemainingMoves <= 0)
+        {
             ShowFailPopup();
+            return;
+        }
+
+        Debug.Log($"[LevelEndSimplePopupController] End check skipped. RemainingMoves={board.RemainingMoves}, GoalsCompleted={topHud.AreAllGoalsCompleted}");
 
     }
 
@@ -201,6 +247,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (failPopupRoot != null)
             failPopupRoot.SetActive(true);
+        else
+            Debug.LogError("[LevelEndSimplePopupController] failPopupRoot is NULL. Fail popup cannot be shown.");
         if (successPopupRoot != null)
             successPopupRoot.SetActive(false);
 
