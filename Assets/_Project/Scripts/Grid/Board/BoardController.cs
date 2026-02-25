@@ -528,6 +528,9 @@ public class BoardController : MonoBehaviour
 
         var result = obstacleStateService.TryDamageAt(x, y, context);
 
+        if (PatchBotDebugLogging)
+            Debug.Log($"[PatchBotDebug][ApplyObstacleDamageAt] primaryTry didHit={result.didHit} rejectedByRule={result.rejectedByRule}");
+
         ObstacleStateService.ObstacleHitResult TryFallback(ObstacleHitContext fallbackContext)
         {
             if (fallbackContext == context)
@@ -565,7 +568,14 @@ public class BoardController : MonoBehaviour
         }
 
         if (!result.didHit)
+        {
+            if (PatchBotDebugLogging)
+                Debug.LogWarning($"[PatchBotDebug][ApplyObstacleDamageAt] NO_HIT cell=({x},{y}) context={context} forcedConsumed={patchBotForcedHit}");
             return false;
+        }
+
+        if (PatchBotDebugLogging)
+            Debug.Log($"[PatchBotDebug][ApplyObstacleDamageAt] HIT cell=({x},{y}) cleared={result.visualChange.cleared} remaining={result.visualChange.remainingHits} spriteNull={(result.visualChange.sprite == null)}");
 
         ConsumeObstacleStageTransition(result);
 
