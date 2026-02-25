@@ -17,23 +17,23 @@ MonoBehaviour:
     stages:
     - sprite: {fileID: -1181487658951336156, guid: 55157247f7a0242e7a94e7ae60e13097, type: 3}
       damageRule: 0
-      blocksCells: 0
-      behavior: 0
-      allowDiagonal: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
     - sprite: {fileID: -310889430209091948, guid: 0278d4caff6064af996f50c58523a808, type: 3}
       damageRule: 0
-      blocksCells: 0
-      behavior: 0
-      allowDiagonal: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
     allowCrossContextFallback: 0
     size: {x: 1, y: 1}
     hits: 2
-    drawUnderTiles: 1
+    drawUnderTiles: 0
     legacySprite: {fileID: -1181487658951336156, guid: 55157247f7a0242e7a94e7ae60e13097, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
-    legacyBlocksCells: 0
-    legacyBehavior: 0
+    legacyBlocksCells: 1
+    legacyBehavior: 1
   - id: 3
     stages:
     - sprite: {fileID: 4844588828632880817, guid: b9a80a10099174f1c81be828c7ad077f, type: 3}

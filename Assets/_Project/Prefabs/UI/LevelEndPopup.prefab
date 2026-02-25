@@ -835,7 +835,7 @@ MonoBehaviour:
   blockerRoot: {fileID: 1905128348902651094}
   failDescriptionText: {fileID: 0}
   successDescriptionText: {fileID: 0}
-  buyMovesButton: {fileID: 0}
+  buyMovesButton: {fileID: 4465645011870064389}
   failCloseButton: {fileID: 1071024246027656764}
   successCloseButton: {fileID: 8577032649475473660}
   successContinueButton: {fileID: 6049704440042232102}
