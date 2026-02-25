@@ -341,7 +341,9 @@ public class SpecialResolver
     {
         if (hasObstacleAtTarget)
         {
-            MarkAffectedCell(targetX, targetY);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log($"[PatchBot] Forced obstacle hit at ({targetX},{targetY}) -> MarkPatchBotForcedObstacleHit");
+#endif
             board.MarkPatchBotForcedObstacleHit(targetX, targetY);
             return;
         }
