@@ -611,6 +611,68 @@ public class SpecialResolver
         board.BoardVfxPlayer.PlayTeleportMarkers(toWorld, fromWorld);
     }
 
+
+    void PlayTransientSpecialVisualAt(TileView sourceTile, int targetX, int targetY)
+    {
+        if (sourceTile == null) return;
+
+        var sprite = sourceTile.GetIconSprite();
+        if (sprite == null) return;
+
+        var parent = board.Parent != null ? board.Parent : sourceTile.transform.parent as RectTransform;
+        if (parent == null) return;
+
+        var ghostGo = new GameObject("PatchBotSpecialGhost", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+        var ghostRt = ghostGo.GetComponent<RectTransform>();
+        ghostRt.SetParent(parent, false);
+        ghostRt.anchorMin = new Vector2(0.5f, 0.5f);
+        ghostRt.anchorMax = new Vector2(0.5f, 0.5f);
+        ghostRt.pivot = new Vector2(0.5f, 0.5f);
+        ghostRt.sizeDelta = new Vector2(board.TileSize, board.TileSize);
+
+        var image = ghostGo.GetComponent<UnityEngine.UI.Image>();
+        image.sprite = sprite;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        image.color = new Color(1f, 1f, 1f, 0.95f);
+
+        bool hasObstacleAtTarget = board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(targetX, targetY);
+        float yOffset = hasObstacleAtTarget ? board.TileSize * 0.22f : 0f;
+        ghostRt.anchoredPosition = new Vector2(targetX * board.TileSize + board.TileSize * 0.5f, -targetY * board.TileSize - board.TileSize * 0.5f + yOffset);
+        ghostRt.localScale = hasObstacleAtTarget ? Vector3.one * 1.08f : Vector3.one;
+
+        board.StartCoroutine(FadeAndDestroySpecialGhost(image, ghostRt, 0.24f));
+    }
+
+    IEnumerator FadeAndDestroySpecialGhost(UnityEngine.UI.Image image, RectTransform ghostRt, float duration)
+    {
+        float elapsed = 0f;
+        Vector2 startPos = ghostRt != null ? ghostRt.anchoredPosition : Vector2.zero;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / Mathf.Max(0.0001f, duration));
+            if (image != null)
+            {
+                var c = image.color;
+                c.a = Mathf.Lerp(0.95f, 0f, t);
+                image.color = c;
+            }
+
+            if (ghostRt != null)
+            {
+                float rise = board.TileSize * 0.08f * t;
+                ghostRt.anchoredPosition = new Vector2(startPos.x, startPos.y + rise);
+            }
+
+            yield return null;
+        }
+
+        if (ghostRt != null)
+            Object.Destroy(ghostRt.gameObject);
+    }
+
     void TeleportTile(TileView tile, int targetX, int targetY)
     {
         
