@@ -11,7 +11,7 @@ public class BoardController : MonoBehaviour
     public int CurrentResolvePass { get; private set; } = 0;
 
     private const float MinLightningLeadTime = 0.05f;
-    private const bool PatchBotDebugLogging = false;
+    private const bool PatchBotDebugLogging = true;
 
     public enum BoosterMode
     {
