@@ -220,6 +220,8 @@ public class BoardController : MonoBehaviour
     private ObstacleStateService obstacleStateService;
     private readonly List<Vector3> lightningTargetPositionsBuffer = new List<Vector3>(32);
     private bool didLogMissingLightningSpawner;
+    private readonly HashSet<int> patchBotForcedObstacleHits = new();
+    private const bool PatchBotDebugLogging = true;
 
     public event System.Action<ObstacleVisualChange> ObstacleVisualChanged;
 
@@ -527,7 +529,15 @@ public class BoardController : MonoBehaviour
     {
         if (obstacleStateService == null) return false;
 
+        bool patchBotForcedHit = ConsumePatchBotForcedObstacleHit(x, y);
+
+        if (PatchBotDebugLogging)
+            Debug.Log($"[PatchBotDebug][ApplyObstacleDamageAt] cell=({x},{y}) context={context} forcedConsumed={patchBotForcedHit}");
+
         var result = obstacleStateService.TryDamageAt(x, y, context);
+
+        if (PatchBotDebugLogging)
+            Debug.Log($"[PatchBotDebug][ApplyObstacleDamageAt] primaryTry didHit={result.didHit} rejectedByRule={result.rejectedByRule}");
 
         ObstacleStateService.ObstacleHitResult TryFallback(ObstacleHitContext fallbackContext)
         {
@@ -546,6 +556,16 @@ public class BoardController : MonoBehaviour
             if (!result.didHit)
                 result = TryFallback(ObstacleHitContext.NormalMatch);
         }
+        else if (!result.didHit && patchBotForcedHit)
+        {
+            result = TryFallback(ObstacleHitContext.SpecialActivation);
+            if (!result.didHit)
+                result = TryFallback(ObstacleHitContext.Booster);
+            if (!result.didHit)
+                result = TryFallback(ObstacleHitContext.NormalMatch);
+            if (!result.didHit)
+                result = TryFallback(ObstacleHitContext.Scripted);
+        }
         else if (!result.didHit && IsCrossContextFallbackAllowedAt(x, y))
         {
             result = TryFallback(ObstacleHitContext.SpecialActivation);
@@ -556,11 +576,44 @@ public class BoardController : MonoBehaviour
         }
 
         if (!result.didHit)
+        {
+            if (PatchBotDebugLogging)
+                Debug.LogWarning($"[PatchBotDebug][ApplyObstacleDamageAt] NO_HIT cell=({x},{y}) context={context} forcedConsumed={patchBotForcedHit}");
             return false;
+        }
+
+        if (PatchBotDebugLogging)
+            Debug.Log($"[PatchBotDebug][ApplyObstacleDamageAt] HIT cell=({x},{y}) cleared={result.visualChange.cleared} remaining={result.visualChange.remainingHits} spriteNull={(result.visualChange.sprite == null)}");
 
         ConsumeObstacleStageTransition(result);
 
         ObstacleVisualChanged?.Invoke(result.visualChange);
+        return true;
+    }
+
+    internal void MarkPatchBotForcedObstacleHit(int x, int y)
+    {
+        if (obstacleStateService == null || !obstacleStateService.HasObstacleAt(x, y))
+            return;
+
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            return;
+
+        patchBotForcedObstacleHits.Add(y * width + x);
+        if (PatchBotDebugLogging)
+            Debug.Log($"[PatchBotDebug][MarkForcedHit] cell=({x},{y}) marked=true");
+    }
+
+    private bool ConsumePatchBotForcedObstacleHit(int x, int y)
+    {
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            return false;
+
+        int index = y * width + x;
+        if (!patchBotForcedObstacleHits.Contains(index))
+            return false;
+
+        patchBotForcedObstacleHits.Remove(index);
         return true;
     }
 
