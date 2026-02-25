@@ -220,6 +220,7 @@ public class BoardController : MonoBehaviour
     private ObstacleStateService obstacleStateService;
     private readonly List<Vector3> lightningTargetPositionsBuffer = new List<Vector3>(32);
     private bool didLogMissingLightningSpawner;
+    private readonly HashSet<int> patchBotForcedObstacleHits = new();
 
     public event System.Action<ObstacleVisualChange> ObstacleVisualChanged;
 
@@ -527,6 +528,8 @@ public class BoardController : MonoBehaviour
     {
         if (obstacleStateService == null) return false;
 
+        bool patchBotForcedHit = ConsumePatchBotForcedObstacleHit(x, y);
+
         var result = obstacleStateService.TryDamageAt(x, y, context);
 
         ObstacleStateService.ObstacleHitResult TryFallback(ObstacleHitContext fallbackContext)
@@ -546,6 +549,16 @@ public class BoardController : MonoBehaviour
             if (!result.didHit)
                 result = TryFallback(ObstacleHitContext.NormalMatch);
         }
+        else if (!result.didHit && patchBotForcedHit)
+        {
+            result = TryFallback(ObstacleHitContext.SpecialActivation);
+            if (!result.didHit)
+                result = TryFallback(ObstacleHitContext.Booster);
+            if (!result.didHit)
+                result = TryFallback(ObstacleHitContext.NormalMatch);
+            if (!result.didHit)
+                result = TryFallback(ObstacleHitContext.Scripted);
+        }
         else if (!result.didHit && IsCrossContextFallbackAllowedAt(x, y))
         {
             result = TryFallback(ObstacleHitContext.SpecialActivation);
@@ -561,6 +574,30 @@ public class BoardController : MonoBehaviour
         ConsumeObstacleStageTransition(result);
 
         ObstacleVisualChanged?.Invoke(result.visualChange);
+        return true;
+    }
+
+    internal void MarkPatchBotForcedObstacleHit(int x, int y)
+    {
+        if (obstacleStateService == null || !obstacleStateService.HasObstacleAt(x, y))
+            return;
+
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            return;
+
+        patchBotForcedObstacleHits.Add(y * width + x);
+    }
+
+    private bool ConsumePatchBotForcedObstacleHit(int x, int y)
+    {
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            return false;
+
+        int index = y * width + x;
+        if (!patchBotForcedObstacleHits.Contains(index))
+            return false;
+
+        patchBotForcedObstacleHits.Remove(index);
         return true;
     }
 
