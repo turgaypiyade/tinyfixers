@@ -341,9 +341,7 @@ public class SpecialResolver
     {
         if (hasObstacleAtTarget)
         {
-            // Obstacle hedefinde tile clear yerine hedef hücreyi obstacle damage turuna zorunlu dahil ederiz.
             board.MarkPatchBotForcedObstacleHit(targetX, targetY);
-            MarkAffectedCell(targetX, targetY);
             return;
         }
 
@@ -359,7 +357,6 @@ public class SpecialResolver
         if (special == TileSpecial.LineH || special == TileSpecial.LineV)
         {
             PlayTeleportMarkers(partnerTile, originX, originY);
-            PlayTransientSpecialVisualAt(partnerTile, originX, originY);
 
             if (special == TileSpecial.LineH)
                 AddRow(matches, originY);
@@ -380,7 +377,6 @@ public class SpecialResolver
         if (special == TileSpecial.PulseCore)
         {
             PlayTeleportMarkers(partnerTile, originX, originY);
-            PlayTransientSpecialVisualAt(partnerTile, originX, originY);
             AddSquare(matches, originX, originY, 2);
             return;
         }
@@ -388,7 +384,6 @@ public class SpecialResolver
         if (special == TileSpecial.SystemOverride)
         {
             PlayTeleportMarkers(partnerTile, originX, originY);
-            PlayTransientSpecialVisualAt(partnerTile, originX, originY);
             TriggerSystemOverridePatchBotConversion(matches, patchBotTile, partnerTile);
         }
     }
@@ -789,7 +784,6 @@ public class SpecialResolver
             {
                 PlayTeleportMarkers(patchBotTile, target.x, target.y);
                 PlayTeleportMarkers(lineTile, target.x, target.y);
-                PlayTransientSpecialVisualAt(lineTile, target.x, target.y);
                 if (lineTile.GetSpecial() == TileSpecial.LineH)
                     AddRow(matches, target.y);
                 else
@@ -851,7 +845,6 @@ public class SpecialResolver
             {
                 PlayTeleportMarkers(patchBotTile, target.x, target.y);
                 PlayTeleportMarkers(pulseTile, target.x, target.y);
-                PlayTransientSpecialVisualAt(pulseTile, target.x, target.y);
                 AddSquareEven(matches, target.x, target.y, board.PatchBotPulseComboSize);
             }
             return;
