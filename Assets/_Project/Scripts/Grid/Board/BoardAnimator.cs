@@ -206,9 +206,6 @@ public class BoardAnimator
             var strikeTargets = lightningVisualTargets ?? list;
             float lightningDuration = board.PlayLightningStrikeForTiles(strikeTargets, lightningOriginTile, lightningOriginCell, lightningVisualTargets);
 
-            int strikeTargetCount = lightningVisualTargets != null ? lightningVisualTargets.Count : list.Count;
-            Debug.Log($"[Lightning][BoardAnimator] strikeTargets={strikeTargetCount} wait={lightningDuration:0.000}s");
-
             if (lightningDuration > 0f)
             {
                 var __w = Wait(lightningDuration);
