@@ -162,6 +162,16 @@ public class ObstacleStateService
 
     public ObstacleHitResult TryDamageAt(int x, int y, ObstacleHitContext context)
     {
+        return TryDamageAtInternal(x, y, context, ignoreDamageRule: false);
+    }
+
+    public ObstacleHitResult TryDamageAtIgnoringRule(int x, int y, ObstacleHitContext context)
+    {
+        return TryDamageAtInternal(x, y, context, ignoreDamageRule: true);
+    }
+
+    private ObstacleHitResult TryDamageAtInternal(int x, int y, ObstacleHitContext context, bool ignoreDamageRule)
+    {
         ObstacleVisualChange change = default;
 
         if (level == null || level.obstacles == null || level.obstacleOrigins == null)
@@ -190,7 +200,7 @@ public class ObstacleStateService
             remaining = Mathf.Max(1, def != null ? def.hits : 1);
         }
 
-        if (!CanConsumeHit(def, remaining, context))
+        if (!ignoreDamageRule && !CanConsumeHit(def, remaining, context))
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
 
         int[] affectedCells = CollectCellsForOrigin(origin, id);
