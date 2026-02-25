@@ -60,6 +60,7 @@ public class GridSpawner : MonoBehaviour
     private readonly Dictionary<int, Image> obstacleViewsByOrigin = new();
     private readonly Dictionary<int, ObstacleDef> obstacleDefsByOrigin = new();
     private readonly Dictionary<int, GameObject> cellBgByIndex = new();
+    private readonly Dictionary<int, Image> cellBgImageByIndex = new();
     private readonly Dictionary<int, Color> baseCellBgColorByIndex = new();
 
     private void Awake()
@@ -212,6 +213,7 @@ public class GridSpawner : MonoBehaviour
         obstacleViewsByOrigin.Clear();
         obstacleDefsByOrigin.Clear();
         cellBgByIndex.Clear();
+        cellBgImageByIndex.Clear();
         baseCellBgColorByIndex.Clear();
 
         bool[] blocked = BuildBlockedMap();
@@ -504,7 +506,10 @@ public class GridSpawner : MonoBehaviour
         int idx = resolvedLevel.Index(x, y);
         cellBgByIndex[idx] = go;
         if (go.TryGetComponent<Image>(out var image))
+        {
+            cellBgImageByIndex[idx] = image;
             baseCellBgColorByIndex[idx] = image.color;
+        }
     }
 
     private void SpawnTile(int x, int y, TileType type)
@@ -538,10 +543,10 @@ public class GridSpawner : MonoBehaviour
         if (resolvedLevel == null || resolvedLevel.obstacles == null || resolvedLevel.obstacleOrigins == null)
             return;
 
-        foreach (var kv in cellBgByIndex)
+        foreach (var kv in cellBgImageByIndex)
         {
-            if (kv.Value == null) continue;
-            if (!kv.Value.TryGetComponent<Image>(out var cellImage)) continue;
+            var cellImage = kv.Value;
+            if (cellImage == null) continue;
 
             int idx = kv.Key;
             if (!baseCellBgColorByIndex.TryGetValue(idx, out var baseColor))
