@@ -222,6 +222,13 @@ public class ObstacleStateService
         return (ObstacleId)level.obstacles[idx] != ObstacleId.None;
     }
 
+    public ObstacleId GetObstacleIdAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return ObstacleId.None;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx];
+    }
+
     public bool IsCellBlocked(int x, int y)
     {
         if (!IsValidCell(x, y)) return false;
