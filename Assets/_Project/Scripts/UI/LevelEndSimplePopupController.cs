@@ -45,6 +45,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void OnEnable()
     {
+        failPopupShown = false;
+        successPopupShown = false;
+        HideAllPopups();
+
         StartCoroutine(InitializeWhenReady());
 
         if (buyMovesButton != null)
