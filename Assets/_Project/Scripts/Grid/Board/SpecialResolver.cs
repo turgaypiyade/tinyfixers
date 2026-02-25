@@ -341,6 +341,7 @@ public class SpecialResolver
     {
         if (hasObstacleAtTarget)
         {
+            MarkAffectedCell(targetX, targetY);
             board.MarkPatchBotForcedObstacleHit(targetX, targetY);
             return;
         }
@@ -556,6 +557,24 @@ public class SpecialResolver
         {
             var pick = tileGoalCells[Random.Range(0, tileGoalCells.Count)];
             return (pick.tile, pick.x, pick.y, true);
+        }
+
+        // PatchBot + normal kullanımında, aktif obstacle goal olmasa bile
+        // obstacle hücrelerini normal hücrelerden önce dene.
+        bool partnerIsSpecial = partnerTile != null && partnerTile.GetSpecial() != TileSpecial.None;
+        if (!partnerIsSpecial)
+        {
+            if (obstacleGoalCells.Count > 0)
+            {
+                var pick = obstacleGoalCells[Random.Range(0, obstacleGoalCells.Count)];
+                return (pick.tile, pick.x, pick.y, true);
+            }
+
+            if (otherObstacleCells.Count > 0)
+            {
+                var pick = otherObstacleCells[Random.Range(0, otherObstacleCells.Count)];
+                return (pick.tile, pick.x, pick.y, true);
+            }
         }
 
         if (normalCells.Count > 0)
