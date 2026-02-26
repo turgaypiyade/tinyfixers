@@ -175,34 +175,32 @@ public class PatchbotDashUI : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    void SpawnAfterImage()
+    private void SpawnAfterImageAt(RectTransform source)
     {
-        // Afterimage'lar VFXRoot altında (aynı coordinate space)
-        var go = new GameObject("PatchbotAfterImage", typeof(RectTransform), typeof(Image));
+        var go = new GameObject("PatchbotAfterImage",
+            typeof(RectTransform), typeof(UnityEngine.UI.Image));
+
         go.transform.SetParent(vfxRoot, false);
 
-        var img = go.GetComponent<Image>();
+        var img = go.GetComponent<UnityEngine.UI.Image>();
+        var rt = (RectTransform)go.transform;
+
         img.sprite = runnerImage.sprite;
         img.raycastTarget = false;
-        img.color = afterColor; // <-- debug kırmızıyı kaldır
+        img.color = afterColor;
 
-        var rt = (RectTransform)go.transform;
-        rt.anchorMin = runnerImage.rectTransform.anchorMin;
-        rt.anchorMax = runnerImage.rectTransform.anchorMax;
-        rt.pivot = runnerImage.rectTransform.pivot;
+        rt.sizeDelta = source.sizeDelta;
+        rt.anchoredPosition = source.anchoredPosition;
+        rt.localScale = source.localScale;
 
-        rt.sizeDelta = runnerImage.rectTransform.sizeDelta;
-        rt.anchoredPosition = runnerImage.rectTransform.anchoredPosition;
-        rt.localScale = runnerImage.rectTransform.localScale;
-
-        // İstersen runner'ın arkasında kalsın:
-        int runnerIndex = runnerImage.rectTransform.GetSiblingIndex();
-        rt.SetSiblingIndex(Mathf.Max(0, runnerIndex - 1));
-
-        //StartCoroutine(FadeAndDestroy(go, img, afterLife));
         Destroy(go, afterLife);
     }
 
+    void SpawnAfterImage()
+    {
+        if (runnerImage == null) return;
+        SpawnAfterImageAt(runnerImage.rectTransform);
+    }
     private IEnumerator FadeAndDestroy(GameObject go, Image img, float life)
     {
         float t = 0f;
@@ -230,6 +228,90 @@ public class PatchbotDashUI : MonoBehaviour
         return localPoint;
     }
 
+    public Coroutine PlayDashParallel(
+        List<BoardController.PatchbotDashRequest> requests,
+        BoardController board)
+    {
+        return StartCoroutine(DashParallelRoutine(requests, board));
+    }
+
+    private IEnumerator DashParallelRoutine(
+        List<BoardController.PatchbotDashRequest> requests,
+        BoardController board)
+    {
+        if (requests == null || requests.Count == 0)
+            yield break;
+
+        List<Coroutine> running = new List<Coroutine>();
+
+        const float stagger = 0.02f; // küçük fark
+
+        for (int i = 0; i < requests.Count; i++)
+        {
+            var req = requests[i];
+
+            running.Add(
+                StartCoroutine(SingleDashRoutine(req, board))
+            );
+
+            yield return new WaitForSeconds(stagger);
+        }
+
+        // Hepsinin bitmesini bekle
+        while (running.Count > 0)
+        {
+            running.RemoveAll(c => c == null);
+            yield return null;
+        }
+    }
+
+    private IEnumerator SingleDashRoutine(
+        BoardController.PatchbotDashRequest req,
+        BoardController board)
+    {
+        if (runnerImage == null || vfxRoot == null)
+            yield break;
+
+        // Her patchbot için ayrı instance yaratıyoruz
+        var go = new GameObject("PatchbotRunnerInstance",
+            typeof(RectTransform), typeof(UnityEngine.UI.Image));
+
+        go.transform.SetParent(vfxRoot, false);
+
+        var img = go.GetComponent<UnityEngine.UI.Image>();
+        var rt = (RectTransform)go.transform;
+
+        img.sprite = runnerImage.sprite;
+        img.raycastTarget = false;
+        img.color = Color.white;
+
+        rt.sizeDelta = runnerImage.rectTransform.sizeDelta;
+
+        Vector3 fromWorld = board.GetCellWorldPosition(req.from.x, req.from.y);
+        Vector3 toWorld = board.GetCellWorldPosition(req.to.x, req.to.y);
+
+        rt.anchoredPosition = WorldToAnchoredIn(vfxRoot, fromWorld);
+        Vector2 target = WorldToAnchoredIn(vfxRoot, toWorld);
+
+        float tAfter = 0f;
+
+        while (Vector2.Distance(rt.anchoredPosition, target) > arriveEps)
+        {
+            rt.anchoredPosition =
+                Vector2.MoveTowards(rt.anchoredPosition, target, dashSpeed * Time.deltaTime);
+
+            tAfter += Time.deltaTime;
+            if (tAfter >= spawnEvery)
+            {
+                tAfter = 0f;
+                SpawnAfterImageAt(rt);
+            }
+
+            yield return null;
+        }
+
+        Destroy(go);
+    }    
     #if UNITY_EDITOR
     [ContextMenu("TEST DASH")]
     void TestDash()

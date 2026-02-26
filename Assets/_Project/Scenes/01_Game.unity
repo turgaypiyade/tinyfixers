@@ -735,11 +735,11 @@ MonoBehaviour:
   vfxRoot: {fileID: 1732843066}
   runnerImage: {fileID: 164518322}
   tileIcons: {fileID: 11400000, guid: 44f21392c67a14dfbb8782561221acf8, type: 2}
-  dashSpeed: 25
-  arriveEps: 2
-  spawnEvery: 0.01
-  afterLife: 0.2
-  afterColor: {r: 0.55, g: 0.85, b: 1, a: 0.9490196}
+  dashSpeed: 1000
+  arriveEps: 5
+  spawnEvery: 0.03
+  afterLife: 0.28
+  afterColor: {r: 0.65, g: 0.9, b: 1, a: 0.8509804}
 --- !u!114 &164518322
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1626,8 +1626,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.07172996}
-  m_AnchorMax: {x: 0.8425197, y: 1.8544304}
+  m_AnchorMin: {x: 0, y: 0.03671706}
+  m_AnchorMax: {x: 1, y: 0.9492441}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8456,6 +8456,7 @@ MonoBehaviour:
   enablePulseMicroShake: 1
   pulseMicroShakeDuration: 0.08
   pulseMicroShakeStrength: 4
+  patchbotDashUI: {fileID: 164518321}
 --- !u!114 &1410826447
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -142,7 +142,7 @@ public class BoardAnimator
 
         if (_patchbotDashBuffer.Count > 0 && board.PatchbotDashUI != null)
         {
-            yield return board.PatchbotDashUI.PlayDashSequence(_patchbotDashBuffer, board);
+            yield return board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board);
         }
 
         ObstacleHitContext damageContext = obstacleHitContext ?? (board.IsSpecialActivationPhase
