@@ -995,26 +995,36 @@ public class BoardController : MonoBehaviour
 
         var activeTiles = new List<TileView>();
         var types = new List<TileType>();
+
         for (int x = 0; x < width; x++)
         for (int y = 0; y < height; y++)
         {
             if (holes[x, y]) continue;
+
+            // Hole ama obstacle varsa? Senin kurallarına göre istersen dahil etme:
+            // if (obstacleStateService != null && obstacleStateService.HasObstacleAt(x,y)) continue;
+
             var tile = tiles[x, y];
             if (tile == null) continue;
+
+            // ✅ Special'lar sabit kalacak: shuffle havuzuna girmez
+            if (tile.GetSpecial() != TileSpecial.None) continue;
+
             activeTiles.Add(tile);
             types.Add(tile.GetTileType());
         }
 
+        // Fisher-Yates shuffle
         for (int i = types.Count - 1; i > 0; i--)
         {
             int j = UnityEngine.Random.Range(0, i + 1);
             (types[i], types[j]) = (types[j], types[i]);
         }
 
+        // Sadece normal taşların type'ını değiştir
         for (int i = 0; i < activeTiles.Count; i++)
         {
             var tile = activeTiles[i];
-            tile.SetSpecial(TileSpecial.None);
             tile.SetType(types[i]);
             RefreshTileObstacleVisual(tile);
         }
