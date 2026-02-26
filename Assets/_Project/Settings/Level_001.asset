@@ -19,7 +19,7 @@ MonoBehaviour:
   - targetType: 0
     tileType: 0
     obstacleId: 1
-    amount: 10
+    amount: 59
   - targetType: 0
     tileType: 2
     obstacleId: 2

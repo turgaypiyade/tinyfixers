@@ -80,46 +80,46 @@ public sealed class LightningStrikeTileClearEffect : ITileClearEffect
 
 
     public sealed class GoalFlyTileClearEffect : ITileClearEffect
-{
-    private readonly BoardController board;
-
-    public GoalFlyTileClearEffect(BoardController board)
     {
-        this.board = board;
-    }
+        private readonly BoardController board;
 
-    public bool CanHandle(ClearAnimationMode mode) => mode == ClearAnimationMode.GoalFlyToHud;
-
-    public IEnumerator Play(TileView tile, float delay, float duration)
-    {
-        if (delay > 0f)
-            yield return new WaitForSeconds(delay);
-
-        if (tile == null || board == null)
-            yield break;
-
-        // HUD slot bul
-        var hud = board.TopHud;
-        if (hud == null || board.GoalFlyFx == null)
+        public GoalFlyTileClearEffect(BoardController board)
         {
-            // Fallback: goal fly yoksa normal pop
-            yield return tile.PopOut(duration);
-            yield break;
+            this.board = board;
         }
 
-        if (!hud.TryGetGoalTargetRectForTile(tile.GetTileType(), out var target) || target == null)
+        public bool CanHandle(ClearAnimationMode mode) => mode == ClearAnimationMode.GoalFlyToHud;
+
+        public IEnumerator Play(TileView tile, float delay, float duration)
         {
-            // Bu tile aktif goal değil → normal pop
+            if (delay > 0f)
+                yield return new WaitForSeconds(delay);
+
+            if (tile == null || board == null)
+                yield break;
+
+            // HUD slot bul
+            var hud = board.TopHud;
+            if (hud == null || board.GoalFlyFx == null)
+            {
+                // Fallback: goal fly yoksa normal pop
+                yield return tile.PopOut(duration);
+                yield break;
+            }
+
+            if (!hud.TryGetGoalTargetRectForTile(tile.GetTileType(), out var target) || target == null)
+            {
+                // Bu tile aktif goal değil → normal pop
+                yield return tile.PopOut(duration);
+                yield break;
+            }
+
+            // Ghost ile uçuşu ayrı coroutine’de başlat (board logic beklemesin / tile destroy güvenli)
+            board.StartCoroutine(board.GoalFlyFx.Play(tile, target, duration));
+
+            // Gerçek tile normal clear akışı: pop-out (ghost zaten uçuyor)
             yield return tile.PopOut(duration);
-            yield break;
         }
-
-        // Ghost ile uçuşu ayrı coroutine’de başlat (board logic beklemesin / tile destroy güvenli)
-        board.StartCoroutine(board.GoalFlyFx.Play(tile, target, duration));
-
-        // Gerçek tile normal clear akışı: pop-out (ghost zaten uçuyor)
-        yield return tile.PopOut(duration);
     }
-}
 
 }
