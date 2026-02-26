@@ -114,7 +114,8 @@ public class PatchbotDashUI : MonoBehaviour
         var img = go.GetComponent<Image>();
         img.sprite = runnerImage.sprite;
         img.raycastTarget = false;
-        img.color = afterColor;
+       // img.color = afterColor;
+        img.color = new Color(1f, 1f, 1f, 0.9f);
 
         var rt = (RectTransform)go.transform;
         rt.anchorMin = runnerImage.rectTransform.anchorMin;
@@ -126,7 +127,15 @@ public class PatchbotDashUI : MonoBehaviour
         rt.anchoredPosition = runnerImage.rectTransform.anchoredPosition;
         rt.localScale = runnerImage.rectTransform.localScale;
 
+        // AfterImage, runner'ın hemen arkasında kalsın
+        int runnerIndex = runnerImage.rectTransform.GetSiblingIndex();
+        rt.SetSiblingIndex(Mathf.Max(0, runnerIndex - 1));
+
         StartCoroutine(FadeAndDestroy(img, afterLife));
+        var afterRT = (RectTransform)go.transform;
+
+        afterRT.SetAsLastSibling(); // EN ÜSTE
+        img.color = new Color(1f, 0f, 0f, 1f); // KIRMIZI, kesin seçilir
     }
 
     IEnumerator FadeAndDestroy(Image img, float life)
@@ -156,26 +165,35 @@ public class PatchbotDashUI : MonoBehaviour
         return localPoint;
     }
 
-#if UNITY_EDITOR
+    #if UNITY_EDITOR
     [ContextMenu("TEST DASH")]
     void TestDash()
     {
-        // BoardContent altından 2 RectTransform seç (tile olmayanlar da gelebilir ama world->local artık stabil)
-        var tiles = boardContent.GetComponentsInChildren<RectTransform>(true);
-
-        List<RectTransform> path = new List<RectTransform>();
-        int count = 0;
-
-        foreach (var t in tiles)
+        if (boardContent == null)
         {
-            if (t == boardContent) continue;
-
-            path.Add(t);
-            count++;
-            if (count >= 2) break;
+            Debug.LogError("[PatchbotDashUI] boardContent missing");
+            return;
         }
 
+        // Sadece Image olanları tile gibi kabul et
+        var images = boardContent.GetComponentsInChildren<Image>(true);
+
+        List<RectTransform> path = new List<RectTransform>();
+
+        for (int i = 0; i < images.Length; i++)
+        {
+            var rt = images[i].rectTransform;
+            if (rt == boardContent) continue;
+
+            // çok küçük/nokta gibi objeleri ele (opsiyonel ama faydalı)
+            if (rt.rect.width < 5f || rt.rect.height < 5f) continue;
+
+            path.Add(rt);
+            if (path.Count >= 2) break;
+        }
+
+        Debug.Log($"[PatchbotDashUI] TEST DASH pathCount={path.Count}");
         PlayDash(path);
     }
-#endif
+    #endif
 }
