@@ -307,6 +307,11 @@ public class SpecialResolver
         var target = FindPatchBotTarget(patchBotTile, partnerTile, null);
         if (!target.hasCell) return;
 
+        board.EnqueuePatchbotDash(
+            new Vector2Int(patchBotTile.X, patchBotTile.Y),
+            new Vector2Int(target.x, target.y)
+        );
+
         bool partnerIsSpecial = partnerTile.GetSpecial() != TileSpecial.None;
         PlayTeleportMarkers(patchBotTile, target.x, target.y);
 
@@ -422,6 +427,11 @@ public class SpecialResolver
         var target = FindPatchBotTarget(autoPatchBot, patchBotTile, null, systemOverrideTile);
         if (!target.hasCell) return;
 
+        board.EnqueuePatchbotDash(
+            new Vector2Int(autoPatchBot.X, autoPatchBot.Y),
+            new Vector2Int(target.x, target.y)
+        );
+        
         PlayTeleportMarkers(autoPatchBot, target.x, target.y);
         HitCellOnce(matches, target.x, target.y, target.tile);
     }
@@ -960,6 +970,11 @@ public class SpecialResolver
         // 1 hedef seç ve vur
         var target = FindPatchBotTarget(patchBotTile, null, null);
         if (!target.hasCell) return;
+
+        board.EnqueuePatchbotDash(
+            new Vector2Int(patchBotTile.X, patchBotTile.Y),
+            new Vector2Int(target.x, target.y)
+        );
 
         PlayTeleportMarkers(patchBotTile, target.x, target.y);
 

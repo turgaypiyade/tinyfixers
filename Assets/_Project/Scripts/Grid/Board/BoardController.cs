@@ -83,25 +83,6 @@ public class BoardController : MonoBehaviour
     [SerializeField] private TopHudController topHud;
     [SerializeField] private GoalFlyFx goalFlyFx;
 
-    public TopHudController TopHud
-    {
-        get
-        {
-            if (topHud == null)
-                topHud = FindFirstObjectByType<TopHudController>();
-            return topHud;
-        }
-    }
-
-    public GoalFlyFx GoalFlyFx
-    {
-        get
-        {
-            if (goalFlyFx == null)
-                goalFlyFx = FindFirstObjectByType<GoalFlyFx>();
-            return goalFlyFx;
-        }
-    }
 
     [Header("Combo VFX")]
     [SerializeField] private OverrideComboController systemOverrideComboVfx;   
@@ -119,6 +100,8 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float pulseMicroShakeDuration = 0.08f;
     [SerializeField] private float pulseMicroShakeStrength = 4f;
 
+    [SerializeField] private PatchbotDashUI patchbotDashUI;
+    public PatchbotDashUI PatchbotDashUI => patchbotDashUI;
     private Vector2 shakeBasePos;
 
     private TileView[,] tiles;
@@ -143,6 +126,48 @@ public class BoardController : MonoBehaviour
     // Fired when board becomes fully idle (no resolves/animations in progress)
     public event Action OnBecameIdle;
 
+    [System.Serializable]
+    public struct PatchbotDashRequest
+    {
+        public Vector2Int from;
+        public Vector2Int to;
+    }
+
+    private readonly List<PatchbotDashRequest> _patchbotDashRequests = new();
+
+    public void EnqueuePatchbotDash(Vector2Int from, Vector2Int to)
+    {
+        _patchbotDashRequests.Add(new PatchbotDashRequest { from = from, to = to });
+    }
+
+    public void ConsumePatchbotDashRequests(List<PatchbotDashRequest> outList)
+    {
+        outList.Clear();
+        outList.AddRange(_patchbotDashRequests);
+        _patchbotDashRequests.Clear();
+    }
+
+
+    public TopHudController TopHud
+    {
+        get
+        {
+            if (topHud == null)
+                topHud = FindFirstObjectByType<TopHudController>();
+            return topHud;
+        }
+    }
+
+    public GoalFlyFx GoalFlyFx
+    {
+        get
+        {
+            if (goalFlyFx == null)
+                goalFlyFx = FindFirstObjectByType<GoalFlyFx>();
+            return goalFlyFx;
+        }
+    }
+
     private void BeginBusy()
     {
         busyCount++;
@@ -154,6 +179,7 @@ public class BoardController : MonoBehaviour
         if (busyCount == 0)
             OnBecameIdle?.Invoke();
     }
+
 
     /// <summary>
     /// Runs an action after the board finishes all current resolve/animation work.
@@ -1446,6 +1472,7 @@ public class BoardController : MonoBehaviour
     {
         int count = 1;
         int lx = x - 1;
+
         while (lx >= 0 && !holes[lx, y] && filled[lx, y] && types[lx, y].Equals(candidate))
         {
             count++;
@@ -1460,6 +1487,20 @@ public class BoardController : MonoBehaviour
         }
 
         if (count >= 3) return true;
+
+        // ✅ NEW: 2x2 check (current cell closes a 2x2)
+        if (x > 0 && y > 0)
+        {
+            if (!holes[x - 1, y] && filled[x - 1, y] &&
+                !holes[x, y - 1] && filled[x, y - 1] &&
+                !holes[x - 1, y - 1] && filled[x - 1, y - 1] &&
+                types[x - 1, y].Equals(candidate) &&
+                types[x, y - 1].Equals(candidate) &&
+                types[x - 1, y - 1].Equals(candidate))
+            {
+                return true;
+            }
+        }
 
         count = 1;
         int uy = y - 1;

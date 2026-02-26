@@ -11,6 +11,7 @@ public class BoardAnimator
     private readonly Color lightningColor = new Color(0.70f, 0.90f, 1f, 1f);
     private const float LightningStaggerStep = 0.025f;
 
+    private static readonly List<BoardController.PatchbotDashRequest> _patchbotDashBuffer = new();
     private static readonly Vector2Int[] OrthogonalDirs =
     {
         new Vector2Int(1, 0),
@@ -136,6 +137,13 @@ public class BoardAnimator
         float maxStaggerDelay = 0f;
         var impactCells = new HashSet<Vector2Int>();
         var obstacleDamageCells = new HashSet<Vector2Int>();
+
+        board.ConsumePatchbotDashRequests(_patchbotDashBuffer);
+
+        if (_patchbotDashBuffer.Count > 0 && board.PatchbotDashUI != null)
+        {
+            yield return board.PatchbotDashUI.PlayDashSequence(_patchbotDashBuffer, board);
+        }
 
         ObstacleHitContext damageContext = obstacleHitContext ?? (board.IsSpecialActivationPhase
             ? ObstacleHitContext.SpecialActivation
@@ -638,7 +646,7 @@ public class BoardAnimator
                     {
                         if (sx < 0 || sx >= board.Width || sy < 0 || sy >= board.Height) return false;
                         if (board.IsMaskHoleCell(sx, sy) || IsObstacleBlockedCell(sx, sy)) return false;
-                        if (IsAdjacentToMaskHole(sx, sy)) return false;
+                        //if (IsAdjacentToMaskHole(sx, sy)) return false;
 
                         var t = board.Tiles[sx, sy];
                         if (t == null) return false;
@@ -849,7 +857,7 @@ public class BoardAnimator
         return true;
     }
 
-    private bool TryDiagonalFrom(
+   /* private bool TryDiagonalFrom(
         int fromX, int fromY,
         int toX, int toY,
         HashSet<TileView> movedThisPass,
@@ -857,8 +865,36 @@ public class BoardAnimator
         List<float> delays)
     {
         return TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, moves, delays);
-    }
+    }*/
 
+    private bool TryDiagonalFrom(
+        int fromX, int fromY,
+        int toX, int toY,
+        HashSet<TileView> movedThisPass,
+        List<IEnumerator> moves,
+        List<float> delays)
+    {
+        // Corner hücreler
+        int cax = fromX, cay = toY;
+        int cbx = toX,  cby = fromY;
+
+        // Board sınırı
+        if (cax < 0 || cax >= board.Width || cay < 0 || cay >= board.Height) return false;
+        if (cbx < 0 || cbx >= board.Width || cby < 0 || cby >= board.Height) return false;
+
+        // Mask hole / oynanamaz köşeden diagonal geçmesin
+        if (board.IsMaskHoleCell(cax, cay) || board.IsMaskHoleCell(cbx, cby)) return false;
+
+        var obs = board.ObstacleStateService;
+        if (obs != null)
+        {
+            // Eğer köşe blocked ise diagonal ancak allowDiagonal=true ise geçebilsin
+            if (obs.IsCellBlocked(cax, cay) && !obs.GetAllowDiagonalAt(cax, cay)) return false;
+            if (obs.IsCellBlocked(cbx, cby) && !obs.GetAllowDiagonalAt(cbx, cby)) return false;
+        }
+
+        return TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, moves, delays);
+    }
     private TileType GetRandomType()
     {
         if (board.RandomPool == null || board.RandomPool.Length == 0)
