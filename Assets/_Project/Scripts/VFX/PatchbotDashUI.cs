@@ -8,17 +8,17 @@ public class PatchbotDashUI : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private RectTransform boardContent;   // Tile'ların bulunduğu root (sadece test/path bulma için)
     [SerializeField] private RectTransform vfxRoot;        // VFXRoot (runner + afterimage burada)
-    [SerializeField] private Image runnerImage;            // PatchbotRunner Image
+    [SerializeField] private Image runnerImage;            // PatchbotRunner Image (template only)
     [SerializeField] private TileIconLibrary tileIcons;    // TileIconLibrary asset
 
     [Header("Dash")]
-    [SerializeField] private float dashSpeed = 2600f;      // UI units per second (anchored space)
+    [SerializeField] private float dashSpeed = 100f;       // UI units per second (anchored space)
     [SerializeField] private float arriveEps = 2f;
 
     [Header("AfterImage")]
-    [SerializeField] private float spawnEvery = 0.04f;
-    [SerializeField] private float afterLife = 0.18f;
-    [SerializeField] private Color afterColor = new Color(0.55f, 0.85f, 1f, 0.75f);
+    [SerializeField] private float spawnEvery = 0.02f;
+    [SerializeField] private float afterLife = 0.28f;
+    [SerializeField] private Color afterColor = new Color(0.55f, 0.85f, 1f, 0.85f);
 
     private Coroutine co;
 
@@ -27,9 +27,11 @@ public class PatchbotDashUI : MonoBehaviour
         runnerImage = GetComponent<Image>();
     }
 
+    /// <summary>
+    /// Legacy/test: runs a single runnerImage along a UI-RectTransform path.
+    /// </summary>
     public void PlayDash(List<RectTransform> pathTiles)
     {
-        // runner kapalıysa aç (Coroutine için şart)
         if (!gameObject.activeInHierarchy)
             gameObject.SetActive(true);
 
@@ -37,94 +39,126 @@ public class PatchbotDashUI : MonoBehaviour
         co = StartCoroutine(DashRoutine(pathTiles));
     }
 
-    public Coroutine PlayDashSequence(List<BoardController.PatchbotDashRequest> requests, BoardController board)
+    /// <summary>
+    /// Main: launches MANY patchbots in parallel (tiny stagger) using per-dash instances,
+    /// so multi-patchbot cases don't take 30 seconds.
+    /// </summary>
+    public Coroutine PlayDashParallel(List<BoardController.PatchbotDashRequest> requests, BoardController board)
     {
         if (!gameObject.activeInHierarchy)
             gameObject.SetActive(true);
 
         if (co != null) StopCoroutine(co);
-        co = StartCoroutine(DashSequenceRoutine(requests, board));
+        co = StartCoroutine(DashParallelRoutine(requests, board));
         return co;
     }
 
-    private IEnumerator DashSequenceRoutine(List<BoardController.PatchbotDashRequest> requests, BoardController board)
+    private IEnumerator DashParallelRoutine(List<BoardController.PatchbotDashRequest> requests, BoardController board)
     {
-        if (runnerImage == null || vfxRoot == null || board == null)
-            yield break;
+        if (vfxRoot == null || board == null) yield break;
+        if (requests == null || requests.Count == 0) yield break;
 
-        if (requests == null || requests.Count == 0)
-            yield break;
+        // IMPORTANT: keep this GameObject active so Fade coroutines can run.
+        // Template image is not used for movement in parallel mode.
+        if (runnerImage != null) runnerImage.enabled = false;
 
-        // Runner her zaman VFXRoot altında kalsın (koord mantığı için)
-        if (transform.parent != vfxRoot)
-            transform.SetParent(vfxRoot, false);
+        // Reliable sprite source
+        Sprite patchbotSprite = null;
+        if (tileIcons != null && tileIcons.patchBot != null) patchbotSprite = tileIcons.patchBot;
+        if (patchbotSprite == null && runnerImage != null) patchbotSprite = runnerImage.sprite;
 
-        runnerImage.raycastTarget = false;
-        runnerImage.enabled = true;
-        runnerImage.color = new Color(runnerImage.color.r, runnerImage.color.g, runnerImage.color.b, 1f);
+        const float stagger = 0.02f; // tiny visual offset
+        int remaining = 0;
 
-        // Eğer patchbot sprite'ı atıyorsan:
-        if (tileIcons != null) runnerImage.sprite = tileIcons.patchBot;
-
-        // Boyut fallback (tile size 0 problemine karşı)
-        runnerImage.rectTransform.sizeDelta = new Vector2(90f, 90f);
-        runnerImage.rectTransform.SetAsLastSibling();
-
-        // sırayla oyna (throttle)
         for (int i = 0; i < requests.Count; i++)
         {
             var req = requests[i];
+            remaining++;
+            StartCoroutine(SingleDashRoutine(req, board, patchbotSprite, () => remaining--));
 
-            Vector3 fromWorld = board.GetCellWorldPosition(req.from.x, req.from.y);
-            Vector3 toWorld   = board.GetCellWorldPosition(req.to.x, req.to.y);
+            if (stagger > 0f)
+                yield return new WaitForSeconds(stagger);
+        }
 
-            runnerImage.rectTransform.anchoredPosition = WorldToAnchoredIn(vfxRoot, fromWorld);
-            Vector2 target = WorldToAnchoredIn(vfxRoot, toWorld);
+        while (remaining > 0)
+            yield return null;
 
-            float tAfter = 0f;
+        co = null;
+    }
 
-            while (Vector2.Distance(runnerImage.rectTransform.anchoredPosition, target) > arriveEps)
+    private IEnumerator SingleDashRoutine(
+        BoardController.PatchbotDashRequest req,
+        BoardController board,
+        Sprite sprite,
+        System.Action onComplete)
+    {
+        // Per-patchbot instance
+        var go = new GameObject("PatchbotRunnerInstance", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(vfxRoot, false);
+
+        var img = go.GetComponent<Image>();
+        var rt = (RectTransform)go.transform;
+
+        img.sprite = sprite;
+        img.raycastTarget = false;
+        img.enabled = true;
+        img.color = Color.white;
+
+        // Ensure visible above board UI
+        rt.SetAsLastSibling();
+
+        // Safe anchors/pivot for anchoredPosition motion
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+
+        // Size fallback
+        Vector2 size = new Vector2(90f, 90f);
+        if (runnerImage != null && runnerImage.rectTransform != null && runnerImage.rectTransform.sizeDelta.sqrMagnitude > 1f)
+            size = runnerImage.rectTransform.sizeDelta;
+        rt.sizeDelta = size;
+
+        Vector3 fromWorld = board.GetCellWorldPosition(req.from.x, req.from.y);
+        Vector3 toWorld   = board.GetCellWorldPosition(req.to.x, req.to.y);
+
+        rt.anchoredPosition = WorldToAnchoredIn(vfxRoot, fromWorld);
+        Vector2 target = WorldToAnchoredIn(vfxRoot, toWorld);
+
+        float tAfter = 0f;
+
+        while (Vector2.Distance(rt.anchoredPosition, target) > arriveEps)
+        {
+            rt.anchoredPosition =
+                Vector2.MoveTowards(rt.anchoredPosition, target, dashSpeed * Time.deltaTime);
+
+            tAfter += Time.deltaTime;
+            if (tAfter >= spawnEvery)
             {
-                runnerImage.rectTransform.anchoredPosition =
-                    Vector2.MoveTowards(runnerImage.rectTransform.anchoredPosition, target, dashSpeed * Time.deltaTime);
-
-                tAfter += Time.deltaTime;
-                if (tAfter >= spawnEvery)
-                {
-                    tAfter = 0f;
-                    SpawnAfterImage();
-                }
-
-                yield return null;
+                tAfter = 0f;
+                SpawnAfterImageAt(rt, sprite);
             }
 
-            // küçük boşluk: çoklu patchbot okunabilir olsun
             yield return null;
         }
 
-        co = null;
-        runnerImage.enabled = false;
-        runnerImage.color = new Color(runnerImage.color.r, runnerImage.color.g, runnerImage.color.b, 0f);
-       // gameObject.SetActive(false);
+        Destroy(go);
+        onComplete?.Invoke();
     }
-    IEnumerator DashRoutine(List<RectTransform> path)
+
+    private IEnumerator DashRoutine(List<RectTransform> path)
     {
         if (runnerImage == null || tileIcons == null || boardContent == null || vfxRoot == null) yield break;
         if (path == null || path.Count == 0) yield break;
 
-        // Runner her zaman VFXRoot altında kalsın (senin pipeline)
         if (transform.parent != vfxRoot)
             transform.SetParent(vfxRoot, false);
 
-        // Sprite
         runnerImage.sprite = tileIcons.patchBot;
         runnerImage.raycastTarget = false;
         runnerImage.enabled = true;
+        runnerImage.color = Color.white;
 
-        // 1 tile boyutu
-        Vector2 tileSize = new Vector2(90f, 90f); // fallback
-
-        // Tile üzerinde Image varsa onun rect'ini kullan
+        Vector2 tileSize = new Vector2(90f, 90f);
         var tileImage = path[0].GetComponent<Image>();
         if (tileImage != null)
         {
@@ -135,8 +169,6 @@ public class PatchbotDashUI : MonoBehaviour
 
         runnerImage.rectTransform.sizeDelta = tileSize;
         runnerImage.rectTransform.SetAsLastSibling();
-
-        // Başlangıç: tile world pos -> vfxRoot local anchored
         runnerImage.rectTransform.anchoredPosition = WorldToAnchoredIn(vfxRoot, path[0].position);
 
         float tAfter = 0f;
@@ -154,53 +186,55 @@ public class PatchbotDashUI : MonoBehaviour
                 if (tAfter >= spawnEvery)
                 {
                     tAfter = 0f;
-                    SpawnAfterImage(); // VFXRoot altında, aynı space
+                    SpawnAfterImageAt(runnerImage.rectTransform, runnerImage.sprite);
                 }
 
                 yield return null;
             }
         }
 
-        // küçük pop
+        // tiny pop
         var rt = runnerImage.rectTransform;
         Vector3 baseScale = rt.localScale;
         rt.localScale = baseScale * 1.15f;
         yield return new WaitForSeconds(0.06f);
         rt.localScale = baseScale;
 
+        runnerImage.enabled = false;
         co = null;
 
-        // İstersen testte kapatma. Prod'da kapatmak OK.
-        runnerImage.enabled = false;
-        gameObject.SetActive(false);
+        // Don't deactivate the GameObject: we want afterimage Fade coroutines to complete.
+        // gameObject.SetActive(false);
     }
 
-    private void SpawnAfterImageAt(RectTransform source)
+    private void SpawnAfterImageAt(RectTransform source, Sprite sprite)
     {
-        var go = new GameObject("PatchbotAfterImage",
-            typeof(RectTransform), typeof(UnityEngine.UI.Image));
+        if (vfxRoot == null || source == null) return;
 
+        var go = new GameObject("PatchbotAfterImage", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(vfxRoot, false);
 
-        var img = go.GetComponent<UnityEngine.UI.Image>();
+        var img = go.GetComponent<Image>();
         var rt = (RectTransform)go.transform;
 
-        img.sprite = runnerImage.sprite;
+        img.sprite = sprite;
         img.raycastTarget = false;
         img.color = afterColor;
+
+        rt.anchorMin = source.anchorMin;
+        rt.anchorMax = source.anchorMax;
+        rt.pivot = source.pivot;
 
         rt.sizeDelta = source.sizeDelta;
         rt.anchoredPosition = source.anchoredPosition;
         rt.localScale = source.localScale;
 
-        Destroy(go, afterLife);
+        // Keep it behind the runner
+        rt.SetSiblingIndex(Mathf.Max(0, source.GetSiblingIndex() - 1));
+
+        StartCoroutine(FadeAndDestroy(go, img, afterLife));
     }
 
-    void SpawnAfterImage()
-    {
-        if (runnerImage == null) return;
-        SpawnAfterImageAt(runnerImage.rectTransform);
-    }
     private IEnumerator FadeAndDestroy(GameObject go, Image img, float life)
     {
         float t = 0f;
@@ -227,120 +261,4 @@ public class PatchbotDashUI : MonoBehaviour
         );
         return localPoint;
     }
-
-    public Coroutine PlayDashParallel(
-        List<BoardController.PatchbotDashRequest> requests,
-        BoardController board)
-    {
-        return StartCoroutine(DashParallelRoutine(requests, board));
-    }
-
-    private IEnumerator DashParallelRoutine(
-        List<BoardController.PatchbotDashRequest> requests,
-        BoardController board)
-    {
-        if (requests == null || requests.Count == 0)
-            yield break;
-
-        List<Coroutine> running = new List<Coroutine>();
-
-        const float stagger = 0.02f; // küçük fark
-
-        for (int i = 0; i < requests.Count; i++)
-        {
-            var req = requests[i];
-
-            running.Add(
-                StartCoroutine(SingleDashRoutine(req, board))
-            );
-
-            yield return new WaitForSeconds(stagger);
-        }
-
-        // Hepsinin bitmesini bekle
-        while (running.Count > 0)
-        {
-            running.RemoveAll(c => c == null);
-            yield return null;
-        }
-    }
-
-    private IEnumerator SingleDashRoutine(
-        BoardController.PatchbotDashRequest req,
-        BoardController board)
-    {
-        if (runnerImage == null || vfxRoot == null)
-            yield break;
-
-        // Her patchbot için ayrı instance yaratıyoruz
-        var go = new GameObject("PatchbotRunnerInstance",
-            typeof(RectTransform), typeof(UnityEngine.UI.Image));
-
-        go.transform.SetParent(vfxRoot, false);
-
-        var img = go.GetComponent<UnityEngine.UI.Image>();
-        var rt = (RectTransform)go.transform;
-
-        img.sprite = runnerImage.sprite;
-        img.raycastTarget = false;
-        img.color = Color.white;
-
-        rt.sizeDelta = runnerImage.rectTransform.sizeDelta;
-
-        Vector3 fromWorld = board.GetCellWorldPosition(req.from.x, req.from.y);
-        Vector3 toWorld = board.GetCellWorldPosition(req.to.x, req.to.y);
-
-        rt.anchoredPosition = WorldToAnchoredIn(vfxRoot, fromWorld);
-        Vector2 target = WorldToAnchoredIn(vfxRoot, toWorld);
-
-        float tAfter = 0f;
-
-        while (Vector2.Distance(rt.anchoredPosition, target) > arriveEps)
-        {
-            rt.anchoredPosition =
-                Vector2.MoveTowards(rt.anchoredPosition, target, dashSpeed * Time.deltaTime);
-
-            tAfter += Time.deltaTime;
-            if (tAfter >= spawnEvery)
-            {
-                tAfter = 0f;
-                SpawnAfterImageAt(rt);
-            }
-
-            yield return null;
-        }
-
-        Destroy(go);
-    }    
-    #if UNITY_EDITOR
-    [ContextMenu("TEST DASH")]
-    void TestDash()
-    {
-        if (boardContent == null)
-        {
-            Debug.LogError("[PatchbotDashUI] boardContent missing");
-            return;
-        }
-
-        // Sadece Image olanları tile gibi kabul et
-        var images = boardContent.GetComponentsInChildren<Image>(true);
-
-        List<RectTransform> path = new List<RectTransform>();
-
-        for (int i = 0; i < images.Length; i++)
-        {
-            var rt = images[i].rectTransform;
-            if (rt == boardContent) continue;
-
-            // çok küçük/nokta gibi objeleri ele (opsiyonel ama faydalı)
-            if (rt.rect.width < 5f || rt.rect.height < 5f) continue;
-
-            path.Add(rt);
-            if (path.Count >= 2) break;
-        }
-
-        Debug.Log($"[PatchbotDashUI] TEST DASH pathCount={path.Count}");
-        PlayDash(path);
-    }
-    #endif
 }
