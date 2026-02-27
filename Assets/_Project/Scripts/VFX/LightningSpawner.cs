@@ -27,11 +27,8 @@ public class LightningSpawner : MonoBehaviour
 
     public void PlayEmitterLightning(Vector3 emitterWorldPos, List<Vector3> targetWorldPositions)
     {
-        Debug.Log($"[LightningSpawner] called targets={targetWorldPositions?.Count ?? -1} prefab={(lightningPrefab ? lightningPrefab.name : "NULL")}");
-
         if (targetWorldPositions == null || targetWorldPositions.Count == 0)
         {
-            Debug.Log("[Lightning][Spawner] PlayEmitterLightning called with no targets.");
             return;
         }
 
@@ -39,7 +36,6 @@ public class LightningSpawner : MonoBehaviour
         for (int i = 0; i < targetWorldPositions.Count; i++)
             targetsCopy.Add(targetWorldPositions[i]);
 
-        Debug.Log($"[Lightning][Spawner] Spawn start origin={emitterWorldPos} targets={targetsCopy.Count} playback={GetPlaybackDuration(targetsCopy.Count):0.000}s");
         StartCoroutine(CoPlay(emitterWorldPos, targetsCopy));
     }
 
@@ -51,8 +47,6 @@ public class LightningSpawner : MonoBehaviour
         {
             var start = current;
             var end = targets[i];
-
-            Debug.Log($"[Lightning][Spawner] Beam {i + 1}/{targets.Count} start={start} end={end} dist={Vector3.Distance(start, end)}");
 
             var beam = Instantiate(lightningPrefab, vfxRoot);
             beam.transform.localPosition = Vector3.zero;
@@ -69,7 +63,6 @@ public class LightningSpawner : MonoBehaviour
             beam.GetComponent<LineRenderer>().useWorldSpace = true;
 
             beam.Init(start, end);
-            beam.Dump(" FROM_SPAWNER");
 
             current = end; // ✅ zincir: bir sonraki beam buradan başlar
 

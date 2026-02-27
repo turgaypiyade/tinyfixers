@@ -266,7 +266,6 @@ public class ObstacleStateService
 
         var def = library != null ? library.Get(id) : null;
         int remaining = ResolveRemainingHitsForCell(idx, def);
-        Debug.Log($"[OBSTACLE] cell=({x},{y}) id={id} remaining={remaining}");
         return def != null && def.GetAllowDiagonalForRemainingHits(remaining);
     }
 
