@@ -9,7 +9,6 @@ public class BoardAnimator
     private readonly TileClearEffectOrchestrator clearEffectOrchestrator;
 
     private readonly Color lightningColor = new Color(0.70f, 0.90f, 1f, 1f);
-    private const float LightningStaggerStep = 0.025f;
 
     private static readonly List<BoardController.PatchbotDashRequest> _patchbotDashBuffer = new();
     private static readonly Vector2Int[] OrthogonalDirs =
@@ -153,6 +152,26 @@ public class BoardAnimator
         if (animationMode == ClearAnimationMode.LightningStrike && lightningVisualTargets != null)
             lightningVisualSet = new HashSet<TileView>(lightningVisualTargets);
 
+        if (animationMode == ClearAnimationMode.LightningStrike)
+        {
+            SortTilesForLightning(list, lightningOriginTile, lightningOriginCell);
+        }
+
+        List<TileView> orderedStrikeTargets = null;
+        if (animationMode == ClearAnimationMode.LightningStrike)
+        {
+            orderedStrikeTargets = lightningVisualTargets != null
+                ? new List<TileView>(lightningVisualTargets)
+                : new List<TileView>(list);
+
+            SortTilesForLightning(orderedStrikeTargets, lightningOriginTile, lightningOriginCell);
+        }
+
+        float lightningStepDelay = animationMode == ClearAnimationMode.LightningStrike
+            ? board.GetLightningStrikeStepDelay()
+            : 0f;
+        int lightningIndex = 0;
+
         if (affectedCells != null)
         {
             foreach (var cell in affectedCells)
@@ -200,25 +219,23 @@ public class BoardAnimator
                 }
 
                 // Öncelik: goal fly > lightning per-tile > default
-                float delay = useLightningEffect ? i * LightningStaggerStep : 0f;
+                float delay = useLightningEffect ? lightningIndex * lightningStepDelay : 0f;
                 var tileAnimationMode =
                     isGoalTile ? ClearAnimationMode.GoalFlyToHud :
                     (useLightningEffect ? ClearAnimationMode.LightningStrike : ClearAnimationMode.Default);
 
                 pops.Add(clearEffectOrchestrator.Play(tile, tileAnimationMode, delay, board.GetClearDurationForCurrentPass()));
+
+                if (useLightningEffect)
+                    lightningIndex++;
            }
         }
 
+        float lightningDuration = 0f;
         if (animationMode == ClearAnimationMode.LightningStrike)
         {
-            var strikeTargets = lightningVisualTargets ?? list;
-            float lightningDuration = board.PlayLightningStrikeForTiles(strikeTargets, lightningOriginTile, lightningOriginCell, lightningVisualTargets);
-
-            if (lightningDuration > 0f)
-            {
-                var __w = Wait(lightningDuration);
-                if (__w != null) yield return __w;
-            }
+            var strikeTargets = orderedStrikeTargets ?? list;
+            lightningDuration = board.PlayLightningStrikeForTiles(strikeTargets, lightningOriginTile, lightningOriginCell, strikeTargets);
         }
 
         if (doShake)
@@ -241,6 +258,12 @@ public class BoardAnimator
 
         if (pops.Count > 0)
             yield return RunMany(pops);
+
+        if (lightningDuration > 0f)
+        {
+            var __w = Wait(lightningDuration);
+            if (__w != null) yield return __w;
+        }
 
         if (pulseImpacts.Count > 0)
         {
@@ -290,6 +313,33 @@ public class BoardAnimator
 
         foreach (var cell in obstacleDamageCells)
             board.ApplyObstacleDamageAt(cell.x, cell.y, damageContext);
+    }
+
+    private static void SortTilesForLightning(List<TileView> tiles, TileView originTile, Vector2Int? originCell)
+    {
+        if (tiles == null || tiles.Count <= 1)
+            return;
+
+        Vector2Int origin = originTile != null
+            ? new Vector2Int(originTile.X, originTile.Y)
+            : originCell ?? new Vector2Int(tiles[0] != null ? tiles[0].X : 0, tiles[0] != null ? tiles[0].Y : 0);
+
+        tiles.Sort((a, b) =>
+        {
+            if (a == b) return 0;
+            if (a == null) return 1;
+            if (b == null) return -1;
+
+            int da = Mathf.Abs(a.X - origin.x) + Mathf.Abs(a.Y - origin.y);
+            int db = Mathf.Abs(b.X - origin.x) + Mathf.Abs(b.Y - origin.y);
+            int byDistance = da.CompareTo(db);
+            if (byDistance != 0) return byDistance;
+
+            int byRow = a.Y.CompareTo(b.Y);
+            if (byRow != 0) return byRow;
+
+            return a.X.CompareTo(b.X);
+        });
     }
 
     private void CollectAdjacentOverTileBlockers(Vector2Int centerCell, HashSet<Vector2Int> obstacleDamageCells)

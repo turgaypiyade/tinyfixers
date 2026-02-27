@@ -16,13 +16,19 @@ public class LightningSpawner : MonoBehaviour
     [SerializeField] private bool useChain = true;
     [SerializeField] private float chainStepDelay = 0.04f; // 0.03–0.06 dene
 
+    public float GetStepDelay()
+    {
+        return Mathf.Max(0f, useChain ? chainStepDelay : spawnJitter);
+    }
+
     public float GetPlaybackDuration(int targetCount)
     {
         int safeTargetCount = Mathf.Max(0, targetCount);
         if (safeTargetCount <= 0)
             return 0f;
 
-        return ((safeTargetCount - 1) * Mathf.Max(0f, spawnJitter)) + Mathf.Max(0f, destroyDelay);
+        float stepDelay = GetStepDelay();
+        return ((safeTargetCount - 1) * stepDelay) + Mathf.Max(0f, destroyDelay);
     }
 
     public void PlayEmitterLightning(Vector3 emitterWorldPos, List<Vector3> targetWorldPositions)
@@ -66,7 +72,7 @@ public class LightningSpawner : MonoBehaviour
 
             current = end; // ✅ zincir: bir sonraki beam buradan başlar
 
-            float delay = useChain ? chainStepDelay : spawnJitter;
+            float delay = GetStepDelay();
             if (delay > 0f)
                 yield return new WaitForSeconds(delay);
         }
