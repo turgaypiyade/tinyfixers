@@ -42,7 +42,6 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private RectTransform underTilesObstaclesRoot;
     [SerializeField] private RectTransform overTilesObstaclesRoot;
     [SerializeField] private RectTransform tilesRoot;
-    [SerializeField] private RectTransform overTilesRoot;
 
     [Header("Obstacle Visual (UI)")]
     [SerializeField] private bool drawObstacles = true;
