@@ -652,7 +652,11 @@ public class BoardAnimator
                         var t = board.Tiles[sx, sy];
                         if (t == null) return false;
 
-                        if (CanTileFallStraightDown(sx, sy))
+                        // Normalde taş kendi kolonunda aşağı düşebiliyorsa diagonal'e öncelik vermeyelim.
+                        // Ancak obstacle-ceplerinde (hedefin üstü blocker) bu kural çok katı kalıp
+                        // boşlukların kilitlenmesine yol açabiliyor; bu durumda diagonal'e izin ver.
+                        bool targetIsObstaclePocket = IsObstacleBlockedCell(x, y - 1);
+                        if (!targetIsObstaclePocket && CanTileFallStraightDown(sx, sy))
                             return false;
 
                         return TryDiagonalFrom(sx, sy, x, y, movedThisPass, moves, moveDelays);
