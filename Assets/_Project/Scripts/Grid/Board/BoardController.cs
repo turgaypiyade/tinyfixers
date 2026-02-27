@@ -1007,6 +1007,15 @@ public class BoardController : MonoBehaviour
     return playbackDuration;
 }
 
+    internal float GetLightningStrikeStepDelay()
+    {
+        TryResolveLightningSpawner();
+        if (lightningSpawner == null)
+            return 0f;
+
+        return lightningSpawner.GetStepDelay();
+    }
+
     public Vector3 GetCellWorldPosition(int x, int y)
     {
         if (parent != null)
