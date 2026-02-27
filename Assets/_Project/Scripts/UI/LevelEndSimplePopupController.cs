@@ -131,7 +131,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         Subscribe();
         RefreshPopupCopy();
-        ResolveBlockerReference();
+        ResolveSerializedReferences();
         SetBlockerVisible(false);
         RequestEvaluateLevelEndState();
     }
@@ -139,8 +139,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private void HandleFailCloseClicked()
     {
         HideAllPopups();
-        // Ana Menü'ye dön
-        SceneManager.LoadScene(mainMenuSceneName);
+        ReturnToMainMenu();
     }
 
     private void HandleSuccessCloseClicked()
@@ -152,21 +151,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
         PlayerPrefs.SetInt(prefsLevelKey, level + 1);
         PlayerPrefs.Save();
 
-        // Ana Menü'ye dön
-        SceneManager.LoadScene(mainMenuSceneName);
+        ReturnToMainMenu();
     }
-    private void ResolveBlockerReference()
-    {
-        if (blockerRoot != null)
-            return;
 
-        Transform blockerTransform = transform.Find("Blocker");
-        if (blockerTransform == null)
-            blockerTransform = transform.Find("blocker");
-
-        if (blockerTransform != null)
-            blockerRoot = blockerTransform.gameObject;
-    }
+    private void ReturnToMainMenu() => SceneManager.LoadScene(mainMenuSceneName);
 
     private void SetBlockerVisible(bool isVisible)
     {
