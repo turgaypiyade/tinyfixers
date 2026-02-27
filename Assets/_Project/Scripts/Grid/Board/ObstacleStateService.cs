@@ -257,6 +257,7 @@ public class ObstacleStateService
 
     public bool IsDiagonalAllowedAt(int x, int y)
     {
+
         if (!IsValidCell(x, y)) return false;
 
         int idx = level.Index(x, y);
@@ -265,6 +266,7 @@ public class ObstacleStateService
 
         var def = library != null ? library.Get(id) : null;
         int remaining = ResolveRemainingHitsForCell(idx, def);
+        Debug.Log($"[OBSTACLE] cell=({x},{y}) id={id} remaining={remaining}");
         return def != null && def.GetAllowDiagonalForRemainingHits(remaining);
     }
 

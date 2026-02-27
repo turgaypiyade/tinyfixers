@@ -644,6 +644,7 @@ public class BoardAnimator
 
                     bool TrySource(int sx, int sy)
                     {
+                        Debug.Log($"[SOURCE] candidate=({sx},{sy}) target=({x},{y}) straightDown={CanTileFallStraightDown(sx,sy)}");
                         if (sx < 0 || sx >= board.Width || sy < 0 || sy >= board.Height) return false;
                         if (board.IsMaskHoleCell(sx, sy) || IsObstacleBlockedCell(sx, sy)) return false;
                         //if (IsAdjacentToMaskHole(sx, sy)) return false;
@@ -878,6 +879,8 @@ public class BoardAnimator
         int cax = fromX, cay = toY;
         int cbx = toX,  cby = fromY;
 
+        Debug.Log($"[DIAG-TRY] from=({fromX},{fromY}) to=({toX},{toY})");
+
         // Board sınırı
         if (cax < 0 || cax >= board.Width || cay < 0 || cay >= board.Height) return false;
         if (cbx < 0 || cbx >= board.Width || cby < 0 || cby >= board.Height) return false;
@@ -888,12 +891,22 @@ public class BoardAnimator
         var obs = board.ObstacleStateService;
         if (obs != null)
         {
-            // Eğer köşe blocked ise diagonal ancak allowDiagonal=true ise geçebilsin
-            if (obs.IsCellBlocked(cax, cay) && !obs.GetAllowDiagonalAt(cax, cay)) return false;
-            if (obs.IsCellBlocked(cbx, cby) && !obs.GetAllowDiagonalAt(cbx, cby)) return false;
-        }
+            if (obs.IsCellBlocked(cax, cay))
+            {
+                if (!obs.GetAllowDiagonalAt(cax, cay))
+                    return false;
+            }
 
-        return TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, moves, delays);
+            if (obs.IsCellBlocked(cbx, cby))
+            {
+                if (!obs.GetAllowDiagonalAt(cbx, cby))
+                    return false;
+            }
+        }
+        bool ok = TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, moves, delays);
+        Debug.Log($"[DIAG-RESULT] from=({fromX},{fromY}) to=({toX},{toY}) ok={ok}");
+        return ok;
+       // return TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, moves, delays);
     }
     private TileType GetRandomType()
     {
