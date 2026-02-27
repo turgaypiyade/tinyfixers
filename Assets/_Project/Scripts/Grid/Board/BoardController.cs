@@ -887,6 +887,7 @@ public class BoardController : MonoBehaviour
             bool includeAdjacentOverTileBlockerDamage = false;
             yield return boardAnimator.ClearMatchesAnimated(matches, doShake: true, animationMode: animationMode, affectedCells: affectedCells, obstacleHitContext: obstacleHitContext, includeAdjacentOverTileBlockerDamage: includeAdjacentOverTileBlockerDamage, lightningOriginTile: target, lightningOriginCell: targetCell, lightningVisualTargets: initialLightningTargets );
             yield return boardAnimator.CollapseAndSpawnAnimated();
+            yield return ResolveEmptyPlayableCellsWithoutMatch();
             yield return ResolveBoard();
         }
 
@@ -1141,6 +1142,7 @@ public class BoardController : MonoBehaviour
                 pendingCreationService.ApplyPendingCreations();
                 yield return boardAnimator.CollapseColumnsAnimated();
             }
+            yield return ResolveEmptyPlayableCellsWithoutMatch();
             yield return ResolveBoard();
             EndBusy();
             yield break;
@@ -1182,6 +1184,24 @@ public class BoardController : MonoBehaviour
             if (tiles[x, y] == null) return true;
         }
         return false;
+    }
+
+    internal IEnumerator ResolveEmptyPlayableCellsWithoutMatch()
+    {
+        const int maxPass = 3;
+
+        for (int pass = 0; pass < maxPass; pass++)
+        {
+            if (!HasAnyEmptyPlayableCell())
+                yield break;
+
+            yield return boardAnimator.SlideFillAnimated();
+
+            if (!HasAnyEmptyPlayableCell())
+                yield break;
+
+            yield return boardAnimator.CollapseAndSpawnAnimated();
+        }
     }
 
     // Duration helpers: distance-based + cascade speed-up on pass>=2
