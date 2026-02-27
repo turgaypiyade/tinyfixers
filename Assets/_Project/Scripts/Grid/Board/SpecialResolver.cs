@@ -138,13 +138,8 @@ public class SpecialResolver
         bool sbIsPulse = sb == TileSpecial.PulseCore;
         bool suppressPulseImpactAnimations = saIsPulse && sbIsPulse;
 
-        // Pulse + Line combo'da base LightningStrike animasyonunu kapatacağız
-        bool suppressBaseLightning = (saIsLine && sbIsPulse) || (sbIsLine && saIsPulse);
-
-        if (!suppressBaseLightning)
-        {
-            hasLineActivation = hasLineActivation || saIsLine || sbIsLine;
-        }
+        // Satır/sütun etkisi üreten tüm özel zincirlerde hedefe lightning gidip ardından tile clear olsun.
+        hasLineActivation = hasLineActivation || saIsLine || sbIsLine;
 
 
         if (sa != TileSpecial.None && sb != TileSpecial.None)
@@ -158,12 +153,6 @@ public class SpecialResolver
             var specialTile = sa != TileSpecial.None ? a : b;
             var partnerTile = sa != TileSpecial.None ? b : a;
             EnqueueActivation(queue, queued, specialTile, partnerTile);
-        }
-
-        // Pulse + Line combo’da: önce combo VFX görünsün, sonra lightning/clear başlasın
-        if (suppressBaseLightning) // bu değişken sende zaten var (Pulse+Line tespiti)
-        {
-            yield return new WaitForSeconds(0.20f); // 0.15–0.30 arası tune edebilirsin
         }
 
         EnqueueChainSpecials(affected, queue, queued, processed);
