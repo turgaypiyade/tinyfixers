@@ -63,6 +63,7 @@ public class TileView : MonoBehaviour,
     private void ResetVisualState()
     {
         transform.localScale = Vector3.one;
+        transform.localRotation = Quaternion.identity;
         if (TryGetComponent<CanvasGroup>(out var canvasGroup))
             canvasGroup.alpha = 1f;
     }
@@ -171,9 +172,10 @@ public class TileView : MonoBehaviour,
     {
         transform.localScale = Vector3.one;
 
+        float popDuration = Mathf.Max(0.0001f, duration);
+        float impactDuration = Mathf.Min(0.055f, popDuration * 0.40f);
         float t = 0f;
-        Vector3 start = transform.localScale;
-        Vector3 end   = Vector3.zero;
+
         Vector2 originalPivot = rt.pivot;
         var hasCanvasGroup = TryGetComponent<CanvasGroup>(out var canvasGroup);
 
@@ -186,16 +188,37 @@ public class TileView : MonoBehaviour,
 
         canvasGroup.alpha = 1f;
 
-        while (t < 1f)
+        // 1) "Kırılma" hissi için kısa bir impact punch.
+        while (t < impactDuration)
         {
-            t += Time.deltaTime / Mathf.Max(0.0001f, duration);
-            float s = 1f - Mathf.Pow(1f - Mathf.Clamp01(t), 3f); // easeOutCubic
-            transform.localScale = Vector3.Lerp(start, end, s);
-            canvasGroup.alpha = 1f - s;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, impactDuration));
+            float squish = 1f + Mathf.Lerp(0f, 0.12f, k);
+            float stretch = 1f - Mathf.Lerp(0f, 0.08f, k);
+            transform.localScale = new Vector3(squish, stretch, 1f);
+            yield return null;
+        }
+
+        // 2) Punch sonrası hızlı parçalanma/kaybolma.
+        t = 0f;
+        Vector3 start = transform.localScale;
+        Vector3 end = Vector3.zero;
+
+        float shatterDuration = Mathf.Max(0.0001f, popDuration - impactDuration);
+        while (t < shatterDuration)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / shatterDuration);
+            float eased = 1f - Mathf.Pow(1f - k, 3f);
+
+            transform.localScale = Vector3.Lerp(start, end, eased);
+            transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(0f, 16f, eased));
+            canvasGroup.alpha = 1f - eased;
             yield return null;
         }
 
         transform.localScale = end;
+        transform.localRotation = Quaternion.identity;
         canvasGroup.alpha = 0f;
 
         // Pool/re-enable durumları için eski pivot'u koru.
@@ -224,9 +247,11 @@ public class TileView : MonoBehaviour,
         }
 
         Color baseColor = iconImage.color;
-        float flashTime = Mathf.Min(0.06f, duration * 0.35f);
+        float flashTime = Mathf.Min(0.05f, duration * 0.30f);
+        float impactTime = Mathf.Min(0.04f, duration * 0.25f);
         float t = 0f;
 
+        // 1) Ani beyaz/elektrik flash
         while (t < flashTime)
         {
             t += Time.deltaTime;
@@ -235,11 +260,22 @@ public class TileView : MonoBehaviour,
             yield return null;
         }
 
+        // 2) Vurulma anında çok kısa sert punch
+        t = 0f;
+        while (t < impactTime)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, impactTime));
+            float s = Mathf.Lerp(1f, 1.14f, k);
+            transform.localScale = new Vector3(s, 1f - (s - 1f) * 0.65f, 1f);
+            yield return null;
+        }
+
         iconImage.color = baseColor;
 
-        float shrinkDuration = Mathf.Max(0.04f, duration - flashTime);
+        // 3) Kırılıp küçülerek yok olma
+        float shrinkDuration = Mathf.Max(0.04f, duration - flashTime - impactTime);
         t = 0f;
-        transform.localScale = Vector3.one;
         Vector3 start = transform.localScale;
         Vector3 end = Vector3.zero;
 
@@ -249,6 +285,7 @@ public class TileView : MonoBehaviour,
             float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, shrinkDuration));
             float eased = k * k;
             transform.localScale = Vector3.Lerp(start, end, eased);
+            transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(0f, 18f, eased));
 
             var c = iconImage.color;
             c.a = Mathf.Lerp(baseColor.a, 0f, eased);
@@ -257,6 +294,7 @@ public class TileView : MonoBehaviour,
         }
 
         transform.localScale = end;
+        transform.localRotation = Quaternion.identity;
         var finalColor = iconImage.color;
         finalColor.a = 0f;
         iconImage.color = finalColor;
