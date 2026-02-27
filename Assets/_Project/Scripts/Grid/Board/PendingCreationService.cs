@@ -103,7 +103,6 @@ public class PendingCreationService
             if (pending.special == TileSpecial.SystemOverride)
                 targetTile.SetOverrideBaseType(targetTile.GetTileType());
 
-            Debug.Log($"[PendingCreation] Placed {pending.special} at ({targetTile.X},{targetTile.Y})");
         }
 
         pendingCreations.Clear();

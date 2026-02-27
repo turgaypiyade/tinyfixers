@@ -42,6 +42,8 @@ public class LightningBeam : MonoBehaviour
         endColor = lr.endColor;
     }
 
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
     public void Dump(string tag = "")
         {
             if (lr == null)

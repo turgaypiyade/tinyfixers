@@ -644,7 +644,7 @@ public class BoardAnimator
 
                     bool TrySource(int sx, int sy)
                     {
-                        Debug.Log($"[SOURCE] candidate=({sx},{sy}) target=({x},{y}) straightDown={CanTileFallStraightDown(sx,sy)}");
+                        LogVerbose($"[SOURCE] candidate=({sx},{sy}) target=({x},{y}) straightDown={CanTileFallStraightDown(sx,sy)}");
                         if (sx < 0 || sx >= board.Width || sy < 0 || sy >= board.Height) return false;
                         if (board.IsMaskHoleCell(sx, sy) || IsObstacleBlockedCell(sx, sy)) return false;
                         //if (IsAdjacentToMaskHole(sx, sy)) return false;
@@ -883,7 +883,7 @@ public class BoardAnimator
         int cax = fromX, cay = toY;
         int cbx = toX,  cby = fromY;
 
-        Debug.Log($"[DIAG-TRY] from=({fromX},{fromY}) to=({toX},{toY})");
+        LogVerbose($"[DIAG-TRY] from=({fromX},{fromY}) to=({toX},{toY})");
 
         // Board sınırı
         if (cax < 0 || cax >= board.Width || cay < 0 || cay >= board.Height) return false;
@@ -908,7 +908,7 @@ public class BoardAnimator
             }
         }
         bool ok = TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, moves, delays);
-        Debug.Log($"[DIAG-RESULT] from=({fromX},{fromY}) to=({toX},{toY}) ok={ok}");
+        LogVerbose($"[DIAG-RESULT] from=({fromX},{fromY}) to=({toX},{toY}) ok={ok}");
         return ok;
        // return TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, moves, delays);
     }
@@ -918,5 +918,12 @@ public class BoardAnimator
             return TileType.Gear;
 
         return board.RandomPool[UnityEngine.Random.Range(0, board.RandomPool.Length)];
+    }
+
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+    private static void LogVerbose(string message)
+    {
+        Debug.Log(message);
     }
 }
