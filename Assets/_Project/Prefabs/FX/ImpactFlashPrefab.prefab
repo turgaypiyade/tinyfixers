@@ -104,7 +104,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e122838e6a66b41a79060569a181f3f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ImpactFlashAnim
-  lifetime: 0.12
+  lifetime: 0.08
   startScale: 0.15
   endScale: 0.9
   startAlpha: 1

@@ -176,7 +176,7 @@ MonoBehaviour:
   segments: 12
   jaggedness: 0.25
   noiseScale: 2
-  lifeTime: 0.18
+  lifeTime: 0.1
   alphaOverLife:
     serializedVersion: 2
     m_Curve:
