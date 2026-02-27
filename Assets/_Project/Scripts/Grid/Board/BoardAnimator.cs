@@ -171,7 +171,6 @@ public class BoardAnimator
             ? board.GetLightningStrikeStepDelay()
             : 0f;
         int lightningIndex = 0;
-        float maxLightningPopCompletion = 0f;
 
         if (affectedCells != null)
         {
@@ -225,17 +224,10 @@ public class BoardAnimator
                     isGoalTile ? ClearAnimationMode.GoalFlyToHud :
                     (useLightningEffect ? ClearAnimationMode.LightningStrike : ClearAnimationMode.Default);
 
-                float clearDuration = board.GetClearDurationForCurrentPass();
-                pops.Add(clearEffectOrchestrator.Play(tile, tileAnimationMode, delay, clearDuration));
+                pops.Add(clearEffectOrchestrator.Play(tile, tileAnimationMode, delay, board.GetClearDurationForCurrentPass()));
 
                 if (useLightningEffect)
-                {
-                    float completion = delay + clearDuration;
-                    if (completion > maxLightningPopCompletion)
-                        maxLightningPopCompletion = completion;
-
                     lightningIndex++;
-                }
            }
         }
 
@@ -269,11 +261,7 @@ public class BoardAnimator
 
         if (lightningDuration > 0f)
         {
-            // Lightning ile tile pop animasyonları paralel çalışıyor.
-            // Burada toplam lightning süresini tekrar beklemek, pop bittikten sonra
-            // gereksiz "boş bekleme" yaratır. Sadece kalan kısmı bekleyelim.
-            float remainingLightning = Mathf.Max(0f, lightningDuration - maxLightningPopCompletion);
-            var __w = Wait(remainingLightning);
+            var __w = Wait(lightningDuration);
             if (__w != null) yield return __w;
         }
 
