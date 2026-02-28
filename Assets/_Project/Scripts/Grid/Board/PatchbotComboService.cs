@@ -89,7 +89,7 @@ public class PatchbotComboService
 
         bool IsExcluded(TileView tile)
         {
-            if (tile == null) return false;
+            if (tile == null) return true;
             if (excluded != null && excluded.Contains(tile)) return true;
             if (tile == patchBotTile || tile == partnerTile) return true;
             if (additionalExcluded != null)
@@ -103,44 +103,38 @@ public class PatchbotComboService
             return false;
         }
 
+        bool IsGoalTile(TileView tile)
+        {
+            if (tile == null) return false;
+            var type = tile.GetTileType();
+            for (int i = 0; i < activeTileGoals.Count; i++)
+            {
+                if (activeTileGoals[i].Equals(type)) return true;
+            }
+
+            return false;
+        }
+
         for (int x = 0; x < board.Width; x++)
             for (int y = 0; y < board.Height; y++)
             {
                 if (board.Holes[x, y] && !HasObstacleAt(x, y)) continue;
 
                 var tile = board.Tiles[x, y];
-                if (tile != null && IsExcluded(tile)) continue;
+                if (IsExcluded(tile)) continue;
 
-                bool isTileGoalCell = false;
-                if (tile != null)
-                {
-                    var type = tile.GetTileType();
-                    for (int i = 0; i < activeTileGoals.Count; i++)
-                    {
-                        if (activeTileGoals[i].Equals(type))
-                        {
-                            isTileGoalCell = true;
-                            break;
-                        }
-                    }
-                }
-
-                var obstacleId = board.ObstacleStateService != null
-                    ? board.ObstacleStateService.GetObstacleIdAt(x, y)
-                    : ObstacleId.None;
-
-                bool hasObstacle = obstacleId != ObstacleId.None;
-                bool isObstacleGoalCell = hasObstacle && activeObstacleGoals.Contains(obstacleId);
-
-                if (isObstacleGoalCell)
-                    obstacleGoalCells.Add((x, y, tile));
-
-                if (isTileGoalCell)
-                    tileGoalCells.Add((x, y, tile));
+                bool hasObstacle = board.ObstacleStateService != null &&
+                                   board.ObstacleStateService.GetObstacleIdAt(x, y) != ObstacleId.None;
 
                 if (hasObstacle)
                 {
-                    if (!isObstacleGoalCell)
+                    var obstacleId = board.ObstacleStateService.GetObstacleIdAt(x, y);
+                    bool isObstacleGoalCell = activeObstacleGoals.Contains(obstacleId);
+                    if (isObstacleGoalCell)
+                        obstacleGoalCells.Add((x, y, tile));
+                    else if (IsGoalTile(tile))
+                        tileGoalCells.Add((x, y, tile));
+                    else
                         otherObstacleCells.Add((x, y, tile));
                 }
                 else if (tile != null)
