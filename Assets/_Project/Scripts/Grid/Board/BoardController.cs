@@ -78,6 +78,7 @@ public class BoardController : MonoBehaviour
     [Header("Board VFX/SFX")]
     [FormerlySerializedAs("pulseCoreVfxPlayer")][SerializeField] private PulseCoreVfxPlayer boardVfxPlayer;
     [SerializeField] private LightningSpawner lightningSpawner;
+    [SerializeField] private LineTravelSplitSwapTestUI lineTravelPlayer;
 
     [Header("HUD / Goal Fly FX")]
     [SerializeField] private TopHudController topHud;
@@ -1094,46 +1095,84 @@ internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineS
     return maxDuration;
 }
 
-private float PlayTwoWaySweepHorizontal(int originX, int y)
-{
-    // Left sweep: origin -> 0
-    var left = new List<Vector3>(originX + 1);
-    for (int x = originX; x >= 0; x--)
-        left.Add(GetCellWorldCenterPosition(x, y));
+    private float PlayTwoWaySweepHorizontal(int originX, int y)
+    {
+        // ✅ Yeni sistem: LineTravel varsa onu oynat
+        if (lineTravelPlayer != null)
+        {
+            var originTile = tiles[originX, y];
+            if (originTile != null && lineTravelPlayer.afterImageParent != null)
+            {
+                var tileRt = originTile.GetComponent<RectTransform>();
 
-    // Right sweep: origin -> width-1
-    var right = new List<Vector3>(width - originX);
-    for (int x = originX; x < width; x++)
-        right.Add(GetCellWorldCenterPosition(x, y));
+                // TileView pivot (0,1) olduğu için hücre merkezi: (+tileSize/2, -tileSize/2)
+                Vector3 worldCenter = tileRt.TransformPoint(new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
 
-    lightningSpawner.PlayLineSweepSteps(left);
-    lightningSpawner.PlayLineSweepSteps(right);
+                Vector2 originAnchored = WorldToAnchoredIn(lineTravelPlayer.afterImageParent, worldCenter);
 
-    float dl = lightningSpawner.GetPlaybackDuration(left.Count);
-    float dr = lightningSpawner.GetPlaybackDuration(right.Count);
-    return Mathf.Max(dl, dr);
-}
+                int steps = Mathf.Max(originX, (width - 1 - originX)); // iki tarafa eşit koreografi
+                float cellSizePx = tileSize; // TileView SnapToGrid tileSize kullanıyor
 
-private float PlayTwoWaySweepVertical(int x, int originY)
-{
-    // Down sweep: origin -> 0
-    var down = new List<Vector3>(originY + 1);
-    for (int y = originY; y >= 0; y--)
-        down.Add(GetCellWorldCenterPosition(x, y));
+                lineTravelPlayer.Play(LineTravelSplitSwapTestUI.LineAxis.Horizontal, originAnchored, steps, cellSizePx);
+                return lineTravelPlayer.EstimateDuration(steps);
+            }
+        }
 
-    // Up sweep: origin -> height-1
-    var up = new List<Vector3>(height - originY);
-    for (int y = originY; y < height; y++)
-        up.Add(GetCellWorldCenterPosition(x, y));
+        // --- eski lightning sweep fallback ---
+        var left = new List<Vector3>(originX + 1);
+        for (int x = originX; x >= 0; x--)
+            left.Add(GetCellWorldCenterPosition(x, y));
 
-    lightningSpawner.PlayLineSweepSteps(down);
-    lightningSpawner.PlayLineSweepSteps(up);
+        var right = new List<Vector3>(width - originX);
+        for (int x = originX; x < width; x++)
+            right.Add(GetCellWorldCenterPosition(x, y));
 
-    float dd = lightningSpawner.GetPlaybackDuration(down.Count);
-    float du = lightningSpawner.GetPlaybackDuration(up.Count);
-    return Mathf.Max(dd, du);
-}
+        lightningSpawner.PlayLineSweepSteps(left);
+        lightningSpawner.PlayLineSweepSteps(right);
 
+        float dl = lightningSpawner.GetPlaybackDuration(left.Count);
+        float dr = lightningSpawner.GetPlaybackDuration(right.Count);
+        return Mathf.Max(dl, dr);
+    }
+
+    private float PlayTwoWaySweepVertical(int x, int originY)
+    {
+        if (lineTravelPlayer != null)
+        {
+            var originTile = tiles[x, originY];
+            if (originTile != null && lineTravelPlayer.afterImageParent != null)
+            {
+                var tileRt = originTile.GetComponent<RectTransform>();
+
+                // TileView pivot (0,1) olduğu için hücre merkezi: (+tileSize/2, -tileSize/2)
+                Vector3 worldCenter = tileRt.TransformPoint(new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
+
+                Vector2 originAnchored = WorldToAnchoredIn(lineTravelPlayer.afterImageParent, worldCenter);
+
+                int steps = Mathf.Max(originY, (height - 1 - originY));
+                float cellSizePx = tileSize;
+
+                lineTravelPlayer.Play(LineTravelSplitSwapTestUI.LineAxis.Vertical, originAnchored, steps, cellSizePx);
+                return lineTravelPlayer.EstimateDuration(steps);
+            }
+        }
+
+        // --- eski lightning sweep fallback ---
+        var down = new List<Vector3>(originY + 1);
+        for (int y = originY; y >= 0; y--)
+            down.Add(GetCellWorldCenterPosition(x, y));
+
+        var up = new List<Vector3>(height - originY);
+        for (int y = originY; y < height; y++)
+            up.Add(GetCellWorldCenterPosition(x, y));
+
+        lightningSpawner.PlayLineSweepSteps(down);
+        lightningSpawner.PlayLineSweepSteps(up);
+
+        float dd = lightningSpawner.GetPlaybackDuration(down.Count);
+        float du = lightningSpawner.GetPlaybackDuration(up.Count);
+        return Mathf.Max(dd, du);
+    }
 
     private Vector3 GetCellWorldCenterPosition(int x, int y)
     {
@@ -1804,5 +1843,22 @@ private float PlayTwoWaySweepVertical(int x, int originY)
     {
         if (amount <= 0) return;
         OnTilesCleared?.Invoke(tileType, amount);
+    }
+
+    private Vector2 WorldToAnchoredIn(RectTransform targetParent, Vector3 worldPos)
+    {
+        if (targetParent == null) return Vector2.zero;
+
+        var canvas = FindFirstObjectByType<Canvas>();
+        Camera cam = null;
+        if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            cam = canvas.worldCamera;
+
+        Vector2 screen = RectTransformUtility.WorldToScreenPoint(cam, worldPos);
+
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            targetParent, screen, cam, out Vector2 localPoint);
+
+        return localPoint;
     }
 }
