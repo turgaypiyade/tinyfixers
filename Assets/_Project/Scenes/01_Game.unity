@@ -1626,8 +1626,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.03671706}
-  m_AnchorMax: {x: 1, y: 0.9492441}
+  m_AnchorMin: {x: 0, y: 0.051567238}
+  m_AnchorMax: {x: 1.4492099, y: 1.3331648}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8357,7 +8357,6 @@ MonoBehaviour:
   underTilesObstaclesRoot: {fileID: 0}
   overTilesObstaclesRoot: {fileID: 0}
   tilesRoot: {fileID: 0}
-  overTilesRoot: {fileID: 0}
   drawObstacles: 1
   resolveInitialOnStart: 0
   randomPool: 00000000010000000200000003000000
@@ -8375,9 +8374,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BoardController
   iconLibrary: {fileID: 0}
   levelData: {fileID: 0}
-  swapDuration: 0.08
-  fallDuration: 0.08
-  clearDuration: 0.05
+  swapDuration: 0.03
+  fallDuration: 0.03
+  clearDuration: 0.03
   spawnStartOffsetY: -2
   swapDurationMultiplier: 1
   fallColumnStep: 0.015
@@ -8395,8 +8394,8 @@ MonoBehaviour:
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
-      time: 1
-      value: 1
+      time: 1.0024414
+      value: 0.7513428
       inSlope: 0
       outSlope: 0
       tangentMode: 0
@@ -8419,8 +8418,8 @@ MonoBehaviour:
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
-      time: 1
-      value: 1
+      time: 1.0049438
+      value: 0.82826614
       inSlope: 0
       outSlope: 0
       tangentMode: 0
@@ -8431,16 +8430,16 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   enableFallSettle: 0
-  fallSettleDuration: 0.06
-  fallSettleStrength: 0.04
-  fallCascadeStep: 0.04
-  preClearDelay: 0.06
+  fallSettleDuration: 0.03
+  fallSettleStrength: 0.03
+  fallCascadeStep: 0.03
+  preClearDelay: 0.025
   shakeDuration: 0.1
   shakeStrength: 10
   shakeTarget: {fileID: 1410826443}
   patchBotPulseComboSize: 4
-  pulseImpactDelayStep: 0.02
-  pulseImpactAnimTime: 0.16
+  pulseImpactDelayStep: 0.03
+  pulseImpactAnimTime: 0.2
   boardVfxPlayer: {fileID: 874639811}
   lightningSpawner: {fileID: 1732843067}
   topHud: {fileID: 0}
