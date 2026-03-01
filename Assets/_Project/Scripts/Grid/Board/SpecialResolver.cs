@@ -139,6 +139,7 @@ public class SpecialResolver
         bool saIsPulse = sa == TileSpecial.PulseCore;
         bool sbIsPulse = sb == TileSpecial.PulseCore;
         bool suppressPulseImpactAnimations = saIsPulse && sbIsPulse;
+        bool suppressPerTileClearVfx = (saIsPulse && sbIsLine) || (sbIsPulse && saIsLine);
 
         // Satır/sütun etkisi üreten tüm özel zincirlerde hedefe lightning gidip ardından tile clear olsun.
         hasLineActivation = hasLineActivation || saIsLine || sbIsLine;
@@ -177,7 +178,17 @@ public class SpecialResolver
         // Special zincirinde yalnızca gerçekten etkilenen hücreler hasar alsın.
         // Komşu over-tile blocker ek hasarı, satır/sütun special'larda yan hücrelerde
         // beklenmeyen stage düşüşüne neden olabiliyor.
-        yield return board.StartCoroutine(boardAnimator.ClearMatchesAnimated(affected, doShake: true, staggerDelays: stagger, staggerAnimTime: board.PulseImpactAnimTime, animationMode: animationMode, affectedCells: specialAffectedCells, includeAdjacentOverTileBlockerDamage: false, lightningVisualTargets: lightningVisualTargets, lightningLineStrikes: lightningLineStrikes));
+        yield return board.StartCoroutine(boardAnimator.ClearMatchesAnimated(
+            affected,
+            doShake: true,
+            staggerDelays: stagger,
+            staggerAnimTime: board.PulseImpactAnimTime,
+            animationMode: animationMode,
+            affectedCells: specialAffectedCells,
+            includeAdjacentOverTileBlockerDamage: false,
+            lightningVisualTargets: lightningVisualTargets,
+            lightningLineStrikes: lightningLineStrikes,
+            suppressPerTileClearVfx: suppressPerTileClearVfx));
         yield return board.StartCoroutine(boardAnimator.CollapseAndSpawnAnimated());
         board.IsSpecialActivationPhase = false;
         specialAffectedCells = null;
@@ -632,27 +643,35 @@ public class SpecialResolver
 
         if (IsLine(sa) && IsPulse(sb) || (IsLine(sb) && IsPulse(sa)))
         {
-            board.PlayPulseEmitterComboVfxAtCell(a.X, a.Y);
-            AddRow(matches, a.Y - 1);
-            AddRow(matches, a.Y);
-            AddRow(matches, a.Y + 1);
-            AddCol(matches, a.X - 1);
-            AddCol(matches, a.X);
-            AddCol(matches, a.X + 1);
-            AddLineStrike(lightningLineStrikes, a.X, a.Y - 1, TileSpecial.LineH);
-            AddLineStrike(lightningLineStrikes, a.X, a.Y, TileSpecial.LineH);
-            AddLineStrike(lightningLineStrikes, a.X, a.Y + 1, TileSpecial.LineH);
-            AddLineStrike(lightningLineStrikes, a.X - 1, a.Y, TileSpecial.LineV);
-            AddLineStrike(lightningLineStrikes, a.X, a.Y, TileSpecial.LineV);
-            AddLineStrike(lightningLineStrikes, a.X + 1, a.Y, TileSpecial.LineV);
+            // Pulse + Line: sadece 3 satır + 3 sütun taraması (LineTravel). Per-tile pop VFX kapatılacak.
+            var center = IsPulse(sa) ? a : b;
+            if (center == null) return;
+
+            int cx = center.X;
+            int cy = center.Y;
+
+            AddRow(matches, cy - 1);
+            AddRow(matches, cy);
+            AddRow(matches, cy + 1);
+            AddCol(matches, cx - 1);
+            AddCol(matches, cx);
+            AddCol(matches, cx + 1);
+
+            // LineTravel tetikleyicileri (BoardController.PlayLightningLineStrikes -> LineTravel)
+            AddLineStrike(lightningLineStrikes, cx, cy - 1, TileSpecial.LineH);
+            AddLineStrike(lightningLineStrikes, cx, cy, TileSpecial.LineH);
+            AddLineStrike(lightningLineStrikes, cx, cy + 1, TileSpecial.LineH);
+            AddLineStrike(lightningLineStrikes, cx - 1, cy, TileSpecial.LineV);
+            AddLineStrike(lightningLineStrikes, cx, cy, TileSpecial.LineV);
+            AddLineStrike(lightningLineStrikes, cx + 1, cy, TileSpecial.LineV);
             if (lightningVisualTargets != null)
             {
-                AddRow(lightningVisualTargets, a.Y - 1);
-                AddRow(lightningVisualTargets, a.Y);
-                AddRow(lightningVisualTargets, a.Y + 1);
-                AddCol(lightningVisualTargets, a.X - 1);
-                AddCol(lightningVisualTargets, a.X);
-                AddCol(lightningVisualTargets, a.X + 1);
+                AddRow(lightningVisualTargets, cy - 1);
+                AddRow(lightningVisualTargets, cy);
+                AddRow(lightningVisualTargets, cy + 1);
+                AddCol(lightningVisualTargets, cx - 1);
+                AddCol(lightningVisualTargets, cx);
+                AddCol(lightningVisualTargets, cx + 1);
             }
             return;
         }

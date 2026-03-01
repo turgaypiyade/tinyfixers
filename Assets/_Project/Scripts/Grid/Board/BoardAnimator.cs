@@ -126,7 +126,8 @@ public class BoardAnimator
         TileView lightningOriginTile = null,
         Vector2Int? lightningOriginCell = null,
         IReadOnlyCollection<TileView> lightningVisualTargets = null,
-        IReadOnlyList<LightningLineStrike> lightningLineStrikes = null)
+        IReadOnlyList<LightningLineStrike> lightningLineStrikes = null,
+        bool suppressPerTileClearVfx = false)
     {
         var list = new List<TileView>(matches);
         var pops = new List<IEnumerator>();
@@ -202,13 +203,16 @@ public class BoardAnimator
             shouldClearTile[tile] = clearTile;
             if (!clearTile) continue;
 
-            if (staggerDelays != null && staggerDelays.TryGetValue(tile, out var d))
+            if (!suppressPerTileClearVfx && staggerDelays != null && staggerDelays.TryGetValue(tile, out var d))
             {
                 pulseImpacts.Add(tile.PlayPulseImpact(d, staggerAnimTime));
                 if (d > maxStaggerDelay) maxStaggerDelay = d;
             }
             else
             {
+                if (suppressPerTileClearVfx)
+                    continue; // LineTravel / lightning sweep handles visuals; skip per-tile pop/fly/impact.
+
                 bool useLightningEffect = animationMode == ClearAnimationMode.LightningStrike
                     && (lightningVisualSet == null || lightningVisualSet.Contains(tile));
 

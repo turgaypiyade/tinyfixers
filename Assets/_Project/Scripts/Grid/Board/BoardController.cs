@@ -78,7 +78,8 @@ public class BoardController : MonoBehaviour
     [Header("Board VFX/SFX")]
     [FormerlySerializedAs("pulseCoreVfxPlayer")][SerializeField] private PulseCoreVfxPlayer boardVfxPlayer;
     [SerializeField] private LightningSpawner lightningSpawner;
-    [SerializeField] private LineTravelSplitSwapTestUI lineTravelPlayer;
+    [SerializeField] private LineTravelSplitSwapTestUI lineTravelPlayer; // Template/prefab reference (should not be re-used for multiple simultaneous plays)
+    [SerializeField] private Transform lineTravelSpawnParent; // Where LineTravel instances will be spawned (e.g., VFXRoot). If null, falls back to lineTravelPlayer's parent.
 
     [Header("HUD / Goal Fly FX")]
     [SerializeField] private TopHudController topHud;
@@ -299,6 +300,8 @@ public class BoardController : MonoBehaviour
             shakeBasePos = shakeTarget.anchoredPosition;
         EnsureServices();
         TryResolveLightningSpawner();
+        if (lineTravelSpawnParent == null && lineTravelPlayer != null && lineTravelPlayer.transform.parent != null)
+            lineTravelSpawnParent = lineTravelPlayer.transform.parent;
         EnsureGoalFlyFx();
 
         if (lightningSpawner == null && !didLogMissingLightningSpawner)
@@ -1061,13 +1064,17 @@ public class BoardController : MonoBehaviour
 
 internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineStrikes)
 {
-   
+    // We can drive LineTravel even if lightningSpawner is missing (lightning is optional).
     TryResolveLightningSpawner();
 
-    if (lightningSpawner == null || lineStrikes == null || lineStrikes.Count == 0)
+    if (lineStrikes == null || lineStrikes.Count == 0)
         return 0f;
 
-    float maxDuration = 0f;
+    if (lineTravelPlayer == null && lightningSpawner == null)
+        return 0f;
+
+    const float StrikeStagger = 0.03f; // small readability stagger (set 0 for fully parallel)
+    float maxEndTime = 0f;
 
     for (int i = 0; i < lineStrikes.Count; i++)
     {
@@ -1077,25 +1084,21 @@ internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineS
         if (x < 0 || x >= width || y < 0 || y >= height)
             continue;
 
-        // Instead of pre-targeting endpoints (which can keep firing after tiles are already cleared),
-        // play a deterministic cell-by-cell sweep. This keeps visuals synced with the chain resolution,
-        // and continues even if another emitter already cleared that row/column.
+        float delay = StrikeStagger * i;
+
+        // Deterministic cell-by-cell sweep (synced with chain resolution).
+        float endTime;
         if (strike.isHorizontal)
-        {
-            float dur = PlayTwoWaySweepHorizontal(x, y);
-            if (dur > maxDuration) maxDuration = dur;
-        }
+            endTime = PlayTwoWaySweepHorizontal(x, y, delay);
         else
-        {
-            float dur = PlayTwoWaySweepVertical(x, y);
-            if (dur > maxDuration) maxDuration = dur;
-        }
+            endTime = PlayTwoWaySweepVertical(x, y, delay);
+
+        if (endTime > maxEndTime) maxEndTime = endTime;
     }
 
-    return maxDuration;
+    return maxEndTime;
 }
-
-    private float PlayTwoWaySweepHorizontal(int originX, int y)
+private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds = 0f)
     {
         // ✅ Yeni sistem: LineTravel varsa onu oynat
         if (lineTravelPlayer != null)
@@ -1113,8 +1116,8 @@ internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineS
                 int steps = Mathf.Max(originX, (width - 1 - originX)); // iki tarafa eşit koreografi
                 float cellSizePx = tileSize; // TileView SnapToGrid tileSize kullanıyor
 
-                lineTravelPlayer.Play(LineTravelSplitSwapTestUI.LineAxis.Horizontal, originAnchored, steps, cellSizePx);
-                return lineTravelPlayer.EstimateDuration(steps);
+                PlayLineTravelInstance(LineTravelSplitSwapTestUI.LineAxis.Horizontal, originAnchored, steps, cellSizePx, delaySeconds);
+                return delaySeconds + lineTravelPlayer.EstimateDuration(steps);
             }
         }
 
@@ -1132,10 +1135,10 @@ internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineS
 
         float dl = lightningSpawner.GetPlaybackDuration(left.Count);
         float dr = lightningSpawner.GetPlaybackDuration(right.Count);
-        return Mathf.Max(dl, dr);
+        return delaySeconds + Mathf.Max(dl, dr);
     }
 
-    private float PlayTwoWaySweepVertical(int x, int originY)
+    private float PlayTwoWaySweepVertical(int x, int originY, float delaySeconds = 0f)
     {
         if (lineTravelPlayer != null)
         {
@@ -1152,8 +1155,8 @@ internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineS
                 int steps = Mathf.Max(originY, (height - 1 - originY));
                 float cellSizePx = tileSize;
 
-                lineTravelPlayer.Play(LineTravelSplitSwapTestUI.LineAxis.Vertical, originAnchored, steps, cellSizePx);
-                return lineTravelPlayer.EstimateDuration(steps);
+                PlayLineTravelInstance(LineTravelSplitSwapTestUI.LineAxis.Vertical, originAnchored, steps, cellSizePx, delaySeconds);
+                return delaySeconds + lineTravelPlayer.EstimateDuration(steps);
             }
         }
 
@@ -1171,7 +1174,7 @@ internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineS
 
         float dd = lightningSpawner.GetPlaybackDuration(down.Count);
         float du = lightningSpawner.GetPlaybackDuration(up.Count);
-        return Mathf.Max(dd, du);
+        return delaySeconds + Mathf.Max(dd, du);
     }
 
     private Vector3 GetCellWorldCenterPosition(int x, int y)
@@ -1844,6 +1847,53 @@ internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineS
         if (amount <= 0) return;
         OnTilesCleared?.Invoke(tileType, amount);
     }
+
+
+// --- LineTravel multi-instance helpers (needed because LineTravelSplitSwapTestUI.Play uses StopAllCoroutines) ---
+private void PlayLineTravelInstance(LineTravelSplitSwapTestUI.LineAxis axis, Vector2 originAnchored, int steps, float cellSizePx, float delaySeconds)
+{
+    if (lineTravelPlayer == null)
+        return;
+
+    Transform parentTr = lineTravelSpawnParent != null
+        ? lineTravelSpawnParent
+        : (lineTravelPlayer.transform.parent != null ? lineTravelPlayer.transform.parent : transform);
+
+    var go = Instantiate(lineTravelPlayer.gameObject, parentTr);
+    go.SetActive(true);
+
+    var inst = go.GetComponent<LineTravelSplitSwapTestUI>();
+    if (inst == null)
+    {
+        Destroy(go);
+        return;
+    }
+
+    // Play after optional delay (unscaled so it works during timeScale changes)
+    StartCoroutine(PlayLineTravelRoutine(inst, axis, originAnchored, steps, cellSizePx, delaySeconds));
+
+    // Cleanup after completion (unscaled)
+    float totalLife = Mathf.Max(0f, delaySeconds) + lineTravelPlayer.EstimateDuration(steps) + 0.10f;
+    StartCoroutine(DestroyAfterUnscaled(go, totalLife));
+}
+
+private IEnumerator PlayLineTravelRoutine(LineTravelSplitSwapTestUI inst, LineTravelSplitSwapTestUI.LineAxis axis, Vector2 originAnchored, int steps, float cellSizePx, float delaySeconds)
+{
+    if (delaySeconds > 0f)
+        yield return new WaitForSecondsRealtime(delaySeconds);
+
+    if (inst != null)
+        inst.Play(axis, originAnchored, steps, cellSizePx);
+}
+
+private IEnumerator DestroyAfterUnscaled(GameObject go, float delaySeconds)
+{
+    if (delaySeconds > 0f)
+        yield return new WaitForSecondsRealtime(delaySeconds);
+
+    if (go != null)
+        Destroy(go);
+}
 
     private Vector2 WorldToAnchoredIn(RectTransform targetParent, Vector3 worldPos)
     {
