@@ -125,7 +125,8 @@ public class BoardAnimator
         bool includeAdjacentOverTileBlockerDamage = true,
         TileView lightningOriginTile = null,
         Vector2Int? lightningOriginCell = null,
-        IReadOnlyCollection<TileView> lightningVisualTargets = null)
+        IReadOnlyCollection<TileView> lightningVisualTargets = null,
+        IReadOnlyList<LightningLineStrike> lightningLineStrikes = null)
     {
         var list = new List<TileView>(matches);
         var pops = new List<IEnumerator>();
@@ -234,8 +235,15 @@ public class BoardAnimator
         float lightningDuration = 0f;
         if (animationMode == ClearAnimationMode.LightningStrike)
         {
-            var strikeTargets = orderedStrikeTargets ?? list;
-            lightningDuration = board.PlayLightningStrikeForTiles(strikeTargets, lightningOriginTile, lightningOriginCell, strikeTargets);
+            if (lightningLineStrikes != null && lightningLineStrikes.Count > 0)
+            {
+                lightningDuration = board.PlayLightningLineStrikes(lightningLineStrikes);
+            }
+            else
+            {
+                var strikeTargets = orderedStrikeTargets ?? list;
+                lightningDuration = board.PlayLightningStrikeForTiles(strikeTargets, lightningOriginTile, lightningOriginCell, strikeTargets);
+            }
         }
 
         if (doShake)

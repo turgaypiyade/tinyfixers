@@ -47,11 +47,9 @@ public class LightningSpawner : MonoBehaviour
 
     private IEnumerator CoPlay(Vector3 emitterWorldPos, List<Vector3> targets)
     {
-        Vector3 current = emitterWorldPos;
-
         for (int i = 0; i < targets.Count; i++)
         {
-            var start = current;
+            var start = emitterWorldPos;
             var end = targets[i];
 
             var beam = Instantiate(lightningPrefab, vfxRoot);
@@ -69,8 +67,6 @@ public class LightningSpawner : MonoBehaviour
             beam.GetComponent<LineRenderer>().useWorldSpace = true;
 
             beam.Init(start, end);
-
-            current = end; // ✅ zincir: bir sonraki beam buradan başlar
 
             float delay = GetStepDelay();
             if (delay > 0f)
