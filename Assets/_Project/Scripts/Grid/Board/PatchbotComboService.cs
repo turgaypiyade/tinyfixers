@@ -127,20 +127,22 @@ public class PatchbotComboService
 
                 if (hasObstacle)
                 {
+                    // Obstacle layer is the source-of-truth for this cell.
+                    // Tile exclusion and tile-goal checks are only relevant when there is no obstacle.
                     var obstacleId = board.ObstacleStateService.GetObstacleIdAt(x, y);
-                    bool isExcludedGoalObstacle = tile != null && IsExcludedTile(tile);
-                    if (isExcludedGoalObstacle) continue;
-
                     bool isObstacleGoalCell = activeObstacleGoals.Contains(obstacleId);
                     if (isObstacleGoalCell)
                         obstacleGoalCells.Add((x, y, tile));
-                    else if (IsGoalTile(tile))
-                        tileGoalCells.Add((x, y, tile));
                     else
                         otherObstacleCells.Add((x, y, tile));
                 }
                 else if (tile != null && !IsExcludedTile(tile))
-                    normalCells.Add((x, y, tile));
+                {
+                    if (IsGoalTile(tile))
+                        tileGoalCells.Add((x, y, tile));
+                    else
+                        normalCells.Add((x, y, tile));
+                }
             }
 
         if (obstacleGoalCells.Count > 0)
