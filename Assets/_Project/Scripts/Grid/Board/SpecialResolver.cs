@@ -125,28 +125,19 @@ public class SpecialResolver
         MarkAffectedCell(a);
         MarkAffectedCell(b);
         var processed = new HashSet<TileView>();
-        bool hasLineActivation = false;
-        var lightningVisualTargets = new HashSet<TileView>(); // lightning only for Line path tiles
-        var lightningLineStrikes = new List<LightningLineStrike>();
         var queued = new HashSet<TileView>();
         var queue = new Queue<SpecialActivation>();
 
         TileSpecial sa = a.GetSpecial();
         TileSpecial sb = b.GetSpecial();
 
-        bool saIsLine  = sa == TileSpecial.LineH || sa == TileSpecial.LineV;
-        bool sbIsLine  = sb == TileSpecial.LineH || sb == TileSpecial.LineV;
         bool saIsPulse = sa == TileSpecial.PulseCore;
         bool sbIsPulse = sb == TileSpecial.PulseCore;
         bool suppressPulseImpactAnimations = saIsPulse && sbIsPulse;
 
-        // Satır/sütun etkisi üreten tüm özel zincirlerde hedefe lightning gidip ardından tile clear olsun.
-        hasLineActivation = hasLineActivation || saIsLine || sbIsLine;
-
-
         if (sa != TileSpecial.None && sb != TileSpecial.None)
         {
-            ApplyComboEffect(affected, queue, queued, processed, a, b, sa, sb, lightningVisualTargets, lightningLineStrikes);
+            ApplyComboEffect(affected, queue, queued, processed, a, b, sa, sb);
             processed.Add(a);
             processed.Add(b);
         }
@@ -166,26 +157,25 @@ public class SpecialResolver
             if (activation.special == null || processed.Contains(activation.special)) continue;
 
             processed.Add(activation.special);
-            ApplySpecialActivation(affected, activation.special, activation.partner, ref hasLineActivation, lightningVisualTargets, lightningLineStrikes);
+            ApplySpecialActivation(affected, activation.special, activation.partner);
             EnqueueChainSpecials(affected, queue, queued, processed);
         }
 
         Dictionary<TileView, float> stagger = suppressPulseImpactAnimations
             ? null
             : pulseCoreImpactService.BuildStaggerDelays(affected, processed);
-        var animationMode = hasLineActivation ? ClearAnimationMode.LightningStrike : ClearAnimationMode.Default;
+        var animationMode = ClearAnimationMode.Default;
         // Special zincirinde yalnızca gerçekten etkilenen hücreler hasar alsın.
         // Komşu over-tile blocker ek hasarı, satır/sütun special'larda yan hücrelerde
         // beklenmeyen stage düşüşüne neden olabiliyor.
-        yield return board.StartCoroutine(boardAnimator.ClearMatchesAnimated(affected, doShake: true, staggerDelays: stagger, staggerAnimTime: board.PulseImpactAnimTime, animationMode: animationMode, affectedCells: specialAffectedCells, includeAdjacentOverTileBlockerDamage: false, lightningVisualTargets: lightningVisualTargets, lightningLineStrikes: lightningLineStrikes));
+        yield return board.StartCoroutine(boardAnimator.ClearMatchesAnimated(affected, doShake: true, staggerDelays: stagger, staggerAnimTime: board.PulseImpactAnimTime, animationMode: animationMode, affectedCells: specialAffectedCells, includeAdjacentOverTileBlockerDamage: false));
         yield return board.StartCoroutine(boardAnimator.CollapseAndSpawnAnimated());
         board.IsSpecialActivationPhase = false;
         specialAffectedCells = null;
     }
 
-    public void ExpandSpecialChain(HashSet<TileView> affected, HashSet<Vector2Int> affectedCells, out bool hasLineActivation, out bool hasAnySpecialActivation)
+    public void ExpandSpecialChain(HashSet<TileView> affected, HashSet<Vector2Int> affectedCells, out bool hasAnySpecialActivation)
     {
-        hasLineActivation = false;
         hasAnySpecialActivation = false;
         if (affected == null || affected.Count == 0)
             return;
@@ -227,7 +217,7 @@ public class SpecialResolver
 
             processed.Add(activation.special);
             hasAnySpecialActivation = true;
-            ApplySpecialActivation(affected, activation.special, activation.partner, ref hasLineActivation);
+            ApplySpecialActivation(affected, activation.special, activation.partner);
             EnqueueChainSpecials(affected, queue, queued, processed);
         }
 
@@ -254,18 +244,14 @@ public class SpecialResolver
         }
     }
 
-    void ApplySpecialActivation(HashSet<TileView> matches, TileView specialTile, TileView partnerTile, ref bool hasLineActivation, HashSet<TileView> lightningVisualTargets = null, List<LightningLineStrike> lightningLineStrikes = null)
+    void ApplySpecialActivation(HashSet<TileView> matches, TileView specialTile, TileView partnerTile)
     {
         if (specialTile == null) return;
         switch (specialTile.GetSpecial())
         {
             case TileSpecial.LineH:
             case TileSpecial.LineV:
-                hasLineActivation = true;
                 AddLineEffect(matches, specialTile, specialTile.GetSpecial());
-                AddLineStrike(lightningLineStrikes, specialTile.X, specialTile.Y, specialTile.GetSpecial());
-                if (lightningVisualTargets != null)
-                    AddLineEffect(lightningVisualTargets, specialTile, specialTile.GetSpecial());
                 break;
             case TileSpecial.PulseCore:
                 AddSquare(matches, specialTile.X, specialTile.Y, 1); //efected grid 3X3
@@ -276,7 +262,7 @@ public class SpecialResolver
                 break;
             case TileSpecial.PatchBot:
                 if (partnerTile != null)
-                    ApplyPatchBotTeleportHit(matches, specialTile, partnerTile, lightningVisualTargets, lightningLineStrikes);
+                    ApplyPatchBotTeleportHit(matches, specialTile, partnerTile);
                 else
                     ApplyPatchBotSoloHit(matches, specialTile);   // ✅
                 break;
@@ -292,7 +278,7 @@ public class SpecialResolver
             AddCol(matches, origin.X);
     }
 
-    void ApplyPatchBotTeleportHit(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile, HashSet<TileView> lightningVisualTargets = null, List<LightningLineStrike> lightningLineStrikes = null)
+    void ApplyPatchBotTeleportHit(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile)
     {
         if (patchBotTile == null || partnerTile == null) return;
 
@@ -306,7 +292,7 @@ public class SpecialResolver
 
         if (partnerIsSpecial)
         {
-            TriggerPartnerEffectAt(matches, patchBotTile, partnerTile, target.x, target.y, lightningVisualTargets, lightningLineStrikes);
+            TriggerPartnerEffectAt(matches, patchBotTile, partnerTile, target.x, target.y);
             return;
         }
 
@@ -325,7 +311,7 @@ public class SpecialResolver
         patchbotComboService.ResolveTargetImpact(matches, targetX, targetY, hasObstacleAtTarget, MarkAffectedCell, MarkAffectedCell);
     }
 
-    void TriggerPartnerEffectAt(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile, int originX, int originY, HashSet<TileView> lightningVisualTargets = null, List<LightningLineStrike> lightningLineStrikes = null)
+    void TriggerPartnerEffectAt(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile, int originX, int originY)
     {
         if (partnerTile == null) return;
         var special = partnerTile.GetSpecial();
@@ -339,16 +325,6 @@ public class SpecialResolver
                 AddRow(matches, originY);
             else
                 AddCol(matches, originX);
-
-            AddLineStrike(lightningLineStrikes, originX, originY, special);
-
-            if (lightningVisualTargets != null)
-            {
-                if (special == TileSpecial.LineH)
-                    AddRow(lightningVisualTargets, originY);
-                else
-                    AddCol(lightningVisualTargets, originX);
-            }
 
             return;
         }
@@ -538,7 +514,7 @@ public class SpecialResolver
         return board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
     }
 
-    void ApplyComboEffect(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<TileView> queued, HashSet<TileView> processed, TileView a, TileView b, TileSpecial sa, TileSpecial sb, HashSet<TileView> lightningVisualTargets = null, List<LightningLineStrike> lightningLineStrikes = null)
+    void ApplyComboEffect(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<TileView> queued, HashSet<TileView> processed, TileView a, TileView b, TileSpecial sa, TileSpecial sb)
     {
         bool IsLine(TileSpecial s) => s == TileSpecial.LineH || s == TileSpecial.LineV;
         bool IsPulse(TileSpecial s) => s == TileSpecial.PulseCore;
@@ -594,13 +570,6 @@ public class SpecialResolver
         {
             AddRow(matches, a.Y);
             AddCol(matches, a.X);
-            AddLineStrike(lightningLineStrikes, a.X, a.Y, TileSpecial.LineH);
-            AddLineStrike(lightningLineStrikes, a.X, a.Y, TileSpecial.LineV);
-            if (lightningVisualTargets != null)
-            {
-                AddRow(lightningVisualTargets, a.Y);
-                AddCol(lightningVisualTargets, a.X);
-            }
             return;
         }
 
@@ -618,14 +587,6 @@ public class SpecialResolver
                     AddRow(matches, target.y);
                 else
                     AddCol(matches, target.x);
-                AddLineStrike(lightningLineStrikes, target.x, target.y, lineTile.GetSpecial());
-                if (lightningVisualTargets != null)
-                {
-                    if (lineTile.GetSpecial() == TileSpecial.LineH)
-                        AddRow(lightningVisualTargets, target.y);
-                    else
-                        AddCol(lightningVisualTargets, target.x);
-                }
             }
             return;
         }
@@ -639,21 +600,6 @@ public class SpecialResolver
             AddCol(matches, a.X - 1);
             AddCol(matches, a.X);
             AddCol(matches, a.X + 1);
-            AddLineStrike(lightningLineStrikes, a.X, a.Y - 1, TileSpecial.LineH);
-            AddLineStrike(lightningLineStrikes, a.X, a.Y, TileSpecial.LineH);
-            AddLineStrike(lightningLineStrikes, a.X, a.Y + 1, TileSpecial.LineH);
-            AddLineStrike(lightningLineStrikes, a.X - 1, a.Y, TileSpecial.LineV);
-            AddLineStrike(lightningLineStrikes, a.X, a.Y, TileSpecial.LineV);
-            AddLineStrike(lightningLineStrikes, a.X + 1, a.Y, TileSpecial.LineV);
-            if (lightningVisualTargets != null)
-            {
-                AddRow(lightningVisualTargets, a.Y - 1);
-                AddRow(lightningVisualTargets, a.Y);
-                AddRow(lightningVisualTargets, a.Y + 1);
-                AddCol(lightningVisualTargets, a.X - 1);
-                AddCol(lightningVisualTargets, a.X);
-                AddCol(lightningVisualTargets, a.X + 1);
-            }
             return;
         }
 
@@ -716,39 +662,17 @@ public class SpecialResolver
                 AddRow(matches, a.Y - 1);
                 AddRow(matches, a.Y);
                 AddRow(matches, a.Y + 1);
-                AddLineStrike(lightningLineStrikes, a.X, a.Y - 1, TileSpecial.LineH);
-                AddLineStrike(lightningLineStrikes, a.X, a.Y, TileSpecial.LineH);
-                AddLineStrike(lightningLineStrikes, a.X, a.Y + 1, TileSpecial.LineH);
             }
             else
             {
                 AddCol(matches, a.X - 1);
                 AddCol(matches, a.X);
                 AddCol(matches, a.X + 1);
-                AddLineStrike(lightningLineStrikes, a.X - 1, a.Y, TileSpecial.LineV);
-                AddLineStrike(lightningLineStrikes, a.X, a.Y, TileSpecial.LineV);
-                AddLineStrike(lightningLineStrikes, a.X + 1, a.Y, TileSpecial.LineV);
             }
             return;
         }
     }
 
-
-    void AddLineStrike(List<LightningLineStrike> lineStrikes, int x, int y, TileSpecial lineSpecial)
-    {
-        if (lineStrikes == null)
-            return;
-
-        bool isHorizontal = lineSpecial == TileSpecial.LineH;
-        bool isVertical = lineSpecial == TileSpecial.LineV;
-        if (!isHorizontal && !isVertical)
-            return;
-
-        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
-            return;
-
-        lineStrikes.Add(new LightningLineStrike(new Vector2Int(x, y), isHorizontal));
-    }
 
     void AddRow(HashSet<TileView> matches, int y)
     {

@@ -839,7 +839,6 @@ public class BoardController : MonoBehaviour
         }
 
         var matches = new HashSet<TileView>();
-        HashSet<TileView> initialLightningTargets = null;
         var affectedCells = new HashSet<Vector2Int>();
         switch (mode)
         {
@@ -862,20 +861,9 @@ public class BoardController : MonoBehaviour
                 break;
         }
 
-        if ((mode == BoosterMode.Row || mode == BoosterMode.Column) && matches.Count > 0)
-            initialLightningTargets = new HashSet<TileView>(matches);
-
         if (matches.Count > 0 || affectedCells.Count > 0)
         {
-            bool hasLineActivation = false;
-            specialResolver.ExpandSpecialChain(matches, affectedCells, out hasLineActivation, out _);
-
-            var animationMode = (mode == BoosterMode.Row || mode == BoosterMode.Column)
-                ? ClearAnimationMode.LightningStrike
-                : ClearAnimationMode.Default;
-
-            if (hasLineActivation)
-                animationMode = ClearAnimationMode.LightningStrike;
+            specialResolver.ExpandSpecialChain(matches, affectedCells, out _);
 
             // Product kararı: hedef seçerek tetiklenen booster hamlesi (emitter dahil)
             // obstacle hasarı açısından "Booster" sayılır; stageDamageRules'ta BoosterOnly/Any ile yönetilir.
@@ -885,16 +873,7 @@ public class BoardController : MonoBehaviour
             // Komşu over-tile blocker ek hasarı, sütun/satır tetiklemelerinde
             // beklenmeyen fazla stage düşüşüne sebep olabiliyor.
             bool includeAdjacentOverTileBlockerDamage = false;
-            List<LightningLineStrike> lightningLineStrikes = null;
-            if (animationMode == ClearAnimationMode.LightningStrike && targetCell.HasValue)
-            {
-                lightningLineStrikes = new List<LightningLineStrike>(1)
-                {
-                    new LightningLineStrike(targetCell.Value, mode == BoosterMode.Row)
-                };
-            }
-
-            yield return boardAnimator.ClearMatchesAnimated(matches, doShake: true, animationMode: animationMode, affectedCells: affectedCells, obstacleHitContext: obstacleHitContext, includeAdjacentOverTileBlockerDamage: includeAdjacentOverTileBlockerDamage, lightningOriginTile: target, lightningOriginCell: targetCell, lightningVisualTargets: initialLightningTargets, lightningLineStrikes: lightningLineStrikes );
+            yield return boardAnimator.ClearMatchesAnimated(matches, doShake: true, animationMode: ClearAnimationMode.Default, affectedCells: affectedCells, obstacleHitContext: obstacleHitContext, includeAdjacentOverTileBlockerDamage: includeAdjacentOverTileBlockerDamage);
             yield return boardAnimator.CollapseAndSpawnAnimated();
             yield return ResolveEmptyPlayableCellsWithoutMatch();
             yield return ResolveBoard();
