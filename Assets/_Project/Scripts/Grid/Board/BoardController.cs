@@ -1628,6 +1628,19 @@ public class BoardController : MonoBehaviour
         return IsMaskHoleCell(x, y) && !IsObstacleBlockedCell(x, y);
     }
 
+    /// <summary>
+    /// Hücre hakkında tek noktadan tüm runtime bilgiyi döner.
+    /// - isMaskHole: LevelData'da hole olarak işaretli mi?
+    /// - isObstacleBlocked: Obstacle bu hücreyi kilitliyor mu?
+    /// - isHole: Runtime board açısından taş barındıramayan hücre (mask hole veya blocked).
+    /// - isPlayableCell: Oyunun aktif parçası mı? (inBounds ve mask hole değil)
+    /// - isActiveButEmpty: Aktif/playable ama o anda üzerinde tile yok.
+    /// </summary>
+    public bool TryGetCellState(int x, int y, out BoardCellStateSnapshot state)
+    {
+        return BoardCellStateQuery.TryGet(this, x, y, out state);
+    }
+
     private TileType GetRandomType()
     {
         return randomPool[UnityEngine.Random.Range(0, randomPool.Length)];
