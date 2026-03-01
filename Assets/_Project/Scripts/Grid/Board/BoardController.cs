@@ -885,7 +885,16 @@ public class BoardController : MonoBehaviour
             // Komşu over-tile blocker ek hasarı, sütun/satır tetiklemelerinde
             // beklenmeyen fazla stage düşüşüne sebep olabiliyor.
             bool includeAdjacentOverTileBlockerDamage = false;
-            yield return boardAnimator.ClearMatchesAnimated(matches, doShake: true, animationMode: animationMode, affectedCells: affectedCells, obstacleHitContext: obstacleHitContext, includeAdjacentOverTileBlockerDamage: includeAdjacentOverTileBlockerDamage, lightningOriginTile: target, lightningOriginCell: targetCell, lightningVisualTargets: initialLightningTargets );
+            List<LightningLineStrike> lightningLineStrikes = null;
+            if (animationMode == ClearAnimationMode.LightningStrike && targetCell.HasValue)
+            {
+                lightningLineStrikes = new List<LightningLineStrike>(1)
+                {
+                    new LightningLineStrike(targetCell.Value, mode == BoosterMode.Row)
+                };
+            }
+
+            yield return boardAnimator.ClearMatchesAnimated(matches, doShake: true, animationMode: animationMode, affectedCells: affectedCells, obstacleHitContext: obstacleHitContext, includeAdjacentOverTileBlockerDamage: includeAdjacentOverTileBlockerDamage, lightningOriginTile: target, lightningOriginCell: targetCell, lightningVisualTargets: initialLightningTargets, lightningLineStrikes: lightningLineStrikes );
             yield return boardAnimator.CollapseAndSpawnAnimated();
             yield return ResolveEmptyPlayableCellsWithoutMatch();
             yield return ResolveBoard();
@@ -980,6 +989,8 @@ public class BoardController : MonoBehaviour
                 lightningTargetPositionsBuffer.Add(p);
         }
 
+        TryCondenseLightningTargetsToSingleLine(originWorldPos, lightningTargetPositionsBuffer);
+
     // Eğer hepsini filtrelediysek (ör. tek hedef origin’in kendisiydi), en az 1 hedef bırak
     if (lightningTargetPositionsBuffer.Count == 0)
     {
@@ -1003,9 +1014,105 @@ public class BoardController : MonoBehaviour
         Debug.LogWarning($"[Lightning][BoardController] Spawner playbackDuration was <= 0. Using fallback lead time {playbackDuration:0.000}s.");
     }
 
-    lightningSpawner.PlayEmitterLightning(originWorldPos, lightningTargetPositionsBuffer);
-    return playbackDuration;
-}
+        lightningSpawner.PlayEmitterLightning(originWorldPos, lightningTargetPositionsBuffer);
+        return playbackDuration;
+    }
+
+    private void TryCondenseLightningTargetsToSingleLine(Vector3 originWorldPos, List<Vector3> targets)
+    {
+        if (targets == null || targets.Count < 2)
+            return;
+
+        float tolerance = Mathf.Max(0.01f, tileSize * 0.18f);
+
+        float minX = float.MaxValue;
+        float maxX = float.MinValue;
+        float minY = float.MaxValue;
+        float maxY = float.MinValue;
+
+        for (int i = 0; i < targets.Count; i++)
+        {
+            var p = targets[i];
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+        }
+
+        bool looksLikeRow = (maxY - minY) <= tolerance;
+        bool looksLikeCol = (maxX - minX) <= tolerance;
+        if (!looksLikeRow && !looksLikeCol)
+            return;
+
+        targets.Clear();
+        if (looksLikeRow)
+        {
+            targets.Add(new Vector3(minX, originWorldPos.y, originWorldPos.z));
+            targets.Add(new Vector3(maxX, originWorldPos.y, originWorldPos.z));
+            return;
+        }
+
+        targets.Add(new Vector3(originWorldPos.x, minY, originWorldPos.z));
+        targets.Add(new Vector3(originWorldPos.x, maxY, originWorldPos.z));
+    }
+
+
+    internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineStrikes)
+    {
+        TryResolveLightningSpawner();
+
+        if (lightningSpawner == null || lineStrikes == null || lineStrikes.Count == 0)
+            return 0f;
+
+        float maxDuration = 0f;
+        var targets = new List<Vector3>(2);
+
+        for (int i = 0; i < lineStrikes.Count; i++)
+        {
+            var strike = lineStrikes[i];
+            int x = strike.originCell.x;
+            int y = strike.originCell.y;
+            if (x < 0 || x >= width || y < 0 || y >= height)
+                continue;
+
+            var origin = GetCellWorldCenterPosition(x, y);
+
+            Vector3 lineStart;
+            Vector3 lineEnd;
+            if (strike.isHorizontal)
+            {
+                lineStart = GetCellWorldCenterPosition(0, y);
+                lineEnd = GetCellWorldCenterPosition(width - 1, y);
+            }
+            else
+            {
+                lineStart = GetCellWorldCenterPosition(x, 0);
+                lineEnd = GetCellWorldCenterPosition(x, height - 1);
+            }
+
+            lightningSpawner.PlayLineSweep(lineStart, lineEnd);
+
+            targets.Clear();
+            targets.Add(lineStart);
+            targets.Add(lineEnd);
+            lightningSpawner.PlayEmitterLightning(origin, targets);
+
+            float duration = Mathf.Max(
+                lightningSpawner.GetPlaybackDuration(targets.Count),
+                lightningSpawner.GetPlaybackDuration(1));
+            if (duration > maxDuration)
+                maxDuration = duration;
+        }
+
+        return maxDuration;
+    }
+
+
+    private Vector3 GetCellWorldCenterPosition(int x, int y)
+    {
+        var basePos = GetCellWorldPosition(x, y);
+        return basePos + new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f);
+    }
 
     internal float GetLightningStrikeStepDelay()
     {
