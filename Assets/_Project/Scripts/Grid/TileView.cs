@@ -68,6 +68,13 @@ public class TileView : MonoBehaviour,
             canvasGroup.alpha = 1f;
     }
 
+
+    public bool TryGetCellState(out BoardCellStateSnapshot state)
+    {
+        state = default;
+        return board != null && board.TryGetCellState(X, Y, out state);
+    }
+
     public void SetCoords(int x, int y)
     {
         X = x; Y = y;
