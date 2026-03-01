@@ -1076,30 +1076,21 @@ public class BoardController : MonoBehaviour
                 continue;
 
             var origin = GetCellWorldCenterPosition(x, y);
+            targets.Clear();
 
-            Vector3 lineStart;
-            Vector3 lineEnd;
             if (strike.isHorizontal)
             {
-                lineStart = GetCellWorldCenterPosition(0, y);
-                lineEnd = GetCellWorldCenterPosition(width - 1, y);
+                targets.Add(GetCellWorldCenterPosition(0, y));
+                targets.Add(GetCellWorldCenterPosition(width - 1, y));
             }
             else
             {
-                lineStart = GetCellWorldCenterPosition(x, 0);
-                lineEnd = GetCellWorldCenterPosition(x, height - 1);
+                targets.Add(GetCellWorldCenterPosition(x, 0));
+                targets.Add(GetCellWorldCenterPosition(x, height - 1));
             }
 
-            lightningSpawner.PlayLineSweep(lineStart, lineEnd);
-
-            targets.Clear();
-            targets.Add(lineStart);
-            targets.Add(lineEnd);
             lightningSpawner.PlayEmitterLightning(origin, targets);
-
-            float duration = Mathf.Max(
-                lightningSpawner.GetPlaybackDuration(targets.Count),
-                lightningSpawner.GetPlaybackDuration(1));
+            float duration = lightningSpawner.GetPlaybackDuration(targets.Count);
             if (duration > maxDuration)
                 maxDuration = duration;
         }
