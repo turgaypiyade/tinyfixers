@@ -87,7 +87,7 @@ public class PatchbotComboService
                 activeTileGoals.Add(goal.tileType);
         }
 
-        bool IsExcluded(TileView tile)
+        bool IsExcludedTile(TileView tile)
         {
             if (tile == null) return true;
             if (excluded != null && excluded.Contains(tile)) return true;
@@ -121,24 +121,28 @@ public class PatchbotComboService
                 if (board.Holes[x, y] && !HasObstacleAt(x, y)) continue;
 
                 var tile = board.Tiles[x, y];
-                if (IsExcluded(tile)) continue;
 
                 bool hasObstacle = board.ObstacleStateService != null &&
                                    board.ObstacleStateService.GetObstacleIdAt(x, y) != ObstacleId.None;
 
                 if (hasObstacle)
                 {
+                    // Obstacle layer is the source-of-truth for this cell.
+                    // Tile exclusion and tile-goal checks are only relevant when there is no obstacle.
                     var obstacleId = board.ObstacleStateService.GetObstacleIdAt(x, y);
                     bool isObstacleGoalCell = activeObstacleGoals.Contains(obstacleId);
                     if (isObstacleGoalCell)
                         obstacleGoalCells.Add((x, y, tile));
-                    else if (IsGoalTile(tile))
-                        tileGoalCells.Add((x, y, tile));
                     else
                         otherObstacleCells.Add((x, y, tile));
                 }
-                else if (tile != null)
-                    normalCells.Add((x, y, tile));
+                else if (tile != null && !IsExcludedTile(tile))
+                {
+                    if (IsGoalTile(tile))
+                        tileGoalCells.Add((x, y, tile));
+                    else
+                        normalCells.Add((x, y, tile));
+                }
             }
 
         if (obstacleGoalCells.Count > 0)
