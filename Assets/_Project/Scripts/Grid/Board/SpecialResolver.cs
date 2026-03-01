@@ -556,8 +556,10 @@ public class SpecialResolver
             if (otherTile == null || overrideTile == null)
                 return;
 
-            TileType baseType = overrideTile.GetOverrideBaseType(out var storedType) ? storedType : overrideTile.GetTileType();
             TileSpecial targetSpecial = otherTile.GetSpecial();
+            TileType baseType = targetSpecial == TileSpecial.None
+                ? otherTile.GetTileType()
+                : (overrideTile.GetOverrideBaseType(out var storedType) ? storedType : overrideTile.GetTileType());
 
             for (int x = 0; x < board.Width; x++)
                 for (int y = 0; y < board.Height; y++)
