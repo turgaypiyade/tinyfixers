@@ -45,6 +45,31 @@ public class LightningSpawner : MonoBehaviour
         StartCoroutine(CoPlay(emitterWorldPos, targetsCopy));
     }
 
+
+    public void PlayLineSweep(Vector3 lineStartWorldPos, Vector3 lineEndWorldPos)
+    {
+        StartCoroutine(CoPlayLineSweep(lineStartWorldPos, lineEndWorldPos));
+    }
+
+    private IEnumerator CoPlayLineSweep(Vector3 lineStartWorldPos, Vector3 lineEndWorldPos)
+    {
+        var beam = Instantiate(lightningPrefab, vfxRoot);
+        beam.transform.localPosition = Vector3.zero;
+        beam.transform.localRotation = Quaternion.identity;
+
+        var s = vfxRoot.lossyScale;
+        beam.transform.localScale = new Vector3(
+            1f / Mathf.Max(0.0001f, s.x),
+            1f / Mathf.Max(0.0001f, s.y),
+            1f / Mathf.Max(0.0001f, s.z)
+        );
+
+        beam.GetComponent<LineRenderer>().useWorldSpace = true;
+        beam.Init(lineStartWorldPos, lineEndWorldPos);
+
+        yield return new WaitForSeconds(destroyDelay);
+    }
+
     private IEnumerator CoPlay(Vector3 emitterWorldPos, List<Vector3> targets)
     {
         for (int i = 0; i < targets.Count; i++)
