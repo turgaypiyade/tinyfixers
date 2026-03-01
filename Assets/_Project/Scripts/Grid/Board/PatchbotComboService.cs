@@ -87,7 +87,7 @@ public class PatchbotComboService
                 activeTileGoals.Add(goal.tileType);
         }
 
-        bool IsExcluded(TileView tile)
+        bool IsExcludedTile(TileView tile)
         {
             if (tile == null) return true;
             if (excluded != null && excluded.Contains(tile)) return true;
@@ -121,7 +121,6 @@ public class PatchbotComboService
                 if (board.Holes[x, y] && !HasObstacleAt(x, y)) continue;
 
                 var tile = board.Tiles[x, y];
-                if (IsExcluded(tile)) continue;
 
                 bool hasObstacle = board.ObstacleStateService != null &&
                                    board.ObstacleStateService.GetObstacleIdAt(x, y) != ObstacleId.None;
@@ -129,6 +128,9 @@ public class PatchbotComboService
                 if (hasObstacle)
                 {
                     var obstacleId = board.ObstacleStateService.GetObstacleIdAt(x, y);
+                    bool isExcludedGoalObstacle = tile != null && IsExcludedTile(tile);
+                    if (isExcludedGoalObstacle) continue;
+
                     bool isObstacleGoalCell = activeObstacleGoals.Contains(obstacleId);
                     if (isObstacleGoalCell)
                         obstacleGoalCells.Add((x, y, tile));
@@ -137,7 +139,7 @@ public class PatchbotComboService
                     else
                         otherObstacleCells.Add((x, y, tile));
                 }
-                else if (tile != null)
+                else if (tile != null && !IsExcludedTile(tile))
                     normalCells.Add((x, y, tile));
             }
 
