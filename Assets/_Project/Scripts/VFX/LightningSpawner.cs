@@ -45,8 +45,50 @@ public class LightningSpawner : MonoBehaviour
         StartCoroutine(CoPlay(emitterWorldPos, targetsCopy));
     }
 
+    public void PlayLineSweepSteps(List<Vector3> stepWorldPositions)
+    {
+        if (stepWorldPositions == null || stepWorldPositions.Count == 0)
+            return;
 
-    public void PlayLineSweep(Vector3 lineStartWorldPos, Vector3 lineEndWorldPos)
+        StartCoroutine(CoPlayLineSweepSteps(stepWorldPositions));
+    }
+
+    private IEnumerator CoPlayLineSweepSteps(List<Vector3> steps)
+    {
+        // Hücre hücre “kısa beam” veya “hit flash” oynatacağız.
+        // En basit: emitterWorldPos gibi bir başlangıç istemiyorsan,
+        // her step’te küçük bir beam segment (prev→current) çiz.
+
+        Vector3 prev = steps[0];
+
+        for (int i = 1; i < steps.Count; i++)
+        {
+            Vector3 cur = steps[i];
+
+            var beam = Instantiate(lightningPrefab, vfxRoot);
+            beam.transform.localPosition = Vector3.zero;
+            beam.transform.localRotation = Quaternion.identity;
+
+            var s = vfxRoot.lossyScale;
+            beam.transform.localScale = new Vector3(
+                1f / Mathf.Max(0.0001f, s.x),
+                1f / Mathf.Max(0.0001f, s.y),
+                1f / Mathf.Max(0.0001f, s.z)
+            );
+
+            beam.GetComponent<LineRenderer>().useWorldSpace = true;
+            beam.Init(prev, cur);
+
+            prev = cur;
+
+            float delay = GetStepDelay();      // chainStepDelay kullan
+            if (delay > 0f) yield return new WaitForSeconds(delay);
+            else yield return null;
+        }
+
+        yield return new WaitForSeconds(destroyDelay);
+    }
+     public void PlayLineSweep(Vector3 lineStartWorldPos, Vector3 lineEndWorldPos)
     {
         StartCoroutine(CoPlayLineSweep(lineStartWorldPos, lineEndWorldPos));
     }
@@ -96,7 +138,7 @@ public class LightningSpawner : MonoBehaviour
             float delay = GetStepDelay();
             if (delay > 0f)
                 yield return new WaitForSeconds(delay);
-        }
+        } 
 
         yield return new WaitForSeconds(destroyDelay);
     }

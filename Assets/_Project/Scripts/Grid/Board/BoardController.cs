@@ -1057,46 +1057,82 @@ public class BoardController : MonoBehaviour
     }
 
 
-    internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineStrikes)
+
+internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineStrikes)
+{
+   
+    TryResolveLightningSpawner();
+
+    if (lightningSpawner == null || lineStrikes == null || lineStrikes.Count == 0)
+        return 0f;
+
+    float maxDuration = 0f;
+
+    for (int i = 0; i < lineStrikes.Count; i++)
     {
-        TryResolveLightningSpawner();
+        var strike = lineStrikes[i];
+        int x = strike.originCell.x;
+        int y = strike.originCell.y;
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            continue;
 
-        if (lightningSpawner == null || lineStrikes == null || lineStrikes.Count == 0)
-            return 0f;
-
-        float maxDuration = 0f;
-        var targets = new List<Vector3>(2);
-
-        for (int i = 0; i < lineStrikes.Count; i++)
+        // Instead of pre-targeting endpoints (which can keep firing after tiles are already cleared),
+        // play a deterministic cell-by-cell sweep. This keeps visuals synced with the chain resolution,
+        // and continues even if another emitter already cleared that row/column.
+        if (strike.isHorizontal)
         {
-            var strike = lineStrikes[i];
-            int x = strike.originCell.x;
-            int y = strike.originCell.y;
-            if (x < 0 || x >= width || y < 0 || y >= height)
-                continue;
-
-            var origin = GetCellWorldCenterPosition(x, y);
-            targets.Clear();
-
-            if (strike.isHorizontal)
-            {
-                targets.Add(GetCellWorldCenterPosition(0, y));
-                targets.Add(GetCellWorldCenterPosition(width - 1, y));
-            }
-            else
-            {
-                targets.Add(GetCellWorldCenterPosition(x, 0));
-                targets.Add(GetCellWorldCenterPosition(x, height - 1));
-            }
-
-            lightningSpawner.PlayEmitterLightning(origin, targets);
-            float duration = lightningSpawner.GetPlaybackDuration(targets.Count);
-            if (duration > maxDuration)
-                maxDuration = duration;
+            float dur = PlayTwoWaySweepHorizontal(x, y);
+            if (dur > maxDuration) maxDuration = dur;
         }
-
-        return maxDuration;
+        else
+        {
+            float dur = PlayTwoWaySweepVertical(x, y);
+            if (dur > maxDuration) maxDuration = dur;
+        }
     }
+
+    return maxDuration;
+}
+
+private float PlayTwoWaySweepHorizontal(int originX, int y)
+{
+    // Left sweep: origin -> 0
+    var left = new List<Vector3>(originX + 1);
+    for (int x = originX; x >= 0; x--)
+        left.Add(GetCellWorldCenterPosition(x, y));
+
+    // Right sweep: origin -> width-1
+    var right = new List<Vector3>(width - originX);
+    for (int x = originX; x < width; x++)
+        right.Add(GetCellWorldCenterPosition(x, y));
+
+    lightningSpawner.PlayLineSweepSteps(left);
+    lightningSpawner.PlayLineSweepSteps(right);
+
+    float dl = lightningSpawner.GetPlaybackDuration(left.Count);
+    float dr = lightningSpawner.GetPlaybackDuration(right.Count);
+    return Mathf.Max(dl, dr);
+}
+
+private float PlayTwoWaySweepVertical(int x, int originY)
+{
+    // Down sweep: origin -> 0
+    var down = new List<Vector3>(originY + 1);
+    for (int y = originY; y >= 0; y--)
+        down.Add(GetCellWorldCenterPosition(x, y));
+
+    // Up sweep: origin -> height-1
+    var up = new List<Vector3>(height - originY);
+    for (int y = originY; y < height; y++)
+        up.Add(GetCellWorldCenterPosition(x, y));
+
+    lightningSpawner.PlayLineSweepSteps(down);
+    lightningSpawner.PlayLineSweepSteps(up);
+
+    float dd = lightningSpawner.GetPlaybackDuration(down.Count);
+    float du = lightningSpawner.GetPlaybackDuration(up.Count);
+    return Mathf.Max(dd, du);
+}
 
 
     private Vector3 GetCellWorldCenterPosition(int x, int y)

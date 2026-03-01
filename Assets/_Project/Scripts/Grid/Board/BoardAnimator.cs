@@ -155,6 +155,7 @@ public class BoardAnimator
 
         if (animationMode == ClearAnimationMode.LightningStrike)
         {
+            Debug.Log($"[Lightning] mode={animationMode} lineStrikes={(lightningLineStrikes==null?-1:lightningLineStrikes.Count)}");
             SortTilesForLightning(list, lightningOriginTile, lightningOriginCell);
         }
 
