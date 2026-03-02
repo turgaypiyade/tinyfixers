@@ -27,7 +27,22 @@ public class SpecialResolver
         patchbotComboService = new PatchbotComboService(board);
     }
 
-    public TileView TryCreateSpecial(HashSet<TileView> matches)
+    
+    private static void HideTileVisualForCombo(TileView t)
+    {
+        if (t == null) return;
+
+        // Hide only visually so the clear pipeline can still reference transforms for VFX.
+        // CanvasGroup should exist on Tile root; if not, add one in prefab.
+        if (!t.TryGetComponent<CanvasGroup>(out var cg))
+            cg = t.gameObject.AddComponent<CanvasGroup>();
+
+        cg.alpha = 0f;
+        cg.blocksRaycasts = false;
+        cg.interactable = false;
+    }
+
+public TileView TryCreateSpecial(HashSet<TileView> matches)
     {
         // 1) Eğer bu tur kullanıcı swap’inin ilk resolve turuysa: eski davranış (A/B'den winner seç)
         if (board.LastSwapUserMove && board.LastSwapA != null && board.LastSwapB != null)
@@ -628,7 +643,13 @@ public class SpecialResolver
             bool aHasBase = a != null && a.GetOverrideBaseType(out _);
             bool bHasBase = b != null && b.GetOverrideBaseType(out _);
             if (aHasBase && bHasBase)
+            {
+                // Hide the two source tiles immediately so the combo runner is the only visible representation.
+                HideTileVisualForCombo(a);
+                HideTileVisualForCombo(b);
+
                 pendingOverrideOverrideClearDelay = Mathf.Max(pendingOverrideOverrideClearDelay, board.PlaySystemOverrideComboVfxAndGetDuration());
+            }
             AddAllTiles(matches);
             return;
         }
@@ -655,7 +676,7 @@ public class SpecialResolver
             // Single-shot fan-out lightning from the override tile to all affected targets
             overrideFanoutOrigin = overrideTile;
             overrideForceDefaultClearAnim = true;     // avoid sequential LightningStrike mode
-            overrideSuppressPerTileClearVfx = true;
+            overrideSuppressPerTileClearVfx = false;
 
             // Build conversion/clear list (only normal tiles of the base type)
             for (int x = 0; x < board.Width; x++)

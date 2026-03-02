@@ -144,33 +144,19 @@ public class TileView : MonoBehaviour,
         if (!enableSettle)
             yield break;
 
+        // Impact squash: scale only the icon (not the whole tile) to avoid visible jitter when many tiles land together.
+        Transform squashTarget = (iconImage != null) ? iconImage.transform : transform;
 
-        // Drag/clear akışlarıyla çakışmaması için settle bitiminde net olarak resetlenir.
-        transform.localScale = Vector3.one;
+        // Keep it extremely subtle by default.
+        float dur = Mathf.Clamp(settleDuration, 0.02f, 0.08f);
+        float str = Mathf.Clamp(settleStrength, 0f, 0.06f);
 
-        float clampedStrength = Mathf.Clamp(settleStrength, 0f, 0.15f);
-        Vector3 settleScale = new Vector3(1f + clampedStrength, 1f - clampedStrength, 1f);
-        float settleHalf = Mathf.Max(0.0001f, settleDuration * 0.5f);
+        // Ensure we reset after any drag/clear flows.
+        squashTarget.localScale = Vector3.one;
 
-        t = 0f;
-        while (t < settleHalf)
-        {
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / settleHalf);
-            transform.localScale = Vector3.Lerp(Vector3.one, settleScale, k);
-            yield return null;
-        }
+        yield return StartCoroutine(PlayImpactSquash(squashTarget, dur, str));
 
-        t = 0f;
-        while (t < settleHalf)
-        {
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / settleHalf);
-            transform.localScale = Vector3.Lerp(settleScale, Vector3.one, k);
-            yield return null;
-        }
-
-        transform.localScale = Vector3.one;
+        // Final snap safety.
         SnapToGrid(tileSize);
 
     }
@@ -501,7 +487,43 @@ public class TileView : MonoBehaviour,
         }
     }
 
+    private IEnumerator PlayImpactSquash(Transform target, float duration, float strength)
+    {
+        if (target == null) yield break;
 
+        // Çok küçük tutuyoruz: ağır çekimde görünür, normalde göze batmaz.
+        float s = Mathf.Clamp(strength, 0.0f, 0.06f);
+        float dur = Mathf.Clamp(duration, 0.02f, 0.08f);
+
+        Vector3 baseScale = Vector3.one;
+
+        // Squash: Y küçülür, X büyür (ağır çekimde gördüğün “ezilme”)
+        Vector3 squashed = new Vector3(1f + s, 1f - s, 1f);
+
+        float half = dur * 0.5f;
+
+        // Down (ezilme)
+        float t = 0f;
+        while (t < half)
+        {
+            t += Time.deltaTime;
+            float u = Mathf.Clamp01(t / half);
+            target.localScale = Vector3.Lerp(baseScale, squashed, u);
+            yield return null;
+        }
+
+        // Up (geri dönüş)
+        t = 0f;
+        while (t < half)
+        {
+            t += Time.deltaTime;
+            float u = Mathf.Clamp01(t / half);
+            target.localScale = Vector3.Lerp(squashed, baseScale, u);
+            yield return null;
+        }
+
+        target.localScale = baseScale;
+    }   
     public void SetOverrideBaseType(TileType type) => model.SetOverrideBaseType(type);
 
     public bool GetOverrideBaseType(out TileType type) => model.TryGetOverrideBaseType(out type);

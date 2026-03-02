@@ -561,16 +561,23 @@ public class BoardAnimator
         board.RefreshAllTileObstacleVisuals();
     }
 
+    
     public IEnumerator CollapseAndSpawnAnimated()
     {
         var moves = new List<IEnumerator>();
         var moveDelays = new List<float>();
 
+        // We want a smooth "waterfall" look:
+        // - No column/cascade staggering delays
+        // - Constant fall speed (duration derived from distance for BOTH existing + spawned tiles)
+        // - Landing settle/bounce only for ONE tile per column (the lowest landing tile),
+        //   to avoid screen-wide jitter when many tiles land at once.
         for (int x = 0; x < board.Width; x++)
         {
-            float baseDelay = x * board.FallColumnStep;
-            int placedCount = 0;
-            int spawnIndexInColumn = 0;
+            // Collect all movements for this column first, so we can pick a single "settle" tile.
+            var colTiles = new List<TileView>(board.Height);
+            var colTargetY = new List<int>(board.Height);
+            var colDuration = new List<float>(board.Height);
 
             int segmentTop = board.Height - 1;
             while (segmentTop >= 0)
@@ -600,31 +607,31 @@ public class BoardAnimator
                         existing.Add(board.Tiles[x, y]);
                 }
 
+                // Clear segment tiles so we can re-place them into slots (top -> bottom).
                 for (int i = 0; i < slots.Count; i++)
                     board.Tiles[x, slots[i]] = null;
 
+                // Re-place existing tiles into the highest available slots (top -> bottom),
+                // and enqueue a constant-speed move (duration from distance).
                 for (int i = 0; i < existing.Count && i < slots.Count; i++)
                 {
                     int targetY = slots[i];
                     var tile = existing[i];
 
+                    int fromY = tile.Y;
+
                     board.Tiles[x, targetY] = tile;
                     tile.SetCoords(x, targetY);
 
-                    float startDelay = baseDelay + placedCount * board.FallCascadeStep;
-                    placedCount++;
+                    int dist = Mathf.Abs(targetY - fromY);
+                    float duration = board.GetFallDurationForDistance(dist);
 
-                    moves.Add(tile.MoveToGrid(
-                        board.TileSize,
-                        board.FallDurationWithMultiplier,
-                        board.FallMoveCurve,
-                        board.EnableFallSettle,
-                        board.FallSettleDuration,
-                        board.FallSettleStrength
-                    ));
-                    moveDelays.Add(startDelay);
+                    colTiles.Add(tile);
+                    colTargetY.Add(targetY);
+                    colDuration.Add(duration);
                 }
 
+                // Spawn new tiles only if this segment is connected to the spawn edge.
                 if (touchesSpawnEdge)
                 {
                     int nextSpawnY = topY + board.SpawnStartOffsetY;
@@ -645,10 +652,15 @@ public class BoardAnimator
 
                         view.Init(board, x, y);
 
-                        view.SetCoords(x, nextSpawnY);
+                        // Place above the board (spawnFromY), then animate down into (x,y).
+                        int spawnFromY = nextSpawnY;
+                        view.SetCoords(x, spawnFromY);
                         view.SnapToGrid(board.TileSize);
+
+                        // Reserve the next spawn slot above.
                         nextSpawnY--;
 
+                        // Now set the logical destination coords.
                         view.SetCoords(x, y);
                         board.Tiles[x, y] = view;
 
@@ -656,25 +668,47 @@ public class BoardAnimator
                         view.SetSpecial(TileSpecial.None);
                         board.RefreshTileObstacleVisual(view);
 
-                        int dist = Mathf.Abs(y - nextSpawnY);
+                        int dist = Mathf.Abs(y - spawnFromY);
                         float duration = board.GetFallDurationForDistance(dist);
 
-                        float startDelay = baseDelay + (placedCount + spawnIndexInColumn) * board.FallCascadeStep;
-                        spawnIndexInColumn++;
-
-                        moves.Add(view.MoveToGrid(
-                            board.TileSize,
-                            duration,
-                            board.FallMoveCurve,
-                            board.ShouldEnableFallSettleThisPass(),
-                            board.FallSettleDuration,
-                            board.FallSettleStrength
-                        ));
-                        moveDelays.Add(startDelay);
+                        colTiles.Add(view);
+                        colTargetY.Add(y);
+                        colDuration.Add(duration);
                     }
                 }
 
                 segmentTop = segmentBottom - 1;
+            }
+
+            // Pick ONE tile in this column to apply settle: the one landing at the lowest Y.
+            int settleIndex = -1;
+            if (board.EnableFallSettle && colTiles.Count > 0)
+            {
+                int bestY = int.MaxValue;
+                for (int i = 0; i < colTiles.Count; i++)
+                {
+                    if (colTargetY[i] < bestY)
+                    {
+                        bestY = colTargetY[i];
+                        settleIndex = i;
+                    }
+                }
+            }
+
+            // Enqueue moves (no delays).
+            for (int i = 0; i < colTiles.Count; i++)
+            {
+                bool doSettle = (i == settleIndex);
+
+                moves.Add(colTiles[i].MoveToGrid(
+                    board.TileSize,
+                    colDuration[i],
+                    board.FallMoveCurve,
+                    doSettle,
+                    board.FallSettleDuration,
+                    board.FallSettleStrength
+                ));
+                moveDelays.Add(0f);
             }
         }
 
@@ -683,6 +717,7 @@ public class BoardAnimator
 
         board.RefreshAllTileObstacleVisuals();
     }
+
 
     internal IEnumerator SlideFillAnimated()
     {
