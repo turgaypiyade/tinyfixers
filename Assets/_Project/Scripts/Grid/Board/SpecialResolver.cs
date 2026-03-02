@@ -339,7 +339,10 @@ public class SpecialResolver
                 break;
             case TileSpecial.SystemOverride:
                 {
-                    var type = partnerTile != null ? partnerTile.GetTileType() : specialTile.GetTileType();
+                    TileType type;
+                    if (partnerTile != null) type = partnerTile.GetTileType();
+                    else if (specialTile.GetOverrideBaseType(out var storedType)) type = storedType;
+                    else type = specialTile.GetTileType();
                     // Single-shot fan-out lightning: mark all targets first, then clear together.
                     overrideFanoutOrigin = specialTile;
                     CollectAllOfType(overrideFanoutTargets, type, excludeSpecials: false);
