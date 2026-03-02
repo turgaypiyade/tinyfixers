@@ -1849,51 +1849,237 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
     }
 
 
-// --- LineTravel multi-instance helpers (needed because LineTravelSplitSwapTestUI.Play uses StopAllCoroutines) ---
-private void PlayLineTravelInstance(LineTravelSplitSwapTestUI.LineAxis axis, Vector2 originAnchored, int steps, float cellSizePx, float delaySeconds)
-{
-    if (lineTravelPlayer == null)
-        return;
-
-    Transform parentTr = lineTravelSpawnParent != null
-        ? lineTravelSpawnParent
-        : (lineTravelPlayer.transform.parent != null ? lineTravelPlayer.transform.parent : transform);
-
-    var go = Instantiate(lineTravelPlayer.gameObject, parentTr);
-    go.SetActive(true);
-
-    var inst = go.GetComponent<LineTravelSplitSwapTestUI>();
-    if (inst == null)
+    public IEnumerator PlayPulseEmitterComboAndClear(int cx, int cy)
     {
-        Destroy(go);
-        return;
+        if (lineTravelPlayer == null) yield break;
+
+        // LineTravel'ın kullandığı space
+        RectTransform space = lineTravelPlayer.afterImageParent != null
+            ? lineTravelPlayer.afterImageParent
+            : (lineTravelSpawnParent as RectTransform);
+
+        if (space == null) yield break;
+
+        var targets = BuildPulseEmitterTargets(cx, cy);
+        var cleared = new HashSet<Vector2Int>();
+
+        void OnStep(Vector2Int cell)
+        {
+            if (!targets.Contains(cell)) return;
+            if (!cleared.Add(cell)) return;
+
+            ClearCellImmediate(cell);
+        }
+
+        float maxEnd = 0f;
+
+        // 3 yatay: y=cy-1,cy,cy+1
+        for (int yy = cy - 1; yy <= cy + 1; yy++)
+        {
+            if (yy < 0 || yy >= height) continue;
+
+            var originTile = tiles[cx, yy];
+            if (originTile == null) continue;
+
+            var rt = originTile.GetComponent<RectTransform>();
+            Vector3 worldCenter = rt.TransformPoint(new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
+            Vector2 originAnch = WorldToAnchoredIn(space, worldCenter);
+
+            int steps = Mathf.Max(cx, (width - 1 - cx));
+            float end = PlayLineTravelInstanceWithStep(
+                LineTravelSplitSwapTestUI.LineAxis.Horizontal,
+                originAnch,
+                new Vector2Int(cx, yy),
+                steps,
+                tileSize,
+                0f,
+                OnStep);
+
+            if (end > maxEnd) maxEnd = end;
+        }
+
+        // 3 dikey: x=cx-1,cx,cx+1
+        for (int xx = cx - 1; xx <= cx + 1; xx++)
+        {
+            if (xx < 0 || xx >= width) continue;
+
+            var originTile = tiles[xx, cy];
+            if (originTile == null) continue;
+
+            var rt = originTile.GetComponent<RectTransform>();
+            Vector3 worldCenter = rt.TransformPoint(new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
+            Vector2 originAnch = WorldToAnchoredIn(space, worldCenter);
+
+            int steps = Mathf.Max(cy, (height - 1 - cy));
+            float end = PlayLineTravelInstanceWithStep(
+                LineTravelSplitSwapTestUI.LineAxis.Vertical,
+                originAnch,
+                new Vector2Int(xx, cy),
+                steps,
+                tileSize,
+                0f,
+                OnStep);
+
+            if (end > maxEnd) maxEnd = end;
+        }
+
+        // süre kadar bekle
+        if (maxEnd > 0f)
+            yield return new WaitForSecondsRealtime(maxEnd);
+
+        // garanti: kaçan hücre kaldıysa temizle
+        foreach (var c in targets)
+            if (cleared.Add(c))
+                ClearCellImmediate(c);
+
+        // sonra toparla
+        yield return boardAnimator.CollapseAndSpawnAnimated();
+        yield return ResolveEmptyPlayableCellsWithoutMatch();
+        yield return ResolveBoard();
     }
 
-    // Play after optional delay (unscaled so it works during timeScale changes)
-    StartCoroutine(PlayLineTravelRoutine(inst, axis, originAnchored, steps, cellSizePx, delaySeconds));
+    // --- LineTravel multi-instance helpers (needed because LineTravelSplitSwapTestUI.Play uses StopAllCoroutines) ---
+    private void PlayLineTravelInstance(LineTravelSplitSwapTestUI.LineAxis axis, Vector2 originAnchored, int steps, float cellSizePx, float delaySeconds)
+    {
+        if (lineTravelPlayer == null)
+            return;
 
-    // Cleanup after completion (unscaled)
-    float totalLife = Mathf.Max(0f, delaySeconds) + lineTravelPlayer.EstimateDuration(steps) + 0.10f;
-    StartCoroutine(DestroyAfterUnscaled(go, totalLife));
-}
+        Transform parentTr = lineTravelSpawnParent != null
+            ? lineTravelSpawnParent
+            : (lineTravelPlayer.transform.parent != null ? lineTravelPlayer.transform.parent : transform);
 
-private IEnumerator PlayLineTravelRoutine(LineTravelSplitSwapTestUI inst, LineTravelSplitSwapTestUI.LineAxis axis, Vector2 originAnchored, int steps, float cellSizePx, float delaySeconds)
-{
-    if (delaySeconds > 0f)
-        yield return new WaitForSecondsRealtime(delaySeconds);
+        var go = Instantiate(lineTravelPlayer.gameObject, parentTr);
+        go.SetActive(true);
 
-    if (inst != null)
-        inst.Play(axis, originAnchored, steps, cellSizePx);
-}
+        var inst = go.GetComponent<LineTravelSplitSwapTestUI>();
+        if (inst == null)
+        {
+            Destroy(go);
+            return;
+        }
 
-private IEnumerator DestroyAfterUnscaled(GameObject go, float delaySeconds)
-{
-    if (delaySeconds > 0f)
-        yield return new WaitForSecondsRealtime(delaySeconds);
+        // Play after optional delay (unscaled so it works during timeScale changes)
+        StartCoroutine(PlayLineTravelRoutine(inst, axis, originAnchored, steps, cellSizePx, delaySeconds));
 
-    if (go != null)
-        Destroy(go);
-}
+        // Cleanup after completion (unscaled)
+        float totalLife = Mathf.Max(0f, delaySeconds) + lineTravelPlayer.EstimateDuration(steps) + 0.10f;
+        StartCoroutine(DestroyAfterUnscaled(go, totalLife));
+    }
+
+    private float PlayLineTravelInstanceWithStep(
+        LineTravelSplitSwapTestUI.LineAxis axis,
+        Vector2 originAnchored,
+        Vector2Int originCell,
+        int steps,
+        float cellSizePx,
+        float delaySeconds,
+        Action<Vector2Int> onStep)
+    {
+        if (lineTravelPlayer == null)
+            return 0f;
+
+        Transform parentTr = lineTravelSpawnParent != null
+            ? lineTravelSpawnParent
+            : (lineTravelPlayer.transform.parent != null ? lineTravelPlayer.transform.parent : transform);
+
+        var go = Instantiate(lineTravelPlayer.gameObject, parentTr);
+        go.SetActive(true);
+
+        var inst = go.GetComponent<LineTravelSplitSwapTestUI>();
+        if (inst == null)
+        {
+            Destroy(go);
+            return 0f;
+        }
+
+        StartCoroutine(PlayLineTravelRoutine(inst, axis, originAnchored, steps, cellSizePx, delaySeconds, originCell, onStep));
+
+        float dur = lineTravelPlayer.EstimateDuration(steps);
+        float totalLife = Mathf.Max(0f, delaySeconds) + dur + 0.15f;
+        StartCoroutine(DestroyAfterUnscaled(go, totalLife));
+
+        return delaySeconds + dur;
+    }
+    private IEnumerator PlayLineTravelRoutine(
+        LineTravelSplitSwapTestUI inst,
+        LineTravelSplitSwapTestUI.LineAxis axis,
+        Vector2 originAnchored,
+        int steps,
+        float cellSizePx,
+        float delaySeconds,
+        Vector2Int originCell,
+        Action<Vector2Int> onStep)
+    {
+        if (delaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(delaySeconds);
+
+        if (inst != null)
+            inst.Play(axis, originAnchored, originCell, steps, cellSizePx, onStep);
+    }
+
+    private IEnumerator PlayLineTravelRoutine(LineTravelSplitSwapTestUI inst, LineTravelSplitSwapTestUI.LineAxis axis, Vector2 originAnchored, int steps, float cellSizePx, float delaySeconds)
+    {
+        if (delaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(delaySeconds);
+
+        if (inst != null)
+            inst.Play(axis, originAnchored, steps, cellSizePx);
+    }
+
+    private IEnumerator DestroyAfterUnscaled(GameObject go, float delaySeconds)
+    {
+        if (delaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(delaySeconds);
+
+        if (go != null)
+            Destroy(go);
+    }
+
+    private void ClearCellImmediate(Vector2Int c)
+    {
+        int x = c.x;
+        int y = c.y;
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+
+        if (IsMaskHoleCell(x, y)) return;
+
+        // obstacle varsa hasar
+        if (obstacleStateService != null && obstacleStateService.HasObstacleAt(x, y))
+            ApplyObstacleDamageAt(x, y, ObstacleHitContext.SpecialActivation);
+
+        var t = tiles[x, y];
+        if (t == null) return;
+
+        TileType type = t.GetTileType();
+
+        tiles[x, y] = null;
+        Destroy(t.gameObject);
+
+        NotifyTilesCleared(type, 1);
+    }
+
+    private HashSet<Vector2Int> BuildPulseEmitterTargets(int cx, int cy)
+    {
+        var set = new HashSet<Vector2Int>();
+
+        // 3 satır
+        for (int yy = cy - 1; yy <= cy + 1; yy++)
+        {
+            if (yy < 0 || yy >= height) continue;
+            for (int x = 0; x < width; x++)
+                if (!IsMaskHoleCell(x, yy)) set.Add(new Vector2Int(x, yy));
+        }
+
+        // 3 sütun
+        for (int xx = cx - 1; xx <= cx + 1; xx++)
+        {
+            if (xx < 0 || xx >= width) continue;
+            for (int y = 0; y < height; y++)
+                if (!IsMaskHoleCell(xx, y)) set.Add(new Vector2Int(xx, y));
+        }
+
+        return set;
+    }
 
     private Vector2 WorldToAnchoredIn(RectTransform targetParent, Vector3 worldPos)
     {

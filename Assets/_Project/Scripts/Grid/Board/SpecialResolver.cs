@@ -119,6 +119,29 @@ public class SpecialResolver
         board.ShakeNextClear = true;
         board.LastSwapUserMove = false;
         board.IsSpecialActivationPhase = true;
+
+        TileSpecial sa = a.GetSpecial();
+        TileSpecial sb = b.GetSpecial();
+
+        bool saIsLine  = sa == TileSpecial.LineH || sa == TileSpecial.LineV;
+        bool sbIsLine  = sb == TileSpecial.LineH || sb == TileSpecial.LineV;
+        bool saIsPulse = sa == TileSpecial.PulseCore;
+        bool sbIsPulse = sb == TileSpecial.PulseCore;
+
+        // ✅ PULSE + LINE: toplu ClearMatchesAnimated yapma.
+        if ((saIsPulse && sbIsLine) || (sbIsPulse && saIsLine))
+        {
+            var center = saIsPulse ? a : b;
+            int cx = center.X;
+            int cy = center.Y;
+
+            // Bu coroutine zaten: lineTravel + step step clear + collapse + resolve yapıyor
+            yield return board.StartCoroutine(board.PlayPulseEmitterComboAndClear(cx, cy));
+
+            board.IsSpecialActivationPhase = false;
+            yield break;
+        }
+
         specialAffectedCells = new HashSet<Vector2Int>();
 
         var affected = new HashSet<TileView> { a, b };
@@ -131,13 +154,13 @@ public class SpecialResolver
         var queued = new HashSet<TileView>();
         var queue = new Queue<SpecialActivation>();
 
-        TileSpecial sa = a.GetSpecial();
-        TileSpecial sb = b.GetSpecial();
+      //  TileSpecial sa = a.GetSpecial();
+       // TileSpecial sb = b.GetSpecial();
 
-        bool saIsLine  = sa == TileSpecial.LineH || sa == TileSpecial.LineV;
+/*        bool saIsLine  = sa == TileSpecial.LineH || sa == TileSpecial.LineV;
         bool sbIsLine  = sb == TileSpecial.LineH || sb == TileSpecial.LineV;
         bool saIsPulse = sa == TileSpecial.PulseCore;
-        bool sbIsPulse = sb == TileSpecial.PulseCore;
+        bool sbIsPulse = sb == TileSpecial.PulseCore;*/
         bool suppressPulseImpactAnimations = saIsPulse && sbIsPulse;
         bool suppressPerTileClearVfx = (saIsPulse && sbIsLine) || (sbIsPulse && saIsLine);
 

@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using System;
 
 public class LineTravelSplitSwapTestUI : MonoBehaviour
 {
@@ -55,6 +56,10 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     private int _stepCount = 6;
     private float _cellSizePx = 110f;
 
+    public Action<Vector2Int> OnStepCell;     // ✅ Board’a step hücresi bildirir
+    private Vector2Int _originCell;
+    private bool _originCellValid;
+
     private void Awake()
     {
         if (leftImage) leftStart = leftImage.rectTransform.anchoredPosition;
@@ -71,6 +76,15 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     {
         // Test otomatiği kapalı
         // Play(axis, rightStart, 6, 110f);
+    }
+
+    public void Play(LineAxis axisMode, Vector2 originAnchoredPos, Vector2Int originCell, int steps, float cellSizePxOverride, Action<Vector2Int> onStepCell)
+    {
+        OnStepCell = onStepCell;
+        _originCell = originCell;
+        _originCellValid = true;
+
+        Play(axisMode, originAnchoredPos, steps, cellSizePxOverride); // mevcut Play’in
     }
 
     public void Play(LineAxis axisMode, Vector2 originAnchoredPos, int steps, float cellSizePxOverride)
@@ -183,6 +197,22 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
             if (rightImage) rightImage.rectTransform.anchoredPosition = rTarget;
             if (leftImage) leftImage.rectTransform.anchoredPosition = lTarget;
+
+            if (_originCellValid && OnStepCell != null)
+            {
+                int s = i + 1; // step index 1-based
+
+                if (axis == LineAxis.Horizontal)
+                {
+                    OnStepCell(new Vector2Int(_originCell.x + s, _originCell.y)); // sağ
+                    OnStepCell(new Vector2Int(_originCell.x - s, _originCell.y)); // sol
+                }
+                else
+                {
+                    OnStepCell(new Vector2Int(_originCell.x, _originCell.y - s)); // aşağı (UI y artınca aşağı; senin grid'de y artınca aşağı)
+                    OnStepCell(new Vector2Int(_originCell.x, _originCell.y + s)); // yukarı
+                }
+            }
 
             // Impact (tile varsa - test deseni)
             if (emittersImpactPrefab && impactParent)
