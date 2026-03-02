@@ -14,6 +14,7 @@ public class SpecialResolver
     // SystemOverride fan-out lightning (single shot) support
     private TileView overrideFanoutOrigin;
     private readonly List<TileView> overrideFanoutTargets = new();
+    private float pendingOverrideOverrideClearDelay = 0f;
     private bool overrideForceDefaultClearAnim;
     private bool overrideSuppressPerTileClearVfx;
 
@@ -155,6 +156,7 @@ public class SpecialResolver
         overrideFanoutTargets.Clear();
         overrideForceDefaultClearAnim = false;
         overrideSuppressPerTileClearVfx = false;
+        pendingOverrideOverrideClearDelay = 0f;
 
         var affected = new HashSet<TileView> { a, b };
         MarkAffectedCell(a);
@@ -206,44 +208,22 @@ public class SpecialResolver
             EnqueueChainSpecials(affected, queue, queued, processed);
         }
 
-        // SystemOverride: sequentially "select" targets with lightning so the player can read the path,
-// then allow the normal clear/activation pipeline to run.
+        // SystemOverride: show a single fan-out lightning mark to all targets before clearing/activating.
         if (overrideFanoutOrigin != null && overrideFanoutTargets.Count > 0)
         {
-            // Order: top-to-bottom, then left-to-right (adjust if your grid has inverted Y).
-            overrideFanoutTargets.Sort((t1, t2) =>
-            {
-                if (t1 == null && t2 == null) return 0;
-                if (t1 == null) return 1;
-                if (t2 == null) return -1;
-                int cy = t1.Y.CompareTo(t2.Y); // y=0 is top
-                if (cy != 0) return cy;
-                return t1.X.CompareTo(t2.X);
-            });
+            float lightningDur = board.PlayLightningStrikeForTiles(
+                overrideFanoutTargets,
+                originTile: overrideFanoutOrigin,
+                visualTargets: overrideFanoutTargets,
+                allowCondense: false);
+            // Wait at least a tiny bit so the mark is readable.
+            yield return new WaitForSeconds(Mathf.Max(0.06f, lightningDur));
+}
 
-            // Small stagger so it feels like "1 light selects 1 tile".
-            const float kSelectStep = 0.02f;
 
-            // Reuse a tiny list to avoid allocations.
-            var one = new List<TileView>(1);
-
-            foreach (var t in overrideFanoutTargets)
-            {
-                if (t == null) continue;
-
-                one.Clear();
-                one.Add(t);
-
-                // IMPORTANT: disable condense so we never collapse to a row/col line.
-                board.PlayLightningStrikeForTiles(one, originTile: overrideFanoutOrigin, visualTargets: one, allowCondense: false);
-
-                if (kSelectStep > 0f)
-                    yield return new WaitForSeconds(kSelectStep);
-            }
-
-            // Tiny extra hold so the last selection reads before the clears start.
-            yield return new WaitForSeconds(0.04f);
-        }
+        // If Override+Override combo VFX played, wait for it to finish before clearing tiles.
+        if (pendingOverrideOverrideClearDelay > 0f)
+            yield return new WaitForSeconds(pendingOverrideOverrideClearDelay);
 
         Dictionary<TileView, float> stagger = suppressPulseImpactAnimations
             ? null
@@ -645,7 +625,7 @@ public class SpecialResolver
             bool aHasBase = a != null && a.GetOverrideBaseType(out _);
             bool bHasBase = b != null && b.GetOverrideBaseType(out _);
             if (aHasBase && bHasBase)
-                board.PlaySystemOverrideComboVfx();
+                pendingOverrideOverrideClearDelay = Mathf.Max(pendingOverrideOverrideClearDelay, board.PlaySystemOverrideComboVfxAndGetDuration());
             AddAllTiles(matches);
             return;
         }

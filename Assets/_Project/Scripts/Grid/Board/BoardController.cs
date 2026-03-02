@@ -362,11 +362,18 @@ public class BoardController : MonoBehaviour
         }
     }
 
+    public float PlaySystemOverrideComboVfxAndGetDuration()
+    {
+        if (systemOverrideComboVfx == null) return 0f;
+        systemOverrideComboVfx.gameObject.SetActive(true);
+        systemOverrideComboVfx.Play();
+        return systemOverrideComboVfx.GetTotalDuration();
+    }
+
+    // Back-compat: keep the old void method for any existing callsites.
     public void PlaySystemOverrideComboVfx()
     {
-        if (systemOverrideComboVfx == null) return;
-        systemOverrideComboVfx.gameObject.SetActive(true); 
-        systemOverrideComboVfx.Play();
+        PlaySystemOverrideComboVfxAndGetDuration();
     }
 
     public void PlayPulseEmitterComboVfxAtCell(int x, int y)

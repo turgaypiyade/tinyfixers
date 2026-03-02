@@ -192,11 +192,11 @@ MonoBehaviour:
   canvasGroup: {fileID: 52612328}
   orbitDuration: 0.6
   compressDuration: 0.25
-  stormDuration: 0.9
+  stormDuration: 0.7
   fadeOutDuration: 0.2
-  orbitRadius: 120
-  orbitTurns: 2
-  orbitScaleFrom: 1
+  orbitRadius: 100
+  orbitTurns: 3
+  orbitScaleFrom: 0.9
   orbitScaleTo: 1.2
   compressScaleTo: 0.7
   flashMaxAlpha: 0.9
@@ -1626,8 +1626,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.051567238}
-  m_AnchorMax: {x: 1.4492099, y: 1.3331648}
+  m_AnchorMin: {x: 0, y: 0.07285714}
+  m_AnchorMax: {x: 0.8520239, y: 1.8835714}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -2361,7 +2361,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 260, y: 260}
+  m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1110056416
 MonoBehaviour:
@@ -2383,7 +2383,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1

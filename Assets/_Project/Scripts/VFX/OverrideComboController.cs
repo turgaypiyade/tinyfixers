@@ -189,7 +189,18 @@ public class OverrideComboController : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    private void SetFlashAlpha(float a)
+    
+    /// <summary>
+    /// Total playback duration of this combo VFX (approx). Useful for syncing gameplay (e.g., clearing tiles after VFX ends).
+    /// Includes orbit + compress + flash hold + storm + fade.
+    /// </summary>
+    public float GetTotalDuration()
+    {
+        // NOTE: Co_Play includes a hardcoded 0.05s flash pop hold.
+        return orbitDuration + compressDuration + 0.05f + stormDuration + fadeOutDuration;
+    }
+
+private void SetFlashAlpha(float a)
     {
         if (centerFlash == null) return;
         var c = centerFlash.color;
