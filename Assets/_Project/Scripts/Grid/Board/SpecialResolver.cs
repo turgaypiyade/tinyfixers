@@ -11,6 +11,12 @@ public class SpecialResolver
     private readonly PatchbotComboService patchbotComboService;
     private HashSet<Vector2Int> specialAffectedCells;
 
+    // SystemOverride fan-out lightning (single shot) support
+    private TileView overrideFanoutOrigin;
+    private readonly List<TileView> overrideFanoutTargets = new();
+    private bool overrideForceDefaultClearAnim;
+    private bool overrideSuppressPerTileClearVfx;
+
     public SpecialResolver(BoardController board, MatchFinder matchFinder, BoardAnimator boardAnimator, PulseCoreImpactService pulseCoreImpactService)
     {
         this.board = board;
@@ -144,6 +150,12 @@ public class SpecialResolver
 
         specialAffectedCells = new HashSet<Vector2Int>();
 
+        // Reset SystemOverride fan-out state for this resolution
+        overrideFanoutOrigin = null;
+        overrideFanoutTargets.Clear();
+        overrideForceDefaultClearAnim = false;
+        overrideSuppressPerTileClearVfx = false;
+
         var affected = new HashSet<TileView> { a, b };
         MarkAffectedCell(a);
         MarkAffectedCell(b);
@@ -194,10 +206,51 @@ public class SpecialResolver
             EnqueueChainSpecials(affected, queue, queued, processed);
         }
 
+        // SystemOverride: sequentially "select" targets with lightning so the player can read the path,
+// then allow the normal clear/activation pipeline to run.
+        if (overrideFanoutOrigin != null && overrideFanoutTargets.Count > 0)
+        {
+            // Order: top-to-bottom, then left-to-right (adjust if your grid has inverted Y).
+            overrideFanoutTargets.Sort((t1, t2) =>
+            {
+                if (t1 == null && t2 == null) return 0;
+                if (t1 == null) return 1;
+                if (t2 == null) return -1;
+                int cy = t1.Y.CompareTo(t2.Y); // y=0 is top
+                if (cy != 0) return cy;
+                return t1.X.CompareTo(t2.X);
+            });
+
+            // Small stagger so it feels like "1 light selects 1 tile".
+            const float kSelectStep = 0.02f;
+
+            // Reuse a tiny list to avoid allocations.
+            var one = new List<TileView>(1);
+
+            foreach (var t in overrideFanoutTargets)
+            {
+                if (t == null) continue;
+
+                one.Clear();
+                one.Add(t);
+
+                // IMPORTANT: disable condense so we never collapse to a row/col line.
+                board.PlayLightningStrikeForTiles(one, originTile: overrideFanoutOrigin, visualTargets: one, allowCondense: false);
+
+                if (kSelectStep > 0f)
+                    yield return new WaitForSeconds(kSelectStep);
+            }
+
+            // Tiny extra hold so the last selection reads before the clears start.
+            yield return new WaitForSeconds(0.04f);
+        }
+
         Dictionary<TileView, float> stagger = suppressPulseImpactAnimations
             ? null
             : pulseCoreImpactService.BuildStaggerDelays(affected, processed);
-        var animationMode = hasLineActivation ? ClearAnimationMode.LightningStrike : ClearAnimationMode.Default;
+        var animationMode = (hasLineActivation && !overrideForceDefaultClearAnim)
+            ? ClearAnimationMode.LightningStrike
+            : ClearAnimationMode.Default;
         // Special zincirinde yalnızca gerçekten etkilenen hücreler hasar alsın.
         // Komşu over-tile blocker ek hasarı, satır/sütun special'larda yan hücrelerde
         // beklenmeyen stage düşüşüne neden olabiliyor.
@@ -211,7 +264,7 @@ public class SpecialResolver
             includeAdjacentOverTileBlockerDamage: false,
             lightningVisualTargets: lightningVisualTargets,
             lightningLineStrikes: lightningLineStrikes,
-            suppressPerTileClearVfx: suppressPerTileClearVfx));
+            suppressPerTileClearVfx: (suppressPerTileClearVfx || overrideSuppressPerTileClearVfx)));
         yield return board.StartCoroutine(boardAnimator.CollapseAndSpawnAnimated());
         board.IsSpecialActivationPhase = false;
         specialAffectedCells = null;
@@ -305,9 +358,16 @@ public class SpecialResolver
                 AddSquare(matches, specialTile.X, specialTile.Y, 1); //efected grid 3X3
                 break;
             case TileSpecial.SystemOverride:
-                var type = partnerTile != null ? partnerTile.GetTileType() : specialTile.GetTileType();
-                AddAllOfType(matches, type);
-                break;
+                {
+                    var type = partnerTile != null ? partnerTile.GetTileType() : specialTile.GetTileType();
+                    // Single-shot fan-out lightning: mark all targets first, then clear together.
+                    overrideFanoutOrigin = specialTile;
+                    CollectAllOfType(overrideFanoutTargets, type, excludeSpecials: false);
+                    overrideForceDefaultClearAnim = true;            // avoid sequential LightningStrike mode
+                    overrideSuppressPerTileClearVfx = true;          // let the fan-out read cleanly
+                    AddAllOfType(matches, type);
+                    break;
+                }
             case TileSpecial.PatchBot:
                 if (partnerTile != null)
                     ApplyPatchBotTeleportHit(matches, specialTile, partnerTile, lightningVisualTargets, lightningLineStrikes);
@@ -581,7 +641,11 @@ public class SpecialResolver
 
         if (IsOverride(sa) && IsOverride(sb))
         {
-            board.PlaySystemOverrideComboVfx(); 
+            // Only show Override+Override combo VFX when both tiles are real overrides (have stored base type)
+            bool aHasBase = a != null && a.GetOverrideBaseType(out _);
+            bool bHasBase = b != null && b.GetOverrideBaseType(out _);
+            if (aHasBase && bHasBase)
+                board.PlaySystemOverrideComboVfx();
             AddAllTiles(matches);
             return;
         }
@@ -594,19 +658,41 @@ public class SpecialResolver
             if (otherTile == null || overrideTile == null)
                 return;
 
+            // Ensure swap sources are consumed (used)
+            matches.Add(overrideTile);
+            matches.Add(otherTile);
+            MarkAffectedCell(overrideTile);
+            MarkAffectedCell(otherTile);
+
             TileSpecial targetSpecial = otherTile.GetSpecial();
             TileType baseType = targetSpecial == TileSpecial.None
                 ? otherTile.GetTileType()
                 : (overrideTile.GetOverrideBaseType(out var storedType) ? storedType : overrideTile.GetTileType());
 
+            // Single-shot fan-out lightning from the override tile to all affected targets
+            overrideFanoutOrigin = overrideTile;
+            overrideForceDefaultClearAnim = true;     // avoid sequential LightningStrike mode
+            overrideSuppressPerTileClearVfx = true;
+
+            // Build conversion/clear list (only normal tiles of the base type)
             for (int x = 0; x < board.Width; x++)
                 for (int y = 0; y < board.Height; y++)
                 {
-                    if (board.Holes[x, y]) continue;
+                    if (!CanSpecialAffectCell(x, y)) continue;
                     var tile = board.Tiles[x, y];
                     if (tile == null) continue;
                     if (!tile.GetTileType().Equals(baseType)) continue;
                     if (tile.GetSpecial() != TileSpecial.None) continue;
+
+                    overrideFanoutTargets.Add(tile);
+
+                    if (targetSpecial == TileSpecial.None)
+                    {
+                        // Normal partner: just clear all matching tiles (after fan-out mark)
+                        matches.Add(tile);
+                        MarkAffectedCell(tile);
+                        continue;
+                    }
 
                     if (targetSpecial == TileSpecial.PatchBot)
                     {
@@ -615,6 +701,7 @@ public class SpecialResolver
                         continue;
                     }
 
+                    // Special partner: implant the same special quickly, then let the special system resolve its effect
                     tile.SetSpecial(targetSpecial);
                     matches.Add(tile);
                     MarkAffectedCell(tile);
@@ -858,7 +945,25 @@ public class SpecialResolver
             }
     }
 
-    void AddAllOfType(HashSet<TileView> matches, TileType type)
+    
+    void CollectAllOfType(List<TileView> buffer, TileType type, bool excludeSpecials)
+    {
+        if (buffer == null) return;
+        buffer.Clear();
+
+        for (int x = 0; x < board.Width; x++)
+            for (int y = 0; y < board.Height; y++)
+            {
+                if (!CanSpecialAffectCell(x, y)) continue;
+                var t = board.Tiles[x, y];
+                if (t == null) continue;
+                if (!t.GetTileType().Equals(type)) continue;
+                if (excludeSpecials && t.GetSpecial() != TileSpecial.None) continue;
+                buffer.Add(t);
+            }
+    }
+
+void AddAllOfType(HashSet<TileView> matches, TileType type)
     {
         for (int x = 0; x < board.Width; x++)
             for (int y = 0; y < board.Height; y++)

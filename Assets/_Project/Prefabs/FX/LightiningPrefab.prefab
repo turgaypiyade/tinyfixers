@@ -101,8 +101,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.49543893
-        value: 0.05103089
+        time: 0.49832284
+        value: 0.17441346
         inSlope: -1.4690787
         outSlope: -1.4690787
         tangentMode: 0
@@ -176,7 +176,7 @@ MonoBehaviour:
   segments: 12
   jaggedness: 0.25
   noiseScale: 2
-  lifeTime: 0.1
+  lifeTime: 0.2
   alphaOverLife:
     serializedVersion: 2
     m_Curve:
@@ -201,5 +201,5 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  extraLength: 0.2
+  extraLength: 0.3
   impactFlashPrefab: {fileID: 430544794101158673, guid: 7e866f9cfe2f1411fb4c5fd79ea3c92e, type: 3}

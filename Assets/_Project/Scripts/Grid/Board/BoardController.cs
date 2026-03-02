@@ -912,7 +912,7 @@ public class BoardController : MonoBehaviour
         IReadOnlyCollection<TileView> matches,
         TileView originTile = null,
         Vector2Int? fallbackOriginCell = null,
-        IReadOnlyCollection<TileView> visualTargets = null)
+        IReadOnlyCollection<TileView> visualTargets = null, bool allowCondense = true)
     {
         TryResolveLightningSpawner();
 
@@ -993,7 +993,7 @@ public class BoardController : MonoBehaviour
                 lightningTargetPositionsBuffer.Add(p);
         }
 
-        TryCondenseLightningTargetsToSingleLine(originWorldPos, lightningTargetPositionsBuffer);
+        if (allowCondense && visualTargets == null) TryCondenseLightningTargetsToSingleLine(originWorldPos, lightningTargetPositionsBuffer);
 
     // Eğer hepsini filtrelediysek (ör. tek hedef origin’in kendisiydi), en az 1 hedef bırak
     if (lightningTargetPositionsBuffer.Count == 0)
