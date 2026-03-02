@@ -765,13 +765,15 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             MarkAffectedCell(otherTile);
 
             TileSpecial targetSpecial = otherTile.GetSpecial();
+            bool targetIsLine = targetSpecial == TileSpecial.LineH || targetSpecial == TileSpecial.LineV;
             TileType baseType = targetSpecial == TileSpecial.None
                 ? otherTile.GetTileType()
                 : (overrideTile.GetOverrideBaseType(out var storedType) ? storedType : overrideTile.GetTileType());
 
             // Single-shot fan-out lightning from the override tile to all affected targets
             overrideFanoutOrigin = overrideTile;
-            overrideForceDefaultClearAnim = true;     // avoid sequential LightningStrike mode
+            // Keep default clear unless partner is a line special; line combos must preserve LineTravel strikes.
+            overrideForceDefaultClearAnim = !targetIsLine;
             overrideSuppressPerTileClearVfx = true;
 
             // Build conversion/clear list (only normal tiles of the base type)
