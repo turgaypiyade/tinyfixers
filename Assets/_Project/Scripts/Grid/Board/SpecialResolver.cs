@@ -17,7 +17,6 @@ public class SpecialResolver
     private float pendingOverrideOverrideClearDelay = 0f;
     private bool overrideForceDefaultClearAnim;
     private bool overrideSuppressPerTileClearVfx;
-    private bool overrideFanoutShowSelectionPulse;
     private readonly List<PendingOverrideImplant> pendingOverrideImplants = new();
 
     private readonly struct PendingOverrideImplant
@@ -189,7 +188,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         overrideFanoutTargets.Clear();
         overrideForceDefaultClearAnim = false;
         overrideSuppressPerTileClearVfx = false;
-        overrideFanoutShowSelectionPulse = false;
+        overrideFanoutNormalSelectionPulse = false;
         pendingOverrideOverrideClearDelay = 0f;
         pendingOverrideImplants.Clear();
 
@@ -251,13 +250,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                 originTile: overrideFanoutOrigin,
                 visualTargets: overrideFanoutTargets,
                 allowCondense: false,
-                onTargetBeamSpawned: tile =>
-                {
-                    if (overrideFanoutShowSelectionPulse)
-                        tile?.PlaySelectionPulse();
-
-                    ApplyPendingOverrideImplantForTile(affected, queue, queued, tile);
-                });
+                onTargetBeamSpawned: tile => ApplyPendingOverrideImplantForTile(affected, queue, queued, tile));
 
             // Wait at least a tiny bit so the mark is readable.
             yield return new WaitForSeconds(Mathf.Max(0.06f, lightningDur));
@@ -862,7 +855,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                     {
                         // Normal partner: fan-out hedefleri beam ulaştığında kısa bir seçilme pulse
                         // oynatıp ardından normal clear akışına bırak.
-                        overrideFanoutShowSelectionPulse = true;
+                        overrideFanoutNormalSelectionPulse = true;
                         matches.Add(tile);
                         MarkAffectedCell(tile);
                         continue;
