@@ -943,7 +943,8 @@ public class BoardController : MonoBehaviour
         IReadOnlyCollection<TileView> matches,
         TileView originTile = null,
         Vector2Int? fallbackOriginCell = null,
-        IReadOnlyCollection<TileView> visualTargets = null, bool allowCondense = true)
+        IReadOnlyCollection<TileView> visualTargets = null, bool allowCondense = true,
+        Action<TileView> onTargetBeamSpawned = null)
     {
         TryResolveLightningSpawner();
 
@@ -963,6 +964,8 @@ public class BoardController : MonoBehaviour
         }
 
         var targetsForVisuals = visualTargets ?? matches;
+        if (onTargetBeamSpawned != null)
+            allowCondense = false;
 
         // 1) Origin’i önce belirle (hedef listesini doldurmadan)
         Vector3 originWorldPos;
@@ -996,6 +999,7 @@ public class BoardController : MonoBehaviour
 
         // 2) Hedefleri doldur (origin’e çok yakın olanları ve duplicate’leri çıkar)
         lightningTargetPositionsBuffer.Clear();
+        var lightningTargetTiles = new List<TileView>(32);
 
         const float kMinDistFromOrigin = 0.05f; // tile aralığın ~0.5 ise bu güvenli
         float minDistSqr = kMinDistFromOrigin * kMinDistFromOrigin;
@@ -1021,7 +1025,10 @@ public class BoardController : MonoBehaviour
                 }
             }
             if (!dup)
+            {
                 lightningTargetPositionsBuffer.Add(p);
+                lightningTargetTiles.Add(tile);
+            }
         }
 
         if (allowCondense && visualTargets == null) TryCondenseLightningTargetsToSingleLine(originWorldPos, lightningTargetPositionsBuffer);
@@ -1033,6 +1040,7 @@ public class BoardController : MonoBehaviour
         {
             if (t == null) continue;
             lightningTargetPositionsBuffer.Add(GetTileWorldCenter(t));
+            lightningTargetTiles.Add(t);
             break;
         }
     }
@@ -1049,7 +1057,19 @@ public class BoardController : MonoBehaviour
         Debug.LogWarning($"[Lightning][BoardController] Spawner playbackDuration was <= 0. Using fallback lead time {playbackDuration:0.000}s.");
     }
 
-        lightningSpawner.PlayEmitterLightning(originWorldPos, lightningTargetPositionsBuffer);
+        if (onTargetBeamSpawned != null)
+        {
+            lightningSpawner.PlayEmitterLightning(originWorldPos, lightningTargetPositionsBuffer, idx =>
+            {
+                if (idx < 0 || idx >= lightningTargetTiles.Count)
+                    return;
+                onTargetBeamSpawned(lightningTargetTiles[idx]);
+            });
+        }
+        else
+        {
+            lightningSpawner.PlayEmitterLightning(originWorldPos, lightningTargetPositionsBuffer);
+        }
         return playbackDuration;
     }
 
