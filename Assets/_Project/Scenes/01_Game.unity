@@ -737,8 +737,8 @@ MonoBehaviour:
   tileIcons: {fileID: 11400000, guid: 44f21392c67a14dfbb8782561221acf8, type: 2}
   dashSpeed: 1000
   arriveEps: 5
-  spawnEvery: 0.03
-  afterLife: 0.28
+  spawnEvery: 0.04
+  afterLife: 0.1
   afterColor: {r: 0.65, g: 0.9, b: 1, a: 0.8509804}
 --- !u!114 &164518322
 MonoBehaviour:
@@ -1626,8 +1626,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.06472081}
-  m_AnchorMax: {x: 0.8520239, y: 1.6732234}
+  m_AnchorMin: {x: 0, y: 0.051567238}
+  m_AnchorMax: {x: 1.3821313, y: 1.3331648}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
