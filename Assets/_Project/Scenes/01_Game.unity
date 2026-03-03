@@ -737,8 +737,8 @@ MonoBehaviour:
   tileIcons: {fileID: 11400000, guid: 44f21392c67a14dfbb8782561221acf8, type: 2}
   dashSpeed: 1000
   arriveEps: 5
-  spawnEvery: 0.03
-  afterLife: 0.28
+  spawnEvery: 0.04
+  afterLife: 0.1
   afterColor: {r: 0.65, g: 0.9, b: 1, a: 0.8509804}
 --- !u!114 &164518322
 MonoBehaviour:
@@ -1626,8 +1626,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.06472081}
-  m_AnchorMax: {x: 0.8520239, y: 1.6732234}
+  m_AnchorMin: {x: 0, y: 0.051567238}
+  m_AnchorMax: {x: 1.3821313, y: 1.3331648}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -9773,23 +9773,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: splitTime
-      value: 0.02
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: pulseSpeed
-      value: 25.1
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: startDelay
-      value: 0.06
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: pulseAmount
-      value: 0.2
+      value: 0.05
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: splitOffset
-      value: 23.9
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: impactParent
@@ -9805,7 +9805,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: afterImageAlpha
-      value: 0.75
+      value: 0.45
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: afterImageParent
@@ -9813,7 +9813,7 @@ PrefabInstance:
       objectReference: {fileID: 1732843066}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: afterImageScaleUp
-      value: 1
+      value: 1.05
       objectReference: {fileID: 0}
     - target: {fileID: 6951413210752950108, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: m_Name
