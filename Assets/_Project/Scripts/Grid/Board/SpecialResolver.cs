@@ -248,15 +248,15 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                 overrideFanoutTargets,
                 originTile: overrideFanoutOrigin,
                 visualTargets: overrideFanoutTargets,
-                allowCondense: false);
-
-            // Apply converted specials as soon as the fan-out starts so beams and conversion feel synchronized.
-            // Follow-up special activations still wait until lightning playback is readable.
-            if (pendingOverrideImplants.Count > 0)
-                ApplyPendingOverrideImplants(affected, queue, queued);
+                allowCondense: false,
+                onTargetBeamSpawned: tile => ApplyPendingOverrideImplantForTile(affected, queue, queued, tile));
 
             // Wait at least a tiny bit so the mark is readable.
             yield return new WaitForSeconds(Mathf.Max(0.06f, lightningDur));
+
+            // Safety: any implant that did not get a beam callback (unexpected filtering, duplicates, etc.).
+            if (pendingOverrideImplants.Count > 0)
+                ApplyPendingOverrideImplants(affected, queue, queued);
         }
         else if (pendingOverrideImplants.Count > 0)
         {
@@ -963,27 +963,46 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
     }
 
+    void ApplyPendingOverrideImplantForTile(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<TileView> queued, TileView target)
+    {
+        if (target == null || pendingOverrideImplants.Count == 0)
+            return;
+
+        for (int i = pendingOverrideImplants.Count - 1; i >= 0; i--)
+        {
+            var pending = pendingOverrideImplants[i];
+            if (pending.target != target)
+                continue;
+
+            ApplyPendingOverrideImplant(matches, queue, queued, pending);
+            pendingOverrideImplants.RemoveAt(i);
+        }
+    }
+
     void ApplyPendingOverrideImplants(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<TileView> queued)
     {
         for (int i = 0; i < pendingOverrideImplants.Count; i++)
-        {
-            var pending = pendingOverrideImplants[i];
-            if (pending.target == null) continue;
-
-            pending.target.SetSpecial(pending.special);
-
-            if (pending.special == TileSpecial.PatchBot)
-            {
-                AutoPatchBotTeleportHitAndVanish(matches, pending.target, pending.partnerTile, pending.overrideTile);
-                continue;
-            }
-
-            matches.Add(pending.target);
-            MarkAffectedCell(pending.target);
-            EnqueueActivation(queue, queued, pending.target, pending.partnerTile);
-        }
+            ApplyPendingOverrideImplant(matches, queue, queued, pendingOverrideImplants[i]);
 
         pendingOverrideImplants.Clear();
+    }
+
+    void ApplyPendingOverrideImplant(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<TileView> queued, PendingOverrideImplant pending)
+    {
+        if (pending.target == null)
+            return;
+
+        pending.target.SetSpecial(pending.special);
+
+        if (pending.special == TileSpecial.PatchBot)
+        {
+            AutoPatchBotTeleportHitAndVanish(matches, pending.target, pending.partnerTile, pending.overrideTile);
+            return;
+        }
+
+        matches.Add(pending.target);
+        MarkAffectedCell(pending.target);
+        EnqueueActivation(queue, queued, pending.target, pending.partnerTile);
     }
 
 

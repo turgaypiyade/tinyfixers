@@ -1,4 +1,5 @@
 using System.Collections;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -31,7 +32,7 @@ public class LightningSpawner : MonoBehaviour
         return ((safeTargetCount - 1) * stepDelay) + Mathf.Max(0f, destroyDelay);
     }
 
-    public void PlayEmitterLightning(Vector3 emitterWorldPos, List<Vector3> targetWorldPositions)
+    public void PlayEmitterLightning(Vector3 emitterWorldPos, List<Vector3> targetWorldPositions, Action<int> onTargetBeamSpawned = null)
     {
         if (targetWorldPositions == null || targetWorldPositions.Count == 0)
         {
@@ -42,7 +43,7 @@ public class LightningSpawner : MonoBehaviour
         for (int i = 0; i < targetWorldPositions.Count; i++)
             targetsCopy.Add(targetWorldPositions[i]);
 
-        StartCoroutine(CoPlay(emitterWorldPos, targetsCopy));
+        StartCoroutine(CoPlay(emitterWorldPos, targetsCopy, onTargetBeamSpawned));
     }
 
     public void PlayLineSweepSteps(List<Vector3> stepWorldPositions)
@@ -112,7 +113,7 @@ public class LightningSpawner : MonoBehaviour
         yield return new WaitForSeconds(destroyDelay);
     }
 
-    private IEnumerator CoPlay(Vector3 emitterWorldPos, List<Vector3> targets)
+    private IEnumerator CoPlay(Vector3 emitterWorldPos, List<Vector3> targets, Action<int> onTargetBeamSpawned)
     {
         for (int i = 0; i < targets.Count; i++)
         {
@@ -134,6 +135,7 @@ public class LightningSpawner : MonoBehaviour
             beam.GetComponent<LineRenderer>().useWorldSpace = true;
 
             beam.Init(start, end);
+            onTargetBeamSpawned?.Invoke(i);
 
             float delay = GetStepDelay();
             if (delay > 0f)
