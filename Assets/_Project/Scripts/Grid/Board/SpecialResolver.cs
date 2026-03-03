@@ -249,13 +249,23 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                 originTile: overrideFanoutOrigin,
                 visualTargets: overrideFanoutTargets,
                 allowCondense: false);
+
+            // Apply converted specials as soon as the fan-out starts so beams and conversion feel synchronized.
+            // Follow-up special activations still wait until lightning playback is readable.
+            if (pendingOverrideImplants.Count > 0)
+                ApplyPendingOverrideImplants(affected, queue, queued);
+
             // Wait at least a tiny bit so the mark is readable.
             yield return new WaitForSeconds(Mathf.Max(0.06f, lightningDur));
-}
-
-        if (pendingOverrideImplants.Count > 0)
+        }
+        else if (pendingOverrideImplants.Count > 0)
         {
+            // Safety: if no fan-out visual was produced, still apply queued implants.
             ApplyPendingOverrideImplants(affected, queue, queued);
+        }
+
+        if (queue.Count > 0)
+        {
             EnqueueChainSpecials(affected, queue, queued, processed);
 
             while (queue.Count > 0)
