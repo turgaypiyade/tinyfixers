@@ -28,6 +28,7 @@ public class TileView : MonoBehaviour,
 
     private float runtimeIconScale = 0.98f;
     private int lastAppliedTileSize;
+    private Coroutine selectionPulseRoutine;
 
     private void Awake()
     {
@@ -417,6 +418,52 @@ public class TileView : MonoBehaviour,
     {
         model.SetSpecial(sp);
         RefreshIcon();
+    }
+
+    public void PlaySelectionPulse(float upScale = 1.14f, float upDuration = 0.06f, float downDuration = 0.08f)
+    {
+        if (this == null)
+            return;
+
+        if (selectionPulseRoutine != null)
+            StopCoroutine(selectionPulseRoutine);
+
+        selectionPulseRoutine = StartCoroutine(CoSelectionPulse(upScale, upDuration, downDuration));
+    }
+
+    private IEnumerator CoSelectionPulse(float upScale, float upDuration, float downDuration)
+    {
+        if (this == null)
+            yield break;
+
+        var tr = transform;
+        Vector3 baseScale = Vector3.one;
+        Vector3 peakScale = Vector3.one * Mathf.Max(1f, upScale);
+
+        float t = 0f;
+        while (t < upDuration)
+        {
+            if (this == null) yield break;
+            t += Time.deltaTime;
+            float k = upDuration > 0f ? Mathf.Clamp01(t / upDuration) : 1f;
+            tr.localScale = Vector3.Lerp(baseScale, peakScale, k);
+            yield return null;
+        }
+
+        t = 0f;
+        while (t < downDuration)
+        {
+            if (this == null) yield break;
+            t += Time.deltaTime;
+            float k = downDuration > 0f ? Mathf.Clamp01(t / downDuration) : 1f;
+            tr.localScale = Vector3.Lerp(peakScale, baseScale, k);
+            yield return null;
+        }
+
+        if (this != null)
+            tr.localScale = baseScale;
+
+        selectionPulseRoutine = null;
     }
     public IEnumerator PlayPulseImpact(float delay, float totalTime)
     {
