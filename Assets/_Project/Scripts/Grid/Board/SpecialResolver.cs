@@ -17,9 +17,7 @@ public class SpecialResolver
     private float pendingOverrideOverrideClearDelay = 0f;
     private bool overrideForceDefaultClearAnim;
     private bool overrideSuppressPerTileClearVfx;
-    private bool overrideFanoutShowSelectionPulse;
-    private bool overrideFanoutPulseTriggeredByBeam;
-    private const float OverrideFanoutSelectionPulseReadability = 0.12f;
+    private bool overrideFanoutNormalSelectionPulse;
     private readonly List<PendingOverrideImplant> pendingOverrideImplants = new();
 
     private readonly struct PendingOverrideImplant
@@ -191,8 +189,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         overrideFanoutTargets.Clear();
         overrideForceDefaultClearAnim = false;
         overrideSuppressPerTileClearVfx = false;
-        overrideFanoutShowSelectionPulse = false;
-        overrideFanoutPulseTriggeredByBeam = false;
+        overrideFanoutNormalSelectionPulse = false;
         pendingOverrideOverrideClearDelay = 0f;
         pendingOverrideImplants.Clear();
 
@@ -254,29 +251,10 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                 originTile: overrideFanoutOrigin,
                 visualTargets: overrideFanoutTargets,
                 allowCondense: false,
-                onTargetBeamSpawned: tile =>
-                {
-                    if (overrideFanoutShowSelectionPulse && tile != null)
-                    {
-                        overrideFanoutPulseTriggeredByBeam = true;
-                        tile.PlaySelectionPulse(1.20f, 0.08f, 0.10f);
-                    }
-
-                    ApplyPendingOverrideImplantForTile(affected, queue, queued, tile);
-                });
+                onTargetBeamSpawned: tile => ApplyPendingOverrideImplantForTile(affected, queue, queued, tile));
 
             // Wait at least a tiny bit so the mark is readable.
             yield return new WaitForSeconds(Mathf.Max(0.06f, lightningDur));
-
-            if (overrideFanoutShowSelectionPulse && !overrideFanoutPulseTriggeredByBeam)
-            {
-                for (int i = 0; i < overrideFanoutTargets.Count; i++)
-                    overrideFanoutTargets[i]?.PlaySelectionPulse(1.20f, 0.08f, 0.10f);
-            }
-
-            // Give the pulse a short readability window before clear destroys targets.
-            if (overrideFanoutShowSelectionPulse)
-                yield return new WaitForSeconds(OverrideFanoutSelectionPulseReadability);
 
             // Safety: any implant that did not get a beam callback (unexpected filtering, duplicates, etc.).
             if (pendingOverrideImplants.Count > 0)
@@ -878,7 +856,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                     {
                         // Normal partner: fan-out hedefleri beam ulaştığında kısa bir seçilme pulse
                         // oynatıp ardından normal clear akışına bırak.
-                        overrideFanoutShowSelectionPulse = true;
+                        overrideFanoutNormalSelectionPulse = true;
                         matches.Add(tile);
                         MarkAffectedCell(tile);
                         continue;
