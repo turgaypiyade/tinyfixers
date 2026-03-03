@@ -943,7 +943,8 @@ public class BoardController : MonoBehaviour
         IReadOnlyCollection<TileView> matches,
         TileView originTile = null,
         Vector2Int? fallbackOriginCell = null,
-        IReadOnlyCollection<TileView> visualTargets = null, bool allowCondense = true)
+        IReadOnlyCollection<TileView> visualTargets = null, bool allowCondense = true,
+        Action<TileView> onTargetBeamSpawned = null)
     {
         TryResolveLightningSpawner();
 
@@ -963,6 +964,8 @@ public class BoardController : MonoBehaviour
         }
 
         var targetsForVisuals = visualTargets ?? matches;
+        if (onTargetBeamSpawned != null)
+            allowCondense = false;
 
         // 1) Origin’i önce belirle (hedef listesini doldurmadan)
         Vector3 originWorldPos;
@@ -996,6 +999,7 @@ public class BoardController : MonoBehaviour
 
         // 2) Hedefleri doldur (origin’e çok yakın olanları ve duplicate’leri çıkar)
         lightningTargetPositionsBuffer.Clear();
+        var lightningTargetTiles = new List<TileView>(32);
 
         const float kMinDistFromOrigin = 0.05f; // tile aralığın ~0.5 ise bu güvenli
         float minDistSqr = kMinDistFromOrigin * kMinDistFromOrigin;
@@ -1021,7 +1025,10 @@ public class BoardController : MonoBehaviour
                 }
             }
             if (!dup)
+            {
                 lightningTargetPositionsBuffer.Add(p);
+                lightningTargetTiles.Add(tile);
+            }
         }
 
         if (allowCondense && visualTargets == null) TryCondenseLightningTargetsToSingleLine(originWorldPos, lightningTargetPositionsBuffer);
@@ -1033,6 +1040,7 @@ public class BoardController : MonoBehaviour
         {
             if (t == null) continue;
             lightningTargetPositionsBuffer.Add(GetTileWorldCenter(t));
+            lightningTargetTiles.Add(t);
             break;
         }
     }
@@ -1049,7 +1057,19 @@ public class BoardController : MonoBehaviour
         Debug.LogWarning($"[Lightning][BoardController] Spawner playbackDuration was <= 0. Using fallback lead time {playbackDuration:0.000}s.");
     }
 
-        lightningSpawner.PlayEmitterLightning(originWorldPos, lightningTargetPositionsBuffer);
+        if (onTargetBeamSpawned != null)
+        {
+            lightningSpawner.PlayEmitterLightning(originWorldPos, lightningTargetPositionsBuffer, idx =>
+            {
+                if (idx < 0 || idx >= lightningTargetTiles.Count)
+                    return;
+                onTargetBeamSpawned(lightningTargetTiles[idx]);
+            });
+        }
+        else
+        {
+            lightningSpawner.PlayEmitterLightning(originWorldPos, lightningTargetPositionsBuffer);
+        }
         return playbackDuration;
     }
 
@@ -1093,7 +1113,7 @@ public class BoardController : MonoBehaviour
 
 
 
-internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineStrikes)
+internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineStrikes, Action<Vector2Int> onSweepCellReached = null)
 {
     // We can drive LineTravel even if lightningSpawner is missing (lightning is optional).
     TryResolveLightningSpawner();
@@ -1120,16 +1140,16 @@ internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineS
         // Deterministic cell-by-cell sweep (synced with chain resolution).
         float endTime;
         if (strike.isHorizontal)
-            endTime = PlayTwoWaySweepHorizontal(x, y, delay);
+            endTime = PlayTwoWaySweepHorizontal(x, y, delay, onSweepCellReached);
         else
-            endTime = PlayTwoWaySweepVertical(x, y, delay);
+            endTime = PlayTwoWaySweepVertical(x, y, delay, onSweepCellReached);
 
         if (endTime > maxEndTime) maxEndTime = endTime;
     }
 
     return maxEndTime;
 }
-private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds = 0f)
+private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds = 0f, Action<Vector2Int> onSweepCellReached = null)
     {
         // ✅ Yeni sistem: LineTravel varsa onu oynat
         if (lineTravelPlayer != null)
@@ -1148,7 +1168,9 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
                 float cellSizePx = tileSize; // TileView SnapToGrid tileSize kullanıyor
 
                 PlayLineTravelInstance(LineTravelSplitSwapTestUI.LineAxis.Horizontal, originAnchored, steps, cellSizePx, delaySeconds);
-                return delaySeconds + lineTravelPlayer.EstimateDuration(steps);
+                float duration = lineTravelPlayer.EstimateDuration(steps);
+                EmitHorizontalSweepCallbacks(originX, y, delaySeconds, duration, onSweepCellReached);
+                return delaySeconds + duration;
             }
         }
 
@@ -1164,12 +1186,14 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         lightningSpawner.PlayLineSweepSteps(left);
         lightningSpawner.PlayLineSweepSteps(right);
 
+        EmitHorizontalSweepCallbacks(originX, y, delaySeconds, Mathf.Max(lightningSpawner.GetPlaybackDuration(left.Count), lightningSpawner.GetPlaybackDuration(right.Count)), onSweepCellReached);
+
         float dl = lightningSpawner.GetPlaybackDuration(left.Count);
         float dr = lightningSpawner.GetPlaybackDuration(right.Count);
         return delaySeconds + Mathf.Max(dl, dr);
     }
 
-    private float PlayTwoWaySweepVertical(int x, int originY, float delaySeconds = 0f)
+    private float PlayTwoWaySweepVertical(int x, int originY, float delaySeconds = 0f, Action<Vector2Int> onSweepCellReached = null)
     {
         if (lineTravelPlayer != null)
         {
@@ -1187,7 +1211,9 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
                 float cellSizePx = tileSize;
 
                 PlayLineTravelInstance(LineTravelSplitSwapTestUI.LineAxis.Vertical, originAnchored, steps, cellSizePx, delaySeconds);
-                return delaySeconds + lineTravelPlayer.EstimateDuration(steps);
+                float duration = lineTravelPlayer.EstimateDuration(steps);
+                EmitVerticalSweepCallbacks(x, originY, delaySeconds, duration, onSweepCellReached);
+                return delaySeconds + duration;
             }
         }
 
@@ -1203,9 +1229,73 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         lightningSpawner.PlayLineSweepSteps(down);
         lightningSpawner.PlayLineSweepSteps(up);
 
+        EmitVerticalSweepCallbacks(x, originY, delaySeconds, Mathf.Max(lightningSpawner.GetPlaybackDuration(down.Count), lightningSpawner.GetPlaybackDuration(up.Count)), onSweepCellReached);
+
         float dd = lightningSpawner.GetPlaybackDuration(down.Count);
         float du = lightningSpawner.GetPlaybackDuration(up.Count);
         return delaySeconds + Mathf.Max(dd, du);
+    }
+
+
+    private void EmitHorizontalSweepCallbacks(int originX, int y, float delaySeconds, float sweepDuration, Action<Vector2Int> onSweepCellReached)
+    {
+        if (onSweepCellReached == null)
+            return;
+
+        int maxDistance = Mathf.Max(originX, width - 1 - originX);
+        float stepInterval = maxDistance > 0 ? sweepDuration / maxDistance : 0f;
+
+        StartCoroutine(CoEmitLineSweepCellCallbacks(delaySeconds, stepInterval, maxDistance, step =>
+        {
+            int leftX = originX - step;
+            if (leftX >= 0 && leftX < width)
+                onSweepCellReached(new Vector2Int(leftX, y));
+
+            if (step == 0)
+                return;
+
+            int rightX = originX + step;
+            if (rightX >= 0 && rightX < width)
+                onSweepCellReached(new Vector2Int(rightX, y));
+        }));
+    }
+
+    private void EmitVerticalSweepCallbacks(int x, int originY, float delaySeconds, float sweepDuration, Action<Vector2Int> onSweepCellReached)
+    {
+        if (onSweepCellReached == null)
+            return;
+
+        int maxDistance = Mathf.Max(originY, height - 1 - originY);
+        float stepInterval = maxDistance > 0 ? sweepDuration / maxDistance : 0f;
+
+        StartCoroutine(CoEmitLineSweepCellCallbacks(delaySeconds, stepInterval, maxDistance, step =>
+        {
+            int downY = originY - step;
+            if (downY >= 0 && downY < height)
+                onSweepCellReached(new Vector2Int(x, downY));
+
+            if (step == 0)
+                return;
+
+            int upY = originY + step;
+            if (upY >= 0 && upY < height)
+                onSweepCellReached(new Vector2Int(x, upY));
+        }));
+    }
+
+    private IEnumerator CoEmitLineSweepCellCallbacks(float delaySeconds, float stepInterval, int maxDistance, Action<int> emitStep)
+    {
+        if (delaySeconds > 0f)
+            yield return new WaitForSeconds(delaySeconds);
+
+        for (int step = 0; step <= maxDistance; step++)
+        {
+            emitStep?.Invoke(step);
+            if (stepInterval > 0f)
+                yield return new WaitForSeconds(stepInterval);
+            else
+                yield return null;
+        }
     }
 
     private Vector3 GetCellWorldCenterPosition(int x, int y)

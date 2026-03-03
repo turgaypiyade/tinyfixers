@@ -17,6 +17,26 @@ public class SpecialResolver
     private float pendingOverrideOverrideClearDelay = 0f;
     private bool overrideForceDefaultClearAnim;
     private bool overrideSuppressPerTileClearVfx;
+    private bool overrideFanoutShowSelectionPulse;
+    private bool overrideFanoutPulseTriggeredByBeam;
+    private const float OverrideFanoutSelectionPulseReadability = 0.12f;
+    private readonly List<PendingOverrideImplant> pendingOverrideImplants = new();
+
+    private readonly struct PendingOverrideImplant
+    {
+        public readonly TileView target;
+        public readonly TileSpecial special;
+        public readonly TileView partnerTile;
+        public readonly TileView overrideTile;
+
+        public PendingOverrideImplant(TileView target, TileSpecial special, TileView partnerTile, TileView overrideTile)
+        {
+            this.target = target;
+            this.special = special;
+            this.partnerTile = partnerTile;
+            this.overrideTile = overrideTile;
+        }
+    }
 
     public SpecialResolver(BoardController board, MatchFinder matchFinder, BoardAnimator boardAnimator, PulseCoreImpactService pulseCoreImpactService)
     {
@@ -171,7 +191,10 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         overrideFanoutTargets.Clear();
         overrideForceDefaultClearAnim = false;
         overrideSuppressPerTileClearVfx = false;
+        overrideFanoutShowSelectionPulse = false;
+        overrideFanoutPulseTriggeredByBeam = false;
         pendingOverrideOverrideClearDelay = 0f;
+        pendingOverrideImplants.Clear();
 
         var affected = new HashSet<TileView> { a, b };
         MarkAffectedCell(a);
@@ -230,10 +253,56 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                 overrideFanoutTargets,
                 originTile: overrideFanoutOrigin,
                 visualTargets: overrideFanoutTargets,
-                allowCondense: false);
+                allowCondense: false,
+                onTargetBeamSpawned: tile =>
+                {
+                    if (overrideFanoutShowSelectionPulse && tile != null)
+                    {
+                        overrideFanoutPulseTriggeredByBeam = true;
+                        tile.PlaySelectionPulse(1.20f, 0.08f, 0.10f);
+                    }
+
+                    ApplyPendingOverrideImplantForTile(affected, queue, queued, tile);
+                });
+
             // Wait at least a tiny bit so the mark is readable.
             yield return new WaitForSeconds(Mathf.Max(0.06f, lightningDur));
-}
+
+            if (overrideFanoutShowSelectionPulse && !overrideFanoutPulseTriggeredByBeam)
+            {
+                for (int i = 0; i < overrideFanoutTargets.Count; i++)
+                    overrideFanoutTargets[i]?.PlaySelectionPulse(1.20f, 0.08f, 0.10f);
+            }
+
+            // Give the pulse a short readability window before clear destroys targets.
+            if (overrideFanoutShowSelectionPulse)
+                yield return new WaitForSeconds(OverrideFanoutSelectionPulseReadability);
+
+            // Safety: any implant that did not get a beam callback (unexpected filtering, duplicates, etc.).
+            if (pendingOverrideImplants.Count > 0)
+                ApplyPendingOverrideImplants(affected, queue, queued);
+        }
+        else if (pendingOverrideImplants.Count > 0)
+        {
+            // Safety: if no fan-out visual was produced, still apply queued implants.
+            ApplyPendingOverrideImplants(affected, queue, queued);
+        }
+
+        if (queue.Count > 0)
+        {
+            EnqueueChainSpecials(affected, queue, queued, processed);
+
+            while (queue.Count > 0)
+            {
+                var activation = queue.Dequeue();
+                queued.Remove(activation.special);
+                if (activation.special == null || processed.Contains(activation.special)) continue;
+
+                processed.Add(activation.special);
+                ApplySpecialActivation(affected, activation.special, activation.partner, ref hasLineActivation, lightningVisualTargets, lightningLineStrikes);
+                EnqueueChainSpecials(affected, queue, queued, processed);
+            }
+        }
 
 
         // If Override+Override combo VFX played, wait for it to finish before clearing tiles.
@@ -807,7 +876,9 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
                     if (targetSpecial == TileSpecial.None)
                     {
-                        // Normal partner: just clear all matching tiles (after fan-out mark)
+                        // Normal partner: fan-out hedefleri beam ulaştığında kısa bir seçilme pulse
+                        // oynatıp ardından normal clear akışına bırak.
+                        overrideFanoutShowSelectionPulse = true;
                         matches.Add(tile);
                         MarkAffectedCell(tile);
                         continue;
@@ -815,16 +886,12 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
                     if (targetSpecial == TileSpecial.PatchBot)
                     {
-                        tile.SetSpecial(TileSpecial.PatchBot);
-                        AutoPatchBotTeleportHitAndVanish(matches, tile, otherTile, overrideTile);
+                        pendingOverrideImplants.Add(new PendingOverrideImplant(tile, TileSpecial.PatchBot, otherTile, overrideTile));
                         continue;
                     }
 
-                    // Special partner: implant the same special quickly, then let the special system resolve its effect
-                    tile.SetSpecial(targetSpecial);
-                    matches.Add(tile);
-                    MarkAffectedCell(tile);
-                    EnqueueActivation(queue, queued, tile, otherTile);
+                    // Special partner: beam targetında taşı dönüştür, sonra özel etkiyi zincire ekle.
+                    pendingOverrideImplants.Add(new PendingOverrideImplant(tile, targetSpecial, otherTile, overrideTile));
                 }
 
             return;
@@ -920,6 +987,48 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             return;
         }
 
+    }
+
+    void ApplyPendingOverrideImplantForTile(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<TileView> queued, TileView target)
+    {
+        if (target == null || pendingOverrideImplants.Count == 0)
+            return;
+
+        for (int i = pendingOverrideImplants.Count - 1; i >= 0; i--)
+        {
+            var pending = pendingOverrideImplants[i];
+            if (pending.target != target)
+                continue;
+
+            ApplyPendingOverrideImplant(matches, queue, queued, pending);
+            pendingOverrideImplants.RemoveAt(i);
+        }
+    }
+
+    void ApplyPendingOverrideImplants(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<TileView> queued)
+    {
+        for (int i = 0; i < pendingOverrideImplants.Count; i++)
+            ApplyPendingOverrideImplant(matches, queue, queued, pendingOverrideImplants[i]);
+
+        pendingOverrideImplants.Clear();
+    }
+
+    void ApplyPendingOverrideImplant(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<TileView> queued, PendingOverrideImplant pending)
+    {
+        if (pending.target == null)
+            return;
+
+        pending.target.SetSpecial(pending.special);
+
+        if (pending.special == TileSpecial.PatchBot)
+        {
+            AutoPatchBotTeleportHitAndVanish(matches, pending.target, pending.partnerTile, pending.overrideTile);
+            return;
+        }
+
+        matches.Add(pending.target);
+        MarkAffectedCell(pending.target);
+        EnqueueActivation(queue, queued, pending.target, pending.partnerTile);
     }
 
 
