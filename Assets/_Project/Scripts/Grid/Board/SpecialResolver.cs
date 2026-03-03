@@ -17,7 +17,6 @@ public class SpecialResolver
     private float pendingOverrideOverrideClearDelay = 0f;
     private bool overrideForceDefaultClearAnim;
     private bool overrideSuppressPerTileClearVfx;
-    private bool overrideFanoutNormalSelectionPulse;
     private readonly List<PendingOverrideImplant> pendingOverrideImplants = new();
 
     private readonly struct PendingOverrideImplant
@@ -251,13 +250,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                 originTile: overrideFanoutOrigin,
                 visualTargets: overrideFanoutTargets,
                 allowCondense: false,
-                onTargetBeamSpawned: tile =>
-                {
-                    if (overrideFanoutNormalSelectionPulse)
-                        tile?.PlaySelectionPulse();
-
-                    ApplyPendingOverrideImplantForTile(affected, queue, queued, tile);
-                });
+                onTargetBeamSpawned: tile => ApplyPendingOverrideImplantForTile(affected, queue, queued, tile));
 
             // Wait at least a tiny bit so the mark is readable.
             yield return new WaitForSeconds(Mathf.Max(0.06f, lightningDur));
