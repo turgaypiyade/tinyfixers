@@ -248,7 +248,6 @@ public class BoardController : MonoBehaviour
     private PulseCoreImpactService pulseCoreImpactService;
     private ObstacleStateService obstacleStateService;
     private readonly List<Vector3> lightningTargetPositionsBuffer = new List<Vector3>(32);
-    private readonly List<TileView> lightningTargetTilesBuffer = new List<TileView>(32);
     private bool didLogMissingLightningSpawner;
     private readonly HashSet<int> patchBotForcedObstacleHits = new();
 
@@ -1000,7 +999,7 @@ public class BoardController : MonoBehaviour
 
         // 2) Hedefleri doldur (origin’e çok yakın olanları ve duplicate’leri çıkar)
         lightningTargetPositionsBuffer.Clear();
-        lightningTargetTilesBuffer.Clear();
+        var lightningTargetTiles = new List<TileView>(32);
 
         const float kMinDistFromOrigin = 0.05f; // tile aralığın ~0.5 ise bu güvenli
         float minDistSqr = kMinDistFromOrigin * kMinDistFromOrigin;
@@ -1028,7 +1027,7 @@ public class BoardController : MonoBehaviour
             if (!dup)
             {
                 lightningTargetPositionsBuffer.Add(p);
-                lightningTargetTilesBuffer.Add(tile);
+                lightningTargetTiles.Add(tile);
             }
         }
 
@@ -1041,7 +1040,7 @@ public class BoardController : MonoBehaviour
         {
             if (t == null) continue;
             lightningTargetPositionsBuffer.Add(GetTileWorldCenter(t));
-            lightningTargetTilesBuffer.Add(t);
+            lightningTargetTiles.Add(t);
             break;
         }
     }
@@ -1062,9 +1061,9 @@ public class BoardController : MonoBehaviour
         {
             lightningSpawner.PlayEmitterLightning(originWorldPos, lightningTargetPositionsBuffer, idx =>
             {
-                if (idx < 0 || idx >= lightningTargetTilesBuffer.Count)
+                if (idx < 0 || idx >= lightningTargetTiles.Count)
                     return;
-                onTargetBeamSpawned(lightningTargetTilesBuffer[idx]);
+                onTargetBeamSpawned(lightningTargetTiles[idx]);
             });
         }
         else
