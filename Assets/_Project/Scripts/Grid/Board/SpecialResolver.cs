@@ -188,6 +188,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         overrideFanoutTargets.Clear();
         overrideForceDefaultClearAnim = false;
         overrideSuppressPerTileClearVfx = false;
+        overrideFanoutNormalSelectionPulse = false;
         pendingOverrideOverrideClearDelay = 0f;
         pendingOverrideImplants.Clear();
 
@@ -852,7 +853,9 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
                     if (targetSpecial == TileSpecial.None)
                     {
-                        // Normal partner: just clear all matching tiles (after fan-out mark)
+                        // Normal partner: fan-out hedefleri beam ulaştığında kısa bir seçilme pulse
+                        // oynatıp ardından normal clear akışına bırak.
+                        overrideFanoutNormalSelectionPulse = true;
                         matches.Add(tile);
                         MarkAffectedCell(tile);
                         continue;
