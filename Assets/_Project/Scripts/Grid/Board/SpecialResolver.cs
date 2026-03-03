@@ -17,6 +17,7 @@ public class SpecialResolver
     private float pendingOverrideOverrideClearDelay = 0f;
     private bool overrideForceDefaultClearAnim;
     private bool overrideSuppressPerTileClearVfx;
+    private bool overrideFanoutNormalSelectionPulse;
     private readonly List<PendingOverrideImplant> pendingOverrideImplants = new();
 
     private readonly struct PendingOverrideImplant
