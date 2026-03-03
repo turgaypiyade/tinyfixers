@@ -246,14 +246,6 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         // SystemOverride: show a single fan-out lightning mark to all targets before clearing/activating.
         if (overrideFanoutOrigin != null && overrideFanoutTargets.Count > 0)
         {
-            // If there are no pending implants, this is a normal clear fan-out path.
-            // Keep pulse feedback ON so beam-hit tiles feel selected.
-            if (!overrideFanoutNormalSelectionPulse && pendingOverrideImplants.Count == 0)
-            {
-                overrideFanoutNormalSelectionPulse = true;
-                Debug.Log("[SystemOverride][PulseDebug] Auto-enabled normal selection pulse (no pending implants).");
-            }
-
             Debug.Log($"[SystemOverride][PulseDebug] Fanout start targets={overrideFanoutTargets.Count} pulseModeNormal={overrideFanoutNormalSelectionPulse}");
             float lightningDur = board.PlayLightningStrikeForTiles(
                 overrideFanoutTargets,
