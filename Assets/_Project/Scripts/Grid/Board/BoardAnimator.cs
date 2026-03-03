@@ -339,25 +339,15 @@ public class BoardAnimator
                 return;
 
             lineHitClearedTiles.Add(tileAtCell);
-            board.StartCoroutine(ClearTileOnLineSweepHit(tileAtCell));
-        }
-
-        IEnumerator ClearTileOnLineSweepHit(TileView tile)
-        {
-            if (tile == null)
-                yield break;
-
-            yield return clearEffectOrchestrator.Play(tile, ClearAnimationMode.LightningStrike, 0f, board.GetClearDurationForCurrentPass());
-
-            if (tile == null)
-                yield break;
-
-            FinalizeTileClear(tile);
+            FinalizeTileClear(tileAtCell);
         }
 
         void FinalizeTileClear(TileView tile)
         {
             if (tile == null)
+                return;
+
+            if (!tile)
                 return;
 
             int x = tile.X;
