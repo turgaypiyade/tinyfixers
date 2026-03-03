@@ -246,15 +246,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         // SystemOverride: show a single fan-out lightning mark to all targets before clearing/activating.
         if (overrideFanoutOrigin != null && overrideFanoutTargets.Count > 0)
         {
-            // Fan-out ışını hedefe çarptığında her zaman kısa seçim hissi ver.
-            // (Normal + combo yollarında kullanıcı feedback'i tutarlı olsun.)
-            if (!overrideFanoutNormalSelectionPulse)
-            {
-                overrideFanoutNormalSelectionPulse = true;
-                Debug.Log("[SystemOverride][PulseDebug] Auto-enabled beam selection pulse for fanout.");
-            }
-
-            Debug.Log($"[SystemOverride][PulseDebug] Fanout start targets={overrideFanoutTargets.Count} pulseModeNormal={overrideFanoutNormalSelectionPulse} pendingImplants={pendingOverrideImplants.Count}");
+            Debug.Log($"[SystemOverride][PulseDebug] Fanout start targets={overrideFanoutTargets.Count} pulseModeNormal={overrideFanoutNormalSelectionPulse}");
             float lightningDur = board.PlayLightningStrikeForTiles(
                 overrideFanoutTargets,
                 originTile: overrideFanoutOrigin,
