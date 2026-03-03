@@ -246,6 +246,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         // SystemOverride: show a single fan-out lightning mark to all targets before clearing/activating.
         if (overrideFanoutOrigin != null && overrideFanoutTargets.Count > 0)
         {
+            Debug.Log($"[SystemOverride][PulseDebug] Fanout start targets={overrideFanoutTargets.Count} pulseModeNormal={overrideFanoutPulseOnBeamForNormal}");
             float lightningDur = board.PlayLightningStrikeForTiles(
                 overrideFanoutTargets,
                 originTile: overrideFanoutOrigin,
