@@ -895,14 +895,38 @@ public class BoardController : MonoBehaviour
             // Row/Column booster etkisinde yalnızca hedeflenen hat hasar almalı.
             // Komşu over-tile blocker ek hasarı, sütun/satır tetiklemelerinde
             // beklenmeyen fazla stage düşüşüne sebep olabiliyor.
+            var chainLineStrikes = new List<LightningLineStrike>();
+
+            specialResolver.ExpandSpecialChain(
+                matches,
+                affectedCells,
+                out hasLineActivation,
+                out _,
+                lightningVisualTargets: initialLightningTargets,
+                lightningLineStrikes: chainLineStrikes);            
+
             bool includeAdjacentOverTileBlockerDamage = false;
             List<LightningLineStrike> lightningLineStrikes = null;
-            if (animationMode == ClearAnimationMode.LightningStrike && targetCell.HasValue)
+       /*     if (animationMode == ClearAnimationMode.LightningStrike && targetCell.HasValue)
             {
                 lightningLineStrikes = new List<LightningLineStrike>(1)
                 {
                     new LightningLineStrike(targetCell.Value, mode == BoosterMode.Row)
                 };
+            }*/
+
+            // Booster Row/Column targetCell strike'ını da ekle
+            if (animationMode == ClearAnimationMode.LightningStrike)
+            {
+                lightningLineStrikes = chainLineStrikes.Count > 0
+                    ? chainLineStrikes
+                    : new List<LightningLineStrike>();
+
+                if (targetCell.HasValue && (mode == BoosterMode.Row || mode == BoosterMode.Column))
+                    lightningLineStrikes.Add(new LightningLineStrike(targetCell.Value, mode == BoosterMode.Row));
+
+                if (lightningLineStrikes.Count == 0)
+                    lightningLineStrikes = null;
             }
 
             yield return boardAnimator.ClearMatchesAnimated(matches, doShake: true, animationMode: animationMode, affectedCells: affectedCells, obstacleHitContext: obstacleHitContext, includeAdjacentOverTileBlockerDamage: includeAdjacentOverTileBlockerDamage, lightningOriginTile: target, lightningOriginCell: targetCell, lightningVisualTargets: initialLightningTargets, lightningLineStrikes: lightningLineStrikes );

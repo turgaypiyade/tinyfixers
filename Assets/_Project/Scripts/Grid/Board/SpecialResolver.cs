@@ -265,7 +265,15 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         specialAffectedCells = null;
     }
 
-    public void ExpandSpecialChain(HashSet<TileView> affected, HashSet<Vector2Int> affectedCells, out bool hasLineActivation, out bool hasAnySpecialActivation)
+   // public void ExpandSpecialChain(HashSet<TileView> affected, HashSet<Vector2Int> affectedCells, out bool hasLineActivation, out bool hasAnySpecialActivation)
+    public void ExpandSpecialChain(
+        HashSet<TileView> affected,
+        HashSet<Vector2Int> affectedCells,
+        out bool hasLineActivation,
+        out bool hasAnySpecialActivation,
+        HashSet<TileView> lightningVisualTargets = null,
+        List<LightningLineStrike> lightningLineStrikes = null)
+
     {
         hasLineActivation = false;
         hasAnySpecialActivation = false;
@@ -309,7 +317,15 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
             processed.Add(activation.special);
             hasAnySpecialActivation = true;
-            ApplySpecialActivation(affected, activation.special, activation.partner, ref hasLineActivation);
+           // ApplySpecialActivation(affected, activation.special, activation.partner, ref hasLineActivation);
+            ApplySpecialActivation(
+            affected,
+            activation.special,
+            activation.partner,
+            ref hasLineActivation,
+            lightningVisualTargets,
+            lightningLineStrikes);
+
             EnqueueChainSpecials(affected, queue, queued, processed);
         }
 
@@ -342,6 +358,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         switch (specialTile.GetSpecial())
         {
             case TileSpecial.LineH:
+
             case TileSpecial.LineV:
                 hasLineActivation = true;
                 ApplyLineAt(matches, specialTile.X, specialTile.Y, specialTile.GetSpecial(), lightningVisualTargets, lightningLineStrikes);
@@ -1054,6 +1071,8 @@ void AddAllOfType(HashSet<TileView> matches, TileType type)
 
         patchbotComboService.ResolveTargetImpact(matches, target.x, target.y, hasObstacleAtTarget, MarkAffectedCell, MarkAffectedCell);
     }
+
+    
     readonly struct SpecialActivation
     {
         public readonly TileView special;

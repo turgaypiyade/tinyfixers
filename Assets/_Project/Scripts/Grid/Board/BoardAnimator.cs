@@ -181,6 +181,14 @@ public class BoardAnimator
                 impactCells.Add(cell);
         }
 
+
+        if (suppressPerTileClearVfx
+            && animationMode == ClearAnimationMode.LightningStrike
+            && (lightningLineStrikes == null || lightningLineStrikes.Count == 0))
+        {
+            suppressPerTileClearVfx = false;
+        }
+        
         for (int i = 0; i < list.Count; i++)
         {
             var tile = list[i];
@@ -243,6 +251,10 @@ public class BoardAnimator
             if (lightningLineStrikes != null && lightningLineStrikes.Count > 0)
             {
                 lightningDuration = board.PlayLightningLineStrikes(lightningLineStrikes);
+                    if (lightningDuration <= 0.001f)
+                    {
+                        suppressPerTileClearVfx = false; // tile bazlı animasyonlara izin ver
+                    }
             }
             else
             {
