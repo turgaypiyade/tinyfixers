@@ -63,7 +63,7 @@ public class TeleportMarkerAnim : MonoBehaviour
     IEnumerator CoPlay()
     {
         // Suggested defaults if you didn't tune anything
-        ApplyModeDefaults();
+        //ApplyModeDefaults();
 
         // 0) Flash frame (instant pop)
         ApplyInstantFlash();
@@ -115,6 +115,7 @@ public class TeleportMarkerAnim : MonoBehaviour
 
     void ApplyModeDefaults()
     {
+    
         // If user didn't change, these values feel good for teleport
         if (mode == Mode.Out)
         {

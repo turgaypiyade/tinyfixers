@@ -214,8 +214,8 @@ MonoBehaviour:
   ringImg: {fileID: 5560681916934870417}
   glowImg: {fileID: 631594699840874250}
   mode: 0
-  duration: 0.08
-  holdTime: 0.05
+  duration: 0.05
+  holdTime: 0.01
   ringFromScale: 1.05
   ringToScale: 0.15
   glowFromScale: 1.25
