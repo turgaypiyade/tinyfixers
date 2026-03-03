@@ -436,9 +436,18 @@ public class TileView : MonoBehaviour,
         if (this == null)
             yield break;
 
-        var tr = transform;
-        Vector3 baseScale = Vector3.one;
-        Vector3 peakScale = Vector3.one * Mathf.Max(1f, upScale);
+        // IMPORTANT:
+        // Root transform scale is frequently driven by other animations (settle/squash/drag/pop).
+        // For "selection feedback" we prefer pulsing the icon rect (if present) so it is not overridden.
+        Transform tr = null;
+        if (iconImage != null && iconImage.rectTransform != null)
+            tr = iconImage.rectTransform;
+        else
+            tr = transform;
+
+        Vector3 baseScale = tr.localScale;
+        float s = Mathf.Max(1f, upScale);
+        Vector3 peakScale = baseScale * s;
 
         float t = 0f;
         while (t < upDuration)
@@ -460,7 +469,7 @@ public class TileView : MonoBehaviour,
             yield return null;
         }
 
-        if (this != null)
+        if (this != null && tr != null)
             tr.localScale = baseScale;
 
         selectionPulseRoutine = null;

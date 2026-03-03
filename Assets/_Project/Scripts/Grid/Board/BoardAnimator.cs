@@ -31,6 +31,32 @@ public class BoardAnimator
     // Keyed by milliseconds to keep lookups stable.
     private static readonly Dictionary<int, WaitForSeconds> _waitCache = new Dictionary<int, WaitForSeconds>(64);
 
+    // Selection pulse ("tile selected") helpers.
+    // Implemented here instead of relying on TileView.PlaySelectionPulse() because TileView
+    // may re-apply scale/size every frame, cancelling the animation.
+    private readonly Dictionary<TileView, Coroutine> _activeSelectionPulses = new();
+    private readonly Dictionary<TileView, Transform> _selectionPulseTargetCache = new();
+
+    private Transform GetSelectionPulseTarget(TileView tile)
+    {
+        if (tile == null) return null;
+        if (_selectionPulseTargetCache.TryGetValue(tile, out var cached) && cached != null)
+            return cached;
+
+        // Prefer pulsing the visual child (often the icon Image) because some TileView layouts
+        // re-apply root scale/size each frame and can stomp animations.
+        // Fallback to root transform.
+        Transform chosen = tile.transform;
+
+        // Try find a child Image transform that's not the root.
+        var img = tile.GetComponentInChildren<UnityEngine.UI.Image>(includeInactive: false);
+        if (img != null && img.transform != null && img.transform != tile.transform)
+            chosen = img.transform;
+
+        _selectionPulseTargetCache[tile] = chosen;
+        return chosen;
+    }
+
     private static WaitForSeconds Wait(float seconds)
     {
         if (seconds <= 0f) return null;
@@ -49,6 +75,69 @@ public class BoardAnimator
             new LightningStrikeTileClearEffect(board.BoardVfxPlayer, lightningColor),
             new DefaultPopTileClearEffect()
         );
+    }
+
+    /// <summary>
+    /// Short "selected" pulse: scale up then back to original.
+    /// Call this when a lightning/marker reaches a target to give feedback.
+    /// </summary>
+    public void PlaySelectionPulse(
+        TileView tile,
+        float delay = 0f,
+        float peakScale = 1.12f,
+        float upTime = 0.06f,
+        float downTime = 0.08f)
+    {
+        if (tile == null) return;
+
+        if (_activeSelectionPulses.TryGetValue(tile, out var running) && running != null)
+            board.StopCoroutine(running);
+
+        var co = board.StartCoroutine(SelectionPulseRoutine(tile, delay, peakScale, upTime, downTime));
+        _activeSelectionPulses[tile] = co;
+    }
+
+    private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peakScale, float upTime, float downTime)
+    {
+        if (tile == null) yield break;
+
+        var w = Wait(delay);
+        if (w != null) yield return w;
+
+        if (tile == null) yield break;
+
+        var tr = GetSelectionPulseTarget(tile);
+        if (tr == null) yield break;
+
+        Vector3 baseScale = tr.localScale;
+        Vector3 targetScale = baseScale * Mathf.Max(1f, peakScale);
+
+        // Up
+        float t = 0f;
+        while (t < upTime)
+        {
+            if (tile == null || tr == null) yield break;
+            t += Time.deltaTime;
+            float a = upTime <= 0.0001f ? 1f : Mathf.Clamp01(t / upTime);
+            tr.localScale = Vector3.LerpUnclamped(baseScale, targetScale, a);
+            yield return null;
+        }
+
+        // Down
+        t = 0f;
+        while (t < downTime)
+        {
+            if (tile == null || tr == null) yield break;
+            t += Time.deltaTime;
+            float a = downTime <= 0.0001f ? 1f : Mathf.Clamp01(t / downTime);
+            tr.localScale = Vector3.LerpUnclamped(targetScale, baseScale, a);
+            yield return null;
+        }
+
+        if (tile != null && tr != null)
+            tr.localScale = baseScale;
+
+        _activeSelectionPulses.Remove(tile);
     }
 
     public IEnumerator SwapTilesAnimated(TileView a, TileView b, float duration)

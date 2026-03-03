@@ -18,6 +18,7 @@ public class SpecialResolver
     private bool overrideForceDefaultClearAnim;
     private bool overrideSuppressPerTileClearVfx;
     private bool overrideFanoutNormalSelectionPulse;
+    private int overrideFanoutPulseHitCount;
     private readonly List<PendingOverrideImplant> pendingOverrideImplants = new();
 
     private readonly struct PendingOverrideImplant
@@ -190,6 +191,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         overrideForceDefaultClearAnim = false;
         overrideSuppressPerTileClearVfx = false;
         overrideFanoutNormalSelectionPulse = false;
+        overrideFanoutPulseHitCount = 0;
         pendingOverrideOverrideClearDelay = 0f;
         pendingOverrideImplants.Clear();
 
@@ -256,6 +258,20 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
             // Wait at least a tiny bit so the mark is readable.
             yield return new WaitForSeconds(Mathf.Max(0.06f, lightningDur));
+
+            // Fallback: Override+Normal wants "selected" feedback per target when the lightning reaches it.
+            // If the VFX system does not report per-target callbacks in this mode, pulse all targets after
+            // the lightning duration so the user still gets the feedback.
+            if (overrideFanoutNormalSelectionPulse && overrideFanoutPulseHitCount <= 0)
+            {
+                Debug.LogWarning("[SystemOverride][SelectionPulse] No per-target hit callback received; applying fallback pulse to all fanout targets.");
+                for (int i = 0; i < overrideFanoutTargets.Count; i++)
+                {
+                    var t = overrideFanoutTargets[i];
+                    if (t == null) continue;
+                    boardAnimator.PlaySelectionPulse(t);
+                }
+            }
 
             // Safety: any implant that did not get a beam callback (unexpected filtering, duplicates, etc.).
             if (pendingOverrideImplants.Count > 0)
@@ -420,6 +436,16 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                     if (partnerTile != null) type = partnerTile.GetTileType();
                     else if (specialTile.GetOverrideBaseType(out var storedType)) type = storedType;
                     else type = specialTile.GetTileType();
+
+                    // Override + Normal partner: we want a quick "selected" pulse feedback when the fanout beam
+                    // reaches each target.
+                    // IMPORTANT: Override+Normal does NOT go through ApplyComboEffect (partner special is None),
+                    // so we must enable the pulse mode here.
+                    var partnerSpecial = partnerTile != null ? partnerTile.GetSpecial() : TileSpecial.None;
+                    overrideFanoutNormalSelectionPulse = (partnerTile != null && partnerSpecial == TileSpecial.None);
+                    overrideFanoutPulseHitCount = 0;
+                    Debug.Log($"[SystemOverride][PulseDebug] Override activation partnerSpecial={partnerSpecial} pulseModeNormal={overrideFanoutNormalSelectionPulse}");
+
                     // Single-shot fan-out lightning: mark all targets first, then clear together.
                     overrideFanoutOrigin = specialTile;
                     CollectAllOfType(overrideFanoutTargets, type, excludeSpecials: false);
@@ -831,6 +857,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
             TileSpecial targetSpecial = otherTile.GetSpecial();
             bool targetIsLine = targetSpecial == TileSpecial.LineH || targetSpecial == TileSpecial.LineV;
+            bool targetIsNormal = targetSpecial == TileSpecial.None;
             TileType baseType = targetSpecial == TileSpecial.None
                 ? otherTile.GetTileType()
                 : (overrideTile.GetOverrideBaseType(out var storedType) ? storedType : overrideTile.GetTileType());
@@ -840,6 +867,9 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             // Keep default clear unless partner is a line special; line combos must preserve LineTravel strikes.
             overrideForceDefaultClearAnim = !targetIsLine;
             overrideSuppressPerTileClearVfx = true;
+            // IMPORTANT: In Override + Normal we want "selected" feedback when the lightning reaches a target.
+            // Set this ONCE here so it can't be missed due to any loop filtering.
+            overrideFanoutNormalSelectionPulse = targetIsNormal;
 
             // Build conversion/clear list (only normal tiles of the base type)
             for (int x = 0; x < board.Width; x++)
@@ -857,7 +887,6 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                     {
                         // Normal partner: fan-out hedefleri beam ulaştığında kısa bir seçilme pulse
                         // oynatıp ardından normal clear akışına bırak.
-                        overrideFanoutNormalSelectionPulse = true;
                         matches.Add(tile);
                         MarkAffectedCell(tile);
                         continue;
@@ -975,8 +1004,12 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
         if (overrideFanoutNormalSelectionPulse)
         {
-            target.PlaySelectionPulse();
-            Debug.Log($"[SystemOverride][PulseDebug] Beam hit selection pulse on ({target.X},{target.Y})");
+            // NOTE: For override+normal partner we only want a quick "selected" feedback
+            // when the lightning reaches the target. TileView.PlaySelectionPulse() was
+            // unreliable (tile sizing logic can stomp scale), so we route through BoardAnimator.
+            boardAnimator.PlaySelectionPulse(target);
+            overrideFanoutPulseHitCount++;
+            Debug.Log($"[SystemOverride][SelectionPulse] beamHit=({target.X},{target.Y})");
         }
 
         if (pendingOverrideImplants.Count == 0)
