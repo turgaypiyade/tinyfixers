@@ -17,6 +17,23 @@ public class SpecialResolver
     private float pendingOverrideOverrideClearDelay = 0f;
     private bool overrideForceDefaultClearAnim;
     private bool overrideSuppressPerTileClearVfx;
+    private readonly List<PendingOverrideImplant> pendingOverrideImplants = new();
+
+    private readonly struct PendingOverrideImplant
+    {
+        public readonly TileView target;
+        public readonly TileSpecial special;
+        public readonly TileView partnerTile;
+        public readonly TileView overrideTile;
+
+        public PendingOverrideImplant(TileView target, TileSpecial special, TileView partnerTile, TileView overrideTile)
+        {
+            this.target = target;
+            this.special = special;
+            this.partnerTile = partnerTile;
+            this.overrideTile = overrideTile;
+        }
+    }
 
     public SpecialResolver(BoardController board, MatchFinder matchFinder, BoardAnimator boardAnimator, PulseCoreImpactService pulseCoreImpactService)
     {
@@ -172,6 +189,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         overrideForceDefaultClearAnim = false;
         overrideSuppressPerTileClearVfx = false;
         pendingOverrideOverrideClearDelay = 0f;
+        pendingOverrideImplants.Clear();
 
         var affected = new HashSet<TileView> { a, b };
         MarkAffectedCell(a);
@@ -234,6 +252,23 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             // Wait at least a tiny bit so the mark is readable.
             yield return new WaitForSeconds(Mathf.Max(0.06f, lightningDur));
 }
+
+        if (pendingOverrideImplants.Count > 0)
+        {
+            ApplyPendingOverrideImplants(affected, queue, queued);
+            EnqueueChainSpecials(affected, queue, queued, processed);
+
+            while (queue.Count > 0)
+            {
+                var activation = queue.Dequeue();
+                queued.Remove(activation.special);
+                if (activation.special == null || processed.Contains(activation.special)) continue;
+
+                processed.Add(activation.special);
+                ApplySpecialActivation(affected, activation.special, activation.partner, ref hasLineActivation, lightningVisualTargets, lightningLineStrikes);
+                EnqueueChainSpecials(affected, queue, queued, processed);
+            }
+        }
 
 
         // If Override+Override combo VFX played, wait for it to finish before clearing tiles.
@@ -815,16 +850,12 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
                     if (targetSpecial == TileSpecial.PatchBot)
                     {
-                        tile.SetSpecial(TileSpecial.PatchBot);
-                        AutoPatchBotTeleportHitAndVanish(matches, tile, otherTile, overrideTile);
+                        pendingOverrideImplants.Add(new PendingOverrideImplant(tile, TileSpecial.PatchBot, otherTile, overrideTile));
                         continue;
                     }
 
-                    // Special partner: implant the same special quickly, then let the special system resolve its effect
-                    tile.SetSpecial(targetSpecial);
-                    matches.Add(tile);
-                    MarkAffectedCell(tile);
-                    EnqueueActivation(queue, queued, tile, otherTile);
+                    // Special partner: beam targetında taşı dönüştür, sonra özel etkiyi zincire ekle.
+                    pendingOverrideImplants.Add(new PendingOverrideImplant(tile, targetSpecial, otherTile, overrideTile));
                 }
 
             return;
@@ -920,6 +951,29 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             return;
         }
 
+    }
+
+    void ApplyPendingOverrideImplants(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<TileView> queued)
+    {
+        for (int i = 0; i < pendingOverrideImplants.Count; i++)
+        {
+            var pending = pendingOverrideImplants[i];
+            if (pending.target == null) continue;
+
+            pending.target.SetSpecial(pending.special);
+
+            if (pending.special == TileSpecial.PatchBot)
+            {
+                AutoPatchBotTeleportHitAndVanish(matches, pending.target, pending.partnerTile, pending.overrideTile);
+                continue;
+            }
+
+            matches.Add(pending.target);
+            MarkAffectedCell(pending.target);
+            EnqueueActivation(queue, queued, pending.target, pending.partnerTile);
+        }
+
+        pendingOverrideImplants.Clear();
     }
 
 
