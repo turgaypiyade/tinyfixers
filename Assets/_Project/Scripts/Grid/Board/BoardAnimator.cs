@@ -134,6 +134,7 @@ public class BoardAnimator
         var pulseImpacts = new List<IEnumerator>();
         var shouldClearTile = new Dictionary<TileView, bool>();
         var clearedByType = new Dictionary<TileType, int>();
+        var lineHitClearedTiles = new HashSet<TileView>();
 
         float maxStaggerDelay = 0f;
         var impactCells = new HashSet<Vector2Int>();
@@ -188,6 +189,13 @@ public class BoardAnimator
         {
             suppressPerTileClearVfx = false;
         }
+
+        bool useLineHitDrivenClear = animationMode == ClearAnimationMode.LightningStrike
+            && lightningLineStrikes != null
+            && lightningLineStrikes.Count > 0;
+
+        if (useLineHitDrivenClear)
+            suppressPerTileClearVfx = true;
         
         for (int i = 0; i < list.Count; i++)
         {
@@ -200,6 +208,7 @@ public class BoardAnimator
         {
             var tile = list[i];
             if (tile == null) continue;
+            if (lineHitClearedTiles.Contains(tile)) continue;
 
             if (!board.IsSpecialActivationPhase && tile.GetSpecial() != TileSpecial.None)
                 continue;
@@ -250,7 +259,7 @@ public class BoardAnimator
         {
             if (lightningLineStrikes != null && lightningLineStrikes.Count > 0)
             {
-                lightningDuration = board.PlayLightningLineStrikes(lightningLineStrikes);
+                lightningDuration = board.PlayLightningLineStrikes(lightningLineStrikes, cell => TryClearTileOnLineSweepHit(cell));
                     if (lightningDuration <= 0.001f)
                     {
                         suppressPerTileClearVfx = false; // tile bazlı animasyonlara izin ver
@@ -300,6 +309,7 @@ public class BoardAnimator
         {
             var tile = list[i];
             if (tile == null) continue;
+            if (lineHitClearedTiles.Contains(tile)) continue;
 
             if (!board.IsSpecialActivationPhase && tile.GetSpecial() != TileSpecial.None)
                 continue;
@@ -307,13 +317,56 @@ public class BoardAnimator
             if (shouldClearTile.TryGetValue(tile, out var clearTile) && !clearTile)
                 continue;
 
-            tile.SetSpecial(TileSpecial.None);
+            FinalizeTileClear(tile);
+        }
+
+        void TryClearTileOnLineSweepHit(Vector2Int cell)
+        {
+            if (!useLineHitDrivenClear)
+                return;
+
+            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                return;
+
+            var tileAtCell = board.Tiles[cell.x, cell.y];
+            if (tileAtCell == null || lineHitClearedTiles.Contains(tileAtCell))
+                return;
+
+            if (!board.IsSpecialActivationPhase && tileAtCell.GetSpecial() != TileSpecial.None)
+                return;
+
+            if (shouldClearTile.TryGetValue(tileAtCell, out var shouldClearNow) && !shouldClearNow)
+                return;
+
+            lineHitClearedTiles.Add(tileAtCell);
+            board.StartCoroutine(ClearTileOnLineSweepHit(tileAtCell));
+        }
+
+        IEnumerator ClearTileOnLineSweepHit(TileView tile)
+        {
+            if (tile == null)
+                yield break;
+
+            yield return clearEffectOrchestrator.Play(tile, ClearAnimationMode.LightningStrike, 0f, board.GetClearDurationForCurrentPass());
+
+            if (tile == null)
+                yield break;
+
+            FinalizeTileClear(tile);
+        }
+
+        void FinalizeTileClear(TileView tile)
+        {
+            if (tile == null)
+                return;
 
             int x = tile.X;
             int y = tile.Y;
 
-            if (x >= 0 && x < board.Width && y >= 0 && y < board.Height)
+            if (x >= 0 && x < board.Width && y >= 0 && y < board.Height && board.Tiles[x, y] == tile)
                 board.Tiles[x, y] = null;
+
+            tile.SetSpecial(TileSpecial.None);
 
             var tileType = tile.GetTileType();
             clearedByType.TryGetValue(tileType, out int current);
