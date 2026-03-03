@@ -135,6 +135,8 @@ public class BoardAnimator
         var shouldClearTile = new Dictionary<TileView, bool>();
         var clearedByType = new Dictionary<TileType, int>();
         var lineHitClearedTiles = new HashSet<TileView>();
+        var lineSweepCandidates = new HashSet<TileView>();
+        bool lineHitWindowOpen = false;
 
         float maxStaggerDelay = 0f;
         var impactCells = new HashSet<Vector2Int>();
@@ -195,7 +197,10 @@ public class BoardAnimator
             && lightningLineStrikes.Count > 0;
 
         if (useLineHitDrivenClear)
+        {
             suppressPerTileClearVfx = true;
+            lineHitWindowOpen = true;
+        }
         
         for (int i = 0; i < list.Count; i++)
         {
@@ -219,6 +224,9 @@ public class BoardAnimator
 
             shouldClearTile[tile] = clearTile;
             if (!clearTile) continue;
+
+            if (useLineHitDrivenClear)
+                lineSweepCandidates.Add(tile);
 
             if (!suppressPerTileClearVfx && staggerDelays != null && staggerDelays.TryGetValue(tile, out var d))
             {
@@ -299,6 +307,8 @@ public class BoardAnimator
             if (__w != null) yield return __w;
         }
 
+        lineHitWindowOpen = false;
+
         if (pulseImpacts.Count > 0)
         {
             var __w = Wait(maxStaggerDelay + staggerAnimTime);
@@ -322,7 +332,7 @@ public class BoardAnimator
 
         void TryClearTileOnLineSweepHit(Vector2Int cell)
         {
-            if (!useLineHitDrivenClear)
+            if (!useLineHitDrivenClear || !lineHitWindowOpen)
                 return;
 
             if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
@@ -335,7 +345,10 @@ public class BoardAnimator
             if (!board.IsSpecialActivationPhase && tileAtCell.GetSpecial() != TileSpecial.None)
                 return;
 
-            if (shouldClearTile.TryGetValue(tileAtCell, out var shouldClearNow) && !shouldClearNow)
+            if (!lineSweepCandidates.Contains(tileAtCell))
+                return;
+
+            if (!shouldClearTile.TryGetValue(tileAtCell, out var shouldClearNow) || !shouldClearNow)
                 return;
 
             lineHitClearedTiles.Add(tileAtCell);
