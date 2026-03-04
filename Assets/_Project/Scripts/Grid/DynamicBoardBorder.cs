@@ -3,6 +3,15 @@ using UnityEngine.UI;
 
 public class DynamicBoardBorder : MonoBehaviour
 {
+    private enum EdgePreviewMode
+    {
+        All,
+        TopOnly,
+        BottomOnly,
+        LeftOnly,
+        RightOnly
+    }
+
     [Header("Dependencies")]
     public LevelData level;
     public RectTransform borderRoot;
@@ -38,6 +47,10 @@ public class DynamicBoardBorder : MonoBehaviour
     [Tooltip("Köşe sprite'larında transparan padding varsa büyütür.")]
     public float cornerScale = 1.20f;
 
+    [Header("Edge Preview")]
+    [Tooltip("Kenar sprite'ını test etmek için sadece tek bir yönü çiz.")]
+    [SerializeField] private EdgePreviewMode edgePreviewMode = EdgePreviewMode.All;
+
 
     public void SetLevelData(LevelData value)
     {
@@ -63,7 +76,7 @@ public class DynamicBoardBorder : MonoBehaviour
 
                 Vector2 cellPos = GetCellCenter(x, y);
 
-                if (!IsSolid(x, y - 1, blocked))
+                if (ShouldDrawTopEdge() && !IsSolid(x, y - 1, blocked))
                 {
                     bool extendLeft =
                         (!IsSolid(x - 1, y - 1, blocked)) && IsSolid(x - 1, y, blocked);
@@ -82,7 +95,7 @@ public class DynamicBoardBorder : MonoBehaviour
                     );
                 }
 
-                if (!IsSolid(x, y + 1, blocked))
+                if (ShouldDrawBottomEdge() && !IsSolid(x, y + 1, blocked))
                 {
                     bool extendLeft =
                         (!IsSolid(x - 1, y + 1, blocked)) && IsSolid(x - 1, y, blocked);
@@ -101,7 +114,7 @@ public class DynamicBoardBorder : MonoBehaviour
                     );
                 }
 
-                if (!IsSolid(x - 1, y, blocked))
+                if (ShouldDrawLeftEdge() && !IsSolid(x - 1, y, blocked))
                 {
                     bool extendUp =
                         (!IsSolid(x - 1, y - 1, blocked)) && IsSolid(x, y - 1, blocked);
@@ -120,7 +133,7 @@ public class DynamicBoardBorder : MonoBehaviour
                     );
                 }
 
-                if (!IsSolid(x + 1, y, blocked))
+                if (ShouldDrawRightEdge() && !IsSolid(x + 1, y, blocked))
                 {
                     bool extendUp =
                         (!IsSolid(x + 1, y - 1, blocked)) && IsSolid(x, y - 1, blocked);
@@ -151,6 +164,11 @@ public class DynamicBoardBorder : MonoBehaviour
             }
         }
     }
+
+    private bool ShouldDrawTopEdge() => edgePreviewMode == EdgePreviewMode.All || edgePreviewMode == EdgePreviewMode.TopOnly;
+    private bool ShouldDrawBottomEdge() => edgePreviewMode == EdgePreviewMode.All || edgePreviewMode == EdgePreviewMode.BottomOnly;
+    private bool ShouldDrawLeftEdge() => edgePreviewMode == EdgePreviewMode.All || edgePreviewMode == EdgePreviewMode.LeftOnly;
+    private bool ShouldDrawRightEdge() => edgePreviewMode == EdgePreviewMode.All || edgePreviewMode == EdgePreviewMode.RightOnly;
 
     private void SpawnMaskLabel(Vector2 pos, int mask)
     {
