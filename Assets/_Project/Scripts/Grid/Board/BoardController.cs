@@ -29,33 +29,19 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float swapDuration = 0.28f;
     [SerializeField] private float fallDuration = 0.22f;
     [SerializeField] private float clearDuration = 0.16f;
-    [SerializeField] private int spawnStartOffsetY = -2; // UI'da negatif yukarı
+    [SerializeField] private int spawnStartOffsetY = -2;
 
     [Header("Movement Feel")]
-    [Tooltip("Swap animasyonunda süre çarpanı. 1'den büyük değerler hareketi daha akışkan hissettirir.")]
     [SerializeField] private float swapDurationMultiplier = 1f;
     [SerializeField] private float fallColumnStep = 0.015f;
-
-    [Tooltip("Düşme/yeniden dolma animasyonunda süre çarpanı. 1'den büyük değerler daha yumuşak bir akış sağlar.")]
     [SerializeField] private float fallDurationMultiplier = 1f;
-
-    [Tooltip("Swap easing eğrisi. 0→1 zamanını pozisyon ilerlemesine map eder.")]
     [SerializeField] private AnimationCurve swapMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-
-    [Tooltip("Fall/Spawn easing eğrisi. 0→1 zamanını pozisyon ilerlemesine map eder.")]
     [SerializeField] private AnimationCurve fallMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
     [Header("Fall Settle")]
-    [Tooltip("Düşme hareketi tamamlandıktan sonra kısa squash-and-return settle etkisini açar.")]
     [SerializeField] private bool enableFallSettle;
-
-    [Tooltip("Settle fazı süresi (sn).")]
     [SerializeField] private float fallSettleDuration = 0.06f;
-
-    [Tooltip("Settle squash gücü. 0.04 => (1.04, 0.96, 1)")]
     [SerializeField] private float fallSettleStrength = 0.04f;
-
-    [Tooltip("Aynı kolondaki taşların düşüş başlangıcı arasındaki kademeli gecikme (sn). 0 => hepsi aynı anda başlar.")]
     [SerializeField] private float fallCascadeStep = 0.02f;
     internal float FallColumnStep => Mathf.Max(0f, fallColumnStep);
 
@@ -69,30 +55,26 @@ public class BoardController : MonoBehaviour
     [SerializeField] private int patchBotPulseComboSize = 4;
 
     [Header("PulseCore Impact (premium stagger)")]
-    [Tooltip("PulseCore etkisi sırasında hücreler arası gecikme (Manhattan dist * step)")]
     [SerializeField] private float pulseImpactDelayStep = 0.02f;
-
-    [Tooltip("PulseCore etkisi sırasında TileView.PlayPulseImpact toplam animasyon süresi")]
     [SerializeField] private float pulseImpactAnimTime = 0.16f;
 
     [Header("Board VFX/SFX")]
     [FormerlySerializedAs("pulseCoreVfxPlayer")][SerializeField] private PulseCoreVfxPlayer boardVfxPlayer;
     [SerializeField] private LightningSpawner lightningSpawner;
-    [SerializeField] private LineTravelSplitSwapTestUI lineTravelPlayer; // Template/prefab reference (should not be re-used for multiple simultaneous plays)
-    [SerializeField] private Transform lineTravelSpawnParent; // Where LineTravel instances will be spawned (e.g., VFXRoot). If null, falls back to lineTravelPlayer's parent.
+    [SerializeField] private LineTravelSplitSwapTestUI lineTravelPlayer;
+    [SerializeField] private Transform lineTravelSpawnParent;
 
     [Header("HUD / Goal Fly FX")]
     [SerializeField] private TopHudController topHud;
     [SerializeField] private GoalFlyFx goalFlyFx;
 
-
     [Header("Combo VFX")]
-    [SerializeField] private OverrideComboController systemOverrideComboVfx;   
+    [SerializeField] private OverrideComboController systemOverrideComboVfx;
     [SerializeField] private PulseEmitterComboController pulseEmitterComboVfx;
-    [SerializeField] private RectTransform vfxSpace; // VFXPlayer RectTransform sürükleyeceksin
+    [SerializeField] private RectTransform vfxSpace;
 
-    [SerializeField]private GameObject pulsePulseExplosionPrefab; // <-- EKLE
-    [SerializeField] private float pulsePulseExplosionLifetime = 1.0f; // <-- EKLE (0.6 - 1.2 arası ok)
+    [SerializeField] private GameObject pulsePulseExplosionPrefab;
+    [SerializeField] private float pulsePulseExplosionLifetime = 1.0f;
 
     [Header("Obstacle Visual Tuning")]
     [SerializeField] private AudioSource sfxSource;
@@ -114,7 +96,6 @@ public class BoardController : MonoBehaviour
     private int height;
 
     private TileView selected;
-        // Busy/idle tracking
     private int busyCount = 0;
     private BoosterMode activeBooster = BoosterMode.None;
 
@@ -125,7 +106,6 @@ public class BoardController : MonoBehaviour
     public int TileSize => tileSize;
     public bool IsBusy => busyCount > 0;
 
-    // Fired when board becomes fully idle (no resolves/animations in progress)
     public event Action OnBecameIdle;
 
     [System.Serializable]
@@ -148,7 +128,6 @@ public class BoardController : MonoBehaviour
         outList.AddRange(_patchbotDashRequests);
         _patchbotDashRequests.Clear();
     }
-
 
     public TopHudController TopHud
     {
@@ -182,11 +161,6 @@ public class BoardController : MonoBehaviour
             OnBecameIdle?.Invoke();
     }
 
-
-    /// <summary>
-    /// Runs an action after the board finishes all current resolve/animation work.
-    /// If the board is already idle, runs immediately.
-    /// </summary>
     public void RunAfterIdle(Action action)
     {
         if (action == null) return;
@@ -214,9 +188,7 @@ public class BoardController : MonoBehaviour
         while (!idle)
             yield return null;
 
-        // extra safety: let any queued coroutines start this frame
         yield return null;
-
         action();
     }
 
@@ -231,11 +203,9 @@ public class BoardController : MonoBehaviour
     public event Action<TileType, int> OnTilesCleared;
     public event Action<bool> OnBoosterTargetingChanged;
 
-    // Swap sonrası power üretmek için
     private TileView lastSwapA;
     private TileView lastSwapB;
     private bool lastSwapUserMove;
-    // Bu tur temizlemede shake olsun mu? (4+ veya power)
     private bool shakeNextClear;
     private bool isSpecialActivationPhase;
 
@@ -307,28 +277,21 @@ public class BoardController : MonoBehaviour
         if (lightningSpawner == null && !didLogMissingLightningSpawner)
         {
             didLogMissingLightningSpawner = true;
-            Debug.LogWarning("[Lightning][BoardController] lightningSpawner reference is not assigned and auto-resolve failed. Assign it in inspector or place LightningSpawner under BoardController.");
+            Debug.LogWarning("[Lightning][BoardController] lightningSpawner reference is not assigned and auto-resolve failed.");
         }
     }
 
-    /// <summary>
-    /// Ensures GoalFlyFx + its OverlayRoot exists under a Canvas.
-    /// This is designed to work across all levels/scenes without manual scene wiring.
-    /// </summary>
     private void EnsureGoalFlyFx()
     {
         var canvas = FindFirstObjectByType<Canvas>();
-        if (canvas == null)
-            return;
+        if (canvas == null) return;
 
-        // 1) Overlay root
         var overlay = canvas.transform.Find("GoalFlyOverlayRoot") as RectTransform;
         if (overlay == null)
         {
             var overlayGo = new GameObject("GoalFlyOverlayRoot", typeof(RectTransform));
             overlay = overlayGo.GetComponent<RectTransform>();
             overlay.SetParent(canvas.transform, false);
-
             overlay.anchorMin = Vector2.zero;
             overlay.anchorMax = Vector2.one;
             overlay.offsetMin = Vector2.zero;
@@ -336,10 +299,8 @@ public class BoardController : MonoBehaviour
             overlay.localScale = Vector3.one;
         }
 
-        // Keep it on top so ghosts are visible over HUD/board.
         overlay.SetAsLastSibling();
 
-        // 2) GoalFlyFx instance
         if (goalFlyFx == null)
         {
             var fxTr = canvas.transform.Find("GoalFlyFx");
@@ -354,12 +315,8 @@ public class BoardController : MonoBehaviour
             }
         }
 
-        // 3) Wire overlay root into GoalFlyFx without requiring inspector access.
-        // Uses SendMessage so GoalFlyFx doesn't have to expose a public setter.
         if (goalFlyFx != null)
-        {
             goalFlyFx.gameObject.SendMessage("SetOverlayRoot", overlay, SendMessageOptions.DontRequireReceiver);
-        }
     }
 
     public float PlaySystemOverrideComboVfxAndGetDuration()
@@ -370,7 +327,6 @@ public class BoardController : MonoBehaviour
         return systemOverrideComboVfx.GetTotalDuration();
     }
 
-    // Back-compat: keep the old void method for any existing callsites.
     public void PlaySystemOverrideComboVfx()
     {
         PlaySystemOverrideComboVfxAndGetDuration();
@@ -378,25 +334,14 @@ public class BoardController : MonoBehaviour
 
     public void PlayPulseEmitterComboVfxAtCell(int x, int y)
     {
-        if (pulseEmitterComboVfx == null)
-        {
-            Debug.LogError("[PulseEmitterCombo] pulseEmitterComboVfx is NULL (Inspector assign missing)");
-            return;
-        }
-
-        if (vfxSpace == null)
-        {
-            Debug.LogError("[PulseEmitterCombo] vfxSpace is NULL (assign Board VFX space RectTransform)");
-            return;
-        }
+        if (pulseEmitterComboVfx == null) return;
+        if (vfxSpace == null) return;
 
         pulseEmitterComboVfx.gameObject.SetActive(true);
 
-        // 1) Swap midpoint (en doğru: LastSwapA/B)
         TileView ta = lastSwapA;
         TileView tb = lastSwapB;
 
-        // Fallback: (x,y) hücresi
         if (ta == null || tb == null)
         {
             ta = (x >= 0 && x < Width && y >= 0 && y < Height) ? tiles[x, y] : null;
@@ -407,40 +352,23 @@ public class BoardController : MonoBehaviour
         Vector3 worldB = GetTileWorldCenter(tb);
         Vector3 worldMid = (worldA + worldB) * 0.5f;
 
-        // 2) Midpoint'i vfxSpace local anchored pos'a çevir
         Vector2 localMid = (Vector2)vfxSpace.InverseTransformPoint(worldMid);
-
-        // 3) Board size (grid değişse bile)
-        Vector2 boardSize = vfxSpace.rect.size; // en güvenlisi: gerçek UI alanı
+        Vector2 boardSize = vfxSpace.rect.size;
         if (boardSize.sqrMagnitude < 1f)
             boardSize = new Vector2(Width * TileSize, Height * TileSize);
 
         pulseEmitterComboVfx.SetTileSize(TileSize);
-
-        // Artık Vector2.zero değil, swap midpoint
         pulseEmitterComboVfx.PlayAt(localMid, boardSize);
-
     }
 
     public void PlayPulsePulseExplosionVfxAtCell(int x, int y)
     {
-        if (pulsePulseExplosionPrefab == null)
-        {
-            Debug.LogError("[PulsePulseCombo] pulsePulseExplosionPrefab is NULL (Inspector assign missing)");
-            return;
-        }
+        if (pulsePulseExplosionPrefab == null) return;
+        if (vfxSpace == null) return;
 
-        if (vfxSpace == null)
-        {
-            Debug.LogError("[PulsePulseCombo] vfxSpace is NULL (assign VFXPlayer RectTransform)");
-            return;
-        }
-
-        // Swap midpoint (tercih edilen)
         TileView ta = lastSwapA;
         TileView tb = lastSwapB;
 
-        // Fallback: (x,y) hücresi
         if (ta == null || tb == null)
         {
             ta = (x >= 0 && x < Width && y >= 0 && y < Height) ? tiles[x, y] : null;
@@ -450,14 +378,11 @@ public class BoardController : MonoBehaviour
         Vector3 worldA = GetTileWorldCenter(ta);
         Vector3 worldB = GetTileWorldCenter(tb);
         Vector3 worldMid = (worldA + worldB) * 0.5f;
-
-        // vfxSpace local (anchored) konuma çevir
         Vector2 localMid = (Vector2)vfxSpace.InverseTransformPoint(worldMid);
 
         var go = Instantiate(pulsePulseExplosionPrefab, vfxSpace);
         go.SetActive(true);
 
-        // UI prefab varsayımı: RectTransform
         var rt = go.GetComponent<RectTransform>();
         if (rt != null)
         {
@@ -467,35 +392,27 @@ public class BoardController : MonoBehaviour
         }
         else
         {
-            // World-space prefab fallback
             go.transform.position = worldMid;
         }
 
-        // Efekt bitince temizle
         Destroy(go, pulsePulseExplosionLifetime);
-
     }
 
     public Vector3 GetTileWorldCenter(TileView tile)
     {
         if (tile == null) return Vector3.zero;
-
         var rt = tile.GetComponent<RectTransform>();
         if (rt != null)
-            return rt.TransformPoint(rt.rect.center);   // pivot ne olursa olsun gerçek merkez
-
+            return rt.TransformPoint(rt.rect.center);
         return tile.transform.position;
     }
 
     private void TryResolveLightningSpawner()
     {
-        if (lightningSpawner != null)
-            return;
-
+        if (lightningSpawner != null) return;
         lightningSpawner = GetComponentInChildren<LightningSpawner>(true);
         if (lightningSpawner == null && transform.parent != null)
             lightningSpawner = transform.parent.GetComponentInChildren<LightningSpawner>(true);
-
     }
 
     void EnsureServices()
@@ -557,7 +474,6 @@ public class BoardController : MonoBehaviour
         BindObstacleEvents();
     }
 
-
     internal bool ApplyObstacleDamageAt(int x, int y, ObstacleHitContext context)
     {
         if (obstacleStateService == null) return false;
@@ -568,92 +484,68 @@ public class BoardController : MonoBehaviour
 
         ObstacleStateService.ObstacleHitResult TryFallback(ObstacleHitContext fallbackContext)
         {
-            if (fallbackContext == context)
-                return default;
-
+            if (fallbackContext == context) return default;
             return obstacleStateService.TryDamageAt(x, y, fallbackContext);
         }
 
-        // Booster jokers (hammer/row/column) ürün kuralı gereği en güçlü etki olmalı:
-        // ilk context reddedilirse bile aynı hücrede alternatif context'lerle tekrar dene.
-        // Böylece yolundaki obstacle, stage rule'u ne olursa olsun en az bir hasar alır.
         if (!result.didHit && context == ObstacleHitContext.Booster)
         {
             result = TryFallback(ObstacleHitContext.SpecialActivation);
-            if (!result.didHit)
-                result = TryFallback(ObstacleHitContext.NormalMatch);
+            if (!result.didHit) result = TryFallback(ObstacleHitContext.NormalMatch);
         }
         else if (!result.didHit && patchBotForcedHit)
         {
             result = TryFallback(ObstacleHitContext.SpecialActivation);
-            if (!result.didHit)
-                result = TryFallback(ObstacleHitContext.Booster);
-            if (!result.didHit)
-                result = TryFallback(ObstacleHitContext.NormalMatch);
-            if (!result.didHit)
-                result = TryFallback(ObstacleHitContext.Scripted);
+            if (!result.didHit) result = TryFallback(ObstacleHitContext.Booster);
+            if (!result.didHit) result = TryFallback(ObstacleHitContext.NormalMatch);
+            if (!result.didHit) result = TryFallback(ObstacleHitContext.Scripted);
         }
         else if (!result.didHit && IsCrossContextFallbackAllowedAt(x, y))
         {
             result = TryFallback(ObstacleHitContext.SpecialActivation);
-            if (!result.didHit)
-                result = TryFallback(ObstacleHitContext.Booster);
-            if (!result.didHit)
-                result = TryFallback(ObstacleHitContext.NormalMatch);
+            if (!result.didHit) result = TryFallback(ObstacleHitContext.Booster);
+            if (!result.didHit) result = TryFallback(ObstacleHitContext.NormalMatch);
         }
 
-        if (!result.didHit)
-            return false;
+        if (!result.didHit) return false;
 
         ConsumeObstacleStageTransition(result);
-
         ObstacleVisualChanged?.Invoke(result.visualChange);
         return true;
     }
 
     internal void MarkPatchBotForcedObstacleHit(int x, int y)
     {
-        if (obstacleStateService == null || !obstacleStateService.HasObstacleAt(x, y))
-            return;
-
-        if (x < 0 || x >= width || y < 0 || y >= height)
-            return;
-
+        if (obstacleStateService == null || !obstacleStateService.HasObstacleAt(x, y)) return;
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
         patchBotForcedObstacleHits.Add(y * width + x);
     }
 
     private bool ConsumePatchBotForcedObstacleHit(int x, int y)
     {
-        if (x < 0 || x >= width || y < 0 || y >= height)
-            return false;
-
+        if (x < 0 || x >= width || y < 0 || y >= height) return false;
         int index = y * width + x;
-        if (!patchBotForcedObstacleHits.Contains(index))
-            return false;
-
+        if (!patchBotForcedObstacleHits.Contains(index)) return false;
         patchBotForcedObstacleHits.Remove(index);
         return true;
     }
 
     private void ConsumeObstacleStageTransition(ObstacleStateService.ObstacleHitResult result)
     {
-        if (!result.stageTransition.hasTransition)
-            return;
+        if (!result.stageTransition.hasTransition) return;
 
         if (!result.stageTransition.cleared)
             OnObstacleStageChanged?.Invoke(result.stageTransition.originIndex, result.stageTransition.currentStage);
 
         var affected = result.affectedCellIndices;
-        if (affected == null || affected.Length == 0)
-            return;
+        if (affected == null || affected.Length == 0) return;
 
         for (int i = 0; i < affected.Length; i++)
         {
             int cellIndex = affected[i];
             int x = cellIndex % width;
             int y = cellIndex / width;
-            if (x < 0 || x >= width || y < 0 || y >= height)
-                continue;
+            if (x < 0 || x >= width || y < 0 || y >= height) continue;
 
             bool isMaskHole = IsMaskHole(x, y);
             bool blockedByObstacle = obstacleStateService != null && obstacleStateService.IsCellBlocked(x, y);
@@ -663,19 +555,14 @@ public class BoardController : MonoBehaviour
 
     private bool IsCrossContextFallbackAllowedAt(int x, int y)
     {
-        if (levelData == null || levelData.obstacles == null || levelData.obstacleOrigins == null)
-            return false;
-
-        if (!levelData.InBounds(x, y))
-            return false;
+        if (levelData == null || levelData.obstacles == null || levelData.obstacleOrigins == null) return false;
+        if (!levelData.InBounds(x, y)) return false;
 
         int idx = levelData.Index(x, y);
-        if (idx < 0 || idx >= levelData.obstacles.Length)
-            return false;
+        if (idx < 0 || idx >= levelData.obstacles.Length) return false;
 
         var obstacleId = (ObstacleId)levelData.obstacles[idx];
-        if (obstacleId == ObstacleId.None)
-            return false;
+        if (obstacleId == ObstacleId.None) return false;
 
         var obstacleDef = levelData.obstacleLibrary != null ? levelData.obstacleLibrary.Get(obstacleId) : null;
         return obstacleDef != null && obstacleDef.allowCrossContextFallback;
@@ -721,16 +608,13 @@ public class BoardController : MonoBehaviour
 
     internal void RefreshTileObstacleVisual(TileView tile)
     {
-        if (tile == null)
-            return;
-
+        if (tile == null) return;
         tile.SetIconAlpha(1f);
     }
 
     internal void RefreshAllTileObstacleVisuals()
     {
         if (tiles == null) return;
-
         for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++)
             RefreshTileObstacleVisual(tiles[x, y]);
@@ -750,11 +634,7 @@ public class BoardController : MonoBehaviour
             case 0: SetBoosterMode(BoosterMode.Single); break;
             case 1: SetBoosterMode(BoosterMode.Row); break;
             case 2: SetBoosterMode(BoosterMode.Column); break;
-            case 3:
-                // Shuffle da diğer jokerlar gibi hedefleme moduna girsin;
-                // oyuncu board'a tıklayınca tetiklensin ki vazgeçebilsin.
-                SetBoosterMode(BoosterMode.Shuffle);
-                break;
+            case 3: SetBoosterMode(BoosterMode.Shuffle); break;
             default: SetBoosterMode(BoosterMode.None); break;
         }
     }
@@ -767,36 +647,17 @@ public class BoardController : MonoBehaviour
 
     bool TryUseBooster(TileView tile)
     {
-        if (activeBooster == BoosterMode.None)
-            return false;
-
-        if (tile == null)
-        {
-            return true;
-        }
-
-        if (IsBusy || InputLocked)
-        {
-            return true;
-        }
-
+        if (activeBooster == BoosterMode.None) return false;
+        if (tile == null) return true;
+        if (IsBusy || InputLocked) return true;
         return TryUseBoosterAtCell(tile.X, tile.Y);
     }
 
     public bool TryUseBoosterAtCell(int x, int y)
     {
-        if (activeBooster == BoosterMode.None)
-            return false;
-
-        if (IsBusy || InputLocked)
-        {
-            return true;
-        }
-
-        if (x < 0 || x >= width || y < 0 || y >= height)
-        {
-            return true;
-        }
+        if (activeBooster == BoosterMode.None) return false;
+        if (IsBusy || InputLocked) return true;
+        if (x < 0 || x >= width || y < 0 || y >= height) return true;
 
         var mode = activeBooster;
         SetBoosterMode(BoosterMode.None);
@@ -852,12 +713,11 @@ public class BoardController : MonoBehaviour
         var matches = new HashSet<TileView>();
         HashSet<TileView> initialLightningTargets = null;
         var affectedCells = new HashSet<Vector2Int>();
+
         switch (mode)
         {
             case BoosterMode.Single:
-                if (target != null)
-                    matches.Add(target);
-
+                if (target != null) matches.Add(target);
                 if (hasValidTargetCell && IsCellBoosterAffectable(targetCell.Value.x, targetCell.Value.y))
                     affectedCells.Add(targetCell.Value);
                 break;
@@ -879,7 +739,16 @@ public class BoardController : MonoBehaviour
         if (matches.Count > 0 || affectedCells.Count > 0)
         {
             bool hasLineActivation = false;
-            specialResolver.ExpandSpecialChain(matches, affectedCells, out hasLineActivation, out _);
+
+            // ✅ FIX: Tek ExpandSpecialChain çağrısı (önceden iki kez çağrılıyordu — state kirlenmesi)
+            var chainLineStrikes = new List<LightningLineStrike>();
+            specialResolver.ExpandSpecialChain(
+                matches,
+                affectedCells,
+                out hasLineActivation,
+                out _,
+                lightningVisualTargets: initialLightningTargets,
+                lightningLineStrikes: chainLineStrikes);
 
             var animationMode = (mode == BoosterMode.Row || mode == BoosterMode.Column)
                 ? ClearAnimationMode.LightningStrike
@@ -888,34 +757,9 @@ public class BoardController : MonoBehaviour
             if (hasLineActivation)
                 animationMode = ClearAnimationMode.LightningStrike;
 
-            // Product kararı: hedef seçerek tetiklenen booster hamlesi (emitter dahil)
-            // obstacle hasarı açısından "Booster" sayılır; stageDamageRules'ta BoosterOnly/Any ile yönetilir.
             ObstacleHitContext obstacleHitContext = ObstacleHitContext.Booster;
 
-            // Row/Column booster etkisinde yalnızca hedeflenen hat hasar almalı.
-            // Komşu over-tile blocker ek hasarı, sütun/satır tetiklemelerinde
-            // beklenmeyen fazla stage düşüşüne sebep olabiliyor.
-            var chainLineStrikes = new List<LightningLineStrike>();
-
-            specialResolver.ExpandSpecialChain(
-                matches,
-                affectedCells,
-                out hasLineActivation,
-                out _,
-                lightningVisualTargets: initialLightningTargets,
-                lightningLineStrikes: chainLineStrikes);            
-
-            bool includeAdjacentOverTileBlockerDamage = false;
             List<LightningLineStrike> lightningLineStrikes = null;
-       /*     if (animationMode == ClearAnimationMode.LightningStrike && targetCell.HasValue)
-            {
-                lightningLineStrikes = new List<LightningLineStrike>(1)
-                {
-                    new LightningLineStrike(targetCell.Value, mode == BoosterMode.Row)
-                };
-            }*/
-
-            // Booster Row/Column targetCell strike'ını da ekle
             if (animationMode == ClearAnimationMode.LightningStrike)
             {
                 lightningLineStrikes = chainLineStrikes.Count > 0
@@ -929,7 +773,18 @@ public class BoardController : MonoBehaviour
                     lightningLineStrikes = null;
             }
 
-            yield return boardAnimator.ClearMatchesAnimated(matches, doShake: true, animationMode: animationMode, affectedCells: affectedCells, obstacleHitContext: obstacleHitContext, includeAdjacentOverTileBlockerDamage: includeAdjacentOverTileBlockerDamage, lightningOriginTile: target, lightningOriginCell: targetCell, lightningVisualTargets: initialLightningTargets, lightningLineStrikes: lightningLineStrikes );
+            yield return boardAnimator.ClearMatchesAnimated(
+                matches,
+                doShake: true,
+                animationMode: animationMode,
+                affectedCells: affectedCells,
+                obstacleHitContext: obstacleHitContext,
+                includeAdjacentOverTileBlockerDamage: false,
+                lightningOriginTile: target,
+                lightningOriginCell: targetCell,
+                lightningVisualTargets: initialLightningTargets,
+                lightningLineStrikes: lightningLineStrikes);
+
             yield return boardAnimator.CollapseAndSpawnAnimated();
             yield return ResolveEmptyPlayableCellsWithoutMatch();
             yield return ResolveBoard();
@@ -943,7 +798,8 @@ public class BoardController : MonoBehaviour
         IReadOnlyCollection<TileView> matches,
         TileView originTile = null,
         Vector2Int? fallbackOriginCell = null,
-        IReadOnlyCollection<TileView> visualTargets = null, bool allowCondense = true,
+        IReadOnlyCollection<TileView> visualTargets = null,
+        bool allowCondense = true,
         Action<TileView> onTargetBeamSpawned = null)
     {
         TryResolveLightningSpawner();
@@ -958,16 +814,11 @@ public class BoardController : MonoBehaviour
             return 0f;
         }
 
-        if (matches == null || matches.Count == 0)
-        {
-            return 0f;
-        }
+        if (matches == null || matches.Count == 0) return 0f;
 
         var targetsForVisuals = visualTargets ?? matches;
-        if (onTargetBeamSpawned != null)
-            allowCondense = false;
+        if (onTargetBeamSpawned != null) allowCondense = false;
 
-        // 1) Origin’i önce belirle (hedef listesini doldurmadan)
         Vector3 originWorldPos;
         if (originTile != null)
         {
@@ -979,7 +830,6 @@ public class BoardController : MonoBehaviour
         }
         else
         {
-            // İlk non-null hedefi origin kabul et
             originWorldPos = default;
             bool found = false;
             foreach (var t in targetsForVisuals)
@@ -989,32 +839,21 @@ public class BoardController : MonoBehaviour
                 found = true;
                 break;
             }
-
-            if (!found)
-            {
-                Debug.LogWarning("[Lightning][BoardController] No valid lightning origin found, skipping.");
-                return 0f;
-            }
+            if (!found) return 0f;
         }
 
-        // 2) Hedefleri doldur (origin’e çok yakın olanları ve duplicate’leri çıkar)
         lightningTargetPositionsBuffer.Clear();
         var lightningTargetTiles = new List<TileView>(32);
 
-        const float kMinDistFromOrigin = 0.05f; // tile aralığın ~0.5 ise bu güvenli
+        const float kMinDistFromOrigin = 0.05f;
         float minDistSqr = kMinDistFromOrigin * kMinDistFromOrigin;
 
         foreach (var tile in targetsForVisuals)
         {
             if (tile == null) continue;
-
             var p = GetTileWorldCenter(tile);
+            if ((p - originWorldPos).sqrMagnitude <= minDistSqr) continue;
 
-            // origin’e “kendine çakma” çizgisi üretmesin
-            if ((p - originWorldPos).sqrMagnitude <= minDistSqr)
-                continue;
-
-            // basit duplicate filtresi (aynı noktaya birden fazla target gelirse)
             bool dup = false;
             for (int i = 0; i < lightningTargetPositionsBuffer.Count; i++)
             {
@@ -1031,38 +870,34 @@ public class BoardController : MonoBehaviour
             }
         }
 
-        if (allowCondense && visualTargets == null) TryCondenseLightningTargetsToSingleLine(originWorldPos, lightningTargetPositionsBuffer);
+        if (allowCondense && visualTargets == null)
+            TryCondenseLightningTargetsToSingleLine(originWorldPos, lightningTargetPositionsBuffer);
 
-    // Eğer hepsini filtrelediysek (ör. tek hedef origin’in kendisiydi), en az 1 hedef bırak
-    if (lightningTargetPositionsBuffer.Count == 0)
-    {
-        foreach (var t in targetsForVisuals)
+        if (lightningTargetPositionsBuffer.Count == 0)
         {
-            if (t == null) continue;
-            lightningTargetPositionsBuffer.Add(GetTileWorldCenter(t));
-            lightningTargetTiles.Add(t);
-            break;
+            foreach (var t in targetsForVisuals)
+            {
+                if (t == null) continue;
+                lightningTargetPositionsBuffer.Add(GetTileWorldCenter(t));
+                lightningTargetTiles.Add(t);
+                break;
+            }
         }
-    }
 
-    if (lightningTargetPositionsBuffer.Count == 0)
-    {
-        return 0f;
-    }
+        if (lightningTargetPositionsBuffer.Count == 0) return 0f;
 
-    float playbackDuration = lightningSpawner.GetPlaybackDuration(lightningTargetPositionsBuffer.Count);
-    if (playbackDuration <= 0f)
-    {
-        playbackDuration = MinLightningLeadTime;
-        Debug.LogWarning($"[Lightning][BoardController] Spawner playbackDuration was <= 0. Using fallback lead time {playbackDuration:0.000}s.");
-    }
+        float playbackDuration = lightningSpawner.GetPlaybackDuration(lightningTargetPositionsBuffer.Count);
+        if (playbackDuration <= 0f)
+        {
+            playbackDuration = MinLightningLeadTime;
+            Debug.LogWarning($"[Lightning][BoardController] Spawner playbackDuration was <= 0. Using fallback {playbackDuration:0.000}s.");
+        }
 
         if (onTargetBeamSpawned != null)
         {
             lightningSpawner.PlayEmitterLightning(originWorldPos, lightningTargetPositionsBuffer, idx =>
             {
-                if (idx < 0 || idx >= lightningTargetTiles.Count)
-                    return;
+                if (idx < 0 || idx >= lightningTargetTiles.Count) return;
                 onTargetBeamSpawned(lightningTargetTiles[idx]);
             });
         }
@@ -1070,20 +905,17 @@ public class BoardController : MonoBehaviour
         {
             lightningSpawner.PlayEmitterLightning(originWorldPos, lightningTargetPositionsBuffer);
         }
+
         return playbackDuration;
     }
 
     private void TryCondenseLightningTargetsToSingleLine(Vector3 originWorldPos, List<Vector3> targets)
     {
-        if (targets == null || targets.Count < 2)
-            return;
+        if (targets == null || targets.Count < 2) return;
 
         float tolerance = Mathf.Max(0.01f, tileSize * 0.18f);
-
-        float minX = float.MaxValue;
-        float maxX = float.MinValue;
-        float minY = float.MaxValue;
-        float maxY = float.MinValue;
+        float minX = float.MaxValue, maxX = float.MinValue;
+        float minY = float.MaxValue, maxY = float.MinValue;
 
         for (int i = 0; i < targets.Count; i++)
         {
@@ -1096,8 +928,7 @@ public class BoardController : MonoBehaviour
 
         bool looksLikeRow = (maxY - minY) <= tolerance;
         bool looksLikeCol = (maxX - minX) <= tolerance;
-        if (!looksLikeRow && !looksLikeCol)
-            return;
+        if (!looksLikeRow && !looksLikeCol) return;
 
         targets.Clear();
         if (looksLikeRow)
@@ -1111,70 +942,87 @@ public class BoardController : MonoBehaviour
         targets.Add(new Vector3(originWorldPos.x, maxY, originWorldPos.z));
     }
 
-
-
-internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineStrikes, Action<Vector2Int> onSweepCellReached = null)
-{
-    // We can drive LineTravel even if lightningSpawner is missing (lightning is optional).
-    TryResolveLightningSpawner();
-
-    if (lineStrikes == null || lineStrikes.Count == 0)
-        return 0f;
-
-    if (lineTravelPlayer == null && lightningSpawner == null)
-        return 0f;
-
-    const float StrikeStagger = 0.03f; // small readability stagger (set 0 for fully parallel)
-    float maxEndTime = 0f;
-
-    for (int i = 0; i < lineStrikes.Count; i++)
+    internal float PlayLightningLineStrikes(
+        IReadOnlyList<LightningLineStrike> lineStrikes,
+        Action<Vector2Int> onSweepCellReached = null)
     {
-        var strike = lineStrikes[i];
-        int x = strike.originCell.x;
-        int y = strike.originCell.y;
-        if (x < 0 || x >= width || y < 0 || y >= height)
-            continue;
+        TryResolveLightningSpawner();
 
-        float delay = StrikeStagger * i;
+        if (lineStrikes == null || lineStrikes.Count == 0) return 0f;
+        if (lineTravelPlayer == null && lightningSpawner == null) return 0f;
 
-        // Deterministic cell-by-cell sweep (synced with chain resolution).
-        float endTime;
-        if (strike.isHorizontal)
-            endTime = PlayTwoWaySweepHorizontal(x, y, delay, onSweepCellReached);
-        else
-            endTime = PlayTwoWaySweepVertical(x, y, delay, onSweepCellReached);
+        const float StrikeStagger = 0.03f;
+        float maxEndTime = 0f;
 
-        if (endTime > maxEndTime) maxEndTime = endTime;
+        for (int i = 0; i < lineStrikes.Count; i++)
+        {
+            var strike = lineStrikes[i];
+            int x = strike.originCell.x;
+            int y = strike.originCell.y;
+            if (x < 0 || x >= width || y < 0 || y >= height) continue;
+
+            float delay = StrikeStagger * i;
+
+            float endTime = strike.isHorizontal
+                ? PlayTwoWaySweepHorizontal(x, y, delay, onSweepCellReached)
+                : PlayTwoWaySweepVertical(x, y, delay, onSweepCellReached);
+
+            if (endTime > maxEndTime) maxEndTime = endTime;
+        }
+
+        return maxEndTime;
     }
 
-    return maxEndTime;
-}
-private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds = 0f, Action<Vector2Int> onSweepCellReached = null)
+    // ✅ FIX: afterImageParent null olsa bile çalışır; callback OnStepCell üzerinden senkron gelir
+    private float PlayTwoWaySweepHorizontal(
+        int originX, int y,
+        float delaySeconds = 0f,
+        Action<Vector2Int> onSweepCellReached = null)
     {
-        // ✅ Yeni sistem: LineTravel varsa onu oynat
         if (lineTravelPlayer != null)
         {
             var originTile = tiles[originX, y];
-            if (originTile != null && lineTravelPlayer.afterImageParent != null)
+            if (originTile != null)
             {
                 var tileRt = originTile.GetComponent<RectTransform>();
+                Vector3 worldCenter = tileRt.TransformPoint(
+                    new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
 
-                // TileView pivot (0,1) olduğu için hücre merkezi: (+tileSize/2, -tileSize/2)
-                Vector3 worldCenter = tileRt.TransformPoint(new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
+                // ✅ afterImageParent null ise lineTravelSpawnParent'ı kullan
+                RectTransform spaceRt = lineTravelPlayer.afterImageParent != null
+                    ? lineTravelPlayer.afterImageParent
+                    : lineTravelSpawnParent as RectTransform;
 
-                Vector2 originAnchored = WorldToAnchoredIn(lineTravelPlayer.afterImageParent, worldCenter);
+                if (spaceRt == null && lineTravelPlayer.transform.parent != null)
+                    spaceRt = lineTravelPlayer.transform.parent as RectTransform;
 
-                int steps = Mathf.Max(originX, (width - 1 - originX)); // iki tarafa eşit koreografi
-                float cellSizePx = tileSize; // TileView SnapToGrid tileSize kullanıyor
+                if (spaceRt != null)
+                {
+                    Vector2 originAnchored = WorldToAnchoredIn(spaceRt, worldCenter);
+                    int steps = Mathf.Max(originX, width - 1 - originX);
 
-                PlayLineTravelInstance(LineTravelSplitSwapTestUI.LineAxis.Horizontal, originAnchored, steps, cellSizePx, delaySeconds);
-                float duration = lineTravelPlayer.EstimateDuration(steps);
-                EmitHorizontalSweepCallbacks(originX, y, delaySeconds, duration, onSweepCellReached);
-                return delaySeconds + duration;
+                    // ✅ FIX B: EmitHorizontalSweepCallbacks kaldırıldı.
+                    //    Callback OnStepCell üzerinden görselle senkron gelir.
+                    PlayLineTravelInstanceWithStep(
+                        LineTravelSplitSwapTestUI.LineAxis.Horizontal,
+                        originAnchored,
+                        new Vector2Int(originX, y),
+                        steps,
+                        tileSize,
+                        delaySeconds,
+                        onSweepCellReached);
+
+                    float duration = lineTravelPlayer.EstimateDuration(steps);
+                    return delaySeconds + duration;
+                }
             }
         }
 
-        // --- eski lightning sweep fallback ---
+        // ─── Fallback: lightning sweep ────────────────────────────────────────
+        Debug.LogWarning("[Lightning][Fallback] LineTravel kullanılamadı (Horizontal), lightning fallback.");
+        TryResolveLightningSpawner();
+        if (lightningSpawner == null) return 0f;
+
         var left = new List<Vector3>(originX + 1);
         for (int x = originX; x >= 0; x--)
             left.Add(GetCellWorldCenterPosition(x, y));
@@ -1186,38 +1034,61 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         lightningSpawner.PlayLineSweepSteps(left);
         lightningSpawner.PlayLineSweepSteps(right);
 
-        EmitHorizontalSweepCallbacks(originX, y, delaySeconds, Mathf.Max(lightningSpawner.GetPlaybackDuration(left.Count), lightningSpawner.GetPlaybackDuration(right.Count)), onSweepCellReached);
-
         float dl = lightningSpawner.GetPlaybackDuration(left.Count);
         float dr = lightningSpawner.GetPlaybackDuration(right.Count);
-        return delaySeconds + Mathf.Max(dl, dr);
+        float sweepDur = Mathf.Max(dl, dr);
+
+        EmitHorizontalSweepCallbacks(originX, y, delaySeconds, sweepDur, onSweepCellReached);
+        return delaySeconds + sweepDur;
     }
 
-    private float PlayTwoWaySweepVertical(int x, int originY, float delaySeconds = 0f, Action<Vector2Int> onSweepCellReached = null)
+    // ✅ FIX: aynı pattern — OnStepCell üzerinden senkron callback
+    private float PlayTwoWaySweepVertical(
+        int x, int originY,
+        float delaySeconds = 0f,
+        Action<Vector2Int> onSweepCellReached = null)
     {
         if (lineTravelPlayer != null)
         {
             var originTile = tiles[x, originY];
-            if (originTile != null && lineTravelPlayer.afterImageParent != null)
+            if (originTile != null)
             {
                 var tileRt = originTile.GetComponent<RectTransform>();
+                Vector3 worldCenter = tileRt.TransformPoint(
+                    new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
 
-                // TileView pivot (0,1) olduğu için hücre merkezi: (+tileSize/2, -tileSize/2)
-                Vector3 worldCenter = tileRt.TransformPoint(new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
-                //Vector3 worldCenter = GetCellWorldCenterPosition(x, originY);
-                Vector2 originAnchored = WorldToAnchoredIn(lineTravelPlayer.afterImageParent, worldCenter);
+                RectTransform spaceRt = lineTravelPlayer.afterImageParent != null
+                    ? lineTravelPlayer.afterImageParent
+                    : lineTravelSpawnParent as RectTransform;
 
-                int steps = Mathf.Max(originY, (height - 1 - originY));
-                float cellSizePx = tileSize;
+                if (spaceRt == null && lineTravelPlayer.transform.parent != null)
+                    spaceRt = lineTravelPlayer.transform.parent as RectTransform;
 
-                PlayLineTravelInstance(LineTravelSplitSwapTestUI.LineAxis.Vertical, originAnchored, steps, cellSizePx, delaySeconds);
-                float duration = lineTravelPlayer.EstimateDuration(steps);
-                EmitVerticalSweepCallbacks(x, originY, delaySeconds, duration, onSweepCellReached);
-                return delaySeconds + duration;
+                if (spaceRt != null)
+                {
+                    Vector2 originAnchored = WorldToAnchoredIn(spaceRt, worldCenter);
+                    int steps = Mathf.Max(originY, height - 1 - originY);
+
+                    PlayLineTravelInstanceWithStep(
+                        LineTravelSplitSwapTestUI.LineAxis.Vertical,
+                        originAnchored,
+                        new Vector2Int(x, originY),
+                        steps,
+                        tileSize,
+                        delaySeconds,
+                        onSweepCellReached);
+
+                    float duration = lineTravelPlayer.EstimateDuration(steps);
+                    return delaySeconds + duration;
+                }
             }
         }
 
-        // --- eski lightning sweep fallback ---
+        // ─── Fallback: lightning sweep ────────────────────────────────────────
+        Debug.LogWarning("[Lightning][Fallback] LineTravel kullanılamadı (Vertical), lightning fallback.");
+        TryResolveLightningSpawner();
+        if (lightningSpawner == null) return 0f;
+
         var down = new List<Vector3>(originY + 1);
         for (int y = originY; y >= 0; y--)
             down.Add(GetCellWorldCenterPosition(x, y));
@@ -1229,18 +1100,21 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         lightningSpawner.PlayLineSweepSteps(down);
         lightningSpawner.PlayLineSweepSteps(up);
 
-        EmitVerticalSweepCallbacks(x, originY, delaySeconds, Mathf.Max(lightningSpawner.GetPlaybackDuration(down.Count), lightningSpawner.GetPlaybackDuration(up.Count)), onSweepCellReached);
-
         float dd = lightningSpawner.GetPlaybackDuration(down.Count);
         float du = lightningSpawner.GetPlaybackDuration(up.Count);
-        return delaySeconds + Mathf.Max(dd, du);
+        float sweepDurV = Mathf.Max(dd, du);
+
+        EmitVerticalSweepCallbacks(x, originY, delaySeconds, sweepDurV, onSweepCellReached);
+        return delaySeconds + sweepDurV;
     }
 
-
-    private void EmitHorizontalSweepCallbacks(int originX, int y, float delaySeconds, float sweepDuration, Action<Vector2Int> onSweepCellReached)
+    // Fallback path için korunuyor (lightning sweep yolunda hâlâ gerekli)
+    private void EmitHorizontalSweepCallbacks(
+        int originX, int y,
+        float delaySeconds, float sweepDuration,
+        Action<Vector2Int> onSweepCellReached)
     {
-        if (onSweepCellReached == null)
-            return;
+        if (onSweepCellReached == null) return;
 
         int maxDistance = Mathf.Max(originX, width - 1 - originX);
         float stepInterval = maxDistance > 0 ? sweepDuration / maxDistance : 0f;
@@ -1251,8 +1125,7 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
             if (leftX >= 0 && leftX < width)
                 onSweepCellReached(new Vector2Int(leftX, y));
 
-            if (step == 0)
-                return;
+            if (step == 0) return;
 
             int rightX = originX + step;
             if (rightX >= 0 && rightX < width)
@@ -1260,10 +1133,12 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         }));
     }
 
-    private void EmitVerticalSweepCallbacks(int x, int originY, float delaySeconds, float sweepDuration, Action<Vector2Int> onSweepCellReached)
+    private void EmitVerticalSweepCallbacks(
+        int x, int originY,
+        float delaySeconds, float sweepDuration,
+        Action<Vector2Int> onSweepCellReached)
     {
-        if (onSweepCellReached == null)
-            return;
+        if (onSweepCellReached == null) return;
 
         int maxDistance = Mathf.Max(originY, height - 1 - originY);
         float stepInterval = maxDistance > 0 ? sweepDuration / maxDistance : 0f;
@@ -1274,8 +1149,7 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
             if (downY >= 0 && downY < height)
                 onSweepCellReached(new Vector2Int(x, downY));
 
-            if (step == 0)
-                return;
+            if (step == 0) return;
 
             int upY = originY + step;
             if (upY >= 0 && upY < height)
@@ -1283,7 +1157,9 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         }));
     }
 
-    private IEnumerator CoEmitLineSweepCellCallbacks(float delaySeconds, float stepInterval, int maxDistance, Action<int> emitStep)
+    private IEnumerator CoEmitLineSweepCellCallbacks(
+        float delaySeconds, float stepInterval,
+        int maxDistance, Action<int> emitStep)
     {
         if (delaySeconds > 0f)
             yield return new WaitForSeconds(delaySeconds);
@@ -1307,9 +1183,7 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
     internal float GetLightningStrikeStepDelay()
     {
         TryResolveLightningSpawner();
-        if (lightningSpawner == null)
-            return 0f;
-
+        if (lightningSpawner == null) return 0f;
         return lightningSpawner.GetStepDelay();
     }
 
@@ -1317,7 +1191,6 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
     {
         if (parent != null)
             return parent.TransformPoint(new Vector3(x * tileSize, -y * tileSize, 0f));
-
         return transform.TransformPoint(new Vector3(x * tileSize, -y * tileSize, 0f));
     }
 
@@ -1333,28 +1206,19 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         for (int y = 0; y < height; y++)
         {
             if (holes[x, y]) continue;
-
-            // Hole ama obstacle varsa? Senin kurallarına göre istersen dahil etme:
-            // if (obstacleStateService != null && obstacleStateService.HasObstacleAt(x,y)) continue;
-
             var tile = tiles[x, y];
             if (tile == null) continue;
-
-            // ✅ Special'lar sabit kalacak: shuffle havuzuna girmez
             if (tile.GetSpecial() != TileSpecial.None) continue;
-
             activeTiles.Add(tile);
             types.Add(tile.GetTileType());
         }
 
-        // Fisher-Yates shuffle
         for (int i = types.Count - 1; i > 0; i--)
         {
             int j = UnityEngine.Random.Range(0, i + 1);
             (types[i], types[j]) = (types[j], types[i]);
         }
 
-        // Sadece normal taşların type'ını değiştir
         for (int i = 0; i < activeTiles.Count; i++)
         {
             var tile = activeTiles[i];
@@ -1404,12 +1268,8 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
 
     bool IsCellBoosterAffectable(int x, int y)
     {
-        if (x < 0 || x >= width || y < 0 || y >= height)
-            return false;
-
-        if (!holes[x, y])
-            return true;
-
+        if (x < 0 || x >= width || y < 0 || y >= height) return false;
+        if (!holes[x, y]) return true;
         return obstacleStateService != null && obstacleStateService.HasObstacleAt(x, y);
     }
 
@@ -1428,21 +1288,18 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         lastSwapB = b;
         lastSwapUserMove = true;
 
-        yield return boardAnimator.SwapTilesAnimated(a, b, SwapDurationWithMultiplier );
+        yield return boardAnimator.SwapTilesAnimated(a, b, SwapDurationWithMultiplier);
 
         pendingCreationService.Clear();
-        if (pendingCreationService.CapturePendingCreation(a, b))
-        {
-        }
+        if (pendingCreationService.CapturePendingCreation(a, b)) { }
 
-        // Power swap: zaten “big” his -> shake
         TileSpecial sa = a.GetSpecial();
         TileSpecial sb = b.GetSpecial();
 
         if (sa != TileSpecial.None || sb != TileSpecial.None)
         {
             ConsumeMove();
-            yield return specialResolver.ResolveSpecialSwap(a, b );
+            yield return specialResolver.ResolveSpecialSwap(a, b);
             if (pendingCreationService.HasPending)
             {
                 pendingCreationService.ApplyPendingCreations();
@@ -1454,7 +1311,6 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
             yield break;
         }
 
-        // Sadece swaplanan iki taşın etrafında match ara
         var matches = new HashSet<TileView>();
         foreach (var t in matchFinder.FindMatchesAt(a.X, a.Y)) matches.Add(t);
         foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y)) matches.Add(t);
@@ -1467,12 +1323,11 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
 
         if (matches.Count == 0)
         {
-            yield return boardAnimator.SwapTilesAnimated(a, b, SwapDurationWithMultiplier );
+            yield return boardAnimator.SwapTilesAnimated(a, b, SwapDurationWithMultiplier);
             EndBusy();
             yield break;
         }
 
-        // Bu swap sonucu 4+ oluştuysa, ilk clear’da shake olsun
         shakeNextClear = matchFinder.HasAnyRunAtLeast(4);
         ConsumeMove();
 
@@ -1480,13 +1335,12 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         EndBusy();
     }
 
-
     private bool HasAnyEmptyPlayableCell()
     {
         for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++)
         {
-            if (holes[x, y]) continue; // hole or blocked cell (no tile allowed)
+            if (holes[x, y]) continue;
             if (tiles[x, y] == null) return true;
         }
         return false;
@@ -1495,34 +1349,21 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
     internal IEnumerator ResolveEmptyPlayableCellsWithoutMatch()
     {
         const int maxPass = 3;
-
         for (int pass = 0; pass < maxPass; pass++)
         {
-            if (!HasAnyEmptyPlayableCell())
-                yield break;
-
+            if (!HasAnyEmptyPlayableCell()) yield break;
             yield return boardAnimator.SlideFillAnimated();
-
-            if (!HasAnyEmptyPlayableCell())
-                yield break;
-
+            if (!HasAnyEmptyPlayableCell()) yield break;
             yield return boardAnimator.CollapseAndSpawnAnimated();
         }
     }
 
-    // Duration helpers: distance-based + cascade speed-up on pass>=2
     internal float GetFallDurationForDistance(int cellDistance)
     {
-        // base duration already tuned for "typical" falls; scale by distance but clamp.
         float baseDur = FallDurationWithMultiplier;
         int d = Mathf.Max(1, cellDistance);
-
-        // distance scaling: 1 cell fast, longer falls slower but capped.
         float distDur = Mathf.Clamp(d * 0.06f, 0.06f, 0.22f);
-
-        // blend with base (so your existing tuning still matters)
         float duration = Mathf.Min(baseDur, distDur) * Mathf.Max(0.25f, GetCascadeFallSpeedMultiplier());
-
         return Mathf.Max(0.04f, duration);
     }
 
@@ -1533,33 +1374,16 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
 
     internal bool ShouldEnableFallSettleThisPass()
     {
-        // Settle looks nice on the first impact, but slows long cascades.
         return EnableFallSettle && CurrentResolvePass <= 1;
     }
 
-    private float GetCascadeFallSpeedMultiplier()
-    {
-        // pass=1 => 1.0, pass>=2 => faster
-        return (CurrentResolvePass <= 1) ? 1f : 0.75f;
-    }
-
-    private float GetCascadeClearSpeedMultiplier()
-    {
-        return (CurrentResolvePass <= 1) ? 1f : 0.85f;
-    }
+    private float GetCascadeFallSpeedMultiplier() => (CurrentResolvePass <= 1) ? 1f : 0.75f;
+    private float GetCascadeClearSpeedMultiplier() => (CurrentResolvePass <= 1) ? 1f : 0.85f;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private float _resolveProfT0;
-    private void ResolveProfBegin(string tag)
-    {
-        _resolveProfT0 = Time.realtimeSinceStartup;
-    }
-
-    private void ResolveProfStep(string label)
-    {
-        float ms = (Time.realtimeSinceStartup - _resolveProfT0) * 1000f;
-        _resolveProfT0 = Time.realtimeSinceStartup;
-    }
+    private void ResolveProfBegin(string tag) { _resolveProfT0 = Time.realtimeSinceStartup; }
+    private void ResolveProfStep(string label) { _resolveProfT0 = Time.realtimeSinceStartup; }
 #endif
 
     IEnumerator ResolveBoard(bool allowSpecial = true)
@@ -1573,11 +1397,11 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
             safety++;
             if (safety > MaxResolveLoops)
             {
-                Debug.LogWarning($"[ResolveBoard] Safety break! loops={safety} (possible infinite resolve/spawn).");
+                Debug.LogWarning($"[ResolveBoard] Safety break! loops={safety}");
                 yield break;
             }
 
-            CurrentResolvePass = safety; // 1-based pass index
+            CurrentResolvePass = safety;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             ResolveProfBegin($"pass={CurrentResolvePass}");
@@ -1589,25 +1413,21 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
             ResolveProfStep($"FindMatches (count={matches.Count})");
 #endif
 
-            if (matches.Count == 0)
-                yield break;
+            if (matches.Count == 0) yield break;
 
             matches.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
-            if (matches.Count == 0)
-                yield break;
+            if (matches.Count == 0) yield break;
 
-            // Special üretimi cascade'de kalabilir (tasarım tercihi)
             if (allowSpecial)
             {
                 var created = specialResolver.TryCreateSpecial(matches);
-                if (created != null)
-                    shakeNextClear = true;
+                if (created != null) shakeNextClear = true;
             }
 
             bool doShake = shakeNextClear;
             shakeNextClear = false;
 
-            yield return boardAnimator.ClearMatchesAnimated(matches, doShake );
+            yield return boardAnimator.ClearMatchesAnimated(matches, doShake);
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             ResolveProfStep("ClearMatchesAnimated");
@@ -1619,7 +1439,6 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
             ResolveProfStep("CollapseAndSpawnAnimated#1");
 #endif
 
-            // ✅ Only do slide fill (and a second collapse/spawn) if there are still empty playable cells
             if (HasAnyEmptyPlayableCell())
             {
                 yield return boardAnimator.SlideFillAnimated();
@@ -1668,8 +1487,7 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
             }
 
             MarkInitialMatches(types, matched);
-            if (!HasAnyMatched(matched))
-                return types;
+            if (!HasAnyMatched(matched)) return types;
         }
 
         return types;
@@ -1685,34 +1503,13 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
 
             for (int x = 0; x < width; x++)
             {
-                if (holes[x, y])
-                {
-                    MarkRunIfNeeded(run, runStart, y, true, matched);
-                    run = 0;
-                    continue;
-                }
-
+                if (holes[x, y]) { MarkRunIfNeeded(run, runStart, y, true, matched); run = 0; continue; }
                 var t = types[x, y];
-                if (run == 0)
-                {
-                    run = 1;
-                    runType = t;
-                    runStart = x;
-                    continue;
-                }
-
-                if (t.Equals(runType))
-                {
-                    run++;
-                    continue;
-                }
-
+                if (run == 0) { run = 1; runType = t; runStart = x; continue; }
+                if (t.Equals(runType)) { run++; continue; }
                 MarkRunIfNeeded(run, runStart, y, true, matched);
-                run = 1;
-                runType = t;
-                runStart = x;
+                run = 1; runType = t; runStart = x;
             }
-
             MarkRunIfNeeded(run, runStart, y, true, matched);
         }
 
@@ -1724,34 +1521,13 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
 
             for (int y = 0; y < height; y++)
             {
-                if (holes[x, y])
-                {
-                    MarkRunIfNeeded(run, runStart, x, false, matched);
-                    run = 0;
-                    continue;
-                }
-
+                if (holes[x, y]) { MarkRunIfNeeded(run, runStart, x, false, matched); run = 0; continue; }
                 var t = types[x, y];
-                if (run == 0)
-                {
-                    run = 1;
-                    runType = t;
-                    runStart = y;
-                    continue;
-                }
-
-                if (t.Equals(runType))
-                {
-                    run++;
-                    continue;
-                }
-
+                if (run == 0) { run = 1; runType = t; runStart = y; continue; }
+                if (t.Equals(runType)) { run++; continue; }
                 MarkRunIfNeeded(run, runStart, x, false, matched);
-                run = 1;
-                runType = t;
-                runStart = y;
+                run = 1; runType = t; runStart = y;
             }
-
             MarkRunIfNeeded(run, runStart, x, false, matched);
         }
     }
@@ -1759,7 +1535,6 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
     private void MarkRunIfNeeded(int run, int runStart, int fixedIndex, bool horizontal, bool[,] matched)
     {
         if (run < 3) return;
-
         for (int i = 0; i < run; i++)
         {
             int x = horizontal ? runStart + i : fixedIndex;
@@ -1772,25 +1547,20 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
     {
         for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++)
-            if (matched[x, y])
-                return true;
-
+            if (matched[x, y]) return true;
         return false;
     }
 
     private TileType PickTypeAvoidingMatch(TileType[,] types, bool[,] filled, int x, int y)
     {
-        if (randomPool == null || randomPool.Length == 0)
-            return default;
+        if (randomPool == null || randomPool.Length == 0) return default;
 
         int start = UnityEngine.Random.Range(0, randomPool.Length);
         for (int i = 0; i < randomPool.Length; i++)
         {
             var candidate = randomPool[(start + i) % randomPool.Length];
-            if (!CreatesMatch(types, filled, x, y, candidate))
-                return candidate;
+            if (!CreatesMatch(types, filled, x, y, candidate)) return candidate;
         }
-
         return randomPool[start];
     }
 
@@ -1798,23 +1568,11 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
     {
         int count = 1;
         int lx = x - 1;
-
-        while (lx >= 0 && !holes[lx, y] && filled[lx, y] && types[lx, y].Equals(candidate))
-        {
-            count++;
-            lx--;
-        }
-
+        while (lx >= 0 && !holes[lx, y] && filled[lx, y] && types[lx, y].Equals(candidate)) { count++; lx--; }
         int rx = x + 1;
-        while (rx < width && !holes[rx, y] && filled[rx, y] && types[rx, y].Equals(candidate))
-        {
-            count++;
-            rx++;
-        }
-
+        while (rx < width && !holes[rx, y] && filled[rx, y] && types[rx, y].Equals(candidate)) { count++; rx++; }
         if (count >= 3) return true;
 
-        // ✅ NEW: 2x2 check (current cell closes a 2x2)
         if (x > 0 && y > 0)
         {
             if (!holes[x - 1, y] && filled[x - 1, y] &&
@@ -1823,49 +1581,30 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
                 types[x - 1, y].Equals(candidate) &&
                 types[x, y - 1].Equals(candidate) &&
                 types[x - 1, y - 1].Equals(candidate))
-            {
                 return true;
-            }
         }
 
         count = 1;
         int uy = y - 1;
-        while (uy >= 0 && !holes[x, uy] && filled[x, uy] && types[x, uy].Equals(candidate))
-        {
-            count++;
-            uy--;
-        }
-
+        while (uy >= 0 && !holes[x, uy] && filled[x, uy] && types[x, uy].Equals(candidate)) { count++; uy--; }
         int dy = y + 1;
-        while (dy < height && !holes[x, dy] && filled[x, dy] && types[x, dy].Equals(candidate))
-        {
-            count++;
-            dy++;
-        }
-
+        while (dy < height && !holes[x, dy] && filled[x, dy] && types[x, dy].Equals(candidate)) { count++; dy++; }
         return count >= 3;
     }
 
     private void BindObstacleEvents()
     {
         if (obstacleStateService == null) return;
-
         obstacleStateService.OnObstacleStageChanged -= HandleObstacleStageChanged;
         obstacleStateService.OnObstacleDestroyed -= HandleObstacleDestroyed;
         obstacleStateService.OnCellUnlocked -= HandleCellUnlocked;
-
         obstacleStateService.OnObstacleStageChanged += HandleObstacleStageChanged;
         obstacleStateService.OnObstacleDestroyed += HandleObstacleDestroyed;
         obstacleStateService.OnCellUnlocked += HandleCellUnlocked;
     }
 
-    private void HandleObstacleStageChanged(int originIndex, ObstacleStageSnapshot stage)
-    {
-        // Stage transition event is consumed in ApplyObstacleDamageAt to keep runtime state update centralized.
-    }
-
-    private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
-        => OnObstacleDestroyed?.Invoke(originIndex, obstacleId);
+    private void HandleObstacleStageChanged(int originIndex, ObstacleStageSnapshot stage) { }
+    private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId) => OnObstacleDestroyed?.Invoke(originIndex, obstacleId);
 
     private void HandleCellUnlocked(int cellIndex)
     {
@@ -1877,8 +1616,7 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         bool blockedByObstacle = obstacleStateService != null && obstacleStateService.IsCellBlocked(x, y);
         holes[x, y] = isMaskHole || blockedByObstacle;
 
-        if (!holes[x, y])
-            OnCellUnlocked?.Invoke(cellIndex);
+        if (!holes[x, y]) OnCellUnlocked?.Invoke(cellIndex);
     }
 
     private void RebuildMaskHoleMap()
@@ -1896,17 +1634,14 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
                 if (idx >= 0 && idx < levelData.cells.Length)
                     isMaskHole = levelData.cells[idx] == (int)CellType.Empty;
             }
-
             maskHoles[x, y] = isMaskHole;
         }
     }
 
     private bool IsMaskHole(int x, int y)
     {
-        if (maskHoles == null)
-            return false;
-        if (x < 0 || x >= width || y < 0 || y >= height)
-            return false;
+        if (maskHoles == null) return false;
+        if (x < 0 || x >= width || y < 0 || y >= height) return false;
         return maskHoles[x, y];
     }
 
@@ -1914,25 +1649,12 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
 
     internal bool IsObstacleBlockedCell(int x, int y)
     {
-        if (x < 0 || x >= width || y < 0 || y >= height)
-            return false;
-
+        if (x < 0 || x >= width || y < 0 || y >= height) return false;
         return obstacleStateService != null && obstacleStateService.IsCellBlocked(x, y);
     }
 
-    internal bool IsSpawnPassThroughCell(int x, int y)
-    {
-        return IsMaskHoleCell(x, y) && !IsObstacleBlockedCell(x, y);
-    }
+    internal bool IsSpawnPassThroughCell(int x, int y) => IsMaskHoleCell(x, y) && !IsObstacleBlockedCell(x, y);
 
-    /// <summary>
-    /// Hücre hakkında tek noktadan tüm runtime bilgiyi döner.
-    /// - isMaskHole: LevelData'da hole olarak işaretli mi?
-    /// - isObstacleBlocked: Obstacle bu hücreyi kilitliyor mu?
-    /// - isHole: Runtime board açısından taş barındıramayan hücre (mask hole veya blocked).
-    /// - isPlayableCell: Oyunun aktif parçası mı? (inBounds ve mask hole değil)
-    /// - isActiveButEmpty: Aktif/playable ama o anda üzerinde tile yok.
-    /// </summary>
     public bool TryGetCellState(int x, int y, out BoardCellStateSnapshot state)
     {
         return BoardCellStateQuery.TryGet(this, x, y, out state);
@@ -1943,10 +1665,7 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         return randomPool[UnityEngine.Random.Range(0, randomPool.Length)];
     }
 
-    public void SetInputLocked(bool isLocked)
-    {
-        InputLocked = isLocked;
-    }
+    public void SetInputLocked(bool isLocked) { InputLocked = isLocked; }
 
     private void ConsumeMove()
     {
@@ -1956,9 +1675,7 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
 
     public void AddMoves(int amount)
     {
-        if (amount <= 0)
-            return;
-
+        if (amount <= 0) return;
         RemainingMoves += amount;
         OnMovesChanged?.Invoke(RemainingMoves);
     }
@@ -1969,12 +1686,10 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         OnTilesCleared?.Invoke(tileType, amount);
     }
 
-
     public IEnumerator PlayPulseEmitterComboAndClear(int cx, int cy)
     {
         if (lineTravelPlayer == null) yield break;
 
-        // LineTravel'ın kullandığı space
         RectTransform space = lineTravelPlayer.afterImageParent != null
             ? lineTravelPlayer.afterImageParent
             : (lineTravelSpawnParent as RectTransform);
@@ -1988,17 +1703,14 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         {
             if (!targets.Contains(cell)) return;
             if (!cleared.Add(cell)) return;
-
             ClearCellImmediate(cell);
         }
 
         float maxEnd = 0f;
 
-        // 3 yatay: y=cy-1,cy,cy+1
         for (int yy = cy - 1; yy <= cy + 1; yy++)
         {
             if (yy < 0 || yy >= height) continue;
-
             var originTile = tiles[cx, yy];
             if (originTile == null) continue;
 
@@ -2006,24 +1718,19 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
             Vector3 worldCenter = rt.TransformPoint(new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
             Vector2 originAnch = WorldToAnchoredIn(space, worldCenter);
 
-            int steps = Mathf.Max(cx, (width - 1 - cx));
+            int steps = Mathf.Max(cx, width - 1 - cx);
             float end = PlayLineTravelInstanceWithStep(
                 LineTravelSplitSwapTestUI.LineAxis.Horizontal,
                 originAnch,
                 new Vector2Int(cx, yy),
-                steps,
-                tileSize,
-                0f,
-                OnStep);
+                steps, tileSize, 0f, OnStep);
 
             if (end > maxEnd) maxEnd = end;
         }
 
-        // 3 dikey: x=cx-1,cx,cx+1
         for (int xx = cx - 1; xx <= cx + 1; xx++)
         {
             if (xx < 0 || xx >= width) continue;
-
             var originTile = tiles[xx, cy];
             if (originTile == null) continue;
 
@@ -2031,62 +1738,64 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
             Vector3 worldCenter = rt.TransformPoint(new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
             Vector2 originAnch = WorldToAnchoredIn(space, worldCenter);
 
-            int steps = Mathf.Max(cy, (height - 1 - cy));
+            int steps = Mathf.Max(cy, height - 1 - cy);
             float end = PlayLineTravelInstanceWithStep(
                 LineTravelSplitSwapTestUI.LineAxis.Vertical,
                 originAnch,
                 new Vector2Int(xx, cy),
-                steps,
-                tileSize,
-                0f,
-                OnStep);
+                steps, tileSize, 0f, OnStep);
 
             if (end > maxEnd) maxEnd = end;
         }
 
-        // süre kadar bekle
         if (maxEnd > 0f)
             yield return new WaitForSecondsRealtime(maxEnd);
 
-        // garanti: kaçan hücre kaldıysa temizle
         foreach (var c in targets)
             if (cleared.Add(c))
                 ClearCellImmediate(c);
 
-        // sonra toparla
         yield return boardAnimator.CollapseAndSpawnAnimated();
         yield return ResolveEmptyPlayableCellsWithoutMatch();
         yield return ResolveBoard();
     }
 
-    // --- LineTravel multi-instance helpers (needed because LineTravelSplitSwapTestUI.Play uses StopAllCoroutines) ---
-    private void PlayLineTravelInstance(LineTravelSplitSwapTestUI.LineAxis axis, Vector2 originAnchored, int steps, float cellSizePx, float delaySeconds)
+    // ✅ FIX: afterImageParent ve impactParent template'den clone'a kopyalanıyor
+    private void PlayLineTravelInstance(
+        LineTravelSplitSwapTestUI.LineAxis axis,
+        Vector2 originAnchored,
+        int steps,
+        float cellSizePx,
+        float delaySeconds)
     {
-        if (lineTravelPlayer == null)
-            return;
+        if (lineTravelPlayer == null) return;
 
         Transform parentTr = lineTravelSpawnParent != null
             ? lineTravelSpawnParent
-            : (lineTravelPlayer.transform.parent != null ? lineTravelPlayer.transform.parent : transform);
+            : (lineTravelPlayer.transform.parent != null
+                ? lineTravelPlayer.transform.parent
+                : transform);
 
         var go = Instantiate(lineTravelPlayer.gameObject, parentTr);
         go.SetActive(true);
 
         var inst = go.GetComponent<LineTravelSplitSwapTestUI>();
-        if (inst == null)
-        {
-            Destroy(go);
-            return;
-        }
+        if (inst == null) { Destroy(go); return; }
 
-        // Play after optional delay (unscaled so it works during timeScale changes)
+        // ✅ FIX: Instantiate scene-object referanslarını kopyalamaz; manuel aktar
+        if (inst.afterImageParent == null && lineTravelPlayer.afterImageParent != null)
+            inst.afterImageParent = lineTravelPlayer.afterImageParent;
+
+        if (inst.impactParent == null && lineTravelPlayer.impactParent != null)
+            inst.impactParent = lineTravelPlayer.impactParent;
+
         StartCoroutine(PlayLineTravelRoutine(inst, axis, originAnchored, steps, cellSizePx, delaySeconds));
 
-        // Cleanup after completion (unscaled)
         float totalLife = Mathf.Max(0f, delaySeconds) + lineTravelPlayer.EstimateDuration(steps) + 0.10f;
         StartCoroutine(DestroyAfterUnscaled(go, totalLife));
     }
 
+    // ✅ FIX: afterImageParent ve impactParent kopyalanıyor
     private float PlayLineTravelInstanceWithStep(
         LineTravelSplitSwapTestUI.LineAxis axis,
         Vector2 originAnchored,
@@ -2096,22 +1805,26 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         float delaySeconds,
         Action<Vector2Int> onStep)
     {
-        if (lineTravelPlayer == null)
-            return 0f;
+        if (lineTravelPlayer == null) return 0f;
 
         Transform parentTr = lineTravelSpawnParent != null
             ? lineTravelSpawnParent
-            : (lineTravelPlayer.transform.parent != null ? lineTravelPlayer.transform.parent : transform);
+            : (lineTravelPlayer.transform.parent != null
+                ? lineTravelPlayer.transform.parent
+                : transform);
 
         var go = Instantiate(lineTravelPlayer.gameObject, parentTr);
         go.SetActive(true);
 
         var inst = go.GetComponent<LineTravelSplitSwapTestUI>();
-        if (inst == null)
-        {
-            Destroy(go);
-            return 0f;
-        }
+        if (inst == null) { Destroy(go); return 0f; }
+
+        // ✅ FIX: referansları aktar
+        if (inst.afterImageParent == null && lineTravelPlayer.afterImageParent != null)
+            inst.afterImageParent = lineTravelPlayer.afterImageParent;
+
+        if (inst.impactParent == null && lineTravelPlayer.impactParent != null)
+            inst.impactParent = lineTravelPlayer.impactParent;
 
         StartCoroutine(PlayLineTravelRoutine(inst, axis, originAnchored, steps, cellSizePx, delaySeconds, originCell, onStep));
 
@@ -2121,6 +1834,7 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
 
         return delaySeconds + dur;
     }
+
     private IEnumerator PlayLineTravelRoutine(
         LineTravelSplitSwapTestUI inst,
         LineTravelSplitSwapTestUI.LineAxis axis,
@@ -2138,7 +1852,13 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
             inst.Play(axis, originAnchored, originCell, steps, cellSizePx, onStep);
     }
 
-    private IEnumerator PlayLineTravelRoutine(LineTravelSplitSwapTestUI inst, LineTravelSplitSwapTestUI.LineAxis axis, Vector2 originAnchored, int steps, float cellSizePx, float delaySeconds)
+    private IEnumerator PlayLineTravelRoutine(
+        LineTravelSplitSwapTestUI inst,
+        LineTravelSplitSwapTestUI.LineAxis axis,
+        Vector2 originAnchored,
+        int steps,
+        float cellSizePx,
+        float delaySeconds)
     {
         if (delaySeconds > 0f)
             yield return new WaitForSecondsRealtime(delaySeconds);
@@ -2151,9 +1871,7 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
     {
         if (delaySeconds > 0f)
             yield return new WaitForSecondsRealtime(delaySeconds);
-
-        if (go != null)
-            Destroy(go);
+        if (go != null) Destroy(go);
     }
 
     private void ClearCellImmediate(Vector2Int c)
@@ -2161,10 +1879,8 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         int x = c.x;
         int y = c.y;
         if (x < 0 || x >= width || y < 0 || y >= height) return;
-
         if (IsMaskHoleCell(x, y)) return;
 
-        // obstacle varsa hasar
         if (obstacleStateService != null && obstacleStateService.HasObstacleAt(x, y))
             ApplyObstacleDamageAt(x, y, ObstacleHitContext.SpecialActivation);
 
@@ -2172,10 +1888,8 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
         if (t == null) return;
 
         TileType type = t.GetTileType();
-
         tiles[x, y] = null;
         Destroy(t.gameObject);
-
         NotifyTilesCleared(type, 1);
     }
 
@@ -2183,7 +1897,6 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
     {
         var set = new HashSet<Vector2Int>();
 
-        // 3 satır
         for (int yy = cy - 1; yy <= cy + 1; yy++)
         {
             if (yy < 0 || yy >= height) continue;
@@ -2191,7 +1904,6 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
                 if (!IsMaskHoleCell(x, yy)) set.Add(new Vector2Int(x, yy));
         }
 
-        // 3 sütun
         for (int xx = cx - 1; xx <= cx + 1; xx++)
         {
             if (xx < 0 || xx >= width) continue;
@@ -2212,10 +1924,7 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
             cam = canvas.worldCamera;
 
         Vector2 screen = RectTransformUtility.WorldToScreenPoint(cam, worldPos);
-
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            targetParent, screen, cam, out Vector2 localPoint);
-
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(targetParent, screen, cam, out Vector2 localPoint);
         return localPoint;
     }
 }
