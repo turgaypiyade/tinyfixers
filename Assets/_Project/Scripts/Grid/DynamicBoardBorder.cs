@@ -44,6 +44,8 @@ public class DynamicBoardBorder : MonoBehaviour
         float baseOff  = borderOutside + (thickness * 0.5f);
         float k        = 0.70f;
         float offOuter = Mathf.Max(0f, baseOff - joinOverlap * k);
+        float cornerSize = (thickness + joinOverlap * 2f) * cornerScale;
+        float topEdgeThickness = cornerSize;
 
         for (int y = 0; y < h; y++)
         for (int x = 0; x < w; x++)
@@ -53,42 +55,16 @@ public class DynamicBoardBorder : MonoBehaviour
             Vector2 cell = GetCellCenter(x, y);
             float   half = tileSize / 2f;
 
-            // ÜST kenar — aboveStraightPrefab, rot=0, no flip
-            // pozisyon: hücre üst kenarı + offOuter yukarı
+            // ÜST kenar — sadece TEK KENAR debug çizimi.
+            // Kalınlık/offset köşeler ile aynı metrikten türetilir:
+            // - offset: offOuter
+            // - kalınlık: cornerSize (köşe sprite'ı ile aynı görsel yükseklik)
+            // - köşe birleşimi için yatayda joinOverlap kadar taşırılır
             if (!IsSolid(x, y - 1, blocked))
-              {
-                Spawn(outerCornerPrefab,
-        pos:  new Vector2(cell.x, cell.y + half + offOuter),
-        rot:  0f,
-        size: new Vector2(tileSize, thickness));
-            Debug.Log("koordinat"+x+" koordinat y" + y);
-             Debug.Log("cell x"+cell.x+" cell y" + cell.y);
-        }
-               /* Spawn(aboveStraightPrefab,
+                SpawnTopEdge(
                     pos:  new Vector2(cell.x, cell.y + half + offOuter),
                     rot:  0f,
-                    size: new Vector2(tileSize, thickness));*/
-
-            // ALT kenar — belowStraightPrefab, rot=0, no flip
-            if (!IsSolid(x, y + 1, blocked))
-                Spawn(belowStraightPrefab,
-                    pos:  new Vector2(cell.x, cell.y - half - offOuter),
-                    rot:  0f,
-                    size: new Vector2(tileSize, thickness));
-
-            // SOL kenar — aboveStraightPrefab, rot=90
-            if (!IsSolid(x - 1, y, blocked))
-                Spawn(aboveStraightPrefab,
-                    pos:  new Vector2(cell.x - half - offOuter, cell.y),
-                    rot:  90f,
-                    size: new Vector2(tileSize, thickness));
-
-            // SAĞ kenar — belowStraightPrefab, rot=90
-            if (!IsSolid(x + 1, y, blocked))
-                Spawn(belowStraightPrefab,
-                    pos:  new Vector2(cell.x + half + offOuter, cell.y),
-                    rot:  90f,
-                    size: new Vector2(tileSize, thickness));
+                    size: new Vector2(tileSize + (joinOverlap * 2f), topEdgeThickness));
         }
 
         // Köşeler — AYNEN ESKİ KOD
@@ -160,6 +136,30 @@ public class DynamicBoardBorder : MonoBehaviour
     private Vector2 GetNodePosition(int x, int y) => new Vector2(
         x * tileSize + contentOffset.x,
         -y * tileSize + contentOffset.y);
+
+    private void SpawnTopEdge(Vector2 pos, float rot, Vector2 size)
+    {
+        if (belowStraightPrefab == null) return;
+
+        var go = Instantiate(belowStraightPrefab, borderRoot);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta        = size;
+        rt.localRotation    = Quaternion.Euler(0, 0, rot);
+        rt.localScale       = Vector3.one;
+
+        if (go.TryGetComponent(out Image img))
+        {
+            // board_tiles_v1_16 sprite'ında border bilgisi var; Sliced ile çizince
+            // çizgi kalınlığı rect yüksekliğine daha doğru tepki verir.
+            img.type = Image.Type.Sliced;
+            img.fillCenter = true;
+            img.raycastTarget  = false;
+            img.preserveAspect = false;
+        }
+    }
 
     private void Spawn(GameObject prefab, Vector2 pos, float rot, Vector2 size,
         bool flipX = false, bool flipY = false)
