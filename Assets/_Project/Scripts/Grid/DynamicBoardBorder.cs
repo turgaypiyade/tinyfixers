@@ -53,42 +53,16 @@ public class DynamicBoardBorder : MonoBehaviour
             Vector2 cell = GetCellCenter(x, y);
             float   half = tileSize / 2f;
 
-            // ÜST kenar — aboveStraightPrefab, rot=0, no flip
-            // pozisyon: hücre üst kenarı + offOuter yukarı
+            // ÜST kenar — sadece TEK KENAR debug çizimi.
+            // Kalınlık/offset köşeler ile aynı metrikten türetilir:
+            // - offset: offOuter
+            // - kalınlık: thickness
+            // - köşe birleşimi için yatayda joinOverlap kadar taşırılır
             if (!IsSolid(x, y - 1, blocked))
-              {
-                Spawn(outerCornerPrefab,
-        pos:  new Vector2(cell.x, cell.y + half + offOuter),
-        rot:  0f,
-        size: new Vector2(tileSize, thickness));
-            Debug.Log("koordinat"+x+" koordinat y" + y);
-             Debug.Log("cell x"+cell.x+" cell y" + cell.y);
-        }
-               /* Spawn(aboveStraightPrefab,
+                Spawn(belowStraightPrefab,
                     pos:  new Vector2(cell.x, cell.y + half + offOuter),
                     rot:  0f,
-                    size: new Vector2(tileSize, thickness));*/
-
-            // ALT kenar — belowStraightPrefab, rot=0, no flip
-            if (!IsSolid(x, y + 1, blocked))
-                Spawn(belowStraightPrefab,
-                    pos:  new Vector2(cell.x, cell.y - half - offOuter),
-                    rot:  0f,
-                    size: new Vector2(tileSize, thickness));
-
-            // SOL kenar — aboveStraightPrefab, rot=90
-            if (!IsSolid(x - 1, y, blocked))
-                Spawn(aboveStraightPrefab,
-                    pos:  new Vector2(cell.x - half - offOuter, cell.y),
-                    rot:  90f,
-                    size: new Vector2(tileSize, thickness));
-
-            // SAĞ kenar — belowStraightPrefab, rot=90
-            if (!IsSolid(x + 1, y, blocked))
-                Spawn(belowStraightPrefab,
-                    pos:  new Vector2(cell.x + half + offOuter, cell.y),
-                    rot:  90f,
-                    size: new Vector2(tileSize, thickness));
+                    size: new Vector2(tileSize + (joinOverlap * 2f), thickness));
         }
 
         // Köşeler — AYNEN ESKİ KOD
