@@ -420,61 +420,69 @@ public class TileView : MonoBehaviour,
         RefreshIcon();
     }
 
-    public void PlaySelectionPulse(float upScale = 1.14f, float upDuration = 0.06f, float downDuration = 0.08f)
+    public void PlaySelectionPulse(float upScale = 1.14f, float popTime = 0.12f, float settleTime = 0.08f)
     {
-        if (this == null)
-            return;
-
+        if (this == null) return;
+        Debug.Log("GIRDIIIIIII");       
         if (selectionPulseRoutine != null)
             StopCoroutine(selectionPulseRoutine);
 
-        selectionPulseRoutine = StartCoroutine(CoSelectionPulse(upScale, upDuration, downDuration));
+        selectionPulseRoutine = StartCoroutine(CoSelectionPulse(upScale, popTime, settleTime));
     }
 
-    private IEnumerator CoSelectionPulse(float upScale, float upDuration, float downDuration)
+    /// <summary>
+    /// A small "selected" feedback pulse. Uses the same ease-out pop feel as GoalFlyTileClearEffect,
+    /// but targets the icon (if present) to avoid other root-scale systems overwriting the effect.
+    /// </summary>
+    private IEnumerator CoSelectionPulse(float upScale, float popTime, float settleTime)
     {
-        if (this == null)
-            yield break;
+        Debug.Log("GIRDIIIIIII");
+        if (this == null) yield break;
 
-        // IMPORTANT:
-        // Root transform scale is frequently driven by other animations (settle/squash/drag/pop).
-        // For "selection feedback" we prefer pulsing the icon rect (if present) so it is not overridden.
-        Transform tr = null;
-        if (iconImage != null && iconImage.rectTransform != null)
-            tr = iconImage.rectTransform;
-        else
-            tr = transform;
+        // Prefer icon transform; fall back to root transform.
+        Transform tr = (iconImage != null) ? iconImage.transform : transform;
 
+        // IMPORTANT: respect current scale (some systems keep tiles slightly scaled).
         Vector3 baseScale = tr.localScale;
-        float s = Mathf.Max(1f, upScale);
-        Vector3 peakScale = baseScale * s;
+
+        float targetMul = Mathf.Max(1f, upScale);
+        Vector3 peakScale = baseScale * targetMul;
 
         float t = 0f;
-        while (t < upDuration)
+        float up = Mathf.Max(0.0001f, popTime);
+
+        // EaseOut growth (quadratic), like GoalFlyTileClearEffect.
+        while (t < up)
         {
             if (this == null) yield break;
             t += Time.deltaTime;
-            float k = upDuration > 0f ? Mathf.Clamp01(t / upDuration) : 1f;
-            tr.localScale = Vector3.Lerp(baseScale, peakScale, k);
+            float k = Mathf.Clamp01(t / up);
+            float eased = 1f - (1f - k) * (1f - k);
+            tr.localScale = Vector3.LerpUnclamped(baseScale, peakScale, eased);
             yield return null;
         }
 
+        tr.localScale = peakScale;
+
+        // Settle back to base.
         t = 0f;
-        while (t < downDuration)
+        float down = Mathf.Max(0.0001f, settleTime);
+        while (t < down)
         {
             if (this == null) yield break;
             t += Time.deltaTime;
-            float k = downDuration > 0f ? Mathf.Clamp01(t / downDuration) : 1f;
-            tr.localScale = Vector3.Lerp(peakScale, baseScale, k);
+            float k = Mathf.Clamp01(t / down);
+            float eased = 1f - Mathf.Pow(1f - k, 3f); // slightly snappier return
+            tr.localScale = Vector3.LerpUnclamped(peakScale, baseScale, eased);
             yield return null;
         }
 
-        if (this != null && tr != null)
+        if (this != null)
             tr.localScale = baseScale;
 
         selectionPulseRoutine = null;
     }
-    public IEnumerator PlayPulseImpact(float delay, float totalTime)
+public IEnumerator PlayPulseImpact(float delay, float totalTime)
     {
         yield return new WaitForSeconds(delay);
         if (this == null) yield break;

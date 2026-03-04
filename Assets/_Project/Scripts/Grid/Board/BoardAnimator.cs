@@ -89,6 +89,9 @@ public class BoardAnimator
         float downTime = 0.08f)
     {
         if (tile == null) return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"[SelectionPulse] BoardAnimator.PlaySelectionPulse tile=({tile.X},{tile.Y}) delay={delay} peakScale={peakScale}");
+#endif
 
         if (_activeSelectionPulses.TryGetValue(tile, out var running) && running != null)
             board.StopCoroutine(running);
@@ -97,7 +100,8 @@ public class BoardAnimator
         _activeSelectionPulses[tile] = co;
     }
 
-    private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peakScale, float upTime, float downTime)
+    
+private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peakScale, float upTime, float downTime)
     {
         if (tile == null) yield break;
 
@@ -109,28 +113,36 @@ public class BoardAnimator
         var tr = GetSelectionPulseTarget(tile);
         if (tr == null) yield break;
 
+        // GoalFlyTileClearEffect pop style (ease-out up, ease-in down) but applied to the chosen visual transform.
         Vector3 baseScale = tr.localScale;
-        Vector3 targetScale = baseScale * Mathf.Max(1f, peakScale);
+        float peak = Mathf.Max(1f, peakScale);
+        Vector3 targetScale = baseScale * peak;
 
-        // Up
+        // Up (EaseOutQuad)
         float t = 0f;
-        while (t < upTime)
+        float upDur = Mathf.Max(0.0001f, upTime);
+        while (t < upDur)
         {
             if (tile == null || tr == null) yield break;
             t += Time.deltaTime;
-            float a = upTime <= 0.0001f ? 1f : Mathf.Clamp01(t / upTime);
-            tr.localScale = Vector3.LerpUnclamped(baseScale, targetScale, a);
+            float a = Mathf.Clamp01(t / upDur);
+            // easeOutQuad: 1 - (1-a)^2
+            float e = 1f - (1f - a) * (1f - a);
+            tr.localScale = Vector3.LerpUnclamped(baseScale, targetScale, e);
             yield return null;
         }
 
-        // Down
+        // Down (EaseInQuad)
         t = 0f;
-        while (t < downTime)
+        float downDur = Mathf.Max(0.0001f, downTime);
+        while (t < downDur)
         {
             if (tile == null || tr == null) yield break;
             t += Time.deltaTime;
-            float a = downTime <= 0.0001f ? 1f : Mathf.Clamp01(t / downTime);
-            tr.localScale = Vector3.LerpUnclamped(targetScale, baseScale, a);
+            float a = Mathf.Clamp01(t / downDur);
+            // easeInQuad: a^2
+            float e = a * a;
+            tr.localScale = Vector3.LerpUnclamped(targetScale, baseScale, e);
             yield return null;
         }
 
@@ -139,6 +151,7 @@ public class BoardAnimator
 
         _activeSelectionPulses.Remove(tile);
     }
+
 
     public IEnumerator SwapTilesAnimated(TileView a, TileView b, float duration)
     {

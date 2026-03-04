@@ -1204,7 +1204,7 @@ private float PlayTwoWaySweepHorizontal(int originX, int y, float delaySeconds =
 
                 // TileView pivot (0,1) olduğu için hücre merkezi: (+tileSize/2, -tileSize/2)
                 Vector3 worldCenter = tileRt.TransformPoint(new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
-
+                //Vector3 worldCenter = GetCellWorldCenterPosition(x, originY);
                 Vector2 originAnchored = WorldToAnchoredIn(lineTravelPlayer.afterImageParent, worldCenter);
 
                 int steps = Mathf.Max(originY, (height - 1 - originY));

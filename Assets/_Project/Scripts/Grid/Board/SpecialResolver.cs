@@ -1007,7 +1007,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             // NOTE: For override+normal partner we only want a quick "selected" feedback
             // when the lightning reaches the target. TileView.PlaySelectionPulse() was
             // unreliable (tile sizing logic can stomp scale), so we route through BoardAnimator.
-            boardAnimator.PlaySelectionPulse(target);
+            boardAnimator.PlaySelectionPulse(target, delay: 0f, peakScale: 1.30f, upTime: 0.10f, downTime: 0.10f);
             overrideFanoutPulseHitCount++;
             Debug.Log($"[SystemOverride][SelectionPulse] beamHit=({target.X},{target.Y})");
         }
