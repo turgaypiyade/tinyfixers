@@ -54,15 +54,12 @@ public class DynamicBoardBorder : MonoBehaviour
             float   half = tileSize / 2f;
 
             // ÜST kenar — sadece TEK KENAR debug çizimi.
-            // Kalınlık/offset köşeler ile aynı metrikten türetilir:
-            // - offset: offOuter
-            // - kalınlık: thickness
-            // - köşe birleşimi için yatayda joinOverlap kadar taşırılır
+            // İkinci sprite'ı (belowStraightPrefab) üst kenarda görünürlük testi için kullanıyoruz.
             if (!IsSolid(x, y - 1, blocked))
                 Spawn(belowStraightPrefab,
                     pos:  new Vector2(cell.x, cell.y + half + offOuter),
                     rot:  0f,
-                    size: new Vector2(tileSize + (joinOverlap * 2f), thickness));
+                    size: new Vector2(tileSize, thickness));
         }
 
         // Köşeler — AYNEN ESKİ KOD
