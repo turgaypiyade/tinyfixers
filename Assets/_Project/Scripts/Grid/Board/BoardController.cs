@@ -98,6 +98,7 @@ public class BoardController : MonoBehaviour
     private TileView selected;
     private int busyCount = 0;
     private BoosterMode activeBooster = BoosterMode.None;
+    public  BoosterMode ActiveBooster => activeBooster; // TileView drag kontrolü için
 
     private GameObject tilePrefab;
     private RectTransform parent;
@@ -580,6 +581,7 @@ public class BoardController : MonoBehaviour
     public void RequestSwapFromDrag(TileView from, int dirX, int dirY)
     {
         if (IsBusy || InputLocked) return;
+        if (activeBooster != BoosterMode.None) return; // booster aktifken drag blokla, click açık kalır
 
         int nx = from.X + dirX;
         int ny = from.Y + dirY;

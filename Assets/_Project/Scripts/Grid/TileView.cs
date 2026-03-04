@@ -338,6 +338,7 @@ public class TileView : MonoBehaviour,
     public void OnBeginDrag(PointerEventData eventData)
     {
         if (board == null || board.IsBusy) return;
+        if (board.ActiveBooster != BoardController.BoosterMode.None) return; // booster aktifken drag yok
 
         // ResetVisualState ile aynı baseline: drag başlangıcında ölçek temizlenir.
         transform.localScale = Vector3.one;
@@ -356,6 +357,7 @@ public class TileView : MonoBehaviour,
     public void OnDrag(PointerEventData eventData)
     {
         if (board == null || board.IsBusy) return;
+        if (board.ActiveBooster != BoardController.BoosterMode.None) return; // booster aktifken drag yok
         if (dragConsumedSwap) return;
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(

@@ -1627,7 +1627,7 @@ RectTransform:
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.051567238}
-  m_AnchorMax: {x: 1.3821313, y: 1.3331648}
+  m_AnchorMax: {x: 1.3375, y: 1.3331648}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8365,7 +8365,7 @@ MonoBehaviour:
   borderDrawer: {fileID: 0}
   boardPadding: 0
   cellBgPrefab: {fileID: 5469896378372082776, guid: 24b7e8f0e6f6e924ba247a059d975e1b, type: 3}
-  underTileCellBgTint: {r: 0.72, g: 0.86, b: 1, a: 1}
+  underTileCellBgTint: {r: 0.75, g: 0.8732394, b: 1, a: 1}
   iconScale: 1
   spawnParent: {fileID: 1410826443}
   cellBgRoot: {fileID: 0}
@@ -8488,18 +8488,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DynamicBoardBorder
   level: {fileID: 0}
   borderRoot: {fileID: 857045940}
-  straightPrefab: {fileID: 3820944190694278369, guid: 780e667e9b49ac64489a2c85b44afb08, type: 3}
+  aboveStraightPrefab: {fileID: 6574422976558452149, guid: fc2054e9fd39d4cc385c6af0e6f5d12a, type: 3}
+  belowStraightPrefab: {fileID: 3820944190694278369, guid: 780e667e9b49ac64489a2c85b44afb08, type: 3}
   outerCornerPrefab: {fileID: 885373921422311714, guid: 778e1dad2221875408a35c693fa6a59d, type: 3}
   innerCornerPrefab: {fileID: 1266194054284808458, guid: df0e237fe58c5374bbf4cfd5ee12a8ab, type: 3}
   tileSize: 106
-  debugMasks: 0
+  debugMasks: 1
   debugFont: {fileID: 0}
   includeObstaclesAsSolid: 1
-  thickness: 10
-  borderOutside: 5
+  thickness: 30
+  borderOutside: 8
   contentOffset: {x: 8, y: -8}
   joinOverlap: 10
-  cornerScale: 1.25
+  cornerScale: 1.2
 --- !u!114 &1410826448
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8918,7 +8919,7 @@ MonoBehaviour:
   selectionOutlineColor: {r: 0.45, g: 0.9, b: 1, a: 1}
   selectionOutlineDistance: 5
   selectedOutlineDistance: 8
-  selectedOverlayAlpha: 0.55
+  selectedOverlayAlpha: 0.88
 --- !u!4 &1705598668 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5495363432972127918, guid: c404d916bf3704cb4983715770e8c427, type: 3}

@@ -68,7 +68,10 @@ public class GridSpawner : MonoBehaviour
                           ?? GetComponentInParent<BoardController>(true)
                           ?? FindFirstObjectByType<BoardController>();
 
-        if (borderDrawer == null) borderDrawer = GetComponent<DynamicBoardBorder>();
+        //if (borderDrawer == null) borderDrawer = GetComponent<DynamicBoardBorder>();
+        if (borderDrawer == null) borderDrawer = GetComponent<DynamicBoardBorder>()
+                                ?? GetComponentInChildren<DynamicBoardBorder>(true)
+                                ?? FindFirstObjectByType<DynamicBoardBorder>();        
     }
 
     private void OnEnable()
@@ -260,7 +263,8 @@ public class GridSpawner : MonoBehaviour
         if (tilesRoot != null) tilesRoot.SetAsLastSibling();
         if (overTilesObstaclesRoot != null) overTilesObstaclesRoot.SetAsLastSibling();
 
-        var drawer = GetComponent<DynamicBoardBorder>();
+       // var drawer = GetComponent<DynamicBoardBorder>();
+       var drawer = borderDrawer;
         if (drawer != null)
         {
             drawer.level = resolvedLevel;
