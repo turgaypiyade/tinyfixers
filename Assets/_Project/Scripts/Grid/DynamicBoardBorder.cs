@@ -44,6 +44,8 @@ public class DynamicBoardBorder : MonoBehaviour
         float baseOff  = borderOutside + (thickness * 0.5f);
         float k        = 0.70f;
         float offOuter = Mathf.Max(0f, baseOff - joinOverlap * k);
+        float cornerSize = (thickness + joinOverlap * 2f) * cornerScale;
+        float topEdgeThickness = cornerSize;
 
         for (int y = 0; y < h; y++)
         for (int x = 0; x < w; x++)
