@@ -30,6 +30,10 @@ public class DynamicBoardBorder : MonoBehaviour
     public float joinOverlap = 10f;
     public float cornerScale = 1.20f;
 
+    [Header("Top Edge Optical Tuning")]
+    [Tooltip("Üst çizgi kalınlığını optik olarak köşeyle eşitlemek için çarpan (1 = matematiksel eşit)")]
+    public float topEdgeOpticalScale = 1f;
+
     public void SetLevelData(LevelData value) => level = value;
 
     public void Draw(bool[] blocked = null)
@@ -70,22 +74,20 @@ public class DynamicBoardBorder : MonoBehaviour
         {
             int mask = GetBitmask(x, y, blocked);
             if (mask > 0 && mask < 15)
-                HandleCorner(GetNodePosition(x, y), mask);
+                HandleCorner(GetNodePosition(x, y), mask, cornerOuterCenterOffset, cornerSize);
         }
     }
 
     // ── Köşeler — hiç değişmedi ──────────────────────────
 
-    private void HandleCorner(Vector2 nodePos, int mask)
+    private void HandleCorner(Vector2 nodePos, int mask, float offOuter, float cornerSize)
     {
         if (debugMasks) SpawnMaskLabel(nodePos, mask);
 
         float baseOff  = borderOutside + (thickness * 0.5f);
         float k        = 0.70f;
-        float offOuter = Mathf.Max(0f, baseOff - joinOverlap * k);
         float offInner = baseOff + joinOverlap * k;
 
-        float cornerSize = (thickness + joinOverlap * 2f) * cornerScale;
         Vector2 sz = new Vector2(cornerSize, cornerSize);
 
         switch (mask)
