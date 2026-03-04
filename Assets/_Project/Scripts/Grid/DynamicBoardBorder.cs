@@ -134,6 +134,30 @@ public class DynamicBoardBorder : MonoBehaviour
         x * tileSize + contentOffset.x,
         -y * tileSize + contentOffset.y);
 
+    private void SpawnTopEdge(Vector2 pos, float rot, Vector2 size)
+    {
+        if (belowStraightPrefab == null) return;
+
+        var go = Instantiate(belowStraightPrefab, borderRoot);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta        = size;
+        rt.localRotation    = Quaternion.Euler(0, 0, rot);
+        rt.localScale       = Vector3.one;
+
+        if (go.TryGetComponent(out Image img))
+        {
+            // board_tiles_v1_16 sprite'ında border bilgisi var; Sliced ile çizince
+            // çizgi kalınlığı rect yüksekliğine daha doğru tepki verir.
+            img.type = Image.Type.Sliced;
+            img.fillCenter = true;
+            img.raycastTarget  = false;
+            img.preserveAspect = false;
+        }
+    }
+
     private void Spawn(GameObject prefab, Vector2 pos, float rot, Vector2 size,
         bool flipX = false, bool flipY = false)
     {
