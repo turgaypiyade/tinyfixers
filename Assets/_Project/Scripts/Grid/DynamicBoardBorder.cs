@@ -138,16 +138,19 @@ public class DynamicBoardBorder : MonoBehaviour
         if (mask == 0 || mask == 15) return;
 
         Vector2 node = NodePos(nx, ny);
-        float   off  = borderOutside + cornerSize * 0.5f;
-        Vector2 sz   = new Vector2(cornerSize, cornerSize);
+        // Köşe görselinin merkezi, straight parçaların merkezi ile aynı hatta olmalı.
+        // cornerSize/2 kullanmak köşeleri fazla dışarı itip (mask varsa) tamamen görünmez yapabiliyor.
+        float offX = borderOutside + straightV_width * 0.5f;
+        float offY = borderOutside + straightH_height * 0.5f;
+        Vector2 sz = new Vector2(cornerSize, cornerSize);
 
         switch (mask)
         {
             // outer
-            case  4: SpawnRect(cornerLTPrefab, node + new Vector2(-off, +off), sz); break; // ┌
-            case  8: SpawnRect(cornerRTPrefab, node + new Vector2(+off, +off), sz); break; // ┐
-            case  2: SpawnRect(cornerLBPrefab, node + new Vector2(-off, -off), sz); break; // └
-            case  1: SpawnRect(cornerRBPrefab, node + new Vector2(+off, -off), sz); break; // ┘
+            case  4: SpawnRect(cornerLTPrefab, node + new Vector2(-offX, +offY), sz); break; // ┌
+            case  8: SpawnRect(cornerRTPrefab, node + new Vector2(+offX, +offY), sz); break; // ┐
+            case  2: SpawnRect(cornerLBPrefab, node + new Vector2(-offX, -offY), sz); break; // └
+            case  1: SpawnRect(cornerRBPrefab, node + new Vector2(+offX, -offY), sz); break; // ┘
             // inner
             case 11: SpawnRect(cornerLTPrefab, node + new Vector2(+off, -off), sz); break; // BR boş
             case  7: SpawnRect(cornerRTPrefab, node + new Vector2(-off, -off), sz); break; // BL boş
