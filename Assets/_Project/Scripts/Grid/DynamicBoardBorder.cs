@@ -198,6 +198,8 @@ public class DynamicBoardBorder : MonoBehaviour
         x * tileSize + contentOffset.x,
        -y * tileSize + contentOffset.y);
 
+    private bool _loggedMissingCornerPrefab;
+
     private bool[] _holes;
 
     private bool IsSolid(int x, int y, bool[] blocked)
