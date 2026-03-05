@@ -20,6 +20,9 @@ public class DynamicBoardBorder : MonoBehaviour
     public Vector2 contentOffset = new Vector2(8f, -8f);
 
     [Header("Border Settings")]
+    [Tooltip("Art setinin tasarlandığı tile boyu. Örn: tile 64 iken corner=64, h=32, v=32.")]
+    public float borderReferenceTileSize = 64f;
+    public bool  autoScaleWithTileSize   = true;
     public float cornerSize       = 64f;
     public float straightH_height = 32f;
     public float straightV_width  = 32f;
@@ -33,6 +36,7 @@ public class DynamicBoardBorder : MonoBehaviour
     public void Draw(bool[] blocked = null, bool[] holes = null)
     {
         if (level == null || borderRoot == null) return;
+        EnsureScaledMetrics();
         _holes = holes;
         ClearChildren();
 
@@ -131,25 +135,49 @@ public class DynamicBoardBorder : MonoBehaviour
 
         int mask = (tl?1:0)|(tr?2:0)|(br?4:0)|(bl?8:0);
 
-        if (mask == 0 || mask == 15 || mask == 5 || mask == 10) return;
+        if (mask == 0 || mask == 15) return;
 
         Vector2 node = NodePos(nx, ny);
-        float   off  = borderOutside + cornerSize * 0.5f;
-        Vector2 sz   = new Vector2(cornerSize, cornerSize);
+        // Köşe görselinin merkezi, straight parçaların merkezi ile aynı hatta olmalı.
+        // cornerSize/2 kullanmak köşeleri fazla dışarı itip (mask varsa) tamamen görünmez yapabiliyor.
+        float offX = borderOutside + straightV_width * 0.5f;
+        float offY = borderOutside + straightH_height * 0.5f;
+        Vector2 sz = new Vector2(cornerSize, cornerSize);
 
         switch (mask)
         {
             // outer
-            case  4: SpawnRect(cornerLTPrefab, node + new Vector2(-off, +off), sz); break; // ┌
-            case  8: SpawnRect(cornerRTPrefab, node + new Vector2(+off, +off), sz); break; // ┐
-            case  2: SpawnRect(cornerLBPrefab, node + new Vector2(-off, -off), sz); break; // └
-            case  1: SpawnRect(cornerRBPrefab, node + new Vector2(+off, -off), sz); break; // ┘
+            case  4: SpawnRect(cornerLTPrefab, node + new Vector2(-offX, +offY), sz); break; // ┌
+            case  8: SpawnRect(cornerRTPrefab, node + new Vector2(+offX, +offY), sz); break; // ┐
+            case  2: SpawnRect(cornerLBPrefab, node + new Vector2(-offX, -offY), sz); break; // └
+            case  1: SpawnRect(cornerRBPrefab, node + new Vector2(+offX, -offY), sz); break; // ┘
             // inner
-            case 11: SpawnRect(cornerLTPrefab, node + new Vector2(+off, -off), sz); break; // BR boş
-            case  7: SpawnRect(cornerRTPrefab, node + new Vector2(-off, -off), sz); break; // BL boş
-            case 13: SpawnRect(cornerLBPrefab, node + new Vector2(+off, +off), sz); break; // TR boş
-            case 14: SpawnRect(cornerRBPrefab, node + new Vector2(-off, +off), sz); break; // TL boş
+            case 11: SpawnRect(cornerLTPrefab, node + new Vector2(+offX, -offY), sz); break; // BR boş
+            case  7: SpawnRect(cornerRTPrefab, node + new Vector2(-offX, -offY), sz); break; // BL boş
+            case 13: SpawnRect(cornerLBPrefab, node + new Vector2(+offX, +offY), sz); break; // TR boş
+            case 14: SpawnRect(cornerRBPrefab, node + new Vector2(-offX, +offY), sz); break; // TL boş
+
+            // diagonal ambiguous: iki ayrı köşe gerekir
+            case  5: // TL + BR dolu
+                SpawnRect(cornerRBPrefab, node + new Vector2(-offX, +offY), sz); // TL hücre köşesi
+                SpawnRect(cornerLTPrefab, node + new Vector2(+offX, -offY), sz); // BR hücre köşesi
+                break;
+            case 10: // TR + BL dolu
+                SpawnRect(cornerLBPrefab, node + new Vector2(+offX, +offY), sz); // TR hücre köşesi
+                SpawnRect(cornerRTPrefab, node + new Vector2(-offX, -offY), sz); // BL hücre köşesi
+                break;
         }
+    }
+
+    private void EnsureScaledMetrics()
+    {
+        if (!autoScaleWithTileSize) return;
+        if (borderReferenceTileSize <= 0f) return;
+
+        float scale = tileSize / borderReferenceTileSize;
+        cornerSize       = 64f * scale;
+        straightH_height = 32f * scale;
+        straightV_width  = 32f * scale;
     }
 
     // =========================================================================
