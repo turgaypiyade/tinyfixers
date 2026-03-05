@@ -4,197 +4,210 @@ using UnityEngine.UI;
 public class DynamicBoardBorder : MonoBehaviour
 {
     [Header("Dependencies")]
-    public LevelData level;
+    public LevelData     level;
     public RectTransform borderRoot;
 
-    [Header("Prefabs (UI Image)")]
-    public GameObject aboveStraightPrefab;   // üst kenar
-    public GameObject belowStraightPrefab;   // alt kenar
-    public GameObject outerCornerPrefab;
-    public GameObject innerCornerPrefab;
+    [Header("Prefabs")]
+    public GameObject straightHPrefab;  // board_straight_h  (64w × 32h)
+    public GameObject straightVPrefab;  // board_straight_v  (32w × 64h)
+    public GameObject cornerLTPrefab;   // board_corner_lt   ┌
+    public GameObject cornerRTPrefab;   // board_corner_rt   ┐
+    public GameObject cornerLBPrefab;   // board_corner_lb   └
+    public GameObject cornerRBPrefab;   // board_corner_rb   ┘
 
-    [Header("Hizalama Ayarları")]
-    public int tileSize = 110;
-
-    [Header("Debug")]
-    public bool debugMasks = false;
-    public Font debugFont;
-
-    [Header("Optional: Treat obstacles as solid")]
-    public bool includeObstaclesAsSolid = true;
-
-    public float thickness = 20f;
-    public float borderOutside = 15f;
+    [Header("Layout")]
+    public int     tileSize      = 110;
     public Vector2 contentOffset = new Vector2(8f, -8f);
 
-    public float joinOverlap = 10f;
-    public float cornerScale = 1.20f;
+    [Header("Border Settings")]
+    public float cornerSize       = 64f;
+    public float straightH_height = 32f;
+    public float straightV_width  = 32f;
+    public float borderOutside    = 0f;
 
-    [Header("Top Edge Optical Tuning")]
-    [Tooltip("Üst çizgi kalınlığını optik olarak köşeyle eşitlemek için çarpan (1 = matematiksel eşit)")]
-    public float topEdgeOpticalScale = 1f;
+    [Header("Obstacle")]
+    public bool includeObstaclesAsSolid = true;
 
     public void SetLevelData(LevelData value) => level = value;
 
-    public void Draw(bool[] blocked = null)
+    public void Draw(bool[] blocked = null, bool[] holes = null)
     {
         if (level == null || borderRoot == null) return;
+        _holes = holes;
         ClearChildren();
 
-        int w = level.width;
-        int h = level.height;
+        int W = level.width;
+        int H = level.height;
 
-        // Köşe ile AYNI offset hesabı
-        float baseOff  = borderOutside + (thickness * 0.5f);
-        float k        = 0.70f;
-        float offOuter = Mathf.Max(0f, baseOff - joinOverlap * k);
-        float cornerSize = (thickness + joinOverlap * 2f) * cornerScale;
-        float topEdgeThickness = cornerSize;
-
-        for (int y = 0; y < h; y++)
-        for (int x = 0; x < w; x++)
+        // ── YATAY KENARLAR ────────────────────────────────────────────────
+        // edge (x, nodeY): x. sütun, nodeY. yatay çizgi
+        // above = hücre (x, nodeY-1), below = hücre (x, nodeY)
+        for (int nodeY = 0; nodeY <= H; nodeY++)
+        for (int x = 0; x < W; x++)
         {
-            if (!IsSolid(x, y, blocked)) continue;
+            bool above = IsSolid(x, nodeY - 1, blocked);
+            bool below = IsSolid(x, nodeY,     blocked);
+            if (above == below) continue;
 
-            Vector2 cell = GetCellCenter(x, y);
-            float   half = tileSize / 2f;
-
-            // ÜST kenar — sadece TEK KENAR debug çizimi.
-            // İkinci sprite'ı (belowStraightPrefab) üst kenarda görünürlük testi için kullanıyoruz.
-            if (!IsSolid(x, y - 1, blocked))
-                Spawn(belowStraightPrefab,
-                    pos:  new Vector2(cell.x, cell.y + half + offOuter),
-                    rot:  0f,
-                    size: new Vector2(tileSize, thickness));
+            PlaceStraightH(x, nodeY, solidIsBelow: below, blocked);
         }
 
-        // Köşeler — AYNEN ESKİ KOD
-        for (int y = 0; y <= h; y++)
-        for (int x = 0; x <= w; x++)
+        // ── DİKEY KENARLAR ────────────────────────────────────────────────
+        // edge (nodeX, y): nodeX. dikey çizgi, y. satır
+        // leftCell = hücre (nodeX-1, y), rightCell = hücre (nodeX, y)
+        for (int y = 0; y < H; y++)
+        for (int nodeX = 0; nodeX <= W; nodeX++)
         {
-            int mask = GetBitmask(x, y, blocked);
-            if (mask > 0 && mask < 15)
-                HandleCorner(GetNodePosition(x, y), mask, cornerOuterCenterOffset, cornerSize);
+            bool leftCell  = IsSolid(nodeX - 1, y, blocked);
+            bool rightCell = IsSolid(nodeX,     y, blocked);
+            if (leftCell == rightCell) continue;
+
+            PlaceStraightV(nodeX, y, solidIsRight: rightCell, blocked);
         }
+
+        // ── KÖŞELER ───────────────────────────────────────────────────────
+        for (int ny = 0; ny <= H; ny++)
+        for (int nx = 0; nx <= W; nx++)
+            PlaceCorner(nx, ny, blocked);
     }
 
-    // ── Köşeler — hiç değişmedi ──────────────────────────
-
-    private void HandleCorner(Vector2 nodePos, int mask, float offOuter, float cornerSize)
+    // =========================================================================
+    // STRAIGHT H
+    // cx, nodeY: hangi hücre sütunu, hangi yatay node satırı
+    // Sol uç node = (cx, nodeY), Sağ uç node = (cx+1, nodeY)
+    // Köşe varsa o uçtan cornerSize/2 kısalt
+    // =========================================================================
+    private void PlaceStraightH(int cx, int nodeY, bool solidIsBelow, bool[] blocked)
     {
-        if (debugMasks) SpawnMaskLabel(nodePos, mask);
+        // Sol node köşesi var mı?
+        bool cornerL = NodeNeedsTrim(cx,     nodeY, blocked);
+        bool cornerR = NodeNeedsTrim(cx + 1, nodeY, blocked);
 
-        float baseOff  = borderOutside + (thickness * 0.5f);
-        float k        = 0.70f;
-        float offInner = baseOff + joinOverlap * k;
+        float trimL = cornerL ? cornerSize * 0.5f : 0f;
+        float trimR = cornerR ? cornerSize * 0.5f : 0f;
 
-        Vector2 sz = new Vector2(cornerSize, cornerSize);
+        Vector2 nL = NodePos(cx,     nodeY);
+        Vector2 nR = NodePos(cx + 1, nodeY);
+
+        float len     = Mathf.Max(1f, tileSize - trimL - trimR);
+        float centerX = nL.x + trimL + len * 0.5f;
+
+        float halfH   = straightH_height * 0.5f;
+        float centerY = nL.y + (solidIsBelow ? 1f : -1f) * (borderOutside + halfH);
+
+        SpawnRect(straightHPrefab,
+                  new Vector2(centerX, centerY),
+                  new Vector2(len, straightH_height));
+    }
+
+    // =========================================================================
+    // STRAIGHT V
+    // nodeX, cy: hangi dikey node sütunu, hangi hücre satırı
+    // Üst uç node = (nodeX, cy), Alt uç node = (nodeX, cy+1)
+    // Köşe varsa o uçtan cornerSize/2 kısalt
+    // =========================================================================
+    private void PlaceStraightV(int nodeX, int cy, bool solidIsRight, bool[] blocked)
+    {
+        bool cornerT = NodeNeedsTrim(nodeX, cy,     blocked);
+        bool cornerB = NodeNeedsTrim(nodeX, cy + 1, blocked);
+
+        float trimT = cornerT ? cornerSize * 0.5f : 0f;
+        float trimB = cornerB ? cornerSize * 0.5f : 0f;
+
+        Vector2 nT = NodePos(nodeX, cy);
+        Vector2 nB = NodePos(nodeX, cy + 1);
+
+        // nT.y > nB.y (UI'da yukarı pozitif)
+        float len     = Mathf.Max(1f, tileSize - trimT - trimB);
+        float centerY = nT.y - trimT - len * 0.5f;
+
+        float halfW   = straightV_width * 0.5f;
+        float centerX = nT.x + (solidIsRight ? -1f : 1f) * (borderOutside + halfW);
+
+        SpawnRect(straightVPrefab,
+                  new Vector2(centerX, centerY),
+                  new Vector2(straightV_width, len));
+    }
+
+    // =========================================================================
+    // CORNER
+    // Node (nx,ny) çevresindeki 4 hücre:
+    //   TL=(nx-1,ny-1)  TR=(nx,ny-1)
+    //   BL=(nx-1,ny  )  BR=(nx,ny  )
+    // Bitmask: bit0=TL  bit1=TR  bit2=BR  bit3=BL
+    // =========================================================================
+    private void PlaceCorner(int nx, int ny, bool[] blocked)
+    {
+        bool tl = IsSolid(nx - 1, ny - 1, blocked);
+        bool tr = IsSolid(nx,     ny - 1, blocked);
+        bool br = IsSolid(nx,     ny,     blocked);
+        bool bl = IsSolid(nx - 1, ny,     blocked);
+
+        int mask = (tl?1:0)|(tr?2:0)|(br?4:0)|(bl?8:0);
+
+        if (mask == 0 || mask == 15 || mask == 5 || mask == 10) return;
+
+        Vector2 node = NodePos(nx, ny);
+        float   off  = borderOutside + cornerSize * 0.5f;
+        Vector2 sz   = new Vector2(cornerSize, cornerSize);
 
         switch (mask)
         {
-            case 1: Spawn(outerCornerPrefab, nodePos + new Vector2(-offOuter, +offOuter), 0, sz, flipX: true,  flipY: true);  break;
-            case 2: Spawn(outerCornerPrefab, nodePos + new Vector2(+offOuter, +offOuter), 0, sz, flipX: false, flipY: true);  break;
-            case 4: Spawn(outerCornerPrefab, nodePos + new Vector2(+offOuter, -offOuter), 0, sz, flipX: false, flipY: false); break;
-            case 8: Spawn(outerCornerPrefab, nodePos + new Vector2(-offOuter, -offOuter), 0, sz, flipX: true,  flipY: false); break;
-
-            case 14: Spawn(innerCornerPrefab, nodePos + new Vector2(-offInner-5f, +offInner+5f), 0, sz, flipX: true,  flipY: true);  break;
-            case 13: Spawn(innerCornerPrefab, nodePos + new Vector2(+offInner+5f, +offInner+5f), 0, sz, flipX: false, flipY: true);  break;
-            case 11: Spawn(innerCornerPrefab, nodePos + new Vector2(+offInner+5f, -offInner-5f), 0, sz, flipX: false, flipY: false); break;
-            case 7:  Spawn(innerCornerPrefab, nodePos + new Vector2(-offInner-5f, -offInner-5f), 0, sz, flipX: true,  flipY: false); break;
+            // outer
+            case  4: SpawnRect(cornerLTPrefab, node + new Vector2(-off, +off), sz); break; // ┌
+            case  8: SpawnRect(cornerRTPrefab, node + new Vector2(+off, +off), sz); break; // ┐
+            case  2: SpawnRect(cornerLBPrefab, node + new Vector2(-off, -off), sz); break; // └
+            case  1: SpawnRect(cornerRBPrefab, node + new Vector2(+off, -off), sz); break; // ┘
+            // inner — prefab aynı, offset boş quadrant yönüne çevrildi
+            case 11: SpawnRect(cornerLTPrefab, node + new Vector2(+off, -off), sz); break; // BR boş → ┌
+            case  7: SpawnRect(cornerRTPrefab, node + new Vector2(-off, -off), sz); break; // BL boş → ┐
+            case 13: SpawnRect(cornerLBPrefab, node + new Vector2(+off, +off), sz); break; // TR boş → └
+            case 14: SpawnRect(cornerRBPrefab, node + new Vector2(-off, +off), sz); break; // TL boş → ┘
         }
     }
 
-    // ── Yardımcılar ──────────────────────────────────────
-
-    private int GetBitmask(int x, int y, bool[] blocked)
+    // Node'da trim gerekiyor mu?
+    // Hem yatay hem dikey bir border edge bu nodeden geçiyorsa trim yap.
+    // Bu hem outer/inner corner'ları hem de T-kesişimleri kapsar.
+    private bool NodeNeedsTrim(int nx, int ny, bool[] blocked)
     {
-        int mask = 0;
-        if (IsSolid(x-1, y-1, blocked)) mask |= 1;
-        if (IsSolid(x,   y-1, blocked)) mask |= 2;
-        if (IsSolid(x,   y,   blocked)) mask |= 4;
-        if (IsSolid(x-1, y,   blocked)) mask |= 8;
-        return mask;
+        bool tl = IsSolid(nx - 1, ny - 1, blocked);
+        bool tr = IsSolid(nx,     ny - 1, blocked);
+        bool br = IsSolid(nx,     ny,     blocked);
+        bool bl = IsSolid(nx - 1, ny,     blocked);
+
+        // Bu node'dan dikey bir border edge geçiyor mu?
+        // (sol sütun ile sağ sütun arasında solid farkı)
+        bool hasVEdge = (tl != tr) || (bl != br);
+
+        // Bu node'dan yatay bir border edge geçiyor mu?
+        // (üst satır ile alt satır arasında solid farkı)
+        bool hasHEdge = (tl != bl) || (tr != br);
+
+        return hasVEdge && hasHEdge;
     }
 
-    private bool IsSolid(int x, int y, bool[] blocked)
-    {
-        if (!level.InBounds(x, y)) return false;
-        int idx = level.Index(x, y);
-        bool isObs = blocked != null && idx >= 0 && idx < blocked.Length && blocked[idx];
-        if ( includeObstaclesAsSolid && isObs) return true;
-        if (!includeObstaclesAsSolid && isObs) return false;
-        if (level.cells != null && idx >= 0 && idx < level.cells.Length &&
-            level.cells[idx] == (int)CellType.Empty) return false;
-        return true;
-    }
-
-    private Vector2 GetCellCenter(int x, int y) => new Vector2(
-        x * tileSize + contentOffset.x + tileSize / 2f,
-        -y * tileSize + contentOffset.y - tileSize / 2f);
-
-    private Vector2 GetNodePosition(int x, int y) => new Vector2(
+    // =========================================================================
+    private Vector2 NodePos(int x, int y) => new Vector2(
         x * tileSize + contentOffset.x,
-        -y * tileSize + contentOffset.y);
+       -y * tileSize + contentOffset.y);
 
-    private void SpawnTopEdge(Vector2 pos, float rot, Vector2 size)
-    {
-        if (belowStraightPrefab == null) return;
-
-        var go = Instantiate(belowStraightPrefab, borderRoot);
-        var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
-        rt.pivot     = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = pos;
-        rt.sizeDelta        = size;
-        rt.localRotation    = Quaternion.Euler(0, 0, rot);
-        rt.localScale       = Vector3.one;
-
-        if (go.TryGetComponent(out Image img))
-        {
-            // board_tiles_v1_16 sprite'ında border bilgisi var; Sliced ile çizince
-            // çizgi kalınlığı rect yüksekliğine daha doğru tepki verir.
-            img.type = Image.Type.Sliced;
-            img.fillCenter = true;
-            img.raycastTarget  = false;
-            img.preserveAspect = false;
-        }
-    }
-
-    private void Spawn(GameObject prefab, Vector2 pos, float rot, Vector2 size,
-        bool flipX = false, bool flipY = false)
+    private void SpawnRect(GameObject prefab, Vector2 pos, Vector2 size)
     {
         if (prefab == null) return;
         var go = Instantiate(prefab, borderRoot);
         var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
-        rt.pivot     = new Vector2(0.5f, 0.5f);
+        rt.anchorMin        = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot            = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = pos;
         rt.sizeDelta        = size;
-        rt.localRotation    = Quaternion.Euler(0, 0, rot);
-        rt.localScale       = new Vector3(flipX ? -1f : 1f, flipY ? -1f : 1f, 1f);
+        rt.localRotation    = Quaternion.identity;
+        rt.localScale       = Vector3.one;
         if (go.TryGetComponent(out Image img))
         {
             img.raycastTarget  = false;
             img.preserveAspect = false;
         }
-    }
-
-    private void SpawnMaskLabel(Vector2 pos, int mask)
-    {
-        var go = new GameObject("Mask_" + mask, typeof(RectTransform), typeof(Text));
-        go.transform.SetParent(borderRoot, false);
-        var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
-        rt.pivot     = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = new Vector2(60, 30);
-        var t = go.GetComponent<Text>();
-        t.text      = mask.ToString();
-        t.font      = debugFont != null ? debugFont : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        t.fontSize  = 18;
-        t.color     = Color.magenta;
-        t.alignment = TextAnchor.MiddleCenter;
-        t.raycastTarget = false;
     }
 
     private void ClearChildren()
@@ -206,5 +219,23 @@ public class DynamicBoardBorder : MonoBehaviour
             if (Application.isPlaying) Destroy(c);
             else                       DestroyImmediate(c);
         }
+    }
+
+    private bool[] _holes;  // Draw() tarafından set edilir
+
+    private bool IsSolid(int x, int y, bool[] blocked)
+    {
+        if (!level.InBounds(x, y)) return false;
+        int  idx   = level.Index(x, y);
+
+        // Hole ise asla solid değil
+        if (_holes != null && idx >= 0 && idx < _holes.Length && _holes[idx]) return false;
+        if (level.cells != null && idx >= 0 && idx < level.cells.Length &&
+            level.cells[idx] == (int)CellType.Empty) return false;
+
+        bool isObs = blocked != null && idx >= 0 && idx < blocked.Length && blocked[idx];
+        if ( includeObstaclesAsSolid && isObs) return true;
+        if (!includeObstaclesAsSolid && isObs) return false;
+        return true;
     }
 }
