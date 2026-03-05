@@ -290,7 +290,14 @@ public class GridSpawner : MonoBehaviour
             drawer.contentOffset = new Vector2(boardPadding, -boardPadding);
 
             drawer.includeObstaclesAsSolid = true;
-            drawer.Draw(blocked);
+
+            // board.Holes[x,y] → 1D array (hole olan hücreler border almaz)
+            bool[] holes = new bool[resolvedLevel.width * resolvedLevel.height];
+            for (int hy = 0; hy < resolvedLevel.height; hy++)
+            for (int hx = 0; hx < resolvedLevel.width; hx++)
+                holes[resolvedLevel.Index(hx, hy)] = board.Holes[hx, hy];
+
+            drawer.Draw(blocked, holes);
         }
 
 
@@ -680,7 +687,7 @@ public class GridSpawner : MonoBehaviour
 
         // Border’ın grid dışına taştığı mesafe:
         // borderOutside + thickness/2
-        return Mathf.Max(0f, drawer.borderOutside + drawer.thickness * 0.5f);
+        return Mathf.Max(0f, drawer.borderOutside + drawer.straightH_height * 0.5f);
     }
 
 }
