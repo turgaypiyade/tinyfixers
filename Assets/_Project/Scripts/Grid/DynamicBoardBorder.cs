@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 public class DynamicBoardBorder : MonoBehaviour
@@ -28,7 +29,17 @@ public class DynamicBoardBorder : MonoBehaviour
     [Header("Obstacle")]
     public bool includeObstaclesAsSolid = true;
 
-    public void SetLevelData(LevelData value) => level = value;
+        if (cornerLbPrefab != null)
+        {
+            if (cornerLtPrefab == null) cornerLtPrefab = cornerLbPrefab;
+            if (cornerRbPrefab == null) cornerRbPrefab = cornerLbPrefab;
+            if (cornerRtPrefab == null) cornerRtPrefab = cornerLbPrefab;
+        }
+
+        if (straightVPrefab == null) straightVPrefab = straightHPrefab;
+
+        _ = legacyInnerCornerPrefab;
+    }
 
     public void Draw(bool[] blocked = null, bool[] holes = null)
     {
@@ -51,6 +62,7 @@ public class DynamicBoardBorder : MonoBehaviour
 
             PlaceStraightH(x, nodeY, solidIsBelow: below, blocked);
         }
+    }
 
         // ── DİKEY KENARLAR ────────────────────────────────────────────────
         // edge (nodeX, y): nodeX. dikey çizgi, y. satır
@@ -195,6 +207,7 @@ public class DynamicBoardBorder : MonoBehaviour
     private void SpawnRect(GameObject prefab, Vector2 pos, Vector2 size)
     {
         if (prefab == null) return;
+
         var go = Instantiate(prefab, borderRoot);
         var rt = go.GetComponent<RectTransform>();
         rt.anchorMin        = rt.anchorMax = new Vector2(0f, 1f);
@@ -205,7 +218,7 @@ public class DynamicBoardBorder : MonoBehaviour
         rt.localScale       = Vector3.one;
         if (go.TryGetComponent(out Image img))
         {
-            img.raycastTarget  = false;
+            img.raycastTarget = false;
             img.preserveAspect = false;
         }
     }
@@ -213,11 +226,12 @@ public class DynamicBoardBorder : MonoBehaviour
     private void ClearChildren()
     {
         if (borderRoot == null) return;
+
         for (int i = borderRoot.childCount - 1; i >= 0; i--)
         {
             var c = borderRoot.GetChild(i).gameObject;
             if (Application.isPlaying) Destroy(c);
-            else                       DestroyImmediate(c);
+            else DestroyImmediate(c);
         }
     }
 
