@@ -152,19 +152,19 @@ public class DynamicBoardBorder : MonoBehaviour
             case  2: SpawnRect(cornerLBPrefab, node + new Vector2(-offX, -offY), sz); break; // └
             case  1: SpawnRect(cornerRBPrefab, node + new Vector2(+offX, -offY), sz); break; // ┘
             // inner
-            case 11: SpawnRect(cornerLTPrefab, node + new Vector2(+offX, -offY), sz); break; // BR boş
-            case  7: SpawnRect(cornerRTPrefab, node + new Vector2(-offX, -offY), sz); break; // BL boş
-            case 13: SpawnRect(cornerLBPrefab, node + new Vector2(+offX, +offY), sz); break; // TR boş
-            case 14: SpawnRect(cornerRBPrefab, node + new Vector2(-offX, +offY), sz); break; // TL boş
+            case 11: SpawnRect(cornerLTPrefab, node + new Vector2(+off, -off), sz); break; // BR boş
+            case  7: SpawnRect(cornerRTPrefab, node + new Vector2(-off, -off), sz); break; // BL boş
+            case 13: SpawnRect(cornerLBPrefab, node + new Vector2(+off, +off), sz); break; // TR boş
+            case 14: SpawnRect(cornerRBPrefab, node + new Vector2(-off, +off), sz); break; // TL boş
 
             // diagonal ambiguous: iki ayrı köşe gerekir
             case  5: // TL + BR dolu
-                SpawnRect(cornerRBPrefab, node + new Vector2(-offX, +offY), sz); // TL hücre köşesi
-                SpawnRect(cornerLTPrefab, node + new Vector2(+offX, -offY), sz); // BR hücre köşesi
+                SpawnRect(cornerRBPrefab, node + new Vector2(-off, +off), sz); // TL hücre köşesi
+                SpawnRect(cornerLTPrefab, node + new Vector2(+off, -off), sz); // BR hücre köşesi
                 break;
             case 10: // TR + BL dolu
-                SpawnRect(cornerLBPrefab, node + new Vector2(+offX, +offY), sz); // TR hücre köşesi
-                SpawnRect(cornerRTPrefab, node + new Vector2(-offX, -offY), sz); // BL hücre köşesi
+                SpawnRect(cornerLBPrefab, node + new Vector2(+off, +off), sz); // TR hücre köşesi
+                SpawnRect(cornerRTPrefab, node + new Vector2(-off, -off), sz); // BL hücre köşesi
                 break;
         }
     }
