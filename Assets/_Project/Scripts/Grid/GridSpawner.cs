@@ -52,6 +52,10 @@ public class GridSpawner : MonoBehaviour
     [Header("Random Pool")]
     public TileType[] randomPool = { TileType.Gear, TileType.Core, TileType.Bolt, TileType.Plate };
 
+    [SerializeField] private int referenceCols = 10;
+    [SerializeField] private int referenceRows = 11;
+    [SerializeField] private bool useReferenceGridSizing = true;
+
     private int width;
     private int height;
     private LevelData resolvedLevel;
@@ -174,36 +178,25 @@ public class GridSpawner : MonoBehaviour
 
         if (underTilesObstaclesRoot != null) underTilesObstaclesRoot.anchoredPosition = inner;
         if (overTilesObstaclesRoot != null)  overTilesObstaclesRoot.anchoredPosition  = inner;
-        // STEP 1: Fit BoardMask (RectMask2D) to grid size so spawned tiles above grid get clipped
-        FitParentMaskToGrid();
 
     }
 
-
-    private void FitParentMaskToGrid()
+    private void AlignBorderRootToSpawnParent()
     {
-        if (spawnParent == null) return;
+        if (borderDrawer == null || borderDrawer.borderRoot == null || spawnParent == null)
+            return;
 
-        // BoardMask genelde spawnParent'ın parent'ı (BoardContent -> BoardMask)
-        var mask = spawnParent.GetComponentInParent<UnityEngine.UI.RectMask2D>();
-        if (mask == null) return;
+        RectTransform br = borderDrawer.borderRoot;
 
-        RectTransform maskRt = mask.rectTransform;
+        br.anchorMin = new Vector2(0.5f, 0.5f);
+        br.anchorMax = new Vector2(0.5f, 0.5f);
+        br.pivot = new Vector2(0.5f, 0.5f);
 
-        float gridW = width * tileSize;
-        float gridH = height * tileSize;
+        br.anchoredPosition = Vector2.zero;
+        br.sizeDelta = spawnParent.rect.size;
 
-        // Mask'i center anchor/pivot'ta tut (sende zaten böyle)
-        maskRt.anchorMin = new Vector2(0.5f, 0.5f);
-        maskRt.anchorMax = new Vector2(0.5f, 0.5f);
-        maskRt.pivot     = new Vector2(0.5f, 0.5f);
-        maskRt.anchoredPosition = Vector2.zero;
-
-        maskRt.sizeDelta = new Vector2(
-            gridW + (boardPadding + GetBorderExtentPx()) * 2f,
-            gridH + (boardPadding + GetBorderExtentPx()) * 2f
-        );
-
+        br.localRotation = Quaternion.identity;
+        br.localScale = Vector3.one;
     }
 
     private void BuildInitialGrid()
@@ -269,27 +262,10 @@ public class GridSpawner : MonoBehaviour
         {
             drawer.level = resolvedLevel;
             drawer.tileSize = tileSize;
-
-            // ✅ BorderRoot'u grid container'ın altına al ve aynı coordinate space'e sok
-            if (drawer.borderRoot != null && spawnParent != null)
-            {
-                var br = drawer.borderRoot;
-
-                br.SetParent(spawnParent, false);
-
-                // spawnParent alanını kaplasın
-                br.anchorMin = Vector2.zero;
-                br.anchorMax = Vector2.one;
-                br.pivot = new Vector2(0f, 1f);   // top-left referansı
-                br.offsetMin = Vector2.zero;
-                br.offsetMax = Vector2.zero;
-                br.localScale = Vector3.one;
-            }
-
-            // ✅ artık offset sadece padding (grid top-left içeride)
-            drawer.contentOffset = new Vector2(boardPadding, -boardPadding);
-
+            drawer.contentOffset = Vector2.zero;
             drawer.includeObstaclesAsSolid = true;
+
+            AlignBorderRootToSpawnParent();
 
             // board.Holes[x,y] → 1D array (hole olan hücreler border almaz)
             bool[] holes = new bool[resolvedLevel.width * resolvedLevel.height];
@@ -672,11 +648,13 @@ public class GridSpawner : MonoBehaviour
 
         float borderExtent = GetBorderExtentPx();
 
-        // ✅ Grid + padding + border her iki yanda yer kaplar
         float availableW = maskRt.rect.width  - (boardPadding + borderExtent) * 2f - fitSafetyMarginPx * 2f;
         float availableH = maskRt.rect.height - (boardPadding + borderExtent) * 2f - fitSafetyMarginPx * 2f;
 
-        int fit = Mathf.FloorToInt(Mathf.Min(availableW / width, availableH / height) * fitScale);
+        int fitCols = useReferenceGridSizing ? referenceCols : width;
+        int fitRows = useReferenceGridSizing ? referenceRows : height;
+
+        int fit = Mathf.FloorToInt(Mathf.Min(availableW / fitCols, availableH / fitRows) * fitScale);
         tileSize = Mathf.Max(40, fit);
     }
 

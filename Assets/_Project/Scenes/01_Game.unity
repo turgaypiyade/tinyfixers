@@ -1208,6 +1208,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1410826443}
+  - {fileID: 857045940}
   m_Father: {fileID: 1939332386}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -1626,8 +1627,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.13350785}
-  m_AnchorMax: {x: 0.49479768, y: 3.4515707}
+  m_AnchorMin: {x: 0, y: 0.1583851}
+  m_AnchorMax: {x: 0.5575337, y: 4.0947204}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -1740,7 +1741,7 @@ Canvas:
   m_RenderMode: 1
   m_Camera: {fileID: 1308996100}
   m_PlaneDistance: 1
-  m_PixelPerfect: 0
+  m_PixelPerfect: 1
   m_ReceivesEvents: 1
   m_OverrideSorting: 0
   m_OverridePixelPerfect: 0
@@ -1840,7 +1841,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1939332386}
-  - {fileID: 857045940}
   - {fileID: 1732843066}
   - {fileID: 874639810}
   m_Father: {fileID: 131633427}
@@ -2013,12 +2013,12 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 692526033}
+  m_Father: {fileID: 415868972}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 990, y: 1220}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &874639809
 GameObject:
@@ -8376,6 +8376,9 @@ MonoBehaviour:
   drawObstacles: 1
   resolveInitialOnStart: 0
   randomPool: 00000000010000000200000003000000
+  referenceCols: 10
+  referenceRows: 11
+  useReferenceGridSizing: 1
 --- !u!114 &1410826445
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8488,17 +8491,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DynamicBoardBorder
   level: {fileID: 0}
   borderRoot: {fileID: 857045940}
-  horizontalStraightPrefab: {fileID: 9183214655784670373, guid: 06ec3655eeb134731acacf791e85be0f, type: 3}
-  verticalStraightPrefab: {fileID: 4641156404151813335, guid: 1bb23cbb7eee2415da09e1cabc9a9c76, type: 3}
-  outerCornerPrefab: {fileID: 885373921422311714, guid: 778e1dad2221875408a35c693fa6a59d, type: 3}
-  innerCornerPrefab: {fileID: 1266194054284808458, guid: df0e237fe58c5374bbf4cfd5ee12a8ab, type: 3}
+  straightHPrefab: {fileID: 9183214655784670373, guid: 06ec3655eeb134731acacf791e85be0f, type: 3}
+  straightVPrefab: {fileID: 1242081749917831717, guid: fa31ec50f9e334b479d113d0da59db42, type: 3}
+  cornerLTPrefab: {fileID: 7522899034841235240, guid: 696fb4d28ad19434d8d43b2fa6efe3b1, type: 3}
+  cornerRTPrefab: {fileID: 731866519192217463, guid: 7cad9b26a56b44f32b30ad821c194900, type: 3}
+  cornerLBPrefab: {fileID: 1257187865206446350, guid: fd847c5922db740ffb9396ba1c4f39ee, type: 3}
+  cornerRBPrefab: {fileID: 190114846152896381, guid: 1a4731807a7ad4216b98add0254ee598, type: 3}
+  debugMasks: 1
+  debugBorderLogs: 1
+  debugFont: {fileID: 0}
   tileSize: 106
   contentOffset: {x: 8, y: -8}
-  spriteThickness: 20
-  borderOutside: 5
+  borderReferenceTileSize: 64
+  autoScaleWithTileSize: 0
+  cornerSize: 15
+  straightH_height: 10
+  straightV_width: 10
+  borderOutside: 4
+  cornerInset: 1
+  innerCornerInset: -2
+  useThinLineMode: 1
+  drawCorners: 1
   includeObstaclesAsSolid: 1
-  debugMasks: 1
-  debugFont: {fileID: 0}
 --- !u!114 &1410826448
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8908,15 +8922,12 @@ MonoBehaviour:
   selectedFrameSpriteName: Top_border_img_v2
   selectedFramePadding: 10
   selectedFrameOutlineColor: {r: 1, g: 0.85, b: 0.25, a: 1}
-  selectedFrameOutlineThickness: 2
   disabledJokerAlpha: 0.35
   selectedJokerScale: 1.1
   selectedGlowSpriteName: 
   selectedGlowAlpha: 0.9
   selectedGlowScale: 1.3
   selectionOutlineColor: {r: 0.45, g: 0.9, b: 1, a: 1}
-  selectionOutlineDistance: 5
-  selectedOutlineDistance: 8
   selectedOverlayAlpha: 0.88
 --- !u!4 &1705598668 stripped
 Transform:
