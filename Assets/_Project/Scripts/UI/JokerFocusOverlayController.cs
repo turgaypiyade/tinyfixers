@@ -33,15 +33,12 @@ public class JokerFocusOverlayController : MonoBehaviour
     [SerializeField] private string selectedFrameSpriteName       = "Top_border_img_v2";
     [SerializeField] private float  selectedFramePadding          = 10f;
     [SerializeField] private Color  selectedFrameOutlineColor     = new Color(1f, 0.85f, 0.25f, 1f);
-    [SerializeField] private float  selectedFrameOutlineThickness = 2f;
     [SerializeField] private float  disabledJokerAlpha            = 0.35f;
     [SerializeField] private float  selectedJokerScale            = 1.1f;
     [SerializeField] private string selectedGlowSpriteName        = "";
     [SerializeField] private float  selectedGlowAlpha             = 0.9f;
     [SerializeField] private float  selectedGlowScale             = 1.3f;
     [SerializeField] private Color  selectionOutlineColor         = new Color(0.45f, 0.9f, 1f, 1f);
-    [SerializeField] private float  selectionOutlineDistance      = 5f;
-    [SerializeField] private float  selectedOutlineDistance       = 8f;
     [SerializeField] private float  selectedOverlayAlpha          = 0.88f;
 
     // ─────────────────────────────────────────────────────────────────────────

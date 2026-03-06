@@ -15,6 +15,10 @@ public class DynamicBoardBorder : MonoBehaviour
     public GameObject cornerLBPrefab;   // board_corner_lb   └
     public GameObject cornerRBPrefab;   // board_corner_rb   ┘
 
+    [Header("Debug")]
+    public bool debugMasks = false;
+    public Font debugFont;
+
     [Header("Layout")]
     public int     tileSize      = 110;
     public Vector2 contentOffset = new Vector2(8f, -8f);
@@ -135,15 +139,25 @@ public class DynamicBoardBorder : MonoBehaviour
 
         int mask = (tl?1:0)|(tr?2:0)|(br?4:0)|(bl?8:0);
 
+
+
+
         if (mask == 0 || mask == 15) return;
 
         Vector2 node = NodePos(nx, ny);
+        if (debugMasks)
+        {
+            SpawnMaskLabel(node, mask);
+            if (mask!=2 && mask!=14) return;
+        }
+       
         // Köşe görselinin merkezi, straight parçaların merkezi ile aynı hatta olmalı.
         // cornerSize/2 kullanmak köşeleri fazla dışarı itip (mask varsa) tamamen görünmez yapabiliyor.
         float offX = borderOutside + straightV_width * 0.5f;
         float offY = borderOutside + straightH_height * 0.5f;
         Vector2 sz = new Vector2(cornerSize, cornerSize);
 
+        Debug.Log("mask="+mask+"offx"+offX+"offy"+offY+"node"+node+"sz"+sz);
         switch (mask)
         {
             // outer
@@ -152,19 +166,19 @@ public class DynamicBoardBorder : MonoBehaviour
             case  2: SpawnRect(cornerLBPrefab, node + new Vector2(-offX, -offY), sz); break; // └
             case  1: SpawnRect(cornerRBPrefab, node + new Vector2(+offX, -offY), sz); break; // ┘
             // inner
-            case 11: SpawnRect(cornerLTPrefab, node + new Vector2(+off, -off), sz); break; // BR boş
-            case  7: SpawnRect(cornerRTPrefab, node + new Vector2(-off, -off), sz); break; // BL boş
-            case 13: SpawnRect(cornerLBPrefab, node + new Vector2(+off, +off), sz); break; // TR boş
-            case 14: SpawnRect(cornerRBPrefab, node + new Vector2(-off, +off), sz); break; // TL boş
+            case 11: SpawnRect(cornerLTPrefab, node + new Vector2(+offX, -offY), sz); break; // BR boş
+            case  7: SpawnRect(cornerRTPrefab, node + new Vector2(-offX, -offY), sz); break; // BL boş
+            case 13: SpawnRect(cornerLBPrefab, node + new Vector2(+offX, +offY), sz); break; // TR boş
+            case 14: SpawnRect(cornerRBPrefab, node + new Vector2(-offX, +offY), sz); break; // TL boş
 
             // diagonal ambiguous: iki ayrı köşe gerekir
             case  5: // TL + BR dolu
-                SpawnRect(cornerRBPrefab, node + new Vector2(-off, +off), sz); // TL hücre köşesi
-                SpawnRect(cornerLTPrefab, node + new Vector2(+off, -off), sz); // BR hücre köşesi
+                SpawnRect(cornerRBPrefab, node + new Vector2(-offX, +offY), sz); // TL hücre köşesi
+                SpawnRect(cornerLTPrefab, node + new Vector2(+offX, -offY), sz); // BR hücre köşesi
                 break;
             case 10: // TR + BL dolu
-                SpawnRect(cornerLBPrefab, node + new Vector2(+off, +off), sz); // TR hücre köşesi
-                SpawnRect(cornerRTPrefab, node + new Vector2(-off, -off), sz); // BL hücre köşesi
+                SpawnRect(cornerLBPrefab, node + new Vector2(+offX, +offY), sz); // TR hücre köşesi
+                SpawnRect(cornerRTPrefab, node + new Vector2(-offX, -offY), sz); // BL hücre köşesi
                 break;
         }
     }
@@ -233,6 +247,29 @@ public class DynamicBoardBorder : MonoBehaviour
             img.raycastTarget  = false;
             img.preserveAspect = false;
         }
+        
+    }
+
+    private void SpawnMaskLabel(Vector2 pos, int mask)
+    {
+        var go = new GameObject("Mask_" + mask, typeof(RectTransform), typeof(Text));
+        go.transform.SetParent(borderRoot, false);
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = new Vector2(60, 30);
+
+        var t = go.GetComponent<Text>();
+        t.text = mask.ToString();
+        t.font = debugFont != null 
+            ? debugFont 
+            : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        t.fontSize = 18;
+        t.color = Color.magenta;
+        t.alignment = TextAnchor.MiddleCenter;
+        t.raycastTarget = false;
     }
 
     private void ClearChildren()
