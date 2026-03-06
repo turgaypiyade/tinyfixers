@@ -17,6 +17,7 @@ public class DynamicBoardBorder : MonoBehaviour
 
     [Header("Debug")]
     public bool debugMasks = false;
+    public bool debugBorderLogs = false;
     public Font debugFont;
 
     [Header("Layout")]
@@ -93,9 +94,10 @@ public class DynamicBoardBorder : MonoBehaviour
         float halfH   = straightH_height * 0.5f;
         float centerY = nL.y + (solidIsBelow ? 1f : -1f) * (borderOutside + halfH);
 
-        SpawnRect(straightHPrefab,
-                  new Vector2(centerX, centerY),
-                  new Vector2(len, straightH_height));
+        Vector2 pos  = new Vector2(centerX, centerY);
+        Vector2 size = new Vector2(len, straightH_height);
+        SpawnRect(straightHPrefab, pos, size);
+        LogStraightH(cx, nodeY, solidIsBelow, pos, size, trimL, trimR);
     }
 
     // =========================================================================
@@ -118,9 +120,10 @@ public class DynamicBoardBorder : MonoBehaviour
         float halfW   = straightV_width * 0.5f;
         float centerX = nT.x + (solidIsRight ? -1f : 1f) * (borderOutside + halfW);
 
-        SpawnRect(straightVPrefab,
-                  new Vector2(centerX, centerY),
-                  new Vector2(straightV_width, len));
+        Vector2 pos  = new Vector2(centerX, centerY);
+        Vector2 size = new Vector2(straightV_width, len);
+        SpawnRect(straightVPrefab, pos, size);
+        LogStraightV(nodeX, cy, solidIsRight, pos, size, trimT, trimB);
     }
 
     // =========================================================================
@@ -157,30 +160,61 @@ public class DynamicBoardBorder : MonoBehaviour
         float offY = borderOutside + straightH_height * 0.5f;
         Vector2 sz = new Vector2(cornerSize, cornerSize);
 
-        Debug.Log("mask="+mask+"offx"+offX+"offy"+offY+"node"+node+"sz"+sz);
         switch (mask)
         {
             // outer
-            case  4: SpawnRect(cornerLTPrefab, node + new Vector2(-offX, +offY), sz); break; // ┌
-            case  8: SpawnRect(cornerRTPrefab, node + new Vector2(+offX, +offY), sz); break; // ┐
-            case  2: SpawnRect(cornerLBPrefab, node + new Vector2(-offX, -offY), sz); break; // └
-            case  1: SpawnRect(cornerRBPrefab, node + new Vector2(+offX, -offY), sz); break; // ┘
+            case  4: SpawnCorner("LT", cornerLTPrefab, node + new Vector2(-offX, +offY), sz, nx, ny, mask, offX, offY); break; // ┌
+            case  8: SpawnCorner("RT", cornerRTPrefab, node + new Vector2(+offX, +offY), sz, nx, ny, mask, offX, offY); break; // ┐
+            case  2: SpawnCorner("LB", cornerLBPrefab, node + new Vector2(-offX, -offY), sz, nx, ny, mask, offX, offY); break; // └
+            case  1: SpawnCorner("RB", cornerRBPrefab, node + new Vector2(+offX, -offY), sz, nx, ny, mask, offX, offY); break; // ┘
             // inner
-            case 11: SpawnRect(cornerLTPrefab, node + new Vector2(+offX, -offY), sz); break; // BR boş
-            case  7: SpawnRect(cornerRTPrefab, node + new Vector2(-offX, -offY), sz); break; // BL boş
-            case 13: SpawnRect(cornerLBPrefab, node + new Vector2(+offX, +offY), sz); break; // TR boş
-            case 14: SpawnRect(cornerRBPrefab, node + new Vector2(-offX, +offY), sz); break; // TL boş
+            case 11: SpawnCorner("LT", cornerLTPrefab, node + new Vector2(+offX, -offY), sz, nx, ny, mask, offX, offY); break; // BR boş
+            case  7: SpawnCorner("RT", cornerRTPrefab, node + new Vector2(-offX, -offY), sz, nx, ny, mask, offX, offY); break; // BL boş
+            case 13: SpawnCorner("LB", cornerLBPrefab, node + new Vector2(+offX, +offY), sz, nx, ny, mask, offX, offY); break; // TR boş
+            case 14: SpawnCorner("RB", cornerRBPrefab, node + new Vector2(-offX, +offY), sz, nx, ny, mask, offX, offY); break; // TL boş
 
             // diagonal ambiguous: iki ayrı köşe gerekir
             case  5: // TL + BR dolu
-                SpawnRect(cornerRBPrefab, node + new Vector2(-offX, +offY), sz); // TL hücre köşesi
-                SpawnRect(cornerLTPrefab, node + new Vector2(+offX, -offY), sz); // BR hücre köşesi
+                SpawnCorner("RB", cornerRBPrefab, node + new Vector2(-offX, +offY), sz, nx, ny, mask, offX, offY); // TL hücre köşesi
+                SpawnCorner("LT", cornerLTPrefab, node + new Vector2(+offX, -offY), sz, nx, ny, mask, offX, offY); // BR hücre köşesi
                 break;
             case 10: // TR + BL dolu
-                SpawnRect(cornerLBPrefab, node + new Vector2(+offX, +offY), sz); // TR hücre köşesi
-                SpawnRect(cornerRTPrefab, node + new Vector2(-offX, -offY), sz); // BL hücre köşesi
+                SpawnCorner("LB", cornerLBPrefab, node + new Vector2(+offX, +offY), sz, nx, ny, mask, offX, offY); // TR hücre köşesi
+                SpawnCorner("RT", cornerRTPrefab, node + new Vector2(-offX, -offY), sz, nx, ny, mask, offX, offY); // BL hücre köşesi
                 break;
         }
+    }
+
+    private void SpawnCorner(string cornerName, GameObject prefab, Vector2 pos, Vector2 size, int nx, int ny, int mask, float offX, float offY)
+    {
+        SpawnRect(prefab, pos, size);
+        if (!debugBorderLogs) return;
+
+        Debug.Log(
+            $"[DynamicBoardBorder][Corner] node=({nx},{ny}) mask={mask} corner={cornerName} " +
+            $"anchorMin=(0.00,1.00) anchorMax=(0.00,1.00) pivot=(0.50,0.50) " +
+            $"anchoredPosition={pos} size={size} thicknessW={straightV_width:F2} thicknessH={straightH_height:F2} " +
+            $"outside={borderOutside:F2} offX={offX:F2} offY={offY:F2}");
+    }
+
+    private void LogStraightH(int cx, int nodeY, bool solidIsBelow, Vector2 pos, Vector2 size, float trimL, float trimR)
+    {
+        if (!debugBorderLogs) return;
+
+        Debug.Log(
+            $"[DynamicBoardBorder][StraightH] cellX={cx} nodeY={nodeY} solidIsBelow={solidIsBelow} " +
+            $"anchorMin=(0.00,1.00) anchorMax=(0.00,1.00) pivot=(0.50,0.50) " +
+            $"anchoredPosition={pos} size={size} thickness={straightH_height:F2} trimL={trimL:F2} trimR={trimR:F2} outside={borderOutside:F2}");
+    }
+
+    private void LogStraightV(int nodeX, int cy, bool solidIsRight, Vector2 pos, Vector2 size, float trimT, float trimB)
+    {
+        if (!debugBorderLogs) return;
+
+        Debug.Log(
+            $"[DynamicBoardBorder][StraightV] nodeX={nodeX} cellY={cy} solidIsRight={solidIsRight} " +
+            $"anchorMin=(0.00,1.00) anchorMax=(0.00,1.00) pivot=(0.50,0.50) " +
+            $"anchoredPosition={pos} size={size} thickness={straightV_width:F2} trimT={trimT:F2} trimB={trimB:F2} outside={borderOutside:F2}");
     }
 
     private void EnsureScaledMetrics()
