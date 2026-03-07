@@ -912,17 +912,14 @@ private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peak
 
                     bool TrySource(int sx, int sy)
                     {
-                        LogVerbose($"[SOURCE] candidate=({sx},{sy}) target=({x},{y}) straightDown={CanTileFallStraightDown(sx,sy)}");
                         if (sx < 0 || sx >= board.Width || sy < 0 || sy >= board.Height) return false;
                         if (board.IsMaskHoleCell(sx, sy) || IsObstacleBlockedCell(sx, sy)) return false;
-                        //if (IsAdjacentToMaskHole(sx, sy)) return false;
+
+                        LogVerbose($"[SOURCE] candidate=({sx},{sy}) target=({x},{y}) straightDown={CanTileFallStraightDown(sx, sy)}");
 
                         var t = board.Tiles[sx, sy];
                         if (t == null) return false;
 
-                        // Normalde taş kendi kolonunda aşağı düşebiliyorsa diagonal'e öncelik vermeyelim.
-                        // Ancak obstacle-ceplerinde (hedefin üstü blocker) bu kural çok katı kalıp
-                        // boşlukların kilitlenmesine yol açabiliyor; bu durumda diagonal'e izin ver.
                         bool targetIsObstaclePocket = IsObstacleBlockedCell(x, y - 1);
                         if (!targetIsObstaclePocket && CanTileFallStraightDown(sx, sy))
                             return false;
@@ -1076,6 +1073,9 @@ private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peak
 
     private bool CanTileFallStraightDown(int fromX, int fromY)
     {
+        if (fromX < 0 || fromX >= board.Width || fromY < 0 || fromY >= board.Height)
+            return false;
+
         int y = fromY + 1;
         while (y < board.Height)
         {
