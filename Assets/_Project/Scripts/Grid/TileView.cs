@@ -620,9 +620,9 @@ public IEnumerator PlayPulseImpact(float delay, float totalTime)
         Vector3 baseScale = Vector3.one;
 
         // Squash: Y küçülür, X büyür (ağır çekimde gördüğün “ezilme”)
-        Vector3 squashed = new Vector3(1f + s, 1f - s, 1f);
+        Vector3 squashed = new Vector3(1f + squashStrength, 1f - squashStrength, 1f);
 
-        float half = dur * 0.5f;
+        float half = squashDuration * 0.5f;
 
         // Down (ezilme)
         float t = 0f;
