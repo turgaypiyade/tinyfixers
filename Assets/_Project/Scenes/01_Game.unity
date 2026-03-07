@@ -1627,8 +1627,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.1583851}
-  m_AnchorMax: {x: 0.5575337, y: 4.0947204}
+  m_AnchorMin: {x: 0, y: 0.03671706}
+  m_AnchorMax: {x: 1, y: 0.9492441}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8497,21 +8497,13 @@ MonoBehaviour:
   cornerRTPrefab: {fileID: 731866519192217463, guid: 7cad9b26a56b44f32b30ad821c194900, type: 3}
   cornerLBPrefab: {fileID: 1257187865206446350, guid: fd847c5922db740ffb9396ba1c4f39ee, type: 3}
   cornerRBPrefab: {fileID: 190114846152896381, guid: 1a4731807a7ad4216b98add0254ee598, type: 3}
-  debugMasks: 1
-  debugBorderLogs: 1
+  debugMasks: 0
+  debugBorderLogs: 0
   debugFont: {fileID: 0}
   tileSize: 106
   contentOffset: {x: 8, y: -8}
-  borderReferenceTileSize: 64
-  autoScaleWithTileSize: 0
-  cornerSize: 15
-  straightH_height: 10
-  straightV_width: 10
+  borderThickness: 8
   borderOutside: 4
-  cornerInset: 1
-  innerCornerInset: -2
-  useThinLineMode: 1
-  drawCorners: 1
   includeObstaclesAsSolid: 1
 --- !u!114 &1410826448
 MonoBehaviour:
