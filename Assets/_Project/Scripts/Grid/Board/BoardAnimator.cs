@@ -921,7 +921,30 @@ private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peak
                         if (t == null) return false;
 
                         bool targetIsObstaclePocket = IsObstacleBlockedCell(x, y - 1);
-                        if (!targetIsObstaclePocket && CanTileFallStraightDown(sx, sy))
+
+                        bool HasUsableOtherSource()
+                        {
+                            int otherSx = (sx == x - 1) ? (x + 1) : (x - 1);
+                            int otherSy = y - 1;
+
+                            if (otherSx < 0 || otherSx >= board.Width || otherSy < 0 || otherSy >= board.Height)
+                                return false;
+
+                            if (board.IsMaskHoleCell(otherSx, otherSy) || IsObstacleBlockedCell(otherSx, otherSy))
+                                return false;
+
+                            return board.Tiles[otherSx, otherSy] != null;
+                        }
+
+                        bool otherSourceExists = HasUsableOtherSource();
+
+                        // Eski davranış:
+                        // obstacle pocket değilse ve source düz düşebiliyorsa diyagonal kaydırma.
+                        //
+                        // Yeni davranış:
+                        // Bu kuralı sadece hedefin karşı tarafında da kullanılabilir başka bir source varsa uygula.
+                        // Yani edge pocket durumunda tek taraftan akış devam etsin.
+                        if (!targetIsObstaclePocket && otherSourceExists && CanTileFallStraightDown(sx, sy))
                             return false;
 
                         return TryDiagonalFrom(sx, sy, x, y, movedThisPass, moves, moveDelays);
@@ -999,10 +1022,13 @@ private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peak
         if (IsNonObstacleHoleCell(x, y))
             return false;
 
-        if (IsAdjacentToMaskHole(x, y))
+        bool obstacleAbove = IsObstacleBlockedCell(x, y - 1);
+
+        // Normalde mask hole komşuluğunu slide target saymıyoruz.
+        // Ama obstacle pocket ise özellikle board kenarında diyagonal akış devam etsin.
+        if (IsAdjacentToMaskHole(x, y) && !obstacleAbove)
             return false;
 
-        bool obstacleAbove = IsObstacleBlockedCell(x, y - 1);
         if (obstacleAbove)
             return true;
 
