@@ -147,10 +147,12 @@ public class TileView : MonoBehaviour,
             yield break;
 
         // Respect inspector values; only guard against invalid negatives.
-        float settleDur = Mathf.Max(0f, settleDuration);
-        float settleStr = Mathf.Max(0f, settleStrength);
+        float dur = Mathf.Max(0f, settleDuration);
+        float str = Mathf.Max(0f, settleStrength);
 
-        bool movedDown = end.y < (start.y - 0.01f);
+        // Respect inspector values; only guard against invalid negatives.
+        float dur = Mathf.Max(0f, settleDuration);
+        float str = Mathf.Max(0f, settleStrength);
 
         // Apply crush to the tile below (if any) for "weight" feel.
         if (movedDown && board != null)
@@ -160,7 +162,7 @@ public class TileView : MonoBehaviour,
             {
                 var below = board.Tiles[X, belowY];
                 if (below != null && below != this)
-                    below.PlayLandingCrushFromAbove(settleDur, settleStr);
+                    below.PlayLandingCrushFromAbove(dur, str);
             }
         }
 
@@ -575,6 +577,9 @@ public IEnumerator PlayPulseImpact(float delay, float totalTime)
     {
         if (target == null) yield break;
 
+        float s = Mathf.Max(0f, strength);
+        float dur = Mathf.Max(0f, duration);
+
         RectTransform targetRt = target as RectTransform;
         Vector2 oldPivot = default;
         bool pivotChanged = false;
@@ -586,7 +591,7 @@ public IEnumerator PlayPulseImpact(float delay, float totalTime)
             pivotChanged = true;
         }
 
-        yield return StartCoroutine(PlayImpactSquash(target, duration, strength));
+        yield return StartCoroutine(PlayImpactSquash(target, dur, s));
 
         if (pivotChanged && targetRt != null)
             SetPivotPreservePosition(targetRt, oldPivot);
