@@ -148,9 +148,9 @@ public class TileView : MonoBehaviour,
         // Impact squash: scale only the icon (not the whole tile) to avoid visible jitter when many tiles land together.
         Transform squashTarget = (iconImage != null) ? iconImage.transform : transform;
 
-        // Keep it extremely subtle by default.
-        float dur = Mathf.Clamp(settleDuration, 0.02f, 0.08f);
-        float str = Mathf.Clamp(settleStrength, 0f, 0.06f);
+        // Respect inspector values; only guard against invalid negatives.
+        float dur = Mathf.Max(0f, settleDuration);
+        float str = Mathf.Max(0f, settleStrength);
 
         // Ensure we reset after any drag/clear flows.
         squashTarget.localScale = Vector3.one;
@@ -557,9 +557,9 @@ public IEnumerator PlayPulseImpact(float delay, float totalTime)
     {
         if (target == null) yield break;
 
-        // Çok küçük tutuyoruz: ağır çekimde görünür, normalde göze batmaz.
-        float s = Mathf.Clamp(strength, 0.0f, 0.06f);
-        float dur = Mathf.Clamp(duration, 0.02f, 0.08f);
+        // Inspector değerlerini birebir kullan; sadece negatifleri engelle.
+        float s = Mathf.Max(0f, strength);
+        float dur = Mathf.Max(0f, duration);
 
         Vector3 baseScale = Vector3.one;
 
