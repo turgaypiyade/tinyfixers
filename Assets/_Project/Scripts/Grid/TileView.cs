@@ -29,7 +29,6 @@ public class TileView : MonoBehaviour,
     private float runtimeIconScale = 0.98f;
     private int lastAppliedTileSize;
     private Coroutine selectionPulseRoutine;
-    private Coroutine landingCrushRoutine;
 
     private void Awake()
     {
@@ -146,25 +145,17 @@ public class TileView : MonoBehaviour,
         if (!enableSettle)
             yield break;
 
-        // Respect inspector values; only guard against invalid negatives.
-        float dur = Mathf.Max(0f, settleDuration);
-        float str = Mathf.Max(0f, settleStrength);
+        // Impact squash: scale only the icon (not the whole tile) to avoid visible jitter when many tiles land together.
+        Transform squashTarget = (iconImage != null) ? iconImage.transform : transform;
 
         // Respect inspector values; only guard against invalid negatives.
         float dur = Mathf.Max(0f, settleDuration);
         float str = Mathf.Max(0f, settleStrength);
 
-        // Apply crush to the tile below (if any) for "weight" feel.
-        if (movedDown && board != null)
-        {
-            int belowY = Y + 1;
-            if (belowY >= 0 && belowY < board.Height)
-            {
-                var below = board.Tiles[X, belowY];
-                if (below != null && below != this)
-                    below.PlayLandingCrushFromAbove(dur, str);
-            }
-        }
+        // Ensure we reset after any drag/clear flows.
+        squashTarget.localScale = Vector3.one;
+
+        yield return StartCoroutine(PlayImpactSquash(squashTarget, dur, str));
 
         // Final snap safety.
         SnapToGrid(tileSize);
@@ -562,53 +553,6 @@ public IEnumerator PlayPulseImpact(float delay, float totalTime)
         }
     }
 
-    public void PlayLandingCrushFromAbove(float duration, float strength)
-    {
-        if (this == null) return;
-
-        if (landingCrushRoutine != null)
-            StopCoroutine(landingCrushRoutine);
-
-        Transform target = (iconImage != null) ? iconImage.transform : transform;
-        landingCrushRoutine = StartCoroutine(PlayImpactSquashFromTop(target, duration, strength));
-    }
-
-    private IEnumerator PlayImpactSquashFromTop(Transform target, float duration, float strength)
-    {
-        if (target == null) yield break;
-
-        float s = Mathf.Max(0f, strength);
-        float dur = Mathf.Max(0f, duration);
-
-        RectTransform targetRt = target as RectTransform;
-        Vector2 oldPivot = default;
-        bool pivotChanged = false;
-
-        if (targetRt != null)
-        {
-            oldPivot = targetRt.pivot;
-            SetPivotPreservePosition(targetRt, new Vector2(0.5f, 0f));
-            pivotChanged = true;
-        }
-
-        yield return StartCoroutine(PlayImpactSquash(target, dur, s));
-
-        if (pivotChanged && targetRt != null)
-            SetPivotPreservePosition(targetRt, oldPivot);
-
-        landingCrushRoutine = null;
-    }
-
-    private static void SetPivotPreservePosition(RectTransform target, Vector2 newPivot)
-    {
-        if (target == null) return;
-
-        Vector2 size = target.rect.size;
-        Vector2 deltaPivot = newPivot - target.pivot;
-        target.pivot = newPivot;
-        target.anchoredPosition += new Vector2(deltaPivot.x * size.x, deltaPivot.y * size.y);
-    }
-
     private IEnumerator PlayImpactSquash(Transform target, float duration, float strength)
     {
         if (target == null) yield break;
@@ -620,9 +564,9 @@ public IEnumerator PlayPulseImpact(float delay, float totalTime)
         Vector3 baseScale = Vector3.one;
 
         // Squash: Y küçülür, X büyür (ağır çekimde gördüğün “ezilme”)
-        Vector3 squashed = new Vector3(1f + squashStrength, 1f - squashStrength, 1f);
+        Vector3 squashed = new Vector3(1f + s, 1f - s, 1f);
 
-        float half = squashDuration * 0.5f;
+        float half = dur * 0.5f;
 
         // Down (ezilme)
         float t = 0f;
