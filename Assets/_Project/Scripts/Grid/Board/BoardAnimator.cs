@@ -7,6 +7,7 @@ public class BoardAnimator
 {
     private readonly BoardController board;
     private readonly TileClearEffectOrchestrator clearEffectOrchestrator;
+    private readonly TileAnimator tileAnimator;
 
     private readonly Color lightningColor = new Color(0.70f, 0.90f, 1f, 1f);
 
@@ -31,31 +32,6 @@ public class BoardAnimator
     // Keyed by milliseconds to keep lookups stable.
     private static readonly Dictionary<int, WaitForSeconds> _waitCache = new Dictionary<int, WaitForSeconds>(64);
 
-    // Selection pulse ("tile selected") helpers.
-    // Implemented here instead of relying on TileView.PlaySelectionPulse() because TileView
-    // may re-apply scale/size every frame, cancelling the animation.
-    private readonly Dictionary<TileView, Coroutine> _activeSelectionPulses = new();
-    private readonly Dictionary<TileView, Transform> _selectionPulseTargetCache = new();
-
-    private Transform GetSelectionPulseTarget(TileView tile)
-    {
-        if (tile == null) return null;
-        if (_selectionPulseTargetCache.TryGetValue(tile, out var cached) && cached != null)
-            return cached;
-
-        // Prefer pulsing the visual child (often the icon Image) because some TileView layouts
-        // re-apply root scale/size each frame and can stomp animations.
-        // Fallback to root transform.
-        Transform chosen = tile.transform;
-
-        // Try find a child Image transform that's not the root.
-        var img = tile.GetComponentInChildren<UnityEngine.UI.Image>(includeInactive: false);
-        if (img != null && img.transform != null && img.transform != tile.transform)
-            chosen = img.transform;
-
-        _selectionPulseTargetCache[tile] = chosen;
-        return chosen;
-    }
 
     private static WaitForSeconds Wait(float seconds)
     {
@@ -70,10 +46,11 @@ public class BoardAnimator
     public BoardAnimator(BoardController board)
     {
         this.board = board;
+        tileAnimator = new TileAnimator(board);
         clearEffectOrchestrator = new TileClearEffectOrchestrator(
-            new GoalFlyTileClearEffect(board),
-            new LightningStrikeTileClearEffect(board.BoardVfxPlayer, lightningColor),
-            new DefaultPopTileClearEffect()
+            new GoalFlyTileClearEffect(board, tileAnimator),
+            new LightningStrikeTileClearEffect(board.BoardVfxPlayer, lightningColor, tileAnimator),
+            new DefaultPopTileClearEffect(tileAnimator)
         );
     }
 
@@ -88,70 +65,8 @@ public class BoardAnimator
         float upTime = 0.06f,
         float downTime = 0.08f)
     {
-        if (tile == null) return;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"[SelectionPulse] BoardAnimator.PlaySelectionPulse tile=({tile.X},{tile.Y}) delay={delay} peakScale={peakScale}");
-#endif
-
-        if (_activeSelectionPulses.TryGetValue(tile, out var running) && running != null)
-            board.StopCoroutine(running);
-
-        var co = board.StartCoroutine(SelectionPulseRoutine(tile, delay, peakScale, upTime, downTime));
-        _activeSelectionPulses[tile] = co;
+        tileAnimator?.PlaySelectionPulse(tile, delay, peakScale, upTime, downTime);
     }
-
-    
-private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peakScale, float upTime, float downTime)
-    {
-        if (tile == null) yield break;
-
-        var w = Wait(delay);
-        if (w != null) yield return w;
-
-        if (tile == null) yield break;
-
-        var tr = GetSelectionPulseTarget(tile);
-        if (tr == null) yield break;
-
-        // GoalFlyTileClearEffect pop style (ease-out up, ease-in down) but applied to the chosen visual transform.
-        Vector3 baseScale = tr.localScale;
-        float peak = Mathf.Max(1f, peakScale);
-        Vector3 targetScale = baseScale * peak;
-
-        // Up (EaseOutQuad)
-        float t = 0f;
-        float upDur = Mathf.Max(0.0001f, upTime);
-        while (t < upDur)
-        {
-            if (tile == null || tr == null) yield break;
-            t += Time.deltaTime;
-            float a = Mathf.Clamp01(t / upDur);
-            // easeOutQuad: 1 - (1-a)^2
-            float e = 1f - (1f - a) * (1f - a);
-            tr.localScale = Vector3.LerpUnclamped(baseScale, targetScale, e);
-            yield return null;
-        }
-
-        // Down (EaseInQuad)
-        t = 0f;
-        float downDur = Mathf.Max(0.0001f, downTime);
-        while (t < downDur)
-        {
-            if (tile == null || tr == null) yield break;
-            t += Time.deltaTime;
-            float a = Mathf.Clamp01(t / downDur);
-            // easeInQuad: a^2
-            float e = a * a;
-            tr.localScale = Vector3.LerpUnclamped(targetScale, baseScale, e);
-            yield return null;
-        }
-
-        if (tile != null && tr != null)
-            tr.localScale = baseScale;
-
-        _activeSelectionPulses.Remove(tile);
-    }
-
 
     public IEnumerator SwapTilesAnimated(TileView a, TileView b, float duration)
     {
@@ -332,7 +247,7 @@ private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peak
 
             if (!suppressPerTileClearVfx && staggerDelays != null && staggerDelays.TryGetValue(tile, out var d))
             {
-                pulseImpacts.Add(tile.PlayPulseImpact(d, staggerAnimTime));
+                pulseImpacts.Add(tileAnimator.PlayPulseImpact(tile, d, staggerAnimTime));
                 if (d > maxStaggerDelay) maxStaggerDelay = d;
             }
             else
@@ -734,20 +649,27 @@ private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peak
     
     public IEnumerator CollapseAndSpawnAnimated()
     {
+        board.IncrementFallGeneration();
+
+        for (int xx = 0; xx < board.Width; xx++)
+        {
+            for (int yy = 0; yy < board.Height; yy++)
+            {
+                var tv = board.Tiles[xx, yy];
+                if (tv != null)
+                    tv.MarkPlannedToMoveThisFallPass(false);
+            }
+        }
+
         var moves = new List<IEnumerator>();
         var moveDelays = new List<float>();
 
-        // We want a smooth "waterfall" look:
-        // - No column/cascade staggering delays
-        // - Constant fall speed (duration derived from distance for BOTH existing + spawned tiles)
-        // - Landing settle/bounce only for ONE tile per column (the lowest landing tile),
-        //   to avoid screen-wide jitter when many tiles land at once.
         for (int x = 0; x < board.Width; x++)
         {
-            // Collect all movements for this column first, so we can pick a single "settle" tile.
             var colTiles = new List<TileView>(board.Height);
             var colTargetY = new List<int>(board.Height);
             var colDuration = new List<float>(board.Height);
+            var colDist = new List<int>(board.Height);
 
             int segmentTop = board.Height - 1;
             while (segmentTop >= 0)
@@ -777,31 +699,31 @@ private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peak
                         existing.Add(board.Tiles[x, y]);
                 }
 
-                // Clear segment tiles so we can re-place them into slots (top -> bottom).
                 for (int i = 0; i < slots.Count; i++)
                     board.Tiles[x, slots[i]] = null;
 
-                // Re-place existing tiles into the highest available slots (top -> bottom),
-                // and enqueue a constant-speed move (duration from distance).
                 for (int i = 0; i < existing.Count && i < slots.Count; i++)
                 {
                     int targetY = slots[i];
                     var tile = existing[i];
-
                     int fromY = tile.Y;
 
                     board.Tiles[x, targetY] = tile;
                     tile.SetCoords(x, targetY);
 
                     int dist = Mathf.Abs(targetY - fromY);
-                    float duration = board.GetFallDurationForDistance(dist);
+                    if (dist <= 0)
+                        continue;
 
+                    tile.MarkPlannedToMoveThisFallPass(true);
+
+                    float duration = board.GetFallDurationForDistance(dist);
                     colTiles.Add(tile);
                     colTargetY.Add(targetY);
                     colDuration.Add(duration);
+                    colDist.Add(dist);
                 }
 
-                // Spawn new tiles only if this segment is connected to the spawn edge.
                 if (touchesSpawnEdge)
                 {
                     int nextSpawnY = topY + board.SpawnStartOffsetY;
@@ -821,16 +743,13 @@ private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peak
                         }
 
                         view.Init(board, x, y);
+                        view.MarkPlannedToMoveThisFallPass(true);
 
-                        // Place above the board (spawnFromY), then animate down into (x,y).
                         int spawnFromY = nextSpawnY;
                         view.SetCoords(x, spawnFromY);
                         view.SnapToGrid(board.TileSize);
-
-                        // Reserve the next spawn slot above.
                         nextSpawnY--;
 
-                        // Now set the logical destination coords.
                         view.SetCoords(x, y);
                         board.Tiles[x, y] = view;
 
@@ -844,37 +763,36 @@ private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peak
                         colTiles.Add(view);
                         colTargetY.Add(y);
                         colDuration.Add(duration);
+                        colDist.Add(dist);
                     }
                 }
 
                 segmentTop = segmentBottom - 1;
             }
 
-            // Pick ONE tile in this column to apply settle: the one landing at the lowest Y.
-            int settleIndex = -1;
-            if (board.EnableFallSettle && colTiles.Count > 0)
-            {
-                int bestY = int.MaxValue;
-                for (int i = 0; i < colTiles.Count; i++)
-                {
-                    if (colTargetY[i] < bestY)
-                    {
-                        bestY = colTargetY[i];
-                        settleIndex = i;
-                    }
-                }
-            }
-
-            // Enqueue moves (no delays).
             for (int i = 0; i < colTiles.Count; i++)
             {
-                bool doSettle = (i == settleIndex);
+                var tile = colTiles[i];
+                int targetY = colTargetY[i];
+                int dist = colDist[i];
 
-                moves.Add(colTiles[i].MoveToGrid(
+                bool useFallSettle = false;
+                if (board.ShouldEnableFallSettleThisPass())
+                {
+                    int belowY = targetY + 1;
+                    if (belowY < board.Height)
+                    {
+                        var belowTile = board.Tiles[x, belowY];
+                        if (belowTile != null && !belowTile.IsPlannedToMoveThisFallPass && dist == 1)
+                            useFallSettle = true;
+                    }
+                }
+
+                moves.Add(tile.MoveToGrid(
                     board.TileSize,
                     colDuration[i],
                     board.FallMoveCurve,
-                    doSettle,
+                    useFallSettle,
                     board.FallSettleDuration,
                     board.FallSettleStrength
                 ));
@@ -887,7 +805,6 @@ private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peak
 
         board.RefreshAllTileObstacleVisuals();
     }
-
 
     internal IEnumerator SlideFillAnimated()
     {
@@ -1035,7 +952,31 @@ private IEnumerator SelectionPulseRoutine(TileView tile, float delay, float peak
         if (IsFloorPocketTarget(x, y))
             return true;
 
+        // ── Spawn alamayan segment ──────────────────────────────────
+        // Obstacle altındaki sütun spawn edge'e bağlı değilse
+        // (örn. obstacle duvara dayalı olduğunda karşı sütun),
+        // bu hücreler sadece diagonal kayma ile doldurulabilir.
+        if (IsInNonSpawnableSegment(x, y))
+            return true;
+
         return false;
+    }
+
+    /// <summary>
+    /// Hücrenin bulunduğu dikey segmentin spawn edge'e bağlı olup olmadığını kontrol eder.
+    /// Segment üst sınırı obstacle veya board üstüdür.
+    /// </summary>
+    private bool IsInNonSpawnableSegment(int x, int y)
+    {
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+
+        // Segment'in üst sınırını bul (obstacle veya board üstü)
+        int topY = y;
+        while (topY > 0 && !IsObstacleBlockedCell(x, topY - 1))
+            topY--;
+
+        return !IsSegmentConnectedToSpawnEdge(x, topY);
     }
 
     private bool IsObstacleBlockedCell(int x, int y)

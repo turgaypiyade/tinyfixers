@@ -9,6 +9,8 @@ public class BoardController : MonoBehaviour
 {
     // Resolve / cascade state
     public int CurrentResolvePass { get; private set; } = 0;
+    public int FallGeneration { get; private set; } = 0;
+    internal void IncrementFallGeneration() => FallGeneration++;
 
     private const float MinLightningLeadTime = 0.05f;
     private const bool PatchBotDebugLogging = true;
@@ -596,6 +598,13 @@ public class BoardController : MonoBehaviour
     }
 
     public void SetHole(int x, int y, bool isHole) => holes[x, y] = isHole;
+
+    public TileView GetTileViewAt(int x, int y)
+    {
+        if (tiles == null) return null;
+        if (x < 0 || x >= width || y < 0 || y >= height) return null;
+        return tiles[x, y];
+    }
 
     public Sprite GetIcon(TileType type) => iconLibrary != null ? iconLibrary.Get(type) : null;
     public Sprite GetSpecialIcon(TileSpecial special) => iconLibrary != null ? iconLibrary.GetSpecialIcon(special) : null;

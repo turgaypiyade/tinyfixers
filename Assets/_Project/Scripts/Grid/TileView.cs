@@ -12,7 +12,6 @@ public class TileView : MonoBehaviour,
     [SerializeField] private Image iconImage;
     private TileModel model;
 
-
     public int X { get; private set; }
     public int Y { get; private set; }
 
@@ -21,15 +20,32 @@ public class TileView : MonoBehaviour,
     private RectTransform parentRt;
 
     // Drag state
-    private UnityEngine.Vector2 dragStartAnchored;
-    private UnityEngine.Vector2 dragStartLocalPointer;
+    private Vector2 dragStartAnchored;
+    private Vector2 dragStartLocalPointer;
     private bool dragConsumedSwap;
     private bool wasDragging;
 
     private float runtimeIconScale = 0.98f;
     private int lastAppliedTileSize;
-    private Coroutine selectionPulseRoutine;
 
+    // Bu taşın düştüğü CollapseAndSpawnAnimated nesil ID'si. -1 = hiç düşmedi.
+    private int lastFallGeneration = -1;
+
+    public RectTransform RectTransform => rt != null ? rt : (RectTransform)transform;
+    public Image IconImage => iconImage;
+
+    public bool IsPlannedToMoveThisFallPass { get; private set; }
+
+    public void MarkPlannedToMoveThisFallPass(bool value)
+    {
+        IsPlannedToMoveThisFallPass = value;
+    }
+
+    public void SetCoords(int x, int y)
+    {
+        X = x;
+        Y = y;
+    }
     private void Awake()
     {
         model = GetComponent<TileModel>();
@@ -40,8 +56,13 @@ public class TileView : MonoBehaviour,
         {
             var imgs = GetComponentsInChildren<Image>(true);
             foreach (var img in imgs)
+            {
                 if (img.gameObject.name == "Icon")
+                {
                     iconImage = img;
+                    break;
+                }
+            }
         }
 
         ResetVisualState();
@@ -55,7 +76,10 @@ public class TileView : MonoBehaviour,
     public void Init(BoardController board, int x, int y)
     {
         this.board = board;
-        X = x; Y = y;
+        X = x;
+        Y = y;
+        IsPlannedToMoveThisFallPass = false;
+
         ResetVisualState();
         dragConsumedSwap = false;
         wasDragging = false;
@@ -65,10 +89,17 @@ public class TileView : MonoBehaviour,
     {
         transform.localScale = Vector3.one;
         transform.localRotation = Quaternion.identity;
+
         if (TryGetComponent<CanvasGroup>(out var canvasGroup))
             canvasGroup.alpha = 1f;
-    }
 
+        if (iconImage != null)
+        {
+            iconImage.color = Color.white;
+            iconImage.transform.localScale = Vector3.one;
+            iconImage.transform.localRotation = Quaternion.identity;
+        }
+    }
 
     public bool TryGetCellState(out BoardCellStateSnapshot state)
     {
@@ -76,40 +107,34 @@ public class TileView : MonoBehaviour,
         return board != null && board.TryGetCellState(X, Y, out state);
     }
 
-    public void SetCoords(int x, int y)
-    {
-        X = x; Y = y;
-    }
+ 
     void RefreshIcon()
     {
         if (model == null || board == null) return;
 
         if (model.special != TileSpecial.None)
         {
-            // Special ikon
             var sp = board.GetSpecialIcon(model.special);
             if (sp != null) SetIcon(sp);
             else SetIcon(board.GetIcon(model.type));
         }
         else
         {
-            // Normal ikon
             SetIcon(board.GetIcon(model.type));
         }
     }
-
 
     public void SnapToGrid(int tileSize)
     {
         if (rt == null) rt = GetComponent<RectTransform>();
         if (parentRt == null) parentRt = rt.parent as RectTransform;
 
-        rt.anchorMin = new UnityEngine.Vector2(0, 1);
-        rt.anchorMax = new UnityEngine.Vector2(0, 1);
-        rt.pivot     = new UnityEngine.Vector2(0, 1);
-        rt.anchoredPosition = new UnityEngine.Vector2(X * tileSize, -Y * tileSize);
-        ApplyTileSize(tileSize);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(X * tileSize, -Y * tileSize);
 
+        ApplyTileSize(tileSize);
     }
 
     public IEnumerator MoveToGrid(
@@ -120,8 +145,10 @@ public class TileView : MonoBehaviour,
         float settleDuration = 0.06f,
         float settleStrength = 0.04f)
     {
-        UnityEngine.Vector2 start = rt.anchoredPosition;
-        UnityEngine.Vector2 end = new UnityEngine.Vector2(X * tileSize, -Y * tileSize);
+        lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+
+        Vector2 start = rt.anchoredPosition;
+        Vector2 end = new Vector2(X * tileSize, -Y * tileSize);
 
         float t = 0f;
         while (t < 1f)
@@ -133,91 +160,43 @@ public class TileView : MonoBehaviour,
             if (easingCurve != null && easingCurve.length > 0)
                 s = Mathf.Clamp01(easingCurve.Evaluate(normalizedT));
             else
-                s = normalizedT * normalizedT * normalizedT * (normalizedT * (6f * normalizedT - 15f) + 10f); // smootherstep
+                s = normalizedT * normalizedT * normalizedT * (normalizedT * (6f * normalizedT - 15f) + 10f);
 
-            rt.anchoredPosition = UnityEngine.Vector2.Lerp(start, end, s);
+            rt.anchoredPosition = Vector2.Lerp(start, end, s);
             yield return null;
         }
 
         rt.anchoredPosition = end;
         SnapToGrid(tileSize);
 
-        if (!enableSettle)
-            yield break;
+        bool movedDown = end.y < start.y - 0.5f;
+        if (movedDown && board != null && enableSettle)
+        {
+            TileView tileBelow = board.GetTileViewAt(X, Y + 1);
+            if (tileBelow != null && tileBelow != this)
+            {
+                Debug.Log(
+                    $"[FALL-SETTLE] TRIGGER | mover=({X},{Y}) type={GetTileType()} -> below=({tileBelow.X},{tileBelow.Y}) type={tileBelow.GetTileType()} " +
+                    $"duration={settleDuration} strength={settleStrength}"
+                );
 
-        // Impact squash: scale only the icon (not the whole tile) to avoid visible jitter when many tiles land together.
-        Transform squashTarget = (iconImage != null) ? iconImage.transform : transform;
+                tileBelow.PlayBeingLandedOnSquash(settleDuration, settleStrength);
+            }
+            else
+            {
+                Debug.Log(
+                    $"[FALL-SETTLE] SKIP | mover=({X},{Y}) type={GetTileType()} reason=no-below-tile"
+                );
+            }
+        }
+        else if (movedDown && board != null)
+        {
+            Debug.Log(
+                $"[FALL-SETTLE] SKIP | mover=({X},{Y}) type={GetTileType()} reason=settle-disabled"
+            );
+        }
 
-        // Respect inspector values; only guard against invalid negatives.
-        float dur = Mathf.Max(0f, settleDuration);
-        float str = Mathf.Max(0f, settleStrength);
-
-        // Ensure we reset after any drag/clear flows.
-        squashTarget.localScale = Vector3.one;
-
-        yield return StartCoroutine(PlayImpactSquash(squashTarget, dur, str));
-
-        // Final snap safety.
         SnapToGrid(tileSize);
-
-    }
-
-    public IEnumerator PopOut(float duration)
-    {
-        transform.localScale = Vector3.one;
-
-        float popDuration = Mathf.Max(0.0001f, duration);
-        float impactDuration = Mathf.Min(0.055f, popDuration * 0.40f);
-        float t = 0f;
-
-        Vector2 originalPivot = rt.pivot;
-        var hasCanvasGroup = TryGetComponent<CanvasGroup>(out var canvasGroup);
-
-        // Küçülme solda kayıyormuş gibi görünmesin diye merkezi pivot'tan animasyon yap.
-        if (rt.pivot != CenterPivot)
-            SetPivotWithoutVisualJump(CenterPivot);
-
-        if (!hasCanvasGroup)
-            canvasGroup = gameObject.AddComponent<CanvasGroup>();
-
-        canvasGroup.alpha = 1f;
-
-        // 1) "Kırılma" hissi için kısa bir impact punch.
-        while (t < impactDuration)
-        {
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, impactDuration));
-            float squish = 1f + Mathf.Lerp(0f, 0.12f, k);
-            float stretch = 1f - Mathf.Lerp(0f, 0.08f, k);
-            transform.localScale = new Vector3(squish, stretch, 1f);
-            yield return null;
-        }
-
-        // 2) Punch sonrası hızlı parçalanma/kaybolma.
-        t = 0f;
-        Vector3 start = transform.localScale;
-        Vector3 end = Vector3.zero;
-
-        float shatterDuration = Mathf.Max(0.0001f, popDuration - impactDuration);
-        while (t < shatterDuration)
-        {
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / shatterDuration);
-            float eased = 1f - Mathf.Pow(1f - k, 3f);
-
-            transform.localScale = Vector3.Lerp(start, end, eased);
-            transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(0f, 16f, eased));
-            canvasGroup.alpha = 1f - eased;
-            yield return null;
-        }
-
-        transform.localScale = end;
-        transform.localRotation = Quaternion.identity;
-        canvasGroup.alpha = 0f;
-
-        // Pool/re-enable durumları için eski pivot'u koru.
-        if (rt != null && rt.pivot != originalPivot)
-            SetPivotWithoutVisualJump(originalPivot);
     }
 
     private void SetPivotWithoutVisualJump(Vector2 newPivot)
@@ -232,73 +211,9 @@ public class TileView : MonoBehaviour,
         rt.anchoredPosition += anchoredOffset;
     }
 
-    public IEnumerator PlayLightningStrikeAndShrink(float duration, Color lightningColor)
-    {
-        if (iconImage == null)
-        {
-            yield return PopOut(duration);
-            yield break;
-        }
-
-        Color baseColor = iconImage.color;
-        float flashTime = Mathf.Min(0.05f, duration * 0.30f);
-        float impactTime = Mathf.Min(0.04f, duration * 0.25f);
-        float t = 0f;
-
-        // 1) Ani beyaz/elektrik flash
-        while (t < flashTime)
-        {
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, flashTime));
-            iconImage.color = Color.Lerp(baseColor, lightningColor, k);
-            yield return null;
-        }
-
-        // 2) Vurulma anında çok kısa sert punch
-        t = 0f;
-        while (t < impactTime)
-        {
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, impactTime));
-            float s = Mathf.Lerp(1f, 1.14f, k);
-            transform.localScale = new Vector3(s, 1f - (s - 1f) * 0.65f, 1f);
-            yield return null;
-        }
-
-        iconImage.color = baseColor;
-
-        // 3) Kırılıp küçülerek yok olma
-        float shrinkDuration = Mathf.Max(0.04f, duration - flashTime - impactTime);
-        t = 0f;
-        Vector3 start = transform.localScale;
-        Vector3 end = Vector3.zero;
-
-        while (t < shrinkDuration)
-        {
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, shrinkDuration));
-            float eased = k * k;
-            transform.localScale = Vector3.Lerp(start, end, eased);
-            transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(0f, 18f, eased));
-
-            var c = iconImage.color;
-            c.a = Mathf.Lerp(baseColor.a, 0f, eased);
-            iconImage.color = c;
-            yield return null;
-        }
-
-        transform.localScale = end;
-        transform.localRotation = Quaternion.identity;
-        var finalColor = iconImage.color;
-        finalColor.a = 0f;
-        iconImage.color = finalColor;
-    }
-
     public TileType GetTileType() => model.type;
 
     public Sprite GetIconSprite() => iconImage != null ? iconImage.sprite : null;
-
-    public RectTransform RectTransform => rt != null ? rt : (RectTransform)transform;
 
     public void SetType(TileType type)
     {
@@ -317,30 +232,26 @@ public class TileView : MonoBehaviour,
             Debug.LogError("TileView: icon set to NULL");
             return;
         }
+
         iconImage.sprite = sprite;
         float currentAlpha = iconImage != null ? iconImage.color.a : 1f;
         iconImage.color = new Color(1f, 1f, 1f, currentAlpha);
     }
 
-
     public void SetIconAlpha(float alpha)
     {
         if (iconImage == null) return;
+
         var c = iconImage.color;
         c.a = Mathf.Clamp01(alpha);
         iconImage.color = c;
     }
 
-    // -------------------
-    // DRAG SWAP
-    // -------------------
-
     public void OnBeginDrag(PointerEventData eventData)
     {
         if (board == null || board.IsBusy) return;
-        if (board.ActiveBooster != BoardController.BoosterMode.None) return; // booster aktifken drag yok
+        if (board.ActiveBooster != BoardController.BoosterMode.None) return;
 
-        // ResetVisualState ile aynı baseline: drag başlangıcında ölçek temizlenir.
         transform.localScale = Vector3.one;
 
         wasDragging = true;
@@ -348,7 +259,6 @@ public class TileView : MonoBehaviour,
 
         dragStartAnchored = rt.anchoredPosition;
 
-        // pointer'ı parent local space'e çevir
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             parentRt, eventData.position, eventData.pressEventCamera, out dragStartLocalPointer
         );
@@ -357,7 +267,7 @@ public class TileView : MonoBehaviour,
     public void OnDrag(PointerEventData eventData)
     {
         if (board == null || board.IsBusy) return;
-        if (board.ActiveBooster != BoardController.BoosterMode.None) return; // booster aktifken drag yok
+        if (board.ActiveBooster != BoardController.BoosterMode.None) return;
         if (dragConsumedSwap) return;
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
@@ -366,14 +276,12 @@ public class TileView : MonoBehaviour,
 
         var delta = curLocal - dragStartLocalPointer;
 
-        // Tile, parmağı biraz takip etsin (çok kaçmasın)
         float max = board.TileSize * 0.45f;
         delta.x = Mathf.Clamp(delta.x, -max, max);
         delta.y = Mathf.Clamp(delta.y, -max, max);
 
         rt.anchoredPosition = dragStartAnchored + delta;
 
-        // Threshold geçildiyse swap tetikle
         float threshold = board.TileSize * 0.25f;
         if (Mathf.Abs(delta.x) < threshold && Mathf.Abs(delta.y) < threshold) return;
 
@@ -381,23 +289,19 @@ public class TileView : MonoBehaviour,
         if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
             dirX = delta.x > 0 ? 1 : -1;
         else
-            dirY = delta.y > 0 ? -1 : 1; // UI'da yukarı negatif Y, dikkat
+            dirY = delta.y > 0 ? -1 : 1;
 
         dragConsumedSwap = true;
 
-        // tile'ı hemen grid'e geri koy (swap animasyonunu Board yapacak)
         SnapToGrid(board.TileSize);
-
         board.RequestSwapFromDrag(this, dirX, dirY);
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        // Swap tetiklenmediyse yerine dön
         if (!dragConsumedSwap && board != null)
             SnapToGrid(board.TileSize);
 
-        // küçük gecikmeyle click’i engelle (drag sonrası tık sayılmasın)
         StartCoroutine(ResetWasDragging());
     }
 
@@ -407,7 +311,6 @@ public class TileView : MonoBehaviour,
         wasDragging = false;
     }
 
-    // Tap-tap swap hâlâ duruyor; drag varken click'i yeme
     public void OnPointerClick(PointerEventData eventData)
     {
         if (wasDragging) return;
@@ -420,110 +323,6 @@ public class TileView : MonoBehaviour,
     {
         model.SetSpecial(sp);
         RefreshIcon();
-    }
-
-    public void PlaySelectionPulse(float upScale = 1.14f, float popTime = 0.12f, float settleTime = 0.08f)
-    {
-        if (this == null) return;
-        Debug.Log("GIRDIIIIIII");       
-        if (selectionPulseRoutine != null)
-            StopCoroutine(selectionPulseRoutine);
-
-        selectionPulseRoutine = StartCoroutine(CoSelectionPulse(upScale, popTime, settleTime));
-    }
-
-    /// <summary>
-    /// A small "selected" feedback pulse. Uses the same ease-out pop feel as GoalFlyTileClearEffect,
-    /// but targets the icon (if present) to avoid other root-scale systems overwriting the effect.
-    /// </summary>
-    private IEnumerator CoSelectionPulse(float upScale, float popTime, float settleTime)
-    {
-        Debug.Log("GIRDIIIIIII");
-        if (this == null) yield break;
-
-        // Prefer icon transform; fall back to root transform.
-        Transform tr = (iconImage != null) ? iconImage.transform : transform;
-
-        // IMPORTANT: respect current scale (some systems keep tiles slightly scaled).
-        Vector3 baseScale = tr.localScale;
-
-        float targetMul = Mathf.Max(1f, upScale);
-        Vector3 peakScale = baseScale * targetMul;
-
-        float t = 0f;
-        float up = Mathf.Max(0.0001f, popTime);
-
-        // EaseOut growth (quadratic), like GoalFlyTileClearEffect.
-        while (t < up)
-        {
-            if (this == null) yield break;
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / up);
-            float eased = 1f - (1f - k) * (1f - k);
-            tr.localScale = Vector3.LerpUnclamped(baseScale, peakScale, eased);
-            yield return null;
-        }
-
-        tr.localScale = peakScale;
-
-        // Settle back to base.
-        t = 0f;
-        float down = Mathf.Max(0.0001f, settleTime);
-        while (t < down)
-        {
-            if (this == null) yield break;
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / down);
-            float eased = 1f - Mathf.Pow(1f - k, 3f); // slightly snappier return
-            tr.localScale = Vector3.LerpUnclamped(peakScale, baseScale, eased);
-            yield return null;
-        }
-
-        if (this != null)
-            tr.localScale = baseScale;
-
-        selectionPulseRoutine = null;
-    }
-public IEnumerator PlayPulseImpact(float delay, float totalTime)
-    {
-        yield return new WaitForSeconds(delay);
-        if (this == null) yield break;
-
-        // Küçük pop + fade
-        var rt = (RectTransform)transform;
-        var g = GetComponent<CanvasGroup>();
-        if (g == null) g = gameObject.AddComponent<CanvasGroup>();
-
-        Vector3 start = rt.localScale;
-        Vector3 up = start * 1.08f;
-        Vector3 down = start * 0.90f;
-
-        float t = 0f;
-        float half = totalTime * 0.45f;
-
-        // Pop up
-        while (t < half)
-        {
-            if (this == null) yield break;
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / half);
-            rt.localScale = Vector3.Lerp(start, up, k);
-            yield return null;
-        }
-
-        // Pop down + fade out
-        t = 0f;
-        while (t < totalTime - half)
-        {
-            if (this == null) yield break;
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / (totalTime - half));
-            rt.localScale = Vector3.Lerp(up, down, k);
-            g.alpha = Mathf.Lerp(1f, 0f, k);
-            yield return null;
-        }
-
-        // (Logic silme ayrı yerde; bu sadece görüntü)
     }
 
     public void SetIconScale(float scale)
@@ -543,56 +342,69 @@ public IEnumerator PlayPulseImpact(float delay, float totalTime)
         if (iconImage != null)
         {
             var irt = iconImage.rectTransform;
-            irt.anchorMin = CenterPivot;
-            irt.anchorMax = CenterPivot;
-            irt.pivot = CenterPivot;
-            irt.anchoredPosition = Vector2.zero;
-
             float s = tileSize * runtimeIconScale;
+
             irt.sizeDelta = new Vector2(s, s);
+            irt.anchorMin = new Vector2(0.5f, 0.5f);
+            irt.anchorMax = new Vector2(0.5f, 0.5f);
+            irt.pivot = new Vector2(0.5f, 0f);
+            irt.anchoredPosition = new Vector2(0f, -s * 0.5f);
         }
     }
 
-    private IEnumerator PlayImpactSquash(Transform target, float duration, float strength)
+    public void PlayBeingLandedOnSquash(float duration = 0.22f, float strength = 0.20f)
     {
-        if (target == null) yield break;
+        if (this == null) return;
 
-        // Inspector değerlerini birebir kullan; sadece negatifleri engelle.
-        float s = Mathf.Max(0f, strength);
-        float dur = Mathf.Max(0f, duration);
+        Debug.Log($"[SQUASH] PLAY tile=({X},{Y}) type={GetTileType()} duration={duration} strength={strength}");
 
-        Vector3 baseScale = Vector3.one;
+        StartCoroutine(CoLandedOnSquash(duration, strength));
+    }
 
-        // Squash: Y küçülür, X büyür (ağır çekimde gördüğün “ezilme”)
-        Vector3 squashed = new Vector3(1f + s, 1f - s, 1f);
+    private IEnumerator CoLandedOnSquash(float duration, float strength)
+    {
+        Transform tr = (iconImage != null) ? (Transform)iconImage.rectTransform : transform;
+        if (tr == null) yield break;
 
-        float half = dur * 0.5f;
+        float s = Mathf.Clamp(strength, 0f, 0.9f);
+        float squashY = Mathf.Max(0.6f, 1f - s * 0.9f);
+        float stretchX = 1f + s * 0.35f;
 
-        // Down (ezilme)
+        Vector3 normal = Vector3.one;
+        Vector3 squashed = new Vector3(stretchX, squashY, 1f);
+
+        float half = Mathf.Max(0.001f, duration * 0.32f);
+        float back = Mathf.Max(0.001f, duration * 0.68f);
+
         float t = 0f;
         while (t < half)
         {
+            if (tr == null) yield break;
+
             t += Time.deltaTime;
-            float u = Mathf.Clamp01(t / half);
-            target.localScale = Vector3.Lerp(baseScale, squashed, u);
+            float k = Mathf.Clamp01(t / half);
+            float e = 1f - (1f - k) * (1f - k);
+            tr.localScale = Vector3.LerpUnclamped(normal, squashed, e);
             yield return null;
         }
 
-        // Up (geri dönüş)
         t = 0f;
-        while (t < half)
+        while (t < back)
         {
+            if (tr == null) yield break;
+
             t += Time.deltaTime;
-            float u = Mathf.Clamp01(t / half);
-            target.localScale = Vector3.Lerp(squashed, baseScale, u);
+            float k = Mathf.Clamp01(t / back);
+            float e = 1f - (1f - k) * (1f - k);
+            tr.localScale = Vector3.LerpUnclamped(squashed, normal, e);
             yield return null;
         }
 
-        target.localScale = baseScale;
-    }   
+        if (tr != null)
+            tr.localScale = normal;
+    }
+
     public void SetOverrideBaseType(TileType type) => model.SetOverrideBaseType(type);
 
     public bool GetOverrideBaseType(out TileType type) => model.TryGetOverrideBaseType(out type);
-
-
 }
