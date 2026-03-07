@@ -150,7 +150,9 @@ public class TileView : MonoBehaviour,
         float dur = Mathf.Max(0f, settleDuration);
         float str = Mathf.Max(0f, settleStrength);
 
-        bool movedDown = end.y < (start.y - 0.01f);
+        // Respect inspector values; only guard against invalid negatives.
+        float dur = Mathf.Max(0f, settleDuration);
+        float str = Mathf.Max(0f, settleStrength);
 
         // Apply crush to the tile below (if any) for "weight" feel.
         if (movedDown && board != null)
