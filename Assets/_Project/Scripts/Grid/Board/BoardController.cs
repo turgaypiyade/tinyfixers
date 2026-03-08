@@ -1310,12 +1310,13 @@ public class BoardController : MonoBehaviour
         if (sa != TileSpecial.None || sb != TileSpecial.None)
         {
             ConsumeMove();
-            yield return specialResolver.ResolveSpecialSwap(a, b);
+
+            // Special match oluştuktan sonra pending özel taşı hemen yerleştir;
+            // böylece taşlar settle olurken özel taş tahtada görünür.
             if (pendingCreationService.HasPending)
-            {
                 pendingCreationService.ApplyPendingCreations();
-                yield return boardAnimator.CollapseColumnsAnimated();
-            }
+
+            yield return specialResolver.ResolveSpecialSwap(a, b);
             yield return ResolveEmptyPlayableCellsWithoutMatch();
             yield return ResolveBoard();
             EndBusy();
