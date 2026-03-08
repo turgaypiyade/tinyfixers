@@ -95,6 +95,8 @@ public class PendingCreationService
             if (targetTile == null)
             {
                 targetTile = FindAndDropTile(pending.x, pending.y);
+                if (targetTile == null)
+                    targetTile = SpawnTileAt(pending.x, pending.y);
             }
 
             if (targetTile == null) continue;
@@ -120,6 +122,34 @@ public class PendingCreationService
         }
 
         return null;
+    }
+
+    TileView SpawnTileAt(int x, int y)
+    {
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return null;
+        if (board.Holes[x, y]) return null;
+        if (board.Tiles[x, y] != null) return board.Tiles[x, y];
+
+        var go = Object.Instantiate(board.TilePrefab, board.Parent);
+        var tile = go.GetComponent<TileView>();
+        if (tile == null)
+        {
+            Object.Destroy(go);
+            return null;
+        }
+
+        tile.Init(board, x, y);
+        tile.SetCoords(x, y);
+        tile.SnapToGrid(board.TileSize);
+        board.Tiles[x, y] = tile;
+
+        var pool = board.RandomPool;
+        if (pool != null && pool.Length > 0)
+            tile.SetType(pool[Random.Range(0, pool.Length)]);
+
+        tile.SetSpecial(TileSpecial.None);
+        board.RefreshTileObstacleVisual(tile);
+        return tile;
     }
 
     void TeleportTile(TileView tile, int targetX, int targetY)
