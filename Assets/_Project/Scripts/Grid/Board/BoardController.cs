@@ -1302,7 +1302,7 @@ public class BoardController : MonoBehaviour
         yield return boardAnimator.SwapTilesAnimated(a, b, SwapDurationWithMultiplier);
 
         pendingCreationService.Clear();
-        if (pendingCreationService.CapturePendingCreation(a, b)) { }
+        bool hasPendingCreation = pendingCreationService.CapturePendingCreation(a, b);
 
         TileSpecial sa = a.GetSpecial();
         TileSpecial sb = b.GetSpecial();
@@ -1310,6 +1310,13 @@ public class BoardController : MonoBehaviour
         if (sa != TileSpecial.None || sb != TileSpecial.None)
         {
             ConsumeMove();
+
+            // Special + normal (veya special + special) swap'te match kaynaklı yeni special
+            // oluşuyorsa hemen board'a uygula. Böylece PulseCore gibi üretilen taşlar,
+            // aynı resolve içinde etki alanına girerse otomatik zincire katılabilir.
+            if (hasPendingCreation)
+                pendingCreationService.ApplyPendingCreations();
+
             yield return specialResolver.ResolveSpecialSwap(a, b);
             if (pendingCreationService.HasPending)
             {
