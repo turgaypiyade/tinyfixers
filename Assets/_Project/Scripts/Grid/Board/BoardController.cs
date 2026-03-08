@@ -1302,7 +1302,7 @@ public class BoardController : MonoBehaviour
         yield return boardAnimator.SwapTilesAnimated(a, b, SwapDurationWithMultiplier);
 
         pendingCreationService.Clear();
-        if (pendingCreationService.CapturePendingCreation(a, b)) { }
+        bool hasPendingCreation = pendingCreationService.CapturePendingCreation(a, b);
 
         TileSpecial sa = a.GetSpecial();
         TileSpecial sb = b.GetSpecial();
