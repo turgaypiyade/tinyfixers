@@ -171,8 +171,11 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         TileSpecial sa = a.GetSpecial();
         TileSpecial sb = b.GetSpecial();
 
+        bool hasDualSpecialSwap = sa != TileSpecial.None && sb != TileSpecial.None;
+
         //clear source stones before starting animation.
-        ConsumeSwapSourceVisuals(a, b);
+        if (hasDualSpecialSwap)
+            ConsumeSwapSourceVisuals(a, b);
 
         bool saIsLine  = sa == TileSpecial.LineH || sa == TileSpecial.LineV;
         bool sbIsLine  = sb == TileSpecial.LineH || sb == TileSpecial.LineV;
@@ -205,9 +208,20 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         pendingOverrideOverrideClearDelay = 0f;
         pendingOverrideImplants.Clear();
 
-        var affected = new HashSet<TileView> { a, b };
-        MarkAffectedCell(a);
-        MarkAffectedCell(b);
+        var affected = new HashSet<TileView>();
+        if (hasDualSpecialSwap)
+        {
+            affected.Add(a);
+            affected.Add(b);
+            MarkAffectedCell(a);
+            MarkAffectedCell(b);
+        }
+        else
+        {
+            var swapSpecialTile = sa != TileSpecial.None ? a : b;
+            affected.Add(swapSpecialTile);
+            MarkAffectedCell(swapSpecialTile);
+        }
         var processed = new HashSet<TileView>();
         bool hasLineActivation = false;
         var lightningVisualTargets = new HashSet<TileView>(); // lightning only for Line path tiles
@@ -229,7 +243,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         hasLineActivation = hasLineActivation || saIsLine || sbIsLine;
 
 
-        if (sa != TileSpecial.None && sb != TileSpecial.None)
+        if (hasDualSpecialSwap)
         {
             ApplyComboEffect(affected, queue, queued, processed, a, b, sa, sb, lightningVisualTargets, lightningLineStrikes);
             processed.Add(a);
