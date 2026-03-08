@@ -119,6 +119,13 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         return bestTile;
     }
 
+    private void ConsumeSwapSourceVisuals(TileView a, TileView b)
+    {
+        HideTileVisualForCombo(a);
+        HideTileVisualForCombo(b);
+    }
+
+    
     public int SpecialScore(TileSpecial s)
     {
         switch (s)
@@ -163,6 +170,9 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
         TileSpecial sa = a.GetSpecial();
         TileSpecial sb = b.GetSpecial();
+
+        //clear source stones before starting animation.
+        ConsumeSwapSourceVisuals(a, b);
 
         bool saIsLine  = sa == TileSpecial.LineH || sa == TileSpecial.LineV;
         bool sbIsLine  = sb == TileSpecial.LineH || sb == TileSpecial.LineV;

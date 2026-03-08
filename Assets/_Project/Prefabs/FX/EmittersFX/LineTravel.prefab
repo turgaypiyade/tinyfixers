@@ -136,12 +136,12 @@ MonoBehaviour:
   startDelay: 0.2
   splitTime: 0.03
   splitOffset: 28.2
-  pulseSpeed: 25
-  pulseAmount: 0.17
+  pulseSpeed: 40
+  pulseAmount: 0.2
   rocketAfterImagePrefab: {fileID: 1073926442982439361, guid: 553f0821b2b41614586f70ec6b63b022, type: 3}
   afterImageParent: {fileID: 0}
   afterImageLife: 0.3
-  afterImageAlpha: 0.74
+  afterImageAlpha: 0.6
   afterImageScaleUp: 1.03
   stepDuration: 0.03
   postDelay: 0.02
