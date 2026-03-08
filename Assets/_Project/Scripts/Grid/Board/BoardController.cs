@@ -1311,8 +1311,73 @@ public class BoardController : MonoBehaviour
         {
             ConsumeMove();
 
-            // Special match oluştuktan sonra pending özel taşı hemen yerleştir;
-            // böylece taşlar settle olurken özel taş tahtada görünür.
+            // ── Yalnızca bir taraf special ise: normal tarafın oluşturduğu match'i
+            //    special aktivasyonundan ÖNCE resolve et.
+            //    Örnek: SP ↔ YT swap'ı, 4'lü YT sütunu oluşuyor →
+            //           önce LineV oluşsun (normalTile pozisyonunda) + fazla taşlar temizlensin,
+            //           sonra SP çalışsın.
+            bool onlyOneSpecial = (sa != TileSpecial.None) ^ (sb != TileSpecial.None);
+            if (onlyOneSpecial)
+            {
+                var normalTile  = (sa == TileSpecial.None) ? a : b;
+                var specialTile = (sa != TileSpecial.None) ? a : b;
+
+                var normalSideMatches = new HashSet<TileView>();
+                foreach (var t in matchFinder.FindMatchesAt(normalTile.X, normalTile.Y))
+                    normalSideMatches.Add(t);
+
+                if (normalSideMatches.Count == 0)
+                    matchFinder.Add2x2Candidates(normalSideMatches, normalTile.X, normalTile.Y);
+
+                // specialTile ve normalTile bu aşamada temizlenmemeli
+                normalSideMatches.Remove(specialTile);
+                normalSideMatches.Remove(normalTile);
+
+                if (normalSideMatches.Count > 0)
+                {
+                    // Bu match yeni bir special üretmeli mi? (4+ → LineV/LineH, 5 → PulseCore vb.)
+                    TileSpecial newSpec = matchFinder.DecideSpecialAt(normalTile.X, normalTile.Y);
+
+                    bool normalGotNewSpecial = false;
+                    if (newSpec != TileSpecial.None)
+                    {
+                        // Special'ı normalTile'ın kendisine yerleştir (swap pozisyonu)
+                        normalTile.SetSpecial(newSpec);
+                        if (newSpec == TileSpecial.SystemOverride)
+                            normalTile.SetOverrideBaseType(normalTile.GetTileType());
+                        normalGotNewSpecial = true;
+
+                        // Override'ı collapse öncesi gizle — kullanıcı düşüşü görmesin,
+                        // ResolveSpecialSolo yerleştiği pozisyondan ışın gönderecek
+                        if (!specialTile.TryGetComponent<CanvasGroup>(out var cg))
+                            cg = specialTile.gameObject.AddComponent<CanvasGroup>();
+                        cg.alpha = 0f;
+                        cg.blocksRaycasts = false;
+                        cg.interactable = false;
+                    }
+
+                    // Kalan eşleşen taşları temizle + collapse
+                    pendingCreationService.Clear();
+                    yield return boardAnimator.ClearMatchesAnimated(normalSideMatches, doShake: true);
+                    yield return boardAnimator.CollapseAndSpawnAnimated();
+                    yield return ResolveEmptyPlayableCellsWithoutMatch();
+
+                    // normalTile'a yeni special yerleştirildiyse →
+                    // specialTile'ı solo aktive et (combo DEĞİL, bağımsız).
+                    // Yeni special, chain mekanizmasıyla (SP etki alanındaysa)
+                    // veya sonraki cascade/hamlelerde tetiklenir.
+                    if (normalGotNewSpecial)
+                    {
+                        yield return specialResolver.ResolveSpecialSolo(specialTile);
+                        yield return ResolveEmptyPlayableCellsWithoutMatch();
+                        yield return ResolveBoard();
+                        EndBusy();
+                        yield break;
+                    }
+                }
+            }
+
+            // İki taraf da special ise eski pending creation akışını koru
             if (pendingCreationService.HasPending)
                 pendingCreationService.ApplyPendingCreations();
 

@@ -161,9 +161,23 @@ public class BoardAnimator
 
         board.ConsumePatchbotDashRequests(_patchbotDashBuffer);
 
+        // Line sweep modunda PatchBot taşına sıra gelene kadar beklenmeli,
+        // ama sweep'i bloklamadan asenkron çalışmalı.
+        bool hasLineStrikes = animationMode == ClearAnimationMode.LightningStrike
+            && lightningLineStrikes != null && lightningLineStrikes.Count > 0;
+
         if (_patchbotDashBuffer.Count > 0 && board.PatchbotDashUI != null)
         {
-            yield return board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board);
+            if (hasLineStrikes)
+            {
+                // Fire-and-forget: dash animasyonu sweep ile paralel çalışır,
+                // oyunu bekletmez
+                board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board);
+            }
+            else
+            {
+                yield return board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board);
+            }
         }
 
         ObstacleHitContext damageContext = obstacleHitContext ?? (board.IsSpecialActivationPhase
