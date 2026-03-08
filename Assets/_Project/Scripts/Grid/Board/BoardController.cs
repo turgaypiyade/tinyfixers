@@ -1311,18 +1311,12 @@ public class BoardController : MonoBehaviour
         {
             ConsumeMove();
 
-            // Special + normal (veya special + special) swap'te match kaynaklı yeni special
-            // oluşuyorsa hemen board'a uygula. Böylece PulseCore gibi üretilen taşlar,
-            // aynı resolve içinde etki alanına girerse otomatik zincire katılabilir.
-            if (hasPendingCreation)
+            // Special match oluştuktan sonra pending özel taşı hemen yerleştir;
+            // böylece taşlar settle olurken özel taş tahtada görünür.
+            if (pendingCreationService.HasPending)
                 pendingCreationService.ApplyPendingCreations();
 
             yield return specialResolver.ResolveSpecialSwap(a, b);
-            if (pendingCreationService.HasPending)
-            {
-                pendingCreationService.ApplyPendingCreations();
-                yield return boardAnimator.CollapseColumnsAnimated();
-            }
             yield return ResolveEmptyPlayableCellsWithoutMatch();
             yield return ResolveBoard();
             EndBusy();
