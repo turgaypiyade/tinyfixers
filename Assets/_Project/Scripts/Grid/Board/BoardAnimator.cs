@@ -144,7 +144,8 @@ public class BoardAnimator
         Vector2Int? lightningOriginCell = null,
         IReadOnlyCollection<TileView> lightningVisualTargets = null,
         IReadOnlyList<LightningLineStrike> lightningLineStrikes = null,
-        bool suppressPerTileClearVfx = false)
+        bool suppressPerTileClearVfx = false,
+        Dictionary<TileView, float> perTileClearDelays = null)
     {
         var list = new List<TileView>(matches);
         var pops = new List<IEnumerator>();
@@ -281,7 +282,12 @@ public class BoardAnimator
                 }
 
                 // Öncelik: goal fly > lightning per-tile > default
-                float delay = useLightningEffect ? lightningIndex * lightningStepDelay : 0f;
+                float delay = 0f;
+                if (perTileClearDelays != null && perTileClearDelays.TryGetValue(tile, out float customDelay))
+                    delay = Mathf.Max(0f, customDelay);
+                else if (useLightningEffect)
+                    delay = lightningIndex * lightningStepDelay;
+
                 var tileAnimationMode =
                     isGoalTile ? ClearAnimationMode.GoalFlyToHud :
                     (useLightningEffect ? ClearAnimationMode.LightningStrike : ClearAnimationMode.Default);

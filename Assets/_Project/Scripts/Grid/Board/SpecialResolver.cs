@@ -20,6 +20,8 @@ public class SpecialResolver
     private bool overrideFanoutNormalSelectionPulse;
     private int overrideFanoutPulseHitCount;
     private readonly List<PendingOverrideImplant> pendingOverrideImplants = new();
+    private Dictionary<TileView, float> overrideOverrideRadialClearDelays;
+    private const float OverrideOverrideRadialClearDuration = 0.35f;
 
     private readonly struct PendingOverrideImplant
     {
@@ -204,6 +206,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         overrideFanoutPulseHitCount = 0;
         pendingOverrideOverrideClearDelay = 0f;
         pendingOverrideImplants.Clear();
+        overrideOverrideRadialClearDelays = null;
 
         // ✅ PULSE + LINE: toplu ClearMatchesAnimated yapma.
         if ((saIsPulse && sbIsLine) || (sbIsPulse && saIsLine))
@@ -352,7 +355,8 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             includeAdjacentOverTileBlockerDamage: false,
             lightningVisualTargets: lightningVisualTargets,
             lightningLineStrikes: lightningLineStrikes,
-            suppressPerTileClearVfx: (suppressPerTileClearVfx || overrideSuppressPerTileClearVfx)));
+            suppressPerTileClearVfx: (suppressPerTileClearVfx || overrideSuppressPerTileClearVfx),
+            perTileClearDelays: overrideOverrideRadialClearDelays)));
         yield return board.StartCoroutine(boardAnimator.CollapseAndSpawnAnimated());
         board.IsSpecialActivationPhase = false;
         specialAffectedCells = null;
@@ -385,6 +389,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         overrideFanoutPulseHitCount = 0;
         pendingOverrideOverrideClearDelay = 0f;
         pendingOverrideImplants.Clear();
+        overrideOverrideRadialClearDelays = null;
 
         var affected = new HashSet<TileView> { specialTile };
         MarkAffectedCell(specialTile);
@@ -482,7 +487,8 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             includeAdjacentOverTileBlockerDamage: false,
             lightningVisualTargets: lightningVisualTargets,
             lightningLineStrikes: lightningLineStrikes,
-            suppressPerTileClearVfx: overrideSuppressPerTileClearVfx));
+            suppressPerTileClearVfx: overrideSuppressPerTileClearVfx,
+            perTileClearDelays: overrideOverrideRadialClearDelays));
 
         yield return board.StartCoroutine(boardAnimator.CollapseAndSpawnAnimated());
         board.IsSpecialActivationPhase = false;
@@ -1012,6 +1018,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                 pendingOverrideOverrideClearDelay = Mathf.Max(pendingOverrideOverrideClearDelay, board.PlaySystemOverrideComboVfxAndGetDuration());
             }
             AddAllTiles(matches);
+            overrideOverrideRadialClearDelays = BuildCenterOutClearDelays(matches, OverrideOverrideRadialClearDuration);
             return;
         }
 
@@ -1376,6 +1383,39 @@ void AddAllOfType(HashSet<TileView> matches, TileType type, bool excludeSpecials
         bool hasObstacleAtTarget = patchbotComboService.HasObstacleAt(target.x, target.y);
 
         patchbotComboService.ResolveTargetImpact(matches, target.x, target.y, hasObstacleAtTarget, MarkAffectedCell, MarkAffectedCell);
+    }
+
+    private Dictionary<TileView, float> BuildCenterOutClearDelays(HashSet<TileView> targets, float maxDelay)
+    {
+        if (targets == null || targets.Count == 0 || maxDelay <= 0f)
+            return null;
+
+        float centerX = (board.Width - 1) * 0.5f;
+        float centerY = (board.Height - 1) * 0.5f;
+        var center = new Vector2(centerX, centerY);
+        float maxDistance = 0f;
+
+        foreach (var tile in targets)
+        {
+            if (tile == null) continue;
+            float distance = Vector2.Distance(new Vector2(tile.X, tile.Y), center);
+            if (distance > maxDistance)
+                maxDistance = distance;
+        }
+
+        if (maxDistance <= Mathf.Epsilon)
+            return null;
+
+        var delays = new Dictionary<TileView, float>(targets.Count);
+        foreach (var tile in targets)
+        {
+            if (tile == null) continue;
+            float distance = Vector2.Distance(new Vector2(tile.X, tile.Y), center);
+            float normalized = Mathf.Clamp01(distance / maxDistance);
+            delays[tile] = normalized * maxDelay;
+        }
+
+        return delays;
     }
 
     
