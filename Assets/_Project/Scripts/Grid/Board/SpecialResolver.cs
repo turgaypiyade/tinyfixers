@@ -356,7 +356,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             lightningVisualTargets: lightningVisualTargets,
             lightningLineStrikes: lightningLineStrikes,
             suppressPerTileClearVfx: (suppressPerTileClearVfx || overrideSuppressPerTileClearVfx),
-            perTileClearDelays: overrideOverrideRadialClearDelays));
+            perTileClearDelays: overrideOverrideRadialClearDelays)));
         yield return board.StartCoroutine(boardAnimator.CollapseAndSpawnAnimated());
         board.IsSpecialActivationPhase = false;
         specialAffectedCells = null;
