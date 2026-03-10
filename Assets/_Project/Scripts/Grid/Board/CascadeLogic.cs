@@ -354,6 +354,8 @@ public class CascadeLogic
         board.Tiles[fromX, fromY] = null;
         board.Tiles[toX, toY] = tile;
         tile.SetCoords(toX, toY);
+        board.SyncTileData(fromX, fromY);
+        board.SyncTileData(toX, toY);
 
         float slideDuration = board.GetFallDurationForDistance(1) * 0.6f;
         action.AddMove(tile, fromY, toY, slideDuration, false, 0f, 0f, board.FallMoveCurve);

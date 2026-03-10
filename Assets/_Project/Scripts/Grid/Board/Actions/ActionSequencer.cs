@@ -41,7 +41,6 @@ public class ActionSequencer : MonoBehaviour
     private IEnumerator PlaySequence()
     {
         IsPlaying = true;
-        Board.BeginBusy();
 
         while (actionQueue.Count > 0)
         {
@@ -62,6 +61,5 @@ public class ActionSequencer : MonoBehaviour
         // Let the controller know the visual sequence is finished,
         // so it can check for falls, collapses, or level end states.
         Board.OnActionSequenceFinished(); 
-        Board.EndBusy();
     }
 }
