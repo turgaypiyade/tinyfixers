@@ -39,7 +39,14 @@ public class SystemOverrideFanoutVisualAction : BoardAction
 
             // 3. Işın hedefe vardı, taşı özel taşa dönüştür (Line/Pulse/Patchbot)
             t.RefreshIcon();
-            if (doSelectionPulse)
+
+            // Override + special partner: Beam hedefe vardığında hedefteki special kısa bir vurgu alsın.
+            var targetSpecial = t.GetSpecial();
+            bool shouldPulse = doSelectionPulse
+                               || targetSpecial == TileSpecial.PatchBot
+                               || targetSpecial == TileSpecial.PulseCore;
+
+            if (shouldPulse)
             {
                 sequencer.Animator.PlaySelectionPulse(t, delay: 0f, peakScale: 1.30f, upTime: 0.10f, downTime: 0.10f);
             }
