@@ -26,18 +26,25 @@ public class SystemOverrideFanoutVisualAction : BoardAction
         {
             if (t == null) continue;
 
+            bool beamReachedTarget = false;
+
             // 1. Tek bir hedefe ışın gönder
-            board.PlayLightningStrikeForTiles(
+            float beamDuration = board.PlayLightningStrikeForTiles(
                 new List<TileView> { t },
                 originTile: origin,
                 visualTargets: new List<TileView> { t },
                 allowCondense: false,
-                onTargetBeamSpawned: null);
+                onTargetBeamSpawned: _ => beamReachedTarget = true);
 
-            // 2. Işının hedefe "gitme" süresi (görsel his için kısa bir bekleme)
-            yield return new WaitForSeconds(0.08f);
+            // 2. Işın hedefe vardığı anda taşı özel taşa dönüştür (Line/Pulse/Patchbot)
+            float timeout = Mathf.Max(beamDuration, 0.08f) + 0.02f;
+            float elapsed = 0f;
+            while (!beamReachedTarget && elapsed < timeout)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
 
-            // 3. Işın hedefe vardı, taşı özel taşa dönüştür (Line/Pulse/Patchbot)
             t.RefreshIcon();
 
             // Override + special partner: Beam hedefe vardığında hedefteki special kısa bir vurgu alsın.
@@ -51,11 +58,11 @@ public class SystemOverrideFanoutVisualAction : BoardAction
                 sequencer.Animator.PlaySelectionPulse(t, delay: 0f, peakScale: 1.30f, upTime: 0.10f, downTime: 0.10f);
             }
 
-            // 4. Sonraki ışına geçmeden önce ufak bir es (böylece sırayla "tık-tık-tık" çalışır)
+            // 3. Sonraki ışına geçmeden önce ufak bir es (böylece sırayla "tık-tık-tık" çalışır)
             yield return new WaitForSeconds(0.04f);
         }
 
-        // Tüm taşlar dönüştükten sonra patlamadan önce çok kısa bir nefes payı
+        // Tüm taşlar dönüştükten sonra özel tetiklere geçmeden önce kısa bir nefes payı
         yield return new WaitForSeconds(0.15f);
     }
 }
