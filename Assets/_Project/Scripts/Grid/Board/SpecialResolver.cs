@@ -906,8 +906,9 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
     {
         if (autoPatchBot == null) return;
 
-        // Kaynak hücrede iz bırakma — taş zaten hayalet gibi hareket edecek
-        HideTileVisualForCombo(autoPatchBot);
+        // Fan-out sırasında PatchBot ikonu hedefte kısa süre görünsün.
+        if (!deferOverrideImplantVisualRefresh)
+            HideTileVisualForCombo(autoPatchBot);
         matches.Add(autoPatchBot);
         MarkAffectedCell(autoPatchBot);
 
@@ -916,7 +917,8 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
         // Dash'i anında ve asenkron başlat (kuyruklamadan)
         // Böylece her PatchBot koyulduğu an harekete geçer, birbirini beklemez
-        FireImmediateDash(autoPatchBot, target.x, target.y);
+        float dashDelay = deferOverrideImplantVisualRefresh ? 0.10f : 0f;
+        FireImmediateDash(autoPatchBot, target.x, target.y, dashDelay);
         
         var matchSetData = new HashSet<TileData>();
         patchbotComboService.HitCellOnce(matchSetData, target.x, target.y, target.tile, MarkAffectedCell, MarkAffectedCell);
@@ -931,16 +933,25 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
     /// PatchBot dash'ini kuyruğa eklemeden anında asenkron başlatır.
     /// Override+PatchBot combo'larında her PatchBot'un hemen harekete geçmesi için kullanılır.
     /// </summary>
-    void FireImmediateDash(TileView fromTile, int targetX, int targetY)
+    void FireImmediateDash(TileView fromTile, int targetX, int targetY, float delay = 0f)
     {
         if (fromTile == null || board.PatchbotDashUI == null) return;
-        var req = new BoardController.PatchbotDashRequest
+
+        IEnumerator CoPlayDash()
         {
-            from = new Vector2Int(fromTile.X, fromTile.Y),
-            to   = new Vector2Int(targetX, targetY)
-        };
-        var singleDash = new List<BoardController.PatchbotDashRequest>(1) { req };
-        board.PatchbotDashUI.PlayDashParallel(singleDash, board);
+            if (delay > 0f)
+                yield return new WaitForSeconds(delay);
+
+            var req = new BoardController.PatchbotDashRequest
+            {
+                from = new Vector2Int(fromTile.X, fromTile.Y),
+                to   = new Vector2Int(targetX, targetY)
+            };
+            var singleDash = new List<BoardController.PatchbotDashRequest>(1) { req };
+            board.PatchbotDashUI.PlayDashParallel(singleDash, board);
+        }
+
+        board.StartCoroutine(CoPlayDash());
     }
 
     void PlayTeleportMarkers(TileView sourceTile, int targetX, int targetY)
