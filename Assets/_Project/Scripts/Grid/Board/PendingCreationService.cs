@@ -105,6 +105,13 @@ public class PendingCreationService
             if (pending.special == TileSpecial.SystemOverride)
                 targetTile.SetOverrideBaseType(targetTile.GetTileType());
 
+            board.SyncTileData(pending.x, pending.y);
+
+            if (board.Tiles[pending.x, pending.y] != null && board.GridData[pending.x, pending.y] == null)
+            {
+                Debug.LogError($"[PendingCreationService] GridData missing for occupied cell ({pending.x},{pending.y}).");
+            }
+
         }
 
         pendingCreations.Clear();
@@ -142,6 +149,7 @@ public class PendingCreationService
         tile.SetCoords(x, y);
         tile.SnapToGrid(board.TileSize);
         board.Tiles[x, y] = tile;
+        board.SyncTileData(x, y);
 
         var pool = board.RandomPool;
         if (pool != null && pool.Length > 0)
@@ -172,5 +180,8 @@ public class PendingCreationService
         board.Tiles[targetX, targetY] = tile;
         tile.SetCoords(targetX, targetY);
         tile.SnapToGrid(board.TileSize);
+
+        board.SyncTileData(sourceX, sourceY);
+        board.SyncTileData(targetX, targetY);
     }
 }

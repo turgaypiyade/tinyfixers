@@ -154,6 +154,7 @@ public class BoardController : MonoBehaviour
     private readonly List<Vector3> lightningTargetPositionsBuffer = new List<Vector3>(32);
     private bool didLogMissingLightningSpawner;
     private readonly HashSet<int> patchBotForcedObstacleHits = new();
+    private int busyScopeDepth;
 
     public event System.Action<ObstacleVisualChange> ObstacleVisualChanged;
 
@@ -236,12 +237,16 @@ public class BoardController : MonoBehaviour
 
     internal void BeginBusy()
     {
+        busyScopeDepth++;
         CurrentState = BoardState.Resolving;
     }
 
     internal void EndBusy()
     {
-        if (CurrentState == BoardState.Resolving)
+        if (busyScopeDepth > 0)
+            busyScopeDepth--;
+
+        if (busyScopeDepth == 0 && CurrentState == BoardState.Resolving)
         {
             CurrentState = BoardState.Idle;
             OnBecameIdle?.Invoke();
