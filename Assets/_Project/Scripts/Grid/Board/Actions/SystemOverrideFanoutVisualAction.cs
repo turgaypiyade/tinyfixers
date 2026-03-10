@@ -41,10 +41,10 @@ public class SystemOverrideFanoutVisualAction : BoardAction
             t.RefreshIcon();
 
             // Override + special partner: Beam hedefe vardığında hedefteki special kısa bir vurgu alsın.
-            // PulseCore için ekstra pulse verme; kendi aktivasyon patlama animasyonunu kullanır.
             var targetSpecial = t.GetSpecial();
             bool shouldPulse = doSelectionPulse
-                               || targetSpecial == TileSpecial.PatchBot;
+                               || targetSpecial == TileSpecial.PatchBot
+                               || targetSpecial == TileSpecial.PulseCore;
 
             if (shouldPulse)
             {
