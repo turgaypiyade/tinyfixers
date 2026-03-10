@@ -249,6 +249,24 @@ public class GridSpawner : MonoBehaviour
             SpawnTile(x, y, initialTypes[x, y]);
         }
 
+        // ─── DEBUG: İlk yerleşim snapshot'u ───────────────────────────────
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"[INITIAL BOARD SNAPSHOT] ({width}x{height}) (H=Hole, ·=null, first letter of type)");
+            for (int dbgY = 0; dbgY < height; dbgY++)
+            {
+                sb.Append($"  row{dbgY}: ");
+                for (int dbgX = 0; dbgX < width; dbgX++)
+                {
+                    if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
+                    else { var td = board.GridData[dbgX, dbgY]; sb.Append(td == null ? "[· ]" : $"[{td.ToDebugString().PadRight(2)}]"); }
+                }
+                sb.AppendLine();
+            }
+            UnityEngine.Debug.Log(sb.ToString());
+        }
+        // ─── END DEBUG ─────────────────────────────────────────────────────
+
         // CellBG < UnderTileObs < Tiles < OverTileObs
         if (cellBgRoot != null) cellBgRoot.SetAsFirstSibling();
         if (underTilesObstaclesRoot != null) underTilesObstaclesRoot.SetAsFirstSibling();
@@ -519,8 +537,9 @@ public class GridSpawner : MonoBehaviour
         view.SetIconScale(iconScale);
         view.ApplyTileSize(tileSize);
 
-        board.RegisterTile(view, x, y);
-        view.SetType(type);
+        board.RegisterTile(view, x, y); // Init + coords + ilk SyncTileData (tipi henüz default olabilir)
+        view.SetType(type);             // Doğru tipi ata
+        board.SyncTileData(x, y);       // gridData'yı doğru tipte güncelle
         board.RefreshTileObstacleVisual(view);
     }
 

@@ -70,15 +70,6 @@ public class BoardAnimator
 
     public IEnumerator SwapTilesAnimated(TileView a, TileView b, float duration)
     {
-        int ax = a.X, ay = a.Y;
-        int bx = b.X, by = b.Y;
-
-        board.Tiles[ax, ay] = b;
-        board.Tiles[bx, by] = a;
-
-        a.SetCoords(bx, by);
-        b.SetCoords(ax, ay);
-
         yield return RunTogether(
             a.MoveToGrid(board.TileSize, duration, board.SwapMoveCurve),
             b.MoveToGrid(board.TileSize, duration, board.SwapMoveCurve)
@@ -107,7 +98,7 @@ public class BoardAnimator
         onDone?.Invoke();
     }
 
-    private IEnumerator RunMany(List<IEnumerator> routines)
+    public IEnumerator RunMany(List<IEnumerator> routines)
     {
         int done = 0;
         for (int i = 0; i < routines.Count; i++)
@@ -116,7 +107,7 @@ public class BoardAnimator
         while (done < routines.Count) yield return null;
     }
 
-    private IEnumerator RunManyWithDelays(List<IEnumerator> routines, List<float> delays)
+    public IEnumerator RunManyWithDelays(List<IEnumerator> routines, List<float> delays)
     {
         if (routines.Count != delays.Count)
         {
@@ -191,7 +182,6 @@ public class BoardAnimator
 
         if (animationMode == ClearAnimationMode.LightningStrike)
         {
-            Debug.Log($"[Lightning] mode={animationMode} lineStrikes={(lightningLineStrikes==null?-1:lightningLineStrikes.Count)}");
             SortTilesForLightning(list, lightningOriginTile, lightningOriginCell);
         }
 
@@ -283,10 +273,22 @@ public class BoardAnimator
 
                 // Öncelik: goal fly > lightning per-tile > default
                 float delay = 0f;
+                bool isRadialWaveTile = false;
                 if (perTileClearDelays != null && perTileClearDelays.TryGetValue(tile, out float customDelay))
+                {
                     delay = Mathf.Max(0f, customDelay);
+                    isRadialWaveTile = true;
+                }
                 else if (useLightningEffect)
                     delay = lightningIndex * lightningStepDelay;
+
+                // Override+Override radial wave: play a "hit" pulse on each tile as the
+                // shockwave reaches it, right before the clear animation kicks in.
+                if (isRadialWaveTile && !isGoalTile)
+                {
+                    float pulseDelay = Mathf.Max(0f, delay - 0.03f);
+                    pops.Add(DelayedSelectionPulse(tile, pulseDelay, 1.22f, 0.05f, 0.07f));
+                }
 
                 var tileAnimationMode =
                     isGoalTile ? ClearAnimationMode.GoalFlyToHud :
@@ -326,7 +328,29 @@ public class BoardAnimator
             }
 
             if (board.ShakeTarget != null)
+            {
                 board.StartCoroutine(ShakeBoard(board.ShakeDuration, board.ShakeStrength));
+
+                // Override+Override radial wave: add escalating micro-shakes during the wave
+                if (perTileClearDelays != null && perTileClearDelays.Count > 0)
+                {
+                    float maxRadialDelay = 0f;
+                    foreach (var kv in perTileClearDelays)
+                        if (kv.Value > maxRadialDelay) maxRadialDelay = kv.Value;
+
+                    if (maxRadialDelay > 0.1f)
+                    {
+                        int waveShakeSteps = 3;
+                        for (int ws = 0; ws < waveShakeSteps; ws++)
+                        {
+                            float t = (ws + 1f) / waveShakeSteps;
+                            float shakeDelay = t * maxRadialDelay * 0.7f;
+                            float shakeStrength = Mathf.Lerp(board.ShakeStrength * 0.3f, board.ShakeStrength * 0.8f, t);
+                            board.StartCoroutine(DelayedMicroShake(shakeDelay, 0.10f, shakeStrength));
+                        }
+                    }
+                }
+            }
         }
 
         if (pulseImpacts.Count > 0)
@@ -404,7 +428,10 @@ public class BoardAnimator
             int y = tile.Y;
 
             if (x >= 0 && x < board.Width && y >= 0 && y < board.Height && board.Tiles[x, y] == tile)
+            {
                 board.Tiles[x, y] = null;
+                board.GridData[x, y] = null; // Sync Data model
+            }
 
             tile.SetSpecial(TileSpecial.None);
 
@@ -430,7 +457,10 @@ public class BoardAnimator
         }
 
         foreach (var cell in obstacleDamageCells)
-            board.ApplyObstacleDamageAt(cell.x, cell.y, damageContext);
+        {
+            var hit = board.ApplyObstacleDamageAt(cell.x, cell.y, damageContext);
+            if (hit.didHit) board.TriggerObstacleVisualChange(hit.visualChange);
+        }
     }
 
     private static void SortTilesForLightning(List<TileView> tiles, TileView originTile, Vector2Int? originCell)
@@ -536,6 +566,40 @@ public class BoardAnimator
         target.anchoredPosition = basePos;
     }
 
+    /// <summary>
+    /// Plays a selection pulse on a tile after a delay.
+    /// Used by Override+Override radial wave to give each tile a visible "hit"
+    /// feedback as the shockwave reaches it.
+    /// </summary>
+    private IEnumerator DelayedSelectionPulse(TileView tile, float delay, float peakScale, float upTime, float downTime)
+    {
+        if (tile == null) yield break;
+        if (delay > 0f)
+        {
+            var w = Wait(delay);
+            if (w != null) yield return w;
+        }
+        if (tile == null) yield break;
+        tileAnimator?.PlaySelectionPulse(tile, 0f, peakScale, upTime, downTime);
+        // Wait for the pulse to finish so RunMany tracks it correctly.
+        var wUp = Wait(upTime + downTime);
+        if (wUp != null) yield return wUp;
+    }
+
+    /// <summary>
+    /// Fires a micro-shake after a delay. Used to create escalating shakes
+    /// during the Override+Override radial clear wave.
+    /// </summary>
+    private IEnumerator DelayedMicroShake(float delay, float duration, float strength)
+    {
+        if (delay > 0f)
+        {
+            var w = Wait(delay);
+            if (w != null) yield return w;
+        }
+        yield return MicroShake(duration, strength);
+    }
+
     public IEnumerator CollapseColumnsAnimated()
     {
         var moves = new List<IEnumerator>();
@@ -585,6 +649,8 @@ public class BoardAnimator
                             board.Tiles[x, fromY] = null;
 
                             tile.SetCoords(x, toY);
+                            board.SyncTileData(x, toY);
+                            board.SyncTileData(x, fromY);
 
                             moves.Add(tile.MoveToGrid(
                                 board.TileSize,
@@ -599,6 +665,7 @@ public class BoardAnimator
                         else
                         {
                             board.Tiles[x, toY] = tile;
+                            board.SyncTileData(x, toY);
                         }
                     }
                 }
@@ -644,6 +711,7 @@ public class BoardAnimator
 
                 view.SetType(GetRandomType());
                 view.SetSpecial(TileSpecial.None);
+                board.SyncTileData(x, y); // Sync Data model AFTER setting type and special
                 board.RefreshTileObstacleVisual(view);
 
                 int dist = Mathf.Abs(y - nextSpawnY);
@@ -730,6 +798,7 @@ public class BoardAnimator
 
                     board.Tiles[x, targetY] = tile;
                     tile.SetCoords(x, targetY);
+                    board.SyncTileData(x, targetY); // Sync Data model
 
                     int dist = Mathf.Abs(targetY - fromY);
                     if (dist <= 0)
@@ -775,6 +844,7 @@ public class BoardAnimator
 
                         view.SetType(GetRandomType());
                         view.SetSpecial(TileSpecial.None);
+                        board.SyncTileData(x, y); // ← EKSİK OLAN BUYDU! Veritabanına kaydet
                         board.RefreshTileObstacleVisual(view);
 
                         int dist = Mathf.Abs(y - spawnFromY);

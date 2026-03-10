@@ -34,7 +34,7 @@ public class PatchbotComboService
         markAffectedCell?.Invoke(partnerTile);
     }
 
-    public void ResolveTargetImpact(HashSet<TileView> matches, int targetX, int targetY, bool hasObstacleAtTarget, System.Action<int, int> markAffectedCell, System.Action<TileView> markAffectedTile)
+    public void ResolveTargetImpact(HashSet<TileData> matches, int targetX, int targetY, bool hasObstacleAtTarget, System.Action<int, int> markAffectedCell, System.Action<TileView> markAffectedTile)
     {
         if (hasObstacleAtTarget)
         {
@@ -46,7 +46,7 @@ public class PatchbotComboService
         HitCellOnce(matches, targetX, targetY, board.Tiles[targetX, targetY], markAffectedCell, markAffectedTile);
     }
 
-    public void HitCellOnce(HashSet<TileView> matches, int x, int y, TileView tileAtCell, System.Action<int, int> markAffectedCell, System.Action<TileView> markAffectedTile)
+    public void HitCellOnce(HashSet<TileData> matches, int x, int y, TileView tileAtCell, System.Action<int, int> markAffectedCell, System.Action<TileView> markAffectedTile)
     {
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return;
         if (board.Holes[x, y] && !HasObstacleAt(x, y)) return;
@@ -58,11 +58,12 @@ public class PatchbotComboService
             return;
         }
 
-        var tile = tileAtCell ?? board.Tiles[x, y];
-        if (tile == null) return;
+        var tileData = board.GridData[x, y];
+        if (tileData == null) return;
 
-        matches.Add(tile);
-        markAffectedTile?.Invoke(tile);
+        matches.Add(tileData);
+        var tileView = tileAtCell ?? board.Tiles[x, y];
+        if (tileView != null) markAffectedTile?.Invoke(tileView);
     }
 
     public (TileView tile, int x, int y, bool hasCell) FindTarget(TileView patchBotTile, TileView partnerTile, HashSet<TileView> excluded, params TileView[] additionalExcluded)

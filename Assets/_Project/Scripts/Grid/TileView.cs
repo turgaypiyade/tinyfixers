@@ -108,7 +108,7 @@ public class TileView : MonoBehaviour,
     }
 
  
-    void RefreshIcon()
+    public void RefreshIcon()
     {
         if (model == null || board == null) return;
 
@@ -175,25 +175,8 @@ public class TileView : MonoBehaviour,
             TileView tileBelow = board.GetTileViewAt(X, Y + 1);
             if (tileBelow != null && tileBelow != this)
             {
-                Debug.Log(
-                    $"[FALL-SETTLE] TRIGGER | mover=({X},{Y}) type={GetTileType()} -> below=({tileBelow.X},{tileBelow.Y}) type={tileBelow.GetTileType()} " +
-                    $"duration={settleDuration} strength={settleStrength}"
-                );
-
                 tileBelow.PlayBeingLandedOnSquash(settleDuration, settleStrength);
             }
-            else
-            {
-                Debug.Log(
-                    $"[FALL-SETTLE] SKIP | mover=({X},{Y}) type={GetTileType()} reason=no-below-tile"
-                );
-            }
-        }
-        else if (movedDown && board != null)
-        {
-            Debug.Log(
-                $"[FALL-SETTLE] SKIP | mover=({X},{Y}) type={GetTileType()} reason=settle-disabled"
-            );
         }
 
         SnapToGrid(tileSize);
@@ -319,10 +302,13 @@ public class TileView : MonoBehaviour,
 
     public TileSpecial GetSpecial() => model.special;
 
-    public void SetSpecial(TileSpecial sp)
+    public void SetSpecial(TileSpecial sp, bool deferVisualUpdate = false)
     {
         model.SetSpecial(sp);
-        RefreshIcon();
+        if (!deferVisualUpdate)
+        {
+            RefreshIcon();
+        }
     }
 
     public void SetIconScale(float scale)
@@ -355,9 +341,6 @@ public class TileView : MonoBehaviour,
     public void PlayBeingLandedOnSquash(float duration = 0.22f, float strength = 0.20f)
     {
         if (this == null) return;
-
-        Debug.Log($"[SQUASH] PLAY tile=({X},{Y}) type={GetTileType()} duration={duration} strength={strength}");
-
         StartCoroutine(CoLandedOnSquash(duration, strength));
     }
 

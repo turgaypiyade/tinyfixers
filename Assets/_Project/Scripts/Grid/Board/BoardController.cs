@@ -63,7 +63,7 @@ public class BoardController : MonoBehaviour
     [Header("Board VFX/SFX")]
     [FormerlySerializedAs("pulseCoreVfxPlayer")][SerializeField] private PulseCoreVfxPlayer boardVfxPlayer;
     [SerializeField] private LightningSpawner lightningSpawner;
-    [SerializeField] private LineTravelSplitSwapTestUI lineTravelPlayer;
+    public LineTravelSplitSwapTestUI lineTravelPlayer;
     [SerializeField] private Transform lineTravelSpawnParent;
 
     [Header("HUD / Goal Fly FX")]
@@ -91,6 +91,8 @@ public class BoardController : MonoBehaviour
     private Vector2 shakeBasePos;
 
     private TileView[,] tiles;
+    private TileData[,] gridData; // The logical state of the tiles
+    
     private bool[,] holes;
     private bool[,] maskHoles;
 
@@ -98,7 +100,7 @@ public class BoardController : MonoBehaviour
     private int height;
 
     private TileView selected;
-    private int busyCount = 0;
+    public BoardState CurrentState { get; private set; } = BoardState.Idle;
     private BoosterMode activeBooster = BoosterMode.None;
     public  BoosterMode ActiveBooster => activeBooster; // TileView drag kontrolü için
 
@@ -107,7 +109,7 @@ public class BoardController : MonoBehaviour
     private int tileSize;
 
     public int TileSize => tileSize;
-    public bool IsBusy => busyCount > 0;
+    public bool IsBusy => CurrentState == BoardState.Resolving;
 
     public event Action OnBecameIdle;
 
@@ -120,82 +122,9 @@ public class BoardController : MonoBehaviour
 
     private readonly List<PatchbotDashRequest> _patchbotDashRequests = new();
 
-    public void EnqueuePatchbotDash(Vector2Int from, Vector2Int to)
-    {
-        _patchbotDashRequests.Add(new PatchbotDashRequest { from = from, to = to });
-    }
 
-    public void ConsumePatchbotDashRequests(List<PatchbotDashRequest> outList)
-    {
-        outList.Clear();
-        outList.AddRange(_patchbotDashRequests);
-        _patchbotDashRequests.Clear();
-    }
 
-    public TopHudController TopHud
-    {
-        get
-        {
-            if (topHud == null)
-                topHud = FindFirstObjectByType<TopHudController>();
-            return topHud;
-        }
-    }
-
-    public GoalFlyFx GoalFlyFx
-    {
-        get
-        {
-            if (goalFlyFx == null)
-                goalFlyFx = FindFirstObjectByType<GoalFlyFx>();
-            return goalFlyFx;
-        }
-    }
-
-    private void BeginBusy()
-    {
-        busyCount++;
-    }
-
-    private void EndBusy()
-    {
-        busyCount = Mathf.Max(0, busyCount - 1);
-        if (busyCount == 0)
-            OnBecameIdle?.Invoke();
-    }
-
-    public void RunAfterIdle(Action action)
-    {
-        if (action == null) return;
-        StartCoroutine(RunAfterIdleRoutine(action));
-    }
-
-    private IEnumerator RunAfterIdleRoutine(Action action)
-    {
-        if (!IsBusy)
-        {
-            action();
-            yield break;
-        }
-
-        bool idle = false;
-
-        void Handler()
-        {
-            OnBecameIdle -= Handler;
-            idle = true;
-        }
-
-        OnBecameIdle += Handler;
-
-        while (!idle)
-            yield return null;
-
-        yield return null;
-        action();
-    }
-
-    public bool InputLocked { get; private set; }
+    public bool InputLocked => CurrentState == BoardState.Locked || IsBusy;
     public int RemainingMoves { get; private set; }
     public LevelData ActiveLevelData => levelData;
 
@@ -217,9 +146,11 @@ public class BoardController : MonoBehaviour
     private MatchFinder matchFinder;
     private SpecialResolver specialResolver;
     private BoardAnimator boardAnimator;
+    private ActionSequencer actionSequencer;
     private PendingCreationService pendingCreationService;
     private PulseCoreImpactService pulseCoreImpactService;
     private ObstacleStateService obstacleStateService;
+    private CascadeLogic cascadeLogic;
     private readonly List<Vector3> lightningTargetPositionsBuffer = new List<Vector3>(32);
     private bool didLogMissingLightningSpawner;
     private readonly HashSet<int> patchBotForcedObstacleHits = new();
@@ -227,6 +158,9 @@ public class BoardController : MonoBehaviour
     public event System.Action<ObstacleVisualChange> ObstacleVisualChanged;
 
     internal TileView[,] Tiles => tiles;
+    internal TileData[,] GridData => gridData; // newly added getter
+    internal BoardAnimator boardAnimatorRef => boardAnimator; // Helper for sequencer
+    
     internal bool[,] Holes => holes;
     internal int Width => width;
     internal int Height => height;
@@ -266,7 +200,85 @@ public class BoardController : MonoBehaviour
     internal bool ShakeNextClear { get => shakeNextClear; set => shakeNextClear = value; }
     internal bool IsSpecialActivationPhase { get => isSpecialActivationPhase; set => isSpecialActivationPhase = value; }
     internal ObstacleStateService ObstacleStateService => obstacleStateService;
+    public CascadeLogic CascadeLogic => cascadeLogic;
 
+    public void EnqueuePatchbotDash(Vector2Int from, Vector2Int to)
+    {
+        _patchbotDashRequests.Add(new PatchbotDashRequest { from = from, to = to });
+    }
+
+    public void ConsumePatchbotDashRequests(List<PatchbotDashRequest> outList)
+    {
+        outList.Clear();
+        outList.AddRange(_patchbotDashRequests);
+        _patchbotDashRequests.Clear();
+    }
+
+    public TopHudController TopHud
+    {
+        get
+        {
+            if (topHud == null)
+                topHud = FindFirstObjectByType<TopHudController>();
+            return topHud;
+        }
+    }
+
+    public GoalFlyFx GoalFlyFx
+    {
+        get
+        {
+            if (goalFlyFx == null)
+                goalFlyFx = FindFirstObjectByType<GoalFlyFx>();
+            return goalFlyFx;
+        }
+    }
+
+    internal void BeginBusy()
+    {
+        CurrentState = BoardState.Resolving;
+    }
+
+    internal void EndBusy()
+    {
+        if (CurrentState == BoardState.Resolving)
+        {
+            CurrentState = BoardState.Idle;
+            OnBecameIdle?.Invoke();
+        }
+    }
+
+    public void RunAfterIdle(Action action)
+    {
+        if (action == null) return;
+        StartCoroutine(RunAfterIdleRoutine(action));
+    }
+
+    private IEnumerator RunAfterIdleRoutine(Action action)
+    {
+        if (!IsBusy)
+        {
+            action();
+            yield break;
+        }
+
+        bool idle = false;
+
+        void Handler()
+        {
+            OnBecameIdle -= Handler;
+            idle = true;
+        }
+
+        OnBecameIdle += Handler;
+
+        while (!idle)
+            yield return null;
+
+        yield return null;
+        action();
+    }
+    
     private void Awake()
     {
         if (shakeTarget != null)
@@ -426,6 +438,19 @@ public class BoardController : MonoBehaviour
         specialResolver ??= new SpecialResolver(this, matchFinder, boardAnimator, pulseCoreImpactService);
         pendingCreationService ??= new PendingCreationService(this, matchFinder, specialResolver);
         obstacleStateService ??= new ObstacleStateService();
+        cascadeLogic ??= new CascadeLogic(this);
+
+        if (actionSequencer == null)
+        {
+            actionSequencer = GetComponent<ActionSequencer>();
+            if (actionSequencer == null) actionSequencer = gameObject.AddComponent<ActionSequencer>();
+            actionSequencer.Initialize(this);
+        }
+    }
+
+    public void OnActionSequenceFinished()
+    {
+        // For now, doing nothing. Board resolves cascades as part of ProcessSwap/ResolveBoard loops.
     }
 
     private void OnDestroy()
@@ -443,6 +468,7 @@ public class BoardController : MonoBehaviour
         this.iconLibrary = iconLibrary;
 
         tiles = new TileView[width, height];
+        gridData = new TileData[width, height];
         holes = new bool[width, height];
         maskHoles = new bool[width, height];
         EnsureServices();
@@ -477,9 +503,9 @@ public class BoardController : MonoBehaviour
         BindObstacleEvents();
     }
 
-    internal bool ApplyObstacleDamageAt(int x, int y, ObstacleHitContext context)
+    internal ObstacleStateService.ObstacleHitResult ApplyObstacleDamageAt(int x, int y, ObstacleHitContext context)
     {
-        if (obstacleStateService == null) return false;
+        if (obstacleStateService == null) return default;
 
         bool patchBotForcedHit = ConsumePatchBotForcedObstacleHit(x, y);
 
@@ -510,11 +536,15 @@ public class BoardController : MonoBehaviour
             if (!result.didHit) result = TryFallback(ObstacleHitContext.NormalMatch);
         }
 
-        if (!result.didHit) return false;
+        if (!result.didHit) return result;
 
         ConsumeObstacleStageTransition(result);
-        ObstacleVisualChanged?.Invoke(result.visualChange);
-        return true;
+        return result;
+    }
+
+    public void TriggerObstacleVisualChange(ObstacleVisualChange change)
+    {
+        ObstacleVisualChanged?.Invoke(change);
     }
 
     internal void MarkPatchBotForcedObstacleHit(int x, int y)
@@ -589,7 +619,7 @@ public class BoardController : MonoBehaviour
         int ny = from.Y + dirY;
 
         if (nx < 0 || nx >= width || ny < 0 || ny >= height) return;
-        if (holes[nx, ny]) return;
+        if (holes[nx, ny] && (obstacleStateService == null || !obstacleStateService.HasObstacleAt(nx, ny))) return;
 
         TileView other = tiles[nx, ny];
         if (other == null) return;
@@ -611,10 +641,40 @@ public class BoardController : MonoBehaviour
 
     public void RegisterTile(TileView tile, int x, int y)
     {
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+        
         tiles[x, y] = tile;
         tile.Init(this, x, y);
         tile.SetCoords(x, y);
         tile.SnapToGrid(tileSize);
+        
+        SyncTileData(x, y); // Initialize data model 
+    }
+
+    public void SyncTileData(int x, int y)
+    {
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+        var tile = tiles[x, y];
+        if (tile == null)
+        {
+            gridData[x, y] = null;
+            return;
+        }
+        
+        if (gridData[x, y] == null)
+        {
+            gridData[x, y] = new TileData(x, y, tile.GetTileType());
+        }
+        
+        var data = gridData[x, y];
+        data.SetCoords(x, y);
+        data.SetType(tile.GetTileType());
+        data.SetSpecial(tile.GetSpecial());
+
+        if (tile.GetSpecial() == TileSpecial.SystemOverride && tile.GetOverrideBaseType(out var baseType))
+        {
+            data.SetOverrideBaseType(baseType);
+        }
     }
 
     internal void RefreshTileObstacleVisual(TileView tile)
@@ -784,7 +844,7 @@ public class BoardController : MonoBehaviour
                     lightningLineStrikes = null;
             }
 
-            yield return boardAnimator.ClearMatchesAnimated(
+            actionSequencer.Enqueue(new MatchClearAction(
                 matches,
                 doShake: true,
                 animationMode: animationMode,
@@ -794,7 +854,8 @@ public class BoardController : MonoBehaviour
                 lightningOriginTile: target,
                 lightningOriginCell: targetCell,
                 lightningVisualTargets: initialLightningTargets,
-                lightningLineStrikes: lightningLineStrikes);
+                lightningLineStrikes: lightningLineStrikes));
+            while(actionSequencer.IsPlaying) yield return null;
 
             yield return boardAnimator.CollapseAndSpawnAnimated();
             yield return ResolveEmptyPlayableCellsWithoutMatch();
@@ -992,45 +1053,38 @@ public class BoardController : MonoBehaviour
     {
         if (lineTravelPlayer != null)
         {
-            var originTile = tiles[originX, y];
-            if (originTile != null)
+            Vector3 worldCenter = GetCellWorldCenterPosition(originX, y);
+
+            // ✅ afterImageParent null ise lineTravelSpawnParent'ı kullan
+            RectTransform spaceRt = lineTravelPlayer.afterImageParent != null
+                ? lineTravelPlayer.afterImageParent
+                : lineTravelSpawnParent as RectTransform;
+
+            if (spaceRt == null && lineTravelPlayer.transform.parent != null)
+                spaceRt = lineTravelPlayer.transform.parent as RectTransform;
+
+            if (spaceRt != null)
             {
-                var tileRt = originTile.GetComponent<RectTransform>();
-                Vector3 worldCenter = tileRt.TransformPoint(
-                    new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
+                Vector2 originAnchored = WorldToAnchoredIn(spaceRt, worldCenter);
+                int steps = Mathf.Max(originX, width - 1 - originX);
 
-                // ✅ afterImageParent null ise lineTravelSpawnParent'ı kullan
-                RectTransform spaceRt = lineTravelPlayer.afterImageParent != null
-                    ? lineTravelPlayer.afterImageParent
-                    : lineTravelSpawnParent as RectTransform;
+                // ✅ FIX B: EmitHorizontalSweepCallbacks kaldırıldı.
+                //    Callback OnStepCell üzerinden görselle senkron gelir.
+                PlayLineTravelInstanceWithStep(
+                    LineTravelSplitSwapTestUI.LineAxis.Horizontal,
+                    originAnchored,
+                    new Vector2Int(originX, y),
+                    steps,
+                    tileSize,
+                    delaySeconds,
+                    onSweepCellReached);
 
-                if (spaceRt == null && lineTravelPlayer.transform.parent != null)
-                    spaceRt = lineTravelPlayer.transform.parent as RectTransform;
-
-                if (spaceRt != null)
-                {
-                    Vector2 originAnchored = WorldToAnchoredIn(spaceRt, worldCenter);
-                    int steps = Mathf.Max(originX, width - 1 - originX);
-
-                    // ✅ FIX B: EmitHorizontalSweepCallbacks kaldırıldı.
-                    //    Callback OnStepCell üzerinden görselle senkron gelir.
-                    PlayLineTravelInstanceWithStep(
-                        LineTravelSplitSwapTestUI.LineAxis.Horizontal,
-                        originAnchored,
-                        new Vector2Int(originX, y),
-                        steps,
-                        tileSize,
-                        delaySeconds,
-                        onSweepCellReached);
-
-                    float duration = lineTravelPlayer.EstimateDuration(steps);
-                    return delaySeconds + duration;
-                }
+                float duration = lineTravelPlayer.EstimateDuration(steps);
+                return delaySeconds + duration;
             }
         }
 
         // ─── Fallback: lightning sweep ────────────────────────────────────────
-        Debug.LogWarning("[Lightning][Fallback] LineTravel kullanılamadı (Horizontal), lightning fallback.");
         TryResolveLightningSpawner();
         if (lightningSpawner == null) return 0f;
 
@@ -1061,42 +1115,35 @@ public class BoardController : MonoBehaviour
     {
         if (lineTravelPlayer != null)
         {
-            var originTile = tiles[x, originY];
-            if (originTile != null)
+            Vector3 worldCenter = GetCellWorldCenterPosition(x, originY);
+
+            RectTransform spaceRt = lineTravelPlayer.afterImageParent != null
+                ? lineTravelPlayer.afterImageParent
+                : lineTravelSpawnParent as RectTransform;
+
+            if (spaceRt == null && lineTravelPlayer.transform.parent != null)
+                spaceRt = lineTravelPlayer.transform.parent as RectTransform;
+
+            if (spaceRt != null)
             {
-                var tileRt = originTile.GetComponent<RectTransform>();
-                Vector3 worldCenter = tileRt.TransformPoint(
-                    new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
+                Vector2 originAnchored = WorldToAnchoredIn(spaceRt, worldCenter);
+                int steps = Mathf.Max(originY, height - 1 - originY);
 
-                RectTransform spaceRt = lineTravelPlayer.afterImageParent != null
-                    ? lineTravelPlayer.afterImageParent
-                    : lineTravelSpawnParent as RectTransform;
+                PlayLineTravelInstanceWithStep(
+                    LineTravelSplitSwapTestUI.LineAxis.Vertical,
+                    originAnchored,
+                    new Vector2Int(x, originY),
+                    steps,
+                    tileSize,
+                    delaySeconds,
+                    onSweepCellReached);
 
-                if (spaceRt == null && lineTravelPlayer.transform.parent != null)
-                    spaceRt = lineTravelPlayer.transform.parent as RectTransform;
-
-                if (spaceRt != null)
-                {
-                    Vector2 originAnchored = WorldToAnchoredIn(spaceRt, worldCenter);
-                    int steps = Mathf.Max(originY, height - 1 - originY);
-
-                    PlayLineTravelInstanceWithStep(
-                        LineTravelSplitSwapTestUI.LineAxis.Vertical,
-                        originAnchored,
-                        new Vector2Int(x, originY),
-                        steps,
-                        tileSize,
-                        delaySeconds,
-                        onSweepCellReached);
-
-                    float duration = lineTravelPlayer.EstimateDuration(steps);
-                    return delaySeconds + duration;
-                }
+                float duration = lineTravelPlayer.EstimateDuration(steps);
+                return delaySeconds + duration;
             }
         }
 
         // ─── Fallback: lightning sweep ────────────────────────────────────────
-        Debug.LogWarning("[Lightning][Fallback] LineTravel kullanılamadı (Vertical), lightning fallback.");
         TryResolveLightningSpawner();
         if (lightningSpawner == null) return 0f;
 
@@ -1187,8 +1234,10 @@ public class BoardController : MonoBehaviour
 
     private Vector3 GetCellWorldCenterPosition(int x, int y)
     {
-        var basePos = GetCellWorldPosition(x, y);
-        return basePos + new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f);
+        Vector3 localCenter = new Vector3(x * tileSize + tileSize * 0.5f, -y * tileSize - tileSize * 0.5f, 0f);
+        if (parent != null)
+            return parent.TransformPoint(localCenter);
+        return transform.TransformPoint(localCenter);
     }
 
     internal float GetLightningStrikeStepDelay()
@@ -1234,6 +1283,7 @@ public class BoardController : MonoBehaviour
         {
             var tile = activeTiles[i];
             tile.SetType(types[i]);
+            SyncTileData(tile.X, tile.Y); // Sync Data model AFTER shuffle type change
             RefreshTileObstacleVisual(tile);
         }
 
@@ -1299,7 +1349,38 @@ public class BoardController : MonoBehaviour
         lastSwapB = b;
         lastSwapUserMove = true;
 
-        yield return boardAnimator.SwapTilesAnimated(a, b, SwapDurationWithMultiplier);
+        // ─── DEBUG: Hamle öncesi snapshot ──────────────────────────────────
+        {
+            var swapSb = new System.Text.StringBuilder();
+            swapSb.AppendLine($"[PRE-SWAP SNAPSHOT] A=({a.X},{a.Y}) B=({b.X},{b.Y})");
+            for (int dbgY = 0; dbgY < height; dbgY++)
+            {
+                swapSb.Append($"  row{dbgY}: ");
+                for (int dbgX = 0; dbgX < width; dbgX++)
+                {
+                    if (holes[dbgX, dbgY]) swapSb.Append("[H ]");
+                    else { var td = gridData[dbgX, dbgY]; swapSb.Append(td == null ? "[· ]" : $"[{td.ToDebugString().PadRight(2)}]"); }
+                }
+                swapSb.AppendLine();
+            }
+            Debug.Log(swapSb.ToString());
+        }
+        // ─── 1. LOGIK SWAP (DATA) ─────────────────────────────────────────
+        int ax = a.X, ay = a.Y;
+        int bx = b.X, by = b.Y;
+
+        tiles[ax, ay] = b;
+        tiles[bx, by] = a;
+        
+        a.SetCoords(bx, by);
+        b.SetCoords(ax, ay);
+        
+        SyncTileData(ax, ay);
+        SyncTileData(bx, by);
+
+        // ─── 2. GÖRSEL SWAP (ACTION) ──────────────────────────────────────
+        actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
+        while(actionSequencer.IsPlaying) yield return null;
 
         pendingCreationService.Clear();
         bool hasPendingCreation = pendingCreationService.CapturePendingCreation(a, b);
@@ -1322,16 +1403,29 @@ public class BoardController : MonoBehaviour
                 var normalTile  = (sa == TileSpecial.None) ? a : b;
                 var specialTile = (sa != TileSpecial.None) ? a : b;
 
-                var normalSideMatches = new HashSet<TileView>();
+                var matchSet = new HashSet<TileData>();
                 foreach (var t in matchFinder.FindMatchesAt(normalTile.X, normalTile.Y))
-                    normalSideMatches.Add(t);
+                    matchSet.Add(t);
+
+                var normalSideMatches = new HashSet<TileData>();
+                if (matchSet.Count >= 3)
+                {
+                    foreach (var md in matchSet)
+                    {
+                        if (tiles[md.X, md.Y] != null)
+                            normalSideMatches.Add(md);
+                    }
+                }
 
                 if (normalSideMatches.Count == 0)
                     matchFinder.Add2x2Candidates(normalSideMatches, normalTile.X, normalTile.Y);
 
                 // specialTile ve normalTile bu aşamada temizlenmemeli
-                normalSideMatches.Remove(specialTile);
-                normalSideMatches.Remove(normalTile);
+                if (specialTile != null && gridData[specialTile.X, specialTile.Y] != null) 
+                    normalSideMatches.Remove(gridData[specialTile.X, specialTile.Y]);
+                
+                if (normalTile != null && gridData[normalTile.X, normalTile.Y] != null) 
+                    normalSideMatches.Remove(gridData[normalTile.X, normalTile.Y]);
 
                 if (normalSideMatches.Count > 0)
                 {
@@ -1345,6 +1439,8 @@ public class BoardController : MonoBehaviour
                         normalTile.SetSpecial(newSpec);
                         if (newSpec == TileSpecial.SystemOverride)
                             normalTile.SetOverrideBaseType(normalTile.GetTileType());
+                        
+                        SyncTileData(normalTile.X, normalTile.Y); // Sync Data model
                         normalGotNewSpecial = true;
 
                         // Override'ı collapse öncesi gizle — kullanıcı düşüşü görmesin,
@@ -1358,7 +1454,16 @@ public class BoardController : MonoBehaviour
 
                     // Kalan eşleşen taşları temizle + collapse
                     pendingCreationService.Clear();
-                    yield return boardAnimator.ClearMatchesAnimated(normalSideMatches, doShake: true);
+                    
+                    var normalMatchViews = new HashSet<TileView>();
+                    foreach (var data in normalSideMatches)
+                    {
+                        if (tiles[data.X, data.Y] != null) normalMatchViews.Add(tiles[data.X, data.Y]);
+                    }
+
+                    actionSequencer.Enqueue(new MatchClearAction(normalMatchViews, true));
+                    while(actionSequencer.IsPlaying) yield return null;
+
                     yield return boardAnimator.CollapseAndSpawnAnimated();
                     yield return ResolveEmptyPlayableCellsWithoutMatch();
 
@@ -1368,7 +1473,11 @@ public class BoardController : MonoBehaviour
                     // veya sonraki cascade/hamlelerde tetiklenir.
                     if (normalGotNewSpecial)
                     {
-                        yield return specialResolver.ResolveSpecialSolo(specialTile);
+                        var soloActions = specialResolver.ResolveSpecialSolo(specialTile);
+                        actionSequencer.Enqueue(soloActions);
+                        while (actionSequencer.IsPlaying) yield return null;
+                        yield return boardAnimator.CollapseAndSpawnAnimated();
+
                         yield return ResolveEmptyPlayableCellsWithoutMatch();
                         yield return ResolveBoard();
                         EndBusy();
@@ -1381,14 +1490,18 @@ public class BoardController : MonoBehaviour
             if (pendingCreationService.HasPending)
                 pendingCreationService.ApplyPendingCreations();
 
-            yield return specialResolver.ResolveSpecialSwap(a, b);
+            var swapActions = specialResolver.ResolveSpecialSwap(a, b);
+            actionSequencer.Enqueue(swapActions);
+            while (actionSequencer.IsPlaying) yield return null;
+            yield return boardAnimator.CollapseAndSpawnAnimated();
+
             yield return ResolveEmptyPlayableCellsWithoutMatch();
             yield return ResolveBoard();
             EndBusy();
             yield break;
         }
 
-        var matches = new HashSet<TileView>();
+        var matches = new HashSet<TileData>();
         foreach (var t in matchFinder.FindMatchesAt(a.X, a.Y)) matches.Add(t);
         foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y)) matches.Add(t);
 
@@ -1400,7 +1513,20 @@ public class BoardController : MonoBehaviour
 
         if (matches.Count == 0)
         {
-            yield return boardAnimator.SwapTilesAnimated(a, b, SwapDurationWithMultiplier);
+            // ─── 1. REVERT LOGIK SWAP (DATA) ──────────────────────────────
+            tiles[ax, ay] = a;
+            tiles[bx, by] = b;
+            
+            a.SetCoords(ax, ay);
+            b.SetCoords(bx, by);
+            
+            SyncTileData(ax, ay);
+            SyncTileData(bx, by);
+
+            // ─── 2. REVERT GÖRSEL SWAP (ACTION) ───────────────────────────
+            actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
+            while(actionSequencer.IsPlaying) yield return null;
+
             EndBusy();
             yield break;
         }
@@ -1412,7 +1538,7 @@ public class BoardController : MonoBehaviour
         EndBusy();
     }
 
-    private bool HasAnyEmptyPlayableCell()
+    public bool HasAnyEmptyPlayableCell()
     {
         for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++)
@@ -1425,13 +1551,11 @@ public class BoardController : MonoBehaviour
 
     internal IEnumerator ResolveEmptyPlayableCellsWithoutMatch()
     {
-        const int maxPass = 3;
-        for (int pass = 0; pass < maxPass; pass++)
+        var cascades = cascadeLogic.CalculateCascades();
+        if (cascades.Count > 0)
         {
-            if (!HasAnyEmptyPlayableCell()) yield break;
-            yield return boardAnimator.SlideFillAnimated();
-            if (!HasAnyEmptyPlayableCell()) yield break;
-            yield return boardAnimator.CollapseAndSpawnAnimated();
+            actionSequencer.Enqueue(cascades);
+            while (actionSequencer.IsPlaying) yield return null;
         }
     }
 
@@ -1475,7 +1599,7 @@ public class BoardController : MonoBehaviour
             if (safety > MaxResolveLoops)
             {
                 Debug.LogWarning($"[ResolveBoard] Safety break! loops={safety}");
-                yield break;
+                yield break; // EndBusy is called by the caller (ProcessSwap, ResolveInitial, etc.)
             }
 
             CurrentResolvePass = safety;
@@ -1485,59 +1609,46 @@ public class BoardController : MonoBehaviour
 #endif
 
             var matches = matchFinder.FindAllMatches();
-
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             ResolveProfStep($"FindMatches (count={matches.Count})");
 #endif
 
             if (matches.Count == 0) yield break;
 
-            matches.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
-            if (matches.Count == 0) yield break;
+            var matchTiles = new HashSet<TileView>();
+            foreach(var t in matches) 
+            {
+                if (tiles[t.X, t.Y] != null) matchTiles.Add(tiles[t.X, t.Y]);
+            }
+
+            matchTiles.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
+            if (matchTiles.Count == 0) yield break;
 
             if (allowSpecial)
             {
-                var created = specialResolver.TryCreateSpecial(matches);
+                var created = specialResolver.TryCreateSpecial(matchTiles);
                 if (created != null) shakeNextClear = true;
             }
 
             bool doShake = shakeNextClear;
             shakeNextClear = false;
 
-            yield return boardAnimator.ClearMatchesAnimated(matches, doShake);
+            actionSequencer.Enqueue(new MatchClearAction(matchTiles, doShake));
+            while(actionSequencer.IsPlaying) yield return null;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             ResolveProfStep("ClearMatchesAnimated");
 #endif
 
-            yield return boardAnimator.CollapseAndSpawnAnimated();
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            ResolveProfStep("CollapseAndSpawnAnimated#1");
-#endif
-
-            if (HasAnyEmptyPlayableCell())
+            var cascadeActions = cascadeLogic.CalculateCascades();
+            if (cascadeActions.Count > 0)
             {
-                yield return boardAnimator.SlideFillAnimated();
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                ResolveProfStep("SlideFillAnimated");
-#endif
-
-                if (HasAnyEmptyPlayableCell())
-                {
-                    yield return boardAnimator.CollapseAndSpawnAnimated();
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    ResolveProfStep("CollapseAndSpawnAnimated#2");
-#endif
-                }
+                actionSequencer.Enqueue(cascadeActions);
+                while (actionSequencer.IsPlaying) yield return null;
             }
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            else
-            {
-                ResolveProfStep("Skip SlideFill (no empty)");
-            }
+            ResolveProfStep("Cascades Processed");
 #endif
         }
     }
@@ -1742,7 +1853,11 @@ public class BoardController : MonoBehaviour
         return randomPool[UnityEngine.Random.Range(0, randomPool.Length)];
     }
 
-    public void SetInputLocked(bool isLocked) { InputLocked = isLocked; }
+    public void SetInputLocked(bool isLocked) 
+    { 
+        if (isLocked) CurrentState = BoardState.Locked;
+        else if (CurrentState == BoardState.Locked) CurrentState = BoardState.Idle;
+    }
 
     private void ConsumeMove()
     {
@@ -1762,28 +1877,21 @@ public class BoardController : MonoBehaviour
         if (amount <= 0) return;
         OnTilesCleared?.Invoke(tileType, amount);
     }
-
-    public IEnumerator PlayPulseEmitterComboAndClear(int cx, int cy)
+    public PulseLineComboAction CreatePulseEmitterComboAction(int cx, int cy)
     {
-        if (lineTravelPlayer == null) yield break;
-
-        RectTransform space = lineTravelPlayer.afterImageParent != null
-            ? lineTravelPlayer.afterImageParent
-            : (lineTravelSpawnParent as RectTransform);
-
-        if (space == null) yield break;
-
         var targets = BuildPulseEmitterTargets(cx, cy);
-        var cleared = new HashSet<Vector2Int>();
 
-        void OnStep(Vector2Int cell)
+        RectTransform space = null;
+        if (lineTravelPlayer != null)
         {
-            if (!targets.Contains(cell)) return;
-            if (!cleared.Add(cell)) return;
-            ClearCellImmediate(cell);
+            space = lineTravelPlayer.afterImageParent != null
+                ? lineTravelPlayer.afterImageParent
+                : (lineTravelSpawnParent as RectTransform);
         }
 
-        float maxEnd = 0f;
+        // 1) PRE-CALCULATE ORIGINS 
+        var hOrigins = new List<(Vector2Int cell, Vector2 anch)>();
+        var vOrigins = new List<(Vector2Int cell, Vector2 anch)>();
 
         for (int yy = cy - 1; yy <= cy + 1; yy++)
         {
@@ -1793,16 +1901,7 @@ public class BoardController : MonoBehaviour
 
             var rt = originTile.GetComponent<RectTransform>();
             Vector3 worldCenter = rt.TransformPoint(new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
-            Vector2 originAnch = WorldToAnchoredIn(space, worldCenter);
-
-            int steps = Mathf.Max(cx, width - 1 - cx);
-            float end = PlayLineTravelInstanceWithStep(
-                LineTravelSplitSwapTestUI.LineAxis.Horizontal,
-                originAnch,
-                new Vector2Int(cx, yy),
-                steps, tileSize, 0f, OnStep);
-
-            if (end > maxEnd) maxEnd = end;
+            hOrigins.Add((new Vector2Int(cx, yy), WorldToAnchoredIn(space, worldCenter)));
         }
 
         for (int xx = cx - 1; xx <= cx + 1; xx++)
@@ -1813,28 +1912,28 @@ public class BoardController : MonoBehaviour
 
             var rt = originTile.GetComponent<RectTransform>();
             Vector3 worldCenter = rt.TransformPoint(new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
-            Vector2 originAnch = WorldToAnchoredIn(space, worldCenter);
-
-            int steps = Mathf.Max(cy, height - 1 - cy);
-            float end = PlayLineTravelInstanceWithStep(
-                LineTravelSplitSwapTestUI.LineAxis.Vertical,
-                originAnch,
-                new Vector2Int(xx, cy),
-                steps, tileSize, 0f, OnStep);
-
-            if (end > maxEnd) maxEnd = end;
+            vOrigins.Add((new Vector2Int(xx, cy), WorldToAnchoredIn(space, worldCenter)));
         }
 
-        if (maxEnd > 0f)
-            yield return new WaitForSecondsRealtime(maxEnd);
-
+        // Gather visuals for the Action before Data is destroyed
+        var targetVisuals = new Dictionary<Vector2Int, (TileType, TileView)>();
         foreach (var c in targets)
-            if (cleared.Add(c))
-                ClearCellImmediate(c);
+        {
+            var t = tiles[c.x, c.y];
+            if (t != null)
+            {
+                targetVisuals[c] = (t.GetTileType(), t);
+            }
+        }
 
-        yield return boardAnimator.CollapseAndSpawnAnimated();
-        yield return ResolveEmptyPlayableCellsWithoutMatch();
-        yield return ResolveBoard();
+        // CLEAR DATA ONLY (Instantly)
+        foreach (var c in targets)
+        {
+            ClearCellDataOnly(c);
+        }
+
+        // Return the visual action container
+        return new PulseLineComboAction(this, cx, cy, targets, hOrigins, vOrigins, targetVisuals);
     }
 
     // ✅ FIX: afterImageParent ve impactParent template'den clone'a kopyalanıyor
@@ -1873,7 +1972,7 @@ public class BoardController : MonoBehaviour
     }
 
     // ✅ FIX: afterImageParent ve impactParent kopyalanıyor
-    private float PlayLineTravelInstanceWithStep(
+    internal float PlayLineTravelInstanceWithStep(
         LineTravelSplitSwapTestUI.LineAxis axis,
         Vector2 originAnchored,
         Vector2Int originCell,
@@ -1951,7 +2050,7 @@ public class BoardController : MonoBehaviour
         if (go != null) Destroy(go);
     }
 
-    private void ClearCellImmediate(Vector2Int c)
+    internal void ClearCellDataOnly(Vector2Int c)
     {
         int x = c.x;
         int y = c.y;
@@ -1959,15 +2058,39 @@ public class BoardController : MonoBehaviour
         if (IsMaskHoleCell(x, y)) return;
 
         if (obstacleStateService != null && obstacleStateService.HasObstacleAt(x, y))
-            ApplyObstacleDamageAt(x, y, ObstacleHitContext.SpecialActivation);
+        {
+            var hit = ApplyObstacleDamageAt(x, y, ObstacleHitContext.SpecialActivation);
+            if (hit.didHit) TriggerObstacleVisualChange(hit.visualChange);
+        }
 
         var t = tiles[x, y];
         if (t == null) return;
-
-        TileType type = t.GetTileType();
+        
         tiles[x, y] = null;
-        Destroy(t.gameObject);
-        NotifyTilesCleared(type, 1);
+        SyncTileData(x, y); // Sync Data model
+    }
+
+    internal void ClearCellVisualOnly(Vector2Int c, TileType type, TileView t)
+    {
+        if (t != null && t.gameObject != null)
+        {
+            Destroy(t.gameObject);
+            NotifyTilesCleared(type, 1);
+        }
+    }
+
+    private void ClearCellImmediate(Vector2Int c)
+    {
+        int x = c.x;
+        int y = c.y;
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+        
+        var t = tiles[x, y];
+        if (t == null) return;
+        TileType type = t.GetTileType();
+
+        ClearCellDataOnly(c);
+        ClearCellVisualOnly(c, type, t);
     }
 
     private HashSet<Vector2Int> BuildPulseEmitterTargets(int cx, int cy)

@@ -40,7 +40,7 @@ public class PendingCreationService
 
     public bool CapturePendingCreation(TileView a, TileView b)
     {
-        var candidates = new HashSet<TileView>();
+        var candidates = new HashSet<TileData>();
         foreach (var t in matchFinder.FindMatchesAt(a.X, a.Y)) candidates.Add(t);
         foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y)) candidates.Add(t);
         matchFinder.Add2x2Candidates(candidates, a.X, a.Y);
@@ -56,7 +56,7 @@ public class PendingCreationService
             return true;
         }
 
-        TileView bestTile = null;
+        TileData bestTile = null;
         TileSpecial bestSpec = TileSpecial.None;
         int bestScore = 0;
 
