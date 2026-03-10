@@ -22,6 +22,7 @@ public class SpecialResolver
     private Dictionary<TileView, float> overrideOverrideRadialClearDelays;
     private float overrideOverrideVfxDuration;
     private readonly HashSet<TileView> overrideImplantedTiles = new();
+    private bool deferOverrideImplantVisualRefresh;
     private const float OverrideOverrideRadialClearDuration = 0.45f;
 
     private readonly struct PendingOverrideImplant
@@ -221,6 +222,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         overrideOverrideRadialClearDelays = null;
         overrideOverrideVfxDuration = 0f;
         overrideImplantedTiles.Clear();
+        deferOverrideImplantVisualRefresh = false;
 
         // ✅ PULSE + LINE: toplu ClearMatchesAnimated yapma.
         if ((saIsPulse && sbIsLine) || (sbIsPulse && saIsLine))
@@ -341,6 +343,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         // SystemOverride: show a single fan-out lightning mark to all targets before clearing/activating.
         if (overrideFanoutOrigin != null && overrideFanoutTargets.Count > 0)
         {
+            deferOverrideImplantVisualRefresh = true;
             foreach (var t in overrideFanoutTargets)
             {
                 ApplyPendingOverrideImplantForTile(affected, queue, queued, t);
@@ -374,18 +377,6 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                 ApplySpecialActivation(affected, activation.special, activation.partner, ref hasLineActivation, lightningVisualTargets, lightningLineStrikes);
                 EnqueueChainSpecials(affected, queue, queued, processed);
             }
-        }
-
-        // ── Issue 7: Override+Line implanted special görsellerini temizle ──
-        //    Aktivasyonları işlendi; SetSpecial(None) stale roket sprite'larını önler.
-        if (overrideImplantedTiles.Count > 0)
-        {
-            foreach (var tile in overrideImplantedTiles)
-            {
-                if (tile != null && tile.GetSpecial() != TileSpecial.None)
-                    tile.SetSpecial(TileSpecial.None);
-            }
-            overrideImplantedTiles.Clear();
         }
 
         // ── Issue 3: Override+Override — VFX ile senkron temizleme ──
@@ -454,9 +445,9 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         overrideFanoutPulseHitCount = 0;
         pendingOverrideImplants.Clear();
         overrideOverrideRadialClearDelays = null;
-        overrideOverrideRadialClearDelays = null;
         overrideOverrideVfxDuration = 0f;
         overrideImplantedTiles.Clear();
+        deferOverrideImplantVisualRefresh = false;
 
         var affected = new HashSet<TileView> { specialTile };
         MarkAffectedCell(specialTile);
@@ -491,6 +482,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         // ── SystemOverride fan-out: lightning → implant → chain ──
         if (overrideFanoutOrigin != null && overrideFanoutTargets.Count > 0)
         {
+            deferOverrideImplantVisualRefresh = true;
             foreach (var t in overrideFanoutTargets)
             {
                 ApplyPendingOverrideImplantForTile(affected, queue, queued, t);
@@ -1320,9 +1312,8 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         if (pending.target == null)
             return;
 
-        pending.target.SetSpecial(pending.special, deferVisualUpdate: false);
-        // Issue 7: İmplant edilen taşı takip et — aktivasyondan sonra
-        // stale roket sprite'ını temizlemek için kullanılacak.
+        pending.target.SetSpecial(pending.special, deferVisualUpdate: deferOverrideImplantVisualRefresh);
+        // İmplant edilen taşı takip et — fan-out boyunca görsel güncellemesi ertelenebilir.
         overrideImplantedTiles.Add(pending.target);
 
         if (pending.special == TileSpecial.PatchBot)
