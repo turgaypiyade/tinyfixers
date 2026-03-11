@@ -184,20 +184,81 @@ public class MatchFinder
 
         // ─── DEBUG: board snapshot + matches ───────────────────────────────────
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        static string TileViewDebugString(TileView tv)
+        {
+            if (tv == null) return "·";
+            var baseChar = tv.GetTileType().ToString()[0];
+            var sp = tv.GetSpecial();
+            if (sp == TileSpecial.SystemOverride) return "S";
+            if (sp == TileSpecial.LineH) return $"{baseChar}-";
+            if (sp == TileSpecial.LineV) return $"{baseChar}|";
+            if (sp == TileSpecial.PatchBot) return $"{baseChar}B";
+            if (sp == TileSpecial.PulseCore) return $"{baseChar}*";
+            return baseChar.ToString();
+        }
+
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"[MatchFinder] FindAllMatches — {result.Count} matches found");
-        sb.AppendLine("  Board snapshot (H=Hole, ·=null, else type):");
+        sb.AppendLine("  GridData snapshot (H=Hole, ·=null, else type):");
         for (int dbgY = 0; dbgY < board.Height; dbgY++)
         {
             sb.Append($"  row{dbgY}: ");
             for (int dbgX = 0; dbgX < board.Width; dbgX++)
             {
-                if (board.Holes[dbgX, dbgY])          sb.Append("[H ]");
+                if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
                 else if (board.GridData[dbgX, dbgY] == null) sb.Append("[· ]");
                 else sb.Append($"[{board.GridData[dbgX, dbgY].ToDebugString().PadRight(2)}]");
             }
             sb.AppendLine();
         }
+
+        sb.AppendLine("  TileView snapshot (H=Hole, ·=null, else type):");
+        int mismatchCount = 0;
+        for (int dbgY = 0; dbgY < board.Height; dbgY++)
+        {
+            sb.Append($"  row{dbgY}: ");
+            for (int dbgX = 0; dbgX < board.Width; dbgX++)
+            {
+                if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
+                else sb.Append($"[{TileViewDebugString(board.Tiles[dbgX, dbgY]).PadRight(2)}]");
+            }
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("  GridData vs TileView mismatch scan:");
+        for (int dbgY = 0; dbgY < board.Height; dbgY++)
+        for (int dbgX = 0; dbgX < board.Width; dbgX++)
+        {
+            if (board.Holes[dbgX, dbgY])
+                continue;
+
+            var gd = board.GridData[dbgX, dbgY];
+            var tv = board.Tiles[dbgX, dbgY];
+
+            if (gd == null && tv == null)
+                continue;
+
+            bool mismatch = false;
+            if (gd == null || tv == null)
+            {
+                mismatch = true;
+            }
+            else
+            {
+                if (!gd.Type.Equals(tv.GetTileType())) mismatch = true;
+                if (gd.Special != tv.GetSpecial()) mismatch = true;
+            }
+
+            if (!mismatch)
+                continue;
+
+            mismatchCount++;
+            string gdStr = gd != null ? gd.ToDebugString() : "·";
+            string tvStr = TileViewDebugString(tv);
+            sb.AppendLine($"    ({dbgX},{dbgY}) GD={gdStr} TV={tvStr} | GD_null={gd == null} TV_null={tv == null}");
+        }
+        sb.AppendLine($"  Mismatch count: {mismatchCount}");
+
         if (result.Count > 0)
         {
             sb.AppendLine("  Matched cells:");

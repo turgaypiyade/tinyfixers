@@ -7,6 +7,7 @@ using UnityEngine;
 /// </summary>
 public class PulseLineCrossCombo : IComboBehavior
 {
+    public int Priority => 150;
     public bool Matches(TileSpecial a, TileSpecial b)
     {
         // This matches when both Line and PulseCore are present

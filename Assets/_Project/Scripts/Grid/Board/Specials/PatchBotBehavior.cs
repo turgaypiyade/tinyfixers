@@ -21,11 +21,4 @@ public class PatchBotBehavior : ISpecialBehavior
 
         return cells;
     }
-
-    public BoardAction CreateVisualAction(BoardController board, int originX, int originY,
-                                           HashSet<Vector2Int> affectedCells)
-    {
-        // PatchBot VFX: dash animation. Handled by PatchbotComboService.EnqueueDash.
-        return null;
-    }
 }
