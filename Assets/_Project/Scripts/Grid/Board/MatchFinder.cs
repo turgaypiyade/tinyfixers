@@ -219,10 +219,10 @@ public class MatchFinder
             sb.Append($"  row{dbgY}: ");
             for (int dbgX = 0; dbgX < board.Width; dbgX++)
             {
-                if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
-                else sb.Append($"[{TileViewDebugString(board.Tiles[dbgX, dbgY]).PadRight(2)}]");
+               if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
+               else sb.Append($"[{TileViewDebugString(board.Tiles[dbgX, dbgY]).PadRight(2)}]");
             }
-            sb.AppendLine();
+           sb.AppendLine();
         }
 
         sb.AppendLine("  GridData vs TileView mismatch scan:");

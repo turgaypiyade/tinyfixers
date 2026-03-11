@@ -23,8 +23,7 @@ public static class PulseBehaviorEvents
 }
 
 /// <summary>
-/// PulseCore special: affects a fixed number of cells around the origin.
-/// NOTE: Visual radius/scale should be handled by VFX layer, not gameplay effect math.
+/// PulseCore special: explodes a square area around the origin (default radius=1 → 3×3).
 /// </summary>
 public class PulseCoreBehavior : ISpecialBehavior
 {
@@ -56,19 +55,6 @@ public class PulseCoreBehavior : ISpecialBehavior
             if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
             candidates.Add(new Vector2Int(x, y));
         }
-
-        candidates.Sort((a, b) =>
-        {
-            int da = Mathf.Abs(a.x - originX) + Mathf.Abs(a.y - originY);
-            int db = Mathf.Abs(b.x - originX) + Mathf.Abs(b.y - originY);
-            if (da != db) return da.CompareTo(db);
-            if (a.y != b.y) return a.y.CompareTo(b.y);
-            return a.x.CompareTo(b.x);
-        });
-
-        int take = Mathf.Min(affectedCellCount, candidates.Count);
-        for (int i = 0; i < take; i++)
-            cells.Add(candidates[i]);
 
         return cells;
     }
