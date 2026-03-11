@@ -10,6 +10,7 @@ public class SpecialResolver
     private readonly PulseCoreImpactService pulseCoreImpactService;
     private readonly PatchbotComboService patchbotComboService;
     private HashSet<Vector2Int> specialAffectedCells;
+    private int overrideFanoutPulseHitCount;
 
     // SystemOverride fan-out lightning (single shot) support
     private TileView overrideFanoutOrigin;
@@ -17,7 +18,6 @@ public class SpecialResolver
     private bool overrideForceDefaultClearAnim;
     private bool overrideSuppressPerTileClearVfx;
     private bool overrideFanoutNormalSelectionPulse;
-    private int overrideFanoutPulseHitCount;
     private readonly List<PendingOverrideImplant> pendingOverrideImplants = new();
     private Dictionary<TileView, float> overrideOverrideRadialClearDelays;
     private float overrideOverrideVfxDuration;
@@ -25,19 +25,20 @@ public class SpecialResolver
     private bool deferOverrideImplantVisualRefresh;
     private const float OverrideOverrideRadialClearDuration = 0.45f;
 
-    private readonly struct PendingOverrideImplant
+    // DTO for decoupling logic from visuals (Phase 6)
+    public readonly struct PendingOverrideImplant
     {
-        public readonly TileView target;
+        public readonly Vector2Int targetCell;
         public readonly TileSpecial special;
-        public readonly TileView partnerTile;
-        public readonly TileView overrideTile;
+        public readonly Vector2Int? partnerCell;
+        public readonly Vector2Int overrideCell;
 
-        public PendingOverrideImplant(TileView target, TileSpecial special, TileView partnerTile, TileView overrideTile)
+        public PendingOverrideImplant(Vector2Int targetCell, TileSpecial special, Vector2Int? partnerCell, Vector2Int overrideCell)
         {
-            this.target = target;
+            this.targetCell = targetCell;
             this.special = special;
-            this.partnerTile = partnerTile;
-            this.overrideTile = overrideTile;
+            this.partnerCell = partnerCell;
+            this.overrideCell = overrideCell;
         }
     }
 
@@ -50,7 +51,12 @@ public class SpecialResolver
         patchbotComboService = new PatchbotComboService(board);
     }
 
-    
+    private void SyncAfterSpecialChange(TileView tile)
+    {
+        if (tile == null) return;
+        board.SyncTileData(tile.X, tile.Y);
+    }
+
     private static void HideTileVisualForCombo(TileView t)
     {
         if (t == null) return;
@@ -65,7 +71,7 @@ public class SpecialResolver
         cg.interactable = false;
     }
 
-public TileView TryCreateSpecial(HashSet<TileView> matches)
+    public TileView TryCreateSpecial(HashSet<TileView> matches)
     {
         // 1) Eğer bu tur kullanıcı swap’inin ilk resolve turuysa: eski davranış (A/B'den winner seç)
         if (board.LastSwapUserMove && board.LastSwapA != null && board.LastSwapB != null)
@@ -83,6 +89,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             winner.SetSpecial(wSpec);
             if (wSpec == TileSpecial.SystemOverride)
                 winner.SetOverrideBaseType(winner.GetTileType());
+            SyncAfterSpecialChange(winner);
 
             // Special tile'ın kendisi patlamasın
             matches.Remove(winner);
@@ -112,6 +119,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             bestTile.SetSpecial(bestSpecial);
             if (bestSpecial == TileSpecial.SystemOverride)
                 bestTile.SetOverrideBaseType(bestTile.GetTileType());
+            SyncAfterSpecialChange(bestTile);
 
             matches.Remove(bestTile);
             return bestTile;
@@ -126,7 +134,6 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         HideTileVisualForCombo(b);
     }
 
-    
     public int SpecialScore(TileSpecial s)
     {
         switch (s)
@@ -265,7 +272,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                 var chainMode = chainHasLine
                     ? ClearAnimationMode.LightningStrike
                     : ClearAnimationMode.Default;
-                
+
                 actions.Add(new MatchClearAction(
                     chainAffected,
                     doShake: true,
@@ -297,11 +304,12 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             affected.Add(a); affected.Add(b);
             MarkAffectedCell(a); MarkAffectedCell(b);
         }
-        var processed = new HashSet<TileView>();
+
+        var processed = new HashSet<Vector2Int>();
         bool hasLineActivation = false;
-        var lightningVisualTargets = new HashSet<TileView>(); // lightning only for Line path tiles
+        var lightningVisualTargets = new HashSet<TileView>();
         var lightningLineStrikes = new List<LightningLineStrike>();
-        var queued = new HashSet<TileView>();
+        var queued = new HashSet<Vector2Int>();
         var queue = new Queue<SpecialActivation>();
 
         bool saIsOverride = sa == TileSpecial.SystemOverride;
@@ -313,12 +321,11 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         // Satır/sütun etkisi üreten tüm özel zincirlerde hedefe lightning gidip ardından tile clear olsun.
         hasLineActivation = hasLineActivation || saIsLine || sbIsLine;
 
-
         if (sa != TileSpecial.None && sb != TileSpecial.None)
         {
             ApplyComboEffect(affected, queue, queued, processed, a, b, sa, sb, lightningVisualTargets, lightningLineStrikes);
-            processed.Add(a);
-            processed.Add(b);
+            processed.Add(new Vector2Int(a.X, a.Y));
+            processed.Add(new Vector2Int(b.X, b.Y));
         }
         else
         {
@@ -332,11 +339,15 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         while (queue.Count > 0)
         {
             var activation = queue.Dequeue();
-            queued.Remove(activation.special);
-            if (activation.special == null || processed.Contains(activation.special)) continue;
+            queued.Remove(activation.cell);
+            if (processed.Contains(activation.cell)) continue;
 
-            processed.Add(activation.special);
-            ApplySpecialActivation(affected, activation.special, activation.partner, ref hasLineActivation, lightningVisualTargets, lightningLineStrikes);
+            processed.Add(activation.cell);
+
+            TileView actSpecial = board.Tiles[activation.cell.x, activation.cell.y];
+            TileView actPartner = activation.partnerCell.HasValue ? board.Tiles[activation.partnerCell.Value.x, activation.partnerCell.Value.y] : null;
+
+            ApplySpecialActivation(affected, actSpecial, actPartner, ref hasLineActivation, lightningVisualTargets, lightningLineStrikes);
             EnqueueChainSpecials(affected, queue, queued, processed);
         }
 
@@ -344,15 +355,19 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         if (overrideFanoutOrigin != null && overrideFanoutTargets.Count > 0)
         {
             deferOverrideImplantVisualRefresh = true;
+
+            // Do NOT apply implants visually. Phase A places them visually, Logic triggers below.
+            List<Vector2Int> targetCoords = new List<Vector2Int>();
             foreach (var t in overrideFanoutTargets)
             {
-                ApplyPendingOverrideImplantForTile(affected, queue, queued, t);
+                targetCoords.Add(new Vector2Int(t.X, t.Y));
             }
+            Vector2Int originCoord = new Vector2Int(overrideFanoutOrigin.X, overrideFanoutOrigin.Y);
+
+            actions.Add(new SystemOverrideFanoutPlacementAction(board, originCoord, targetCoords, overrideFanoutNormalSelectionPulse));
 
             if (pendingOverrideImplants.Count > 0)
                 ApplyPendingOverrideImplants(affected, queue, queued);
-
-            actions.Add(new SystemOverrideFanoutVisualAction(board, overrideFanoutOrigin, new List<TileView>(overrideFanoutTargets), overrideFanoutNormalSelectionPulse));
         }
         else if (pendingOverrideImplants.Count > 0)
         {
@@ -370,11 +385,15 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             while (queue.Count > 0)
             {
                 var activation = queue.Dequeue();
-                queued.Remove(activation.special);
-                if (activation.special == null || processed.Contains(activation.special)) continue;
+                queued.Remove(activation.cell);
+                if (processed.Contains(activation.cell)) continue;
 
-                processed.Add(activation.special);
-                ApplySpecialActivation(affected, activation.special, activation.partner, ref hasLineActivation, lightningVisualTargets, lightningLineStrikes);
+                processed.Add(activation.cell);
+
+                TileView actSpecial = board.Tiles[activation.cell.x, activation.cell.y];
+                TileView actPartner = activation.partnerCell.HasValue ? board.Tiles[activation.partnerCell.Value.x, activation.partnerCell.Value.y] : null;
+
+                ApplySpecialActivation(affected, actSpecial, actPartner, ref hasLineActivation, lightningVisualTargets, lightningLineStrikes);
                 EnqueueChainSpecials(affected, queue, queued, processed);
             }
         }
@@ -386,15 +405,18 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         if (overrideOverrideRadialClearDelays != null && overrideOverrideRadialClearDelays.Count > 0)
             FireOverrideOverrideSpecialVisuals(affected, overrideOverrideRadialClearDelays);
 
+        HashSet<TileView> processedViews = new HashSet<TileView>();
+        foreach (var pos in processed)
+            if (board.Tiles[pos.x, pos.y] != null) processedViews.Add(board.Tiles[pos.x, pos.y]);
+
         Dictionary<TileView, float> stagger = suppressPulseImpactAnimations
             ? null
-            : pulseCoreImpactService.BuildStaggerDelays(affected, processed);
+            : pulseCoreImpactService.BuildStaggerDelays(affected, processedViews);
+
         var animationMode = (hasLineActivation && !overrideForceDefaultClearAnim)
             ? ClearAnimationMode.LightningStrike
             : ClearAnimationMode.Default;
-        // Special zincirinde yalnızca gerçekten etkilenen hücreler hasar alsın.
-        // Komşu over-tile blocker ek hasarı, satır/sütun special'larda yan hücrelerde
-        // beklenmeyen stage düşüşüne neden olabiliyor.
+
         actions.Add(new MatchClearAction(
             affected,
             doShake: true,
@@ -408,7 +430,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             suppressPerTileClearVfx: (suppressPerTileClearVfx || overrideSuppressPerTileClearVfx),
             perTileClearDelays: overrideOverrideRadialClearDelays,
             isSpecialPhase: true));
-            
+
         board.IsSpecialActivationPhase = false;
         specialAffectedCells = null;
         return actions;
@@ -452,11 +474,11 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         var affected = new HashSet<TileView> { specialTile };
         MarkAffectedCell(specialTile);
 
-        var processed = new HashSet<TileView>();
+        var processed = new HashSet<Vector2Int>();
         bool hasLineActivation = false;
         var lightningVisualTargets = new HashSet<TileView>();
         var lightningLineStrikes = new List<LightningLineStrike>();
-        var queued = new HashSet<TileView>();
+        var queued = new HashSet<Vector2Int>();
         var queue = new Queue<SpecialActivation>();
 
         TileSpecial spec = specialTile.GetSpecial();
@@ -470,11 +492,14 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         while (queue.Count > 0)
         {
             var activation = queue.Dequeue();
-            queued.Remove(activation.special);
-            if (activation.special == null || processed.Contains(activation.special)) continue;
+            queued.Remove(activation.cell);
+            if (processed.Contains(activation.cell)) continue;
 
-            processed.Add(activation.special);
-            ApplySpecialActivation(affected, activation.special, activation.partner,
+            processed.Add(activation.cell);
+            TileView actSpecial = board.Tiles[activation.cell.x, activation.cell.y];
+            TileView actPartner = activation.partnerCell.HasValue ? board.Tiles[activation.partnerCell.Value.x, activation.partnerCell.Value.y] : null;
+
+            ApplySpecialActivation(affected, actSpecial, actPartner,
                 ref hasLineActivation, lightningVisualTargets, lightningLineStrikes);
             EnqueueChainSpecials(affected, queue, queued, processed);
         }
@@ -483,15 +508,19 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         if (overrideFanoutOrigin != null && overrideFanoutTargets.Count > 0)
         {
             deferOverrideImplantVisualRefresh = true;
+
+            // Do NOT apply implants visually. Phase A places them visually, Logic triggers below.
+            List<Vector2Int> targetCoords = new List<Vector2Int>();
             foreach (var t in overrideFanoutTargets)
             {
-                ApplyPendingOverrideImplantForTile(affected, queue, queued, t);
+                targetCoords.Add(new Vector2Int(t.X, t.Y));
             }
+            Vector2Int originCoord = new Vector2Int(overrideFanoutOrigin.X, overrideFanoutOrigin.Y);
+
+            actions.Add(new SystemOverrideFanoutPlacementAction(board, originCoord, targetCoords, overrideFanoutNormalSelectionPulse));
 
             if (pendingOverrideImplants.Count > 0)
                 ApplyPendingOverrideImplants(affected, queue, queued);
-
-            actions.Add(new SystemOverrideFanoutVisualAction(board, overrideFanoutOrigin, new List<TileView>(overrideFanoutTargets), overrideFanoutNormalSelectionPulse));
         }
         else if (pendingOverrideImplants.Count > 0)
         {
@@ -511,28 +540,39 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             while (queue.Count > 0)
             {
                 var activation = queue.Dequeue();
-                queued.Remove(activation.special);
-                if (activation.special == null || processed.Contains(activation.special)) continue;
-                processed.Add(activation.special);
-                ApplySpecialActivation(affected, activation.special, activation.partner,
+                queued.Remove(activation.cell);
+                if (processed.Contains(activation.cell)) continue;
+
+                processed.Add(activation.cell);
+                TileView actSpecial = board.Tiles[activation.cell.x, activation.cell.y];
+                TileView actPartner = activation.partnerCell.HasValue ? board.Tiles[activation.partnerCell.Value.x, activation.partnerCell.Value.y] : null;
+
+                ApplySpecialActivation(affected, actSpecial, actPartner,
                     ref hasLineActivation, lightningVisualTargets, lightningLineStrikes);
                 EnqueueChainSpecials(affected, queue, queued, processed);
             }
         }
 
-        // ── Issue 7: implanted special görsellerini temizle ──
+        // ── implanted special görsellerini temizle ──
         if (overrideImplantedTiles.Count > 0)
         {
             foreach (var tile in overrideImplantedTiles)
             {
                 if (tile != null && tile.GetSpecial() != TileSpecial.None)
+                {
                     tile.SetSpecial(TileSpecial.None);
+                    SyncAfterSpecialChange(tile);
+                }
             }
             overrideImplantedTiles.Clear();
         }
 
+        HashSet<TileView> processedViews = new HashSet<TileView>();
+        foreach (var pos in processed)
+            if (board.Tiles[pos.x, pos.y] != null) processedViews.Add(board.Tiles[pos.x, pos.y]);
+
         Dictionary<TileView, float> stagger =
-            pulseCoreImpactService.BuildStaggerDelays(affected, processed);
+            pulseCoreImpactService.BuildStaggerDelays(affected, processedViews);
 
         var animationMode = (hasLineActivation && !overrideForceDefaultClearAnim)
             ? ClearAnimationMode.LightningStrike
@@ -556,6 +596,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         specialAffectedCells = null;
         return actions;
     }
+
     public void ExpandSpecialChain(
         HashSet<TileView> affected,
         HashSet<Vector2Int> affectedCells,
@@ -576,8 +617,8 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         board.IsSpecialActivationPhase = true;
         specialAffectedCells = affectedCells ?? new HashSet<Vector2Int>();
 
-        var processed = new HashSet<TileView>();
-        var queued = new HashSet<TileView>();
+        var processed = new HashSet<Vector2Int>();
+        var queued = new HashSet<Vector2Int>();
         var queue = new Queue<SpecialActivation>();
 
         if (affectedCells != null)
@@ -602,19 +643,21 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         while (queue.Count > 0)
         {
             var activation = queue.Dequeue();
-            queued.Remove(activation.special);
-            if (activation.special == null || processed.Contains(activation.special)) continue;
+            queued.Remove(activation.cell);
+            if (processed.Contains(activation.cell)) continue;
 
-            processed.Add(activation.special);
+            processed.Add(activation.cell);
             hasAnySpecialActivation = true;
-           // ApplySpecialActivation(affected, activation.special, activation.partner, ref hasLineActivation);
+            TileView actSpecial = board.Tiles[activation.cell.x, activation.cell.y];
+            TileView actPartner = activation.partnerCell.HasValue ? board.Tiles[activation.partnerCell.Value.x, activation.partnerCell.Value.y] : null;
+
             ApplySpecialActivation(
-            affected,
-            activation.special,
-            activation.partner,
-            ref hasLineActivation,
-            lightningVisualTargets,
-            lightningLineStrikes);
+                affected,
+                actSpecial,
+                actPartner,
+                ref hasLineActivation,
+                lightningVisualTargets,
+                lightningLineStrikes);
 
             EnqueueChainSpecials(affected, queue, queued, processed);
         }
@@ -623,21 +666,28 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         specialAffectedCells = previousAffectedCells;
     }
 
-    void EnqueueActivation(Queue<SpecialActivation> queue, HashSet<TileView> queued, TileView special, TileView partner)
+    void EnqueueActivation(Queue<SpecialActivation> queue, HashSet<Vector2Int> queued, TileView special, TileView partner)
     {
-        if (special == null || queued.Contains(special)) return;
+        if (special == null) return;
+        Vector2Int pos = new Vector2Int(special.X, special.Y);
+        if (queued.Contains(pos)) return;
+
         if (special.GetSpecial() == TileSpecial.None) return;
-        queued.Add(special);
-        queue.Enqueue(new SpecialActivation(special, partner));
+
+        queued.Add(pos);
+        Vector2Int? partnerPos = partner != null ? new Vector2Int(partner.X, partner.Y) : (Vector2Int?)null;
+        queue.Enqueue(new SpecialActivation(pos, partnerPos));
     }
 
-    void EnqueueChainSpecials(HashSet<TileView> affected, Queue<SpecialActivation> queue, HashSet<TileView> queued, HashSet<TileView> processed)
+    void EnqueueChainSpecials(HashSet<TileView> affected, Queue<SpecialActivation> queue, HashSet<Vector2Int> queued, HashSet<Vector2Int> processed)
     {
         foreach (var tile in affected)
         {
             if (tile == null) continue;
             if (tile.GetSpecial() == TileSpecial.None) continue;
-            if (processed.Contains(tile)) continue;
+
+            Vector2Int pos = new Vector2Int(tile.X, tile.Y);
+            if (processed.Contains(pos)) continue;
             EnqueueActivation(queue, queued, tile, null);
         }
     }
@@ -648,35 +698,46 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         switch (specialTile.GetSpecial())
         {
             case TileSpecial.LineH:
-
             case TileSpecial.LineV:
                 hasLineActivation = true;
                 ApplyLineAt(matches, specialTile.X, specialTile.Y, specialTile.GetSpecial(), lightningVisualTargets, lightningLineStrikes);
                 break;
+
             case TileSpecial.PulseCore:
-                AddSquare(matches, specialTile.X, specialTile.Y, 1); //efected grid 3X3
+                AddSquare(matches, specialTile.X, specialTile.Y, 1);
                 break;
+
             case TileSpecial.SystemOverride:
+            {
+                // If an override fanout is currently in progress from the primary swap, DO NOT let a chained
+                // Override hijack the entire board clearing process. Treat the distant override as a normal tile explosion.
+                if (overrideFanoutOrigin != null && overrideFanoutOrigin != specialTile)
                 {
-                    TileType type;
-                    if (partnerTile != null) type = partnerTile.GetTileType();
-                    else type = specialTile.GetTileType();
-
-                    // Solo (partner=null) veya normal partner → selection pulse aktif
-                    var partnerSpecial = partnerTile != null ? partnerTile.GetSpecial() : TileSpecial.None;
-                    overrideFanoutNormalSelectionPulse = (partnerTile == null) || (partnerSpecial == TileSpecial.None);
-                    overrideFanoutPulseHitCount = 0;
-
-                    // Fan-out lightning: hedefleri işaretle, sonra topluca temizle
-                    overrideFanoutOrigin = specialTile;
-                    // Special taşları hedefleme — onlar board'da kalsın, chain tetiklenmesin
-                    CollectAllOfType(overrideFanoutTargets, type, excludeSpecials: true);
-                    overrideForceDefaultClearAnim = true;
-                    // Per-tile VFX gösterilsin (shrink/pop) — fan-out lightning zaten ayrı çalışır
-                    overrideSuppressPerTileClearVfx = false;
-                    AddAllOfType(matches, type, excludeSpecials: true);
+                    matches.Add(specialTile);
+                    MarkAffectedCell(specialTile);
                     break;
                 }
+
+                TileType type;
+                if (partnerTile != null) type = partnerTile.GetTileType();
+                else type = specialTile.GetTileType();
+
+                // Solo (partner=null) veya normal partner → selection pulse aktif
+                var partnerSpecial = partnerTile != null ? partnerTile.GetSpecial() : TileSpecial.None;
+                overrideFanoutNormalSelectionPulse = (partnerTile == null) || (partnerSpecial == TileSpecial.None);
+                overrideFanoutPulseHitCount = 0;
+
+                // Fan-out lightning: hedefleri işaretle, sonra topluca temizle
+                overrideFanoutOrigin = specialTile;
+                // Special taşları hedefleme — onlar board'da kalsın, chain tetiklenmesin
+                CollectAllOfType(overrideFanoutTargets, type, excludeSpecials: true);
+                overrideForceDefaultClearAnim = true;
+                // Per-tile VFX gösterilsin (shrink/pop) — fan-out lightning zaten ayrı çalışır
+                overrideSuppressPerTileClearVfx = false;
+                AddAllOfType(matches, type, excludeSpecials: true);
+                break;
+            }
+
             case TileSpecial.PatchBot:
                 if (partnerTile != null)
                 {
@@ -684,7 +745,9 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                         hasLineActivation = true;
                 }
                 else
-                    ApplyPatchBotSoloHit(matches, specialTile);   // ✅
+                {
+                    ApplyPatchBotSoloHit(matches, specialTile);
+                }
                 break;
         }
     }
@@ -698,8 +761,8 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             AddCol(matches, origin.X);
     }
 
-// Centralized helpers so line-style specials (LineH/LineV and any combos that rely on LineTravel)
-// don't have their row/col + strike logic copy-pasted across combo branches.
+    // Centralized helpers so line-style specials (LineH/LineV and any combos that rely on LineTravel)
+    // don't have their row/col + strike logic copy-pasted across combo branches.
     void ApplyLineAt(
         HashSet<TileView> matches,
         int x, int y,
@@ -898,6 +961,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                 if (tile.GetSpecial() != TileSpecial.None) continue;
 
                 tile.SetSpecial(TileSpecial.PatchBot);
+                SyncAfterSpecialChange(tile);
                 AutoPatchBotTeleportHitAndVanish(matches, tile, patchBotTile, systemOverrideTile);
             }
     }
@@ -909,6 +973,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         // Fan-out sırasında PatchBot ikonu hedefte kısa süre görünsün.
         if (!deferOverrideImplantVisualRefresh)
             HideTileVisualForCombo(autoPatchBot);
+
         matches.Add(autoPatchBot);
         MarkAffectedCell(autoPatchBot);
 
@@ -918,12 +983,12 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         // Dash'i anında ve asenkron başlat (kuyruklamadan)
         // Böylece her PatchBot koyulduğu an harekete geçer, birbirini beklemez
         float dashDelay = deferOverrideImplantVisualRefresh ? 0.10f : 0f;
-        FireImmediateDash(autoPatchBot, target.x, target.y, dashDelay);
-        
+        FireImmediateDash(autoPatchBot.X, autoPatchBot.Y, target.x, target.y, dashDelay);
+
         var matchSetData = new HashSet<TileData>();
         patchbotComboService.HitCellOnce(matchSetData, target.x, target.y, target.tile, MarkAffectedCell, MarkAffectedCell);
-        
-        foreach (var data in matchSetData) 
+
+        foreach (var data in matchSetData)
         {
             if (board.Tiles[data.X, data.Y] != null) matches.Add(board.Tiles[data.X, data.Y]);
         }
@@ -933,9 +998,9 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
     /// PatchBot dash'ini kuyruğa eklemeden anında asenkron başlatır.
     /// Override+PatchBot combo'larında her PatchBot'un hemen harekete geçmesi için kullanılır.
     /// </summary>
-    void FireImmediateDash(TileView fromTile, int targetX, int targetY, float delay = 0f)
+    void FireImmediateDash(int fromX, int fromY, int targetX, int targetY, float delay = 0f)
     {
-        if (fromTile == null || board.PatchbotDashUI == null) return;
+        if (board.PatchbotDashUI == null) return;
 
         IEnumerator CoPlayDash()
         {
@@ -944,8 +1009,8 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
             var req = new BoardController.PatchbotDashRequest
             {
-                from = new Vector2Int(fromTile.X, fromTile.Y),
-                to   = new Vector2Int(targetX, targetY)
+                from = new Vector2Int(fromX, fromY),
+                to = new Vector2Int(targetX, targetY)
             };
             var singleDash = new List<BoardController.PatchbotDashRequest>(1) { req };
             board.PatchbotDashUI.PlayDashParallel(singleDash, board);
@@ -985,7 +1050,6 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
         board.BoardVfxPlayer.PlayTeleportMarkers(toWorld, fromWorld);
     }
-
 
     void PlayTransientSpecialVisualAt(TileView sourceTile, int targetX, int targetY)
     {
@@ -1050,7 +1114,6 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
     void TeleportTile(TileView tile, int targetX, int targetY)
     {
-        
         if (tile == null) return;
         if (targetX < 0 || targetX >= board.Width || targetY < 0 || targetY >= board.Height) return;
         if (board.Holes[targetX, targetY]) return;
@@ -1060,24 +1123,22 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         int sourceY = tile.Y;
         PlayTeleportMarkers(tile, targetX, targetY);
 
-
         board.Tiles[sourceX, sourceY] = targetTile;
         if (targetTile != null)
         {
             targetTile.SetCoords(sourceX, sourceY);
             targetTile.SnapToGrid(board.TileSize);
         }
-        board.SyncTileData(sourceX, sourceY); // Sync Data model
+        board.SyncTileData(sourceX, sourceY);
 
         board.Tiles[targetX, targetY] = tile;
         tile.SetCoords(targetX, targetY);
         tile.SnapToGrid(board.TileSize);
-        board.SyncTileData(targetX, targetY); // Sync Data model
+        board.SyncTileData(targetX, targetY);
 
         board.RefreshTileObstacleVisual(tile);
         board.RefreshTileObstacleVisual(targetTile);
     }
-
 
     bool CanSpecialAffectCell(int x, int y)
     {
@@ -1090,7 +1151,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         return board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
     }
 
-    void ApplyComboEffect(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<TileView> queued, HashSet<TileView> processed, TileView a, TileView b, TileSpecial sa, TileSpecial sb, HashSet<TileView> lightningVisualTargets = null, List<LightningLineStrike> lightningLineStrikes = null)
+    void ApplyComboEffect(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<Vector2Int> queued, HashSet<Vector2Int> processed, TileView a, TileView b, TileSpecial sa, TileSpecial sb, HashSet<TileView> lightningVisualTargets = null, List<LightningLineStrike> lightningLineStrikes = null)
     {
         bool IsLine(TileSpecial s) => s == TileSpecial.LineH || s == TileSpecial.LineV;
         bool IsPulse(TileSpecial s) => s == TileSpecial.PulseCore;
@@ -1099,12 +1160,10 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
         if (IsOverride(sa) && IsOverride(sb))
         {
-            // Only show Override+Override combo VFX when both tiles are real overrides (have stored base type)
             bool aHasBase = a != null && a.GetOverrideBaseType(out _);
             bool bHasBase = b != null && b.GetOverrideBaseType(out _);
             if (aHasBase && bHasBase)
             {
-                // Hide the two source tiles immediately so the combo runner is the only visible representation.
                 HideTileVisualForCombo(a);
                 HideTileVisualForCombo(b);
 
@@ -1113,8 +1172,6 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
             AddAllTiles(matches);
 
-            // Radial clear süresi VFX ile senkron: VFX genişlerken taşlar yok edilir.
-            // pendingOverrideOverrideClearDelay = 0 → VFX'i beklemeden hemen temizlemeye başla.
             float clearDuration = Mathf.Max(OverrideOverrideRadialClearDuration, overrideOverrideVfxDuration * 0.85f);
             overrideOverrideRadialClearDelays = BuildCenterOutClearDelays(matches, clearDuration);
             return;
@@ -1128,7 +1185,6 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             if (otherTile == null || overrideTile == null)
                 return;
 
-            // Ensure swap sources are consumed (used)
             matches.Add(overrideTile);
             matches.Add(otherTile);
             MarkAffectedCell(overrideTile);
@@ -1137,20 +1193,13 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             TileSpecial targetSpecial = otherTile.GetSpecial();
             bool targetIsLine = targetSpecial == TileSpecial.LineH || targetSpecial == TileSpecial.LineV;
             bool targetIsNormal = targetSpecial == TileSpecial.None;
-            // Kural: Override taşı HER ZAMAN swaplandığı (partner) taşın rengini hedef almalı.
             TileType baseType = otherTile.GetTileType();
 
-            // Single-shot fan-out lightning from the override tile to all affected targets
             overrideFanoutOrigin = overrideTile;
-            // Keep default clear unless partner is a line special; line combos must preserve LineTravel strikes.
             overrideForceDefaultClearAnim = !targetIsLine;
-            // Per-tile VFX: normal partner → shrink/pop göster; line partner → LineTravel görseli yeterli
             overrideSuppressPerTileClearVfx = targetIsLine;
-            // IMPORTANT: In Override + Normal we want "selected" feedback when the lightning reaches a target.
-            // Set this ONCE here so it can't be missed due to any loop filtering.
             overrideFanoutNormalSelectionPulse = targetIsNormal;
 
-            // Build conversion/clear list (only normal tiles of the base type)
             for (int x = 0; x < board.Width; x++)
                 for (int y = 0; y < board.Height; y++)
                 {
@@ -1164,21 +1213,22 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
                     if (targetSpecial == TileSpecial.None)
                     {
-                        // Normal partner: fan-out hedefleri beam ulaştığında kısa bir seçilme pulse
-                        // oynatıp ardından normal clear akışına bırak.
                         matches.Add(tile);
                         MarkAffectedCell(tile);
                         continue;
                     }
 
+                    Vector2Int targetPos = new Vector2Int(tile.X, tile.Y);
+                    Vector2Int? partnerPos = otherTile != null ? new Vector2Int(otherTile.X, otherTile.Y) : (Vector2Int?)null;
+                    Vector2Int overridePos = new Vector2Int(overrideTile.X, overrideTile.Y);
+
                     if (targetSpecial == TileSpecial.PatchBot)
                     {
-                        pendingOverrideImplants.Add(new PendingOverrideImplant(tile, TileSpecial.PatchBot, otherTile, overrideTile));
+                        pendingOverrideImplants.Add(new PendingOverrideImplant(targetPos, TileSpecial.PatchBot, partnerPos, overridePos));
                         continue;
                     }
 
-                    // Special partner: beam targetında taşı dönüştür, sonra özel etkiyi zincire ekle.
-                    pendingOverrideImplants.Add(new PendingOverrideImplant(tile, targetSpecial, otherTile, overrideTile));
+                    pendingOverrideImplants.Add(new PendingOverrideImplant(targetPos, targetSpecial, partnerPos, overridePos));
                 }
 
             return;
@@ -1207,7 +1257,6 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
 
         if (IsLine(sa) && IsPulse(sb) || (IsLine(sb) && IsPulse(sa)))
         {
-            // Pulse + Line: sadece 3 satır + 3 sütun taraması (LineTravel). Per-tile pop VFX kapatılacak.
             var center = IsPulse(sa) ? a : b;
             if (center == null) return;
 
@@ -1239,8 +1288,8 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                 PlayTeleportMarkers(b, secondTarget.x, secondTarget.y);
                 patchbotComboService.HitCellOnce(dataMatches, secondTarget.x, secondTarget.y, secondTarget.tile, MarkAffectedCell, MarkAffectedCell);
             }
-            
-            foreach (var data in dataMatches) 
+
+            foreach (var data in dataMatches)
             {
                 if (board.Tiles[data.X, data.Y] != null) matches.Add(board.Tiles[data.X, data.Y]);
             }
@@ -1257,51 +1306,27 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
                 patchbotComboService.EnqueueDash(patchBotTile, target.x, target.y);
                 PlayTeleportMarkers(patchBotTile, target.x, target.y);
                 PlayTeleportMarkers(pulseTile, target.x, target.y);
-                //AddSquareEven(matches, target.x, target.y, board.PatchBotPulseComboSize);
-                AddSquare(matches, target.x, target.y, 1); // 3x3
+                AddSquare(matches, target.x, target.y, 1);
             }
             return;
         }
 
         if (IsPulse(sa) && IsPulse(sb))
         {
-                // Combo patlama VFX
             board.PlayPulsePulseExplosionVfxAtCell(a.X, a.Y);
-            AddSquare(matches, a.X, a.Y, 2); //5X5
+            AddSquare(matches, a.X, a.Y, 2);
             return;
         }
 
         if (IsLine(sa) || IsLine(sb))
         {
             TileSpecial line = IsLine(sa) ? sa : sb;
-            // Keep legacy behavior: apply from tile 'a' coords (swap origin),
-            // but route through a single helper to avoid copy-paste.
             ApplyFatLineAt(matches, a.X, a.Y, line, lightningVisualTargets, lightningLineStrikes);
             return;
         }
-
     }
 
-    void ApplyPendingOverrideImplantForTile(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<TileView> queued, TileView target)
-    {
-        if (target == null)
-            return;
-
-        if (pendingOverrideImplants.Count == 0)
-            return;
-
-        for (int i = pendingOverrideImplants.Count - 1; i >= 0; i--)
-        {
-            var pending = pendingOverrideImplants[i];
-            if (pending.target != target)
-                continue;
-
-            ApplyPendingOverrideImplant(matches, queue, queued, pending);
-            pendingOverrideImplants.RemoveAt(i);
-        }
-    }
-
-    void ApplyPendingOverrideImplants(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<TileView> queued)
+    void ApplyPendingOverrideImplants(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<Vector2Int> queued)
     {
         for (int i = 0; i < pendingOverrideImplants.Count; i++)
             ApplyPendingOverrideImplant(matches, queue, queued, pendingOverrideImplants[i]);
@@ -1309,26 +1334,37 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
         pendingOverrideImplants.Clear();
     }
 
-    void ApplyPendingOverrideImplant(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<TileView> queued, PendingOverrideImplant pending)
+    void ApplyPendingOverrideImplant(HashSet<TileView> matches, Queue<SpecialActivation> queue, HashSet<Vector2Int> queued, PendingOverrideImplant pending)
     {
-        if (pending.target == null)
+        TileView pendingTarget = board.Tiles[pending.targetCell.x, pending.targetCell.y];
+        if (pendingTarget == null)
             return;
 
-        pending.target.SetSpecial(pending.special, deferVisualUpdate: deferOverrideImplantVisualRefresh);
+        pendingTarget.SetSpecial(pending.special, deferVisualUpdate: deferOverrideImplantVisualRefresh);
+        SyncAfterSpecialChange(pendingTarget);
+
         // İmplant edilen taşı takip et — fan-out boyunca görsel güncellemesi ertelenebilir.
-        overrideImplantedTiles.Add(pending.target);
+        overrideImplantedTiles.Add(pendingTarget);
 
         if (pending.special == TileSpecial.PatchBot)
         {
-            AutoPatchBotTeleportHitAndVanish(matches, pending.target, pending.partnerTile, pending.overrideTile);
+            TileView patchPartner = pending.partnerCell.HasValue ? board.Tiles[pending.partnerCell.Value.x, pending.partnerCell.Value.y] : null;
+            TileView patchOverride = board.Tiles[pending.overrideCell.x, pending.overrideCell.y];
+            AutoPatchBotTeleportHitAndVanish(matches, pendingTarget, patchPartner, patchOverride);
             return;
         }
 
-        matches.Add(pending.target);
-        MarkAffectedCell(pending.target);
-        EnqueueActivation(queue, queued, pending.target, pending.partnerTile);
-    }
+        matches.Add(pendingTarget);
+        MarkAffectedCell(pendingTarget);
 
+        if (pending.special == TileSpecial.PulseCore)
+        {
+            AddSquare(matches, pendingTarget.X, pendingTarget.Y, 1);
+        }
+
+        TileView activePartner = pending.partnerCell.HasValue ? board.Tiles[pending.partnerCell.Value.x, pending.partnerCell.Value.y] : null;
+        EnqueueActivation(queue, queued, pendingTarget, activePartner);
+    }
 
     void AddLineStrike(List<LightningLineStrike> lineStrikes, int x, int y, TileSpecial lineSpecial)
     {
@@ -1412,7 +1448,6 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             }
     }
 
-    
     void CollectAllOfType(List<TileView> buffer, TileType type, bool excludeSpecials)
     {
         if (buffer == null) return;
@@ -1430,7 +1465,7 @@ public TileView TryCreateSpecial(HashSet<TileView> matches)
             }
     }
 
-void AddAllOfType(HashSet<TileView> matches, TileType type, bool excludeSpecials = false)
+    void AddAllOfType(HashSet<TileView> matches, TileType type, bool excludeSpecials = false)
     {
         for (int x = 0; x < board.Width; x++)
             for (int y = 0; y < board.Height; y++)
@@ -1463,24 +1498,21 @@ void AddAllOfType(HashSet<TileView> matches, TileType type, bool excludeSpecials
     {
         if (patchBotTile == null) return;
 
-        // PatchBot zaten clear edilecek; sadece kendi cell’ini affected olarak işaretlemek yeterli
         matches.Add(patchBotTile);
         MarkAffectedCell(patchBotTile);
 
-        // 1 hedef seç ve vur
         var target = patchbotComboService.FindTarget(patchBotTile, null, null);
         if (!target.hasCell) return;
 
         patchbotComboService.EnqueueDash(patchBotTile, target.x, target.y);
-
         PlayTeleportMarkers(patchBotTile, target.x, target.y);
 
         bool hasObstacleAtTarget = patchbotComboService.HasObstacleAt(target.x, target.y);
 
         var dataMatches = new HashSet<TileData>();
         patchbotComboService.ResolveTargetImpact(dataMatches, target.x, target.y, hasObstacleAtTarget, MarkAffectedCell, MarkAffectedCell);
-        
-        foreach (var data in dataMatches) 
+
+        foreach (var data in dataMatches)
         {
             if (board.Tiles[data.X, data.Y] != null) matches.Add(board.Tiles[data.X, data.Y]);
         }
@@ -1513,8 +1545,6 @@ void AddAllOfType(HashSet<TileView> matches, TileType type, bool excludeSpecials
             if (tile == null) continue;
             float distance = Vector2.Distance(new Vector2(tile.X, tile.Y), center);
             float normalized = Mathf.Clamp01(distance / maxDistance);
-            // Ease-out quadratic: wave expands quickly from center then decelerates at edges,
-            // giving a dramatic shockwave-like feel.
             float eased = 1f - (1f - normalized) * (1f - normalized);
             delays[tile] = eased * maxDelay;
         }
@@ -1560,6 +1590,7 @@ void AddAllOfType(HashSet<TileView> matches, TileType type, bool excludeSpecials
                 board.PlayPulsePulseExplosionVfxAtCell(x, y);
                 board.StartCoroutine(boardAnimator.MicroShake(0.08f, board.ShakeStrength * 0.4f));
                 break;
+
             case TileSpecial.LineH:
             case TileSpecial.LineV:
             {
@@ -1573,16 +1604,15 @@ void AddAllOfType(HashSet<TileView> matches, TileType type, bool excludeSpecials
         }
     }
 
-    
-    readonly struct SpecialActivation
+    public readonly struct SpecialActivation
     {
-        public readonly TileView special;
-        public readonly TileView partner;
+        public readonly Vector2Int cell;
+        public readonly Vector2Int? partnerCell;
 
-        public SpecialActivation(TileView special, TileView partner)
+        public SpecialActivation(Vector2Int cell, Vector2Int? partnerCell)
         {
-            this.special = special;
-            this.partner = partner;
+            this.cell = cell;
+            this.partnerCell = partnerCell;
         }
     }
 }

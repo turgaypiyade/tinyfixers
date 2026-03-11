@@ -220,8 +220,7 @@ public class BoardAnimator
 
         if (useLineHitDrivenClear)
         {
-            suppressPerTileClearVfx = true;
-            lineHitWindowOpen = true;
+            lineHitWindowOpen = true; // Sadece o spesifik hatlar için takip açılır.
         }
         
         for (int i = 0; i < list.Count; i++)
@@ -247,21 +246,25 @@ public class BoardAnimator
             shouldClearTile[tile] = clearTile;
             if (!clearTile) continue;
 
-            if (useLineHitDrivenClear)
+            bool useLightningEffect = animationMode == ClearAnimationMode.LightningStrike
+                && (lightningVisualSet == null || lightningVisualSet.Contains(tile));
+
+            // Tile eger gercekten Line tarafindan supurulecekse popup vs. baskilansin
+            bool isSweptOff = useLineHitDrivenClear && useLightningEffect;
+            bool shouldSuppressVfx = suppressPerTileClearVfx || isSweptOff;
+
+            if (isSweptOff)
                 lineSweepCandidates.Add(tile);
 
-            if (!suppressPerTileClearVfx && staggerDelays != null && staggerDelays.TryGetValue(tile, out var d))
+            if (!shouldSuppressVfx && staggerDelays != null && staggerDelays.TryGetValue(tile, out var d))
             {
                 pulseImpacts.Add(tileAnimator.PlayPulseImpact(tile, d, staggerAnimTime));
                 if (d > maxStaggerDelay) maxStaggerDelay = d;
             }
             else
             {
-                if (suppressPerTileClearVfx)
+                if (shouldSuppressVfx)
                     continue; // LineTravel / lightning sweep handles visuals; skip per-tile pop/fly/impact.
-
-                bool useLightningEffect = animationMode == ClearAnimationMode.LightningStrike
-                    && (lightningVisualSet == null || lightningVisualSet.Contains(tile));
 
                 // Goal tile mı?
                 bool isGoalTile = false;
