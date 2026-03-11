@@ -198,31 +198,31 @@ public class MatchFinder
         }
 
         var sb = new System.Text.StringBuilder();
-        //sb.AppendLine($"[MatchFinder] FindAllMatches — {result.Count} matches found");
-        //sb.AppendLine("  GridData snapshot (H=Hole, ·=null, else type):");
+        sb.AppendLine($"[MatchFinder] FindAllMatches — {result.Count} matches found");
+        sb.AppendLine("  GridData snapshot (H=Hole, ·=null, else type):");
         for (int dbgY = 0; dbgY < board.Height; dbgY++)
         {
-            //sb.Append($"  row{dbgY}: ");
+            sb.Append($"  row{dbgY}: ");
             for (int dbgX = 0; dbgX < board.Width; dbgX++)
             {
-                //if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
-                //else if (board.GridData[dbgX, dbgY] == null) sb.Append("[· ]");
-              //  else sb.Append($"[{board.GridData[dbgX, dbgY].ToDebugString().PadRight(2)}]");
+                if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
+                else if (board.GridData[dbgX, dbgY] == null) sb.Append("[· ]");
+                else sb.Append($"[{board.GridData[dbgX, dbgY].ToDebugString().PadRight(2)}]");
             }
-            //sb.AppendLine();
+            sb.AppendLine();
         }
 
-        //sb.AppendLine("  TileView snapshot (H=Hole, ·=null, else type):");
+        sb.AppendLine("  TileView snapshot (H=Hole, ·=null, else type):");
         int mismatchCount = 0;
         for (int dbgY = 0; dbgY < board.Height; dbgY++)
         {
-            //sb.Append($"  row{dbgY}: ");
+            sb.Append($"  row{dbgY}: ");
             for (int dbgX = 0; dbgX < board.Width; dbgX++)
             {
-               // if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
-                //else sb.Append($"[{TileViewDebugString(board.Tiles[dbgX, dbgY]).PadRight(2)}]");
+               if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
+               else sb.Append($"[{TileViewDebugString(board.Tiles[dbgX, dbgY]).PadRight(2)}]");
             }
-           // sb.AppendLine();
+           sb.AppendLine();
         }
 
         sb.AppendLine("  GridData vs TileView mismatch scan:");
