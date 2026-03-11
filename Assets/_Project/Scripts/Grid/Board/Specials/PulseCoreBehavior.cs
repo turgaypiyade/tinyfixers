@@ -29,23 +29,31 @@ public class PulseCoreBehavior : ISpecialBehavior
 {
     public TileSpecial SpecialType => TileSpecial.PulseCore;
 
-    private readonly int radius;
+    private readonly int affectedCellCount;
 
-    public PulseCoreBehavior(int radius = 1)
+    public PulseCoreBehavior(int affectedCellCount = 9)
     {
-        this.radius = radius;
+        this.affectedCellCount = Mathf.Max(1, affectedCellCount);
     }
 
     public HashSet<Vector2Int> CalculateAffectedCells(BoardController board, int originX, int originY)
     {
         var cells = new HashSet<Vector2Int>();
 
-        for (int x = originX - radius; x <= originX + radius; x++)
-        for (int y = originY - radius; y <= originY + radius; y++)
+        // Build candidates in a centered square window based on desired cell count.
+        // Use deterministic ordering by distance to center, then row/column to cap exactly.
+        int side = Mathf.CeilToInt(Mathf.Sqrt(affectedCellCount));
+        if (side % 2 == 0) side += 1; // keep origin centered
+        int half = side / 2;
+
+        var candidates = new List<Vector2Int>(side * side);
+
+        for (int x = originX - half; x <= originX + half; x++)
+        for (int y = originY - half; y <= originY + half; y++)
         {
             if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
             if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
-            cells.Add(new Vector2Int(x, y));
+            candidates.Add(new Vector2Int(x, y));
         }
 
         return cells;
