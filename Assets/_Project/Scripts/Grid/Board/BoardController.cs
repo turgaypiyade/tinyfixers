@@ -56,6 +56,9 @@ public class BoardController : MonoBehaviour
     [Header("Special Combos")]
     [SerializeField] private int patchBotPulseComboSize = 4;
 
+    [Header("Special Chain Tempo")]
+    [SerializeField, Range(0.2f, 1.5f)] private float specialChainDurationMultiplier = 0.75f;
+
     [Header("PulseCore Impact (premium stagger)")]
     [SerializeField] private float pulseImpactDelayStep = 0.02f;
     [SerializeField] private float pulseImpactAnimTime = 0.16f;
@@ -1393,7 +1396,19 @@ public class BoardController : MonoBehaviour
     {
         TryResolveLightningSpawner();
         if (lightningSpawner == null) return 0f;
-        return lightningSpawner.GetStepDelay();
+        return ApplySpecialChainTempo(lightningSpawner.GetStepDelay());
+    }
+
+    internal float GetSpecialChainDurationMultiplier()
+    {
+        return Mathf.Clamp(specialChainDurationMultiplier, 0.2f, 1.5f);
+    }
+
+    internal float ApplySpecialChainTempo(float duration)
+    {
+        if (duration <= 0f) return 0f;
+        if (!isSpecialActivationPhase) return duration;
+        return duration * GetSpecialChainDurationMultiplier();
     }
 
     public Vector3 GetCellWorldPosition(int x, int y)
@@ -1649,7 +1664,7 @@ public class BoardController : MonoBehaviour
                         }
 
                         yield return ResolveEmptyPlayableCellsWithoutMatch();
-                        yield return ResolveBoard();
+                        yield return ResolveBoard(allowSpecial: false);
                         EndBusy();
                         yield break;
                     }
@@ -1676,7 +1691,7 @@ public class BoardController : MonoBehaviour
             }
 
             yield return ResolveEmptyPlayableCellsWithoutMatch();
-            yield return ResolveBoard();
+            yield return ResolveBoard(allowSpecial: false);
             EndBusy();
             yield break;
         }
@@ -1750,7 +1765,7 @@ public class BoardController : MonoBehaviour
 
     internal float GetClearDurationForCurrentPass()
     {
-        return Mathf.Max(0.03f, ClearDuration * GetCascadeClearSpeedMultiplier());
+        return Mathf.Max(0.03f, ApplySpecialChainTempo(ClearDuration * GetCascadeClearSpeedMultiplier()));
     }
 
     internal bool ShouldEnableFallSettleThisPass()
