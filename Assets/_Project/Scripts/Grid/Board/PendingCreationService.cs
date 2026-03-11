@@ -149,13 +149,13 @@ public class PendingCreationService
         tile.SetCoords(x, y);
         tile.SnapToGrid(board.TileSize);
         board.Tiles[x, y] = tile;
-        board.SyncTileData(x, y);
 
         var pool = board.RandomPool;
         if (pool != null && pool.Length > 0)
             tile.SetType(pool[Random.Range(0, pool.Length)]);
 
         tile.SetSpecial(TileSpecial.None);
+        board.SyncTileData(x, y); // Sync AFTER type and special are set
         board.RefreshTileObstacleVisual(tile);
         return tile;
     }

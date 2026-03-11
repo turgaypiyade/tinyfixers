@@ -180,6 +180,10 @@ public class SpecialResolver
         TileSpecial sa = a.GetSpecial();
         TileSpecial sb = b.GetSpecial();
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"[SpecialResolver] ResolveSpecialSwap: a=({a.X},{a.Y}) type={a.GetTileType()} special={sa}, b=({b.X},{b.Y}) type={b.GetTileType()} special={sb}");
+#endif
+
         bool saIsLine  = sa == TileSpecial.LineH || sa == TileSpecial.LineV;
         bool sbIsLine  = sb == TileSpecial.LineH || sb == TileSpecial.LineV;
         bool saIsPulse = sa == TileSpecial.PulseCore;
@@ -695,22 +699,15 @@ public class SpecialResolver
     void ApplySpecialActivation(HashSet<TileView> matches, TileView specialTile, TileView partnerTile, ref bool hasLineActivation, HashSet<TileView> lightningVisualTargets = null, List<LightningLineStrike> lightningLineStrikes = null)
     {
         if (specialTile == null) return;
-        switch (specialTile.GetSpecial())
+        var special = specialTile.GetSpecial();
+        int ox = specialTile.X;
+        int oy = specialTile.Y;
+
+        switch (special)
         {
-            case TileSpecial.LineH:
-            case TileSpecial.LineV:
-                hasLineActivation = true;
-                ApplyLineAt(matches, specialTile.X, specialTile.Y, specialTile.GetSpecial(), lightningVisualTargets, lightningLineStrikes);
-                break;
-
-            case TileSpecial.PulseCore:
-                AddSquare(matches, specialTile.X, specialTile.Y, 1);
-                break;
-
             case TileSpecial.SystemOverride:
             {
-                // If an override fanout is currently in progress from the primary swap, DO NOT let a chained
-                // Override hijack the entire board clearing process. Treat the distant override as a normal tile explosion.
+                // Override has complex fan-out side effects — keep inline for now.
                 if (overrideFanoutOrigin != null && overrideFanoutOrigin != specialTile)
                 {
                     matches.Add(specialTile);
@@ -722,17 +719,13 @@ public class SpecialResolver
                 if (partnerTile != null) type = partnerTile.GetTileType();
                 else type = specialTile.GetTileType();
 
-                // Solo (partner=null) veya normal partner → selection pulse aktif
                 var partnerSpecial = partnerTile != null ? partnerTile.GetSpecial() : TileSpecial.None;
                 overrideFanoutNormalSelectionPulse = (partnerTile == null) || (partnerSpecial == TileSpecial.None);
                 overrideFanoutPulseHitCount = 0;
 
-                // Fan-out lightning: hedefleri işaretle, sonra topluca temizle
                 overrideFanoutOrigin = specialTile;
-                // Special taşları hedefleme — onlar board'da kalsın, chain tetiklenmesin
                 CollectAllOfType(overrideFanoutTargets, type, excludeSpecials: true);
                 overrideForceDefaultClearAnim = true;
-                // Per-tile VFX gösterilsin (shrink/pop) — fan-out lightning zaten ayrı çalışır
                 overrideSuppressPerTileClearVfx = false;
                 AddAllOfType(matches, type, excludeSpecials: true);
                 break;
@@ -749,131 +742,41 @@ public class SpecialResolver
                     ApplyPatchBotSoloHit(matches, specialTile);
                 }
                 break;
-        }
-    }
 
-    void AddLineEffect(HashSet<TileView> matches, TileView origin, TileSpecial line)
-    {
-        if (origin == null) return;
-        if (line == TileSpecial.LineH)
-            AddRow(matches, origin.Y);
-        else if (line == TileSpecial.LineV)
-            AddCol(matches, origin.X);
-    }
-
-    // Centralized helpers so line-style specials (LineH/LineV and any combos that rely on LineTravel)
-    // don't have their row/col + strike logic copy-pasted across combo branches.
-    void ApplyLineAt(
-        HashSet<TileView> matches,
-        int x, int y,
-        TileSpecial line,
-        HashSet<TileView> lightningVisualTargets,
-        List<LightningLineStrike> lightningLineStrikes)
-    {
-        if (line == TileSpecial.LineH)
-        {
-            AddRow(matches, y);
-            AddLineStrike(lightningLineStrikes, x, y, TileSpecial.LineH);
-            if (lightningVisualTargets != null) AddRow(lightningVisualTargets, y);
-        }
-        else if (line == TileSpecial.LineV)
-        {
-            AddCol(matches, x);
-            AddLineStrike(lightningLineStrikes, x, y, TileSpecial.LineV);
-            if (lightningVisualTargets != null) AddCol(lightningVisualTargets, x);
-        }
-    }
-
-    void ApplyFatLineAt(
-        HashSet<TileView> matches,
-        int x, int y,
-        TileSpecial line,
-        HashSet<TileView> lightningVisualTargets,
-        List<LightningLineStrike> lightningLineStrikes)
-    {
-        if (line == TileSpecial.LineH)
-        {
-            AddRow(matches, y - 1);
-            AddRow(matches, y);
-            AddRow(matches, y + 1);
-            AddLineStrike(lightningLineStrikes, x, y - 1, TileSpecial.LineH);
-            AddLineStrike(lightningLineStrikes, x, y, TileSpecial.LineH);
-            AddLineStrike(lightningLineStrikes, x, y + 1, TileSpecial.LineH);
-
-            if (lightningVisualTargets != null)
+            default:
             {
-                AddRow(lightningVisualTargets, y - 1);
-                AddRow(lightningVisualTargets, y);
-                AddRow(lightningVisualTargets, y + 1);
-            }
-        }
-        else if (line == TileSpecial.LineV)
-        {
-            AddCol(matches, x - 1);
-            AddCol(matches, x);
-            AddCol(matches, x + 1);
-            AddLineStrike(lightningLineStrikes, x - 1, y, TileSpecial.LineV);
-            AddLineStrike(lightningLineStrikes, x, y, TileSpecial.LineV);
-            AddLineStrike(lightningLineStrikes, x + 1, y, TileSpecial.LineV);
+                var behavior = board.SpecialBehaviors.Get(special);
+                if (behavior == null) break;
 
-            if (lightningVisualTargets != null)
-            {
-                AddCol(lightningVisualTargets, x - 1);
-                AddCol(lightningVisualTargets, x);
-                AddCol(lightningVisualTargets, x + 1);
+                var cells = behavior.CalculateAffectedCells(board, ox, oy);
+                foreach (var c in cells)
+                {
+                    MarkAffectedCell(c.x, c.y);
+                    if (board.Tiles[c.x, c.y] != null) matches.Add(board.Tiles[c.x, c.y]);
+                }
+
+                if (behavior is ILightningBehavior lightningBehavior)
+                {
+                    hasLineActivation |= lightningBehavior.HasLineActivation;
+                    var strikes = lightningBehavior.GetLineStrikes(ox, oy);
+                    if (strikes != null && lightningLineStrikes != null)
+                    {
+                        lightningLineStrikes.AddRange(strikes);
+                    }
+                    if (lightningVisualTargets != null)
+                    {
+                        foreach (var c in cells)
+                        {
+                            if (board.Tiles[c.x, c.y] != null) lightningVisualTargets.Add(board.Tiles[c.x, c.y]);
+                        }
+                    }
+                }
+                break;
             }
         }
     }
 
-    void ApplyCrossAt(
-        HashSet<TileView> matches,
-        int x, int y,
-        HashSet<TileView> lightningVisualTargets,
-        List<LightningLineStrike> lightningLineStrikes)
-    {
-        AddRow(matches, y);
-        AddCol(matches, x);
-        AddLineStrike(lightningLineStrikes, x, y, TileSpecial.LineH);
-        AddLineStrike(lightningLineStrikes, x, y, TileSpecial.LineV);
 
-        if (lightningVisualTargets != null)
-        {
-            AddRow(lightningVisualTargets, y);
-            AddCol(lightningVisualTargets, x);
-        }
-    }
-
-    void ApplyPulseLineAt(
-        HashSet<TileView> matches,
-        int cx, int cy,
-        HashSet<TileView> lightningVisualTargets,
-        List<LightningLineStrike> lightningLineStrikes)
-    {
-        // 3 rows + 3 cols sweep (LineTravel)
-        AddRow(matches, cy - 1);
-        AddRow(matches, cy);
-        AddRow(matches, cy + 1);
-        AddCol(matches, cx - 1);
-        AddCol(matches, cx);
-        AddCol(matches, cx + 1);
-
-        AddLineStrike(lightningLineStrikes, cx, cy - 1, TileSpecial.LineH);
-        AddLineStrike(lightningLineStrikes, cx, cy, TileSpecial.LineH);
-        AddLineStrike(lightningLineStrikes, cx, cy + 1, TileSpecial.LineH);
-        AddLineStrike(lightningLineStrikes, cx - 1, cy, TileSpecial.LineV);
-        AddLineStrike(lightningLineStrikes, cx, cy, TileSpecial.LineV);
-        AddLineStrike(lightningLineStrikes, cx + 1, cy, TileSpecial.LineV);
-
-        if (lightningVisualTargets != null)
-        {
-            AddRow(lightningVisualTargets, cy - 1);
-            AddRow(lightningVisualTargets, cy);
-            AddRow(lightningVisualTargets, cy + 1);
-            AddCol(lightningVisualTargets, cx - 1);
-            AddCol(lightningVisualTargets, cx);
-            AddCol(lightningVisualTargets, cx + 1);
-        }
-    }
 
     bool ApplyPatchBotTeleportHit(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile, HashSet<TileView> lightningVisualTargets = null, List<LightningLineStrike> lightningLineStrikes = null)
     {
@@ -923,7 +826,16 @@ public class SpecialResolver
         {
             PlayTeleportMarkers(partnerTile, originX, originY);
             PlayTransientSpecialVisualAt(partnerTile, originX, originY);
-            ApplyLineAt(matches, originX, originY, special, lightningVisualTargets, lightningLineStrikes);
+            
+            var cells = board.SpecialBehaviors.CalculateEffect(special, board, originX, originY);
+            foreach (var c in cells)
+            {
+                MarkAffectedCell(c.x, c.y);
+                if (board.Tiles[c.x, c.y] != null) matches.Add(board.Tiles[c.x, c.y]);
+                if (lightningVisualTargets != null && board.Tiles[c.x, c.y] != null)
+                    lightningVisualTargets.Add(board.Tiles[c.x, c.y]);
+            }
+            AddLineStrike(lightningLineStrikes, originX, originY, special);
             return true;
         }
 
@@ -1236,7 +1148,28 @@ public class SpecialResolver
 
         if (IsLine(sa) && IsLine(sb))
         {
-            ApplyCrossAt(matches, a.X, a.Y, lightningVisualTargets, lightningLineStrikes);
+            var combo = board.SpecialBehaviors.FindCombo(sa, sb);
+            if (combo != null)
+            {
+                var cells = combo.CalculateAffectedCells(board, a.X, a.Y, sa, sb);
+                foreach (var c in cells)
+                {
+                    MarkAffectedCell(c.x, c.y);
+                    if (board.Tiles[c.x, c.y] != null) matches.Add(board.Tiles[c.x, c.y]);
+                }
+                if (combo is ILightningComboBehavior lb)
+                {
+                    var strikes = lb.GetLineStrikes(a.X, a.Y, sa, sb);
+                    if (strikes != null && lightningLineStrikes != null)
+                        lightningLineStrikes.AddRange(strikes);
+                    
+                    if (lightningVisualTargets != null)
+                    {
+                        foreach (var c in cells)
+                            if (board.Tiles[c.x, c.y] != null) lightningVisualTargets.Add(board.Tiles[c.x, c.y]);
+                    }
+                }
+            }
             return;
         }
 
@@ -1250,17 +1183,17 @@ public class SpecialResolver
                 patchbotComboService.EnqueueDash(patchBotTile, target.x, target.y);
                 PlayTeleportMarkers(patchBotTile, target.x, target.y);
                 PlayTeleportMarkers(lineTile, target.x, target.y);
-                ApplyLineAt(matches, target.x, target.y, lineTile.GetSpecial(), lightningVisualTargets, lightningLineStrikes);
+                
+                var cells = board.SpecialBehaviors.CalculateEffect(lineTile.GetSpecial(), board, target.x, target.y);
+                foreach (var c in cells)
+                {
+                    MarkAffectedCell(c.x, c.y);
+                    if (board.Tiles[c.x, c.y] != null) matches.Add(board.Tiles[c.x, c.y]);
+                    if (lightningVisualTargets != null && board.Tiles[c.x, c.y] != null)
+                        lightningVisualTargets.Add(board.Tiles[c.x, c.y]);
+                }
+                AddLineStrike(lightningLineStrikes, target.x, target.y, lineTile.GetSpecial());
             }
-            return;
-        }
-
-        if (IsLine(sa) && IsPulse(sb) || (IsLine(sb) && IsPulse(sa)))
-        {
-            var center = IsPulse(sa) ? a : b;
-            if (center == null) return;
-
-            ApplyPulseLineAt(matches, center.X, center.Y, lightningVisualTargets, lightningLineStrikes);
             return;
         }
 
@@ -1315,13 +1248,6 @@ public class SpecialResolver
         {
             board.PlayPulsePulseExplosionVfxAtCell(a.X, a.Y);
             AddSquare(matches, a.X, a.Y, 2);
-            return;
-        }
-
-        if (IsLine(sa) || IsLine(sb))
-        {
-            TileSpecial line = IsLine(sa) ? sa : sb;
-            ApplyFatLineAt(matches, a.X, a.Y, line, lightningVisualTargets, lightningLineStrikes);
             return;
         }
     }
@@ -1382,53 +1308,12 @@ public class SpecialResolver
         lineStrikes.Add(new LightningLineStrike(new Vector2Int(x, y), isHorizontal));
     }
 
-    void AddRow(HashSet<TileView> matches, int y)
-    {
-        if (y < 0 || y >= board.Height) return;
-        for (int x = 0; x < board.Width; x++)
-            if (CanSpecialAffectCell(x, y))
-            {
-                MarkAffectedCell(x, y);
-                if (board.Tiles[x, y] != null)
-                    matches.Add(board.Tiles[x, y]);
-            }
-    }
 
-    void AddCol(HashSet<TileView> matches, int x)
-    {
-        if (x < 0 || x >= board.Width) return;
-        for (int y = 0; y < board.Height; y++)
-            if (CanSpecialAffectCell(x, y))
-            {
-                MarkAffectedCell(x, y);
-                if (board.Tiles[x, y] != null)
-                    matches.Add(board.Tiles[x, y]);
-            }
-    }
 
     void AddSquare(HashSet<TileView> matches, int cx, int cy, int radius)
     {
         for (int x = cx - radius; x <= cx + radius; x++)
             for (int y = cy - radius; y <= cy + radius; y++)
-            {
-                if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
-                if (!CanSpecialAffectCell(x, y)) continue;
-                MarkAffectedCell(x, y);
-                if (board.Tiles[x, y] != null) matches.Add(board.Tiles[x, y]);
-            }
-    }
-
-    void AddSquareEven(HashSet<TileView> matches, int cx, int cy, int size)
-    {
-        if (size < 2) return;
-        int half = size / 2;
-        int startX = cx - (half - 1);
-        int startY = cy - (half - 1);
-        int endX = startX + size - 1;
-        int endY = startY + size - 1;
-
-        for (int x = startX; x <= endX; x++)
-            for (int y = startY; y <= endY; y++)
             {
                 if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
                 if (!CanSpecialAffectCell(x, y)) continue;

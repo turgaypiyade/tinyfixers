@@ -421,28 +421,7 @@ public class BoardAnimator
 
         void FinalizeTileClear(TileView tile)
         {
-            if (tile == null)
-                return;
-
-            if (!tile)
-                return;
-
-            int x = tile.X;
-            int y = tile.Y;
-
-            if (x >= 0 && x < board.Width && y >= 0 && y < board.Height && board.Tiles[x, y] == tile)
-            {
-                board.Tiles[x, y] = null;
-                board.GridData[x, y] = null; // Sync Data model
-            }
-
-            tile.SetSpecial(TileSpecial.None);
-
-            var tileType = tile.GetTileType();
-            clearedByType.TryGetValue(tileType, out int current);
-            clearedByType[tileType] = current + 1;
-
-            UnityEngine.Object.Destroy(tile.gameObject);
+            board.ClearAndDestroyTile(tile, clearedByType);
         }
 
         foreach (var pair in clearedByType)
@@ -738,6 +717,7 @@ public class BoardAnimator
     }
 
     
+    [System.Obsolete("Use CascadeLogic.CalculateCascades() instead. This method will be removed.")]
     public IEnumerator CollapseAndSpawnAnimated()
     {
         board.IncrementFallGeneration();

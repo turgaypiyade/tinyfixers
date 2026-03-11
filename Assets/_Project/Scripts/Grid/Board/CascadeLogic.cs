@@ -100,7 +100,10 @@ public class CascadeLogic
                 }
 
                 for (int i = 0; i < slots.Count; i++)
+                {
                     board.Tiles[x, slots[i]] = null;
+                    board.SyncTileData(x, slots[i]);
+                }
 
                 for (int i = 0; i < existing.Count && i < slots.Count; i++)
                 {
@@ -282,7 +285,10 @@ public class CascadeLogic
                     }
 
                     for (int i = 0; i < slots.Count; i++)
+                    {
                         board.Tiles[x, slots[i]] = null;
+                        board.SyncTileData(x, slots[i]);
+                    }
 
                     for (int i = 0; i < existing.Count && i < slots.Count; i++)
                     {
@@ -290,21 +296,13 @@ public class CascadeLogic
                         var tile = existing[i];
                         int fromY = tile.Y;
 
+                        board.Tiles[x, toY] = tile;
+                        tile.SetCoords(x, toY);
+                        board.SyncTileData(x, toY);
+
                         if (fromY != toY)
                         {
-                            board.Tiles[x, toY] = tile;
-                            board.Tiles[x, fromY] = null;
-
-                            tile.SetCoords(x, toY);
-                            board.SyncTileData(x, toY);
-                            board.SyncTileData(x, fromY);
-
                             action.AddMove(tile, fromY, toY, board.GetFallDurationForDistance(Mathf.Abs(toY - fromY)), board.EnableFallSettle, board.FallSettleDuration, board.FallSettleStrength, board.FallMoveCurve);
-                        }
-                        else
-                        {
-                            board.Tiles[x, toY] = tile;
-                            board.SyncTileData(x, toY);
                         }
                     }
                 }

@@ -183,6 +183,7 @@ public class MatchFinder
         Add2x2Matches(result);
 
         // ─── DEBUG: board snapshot + matches ───────────────────────────────────
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"[MatchFinder] FindAllMatches — {result.Count} matches found");
         sb.AppendLine("  Board snapshot (H=Hole, ·=null, else type):");
@@ -204,6 +205,7 @@ public class MatchFinder
                 sb.AppendLine($"    ({m.X},{m.Y}) {m.Type}");
         }
         Debug.Log(sb.ToString());
+#endif
         // ─── END DEBUG ─────────────────────────────────────────────────────────
 
         return result;

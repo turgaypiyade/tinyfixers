@@ -287,6 +287,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         failPopupShown = false;
         HideAllPopups();
+
+        // Force full board sync to prevent any accumulated drift after popup
+        board.ForceFullBoardSync();
     }
 
     private void RefreshPopupCopy()

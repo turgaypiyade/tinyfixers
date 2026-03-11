@@ -153,6 +153,7 @@ public class BoardController : MonoBehaviour
 
     private MatchFinder matchFinder;
     private SpecialResolver specialResolver;
+    private SpecialBehaviorRegistry specialBehaviorRegistry;
     private BoardAnimator boardAnimator;
     private ActionSequencer actionSequencer;
     private PendingCreationService pendingCreationService;
@@ -209,6 +210,7 @@ public class BoardController : MonoBehaviour
     internal bool ShakeNextClear { get => shakeNextClear; set => shakeNextClear = value; }
     internal bool IsSpecialActivationPhase { get => isSpecialActivationPhase; set => isSpecialActivationPhase = value; }
     internal ObstacleStateService ObstacleStateService => obstacleStateService;
+    internal SpecialBehaviorRegistry SpecialBehaviors => specialBehaviorRegistry;
     public CascadeLogic CascadeLogic => cascadeLogic;
 
     public void EnqueuePatchbotDash(Vector2Int from, Vector2Int to)
@@ -259,6 +261,38 @@ public class BoardController : MonoBehaviour
             CurrentState = BoardState.Idle;
             OnBecameIdle?.Invoke();
         }
+    }
+
+    /// <summary>
+    /// Force full board resync: copies all TileView state into GridData.
+    /// Call this at checkpoints where drift may have accumulated (e.g. after popup).
+    /// </summary>
+    public void ForceFullBoardSync()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        ValidateTileSync("ForceFullBoardSync.Before");
+#endif
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            if (tiles[x, y] != null)
+            {
+                // Force visual icon to match internal special state
+                tiles[x, y].RefreshIcon();
+                // Reset CanvasGroup alpha in case HideTileVisualForCombo left it invisible
+                if (tiles[x, y].TryGetComponent<CanvasGroup>(out var cg))
+                    cg.alpha = 1f;
+                SyncTileData(x, y);
+            }
+            else if (gridData[x, y] != null)
+            {
+                Debug.LogError($"[ForceFullBoardSync] GridData orphan at ({x},{y}) data={gridData[x,y].ToDebugString()} — clearing.");
+                gridData[x, y] = null;
+            }
+        }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        ValidateTileSync("ForceFullBoardSync.After");
+#endif
     }
 
     public void RunAfterIdle(Action action)
@@ -448,6 +482,7 @@ public class BoardController : MonoBehaviour
         matchFinder ??= new MatchFinder(this);
         boardAnimator ??= new BoardAnimator(this);
         pulseCoreImpactService ??= new PulseCoreImpactService(this, boardAnimator);
+        specialBehaviorRegistry ??= new SpecialBehaviorRegistry();
         specialResolver ??= new SpecialResolver(this, matchFinder, boardAnimator, pulseCoreImpactService);
         pendingCreationService ??= new PendingCreationService(this, matchFinder, specialResolver);
         obstacleStateService ??= new ObstacleStateService();
@@ -690,12 +725,12 @@ public class BoardController : MonoBehaviour
             data.SetOverrideBaseType(baseType);
         }
 
-        ValidateTileSync($"SyncTileData ({x},{y})", x, y);
+        ValidateTileSync($"SyncTileData ({x},{y})", x, y, checkVisualPosition: false);
     }
 
     [System.Diagnostics.Conditional("UNITY_EDITOR")]
     [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
-    private void ValidateTileSync(string context, int onlyX = -1, int onlyY = -1)
+    private void ValidateTileSync(string context, int onlyX = -1, int onlyY = -1, bool checkVisualPosition = true)
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (!enableTileSyncValidation || tiles == null || gridData == null) return;
@@ -750,7 +785,7 @@ public class BoardController : MonoBehaviour
                 }
 
                 var rt = tile.GetComponent<RectTransform>();
-                if (rt != null)
+                if (rt != null && checkVisualPosition)
                 {
                     Vector2 expected = new Vector2(x * tileSize, -y * tileSize);
                     if (Vector2.Distance(rt.anchoredPosition, expected) > tilePositionEpsilon)
@@ -952,7 +987,12 @@ public class BoardController : MonoBehaviour
                 lightningLineStrikes: lightningLineStrikes));
             while(actionSequencer.IsPlaying) yield return null;
 
-            yield return boardAnimator.CollapseAndSpawnAnimated();
+            var cascadeActions_c = cascadeLogic.CalculateCascades();
+            if (cascadeActions_c.Count > 0)
+            {
+                actionSequencer.Enqueue(cascadeActions_c);
+                while (actionSequencer.IsPlaying) yield return null;
+            }
             yield return ResolveEmptyPlayableCellsWithoutMatch();
             yield return ResolveBoard();
         }
@@ -1444,6 +1484,16 @@ public class BoardController : MonoBehaviour
         lastSwapB = b;
         lastSwapUserMove = true;
 
+        // ─── FULL SYNC VALIDATION: catch any drift that accumulated during cascades ──
+        ValidateTileSync("ProcessSwap.Entry");
+        // Force a full resync to prevent stale data from causing wrong combos
+        for (int sy = 0; sy < height; sy++)
+        for (int sx = 0; sx < width; sx++)
+        {
+            if (tiles[sx, sy] != null)
+                SyncTileData(sx, sy);
+        }
+
         // ─── DEBUG: Hamle öncesi snapshot ──────────────────────────────────
         {
             var swapSb = new System.Text.StringBuilder();
@@ -1560,7 +1610,12 @@ public class BoardController : MonoBehaviour
                     actionSequencer.Enqueue(new MatchClearAction(normalMatchViews, true));
                     while(actionSequencer.IsPlaying) yield return null;
 
-                    yield return boardAnimator.CollapseAndSpawnAnimated();
+                    var cascadeActions_c2 = cascadeLogic.CalculateCascades();
+                    if (cascadeActions_c2.Count > 0)
+                    {
+                        actionSequencer.Enqueue(cascadeActions_c2);
+                        while (actionSequencer.IsPlaying) yield return null;
+                    }
                     yield return ResolveEmptyPlayableCellsWithoutMatch();
 
                     // normalTile'a yeni special yerleştirildiyse →
@@ -1572,7 +1627,12 @@ public class BoardController : MonoBehaviour
                         var soloActions = specialResolver.ResolveSpecialSolo(specialTile);
                         actionSequencer.Enqueue(soloActions);
                         while (actionSequencer.IsPlaying) yield return null;
-                        yield return boardAnimator.CollapseAndSpawnAnimated();
+                        var cascadeActions_c3 = cascadeLogic.CalculateCascades();
+                        if (cascadeActions_c3.Count > 0)
+                        {
+                            actionSequencer.Enqueue(cascadeActions_c3);
+                            while (actionSequencer.IsPlaying) yield return null;
+                        }
 
                         yield return ResolveEmptyPlayableCellsWithoutMatch();
                         yield return ResolveBoard();
@@ -1589,7 +1649,12 @@ public class BoardController : MonoBehaviour
             var swapActions = specialResolver.ResolveSpecialSwap(a, b);
             actionSequencer.Enqueue(swapActions);
             while (actionSequencer.IsPlaying) yield return null;
-            yield return boardAnimator.CollapseAndSpawnAnimated();
+            var cascadeActions_c = cascadeLogic.CalculateCascades();
+            if (cascadeActions_c.Count > 0)
+            {
+                actionSequencer.Enqueue(cascadeActions_c);
+                while (actionSequencer.IsPlaying) yield return null;
+            }
 
             yield return ResolveEmptyPlayableCellsWithoutMatch();
             yield return ResolveBoard();
@@ -2147,6 +2212,46 @@ public class BoardController : MonoBehaviour
         if (go != null) Destroy(go);
     }
 
+    /// <summary>
+    /// Canonical data-only clear. Sets Tiles and GridData to null at (x,y).
+    /// All tile clearing MUST go through this method.
+    /// </summary>
+    internal void ClearCell(int x, int y)
+    {
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+
+        tiles[x, y] = null;
+        gridData[x, y] = null;
+    }
+
+    /// <summary>
+    /// Canonical clear + destroy. Clears data, accumulates type counts for batch notification,
+    /// and destroys the TileView GameObject.
+    /// Call NotifyTilesCleared for each entry in clearedByType after the batch.
+    /// </summary>
+    internal void ClearAndDestroyTile(TileView tile, Dictionary<TileType, int> clearedByType = null)
+    {
+        if (tile == null) return;
+        if (!tile) return; // Unity null check for destroyed objects
+
+        int x = tile.X;
+        int y = tile.Y;
+
+        if (x >= 0 && x < width && y >= 0 && y < height && tiles[x, y] == tile)
+            ClearCell(x, y);
+
+        tile.SetSpecial(TileSpecial.None);
+
+        if (clearedByType != null)
+        {
+            var tileType = tile.GetTileType();
+            clearedByType.TryGetValue(tileType, out int current);
+            clearedByType[tileType] = current + 1;
+        }
+
+        Destroy(tile.gameObject);
+    }
+
     internal void ClearCellDataOnly(Vector2Int c)
     {
         int x = c.x;
@@ -2162,9 +2267,8 @@ public class BoardController : MonoBehaviour
 
         var t = tiles[x, y];
         if (t == null) return;
-        
-        tiles[x, y] = null;
-        SyncTileData(x, y); // Sync Data model
+
+        ClearCell(x, y);
     }
 
     internal void ClearCellVisualOnly(Vector2Int c, TileType type, TileView t)
@@ -2181,7 +2285,7 @@ public class BoardController : MonoBehaviour
         int x = c.x;
         int y = c.y;
         if (x < 0 || x >= width || y < 0 || y >= height) return;
-        
+
         var t = tiles[x, y];
         if (t == null) return;
         TileType type = t.GetTileType();
