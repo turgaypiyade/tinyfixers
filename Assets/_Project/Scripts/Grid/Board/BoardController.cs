@@ -87,6 +87,14 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float pulseMicroShakeStrength = 4f;
 
     [SerializeField] private PatchbotDashUI patchbotDashUI;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    [Header("Debug / Tile Sync")]
+    [SerializeField] private bool enableTileSyncValidation = true;
+    [SerializeField] private bool throwOnTileSyncMismatch;
+    [SerializeField] private float tilePositionEpsilon = 0.25f;
+#endif
+
     public PatchbotDashUI PatchbotDashUI => patchbotDashUI;
     private Vector2 shakeBasePos;
 
@@ -654,6 +662,7 @@ public class BoardController : MonoBehaviour
         tile.SnapToGrid(tileSize);
         
         SyncTileData(x, y); // Initialize data model 
+        ValidateTileSync($"RegisterTile ({x},{y})");
     }
 
     public void SyncTileData(int x, int y)
@@ -680,6 +689,87 @@ public class BoardController : MonoBehaviour
         {
             data.SetOverrideBaseType(baseType);
         }
+
+        ValidateTileSync($"SyncTileData ({x},{y})", x, y);
+    }
+
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+    private void ValidateTileSync(string context, int onlyX = -1, int onlyY = -1)
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (!enableTileSyncValidation || tiles == null || gridData == null) return;
+
+        int startX = (onlyX >= 0) ? onlyX : 0;
+        int endX = (onlyX >= 0) ? onlyX : width - 1;
+        int startY = (onlyY >= 0) ? onlyY : 0;
+        int endY = (onlyY >= 0) ? onlyY : height - 1;
+
+        bool mismatch = false;
+        var sb = new System.Text.StringBuilder();
+
+        for (int y = startY; y <= endY; y++)
+        {
+            for (int x = startX; x <= endX; x++)
+            {
+                var tile = tiles[x, y];
+                var data = gridData[x, y];
+
+                if (tile == null && data != null)
+                {
+                    mismatch = true;
+                    sb.AppendLine($"[{context}] Data var ama view yok @ ({x},{y}) data={data.ToDebugString()}");
+                    continue;
+                }
+
+                if (tile != null && data == null)
+                {
+                    mismatch = true;
+                    sb.AppendLine($"[{context}] View var ama data yok @ ({x},{y}) view={tile.GetTileType()}/{tile.GetSpecial()}");
+                    continue;
+                }
+
+                if (tile == null) continue;
+
+                if (tile.X != x || tile.Y != y)
+                {
+                    mismatch = true;
+                    sb.AppendLine($"[{context}] TileView koordinat sapması @ ({x},{y}) viewXY=({tile.X},{tile.Y})");
+                }
+
+                if (data.X != x || data.Y != y)
+                {
+                    mismatch = true;
+                    sb.AppendLine($"[{context}] TileData koordinat sapması @ ({x},{y}) dataXY=({data.X},{data.Y})");
+                }
+
+                if (data.Type != tile.GetTileType() || data.Special != tile.GetSpecial())
+                {
+                    mismatch = true;
+                    sb.AppendLine($"[{context}] Type/Special mismatch @ ({x},{y}) data={data.Type}/{data.Special} view={tile.GetTileType()}/{tile.GetSpecial()}");
+                }
+
+                var rt = tile.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    Vector2 expected = new Vector2(x * tileSize, -y * tileSize);
+                    if (Vector2.Distance(rt.anchoredPosition, expected) > tilePositionEpsilon)
+                    {
+                        mismatch = true;
+                        sb.AppendLine($"[{context}] Görsel pozisyon sapması @ ({x},{y}) pos={rt.anchoredPosition} expected={expected}");
+                    }
+                }
+            }
+        }
+
+        if (!mismatch) return;
+
+        string log = $"[TileSyncValidation] {context}\n{sb}";
+        if (throwOnTileSyncMismatch)
+            throw new InvalidOperationException(log);
+
+        Debug.LogError(log, this);
+#endif
     }
 
     internal void RefreshTileObstacleVisual(TileView tile)
@@ -1386,6 +1476,7 @@ public class BoardController : MonoBehaviour
         // ─── 2. GÖRSEL SWAP (ACTION) ──────────────────────────────────────
         actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
         while(actionSequencer.IsPlaying) yield return null;
+        ValidateTileSync("ProcessSwap.AfterSwapAnimation");
 
         pendingCreationService.Clear();
         bool hasPendingCreation = pendingCreationService.CapturePendingCreation(a, b);
@@ -1650,6 +1741,7 @@ public class BoardController : MonoBehaviour
             {
                 actionSequencer.Enqueue(cascadeActions);
                 while (actionSequencer.IsPlaying) yield return null;
+                ValidateTileSync($"ResolveBoard.Pass{CurrentResolvePass}.AfterCascade");
             }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
