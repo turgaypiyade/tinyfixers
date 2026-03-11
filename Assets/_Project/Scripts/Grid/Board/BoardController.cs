@@ -1810,6 +1810,17 @@ public class BoardController : MonoBehaviour
 #endif
 
             var matches = matchFinder.FindAllMatches();
+
+            // 2x2 special-candidate fallback should apply only for the user's swap pass,
+            // not globally in every cascade resolve pass.
+            if (matches.Count == 0 && allowSpecial && lastSwapUserMove && lastSwapA != null && lastSwapB != null)
+            {
+                var twoByTwoCandidates = new HashSet<TileData>();
+                matchFinder.Add2x2Candidates(twoByTwoCandidates, lastSwapA.X, lastSwapA.Y);
+                matchFinder.Add2x2Candidates(twoByTwoCandidates, lastSwapB.X, lastSwapB.Y);
+                if (twoByTwoCandidates.Count > 0)
+                    matches = twoByTwoCandidates;
+            }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             ResolveProfStep($"FindMatches (count={matches.Count})");
 #endif
