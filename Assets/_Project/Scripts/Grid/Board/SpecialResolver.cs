@@ -724,6 +724,7 @@ public class SpecialResolver
                 overrideFanoutPulseHitCount = 0;
 
                 overrideFanoutOrigin = specialTile;
+                SystemOverrideBehaviorEvents.EmitOverrideFanoutStarted(new Vector2Int(ox, oy), TileSpecial.None);
                 CollectAllOfType(overrideFanoutTargets, type, excludeSpecials: true);
                 overrideForceDefaultClearAnim = true;
                 overrideSuppressPerTileClearVfx = false;
@@ -1108,6 +1109,7 @@ public class SpecialResolver
             TileType baseType = otherTile.GetTileType();
 
             overrideFanoutOrigin = overrideTile;
+            SystemOverrideBehaviorEvents.EmitOverrideFanoutStarted(new Vector2Int(overrideTile.X, overrideTile.Y), targetSpecial);
             overrideForceDefaultClearAnim = !targetIsLine;
             overrideSuppressPerTileClearVfx = targetIsLine;
             overrideFanoutNormalSelectionPulse = targetIsNormal;
