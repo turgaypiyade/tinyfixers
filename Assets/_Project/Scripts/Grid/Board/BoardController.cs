@@ -145,6 +145,8 @@ public class BoardController : MonoBehaviour
     public event Action<int> OnMovesChanged;
     public event Action<TileType, int> OnTilesCleared;
     public event Action<bool> OnBoosterTargetingChanged;
+    public event Action<LightningLineStrike, float> OnLineSweepStarted;
+    public event Action<Vector2Int, LightningLineStrike> OnLineSweepCellReached;
 
     private TileView lastSwapA;
     private TileView lastSwapB;
@@ -1177,12 +1179,12 @@ public class BoardController : MonoBehaviour
 
             float delay = StrikeStagger * i;
 
-            LineBehaviorEvents.EmitSweepStarted(strike, delay);
+            OnLineSweepStarted?.Invoke(strike, delay);
 
             void EmitSweepCell(Vector2Int cell)
             {
                 onSweepCellReached?.Invoke(cell);
-                LineBehaviorEvents.EmitSweepCellReached(cell, strike);
+                OnLineSweepCellReached?.Invoke(cell, strike);
             }
 
             float endTime = strike.isHorizontal
