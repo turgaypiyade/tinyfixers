@@ -1170,9 +1170,17 @@ public class BoardController : MonoBehaviour
 
             float delay = StrikeStagger * i;
 
+            LineBehaviorEvents.EmitSweepStarted(strike, delay);
+
+            void EmitSweepCell(Vector2Int cell)
+            {
+                onSweepCellReached?.Invoke(cell);
+                LineBehaviorEvents.EmitSweepCellReached(cell, strike);
+            }
+
             float endTime = strike.isHorizontal
-                ? PlayTwoWaySweepHorizontal(x, y, delay, onSweepCellReached)
-                : PlayTwoWaySweepVertical(x, y, delay, onSweepCellReached);
+                ? PlayTwoWaySweepHorizontal(x, y, delay, EmitSweepCell)
+                : PlayTwoWaySweepVertical(x, y, delay, EmitSweepCell);
 
             if (endTime > maxEndTime) maxEndTime = endTime;
         }
