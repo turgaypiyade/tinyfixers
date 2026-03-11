@@ -13,8 +13,8 @@ public class SpecialBehaviorRegistry
     public SpecialBehaviorRegistry()
     {
         // Register solo behaviors
-        Register(new LineHorizontalSpecialBehavior());
-        Register(new LineVerticalSpecialBehavior());
+        Register(new LineHorizontalBehavior());
+        Register(new LineVerticalBehavior());
         Register(new PulseCoreBehavior());
         Register(new SystemOverrideBehavior());
         Register(new PatchBotBehavior());
