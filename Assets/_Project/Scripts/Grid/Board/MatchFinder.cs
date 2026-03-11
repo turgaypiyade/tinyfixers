@@ -180,7 +180,6 @@ public class MatchFinder
 
             FlushRun(run, runTiles, result);
         }
-        Add2x2Matches(result);
 
         // ─── DEBUG: board snapshot + matches ───────────────────────────────────
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -421,7 +420,7 @@ public class MatchFinder
         // 4 straight => Line
         if (best == 4) return (hLen >= vLen) ? TileSpecial.LineH : TileSpecial.LineV;
 
-        // 2x2 => PatchBot (match olsa da olmasa da, biz FindAllMatches’e ekledik)
+        // 2x2 => PatchBot (yalnızca çağrıldığı bağlamda; global auto-match listesine eklenmez)
         if (Has2x2At(x, y)) return TileSpecial.PatchBot;
 
         return TileSpecial.None;
