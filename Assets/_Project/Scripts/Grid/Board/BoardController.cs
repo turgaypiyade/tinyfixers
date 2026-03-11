@@ -1652,9 +1652,14 @@ public class BoardController : MonoBehaviour
                 }
             }
 
-            // İki taraf da special ise eski pending creation akışını koru
-            if (pendingCreationService.HasPending)
+            // İki taraf da special ise pending creation UYGULAMA:
+            // line+line gibi combo sonuçlarını, swap öncesi yakalanan olası creation
+            // adaylarıyla kirletme (ör. yanlışlıkla Override implantı).
+            bool bothSpecial = sa != TileSpecial.None && sb != TileSpecial.None;
+            if (!bothSpecial && pendingCreationService.HasPending)
                 pendingCreationService.ApplyPendingCreations();
+            else if (bothSpecial)
+                pendingCreationService.Clear();
 
             var swapActions = specialResolver.ResolveSpecialSwap(a, b);
             actionSequencer.Enqueue(swapActions);
