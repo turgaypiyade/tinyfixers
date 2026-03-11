@@ -151,7 +151,7 @@ public class CascadeLogic
                         view.SetCoords(x, y);
                         board.Tiles[x, y] = view;
 
-                        view.SetType(GetRandomType());
+                        view.SetType(GetRandomTypeAvoidingImmediateMatch(x, y));
                         view.SetSpecial(TileSpecial.None);
                         board.SyncTileData(x, y);
                         board.RefreshTileObstacleVisual(view);
@@ -496,5 +496,52 @@ public class CascadeLogic
             return TileType.Gear;
 
         return board.RandomPool[UnityEngine.Random.Range(0, board.RandomPool.Length)];
+    }
+
+    private TileType GetRandomTypeAvoidingImmediateMatch(int x, int y)
+    {
+        if (board.RandomPool == null || board.RandomPool.Length == 0)
+            return TileType.Gear;
+
+        int len = board.RandomPool.Length;
+        int start = UnityEngine.Random.Range(0, len);
+
+        for (int i = 0; i < len; i++)
+        {
+            TileType candidate = board.RandomPool[(start + i) % len];
+            if (!WouldCreateImmediateMatch(x, y, candidate))
+                return candidate;
+        }
+
+        return board.RandomPool[start];
+    }
+
+    private bool WouldCreateImmediateMatch(int x, int y, TileType type)
+    {
+        // Horizontal 3-run patterns including (x,y)
+        if (HasTypeAt(x - 1, y, type) && HasTypeAt(x - 2, y, type)) return true;
+        if (HasTypeAt(x + 1, y, type) && HasTypeAt(x + 2, y, type)) return true;
+        if (HasTypeAt(x - 1, y, type) && HasTypeAt(x + 1, y, type)) return true;
+
+        // Vertical 3-run patterns including (x,y)
+        if (HasTypeAt(x, y - 1, type) && HasTypeAt(x, y - 2, type)) return true;
+        if (HasTypeAt(x, y + 1, type) && HasTypeAt(x, y + 2, type)) return true;
+        if (HasTypeAt(x, y - 1, type) && HasTypeAt(x, y + 1, type)) return true;
+
+        return false;
+    }
+
+    private bool HasTypeAt(int x, int y, TileType type)
+    {
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+        if (board.Holes[x, y])
+            return false;
+
+        var tile = board.Tiles[x, y];
+        if (tile == null)
+            return false;
+
+        return tile.GetTileType() == type;
     }
 }
