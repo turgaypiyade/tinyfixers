@@ -241,6 +241,7 @@ public class SpecialResolver
             var center = saIsPulse ? a : b;
             int cx = center.X;
             int cy = center.Y;
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(cx, cy));
 
             // Yeni Action sistemine göre datayı anında silip Action objesini oluştur
             var pulseAction = board.CreatePulseEmitterComboAction(cx, cy);
@@ -724,6 +725,7 @@ public class SpecialResolver
                 overrideFanoutPulseHitCount = 0;
 
                 overrideFanoutOrigin = specialTile;
+                SystemOverrideBehaviorEvents.EmitOverrideFanoutStarted(new Vector2Int(ox, oy), TileSpecial.None);
                 CollectAllOfType(overrideFanoutTargets, type, excludeSpecials: true);
                 overrideForceDefaultClearAnim = true;
                 overrideSuppressPerTileClearVfx = false;
@@ -1072,6 +1074,7 @@ public class SpecialResolver
 
         if (IsOverride(sa) && IsOverride(sb))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             bool aHasBase = a != null && a.GetOverrideBaseType(out _);
             bool bHasBase = b != null && b.GetOverrideBaseType(out _);
             if (aHasBase && bHasBase)
@@ -1080,6 +1083,7 @@ public class SpecialResolver
                 HideTileVisualForCombo(b);
 
                 overrideOverrideVfxDuration = board.PlaySystemOverrideComboVfxAndGetDuration();
+                ComboBehaviorEvents.EmitComboVisualQueued(sa, sb, new Vector2Int(a.X, a.Y), overrideOverrideVfxDuration);
             }
 
             AddAllTiles(matches);
@@ -1091,6 +1095,7 @@ public class SpecialResolver
 
         if (IsOverride(sa) || IsOverride(sb))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             var overrideTile = IsOverride(sa) ? a : b;
             var otherTile = IsOverride(sa) ? b : a;
 
@@ -1108,6 +1113,7 @@ public class SpecialResolver
             TileType baseType = otherTile.GetTileType();
 
             overrideFanoutOrigin = overrideTile;
+            SystemOverrideBehaviorEvents.EmitOverrideFanoutStarted(new Vector2Int(overrideTile.X, overrideTile.Y), targetSpecial);
             overrideForceDefaultClearAnim = !targetIsLine;
             overrideSuppressPerTileClearVfx = targetIsLine;
             overrideFanoutNormalSelectionPulse = targetIsNormal;
@@ -1148,6 +1154,7 @@ public class SpecialResolver
 
         if (IsLine(sa) && IsLine(sb))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             var combo = board.SpecialBehaviors.FindCombo(sa, sb);
             if (combo != null)
             {
@@ -1175,6 +1182,7 @@ public class SpecialResolver
 
         if (IsLine(sa) && IsPatchBot(sb) || (IsLine(sb) && IsPatchBot(sa)))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             var lineTile = IsLine(sa) ? a : b;
             var patchBotTile = IsPatchBot(sa) ? a : b;
             var target = patchbotComboService.FindTarget(patchBotTile, lineTile, null);
@@ -1199,6 +1207,7 @@ public class SpecialResolver
 
         if (IsPatchBot(sa) && IsPatchBot(sb))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             var usedTargets = new HashSet<TileView>();
             var dataMatches = new HashSet<TileData>();
 
@@ -1231,6 +1240,7 @@ public class SpecialResolver
 
         if ((IsPatchBot(sa) && IsPulse(sb)) || (IsPulse(sa) && IsPatchBot(sb)))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             var pulseTile = IsPulse(sa) ? a : b;
             var patchBotTile = IsPatchBot(sa) ? a : b;
             var target = patchbotComboService.FindTarget(patchBotTile, pulseTile, null);
@@ -1246,6 +1256,7 @@ public class SpecialResolver
 
         if (IsPulse(sa) && IsPulse(sb))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             board.PlayPulsePulseExplosionVfxAtCell(a.X, a.Y);
             AddSquare(matches, a.X, a.Y, 2);
             return;

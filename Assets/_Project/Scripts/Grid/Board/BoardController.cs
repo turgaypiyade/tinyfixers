@@ -386,7 +386,9 @@ public class BoardController : MonoBehaviour
         if (systemOverrideComboVfx == null) return 0f;
         systemOverrideComboVfx.gameObject.SetActive(true);
         systemOverrideComboVfx.Play();
-        return systemOverrideComboVfx.GetTotalDuration();
+        float duration = systemOverrideComboVfx.GetTotalDuration();
+        SystemOverrideBehaviorEvents.EmitOverrideComboVfxPlayed(duration);
+        return duration;
     }
 
     public void PlaySystemOverrideComboVfx()
@@ -427,6 +429,8 @@ public class BoardController : MonoBehaviour
     {
         if (pulsePulseExplosionPrefab == null) return;
         if (vfxSpace == null) return;
+
+        PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(x, y));
 
         TileView ta = lastSwapA;
         TileView tb = lastSwapB;
@@ -1170,9 +1174,17 @@ public class BoardController : MonoBehaviour
 
             float delay = StrikeStagger * i;
 
+            LineBehaviorEvents.EmitSweepStarted(strike, delay);
+
+            void EmitSweepCell(Vector2Int cell)
+            {
+                onSweepCellReached?.Invoke(cell);
+                LineBehaviorEvents.EmitSweepCellReached(cell, strike);
+            }
+
             float endTime = strike.isHorizontal
-                ? PlayTwoWaySweepHorizontal(x, y, delay, onSweepCellReached)
-                : PlayTwoWaySweepVertical(x, y, delay, onSweepCellReached);
+                ? PlayTwoWaySweepHorizontal(x, y, delay, EmitSweepCell)
+                : PlayTwoWaySweepVertical(x, y, delay, EmitSweepCell);
 
             if (endTime > maxEndTime) maxEndTime = endTime;
         }
@@ -1642,9 +1654,14 @@ public class BoardController : MonoBehaviour
                 }
             }
 
-            // İki taraf da special ise eski pending creation akışını koru
-            if (pendingCreationService.HasPending)
+            // İki taraf da special ise pending creation UYGULAMA:
+            // line+line gibi combo sonuçlarını, swap öncesi yakalanan olası creation
+            // adaylarıyla kirletme (ör. yanlışlıkla Override implantı).
+            bool bothSpecial = sa != TileSpecial.None && sb != TileSpecial.None;
+            if (!bothSpecial && pendingCreationService.HasPending)
                 pendingCreationService.ApplyPendingCreations();
+            else if (bothSpecial)
+                pendingCreationService.Clear();
 
             var swapActions = specialResolver.ResolveSpecialSwap(a, b);
             actionSequencer.Enqueue(swapActions);
@@ -2041,6 +2058,8 @@ public class BoardController : MonoBehaviour
     }
     public PulseLineComboAction CreatePulseEmitterComboAction(int cx, int cy)
     {
+        PulseBehaviorEvents.EmitPulseEmitterComboTriggered(new Vector2Int(cx, cy));
+
         var targets = BuildPulseEmitterTargets(cx, cy);
 
         RectTransform space = null;
