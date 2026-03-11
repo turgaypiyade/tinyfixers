@@ -1122,14 +1122,24 @@ public class SpecialResolver
             overrideSuppressPerTileClearVfx = false;
             overrideFanoutNormalSelectionPulse = targetIsNormal;
 
-            for (int x = 0; x < board.Width; x++)
+                for (int x = 0; x < board.Width; x++)
                 for (int y = 0; y < board.Height; y++)
                 {
                     if (!CanSpecialAffectCell(x, y)) continue;
                     var tile = board.Tiles[x, y];
                     if (tile == null) continue;
                     if (!tile.GetTileType().Equals(baseType)) continue;
-                    if (tile.GetSpecial() != TileSpecial.None) continue;
+
+                    // Override fan-out yolunda mevcut special taşlar da etkilenebilmeli.
+                    // Önceden burada skip edildiği için zincirde patlaması beklenen
+                    // special'lar kuyruğa hiç girmiyordu.
+                    if (tile.GetSpecial() != TileSpecial.None)
+                    {
+                        matches.Add(tile);
+                        MarkAffectedCell(tile);
+                        EnqueueActivation(queue, queued, tile, otherTile);
+                        continue;
+                    }
 
                     overrideFanoutTargets.Add(tile);
 
