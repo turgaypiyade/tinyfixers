@@ -388,7 +388,9 @@ public class BoardController : MonoBehaviour
         if (systemOverrideComboVfx == null) return 0f;
         systemOverrideComboVfx.gameObject.SetActive(true);
         systemOverrideComboVfx.Play();
-        return systemOverrideComboVfx.GetTotalDuration();
+        float duration = systemOverrideComboVfx.GetTotalDuration();
+        SystemOverrideBehaviorEvents.EmitOverrideComboVfxPlayed(duration);
+        return duration;
     }
 
     public void PlaySystemOverrideComboVfx()
@@ -429,6 +431,8 @@ public class BoardController : MonoBehaviour
     {
         if (pulsePulseExplosionPrefab == null) return;
         if (vfxSpace == null) return;
+
+        PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(x, y));
 
         TileView ta = lastSwapA;
         TileView tb = lastSwapB;
@@ -2056,6 +2060,8 @@ public class BoardController : MonoBehaviour
     }
     public PulseLineComboAction CreatePulseEmitterComboAction(int cx, int cy)
     {
+        PulseBehaviorEvents.EmitPulseEmitterComboTriggered(new Vector2Int(cx, cy));
+
         var targets = BuildPulseEmitterTargets(cx, cy);
 
         RectTransform space = null;
