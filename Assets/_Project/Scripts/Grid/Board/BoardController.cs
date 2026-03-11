@@ -56,6 +56,9 @@ public class BoardController : MonoBehaviour
     [Header("Special Combos")]
     [SerializeField] private int patchBotPulseComboSize = 4;
 
+    [Header("Special Chain Tempo")]
+    [SerializeField, Range(0.2f, 1.5f)] private float specialChainDurationMultiplier = 0.75f;
+
     [Header("PulseCore Impact (premium stagger)")]
     [SerializeField] private float pulseImpactDelayStep = 0.02f;
     [SerializeField] private float pulseImpactAnimTime = 0.16f;
@@ -91,6 +94,7 @@ public class BoardController : MonoBehaviour
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     [Header("Debug / Tile Sync")]
     [SerializeField] private bool enableTileSyncValidation = true;
+    [SerializeField] private bool enableSpecialChainTrace;
     [SerializeField] private bool throwOnTileSyncMismatch;
     [SerializeField] private float tilePositionEpsilon = 0.25f;
 #endif
@@ -209,6 +213,11 @@ public class BoardController : MonoBehaviour
     internal bool LastSwapUserMove { get => lastSwapUserMove; set => lastSwapUserMove = value; }
     internal bool ShakeNextClear { get => shakeNextClear; set => shakeNextClear = value; }
     internal bool IsSpecialActivationPhase { get => isSpecialActivationPhase; set => isSpecialActivationPhase = value; }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    internal bool EnableSpecialChainTrace => enableSpecialChainTrace;
+#else
+    internal bool EnableSpecialChainTrace => false;
+#endif
     internal ObstacleStateService ObstacleStateService => obstacleStateService;
     internal SpecialBehaviorRegistry SpecialBehaviors => specialBehaviorRegistry;
     public CascadeLogic CascadeLogic => cascadeLogic;
@@ -386,7 +395,9 @@ public class BoardController : MonoBehaviour
         if (systemOverrideComboVfx == null) return 0f;
         systemOverrideComboVfx.gameObject.SetActive(true);
         systemOverrideComboVfx.Play();
-        return systemOverrideComboVfx.GetTotalDuration();
+        float duration = systemOverrideComboVfx.GetTotalDuration();
+        SystemOverrideBehaviorEvents.EmitOverrideComboVfxPlayed(duration);
+        return duration;
     }
 
     public void PlaySystemOverrideComboVfx()
@@ -427,6 +438,8 @@ public class BoardController : MonoBehaviour
     {
         if (pulsePulseExplosionPrefab == null) return;
         if (vfxSpace == null) return;
+
+        PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(x, y));
 
         TileView ta = lastSwapA;
         TileView tb = lastSwapB;
@@ -1170,9 +1183,17 @@ public class BoardController : MonoBehaviour
 
             float delay = StrikeStagger * i;
 
+            LineBehaviorEvents.EmitSweepStarted(strike, delay);
+
+            void EmitSweepCell(Vector2Int cell)
+            {
+                onSweepCellReached?.Invoke(cell);
+                LineBehaviorEvents.EmitSweepCellReached(cell, strike);
+            }
+
             float endTime = strike.isHorizontal
-                ? PlayTwoWaySweepHorizontal(x, y, delay, onSweepCellReached)
-                : PlayTwoWaySweepVertical(x, y, delay, onSweepCellReached);
+                ? PlayTwoWaySweepHorizontal(x, y, delay, EmitSweepCell)
+                : PlayTwoWaySweepVertical(x, y, delay, EmitSweepCell);
 
             if (endTime > maxEndTime) maxEndTime = endTime;
         }
@@ -1379,7 +1400,19 @@ public class BoardController : MonoBehaviour
     {
         TryResolveLightningSpawner();
         if (lightningSpawner == null) return 0f;
-        return lightningSpawner.GetStepDelay();
+        return ApplySpecialChainTempo(lightningSpawner.GetStepDelay());
+    }
+
+    internal float GetSpecialChainDurationMultiplier()
+    {
+        return Mathf.Clamp(specialChainDurationMultiplier, 0.2f, 1.5f);
+    }
+
+    internal float ApplySpecialChainTempo(float duration)
+    {
+        if (duration <= 0f) return 0f;
+        if (!isSpecialActivationPhase) return duration;
+        return duration * GetSpecialChainDurationMultiplier();
     }
 
     public Vector3 GetCellWorldPosition(int x, int y)
@@ -1635,16 +1668,21 @@ public class BoardController : MonoBehaviour
                         }
 
                         yield return ResolveEmptyPlayableCellsWithoutMatch();
-                        yield return ResolveBoard();
+                        yield return ResolveBoard(allowSpecial: false);
                         EndBusy();
                         yield break;
                     }
                 }
             }
 
-            // İki taraf da special ise eski pending creation akışını koru
-            if (pendingCreationService.HasPending)
+            // İki taraf da special ise pending creation UYGULAMA:
+            // line+line gibi combo sonuçlarını, swap öncesi yakalanan olası creation
+            // adaylarıyla kirletme (ör. yanlışlıkla Override implantı).
+            bool bothSpecial = sa != TileSpecial.None && sb != TileSpecial.None;
+            if (!bothSpecial && pendingCreationService.HasPending)
                 pendingCreationService.ApplyPendingCreations();
+            else if (bothSpecial)
+                pendingCreationService.Clear();
 
             var swapActions = specialResolver.ResolveSpecialSwap(a, b);
             actionSequencer.Enqueue(swapActions);
@@ -1657,7 +1695,7 @@ public class BoardController : MonoBehaviour
             }
 
             yield return ResolveEmptyPlayableCellsWithoutMatch();
-            yield return ResolveBoard();
+            yield return ResolveBoard(allowSpecial: false);
             EndBusy();
             yield break;
         }
@@ -1731,7 +1769,7 @@ public class BoardController : MonoBehaviour
 
     internal float GetClearDurationForCurrentPass()
     {
-        return Mathf.Max(0.03f, ClearDuration * GetCascadeClearSpeedMultiplier());
+        return Mathf.Max(0.03f, ApplySpecialChainTempo(ClearDuration * GetCascadeClearSpeedMultiplier()));
     }
 
     internal bool ShouldEnableFallSettleThisPass()
@@ -1770,6 +1808,17 @@ public class BoardController : MonoBehaviour
 #endif
 
             var matches = matchFinder.FindAllMatches();
+
+            // 2x2 special-candidate fallback should apply only for the user's swap pass,
+            // not globally in every cascade resolve pass.
+            if (matches.Count == 0 && allowSpecial && lastSwapUserMove && lastSwapA != null && lastSwapB != null)
+            {
+                var twoByTwoCandidates = new HashSet<TileData>();
+                matchFinder.Add2x2Candidates(twoByTwoCandidates, lastSwapA.X, lastSwapA.Y);
+                matchFinder.Add2x2Candidates(twoByTwoCandidates, lastSwapB.X, lastSwapB.Y);
+                if (twoByTwoCandidates.Count > 0)
+                    matches = twoByTwoCandidates;
+            }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             ResolveProfStep($"FindMatches (count={matches.Count})");
 #endif
@@ -1777,18 +1826,25 @@ public class BoardController : MonoBehaviour
             if (matches.Count == 0) yield break;
 
             var matchTiles = new HashSet<TileView>();
-            foreach(var t in matches) 
+            foreach(var t in matches)
             {
                 if (tiles[t.X, t.Y] != null) matchTiles.Add(tiles[t.X, t.Y]);
             }
 
-            matchTiles.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
             if (matchTiles.Count == 0) yield break;
+
+            var nonSpecialMatchTiles = new HashSet<TileView>(matchTiles);
+            nonSpecialMatchTiles.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
 
             if (allowSpecial)
             {
-                var created = specialResolver.TryCreateSpecial(matchTiles);
-                if (created != null) shakeNextClear = true;
+                var created = specialResolver.TryCreateSpecial(nonSpecialMatchTiles);
+                if (created != null)
+                {
+                    // Special created from this match should survive this clear pass.
+                    matchTiles.Remove(created);
+                    shakeNextClear = true;
+                }
             }
 
             bool doShake = shakeNextClear;
@@ -2041,6 +2097,8 @@ public class BoardController : MonoBehaviour
     }
     public PulseLineComboAction CreatePulseEmitterComboAction(int cx, int cy)
     {
+        PulseBehaviorEvents.EmitPulseEmitterComboTriggered(new Vector2Int(cx, cy));
+
         var targets = BuildPulseEmitterTargets(cx, cy);
 
         RectTransform space = null;

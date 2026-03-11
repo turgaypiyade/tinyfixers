@@ -170,6 +170,23 @@ public class SpecialResolver
         return (b, bSpec);
     }
 
+
+    void TraceSpecialChain(string stage, TileView a, TileView b, HashSet<Vector2Int> processed, HashSet<TileView> affected)
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (!board.EnableSpecialChainTrace)
+            return;
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append("[SpecialChainTrace] ").Append(stage);
+        if (a != null) sb.Append(" A=").Append(a.GetSpecial()).Append("@").Append(a.X).Append(",").Append(a.Y);
+        if (b != null) sb.Append(" B=").Append(b.GetSpecial()).Append("@").Append(b.X).Append(",").Append(b.Y);
+        sb.Append(" processed=").Append(processed != null ? processed.Count : 0);
+        sb.Append(" affected=").Append(affected != null ? affected.Count : 0);
+        Debug.Log(sb.ToString());
+#endif
+    }
+
     public List<BoardAction> ResolveSpecialSwap(TileView a, TileView b)
     {
         var actions = new List<BoardAction>();
@@ -241,6 +258,7 @@ public class SpecialResolver
             var center = saIsPulse ? a : b;
             int cx = center.X;
             int cy = center.Y;
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(cx, cy));
 
             // Yeni Action sistemine göre datayı anında silip Action objesini oluştur
             var pulseAction = board.CreatePulseEmitterComboAction(cx, cy);
@@ -425,7 +443,7 @@ public class SpecialResolver
             affected,
             doShake: true,
             staggerDelays: stagger,
-            staggerAnimTime: board.PulseImpactAnimTime,
+            staggerAnimTime: board.ApplySpecialChainTempo(board.PulseImpactAnimTime),
             animationMode: animationMode,
             affectedCells: specialAffectedCells,
             includeAdjacentOverTileBlockerDamage: false,
@@ -435,6 +453,7 @@ public class SpecialResolver
             perTileClearDelays: overrideOverrideRadialClearDelays,
             isSpecialPhase: true));
 
+        TraceSpecialChain("ResolveSpecialSwap", a, b, processed, affected);
         board.IsSpecialActivationPhase = false;
         specialAffectedCells = null;
         return actions;
@@ -586,7 +605,7 @@ public class SpecialResolver
             affected,
             doShake: true,
             staggerDelays: stagger,
-            staggerAnimTime: board.PulseImpactAnimTime,
+            staggerAnimTime: board.ApplySpecialChainTempo(board.PulseImpactAnimTime),
             animationMode: animationMode,
             affectedCells: specialAffectedCells,
             includeAdjacentOverTileBlockerDamage: false,
@@ -596,6 +615,7 @@ public class SpecialResolver
             perTileClearDelays: overrideOverrideRadialClearDelays,
             isSpecialPhase: true));
 
+        TraceSpecialChain("ResolveSpecialSolo", specialTile, null, processed, affected);
         board.IsSpecialActivationPhase = false;
         specialAffectedCells = null;
         return actions;
@@ -724,6 +744,7 @@ public class SpecialResolver
                 overrideFanoutPulseHitCount = 0;
 
                 overrideFanoutOrigin = specialTile;
+                SystemOverrideBehaviorEvents.EmitOverrideFanoutStarted(new Vector2Int(ox, oy), TileSpecial.None);
                 CollectAllOfType(overrideFanoutTargets, type, excludeSpecials: true);
                 overrideForceDefaultClearAnim = true;
                 overrideSuppressPerTileClearVfx = false;
@@ -1072,6 +1093,7 @@ public class SpecialResolver
 
         if (IsOverride(sa) && IsOverride(sb))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             bool aHasBase = a != null && a.GetOverrideBaseType(out _);
             bool bHasBase = b != null && b.GetOverrideBaseType(out _);
             if (aHasBase && bHasBase)
@@ -1080,6 +1102,7 @@ public class SpecialResolver
                 HideTileVisualForCombo(b);
 
                 overrideOverrideVfxDuration = board.PlaySystemOverrideComboVfxAndGetDuration();
+                ComboBehaviorEvents.EmitComboVisualQueued(sa, sb, new Vector2Int(a.X, a.Y), overrideOverrideVfxDuration);
             }
 
             AddAllTiles(matches);
@@ -1091,6 +1114,7 @@ public class SpecialResolver
 
         if (IsOverride(sa) || IsOverride(sb))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             var overrideTile = IsOverride(sa) ? a : b;
             var otherTile = IsOverride(sa) ? b : a;
 
@@ -1108,18 +1132,33 @@ public class SpecialResolver
             TileType baseType = otherTile.GetTileType();
 
             overrideFanoutOrigin = overrideTile;
+            SystemOverrideBehaviorEvents.EmitOverrideFanoutStarted(new Vector2Int(overrideTile.X, overrideTile.Y), targetSpecial);
             overrideForceDefaultClearAnim = !targetIsLine;
-            overrideSuppressPerTileClearVfx = targetIsLine;
+            // Override+Line'da global per-tile VFX suppression uygulamak,
+            // yol üstünde tetiklenen diğer special'ların (Pulse/Line/PatchBot vb.)
+            // kendi efektlerini görünmez yapabiliyor.
+            // Bu yüzden suppression'ı kapalı tutup zincir special efektlerini görünür bırak.
+            overrideSuppressPerTileClearVfx = false;
             overrideFanoutNormalSelectionPulse = targetIsNormal;
 
-            for (int x = 0; x < board.Width; x++)
+                for (int x = 0; x < board.Width; x++)
                 for (int y = 0; y < board.Height; y++)
                 {
                     if (!CanSpecialAffectCell(x, y)) continue;
                     var tile = board.Tiles[x, y];
                     if (tile == null) continue;
                     if (!tile.GetTileType().Equals(baseType)) continue;
-                    if (tile.GetSpecial() != TileSpecial.None) continue;
+
+                    // Override fan-out yolunda mevcut special taşlar da etkilenebilmeli.
+                    // Önceden burada skip edildiği için zincirde patlaması beklenen
+                    // special'lar kuyruğa hiç girmiyordu.
+                    if (tile.GetSpecial() != TileSpecial.None)
+                    {
+                        matches.Add(tile);
+                        MarkAffectedCell(tile);
+                        EnqueueActivation(queue, queued, tile, otherTile);
+                        continue;
+                    }
 
                     overrideFanoutTargets.Add(tile);
 
@@ -1148,6 +1187,7 @@ public class SpecialResolver
 
         if (IsLine(sa) && IsLine(sb))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             var combo = board.SpecialBehaviors.FindCombo(sa, sb);
             if (combo != null)
             {
@@ -1175,6 +1215,7 @@ public class SpecialResolver
 
         if (IsLine(sa) && IsPatchBot(sb) || (IsLine(sb) && IsPatchBot(sa)))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             var lineTile = IsLine(sa) ? a : b;
             var patchBotTile = IsPatchBot(sa) ? a : b;
             var target = patchbotComboService.FindTarget(patchBotTile, lineTile, null);
@@ -1199,6 +1240,7 @@ public class SpecialResolver
 
         if (IsPatchBot(sa) && IsPatchBot(sb))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             var usedTargets = new HashSet<TileView>();
             var dataMatches = new HashSet<TileData>();
 
@@ -1231,6 +1273,7 @@ public class SpecialResolver
 
         if ((IsPatchBot(sa) && IsPulse(sb)) || (IsPulse(sa) && IsPatchBot(sb)))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             var pulseTile = IsPulse(sa) ? a : b;
             var patchBotTile = IsPatchBot(sa) ? a : b;
             var target = patchbotComboService.FindTarget(patchBotTile, pulseTile, null);
@@ -1246,6 +1289,7 @@ public class SpecialResolver
 
         if (IsPulse(sa) && IsPulse(sb))
         {
+            ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
             board.PlayPulsePulseExplosionVfxAtCell(a.X, a.Y);
             AddSquare(matches, a.X, a.Y, 2);
             return;
