@@ -6,6 +6,7 @@ using UnityEngine;
 /// </summary>
 public class PulseLineCombo : IComboBehavior
 {
+    public int Priority => 100;
     public bool Matches(TileSpecial a, TileSpecial b)
     {
         return (IsLine(a) && IsPulse(b)) || (IsPulse(a) && IsLine(b));

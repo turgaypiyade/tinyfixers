@@ -6,6 +6,7 @@ using UnityEngine;
 /// </summary>
 public class PulsePulseCombo : IComboBehavior
 {
+    public int Priority => 300;
     public bool Matches(TileSpecial a, TileSpecial b)
     {
         return a == TileSpecial.PulseCore && b == TileSpecial.PulseCore;
