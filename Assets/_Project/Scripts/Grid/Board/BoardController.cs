@@ -146,6 +146,8 @@ public class BoardController : MonoBehaviour
     public event Action<int> OnMovesChanged;
     public event Action<TileType, int> OnTilesCleared;
     public event Action<bool> OnBoosterTargetingChanged;
+    public event Action<LightningLineStrike, float> OnLineSweepStarted;
+    public event Action<Vector2Int, LightningLineStrike> OnLineSweepCellReached;
 
     private TileView lastSwapA;
     private TileView lastSwapB;
@@ -1183,12 +1185,12 @@ public class BoardController : MonoBehaviour
 
             float delay = StrikeStagger * i;
 
-            LineBehaviorEvents.EmitSweepStarted(strike, delay);
+            OnLineSweepStarted?.Invoke(strike, delay);
 
             void EmitSweepCell(Vector2Int cell)
             {
                 onSweepCellReached?.Invoke(cell);
-                LineBehaviorEvents.EmitSweepCellReached(cell, strike);
+                OnLineSweepCellReached?.Invoke(cell, strike);
             }
 
             float endTime = strike.isHorizontal
@@ -1831,7 +1833,18 @@ public class BoardController : MonoBehaviour
                 if (created != null) shakeNextClear = true;
             }
 
-            bool doShake = shakeNextClear;
+            bool hasLineActivation = false;
+            bool hasAnySpecialActivation = false;
+            specialResolver.ExpandSpecialChain(matchTiles, null, out hasLineActivation, out hasAnySpecialActivation);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (hasAnySpecialActivation)
+                Debug.Log($"[ResolveBoard] pass={CurrentResolvePass} expanded matched special chain. clearCount={matchTiles.Count}");
+#endif
+
+            if (matchTiles.Count == 0) yield break;
+
+            bool doShake = shakeNextClear || hasLineActivation;
             shakeNextClear = false;
 
             actionSequencer.Enqueue(new MatchClearAction(matchTiles, doShake));
