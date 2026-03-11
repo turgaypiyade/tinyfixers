@@ -48,7 +48,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 allowCondense: false,
                 onTargetBeamSpawned: _ => beamReached = true);
 
-            float timeout = Mathf.Max(duration, 0.08f) + 0.02f;
+            float timeout = Mathf.Max(duration, board.ApplySpecialChainTempo(0.08f)) + board.ApplySpecialChainTempo(0.02f);
             float elapsed = 0f;
 
             while (!beamReached && elapsed < timeout)
@@ -77,9 +77,9 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                     downTime: 0.10f);
             }
 
-            yield return new WaitForSeconds(0.04f);
+            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.04f));
         }
 
-        yield return new WaitForSeconds(0.15f);
+        yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.15f));
     }
 }

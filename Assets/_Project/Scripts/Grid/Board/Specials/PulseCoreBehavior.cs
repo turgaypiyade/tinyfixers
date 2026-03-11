@@ -1,39 +1,75 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// PulseCore special: explodes a square area around the origin (default radius=1 → 3×3).
+/// Event hub for PulseCore visual lifecycle.
+/// Keeps pulse animation triggers out of BoardController public API.
+/// </summary>
+public static class PulseBehaviorEvents
+{
+    public static event Action<Vector2Int> PulseExplosionPlayed;
+    public static event Action<Vector2Int> PulseEmitterComboTriggered;
+
+    public static void EmitPulseExplosionPlayed(Vector2Int cell)
+    {
+        PulseExplosionPlayed?.Invoke(cell);
+    }
+
+    public static void EmitPulseEmitterComboTriggered(Vector2Int centerCell)
+    {
+        PulseEmitterComboTriggered?.Invoke(centerCell);
+    }
+}
+
+/// <summary>
+/// PulseCore special: affects a fixed number of cells around the origin.
+/// NOTE: Visual radius/scale should be handled by VFX layer, not gameplay effect math.
 /// </summary>
 public class PulseCoreBehavior : ISpecialBehavior
 {
     public TileSpecial SpecialType => TileSpecial.PulseCore;
 
-    private readonly int radius;
+    private readonly int affectedCellCount;
 
-    public PulseCoreBehavior(int radius = 1)
+    public PulseCoreBehavior(int affectedCellCount = 9)
     {
-        this.radius = radius;
+        this.affectedCellCount = Mathf.Max(1, affectedCellCount);
     }
 
     public HashSet<Vector2Int> CalculateAffectedCells(BoardController board, int originX, int originY)
     {
         var cells = new HashSet<Vector2Int>();
 
-        for (int x = originX - radius; x <= originX + radius; x++)
-        for (int y = originY - radius; y <= originY + radius; y++)
+        // Build candidates in a centered square window based on desired cell count.
+        // Use deterministic ordering by distance to center, then row/column to cap exactly.
+        int side = Mathf.CeilToInt(Mathf.Sqrt(affectedCellCount));
+        if (side % 2 == 0) side += 1; // keep origin centered
+        int half = side / 2;
+
+        var candidates = new List<Vector2Int>(side * side);
+
+        for (int x = originX - half; x <= originX + half; x++)
+        for (int y = originY - half; y <= originY + half; y++)
         {
             if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
             if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
-            cells.Add(new Vector2Int(x, y));
+            candidates.Add(new Vector2Int(x, y));
         }
 
-        return cells;
-    }
+        candidates.Sort((a, b) =>
+        {
+            int da = Mathf.Abs(a.x - originX) + Mathf.Abs(a.y - originY);
+            int db = Mathf.Abs(b.x - originX) + Mathf.Abs(b.y - originY);
+            if (da != db) return da.CompareTo(db);
+            if (a.y != b.y) return a.y.CompareTo(b.y);
+            return a.x.CompareTo(b.x);
+        });
 
-    public BoardAction CreateVisualAction(BoardController board, int originX, int originY,
-                                           HashSet<Vector2Int> affectedCells)
-    {
-        // PulseCore VFX is handled by default clear animation with stagger.
-        return null;
+        int take = Mathf.Min(affectedCellCount, candidates.Count);
+        for (int i = 0; i < take; i++)
+            cells.Add(candidates[i]);
+
+        return cells;
     }
 }
