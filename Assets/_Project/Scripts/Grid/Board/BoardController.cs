@@ -1584,6 +1584,35 @@ public class BoardController : MonoBehaviour
             {
                 var pendingItems = pendingCreationStore.Drain();
                 pendingCreationApplicator.ApplyAll(pendingItems);
+
+                // ─── FIX: Clear matched tiles around the newly created special ───
+                // The special swap activated the old special, and
+                // pendingCreationApplicator placed the new special on the board.
+                // But the tiles that FORMED the match (and triggered the new
+                // special) were never cleared. Re-find them at the created
+                // position and clear (some may have been destroyed by the
+                // special activation, so re-query is necessary).
+                // ─────────────────────────────────────────────────────────────────
+                for (int pi = 0; pi < pendingItems.Count; pi++)
+                {
+                    var pending = pendingItems[pi];
+                    if (pending.x < 0 || pending.x >= width || pending.y < 0 || pending.y >= height)
+                        continue;
+
+                    var createdTile = tiles[pending.x, pending.y];
+                    if (createdTile == null) continue;
+
+                    var surroundingMatches = matchFinder.FindMatchesAt(pending.x, pending.y);
+                    surroundingMatches.Remove(createdTile);
+                    surroundingMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
+
+                    if (surroundingMatches.Count > 0)
+                    {
+                        actionSequencer.Enqueue(new MatchClearAction(surroundingMatches, doShake: false));
+                        while (actionSequencer.IsPlaying)
+                            yield return null;
+                    }
+                }
             }
             else
             {
