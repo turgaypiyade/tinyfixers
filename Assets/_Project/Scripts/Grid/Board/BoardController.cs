@@ -1170,9 +1170,17 @@ public class BoardController : MonoBehaviour
 
             float delay = StrikeStagger * i;
 
+            LineBehaviorEvents.EmitSweepStarted(strike, delay);
+
+            void EmitSweepCell(Vector2Int cell)
+            {
+                onSweepCellReached?.Invoke(cell);
+                LineBehaviorEvents.EmitSweepCellReached(cell, strike);
+            }
+
             float endTime = strike.isHorizontal
-                ? PlayTwoWaySweepHorizontal(x, y, delay, onSweepCellReached)
-                : PlayTwoWaySweepVertical(x, y, delay, onSweepCellReached);
+                ? PlayTwoWaySweepHorizontal(x, y, delay, EmitSweepCell)
+                : PlayTwoWaySweepVertical(x, y, delay, EmitSweepCell);
 
             if (endTime > maxEndTime) maxEndTime = endTime;
         }
@@ -1642,9 +1650,14 @@ public class BoardController : MonoBehaviour
                 }
             }
 
-            // İki taraf da special ise eski pending creation akışını koru
-            if (pendingCreationService.HasPending)
+            // İki taraf da special ise pending creation UYGULAMA:
+            // line+line gibi combo sonuçlarını, swap öncesi yakalanan olası creation
+            // adaylarıyla kirletme (ör. yanlışlıkla Override implantı).
+            bool bothSpecial = sa != TileSpecial.None && sb != TileSpecial.None;
+            if (!bothSpecial && pendingCreationService.HasPending)
                 pendingCreationService.ApplyPendingCreations();
+            else if (bothSpecial)
+                pendingCreationService.Clear();
 
             var swapActions = specialResolver.ResolveSpecialSwap(a, b);
             actionSequencer.Enqueue(swapActions);
