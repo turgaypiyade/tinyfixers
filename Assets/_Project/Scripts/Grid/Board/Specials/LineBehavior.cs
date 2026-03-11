@@ -59,20 +59,3 @@ public sealed class LineVerticalBehavior : LineBehaviorBase
     protected override bool IsHorizontal => false;
 }
 
-/// <summary>
-/// LineH special: clears a full row from the activation origin.
-/// </summary>
-public sealed class LineHorizontalBehavior : LineBehaviorBase
-{
-    public override TileSpecial SpecialType => TileSpecial.LineH;
-    protected override bool IsHorizontal => true;
-}
-
-/// <summary>
-/// LineV special: clears a full column from the activation origin.
-/// </summary>
-public sealed class LineVerticalBehavior : LineBehaviorBase
-{
-    public override TileSpecial SpecialType => TileSpecial.LineV;
-    protected override bool IsHorizontal => false;
-}
