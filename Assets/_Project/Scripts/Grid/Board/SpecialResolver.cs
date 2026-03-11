@@ -71,105 +71,12 @@ public class SpecialResolver
         cg.interactable = false;
     }
 
-    public TileView TryCreateSpecial(HashSet<TileView> matches)
-    {
-        // 1) Eğer bu tur kullanıcı swap’inin ilk resolve turuysa: eski davranış (A/B'den winner seç)
-        if (board.LastSwapUserMove && board.LastSwapA != null && board.LastSwapB != null)
-        {
-            board.LastSwapUserMove = false;
-
-            TileSpecial aSpec = matchFinder.DecideSpecialAt(board.LastSwapA.X, board.LastSwapA.Y);
-            TileSpecial bSpec = matchFinder.DecideSpecialAt(board.LastSwapB.X, board.LastSwapB.Y);
-
-            (TileView winner, TileSpecial wSpec) = PickWinner(board.LastSwapA, aSpec, board.LastSwapB, bSpec);
-
-            if (winner == null || wSpec == TileSpecial.None)
-                return null;
-
-            winner.SetSpecial(wSpec);
-            if (wSpec == TileSpecial.SystemOverride)
-                winner.SetOverrideBaseType(winner.GetTileType());
-            SyncAfterSpecialChange(winner);
-
-            // Special tile'ın kendisi patlamasın
-            matches.Remove(winner);
-
-            return winner;
-        }
-
-        // 2) Cascade turu: Eğer kullanıcı swap'ı değilse (yukarıdan düşenlerden special oluşuyorsa)
-        TileView bestTile = null;
-        TileSpecial bestSpecial = TileSpecial.None;
-        int bestScore = 0;
-
-        foreach (var t in matches)
-        {
-            TileSpecial s = matchFinder.DecideSpecialAt(t.X, t.Y);
-            int score = SpecialScore(s);
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestSpecial = s;
-                bestTile = t;
-            }
-        }
-
-        if (bestTile != null && bestSpecial != TileSpecial.None)
-        {
-            bestTile.SetSpecial(bestSpecial);
-            if (bestSpecial == TileSpecial.SystemOverride)
-                bestTile.SetOverrideBaseType(bestTile.GetTileType());
-            SyncAfterSpecialChange(bestTile);
-
-            matches.Remove(bestTile);
-            return bestTile;
-        }
-
-        return null;
-    }
-
+ 
     private void ConsumeSwapSourceVisuals(TileView a, TileView b)
     {
         HideTileVisualForCombo(a);
         HideTileVisualForCombo(b);
     }
-
-    public int SpecialScore(TileSpecial s)
-    {
-        switch (s)
-        {
-            case TileSpecial.SystemOverride: return 60;
-            case TileSpecial.PulseCore: return 50;
-            case TileSpecial.LineH:
-            case TileSpecial.LineV: return 30;
-            case TileSpecial.PatchBot: return 20;
-            default: return 0;
-        }
-    }
-
-    public (TileView winner, TileSpecial spec) PickWinner(TileView a, TileSpecial aSpec, TileView b, TileSpecial bSpec)
-    {
-        int Score(TileSpecial s)
-        {
-            switch (s)
-            {
-                case TileSpecial.SystemOverride: return 60;
-                case TileSpecial.PulseCore: return 50;
-                case TileSpecial.LineH:
-                case TileSpecial.LineV: return 30;
-                case TileSpecial.PatchBot: return 20;
-                default: return 0;
-            }
-        }
-
-        int ascore = Score(aSpec);
-        int bscore = Score(bSpec);
-
-        if (ascore == 0 && bscore == 0) return (null, TileSpecial.None);
-        if (ascore >= bscore) return (a, aSpec);
-        return (b, bSpec);
-    }
-
 
     void TraceSpecialChain(string stage, TileView a, TileView b, HashSet<Vector2Int> processed, HashSet<TileView> affected)
     {
@@ -1533,6 +1440,24 @@ public class SpecialResolver
         }
     }
 
+    public TileView ApplyCreatedSpecial(TileView winner, TileSpecial special)
+    {
+        if (winner == null)
+            return null;
+
+        if (special == TileSpecial.None)
+            return null;
+
+        winner.SetSpecial(special);
+
+        if (special == TileSpecial.SystemOverride)
+            winner.SetOverrideBaseType(winner.GetTileType());
+
+        SyncAfterSpecialChange(winner);
+        board.RefreshTileObstacleVisual(winner);
+
+        return winner;
+    }
     public readonly struct SpecialActivation
     {
         public readonly Vector2Int cell;

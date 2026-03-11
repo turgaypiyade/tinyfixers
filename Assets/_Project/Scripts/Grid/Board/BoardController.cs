@@ -162,7 +162,6 @@ public class BoardController : MonoBehaviour
     private SpecialBehaviorRegistry specialBehaviorRegistry;
     private BoardAnimator boardAnimator;
     private ActionSequencer actionSequencer;
-    private PendingCreationService pendingCreationService;
     private PulseCoreImpactService pulseCoreImpactService;
     private ObstacleStateService obstacleStateService;
     private CascadeLogic cascadeLogic;
@@ -223,6 +222,10 @@ public class BoardController : MonoBehaviour
     internal ObstacleStateService ObstacleStateService => obstacleStateService;
     internal SpecialBehaviorRegistry SpecialBehaviors => specialBehaviorRegistry;
     public CascadeLogic CascadeLogic => cascadeLogic;
+
+    private SpecialCreationService specialCreationService;
+    private PendingCreationStore pendingCreationStore;
+    private PendingCreationApplicator pendingCreationApplicator;
 
     public void EnqueuePatchbotDash(Vector2Int from, Vector2Int to)
     {
@@ -499,7 +502,11 @@ public class BoardController : MonoBehaviour
         pulseCoreImpactService ??= new PulseCoreImpactService(this, boardAnimator);
         specialBehaviorRegistry ??= new SpecialBehaviorRegistry();
         specialResolver ??= new SpecialResolver(this, matchFinder, boardAnimator, pulseCoreImpactService);
-        pendingCreationService ??= new PendingCreationService(this, matchFinder, specialResolver);
+
+        specialCreationService ??= new SpecialCreationService(matchFinder);
+        pendingCreationStore ??= new PendingCreationStore();
+        pendingCreationApplicator ??= new PendingCreationApplicator(this);
+
         obstacleStateService ??= new ObstacleStateService();
         cascadeLogic ??= new CascadeLogic(this);
 
@@ -1519,9 +1526,8 @@ public class BoardController : MonoBehaviour
         lastSwapB = b;
         lastSwapUserMove = true;
 
-        // ─── FULL SYNC VALIDATION: catch any drift that accumulated during cascades ──
         ValidateTileSync("ProcessSwap.Entry");
-        // Force a full resync to prevent stale data from causing wrong combos
+
         for (int sy = 0; sy < height; sy++)
         for (int sx = 0; sx < width; sx++)
         {
@@ -1529,216 +1535,107 @@ public class BoardController : MonoBehaviour
                 SyncTileData(sx, sy);
         }
 
-        // ─── DEBUG: Hamle öncesi snapshot ──────────────────────────────────
-        {
-            var swapSb = new System.Text.StringBuilder();
-            swapSb.AppendLine($"[PRE-SWAP SNAPSHOT] A=({a.X},{a.Y}) B=({b.X},{b.Y})");
-            for (int dbgY = 0; dbgY < height; dbgY++)
-            {
-                swapSb.Append($"  row{dbgY}: ");
-                for (int dbgX = 0; dbgX < width; dbgX++)
-                {
-                    if (holes[dbgX, dbgY]) swapSb.Append("[H ]");
-                    else { var td = gridData[dbgX, dbgY]; swapSb.Append(td == null ? "[· ]" : $"[{td.ToDebugString().PadRight(2)}]"); }
-                }
-                swapSb.AppendLine();
-            }
-            Debug.Log(swapSb.ToString());
-        }
-        // ─── 1. LOGIK SWAP (DATA) ─────────────────────────────────────────
         int ax = a.X, ay = a.Y;
         int bx = b.X, by = b.Y;
 
         tiles[ax, ay] = b;
         tiles[bx, by] = a;
-        
+
         a.SetCoords(bx, by);
         b.SetCoords(ax, ay);
-        
+
         SyncTileData(ax, ay);
         SyncTileData(bx, by);
 
-        // ─── 2. GÖRSEL SWAP (ACTION) ──────────────────────────────────────
         actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
-        while(actionSequencer.IsPlaying) yield return null;
-        ValidateTileSync("ProcessSwap.AfterSwapAnimation");
+        while (actionSequencer.IsPlaying)
+            yield return null;
 
-        pendingCreationService.Clear();
-        bool hasPendingCreation = pendingCreationService.CapturePendingCreation(a, b);
+        ValidateTileSync("ProcessSwap.AfterSwapAnimation");
 
         TileSpecial sa = a.GetSpecial();
         TileSpecial sb = b.GetSpecial();
 
+        // Special swap path
         if (sa != TileSpecial.None || sb != TileSpecial.None)
         {
+            pendingCreationStore.Clear();
+
+            var specialSwapMatches = CollectMatchedTilesForSwap(a, b);
+            var pendingCreation = specialCreationService.DecideFromMatches(
+                specialSwapMatches,
+                new SpecialCreationService.CreationRequest(a, b, true)
+            );
+
+            if (pendingCreation.hasValue)
+                pendingCreationStore.Store(pendingCreation.winner.X, pendingCreation.winner.Y, pendingCreation.special);
+
             ConsumeMove();
 
-            // ── Yalnızca bir taraf special ise: normal tarafın oluşturduğu match'i
-            //    special aktivasyonundan ÖNCE resolve et.
-            //    Örnek: SP ↔ YT swap'ı, 4'lü YT sütunu oluşuyor →
-            //           önce LineV oluşsun (normalTile pozisyonunda) + fazla taşlar temizlensin,
-            //           sonra SP çalışsın.
-            bool onlyOneSpecial = (sa != TileSpecial.None) ^ (sb != TileSpecial.None);
-            if (onlyOneSpecial)
-            {
-                var normalTile  = (sa == TileSpecial.None) ? a : b;
-                var specialTile = (sa != TileSpecial.None) ? a : b;
-
-                var matchSet = new HashSet<TileData>();
-                foreach (var t in matchFinder.FindMatchesAt(normalTile.X, normalTile.Y))
-                    matchSet.Add(t);
-
-                var normalSideMatches = new HashSet<TileData>();
-                if (matchSet.Count >= 3)
-                {
-                    foreach (var md in matchSet)
-                    {
-                        if (tiles[md.X, md.Y] != null)
-                            normalSideMatches.Add(md);
-                    }
-                }
-
-                if (normalSideMatches.Count == 0)
-                    matchFinder.Add2x2Candidates(normalSideMatches, normalTile.X, normalTile.Y);
-
-                // specialTile ve normalTile bu aşamada temizlenmemeli
-                if (specialTile != null && gridData[specialTile.X, specialTile.Y] != null) 
-                    normalSideMatches.Remove(gridData[specialTile.X, specialTile.Y]);
-                
-                if (normalTile != null && gridData[normalTile.X, normalTile.Y] != null) 
-                    normalSideMatches.Remove(gridData[normalTile.X, normalTile.Y]);
-
-                if (normalSideMatches.Count > 0)
-                {
-                    // Bu match yeni bir special üretmeli mi? (4+ → LineV/LineH, 5 → PulseCore vb.)
-                    TileSpecial newSpec = matchFinder.DecideSpecialAt(normalTile.X, normalTile.Y);
-
-                    bool normalGotNewSpecial = false;
-                    if (newSpec != TileSpecial.None)
-                    {
-                        // Special'ı normalTile'ın kendisine yerleştir (swap pozisyonu)
-                        normalTile.SetSpecial(newSpec);
-                        if (newSpec == TileSpecial.SystemOverride)
-                            normalTile.SetOverrideBaseType(normalTile.GetTileType());
-                        
-                        SyncTileData(normalTile.X, normalTile.Y); // Sync Data model
-                        normalGotNewSpecial = true;
-
-                        // Override'ı collapse öncesi gizle — kullanıcı düşüşü görmesin,
-                        // ResolveSpecialSolo yerleştiği pozisyondan ışın gönderecek
-                        if (!specialTile.TryGetComponent<CanvasGroup>(out var cg))
-                            cg = specialTile.gameObject.AddComponent<CanvasGroup>();
-                        cg.alpha = 0f;
-                        cg.blocksRaycasts = false;
-                        cg.interactable = false;
-                    }
-
-                    // Kalan eşleşen taşları temizle + collapse
-                    pendingCreationService.Clear();
-                    
-                    var normalMatchViews = new HashSet<TileView>();
-                    foreach (var data in normalSideMatches)
-                    {
-                        if (tiles[data.X, data.Y] != null) normalMatchViews.Add(tiles[data.X, data.Y]);
-                    }
-
-                    actionSequencer.Enqueue(new MatchClearAction(normalMatchViews, true));
-                    while(actionSequencer.IsPlaying) yield return null;
-
-                    var cascadeActions_c2 = cascadeLogic.CalculateCascades();
-                    if (cascadeActions_c2.Count > 0)
-                    {
-                        actionSequencer.Enqueue(cascadeActions_c2);
-                        while (actionSequencer.IsPlaying) yield return null;
-                    }
-                    yield return ResolveEmptyPlayableCellsWithoutMatch();
-
-                    // normalTile'a yeni special yerleştirildiyse →
-                    // specialTile'ı solo aktive et (combo DEĞİL, bağımsız).
-                    // Yeni special, chain mekanizmasıyla (SP etki alanındaysa)
-                    // veya sonraki cascade/hamlelerde tetiklenir.
-                    if (normalGotNewSpecial)
-                    {
-                        var soloActions = specialResolver.ResolveSpecialSolo(specialTile);
-                        actionSequencer.Enqueue(soloActions);
-                        while (actionSequencer.IsPlaying) yield return null;
-                        var cascadeActions_c3 = cascadeLogic.CalculateCascades();
-                        if (cascadeActions_c3.Count > 0)
-                        {
-                            actionSequencer.Enqueue(cascadeActions_c3);
-                            while (actionSequencer.IsPlaying) yield return null;
-                        }
-
-                        yield return ResolveEmptyPlayableCellsWithoutMatch();
-                        yield return ResolveBoard(allowSpecial: false);
-                        EndBusy();
-                        yield break;
-                    }
-                }
-            }
-
-            // İki taraf da special ise pending creation UYGULAMA:
-            // line+line gibi combo sonuçlarını, swap öncesi yakalanan olası creation
-            // adaylarıyla kirletme (ör. yanlışlıkla Override implantı).
             bool bothSpecial = sa != TileSpecial.None && sb != TileSpecial.None;
-            if (!bothSpecial && pendingCreationService.HasPending)
-                pendingCreationService.ApplyPendingCreations();
-            else if (bothSpecial)
-                pendingCreationService.Clear();
 
             var swapActions = specialResolver.ResolveSpecialSwap(a, b);
             actionSequencer.Enqueue(swapActions);
-            while (actionSequencer.IsPlaying) yield return null;
-            var cascadeActions_c = cascadeLogic.CalculateCascades();
-            if (cascadeActions_c.Count > 0)
+
+            while (actionSequencer.IsPlaying)
+                yield return null;
+
+            if (!bothSpecial && pendingCreationStore.HasPending)
             {
-                actionSequencer.Enqueue(cascadeActions_c);
-                while (actionSequencer.IsPlaying) yield return null;
+                var pendingItems = pendingCreationStore.Drain();
+                pendingCreationApplicator.ApplyAll(pendingItems);
+            }
+            else
+            {
+                pendingCreationStore.Clear();
             }
 
             yield return ResolveEmptyPlayableCellsWithoutMatch();
             yield return ResolveBoard(allowSpecial: false);
+
             EndBusy();
             yield break;
         }
 
-        var matches = new HashSet<TileData>();
-        foreach (var t in matchFinder.FindMatchesAt(a.X, a.Y)) matches.Add(t);
-        foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y)) matches.Add(t);
+        var matches = new HashSet<TileView>();
+
+        foreach (var t in matchFinder.FindMatchesAt(a.X, a.Y))
+            matches.Add(t);
+
+        foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y))
+            matches.Add(t);
 
         if (matches.Count == 0)
         {
-            matchFinder.Add2x2Candidates(matches, a.X, a.Y);
-            matchFinder.Add2x2Candidates(matches, b.X, b.Y);
-        }
-
-        if (matches.Count == 0)
-        {
-            // ─── 1. REVERT LOGIK SWAP (DATA) ──────────────────────────────
             tiles[ax, ay] = a;
             tiles[bx, by] = b;
-            
+
             a.SetCoords(ax, ay);
             b.SetCoords(bx, by);
-            
+
             SyncTileData(ax, ay);
             SyncTileData(bx, by);
 
-            // ─── 2. REVERT GÖRSEL SWAP (ACTION) ───────────────────────────
             actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
-            while(actionSequencer.IsPlaying) yield return null;
+            while (actionSequencer.IsPlaying)
+                yield return null;
 
             EndBusy();
             yield break;
         }
 
-        shakeNextClear = matchFinder.HasAnyRunAtLeast(4);
         ConsumeMove();
 
+        // First clear pass uses FindMatchesAt results (includes 2x2).
+        // Subsequent cascade passes are handled by ResolveBoard (3+ runs only).
+        yield return ExecuteClearPass(matches, allowSpecial: true);
+
+        yield return ResolveEmptyPlayableCellsWithoutMatch();
         yield return ResolveBoard();
+
         EndBusy();
     }
-
+    
     public bool HasAnyEmptyPlayableCell()
     {
         for (int y = 0; y < height; y++)
@@ -1798,87 +1695,129 @@ public class BoardController : MonoBehaviour
         {
             safety++;
             if (safety > MaxResolveLoops)
-            {
-                Debug.LogWarning($"[ResolveBoard] Safety break! loops={safety}");
-                yield break; // EndBusy is called by the caller (ProcessSwap, ResolveInitial, etc.)
-            }
+                yield break;
 
             CurrentResolvePass = safety;
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            ResolveProfBegin($"pass={CurrentResolvePass}");
-#endif
-
             var matches = matchFinder.FindAllMatches();
 
-            // 2x2 special-candidate fallback should apply only for the user's swap pass,
-            // not globally in every cascade resolve pass.
-            if (matches.Count == 0 && allowSpecial && lastSwapUserMove && lastSwapA != null && lastSwapB != null)
-            {
-                var twoByTwoCandidates = new HashSet<TileData>();
-                matchFinder.Add2x2Candidates(twoByTwoCandidates, lastSwapA.X, lastSwapA.Y);
-                matchFinder.Add2x2Candidates(twoByTwoCandidates, lastSwapB.X, lastSwapB.Y);
-                if (twoByTwoCandidates.Count > 0)
-                    matches = twoByTwoCandidates;
-            }
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            ResolveProfStep($"FindMatches (count={matches.Count})");
-#endif
-
-            if (matches.Count == 0) yield break;
+            if (matches.Count == 0)
+                yield break;
 
             var matchTiles = new HashSet<TileView>();
-            foreach(var t in matches)
+
+            foreach (var t in matches)
             {
-                if (tiles[t.X, t.Y] != null) matchTiles.Add(tiles[t.X, t.Y]);
+                var tile = tiles[t.X, t.Y];
+                if (tile != null)
+                    matchTiles.Add(tile);
             }
 
-            if (matchTiles.Count == 0) yield break;
+            if (matchTiles.Count == 0)
+                yield break;
 
-            var nonSpecialMatchTiles = new HashSet<TileView>(matchTiles);
-            nonSpecialMatchTiles.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
+            bool cleared = false;
+            yield return ExecuteClearPass(matchTiles, allowSpecial, result => cleared = result);
 
-            if (allowSpecial)
-            {
-                var created = specialResolver.TryCreateSpecial(nonSpecialMatchTiles);
-                if (created != null) shakeNextClear = true;
-            }
-
-            bool hasLineActivation = false;
-            bool hasAnySpecialActivation = false;
-            specialResolver.ExpandSpecialChain(matchTiles, null, out hasLineActivation, out hasAnySpecialActivation);
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (hasAnySpecialActivation)
-                Debug.Log($"[ResolveBoard] pass={CurrentResolvePass} expanded matched special chain. clearCount={matchTiles.Count}");
-#endif
-
-            if (matchTiles.Count == 0) yield break;
-
-            bool doShake = shakeNextClear || hasLineActivation;
-            shakeNextClear = false;
-
-            actionSequencer.Enqueue(new MatchClearAction(matchTiles, doShake));
-            while(actionSequencer.IsPlaying) yield return null;
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            ResolveProfStep("ClearMatchesAnimated");
-#endif
-
-            var cascadeActions = cascadeLogic.CalculateCascades();
-            if (cascadeActions.Count > 0)
-            {
-                actionSequencer.Enqueue(cascadeActions);
-                while (actionSequencer.IsPlaying) yield return null;
-                ValidateTileSync($"ResolveBoard.Pass{CurrentResolvePass}.AfterCascade");
-            }
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            ResolveProfStep("Cascades Processed");
-#endif
+            if (!cleared)
+                yield break;
         }
     }
 
+    /// <summary>
+    /// Single clear pass shared by ProcessSwap (first pass) and ResolveBoard (each loop).
+    /// Handles: special creation → PatchBot 2x2 injection → chain expansion → clear → cascade.
+    /// </summary>
+    IEnumerator ExecuteClearPass(HashSet<TileView> matchTiles, bool allowSpecial, System.Action<bool> onResult = null)
+    {
+        // ── 1. Special creation ──────────────────────────────────────────────
+        var nonSpecialMatchTiles = new HashSet<TileView>(matchTiles);
+        nonSpecialMatchTiles.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
+
+        if (allowSpecial)
+        {
+            var creation = specialCreationService.DecideFromMatches(
+                nonSpecialMatchTiles,
+                new SpecialCreationService.CreationRequest(lastSwapA, lastSwapB, LastSwapUserMove)
+            );
+
+            if (creation.hasValue)
+            {
+                var created = specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
+
+                if (created != null)
+                {
+                    matchTiles.Remove(created);
+                    shakeNextClear = true;
+
+                    // PatchBot match-group injection: FindAllMatches only
+                    // detects 3+ line runs, so tiles connected to the PatchBot
+                    // through a 2x2 pattern may be missing from matchTiles.
+                    // Use FindMatchesAt to get the FULL connected group
+                    // (runs + 2x2) instead of just the 2x2 block.
+                    //
+                    // Example — 5-tile PatchBot group:
+                    //   X .
+                    //   X X
+                    //   X X  ← PatchBot created here
+                    //
+                    // Add2x2Candidates would only find the 4 tiles in the 2x2
+                    // block, missing (0,0). FindMatchesAt finds all 5.
+                    if (creation.special == TileSpecial.PatchBot)
+                    {
+                        var fullGroup = matchFinder.FindMatchesAt(created.X, created.Y);
+                        foreach (var pt in fullGroup)
+                        {
+                            if (pt == null) continue;
+                            if (pt == created) continue;
+                            if (pt.GetSpecial() != TileSpecial.None) continue;
+                            matchTiles.Add(pt);
+                        }
+                    }
+                }
+            }
+
+            LastSwapUserMove = false;
+        }
+
+        // ── 2. Special chain expansion ───────────────────────────────────────
+        bool hasLineActivation;
+        bool hasAnySpecialActivation;
+
+        specialResolver.ExpandSpecialChain(
+            matchTiles,
+            null,
+            out hasLineActivation,
+            out hasAnySpecialActivation
+        );
+
+        if (matchTiles.Count == 0)
+        {
+            onResult?.Invoke(false);
+            yield break;
+        }
+
+        // ── 3. Clear ─────────────────────────────────────────────────────────
+        bool doShake = shakeNextClear || hasLineActivation;
+        shakeNextClear = false;
+
+        actionSequencer.Enqueue(new MatchClearAction(matchTiles, doShake));
+        while (actionSequencer.IsPlaying)
+            yield return null;
+
+        // ── 4. Cascade ───────────────────────────────────────────────────────
+        var cascadeActions = cascadeLogic.CalculateCascades();
+        if (cascadeActions.Count > 0)
+        {
+            actionSequencer.Enqueue(cascadeActions);
+            while (actionSequencer.IsPlaying)
+                yield return null;
+
+            ValidateTileSync($"ExecuteClearPass.AfterCascade");
+        }
+
+        onResult?.Invoke(true);
+    }
     public TileType[,] SimulateInitialTypes()
     {
         var types = new TileType[width, height];
@@ -2379,6 +2318,33 @@ public class BoardController : MonoBehaviour
         }
 
         return set;
+    }
+
+    private HashSet<TileView> CollectMatchedTilesForSwap(TileView a, TileView b)
+    {
+        var result = new HashSet<TileView>();
+
+        if (a != null)
+        {
+            foreach (var data in matchFinder.FindMatchesAt(a.X, a.Y))
+            {
+                var tile = tiles[data.X, data.Y];
+                if (tile != null)
+                    result.Add(tile);
+            }
+        }
+
+        if (b != null)
+        {
+            foreach (var data in matchFinder.FindMatchesAt(b.X, b.Y))
+            {
+                var tile = tiles[data.X, data.Y];
+                if (tile != null)
+                    result.Add(tile);
+            }
+        }
+
+        return result;
     }
 
     private Vector2 WorldToAnchoredIn(RectTransform targetParent, Vector3 worldPos)
