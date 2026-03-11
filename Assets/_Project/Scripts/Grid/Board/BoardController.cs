@@ -1817,21 +1817,34 @@ public class BoardController : MonoBehaviour
             if (matches.Count == 0) yield break;
 
             var matchTiles = new HashSet<TileView>();
-            foreach(var t in matches) 
+            foreach(var t in matches)
             {
                 if (tiles[t.X, t.Y] != null) matchTiles.Add(tiles[t.X, t.Y]);
             }
 
-            matchTiles.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
             if (matchTiles.Count == 0) yield break;
+
+            var nonSpecialMatchTiles = new HashSet<TileView>(matchTiles);
+            nonSpecialMatchTiles.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
 
             if (allowSpecial)
             {
-                var created = specialResolver.TryCreateSpecial(matchTiles);
+                var created = specialResolver.TryCreateSpecial(nonSpecialMatchTiles);
                 if (created != null) shakeNextClear = true;
             }
 
-            bool doShake = shakeNextClear;
+            bool hasLineActivation = false;
+            bool hasAnySpecialActivation = false;
+            specialResolver.ExpandSpecialChain(matchTiles, null, out hasLineActivation, out hasAnySpecialActivation);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (hasAnySpecialActivation)
+                Debug.Log($"[ResolveBoard] pass={CurrentResolvePass} expanded matched special chain. clearCount={matchTiles.Count}");
+#endif
+
+            if (matchTiles.Count == 0) yield break;
+
+            bool doShake = shakeNextClear || hasLineActivation;
             shakeNextClear = false;
 
             actionSequencer.Enqueue(new MatchClearAction(matchTiles, doShake));
