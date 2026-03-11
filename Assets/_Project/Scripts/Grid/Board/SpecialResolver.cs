@@ -1115,7 +1115,11 @@ public class SpecialResolver
             overrideFanoutOrigin = overrideTile;
             SystemOverrideBehaviorEvents.EmitOverrideFanoutStarted(new Vector2Int(overrideTile.X, overrideTile.Y), targetSpecial);
             overrideForceDefaultClearAnim = !targetIsLine;
-            overrideSuppressPerTileClearVfx = targetIsLine;
+            // Override+Line'da global per-tile VFX suppression uygulamak,
+            // yol üstünde tetiklenen diğer special'ların (Pulse/Line/PatchBot vb.)
+            // kendi efektlerini görünmez yapabiliyor.
+            // Bu yüzden suppression'ı kapalı tutup zincir special efektlerini görünür bırak.
+            overrideSuppressPerTileClearVfx = false;
             overrideFanoutNormalSelectionPulse = targetIsNormal;
 
             for (int x = 0; x < board.Width; x++)
