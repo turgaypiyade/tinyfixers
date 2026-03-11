@@ -3,8 +3,6 @@ using UnityEngine;
 
 /// <summary>
 /// Base line special behavior with shared line clear logic.
-/// Visual playback is kept outside of behavior classes and driven by
-/// BoardController line-sweep events + BoardAnimator orchestration.
 /// </summary>
 public abstract class LineBehaviorBase : ISpecialBehavior, ILightningBehavior
 {
