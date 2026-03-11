@@ -12,17 +12,27 @@ public class SpecialBehaviorRegistry
 
     public SpecialBehaviorRegistry()
     {
-        // Register solo behaviors
+        // ── Solo behaviors ──
         Register(new LineHorizontalBehavior());
         Register(new LineVerticalBehavior());
         Register(new PulseCoreBehavior());
         Register(new SystemOverrideBehavior());
         Register(new PatchBotBehavior());
 
-        // Register combo behaviors (order matters — first match wins)
-        RegisterCombo(new PulsePulseCombo());      // PulseCore + PulseCore → 5×5
-        RegisterCombo(new LineCrossCombo());        // Line + Line → cross
-        RegisterCombo(new PulseLineCombo());        // PulseCore + Line → 3 parallel lines
+        // ── Combo behaviors (priority determines precedence; highest wins) ──
+        // Override combos (highest priority)
+        RegisterCombo(new OverrideOverrideCombo());  // Override+Override → clear all   (500)
+        RegisterCombo(new OverrideSpecialCombo());   // Override+Any → fan-out          (400)
+
+        // Pure special combos
+        RegisterCombo(new PulsePulseCombo());         // Pulse+Pulse → 5×5              (300)
+        RegisterCombo(new LineCrossCombo());           // Line+Line → cross              (200)
+        RegisterCombo(new PulseLineCombo());           // Pulse+Line → 3 parallel lines  (100)
+
+        // PatchBot combos
+        RegisterCombo(new PatchBotLineCombo());        // PB+Line → teleport + line      (150)
+        RegisterCombo(new PatchBotPatchBotCombo());    // PB+PB → dual teleport          (100)
+        RegisterCombo(new PatchBotPulseCombo());       // PB+Pulse → teleport + 3×3      (100)
     }
 
     public void Register(ISpecialBehavior behavior)
@@ -46,6 +56,7 @@ public class SpecialBehaviorRegistry
 
     /// <summary>
     /// Finds the combo behavior for a pair of specials, or null if no combo is defined.
+    /// Returns highest-priority match.
     /// </summary>
     public IComboBehavior FindCombo(TileSpecial a, TileSpecial b)
     {

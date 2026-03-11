@@ -1518,114 +1518,223 @@ public class BoardController : MonoBehaviour
         return dx + dy == 1;
     }
 
-    IEnumerator ProcessSwap(TileView a, TileView b)
+ IEnumerator ProcessSwap(TileView a, TileView b)
+{
+    BeginBusy();
+
+    lastSwapA = a;
+    lastSwapB = b;
+    lastSwapUserMove = true;
+
+    ValidateTileSync("ProcessSwap.Entry");
+
+    SyncAllTilesToGridData();
+
+    int ax = a.X, ay = a.Y;
+    int bx = b.X, by = b.Y;
+
+    tiles[ax, ay] = b;
+    tiles[bx, by] = a;
+
+    a.SetCoords(bx, by);
+    b.SetCoords(ax, ay);
+
+    SyncTileData(ax, ay);
+    SyncTileData(bx, by);
+
+    actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
+    yield return AnimateQueuedActions();
+
+    ValidateTileSync("ProcessSwap.AfterSwapAnimation");
+
+    TileSpecial sa = a.GetSpecial();
+    TileSpecial sb = b.GetSpecial();
+
+    // Special swap path
+    if (sa != TileSpecial.None || sb != TileSpecial.None)
     {
-        BeginBusy();
+        pendingCreationStore.Clear();
 
-        lastSwapA = a;
-        lastSwapB = b;
-        lastSwapUserMove = true;
+        var specialSwapMatches = CollectMatchedTilesForSwap(a, b);
+        var pendingCreation = specialCreationService.DecideFromMatches(
+            specialSwapMatches,
+            new SpecialCreationService.CreationRequest(a, b, true)
+        );
 
-        ValidateTileSync("ProcessSwap.Entry");
+        if (pendingCreation.hasValue)
+            pendingCreationStore.Store(
+                pendingCreation.winner.X,
+                pendingCreation.winner.Y,
+                pendingCreation.special
+            );
 
+        ConsumeMove();
+
+        bool bothSpecial = sa != TileSpecial.None && sb != TileSpecial.None;
+
+        var swapActions = specialResolver.ResolveSpecialSwap(a, b);
+        actionSequencer.Enqueue(swapActions);
+
+        yield return AnimateQueuedActions();
+
+        if (!bothSpecial && pendingCreationStore.HasPending)
+        {
+            var pendingItems = pendingCreationStore.Drain();
+            pendingCreationApplicator.ApplyAll(pendingItems);
+
+            // Yeni oluşturulan special etrafında hala duran match taşlarını temizle
+            for (int pi = 0; pi < pendingItems.Count; pi++)
+            {
+                var pending = pendingItems[pi];
+                if (pending.x < 0 || pending.x >= width || pending.y < 0 || pending.y >= height)
+                    continue;
+
+                var createdTile = tiles[pending.x, pending.y];
+                if (createdTile == null)
+                    continue;
+
+                var surroundingMatches = matchFinder.FindMatchesAt(pending.x, pending.y);
+                surroundingMatches.Remove(createdTile);
+                surroundingMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
+
+                if (surroundingMatches.Count > 0)
+                {
+                    actionSequencer.Enqueue(new MatchClearAction(surroundingMatches, doShake: false));
+                    yield return AnimateQueuedActions();
+                }
+            }
+        }
+        else
+        {
+            pendingCreationStore.Clear();
+        }
+
+        yield return ResolveEmptyPlayableCellsWithoutMatch();
+        yield return ResolveBoard(allowSpecial: false);
+
+        EndBusy();
+        yield break;
+    }
+
+    var matches = new HashSet<TileView>();
+
+    foreach (var t in matchFinder.FindMatchesAt(a.X, a.Y))
+        matches.Add(t);
+
+    foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y))
+        matches.Add(t);
+
+    if (matches.Count == 0)
+    {
+        tiles[ax, ay] = a;
+        tiles[bx, by] = b;
+
+        a.SetCoords(ax, ay);
+        b.SetCoords(bx, by);
+
+        SyncTileData(ax, ay);
+        SyncTileData(bx, by);
+
+        actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
+        yield return AnimateQueuedActions();
+
+        EndBusy();
+        yield break;
+    }
+
+    ConsumeMove();
+
+    // İlk pass mutlaka ExecuteClearPass üzerinden geçsin.
+    // 2x2 / PatchBot akışı burada korunuyor.
+    yield return ExecuteClearPass(matches, allowSpecial: true);
+
+    yield return ResolveEmptyPlayableCellsWithoutMatch();
+    yield return ResolveBoard();
+
+    EndBusy();
+}
+    
+    private void SyncAllTilesToGridData()
+    {
         for (int sy = 0; sy < height; sy++)
         for (int sx = 0; sx < width; sx++)
         {
             if (tiles[sx, sy] != null)
                 SyncTileData(sx, sy);
         }
+    }
 
-        int ax = a.X, ay = a.Y;
-        int bx = b.X, by = b.Y;
-
-        tiles[ax, ay] = b;
-        tiles[bx, by] = a;
-
-        a.SetCoords(bx, by);
-        b.SetCoords(ax, ay);
-
-        SyncTileData(ax, ay);
-        SyncTileData(bx, by);
-
-        actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
+    private IEnumerator AnimateQueuedActions()
+    {
         while (actionSequencer.IsPlaying)
             yield return null;
+    }
 
-        ValidateTileSync("ProcessSwap.AfterSwapAnimation");
+    private IEnumerator HandleSpecialSwap(TileView a, TileView b, TileSpecial sa, TileSpecial sb)
+    {
+        pendingCreationStore.Clear();
 
-        TileSpecial sa = a.GetSpecial();
-        TileSpecial sb = b.GetSpecial();
+        var specialSwapMatches = CollectMatchedTilesForSwap(a, b);
+        var pendingCreation = specialCreationService.DecideFromMatches(
+            specialSwapMatches,
+            new SpecialCreationService.CreationRequest(a, b, true)
+        );
 
-        // Special swap path
-        if (sa != TileSpecial.None || sb != TileSpecial.None)
-        {
-            pendingCreationStore.Clear();
-
-            var specialSwapMatches = CollectMatchedTilesForSwap(a, b);
-            var pendingCreation = specialCreationService.DecideFromMatches(
-                specialSwapMatches,
-                new SpecialCreationService.CreationRequest(a, b, true)
+        if (pendingCreation.hasValue)
+            pendingCreationStore.Store(
+                pendingCreation.winner.X,
+                pendingCreation.winner.Y,
+                pendingCreation.special
             );
 
-            if (pendingCreation.hasValue)
-                pendingCreationStore.Store(pendingCreation.winner.X, pendingCreation.winner.Y, pendingCreation.special);
+        ConsumeMove();
 
-            ConsumeMove();
+        bool bothSpecial = sa != TileSpecial.None && sb != TileSpecial.None;
 
-            bool bothSpecial = sa != TileSpecial.None && sb != TileSpecial.None;
+        var swapActions = specialResolver.ResolveSpecialSwap(a, b);
+        actionSequencer.Enqueue(swapActions);
 
-            var swapActions = specialResolver.ResolveSpecialSwap(a, b);
-            actionSequencer.Enqueue(swapActions);
+        yield return AnimateQueuedActions();
 
-            while (actionSequencer.IsPlaying)
-                yield return null;
+        if (!bothSpecial && pendingCreationStore.HasPending)
+        {
+            var pendingItems = pendingCreationStore.Drain();
+            pendingCreationApplicator.ApplyAll(pendingItems);
 
-            if (!bothSpecial && pendingCreationStore.HasPending)
+            for (int pi = 0; pi < pendingItems.Count; pi++)
             {
-                var pendingItems = pendingCreationStore.Drain();
-                pendingCreationApplicator.ApplyAll(pendingItems);
+                var pending = pendingItems[pi];
+                if (pending.x < 0 || pending.x >= width || pending.y < 0 || pending.y >= height)
+                    continue;
 
-                // ─── FIX: Clear matched tiles around the newly created special ───
-                // The special swap activated the old special, and
-                // pendingCreationApplicator placed the new special on the board.
-                // But the tiles that FORMED the match (and triggered the new
-                // special) were never cleared. Re-find them at the created
-                // position and clear (some may have been destroyed by the
-                // special activation, so re-query is necessary).
-                // ─────────────────────────────────────────────────────────────────
-                for (int pi = 0; pi < pendingItems.Count; pi++)
+                var createdTile = tiles[pending.x, pending.y];
+                if (createdTile == null)
+                    continue;
+
+                var surroundingMatches = matchFinder.FindMatchesAt(pending.x, pending.y);
+                surroundingMatches.Remove(createdTile);
+                surroundingMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
+
+                if (surroundingMatches.Count > 0)
                 {
-                    var pending = pendingItems[pi];
-                    if (pending.x < 0 || pending.x >= width || pending.y < 0 || pending.y >= height)
-                        continue;
-
-                    var createdTile = tiles[pending.x, pending.y];
-                    if (createdTile == null) continue;
-
-                    var surroundingMatches = matchFinder.FindMatchesAt(pending.x, pending.y);
-                    surroundingMatches.Remove(createdTile);
-                    surroundingMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
-
-                    if (surroundingMatches.Count > 0)
-                    {
-                        actionSequencer.Enqueue(new MatchClearAction(surroundingMatches, doShake: false));
-                        while (actionSequencer.IsPlaying)
-                            yield return null;
-                    }
+                    actionSequencer.Enqueue(new MatchClearAction(surroundingMatches, doShake: false));
+                    yield return AnimateQueuedActions();
                 }
             }
-            else
-            {
-                pendingCreationStore.Clear();
-            }
-
-            yield return ResolveEmptyPlayableCellsWithoutMatch();
-            yield return ResolveBoard(allowSpecial: false);
-
-            EndBusy();
-            yield break;
+        }
+        else
+        {
+            pendingCreationStore.Clear();
         }
 
+        yield return ResolveEmptyPlayableCellsWithoutMatch();
+        yield return ResolveBoard(allowSpecial: false);
+    }      
+
+    private IEnumerator HandleNormalSwapMatchOrRevert(
+        TileView a, TileView b,
+        int ax, int ay, int bx, int by)
+    {
         var matches = new HashSet<TileView>();
 
         foreach (var t in matchFinder.FindMatchesAt(a.X, a.Y))
@@ -1646,25 +1755,16 @@ public class BoardController : MonoBehaviour
             SyncTileData(bx, by);
 
             actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
-            while (actionSequencer.IsPlaying)
-                yield return null;
-
-            EndBusy();
+            yield return AnimateQueuedActions();
             yield break;
         }
 
         ConsumeMove();
 
-        // First clear pass uses FindMatchesAt results (includes 2x2).
-        // Subsequent cascade passes are handled by ResolveBoard (3+ runs only).
         yield return ExecuteClearPass(matches, allowSpecial: true);
-
         yield return ResolveEmptyPlayableCellsWithoutMatch();
         yield return ResolveBoard();
-
-        EndBusy();
-    }
-    
+    }         
     public bool HasAnyEmptyPlayableCell()
     {
         for (int y = 0; y < height; y++)
