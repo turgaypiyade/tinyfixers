@@ -1670,101 +1670,6 @@ public class BoardController : MonoBehaviour
             yield return null;
     }
 
-    private IEnumerator HandleSpecialSwap(TileView a, TileView b, TileSpecial sa, TileSpecial sb)
-    {
-        pendingCreationStore.Clear();
-
-        var specialSwapMatches = CollectMatchedTilesForSwap(a, b);
-        var pendingCreation = specialCreationService.DecideFromMatches(
-            specialSwapMatches,
-            new SpecialCreationService.CreationRequest(a, b, true)
-        );
-
-        if (pendingCreation.hasValue)
-            pendingCreationStore.Store(
-                pendingCreation.winner.X,
-                pendingCreation.winner.Y,
-                pendingCreation.special
-            );
-
-        ConsumeMove();
-
-        bool bothSpecial = sa != TileSpecial.None && sb != TileSpecial.None;
-
-        var swapActions = specialResolver.ResolveSpecialSwap(a, b);
-        actionSequencer.Enqueue(swapActions);
-
-        yield return AnimateQueuedActions();
-
-        if (!bothSpecial && pendingCreationStore.HasPending)
-        {
-            var pendingItems = pendingCreationStore.Drain();
-            pendingCreationApplicator.ApplyAll(pendingItems);
-
-            for (int pi = 0; pi < pendingItems.Count; pi++)
-            {
-                var pending = pendingItems[pi];
-                if (pending.x < 0 || pending.x >= width || pending.y < 0 || pending.y >= height)
-                    continue;
-
-                var createdTile = tiles[pending.x, pending.y];
-                if (createdTile == null)
-                    continue;
-
-                var surroundingMatches = matchFinder.FindMatchesAt(pending.x, pending.y);
-                surroundingMatches.Remove(createdTile);
-                surroundingMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
-
-                if (surroundingMatches.Count > 0)
-                {
-                    actionSequencer.Enqueue(new MatchClearAction(surroundingMatches, doShake: false));
-                    yield return AnimateQueuedActions();
-                }
-            }
-        }
-        else
-        {
-            pendingCreationStore.Clear();
-        }
-
-        yield return ResolveEmptyPlayableCellsWithoutMatch();
-        yield return ResolveBoard(allowSpecial: false);
-    }      
-
-    private IEnumerator HandleNormalSwapMatchOrRevert(
-        TileView a, TileView b,
-        int ax, int ay, int bx, int by)
-    {
-        var matches = new HashSet<TileView>();
-
-        foreach (var t in matchFinder.FindMatchesAt(a.X, a.Y))
-            matches.Add(t);
-
-        foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y))
-            matches.Add(t);
-
-        if (matches.Count == 0)
-        {
-            tiles[ax, ay] = a;
-            tiles[bx, by] = b;
-
-            a.SetCoords(ax, ay);
-            b.SetCoords(bx, by);
-
-            SyncTileData(ax, ay);
-            SyncTileData(bx, by);
-
-            actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
-            yield return AnimateQueuedActions();
-            yield break;
-        }
-
-        ConsumeMove();
-
-        yield return ExecuteClearPass(matches, allowSpecial: true);
-        yield return ResolveEmptyPlayableCellsWithoutMatch();
-        yield return ResolveBoard();
-    }         
     public bool HasAnyEmptyPlayableCell()
     {
         for (int y = 0; y < height; y++)
@@ -1807,12 +1712,6 @@ public class BoardController : MonoBehaviour
 
     private float GetCascadeFallSpeedMultiplier() => (CurrentResolvePass <= 1) ? 1f : 0.75f;
     private float GetCascadeClearSpeedMultiplier() => (CurrentResolvePass <= 1) ? 1f : 0.85f;
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-    private float _resolveProfT0;
-    private void ResolveProfBegin(string tag) { _resolveProfT0 = Time.realtimeSinceStartup; }
-    private void ResolveProfStep(string label) { _resolveProfT0 = Time.realtimeSinceStartup; }
-#endif
 
     IEnumerator ResolveBoard(bool allowSpecial = true)
     {

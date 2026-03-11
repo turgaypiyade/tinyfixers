@@ -66,12 +66,12 @@ public class SpecialFanoutService
         // Fan-out tamamlandı — override taşını artık gizle
         if (ctx.OverrideFanoutOrigin != null)
         {
-            SpecialVisualService.HideTileVisualForCombo(ctx.OverrideFanoutOrigin);
+           // SpecialVisualService.HideTileVisualForCombo(ctx.OverrideFanoutOrigin);
         }
         else if (soloSpecialTile != null && soloSpecialTile.GetSpecial() == TileSpecial.SystemOverride)
         {
             // Solo activation: fan-out yoksa soloSpecialTile'ı gizle (deferHide durumu)
-            SpecialVisualService.HideTileVisualForCombo(soloSpecialTile);
+          //  SpecialVisualService.HideTileVisualForCombo(soloSpecialTile);
         }
 
         // Fan-out'tan eklenen chain special'ları işle

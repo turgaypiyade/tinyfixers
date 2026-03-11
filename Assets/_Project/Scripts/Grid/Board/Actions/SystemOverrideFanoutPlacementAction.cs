@@ -81,5 +81,9 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         }
 
         yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.15f));
+        if (originTile != null)
+        {
+            SpecialVisualService.HideTileVisualForCombo(originTile);
+        }
     }
 }
