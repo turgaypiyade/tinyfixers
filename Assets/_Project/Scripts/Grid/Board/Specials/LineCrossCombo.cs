@@ -6,6 +6,7 @@ using UnityEngine;
 /// </summary>
 public class LineCrossCombo : IComboBehavior, ILightningComboBehavior
 {
+    public int Priority => 200;
     public bool HasLineActivation => true;
 
     public IEnumerable<LightningLineStrike> GetLineStrikes(int originX, int originY, TileSpecial a, TileSpecial b)

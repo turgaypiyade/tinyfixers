@@ -7,6 +7,9 @@ using UnityEngine;
 /// </summary>
 public interface IComboBehavior
 {
+    /// <summary>Higher value means higher precedence when multiple combos match.</summary>
+    int Priority { get; }
+
     /// <summary>
     /// Returns true if this combo handles the given pair of specials (order-independent).
     /// </summary>

@@ -49,12 +49,22 @@ public class SpecialBehaviorRegistry
     /// </summary>
     public IComboBehavior FindCombo(TileSpecial a, TileSpecial b)
     {
+        IComboBehavior best = null;
+        int bestPriority = int.MinValue;
+
         foreach (var combo in combos)
         {
-            if (combo.Matches(a, b))
-                return combo;
+            if (!combo.Matches(a, b))
+                continue;
+
+            if (combo.Priority > bestPriority)
+            {
+                best = combo;
+                bestPriority = combo.Priority;
+            }
         }
-        return null;
+
+        return best;
     }
 
     /// <summary>

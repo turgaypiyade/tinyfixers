@@ -50,11 +50,4 @@ public class PulseCoreBehavior : ISpecialBehavior
 
         return cells;
     }
-
-    public BoardAction CreateVisualAction(BoardController board, int originX, int originY,
-                                           HashSet<Vector2Int> affectedCells)
-    {
-        // PulseCore VFX is handled by default clear animation with stagger.
-        return null;
-    }
 }

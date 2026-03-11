@@ -54,11 +54,4 @@ public class SystemOverrideBehavior : ISpecialBehavior
 
         return cells;
     }
-
-    public BoardAction CreateVisualAction(BoardController board, int originX, int originY,
-                                           HashSet<Vector2Int> affectedCells)
-    {
-        // Override VFX: fan-out lightning. Handled by SystemOverrideFanoutPlacementAction.
-        return null;
-    }
 }

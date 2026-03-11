@@ -170,6 +170,23 @@ public class SpecialResolver
         return (b, bSpec);
     }
 
+
+    void TraceSpecialChain(string stage, TileView a, TileView b, HashSet<Vector2Int> processed, HashSet<TileView> affected)
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (!board.EnableSpecialChainTrace)
+            return;
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append("[SpecialChainTrace] ").Append(stage);
+        if (a != null) sb.Append(" A=").Append(a.GetSpecial()).Append("@").Append(a.X).Append(",").Append(a.Y);
+        if (b != null) sb.Append(" B=").Append(b.GetSpecial()).Append("@").Append(b.X).Append(",").Append(b.Y);
+        sb.Append(" processed=").Append(processed != null ? processed.Count : 0);
+        sb.Append(" affected=").Append(affected != null ? affected.Count : 0);
+        Debug.Log(sb.ToString());
+#endif
+    }
+
     public List<BoardAction> ResolveSpecialSwap(TileView a, TileView b)
     {
         var actions = new List<BoardAction>();
@@ -436,6 +453,7 @@ public class SpecialResolver
             perTileClearDelays: overrideOverrideRadialClearDelays,
             isSpecialPhase: true));
 
+        TraceSpecialChain("ResolveSpecialSwap", a, b, processed, affected);
         board.IsSpecialActivationPhase = false;
         specialAffectedCells = null;
         return actions;
@@ -597,6 +615,7 @@ public class SpecialResolver
             perTileClearDelays: overrideOverrideRadialClearDelays,
             isSpecialPhase: true));
 
+        TraceSpecialChain("ResolveSpecialSolo", specialTile, null, processed, affected);
         board.IsSpecialActivationPhase = false;
         specialAffectedCells = null;
         return actions;

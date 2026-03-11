@@ -94,6 +94,7 @@ public class BoardController : MonoBehaviour
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     [Header("Debug / Tile Sync")]
     [SerializeField] private bool enableTileSyncValidation = true;
+    [SerializeField] private bool enableSpecialChainTrace;
     [SerializeField] private bool throwOnTileSyncMismatch;
     [SerializeField] private float tilePositionEpsilon = 0.25f;
 #endif
@@ -214,6 +215,11 @@ public class BoardController : MonoBehaviour
     internal bool LastSwapUserMove { get => lastSwapUserMove; set => lastSwapUserMove = value; }
     internal bool ShakeNextClear { get => shakeNextClear; set => shakeNextClear = value; }
     internal bool IsSpecialActivationPhase { get => isSpecialActivationPhase; set => isSpecialActivationPhase = value; }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    internal bool EnableSpecialChainTrace => enableSpecialChainTrace;
+#else
+    internal bool EnableSpecialChainTrace => false;
+#endif
     internal ObstacleStateService ObstacleStateService => obstacleStateService;
     internal SpecialBehaviorRegistry SpecialBehaviors => specialBehaviorRegistry;
     public CascadeLogic CascadeLogic => cascadeLogic;

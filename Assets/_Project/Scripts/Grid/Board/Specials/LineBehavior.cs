@@ -39,14 +39,24 @@ public abstract class LineBehaviorBase : ISpecialBehavior, ILightningBehavior
 
         return cells;
     }
+}
 
-    public BoardAction CreateVisualAction(BoardController board, int originX, int originY,
-                                           HashSet<Vector2Int> affectedCells)
-    {
-        // Line VFX is handled by MatchClearAction with LightningStrike mode.
-        // Return null — the caller configures ClearAnimationMode.
-        return null;
-    }
+/// <summary>
+/// LineH special: clears a full row from the activation origin.
+/// </summary>
+public sealed class LineHorizontalBehavior : LineBehaviorBase
+{
+    public override TileSpecial SpecialType => TileSpecial.LineH;
+    protected override bool IsHorizontal => true;
+}
+
+/// <summary>
+/// LineV special: clears a full column from the activation origin.
+/// </summary>
+public sealed class LineVerticalBehavior : LineBehaviorBase
+{
+    public override TileSpecial SpecialType => TileSpecial.LineV;
+    protected override bool IsHorizontal => false;
 }
 
 /// <summary>
