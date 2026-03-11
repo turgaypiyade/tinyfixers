@@ -1,5 +1,26 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+
+/// <summary>
+/// Event hub for PulseCore visual lifecycle.
+/// Keeps pulse animation triggers out of BoardController public API.
+/// </summary>
+public static class PulseBehaviorEvents
+{
+    public static event Action<Vector2Int> PulseExplosionPlayed;
+    public static event Action<Vector2Int> PulseEmitterComboTriggered;
+
+    public static void EmitPulseExplosionPlayed(Vector2Int cell)
+    {
+        PulseExplosionPlayed?.Invoke(cell);
+    }
+
+    public static void EmitPulseEmitterComboTriggered(Vector2Int centerCell)
+    {
+        PulseEmitterComboTriggered?.Invoke(centerCell);
+    }
+}
 
 /// <summary>
 /// PulseCore special: explodes a square area around the origin (default radius=1 → 3×3).
@@ -28,12 +49,5 @@ public class PulseCoreBehavior : ISpecialBehavior
         }
 
         return cells;
-    }
-
-    public BoardAction CreateVisualAction(BoardController board, int originX, int originY,
-                                           HashSet<Vector2Int> affectedCells)
-    {
-        // PulseCore VFX is handled by default clear animation with stagger.
-        return null;
     }
 }

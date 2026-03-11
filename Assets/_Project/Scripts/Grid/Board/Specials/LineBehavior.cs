@@ -1,34 +1,48 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Line special: clears an entire row (LineH) or column (LineV).
-/// Handles both orientations via a single implementation.
+/// Event hub for line sweep lifecycle notifications.
+/// Kept in line behavior model layer to avoid growing BoardController surface.
 /// </summary>
-public class LineBehavior : ISpecialBehavior, ILightningBehavior
+public static class LineBehaviorEvents
 {
-    private readonly TileSpecial lineType;
+    public static event Action<LightningLineStrike, float> SweepStarted;
+    public static event Action<Vector2Int, LightningLineStrike> SweepCellReached;
 
-    public TileSpecial SpecialType => lineType;
-    public bool HasLineActivation => true;
-
-    public LineBehavior(TileSpecial type)
+    public static void EmitSweepStarted(LightningLineStrike strike, float delay)
     {
-        Debug.Assert(type == TileSpecial.LineH || type == TileSpecial.LineV,
-            $"LineBehavior created with invalid type: {type}");
-        lineType = type;
+        SweepStarted?.Invoke(strike, delay);
     }
+
+    public static void EmitSweepCellReached(Vector2Int cell, LightningLineStrike strike)
+    {
+        SweepCellReached?.Invoke(cell, strike);
+    }
+}
+
+/// <summary>
+/// Base line special behavior with shared line clear logic.
+/// Visual playback is kept outside of behavior classes and driven by
+/// LineBehaviorEvents + BoardAnimator orchestration.
+/// </summary>
+public abstract class LineBehaviorBase : ISpecialBehavior, ILightningBehavior
+{
+    public abstract TileSpecial SpecialType { get; }
+    protected abstract bool IsHorizontal { get; }
+    public bool HasLineActivation => true;
 
     public IEnumerable<LightningLineStrike> GetLineStrikes(int originX, int originY)
     {
-        yield return new LightningLineStrike(new Vector2Int(originX, originY), lineType == TileSpecial.LineH);
+        yield return new LightningLineStrike(new Vector2Int(originX, originY), IsHorizontal);
     }
 
     public HashSet<Vector2Int> CalculateAffectedCells(BoardController board, int originX, int originY)
     {
         var cells = new HashSet<Vector2Int>();
 
-        if (lineType == TileSpecial.LineH)
+        if (IsHorizontal)
         {
             for (int x = 0; x < board.Width; x++)
             {
@@ -47,12 +61,22 @@ public class LineBehavior : ISpecialBehavior, ILightningBehavior
 
         return cells;
     }
+}
 
-    public BoardAction CreateVisualAction(BoardController board, int originX, int originY,
-                                           HashSet<Vector2Int> affectedCells)
-    {
-        // Line VFX is handled by MatchClearAction with LightningStrike mode.
-        // Return null — the caller configures ClearAnimationMode.
-        return null;
-    }
+/// <summary>
+/// LineH special: clears a full row from the activation origin.
+/// </summary>
+public sealed class LineHorizontalSpecialBehavior : LineBehaviorBase
+{
+    public override TileSpecial SpecialType => TileSpecial.LineH;
+    protected override bool IsHorizontal => true;
+}
+
+/// <summary>
+/// LineV special: clears a full column from the activation origin.
+/// </summary>
+public sealed class LineVerticalSpecialBehavior : LineBehaviorBase
+{
+    public override TileSpecial SpecialType => TileSpecial.LineV;
+    protected override bool IsHorizontal => false;
 }
