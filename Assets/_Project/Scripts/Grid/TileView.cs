@@ -308,6 +308,8 @@ public class TileView : MonoBehaviour,
         if (!deferVisualUpdate)
         {
             RefreshIcon();
+            if (lastAppliedTileSize > 0)
+                ApplyTileSize(lastAppliedTileSize);
         }
     }
 
@@ -329,12 +331,23 @@ public class TileView : MonoBehaviour,
         {
             var irt = iconImage.rectTransform;
             float s = tileSize * runtimeIconScale;
+            bool isSpecial = model != null && model.special != TileSpecial.None;
 
             irt.sizeDelta = new Vector2(s, s);
             irt.anchorMin = new Vector2(0.5f, 0.5f);
             irt.anchorMax = new Vector2(0.5f, 0.5f);
-            irt.pivot = new Vector2(0.5f, 0f);
-            irt.anchoredPosition = new Vector2(0f, -s * 0.5f);
+            if (isSpecial)
+            {
+                // Special ikonları (LineH/LineV/PatchBot/PulseCore/SystemOverride) görsel merkezde tut.
+                irt.pivot = new Vector2(0.5f, 0.5f);
+                irt.anchoredPosition = Vector2.zero;
+            }
+            else
+            {
+                // Normal taşlar mevcut "alta oturan" hissini korusun.
+                irt.pivot = new Vector2(0.5f, 0f);
+                irt.anchoredPosition = new Vector2(0f, -s * 0.5f);
+            }
         }
     }
 

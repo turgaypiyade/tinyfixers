@@ -394,10 +394,25 @@ public class BoardController : MonoBehaviour
     }
 
     internal float PlayLineTravelInstanceWithStep(
-        LineTravelSplitSwapTestUI.LineAxis axis, Vector2 originAnchored, Vector2Int originCell,
-        int steps, float cellSizePx, float delaySeconds, Action<Vector2Int> onStep)
+        LineTravelSplitSwapTestUI.LineAxis axis,
+        Vector2 originAnchored,
+        Vector2Int originCell,
+        int steps,
+        float cellSizePx,
+        float delaySeconds,
+        Action<Vector2Int> onStep,
+        Action onCompleted = null)
     {
-        return lineSweepService.PlayLineTravelInstanceWithStep(lineTravelPlayer, axis, originAnchored, originCell, steps, cellSizePx, delaySeconds, onStep);
+        return lineSweepService.PlayLineTravelInstanceWithStep(
+            lineTravelPlayer,
+            axis,
+            originAnchored,
+            originCell,
+            steps,
+            cellSizePx,
+            delaySeconds,
+            onStep,
+            onCompleted);
     }
 
     internal float GetLightningStrikeStepDelay()
@@ -878,8 +893,8 @@ IEnumerator ProcessSwap(TileView a, TileView b)
 
     internal float GetClearDurationForCurrentPass() => Mathf.Max(0.03f, ApplySpecialChainTempo(ClearDuration * GetCascadeClearSpeedMultiplier()));
     internal bool ShouldEnableFallSettleThisPass() => EnableFallSettle && CurrentResolvePass <= 1;
-    private float GetCascadeFallSpeedMultiplier() => (CurrentResolvePass <= 1) ? 1f : 0.75f;
-    private float GetCascadeClearSpeedMultiplier() => (CurrentResolvePass <= 1) ? 1f : 0.85f;
+    private float GetCascadeFallSpeedMultiplier() => (CurrentResolvePass <= 1) ? 1f : 0.50f;
+    private float GetCascadeClearSpeedMultiplier() => (CurrentResolvePass <= 1) ? 1f : 0.60f;
     private TileType GetRandomType() => randomPool[UnityEngine.Random.Range(0, randomPool.Length)];
     private void ConsumeMove() { RemainingMoves = Mathf.Max(0, RemainingMoves - 1); OnMovesChanged?.Invoke(RemainingMoves); }
     public void AddMoves(int amount) { if (amount <= 0) return; RemainingMoves += amount; OnMovesChanged?.Invoke(RemainingMoves); }

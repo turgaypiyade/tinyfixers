@@ -59,6 +59,10 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             board.SyncTileData(target.X, target.Y);
             target.RefreshIcon();
 
+            // Beam hedefe vardığında data/view senkronunu zorla
+            board.SyncTileData(target.X, target.Y);
+            target.RefreshIcon();
+
             TileSpecial targetSpecial = target.GetSpecial();
             bool shouldPulse =
                 doSelectionPulse ||
