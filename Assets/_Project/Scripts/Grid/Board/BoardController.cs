@@ -586,43 +586,75 @@ public class BoardController : MonoBehaviour
 
         TileSpecial sa = a.GetSpecial(), sb = b.GetSpecial();
 
-        // ── Special swap path ──
+        // ══════════════════════════════════════════════════════════
+        //  Special swap path — en az bir taraf special
+        // ══════════════════════════════════════════════════════════
         if (sa != TileSpecial.None || sb != TileSpecial.None)
         {
-            pendingCreationStore.Clear();
-            var specialSwapMatches = CollectMatchedTilesForSwap(a, b);
-            var pendingCreation = specialCreationService.DecideFromMatches(specialSwapMatches, new SpecialCreationService.CreationRequest(a, b, true));
-            if (pendingCreation.hasValue) pendingCreationStore.Store(pendingCreation.winner.X, pendingCreation.winner.Y, pendingCreation.special);
+            bool bothSpecial = sa != TileSpecial.None && sb != TileSpecial.None;
             ConsumeMove();
 
-            bool bothSpecial = sa != TileSpecial.None && sb != TileSpecial.None;
+            // ── Adım 1: Normal tarafın match'ini ÖNCE çöz ──
+            // Special taş aktive olmadan önce, normal taş gittiği yerde
+            // match oluşturuyorsa → special creation + clear hemen yapılır.
+            // Böylece tile type doğru kalır, pending mekanizmasına gerek kalmaz.
+            if (!bothSpecial)
+            {
+                var specialTile = (sa != TileSpecial.None) ? a : b;
+                var normalTile  = (sa != TileSpecial.None) ? b : a;
+                int sx = specialTile.X, sy = specialTile.Y;
+
+                // Special taşı geçici olarak grid'den çıkar
+                // GetRunLengths special'ı da sayıyor → yanlış 4'lü kararı veriyor
+                // Bunu engellemenin en basit yolu: hesap sırasında orada olmaması
+                var savedTile = tiles[sx, sy];
+                var savedData = gridData[sx, sy];
+                tiles[sx, sy] = null;
+                gridData[sx, sy] = null;
+
+                var normalMatches = matchFinder.FindMatchesAt(normalTile.X, normalTile.Y);
+
+                // Special taşı geri koy
+                tiles[sx, sy] = savedTile;
+                gridData[sx, sy] = savedData;
+
+                if (normalMatches.Count >= 3)
+                {
+                    // Special creation kararı (sadece normal taşlar arasından)
+                    var candidates = new HashSet<TileView>(normalMatches);
+                    candidates.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
+
+                    var creation = specialCreationService.DecideBestFromMatchedTiles(candidates);
+                    if (creation.hasValue)
+                    {
+                        specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
+                        normalMatches.Remove(creation.winner);
+                    }
+
+                    // Kalan normal match taşlarını temizle
+                    normalMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
+                    if (normalMatches.Count > 0)
+                    {
+                        actionSequencer.Enqueue(new MatchClearAction(normalMatches, doShake: false));
+                        yield return AnimateQueuedActions();
+                    }
+                }
+            }
+
+            // ── Adım 2: Special activation ──
             actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b));
             yield return AnimateQueuedActions();
 
-            if (!bothSpecial && pendingCreationStore.HasPending)
-            {
-                var pendingItems = pendingCreationStore.Drain();
-                pendingCreationApplicator.ApplyAll(pendingItems);
-                for (int pi = 0; pi < pendingItems.Count; pi++)
-                {
-                    var pending = pendingItems[pi];
-                    if (pending.x < 0 || pending.x >= width || pending.y < 0 || pending.y >= height) continue;
-                    var createdTile = tiles[pending.x, pending.y]; if (createdTile == null) continue;
-                    var surroundingMatches = matchFinder.FindMatchesAt(pending.x, pending.y);
-                    surroundingMatches.Remove(createdTile);
-                    surroundingMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
-                    if (surroundingMatches.Count > 0) { actionSequencer.Enqueue(new MatchClearAction(surroundingMatches, doShake: false)); yield return AnimateQueuedActions(); }
-                }
-            }
-            else { pendingCreationStore.Clear(); }
-
+            // ── Adım 3: Cascade + resolve ──
             yield return ResolveEmptyPlayableCellsWithoutMatch();
-            yield return ResolveBoard(allowSpecial: false);
+            yield return ResolveBoard(allowSpecialActivation: false);
             EndBusy();
             yield break;
         }
 
-        // ── Normal swap path ──
+        // ══════════════════════════════════════════════════════════
+        //  Normal swap path — iki taraf da normal taş
+        // ══════════════════════════════════════════════════════════
         var matches = new HashSet<TileView>();
         foreach (var t in matchFinder.FindMatchesAt(a.X, a.Y)) matches.Add(t);
         foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y)) matches.Add(t);
@@ -638,7 +670,7 @@ public class BoardController : MonoBehaviour
         }
 
         ConsumeMove();
-        yield return ExecuteClearPass(matches, allowSpecial: true);
+        yield return ExecuteClearPass(matches, allowSpecialActivation: true);
         yield return ResolveEmptyPlayableCellsWithoutMatch();
         yield return ResolveBoard();
         EndBusy();
@@ -648,7 +680,7 @@ public class BoardController : MonoBehaviour
     //  Resolve Board
     // ═══════════════════════════════════════════════════════════════
 
-    IEnumerator ResolveBoard(bool allowSpecial = true)
+    IEnumerator ResolveBoard(bool allowSpecialActivation = false) 
     {
         isSpecialActivationPhase = false;
         int safety = 0;
@@ -664,7 +696,7 @@ public class BoardController : MonoBehaviour
             foreach (var t in matches) { var tile = tiles[t.X, t.Y]; if (tile != null) matchTiles.Add(tile); }
             if (matchTiles.Count == 0) yield break;
             bool cleared = false;
-            yield return ExecuteClearPass(matchTiles, allowSpecial, result => cleared = result);
+            yield return ExecuteClearPass(matchTiles, allowSpecialActivation, result => cleared = result);
             if (!cleared) yield break;
         }
     }
@@ -672,38 +704,55 @@ public class BoardController : MonoBehaviour
     // Public wrapper for services (BoosterService)
     internal IEnumerator ResolveBoardPublic(bool allowSpecial = true) => ResolveBoard(allowSpecial);
 
-    IEnumerator ExecuteClearPass(HashSet<TileView> matchTiles, bool allowSpecial, Action<bool> onResult = null)
+    IEnumerator ExecuteClearPass(HashSet<TileView> matchTiles, bool allowSpecialActivation, Action<bool> onResult = null)
     {
         var nonSpecialMatchTiles = new HashSet<TileView>(matchTiles);
         nonSpecialMatchTiles.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
 
-        if (allowSpecial)
+        // ── 1. Special CREATION — her zaman aktif ──
+        // Cascade'de de 4'lü Line, 2x2 PatchBot vs. oluşabilir
+        var creation = specialCreationService.DecideFromMatches(
+            nonSpecialMatchTiles,
+            new SpecialCreationService.CreationRequest(lastSwapA, lastSwapB, LastSwapUserMove));
+
+        if (creation.hasValue)
         {
-            var creation = specialCreationService.DecideFromMatches(nonSpecialMatchTiles, new SpecialCreationService.CreationRequest(lastSwapA, lastSwapB, LastSwapUserMove));
-            if (creation.hasValue)
+            var created = specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
+            if (created != null)
             {
-                var created = specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
-                if (created != null)
+                matchTiles.Remove(created);
+                shakeNextClear = true;
+                if (creation.special == TileSpecial.PatchBot)
                 {
-                    matchTiles.Remove(created);
-                    shakeNextClear = true;
-                    if (creation.special == TileSpecial.PatchBot)
-                    {
-                        var fullGroup = matchFinder.FindMatchesAt(created.X, created.Y);
-                        foreach (var pt in fullGroup)
-                        { if (pt == null || pt == created || pt.GetSpecial() != TileSpecial.None) continue; matchTiles.Add(pt); }
-                    }
+                    var fullGroup = matchFinder.FindMatchesAt(created.X, created.Y);
+                    foreach (var pt in fullGroup)
+                    { if (pt == null || pt == created || pt.GetSpecial() != TileSpecial.None) continue; matchTiles.Add(pt); }
                 }
             }
-            LastSwapUserMove = false;
+        }
+        LastSwapUserMove = false;
+
+        // ── 2. Special ACTIVATION — sadece izin verilmişse ──
+        bool hasLineActivation = false;
+        bool hasAnySpecialActivation = false;
+        if (allowSpecialActivation)
+        {
+            specialResolver.ExpandSpecialChain(matchTiles, null, out hasLineActivation, out hasAnySpecialActivation);
+        }
+        else
+        {
+            // Cascade: special taşlar board'da kalacak, silme listesinden çıkar
+            matchTiles.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
         }
 
-        specialResolver.ExpandSpecialChain(matchTiles, null, out bool hasLineActivation, out _);
         if (matchTiles.Count == 0) { onResult?.Invoke(false); yield break; }
 
         bool doShake = shakeNextClear || hasLineActivation;
         shakeNextClear = false;
-        actionSequencer.Enqueue(new MatchClearAction(matchTiles, doShake));
+
+        // ── 3. Clear — activation olduysa special'lar da silinebilmeli ──
+        actionSequencer.Enqueue(new MatchClearAction(matchTiles, doShake,
+            isSpecialPhase: allowSpecialActivation && hasAnySpecialActivation));
         while (actionSequencer.IsPlaying) yield return null;
 
         var cascadeActions = cascadeLogic.CalculateCascades();

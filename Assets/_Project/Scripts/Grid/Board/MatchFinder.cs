@@ -13,16 +13,19 @@ public class MatchFinder
     public void Add2x2Matches(HashSet<TileData> result)
     {
         for (int y = 0; y < board.Height - 1; y++)
+        {
             for (int x = 0; x < board.Width - 1; x++)
             {
-                if (board.Holes[x, y] || board.Holes[x + 1, y] || board.Holes[x, y + 1] || board.Holes[x + 1, y + 1]) continue;
+                if (board.Holes[x, y] || board.Holes[x + 1, y] || board.Holes[x, y + 1] || board.Holes[x + 1, y + 1])
+                    continue;
 
                 var a = board.GridData[x, y];
                 var b = board.GridData[x + 1, y];
                 var c = board.GridData[x, y + 1];
                 var d = board.GridData[x + 1, y + 1];
 
-                if (a == null || b == null || c == null || d == null) continue;
+                if (a == null || b == null || c == null || d == null)
+                    continue;
 
                 var t = a.Type;
                 if (!b.Type.Equals(t)) continue;
@@ -34,67 +37,34 @@ public class MatchFinder
                 result.Add(c);
                 result.Add(d);
             }
+        }
     }
 
     public HashSet<TileView> FindMatchesAt(int x, int y)
     {
         var result = new HashSet<TileView>();
 
-        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return result;
-        if (board.Holes[x, y]) return result;
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return result;
+
+        if (board.Holes[x, y])
+            return result;
 
         var center = board.Tiles[x, y];
-        if (center == null) return result;
+        if (center == null)
+            return result;
 
         TileType type = center.GetTileType();
 
-        // Horizontal
-        var hor = new List<TileView> { center };
+        AddHorizontalRunIfAny(result, x, y, type);
+        AddVerticalRunIfAny(result, x, y, type);
+        Add2x2CandidatesOfType(result, x, y, type);
 
-        int lx = x - 1;
-        while (lx >= 0 && !board.Holes[lx, y] && board.Tiles[lx, y] != null && board.Tiles[lx, y].GetTileType().Equals(type))
-        {
-            hor.Add(board.Tiles[lx, y]);
-            lx--;
-        }
-
-        int rx = x + 1;
-        while (rx < board.Width && !board.Holes[rx, y] && board.Tiles[rx, y] != null && board.Tiles[rx, y].GetTileType().Equals(type))
-        {
-            hor.Add(board.Tiles[rx, y]);
-            rx++;
-        }
-
-        if (hor.Count >= 3)
-            for (int i = 0; i < hor.Count; i++)
-                result.Add(hor[i]);
-
-        // Vertical
-        var ver = new List<TileView> { center };
-
-        int uy = y - 1;
-        while (uy >= 0 && !board.Holes[x, uy] && board.Tiles[x, uy] != null && board.Tiles[x, uy].GetTileType().Equals(type))
-        {
-            ver.Add(board.Tiles[x, uy]);
-            uy--;
-        }
-
-        int dy = y + 1;
-        while (dy < board.Height && !board.Holes[x, dy] && board.Tiles[x, dy] != null && board.Tiles[x, dy].GetTileType().Equals(type))
-        {
-            ver.Add(board.Tiles[x, dy]);
-            dy++;
-        }
-
-        if (ver.Count >= 3)
-            for (int i = 0; i < ver.Count; i++)
-                result.Add(ver[i]);
-
-        // 2x2 de geçerli match
-        Add2x2Candidates(result, x, y);
+        ExpandMatchGroupClosure(result, type);
 
         return result;
     }
+
     public HashSet<TileData> FindAllMatches()
     {
         var result = new HashSet<TileData>();
@@ -185,7 +155,8 @@ public class MatchFinder
             FlushRun(run, runTiles, result);
         }
 
-        // ─── DEBUG: board snapshot + matches ───────────────────────────────────
+        Add2x2Matches(result);
+        
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         static string TileViewDebugString(TileView tv)
         {
@@ -222,43 +193,45 @@ public class MatchFinder
             sb.Append($"  row{dbgY}: ");
             for (int dbgX = 0; dbgX < board.Width; dbgX++)
             {
-               if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
-               else sb.Append($"[{TileViewDebugString(board.Tiles[dbgX, dbgY]).PadRight(2)}]");
+                if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
+                else sb.Append($"[{TileViewDebugString(board.Tiles[dbgX, dbgY]).PadRight(2)}]");
             }
-           sb.AppendLine();
+            sb.AppendLine();
         }
 
         sb.AppendLine("  GridData vs TileView mismatch scan:");
         for (int dbgY = 0; dbgY < board.Height; dbgY++)
-        for (int dbgX = 0; dbgX < board.Width; dbgX++)
         {
-            if (board.Holes[dbgX, dbgY])
-                continue;
-
-            var gd = board.GridData[dbgX, dbgY];
-            var tv = board.Tiles[dbgX, dbgY];
-
-            if (gd == null && tv == null)
-                continue;
-
-            bool mismatch = false;
-            if (gd == null || tv == null)
+            for (int dbgX = 0; dbgX < board.Width; dbgX++)
             {
-                mismatch = true;
-            }
-            else
-            {
-                if (!gd.Type.Equals(tv.GetTileType())) mismatch = true;
-                if (gd.Special != tv.GetSpecial()) mismatch = true;
-            }
+                if (board.Holes[dbgX, dbgY])
+                    continue;
 
-            if (!mismatch)
-                continue;
+                var gd = board.GridData[dbgX, dbgY];
+                var tv = board.Tiles[dbgX, dbgY];
 
-            mismatchCount++;
-            string gdStr = gd != null ? gd.ToDebugString() : "·";
-            string tvStr = TileViewDebugString(tv);
-            sb.AppendLine($"    ({dbgX},{dbgY}) GD={gdStr} TV={tvStr} | GD_null={gd == null} TV_null={tv == null}");
+                if (gd == null && tv == null)
+                    continue;
+
+                bool mismatch = false;
+                if (gd == null || tv == null)
+                {
+                    mismatch = true;
+                }
+                else
+                {
+                    if (!gd.Type.Equals(tv.GetTileType())) mismatch = true;
+                    if (gd.Special != tv.GetSpecial()) mismatch = true;
+                }
+
+                if (!mismatch)
+                    continue;
+
+                mismatchCount++;
+                string gdStr = gd != null ? gd.ToDebugString() : "·";
+                string tvStr = TileViewDebugString(tv);
+                sb.AppendLine($"    ({dbgX},{dbgY}) GD={gdStr} TV={tvStr} | GD_null={gd == null} TV_null={tv == null}");
+            }
         }
         sb.AppendLine($"  Mismatch count: {mismatchCount}");
 
@@ -270,37 +243,23 @@ public class MatchFinder
         }
         Debug.Log(sb.ToString());
 #endif
-        // ─── END DEBUG ─────────────────────────────────────────────────────────
 
         return result;
     }
 
     public void Add2x2Candidates(HashSet<TileView> candidates, int x, int y)
     {
-        for (int ox = -1; ox <= 0; ox++)
-            for (int oy = -1; oy <= 0; oy++)
-            {
-                int sx = x + ox;
-                int sy = y + oy;
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return;
 
-                if (sx < 0 || sx >= board.Width - 1 || sy < 0 || sy >= board.Height - 1) continue;
-                if (board.Holes[sx, sy] || board.Holes[sx + 1, sy] || board.Holes[sx, sy + 1] || board.Holes[sx + 1, sy + 1]) continue;
+        if (board.Holes[x, y])
+            return;
 
-                var a = board.Tiles[sx, sy];
-                var b = board.Tiles[sx + 1, sy];
-                var c = board.Tiles[sx, sy + 1];
-                var d = board.Tiles[sx + 1, sy + 1];
+        var center = board.Tiles[x, y];
+        if (center == null)
+            return;
 
-                if (a == null || b == null || c == null || d == null) continue;
-                if (!a.GetTileType().Equals(b.GetTileType())) continue;
-                if (!a.GetTileType().Equals(c.GetTileType())) continue;
-                if (!a.GetTileType().Equals(d.GetTileType())) continue;
-
-                candidates.Add(a);
-                candidates.Add(b);
-                candidates.Add(c);
-                candidates.Add(d);
-            }
+        Add2x2CandidatesOfType(candidates, x, y, center.GetTileType());
     }
 
     public bool HasAnyRunAtLeast(int minLen)
@@ -391,15 +350,33 @@ public class MatchFinder
 
         int h = 1;
         int lx = x - 1;
-        while (lx >= 0 && !board.Holes[lx, y] && board.GridData[lx, y] != null && board.GridData[lx, y].Type.Equals(type)) { h++; lx--; }
+        while (lx >= 0 && !board.Holes[lx, y] && board.GridData[lx, y] != null && board.GridData[lx, y].Type.Equals(type))
+        {
+            h++;
+            lx--;
+        }
+
         int rx = x + 1;
-        while (rx < board.Width && !board.Holes[rx, y] && board.GridData[rx, y] != null && board.GridData[rx, y].Type.Equals(type)) { h++; rx++; }
+        while (rx < board.Width && !board.Holes[rx, y] && board.GridData[rx, y] != null && board.GridData[rx, y].Type.Equals(type))
+        {
+            h++;
+            rx++;
+        }
 
         int v = 1;
         int uy = y - 1;
-        while (uy >= 0 && !board.Holes[x, uy] && board.GridData[x, uy] != null && board.GridData[x, uy].Type.Equals(type)) { v++; uy--; }
+        while (uy >= 0 && !board.Holes[x, uy] && board.GridData[x, uy] != null && board.GridData[x, uy].Type.Equals(type))
+        {
+            v++;
+            uy--;
+        }
+
         int dy = y + 1;
-        while (dy < board.Height && !board.Holes[x, dy] && board.GridData[x, dy] != null && board.GridData[x, dy].Type.Equals(type)) { v++; dy++; }
+        while (dy < board.Height && !board.Holes[x, dy] && board.GridData[x, dy] != null && board.GridData[x, dy].Type.Equals(type))
+        {
+            v++;
+            dy++;
+        }
 
         return (h, v);
     }
@@ -413,22 +390,12 @@ public class MatchFinder
 
         int best = Mathf.Max(hLen, vLen);
 
-        // 5+ straight => System Override
         if (best >= 5) return TileSpecial.SystemOverride;
 
-        // L/T shape: both horizontal and vertical runs of 3+ pass through this tile.
-        // Note: The old "isFiveCluster" check (FindMatchesAt().Count >= 5) was removed
-        // because FindMatchesAt includes 2x2 candidates, which inflated the count and
-        // caused false PulseCore creation (e.g. a 3-run + adjacent 2x2 = 5 tiles).
-        // The L/T condition (hLen >= 3 && vLen >= 3) already covers all valid cases:
-        // the minimum unique tile count for this is hLen + vLen - 1 = 5, which matches
-        // the intended "5-cluster" rule for line-based patterns.
         if (hLen >= 3 && vLen >= 3) return TileSpecial.PulseCore;
 
-        // 4 straight => Line
         if (best == 4) return (hLen >= vLen) ? TileSpecial.LineH : TileSpecial.LineV;
 
-        // 2x2 => PatchBot (yalnızca çağrıldığı bağlamda; global auto-match listesine eklenmez)
         if (Has2x2At(x, y)) return TileSpecial.PatchBot;
 
         return TileSpecial.None;
@@ -436,24 +403,34 @@ public class MatchFinder
 
     public bool Has2x2At(int x, int y)
     {
-        if (board.GridData[x, y] == null) return false;
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+
+        if (board.GridData[x, y] == null)
+            return false;
+
         var t = board.GridData[x, y].Type;
 
         for (int ox = -1; ox <= 0; ox++)
+        {
             for (int oy = -1; oy <= 0; oy++)
             {
                 int sx = x + ox;
                 int sy = y + oy;
 
-                if (sx < 0 || sx >= board.Width - 1 || sy < 0 || sy >= board.Height - 1) continue;
-                if (board.Holes[sx, sy] || board.Holes[sx + 1, sy] || board.Holes[sx, sy + 1] || board.Holes[sx + 1, sy + 1]) continue;
+                if (sx < 0 || sx >= board.Width - 1 || sy < 0 || sy >= board.Height - 1)
+                    continue;
+
+                if (board.Holes[sx, sy] || board.Holes[sx + 1, sy] || board.Holes[sx, sy + 1] || board.Holes[sx + 1, sy + 1])
+                    continue;
 
                 var a = board.GridData[sx, sy];
                 var b = board.GridData[sx + 1, sy];
                 var c = board.GridData[sx, sy + 1];
                 var d = board.GridData[sx + 1, sy + 1];
 
-                if (a == null || b == null || c == null || d == null) continue;
+                if (a == null || b == null || c == null || d == null)
+                    continue;
 
                 if (!a.Type.Equals(t)) continue;
                 if (!b.Type.Equals(t)) continue;
@@ -462,14 +439,165 @@ public class MatchFinder
 
                 return true;
             }
+        }
 
         return false;
     }
 
-    void FlushRun(int run, List<TileData> runTiles, HashSet<TileData> result)
+    private void ExpandMatchGroupClosure(HashSet<TileView> result, TileType type)
+    {
+        bool changed;
+        do
+        {
+            int before = result.Count;
+
+            ExpandBy2x2(result, type);
+            ExpandByRuns(result, type);
+
+            changed = result.Count > before;
+        }
+        while (changed);
+    }
+
+    private void ExpandBy2x2(HashSet<TileView> result, TileType type)
+    {
+        var snapshot = new List<TileView>(result);
+
+        for (int i = 0; i < snapshot.Count; i++)
+        {
+            var tile = snapshot[i];
+            if (tile == null) continue;
+
+            Add2x2CandidatesOfType(result, tile.X, tile.Y, type);
+        }
+    }
+
+    private void ExpandByRuns(HashSet<TileView> result, TileType type)
+    {
+        var snapshot = new List<TileView>(result);
+
+        for (int i = 0; i < snapshot.Count; i++)
+        {
+            var tile = snapshot[i];
+            if (tile == null) continue;
+
+            AddHorizontalRunIfAny(result, tile.X, tile.Y, type);
+            AddVerticalRunIfAny(result, tile.X, tile.Y, type);
+        }
+    }
+
+    private void Add2x2CandidatesOfType(HashSet<TileView> candidates, int x, int y, TileType type)
+    {
+        for (int ox = -1; ox <= 0; ox++)
+        {
+            for (int oy = -1; oy <= 0; oy++)
+            {
+                int sx = x + ox;
+                int sy = y + oy;
+
+                if (sx < 0 || sx >= board.Width - 1 || sy < 0 || sy >= board.Height - 1)
+                    continue;
+
+                if (board.Holes[sx, sy] || board.Holes[sx + 1, sy] || board.Holes[sx, sy + 1] || board.Holes[sx + 1, sy + 1])
+                    continue;
+
+                var a = board.Tiles[sx, sy];
+                var b = board.Tiles[sx + 1, sy];
+                var c = board.Tiles[sx, sy + 1];
+                var d = board.Tiles[sx + 1, sy + 1];
+
+                if (a == null || b == null || c == null || d == null)
+                    continue;
+
+                if (!a.GetTileType().Equals(type)) continue;
+                if (!b.GetTileType().Equals(type)) continue;
+                if (!c.GetTileType().Equals(type)) continue;
+                if (!d.GetTileType().Equals(type)) continue;
+
+                candidates.Add(a);
+                candidates.Add(b);
+                candidates.Add(c);
+                candidates.Add(d);
+            }
+        }
+    }
+
+    private void AddHorizontalRunIfAny(HashSet<TileView> result, int x, int y, TileType type)
+    {
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return;
+
+        if (board.Holes[x, y])
+            return;
+
+        var center = board.Tiles[x, y];
+        if (center == null || !center.GetTileType().Equals(type))
+            return;
+
+        var run = new List<TileView> { center };
+
+        int lx = x - 1;
+        while (lx >= 0 && !board.Holes[lx, y] && board.Tiles[lx, y] != null && board.Tiles[lx, y].GetTileType().Equals(type))
+        {
+            run.Add(board.Tiles[lx, y]);
+            lx--;
+        }
+
+        int rx = x + 1;
+        while (rx < board.Width && !board.Holes[rx, y] && board.Tiles[rx, y] != null && board.Tiles[rx, y].GetTileType().Equals(type))
+        {
+            run.Add(board.Tiles[rx, y]);
+            rx++;
+        }
+
+        if (run.Count >= 3)
+        {
+            for (int i = 0; i < run.Count; i++)
+                result.Add(run[i]);
+        }
+    }
+
+    private void AddVerticalRunIfAny(HashSet<TileView> result, int x, int y, TileType type)
+    {
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return;
+
+        if (board.Holes[x, y])
+            return;
+
+        var center = board.Tiles[x, y];
+        if (center == null || !center.GetTileType().Equals(type))
+            return;
+
+        var run = new List<TileView> { center };
+
+        int uy = y - 1;
+        while (uy >= 0 && !board.Holes[x, uy] && board.Tiles[x, uy] != null && board.Tiles[x, uy].GetTileType().Equals(type))
+        {
+            run.Add(board.Tiles[x, uy]);
+            uy--;
+        }
+
+        int dy = y + 1;
+        while (dy < board.Height && !board.Holes[x, dy] && board.Tiles[x, dy] != null && board.Tiles[x, dy].GetTileType().Equals(type))
+        {
+            run.Add(board.Tiles[x, dy]);
+            dy++;
+        }
+
+        if (run.Count >= 3)
+        {
+            for (int i = 0; i < run.Count; i++)
+                result.Add(run[i]);
+        }
+    }
+
+    private void FlushRun(int run, List<TileData> runTiles, HashSet<TileData> result)
     {
         if (run >= 3)
+        {
             for (int i = 0; i < runTiles.Count; i++)
                 result.Add(runTiles[i]);
+        }
     }
 }

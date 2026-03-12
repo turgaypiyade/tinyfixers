@@ -528,6 +528,12 @@ public class CascadeLogic
         if (HasTypeAt(x, y + 1, type) && HasTypeAt(x, y + 2, type)) return true;
         if (HasTypeAt(x, y - 1, type) && HasTypeAt(x, y + 1, type)) return true;
 
+        // 2x2 patterns
+        if (HasTypeAt(x-1, y, type) && HasTypeAt(x-1, y-1, type) && HasTypeAt(x, y-1, type)) return true;
+        if (HasTypeAt(x+1, y, type) && HasTypeAt(x+1, y-1, type) && HasTypeAt(x, y-1, type)) return true;
+        if (HasTypeAt(x-1, y, type) && HasTypeAt(x-1, y+1, type) && HasTypeAt(x, y+1, type)) return true;
+        if (HasTypeAt(x+1, y, type) && HasTypeAt(x+1, y+1, type) && HasTypeAt(x, y+1, type)) return true;
+
         return false;
     }
 
