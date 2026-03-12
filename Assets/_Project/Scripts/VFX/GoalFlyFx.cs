@@ -9,7 +9,7 @@ public class GoalFlyFx : MonoBehaviour
 
     [Header("Timing")]
     [SerializeField] private float popUpPortion = 0.20f;      // ilk pop süresi oranı
-    [SerializeField] private float fadeOutPortion = 0.25f;    // son fade oranı
+    [SerializeField] private float fadeOutPortion = 0.25f;    // son fade oranı (düşürürsen hayalet daha uzun görünür)
     [SerializeField] private float arcHeight = 160f;          // bezier yükseliği
     [SerializeField] private float sideOffset = 90f;          // bezier yana kaçış
 
@@ -65,7 +65,7 @@ public class GoalFlyFx : MonoBehaviour
 
         rt.anchoredPosition = start;
 
-        float duration = Mathf.Max(0.12f, baseDuration); // güvenli alt limit
+        float duration = Mathf.Max(0.12f, baseDuration); // toplam ghost uçuş süresi (arttırırsan daha uzun kalır)
         float t = 0f;
 
         // Bezier control point

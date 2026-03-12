@@ -22,8 +22,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     public Sprite splitRightSprite;
 
     [Header("Tuning")]
-    public float startDelay = 0.15f;
-    public float splitTime = 0.06f;
+    public float startDelay = 0.15f; // Başlangıç bekleme süresi (düşürürsen daha erken başlar)
+    public float splitTime = 0.06f;  // Roketin ayrışma süresi (düşürürsen daha hızlı split olur)
     public float splitOffset = 60f;
 
     [Header("Rocket FX")]
@@ -33,12 +33,12 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     [Header("AfterImage Trail")]
     public GameObject rocketAfterImagePrefab;
     public RectTransform afterImageParent;
-    public float afterImageLife = 0.15f;
+    public float afterImageLife = 0.15f; // Arkadaki hayalet izinin ekranda kalma süresi
     public float afterImageAlpha = 0.55f;
     public float afterImageScaleUp = 1.08f;
 
     [Header("Timing")]
-    public float stepDuration = 0.06f;
+    public float stepDuration = 0.06f; // Her hücre adımının süresi (düşürürsen roket daha hızlı gider)
     public float postDelay = 0.02f;
 
     [Header("Cleanup")]
