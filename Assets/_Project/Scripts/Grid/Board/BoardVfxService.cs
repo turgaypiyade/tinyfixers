@@ -31,19 +31,7 @@ public class BoardVfxService
 
         vfx.gameObject.SetActive(true);
 
-        TileView ta = board.LastSwapA;
-        TileView tb = board.LastSwapB;
-
-        if (ta == null || tb == null)
-        {
-            ta = (x >= 0 && x < board.Width && y >= 0 && y < board.Height) ? board.Tiles[x, y] : null;
-            tb = ta;
-        }
-
-        Vector3 worldA = board.GetTileWorldCenter(ta);
-        Vector3 worldB = board.GetTileWorldCenter(tb);
-        Vector3 worldMid = (worldA + worldB) * 0.5f;
-
+        Vector3 worldMid = ResolveWorldCenterForCell(x, y);
         Vector2 localMid = (Vector2)vfxSpace.InverseTransformPoint(worldMid);
         Vector2 boardSize = vfxSpace.rect.size;
         if (boardSize.sqrMagnitude < 1f)
@@ -59,18 +47,7 @@ public class BoardVfxService
 
         PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(x, y));
 
-        TileView ta = board.LastSwapA;
-        TileView tb = board.LastSwapB;
-
-        if (ta == null || tb == null)
-        {
-            ta = (x >= 0 && x < board.Width && y >= 0 && y < board.Height) ? board.Tiles[x, y] : null;
-            tb = ta;
-        }
-
-        Vector3 worldA = board.GetTileWorldCenter(ta);
-        Vector3 worldB = board.GetTileWorldCenter(tb);
-        Vector3 worldMid = (worldA + worldB) * 0.5f;
+        Vector3 worldMid = ResolveWorldCenterForCell(x, y);
         Vector2 localMid = (Vector2)vfxSpace.InverseTransformPoint(worldMid);
 
         var go = Object.Instantiate(prefab, vfxSpace);
@@ -89,6 +66,34 @@ public class BoardVfxService
         }
 
         Object.Destroy(go, lifetime);
+    }
+
+
+    private Vector3 ResolveWorldCenterForCell(int x, int y)
+    {
+        bool inBounds = x >= 0 && x < board.Width && y >= 0 && y < board.Height;
+        if (inBounds)
+        {
+            TileView tile = board.Tiles[x, y];
+            if (tile != null)
+                return board.GetTileWorldCenter(tile);
+
+            // Obstacle / empty tile fallback: use geometric center of the board cell.
+            Vector3 topLeft = board.GetCellWorldPosition(x, y);
+            return topLeft + new Vector3(board.TileSize * 0.5f, -board.TileSize * 0.5f, 0f);
+        }
+
+        // Last resort: preserve previous behavior and use last swap midpoint.
+        TileView ta = board.LastSwapA;
+        TileView tb = board.LastSwapB;
+        if (ta != null && tb != null)
+            return (board.GetTileWorldCenter(ta) + board.GetTileWorldCenter(tb)) * 0.5f;
+        if (ta != null)
+            return board.GetTileWorldCenter(ta);
+        if (tb != null)
+            return board.GetTileWorldCenter(tb);
+
+        return Vector3.zero;
     }
 
     public HashSet<Vector2Int> BuildPulseEmitterTargets(int cx, int cy)

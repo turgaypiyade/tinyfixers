@@ -65,7 +65,7 @@ public class GoalFlyFx : MonoBehaviour
 
         rt.anchoredPosition = start;
 
-        float duration = Mathf.Max(0.12f, baseDuration); // güvenli alt limit
+        float duration = Mathf.Max(0.12f, baseDuration); // toplam ghost uçuş süresi (arttırırsan daha uzun kalır)
         float t = 0f;
 
         // Bezier control point
