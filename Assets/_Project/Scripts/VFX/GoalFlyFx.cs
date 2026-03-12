@@ -9,7 +9,7 @@ public class GoalFlyFx : MonoBehaviour
 
     [Header("Timing")]
     [SerializeField] private float popUpPortion = 0.20f;      // ilk pop süresi oranı
-    [SerializeField] private float fadeOutPortion = 0.25f;    // son fade oranı
+    [SerializeField] private float fadeOutPortion = 0.18f;    // son fade oranı
     [SerializeField] private float arcHeight = 160f;          // bezier yükseliği
     [SerializeField] private float sideOffset = 90f;          // bezier yana kaçış
 

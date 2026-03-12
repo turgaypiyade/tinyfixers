@@ -1627,8 +1627,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.06836461}
-  m_AnchorMax: {x: 0.7250141, y: 1.7674263}
+  m_AnchorMin: {x: 0, y: 0.29142857}
+  m_AnchorMax: {x: 0.5522581, y: 7.5342855}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8395,7 +8395,7 @@ MonoBehaviour:
   levelData: {fileID: 0}
   swapDuration: 0.03
   fallDuration: 0.1
-  clearDuration: 0.03
+  clearDuration: 0.02
   spawnStartOffsetY: -2
   swapDurationMultiplier: 1
   fallColumnStep: 0.015
@@ -8457,6 +8457,7 @@ MonoBehaviour:
   shakeStrength: 1
   shakeTarget: {fileID: 1410826443}
   patchBotPulseComboSize: 4
+  specialChainDurationMultiplier: 0.75
   pulseImpactDelayStep: 0.03
   pulseImpactAnimTime: 0.2
   boardVfxPlayer: {fileID: 874639811}
@@ -8477,6 +8478,10 @@ MonoBehaviour:
   pulseMicroShakeDuration: 0.08
   pulseMicroShakeStrength: 4
   patchbotDashUI: {fileID: 164518321}
+  enableTileSyncValidation: 1
+  enableSpecialChainTrace: 0
+  throwOnTileSyncMismatch: 0
+  tilePositionEpsilon: 0.25
 --- !u!114 &1410826447
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9771,19 +9776,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: postDelay
-      value: 0.03
+      value: 0.02
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: splitTime
-      value: 0.1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: pulseSpeed
-      value: 30
+      value: 20
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: startDelay
-      value: 0.1
+      value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: pulseAmount
@@ -9791,7 +9796,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: splitOffset
-      value: 30
+      value: 60
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: impactParent
@@ -9803,11 +9808,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: afterImageLife
-      value: 0.12
+      value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: afterImageAlpha
-      value: 0.45
+      value: 0.55
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: afterImageParent
@@ -9815,7 +9820,7 @@ PrefabInstance:
       objectReference: {fileID: 1732843066}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: afterImageScaleUp
-      value: 1.05
+      value: 1.08
       objectReference: {fileID: 0}
     - target: {fileID: 6951413210752950108, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: m_Name

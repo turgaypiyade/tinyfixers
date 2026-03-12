@@ -61,6 +61,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     private Vector2Int _originCell;
     private bool _originCellValid;
 
+    public Action OnCompleted;
+
     private void Awake()
     {
         if (leftImage) leftStart = leftImage.rectTransform.anchoredPosition;
@@ -68,9 +70,17 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     }
 
     // ✅ Full overload: originCell + callback ile
-    public void Play(LineAxis axisMode, Vector2 originAnchoredPos, Vector2Int originCell, int steps, float cellSizePxOverride, Action<Vector2Int> onStepCell)
+    public void Play(
+        LineAxis axisMode,
+        Vector2 originAnchoredPos,
+        Vector2Int originCell,
+        int steps,
+        float cellSizePxOverride,
+        Action<Vector2Int> onStepCell,
+        Action onCompleted = null)
     {
         OnStepCell = onStepCell;
+        OnCompleted = onCompleted;
         _originCell = originCell;
         _originCellValid = true;
         Play(axisMode, originAnchoredPos, steps, cellSizePxOverride);
@@ -79,6 +89,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     // ✅ Basit overload: callback olmadan
     public void Play(LineAxis axisMode, Vector2 originAnchoredPos, int steps, float cellSizePxOverride)
     {
+
         if (leftImage) leftImage.enabled = false;
         if (rightImage) rightImage.enabled = false;
 
@@ -271,6 +282,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             if (leftImage)  leftImage.rectTransform.anchoredPosition  = leftStart;
             if (rightImage) rightImage.rectTransform.anchoredPosition = rightStart;
         }
+        OnCompleted?.Invoke();
     }
 
     private bool HasTileAtStep(int stepIndex, bool isRight)

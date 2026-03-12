@@ -166,7 +166,8 @@ public class LineSweepService
         LightningSpawner lightningSpawner,
         LineTravelSplitSwapTestUI lineTravelPlayer,
         IReadOnlyList<LightningLineStrike> lineStrikes,
-        Action<Vector2Int> onSweepCellReached = null)
+        Action<Vector2Int> onSweepCellReached = null,
+        Action onStrikeCompleted = null)
     {
         if (lineStrikes == null || lineStrikes.Count == 0) return 0f;
         if (lineTravelPlayer == null && lightningSpawner == null) return 0f;
@@ -206,7 +207,8 @@ public class LineSweepService
         LineTravelSplitSwapTestUI lineTravelPlayer,
         int originX, int originY, bool isHorizontal,
         float delaySeconds,
-        Action<Vector2Int> onSweepCellReached)
+        Action<Vector2Int> onSweepCellReached,
+        Action onCompleted = null)
     {
         if (lineTravelPlayer != null)
         {
@@ -234,8 +236,16 @@ public class LineSweepService
 
                 var originCell = new Vector2Int(originX, originY);
 
-                PlayLineTravelInstanceWithStep(lineTravelPlayer, axis, originAnchored, originCell,
-                    steps, board.TileSize, delaySeconds, onSweepCellReached);
+                PlayLineTravelInstanceWithStep(
+                    lineTravelPlayer,
+                    axis,
+                    originAnchored,
+                    originCell,
+                    steps,
+                    board.TileSize,
+                    delaySeconds,
+                    onSweepCellReached,
+                    onCompleted);
 
                 float duration = lineTravelPlayer.EstimateDuration(steps);
                 return delaySeconds + duration;
@@ -324,7 +334,8 @@ public class LineSweepService
         LineTravelSplitSwapTestUI.LineAxis axis,
         Vector2 originAnchored, Vector2Int originCell,
         int steps, float cellSizePx, float delaySeconds,
-        Action<Vector2Int> onStep)
+        Action<Vector2Int> onStep,
+        Action onCompleted = null)
     {
         if (lineTravelPlayer == null) return 0f;
 
@@ -343,7 +354,10 @@ public class LineSweepService
         if (inst.impactParent == null && lineTravelPlayer.impactParent != null)
             inst.impactParent = lineTravelPlayer.impactParent;
 
-        board.StartCoroutine(CoPlayLineTravel(inst, axis, originAnchored, originCell, steps, cellSizePx, delaySeconds, onStep));
+        board.StartCoroutine(
+            CoPlayLineTravel(
+                inst, axis, originAnchored, originCell,
+                steps, cellSizePx, delaySeconds, onStep, onCompleted));
 
         float dur = lineTravelPlayer.EstimateDuration(steps);
         float totalLife = Mathf.Max(0f, delaySeconds) + dur + 0.15f;
@@ -357,10 +371,16 @@ public class LineSweepService
         LineTravelSplitSwapTestUI.LineAxis axis,
         Vector2 originAnchored, Vector2Int originCell,
         int steps, float cellSizePx, float delaySeconds,
-        Action<Vector2Int> onStep)
+        Action<Vector2Int> onStep,
+        Action onCompleted)
     {
-        if (delaySeconds > 0f) yield return new WaitForSecondsRealtime(delaySeconds);
-        if (inst != null) inst.Play(axis, originAnchored, originCell, steps, cellSizePx, onStep);
+        if (delaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(delaySeconds);
+
+        if (inst != null)
+            inst.Play(axis, originAnchored, originCell, steps, cellSizePx, onStep, onCompleted);
+        else
+            onCompleted?.Invoke();
     }
 
     private IEnumerator CoDestroyAfterUnscaled(GameObject go, float delaySeconds)

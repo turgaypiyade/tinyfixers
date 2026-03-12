@@ -13,8 +13,8 @@ public class PulseLineComboAction : BoardAction
     private Dictionary<Vector2Int, (TileType type, TileView view)> targetVisuals;
 
     public PulseLineComboAction(
-        BoardController board, 
-        int cx, int cy, 
+        BoardController board,
+        int cx, int cy,
         HashSet<Vector2Int> targets,
         List<(Vector2Int cell, Vector2 anch)> hOrigins,
         List<(Vector2Int cell, Vector2 anch)> vOrigins,
@@ -32,14 +32,26 @@ public class PulseLineComboAction : BoardAction
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
         var cleared = new HashSet<Vector2Int>();
+        var hiddenOrigins = new HashSet<TileView>();
 
-        // If no VFX configured, just clear immediately
+        foreach (var h in hOrigins)
+        {
+            var view = board.GetTileViewAt(h.cell.x, h.cell.y);
+            if (view != null && hiddenOrigins.Add(view))
+                SpecialVisualService.HideTileVisualForCombo(view);
+        }
+
+        foreach (var v in vOrigins)
+        {
+            var view = board.GetTileViewAt(v.cell.x, v.cell.y);
+            if (view != null && hiddenOrigins.Add(view))
+                SpecialVisualService.HideTileVisualForCombo(view);
+        }
+
         if (board.lineTravelPlayer == null)
         {
             foreach (var kvp in targetVisuals)
-            {
                 board.ClearCellVisualOnly(kvp.Key, kvp.Value.type, kvp.Value.view);
-            }
             yield break;
         }
 
@@ -47,52 +59,61 @@ public class PulseLineComboAction : BoardAction
         {
             if (!targets.Contains(cell)) return;
             if (!cleared.Add(cell)) return;
-            
+
             if (targetVisuals.TryGetValue(cell, out var visualData))
-            {
                 board.ClearCellVisualOnly(cell, visualData.type, visualData.view);
-            }
         }
 
-        float maxEnd = 0f;
+        int pendingTravels = 0;
+
+        void OnTravelCompleted()
+        {
+            pendingTravels = Mathf.Max(0, pendingTravels - 1);
+        }
+
         int width = board.Width;
         int height = board.Height;
         float tileSize = board.TileSize;
 
         foreach (var h in hOrigins)
         {
-            int steps = Mathf.Max(cx, width - 1 - cx);
-            float end = board.PlayLineTravelInstanceWithStep(
+            int steps = Mathf.Max(h.cell.x, width - 1 - h.cell.x);
+            pendingTravels++;
+
+            board.PlayLineTravelInstanceWithStep(
                 LineTravelSplitSwapTestUI.LineAxis.Horizontal,
                 h.anch,
                 h.cell,
-                steps, tileSize, 0f, OnStep);
-
-            if (end > maxEnd) maxEnd = end;
+                steps,
+                tileSize,
+                0f,
+                OnStep,
+                OnTravelCompleted);
         }
 
         foreach (var v in vOrigins)
         {
-            int steps = Mathf.Max(cy, height - 1 - cy);
-            float end = board.PlayLineTravelInstanceWithStep(
+            int steps = Mathf.Max(v.cell.y, height - 1 - v.cell.y);
+            pendingTravels++;
+
+            board.PlayLineTravelInstanceWithStep(
                 LineTravelSplitSwapTestUI.LineAxis.Vertical,
                 v.anch,
                 v.cell,
-                steps, tileSize, 0f, OnStep);
-
-            if (end > maxEnd) maxEnd = end;
+                steps,
+                tileSize,
+                0f,
+                OnStep,
+                OnTravelCompleted);
         }
 
-        if (maxEnd > 0f)
-            yield return new WaitForSecondsRealtime(maxEnd);
+        while (pendingTravels > 0)
+            yield return null;
 
-        // Fallback for any targets missed by the visual sweep
         foreach (var kvp in targetVisuals)
         {
             if (cleared.Add(kvp.Key))
-            {
                 board.ClearCellVisualOnly(kvp.Key, kvp.Value.type, kvp.Value.view);
-            }
         }
     }
 }
