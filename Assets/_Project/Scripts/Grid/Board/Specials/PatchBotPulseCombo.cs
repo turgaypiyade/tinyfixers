@@ -41,6 +41,10 @@ public class PatchBotPulseCombo : IComboBehavior, IComboExecutor
             ctx.PatchbotService.EnqueueDash(patchBotTile, target.x, target.y);
             ctx.VisualService.PlayTeleportMarkers(patchBotTile, target.x, target.y);
             ctx.VisualService.PlayTeleportMarkers(pulseTile, target.x, target.y);
+
+            // Hedefte tile olmasa bile (ör. obstacle hücresi) Pulse patlamasını
+            // hedef hücre üzerinde mutlaka göster.
+            board.PlayPulsePulseExplosionVfxAtCell(target.x, target.y);
             SpecialCellUtils.AddSquare(res.Affected, res, board, target.x, target.y, 1);
         }
     }

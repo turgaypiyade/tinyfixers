@@ -32,7 +32,7 @@ public class BoardVfxService
         vfx.gameObject.SetActive(true);
 
         Vector3 worldMid = ResolveWorldCenterForCell(x, y);
-        Vector2 localMid = (Vector2)vfxSpace.InverseTransformPoint(worldMid);
+        Vector2 localMid = board.WorldToAnchoredIn(vfxSpace, worldMid);
         Vector2 boardSize = vfxSpace.rect.size;
         if (boardSize.sqrMagnitude < 1f)
             boardSize = new Vector2(board.Width * board.TileSize, board.Height * board.TileSize);
@@ -48,7 +48,7 @@ public class BoardVfxService
         PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(x, y));
 
         Vector3 worldMid = ResolveWorldCenterForCell(x, y);
-        Vector2 localMid = (Vector2)vfxSpace.InverseTransformPoint(worldMid);
+        Vector2 localMid = board.WorldToAnchoredIn(vfxSpace, worldMid);
 
         var go = Object.Instantiate(prefab, vfxSpace);
         go.SetActive(true);
