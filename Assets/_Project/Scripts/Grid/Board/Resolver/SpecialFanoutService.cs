@@ -80,9 +80,9 @@ public class SpecialFanoutService
         }
 
         // Fan-out'tan eklenen chain special'ları işle
+        queueProcessor.EnqueueChainSpecials(ctx);
         if (ctx.Queue.Count > 0)
         {
-            queueProcessor.EnqueueChainSpecials(ctx);
             queueProcessor.ProcessQueue(ctx);
         }
 

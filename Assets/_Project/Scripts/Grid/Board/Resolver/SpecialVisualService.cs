@@ -187,12 +187,20 @@ public class SpecialVisualService
     {
         if (affected == null || radialDelays == null || board == null) return;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    Debug.Log("[SVS] OVR-OVR-VISUALS affected=" + affected.Count + " radialDelays=" + radialDelays.Count);
+#endif
+
         foreach (var tile in affected)
         {
             if (tile == null) continue;
             var spec = tile.GetSpecial();
             if (spec == TileSpecial.None) continue;
             if (!radialDelays.TryGetValue(tile, out float delay)) continue;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log("[SVS] OVR-OVR-SCHEDULE cell=(" + tile.X + "," + tile.Y + ") special=" + spec + " delay=" + delay);
+#endif
 
             int x = tile.X;
             int y = tile.Y;
@@ -205,6 +213,10 @@ public class SpecialVisualService
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    Debug.Log("[SVS] DELAYED-TRIGGER cell=(" + x + "," + y + ") special=" + special);
+#endif
+
         switch (special)
         {
             case TileSpecial.PulseCore:
@@ -214,14 +226,18 @@ public class SpecialVisualService
 
             case TileSpecial.LineH:
             case TileSpecial.LineV:
-            {
-                var strikes = new List<LightningLineStrike>(1)
                 {
-                    new LightningLineStrike(new Vector2Int(x, y), special == TileSpecial.LineH)
-                };
-                board.PlayLightningLineStrikes(strikes, null);
-                break;
-            }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log("[SVS] DELAYED-LINE-VISUAL cell=(" + x + "," + y + ") special=" + special);
+#endif
+
+                    var strikes = new List<LightningLineStrike>(1)
+            {
+                new LightningLineStrike(new Vector2Int(x, y), special == TileSpecial.LineH)
+            };
+                    board.PlayLightningLineStrikes(strikes, null);
+                    break;
+                }
         }
     }
 
@@ -270,10 +286,18 @@ public class SpecialVisualService
     {
         if (board.PatchbotDashUI == null) return;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    Debug.Log("[SVS] DASH-SCHEDULE from=(" + fromX + "," + fromY + ") to=(" + targetX + "," + targetY + ") delay=" + delay);
+#endif
+
         IEnumerator CoPlayDash()
         {
             if (delay > 0f)
                 yield return new WaitForSeconds(delay);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log("[SVS] DASH-PLAY from=(" + fromX + "," + fromY + ") to=(" + targetX + "," + targetY + ")");
+#endif
 
             var req = new BoardController.PatchbotDashRequest
             {

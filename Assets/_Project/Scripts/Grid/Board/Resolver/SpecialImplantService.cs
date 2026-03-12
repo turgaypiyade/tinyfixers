@@ -49,7 +49,10 @@ public class SpecialImplantService
         pendingTarget.SetSpecial(pending.special, deferVisualUpdate: ctx.DeferOverrideImplantVisualRefresh);
         SpecialCellUtils.SyncAfterSpecialChange(board, pendingTarget);
 
-        ctx.OverrideImplantedTiles.Add(pendingTarget);
+        if (pending.special != TileSpecial.LineH && pending.special != TileSpecial.LineV)
+        {
+            ctx.OverrideImplantedTiles.Add(pendingTarget);
+        }
 
         if (pending.special == TileSpecial.PatchBot)
         {

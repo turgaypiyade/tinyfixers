@@ -27,7 +27,9 @@ public class ActivationQueueProcessor
     public void EnqueueActivation(ResolutionContext ctx, TileView special, TileView partner)
     {
         if (special == null) return;
+
         Vector2Int pos = new Vector2Int(special.X, special.Y);
+
         if (ctx.Queued.Contains(pos)) return;
         if (special.GetSpecial() == TileSpecial.None) return;
 
@@ -44,10 +46,13 @@ public class ActivationQueueProcessor
         foreach (var tile in ctx.Affected)
         {
             if (tile == null) continue;
-            if (tile.GetSpecial() == TileSpecial.None) continue;
 
             Vector2Int pos = new Vector2Int(tile.X, tile.Y);
+            TileSpecial special = tile.GetSpecial();
+
+            if (special == TileSpecial.None) continue;
             if (ctx.Processed.Contains(pos)) continue;
+
             EnqueueActivation(ctx, tile, null);
         }
     }
@@ -62,7 +67,9 @@ public class ActivationQueueProcessor
         {
             var activation = ctx.Queue.Dequeue();
             ctx.Queued.Remove(activation.cell);
-            if (ctx.Processed.Contains(activation.cell)) continue;
+
+            if (ctx.Processed.Contains(activation.cell))
+                continue;
 
             ctx.Processed.Add(activation.cell);
 

@@ -44,7 +44,10 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 originTile: originTile,
                 visualTargets: new List<TileView> { target },
                 allowCondense: false,
-                onTargetBeamSpawned: _ => beamReached = true);
+                onTargetBeamSpawned: _ =>
+                {
+                    beamReached = true;
+                });
 
             float timeout = Mathf.Max(duration, board.ApplySpecialChainTempo(0.08f)) + board.ApplySpecialChainTempo(0.02f);
             float elapsed = 0f;
@@ -59,11 +62,8 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             board.SyncTileData(target.X, target.Y);
             target.RefreshIcon();
 
-            // Beam hedefe vardığında data/view senkronunu zorla
-            board.SyncTileData(target.X, target.Y);
-            target.RefreshIcon();
-
             TileSpecial targetSpecial = target.GetSpecial();
+
             bool shouldPulse =
                 doSelectionPulse ||
                 targetSpecial == TileSpecial.PatchBot ||
@@ -93,12 +93,16 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             for (int i = 0; i < deferredPulseExplosionCells.Count; i++)
             {
                 var cell = deferredPulseExplosionCells[i];
+
                 if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
                     continue;
 
                 var tile = board.Tiles[cell.x, cell.y];
-                if (tile == null) continue;
-                if (tile.GetSpecial() != TileSpecial.PulseCore) continue;
+                if (tile == null)
+                    continue;
+
+                if (tile.GetSpecial() != TileSpecial.PulseCore)
+                    continue;
 
                 board.PlayPulsePulseExplosionVfxAtCell(cell.x, cell.y);
                 yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.03f));

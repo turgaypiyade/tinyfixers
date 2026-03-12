@@ -213,26 +213,29 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             // ayrı coroutine tabanlı timing kaldırıldı.
             if (_originCellValid && OnStepCell != null)
             {
-                int s = i + 1; // 1-based step
+                int s = i + 1;
 
                 if (axis == LineAxis.Horizontal)
                 {
-                    // ✅ Önce origin'e yakın hücreler: sağ = +X, sol = -X
+                    int leftX = _originCell.x - s;
                     int rightX = _originCell.x + s;
-                    int leftX  = _originCell.x - s;
 
-                    if (rightX >= 0) OnStepCell(new Vector2Int(rightX, _originCell.y));
-                    if (leftX  >= 0) OnStepCell(new Vector2Int(leftX,  _originCell.y));
+                    if (leftX >= 0)
+                        OnStepCell(new Vector2Int(leftX, _originCell.y));
+
+                    if (rightX >= 0 && rightX < 9)
+                        OnStepCell(new Vector2Int(rightX, _originCell.y));
                 }
-                else // Vertical
+                else
                 {
-                    // ✅ UI grid'de y artınca aşağı — posDir = down = +y grid
-                    // roket aşağı giderken _originCell.y + s, yukarı giderken - s
-                    int downY = _originCell.y + s;
-                    int upY   = _originCell.y - s;
+                    int downY = _originCell.y - s;
+                    int upY = _originCell.y + s;
 
-                    if (downY >= 0) OnStepCell(new Vector2Int(_originCell.x, downY));
-                    if (upY   >= 0) OnStepCell(new Vector2Int(_originCell.x, upY));
+                    if (downY >= 0)
+                        OnStepCell(new Vector2Int(_originCell.x, downY));
+
+                    if (upY >= 0 && upY < 9)
+                        OnStepCell(new Vector2Int(_originCell.x, upY));
                 }
             }
 
@@ -287,9 +290,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
     private bool HasTileAtStep(int stepIndex, bool isRight)
     {
-        // Test deseni — gerçek kullanımda board'dan sorgulanabilir
-        if (isRight) return stepIndex == 0 || stepIndex == 1 || stepIndex == 3;
-        return stepIndex == 0 || stepIndex == 2 || stepIndex == 4;
+        return true;
     }
 
     private void SpawnAfterImage(Image sourceImage, Vector2 anchoredPos)

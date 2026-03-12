@@ -105,6 +105,7 @@ public class SpecialBehaviorDispatcher
     public void ApplySpecialActivation(ResolutionContext ctx, TileView specialTile, TileView partnerTile)
     {
         if (specialTile == null) return;
+
         var special = specialTile.GetSpecial();
         int ox = specialTile.X;
         int oy = specialTile.Y;
@@ -358,7 +359,7 @@ public class SpecialBehaviorDispatcher
             var strikes = lb.GetLineStrikes(ox, oy);
             if (strikes != null) ctx.LightningLineStrikes.AddRange(strikes);
 
-            foreach (var c in cells)
+            foreach (var c in behavior.CalculateAffectedCells(board, ox, oy))
                 if (board.Tiles[c.x, c.y] != null) ctx.LightningVisualTargets.Add(board.Tiles[c.x, c.y]);
         }
     }
