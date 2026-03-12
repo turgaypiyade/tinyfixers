@@ -47,87 +47,113 @@ public class SpecialResolver
     //  Public API
     // ═══════════════════════════════════════════════
 
-    public List<BoardAction> ResolveSpecialSwap(TileView a, TileView b)
+    public List<BoardAction> ResolveSpecialSwap(TileView a, TileView b, TileSpecial originalSa, TileSpecial originalSb)
     {
         var actions = new List<BoardAction>();
         board.ShakeNextClear = true;
         board.LastSwapUserMove = false;
         board.IsSpecialActivationPhase = true;
 
-        TileSpecial sa = a.GetSpecial();
-        TileSpecial sb = b.GetSpecial();
+        // Current board state sadece board üstündeki güncel taşları görmek için.
+        TileSpecial currentSa = a.GetSpecial();
+        TileSpecial currentSb = b.GetSpecial();
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"[SpecialResolver] ResolveSpecialSwap: a=({a.X},{a.Y}) type={a.GetTileType()} special={sa}, b=({b.X},{b.Y}) type={b.GetTileType()} special={sb}");
-#endif
+    #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"[SpecialResolver] ResolveSpecialSwap: " +
+                $"a=({a.X},{a.Y}) current={currentSa} original={originalSa}, " +
+                $"b=({b.X},{b.Y}) current={currentSb} original={originalSb}");
+    #endif
 
-        bool saIsLine  = sa == TileSpecial.LineH || sa == TileSpecial.LineV;
-        bool sbIsLine  = sb == TileSpecial.LineH || sb == TileSpecial.LineV;
-        bool saIsPulse = sa == TileSpecial.PulseCore;
-        bool sbIsPulse = sb == TileSpecial.PulseCore;
+        bool aOriginallySpecial = originalSa != TileSpecial.None;
+        bool bOriginallySpecial = originalSb != TileSpecial.None;
+        bool bothOriginallySpecial = aOriginallySpecial && bOriginallySpecial;
 
-        bool bothSpecial = sa != TileSpecial.None && sb != TileSpecial.None;
-        bool anyPatchBot = sa == TileSpecial.PatchBot || sb == TileSpecial.PatchBot;
-        bool consumeNormalPartner = bothSpecial || anyPatchBot;
+        bool originalSaIsLine  = originalSa == TileSpecial.LineH || originalSa == TileSpecial.LineV;
+        bool originalSbIsLine  = originalSb == TileSpecial.LineH || originalSb == TileSpecial.LineV;
+        bool originalSaIsPulse = originalSa == TileSpecial.PulseCore;
+        bool originalSbIsPulse = originalSb == TileSpecial.PulseCore;
 
-        // ── Visual: hide swap source tiles ──
-        visualService.HideSwapSourceVisuals(a, b, sa, sb, consumeNormalPartner);
+        // ÖNEMLİ:
+        // PatchBot + normal artık normal partneri otomatik tüketmeyecek.
+        bool consumeNormalPartner = bothOriginallySpecial;
 
-        // ── Reset shared state ──
+        // Görselleri de original swap intent'e göre yönet.
+        visualService.HideSwapSourceVisuals(a, b, originalSa, originalSb, consumeNormalPartner);
+
         ctx.Reset();
 
-        // ── Pulse + Line early path: dedicated action ──
-        if ((saIsPulse && sbIsLine) || (sbIsPulse && saIsLine))
+        // Pulse + Line erken combo yolu da original intent'e göre karar versin.
+        if ((originalSaIsPulse && originalSbIsLine) || (originalSbIsPulse && originalSaIsLine))
         {
-            ResolvePulseLineCombo(actions, a, b, sa, sb);
+            ResolvePulseLineCombo(actions, a, b, originalSa, originalSb);
             board.IsSpecialActivationPhase = false;
             return actions;
         }
 
-        // ── Populate initial affected set ──
-        if (sa != TileSpecial.None) { ctx.Affected.Add(a); SpecialCellUtils.MarkAffectedCell(ctx, a, board); }
-        if (sb != TileSpecial.None) { ctx.Affected.Add(b); SpecialCellUtils.MarkAffectedCell(ctx, b, board); }
+        // Initial affected set: sadece başlangıçta special olanlar
+        if (aOriginallySpecial)
+        {
+            ctx.Affected.Add(a);
+            SpecialCellUtils.MarkAffectedCell(ctx, a, board);
+        }
+
+        if (bOriginallySpecial)
+        {
+            ctx.Affected.Add(b);
+            SpecialCellUtils.MarkAffectedCell(ctx, b, board);
+        }
+
         if (consumeNormalPartner)
         {
-            ctx.Affected.Add(a); ctx.Affected.Add(b);
+            ctx.Affected.Add(a);
+            ctx.Affected.Add(b);
             SpecialCellUtils.MarkAffectedCell(ctx, a, board);
             SpecialCellUtils.MarkAffectedCell(ctx, b, board);
         }
 
-        bool saIsOverride = sa == TileSpecial.SystemOverride;
-        bool sbIsOverride = sb == TileSpecial.SystemOverride;
-        bool suppressPulseImpactAnimations = (saIsPulse && sbIsPulse) || (saIsOverride && sbIsOverride);
-        bool suppressPerTileClearVfx = (saIsPulse && sbIsLine) || (sbIsPulse && saIsLine);
+        bool originalSaIsOverride = originalSa == TileSpecial.SystemOverride;
+        bool originalSbIsOverride = originalSb == TileSpecial.SystemOverride;
+        bool suppressPulseImpactAnimations = (originalSaIsPulse && originalSbIsPulse) || (originalSaIsOverride && originalSbIsOverride);
+        bool suppressPerTileClearVfx = (originalSaIsPulse && originalSbIsLine) || (originalSbIsPulse && originalSaIsLine);
 
-        ctx.HasLineActivation = saIsLine || sbIsLine;
+        ctx.HasLineActivation = originalSaIsLine || originalSbIsLine;
 
-        // ── Combo or single activation ──
-        if (sa != TileSpecial.None && sb != TileSpecial.None)
+        // Combo kararı sadece ORIGINAL state ile verilir.
+        if (bothOriginallySpecial)
         {
-            dispatcher.ApplyComboEffect(ctx, a, b, sa, sb);
+            dispatcher.ApplyComboEffect(ctx, a, b, originalSa, originalSb);
             ctx.Processed.Add(new Vector2Int(a.X, a.Y));
             ctx.Processed.Add(new Vector2Int(b.X, b.Y));
         }
         else
         {
-            var specialTile = sa != TileSpecial.None ? a : b;
-            var partnerTile = sa != TileSpecial.None ? b : a;
-            queueProcessor.EnqueueActivation(ctx, specialTile, partnerTile);
+            var specialTile = aOriginallySpecial ? a : b;
+            var partnerTile = aOriginallySpecial ? b : a;
+            var originalSpecial = aOriginallySpecial ? originalSa : originalSb;
+            var originalPartner = aOriginallySpecial ? originalSb : originalSa;
+
+            // Tek special + normal swap:
+            // - Line/Pulse zaten partner kullanmıyor.
+            // - SystemOverride partner type'ını kullanır, o yüzden partner geç.
+            // - PatchBot + normal artık partneri combo partner gibi kullanmasın.
+            TileView partnerForActivation = null;
+            if (originalSpecial == TileSpecial.SystemOverride)
+                partnerForActivation = partnerTile;
+            else if (originalSpecial == TileSpecial.PatchBot && originalPartner != TileSpecial.None)
+                partnerForActivation = partnerTile;
+
+            queueProcessor.EnqueueActivation(ctx, specialTile, partnerForActivation);
         }
 
-        // ── Chain + process queue ──
         queueProcessor.EnqueueChainSpecials(ctx);
         queueProcessor.ProcessQueue(ctx);
 
-        // ── SystemOverride fan-out phase ──
         var fanoutActions = fanoutService.ProcessFanout(ctx);
         actions.AddRange(fanoutActions);
 
-        // ── Override+Override radial special visuals ──
         if (ctx.OverrideRadialClearDelays != null && ctx.OverrideRadialClearDelays.Count > 0)
             visualService.FireOverrideOverrideSpecialVisuals(ctx.Affected, ctx.OverrideRadialClearDelays);
 
-        // ── Build final MatchClearAction ──
         actions.Add(BuildMatchClearAction(suppressPulseImpactAnimations, suppressPerTileClearVfx));
 
         TraceSpecialChain("ResolveSpecialSwap", a, b);
@@ -277,6 +303,10 @@ public class SpecialResolver
     {
         if (winner == null) return null;
         if (special == TileSpecial.None) return null;
+
+        // Kazanılmış existing special'ı creation ile ezme.
+        if (winner.GetSpecial() != TileSpecial.None)
+            return winner;
 
         winner.SetSpecial(special);
 

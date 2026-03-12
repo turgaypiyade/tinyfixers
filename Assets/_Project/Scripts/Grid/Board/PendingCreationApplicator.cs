@@ -25,6 +25,10 @@ public sealed class PendingCreationApplicator
     {
         var targetTile = board.Tiles[pending.x, pending.y];
 
+        // Hedef hücrede zaten kazanılmış special varsa ezme.
+        if (targetTile != null && targetTile.GetSpecial() != TileSpecial.None)
+            return;
+
         if (targetTile == null)
         {
             targetTile = FindAndDropTile(pending.x, pending.y);
@@ -33,6 +37,10 @@ public sealed class PendingCreationApplicator
         }
 
         if (targetTile == null)
+            return;
+
+        // Güvenlik: donor olarak taşınan tile zaten special ise onu creation için kullanma.
+        if (targetTile.GetSpecial() != TileSpecial.None)
             return;
 
         targetTile.SetSpecial(pending.special);
@@ -52,6 +60,9 @@ public sealed class PendingCreationApplicator
 
             var tile = board.Tiles[x, yy];
             if (tile == null) continue;
+
+            // Kazanılmış special'ı donor olarak çekip başka yere taşıma.
+            if (tile.GetSpecial() != TileSpecial.None) continue;
 
             TeleportTile(tile, x, y);
             return tile;

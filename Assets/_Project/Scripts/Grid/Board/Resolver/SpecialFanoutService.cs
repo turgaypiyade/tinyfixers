@@ -53,8 +53,13 @@ public class SpecialFanoutService
             }
             Vector2Int originCoord = new Vector2Int(ctx.OverrideFanoutOrigin.X, ctx.OverrideFanoutOrigin.Y);
 
-            actions.Add(new SystemOverrideFanoutPlacementAction(board, originCoord, targetCoords, ctx.OverrideFanoutNormalSelectionPulse));
-
+            actions.Add(new SystemOverrideFanoutPlacementAction(
+                board,
+                originCoord,
+                targetCoords,
+                ctx.OverrideFanoutNormalSelectionPulse,
+                new List<Vector2Int>(ctx.OverrideDeferredPulseExplosions)));
+                
             if (ctx.PendingOverrideImplants.Count > 0)
                 implantService.ApplyPendingOverrideImplants(ctx);
         }

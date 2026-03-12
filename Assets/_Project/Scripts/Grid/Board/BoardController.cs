@@ -138,6 +138,7 @@ public class BoardController : MonoBehaviour
     private PulseCoreImpactService pulseCoreImpactService;
     private ObstacleStateService obstacleStateService;
     private CascadeLogic cascadeLogic;
+    private ObstacleResolutionService obstacleResolutionService;    
     private SpecialCreationService specialCreationService;
     private PendingCreationStore pendingCreationStore;
     private PendingCreationApplicator pendingCreationApplicator;
@@ -148,7 +149,6 @@ public class BoardController : MonoBehaviour
     private LineSweepService lineSweepService;
     private BoosterService boosterService;
 
-    private readonly HashSet<int> patchBotForcedObstacleHits = new();
     private int busyScopeDepth;
 
     public event Action<ObstacleVisualChange> ObstacleVisualChanged;
@@ -208,7 +208,7 @@ public class BoardController : MonoBehaviour
     // ── Event forwarders for LineSweepService ──
     internal void OnLineSweepStartedInternal(LightningLineStrike strike, float delay) => OnLineSweepStarted?.Invoke(strike, delay);
     internal void OnLineSweepCellReachedInternal(Vector2Int cell, LightningLineStrike strike) => OnLineSweepCellReached?.Invoke(cell, strike);
-
+    internal ObstacleResolutionService Obstacles => obstacleResolutionService;
     // ═══════════════════════════════════════════════════════════════
     //  Lifecycle
     // ═══════════════════════════════════════════════════════════════
@@ -237,6 +237,7 @@ public class BoardController : MonoBehaviour
         pendingCreationStore ??= new PendingCreationStore();
         pendingCreationApplicator ??= new PendingCreationApplicator(this);
         obstacleStateService ??= new ObstacleStateService();
+        obstacleResolutionService ??= new ObstacleResolutionService(this);
         cascadeLogic ??= new CascadeLogic(this);
         boardInitService ??= new BoardInitService();
         boardVfxService ??= new BoardVfxService(this);
@@ -570,112 +571,110 @@ public class BoardController : MonoBehaviour
     //  ProcessSwap
     // ═══════════════════════════════════════════════════════════════
 
-    IEnumerator ProcessSwap(TileView a, TileView b)
+IEnumerator ProcessSwap(TileView a, TileView b)
+{
+    BeginBusy();
+    lastSwapA = a; lastSwapB = b; lastSwapUserMove = true;
+    SyncAllTilesToGridData();
+
+    int ax = a.X, ay = a.Y, bx = b.X, by = b.Y;
+    tiles[ax, ay] = b; tiles[bx, by] = a;
+    a.SetCoords(bx, by); b.SetCoords(ax, ay);
+    SyncTileData(ax, ay); SyncTileData(bx, by);
+
+    actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
+    yield return AnimateQueuedActions();
+
+    // SWAP ANINDAKI gerçek special state'i snapshot al.
+    // Sonradan oluşan special'lar combo kararı için kullanılmayacak.
+    TileSpecial originalSa = a.GetSpecial();
+    TileSpecial originalSb = b.GetSpecial();
+
+    // ══════════════════════════════════════════════════════════
+    //  Special swap path — en az bir taraf başlangıçta special
+    // ══════════════════════════════════════════════════════════
+    if (originalSa != TileSpecial.None || originalSb != TileSpecial.None)
     {
-        BeginBusy();
-        lastSwapA = a; lastSwapB = b; lastSwapUserMove = true;
-        SyncAllTilesToGridData();
+        bool bothOriginallySpecial = originalSa != TileSpecial.None && originalSb != TileSpecial.None;
+        ConsumeMove();
 
-        int ax = a.X, ay = a.Y, bx = b.X, by = b.Y;
-        tiles[ax, ay] = b; tiles[bx, by] = a;
-        a.SetCoords(bx, by); b.SetCoords(ax, ay);
-        SyncTileData(ax, ay); SyncTileData(bx, by);
-
-        actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
-        yield return AnimateQueuedActions();
-
-        TileSpecial sa = a.GetSpecial(), sb = b.GetSpecial();
-
-        // ══════════════════════════════════════════════════════════
-        //  Special swap path — en az bir taraf special
-        // ══════════════════════════════════════════════════════════
-        if (sa != TileSpecial.None || sb != TileSpecial.None)
+        // ── Adım 1: Eğer yalnızca tek taraf başlangıçta special ise,
+        // normal tarafın yeni yerindeki match'ini önce çöz.
+        // Burada doğan special board üstünde kalır; combo partner sayılmaz.
+        if (!bothOriginallySpecial)
         {
-            bool bothSpecial = sa != TileSpecial.None && sb != TileSpecial.None;
-            ConsumeMove();
+            var specialTile = (originalSa != TileSpecial.None) ? a : b;
+            var normalTile  = (originalSa != TileSpecial.None) ? b : a;
+            int sx = specialTile.X, sy = specialTile.Y;
 
-            // ── Adım 1: Normal tarafın match'ini ÖNCE çöz ──
-            // Special taş aktive olmadan önce, normal taş gittiği yerde
-            // match oluşturuyorsa → special creation + clear hemen yapılır.
-            // Böylece tile type doğru kalır, pending mekanizmasına gerek kalmaz.
-            if (!bothSpecial)
+            // Geçici çıkarma hack'i şimdilik kalsın; önce davranışı düzeltelim.
+            var savedTile = tiles[sx, sy];
+            var savedData = gridData[sx, sy];
+            tiles[sx, sy] = null;
+            gridData[sx, sy] = null;
+
+            var normalMatches = matchFinder.FindMatchesAt(normalTile.X, normalTile.Y);
+
+            tiles[sx, sy] = savedTile;
+            gridData[sx, sy] = savedData;
+
+            if (normalMatches.Count >= 3)
             {
-                var specialTile = (sa != TileSpecial.None) ? a : b;
-                var normalTile  = (sa != TileSpecial.None) ? b : a;
-                int sx = specialTile.X, sy = specialTile.Y;
+                var candidates = new HashSet<TileView>(normalMatches);
+                candidates.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
 
-                // Special taşı geçici olarak grid'den çıkar
-                // GetRunLengths special'ı da sayıyor → yanlış 4'lü kararı veriyor
-                // Bunu engellemenin en basit yolu: hesap sırasında orada olmaması
-                var savedTile = tiles[sx, sy];
-                var savedData = gridData[sx, sy];
-                tiles[sx, sy] = null;
-                gridData[sx, sy] = null;
-
-                var normalMatches = matchFinder.FindMatchesAt(normalTile.X, normalTile.Y);
-
-                // Special taşı geri koy
-                tiles[sx, sy] = savedTile;
-                gridData[sx, sy] = savedData;
-
-                if (normalMatches.Count >= 3)
+                var creation = specialCreationService.DecideBestFromMatchedTiles(candidates);
+                if (creation.hasValue)
                 {
-                    // Special creation kararı (sadece normal taşlar arasından)
-                    var candidates = new HashSet<TileView>(normalMatches);
-                    candidates.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
+                    specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
+                    normalMatches.Remove(creation.winner);
+                }
 
-                    var creation = specialCreationService.DecideBestFromMatchedTiles(candidates);
-                    if (creation.hasValue)
-                    {
-                        specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
-                        normalMatches.Remove(creation.winner);
-                    }
-
-                    // Kalan normal match taşlarını temizle
-                    normalMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
-                    if (normalMatches.Count > 0)
-                    {
-                        actionSequencer.Enqueue(new MatchClearAction(normalMatches, doShake: false));
-                        yield return AnimateQueuedActions();
-                    }
+                // Yeni oluşan special silinmesin; kalan normal match taşları silinsin.
+                normalMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
+                if (normalMatches.Count > 0)
+                {
+                    actionSequencer.Enqueue(new MatchClearAction(normalMatches, doShake: false));
+                    yield return AnimateQueuedActions();
                 }
             }
-
-            // ── Adım 2: Special activation ──
-            actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b));
-            yield return AnimateQueuedActions();
-
-            // ── Adım 3: Cascade + resolve ──
-            yield return ResolveEmptyPlayableCellsWithoutMatch();
-            yield return ResolveBoard(allowSpecialActivation: false);
-            EndBusy();
-            yield break;
         }
 
-        // ══════════════════════════════════════════════════════════
-        //  Normal swap path — iki taraf da normal taş
-        // ══════════════════════════════════════════════════════════
-        var matches = new HashSet<TileView>();
-        foreach (var t in matchFinder.FindMatchesAt(a.X, a.Y)) matches.Add(t);
-        foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y)) matches.Add(t);
+        // ── Adım 2: Special activation
+        // Burada karar current state ile değil, original snapshot ile verilecek.
+        actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb));
+        yield return AnimateQueuedActions();
 
-        if (matches.Count == 0)
-        {
-            tiles[ax, ay] = a; tiles[bx, by] = b;
-            a.SetCoords(ax, ay); b.SetCoords(bx, by);
-            SyncTileData(ax, ay); SyncTileData(bx, by);
-            actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
-            yield return AnimateQueuedActions();
-            EndBusy(); yield break;
-        }
-
-        ConsumeMove();
-        yield return ExecuteClearPass(matches, allowSpecialActivation: true);
+        // ── Adım 3: Cascade + resolve
         yield return ResolveEmptyPlayableCellsWithoutMatch();
-        yield return ResolveBoard();
+        yield return ResolveBoard(allowSpecialActivation: false);
         EndBusy();
+        yield break;
     }
 
+    // ══════════════════════════════════════════════════════════
+    //  Normal swap path — iki taraf da normal taş
+    // ══════════════════════════════════════════════════════════
+    var matches = new HashSet<TileView>();
+    foreach (var t in matchFinder.FindMatchesAt(a.X, a.Y)) matches.Add(t);
+    foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y)) matches.Add(t);
+
+    if (matches.Count == 0)
+    {
+        tiles[ax, ay] = a; tiles[bx, by] = b;
+        a.SetCoords(ax, ay); b.SetCoords(bx, by);
+        SyncTileData(ax, ay); SyncTileData(bx, by);
+        actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
+        yield return AnimateQueuedActions();
+        EndBusy(); yield break;
+    }
+
+    ConsumeMove();
+    yield return ExecuteClearPass(matches, allowSpecialActivation: true);
+    yield return ResolveEmptyPlayableCellsWithoutMatch();
+    yield return ResolveBoard();
+    EndBusy();
+}
     // ═══════════════════════════════════════════════════════════════
     //  Resolve Board
     // ═══════════════════════════════════════════════════════════════
@@ -706,46 +705,67 @@ public class BoardController : MonoBehaviour
 
     IEnumerator ExecuteClearPass(HashSet<TileView> matchTiles, bool allowSpecialActivation, Action<bool> onResult = null)
     {
-        var nonSpecialMatchTiles = new HashSet<TileView>(matchTiles);
-        nonSpecialMatchTiles.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
+        // Kazanılmış special'lar normal match clear'ına girmez.
+        // Sadece explicit activation veya effect-hit ile temizlenebilirler.
+        var preservedSpecialTiles = new HashSet<TileView>();
+        foreach (var tile in matchTiles)
+        {
+            if (tile != null && tile.GetSpecial() != TileSpecial.None)
+                preservedSpecialTiles.Add(tile);
+        }
 
-        // ── 1. Special CREATION — her zaman aktif ──
-        // Cascade'de de 4'lü Line, 2x2 PatchBot vs. oluşabilir
+        // Creation ve normal clear yalnızca non-special matched tiles üstünden çalışır.
+        var nonSpecialMatchTiles = new HashSet<TileView>(matchTiles);
+        nonSpecialMatchTiles.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
+
+        // ── 1. Special CREATION — cascade dahil aktif ──
         var creation = specialCreationService.DecideFromMatches(
             nonSpecialMatchTiles,
             new SpecialCreationService.CreationRequest(lastSwapA, lastSwapB, LastSwapUserMove));
 
         if (creation.hasValue)
         {
+            bool winnerAlreadySpecial = creation.winner != null && creation.winner.GetSpecial() != TileSpecial.None;
             var created = specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
-            if (created != null)
+
+            if (!winnerAlreadySpecial && created != null)
             {
+                // Oluşan special kazanılmış haktır; normal clear listesinde kalmamalı.
                 matchTiles.Remove(created);
+                nonSpecialMatchTiles.Remove(created);
+                preservedSpecialTiles.Add(created);
+
                 shakeNextClear = true;
+
                 if (creation.special == TileSpecial.PatchBot)
                 {
                     var fullGroup = matchFinder.FindMatchesAt(created.X, created.Y);
                     foreach (var pt in fullGroup)
-                    { if (pt == null || pt == created || pt.GetSpecial() != TileSpecial.None) continue; matchTiles.Add(pt); }
+                    {
+                        if (pt == null || pt == created || pt.GetSpecial() != TileSpecial.None)
+                            continue;
+
+                        matchTiles.Add(pt);
+                        nonSpecialMatchTiles.Add(pt);
+                    }
                 }
             }
         }
         LastSwapUserMove = false;
 
-        // ── 2. Special ACTIVATION — sadece izin verilmişse ──
+        // Normal clear hiçbir durumda existing/new special'ları otomatik silmesin.
+        matchTiles.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
+
+        // ── 2. Special ACTIVATION — bu path yalnızca explicit effect kaynaklı zincirlerde kullanılmalı ──
+        // Normal resolve/cascade sırasında matched set içindeki special'ları aktive etmiyoruz.
         bool hasLineActivation = false;
         bool hasAnySpecialActivation = false;
-        if (allowSpecialActivation)
-        {
-            specialResolver.ExpandSpecialChain(matchTiles, null, out hasLineActivation, out hasAnySpecialActivation);
-        }
-        else
-        {
-            // Cascade: special taşlar board'da kalacak, silme listesinden çıkar
-            matchTiles.RemoveWhere(t => t != null && t.GetSpecial() != TileSpecial.None);
-        }
 
-        if (matchTiles.Count == 0) { onResult?.Invoke(false); yield break; }
+        if (matchTiles.Count == 0)
+        {
+            onResult?.Invoke(false);
+            yield break;
+        }
 
         bool doShake = shakeNextClear || hasLineActivation;
         shakeNextClear = false;
@@ -772,49 +792,24 @@ public class BoardController : MonoBehaviour
     // ═══════════════════════════════════════════════════════════════
     //  Obstacle Handling
     // ═══════════════════════════════════════════════════════════════
-
     internal ObstacleStateService.ObstacleHitResult ApplyObstacleDamageAt(int x, int y, ObstacleHitContext context)
+        => obstacleResolutionService != null ? obstacleResolutionService.ApplyDamageAt(x, y, context) : default;
+
+    public void TriggerObstacleVisualChange(ObstacleVisualChange change)
+        => ObstacleVisualChanged?.Invoke(change);
+
+    internal void MarkPatchBotForcedObstacleHit(int x, int y)
+        => obstacleResolutionService?.MarkPatchBotForcedHit(x, y);
+
+    internal void RaiseObstacleStageChanged(int originIndex, ObstacleStageSnapshot stage)
+        => OnObstacleStageChanged?.Invoke(originIndex, stage);
+
+    internal void SetHoleStateFromObstacle(int x, int y)
     {
-        if (obstacleStateService == null) return default;
-        bool patchBotForcedHit = ConsumePatchBotForcedObstacleHit(x, y);
-        var result = obstacleStateService.TryDamageAt(x, y, context);
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            return;
 
-        ObstacleStateService.ObstacleHitResult TryFallback(ObstacleHitContext fb)
-        { return fb == context ? default : obstacleStateService.TryDamageAt(x, y, fb); }
-
-        if (!result.didHit && context == ObstacleHitContext.Booster)
-        { result = TryFallback(ObstacleHitContext.SpecialActivation); if (!result.didHit) result = TryFallback(ObstacleHitContext.NormalMatch); }
-        else if (!result.didHit && patchBotForcedHit)
-        { result = TryFallback(ObstacleHitContext.SpecialActivation); if (!result.didHit) result = TryFallback(ObstacleHitContext.Booster); if (!result.didHit) result = TryFallback(ObstacleHitContext.NormalMatch); if (!result.didHit) result = TryFallback(ObstacleHitContext.Scripted); }
-        else if (!result.didHit && IsCrossContextFallbackAllowedAt(x, y))
-        { result = TryFallback(ObstacleHitContext.SpecialActivation); if (!result.didHit) result = TryFallback(ObstacleHitContext.Booster); if (!result.didHit) result = TryFallback(ObstacleHitContext.NormalMatch); }
-
-        if (!result.didHit) return result;
-        ConsumeObstacleStageTransition(result);
-        return result;
-    }
-
-    public void TriggerObstacleVisualChange(ObstacleVisualChange change) => ObstacleVisualChanged?.Invoke(change);
-    internal void MarkPatchBotForcedObstacleHit(int x, int y) { if (obstacleStateService == null || !obstacleStateService.HasObstacleAt(x, y) || x < 0 || x >= width || y < 0 || y >= height) return; patchBotForcedObstacleHits.Add(y * width + x); }
-    private bool ConsumePatchBotForcedObstacleHit(int x, int y) { if (x < 0 || x >= width || y < 0 || y >= height) return false; int idx = y * width + x; return patchBotForcedObstacleHits.Remove(idx); }
-
-    private void ConsumeObstacleStageTransition(ObstacleStateService.ObstacleHitResult result)
-    {
-        if (!result.stageTransition.hasTransition) return;
-        if (!result.stageTransition.cleared) OnObstacleStageChanged?.Invoke(result.stageTransition.originIndex, result.stageTransition.currentStage);
-        var affected = result.affectedCellIndices;
-        if (affected == null || affected.Length == 0) return;
-        for (int i = 0; i < affected.Length; i++)
-        { int idx = affected[i]; int x = idx % width, y = idx / width; if (x < 0 || x >= width || y < 0 || y >= height) continue; holes[x, y] = IsMaskHole(x, y) || (obstacleStateService != null && obstacleStateService.IsCellBlocked(x, y)); }
-    }
-
-    private bool IsCrossContextFallbackAllowedAt(int x, int y)
-    {
-        if (levelData == null || levelData.obstacles == null || !levelData.InBounds(x, y)) return false;
-        int idx = levelData.Index(x, y); if (idx < 0 || idx >= levelData.obstacles.Length) return false;
-        var obstacleId = (ObstacleId)levelData.obstacles[idx]; if (obstacleId == ObstacleId.None) return false;
-        var def = levelData.obstacleLibrary != null ? levelData.obstacleLibrary.Get(obstacleId) : null;
-        return def != null && def.allowCrossContextFallback;
+        holes[x, y] = IsMaskHole(x, y) || (obstacleStateService != null && obstacleStateService.IsCellBlocked(x, y));
     }
 
     private void BindObstacleEvents()
@@ -833,10 +828,16 @@ public class BoardController : MonoBehaviour
 
     private void HandleCellUnlocked(int cellIndex)
     {
-        int x = cellIndex % width, y = cellIndex / width;
-        if (x < 0 || x >= width || y < 0 || y >= height) return;
-        holes[x, y] = IsMaskHole(x, y) || (obstacleStateService != null && obstacleStateService.IsCellBlocked(x, y));
-        if (!holes[x, y]) OnCellUnlocked?.Invoke(cellIndex);
+        int x = cellIndex % width;
+        int y = cellIndex / width;
+
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            return;
+
+        SetHoleStateFromObstacle(x, y);
+
+        if (!holes[x, y])
+            OnCellUnlocked?.Invoke(cellIndex);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -858,7 +859,7 @@ public class BoardController : MonoBehaviour
 
     private bool IsMaskHole(int x, int y) { if (maskHoles == null || x < 0 || x >= width || y < 0 || y >= height) return false; return maskHoles[x, y]; }
     internal bool IsMaskHoleCell(int x, int y) => IsMaskHole(x, y);
-    internal bool IsObstacleBlockedCell(int x, int y) => x >= 0 && x < width && y >= 0 && y < height && obstacleStateService != null && obstacleStateService.IsCellBlocked(x, y);
+    internal bool IsObstacleBlockedCell(int x, int y) => x >= 0 && x < width && y >= 0 && y < height && obstacleResolutionService != null && obstacleResolutionService.IsBlockedCell(x, y);
     internal bool IsSpawnPassThroughCell(int x, int y) => IsMaskHoleCell(x, y) && !IsObstacleBlockedCell(x, y);
     public bool TryGetCellState(int x, int y, out BoardCellStateSnapshot state) => BoardCellStateQuery.TryGet(this, x, y, out state);
     public bool HasAnyEmptyPlayableCell() { for (int y = 0; y < height; y++) for (int x = 0; x < width; x++) { if (holes[x, y]) continue; if (tiles[x, y] == null) return true; } return false; }

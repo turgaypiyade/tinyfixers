@@ -8,17 +8,15 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
     private readonly Vector2Int origin;
     private readonly List<Vector2Int> targets;
     private readonly bool doSelectionPulse;
+    private readonly List<Vector2Int> deferredPulseExplosionCells;
 
-    public SystemOverrideFanoutPlacementAction(
-        BoardController board,
-        Vector2Int origin,
-        List<Vector2Int> targets,
-        bool doPulse)
+    public SystemOverrideFanoutPlacementAction(BoardController board, Vector2Int origin, List<Vector2Int> targets, bool doPulse, List<Vector2Int> deferredPulseExplosionCells = null)
     {
         this.board = board;
         this.origin = origin;
         this.targets = targets;
         this.doSelectionPulse = doPulse;
+        this.deferredPulseExplosionCells = deferredPulseExplosionCells ?? new List<Vector2Int>();
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
@@ -80,7 +78,29 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.04f));
         }
 
-        yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.15f));
+        yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.12f));
+
+        // Tüm override yerleşimleri bittikten sonra implanted PulseCore patlamalarını başlat.
+        // Böylece swap anında veya placement sırasında erken pulse patlaması görünmez.
+        if (deferredPulseExplosionCells != null && deferredPulseExplosionCells.Count > 0)
+        {
+            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.05f));
+
+            for (int i = 0; i < deferredPulseExplosionCells.Count; i++)
+            {
+                var cell = deferredPulseExplosionCells[i];
+                if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                    continue;
+
+                var tile = board.Tiles[cell.x, cell.y];
+                if (tile == null) continue;
+                if (tile.GetSpecial() != TileSpecial.PulseCore) continue;
+
+                board.PlayPulsePulseExplosionVfxAtCell(cell.x, cell.y);
+                yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.03f));
+            }
+        }
+
         if (originTile != null)
         {
             SpecialVisualService.HideTileVisualForCombo(originTile);

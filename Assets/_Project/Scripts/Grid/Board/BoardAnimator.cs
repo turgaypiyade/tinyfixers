@@ -148,8 +148,8 @@ public class BoardAnimator
         bool lineHitWindowOpen = false;
 
         float maxStaggerDelay = 0f;
-        var impactCells = new HashSet<Vector2Int>();
-        var obstacleDamageCells = new HashSet<Vector2Int>();
+        var impactCells = new List<Vector2Int>();
+        var obstacleDamageCounts = new Dictionary<Vector2Int, int>();
 
         board.ConsumePatchbotDashRequests(_patchbotDashBuffer);
 
@@ -430,18 +430,35 @@ public class BoardAnimator
         if (board.ObstacleStateService == null)
             yield break;
 
-        foreach (var cell in impactCells)
+        void AddObstacleDamageCell(Vector2Int cell, int amount = 1)
         {
-            obstacleDamageCells.Add(cell);
+            if (amount <= 0) return;
 
-            if (includeAdjacentOverTileBlockerDamage)
-                CollectAdjacentOverTileBlockers(cell, obstacleDamageCells);
+            if (obstacleDamageCounts.TryGetValue(cell, out int existing))
+                obstacleDamageCounts[cell] = existing + amount;
+            else
+                obstacleDamageCounts[cell] = amount;
         }
 
-        foreach (var cell in obstacleDamageCells)
+        foreach (var cell in impactCells)
         {
-            var hit = board.ApplyObstacleDamageAt(cell.x, cell.y, damageContext);
-            if (hit.didHit) board.TriggerObstacleVisualChange(hit.visualChange);
+            AddObstacleDamageCell(cell, 1);
+
+            if (includeAdjacentOverTileBlockerDamage)
+                CollectAdjacentOverTileBlockers(cell, obstacleDamageCounts);
+        }
+
+        foreach (var kv in obstacleDamageCounts)
+        {
+            var cell = kv.Key;
+            int hitCount = kv.Value;
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                var hit = board.ApplyObstacleDamageAt(cell.x, cell.y, damageContext);
+                if (hit.didHit)
+                    board.TriggerObstacleVisualChange(hit.visualChange);
+            }
         }
     }
 
@@ -472,32 +489,31 @@ public class BoardAnimator
         });
     }
 
-    private void CollectAdjacentOverTileBlockers(Vector2Int centerCell, HashSet<Vector2Int> obstacleDamageCells)
+    private void CollectAdjacentOverTileBlockers(Vector2Int centerCell, Dictionary<Vector2Int, int> obstacleDamageCounts)
     {
-        var obstacleStateService = board.ObstacleStateService;
-        if (obstacleStateService == null)
+        if (board == null || board.Obstacles == null)
             return;
 
-        AddNeighbors(OrthogonalDirs);
-
-        if (!obstacleStateService.GetAllowDiagonalAt(centerCell.x, centerCell.y))
-            return;
-
-        AddNeighbors(DiagonalDirs);
-
-        void AddNeighbors(Vector2Int[] directions)
+        for (int dir = 0; dir < 4; dir++)
         {
-            for (int i = 0; i < directions.Length; i++)
+            Vector2Int neighbor = dir switch
             {
-                var neighbor = centerCell + directions[i];
-                if (neighbor.x < 0 || neighbor.x >= board.Width || neighbor.y < 0 || neighbor.y >= board.Height)
-                    continue;
+                0 => new Vector2Int(centerCell.x + 1, centerCell.y),
+                1 => new Vector2Int(centerCell.x - 1, centerCell.y),
+                2 => new Vector2Int(centerCell.x, centerCell.y + 1),
+                _ => new Vector2Int(centerCell.x, centerCell.y - 1),
+            };
 
-                if (!obstacleStateService.IsOverTileBlockerAt(neighbor.x, neighbor.y))
-                    continue;
+            if (neighbor.x < 0 || neighbor.x >= board.Width || neighbor.y < 0 || neighbor.y >= board.Height)
+                continue;
 
-                obstacleDamageCells.Add(neighbor);
-            }
+            if (!board.Obstacles.IsOverTileBlockerAt(neighbor.x, neighbor.y))
+                continue;
+
+            if (obstacleDamageCounts.TryGetValue(neighbor, out int existing))
+                obstacleDamageCounts[neighbor] = existing + 1;
+            else
+                obstacleDamageCounts[neighbor] = 1;
         }
     }
 

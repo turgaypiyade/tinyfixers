@@ -25,13 +25,21 @@ public class PatchbotComboService
         );
     }
 
-    public void ConsumeSwapSource(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile, System.Action<TileView> markAffectedCell)
+    /*public void ConsumeSwapSource(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile, System.Action<TileView> markAffectedCell)
     {
         if (patchBotTile == null || partnerTile == null) return;
         matches.Add(patchBotTile);
         matches.Add(partnerTile);
         markAffectedCell?.Invoke(patchBotTile);
         markAffectedCell?.Invoke(partnerTile);
+    }*/
+
+    public void ConsumePatchBotOnly(HashSet<TileView> matches, TileView patchBotTile, System.Action<TileView> markAffectedCell)
+    {
+        if (patchBotTile == null) return;
+
+        matches.Add(patchBotTile);
+        markAffectedCell?.Invoke(patchBotTile);
     }
 
     public void ResolveTargetImpact(HashSet<TileData> matches, int targetX, int targetY, bool hasObstacleAtTarget, System.Action<int, int> markAffectedCell, System.Action<TileView> markAffectedTile)

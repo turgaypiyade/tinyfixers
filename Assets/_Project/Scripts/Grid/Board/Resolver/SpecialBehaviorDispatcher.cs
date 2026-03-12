@@ -206,7 +206,7 @@ public class SpecialBehaviorDispatcher
         return false;
     }
 
-    private void ApplyPatchBotTeleportToCell(ResolutionContext ctx, TileView patchBotTile, TileView partnerTile,
+  /*  private void ApplyPatchBotTeleportToCell(ResolutionContext ctx, TileView patchBotTile, TileView partnerTile,
         int targetX, int targetY)
     {
         if (targetX < 0 || targetX >= board.Width || targetY < 0 || targetY >= board.Height) return;
@@ -221,6 +221,35 @@ public class SpecialBehaviorDispatcher
             (tile) => SpecialCellUtils.MarkAffectedCell(ctx, tile, board));
         foreach (var data in matchDatas)
             if (board.Tiles[data.X, data.Y] != null) ctx.Affected.Add(board.Tiles[data.X, data.Y]);
+    }*/
+
+    private void ApplyPatchBotTeleportToCell(ResolutionContext ctx, TileView patchBotTile, TileView partnerTile,
+        int targetX, int targetY)
+    {
+        if (targetX < 0 || targetX >= board.Width || targetY < 0 || targetY >= board.Height) return;
+
+        bool hasObstacleAtTarget = patchbotComboService.HasObstacleAt(targetX, targetY);
+        if (board.Holes[targetX, targetY] && !hasObstacleAtTarget) return;
+
+        // Yeni kural:
+        // PatchBot + normal swap'ta normal partner otomatik tüketilmez.
+        patchbotComboService.ConsumePatchBotOnly(
+            ctx.Affected,
+            patchBotTile,
+            (tile) => SpecialCellUtils.MarkAffectedCell(ctx, tile, board));
+
+        var matchDatas = new HashSet<TileData>();
+        patchbotComboService.ResolveTargetImpact(
+            matchDatas,
+            targetX,
+            targetY,
+            hasObstacleAtTarget,
+            (x, y) => SpecialCellUtils.MarkAffectedCell(ctx, x, y, board),
+            (tile) => SpecialCellUtils.MarkAffectedCell(ctx, tile, board));
+
+        foreach (var data in matchDatas)
+            if (board.Tiles[data.X, data.Y] != null)
+                ctx.Affected.Add(board.Tiles[data.X, data.Y]);
     }
 
     /// <summary>
