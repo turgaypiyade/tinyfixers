@@ -50,7 +50,14 @@ public class PulseLineComboAction : BoardAction
         {
             var view = board.GetTileViewAt(h.cell.x, h.cell.y);
             if (view != null && hiddenOrigins.Add(view))
+            {
                 SpecialVisualService.HideTileVisualForCombo(view);
+
+                // Origin visuals can be re-shown by later board sync passes.
+                // Clear them immediately so the source "rocket" does not remain visible.
+                if (cleared.Add(h.cell) && targetVisuals.TryGetValue(h.cell, out var originVisual))
+                    board.ClearCellVisualOnly(h.cell, originVisual.type, originVisual.view);
+            }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"[LineTravelAction] HIDE origin H {h.cell}");
@@ -61,7 +68,12 @@ public class PulseLineComboAction : BoardAction
         {
             var view = board.GetTileViewAt(v.cell.x, v.cell.y);
             if (view != null && hiddenOrigins.Add(view))
+            {
                 SpecialVisualService.HideTileVisualForCombo(view);
+
+                if (cleared.Add(v.cell) && targetVisuals.TryGetValue(v.cell, out var originVisual))
+                    board.ClearCellVisualOnly(v.cell, originVisual.type, originVisual.view);
+            }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"[LineTravelAction] HIDE origin V {v.cell}");

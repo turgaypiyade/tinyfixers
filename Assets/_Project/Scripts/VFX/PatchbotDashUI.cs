@@ -14,6 +14,7 @@ public class PatchbotDashUI : MonoBehaviour
     [Header("Dash")]
     [SerializeField] private float dashSpeed = 100f;       // UI units per second (anchored space)
     [SerializeField] private float arriveEps = 2f;
+    [SerializeField, Range(0.5f, 1.5f)] private float syncedDurationMultiplier = 1f;
 
     [Header("AfterImage")]
     [SerializeField] private float spawnEvery = 0.02f;
@@ -43,17 +44,17 @@ public class PatchbotDashUI : MonoBehaviour
     /// Main: launches MANY patchbots in parallel (tiny stagger) using per-dash instances,
     /// so multi-patchbot cases don't take 30 seconds.
     /// </summary>
-    public Coroutine PlayDashParallel(List<BoardController.PatchbotDashRequest> requests, BoardController board)
+    public Coroutine PlayDashParallel(List<BoardController.PatchbotDashRequest> requests, BoardController board, float syncDuration = -1f)
     {
         if (!gameObject.activeInHierarchy)
             gameObject.SetActive(true);
 
         if (co != null) StopCoroutine(co);
-        co = StartCoroutine(DashParallelRoutine(requests, board));
+        co = StartCoroutine(DashParallelRoutine(requests, board, syncDuration));
         return co;
     }
 
-    private IEnumerator DashParallelRoutine(List<BoardController.PatchbotDashRequest> requests, BoardController board)
+    private IEnumerator DashParallelRoutine(List<BoardController.PatchbotDashRequest> requests, BoardController board, float syncDuration)
     {
         if (vfxRoot == null || board == null) yield break;
         if (requests == null || requests.Count == 0) yield break;
@@ -74,7 +75,7 @@ public class PatchbotDashUI : MonoBehaviour
         {
             var req = requests[i];
             remaining++;
-            StartCoroutine(SingleDashRoutine(req, board, patchbotSprite, () => remaining--));
+            StartCoroutine(SingleDashRoutine(req, board, patchbotSprite, syncDuration, () => remaining--));
 
             if (stagger > 0f)
                 yield return new WaitForSeconds(stagger);
@@ -90,6 +91,7 @@ public class PatchbotDashUI : MonoBehaviour
         BoardController.PatchbotDashRequest req,
         BoardController board,
         Sprite sprite,
+        float syncDuration,
         System.Action onComplete)
     {
         // Per-patchbot instance
@@ -126,10 +128,19 @@ public class PatchbotDashUI : MonoBehaviour
 
         float tAfter = 0f;
 
+        float effectiveSpeed = dashSpeed;
+        if (syncDuration > 0f)
+        {
+            syncDuration *= Mathf.Max(0.01f, syncedDurationMultiplier);
+            float dist = Vector2.Distance(rt.anchoredPosition, target);
+            if (dist > 0.001f)
+                effectiveSpeed = Mathf.Max(1f, dist / syncDuration);
+        }
+
         while (Vector2.Distance(rt.anchoredPosition, target) > arriveEps)
         {
             rt.anchoredPosition =
-                Vector2.MoveTowards(rt.anchoredPosition, target, dashSpeed * Time.deltaTime);
+                Vector2.MoveTowards(rt.anchoredPosition, target, effectiveSpeed * Time.deltaTime);
 
             tAfter += Time.deltaTime;
             if (tAfter >= spawnEvery)
