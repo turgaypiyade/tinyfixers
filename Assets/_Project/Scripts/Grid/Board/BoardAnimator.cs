@@ -178,27 +178,19 @@ public class BoardAnimator
         {
             if (strikes == null || strikes.Count == 0) return -1f;
 
-            float maxDuration = 0f;
+            // PatchBot+Line senaryosunda dash'in hedefe varış anı,
+            // line strike başlangıç gecikmesi ile hizalanmalı.
+            // Strike'ın tüm sweep süresini (delay + duration) kullanmak,
+            // dash'i gereksiz uzatıp line'ın "daha erken varmış" görünmesine neden olur.
+            float maxStartDelay = 0f;
             for (int i = 0; i < strikes.Count; i++)
             {
                 var strike = strikes[i];
-                int ox = strike.originCell.x;
-                int oy = strike.originCell.y;
-
-                int steps = strike.isHorizontal
-                    ? Mathf.Max(ox, board.Width - 1 - ox)
-                    : Mathf.Max(oy, board.Height - 1 - oy);
-
-                float strikeDuration = board.lineTravelPlayer != null
-                    ? board.lineTravelPlayer.EstimateDuration(steps)
-                    : 0f;
-
                 float strikeDelay = 0.03f * i + Mathf.Max(0f, strike.startDelaySeconds);
-                float endTime = strikeDelay + strikeDuration;
-                if (endTime > maxDuration) maxDuration = endTime;
+                if (strikeDelay > maxStartDelay) maxStartDelay = strikeDelay;
             }
 
-            return maxDuration > 0f ? maxDuration : -1f;
+            return maxStartDelay > 0f ? maxStartDelay : -1f;
         }
 
         ObstacleHitContext damageContext = obstacleHitContext ?? (board.IsSpecialActivationPhase

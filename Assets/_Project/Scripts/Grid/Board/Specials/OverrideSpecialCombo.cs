@@ -62,7 +62,10 @@ public class OverrideSpecialCombo : IComboBehavior, IComboExecutor
         SpecialCellUtils.MarkAffectedCell(res, overrideTile, board);
         SpecialCellUtils.MarkAffectedCell(res, otherTile, board);
 
-        TileSpecial targetSpecial = otherTile.GetSpecial();
+        // Combo kararını runtime tile state'inden değil original swap special'larından al.
+        // Swap görsel/resolve sıralarında tile üstündeki special geçici olarak değişebildiği için
+        // (özellikle Override+PulseCore), burada otherTile.GetSpecial() kullanmak implantı düşürebilir.
+        TileSpecial targetSpecial = IsOverride(sa) ? sb : sa;
         bool targetIsLine = targetSpecial == TileSpecial.LineH || targetSpecial == TileSpecial.LineV;
         bool targetIsNormal = targetSpecial == TileSpecial.None;
         TileType baseType = otherTile.GetTileType();
