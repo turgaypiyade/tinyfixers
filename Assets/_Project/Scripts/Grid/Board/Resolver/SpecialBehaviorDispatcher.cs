@@ -319,8 +319,9 @@ public class SpecialBehaviorDispatcher
     private void AutoPatchBotTeleportHitAndVanish(ResolutionContext ctx, TileView autoPatchBot, TileView patchBotTile, TileView systemOverrideTile)
     {
         if (autoPatchBot == null) return;
-        if (!ctx.DeferOverrideImplantVisualRefresh)
-            SpecialVisualService.HideTileVisualForCombo(autoPatchBot);
+        // Override fan-out deferred refresh aktif olsa bile,
+        // patchbot kaynak hücresinde görünür kalmamalı.
+        SpecialVisualService.HideTileVisualForCombo(autoPatchBot);
 
         ctx.Affected.Add(autoPatchBot);
         SpecialCellUtils.MarkAffectedCell(ctx, autoPatchBot, board);

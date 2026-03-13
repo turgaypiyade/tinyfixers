@@ -151,6 +151,9 @@ public class SpecialResolver
         var fanoutActions = fanoutService.ProcessFanout(ctx);
         actions.AddRange(fanoutActions);
 
+        // Swap akışını solo ile hizala: fan-out sonrası implanted special görsellerini temizle.
+        implantService.CleanupImplantedTiles(ctx);
+
         if (ctx.OverrideRadialClearDelays != null && ctx.OverrideRadialClearDelays.Count > 0)
             visualService.FireOverrideOverrideSpecialVisuals(ctx.Affected, ctx.OverrideRadialClearDelays);
 
