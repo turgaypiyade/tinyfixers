@@ -46,6 +46,10 @@ public class BoardController : MonoBehaviour
     [Header("Special Combos")]
     [SerializeField] private int patchBotPulseComboSize = 4;
 
+
+    [Header("PatchBot Combo Ghost Tuning")]
+    [SerializeField] private PatchBotPairGhostTuning patchBotPairGhostTuning = PatchBotPairGhostTuning.Default;
+
     [Header("Special Chain Tempo")]
     [SerializeField, Range(0.2f, 1.5f)] private float specialChainDurationMultiplier = 0.75f;
 
@@ -106,6 +110,40 @@ public class BoardController : MonoBehaviour
     public int TileSize => tileSize;
     public bool IsBusy => CurrentState == BoardState.Resolving;
     public event Action OnBecameIdle;
+
+    [System.Serializable]
+    public struct PatchBotPairGhostTuning
+    {
+        [SerializeField] private float duration;
+        [SerializeField] private float startRadiusFactor;
+        [SerializeField] private float endRadiusFactor;
+        [SerializeField] private float spinDegrees;
+        [SerializeField] private float riseFactor;
+
+        public float Duration => Mathf.Max(0.05f, duration);
+        public float StartRadiusFactor => Mathf.Max(0f, startRadiusFactor);
+        public float EndRadiusFactor => Mathf.Max(0f, endRadiusFactor);
+        public float SpinDegrees => spinDegrees;
+        public float RiseFactor => Mathf.Max(0f, riseFactor);
+
+        public PatchBotPairGhostTuning Sanitized => new PatchBotPairGhostTuning
+        {
+            duration = Duration,
+            startRadiusFactor = StartRadiusFactor,
+            endRadiusFactor = EndRadiusFactor,
+            spinDegrees = SpinDegrees,
+            riseFactor = RiseFactor,
+        };
+
+        public static PatchBotPairGhostTuning Default => new PatchBotPairGhostTuning
+        {
+            duration = 0.35f,
+            startRadiusFactor = 0.22f,
+            endRadiusFactor = 0.08f,
+            spinDegrees = 270f,
+            riseFactor = 0.08f,
+        };
+    }
 
     [System.Serializable]
     public struct PatchbotDashRequest { public Vector2Int from; public Vector2Int to; }
@@ -180,6 +218,7 @@ public class BoardController : MonoBehaviour
     internal TileType[] RandomPool => randomPool;
     internal LevelData LevelData => levelData;
     internal int PatchBotPulseComboSize => patchBotPulseComboSize;
+    internal PatchBotPairGhostTuning PatchBotGhostTuning => patchBotPairGhostTuning.Sanitized;
     internal float PulseImpactDelayStep => pulseImpactDelayStep;
     internal float PulseImpactAnimTime => pulseImpactAnimTime;
     internal PulseCoreVfxPlayer BoardVfxPlayer => boardVfxPlayer;
