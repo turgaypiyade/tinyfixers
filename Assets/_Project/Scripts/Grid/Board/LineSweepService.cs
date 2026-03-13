@@ -182,7 +182,7 @@ public class LineSweepService
             int y = strike.originCell.y;
             if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
 
-            float delay = StrikeStagger * i;
+            float delay = StrikeStagger * i + Mathf.Max(0f, strike.startDelaySeconds);
 
             board.OnLineSweepStartedInternal(strike, delay);
 
