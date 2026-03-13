@@ -65,8 +65,7 @@ public class PatchBotLineCombo : IComboBehavior, IComboExecutor, ILightningCombo
 
             // PatchBot+Line swap'ta iki kaynak da aynı anda hedefte "hayalet" görünsün.
             // Böylece line patlaması ile patchbot geçişi görsel olarak eşzamanlı başlar.
-            ctx.VisualService.PlayTransientSpecialVisualAt(patchBotTile, target.x, target.y);
-            ctx.VisualService.PlayTransientSpecialVisualAt(lineTile, target.x, target.y);
+            ctx.VisualService.PlayTransientSpecialPairVisualAt(patchBotTile, lineTile, target.x, target.y);
 
             var cells = board.SpecialBehaviors.CalculateEffect(lineTile.GetSpecial(), board, target.x, target.y);
             foreach (var c in cells)
