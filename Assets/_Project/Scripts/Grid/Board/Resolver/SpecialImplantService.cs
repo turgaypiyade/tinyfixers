@@ -55,18 +55,10 @@ public class SpecialImplantService
             return left.AutoPatchBot.X.CompareTo(right.AutoPatchBot.X);
         });
 
-        float perPatchbotStartDelay = board.ApplySpecialChainTempo(0.05f);
-
         for (int i = 0; i < deferredPatchBots.Count; i++)
         {
             var activation = deferredPatchBots[i];
-            float sequenceDelay = i * perPatchbotStartDelay;
-            AutoPatchBotTeleportHitAndVanish(
-                ctx,
-                activation.AutoPatchBot,
-                activation.PatchPartner,
-                activation.SystemOverride,
-                sequenceDelay);
+            AutoPatchBotTeleportHitAndVanish(ctx, activation.AutoPatchBot, activation.PatchPartner, activation.SystemOverride);
         }
 
         ctx.PendingOverrideImplants.Clear();
