@@ -195,7 +195,10 @@ public class SpecialResolver
         actions.AddRange(fanoutActions);
 
         // ── Cleanup implanted tiles ──
-        implantService.CleanupImplantedTiles(ctx);
+        // Override+PulseCore placement aksiyonu pulse special'ı okuyacağı için
+        // deferred pulse listesi varken cleanup'i ertele.
+        if (ctx.OverrideDeferredPulseExplosions.Count == 0)
+            implantService.CleanupImplantedTiles(ctx);
 
         // ── Build final MatchClearAction ──
         actions.Add(BuildMatchClearAction(suppressPulseImpact: false, suppressPerTileClearVfx: false));
