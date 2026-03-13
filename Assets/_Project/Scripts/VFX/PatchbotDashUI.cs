@@ -262,6 +262,26 @@ public class PatchbotDashUI : MonoBehaviour
         Destroy(go);
     }
 
+
+    public float EstimateDashDuration(BoardController board, Vector2Int fromCell, Vector2Int toCell, float syncDuration = -1f)
+    {
+        if (board == null || vfxRoot == null) return 0f;
+
+        Vector3 fromWorld = board.GetCellWorldPosition(fromCell.x, fromCell.y);
+        Vector3 toWorld = board.GetCellWorldPosition(toCell.x, toCell.y);
+        Vector2 from = WorldToAnchoredIn(vfxRoot, fromWorld);
+        Vector2 to = WorldToAnchoredIn(vfxRoot, toWorld);
+
+        float distance = Vector2.Distance(from, to);
+        if (distance <= arriveEps) return 0f;
+
+        if (syncDuration > 0f)
+            return syncDuration * Mathf.Max(0.01f, syncedDurationMultiplier);
+
+        float speed = Mathf.Max(1f, dashSpeed);
+        return distance / speed;
+    }
+
     static Vector2 WorldToAnchoredIn(RectTransform targetSpace, Vector3 worldPos)
     {
         RectTransformUtility.ScreenPointToLocalPointInRectangle(

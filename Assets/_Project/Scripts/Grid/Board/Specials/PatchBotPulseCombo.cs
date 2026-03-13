@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -38,15 +39,30 @@ public class PatchBotPulseCombo : IComboBehavior, IComboExecutor
         var target = ctx.PatchbotService.FindTarget(patchBotTile, pulseTile, null);
         if (target.hasCell)
         {
+            var fromCell = new Vector2Int(patchBotTile.X, patchBotTile.Y);
+            var toCell = new Vector2Int(target.x, target.y);
+            float travelDuration = board.PatchbotDashUI != null
+                ? board.PatchbotDashUI.EstimateDashDuration(board, fromCell, toCell)
+                : 0.22f;
+
             ctx.PatchbotService.EnqueueDash(patchBotTile, target.x, target.y);
             ctx.VisualService.PlayTeleportMarkers(patchBotTile, target.x, target.y);
             ctx.VisualService.PlayTeleportMarkers(pulseTile, target.x, target.y);
+            ctx.VisualService.PlayTransientSpecialPairTravelVisualAt(patchBotTile, pulseTile, target.x, target.y, travelDuration);
 
             // Hedefte tile olmasa bile (ör. obstacle hücresi) Pulse patlamasını
             // hedef hücre üzerinde mutlaka göster.
-            board.PlayPulsePulseExplosionVfxAtCell(target.x, target.y);
+            board.StartCoroutine(CoPlayPulseExplosionDelayed(board, target.x, target.y, travelDuration));
             SpecialCellUtils.AddSquare(res.Affected, res, board, target.x, target.y, 1);
         }
+    }
+
+    private static IEnumerator CoPlayPulseExplosionDelayed(BoardController board, int x, int y, float delay)
+    {
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        board.PlayPulsePulseExplosionVfxAtCell(x, y);
     }
 
     static bool IsPatchBot(TileSpecial s) => s == TileSpecial.PatchBot;

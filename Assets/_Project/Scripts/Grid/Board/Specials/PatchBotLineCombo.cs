@@ -14,6 +14,7 @@ public class PatchBotLineCombo : IComboBehavior, IComboExecutor, ILightningCombo
     private int lastTargetX, lastTargetY;
     private TileSpecial lastLineSpecial;
     private bool lastHadTarget;
+    private float lastStartDelaySeconds;
 
     public bool Matches(TileSpecial a, TileSpecial b)
     {
@@ -32,7 +33,7 @@ public class PatchBotLineCombo : IComboBehavior, IComboExecutor, ILightningCombo
         if (!lastHadTarget) yield break;
 
         bool isHorizontal = lastLineSpecial == TileSpecial.LineH;
-        yield return new LightningLineStrike(new Vector2Int(lastTargetX, lastTargetY), isHorizontal);
+        yield return new LightningLineStrike(new Vector2Int(lastTargetX, lastTargetY), isHorizontal, lastStartDelaySeconds);
     }
 
     public void Execute(ComboExecutionContext ctx)
@@ -51,6 +52,7 @@ public class PatchBotLineCombo : IComboBehavior, IComboExecutor, ILightningCombo
 
         lastLineSpecial = lineTile.GetSpecial();
         lastHadTarget = false;
+        lastStartDelaySeconds = 0f;
 
         var target = ctx.PatchbotService.FindTarget(patchBotTile, lineTile, null);
         if (target.hasCell)
@@ -59,14 +61,17 @@ public class PatchBotLineCombo : IComboBehavior, IComboExecutor, ILightningCombo
             lastTargetX = target.x;
             lastTargetY = target.y;
 
+            var fromCell = new Vector2Int(patchBotTile.X, patchBotTile.Y);
+            var toCell = new Vector2Int(target.x, target.y);
+            float travelDuration = board.PatchbotDashUI != null
+                ? board.PatchbotDashUI.EstimateDashDuration(board, fromCell, toCell)
+                : 0.22f;
+
             ctx.PatchbotService.EnqueueDash(patchBotTile, target.x, target.y);
             ctx.VisualService.PlayTeleportMarkers(patchBotTile, target.x, target.y);
             ctx.VisualService.PlayTeleportMarkers(lineTile, target.x, target.y);
-
-            // PatchBot+Line swap'ta iki kaynak da aynı anda hedefte "hayalet" görünsün.
-            // Böylece line patlaması ile patchbot geçişi görsel olarak eşzamanlı başlar.
-            ctx.VisualService.PlayTransientSpecialVisualAt(patchBotTile, target.x, target.y);
-            ctx.VisualService.PlayTransientSpecialVisualAt(lineTile, target.x, target.y);
+            ctx.VisualService.PlayTransientSpecialPairTravelVisualAt(patchBotTile, lineTile, target.x, target.y, travelDuration);
+            lastStartDelaySeconds = travelDuration;
 
             var cells = board.SpecialBehaviors.CalculateEffect(lineTile.GetSpecial(), board, target.x, target.y);
             foreach (var c in cells)
@@ -77,7 +82,7 @@ public class PatchBotLineCombo : IComboBehavior, IComboExecutor, ILightningCombo
             }
 
             res.LightningLineStrikes.Add(
-                new LightningLineStrike(new Vector2Int(target.x, target.y), lastLineSpecial == TileSpecial.LineH));
+                new LightningLineStrike(new Vector2Int(target.x, target.y), lastLineSpecial == TileSpecial.LineH, travelDuration));
             res.HasLineActivation = true;
         }
     }
