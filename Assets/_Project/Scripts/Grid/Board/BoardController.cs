@@ -119,12 +119,24 @@ public class BoardController : MonoBehaviour
         [SerializeField] private float endRadiusFactor;
         [SerializeField] private float spinDegrees;
         [SerializeField] private float riseFactor;
+        [SerializeField] private float travelStartRadiusFactor;
+        [SerializeField] private float travelEndRadiusFactor;
+        [SerializeField] private float travelSpinSpeed;
+        [SerializeField] private float travelSpinFrequency;
+        [SerializeField] private AnimationCurve fadeCurve;
+        [SerializeField] private AnimationCurve travelApproachCurve;
 
         public float Duration => Mathf.Max(0.05f, duration);
         public float StartRadiusFactor => Mathf.Max(0f, startRadiusFactor);
         public float EndRadiusFactor => Mathf.Max(0f, endRadiusFactor);
         public float SpinDegrees => spinDegrees;
         public float RiseFactor => Mathf.Max(0f, riseFactor);
+        public float TravelStartRadiusFactor => Mathf.Max(0f, travelStartRadiusFactor);
+        public float TravelEndRadiusFactor => Mathf.Max(0f, travelEndRadiusFactor);
+        public float TravelSpinSpeed => travelSpinSpeed;
+        public float TravelSpinFrequency => Mathf.Max(0f, travelSpinFrequency);
+        public AnimationCurve FadeCurve => fadeCurve ?? AnimationCurve.Linear(0f, 1f, 1f, 0f);
+        public AnimationCurve TravelApproachCurve => travelApproachCurve ?? AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
         public PatchBotPairGhostTuning Sanitized => new PatchBotPairGhostTuning
         {
@@ -133,6 +145,12 @@ public class BoardController : MonoBehaviour
             endRadiusFactor = EndRadiusFactor,
             spinDegrees = SpinDegrees,
             riseFactor = RiseFactor,
+            travelStartRadiusFactor = TravelStartRadiusFactor,
+            travelEndRadiusFactor = TravelEndRadiusFactor,
+            travelSpinSpeed = TravelSpinSpeed,
+            travelSpinFrequency = TravelSpinFrequency,
+            fadeCurve = FadeCurve,
+            travelApproachCurve = TravelApproachCurve,
         };
 
         public static PatchBotPairGhostTuning Default => new PatchBotPairGhostTuning
@@ -142,6 +160,12 @@ public class BoardController : MonoBehaviour
             endRadiusFactor = 0.08f,
             spinDegrees = 270f,
             riseFactor = 0.08f,
+            travelStartRadiusFactor = 0.28f,
+            travelEndRadiusFactor = 0.11f,
+            travelSpinSpeed = 540f,
+            travelSpinFrequency = 1.25f,
+            fadeCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f),
+            travelApproachCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f),
         };
     }
 

@@ -147,43 +147,91 @@ public class SpecialVisualService
 
     public void PlayTransientSpecialPairVisualAt(TileView firstTile, TileView secondTile, int targetX, int targetY)
     {
+        if (!TryCreatePairGhost(firstTile, secondTile, targetX, targetY, out var pairRt, out var firstImage, out var secondImage))
+            return;
+
+        var tuning = board.PatchBotGhostTuning;
+        board.StartCoroutine(AnimateAndDestroySpecialPairGhost(firstImage, secondImage, pairRt, tuning.Duration));
+    }
+
+    public void PlayTravelingSpecialPairGhost(
+        TileView firstTile,
+        TileView secondTile,
+        Vector2Int sourceCell,
+        Vector2Int targetCell,
+        float travelDuration,
+        bool playImpactAtTarget)
+    {
+        if (!TryCreatePairGhost(firstTile, secondTile, sourceCell.x, sourceCell.y, out var pairRt, out var firstImage, out var secondImage))
+            return;
+
+        board.StartCoroutine(AnimateTravelingSpecialPairGhost(
+            firstImage,
+            secondImage,
+            pairRt,
+            sourceCell,
+            targetCell,
+            travelDuration,
+            playImpactAtTarget,
+            firstTile,
+            secondTile));
+    }
+
+    private bool TryCreatePairGhost(
+        TileView firstTile,
+        TileView secondTile,
+        int anchorX,
+        int anchorY,
+        out RectTransform pairRt,
+        out UnityEngine.UI.Image firstImage,
+        out UnityEngine.UI.Image secondImage)
+    {
+        pairRt = null;
+        firstImage = null;
+        secondImage = null;
+
         if (firstTile == null || secondTile == null)
         {
-            PlayTransientSpecialVisualAt(firstTile != null ? firstTile : secondTile, targetX, targetY);
-            return;
+            PlayTransientSpecialVisualAt(firstTile != null ? firstTile : secondTile, anchorX, anchorY);
+            return false;
         }
 
         var firstSprite = firstTile.GetIconSprite();
         var secondSprite = secondTile.GetIconSprite();
         if (firstSprite == null || secondSprite == null)
         {
-            if (firstSprite != null) PlayTransientSpecialVisualAt(firstTile, targetX, targetY);
-            if (secondSprite != null) PlayTransientSpecialVisualAt(secondTile, targetX, targetY);
-            return;
+            if (firstSprite != null) PlayTransientSpecialVisualAt(firstTile, anchorX, anchorY);
+            if (secondSprite != null) PlayTransientSpecialVisualAt(secondTile, anchorX, anchorY);
+            return false;
         }
 
         var parent = board.Parent != null ? board.Parent : firstTile.transform.parent as RectTransform;
-        if (parent == null) return;
+        if (parent == null) return false;
 
         var pairGo = new GameObject("PatchBotSpecialPairGhost", typeof(RectTransform));
-        var pairRt = pairGo.GetComponent<RectTransform>();
+        pairRt = pairGo.GetComponent<RectTransform>();
         pairRt.SetParent(parent, false);
         pairRt.anchorMin = new Vector2(0.5f, 0.5f);
         pairRt.anchorMax = new Vector2(0.5f, 0.5f);
         pairRt.pivot = new Vector2(0.5f, 0.5f);
         pairRt.sizeDelta = new Vector2(board.TileSize, board.TileSize);
 
-        bool hasObstacleAtTarget = patchbotComboService.HasObstacleAt(targetX, targetY);
-        float yOffset = hasObstacleAtTarget ? board.TileSize * 0.22f : 0f;
-        pairRt.anchoredPosition = new Vector2(
-            targetX * board.TileSize + board.TileSize * 0.5f,
-            -targetY * board.TileSize - board.TileSize * 0.5f + yOffset);
+        pairRt.anchoredPosition = GetCellAnchoredPosition(anchorX, anchorY);
+        bool hasObstacleAtTarget = patchbotComboService.HasObstacleAt(anchorX, anchorY);
         pairRt.localScale = hasObstacleAtTarget ? Vector3.one * 1.08f : Vector3.one;
 
-        var firstImage = CreatePairGhostImage(pairRt, "GhostA", firstSprite);
-        var secondImage = CreatePairGhostImage(pairRt, "GhostB", secondSprite);
+        firstImage = CreatePairGhostImage(pairRt, "GhostA", firstSprite);
+        secondImage = CreatePairGhostImage(pairRt, "GhostB", secondSprite);
+        return true;
+    }
 
-        board.StartCoroutine(AnimateAndDestroySpecialPairGhost(firstImage, secondImage, pairRt, 0.27f));
+    private Vector2 GetCellAnchoredPosition(int x, int y)
+    {
+        bool hasObstacleAtTarget = patchbotComboService.HasObstacleAt(x, y);
+        float yOffset = hasObstacleAtTarget ? board.TileSize * 0.22f : 0f;
+        return new Vector2(
+            x * board.TileSize + board.TileSize * 0.5f,
+            -y * board.TileSize - board.TileSize * 0.5f + yOffset);
     }
 
     private UnityEngine.UI.Image CreatePairGhostImage(RectTransform parent, string name, Sprite sprite)
@@ -242,10 +290,10 @@ public class SpecialVisualService
         if (firstImage == null || secondImage == null || pairRt == null)
             yield break;
 
+        var tuning = board.PatchBotGhostTuning;
         float elapsed = 0f;
-        float startRadius = board.TileSize * 0.22f;
-        float endRadius = board.TileSize * 0.08f;
-        float maxSpin = 460f;
+        float startRadius = board.TileSize * tuning.StartRadiusFactor;
+        float endRadius = board.TileSize * tuning.EndRadiusFactor;
         Vector2 pairStart = pairRt.anchoredPosition;
 
         while (elapsed < duration)
@@ -254,15 +302,13 @@ public class SpecialVisualService
             float t = Mathf.Clamp01(elapsed / Mathf.Max(0.0001f, duration));
 
             float radius = Mathf.Lerp(startRadius, endRadius, t);
-            float angle = maxSpin * t;
+            float angle = tuning.SpinDegrees * t;
             Vector2 dir = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
 
-            var firstRt = firstImage.rectTransform;
-            var secondRt = secondImage.rectTransform;
-            firstRt.anchoredPosition = dir * radius;
-            secondRt.anchoredPosition = -dir * radius;
+            firstImage.rectTransform.anchoredPosition = dir * radius;
+            secondImage.rectTransform.anchoredPosition = -dir * radius;
 
-            float alpha = Mathf.Lerp(0.95f, 0f, t);
+            float alpha = Mathf.Clamp01(tuning.FadeCurve.Evaluate(t)) * 0.95f;
             var c1 = firstImage.color;
             c1.a = alpha;
             firstImage.color = c1;
@@ -270,7 +316,7 @@ public class SpecialVisualService
             c2.a = alpha;
             secondImage.color = c2;
 
-            float rise = board.TileSize * 0.08f * t;
+            float rise = board.TileSize * tuning.RiseFactor * t;
             pairRt.anchoredPosition = new Vector2(pairStart.x, pairStart.y + rise);
 
             yield return null;
@@ -278,6 +324,61 @@ public class SpecialVisualService
 
         if (pairRt != null)
             Object.Destroy(pairRt.gameObject);
+    }
+
+    private IEnumerator AnimateTravelingSpecialPairGhost(
+        UnityEngine.UI.Image firstImage,
+        UnityEngine.UI.Image secondImage,
+        RectTransform pairRt,
+        Vector2Int sourceCell,
+        Vector2Int targetCell,
+        float travelDuration,
+        bool playImpactAtTarget,
+        TileView firstTile,
+        TileView secondTile)
+    {
+        if (firstImage == null || secondImage == null || pairRt == null)
+            yield break;
+
+        var tuning = board.PatchBotGhostTuning;
+        float duration = Mathf.Max(0.02f, travelDuration);
+        Vector2 startPos = GetCellAnchoredPosition(sourceCell.x, sourceCell.y);
+        Vector2 endPos = GetCellAnchoredPosition(targetCell.x, targetCell.y);
+        pairRt.anchoredPosition = startPos;
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float approachT = Mathf.Clamp01(tuning.TravelApproachCurve.Evaluate(t));
+            pairRt.anchoredPosition = Vector2.LerpUnclamped(startPos, endPos, approachT);
+
+            float radius = Mathf.Lerp(
+                board.TileSize * tuning.TravelStartRadiusFactor,
+                board.TileSize * tuning.TravelEndRadiusFactor,
+                t);
+            float angle = tuning.TravelSpinSpeed * t + Mathf.Sin(t * Mathf.PI * 2f * tuning.TravelSpinFrequency) * 25f;
+            Vector2 dir = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
+            firstImage.rectTransform.anchoredPosition = dir * radius;
+            secondImage.rectTransform.anchoredPosition = -dir * radius;
+
+            float alpha = Mathf.Clamp01(tuning.FadeCurve.Evaluate(1f - Mathf.Abs(0.5f - t) * 2f));
+            var c1 = firstImage.color;
+            c1.a = alpha * 0.95f;
+            firstImage.color = c1;
+            var c2 = secondImage.color;
+            c2.a = alpha * 0.95f;
+            secondImage.color = c2;
+
+            yield return null;
+        }
+
+        if (pairRt != null)
+            Object.Destroy(pairRt.gameObject);
+
+        if (playImpactAtTarget)
+            PlayTransientSpecialPairVisualAt(firstTile, secondTile, targetCell.x, targetCell.y);
     }
 
     // ─────────────────────────────────────────────
