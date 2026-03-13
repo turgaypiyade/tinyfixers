@@ -70,8 +70,10 @@ public class PatchBotLineCombo : IComboBehavior, IComboExecutor, ILightningCombo
             ctx.PatchbotService.EnqueueDash(patchBotTile, target.x, target.y);
             ctx.VisualService.PlayTeleportMarkers(patchBotTile, target.x, target.y);
             ctx.VisualService.PlayTeleportMarkers(lineTile, target.x, target.y);
-            ctx.VisualService.PlayTransientSpecialPairTravelVisualAt(patchBotTile, lineTile, target.x, target.y, travelDuration);
-            lastStartDelaySeconds = travelDuration;
+
+            // PatchBot+Line swap'ta iki kaynak da aynı anda hedefte "hayalet" görünsün.
+            // Böylece line patlaması ile patchbot geçişi görsel olarak eşzamanlı başlar.
+            ctx.VisualService.PlayTransientSpecialPairVisualAt(patchBotTile, lineTile, target.x, target.y);
 
             var cells = board.SpecialBehaviors.CalculateEffect(lineTile.GetSpecial(), board, target.x, target.y);
             foreach (var c in cells)
