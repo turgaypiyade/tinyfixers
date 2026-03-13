@@ -117,7 +117,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 if (pulseMatches.Count == 0)
                     continue;
 
-                board.PlayPulsePulseExplosionVfxAtCell(cell.x, cell.y);
+                PlayPulseCoreExplosionVfx(tile);
 
                 var pulseClear = new MatchClearAction(
                     pulseMatches,
@@ -125,7 +125,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                     animationMode: ClearAnimationMode.Default,
                     affectedCells: null,
                     obstacleHitContext: null,
-                    includeAdjacentOverTileBlockerDamage: false,
+                    includeAdjacentOverTileBlockerDamage: true,
                     lightningOriginTile: null,
                     lightningOriginCell: null,
                     lightningVisualTargets: null,
@@ -144,6 +144,47 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
         if (originTile != null)
             SpecialVisualService.HideTileVisualForCombo(originTile);
+    }
+
+    private void PlayPulseCoreExplosionVfx(TileView tile)
+    {
+        if (tile == null)
+            return;
+
+        if (board.BoardVfxPlayer != null)
+            board.BoardVfxPlayer.PlayPulseVfx(GetTileAnchoredPos(tile), radiusCells: 1, tileSize: board.TileSize);
+
+        if (board.SfxSource != null)
+        {
+            if (board.SfxPulseCoreBoom != null)
+                board.SfxSource.PlayOneShot(board.SfxPulseCoreBoom);
+            if (board.SfxPulseCoreWave != null)
+                board.SfxSource.PlayOneShot(board.SfxPulseCoreWave);
+        }
+
+        if (board.EnablePulseMicroShake && board.PulseMicroShakeDuration > 0f && board.PulseMicroShakeStrength > 0f)
+            board.StartCoroutine(board.boardAnimatorRef.MicroShake(board.PulseMicroShakeDuration, board.PulseMicroShakeStrength));
+
+        PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(tile.X, tile.Y));
+    }
+
+    private Vector2 GetTileAnchoredPos(TileView tile)
+    {
+        var tileRect = tile.GetComponent<RectTransform>();
+        if (tileRect == null)
+            return Vector2.zero;
+
+        var vfxRoot = board.BoardVfxPlayer != null ? board.BoardVfxPlayer.VfxRoot : null;
+        if (vfxRoot != null)
+        {
+            var worldPos = tileRect.TransformPoint(tileRect.rect.center);
+            var localPos = vfxRoot.InverseTransformPoint(worldPos);
+            return (Vector2)localPos;
+        }
+
+        var tilesRoot = board.Parent;
+        var rootOffset = tilesRoot != null ? tilesRoot.anchoredPosition : Vector2.zero;
+        return rootOffset + tileRect.anchoredPosition;
     }
 
     private HashSet<TileView> BuildPulseClearSet(
