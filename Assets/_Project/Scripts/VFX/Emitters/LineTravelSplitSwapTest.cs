@@ -176,6 +176,12 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         ApplyAxisVisualRotation();
         rocketMode = true;
 
+        // Origin hücresini de sweep başlangıcında bildir:
+        // Böylece line kaynak taşı beklemeden temizlenebilir ve
+        // roketler ayrıldıktan sonra merkezde hayalet görüntü kalmaz.
+        if (_originCellValid && OnStepCell != null)
+            OnStepCell(_originCell);
+
         // ─── STEP TRAVEL ──────────────────────────────────────────────────────
         float movePortion = 0.85f;
         float cellSizePx  = _cellSizePx;
