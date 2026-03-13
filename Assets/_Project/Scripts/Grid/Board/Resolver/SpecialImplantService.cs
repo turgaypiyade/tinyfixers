@@ -11,6 +11,13 @@ using static ResolutionContext;
 /// </summary>
 public class SpecialImplantService
 {
+    private struct DeferredPatchBotActivation
+    {
+        public TileView AutoPatchBot;
+        public TileView PatchPartner;
+        public TileView SystemOverride;
+    }
+
     private readonly BoardController board;
     private readonly PatchbotComboService patchbotComboService;
     private readonly SpecialVisualService visualService;
@@ -34,13 +41,33 @@ public class SpecialImplantService
     /// </summary>
     public void ApplyPendingOverrideImplants(ResolutionContext ctx)
     {
+        var deferredPatchBots = new List<DeferredPatchBotActivation>();
+
         for (int i = 0; i < ctx.PendingOverrideImplants.Count; i++)
-            ApplyPendingOverrideImplant(ctx, ctx.PendingOverrideImplants[i]);
+            ApplyPendingOverrideImplant(ctx, ctx.PendingOverrideImplants[i], deferredPatchBots);
+
+        // Override + PatchBot: önce tüm hücrelere implantı uygula,
+        // sonra patchbotları üst satırdan başlayacak şekilde sırayla çalıştır.
+        deferredPatchBots.Sort((left, right) =>
+        {
+            int byRow = right.AutoPatchBot.Y.CompareTo(left.AutoPatchBot.Y);
+            if (byRow != 0) return byRow;
+            return left.AutoPatchBot.X.CompareTo(right.AutoPatchBot.X);
+        });
+
+        for (int i = 0; i < deferredPatchBots.Count; i++)
+        {
+            var activation = deferredPatchBots[i];
+            AutoPatchBotTeleportHitAndVanish(ctx, activation.AutoPatchBot, activation.PatchPartner, activation.SystemOverride);
+        }
 
         ctx.PendingOverrideImplants.Clear();
     }
 
-    private void ApplyPendingOverrideImplant(ResolutionContext ctx, PendingOverrideImplant pending)
+    private void ApplyPendingOverrideImplant(
+        ResolutionContext ctx,
+        PendingOverrideImplant pending,
+        List<DeferredPatchBotActivation> deferredPatchBots)
     {
         TileView pendingTarget = board.Tiles[pending.targetCell.x, pending.targetCell.y];
         if (pendingTarget == null)
@@ -60,7 +87,13 @@ public class SpecialImplantService
                 ? board.Tiles[pending.partnerCell.Value.x, pending.partnerCell.Value.y]
                 : null;
             TileView patchOverride = board.Tiles[pending.overrideCell.x, pending.overrideCell.y];
-            AutoPatchBotTeleportHitAndVanish(ctx, pendingTarget, patchPartner, patchOverride);
+
+            deferredPatchBots.Add(new DeferredPatchBotActivation
+            {
+                AutoPatchBot = pendingTarget,
+                PatchPartner = patchPartner,
+                SystemOverride = patchOverride,
+            });
             return;
         }
 
