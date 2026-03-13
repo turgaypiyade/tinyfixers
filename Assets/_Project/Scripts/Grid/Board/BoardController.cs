@@ -201,6 +201,7 @@ public class BoardController : MonoBehaviour
     internal bool EnableSpecialChainTrace => false;
 #endif
     internal ObstacleStateService ObstacleStateService => obstacleStateService;
+    internal PulseCoreImpactService PulseCoreImpactService => pulseCoreImpactService;
     internal SpecialBehaviorRegistry SpecialBehaviors => specialBehaviorRegistry;
     public CascadeLogic CascadeLogic => cascadeLogic;
     internal Transform LineTravelSpawnParent => lineTravelSpawnParent;

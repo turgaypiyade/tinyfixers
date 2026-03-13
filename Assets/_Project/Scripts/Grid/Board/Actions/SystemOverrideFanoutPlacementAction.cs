@@ -117,7 +117,11 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 if (pulseMatches.Count == 0)
                     continue;
 
-                board.PlayPulsePulseExplosionVfxAtCell(cell.x, cell.y);
+                if (board.PulseCoreImpactService != null)
+                    yield return board.PulseCoreImpactService.PlayPreExplosionPulse(tile);
+
+                if (board.PulseCoreImpactService != null)
+                    board.PulseCoreImpactService.PlayPulseCoreExplosionVfxAtTile(tile, radiusCells: 1);
 
                 var pulseClear = new MatchClearAction(
                     pulseMatches,
@@ -125,7 +129,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                     animationMode: ClearAnimationMode.Default,
                     affectedCells: null,
                     obstacleHitContext: null,
-                    includeAdjacentOverTileBlockerDamage: false,
+                    includeAdjacentOverTileBlockerDamage: true,
                     lightningOriginTile: null,
                     lightningOriginCell: null,
                     lightningVisualTargets: null,

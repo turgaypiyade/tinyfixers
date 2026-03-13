@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -25,8 +26,7 @@ public class PulseCoreImpactService
 
         for (int i = 0; i < pulseCenters.Count; i++)
         {
-            var centerLocalPos = GetTileAnchoredPos(pulseCenters[i]);
-            PlayPulseCoreVfxAndSfx(centerLocalPos);
+            PlayPulseCoreExplosionVfxAtTile(pulseCenters[i], radiusCells: 2);
         }
 
         if (pulseCenters.Count > 0)
@@ -52,10 +52,24 @@ public class PulseCoreImpactService
         return stagger;
     }
 
-    void PlayPulseCoreVfxAndSfx(Vector2 centerLocalPos)
+    public IEnumerator PlayPreExplosionPulse(TileView tile, float peakScale = 1.42f, float upTime = 0.06f, float downTime = 0.06f, float postDelay = 0.05f)
     {
+        if (tile == null)
+            yield break;
+
+        boardAnimator.PlaySelectionPulse(tile, delay: 0f, peakScale: peakScale, upTime: upTime, downTime: downTime);
+
+        if (postDelay > 0f)
+            yield return new WaitForSeconds(board.ApplySpecialChainTempo(postDelay));
+    }
+
+    public void PlayPulseCoreExplosionVfxAtTile(TileView tile, int radiusCells = 2)
+    {
+        if (tile == null)
+            return;
+
         if (board.BoardVfxPlayer != null)
-            board.BoardVfxPlayer.PlayPulseVfx(centerLocalPos, radiusCells: 2, tileSize: board.TileSize);
+            board.BoardVfxPlayer.PlayPulseVfx(GetTileAnchoredPos(tile), radiusCells: radiusCells, tileSize: board.TileSize);
 
         if (board.SfxSource != null)
         {
@@ -67,6 +81,8 @@ public class PulseCoreImpactService
 
         if (board.EnablePulseMicroShake && board.PulseMicroShakeDuration > 0f && board.PulseMicroShakeStrength > 0f)
             board.StartCoroutine(boardAnimator.MicroShake(board.PulseMicroShakeDuration, board.PulseMicroShakeStrength));
+
+        PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(tile.X, tile.Y));
     }
 
     Vector2 GetTileAnchoredPos(TileView tile)
