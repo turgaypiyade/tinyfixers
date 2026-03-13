@@ -151,10 +151,8 @@ public class SpecialResolver
         var fanoutActions = fanoutService.ProcessFanout(ctx);
         actions.AddRange(fanoutActions);
 
-        // Override+PulseCore placement aksiyonunda pulse special'ları hedefte
-        // geçici olarak korunmalı; aksi halde pulse yerleştirme/patlatma kaybolur.
-        if (ctx.OverrideDeferredPulseExplosions.Count == 0)
-            implantService.CleanupImplantedTiles(ctx);
+        // Swap akışını solo ile hizala: fan-out sonrası implanted special görsellerini temizle.
+        implantService.CleanupImplantedTiles(ctx);
 
         if (ctx.OverrideRadialClearDelays != null && ctx.OverrideRadialClearDelays.Count > 0)
             visualService.FireOverrideOverrideSpecialVisuals(ctx.Affected, ctx.OverrideRadialClearDelays);
