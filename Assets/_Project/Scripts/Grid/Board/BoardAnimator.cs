@@ -162,14 +162,43 @@ public class BoardAnimator
         {
             if (hasLineStrikes)
             {
+                float syncedDashDuration = EstimateLineStrikeDuration(lightningLineStrikes);
+
                 // Fire-and-forget: dash animasyonu sweep ile paralel çalışır,
                 // oyunu bekletmez
-                board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board);
+                board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board, syncedDashDuration);
             }
             else
             {
                 yield return board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board);
             }
+        }
+
+        float EstimateLineStrikeDuration(IReadOnlyList<LightningLineStrike> strikes)
+        {
+            if (strikes == null || strikes.Count == 0) return -1f;
+
+            float maxDuration = 0f;
+            for (int i = 0; i < strikes.Count; i++)
+            {
+                var strike = strikes[i];
+                int ox = strike.originCell.x;
+                int oy = strike.originCell.y;
+
+                int steps = strike.isHorizontal
+                    ? Mathf.Max(ox, board.Width - 1 - ox)
+                    : Mathf.Max(oy, board.Height - 1 - oy);
+
+                float strikeDuration = board.lineTravelPlayer != null
+                    ? board.lineTravelPlayer.EstimateDuration(steps)
+                    : 0f;
+
+                float strikeDelay = 0.03f * i;
+                float endTime = strikeDelay + strikeDuration;
+                if (endTime > maxDuration) maxDuration = endTime;
+            }
+
+            return maxDuration > 0f ? maxDuration : -1f;
         }
 
         ObstacleHitContext damageContext = obstacleHitContext ?? (board.IsSpecialActivationPhase
