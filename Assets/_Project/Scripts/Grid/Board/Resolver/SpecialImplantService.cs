@@ -118,9 +118,14 @@ public class SpecialImplantService
     }
     /// <summary>
     /// Auto-fires a PatchBot that was implanted via Override+PatchBot conversion.
-    /// The PatchBot dashes immediately and independently.
+    /// Optional queued delay lets Override fan-out run PatchBots in a deterministic sequence.
     /// </summary>
-    private void AutoPatchBotTeleportHitAndVanish(ResolutionContext ctx, TileView autoPatchBot, TileView patchBotTile, TileView systemOverrideTile)
+    private void AutoPatchBotTeleportHitAndVanish(
+        ResolutionContext ctx,
+        TileView autoPatchBot,
+        TileView patchBotTile,
+        TileView systemOverrideTile,
+        float queuedDelay = 0f)
     {
         if (autoPatchBot == null) return;
 
@@ -134,7 +139,7 @@ public class SpecialImplantService
         var target = patchbotComboService.FindTarget(autoPatchBot, patchBotTile, null, systemOverrideTile);
         if (!target.hasCell) return;
 
-        float dashDelay = ctx.DeferOverrideImplantVisualRefresh ? 0.10f : 0f;
+        float dashDelay = (ctx.DeferOverrideImplantVisualRefresh ? 0.10f : 0f) + Mathf.Max(0f, queuedDelay);
         visualService.FireImmediateDash(autoPatchBot.X, autoPatchBot.Y, target.x, target.y, dashDelay);
 
         var matchSetData = new HashSet<TileData>();
