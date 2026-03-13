@@ -84,8 +84,6 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
         yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.12f));
 
-        // Tüm override yerleşimleri bittikten sonra implanted PulseCore patlamalarını başlat.
-        // Böylece swap anında veya placement sırasında erken pulse patlaması görünmez.
         if (deferredPulseExplosionCells != null && deferredPulseExplosionCells.Count > 0)
         {
             yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.05f));
@@ -104,7 +102,35 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 if (tile.GetSpecial() != TileSpecial.PulseCore)
                     continue;
 
+                var futurePulseCells = new HashSet<Vector2Int>();
+                for (int j = i + 1; j < deferredPulseExplosionCells.Count; j++)
+                    futurePulseCells.Add(deferredPulseExplosionCells[j]);
+
+                var pulseMatches = BuildPulseClearSet(cell, futurePulseCells);
+                if (pulseMatches.Count == 0)
+                    continue;
+
                 board.PlayPulsePulseExplosionVfxAtCell(cell.x, cell.y);
+
+                var pulseClear = new MatchClearAction(
+                    pulseMatches,
+                    doShake: true,
+                    animationMode: ClearAnimationMode.Default,
+                    affectedCells: null,
+                    obstacleHitContext: null,
+                    includeAdjacentOverTileBlockerDamage: false,
+                    lightningOriginTile: null,
+                    lightningOriginCell: null,
+                    lightningVisualTargets: null,
+                    lightningLineStrikes: null,
+                    suppressPerTileClearVfx: false,
+                    perTileClearDelays: null,
+                    staggerDelays: null,
+                    staggerAnimTime: 0.16f,
+                    isSpecialPhase: true
+                );
+
+                yield return pulseClear.ExecuteVisuals(sequencer);
                 yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.03f));
             }
         }
@@ -113,5 +139,29 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         {
             SpecialVisualService.HideTileVisualForCombo(originTile);
         }
+    }
+
+    private HashSet<TileView> BuildPulseClearSet(Vector2Int centerCell, HashSet<Vector2Int> futurePulseCells)
+    {
+        var result = new HashSet<TileView>();
+        var cells = board.SpecialBehaviors.CalculateEffect(TileSpecial.PulseCore, board, centerCell.x, centerCell.y);
+
+        foreach (var cell in cells)
+        {
+            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                continue;
+
+            var tile = board.Tiles[cell.x, cell.y];
+            if (tile == null)
+                continue;
+
+            // Gelecekte tetiklenecek pulsecore'ları erken temizleme
+            if (futurePulseCells.Contains(cell))
+                continue;
+
+            result.Add(tile);
+        }
+
+        return result;
     }
 }

@@ -67,12 +67,10 @@ public class SpecialImplantService
         ctx.Affected.Add(pendingTarget);
         SpecialCellUtils.MarkAffectedCell(ctx, pendingTarget, board);
 
-        // Override + PulseCore özel kuralı:
-        // gameplay etkisini şimdi hesapla ama pulse activation kuyruğunu hemen çalıştırma.
-        // Önce fanout placement görseli bitsin, pulse patlamaları sonra başlasın.
         if (pending.special == TileSpecial.PulseCore)
         {
-            SpecialCellUtils.AddSquare(ctx.Affected, ctx, board, pendingTarget.X, pendingTarget.Y, 1);
+            // Override+PulseCore için gameplay clear burada hesaplanmaz.
+            // Önce placement görseli bitecek, sonra pulsecore'lar sırayla tetiklenecek.
             ctx.OverrideDeferredPulseExplosions.Add(new Vector2Int(pendingTarget.X, pendingTarget.Y));
             return;
         }
