@@ -44,17 +44,17 @@ public class PatchbotDashUI : MonoBehaviour
     /// Main: launches MANY patchbots in parallel (tiny stagger) using per-dash instances,
     /// so multi-patchbot cases don't take 30 seconds.
     /// </summary>
-    public Coroutine PlayDashParallel(List<BoardController.PatchbotDashRequest> requests, BoardController board, float syncDuration = -1f, float startDelay = 0f)
+    public Coroutine PlayDashParallel(List<BoardController.PatchbotDashRequest> requests, BoardController board, float syncDuration = -1f)
     {
         if (!gameObject.activeInHierarchy)
             gameObject.SetActive(true);
 
         if (co != null) StopCoroutine(co);
-        co = StartCoroutine(DashParallelRoutine(requests, board, syncDuration, startDelay));
+        co = StartCoroutine(DashParallelRoutine(requests, board, syncDuration));
         return co;
     }
 
-    private IEnumerator DashParallelRoutine(List<BoardController.PatchbotDashRequest> requests, BoardController board, float syncDuration, float startDelay)
+    private IEnumerator DashParallelRoutine(List<BoardController.PatchbotDashRequest> requests, BoardController board, float syncDuration)
     {
         if (vfxRoot == null || board == null) yield break;
         if (requests == null || requests.Count == 0) yield break;
@@ -75,7 +75,7 @@ public class PatchbotDashUI : MonoBehaviour
         {
             var req = requests[i];
             remaining++;
-            StartCoroutine(SingleDashRoutine(req, board, patchbotSprite, syncDuration, startDelay, () => remaining--));
+            StartCoroutine(SingleDashRoutine(req, board, patchbotSprite, syncDuration, () => remaining--));
 
             if (stagger > 0f)
                 yield return new WaitForSeconds(stagger);
@@ -92,7 +92,6 @@ public class PatchbotDashUI : MonoBehaviour
         BoardController board,
         Sprite sprite,
         float syncDuration,
-        float startDelay,
         System.Action onComplete)
     {
         // Per-patchbot instance
@@ -128,9 +127,6 @@ public class PatchbotDashUI : MonoBehaviour
         Vector2 target = WorldToAnchoredIn(vfxRoot, toWorld);
 
         float tAfter = 0f;
-
-        if (startDelay > 0f)
-            yield return new WaitForSeconds(startDelay);
 
         float effectiveSpeed = dashSpeed;
         if (syncDuration > 0f)

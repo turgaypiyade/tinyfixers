@@ -163,22 +163,15 @@ public class BoardAnimator
             if (hasLineStrikes)
             {
                 float syncedDashDuration = EstimateLineStrikeDuration(lightningLineStrikes);
-                float syncedDashStartDelay = EstimateLineStrikeStartDelay();
 
                 // Fire-and-forget: dash animasyonu sweep ile paralel çalışır,
                 // oyunu bekletmez
-                board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board, syncedDashDuration, syncedDashStartDelay);
+                board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board, syncedDashDuration);
             }
             else
             {
                 yield return board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board);
             }
-        }
-
-        float EstimateLineStrikeStartDelay()
-        {
-            if (board.lineTravelPlayer == null) return 0f;
-            return Mathf.Max(0f, board.lineTravelPlayer.startDelay + board.lineTravelPlayer.splitTime);
         }
 
         float EstimateLineStrikeDuration(IReadOnlyList<LightningLineStrike> strikes)
