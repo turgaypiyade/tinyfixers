@@ -183,7 +183,7 @@ public class SpecialVisualService
         var firstImage = CreatePairGhostImage(pairRt, "GhostA", firstSprite);
         var secondImage = CreatePairGhostImage(pairRt, "GhostB", secondSprite);
 
-        board.StartCoroutine(AnimateAndDestroySpecialPairGhost(firstImage, secondImage, pairRt));
+        board.StartCoroutine(AnimateAndDestroySpecialPairGhost(firstImage, secondImage, pairRt, 0.27f));
     }
 
     private UnityEngine.UI.Image CreatePairGhostImage(RectTransform parent, string name, Sprite sprite)
@@ -236,17 +236,16 @@ public class SpecialVisualService
     private IEnumerator AnimateAndDestroySpecialPairGhost(
         UnityEngine.UI.Image firstImage,
         UnityEngine.UI.Image secondImage,
-        RectTransform pairRt)
+        RectTransform pairRt,
+        float duration)
     {
         if (firstImage == null || secondImage == null || pairRt == null)
             yield break;
 
-        var tuning = board.PatchBotGhostTuning;
         float elapsed = 0f;
-        float duration = tuning.Duration;
-        float startRadius = board.TileSize * tuning.StartRadiusFactor;
-        float endRadius = board.TileSize * tuning.EndRadiusFactor;
-        float maxSpin = tuning.SpinDegrees;
+        float startRadius = board.TileSize * 0.22f;
+        float endRadius = board.TileSize * 0.08f;
+        float maxSpin = 460f;
         Vector2 pairStart = pairRt.anchoredPosition;
 
         while (elapsed < duration)
@@ -271,7 +270,7 @@ public class SpecialVisualService
             c2.a = alpha;
             secondImage.color = c2;
 
-            float rise = board.TileSize * tuning.RiseFactor * t;
+            float rise = board.TileSize * 0.08f * t;
             pairRt.anchoredPosition = new Vector2(pairStart.x, pairStart.y + rise);
 
             yield return null;
