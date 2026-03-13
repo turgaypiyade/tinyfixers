@@ -51,35 +51,28 @@ public class SpecialFanoutService
             {
                 targetCoords.Add(new Vector2Int(t.X, t.Y));
             }
-            Vector2Int originCoord = new Vector2Int(ctx.OverrideFanoutOrigin.X, ctx.OverrideFanoutOrigin.Y);
 
+            Vector2Int originCoord = new Vector2Int(
+                ctx.OverrideFanoutOrigin.X,
+                ctx.OverrideFanoutOrigin.Y);
+
+            // Önce implant et ki deferred pulse listesi dolsun
+            if (ctx.PendingOverrideImplants.Count > 0)
+                implantService.ApplyPendingOverrideImplants(ctx);
+
+            // Sonra action oluştur; güncel deferred pulse listesini alsın
             actions.Add(new SystemOverrideFanoutPlacementAction(
                 board,
                 originCoord,
                 targetCoords,
                 ctx.OverrideFanoutNormalSelectionPulse,
                 new List<Vector2Int>(ctx.OverrideDeferredPulseExplosions)));
-                
-            if (ctx.PendingOverrideImplants.Count > 0)
-                implantService.ApplyPendingOverrideImplants(ctx);
         }
         else if (ctx.PendingOverrideImplants.Count > 0)
         {
             implantService.ApplyPendingOverrideImplants(ctx);
         }
 
-        // Fan-out tamamlandı — override taşını artık gizle
-        if (ctx.OverrideFanoutOrigin != null)
-        {
-           // SpecialVisualService.HideTileVisualForCombo(ctx.OverrideFanoutOrigin);
-        }
-        else if (soloSpecialTile != null && soloSpecialTile.GetSpecial() == TileSpecial.SystemOverride)
-        {
-            // Solo activation: fan-out yoksa soloSpecialTile'ı gizle (deferHide durumu)
-          //  SpecialVisualService.HideTileVisualForCombo(soloSpecialTile);
-        }
-
-        // Fan-out'tan eklenen chain special'ları işle
         queueProcessor.EnqueueChainSpecials(ctx);
         if (ctx.Queue.Count > 0)
         {
