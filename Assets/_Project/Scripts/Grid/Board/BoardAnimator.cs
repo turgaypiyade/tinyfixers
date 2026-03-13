@@ -193,7 +193,7 @@ public class BoardAnimator
                     ? board.lineTravelPlayer.EstimateDuration(steps)
                     : 0f;
 
-                float strikeDelay = 0.03f * i;
+                float strikeDelay = 0.03f * i + Mathf.Max(0f, strike.startDelaySeconds);
                 float endTime = strikeDelay + strikeDuration;
                 if (endTime > maxDuration) maxDuration = endTime;
             }
