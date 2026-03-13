@@ -10,6 +10,16 @@ public class MatchFinder
         this.board = board;
     }
 
+    private bool IsNormalMatchable(TileData data)
+    {
+        return data != null && data.Special == TileSpecial.None;
+    }
+
+    private bool IsNormalMatchable(TileView tile)
+    {
+        return tile != null && tile.GetSpecial() == TileSpecial.None;
+    }
+
     public void Add2x2Matches(HashSet<TileData> result)
     {
         for (int y = 0; y < board.Height - 1; y++)
@@ -24,7 +34,7 @@ public class MatchFinder
                 var c = board.GridData[x, y + 1];
                 var d = board.GridData[x + 1, y + 1];
 
-                if (a == null || b == null || c == null || d == null)
+                if (!IsNormalMatchable(a) || !IsNormalMatchable(b) || !IsNormalMatchable(c) || !IsNormalMatchable(d))
                     continue;
 
                 var t = a.Type;
@@ -51,7 +61,7 @@ public class MatchFinder
             return result;
 
         var center = board.Tiles[x, y];
-        if (center == null)
+        if (!IsNormalMatchable(center))
             return result;
 
         TileType type = center.GetTileType();
@@ -78,7 +88,9 @@ public class MatchFinder
 
             for (int x = 0; x < board.Width; x++)
             {
-                if (board.Holes[x, y] || board.GridData[x, y] == null)
+                var data = board.GridData[x, y];
+
+                if (board.Holes[x, y] || !IsNormalMatchable(data))
                 {
                     FlushRun(run, runTiles, result);
                     run = 0;
@@ -86,18 +98,18 @@ public class MatchFinder
                     continue;
                 }
 
-                var t = board.GridData[x, y].Type;
+                var t = data.Type;
 
                 if (run == 0)
                 {
                     run = 1;
                     runType = t;
-                    runTiles.Add(board.GridData[x, y]);
+                    runTiles.Add(data);
                 }
                 else if (t.Equals(runType))
                 {
                     run++;
-                    runTiles.Add(board.GridData[x, y]);
+                    runTiles.Add(data);
                 }
                 else
                 {
@@ -105,7 +117,7 @@ public class MatchFinder
                     run = 1;
                     runType = t;
                     runTiles.Clear();
-                    runTiles.Add(board.GridData[x, y]);
+                    runTiles.Add(data);
                 }
             }
 
@@ -121,7 +133,9 @@ public class MatchFinder
 
             for (int y = 0; y < board.Height; y++)
             {
-                if (board.Holes[x, y] || board.GridData[x, y] == null)
+                var data = board.GridData[x, y];
+
+                if (board.Holes[x, y] || !IsNormalMatchable(data))
                 {
                     FlushRun(run, runTiles, result);
                     run = 0;
@@ -129,18 +143,18 @@ public class MatchFinder
                     continue;
                 }
 
-                var t = board.GridData[x, y].Type;
+                var t = data.Type;
 
                 if (run == 0)
                 {
                     run = 1;
                     runType = t;
-                    runTiles.Add(board.GridData[x, y]);
+                    runTiles.Add(data);
                 }
                 else if (t.Equals(runType))
                 {
                     run++;
-                    runTiles.Add(board.GridData[x, y]);
+                    runTiles.Add(data);
                 }
                 else
                 {
@@ -148,7 +162,7 @@ public class MatchFinder
                     run = 1;
                     runType = t;
                     runTiles.Clear();
-                    runTiles.Add(board.GridData[x, y]);
+                    runTiles.Add(data);
                 }
             }
 
@@ -156,7 +170,7 @@ public class MatchFinder
         }
 
         Add2x2Matches(result);
-        
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         static string TileViewDebugString(TileView tv)
         {
@@ -256,7 +270,7 @@ public class MatchFinder
             return;
 
         var center = board.Tiles[x, y];
-        if (center == null)
+        if (!IsNormalMatchable(center))
             return;
 
         Add2x2CandidatesOfType(candidates, x, y, center.GetTileType());
@@ -272,14 +286,16 @@ public class MatchFinder
 
             for (int x = 0; x < board.Width; x++)
             {
-                if (board.GridData[x, y] == null)
+                var data = board.GridData[x, y];
+
+                if (board.Holes[x, y] || !IsNormalMatchable(data))
                 {
                     if (run >= minLen) return true;
                     run = 0;
                     continue;
                 }
 
-                var t = board.GridData[x, y].Type;
+                var t = data.Type;
 
                 if (run == 0)
                 {
@@ -309,14 +325,16 @@ public class MatchFinder
 
             for (int y = 0; y < board.Height; y++)
             {
-                if (board.Holes[x, y] || board.GridData[x, y] == null)
+                var data = board.GridData[x, y];
+
+                if (board.Holes[x, y] || !IsNormalMatchable(data))
                 {
                     if (run >= minLen) return true;
                     run = 0;
                     continue;
                 }
 
-                var t = board.GridData[x, y].Type;
+                var t = data.Type;
 
                 if (run == 0)
                 {
@@ -344,20 +362,20 @@ public class MatchFinder
     public (int hLen, int vLen) GetRunLengths(int x, int y)
     {
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return (0, 0);
-        if (board.Holes[x, y] || board.GridData[x, y] == null) return (0, 0);
+        if (board.Holes[x, y] || !IsNormalMatchable(board.GridData[x, y])) return (0, 0);
 
         TileType type = board.GridData[x, y].Type;
 
         int h = 1;
         int lx = x - 1;
-        while (lx >= 0 && !board.Holes[lx, y] && board.GridData[lx, y] != null && board.GridData[lx, y].Type.Equals(type))
+        while (lx >= 0 && !board.Holes[lx, y] && IsNormalMatchable(board.GridData[lx, y]) && board.GridData[lx, y].Type.Equals(type))
         {
             h++;
             lx--;
         }
 
         int rx = x + 1;
-        while (rx < board.Width && !board.Holes[rx, y] && board.GridData[rx, y] != null && board.GridData[rx, y].Type.Equals(type))
+        while (rx < board.Width && !board.Holes[rx, y] && IsNormalMatchable(board.GridData[rx, y]) && board.GridData[rx, y].Type.Equals(type))
         {
             h++;
             rx++;
@@ -365,14 +383,14 @@ public class MatchFinder
 
         int v = 1;
         int uy = y - 1;
-        while (uy >= 0 && !board.Holes[x, uy] && board.GridData[x, uy] != null && board.GridData[x, uy].Type.Equals(type))
+        while (uy >= 0 && !board.Holes[x, uy] && IsNormalMatchable(board.GridData[x, uy]) && board.GridData[x, uy].Type.Equals(type))
         {
             v++;
             uy--;
         }
 
         int dy = y + 1;
-        while (dy < board.Height && !board.Holes[x, dy] && board.GridData[x, dy] != null && board.GridData[x, dy].Type.Equals(type))
+        while (dy < board.Height && !board.Holes[x, dy] && IsNormalMatchable(board.GridData[x, dy]) && board.GridData[x, dy].Type.Equals(type))
         {
             v++;
             dy++;
@@ -384,7 +402,7 @@ public class MatchFinder
     public TileSpecial DecideSpecialAt(int x, int y)
     {
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return TileSpecial.None;
-        if (board.GridData[x, y] == null) return TileSpecial.None;
+        if (!IsNormalMatchable(board.GridData[x, y])) return TileSpecial.None;
 
         var (hLen, vLen) = GetRunLengths(x, y);
 
@@ -406,7 +424,7 @@ public class MatchFinder
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
             return false;
 
-        if (board.GridData[x, y] == null)
+        if (!IsNormalMatchable(board.GridData[x, y]))
             return false;
 
         var t = board.GridData[x, y].Type;
@@ -429,7 +447,7 @@ public class MatchFinder
                 var c = board.GridData[sx, sy + 1];
                 var d = board.GridData[sx + 1, sy + 1];
 
-                if (a == null || b == null || c == null || d == null)
+                if (!IsNormalMatchable(a) || !IsNormalMatchable(b) || !IsNormalMatchable(c) || !IsNormalMatchable(d))
                     continue;
 
                 if (!a.Type.Equals(t)) continue;
@@ -506,7 +524,7 @@ public class MatchFinder
                 var c = board.Tiles[sx, sy + 1];
                 var d = board.Tiles[sx + 1, sy + 1];
 
-                if (a == null || b == null || c == null || d == null)
+                if (!IsNormalMatchable(a) || !IsNormalMatchable(b) || !IsNormalMatchable(c) || !IsNormalMatchable(d))
                     continue;
 
                 if (!a.GetTileType().Equals(type)) continue;
@@ -531,20 +549,20 @@ public class MatchFinder
             return;
 
         var center = board.Tiles[x, y];
-        if (center == null || !center.GetTileType().Equals(type))
+        if (!IsNormalMatchable(center) || !center.GetTileType().Equals(type))
             return;
 
         var run = new List<TileView> { center };
 
         int lx = x - 1;
-        while (lx >= 0 && !board.Holes[lx, y] && board.Tiles[lx, y] != null && board.Tiles[lx, y].GetTileType().Equals(type))
+        while (lx >= 0 && !board.Holes[lx, y] && IsNormalMatchable(board.Tiles[lx, y]) && board.Tiles[lx, y].GetTileType().Equals(type))
         {
             run.Add(board.Tiles[lx, y]);
             lx--;
         }
 
         int rx = x + 1;
-        while (rx < board.Width && !board.Holes[rx, y] && board.Tiles[rx, y] != null && board.Tiles[rx, y].GetTileType().Equals(type))
+        while (rx < board.Width && !board.Holes[rx, y] && IsNormalMatchable(board.Tiles[rx, y]) && board.Tiles[rx, y].GetTileType().Equals(type))
         {
             run.Add(board.Tiles[rx, y]);
             rx++;
@@ -566,20 +584,20 @@ public class MatchFinder
             return;
 
         var center = board.Tiles[x, y];
-        if (center == null || !center.GetTileType().Equals(type))
+        if (!IsNormalMatchable(center) || !center.GetTileType().Equals(type))
             return;
 
         var run = new List<TileView> { center };
 
         int uy = y - 1;
-        while (uy >= 0 && !board.Holes[x, uy] && board.Tiles[x, uy] != null && board.Tiles[x, uy].GetTileType().Equals(type))
+        while (uy >= 0 && !board.Holes[x, uy] && IsNormalMatchable(board.Tiles[x, uy]) && board.Tiles[x, uy].GetTileType().Equals(type))
         {
             run.Add(board.Tiles[x, uy]);
             uy--;
         }
 
         int dy = y + 1;
-        while (dy < board.Height && !board.Holes[x, dy] && board.Tiles[x, dy] != null && board.Tiles[x, dy].GetTileType().Equals(type))
+        while (dy < board.Height && !board.Holes[x, dy] && IsNormalMatchable(board.Tiles[x, dy]) && board.Tiles[x, dy].GetTileType().Equals(type))
         {
             run.Add(board.Tiles[x, dy]);
             dy++;
