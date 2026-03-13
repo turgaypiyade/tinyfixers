@@ -52,7 +52,7 @@ public class PatchBotPulseCombo : IComboBehavior, IComboExecutor
 
             // Hedefte tile olmasa bile (ör. obstacle hücresi) Pulse patlamasını
             // hedef hücre üzerinde mutlaka göster.
-            ctx.VisualService.PlayPulseExplosionAtDelayed(target.x, target.y, travelDuration);
+            board.StartCoroutine(CoPlayPulseExplosionDelayed(board, target.x, target.y, travelDuration));
             SpecialCellUtils.AddSquare(res.Affected, res, board, target.x, target.y, 1);
         }
     }
