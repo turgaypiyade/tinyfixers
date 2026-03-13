@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -54,6 +55,14 @@ public class PatchBotPulseCombo : IComboBehavior, IComboExecutor
             ctx.VisualService.PlayPulseExplosionAtDelayed(target.x, target.y, travelDuration);
             SpecialCellUtils.AddSquare(res.Affected, res, board, target.x, target.y, 1);
         }
+    }
+
+    private static IEnumerator CoPlayPulseExplosionDelayed(BoardController board, int x, int y, float delay)
+    {
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        board.PlayPulsePulseExplosionVfxAtCell(x, y);
     }
 
     static bool IsPatchBot(TileSpecial s) => s == TileSpecial.PatchBot;
