@@ -37,7 +37,7 @@ public class ResolutionContext
     public bool DeferOverrideImplantVisualRefresh;
 
     public const float OverrideRadialClearDuration = 0.45f;
-
+    public readonly List<Vector2Int> OverrideDeferredPulseActivations = new();
     /// <summary>
     /// DTO for decoupling logic from visuals — pending override implant data.
     /// </summary>
@@ -101,5 +101,6 @@ public class ResolutionContext
         OverrideImplantedTiles.Clear();
         DeferOverrideImplantVisualRefresh = false;
         OverrideDeferredPulseExplosions.Clear();
+        OverrideDeferredPulseActivations.Clear();
     }
 }

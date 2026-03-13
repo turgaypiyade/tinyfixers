@@ -10,7 +10,12 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
     private readonly bool doSelectionPulse;
     private readonly List<Vector2Int> deferredPulseExplosionCells;
 
-    public SystemOverrideFanoutPlacementAction(BoardController board, Vector2Int origin, List<Vector2Int> targets, bool doPulse, List<Vector2Int> deferredPulseExplosionCells = null)
+    public SystemOverrideFanoutPlacementAction(
+        BoardController board,
+        Vector2Int origin,
+        List<Vector2Int> targets,
+        bool doPulse,
+        List<Vector2Int> deferredPulseExplosionCells = null)
     {
         this.board = board;
         this.origin = origin;
@@ -49,9 +54,11 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                     beamReached = true;
                 });
 
-            float timeout = Mathf.Max(duration, board.ApplySpecialChainTempo(0.08f)) + board.ApplySpecialChainTempo(0.02f);
-            float elapsed = 0f;
+            float timeout =
+                Mathf.Max(duration, board.ApplySpecialChainTempo(0.08f)) +
+                board.ApplySpecialChainTempo(0.02f);
 
+            float elapsed = 0f;
             while (!beamReached && elapsed < timeout)
             {
                 elapsed += Time.unscaledDeltaTime;
@@ -136,15 +143,19 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         }
 
         if (originTile != null)
-        {
             SpecialVisualService.HideTileVisualForCombo(originTile);
-        }
     }
 
-    private HashSet<TileView> BuildPulseClearSet(Vector2Int centerCell, HashSet<Vector2Int> futurePulseCells)
+    private HashSet<TileView> BuildPulseClearSet(
+        Vector2Int centerCell,
+        HashSet<Vector2Int> futurePulseCells)
     {
         var result = new HashSet<TileView>();
-        var cells = board.SpecialBehaviors.CalculateEffect(TileSpecial.PulseCore, board, centerCell.x, centerCell.y);
+        var cells = board.SpecialBehaviors.CalculateEffect(
+            TileSpecial.PulseCore,
+            board,
+            centerCell.x,
+            centerCell.y);
 
         foreach (var cell in cells)
         {
@@ -155,7 +166,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             if (tile == null)
                 continue;
 
-            // Gelecekte tetiklenecek pulsecore'ları erken temizleme
+            // Sonraki pulse'ları erken yok etme
             if (futurePulseCells.Contains(cell))
                 continue;
 

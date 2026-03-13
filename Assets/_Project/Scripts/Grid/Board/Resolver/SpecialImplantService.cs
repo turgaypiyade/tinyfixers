@@ -64,23 +64,25 @@ public class SpecialImplantService
             return;
         }
 
-        ctx.Affected.Add(pendingTarget);
-        SpecialCellUtils.MarkAffectedCell(ctx, pendingTarget, board);
-
+        // Override + PulseCore:
+        // Pulse target'ı placement bitmeden Affected'e sokma.
+        // Aksi halde final MatchClearAction içinde erken clear/patlama animasyonu oynuyor.
+        // PulseCore'lar placement tamamlandıktan sonra SystemOverrideFanoutPlacementAction içinde
+        // sırayla tetiklenecek.
         if (pending.special == TileSpecial.PulseCore)
         {
-            // Override+PulseCore için gameplay clear burada hesaplanmaz.
-            // Önce placement görseli bitecek, sonra pulsecore'lar sırayla tetiklenecek.
             ctx.OverrideDeferredPulseExplosions.Add(new Vector2Int(pendingTarget.X, pendingTarget.Y));
             return;
         }
+
+        ctx.Affected.Add(pendingTarget);
+        SpecialCellUtils.MarkAffectedCell(ctx, pendingTarget, board);
 
         TileView activePartner = pending.partnerCell.HasValue
             ? board.Tiles[pending.partnerCell.Value.x, pending.partnerCell.Value.y]
             : null;
         queueProcessor.EnqueueActivation(ctx, pendingTarget, activePartner);
     }
-
     /// <summary>
     /// Auto-fires a PatchBot that was implanted via Override+PatchBot conversion.
     /// The PatchBot dashes immediately and independently.
