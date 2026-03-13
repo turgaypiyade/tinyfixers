@@ -152,7 +152,11 @@ public class SpecialResolver
         actions.AddRange(fanoutActions);
 
         // Swap akışını solo ile hizala: fan-out sonrası implanted special görsellerini temizle.
-        implantService.CleanupImplantedTiles(ctx);
+        // Override+PulseCore'da placement aksiyonu implanted PulseCore special'ını okuyup
+        // beam sonrası patlamayı tetikliyor. Deferred pulse listesi varken erken cleanup
+        // yapılırsa special None'a döner ve zincir bozulur.
+        if (ctx.OverrideDeferredPulseExplosions.Count == 0)
+            implantService.CleanupImplantedTiles(ctx);
 
         if (ctx.OverrideRadialClearDelays != null && ctx.OverrideRadialClearDelays.Count > 0)
             visualService.FireOverrideOverrideSpecialVisuals(ctx.Affected, ctx.OverrideRadialClearDelays);
