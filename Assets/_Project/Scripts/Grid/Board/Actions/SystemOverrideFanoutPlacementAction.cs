@@ -95,7 +95,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.04f));
         }
 
-        yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.12f));
+        yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.04f));
 
         if (deferredPulseExplosionCells != null && deferredPulseExplosionCells.Count > 0)
         {
@@ -173,15 +173,28 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
                 var fromCell = new Vector2Int(tile.X, tile.Y);
                 var toCell = new Vector2Int(pbTarget.x, pbTarget.y);
-
-                patchbotService.EnqueueDash(tile, pbTarget.x, pbTarget.y);
-                SpecialVisualService.HideTileVisualForCombo(tile);
-
-                // KRİTİK:
-                // Ghost hareket başlarken source cell hemen boşalsın.
                 var sourceType = tile.GetTileType();
-                board.ClearCell(fromCell.x, fromCell.y);
-                board.ClearCellVisualOnly(fromCell, sourceType, tile);
+
+                patchbotService.EnqueueDash(
+                    tile,
+                    pbTarget.x,
+                    pbTarget.y,
+                    onDashStart: () =>
+                    {
+                        if (tile == null)
+                            return;
+
+                        SpecialVisualService.HideTileVisualForCombo(tile);
+
+                        if (fromCell.x < 0 || fromCell.x >= board.Width || fromCell.y < 0 || fromCell.y >= board.Height)
+                            return;
+
+                        if (board.Tiles[fromCell.x, fromCell.y] == tile)
+                        {
+                            board.ClearCell(fromCell.x, fromCell.y);
+                            board.ClearCellVisualOnly(fromCell, sourceType, tile);
+                        }
+                    });
 
                 float dd = board.PatchbotDashUI != null
                     ? board.PatchbotDashUI.EstimateDashDuration(board, fromCell, toCell)
@@ -191,7 +204,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 launchedPatchBots.Add((tile, pbTarget.x, pbTarget.y));
 
                 if (i < deferredPatchBotCells.Count - 1)
-                    yield return new WaitForSeconds(0.003f);
+                    yield return new WaitForSeconds(0.002f);
             }
 
             if (maxDashDur > 0f)
@@ -214,7 +227,6 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 }
 
                 // source tile artık burada eklenmiyor
-                // allClearTiles.Add(tile);  <-- kaldırıldı
             }
 
             if (allClearTiles.Count > 0)

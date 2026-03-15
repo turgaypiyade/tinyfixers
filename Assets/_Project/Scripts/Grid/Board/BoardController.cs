@@ -507,7 +507,21 @@ public class BoardController : MonoBehaviour
     //  Tile / Data Management
     // ═══════════════════════════════════════════════════════════════
 
-    public void EnqueuePatchbotDash(Vector2Int from, Vector2Int to) => _patchbotDashRequests.Add(new PatchbotDashRequest { from = from, to = to });
+    //public void EnqueuePatchbotDash(Vector2Int from, Vector2Int to) => _patchbotDashRequests.Add(new PatchbotDashRequest { from = from, to = to });
+    public void EnqueuePatchbotDash(Vector2Int from, Vector2Int to)
+    {
+        _patchbotDashRequests.Add(new PatchbotDashRequest
+        {
+            from = from,
+            to = to
+        });
+    }
+
+    public void EnqueuePatchbotDash(PatchbotDashRequest req)
+    {
+        _patchbotDashRequests.Add(req);
+    }
+
     public void ConsumePatchbotDashRequests(List<PatchbotDashRequest> outList) { outList.Clear(); outList.AddRange(_patchbotDashRequests); _patchbotDashRequests.Clear(); }
 
     public TopHudController TopHud { get { if (topHud == null) topHud = FindFirstObjectByType<TopHudController>(); return topHud; } }

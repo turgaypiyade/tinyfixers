@@ -16,15 +16,19 @@ public class PatchbotComboService
         return board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
     }
 
-    public void EnqueueDash(TileView fromTile, int targetX, int targetY)
+    public void EnqueueDash(TileView fromTile, int targetX, int targetY, System.Action onDashStart = null)
     {
         if (fromTile == null) return;
+
         board.EnqueuePatchbotDash(
-            new Vector2Int(fromTile.X, fromTile.Y),
-            new Vector2Int(targetX, targetY)
+            new BoardController.PatchbotDashRequest
+            {
+                from = new Vector2Int(fromTile.X, fromTile.Y),
+                to = new Vector2Int(targetX, targetY),
+                onStart = onDashStart
+            }
         );
     }
-
     /*public void ConsumeSwapSource(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile, System.Action<TileView> markAffectedCell)
     {
         if (patchBotTile == null || partnerTile == null) return;

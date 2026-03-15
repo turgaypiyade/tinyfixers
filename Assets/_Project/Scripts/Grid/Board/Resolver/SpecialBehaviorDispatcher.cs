@@ -346,8 +346,8 @@ public class SpecialBehaviorDispatcher
         var target = patchbotComboService.FindTarget(autoPatchBot, patchBotTile, null, systemOverrideTile);
         if (!target.hasCell) return;
 
-        const float sequentialActivationStep = 0.03f;
-        float dashDelay = (ctx.DeferOverrideImplantVisualRefresh ? 0.10f : 0f)
+        const float sequentialActivationStep = 0.01f;
+        float dashDelay = (ctx.DeferOverrideImplantVisualRefresh ? 0.01f : 0f)
             + Mathf.Max(0, activationIndex) * sequentialActivationStep;
 
         visualService.FireImmediateDash(
