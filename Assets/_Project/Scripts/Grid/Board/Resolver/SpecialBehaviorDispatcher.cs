@@ -300,6 +300,7 @@ public class SpecialBehaviorDispatcher
     {
         if (systemOverrideTile == null) return;
         TileType baseType = systemOverrideTile.GetOverrideBaseType(out var storedType) ? storedType : systemOverrideTile.GetTileType();
+        int activationIndex = 0;
 
         for (int x = 0; x < board.Width; x++)
             for (int y = 0; y < board.Height; y++)
@@ -312,11 +313,12 @@ public class SpecialBehaviorDispatcher
 
                 tile.SetSpecial(TileSpecial.PatchBot);
                 SpecialCellUtils.SyncAfterSpecialChange(board, tile);
-                AutoPatchBotTeleportHitAndVanish(ctx, tile, patchBotTile, systemOverrideTile);
+                AutoPatchBotTeleportHitAndVanish(ctx, tile, patchBotTile, systemOverrideTile, activationIndex);
+                activationIndex++;
             }
     }
 
-    private void AutoPatchBotTeleportHitAndVanish(ResolutionContext ctx, TileView autoPatchBot, TileView patchBotTile, TileView systemOverrideTile)
+    private void AutoPatchBotTeleportHitAndVanish(ResolutionContext ctx, TileView autoPatchBot, TileView patchBotTile, TileView systemOverrideTile, int activationIndex)
     {
         if (autoPatchBot == null) return;
         // Override fan-out deferred refresh aktif olsa bile,
@@ -329,7 +331,9 @@ public class SpecialBehaviorDispatcher
         var target = patchbotComboService.FindTarget(autoPatchBot, patchBotTile, null, systemOverrideTile);
         if (!target.hasCell) return;
 
-        float dashDelay = ctx.DeferOverrideImplantVisualRefresh ? 0.10f : 0f;
+        const float sequentialActivationStep = 0.03f;
+        float dashDelay = (ctx.DeferOverrideImplantVisualRefresh ? 0.10f : 0f)
+            + Mathf.Max(0, activationIndex) * sequentialActivationStep;
         visualService.FireImmediateDash(autoPatchBot.X, autoPatchBot.Y, target.x, target.y, dashDelay);
 
         var matchSetData = new HashSet<TileData>();
