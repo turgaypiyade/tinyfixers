@@ -299,13 +299,19 @@ public class SpecialBehaviorDispatcher
     private void TriggerSystemOverridePatchBotConversion(ResolutionContext ctx, TileView patchBotTile, TileView systemOverrideTile)
     {
         if (systemOverrideTile == null) return;
-        TileType baseType = systemOverrideTile.GetOverrideBaseType(out var storedType) ? storedType : systemOverrideTile.GetTileType();
+
+        TileType baseType = systemOverrideTile.GetOverrideBaseType(out var storedType)
+            ? storedType
+            : systemOverrideTile.GetTileType();
+
         int activationIndex = 0;
 
         for (int x = 0; x < board.Width; x++)
+        {
             for (int y = 0; y < board.Height; y++)
             {
                 if (board.Holes[x, y]) continue;
+
                 var tile = board.Tiles[x, y];
                 if (tile == null || tile == patchBotTile || tile == systemOverrideTile) continue;
                 if (!tile.GetTileType().Equals(baseType)) continue;
@@ -313,14 +319,24 @@ public class SpecialBehaviorDispatcher
 
                 tile.SetSpecial(TileSpecial.PatchBot);
                 SpecialCellUtils.SyncAfterSpecialChange(board, tile);
+
+                // Override+LineV benzeri his:
+                // PatchBot yerleşir, sonra kendi sırası geldiğinde ghost olarak çıkıp source cell'i boşaltır.
                 AutoPatchBotTeleportHitAndVanish(ctx, tile, patchBotTile, systemOverrideTile, activationIndex);
                 activationIndex++;
             }
+        }
     }
 
-    private void AutoPatchBotTeleportHitAndVanish(ResolutionContext ctx, TileView autoPatchBot, TileView patchBotTile, TileView systemOverrideTile, int activationIndex)
+    private void AutoPatchBotTeleportHitAndVanish(
+        ResolutionContext ctx,
+        TileView autoPatchBot,
+        TileView patchBotTile,
+        TileView systemOverrideTile,
+        int activationIndex)
     {
         if (autoPatchBot == null) return;
+
         // Override fan-out deferred refresh aktif olsa bile,
         // patchbot kaynak hücresinde görünür kalmamalı.
         SpecialVisualService.HideTileVisualForCombo(autoPatchBot);
@@ -330,6 +346,9 @@ public class SpecialBehaviorDispatcher
 
         var sourceCell = new Vector2Int(autoPatchBot.X, autoPatchBot.Y);
         var sourceType = autoPatchBot.GetTileType();
+
+        // Kritik davranış:
+        // Ghost hareket başlamadan source cell hemen boşalır.
         board.ClearCell(sourceCell.x, sourceCell.y);
         board.ClearCellVisualOnly(sourceCell, sourceType, autoPatchBot);
 
@@ -339,14 +358,23 @@ public class SpecialBehaviorDispatcher
         const float sequentialActivationStep = 0.03f;
         float dashDelay = (ctx.DeferOverrideImplantVisualRefresh ? 0.10f : 0f)
             + Mathf.Max(0, activationIndex) * sequentialActivationStep;
+
         visualService.FireImmediateDash(autoPatchBot.X, autoPatchBot.Y, target.x, target.y, dashDelay);
 
         var matchSetData = new HashSet<TileData>();
-        patchbotComboService.HitCellOnce(matchSetData, target.x, target.y, target.tile,
+        patchbotComboService.HitCellOnce(
+            matchSetData,
+            target.x,
+            target.y,
+            target.tile,
             (x, y) => SpecialCellUtils.MarkAffectedCell(ctx, x, y, board),
             (tile) => SpecialCellUtils.MarkAffectedCell(ctx, tile, board));
+
         foreach (var data in matchSetData)
-            if (board.Tiles[data.X, data.Y] != null) ctx.Affected.Add(board.Tiles[data.X, data.Y]);
+        {
+            if (board.Tiles[data.X, data.Y] != null)
+                ctx.Affected.Add(board.Tiles[data.X, data.Y]);
+        }
     }
 
     // ── Registry-based activation (Line, Pulse, etc.) ──

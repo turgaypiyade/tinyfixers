@@ -36,7 +36,6 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         if (origin.x >= 0 && origin.x < board.Width && origin.y >= 0 && origin.y < board.Height)
             originTile = board.Tiles[origin.x, origin.y];
 
-        // PatchBot dash tracking
         var patchbotService = (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0)
             ? new PatchbotComboService(board) : null;
         var launchedPatchBots = new List<(TileView tile, int targetX, int targetY)>();
@@ -57,10 +56,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 originTile: originTile,
                 visualTargets: new List<TileView> { target },
                 allowCondense: false,
-                onTargetBeamSpawned: _ =>
-                {
-                    beamReached = true;
-                });
+                onTargetBeamSpawned: _ => { beamReached = true; });
 
             float timeout =
                 Mathf.Max(duration, board.ApplySpecialChainTempo(0.08f)) +
@@ -73,7 +69,6 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 yield return null;
             }
 
-            // Beam hedefe vardığında data/view senkronunu zorla
             board.SyncTileData(target.X, target.Y);
             target.RefreshIcon();
 
@@ -150,7 +145,6 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             }
         }
 
-        // ── Deferred PatchBot dashes — beam loop'unda yerleştirildi, şimdi sırayla fırlat ──
         if (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0 && patchbotService != null)
         {
             float maxDashDur = 0f;
@@ -190,11 +184,9 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                     yield return new WaitForSeconds(0.003f);
             }
 
-            // En uzun dash'in bitmesini bekle
             if (maxDashDur > 0f)
                 yield return new WaitForSeconds(maxDashDur);
 
-            // Tüm hedefleri tek seferde temizle
             var allClearTiles = new HashSet<TileView>();
 
             foreach (var (tile, targetX, targetY) in launchedPatchBots)
@@ -211,7 +203,8 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                         allClearTiles.Add(targetTile);
                 }
 
-                allClearTiles.Add(tile);
+                // Burada artık source tile final clear set'ine eklenmiyor.
+                // allClearTiles.Add(tile);  <-- kaldırıldı
             }
 
             if (allClearTiles.Count > 0)
@@ -241,7 +234,6 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         if (originTile != null)
             SpecialVisualService.HideTileVisualForCombo(originTile);
     }
-
     private void PlayPulseCoreExplosionVfx(TileView tile)
     {
         if (tile == null)
