@@ -328,6 +328,11 @@ public class SpecialBehaviorDispatcher
         ctx.Affected.Add(autoPatchBot);
         SpecialCellUtils.MarkAffectedCell(ctx, autoPatchBot, board);
 
+        var sourceCell = new Vector2Int(autoPatchBot.X, autoPatchBot.Y);
+        var sourceType = autoPatchBot.GetTileType();
+        board.ClearCell(sourceCell.x, sourceCell.y);
+        board.ClearCellVisualOnly(sourceCell, sourceType, autoPatchBot);
+
         var target = patchbotComboService.FindTarget(autoPatchBot, patchBotTile, null, systemOverrideTile);
         if (!target.hasCell) return;
 
