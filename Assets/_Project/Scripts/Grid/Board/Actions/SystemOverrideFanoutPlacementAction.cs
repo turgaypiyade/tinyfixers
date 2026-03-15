@@ -9,19 +9,22 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
     private readonly List<Vector2Int> targets;
     private readonly bool doSelectionPulse;
     private readonly List<Vector2Int> deferredPulseExplosionCells;
+    private readonly List<Vector2Int> deferredPatchBotCells;
 
     public SystemOverrideFanoutPlacementAction(
         BoardController board,
         Vector2Int origin,
         List<Vector2Int> targets,
         bool doPulse,
-        List<Vector2Int> deferredPulseExplosionCells = null)
+        List<Vector2Int> deferredPulseExplosionCells = null,
+        List<Vector2Int> deferredPatchBotCells = null)
     {
         this.board = board;
         this.origin = origin;
         this.targets = targets;
         this.doSelectionPulse = doPulse;
         this.deferredPulseExplosionCells = deferredPulseExplosionCells ?? new List<Vector2Int>();
+        this.deferredPatchBotCells = deferredPatchBotCells ?? new List<Vector2Int>();
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
@@ -32,6 +35,11 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         TileView originTile = null;
         if (origin.x >= 0 && origin.x < board.Width && origin.y >= 0 && origin.y < board.Height)
             originTile = board.Tiles[origin.x, origin.y];
+
+        // PatchBot dash tracking
+        var patchbotService = (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0)
+            ? new PatchbotComboService(board) : null;
+        var launchedPatchBots = new List<(TileView tile, int targetX, int targetY)>();
 
         foreach (var pos in targets)
         {
@@ -139,6 +147,94 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
                 yield return pulseClear.ExecuteVisuals(sequencer);
                 yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.03f));
+            }
+        }
+
+        // ── Deferred PatchBot dashes — beam loop'unda yerleştirildi, şimdi sırayla fırlat ──
+        if (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0 && patchbotService != null)
+        {
+            float maxDashDur = 0f;
+
+            for (int i = 0; i < deferredPatchBotCells.Count; i++)
+            {
+                var cell = deferredPatchBotCells[i];
+
+                if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                    continue;
+
+                var tile = board.Tiles[cell.x, cell.y];
+                if (tile == null)
+                    continue;
+
+                if (tile.GetSpecial() != TileSpecial.PatchBot)
+                    continue;
+
+                var pbTarget = patchbotService.FindTarget(tile, null, null);
+                if (!pbTarget.hasCell)
+                    continue;
+
+                var fromCell = new Vector2Int(tile.X, tile.Y);
+                var toCell = new Vector2Int(pbTarget.x, pbTarget.y);
+
+                patchbotService.EnqueueDash(tile, pbTarget.x, pbTarget.y);
+                SpecialVisualService.HideTileVisualForCombo(tile);
+
+                float dd = board.PatchbotDashUI != null
+                    ? board.PatchbotDashUI.EstimateDashDuration(board, fromCell, toCell)
+                    : 0.22f;
+                if (dd > maxDashDur) maxDashDur = dd;
+
+                launchedPatchBots.Add((tile, pbTarget.x, pbTarget.y));
+
+                if (i < deferredPatchBotCells.Count - 1)
+                    yield return new WaitForSeconds(0.003f);
+            }
+
+            // En uzun dash'in bitmesini bekle
+            if (maxDashDur > 0f)
+                yield return new WaitForSeconds(maxDashDur);
+
+            // Tüm hedefleri tek seferde temizle
+            var allClearTiles = new HashSet<TileView>();
+
+            foreach (var (tile, targetX, targetY) in launchedPatchBots)
+            {
+                bool hasObstacle = patchbotService.HasObstacleAt(targetX, targetY);
+                if (hasObstacle)
+                {
+                    board.MarkPatchBotForcedObstacleHit(targetX, targetY);
+                }
+                else
+                {
+                    var targetTile = board.Tiles[targetX, targetY];
+                    if (targetTile != null)
+                        allClearTiles.Add(targetTile);
+                }
+
+                allClearTiles.Add(tile);
+            }
+
+            if (allClearTiles.Count > 0)
+            {
+                var patchClear = new MatchClearAction(
+                    allClearTiles,
+                    doShake: true,
+                    animationMode: ClearAnimationMode.Default,
+                    affectedCells: null,
+                    obstacleHitContext: null,
+                    includeAdjacentOverTileBlockerDamage: true,
+                    lightningOriginTile: null,
+                    lightningOriginCell: null,
+                    lightningVisualTargets: null,
+                    lightningLineStrikes: null,
+                    suppressPerTileClearVfx: false,
+                    perTileClearDelays: null,
+                    staggerDelays: null,
+                    staggerAnimTime: 0.16f,
+                    isSpecialPhase: true
+                );
+
+                yield return patchClear.ExecuteVisuals(sequencer);
             }
         }
 

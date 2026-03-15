@@ -34,6 +34,7 @@ public class ResolutionContext
     public float OverrideVfxDuration;
     public readonly HashSet<TileView> OverrideImplantedTiles = new();
     public readonly List<Vector2Int> OverrideDeferredPulseExplosions = new();
+    public readonly List<Vector2Int> OverrideDeferredPatchBotDashes = new();
     public bool DeferOverrideImplantVisualRefresh;
 
     public const float OverrideRadialClearDuration = 0.45f;
@@ -101,6 +102,7 @@ public class ResolutionContext
         OverrideImplantedTiles.Clear();
         DeferOverrideImplantVisualRefresh = false;
         OverrideDeferredPulseExplosions.Clear();
+        OverrideDeferredPatchBotDashes.Clear();
         OverrideDeferredPulseActivations.Clear();
     }
 }

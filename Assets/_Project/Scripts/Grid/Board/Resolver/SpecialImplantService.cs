@@ -65,6 +65,12 @@ public class SpecialImplantService
             return;
         }
 
+      /*  if (pending.special == TileSpecial.PatchBot)
+        {
+            ctx.OverrideDeferredPatchBotDashes.Add(new Vector2Int(pendingTarget.X, pendingTarget.Y));
+            return;
+        }*/
+
         ctx.Affected.Add(pendingTarget);
         SpecialCellUtils.MarkAffectedCell(ctx, pendingTarget, board);
 
