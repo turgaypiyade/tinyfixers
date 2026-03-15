@@ -492,12 +492,11 @@ public class SpecialVisualService
             if (delay > 0f)
                 yield return new WaitForSeconds(delay);
 
-            onDashStart?.Invoke();
-
             var req = new BoardController.PatchbotDashRequest
             {
                 from = new Vector2Int(fromX, fromY),
-                to = new Vector2Int(targetX, targetY)
+                to = new Vector2Int(targetX, targetY),
+                onStart = onDashStart
             };
 
             var singleDash = new List<BoardController.PatchbotDashRequest>(1) { req };

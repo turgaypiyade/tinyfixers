@@ -94,6 +94,8 @@ public class PatchbotDashUI : MonoBehaviour
         float syncDuration,
         System.Action onComplete)
     {
+        req.onStart?.Invoke();
+        
         // Per-patchbot instance
         var go = new GameObject("PatchbotRunnerInstance", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(vfxRoot, false);
