@@ -337,20 +337,11 @@ public class SpecialBehaviorDispatcher
     {
         if (autoPatchBot == null) return;
 
-        // Override fan-out deferred refresh aktif olsa bile,
-        // patchbot kaynak hücresinde görünür kalmamalı.
-        SpecialVisualService.HideTileVisualForCombo(autoPatchBot);
-
         ctx.Affected.Add(autoPatchBot);
         SpecialCellUtils.MarkAffectedCell(ctx, autoPatchBot, board);
 
         var sourceCell = new Vector2Int(autoPatchBot.X, autoPatchBot.Y);
         var sourceType = autoPatchBot.GetTileType();
-
-        // Kritik davranış:
-        // Ghost hareket başlamadan source cell hemen boşalır.
-        board.ClearCell(sourceCell.x, sourceCell.y);
-        board.ClearCellVisualOnly(sourceCell, sourceType, autoPatchBot);
 
         var target = patchbotComboService.FindTarget(autoPatchBot, patchBotTile, null, systemOverrideTile);
         if (!target.hasCell) return;
@@ -359,7 +350,27 @@ public class SpecialBehaviorDispatcher
         float dashDelay = (ctx.DeferOverrideImplantVisualRefresh ? 0.10f : 0f)
             + Mathf.Max(0, activationIndex) * sequentialActivationStep;
 
-        visualService.FireImmediateDash(autoPatchBot.X, autoPatchBot.Y, target.x, target.y, dashDelay);
+        visualService.FireImmediateDash(
+            autoPatchBot.X,
+            autoPatchBot.Y,
+            target.x,
+            target.y,
+            dashDelay,
+            onDashStart: () =>
+            {
+                if (autoPatchBot == null) return;
+
+                SpecialVisualService.HideTileVisualForCombo(autoPatchBot);
+
+                if (sourceCell.x < 0 || sourceCell.x >= board.Width || sourceCell.y < 0 || sourceCell.y >= board.Height)
+                    return;
+
+                if (board.Tiles[sourceCell.x, sourceCell.y] == autoPatchBot)
+                {
+                    board.ClearCell(sourceCell.x, sourceCell.y);
+                    board.ClearCellVisualOnly(sourceCell, sourceType, autoPatchBot);
+                }
+            });
 
         var matchSetData = new HashSet<TileData>();
         patchbotComboService.HitCellOnce(

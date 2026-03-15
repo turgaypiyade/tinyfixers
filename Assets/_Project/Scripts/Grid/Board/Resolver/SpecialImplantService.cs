@@ -65,20 +65,22 @@ public class SpecialImplantService
             return;
         }
 
-      /*  if (pending.special == TileSpecial.PatchBot)
+        // KRİTİK:
+        // Override + PatchBot'ta patchbot'u hemen queue'ya sokmuyoruz.
+        // Önce fanout placement aksiyonunda görünür olarak yerleşsin,
+        // sonra o aksiyon içindeki deferred patchbot phase'de sırayla dash atsın.
+        if (pending.special == TileSpecial.PatchBot)
         {
             ctx.OverrideDeferredPatchBotDashes.Add(new Vector2Int(pendingTarget.X, pendingTarget.Y));
             return;
-        }*/
+        }
 
         ctx.Affected.Add(pendingTarget);
         SpecialCellUtils.MarkAffectedCell(ctx, pendingTarget, board);
 
-        TileView activePartner = pending.special == TileSpecial.PatchBot
-            ? null
-            : (pending.partnerCell.HasValue
-                ? board.Tiles[pending.partnerCell.Value.x, pending.partnerCell.Value.y]
-                : null);
+        TileView activePartner = pending.partnerCell.HasValue
+            ? board.Tiles[pending.partnerCell.Value.x, pending.partnerCell.Value.y]
+            : null;
 
         queueProcessor.EnqueueActivation(ctx, pendingTarget, activePartner);
     }

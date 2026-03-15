@@ -56,7 +56,10 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 originTile: originTile,
                 visualTargets: new List<TileView> { target },
                 allowCondense: false,
-                onTargetBeamSpawned: _ => { beamReached = true; });
+                onTargetBeamSpawned: _ =>
+                {
+                    beamReached = true;
+                });
 
             float timeout =
                 Mathf.Max(duration, board.ApplySpecialChainTempo(0.08f)) +
@@ -145,6 +148,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             }
         }
 
+        // Deferred PatchBot dashes
         if (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0 && patchbotService != null)
         {
             float maxDashDur = 0f;
@@ -172,6 +176,12 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
                 patchbotService.EnqueueDash(tile, pbTarget.x, pbTarget.y);
                 SpecialVisualService.HideTileVisualForCombo(tile);
+
+                // KRİTİK:
+                // Ghost hareket başlarken source cell hemen boşalsın.
+                var sourceType = tile.GetTileType();
+                board.ClearCell(fromCell.x, fromCell.y);
+                board.ClearCellVisualOnly(fromCell, sourceType, tile);
 
                 float dd = board.PatchbotDashUI != null
                     ? board.PatchbotDashUI.EstimateDashDuration(board, fromCell, toCell)
@@ -203,7 +213,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                         allClearTiles.Add(targetTile);
                 }
 
-                // Burada artık source tile final clear set'ine eklenmiyor.
+                // source tile artık burada eklenmiyor
                 // allClearTiles.Add(tile);  <-- kaldırıldı
             }
 

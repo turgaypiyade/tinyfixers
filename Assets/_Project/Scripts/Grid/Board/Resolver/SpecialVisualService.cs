@@ -477,22 +477,29 @@ public class SpecialVisualService
     //  PatchBot Immediate Dash VFX
     // ─────────────────────────────────────────────
 
-    public void FireImmediateDash(int fromX, int fromY, int targetX, int targetY, float delay = 0f)
+    public void FireImmediateDash(
+        int fromX,
+        int fromY,
+        int targetX,
+        int targetY,
+        float delay = 0f,
+        System.Action onDashStart = null)
     {
         if (board.PatchbotDashUI == null) return;
-
 
         IEnumerator CoPlayDash()
         {
             if (delay > 0f)
                 yield return new WaitForSeconds(delay);
 
+            onDashStart?.Invoke();
 
             var req = new BoardController.PatchbotDashRequest
             {
                 from = new Vector2Int(fromX, fromY),
                 to = new Vector2Int(targetX, targetY)
             };
+
             var singleDash = new List<BoardController.PatchbotDashRequest>(1) { req };
             board.PatchbotDashUI.PlayDashParallel(singleDash, board);
         }
