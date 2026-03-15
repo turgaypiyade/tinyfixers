@@ -62,7 +62,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 });
 
             float timeout =
-                Mathf.Max(duration, board.ApplySpecialChainTempo(0.08f)) +
+                Mathf.Max(duration, board.ApplySpecialChainTempo(0.03f)) +
                 board.ApplySpecialChainTempo(0.02f);
 
             float elapsed = 0f;
@@ -92,14 +92,14 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                     downTime: 0.10f);
             }
 
-            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.04f));
+            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.03f));
         }
 
-        yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.04f));
+        yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.03f));
 
         if (deferredPulseExplosionCells != null && deferredPulseExplosionCells.Count > 0)
         {
-            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.05f));
+            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.02f));
 
             for (int i = 0; i < deferredPulseExplosionCells.Count; i++)
             {

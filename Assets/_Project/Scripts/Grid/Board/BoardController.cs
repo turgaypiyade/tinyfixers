@@ -51,7 +51,7 @@ public class BoardController : MonoBehaviour
     [SerializeField] private PatchBotPairGhostTuning patchBotPairGhostTuning = PatchBotPairGhostTuning.Default;
 
     [Header("Special Chain Tempo")]
-    [SerializeField, Range(0.2f, 1.5f)] private float specialChainDurationMultiplier = 0.75f;
+    [SerializeField, Range(0.2f, 1.5f)] private float specialChainDurationMultiplier = 0.55f;
 
     [Header("PulseCore Impact (premium stagger)")]
     [SerializeField] private float pulseImpactDelayStep = 0.02f;
