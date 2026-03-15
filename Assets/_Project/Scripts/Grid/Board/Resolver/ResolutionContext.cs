@@ -37,7 +37,7 @@ public class ResolutionContext
     public readonly List<Vector2Int> OverrideDeferredPatchBotDashes = new();
     public bool DeferOverrideImplantVisualRefresh;
 
-    public const float OverrideRadialClearDuration = 0.45f;
+    public const float OverrideRadialClearDuration = 0.20f;
     public readonly List<Vector2Int> OverrideDeferredPulseActivations = new();
     /// <summary>
     /// DTO for decoupling logic from visuals — pending override implant data.

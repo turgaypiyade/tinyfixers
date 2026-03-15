@@ -61,9 +61,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                     beamReached = true;
                 });
 
-            float timeout =
-                Mathf.Max(duration, board.ApplySpecialChainTempo(0.03f)) +
-                board.ApplySpecialChainTempo(0.02f);
+            float timeout =   Mathf.Max(duration, board.ApplySpecialChainTempo(0.03f)) +board.ApplySpecialChainTempo(0.02f);
 
             float elapsed = 0f;
             while (!beamReached && elapsed < timeout)
@@ -95,7 +93,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.03f));
         }
 
-        yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.03f));
+        yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.002f));
 
         if (deferredPulseExplosionCells != null && deferredPulseExplosionCells.Count > 0)
         {
@@ -202,13 +200,14 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 if (dd > maxDashDur) maxDashDur = dd;
 
                 launchedPatchBots.Add((tile, pbTarget.x, pbTarget.y));
-
+                Debug.Log("MaxDashdur"+maxDashDur);
                 if (i < deferredPatchBotCells.Count - 1)
                     yield return new WaitForSeconds(0.002f);
             }
 
             if (maxDashDur > 0f)
-                yield return new WaitForSeconds(maxDashDur);
+                yield return new WaitForSeconds(0.03f);
+            //yield return new WaitForSeconds(maxDashDur);
 
             var allClearTiles = new HashSet<TileView>();
 
