@@ -22,6 +22,7 @@ public class SpecialResolver
     private readonly ActivationQueueProcessor queueProcessor;
     private readonly SpecialImplantService implantService;
     private readonly SpecialFanoutService fanoutService;
+    private readonly SpecialEffectOrchestrator effectOrchestrator;
 
     // Reusable context — reset at the start of each resolution pass
     private readonly ResolutionContext ctx = new();
@@ -34,7 +35,8 @@ public class SpecialResolver
         var patchbotComboService = new PatchbotComboService(board);
 
         visualService = new SpecialVisualService(board, boardAnimator, patchbotComboService);
-        dispatcher = new SpecialBehaviorDispatcher(board, patchbotComboService, visualService);
+        effectOrchestrator = new SpecialEffectOrchestrator(board);
+        dispatcher = new SpecialBehaviorDispatcher(board, patchbotComboService, visualService, effectOrchestrator);
         queueProcessor = new ActivationQueueProcessor(board, dispatcher);
         implantService = new SpecialImplantService(board, patchbotComboService, visualService, queueProcessor);
         fanoutService = new SpecialFanoutService(board, implantService, queueProcessor, visualService);
@@ -342,9 +344,10 @@ public class SpecialResolver
         var center = saIsPulse ? a : b;
         int cx = center.X;
         int cy = center.Y;
-        ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(cx, cy));
+        effectOrchestrator.EmitComboTriggered(sa, sb, new Vector2Int(cx, cy));
+        effectOrchestrator.EmitPulseEmitterComboTriggered(new Vector2Int(cx, cy));
 
-        var pulseAction = board.CreatePulseEmitterComboAction(cx, cy);
+        var pulseAction = PulseLineCombo.CreatePulseEmitterComboAction(board, cx, cy);
         actions.Add(pulseAction);
 
         // Chain: combo alanındaki special taşları tetikle
