@@ -76,16 +76,8 @@ public sealed class PulseCorePatchBotCombo
             true);
 
         // Dash geçişinden sonra Pulse patlamasını hedef hücrede oynat.
-        // Öncelik: PulseCoreVfxPlayer (PulseCoreImpactService) üzerinden patlat.
-        // Hücre koordinatından patlat ki hedef tile temizlenmiş olsa da efekt kaçmasın.
-        if (rt.Board.PulseCoreImpactService != null)
-        {
-            rt.Board.StartCoroutine(CoPlayPulseCoreExplosionDelayed(rt.Board, tx, ty, travelDuration));
-        }
-        else
-        {
-            rt.Effects?.PlayPulseExplosionDelayed(tx, ty, travelDuration);
-        }
+        // Refactor sırasında sadece event emit kalmıştı; gerçek VFX/SFX bu çağrıyla tetiklenir.
+        rt.Effects?.PlayPulseExplosionDelayed(tx, ty, travelDuration);
 
         CollectAreaAtTarget(rt, tx, ty);
         ExecuteChain(rt, pulseTile, tx, ty);
@@ -304,15 +296,15 @@ public sealed class PulseCorePatchBotCombo
     }
 
 
-    private System.Collections.IEnumerator CoPlayPulseCoreExplosionDelayed(BoardController board, int x, int y, float delay)
+    private System.Collections.IEnumerator CoPlayPulseCoreExplosionDelayed(BoardController board, TileView tile, float delay)
     {
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
 
-        if (board == null)
+        if (board == null || tile == null || !tile)
             yield break;
 
-        board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtCell(x, y, radiusCells: 2);
+        board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtTile(tile, radiusCells: 2);
     }
 
     private MatchClearAction BuildClearAction(PulseCorePatchBotComboExecutionRuntime rt)
