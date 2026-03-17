@@ -318,6 +318,14 @@ public sealed class PulseCorePatchBotCombo
         board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtTile(tile, radiusCells: 2);
     }
 
+    private System.Collections.IEnumerator CoPlayPulseCoreExplosionDelayed(BoardController board, int x, int y, float delay)
+    {
+        if (board == null || x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            yield break;
+
+        yield return CoPlayPulseCoreExplosionDelayed(board, board.Tiles[x, y], delay);
+    }
+
     private MatchClearAction BuildClearAction(PulseCorePatchBotComboExecutionRuntime rt)
     {
         var ctx = rt.Context;
