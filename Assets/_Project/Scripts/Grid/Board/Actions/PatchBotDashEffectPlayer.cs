@@ -18,6 +18,8 @@ public sealed class PatchBotDashEffectPlayer : IClearEffectPlayer
         if (!dash.OriginCell.HasValue || !dash.TargetCell.HasValue)
             yield break;
 
+        FlushLegacyDashQueue(board);
+
         if (board.PatchbotDashUI != null)
         {
             var requests = new List<BoardController.PatchbotDashRequest>(1);
@@ -33,6 +35,18 @@ public sealed class PatchBotDashEffectPlayer : IClearEffectPlayer
         if (context != null && context.NotifyCellImpactNow != null)
             context.NotifyCellImpactNow(dash.TargetCell.Value);
 
+        FlushLegacyDashQueue(board);
+
         yield return new WaitForSeconds(dash.Timing.TailHoldSeconds);
+    }
+
+    private void FlushLegacyDashQueue(BoardController board)
+    {
+        if (board == null || board.TempPatchbotDashRequests == null)
+            return;
+
+        board.TempPatchbotDashRequests.Clear();
+        board.ConsumePatchbotDashRequests(board.TempPatchbotDashRequests);
+        board.TempPatchbotDashRequests.Clear();
     }
 }
