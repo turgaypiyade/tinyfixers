@@ -75,7 +75,21 @@ public sealed class PulseCorePatchBotCombo
             travelDuration,
             true);
 
-        PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(tx, ty));
+        // Dash geçişinden sonra Pulse patlamasını hedef hücrede oynat.
+        // Öncelik: PulseCoreVfxPlayer (PulseCoreImpactService) üzerinden patlat.
+        // Hücrede tile yoksa fallback olarak legacy cell explosion VFX'i kullan.
+        var targetTile = (tx >= 0 && tx < rt.Board.Width && ty >= 0 && ty < rt.Board.Height)
+            ? rt.Board.Tiles[tx, ty]
+            : null;
+
+        if (targetTile != null && rt.Board.PulseCoreImpactService != null)
+        {
+            rt.Board.StartCoroutine(CoPlayPulseCoreExplosionDelayed(rt.Board, targetTile, travelDuration));
+        }
+        else
+        {
+            rt.Effects?.PlayPulseExplosionDelayed(tx, ty, travelDuration);
+        }
 
         CollectAreaAtTarget(rt, tx, ty);
         ExecuteChain(rt, pulseTile, tx, ty);
@@ -291,6 +305,18 @@ public sealed class PulseCorePatchBotCombo
 
         rt.Context.Queued.Add(pos);
         pending.Enqueue(tile);
+    }
+
+
+    private System.Collections.IEnumerator CoPlayPulseCoreExplosionDelayed(BoardController board, TileView tile, float delay)
+    {
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        if (board == null || tile == null || !tile)
+            yield break;
+
+        board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtTile(tile, radiusCells: 2);
     }
 
     private MatchClearAction BuildClearAction(PulseCorePatchBotComboExecutionRuntime rt)
