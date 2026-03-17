@@ -8,9 +8,7 @@ public class SpecialBehaviorRegistry
 
     public SpecialBehaviorRegistry()
     {
-        Register(new PulseCoreBehavior());
         Register(new SystemOverrideBehavior());
-        Register(new PatchBotBehavior());
 
         RegisterCombo(new OverrideOverrideCombo());
         RegisterCombo(new OverrideSpecialCombo());
@@ -60,8 +58,12 @@ public class SpecialBehaviorRegistry
         return best;
     }
 
-    public HashSet<Vector2Int> CalculateComboEffect(TileSpecial a, TileSpecial b,
-                                                     BoardController board, int originX, int originY)
+    public HashSet<Vector2Int> CalculateComboEffect(
+        TileSpecial a,
+        TileSpecial b,
+        BoardController board,
+        int originX,
+        int originY)
     {
         var combo = FindCombo(a, b);
         if (combo == null) return null;
