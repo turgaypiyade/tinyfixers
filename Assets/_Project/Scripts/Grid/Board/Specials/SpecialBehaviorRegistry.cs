@@ -1,10 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Registry that maps TileSpecial → ISpecialBehavior and combo pairs → IComboBehavior.
-/// Provides lookup and batch effect calculation for special activation and combos.
-/// </summary>
 public class SpecialBehaviorRegistry
 {
     private readonly Dictionary<TileSpecial, ISpecialBehavior> behaviors = new();
@@ -12,13 +8,10 @@ public class SpecialBehaviorRegistry
 
     public SpecialBehaviorRegistry()
     {
-        // ── Solo behaviors ──
-        Register(new LineHorizontalBehavior());
         Register(new PulseCoreBehavior());
         Register(new SystemOverrideBehavior());
         Register(new PatchBotBehavior());
 
-        // ── Combo behaviors (priority determines precedence; highest wins) ──
         RegisterCombo(new OverrideOverrideCombo());
         RegisterCombo(new OverrideSpecialCombo());
 

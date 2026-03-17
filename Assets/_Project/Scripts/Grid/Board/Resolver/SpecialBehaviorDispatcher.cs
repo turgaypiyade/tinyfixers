@@ -1,24 +1,17 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Dispatches special activations and combo effects.
-///
-/// Combo logic is fully delegated to registry-based IComboBehavior/IComboExecutor classes.
-/// Solo activation for Line/Pulse goes through ISpecialBehavior registry.
-/// SystemOverride and PatchBot solo activations remain here (they need ResolutionContext side-effects).
-/// </summary>
 public class SpecialBehaviorDispatcher
 {
     private readonly BoardController board;
     private readonly PatchbotComboService patchbotComboService;
     private readonly SpecialVisualService visualService;
     private readonly SpecialEffectOrchestrator effectOrchestrator;
+    private readonly LineVSpecial lineVSpecial = new();
+    private readonly LineHSpecial lineHSpecial = new();
 
-    // Set after construction (circular dep)
     internal ActivationQueueProcessor QueueProcessor;
 
-    // Reusable execution context — populated per-combo
     private readonly ComboExecutionContext execCtx = new();
 
     public SpecialBehaviorDispatcher(
@@ -33,14 +26,6 @@ public class SpecialBehaviorDispatcher
         this.effectOrchestrator = effectOrchestrator;
     }
 
-    // ═══════════════════════════════════════════════
-    //  Combo Dispatch — fully registry-based
-    // ═══════════════════════════════════════════════
-
-    /// <summary>
-    /// Finds and executes the combo for two specials. All combo logic lives
-    /// in IComboBehavior/IComboExecutor classes registered in SpecialBehaviorRegistry.
-    /// </summary>
     public void ApplyComboEffect(ResolutionContext ctx, TileView a, TileView b, TileSpecial sa, TileSpecial sb)
     {
         var combo = board.SpecialBehaviors.FindCombo(sa, sb);
@@ -97,15 +82,6 @@ public class SpecialBehaviorDispatcher
         execCtx.Effects = effectOrchestrator;
     }
 
-    // ═══════════════════════════════════════════════
-    //  Solo Activation Dispatch
-    // ═══════════════════════════════════════════════
-
-    /// <summary>
-    /// Dispatches a single special activation.
-    /// Line/Pulse → registry ISpecialBehavior.
-    /// SystemOverride/PatchBot → inline (need ResolutionContext side-effects).
-    /// </summary>
     public void ApplySpecialActivation(ResolutionContext ctx, TileView specialTile, TileView partnerTile)
     {
         if (specialTile == null) return;
@@ -116,6 +92,30 @@ public class SpecialBehaviorDispatcher
 
         switch (special)
         {
+            case TileSpecial.LineV:
+                lineVSpecial.Execute(new LineVExecutionRuntime
+                {
+                    Board = board,
+                    Context = ctx,
+                    Origin = specialTile,
+                    Partner = partnerTile,
+                    FinalizeAtEnd = false,
+                    ActivateSpecial = ApplySpecialActivation
+                });
+                break;
+
+            case TileSpecial.LineH:
+                lineHSpecial.Execute(new LineHExecutionRuntime
+                {
+                    Board = board,
+                    Context = ctx,
+                    Origin = specialTile,
+                    Partner = partnerTile,
+                    FinalizeAtEnd = false,
+                    ActivateSpecial = ApplySpecialActivation
+                });
+                break;
+
             case TileSpecial.SystemOverride:
                 ActivateSystemOverride(ctx, specialTile, partnerTile, ox, oy);
                 break;
@@ -129,8 +129,6 @@ public class SpecialBehaviorDispatcher
                 break;
         }
     }
-
-    // ── SystemOverride solo activation ──
 
     private void ActivateSystemOverride(ResolutionContext ctx, TileView specialTile, TileView partnerTile, int ox, int oy)
     {
@@ -154,8 +152,6 @@ public class SpecialBehaviorDispatcher
         ctx.OverrideSuppressPerTileClearVfx = false;
         SpecialCellUtils.AddAllOfType(ctx.Affected, ctx, board, type, excludeSpecials: true);
     }
-
-    // ── PatchBot solo / teleport activation ──
 
     private void ActivatePatchBot(ResolutionContext ctx, TileView specialTile, TileView partnerTile)
     {
@@ -211,23 +207,6 @@ public class SpecialBehaviorDispatcher
         return false;
     }
 
-  /*  private void ApplyPatchBotTeleportToCell(ResolutionContext ctx, TileView patchBotTile, TileView partnerTile,
-        int targetX, int targetY)
-    {
-        if (targetX < 0 || targetX >= board.Width || targetY < 0 || targetY >= board.Height) return;
-        bool hasObstacleAtTarget = patchbotComboService.HasObstacleAt(targetX, targetY);
-        if (board.Holes[targetX, targetY] && !hasObstacleAtTarget) return;
-
-        patchbotComboService.ConsumeSwapSource(ctx.Affected, patchBotTile, partnerTile,
-            (tile) => SpecialCellUtils.MarkAffectedCell(ctx, tile, board));
-        var matchDatas = new HashSet<TileData>();
-        patchbotComboService.ResolveTargetImpact(matchDatas, targetX, targetY, hasObstacleAtTarget,
-            (x, y) => SpecialCellUtils.MarkAffectedCell(ctx, x, y, board),
-            (tile) => SpecialCellUtils.MarkAffectedCell(ctx, tile, board));
-        foreach (var data in matchDatas)
-            if (board.Tiles[data.X, data.Y] != null) ctx.Affected.Add(board.Tiles[data.X, data.Y]);
-    }*/
-
     private void ApplyPatchBotTeleportToCell(ResolutionContext ctx, TileView patchBotTile, TileView partnerTile,
         int targetX, int targetY)
     {
@@ -236,8 +215,6 @@ public class SpecialBehaviorDispatcher
         bool hasObstacleAtTarget = patchbotComboService.HasObstacleAt(targetX, targetY);
         if (board.Holes[targetX, targetY] && !hasObstacleAtTarget) return;
 
-        // Yeni kural:
-        // PatchBot + normal swap'ta normal partner otomatik tüketilmez.
         patchbotComboService.ConsumePatchBotOnly(
             ctx.Affected,
             patchBotTile,
@@ -257,10 +234,6 @@ public class SpecialBehaviorDispatcher
                 ctx.Affected.Add(board.Tiles[data.X, data.Y]);
     }
 
-    /// <summary>
-    /// PatchBot partner is a special tile → fire that special's effect at teleport target.
-    /// Handles Line partner (lightning), Pulse partner (3×3), SystemOverride partner (conversion).
-    /// </summary>
     private bool TriggerPartnerEffectAt(ResolutionContext ctx, TileView patchBotTile, TileView partnerTile,
         int originX, int originY)
     {
@@ -272,14 +245,31 @@ public class SpecialBehaviorDispatcher
             visualService.PlayTeleportMarkers(partnerTile, originX, originY);
             visualService.PlayTransientSpecialVisualAt(partnerTile, originX, originY);
 
-            var cells = board.SpecialBehaviors.CalculateEffect(special, board, originX, originY);
-            foreach (var c in cells)
+            if (special == TileSpecial.LineH)
             {
-                SpecialCellUtils.MarkAffectedCell(ctx, c.x, c.y, board);
-                if (board.Tiles[c.x, c.y] != null) ctx.Affected.Add(board.Tiles[c.x, c.y]);
-                if (board.Tiles[c.x, c.y] != null) ctx.LightningVisualTargets.Add(board.Tiles[c.x, c.y]);
+                lineHSpecial.Execute(new LineHExecutionRuntime
+                {
+                    Board = board,
+                    Context = ctx,
+                    Origin = partnerTile,
+                    Partner = null,
+                    FinalizeAtEnd = false,
+                    ActivateSpecial = ApplySpecialActivation
+                });
             }
-            ctx.LightningLineStrikes.Add(new LightningLineStrike(new Vector2Int(originX, originY), special == TileSpecial.LineH));
+            else
+            {
+                lineVSpecial.Execute(new LineVExecutionRuntime
+                {
+                    Board = board,
+                    Context = ctx,
+                    Origin = partnerTile,
+                    Partner = null,
+                    FinalizeAtEnd = false,
+                    ActivateSpecial = ApplySpecialActivation
+                });
+            }
+
             return true;
         }
 
@@ -324,8 +314,6 @@ public class SpecialBehaviorDispatcher
                 tile.SetSpecial(TileSpecial.PatchBot);
                 SpecialCellUtils.SyncAfterSpecialChange(board, tile);
 
-                // Override+LineV benzeri his:
-                // PatchBot yerleşir, sonra kendi sırası geldiğinde ghost olarak çıkıp source cell'i boşaltır.
                 AutoPatchBotTeleportHitAndVanish(ctx, tile, patchBotTile, systemOverrideTile, activationIndex);
                 activationIndex++;
             }
@@ -391,8 +379,6 @@ public class SpecialBehaviorDispatcher
                 ctx.Affected.Add(board.Tiles[data.X, data.Y]);
         }
     }
-
-    // ── Registry-based activation (Line, Pulse, etc.) ──
 
     private void ActivateViaRegistry(ResolutionContext ctx, TileSpecial special, int ox, int oy)
     {

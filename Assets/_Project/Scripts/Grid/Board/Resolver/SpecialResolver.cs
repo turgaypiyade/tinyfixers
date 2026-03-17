@@ -1,11 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Orchestrates special tile resolution: swap combos, solo activations, chain expansions.
-///
-/// LineV top-level activation artık doğrudan LineVSpecial içine route edilir.
-/// </summary>
 public class SpecialResolver
 {
     private readonly BoardController board;
@@ -18,6 +13,7 @@ public class SpecialResolver
     private readonly SpecialEffectOrchestrator effectOrchestrator;
     private readonly PatchbotComboService patchbotComboService;
     private readonly LineVSpecial lineVSpecial = new();
+    private readonly LineHSpecial lineHSpecial = new();
 
     private readonly ResolutionContext ctx = new();
 
@@ -64,6 +60,7 @@ public class SpecialResolver
         bool originalSbIsPulse = originalSb == TileSpecial.PulseCore;
 
         bool consumeNormalPartner = bothOriginallySpecial;
+
         visualService.HideSwapSourceVisuals(a, b, originalSa, originalSb, consumeNormalPartner);
 
         ctx.Reset();
@@ -73,36 +70,6 @@ public class SpecialResolver
             ResolvePulseLineCombo(actions, a, b, originalSa, originalSb);
             board.IsSpecialActivationPhase = false;
             return actions;
-        }
-
-        if (!bothOriginallySpecial)
-        {
-            var specialTile = aOriginallySpecial ? a : b;
-            var originalSpecial = aOriginallySpecial ? originalSa : originalSb;
-
-            if (originalSpecial == TileSpecial.LineV)
-            {
-                ctx.Affected.Add(specialTile);
-                SpecialCellUtils.MarkAffectedCell(ctx, specialTile, board);
-
-                var result = lineVSpecial.Execute(new LineVExecutionRuntime
-                {
-                    Board = board,
-                    Context = ctx,
-                    Origin = specialTile,
-                    Partner = null,
-                    FinalizeAtEnd = true,
-                    ActivateSpecial = dispatcher.ApplySpecialActivation,
-                    ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                    CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                    FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
-                });
-
-                actions.AddRange(result.Actions);
-                TraceSpecialChain("ResolveSpecialSwap.LineV", a, b);
-                board.IsSpecialActivationPhase = false;
-                return actions;
-            }
         }
 
         if (aOriginallySpecial)
@@ -144,6 +111,54 @@ public class SpecialResolver
             var partnerTile = aOriginallySpecial ? b : a;
             var originalSpecial = aOriginallySpecial ? originalSa : originalSb;
             var originalPartner = aOriginallySpecial ? originalSb : originalSa;
+
+            if (originalSpecial == TileSpecial.LineV)
+            {
+                var result = lineVSpecial.Execute(new LineVExecutionRuntime
+                {
+                    Board = board,
+                    Context = ctx,
+                    Origin = specialTile,
+                    Partner = null,
+                    FinalizeAtEnd = true,
+                    ActivateSpecial = dispatcher.ApplySpecialActivation,
+                    ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                    CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                    FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                    {
+                        visualService.FireOverrideOverrideSpecialVisuals(affected, delays);
+                    }
+                });
+
+                actions.AddRange(result.Actions);
+                TraceSpecialChain("ResolveSpecialSwap.LineV", a, b);
+                board.IsSpecialActivationPhase = false;
+                return actions;
+            }
+
+            if (originalSpecial == TileSpecial.LineH)
+            {
+                var result = lineHSpecial.Execute(new LineHExecutionRuntime
+                {
+                    Board = board,
+                    Context = ctx,
+                    Origin = specialTile,
+                    Partner = null,
+                    FinalizeAtEnd = true,
+                    ActivateSpecial = dispatcher.ApplySpecialActivation,
+                    ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                    CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                    FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                    {
+                        visualService.FireOverrideOverrideSpecialVisuals(affected, delays);
+                    }
+                });
+
+                actions.AddRange(result.Actions);
+                TraceSpecialChain("ResolveSpecialSwap.LineH", a, b);
+                board.IsSpecialActivationPhase = false;
+                return actions;
+            }
 
             TileView partnerForActivation = null;
             if (originalSpecial == TileSpecial.SystemOverride)
@@ -189,11 +204,9 @@ public class SpecialResolver
         ctx.Reset();
 
         TileSpecial spec = specialTile.GetSpecial();
+
         if (spec == TileSpecial.LineV)
         {
-            ctx.Affected.Add(specialTile);
-            SpecialCellUtils.MarkAffectedCell(ctx, specialTile, board);
-
             var result = lineVSpecial.Execute(new LineVExecutionRuntime
             {
                 Board = board,
@@ -202,9 +215,12 @@ public class SpecialResolver
                 Partner = null,
                 FinalizeAtEnd = true,
                 ActivateSpecial = dispatcher.ApplySpecialActivation,
-                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx, soloSpecialTile: null),
+                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                 CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                {
+                    visualService.FireOverrideOverrideSpecialVisuals(affected, delays);
+                }
             });
 
             actions.AddRange(result.Actions);
@@ -213,8 +229,33 @@ public class SpecialResolver
             return actions;
         }
 
+        if (spec == TileSpecial.LineH)
+        {
+            var result = lineHSpecial.Execute(new LineHExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = specialTile,
+                Partner = null,
+                FinalizeAtEnd = true,
+                ActivateSpecial = dispatcher.ApplySpecialActivation,
+                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                {
+                    visualService.FireOverrideOverrideSpecialVisuals(affected, delays);
+                }
+            });
+
+            actions.AddRange(result.Actions);
+            TraceSpecialChain("ResolveSpecialSolo.LineH", specialTile, null);
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
+
         ctx.Affected.Add(specialTile);
         SpecialCellUtils.MarkAffectedCell(ctx, specialTile, board);
+
         ctx.HasLineActivation = spec == TileSpecial.LineH || spec == TileSpecial.LineV;
 
         queueProcessor.EnqueueActivation(ctx, specialTile, null);
@@ -255,8 +296,8 @@ public class SpecialResolver
         ctx.Processed.Clear();
         ctx.Queued.Clear();
         ctx.Queue.Clear();
-        ctx.Affected.Clear();
 
+        ctx.Affected.Clear();
         if (affectedCells != null)
         {
             foreach (var cell in affectedCells)
@@ -274,31 +315,12 @@ public class SpecialResolver
             ctx.Affected.Add(tile);
             SpecialCellUtils.MarkAffectedCell(ctx, tile, board);
             if (tile.GetSpecial() == TileSpecial.None) continue;
-
-            if (tile.GetSpecial() == TileSpecial.LineV)
-            {
-                hasAnySpecialActivation = true;
-                lineVSpecial.Execute(new LineVExecutionRuntime
-                {
-                    Board = board,
-                    Context = ctx,
-                    Origin = tile,
-                    Partner = null,
-                    FinalizeAtEnd = false,
-                    ActivateSpecial = dispatcher.ApplySpecialActivation,
-                    ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                    CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                    FireOverrideOverrideSpecialVisuals = (set, delays) => visualService.FireOverrideOverrideSpecialVisuals(set, delays)
-                });
-            }
-            else
-            {
-                queueProcessor.EnqueueActivation(ctx, tile, null);
-            }
+            queueProcessor.EnqueueActivation(ctx, tile, null);
         }
 
         if (lightningVisualTargets != null)
             ctx.LightningVisualTargets.Clear();
+
         if (lightningLineStrikes != null)
             ctx.LightningLineStrikes.Clear();
 
@@ -322,13 +344,10 @@ public class SpecialResolver
         hasLineActivation = ctx.HasLineActivation;
 
         if (lightningVisualTargets != null)
-        {
             foreach (var t in ctx.LightningVisualTargets) lightningVisualTargets.Add(t);
-        }
+
         if (lightningLineStrikes != null)
-        {
             lightningLineStrikes.AddRange(ctx.LightningLineStrikes);
-        }
 
         foreach (var tile in ctx.Affected) affected.Add(tile);
 
@@ -413,9 +432,12 @@ public class SpecialResolver
         }
     }
 
-    private bool IsPureSoloPulsePresentationCandidate(HashSet<TileView> affected, bool suppressPulseImpact)
+    private bool IsPureSoloPulsePresentationCandidate(
+       HashSet<TileView> affected,
+       bool suppressPulseImpact)
     {
-        if (suppressPulseImpact || affected == null || affected.Count == 0) return false;
+        if (suppressPulseImpact) return false;
+        if (affected == null || affected.Count == 0) return false;
         if (ctx.HasLineActivation) return false;
         if (ctx.LightningLineStrikes != null && ctx.LightningLineStrikes.Count > 0) return false;
         if (ctx.LightningVisualTargets != null && ctx.LightningVisualTargets.Count > 0) return false;
@@ -428,12 +450,16 @@ public class SpecialResolver
 
         int specialCount = 0;
         bool hasNonPulseSpecial = false;
+
         foreach (var tile in affected)
         {
             if (tile == null) continue;
+
             TileSpecial special = tile.GetSpecial();
             if (special == TileSpecial.None) continue;
+
             specialCount++;
+
             if (special != TileSpecial.PulseCore)
             {
                 hasNonPulseSpecial = true;
@@ -441,7 +467,10 @@ public class SpecialResolver
             }
         }
 
-        return !(hasNonPulseSpecial || specialCount > 1);
+        if (hasNonPulseSpecial || specialCount > 1)
+            return false;
+
+        return true;
     }
 
     private bool IsPureSoloLinePresentationCandidate()
@@ -462,9 +491,12 @@ public class SpecialResolver
         foreach (var tile in ctx.Affected)
         {
             if (tile == null) continue;
+
             TileSpecial special = tile.GetSpecial();
             if (special == TileSpecial.None) continue;
+
             specialCount++;
+
             bool isLine = special == TileSpecial.LineH || special == TileSpecial.LineV;
             if (!isLine)
             {
@@ -473,7 +505,10 @@ public class SpecialResolver
             }
         }
 
-        return !(hasNonLineSpecial || specialCount > 1);
+        if (hasNonLineSpecial || specialCount > 1)
+            return false;
+
+        return true;
     }
 
     private bool IsPureSoloOverridePresentationCandidate()
@@ -488,12 +523,16 @@ public class SpecialResolver
 
         int specialCount = 0;
         bool hasNonOverrideSpecial = false;
+
         foreach (var tile in ctx.Affected)
         {
             if (tile == null) continue;
+
             TileSpecial special = tile.GetSpecial();
             if (special == TileSpecial.None) continue;
+
             specialCount++;
+
             if (special != TileSpecial.SystemOverride)
             {
                 hasNonOverrideSpecial = true;
@@ -501,7 +540,10 @@ public class SpecialResolver
             }
         }
 
-        return !(hasNonOverrideSpecial || specialCount > 1);
+        if (hasNonOverrideSpecial || specialCount > 1)
+            return false;
+
+        return true;
     }
 
     private bool IsPureSoloPatchBotPresentationCandidate()
@@ -519,12 +561,16 @@ public class SpecialResolver
 
         int specialCount = 0;
         bool hasNonPatchBotSpecial = false;
+
         foreach (var tile in ctx.Affected)
         {
             if (tile == null) continue;
+
             TileSpecial special = tile.GetSpecial();
             if (special == TileSpecial.None) continue;
+
             specialCount++;
+
             if (special != TileSpecial.PatchBot)
             {
                 hasNonPatchBotSpecial = true;
@@ -532,7 +578,10 @@ public class SpecialResolver
             }
         }
 
-        return !(hasNonPatchBotSpecial || specialCount > 1);
+        if (hasNonPatchBotSpecial || specialCount > 1)
+            return false;
+
+        return true;
     }
 
     private ClearPresentationPlan BuildPatchBotPresentationPlanIfNeeded()
@@ -542,19 +591,24 @@ public class SpecialResolver
 
         List<TileView> targetTiles = new List<TileView>();
         List<Vector2Int> targetCells = new List<Vector2Int>();
+
         foreach (var tile in ctx.Affected)
         {
             if (tile == null) continue;
             targetTiles.Add(tile);
             targetCells.Add(new Vector2Int(tile.X, tile.Y));
         }
-        if (targetTiles.Count == 0) return null;
+
+        if (targetTiles.Count == 0)
+            return null;
 
         TileView originTile = null;
         Vector2Int? originCell = null;
+
         foreach (var tile in targetTiles)
         {
             if (tile == null) continue;
+
             if (tile.GetSpecial() == TileSpecial.PatchBot)
             {
                 originTile = tile;
@@ -562,13 +616,17 @@ public class SpecialResolver
                 break;
             }
         }
-        if (originTile == null || !originCell.HasValue) return null;
+
+        if (originTile == null || !originCell.HasValue)
+            return null;
 
         var target = patchbotComboService.FindTarget(originTile, null, null);
-        if (!target.hasCell) return null;
+        if (!target.hasCell)
+            return null;
 
         TileView targetTile = target.tile;
         Vector2Int targetCell = new Vector2Int(target.x, target.y);
+
         if (targetTile != null && !targetTiles.Contains(targetTile))
         {
             targetTiles.Add(targetTile);
@@ -579,9 +637,22 @@ public class SpecialResolver
         plan.DoBoardShake = true;
         plan.IncludeAdjacentOverTileBlockerDamage = false;
         plan.ObstacleHitContext = ObstacleHitContext.SpecialActivation;
-        plan.Effects.Add(new PatchBotDashEffectDescriptor(targetTiles, targetCells, originTile, originCell, targetTile, targetCell));
+
+        plan.Effects.Add(new PatchBotDashEffectDescriptor(
+            targetTiles,
+            targetCells,
+            originTile,
+            originCell,
+            targetTile,
+            targetCell
+        ));
+
         foreach (var tile in targetTiles)
-            if (tile != null) plan.FinalClearTiles.Add(tile);
+        {
+            if (tile != null)
+                plan.FinalClearTiles.Add(tile);
+        }
+
         return plan;
     }
 
@@ -592,19 +663,24 @@ public class SpecialResolver
 
         List<TileView> targetTiles = new List<TileView>();
         List<Vector2Int> targetCells = new List<Vector2Int>();
+
         foreach (var tile in ctx.Affected)
         {
             if (tile == null) continue;
             targetTiles.Add(tile);
             targetCells.Add(new Vector2Int(tile.X, tile.Y));
         }
-        if (targetTiles.Count == 0) return null;
+
+        if (targetTiles.Count == 0)
+            return null;
 
         TileView originTile = null;
         Vector2Int? originCell = null;
+
         foreach (var tile in targetTiles)
         {
             if (tile == null) continue;
+
             if (tile.GetSpecial() == TileSpecial.SystemOverride)
             {
                 originTile = tile;
@@ -621,12 +697,24 @@ public class SpecialResolver
         plan.DoBoardShake = true;
         plan.IncludeAdjacentOverTileBlockerDamage = false;
         plan.ObstacleHitContext = ObstacleHitContext.SpecialActivation;
-        plan.Effects.Add(new OverrideRadialEffectDescriptor(targetTiles, targetCells, delayMap, originTile, originCell));
-        foreach (var tile in targetTiles) plan.FinalClearTiles.Add(tile);
+
+        plan.Effects.Add(new OverrideRadialEffectDescriptor(
+            targetTiles,
+            targetCells,
+            delayMap,
+            originTile,
+            originCell));
+
+        foreach (var tile in targetTiles)
+            plan.FinalClearTiles.Add(tile);
+
         return plan;
     }
 
-    private ClearPresentationPlan BuildPulsePresentationPlanIfNeeded(HashSet<TileView> affected, HashSet<TileView> processedViews, bool suppressPulseImpact)
+    private ClearPresentationPlan BuildPulsePresentationPlanIfNeeded(
+        HashSet<TileView> affected,
+        HashSet<TileView> processedViews,
+        bool suppressPulseImpact)
     {
         if (!IsPureSoloPulsePresentationCandidate(affected, suppressPulseImpact))
             return null;
@@ -637,23 +725,30 @@ public class SpecialResolver
 
         List<TileView> targetTiles = new List<TileView>();
         List<Vector2Int> targetCells = new List<Vector2Int>();
+
         TileView centerTile = null;
         float bestDelay = float.MaxValue;
 
         foreach (var tile in affected)
         {
             if (tile == null) continue;
+
             targetTiles.Add(tile);
             targetCells.Add(new Vector2Int(tile.X, tile.Y));
 
-            if (stagger.TryGetValue(tile, out float delay) && delay < bestDelay)
+            float delay;
+            if (stagger.TryGetValue(tile, out delay))
             {
-                bestDelay = delay;
-                centerTile = tile;
+                if (delay < bestDelay)
+                {
+                    bestDelay = delay;
+                    centerTile = tile;
+                }
             }
         }
 
-        if (targetTiles.Count == 0) return null;
+        if (targetTiles.Count == 0)
+            return null;
 
         Vector2Int centerCell = centerTile != null
             ? new Vector2Int(centerTile.X, centerTile.Y)
@@ -663,8 +758,18 @@ public class SpecialResolver
         plan.DoBoardShake = true;
         plan.IncludeAdjacentOverTileBlockerDamage = false;
         plan.ObstacleHitContext = ObstacleHitContext.SpecialActivation;
-        plan.Effects.Add(new PulseWaveEffectDescriptor(targetTiles, targetCells, stagger, board.ApplySpecialChainTempo(board.PulseImpactAnimTime), centerCell));
-        foreach (var tile in targetTiles) plan.FinalClearTiles.Add(tile);
+
+        plan.Effects.Add(new PulseWaveEffectDescriptor(
+            targetTiles,
+            targetCells,
+            stagger,
+            board.ApplySpecialChainTempo(board.PulseImpactAnimTime),
+            centerCell
+        ));
+
+        foreach (var tile in targetTiles)
+            plan.FinalClearTiles.Add(tile);
+
         return plan;
     }
 
@@ -675,13 +780,16 @@ public class SpecialResolver
 
         List<TileView> targetTiles = new List<TileView>();
         List<Vector2Int> targetCells = new List<Vector2Int>();
+
         foreach (var tile in ctx.Affected)
         {
             if (tile == null) continue;
             targetTiles.Add(tile);
             targetCells.Add(new Vector2Int(tile.X, tile.Y));
         }
-        if (targetTiles.Count == 0) return null;
+
+        if (targetTiles.Count == 0)
+            return null;
 
         IList<LightningLineStrike> strikes = new List<LightningLineStrike>();
         for (int i = 0; i < ctx.LightningLineStrikes.Count; i++)
@@ -689,9 +797,11 @@ public class SpecialResolver
 
         TileView originTile = null;
         Vector2Int? originCell = null;
+
         foreach (var tile in targetTiles)
         {
             if (tile == null) continue;
+
             TileSpecial special = tile.GetSpecial();
             if (special == TileSpecial.LineH || special == TileSpecial.LineV)
             {
@@ -705,8 +815,18 @@ public class SpecialResolver
         plan.DoBoardShake = true;
         plan.IncludeAdjacentOverTileBlockerDamage = false;
         plan.ObstacleHitContext = ObstacleHitContext.SpecialActivation;
-        plan.Effects.Add(new LineSweepEffectDescriptor(targetTiles, targetCells, strikes, originTile, originCell));
-        foreach (var tile in targetTiles) plan.FinalClearTiles.Add(tile);
+
+        plan.Effects.Add(new LineSweepEffectDescriptor(
+            targetTiles,
+            targetCells,
+            strikes,
+            originTile,
+            originCell
+        ));
+
+        foreach (var tile in targetTiles)
+            plan.FinalClearTiles.Add(tile);
+
         return plan;
     }
 
@@ -719,7 +839,8 @@ public class SpecialResolver
                 processedViews.Add(board.Tiles[pos.x, pos.y]);
         }
 
-        ClearPresentationPlan presentationPlan = BuildPulsePresentationPlanIfNeeded(ctx.Affected, processedViews, suppressPulseImpact);
+        ClearPresentationPlan presentationPlan =
+            BuildPulsePresentationPlanIfNeeded(ctx.Affected, processedViews, suppressPulseImpact);
         if (presentationPlan == null)
             presentationPlan = BuildLinePresentationPlanIfNeeded();
         if (presentationPlan == null)
@@ -732,11 +853,22 @@ public class SpecialResolver
             : BuildPulseStagger(ctx.Affected, processedViews, suppressPulseImpact);
 
         bool linePresentationOwnsVisuals =
-            presentationPlan != null && presentationPlan.Effects != null && presentationPlan.Effects.Count > 0 && presentationPlan.Effects[0] is LineSweepEffectDescriptor;
+            presentationPlan != null
+            && presentationPlan.Effects != null
+            && presentationPlan.Effects.Count > 0
+            && presentationPlan.Effects[0] is LineSweepEffectDescriptor;
+
         bool overridePresentationOwnsVisuals =
-            presentationPlan != null && presentationPlan.Effects != null && presentationPlan.Effects.Count > 0 && presentationPlan.Effects[0] is OverrideRadialEffectDescriptor;
+            presentationPlan != null
+            && presentationPlan.Effects != null
+            && presentationPlan.Effects.Count > 0
+            && presentationPlan.Effects[0] is OverrideRadialEffectDescriptor;
+
         bool patchBotPresentationOwnsVisuals =
-            presentationPlan != null && presentationPlan.Effects != null && presentationPlan.Effects.Count > 0 && presentationPlan.Effects[0] is PatchBotDashEffectDescriptor;
+            presentationPlan != null
+            && presentationPlan.Effects != null
+            && presentationPlan.Effects.Count > 0
+            && presentationPlan.Effects[0] is PatchBotDashEffectDescriptor;
 
         var animationMode = (ctx.HasLineActivation && !ctx.OverrideForceDefaultClearAnim && !linePresentationOwnsVisuals)
             ? ClearAnimationMode.LightningStrike
@@ -762,6 +894,7 @@ public class SpecialResolver
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (!board.EnableSpecialChainTrace) return;
+
         var sb = new System.Text.StringBuilder();
         sb.Append("[SpecialChainTrace] ").Append(stage);
         if (a != null) sb.Append(" A=").Append(a.GetSpecial()).Append("@").Append(a.X).Append(",").Append(a.Y);
@@ -784,7 +917,10 @@ public class SpecialResolver
         }
     }
 
-    private Dictionary<TileView, float> BuildPulseStagger(HashSet<TileView> affected, HashSet<TileView> processedViews, bool suppressPulseImpact)
+    private Dictionary<TileView, float> BuildPulseStagger(
+        HashSet<TileView> affected,
+        HashSet<TileView> processedViews,
+        bool suppressPulseImpact)
     {
         if (suppressPulseImpact)
             return null;
