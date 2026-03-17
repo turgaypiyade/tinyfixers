@@ -89,6 +89,7 @@ public class PulseCoreVfxPlayer : MonoBehaviour
     {
         var vfx = Instantiate(pulsePrefab, vfxRoot);
         vfx.anchoredPosition = centerLocalPos;
+        vfx.SetAsLastSibling();
 
         var refs = vfx.GetComponent<PulseCoreVfxRefs>();
         if (refs == null) { Destroy(vfx.gameObject); yield break; }

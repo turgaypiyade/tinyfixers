@@ -989,6 +989,15 @@ IEnumerator ProcessSwap(TileView a, TileView b)
         return transform.TransformPoint(new Vector3(x * tileSize, -y * tileSize, 0f));
     }
 
+    public Vector3 GetCellWorldCenterPosition(int x, int y)
+    {
+        Vector3 localCenter = new Vector3(x * tileSize + tileSize * 0.5f, -y * tileSize - tileSize * 0.5f, 0f);
+        if (parent != null)
+            return parent.TransformPoint(localCenter);
+
+        return transform.TransformPoint(localCenter);
+    }
+
     internal Vector2 WorldToAnchoredIn(RectTransform targetParent, Vector3 worldPos)
     {
         if (targetParent == null) return Vector2.zero;

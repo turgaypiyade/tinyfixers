@@ -79,8 +79,7 @@ public class BoardVfxService
                 return board.GetTileWorldCenter(tile);
 
             // Obstacle / empty tile fallback: use geometric center of the board cell.
-            Vector3 topLeft = board.GetCellWorldPosition(x, y);
-            return topLeft + new Vector3(board.TileSize * 0.5f, -board.TileSize * 0.5f, 0f);
+            return board.GetCellWorldCenterPosition(x, y);
         }
 
         // Last resort: preserve previous behavior and use last swap midpoint.

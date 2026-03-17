@@ -112,67 +112,38 @@ public sealed class PulseCorePatchBotCombo
     }
 
     // ---------------------------------------------------------------
-    //  Pulse VFX — obstacle hücreleri için grid'den pozisyon hesaplar
+    //  Pulse VFX
+    //  PulseCoreSpecial ile aynı patlama oyuncusunu kullanır;
+    //  tile olmasa da (obstacle/boş) doğrudan hücre merkezinde oynatır.
     // ---------------------------------------------------------------
 
     private void SchedulePulseExplosionVfx(PulseCorePatchBotComboExecutionRuntime rt, int cellX, int cellY, float delay)
     {
-        // Hedef hücrede tile varsa standart Effects yolunu kullan
-        if (rt.Board.Tiles[cellX, cellY] != null)
-        {
-            rt.Effects.PlayPulseExplosionDelayed(cellX, cellY, delay);
-            return;
-        }
-
-        // Obstacle / boş hücre — tile yok, pozisyonu grid'den hesapla
-        // ve PulseCoreVfxPlayer'ı doğrudan çağır.
-        // BoardController.GetCellWorldPosition sol-üst köşeyi verir;
-        // merkez için yarım tile offset ekliyoruz.
-        var vfxPlayer = rt.Board.GetComponentInChildren<PulseCoreVfxPlayer>();
-        if (vfxPlayer == null || vfxPlayer.VfxRoot == null)
-            return;
-
-        // GetCellWorldPosition => hücrenin sol-üst köşesi (anchor noktası)
-        // Merkez = sol-üst + (TileSize*0.5, -TileSize*0.5) parent-space'de
-        Vector3 cornerWorld = rt.Board.GetCellWorldPosition(cellX, cellY);
-        float halfTile = rt.Board.TileSize * 0.5f;
-
-        // Parent'ın lokal yönlerini world'e çevirip offset uygula
-        // (board döndürülmüş / ölçeklenmiş olsa bile doğru çalışır)
-        Transform boardParent = rt.Board.transform;
-        Vector3 rightDir = boardParent.TransformDirection(Vector3.right);
-        Vector3 downDir = boardParent.TransformDirection(Vector3.down);
-        Vector3 worldCenter = cornerWorld + rightDir * halfTile + downDir * halfTile;
-
-        Vector2 vfxLocalPos = WorldToVfxLocal(vfxPlayer.VfxRoot, worldCenter);
-
         int radiusCells = Mathf.CeilToInt(Mathf.Sqrt(affectedCellCount)) / 2;
-        if (radiusCells < 1) radiusCells = 1;
+        if (radiusCells < 1)
+            radiusCells = 1;
 
-        rt.Board.StartCoroutine(CoPlayDelayedPulseVfx(
-            vfxPlayer, vfxLocalPos, radiusCells, rt.Board.TileSize, delay));
-    }
-
-    private Vector2 WorldToVfxLocal(RectTransform vfxRoot, Vector3 worldPos)
-    {
-        var canvas = vfxRoot.GetComponentInParent<Canvas>();
-        Camera cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
-            ? canvas.worldCamera
-            : null;
-
-        Vector2 screenPos = RectTransformUtility.WorldToScreenPoint(cam, worldPos);
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(vfxRoot, screenPos, cam, out var localPos);
-        return localPos;
+        rt.Board.StartCoroutine(CoPlayDelayedPulseVfx(rt.Board, rt.Effects, cellX, cellY, radiusCells, delay));
     }
 
     private IEnumerator CoPlayDelayedPulseVfx(
-        PulseCoreVfxPlayer vfxPlayer, Vector2 localPos, int radiusCells, int tileSize, float delay)
+        BoardController board,
+        SpecialEffectOrchestrator effects,
+        int cellX,
+        int cellY,
+        int radiusCells,
+        float delay)
     {
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
 
-        if (vfxPlayer != null)
-            vfxPlayer.PlayPulseVfx(localPos, radiusCells, tileSize);
+        if (board?.PulseCoreImpactService != null)
+        {
+            board.PulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(cellX, cellY, radiusCells);
+            yield break;
+        }
+
+        effects?.PlayPulseExplosionAt(cellX, cellY);
     }
 
     // ---------------------------------------------------------------
