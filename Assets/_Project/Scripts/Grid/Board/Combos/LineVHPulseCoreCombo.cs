@@ -122,21 +122,7 @@ public sealed class LineVHPulseCoreCombo
 
     private void ExpandChain(LineVHPulseCoreComboExecutionRuntime rt)
     {
-        if (rt.EnqueueActivation != null && rt.ProcessQueuedActivations != null)
-        {
-            SpecialChainExecutor.ExecuteFromAffectedCellsViaQueue(
-                rt.Board,
-                rt.Context,
-                rt.EnqueueActivation,
-                rt.ProcessQueuedActivations,
-                rt.DebugLog,
-                rt.Origin,
-                rt.Partner);
-            return;
-        }
-
-        rt.DebugLog?.Invoke("[LineVHPulseCoreCombo] Queue callbacks missing, using direct activation chain.");
-        SpecialChainExecutor.ExecuteFromAffected(rt.Board, rt.Context, rt.ActivateSpecial, rt.Origin, rt.Partner);
+        SpecialChainExecutor.ExecuteFromAffected(rt.Context, rt.ActivateSpecial, rt.Origin, rt.Partner);
     }
 
     private void AddCell(LineVHPulseCoreComboExecutionRuntime rt, int x, int y, bool horizontalStrike, int centerX, int centerY)
