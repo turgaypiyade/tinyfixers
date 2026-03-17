@@ -75,7 +75,9 @@ public sealed class PulseCorePatchBotCombo
             travelDuration,
             true);
 
-        PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(tx, ty));
+        // Dash geçişinden sonra Pulse patlamasını hedef hücrede oynat.
+        // Refactor sırasında sadece event emit kalmıştı; gerçek VFX/SFX bu çağrıyla tetiklenir.
+        rt.Effects?.PlayPulseExplosionDelayed(tx, ty, travelDuration);
 
         CollectAreaAtTarget(rt, tx, ty);
         ExecuteChain(rt, pulseTile, tx, ty);
