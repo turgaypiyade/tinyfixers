@@ -44,6 +44,13 @@ public class SpecialResolver
     public List<BoardAction> ResolveSpecialSwap(TileView a, TileView b, TileSpecial originalSa, TileSpecial originalSb)
     {
         var actions = new List<BoardAction>();
+
+        if (a == null || b == null)
+        {
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
+
         board.ShakeNextClear = true;
         board.LastSwapUserMove = false;
         board.IsSpecialActivationPhase = true;
@@ -60,6 +67,14 @@ public class SpecialResolver
         bool aOriginallySpecial = originalSa != TileSpecial.None;
         bool bOriginallySpecial = originalSb != TileSpecial.None;
         bool bothOriginallySpecial = aOriginallySpecial && bOriginallySpecial;
+
+        // Bu metod sadece special swap resolve için; normal/no-match swap akışında
+        // buraya düşülse bile zincir çözümüne girmeden güvenle çık.
+        if (!aOriginallySpecial && !bOriginallySpecial)
+        {
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
 
         bool originalSaIsLine = originalSa == TileSpecial.LineH || originalSa == TileSpecial.LineV;
         bool originalSbIsLine = originalSb == TileSpecial.LineH || originalSb == TileSpecial.LineV;
