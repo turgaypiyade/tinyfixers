@@ -13,6 +13,9 @@ public class SpecialBehaviorDispatcher
     private readonly PulseCoreSpecial pulseCoreSpecial = new();
     private readonly PatchBotSpecial patchBotSpecial = new();
     private readonly LineVHPulseCoreCombo lineVHPulseCoreCombo = new();
+    private readonly LineHPatchBotCombo lineHPatchBotCombo = new();
+    private readonly LineVPatchBotCombo lineVPatchBotCombo = new();
+    private readonly PulseCorePatchBotCombo pulseCorePatchBotCombo = new();
     internal ActivationQueueProcessor QueueProcessor;
 
     private readonly ComboExecutionContext execCtx = new();
@@ -70,6 +73,63 @@ public class SpecialBehaviorDispatcher
             return;
         }
 
+        if ((sa == TileSpecial.PatchBot && sb == TileSpecial.LineH) ||
+            (sb == TileSpecial.PatchBot && sa == TileSpecial.LineH))
+        {
+            lineHPatchBotCombo.Execute(new LineHPatchBotComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = false,
+                PatchbotService = patchbotComboService,
+                VisualService = visualService,
+                Effects = effectOrchestrator,
+                ActivateSpecial = ApplySpecialActivation
+            });
+
+            return;
+        }
+
+        if ((sa == TileSpecial.PatchBot && sb == TileSpecial.LineV) ||
+            (sb == TileSpecial.PatchBot && sa == TileSpecial.LineV))
+        {
+            lineVPatchBotCombo.Execute(new LineVPatchBotComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = false,
+                PatchbotService = patchbotComboService,
+                VisualService = visualService,
+                Effects = effectOrchestrator,
+                ActivateSpecial = ApplySpecialActivation
+            });
+
+            return;
+        }
+
+        if ((sa == TileSpecial.PatchBot && sb == TileSpecial.PulseCore) ||
+            (sb == TileSpecial.PatchBot && sa == TileSpecial.PulseCore))
+        {
+            pulseCorePatchBotCombo.Execute(new PulseCorePatchBotComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = false,
+                PatchbotService = patchbotComboService,
+                VisualService = visualService,
+                Effects = effectOrchestrator,
+                ActivateSpecial = ApplySpecialActivation
+            });
+
+            return;
+        }
+        
         var combo = board.SpecialBehaviors.FindCombo(sa, sb);
         if (combo == null) return;
 

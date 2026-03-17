@@ -41,32 +41,34 @@ public sealed class PulseCoreSpecial
             return result;
 
         RegisterOrigin(rt);
-        CollectArea(rt);
+        CollectArea(rt, rt.Origin.X, rt.Origin.Y);
         ExecuteChain(rt);
 
         if (rt.FinalizeAtEnd)
         {
-            if (rt.ProcessFanout != null)
-            {
-                var fanoutActions = rt.ProcessFanout(rt.Context);
-                if (fanoutActions != null && fanoutActions.Count > 0)
-                    result.Actions.AddRange(fanoutActions);
-            }
+            Finalize(rt, result, rt.Origin.X, rt.Origin.Y);
+        }
 
-            if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
-                rt.CleanupImplantedTiles?.Invoke(rt.Context);
+        return result;
+    }
 
-            if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
-                rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
+    public PulseCoreExecutionResult ExecuteAtTarget(PulseCoreExecutionRuntime rt, int targetX, int targetY)
+    {
+        var result = new PulseCoreExecutionResult();
 
-            var clearAction = BuildClearAction(rt);
-            if (clearAction != null)
-                result.Actions.Add(clearAction);
+        if (!CanExecute(rt))
+            return result;
 
-            rt.EmitBoardSignal?.Invoke(new SpecialBoardSignal(
-                SpecialBoardSignalType.SpecialPassFinished,
-                new Vector2Int(rt.Origin.X, rt.Origin.Y),
-                rt.Origin));
+        if (targetX < 0 || targetX >= rt.Board.Width || targetY < 0 || targetY >= rt.Board.Height)
+            return result;
+
+        RegisterOrigin(rt);
+        CollectArea(rt, targetX, targetY);
+        ExecuteChain(rt);
+
+        if (rt.FinalizeAtEnd)
+        {
+            Finalize(rt, result, targetX, targetY);
         }
 
         return result;
@@ -97,17 +99,18 @@ public sealed class PulseCoreSpecial
         rt.Context.Processed.Add(originCell);
         rt.Context.Affected.Add(rt.Origin);
         SpecialCellUtils.MarkAffectedCell(rt.Context, rt.Origin, rt.Board);
-        PulseBehaviorEvents.EmitPulseExplosionPlayed(originCell);
     }
 
-    private void CollectArea(PulseCoreExecutionRuntime rt)
+    private void CollectArea(PulseCoreExecutionRuntime rt, int centerX, int centerY)
     {
+        PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(centerX, centerY));
+
         int side = Mathf.CeilToInt(Mathf.Sqrt(affectedCellCount));
         if (side % 2 == 0) side += 1;
         int half = side / 2;
 
-        for (int x = rt.Origin.X - half; x <= rt.Origin.X + half; x++)
-            for (int y = rt.Origin.Y - half; y <= rt.Origin.Y + half; y++)
+        for (int x = centerX - half; x <= centerX + half; x++)
+            for (int y = centerY - half; y <= centerY + half; y++)
             {
                 if (x < 0 || x >= rt.Board.Width || y < 0 || y >= rt.Board.Height)
                     continue;
@@ -179,22 +182,17 @@ public sealed class PulseCoreSpecial
 
     private void SeedAreaSpecials(PulseCoreExecutionRuntime rt, Queue<TileView> pending)
     {
-        int side = Mathf.CeilToInt(Mathf.Sqrt(affectedCellCount));
-        if (side % 2 == 0) side += 1;
-        int half = side / 2;
+        foreach (var cell in rt.Context.AffectedCells)
+        {
+            if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+                continue;
 
-        for (int x = rt.Origin.X - half; x <= rt.Origin.X + half; x++)
-            for (int y = rt.Origin.Y - half; y <= rt.Origin.Y + half; y++)
-            {
-                if (x < 0 || x >= rt.Board.Width || y < 0 || y >= rt.Board.Height)
-                    continue;
+            var tile = rt.Board.Tiles[cell.x, cell.y];
+            if (tile == null || tile == rt.Origin)
+                continue;
 
-                var tile = rt.Board.Tiles[x, y];
-                if (tile == null || tile == rt.Origin)
-                    continue;
-
-                TryQueue(rt, pending, tile);
-            }
+            TryQueue(rt, pending, tile);
+        }
     }
 
     private void EnqueueNewlyAffectedSpecials(PulseCoreExecutionRuntime rt, Queue<TileView> pending)
@@ -229,6 +227,31 @@ public sealed class PulseCoreSpecial
 
         rt.Context.Queued.Add(pos);
         pending.Enqueue(tile);
+    }
+
+    private void Finalize(PulseCoreExecutionRuntime rt, PulseCoreExecutionResult result, int signalX, int signalY)
+    {
+        if (rt.ProcessFanout != null)
+        {
+            var fanoutActions = rt.ProcessFanout(rt.Context);
+            if (fanoutActions != null && fanoutActions.Count > 0)
+                result.Actions.AddRange(fanoutActions);
+        }
+
+        if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
+            rt.CleanupImplantedTiles?.Invoke(rt.Context);
+
+        if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
+            rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
+
+        var clearAction = BuildClearAction(rt);
+        if (clearAction != null)
+            result.Actions.Add(clearAction);
+
+        rt.EmitBoardSignal?.Invoke(new SpecialBoardSignal(
+            SpecialBoardSignalType.SpecialPassFinished,
+            new Vector2Int(signalX, signalY),
+            rt.Origin));
     }
 
     private MatchClearAction BuildClearAction(PulseCoreExecutionRuntime rt)

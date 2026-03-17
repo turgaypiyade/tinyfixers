@@ -18,6 +18,9 @@ public class SpecialResolver
     private readonly PulseCoreSpecial pulseCoreSpecial = new();
     private readonly PatchBotSpecial patchBotSpecial = new();
     private readonly LineVHPulseCoreCombo lineVHPulseCoreCombo = new();
+    private readonly LineHPatchBotCombo lineHPatchBotCombo = new();
+    private readonly LineVPatchBotCombo lineVPatchBotCombo = new();
+    private readonly PulseCorePatchBotCombo pulseCorePatchBotCombo = new();
     private readonly ResolutionContext ctx = new();
 
     public SpecialResolver(BoardController board, MatchFinder matchFinder, BoardAnimator boardAnimator, PulseCoreImpactService pulseCoreImpactService)
@@ -66,6 +69,94 @@ public class SpecialResolver
         visualService.HideSwapSourceVisuals(a, b, originalSa, originalSb, consumeNormalPartner);
 
         ctx.Reset();
+
+        bool originalSaIsPatchBot = originalSa == TileSpecial.PatchBot;
+        bool originalSbIsPatchBot = originalSb == TileSpecial.PatchBot;
+
+
+        if ((originalSaIsPatchBot && originalSb == TileSpecial.PulseCore) ||
+            (originalSbIsPatchBot && originalSa == TileSpecial.PulseCore))
+        {
+            ctx.Affected.Add(a);
+            ctx.Affected.Add(b);
+            SpecialCellUtils.MarkAffectedCell(ctx, a, board);
+            SpecialCellUtils.MarkAffectedCell(ctx, b, board);
+
+            var result = pulseCorePatchBotCombo.Execute(new PulseCorePatchBotComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = true,
+                PatchbotService = patchbotComboService,
+                VisualService = visualService,
+                Effects = effectOrchestrator,
+                ActivateSpecial = dispatcher.ApplySpecialActivation
+            });
+
+            actions.AddRange(result.Actions);
+            TraceSpecialChain("ResolveSpecialSwap.PulseCorePatchBot", a, b);
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
+
+        if ((originalSaIsPatchBot && originalSb == TileSpecial.LineV) ||
+            (originalSbIsPatchBot && originalSa == TileSpecial.LineV))
+        {
+            ctx.Affected.Add(a);
+            ctx.Affected.Add(b);
+            SpecialCellUtils.MarkAffectedCell(ctx, a, board);
+            SpecialCellUtils.MarkAffectedCell(ctx, b, board);
+
+            var result = lineVPatchBotCombo.Execute(new LineVPatchBotComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = true,
+                PatchbotService = patchbotComboService,
+                VisualService = visualService,
+                Effects = effectOrchestrator,
+                ActivateSpecial = dispatcher.ApplySpecialActivation
+            });
+
+            actions.AddRange(result.Actions);
+            TraceSpecialChain("ResolveSpecialSwap.LineVPatchBot", a, b);
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
+
+       // bool originalSaIsPatchBot = originalSa == TileSpecial.PatchBot;
+       // bool originalSbIsPatchBot = originalSb == TileSpecial.PatchBot;
+
+        if ((originalSaIsPatchBot && originalSb == TileSpecial.LineH) ||
+            (originalSbIsPatchBot && originalSa == TileSpecial.LineH))
+        {
+            ctx.Affected.Add(a);
+            ctx.Affected.Add(b);
+            SpecialCellUtils.MarkAffectedCell(ctx, a, board);
+            SpecialCellUtils.MarkAffectedCell(ctx, b, board);
+
+            var result = lineHPatchBotCombo.Execute(new LineHPatchBotComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = true,
+                PatchbotService = patchbotComboService,
+                VisualService = visualService,
+                Effects = effectOrchestrator,
+                ActivateSpecial = dispatcher.ApplySpecialActivation
+            });
+
+            actions.AddRange(result.Actions);
+            TraceSpecialChain("ResolveSpecialSwap.LineHPatchBot", a, b);
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
 
         if ((originalSaIsPulse && originalSbIsLine) || (originalSbIsPulse && originalSaIsLine))
         {
