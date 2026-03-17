@@ -7,7 +7,6 @@ public sealed class LineVHPulseCoreComboExecutionRuntime
     public BoardController Board;
     public ResolutionContext Context;
 
-    // Mevcut swap semantiğinde:
     // Origin = line tile
     // Partner = pulse tile
     public TileView Origin;
@@ -44,15 +43,16 @@ public sealed class LineVHPulseCoreCombo
         rt.EmitComboTriggered?.Invoke(lineTile.GetSpecial(), pulseTile.GetSpecial(), pulseCell);
         rt.EmitPulseEmitterComboTriggered?.Invoke(pulseCell);
 
-        var pulseAction = PulseLineCombo.CreatePulseEmitterComboAction(rt.Board, pulseTile.X, pulseTile.Y);
-        if (pulseAction != null)
-            result.Actions.Add(pulseAction);
-
+        // Önce combo source special'ları register et
         RegisterComboTiles(rt, lineTile, pulseTile);
 
+        // Önce etki alanını topla
         BuildAffectedArea(rt, lineTile, pulseTile);
+
+        // Hücreler daha data tarafında canlıyken chain'i kur
         ExpandChain(rt);
 
+        // Match clear action'ı hazırla
         if (rt.FinalizeAtEnd && rt.Context.Affected.Count > 0)
         {
             var chainMode = rt.Context.HasLineActivation
@@ -74,6 +74,13 @@ public sealed class LineVHPulseCoreCombo
                 presentationPlan: null
             ));
         }
+
+        // EN SONA ALINDI:
+        // Bu çağrı targetVisuals snapshot aldıktan sonra board.ClearCellDataOnly(c) yaptığı için
+        // chain kurulmadan önce çağrılırsa board.Tiles null'a düşüyor.
+        var pulseAction = PulseLineCombo.CreatePulseEmitterComboAction(rt.Board, pulseTile.X, pulseTile.Y);
+        if (pulseAction != null)
+            result.Actions.Insert(0, pulseAction);
 
         return result;
     }
@@ -109,34 +116,43 @@ public sealed class LineVHPulseCoreCombo
         if (lineTile.GetSpecial() == TileSpecial.LineH)
         {
             for (int y = cy - 1; y <= cy + 1; y++)
+            {
                 for (int x = 0; x < rt.Board.Width; x++)
-                    AddCell(rt, x, y, horizontalStrike: true, centerX: cx, centerY: y);
+                    AddCell(rt, x, y);
+            }
         }
         else
         {
             for (int x = cx - 1; x <= cx + 1; x++)
+            {
                 for (int y = 0; y < rt.Board.Height; y++)
-                    AddCell(rt, x, y, horizontalStrike: false, centerX: x, centerY: cy);
+                    AddCell(rt, x, y);
+            }
         }
     }
 
     private void ExpandChain(LineVHPulseCoreComboExecutionRuntime rt)
     {
         var snapshot = CollectSnapshotSpecials(rt, rt.Origin, rt.Partner);
+
         foreach (var tile in snapshot)
         {
             if (tile == null)
                 continue;
 
             var cell = new Vector2Int(tile.X, tile.Y);
+
             if (rt.Context.Processed.Contains(cell))
                 continue;
 
             if (tile.GetSpecial() == TileSpecial.None)
                 continue;
 
-            rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
+            // Guard önce
             rt.Context.Processed.Add(cell);
+
+            // Sonra execute
+            rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
 
             if (!rt.Context.ChainExecutionOrder.Contains(cell))
                 rt.Context.ChainExecutionOrder.Add(cell);
@@ -166,10 +182,12 @@ public sealed class LineVHPulseCoreCombo
                 continue;
 
             var cell = new Vector2Int(tile.X, tile.Y);
-            if (excluded.Contains(cell) || visited.Contains(cell))
+
+            if (excluded.Contains(cell))
                 continue;
 
-            visited.Add(cell);
+            if (!visited.Add(cell))
+                continue;
 
             if (tile.GetSpecial() == TileSpecial.None)
                 continue;
@@ -180,7 +198,7 @@ public sealed class LineVHPulseCoreCombo
         return snapshot;
     }
 
-    private void AddCell(LineVHPulseCoreComboExecutionRuntime rt, int x, int y, bool horizontalStrike, int centerX, int centerY)
+    private void AddCell(LineVHPulseCoreComboExecutionRuntime rt, int x, int y)
     {
         if (x < 0 || x >= rt.Board.Width || y < 0 || y >= rt.Board.Height)
             return;
@@ -191,13 +209,14 @@ public sealed class LineVHPulseCoreCombo
         var cell = new Vector2Int(x, y);
         rt.Context.AffectedCells.Add(cell);
 
-        var tile = rt.Board.Tiles[x, y];
+        var tile = rt.Board.GetTileViewAt(x, y);
         if (tile == null)
             return;
 
         rt.Context.Affected.Add(tile);
         rt.Context.LightningVisualTargets.Add(tile);
         rt.Context.HasLineActivation = true;
+        SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board);
     }
 
     private void AddOrigin(LineVHPulseCoreComboExecutionRuntime rt, TileView tile)
@@ -206,6 +225,7 @@ public sealed class LineVHPulseCoreCombo
             return;
 
         var cell = new Vector2Int(tile.X, tile.Y);
+
         rt.Context.Processed.Add(cell);
         rt.Context.Affected.Add(tile);
         SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board);
