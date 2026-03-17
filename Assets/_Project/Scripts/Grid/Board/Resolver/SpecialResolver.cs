@@ -58,12 +58,6 @@ public class SpecialResolver
         TileSpecial currentSa = a.GetSpecial();
         TileSpecial currentSb = b.GetSpecial();
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"[SpecialResolver] ResolveSpecialSwap: " +
-                $"a=({a.X},{a.Y}) current={currentSa} original={originalSa}, " +
-                $"b=({b.X},{b.Y}) current={currentSb} original={originalSb}");
-#endif
-
         bool aOriginallySpecial = originalSa != TileSpecial.None;
         bool bOriginallySpecial = originalSb != TileSpecial.None;
         bool bothOriginallySpecial = aOriginallySpecial && bOriginallySpecial;
@@ -102,8 +96,8 @@ public class SpecialResolver
             {
                 Board = board,
                 Context = ctx,
-                Origin = a,
-                Partner = b,
+                Origin = b,
+                Partner = a,
                 FinalizeAtEnd = true,
                 PatchbotService = patchbotComboService,
                 VisualService = visualService,
@@ -185,8 +179,8 @@ public class SpecialResolver
             {
                 Board = board,
                 Context = ctx,
-                Origin = b,
-                Partner = a,
+                Origin = a,
+                Partner = b,
                 FinalizeAtEnd = true,
                 ActivateSpecial = dispatcher.ApplySpecialActivation,
                 EmitComboTriggered = (sa, sb, cell) => effectOrchestrator.EmitComboTriggered(sa, sb, cell),

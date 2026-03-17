@@ -58,22 +58,15 @@ public class PulseCoreImpactService
         Vector3 worldCenter = board.GetCellWorldPosition(x, y)
             + new Vector3(board.TileSize * 0.5f, -board.TileSize * 0.5f, 0f);
 
-        bool playedPulseCoreVfx = false;
         if (board.BoardVfxPlayer != null)
         {
             var vfxRoot = board.BoardVfxPlayer.VfxRoot;
-            if (vfxRoot != null)
-            {
-                Vector2 anchored = board.WorldToAnchoredIn(vfxRoot, worldCenter);
-                board.BoardVfxPlayer.PlayPulseVfx(anchored, radiusCells: radiusCells, tileSize: board.TileSize);
-                playedPulseCoreVfx = true;
-            }
-        }
+            Vector2 anchored = vfxRoot != null
+                ? board.WorldToAnchoredIn(vfxRoot, worldCenter)
+                : Vector2.zero;
 
-        // Obstacle hedeflerinde de görsel garanti olsun: PulseCoreVfxPlayer yoksa
-        // legacy cell explosion ile fallback ver.
-        if (!playedPulseCoreVfx)
-            board.PlayPulsePulseExplosionVfxAtCell(x, y);
+            board.BoardVfxPlayer.PlayPulseVfx(anchored, radiusCells: radiusCells, tileSize: board.TileSize);
+        }
 
         if (board.SfxSource != null)
         {
