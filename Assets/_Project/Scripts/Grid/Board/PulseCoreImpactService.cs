@@ -55,8 +55,7 @@ public class PulseCoreImpactService
 
     public void PlayPulseCoreExplosionVfxAtCell(int x, int y, int radiusCells = 2)
     {
-        Vector3 worldCenter = board.GetCellWorldPosition(x, y)
-            + new Vector3(board.TileSize * 0.5f, -board.TileSize * 0.5f, 0f);
+        Vector3 worldCenter = board.GetCellWorldCenterPosition(x, y);
 
         if (board.BoardVfxPlayer != null)
         {
