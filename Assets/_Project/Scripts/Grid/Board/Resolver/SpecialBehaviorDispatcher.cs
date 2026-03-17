@@ -16,6 +16,7 @@ public class SpecialBehaviorDispatcher
     private readonly LineHPatchBotCombo lineHPatchBotCombo = new();
     private readonly LineVPatchBotCombo lineVPatchBotCombo = new();
     private readonly PulseCorePatchBotCombo pulseCorePatchBotCombo = new();
+    private readonly OverrideSpecializedCombo overrideSpecializedCombo = new();
     internal ActivationQueueProcessor QueueProcessor;
 
     private readonly ComboExecutionContext execCtx = new();
@@ -130,6 +131,22 @@ public class SpecialBehaviorDispatcher
             return;
         }
         
+        if ((sa == TileSpecial.SystemOverride && (sb == TileSpecial.LineH || sb == TileSpecial.LineV || sb == TileSpecial.PulseCore || sb == TileSpecial.PatchBot)) ||
+            (sb == TileSpecial.SystemOverride && (sa == TileSpecial.LineH || sa == TileSpecial.LineV || sa == TileSpecial.PulseCore || sa == TileSpecial.PatchBot)))
+        {
+            overrideSpecializedCombo.Execute(new OverrideSpecializedComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = false,
+                EnqueueActivation = (resolution, tile, partner) => QueueProcessor?.EnqueueActivation(resolution, tile, partner)
+            });
+
+            return;
+        }
+
         var combo = board.SpecialBehaviors.FindCombo(sa, sb);
         if (combo == null) return;
 
