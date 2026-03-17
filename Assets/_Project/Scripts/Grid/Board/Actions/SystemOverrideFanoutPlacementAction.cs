@@ -314,26 +314,33 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         HashSet<Vector2Int> futurePulseCells)
     {
         var result = new HashSet<TileView>();
-        var cells = board.SpecialBehaviors.CalculateEffect(
-            TileSpecial.PulseCore,
-            board,
-            centerCell.x,
-            centerCell.y);
 
-        foreach (var cell in cells)
+        // PulseCore alanını registry'den değil doğrudan 3x3 hesapla.
+        // Registry artık PulseCoreBehavior register etmediği için burada boş set dönüyordu.
+        const int half = 1;
+
+        for (int x = centerCell.x - half; x <= centerCell.x + half; x++)
         {
-            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
-                continue;
+            for (int y = centerCell.y - half; y <= centerCell.y + half; y++)
+            {
+                if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+                    continue;
 
-            var tile = board.Tiles[cell.x, cell.y];
-            if (tile == null)
-                continue;
+                if (!SpecialUtils.CanAffectCell(board, x, y))
+                    continue;
 
-            // Sonraki pulse'ları erken yok etme
-            if (futurePulseCells.Contains(cell))
-                continue;
+                var cell = new Vector2Int(x, y);
 
-            result.Add(tile);
+                // Sonraki pulse'ları erken yok etme
+                if (futurePulseCells.Contains(cell))
+                    continue;
+
+                var tile = board.Tiles[x, y];
+                if (tile == null)
+                    continue;
+
+                result.Add(tile);
+            }
         }
 
         return result;
