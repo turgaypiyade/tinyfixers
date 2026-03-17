@@ -12,7 +12,7 @@ public class SpecialBehaviorDispatcher
     private readonly LineVLineHCombo lineVLineHCombo = new();
     private readonly PulseCoreSpecial pulseCoreSpecial = new();
     private readonly PatchBotSpecial patchBotSpecial = new();
-
+    private readonly LineVHPulseCoreCombo lineVHPulseCoreCombo = new();
     internal ActivationQueueProcessor QueueProcessor;
 
     private readonly ComboExecutionContext execCtx = new();
@@ -48,6 +48,23 @@ public class SpecialBehaviorDispatcher
                 Center = b,
                 FinalizeAtEnd = false,
                 ActivateSpecial = ApplySpecialActivation
+            });
+
+            return;
+        }
+
+        if (IsPulseLineCombo(sa, sb))
+        {
+            lineVHPulseCoreCombo.Execute(new LineVHPulseCoreComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = false,
+                ActivateSpecial = ApplySpecialActivation,
+                EmitComboTriggered = (comboSa, comboSb, cell) => effectOrchestrator.EmitComboTriggered(comboSa, comboSb, cell),
+                EmitPulseEmitterComboTriggered = cell => effectOrchestrator.EmitPulseEmitterComboTriggered(cell)
             });
 
             return;
@@ -233,4 +250,15 @@ public class SpecialBehaviorDispatcher
     {
         return special == TileSpecial.LineH || special == TileSpecial.LineV;
     }
+
+    private static bool IsPulseLineCombo(TileSpecial a, TileSpecial b)
+    {
+        return (IsPulse(a) && IsLine(b)) || (IsPulse(b) && IsLine(a));
+    }
+
+    private static bool IsPulse(TileSpecial special)
+    {
+        return special == TileSpecial.PulseCore;
+    }
+
 }

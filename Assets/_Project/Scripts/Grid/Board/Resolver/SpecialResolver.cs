@@ -17,7 +17,7 @@ public class SpecialResolver
     private readonly LineVLineHCombo lineVLineHCombo = new();
     private readonly PulseCoreSpecial pulseCoreSpecial = new();
     private readonly PatchBotSpecial patchBotSpecial = new();
-
+    private readonly LineVHPulseCoreCombo lineVHPulseCoreCombo = new();
     private readonly ResolutionContext ctx = new();
 
     public SpecialResolver(BoardController board, MatchFinder matchFinder, BoardAnimator boardAnimator, PulseCoreImpactService pulseCoreImpactService)
@@ -69,7 +69,25 @@ public class SpecialResolver
 
         if ((originalSaIsPulse && originalSbIsLine) || (originalSbIsPulse && originalSaIsLine))
         {
-            ResolvePulseLineCombo(actions, a, b, originalSa, originalSb);
+            ctx.Affected.Add(a);
+            ctx.Affected.Add(b);
+            SpecialCellUtils.MarkAffectedCell(ctx, a, board);
+            SpecialCellUtils.MarkAffectedCell(ctx, b, board);
+
+            var result = lineVHPulseCoreCombo.Execute(new LineVHPulseCoreComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = b,
+                Partner = a,
+                FinalizeAtEnd = true,
+                ActivateSpecial = dispatcher.ApplySpecialActivation,
+                EmitComboTriggered = (sa, sb, cell) => effectOrchestrator.EmitComboTriggered(sa, sb, cell),
+                EmitPulseEmitterComboTriggered = cell => effectOrchestrator.EmitPulseEmitterComboTriggered(cell)
+            });
+
+            actions.AddRange(result.Actions);
+            TraceSpecialChain("ResolveSpecialSwap.LineVHPulseCore", a, b);
             board.IsSpecialActivationPhase = false;
             return actions;
         }
