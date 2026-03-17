@@ -374,7 +374,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             // ✅ İki roket de aynı sprite rotasyonunda — biri +Y biri -Y yönünde hareket eder
             // Sprite'ın hangi yönde olduğuna göre bu değeri inspector'dan ayarlayabilirsiniz.
             // Varsayılan: sağa bakan sprite'ı 90° CW çevirerek aşağı bak, -90° CCW ile yukarı bak.
-            rightImage.rectTransform.localEulerAngles = new Vector3(0f, 0f,  90f); // aşağı bakan
+            rightImage.rectTransform.localEulerAngles = new Vector3(0f, 0f, -90f); // aşağı bakan
             leftImage.rectTransform.localEulerAngles  = new Vector3(0f, 0f, -90f); // yukarı bakan
         }
     }
