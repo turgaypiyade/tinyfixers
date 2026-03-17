@@ -21,6 +21,7 @@ public class SpecialResolver
     private readonly LineHPatchBotCombo lineHPatchBotCombo = new();
     private readonly LineVPatchBotCombo lineVPatchBotCombo = new();
     private readonly PulseCorePatchBotCombo pulseCorePatchBotCombo = new();
+    private readonly OverrideSpecializedCombo overrideSpecializedCombo = new();
     private readonly ResolutionContext ctx = new();
 
     public SpecialResolver(BoardController board, MatchFinder matchFinder, BoardAnimator boardAnimator, PulseCoreImpactService pulseCoreImpactService)
@@ -43,6 +44,13 @@ public class SpecialResolver
     public List<BoardAction> ResolveSpecialSwap(TileView a, TileView b, TileSpecial originalSa, TileSpecial originalSb)
     {
         var actions = new List<BoardAction>();
+
+        if (a == null || b == null)
+        {
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
+
         board.ShakeNextClear = true;
         board.LastSwapUserMove = false;
         board.IsSpecialActivationPhase = true;
@@ -59,6 +67,14 @@ public class SpecialResolver
         bool aOriginallySpecial = originalSa != TileSpecial.None;
         bool bOriginallySpecial = originalSb != TileSpecial.None;
         bool bothOriginallySpecial = aOriginallySpecial && bOriginallySpecial;
+
+        // Bu metod sadece special swap resolve için; normal/no-match swap akışında
+        // buraya düşülse bile zincir çözümüne girmeden güvenle çık.
+        if (!aOriginallySpecial && !bOriginallySpecial)
+        {
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
 
         bool originalSaIsLine = originalSa == TileSpecial.LineH || originalSa == TileSpecial.LineV;
         bool originalSbIsLine = originalSb == TileSpecial.LineH || originalSb == TileSpecial.LineV;
@@ -179,6 +195,38 @@ public class SpecialResolver
 
             actions.AddRange(result.Actions);
             TraceSpecialChain("ResolveSpecialSwap.LineVHPulseCore", a, b);
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
+
+        bool originalSaIsOverride = originalSa == TileSpecial.SystemOverride;
+        bool originalSbIsOverride = originalSb == TileSpecial.SystemOverride;
+        bool originalSaIsOverrideSupported = originalSa == TileSpecial.LineH || originalSa == TileSpecial.LineV || originalSa == TileSpecial.PulseCore || originalSa == TileSpecial.PatchBot;
+        bool originalSbIsOverrideSupported = originalSb == TileSpecial.LineH || originalSb == TileSpecial.LineV || originalSb == TileSpecial.PulseCore || originalSb == TileSpecial.PatchBot;
+
+        if ((originalSaIsOverride && originalSbIsOverrideSupported) ||
+            (originalSbIsOverride && originalSaIsOverrideSupported))
+        {
+            ctx.Affected.Add(a);
+            ctx.Affected.Add(b);
+            SpecialCellUtils.MarkAffectedCell(ctx, a, board);
+            SpecialCellUtils.MarkAffectedCell(ctx, b, board);
+
+            var result = overrideSpecializedCombo.Execute(new OverrideSpecializedComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = true,
+                EnqueueActivation = (resolution, tile, partner) => queueProcessor.EnqueueActivation(resolution, tile, partner),
+                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+            });
+
+            actions.AddRange(result.Actions);
+            TraceSpecialChain("ResolveSpecialSwap.OverrideSpecialized", a, b);
             board.IsSpecialActivationPhase = false;
             return actions;
         }
@@ -340,8 +388,6 @@ public class SpecialResolver
             SpecialCellUtils.MarkAffectedCell(ctx, b, board);
         }
 
-        bool originalSaIsOverride = originalSa == TileSpecial.SystemOverride;
-        bool originalSbIsOverride = originalSb == TileSpecial.SystemOverride;
         bool suppressPulseImpactAnimations = (originalSaIsPulse && originalSbIsPulse) || (originalSaIsOverride && originalSbIsOverride);
         bool suppressPerTileClearVfx = (originalSaIsPulse && originalSbIsLine) || (originalSbIsPulse && originalSaIsLine);
 
