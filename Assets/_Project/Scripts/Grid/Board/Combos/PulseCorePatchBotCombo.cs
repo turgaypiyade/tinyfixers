@@ -63,7 +63,18 @@ public sealed class PulseCorePatchBotCombo
                 new Vector2Int(tx, ty))
             : 0.22f;
 
-        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty);
+        rt.PatchbotService.EnqueueDash(
+            patchBotTile,
+            tx,
+            ty,
+            onDashStart: () =>
+            {
+                if (rt.Board.PulseCoreImpactService != null)
+                    rt.Board.StartCoroutine(CoPlayPulseExplosionAtCellDelayed(rt.Board, tx, ty, travelDuration));
+                else
+                    rt.Effects?.PlayPulseExplosionDelayed(tx, ty, travelDuration);
+            });
+
         rt.VisualService.PlayTeleportMarkers(patchBotTile, tx, ty);
         rt.VisualService.PlayTeleportMarkers(pulseTile, tx, ty);
 
@@ -74,8 +85,6 @@ public sealed class PulseCorePatchBotCombo
             new Vector2Int(tx, ty),
             travelDuration,
             true);
-
-        PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(tx, ty));
 
         CollectAreaAtTarget(rt, tx, ty);
         ExecuteChain(rt, pulseTile, tx, ty);
@@ -291,6 +300,24 @@ public sealed class PulseCorePatchBotCombo
 
         rt.Context.Queued.Add(pos);
         pending.Enqueue(tile);
+    }
+
+
+    private System.Collections.IEnumerator CoPlayPulseExplosionAtCellDelayed(BoardController board, int x, int y, float delay)
+    {
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        if (board == null)
+            yield break;
+
+        board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtCell(x, y, radiusCells: 2);
+    }
+
+    // Backward-compatible shim for stale call-sites/Unity incremental compile cache.
+    private System.Collections.IEnumerator CoPlayPulseCoreExplosionDelayed(BoardController board, int x, int y, float delay)
+    {
+        return CoPlayPulseExplosionAtCellDelayed(board, x, y, delay);
     }
 
     private MatchClearAction BuildClearAction(PulseCorePatchBotComboExecutionRuntime rt)
