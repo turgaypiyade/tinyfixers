@@ -122,7 +122,62 @@ public sealed class LineVHPulseCoreCombo
 
     private void ExpandChain(LineVHPulseCoreComboExecutionRuntime rt)
     {
-        SpecialChainExecutor.ExecuteFromAffected(rt.Context, rt.ActivateSpecial, rt.Origin, rt.Partner);
+        var snapshot = CollectSnapshotSpecials(rt, rt.Origin, rt.Partner);
+        foreach (var tile in snapshot)
+        {
+            if (tile == null)
+                continue;
+
+            var cell = new Vector2Int(tile.X, tile.Y);
+            if (rt.Context.Processed.Contains(cell))
+                continue;
+
+            if (tile.GetSpecial() == TileSpecial.None)
+                continue;
+
+            rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
+            rt.Context.Processed.Add(cell);
+
+            if (!rt.Context.ChainExecutionOrder.Contains(cell))
+                rt.Context.ChainExecutionOrder.Add(cell);
+        }
+    }
+
+    private static List<TileView> CollectSnapshotSpecials(LineVHPulseCoreComboExecutionRuntime rt, params TileView[] excludedTiles)
+    {
+        var excluded = new HashSet<Vector2Int>();
+        if (excludedTiles != null)
+        {
+            foreach (var excludedTile in excludedTiles)
+            {
+                if (excludedTile == null)
+                    continue;
+
+                excluded.Add(new Vector2Int(excludedTile.X, excludedTile.Y));
+            }
+        }
+
+        var snapshot = new List<TileView>();
+        var visited = new HashSet<Vector2Int>();
+
+        foreach (var tile in rt.Context.Affected)
+        {
+            if (tile == null)
+                continue;
+
+            var cell = new Vector2Int(tile.X, tile.Y);
+            if (excluded.Contains(cell) || visited.Contains(cell))
+                continue;
+
+            visited.Add(cell);
+
+            if (tile.GetSpecial() == TileSpecial.None)
+                continue;
+
+            snapshot.Add(tile);
+        }
+
+        return snapshot;
     }
 
     private void AddCell(LineVHPulseCoreComboExecutionRuntime rt, int x, int y, bool horizontalStrike, int centerX, int centerY)
