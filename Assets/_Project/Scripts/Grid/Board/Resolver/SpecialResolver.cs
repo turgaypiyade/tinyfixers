@@ -14,6 +14,7 @@ public class SpecialResolver
     private readonly PatchbotComboService patchbotComboService;
     private readonly LineVSpecial lineVSpecial = new();
     private readonly LineHSpecial lineHSpecial = new();
+    private readonly LineVLineHCombo lineVLineHCombo = new();
     private readonly PulseCoreSpecial pulseCoreSpecial = new();
     private readonly PatchBotSpecial patchBotSpecial = new();
 
@@ -69,6 +70,38 @@ public class SpecialResolver
         if ((originalSaIsPulse && originalSbIsLine) || (originalSbIsPulse && originalSaIsLine))
         {
             ResolvePulseLineCombo(actions, a, b, originalSa, originalSb);
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
+
+        if (bothOriginallySpecial && originalSaIsLine && originalSbIsLine)
+        {
+            ctx.Affected.Add(a);
+            ctx.Affected.Add(b);
+            SpecialCellUtils.MarkAffectedCell(ctx, a, board);
+            SpecialCellUtils.MarkAffectedCell(ctx, b, board);
+
+            // var comboOrigin = originalSa == TileSpecial.LineV ? a : b;
+            // var comboPartner = comboOrigin == a ? b : a;
+            var comboOrigin = b;
+            var comboPartner = a;
+
+            var result = lineVLineHCombo.Execute(new LineVLineHComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = b,      // source
+                Partner = a,     // target
+                Center = a,      // merkez hedef hücre
+                FinalizeAtEnd = true,
+                ActivateSpecial = dispatcher.ApplySpecialActivation,
+                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+            });
+
+            actions.AddRange(result.Actions);
+            TraceSpecialChain("ResolveSpecialSwap.LineVLineH", a, b);
             board.IsSpecialActivationPhase = false;
             return actions;
         }

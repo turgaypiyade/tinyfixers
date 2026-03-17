@@ -14,7 +14,6 @@ public class SpecialBehaviorRegistry
         RegisterCombo(new OverrideSpecialCombo());
 
         RegisterCombo(new PulsePulseCombo());
-        RegisterCombo(new LineCrossCombo());
         RegisterCombo(new PulseLineCombo());
 
         RegisterCombo(new PatchBotLineCombo());

@@ -9,6 +9,7 @@ public class SpecialBehaviorDispatcher
     private readonly SpecialEffectOrchestrator effectOrchestrator;
     private readonly LineVSpecial lineVSpecial = new();
     private readonly LineHSpecial lineHSpecial = new();
+    private readonly LineVLineHCombo lineVLineHCombo = new();
     private readonly PulseCoreSpecial pulseCoreSpecial = new();
     private readonly PatchBotSpecial patchBotSpecial = new();
 
@@ -30,6 +31,28 @@ public class SpecialBehaviorDispatcher
 
     public void ApplyComboEffect(ResolutionContext ctx, TileView a, TileView b, TileSpecial sa, TileSpecial sb)
     {
+        if (IsLineCombo(sa, sb))
+        {
+            //var comboOrigin = sa == TileSpecial.LineV ? a : b;
+            //var comboPartner = comboOrigin == a ? b : a;
+
+            var comboOrigin = a;
+            var comboPartner = b;
+
+            lineVLineHCombo.Execute(new LineVLineHComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                Center = b,
+                FinalizeAtEnd = false,
+                ActivateSpecial = ApplySpecialActivation
+            });
+
+            return;
+        }
+
         var combo = board.SpecialBehaviors.FindCombo(sa, sb);
         if (combo == null) return;
 
@@ -199,5 +222,15 @@ public class SpecialBehaviorDispatcher
             foreach (var c in behavior.CalculateAffectedCells(board, ox, oy))
                 if (board.Tiles[c.x, c.y] != null) ctx.LightningVisualTargets.Add(board.Tiles[c.x, c.y]);
         }
+    }
+
+    private static bool IsLineCombo(TileSpecial a, TileSpecial b)
+    {
+        return IsLine(a) && IsLine(b);
+    }
+
+    private static bool IsLine(TileSpecial special)
+    {
+        return special == TileSpecial.LineH || special == TileSpecial.LineV;
     }
 }
