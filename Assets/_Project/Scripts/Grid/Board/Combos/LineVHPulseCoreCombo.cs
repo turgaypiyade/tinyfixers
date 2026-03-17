@@ -16,6 +16,9 @@ public sealed class LineVHPulseCoreComboExecutionRuntime
     public bool FinalizeAtEnd;
 
     public Action<ResolutionContext, TileView, TileView> ActivateSpecial;
+    public Action<ResolutionContext, TileView, TileView> EnqueueActivation;
+    public Action<ResolutionContext> ProcessQueuedActivations;
+    public Action<string> DebugLog;
     public Action<TileSpecial, TileSpecial, Vector2Int> EmitComboTriggered;
     public Action<Vector2Int> EmitPulseEmitterComboTriggered;
 }
@@ -119,33 +122,21 @@ public sealed class LineVHPulseCoreCombo
 
     private void ExpandChain(LineVHPulseCoreComboExecutionRuntime rt)
     {
-        var pending = new Queue<TileView>();
-
-        foreach (var tile in rt.Context.Affected)
-            TryQueue(rt, pending, tile);
-
-        while (pending.Count > 0)
+        if (rt.EnqueueActivation != null && rt.ProcessQueuedActivations != null)
         {
-            var tile = pending.Dequeue();
-            if (tile == null)
-                continue;
-
-            var pos = new Vector2Int(tile.X, tile.Y);
-            if (rt.Context.Processed.Contains(pos))
-                continue;
-
-            var special = tile.GetSpecial();
-            if (special == TileSpecial.None)
-                continue;
-
-            rt.Context.Queued.Remove(pos);
-
-            rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
-            rt.Context.Processed.Add(pos);
-
-            foreach (var affectedTile in rt.Context.Affected)
-                TryQueue(rt, pending, affectedTile);
+            SpecialChainExecutor.ExecuteFromAffectedCellsViaQueue(
+                rt.Board,
+                rt.Context,
+                rt.EnqueueActivation,
+                rt.ProcessQueuedActivations,
+                rt.DebugLog,
+                rt.Origin,
+                rt.Partner);
+            return;
         }
+
+        rt.DebugLog?.Invoke("[LineVHPulseCoreCombo] Queue callbacks missing, using direct activation chain.");
+        SpecialChainExecutor.ExecuteFromAffected(rt.Board, rt.Context, rt.ActivateSpecial, rt.Origin, rt.Partner);
     }
 
     private void AddCell(LineVHPulseCoreComboExecutionRuntime rt, int x, int y, bool horizontalStrike, int centerX, int centerY)
@@ -177,29 +168,6 @@ public sealed class LineVHPulseCoreCombo
         rt.Context.Processed.Add(cell);
         rt.Context.Affected.Add(tile);
         SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board);
-    }
-
-    private void TryQueue(LineVHPulseCoreComboExecutionRuntime rt, Queue<TileView> pending, TileView tile)
-    {
-        if (tile == null)
-            return;
-
-        if (tile.GetSpecial() == TileSpecial.None)
-            return;
-
-        if (tile == rt.Origin || tile == rt.Partner)
-            return;
-
-        var pos = new Vector2Int(tile.X, tile.Y);
-
-        if (rt.Context.Processed.Contains(pos))
-            return;
-
-        if (rt.Context.Queued.Contains(pos))
-            return;
-
-        rt.Context.Queued.Add(pos);
-        pending.Enqueue(tile);
     }
 
     private TileView GetPulseTile(LineVHPulseCoreComboExecutionRuntime rt)

@@ -67,6 +67,9 @@ public class SpecialBehaviorDispatcher
                 Partner = b,
                 FinalizeAtEnd = false,
                 ActivateSpecial = ApplySpecialActivation,
+                EnqueueActivation = (resolution, tile, partner) => QueueProcessor?.EnqueueActivation(resolution, tile, partner),
+                ProcessQueuedActivations = resolution => QueueProcessor?.ProcessQueue(resolution),
+                DebugLog = msg => Debug.Log(msg),
                 EmitComboTriggered = (comboSa, comboSb, cell) => effectOrchestrator.EmitComboTriggered(comboSa, comboSb, cell),
                 EmitPulseEmitterComboTriggered = cell => effectOrchestrator.EmitPulseEmitterComboTriggered(cell)
             });

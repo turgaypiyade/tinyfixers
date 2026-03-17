@@ -16,6 +16,7 @@ public class ResolutionContext
     public readonly HashSet<Vector2Int> Processed = new();
     public readonly HashSet<Vector2Int> Queued = new();
     public readonly Queue<SpecialActivation> Queue = new();
+    public readonly List<Vector2Int> ChainExecutionOrder = new();
 
     // Lightning / line tracking
     public bool HasLineActivation;
@@ -85,6 +86,7 @@ public class ResolutionContext
         Processed.Clear();
         Queued.Clear();
         Queue.Clear();
+        ChainExecutionOrder.Clear();
 
         HasLineActivation = false;
         LightningVisualTargets.Clear();
