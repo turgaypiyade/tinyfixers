@@ -119,7 +119,7 @@ public sealed class LineVHPulseCoreCombo
 
     private void ExpandChain(LineVHPulseCoreComboExecutionRuntime rt)
     {
-        SpecialChainExecutor.ExecuteFromAffected(rt.Board, rt.Context, rt.ActivateSpecial, rt.Origin, rt.Partner);
+        SpecialChainExecutor.ExecuteFromAffected(rt.Context, rt.ActivateSpecial, rt.Origin, rt.Partner);
     }
 
     private void AddCell(LineVHPulseCoreComboExecutionRuntime rt, int x, int y, bool horizontalStrike, int centerX, int centerY)

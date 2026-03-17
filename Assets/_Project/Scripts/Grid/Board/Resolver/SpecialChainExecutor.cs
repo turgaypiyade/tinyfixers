@@ -5,32 +5,28 @@ using UnityEngine;
 public static class SpecialChainExecutor
 {
     public static void ExecuteFromAffected(
-        BoardController board,
         ResolutionContext ctx,
         Action<ResolutionContext, TileView, TileView> activateSpecial,
         params TileView[] excludedTiles)
     {
-        if (board == null || ctx == null || activateSpecial == null)
+        if (ctx == null || activateSpecial == null)
             return;
 
         var excluded = BuildExcludedCells(excludedTiles);
-        var pending = new Queue<Vector2Int>();
+        var pending = new Queue<TileView>();
 
         EnqueueAffectedSpecials(ctx, pending, excluded);
 
         while (pending.Count > 0)
         {
-            var cell = pending.Dequeue();
+            var tile = pending.Dequeue();
+            if (tile == null)
+                continue;
+
+            var cell = new Vector2Int(tile.X, tile.Y);
             ctx.Queued.Remove(cell);
 
             if (excluded.Contains(cell) || ctx.Processed.Contains(cell))
-                continue;
-
-            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
-                continue;
-
-            var tile = board.Tiles[cell.x, cell.y];
-            if (tile == null)
                 continue;
 
             if (tile.GetSpecial() == TileSpecial.None)
@@ -46,13 +42,13 @@ public static class SpecialChainExecutor
         }
     }
 
-    private static void EnqueueAffectedSpecials(ResolutionContext ctx, Queue<Vector2Int> pending, HashSet<Vector2Int> excluded)
+    private static void EnqueueAffectedSpecials(ResolutionContext ctx, Queue<TileView> pending, HashSet<Vector2Int> excluded)
     {
         foreach (var tile in ctx.Affected)
             TryQueue(ctx, pending, tile, excluded);
     }
 
-    private static void TryQueue(ResolutionContext ctx, Queue<Vector2Int> pending, TileView tile, HashSet<Vector2Int> excluded)
+    private static void TryQueue(ResolutionContext ctx, Queue<TileView> pending, TileView tile, HashSet<Vector2Int> excluded)
     {
         if (tile == null || tile.GetSpecial() == TileSpecial.None)
             return;
@@ -63,7 +59,7 @@ public static class SpecialChainExecutor
             return;
 
         ctx.Queued.Add(cell);
-        pending.Enqueue(cell);
+        pending.Enqueue(tile);
     }
 
     private static HashSet<Vector2Int> BuildExcludedCells(TileView[] excludedTiles)
