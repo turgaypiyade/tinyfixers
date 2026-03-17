@@ -212,7 +212,8 @@ public class BoardController : MonoBehaviour
     private BoosterService boosterService;
 
     private int busyScopeDepth;
-
+    public readonly System.Collections.Generic.List<PatchbotDashRequest> TempPatchbotDashRequests =
+        new System.Collections.Generic.List<PatchbotDashRequest>();
     public event Action<ObstacleVisualChange> ObstacleVisualChanged;
 
     // ── Internal accessors ──

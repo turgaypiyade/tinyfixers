@@ -12,6 +12,7 @@ public class BoardAnimator
     private readonly Color lightningColor = new Color(0.70f, 0.90f, 1f, 1f);
 
     private static readonly List<BoardController.PatchbotDashRequest> _patchbotDashBuffer = new();
+    private readonly List<IClearEffectPlayer> clearEffectPlayers = new List<IClearEffectPlayer>();
     private static readonly Vector2Int[] OrthogonalDirs =
     {
         new Vector2Int(1, 0),
@@ -52,6 +53,11 @@ public class BoardAnimator
             new LightningStrikeTileClearEffect(board.BoardVfxPlayer, lightningColor, tileAnimator),
             new DefaultPopTileClearEffect(tileAnimator)
         );
+
+        clearEffectPlayers.Add(new PulseWaveEffectPlayer());
+        clearEffectPlayers.Add(new LineSweepEffectPlayer());
+        clearEffectPlayers.Add(new OverrideRadialEffectPlayer());
+        clearEffectPlayers.Add(new PatchBotDashEffectPlayer());
     }
 
     /// <summary>
@@ -483,6 +489,124 @@ public class BoardAnimator
         }
     }
 
+
+    private IClearEffectPlayer ResolveEffectPlayer(IClearEffectDescriptor effect)
+    {
+        if (effect == null)
+            return null;
+
+        for (int i = 0; i < clearEffectPlayers.Count; i++)
+        {
+            if (clearEffectPlayers[i] != null && clearEffectPlayers[i].CanPlay(effect))
+                return clearEffectPlayers[i];
+        }
+
+        return null;
+    }
+
+    public IEnumerator PlayPulseImpactSingle(TileView tile, float animTime)
+    {
+        if (tile == null)
+            yield break;
+
+        yield return tileAnimator.PlayPulseImpact(tile, 0f, animTime);
+    }
+
+    public IEnumerator PlayClearPresentation(ClearPresentationPlan plan)
+    {
+        // Pilot presentation path.
+        // Currently intended for pure solo PulseCore only.
+        if (plan == null)
+            yield break;
+
+        System.Collections.Generic.List<Vector2Int> impactedCells =
+            new System.Collections.Generic.List<Vector2Int>();
+        System.Collections.Generic.Dictionary<TileType, int> clearedByType =
+            new System.Collections.Generic.Dictionary<TileType, int>();
+
+        var ctx = new ClearEffectPlaybackContext();
+
+        var cleared = new System.Collections.Generic.HashSet<TileView>();
+
+        ctx.ClearTileNow = delegate (TileView tile)
+        {
+            if (tile == null || cleared.Contains(tile))
+                return;
+
+            cleared.Add(tile);
+            board.ClearAndDestroyTile(tile, clearedByType);
+        };
+
+        ctx.NotifyCellImpactNow = delegate (Vector2Int cell)
+        {
+            impactedCells.Add(cell);
+        };
+
+        if (plan.DoBoardShake && board.ShakeTarget != null)
+            board.StartCoroutine(ShakeBoard(board.ShakeDuration, board.ShakeStrength));
+
+        for (int i = 0; i < plan.Effects.Count; i++)
+        {
+            var effect = plan.Effects[i];
+            if (effect == null)
+                continue;
+
+            var player = ResolveEffectPlayer(effect);
+            if (player == null)
+                continue;
+
+            yield return player.Play(effect, board, ctx);
+        }
+
+        foreach (TileView tile in plan.FinalClearTiles)
+        {
+            if (tile == null || cleared.Contains(tile))
+                continue;
+
+            cleared.Add(tile);
+            board.ClearAndDestroyTile(tile, clearedByType);
+        }
+
+        foreach (var pair in clearedByType)
+            board.NotifyTilesCleared(pair.Key, pair.Value);
+
+        ApplyPresentationObstacleDamage(impactedCells, plan);
+    }
+
+    private void ApplyPresentationObstacleDamage(
+    System.Collections.Generic.List<Vector2Int> impactedCells,
+    ClearPresentationPlan plan)
+    {
+        if (board.ObstacleStateService == null || impactedCells == null || impactedCells.Count == 0)
+            return;
+
+        System.Collections.Generic.Dictionary<Vector2Int, int> obstacleDamageCounts =
+            new System.Collections.Generic.Dictionary<Vector2Int, int>();
+
+        for (int i = 0; i < impactedCells.Count; i++)
+        {
+            Vector2Int cell = impactedCells[i];
+
+            int existing;
+            if (obstacleDamageCounts.TryGetValue(cell, out existing))
+                obstacleDamageCounts[cell] = existing + 1;
+            else
+                obstacleDamageCounts[cell] = 1;
+
+            if (plan.IncludeAdjacentOverTileBlockerDamage)
+                CollectAdjacentOverTileBlockers(cell, obstacleDamageCounts);
+        }
+
+        foreach (var kv in obstacleDamageCounts)
+        {
+            for (int i = 0; i < kv.Value; i++)
+            {
+                var hit = board.ApplyObstacleDamageAt(kv.Key.x, kv.Key.y, plan.ObstacleHitContext);
+                if (hit.didHit)
+                    board.TriggerObstacleVisualChange(hit.visualChange);
+            }
+        }
+    }
     private static void SortTilesForLightning(List<TileView> tiles, TileView originTile, Vector2Int? originCell)
     {
         if (tiles == null || tiles.Count <= 1)
@@ -1271,4 +1395,6 @@ public class BoardAnimator
     {
         Debug.Log(message);
     }
+
+
 }
