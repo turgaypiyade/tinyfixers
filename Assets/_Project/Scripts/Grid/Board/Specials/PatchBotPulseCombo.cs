@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -31,7 +30,7 @@ public class PatchBotPulseCombo : IComboBehavior, IComboExecutor
         var sa = ctx.SpecialA;
         var sb = ctx.SpecialB;
 
-        ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
+        ctx.Effects.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
 
         var pulseTile = IsPulse(sa) ? a : b;
         var patchBotTile = IsPatchBot(sa) ? a : b;
@@ -58,17 +57,9 @@ public class PatchBotPulseCombo : IComboBehavior, IComboExecutor
 
             // Hedefte tile olmasa bile (ör. obstacle hücresi) Pulse patlamasını
             // hedef hücre üzerinde mutlaka göster.
-            board.StartCoroutine(CoPlayPulseExplosionDelayed(board, target.x, target.y, travelDuration));
+            ctx.Effects.PlayPulseExplosionDelayed(target.x, target.y, travelDuration);
             SpecialCellUtils.AddSquare(res.Affected, res, board, target.x, target.y, 1);
         }
-    }
-
-    private static IEnumerator CoPlayPulseExplosionDelayed(BoardController board, int x, int y, float delay)
-    {
-        if (delay > 0f)
-            yield return new WaitForSeconds(delay);
-
-        board.PlayPulsePulseExplosionVfxAtCell(x, y);
     }
 
     static bool IsPatchBot(TileSpecial s) => s == TileSpecial.PatchBot;

@@ -32,5 +32,7 @@ public class LineCrossCombo : IComboBehavior, ILightningComboBehavior
         return cells;
     }
 
+
+
     static bool IsLine(TileSpecial s) => s == TileSpecial.LineH || s == TileSpecial.LineV;
 }

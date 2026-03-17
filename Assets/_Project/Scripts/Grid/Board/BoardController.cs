@@ -429,6 +429,7 @@ public class BoardController : MonoBehaviour
     public float PlaySystemOverrideComboVfxAndGetDuration() => boardVfxService.PlaySystemOverrideComboVfxAndGetDuration(systemOverrideComboVfx);
     public void PlayPulseEmitterComboVfxAtCell(int x, int y) => boardVfxService.PlayPulseEmitterComboVfxAtCell(pulseEmitterComboVfx, vfxSpace, x, y);
     public void PlayPulsePulseExplosionVfxAtCell(int x, int y) => boardVfxService.PlayPulsePulseExplosionVfxAtCell(pulsePulseExplosionPrefab, vfxSpace, pulsePulseExplosionLifetime, x, y);
+    internal HashSet<Vector2Int> BuildPulseEmitterTargets(int cx, int cy) => boardVfxService.BuildPulseEmitterTargets(cx, cy);
 
     public Vector3 GetTileWorldCenter(TileView tile)
     {
@@ -997,45 +998,7 @@ IEnumerator ProcessSwap(TileView a, TileView b)
         return localPoint;
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    //  PulseEmitter Combo Action Factory
-    // ═══════════════════════════════════════════════════════════════
 
-    public PulseLineComboAction CreatePulseEmitterComboAction(int cx, int cy)
-    {
-        PulseBehaviorEvents.EmitPulseEmitterComboTriggered(new Vector2Int(cx, cy));
-        var targets = boardVfxService.BuildPulseEmitterTargets(cx, cy);
-
-        RectTransform space = null;
-        if (lineTravelPlayer != null)
-            space = lineTravelPlayer.afterImageParent != null ? lineTravelPlayer.afterImageParent : (lineTravelSpawnParent as RectTransform);
-
-        var hOrigins = new List<(Vector2Int cell, Vector2 anch)>();
-        var vOrigins = new List<(Vector2Int cell, Vector2 anch)>();
-
-        for (int yy = cy - 1; yy <= cy + 1; yy++)
-        {
-            if (yy < 0 || yy >= height) continue;
-            var originTile = tiles[cx, yy]; if (originTile == null) continue;
-            var rt = originTile.GetComponent<RectTransform>();
-            Vector3 wc = rt.TransformPoint(new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
-            hOrigins.Add((new Vector2Int(cx, yy), WorldToAnchoredIn(space, wc)));
-        }
-
-        for (int xx = cx - 1; xx <= cx + 1; xx++)
-        {
-            if (xx < 0 || xx >= width) continue;
-            var originTile = tiles[xx, cy]; if (originTile == null) continue;
-            var rt = originTile.GetComponent<RectTransform>();
-            Vector3 wc = rt.TransformPoint(new Vector3(tileSize * 0.5f, -tileSize * 0.5f, 0f));
-            vOrigins.Add((new Vector2Int(xx, cy), WorldToAnchoredIn(space, wc)));
-        }
-
-        var targetVisuals = new Dictionary<Vector2Int, (TileType, TileView)>();
-        foreach (var c in targets) { var t = tiles[c.x, c.y]; if (t != null) targetVisuals[c] = (t.GetTileType(), t); }
-        foreach (var c in targets) ClearCellDataOnly(c);
-        return new PulseLineComboAction(this, cx, cy, targets, hOrigins, vOrigins, targetVisuals);
-    }
 
     private HashSet<TileView> CollectMatchedTilesForSwap(TileView a, TileView b)
     {

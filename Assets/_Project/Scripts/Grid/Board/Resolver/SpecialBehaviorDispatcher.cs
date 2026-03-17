@@ -13,6 +13,7 @@ public class SpecialBehaviorDispatcher
     private readonly BoardController board;
     private readonly PatchbotComboService patchbotComboService;
     private readonly SpecialVisualService visualService;
+    private readonly SpecialEffectOrchestrator effectOrchestrator;
 
     // Set after construction (circular dep)
     internal ActivationQueueProcessor QueueProcessor;
@@ -23,11 +24,13 @@ public class SpecialBehaviorDispatcher
     public SpecialBehaviorDispatcher(
         BoardController board,
         PatchbotComboService patchbotComboService,
-        SpecialVisualService visualService)
+        SpecialVisualService visualService,
+        SpecialEffectOrchestrator effectOrchestrator)
     {
         this.board = board;
         this.patchbotComboService = patchbotComboService;
         this.visualService = visualService;
+        this.effectOrchestrator = effectOrchestrator;
     }
 
     // ═══════════════════════════════════════════════
@@ -91,6 +94,7 @@ public class SpecialBehaviorDispatcher
         execCtx.VisualService = visualService;
         execCtx.PatchbotService = patchbotComboService;
         execCtx.QueueProcessor = QueueProcessor;
+        execCtx.Effects = effectOrchestrator;
     }
 
     // ═══════════════════════════════════════════════
@@ -283,7 +287,7 @@ public class SpecialBehaviorDispatcher
         {
             visualService.PlayTeleportMarkers(partnerTile, originX, originY);
             visualService.PlayTransientSpecialVisualAt(partnerTile, originX, originY);
-            board.PlayPulsePulseExplosionVfxAtCell(originX, originY);
+            effectOrchestrator.PlayPulseExplosionAt(originX, originY);
             SpecialCellUtils.AddSquare(ctx.Affected, ctx, board, originX, originY, 2);
             return false;
         }

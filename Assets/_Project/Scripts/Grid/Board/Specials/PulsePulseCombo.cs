@@ -32,8 +32,8 @@ public class PulsePulseCombo : IComboBehavior, IComboExecutor
         var res = ctx.Resolution;
         var a = ctx.TileA;
 
-        ComboBehaviorEvents.EmitComboTriggered(ctx.SpecialA, ctx.SpecialB, new Vector2Int(a.X, a.Y));
-        ctx.Board.PlayPulsePulseExplosionVfxAtCell(a.X, a.Y);
+        ctx.Effects.EmitComboTriggered(ctx.SpecialA, ctx.SpecialB, new Vector2Int(a.X, a.Y));
+        ctx.Effects.PlayPulseExplosionAt(a.X, a.Y);
         SpecialCellUtils.AddSquare(res.Affected, res, ctx.Board, a.X, a.Y, 2);
     }
 }

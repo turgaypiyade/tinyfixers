@@ -29,4 +29,5 @@ public class ComboExecutionContext
     public SpecialVisualService VisualService;
     public PatchbotComboService PatchbotService;
     public ActivationQueueProcessor QueueProcessor;
+    public SpecialEffectOrchestrator Effects;
 }
