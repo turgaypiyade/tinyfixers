@@ -23,6 +23,7 @@ public class SpecialResolver
     private readonly SpecialImplantService implantService;
     private readonly SpecialFanoutService fanoutService;
     private readonly SpecialEffectOrchestrator effectOrchestrator;
+    private readonly PatchbotComboService patchbotComboService;
 
     // Reusable context — reset at the start of each resolution pass
     private readonly ResolutionContext ctx = new();
@@ -32,7 +33,7 @@ public class SpecialResolver
         this.board = board;
         this.pulseCoreImpactService = pulseCoreImpactService;
 
-        var patchbotComboService = new PatchbotComboService(board);
+        patchbotComboService = new PatchbotComboService(board);
 
         visualService = new SpecialVisualService(board, boardAnimator, patchbotComboService);
         effectOrchestrator = new SpecialEffectOrchestrator(board);
@@ -645,8 +646,6 @@ public class SpecialResolver
 
         TileView originTile = null;
         Vector2Int? originCell = null;
-        TileView targetTile = null;
-        Vector2Int? targetCell = null;
 
         foreach (var tile in targetTiles)
         {
@@ -657,15 +656,25 @@ public class SpecialResolver
             {
                 originTile = tile;
                 originCell = new Vector2Int(tile.X, tile.Y);
+                break;
             }
-            else
-            {
-                if (targetTile == null)
-                {
-                    targetTile = tile;
-                    targetCell = new Vector2Int(tile.X, tile.Y);
-                }
-            }
+        }
+
+        if (originTile == null || !originCell.HasValue)
+            return null;
+
+        // PatchBot target selection must match legacy gameplay logic exactly.
+        var target = patchbotComboService.FindTarget(originTile, null, null);
+        if (!target.hasCell)
+            return null;
+
+        TileView targetTile = target.tile;
+        Vector2Int targetCell = new Vector2Int(target.x, target.y);
+
+        if (targetTile != null && !targetTiles.Contains(targetTile))
+        {
+            targetTiles.Add(targetTile);
+            targetCells.Add(targetCell);
         }
 
         var plan = new ClearPresentationPlan();
@@ -683,7 +692,10 @@ public class SpecialResolver
         ));
 
         foreach (var tile in targetTiles)
-            plan.FinalClearTiles.Add(tile);
+        {
+            if (tile != null)
+                plan.FinalClearTiles.Add(tile);
+        }
 
         return plan;
     }
