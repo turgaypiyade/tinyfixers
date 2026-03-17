@@ -141,7 +141,7 @@ public class SpecialBehaviorDispatcher
                 Origin = a,
                 Partner = b,
                 FinalizeAtEnd = false,
-                EnqueueActivation = (resolution, tile, partner) => QueueProcessor?.EnqueueActivation(resolution, tile, partner)
+                EnqueueActivation = (resolution, tile, partner) => QueueProcessor.EnqueueActivation(resolution, tile, partner)
             });
 
             return;
