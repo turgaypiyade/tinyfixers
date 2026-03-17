@@ -76,20 +76,8 @@ public sealed class PulseCorePatchBotCombo
             true);
 
         // Dash geçişinden sonra Pulse patlamasını hedef hücrede oynat.
-        // Öncelik: PulseCoreVfxPlayer (PulseCoreImpactService) üzerinden patlat.
-        // Hücrede tile yoksa fallback olarak legacy cell explosion VFX'i kullan.
-        var targetTile = (tx >= 0 && tx < rt.Board.Width && ty >= 0 && ty < rt.Board.Height)
-            ? rt.Board.Tiles[tx, ty]
-            : null;
-
-        if (targetTile != null && rt.Board.PulseCoreImpactService != null)
-        {
-            rt.Board.StartCoroutine(CoPlayPulseCoreExplosionDelayed(rt.Board, targetTile, travelDuration));
-        }
-        else
-        {
-            rt.Effects?.PlayPulseExplosionDelayed(tx, ty, travelDuration);
-        }
+        // Refactor sırasında sadece event emit kalmıştı; gerçek VFX/SFX bu çağrıyla tetiklenir.
+        rt.Effects?.PlayPulseExplosionDelayed(tx, ty, travelDuration);
 
         CollectAreaAtTarget(rt, tx, ty);
         ExecuteChain(rt, pulseTile, tx, ty);
