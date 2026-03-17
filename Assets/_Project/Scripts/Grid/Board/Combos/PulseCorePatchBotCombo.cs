@@ -123,27 +123,17 @@ public sealed class PulseCorePatchBotCombo
         if (radiusCells < 1)
             radiusCells = 1;
 
-        rt.Board.StartCoroutine(CoPlayDelayedPulseVfx(rt.Board, rt.Effects, cellX, cellY, radiusCells, delay));
+        rt.Board.StartCoroutine(CoPlayDelayedPulseVfx(rt.Board, cellX, cellY, radiusCells, delay));
     }
 
     private IEnumerator CoPlayDelayedPulseVfx(
-        BoardController board,
-        SpecialEffectOrchestrator effects,
-        int cellX,
-        int cellY,
-        int radiusCells,
-        float delay)
+        BoardController board, int cellX, int cellY, int radiusCells, float delay)
     {
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
 
         if (board?.PulseCoreImpactService != null)
-        {
             board.PulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(cellX, cellY, radiusCells);
-            yield break;
-        }
-
-        effects?.PlayPulseExplosionAt(cellX, cellY);
     }
 
     // ---------------------------------------------------------------
