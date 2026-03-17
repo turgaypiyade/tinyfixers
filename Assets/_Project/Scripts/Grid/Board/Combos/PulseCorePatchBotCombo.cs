@@ -63,7 +63,18 @@ public sealed class PulseCorePatchBotCombo
                 new Vector2Int(tx, ty))
             : 0.22f;
 
-        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty);
+        rt.PatchbotService.EnqueueDash(
+            patchBotTile,
+            tx,
+            ty,
+            onDashStart: () =>
+            {
+                if (rt.Board.PulseCoreImpactService != null)
+                    rt.Board.StartCoroutine(CoPlayPulseCoreExplosionDelayed(rt.Board, tx, ty, travelDuration));
+                else
+                    rt.Effects?.PlayPulseExplosionDelayed(tx, ty, travelDuration);
+            });
+
         rt.VisualService.PlayTeleportMarkers(patchBotTile, tx, ty);
         rt.VisualService.PlayTeleportMarkers(pulseTile, tx, ty);
 
