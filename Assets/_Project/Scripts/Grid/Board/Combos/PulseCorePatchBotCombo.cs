@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -63,17 +64,7 @@ public sealed class PulseCorePatchBotCombo
                 new Vector2Int(tx, ty))
             : 0.22f;
 
-        rt.PatchbotService.EnqueueDash(
-            patchBotTile,
-            tx,
-            ty,
-            onDashStart: () =>
-            {
-                if (rt.Board.PulseCoreImpactService != null)
-                    rt.Board.StartCoroutine(CoPlayPulseCoreExplosionDelayed(rt.Board, tx, ty, travelDuration));
-                else
-                    rt.Effects?.PlayPulseExplosionDelayed(tx, ty, travelDuration);
-            });
+        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty);
 
         rt.VisualService.PlayTeleportMarkers(patchBotTile, tx, ty);
         rt.VisualService.PlayTeleportMarkers(pulseTile, tx, ty);
@@ -86,9 +77,8 @@ public sealed class PulseCorePatchBotCombo
             travelDuration,
             true);
 
-        // Dash geçişinden sonra Pulse patlamasını hedef hücrede oynat.
-        // Refactor sırasında sadece event emit kalmıştı; gerçek VFX/SFX bu çağrıyla tetiklenir.
-        rt.Effects?.PlayPulseExplosionDelayed(tx, ty, travelDuration);
+        // Hedef hücrede tile varsa standart yol, yoksa (obstacle) grid pozisyonundan VFX
+        SchedulePulseExplosionVfx(rt, tx, ty, travelDuration);
 
         CollectAreaAtTarget(rt, tx, ty);
         ExecuteChain(rt, pulseTile, tx, ty);
@@ -120,6 +110,74 @@ public sealed class PulseCorePatchBotCombo
 
         return result;
     }
+
+    // ---------------------------------------------------------------
+    //  Pulse VFX — obstacle hücreleri için grid'den pozisyon hesaplar
+    // ---------------------------------------------------------------
+
+    private void SchedulePulseExplosionVfx(PulseCorePatchBotComboExecutionRuntime rt, int cellX, int cellY, float delay)
+    {
+        // Hedef hücrede tile varsa standart Effects yolunu kullan
+        if (rt.Board.Tiles[cellX, cellY] != null)
+        {
+            rt.Effects.PlayPulseExplosionDelayed(cellX, cellY, delay);
+            return;
+        }
+
+        // Obstacle / boş hücre — tile yok, pozisyonu grid'den hesapla
+        // ve PulseCoreVfxPlayer'ı doğrudan çağır.
+        // BoardController.GetCellWorldPosition sol-üst köşeyi verir;
+        // merkez için yarım tile offset ekliyoruz.
+        var vfxPlayer = rt.Board.GetComponentInChildren<PulseCoreVfxPlayer>();
+        if (vfxPlayer == null || vfxPlayer.VfxRoot == null)
+            return;
+
+        // GetCellWorldPosition => hücrenin sol-üst köşesi (anchor noktası)
+        // Merkez = sol-üst + (TileSize*0.5, -TileSize*0.5) parent-space'de
+        Vector3 cornerWorld = rt.Board.GetCellWorldPosition(cellX, cellY);
+        float halfTile = rt.Board.TileSize * 0.5f;
+
+        // Parent'ın lokal yönlerini world'e çevirip offset uygula
+        // (board döndürülmüş / ölçeklenmiş olsa bile doğru çalışır)
+        Transform boardParent = rt.Board.transform;
+        Vector3 rightDir = boardParent.TransformDirection(Vector3.right);
+        Vector3 downDir = boardParent.TransformDirection(Vector3.down);
+        Vector3 worldCenter = cornerWorld + rightDir * halfTile + downDir * halfTile;
+
+        Vector2 vfxLocalPos = WorldToVfxLocal(vfxPlayer.VfxRoot, worldCenter);
+
+        int radiusCells = Mathf.CeilToInt(Mathf.Sqrt(affectedCellCount)) / 2;
+        if (radiusCells < 1) radiusCells = 1;
+
+        rt.Board.StartCoroutine(CoPlayDelayedPulseVfx(
+            vfxPlayer, vfxLocalPos, radiusCells, rt.Board.TileSize, delay));
+    }
+
+    private Vector2 WorldToVfxLocal(RectTransform vfxRoot, Vector3 worldPos)
+    {
+        var canvas = vfxRoot.GetComponentInParent<Canvas>();
+        Camera cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? canvas.worldCamera
+            : null;
+
+        Vector2 screenPos = RectTransformUtility.WorldToScreenPoint(cam, worldPos);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(vfxRoot, screenPos, cam, out var localPos);
+        return localPos;
+    }
+
+    private IEnumerator CoPlayDelayedPulseVfx(
+        PulseCoreVfxPlayer vfxPlayer, Vector2 localPos, int radiusCells, int tileSize, float delay)
+    {
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        if (vfxPlayer != null)
+            vfxPlayer.PlayPulseVfx(localPos, radiusCells, tileSize);
+    }
+
+    // ---------------------------------------------------------------
+    //  Mevcut mantık
+    // ---------------------------------------------------------------
 
     private bool CanExecute(PulseCorePatchBotComboExecutionRuntime rt)
     {
@@ -165,6 +223,8 @@ public sealed class PulseCorePatchBotCombo
 
     private void CollectAreaAtTarget(PulseCorePatchBotComboExecutionRuntime rt, int centerX, int centerY)
     {
+        PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(centerX, centerY));
+
         int side = Mathf.CeilToInt(Mathf.Sqrt(affectedCellCount));
         if (side % 2 == 0) side += 1;
         int half = side / 2;
@@ -304,26 +364,6 @@ public sealed class PulseCorePatchBotCombo
 
         rt.Context.Queued.Add(pos);
         pending.Enqueue(tile);
-    }
-
-
-    private System.Collections.IEnumerator CoPlayPulseCoreExplosionDelayed(BoardController board, TileView tile, float delay)
-    {
-        if (delay > 0f)
-            yield return new WaitForSeconds(delay);
-
-        if (board == null || tile == null || !tile)
-            yield break;
-
-        board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtTile(tile, radiusCells: 2);
-    }
-
-    private System.Collections.IEnumerator CoPlayPulseCoreExplosionDelayed(BoardController board, int x, int y, float delay)
-    {
-        if (board == null || x < 0 || x >= board.Width || y < 0 || y >= board.Height)
-            yield break;
-
-        yield return CoPlayPulseCoreExplosionDelayed(board, board.Tiles[x, y], delay);
     }
 
     private MatchClearAction BuildClearAction(PulseCorePatchBotComboExecutionRuntime rt)
