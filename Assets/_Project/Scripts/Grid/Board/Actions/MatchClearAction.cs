@@ -20,6 +20,9 @@ public class MatchClearAction : BoardAction
     private float staggerAnimTime;
     private bool isSpecialActivationPhase;
 
+    // NEW: future-facing generic presentation payload
+    public ClearPresentationPlan PresentationPlan { get; }
+
     public MatchClearAction(
         HashSet<TileView> matches,
         bool doShake = false,
@@ -35,7 +38,8 @@ public class MatchClearAction : BoardAction
         Dictionary<TileView, float> perTileClearDelays = null,
         Dictionary<TileView, float> staggerDelays = null,
         float staggerAnimTime = 0.16f,
-        bool isSpecialPhase = false)
+        bool isSpecialPhase = false,
+        ClearPresentationPlan presentationPlan = null)
     {
         this.matches = matches != null ? new HashSet<TileView>(matches) : new HashSet<TileView>();
         this.doShake = doShake;
@@ -52,15 +56,30 @@ public class MatchClearAction : BoardAction
         this.staggerDelays = staggerDelays;
         this.staggerAnimTime = staggerAnimTime;
         this.isSpecialActivationPhase = isSpecialPhase;
+        this.PresentationPlan = presentationPlan;
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
-        if (matches == null || matches.Count == 0) yield break;
+        if (matches == null || matches.Count == 0)
+            yield break;
 
         bool prevSpecial = sequencer.Board.IsSpecialActivationPhase;
         if (isSpecialActivationPhase)
             sequencer.Board.IsSpecialActivationPhase = true;
+
+        // Pulse pilot path:
+        // If PresentationPlan exists, let the new presentation pipeline own visuals.
+        // Otherwise fall back to the legacy clear animation path.
+        if (PresentationPlan != null)
+        {
+            yield return sequencer.Animator.PlayClearPresentation(PresentationPlan);
+
+            if (isSpecialActivationPhase)
+                sequencer.Board.IsSpecialActivationPhase = prevSpecial;
+
+            yield break;
+        }
 
         yield return sequencer.Animator.ClearMatchesAnimated(
             matches, doShake, staggerDelays, staggerAnimTime,
