@@ -24,7 +24,7 @@ public class SpecialResolver
     private readonly OverrideSpecializedCombo overrideSpecializedCombo = new();
     private readonly ResolutionContext ctx = new();
 
-    public SpecialResolver(BoardController board, MatchFinder matchFinder, BoardAnimator boardAnimator, PulseCoreImpactService pulseCoreImpactService)
+    public SpecialResolver(BoardController board, BoardAnimator boardAnimator, PulseCoreImpactService pulseCoreImpactService)
     {
         this.board = board;
         this.pulseCoreImpactService = pulseCoreImpactService;
@@ -231,11 +231,6 @@ public class SpecialResolver
             ctx.Affected.Add(b);
             SpecialCellUtils.MarkAffectedCell(ctx, a, board);
             SpecialCellUtils.MarkAffectedCell(ctx, b, board);
-
-            // var comboOrigin = originalSa == TileSpecial.LineV ? a : b;
-            // var comboPartner = comboOrigin == a ? b : a;
-            var comboOrigin = b;
-            var comboPartner = a;
 
             var result = lineVLineHCombo.Execute(new LineVLineHComboExecutionRuntime
             {
@@ -720,64 +715,6 @@ public class SpecialResolver
         board.RefreshTileObstacleVisual(winner);
 
         return winner;
-    }
-
-    private void ResolvePulseLineCombo(List<BoardAction> actions, TileView a, TileView b, TileSpecial sa, TileSpecial sb)
-    {
-        bool saIsPulse = sa == TileSpecial.PulseCore;
-        var center = saIsPulse ? a : b;
-        int cx = center.X;
-        int cy = center.Y;
-        effectOrchestrator.EmitComboTriggered(sa, sb, new Vector2Int(cx, cy));
-        effectOrchestrator.EmitPulseEmitterComboTriggered(new Vector2Int(cx, cy));
-
-        var pulseAction = PulseLineCombo.CreatePulseEmitterComboAction(board, cx, cy);
-        actions.Add(pulseAction);
-
-        var chainAffected = new HashSet<TileView>();
-        var chainCells = new HashSet<Vector2Int>();
-        for (int r = cy - 1; r <= cy + 1; r++)
-            for (int c = 0; c < board.Width; c++)
-            {
-                if (r < 0 || r >= board.Height) continue;
-                chainCells.Add(new Vector2Int(c, r));
-                if (board.Tiles[c, r] != null) chainAffected.Add(board.Tiles[c, r]);
-            }
-        for (int c = cx - 1; c <= cx + 1; c++)
-            for (int r = 0; r < board.Height; r++)
-            {
-                if (c < 0 || c >= board.Width) continue;
-                chainCells.Add(new Vector2Int(c, r));
-                if (board.Tiles[c, r] != null) chainAffected.Add(board.Tiles[c, r]);
-            }
-
-        bool chainHasLine, chainHasAny;
-        var chainLightningTargets = new HashSet<TileView>();
-        var chainLightningStrikes = new List<LightningLineStrike>();
-        ExpandSpecialChain(chainAffected, chainCells,
-            out chainHasLine, out chainHasAny,
-            chainLightningTargets, chainLightningStrikes);
-
-        if (chainHasAny && chainAffected.Count > 0)
-        {
-            var chainMode = chainHasLine
-                ? ClearAnimationMode.LightningStrike
-                : ClearAnimationMode.Default;
-
-            actions.Add(new MatchClearAction(
-                chainAffected,
-                doShake: true,
-                animationMode: chainMode,
-                affectedCells: chainCells,
-                obstacleHitContext: null,
-                includeAdjacentOverTileBlockerDamage: false,
-                lightningOriginTile: null,
-                lightningOriginCell: null,
-                lightningVisualTargets: chainLightningTargets,
-                lightningLineStrikes: chainLightningStrikes,
-                isSpecialPhase: true
-            ));
-        }
     }
 
     private bool IsPureSoloPulsePresentationCandidate(HashSet<TileView> affected, bool suppressPulseImpact)

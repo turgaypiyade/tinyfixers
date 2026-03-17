@@ -297,7 +297,7 @@ public class BoardController : MonoBehaviour
         boardAnimator ??= new BoardAnimator(this);
         pulseCoreImpactService ??= new PulseCoreImpactService(this, boardAnimator);
         specialBehaviorRegistry ??= new SpecialBehaviorRegistry();
-        specialResolver ??= new SpecialResolver(this, matchFinder, boardAnimator, pulseCoreImpactService);
+        specialResolver ??= new SpecialResolver(this, boardAnimator, pulseCoreImpactService);
         specialCreationService ??= new SpecialCreationService(matchFinder);
         pendingCreationStore ??= new PendingCreationStore();
         pendingCreationApplicator ??= new PendingCreationApplicator(this);
