@@ -52,6 +52,36 @@ public class PulseCoreImpactService
         return stagger;
     }
 
+
+    public void PlayPulseCoreExplosionVfxAtCell(int x, int y, int radiusCells = 2)
+    {
+        Vector3 worldCenter = board.GetCellWorldPosition(x, y)
+            + new Vector3(board.TileSize * 0.5f, -board.TileSize * 0.5f, 0f);
+
+        if (board.BoardVfxPlayer != null)
+        {
+            var vfxRoot = board.BoardVfxPlayer.VfxRoot;
+            Vector2 anchored = vfxRoot != null
+                ? board.WorldToAnchoredIn(vfxRoot, worldCenter)
+                : Vector2.zero;
+
+            board.BoardVfxPlayer.PlayPulseVfx(anchored, radiusCells: radiusCells, tileSize: board.TileSize);
+        }
+
+        if (board.SfxSource != null)
+        {
+            if (board.SfxPulseCoreBoom != null)
+                board.SfxSource.PlayOneShot(board.SfxPulseCoreBoom);
+            if (board.SfxPulseCoreWave != null)
+                board.SfxSource.PlayOneShot(board.SfxPulseCoreWave);
+        }
+
+        if (board.EnablePulseMicroShake && board.PulseMicroShakeDuration > 0f && board.PulseMicroShakeStrength > 0f)
+            board.StartCoroutine(boardAnimator.MicroShake(board.PulseMicroShakeDuration, board.PulseMicroShakeStrength));
+
+        PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(x, y));
+    }
+
     public IEnumerator PlayPreExplosionPulse(TileView tile, float peakScale = 1.42f, float upTime = 0.06f, float downTime = 0.06f, float postDelay = 0.05f)
     {
         if (tile == null)
