@@ -295,6 +295,18 @@ public sealed class PulseCorePatchBotCombo
         pending.Enqueue(tile);
     }
 
+
+    private System.Collections.IEnumerator CoPlayPulseCoreExplosionDelayed(BoardController board, TileView tile, float delay)
+    {
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        if (board == null || tile == null || !tile)
+            yield break;
+
+        board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtTile(tile, radiusCells: 2);
+    }
+
     private MatchClearAction BuildClearAction(PulseCorePatchBotComboExecutionRuntime rt)
     {
         var ctx = rt.Context;

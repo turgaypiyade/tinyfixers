@@ -123,6 +123,19 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
                 PlayPulseCoreExplosionVfx(tile);
 
+                // MatchClearAction sadece görsel oynatır; data temizliğini burada yapmalıyız.
+                foreach (var clearTile in pulseMatches)
+                {
+                    if (clearTile == null)
+                        continue;
+
+                    var clearCell = new Vector2Int(clearTile.X, clearTile.Y);
+                    var clearType = clearTile.GetTileType();
+
+                    board.ClearCellDataOnly(clearCell);
+                    board.ClearCellVisualOnly(clearCell, clearType, clearTile);
+                }
+
                 var pulseClear = new MatchClearAction(
                     pulseMatches,
                     doShake: true,
