@@ -183,6 +183,9 @@ public class SpecialResolver
                 Partner = b,
                 FinalizeAtEnd = true,
                 ActivateSpecial = dispatcher.ApplySpecialActivation,
+                EnqueueActivation = (resolution, tile, partner) => queueProcessor.EnqueueActivation(resolution, tile, partner),
+                ProcessQueuedActivations = resolution => queueProcessor.ProcessQueue(resolution),
+                DebugLog = msg => Debug.Log(msg),
                 EmitComboTriggered = (sa, sb, cell) => effectOrchestrator.EmitComboTriggered(sa, sb, cell),
                 EmitPulseEmitterComboTriggered = cell => effectOrchestrator.EmitPulseEmitterComboTriggered(cell)
             });

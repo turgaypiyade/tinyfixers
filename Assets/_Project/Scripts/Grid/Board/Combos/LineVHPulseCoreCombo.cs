@@ -16,6 +16,9 @@ public sealed class LineVHPulseCoreComboExecutionRuntime
     public bool FinalizeAtEnd;
 
     public Action<ResolutionContext, TileView, TileView> ActivateSpecial;
+    public Action<ResolutionContext, TileView, TileView> EnqueueActivation;
+    public Action<ResolutionContext> ProcessQueuedActivations;
+    public Action<string> DebugLog;
     public Action<TileSpecial, TileSpecial, Vector2Int> EmitComboTriggered;
     public Action<Vector2Int> EmitPulseEmitterComboTriggered;
 }
