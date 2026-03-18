@@ -376,6 +376,12 @@ public class SpecialBehaviorDispatcher
                         actions.AddRange(res.Actions);
                     break;
                 }
+
+            case TileSpecial.SystemOverride:
+                {
+                    ApplySpecialActivation(ctx, tile, partner);
+                    break;
+                }
         }
 
         return actions;

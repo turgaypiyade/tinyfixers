@@ -651,6 +651,20 @@ public class SpecialResolver
 
                     break;
                 }
+
+            case TileSpecial.SystemOverride:
+                {
+                    dispatcher.ApplySpecialActivation(ctx, tile, partner);
+
+                    var fanoutActions = fanoutService.ProcessFanout(ctx);
+                    if (fanoutActions != null && fanoutActions.Count > 0)
+                        actions.AddRange(fanoutActions);
+
+                    if (ctx.OverrideDeferredPulseExplosions.Count == 0)
+                        implantService.CleanupImplantedTiles(ctx);
+
+                    break;
+                }
         }
 
         return actions;
