@@ -66,9 +66,7 @@ public class SpecialBehaviorDispatcher
                 Origin = a,
                 Partner = b,
                 FinalizeAtEnd = false,
-                ActivateSpecial = ApplySpecialActivation,
-                EnqueueActivation = (resolution, tile, partner) => QueueProcessor?.EnqueueActivation(resolution, tile, partner),
-                ProcessQueuedActivations = resolution => QueueProcessor?.ProcessQueue(resolution),
+                ExecuteSpecialActions = ExecuteSpecialActions,
                 DebugLog = msg => Debug.Log(msg),
                 EmitComboTriggered = (comboSa, comboSb, cell) => effectOrchestrator.EmitComboTriggered(comboSa, comboSb, cell),
                 EmitPulseEmitterComboTriggered = cell => effectOrchestrator.EmitPulseEmitterComboTriggered(cell)
@@ -297,7 +295,91 @@ public class SpecialBehaviorDispatcher
         ctx.OverrideSuppressPerTileClearVfx = false;
         SpecialCellUtils.AddAllOfType(ctx.Affected, ctx, board, type, excludeSpecials: true);
     }
+    private List<BoardAction> ExecuteSpecialActions(ResolutionContext ctx, TileView tile, TileView partner)
+    {
+        var actions = new List<BoardAction>();
 
+        if (tile == null)
+            return actions;
+
+        var special = tile.GetSpecial();
+
+        switch (special)
+        {
+            case TileSpecial.LineH:
+                {
+                    var res = lineHSpecial.Execute(new LineHExecutionRuntime
+                    {
+                        Board = board,
+                        Context = ctx,
+                        Origin = tile,
+                        Partner = partner,
+                        FinalizeAtEnd = false,
+                        ActivateSpecial = ApplySpecialActivation
+                    });
+
+                    if (res != null && res.Actions != null)
+                        actions.AddRange(res.Actions);
+                    break;
+                }
+
+            case TileSpecial.LineV:
+                {
+                    var res = lineVSpecial.Execute(new LineVExecutionRuntime
+                    {
+                        Board = board,
+                        Context = ctx,
+                        Origin = tile,
+                        Partner = partner,
+                        FinalizeAtEnd = false,
+                        ActivateSpecial = ApplySpecialActivation
+                    });
+
+                    if (res != null && res.Actions != null)
+                        actions.AddRange(res.Actions);
+                    break;
+                }
+
+            case TileSpecial.PulseCore:
+                {
+                    var res = pulseCoreSpecial.Execute(new PulseCoreExecutionRuntime
+                    {
+                        Board = board,
+                        Context = ctx,
+                        Origin = tile,
+                        Partner = partner,
+                        FinalizeAtEnd = false,
+                        ActivateSpecial = ApplySpecialActivation
+                    });
+
+                    if (res != null && res.Actions != null)
+                        actions.AddRange(res.Actions);
+                    break;
+                }
+
+            case TileSpecial.PatchBot:
+                {
+                    var res = patchBotSpecial.Execute(new PatchBotExecutionRuntime
+                    {
+                        Board = board,
+                        Context = ctx,
+                        Origin = tile,
+                        Partner = partner,
+                        FinalizeAtEnd = false,
+                        PatchbotService = patchbotComboService,
+                        VisualService = visualService,
+                        Effects = effectOrchestrator,
+                        ActivateSpecial = ApplySpecialActivation
+                    });
+
+                    if (res != null && res.Actions != null)
+                        actions.AddRange(res.Actions);
+                    break;
+                }
+        }
+
+        return actions;
+    }
     private void ActivateViaRegistry(ResolutionContext ctx, TileSpecial special, int ox, int oy)
     {
         var behavior = board.SpecialBehaviors.Get(special);

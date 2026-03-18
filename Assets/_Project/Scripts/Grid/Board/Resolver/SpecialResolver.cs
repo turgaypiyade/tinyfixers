@@ -182,9 +182,7 @@ public class SpecialResolver
                 Origin = a,
                 Partner = b,
                 FinalizeAtEnd = true,
-                ActivateSpecial = dispatcher.ApplySpecialActivation,
-                EnqueueActivation = (resolution, tile, partner) => queueProcessor.EnqueueActivation(resolution, tile, partner),
-                ProcessQueuedActivations = resolution => queueProcessor.ProcessQueue(resolution),
+                ExecuteSpecialActions = ExecuteSpecialActions,
                 DebugLog = msg => Debug.Log(msg),
                 EmitComboTriggered = (sa, sb, cell) => effectOrchestrator.EmitComboTriggered(sa, sb, cell),
                 EmitPulseEmitterComboTriggered = cell => effectOrchestrator.EmitPulseEmitterComboTriggered(cell)
@@ -549,6 +547,112 @@ public class SpecialResolver
 
         TraceSpecialChain("ResolveSpecialSolo", specialTile, null);
         board.IsSpecialActivationPhase = false;
+        return actions;
+    }
+
+    private List<BoardAction> ExecuteSpecialActions(ResolutionContext ctx, TileView tile, TileView partner)
+    {
+        var actions = new List<BoardAction>();
+
+        if (tile == null)
+            return actions;
+
+        var special = tile.GetSpecial();
+
+        switch (special)
+        {
+            case TileSpecial.LineH:
+                {
+                    var res = lineHSpecial.Execute(new LineHExecutionRuntime
+                    {
+                        Board = board,
+                        Context = ctx,
+                        Origin = tile,
+                        Partner = partner,
+                        FinalizeAtEnd = true,
+                        ActivateSpecial = dispatcher.ApplySpecialActivation,
+                        ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                        CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                        FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                    });
+
+                    if (res != null && res.Actions != null)
+                        actions.AddRange(res.Actions);
+
+                    break;
+                }
+
+            case TileSpecial.LineV:
+                {
+                    var res = lineVSpecial.Execute(new LineVExecutionRuntime
+                    {
+                        Board = board,
+                        Context = ctx,
+                        Origin = tile,
+                        Partner = partner,
+                        FinalizeAtEnd = true,
+                        ActivateSpecial = dispatcher.ApplySpecialActivation,
+                        ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                        CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                        FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                    });
+
+                    if (res != null && res.Actions != null)
+                        actions.AddRange(res.Actions);
+
+                    break;
+                }
+
+            case TileSpecial.PulseCore:
+                {
+                    var res = pulseCoreSpecial.Execute(new PulseCoreExecutionRuntime
+                    {
+                        Board = board,
+                        Context = ctx,
+                        Origin = tile,
+                        Partner = partner,
+                        FinalizeAtEnd = true,
+                        ActivateSpecial = dispatcher.ApplySpecialActivation,
+                        ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                        CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                        FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                    });
+
+                    if (res != null && res.Actions != null)
+                        actions.AddRange(res.Actions);
+
+                    break;
+                }
+
+            case TileSpecial.PatchBot:
+                {
+                    var res = patchBotSpecial.Execute(new PatchBotExecutionRuntime
+                    {
+                        Board = board,
+                        Context = ctx,
+                        Origin = tile,
+                        Partner = partner,
+                        FinalizeAtEnd = true,
+                        PatchbotService = patchbotComboService,
+                        VisualService = visualService,
+                        Effects = effectOrchestrator,
+                        ActivateSpecial = dispatcher.ApplySpecialActivation,
+                        ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                        CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                        FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                    });
+
+                    if (res != null && res.Actions != null)
+                        actions.AddRange(res.Actions);
+
+                    break;
+                }
+        }
+
         return actions;
     }
 

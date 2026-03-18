@@ -14,9 +14,9 @@ public sealed class LineVHPulseCoreComboExecutionRuntime
 
     public bool FinalizeAtEnd;
 
-    public Action<ResolutionContext, TileView, TileView> ActivateSpecial;
-    public Action<ResolutionContext, TileView, TileView> EnqueueActivation;
-    public Action<ResolutionContext> ProcessQueuedActivations;
+    // Nested special execute sonucu action listesi döner
+    public Func<ResolutionContext, TileView, TileView, List<BoardAction>> ExecuteSpecialActions;
+
     public Action<string> DebugLog;
     public Action<TileSpecial, TileSpecial, Vector2Int> EmitComboTriggered;
     public Action<Vector2Int> EmitPulseEmitterComboTriggered;
@@ -40,44 +40,36 @@ public sealed class LineVHPulseCoreCombo
         var lineTile = GetLineTile(rt);
         var pulseCell = new Vector2Int(pulseTile.X, pulseTile.Y);
 
+        // Combo presentation bilgisini local tutuyoruz.
+        // Shared context'e yazmıyoruz ki zincirdeki diğer special'lara sızmasın.
+        var comboLightningVisualTargets = new List<TileView>();
+
         rt.EmitComboTriggered?.Invoke(lineTile.GetSpecial(), pulseTile.GetSpecial(), pulseCell);
         rt.EmitPulseEmitterComboTriggered?.Invoke(pulseCell);
 
-        // Önce combo source special'ları register et
         RegisterComboTiles(rt, lineTile, pulseTile);
+        BuildAffectedArea(rt, lineTile, pulseTile, comboLightningVisualTargets);
 
-        // Önce etki alanını topla
-        BuildAffectedArea(rt, lineTile, pulseTile);
+        ExpandChain(rt, result);
 
-        // Hücreler daha data tarafında canlıyken chain'i kur
-        ExpandChain(rt);
-
-        // Match clear action'ı hazırla
         if (rt.FinalizeAtEnd && rt.Context.Affected.Count > 0)
         {
-            var chainMode = rt.Context.HasLineActivation
-                ? ClearAnimationMode.LightningStrike
-                : ClearAnimationMode.Default;
-
             result.Actions.Add(new MatchClearAction(
                 rt.Context.Affected,
                 doShake: true,
-                animationMode: chainMode,
+                animationMode: ClearAnimationMode.LightningStrike,
                 affectedCells: rt.Context.AffectedCells,
                 obstacleHitContext: null,
                 includeAdjacentOverTileBlockerDamage: false,
                 lightningOriginTile: null,
                 lightningOriginCell: null,
-                lightningVisualTargets: rt.Context.LightningVisualTargets,
-                lightningLineStrikes: rt.Context.LightningLineStrikes,
+                lightningVisualTargets: comboLightningVisualTargets,
+                lightningLineStrikes: null, // ekstra combo line-strike bind etmiyoruz
                 isSpecialPhase: true,
                 presentationPlan: null
             ));
         }
 
-        // EN SONA ALINDI:
-        // Bu çağrı targetVisuals snapshot aldıktan sonra board.ClearCellDataOnly(c) yaptığı için
-        // chain kurulmadan önce çağrılırsa board.Tiles null'a düşüyor.
         var pulseAction = PulseLineCombo.CreatePulseEmitterComboAction(rt.Board, pulseTile.X, pulseTile.Y);
         if (pulseAction != null)
             result.Actions.Insert(0, pulseAction);
@@ -105,10 +97,16 @@ public sealed class LineVHPulseCoreCombo
     {
         AddOrigin(rt, lineTile);
         AddOrigin(rt, pulseTile);
-        rt.Context.HasLineActivation = true;
+
+        // BURADA rt.Context.HasLineActivation = true DEMİYORUZ.
+        // Çünkü bu flag zincirdeki diğer special'lara da pulse+line sunumu taşıyor.
     }
 
-    private void BuildAffectedArea(LineVHPulseCoreComboExecutionRuntime rt, TileView lineTile, TileView pulseTile)
+    private void BuildAffectedArea(
+        LineVHPulseCoreComboExecutionRuntime rt,
+        TileView lineTile,
+        TileView pulseTile,
+        List<TileView> comboLightningVisualTargets)
     {
         int cx = pulseTile.X;
         int cy = pulseTile.Y;
@@ -118,7 +116,7 @@ public sealed class LineVHPulseCoreCombo
             for (int y = cy - 1; y <= cy + 1; y++)
             {
                 for (int x = 0; x < rt.Board.Width; x++)
-                    AddCell(rt, x, y);
+                    AddCell(rt, x, y, comboLightningVisualTargets);
             }
         }
         else
@@ -126,79 +124,96 @@ public sealed class LineVHPulseCoreCombo
             for (int x = cx - 1; x <= cx + 1; x++)
             {
                 for (int y = 0; y < rt.Board.Height; y++)
-                    AddCell(rt, x, y);
+                    AddCell(rt, x, y, comboLightningVisualTargets);
             }
         }
     }
 
-    private void ExpandChain(LineVHPulseCoreComboExecutionRuntime rt)
+    private void ExpandChain(LineVHPulseCoreComboExecutionRuntime rt, LineVHPulseCoreComboExecutionResult result)
     {
-        var snapshot = CollectSnapshotSpecials(rt, rt.Origin, rt.Partner);
+        var pending = new Queue<TileView>();
+        EnqueueNewlyAffectedSpecials(rt, pending);
 
-        foreach (var tile in snapshot)
+        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] seed count={pending.Count}");
+
+        while (pending.Count > 0)
         {
+            var tile = pending.Dequeue();
             if (tile == null)
                 continue;
 
             var cell = new Vector2Int(tile.X, tile.Y);
+            var special = tile.GetSpecial();
+
+            rt.Context.Queued.Remove(cell);
+
+            if (tile == rt.Origin || tile == rt.Partner)
+                continue;
+
+            rt.DebugLog?.Invoke(
+                $"[LineVHPulseCoreCombo] candidate cell={cell} special={special} processed={rt.Context.Processed.Contains(cell)}");
 
             if (rt.Context.Processed.Contains(cell))
                 continue;
 
-            if (tile.GetSpecial() == TileSpecial.None)
+            if (special == TileSpecial.None)
                 continue;
 
-            // Guard önce
-            rt.Context.Processed.Add(cell);
+            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] EXECUTE special={special} cell={cell}");
 
-            // Sonra execute
-            rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
+            // execute FIRST
+            var nestedActions = rt.ExecuteSpecialActions?.Invoke(rt.Context, tile, null);
+            if (nestedActions != null && nestedActions.Count > 0)
+            {
+                rt.DebugLog?.Invoke(
+                    $"[LineVHPulseCoreCombo] MERGE nested actions count={nestedActions.Count} from {special} at {cell}");
+                result.Actions.AddRange(nestedActions);
+            }
+
+            // processed AFTER execute
+            rt.Context.Processed.Add(cell);
 
             if (!rt.Context.ChainExecutionOrder.Contains(cell))
                 rt.Context.ChainExecutionOrder.Add(cell);
+
+            EnqueueNewlyAffectedSpecials(rt, pending);
         }
     }
 
-    private static List<TileView> CollectSnapshotSpecials(LineVHPulseCoreComboExecutionRuntime rt, params TileView[] excludedTiles)
+    private void EnqueueNewlyAffectedSpecials(LineVHPulseCoreComboExecutionRuntime rt, Queue<TileView> pending)
     {
-        var excluded = new HashSet<Vector2Int>();
-        if (excludedTiles != null)
-        {
-            foreach (var excludedTile in excludedTiles)
-            {
-                if (excludedTile == null)
-                    continue;
-
-                excluded.Add(new Vector2Int(excludedTile.X, excludedTile.Y));
-            }
-        }
-
-        var snapshot = new List<TileView>();
-        var visited = new HashSet<Vector2Int>();
-
         foreach (var tile in rt.Context.Affected)
-        {
-            if (tile == null)
-                continue;
-
-            var cell = new Vector2Int(tile.X, tile.Y);
-
-            if (excluded.Contains(cell))
-                continue;
-
-            if (!visited.Add(cell))
-                continue;
-
-            if (tile.GetSpecial() == TileSpecial.None)
-                continue;
-
-            snapshot.Add(tile);
-        }
-
-        return snapshot;
+            TryQueue(rt, pending, tile);
     }
 
-    private void AddCell(LineVHPulseCoreComboExecutionRuntime rt, int x, int y)
+    private void TryQueue(LineVHPulseCoreComboExecutionRuntime rt, Queue<TileView> pending, TileView tile)
+    {
+        if (tile == null)
+            return;
+
+        if (tile == rt.Origin || tile == rt.Partner)
+            return;
+
+        if (tile.GetSpecial() == TileSpecial.None)
+            return;
+
+        var cell = new Vector2Int(tile.X, tile.Y);
+
+        if (rt.Context.Processed.Contains(cell))
+            return;
+
+        if (rt.Context.Queued.Contains(cell))
+            return;
+
+        rt.Context.Queued.Add(cell);
+        pending.Enqueue(tile);
+    }
+
+    private void AddCell(
+        LineVHPulseCoreComboExecutionRuntime rt,
+        int x,
+        int y,
+        List<TileView> comboLightningVisualTargets)
     {
         if (x < 0 || x >= rt.Board.Width || y < 0 || y >= rt.Board.Height)
             return;
@@ -214,9 +229,11 @@ public sealed class LineVHPulseCoreCombo
             return;
 
         rt.Context.Affected.Add(tile);
-        rt.Context.LightningVisualTargets.Add(tile);
-        rt.Context.HasLineActivation = true;
+        comboLightningVisualTargets.Add(tile);
+
         SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board);
+
+        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] AddCell cell={cell} special={tile.GetSpecial()}");
     }
 
     private void AddOrigin(LineVHPulseCoreComboExecutionRuntime rt, TileView tile)
@@ -228,7 +245,10 @@ public sealed class LineVHPulseCoreCombo
 
         rt.Context.Processed.Add(cell);
         rt.Context.Affected.Add(tile);
+
         SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board);
+
+        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] AddOrigin cell={cell} special={tile.GetSpecial()}");
     }
 
     private TileView GetPulseTile(LineVHPulseCoreComboExecutionRuntime rt)
