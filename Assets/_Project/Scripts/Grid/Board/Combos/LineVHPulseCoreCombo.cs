@@ -111,21 +111,18 @@ public sealed class LineVHPulseCoreCombo
         int cx = pulseTile.X;
         int cy = pulseTile.Y;
 
-        if (lineTile.GetSpecial() == TileSpecial.LineH)
+        // 3 satır
+        for (int y = cy - 1; y <= cy + 1; y++)
         {
-            for (int y = cy - 1; y <= cy + 1; y++)
-            {
-                for (int x = 0; x < rt.Board.Width; x++)
-                    AddCell(rt, x, y, comboLightningVisualTargets);
-            }
+            for (int x = 0; x < rt.Board.Width; x++)
+                AddCell(rt, x, y, comboLightningVisualTargets);
         }
-        else
+
+        // 3 sütun
+        for (int x = cx - 1; x <= cx + 1; x++)
         {
-            for (int x = cx - 1; x <= cx + 1; x++)
-            {
-                for (int y = 0; y < rt.Board.Height; y++)
-                    AddCell(rt, x, y, comboLightningVisualTargets);
-            }
+            for (int y = 0; y < rt.Board.Height; y++)
+                AddCell(rt, x, y, comboLightningVisualTargets);
         }
     }
 

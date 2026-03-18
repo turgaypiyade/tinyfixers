@@ -138,8 +138,6 @@ public class SpecialResolver
             return actions;
         }
 
-       // bool originalSaIsPatchBot = originalSa == TileSpecial.PatchBot;
-       // bool originalSbIsPatchBot = originalSb == TileSpecial.PatchBot;
 
         if ((originalSaIsPatchBot && originalSb == TileSpecial.LineH) ||
             (originalSbIsPatchBot && originalSa == TileSpecial.LineH))
@@ -358,7 +356,8 @@ public class SpecialResolver
             }
         }
 
-        if (aOriginallySpecial)
+// burada bitiyor....
+/*         if (aOriginallySpecial)
         {
             ctx.Affected.Add(a);
             SpecialCellUtils.MarkAffectedCell(ctx, a, board);
@@ -421,7 +420,7 @@ public class SpecialResolver
 
         TraceSpecialChain("ResolveSpecialSwap", a, b);
         board.IsSpecialActivationPhase = false;
-        return actions;
+        return actions; */
     }
 
     public List<BoardAction> ResolveSpecialSolo(TileView specialTile)
