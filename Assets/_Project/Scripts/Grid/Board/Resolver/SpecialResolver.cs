@@ -179,8 +179,8 @@ public class SpecialResolver
             {
                 Board = board,
                 Context = ctx,
-                Origin = a,
-                Partner = b,
+                Origin = b,
+                Partner = a,
                 FinalizeAtEnd = true,
                 ExecuteSpecialActions = ExecuteSpecialActions,
                 DebugLog = msg => Debug.Log(msg),
@@ -211,8 +211,8 @@ public class SpecialResolver
             {
                 Board = board,
                 Context = ctx,
-                Origin = a,
-                Partner = b,
+                Origin = b,
+                Partner = a,
                 FinalizeAtEnd = true,
                 EnqueueActivation = (resolution, tile, partner) => queueProcessor.EnqueueActivation(resolution, tile, partner),
                 ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
