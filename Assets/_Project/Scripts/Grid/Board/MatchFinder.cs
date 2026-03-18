@@ -29,6 +29,10 @@ public class MatchFinder
                 if (board.Holes[x, y] || board.Holes[x + 1, y] || board.Holes[x, y + 1] || board.Holes[x + 1, y + 1])
                     continue;
 
+                // 4'lü / 5+ / T-L match ile çakışan kareyi 2x2 olarak alma
+                if (SquareOverlapsHigherPriorityRun(x, y))
+                    continue;
+
                 var a = board.GridData[x, y];
                 var b = board.GridData[x + 1, y];
                 var c = board.GridData[x, y + 1];
@@ -38,6 +42,7 @@ public class MatchFinder
                     continue;
 
                 var t = a.Type;
+
                 if (!b.Type.Equals(t)) continue;
                 if (!c.Type.Equals(t)) continue;
                 if (!d.Type.Equals(t)) continue;
@@ -399,6 +404,25 @@ public class MatchFinder
         return (h, v);
     }
 
+    private bool IsHigherPriorityRunAt(int x, int y)
+    {
+        var (hLen, vLen) = GetRunLengths(x, y);
+        int best = Mathf.Max(hLen, vLen);
+
+        // 4'lü, 5+ ve T/L (PulseCore) 2x2'den daha yüksek öncelikli
+        return best >= 4 || (hLen >= 3 && vLen >= 3);
+    }
+
+    private bool SquareOverlapsHigherPriorityRun(int sx, int sy)
+    {
+        if (sx < 0 || sx >= board.Width - 1 || sy < 0 || sy >= board.Height - 1)
+            return false;
+
+        return IsHigherPriorityRunAt(sx, sy)
+            || IsHigherPriorityRunAt(sx + 1, sy)
+            || IsHigherPriorityRunAt(sx, sy + 1)
+            || IsHigherPriorityRunAt(sx + 1, sy + 1);
+    }
     public TileSpecial DecideSpecialAt(int x, int y)
     {
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return TileSpecial.None;
@@ -440,6 +464,10 @@ public class MatchFinder
                     continue;
 
                 if (board.Holes[sx, sy] || board.Holes[sx + 1, sy] || board.Holes[sx, sy + 1] || board.Holes[sx + 1, sy + 1])
+                    continue;
+
+                // Daha yüksek öncelikli run ile çakışıyorsa bu kareyi 2x2 sayma
+                if (SquareOverlapsHigherPriorityRun(sx, sy))
                     continue;
 
                 var a = board.GridData[sx, sy];
@@ -517,6 +545,10 @@ public class MatchFinder
                     continue;
 
                 if (board.Holes[sx, sy] || board.Holes[sx + 1, sy] || board.Holes[sx, sy + 1] || board.Holes[sx + 1, sy + 1])
+                    continue;
+
+                // 4'lü / 5+ / T-L ile çakışan kare 2x2 candidate olmasın
+                if (SquareOverlapsHigherPriorityRun(sx, sy))
                     continue;
 
                 var a = board.Tiles[sx, sy];
