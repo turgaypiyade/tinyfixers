@@ -51,7 +51,7 @@ Ana giriş noktaları:
   - Combo arayüzü (`Priority` ile).
 - Çekirdek davranışlar:
   - `LineBehavior.cs`
-  - `PulseCoreBehavior.cs`
+  - `PulseCoreSpecial.cs`
   - `PatchBotBehavior.cs`
   - `SystemOverrideBehavior.cs`
 - Combo davranışları:
@@ -103,7 +103,7 @@ Bu proje için istenen temel akış şu şekilde tanımlanmış durumda:
 ### 4.4 Special/combo mimarisi
 - Special efektleri `SpecialBehaviorRegistry` + behavior sınıfları üzerinden hesaplanır.
 - `SpecialResolver` combo/special zincir yönetimini yapar.
-- Event hub’lar görsel orkestrasyon için eklenmiştir (`ComboBehaviorEvents`, `LineBehaviorEvents`, `PulseBehaviorEvents`, `SystemOverrideBehaviorEvents`).
+- Event hub’lar görsel orkestrasyon için eklenmiştir (`ComboBehaviorEvents`, `PulseBehaviorEvents`, `SystemOverrideBehaviorEvents`).
 
 ---
 

@@ -315,8 +315,8 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
     {
         var result = new HashSet<TileView>();
 
-        // PulseCore alanını registry'den değil doğrudan 3x3 hesapla.
-        // Registry artık PulseCoreBehavior register etmediği için burada boş set dönüyordu.
+        // PulseCore etki alanı artık PulseCoreSpecial tarafından yürütülüyor.
+        // Bu yüzden zincirdeki pulse temizliği burada doğrudan 3x3 olarak hesaplanıyor.
         const int half = 1;
 
         for (int x = centerCell.x - half; x <= centerCell.x + half; x++)
