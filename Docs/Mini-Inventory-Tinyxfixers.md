@@ -32,7 +32,7 @@ Bu doküman, mevcut kod yapısındaki oyun akışını ve merkezi sınıfları k
 - `SpecialCellUtils`
 - `SpecialBehaviorRegistry`
 - `ISpecialBehavior`, `IComboBehavior`, `IComboExecutor`, `ILightningBehavior`, `ILightningComboBehavior`
-- Davranış/Combo implementasyonları: `LineHorizontalBehavior`, `LineVerticalBehavior`, `PulseCoreBehavior`, `PatchBotBehavior`, `SystemOverrideBehavior`, `LineCrossCombo`, `PulseLineCombo`, `PulseLineCrossCombo`, `PulsePulseCombo`, `PatchBotLineCombo`, `PatchBotPulseCombo`, `PatchBotPatchBotCombo`, `OverrideSpecialCombo`, `OverrideOverrideCombo`
+- Davranış/Combo implementasyonları: `LineHorizontalBehavior`, `LineVerticalBehavior`, `PulseCoreBehavior`, `PatchBotBehavior`, `SystemOverrideBehavior`, `LineCrossCombo`, `PulseLineCombo`, `PulseLineCrossCombo`, `PulsePulseCombo`, `PatchBotLineCombo`, `PatchBotPulseCombo`, `PatchBotPatchBotCombo`, `OverrideSpecializedCombo`, `OverrideOverrideCombo`
 
 ### Obstacle hattı
 - `ObstacleStateService`

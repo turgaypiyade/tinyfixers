@@ -535,7 +535,8 @@ public class GridSpawner : MonoBehaviour
             Destroy(tile);
             return;
         }
-        board.ConfigureTileView(view);
+        view.SetIconScale(iconScale);
+        view.SetUseFullCellIcon(fullCellIcons);
         view.ApplyTileSize(tileSize);
 
         board.RegisterTile(view, x, y); // Init + coords + ilk SyncTileData (tipi henüz default olabilir)
