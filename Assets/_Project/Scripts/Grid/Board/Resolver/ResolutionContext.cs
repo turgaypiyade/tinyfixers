@@ -20,6 +20,7 @@ public class ResolutionContext
 
     // Lightning / line tracking
     public bool HasLineActivation;
+    public bool HasPulseActivation;
     public readonly HashSet<TileView> LightningVisualTargets = new();
     public readonly List<LightningLineStrike> LightningLineStrikes = new();
 
@@ -89,6 +90,7 @@ public class ResolutionContext
         ChainExecutionOrder.Clear();
 
         HasLineActivation = false;
+        HasPulseActivation = false;
         LightningVisualTargets.Clear();
         LightningLineStrikes.Clear();
 
