@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -70,7 +71,7 @@ public sealed class LineVHPulseCoreCombo
             ));
         }
 
-        var pulseAction = PulseLineCombo.CreatePulseEmitterComboAction(rt.Board, pulseTile.X, pulseTile.Y);
+        var pulseAction = CreatePulseEmitterComboAction(rt.Board, pulseTile.X, pulseTile.Y);
         if (pulseAction != null)
             result.Actions.Insert(0, pulseAction);
 
@@ -258,6 +259,63 @@ public sealed class LineVHPulseCoreCombo
         return IsLine(rt.Origin.GetSpecial()) ? rt.Origin : rt.Partner;
     }
 
+    private static BoardAction CreatePulseEmitterComboAction(BoardController board, int cx, int cy)
+    {
+        var targets = board.BuildPulseEmitterTargets(cx, cy);
+
+        RectTransform space = null;
+        if (board.lineTravelPlayer != null)
+        {
+            space = board.lineTravelPlayer.afterImageParent != null
+                ? board.lineTravelPlayer.afterImageParent
+                : board.LineTravelSpawnParent as RectTransform;
+        }
+
+        var hOrigins = new List<(Vector2Int cell, Vector2 anch)>();
+        var vOrigins = new List<(Vector2Int cell, Vector2 anch)>();
+
+        for (int yy = cy - 1; yy <= cy + 1; yy++)
+        {
+            if (yy < 0 || yy >= board.Height)
+                continue;
+
+            var originTile = board.Tiles[cx, yy];
+            if (originTile == null)
+                continue;
+
+            var originRect = originTile.GetComponent<RectTransform>();
+            var worldCenter = originRect.TransformPoint(new Vector3(board.TileSize * 0.5f, -board.TileSize * 0.5f, 0f));
+            hOrigins.Add((new Vector2Int(cx, yy), board.WorldToAnchoredIn(space, worldCenter)));
+        }
+
+        for (int xx = cx - 1; xx <= cx + 1; xx++)
+        {
+            if (xx < 0 || xx >= board.Width)
+                continue;
+
+            var originTile = board.Tiles[xx, cy];
+            if (originTile == null)
+                continue;
+
+            var originRect = originTile.GetComponent<RectTransform>();
+            var worldCenter = originRect.TransformPoint(new Vector3(board.TileSize * 0.5f, -board.TileSize * 0.5f, 0f));
+            vOrigins.Add((new Vector2Int(xx, cy), board.WorldToAnchoredIn(space, worldCenter)));
+        }
+
+        var targetVisuals = new Dictionary<Vector2Int, (TileType type, TileView view)>();
+        foreach (var cell in targets)
+        {
+            var tile = board.Tiles[cell.x, cell.y];
+            if (tile != null)
+                targetVisuals[cell] = (tile.GetTileType(), tile);
+        }
+
+        foreach (var cell in targets)
+            board.ClearCellDataOnly(cell);
+
+        return new LineVHPulseCoreComboAction(board, targets, hOrigins, vOrigins, targetVisuals);
+    }
+
     private static bool IsLine(TileSpecial s)
     {
         return s == TileSpecial.LineH || s == TileSpecial.LineV;
@@ -266,5 +324,222 @@ public sealed class LineVHPulseCoreCombo
     private static bool IsPulse(TileSpecial s)
     {
         return s == TileSpecial.PulseCore;
+    }
+}
+
+public sealed class LineVHPulseCoreComboAction : BoardAction
+{
+    private readonly BoardController board;
+    private readonly HashSet<Vector2Int> targets;
+    private readonly List<(Vector2Int cell, Vector2 anch)> hOrigins;
+    private readonly List<(Vector2Int cell, Vector2 anch)> vOrigins;
+    private readonly Dictionary<Vector2Int, (TileType type, TileView view)> targetVisuals;
+
+    public LineVHPulseCoreComboAction(
+        BoardController board,
+        HashSet<Vector2Int> targets,
+        List<(Vector2Int cell, Vector2 anch)> hOrigins,
+        List<(Vector2Int cell, Vector2 anch)> vOrigins,
+        Dictionary<Vector2Int, (TileType type, TileView view)> targetVisuals)
+    {
+        this.board = board;
+        this.targets = targets;
+        this.hOrigins = hOrigins;
+        this.vOrigins = vOrigins;
+        this.targetVisuals = targetVisuals;
+    }
+
+    public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
+    {
+        var cleared = new HashSet<Vector2Int>();
+        var hiddenOrigins = new HashSet<TileView>();
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        string CellsToString(IEnumerable<Vector2Int> cells)
+        {
+            return string.Join(", ", cells);
+        }
+
+        Debug.Log(
+            $"[LineTravelAction] START targets={targets.Count} " +
+            $"hOrigins={hOrigins.Count} vOrigins={vOrigins.Count} " +
+            $"targetCells=[{CellsToString(targets)}]");
+#endif
+
+        foreach (var h in hOrigins)
+        {
+            var view = board.GetTileViewAt(h.cell.x, h.cell.y);
+            if (view != null && hiddenOrigins.Add(view))
+            {
+                SpecialVisualService.HideTileVisualForCombo(view);
+
+                if (cleared.Add(h.cell) && targetVisuals.TryGetValue(h.cell, out var originVisual))
+                    board.ClearCellVisualOnly(h.cell, originVisual.type, originVisual.view);
+            }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log($"[LineTravelAction] HIDE origin H {h.cell}");
+#endif
+        }
+
+        foreach (var v in vOrigins)
+        {
+            var view = board.GetTileViewAt(v.cell.x, v.cell.y);
+            if (view != null && hiddenOrigins.Add(view))
+            {
+                SpecialVisualService.HideTileVisualForCombo(view);
+
+                if (cleared.Add(v.cell) && targetVisuals.TryGetValue(v.cell, out var originVisual))
+                    board.ClearCellVisualOnly(v.cell, originVisual.type, originVisual.view);
+            }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log($"[LineTravelAction] HIDE origin V {v.cell}");
+#endif
+        }
+
+        if (board.lineTravelPlayer == null)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log("[LineTravelAction] lineTravelPlayer == null, fallback clear all targets immediately.");
+#endif
+            foreach (var kvp in targetVisuals)
+                board.ClearCellVisualOnly(kvp.Key, kvp.Value.type, kvp.Value.view);
+            yield break;
+        }
+
+        void OnStep(Vector2Int cell)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            bool isTarget = targets.Contains(cell);
+            bool alreadyCleared = cleared.Contains(cell);
+            bool hasVisual = targetVisuals.ContainsKey(cell);
+
+            Debug.Log(
+                $"[LineTravelAction] STEP cell={cell} " +
+                $"isTarget={isTarget} alreadyCleared={alreadyCleared} hasVisual={hasVisual}");
+#endif
+
+            if (!targets.Contains(cell))
+                return;
+
+            if (!cleared.Add(cell))
+                return;
+
+            if (targetVisuals.TryGetValue(cell, out var visualData))
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.Log(
+                    $"[LineTravelAction] CLEAR cell={cell} " +
+                    $"type={visualData.type} view={(visualData.view != null ? visualData.view.name : "null")}");
+#endif
+                board.ClearCellVisualOnly(cell, visualData.type, visualData.view);
+            }
+            else
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.LogWarning($"[LineTravelAction] TARGET WITHOUT VISUAL DATA cell={cell}");
+#endif
+            }
+        }
+
+        int pendingTravels = 0;
+        int travelIdSeed = 0;
+
+        Action<string, Vector2Int> makeCompletedLogger = (axisLabel, originCell) =>
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log(
+                $"[LineTravelAction] COMPLETE axis={axisLabel} origin={originCell} " +
+                $"pendingBeforeDec={pendingTravels}");
+#endif
+            pendingTravels = Mathf.Max(0, pendingTravels - 1);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log(
+                $"[LineTravelAction] COMPLETE axis={axisLabel} origin={originCell} " +
+                $"pendingAfterDec={pendingTravels}");
+#endif
+        };
+
+        int width = board.Width;
+        int height = board.Height;
+        float tileSize = board.TileSize;
+
+        foreach (var h in hOrigins)
+        {
+            int steps = Mathf.Max(h.cell.x, width - 1 - h.cell.x);
+            pendingTravels++;
+            int travelId = ++travelIdSeed;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log(
+                $"[LineTravelAction] BEGIN travelId={travelId} axis=H origin={h.cell} " +
+                $"steps={steps} pendingAfterInc={pendingTravels}");
+#endif
+
+            board.PlayLineTravelInstanceWithStep(
+                LineTravelSplitSwapTestUI.LineAxis.Horizontal,
+                h.anch,
+                h.cell,
+                steps,
+                tileSize,
+                0f,
+                OnStep,
+                () => makeCompletedLogger("H", h.cell));
+        }
+
+        foreach (var v in vOrigins)
+        {
+            int steps = Mathf.Max(v.cell.y, height - 1 - v.cell.y);
+            pendingTravels++;
+            int travelId = ++travelIdSeed;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log(
+                $"[LineTravelAction] BEGIN travelId={travelId} axis=V origin={v.cell} " +
+                $"steps={steps} pendingAfterInc={pendingTravels}");
+#endif
+
+            board.PlayLineTravelInstanceWithStep(
+                LineTravelSplitSwapTestUI.LineAxis.Vertical,
+                v.anch,
+                v.cell,
+                steps,
+                tileSize,
+                0f,
+                OnStep,
+                () => makeCompletedLogger("V", v.cell));
+        }
+
+        while (pendingTravels > 0)
+            yield return null;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        var missedBeforeFallback = new List<Vector2Int>();
+        foreach (var kvp in targetVisuals)
+        {
+            if (!cleared.Contains(kvp.Key))
+                missedBeforeFallback.Add(kvp.Key);
+        }
+
+        Debug.Log(
+            $"[LineTravelAction] PRE-FALLBACK cleared={cleared.Count}/{targetVisuals.Count} " +
+            $"missed=[{CellsToString(missedBeforeFallback)}]");
+#endif
+
+        foreach (var kvp in targetVisuals)
+        {
+            if (cleared.Add(kvp.Key))
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.Log($"[LineTravelAction] FALLBACK CLEAR cell={kvp.Key}");
+#endif
+                board.ClearCellVisualOnly(kvp.Key, kvp.Value.type, kvp.Value.view);
+            }
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"[LineTravelAction] END totalCleared={cleared.Count}");
+#endif
     }
 }
