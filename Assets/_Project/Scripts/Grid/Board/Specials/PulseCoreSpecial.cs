@@ -105,8 +105,10 @@ public sealed class PulseCoreSpecial
     private void PlayPulseActivationVisual(PulseCoreExecutionRuntime rt, int centerX, int centerY)
     {
         PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(centerX, centerY));
-    }
 
+        if (!rt.FinalizeAtEnd && rt.Board?.PulseCoreImpactService != null)
+            rt.Board.PulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(centerX, centerY, radiusCells: 2);
+    }
     private void CollectArea(PulseCoreExecutionRuntime rt, int centerX, int centerY)
     {
         int side = Mathf.CeilToInt(Mathf.Sqrt(affectedCellCount));
