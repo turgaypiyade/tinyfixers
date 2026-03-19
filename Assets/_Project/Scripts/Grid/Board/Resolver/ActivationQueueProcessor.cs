@@ -26,15 +26,26 @@ public class ActivationQueueProcessor
     /// </summary>
     public void EnqueueActivation(ResolutionContext ctx, TileView special, TileView partner)
     {
-        if (special == null) return;
+        if (ctx == null || special == null)
+            return;
 
         Vector2Int pos = new Vector2Int(special.X, special.Y);
 
-        if (ctx.Queued.Contains(pos)) return;
-        if (special.GetSpecial() == TileSpecial.None) return;
+        if (ctx.Queued.Contains(pos))
+            return;
+
+        if (ctx.Processed.Contains(pos))
+            return;
+
+        if (special.GetSpecial() == TileSpecial.None)
+            return;
 
         ctx.Queued.Add(pos);
-        Vector2Int? partnerPos = partner != null ? new Vector2Int(partner.X, partner.Y) : (Vector2Int?)null;
+
+        Vector2Int? partnerPos = partner != null
+            ? new Vector2Int(partner.X, partner.Y)
+            : (Vector2Int?)null;
+
         ctx.Queue.Enqueue(new SpecialActivation(pos, partnerPos));
     }
 
@@ -43,15 +54,25 @@ public class ActivationQueueProcessor
     /// </summary>
     public void EnqueueChainSpecials(ResolutionContext ctx)
     {
+        if (ctx == null)
+            return;
+
         foreach (var tile in ctx.Affected)
         {
-            if (tile == null) continue;
+            if (tile == null)
+                continue;
 
             Vector2Int pos = new Vector2Int(tile.X, tile.Y);
             TileSpecial special = tile.GetSpecial();
 
-            if (special == TileSpecial.None) continue;
-            if (ctx.Processed.Contains(pos)) continue;
+            if (special == TileSpecial.None)
+                continue;
+
+            if (ctx.Processed.Contains(pos))
+                continue;
+
+            if (ctx.Queued.Contains(pos))
+                continue;
 
             EnqueueActivation(ctx, tile, null);
         }
@@ -63,6 +84,9 @@ public class ActivationQueueProcessor
     /// </summary>
     public void ProcessQueue(ResolutionContext ctx)
     {
+        if (ctx == null)
+            return;
+
         while (ctx.Queue.Count > 0)
         {
             var activation = ctx.Queue.Dequeue();
@@ -71,14 +95,22 @@ public class ActivationQueueProcessor
             if (ctx.Processed.Contains(activation.cell))
                 continue;
 
-            ctx.Processed.Add(activation.cell);
-
             TileView actSpecial = board.Tiles[activation.cell.x, activation.cell.y];
             TileView actPartner = activation.partnerCell.HasValue
                 ? board.Tiles[activation.partnerCell.Value.x, activation.partnerCell.Value.y]
                 : null;
 
+            if (actSpecial == null)
+                continue;
+
+            if (actSpecial.GetSpecial() == TileSpecial.None)
+                continue;
+
             dispatcher.ApplySpecialActivation(ctx, actSpecial, actPartner);
+
+            if (!ctx.Processed.Contains(activation.cell))
+                ctx.Processed.Add(activation.cell);
+
             EnqueueChainSpecials(ctx);
         }
     }

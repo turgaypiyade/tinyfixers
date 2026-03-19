@@ -257,7 +257,9 @@ public class SpecialBehaviorDispatcher
                     Origin = specialTile,
                     Partner = partnerTile,
                     FinalizeAtEnd = false,
-                    ActivateSpecial = ApplySpecialActivation
+                    ActivateSpecial = ApplySpecialActivation,
+                    EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
+                    ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
                 });
                 break;
 
@@ -281,7 +283,9 @@ public class SpecialBehaviorDispatcher
                     Origin = specialTile,
                     Partner = partnerTile,
                     FinalizeAtEnd = false,
-                    ActivateSpecial = ApplySpecialActivation
+                    ActivateSpecial = ApplySpecialActivation,
+                    EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
+                    ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
                 });
                 break;
 
@@ -310,36 +314,14 @@ public class SpecialBehaviorDispatcher
                     FinalizeAtEnd = false
                 });
                 break;
+
             default:
                 ActivateViaRegistry(ctx, special, ox, oy);
                 break;
         }
     }
 
-/*     private void ActivateSystemOverride(ResolutionContext ctx, TileView specialTile, TileView partnerTile, int ox, int oy)
-    {
-        if (ctx.OverrideFanoutOrigin != null && ctx.OverrideFanoutOrigin != specialTile)
-        {
-            ctx.Affected.Add(specialTile);
-            SpecialCellUtils.MarkAffectedCell(ctx, specialTile, board);
-            return;
-        }
-
-        TileType type = partnerTile != null ? partnerTile.GetTileType() : specialTile.GetTileType();
-        var partnerSpecial = partnerTile != null ? partnerTile.GetSpecial() : TileSpecial.None;
-
-        ctx.OverrideFanoutNormalSelectionPulse = (partnerTile == null) || (partnerSpecial == TileSpecial.None);
-        ctx.OverrideFanoutPulseHitCount = 0;
-        ctx.OverrideFanoutOrigin = specialTile;
-
-        SystemOverrideBehaviorEvents.EmitOverrideFanoutStarted(new Vector2Int(ox, oy), TileSpecial.None);
-        SpecialCellUtils.CollectAllOfType(ctx.OverrideFanoutTargets, board, type, excludeSpecials: true);
-        ctx.OverrideForceDefaultClearAnim = true;
-        ctx.OverrideSuppressPerTileClearVfx = false;
-        SpecialCellUtils.AddAllOfType(ctx.Affected, ctx, board, type, excludeSpecials: true);
-    }
- */    
- private List<BoardAction> ExecuteSpecialActions(ResolutionContext ctx, TileView tile, TileView partner)
+    private List<BoardAction> ExecuteSpecialActions(ResolutionContext ctx, TileView tile, TileView partner)
     {
         var actions = new List<BoardAction>();
 
@@ -376,7 +358,9 @@ public class SpecialBehaviorDispatcher
                         Origin = tile,
                         Partner = partner,
                         FinalizeAtEnd = false,
-                        ActivateSpecial = ApplySpecialActivation
+                        ActivateSpecial = ApplySpecialActivation,
+                        EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
+                        ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
                     });
 
                     if (res != null && res.Actions != null)
@@ -393,7 +377,9 @@ public class SpecialBehaviorDispatcher
                         Origin = tile,
                         Partner = partner,
                         FinalizeAtEnd = false,
-                        ActivateSpecial = ApplySpecialActivation
+                        ActivateSpecial = ApplySpecialActivation,
+                        EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
+                        ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
                     });
 
                     if (res != null && res.Actions != null)

@@ -17,6 +17,9 @@ public sealed class PulseCoreExecutionRuntime
     public Action<ResolutionContext> CleanupImplantedTiles;
     public Action<HashSet<TileView>, Dictionary<TileView, float>> FireOverrideOverrideSpecialVisuals;
     public Action<SpecialBoardSignal> EmitBoardSignal;
+
+    public Action<ResolutionContext> EnqueueChainSpecials;
+    public Action<ResolutionContext> ProcessQueue;
 }
 
 public sealed class PulseCoreExecutionResult
@@ -41,13 +44,12 @@ public sealed class PulseCoreSpecial
             return result;
 
         RegisterOrigin(rt);
+        PlayPulseActivationVisual(rt, rt.Origin.X, rt.Origin.Y);
         CollectArea(rt, rt.Origin.X, rt.Origin.Y);
-        ExecuteChain(rt);
+        ExecuteQueuedChain(rt);
 
         if (rt.FinalizeAtEnd)
-        {
             Finalize(rt, result, rt.Origin.X, rt.Origin.Y);
-        }
 
         return result;
     }
@@ -63,13 +65,12 @@ public sealed class PulseCoreSpecial
             return result;
 
         RegisterOrigin(rt);
+        PlayPulseActivationVisual(rt, targetX, targetY);
         CollectArea(rt, targetX, targetY);
-        ExecuteChain(rt);
+        ExecuteQueuedChain(rt);
 
         if (rt.FinalizeAtEnd)
-        {
             Finalize(rt, result, targetX, targetY);
-        }
 
         return result;
     }
@@ -101,15 +102,21 @@ public sealed class PulseCoreSpecial
         SpecialCellUtils.MarkAffectedCell(rt.Context, rt.Origin, rt.Board);
     }
 
-    private void CollectArea(PulseCoreExecutionRuntime rt, int centerX, int centerY)
+    private void PlayPulseActivationVisual(PulseCoreExecutionRuntime rt, int centerX, int centerY)
     {
         PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(centerX, centerY));
+    }
 
+    private void CollectArea(PulseCoreExecutionRuntime rt, int centerX, int centerY)
+    {
         int side = Mathf.CeilToInt(Mathf.Sqrt(affectedCellCount));
-        if (side % 2 == 0) side += 1;
+        if (side % 2 == 0)
+            side += 1;
+
         int half = side / 2;
 
         for (int x = centerX - half; x <= centerX + half; x++)
+        {
             for (int y = centerY - half; y <= centerY + half; y++)
             {
                 if (x < 0 || x >= rt.Board.Width || y < 0 || y >= rt.Board.Height)
@@ -127,106 +134,16 @@ public sealed class PulseCoreSpecial
 
                 rt.Context.Affected.Add(tile);
             }
-    }
-
-    private void ExecuteChain(PulseCoreExecutionRuntime rt)
-    {
-        var pending = new Queue<TileView>();
-
-        SeedAreaSpecials(rt, pending);
-
-        while (pending.Count > 0)
-        {
-            var tile = pending.Dequeue();
-            if (tile == null)
-                continue;
-
-            var pos = new Vector2Int(tile.X, tile.Y);
-
-            if (rt.Context.Processed.Contains(pos))
-                continue;
-
-            var special = tile.GetSpecial();
-            if (special == TileSpecial.None)
-                continue;
-
-            rt.Context.Queued.Remove(pos);
-
-            if (special == TileSpecial.PulseCore)
-            {
-                Execute(new PulseCoreExecutionRuntime
-                {
-                    Board = rt.Board,
-                    Context = rt.Context,
-                    Origin = tile,
-                    Partner = null,
-                    FinalizeAtEnd = false,
-                    ActivateSpecial = rt.ActivateSpecial,
-                    ProcessFanout = rt.ProcessFanout,
-                    CleanupImplantedTiles = rt.CleanupImplantedTiles,
-                    FireOverrideOverrideSpecialVisuals = rt.FireOverrideOverrideSpecialVisuals,
-                    EmitBoardSignal = rt.EmitBoardSignal
-                });
-            }
-            else
-            {
-                if (!rt.Context.Processed.Contains(pos))
-                    rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
-
-                rt.Context.Processed.Add(pos);
-            }
-
-            EnqueueNewlyAffectedSpecials(rt, pending);
         }
     }
 
-    private void SeedAreaSpecials(PulseCoreExecutionRuntime rt, Queue<TileView> pending)
+    private void ExecuteQueuedChain(PulseCoreExecutionRuntime rt)
     {
-        foreach (var cell in rt.Context.AffectedCells)
-        {
-            if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
-                continue;
-
-            var tile = rt.Board.Tiles[cell.x, cell.y];
-            if (tile == null || tile == rt.Origin)
-                continue;
-
-            TryQueue(rt, pending, tile);
-        }
-    }
-
-    private void EnqueueNewlyAffectedSpecials(PulseCoreExecutionRuntime rt, Queue<TileView> pending)
-    {
-        foreach (var tile in rt.Context.Affected)
-        {
-            if (tile == null)
-                continue;
-
-            TryQueue(rt, pending, tile);
-        }
-    }
-
-    private void TryQueue(PulseCoreExecutionRuntime rt, Queue<TileView> pending, TileView tile)
-    {
-        if (tile == null)
+        if (rt.EnqueueChainSpecials == null || rt.ProcessQueue == null)
             return;
 
-        if (tile == rt.Origin)
-            return;
-
-        if (tile.GetSpecial() == TileSpecial.None)
-            return;
-
-        var pos = new Vector2Int(tile.X, tile.Y);
-
-        if (rt.Context.Processed.Contains(pos))
-            return;
-
-        if (rt.Context.Queued.Contains(pos))
-            return;
-
-        rt.Context.Queued.Add(pos);
-        pending.Enqueue(tile);
+        rt.EnqueueChainSpecials(rt.Context);
+        rt.ProcessQueue(rt.Context);
     }
 
     private void Finalize(PulseCoreExecutionRuntime rt, PulseCoreExecutionResult result, int signalX, int signalY)

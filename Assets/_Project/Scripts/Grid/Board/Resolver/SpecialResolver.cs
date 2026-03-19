@@ -360,9 +360,10 @@ public class SpecialResolver
                     ActivateSpecial = dispatcher.ApplySpecialActivation,
                     ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                     CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                    FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                    FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                    EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                    ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
                 });
-
                 actions.AddRange(result.Actions);
                 TraceSpecialChain("ResolveSpecialSwap.LineV", a, b);
                 board.IsSpecialActivationPhase = false;
@@ -397,7 +398,6 @@ public class SpecialResolver
             {
                 ctx.Affected.Add(specialTile);
                 SpecialCellUtils.MarkAffectedCell(ctx, specialTile, board);
-
                 var result = pulseCoreSpecial.Execute(new PulseCoreExecutionRuntime
                 {
                     Board = board,
@@ -408,9 +408,10 @@ public class SpecialResolver
                     ActivateSpecial = dispatcher.ApplySpecialActivation,
                     ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                     CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                    FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                    FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                    EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                    ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
                 });
-
                 actions.AddRange(result.Actions);
                 TraceSpecialChain("ResolveSpecialSwap.PulseCore", a, b);
                 board.IsSpecialActivationPhase = false;
@@ -541,7 +542,9 @@ public class SpecialResolver
                 ActivateSpecial = dispatcher.ApplySpecialActivation,
                 ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                 CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
             });
 
             actions.AddRange(result.Actions);
@@ -583,7 +586,9 @@ public class SpecialResolver
                 ActivateSpecial = dispatcher.ApplySpecialActivation,
                 ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                 CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
             });
 
             actions.AddRange(result.Actions);
@@ -684,7 +689,9 @@ public class SpecialResolver
                         ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                         CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
                         FireOverrideOverrideSpecialVisuals = (affected, delays) =>
-                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                        EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                        ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
                     });
 
                     if (res != null && res.Actions != null)
@@ -706,7 +713,9 @@ public class SpecialResolver
                         ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                         CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
                         FireOverrideOverrideSpecialVisuals = (affected, delays) =>
-                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                        EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                        ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
                     });
 
                     if (res != null && res.Actions != null)
@@ -812,7 +821,9 @@ public class SpecialResolver
                     ActivateSpecial = dispatcher.ApplySpecialActivation,
                     ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                     CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                    FireOverrideOverrideSpecialVisuals = (set, delays) => visualService.FireOverrideOverrideSpecialVisuals(set, delays)
+                    FireOverrideOverrideSpecialVisuals = (set, delays) => visualService.FireOverrideOverrideSpecialVisuals(set, delays),
+                    EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                    ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
                 });
             }
             else if (tile.GetSpecial() == TileSpecial.LineH)
@@ -844,7 +855,9 @@ public class SpecialResolver
                     ActivateSpecial = dispatcher.ApplySpecialActivation,
                     ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                     CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                    FireOverrideOverrideSpecialVisuals = (set, delays) => visualService.FireOverrideOverrideSpecialVisuals(set, delays)
+                    FireOverrideOverrideSpecialVisuals = (set, delays) => visualService.FireOverrideOverrideSpecialVisuals(set, delays),
+                    EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                    ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
                 });
             }
             else if (tile.GetSpecial() == TileSpecial.PatchBot)
@@ -877,21 +890,10 @@ public class SpecialResolver
         if (lightningLineStrikes != null)
             ctx.LightningLineStrikes.Clear();
 
-        while (ctx.Queue.Count > 0)
+        if (ctx.Queue.Count > 0)
         {
-            var activation = ctx.Queue.Dequeue();
-            ctx.Queued.Remove(activation.cell);
-            if (ctx.Processed.Contains(activation.cell)) continue;
-
-            ctx.Processed.Add(activation.cell);
             hasAnySpecialActivation = true;
-            TileView actSpecial = board.Tiles[activation.cell.x, activation.cell.y];
-            TileView actPartner = activation.partnerCell.HasValue
-                ? board.Tiles[activation.partnerCell.Value.x, activation.partnerCell.Value.y]
-                : null;
-
-            dispatcher.ApplySpecialActivation(ctx, actSpecial, actPartner);
-            queueProcessor.EnqueueChainSpecials(ctx);
+            queueProcessor.ProcessQueue(ctx);
         }
 
         hasLineActivation = ctx.HasLineActivation;

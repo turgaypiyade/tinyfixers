@@ -21,6 +21,10 @@ public sealed class LineVExecutionRuntime
     public Action<ResolutionContext> CleanupImplantedTiles;
     public Action<HashSet<TileView>, Dictionary<TileView, float>> FireOverrideOverrideSpecialVisuals;
     public Action<SpecialBoardSignal> EmitBoardSignal;
+
+    // global chain queue hook'ları
+    public Action<ResolutionContext> EnqueueChainSpecials;
+    public Action<ResolutionContext> ProcessQueue;
 }
 
 public sealed class LineVExecutionResult
@@ -61,7 +65,7 @@ public sealed class LineVSpecial
         RegisterOrigin(rt);
         CollectColumn(rt);
         BuildLineVisuals(rt);
-        ExecuteChain(rt);
+        ExecuteQueuedChain(rt);
 
         if (rt.FinalizeAtEnd)
         {
@@ -148,103 +152,13 @@ public sealed class LineVSpecial
                 false)); // false => vertical
     }
 
-    private void ExecuteChain(LineVExecutionRuntime rt)
+    private void ExecuteQueuedChain(LineVExecutionRuntime rt)
     {
-        var pending = new Queue<TileView>();
-
-        SeedColumnSpecials(rt, pending);
-
-        while (pending.Count > 0)
-        {
-            var tile = pending.Dequeue();
-            if (tile == null)
-                continue;
-
-            var pos = new Vector2Int(tile.X, tile.Y);
-
-            if (rt.Context.Processed.Contains(pos))
-                continue;
-
-            var special = tile.GetSpecial();
-            if (special == TileSpecial.None)
-                continue;
-
-            rt.Context.Queued.Remove(pos);
-
-            if (special == TileSpecial.LineV)
-            {
-                Execute(new LineVExecutionRuntime
-                {
-                    Board = rt.Board,
-                    Context = rt.Context,
-                    Origin = tile,
-                    Partner = null,
-                    FinalizeAtEnd = false,
-                    ActivateSpecial = rt.ActivateSpecial,
-                    ProcessFanout = rt.ProcessFanout,
-                    CleanupImplantedTiles = rt.CleanupImplantedTiles,
-                    FireOverrideOverrideSpecialVisuals = rt.FireOverrideOverrideSpecialVisuals,
-                    EmitBoardSignal = rt.EmitBoardSignal
-                });
-            }
-            else
-            {
-                if (!rt.Context.Processed.Contains(pos))
-                    rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
-
-                rt.Context.Processed.Add(pos);
-            }
-
-            EnqueueNewlyAffectedSpecials(rt, pending);
-        }
-    }
-
-    private void SeedColumnSpecials(LineVExecutionRuntime rt, Queue<TileView> pending)
-    {
-        int x = rt.Origin.X;
-
-        for (int y = 0; y < rt.Board.Height; y++)
-        {
-            var tile = rt.Board.Tiles[x, y];
-            if (tile == null || tile == rt.Origin)
-                continue;
-
-            TryQueue(rt, pending, tile);
-        }
-    }
-
-    private void EnqueueNewlyAffectedSpecials(LineVExecutionRuntime rt, Queue<TileView> pending)
-    {
-        foreach (var tile in rt.Context.Affected)
-        {
-            if (tile == null)
-                continue;
-
-            TryQueue(rt, pending, tile);
-        }
-    }
-
-    private void TryQueue(LineVExecutionRuntime rt, Queue<TileView> pending, TileView tile)
-    {
-        if (tile == null)
+        if (rt.EnqueueChainSpecials == null || rt.ProcessQueue == null)
             return;
 
-        if (tile == rt.Origin)
-            return;
-
-        if (tile.GetSpecial() == TileSpecial.None)
-            return;
-
-        var pos = new Vector2Int(tile.X, tile.Y);
-
-        if (rt.Context.Processed.Contains(pos))
-            return;
-
-        if (rt.Context.Queued.Contains(pos))
-            return;
-
-        rt.Context.Queued.Add(pos);
-        pending.Enqueue(tile);
+        rt.EnqueueChainSpecials(rt.Context);
+        rt.ProcessQueue(rt.Context);
     }
 
     private MatchClearAction BuildClearAction(LineVExecutionRuntime rt)
