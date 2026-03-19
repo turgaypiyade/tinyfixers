@@ -36,28 +36,28 @@ public class PulseCoreBehavior : ISpecialBehavior
         this.affectedCellCount = Mathf.Max(1, affectedCellCount);
     }
 
-  /*  public HashSet<Vector2Int> CalculateAffectedCells(BoardController board, int originX, int originY)
-    {
-        var cells = new HashSet<Vector2Int>();
+    /*  public HashSet<Vector2Int> CalculateAffectedCells(BoardController board, int originX, int originY)
+      {
+          var cells = new HashSet<Vector2Int>();
 
-        // Build candidates in a centered square window based on desired cell count.
-        // Use deterministic ordering by distance to center, then row/column to cap exactly.
-        int side = Mathf.CeilToInt(Mathf.Sqrt(affectedCellCount));
-        if (side % 2 == 0) side += 1; // keep origin centered
-        int half = side / 2;
+          // Build candidates in a centered square window based on desired cell count.
+          // Use deterministic ordering by distance to center, then row/column to cap exactly.
+          int side = Mathf.CeilToInt(Mathf.Sqrt(affectedCellCount));
+          if (side % 2 == 0) side += 1; // keep origin centered
+          int half = side / 2;
 
-        var candidates = new List<Vector2Int>(side * side);
+          var candidates = new List<Vector2Int>(side * side);
 
-        for (int x = originX - half; x <= originX + half; x++)
-        for (int y = originY - half; y <= originY + half; y++)
-        {
-            if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
-            if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
-            candidates.Add(new Vector2Int(x, y));
-        }
+          for (int x = originX - half; x <= originX + half; x++)
+          for (int y = originY - half; y <= originY + half; y++)
+          {
+              if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
+              if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
+              candidates.Add(new Vector2Int(x, y));
+          }
 
-        return cells;
-    }*/
+          return cells;
+      }*/
 
     public HashSet<Vector2Int> CalculateAffectedCells(BoardController board, int originX, int originY)
     {
@@ -68,14 +68,14 @@ public class PulseCoreBehavior : ISpecialBehavior
         int half = side / 2;
 
         for (int x = originX - half; x <= originX + half; x++)
-        for (int y = originY - half; y <= originY + half; y++)
-        {
-            if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
-            if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
+            for (int y = originY - half; y <= originY + half; y++)
+            {
+                if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
+                if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
 
-            cells.Add(new Vector2Int(x, y));
-        }
+                cells.Add(new Vector2Int(x, y));
+            }
 
         return cells;
-    }    
+    }
 }
