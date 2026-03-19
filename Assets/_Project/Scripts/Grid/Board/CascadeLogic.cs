@@ -141,6 +141,7 @@ public class CascadeLogic
                         var view = go.GetComponent<TileView>();
 
                         view.Init(board, x, y);
+                        board.ConfigureTileView(view);
                         view.MarkPlannedToMoveThisFallPass(true);
 
                         int spawnFromY = nextSpawnY;

@@ -844,6 +844,7 @@ public class BoardAnimator
                 }
 
                 view.Init(board, x, y);
+                board.ConfigureTileView(view);
 
                 view.SetCoords(x, nextSpawnY);
                 view.SnapToGrid(board.TileSize);
@@ -976,6 +977,7 @@ public class BoardAnimator
                         }
 
                         view.Init(board, x, y);
+                        board.ConfigureTileView(view);
                         view.MarkPlannedToMoveThisFallPass(true);
 
                         int spawnFromY = nextSpawnY;

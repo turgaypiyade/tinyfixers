@@ -122,7 +122,7 @@ public class GridSpawner : MonoBehaviour
 
         board.Init(width, height, iconLibrary);
         board.SetLevelData(resolvedLevel);
-        board.SetupFactory(tilePrefab, tilesRoot, tileSize, randomPool);
+        board.SetupFactory(tilePrefab, tilesRoot, tileSize, randomPool, iconScale, fullCellIcons);
 
         BindBoardEvents();
 
