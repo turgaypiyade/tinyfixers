@@ -98,7 +98,6 @@ public sealed class PulseCoreSpecial
 
         rt.Context.Processed.Add(originCell);
         rt.Context.Affected.Add(rt.Origin);
-        rt.Context.HasPulseActivation = true;
         SpecialCellUtils.MarkAffectedCell(rt.Context, rt.Origin, rt.Board);
     }
 
