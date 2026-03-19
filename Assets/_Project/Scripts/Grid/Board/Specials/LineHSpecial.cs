@@ -40,9 +40,12 @@ public sealed class LineHSpecial
 
         if (rt.FinalizeAtEnd)
         {
-            List<BoardAction> fanoutActions = null;
             if (rt.ProcessFanout != null)
-                fanoutActions = rt.ProcessFanout(rt.Context);
+            {
+                var fanoutActions = rt.ProcessFanout(rt.Context);
+                if (fanoutActions != null && fanoutActions.Count > 0)
+                    result.Actions.AddRange(fanoutActions);
+            }
 
             if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
                 rt.CleanupImplantedTiles?.Invoke(rt.Context);
@@ -53,9 +56,6 @@ public sealed class LineHSpecial
             var clearAction = BuildClearAction(rt);
             if (clearAction != null)
                 result.Actions.Add(clearAction);
-
-            if (!ShouldSuppressOverrideFanoutPresentation(rt.Context) && fanoutActions != null && fanoutActions.Count > 0)
-                result.Actions.AddRange(fanoutActions);
 
             rt.EmitBoardSignal?.Invoke(new SpecialBoardSignal(
                 SpecialBoardSignalType.SpecialPassFinished,
@@ -222,37 +222,9 @@ public sealed class LineHSpecial
         pending.Enqueue(tile);
     }
 
-    private bool ShouldSuppressOverrideFanoutPresentation(ResolutionContext ctx)
-    {
-        if (ctx == null)
-            return false;
-
-        return ctx.HasLineActivation
-            && ctx.OverrideFanoutOrigin != null
-            && ctx.OverrideFanoutTargets.Count > 0
-            && ctx.PendingOverrideImplants.Count == 0
-            && ctx.OverrideDeferredPulseExplosions.Count == 0
-            && ctx.OverrideDeferredPatchBotDashes.Count == 0;
-    }
-
     private MatchClearAction BuildClearAction(LineHExecutionRuntime rt)
     {
         var ctx = rt.Context;
-
-        HashSet<TileView> processedViews = null;
-        Dictionary<TileView, float> stagger = null;
-
-        if (ctx.HasPulseActivation)
-        {
-            processedViews = new HashSet<TileView>();
-            foreach (var pos in ctx.Processed)
-            {
-                if (rt.Board.Tiles[pos.x, pos.y] != null)
-                    processedViews.Add(rt.Board.Tiles[pos.x, pos.y]);
-            }
-
-            stagger = rt.Board.PulseCoreImpactService.BuildStaggerDelays(ctx.Affected, processedViews);
-        }
 
         return new MatchClearAction(
             ctx.Affected,
@@ -266,8 +238,6 @@ public sealed class LineHSpecial
             lightningLineStrikes: ctx.LightningLineStrikes,
             suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
             perTileClearDelays: ctx.OverrideRadialClearDelays,
-            staggerDelays: stagger,
-            staggerAnimTime: rt.Board.ApplySpecialChainTempo(rt.Board.PulseImpactAnimTime),
             isSpecialPhase: true,
             presentationPlan: null
         );
