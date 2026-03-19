@@ -24,6 +24,7 @@ public class SpecialResolver
     private readonly OverrideSpecial overrideSpecial = new();
     private readonly PatchBotCombo patchBotCombo = new();
     private readonly OverrideSpecializedCombo overrideSpecializedCombo = new();
+    private readonly OverrideOverrideCombo overrideOverrideCombo = new();
     private readonly ResolutionContext ctx = new();
 
     public SpecialResolver(BoardController board, BoardAnimator boardAnimator, PulseCoreImpactService pulseCoreImpactService)
@@ -227,6 +228,34 @@ public class SpecialResolver
         bool originalSbIsOverride = originalSb == TileSpecial.SystemOverride;
         bool originalSaIsOverrideSupported = originalSa == TileSpecial.LineH || originalSa == TileSpecial.LineV || originalSa == TileSpecial.PulseCore || originalSa == TileSpecial.PatchBot;
         bool originalSbIsOverrideSupported = originalSb == TileSpecial.LineH || originalSb == TileSpecial.LineV || originalSb == TileSpecial.PulseCore || originalSb == TileSpecial.PatchBot;
+
+        if (originalSaIsOverride && originalSbIsOverride)
+        {
+            ctx.Affected.Add(a);
+            ctx.Affected.Add(b);
+            SpecialCellUtils.MarkAffectedCell(ctx, a, board);
+            SpecialCellUtils.MarkAffectedCell(ctx, b, board);
+
+            var result = overrideOverrideCombo.Execute(new OverrideOverrideComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = true,
+                VisualService = visualService,
+                Effects = effectOrchestrator,
+                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                    visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+            });
+
+            actions.AddRange(result.Actions);
+            TraceSpecialChain("ResolveSpecialSwap.OverrideOverride", a, b);
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
 
         if ((originalSaIsOverride && originalSbIsOverrideSupported) ||
             (originalSbIsOverride && originalSaIsOverrideSupported))

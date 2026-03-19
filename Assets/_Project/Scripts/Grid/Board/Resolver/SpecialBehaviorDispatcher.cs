@@ -18,6 +18,7 @@ public class SpecialBehaviorDispatcher
     private readonly PulseCorePatchBotCombo pulseCorePatchBotCombo = new();
     private readonly OverrideSpecial overrideSpecial = new();
     private readonly OverrideSpecializedCombo overrideSpecializedCombo = new();
+    private readonly OverrideOverrideCombo overrideOverrideCombo = new();
     private readonly PatchBotCombo patchBotCombo = new();
     internal ActivationQueueProcessor QueueProcessor;
 
@@ -134,6 +135,22 @@ public class SpecialBehaviorDispatcher
             return;
         }
         
+        if (sa == TileSpecial.SystemOverride && sb == TileSpecial.SystemOverride)
+        {
+            overrideOverrideCombo.Execute(new OverrideOverrideComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = false,
+                VisualService = visualService,
+                Effects = effectOrchestrator
+            });
+
+            return;
+        }
+
         if ((sa == TileSpecial.SystemOverride && (sb == TileSpecial.LineH || sb == TileSpecial.LineV || sb == TileSpecial.PulseCore || sb == TileSpecial.PatchBot)) ||
             (sb == TileSpecial.SystemOverride && (sa == TileSpecial.LineH || sa == TileSpecial.LineV || sa == TileSpecial.PulseCore || sa == TileSpecial.PatchBot)))
         {
