@@ -32,6 +32,7 @@ public class GridSpawner : MonoBehaviour
 
     [SerializeField, Range(0.5f, 1f)]
     private float iconScale = 0.82f;
+    [SerializeField] private bool fullCellIcons = false;
 
     [Header("Spawn Parent (BoardMask altındaki BoardContent)")]
     [SerializeField] private RectTransform spawnParent;
@@ -535,6 +536,7 @@ public class GridSpawner : MonoBehaviour
             return;
         }
         view.SetIconScale(iconScale);
+        view.SetUseFullCellIcon(fullCellIcons);
         view.ApplyTileSize(tileSize);
 
         board.RegisterTile(view, x, y); // Init + coords + ilk SyncTileData (tipi henüz default olabilir)
