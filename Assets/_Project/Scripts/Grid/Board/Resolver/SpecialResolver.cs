@@ -21,6 +21,8 @@ public class SpecialResolver
     private readonly LineHPatchBotCombo lineHPatchBotCombo = new();
     private readonly LineVPatchBotCombo lineVPatchBotCombo = new();
     private readonly PulseCorePatchBotCombo pulseCorePatchBotCombo = new();
+    private readonly OverrideSpecial overrideSpecial = new();
+    private readonly PatchBotCombo patchBotCombo = new();
     private readonly OverrideSpecializedCombo overrideSpecializedCombo = new();
     private readonly ResolutionContext ctx = new();
 
@@ -83,6 +85,35 @@ public class SpecialResolver
         bool originalSaIsPatchBot = originalSa == TileSpecial.PatchBot;
         bool originalSbIsPatchBot = originalSb == TileSpecial.PatchBot;
 
+        if (originalSaIsPatchBot && originalSbIsPatchBot)
+        {
+            ctx.Affected.Add(a);
+            ctx.Affected.Add(b);
+            SpecialCellUtils.MarkAffectedCell(ctx, a, board);
+            SpecialCellUtils.MarkAffectedCell(ctx, b, board);
+
+            var result = patchBotCombo.Execute(new PatchBotComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = true,
+                PatchbotService = patchbotComboService,
+                VisualService = visualService,
+                Effects = effectOrchestrator,
+                ActivateSpecial = dispatcher.ApplySpecialActivation,
+                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                    visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+            });
+
+            actions.AddRange(result.Actions);
+            TraceSpecialChain("ResolveSpecialSwap.PatchBot", a, b);
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
 
         if ((originalSaIsPatchBot && originalSb == TileSpecial.PulseCore) ||
             (originalSbIsPatchBot && originalSa == TileSpecial.PulseCore))
@@ -251,6 +282,35 @@ public class SpecialResolver
             return actions;
         }
 
+        bool originalSaIsNormal = originalSa == TileSpecial.None;
+        bool originalSbIsNormal = originalSb == TileSpecial.None;
+
+        if ((originalSaIsOverride && originalSbIsNormal) ||
+            (originalSbIsOverride && originalSaIsNormal))
+        {
+            var overrideTile = originalSaIsOverride ? a : b;
+            var normalTile = overrideTile == a ? b : a;
+
+            var result = overrideSpecial.Execute(new OverrideExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = overrideTile,
+                Partner = normalTile,
+                FinalizeAtEnd = true,
+                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                FireOverrideOverrideSpecialVisuals =
+                    (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+            });
+
+            actions.AddRange(result.Actions);
+            TraceSpecialChain("ResolveSpecialSwap.OverrideNormal", a, b);
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
+
+
         if (!bothOriginallySpecial)
         {
             var specialTile = aOriginallySpecial ? a : b;
@@ -356,7 +416,7 @@ public class SpecialResolver
             }
         }
 
-// burada bitiyor....
+    return actions;
 /*         if (aOriginallySpecial)
         {
             ctx.Affected.Add(a);
@@ -420,7 +480,7 @@ public class SpecialResolver
 
         TraceSpecialChain("ResolveSpecialSwap", a, b);
         board.IsSpecialActivationPhase = false;
-        return actions; */
+        return actions;  */
     }
 
     public List<BoardAction> ResolveSpecialSolo(TileView specialTile)

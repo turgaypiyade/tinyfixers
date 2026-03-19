@@ -16,7 +16,9 @@ public class SpecialBehaviorDispatcher
     private readonly LineHPatchBotCombo lineHPatchBotCombo = new();
     private readonly LineVPatchBotCombo lineVPatchBotCombo = new();
     private readonly PulseCorePatchBotCombo pulseCorePatchBotCombo = new();
+    private readonly OverrideSpecial overrideSpecial = new();
     private readonly OverrideSpecializedCombo overrideSpecializedCombo = new();
+    private readonly PatchBotCombo patchBotCombo = new();
     internal ActivationQueueProcessor QueueProcessor;
 
     private readonly ComboExecutionContext execCtx = new();
@@ -148,6 +150,24 @@ public class SpecialBehaviorDispatcher
             return;
         }
 
+        if (sa == TileSpecial.PatchBot && sb == TileSpecial.PatchBot)
+        {
+            patchBotCombo.Execute(new PatchBotComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = false,
+                PatchbotService = patchbotComboService,
+                VisualService = visualService,
+                Effects = effectOrchestrator,
+                ActivateSpecial = ApplySpecialActivation
+            });
+
+            return;
+        }
+
         var combo = board.SpecialBehaviors.FindCombo(sa, sb);
         if (combo == null) return;
 
@@ -264,16 +284,22 @@ public class SpecialBehaviorDispatcher
                 break;
 
             case TileSpecial.SystemOverride:
-                ActivateSystemOverride(ctx, specialTile, partnerTile, ox, oy);
+                overrideSpecial.Execute(new OverrideExecutionRuntime
+                {
+                    Board = board,
+                    Context = ctx,
+                    Origin = specialTile,
+                    Partner = partnerTile,
+                    FinalizeAtEnd = false
+                });
                 break;
-
             default:
                 ActivateViaRegistry(ctx, special, ox, oy);
                 break;
         }
     }
 
-    private void ActivateSystemOverride(ResolutionContext ctx, TileView specialTile, TileView partnerTile, int ox, int oy)
+/*     private void ActivateSystemOverride(ResolutionContext ctx, TileView specialTile, TileView partnerTile, int ox, int oy)
     {
         if (ctx.OverrideFanoutOrigin != null && ctx.OverrideFanoutOrigin != specialTile)
         {
@@ -295,7 +321,8 @@ public class SpecialBehaviorDispatcher
         ctx.OverrideSuppressPerTileClearVfx = false;
         SpecialCellUtils.AddAllOfType(ctx.Affected, ctx, board, type, excludeSpecials: true);
     }
-    private List<BoardAction> ExecuteSpecialActions(ResolutionContext ctx, TileView tile, TileView partner)
+ */    
+ private List<BoardAction> ExecuteSpecialActions(ResolutionContext ctx, TileView tile, TileView partner)
     {
         var actions = new List<BoardAction>();
 

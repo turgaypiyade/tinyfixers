@@ -17,7 +17,6 @@ public class SpecialBehaviorRegistry
         RegisterCombo(new PulseLineCombo());
 
         RegisterCombo(new PatchBotLineCombo());
-        RegisterCombo(new PatchBotPatchBotCombo());
         RegisterCombo(new PatchBotPulseCombo());
     }
 
