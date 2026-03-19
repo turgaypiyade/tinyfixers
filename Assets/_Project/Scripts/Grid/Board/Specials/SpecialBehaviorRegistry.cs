@@ -10,7 +10,6 @@ public class SpecialBehaviorRegistry
     {
         Register(new SystemOverrideBehavior());
 
-        RegisterCombo(new PatchBotPulseCombo());
     }
 
     public void Register(ISpecialBehavior behavior)
