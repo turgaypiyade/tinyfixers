@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.Serialization;
 
 public class TileView : MonoBehaviour,
     IPointerClickHandler,
@@ -25,7 +26,12 @@ public class TileView : MonoBehaviour,
     private bool dragConsumedSwap;
     private bool wasDragging;
 
-    private float runtimeIconScale = 0.98f;
+    [SerializeField, Range(0.5f, 1f)]
+    [FormerlySerializedAs("runtimeIconScale")]
+    private float iconScale = 0.98f;
+
+    [SerializeField] private bool useFullCellIcon = false;
+
     private int lastAppliedTileSize;
 
     // Bu taşın düştüğü CollapseAndSpawnAnimated nesil ID'si. -1 = hiç düşmedi.
@@ -315,7 +321,14 @@ public class TileView : MonoBehaviour,
 
     public void SetIconScale(float scale)
     {
-        runtimeIconScale = Mathf.Clamp(scale, 0.5f, 1f);
+        iconScale = Mathf.Clamp(scale, 0.5f, 1f);
+        if (lastAppliedTileSize > 0)
+            ApplyTileSize(lastAppliedTileSize);
+    }
+
+    public void SetUseFullCellIcon(bool useFullCell)
+    {
+        useFullCellIcon = useFullCell;
         if (lastAppliedTileSize > 0)
             ApplyTileSize(lastAppliedTileSize);
     }
@@ -330,23 +343,36 @@ public class TileView : MonoBehaviour,
         if (iconImage != null)
         {
             var irt = iconImage.rectTransform;
-            float s = tileSize * runtimeIconScale;
             bool isSpecial = model != null && model.special != TileSpecial.None;
 
-            irt.sizeDelta = new Vector2(s, s);
-            irt.anchorMin = new Vector2(0.5f, 0.5f);
-            irt.anchorMax = new Vector2(0.5f, 0.5f);
-            if (isSpecial)
+            if (useFullCellIcon)
             {
-                // Special ikonları (LineH/LineV/PatchBot/PulseCore/SystemOverride) görsel merkezde tut.
+                irt.anchorMin = Vector2.zero;
+                irt.anchorMax = Vector2.one;
                 irt.pivot = new Vector2(0.5f, 0.5f);
                 irt.anchoredPosition = Vector2.zero;
+                irt.sizeDelta = Vector2.zero;
+                iconImage.preserveAspect = false;
             }
             else
             {
-                // Normal taşlar mevcut "alta oturan" hissini korusun.
-                irt.pivot = new Vector2(0.5f, 0f);
-                irt.anchoredPosition = new Vector2(0f, -s * 0.5f);
+                float s = tileSize * iconScale;
+                irt.sizeDelta = new Vector2(s, s);
+                irt.anchorMin = new Vector2(0.5f, 0.5f);
+                irt.anchorMax = new Vector2(0.5f, 0.5f);
+                iconImage.preserveAspect = true;
+                if (isSpecial)
+                {
+                    // Special ikonları (LineH/LineV/PatchBot/PulseCore/SystemOverride) görsel merkezde tut.
+                    irt.pivot = new Vector2(0.5f, 0.5f);
+                    irt.anchoredPosition = Vector2.zero;
+                }
+                else
+                {
+                    // Normal taşlar mevcut "alta oturan" hissini korusun.
+                    irt.pivot = new Vector2(0.5f, 0f);
+                    irt.anchoredPosition = new Vector2(0f, -s * 0.5f);
+                }
             }
         }
     }

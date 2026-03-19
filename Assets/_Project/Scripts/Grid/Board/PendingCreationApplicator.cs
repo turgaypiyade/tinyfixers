@@ -87,6 +87,7 @@ public sealed class PendingCreationApplicator
         }
 
         tile.Init(board, x, y);
+        board.ConfigureTileView(tile);
         tile.SetCoords(x, y);
         tile.SnapToGrid(board.TileSize);
 

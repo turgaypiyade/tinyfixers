@@ -32,6 +32,7 @@ public class GridSpawner : MonoBehaviour
 
     [SerializeField, Range(0.5f, 1f)]
     private float iconScale = 0.82f;
+    [SerializeField] private bool fullCellIcons = false;
 
     [Header("Spawn Parent (BoardMask altındaki BoardContent)")]
     [SerializeField] private RectTransform spawnParent;
@@ -121,7 +122,7 @@ public class GridSpawner : MonoBehaviour
 
         board.Init(width, height, iconLibrary);
         board.SetLevelData(resolvedLevel);
-        board.SetupFactory(tilePrefab, tilesRoot, tileSize, randomPool);
+        board.SetupFactory(tilePrefab, tilesRoot, tileSize, randomPool, iconScale, fullCellIcons);
 
         BindBoardEvents();
 
@@ -534,7 +535,7 @@ public class GridSpawner : MonoBehaviour
             Destroy(tile);
             return;
         }
-        view.SetIconScale(iconScale);
+        board.ConfigureTileView(view);
         view.ApplyTileSize(tileSize);
 
         board.RegisterTile(view, x, y); // Init + coords + ilk SyncTileData (tipi henüz default olabilir)

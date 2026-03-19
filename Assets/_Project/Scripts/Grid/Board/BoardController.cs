@@ -106,6 +106,8 @@ public class BoardController : MonoBehaviour
     private GameObject tilePrefab;
     private RectTransform parent;
     private int tileSize;
+    private float tileIconScale = 0.98f;
+    private bool useFullCellIcons;
 
     public int TileSize => tileSize;
     public bool IsBusy => CurrentState == BoardState.Resolving;
@@ -364,10 +366,24 @@ public class BoardController : MonoBehaviour
         BindObstacleEvents();
     }
 
-    public void SetupFactory(GameObject tilePrefab, RectTransform parent, int tileSize, TileType[] randomPool)
+    public void SetupFactory(GameObject tilePrefab, RectTransform parent, int tileSize, TileType[] randomPool, float tileIconScale = 0.98f, bool useFullCellIcons = false)
     {
-        this.tilePrefab = tilePrefab; this.parent = parent; this.tileSize = tileSize; this.randomPool = randomPool;
+        this.tilePrefab = tilePrefab;
+        this.parent = parent;
+        this.tileSize = tileSize;
+        this.randomPool = randomPool;
+        this.tileIconScale = Mathf.Clamp(tileIconScale, 0.5f, 1f);
+        this.useFullCellIcons = useFullCellIcons;
         EnsureServices();
+    }
+
+    public void ConfigureTileView(TileView tile)
+    {
+        if (tile == null)
+            return;
+
+        tile.SetIconScale(tileIconScale);
+        tile.SetUseFullCellIcon(useFullCellIcons);
     }
 
     public TileType[,] SimulateInitialTypes() => boardInitService.SimulateInitialTypes(width, height, holes, randomPool);
