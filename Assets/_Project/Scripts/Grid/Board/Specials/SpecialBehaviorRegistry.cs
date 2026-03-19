@@ -10,13 +10,7 @@ public class SpecialBehaviorRegistry
     {
         Register(new SystemOverrideBehavior());
 
-        RegisterCombo(new OverrideOverrideCombo());
-        RegisterCombo(new OverrideSpecialCombo());
-
-        RegisterCombo(new PulsePulseCombo());
         RegisterCombo(new PulseLineCombo());
-
-        RegisterCombo(new PatchBotLineCombo());
         RegisterCombo(new PatchBotPulseCombo());
     }
 
