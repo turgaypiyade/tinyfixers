@@ -20,6 +20,7 @@ public class SpecialBehaviorDispatcher
     private readonly OverrideSpecializedCombo overrideSpecializedCombo = new();
     private readonly OverrideOverrideCombo overrideOverrideCombo = new();
     private readonly PatchBotCombo patchBotCombo = new();
+    private readonly PulsePulseCombo pulsePulseCombo = new();
     internal ActivationQueueProcessor QueueProcessor;
 
     private readonly ComboExecutionContext execCtx = new();
@@ -59,7 +60,24 @@ public class SpecialBehaviorDispatcher
 
             return;
         }
+        if (sa == TileSpecial.PulseCore && sb == TileSpecial.PulseCore)
+        {
+            pulsePulseCombo.Execute(new PulsePulseComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = false,
+                Effects = effectOrchestrator,
+                ActivateSpecial = ApplySpecialActivation,
+                EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
+                ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
+            });
 
+            return;
+        }
+        
         if (IsPulseLineCombo(sa, sb))
         {
             lineVHPulseCoreCombo.Execute(new LineVHPulseCoreComboExecutionRuntime

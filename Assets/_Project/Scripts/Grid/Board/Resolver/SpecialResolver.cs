@@ -25,6 +25,7 @@ public class SpecialResolver
     private readonly PatchBotCombo patchBotCombo = new();
     private readonly OverrideSpecializedCombo overrideSpecializedCombo = new();
     private readonly OverrideOverrideCombo overrideOverrideCombo = new();
+    private readonly PulsePulseCombo pulsePulseCombo = new();
     private readonly ResolutionContext ctx = new();
 
     public SpecialResolver(BoardController board, BoardAnimator boardAnimator, PulseCoreImpactService pulseCoreImpactService)
@@ -194,6 +195,37 @@ public class SpecialResolver
 
             actions.AddRange(result.Actions);
             TraceSpecialChain("ResolveSpecialSwap.LineHPatchBot", a, b);
+            board.IsSpecialActivationPhase = false;
+            return actions;
+        }
+
+        if (bothOriginallySpecial && originalSa == TileSpecial.PulseCore && originalSb == TileSpecial.PulseCore)
+        {
+            ctx.Affected.Add(a);
+            ctx.Affected.Add(b);
+            SpecialCellUtils.MarkAffectedCell(ctx, a, board);
+            SpecialCellUtils.MarkAffectedCell(ctx, b, board);
+
+            var result = pulsePulseCombo.Execute(new PulsePulseComboExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = a,
+                Partner = b,
+                FinalizeAtEnd = true,
+                Effects = effectOrchestrator,
+                ActivateSpecial = dispatcher.ApplySpecialActivation,
+                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                    visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                EmitBoardSignal = signal => { },
+                EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
+            });
+
+            actions.AddRange(result.Actions);
+            TraceSpecialChain("ResolveSpecialSwap.PulsePulse", a, b);
             board.IsSpecialActivationPhase = false;
             return actions;
         }
@@ -392,6 +424,7 @@ public class SpecialResolver
                 });
 
                 actions.AddRange(result.Actions);
+                DrainDeferredLineOverrides(actions);
                 TraceSpecialChain("ResolveSpecialSwap.LineH", a, b);
                 board.IsSpecialActivationPhase = false;
                 return actions;
@@ -575,6 +608,7 @@ public class SpecialResolver
             });
 
             actions.AddRange(result.Actions);
+            DrainDeferredLineOverrides(actions);
             TraceSpecialChain("ResolveSpecialSolo.LineH", specialTile, null);
             board.IsSpecialActivationPhase = false;
             return actions;
@@ -681,6 +715,7 @@ public class SpecialResolver
                     if (res != null && res.Actions != null)
                         actions.AddRange(res.Actions);
 
+                    DrainDeferredLineOverrides(actions);
                     break;
                 }
 

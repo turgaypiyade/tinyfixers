@@ -39,6 +39,7 @@ public sealed class LineHSpecial
         CollectRow(rt);
         BuildLineVisuals(rt);
         ExecuteQueuedChain(rt);
+        RemoveDeferredOverrideOriginsFromLineClear(rt);
 
         if (rt.FinalizeAtEnd)
         {
@@ -68,6 +69,26 @@ public sealed class LineHSpecial
         return result;
     }
 
+    private void RemoveDeferredOverrideOriginsFromLineClear(LineHExecutionRuntime rt)
+    {
+        if (rt?.Context?.DeferredLineHitOverrideCells == null || rt.Context.DeferredLineHitOverrideCells.Count == 0)
+            return;
+
+        foreach (var cell in rt.Context.DeferredLineHitOverrideCells)
+        {
+            if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+                continue;
+
+            var tile = rt.Board.Tiles[cell.x, cell.y];
+            if (tile == null)
+                continue;
+
+            if (tile.GetSpecial() != TileSpecial.SystemOverride)
+                continue;
+
+            rt.Context.Affected.Remove(tile);
+        }
+    }
     private void ExecuteQueuedChain(LineHExecutionRuntime rt)
     {
         if (rt.EnqueueChainSpecials == null || rt.ProcessQueue == null)
