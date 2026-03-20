@@ -225,6 +225,7 @@ public class SpecialResolver
             });
 
             actions.AddRange(result.Actions);
+            DrainDeferredPulseComboOverrides(actions);
             TraceSpecialChain("ResolveSpecialSwap.PulsePulse", a, b);
             board.IsSpecialActivationPhase = false;
             return actions;
@@ -1399,6 +1400,34 @@ public class SpecialResolver
             presentationPlan: presentationPlan);
     }
 
+    private void DrainDeferredPulseComboOverrides(List<BoardAction> actions)
+    {
+        if (ctx.DeferredPulseComboOverrideCells == null || ctx.DeferredPulseComboOverrideCells.Count == 0)
+            return;
+
+        var deferred = new List<Vector2Int>(ctx.DeferredPulseComboOverrideCells);
+        ctx.DeferredPulseComboOverrideCells.Clear();
+
+        foreach (var cell in deferred)
+        {
+            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                continue;
+
+            var tile = board.Tiles[cell.x, cell.y];
+            if (tile == null)
+                continue;
+
+            if (tile.GetSpecial() != TileSpecial.SystemOverride)
+                continue;
+
+            ctx.Processed.Remove(cell);
+            ctx.Queued.Remove(cell);
+
+            var overrideActions = ExecuteSpecialActions(ctx, tile, null);
+            if (overrideActions != null && overrideActions.Count > 0)
+                actions.AddRange(overrideActions);
+        }
+    }
     private void TraceSpecialChain(string stage, TileView a, TileView b)
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

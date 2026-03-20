@@ -192,11 +192,13 @@ public sealed class PulseCoreSpecial
             doShake: true,
             staggerDelays: stagger,
             staggerAnimTime: rt.Board.ApplySpecialChainTempo(rt.Board.PulseImpactAnimTime),
-            animationMode: ClearAnimationMode.Default,
+            animationMode: ctx.HasLineActivation && !ctx.OverrideForceDefaultClearAnim
+                ? ClearAnimationMode.LightningStrike
+                : ClearAnimationMode.Default,
             affectedCells: ctx.AffectedCells,
             includeAdjacentOverTileBlockerDamage: false,
-            lightningVisualTargets: null,
-            lightningLineStrikes: null,
+            lightningVisualTargets: ctx.LightningVisualTargets,
+            lightningLineStrikes: ctx.LightningLineStrikes,
             suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
             perTileClearDelays: ctx.OverrideRadialClearDelays,
             isSpecialPhase: true,

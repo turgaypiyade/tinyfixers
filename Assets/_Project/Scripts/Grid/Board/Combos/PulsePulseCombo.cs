@@ -39,6 +39,8 @@ public sealed class PulsePulseCombo
 
     public PulsePulseComboExecutionResult Execute(PulsePulseComboExecutionRuntime rt)
     {
+        rt.Context.IsPulsePulseComboActive = true;
+
         var result = new PulsePulseComboExecutionResult();
 
         if (!CanExecute(rt))
@@ -51,7 +53,9 @@ public sealed class PulsePulseCombo
         PlayComboVisuals(rt, centerX, centerY);
         CollectArea(rt, centerX, centerY);
         ExecuteQueuedChain(rt);
-
+        RemoveDeferredOverrideOriginsFromPulseClear(rt);
+        rt.Context.IsPulsePulseComboActive = false;
+        
         if (rt.FinalizeAtEnd)
         {
             if (rt.ProcessFanout != null)
@@ -111,7 +115,7 @@ public sealed class PulsePulseCombo
 
     private void PlayComboVisuals(PulsePulseComboExecutionRuntime rt, int centerX, int centerY)
     {
-        rt.Effects?.EmitComboTriggered(TileSpecial.PulseCore, TileSpecial.PulseCore, new Vector2Int(centerX, centerY));
+        //rt.Effects?.EmitComboTriggered(TileSpecial.PulseCore, TileSpecial.PulseCore, new Vector2Int(centerX, centerY));
         rt.Effects?.PlayPulseExplosionAt(centerX, centerY);
     }
 
@@ -149,30 +153,43 @@ public sealed class PulsePulseCombo
     {
         var ctx = rt.Context;
 
-        HashSet<TileView> processedViews = new HashSet<TileView>();
-        foreach (var pos in ctx.Processed)
-        {
-            if (rt.Board.Tiles[pos.x, pos.y] != null)
-                processedViews.Add(rt.Board.Tiles[pos.x, pos.y]);
-        }
-
-        Dictionary<TileView, float> stagger =
-            rt.Board.PulseCoreImpactService.BuildStaggerDelays(ctx.Affected, processedViews);
-
         return new MatchClearAction(
             ctx.Affected,
             doShake: true,
-            staggerDelays: stagger,
-            staggerAnimTime: rt.Board.ApplySpecialChainTempo(rt.Board.PulseImpactAnimTime),
-            animationMode: ClearAnimationMode.Default,
+            staggerDelays: null,
+            staggerAnimTime: 0f,
+            animationMode: ctx.HasLineActivation && !ctx.OverrideForceDefaultClearAnim
+                ? ClearAnimationMode.LightningStrike
+                : ClearAnimationMode.Default,
             affectedCells: ctx.AffectedCells,
             includeAdjacentOverTileBlockerDamage: false,
-            lightningVisualTargets: null,
-            lightningLineStrikes: null,
+            lightningVisualTargets: ctx.LightningVisualTargets,
+            lightningLineStrikes: ctx.LightningLineStrikes,
             suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
             perTileClearDelays: ctx.OverrideRadialClearDelays,
             isSpecialPhase: true,
             presentationPlan: null
         );
+    }
+
+    private void RemoveDeferredOverrideOriginsFromPulseClear(PulsePulseComboExecutionRuntime rt)
+    {
+        if (rt?.Context?.DeferredPulseComboOverrideCells == null || rt.Context.DeferredPulseComboOverrideCells.Count == 0)
+            return;
+
+        foreach (var cell in rt.Context.DeferredPulseComboOverrideCells)
+        {
+            if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+                continue;
+
+            var tile = rt.Board.Tiles[cell.x, cell.y];
+            if (tile == null)
+                continue;
+
+            if (tile.GetSpecial() != TileSpecial.SystemOverride)
+                continue;
+
+            rt.Context.Affected.Remove(tile);
+        }
     }
 }

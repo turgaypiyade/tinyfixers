@@ -328,11 +328,18 @@ public class SpecialBehaviorDispatcher
                 {
                     var cell = new Vector2Int(specialTile.X, specialTile.Y);
 
-                    // Line beam yolundaysa hemen override koşturma.
                     if (ctx.HasLineActivation && ctx.LightningLineStrikes != null && ctx.LightningLineStrikes.Count > 0)
                     {
                         if (!ctx.DeferredLineHitOverrideCells.Contains(cell))
                             ctx.DeferredLineHitOverrideCells.Add(cell);
+
+                        break;
+                    }
+
+                    if (ctx.IsPulsePulseComboActive)
+                    {
+                        if (!ctx.DeferredPulseComboOverrideCells.Contains(cell))
+                            ctx.DeferredPulseComboOverrideCells.Add(cell);
 
                         break;
                     }

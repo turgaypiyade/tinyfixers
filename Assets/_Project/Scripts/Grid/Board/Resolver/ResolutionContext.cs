@@ -42,6 +42,8 @@ public class ResolutionContext
 
     public const float OverrideRadialClearDuration = 0.20f;
     public readonly List<Vector2Int> OverrideDeferredPulseActivations = new();
+    public readonly List<Vector2Int> DeferredPulseComboOverrideCells = new();
+    public bool IsPulsePulseComboActive;
     /// <summary>
     /// DTO for decoupling logic from visuals — pending override implant data.
     /// </summary>
@@ -83,6 +85,7 @@ public class ResolutionContext
 
     public void Reset()
     {
+        IsPulsePulseComboActive = false;
         AffectedCells = new HashSet<Vector2Int>();
         Affected.Clear();
         Processed.Clear();
@@ -109,5 +112,6 @@ public class ResolutionContext
         OverrideDeferredPatchBotDashes.Clear();
         OverrideDeferredPulseActivations.Clear();
         DeferredLineHitOverrideCells.Clear();
+        DeferredPulseComboOverrideCells.Clear();
     }
 }
