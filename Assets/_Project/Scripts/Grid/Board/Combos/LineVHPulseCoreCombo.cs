@@ -8,8 +8,8 @@ public sealed class LineVHPulseCoreComboExecutionRuntime
     public BoardController Board;
     public ResolutionContext Context;
 
-    // Origin = line tile
-    // Partner = pulse tile
+    // Origin/Partner rolleri çağıran akış tarafından belirlenir.
+    // Line/Pulse kimliği combo içinde special type üzerinden çözülür.
     public TileView Origin;
     public TileView Partner;
 
@@ -39,17 +39,18 @@ public sealed class LineVHPulseCoreCombo
 
         var pulseTile = GetPulseTile(rt);
         var lineTile = GetLineTile(rt);
-        var pulseCell = new Vector2Int(pulseTile.X, pulseTile.Y);
+        var comboCenterTile = rt.Partner != null ? rt.Partner : pulseTile;
+        var comboCenterCell = new Vector2Int(comboCenterTile.X, comboCenterTile.Y);
 
         // Combo presentation bilgisini local tutuyoruz.
         // Shared context'e yazmıyoruz ki zincirdeki diğer special'lara sızmasın.
         var comboLightningVisualTargets = new List<TileView>();
 
-        rt.EmitComboTriggered?.Invoke(lineTile.GetSpecial(), pulseTile.GetSpecial(), pulseCell);
-        rt.EmitPulseEmitterComboTriggered?.Invoke(pulseCell);
+        rt.EmitComboTriggered?.Invoke(lineTile.GetSpecial(), pulseTile.GetSpecial(), comboCenterCell);
+        rt.EmitPulseEmitterComboTriggered?.Invoke(comboCenterCell);
 
         RegisterComboTiles(rt, lineTile, pulseTile);
-        BuildAffectedArea(rt, lineTile, pulseTile, comboLightningVisualTargets);
+        BuildAffectedArea(rt, comboCenterTile, comboLightningVisualTargets);
 
         ExpandChain(rt, result);
 
@@ -71,7 +72,7 @@ public sealed class LineVHPulseCoreCombo
             ));
         }
 
-        var pulseAction = CreatePulseEmitterComboAction(rt.Board, pulseTile.X, pulseTile.Y);
+        var pulseAction = CreatePulseEmitterComboAction(rt.Board, comboCenterCell.x, comboCenterCell.y);
         if (pulseAction != null)
             result.Actions.Insert(0, pulseAction);
 
@@ -105,12 +106,11 @@ public sealed class LineVHPulseCoreCombo
 
     private void BuildAffectedArea(
         LineVHPulseCoreComboExecutionRuntime rt,
-        TileView lineTile,
-        TileView pulseTile,
+        TileView comboCenterTile,
         List<TileView> comboLightningVisualTargets)
     {
-        int cx = pulseTile.X;
-        int cy = pulseTile.Y;
+        int cx = comboCenterTile.X;
+        int cy = comboCenterTile.Y;
 
         // 3 satır
         for (int y = cy - 1; y <= cy + 1; y++)
