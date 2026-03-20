@@ -38,6 +38,8 @@ public class ResolutionContext
     public readonly List<Vector2Int> OverrideDeferredPatchBotDashes = new();
     public bool DeferOverrideImplantVisualRefresh;
 
+    public readonly List<Vector2Int> DeferredLineHitOverrideCells = new();
+
     public const float OverrideRadialClearDuration = 0.20f;
     public readonly List<Vector2Int> OverrideDeferredPulseActivations = new();
     /// <summary>
@@ -106,5 +108,6 @@ public class ResolutionContext
         OverrideDeferredPulseExplosions.Clear();
         OverrideDeferredPatchBotDashes.Clear();
         OverrideDeferredPulseActivations.Clear();
+        DeferredLineHitOverrideCells.Clear();
     }
 }

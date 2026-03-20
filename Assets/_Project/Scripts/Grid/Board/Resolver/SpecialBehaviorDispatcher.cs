@@ -307,15 +307,28 @@ public class SpecialBehaviorDispatcher
                 break;
 
             case TileSpecial.SystemOverride:
-                overrideSpecial.Execute(new OverrideExecutionRuntime
                 {
-                    Board = board,
-                    Context = ctx,
-                    Origin = specialTile,
-                    Partner = partnerTile,
-                    FinalizeAtEnd = false
-                });
-                break;
+                    var cell = new Vector2Int(specialTile.X, specialTile.Y);
+
+                    // Line beam yolundaysa hemen override koşturma.
+                    if (ctx.HasLineActivation && ctx.LightningLineStrikes != null && ctx.LightningLineStrikes.Count > 0)
+                    {
+                        if (!ctx.DeferredLineHitOverrideCells.Contains(cell))
+                            ctx.DeferredLineHitOverrideCells.Add(cell);
+
+                        break;
+                    }
+
+                    overrideSpecial.Execute(new OverrideExecutionRuntime
+                    {
+                        Board = board,
+                        Context = ctx,
+                        Origin = specialTile,
+                        Partner = partnerTile,
+                        FinalizeAtEnd = false
+                    });
+                    break;
+                }
 
             default:
                 ActivateViaRegistry(ctx, special, ox, oy);
@@ -413,7 +426,14 @@ public class SpecialBehaviorDispatcher
 
             case TileSpecial.SystemOverride:
                 {
-                    ApplySpecialActivation(ctx, tile, partner);
+                    overrideSpecial.Execute(new OverrideExecutionRuntime
+                    {
+                        Board = board,
+                        Context = ctx,
+                        Origin = tile,
+                        Partner = partner,
+                        FinalizeAtEnd = false
+                    });
                     break;
                 }
         }

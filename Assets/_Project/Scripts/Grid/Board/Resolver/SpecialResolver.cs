@@ -365,6 +365,7 @@ public class SpecialResolver
                     ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
                 });
                 actions.AddRange(result.Actions);
+                DrainDeferredLineOverrides(actions);
                 TraceSpecialChain("ResolveSpecialSwap.LineV", a, b);
                 board.IsSpecialActivationPhase = false;
                 return actions;
@@ -550,6 +551,7 @@ public class SpecialResolver
             });
 
             actions.AddRange(result.Actions);
+            DrainDeferredLineOverrides(actions);
             TraceSpecialChain("ResolveSpecialSolo.LineV", specialTile, null);
             board.IsSpecialActivationPhase = false;
             return actions;
@@ -703,7 +705,9 @@ public class SpecialResolver
                     if (res != null && res.Actions != null)
                         actions.AddRange(res.Actions);
 
+                    DrainDeferredLineOverrides(actions);
                     break;
+
                 }
 
             case TileSpecial.PulseCore:
@@ -757,14 +761,21 @@ public class SpecialResolver
 
             case TileSpecial.SystemOverride:
                 {
-                    dispatcher.ApplySpecialActivation(ctx, tile, partner);
+                    var res = overrideSpecial.Execute(new OverrideExecutionRuntime
+                    {
+                        Board = board,
+                        Context = ctx,
+                        Origin = tile,
+                        Partner = partner,
+                        FinalizeAtEnd = true,
+                        ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                        CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                        FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                    });
 
-                    var fanoutActions = fanoutService.ProcessFanout(ctx);
-                    if (fanoutActions != null && fanoutActions.Count > 0)
-                        actions.AddRange(fanoutActions);
-
-                    if (ctx.OverrideDeferredPulseExplosions.Count == 0)
-                        implantService.CleanupImplantedTiles(ctx);
+                    if (res != null && res.Actions != null)
+                        actions.AddRange(res.Actions);
 
                     break;
                 }
@@ -1367,6 +1378,34 @@ public class SpecialResolver
 #endif
     }
 
+    private void DrainDeferredLineOverrides(List<BoardAction> actions)
+    {
+        if (ctx.DeferredLineHitOverrideCells == null || ctx.DeferredLineHitOverrideCells.Count == 0)
+            return;
+
+        var deferred = new List<Vector2Int>(ctx.DeferredLineHitOverrideCells);
+        ctx.DeferredLineHitOverrideCells.Clear();
+
+        foreach (var cell in deferred)
+        {
+            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                continue;
+
+            var tile = board.Tiles[cell.x, cell.y];
+            if (tile == null)
+                continue;
+
+            if (tile.GetSpecial() != TileSpecial.SystemOverride)
+                continue;
+
+            ctx.Processed.Remove(cell);
+            ctx.Queued.Remove(cell);
+
+            var overrideActions = ExecuteSpecialActions(ctx, tile, null);
+            if (overrideActions != null && overrideActions.Count > 0)
+                actions.AddRange(overrideActions);
+        }
+    }
     public readonly struct SpecialActivation
     {
         public readonly Vector2Int cell;

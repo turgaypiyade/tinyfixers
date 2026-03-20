@@ -66,6 +66,7 @@ public sealed class LineVSpecial
         CollectColumn(rt);
         BuildLineVisuals(rt);
         ExecuteQueuedChain(rt);
+        RemoveDeferredOverrideOriginsFromLineClear(rt);
 
         if (rt.FinalizeAtEnd)
         {
@@ -113,6 +114,27 @@ public sealed class LineVSpecial
         return true;
     }
 
+    private void RemoveDeferredOverrideOriginsFromLineClear(LineVExecutionRuntime rt)
+    {
+        if (rt?.Context?.DeferredLineHitOverrideCells == null || rt.Context.DeferredLineHitOverrideCells.Count == 0)
+            return;
+
+        foreach (var cell in rt.Context.DeferredLineHitOverrideCells)
+        {
+            if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+                continue;
+
+            var tile = rt.Board.Tiles[cell.x, cell.y];
+            if (tile == null)
+                continue;
+
+            if (tile.GetSpecial() != TileSpecial.SystemOverride)
+                continue;
+
+            // Beam yolu ve hit sırası kalsın, ama LineV bu origin'i hemen clear etmesin.
+            rt.Context.Affected.Remove(tile);
+        }
+    }
     private void RegisterOrigin(LineVExecutionRuntime rt)
     {
         var originCell = new Vector2Int(rt.Origin.X, rt.Origin.Y);
