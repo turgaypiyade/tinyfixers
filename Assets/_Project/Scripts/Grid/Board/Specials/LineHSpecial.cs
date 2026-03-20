@@ -17,6 +17,8 @@ public sealed class LineHExecutionRuntime
     public Action<ResolutionContext> CleanupImplantedTiles;
     public Action<HashSet<TileView>, Dictionary<TileView, float>> FireOverrideOverrideSpecialVisuals;
     public Action<SpecialBoardSignal> EmitBoardSignal;
+    public Action<ResolutionContext> EnqueueChainSpecials;
+    public Action<ResolutionContext> ProcessQueue;
 }
 
 public sealed class LineHExecutionResult
@@ -36,7 +38,7 @@ public sealed class LineHSpecial
         RegisterOrigin(rt);
         CollectRow(rt);
         BuildLineVisuals(rt);
-        ExecuteChain(rt);
+        ExecuteQueuedChain(rt);
 
         if (rt.FinalizeAtEnd)
         {
@@ -64,6 +66,15 @@ public sealed class LineHSpecial
         }
 
         return result;
+    }
+
+    private void ExecuteQueuedChain(LineHExecutionRuntime rt)
+    {
+        if (rt.EnqueueChainSpecials == null || rt.ProcessQueue == null)
+            return;
+
+        rt.EnqueueChainSpecials(rt.Context);
+        rt.ProcessQueue(rt.Context);
     }
 
     private bool CanExecute(LineHExecutionRuntime rt)
@@ -123,104 +134,6 @@ public sealed class LineHSpecial
                 true)); // true => horizontal
     }
 
-    private void ExecuteChain(LineHExecutionRuntime rt)
-    {
-        var pending = new Queue<TileView>();
-
-        SeedRowSpecials(rt, pending);
-
-        while (pending.Count > 0)
-        {
-            var tile = pending.Dequeue();
-            if (tile == null)
-                continue;
-
-            var pos = new Vector2Int(tile.X, tile.Y);
-
-            if (rt.Context.Processed.Contains(pos))
-                continue;
-
-            var special = tile.GetSpecial();
-            if (special == TileSpecial.None)
-                continue;
-
-            rt.Context.Queued.Remove(pos);
-
-            if (special == TileSpecial.LineH)
-            {
-                Execute(new LineHExecutionRuntime
-                {
-                    Board = rt.Board,
-                    Context = rt.Context,
-                    Origin = tile,
-                    Partner = null,
-                    FinalizeAtEnd = false,
-                    ActivateSpecial = rt.ActivateSpecial,
-                    ProcessFanout = rt.ProcessFanout,
-                    CleanupImplantedTiles = rt.CleanupImplantedTiles,
-                    FireOverrideOverrideSpecialVisuals = rt.FireOverrideOverrideSpecialVisuals,
-                    EmitBoardSignal = rt.EmitBoardSignal
-                });
-            }
-            else
-            {
-                if (!rt.Context.Processed.Contains(pos))
-                    rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
-
-                rt.Context.Processed.Add(pos);
-            }
-
-            EnqueueNewlyAffectedSpecials(rt, pending);
-        }
-    }
-
-    private void SeedRowSpecials(LineHExecutionRuntime rt, Queue<TileView> pending)
-    {
-        int y = rt.Origin.Y;
-
-        for (int x = 0; x < rt.Board.Width; x++)
-        {
-            var tile = rt.Board.Tiles[x, y];
-            if (tile == null || tile == rt.Origin)
-                continue;
-
-            TryQueue(rt, pending, tile);
-        }
-    }
-
-    private void EnqueueNewlyAffectedSpecials(LineHExecutionRuntime rt, Queue<TileView> pending)
-    {
-        foreach (var tile in rt.Context.Affected)
-        {
-            if (tile == null)
-                continue;
-
-            TryQueue(rt, pending, tile);
-        }
-    }
-
-    private void TryQueue(LineHExecutionRuntime rt, Queue<TileView> pending, TileView tile)
-    {
-        if (tile == null)
-            return;
-
-        if (tile == rt.Origin)
-            return;
-
-        if (tile.GetSpecial() == TileSpecial.None)
-            return;
-
-        var pos = new Vector2Int(tile.X, tile.Y);
-
-        if (rt.Context.Processed.Contains(pos))
-            return;
-
-        if (rt.Context.Queued.Contains(pos))
-            return;
-
-        rt.Context.Queued.Add(pos);
-        pending.Enqueue(tile);
-    }
 
     private MatchClearAction BuildClearAction(LineHExecutionRuntime rt)
     {

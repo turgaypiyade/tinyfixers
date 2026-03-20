@@ -385,7 +385,9 @@ public class SpecialResolver
                     ActivateSpecial = dispatcher.ApplySpecialActivation,
                     ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                     CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                    FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                    FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                    EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                    ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
                 });
 
                 actions.AddRange(result.Actions);
@@ -565,7 +567,9 @@ public class SpecialResolver
                 ActivateSpecial = dispatcher.ApplySpecialActivation,
                 ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                 CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
             });
 
             actions.AddRange(result.Actions);
@@ -667,7 +671,9 @@ public class SpecialResolver
                         ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                         CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
                         FireOverrideOverrideSpecialVisuals = (affected, delays) =>
-                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                        EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                        ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
                     });
 
                     if (res != null && res.Actions != null)
@@ -839,7 +845,9 @@ public class SpecialResolver
                     ActivateSpecial = dispatcher.ApplySpecialActivation,
                     ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                     CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                    FireOverrideOverrideSpecialVisuals = (set, delays) => visualService.FireOverrideOverrideSpecialVisuals(set, delays)
+                    FireOverrideOverrideSpecialVisuals = (set, delays) => visualService.FireOverrideOverrideSpecialVisuals(set, delays),
+                    EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                    ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
                 });
             }
             else if (tile.GetSpecial() == TileSpecial.PulseCore)

@@ -271,7 +271,9 @@ public class SpecialBehaviorDispatcher
                     Origin = specialTile,
                     Partner = partnerTile,
                     FinalizeAtEnd = false,
-                    ActivateSpecial = ApplySpecialActivation
+                    ActivateSpecial = ApplySpecialActivation,
+                    EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
+                    ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
                 });
                 break;
 
@@ -341,7 +343,9 @@ public class SpecialBehaviorDispatcher
                         Origin = tile,
                         Partner = partner,
                         FinalizeAtEnd = false,
-                        ActivateSpecial = ApplySpecialActivation
+                        ActivateSpecial = ApplySpecialActivation,
+                        EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
+                        ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
                     });
 
                     if (res != null && res.Actions != null)
