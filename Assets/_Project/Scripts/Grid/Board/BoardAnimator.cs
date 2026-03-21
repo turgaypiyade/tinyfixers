@@ -74,6 +74,21 @@ public class BoardAnimator
         tileAnimator?.PlaySelectionPulse(tile, delay, peakScale, upTime, downTime);
     }
 
+    public IEnumerator PlaySpecialCreationMerge(
+        TileView createdTile,
+        IEnumerable<TileView> sourceTiles,
+        float duration = -1f)
+    {
+        if (tileAnimator == null || createdTile == null)
+            yield break;
+
+        float animDuration = duration > 0f
+            ? duration
+            : Mathf.Max(0.18f, board.ApplySpecialChainTempo(board.ClearDuration * 1.45f));
+
+        yield return tileAnimator.PlaySpecialCreationMerge(createdTile, sourceTiles, animDuration);
+    }
+
     public IEnumerator SwapTilesAnimated(TileView a, TileView b, float duration)
     {
         yield return RunTogether(
