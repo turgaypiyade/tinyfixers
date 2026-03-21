@@ -850,6 +850,7 @@ IEnumerator ProcessSwap(TileView a, TileView b)
         nonSpecialMatchTiles.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
 
         // ── 1. Special CREATION — cascade dahil aktif ──
+        TileView createdSpecialTile = null;
         var creation = specialCreationService.DecideFromMatches(
             nonSpecialMatchTiles,
             new SpecialCreationService.CreationRequest(lastSwapA, lastSwapB, LastSwapUserMove));
@@ -861,6 +862,8 @@ IEnumerator ProcessSwap(TileView a, TileView b)
 
             if (!winnerAlreadySpecial && created != null)
             {
+                createdSpecialTile = created;
+
                 // Oluşan special kazanılmış haktır; normal clear listesinde kalmamalı.
                 matchTiles.Remove(created);
                 nonSpecialMatchTiles.Remove(created);
@@ -901,15 +904,71 @@ IEnumerator ProcessSwap(TileView a, TileView b)
         bool doShake = shakeNextClear || hasLineActivation;
         shakeNextClear = false;
 
+        ClearPresentationPlan presentationPlan =
+            BuildCreatedSpecialPresentationPlan(createdSpecialTile, matchTiles, doShake);
+
         // ── 3. Clear — activation olduysa special'lar da silinebilmeli ──
         actionSequencer.Enqueue(new MatchClearAction(matchTiles, doShake,
-            isSpecialPhase: allowSpecialActivation && hasAnySpecialActivation));
+            isSpecialPhase: allowSpecialActivation && hasAnySpecialActivation,
+            presentationPlan: presentationPlan));
         while (actionSequencer.IsPlaying) yield return null;
 
         var cascadeActions = cascadeLogic.CalculateCascades();
         if (cascadeActions.Count > 0)
         { actionSequencer.Enqueue(cascadeActions); while (actionSequencer.IsPlaying) yield return null; }
         onResult?.Invoke(true);
+    }
+
+    private ClearPresentationPlan BuildCreatedSpecialPresentationPlan(
+        TileView createdTile,
+        HashSet<TileView> clearTiles,
+        bool doShake)
+    {
+        if (createdTile == null || clearTiles == null || clearTiles.Count == 0)
+            return null;
+
+        var contributors = new List<TileView>();
+        var contributorCells = new List<Vector2Int>();
+
+        foreach (var tile in clearTiles)
+        {
+            if (tile == null || tile == createdTile)
+                continue;
+
+            contributors.Add(tile);
+            contributorCells.Add(new Vector2Int(tile.X, tile.Y));
+        }
+
+        if (contributors.Count == 0)
+            return null;
+
+        var createdGroup = createdTile.GetComponent<CanvasGroup>();
+        if (createdGroup == null)
+            createdGroup = createdTile.gameObject.AddComponent<CanvasGroup>();
+
+        createdGroup.alpha = 0f;
+        createdTile.SetIconAlpha(0f);
+        createdTile.transform.localScale = Vector3.one * 0.18f;
+
+        var plan = new ClearPresentationPlan
+        {
+            DoBoardShake = doShake,
+            IncludeAdjacentOverTileBlockerDamage = true,
+            ObstacleHitContext = IsSpecialActivationPhase
+                ? ObstacleHitContext.SpecialActivation
+                : ObstacleHitContext.NormalMatch
+        };
+
+        plan.Effects.Add(new SpecialCreationFormationEffectDescriptor(
+            createdTile,
+            contributors,
+            contributorCells,
+            GetClearDurationForCurrentPass()));
+
+        foreach (var tile in contributors)
+            plan.FinalClearTiles.Add(tile);
+
+        return plan;
     }
 
     public IEnumerator ResolveInitial() { BeginBusy(); yield return ResolveBoard(false); EndBusy(); }

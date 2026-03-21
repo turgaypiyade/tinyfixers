@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -272,6 +273,176 @@ public sealed class TileAnimator
             g.alpha = Mathf.Lerp(1f, 0f, k);
             yield return null;
         }
+    }
+
+    public IEnumerator PlaySpecialCreationFormation(
+        TileView createdTile,
+        IReadOnlyList<TileView> sourceTiles,
+        float duration)
+    {
+        if (createdTile == null)
+            yield break;
+
+        RectTransform createdRt = createdTile.RectTransform;
+        if (createdRt == null)
+            yield break;
+
+        float animDuration = Mathf.Max(0.08f, duration);
+        Vector2 targetPos = createdRt.anchoredPosition;
+        Vector3 createdBaseScale = createdRt.localScale;
+        Quaternion createdBaseRotation = createdRt.localRotation;
+        CanvasGroup createdGroup = createdTile.GetComponent<CanvasGroup>();
+        if (createdGroup == null)
+            createdGroup = createdTile.gameObject.AddComponent<CanvasGroup>();
+
+        createdRt.localScale = createdBaseScale * 0.18f;
+        createdRt.localRotation = Quaternion.identity;
+        createdGroup.alpha = 0f;
+
+        Image createdIcon = createdTile.IconImage;
+        Color createdIconColor = createdIcon != null ? createdIcon.color : Color.white;
+        if (createdIcon != null)
+        {
+            createdIcon.color = new Color(
+                createdIconColor.r,
+                createdIconColor.g,
+                createdIconColor.b,
+                0f);
+        }
+
+        var sources = new List<SpecialCreationSourceState>();
+        if (sourceTiles != null)
+        {
+            for (int i = 0; i < sourceTiles.Count; i++)
+            {
+                TileView tile = sourceTiles[i];
+                if (tile == null || tile == createdTile)
+                    continue;
+
+                RectTransform sourceRt = tile.RectTransform;
+                if (sourceRt == null)
+                    continue;
+
+                CanvasGroup sourceGroup = tile.GetComponent<CanvasGroup>();
+                if (sourceGroup == null)
+                    sourceGroup = tile.gameObject.AddComponent<CanvasGroup>();
+
+                sources.Add(new SpecialCreationSourceState
+                {
+                    tile = tile,
+                    rect = sourceRt,
+                    canvasGroup = sourceGroup,
+                    startPos = sourceRt.anchoredPosition,
+                    startScale = sourceRt.localScale,
+                    startRotation = sourceRt.localRotation,
+                    startAlpha = sourceGroup.alpha
+                });
+            }
+        }
+
+        float t = 0f;
+        while (t < animDuration)
+        {
+            if (createdTile == null || createdRt == null)
+                yield break;
+
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / animDuration);
+            float travelEase = EaseOutCubic(k);
+            float fadeEase = Mathf.Clamp01(k * 1.2f);
+            float createdScaleFactor = EvaluateCreatedSpecialScale(k);
+
+            for (int i = 0; i < sources.Count; i++)
+            {
+                var source = sources[i];
+                if (source.tile == null || source.rect == null)
+                    continue;
+
+                source.rect.anchoredPosition = Vector2.LerpUnclamped(source.startPos, targetPos, travelEase);
+                source.rect.localScale = Vector3.LerpUnclamped(source.startScale, Vector3.one * 0.05f, travelEase);
+                source.rect.localRotation = Quaternion.SlerpUnclamped(
+                    source.startRotation,
+                    Quaternion.Euler(0f, 0f, 24f),
+                    travelEase);
+
+                if (source.canvasGroup != null)
+                    source.canvasGroup.alpha = Mathf.Lerp(source.startAlpha, 0f, fadeEase);
+            }
+
+            createdRt.localScale = createdBaseScale * createdScaleFactor;
+            createdGroup.alpha = Mathf.Lerp(0f, 1f, fadeEase);
+
+            if (createdIcon != null)
+            {
+                createdIcon.color = new Color(
+                    createdIconColor.r,
+                    createdIconColor.g,
+                    createdIconColor.b,
+                    fadeEase);
+            }
+
+            yield return null;
+        }
+
+        for (int i = 0; i < sources.Count; i++)
+        {
+            var source = sources[i];
+            if (source.tile == null || source.rect == null)
+                continue;
+
+            source.rect.anchoredPosition = targetPos;
+            source.rect.localScale = Vector3.one * 0.05f;
+            source.rect.localRotation = Quaternion.identity;
+
+            if (source.canvasGroup != null)
+                source.canvasGroup.alpha = 0f;
+        }
+
+        createdRt.localScale = createdBaseScale;
+        createdRt.localRotation = createdBaseRotation;
+        createdGroup.alpha = 1f;
+
+        if (createdIcon != null)
+            createdIcon.color = createdIconColor;
+    }
+
+    private static float EaseOutCubic(float t)
+    {
+        float inv = 1f - Mathf.Clamp01(t);
+        return 1f - (inv * inv * inv);
+    }
+
+    private static float EvaluateCreatedSpecialScale(float t)
+    {
+        t = Mathf.Clamp01(t);
+        if (t < 0.72f)
+        {
+            float phase = t / 0.72f;
+            return Mathf.LerpUnclamped(0.18f, 1.12f, EaseOutBack(phase));
+        }
+
+        float settle = (t - 0.72f) / 0.28f;
+        return Mathf.LerpUnclamped(1.12f, 1f, EaseOutCubic(settle));
+    }
+
+    private static float EaseOutBack(float t)
+    {
+        t = Mathf.Clamp01(t);
+        const float c1 = 1.70158f;
+        const float c3 = c1 + 1f;
+        float x = t - 1f;
+        return 1f + c3 * x * x * x + c1 * x * x;
+    }
+
+    private struct SpecialCreationSourceState
+    {
+        public TileView tile;
+        public RectTransform rect;
+        public CanvasGroup canvasGroup;
+        public Vector2 startPos;
+        public Vector3 startScale;
+        public Quaternion startRotation;
+        public float startAlpha;
     }
 
     private static Transform GetVisualTarget(TileView tile)
