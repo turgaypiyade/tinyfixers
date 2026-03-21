@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class BoardAnimator
 {
@@ -104,6 +105,26 @@ public class BoardAnimator
         board.StartCoroutine(Wrap(c1, () => d1 = true));
         board.StartCoroutine(Wrap(c2, () => d2 = true));
         while (!d1 || !d2) yield return null;
+    }
+
+    private static Transform GetVisualTarget(TileView tile)
+    {
+        if (tile == null)
+            return null;
+
+        Image icon = tile.IconImage;
+        if (icon != null && icon.transform != null && icon.transform != tile.transform)
+            return icon.transform;
+
+        return tile.transform;
+    }
+
+    private static float EaseOutBack(float t)
+    {
+        const float c1 = 1.70158f;
+        const float c3 = c1 + 1f;
+        float x = Mathf.Clamp01(t) - 1f;
+        return 1f + c3 * x * x * x + c1 * x * x;
     }
 
     private IEnumerator Wrap(IEnumerator c, Action onDone)
