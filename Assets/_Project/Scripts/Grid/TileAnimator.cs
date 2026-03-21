@@ -275,156 +275,174 @@ public sealed class TileAnimator
         }
     }
 
-    public IEnumerator PlaySpecialCreationMerge(
+    public IEnumerator PlaySpecialCreationFormation(
         TileView createdTile,
-        IEnumerable<TileView> sourceTiles,
+        IReadOnlyList<TileView> sourceTiles,
         float duration)
     {
         if (createdTile == null)
             yield break;
 
-        RectTransform targetRt = createdTile.RectTransform;
-        if (targetRt == null)
+        RectTransform createdRt = createdTile.RectTransform;
+        if (createdRt == null)
             yield break;
 
-        var contributors = new List<TileView>();
-        if (sourceTiles != null)
-        {
-            foreach (var tile in sourceTiles)
-            {
-                if (tile == null || tile == createdTile || contributors.Contains(tile))
-                    continue;
-
-                contributors.Add(tile);
-            }
-        }
-
-        Transform createdRoot = createdTile.transform;
-        Transform createdVisual = GetVisualTarget(createdTile);
-
+        float animDuration = Mathf.Max(0.08f, duration);
+        Vector2 targetPos = createdRt.anchoredPosition;
+        Vector3 createdBaseScale = createdRt.localScale;
+        Quaternion createdBaseRotation = createdRt.localRotation;
         CanvasGroup createdGroup = createdTile.GetComponent<CanvasGroup>();
         if (createdGroup == null)
             createdGroup = createdTile.gameObject.AddComponent<CanvasGroup>();
 
-        if (createdRoot != null)
-            createdRoot.localScale = Vector3.one;
-        if (createdVisual != null)
-            createdVisual.localScale = Vector3.one;
+        createdRt.localScale = createdBaseScale * 0.18f;
+        createdRt.localRotation = Quaternion.identity;
+        createdGroup.alpha = 0f;
 
-        Vector3 createdBaseScale = Vector3.one;
-        Vector3 createdStartScale = createdBaseScale * 0.12f;
-        Vector3 createdOvershoot = createdBaseScale * 1.14f;
-        createdGroup.alpha = 1f;
-
-        if (createdVisual != null)
-            createdVisual.localScale = createdStartScale;
-
-        var sourceRts = new List<RectTransform>(contributors.Count);
-        var sourceStarts = new List<Vector2>(contributors.Count);
-        var sourceScales = new List<Vector3>(contributors.Count);
-        var sourceVisuals = new List<Transform>(contributors.Count);
-        var sourceVisualScales = new List<Vector3>(contributors.Count);
-        var sourceGroups = new List<CanvasGroup>(contributors.Count);
-        Vector2 targetPos = targetRt.anchoredPosition;
-
-        for (int i = 0; i < contributors.Count; i++)
+        Image createdIcon = createdTile.IconImage;
+        Color createdIconColor = createdIcon != null ? createdIcon.color : Color.white;
+        if (createdIcon != null)
         {
-            var tile = contributors[i];
-            RectTransform rt = tile != null ? tile.RectTransform : null;
-            if (rt == null)
-                continue;
-
-            CanvasGroup group = tile.GetComponent<CanvasGroup>();
-            if (group == null)
-                group = tile.gameObject.AddComponent<CanvasGroup>();
-
-            sourceRts.Add(rt);
-            sourceStarts.Add(rt.anchoredPosition);
-            rt.localScale = Vector3.one;
-            sourceScales.Add(rt.localScale);
-
-            Transform visual = GetVisualTarget(tile);
-            if (visual != null)
-                visual.localScale = Vector3.one;
-
-            sourceVisuals.Add(visual);
-            sourceVisualScales.Add(visual != null ? visual.localScale : Vector3.one);
-            sourceGroups.Add(group);
-
-            group.alpha = 1f;
+            createdIcon.color = new Color(
+                createdIconColor.r,
+                createdIconColor.g,
+                createdIconColor.b,
+                0f);
         }
 
-        float animDuration = Mathf.Max(0.18f, duration);
-        float t = 0f;
-
-        while (t < animDuration)
+        var sources = new List<SpecialCreationSourceState>();
+        if (sourceTiles != null)
         {
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / animDuration);
-            float moveEase = 1f - Mathf.Pow(1f - k, 3f);
-            float growEase = EaseOutBack(k);
-            float shrinkEase = Mathf.SmoothStep(0f, 1f, k);
-
-            for (int i = 0; i < sourceRts.Count; i++)
+            for (int i = 0; i < sourceTiles.Count; i++)
             {
-                RectTransform rt = sourceRts[i];
-                if (rt == null)
+                TileView tile = sourceTiles[i];
+                if (tile == null || tile == createdTile)
                     continue;
 
-                rt.anchoredPosition = Vector2.Lerp(sourceStarts[i], targetPos, moveEase);
-                rt.localScale = Vector3.Lerp(sourceScales[i], Vector3.one * 0.18f, shrinkEase);
+                RectTransform sourceRt = tile.RectTransform;
+                if (sourceRt == null)
+                    continue;
 
-                Transform visual = sourceVisuals[i];
-                if (visual != null)
-                    visual.localScale = Vector3.Lerp(sourceVisualScales[i], Vector3.zero, shrinkEase);
+                CanvasGroup sourceGroup = tile.GetComponent<CanvasGroup>();
+                if (sourceGroup == null)
+                    sourceGroup = tile.gameObject.AddComponent<CanvasGroup>();
 
-                CanvasGroup group = sourceGroups[i];
-                if (group != null)
-                    group.alpha = 1f - shrinkEase;
+                sources.Add(new SpecialCreationSourceState
+                {
+                    tile = tile,
+                    rect = sourceRt,
+                    canvasGroup = sourceGroup,
+                    startPos = sourceRt.anchoredPosition,
+                    startScale = sourceRt.localScale,
+                    startRotation = sourceRt.localRotation,
+                    startAlpha = sourceGroup.alpha
+                });
+            }
+        }
+
+        float t = 0f;
+        while (t < animDuration)
+        {
+            if (createdTile == null || createdRt == null)
+                yield break;
+
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / animDuration);
+            float travelEase = EaseOutCubic(k);
+            float fadeEase = Mathf.Clamp01(k * 1.2f);
+            float createdScaleFactor = EvaluateCreatedSpecialScale(k);
+
+            for (int i = 0; i < sources.Count; i++)
+            {
+                var source = sources[i];
+                if (source.tile == null || source.rect == null)
+                    continue;
+
+                source.rect.anchoredPosition = Vector2.LerpUnclamped(source.startPos, targetPos, travelEase);
+                source.rect.localScale = Vector3.LerpUnclamped(source.startScale, Vector3.one * 0.05f, travelEase);
+                source.rect.localRotation = Quaternion.SlerpUnclamped(
+                    source.startRotation,
+                    Quaternion.Euler(0f, 0f, 24f),
+                    travelEase);
+
+                if (source.canvasGroup != null)
+                    source.canvasGroup.alpha = Mathf.Lerp(source.startAlpha, 0f, fadeEase);
             }
 
-            if (createdVisual != null)
+            createdRt.localScale = createdBaseScale * createdScaleFactor;
+            createdGroup.alpha = Mathf.Lerp(0f, 1f, fadeEase);
+
+            if (createdIcon != null)
             {
-                createdVisual.localScale = k < 0.78f
-                    ? Vector3.LerpUnclamped(createdStartScale, createdOvershoot, growEase)
-                    : Vector3.LerpUnclamped(createdOvershoot, createdBaseScale, Mathf.InverseLerp(0.78f, 1f, k));
+                createdIcon.color = new Color(
+                    createdIconColor.r,
+                    createdIconColor.g,
+                    createdIconColor.b,
+                    fadeEase);
             }
 
             yield return null;
         }
 
-        for (int i = 0; i < sourceRts.Count; i++)
+        for (int i = 0; i < sources.Count; i++)
         {
-            RectTransform rt = sourceRts[i];
-            if (rt == null)
+            var source = sources[i];
+            if (source.tile == null || source.rect == null)
                 continue;
 
-            rt.anchoredPosition = targetPos;
-            rt.localScale = Vector3.zero;
+            source.rect.anchoredPosition = targetPos;
+            source.rect.localScale = Vector3.one * 0.05f;
+            source.rect.localRotation = Quaternion.identity;
 
-            Transform visual = sourceVisuals[i];
-            if (visual != null)
-                visual.localScale = Vector3.zero;
-
-            CanvasGroup group = sourceGroups[i];
-            if (group != null)
-                group.alpha = 0f;
+            if (source.canvasGroup != null)
+                source.canvasGroup.alpha = 0f;
         }
 
-        if (createdRoot != null)
-            createdRoot.localScale = Vector3.one;
-        if (createdVisual != null)
-            createdVisual.localScale = createdBaseScale;
-
+        createdRt.localScale = createdBaseScale;
+        createdRt.localRotation = createdBaseRotation;
         createdGroup.alpha = 1f;
+
+        if (createdIcon != null)
+            createdIcon.color = createdIconColor;
+    }
+
+    private static float EaseOutCubic(float t)
+    {
+        float inv = 1f - Mathf.Clamp01(t);
+        return 1f - (inv * inv * inv);
+    }
+
+    private static float EvaluateCreatedSpecialScale(float t)
+    {
+        t = Mathf.Clamp01(t);
+        if (t < 0.72f)
+        {
+            float phase = t / 0.72f;
+            return Mathf.LerpUnclamped(0.18f, 1.12f, EaseOutBack(phase));
+        }
+
+        float settle = (t - 0.72f) / 0.28f;
+        return Mathf.LerpUnclamped(1.12f, 1f, EaseOutCubic(settle));
     }
 
     private static float EaseOutBack(float t)
     {
+        t = Mathf.Clamp01(t);
         const float c1 = 1.70158f;
         const float c3 = c1 + 1f;
-        float x = Mathf.Clamp01(t) - 1f;
+        float x = t - 1f;
         return 1f + c3 * x * x * x + c1 * x * x;
+    }
+
+    private struct SpecialCreationSourceState
+    {
+        public TileView tile;
+        public RectTransform rect;
+        public CanvasGroup canvasGroup;
+        public Vector2 startPos;
+        public Vector3 startScale;
+        public Quaternion startRotation;
+        public float startAlpha;
     }
 
     private static Transform GetVisualTarget(TileView tile)

@@ -58,6 +58,7 @@ public class BoardAnimator
         clearEffectPlayers.Add(new LineSweepEffectPlayer());
         clearEffectPlayers.Add(new OverrideRadialEffectPlayer());
         clearEffectPlayers.Add(new PatchBotDashEffectPlayer());
+        clearEffectPlayers.Add(new SpecialCreationFormationEffectPlayer());
     }
 
     /// <summary>
@@ -166,6 +167,7 @@ public class BoardAnimator
         var clearedByType = new Dictionary<TileType, int>();
         var lineHitClearedTiles = new HashSet<TileView>();
         var lineSweepCandidates = new HashSet<TileView>();
+        var skipBreakFxTiles = new HashSet<TileView>();
         bool lineHitWindowOpen = false;
 
         float maxStaggerDelay = 0f;
@@ -316,6 +318,9 @@ public class BoardAnimator
                     isGoalTile = hud.TryGetGoalTargetRectForTile(tile.GetTileType(), out _);
                 }
 
+                if (isGoalTile)
+                    skipBreakFxTiles.Add(tile);
+
                 // Öncelik: goal fly > lightning per-tile > default
                 float delay = 0f;
                 bool isRadialWaveTile = false;
@@ -463,6 +468,12 @@ public class BoardAnimator
 
         void FinalizeTileClear(TileView tile)
         {
+            if (tile == null)
+                return;
+
+            if (!skipBreakFxTiles.Contains(tile))
+                board.BreakFx?.PlayTileBreak(tile);
+
             board.ClearAndDestroyTile(tile, clearedByType);
         }
 
@@ -527,10 +538,19 @@ public class BoardAnimator
         yield return tileAnimator.PlayPulseImpact(tile, 0f, animTime);
     }
 
+    public IEnumerator PlayCreatedSpecialFormation(
+        TileView createdTile,
+        IReadOnlyList<TileView> sourceTiles,
+        float duration)
+    {
+        if (createdTile == null)
+            yield break;
+
+        yield return tileAnimator.PlaySpecialCreationFormation(createdTile, sourceTiles, duration);
+    }
+
     public IEnumerator PlayClearPresentation(ClearPresentationPlan plan)
     {
-        // Pilot presentation path.
-        // Currently intended for pure solo PulseCore only.
         if (plan == null)
             yield break;
 
@@ -540,16 +560,21 @@ public class BoardAnimator
             new System.Collections.Generic.Dictionary<TileType, int>();
 
         var ctx = new ClearEffectPlaybackContext();
-
         var cleared = new System.Collections.Generic.HashSet<TileView>();
 
-        ctx.ClearTileNow = delegate (TileView tile)
+        void FinalizePresentationTileClear(TileView tile)
         {
             if (tile == null || cleared.Contains(tile))
                 return;
 
             cleared.Add(tile);
+            board.BreakFx?.PlayTileBreak(tile);
             board.ClearAndDestroyTile(tile, clearedByType);
+        }
+
+        ctx.ClearTileNow = delegate (TileView tile)
+        {
+            FinalizePresentationTileClear(tile);
         };
 
         ctx.NotifyCellImpactNow = delegate (Vector2Int cell)
@@ -574,13 +599,7 @@ public class BoardAnimator
         }
 
         foreach (TileView tile in plan.FinalClearTiles)
-        {
-            if (tile == null || cleared.Contains(tile))
-                continue;
-
-            cleared.Add(tile);
-            board.ClearAndDestroyTile(tile, clearedByType);
-        }
+            FinalizePresentationTileClear(tile);
 
         foreach (var pair in clearedByType)
             board.NotifyTilesCleared(pair.Key, pair.Value);
