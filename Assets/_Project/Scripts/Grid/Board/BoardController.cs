@@ -83,6 +83,14 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float pulseMicroShakeStrength = 4f;
     [SerializeField] private PatchbotDashUI patchbotDashUI;
 
+    [Header("Break FX")]
+    [SerializeField] private GameObject tileBreakFxPrefab;
+    [SerializeField] private float tileBreakFxLifetime = 0.35f;
+    [SerializeField] private GameObject obstacleHitFxPrefab;
+    [SerializeField] private float obstacleHitFxLifetime = 0.30f;
+    [SerializeField] private GameObject obstacleBreakFxPrefab;
+    [SerializeField] private float obstacleBreakFxLifetime = 0.40f;
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     [Header("Debug / Tile Sync")]
     [SerializeField] private bool enableTileSyncValidation = true;
@@ -108,6 +116,7 @@ public class BoardController : MonoBehaviour
     private int tileSize;
     private float tileIconScale = 0.98f;
     private bool useFullCellIcons;
+    private BoardBreakFxService boardBreakFxService;
 
     public int TileSize => tileSize;
     public bool IsBusy => CurrentState == BoardState.Resolving;
@@ -276,6 +285,16 @@ public class BoardController : MonoBehaviour
     internal void OnLineSweepStartedInternal(LightningLineStrike strike, float delay) => OnLineSweepStarted?.Invoke(strike, delay);
     internal void OnLineSweepCellReachedInternal(Vector2Int cell, LightningLineStrike strike) => OnLineSweepCellReached?.Invoke(cell, strike);
     internal ObstacleResolutionService Obstacles => obstacleResolutionService;
+    // -- gems break animations
+    internal BoardBreakFxService BreakFx => boardBreakFxService;
+    internal RectTransform BreakFxParent => vfxSpace != null ? vfxSpace : parent;
+    internal GameObject TileBreakFxPrefab => tileBreakFxPrefab;
+    internal float TileBreakFxLifetime => Mathf.Max(0f, tileBreakFxLifetime);
+    internal GameObject ObstacleHitFxPrefab => obstacleHitFxPrefab;
+    internal float ObstacleHitFxLifetime => Mathf.Max(0f, obstacleHitFxLifetime);
+    internal GameObject ObstacleBreakFxPrefab => obstacleBreakFxPrefab;
+    internal float ObstacleBreakFxLifetime => Mathf.Max(0f, obstacleBreakFxLifetime);
+
     // ═══════════════════════════════════════════════════════════════
     //  Lifecycle
     // ═══════════════════════════════════════════════════════════════
@@ -308,6 +327,7 @@ public class BoardController : MonoBehaviour
         cascadeLogic ??= new CascadeLogic(this);
         boardInitService ??= new BoardInitService();
         boardVfxService ??= new BoardVfxService(this);
+        boardBreakFxService ??= new BoardBreakFxService(this);
         lineSweepService ??= new LineSweepService(this);
         boosterService ??= new BoosterService(this);
 
@@ -907,7 +927,10 @@ IEnumerator ProcessSwap(TileView a, TileView b)
         => obstacleResolutionService != null ? obstacleResolutionService.ApplyDamageAt(x, y, context) : default;
 
     public void TriggerObstacleVisualChange(ObstacleVisualChange change)
-        => ObstacleVisualChanged?.Invoke(change);
+    {
+        boardBreakFxService?.PlayObstacleBreak(change);
+        ObstacleVisualChanged?.Invoke(change);
+    }
 
     internal void MarkPatchBotForcedObstacleHit(int x, int y)
         => obstacleResolutionService?.MarkPatchBotForcedHit(x, y);
