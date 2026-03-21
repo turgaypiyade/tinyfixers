@@ -753,11 +753,17 @@ IEnumerator ProcessSwap(TileView a, TileView b)
             {
                 var candidates = new HashSet<TileView>(normalMatches);
                 candidates.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
+                HashSet<TileView> creationContributors = null;
+                TileView createdTile = null;
 
                 var creation = specialCreationService.DecideBestFromMatchedTiles(candidates);
                 if (creation.hasValue)
                 {
-                    specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
+                    creationContributors = new HashSet<TileView>(candidates);
+                    createdTile = specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
+                    if (createdTile != null && boardAnimatorRef != null)
+                        yield return boardAnimatorRef.PlaySpecialCreationMerge(createdTile, creationContributors);
+
                     normalMatches.Remove(creation.winner);
                 }
 
@@ -765,7 +771,10 @@ IEnumerator ProcessSwap(TileView a, TileView b)
                 normalMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
                 if (normalMatches.Count > 0)
                 {
-                    actionSequencer.Enqueue(new MatchClearAction(normalMatches, doShake: false));
+                    actionSequencer.Enqueue(new MatchClearAction(
+                        normalMatches,
+                        doShake: false,
+                        suppressPerTileClearVfx: createdTile != null));
                     yield return AnimateQueuedActions();
                 }
             }
@@ -854,10 +863,15 @@ IEnumerator ProcessSwap(TileView a, TileView b)
         var creation = specialCreationService.DecideFromMatches(
             nonSpecialMatchTiles,
             new SpecialCreationService.CreationRequest(lastSwapA, lastSwapB, LastSwapUserMove));
+        bool playedSpecialCreationMerge = false;
 
         if (creation.hasValue)
         {
             bool winnerAlreadySpecial = creation.winner != null && creation.winner.GetSpecial() != TileSpecial.None;
+            HashSet<TileView> creationContributors = null;
+            if (!winnerAlreadySpecial)
+                creationContributors = new HashSet<TileView>(nonSpecialMatchTiles);
+
             var created = specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
 
             if (!winnerAlreadySpecial && created != null)
