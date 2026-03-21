@@ -58,6 +58,7 @@ public class BoardAnimator
         clearEffectPlayers.Add(new LineSweepEffectPlayer());
         clearEffectPlayers.Add(new OverrideRadialEffectPlayer());
         clearEffectPlayers.Add(new PatchBotDashEffectPlayer());
+        clearEffectPlayers.Add(new SpecialCreationFormationEffectPlayer());
     }
 
     /// <summary>
@@ -510,6 +511,17 @@ public class BoardAnimator
             yield break;
 
         yield return tileAnimator.PlayPulseImpact(tile, 0f, animTime);
+    }
+
+    public IEnumerator PlayCreatedSpecialFormation(
+        TileView createdTile,
+        IReadOnlyList<TileView> sourceTiles,
+        float duration)
+    {
+        if (createdTile == null)
+            yield break;
+
+        yield return tileAnimator.PlaySpecialCreationFormation(createdTile, sourceTiles, duration);
     }
 
     public IEnumerator PlayClearPresentation(ClearPresentationPlan plan)
