@@ -733,11 +733,24 @@ IEnumerator ProcessSwap(TileView a, TileView b)
             {
                 var candidates = new HashSet<TileView>(normalMatches);
                 candidates.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
+                HashSet<TileView> creationContributors = null;
+                TileView createdTile = null;
+                bool playedSpecialCreationMerge = false;
 
                 var creation = specialCreationService.DecideBestFromMatchedTiles(candidates);
                 if (creation.hasValue)
                 {
-                    specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
+                    creationContributors = new HashSet<TileView>(candidates);
+                    yield return ApplyCreatedSpecialWithPresentation(
+                        creation.winner,
+                        creation.special,
+                        creationContributors,
+                        (created, didPlayMerge) =>
+                        {
+                            createdTile = created;
+                            playedSpecialCreationMerge = didPlayMerge;
+                        });
+
                     normalMatches.Remove(creation.winner);
                 }
 
@@ -745,7 +758,10 @@ IEnumerator ProcessSwap(TileView a, TileView b)
                 normalMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
                 if (normalMatches.Count > 0)
                 {
-                    actionSequencer.Enqueue(new MatchClearAction(normalMatches, doShake: false));
+                    actionSequencer.Enqueue(new MatchClearAction(
+                        normalMatches,
+                        doShake: false,
+                        suppressPerTileClearVfx: playedSpecialCreationMerge));
                     yield return AnimateQueuedActions();
                 }
             }
@@ -833,14 +849,33 @@ IEnumerator ProcessSwap(TileView a, TileView b)
         var creation = specialCreationService.DecideFromMatches(
             nonSpecialMatchTiles,
             new SpecialCreationService.CreationRequest(lastSwapA, lastSwapB, LastSwapUserMove));
+        bool playedSpecialCreationMerge = false;
 
         if (creation.hasValue)
         {
             bool winnerAlreadySpecial = creation.winner != null && creation.winner.GetSpecial() != TileSpecial.None;
-            var created = specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
+            HashSet<TileView> creationContributors = null;
+            if (!winnerAlreadySpecial)
+                creationContributors = new HashSet<TileView>(nonSpecialMatchTiles);
+
+            TileView created = null;
+
+            if (!winnerAlreadySpecial)
+            {
+                yield return ApplyCreatedSpecialWithPresentation(
+                    creation.winner,
+                    creation.special,
+                    creationContributors,
+                    (appliedCreated, didPlayMerge) =>
+                    {
+                        created = appliedCreated;
+                        playedSpecialCreationMerge = didPlayMerge;
+                    });
+            }
 
             if (!winnerAlreadySpecial && created != null)
             {
+
                 // Oluşan special kazanılmış haktır; normal clear listesinde kalmamalı.
                 matchTiles.Remove(created);
                 nonSpecialMatchTiles.Remove(created);
@@ -883,13 +918,32 @@ IEnumerator ProcessSwap(TileView a, TileView b)
 
         // ── 3. Clear — activation olduysa special'lar da silinebilmeli ──
         actionSequencer.Enqueue(new MatchClearAction(matchTiles, doShake,
-            isSpecialPhase: allowSpecialActivation && hasAnySpecialActivation));
+            isSpecialPhase: allowSpecialActivation && hasAnySpecialActivation,
+            suppressPerTileClearVfx: playedSpecialCreationMerge));
         while (actionSequencer.IsPlaying) yield return null;
 
         var cascadeActions = cascadeLogic.CalculateCascades();
         if (cascadeActions.Count > 0)
         { actionSequencer.Enqueue(cascadeActions); while (actionSequencer.IsPlaying) yield return null; }
         onResult?.Invoke(true);
+    }
+
+    private IEnumerator ApplyCreatedSpecialWithPresentation(
+        TileView winner,
+        TileSpecial special,
+        HashSet<TileView> contributors,
+        Action<TileView, bool> onComplete)
+    {
+        TileView created = specialResolver.ApplyCreatedSpecial(winner, special);
+        bool playedMerge = false;
+
+        if (created != null && boardAnimatorRef != null)
+        {
+            yield return boardAnimatorRef.PlaySpecialCreationMerge(created, contributors);
+            playedMerge = true;
+        }
+
+        onComplete?.Invoke(created, playedMerge);
     }
 
     public IEnumerator ResolveInitial() { BeginBusy(); yield return ResolveBoard(false); EndBusy(); }
