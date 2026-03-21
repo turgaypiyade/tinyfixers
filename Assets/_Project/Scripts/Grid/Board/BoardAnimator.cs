@@ -59,6 +59,7 @@ public class BoardAnimator
         clearEffectPlayers.Add(new LineSweepEffectPlayer());
         clearEffectPlayers.Add(new OverrideRadialEffectPlayer());
         clearEffectPlayers.Add(new PatchBotDashEffectPlayer());
+        clearEffectPlayers.Add(new SpecialCreationFormationEffectPlayer());
     }
 
     /// <summary>
@@ -80,143 +81,14 @@ public class BoardAnimator
         IEnumerable<TileView> sourceTiles,
         float duration = -1f)
     {
-        if (createdTile == null)
+        if (tileAnimator == null || createdTile == null)
             yield break;
 
         float animDuration = duration > 0f
             ? duration
             : Mathf.Max(0.18f, board.ApplySpecialChainTempo(board.ClearDuration * 1.45f));
 
-        RectTransform targetRt = createdTile.RectTransform;
-        if (targetRt == null)
-            yield break;
-
-        var contributors = new List<TileView>();
-        if (sourceTiles != null)
-        {
-            foreach (var tile in sourceTiles)
-            {
-                if (tile == null || tile == createdTile || contributors.Contains(tile))
-                    continue;
-
-                contributors.Add(tile);
-            }
-        }
-
-        Transform createdRoot = createdTile.transform;
-        Transform createdVisual = GetVisualTarget(createdTile);
-        CanvasGroup createdGroup = createdTile.GetComponent<CanvasGroup>();
-        if (createdGroup == null)
-            createdGroup = createdTile.gameObject.AddComponent<CanvasGroup>();
-
-        if (createdRoot != null)
-            createdRoot.localScale = Vector3.one;
-        if (createdVisual != null)
-            createdVisual.localScale = Vector3.one;
-
-        Vector3 createdBaseScale = Vector3.one;
-        Vector3 createdStartScale = createdBaseScale * 0.12f;
-        Vector3 createdOvershoot = createdBaseScale * 1.14f;
-        createdGroup.alpha = 1f;
-
-        if (createdVisual != null)
-            createdVisual.localScale = createdStartScale;
-
-        var sourceRts = new List<RectTransform>(contributors.Count);
-        var sourceStarts = new List<Vector2>(contributors.Count);
-        var sourceScales = new List<Vector3>(contributors.Count);
-        var sourceVisuals = new List<Transform>(contributors.Count);
-        var sourceVisualScales = new List<Vector3>(contributors.Count);
-        var sourceGroups = new List<CanvasGroup>(contributors.Count);
-        Vector2 targetPos = targetRt.anchoredPosition;
-
-        for (int i = 0; i < contributors.Count; i++)
-        {
-            var tile = contributors[i];
-            RectTransform rt = tile != null ? tile.RectTransform : null;
-            if (rt == null)
-                continue;
-
-            CanvasGroup group = tile.GetComponent<CanvasGroup>();
-            if (group == null)
-                group = tile.gameObject.AddComponent<CanvasGroup>();
-
-            sourceRts.Add(rt);
-            sourceStarts.Add(rt.anchoredPosition);
-            rt.localScale = Vector3.one;
-            sourceScales.Add(rt.localScale);
-
-            Transform visual = GetVisualTarget(tile);
-            if (visual != null)
-                visual.localScale = Vector3.one;
-
-            sourceVisuals.Add(visual);
-            sourceVisualScales.Add(visual != null ? visual.localScale : Vector3.one);
-            sourceGroups.Add(group);
-            group.alpha = 1f;
-        }
-
-        float t = 0f;
-        while (t < animDuration)
-        {
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / animDuration);
-            float moveEase = 1f - Mathf.Pow(1f - k, 3f);
-            float growEase = EaseOutBack(k);
-            float shrinkEase = Mathf.SmoothStep(0f, 1f, k);
-
-            for (int i = 0; i < sourceRts.Count; i++)
-            {
-                RectTransform rt = sourceRts[i];
-                if (rt == null)
-                    continue;
-
-                rt.anchoredPosition = Vector2.Lerp(sourceStarts[i], targetPos, moveEase);
-                rt.localScale = Vector3.Lerp(sourceScales[i], Vector3.one * 0.18f, shrinkEase);
-
-                Transform visual = sourceVisuals[i];
-                if (visual != null)
-                    visual.localScale = Vector3.Lerp(sourceVisualScales[i], Vector3.zero, shrinkEase);
-
-                CanvasGroup group = sourceGroups[i];
-                if (group != null)
-                    group.alpha = 1f - shrinkEase;
-            }
-
-            if (createdVisual != null)
-            {
-                createdVisual.localScale = k < 0.78f
-                    ? Vector3.LerpUnclamped(createdStartScale, createdOvershoot, growEase)
-                    : Vector3.LerpUnclamped(createdOvershoot, createdBaseScale, Mathf.InverseLerp(0.78f, 1f, k));
-            }
-
-            yield return null;
-        }
-
-        for (int i = 0; i < sourceRts.Count; i++)
-        {
-            RectTransform rt = sourceRts[i];
-            if (rt == null)
-                continue;
-
-            rt.anchoredPosition = targetPos;
-            rt.localScale = Vector3.zero;
-
-            Transform visual = sourceVisuals[i];
-            if (visual != null)
-                visual.localScale = Vector3.zero;
-
-            CanvasGroup group = sourceGroups[i];
-            if (group != null)
-                group.alpha = 0f;
-        }
-
-        if (createdRoot != null)
-            createdRoot.localScale = Vector3.one;
-        if (createdVisual != null)
-            createdVisual.localScale = createdBaseScale;
-
-        createdGroup.alpha = 1f;
+        yield return tileAnimator.PlaySpecialCreationMerge(createdTile, sourceTiles, animDuration);
     }
 
     public IEnumerator SwapTilesAnimated(TileView a, TileView b, float duration)
@@ -316,6 +188,7 @@ public class BoardAnimator
         var clearedByType = new Dictionary<TileType, int>();
         var lineHitClearedTiles = new HashSet<TileView>();
         var lineSweepCandidates = new HashSet<TileView>();
+        var skipBreakFxTiles = new HashSet<TileView>();
         bool lineHitWindowOpen = false;
 
         float maxStaggerDelay = 0f;
@@ -466,6 +339,9 @@ public class BoardAnimator
                     isGoalTile = hud.TryGetGoalTargetRectForTile(tile.GetTileType(), out _);
                 }
 
+                if (isGoalTile)
+                    skipBreakFxTiles.Add(tile);
+
                 // Öncelik: goal fly > lightning per-tile > default
                 float delay = 0f;
                 bool isRadialWaveTile = false;
@@ -613,6 +489,12 @@ public class BoardAnimator
 
         void FinalizeTileClear(TileView tile)
         {
+            if (tile == null)
+                return;
+
+            if (!skipBreakFxTiles.Contains(tile))
+                board.BreakFx?.PlayTileBreak(tile);
+
             board.ClearAndDestroyTile(tile, clearedByType);
         }
 
@@ -677,10 +559,19 @@ public class BoardAnimator
         yield return tileAnimator.PlayPulseImpact(tile, 0f, animTime);
     }
 
+    public IEnumerator PlayCreatedSpecialFormation(
+        TileView createdTile,
+        IReadOnlyList<TileView> sourceTiles,
+        float duration)
+    {
+        if (createdTile == null)
+            yield break;
+
+        yield return tileAnimator.PlaySpecialCreationFormation(createdTile, sourceTiles, duration);
+    }
+
     public IEnumerator PlayClearPresentation(ClearPresentationPlan plan)
     {
-        // Pilot presentation path.
-        // Currently intended for pure solo PulseCore only.
         if (plan == null)
             yield break;
 
@@ -690,16 +581,21 @@ public class BoardAnimator
             new System.Collections.Generic.Dictionary<TileType, int>();
 
         var ctx = new ClearEffectPlaybackContext();
-
         var cleared = new System.Collections.Generic.HashSet<TileView>();
 
-        ctx.ClearTileNow = delegate (TileView tile)
+        void FinalizePresentationTileClear(TileView tile)
         {
             if (tile == null || cleared.Contains(tile))
                 return;
 
             cleared.Add(tile);
+            board.BreakFx?.PlayTileBreak(tile);
             board.ClearAndDestroyTile(tile, clearedByType);
+        }
+
+        ctx.ClearTileNow = delegate (TileView tile)
+        {
+            FinalizePresentationTileClear(tile);
         };
 
         ctx.NotifyCellImpactNow = delegate (Vector2Int cell)
@@ -724,13 +620,7 @@ public class BoardAnimator
         }
 
         foreach (TileView tile in plan.FinalClearTiles)
-        {
-            if (tile == null || cleared.Contains(tile))
-                continue;
-
-            cleared.Add(tile);
-            board.ClearAndDestroyTile(tile, clearedByType);
-        }
+            FinalizePresentationTileClear(tile);
 
         foreach (var pair in clearedByType)
             board.NotifyTilesCleared(pair.Key, pair.Value);

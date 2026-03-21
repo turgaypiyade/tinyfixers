@@ -83,6 +83,14 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float pulseMicroShakeStrength = 4f;
     [SerializeField] private PatchbotDashUI patchbotDashUI;
 
+    [Header("Break FX")]
+    [SerializeField] private GameObject tileBreakFxPrefab;
+    [SerializeField] private float tileBreakFxLifetime = 0.35f;
+    [SerializeField] private GameObject obstacleHitFxPrefab;
+    [SerializeField] private float obstacleHitFxLifetime = 0.30f;
+    [SerializeField] private GameObject obstacleBreakFxPrefab;
+    [SerializeField] private float obstacleBreakFxLifetime = 0.40f;
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     [Header("Debug / Tile Sync")]
     [SerializeField] private bool enableTileSyncValidation = true;
@@ -108,6 +116,7 @@ public class BoardController : MonoBehaviour
     private int tileSize;
     private float tileIconScale = 0.98f;
     private bool useFullCellIcons;
+    private BoardBreakFxService boardBreakFxService;
 
     public int TileSize => tileSize;
     public bool IsBusy => CurrentState == BoardState.Resolving;
@@ -276,6 +285,16 @@ public class BoardController : MonoBehaviour
     internal void OnLineSweepStartedInternal(LightningLineStrike strike, float delay) => OnLineSweepStarted?.Invoke(strike, delay);
     internal void OnLineSweepCellReachedInternal(Vector2Int cell, LightningLineStrike strike) => OnLineSweepCellReached?.Invoke(cell, strike);
     internal ObstacleResolutionService Obstacles => obstacleResolutionService;
+    // -- gems break animations
+    internal BoardBreakFxService BreakFx => boardBreakFxService;
+    internal RectTransform BreakFxParent => vfxSpace != null ? vfxSpace : parent;
+    internal GameObject TileBreakFxPrefab => tileBreakFxPrefab;
+    internal float TileBreakFxLifetime => Mathf.Max(0f, tileBreakFxLifetime);
+    internal GameObject ObstacleHitFxPrefab => obstacleHitFxPrefab;
+    internal float ObstacleHitFxLifetime => Mathf.Max(0f, obstacleHitFxLifetime);
+    internal GameObject ObstacleBreakFxPrefab => obstacleBreakFxPrefab;
+    internal float ObstacleBreakFxLifetime => Mathf.Max(0f, obstacleBreakFxLifetime);
+
     // ═══════════════════════════════════════════════════════════════
     //  Lifecycle
     // ═══════════════════════════════════════════════════════════════
@@ -308,6 +327,7 @@ public class BoardController : MonoBehaviour
         cascadeLogic ??= new CascadeLogic(this);
         boardInitService ??= new BoardInitService();
         boardVfxService ??= new BoardVfxService(this);
+        boardBreakFxService ??= new BoardBreakFxService(this);
         lineSweepService ??= new LineSweepService(this);
         boosterService ??= new BoosterService(this);
 
@@ -839,6 +859,7 @@ IEnumerator ProcessSwap(TileView a, TileView b)
         nonSpecialMatchTiles.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
 
         // ── 1. Special CREATION — cascade dahil aktif ──
+        TileView createdSpecialTile = null;
         var creation = specialCreationService.DecideFromMatches(
             nonSpecialMatchTiles,
             new SpecialCreationService.CreationRequest(lastSwapA, lastSwapB, LastSwapUserMove));
@@ -855,11 +876,7 @@ IEnumerator ProcessSwap(TileView a, TileView b)
 
             if (!winnerAlreadySpecial && created != null)
             {
-                if (boardAnimatorRef != null)
-                {
-                    yield return boardAnimatorRef.PlaySpecialCreationMerge(created, creationContributors);
-                    playedSpecialCreationMerge = true;
-                }
+                createdSpecialTile = created;
 
                 // Oluşan special kazanılmış haktır; normal clear listesinde kalmamalı.
                 matchTiles.Remove(created);
@@ -901,16 +918,71 @@ IEnumerator ProcessSwap(TileView a, TileView b)
         bool doShake = shakeNextClear || hasLineActivation;
         shakeNextClear = false;
 
+        ClearPresentationPlan presentationPlan =
+            BuildCreatedSpecialPresentationPlan(createdSpecialTile, matchTiles, doShake);
+
         // ── 3. Clear — activation olduysa special'lar da silinebilmeli ──
         actionSequencer.Enqueue(new MatchClearAction(matchTiles, doShake,
             isSpecialPhase: allowSpecialActivation && hasAnySpecialActivation,
-            suppressPerTileClearVfx: playedSpecialCreationMerge));
+            presentationPlan: presentationPlan));
         while (actionSequencer.IsPlaying) yield return null;
 
         var cascadeActions = cascadeLogic.CalculateCascades();
         if (cascadeActions.Count > 0)
         { actionSequencer.Enqueue(cascadeActions); while (actionSequencer.IsPlaying) yield return null; }
         onResult?.Invoke(true);
+    }
+
+    private ClearPresentationPlan BuildCreatedSpecialPresentationPlan(
+        TileView createdTile,
+        HashSet<TileView> clearTiles,
+        bool doShake)
+    {
+        if (createdTile == null || clearTiles == null || clearTiles.Count == 0)
+            return null;
+
+        var contributors = new List<TileView>();
+        var contributorCells = new List<Vector2Int>();
+
+        foreach (var tile in clearTiles)
+        {
+            if (tile == null || tile == createdTile)
+                continue;
+
+            contributors.Add(tile);
+            contributorCells.Add(new Vector2Int(tile.X, tile.Y));
+        }
+
+        if (contributors.Count == 0)
+            return null;
+
+        var createdGroup = createdTile.GetComponent<CanvasGroup>();
+        if (createdGroup == null)
+            createdGroup = createdTile.gameObject.AddComponent<CanvasGroup>();
+
+        createdGroup.alpha = 0f;
+        createdTile.SetIconAlpha(0f);
+        createdTile.transform.localScale = Vector3.one * 0.18f;
+
+        var plan = new ClearPresentationPlan
+        {
+            DoBoardShake = doShake,
+            IncludeAdjacentOverTileBlockerDamage = true,
+            ObstacleHitContext = IsSpecialActivationPhase
+                ? ObstacleHitContext.SpecialActivation
+                : ObstacleHitContext.NormalMatch
+        };
+
+        plan.Effects.Add(new SpecialCreationFormationEffectDescriptor(
+            createdTile,
+            contributors,
+            contributorCells,
+            GetClearDurationForCurrentPass()));
+
+        foreach (var tile in contributors)
+            plan.FinalClearTiles.Add(tile);
+
+        return plan;
     }
 
     public IEnumerator ResolveInitial() { BeginBusy(); yield return ResolveBoard(false); EndBusy(); }
@@ -928,7 +1000,10 @@ IEnumerator ProcessSwap(TileView a, TileView b)
         => obstacleResolutionService != null ? obstacleResolutionService.ApplyDamageAt(x, y, context) : default;
 
     public void TriggerObstacleVisualChange(ObstacleVisualChange change)
-        => ObstacleVisualChanged?.Invoke(change);
+    {
+        boardBreakFxService?.PlayObstacleBreak(change);
+        ObstacleVisualChanged?.Invoke(change);
+    }
 
     internal void MarkPatchBotForcedObstacleHit(int x, int y)
         => obstacleResolutionService?.MarkPatchBotForcedHit(x, y);
