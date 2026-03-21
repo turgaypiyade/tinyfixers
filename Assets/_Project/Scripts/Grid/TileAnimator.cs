@@ -275,6 +275,17 @@ public sealed class TileAnimator
         }
     }
 
+    public IEnumerator PlaySpecialCreationMerge(
+        TileView createdTile,
+        IEnumerable<TileView> sourceTiles,
+        float duration)
+    {
+        IReadOnlyList<TileView> formationSources = sourceTiles as IReadOnlyList<TileView>
+            ?? (sourceTiles != null ? new List<TileView>(sourceTiles) : null);
+
+        yield return PlaySpecialCreationFormation(createdTile, formationSources, duration);
+    }
+
     public IEnumerator PlaySpecialCreationFormation(
         TileView createdTile,
         IReadOnlyList<TileView> sourceTiles,
