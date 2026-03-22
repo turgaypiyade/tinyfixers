@@ -133,18 +133,18 @@ MonoBehaviour:
   rocketRightSprite: {fileID: 21300000, guid: 9b1446485c01505458ba38595e6f6fec, type: 3}
   splitLeftSprite: {fileID: 21300000, guid: d57bdb38ec26cd3418cbc02fda99811b, type: 3}
   splitRightSprite: {fileID: 21300000, guid: 9a02e83a393f61742bfbf1911e0b52ec, type: 3}
-  startDelay: 0.01
-  splitTime: 0.01
+  startDelay: 0.004
+  splitTime: 0.005
   splitOffset: 60
   pulseSpeed: 70
   pulseAmount: 0.29
   rocketAfterImagePrefab: {fileID: 1073926442982439361, guid: 553f0821b2b41614586f70ec6b63b022, type: 3}
   afterImageParent: {fileID: 0}
-  afterImageLife: 0.08
+  afterImageLife: 0.1
   afterImageAlpha: 0.55
   afterImageScaleUp: 1.08
-  stepDuration: 0.01
-  postDelay: 0.01
+  stepDuration: 0.005
+  postDelay: 0.004
   hideOnComplete: 1
   axis: 0
 --- !u!1 &8507573183615892037

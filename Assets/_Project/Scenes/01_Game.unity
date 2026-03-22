@@ -1628,8 +1628,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.13783784}
-  m_AnchorMax: {x: 0.6065187, y: 3.5635135}
+  m_AnchorMin: {x: 0, y: 0.03671706}
+  m_AnchorMax: {x: 1, y: 0.9492441}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8397,10 +8397,10 @@ MonoBehaviour:
   levelData: {fileID: 0}
   swapDuration: 0.03
   fallDuration: 0.1
-  clearDuration: 0.02
+  clearDuration: 0.06
   spawnStartOffsetY: -2
   swapDurationMultiplier: 1
-  fallColumnStep: 0.015
+  fallColumnStep: 0.005
   fallDurationMultiplier: 1
   swapMoveCurve:
     serializedVersion: 2
@@ -8451,9 +8451,9 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   enableFallSettle: 1
-  fallSettleDuration: 0.05
+  fallSettleDuration: 0.03
   fallSettleStrength: 0.05
-  fallCascadeStep: 0.03
+  fallCascadeStep: 0.01
   preClearDelay: 0.025
   shakeDuration: 0.05
   shakeStrength: 1
@@ -8517,7 +8517,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-  specialChainDurationMultiplier: 1.132
+  specialChainDurationMultiplier: 0.4
   pulseImpactDelayStep: 0.012
   pulseImpactAnimTime: 0.1
   boardVfxPlayer: {fileID: 874639811}
@@ -9050,9 +9050,9 @@ MonoBehaviour:
   lightningPrefab: {fileID: -336078503592757907, guid: 50425a05ae288423d8a265c8073cfc00, type: 3}
   vfxRoot: {fileID: 1732843066}
   spawnJitter: 0
-  destroyDelay: 0.15
+  destroyDelay: 0.08
   useChain: 1
-  chainStepDelay: 0.04
+  chainStepDelay: 0.02
 --- !u!1 &1734065518
 GameObject:
   m_ObjectHideFlags: 0
