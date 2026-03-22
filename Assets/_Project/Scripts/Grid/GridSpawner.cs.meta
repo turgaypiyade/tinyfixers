@@ -1,0 +1,22 @@
+fileFormatVersion: 2
+guid: 05860f5def36840f3a3f2af04da77511
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - borderSegmentPrefab: {fileID: 4693198045965778921, guid: ba25dfe40a0422b4894863ffc7d48f5d, type: 3}
+  - borderRoot: {instanceID: 0}
+  - level: {instanceID: 0}
+  - tilePrefab: {instanceID: 0}
+  - iconLibrary: {instanceID: 0}
+  - board: {instanceID: 0}
+  - cellBgPrefab: {instanceID: 0}
+  - spawnParent: {instanceID: 0}
+  - cellBgRoot: {instanceID: 0}
+  - obstaclesRoot: {instanceID: 0}
+  - tilesRoot: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

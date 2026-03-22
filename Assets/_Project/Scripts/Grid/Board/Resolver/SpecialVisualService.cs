@@ -1,0 +1,553 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+/// <summary>
+/// Handles all visual effects during special tile resolution:
+/// tile hiding, teleport markers, transient ghost sprites, override radial visuals, etc.
+///
+/// Extracted from SpecialResolver — no gameplay logic, only presentation.
+/// </summary>
+public class SpecialVisualService
+{
+    private readonly BoardController board;
+    private readonly BoardAnimator boardAnimator;
+    private readonly PatchbotComboService patchbotComboService;
+
+    public SpecialVisualService(BoardController board, BoardAnimator boardAnimator, PatchbotComboService patchbotComboService)
+    {
+        this.board = board;
+        this.boardAnimator = boardAnimator;
+        this.patchbotComboService = patchbotComboService;
+    }
+
+    // ─────────────────────────────────────────────
+    //  Tile Hiding
+    // ─────────────────────────────────────────────
+
+    public static void HideTileVisualForCombo(TileView t)
+    {
+        if (t == null) return;
+
+        if (!t.TryGetComponent<CanvasGroup>(out var cg))
+            cg = t.gameObject.AddComponent<CanvasGroup>();
+
+        cg.alpha = 0f;
+        cg.blocksRaycasts = false;
+        cg.interactable = false;
+    }
+
+    public void ConsumeSwapSourceVisuals(TileView a, TileView b)
+    {
+        HideTileVisualForCombo(a);
+        HideTileVisualForCombo(b);
+    }
+
+    /// <summary>
+    /// Determines which tiles should be visually hidden at the start of a special swap.
+    /// Handles Override deferral (Override stays visible during fan-out), combo vs solo cases.
+    /// </summary>
+    public void HideSwapSourceVisuals(TileView a, TileView b, TileSpecial sa, TileSpecial sb,
+        bool consumeNormalPartner)
+    {
+        if (consumeNormalPartner)
+        {
+            bool aIsOvr = sa == TileSpecial.SystemOverride;
+            bool bIsOvr = sb == TileSpecial.SystemOverride;
+            bool deferOverrideHide = (aIsOvr || bIsOvr) && !(aIsOvr && bIsOvr);
+            if (deferOverrideHide)
+            {
+                if (aIsOvr) HideTileVisualForCombo(b);
+                else        HideTileVisualForCombo(a);
+            }
+            else
+            {
+                ConsumeSwapSourceVisuals(a, b);
+            }
+        }
+        else
+        {
+            var onlySpecial = (sa != TileSpecial.None) ? a : b;
+            if (onlySpecial.GetSpecial() != TileSpecial.SystemOverride)
+                HideTileVisualForCombo(onlySpecial);
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    //  Teleport Markers
+    // ─────────────────────────────────────────────
+
+    public void PlayTeleportMarkers(TileView sourceTile, int targetX, int targetY)
+    {
+        if (board.BoardVfxPlayer == null || sourceTile == null) return;
+
+        static Vector3 WorldCenter(TileView tv)
+        {
+            if (tv == null) return Vector3.zero;
+            var rt = tv.GetComponent<RectTransform>();
+            if (rt != null) return rt.TransformPoint(rt.rect.center);
+            return tv.transform.position;
+        }
+
+        Vector3 CellWorldCenterVia(Transform reference, int x, int y, float ts)
+        {
+            var local = new Vector3(x * ts + ts * 0.5f, -y * ts - ts * 0.5f, 0f);
+            return reference.TransformPoint(local);
+        }
+
+        var fromWorld = WorldCenter(sourceTile);
+        var targetTile = board.Tiles[targetX, targetY];
+        Vector3 toWorld;
+        if (targetTile != null)
+            toWorld = WorldCenter(targetTile);
+        else
+        {
+            var reference = sourceTile.transform.parent != null ? sourceTile.transform.parent : sourceTile.transform;
+            toWorld = CellWorldCenterVia(reference, targetX, targetY, board.TileSize);
+        }
+
+        board.BoardVfxPlayer.PlayTeleportMarkers(toWorld, fromWorld);
+    }
+
+    // ─────────────────────────────────────────────
+    //  Transient Special Ghost (PatchBot partner visual)
+    // ─────────────────────────────────────────────
+
+    public void PlayTransientSpecialVisualAt(TileView sourceTile, int targetX, int targetY)
+    {
+        if (sourceTile == null) return;
+
+        var sprite = sourceTile.GetIconSprite();
+        if (sprite == null) return;
+
+        var parent = board.Parent != null ? board.Parent : sourceTile.transform.parent as RectTransform;
+        if (parent == null) return;
+
+        var ghostGo = new GameObject("PatchBotSpecialGhost", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+        var ghostRt = ghostGo.GetComponent<RectTransform>();
+        ghostRt.SetParent(parent, false);
+        ghostRt.anchorMin = new Vector2(0.5f, 0.5f);
+        ghostRt.anchorMax = new Vector2(0.5f, 0.5f);
+        ghostRt.pivot = new Vector2(0.5f, 0.5f);
+        ghostRt.sizeDelta = new Vector2(board.TileSize, board.TileSize);
+
+        var image = ghostGo.GetComponent<UnityEngine.UI.Image>();
+        image.sprite = sprite;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        image.color = new Color(1f, 1f, 1f, 0.95f);
+
+        bool hasObstacleAtTarget = patchbotComboService.HasObstacleAt(targetX, targetY);
+        float yOffset = hasObstacleAtTarget ? board.TileSize * 0.22f : 0f;
+        ghostRt.anchoredPosition = new Vector2(targetX * board.TileSize + board.TileSize * 0.5f, -targetY * board.TileSize - board.TileSize * 0.5f + yOffset);
+        ghostRt.localScale = hasObstacleAtTarget ? Vector3.one * 1.08f : Vector3.one;
+
+        board.StartCoroutine(FadeAndDestroySpecialGhost(image, ghostRt, 0.24f));
+    }
+
+    public void PlayTransientSpecialPairVisualAt(TileView firstTile, TileView secondTile, int targetX, int targetY)
+    {
+        if (!TryCreatePairGhost(firstTile, secondTile, targetX, targetY, out var pairRt, out var firstImage, out var secondImage))
+            return;
+
+        var tuning = board.PatchBotGhostTuning;
+        board.StartCoroutine(AnimateAndDestroySpecialPairGhost(firstImage, secondImage, pairRt, tuning.Duration));
+    }
+
+    public void PlayTravelingSpecialPairGhost(
+        TileView firstTile,
+        TileView secondTile,
+        Vector2Int sourceCell,
+        Vector2Int targetCell,
+        float travelDuration,
+        bool playImpactAtTarget)
+    {
+        if (!TryCreatePairGhost(firstTile, secondTile, sourceCell.x, sourceCell.y, out var pairRt, out var firstImage, out var secondImage))
+            return;
+
+        board.StartCoroutine(AnimateTravelingSpecialPairGhost(
+            firstImage,
+            secondImage,
+            pairRt,
+            sourceCell,
+            targetCell,
+            travelDuration,
+            playImpactAtTarget,
+            firstTile,
+            secondTile));
+    }
+
+    private bool TryCreatePairGhost(
+        TileView firstTile,
+        TileView secondTile,
+        int anchorX,
+        int anchorY,
+        out RectTransform pairRt,
+        out UnityEngine.UI.Image firstImage,
+        out UnityEngine.UI.Image secondImage)
+    {
+        pairRt = null;
+        firstImage = null;
+        secondImage = null;
+
+        if (firstTile == null || secondTile == null)
+        {
+            PlayTransientSpecialVisualAt(firstTile != null ? firstTile : secondTile, anchorX, anchorY);
+            return false;
+        }
+
+        var firstSprite = firstTile.GetIconSprite();
+        var secondSprite = secondTile.GetIconSprite();
+        if (firstSprite == null || secondSprite == null)
+        {
+            if (firstSprite != null) PlayTransientSpecialVisualAt(firstTile, anchorX, anchorY);
+            if (secondSprite != null) PlayTransientSpecialVisualAt(secondTile, anchorX, anchorY);
+            return false;
+        }
+
+        var parent = board.Parent != null ? board.Parent : firstTile.transform.parent as RectTransform;
+        if (parent == null) return false;
+
+        var pairGo = new GameObject("PatchBotSpecialPairGhost", typeof(RectTransform));
+        pairRt = pairGo.GetComponent<RectTransform>();
+        pairRt.SetParent(parent, false);
+        pairRt.anchorMin = new Vector2(0.5f, 0.5f);
+        pairRt.anchorMax = new Vector2(0.5f, 0.5f);
+        pairRt.pivot = new Vector2(0.5f, 0.5f);
+        pairRt.sizeDelta = new Vector2(board.TileSize, board.TileSize);
+
+        pairRt.anchoredPosition = GetCellAnchoredPosition(anchorX, anchorY);
+        bool hasObstacleAtTarget = patchbotComboService.HasObstacleAt(anchorX, anchorY);
+        pairRt.localScale = hasObstacleAtTarget ? Vector3.one * 1.08f : Vector3.one;
+
+        firstImage = CreatePairGhostImage(pairRt, "GhostA", firstSprite);
+        secondImage = CreatePairGhostImage(pairRt, "GhostB", secondSprite);
+        return true;
+    }
+
+    private Vector2 GetCellAnchoredPosition(int x, int y)
+    {
+        bool hasObstacleAtTarget = patchbotComboService.HasObstacleAt(x, y);
+        float yOffset = hasObstacleAtTarget ? board.TileSize * 0.22f : 0f;
+        return new Vector2(
+            x * board.TileSize + board.TileSize * 0.5f,
+            -y * board.TileSize - board.TileSize * 0.5f + yOffset);
+    }
+
+    private UnityEngine.UI.Image CreatePairGhostImage(RectTransform parent, string name, Sprite sprite)
+    {
+        var ghostGo = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+        var ghostRt = ghostGo.GetComponent<RectTransform>();
+        ghostRt.SetParent(parent, false);
+        ghostRt.anchorMin = new Vector2(0.5f, 0.5f);
+        ghostRt.anchorMax = new Vector2(0.5f, 0.5f);
+        ghostRt.pivot = new Vector2(0.5f, 0.5f);
+        ghostRt.sizeDelta = new Vector2(board.TileSize * 0.92f, board.TileSize * 0.92f);
+
+        var image = ghostGo.GetComponent<UnityEngine.UI.Image>();
+        image.sprite = sprite;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        image.color = new Color(1f, 1f, 1f, 0.95f);
+        return image;
+    }
+
+    private IEnumerator FadeAndDestroySpecialGhost(UnityEngine.UI.Image image, RectTransform ghostRt, float duration)
+    {
+        float elapsed = 0f;
+        Vector2 startPos = ghostRt != null ? ghostRt.anchoredPosition : Vector2.zero;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / Mathf.Max(0.0001f, duration));
+            if (image != null)
+            {
+                var c = image.color;
+                c.a = Mathf.Lerp(0.95f, 0f, t);
+                image.color = c;
+            }
+
+            if (ghostRt != null)
+            {
+                float rise = board.TileSize * 0.08f * t;
+                ghostRt.anchoredPosition = new Vector2(startPos.x, startPos.y + rise);
+            }
+
+            yield return null;
+        }
+
+        if (ghostRt != null)
+            Object.Destroy(ghostRt.gameObject);
+    }
+
+    private IEnumerator AnimateAndDestroySpecialPairGhost(
+        UnityEngine.UI.Image firstImage,
+        UnityEngine.UI.Image secondImage,
+        RectTransform pairRt,
+        float duration)
+    {
+        if (firstImage == null || secondImage == null || pairRt == null)
+            yield break;
+
+        var tuning = board.PatchBotGhostTuning;
+        float elapsed = 0f;
+        float startRadius = board.TileSize * tuning.StartRadiusFactor;
+        float endRadius = board.TileSize * tuning.EndRadiusFactor;
+        Vector2 pairStart = pairRt.anchoredPosition;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / Mathf.Max(0.0001f, duration));
+
+            float radius = Mathf.Lerp(startRadius, endRadius, t);
+            float angle = tuning.SpinDegrees * t;
+            Vector2 dir = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
+
+            firstImage.rectTransform.anchoredPosition = dir * radius;
+            secondImage.rectTransform.anchoredPosition = -dir * radius;
+
+            float alpha = Mathf.Clamp01(tuning.FadeCurve.Evaluate(t)) * 0.95f;
+            var c1 = firstImage.color;
+            c1.a = alpha;
+            firstImage.color = c1;
+            var c2 = secondImage.color;
+            c2.a = alpha;
+            secondImage.color = c2;
+
+            float rise = board.TileSize * tuning.RiseFactor * t;
+            pairRt.anchoredPosition = new Vector2(pairStart.x, pairStart.y + rise);
+
+            yield return null;
+        }
+
+        if (pairRt != null)
+            Object.Destroy(pairRt.gameObject);
+    }
+
+    private IEnumerator AnimateTravelingSpecialPairGhost(
+        UnityEngine.UI.Image firstImage,
+        UnityEngine.UI.Image secondImage,
+        RectTransform pairRt,
+        Vector2Int sourceCell,
+        Vector2Int targetCell,
+        float travelDuration,
+        bool playImpactAtTarget,
+        TileView firstTile,
+        TileView secondTile)
+    {
+        if (firstImage == null || secondImage == null || pairRt == null)
+            yield break;
+
+        var tuning = board.PatchBotGhostTuning;
+        float duration = Mathf.Max(0.02f, travelDuration);
+        Vector2 startPos = GetCellAnchoredPosition(sourceCell.x, sourceCell.y);
+        Vector2 endPos = GetCellAnchoredPosition(targetCell.x, targetCell.y);
+        pairRt.anchoredPosition = startPos;
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float approachT = Mathf.Clamp01(tuning.TravelApproachCurve.Evaluate(t));
+            pairRt.anchoredPosition = Vector2.LerpUnclamped(startPos, endPos, approachT);
+
+            float radius = Mathf.Lerp(
+                board.TileSize * tuning.TravelStartRadiusFactor,
+                board.TileSize * tuning.TravelEndRadiusFactor,
+                t);
+            float angle = tuning.TravelSpinSpeed * t + Mathf.Sin(t * Mathf.PI * 2f * tuning.TravelSpinFrequency) * 25f;
+            Vector2 dir = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
+            firstImage.rectTransform.anchoredPosition = dir * radius;
+            secondImage.rectTransform.anchoredPosition = -dir * radius;
+
+            float alpha = Mathf.Clamp01(tuning.FadeCurve.Evaluate(1f - Mathf.Abs(0.5f - t) * 2f));
+            var c1 = firstImage.color;
+            c1.a = alpha * 0.95f;
+            firstImage.color = c1;
+            var c2 = secondImage.color;
+            c2.a = alpha * 0.95f;
+            secondImage.color = c2;
+
+            yield return null;
+        }
+
+        if (pairRt != null)
+            Object.Destroy(pairRt.gameObject);
+
+        if (playImpactAtTarget)
+            PlayTransientSpecialPairVisualAt(firstTile, secondTile, targetCell.x, targetCell.y);
+    }
+
+    // ─────────────────────────────────────────────
+    //  Override+Override Radial Visual Effects
+    // ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Override+Override radial dalga sırasında yoluna çıkan special taşların
+    /// görsel efektini (sadece VFX, mantıksal etki yok) ateşler.
+    /// Her special'ın efekti, dalganın o hücreye ulaştığı zamana göre tetiklenir.
+    /// </summary>
+
+
+    public void FireOverrideOverrideSpecialVisuals(HashSet<TileView> affected, Dictionary<TileView, float> radialDelays)
+    {
+        Debug.Log($"[OverrideVisual] start affected={affected?.Count ?? -1} delays={radialDelays?.Count ?? -1}");
+
+        if (affected == null || radialDelays == null || board == null)
+            return;
+
+        foreach (var tile in affected)
+        {
+            if (tile == null)
+                continue;
+
+            var special = tile.GetSpecial();
+            if (special == TileSpecial.None)
+                continue;
+
+            if (!radialDelays.TryGetValue(tile, out float delay))
+                continue;
+
+            int x = tile.X;
+            int y = tile.Y;
+
+            Debug.Log($"[OverrideVisual] schedule cell=({x},{y}) special={special} delay={delay} tile={tile.name}");
+
+            board.StartCoroutine(DelayedSpecialVisualTrigger(x, y, special, delay));
+        }
+    }
+
+    private IEnumerator DelayedSpecialVisualTrigger(int x, int y, TileSpecial special, float delay)
+    {
+        Debug.Log($"[DelayedSpecialVisualTrigger] begin cell=({x},{y}) special={special} delay={delay}");
+
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        if (board == null)
+        {
+            Debug.Log($"[DelayedSpecialVisualTrigger] abort cell=({x},{y}) reason=board-null");
+            yield break;
+        }
+
+        var tileNow = board.GetTileViewAt(x, y);
+        Debug.Log(
+            $"[DelayedSpecialVisualTrigger] fire cell=({x},{y}) special={special} " +
+            $"tileNow={(tileNow != null ? tileNow.name : "null")} " +
+            $"specialNow={(tileNow != null ? tileNow.GetSpecial().ToString() : "null")}");
+
+        if (tileNow == null)
+        {
+            Debug.Log($"[DelayedSpecialVisualTrigger] abort cell=({x},{y}) reason=tile-null");
+            yield break;
+        }
+
+        if (tileNow.GetSpecial() != special)
+        {
+            Debug.Log(
+                $"[DelayedSpecialVisualTrigger] abort cell=({x},{y}) reason=special-changed expected={special} actual={tileNow.GetSpecial()}");
+            yield break;
+        }
+
+
+        switch (special)
+        {
+            case TileSpecial.PulseCore:
+                Debug.Log($"[DelayedSpecialVisualTrigger] PLAY pulse cell=({x},{y})");
+                board.PlayPulsePulseExplosionVfxAtCell(x, y);
+                board.StartCoroutine(boardAnimator.MicroShake(0.08f, board.ShakeStrength * 0.4f));
+                break;
+
+            case TileSpecial.LineH:
+            case TileSpecial.LineV:
+                {
+                    Debug.Log($"[DelayedSpecialVisualTrigger] PLAY line cell=({x},{y}) horizontal={(special == TileSpecial.LineH)}");
+
+                    var strikes = new List<LightningLineStrike>(1)
+            {
+                new LightningLineStrike(new Vector2Int(x, y), special == TileSpecial.LineH)
+            };
+
+                    board.PlayLightningLineStrikes(strikes, null);
+                    break;
+                }
+
+            default:
+                Debug.Log($"[DelayedSpecialVisualTrigger] skip cell=({x},{y}) reason=unsupported-special special={special}");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Builds center-out radial clear delays for Override+Override combo.
+    /// </summary>
+    public Dictionary<TileView, float> BuildCenterOutClearDelays(HashSet<TileView> targets, float maxDelay)
+    {
+        if (targets == null || targets.Count == 0 || maxDelay <= 0f)
+            return null;
+
+        float centerX = (board.Width - 1) * 0.5f;
+        float centerY = (board.Height - 1) * 0.5f;
+        var center = new Vector2(centerX, centerY);
+        float maxDistance = 0f;
+
+        foreach (var tile in targets)
+        {
+            if (tile == null) continue;
+            float distance = Vector2.Distance(new Vector2(tile.X, tile.Y), center);
+            if (distance > maxDistance)
+                maxDistance = distance;
+        }
+
+        if (maxDistance <= Mathf.Epsilon)
+            return null;
+
+        var delays = new Dictionary<TileView, float>(targets.Count);
+        foreach (var tile in targets)
+        {
+            if (tile == null) continue;
+            float distance = Vector2.Distance(new Vector2(tile.X, tile.Y), center);
+            float normalized = Mathf.Clamp01(distance / maxDistance);
+            float eased = 1f - (1f - normalized) * (1f - normalized);
+            delays[tile] = eased * maxDelay;
+        }
+
+        return delays;
+    }
+
+    // ─────────────────────────────────────────────
+    //  PatchBot Immediate Dash VFX
+    // ─────────────────────────────────────────────
+
+    public void FireImmediateDash(
+        int fromX,
+        int fromY,
+        int targetX,
+        int targetY,
+        float delay = 0f,
+        System.Action onDashStart = null)
+    {
+        if (board.PatchbotDashUI == null) return;
+
+        IEnumerator CoPlayDash()
+        {
+            if (delay > 0f)
+                yield return new WaitForSeconds(delay);
+
+            var req = new BoardController.PatchbotDashRequest
+            {
+                from = new Vector2Int(fromX, fromY),
+                to = new Vector2Int(targetX, targetY),
+                onStart = onDashStart
+            };
+
+            var singleDash = new List<BoardController.PatchbotDashRequest>(1) { req };
+            board.PatchbotDashUI.PlayDashParallel(singleDash, board);
+        }
+
+        board.StartCoroutine(CoPlayDash());
+    }
+}

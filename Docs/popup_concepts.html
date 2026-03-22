@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoreCollapse Popup Konseptleri (Game Palette)</title>
+  <style>
+    :root{
+      --bg1:#070c1c;
+      --bg2:#0d1330;
+      --panel:#f7f3e6;
+      --ink:#1a1f3a;
+      --navy1:#254aa8;
+      --navy2:#16337d;
+      --royal:#3f6be0;
+      --gold1:#ffd874;
+      --gold2:#e7a928;
+      --coin:#ffcc43;
+      --cta1:#3acb62;
+      --cta2:#1f8f46;
+      --cream:#fff5de;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"Baloo 2","Fredoka","Nunito",system-ui,sans-serif;
+      min-height:100vh;
+      padding:28px;
+      color:#eef4ff;
+      background:
+        radial-gradient(circle at 50% 12%, rgba(252,186,62,.24) 0 12%, transparent 34%),
+        radial-gradient(circle at 18% 80%, rgba(48,107,255,.26), transparent 38%),
+        linear-gradient(180deg,var(--bg2),var(--bg1));
+    }
+
+    h1{
+      margin:0;
+      text-align:center;
+      font-size:42px;
+      line-height:1;
+      letter-spacing:.4px;
+      color:#ffe199;
+      text-shadow:0 4px 0 #6b4d18,0 8px 16px rgba(0,0,0,.45);
+    }
+
+    .sub{
+      text-align:center;
+      margin:8px 0 24px;
+      font-size:19px;
+      color:#c6d6ff;
+      text-shadow:0 2px 0 rgba(8,18,55,.9);
+    }
+
+    .grid{
+      width:min(1280px,100%);
+      margin:0 auto;
+      display:grid;
+      grid-template-columns:repeat(2,minmax(320px,1fr));
+      gap:24px;
+    }
+
+    .popup{
+      border-radius:34px;
+      overflow:hidden;
+      border:6px solid #b68422;
+      box-shadow:0 16px 0 #775311,0 20px 34px rgba(0,0,0,.4);
+      background:var(--panel);
+    }
+
+    .head{
+      background:linear-gradient(180deg,var(--royal),var(--navy2));
+      border-bottom:5px solid #102864;
+      padding:16px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      color:#fffbe7;
+    }
+
+    .head h2{
+      margin:0;
+      font-size:56px;
+      line-height:.9;
+      text-shadow:
+        -2px -2px 0 #102864,
+         2px -2px 0 #102864,
+        -2px  2px 0 #102864,
+         2px  2px 0 #102864,
+         0 6px 0 rgba(0,0,0,.2);
+      letter-spacing:.6px;
+    }
+
+    .close{
+      width:56px;height:56px;border-radius:50%;
+      border:4px solid #be8d2d;
+      background:radial-gradient(circle at 35% 30%, #ffe9b2, #f3b93f);
+      display:grid;place-items:center;
+      font-size:34px;font-weight:900;
+      color:#5f3c06;
+      box-shadow:0 4px 0 #a97110;
+    }
+
+    .body{
+      color:var(--ink);
+      padding:20px 20px 16px;
+      background:
+        repeating-conic-gradient(from 0deg at 50% 40%, #fff2d4 0deg 8deg, #ffe9bf 8deg 16deg);
+      min-height:530px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+      gap:14px;
+    }
+
+    .badge{
+      width:126px;height:126px;border-radius:50%;
+      border:8px solid var(--gold1);
+      background:radial-gradient(circle at 30% 28%, #fff8d8, var(--gold2));
+      display:grid;place-items:center;
+      box-shadow:0 8px 0 #bd7f14;
+      font-size:52px;
+      color:#643f09;
+      font-weight:900;
+    }
+
+    .txt-main{
+      font-size:56px;line-height:1;margin:0;
+      color:#17367d;
+      text-shadow:0 3px 0 #fff9e8;
+      letter-spacing:.4px;font-weight:900;
+    }
+
+    .txt-sub{
+      margin:0;
+      font-size:50px;
+      line-height:.95;
+      font-weight:900;
+      color:#1f2143;
+    }
+
+    .pill{
+      background:var(--cream);
+      border:4px solid #d8b678;
+      border-radius:999px;
+      padding:10px 20px;
+      color:#6e4c1a;
+      font-size:32px;
+      font-weight:800;
+      box-shadow:0 5px 0 #c79e5a;
+    }
+
+    .cta-wrap{
+      margin-top:4px;
+      width:100%;
+      padding:10px;
+      border-radius:24px;
+      background:linear-gradient(180deg,#ffd771,#e3a423);
+      border:4px solid #a67616;
+    }
+
+    .cta{
+      width:100%;
+      border:4px solid #197c3f;
+      border-radius:22px;
+      background:linear-gradient(180deg,var(--cta1),var(--cta2));
+      color:#f3ffe8;
+      font-size:56px;
+      font-weight:900;
+      padding:16px 14px;
+      text-shadow:
+        -2px -2px 0 #227f3f,
+         2px -2px 0 #227f3f,
+        -2px  2px 0 #227f3f,
+         2px  2px 0 #227f3f,
+         0 5px 0 rgba(0,0,0,.24);
+      box-shadow:0 8px 0 #197c3f;
+    }
+
+    .meta{width:100%;margin-top:6px;display:grid;gap:8px}
+
+    .chip{
+      background:#fff7e3;
+      border:3px solid #ddb97a;
+      border-radius:16px;
+      font-size:27px;
+      font-weight:800;
+      color:#704821;
+      padding:8px 12px;
+      box-shadow:0 4px 0 #cca162;
+    }
+
+    .coin{color:#c4840f}
+
+    @media (max-width:1100px){ .grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <h1>POPUP TASLAKLARI</h1>
+  <p class="sub">Aynı eğlenceli form + CoreCollapse renk kimliği (mavi/uzay & altın vurgu).</p>
+
+  <section class="grid">
+    <article class="popup">
+      <div class="head">
+        <h2>Hamle Kalmadı!</h2>
+        <div class="close">×</div>
+      </div>
+      <div class="body">
+        <div class="badge">+5</div>
+        <p class="txt-main">5</p>
+        <p class="txt-sub">hamle ekleyerek devam et</p>
+        <div class="pill">Teklif: <b>900 <span class="coin">🪙</span></b> (1. alış)</div>
+
+        <div class="cta-wrap">
+          <button class="cta">Devam Et 900 🪙</button>
+        </div>
+
+        <div class="meta">
+          <div class="chip">2. alış: 1300 🪙 • 3. alış: 1800 🪙</div>
+          <div class="chip">Yetersiz bakiyede mini uyarı: “Yeterli paran yok”</div>
+        </div>
+      </div>
+    </article>
+
+    <article class="popup">
+      <div class="head">
+        <h2>Hedefler Tamam!</h2>
+        <div class="close">×</div>
+      </div>
+      <div class="body">
+        <div class="badge">✨</div>
+        <p class="txt-main">Bonus</p>
+        <p class="txt-sub">kalan hamleler özel taşa dönüşüyor</p>
+        <div class="pill">Ödül Formülü: <b>Patlayan taş × 3 🪙</b></div>
+
+        <div class="cta-wrap">
+          <button class="cta">Bonus Patlatmayı Başlat</button>
+        </div>
+
+        <div class="meta">
+          <div class="chip">Örnek: 7 kalan hamle → 7 random special taş</div>
+          <div class="chip">Finalde: “Toplam Bonus +X 🪙” ve cüzdana ekle</div>
+        </div>
+      </div>
+    </article>
+  </section>
+</body>
+</html>
