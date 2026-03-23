@@ -76,11 +76,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   bombSprite: {fileID: 21300000, guid: e9edfc8e4556642aeba87bf62d997eb2, type: 3}
-  bombBaseSize: 100
+  bombBaseSize: 150
   chargeDuration: 1.5
   chargeStartScale: 0.9
   chargeMaxScale: 1.5
-  breathSpeed: 6
+  breathSpeed: 3
   breathAmount: 0.15
   shakeStartNormalized: 0.25
   shakeIntensityStart: 1
