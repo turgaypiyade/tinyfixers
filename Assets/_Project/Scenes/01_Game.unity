@@ -8457,7 +8457,7 @@ MonoBehaviour:
   preClearDelay: 0.025
   shakeDuration: 0.05
   shakeStrength: 1
-  shakeTarget: {fileID: 1410826443}
+  shakeTarget: {fileID: 1939332386}
   patchBotPulseComboSize: 4
   patchBotPairGhostTuning:
     duration: 0.18
