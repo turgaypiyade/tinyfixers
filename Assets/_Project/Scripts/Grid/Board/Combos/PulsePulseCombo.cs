@@ -55,7 +55,7 @@ public sealed class PulsePulseCombo
         ExecuteQueuedChain(rt);
         RemoveDeferredOverrideOriginsFromPulseClear(rt);
         rt.Context.IsPulsePulseComboActive = false;
-        
+
         if (rt.FinalizeAtEnd)
         {
             if (rt.ProcessFanout != null)
@@ -115,8 +115,8 @@ public sealed class PulsePulseCombo
 
     private void PlayComboVisuals(PulsePulseComboExecutionRuntime rt, int centerX, int centerY)
     {
-        //rt.Effects?.EmitComboTriggered(TileSpecial.PulseCore, TileSpecial.PulseCore, new Vector2Int(centerX, centerY));
-        //rt.Effects?.PlayPulseExplosionAt(centerX, centerY);
+        rt.Effects?.EmitComboTriggered(TileSpecial.PulseCore, TileSpecial.PulseCore, new Vector2Int(centerX, centerY));
+        rt.Effects?.PlayPulseExplosionAt(centerX, centerY);
     }
 
     private void CollectArea(PulsePulseComboExecutionRuntime rt, int centerX, int centerY)
@@ -145,7 +145,7 @@ public sealed class PulsePulseCombo
             return;
 
         rt.EnqueueChainSpecials(rt.Context);
-        rt.ProcessQueue(rt.Context);    
+        rt.ProcessQueue(rt.Context);
     }
 
     private MatchClearAction BuildClearAction(PulsePulseComboExecutionRuntime rt)

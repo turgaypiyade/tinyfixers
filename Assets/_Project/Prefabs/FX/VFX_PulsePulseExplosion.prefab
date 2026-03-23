@@ -76,6 +76,30 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   streaks: {fileID: 5686865202536336836}
+  ring: {fileID: 0}
+  ring2: {fileID: 0}
+  flashImage: {fileID: 0}
+  enableRingWobble: 1
+  wobbleSpeed: 25
+  wobbleAmount: 0.08
+  enableFillBurst: 1
+  fillParticleSprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  fillParticleCount: 16
+  fillRadius: 80
+  fillDuration: 0.3
+  fillParticleSize: 20
+  fillColorInner: {r: 1, g: 1, b: 0.85, a: 0.9}
+  fillColorOuter: {r: 1, g: 0.65, b: 0.15, a: 0.7}
+  enableSecondaryBurst: 1
+  burstParticleSprite: {fileID: 0}
+  burstParticleCount: 10
+  burstDistance: 160
+  burstDuration: 0.35
+  burstParticleSize: 14
+  burstColor: {r: 1, g: 0.8, b: 0.3, a: 0.85}
+  enableInnerGlow: 1
+  glowMaxScale: 1.8
+  glowDuration: 0.25
 --- !u!1 &2680334470229352937
 GameObject:
   m_ObjectHideFlags: 0
