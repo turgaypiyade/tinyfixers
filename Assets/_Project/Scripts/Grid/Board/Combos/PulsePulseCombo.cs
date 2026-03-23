@@ -116,7 +116,7 @@ public sealed class PulsePulseCombo
     private void PlayComboVisuals(PulsePulseComboExecutionRuntime rt, int centerX, int centerY)
     {
         rt.Effects?.EmitComboTriggered(TileSpecial.PulseCore, TileSpecial.PulseCore, new Vector2Int(centerX, centerY));
-        rt.Effects?.PlayPulseExplosionAt(centerX, centerY);
+        // VFX zaten BoardController'da charge öncesi spawn edildi — burada tekrar spawn etmiyoruz
     }
 
     private void CollectArea(PulsePulseComboExecutionRuntime rt, int centerX, int centerY)
@@ -175,7 +175,7 @@ public sealed class PulsePulseCombo
             includeAdjacentOverTileBlockerDamage: false,
             lightningVisualTargets: ctx.LightningVisualTargets,
             lightningLineStrikes: ctx.LightningLineStrikes,
-            suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
+            suppressPerTileClearVfx: true,
             perTileClearDelays: ctx.OverrideRadialClearDelays,
             isSpecialPhase: true,
             presentationPlan: null

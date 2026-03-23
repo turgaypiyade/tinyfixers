@@ -1628,8 +1628,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.08528428}
-  m_AnchorMax: {x: 0.6176046, y: 2.2048495}
+  m_AnchorMin: {x: 0, y: 0.051567238}
+  m_AnchorMax: {x: 1.0078493, y: 1.3331648}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8530,7 +8530,9 @@ MonoBehaviour:
   pulseEmitterComboVfx: {fileID: 1437935558}
   vfxSpace: {fileID: 874639810}
   pulsePulseExplosionPrefab: {fileID: 89739832858321300, guid: faa00e8a44ed34466b9a9aec6e73f687, type: 3}
-  pulsePulseExplosionLifetime: 1
+  pulsePulseExplosionLifetime: 2.5
+  pulsePulseChargeDuration: 2
+  pulsePulseExplosionRadius: 5
   sfxSource: {fileID: 0}
   sfxPulseCoreBoom: {fileID: 0}
   sfxPulseCoreWave: {fileID: 0}

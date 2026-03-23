@@ -1,357 +1,184 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Pulse+Pulse combo patlama VFX'i.
-/// Mevcut Animator animasyonunun üstüne prosedürel efektler ekler:
-///   - Ring wobble (halkaya düzensizlik)
-///   - Fill burst (halkanın içini dolduran parçacıklar)
-///   - Inner glow (merkez parlama genişlemesi)
+/// Pulse+Pulse combo — SADECE charge animasyonu.
+/// Glow + bomba sprite: şişer, titrer, nefes alır.
+///
+/// Patlama bu component'te YOK — BoardController charge bittikten sonra
+/// mevcut PulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell() ile
+/// daha geniş alanda (5x5) patlatır.
+///
+/// Start()'ta otomatik başlar.
 /// </summary>
 public class PulsePulseExplosionVfx : MonoBehaviour
 {
-    [Header("Existing")]
-    [SerializeField] private ParticleSystem streaks;
+    [Header("Charge — Bomb")]
+    [Tooltip("PulseCore bomba sprite'ı. TileIconLibrary'deki PulseCore.")]
+    [SerializeField] private Sprite bombSprite;
+    [SerializeField] private float bombBaseSize = 130f;
+    [SerializeField] private float chargeDuration = 2.0f;
 
-    [Header("Ring References (opsiyonel — otomatik bulur)")]
-    [SerializeField] private RectTransform ring;
-    [SerializeField] private RectTransform ring2;
-    [SerializeField] private Image flashImage;
+    [Header("Charge — Scale")]
+    [SerializeField] private float chargeStartScale = 0.9f;
+    [SerializeField] private float chargeMaxScale = 2.5f;
+    [SerializeField] private float breathSpeed = 6f;
+    [SerializeField] private float breathAmount = 0.15f;
 
-    // ── Ring Wobble ──
-    [Header("Ring Wobble")]
-    [Tooltip("Halkaya random scale düzensizliği ekle")]
-    [SerializeField] private bool enableRingWobble = true;
-    [SerializeField] private float wobbleSpeed = 25f;
-    [SerializeField] private float wobbleAmount = 0.08f;
+    [Header("Charge — Shake")]
+    [SerializeField] private float shakeStartNormalized = 0.25f;
+    [SerializeField] private float shakeIntensityStart = 0.5f;
+    [SerializeField] private float shakeIntensityEnd = 6f;
+    [SerializeField] private float shakeSpeed = 40f;
 
-    // ── Fill Burst ──
-    [Header("Fill Burst (halkanın içini dolduran parçacıklar)")]
-    [SerializeField] private bool enableFillBurst = true;
-    [SerializeField] private Sprite fillParticleSprite;
-    [SerializeField] private int fillParticleCount = 16;
-    [SerializeField] private float fillRadius = 80f;
-    [SerializeField] private float fillDuration = 0.30f;
-    [SerializeField] private float fillParticleSize = 20f;
-    [SerializeField] private Color fillColorInner = new Color(1f, 1f, 0.85f, 0.9f);
-    [SerializeField] private Color fillColorOuter = new Color(1f, 0.65f, 0.15f, 0.7f);
+    [Header("Charge — Glow")]
+    [Tooltip("Glow sprite (Knob). Bombanın arkasında yumuşak parlama.")]
+    [SerializeField] private Sprite glowSprite;
+    [SerializeField] private float glowSizeMultiplier = 2.8f;
+    [SerializeField] private Color glowColorStart = new Color(0.4f, 0.6f, 1f, 0f);
+    [SerializeField] private Color glowColorPeak = new Color(1f, 0.95f, 0.7f, 0.8f);
 
-    // ── Secondary Burst (dışarı fırlayan parçalar) ──
-    [Header("Secondary Burst")]
-    [SerializeField] private bool enableSecondaryBurst = true;
-    [SerializeField] private Sprite burstParticleSprite;
-    [SerializeField] private int burstParticleCount = 10;
-    [SerializeField] private float burstDistance = 160f;
-    [SerializeField] private float burstDuration = 0.35f;
-    [SerializeField] private float burstParticleSize = 14f;
-    [SerializeField] private Color burstColor = new Color(1f, 0.8f, 0.3f, 0.85f);
+    private Animator animator;
 
-    // ── Inner Glow ──
-    [Header("Inner Glow")]
-    [SerializeField] private bool enableInnerGlow = true;
-    [SerializeField] private float glowMaxScale = 1.8f;
-    [SerializeField] private float glowDuration = 0.25f;
-
-    // Runtime
-    private bool isPlaying;
-    private float playTime;
-    private Vector3 ring1BaseScale;
-    private Vector3 ring2BaseScale;
-    private float wobbleSeed;
+    public float ChargeDuration => chargeDuration;
 
     private void Awake()
     {
-        AutoFindReferences();
+        animator = GetComponent<Animator>();
+        if (animator) animator.enabled = false;
+
+        // Mevcut ring/flash child'larını gizle — kullanmıyoruz
+        string[] names = { "Ring", "Ring2", "Flash" };
+        foreach (var name in names)
+        {
+            var t = transform.Find(name);
+            if (t) t.gameObject.SetActive(false);
+        }
     }
 
-    private void AutoFindReferences()
+    private void Start()
     {
-        if (ring == null)
-        {
-            var t = transform.Find("Ring");
-            if (t) ring = t as RectTransform;
-        }
-
-        if (ring2 == null)
-        {
-            var t = transform.Find("Ring2");
-            if (t) ring2 = t as RectTransform;
-        }
-
-        if (flashImage == null)
-        {
-            var t = transform.Find("Flash");
-            if (t) flashImage = t.GetComponent<Image>();
-        }
+        Debug.Log("[PulsePulseExplosionVfx] Start — charge begin");
+        StartCoroutine(CoCharge());
     }
 
     public void PlayStreaks()
     {
-        if (streaks != null)
-            streaks.Play();
-
-        // Prosedürel efektleri başlat
-        isPlaying = true;
-        playTime = 0f;
-        wobbleSeed = Random.Range(0f, 100f);
-
-        if (ring) ring1BaseScale = ring.localScale;
-        if (ring2) ring2BaseScale = ring2.localScale;
-
-        if (enableFillBurst)
-            StartCoroutine(CoFillBurst());
-
-        if (enableSecondaryBurst)
-            StartCoroutine(CoSecondaryBurst());
-
-        if (enableInnerGlow && flashImage)
-            StartCoroutine(CoInnerGlow());
+        // Geriye uyumluluk — Start() zaten başlatıyor
     }
 
-    private void Update()
-    {
-        if (!isPlaying) return;
-
-        playTime += Time.unscaledDeltaTime;
-
-        if (enableRingWobble)
-            ApplyRingWobble();
-    }
-
-    // ────────────────────────────────────────────────
-    // Ring Wobble — halkaya düzensiz titreşim
-    // ────────────────────────────────────────────────
-    private void ApplyRingWobble()
-    {
-        float t = playTime * wobbleSpeed;
-
-        if (ring)
-        {
-            float wx = 1f + Mathf.PerlinNoise(t + wobbleSeed, 0f) * wobbleAmount * 2f - wobbleAmount;
-            float wy = 1f + Mathf.PerlinNoise(0f, t + wobbleSeed + 17f) * wobbleAmount * 2f - wobbleAmount;
-
-            ring.localScale = new Vector3(
-                ring1BaseScale.x * wx,
-                ring1BaseScale.y * wy,
-                ring1BaseScale.z
-            );
-        }
-
-        if (ring2)
-        {
-            float wx = 1f + Mathf.PerlinNoise(t + wobbleSeed + 50f, 30f) * wobbleAmount * 2f - wobbleAmount;
-            float wy = 1f + Mathf.PerlinNoise(30f, t + wobbleSeed + 67f) * wobbleAmount * 2f - wobbleAmount;
-
-            ring2.localScale = new Vector3(
-                ring2BaseScale.x * wx,
-                ring2BaseScale.y * wy,
-                ring2BaseScale.z
-            );
-        }
-    }
-
-    // ────────────────────────────────────────────────
-    // Fill Burst — halkanın içini dolduran parçacıklar
-    // ────────────────────────────────────────────────
-    private IEnumerator CoFillBurst()
+    // ════════════════════════════════════════════════
+    //  CHARGE: Glow + Bomba — şişer, titrer
+    // ════════════════════════════════════════════════
+    private IEnumerator CoCharge()
     {
         var parent = transform as RectTransform;
-        if (parent == null) yield break;
+        if (!parent) yield break;
 
-        var particles = new List<(RectTransform rt, Image img, Vector2 velocity, float startDelay)>();
+        var container = CreateContainer(parent);
 
-        for (int i = 0; i < fillParticleCount; i++)
+        // Glow (arkada)
+        Image glowImg = null;
+        if (glowSprite)
         {
-            var go = new GameObject($"FillP_{i}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            var rt = go.GetComponent<RectTransform>();
-            rt.SetParent(parent, false);
-            rt.anchorMin = new Vector2(0.5f, 0.5f);
-            rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
+            float glowSize = bombBaseSize * glowSizeMultiplier;
+            glowImg = CreateUIImage("ChargeGlow", container, glowSprite, glowSize);
+            glowImg.color = glowColorStart;
+        }
 
-            // Rastgele pozisyon — merkezden dağılımlı
-            float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-            float dist = Random.Range(0f, fillRadius * 0.3f);
-            rt.anchoredPosition = new Vector2(Mathf.Cos(angle) * dist, Mathf.Sin(angle) * dist);
-
-            float size = fillParticleSize * Random.Range(0.6f, 1.4f);
-            rt.sizeDelta = new Vector2(size, size);
-            rt.localRotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
-
-            var img = go.GetComponent<Image>();
-            img.raycastTarget = false;
-            if (fillParticleSprite) img.sprite = fillParticleSprite;
-
-            // İç parçacıklar daha parlak, dıştakiler daha turuncu
-            float normalizedDist = dist / Mathf.Max(0.01f, fillRadius * 0.3f);
-            img.color = Color.Lerp(fillColorInner, fillColorOuter, normalizedDist);
-
-            // Dışa doğru yavaş hareket
-            Vector2 vel = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * Random.Range(fillRadius * 0.8f, fillRadius * 1.5f);
-            float delay = Random.Range(0f, 0.04f);
-
-            particles.Add((rt, img, vel, delay));
+        // Bomba (önde)
+        Image bombImg = null;
+        if (bombSprite)
+        {
+            bombImg = CreateUIImage("ChargeBomb", container, bombSprite, bombBaseSize);
+            bombImg.preserveAspect = true;
+            bombImg.color = Color.white;
         }
 
         float elapsed = 0f;
-        while (elapsed < fillDuration)
+        float shakeSeed = Random.Range(0f, 100f);
+
+        while (elapsed < chargeDuration)
         {
             elapsed += Time.unscaledDeltaTime;
-            float u = Mathf.Clamp01(elapsed / fillDuration);
+            float u = Mathf.Clamp01(elapsed / chargeDuration);
 
-            for (int i = 0; i < particles.Count; i++)
+            // Büyüme: ease-in
+            float grow = u * u;
+            float baseScale = Mathf.Lerp(chargeStartScale, chargeMaxScale, grow);
+
+            // Nefes
+            float breathU = Mathf.Clamp01((u - 0.15f) / 0.85f);
+            float curBreathSpeed = Mathf.Lerp(breathSpeed * 0.6f, breathSpeed * 2f, breathU);
+            float curBreathAmt = Mathf.Lerp(breathAmount * 0.3f, breathAmount, breathU * breathU);
+            float breath = Mathf.Sin(elapsed * curBreathSpeed) * curBreathAmt;
+
+            container.localScale = Vector3.one * (baseScale + breath);
+
+            // Shake
+            float shakeU = Mathf.Clamp01((u - shakeStartNormalized) / (1f - shakeStartNormalized));
+            float intensity = Mathf.Lerp(shakeIntensityStart, shakeIntensityEnd, shakeU * shakeU);
+
+            float sx = (Mathf.PerlinNoise(elapsed * shakeSpeed + shakeSeed, 0f) - 0.5f) * 2f * intensity;
+            float sy = (Mathf.PerlinNoise(0f, elapsed * shakeSpeed + shakeSeed + 50f) - 0.5f) * 2f * intensity;
+            container.anchoredPosition = new Vector2(sx, sy);
+
+            // Glow: fade in
+            if (glowImg)
             {
-                var p = particles[i];
-                if (p.rt == null) continue;
+                Color gc = Color.Lerp(glowColorStart, glowColorPeak, u * u);
+                if (u > 0.7f)
+                {
+                    float flashPulse = Mathf.Sin(elapsed * breathSpeed * 2f) * 0.15f;
+                    gc.a = Mathf.Clamp01(gc.a + flashPulse);
+                }
+                glowImg.color = gc;
+            }
 
-                // Delay
-                float localU = Mathf.Clamp01((elapsed - p.startDelay) / (fillDuration - p.startDelay));
-                if (localU <= 0f) continue;
-
-                float eased = 1f - (1f - localU) * (1f - localU);
-
-                // Hareket
-                p.rt.anchoredPosition += p.velocity * Time.unscaledDeltaTime * (1f - eased * 0.5f);
-
-                // Scale: büyü → küçül
-                float scale = localU < 0.3f
-                    ? Mathf.Lerp(0.2f, 1.2f, localU / 0.3f)
-                    : Mathf.Lerp(1.2f, 0f, (localU - 0.3f) / 0.7f);
-                p.rt.localScale = Vector3.one * Mathf.Max(0f, scale);
-
-                // Alpha fade
-                float alpha = 1f - (localU * localU);
-                var c = p.img.color;
-                c.a = alpha * fillColorInner.a;
-                p.img.color = c;
+            // Bomba: son %25'te flash
+            if (bombImg)
+            {
+                float flashU = Mathf.Clamp01((u - 0.75f) / 0.25f);
+                float flashBeat = Mathf.Sin(elapsed * breathSpeed * 3f) * 0.5f + 0.5f;
+                bombImg.color = Color.Lerp(Color.white, new Color(1f, 0.9f, 0.75f), flashU * flashBeat);
             }
 
             yield return null;
         }
 
-        // Temizlik
-        for (int i = 0; i < particles.Count; i++)
-        {
-            if (particles[i].rt != null)
-                Destroy(particles[i].rt.gameObject);
-        }
+        Destroy(container.gameObject);
+        Debug.Log("[PulsePulseExplosionVfx] Charge done");
     }
 
     // ────────────────────────────────────────────────
-    // Secondary Burst — dışarı fırlayan düzensiz parçalar
+    //  Utility
     // ────────────────────────────────────────────────
-    private IEnumerator CoSecondaryBurst()
+    private RectTransform CreateContainer(RectTransform parent)
     {
-        var parent = transform as RectTransform;
-        if (parent == null) yield break;
-
-        // Küçük gecikme — ring açılmaya başladıktan sonra
-        yield return new WaitForSecondsRealtime(0.04f);
-
-        var particles = new List<(RectTransform rt, Image img, Vector2 dir, float speed, float rotSpeed)>();
-
-        for (int i = 0; i < burstParticleCount; i++)
-        {
-            var go = new GameObject($"BurstP_{i}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            var rt = go.GetComponent<RectTransform>();
-            rt.SetParent(parent, false);
-            rt.anchorMin = new Vector2(0.5f, 0.5f);
-            rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-
-            // Düzensiz açı dağılımı — eşit aralık + random offset
-            float baseAngle = (360f / burstParticleCount) * i;
-            float angle = (baseAngle + Random.Range(-20f, 20f)) * Mathf.Deg2Rad;
-            Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-
-            rt.anchoredPosition = dir * Random.Range(8f, 20f);
-
-            float size = burstParticleSize * Random.Range(0.5f, 1.5f);
-            rt.sizeDelta = new Vector2(size, size * Random.Range(0.6f, 1.0f)); // Hafif yamuk
-            rt.localRotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
-
-            var img = go.GetComponent<Image>();
-            img.raycastTarget = false;
-            if (burstParticleSprite) img.sprite = burstParticleSprite;
-            img.color = burstColor;
-
-            float speed = Random.Range(burstDistance * 0.7f, burstDistance * 1.3f);
-            float rotSpeed = Random.Range(-400f, 400f);
-
-            particles.Add((rt, img, dir, speed, rotSpeed));
-        }
-
-        float elapsed = 0f;
-        while (elapsed < burstDuration)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            float u = Mathf.Clamp01(elapsed / burstDuration);
-
-            float eased = 1f - (1f - u) * (1f - u); // ease out
-
-            for (int i = 0; i < particles.Count; i++)
-            {
-                var p = particles[i];
-                if (p.rt == null) continue;
-
-                // Pozisyon
-                float dist = p.speed * eased;
-                p.rt.anchoredPosition = p.dir * (10f + dist);
-
-                // Rotation
-                float rot = p.rotSpeed * elapsed;
-                p.rt.localRotation = Quaternion.Euler(0f, 0f, rot);
-
-                // Scale + alpha
-                float scale = u < 0.2f
-                    ? Mathf.Lerp(0.3f, 1.0f, u / 0.2f)
-                    : Mathf.Lerp(1.0f, 0f, (u - 0.2f) / 0.8f);
-                p.rt.localScale = Vector3.one * Mathf.Max(0f, scale);
-
-                float alpha = 1f - (u * u * u);
-                var c = p.img.color;
-                c.a = alpha * burstColor.a;
-                p.img.color = c;
-            }
-
-            yield return null;
-        }
-
-        for (int i = 0; i < particles.Count; i++)
-        {
-            if (particles[i].rt != null)
-                Destroy(particles[i].rt.gameObject);
-        }
+        var go = new GameObject("ChargeContainer", typeof(RectTransform));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = Vector2.zero;
+        return rt;
     }
 
-    // ────────────────────────────────────────────────
-    // Inner Glow — flash'ın ekstra parlama genişlemesi
-    // ────────────────────────────────────────────────
-    private IEnumerator CoInnerGlow()
+    private Image CreateUIImage(string name, RectTransform parent, Sprite sprite, float size)
     {
-        if (flashImage == null) yield break;
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = new Vector2(size, size);
 
-        var rt = flashImage.rectTransform;
-        Vector3 baseScale = rt.localScale;
-
-        float elapsed = 0f;
-        while (elapsed < glowDuration)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            float u = Mathf.Clamp01(elapsed / glowDuration);
-
-            // Hızlı genişle, yavaş sönsün
-            float scale = u < 0.25f
-                ? Mathf.Lerp(1f, glowMaxScale, u / 0.25f)
-                : Mathf.Lerp(glowMaxScale, 1f, (u - 0.25f) / 0.75f);
-
-            rt.localScale = baseScale * scale;
-
-            yield return null;
-        }
-
-        rt.localScale = baseScale;
+        var img = go.GetComponent<Image>();
+        img.sprite = sprite;
+        img.raycastTarget = false;
+        return img;
     }
 }

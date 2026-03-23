@@ -73,6 +73,8 @@ public class BoardController : MonoBehaviour
     [SerializeField] private RectTransform vfxSpace;
     [SerializeField] private GameObject pulsePulseExplosionPrefab;
     [SerializeField] private float pulsePulseExplosionLifetime = 1.0f;
+    [SerializeField] private float pulsePulseChargeDuration = 2.0f;
+    [SerializeField] private int pulsePulseExplosionRadius = 4;
 
     [Header("Obstacle Visual Tuning")]
     [SerializeField] private AudioSource sfxSource;
@@ -211,7 +213,7 @@ public class BoardController : MonoBehaviour
     private PulseCoreImpactService pulseCoreImpactService;
     private ObstacleStateService obstacleStateService;
     private CascadeLogic cascadeLogic;
-    private ObstacleResolutionService obstacleResolutionService;    
+    private ObstacleResolutionService obstacleResolutionService;
     private SpecialCreationService specialCreationService;
     private PendingCreationStore pendingCreationStore;
     private PendingCreationApplicator pendingCreationApplicator;
@@ -707,9 +709,14 @@ public class BoardController : MonoBehaviour
 
     public void ActivateBooster(int idx)
     {
-        switch (idx) { case 0: SetBoosterMode(BoosterMode.Single); break; case 1: SetBoosterMode(BoosterMode.Row); break;
-            case 2: SetBoosterMode(BoosterMode.Column); break; case 3: SetBoosterMode(BoosterMode.Shuffle); break;
-            default: SetBoosterMode(BoosterMode.None); break; }
+        switch (idx)
+        {
+            case 0: SetBoosterMode(BoosterMode.Single); break;
+            case 1: SetBoosterMode(BoosterMode.Row); break;
+            case 2: SetBoosterMode(BoosterMode.Column); break;
+            case 3: SetBoosterMode(BoosterMode.Shuffle); break;
+            default: SetBoosterMode(BoosterMode.None); break;
+        }
     }
 
     void SetBoosterMode(BoosterMode mode) { activeBooster = mode; OnBoosterTargetingChanged?.Invoke(activeBooster != BoosterMode.None); }
@@ -852,6 +859,30 @@ public class BoardController : MonoBehaviour
 
             // ── Adım 2: Special activation
             // Burada karar current state ile değil, original snapshot ile verilecek.
+
+            // Pulse+Pulse combo: charge animasyonu (bomba şişer) → bitince patlama
+            if (originalSa == TileSpecial.PulseCore && originalSb == TileSpecial.PulseCore)
+            {
+                Debug.Log($"[PulsePulseCharge] a=({a.X},{a.Y}) b=({b.X},{b.Y}) orig_a=({ax},{ay}) orig_b=({bx},{by})");
+
+                // Hedef hücre: swap öncesi b'nin pozisyonu (bx,by)
+                // Bu değer swap'tan bağımsız, kesinlikle doğru
+                int chargeX = bx;
+                int chargeY = by;
+
+                // Charge sırasında pulse tile'lar görünmesin
+                SpecialVisualService.HideTileVisualForCombo(a);
+                SpecialVisualService.HideTileVisualForCombo(b);
+
+                // Charge animasyonu başlat
+                PlayPulsePulseExplosionVfxAtCell(chargeX, chargeY);
+                yield return new WaitForSeconds(pulsePulseChargeDuration);
+
+                // Charge bitti — hemen mevcut pulse patlamasını geniş alanda oynat
+                if (pulseCoreImpactService != null)
+                    pulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(chargeX, chargeY, radiusCells: pulsePulseExplosionRadius);
+            }
+
             actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb));
             yield return AnimateQueuedActions();
 
@@ -889,7 +920,7 @@ public class BoardController : MonoBehaviour
     //  Resolve Board
     // ═══════════════════════════════════════════════════════════════
 
-    IEnumerator ResolveBoard(bool allowSpecialActivation = false) 
+    IEnumerator ResolveBoard(bool allowSpecialActivation = false)
     {
         isSpecialActivationPhase = false;
         int safety = 0;

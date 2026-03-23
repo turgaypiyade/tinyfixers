@@ -77,7 +77,7 @@ public class SpecialBehaviorDispatcher
 
             return;
         }
-        
+
         if (IsPulseLineCombo(sa, sb))
         {
             lineVHPulseCoreCombo.Execute(new LineVHPulseCoreComboExecutionRuntime
@@ -152,7 +152,7 @@ public class SpecialBehaviorDispatcher
 
             return;
         }
-        
+
         if (sa == TileSpecial.SystemOverride && sb == TileSpecial.SystemOverride)
         {
             overrideOverrideCombo.Execute(new OverrideOverrideComboExecutionRuntime
@@ -305,7 +305,8 @@ public class SpecialBehaviorDispatcher
                     FinalizeAtEnd = false,
                     ActivateSpecial = ApplySpecialActivation,
                     EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
-                    ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
+                    ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution),
+                    SuppressVisualSideEffects = ctx.IsPulsePulseComboActive
                 });
                 break;
 
@@ -366,7 +367,7 @@ public class SpecialBehaviorDispatcher
                             $"[OverrideDefer] reason=PulsePulse cell={cell} " +
                             $"deferredAfter={ctx.DeferredPulseComboOverrideCells.Count}");
 
-                        break; 
+                        break;
                     }
 
                     Debug.Log($"[OverrideExecuteNow] cell={cell}");
@@ -448,7 +449,8 @@ public class SpecialBehaviorDispatcher
                         FinalizeAtEnd = false,
                         ActivateSpecial = ApplySpecialActivation,
                         EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
-                        ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
+                        ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution),
+                        SuppressVisualSideEffects = ctx.IsPulsePulseComboActive
                     });
 
                     if (res != null && res.Actions != null)
