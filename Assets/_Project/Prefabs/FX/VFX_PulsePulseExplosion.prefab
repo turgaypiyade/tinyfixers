@@ -76,18 +76,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   bombSprite: {fileID: 21300000, guid: e9edfc8e4556642aeba87bf62d997eb2, type: 3}
-  bombBaseSize: 150
-  chargeDuration: 1.5
-  chargeStartScale: 0.9
-  chargeMaxScale: 1.5
-  breathSpeed: 3
-  breathAmount: 0.15
+  bombBaseSize: 200
+  chargeDuration: 1.9
+  chargeStartScale: 0.3
+  chargeMaxScale: 0.9
+  breathSpeed: 5
+  breathAmount: 0.05
   shakeStartNormalized: 0.25
   shakeIntensityStart: 1
   shakeIntensityEnd: 8
   shakeSpeed: 45
   glowSprite: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
-  glowSizeMultiplier: 2.8
+  glowSizeMultiplier: 2
   glowColorStart: {r: 0.5, g: 0.75, b: 1, a: 0}
   glowColorPeak: {r: 1, g: 0.95, b: 0.7, a: 0.8}
 --- !u!1 &2680334470229352937
