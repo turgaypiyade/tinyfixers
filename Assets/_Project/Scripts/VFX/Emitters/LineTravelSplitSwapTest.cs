@@ -22,8 +22,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     public Sprite splitRightSprite;
 
     [Header("Tuning")]
-    public float startDelay = 0.15f; // Başlangıç bekleme süresi (düşürürsen daha erken başlar)
-    public float splitTime = 0.06f;  // Roketin ayrışma süresi (düşürürsen daha hızlı split olur)
+    public float startDelay = 0.15f;
+    public float splitTime = 0.06f;
     public float splitOffset = 60f;
 
     [Header("Rocket FX")]
@@ -33,12 +33,26 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     [Header("AfterImage Trail")]
     public GameObject rocketAfterImagePrefab;
     public RectTransform afterImageParent;
-    public float afterImageLife = 0.15f; // Arkadaki hayalet izinin ekranda kalma süresi
+    public float afterImageLife = 0.15f;
     public float afterImageAlpha = 0.55f;
     public float afterImageScaleUp = 1.08f;
 
+    // ────────────────────────────────────────────────
+    // ✅ Beam Trail
+    // ────────────────────────────────────────────────
+    [Header("Beam Trail")]
+    [Tooltip("RocketTrailBeam prefab. Null bırakırsan trail çıkmaz.")]
+    public RocketTrailBeam trailBeamPrefab;
+
+    [Tooltip("Trail beam'lerin spawn edileceği parent. Yoksa afterImageParent kullanılır.")]
+    public RectTransform trailParent;
+
+    [Tooltip("Trail spawn etme — false yaparak kapatabilirsin")]
+    public bool enableTrailBeam = true;
+    // ────────────────────────────────────────────────
+
     [Header("Timing")]
-    public float stepDuration = 0.06f; // Her hücre adımının süresi (düşürürsen roket daha hızlı gider)
+    public float stepDuration = 0.06f;
     public float postDelay = 0.02f;
 
     [Header("Cleanup")]
@@ -56,7 +70,6 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     private int _stepCount = 6;
     private float _cellSizePx = 110f;
 
-    // ✅ OnStepCell: Board'a step hücresi bildirir — Run() içinde move bitince tetiklenir
     public Action<Vector2Int> OnStepCell;
     private Vector2Int _originCell;
     private bool _originCellValid;
@@ -67,13 +80,15 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
     public Action OnCompleted;
 
+    private RocketTrailBeam _leftTrail;
+    private RocketTrailBeam _rightTrail;
+
     private void Awake()
     {
         if (leftImage) leftStart = leftImage.rectTransform.anchoredPosition;
         if (rightImage) rightStart = rightImage.rectTransform.anchoredPosition;
     }
 
-    // ✅ Full overload: originCell + callback ile
     public void Play(
         LineAxis axisMode,
         Vector2 originAnchoredPos,
@@ -83,16 +98,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         Action<Vector2Int> onStepCell,
         Action onCompleted = null)
     {
-        Play(
-            axisMode,
-            originAnchoredPos,
-            originCell,
-            steps,
-            cellSizePxOverride,
-            9,
-            9,
-            onStepCell,
-            onCompleted);
+        Play(axisMode, originAnchoredPos, originCell, steps, cellSizePxOverride, 9, 9, onStepCell, onCompleted);
     }
 
     public void Play(
@@ -131,6 +137,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
         _stepCount = Mathf.Max(0, steps);
         _cellSizePx = Mathf.Max(1f, cellSizePxOverride);
+
+        KillTrails();
 
         if (leftImage)
         {
@@ -171,6 +179,13 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         if (rightImage && splitRightSprite) rightImage.sprite = splitRightSprite;
         ApplyAxisVisualRotation();
 
+        // ✅ Split ÖNCESI origin world pozisyonunu yakala
+        //    İki trail de bu noktadan başlayacak → tüm yolu kapsayacak
+        Vector3 originWorldPos = Vector3.zero;
+        if (leftImage) originWorldPos = leftImage.rectTransform.position;
+        else if (rightImage) originWorldPos = rightImage.rectTransform.position;
+        originWorldPos.z = 0f;
+
         Vector2 leftTarget = leftStart + negDir * splitOffset;
         Vector2 rightTarget = rightStart + posDir * splitOffset;
 
@@ -183,7 +198,6 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
             if (leftImage)
                 leftImage.rectTransform.anchoredPosition = Vector2.LerpUnclamped(leftStart, leftTarget, u);
-
             if (rightImage)
                 rightImage.rectTransform.anchoredPosition = Vector2.LerpUnclamped(rightStart, rightTarget, u);
 
@@ -195,9 +209,11 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
         if (leftImage && rocketLeftSprite) leftImage.sprite = rocketLeftSprite;
         if (rightImage && rocketRightSprite) rightImage.sprite = rocketRightSprite;
-
         ApplyAxisVisualRotation();
         rocketMode = true;
+
+        // ✅ Trail'leri başlat — her iki trail de origin merkez noktasından başlar
+        SpawnTrails(originWorldPos);
 
         if (_originCellValid && OnStepCell != null)
             OnStepCell(_originCell);
@@ -226,15 +242,18 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
                 if (rightImage)
                     rightImage.rectTransform.anchoredPosition = Vector2.LerpUnclamped(rStart, rTarget, u);
-
                 if (leftImage)
                     leftImage.rectTransform.anchoredPosition = Vector2.LerpUnclamped(lStart, lTarget, u);
+
+                UpdateTrailHeads();
 
                 yield return null;
             }
 
             if (rightImage) rightImage.rectTransform.anchoredPosition = rTarget;
             if (leftImage) leftImage.rectTransform.anchoredPosition = lTarget;
+
+            UpdateTrailHeads();
 
             if (_originCellValid && OnStepCell != null)
             {
@@ -247,7 +266,6 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
                     if (leftX >= 0 && leftX < _boardWidth)
                         OnStepCell(new Vector2Int(leftX, _originCell.y));
-
                     if (rightX >= 0 && rightX < _boardWidth)
                         OnStepCell(new Vector2Int(rightX, _originCell.y));
                 }
@@ -258,7 +276,6 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
                     if (downY >= 0 && downY < _boardHeight)
                         OnStepCell(new Vector2Int(_originCell.x, downY));
-
                     if (upY >= 0 && upY < _boardHeight)
                         OnStepCell(new Vector2Int(_originCell.x, upY));
                 }
@@ -299,6 +316,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
         rocketMode = false;
 
+        FadeOutTrails();
+
         if (hideOnComplete)
         {
             if (leftImage) leftImage.enabled = false;
@@ -311,11 +330,79 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         CompleteOnce();
     }
 
+    // ────────────────────────────────────────────────
+    // ✅ Trail yönetimi
+    // ────────────────────────────────────────────────
+    private void SpawnTrails(Vector3 originWorldPos)
+    {
+        if (!enableTrailBeam || !trailBeamPrefab)
+        {
+            Debug.LogWarning($"[LineTravelSplit.SpawnTrails] SKIP — enableTrailBeam={enableTrailBeam} prefab={trailBeamPrefab}");
+            return;
+        }
+
+        RectTransform parent = trailParent ? trailParent : afterImageParent;
+        if (!parent)
+        {
+            Debug.LogWarning("[LineTravelSplit.SpawnTrails] SKIP — no parent");
+            return;
+        }
+
+        // ✅ Her iki trail de aynı merkez noktasından başlar
+        //    Böylece trail, origin cell'den board kenarına kadar tüm yolu kapsar
+        Debug.Log($"[LineTravelSplit.SpawnTrails] originWorldPos={originWorldPos}");
+
+        if (leftImage)
+        {
+            _leftTrail = CreateTrailInstance(parent, originWorldPos);
+            // İlk head = roketin şu anki pozisyonu (split sonrası)
+            _leftTrail.UpdateHead(leftImage.rectTransform.position);
+        }
+
+        if (rightImage)
+        {
+            _rightTrail = CreateTrailInstance(parent, originWorldPos);
+            _rightTrail.UpdateHead(rightImage.rectTransform.position);
+        }
+    }
+
+    private RocketTrailBeam CreateTrailInstance(RectTransform parent, Vector3 originWorld)
+    {
+        var beam = Instantiate(trailBeamPrefab, parent);
+        beam.transform.position = Vector3.zero;
+        beam.transform.localRotation = Quaternion.identity;
+        beam.transform.localScale = Vector3.one;
+
+        Debug.Log($"[LineTravelSplit.CreateTrail] parent={parent.name} beamWorldScale={beam.transform.lossyScale} originWorld={originWorld}");
+
+        beam.Init(originWorld);
+        return beam;
+    }
+
+    private void UpdateTrailHeads()
+    {
+        if (_rightTrail && rightImage) _rightTrail.UpdateHead(rightImage.rectTransform.position);
+        if (_leftTrail && leftImage) _leftTrail.UpdateHead(leftImage.rectTransform.position);
+    }
+
+    private void FadeOutTrails()
+    {
+        if (_leftTrail) _leftTrail.FadeOutAndDestroy();
+        if (_rightTrail) _rightTrail.FadeOutAndDestroy();
+        _leftTrail = null;
+        _rightTrail = null;
+    }
+
+    private void KillTrails()
+    {
+        if (_leftTrail) { _leftTrail.Kill(); _leftTrail = null; }
+        if (_rightTrail) { _rightTrail.Kill(); _rightTrail = null; }
+    }
+    // ────────────────────────────────────────────────
+
     private void CompleteOnce()
     {
-        if (_completionRaised)
-            return;
-
+        if (_completionRaised) return;
         _completionRaised = true;
 
         var callback = OnCompleted;
@@ -325,24 +412,19 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
     private void OnDisable()
     {
-        if (!Application.isPlaying)
-            return;
-
+        if (!Application.isPlaying) return;
+        KillTrails();
         CompleteOnce();
     }
 
     private void OnDestroy()
     {
-        if (!Application.isPlaying)
-            return;
-
+        if (!Application.isPlaying) return;
+        KillTrails();
         CompleteOnce();
     }
 
-    private bool HasTileAtStep(int stepIndex, bool isRight)
-    {
-        return true;
-    }
+    private bool HasTileAtStep(int stepIndex, bool isRight) => true;
 
     private void SpawnAfterImage(Image sourceImage, Vector2 anchoredPos)
     {
@@ -352,18 +434,18 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         EnsureAutoDestroy(go, afterImageLife + 0.05f);
 
         var img = go.GetComponentInChildren<Image>(true);
-        var rt  = img ? img.rectTransform : go.GetComponent<RectTransform>();
+        var rt = img ? img.rectTransform : go.GetComponent<RectTransform>();
         if (!img || !rt) return;
 
         img.sprite = sourceImage.sprite;
-        img.color  = new Color(1f, 1f, 1f, afterImageAlpha);
+        img.color = new Color(1f, 1f, 1f, afterImageAlpha);
 
-        rt.anchorMin       = sourceImage.rectTransform.anchorMin;
-        rt.anchorMax       = sourceImage.rectTransform.anchorMax;
-        rt.pivot           = sourceImage.rectTransform.pivot;
-        rt.sizeDelta       = sourceImage.rectTransform.sizeDelta;
-        rt.localScale      = sourceImage.rectTransform.localScale;
-        rt.localRotation   = sourceImage.rectTransform.localRotation;
+        rt.anchorMin = sourceImage.rectTransform.anchorMin;
+        rt.anchorMax = sourceImage.rectTransform.anchorMax;
+        rt.pivot = sourceImage.rectTransform.pivot;
+        rt.sizeDelta = sourceImage.rectTransform.sizeDelta;
+        rt.localScale = sourceImage.rectTransform.localScale;
+        rt.localRotation = sourceImage.rectTransform.localRotation;
         rt.anchoredPosition = anchoredPos;
 
         StartCoroutine(FadeOnly(img, rt, afterImageLife, afterImageScaleUp));
@@ -389,37 +471,26 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             ft += Time.unscaledDeltaTime;
             float u = Mathf.Clamp01(ft / life);
 
-            if (img)
-                img.color = new Color(1f, 1f, 1f, Mathf.Lerp(c0.a, 0f, u));
-
-            if (rt)
-                rt.localScale = Vector3.LerpUnclamped(s0, s1, u);
+            if (img) img.color = new Color(1f, 1f, 1f, Mathf.Lerp(c0.a, 0f, u));
+            if (rt) rt.localScale = Vector3.LerpUnclamped(s0, s1, u);
 
             yield return null;
         }
     }
-    
-    // ✅ FIX A (rotation): Her iki roket de aynı yönde dönmeli
-    // Horizontal: 0° (sprite zaten yatay)
-    // Vertical:   Her ikisi de 90° — görsel "yukarı/aşağı bakan roket" etkisi
-    //             Sol = -90°, Sağ = 90° olunca görsel iptal oluyor (eski hata).
-    //             Şimdi her ikisi de 90° — sprite yataysa dikey çevrilir.
+
     private void ApplyAxisVisualRotation()
     {
         if (!leftImage || !rightImage) return;
 
         if (axis == LineAxis.Horizontal)
         {
-            leftImage.rectTransform.localEulerAngles  = Vector3.zero;
+            leftImage.rectTransform.localEulerAngles = Vector3.zero;
             rightImage.rectTransform.localEulerAngles = Vector3.zero;
         }
-        else // Vertical
+        else
         {
-            // ✅ İki roket de aynı sprite rotasyonunda — biri +Y biri -Y yönünde hareket eder
-            // Sprite'ın hangi yönde olduğuna göre bu değeri inspector'dan ayarlayabilirsiniz.
-            // Varsayılan: sağa bakan sprite'ı 90° CW çevirerek aşağı bak, -90° CCW ile yukarı bak.
-            rightImage.rectTransform.localEulerAngles = new Vector3(0f, 0f, -90f); // aşağı bakan
-            leftImage.rectTransform.localEulerAngles  = new Vector3(0f, 0f, -90f); // yukarı bakan
+            rightImage.rectTransform.localEulerAngles = new Vector3(0f, 0f, -90f);
+            leftImage.rectTransform.localEulerAngles = new Vector3(0f, 0f, -90f);
         }
     }
 
@@ -429,14 +500,10 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
         float scaleOffset = 1f + Mathf.Sin(Time.time * pulseSpeed) * pulseAmount;
 
-        if (leftImage)
-            leftImage.rectTransform.localScale  = new Vector3(scaleOffset, 1f, 1f);
-        if (rightImage)
-            rightImage.rectTransform.localScale = new Vector3(scaleOffset, 1f, 1f);
+        if (leftImage) leftImage.rectTransform.localScale = new Vector3(scaleOffset, 1f, 1f);
+        if (rightImage) rightImage.rectTransform.localScale = new Vector3(scaleOffset, 1f, 1f);
     }
 
-    // ✅ EstimateDuration: startDelay + splitTime + steps*stepDuration + postDelay
-    // BoardController bu değeri DestroyAfterUnscaled için kullanıyor.
     public float EstimateDuration(int steps)
     {
         return startDelay + splitTime + (steps * stepDuration) + postDelay;

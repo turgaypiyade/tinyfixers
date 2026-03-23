@@ -1628,8 +1628,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.03671706}
-  m_AnchorMax: {x: 1, y: 0.9492441}
+  m_AnchorMin: {x: 0, y: 0.08528428}
+  m_AnchorMax: {x: 0.6176046, y: 2.2048495}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -9865,6 +9865,10 @@ PrefabInstance:
       value: 60
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
+      propertyPath: trailParent
+      value: 
+      objectReference: {fileID: 1732843066}
+    - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: impactParent
       value: 
       objectReference: {fileID: 1732843066}
@@ -9880,6 +9884,10 @@ PrefabInstance:
       propertyPath: afterImageAlpha
       value: 0.55
       objectReference: {fileID: 0}
+    - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
+      propertyPath: trailBeamPrefab
+      value: 
+      objectReference: {fileID: 864241499568937563, guid: 05809187aac444fd0bca3a365ad53a74, type: 3}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: afterImageParent
       value: 
