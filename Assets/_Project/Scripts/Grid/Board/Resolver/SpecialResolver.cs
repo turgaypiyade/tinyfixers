@@ -1095,10 +1095,19 @@ public class SpecialResolver
         if (winner.GetSpecial() != TileSpecial.None)
             return winner;
 
-        winner.SetSpecial(special);
-
         if (special == TileSpecial.SystemOverride)
+        {
+            // Önce visual update'i ertele, override base type'ı set et,
+            // sonra RefreshIcon çağır — böylece hasOverrideBaseType = true
+            // olduğunda doğru renk ikonu seçilir.
+            winner.SetSpecial(special, deferVisualUpdate: true);
             winner.SetOverrideBaseType(winner.GetTileType());
+            winner.RefreshIcon();
+        }
+        else
+        {
+            winner.SetSpecial(special);
+        }
 
         SpecialCellUtils.SyncAfterSpecialChange(board, winner);
         board.RefreshTileObstacleVisual(winner);

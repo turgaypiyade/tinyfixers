@@ -62,7 +62,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                     beamReached = true;
                 });
 
-            float timeout =   Mathf.Max(duration, board.ApplySpecialChainTempo(0.03f)) +board.ApplySpecialChainTempo(0.02f);
+            float timeout = Mathf.Max(duration, board.ApplySpecialChainTempo(0.03f)) + board.ApplySpecialChainTempo(0.02f);
 
             float elapsed = 0f;
             while (!beamReached && elapsed < timeout)
@@ -70,7 +70,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 elapsed += Time.unscaledDeltaTime;
                 yield return null;
             }
-        
+
             board.SyncTileData(target.X, target.Y);
             target.RefreshIcon();
 
@@ -183,8 +183,15 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
                 var pbTarget = patchbotService.FindTarget(tile, null, usedTargets);
                 if (!pbTarget.hasCell)
+                {
+                    // Hedef bulamayan PatchBot'u temizle — yoksa ekranda kalır
+                    tile.SetSpecial(TileSpecial.None);
+                    SpecialCellUtils.SyncAfterSpecialChange(board, tile);
+                    board.ClearCell(cell.x, cell.y);
+                    board.ClearCellVisualOnly(cell, tile.GetTileType(), tile);
                     continue;
-                    
+                }
+
                 if (pbTarget.tile != null)
                     usedTargets.Add(pbTarget.tile);
 
@@ -227,7 +234,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                         var dataMatches = new HashSet<TileData>();
 
                         bool hasObstacle = patchbotService.HasObstacleAt(capturedTarget.x, capturedTarget.y);
-                        
+
                         patchbotService.ResolveTargetImpact(
                             dataMatches,
                             capturedTarget.x,
@@ -241,7 +248,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                         {
                             if (data == null) continue;
                             if (data.X < 0 || data.X >= board.Width || data.Y < 0 || data.Y >= board.Height) continue;
-                            
+
                             var t = board.Tiles[data.X, data.Y];
                             if (t != null) arrivalCtx.Affected.Add(t);
                         }

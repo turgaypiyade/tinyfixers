@@ -89,8 +89,26 @@ public class TileView : MonoBehaviour,
         ResetVisualState();
         dragConsumedSwap = false;
         wasDragging = false;
-    }
 
+        // ── DEBUG (sadece ilk tile için logla) ──
+        if (x == 1 && y == 1)
+        {
+            var cam = GetComponentInParent<Canvas>()?.worldCamera;
+            if (cam != null)
+            {
+                Debug.Log($"[TileDebug] Camera clearFlags: {cam.clearFlags}");
+                Debug.Log($"[TileDebug] Camera bgColor: {cam.backgroundColor}");
+                Debug.Log($"[TileDebug] Camera HDR: {cam.allowHDR}");
+
+                var vol = cam.GetComponent<UnityEngine.Rendering.Volume>();
+                Debug.Log($"[TileDebug] PostProcess Volume: {(vol != null ? "VAR" : "YOK")}");
+            }
+
+            var parentImages = GetComponentsInParent<UnityEngine.UI.Image>(true);
+            foreach (var img in parentImages)
+                Debug.Log($"[TileDebug] Parent Image: {img.gameObject.name} color={img.color} raycast={img.raycastTarget}");
+        }
+    }
     private void ResetVisualState()
     {
         transform.localScale = Vector3.one;
@@ -225,9 +243,28 @@ public class TileView : MonoBehaviour,
         }
     }
 
+    /*     public void SetIcon(Sprite sprite)
+        {
+            float glowIntensity = 3.0f; // Parlama şiddeti
+            if (sprite == null)
+            {
+                Debug.LogError("TileView: icon set to NULL");
+                return;
+            }
+
+            iconImage.sprite = sprite;
+            float currentAlpha = iconImage != null ? iconImage.color.a : 1f;
+            iconImage.color = new Color(1f, 1f, 1f, 1f);
+            Color hdrColor = new Color(
+                iconImage.color.r * glowIntensity,
+                iconImage.color.g * glowIntensity,
+                iconImage.color.b * glowIntensity,
+                1.0f // Alpha (Görünürlük)
+            );
+            iconImage.color = hdrColor;
+        } */
     public void SetIcon(Sprite sprite)
     {
-        float glowIntensity = 3.0f; // Parlama şiddeti
         if (sprite == null)
         {
             Debug.LogError("TileView: icon set to NULL");
@@ -235,17 +272,8 @@ public class TileView : MonoBehaviour,
         }
 
         iconImage.sprite = sprite;
-        float currentAlpha = iconImage != null ? iconImage.color.a : 1f;
-        iconImage.color = new Color(1f, 1f, 1f, 1f);
-        Color hdrColor = new Color(
-            iconImage.color.r * glowIntensity,
-            iconImage.color.g * glowIntensity,
-            iconImage.color.b * glowIntensity,
-            1.0f // Alpha (Görünürlük)
-        );
-        iconImage.color = hdrColor;
+        iconImage.color = Color.white; // Sade beyaz = sprite'ın orijinal rengi
     }
-
     public void SetIconAlpha(float alpha)
     {
         if (iconImage == null) return;

@@ -54,9 +54,9 @@ public class TileIconLibrary : ScriptableObject
     {
         switch (baseType)
         {
-            case TileType.Gear:   return overrideRed;
-            case TileType.Core:   return overrideBlue;
-            case TileType.Bolt:   return overrideYellow;
+            case TileType.Gear:   return overrideYellow;
+            case TileType.Core:   return overrideRed;
+            case TileType.Bolt:   return overrideBlue;
             case TileType.Plate:  return overrideGreen;
             default:              return overrideRed;
         }

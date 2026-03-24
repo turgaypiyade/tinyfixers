@@ -78,6 +78,8 @@ public sealed class LineVPatchBotCombo
             result.Actions.Add(initialClearAction);
         }
 
+        rt.Board.ActiveBackgroundJobs++;
+
         rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty, null, () =>
         {
             var arrivalCtx = new ResolutionContext();
@@ -112,6 +114,8 @@ public sealed class LineVPatchBotCombo
             {
                 sequencer.Enqueue(deferredActions);
             }
+
+            rt.Board.ActiveBackgroundJobs--;
         });
 
         return result;

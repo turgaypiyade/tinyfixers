@@ -116,10 +116,10 @@ TextureImporter:
       name: override_green_0
       rect:
         serializedVersion: 2
-        x: 261
-        y: 261
-        width: 502
-        height: 502
+        x: 232
+        y: 238
+        width: 561
+        height: 549
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

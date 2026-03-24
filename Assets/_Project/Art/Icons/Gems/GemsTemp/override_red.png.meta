@@ -116,10 +116,10 @@ TextureImporter:
       name: override_red_0
       rect:
         serializedVersion: 2
-        x: 261
-        y: 261
-        width: 502
-        height: 502
+        x: 229
+        y: 233
+        width: 567
+        height: 559
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
