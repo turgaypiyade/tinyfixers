@@ -20,6 +20,8 @@ public class MatchClearAction : BoardAction
     private float staggerAnimTime;
     private bool isSpecialActivationPhase;
     private IReadOnlyList<Vector2Int> impactCells;
+    private bool isBlocking;
+    public override bool Blocking => isBlocking;
     // NEW: future-facing generic presentation payload
     public ClearPresentationPlan PresentationPlan { get; }
 
@@ -40,7 +42,8 @@ public class MatchClearAction : BoardAction
         float staggerAnimTime = 0.16f,
         bool isSpecialPhase = false,
         ClearPresentationPlan presentationPlan = null,
-        IReadOnlyList<Vector2Int> impactCells = null)
+        IReadOnlyList<Vector2Int> impactCells = null,
+        bool isBlocking = true)
     {
         this.matches = matches != null ? new HashSet<TileView>(matches) : new HashSet<TileView>();
         this.doShake = doShake;
@@ -59,12 +62,25 @@ public class MatchClearAction : BoardAction
         this.isSpecialActivationPhase = isSpecialPhase;
         this.PresentationPlan = presentationPlan;
         this.impactCells = impactCells;
+        this.isBlocking = isBlocking;
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
-        if (matches == null || matches.Count == 0)
+        if (!isBlocking)
+            sequencer.Board.ActiveBackgroundJobs++;
+
+        bool hasMatches = matches != null && matches.Count > 0;
+        bool hasImpacts = impactCells != null && impactCells.Count > 0;
+        bool hasAffected = affectedCells != null && affectedCells.Count > 0;
+        bool hasStrikes = lightningLineStrikes != null && lightningLineStrikes.Count > 0;
+
+        if (!hasMatches && !hasImpacts && !hasAffected && !hasStrikes && PresentationPlan == null)
+        {
+            if (!isBlocking)
+                sequencer.Board.ActiveBackgroundJobs--;
             yield break;
+        }
 
         bool prevSpecial = sequencer.Board.IsSpecialActivationPhase;
         if (isSpecialActivationPhase)
@@ -80,6 +96,9 @@ public class MatchClearAction : BoardAction
             if (isSpecialActivationPhase)
                 sequencer.Board.IsSpecialActivationPhase = prevSpecial;
 
+            if (!isBlocking)
+                sequencer.Board.ActiveBackgroundJobs--;
+
             yield break;
         }
 
@@ -92,5 +111,8 @@ public class MatchClearAction : BoardAction
 
         if (isSpecialActivationPhase)
             sequencer.Board.IsSpecialActivationPhase = prevSpecial;
+            
+        if (!isBlocking)
+            sequencer.Board.ActiveBackgroundJobs--;
     }
 }

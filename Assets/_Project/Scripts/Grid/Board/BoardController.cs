@@ -183,7 +183,7 @@ public class BoardController : MonoBehaviour
     }
 
     [System.Serializable]
-    public struct PatchbotDashRequest { public Vector2Int from; public Vector2Int to; public System.Action onStart; }
+    public struct PatchbotDashRequest { public Vector2Int from; public Vector2Int to; public System.Action onStart; public System.Action onArrived; }
     private readonly List<PatchbotDashRequest> _patchbotDashRequests = new();
 
     public bool InputLocked => CurrentState == BoardState.Locked || IsBusy;
@@ -209,6 +209,7 @@ public class BoardController : MonoBehaviour
     private SpecialResolver specialResolver;
     private SpecialBehaviorRegistry specialBehaviorRegistry;
     private BoardAnimator boardAnimator;
+    public int ActiveBackgroundJobs = 0;
     private ActionSequencer actionSequencer;
     private PulseCoreImpactService pulseCoreImpactService;
     private ObstacleStateService obstacleStateService;
@@ -574,6 +575,7 @@ public class BoardController : MonoBehaviour
     public TileView GetTileViewAt(int x, int y) { if (tiles == null || x < 0 || x >= width || y < 0 || y >= height) return null; return tiles[x, y]; }
     public Sprite GetIcon(TileType type) => iconLibrary != null ? iconLibrary.Get(type) : null;
     public Sprite GetSpecialIcon(TileSpecial special) => iconLibrary != null ? iconLibrary.GetSpecialIcon(special) : null;
+    public Sprite GetOverrideIcon(TileType baseType) => iconLibrary != null ? iconLibrary.GetOverrideIcon(baseType) : null;
 
     public void RegisterTile(TileView tile, int x, int y)
     {
@@ -924,20 +926,49 @@ public class BoardController : MonoBehaviour
     {
         isSpecialActivationPhase = false;
         int safety = 0;
-        const int MaxResolveLoops = 25;
+        const int MaxResolveLoops = 250;
+        float backgroundJobWaitTime = 0f;
         while (true)
         {
             safety++;
             if (safety > MaxResolveLoops) yield break;
             CurrentResolvePass = safety;
             var matches = matchFinder.FindAllMatches();
-            if (matches.Count == 0) yield break;
-            var matchTiles = new HashSet<TileView>();
-            foreach (var t in matches) { var tile = tiles[t.X, t.Y]; if (tile != null) matchTiles.Add(tile); }
-            if (matchTiles.Count == 0) yield break;
-            bool cleared = false;
-            yield return ExecuteClearPass(matchTiles, allowSpecialActivation, result => cleared = result);
-            if (!cleared) yield break;
+            
+            if (matches.Count > 0)
+            {
+                var matchTiles = new HashSet<TileView>();
+                foreach (var t in matches) { var tile = tiles[t.X, t.Y]; if (tile != null) matchTiles.Add(tile); }
+                if (matchTiles.Count > 0)
+                {
+                    bool cleared = false;
+                    yield return ExecuteClearPass(matchTiles, allowSpecialActivation, result => cleared = result);
+                    if (cleared) continue;
+                }
+            }
+
+            var cascades = cascadeLogic.CalculateCascades();
+            if (cascades.Count > 0)
+            {
+                actionSequencer.Enqueue(cascades);
+                while (actionSequencer.IsPlaying) yield return null;
+                continue;
+            }
+
+            if (ActiveBackgroundJobs > 0 || actionSequencer.IsPlaying)
+            {
+                backgroundJobWaitTime += Time.deltaTime;
+                if (backgroundJobWaitTime > 5f)
+                {
+                    Debug.LogWarning($"[ResolveBoard] Background job timeout — forcing continue. ActiveBackgroundJobs={ActiveBackgroundJobs}, IsPlaying={actionSequencer.IsPlaying}");
+                    ActiveBackgroundJobs = 0;
+                }
+                yield return null;
+                continue;
+            }
+            backgroundJobWaitTime = 0f;
+
+            break;
         }
     }
 

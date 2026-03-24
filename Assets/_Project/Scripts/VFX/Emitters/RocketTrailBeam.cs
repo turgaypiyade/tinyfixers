@@ -65,14 +65,14 @@ public class RocketTrailBeam : MonoBehaviour
 
     public void UpdateHead(Vector3 headWorld)
     {
-        if (!alive) return;
+        if (!alive || this == null) return;
         headWorld.z = 0f;
         head = headWorld;
     }
 
     public void FadeOutAndDestroy()
     {
-        if (!alive) return;
+        if (!alive || this == null) return;
         Debug.Log($"[RocketTrailBeam.FadeOut] origin={origin} head={head}");
         fadingOut = true;
         fadeTimer = 0f;
@@ -81,12 +81,13 @@ public class RocketTrailBeam : MonoBehaviour
     public void Kill()
     {
         alive = false;
-        if (gameObject) Destroy(gameObject);
+        if (this != null && gameObject != null) Destroy(gameObject);
     }
 
     private void Update()
     {
-        if (!alive || !lr) return;
+        if (!alive) return;
+        if (this == null || lr == null) { alive = false; return; }
 
         BuildTrail();
 
@@ -107,7 +108,7 @@ public class RocketTrailBeam : MonoBehaviour
 
     private void ApplyGradient()
     {
-        if (!lr) return;
+        if (lr == null) return;
 
         float tA = tailAlpha * masterAlpha;
         float hA = headAlpha * masterAlpha;
@@ -131,7 +132,7 @@ public class RocketTrailBeam : MonoBehaviour
 
     private void BuildTrail()
     {
-        if (!lr) return;
+        if (lr == null) return;
 
         Vector3 dir = head - origin;
         float len = dir.magnitude;

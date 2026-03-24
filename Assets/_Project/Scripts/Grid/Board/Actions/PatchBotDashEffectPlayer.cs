@@ -29,7 +29,7 @@ public sealed class PatchBotDashEffectPlayer : IClearEffectPlayer
                 to = dash.TargetCell.Value
             });
 
-            yield return board.PatchbotDashUI.PlayDashParallel(requests, board);
+            board.PatchbotDashUI.PlayDashParallel(requests, board);
         }
 
         if (context != null && context.NotifyCellImpactNow != null)

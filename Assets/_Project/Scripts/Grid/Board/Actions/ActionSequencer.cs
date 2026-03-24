@@ -22,6 +22,7 @@ public class ActionSequencer : MonoBehaviour
         actionQueue.Enqueue(action);
         if (!IsPlaying)
         {
+            IsPlaying = true;
             StartCoroutine(PlaySequence());
         }
     }
@@ -34,13 +35,14 @@ public class ActionSequencer : MonoBehaviour
         }
         if (!IsPlaying && actionQueue.Count > 0)
         {
+            IsPlaying = true;
             StartCoroutine(PlaySequence());
         }
     }
 
     private IEnumerator PlaySequence()
     {
-        IsPlaying = true;
+        // IsPlaying is already set to true by Enqueue() — no race window
 
         while (actionQueue.Count > 0)
         {

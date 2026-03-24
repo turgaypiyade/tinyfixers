@@ -145,6 +145,36 @@ public class SpecialVisualService
         board.StartCoroutine(FadeAndDestroySpecialGhost(image, ghostRt, 0.24f));
     }
 
+    public void PlayTransientSpecialVisualAt(TileSpecial special, int targetX, int targetY)
+    {
+        var sprite = board.GetSpecialIcon(special);
+        if (sprite == null) return;
+
+        var parent = board.Parent != null ? board.Parent : board.transform as RectTransform;
+        if (parent == null) return;
+
+        var ghostGo = new GameObject("PatchBotSpecialGhost_" + special.ToString(), typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+        var ghostRt = ghostGo.GetComponent<RectTransform>();
+        ghostRt.SetParent(parent, false);
+        ghostRt.anchorMin = new Vector2(0.5f, 0.5f);
+        ghostRt.anchorMax = new Vector2(0.5f, 0.5f);
+        ghostRt.pivot = new Vector2(0.5f, 0.5f);
+        ghostRt.sizeDelta = new Vector2(board.TileSize, board.TileSize);
+
+        var image = ghostGo.GetComponent<UnityEngine.UI.Image>();
+        image.sprite = sprite;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        image.color = new Color(1f, 1f, 1f, 0.95f);
+
+        bool hasObstacleAtTarget = patchbotComboService.HasObstacleAt(targetX, targetY);
+        float yOffset = hasObstacleAtTarget ? board.TileSize * 0.22f : 0f;
+        ghostRt.anchoredPosition = new Vector2(targetX * board.TileSize + board.TileSize * 0.5f, -targetY * board.TileSize - board.TileSize * 0.5f + yOffset);
+        ghostRt.localScale = hasObstacleAtTarget ? Vector3.one * 1.08f : Vector3.one;
+
+        board.StartCoroutine(FadeAndDestroySpecialGhost(image, ghostRt, 0.24f));
+    }
+
     public void PlayTransientSpecialPairVisualAt(TileView firstTile, TileView secondTile, int targetX, int targetY)
     {
         if (!TryCreatePairGhost(firstTile, secondTile, targetX, targetY, out var pairRt, out var firstImage, out var secondImage))

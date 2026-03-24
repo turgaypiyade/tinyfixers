@@ -46,30 +46,36 @@ public sealed class PatchBotCombo
             TileSpecial.PatchBot,
             new Vector2Int(firstPatchBot.X, firstPatchBot.Y));
 
+        rt.Context.Affected.Add(firstPatchBot);
+        rt.Context.Affected.Add(secondPatchBot);
+        SpecialCellUtils.MarkAffectedCell(rt.Context, firstPatchBot, rt.Board);
+        SpecialCellUtils.MarkAffectedCell(rt.Context, secondPatchBot, rt.Board);
+
+        var initialClearAction = new MatchClearAction(
+            new HashSet<TileView> { firstPatchBot, secondPatchBot },
+            doShake: false,
+            animationMode: ClearAnimationMode.Default,
+            isSpecialPhase: true
+        );
+        result.Actions.Add(initialClearAction);
+
         var usedTargets = new HashSet<TileView>();
-        var dataMatches = new HashSet<TileData>();
 
-        ExecuteSingleDash(rt, firstPatchBot, secondPatchBot, usedTargets, dataMatches);
-        ExecuteSingleDash(rt, secondPatchBot, firstPatchBot, usedTargets, dataMatches);
-
-        foreach (var data in dataMatches)
-        {
-            if (data == null)
-                continue;
-
-            if (data.X < 0 || data.X >= rt.Board.Width || data.Y < 0 || data.Y >= rt.Board.Height)
-                continue;
-
-            var tile = rt.Board.Tiles[data.X, data.Y];
-            if (tile == null)
-                continue;
-
-            rt.Context.Affected.Add(tile);
-            SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board);
-        }
+        ExecuteSingleDash(rt, firstPatchBot, secondPatchBot, usedTargets);
+        ExecuteSingleDash(rt, secondPatchBot, firstPatchBot, usedTargets);
 
         if (rt.FinalizeAtEnd)
-            Finalize(rt, result);
+        {
+            if (rt.ProcessFanout != null)
+            {
+                var fanoutActions = rt.ProcessFanout(rt.Context);
+                if (fanoutActions != null && fanoutActions.Count > 0)
+                    result.Actions.AddRange(fanoutActions);
+            }
+
+            if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
+                rt.CleanupImplantedTiles?.Invoke(rt.Context);
+        }
 
         return result;
     }
@@ -108,8 +114,7 @@ public sealed class PatchBotCombo
         PatchBotComboExecutionRuntime rt,
         TileView actor,
         TileView otherPatchBot,
-        HashSet<TileView> usedTargets,
-        HashSet<TileData> dataMatches)
+        HashSet<TileView> usedTargets)
     {
         if (actor == null)
             return;
@@ -121,16 +126,44 @@ public sealed class PatchBotCombo
         if (target.tile != null)
             usedTargets.Add(target.tile);
 
-        rt.PatchbotService.EnqueueDash(actor, target.x, target.y);
         rt.VisualService.PlayTeleportMarkers(actor, target.x, target.y);
 
-        rt.PatchbotService.HitCellOnce(
-            dataMatches,
-            target.x,
-            target.y,
-            target.tile,
-            (x, y) => SpecialCellUtils.MarkAffectedCell(rt.Context, x, y, rt.Board),
-            tile => SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board));
+        rt.PatchbotService.EnqueueDash(actor, target.x, target.y, null, () =>
+        {
+            var arrivalCtx = new ResolutionContext();
+            var dataMatches = new HashSet<TileData>();
+
+            rt.PatchbotService.HitCellOnce(
+                dataMatches,
+                target.x,
+                target.y,
+                rt.Board.Tiles[target.x, target.y],
+                (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalCtx, x, y, rt.Board),
+                tile => SpecialCellUtils.MarkAffectedCell(arrivalCtx, tile, rt.Board));
+
+            foreach (var data in dataMatches)
+            {
+                if (data == null) continue;
+                if (data.X < 0 || data.X >= rt.Board.Width || data.Y < 0 || data.Y >= rt.Board.Height) continue;
+
+                var tile = rt.Board.Tiles[data.X, data.Y];
+                if (tile == null) continue;
+
+                arrivalCtx.Affected.Add(tile);
+            }
+
+            var clearAction = BuildClearAction(arrivalCtx);
+            
+            var deferredActions = new List<BoardAction>();
+            if (clearAction != null && arrivalCtx.Affected.Count > 0)
+                deferredActions.Add(clearAction);
+
+            var sequencer = rt.Board.GetComponent<ActionSequencer>();
+            if (sequencer != null && deferredActions.Count > 0)
+            {
+                sequencer.Enqueue(deferredActions);
+            }
+        });
     }
 
     private void Finalize(

@@ -160,11 +160,13 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             }
         }
 
-        // Deferred PatchBot dashes
+        // Deferred PatchBot dashes — launch ALL in parallel for snappy feel
         if (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0 && patchbotService != null)
         {
-            float maxDashDur = 0f;
+            var usedTargets = new HashSet<TileView>();
+            var allRequests = new List<BoardController.PatchbotDashRequest>();
 
+            // Phase 1: Prepare all dash requests up-front
             for (int i = 0; i < deferredPatchBotCells.Count; i++)
             {
                 var cell = deferredPatchBotCells[i];
@@ -179,90 +181,100 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 if (tile.GetSpecial() != TileSpecial.PatchBot)
                     continue;
 
-                var pbTarget = patchbotService.FindTarget(tile, null, null);
+                var pbTarget = patchbotService.FindTarget(tile, null, usedTargets);
                 if (!pbTarget.hasCell)
                     continue;
+                    
+                if (pbTarget.tile != null)
+                    usedTargets.Add(pbTarget.tile);
 
                 var fromCell = new Vector2Int(tile.X, tile.Y);
                 var toCell = new Vector2Int(pbTarget.x, pbTarget.y);
                 var sourceType = tile.GetTileType();
 
-                patchbotService.EnqueueDash(
-                    tile,
-                    pbTarget.x,
-                    pbTarget.y,
-                    onDashStart: () =>
+                // Capture for closure
+                var capturedTile = tile;
+                var capturedFrom = fromCell;
+                var capturedTo = toCell;
+                var capturedSourceType = sourceType;
+                var capturedTarget = pbTarget;
+
+                board.ActiveBackgroundJobs++;
+
+                allRequests.Add(new BoardController.PatchbotDashRequest
+                {
+                    from = capturedFrom,
+                    to = capturedTo,
+                    onStart = () =>
                     {
-                        if (tile == null)
+                        if (capturedTile == null)
                             return;
 
-                        SpecialVisualService.HideTileVisualForCombo(tile);
+                        SpecialVisualService.HideTileVisualForCombo(capturedTile);
 
-                        if (fromCell.x < 0 || fromCell.x >= board.Width || fromCell.y < 0 || fromCell.y >= board.Height)
+                        if (capturedFrom.x < 0 || capturedFrom.x >= board.Width || capturedFrom.y < 0 || capturedFrom.y >= board.Height)
                             return;
 
-                        if (board.Tiles[fromCell.x, fromCell.y] == tile)
+                        if (board.Tiles[capturedFrom.x, capturedFrom.y] == capturedTile)
                         {
-                            board.ClearCell(fromCell.x, fromCell.y);
-                            board.ClearCellVisualOnly(fromCell, sourceType, tile);
+                            board.ClearCell(capturedFrom.x, capturedFrom.y);
+                            board.ClearCellVisualOnly(capturedFrom, capturedSourceType, capturedTile);
                         }
-                    });
+                    },
+                    onArrived = () =>
+                    {
+                        var arrivalCtx = new ResolutionContext();
+                        var dataMatches = new HashSet<TileData>();
 
-                float dd = board.PatchbotDashUI != null
-                    ? board.PatchbotDashUI.EstimateDashDuration(board, fromCell, toCell)
-                    : 0.22f;
-                if (dd > maxDashDur) maxDashDur = dd;
+                        bool hasObstacle = patchbotService.HasObstacleAt(capturedTarget.x, capturedTarget.y);
+                        
+                        patchbotService.ResolveTargetImpact(
+                            dataMatches,
+                            capturedTarget.x,
+                            capturedTarget.y,
+                            hasObstacle,
+                            (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalCtx, x, y, board),
+                            t => SpecialCellUtils.MarkAffectedCell(arrivalCtx, t, board)
+                        );
 
-                launchedPatchBots.Add((tile, pbTarget.x, pbTarget.y));
-                Debug.Log("MaxDashdur"+maxDashDur);
-                if (i < deferredPatchBotCells.Count - 1)
-                    yield return new WaitForSeconds(0.002f);
+                        foreach (var data in dataMatches)
+                        {
+                            if (data == null) continue;
+                            if (data.X < 0 || data.X >= board.Width || data.Y < 0 || data.Y >= board.Height) continue;
+                            
+                            var t = board.Tiles[data.X, data.Y];
+                            if (t != null) arrivalCtx.Affected.Add(t);
+                        }
+
+                        var clearAction = new MatchClearAction(
+                            arrivalCtx.Affected,
+                            doShake: true,
+                            animationMode: ClearAnimationMode.Default,
+                            affectedCells: arrivalCtx.AffectedCells,
+                            impactCells: arrivalCtx.ImpactCells,
+                            isSpecialPhase: true
+                        );
+                        sequencer.Enqueue(new List<BoardAction> { clearAction });
+
+                        board.ActiveBackgroundJobs--;
+                    }
+                });
             }
 
-            if (maxDashDur > 0f)
-                yield return new WaitForSeconds(0.03f);
-            //yield return new WaitForSeconds(maxDashDur);
-
-            var allClearTiles = new HashSet<TileView>();
-
-            foreach (var (tile, targetX, targetY) in launchedPatchBots)
+            // Phase 2: Fire all dashes in one parallel batch
+            if (allRequests.Count > 0)
             {
-                bool hasObstacle = patchbotService.HasObstacleAt(targetX, targetY);
-                if (hasObstacle)
-                {
-                    board.MarkPatchBotForcedObstacleHit(targetX, targetY);
-                }
+                if (board.PatchbotDashUI != null)
+                    board.PatchbotDashUI.PlayDashParallel(allRequests, board);
                 else
                 {
-                    var targetTile = board.Tiles[targetX, targetY];
-                    if (targetTile != null)
-                        allClearTiles.Add(targetTile);
+                    // Fallback: fire arrivals directly
+                    foreach (var r in allRequests)
+                    {
+                        r.onStart?.Invoke();
+                        r.onArrived?.Invoke();
+                    }
                 }
-
-                // source tile artık burada eklenmiyor
-            }
-
-            if (allClearTiles.Count > 0)
-            {
-                var patchClear = new MatchClearAction(
-                    allClearTiles,
-                    doShake: true,
-                    animationMode: ClearAnimationMode.Default,
-                    affectedCells: null,
-                    obstacleHitContext: null,
-                    includeAdjacentOverTileBlockerDamage: true,
-                    lightningOriginTile: null,
-                    lightningOriginCell: null,
-                    lightningVisualTargets: null,
-                    lightningLineStrikes: null,
-                    suppressPerTileClearVfx: false,
-                    perTileClearDelays: null,
-                    staggerDelays: null,
-                    staggerAnimTime: 0.16f,
-                    isSpecialPhase: true
-                );
-
-                yield return patchClear.ExecuteVisuals(sequencer);
             }
         }
 

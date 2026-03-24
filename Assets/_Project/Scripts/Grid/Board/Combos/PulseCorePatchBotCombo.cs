@@ -64,8 +64,6 @@ public sealed class PulseCorePatchBotCombo
                 new Vector2Int(tx, ty))
             : 0.22f;
 
-        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty);
-
         rt.VisualService.PlayTeleportMarkers(patchBotTile, tx, ty);
         rt.VisualService.PlayTeleportMarkers(pulseTile, tx, ty);
 
@@ -77,36 +75,80 @@ public sealed class PulseCorePatchBotCombo
             travelDuration,
             true);
 
-        // Hedef hücrede tile varsa standart yol, yoksa (obstacle) grid pozisyonundan VFX
-        SchedulePulseExplosionVfx(rt, tx, ty, travelDuration);
-
-        CollectAreaAtTarget(rt, tx, ty);
-        ExecuteChain(rt, pulseTile, tx, ty);
+        rt.Context.Affected.Add(patchBotTile);
+        rt.Context.Affected.Add(pulseTile);
+        SpecialCellUtils.MarkAffectedCell(rt.Context, patchBotTile, rt.Board);
+        SpecialCellUtils.MarkAffectedCell(rt.Context, pulseTile, rt.Board);
 
         if (rt.FinalizeAtEnd)
         {
-            if (rt.ProcessFanout != null)
+            var initialClearAction = new MatchClearAction(
+                new HashSet<TileView> { patchBotTile, pulseTile },
+                doShake: false,
+                animationMode: ClearAnimationMode.Default,
+                isSpecialPhase: true
+            );
+            result.Actions.Add(initialClearAction);
+        }
+
+        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty, null, () =>
+        {
+            var arrivalCtx = new ResolutionContext();
+            var arrivalRt = new PulseCorePatchBotComboExecutionRuntime
             {
-                var fanoutActions = rt.ProcessFanout(rt.Context);
-                if (fanoutActions != null && fanoutActions.Count > 0)
-                    result.Actions.AddRange(fanoutActions);
+                Board = rt.Board,
+                Context = arrivalCtx,
+                Origin = patchBotTile,
+                Partner = pulseTile,
+                PatchbotService = rt.PatchbotService,
+                VisualService = rt.VisualService,
+                Effects = rt.Effects,
+                ActivateSpecial = rt.ActivateSpecial,
+                ProcessFanout = rt.ProcessFanout,
+                CleanupImplantedTiles = rt.CleanupImplantedTiles,
+                FireOverrideOverrideSpecialVisuals = rt.FireOverrideOverrideSpecialVisuals,
+                EmitBoardSignal = rt.EmitBoardSignal,
+                FinalizeAtEnd = true
+            };
+
+            SchedulePulseExplosionVfx(arrivalRt, tx, ty, 0f);
+
+            CollectAreaAtTarget(arrivalRt, tx, ty);
+            ExecuteChain(arrivalRt, pulseTile, tx, ty);
+
+            var deferredActions = new List<BoardAction>();
+
+            if (arrivalRt.FinalizeAtEnd)
+            {
+                if (arrivalRt.ProcessFanout != null)
+                {
+                    var fanoutActions = arrivalRt.ProcessFanout(arrivalRt.Context);
+                    if (fanoutActions != null && fanoutActions.Count > 0)
+                        deferredActions.AddRange(fanoutActions);
+                }
+
+                if (arrivalRt.Context.OverrideDeferredPulseExplosions.Count == 0)
+                    arrivalRt.CleanupImplantedTiles?.Invoke(arrivalRt.Context);
+
+                if (arrivalRt.Context.OverrideRadialClearDelays != null && arrivalRt.Context.OverrideRadialClearDelays.Count > 0)
+                    arrivalRt.FireOverrideOverrideSpecialVisuals?.Invoke(arrivalRt.Context.Affected, arrivalRt.Context.OverrideRadialClearDelays);
+
+                var clearAction = BuildClearAction(arrivalRt);
+                if (clearAction != null)
+                    deferredActions.Add(clearAction);
+
+                arrivalRt.EmitBoardSignal?.Invoke(new SpecialBoardSignal(
+                    SpecialBoardSignalType.SpecialPassFinished,
+                    new Vector2Int(tx, ty),
+                    pulseTile));
             }
 
-            if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
-                rt.CleanupImplantedTiles?.Invoke(rt.Context);
-
-            if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
-                rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
-
-            var clearAction = BuildClearAction(rt);
-            if (clearAction != null)
-                result.Actions.Add(clearAction);
-
-            rt.EmitBoardSignal?.Invoke(new SpecialBoardSignal(
-                SpecialBoardSignalType.SpecialPassFinished,
-                new Vector2Int(tx, ty),
-                pulseTile));
-        }
+            var sequencer = arrivalRt.Board.GetComponent<ActionSequencer>();
+            if (sequencer != null && deferredActions.Count > 0)
+            {
+                sequencer.Enqueue(deferredActions);
+            }
+        });
 
         return result;
     }

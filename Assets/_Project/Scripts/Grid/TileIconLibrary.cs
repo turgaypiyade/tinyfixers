@@ -14,7 +14,12 @@ public class TileIconLibrary : ScriptableObject
     public Sprite lineV;
     public Sprite patchBot;
     public Sprite pulseCore;
-    public Sprite systemOverride;
+
+    [Header("Override Icons (color-keyed)")]
+    public Sprite overrideRed;
+    public Sprite overrideYellow;
+    public Sprite overrideBlue;
+    public Sprite overrideGreen;
 
 
     public Sprite GetSpecialIcon(TileSpecial special)
@@ -34,10 +39,26 @@ public class TileIconLibrary : ScriptableObject
                 return pulseCore;
 
             case TileSpecial.SystemOverride:
-                return systemOverride;
+                return overrideRed; // default fallback — callers should use GetOverrideIcon for color-keyed
 
             default:
                 return null;
+        }
+    }
+
+    /// <summary>
+    /// Returns the color-specific Override icon based on the base TileType
+    /// that formed the 5-match.
+    /// </summary>
+    public Sprite GetOverrideIcon(TileType baseType)
+    {
+        switch (baseType)
+        {
+            case TileType.Gear:   return overrideRed;
+            case TileType.Core:   return overrideBlue;
+            case TileType.Bolt:   return overrideYellow;
+            case TileType.Plate:  return overrideGreen;
+            default:              return overrideRed;
         }
     }
 

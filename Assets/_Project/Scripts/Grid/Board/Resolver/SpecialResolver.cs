@@ -1478,8 +1478,11 @@ public class SpecialResolver
             presentationPlan = BuildLinePresentationPlanIfNeeded();
         if (presentationPlan == null)
             presentationPlan = BuildOverridePresentationPlanIfNeeded();
-        if (presentationPlan == null)
-            presentationPlan = BuildPatchBotPresentationPlanIfNeeded();
+        // DISABLED: PatchBotSpecial now manages its own dash via EnqueueDash+onArrived.
+        // The legacy PatchBotDashEffectPlayer path would conflict (flush the dash queue,
+        // never decrement ActiveBackgroundJobs → deadlock in ResolveBoard).
+        // if (presentationPlan == null)
+        //     presentationPlan = BuildPatchBotPresentationPlanIfNeeded();
 
         Dictionary<TileView, float> stagger = presentationPlan != null
             ? null

@@ -118,7 +118,18 @@ public class TileView : MonoBehaviour,
     {
         if (model == null || board == null) return;
 
-        if (model.special != TileSpecial.None)
+        if (model.special == TileSpecial.SystemOverride)
+        {
+            // Use color-keyed Override icon based on the tiles that formed the 5-match
+            Sprite sp = null;
+            if (model.hasOverrideBaseType)
+                sp = board.GetOverrideIcon(model.overrideBaseType);
+            if (sp == null)
+                sp = board.GetSpecialIcon(model.special);
+            if (sp != null) SetIcon(sp);
+            else SetIcon(board.GetIcon(model.type));
+        }
+        else if (model.special != TileSpecial.None)
         {
             var sp = board.GetSpecialIcon(model.special);
             if (sp != null) SetIcon(sp);
@@ -216,6 +227,7 @@ public class TileView : MonoBehaviour,
 
     public void SetIcon(Sprite sprite)
     {
+        float glowIntensity = 3.0f; // Parlama şiddeti
         if (sprite == null)
         {
             Debug.LogError("TileView: icon set to NULL");
@@ -224,7 +236,14 @@ public class TileView : MonoBehaviour,
 
         iconImage.sprite = sprite;
         float currentAlpha = iconImage != null ? iconImage.color.a : 1f;
-        iconImage.color = new Color(1f, 1f, 1f, currentAlpha);
+        iconImage.color = new Color(1f, 1f, 1f, 1f);
+        Color hdrColor = new Color(
+            iconImage.color.r * glowIntensity,
+            iconImage.color.g * glowIntensity,
+            iconImage.color.b * glowIntensity,
+            1.0f // Alpha (Görünürlük)
+        );
+        iconImage.color = hdrColor;
     }
 
     public void SetIconAlpha(float alpha)

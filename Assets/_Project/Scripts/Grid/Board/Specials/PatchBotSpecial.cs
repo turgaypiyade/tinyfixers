@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -37,42 +38,101 @@ public sealed class PatchBotSpecial
         if (!CanExecute(rt))
             return result;
 
-        RegisterOrigin(rt);
+        rt.Context.Affected.Add(rt.Origin);
+        if (rt.Partner != null) rt.Context.Affected.Add(rt.Partner);
+        SpecialCellUtils.MarkAffectedCell(rt.Context, rt.Origin, rt.Board);
+        if (rt.Partner != null) SpecialCellUtils.MarkAffectedCell(rt.Context, rt.Partner, rt.Board);
 
-        if (rt.Partner != null)
-        {
-            if (ApplyPatchBotTeleportHit(rt, rt.Origin, rt.Partner))
-                rt.Context.HasLineActivation = true;
-        }
-        else
-        {
-            ApplyPatchBotSoloHit(rt, rt.Origin);
-        }
+        rt.Context.Processed.Add(new Vector2Int(rt.Origin.X, rt.Origin.Y));
 
+        // Only create the initial clear action when FinalizeAtEnd is true (solo activation).
+        // When FinalizeAtEnd is false (chain activation), the parent resolution owns the clear.
         if (rt.FinalizeAtEnd)
         {
-            if (rt.ProcessFanout != null)
+            var initialTiles = new HashSet<TileView> { rt.Origin };
+            if (rt.Partner != null) initialTiles.Add(rt.Partner);
+
+            var initialClearAction = new MatchClearAction(
+                initialTiles,
+                doShake: false,
+                animationMode: ClearAnimationMode.Default,
+                isSpecialPhase: true
+            );
+            result.Actions.Add(initialClearAction);
+        }
+
+        var target = rt.PatchbotService.FindTarget(rt.Origin, rt.Partner, null);
+        if (!target.hasCell) return result;
+
+        var cachedPartnerSpecial = rt.Partner != null ? rt.Partner.GetSpecial() : TileSpecial.None;
+        rt.VisualService.PlayTeleportMarkers(rt.Origin, target.x, target.y);
+
+        rt.PatchbotService.EnqueueDash(rt.Origin, target.x, target.y, null, () =>
+        {
+            var arrivalCtx = new ResolutionContext();
+            var arrivalRt = new PatchBotExecutionRuntime
             {
-                var fanoutActions = rt.ProcessFanout(rt.Context);
-                if (fanoutActions != null && fanoutActions.Count > 0)
-                    result.Actions.AddRange(fanoutActions);
+                Board = rt.Board,
+                Context = arrivalCtx,
+                Origin = null,
+                Partner = null,
+                PatchbotService = rt.PatchbotService,
+                VisualService = rt.VisualService,
+                Effects = rt.Effects,
+                ActivateSpecial = rt.ActivateSpecial,
+                ProcessFanout = rt.ProcessFanout,
+                CleanupImplantedTiles = rt.CleanupImplantedTiles,
+                FireOverrideOverrideSpecialVisuals = rt.FireOverrideOverrideSpecialVisuals,
+                EmitBoardSignal = rt.EmitBoardSignal,
+                FinalizeAtEnd = true
+            };
+
+            if (cachedPartnerSpecial != TileSpecial.None)
+            {
+                if (TriggerPartnerEffectAtDeferred(arrivalRt, cachedPartnerSpecial, target.x, target.y))
+                    arrivalRt.Context.HasLineActivation = true;
+            }
+            else if (rt.Partner != null)
+            {
+                ApplyPatchBotTeleportToCellDeferred(arrivalRt, target.x, target.y);
+            }
+            else
+            {
+                ApplyPatchBotSoloHitDeferred(arrivalRt, target.x, target.y);
             }
 
-            if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
-                rt.CleanupImplantedTiles?.Invoke(rt.Context);
+            var deferredActions = new List<BoardAction>();
+            if (arrivalRt.FinalizeAtEnd)
+            {
+                if (arrivalRt.ProcessFanout != null)
+                {
+                    var fanoutActions = arrivalRt.ProcessFanout(arrivalRt.Context);
+                    if (fanoutActions != null && fanoutActions.Count > 0)
+                        deferredActions.AddRange(fanoutActions);
+                }
 
-            if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
-                rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
+                if (arrivalRt.Context.OverrideDeferredPulseExplosions.Count == 0)
+                    arrivalRt.CleanupImplantedTiles?.Invoke(arrivalRt.Context);
 
-            var clearAction = BuildClearAction(rt);
-            if (clearAction != null)
-                result.Actions.Add(clearAction);
+                if (arrivalRt.Context.OverrideRadialClearDelays != null && arrivalRt.Context.OverrideRadialClearDelays.Count > 0)
+                    arrivalRt.FireOverrideOverrideSpecialVisuals?.Invoke(arrivalRt.Context.Affected, arrivalRt.Context.OverrideRadialClearDelays);
 
-            rt.EmitBoardSignal?.Invoke(new SpecialBoardSignal(
-                SpecialBoardSignalType.SpecialPassFinished,
-                new Vector2Int(rt.Origin.X, rt.Origin.Y),
-                rt.Origin));
-        }
+                var clearAction = BuildClearAction(arrivalRt);
+                if (clearAction != null)
+                    deferredActions.Add(clearAction);
+
+                arrivalRt.EmitBoardSignal?.Invoke(new SpecialBoardSignal(
+                    SpecialBoardSignalType.SpecialPassFinished,
+                    new Vector2Int(target.x, target.y),
+                    rt.Origin));
+            }
+
+            var sequencer = arrivalRt.Board.GetComponent<ActionSequencer>();
+            if (sequencer != null && deferredActions.Count > 0)
+            {
+                sequencer.Enqueue(deferredActions);
+            }
+        });
 
         return result;
     }
@@ -91,196 +151,153 @@ public sealed class PatchBotSpecial
         return true;
     }
 
-    private void RegisterOrigin(PatchBotExecutionRuntime rt)
+    private void ApplyPatchBotSoloHitDeferred(PatchBotExecutionRuntime arrivalRt, int targetX, int targetY)
     {
-        rt.Context.Affected.Add(rt.Origin);
-        SpecialCellUtils.MarkAffectedCell(rt.Context, rt.Origin, rt.Board);
-        rt.Context.Processed.Add(new Vector2Int(rt.Origin.X, rt.Origin.Y));
-    }
-
-    private void ApplyPatchBotSoloHit(PatchBotExecutionRuntime rt, TileView patchBotTile)
-    {
-        if (patchBotTile == null) return;
-
-        var target = rt.PatchbotService.FindTarget(patchBotTile, null, null);
-        if (!target.hasCell) return;
-
-        rt.PatchbotService.EnqueueDash(patchBotTile, target.x, target.y);
-        rt.VisualService.PlayTeleportMarkers(patchBotTile, target.x, target.y);
-
-        bool hasObstacleAtTarget = rt.PatchbotService.HasObstacleAt(target.x, target.y);
+        bool hasObstacleAtTarget = arrivalRt.PatchbotService.HasObstacleAt(targetX, targetY);
         var dataMatches = new HashSet<TileData>();
-        rt.PatchbotService.ResolveTargetImpact(dataMatches, target.x, target.y, hasObstacleAtTarget,
-            (x, y) => SpecialCellUtils.MarkAffectedCell(rt.Context, x, y, rt.Board),
-            (tile) => SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board));
+        
+        arrivalRt.PatchbotService.ResolveTargetImpact(dataMatches, targetX, targetY, hasObstacleAtTarget,
+            (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, x, y, arrivalRt.Board),
+            (tile) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, tile, arrivalRt.Board));
 
         foreach (var data in dataMatches)
-            if (rt.Board.Tiles[data.X, data.Y] != null) rt.Context.Affected.Add(rt.Board.Tiles[data.X, data.Y]);
+        {
+            if (data != null && arrivalRt.Board.Tiles[data.X, data.Y] != null) 
+                arrivalRt.Context.Affected.Add(arrivalRt.Board.Tiles[data.X, data.Y]);
+        }
     }
 
-    private bool ApplyPatchBotTeleportHit(PatchBotExecutionRuntime rt, TileView patchBotTile, TileView partnerTile)
+    private void ApplyPatchBotTeleportToCellDeferred(PatchBotExecutionRuntime arrivalRt, int targetX, int targetY)
     {
-        if (patchBotTile == null || partnerTile == null) return false;
+        if (targetX < 0 || targetX >= arrivalRt.Board.Width || targetY < 0 || targetY >= arrivalRt.Board.Height) return;
 
-        var target = rt.PatchbotService.FindTarget(patchBotTile, partnerTile, null);
-        if (!target.hasCell) return false;
-
-        rt.PatchbotService.EnqueueDash(patchBotTile, target.x, target.y);
-        rt.VisualService.PlayTeleportMarkers(patchBotTile, target.x, target.y);
-
-        bool partnerIsSpecial = partnerTile.GetSpecial() != TileSpecial.None;
-        if (partnerIsSpecial)
-            return TriggerPartnerEffectAt(rt, patchBotTile, partnerTile, target.x, target.y);
-
-        ApplyPatchBotTeleportToCell(rt, patchBotTile, partnerTile, target.x, target.y);
-        return false;
-    }
-
-    private void ApplyPatchBotTeleportToCell(PatchBotExecutionRuntime rt, TileView patchBotTile, TileView partnerTile, int targetX, int targetY)
-    {
-        if (targetX < 0 || targetX >= rt.Board.Width || targetY < 0 || targetY >= rt.Board.Height) return;
-
-        bool hasObstacleAtTarget = rt.PatchbotService.HasObstacleAt(targetX, targetY);
-        if (rt.Board.Holes[targetX, targetY] && !hasObstacleAtTarget) return;
-
-        rt.PatchbotService.ConsumePatchBotOnly(
-            rt.Context.Affected,
-            patchBotTile,
-            (tile) => SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board));
+        bool hasObstacleAtTarget = arrivalRt.PatchbotService.HasObstacleAt(targetX, targetY);
+        if (arrivalRt.Board.Holes[targetX, targetY] && !hasObstacleAtTarget) return;
 
         var matchDatas = new HashSet<TileData>();
-        rt.PatchbotService.ResolveTargetImpact(
+        arrivalRt.PatchbotService.ResolveTargetImpact(
             matchDatas,
             targetX,
             targetY,
             hasObstacleAtTarget,
-            (x, y) => SpecialCellUtils.MarkAffectedCell(rt.Context, x, y, rt.Board),
-            (tile) => SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board));
+            (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, x, y, arrivalRt.Board),
+            (tile) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, tile, arrivalRt.Board));
 
         foreach (var data in matchDatas)
-            if (rt.Board.Tiles[data.X, data.Y] != null)
-                rt.Context.Affected.Add(rt.Board.Tiles[data.X, data.Y]);
+        {
+            if (data != null && arrivalRt.Board.Tiles[data.X, data.Y] != null)
+                arrivalRt.Context.Affected.Add(arrivalRt.Board.Tiles[data.X, data.Y]);
+        }
     }
 
-    private bool TriggerPartnerEffectAt(PatchBotExecutionRuntime rt, TileView patchBotTile, TileView partnerTile, int originX, int originY)
+    private bool TriggerPartnerEffectAtDeferred(PatchBotExecutionRuntime arrivalRt, TileSpecial special, int originX, int originY)
     {
-        var special = partnerTile.GetSpecial();
-        if (special == TileSpecial.None) return false;
-
         if (special == TileSpecial.LineH)
         {
-            rt.VisualService.PlayTeleportMarkers(partnerTile, originX, originY);
-            rt.VisualService.PlayTransientSpecialVisualAt(partnerTile, originX, originY);
+            arrivalRt.VisualService.PlayTransientSpecialVisualAt(special, originX, originY);
 
-            for (int x = 0; x < rt.Board.Width; x++)
+            for (int x = 0; x < arrivalRt.Board.Width; x++)
             {
-                if (!SpecialUtils.CanAffectCell(rt.Board, x, originY))
+                if (!SpecialUtils.CanAffectCell(arrivalRt.Board, x, originY))
                     continue;
 
-                SpecialCellUtils.MarkAffectedCell(rt.Context, x, originY, rt.Board);
-                if (rt.Board.Tiles[x, originY] != null)
+                SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, x, originY, arrivalRt.Board);
+                if (arrivalRt.Board.Tiles[x, originY] != null)
                 {
-                    rt.Context.Affected.Add(rt.Board.Tiles[x, originY]);
-                    rt.Context.LightningVisualTargets.Add(rt.Board.Tiles[x, originY]);
+                    arrivalRt.Context.Affected.Add(arrivalRt.Board.Tiles[x, originY]);
+                    arrivalRt.Context.LightningVisualTargets.Add(arrivalRt.Board.Tiles[x, originY]);
                 }
             }
 
-            rt.Context.LightningLineStrikes.Add(new LightningLineStrike(new Vector2Int(originX, originY), true));
+            arrivalRt.Context.LightningLineStrikes.Add(new LightningLineStrike(new Vector2Int(originX, originY), true));
             return true;
         }
 
         if (special == TileSpecial.LineV)
         {
-            rt.VisualService.PlayTeleportMarkers(partnerTile, originX, originY);
-            rt.VisualService.PlayTransientSpecialVisualAt(partnerTile, originX, originY);
+            arrivalRt.VisualService.PlayTransientSpecialVisualAt(special, originX, originY);
 
-            for (int y = 0; y < rt.Board.Height; y++)
+            for (int y = 0; y < arrivalRt.Board.Height; y++)
             {
-                if (!SpecialUtils.CanAffectCell(rt.Board, originX, y))
+                if (!SpecialUtils.CanAffectCell(arrivalRt.Board, originX, y))
                     continue;
 
-                SpecialCellUtils.MarkAffectedCell(rt.Context, originX, y, rt.Board);
-                if (rt.Board.Tiles[originX, y] != null)
+                SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, originX, y, arrivalRt.Board);
+                if (arrivalRt.Board.Tiles[originX, y] != null)
                 {
-                    rt.Context.Affected.Add(rt.Board.Tiles[originX, y]);
-                    rt.Context.LightningVisualTargets.Add(rt.Board.Tiles[originX, y]);
+                    arrivalRt.Context.Affected.Add(arrivalRt.Board.Tiles[originX, y]);
+                    arrivalRt.Context.LightningVisualTargets.Add(arrivalRt.Board.Tiles[originX, y]);
                 }
             }
 
-            rt.Context.LightningLineStrikes.Add(new LightningLineStrike(new Vector2Int(originX, originY), false));
+            arrivalRt.Context.LightningLineStrikes.Add(new LightningLineStrike(new Vector2Int(originX, originY), false));
             return true;
         }
 
         if (special == TileSpecial.PulseCore)
         {
-            rt.VisualService.PlayTeleportMarkers(partnerTile, originX, originY);
-            rt.VisualService.PlayTransientSpecialVisualAt(partnerTile, originX, originY);
-            rt.Effects.PlayPulseExplosionAt(originX, originY);
-            SpecialCellUtils.AddSquare(rt.Context.Affected, rt.Context, rt.Board, originX, originY, 2);
+            arrivalRt.VisualService.PlayTransientSpecialVisualAt(special, originX, originY);
+            arrivalRt.Effects.PlayPulseExplosionAt(originX, originY);
+            SpecialCellUtils.AddSquare(arrivalRt.Context.Affected, arrivalRt.Context, arrivalRt.Board, originX, originY, 2);
             return false;
         }
 
         if (special == TileSpecial.SystemOverride)
         {
-            rt.VisualService.PlayTeleportMarkers(partnerTile, originX, originY);
-            TriggerSystemOverridePatchBotConversion(rt, patchBotTile, partnerTile);
+            TriggerSystemOverridePatchBotConversionDeferred(arrivalRt, originX, originY);
         }
 
         return false;
     }
 
-    private void TriggerSystemOverridePatchBotConversion(PatchBotExecutionRuntime rt, TileView patchBotTile, TileView systemOverrideTile)
+    private void TriggerSystemOverridePatchBotConversionDeferred(PatchBotExecutionRuntime arrivalRt, int originX, int originY)
     {
-        if (systemOverrideTile == null) return;
+        var tileAtOrigin = arrivalRt.Board.Tiles[originX, originY];
+        if (tileAtOrigin == null) return;
 
-        TileType baseType = systemOverrideTile.GetOverrideBaseType(out var storedType)
+        TileType baseType = tileAtOrigin.GetOverrideBaseType(out var storedType)
             ? storedType
-            : systemOverrideTile.GetTileType();
+            : tileAtOrigin.GetTileType();
 
         int activationIndex = 0;
 
-        for (int x = 0; x < rt.Board.Width; x++)
+        for (int x = 0; x < arrivalRt.Board.Width; x++)
         {
-            for (int y = 0; y < rt.Board.Height; y++)
+            for (int y = 0; y < arrivalRt.Board.Height; y++)
             {
-                if (rt.Board.Holes[x, y]) continue;
+                if (arrivalRt.Board.Holes[x, y]) continue;
 
-                var tile = rt.Board.Tiles[x, y];
-                if (tile == null || tile == patchBotTile || tile == systemOverrideTile) continue;
+                var tile = arrivalRt.Board.Tiles[x, y];
+                if (tile == null || tile == tileAtOrigin) continue;
                 if (!tile.GetTileType().Equals(baseType)) continue;
                 if (tile.GetSpecial() != TileSpecial.None) continue;
 
                 tile.SetSpecial(TileSpecial.PatchBot);
-                SpecialCellUtils.SyncAfterSpecialChange(rt.Board, tile);
+                SpecialCellUtils.SyncAfterSpecialChange(arrivalRt.Board, tile);
 
-                AutoPatchBotTeleportHitAndVanish(rt, tile, patchBotTile, systemOverrideTile, activationIndex);
+                AutoPatchBotTeleportHitAndVanishDeferred(arrivalRt, tile, activationIndex);
                 activationIndex++;
             }
         }
     }
 
-    private void AutoPatchBotTeleportHitAndVanish(
-        PatchBotExecutionRuntime rt,
+    private void AutoPatchBotTeleportHitAndVanishDeferred(
+        PatchBotExecutionRuntime arrivalRt,
         TileView autoPatchBot,
-        TileView patchBotTile,
-        TileView systemOverrideTile,
         int activationIndex)
     {
         if (autoPatchBot == null) return;
 
-        rt.Context.Affected.Add(autoPatchBot);
-        SpecialCellUtils.MarkAffectedCell(rt.Context, autoPatchBot, rt.Board);
-
         var sourceCell = new Vector2Int(autoPatchBot.X, autoPatchBot.Y);
         var sourceType = autoPatchBot.GetTileType();
 
-        var target = rt.PatchbotService.FindTarget(autoPatchBot, patchBotTile, null, systemOverrideTile);
+        var target = arrivalRt.PatchbotService.FindTarget(autoPatchBot, null, null);
         if (!target.hasCell) return;
 
         const float sequentialActivationStep = 0.01f;
         float dashDelay = Mathf.Max(0, activationIndex) * sequentialActivationStep;
 
-        rt.VisualService.FireImmediateDash(
+        arrivalRt.VisualService.FireImmediateDash(
             autoPatchBot.X,
             autoPatchBot.Y,
             target.x,
@@ -292,29 +309,53 @@ public sealed class PatchBotSpecial
 
                 SpecialVisualService.HideTileVisualForCombo(autoPatchBot);
 
-                if (sourceCell.x < 0 || sourceCell.x >= rt.Board.Width || sourceCell.y < 0 || sourceCell.y >= rt.Board.Height)
+                if (sourceCell.x < 0 || sourceCell.x >= arrivalRt.Board.Width || sourceCell.y < 0 || sourceCell.y >= arrivalRt.Board.Height)
                     return;
 
-                if (rt.Board.Tiles[sourceCell.x, sourceCell.y] == autoPatchBot)
+                if (arrivalRt.Board.Tiles[sourceCell.x, sourceCell.y] == autoPatchBot)
                 {
-                    rt.Board.ClearCell(sourceCell.x, sourceCell.y);
-                    rt.Board.ClearCellVisualOnly(sourceCell, sourceType, autoPatchBot);
+                    arrivalRt.Board.ClearCell(sourceCell.x, sourceCell.y);
+                    arrivalRt.Board.ClearCellVisualOnly(sourceCell, sourceType, autoPatchBot);
                 }
             });
 
-        var matchSetData = new HashSet<TileData>();
-        rt.PatchbotService.HitCellOnce(
-            matchSetData,
-            target.x,
-            target.y,
-            target.tile,
-            (x, y) => SpecialCellUtils.MarkAffectedCell(rt.Context, x, y, rt.Board),
-            (tile) => SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board));
+        arrivalRt.Board.StartCoroutine(CoDeferredHitVanish(arrivalRt, target.x, target.y, target.tile, dashDelay + 0.25f)); // Wait for dash to complete visually
+    }
 
+    private IEnumerator CoDeferredHitVanish(PatchBotExecutionRuntime arrivalRt, int targetX, int targetY, TileView targetTileView, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        var matchSetData = new HashSet<TileData>();
+        arrivalRt.PatchbotService.HitCellOnce(
+            matchSetData,
+            targetX,
+            targetY,
+            null,
+            (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, x, y, arrivalRt.Board),
+            (tile) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, tile, arrivalRt.Board));
+
+        var hits = new HashSet<TileView>();
         foreach (var data in matchSetData)
         {
-            if (rt.Board.Tiles[data.X, data.Y] != null)
-                rt.Context.Affected.Add(rt.Board.Tiles[data.X, data.Y]);
+            if (data != null && arrivalRt.Board.Tiles[data.X, data.Y] != null)
+                hits.Add(arrivalRt.Board.Tiles[data.X, data.Y]);
+        }
+
+        if (hits.Count > 0)
+        {
+            var clearAction = new MatchClearAction(
+                hits,
+                doShake: true,
+                animationMode: ClearAnimationMode.Default,
+                isSpecialPhase: true
+            );
+            
+            var sequencer = arrivalRt.Board.GetComponent<ActionSequencer>();
+            if (sequencer != null)
+            {
+                sequencer.Enqueue(new List<BoardAction> { clearAction });
+            }
         }
     }
 

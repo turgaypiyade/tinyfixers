@@ -406,7 +406,6 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
     private readonly Dictionary<Vector2Int, (TileType type, TileView view)> targetVisuals;
     private readonly Vector2Int comboCenterCell;
     private readonly Action<Vector2Int> emitPulseEmitterComboTriggered;
-    public override bool Blocking => true;
 
     public LineVHPulseCoreComboAction(BoardController board, HashSet<Vector2Int> targets, List<(Vector2Int cell, Vector2 anch)> hOrigins,
                                       List<(Vector2Int cell, Vector2 anch)> vOrigins, Dictionary<Vector2Int, (TileType type, TileView view)> targetVisuals,
@@ -542,5 +541,6 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             if (cleared.Add(kvp.Key))
                 board.ClearCellVisualOnly(kvp.Key, kvp.Value.type, kvp.Value.view);
         }
+        
     }
 }

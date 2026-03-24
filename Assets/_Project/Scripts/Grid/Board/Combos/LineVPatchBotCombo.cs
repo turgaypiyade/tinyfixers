@@ -51,7 +51,6 @@ public sealed class LineVPatchBotCombo
                 new Vector2Int(tx, ty))
             : 0.22f;
 
-        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty);
         rt.VisualService.PlayTeleportMarkers(patchBotTile, tx, ty);
         rt.VisualService.PlayTeleportMarkers(lineTile, tx, ty);
 
@@ -63,16 +62,57 @@ public sealed class LineVPatchBotCombo
             travelDuration,
             true);
 
-        CollectColumnAtTarget(rt, tx);
-        BuildLineVisuals(rt, tx, ty, travelDuration);
-        ExecuteChain(rt);
+        rt.Context.Affected.Add(patchBotTile);
+        rt.Context.Affected.Add(lineTile);
+        SpecialCellUtils.MarkAffectedCell(rt.Context, patchBotTile, rt.Board);
+        SpecialCellUtils.MarkAffectedCell(rt.Context, lineTile, rt.Board);
 
         if (rt.FinalizeAtEnd)
         {
-            var clearAction = BuildClearAction(rt);
-            if (clearAction != null)
-                result.Actions.Add(clearAction);
+            var initialClearAction = new MatchClearAction(
+                new HashSet<TileView> { patchBotTile, lineTile },
+                doShake: false,
+                animationMode: ClearAnimationMode.Default,
+                isSpecialPhase: true
+            );
+            result.Actions.Add(initialClearAction);
         }
+
+        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty, null, () =>
+        {
+            var arrivalCtx = new ResolutionContext();
+            arrivalCtx.HasLineActivation = true;
+            var arrivalRt = new LineVPatchBotComboExecutionRuntime
+            {
+                Board = rt.Board,
+                Context = arrivalCtx,
+                Origin = patchBotTile,
+                Partner = lineTile,
+                PatchbotService = rt.PatchbotService,
+                VisualService = rt.VisualService,
+                Effects = rt.Effects,
+                ActivateSpecial = rt.ActivateSpecial,
+                FinalizeAtEnd = true
+            };
+
+            CollectColumnAtTarget(arrivalRt, tx);
+            BuildLineVisuals(arrivalRt, tx, ty, 0f);
+            ExecuteChain(arrivalRt);
+
+            var deferredActions = new List<BoardAction>();
+            if (arrivalRt.FinalizeAtEnd)
+            {
+                var clearAction = BuildClearAction(arrivalRt);
+                if (clearAction != null)
+                    deferredActions.Add(clearAction);
+            }
+
+            var sequencer = arrivalRt.Board.GetComponent<ActionSequencer>();
+            if (sequencer != null && deferredActions.Count > 0)
+            {
+                sequencer.Enqueue(deferredActions);
+            }
+        });
 
         return result;
     }

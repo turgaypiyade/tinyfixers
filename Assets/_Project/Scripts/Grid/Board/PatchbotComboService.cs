@@ -16,16 +16,29 @@ public class PatchbotComboService
         return board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
     }
 
-    public void EnqueueDash(TileView fromTile, int targetX, int targetY, System.Action onDashStart = null)
+    public void EnqueueDash(TileView fromTile, int targetX, int targetY, System.Action onDashStart = null, System.Action onArrived = null)
     {
         if (fromTile == null) return;
+
+        board.ActiveBackgroundJobs++;
 
         board.EnqueuePatchbotDash(
             new BoardController.PatchbotDashRequest
             {
                 from = new Vector2Int(fromTile.X, fromTile.Y),
                 to = new Vector2Int(targetX, targetY),
-                onStart = onDashStart
+                onStart = onDashStart,
+                onArrived = () =>
+                {
+                    try
+                    {
+                        if (onArrived != null) onArrived();
+                    }
+                    finally
+                    {
+                        board.ActiveBackgroundJobs--;
+                    }
+                }
             }
         );
     }

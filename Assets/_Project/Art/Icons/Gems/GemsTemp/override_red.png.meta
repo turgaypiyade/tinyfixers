@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: ca54974efd1a7aa4a92b4d79630dbce5
+guid: c3a8b514c271d423a8b244956105e471
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 7587575239066410478
-    second: override_v5_0
+      213: 2789401260304263213
+    second: override_red_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: override_v5_0
+      name: override_red_0
       rect:
         serializedVersion: 2
-        x: 229
-        y: 186
-        width: 618
-        height: 680
+        x: 261
+        y: 261
+        width: 502
+        height: 502
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: eed5a1faa7b7c4960800000000000000
-      internalID: 7587575239066410478
+      spriteID: d286678daa1f5b620800000000000000
+      internalID: 2789401260304263213
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      override_v5_0: 7587575239066410478
+      override_red_0: 2789401260304263213
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

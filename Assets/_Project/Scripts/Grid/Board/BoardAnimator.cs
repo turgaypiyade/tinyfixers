@@ -203,19 +203,26 @@ public class BoardAnimator
         bool hasLineStrikes = animationMode == ClearAnimationMode.LightningStrike
             && lightningLineStrikes != null && lightningLineStrikes.Count > 0;
 
-        if (_patchbotDashBuffer.Count > 0 && board.PatchbotDashUI != null)
+        if (_patchbotDashBuffer.Count > 0)
         {
-            if (hasLineStrikes)
+            if (board.PatchbotDashUI != null)
             {
-                float syncedDashDuration = EstimateLineStrikeDuration(lightningLineStrikes);
-
-                // Fire-and-forget: dash animasyonu sweep ile paralel çalışır,
-                // oyunu bekletmez
-                board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board, syncedDashDuration);
+                if (hasLineStrikes)
+                {
+                    float syncedDashDuration = EstimateLineStrikeDuration(lightningLineStrikes);
+                    board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board, syncedDashDuration);
+                }
+                else
+                {
+                    board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board);
+                }
             }
             else
             {
-                yield return board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board);
+                foreach (var req in _patchbotDashBuffer)
+                {
+                    req.onArrived?.Invoke();
+                }
             }
         }
 
@@ -376,6 +383,11 @@ public class BoardAnimator
 
                 pops.Add(clearEffectOrchestrator.Play(tile, tileAnimationMode, delay, board.GetClearDurationForCurrentPass()));
 
+                if (!isSweptOff)
+                {
+                    board.StartCoroutine(ClearCellDataAfterDelay(tile, delay));
+                }
+
                 if (useLightningEffect)
                     lightningIndex++;
            }
@@ -469,6 +481,15 @@ public class BoardAnimator
                 continue;
 
             FinalizeTileClear(tile);
+        }
+
+        IEnumerator ClearCellDataAfterDelay(TileView t, float waitTime)
+        {
+            if (waitTime > 0f) yield return new WaitForSeconds(waitTime);
+            if (t != null && board.Tiles[t.X, t.Y] == t)
+            {
+                board.ClearCellDataOnly(new Vector2Int(t.X, t.Y));
+            }
         }
 
         void TryClearTileOnLineSweepHit(Vector2Int cell)

@@ -155,6 +155,7 @@ public class PatchbotDashUI : MonoBehaviour
         }
 
         Destroy(go);
+        req.onArrived?.Invoke();
         onComplete?.Invoke();
     }
 
