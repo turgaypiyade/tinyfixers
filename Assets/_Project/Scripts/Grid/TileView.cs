@@ -182,12 +182,15 @@ public class TileView : MonoBehaviour,
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
 
+        if (rt == null || !rt) yield break;
+
         Vector2 start = rt.anchoredPosition;
         Vector2 end = new Vector2(X * tileSize, -Y * tileSize);
 
         float t = 0f;
         while (t < 1f)
         {
+            if (rt == null || !rt) yield break;
             t += Time.deltaTime / Mathf.Max(0.0001f, duration);
             float normalizedT = Mathf.Clamp01(t);
             float s;
@@ -201,6 +204,7 @@ public class TileView : MonoBehaviour,
             yield return null;
         }
 
+        if (rt == null || !rt) yield break;
         rt.anchoredPosition = end;
         SnapToGrid(tileSize);
 

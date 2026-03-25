@@ -129,15 +129,42 @@ public class BoardAnimator
 
     private IEnumerator Wrap(IEnumerator c, Action onDone)
     {
-        yield return c;
-        onDone?.Invoke();
+        return SafeWrap(c, 0f, onDone);
     }
 
     private IEnumerator WrapWithDelay(IEnumerator c, float delay, Action onDone)
     {
-        var w = Wait(delay);
-        if (w != null) yield return w;
-        yield return c;
+        return SafeWrap(c, delay, onDone);
+    }
+
+    /// <summary>
+    /// Steps through a coroutine manually so that exceptions are caught
+    /// and onDone is always called — preventing RunMany from hanging.
+    /// </summary>
+    private IEnumerator SafeWrap(IEnumerator c, float delay, Action onDone)
+    {
+        if (delay > 0f)
+        {
+            var w = Wait(delay);
+            if (w != null) yield return w;
+        }
+
+        while (true)
+        {
+            bool hasNext;
+            try
+            {
+                hasNext = c.MoveNext();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogException(ex);
+                break;
+            }
+            if (!hasNext) break;
+            yield return c.Current;
+        }
+
         onDone?.Invoke();
     }
 
