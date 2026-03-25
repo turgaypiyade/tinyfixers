@@ -98,7 +98,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
         if (deferredPulseExplosionCells != null && deferredPulseExplosionCells.Count > 0)
         {
-            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.02f));
+            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.01f));
 
             for (int i = 0; i < deferredPulseExplosionCells.Count; i++)
             {
@@ -156,7 +156,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 );
 
                 yield return pulseClear.ExecuteVisuals(sequencer);
-                yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.03f));
+                yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.015f));
             }
         }
 
@@ -293,8 +293,15 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         if (tile == null)
             return;
 
+        if (board.PulseCoreImpactService != null)
+        {
+            board.PulseCoreImpactService.PlayPulseCoreExplosionVfxAtTile(tile, radiusCells: 2);
+            return;
+        }
+
+        // Güvenli fallback
         if (board.BoardVfxPlayer != null)
-            board.BoardVfxPlayer.PlayPulseVfx(GetTileAnchoredPos(tile), radiusCells: 1, tileSize: board.TileSize);
+            board.BoardVfxPlayer.PlayPulseVfx(GetTileAnchoredPos(tile), radiusCells: 2, tileSize: board.TileSize);
 
         if (board.SfxSource != null)
         {

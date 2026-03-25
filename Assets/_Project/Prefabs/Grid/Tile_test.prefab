@@ -152,8 +152,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TileView
   iconImage: {fileID: 5310917763237610214}
-  iconScale: 0.934
-  useFullCellIcon: 0
+  iconScale: 1
+  useFullCellIcon: 1
 --- !u!114 &7756393738161300215
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -84,9 +84,24 @@ public class BoardAnimator
         if (tileAnimator == null || createdTile == null)
             yield break;
 
-        float animDuration = duration > 0f
-            ? duration
-            : Mathf.Max(0.18f, board.ApplySpecialChainTempo(board.ClearDuration * 1.45f));
+        float animDuration;
+        if (duration > 0f)
+        {
+            animDuration = duration;
+        }
+        else
+        {
+            // Amaç: özel taş oluşsun ama board'ı 0.18+ kadar kilitlemesin.
+            // Clear ile fall arasına daha doğal otursun.
+            float clearBased = board.ApplySpecialChainTempo(board.ClearDuration * 1.6f);
+            float fallBased = board.FallDurationWithMultiplier * 0.70f;
+
+            animDuration = Mathf.Clamp(
+                Mathf.Max(clearBased, fallBased),
+                0.08f,
+                0.12f
+            );
+        }
 
         yield return tileAnimator.PlaySpecialCreationMerge(createdTile, sourceTiles, animDuration);
     }
@@ -906,12 +921,15 @@ public class BoardAnimator
                             tile.SetCoords(x, toY);
                             board.SyncTileData(x, toY);
                             board.SyncTileData(x, fromY);
+                            int fallDistance = Mathf.Abs(toY - fromY);
+                            float fallDuration = board.GetFallDurationForDistance(fallDistance);
+                            bool useFallSettle = board.ShouldEnableFallSettleThisPass();
 
                             moves.Add(tile.MoveToGrid(
                                 board.TileSize,
-                                board.FallDurationWithMultiplier,
+                                fallDuration,
                                 board.FallMoveCurve,
-                                board.EnableFallSettle,
+                                useFallSettle,
                                 board.FallSettleDuration,
                                 board.FallSettleStrength
                             ));

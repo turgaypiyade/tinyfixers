@@ -343,10 +343,7 @@ public sealed class TileAnimator
     }
 
 
-    public IEnumerator PlaySpecialCreationMerge(
-    TileView createdTile,
-    IEnumerable<TileView> sourceTiles,
-    float duration)
+    public IEnumerator PlaySpecialCreationMerge(TileView createdTile, IEnumerable<TileView> sourceTiles, float duration)
     {
         if (createdTile == null)
             yield break;
@@ -458,7 +455,14 @@ public sealed class TileAnimator
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / animDuration);
             float travelEase = EaseOutCubic(k);
-            float fadeEase = Mathf.Clamp01(k * 1.15f);
+            float ghostFadeEase = Mathf.Clamp01(k * 0.95f);
+
+            float createdFadeEase;
+            if (k < 0.52f)
+                createdFadeEase = 0f;
+            else
+                createdFadeEase = Mathf.Clamp01((k - 0.52f) / 0.48f);
+
             float createdScaleFactor = EvaluateCreatedSpecialScale(k);
 
             for (int i = 0; i < ghosts.Count; i++)
@@ -470,25 +474,25 @@ public sealed class TileAnimator
                 ghost.ghostRect.anchoredPosition =
                     Vector2.LerpUnclamped(ghost.startPos, targetPos, travelEase);
                 ghost.ghostRect.localScale =
-                    Vector3.LerpUnclamped(Vector3.one, Vector3.one * 0.08f, travelEase);
+                    Vector3.LerpUnclamped(Vector3.one, Vector3.one * 0.28f, travelEase);
                 ghost.ghostRect.localRotation =
                     Quaternion.SlerpUnclamped(
                         Quaternion.identity,
-                        Quaternion.Euler(0f, 0f, 24f),
+                        Quaternion.Euler(0f, 0f, 42f),
                         travelEase);
 
                 if (ghost.ghostGroup != null)
-                    ghost.ghostGroup.alpha = Mathf.Lerp(ghost.sourceColor.a, 0f, fadeEase);
+                    ghost.ghostGroup.alpha = Mathf.Lerp(ghost.sourceColor.a, 0f, ghostFadeEase);
             }
 
             createdIconRt.localScale = createdBaseScale * createdScaleFactor;
             createdIconRt.localRotation = Quaternion.identity;
-            createdGroup.alpha = fadeEase;
+            createdGroup.alpha = createdFadeEase;
             createdIcon.color = new Color(
                 createdBaseColor.r,
                 createdBaseColor.g,
                 createdBaseColor.b,
-                fadeEase);
+                createdFadeEase);
 
             yield return null;
         }
@@ -609,14 +613,15 @@ public sealed class TileAnimator
     private static float EvaluateCreatedSpecialScale(float t)
     {
         t = Mathf.Clamp01(t);
-        if (t < 0.72f)
+
+        if (t < 0.60f)
         {
-            float phase = t / 0.72f;
-            return Mathf.LerpUnclamped(0.18f, 1.12f, EaseOutBack(phase));
+            float phase = t / 0.60f;
+            return Mathf.LerpUnclamped(0.10f, 1.18f, EaseOutBack(phase));
         }
 
-        float settle = (t - 0.72f) / 0.28f;
-        return Mathf.LerpUnclamped(1.12f, 1f, EaseOutCubic(settle));
+        float settle = (t - 0.60f) / 0.40f;
+        return Mathf.LerpUnclamped(1.18f, 1f, EaseOutCubic(settle));
     }
 
     private static float EaseOutBack(float t)
@@ -792,7 +797,7 @@ public sealed class TileAnimator
                 ghost.ghostRect.anchoredPosition =
                     Vector2.LerpUnclamped(ghost.startPos, targetPos, travelEase);
                 ghost.ghostRect.localScale =
-                    Vector3.LerpUnclamped(Vector3.one, Vector3.one * 0.08f, travelEase);
+                    Vector3.LerpUnclamped(Vector3.one, Vector3.one * 0.28f, travelEase);
                 ghost.ghostRect.localRotation =
                     Quaternion.SlerpUnclamped(
                         Quaternion.identity,
