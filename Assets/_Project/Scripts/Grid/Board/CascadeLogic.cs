@@ -5,6 +5,23 @@ public class CascadeLogic
 {
     private readonly BoardController board;
 
+    // ── Pooled / reusable buffers (zero GC per call) ──
+    private readonly List<BoardAction> _actionsBuffer = new List<BoardAction>(8);
+
+    // Per-column buffers for CalculateCollapseAndSpawn
+    private readonly List<TileView> _colTiles = new List<TileView>(16);
+    private readonly List<int> _colTargetY = new List<int>(16);
+    private readonly List<float> _colDuration = new List<float>(16);
+    private readonly List<int> _colDist = new List<int>(16);
+    private readonly List<int> _colFromY = new List<int>(16);
+
+    // Segment buffers
+    private readonly List<int> _slots = new List<int>(16);
+    private readonly List<TileView> _existing = new List<TileView>(16);
+
+    // Slide fill
+    private readonly HashSet<TileView> _movedThisPassSet = new HashSet<TileView>();
+
     public CascadeLogic(BoardController board)
     {
         this.board = board;
@@ -12,7 +29,7 @@ public class CascadeLogic
 
     public List<BoardAction> CalculateCascades()
     {
-        var actions = new List<BoardAction>();
+        _actionsBuffer.Clear();
         const int maxPass = 32;
 
         for (int pass = 0; pass < maxPass; pass++)
@@ -21,30 +38,29 @@ public class CascadeLogic
 
             var collapseAction = CalculateCollapseAndSpawn();
             if (collapseAction != null && collapseAction.HasMoves)
-                actions.Add(collapseAction);
+                _actionsBuffer.Add(collapseAction);
 
             if (!HasAnyEmptyPlayableCell()) break;
 
             var slideAction = CalculateSlideFill();
             if (slideAction != null && slideAction.HasMoves)
             {
-                actions.Add(slideAction);
-                
-                // Usually a slide opens up spaces above it, so we need to do another direct collapse straight away.
+                _actionsBuffer.Add(slideAction);
+
                 var postSlideCollapse = CalculateCollapseColumns();
                 if (postSlideCollapse != null && postSlideCollapse.HasMoves)
                 {
-                    actions.Add(postSlideCollapse);
+                    _actionsBuffer.Add(postSlideCollapse);
                 }
             }
             else
             {
-                // No more slides and falls possible
                 break;
             }
         }
 
-        return actions;
+        // Return a new list so the caller owns it (ActionSequencer may hold reference)
+        return new List<BoardAction>(_actionsBuffer);
     }
 
     public FallAction CalculateCollapseAndSpawn()
@@ -65,11 +81,12 @@ public class CascadeLogic
 
         for (int x = 0; x < board.Width; x++)
         {
-            var colTiles = new List<TileView>(board.Height);
-            var colTargetY = new List<int>(board.Height);
-            var colDuration = new List<float>(board.Height);
-            var colDist = new List<int>(board.Height);
-            var colFromY = new List<int>(board.Height);
+            // Reuse pooled per-column buffers
+            _colTiles.Clear();
+            _colTargetY.Clear();
+            _colDuration.Clear();
+            _colDist.Clear();
+            _colFromY.Clear();
 
             int segmentTop = board.Height - 1;
             while (segmentTop >= 0)
@@ -87,28 +104,28 @@ public class CascadeLogic
                 int topY = segmentBottom + 1;
                 bool touchesSpawnEdge = IsSegmentConnectedToSpawnEdge(x, topY);
 
-                var slots = new List<int>();
-                var existing = new List<TileView>();
+                _slots.Clear();
+                _existing.Clear();
 
                 for (int y = segmentTop; y >= topY; y--)
                 {
                     if (board.Holes[x, y]) continue;
-                    slots.Add(y);
+                    _slots.Add(y);
 
                     if (board.Tiles[x, y] != null)
-                        existing.Add(board.Tiles[x, y]);
+                        _existing.Add(board.Tiles[x, y]);
                 }
 
-                for (int i = 0; i < slots.Count; i++)
+                for (int i = 0; i < _slots.Count; i++)
                 {
-                    board.Tiles[x, slots[i]] = null;
-                    board.SyncTileData(x, slots[i]);
+                    board.Tiles[x, _slots[i]] = null;
+                    board.SyncTileData(x, _slots[i]);
                 }
 
-                for (int i = 0; i < existing.Count && i < slots.Count; i++)
+                for (int i = 0; i < _existing.Count && i < _slots.Count; i++)
                 {
-                    int targetY = slots[i];
-                    var tile = existing[i];
+                    int targetY = _slots[i];
+                    var tile = _existing[i];
                     int fromY = tile.Y;
 
                     board.Tiles[x, targetY] = tile;
@@ -120,11 +137,11 @@ public class CascadeLogic
                     {
                         tile.MarkPlannedToMoveThisFallPass(true);
                         float duration = board.GetFallDurationForDistance(dist);
-                        colTiles.Add(tile);
-                        colTargetY.Add(targetY);
-                        colDuration.Add(duration);
-                        colDist.Add(dist);
-                        colFromY.Add(fromY);
+                        _colTiles.Add(tile);
+                        _colTargetY.Add(targetY);
+                        _colDuration.Add(duration);
+                        _colDist.Add(dist);
+                        _colFromY.Add(fromY);
                     }
                 }
 
@@ -160,23 +177,23 @@ public class CascadeLogic
                         int dist = Mathf.Abs(y - spawnFromY);
                         float duration = board.GetFallDurationForDistance(dist);
 
-                        colTiles.Add(view);
-                        colTargetY.Add(y);
-                        colDuration.Add(duration);
-                        colDist.Add(dist);
-                        colFromY.Add(spawnFromY);
+                        _colTiles.Add(view);
+                        _colTargetY.Add(y);
+                        _colDuration.Add(duration);
+                        _colDist.Add(dist);
+                        _colFromY.Add(spawnFromY);
                     }
                 }
 
                 segmentTop = segmentBottom - 1;
             }
 
-            for (int i = 0; i < colTiles.Count; i++)
+            for (int i = 0; i < _colTiles.Count; i++)
             {
-                var tile = colTiles[i];
-                int targetY = colTargetY[i];
-                int dist = colDist[i];
-                int fromY = colFromY[i];
+                var tile = _colTiles[i];
+                int targetY = _colTargetY[i];
+                int dist = _colDist[i];
+                int fromY = _colFromY[i];
 
                 bool useFallSettle = false;
                 if (board.ShouldEnableFallSettleThisPass())
@@ -190,7 +207,7 @@ public class CascadeLogic
                     }
                 }
 
-                action.AddMove(tile, fromY, targetY, colDuration[i], useFallSettle, board.FallSettleDuration, board.FallSettleStrength, board.FallMoveCurve);
+                action.AddMove(tile, fromY, targetY, _colDuration[i], useFallSettle, board.FallSettleDuration, board.FallSettleStrength, board.FallMoveCurve);
             }
         }
 
@@ -201,7 +218,7 @@ public class CascadeLogic
     public FallAction CalculateSlideFill()
     {
         var action = new FallAction();
-        var movedThisPass = new HashSet<TileView>();
+        _movedThisPassSet.Clear();
 
         for (int y = board.Height - 1; y >= 0; y--)
         {
@@ -242,7 +259,7 @@ public class CascadeLogic
                     if (!targetIsObstaclePocket && otherSourceExists && CanTileFallStraightDown(sx, sy))
                         return false;
 
-                    return TryDiagonalFrom(sx, sy, x, y, movedThisPass, action);
+                    return TryDiagonalFrom(sx, sy, x, y, _movedThisPassSet, action);
                 }
 
                 bool _ = TrySource(x - 1, y - 1) || TrySource(x + 1, y - 1);
@@ -269,32 +286,32 @@ public class CascadeLogic
                 int segEndY = y + 1;
                 if (segEndY <= segStartY)
                 {
-                    var slots = new List<int>();
+                    _slots.Clear();
                     for (int yy = segStartY; yy >= segEndY; yy--)
                     {
                         if (board.Holes[x, yy]) continue;
-                        slots.Add(yy);
+                        _slots.Add(yy);
                     }
 
-                    var existing = new List<TileView>();
+                    _existing.Clear();
                     for (int yy = segStartY; yy >= segEndY; yy--)
                     {
                         if (board.Holes[x, yy]) continue;
                         var tv = board.Tiles[x, yy];
                         if (tv != null)
-                            existing.Add(tv);
+                            _existing.Add(tv);
                     }
 
-                    for (int i = 0; i < slots.Count; i++)
+                    for (int i = 0; i < _slots.Count; i++)
                     {
-                        board.Tiles[x, slots[i]] = null;
-                        board.SyncTileData(x, slots[i]);
+                        board.Tiles[x, _slots[i]] = null;
+                        board.SyncTileData(x, _slots[i]);
                     }
 
-                    for (int i = 0; i < existing.Count && i < slots.Count; i++)
+                    for (int i = 0; i < _existing.Count && i < _slots.Count; i++)
                     {
-                        int toY = slots[i];
-                        var tile = existing[i];
+                        int toY = _slots[i];
+                        var tile = _existing[i];
                         int fromY = tile.Y;
 
                         board.Tiles[x, toY] = tile;
@@ -530,10 +547,10 @@ public class CascadeLogic
         if (HasTypeAt(x, y - 1, type) && HasTypeAt(x, y + 1, type)) return true;
 
         // 2x2 patterns
-        if (HasTypeAt(x-1, y, type) && HasTypeAt(x-1, y-1, type) && HasTypeAt(x, y-1, type)) return true;
-        if (HasTypeAt(x+1, y, type) && HasTypeAt(x+1, y-1, type) && HasTypeAt(x, y-1, type)) return true;
-        if (HasTypeAt(x-1, y, type) && HasTypeAt(x-1, y+1, type) && HasTypeAt(x, y+1, type)) return true;
-        if (HasTypeAt(x+1, y, type) && HasTypeAt(x+1, y+1, type) && HasTypeAt(x, y+1, type)) return true;
+        if (HasTypeAt(x - 1, y, type) && HasTypeAt(x - 1, y - 1, type) && HasTypeAt(x, y - 1, type)) return true;
+        if (HasTypeAt(x + 1, y, type) && HasTypeAt(x + 1, y - 1, type) && HasTypeAt(x, y - 1, type)) return true;
+        if (HasTypeAt(x - 1, y, type) && HasTypeAt(x - 1, y + 1, type) && HasTypeAt(x, y + 1, type)) return true;
+        if (HasTypeAt(x + 1, y, type) && HasTypeAt(x + 1, y + 1, type) && HasTypeAt(x, y + 1, type)) return true;
 
         return false;
     }

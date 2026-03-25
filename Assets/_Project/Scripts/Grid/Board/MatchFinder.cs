@@ -5,10 +5,53 @@ public class MatchFinder
 {
     private readonly BoardController board;
 
+    // ── Pooled / reusable buffers (zero GC per call) ──
+    private readonly List<TileData> _runTilesBuffer = new List<TileData>(16);
+    private readonly List<TileView> _snapshotBuffer = new List<TileView>(32);
+    private readonly List<TileView> _runViewBuffer = new List<TileView>(16);
+
+    // ── Cached run-length grid ──
+    private int[,] _hRunCache;   // horizontal run length passing through (x,y)
+    private int[,] _vRunCache;   // vertical   run length passing through (x,y)
+    private int _cacheW, _cacheH;
+    private bool _cacheValid;    // false → cache must be rebuilt before reading
+
     public MatchFinder(BoardController board)
     {
         this.board = board;
     }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Cache Invalidation — call when the board changes
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Marks the run-length cache as stale. Call this whenever
+    /// tiles are swapped, cleared, spawned, or moved on the board
+    /// so that GetRunLengths / DecideSpecialAt / FindMatchesAt
+    /// see the current board state.
+    ///
+    /// Lightweight — just flips a flag; actual rebuild happens
+    /// lazily the next time the cache is queried.
+    /// </summary>
+    public void InvalidateRunCache()
+    {
+        _cacheValid = false;
+    }
+
+    /// <summary>
+    /// Rebuilds the cache only if it has been invalidated.
+    /// Safe to call frequently — no-ops when cache is fresh.
+    /// </summary>
+    private void EnsureRunCache()
+    {
+        if (!_cacheValid)
+            RebuildRunCache();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Helpers
+    // ─────────────────────────────────────────────────────────────
 
     private bool IsNormalMatchable(TileData data)
     {
@@ -20,6 +63,288 @@ public class MatchFinder
         return tile != null && tile.GetSpecial() == TileSpecial.None;
     }
 
+    // ─────────────────────────────────────────────────────────────
+    //  Run-length cache — built once, queried O(1)
+    // ─────────────────────────────────────────────────────────────
+
+    private void EnsureCacheArrays(int w, int h)
+    {
+        if (_hRunCache == null || _cacheW != w || _cacheH != h)
+        {
+            _hRunCache = new int[w, h];
+            _vRunCache = new int[w, h];
+            _cacheW = w;
+            _cacheH = h;
+        }
+    }
+
+    /// <summary>
+    /// Fills _hRunCache and _vRunCache in O(W*H).
+    /// Each cell stores the total length of the contiguous run it belongs to.
+    /// </summary>
+    private void RebuildRunCache()
+    {
+        int w = board.Width, h = board.Height;
+        EnsureCacheArrays(w, h);
+
+        // ── Horizontal runs ──
+        for (int y = 0; y < h; y++)
+        {
+            int runStart = 0;
+            int runLen = 0;
+            TileType runType = default;
+
+            for (int x = 0; x <= w; x++) // x==w forces flush
+            {
+                bool extend = false;
+                if (x < w && !board.Holes[x, y])
+                {
+                    var data = board.GridData[x, y];
+                    if (IsNormalMatchable(data))
+                    {
+                        var t = data.Type;
+                        if (runLen > 0 && t.Equals(runType))
+                        {
+                            runLen++;
+                            extend = true;
+                        }
+                        else
+                        {
+                            FlushRunCache(_hRunCache, runStart, y, runLen, horizontal: true);
+                            runStart = x;
+                            runLen = 1;
+                            runType = t;
+                            extend = true;
+                        }
+                    }
+                }
+
+                if (!extend)
+                {
+                    FlushRunCache(_hRunCache, runStart, y, runLen, horizontal: true);
+                    runStart = x + 1;
+                    runLen = 0;
+                }
+            }
+        }
+
+        // ── Vertical runs ──
+        for (int x = 0; x < w; x++)
+        {
+            int runStart = 0;
+            int runLen = 0;
+            TileType runType = default;
+
+            for (int y = 0; y <= h; y++)
+            {
+                bool extend = false;
+                if (y < h && !board.Holes[x, y])
+                {
+                    var data = board.GridData[x, y];
+                    if (IsNormalMatchable(data))
+                    {
+                        var t = data.Type;
+                        if (runLen > 0 && t.Equals(runType))
+                        {
+                            runLen++;
+                            extend = true;
+                        }
+                        else
+                        {
+                            FlushRunCache(_vRunCache, x, runStart, runLen, horizontal: false);
+                            runStart = y;
+                            runLen = 1;
+                            runType = t;
+                            extend = true;
+                        }
+                    }
+                }
+
+                if (!extend)
+                {
+                    FlushRunCache(_vRunCache, x, runStart, runLen, horizontal: false);
+                    runStart = y + 1;
+                    runLen = 0;
+                }
+            }
+        }
+
+        _cacheValid = true;
+    }
+
+    private void FlushRunCache(int[,] cache, int fixedOrStartX, int fixedOrStartY, int runLen, bool horizontal)
+    {
+        if (runLen <= 0) return;
+
+        if (horizontal)
+        {
+            int y = fixedOrStartY;
+            for (int i = 0; i < runLen; i++)
+                cache[fixedOrStartX + i, y] = runLen;
+        }
+        else
+        {
+            int x = fixedOrStartX;
+            for (int i = 0; i < runLen; i++)
+                cache[x, fixedOrStartY + i] = runLen;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Cached GetRunLengths — O(1) lookup, auto-rebuilds if stale
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// O(1) run-length query. Auto-rebuilds the cache if it was
+    /// invalidated since the last build.
+    /// </summary>
+    public (int hLen, int vLen) GetRunLengths(int x, int y)
+    {
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return (0, 0);
+        if (board.Holes[x, y] || !IsNormalMatchable(board.GridData[x, y])) return (0, 0);
+
+        EnsureRunCache();
+
+        return (_hRunCache[x, y], _vRunCache[x, y]);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  2×2 helpers (using cached run lengths)
+    // ─────────────────────────────────────────────────────────────
+
+    private bool IsHigherPriorityRunAt(int x, int y)
+    {
+        var (hLen, vLen) = GetRunLengths(x, y);
+        int best = hLen > vLen ? hLen : vLen;
+        return best >= 4 || (hLen >= 3 && vLen >= 3);
+    }
+
+    private bool SquareOverlapsHigherPriorityRun(int sx, int sy)
+    {
+        if (sx < 0 || sx >= board.Width - 1 || sy < 0 || sy >= board.Height - 1)
+            return false;
+
+        return IsHigherPriorityRunAt(sx, sy)
+            || IsHigherPriorityRunAt(sx + 1, sy)
+            || IsHigherPriorityRunAt(sx, sy + 1)
+            || IsHigherPriorityRunAt(sx + 1, sy + 1);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  FindAllMatches — MAIN HOT PATH
+    // ─────────────────────────────────────────────────────────────
+
+    public HashSet<TileData> FindAllMatches()
+    {
+        var result = new HashSet<TileData>();
+
+        // Always force-rebuild — this is the authoritative entry point
+        RebuildRunCache();
+
+        // ── Horizontal matches ──
+        for (int y = 0; y < board.Height; y++)
+        {
+            _runTilesBuffer.Clear();
+            int run = 0;
+            TileType runType = default;
+
+            for (int x = 0; x < board.Width; x++)
+            {
+                var data = board.GridData[x, y];
+
+                if (board.Holes[x, y] || !IsNormalMatchable(data))
+                {
+                    FlushRun(run, _runTilesBuffer, result);
+                    run = 0;
+                    _runTilesBuffer.Clear();
+                    continue;
+                }
+
+                var t = data.Type;
+
+                if (run == 0)
+                {
+                    run = 1;
+                    runType = t;
+                    _runTilesBuffer.Add(data);
+                }
+                else if (t.Equals(runType))
+                {
+                    run++;
+                    _runTilesBuffer.Add(data);
+                }
+                else
+                {
+                    FlushRun(run, _runTilesBuffer, result);
+                    run = 1;
+                    runType = t;
+                    _runTilesBuffer.Clear();
+                    _runTilesBuffer.Add(data);
+                }
+            }
+
+            FlushRun(run, _runTilesBuffer, result);
+        }
+
+        // ── Vertical matches ──
+        for (int x = 0; x < board.Width; x++)
+        {
+            _runTilesBuffer.Clear();
+            int run = 0;
+            TileType runType = default;
+
+            for (int y = 0; y < board.Height; y++)
+            {
+                var data = board.GridData[x, y];
+
+                if (board.Holes[x, y] || !IsNormalMatchable(data))
+                {
+                    FlushRun(run, _runTilesBuffer, result);
+                    run = 0;
+                    _runTilesBuffer.Clear();
+                    continue;
+                }
+
+                var t = data.Type;
+
+                if (run == 0)
+                {
+                    run = 1;
+                    runType = t;
+                    _runTilesBuffer.Add(data);
+                }
+                else if (t.Equals(runType))
+                {
+                    run++;
+                    _runTilesBuffer.Add(data);
+                }
+                else
+                {
+                    FlushRun(run, _runTilesBuffer, result);
+                    run = 1;
+                    runType = t;
+                    _runTilesBuffer.Clear();
+                    _runTilesBuffer.Add(data);
+                }
+            }
+
+            FlushRun(run, _runTilesBuffer, result);
+        }
+
+        // ── 2×2 matches ──
+        Add2x2Matches(result);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        LogFindAllMatchesDebug(result);
+#endif
+
+        return result;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  2×2 match collection
+    // ─────────────────────────────────────────────────────────────
+
     public void Add2x2Matches(HashSet<TileData> result)
     {
         for (int y = 0; y < board.Height - 1; y++)
@@ -29,7 +354,6 @@ public class MatchFinder
                 if (board.Holes[x, y] || board.Holes[x + 1, y] || board.Holes[x, y + 1] || board.Holes[x + 1, y + 1])
                     continue;
 
-                // 4'lü / 5+ / T-L match ile çakışan kareyi 2x2 olarak alma
                 if (SquareOverlapsHigherPriorityRun(x, y))
                     continue;
 
@@ -55,8 +379,18 @@ public class MatchFinder
         }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    //  FindMatchesAt (per-tile query, used for swap validation)
+    // ─────────────────────────────────────────────────────────────
+
     public HashSet<TileView> FindMatchesAt(int x, int y)
     {
+        // Board may have changed since last FindAllMatches
+        // (e.g. after a swap, special activation, PatchBot flight).
+        // Invalidate so the lazy rebuild in GetRunLengths/
+        // SquareOverlapsHigherPriorityRun picks up current state.
+        InvalidateRunCache();
+
         var result = new HashSet<TileView>();
 
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
@@ -80,206 +414,87 @@ public class MatchFinder
         return result;
     }
 
-    public HashSet<TileData> FindAllMatches()
+    // ─────────────────────────────────────────────────────────────
+    //  DecideSpecialAt — uses cached run lengths with auto-rebuild
+    // ─────────────────────────────────────────────────────────────
+
+    public TileSpecial DecideSpecialAt(int x, int y)
     {
-        var result = new HashSet<TileData>();
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return TileSpecial.None;
+        if (!IsNormalMatchable(board.GridData[x, y])) return TileSpecial.None;
 
-        // Horizontal
-        for (int y = 0; y < board.Height; y++)
-        {
-            int run = 0;
-            TileType runType = default;
-            var runTiles = new List<TileData>();
+        // EnsureRunCache inside GetRunLengths handles staleness automatically.
+        // When called right after FindAllMatches (normal flow), cache is
+        // already valid → zero cost. When called after a board mutation
+        // (special chain, PatchBot arrival), cache rebuilds once.
+        var (hLen, vLen) = GetRunLengths(x, y);
 
-            for (int x = 0; x < board.Width; x++)
-            {
-                var data = board.GridData[x, y];
+        int best = hLen > vLen ? hLen : vLen;
 
-                if (board.Holes[x, y] || !IsNormalMatchable(data))
-                {
-                    FlushRun(run, runTiles, result);
-                    run = 0;
-                    runTiles.Clear();
-                    continue;
-                }
+        if (best >= 5) return TileSpecial.SystemOverride;
 
-                var t = data.Type;
+        if (hLen >= 3 && vLen >= 3) return TileSpecial.PulseCore;
 
-                if (run == 0)
-                {
-                    run = 1;
-                    runType = t;
-                    runTiles.Add(data);
-                }
-                else if (t.Equals(runType))
-                {
-                    run++;
-                    runTiles.Add(data);
-                }
-                else
-                {
-                    FlushRun(run, runTiles, result);
-                    run = 1;
-                    runType = t;
-                    runTiles.Clear();
-                    runTiles.Add(data);
-                }
-            }
+        if (best == 4) return (hLen >= vLen) ? TileSpecial.LineH : TileSpecial.LineV;
 
-            FlushRun(run, runTiles, result);
-        }
+        if (Has2x2At(x, y)) return TileSpecial.PatchBot;
 
-        // Vertical
-        for (int x = 0; x < board.Width; x++)
-        {
-            int run = 0;
-            TileType runType = default;
-            var runTiles = new List<TileData>();
-
-            for (int y = 0; y < board.Height; y++)
-            {
-                var data = board.GridData[x, y];
-
-                if (board.Holes[x, y] || !IsNormalMatchable(data))
-                {
-                    FlushRun(run, runTiles, result);
-                    run = 0;
-                    runTiles.Clear();
-                    continue;
-                }
-
-                var t = data.Type;
-
-                if (run == 0)
-                {
-                    run = 1;
-                    runType = t;
-                    runTiles.Add(data);
-                }
-                else if (t.Equals(runType))
-                {
-                    run++;
-                    runTiles.Add(data);
-                }
-                else
-                {
-                    FlushRun(run, runTiles, result);
-                    run = 1;
-                    runType = t;
-                    runTiles.Clear();
-                    runTiles.Add(data);
-                }
-            }
-
-            FlushRun(run, runTiles, result);
-        }
-
-        Add2x2Matches(result);
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        static string TileViewDebugString(TileView tv)
-        {
-            if (tv == null) return "·";
-            var baseChar = tv.GetTileType().ToString()[0];
-            var sp = tv.GetSpecial();
-            if (sp == TileSpecial.SystemOverride) return "S";
-            if (sp == TileSpecial.LineH) return $"{baseChar}-";
-            if (sp == TileSpecial.LineV) return $"{baseChar}|";
-            if (sp == TileSpecial.PatchBot) return $"{baseChar}B";
-            if (sp == TileSpecial.PulseCore) return $"{baseChar}*";
-            return baseChar.ToString();
-        }
-
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"[MatchFinder] FindAllMatches — {result.Count} matches found");
-        sb.AppendLine("  GridData snapshot (H=Hole, ·=null, else type):");
-        for (int dbgY = 0; dbgY < board.Height; dbgY++)
-        {
-            sb.Append($"  row{dbgY}: ");
-            for (int dbgX = 0; dbgX < board.Width; dbgX++)
-            {
-                if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
-                else if (board.GridData[dbgX, dbgY] == null) sb.Append("[· ]");
-                else sb.Append($"[{board.GridData[dbgX, dbgY].ToDebugString().PadRight(2)}]");
-            }
-            sb.AppendLine();
-        }
-
-        sb.AppendLine("  TileView snapshot (H=Hole, ·=null, else type):");
-        int mismatchCount = 0;
-        for (int dbgY = 0; dbgY < board.Height; dbgY++)
-        {
-            sb.Append($"  row{dbgY}: ");
-            for (int dbgX = 0; dbgX < board.Width; dbgX++)
-            {
-                if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
-                else sb.Append($"[{TileViewDebugString(board.Tiles[dbgX, dbgY]).PadRight(2)}]");
-            }
-            sb.AppendLine();
-        }
-
-        sb.AppendLine("  GridData vs TileView mismatch scan:");
-        for (int dbgY = 0; dbgY < board.Height; dbgY++)
-        {
-            for (int dbgX = 0; dbgX < board.Width; dbgX++)
-            {
-                if (board.Holes[dbgX, dbgY])
-                    continue;
-
-                var gd = board.GridData[dbgX, dbgY];
-                var tv = board.Tiles[dbgX, dbgY];
-
-                if (gd == null && tv == null)
-                    continue;
-
-                bool mismatch = false;
-                if (gd == null || tv == null)
-                {
-                    mismatch = true;
-                }
-                else
-                {
-                    if (!gd.Type.Equals(tv.GetTileType())) mismatch = true;
-                    if (gd.Special != tv.GetSpecial()) mismatch = true;
-                }
-
-                if (!mismatch)
-                    continue;
-
-                mismatchCount++;
-                string gdStr = gd != null ? gd.ToDebugString() : "·";
-                string tvStr = TileViewDebugString(tv);
-                sb.AppendLine($"    ({dbgX},{dbgY}) GD={gdStr} TV={tvStr} | GD_null={gd == null} TV_null={tv == null}");
-            }
-        }
-        sb.AppendLine($"  Mismatch count: {mismatchCount}");
-
-        if (result.Count > 0)
-        {
-            sb.AppendLine("  Matched cells:");
-            foreach (var m in result)
-                sb.AppendLine($"    ({m.X},{m.Y}) {m.Type}");
-        }
-        Debug.Log(sb.ToString());
-#endif
-
-        return result;
+        return TileSpecial.None;
     }
 
-    public void Add2x2Candidates(HashSet<TileView> candidates, int x, int y)
+    // ─────────────────────────────────────────────────────────────
+    //  Has2x2At
+    // ─────────────────────────────────────────────────────────────
+
+    public bool Has2x2At(int x, int y)
     {
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
-            return;
+            return false;
 
-        if (board.Holes[x, y])
-            return;
+        if (!IsNormalMatchable(board.GridData[x, y]))
+            return false;
 
-        var center = board.Tiles[x, y];
-        if (!IsNormalMatchable(center))
-            return;
+        var t = board.GridData[x, y].Type;
 
-        Add2x2CandidatesOfType(candidates, x, y, center.GetTileType());
+        for (int ox = -1; ox <= 0; ox++)
+        {
+            for (int oy = -1; oy <= 0; oy++)
+            {
+                int sx = x + ox;
+                int sy = y + oy;
+
+                if (sx < 0 || sx >= board.Width - 1 || sy < 0 || sy >= board.Height - 1)
+                    continue;
+
+                if (board.Holes[sx, sy] || board.Holes[sx + 1, sy] || board.Holes[sx, sy + 1] || board.Holes[sx + 1, sy + 1])
+                    continue;
+
+                if (SquareOverlapsHigherPriorityRun(sx, sy))
+                    continue;
+
+                var a = board.GridData[sx, sy];
+                var b = board.GridData[sx + 1, sy];
+                var c = board.GridData[sx, sy + 1];
+                var d = board.GridData[sx + 1, sy + 1];
+
+                if (!IsNormalMatchable(a) || !IsNormalMatchable(b) || !IsNormalMatchable(c) || !IsNormalMatchable(d))
+                    continue;
+
+                if (!a.Type.Equals(t)) continue;
+                if (!b.Type.Equals(t)) continue;
+                if (!c.Type.Equals(t)) continue;
+                if (!d.Type.Equals(t)) continue;
+
+                return true;
+            }
+        }
+
+        return false;
     }
+
+    // ─────────────────────────────────────────────────────────────
+    //  HasAnyRunAtLeast — early-exit scan (no cache needed)
+    // ─────────────────────────────────────────────────────────────
 
     public bool HasAnyRunAtLeast(int minLen)
     {
@@ -364,131 +579,9 @@ public class MatchFinder
         return false;
     }
 
-    public (int hLen, int vLen) GetRunLengths(int x, int y)
-    {
-        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return (0, 0);
-        if (board.Holes[x, y] || !IsNormalMatchable(board.GridData[x, y])) return (0, 0);
-
-        TileType type = board.GridData[x, y].Type;
-
-        int h = 1;
-        int lx = x - 1;
-        while (lx >= 0 && !board.Holes[lx, y] && IsNormalMatchable(board.GridData[lx, y]) && board.GridData[lx, y].Type.Equals(type))
-        {
-            h++;
-            lx--;
-        }
-
-        int rx = x + 1;
-        while (rx < board.Width && !board.Holes[rx, y] && IsNormalMatchable(board.GridData[rx, y]) && board.GridData[rx, y].Type.Equals(type))
-        {
-            h++;
-            rx++;
-        }
-
-        int v = 1;
-        int uy = y - 1;
-        while (uy >= 0 && !board.Holes[x, uy] && IsNormalMatchable(board.GridData[x, uy]) && board.GridData[x, uy].Type.Equals(type))
-        {
-            v++;
-            uy--;
-        }
-
-        int dy = y + 1;
-        while (dy < board.Height && !board.Holes[x, dy] && IsNormalMatchable(board.GridData[x, dy]) && board.GridData[x, dy].Type.Equals(type))
-        {
-            v++;
-            dy++;
-        }
-
-        return (h, v);
-    }
-
-    private bool IsHigherPriorityRunAt(int x, int y)
-    {
-        var (hLen, vLen) = GetRunLengths(x, y);
-        int best = Mathf.Max(hLen, vLen);
-
-        // 4'lü, 5+ ve T/L (PulseCore) 2x2'den daha yüksek öncelikli
-        return best >= 4 || (hLen >= 3 && vLen >= 3);
-    }
-
-    private bool SquareOverlapsHigherPriorityRun(int sx, int sy)
-    {
-        if (sx < 0 || sx >= board.Width - 1 || sy < 0 || sy >= board.Height - 1)
-            return false;
-
-        return IsHigherPriorityRunAt(sx, sy)
-            || IsHigherPriorityRunAt(sx + 1, sy)
-            || IsHigherPriorityRunAt(sx, sy + 1)
-            || IsHigherPriorityRunAt(sx + 1, sy + 1);
-    }
-    public TileSpecial DecideSpecialAt(int x, int y)
-    {
-        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return TileSpecial.None;
-        if (!IsNormalMatchable(board.GridData[x, y])) return TileSpecial.None;
-
-        var (hLen, vLen) = GetRunLengths(x, y);
-
-        int best = Mathf.Max(hLen, vLen);
-
-        if (best >= 5) return TileSpecial.SystemOverride;
-
-        if (hLen >= 3 && vLen >= 3) return TileSpecial.PulseCore;
-
-        if (best == 4) return (hLen >= vLen) ? TileSpecial.LineH : TileSpecial.LineV;
-
-        if (Has2x2At(x, y)) return TileSpecial.PatchBot;
-
-        return TileSpecial.None;
-    }
-
-    public bool Has2x2At(int x, int y)
-    {
-        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
-            return false;
-
-        if (!IsNormalMatchable(board.GridData[x, y]))
-            return false;
-
-        var t = board.GridData[x, y].Type;
-
-        for (int ox = -1; ox <= 0; ox++)
-        {
-            for (int oy = -1; oy <= 0; oy++)
-            {
-                int sx = x + ox;
-                int sy = y + oy;
-
-                if (sx < 0 || sx >= board.Width - 1 || sy < 0 || sy >= board.Height - 1)
-                    continue;
-
-                if (board.Holes[sx, sy] || board.Holes[sx + 1, sy] || board.Holes[sx, sy + 1] || board.Holes[sx + 1, sy + 1])
-                    continue;
-
-                // Daha yüksek öncelikli run ile çakışıyorsa bu kareyi 2x2 sayma
-                if (SquareOverlapsHigherPriorityRun(sx, sy))
-                    continue;
-
-                var a = board.GridData[sx, sy];
-                var b = board.GridData[sx + 1, sy];
-                var c = board.GridData[sx, sy + 1];
-                var d = board.GridData[sx + 1, sy + 1];
-
-                if (!IsNormalMatchable(a) || !IsNormalMatchable(b) || !IsNormalMatchable(c) || !IsNormalMatchable(d))
-                    continue;
-
-                if (!a.Type.Equals(t)) continue;
-                if (!b.Type.Equals(t)) continue;
-                if (!c.Type.Equals(t)) continue;
-                if (!d.Type.Equals(t)) continue;
-
-                return true;
-            }
-        }
-
-        return false;
-    }
+    // ─────────────────────────────────────────────────────────────
+    //  Expand closure helpers (pooled snapshot buffers)
+    // ─────────────────────────────────────────────────────────────
 
     private void ExpandMatchGroupClosure(HashSet<TileView> result, TileType type)
     {
@@ -507,11 +600,12 @@ public class MatchFinder
 
     private void ExpandBy2x2(HashSet<TileView> result, TileType type)
     {
-        var snapshot = new List<TileView>(result);
+        _snapshotBuffer.Clear();
+        _snapshotBuffer.AddRange(result);
 
-        for (int i = 0; i < snapshot.Count; i++)
+        for (int i = 0; i < _snapshotBuffer.Count; i++)
         {
-            var tile = snapshot[i];
+            var tile = _snapshotBuffer[i];
             if (tile == null) continue;
 
             Add2x2CandidatesOfType(result, tile.X, tile.Y, type);
@@ -520,16 +614,36 @@ public class MatchFinder
 
     private void ExpandByRuns(HashSet<TileView> result, TileType type)
     {
-        var snapshot = new List<TileView>(result);
+        _snapshotBuffer.Clear();
+        _snapshotBuffer.AddRange(result);
 
-        for (int i = 0; i < snapshot.Count; i++)
+        for (int i = 0; i < _snapshotBuffer.Count; i++)
         {
-            var tile = snapshot[i];
+            var tile = _snapshotBuffer[i];
             if (tile == null) continue;
 
             AddHorizontalRunIfAny(result, tile.X, tile.Y, type);
             AddVerticalRunIfAny(result, tile.X, tile.Y, type);
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  2×2 candidate helpers (TileView-based, for FindMatchesAt)
+    // ─────────────────────────────────────────────────────────────
+
+    public void Add2x2Candidates(HashSet<TileView> candidates, int x, int y)
+    {
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return;
+
+        if (board.Holes[x, y])
+            return;
+
+        var center = board.Tiles[x, y];
+        if (!IsNormalMatchable(center))
+            return;
+
+        Add2x2CandidatesOfType(candidates, x, y, center.GetTileType());
     }
 
     private void Add2x2CandidatesOfType(HashSet<TileView> candidates, int x, int y, TileType type)
@@ -547,7 +661,6 @@ public class MatchFinder
                 if (board.Holes[sx, sy] || board.Holes[sx + 1, sy] || board.Holes[sx, sy + 1] || board.Holes[sx + 1, sy + 1])
                     continue;
 
-                // 4'lü / 5+ / T-L ile çakışan kare 2x2 candidate olmasın
                 if (SquareOverlapsHigherPriorityRun(sx, sy))
                     continue;
 
@@ -572,6 +685,10 @@ public class MatchFinder
         }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    //  Run helpers (pooled _runViewBuffer)
+    // ─────────────────────────────────────────────────────────────
+
     private void AddHorizontalRunIfAny(HashSet<TileView> result, int x, int y, TileType type)
     {
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
@@ -584,26 +701,27 @@ public class MatchFinder
         if (!IsNormalMatchable(center) || !center.GetTileType().Equals(type))
             return;
 
-        var run = new List<TileView> { center };
+        _runViewBuffer.Clear();
+        _runViewBuffer.Add(center);
 
         int lx = x - 1;
         while (lx >= 0 && !board.Holes[lx, y] && IsNormalMatchable(board.Tiles[lx, y]) && board.Tiles[lx, y].GetTileType().Equals(type))
         {
-            run.Add(board.Tiles[lx, y]);
+            _runViewBuffer.Add(board.Tiles[lx, y]);
             lx--;
         }
 
         int rx = x + 1;
         while (rx < board.Width && !board.Holes[rx, y] && IsNormalMatchable(board.Tiles[rx, y]) && board.Tiles[rx, y].GetTileType().Equals(type))
         {
-            run.Add(board.Tiles[rx, y]);
+            _runViewBuffer.Add(board.Tiles[rx, y]);
             rx++;
         }
 
-        if (run.Count >= 3)
+        if (_runViewBuffer.Count >= 3)
         {
-            for (int i = 0; i < run.Count; i++)
-                result.Add(run[i]);
+            for (int i = 0; i < _runViewBuffer.Count; i++)
+                result.Add(_runViewBuffer[i]);
         }
     }
 
@@ -619,26 +737,27 @@ public class MatchFinder
         if (!IsNormalMatchable(center) || !center.GetTileType().Equals(type))
             return;
 
-        var run = new List<TileView> { center };
+        _runViewBuffer.Clear();
+        _runViewBuffer.Add(center);
 
         int uy = y - 1;
         while (uy >= 0 && !board.Holes[x, uy] && IsNormalMatchable(board.Tiles[x, uy]) && board.Tiles[x, uy].GetTileType().Equals(type))
         {
-            run.Add(board.Tiles[x, uy]);
+            _runViewBuffer.Add(board.Tiles[x, uy]);
             uy--;
         }
 
         int dy = y + 1;
         while (dy < board.Height && !board.Holes[x, dy] && IsNormalMatchable(board.Tiles[x, dy]) && board.Tiles[x, dy].GetTileType().Equals(type))
         {
-            run.Add(board.Tiles[x, dy]);
+            _runViewBuffer.Add(board.Tiles[x, dy]);
             dy++;
         }
 
-        if (run.Count >= 3)
+        if (_runViewBuffer.Count >= 3)
         {
-            for (int i = 0; i < run.Count; i++)
-                result.Add(run[i]);
+            for (int i = 0; i < _runViewBuffer.Count; i++)
+                result.Add(_runViewBuffer[i]);
         }
     }
 
@@ -650,4 +769,100 @@ public class MatchFinder
                 result.Add(runTiles[i]);
         }
     }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Debug logging — isolated so release builds pay zero cost
+    // ─────────────────────────────────────────────────────────────
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+    private void LogFindAllMatchesDebug(HashSet<TileData> result)
+    {
+        static string TileViewDebugString(TileView tv)
+        {
+            if (tv == null) return "·";
+            var baseChar = tv.GetTileType().ToString()[0];
+            var sp = tv.GetSpecial();
+            if (sp == TileSpecial.SystemOverride) return "S";
+            if (sp == TileSpecial.LineH) return $"{baseChar}-";
+            if (sp == TileSpecial.LineV) return $"{baseChar}|";
+            if (sp == TileSpecial.PatchBot) return $"{baseChar}B";
+            if (sp == TileSpecial.PulseCore) return $"{baseChar}*";
+            return baseChar.ToString();
+        }
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"[MatchFinder] FindAllMatches — {result.Count} matches found");
+        sb.AppendLine("  GridData snapshot (H=Hole, ·=null, else type):");
+        for (int dbgY = 0; dbgY < board.Height; dbgY++)
+        {
+            sb.Append($"  row{dbgY}: ");
+            for (int dbgX = 0; dbgX < board.Width; dbgX++)
+            {
+                if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
+                else if (board.GridData[dbgX, dbgY] == null) sb.Append("[· ]");
+                else sb.Append($"[{board.GridData[dbgX, dbgY].ToDebugString().PadRight(2)}]");
+            }
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("  TileView snapshot (H=Hole, ·=null, else type):");
+        int mismatchCount = 0;
+        for (int dbgY = 0; dbgY < board.Height; dbgY++)
+        {
+            sb.Append($"  row{dbgY}: ");
+            for (int dbgX = 0; dbgX < board.Width; dbgX++)
+            {
+                if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
+                else sb.Append($"[{TileViewDebugString(board.Tiles[dbgX, dbgY]).PadRight(2)}]");
+            }
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("  GridData vs TileView mismatch scan:");
+        for (int dbgY = 0; dbgY < board.Height; dbgY++)
+        {
+            for (int dbgX = 0; dbgX < board.Width; dbgX++)
+            {
+                if (board.Holes[dbgX, dbgY])
+                    continue;
+
+                var gd = board.GridData[dbgX, dbgY];
+                var tv = board.Tiles[dbgX, dbgY];
+
+                if (gd == null && tv == null)
+                    continue;
+
+                bool mismatch = false;
+                if (gd == null || tv == null)
+                {
+                    mismatch = true;
+                }
+                else
+                {
+                    if (!gd.Type.Equals(tv.GetTileType())) mismatch = true;
+                    if (gd.Special != tv.GetSpecial()) mismatch = true;
+                }
+
+                if (!mismatch)
+                    continue;
+
+                mismatchCount++;
+                string gdStr = gd != null ? gd.ToDebugString() : "·";
+                string tvStr = TileViewDebugString(tv);
+                sb.AppendLine($"    ({dbgX},{dbgY}) GD={gdStr} TV={tvStr} | GD_null={gd == null} TV_null={tv == null}");
+            }
+        }
+        sb.AppendLine($"  Mismatch count: {mismatchCount}");
+
+        if (result.Count > 0)
+        {
+            sb.AppendLine("  Matched cells:");
+            foreach (var m in result)
+                sb.AppendLine($"    ({m.X},{m.Y}) {m.Type}");
+        }
+        Debug.Log(sb.ToString());
+    }
+#endif
 }
