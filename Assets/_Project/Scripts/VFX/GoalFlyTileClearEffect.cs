@@ -3,6 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Clear effect: spawns a ghost that flies to the matching TopHUD goal slot.
+/// Also fires break particle FX so every tile clear has a visual pop.
 /// Only used when ClearAnimationMode.GoalFlyToHud is requested.
 /// </summary>
 public sealed class GoalFlyTileClearEffect : ITileClearEffect
@@ -25,6 +26,9 @@ public sealed class GoalFlyTileClearEffect : ITileClearEffect
 
         if (tile == null || board == null)
             yield break;
+
+        // Break particle fires for ALL clears — goal fly or not
+        board.BreakFx?.PlayTileBreak(tile);
 
         var hud = board.TopHud;
         var fx = board.GoalFlyFx;

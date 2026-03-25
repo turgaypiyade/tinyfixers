@@ -15,11 +15,15 @@ public class BoardVfxService
         this.board = board;
     }
 
-    public float PlaySystemOverrideComboVfxAndGetDuration(OverrideComboController vfx)
+    public float PlaySystemOverrideComboVfxAndGetDuration(
+        OverrideComboController vfx,
+        Sprite overrideSpriteA,
+        Sprite overrideSpriteB,
+        Sprite mergedSprite = null)
     {
         if (vfx == null) return 0f;
         vfx.gameObject.SetActive(true);
-        vfx.Play();
+        vfx.Play(overrideSpriteA, overrideSpriteB, mergedSprite);
         float duration = vfx.GetTotalDuration();
         SystemOverrideBehaviorEvents.EmitOverrideComboVfxPlayed(duration);
         return duration;

@@ -469,7 +469,12 @@ public class BoardController : MonoBehaviour
     //  VFX Delegation
     // ═══════════════════════════════════════════════════════════════
 
-    public float PlaySystemOverrideComboVfxAndGetDuration() => boardVfxService.PlaySystemOverrideComboVfxAndGetDuration(systemOverrideComboVfx);
+    public float PlaySystemOverrideComboVfxAndGetDuration()
+    {
+        Sprite sprA = lastSwapA != null ? GetOverrideIcon(lastSwapA.GetTileType()) : null;
+        Sprite sprB = lastSwapB != null ? GetOverrideIcon(lastSwapB.GetTileType()) : null;
+        return boardVfxService.PlaySystemOverrideComboVfxAndGetDuration(systemOverrideComboVfx, sprA, sprB);
+    }
     public void PlayPulseEmitterComboVfxAtCell(int x, int y) => boardVfxService.PlayPulseEmitterComboVfxAtCell(pulseEmitterComboVfx, vfxSpace, x, y);
     public void PlayPulsePulseExplosionVfxAtCell(int x, int y) => boardVfxService.PlayPulsePulseExplosionVfxAtCell(pulsePulseExplosionPrefab, vfxSpace, pulsePulseExplosionLifetime, x, y);
     internal HashSet<Vector2Int> BuildPulseEmitterTargets(int cx, int cy) => boardVfxService.BuildPulseEmitterTargets(cx, cy);
@@ -934,7 +939,7 @@ public class BoardController : MonoBehaviour
             if (safety > MaxResolveLoops) yield break;
             CurrentResolvePass = safety;
             var matches = matchFinder.FindAllMatches();
-            
+
             if (matches.Count > 0)
             {
                 var matchTiles = new HashSet<TileView>();

@@ -19,7 +19,7 @@ MonoBehaviour:
   lineH: {fileID: -1864291419074630407, guid: b77f3bf70ccdbfe4991f3b64171f1b2f, type: 3}
   lineV: {fileID: 2922673007561258990, guid: 193a16943f59e0048bd2abda04875de5, type: 3}
   patchBot: {fileID: 6553379424239023069, guid: fc95b24f6b35f409eb40e07fd12e0be8, type: 3}
-  pulseCore: {fileID: -7436901959982612844, guid: 2106a6a782d17ff419b60933b6a39c72, type: 3}
+  pulseCore: {fileID: 775674652969251136, guid: fda4d5a44613545f0a69986fce85c4d6, type: 3}
   overrideRed: {fileID: 2789401260304263213, guid: c3a8b514c271d423a8b244956105e471, type: 3}
   overrideYellow: {fileID: 2619745284460239960, guid: 1ee04c023b6744671a13a4b6288e4c16, type: 3}
   overrideBlue: {fileID: 7842146363385098208, guid: b01b13ad3457545b494f352c26060846, type: 3}
