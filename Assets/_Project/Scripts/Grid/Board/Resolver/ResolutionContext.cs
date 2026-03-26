@@ -46,6 +46,7 @@ public class ResolutionContext
     public readonly List<Vector2Int> ImpactCells = new();
 
     public bool IsPulsePulseComboActive;
+    public bool IsPulseCoreActive;
     /// <summary>
     /// DTO for decoupling logic from visuals — pending override implant data.
     /// </summary>
@@ -88,6 +89,7 @@ public class ResolutionContext
     public void Reset()
     {
         IsPulsePulseComboActive = false;
+        IsPulseCoreActive = false;
         AffectedCells = new HashSet<Vector2Int>();
         Affected.Clear();
         Processed.Clear();

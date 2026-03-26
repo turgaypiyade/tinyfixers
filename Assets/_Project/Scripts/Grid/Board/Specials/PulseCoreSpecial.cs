@@ -147,8 +147,10 @@ public sealed class PulseCoreSpecial
         if (rt.EnqueueChainSpecials == null || rt.ProcessQueue == null)
             return;
 
+        rt.Context.IsPulseCoreActive = true;
         rt.EnqueueChainSpecials(rt.Context);
         rt.ProcessQueue(rt.Context);
+        rt.Context.IsPulseCoreActive = false;
     }
 
     private void Finalize(PulseCoreExecutionRuntime rt, PulseCoreExecutionResult result, int signalX, int signalY)

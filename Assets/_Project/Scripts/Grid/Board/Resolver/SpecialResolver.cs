@@ -452,6 +452,7 @@ public class SpecialResolver
                     ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
                 });
                 actions.AddRange(result.Actions);
+                DrainDeferredPulseComboOverrides(actions);
                 TraceSpecialChain("ResolveSpecialSwap.PulseCore", a, b);
                 board.IsSpecialActivationPhase = false;
                 return actions;
@@ -635,6 +636,7 @@ public class SpecialResolver
             });
 
             actions.AddRange(result.Actions);
+            DrainDeferredPulseComboOverrides(actions);
             TraceSpecialChain("ResolveSpecialSolo.PulseCore", specialTile, null);
             board.IsSpecialActivationPhase = false;
             return actions;

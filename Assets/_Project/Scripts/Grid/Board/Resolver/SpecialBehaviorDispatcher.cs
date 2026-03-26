@@ -334,6 +334,7 @@ public class SpecialBehaviorDispatcher
                         $"hasLine={ctx.HasLineActivation} " +
                         $"strikes={(ctx.LightningLineStrikes != null ? ctx.LightningLineStrikes.Count : -1)} " +
                         $"isPulsePulse={ctx.IsPulsePulseComboActive} " +
+                        $"isPulseCore={ctx.IsPulseCoreActive} " +
                         $"processed={ctx.Processed.Contains(cell)} " +
                         $"queued={ctx.Queued.Contains(cell)}");
 
@@ -365,6 +366,22 @@ public class SpecialBehaviorDispatcher
 
                         Debug.Log(
                             $"[OverrideDefer] reason=PulsePulse cell={cell} " +
+                            $"deferredAfter={ctx.DeferredPulseComboOverrideCells.Count}");
+
+                        break;
+                    }
+
+                    if (ctx.IsPulseCoreActive)
+                    {
+                        Debug.Log(
+                            $"[OverrideDefer] reason=PulseCore cell={cell} " +
+                            $"deferredBefore={ctx.DeferredPulseComboOverrideCells.Count}");
+
+                        if (!ctx.DeferredPulseComboOverrideCells.Contains(cell))
+                            ctx.DeferredPulseComboOverrideCells.Add(cell);
+
+                        Debug.Log(
+                            $"[OverrideDefer] reason=PulseCore cell={cell} " +
                             $"deferredAfter={ctx.DeferredPulseComboOverrideCells.Count}");
 
                         break;
