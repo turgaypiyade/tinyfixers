@@ -21,6 +21,7 @@ public class MatchClearAction : BoardAction
     private bool isSpecialActivationPhase;
     private IReadOnlyList<Vector2Int> impactCells;
     private bool isBlocking;
+    private bool enqueueCascadeOnComplete;
     public override bool Blocking => isBlocking;
     // NEW: future-facing generic presentation payload
     public ClearPresentationPlan PresentationPlan { get; }
@@ -43,7 +44,8 @@ public class MatchClearAction : BoardAction
         bool isSpecialPhase = false,
         ClearPresentationPlan presentationPlan = null,
         IReadOnlyList<Vector2Int> impactCells = null,
-        bool isBlocking = true)
+        bool isBlocking = true,
+        bool enqueueCascadeOnComplete = false)
     {
         this.matches = matches != null ? new HashSet<TileView>(matches) : new HashSet<TileView>();
         this.doShake = doShake;
@@ -63,6 +65,7 @@ public class MatchClearAction : BoardAction
         this.PresentationPlan = presentationPlan;
         this.impactCells = impactCells;
         this.isBlocking = isBlocking;
+        this.enqueueCascadeOnComplete = enqueueCascadeOnComplete;
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
@@ -96,6 +99,10 @@ public class MatchClearAction : BoardAction
             if (isSpecialActivationPhase)
                 sequencer.Board.IsSpecialActivationPhase = prevSpecial;
 
+            // Clear biter bitmez cascade'i hemen enqueue et
+            // → ActionSequencer.PlaySequence döngüsü aynı frame'de yakalar, boş board görünmez
+            EnqueueCascadeIfNeeded(sequencer);
+
             if (!isBlocking)
                 sequencer.Board.ActiveBackgroundJobs--;
 
@@ -111,8 +118,21 @@ public class MatchClearAction : BoardAction
 
         if (isSpecialActivationPhase)
             sequencer.Board.IsSpecialActivationPhase = prevSpecial;
-            
+
+        // Clear biter bitmez cascade'i hemen enqueue et
+        EnqueueCascadeIfNeeded(sequencer);
+
         if (!isBlocking)
             sequencer.Board.ActiveBackgroundJobs--;
+    }
+
+    private void EnqueueCascadeIfNeeded(ActionSequencer sequencer)
+    {
+        if (!enqueueCascadeOnComplete)
+            return;
+
+        var cascades = sequencer.Board.CascadeLogic.CalculateCascades();
+        if (cascades.Count > 0)
+            sequencer.Enqueue(cascades);
     }
 }

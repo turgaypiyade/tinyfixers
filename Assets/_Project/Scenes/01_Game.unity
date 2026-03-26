@@ -1779,8 +1779,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.30722892}
-  m_AnchorMax: {x: 0.53972256, y: 7.942771}
+  m_AnchorMin: {x: 0, y: 0.91071427}
+  m_AnchorMax: {x: 0.53972256, y: 23.544643}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8548,8 +8548,8 @@ MonoBehaviour:
   iconLibrary: {fileID: 0}
   levelData: {fileID: 0}
   swapDuration: 0.03
-  fallDuration: 0.16
-  clearDuration: 0.04
+  fallDuration: 0.14
+  clearDuration: 0.03
   spawnStartOffsetY: -2
   swapDurationMultiplier: 1
   fallColumnStep: 0.008
@@ -8606,8 +8606,8 @@ MonoBehaviour:
   fallSettleDuration: 0.04
   fallSettleStrength: 0.08
   fallCascadeStep: 0.01
-  preClearDelay: 0.025
-  shakeDuration: 0.05
+  preClearDelay: 0.01
+  shakeDuration: 0.03
   shakeStrength: 1
   shakeTarget: {fileID: 1939332386}
   patchBotPulseComboSize: 4
@@ -8671,7 +8671,7 @@ MonoBehaviour:
       m_RotationOrder: 4
   specialChainDurationMultiplier: 0.4
   pulseImpactDelayStep: 0.012
-  pulseImpactAnimTime: 0.1
+  pulseImpactAnimTime: 0.05
   boardVfxPlayer: {fileID: 874639811}
   lightningSpawner: {fileID: 1732843067}
   lineTravelPlayer: {fileID: 1244073440}

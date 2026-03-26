@@ -835,7 +835,7 @@ public class BoardController : MonoBehaviour
                             candidates.Remove(created);
                         }
 
-                        // Merge animasyonlarını non-blocking başlat
+                        // Merge animasyonlarını non-blocking başlat (fire-and-forget)
                         // Clear animasyonuyla paralel çalışır → board donmaz
                         if (boardAnimatorRef != null)
                         {
@@ -931,8 +931,8 @@ public class BoardController : MonoBehaviour
     {
         isSpecialActivationPhase = false;
 
-        // Boş hücreleri döngüye girmeden önce doldur — ayrı coroutine çağırmak
-        // yerine burada yaparak frame boşluğunu ortadan kaldır
+        // Boş hücreleri döngüye girmeden önce doldur
+        // → ayrı coroutine çağırmak yerine burada yaparak frame boşluğunu kaldır
         if (resolveEmptyCellsFirst)
         {
             var initialCascades = cascadeLogic.CalculateCascades();
@@ -989,8 +989,7 @@ public class BoardController : MonoBehaviour
             break;
         }
 
-        // Tüm resolve döngüsü bittikten sonra TEK SEFER çağrılır
-        // → passlar arasında visual flash oluşmaz
+        // Tüm döngü bittikten sonra TEK SEFER çağır — passlar arası flash yok
         RestoreAllTilePresentation();
     }
 
@@ -1080,27 +1079,21 @@ public class BoardController : MonoBehaviour
         ClearPresentationPlan presentationPlan =
             BuildCreatedSpecialPresentationPlan(createdSpecialTiles, matchTiles, doShake);
 
-        // ── 3. Clear — activation olduysa special'lar da silinebilmeli ──
+        // ── 3. Clear + Cascade — MatchClearAction biter bitmez cascade'i kendi enqueue eder
+        //    → ActionSequencer.PlaySequence döngüsü aynı frame'de yakalar
+        //    → boş board görünmez, clear→fall akışı kesintisiz
         actionSequencer.Enqueue(new MatchClearAction(
             matchTiles,
             doShake,
             isSpecialPhase: allowSpecialActivation && hasAnySpecialActivation,
-            presentationPlan: presentationPlan));
+            presentationPlan: presentationPlan,
+            enqueueCascadeOnComplete: true));
 
         while (actionSequencer.IsPlaying)
             yield return null;
 
-        var cascadeActions = cascadeLogic.CalculateCascades();
-        if (cascadeActions.Count > 0)
-        {
-            actionSequencer.Enqueue(cascadeActions);
-            while (actionSequencer.IsPlaying)
-                yield return null;
-        }
-
         // NOT: RestoreAllTilePresentation burada yok.
-        // ResolveBoard döngüsü sonunda tek seferde çağrılır,
-        // böylece passlar arasında visual flash oluşmaz.
+        // ResolveBoard döngüsü sonunda tek seferde çağrılır.
         onResult?.Invoke(true);
     }
 
@@ -1183,8 +1176,7 @@ public class BoardController : MonoBehaviour
             actionSequencer.Enqueue(cascades);
             while (actionSequencer.IsPlaying) yield return null;
         }
-        // NOT: RestoreAllTilePresentation kaldırıldı.
-        // ResolveBoard döngüsü sonunda ele alınır.
+        // NOT: RestoreAllTilePresentation kaldırıldı — ResolveBoard ele alır.
     }
     // ═══════════════════════════════════════════════════════════════
     //  Obstacle Handling
