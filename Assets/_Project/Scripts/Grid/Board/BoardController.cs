@@ -830,23 +830,18 @@ public class BoardController : MonoBehaviour
 
                             createdTiles.Add(created);
 
-                            // Oluşan special contributor/clear havuzundan çıksın
                             normalMatches.Remove(created);
                             candidates.Remove(created);
                         }
 
-                        // Merge animasyonlarını non-blocking başlat (fire-and-forget)
-                        // Clear animasyonuyla paralel çalışır → board donmaz
+                        // Fire-and-forget: merge clear ile paralel çalışır
                         if (boardAnimatorRef != null)
                         {
                             foreach (var created in createdTiles)
                             {
-                                if (created == null)
-                                    continue;
-
+                                if (created == null) continue;
                                 var creationContributors = new HashSet<TileView>(normalMatches);
                                 creationContributors.RemoveWhere(t => t == null || t == created || t.GetSpecial() != TileSpecial.None);
-
                                 if (creationContributors.Count > 0)
                                     StartCoroutine(boardAnimatorRef.PlaySpecialCreationMerge(created, creationContributors));
                             }
@@ -895,7 +890,7 @@ public class BoardController : MonoBehaviour
             actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb));
             yield return AnimateQueuedActions();
 
-            // ── Adım 3: Cascade + resolve — tek senkron akış
+            // ── Adım 3: Cascade + resolve
             yield return ResolveBoard(allowSpecialActivation: false, resolveEmptyCellsFirst: true);
             EndBusy();
             yield break;
@@ -931,8 +926,6 @@ public class BoardController : MonoBehaviour
     {
         isSpecialActivationPhase = false;
 
-        // Boş hücreleri döngüye girmeden önce doldur
-        // → ayrı coroutine çağırmak yerine burada yaparak frame boşluğunu kaldır
         if (resolveEmptyCellsFirst)
         {
             var initialCascades = cascadeLogic.CalculateCascades();
@@ -989,7 +982,6 @@ public class BoardController : MonoBehaviour
             break;
         }
 
-        // Tüm döngü bittikten sonra TEK SEFER çağır — passlar arası flash yok
         RestoreAllTilePresentation();
     }
 
@@ -1079,9 +1071,7 @@ public class BoardController : MonoBehaviour
         ClearPresentationPlan presentationPlan =
             BuildCreatedSpecialPresentationPlan(createdSpecialTiles, matchTiles, doShake);
 
-        // ── 3. Clear + Cascade — MatchClearAction biter bitmez cascade'i kendi enqueue eder
-        //    → ActionSequencer.PlaySequence döngüsü aynı frame'de yakalar
-        //    → boş board görünmez, clear→fall akışı kesintisiz
+        // ── 3. Clear — activation olduysa special'lar da silinebilmeli ──
         actionSequencer.Enqueue(new MatchClearAction(
             matchTiles,
             doShake,
@@ -1092,8 +1082,6 @@ public class BoardController : MonoBehaviour
         while (actionSequencer.IsPlaying)
             yield return null;
 
-        // NOT: RestoreAllTilePresentation burada yok.
-        // ResolveBoard döngüsü sonunda tek seferde çağrılır.
         onResult?.Invoke(true);
     }
 
@@ -1176,7 +1164,6 @@ public class BoardController : MonoBehaviour
             actionSequencer.Enqueue(cascades);
             while (actionSequencer.IsPlaying) yield return null;
         }
-        // NOT: RestoreAllTilePresentation kaldırıldı — ResolveBoard ele alır.
     }
     // ═══════════════════════════════════════════════════════════════
     //  Obstacle Handling
@@ -1262,10 +1249,13 @@ public class BoardController : MonoBehaviour
 
     internal float GetFallDurationForDistance(int cellDistance)
     {
-        float baseDur = FallDurationWithMultiplier;
+        // Yerçekimi modeli: süre ∝ √mesafe
+        // 1 cell=0.07s, 4 cell=0.14s, 9 cell=0.21s → hız orantılı
         int d = Mathf.Max(1, cellDistance);
-        float distDur = Mathf.Clamp(d * 0.06f, 0.06f, 0.22f);
-        return Mathf.Max(0.04f, Mathf.Min(baseDur, distDur) * Mathf.Max(0.25f, GetCascadeFallSpeedMultiplier()));
+        float baseDur = FallDurationWithMultiplier;
+        float perCell = baseDur * 0.5f;
+        float duration = perCell * Mathf.Sqrt(d);
+        return Mathf.Max(0.04f, duration * Mathf.Max(0.25f, GetCascadeFallSpeedMultiplier()));
     }
 
     internal float GetClearDurationForCurrentPass() => Mathf.Max(0.03f, ApplySpecialChainTempo(ClearDuration * GetCascadeClearSpeedMultiplier()));

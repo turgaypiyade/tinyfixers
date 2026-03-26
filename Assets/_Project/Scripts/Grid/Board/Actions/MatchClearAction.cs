@@ -99,8 +99,6 @@ public class MatchClearAction : BoardAction
             if (isSpecialActivationPhase)
                 sequencer.Board.IsSpecialActivationPhase = prevSpecial;
 
-            // Clear biter bitmez cascade'i hemen enqueue et
-            // → ActionSequencer.PlaySequence döngüsü aynı frame'de yakalar, boş board görünmez
             EnqueueCascadeIfNeeded(sequencer);
 
             if (!isBlocking)
@@ -119,7 +117,6 @@ public class MatchClearAction : BoardAction
         if (isSpecialActivationPhase)
             sequencer.Board.IsSpecialActivationPhase = prevSpecial;
 
-        // Clear biter bitmez cascade'i hemen enqueue et
         EnqueueCascadeIfNeeded(sequencer);
 
         if (!isBlocking)
@@ -128,9 +125,7 @@ public class MatchClearAction : BoardAction
 
     private void EnqueueCascadeIfNeeded(ActionSequencer sequencer)
     {
-        if (!enqueueCascadeOnComplete)
-            return;
-
+        if (!enqueueCascadeOnComplete) return;
         var cascades = sequencer.Board.CascadeLogic.CalculateCascades();
         if (cascades.Count > 0)
             sequencer.Enqueue(cascades);

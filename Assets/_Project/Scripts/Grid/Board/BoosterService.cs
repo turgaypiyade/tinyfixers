@@ -96,16 +96,10 @@ public class BoosterService
                 includeAdjacentOverTileBlockerDamage: false,
                 lightningOriginTile: target, lightningOriginCell: targetCell,
                 lightningVisualTargets: initialLightningTargets,
-                lightningLineStrikes: lightningLineStrikes));
+                lightningLineStrikes: lightningLineStrikes,
+                enqueueCascadeOnComplete: true));
             while (actionSequencer.IsPlaying) yield return null;
 
-            var cascadeActions = cascadeLogic.CalculateCascades();
-            if (cascadeActions.Count > 0)
-            {
-                actionSequencer.Enqueue(cascadeActions);
-                while (actionSequencer.IsPlaying) yield return null;
-            }
-            yield return board.ResolveEmptyPlayableCellsWithoutMatch();
             yield return board.ResolveBoardPublic();
         }
 
@@ -121,15 +115,15 @@ public class BoosterService
         var types = new List<TileType>();
 
         for (int x = 0; x < board.Width; x++)
-        for (int y = 0; y < board.Height; y++)
-        {
-            if (board.Holes[x, y]) continue;
-            var tile = board.Tiles[x, y];
-            if (tile == null) continue;
-            if (tile.GetSpecial() != TileSpecial.None) continue;
-            activeTiles.Add(tile);
-            types.Add(tile.GetTileType());
-        }
+            for (int y = 0; y < board.Height; y++)
+            {
+                if (board.Holes[x, y]) continue;
+                var tile = board.Tiles[x, y];
+                if (tile == null) continue;
+                if (tile.GetSpecial() != TileSpecial.None) continue;
+                activeTiles.Add(tile);
+                types.Add(tile.GetTileType());
+            }
 
         for (int i = types.Count - 1; i > 0; i--)
         {
