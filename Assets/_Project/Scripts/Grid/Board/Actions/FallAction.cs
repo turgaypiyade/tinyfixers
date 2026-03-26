@@ -38,17 +38,25 @@ public class FallAction : BoardAction
     {
         if (fallRecords.Count == 0) yield break;
 
+        float columnStep = sequencer.Board.FallColumnStep;
+        bool useStagger = columnStep > 0f;
+
         var moves = new List<IEnumerator>(fallRecords.Count);
+        var delays = useStagger ? new List<float>(fallRecords.Count) : null;
+
         foreach (var r in fallRecords)
         {
             if (r.tile != null)
             {
-                // To avoid visual pop if tile's anchor was off, we start it at the true visual position
-                // MoveToGrid inside TileView uses its current rectTransform position to interpolate to the destination grid coordinates.
                 moves.Add(r.tile.MoveToGrid(sequencer.Board.TileSize, r.duration, r.curve, r.useSettle, r.settleDuration, r.settleStrength));
+                if (useStagger)
+                    delays.Add(r.tile.X * columnStep);
             }
         }
 
-        yield return sequencer.Animator.RunMany(moves);
+        if (useStagger)
+            yield return sequencer.Animator.RunManyWithDelays(moves, delays);
+        else
+            yield return sequencer.Animator.RunMany(moves);
     }
 }

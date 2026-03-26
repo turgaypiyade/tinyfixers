@@ -835,6 +835,8 @@ public class BoardController : MonoBehaviour
                             candidates.Remove(created);
                         }
 
+                        // Merge animasyonlarını non-blocking başlat
+                        // Clear animasyonuyla paralel çalışır → board donmaz
                         if (boardAnimatorRef != null)
                         {
                             foreach (var created in createdTiles)
@@ -846,7 +848,7 @@ public class BoardController : MonoBehaviour
                                 creationContributors.RemoveWhere(t => t == null || t == created || t.GetSpecial() != TileSpecial.None);
 
                                 if (creationContributors.Count > 0)
-                                    yield return boardAnimatorRef.PlaySpecialCreationMerge(created, creationContributors);
+                                    StartCoroutine(boardAnimatorRef.PlaySpecialCreationMerge(created, creationContributors));
                             }
                         }
                     }
@@ -893,9 +895,8 @@ public class BoardController : MonoBehaviour
             actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb));
             yield return AnimateQueuedActions();
 
-            // ── Adım 3: Cascade + resolve
-            yield return ResolveEmptyPlayableCellsWithoutMatch();
-            yield return ResolveBoard(allowSpecialActivation: false);
+            // ── Adım 3: Cascade + resolve — tek senkron akış
+            yield return ResolveBoard(allowSpecialActivation: false, resolveEmptyCellsFirst: true);
             EndBusy();
             yield break;
         }
@@ -919,17 +920,29 @@ public class BoardController : MonoBehaviour
 
         ConsumeMove();
         yield return ExecuteClearPass(matches, allowSpecialActivation: true);
-        yield return ResolveEmptyPlayableCellsWithoutMatch();
-        yield return ResolveBoard();
+        yield return ResolveBoard(resolveEmptyCellsFirst: true);
         EndBusy();
     }
     // ═══════════════════════════════════════════════════════════════
     //  Resolve Board
     // ═══════════════════════════════════════════════════════════════
 
-    IEnumerator ResolveBoard(bool allowSpecialActivation = false)
+    IEnumerator ResolveBoard(bool allowSpecialActivation = false, bool resolveEmptyCellsFirst = false)
     {
         isSpecialActivationPhase = false;
+
+        // Boş hücreleri döngüye girmeden önce doldur — ayrı coroutine çağırmak
+        // yerine burada yaparak frame boşluğunu ortadan kaldır
+        if (resolveEmptyCellsFirst)
+        {
+            var initialCascades = cascadeLogic.CalculateCascades();
+            if (initialCascades.Count > 0)
+            {
+                actionSequencer.Enqueue(initialCascades);
+                while (actionSequencer.IsPlaying) yield return null;
+            }
+        }
+
         int safety = 0;
         const int MaxResolveLoops = 250;
         float backgroundJobWaitTime = 0f;
@@ -975,10 +988,14 @@ public class BoardController : MonoBehaviour
 
             break;
         }
+
+        // Tüm resolve döngüsü bittikten sonra TEK SEFER çağrılır
+        // → passlar arasında visual flash oluşmaz
+        RestoreAllTilePresentation();
     }
 
     // Public wrapper for services (BoosterService)
-    internal IEnumerator ResolveBoardPublic(bool allowSpecial = true) => ResolveBoard(allowSpecial);
+    internal IEnumerator ResolveBoardPublic(bool allowSpecial = true) => ResolveBoard(allowSpecial, resolveEmptyCellsFirst: true);
 
     IEnumerator ExecuteClearPass(HashSet<TileView> matchTiles, bool allowSpecialActivation, Action<bool> onResult = null)
     {
@@ -1081,7 +1098,9 @@ public class BoardController : MonoBehaviour
                 yield return null;
         }
 
-        RestoreAllTilePresentation();
+        // NOT: RestoreAllTilePresentation burada yok.
+        // ResolveBoard döngüsü sonunda tek seferde çağrılır,
+        // böylece passlar arasında visual flash oluşmaz.
         onResult?.Invoke(true);
     }
 
@@ -1164,8 +1183,8 @@ public class BoardController : MonoBehaviour
             actionSequencer.Enqueue(cascades);
             while (actionSequencer.IsPlaying) yield return null;
         }
-
-        RestoreAllTilePresentation();
+        // NOT: RestoreAllTilePresentation kaldırıldı.
+        // ResolveBoard döngüsü sonunda ele alınır.
     }
     // ═══════════════════════════════════════════════════════════════
     //  Obstacle Handling
