@@ -32,25 +32,41 @@ public class CascadeLogic
         _actionsBuffer.Clear();
         const int maxPass = 32;
 
+        // Tüm pass'ları tek FallAction'a birleştir
+        // Her pass öncekinin %40'ı kadar gecikmeli başlar → overlap
+        // Eski: 6 sıralı FallAction = 0.65s
+        // Yeni: 1 merged FallAction = ~0.25s
+        var merged = new FallAction();
+        float cumulativeDelay = 0f;
+        const float overlapRatio = 0.4f; // önceki pass'ın %40'ında sonraki başlar
+
         for (int pass = 0; pass < maxPass; pass++)
         {
             if (!HasAnyEmptyPlayableCell()) break;
 
             var collapseAction = CalculateCollapseAndSpawn();
             if (collapseAction != null && collapseAction.HasMoves)
-                _actionsBuffer.Add(collapseAction);
+            {
+                float dur = collapseAction.GetMaxMoveDuration();
+                merged.MergeFrom(collapseAction, cumulativeDelay);
+                cumulativeDelay += dur * overlapRatio;
+            }
 
             if (!HasAnyEmptyPlayableCell()) break;
 
             var slideAction = CalculateSlideFill();
             if (slideAction != null && slideAction.HasMoves)
             {
-                _actionsBuffer.Add(slideAction);
+                float slideDur = slideAction.GetMaxMoveDuration();
+                merged.MergeFrom(slideAction, cumulativeDelay);
+                cumulativeDelay += slideDur * overlapRatio;
 
                 var postSlideCollapse = CalculateCollapseColumns();
                 if (postSlideCollapse != null && postSlideCollapse.HasMoves)
                 {
-                    _actionsBuffer.Add(postSlideCollapse);
+                    float postDur = postSlideCollapse.GetMaxMoveDuration();
+                    merged.MergeFrom(postSlideCollapse, cumulativeDelay);
+                    cumulativeDelay += postDur * overlapRatio;
                 }
             }
             else
@@ -59,7 +75,9 @@ public class CascadeLogic
             }
         }
 
-        // Return a new list so the caller owns it (ActionSequencer may hold reference)
+        if (merged.HasMoves)
+            _actionsBuffer.Add(merged);
+
         return new List<BoardAction>(_actionsBuffer);
     }
 
@@ -373,7 +391,7 @@ public class CascadeLogic
         board.SyncTileData(fromX, fromY);
         board.SyncTileData(toX, toY);
 
-        float slideDuration = board.GetFallDurationForDistance(1) * 0.6f;
+        float slideDuration = board.GetFallDurationForDistance(1);
         action.AddMove(tile, fromY, toY, slideDuration, false, 0f, 0f, board.FallMoveCurve);
 
         movedThisPass.Add(tile);

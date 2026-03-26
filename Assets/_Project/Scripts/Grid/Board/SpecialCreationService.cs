@@ -35,6 +35,10 @@ public sealed class SpecialCreationService
 
     private readonly MatchFinder matchFinder;
 
+    // ── Pooled buffers — zero GC per call ──
+    private readonly Dictionary<Vector2Int, TileView> _cellMapBuffer = new Dictionary<Vector2Int, TileView>(32);
+    private readonly HashSet<TileView> _consumedBuffer = new HashSet<TileView>();
+
     public SpecialCreationService(MatchFinder matchFinder)
     {
         this.matchFinder = matchFinder;
@@ -333,26 +337,26 @@ public sealed class SpecialCreationService
 
     private Dictionary<Vector2Int, TileView> BuildCellMap(HashSet<TileView> matches)
     {
-        var map = new Dictionary<Vector2Int, TileView>();
+        _cellMapBuffer.Clear();
         foreach (var tile in matches)
         {
             if (tile == null)
                 continue;
 
-            map[new Vector2Int(tile.X, tile.Y)] = tile;
+            _cellMapBuffer[new Vector2Int(tile.X, tile.Y)] = tile;
         }
-        return map;
+        return _cellMapBuffer;
     }
     public int Score(TileSpecial special)
     {
         switch (special)
         {
             case TileSpecial.SystemOverride: return 60;
-            case TileSpecial.PulseCore:      return 50;
+            case TileSpecial.PulseCore: return 50;
             case TileSpecial.LineH:
-            case TileSpecial.LineV:          return 30;
-            case TileSpecial.PatchBot:       return 20;
-            default:                         return 0;
+            case TileSpecial.LineV: return 30;
+            case TileSpecial.PatchBot: return 20;
+            default: return 0;
         }
     }
 }

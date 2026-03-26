@@ -357,11 +357,23 @@ public class LineSweepService
         board.StartCoroutine(
             CoPlayLineTravel(
                 inst, axis, originAnchored, originCell,
-                steps, cellSizePx, delaySeconds, onStep, onCompleted));
+                steps, cellSizePx, delaySeconds, onStep, () =>
+                {
+                    // Animasyon gerçekten bitince callback ile cleanup
+                    // Eski: CoDestroyAfterUnscaled(go, estimatedDuration) → frame drop olunca
+                    // animasyon hâlâ çalışıyorken obje siliniyor → MissingReferenceException
+                    // Yeni: OnCompleted callback → animasyon ne kadar sürerse sürsün güvenli
+                    onCompleted?.Invoke();
+                    if (go != null) UnityEngine.Object.Destroy(go);
+                }));
 
         float dur = lineTravelPlayer.EstimateDuration(steps);
-        float totalLife = Mathf.Max(0f, delaySeconds) + dur + 0.15f;
-        board.StartCoroutine(CoDestroyAfterUnscaled(go, totalLife));
+
+        // Güvenlik ağı: eğer callback hiç çağrılmazsa (obje disable vb.)
+        // LineTravelSplitSwapTestUI.OnDestroy/OnDisable zaten CompleteOnce çağırır
+        // ama ekstra güvenlik olarak çok uzun bir timeout koy
+        float safetyTimeout = Mathf.Max(0f, delaySeconds) + dur + 2.0f;
+        board.StartCoroutine(CoDestroyAfterUnscaled(go, safetyTimeout));
 
         return delaySeconds + dur;
     }

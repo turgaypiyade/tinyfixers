@@ -758,6 +758,18 @@ public class BoardController : MonoBehaviour
 
     IEnumerator ProcessSwap(TileView a, TileView b)
     {
+        float _flowStart = Time.realtimeSinceStartup;
+        float _flowLast = _flowStart;
+        void FlowLog(string step)
+        {
+            float now = Time.realtimeSinceStartup;
+            float delta = now - _flowLast;
+            float total = now - _flowStart;
+            Debug.Log($"[Flow] {step,-22} +{delta:0.000}s (total: {total:0.000}s)");
+            _flowLast = now;
+        }
+
+        Debug.Log("[Flow] ═══ SWAP START ═══");
         BeginBusy();
         lastSwapA = a; lastSwapB = b; lastSwapUserMove = true;
         SyncAllTilesToGridData();
@@ -769,6 +781,7 @@ public class BoardController : MonoBehaviour
 
         actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
         yield return AnimateQueuedActions();
+        FlowLog("swap_anim");
 
         // SWAP ANINDAKI gerçek special state'i snapshot al.
         // Sonradan oluşan special'lar combo kararı için kullanılmayacak.
@@ -830,6 +843,7 @@ public class BoardController : MonoBehaviour
 
                             createdTiles.Add(created);
 
+                            // Oluşan special contributor/clear havuzundan çıksın
                             normalMatches.Remove(created);
                             candidates.Remove(created);
                         }
@@ -850,6 +864,7 @@ public class BoardController : MonoBehaviour
 
                     // Yeni oluşan special'lar silinmesin; kalan normal match taşları silinsin.
                     normalMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
+                    FlowLog($"special_creation({createdTiles.Count})");
                     if (normalMatches.Count > 0)
                     {
                         actionSequencer.Enqueue(new MatchClearAction(
@@ -857,6 +872,7 @@ public class BoardController : MonoBehaviour
                             doShake: false,
                             suppressPerTileClearVfx: createdTiles.Count > 0));
                         yield return AnimateQueuedActions();
+                        FlowLog("normal_side_clear");
                     }
                 }
             }
@@ -889,9 +905,11 @@ public class BoardController : MonoBehaviour
 
             actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb));
             yield return AnimateQueuedActions();
+            FlowLog("special_resolve");
 
-            // ── Adım 3: Cascade + resolve
             yield return ResolveBoard(allowSpecialActivation: false, resolveEmptyCellsFirst: true);
+            FlowLog("resolve_board");
+            Debug.Log($"[Flow] ═══ SWAP END (special) ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
             EndBusy();
             yield break;
         }
@@ -902,6 +920,7 @@ public class BoardController : MonoBehaviour
         var matches = new HashSet<TileView>();
         foreach (var t in matchFinder.FindMatchesAt(a.X, a.Y)) matches.Add(t);
         foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y)) matches.Add(t);
+        FlowLog($"match_find({matches.Count})");
 
         if (matches.Count == 0)
         {
@@ -910,12 +929,17 @@ public class BoardController : MonoBehaviour
             SyncTileData(ax, ay); SyncTileData(bx, by);
             actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
             yield return AnimateQueuedActions();
+            FlowLog("swap_back");
+            Debug.Log($"[Flow] ═══ SWAP END (no match) ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
             EndBusy(); yield break;
         }
 
         ConsumeMove();
         yield return ExecuteClearPass(matches, allowSpecialActivation: true);
+        FlowLog("clear_pass");
         yield return ResolveBoard(resolveEmptyCellsFirst: true);
+        FlowLog("resolve_board");
+        Debug.Log($"[Flow] ═══ SWAP END ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
         EndBusy();
     }
     // ═══════════════════════════════════════════════════════════════
@@ -924,6 +948,7 @@ public class BoardController : MonoBehaviour
 
     IEnumerator ResolveBoard(bool allowSpecialActivation = false, bool resolveEmptyCellsFirst = false)
     {
+        float _rbStart = Time.realtimeSinceStartup;
         isSpecialActivationPhase = false;
 
         if (resolveEmptyCellsFirst)
@@ -931,8 +956,10 @@ public class BoardController : MonoBehaviour
             var initialCascades = cascadeLogic.CalculateCascades();
             if (initialCascades.Count > 0)
             {
+                Debug.Log($"[Resolve] initial_cascade actions={initialCascades.Count}");
                 actionSequencer.Enqueue(initialCascades);
                 while (actionSequencer.IsPlaying) yield return null;
+                Debug.Log($"[Resolve] initial_cascade_done +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
             }
         }
 
@@ -952,6 +979,7 @@ public class BoardController : MonoBehaviour
                 foreach (var t in matches) { var tile = tiles[t.X, t.Y]; if (tile != null) matchTiles.Add(tile); }
                 if (matchTiles.Count > 0)
                 {
+                    Debug.Log($"[Resolve] pass={safety} cascade_match={matchTiles.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
                     bool cleared = false;
                     yield return ExecuteClearPass(matchTiles, allowSpecialActivation, result => cleared = result);
                     if (cleared) continue;
@@ -961,6 +989,7 @@ public class BoardController : MonoBehaviour
             var cascades = cascadeLogic.CalculateCascades();
             if (cascades.Count > 0)
             {
+                Debug.Log($"[Resolve] pass={safety} cascade_fall actions={cascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
                 actionSequencer.Enqueue(cascades);
                 while (actionSequencer.IsPlaying) yield return null;
                 continue;
@@ -983,6 +1012,7 @@ public class BoardController : MonoBehaviour
         }
 
         RestoreAllTilePresentation();
+        Debug.Log($"[Resolve] ═══ DONE ═══ passes={safety} total: {(Time.realtimeSinceStartup - _rbStart):0.000}s");
     }
 
     // Public wrapper for services (BoosterService)
@@ -990,6 +1020,14 @@ public class BoardController : MonoBehaviour
 
     IEnumerator ExecuteClearPass(HashSet<TileView> matchTiles, bool allowSpecialActivation, Action<bool> onResult = null)
     {
+        float _cpStart = Time.realtimeSinceStartup;
+        float _cpLast = _cpStart;
+        void CpLog(string step)
+        {
+            float now = Time.realtimeSinceStartup;
+            Debug.Log($"[ClearPass] {step,-22} +{(now - _cpLast):0.000}s (total: {(now - _cpStart):0.000}s) matchCount={matchTiles.Count}");
+            _cpLast = now;
+        }
         // Kazanılmış special'lar normal match clear'ına girmez.
         // Sadece explicit activation veya effect-hit ile temizlenebilirler.
         var preservedSpecialTiles = new HashSet<TileView>();
@@ -1050,6 +1088,7 @@ public class BoardController : MonoBehaviour
         }
 
         lastSwapUserMove = false;
+        CpLog($"special_creation({createdSpecialTiles.Count})");
 
         // Normal clear hiçbir durumda existing/new special'ları otomatik silmesin.
         matchTiles.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
@@ -1071,7 +1110,8 @@ public class BoardController : MonoBehaviour
         ClearPresentationPlan presentationPlan =
             BuildCreatedSpecialPresentationPlan(createdSpecialTiles, matchTiles, doShake);
 
-        // ── 3. Clear — activation olduysa special'lar da silinebilmeli ──
+        CpLog($"pre_clear(tiles={matchTiles.Count} plan={presentationPlan != null})");
+
         actionSequencer.Enqueue(new MatchClearAction(
             matchTiles,
             doShake,
@@ -1082,6 +1122,7 @@ public class BoardController : MonoBehaviour
         while (actionSequencer.IsPlaying)
             yield return null;
 
+        CpLog("clear+cascade_done");
         onResult?.Invoke(true);
     }
 
@@ -1249,19 +1290,35 @@ public class BoardController : MonoBehaviour
 
     internal float GetFallDurationForDistance(int cellDistance)
     {
-        // Yerçekimi modeli: süre ∝ √mesafe
-        // 1 cell=0.07s, 4 cell=0.14s, 9 cell=0.21s → hız orantılı
+        // Gravity modeli: süre ∝ √mesafe (gerçek fizik: t = √(2d/g))
+        // EaseIn curve ile birleşince: taş yavaş başlar, hızlanarak düşer
+        // Toon Blast / Candy Crush hissi
         int d = Mathf.Max(1, cellDistance);
         float baseDur = FallDurationWithMultiplier;
-        float perCell = baseDur * 0.5f;
+        float perCell = baseDur * 0.35f; // FallDuration=0.22 → perCell=0.077
         float duration = perCell * Mathf.Sqrt(d);
-        return Mathf.Max(0.04f, duration * Mathf.Max(0.25f, GetCascadeFallSpeedMultiplier()));
+        return Mathf.Max(0.05f, duration * Mathf.Max(0.5f, GetCascadeFallSpeedMultiplier()));
     }
 
     internal float GetClearDurationForCurrentPass() => Mathf.Max(0.03f, ApplySpecialChainTempo(ClearDuration * GetCascadeClearSpeedMultiplier()));
-    internal bool ShouldEnableFallSettleThisPass() => EnableFallSettle && CurrentResolvePass <= 1;
-    private float GetCascadeFallSpeedMultiplier() => (CurrentResolvePass <= 1) ? 1f : 0.50f;
-    private float GetCascadeClearSpeedMultiplier() => (CurrentResolvePass <= 1) ? 1f : 0.60f;
+    internal bool ShouldEnableFallSettleThisPass() => EnableFallSettle && CurrentResolvePass <= 3;
+
+    private float GetCascadeFallSpeedMultiplier()
+    {
+        // Eski: pass 2+ = 0.50 → taşlar 2x hızlı → "pat pat"
+        // Yeni: kademeli hızlanma, asla 2x'i geçmez
+        if (CurrentResolvePass <= 1) return 1f;
+        if (CurrentResolvePass <= 2) return 0.85f;
+        if (CurrentResolvePass <= 4) return 0.75f;
+        return 0.70f;
+    }
+
+    private float GetCascadeClearSpeedMultiplier()
+    {
+        if (CurrentResolvePass <= 1) return 1f;
+        if (CurrentResolvePass <= 2) return 0.80f;
+        return 0.70f;
+    }
     private TileType GetRandomType() => randomPool[UnityEngine.Random.Range(0, randomPool.Length)];
     private void ConsumeMove() { RemainingMoves = Mathf.Max(0, RemainingMoves - 1); OnMovesChanged?.Invoke(RemainingMoves); }
     public void AddMoves(int amount) { if (amount <= 0) return; RemainingMoves += amount; OnMovesChanged?.Invoke(RemainingMoves); }

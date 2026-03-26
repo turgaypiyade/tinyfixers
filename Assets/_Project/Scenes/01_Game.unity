@@ -1779,8 +1779,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.91071427}
-  m_AnchorMax: {x: 0.53972256, y: 23.544643}
+  m_AnchorMin: {x: 0, y: 0.03671706}
+  m_AnchorMax: {x: 1, y: 0.9492441}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8548,11 +8548,11 @@ MonoBehaviour:
   iconLibrary: {fileID: 0}
   levelData: {fileID: 0}
   swapDuration: 0.03
-  fallDuration: 0.14
+  fallDuration: 0.18
   clearDuration: 0.03
-  spawnStartOffsetY: -2
+  spawnStartOffsetY: -3
   swapDurationMultiplier: 1
-  fallColumnStep: 0.008
+  fallColumnStep: 0.004
   fallDurationMultiplier: 1
   swapMoveCurve:
     serializedVersion: 2
@@ -8567,8 +8567,17 @@ MonoBehaviour:
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
-      time: 1.0024414
-      value: 0.7513428
+      time: 0.5369451
+      value: 0.2782404
+      inSlope: 1.1230894
+      outSlope: 1.1230894
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1.1054688
+      value: 0.59391785
       inSlope: 0
       outSlope: 0
       tangentMode: 0
@@ -8591,8 +8600,8 @@ MonoBehaviour:
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
-      time: 1.0049438
-      value: 0.82826614
+      time: 1.0803223
+      value: 0.7572708
       inSlope: 0
       outSlope: 0
       tangentMode: 0
@@ -8603,12 +8612,12 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   enableFallSettle: 1
-  fallSettleDuration: 0.04
-  fallSettleStrength: 0.08
-  fallCascadeStep: 0.01
-  preClearDelay: 0.01
-  shakeDuration: 0.03
-  shakeStrength: 1
+  fallSettleDuration: 0.06
+  fallSettleStrength: 0.1
+  fallCascadeStep: 0.005
+  preClearDelay: 0
+  shakeDuration: 0.04
+  shakeStrength: 2
   shakeTarget: {fileID: 1939332386}
   patchBotPulseComboSize: 4
   patchBotPairGhostTuning:
@@ -8669,9 +8678,9 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-  specialChainDurationMultiplier: 0.4
-  pulseImpactDelayStep: 0.012
-  pulseImpactAnimTime: 0.05
+  specialChainDurationMultiplier: 0.35
+  pulseImpactDelayStep: 0.008
+  pulseImpactAnimTime: 0.06
   boardVfxPlayer: {fileID: 874639811}
   lightningSpawner: {fileID: 1732843067}
   lineTravelPlayer: {fileID: 1244073440}

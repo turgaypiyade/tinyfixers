@@ -10,6 +10,10 @@ public class MatchFinder
     private readonly List<TileView> _snapshotBuffer = new List<TileView>(32);
     private readonly List<TileView> _runViewBuffer = new List<TileView>(16);
 
+    // ── Pooled result sets — callers borrow these, never allocate ──
+    private readonly HashSet<TileData> _findAllResult = new HashSet<TileData>();
+    private readonly HashSet<TileView> _findAtResult = new HashSet<TileView>();
+
     // ── Cached run-length grid ──
     private int[,] _hRunCache;   // horizontal run length passing through (x,y)
     private int[,] _vRunCache;   // vertical   run length passing through (x,y)
@@ -236,7 +240,7 @@ public class MatchFinder
 
     public HashSet<TileData> FindAllMatches()
     {
-        var result = new HashSet<TileData>();
+        _findAllResult.Clear();
 
         // Always force-rebuild — this is the authoritative entry point
         RebuildRunCache();
@@ -254,7 +258,7 @@ public class MatchFinder
 
                 if (board.Holes[x, y] || !IsNormalMatchable(data))
                 {
-                    FlushRun(run, _runTilesBuffer, result);
+                    FlushRun(run, _runTilesBuffer, _findAllResult);
                     run = 0;
                     _runTilesBuffer.Clear();
                     continue;
@@ -275,7 +279,7 @@ public class MatchFinder
                 }
                 else
                 {
-                    FlushRun(run, _runTilesBuffer, result);
+                    FlushRun(run, _runTilesBuffer, _findAllResult);
                     run = 1;
                     runType = t;
                     _runTilesBuffer.Clear();
@@ -283,7 +287,7 @@ public class MatchFinder
                 }
             }
 
-            FlushRun(run, _runTilesBuffer, result);
+            FlushRun(run, _runTilesBuffer, _findAllResult);
         }
 
         // ── Vertical matches ──
@@ -299,7 +303,7 @@ public class MatchFinder
 
                 if (board.Holes[x, y] || !IsNormalMatchable(data))
                 {
-                    FlushRun(run, _runTilesBuffer, result);
+                    FlushRun(run, _runTilesBuffer, _findAllResult);
                     run = 0;
                     _runTilesBuffer.Clear();
                     continue;
@@ -320,7 +324,7 @@ public class MatchFinder
                 }
                 else
                 {
-                    FlushRun(run, _runTilesBuffer, result);
+                    FlushRun(run, _runTilesBuffer, _findAllResult);
                     run = 1;
                     runType = t;
                     _runTilesBuffer.Clear();
@@ -328,17 +332,17 @@ public class MatchFinder
                 }
             }
 
-            FlushRun(run, _runTilesBuffer, result);
+            FlushRun(run, _runTilesBuffer, _findAllResult);
         }
 
         // ── 2×2 matches ──
-        Add2x2Matches(result);
+        Add2x2Matches(_findAllResult);
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        LogFindAllMatchesDebug(result);
+        LogFindAllMatchesDebug(_findAllResult);
 #endif
 
-        return result;
+        return _findAllResult;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -385,10 +389,6 @@ public class MatchFinder
 
     public HashSet<TileView> FindMatchesAt(int x, int y)
     {
-        // Board may have changed since last FindAllMatches
-        // (e.g. after a swap, special activation, PatchBot flight).
-        // Invalidate so the lazy rebuild in GetRunLengths/
-        // SquareOverlapsHigherPriorityRun picks up current state.
         InvalidateRunCache();
 
         var result = new HashSet<TileView>();
