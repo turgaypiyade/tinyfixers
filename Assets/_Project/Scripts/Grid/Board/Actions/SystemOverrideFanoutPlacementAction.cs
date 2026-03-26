@@ -160,13 +160,14 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             }
         }
 
-        // Deferred PatchBot dashes — launch ALL in parallel for snappy feel
+        // ── Deferred PatchBot dashes — staggered launch with coordinator ──
         if (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0 && patchbotService != null)
         {
-            var usedTargets = new HashSet<TileView>();
-            var allRequests = new List<BoardController.PatchbotDashRequest>();
+            var coordinator = new PatchBotTargetCoordinator(board, patchbotService);
 
-            // Phase 1: Prepare all dash requests up-front
+            // Phase 1: Topla — hangi tile'lar PatchBot?
+            var patchBotEntries = new List<(Vector2Int cell, TileView tile, TileType sourceType)>();
+
             for (int i = 0; i < deferredPatchBotCells.Count; i++)
             {
                 var cell = deferredPatchBotCells[i];
@@ -181,37 +182,42 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 if (tile.GetSpecial() != TileSpecial.PatchBot)
                     continue;
 
-                var pbTarget = patchbotService.FindTarget(tile, null, usedTargets);
+                patchBotEntries.Add((cell, tile, tile.GetTileType()));
+            }
+
+            // Phase 2: Staggered launch — her bot sırayla hedef alıp uçar
+            const float staggerInterval = 0.04f;
+
+            for (int i = 0; i < patchBotEntries.Count; i++)
+            {
+                var (cell, tile, sourceType) = patchBotEntries[i];
+
+                // ── Launch anında hedef al (baştan değil!) ──
+                var pbTarget = coordinator.ReserveTarget(tile, null, null);
+
                 if (!pbTarget.hasCell)
                 {
-                    // Hedef bulamayan PatchBot'u temizle — yoksa ekranda kalır
+                    // Hedef bulamayan PatchBot'u temizle — ekranda kalmasın
                     tile.SetSpecial(TileSpecial.None);
                     SpecialCellUtils.SyncAfterSpecialChange(board, tile);
                     board.ClearCell(cell.x, cell.y);
-                    board.ClearCellVisualOnly(cell, tile.GetTileType(), tile);
+                    board.ClearCellVisualOnly(cell, sourceType, tile);
                     continue;
                 }
 
-                if (pbTarget.tile != null)
-                    usedTargets.Add(pbTarget.tile);
-
-                var fromCell = new Vector2Int(tile.X, tile.Y);
-                var toCell = new Vector2Int(pbTarget.x, pbTarget.y);
-                var sourceType = tile.GetTileType();
-
-                // Capture for closure
+                // Closure captures
                 var capturedTile = tile;
-                var capturedFrom = fromCell;
-                var capturedTo = toCell;
+                var capturedFrom = cell;
                 var capturedSourceType = sourceType;
-                var capturedTarget = pbTarget;
+                var capturedTargetX = pbTarget.x;
+                var capturedTargetY = pbTarget.y;
 
                 board.ActiveBackgroundJobs++;
 
-                allRequests.Add(new BoardController.PatchbotDashRequest
+                var request = new BoardController.PatchbotDashRequest
                 {
                     from = capturedFrom,
-                    to = capturedTo,
+                    to = new Vector2Int(capturedTargetX, capturedTargetY),
                     onStart = () =>
                     {
                         if (capturedTile == null)
@@ -219,7 +225,8 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
                         SpecialVisualService.HideTileVisualForCombo(capturedTile);
 
-                        if (capturedFrom.x < 0 || capturedFrom.x >= board.Width || capturedFrom.y < 0 || capturedFrom.y >= board.Height)
+                        if (capturedFrom.x < 0 || capturedFrom.x >= board.Width ||
+                            capturedFrom.y < 0 || capturedFrom.y >= board.Height)
                             return;
 
                         if (board.Tiles[capturedFrom.x, capturedFrom.y] == capturedTile)
@@ -230,15 +237,18 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                     },
                     onArrived = () =>
                     {
+                        // ── Koordinatör rezervasyonunu serbest bırak ──
+                        coordinator.ReleaseReservation(capturedTargetX, capturedTargetY);
+
                         var arrivalCtx = new ResolutionContext();
                         var dataMatches = new HashSet<TileData>();
 
-                        bool hasObstacle = patchbotService.HasObstacleAt(capturedTarget.x, capturedTarget.y);
+                        bool hasObstacle = patchbotService.HasObstacleAt(capturedTargetX, capturedTargetY);
 
                         patchbotService.ResolveTargetImpact(
                             dataMatches,
-                            capturedTarget.x,
-                            capturedTarget.y,
+                            capturedTargetX,
+                            capturedTargetY,
                             hasObstacle,
                             (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalCtx, x, y, board),
                             t => SpecialCellUtils.MarkAffectedCell(arrivalCtx, t, board)
@@ -265,23 +275,20 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
                         board.ActiveBackgroundJobs--;
                     }
-                });
-            }
+                };
 
-            // Phase 2: Fire all dashes in one parallel batch
-            if (allRequests.Count > 0)
-            {
+                // Tek tek dash başlat (PlayDashParallel yerine)
                 if (board.PatchbotDashUI != null)
-                    board.PatchbotDashUI.PlayDashParallel(allRequests, board);
+                    board.PatchbotDashUI.PlayDashParallel(new List<BoardController.PatchbotDashRequest> { request }, board);
                 else
                 {
-                    // Fallback: fire arrivals directly
-                    foreach (var r in allRequests)
-                    {
-                        r.onStart?.Invoke();
-                        r.onArrived?.Invoke();
-                    }
+                    request.onStart?.Invoke();
+                    request.onArrived?.Invoke();
                 }
+
+                // ── Sonraki bot için stagger bekle — bu sürede önceki botun
+                //    vurduğu hedef kayıtlardan düşer ──
+                yield return new WaitForSeconds(board.ApplySpecialChainTempo(staggerInterval));
             }
         }
 

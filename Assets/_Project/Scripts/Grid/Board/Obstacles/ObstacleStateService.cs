@@ -222,11 +222,49 @@ public class ObstacleStateService
         return (ObstacleId)level.obstacles[idx] != ObstacleId.None;
     }
 
+    /// <summary>
+    /// Belirtilen hücredeki obstacle'ın kalan vuruş sayısını döner.
+    /// Obstacle yoksa 0 döner.
+    /// </summary>
+    public int GetRemainingHitsAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return 0;
+
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None) return 0;
+
+        int origin = level.obstacleOrigins[idx];
+        if (origin < 0 || origin >= remainingHitsByOrigin.Length) return 0;
+
+        int remaining = remainingHitsByOrigin[origin];
+        if (remaining >= 0)
+            return remaining;
+
+        var def = library != null ? library.Get(id) : null;
+        return Mathf.Max(1, def != null ? def.hits : 1);
+    }
+
     public ObstacleId GetObstacleIdAt(int x, int y)
     {
         if (!IsValidCell(x, y)) return ObstacleId.None;
         int idx = level.Index(x, y);
         return (ObstacleId)level.obstacles[idx];
+    }
+
+    /// <summary>
+    /// Belirtilen hücredeki obstacle'ın origin index'ini döner.
+    /// Multi-cell obstacle'lar aynı origin'i paylaşır.
+    /// Obstacle yoksa -1 döner.
+    /// </summary>
+    public int GetObstacleOriginAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return -1;
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None) return -1;
+        int origin = level.obstacleOrigins[idx];
+        return (origin >= 0 && origin < remainingHitsByOrigin.Length) ? origin : -1;
     }
 
     public bool IsCellBlocked(int x, int y)

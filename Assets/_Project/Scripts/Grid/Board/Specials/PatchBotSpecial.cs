@@ -13,6 +13,7 @@ public sealed class PatchBotExecutionRuntime
     public bool FinalizeAtEnd;
 
     public PatchbotComboService PatchbotService;
+    public PatchBotTargetCoordinator TargetCoordinator;
     public SpecialVisualService VisualService;
     public SpecialEffectOrchestrator Effects;
 
@@ -155,14 +156,14 @@ public sealed class PatchBotSpecial
     {
         bool hasObstacleAtTarget = arrivalRt.PatchbotService.HasObstacleAt(targetX, targetY);
         var dataMatches = new HashSet<TileData>();
-        
+
         arrivalRt.PatchbotService.ResolveTargetImpact(dataMatches, targetX, targetY, hasObstacleAtTarget,
             (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, x, y, arrivalRt.Board),
             (tile) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, tile, arrivalRt.Board));
 
         foreach (var data in dataMatches)
         {
-            if (data != null && arrivalRt.Board.Tiles[data.X, data.Y] != null) 
+            if (data != null && arrivalRt.Board.Tiles[data.X, data.Y] != null)
                 arrivalRt.Context.Affected.Add(arrivalRt.Board.Tiles[data.X, data.Y]);
         }
     }
@@ -259,7 +260,8 @@ public sealed class PatchBotSpecial
             ? storedType
             : tileAtOrigin.GetTileType();
 
-        int activationIndex = 0;
+        // ── Phase 1: Tüm eşleşen taşları topla ve PatchBot'a dönüştür ──
+        var autoPatchBots = new List<(TileView tile, Vector2Int sourceCell, TileType sourceType)>();
 
         for (int x = 0; x < arrivalRt.Board.Width; x++)
         {
@@ -275,56 +277,103 @@ public sealed class PatchBotSpecial
                 tile.SetSpecial(TileSpecial.PatchBot);
                 SpecialCellUtils.SyncAfterSpecialChange(arrivalRt.Board, tile);
 
-                AutoPatchBotTeleportHitAndVanishDeferred(arrivalRt, tile, activationIndex);
-                activationIndex++;
+                autoPatchBots.Add((tile, new Vector2Int(x, y), tile.GetTileType()));
             }
+        }
+
+        if (autoPatchBots.Count == 0) return;
+
+        // ── Phase 2: Koordinatör oluştur ──
+        var coordinator = new PatchBotTargetCoordinator(arrivalRt.Board, arrivalRt.PatchbotService);
+
+        // ── Phase 3: Staggered launch — her bot sırayla havalanıp hedef bulur ──
+        arrivalRt.Board.StartCoroutine(CoStaggeredPatchBotLaunch(arrivalRt, autoPatchBots, coordinator));
+    }
+
+    /// <summary>
+    /// Tüm auto-PatchBot'ları sıralı olarak havalandırır.
+    /// Her biri önce hücresinden kalkar, sonra koordinatörden hedef alır,
+    /// dash animasyonu başlatılır. Aralarında kısa süre bırakılarak
+    /// önceki botların vurduğu hedefler güncellenmiş olur.
+    /// </summary>
+    private IEnumerator CoStaggeredPatchBotLaunch(
+        PatchBotExecutionRuntime arrivalRt,
+        List<(TileView tile, Vector2Int sourceCell, TileType sourceType)> autoPatchBots,
+        PatchBotTargetCoordinator coordinator)
+    {
+        const float staggerInterval = 0.04f;   // Botlar arası bekleme
+        const float dashTravelTime = 0.25f;     // Dash animasyon süresi tahmini
+
+        for (int i = 0; i < autoPatchBots.Count; i++)
+        {
+            var (autoPatchBot, sourceCell, sourceType) = autoPatchBots[i];
+            if (autoPatchBot == null) continue;
+
+            // ── Koordinatörden hedef al ──
+            var target = coordinator.ReserveTarget(autoPatchBot, null, null);
+
+            if (!target.hasCell)
+            {
+                // Hedef bulamayan PatchBot'u temizle — ekranda kalmasın
+                autoPatchBot.SetSpecial(TileSpecial.None);
+                SpecialCellUtils.SyncAfterSpecialChange(arrivalRt.Board, autoPatchBot);
+                arrivalRt.Board.ClearCell(sourceCell.x, sourceCell.y);
+                arrivalRt.Board.ClearCellVisualOnly(sourceCell, sourceType, autoPatchBot);
+                continue;
+            }
+
+            // Closure için yakala
+            var capturedBot = autoPatchBot;
+            var capturedSource = sourceCell;
+            var capturedSourceType = sourceType;
+            var capturedTarget = target;
+
+            // ── Dash animasyonunu başlat ──
+            arrivalRt.VisualService.FireImmediateDash(
+                capturedBot.X,
+                capturedBot.Y,
+                capturedTarget.x,
+                capturedTarget.y,
+                delay: 0f,
+                onDashStart: () =>
+                {
+                    if (capturedBot == null) return;
+
+                    SpecialVisualService.HideTileVisualForCombo(capturedBot);
+
+                    if (capturedSource.x < 0 || capturedSource.x >= arrivalRt.Board.Width ||
+                        capturedSource.y < 0 || capturedSource.y >= arrivalRt.Board.Height)
+                        return;
+
+                    if (arrivalRt.Board.Tiles[capturedSource.x, capturedSource.y] == capturedBot)
+                    {
+                        arrivalRt.Board.ClearCell(capturedSource.x, capturedSource.y);
+                        arrivalRt.Board.ClearCellVisualOnly(capturedSource, capturedSourceType, capturedBot);
+                    }
+                });
+
+            // ── Varış sonrası vuruş ve temizlik — koordinatör bilgilendirilir ──
+            arrivalRt.Board.StartCoroutine(CoDeferredHitVanish(
+                arrivalRt, capturedTarget.x, capturedTarget.y, capturedTarget.tile,
+                dashTravelTime, coordinator));
+
+            // ── Sonraki bot için kısa bekle — bu sürede önceki botun vurduğu
+            //    hedef kayıtlardan düşer, obstacle kalan vuruşu güncellenir ──
+            yield return new WaitForSeconds(staggerInterval);
         }
     }
 
-    private void AutoPatchBotTeleportHitAndVanishDeferred(
+    private IEnumerator CoDeferredHitVanish(
         PatchBotExecutionRuntime arrivalRt,
-        TileView autoPatchBot,
-        int activationIndex)
-    {
-        if (autoPatchBot == null) return;
-
-        var sourceCell = new Vector2Int(autoPatchBot.X, autoPatchBot.Y);
-        var sourceType = autoPatchBot.GetTileType();
-
-        var target = arrivalRt.PatchbotService.FindTarget(autoPatchBot, null, null);
-        if (!target.hasCell) return;
-
-        const float sequentialActivationStep = 0.01f;
-        float dashDelay = Mathf.Max(0, activationIndex) * sequentialActivationStep;
-
-        arrivalRt.VisualService.FireImmediateDash(
-            autoPatchBot.X,
-            autoPatchBot.Y,
-            target.x,
-            target.y,
-            dashDelay,
-            onDashStart: () =>
-            {
-                if (autoPatchBot == null) return;
-
-                SpecialVisualService.HideTileVisualForCombo(autoPatchBot);
-
-                if (sourceCell.x < 0 || sourceCell.x >= arrivalRt.Board.Width || sourceCell.y < 0 || sourceCell.y >= arrivalRt.Board.Height)
-                    return;
-
-                if (arrivalRt.Board.Tiles[sourceCell.x, sourceCell.y] == autoPatchBot)
-                {
-                    arrivalRt.Board.ClearCell(sourceCell.x, sourceCell.y);
-                    arrivalRt.Board.ClearCellVisualOnly(sourceCell, sourceType, autoPatchBot);
-                }
-            });
-
-        arrivalRt.Board.StartCoroutine(CoDeferredHitVanish(arrivalRt, target.x, target.y, target.tile, dashDelay + 0.25f)); // Wait for dash to complete visually
-    }
-
-    private IEnumerator CoDeferredHitVanish(PatchBotExecutionRuntime arrivalRt, int targetX, int targetY, TileView targetTileView, float delay)
+        int targetX, int targetY,
+        TileView targetTileView,
+        float delay,
+        PatchBotTargetCoordinator coordinator = null)
     {
         yield return new WaitForSeconds(delay);
+
+        // ── Koordinatör rezervasyonunu serbest bırak ──
+        coordinator?.ReleaseReservation(targetX, targetY);
 
         var matchSetData = new HashSet<TileData>();
         arrivalRt.PatchbotService.HitCellOnce(
@@ -350,7 +399,7 @@ public sealed class PatchBotSpecial
                 animationMode: ClearAnimationMode.Default,
                 isSpecialPhase: true
             );
-            
+
             var sequencer = arrivalRt.Board.GetComponent<ActionSequencer>();
             if (sequencer != null)
             {
