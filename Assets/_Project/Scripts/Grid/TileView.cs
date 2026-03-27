@@ -131,7 +131,7 @@ public class TileView : MonoBehaviour,
         return board != null && board.TryGetCellState(X, Y, out state);
     }
 
- 
+
     public void RefreshIcon()
     {
         if (model == null || board == null) return;
@@ -206,19 +206,56 @@ public class TileView : MonoBehaviour,
 
         if (rt == null || !rt) yield break;
         rt.anchoredPosition = end;
-        SnapToGrid(tileSize);
 
+        // Toon Blast gravity bounce: taş KENDİSİ zıplayarak oturuyor
+        // Eski: alttaki taşa squash uyguluyordu → çoğu zaman altta taş yok, efekt görünmüyordu
+        // Yeni: düşen taş hedefi aşar (overshoot) → geri gelir → küçük bir daha → oturur
         bool movedDown = end.y < start.y - 0.5f;
-        if (movedDown && board != null && enableSettle)
+        if (movedDown && enableSettle && rt != null && rt)
         {
-            TileView tileBelow = board.GetTileViewAt(X, Y + 1);
-            if (tileBelow != null && tileBelow != this)
+            float bounceAmount = tileSize * settleStrength;
+            float bounceDur = Mathf.Max(0.01f, settleDuration);
+
+            // Bounce 1: hedefin altına overshoot
+            float b1 = 0f;
+            Vector2 overshoot = end + new Vector2(0f, -bounceAmount);
+            while (b1 < bounceDur * 0.35f)
             {
-                tileBelow.PlayBeingLandedOnSquash(settleDuration, settleStrength);
+                if (rt == null || !rt) yield break;
+                b1 += Time.deltaTime;
+                float k = Mathf.Clamp01(b1 / (bounceDur * 0.35f));
+                rt.anchoredPosition = Vector2.LerpUnclamped(end, overshoot, k);
+                yield return null;
+            }
+
+            // Bounce 2: geri gel + küçük overshoot yukarı
+            float b2 = 0f;
+            Vector2 overUp = end + new Vector2(0f, bounceAmount * 0.3f);
+            while (b2 < bounceDur * 0.35f)
+            {
+                if (rt == null || !rt) yield break;
+                b2 += Time.deltaTime;
+                float k = Mathf.Clamp01(b2 / (bounceDur * 0.35f));
+                float eased = 1f - (1f - k) * (1f - k);
+                rt.anchoredPosition = Vector2.LerpUnclamped(overshoot, overUp, eased);
+                yield return null;
+            }
+
+            // Bounce 3: son oturma
+            float b3 = 0f;
+            while (b3 < bounceDur * 0.3f)
+            {
+                if (rt == null || !rt) yield break;
+                b3 += Time.deltaTime;
+                float k = Mathf.Clamp01(b3 / (bounceDur * 0.3f));
+                float eased = k * k;
+                rt.anchoredPosition = Vector2.LerpUnclamped(overUp, end, eased);
+                yield return null;
             }
         }
 
-        SnapToGrid(tileSize);
+        if (rt != null && rt)
+            SnapToGrid(tileSize);
     }
 
     private void SetPivotWithoutVisualJump(Vector2 newPivot)

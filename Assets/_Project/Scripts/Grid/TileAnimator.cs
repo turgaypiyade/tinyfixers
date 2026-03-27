@@ -36,14 +36,8 @@ public sealed class TileAnimator
         if (root == null || rt == null)
             yield break;
 
-        root.localScale = Vector3.one;
-
-        float popDuration = Mathf.Max(0.0001f, duration);
-        float impactDuration = Mathf.Min(0.055f, popDuration * 0.40f);
-        float t = 0f;
-
-        Vector2 originalPivot = CenterPivot;
         CanvasGroup canvasGroup = null;
+        Vector2 originalPivot = CenterPivot;
 
         try
         {
@@ -63,61 +57,26 @@ public sealed class TileAnimator
             yield break;
         }
 
-        // 1) Kısa impact punch
-        while (t < impactDuration)
+        // Toon Blast tarzı: kısa punch → anında kaybol
+        // Eski: uzun shrink+rotate (0.05s+) → "yavaş erime" hissi
+        // Yeni: micro punch (1 frame) → snap kaybolma
+        float snapDuration = Mathf.Min(0.03f, duration);
+        float t = 0f;
+
+        while (t < snapDuration)
         {
-            if (tile == null || !tile || root == null)
-                yield break;
+            if (tile == null || !tile || root == null) yield break;
 
             try
             {
                 t += Time.deltaTime;
-                float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, impactDuration));
-                float squish = 1f + Mathf.Lerp(0f, 0.12f, k);
-                float stretch = 1f - Mathf.Lerp(0f, 0.08f, k);
-
-                root.localScale = new Vector3(squish, stretch, 1f);
-            }
-            catch (MissingReferenceException)
-            {
-                yield break;
-            }
-
-            yield return null;
-        }
-
-        // 2) Parçalanarak küçülme
-        t = 0f;
-        Vector3 start;
-
-        try
-        {
-            start = root.localScale;
-        }
-        catch (MissingReferenceException)
-        {
-            yield break;
-        }
-
-        Vector3 end = Vector3.zero;
-        float shatterDuration = Mathf.Max(0.0001f, popDuration - impactDuration);
-
-        while (t < shatterDuration)
-        {
-            if (tile == null || !tile || root == null)
-                yield break;
-
-            try
-            {
-                t += Time.deltaTime;
-                float k = Mathf.Clamp01(t / shatterDuration);
-                float eased = 1f - Mathf.Pow(1f - k, 3f);
-
-                root.localScale = Vector3.Lerp(start, end, eased);
-                root.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(0f, 16f, eased));
+                float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, snapDuration));
+                // Kısa punch scale up → hemen shrink
+                float scale = Mathf.Lerp(1f, 0f, k * k);
+                root.localScale = new Vector3(scale, scale, 1f);
 
                 if (canvasGroup != null)
-                    canvasGroup.alpha = 1f - eased;
+                    canvasGroup.alpha = 1f - k;
             }
             catch (MissingReferenceException)
             {
@@ -131,7 +90,7 @@ public sealed class TileAnimator
         {
             if (root != null)
             {
-                root.localScale = end;
+                root.localScale = Vector3.zero;
                 root.localRotation = Quaternion.identity;
             }
 

@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: e74a9b9bd6a74b345905fb25d710616e
+guid: 5822323fd4bae46f58901e3c45bb7716
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2248779920582910405
-    second: TopHudFrame_v3_0
+      213: -997401934497304548
+    second: BG_Bottom_Area_v3_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: TopHudFrame_v3_0
+      name: BG_Bottom_Area_v3_0
       rect:
         serializedVersion: 2
         x: 0
-        y: 71
+        y: 0
         width: 4320
-        height: 1717
+        height: 928
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: b3edf97a39abac0e0800000000000000
-      internalID: -2248779920582910405
+      spriteID: c10300c99348822f0800000000000000
+      internalID: -997401934497304548
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      TopHudFrame_v3_0: -2248779920582910405
+      BG_Bottom_Area_v3_0: -997401934497304548
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
