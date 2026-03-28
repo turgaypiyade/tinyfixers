@@ -9,6 +9,7 @@ public class TileView : MonoBehaviour,
     IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     private static readonly Vector2 CenterPivot = new Vector2(0.5f, 0.5f);
+    private static readonly Vector2 IconReferenceSize = new Vector2(100f, 120f);
     private const float IconReferenceTileSize = 100f;
 
     [SerializeField] private Image iconImage;
