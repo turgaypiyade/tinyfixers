@@ -10,7 +10,6 @@ public class TileView : MonoBehaviour,
 {
     private static readonly Vector2 CenterPivot = new Vector2(0.5f, 0.5f);
     private const float IconReferenceTileSize = 100f;
-    private static readonly Vector2 IconReferenceSize = new Vector2(100f, 120f);
 
     [SerializeField] private Image iconImage;
     private TileModel model;
