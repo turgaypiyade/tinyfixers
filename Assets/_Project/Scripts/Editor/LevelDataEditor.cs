@@ -58,8 +58,11 @@ public class LevelDataEditor : Editor
     private void DrawSettings(LevelData level)
     {
         EditorGUILayout.LabelField("Level Settings", EditorStyles.boldLabel);
-        level.width = EditorGUILayout.IntField("Width", level.width);
-        level.height = EditorGUILayout.IntField("Height", level.height);
+        level.width = EditorGUILayout.IntSlider("Width", level.width, LevelData.MinWidth, LevelData.MaxWidth);
+        level.height = EditorGUILayout.IntSlider("Height", level.height, LevelData.MinHeight, LevelData.MaxHeight);
+        EditorGUILayout.HelpBox(
+            $"Grid size limits: Width {LevelData.MinWidth}-{LevelData.MaxWidth}, Height {LevelData.MinHeight}-{LevelData.MaxHeight}.",
+            MessageType.Info);
         level.moves = EditorGUILayout.IntField("Moves", level.moves);
 
         DrawGoals(level);
