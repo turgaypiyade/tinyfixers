@@ -504,13 +504,14 @@ public class GridSpawner : MonoBehaviour
     {
         var go = Instantiate(cellBgPrefab, cellBgRoot);
         var rt = go.GetComponent<RectTransform>();
+        Vector2 cellRect = GetVisualCellRectSize();
 
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
 
         rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
-        rt.sizeDelta = new Vector2(tileSize, tileSize);
+        rt.sizeDelta = cellRect;
         int idx = resolvedLevel.Index(x, y);
         cellBgByIndex[idx] = go;
         if (go.TryGetComponent<Image>(out var image))
@@ -524,11 +525,12 @@ public class GridSpawner : MonoBehaviour
     {
         var tile = Instantiate(tilePrefab, tilesRoot);
         var rt = tile.GetComponent<RectTransform>();
+        Vector2 cellRect = GetVisualCellRectSize();
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
         rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
-        rt.sizeDelta = new Vector2(tileSize, tileSize);
+        rt.sizeDelta = cellRect;
 
 
         var view = tile.GetComponent<TileView>();

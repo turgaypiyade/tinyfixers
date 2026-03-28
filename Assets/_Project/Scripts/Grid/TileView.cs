@@ -435,7 +435,18 @@ public class TileView : MonoBehaviour,
         lastAppliedTileSize = tileSize;
 
         if (rt == null) rt = GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(tileSize, tileSize);
+        if (useFullCellIcon)
+        {
+            rt.sizeDelta = new Vector2(tileSize, tileSize);
+        }
+        else
+        {
+            float ratioX = iconSize.x / Mathf.Max(1f, IconReferenceSize.x);
+            float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
+            rt.sizeDelta = new Vector2(
+                tileSize * Mathf.Max(0.1f, ratioX),
+                tileSize * Mathf.Max(0.1f, ratioY));
+        }
 
         if (iconImage != null)
         {
