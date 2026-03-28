@@ -117,6 +117,7 @@ public class BoardController : MonoBehaviour
     private RectTransform parent;
     private int tileSize;
     private float tileIconScale = 0.98f;
+    private Vector2 tileIconSize = new Vector2(100f, 120f);
     private bool useFullCellIcons;
     private BoardBreakFxService boardBreakFxService;
 
@@ -389,13 +390,21 @@ public class BoardController : MonoBehaviour
         BindObstacleEvents();
     }
 
-    public void SetupFactory(GameObject tilePrefab, RectTransform parent, int tileSize, TileType[] randomPool, float tileIconScale = 0.98f, bool useFullCellIcons = false)
+    public void SetupFactory(
+        GameObject tilePrefab,
+        RectTransform parent,
+        int tileSize,
+        TileType[] randomPool,
+        float tileIconScale = 0.98f,
+        bool useFullCellIcons = false,
+        Vector2? tileIconSize = null)
     {
         this.tilePrefab = tilePrefab;
         this.parent = parent;
         this.tileSize = tileSize;
         this.randomPool = randomPool;
         this.tileIconScale = Mathf.Clamp(tileIconScale, 0.5f, 1f);
+        this.tileIconSize = tileIconSize ?? new Vector2(100f, 120f);
         this.useFullCellIcons = useFullCellIcons;
         EnsureServices();
     }
@@ -406,6 +415,7 @@ public class BoardController : MonoBehaviour
             return;
 
         tile.SetIconScale(tileIconScale);
+        tile.SetIconSize(tileIconSize);
         tile.SetUseFullCellIcon(useFullCellIcons);
     }
 

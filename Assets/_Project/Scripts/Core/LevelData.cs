@@ -34,6 +34,11 @@ public enum ObstacleId : int
 [CreateAssetMenu(fileName = "Level_001", menuName = "CoreCollapse/Level Data", order = 1)]
 public class LevelData : ScriptableObject
 {
+    public const int MinWidth = 1;
+    public const int MaxWidth = 10;
+    public const int MinHeight = 1;
+    public const int MaxHeight = 11;
+
     public int width = 9;
     public int height = 9;
     public int moves = 25;
@@ -56,8 +61,8 @@ public class LevelData : ScriptableObject
 
     private void OnValidate()
     {
-        width = Mathf.Max(1, width);
-        height = Mathf.Max(1, height);
+        width = Mathf.Clamp(width, MinWidth, MaxWidth);
+        height = Mathf.Clamp(height, MinHeight, MaxHeight);
         int size = width * height;
 
         if (cells == null || cells.Length != size)
