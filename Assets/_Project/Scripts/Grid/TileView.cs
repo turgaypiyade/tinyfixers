@@ -9,6 +9,8 @@ public class TileView : MonoBehaviour,
     IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     private static readonly Vector2 CenterPivot = new Vector2(0.5f, 0.5f);
+    private const float IconReferenceTileSize = 100f;
+    private static readonly Vector2 IconReferenceSize = new Vector2(100f, 120f);
 
     [SerializeField] private Image iconImage;
     private TileModel model;
@@ -29,6 +31,7 @@ public class TileView : MonoBehaviour,
     [SerializeField, Range(0.5f, 1f)]
     [FormerlySerializedAs("runtimeIconScale")]
     private float iconScale = 0.98f;
+    [SerializeField] private Vector2 iconSize = new Vector2(100f, 120f);
 
     [SerializeField] private bool useFullCellIcon = false;
 
@@ -421,12 +424,30 @@ public class TileView : MonoBehaviour,
             ApplyTileSize(lastAppliedTileSize);
     }
 
+    public void SetIconSize(Vector2 size)
+    {
+        iconSize = new Vector2(Mathf.Max(1f, size.x), Mathf.Max(1f, size.y));
+        if (lastAppliedTileSize > 0)
+            ApplyTileSize(lastAppliedTileSize);
+    }
+
     public void ApplyTileSize(int tileSize)
     {
         lastAppliedTileSize = tileSize;
 
         if (rt == null) rt = GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(tileSize, tileSize);
+        if (useFullCellIcon)
+        {
+            rt.sizeDelta = new Vector2(tileSize, tileSize);
+        }
+        else
+        {
+            float ratioX = iconSize.x / Mathf.Max(1f, IconReferenceSize.x);
+            float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
+            rt.sizeDelta = new Vector2(
+                tileSize * Mathf.Max(0.1f, ratioX),
+                tileSize * Mathf.Max(0.1f, ratioY));
+        }
 
         if (iconImage != null)
         {
@@ -444,8 +465,9 @@ public class TileView : MonoBehaviour,
             }
             else
             {
-                float s = tileSize * iconScale;
-                irt.sizeDelta = new Vector2(s, s);
+                float tileRatio = Mathf.Max(0.01f, tileSize / IconReferenceTileSize);
+                Vector2 scaledIconSize = iconSize * (tileRatio * iconScale);
+                irt.sizeDelta = scaledIconSize;
                 irt.anchorMin = new Vector2(0.5f, 0.5f);
                 irt.anchorMax = new Vector2(0.5f, 0.5f);
                 iconImage.preserveAspect = true;
@@ -459,7 +481,7 @@ public class TileView : MonoBehaviour,
                 {
                     // Normal taşlar mevcut "alta oturan" hissini korusun.
                     irt.pivot = new Vector2(0.5f, 0f);
-                    irt.anchoredPosition = new Vector2(0f, -s * 0.5f);
+                    irt.anchoredPosition = new Vector2(0f, -scaledIconSize.y * 0.5f);
                 }
             }
         }

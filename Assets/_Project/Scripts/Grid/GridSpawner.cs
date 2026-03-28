@@ -5,6 +5,8 @@ using UnityEngine.UI;
 
 public class GridSpawner : MonoBehaviour
 {
+    private static readonly Vector2 IconReferenceSize = new Vector2(100f, 120f);
+
     [Header("Level")]
     public LevelData level;
     [SerializeField] private LevelRuntimeSelector levelRuntimeSelector;
@@ -32,6 +34,7 @@ public class GridSpawner : MonoBehaviour
 
     [SerializeField, Range(0.5f, 1f)]
     private float iconScale = 0.82f;
+    [SerializeField] private Vector2 iconSize = new Vector2(100f, 120f);
     [SerializeField] private bool fullCellIcons = false;
 
     [Header("Spawn Parent (BoardMask altındaki BoardContent)")]
@@ -122,7 +125,7 @@ public class GridSpawner : MonoBehaviour
 
         board.Init(width, height, iconLibrary);
         board.SetLevelData(resolvedLevel);
-        board.SetupFactory(tilePrefab, tilesRoot, tileSize, randomPool, iconScale, fullCellIcons);
+        board.SetupFactory(tilePrefab, tilesRoot, tileSize, randomPool, iconScale, fullCellIcons, iconSize);
 
         BindBoardEvents();
 
@@ -501,13 +504,14 @@ public class GridSpawner : MonoBehaviour
     {
         var go = Instantiate(cellBgPrefab, cellBgRoot);
         var rt = go.GetComponent<RectTransform>();
+        Vector2 cellRect = GetVisualCellRectSize();
 
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
 
         rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
-        rt.sizeDelta = new Vector2(tileSize, tileSize);
+        rt.sizeDelta = cellRect;
         int idx = resolvedLevel.Index(x, y);
         cellBgByIndex[idx] = go;
         if (go.TryGetComponent<Image>(out var image))
@@ -521,11 +525,12 @@ public class GridSpawner : MonoBehaviour
     {
         var tile = Instantiate(tilePrefab, tilesRoot);
         var rt = tile.GetComponent<RectTransform>();
+        Vector2 cellRect = GetVisualCellRectSize();
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
         rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
-        rt.sizeDelta = new Vector2(tileSize, tileSize);
+        rt.sizeDelta = cellRect;
 
 
         var view = tile.GetComponent<TileView>();
@@ -536,6 +541,7 @@ public class GridSpawner : MonoBehaviour
             return;
         }
         view.SetIconScale(iconScale);
+        view.SetIconSize(iconSize);
         view.SetUseFullCellIcon(fullCellIcons);
         view.ApplyTileSize(tileSize);
 
@@ -676,7 +682,28 @@ public class GridSpawner : MonoBehaviour
         int fitRows = useReferenceGridSizing ? referenceRows : height;
 
         int fit = Mathf.FloorToInt(Mathf.Min(availableW / fitCols, availableH / fitRows) * fitScale);
-        tileSize = Mathf.Max(40, fit);
+        float iconRatio = GetIconDrivenTileRatio();
+        tileSize = Mathf.Max(40, Mathf.RoundToInt(fit * iconRatio));
+    }
+
+    private float GetIconDrivenTileRatio()
+    {
+        if (fullCellIcons)
+            return 1f;
+
+        float ratioX = iconSize.x / Mathf.Max(1f, IconReferenceSize.x);
+        float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
+        return Mathf.Max(0.1f, Mathf.Max(ratioX, ratioY));
+    }
+
+    private Vector2 GetVisualCellRectSize()
+    {
+        if (fullCellIcons)
+            return new Vector2(tileSize, tileSize);
+
+        float ratioX = iconSize.x / Mathf.Max(1f, IconReferenceSize.x);
+        float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
+        return new Vector2(tileSize * Mathf.Max(0.1f, ratioX), tileSize * Mathf.Max(0.1f, ratioY));
     }
 
     private float GetBorderExtentPx()
