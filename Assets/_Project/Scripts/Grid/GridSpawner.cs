@@ -696,6 +696,18 @@ public class GridSpawner : MonoBehaviour
         return Mathf.Max(0.1f, Mathf.Max(ratioX, ratioY));
     }
 
+    private Vector2 GetVisualCellRectSize()
+    {
+        if (fullCellIcons)
+            return new Vector2(tileSize, tileSize);
+
+        float ratioX = iconSize.x / Mathf.Max(1f, IconReferenceSize.x);
+        float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
+        return new Vector2(
+            tileSize * Mathf.Max(0.1f, ratioX),
+            tileSize * Mathf.Max(0.1f, ratioY));
+    }
+
     private float GetBorderExtentPx()
     {
         var drawer = GetComponent<DynamicBoardBorder>();
