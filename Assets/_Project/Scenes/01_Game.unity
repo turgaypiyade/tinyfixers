@@ -8364,6 +8364,7 @@ MonoBehaviour:
   cellBgPrefab: {fileID: 5469896378372082776, guid: 24b7e8f0e6f6e924ba247a059d975e1b, type: 3}
   underTileCellBgTint: {r: 0.75, g: 0.8732394, b: 1, a: 1}
   iconScale: 1
+  iconSize: {x: 100, y: 120}
   fullCellIcons: 1
   spawnParent: {fileID: 1410826443}
   cellBgRoot: {fileID: 0}
@@ -8579,7 +8580,7 @@ MonoBehaviour:
   debugMasks: 0
   debugBorderLogs: 0
   debugFont: {fileID: 0}
-  tileSize: 106
+  tileSize: 107
   contentOffset: {x: 8, y: -8}
   borderThickness: 10
   borderOutside: 3
