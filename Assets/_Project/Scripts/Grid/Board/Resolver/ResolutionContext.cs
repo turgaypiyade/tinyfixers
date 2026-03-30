@@ -47,6 +47,7 @@ public class ResolutionContext
 
     public bool IsPulsePulseComboActive;
     public bool IsPulseCoreActive;
+    public bool SuppressOverridePulseSelectionVfx;
     /// <summary>
     /// DTO for decoupling logic from visuals — pending override implant data.
     /// </summary>
@@ -90,6 +91,7 @@ public class ResolutionContext
     {
         IsPulsePulseComboActive = false;
         IsPulseCoreActive = false;
+        SuppressOverridePulseSelectionVfx = false;
         AffectedCells = new HashSet<Vector2Int>();
         Affected.Clear();
         Processed.Clear();

@@ -1717,8 +1717,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.2771739}
-  m_AnchorMax: {x: 0.5169082, y: 7.165761}
+  m_AnchorMin: {x: 0, y: 0.051567238}
+  m_AnchorMax: {x: 1.5249406, y: 1.3331648}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8356,16 +8356,16 @@ MonoBehaviour:
   tilePrefab: {fileID: 8082158129049703175, guid: 43636d30932ce457da74ebb3ece6a14c, type: 3}
   iconLibrary: {fileID: 11400000, guid: 44f21392c67a14dfbb8782561221acf8, type: 2}
   board: {fileID: 0}
-  tileSize: 107
-  fitSafetyMarginPx: 8
+  tileSize: 106
+  fitSafetyMarginPx: 3
   fitScale: 1
   borderDrawer: {fileID: 0}
-  boardPadding: 0
+  boardPadding: 2
   cellBgPrefab: {fileID: 5469896378372082776, guid: 24b7e8f0e6f6e924ba247a059d975e1b, type: 3}
   underTileCellBgTint: {r: 0.75, g: 0.8732394, b: 1, a: 1}
   iconScale: 1
-  iconSize: {x: 100, y: 120}
-  fullCellIcons: 1
+  iconSize: {x: 95, y: 115}
+  fullCellIcons: 0
   spawnParent: {fileID: 1410826443}
   cellBgRoot: {fileID: 0}
   obstaclesRoot: {fileID: 0}
@@ -8547,11 +8547,11 @@ MonoBehaviour:
   pulseMicroShakeStrength: 5.5
   patchbotDashUI: {fileID: 164518321}
   tileBreakFxPrefab: {fileID: 1851070113503770558, guid: cfef197805386a74f90977ba54da8af3, type: 3}
-  tileBreakFxLifetime: 0.35
+  tileBreakFxLifetime: 0.25
   obstacleHitFxPrefab: {fileID: 1851070113503770558, guid: cfef197805386a74f90977ba54da8af3, type: 3}
-  obstacleHitFxLifetime: 0.3
+  obstacleHitFxLifetime: 0.25
   obstacleBreakFxPrefab: {fileID: 1851070113503770558, guid: cfef197805386a74f90977ba54da8af3, type: 3}
-  obstacleBreakFxLifetime: 0.4
+  obstacleBreakFxLifetime: 0.25
   enableTileSyncValidation: 1
   enableSpecialChainTrace: 0
   throwOnTileSyncMismatch: 0
@@ -8580,7 +8580,7 @@ MonoBehaviour:
   debugMasks: 0
   debugBorderLogs: 0
   debugFont: {fileID: 0}
-  tileSize: 107
+  tileSize: 106
   contentOffset: {x: 8, y: -8}
   borderThickness: 10
   borderOutside: 3

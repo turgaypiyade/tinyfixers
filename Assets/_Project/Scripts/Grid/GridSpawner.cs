@@ -79,7 +79,7 @@ public class GridSpawner : MonoBehaviour
         //if (borderDrawer == null) borderDrawer = GetComponent<DynamicBoardBorder>();
         if (borderDrawer == null) borderDrawer = GetComponent<DynamicBoardBorder>()
                                 ?? GetComponentInChildren<DynamicBoardBorder>(true)
-                                ?? FindFirstObjectByType<DynamicBoardBorder>();        
+                                ?? FindFirstObjectByType<DynamicBoardBorder>();
     }
 
     private void OnEnable()
@@ -119,7 +119,7 @@ public class GridSpawner : MonoBehaviour
         width = resolvedLevel.width;
         height = resolvedLevel.height;
 
-        AutoFitTileSizeToMask(); 
+        AutoFitTileSizeToMask();
         EnsureRoots();
         ApplyPaddingToSpawnParent();
 
@@ -165,23 +165,33 @@ public class GridSpawner : MonoBehaviour
         float gridW = width * tileSize;
         float gridH = height * tileSize;
 
+        // İkonun tileSize'dan taşan dikey kısmı için ek padding
+        float iconOverflowY = 0f;
+        if (!fullCellIcons)
+        {
+            float tileRatio = Mathf.Max(0.01f, tileSize / Mathf.Max(1f, IconReferenceSize.x));
+            float scaledIconH = iconSize.y * tileRatio * iconScale;
+            iconOverflowY = Mathf.Max(0f, (scaledIconH - tileSize) * 0.5f);
+        }
+        float vertPadding = boardPadding + iconOverflowY;
+
         // spawnParent her zaman ortada
         spawnParent.anchorMin = new Vector2(0.5f, 0.5f);
         spawnParent.anchorMax = new Vector2(0.5f, 0.5f);
-        spawnParent.pivot     = new Vector2(0.5f, 0.5f);
+        spawnParent.pivot = new Vector2(0.5f, 0.5f);
         spawnParent.anchoredPosition = Vector2.zero;
 
         // spawnParent grid + padding alanını taşıyor
-        spawnParent.sizeDelta = new Vector2(gridW + boardPadding * 2f, gridH + boardPadding * 2f);
+        spawnParent.sizeDelta = new Vector2(gridW + boardPadding * 2f, gridH + vertPadding * 2f);
 
         // içerideki root'lar grid top-left + padding'den başlasın
-        Vector2 inner = new Vector2(boardPadding, -boardPadding);
+        Vector2 inner = new Vector2(boardPadding, -vertPadding);
         if (cellBgRoot != null) cellBgRoot.anchoredPosition = inner;
-        if (tilesRoot != null)  tilesRoot.anchoredPosition  = inner;
+        if (tilesRoot != null) tilesRoot.anchoredPosition = inner;
         if (obstaclesRoot != null) obstaclesRoot.anchoredPosition = inner;
 
         if (underTilesObstaclesRoot != null) underTilesObstaclesRoot.anchoredPosition = inner;
-        if (overTilesObstaclesRoot != null)  overTilesObstaclesRoot.anchoredPosition  = inner;
+        if (overTilesObstaclesRoot != null) overTilesObstaclesRoot.anchoredPosition = inner;
 
     }
 
@@ -221,37 +231,40 @@ public class GridSpawner : MonoBehaviour
             DrawObstacleVisuals();
 
         for (int y = 0; y < height; y++)
-        for (int x = 0; x < width; x++)
-        {
-            int idx = resolvedLevel.Index(x, y);
-            bool isBlockedByObstacle = blocked[idx];
-
-            bool isEmpty = (resolvedLevel.cells != null && idx >= 0 && idx < resolvedLevel.cells.Length && resolvedLevel.cells[idx] == (int)CellType.Empty);
-            if (isEmpty)
+            for (int x = 0; x < width; x++)
             {
-                board.SetHole(x, y, true);
-                continue;
-            }
+                int idx = resolvedLevel.Index(x, y);
+                bool isBlockedByObstacle = blocked[idx];
 
-            SpawnCellBg(x, y);
-            if (isBlockedByObstacle)
-            {
-                board.SetHole(x, y, true);
-                continue;
-            }
+                bool isEmpty = (resolvedLevel.cells != null && idx >= 0 && idx < resolvedLevel.cells.Length && resolvedLevel.cells[idx] == (int)CellType.Empty);
+                if (isEmpty)
+                {
+                    board.SetHole(x, y, true);
+                    continue;
+                }
 
-            board.SetHole(x, y, false);
-        }
+                SpawnCellBg(x, y);
+                if (isBlockedByObstacle)
+                {
+                    board.SetHole(x, y, true);
+                    continue;
+                }
+
+                board.SetHole(x, y, false);
+            }
 
         ApplyUnderTileCellBgTint();
 
         var initialTypes = board.SimulateInitialTypes();
         for (int y = 0; y < height; y++)
-        for (int x = 0; x < width; x++)
-        {
-            if (board.Holes[x, y]) continue;
-            SpawnTile(x, y, initialTypes[x, y]);
-        }
+            for (int x = 0; x < width; x++)
+            {
+                if (board.Holes[x, y]) continue;
+                SpawnTile(x, y, initialTypes[x, y]);
+            }
+
+        // Tüm tile'lar spawn edildikten sonra sıralamayı toplu yenile
+        board.RefreshAllSortingOrders();
 
         // ─── DEBUG: İlk yerleşim snapshot'u ───────────────────────────────
         {
@@ -278,8 +291,8 @@ public class GridSpawner : MonoBehaviour
         if (tilesRoot != null) tilesRoot.SetAsLastSibling();
         if (overTilesObstaclesRoot != null) overTilesObstaclesRoot.SetAsLastSibling();
 
-       // var drawer = GetComponent<DynamicBoardBorder>();
-       var drawer = borderDrawer;
+        // var drawer = GetComponent<DynamicBoardBorder>();
+        var drawer = borderDrawer;
         if (drawer != null)
         {
             drawer.level = resolvedLevel;
@@ -292,8 +305,8 @@ public class GridSpawner : MonoBehaviour
             // board.Holes[x,y] → 1D array (hole olan hücreler border almaz)
             bool[] holes = new bool[resolvedLevel.width * resolvedLevel.height];
             for (int hy = 0; hy < resolvedLevel.height; hy++)
-            for (int hx = 0; hx < resolvedLevel.width; hx++)
-                holes[resolvedLevel.Index(hx, hy)] = board.Holes[hx, hy];
+                for (int hx = 0; hx < resolvedLevel.width; hx++)
+                    holes[resolvedLevel.Index(hx, hy)] = board.Holes[hx, hy];
 
             drawer.Draw(blocked, holes);
         }
@@ -390,8 +403,8 @@ public class GridSpawner : MonoBehaviour
             return blocked;
 
         for (int y = 0; y < height; y++)
-        for (int x = 0; x < width; x++)
-            blocked[resolvedLevel.Index(x, y)] = board.ObstacleStateService.IsCellBlocked(x, y);
+            for (int x = 0; x < width; x++)
+                blocked[resolvedLevel.Index(x, y)] = board.ObstacleStateService.IsCellBlocked(x, y);
 
         return blocked;
     }
@@ -401,23 +414,23 @@ public class GridSpawner : MonoBehaviour
         if (resolvedLevel.obstacleLibrary == null || resolvedLevel.obstacles == null || resolvedLevel.obstacleOrigins == null) return;
 
         for (int y = 0; y < height; y++)
-        for (int x = 0; x < width; x++)
-        {
-            int idx = resolvedLevel.Index(x, y);
-            var obsId = (ObstacleId)resolvedLevel.obstacles[idx];
-            if (obsId == ObstacleId.None) continue;
-            if (resolvedLevel.obstacleOrigins[idx] != idx) continue;
-
-            var def = resolvedLevel.obstacleLibrary.Get(obsId);
-            if (def == null) continue;
-
-            var image = DrawObstacleImage(def, x, y);
-            if (image != null)
+            for (int x = 0; x < width; x++)
             {
-                obstacleViewsByOrigin[idx] = image;
-                obstacleDefsByOrigin[idx] = def;
+                int idx = resolvedLevel.Index(x, y);
+                var obsId = (ObstacleId)resolvedLevel.obstacles[idx];
+                if (obsId == ObstacleId.None) continue;
+                if (resolvedLevel.obstacleOrigins[idx] != idx) continue;
+
+                var def = resolvedLevel.obstacleLibrary.Get(obsId);
+                if (def == null) continue;
+
+                var image = DrawObstacleImage(def, x, y);
+                if (image != null)
+                {
+                    obstacleViewsByOrigin[idx] = image;
+                    obstacleDefsByOrigin[idx] = def;
+                }
             }
-        }
     }
 
     private void HandleObstacleStageChanged(int originIndex, ObstacleStageSnapshot nextStage)
@@ -504,14 +517,16 @@ public class GridSpawner : MonoBehaviour
     {
         var go = Instantiate(cellBgPrefab, cellBgRoot);
         var rt = go.GetComponent<RectTransform>();
-        Vector2 cellRect = GetVisualCellRectSize();
 
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
 
         rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
-        rt.sizeDelta = cellRect;
+        // CellBG her zaman tam hücre boyutunda olmalı (kare grid),
+        // ikon aspect ratio'sundan bağımsız.
+        rt.sizeDelta = new Vector2(tileSize, tileSize);
+        go.transform.SetAsFirstSibling();
         int idx = resolvedLevel.Index(x, y);
         cellBgByIndex[idx] = go;
         if (go.TryGetComponent<Image>(out var image))
@@ -525,14 +540,14 @@ public class GridSpawner : MonoBehaviour
     {
         var tile = Instantiate(tilePrefab, tilesRoot);
         var rt = tile.GetComponent<RectTransform>();
-        Vector2 cellRect = GetVisualCellRectSize();
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
         rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
-        rt.sizeDelta = cellRect;
+        // Tile RectTransform tam hücre boyutunda; ikon boyutu ApplyTileSize ile ayarlanır.
+        rt.sizeDelta = new Vector2(tileSize, tileSize);
 
-
+        // Sıralama ApplySortingOrder() ile yapılacak, burada müdahale etmeye gerek yok.
         var view = tile.GetComponent<TileView>();
         if (view == null)
         {
@@ -549,6 +564,7 @@ public class GridSpawner : MonoBehaviour
         view.SetType(type);             // Doğru tipi ata
         board.SyncTileData(x, y);       // gridData'yı doğru tipte güncelle
         board.RefreshTileObstacleVisual(view);
+        // Sıralama BuildInitialGrid sonunda toplu RefreshAllSortingOrders ile yapılacak
     }
 
     private void ApplyUnderTileCellBgTint()
@@ -675,15 +691,14 @@ public class GridSpawner : MonoBehaviour
 
         float borderExtent = GetBorderExtentPx();
 
-        float availableW = maskRt.rect.width  - (boardPadding + borderExtent) * 2f - fitSafetyMarginPx * 2f;
+        float availableW = maskRt.rect.width - (boardPadding + borderExtent) * 2f - fitSafetyMarginPx * 2f;
         float availableH = maskRt.rect.height - (boardPadding + borderExtent) * 2f - fitSafetyMarginPx * 2f;
 
         int fitCols = useReferenceGridSizing ? referenceCols : width;
         int fitRows = useReferenceGridSizing ? referenceRows : height;
 
         int fit = Mathf.FloorToInt(Mathf.Min(availableW / fitCols, availableH / fitRows) * fitScale);
-        float iconRatio = GetIconDrivenTileRatio();
-        tileSize = Mathf.Max(40, Mathf.RoundToInt(fit * iconRatio));
+        tileSize = Mathf.Max(40, fit);
     }
 
     private float GetIconDrivenTileRatio()

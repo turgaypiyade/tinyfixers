@@ -456,6 +456,7 @@ public class BoardController : MonoBehaviour
                     gridData[x, y] = null;
                 }
             }
+        RefreshAllSortingOrders();
     }
 
     public void RunAfterIdle(Action action)
@@ -661,6 +662,28 @@ public class BoardController : MonoBehaviour
             }
         }
     }
+
+    /// <summary>
+    /// Tüm tile'ların sibling sırasını Y koordinatına göre yeniden hesaplar.
+    /// Cascade/spawn sonrası tutarsız sıralamayı düzeltir.
+    /// Üst satırlar (Y küçük) önde render edilir → en son SetAsLastSibling çağrılır.
+    /// SetSiblingIndex yerine SetAsLastSibling kullanılır çünkü SetSiblingIndex
+    /// çağrıldığında diğer child'ların index'leri kayar ve tutarsızlık oluşur.
+    /// </summary>
+    internal void RefreshAllSortingOrders()
+    {
+        if (tiles == null) return;
+        // En arkada olması gereken tile'dan başla (Y büyük = alt satır = arkada)
+        // En son çağrılan SetAsLastSibling en önde olur
+        for (int y = height - 1; y >= 0; y--)
+        {
+            for (int x = width - 1; x >= 0; x--)
+            {
+                if (tiles[x, y] != null)
+                    tiles[x, y].transform.SetAsLastSibling();
+            }
+        }
+    }
     // ═══════════════════════════════════════════════════════════════
     //  Cell Clear
     // ═══════════════════════════════════════════════════════════════
@@ -788,6 +811,7 @@ public class BoardController : MonoBehaviour
         tiles[ax, ay] = b; tiles[bx, by] = a;
         a.SetCoords(bx, by); b.SetCoords(ax, ay);
         SyncTileData(ax, ay); SyncTileData(bx, by);
+        RefreshAllSortingOrders();
 
         actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
         yield return AnimateQueuedActions();
@@ -797,6 +821,8 @@ public class BoardController : MonoBehaviour
         // Sonradan oluşan special'lar combo kararı için kullanılmayacak.
         TileSpecial originalSa = a.GetSpecial();
         TileSpecial originalSb = b.GetSpecial();
+
+        Debug.Log($"[ProcessSwap] SNAPSHOT a=({a.X},{a.Y}) specialA={originalSa} | b=({b.X},{b.Y}) specialB={originalSb} | origPos a=({ax},{ay}) b=({bx},{by})");
 
         // ══════════════════════════════════════════════════════════
         //  Special swap path — en az bir taraf başlangıçta special
@@ -937,6 +963,7 @@ public class BoardController : MonoBehaviour
             tiles[ax, ay] = a; tiles[bx, by] = b;
             a.SetCoords(ax, ay); b.SetCoords(bx, by);
             SyncTileData(ax, ay); SyncTileData(bx, by);
+            RefreshAllSortingOrders();
             actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
             yield return AnimateQueuedActions();
             FlowLog("swap_back");
@@ -969,6 +996,7 @@ public class BoardController : MonoBehaviour
                 Debug.Log($"[Resolve] initial_cascade actions={initialCascades.Count}");
                 actionSequencer.Enqueue(initialCascades);
                 while (actionSequencer.IsPlaying) yield return null;
+                RefreshAllSortingOrders();
                 Debug.Log($"[Resolve] initial_cascade_done +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
             }
         }
@@ -1002,6 +1030,7 @@ public class BoardController : MonoBehaviour
                 Debug.Log($"[Resolve] pass={safety} cascade_fall actions={cascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
                 actionSequencer.Enqueue(cascades);
                 while (actionSequencer.IsPlaying) yield return null;
+                RefreshAllSortingOrders();
                 continue;
             }
 
@@ -1022,6 +1051,10 @@ public class BoardController : MonoBehaviour
         }
 
         RestoreAllTilePresentation();
+        RefreshAllSortingOrders();
+        // Shake sonrası pozisyon kaymasını garanti et
+        if (shakeTarget != null)
+            shakeTarget.anchoredPosition = shakeBasePos;
         Debug.Log($"[Resolve] ═══ DONE ═══ passes={safety} total: {(Time.realtimeSinceStartup - _rbStart):0.000}s");
     }
 

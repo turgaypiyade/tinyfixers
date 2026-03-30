@@ -37,7 +37,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 2
+    filterMode: 1
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -116,10 +116,10 @@ TextureImporter:
       name: icon_normal_green_1_0
       rect:
         serializedVersion: 2
-        x: 364
-        y: 323
-        width: 285
-        height: 298
+        x: 0
+        y: 0
+        width: 1260
+        height: 1496
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

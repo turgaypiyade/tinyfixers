@@ -55,6 +55,22 @@ public class TileView : MonoBehaviour,
         X = x;
         Y = y;
     }
+
+    public void ApplySortingOrder() => UpdateSiblingOrder();
+
+    private void UpdateSiblingOrder()
+    {
+        if (transform.parent == null || board == null) return;
+        // Üst satırlar (Y küçük) ÖNE gelmeli → büyük sibling index.
+        // Unity UI'da büyük sibling index = en son çizilir = en önde.
+        // Y=0 → totalTiles-1 (en önde)
+        // Y=height-1 → 0 (en arkada)
+        int tilesPerRow = board.Width;
+        int totalTiles = board.Width * board.Height;
+        int idx = totalTiles - 1 - (Y * tilesPerRow + X);
+        transform.SetSiblingIndex(Mathf.Clamp(idx, 0, totalTiles - 1));
+    }
+
     private void Awake()
     {
         model = GetComponent<TileModel>();

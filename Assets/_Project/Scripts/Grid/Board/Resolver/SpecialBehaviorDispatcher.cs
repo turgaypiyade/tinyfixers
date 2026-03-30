@@ -306,7 +306,7 @@ public class SpecialBehaviorDispatcher
                     ActivateSpecial = ApplySpecialActivation,
                     EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
                     ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution),
-                    SuppressVisualSideEffects = ctx.IsPulsePulseComboActive
+                    SuppressVisualSideEffects = ctx.IsPulsePulseComboActive || ctx.SuppressOverridePulseSelectionVfx
                 });
                 break;
 
@@ -467,7 +467,7 @@ public class SpecialBehaviorDispatcher
                         ActivateSpecial = ApplySpecialActivation,
                         EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
                         ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution),
-                        SuppressVisualSideEffects = ctx.IsPulsePulseComboActive
+                        SuppressVisualSideEffects = ctx.IsPulsePulseComboActive || ctx.SuppressOverridePulseSelectionVfx
                     });
 
                     if (res != null && res.Actions != null)

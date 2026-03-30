@@ -111,51 +111,10 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 if (tile == null)
                     continue;
 
-                if (tile.GetSpecial() != TileSpecial.PulseCore)
-                    continue;
-
-                var futurePulseCells = new HashSet<Vector2Int>();
-                for (int j = i + 1; j < deferredPulseExplosionCells.Count; j++)
-                    futurePulseCells.Add(deferredPulseExplosionCells[j]);
-
-                var pulseMatches = BuildPulseClearSet(cell, futurePulseCells);
-                if (pulseMatches.Count == 0)
-                    continue;
-
+                // Sadece görsel patlama — chain tetikleme OverrideSpecializedCombo
+                // tarafından PulseCoreSpecial üzerinden zaten yapıldı.
                 PlayPulseCoreExplosionVfx(tile);
 
-                // MatchClearAction sadece görsel oynatır; data temizliğini burada yapmalıyız
-                foreach (var clearTile in pulseMatches)
-                {
-                    if (clearTile == null)
-                        continue;
-
-                    var clearCell = new Vector2Int(clearTile.X, clearTile.Y);
-                    var clearType = clearTile.GetTileType();
-
-                    board.ClearCellDataOnly(clearCell);
-                    board.ClearCellVisualOnly(clearCell, clearType, clearTile);
-                }
-
-                var pulseClear = new MatchClearAction(
-                    pulseMatches,
-                    doShake: true,
-                    animationMode: ClearAnimationMode.Default,
-                    affectedCells: null,
-                    obstacleHitContext: null,
-                    includeAdjacentOverTileBlockerDamage: true,
-                    lightningOriginTile: null,
-                    lightningOriginCell: null,
-                    lightningVisualTargets: null,
-                    lightningLineStrikes: null,
-                    suppressPerTileClearVfx: false,
-                    perTileClearDelays: null,
-                    staggerDelays: null,
-                    staggerAnimTime: 0.16f,
-                    isSpecialPhase: true
-                );
-
-                yield return pulseClear.ExecuteVisuals(sequencer);
                 yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.015f));
             }
         }

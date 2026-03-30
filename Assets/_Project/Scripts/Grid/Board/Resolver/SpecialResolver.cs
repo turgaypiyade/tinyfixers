@@ -55,6 +55,8 @@ public class SpecialResolver
             return actions;
         }
 
+        Debug.Log($"[ResolveSpecialSwap] a=({a.X},{a.Y}) currentA={a.GetSpecial()} originalA={originalSa} | b=({b.X},{b.Y}) currentB={b.GetSpecial()} originalB={originalSb}");
+
         board.ShakeNextClear = true;
         board.LastSwapUserMove = false;
         board.IsSpecialActivationPhase = true;
@@ -263,6 +265,8 @@ public class SpecialResolver
         bool originalSaIsOverrideSupported = originalSa == TileSpecial.LineH || originalSa == TileSpecial.LineV || originalSa == TileSpecial.PulseCore || originalSa == TileSpecial.PatchBot;
         bool originalSbIsOverrideSupported = originalSb == TileSpecial.LineH || originalSb == TileSpecial.LineV || originalSb == TileSpecial.PulseCore || originalSb == TileSpecial.PatchBot;
 
+        Debug.Log($"[ResolveSpecialSwap] OverrideRouting: aIsOvr={originalSaIsOverride} bIsOvr={originalSbIsOverride} aIsSupported={originalSaIsOverrideSupported} bIsSupported={originalSbIsOverrideSupported} bothOrigSpecial={bothOriginallySpecial}");
+
         if (originalSaIsOverride && originalSbIsOverride)
         {
             ctx.Affected.Add(a);
@@ -307,9 +311,12 @@ public class SpecialResolver
                 Partner = a,
                 FinalizeAtEnd = true,
                 EnqueueActivation = (resolution, tile, partner) => queueProcessor.EnqueueActivation(resolution, tile, partner),
+                ActivateSpecial = dispatcher.ApplySpecialActivation,
                 ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                 CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
             });
 
             actions.AddRange(result.Actions);

@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: dd725e22520694350b646f446b2f9192
+guid: be808079c5d184f2090906b2d8fcd49d
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8902967599548287868
-    second: icon_normal_blue_2_0
+      213: 4220616153652356067
+    second: plastic_cap_orange_299 1 (2)_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -51,7 +51,7 @@ TextureImporter:
   spriteMeshType: 0
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 256
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -75,7 +75,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 0
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: icon_normal_blue_2_0
+      name: plastic_cap_orange_299 1 (2)_0
       rect:
         serializedVersion: 2
-        x: 32
+        x: 22
         y: 0
-        width: 1281
-        height: 1532
+        width: 999
+        height: 1060
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: c7b43e1acd1bd8b70800000000000000
-      internalID: 8902967599548287868
+      spriteID: 3e369bba704a29a30800000000000000
+      internalID: 4220616153652356067
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      icon_normal_blue_2_0: 8902967599548287868
+      plastic_cap_orange_299 1 (2)_0: 4220616153652356067
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

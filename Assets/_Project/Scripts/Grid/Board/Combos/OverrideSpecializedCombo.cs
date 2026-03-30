@@ -12,10 +12,14 @@ public sealed class OverrideSpecializedComboExecutionRuntime
     public bool FinalizeAtEnd;
 
     public Action<ResolutionContext, TileView, TileView> EnqueueActivation;
+    public Action<ResolutionContext, TileView, TileView> ActivateSpecial;
 
     public Func<ResolutionContext, List<BoardAction>> ProcessFanout;
     public Action<ResolutionContext> CleanupImplantedTiles;
     public Action<HashSet<TileView>, Dictionary<TileView, float>> FireOverrideOverrideSpecialVisuals;
+
+    public Action<ResolutionContext> EnqueueChainSpecials;
+    public Action<ResolutionContext> ProcessQueue;
 }
 
 public sealed class OverrideSpecializedComboExecutionResult
@@ -40,7 +44,7 @@ public sealed class OverrideSpecializedCombo
         AddOrigin(rt, otherTile);
 
         PrepareFanout(rt, overrideTile, targetSpecial);
-        CollectTargets(rt, overrideTile, otherTile, targetSpecial);
+        var deferredSpecials = CollectTargets(rt, overrideTile, otherTile, targetSpecial);
 
         if (rt.FinalizeAtEnd)
         {
@@ -51,13 +55,48 @@ public sealed class OverrideSpecializedCombo
                     result.Actions.AddRange(fanoutActions);
             }
 
+            // Fanout bitti — aynı renk mevcut special'ları aktive et
+            if (deferredSpecials != null && deferredSpecials.Count > 0)
+            {
+                foreach (var cell in deferredSpecials)
+                    rt.Context.Processed.Remove(cell);
+
+                rt.EnqueueChainSpecials?.Invoke(rt.Context);
+                rt.ProcessQueue?.Invoke(rt.Context);
+            }
+
+            // İmplant edilen PulseCore'ları sırayla tetikle.
+            // PulseCoreSpecial.ExecuteQueuedChain etrafındaki special'ları
+            // (LineH, LineV, Override vs.) kuyruğa alıp zincirleme tetikler.
+            // Processed seti recursive döngüyü önler.
+            // VFX bastırılıyor — görsel patlama SystemOverrideFanoutPlacementAction
+            // tarafından doğru zamanda (lightningbeam sonrası) oynatılacak.
+            if (targetSpecial == TileSpecial.PulseCore && rt.ActivateSpecial != null)
+            {
+                rt.Context.SuppressOverridePulseSelectionVfx = true;
+
+                foreach (var cell in rt.Context.OverrideDeferredPulseExplosions)
+                {
+                    if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+                        continue;
+
+                    var tile = rt.Board.Tiles[cell.x, cell.y];
+                    if (tile == null || tile.GetSpecial() != TileSpecial.PulseCore)
+                        continue;
+
+                    rt.ActivateSpecial(rt.Context, tile, null);
+                }
+
+                rt.Context.SuppressOverridePulseSelectionVfx = false;
+            }
+
             if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
                 rt.CleanupImplantedTiles?.Invoke(rt.Context);
 
             if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
                 rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
 
-            result.Actions.Add(BuildClearAction(rt.Context));
+            result.Actions.Add(BuildClearAction(rt.Context, targetSpecial));
         }
 
         return result;
@@ -99,9 +138,10 @@ public sealed class OverrideSpecializedCombo
             targetSpecial);
     }
 
-    private void CollectTargets(OverrideSpecializedComboExecutionRuntime rt, TileView overrideTile, TileView otherTile, TileSpecial targetSpecial)
+    private List<Vector2Int> CollectTargets(OverrideSpecializedComboExecutionRuntime rt, TileView overrideTile, TileView otherTile, TileSpecial targetSpecial)
     {
         TileType baseType = otherTile.GetTileType();
+        List<Vector2Int> deferredSpecialCells = null;
 
         for (int x = 0; x < rt.Board.Width; x++)
         {
@@ -114,11 +154,24 @@ public sealed class OverrideSpecializedCombo
                 if (tile == null || !tile.GetTileType().Equals(baseType))
                     continue;
 
+                // Origin ve Partner zaten AddOrigin'de eklendi
+                if (tile == overrideTile || tile == otherTile)
+                    continue;
+
                 if (tile.GetSpecial() != TileSpecial.None)
                 {
+                    // Mevcut special tile'lar: Affected'a ekle, Processed'a da ekle
+                    // ki fanout sırasında erken aktive olmasınlar.
+                    // Fanout bittikten sonra Processed'dan çıkarılıp
+                    // EnqueueChainSpecials ile doğal sırayla aktive edilecekler.
+                    var cell = new Vector2Int(tile.X, tile.Y);
                     rt.Context.Affected.Add(tile);
                     SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board);
-                    rt.EnqueueActivation?.Invoke(rt.Context, tile, otherTile);
+                    rt.Context.Processed.Add(cell);
+
+                    if (deferredSpecialCells == null)
+                        deferredSpecialCells = new List<Vector2Int>();
+                    deferredSpecialCells.Add(cell);
                     continue;
                 }
 
@@ -130,6 +183,8 @@ public sealed class OverrideSpecializedCombo
                     new Vector2Int(overrideTile.X, overrideTile.Y)));
             }
         }
+
+        return deferredSpecialCells;
     }
 
     private void AddOrigin(OverrideSpecializedComboExecutionRuntime rt, TileView tile)
@@ -137,23 +192,32 @@ public sealed class OverrideSpecializedCombo
         if (tile == null)
             return;
 
+        var cell = new Vector2Int(tile.X, tile.Y);
+        rt.Context.Processed.Add(cell);
         rt.Context.Affected.Add(tile);
         SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board);
     }
 
-    private MatchClearAction BuildClearAction(ResolutionContext ctx)
+    private MatchClearAction BuildClearAction(ResolutionContext ctx, TileSpecial targetSpecial)
     {
+        // Chain'den gelen line activation varsa lightning sweep animasyonu kullan.
+        // OverrideForceDefaultClearAnim sadece override fanout'un kendi clear'ı için geçerli,
+        // chain special'lar kendi animasyonlarını kullanmalı.
+        bool hasChainLightning = ctx.HasLineActivation
+            && ctx.LightningLineStrikes != null
+            && ctx.LightningLineStrikes.Count > 0;
+
         return new MatchClearAction(
             ctx.Affected,
             doShake: true,
-            animationMode: ctx.HasLineActivation && !ctx.OverrideForceDefaultClearAnim
+            animationMode: hasChainLightning
                 ? ClearAnimationMode.LightningStrike
                 : ClearAnimationMode.Default,
             affectedCells: ctx.AffectedCells,
             impactCells: ctx.ImpactCells,
             includeAdjacentOverTileBlockerDamage: false,
-            lightningVisualTargets: ctx.LightningVisualTargets,
-            lightningLineStrikes: ctx.LightningLineStrikes,
+            lightningVisualTargets: hasChainLightning ? ctx.LightningVisualTargets : null,
+            lightningLineStrikes: hasChainLightning ? ctx.LightningLineStrikes : null,
             suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
             perTileClearDelays: ctx.OverrideRadialClearDelays,
             isSpecialPhase: true,
