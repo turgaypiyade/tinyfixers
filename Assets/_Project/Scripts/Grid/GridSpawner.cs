@@ -284,12 +284,11 @@ public class GridSpawner : MonoBehaviour
         }
         // ─── END DEBUG ─────────────────────────────────────────────────────
 
-        // CellBG < UnderTileObs < Tiles < OverTileObs
-        if (cellBgRoot != null) cellBgRoot.SetAsFirstSibling();
-        if (underTilesObstaclesRoot != null) underTilesObstaclesRoot.SetAsFirstSibling();
+        // Sıralama: CellBG < Tiles < Obstacles
+        // Obstacle'lar (over/under dahil) tile'ların önünde render edilmeli
         if (cellBgRoot != null) cellBgRoot.SetAsFirstSibling();
         if (tilesRoot != null) tilesRoot.SetAsLastSibling();
-        if (overTilesObstaclesRoot != null) overTilesObstaclesRoot.SetAsLastSibling();
+        if (obstaclesRoot != null) obstaclesRoot.SetAsLastSibling();
 
         // var drawer = GetComponent<DynamicBoardBorder>();
         var drawer = borderDrawer;
