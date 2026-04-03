@@ -414,4 +414,66 @@ public class ObstacleStateService
         remainingHitsByOrigin[origin] = -1;
         OnObstacleDestroyed?.Invoke(origin, originId);
     }
+
+    // ObstacleStateService sınıfı içine ekle:
+
+    /// <summary>
+    /// Belirtilen hücredeki obstacle movable mı?
+    /// </summary>
+    public bool IsMovableObstacleAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None) return false;
+
+        var def = library != null ? library.Get(id) : null;
+        if (def == null) return false;
+
+        int remaining = ResolveRemainingHitsForCell(idx, def);
+        return def.IsMovableObstacleForRemainingHits(remaining);
+    }
+
+    /// <summary>
+    /// Movable obstacle'ın level data'daki pozisyonunu günceller.
+    /// Gravity/swap sonrası çağrılır.
+    /// </summary>
+    public void MoveObstacle(int fromX, int fromY, int toX, int toY)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return;
+
+        if (!level.InBounds(fromX, fromY) || !level.InBounds(toX, toY))
+            return;
+
+        int fromIdx = level.Index(fromX, fromY);
+        int toIdx = level.Index(toX, toY);
+
+        if (fromIdx < 0 || fromIdx >= level.obstacles.Length) return;
+        if (toIdx < 0 || toIdx >= level.obstacles.Length) return;
+
+        var id = (ObstacleId)level.obstacles[fromIdx];
+        if (id == ObstacleId.None) return;
+
+        int origin = level.obstacleOrigins[fromIdx];
+
+        // Hedef hücreye obstacle bilgisini taşı
+        level.obstacles[toIdx] = level.obstacles[fromIdx];
+        level.obstacleOrigins[toIdx] = toIdx; // Yeni pozisyon yeni origin olur
+
+        // Eski hücreyi temizle
+        level.obstacles[fromIdx] = (int)ObstacleId.None;
+        level.obstacleOrigins[fromIdx] = -1;
+
+        // remainingHits'i yeni origin'e taşı
+        if (origin >= 0 && origin < remainingHitsByOrigin.Length)
+        {
+            int remaining = remainingHitsByOrigin[origin];
+            remainingHitsByOrigin[origin] = -1;
+
+            if (toIdx < remainingHitsByOrigin.Length)
+                remainingHitsByOrigin[toIdx] = remaining;
+        }
+    }
 }

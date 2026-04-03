@@ -260,7 +260,19 @@ public class GridSpawner : MonoBehaviour
             for (int x = 0; x < width; x++)
             {
                 if (board.Holes[x, y]) continue;
-                SpawnTile(x, y, initialTypes[x, y]);
+
+                // MovableObstacle: hücre bloklanmamış ama obstacle var → tile yerine obstacle tile spawn et
+                bool isMovableObstacle = board.ObstacleStateService != null
+                    && board.ObstacleStateService.IsMovableObstacleAt(x, y);
+
+                if (isMovableObstacle)
+                {
+                    SpawnMovableObstacleTile(x, y);
+                }
+                else
+                {
+                    SpawnTile(x, y, initialTypes[x, y]);
+                }
             }
 
         // Tüm tile'lar spawn edildikten sonra sıralamayı toplu yenile
@@ -313,7 +325,51 @@ public class GridSpawner : MonoBehaviour
 
     }
 
+    private void SpawnMovableObstacleTile(int x, int y)
+    {
+        int idx = resolvedLevel.Index(x, y);
+        var obsId = (ObstacleId)resolvedLevel.obstacles[idx];
+        var def = resolvedLevel.obstacleLibrary?.Get(obsId);
+        if (def == null) return;
 
+        // Normal tile prefab spawn et
+        var tile = Instantiate(tilePrefab, tilesRoot);
+        var rt = tile.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
+        rt.sizeDelta = new Vector2(tileSize, tileSize);
+
+        var view = tile.GetComponent<TileView>();
+        if (view == null)
+        {
+            Debug.LogError("GridSpawner: TileView yok (movable obstacle).");
+            Destroy(tile);
+            return;
+        }
+
+        view.SetIconScale(iconScale);
+        view.SetIconSize(iconSize);
+        view.SetUseFullCellIcon(fullCellIcons);
+        view.ApplyTileSize(tileSize);
+
+        board.RegisterTile(view, x, y);
+
+        // Herhangi bir normal tile tipi ata (match'e girmeyecek zaten)
+        // randomPool'dan birini kullan — görünmeyecek çünkü icon override edilecek
+        var dummyType = randomPool != null && randomPool.Length > 0
+            ? randomPool[0]
+            : TileType.Gear;
+        view.SetType(dummyType);
+
+        // Obstacle sprite'ını tile icon'u olarak ayarla
+        Sprite obstacleSprite = def.GetPreviewSprite();
+        if (obstacleSprite != null && view.IconImage != null)
+            view.IconImage.sprite = obstacleSprite;
+
+        board.SyncTileData(x, y);
+    }
     private void ApplyResolvedLevelToConsumers(LevelData activeLevel)
     {
         if (activeLevel == null) return;
@@ -422,6 +478,9 @@ public class GridSpawner : MonoBehaviour
 
                 var def = resolvedLevel.obstacleLibrary.Get(obsId);
                 if (def == null) continue;
+
+                // ── MovableObstacle tile olarak yönetilir, ayrı visual çizilmez ──
+                if (def.IsMovableObstacle) continue;
 
                 var image = DrawObstacleImage(def, x, y);
                 if (image != null)

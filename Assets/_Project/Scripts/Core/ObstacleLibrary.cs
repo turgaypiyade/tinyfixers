@@ -7,7 +7,8 @@ public enum ObstacleBehaviorType
 {
     UnderTileLayered = 0,
     OverTileBlocker = 1,
-    RevealOnBreak = 2
+    RevealOnBreak = 2,
+    MovableObstacle = 3    // ← YENİ
 }
 
 public enum ObstacleDamageSourceRule
@@ -72,6 +73,30 @@ public class ObstacleDef
 
     public bool IsUnderTileBehavior => GetPrimaryStage().behavior == ObstacleBehaviorType.UnderTileLayered;
     public bool IsOverTileDamageBehavior => IsOverTileDamageBehaviorForRemainingHits(hits);
+
+    // ObstacleDef sınıfı içine ekle:
+
+    /// <summary>
+    /// Bu obstacle hareket edebilir mi? (düşme, swap)
+    /// </summary>
+    public bool IsMovableObstacle
+    {
+        get
+        {
+            var stage = GetStageRuleForRemainingHits(hits);
+            return stage != null && stage.behavior == ObstacleBehaviorType.MovableObstacle;
+        }
+    }
+
+    /// <summary>
+    /// Belirtilen kalan vuruş için obstacle hareket edebilir mi?
+    /// Stage geçişlerinde behavior değişebilir.
+    /// </summary>
+    public bool IsMovableObstacleForRemainingHits(int remainingHits)
+    {
+        var stage = GetStageRuleForRemainingHits(remainingHits);
+        return stage != null && stage.behavior == ObstacleBehaviorType.MovableObstacle;
+    }
 
     public void MigrateLegacyFieldsIfNeeded()
     {
@@ -147,7 +172,8 @@ public class ObstacleDef
             return false;
 
         return stage.behavior == ObstacleBehaviorType.OverTileBlocker
-               || stage.behavior == ObstacleBehaviorType.RevealOnBreak;
+               || stage.behavior == ObstacleBehaviorType.RevealOnBreak
+               || stage.behavior == ObstacleBehaviorType.MovableObstacle; 
     }
 
     public bool GetAllowDiagonalForRemainingHits(int remainingHits)

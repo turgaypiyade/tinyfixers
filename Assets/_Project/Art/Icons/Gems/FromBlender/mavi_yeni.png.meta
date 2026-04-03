@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: ff54dd503bfcd4868b64cb1b26664f03
+guid: 3dbacd68f9961423d8e008290cec1d2e
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -5190977998351371268
-    second: sari yeni_0
+      213: 3439309077414916585
+    second: mavi_yeni_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -48,10 +48,10 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 2
   spriteExtrude: 1
-  spriteMeshType: 1
+  spriteMeshType: 0
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 100
+  spritePixelsToUnits: 256
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -75,7 +75,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 1
+    textureCompression: 0
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: sari yeni_0
+      name: mavi_yeni_0
       rect:
         serializedVersion: 2
-        x: 566
-        y: 24
-        width: 829
-        height: 989
+        x: 568
+        y: 18
+        width: 825
+        height: 980
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: cf3f5637301f5f7b0800000000000000
-      internalID: -5190977998351371268
+      spriteID: 9e1b7183261eabf20800000000000000
+      internalID: 3439309077414916585
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      sari yeni_0: -5190977998351371268
+      mavi_yeni_0: 3439309077414916585
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

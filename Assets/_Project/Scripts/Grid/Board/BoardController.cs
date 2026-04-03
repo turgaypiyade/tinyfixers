@@ -873,6 +873,11 @@ public class BoardController : MonoBehaviour
                             if (creation.winner.GetSpecial() != TileSpecial.None)
                                 continue;
 
+                            // MovableObstacle tile'ına special atanamaz
+                            if (obstacleStateService != null
+                                && obstacleStateService.IsMovableObstacleAt(creation.winner.X, creation.winner.Y))
+                                continue;
+
                             var created = specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
                             if (created == null)
                                 continue;
@@ -1102,6 +1107,11 @@ public class BoardController : MonoBehaviour
                 if (winnerAlreadySpecial)
                     continue;
 
+                // MovableObstacle tile'ına special atanamaz
+                if (obstacleStateService != null
+                    && obstacleStateService.IsMovableObstacleAt(creation.winner.X, creation.winner.Y))
+                    continue;
+
                 var created = specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
                 if (created == null)
                     continue;
@@ -1287,7 +1297,23 @@ public class BoardController : MonoBehaviour
     }
 
     private void HandleObstacleStageChanged(int originIndex, ObstacleStageSnapshot stage) { }
-    private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId) => OnObstacleDestroyed?.Invoke(originIndex, obstacleId);
+    private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
+    {
+        OnObstacleDestroyed?.Invoke(originIndex, obstacleId);
+
+        // MovableObstacle kırıldığında o hücredeki tile'ı da yok et
+        int ox = originIndex % width;
+        int oy = originIndex / width;
+        if (ox >= 0 && ox < width && oy >= 0 && oy < height)
+        {
+            var tile = tiles[ox, oy];
+            if (tile != null)
+            {
+                NotifyTilesCleared(tile.GetTileType(), 1);
+                ClearAndDestroyTile(tile);
+            }
+        }
+    }
 
     private void HandleCellUnlocked(int cellIndex)
     {

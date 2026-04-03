@@ -22,6 +22,11 @@ public class CascadeLogic
     // Slide fill
     private readonly HashSet<TileView> _movedThisPassSet = new HashSet<TileView>();
 
+    // ── MovableObstacle: düşme sırasında pozisyon sync bilgisi ──
+    private readonly List<int> _colObsFromX = new List<int>(16);
+    private readonly List<int> _colObsFromYObs = new List<int>(16);
+    private readonly List<bool> _colIsMovableObs = new List<bool>(16);
+
     public CascadeLogic(BoardController board)
     {
         this.board = board;
@@ -105,6 +110,9 @@ public class CascadeLogic
             _colDuration.Clear();
             _colDist.Clear();
             _colFromY.Clear();
+            _colObsFromX.Clear();
+            _colObsFromYObs.Clear();
+            _colIsMovableObs.Clear();
 
             int segmentTop = board.Height - 1;
             while (segmentTop >= 0)
@@ -145,6 +153,16 @@ public class CascadeLogic
                     int targetY = _slots[i];
                     var tile = _existing[i];
                     int fromY = tile.Y;
+
+                    // ── MovableObstacle: taşınmadan ÖNCE pozisyon bilgisini kaydet ──
+                    bool isMovable = fromY != targetY
+                                     && board.ObstacleStateService != null
+                                     && board.ObstacleStateService.IsMovableObstacleAt(x, fromY);
+
+                    if (isMovable)
+                    {
+                        board.ObstacleStateService.MoveObstacle(x, fromY, x, targetY);
+                    }
 
                     board.Tiles[x, targetY] = tile;
                     tile.SetCoords(x, targetY);
@@ -332,6 +350,14 @@ public class CascadeLogic
                         var tile = _existing[i];
                         int fromY = tile.Y;
 
+                        // ── MovableObstacle: pozisyon sync ──
+                        if (fromY != toY
+                            && board.ObstacleStateService != null
+                            && board.ObstacleStateService.IsMovableObstacleAt(x, fromY))
+                        {
+                            board.ObstacleStateService.MoveObstacle(x, fromY, x, toY);
+                        }
+
                         board.Tiles[x, toY] = tile;
                         tile.SetCoords(x, toY);
                         board.SyncTileData(x, toY);
@@ -384,6 +410,13 @@ public class CascadeLogic
 
         var tile = board.Tiles[fromX, fromY];
         if (tile == null || movedThisPass.Contains(tile)) return false;
+
+        // ── MovableObstacle: diagonal/slide taşıma sırasında pozisyon sync ──
+        if (board.ObstacleStateService != null
+            && board.ObstacleStateService.IsMovableObstacleAt(fromX, fromY))
+        {
+            board.ObstacleStateService.MoveObstacle(fromX, fromY, toX, toY);
+        }
 
         board.Tiles[fromX, fromY] = null;
         board.Tiles[toX, toY] = tile;

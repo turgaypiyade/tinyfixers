@@ -59,14 +59,29 @@ public class MatchFinder
 
     private bool IsNormalMatchable(TileData data)
     {
-        return data != null && data.Special == TileSpecial.None;
+        if (data == null || data.Special != TileSpecial.None)
+            return false;
+
+        // Movable obstacle olan hücredeki tile match'e dahil edilmez
+        if (board.ObstacleStateService != null
+            && board.ObstacleStateService.IsMovableObstacleAt(data.X, data.Y))
+            return false;
+
+        return true;
     }
 
     private bool IsNormalMatchable(TileView tile)
     {
-        return tile != null && tile.GetSpecial() == TileSpecial.None;
-    }
+        if (tile == null || tile.GetSpecial() != TileSpecial.None)
+            return false;
 
+        // Movable obstacle olan hücredeki tile match'e dahil edilmez
+        if (board.ObstacleStateService != null
+            && board.ObstacleStateService.IsMovableObstacleAt(tile.X, tile.Y))
+            return false;
+
+        return true;
+    }
     // ─────────────────────────────────────────────────────────────
     //  Run-length cache — built once, queried O(1)
     // ─────────────────────────────────────────────────────────────

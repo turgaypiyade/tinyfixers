@@ -27,6 +27,10 @@ public enum ObstacleId : int
     Stone = 1,
     Shield1 = 2,
     Shield2 = 3,
+    chest1 = 4,
+    chest2 = 5,
+    chest3 = 6,
+    plastic = 7,
     PipeV_1x2 = 10,
     Big_4x4 = 20
 }
