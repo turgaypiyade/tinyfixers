@@ -142,7 +142,7 @@ public sealed class OverrideSpecial
                 : ClearAnimationMode.Default,
             affectedCells: ctx.AffectedCells,
             impactCells: ctx.ImpactCells,
-            includeAdjacentOverTileBlockerDamage: false,
+            includeAdjacentOverTileBlockerDamage: true,
             lightningVisualTargets: ctx.LightningVisualTargets,
             lightningLineStrikes: ctx.LightningLineStrikes,
             suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
@@ -190,7 +190,7 @@ public sealed class OverrideSpecial
 
         var plan = new ClearPresentationPlan();
         plan.DoBoardShake = true;
-        plan.IncludeAdjacentOverTileBlockerDamage = false;
+        plan.IncludeAdjacentOverTileBlockerDamage = true;
         plan.ObstacleHitContext = ObstacleHitContext.SpecialActivation;
 
         plan.Effects.Add(new OverrideRadialEffectDescriptor(

@@ -46,6 +46,14 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private RectTransform underTilesObstaclesRoot;
     [SerializeField] private RectTransform overTilesObstaclesRoot;
     [SerializeField] private RectTransform tilesRoot;
+    [SerializeField, Min(0f)] private float cellBgInset = 1.5f;
+    [SerializeField] private Color runtimeBoardBg = new Color(0.78f, 0.88f, 0.97f, 1f);
+    [SerializeField] private Color runtimeNormalCell = new Color(1f, 1f, 1f, 0.16f);
+    [SerializeField] private RectTransform gridLinesRoot;
+    [SerializeField] private Color runtimeGridLineColor = new Color(1f, 1f, 1f, 0.35f);
+    [SerializeField, Min(1f)] private float runtimeGridLineThickness = 2f;
+
+    [SerializeField] private RectTransform boardBgRoot;
 
     [Header("Obstacle Visual (UI)")]
     [SerializeField] private bool drawObstacles = true;
@@ -59,7 +67,7 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private int referenceCols = 10;
     [SerializeField] private int referenceRows = 11;
     [SerializeField] private bool useReferenceGridSizing = true;
-
+  
     private int width;
     private int height;
     private LevelData resolvedLevel;
@@ -165,7 +173,6 @@ public class GridSpawner : MonoBehaviour
         float gridW = width * tileSize;
         float gridH = height * tileSize;
 
-        // İkonun tileSize'dan taşan dikey kısmı için ek padding
         float iconOverflowY = 0f;
         if (!fullCellIcons)
         {
@@ -175,24 +182,21 @@ public class GridSpawner : MonoBehaviour
         }
         float vertPadding = boardPadding + iconOverflowY;
 
-        // spawnParent her zaman ortada
         spawnParent.anchorMin = new Vector2(0.5f, 0.5f);
         spawnParent.anchorMax = new Vector2(0.5f, 0.5f);
         spawnParent.pivot = new Vector2(0.5f, 0.5f);
         spawnParent.anchoredPosition = Vector2.zero;
 
-        // spawnParent grid + padding alanını taşıyor
         spawnParent.sizeDelta = new Vector2(gridW + boardPadding * 2f, gridH + vertPadding * 2f);
 
-        // içerideki root'lar grid top-left + padding'den başlasın
         Vector2 inner = new Vector2(boardPadding, -vertPadding);
+
         if (cellBgRoot != null) cellBgRoot.anchoredPosition = inner;
+        if (gridLinesRoot != null) gridLinesRoot.anchoredPosition = inner;
         if (tilesRoot != null) tilesRoot.anchoredPosition = inner;
         if (obstaclesRoot != null) obstaclesRoot.anchoredPosition = inner;
-
         if (underTilesObstaclesRoot != null) underTilesObstaclesRoot.anchoredPosition = inner;
         if (overTilesObstaclesRoot != null) overTilesObstaclesRoot.anchoredPosition = inner;
-
     }
 
     private void AlignBorderRootToSpawnParent()
@@ -216,6 +220,7 @@ public class GridSpawner : MonoBehaviour
     private void BuildInitialGrid()
     {
         ClearChildren(cellBgRoot);
+        ClearChildren(gridLinesRoot);
         ClearChildren(underTilesObstaclesRoot);
         ClearChildren(overTilesObstaclesRoot);
         ClearChildren(tilesRoot);
@@ -254,6 +259,8 @@ public class GridSpawner : MonoBehaviour
             }
 
         ApplyUnderTileCellBgTint();
+
+        DrawGridLines();
 
         var initialTypes = board.SimulateInitialTypes();
         for (int y = 0; y < height; y++)
@@ -299,6 +306,7 @@ public class GridSpawner : MonoBehaviour
         // Sıralama: CellBG < Tiles < Obstacles
         // Obstacle'lar (over/under dahil) tile'ların önünde render edilmeli
         if (cellBgRoot != null) cellBgRoot.SetAsFirstSibling();
+        if (gridLinesRoot != null) gridLinesRoot.SetSiblingIndex(cellBgRoot != null ? cellBgRoot.GetSiblingIndex() + 1 : 0);
         if (tilesRoot != null) tilesRoot.SetAsLastSibling();
         if (obstaclesRoot != null) obstaclesRoot.SetAsLastSibling();
 
@@ -332,7 +340,6 @@ public class GridSpawner : MonoBehaviour
         var def = resolvedLevel.obstacleLibrary?.Get(obsId);
         if (def == null) return;
 
-        // Normal tile prefab spawn et
         var tile = Instantiate(tilePrefab, tilesRoot);
         var rt = tile.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0, 1);
@@ -351,20 +358,21 @@ public class GridSpawner : MonoBehaviour
 
         view.SetIconScale(iconScale);
         view.SetIconSize(iconSize);
-        view.SetUseFullCellIcon(fullCellIcons);
+        view.SetUseFullCellIcon(false);
         view.SetMovableObstacleTile(true);
+
+        // ÖNEMLİ: Centered değil, BottomAligned
+        view.SetVisualLayout(TileView.TileVisualLayout.BottomAligned);
+
         view.ApplyTileSize(tileSize);
 
         board.RegisterTile(view, x, y);
 
-        // Herhangi bir normal tile tipi ata (match'e girmeyecek zaten)
-        // randomPool'dan birini kullan — görünmeyecek çünkü icon override edilecek
         var dummyType = randomPool != null && randomPool.Length > 0
             ? randomPool[0]
             : TileType.Gear;
         view.SetType(dummyType);
 
-        // Obstacle sprite'ını tile icon'u olarak ayarla
         Sprite obstacleSprite = def.GetPreviewSprite();
         if (obstacleSprite != null && view.IconImage != null)
             view.IconImage.sprite = obstacleSprite;
@@ -531,6 +539,9 @@ public class GridSpawner : MonoBehaviour
         if (cellBgRoot == null)
             cellBgRoot = GetOrCreateChildRoot(root, "CellBGs");
 
+        if (gridLinesRoot == null)
+            gridLinesRoot = GetOrCreateChildRoot(root, "GridLines");
+
         if (obstaclesRoot == null)
             obstaclesRoot = GetOrCreateChildRoot(root, "Obstacles");
 
@@ -551,6 +562,35 @@ public class GridSpawner : MonoBehaviour
         return CreateChildRoot(parent, name);
     }
 
+    private RectTransform GetOrCreateBoardBgRoot(RectTransform parent)
+    {
+        var found = parent.Find("BoardBG") as RectTransform;
+        if (found != null)
+        {
+            if (found.TryGetComponent<Image>(out var foundImg))
+            {
+                foundImg.color = runtimeBoardBg;
+                foundImg.raycastTarget = false;
+            }
+            return found;
+        }
+
+        var go = new GameObject("BoardBG", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = Vector2.zero;
+
+        var img = go.GetComponent<Image>();
+        img.color = runtimeBoardBg;
+        img.raycastTarget = false;
+
+        return rt;
+    }
     private RectTransform CreateChildRoot(RectTransform parent, string name)
     {
         var go = new GameObject(name, typeof(RectTransform));
@@ -571,7 +611,49 @@ public class GridSpawner : MonoBehaviour
         for (int i = parent.childCount - 1; i >= 0; i--)
             Destroy(parent.GetChild(i).gameObject);
     }
+    private void DrawGridLines()
+    {
+        if (gridLinesRoot == null)
+            return;
 
+        float gridW = width * tileSize;
+        float gridH = height * tileSize;
+        float thickness = Mathf.Max(1f, runtimeGridLineThickness);
+
+        for (int x = 0; x <= width; x++)
+        {
+            var go = new GameObject($"GridLine_V_{x}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(gridLinesRoot, false);
+
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot = new Vector2(0, 1);
+            rt.anchoredPosition = new Vector2(x * tileSize - thickness * 0.5f, 0f);
+            rt.sizeDelta = new Vector2(thickness, gridH);
+
+            var img = go.GetComponent<Image>();
+            img.color = runtimeGridLineColor;
+            img.raycastTarget = false;
+        }
+
+        for (int y = 0; y <= height; y++)
+        {
+            var go = new GameObject($"GridLine_H_{y}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(gridLinesRoot, false);
+
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot = new Vector2(0, 1);
+            rt.anchoredPosition = new Vector2(0f, -y * tileSize + thickness * 0.5f);
+            rt.sizeDelta = new Vector2(gridW, thickness);
+
+            var img = go.GetComponent<Image>();
+            img.color = runtimeGridLineColor;
+            img.raycastTarget = false;
+        }
+    }
     private void SpawnCellBg(int x, int y)
     {
         var go = Instantiate(cellBgPrefab, cellBgRoot);
@@ -582,10 +664,10 @@ public class GridSpawner : MonoBehaviour
         rt.pivot = new Vector2(0, 1);
 
         rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
-        // CellBG her zaman tam hücre boyutunda olmalı (kare grid),
-        // ikon aspect ratio'sundan bağımsız.
         rt.sizeDelta = new Vector2(tileSize, tileSize);
+
         go.transform.SetAsFirstSibling();
+
         int idx = resolvedLevel.Index(x, y);
         cellBgByIndex[idx] = go;
         if (go.TryGetComponent<Image>(out var image))
@@ -617,6 +699,7 @@ public class GridSpawner : MonoBehaviour
         view.SetIconScale(iconScale);
         view.SetIconSize(iconSize);
         view.SetUseFullCellIcon(fullCellIcons);
+        view.SetVisualLayout(TileView.TileVisualLayout.BottomAligned);
         view.ApplyTileSize(tileSize);
 
         board.RegisterTile(view, x, y); // Init + coords + ilk SyncTileData (tipi henüz default olabilir)

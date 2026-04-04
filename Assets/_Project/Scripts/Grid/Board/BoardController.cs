@@ -93,6 +93,8 @@ public class BoardController : MonoBehaviour
     [SerializeField] private GameObject obstacleBreakFxPrefab;
     [SerializeField] private float obstacleBreakFxLifetime = 0.40f;
 
+    [SerializeField] private bool allowPostSwapSettleValidation = true;
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     [Header("Debug / Tile Sync")]
     [SerializeField] private bool enableTileSyncValidation = true;
@@ -808,9 +810,20 @@ public class BoardController : MonoBehaviour
         SyncAllTilesToGridData();
 
         int ax = a.X, ay = a.Y, bx = b.X, by = b.Y;
-        tiles[ax, ay] = b; tiles[bx, by] = a;
-        a.SetCoords(bx, by); b.SetCoords(ax, ay);
-        SyncTileData(ax, ay); SyncTileData(bx, by);
+
+        // Swap öncesi movable obstacle state snapshot
+        bool movableMovedAToB, movableMovedBToA;
+
+        tiles[ax, ay] = b;
+        tiles[bx, by] = a;
+        a.SetCoords(bx, by);
+        b.SetCoords(ax, ay);
+
+        // Movable obstacle varsa logical obstacle state de tile ile birlikte taşınsın
+        TryApplyMovableObstacleSwapState(ax, ay, bx, by, out movableMovedAToB, out movableMovedBToA);
+
+        SyncTileData(ax, ay);
+        SyncTileData(bx, by);
         RefreshAllSortingOrders();
 
         actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
@@ -818,7 +831,6 @@ public class BoardController : MonoBehaviour
         FlowLog("swap_anim");
 
         // SWAP ANINDAKI gerçek special state'i snapshot al.
-        // Sonradan oluşan special'lar combo kararı için kullanılmayacak.
         TileSpecial originalSa = a.GetSpecial();
         TileSpecial originalSb = b.GetSpecial();
 
@@ -832,16 +844,12 @@ public class BoardController : MonoBehaviour
             bool bothOriginallySpecial = originalSa != TileSpecial.None && originalSb != TileSpecial.None;
             ConsumeMove();
 
-            // ── Adım 1: Eğer yalnızca tek taraf başlangıçta special ise,
-            // normal tarafın yeni yerindeki match'ini önce çöz.
-            // Burada doğan special board üstünde kalır; combo partner sayılmaz.
             if (!bothOriginallySpecial)
             {
                 var specialTile = (originalSa != TileSpecial.None) ? a : b;
                 var normalTile = (originalSa != TileSpecial.None) ? b : a;
                 int sx = specialTile.X, sy = specialTile.Y;
 
-                // Geçici çıkarma hack'i şimdilik kalsın; önce davranışı düzeltelim.
                 var savedTile = tiles[sx, sy];
                 var savedData = gridData[sx, sy];
                 tiles[sx, sy] = null;
@@ -873,7 +881,6 @@ public class BoardController : MonoBehaviour
                             if (creation.winner.GetSpecial() != TileSpecial.None)
                                 continue;
 
-                            // MovableObstacle tile'ına special atanamaz
                             if (obstacleStateService != null
                                 && obstacleStateService.IsMovableObstacleAt(creation.winner.X, creation.winner.Y))
                                 continue;
@@ -884,12 +891,10 @@ public class BoardController : MonoBehaviour
 
                             createdTiles.Add(created);
 
-                            // Oluşan special contributor/clear havuzundan çıksın
                             normalMatches.Remove(created);
                             candidates.Remove(created);
                         }
 
-                        // Fire-and-forget: merge clear ile paralel çalışır
                         if (boardAnimatorRef != null)
                         {
                             foreach (var created in createdTiles)
@@ -903,9 +908,9 @@ public class BoardController : MonoBehaviour
                         }
                     }
 
-                    // Yeni oluşan special'lar silinmesin; kalan normal match taşları silinsin.
                     normalMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
                     FlowLog($"special_creation({createdTiles.Count})");
+
                     if (normalMatches.Count > 0)
                     {
                         actionSequencer.Enqueue(new MatchClearAction(
@@ -918,28 +923,19 @@ public class BoardController : MonoBehaviour
                 }
             }
 
-            // ── Adım 2: Special activation
-            // Burada karar current state ile değil, original snapshot ile verilecek.
-
-            // Pulse+Pulse combo: charge animasyonu (bomba şişer) → bitince patlama
             if (originalSa == TileSpecial.PulseCore && originalSb == TileSpecial.PulseCore)
             {
                 Debug.Log($"[PulsePulseCharge] a=({a.X},{a.Y}) b=({b.X},{b.Y}) orig_a=({ax},{ay}) orig_b=({bx},{by})");
 
-                // Hedef hücre: swap öncesi b'nin pozisyonu (bx,by)
-                // Bu değer swap'tan bağımsız, kesinlikle doğru
                 int chargeX = bx;
                 int chargeY = by;
 
-                // Charge sırasında pulse tile'lar görünmesin
                 SpecialVisualService.HideTileVisualForCombo(a);
                 SpecialVisualService.HideTileVisualForCombo(b);
 
-                // Charge animasyonu başlat
                 PlayPulsePulseExplosionVfxAtCell(chargeX, chargeY);
                 yield return new WaitForSeconds(pulsePulseChargeDuration);
 
-                // Charge bitti — hemen mevcut pulse patlamasını geniş alanda oynat
                 if (pulseCoreImpactService != null)
                     pulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(chargeX, chargeY, radiusCells: pulsePulseExplosionRadius);
             }
@@ -963,20 +959,49 @@ public class BoardController : MonoBehaviour
         foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y)) matches.Add(t);
         FlowLog($"match_find({matches.Count})");
 
-        if (matches.Count == 0)
+        bool shouldAcceptViaSettle = false;
+        if (matches.Count == 0 && allowPostSwapSettleValidation)
         {
-            tiles[ax, ay] = a; tiles[bx, by] = b;
-            a.SetCoords(ax, ay); b.SetCoords(bx, by);
-            SyncTileData(ax, ay); SyncTileData(bx, by);
+            shouldAcceptViaSettle = WouldCreatePostSwapSettleMatch();
+            FlowLog($"post_settle_check({shouldAcceptViaSettle})");
+        }
+
+        if (matches.Count == 0 && !shouldAcceptViaSettle)
+        {
+            // Obstacle state de geri alınsın
+            RestoreMovableObstacleSwapState(ax, ay, bx, by, movableMovedAToB, movableMovedBToA);
+
+            tiles[ax, ay] = a;
+            tiles[bx, by] = b;
+            a.SetCoords(ax, ay);
+            b.SetCoords(bx, by);
+
+            SyncTileData(ax, ay);
+            SyncTileData(bx, by);
             RefreshAllSortingOrders();
+
             actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
             yield return AnimateQueuedActions();
             FlowLog("swap_back");
+
             Debug.Log($"[Flow] ═══ SWAP END (no match) ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
-            EndBusy(); yield break;
+            EndBusy();
+            yield break;
         }
 
         ConsumeMove();
+
+        // Instant match yok ama settle sonrası match olacaksa, clear pass'e girmeden
+        // board'un önce fall/cascade çözmesine izin ver.
+        if (matches.Count == 0 && shouldAcceptViaSettle)
+        {
+            yield return ResolveBoard(resolveEmptyCellsFirst: true);
+            FlowLog("resolve_board_after_settle");
+            Debug.Log($"[Flow] ═══ SWAP END (settle-valid) ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
+            EndBusy();
+            yield break;
+        }
+
         yield return ExecuteClearPass(matches, allowSpecialActivation: true);
         FlowLog("clear_pass");
         yield return ResolveBoard(resolveEmptyCellsFirst: true);
@@ -988,6 +1013,322 @@ public class BoardController : MonoBehaviour
     //  Resolve Board
     // ═══════════════════════════════════════════════════════════════
 
+    private void TryApplyMovableObstacleSwapState(
+        int ax, int ay,
+        int bx, int by,
+        out bool movedAToB,
+        out bool movedBToA)
+    {
+        movedAToB = false;
+        movedBToA = false;
+
+        if (obstacleStateService == null)
+            return;
+
+        bool aHasMovable = obstacleStateService.IsMovableObstacleAt(ax, ay);
+        bool bHasMovable = obstacleStateService.IsMovableObstacleAt(bx, by);
+
+        // İki taraf da movable ise hücreler yine movable kalır, ekstra taşıma gerekmez.
+        if (aHasMovable == bHasMovable)
+            return;
+
+        if (aHasMovable)
+        {
+            obstacleStateService.MoveObstacle(ax, ay, bx, by);
+            movedAToB = true;
+        }
+        else
+        {
+            obstacleStateService.MoveObstacle(bx, by, ax, ay);
+            movedBToA = true;
+        }
+    }
+
+    private void RestoreMovableObstacleSwapState(
+        int ax, int ay,
+        int bx, int by,
+        bool movedAToB,
+        bool movedBToA)
+    {
+        if (obstacleStateService == null)
+            return;
+
+        if (movedAToB)
+            obstacleStateService.MoveObstacle(bx, by, ax, ay);
+        else if (movedBToA)
+            obstacleStateService.MoveObstacle(ax, ay, bx, by);
+    }
+
+    private bool WouldCreatePostSwapSettleMatch()
+    {
+        if (!allowPostSwapSettleValidation)
+            return false;
+
+        bool[,] simHasTile = new bool[width, height];
+        TileType[,] simTypes = new TileType[width, height];
+        TileSpecial[,] simSpecials = new TileSpecial[width, height];
+        bool[,] simMovableObstacle = new bool[width, height];
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                var tile = tiles[x, y];
+                if (tile != null)
+                {
+                    simHasTile[x, y] = true;
+                    simTypes[x, y] = tile.GetTileType();
+                    simSpecials[x, y] = tile.GetSpecial();
+                }
+
+                simMovableObstacle[x, y] =
+                    obstacleStateService != null &&
+                    obstacleStateService.IsMovableObstacleAt(x, y);
+            }
+        }
+
+        if (HasAnySimMatch(simHasTile, simTypes, simSpecials, simMovableObstacle))
+            return true;
+
+        const int maxPass = 32;
+        for (int pass = 0; pass < maxPass; pass++)
+        {
+            bool moved = SimulateCollapseExistingTiles(
+                simHasTile,
+                simTypes,
+                simSpecials,
+                simMovableObstacle);
+
+            if (!moved)
+                return false;
+
+            if (HasAnySimMatch(simHasTile, simTypes, simSpecials, simMovableObstacle))
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool SimulateCollapseExistingTiles(
+        bool[,] simHasTile,
+        TileType[,] simTypes,
+        TileSpecial[,] simSpecials,
+        bool[,] simMovableObstacle)
+    {
+        bool movedAny = false;
+
+        var landingYs = new List<int>(height);
+        var sourceYs = new List<int>(height);
+        var sourceTypes = new List<TileType>(height);
+        var sourceSpecials = new List<TileSpecial>(height);
+        var sourceMovableFlags = new List<bool>(height);
+
+        for (int x = 0; x < width; x++)
+        {
+            int segmentBottom = height - 1;
+
+            while (segmentBottom >= 0)
+            {
+                while (segmentBottom >= 0 && IsObstacleBlockedCell(x, segmentBottom))
+                    segmentBottom--;
+
+                if (segmentBottom < 0)
+                    break;
+
+                int segmentTop = segmentBottom;
+                while (segmentTop > 0 && !IsObstacleBlockedCell(x, segmentTop - 1))
+                    segmentTop--;
+
+                landingYs.Clear();
+                sourceYs.Clear();
+                sourceTypes.Clear();
+                sourceSpecials.Clear();
+                sourceMovableFlags.Clear();
+
+                // Bu segmentte taşların yerleşebileceği gerçek slotlar
+                for (int y = segmentBottom; y >= segmentTop; y--)
+                {
+                    if (IsMaskHoleCell(x, y))
+                        continue;
+
+                    if (IsObstacleBlockedCell(x, y))
+                        continue;
+
+                    landingYs.Add(y);
+                }
+
+                // Segmentteki mevcut taşları topla
+                for (int y = segmentBottom; y >= segmentTop; y--)
+                {
+                    if (!simHasTile[x, y])
+                        continue;
+
+                    if (IsMaskHoleCell(x, y))
+                        continue;
+
+                    if (IsObstacleBlockedCell(x, y))
+                        continue;
+
+                    sourceYs.Add(y);
+                    sourceTypes.Add(simTypes[x, y]);
+                    sourceSpecials.Add(simSpecials[x, y]);
+                    sourceMovableFlags.Add(simMovableObstacle[x, y]);
+
+                    simHasTile[x, y] = false;
+                    simTypes[x, y] = default;
+                    simSpecials[x, y] = TileSpecial.None;
+                    simMovableObstacle[x, y] = false;
+                }
+
+                // Taşları aşağı sıkıştır
+                int count = Mathf.Min(sourceYs.Count, landingYs.Count);
+                for (int i = 0; i < count; i++)
+                {
+                    int toY = landingYs[i];
+
+                    simHasTile[x, toY] = true;
+                    simTypes[x, toY] = sourceTypes[i];
+                    simSpecials[x, toY] = sourceSpecials[i];
+                    simMovableObstacle[x, toY] = sourceMovableFlags[i];
+
+                    if (sourceYs[i] != toY)
+                        movedAny = true;
+                }
+
+                segmentBottom = segmentTop - 1;
+            }
+        }
+
+        return movedAny;
+    }
+
+    private bool HasAnySimMatch(
+        bool[,] simHasTile,
+        TileType[,] simTypes,
+        TileSpecial[,] simSpecials,
+        bool[,] simMovableObstacle)
+    {
+        // Horizontal
+        for (int y = 0; y < height; y++)
+        {
+            int run = 0;
+            TileType runType = default;
+
+            for (int x = 0; x < width; x++)
+            {
+                if (!IsSimNormalMatchable(simHasTile, simSpecials, simMovableObstacle, x, y))
+                {
+                    if (run >= 3) return true;
+                    run = 0;
+                    continue;
+                }
+
+                var t = simTypes[x, y];
+                if (run == 0)
+                {
+                    run = 1;
+                    runType = t;
+                }
+                else if (t.Equals(runType))
+                {
+                    run++;
+                }
+                else
+                {
+                    if (run >= 3) return true;
+                    run = 1;
+                    runType = t;
+                }
+            }
+
+            if (run >= 3) return true;
+        }
+
+        // Vertical
+        for (int x = 0; x < width; x++)
+        {
+            int run = 0;
+            TileType runType = default;
+
+            for (int y = 0; y < height; y++)
+            {
+                if (!IsSimNormalMatchable(simHasTile, simSpecials, simMovableObstacle, x, y))
+                {
+                    if (run >= 3) return true;
+                    run = 0;
+                    continue;
+                }
+
+                var t = simTypes[x, y];
+                if (run == 0)
+                {
+                    run = 1;
+                    runType = t;
+                }
+                else if (t.Equals(runType))
+                {
+                    run++;
+                }
+                else
+                {
+                    if (run >= 3) return true;
+                    run = 1;
+                    runType = t;
+                }
+            }
+
+            if (run >= 3) return true;
+        }
+
+        // 2x2
+        for (int y = 0; y < height - 1; y++)
+        {
+            for (int x = 0; x < width - 1; x++)
+            {
+                if (!IsSimNormalMatchable(simHasTile, simSpecials, simMovableObstacle, x, y)) continue;
+                if (!IsSimNormalMatchable(simHasTile, simSpecials, simMovableObstacle, x + 1, y)) continue;
+                if (!IsSimNormalMatchable(simHasTile, simSpecials, simMovableObstacle, x, y + 1)) continue;
+                if (!IsSimNormalMatchable(simHasTile, simSpecials, simMovableObstacle, x + 1, y + 1)) continue;
+
+                var t = simTypes[x, y];
+                if (!simTypes[x + 1, y].Equals(t)) continue;
+                if (!simTypes[x, y + 1].Equals(t)) continue;
+                if (!simTypes[x + 1, y + 1].Equals(t)) continue;
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsSimNormalMatchable(
+        bool[,] simHasTile,
+        TileSpecial[,] simSpecials,
+        bool[,] simMovableObstacle,
+        int x,
+        int y)
+    {
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            return false;
+
+        if (!simHasTile[x, y])
+            return false;
+
+        if (IsMaskHoleCell(x, y))
+            return false;
+
+        if (IsObstacleBlockedCell(x, y))
+            return false;
+
+        if (simSpecials[x, y] != TileSpecial.None)
+            return false;
+
+        if (simMovableObstacle[x, y])
+            return false;
+
+        return true;
+    }
     IEnumerator ResolveBoard(bool allowSpecialActivation = false, bool resolveEmptyCellsFirst = false)
     {
         float _rbStart = Time.realtimeSinceStartup;
