@@ -352,6 +352,7 @@ public class GridSpawner : MonoBehaviour
         view.SetIconScale(iconScale);
         view.SetIconSize(iconSize);
         view.SetUseFullCellIcon(fullCellIcons);
+        view.SetMovableObstacleTile(true);
         view.ApplyTileSize(tileSize);
 
         board.RegisterTile(view, x, y);

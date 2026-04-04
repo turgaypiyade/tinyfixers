@@ -35,6 +35,8 @@ public class TileView : MonoBehaviour,
 
     [SerializeField] private bool useFullCellIcon = false;
 
+    private bool isMovableObstacleTile = false;
+
     private int lastAppliedTileSize;
 
     // Bu taşın düştüğü CollapseAndSpawnAnimated nesil ID'si. -1 = hiç düşmedi.
@@ -186,7 +188,27 @@ public class TileView : MonoBehaviour,
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
-        rt.anchoredPosition = new Vector2(X * tileSize, -Y * tileSize);
+
+        // ApplyTileSize hesapladığı ortalamayı burada da uygula
+        bool isSpecial = model != null && model.special != TileSpecial.None;
+        if (isSpecial || isMovableObstacleTile)
+        {
+            float cellH;
+            if (useFullCellIcon)
+                cellH = tileSize;
+            else
+            {
+                float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
+                cellH = tileSize * Mathf.Max(0.1f, ratioY);
+            }
+            float elemH = cellH * (118f / 120f);
+            float yOffset = (cellH - elemH) * 0.5f;
+            rt.anchoredPosition = new Vector2(X * tileSize, -Y * tileSize - yOffset);
+        }
+        else
+        {
+            rt.anchoredPosition = new Vector2(X * tileSize, -Y * tileSize);
+        }
 
         ApplyTileSize(tileSize);
     }
@@ -204,7 +226,27 @@ public class TileView : MonoBehaviour,
         if (rt == null || !rt) yield break;
 
         Vector2 start = rt.anchoredPosition;
-        Vector2 end = new Vector2(X * tileSize, -Y * tileSize);
+        Vector2 end;
+
+        bool isSpecialOrMovable = (model != null && model.special != TileSpecial.None) || isMovableObstacleTile;
+        if (isSpecialOrMovable)
+        {
+            float cellH;
+            if (useFullCellIcon)
+                cellH = tileSize;
+            else
+            {
+                float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
+                cellH = tileSize * Mathf.Max(0.1f, ratioY);
+            }
+            float elemH = cellH * (118f / 120f);
+            float yOffset = (cellH - elemH) * 0.5f;
+            end = new Vector2(X * tileSize, -Y * tileSize - yOffset);
+        }
+        else
+        {
+            end = new Vector2(X * tileSize, -Y * tileSize);
+        }
 
         float t = 0f;
         while (t < 1f)
@@ -440,6 +482,13 @@ public class TileView : MonoBehaviour,
             ApplyTileSize(lastAppliedTileSize);
     }
 
+    public void SetMovableObstacleTile(bool value)
+    {
+        isMovableObstacleTile = value;
+        if (lastAppliedTileSize > 0)
+            ApplyTileSize(lastAppliedTileSize);
+    }
+
     public void SetIconSize(Vector2 size)
     {
         iconSize = new Vector2(Mathf.Max(1f, size.x), Mathf.Max(1f, size.y));
@@ -452,26 +501,42 @@ public class TileView : MonoBehaviour,
         lastAppliedTileSize = tileSize;
 
         if (rt == null) rt = GetComponent<RectTransform>();
+
+        // ── Hücre boyutunu hesapla ──
+        float cellW, cellH;
         if (useFullCellIcon)
         {
-            rt.sizeDelta = new Vector2(tileSize, tileSize);
+            cellW = tileSize;
+            cellH = tileSize;
         }
         else
         {
             float ratioX = iconSize.x / Mathf.Max(1f, IconReferenceSize.x);
             float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
-            rt.sizeDelta = new Vector2(
-                tileSize * Mathf.Max(0.1f, ratioX),
-                tileSize * Mathf.Max(0.1f, ratioY));
+            cellW = tileSize * Mathf.Max(0.1f, ratioX);
+            cellH = tileSize * Mathf.Max(0.1f, ratioY);
         }
 
-        if (iconImage != null)
-        {
-            var irt = iconImage.rectTransform;
-            bool isSpecial = model != null && model.special != TileSpecial.None;
+        bool isSpecial = model != null && model.special != TileSpecial.None;
 
-            if (useFullCellIcon)
+        // ── MovableObstacle ve Special: 100x118 oranında, hücrede dikeyde ortalı ──
+        if (isSpecial || isMovableObstacleTile)
+        {
+            // Referans: hücre 100x120 iken eleman 100x118 olacak.
+            // Genişlik hücreyle aynı, yükseklik = cellH * (118/120)
+            float elemH = cellH * (118f / 120f);
+            float elemW = cellW; // genişlik aynı kalıyor
+
+            rt.sizeDelta = new Vector2(elemW, elemH);
+
+            // Pivot top-left (0,1) olduğu için ortalamak adına Y ofsetini ayarla
+            // Hücre top-left'ten başlıyor, elemanı dikeyde ortala
+            float yOffset = (cellH - elemH) * 0.5f;
+            rt.anchoredPosition = new Vector2(X * tileSize, -Y * tileSize - yOffset);
+
+            if (iconImage != null)
             {
+                var irt = iconImage.rectTransform;
                 irt.anchorMin = Vector2.zero;
                 irt.anchorMax = Vector2.one;
                 irt.pivot = new Vector2(0.5f, 0.5f);
@@ -479,22 +544,33 @@ public class TileView : MonoBehaviour,
                 irt.sizeDelta = Vector2.zero;
                 iconImage.preserveAspect = false;
             }
-            else
+        }
+        else
+        {
+            rt.sizeDelta = new Vector2(cellW, cellH);
+
+            if (iconImage != null)
             {
-                float tileRatio = Mathf.Max(0.01f, tileSize / IconReferenceTileSize);
-                Vector2 scaledIconSize = iconSize * (tileRatio * iconScale);
-                irt.sizeDelta = scaledIconSize;
-                irt.anchorMin = new Vector2(0.5f, 0.5f);
-                irt.anchorMax = new Vector2(0.5f, 0.5f);
-                iconImage.preserveAspect = true;
-                if (isSpecial)
+                var irt = iconImage.rectTransform;
+
+                if (useFullCellIcon)
                 {
-                    // Special ikonları (LineH/LineV/PatchBot/PulseCore/SystemOverride) görsel merkezde tut.
+                    irt.anchorMin = Vector2.zero;
+                    irt.anchorMax = Vector2.one;
                     irt.pivot = new Vector2(0.5f, 0.5f);
                     irt.anchoredPosition = Vector2.zero;
+                    irt.sizeDelta = Vector2.zero;
+                    iconImage.preserveAspect = false;
                 }
                 else
                 {
+                    float tileRatio = Mathf.Max(0.01f, tileSize / IconReferenceTileSize);
+                    Vector2 scaledIconSize = iconSize * (tileRatio * iconScale);
+                    irt.sizeDelta = scaledIconSize;
+                    irt.anchorMin = new Vector2(0.5f, 0.5f);
+                    irt.anchorMax = new Vector2(0.5f, 0.5f);
+                    iconImage.preserveAspect = true;
+
                     // Normal taşlar mevcut "alta oturan" hissini korusun.
                     irt.pivot = new Vector2(0.5f, 0f);
                     irt.anchoredPosition = new Vector2(0f, -scaledIconSize.y * 0.5f);
