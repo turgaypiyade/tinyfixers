@@ -36,7 +36,12 @@ public readonly struct ObstacleStageSnapshot
     public readonly ObstacleDamageSourceRule damageRule;
     public readonly Sprite sprite;
 
-    public ObstacleStageSnapshot(ObstacleBehaviorType behavior, bool blocksCells, bool allowDiagonal, ObstacleDamageSourceRule damageRule, Sprite sprite)
+    public ObstacleStageSnapshot(
+        ObstacleBehaviorType behavior,
+        bool blocksCells,
+        bool allowDiagonal,
+        ObstacleDamageSourceRule damageRule,
+        Sprite sprite)
     {
         this.behavior = behavior;
         this.blocksCells = blocksCells;
@@ -56,8 +61,14 @@ public readonly struct ObstacleStageTransition
     public readonly ObstacleStageSnapshot previousStage;
     public readonly ObstacleStageSnapshot currentStage;
 
-    public ObstacleStageTransition(bool hasTransition, int originIndex, ObstacleId obstacleId, int remainingHitsAfter, bool cleared,
-        ObstacleStageSnapshot previousStage, ObstacleStageSnapshot currentStage)
+    public ObstacleStageTransition(
+        bool hasTransition,
+        int originIndex,
+        ObstacleId obstacleId,
+        int remainingHitsAfter,
+        bool cleared,
+        ObstacleStageSnapshot previousStage,
+        ObstacleStageSnapshot currentStage)
     {
         this.hasTransition = hasTransition;
         this.originIndex = originIndex;
@@ -90,8 +101,13 @@ public class ObstacleStateService
         public readonly ObstacleStageTransition stageTransition;
         public readonly int[] affectedCellIndices;
 
-        public ObstacleHitResult(bool didHit, bool consumedHit, bool rejectedByRule, ObstacleVisualChange visualChange,
-            ObstacleStageTransition stageTransition, int[] affectedCellIndices)
+        public ObstacleHitResult(
+            bool didHit,
+            bool consumedHit,
+            bool rejectedByRule,
+            ObstacleVisualChange visualChange,
+            ObstacleStageTransition stageTransition,
+            int[] affectedCellIndices)
         {
             this.didHit = didHit;
             this.consumedHit = consumedHit;
@@ -118,7 +134,8 @@ public class ObstacleStateService
 
         int size = (level != null) ? level.width * level.height : 0;
         remainingHitsByOrigin = new int[size];
-        for (int i = 0; i < size; i++) remainingHitsByOrigin[i] = -1;
+        for (int i = 0; i < size; i++)
+            remainingHitsByOrigin[i] = -1;
 
         InitializeFromLevel();
     }
@@ -128,7 +145,9 @@ public class ObstacleStateService
         if (level == null || level.obstacles == null || level.obstacleOrigins == null)
             return;
 
-        int size = Mathf.Min(remainingHitsByOrigin.Length, Mathf.Min(level.obstacles.Length, level.obstacleOrigins.Length));
+        int size = Mathf.Min(
+            remainingHitsByOrigin.Length,
+            Mathf.Min(level.obstacles.Length, level.obstacleOrigins.Length));
 
         for (int i = 0; i < size; i++)
             remainingHitsByOrigin[i] = -1;
@@ -186,9 +205,7 @@ public class ObstacleStateService
 
         int remaining = remainingHitsByOrigin[origin];
         if (remaining < 0)
-        {
             remaining = Mathf.Max(1, def != null ? def.hits : 1);
-        }
 
         if (!CanConsumeHit(def, remaining, context))
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
@@ -210,7 +227,16 @@ public class ObstacleStateService
         var currentStage = CreateSnapshot(def, id, remaining);
         var sprite = ResolveStageSprite(def, id, remaining);
         change = new ObstacleVisualChange(origin, id, false, remaining, sprite);
-        var stageTransition = new ObstacleStageTransition(true, origin, id, remaining, false, previousStage, currentStage);
+
+        var stageTransition = new ObstacleStageTransition(
+            true,
+            origin,
+            id,
+            remaining,
+            false,
+            previousStage,
+            currentStage);
+
         OnObstacleStageChanged?.Invoke(origin, currentStage);
         return new ObstacleHitResult(true, true, false, change, stageTransition, affectedCells);
     }
@@ -222,10 +248,6 @@ public class ObstacleStateService
         return (ObstacleId)level.obstacles[idx] != ObstacleId.None;
     }
 
-    /// <summary>
-    /// Belirtilen hücredeki obstacle'ın kalan vuruş sayısını döner.
-    /// Obstacle yoksa 0 döner.
-    /// </summary>
     public int GetRemainingHitsAt(int x, int y)
     {
         if (!IsValidCell(x, y)) return 0;
@@ -252,17 +274,14 @@ public class ObstacleStateService
         return (ObstacleId)level.obstacles[idx];
     }
 
-    /// <summary>
-    /// Belirtilen hücredeki obstacle'ın origin index'ini döner.
-    /// Multi-cell obstacle'lar aynı origin'i paylaşır.
-    /// Obstacle yoksa -1 döner.
-    /// </summary>
     public int GetObstacleOriginAt(int x, int y)
     {
         if (!IsValidCell(x, y)) return -1;
+
         int idx = level.Index(x, y);
         var id = (ObstacleId)level.obstacles[idx];
         if (id == ObstacleId.None) return -1;
+
         int origin = level.obstacleOrigins[idx];
         return (origin >= 0 && origin < remainingHitsByOrigin.Length) ? origin : -1;
     }
@@ -295,7 +314,6 @@ public class ObstacleStateService
 
     public bool IsDiagonalAllowedAt(int x, int y)
     {
-
         if (!IsValidCell(x, y)) return false;
 
         int idx = level.Index(x, y);
@@ -307,6 +325,11 @@ public class ObstacleStateService
         return def != null && def.GetAllowDiagonalForRemainingHits(remaining);
     }
 
+    // CascadeLogic ile uyum için alias
+    public bool GetAllowDiagonalAt(int x, int y)
+    {
+        return IsDiagonalAllowedAt(x, y);
+    }
 
     private int ResolveRemainingHitsForCell(int idx, ObstacleDef def)
     {
@@ -327,9 +350,9 @@ public class ObstacleStateService
     private bool IsValidCell(int x, int y)
     {
         return level != null
-               && level.obstacles != null
-               && level.obstacleOrigins != null
-               && level.InBounds(x, y);
+            && level.obstacles != null
+            && level.obstacleOrigins != null
+            && level.InBounds(x, y);
     }
 
     private bool CanConsumeHit(ObstacleDef def, int remainingHits, ObstacleHitContext context)
@@ -347,10 +370,13 @@ public class ObstacleStateService
         {
             case ObstacleDamageSourceRule.SpecialOnly:
                 return context == ObstacleHitContext.SpecialActivation;
+
             case ObstacleDamageSourceRule.NormalOnly:
                 return context == ObstacleHitContext.NormalMatch;
+
             case ObstacleDamageSourceRule.BoosterOnly:
                 return context == ObstacleHitContext.Booster;
+
             case ObstacleDamageSourceRule.Any:
             default:
                 return true;
@@ -371,7 +397,12 @@ public class ObstacleStateService
         if (stage == null)
             return default;
 
-        return new ObstacleStageSnapshot(stage.behavior, stage.blocksCells, stage.allowDiagonal, stage.damageRule, stage.sprite);
+        return new ObstacleStageSnapshot(
+            stage.behavior,
+            stage.blocksCells,
+            stage.allowDiagonal,
+            stage.damageRule,
+            stage.sprite);
     }
 
     private int[] CollectCellsForOrigin(int origin, ObstacleId originId)
@@ -415,11 +446,6 @@ public class ObstacleStateService
         OnObstacleDestroyed?.Invoke(origin, originId);
     }
 
-    // ObstacleStateService sınıfı içine ekle:
-
-    /// <summary>
-    /// Belirtilen hücredeki obstacle movable mı?
-    /// </summary>
     public bool IsMovableObstacleAt(int x, int y)
     {
         if (!IsValidCell(x, y)) return false;
@@ -435,10 +461,6 @@ public class ObstacleStateService
         return def.IsMovableObstacleForRemainingHits(remaining);
     }
 
-    /// <summary>
-    /// Movable obstacle'ın level data'daki pozisyonunu günceller.
-    /// Gravity/swap sonrası çağrılır.
-    /// </summary>
     public void MoveObstacle(int fromX, int fromY, int toX, int toY)
     {
         if (level == null || level.obstacles == null || level.obstacleOrigins == null)
@@ -458,15 +480,12 @@ public class ObstacleStateService
 
         int origin = level.obstacleOrigins[fromIdx];
 
-        // Hedef hücreye obstacle bilgisini taşı
         level.obstacles[toIdx] = level.obstacles[fromIdx];
-        level.obstacleOrigins[toIdx] = toIdx; // Yeni pozisyon yeni origin olur
+        level.obstacleOrigins[toIdx] = toIdx; // yeni pozisyon yeni origin
 
-        // Eski hücreyi temizle
         level.obstacles[fromIdx] = (int)ObstacleId.None;
         level.obstacleOrigins[fromIdx] = -1;
 
-        // remainingHits'i yeni origin'e taşı
         if (origin >= 0 && origin < remainingHitsByOrigin.Length)
         {
             int remaining = remainingHitsByOrigin[origin];
@@ -475,5 +494,52 @@ public class ObstacleStateService
             if (toIdx < remainingHitsByOrigin.Length)
                 remainingHitsByOrigin[toIdx] = remaining;
         }
+    }
+
+    public int CountAliveOrigins(ObstacleId obstacleId)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return 0;
+
+        int count = 0;
+        int size = Mathf.Min(level.obstacles.Length, level.obstacleOrigins.Length);
+
+        for (int i = 0; i < size; i++)
+        {
+            if ((ObstacleId)level.obstacles[i] != obstacleId) continue;
+            if (level.obstacleOrigins[i] != i) continue;
+            count++;
+        }
+
+        return count;
+    }
+
+    public bool TrySpawnSingleCellObstacleAt(int x, int y, ObstacleId obstacleId)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return false;
+        if (!level.InBounds(x, y))
+            return false;
+
+        int idx = level.Index(x, y);
+        if ((ObstacleId)level.obstacles[idx] != ObstacleId.None)
+            return false;
+
+        var def = library != null ? library.Get(obstacleId) : null;
+        if (def == null)
+            return false;
+
+        if (def.size.x != 1 || def.size.y != 1)
+            return false;
+
+        int initialHits = Mathf.Max(1, def.hits);
+
+        level.obstacles[idx] = (int)obstacleId;
+        level.obstacleOrigins[idx] = idx;
+
+        if (idx >= 0 && idx < remainingHitsByOrigin.Length)
+            remainingHitsByOrigin[idx] = initialHits;
+
+        return true;
     }
 }

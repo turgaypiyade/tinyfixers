@@ -1350,23 +1350,36 @@ public class BoardController : MonoBehaviour
         int safety = 0;
         const int MaxResolveLoops = 250;
         float backgroundJobWaitTime = 0f;
+
         while (true)
         {
             safety++;
-            if (safety > MaxResolveLoops) yield break;
+            if (safety > MaxResolveLoops)
+                yield break;
+
             CurrentResolvePass = safety;
+
             var matches = matchFinder.FindAllMatches();
 
             if (matches.Count > 0)
             {
                 var matchTiles = new HashSet<TileView>();
-                foreach (var t in matches) { var tile = tiles[t.X, t.Y]; if (tile != null) matchTiles.Add(tile); }
+                foreach (var t in matches)
+                {
+                    var tile = tiles[t.X, t.Y];
+                    if (tile != null)
+                        matchTiles.Add(tile);
+                }
+
                 if (matchTiles.Count > 0)
                 {
                     Debug.Log($"[Resolve] pass={safety} cascade_match={matchTiles.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+
                     bool cleared = false;
                     yield return ExecuteClearPass(matchTiles, allowSpecialActivation, result => cleared = result);
-                    if (cleared) continue;
+
+                    if (cleared)
+                        continue;
                 }
             }
 
@@ -1375,7 +1388,10 @@ public class BoardController : MonoBehaviour
             {
                 Debug.Log($"[Resolve] pass={safety} cascade_fall actions={cascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
                 actionSequencer.Enqueue(cascades);
-                while (actionSequencer.IsPlaying) yield return null;
+
+                while (actionSequencer.IsPlaying)
+                    yield return null;
+
                 RefreshAllSortingOrders();
                 continue;
             }
@@ -1383,24 +1399,46 @@ public class BoardController : MonoBehaviour
             if (ActiveBackgroundJobs > 0 || actionSequencer.IsPlaying)
             {
                 backgroundJobWaitTime += Time.deltaTime;
+
                 if (backgroundJobWaitTime > 5f)
                 {
                     Debug.LogWarning($"[ResolveBoard] Background job timeout — forcing continue. ActiveBackgroundJobs={ActiveBackgroundJobs}, IsPlaying={actionSequencer.IsPlaying}");
                     ActiveBackgroundJobs = 0;
                 }
+
                 yield return null;
                 continue;
             }
+
             backgroundJobWaitTime = 0f;
+
+            // ─────────────────────────────────────────────
+            // Deadlock kontrolü:
+            // Eğer board durmuşsa ve oynanabilir hiçbir swap yoksa
+            // safe reshuffle yap, sonra resolve loop'una tekrar gir.
+            // Special swap mümkünse HasAnyPlayableSwap() true döndürmeli.
+            // ─────────────────────────────────────────────
+            if (!matchFinder.HasAnyPlayableSwap())
+            {
+                Debug.Log($"[Resolve] pass={safety} deadlock_detected -> safe_shuffle +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+
+                yield return boosterService.SafeShuffleBoardRoutine(boardInitService);
+
+                // Shuffle sonrası board değiştiği için tekrar resolve et
+                RefreshAllSortingOrders();
+                continue;
+            }
 
             break;
         }
 
         RestoreAllTilePresentation();
         RefreshAllSortingOrders();
+
         // Shake sonrası pozisyon kaymasını garanti et
         if (shakeTarget != null)
             shakeTarget.anchoredPosition = shakeBasePos;
+
         Debug.Log($"[Resolve] ═══ DONE ═══ passes={safety} total: {(Time.realtimeSinceStartup - _rbStart):0.000}s");
     }
 
@@ -1734,7 +1772,7 @@ public class BoardController : MonoBehaviour
     public void AddMoves(int amount) { if (amount <= 0) return; RemainingMoves += amount; OnMovesChanged?.Invoke(RemainingMoves); }
     internal void NotifyTilesCleared(TileType tileType, int amount) { if (amount > 0) OnTilesCleared?.Invoke(tileType, amount); }
 
-    private void SyncAllTilesToGridData() { for (int sy = 0; sy < height; sy++) for (int sx = 0; sx < width; sx++) if (tiles[sx, sy] != null) SyncTileData(sx, sy); }
+    internal void SyncAllTilesToGridData() { for (int sy = 0; sy < height; sy++) for (int sx = 0; sx < width; sx++) if (tiles[sx, sy] != null) SyncTileData(sx, sy); }
     private IEnumerator AnimateQueuedActions() { while (actionSequencer.IsPlaying) yield return null; }
 
     public Vector3 GetCellWorldPosition(int x, int y)

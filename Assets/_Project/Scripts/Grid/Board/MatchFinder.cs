@@ -784,7 +784,108 @@ public class MatchFinder
                 result.Add(runTiles[i]);
         }
     }
+    public bool HasAnyPlayableSwap()
+    {
+        for (int y = 0; y < board.Height; y++)
+        {
+            for (int x = 0; x < board.Width; x++)
+            {
+                if (board.Holes[x, y]) continue;
+                var tile = board.Tiles[x, y];
+                if (tile == null) continue;
 
+                if (HasAnySpecialSwapAt(x, y))
+                    return true;
+
+                if (!IsNormalSwapCandidate(tile))
+                    continue;
+
+                if (x + 1 < board.Width && WouldSwapCreateMatch(x, y, x + 1, y))
+                    return true;
+
+                if (y + 1 < board.Height && WouldSwapCreateMatch(x, y, x, y + 1))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool HasAnySpecialSwapAt(int x, int y)
+    {
+        var tile = board.Tiles[x, y];
+        if (tile == null || tile.GetSpecial() == TileSpecial.None)
+            return false;
+
+        return IsSwappableNeighbor(x - 1, y)
+            || IsSwappableNeighbor(x + 1, y)
+            || IsSwappableNeighbor(x, y - 1)
+            || IsSwappableNeighbor(x, y + 1);
+    }
+
+    private bool IsSwappableNeighbor(int x, int y)
+    {
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+        if (board.Holes[x, y])
+            return false;
+        return board.Tiles[x, y] != null;
+    }
+
+    private bool IsNormalSwapCandidate(TileView tile)
+    {
+        if (tile == null)
+            return false;
+        if (tile.GetSpecial() != TileSpecial.None)
+            return false;
+        if (board.ObstacleStateService != null &&
+            board.ObstacleStateService.IsMovableObstacleAt(tile.X, tile.Y))
+            return false;
+
+        return true;
+    }
+
+    private bool WouldSwapCreateMatch(int ax, int ay, int bx, int by)
+    {
+        if (bx < 0 || bx >= board.Width || by < 0 || by >= board.Height)
+            return false;
+        if (board.Holes[bx, by])
+            return false;
+
+        var a = board.Tiles[ax, ay];
+        var b = board.Tiles[bx, by];
+        if (a == null || b == null)
+            return false;
+
+        if (!IsNormalSwapCandidate(a) || !IsNormalSwapCandidate(b))
+            return false;
+
+        board.Tiles[ax, ay] = b;
+        board.Tiles[bx, by] = a;
+
+        a.SetCoords(bx, by);
+        b.SetCoords(ax, ay);
+
+        board.SyncTileData(ax, ay);
+        board.SyncTileData(bx, by);
+        InvalidateRunCache();
+
+        bool hasMatch =
+            FindMatchesAt(ax, ay).Count > 0 ||
+            FindMatchesAt(bx, by).Count > 0;
+
+        board.Tiles[ax, ay] = a;
+        board.Tiles[bx, by] = b;
+
+        a.SetCoords(ax, ay);
+        b.SetCoords(bx, by);
+
+        board.SyncTileData(ax, ay);
+        board.SyncTileData(bx, by);
+        InvalidateRunCache();
+
+        return hasMatch;
+    }
     // ─────────────────────────────────────────────────────────────
     //  Debug logging — isolated so release builds pay zero cost
     // ─────────────────────────────────────────────────────────────

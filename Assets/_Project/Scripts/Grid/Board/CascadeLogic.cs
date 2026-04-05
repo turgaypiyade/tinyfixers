@@ -22,10 +22,8 @@ public class CascadeLogic
     // Slide fill
     private readonly HashSet<TileView> _movedThisPassSet = new HashSet<TileView>();
 
-    // ── MovableObstacle: düşme sırasında pozisyon sync bilgisi ──
-    private readonly List<int> _colObsFromX = new List<int>(16);
-    private readonly List<int> _colObsFromYObs = new List<int>(16);
-    private readonly List<bool> _colIsMovableObs = new List<bool>(16);
+    // Goal buffer
+    private readonly List<TopHudController.ActiveGoal> _activeGoalsBuffer = new List<TopHudController.ActiveGoal>(4);
 
     public CascadeLogic(BoardController board)
     {
@@ -101,6 +99,7 @@ public class CascadeLogic
         }
 
         var action = new FallAction();
+        bool spawnedMovableThisPass = false;
 
         for (int x = 0; x < board.Width; x++)
         {
@@ -110,9 +109,6 @@ public class CascadeLogic
             _colDuration.Clear();
             _colDist.Clear();
             _colFromY.Clear();
-            _colObsFromX.Clear();
-            _colObsFromYObs.Clear();
-            _colIsMovableObs.Clear();
 
             int segmentTop = board.Height - 1;
             while (segmentTop >= 0)
@@ -154,12 +150,10 @@ public class CascadeLogic
                     var tile = _existing[i];
                     int fromY = tile.Y;
 
-                    // ── MovableObstacle: taşınmadan ÖNCE pozisyon bilgisini kaydet ──
-                    bool isMovable = fromY != targetY
-                                     && board.ObstacleStateService != null
-                                     && board.ObstacleStateService.IsMovableObstacleAt(x, fromY);
-
-                    if (isMovable)
+                    // ── MovableObstacle: taşınmadan önce logical state sync ──
+                    if (fromY != targetY
+                        && board.ObstacleStateService != null
+                        && board.ObstacleStateService.IsMovableObstacleAt(x, fromY))
                     {
                         board.ObstacleStateService.MoveObstacle(x, fromY, x, targetY);
                     }
@@ -190,25 +184,39 @@ public class CascadeLogic
                         if (board.Holes[x, y]) continue;
                         if (board.Tiles[x, y] != null) continue;
 
-                        var go = UnityEngine.Object.Instantiate(board.TilePrefab, board.Parent);
-                        var view = go.GetComponent<TileView>();
-
-                        view.Init(board, x, y);
-                        board.ConfigureTileView(view);
-                        view.MarkPlannedToMoveThisFallPass(true);
-
                         int spawnFromY = nextSpawnY;
-                        view.SetCoords(x, spawnFromY);
-                        view.SnapToGrid(board.TileSize);
+                        TileView view = null;
+
+                        // Aynı fall/collapse pass'inde sadece 1 tane movable obstacle üret
+                        if (!spawnedMovableThisPass && TryPickMovableGoalToSpawn(out var goalObstacleId))
+                        {
+                            view = SpawnMovableObstacleTileForFall(x, y, spawnFromY, goalObstacleId);
+                            if (view != null)
+                                spawnedMovableThisPass = true;
+                        }
+
+                        if (view == null)
+                        {
+                            var go = UnityEngine.Object.Instantiate(board.TilePrefab, board.Parent);
+                            view = go.GetComponent<TileView>();
+
+                            view.Init(board, x, y);
+                            board.ConfigureTileView(view);
+                            view.MarkPlannedToMoveThisFallPass(true);
+
+                            view.SetCoords(x, spawnFromY);
+                            view.SnapToGrid(board.TileSize);
+
+                            view.SetCoords(x, y);
+                            board.Tiles[x, y] = view;
+
+                            view.SetType(GetRandomTypeAvoidingImmediateMatch(x, y));
+                            view.SetSpecial(TileSpecial.None);
+                            board.SyncTileData(x, y);
+                            board.RefreshTileObstacleVisual(view);
+                        }
+
                         nextSpawnY--;
-
-                        view.SetCoords(x, y);
-                        board.Tiles[x, y] = view;
-
-                        view.SetType(GetRandomTypeAvoidingImmediateMatch(x, y));
-                        view.SetSpecial(TileSpecial.None);
-                        board.SyncTileData(x, y);
-                        board.RefreshTileObstacleVisual(view);
 
                         int dist = Mathf.Abs(y - spawnFromY);
                         float duration = board.GetFallDurationForDistance(dist);
@@ -243,7 +251,15 @@ public class CascadeLogic
                     }
                 }
 
-                action.AddMove(tile, fromY, targetY, _colDuration[i], useFallSettle, board.FallSettleDuration, board.FallSettleStrength, board.FallMoveCurve);
+                action.AddMove(
+                    tile,
+                    fromY,
+                    targetY,
+                    _colDuration[i],
+                    useFallSettle,
+                    board.FallSettleDuration,
+                    board.FallSettleStrength,
+                    board.FallMoveCurve);
             }
         }
 
@@ -364,7 +380,15 @@ public class CascadeLogic
 
                         if (fromY != toY)
                         {
-                            action.AddMove(tile, fromY, toY, board.GetFallDurationForDistance(Mathf.Abs(toY - fromY)), board.EnableFallSettle, board.FallSettleDuration, board.FallSettleStrength, board.FallMoveCurve);
+                            action.AddMove(
+                                tile,
+                                fromY,
+                                toY,
+                                board.GetFallDurationForDistance(Mathf.Abs(toY - fromY)),
+                                board.EnableFallSettle,
+                                board.FallSettleDuration,
+                                board.FallSettleStrength,
+                                board.FallMoveCurve);
                         }
                     }
                 }
@@ -618,5 +642,97 @@ public class CascadeLogic
             return false;
 
         return tile.GetTileType() == type;
+    }
+
+    private bool TryPickMovableGoalToSpawn(out ObstacleId obstacleId)
+    {
+        obstacleId = ObstacleId.None;
+
+        var topHud = board.TopHud;
+        if (topHud == null || board.ObstacleStateService == null || board.ActiveLevelData == null)
+            return false;
+
+        _activeGoalsBuffer.Clear();
+        topHud.GetActiveGoals(_activeGoalsBuffer);
+
+        for (int i = 0; i < _activeGoalsBuffer.Count; i++)
+        {
+            var goal = _activeGoalsBuffer[i];
+            if (goal.targetType != LevelGoalTargetType.Obstacle)
+                continue;
+            if (goal.remaining <= 0)
+                continue;
+
+            var def = board.ActiveLevelData.obstacleLibrary != null
+                ? board.ActiveLevelData.obstacleLibrary.Get(goal.obstacleId)
+                : null;
+
+            if (def == null)
+                continue;
+
+            if (!def.IsMovableObstacleForRemainingHits(Mathf.Max(1, def.hits)))
+                continue;
+
+            int alive = board.ObstacleStateService.CountAliveOrigins(goal.obstacleId);
+            if (alive < goal.remaining)
+            {
+                obstacleId = goal.obstacleId;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private TileView SpawnMovableObstacleTileForFall(int x, int y, int spawnFromY, ObstacleId obstacleId)
+    {
+        if (board.ObstacleStateService == null)
+            return null;
+
+        if (!board.ObstacleStateService.TrySpawnSingleCellObstacleAt(x, y, obstacleId))
+            return null;
+
+        var def = board.ActiveLevelData != null && board.ActiveLevelData.obstacleLibrary != null
+            ? board.ActiveLevelData.obstacleLibrary.Get(obstacleId)
+            : null;
+
+        if (def == null)
+            return null;
+
+        var go = UnityEngine.Object.Instantiate(board.TilePrefab, board.Parent);
+        var view = go.GetComponent<TileView>();
+        if (view == null)
+        {
+            UnityEngine.Object.Destroy(go);
+            return null;
+        }
+
+        view.Init(board, x, y);
+        board.ConfigureTileView(view);
+        view.MarkPlannedToMoveThisFallPass(true);
+        view.SetUseFullCellIcon(false);
+        view.SetMovableObstacleTile(true);
+
+        view.SetCoords(x, spawnFromY);
+        view.SnapToGrid(board.TileSize);
+
+        view.SetCoords(x, y);
+        board.Tiles[x, y] = view;
+
+        TileType dummyType = board.RandomPool != null && board.RandomPool.Length > 0
+            ? board.RandomPool[0]
+            : TileType.Gear;
+
+        view.SetType(dummyType);
+        view.SetSpecial(TileSpecial.None);
+
+        Sprite obstacleSprite = def.GetPreviewSprite();
+        if (obstacleSprite != null && view.IconImage != null)
+            view.IconImage.sprite = obstacleSprite;
+
+        board.SyncTileData(x, y);
+        board.RefreshTileObstacleVisual(view);
+
+        return view;
     }
 }

@@ -179,4 +179,81 @@ public class BoosterService
         if (!board.Holes[x, y]) return true;
         return board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
     }
+    public IEnumerator SafeShuffleBoardRoutine(BoardInitService boardInitService)
+    {
+        board.BeginBusy();
+
+        var currentTypes = new TileType[board.Width, board.Height];
+        var lockedMask = new bool[board.Width, board.Height];
+
+        BuildSafeShuffleState(currentTypes, lockedMask);
+
+        if (boardInitService != null &&
+            boardInitService.TryBuildSafeShuffleTypes(currentTypes, lockedMask, board.RandomPool, out var finalTypes))
+        {
+            ApplyShuffledTypes(finalTypes, lockedMask);
+            board.SyncAllTilesToGridData();
+            board.RefreshAllTileObstacleVisuals();
+            board.RefreshAllSortingOrders();
+        }
+
+        board.EndBusy();
+        yield break;
+    }
+
+    private void BuildSafeShuffleState(TileType[,] currentTypes, bool[,] lockedMask)
+    {
+        for (int y = 0; y < board.Height; y++)
+        {
+            for (int x = 0; x < board.Width; x++)
+            {
+                bool locked = false;
+
+                if (board.Holes[x, y])
+                {
+                    locked = true;
+                }
+                else
+                {
+                    var tile = board.Tiles[x, y];
+                    if (tile == null)
+                    {
+                        locked = true;
+                    }
+                    else if (tile.GetSpecial() != TileSpecial.None)
+                    {
+                        locked = true;
+                    }
+                    else if (board.ObstacleStateService != null &&
+                             board.ObstacleStateService.IsMovableObstacleAt(x, y))
+                    {
+                        locked = true;
+                    }
+                }
+
+                lockedMask[x, y] = locked;
+
+                var tv = board.Tiles[x, y];
+                currentTypes[x, y] = tv != null ? tv.GetTileType() : default;
+            }
+        }
+    }
+
+    private void ApplyShuffledTypes(TileType[,] finalTypes, bool[,] lockedMask)
+    {
+        for (int y = 0; y < board.Height; y++)
+        {
+            for (int x = 0; x < board.Width; x++)
+            {
+                if (lockedMask[x, y]) continue;
+
+                var tile = board.Tiles[x, y];
+                if (tile == null) continue;
+
+                tile.SetType(finalTypes[x, y]);
+                board.SyncTileData(x, y);
+                board.RefreshTileObstacleVisual(tile);
+            }
+        }
+    }
 }
