@@ -201,9 +201,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LightningBeam
   segments: 2
-  jaggedness: 0.25
-  noiseScale: 2
-  lifeTime: 0.4
+  jaggedness: 0.1
+  noiseScale: 0.5
+  lifeTime: 0.32
   alphaOverLife:
     serializedVersion: 2
     m_Curve:

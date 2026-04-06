@@ -91,7 +91,7 @@ LineRenderer:
   - {x: 0, y: 0, z: 1}
   m_Parameters:
     serializedVersion: 3
-    widthMultiplier: 1
+    widthMultiplier: 1.2
     widthCurve:
       serializedVersion: 2
       m_Curve:
@@ -115,7 +115,7 @@ LineRenderer:
         outWeight: 0
       - serializedVersion: 3
         time: 0.19486135
-        value: 0.19065952
+        value: 0.23893833
         inSlope: -1.2664653
         outSlope: -1.2664653
         tangentMode: 0
@@ -150,8 +150,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.876465
-        value: 0.2163792
+        time: 0.84008807
+        value: 0.23707011
         inSlope: -3.0046299
         outSlope: -3.0046299
         tangentMode: 0
@@ -205,7 +205,7 @@ LineRenderer:
     alignment: 0
     textureMode: 0
     textureScale: {x: 1, y: 1}
-    shadowBias: 0.5
+    shadowBias: 0.8
     generateLightingData: 0
   m_UseWorldSpace: 1
   m_Loop: 0
@@ -222,10 +222,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d38cfcfa9f7584fa28538e78bb694bb0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RocketTrailBeam
-  jaggedness: 0.2
-  noiseScale: 1.2
-  minSegments: 4
-  segmentsPerUnit: 10
+  jaggedness: 0.15
+  noiseScale: 0.5
+  minSegments: 6
+  segmentsPerUnit: 15
   tailAlpha: 0
   headAlpha: 1
   fadeOutDuration: 0.18
