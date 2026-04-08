@@ -29,8 +29,23 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private int extraMovesAmount = 5;
     [SerializeField] private int extraMovesCost = 900;
 
-    [Header("Success Bonus (placeholder)")]
-    [SerializeField] private bool autoStartBonus = true;
+    [Header("Success — Yıldız Görselleri (sırayla 1., 2., 3. yıldız)")]
+    [SerializeField] private UnityEngine.UI.Image[] starImages;
+    [SerializeField] private Sprite starFilledSprite;
+    [SerializeField] private Sprite starEmptySprite;
+
+    [Header("Success — Para Metni")]
+    [SerializeField] private TMP_Text coinsEarnedText;
+    [SerializeField] private string coinsPrefix = "+";
+    [SerializeField] private string coinsSuffix = " coin";
+
+    [Header("Yıldız Eşikleri (kalan hamle / başlangıç hamle)")]
+    [Range(0f, 1f)] [SerializeField] private float star3Ratio = 0.5f;  // >= %50 kalan → 3 yıldız
+    [Range(0f, 1f)] [SerializeField] private float star2Ratio = 0.2f;  // >= %20 kalan → 2 yıldız
+
+    [Header("Coin Ödülü")]
+    [SerializeField] private int baseCoins = 100;
+    [SerializeField] private int coinsPerRemainingMove = 20;
 
     [Header("Progression")]
     [SerializeField] private string mainMenuSceneName = "MainMenu";
@@ -273,8 +288,69 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         SetBlockerVisible(true);
 
-        if (autoStartBonus)
-            Debug.Log("[LevelEndSimplePopupController] Success popup shown. Hook bonus flow here.");
+        int stars = CalculateStars();
+        int coins = CalculateCoins();
+
+        ApplyRewardVisuals(stars, coins);
+        SaveRewards(stars, coins);
+
+        Debug.Log($"[LevelEnd] Success — Yıldız: {stars}, Coin: {coins}");
+    }
+
+    private int CalculateStars()
+    {
+        if (board == null || board.ActiveLevelData == null)
+            return 1;
+
+        int totalMoves = board.ActiveLevelData.moves;
+        if (totalMoves <= 0)
+            return 1;
+
+        float ratio = (float)board.RemainingMoves / totalMoves;
+
+        if (ratio >= star3Ratio) return 3;
+        if (ratio >= star2Ratio) return 2;
+        return 1;
+    }
+
+    private int CalculateCoins()
+    {
+        int remaining = board != null ? board.RemainingMoves : 0;
+        return baseCoins + remaining * coinsPerRemainingMove;
+    }
+
+    private void ApplyRewardVisuals(int stars, int coins)
+    {
+        // Yıldızlar
+        if (starImages != null)
+        {
+            for (int i = 0; i < starImages.Length; i++)
+            {
+                if (starImages[i] == null) continue;
+
+                bool filled = i < stars;
+
+                if (filled && starFilledSprite != null)
+                    starImages[i].sprite = starFilledSprite;
+                else if (!filled && starEmptySprite != null)
+                    starImages[i].sprite = starEmptySprite;
+
+                var c = starImages[i].color;
+                c.a = filled ? 1f : 0.35f;
+                starImages[i].color = c;
+            }
+        }
+
+        // Para
+        if (coinsEarnedText != null)
+            coinsEarnedText.text = coinsPrefix + coins + coinsSuffix;
+    }
+
+    private void SaveRewards(int stars, int coins)
+    {
+        int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
+        PlayerWallet.SetLevelStars(level, stars);
+        PlayerWallet.AddCoins(coins);
     }
 
     private void HandleBuyMovesClicked()

@@ -45,8 +45,6 @@ public class OverrideComboController : MonoBehaviour
     [Header("Phase Timings")]
     [SerializeField] private float orbitDuration = 2.0f;
     [SerializeField] private float mergeDuration = 0.30f;
-    [SerializeField] private float flashHoldDuration = 0.08f;
-    [SerializeField] private float mergedIconShowDuration = 0.35f;
     [SerializeField] private float radialClearDuration = 0.70f;
     [SerializeField] private float fadeOutDuration = 0.30f;
 

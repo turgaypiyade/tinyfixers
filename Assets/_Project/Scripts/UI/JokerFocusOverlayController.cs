@@ -48,7 +48,6 @@ public class JokerFocusOverlayController : MonoBehaviour
     private readonly Button[]    jokerButtons          = new Button[MaxJokerSlots];
     private readonly Image[]     jokerSelectionFrames  = new Image[MaxJokerSlots];
     private readonly Image[]     jokerSelectionGlows   = new Image[MaxJokerSlots];
-    private readonly Outline[]   jokerSelectionOutlines = new Outline[MaxJokerSlots];
     private readonly Vector3[]   jokerBaseScales       = new Vector3[MaxJokerSlots];
     private readonly Vector3[]   jokerIconBaseScales   = new Vector3[MaxJokerSlots];
     private readonly Transform[] jokerSlotTransforms   = new Transform[MaxJokerSlots];
@@ -404,7 +403,6 @@ public class JokerFocusOverlayController : MonoBehaviour
             }
 
             // Outline yok — sarı kaplama önlendi
-            // jokerSelectionOutlines[i] kullanılmıyor
 
             var icon = jokerIcons[i];
             if (icon != null)
@@ -437,7 +435,6 @@ public class JokerFocusOverlayController : MonoBehaviour
             jokerButtons[i]           = null;
             jokerSelectionFrames[i]   = null;
             jokerSelectionGlows[i]    = null;
-            jokerSelectionOutlines[i] = null;
             jokerSlotTransforms[i]    = null;
             jokerBoosterIndices[i]    = -1;
             jokerIsBoosterSlot[i]     = false;
@@ -491,7 +488,6 @@ public class JokerFocusOverlayController : MonoBehaviour
                 jokerIconBaseScales[i]    = icon.rectTransform.localScale;
                 jokerSelectionFrames[i]   = EnsureSelectionFrame(icon);
                 jokerSelectionGlows[i]    = EnsureSelectionGlow(icon);
-                jokerSelectionOutlines[i] = null; // Outline kullanılmıyor
             }
 
             var button = child.GetComponent<Button>() ?? child.gameObject.AddComponent<Button>();

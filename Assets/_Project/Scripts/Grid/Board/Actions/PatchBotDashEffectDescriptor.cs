@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public sealed class PatchBotDashEffectDescriptor : IClearEffectDescriptor
+public sealed class PatchBotDashEffectDescriptor : ClearEffectDescriptorBase
 {
-    private static readonly EffectTimingSemantics semantics = new EffectTimingSemantics
+    private static readonly EffectTimingSemantics _semantics = new EffectTimingSemantics
     {
         IsBlocking = true,
         CanRunInParallel = false,
@@ -14,18 +14,8 @@ public sealed class PatchBotDashEffectDescriptor : IClearEffectDescriptor
         StepDelaySeconds = 0f
     };
 
-    public string EffectKey
-    {
-        get { return "patchbot_dash"; }
-    }
-
-    public EffectTimingSemantics Timing
-    {
-        get { return semantics; }
-    }
-
-    public IList<TileView> TargetTiles { get; private set; }
-    public IList<Vector2Int> TargetCells { get; private set; }
+    public override string EffectKey => "patchbot_dash";
+    public override EffectTimingSemantics Timing => _semantics;
 
     public TileView OriginTile { get; private set; }
     public Vector2Int? OriginCell { get; private set; }

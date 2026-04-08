@@ -61,9 +61,6 @@ public class SpecialResolver
         board.LastSwapUserMove = false;
         board.IsSpecialActivationPhase = true;
 
-        TileSpecial currentSa = a.GetSpecial();
-        TileSpecial currentSb = b.GetSpecial();
-
         bool aOriginallySpecial = originalSa != TileSpecial.None;
         bool bOriginallySpecial = originalSb != TileSpecial.None;
         bool bothOriginallySpecial = aOriginallySpecial && bOriginallySpecial;

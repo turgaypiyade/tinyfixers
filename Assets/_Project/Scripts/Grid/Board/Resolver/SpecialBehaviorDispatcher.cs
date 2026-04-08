@@ -23,7 +23,6 @@ public class SpecialBehaviorDispatcher
     private readonly PulsePulseCombo pulsePulseCombo = new();
     internal ActivationQueueProcessor QueueProcessor;
 
-    private readonly ComboExecutionContext execCtx = new();
 
     public SpecialBehaviorDispatcher(
         BoardController board,
@@ -206,15 +205,7 @@ public class SpecialBehaviorDispatcher
         var combo = board.SpecialBehaviors.FindCombo(sa, sb);
         if (combo == null) return;
 
-        if (combo is IComboExecutor executor)
-        {
-            PopulateExecCtx(ctx, a, b, sa, sb);
-            executor.Execute(execCtx);
-        }
-        else
-        {
-            ApplyGenericCombo(ctx, combo, a, b, sa, sb);
-        }
+        ApplyGenericCombo(ctx, combo, a, b, sa, sb);
     }
 
     private void ApplyGenericCombo(ResolutionContext ctx, IComboBehavior combo, TileView a, TileView b,
@@ -229,33 +220,8 @@ public class SpecialBehaviorDispatcher
             if (board.Tiles[c.x, c.y] != null) ctx.Affected.Add(board.Tiles[c.x, c.y]);
         }
 
-        if (combo is ILightningComboBehavior lb)
-        {
-            var strikes = lb.GetLineStrikes(a.X, a.Y, sa, sb);
-            if (strikes != null)
-                ctx.LightningLineStrikes.AddRange(strikes);
-
-            foreach (var c in cells)
-                if (board.Tiles[c.x, c.y] != null)
-                    ctx.LightningVisualTargets.Add(board.Tiles[c.x, c.y]);
-
-            ctx.HasLineActivation = true;
-        }
     }
 
-    private void PopulateExecCtx(ResolutionContext ctx, TileView a, TileView b, TileSpecial sa, TileSpecial sb)
-    {
-        execCtx.Resolution = ctx;
-        execCtx.Board = board;
-        execCtx.TileA = a;
-        execCtx.TileB = b;
-        execCtx.SpecialA = sa;
-        execCtx.SpecialB = sb;
-        execCtx.VisualService = visualService;
-        execCtx.PatchbotService = patchbotComboService;
-        execCtx.QueueProcessor = QueueProcessor;
-        execCtx.Effects = effectOrchestrator;
-    }
 
     public void ApplySpecialActivation(ResolutionContext ctx, TileView specialTile, TileView partnerTile)
     {
@@ -523,15 +489,6 @@ public class SpecialBehaviorDispatcher
             if (board.Tiles[c.x, c.y] != null) ctx.Affected.Add(board.Tiles[c.x, c.y]);
         }
 
-        if (behavior is ILightningBehavior lb)
-        {
-            ctx.HasLineActivation |= lb.HasLineActivation;
-            var strikes = lb.GetLineStrikes(ox, oy);
-            if (strikes != null) ctx.LightningLineStrikes.AddRange(strikes);
-
-            foreach (var c in behavior.CalculateAffectedCells(board, ox, oy))
-                if (board.Tiles[c.x, c.y] != null) ctx.LightningVisualTargets.Add(board.Tiles[c.x, c.y]);
-        }
     }
 
     private static bool IsLineCombo(TileSpecial a, TileSpecial b)

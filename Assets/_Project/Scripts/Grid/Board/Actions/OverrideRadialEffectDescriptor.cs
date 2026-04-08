@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public sealed class OverrideRadialEffectDescriptor : IClearEffectDescriptor
+public sealed class OverrideRadialEffectDescriptor : ClearEffectDescriptorBase
 {
-    private static readonly EffectTimingSemantics semantics = new EffectTimingSemantics
+    private static readonly EffectTimingSemantics _semantics = new EffectTimingSemantics
     {
         IsBlocking = true,
         CanRunInParallel = false,
@@ -14,18 +14,8 @@ public sealed class OverrideRadialEffectDescriptor : IClearEffectDescriptor
         StepDelaySeconds = 0f
     };
 
-    public string EffectKey
-    {
-        get { return "override_radial"; }
-    }
-
-    public EffectTimingSemantics Timing
-    {
-        get { return semantics; }
-    }
-
-    public IList<TileView> TargetTiles { get; private set; }
-    public IList<Vector2Int> TargetCells { get; private set; }
+    public override string EffectKey => "override_radial";
+    public override EffectTimingSemantics Timing => _semantics;
 
     public Dictionary<TileView, float> DelayMap { get; private set; }
     public TileView OriginTile { get; private set; }

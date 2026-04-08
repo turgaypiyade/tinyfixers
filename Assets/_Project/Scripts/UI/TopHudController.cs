@@ -279,6 +279,29 @@ public class TopHudController : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// 0→1 arası. Tüm hedeflerin ortalama tamamlanma oranı.
+    /// Oyun sırasında canlı yıldız hesabı için kullanılır.
+    /// </summary>
+    public float GetGoalProgressRatio()
+    {
+        if (runtimeGoals == null || runtimeGoals.Count == 0) return 0f;
+
+        float total = 0f;
+        int validCount = 0;
+
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var g = runtimeGoals[i];
+            if (g == null || g.definition == null || g.definition.amount <= 0) continue;
+            int cleared = g.definition.amount - g.remaining;
+            total += Mathf.Clamp01((float)cleared / g.definition.amount);
+            validCount++;
+        }
+
+        return validCount > 0 ? total / validCount : 0f;
+    }
+
     public void GetActiveGoals(List<ActiveGoal> result)
     {
         if (result == null)

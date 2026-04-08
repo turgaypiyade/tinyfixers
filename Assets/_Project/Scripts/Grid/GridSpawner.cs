@@ -46,7 +46,6 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private RectTransform underTilesObstaclesRoot;
     [SerializeField] private RectTransform overTilesObstaclesRoot;
     [SerializeField] private RectTransform tilesRoot;
-    [SerializeField, Min(0f)] private float cellBgInset = 1.5f;
     [SerializeField] private Color runtimeBoardBg = new Color(0.78f, 0.88f, 0.97f, 1f);
     [SerializeField] private Color runtimeNormalCell = new Color(1f, 1f, 1f, 0.16f);
     [SerializeField] private RectTransform gridLinesRoot;

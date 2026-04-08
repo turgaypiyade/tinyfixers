@@ -147,7 +147,7 @@ public sealed class OverrideSpecializedCombo
         {
             for (int y = 0; y < rt.Board.Height; y++)
             {
-                if (!SpecialCellUtils.CanAffectCell(rt.Board, x, y))
+                if (!SpecialUtils.CanAffectCell(rt.Board, x, y))
                     continue;
 
                 var tile = rt.Board.Tiles[x, y];

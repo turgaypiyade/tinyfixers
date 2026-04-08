@@ -7,22 +7,11 @@ using UnityEngine;
 /// </summary>
 public static class SpecialCellUtils
 {
-    public static bool CanAffectCell(BoardController board, int x, int y)
-    {
-        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
-            return false;
-
-        if (!board.Holes[x, y])
-            return true;
-
-        return board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
-    }
-
     public static void MarkAffectedCell(ResolutionContext ctx, int x, int y, BoardController board)
     {
         if (ctx == null || board == null) return;
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return;
-        if (!CanAffectCell(board, x, y)) return;
+        if (!SpecialUtils.CanAffectCell(board, x, y)) return;
 
         var cell = new Vector2Int(x, y);
 
@@ -47,7 +36,7 @@ public static class SpecialCellUtils
             for (int y = cy - radius; y <= cy + radius; y++)
             {
                 if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
-                if (!CanAffectCell(board, x, y)) continue;
+                if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
                 MarkAffectedCell(ctx, x, y, board);
                 if (board.Tiles[x, y] != null) matches.Add(board.Tiles[x, y]);
             }
@@ -58,7 +47,7 @@ public static class SpecialCellUtils
         for (int x = 0; x < board.Width; x++)
             for (int y = 0; y < board.Height; y++)
             {
-                if (!CanAffectCell(board, x, y)) continue;
+                if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
                 MarkAffectedCell(ctx, x, y, board);
                 if (board.Tiles[x, y] != null) matches.Add(board.Tiles[x, y]);
             }
@@ -70,11 +59,19 @@ public static class SpecialCellUtils
         for (int x = 0; x < board.Width; x++)
             for (int y = 0; y < board.Height; y++)
             {
-                if (!CanAffectCell(board, x, y)) continue;
+                if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
+
                 var t = board.Tiles[x, y];
                 if (t == null) continue;
+
+                // Movable obstacle üstündeki tile'ları override hedef listesine alma
+                if (board.ObstacleStateService != null &&
+                    board.ObstacleStateService.IsMovableObstacleAt(x, y))
+                    continue;
+
                 if (!t.GetTileType().Equals(type)) continue;
                 if (excludeSpecials && t.GetSpecial() != TileSpecial.None) continue;
+
                 MarkAffectedCell(ctx, x, y, board);
                 matches.Add(t);
             }
@@ -89,11 +86,19 @@ public static class SpecialCellUtils
         for (int x = 0; x < board.Width; x++)
             for (int y = 0; y < board.Height; y++)
             {
-                if (!CanAffectCell(board, x, y)) continue;
+                if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
+
                 var t = board.Tiles[x, y];
                 if (t == null) continue;
+
+                // Movable obstacle üstündeki tile'ları override hedef listesine alma
+                if (board.ObstacleStateService != null &&
+                    board.ObstacleStateService.IsMovableObstacleAt(x, y))
+                    continue;
+
                 if (!t.GetTileType().Equals(type)) continue;
                 if (excludeSpecials && t.GetSpecial() != TileSpecial.None) continue;
+
                 buffer.Add(t);
             }
     }

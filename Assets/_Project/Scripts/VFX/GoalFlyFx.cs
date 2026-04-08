@@ -145,36 +145,6 @@ public class GoalFlyFx : MonoBehaviour
 
     }
 
-    private IEnumerator Punch(RectTransform target)
-    {
-        if (target == null) yield break;
-
-        Vector3 baseScale = target.localScale;
-
-        float half = Mathf.Max(0.02f, punchTime * 0.5f);
-        float t = 0f;
-
-        // up
-        while (t < half)
-        {
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / half);
-            target.localScale = Vector3.Lerp(baseScale, baseScale * punchScale, EaseOut(k));
-            yield return null;
-        }
-
-        // down
-        t = 0f;
-        while (t < half)
-        {
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / half);
-            target.localScale = Vector3.Lerp(baseScale * punchScale, baseScale, EaseIn(k));
-            yield return null;
-        }
-
-        target.localScale = baseScale;
-    }
 
     private static readonly System.Collections.Generic.Dictionary<int, Vector3> _baseScales
         = new System.Collections.Generic.Dictionary<int, Vector3>();

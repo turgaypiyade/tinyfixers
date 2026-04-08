@@ -350,7 +350,6 @@ public class BoardController : MonoBehaviour
     private void OnDestroy()
     {
         if (obstacleStateService == null) return;
-        obstacleStateService.OnObstacleStageChanged -= HandleObstacleStageChanged;
         obstacleStateService.OnObstacleDestroyed -= HandleObstacleDestroyed;
         obstacleStateService.OnCellUnlocked -= HandleCellUnlocked;
     }
@@ -379,7 +378,6 @@ public class BoardController : MonoBehaviour
 
         if (obstacleStateService != null)
         {
-            obstacleStateService.OnObstacleStageChanged -= HandleObstacleStageChanged;
             obstacleStateService.OnObstacleDestroyed -= HandleObstacleDestroyed;
             obstacleStateService.OnCellUnlocked -= HandleCellUnlocked;
         }
@@ -569,7 +567,6 @@ public class BoardController : MonoBehaviour
     //  Tile / Data Management
     // ═══════════════════════════════════════════════════════════════
 
-    //public void EnqueuePatchbotDash(Vector2Int from, Vector2Int to) => _patchbotDashRequests.Add(new PatchbotDashRequest { from = from, to = to });
     public void EnqueuePatchbotDash(Vector2Int from, Vector2Int to)
     {
         _patchbotDashRequests.Add(new PatchbotDashRequest
@@ -1667,15 +1664,12 @@ public class BoardController : MonoBehaviour
     private void BindObstacleEvents()
     {
         if (obstacleStateService == null) return;
-        obstacleStateService.OnObstacleStageChanged -= HandleObstacleStageChanged;
         obstacleStateService.OnObstacleDestroyed -= HandleObstacleDestroyed;
         obstacleStateService.OnCellUnlocked -= HandleCellUnlocked;
-        obstacleStateService.OnObstacleStageChanged += HandleObstacleStageChanged;
         obstacleStateService.OnObstacleDestroyed += HandleObstacleDestroyed;
         obstacleStateService.OnCellUnlocked += HandleCellUnlocked;
     }
 
-    private void HandleObstacleStageChanged(int originIndex, ObstacleStageSnapshot stage) { }
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
     {
         OnObstacleDestroyed?.Invoke(originIndex, obstacleId);

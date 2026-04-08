@@ -113,38 +113,6 @@ public class TeleportMarkerAnim : MonoBehaviour
         Destroy(gameObject);
     }
 
-    void ApplyModeDefaults()
-    {
-    
-        // If user didn't change, these values feel good for teleport
-        if (mode == Mode.Out)
-        {
-            // Depart: implode
-            ringFromScale = 1.05f;
-            ringToScale   = 0.10f;
-
-            glowFromScale = 1.10f;
-            glowToScale   = 0.10f;
-
-            ringPeakAlpha = 0.95f;
-            glowPeakAlpha = 0.30f;
-        }
-        else
-        {
-            // Arrive: explode
-            ringFromScale = 0.20f;
-            ringToScale   = 1.25f;
-
-            glowFromScale = 0.35f;
-            glowToScale   = 1.60f;
-
-            ringPeakAlpha = 0.95f;
-            glowPeakAlpha = 0.35f;
-        }
-
-        ringEndAlpha = 0f;
-        glowEndAlpha = 0f;
-    }
 
     void ApplyInstantFlash()
     {

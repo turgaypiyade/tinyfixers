@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public sealed class PulseWaveEffectDescriptor : IClearEffectDescriptor
+public sealed class PulseWaveEffectDescriptor : ClearEffectDescriptorBase
 {
-    private static readonly EffectTimingSemantics semantics = new EffectTimingSemantics
+    private static readonly EffectTimingSemantics _semantics = new EffectTimingSemantics
     {
         IsBlocking = true,
         CanRunInParallel = false,
@@ -14,24 +14,12 @@ public sealed class PulseWaveEffectDescriptor : IClearEffectDescriptor
         StepDelaySeconds = 0f
     };
 
-    public string EffectKey
-    {
-        get { return "pulse_wave"; }
-    }
-
-    public EffectTimingSemantics Timing
-    {
-        get { return semantics; }
-    }
-
-    public IList<TileView> TargetTiles { get; private set; }
-    public IList<Vector2Int> TargetCells { get; private set; }
+    public override string EffectKey => "pulse_wave";
+    public override EffectTimingSemantics Timing => _semantics;
 
     public Dictionary<TileView, float> DelayMap { get; private set; }
     public float ImpactAnimTime { get; private set; }
     public Vector2Int CenterCell { get; private set; }
-
-    // yeni alanlar
     public int CenterRadiusCells { get; private set; }
     public bool ClearOnImpact { get; private set; }
     public float TailHoldSecondsOverride { get; private set; }

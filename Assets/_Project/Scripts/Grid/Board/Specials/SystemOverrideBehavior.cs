@@ -21,16 +21,23 @@ public class SystemOverrideBehavior : ISpecialBehavior
             : originTile.GetTileType();
 
         for (int x = 0; x < board.Width; x++)
-        for (int y = 0; y < board.Height; y++)
-        {
-            if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
-            var tile = board.Tiles[x, y];
-            if (tile == null) continue;
-            if (!tile.GetTileType().Equals(baseType)) continue;
-            if (tile.GetSpecial() != TileSpecial.None) continue; // Don't select other specials
+            for (int y = 0; y < board.Height; y++)
+            {
+                if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
 
-            cells.Add(new Vector2Int(x, y));
-        }
+                var tile = board.Tiles[x, y];
+                if (tile == null) continue;
+
+                // Movable obstacle üstündeki tile'ları system override kapsamı dışında tut
+                if (board.ObstacleStateService != null &&
+                    board.ObstacleStateService.IsMovableObstacleAt(x, y))
+                    continue;
+
+                if (!tile.GetTileType().Equals(baseType)) continue;
+                if (tile.GetSpecial() != TileSpecial.None) continue; // Don't select other specials
+
+                cells.Add(new Vector2Int(x, y));
+            }
 
         return cells;
     }

@@ -316,26 +316,7 @@ public class TileView : MonoBehaviour,
         }
     }
 
-    /*     public void SetIcon(Sprite sprite)
-        {
-            float glowIntensity = 3.0f; // Parlama şiddeti
-            if (sprite == null)
-            {
-                Debug.LogError("TileView: icon set to NULL");
-                return;
-            }
 
-            iconImage.sprite = sprite;
-            float currentAlpha = iconImage != null ? iconImage.color.a : 1f;
-            iconImage.color = new Color(1f, 1f, 1f, 1f);
-            Color hdrColor = new Color(
-                iconImage.color.r * glowIntensity,
-                iconImage.color.g * glowIntensity,
-                iconImage.color.b * glowIntensity,
-                1.0f // Alpha (Görünürlük)
-            );
-            iconImage.color = hdrColor;
-        } */
     public void SetIcon(Sprite sprite)
     {
         if (sprite == null)
