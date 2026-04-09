@@ -207,6 +207,7 @@ public sealed class PatchBotCombo
             suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
             perTileClearDelays: ctx.OverrideRadialClearDelays,
             isSpecialPhase: true,
-            presentationPlan: null);
+            enqueueCascadeOnComplete: true
+        );
     }
 }

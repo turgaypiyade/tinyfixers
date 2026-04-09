@@ -397,7 +397,8 @@ public sealed class PatchBotSpecial
                 hits,
                 doShake: true,
                 animationMode: ClearAnimationMode.Default,
-                isSpecialPhase: true
+                isSpecialPhase: true,
+                enqueueCascadeOnComplete: true
             );
 
             var sequencer = arrivalRt.Board.GetComponent<ActionSequencer>();
@@ -426,7 +427,8 @@ public sealed class PatchBotSpecial
             suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
             perTileClearDelays: ctx.OverrideRadialClearDelays,
             isSpecialPhase: true,
-            presentationPlan: null
+            presentationPlan: null,
+            enqueueCascadeOnComplete: true
         );
     }
 }

@@ -282,7 +282,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
         failPopupShown = false;
 
         if (successPopupRoot != null)
+        {
             successPopupRoot.SetActive(true);
+            successPopupRoot.transform.SetAsLastSibling();
+        }
         if (failPopupRoot != null)
             failPopupRoot.SetActive(false);
 
