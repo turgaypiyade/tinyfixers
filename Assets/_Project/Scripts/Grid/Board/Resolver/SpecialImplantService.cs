@@ -42,14 +42,32 @@ public class SpecialImplantService
     }
 
     private void ApplyPendingOverrideImplant(
-       ResolutionContext ctx,
-       PendingOverrideImplant pending)
+      ResolutionContext ctx,
+      PendingOverrideImplant pending)
     {
-        TileView pendingTarget = board.Tiles[pending.targetCell.x, pending.targetCell.y];
+        int x = pending.targetCell.x;
+        int y = pending.targetCell.y;
+
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return;
+
+        // Ek güvenlik:
+        // Override+Special fanout herhangi bir sebeple movable obstacle hücresini
+        // buraya kadar taşımışsa implant etme.
+        if (board.ObstacleStateService != null &&
+            board.ObstacleStateService.IsMovableObstacleAt(x, y))
+        {
+            return;
+        }
+
+        TileView pendingTarget = board.Tiles[x, y];
         if (pendingTarget == null)
             return;
 
-        pendingTarget.SetSpecial(pending.special, deferVisualUpdate: ctx.DeferOverrideImplantVisualRefresh);
+        pendingTarget.SetSpecial(
+            pending.special,
+            deferVisualUpdate: ctx.DeferOverrideImplantVisualRefresh);
+
         SpecialCellUtils.SyncAfterSpecialChange(board, pendingTarget);
 
         if (pending.special != TileSpecial.LineH &&
@@ -61,7 +79,8 @@ public class SpecialImplantService
 
         if (pending.special == TileSpecial.PulseCore)
         {
-            ctx.OverrideDeferredPulseExplosions.Add(new Vector2Int(pendingTarget.X, pendingTarget.Y));
+            ctx.OverrideDeferredPulseExplosions.Add(
+                new Vector2Int(pendingTarget.X, pendingTarget.Y));
             return;
         }
 
@@ -71,7 +90,8 @@ public class SpecialImplantService
         // sonra o aksiyon içindeki deferred patchbot phase'de sırayla dash atsın.
         if (pending.special == TileSpecial.PatchBot)
         {
-            ctx.OverrideDeferredPatchBotDashes.Add(new Vector2Int(pendingTarget.X, pendingTarget.Y));
+            ctx.OverrideDeferredPatchBotDashes.Add(
+                new Vector2Int(pendingTarget.X, pendingTarget.Y));
             return;
         }
 
@@ -83,11 +103,10 @@ public class SpecialImplantService
             : null;
 
         queueProcessor.EnqueueActivation(ctx, pendingTarget, activePartner);
-    }
-    /// <summary>
-    /// Cleans up implanted special visuals after resolution completes.
-    /// Resets specials on implanted tiles back to None.
-    /// </summary>
+    }    /// <summary>
+         /// Cleans up implanted special visuals after resolution completes.
+         /// Resets specials on implanted tiles back to None.
+         /// </summary>
     public void CleanupImplantedTiles(ResolutionContext ctx)
     {
         if (ctx.OverrideImplantedTiles.Count == 0) return;

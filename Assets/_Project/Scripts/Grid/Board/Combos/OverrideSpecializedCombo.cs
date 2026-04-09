@@ -150,27 +150,27 @@ public sealed class OverrideSpecializedCombo
                 if (!SpecialUtils.CanAffectCell(rt.Board, x, y))
                     continue;
 
+                // KRITIK FIX:
+                // Movable obstacle ustundeki tile'lari override+special fanout hedefine alma
+                if (rt.Board.ObstacleStateService != null &&
+                    rt.Board.ObstacleStateService.IsMovableObstacleAt(x, y))
+                    continue;
+
                 var tile = rt.Board.Tiles[x, y];
                 if (tile == null || !tile.GetTileType().Equals(baseType))
                     continue;
 
-                // Origin ve Partner zaten AddOrigin'de eklendi
                 if (tile == overrideTile || tile == otherTile)
                     continue;
 
                 if (tile.GetSpecial() != TileSpecial.None)
                 {
-                    // Mevcut special tile'lar: Affected'a ekle, Processed'a da ekle
-                    // ki fanout sırasında erken aktive olmasınlar.
-                    // Fanout bittikten sonra Processed'dan çıkarılıp
-                    // EnqueueChainSpecials ile doğal sırayla aktive edilecekler.
                     var cell = new Vector2Int(tile.X, tile.Y);
                     rt.Context.Affected.Add(tile);
                     SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board);
                     rt.Context.Processed.Add(cell);
 
-                    if (deferredSpecialCells == null)
-                        deferredSpecialCells = new List<Vector2Int>();
+                    deferredSpecialCells ??= new List<Vector2Int>();
                     deferredSpecialCells.Add(cell);
                     continue;
                 }
@@ -186,7 +186,6 @@ public sealed class OverrideSpecializedCombo
 
         return deferredSpecialCells;
     }
-
     private void AddOrigin(OverrideSpecializedComboExecutionRuntime rt, TileView tile)
     {
         if (tile == null)

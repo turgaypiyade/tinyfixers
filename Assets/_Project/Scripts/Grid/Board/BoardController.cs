@@ -300,7 +300,7 @@ public class BoardController : MonoBehaviour
     internal float ObstacleHitFxLifetime => Mathf.Max(0f, obstacleHitFxLifetime);
     internal GameObject ObstacleBreakFxPrefab => obstacleBreakFxPrefab;
     internal float ObstacleBreakFxLifetime => Mathf.Max(0f, obstacleBreakFxLifetime);
-
+    internal BoardInitService BoardInitService => boardInitService;
     // ═══════════════════════════════════════════════════════════════
     //  Lifecycle
     // ═══════════════════════════════════════════════════════════════

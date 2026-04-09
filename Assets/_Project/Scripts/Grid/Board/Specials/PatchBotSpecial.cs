@@ -260,19 +260,29 @@ public sealed class PatchBotSpecial
             ? storedType
             : tileAtOrigin.GetTileType();
 
-        // ── Phase 1: Tüm eşleşen taşları topla ve PatchBot'a dönüştür ──
         var autoPatchBots = new List<(TileView tile, Vector2Int sourceCell, TileType sourceType)>();
 
         for (int x = 0; x < arrivalRt.Board.Width; x++)
         {
             for (int y = 0; y < arrivalRt.Board.Height; y++)
             {
-                if (arrivalRt.Board.Holes[x, y]) continue;
+                if (arrivalRt.Board.Holes[x, y])
+                    continue;
+
+                // KRITIK FIX:
+                if (arrivalRt.Board.ObstacleStateService != null &&
+                    arrivalRt.Board.ObstacleStateService.IsMovableObstacleAt(x, y))
+                    continue;
 
                 var tile = arrivalRt.Board.Tiles[x, y];
-                if (tile == null || tile == tileAtOrigin) continue;
-                if (!tile.GetTileType().Equals(baseType)) continue;
-                if (tile.GetSpecial() != TileSpecial.None) continue;
+                if (tile == null || tile == tileAtOrigin)
+                    continue;
+
+                if (!tile.GetTileType().Equals(baseType))
+                    continue;
+
+                if (tile.GetSpecial() != TileSpecial.None)
+                    continue;
 
                 tile.SetSpecial(TileSpecial.PatchBot);
                 SpecialCellUtils.SyncAfterSpecialChange(arrivalRt.Board, tile);
@@ -281,15 +291,12 @@ public sealed class PatchBotSpecial
             }
         }
 
-        if (autoPatchBots.Count == 0) return;
+        if (autoPatchBots.Count == 0)
+            return;
 
-        // ── Phase 2: Koordinatör oluştur ──
         var coordinator = new PatchBotTargetCoordinator(arrivalRt.Board, arrivalRt.PatchbotService);
-
-        // ── Phase 3: Staggered launch — her bot sırayla havalanıp hedef bulur ──
         arrivalRt.Board.StartCoroutine(CoStaggeredPatchBotLaunch(arrivalRt, autoPatchBots, coordinator));
     }
-
     /// <summary>
     /// Tüm auto-PatchBot'ları sıralı olarak havalandırır.
     /// Her biri önce hücresinden kalkar, sonra koordinatörden hedef alır,

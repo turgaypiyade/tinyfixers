@@ -2,7 +2,8 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// Pure board initialization logic: initial type generation, match avoidance.
+/// Pure board initialization logic: initial type generation, match avoidance,
+/// and safe shuffle generation.
 /// No MonoBehaviour dependency, no coroutines, no side effects.
 /// </summary>
 public class BoardInitService
@@ -41,18 +42,15 @@ public class BoardInitService
                 }
             }
 
-            // İlk board'da otomatik match istemiyoruz
             if (HasImmediateMatch(types, holes))
                 continue;
 
-            // Ama mutlaka oynanabilir en az 1 hamle olsun
             if (HasAnyPlayableMove(types, holes))
                 return CloneTypes(types);
 
             fallbackCandidate = CloneTypes(types);
         }
 
-        // Random denemelerde çıkmazsa kontrollü şekilde legal hamle enjekte et
         if (fallbackCandidate != null &&
             TryInjectPlayableMove(fallbackCandidate, holes, randomPool) &&
             !HasImmediateMatch(fallbackCandidate, holes) &&
@@ -61,60 +59,7 @@ public class BoardInitService
             return fallbackCandidate;
         }
 
-        // Son çare
         return fallbackCandidate ?? CloneTypes(types);
-    }
-
-    private void MarkInitialMatches(TileType[,] types, bool[,] matched, int width, int height, bool[,] holes)
-    {
-        for (int y = 0; y < height; y++)
-        {
-            int run = 0; TileType runType = default; int runStart = 0;
-            for (int x = 0; x < width; x++)
-            {
-                if (holes[x, y]) { MarkRunIfNeeded(run, runStart, y, true, matched); run = 0; continue; }
-                var t = types[x, y];
-                if (run == 0) { run = 1; runType = t; runStart = x; continue; }
-                if (t.Equals(runType)) { run++; continue; }
-                MarkRunIfNeeded(run, runStart, y, true, matched);
-                run = 1; runType = t; runStart = x;
-            }
-            MarkRunIfNeeded(run, runStart, y, true, matched);
-        }
-
-        for (int x = 0; x < width; x++)
-        {
-            int run = 0; TileType runType = default; int runStart = 0;
-            for (int y = 0; y < height; y++)
-            {
-                if (holes[x, y]) { MarkRunIfNeeded(run, runStart, x, false, matched); run = 0; continue; }
-                var t = types[x, y];
-                if (run == 0) { run = 1; runType = t; runStart = y; continue; }
-                if (t.Equals(runType)) { run++; continue; }
-                MarkRunIfNeeded(run, runStart, x, false, matched);
-                run = 1; runType = t; runStart = y;
-            }
-            MarkRunIfNeeded(run, runStart, x, false, matched);
-        }
-    }
-
-    private void MarkRunIfNeeded(int run, int runStart, int fixedIndex, bool horizontal, bool[,] matched)
-    {
-        if (run < 3) return;
-        for (int i = 0; i < run; i++)
-        {
-            int x = horizontal ? runStart + i : fixedIndex;
-            int y = horizontal ? fixedIndex : runStart + i;
-            matched[x, y] = true;
-        }
-    }
-
-    private bool HasAnyMatched(bool[,] matched, int width, int height)
-    {
-        for (int y = 0; y < height; y++)
-        for (int x = 0; x < width; x++)
-            if (matched[x, y]) return true;
-        return false;
     }
 
     private TileType PickTypeAvoidingMatch(TileType[,] types, bool[,] filled, int x, int y,
@@ -159,6 +104,7 @@ public class BoardInitService
         while (dy < height && !holes[x, dy] && filled[x, dy] && types[x, dy].Equals(candidate)) { count++; dy++; }
         return count >= 3;
     }
+
     public bool TryBuildSafeShuffleTypes(
         TileType[,] currentTypes,
         bool[,] lockedMask,
@@ -351,7 +297,8 @@ public class BoardInitService
     private bool WouldSwapCreateMatch(
         TileType[,] types,
         bool[,] lockedMask,
-        int ax, int ay, int bx, int by)
+        int ax, int ay,
+        int bx, int by)
     {
         TileType a = types[ax, ay];
         TileType b = types[bx, by];

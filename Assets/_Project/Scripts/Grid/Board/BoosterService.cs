@@ -107,40 +107,32 @@ public class BoosterService
         board.EndBusy();
     }
 
+
     public IEnumerator ShuffleBoardRoutine(ActionSequencer actionSequencer)
+    {
+        yield return SafeShuffleBoardRoutine(board.BoardInitService);
+    }
+
+    public IEnumerator SafeShuffleBoardRoutine(BoardInitService boardInitService)
     {
         board.BeginBusy();
 
-        var activeTiles = new List<TileView>();
-        var types = new List<TileType>();
+        var currentTypes = new TileType[board.Width, board.Height];
+        var lockedMask = new bool[board.Width, board.Height];
 
-        for (int x = 0; x < board.Width; x++)
-            for (int y = 0; y < board.Height; y++)
-            {
-                if (board.Holes[x, y]) continue;
-                var tile = board.Tiles[x, y];
-                if (tile == null) continue;
-                if (tile.GetSpecial() != TileSpecial.None) continue;
-                activeTiles.Add(tile);
-                types.Add(tile.GetTileType());
-            }
+        BuildSafeShuffleState(currentTypes, lockedMask);
 
-        for (int i = types.Count - 1; i > 0; i--)
+        if (boardInitService != null &&
+            boardInitService.TryBuildSafeShuffleTypes(currentTypes, lockedMask, board.RandomPool, out var finalTypes))
         {
-            int j = UnityEngine.Random.Range(0, i + 1);
-            (types[i], types[j]) = (types[j], types[i]);
+            ApplyShuffledTypes(finalTypes, lockedMask);
+            board.SyncAllTilesToGridData();
+            board.RefreshAllTileObstacleVisuals();
+            board.RefreshAllSortingOrders();
         }
 
-        for (int i = 0; i < activeTiles.Count; i++)
-        {
-            var tile = activeTiles[i];
-            tile.SetType(types[i]);
-            board.SyncTileData(tile.X, tile.Y);
-            board.RefreshTileObstacleVisual(tile);
-        }
-
-        yield return board.ResolveBoardPublic();
         board.EndBusy();
+        yield break;
     }
 
     public void AddRow(HashSet<TileView> matches, int y)
@@ -179,27 +171,7 @@ public class BoosterService
         if (!board.Holes[x, y]) return true;
         return board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
     }
-    public IEnumerator SafeShuffleBoardRoutine(BoardInitService boardInitService)
-    {
-        board.BeginBusy();
 
-        var currentTypes = new TileType[board.Width, board.Height];
-        var lockedMask = new bool[board.Width, board.Height];
-
-        BuildSafeShuffleState(currentTypes, lockedMask);
-
-        if (boardInitService != null &&
-            boardInitService.TryBuildSafeShuffleTypes(currentTypes, lockedMask, board.RandomPool, out var finalTypes))
-        {
-            ApplyShuffledTypes(finalTypes, lockedMask);
-            board.SyncAllTilesToGridData();
-            board.RefreshAllTileObstacleVisuals();
-            board.RefreshAllSortingOrders();
-        }
-
-        board.EndBusy();
-        yield break;
-    }
 
     private void BuildSafeShuffleState(TileType[,] currentTypes, bool[,] lockedMask)
     {
