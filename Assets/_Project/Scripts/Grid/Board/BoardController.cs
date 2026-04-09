@@ -1829,7 +1829,36 @@ public class BoardController : MonoBehaviour
         }
         if (goalFlyFx != null) goalFlyFx.gameObject.SendMessage("SetOverlayRoot", overlay, SendMessageOptions.DontRequireReceiver);
     }
+    private IEnumerator EnsurePlayableBoardAfterSettleRoutine()
+    {
+        if (matchFinder == null || boosterService == null || boardInitService == null)
+            yield break;
 
+        const int maxShuffleRetries = 4;
+
+        for (int attempt = 0; attempt < maxShuffleRetries; attempt++)
+        {
+            // HasAnyPlayableSwap zaten:
+            // - normal match yaratacak swap'ı
+            // - special tile varsa onun komşu swap'ını
+            // birlikte kontrol ediyor
+            if (matchFinder.HasAnyPlayableSwap())
+                yield break;
+
+            yield return boosterService.SafeShuffleBoardRoutine(boardInitService);
+
+            SyncAllTilesToGridData();
+            RefreshAllTileObstacleVisuals();
+            RefreshAllSortingOrders();
+
+            if (matchFinder.HasAnyPlayableSwap())
+                yield break;
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    Debug.LogWarning("[Board] No playable move found even after safe shuffle retries.");
+#endif
+    }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     [System.Diagnostics.Conditional("UNITY_EDITOR")]
     [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]

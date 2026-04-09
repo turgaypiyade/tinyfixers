@@ -10,29 +10,59 @@ public class BoardInitService
     public TileType[,] SimulateInitialTypes(int width, int height, bool[,] holes, TileType[] randomPool)
     {
         var types = new TileType[width, height];
-        var matched = new bool[width, height];
         var filled = new bool[width, height];
 
-        const int maxAttempts = 10;
+        TileType[,] fallbackCandidate = null;
+
+        const int maxAttempts = 96;
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
             System.Array.Clear(types, 0, types.Length);
-            System.Array.Clear(matched, 0, matched.Length);
             System.Array.Clear(filled, 0, filled.Length);
 
             for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x++)
             {
-                if (holes[x, y]) continue;
-                types[x, y] = PickTypeAvoidingMatch(types, filled, x, y, width, height, holes, randomPool);
-                filled[x, y] = true;
+                for (int x = 0; x < width; x++)
+                {
+                    if (holes[x, y])
+                        continue;
+
+                    types[x, y] = PickTypeAvoidingMatch(
+                        types,
+                        filled,
+                        x,
+                        y,
+                        width,
+                        height,
+                        holes,
+                        randomPool);
+
+                    filled[x, y] = true;
+                }
             }
 
-            MarkInitialMatches(types, matched, width, height, holes);
-            if (!HasAnyMatched(matched, width, height)) return types;
+            // İlk board'da otomatik match istemiyoruz
+            if (HasImmediateMatch(types, holes))
+                continue;
+
+            // Ama mutlaka oynanabilir en az 1 hamle olsun
+            if (HasAnyPlayableMove(types, holes))
+                return CloneTypes(types);
+
+            fallbackCandidate = CloneTypes(types);
         }
 
-        return types;
+        // Random denemelerde çıkmazsa kontrollü şekilde legal hamle enjekte et
+        if (fallbackCandidate != null &&
+            TryInjectPlayableMove(fallbackCandidate, holes, randomPool) &&
+            !HasImmediateMatch(fallbackCandidate, holes) &&
+            HasAnyPlayableMove(fallbackCandidate, holes))
+        {
+            return fallbackCandidate;
+        }
+
+        // Son çare
+        return fallbackCandidate ?? CloneTypes(types);
     }
 
     private void MarkInitialMatches(TileType[,] types, bool[,] matched, int width, int height, bool[,] holes)
