@@ -41,9 +41,7 @@ public class SpecialImplantService
         ctx.PendingOverrideImplants.Clear();
     }
 
-    private void ApplyPendingOverrideImplant(
-      ResolutionContext ctx,
-      PendingOverrideImplant pending)
+    private void ApplyPendingOverrideImplant(ResolutionContext ctx, PendingOverrideImplant pending)
     {
         int x = pending.targetCell.x;
         int y = pending.targetCell.y;
