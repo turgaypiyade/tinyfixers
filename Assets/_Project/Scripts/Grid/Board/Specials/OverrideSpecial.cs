@@ -38,7 +38,20 @@ public sealed class OverrideSpecial
 
         AddAffected(rt, overrideTile);
 
-        TileType type = partnerTile != null ? partnerTile.GetTileType() : overrideTile.GetTileType();
+        TileType type;
+        if (partnerTile != null)
+        {
+            type = partnerTile.GetTileType();
+        }
+        else if (overrideTile.GetOverrideBaseType(out var storedType))
+        {
+            type = storedType;
+        }
+        else
+        {
+            type = overrideTile.GetTileType();
+        }
+
         TileSpecial partnerSpecial = partnerTile != null ? partnerTile.GetSpecial() : TileSpecial.None;
 
         rt.Context.OverrideFanoutNormalSelectionPulse = (partnerTile == null) || (partnerSpecial == TileSpecial.None);

@@ -791,22 +791,7 @@ public class SpecialResolver
 
             case TileSpecial.SystemOverride:
                 {
-                    var res = overrideSpecial.Execute(new OverrideExecutionRuntime
-                    {
-                        Board = board,
-                        Context = ctx,
-                        Origin = tile,
-                        Partner = partner,
-                        FinalizeAtEnd = false,
-                        ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                        CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                        FireOverrideOverrideSpecialVisuals = (affected, delays) =>
-                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
-                    });
-
-                    if (res != null && res.Actions != null)
-                        actions.AddRange(res.Actions);
-
+                    dispatcher.ApplySpecialActivation(ctx, tile, partner);
                     break;
                 }
         }

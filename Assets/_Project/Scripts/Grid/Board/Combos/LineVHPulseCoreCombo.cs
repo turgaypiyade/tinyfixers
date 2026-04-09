@@ -91,7 +91,8 @@ public sealed class LineVHPulseCoreCombo
             rt.Board,
             comboCenterCell.x,
             comboCenterCell.y,
-            rt.EmitPulseEmitterComboTriggered);
+            rt.EmitPulseEmitterComboTriggered,
+            rt.Context?.DeferredLineHitOverrideCells);
 
         if (pulseAction != null)
             result.Actions.Insert(0, pulseAction);
@@ -322,7 +323,8 @@ public sealed class LineVHPulseCoreCombo
         BoardController board,
         int cx,
         int cy,
-        Action<Vector2Int> emitPulseEmitterComboTriggered)
+        Action<Vector2Int> emitPulseEmitterComboTriggered,
+        ICollection<Vector2Int> deferredLineHitOverrideCells)
     {
         var targets = board.BuildPulseEmitterTargets(cx, cy);
 
@@ -373,8 +375,35 @@ public sealed class LineVHPulseCoreCombo
                 targetVisuals[cell] = (tile.GetTileType(), tile);
         }
 
+        var protectedOverrideCells = new HashSet<Vector2Int>();
+        if (deferredLineHitOverrideCells != null)
+        {
+            foreach (var cell in deferredLineHitOverrideCells)
+            {
+                if (!targets.Contains(cell))
+                    continue;
+
+                if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                    continue;
+
+                var tile = board.Tiles[cell.x, cell.y];
+                if (tile == null)
+                    continue;
+
+                if (tile.GetSpecial() != TileSpecial.SystemOverride)
+                    continue;
+
+                protectedOverrideCells.Add(cell);
+            }
+        }
+
         foreach (var cell in targets)
+        {
+            if (protectedOverrideCells.Contains(cell))
+                continue;
+
             board.ClearCellDataOnly(cell);
+        }
 
         return new LineVHPulseCoreComboAction(
             board,
@@ -382,6 +411,7 @@ public sealed class LineVHPulseCoreCombo
             hOrigins,
             vOrigins,
             targetVisuals,
+            protectedOverrideCells,
             new Vector2Int(cx, cy),
             emitPulseEmitterComboTriggered);
     }
@@ -404,18 +434,26 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
     private readonly List<(Vector2Int cell, Vector2 anch)> hOrigins;
     private readonly List<(Vector2Int cell, Vector2 anch)> vOrigins;
     private readonly Dictionary<Vector2Int, (TileType type, TileView view)> targetVisuals;
+    private readonly HashSet<Vector2Int> protectedOverrideCells;
     private readonly Vector2Int comboCenterCell;
     private readonly Action<Vector2Int> emitPulseEmitterComboTriggered;
 
-    public LineVHPulseCoreComboAction(BoardController board, HashSet<Vector2Int> targets, List<(Vector2Int cell, Vector2 anch)> hOrigins,
-                                      List<(Vector2Int cell, Vector2 anch)> vOrigins, Dictionary<Vector2Int, (TileType type, TileView view)> targetVisuals,
-                                    Vector2Int comboCenterCell, Action<Vector2Int> emitPulseEmitterComboTriggered)
+    public LineVHPulseCoreComboAction(
+        BoardController board,
+        HashSet<Vector2Int> targets,
+        List<(Vector2Int cell, Vector2 anch)> hOrigins,
+        List<(Vector2Int cell, Vector2 anch)> vOrigins,
+        Dictionary<Vector2Int, (TileType type, TileView view)> targetVisuals,
+        HashSet<Vector2Int> protectedOverrideCells,
+        Vector2Int comboCenterCell,
+        Action<Vector2Int> emitPulseEmitterComboTriggered)
     {
         this.board = board;
         this.targets = targets;
         this.hOrigins = hOrigins;
         this.vOrigins = vOrigins;
         this.targetVisuals = targetVisuals;
+        this.protectedOverrideCells = protectedOverrideCells ?? new HashSet<Vector2Int>();
         this.comboCenterCell = comboCenterCell;
         this.emitPulseEmitterComboTriggered = emitPulseEmitterComboTriggered;
     }
@@ -425,6 +463,8 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         var cleared = new HashSet<Vector2Int>();
         var hiddenOrigins = new HashSet<TileView>();
 
+        bool IsProtected(Vector2Int cell) => protectedOverrideCells.Contains(cell);
+
         foreach (var h in hOrigins)
         {
             var view = board.GetTileViewAt(h.cell.x, h.cell.y);
@@ -432,8 +472,12 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             {
                 SpecialVisualService.HideTileVisualForCombo(view);
 
-                if (cleared.Add(h.cell) && targetVisuals.TryGetValue(h.cell, out var originVisual))
+                if (!IsProtected(h.cell) &&
+                    cleared.Add(h.cell) &&
+                    targetVisuals.TryGetValue(h.cell, out var originVisual))
+                {
                     board.ClearCellVisualOnly(h.cell, originVisual.type, originVisual.view);
+                }
             }
         }
 
@@ -444,15 +488,25 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             {
                 SpecialVisualService.HideTileVisualForCombo(view);
 
-                if (cleared.Add(v.cell) && targetVisuals.TryGetValue(v.cell, out var originVisual))
+                if (!IsProtected(v.cell) &&
+                    cleared.Add(v.cell) &&
+                    targetVisuals.TryGetValue(v.cell, out var originVisual))
+                {
                     board.ClearCellVisualOnly(v.cell, originVisual.type, originVisual.view);
+                }
             }
         }
 
         if (board.lineTravelPlayer == null)
         {
             foreach (var kvp in targetVisuals)
+            {
+                if (IsProtected(kvp.Key))
+                    continue;
+
                 board.ClearCellVisualOnly(kvp.Key, kvp.Value.type, kvp.Value.view);
+            }
+
             yield break;
         }
 
@@ -463,6 +517,9 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             if (!targets.Contains(cell))
                 return;
 
+            if (IsProtected(cell))
+                return;
+
             if (!cleared.Add(cell))
                 return;
 
@@ -471,7 +528,6 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         }
 
         int pendingTravels = 0;
-        int travelIdSeed = 0;
         float expectedMaxDuration = 0f;
 
         Action<string, Vector2Int> makeCompletedLogger = (axisLabel, originCell) =>
@@ -491,7 +547,6 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
                 board.lineTravelPlayer != null ? board.lineTravelPlayer.EstimateDuration(steps) : 0f);
 
             pendingTravels++;
-            int travelId = ++travelIdSeed;
 
             board.PlayLineTravelInstanceWithStep(
                 LineTravelSplitSwapTestUI.LineAxis.Horizontal,
@@ -512,7 +567,6 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
                 board.lineTravelPlayer != null ? board.lineTravelPlayer.EstimateDuration(steps) : 0f);
 
             pendingTravels++;
-            int travelId = ++travelIdSeed;
 
             board.PlayLineTravelInstanceWithStep(
                 LineTravelSplitSwapTestUI.LineAxis.Vertical,
@@ -534,13 +588,13 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             yield return null;
         }
 
-        //pendingTravels = 0;
-
         foreach (var kvp in targetVisuals)
         {
+            if (IsProtected(kvp.Key))
+                continue;
+
             if (cleared.Add(kvp.Key))
                 board.ClearCellVisualOnly(kvp.Key, kvp.Value.type, kvp.Value.view);
         }
-        
     }
 }

@@ -304,20 +304,10 @@ public class SpecialBehaviorDispatcher
                         $"processed={ctx.Processed.Contains(cell)} " +
                         $"queued={ctx.Queued.Contains(cell)}");
 
-                    if (ctx.HasLineActivation && ctx.LightningLineStrikes != null && ctx.LightningLineStrikes.Count > 0)
+                    if (ctx.HasLineActivation)
                     {
-                        Debug.Log(
-                            $"[OverrideDefer] reason=LineHit cell={cell} " +
-                            $"strikes={ctx.LightningLineStrikes.Count} " +
-                            $"deferredBefore={ctx.DeferredLineHitOverrideCells.Count}");
-
                         if (!ctx.DeferredLineHitOverrideCells.Contains(cell))
                             ctx.DeferredLineHitOverrideCells.Add(cell);
-
-                        Debug.Log(
-                            $"[OverrideDefer] reason=LineHit cell={cell} " +
-                            $"deferredAfter={ctx.DeferredLineHitOverrideCells.Count}");
-
                         break;
                     }
 
