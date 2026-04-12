@@ -20,6 +20,10 @@ public sealed class OverrideSpecializedComboExecutionRuntime
 
     public Action<ResolutionContext> EnqueueChainSpecials;
     public Action<ResolutionContext> ProcessQueue;
+
+    public bool UseBatchClearSpike;
+    public int DeferredSpecialBatchSize;
+    public bool EnqueueCascadeBetweenBatches;
 }
 
 public sealed class OverrideSpecializedComboExecutionResult
@@ -48,6 +52,16 @@ public sealed class OverrideSpecializedCombo
 
         if (rt.FinalizeAtEnd)
         {
+            bool useBatchClearSpike =
+                rt.UseBatchClearSpike &&
+                (targetSpecial == TileSpecial.LineH || targetSpecial == TileSpecial.LineV);
+
+            HashSet<TileView> emittedTiles = null;
+            HashSet<Vector2Int> emittedCells = null;
+
+            // 1) Fanout
+            var beforeFanout = CaptureSnapshot(rt.Context);
+
             if (rt.ProcessFanout != null)
             {
                 var fanoutActions = rt.ProcessFanout(rt.Context);
@@ -55,22 +69,42 @@ public sealed class OverrideSpecializedCombo
                     result.Actions.AddRange(fanoutActions);
             }
 
-            // Fanout bitti — aynı renk mevcut special'ları aktive et
-            if (deferredSpecials != null && deferredSpecials.Count > 0)
+            if (useBatchClearSpike)
             {
-                foreach (var cell in deferredSpecials)
-                    rt.Context.Processed.Remove(cell);
+                emittedTiles = new HashSet<TileView>();
+                emittedCells = new HashSet<Vector2Int>();
 
-                rt.EnqueueChainSpecials?.Invoke(rt.Context);
-                rt.ProcessQueue?.Invoke(rt.Context);
+                // Fanout'un ürettiği chain etkilerini ilk batch gibi clear et
+                AppendDeltaClearAction(
+                    result.Actions,
+                    BuildDeltaClearPayload(rt.Context, beforeFanout, rt.EnqueueCascadeBetweenBatches),
+                    emittedTiles,
+                    emittedCells);
             }
 
-            // İmplant edilen PulseCore'ları sırayla tetikle.
-            // PulseCoreSpecial.ExecuteQueuedChain etrafındaki special'ları
-            // (LineH, LineV, Override vs.) kuyruğa alıp zincirleme tetikler.
-            // Processed seti recursive döngüyü önler.
-            // VFX bastırılıyor — görsel patlama SystemOverrideFanoutPlacementAction
-            // tarafından doğru zamanda (lightningbeam sonrası) oynatılacak.
+            // 2) Deferred same-color mevcut special'lar
+            if (deferredSpecials != null && deferredSpecials.Count > 0)
+            {
+                if (useBatchClearSpike)
+                {
+                    ReleaseDeferredSpecialsInBatches(
+                        rt,
+                        deferredSpecials,
+                        result.Actions,
+                        emittedTiles,
+                        emittedCells);
+                }
+                else
+                {
+                    foreach (var cell in deferredSpecials)
+                        rt.Context.Processed.Remove(cell);
+
+                    rt.EnqueueChainSpecials?.Invoke(rt.Context);
+                    rt.ProcessQueue?.Invoke(rt.Context);
+                }
+            }
+
+            // 3) Pulse yolu ilk spike'ta aynen kalsın
             if (targetSpecial == TileSpecial.PulseCore && rt.ActivateSpecial != null)
             {
                 rt.Context.SuppressOverridePulseSelectionVfx = true;
@@ -96,7 +130,23 @@ public sealed class OverrideSpecializedCombo
             if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
                 rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
 
-            result.Actions.Add(BuildClearAction(rt.Context, targetSpecial));
+            if (useBatchClearSpike)
+            {
+                // En sonda origin / partner / deferred source hücreleri gibi
+                // delta clear'lara girmemiş kalanları temizle.
+                var tail = BuildRemainingSeedClearPayload(
+                    rt.Context,
+                    emittedTiles,
+                    emittedCells,
+                    rt.EnqueueCascadeBetweenBatches);
+
+                if (tail.Action != null)
+                    result.Actions.Add(tail.Action);
+            }
+            else
+            {
+                result.Actions.Add(BuildClearAction(rt.Context, targetSpecial));
+            }
         }
 
         return result;
@@ -221,5 +271,290 @@ public sealed class OverrideSpecializedCombo
             perTileClearDelays: ctx.OverrideRadialClearDelays,
             isSpecialPhase: true,
             presentationPlan: null);
+    }
+    private void ReleaseDeferredSpecialsAllAtOnce(
+    OverrideSpecializedComboExecutionRuntime rt,
+    List<Vector2Int> deferredSpecials)
+    {
+        for (int i = 0; i < deferredSpecials.Count; i++)
+            rt.Context.Processed.Remove(deferredSpecials[i]);
+
+        rt.EnqueueChainSpecials?.Invoke(rt.Context);
+        rt.ProcessQueue?.Invoke(rt.Context);
+    }
+
+    private void ReleaseDeferredSpecialsInBatches(
+        OverrideSpecializedComboExecutionRuntime rt,
+        List<Vector2Int> deferredSpecials)
+    {
+        if (deferredSpecials == null || deferredSpecials.Count == 0)
+            return;
+
+        int batchSize = Mathf.Max(1, rt.DeferredSpecialBatchSize);
+
+        // İstersen bu sırayı explicit hale getirebilirsin.
+        // Mevcut CollectTargets x/y scan ile zaten deterministik bir sıra üretiyor.
+        // Güvenli olmak için ayrıca sırala:
+        deferredSpecials.Sort((a, b) =>
+        {
+            int y = a.y.CompareTo(b.y);
+            if (y != 0) return y;
+            return a.x.CompareTo(b.x);
+        });
+
+        for (int start = 0; start < deferredSpecials.Count; start += batchSize)
+        {
+            int end = Mathf.Min(start + batchSize, deferredSpecials.Count);
+
+            // Sadece bu batch açılıyor
+            for (int i = start; i < end; i++)
+                rt.Context.Processed.Remove(deferredSpecials[i]);
+
+            rt.EnqueueChainSpecials?.Invoke(rt.Context);
+            rt.ProcessQueue?.Invoke(rt.Context);
+        }
+    }
+    private readonly struct ClearSnapshot
+    {
+        public readonly HashSet<TileView> Affected;
+        public readonly HashSet<Vector2Int> AffectedCells;
+        public readonly HashSet<TileView> LightningTargets;
+        public readonly int StrikeCount;
+        public readonly int ImpactCount;
+
+        public ClearSnapshot(
+            HashSet<TileView> affected,
+            HashSet<Vector2Int> affectedCells,
+            HashSet<TileView> lightningTargets,
+            int strikeCount,
+            int impactCount)
+        {
+            Affected = affected;
+            AffectedCells = affectedCells;
+            LightningTargets = lightningTargets;
+            StrikeCount = strikeCount;
+            ImpactCount = impactCount;
+        }
+    }
+
+    private readonly struct ClearPayload
+    {
+        public readonly MatchClearAction Action;
+        public readonly HashSet<TileView> Tiles;
+        public readonly HashSet<Vector2Int> Cells;
+
+        public ClearPayload(MatchClearAction action, HashSet<TileView> tiles, HashSet<Vector2Int> cells)
+        {
+            Action = action;
+            Tiles = tiles;
+            Cells = cells;
+        }
+    }
+
+    private ClearSnapshot CaptureSnapshot(ResolutionContext ctx)
+    {
+        return new ClearSnapshot(
+            new HashSet<TileView>(ctx.Affected),
+            new HashSet<Vector2Int>(ctx.AffectedCells),
+            new HashSet<TileView>(ctx.LightningVisualTargets),
+            ctx.LightningLineStrikes.Count,
+            ctx.ImpactCells.Count);
+    }
+
+    private void ReleaseDeferredSpecialsInBatches(
+        OverrideSpecializedComboExecutionRuntime rt,
+        List<Vector2Int> deferredSpecials,
+        List<BoardAction> actions,
+        HashSet<TileView> emittedTiles,
+        HashSet<Vector2Int> emittedCells)
+    {
+        if (deferredSpecials == null || deferredSpecials.Count == 0)
+            return;
+
+        deferredSpecials.Sort((a, b) =>
+        {
+            int y = a.y.CompareTo(b.y);
+            if (y != 0) return y;
+            return a.x.CompareTo(b.x);
+        });
+
+        int batchSize = Mathf.Max(1, rt.DeferredSpecialBatchSize);
+
+        for (int start = 0; start < deferredSpecials.Count; start += batchSize)
+        {
+            var beforeBatch = CaptureSnapshot(rt.Context);
+
+            int end = Mathf.Min(start + batchSize, deferredSpecials.Count);
+            for (int i = start; i < end; i++)
+                rt.Context.Processed.Remove(deferredSpecials[i]);
+
+            rt.EnqueueChainSpecials?.Invoke(rt.Context);
+            rt.ProcessQueue?.Invoke(rt.Context);
+
+            AppendDeltaClearAction(
+                actions,
+                BuildDeltaClearPayload(rt.Context, beforeBatch, rt.EnqueueCascadeBetweenBatches),
+                emittedTiles,
+                emittedCells);
+        }
+    }
+
+    private void AppendDeltaClearAction(
+        List<BoardAction> actions,
+        ClearPayload payload,
+        HashSet<TileView> emittedTiles,
+        HashSet<Vector2Int> emittedCells)
+    {
+        if (payload.Action == null)
+            return;
+
+        actions.Add(payload.Action);
+
+        if (payload.Tiles != null)
+        {
+            foreach (var t in payload.Tiles)
+                emittedTiles.Add(t);
+        }
+
+        if (payload.Cells != null)
+        {
+            foreach (var c in payload.Cells)
+                emittedCells.Add(c);
+        }
+    }
+
+    private ClearPayload BuildDeltaClearPayload(
+        ResolutionContext ctx,
+        ClearSnapshot before,
+        bool enqueueCascadeOnComplete)
+    {
+        var deltaTiles = new HashSet<TileView>();
+        foreach (var tile in ctx.Affected)
+        {
+            if (tile != null && !before.Affected.Contains(tile))
+                deltaTiles.Add(tile);
+        }
+
+        var deltaCells = new HashSet<Vector2Int>();
+        foreach (var cell in ctx.AffectedCells)
+        {
+            if (!before.AffectedCells.Contains(cell))
+                deltaCells.Add(cell);
+        }
+
+        var deltaLightningTargets = new HashSet<TileView>();
+        foreach (var tile in ctx.LightningVisualTargets)
+        {
+            if (tile != null && !before.LightningTargets.Contains(tile))
+                deltaLightningTargets.Add(tile);
+        }
+
+        List<LightningLineStrike> deltaStrikes = null;
+        int strikeDelta = ctx.LightningLineStrikes.Count - before.StrikeCount;
+        if (strikeDelta > 0)
+            deltaStrikes = ctx.LightningLineStrikes.GetRange(before.StrikeCount, strikeDelta);
+
+        List<Vector2Int> deltaImpacts = null;
+        int impactDelta = ctx.ImpactCells.Count - before.ImpactCount;
+        if (impactDelta > 0)
+            deltaImpacts = ctx.ImpactCells.GetRange(before.ImpactCount, impactDelta);
+
+        if (deltaTiles.Count == 0 &&
+            deltaCells.Count == 0 &&
+            (deltaStrikes == null || deltaStrikes.Count == 0))
+        {
+            return new ClearPayload(null, null, null);
+        }
+
+        Dictionary<TileView, float> batchRadialDelays = null;
+        if (ctx.OverrideRadialClearDelays != null)
+        {
+            foreach (var kv in ctx.OverrideRadialClearDelays)
+            {
+                if (!deltaTiles.Contains(kv.Key))
+                    continue;
+
+                batchRadialDelays ??= new Dictionary<TileView, float>();
+                batchRadialDelays[kv.Key] = kv.Value;
+            }
+        }
+
+        bool hasChainLightning = deltaStrikes != null && deltaStrikes.Count > 0;
+
+        var action = new MatchClearAction(
+            deltaTiles,
+            doShake: true,
+            animationMode: hasChainLightning
+                ? ClearAnimationMode.LightningStrike
+                : ClearAnimationMode.Default,
+            affectedCells: deltaCells.Count > 0 ? deltaCells : null,
+            impactCells: deltaImpacts,
+            includeAdjacentOverTileBlockerDamage: false,
+            lightningVisualTargets: hasChainLightning && deltaLightningTargets.Count > 0 ? deltaLightningTargets : null,
+            lightningLineStrikes: hasChainLightning ? deltaStrikes : null,
+            suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
+            perTileClearDelays: batchRadialDelays,
+            isSpecialPhase: true,
+            presentationPlan: null,
+            enqueueCascadeOnComplete: enqueueCascadeOnComplete);
+
+        return new ClearPayload(action, deltaTiles, deltaCells);
+    }
+
+    private ClearPayload BuildRemainingSeedClearPayload(
+        ResolutionContext ctx,
+        HashSet<TileView> emittedTiles,
+        HashSet<Vector2Int> emittedCells,
+        bool enqueueCascadeOnComplete)
+    {
+        var remainingTiles = new HashSet<TileView>();
+        foreach (var tile in ctx.Affected)
+        {
+            if (tile != null && (emittedTiles == null || !emittedTiles.Contains(tile)))
+                remainingTiles.Add(tile);
+        }
+
+        var remainingCells = new HashSet<Vector2Int>();
+        foreach (var cell in ctx.AffectedCells)
+        {
+            if (emittedCells == null || !emittedCells.Contains(cell))
+                remainingCells.Add(cell);
+        }
+
+        if (remainingTiles.Count == 0 &&
+            remainingCells.Count == 0)
+        {
+            return new ClearPayload(null, null, null);
+        }
+
+        Dictionary<TileView, float> tailDelays = null;
+        if (ctx.OverrideRadialClearDelays != null)
+        {
+            foreach (var kv in ctx.OverrideRadialClearDelays)
+            {
+                if (!remainingTiles.Contains(kv.Key))
+                    continue;
+
+                tailDelays ??= new Dictionary<TileView, float>();
+                tailDelays[kv.Key] = kv.Value;
+            }
+        }
+
+        var action = new MatchClearAction(
+            remainingTiles,
+            doShake: true,
+            animationMode: ClearAnimationMode.Default,
+            affectedCells: remainingCells.Count > 0 ? remainingCells : null,
+            impactCells: null,
+            includeAdjacentOverTileBlockerDamage: false,
+            lightningVisualTargets: null,
+            lightningLineStrikes: null,
+            suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
+            perTileClearDelays: tailDelays,
+            isSpecialPhase: true,
+            presentationPlan: null,
+            enqueueCascadeOnComplete: enqueueCascadeOnComplete);
+
+        return new ClearPayload(action, remainingTiles, remainingCells);
     }
 }

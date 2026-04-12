@@ -313,7 +313,10 @@ public class SpecialResolver
                 CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
                 FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
                 EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
-                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
+                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution),
+                UseBatchClearSpike = true,
+                DeferredSpecialBatchSize = 4,
+                EnqueueCascadeBetweenBatches = true
             });
 
             actions.AddRange(result.Actions);
