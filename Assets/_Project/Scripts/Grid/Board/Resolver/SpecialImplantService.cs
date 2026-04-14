@@ -11,7 +11,6 @@ using static ResolutionContext;
 /// </summary>
 public class SpecialImplantService
 {
-
     private readonly BoardController board;
     private readonly PatchbotComboService patchbotComboService;
     private readonly SpecialVisualService visualService;
@@ -49,9 +48,6 @@ public class SpecialImplantService
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
             return;
 
-        // Ek güvenlik:
-        // Override+Special fanout herhangi bir sebeple movable obstacle hücresini
-        // buraya kadar taşımışsa implant etme.
         if (board.ObstacleStateService != null &&
             board.ObstacleStateService.IsMovableObstacleAt(x, y))
         {
@@ -82,10 +78,6 @@ public class SpecialImplantService
             return;
         }
 
-        // KRİTİK:
-        // Override + PatchBot'ta patchbot'u hemen queue'ya sokmuyoruz.
-        // Önce fanout placement aksiyonunda görünür olarak yerleşsin,
-        // sonra o aksiyon içindeki deferred patchbot phase'de sırayla dash atsın.
         if (pending.special == TileSpecial.PatchBot)
         {
             ctx.OverrideDeferredPatchBotDashes.Add(
@@ -93,21 +85,41 @@ public class SpecialImplantService
             return;
         }
 
-        ctx.Affected.Add(pendingTarget);
-        SpecialCellUtils.MarkAffectedCell(ctx, pendingTarget, board);
-
         TileView activePartner = pending.partnerCell.HasValue
             ? board.Tiles[pending.partnerCell.Value.x, pending.partnerCell.Value.y]
             : null;
 
+        // KRITIK:
+        // Override+LineH / Override+LineV implantlarini fanout aninda
+        // queue'ya sokmuyoruz. Gercek batch fazinda native aktive olacaklar.
+        //
+        // Liste ismi LineV kalsa da burada iki line tipi de bu listeye giriyor.
+        if (pending.special == TileSpecial.LineH ||
+            pending.special == TileSpecial.LineV)
+        {
+            ctx.OverrideDeferredLineVActivations.Add(
+                new SpecialActivation(
+                    new Vector2Int(pendingTarget.X, pendingTarget.Y),
+                    activePartner != null
+                        ? new Vector2Int(activePartner.X, activePartner.Y)
+                        : (Vector2Int?)null));
+            return;
+        }
+
+        ctx.Affected.Add(pendingTarget);
+        SpecialCellUtils.MarkAffectedCell(ctx, pendingTarget, board);
+
         queueProcessor.EnqueueActivation(ctx, pendingTarget, activePartner);
-    }    /// <summary>
-         /// Cleans up implanted special visuals after resolution completes.
-         /// Resets specials on implanted tiles back to None.
-         /// </summary>
+    }
+
+    /// <summary>
+    /// Cleans up implanted special visuals after resolution completes.
+    /// Resets specials on implanted tiles back to None.
+    /// </summary>
     public void CleanupImplantedTiles(ResolutionContext ctx)
     {
-        if (ctx.OverrideImplantedTiles.Count == 0) return;
+        if (ctx.OverrideImplantedTiles.Count == 0)
+            return;
 
         foreach (var tile in ctx.OverrideImplantedTiles)
         {
@@ -117,6 +129,7 @@ public class SpecialImplantService
                 SpecialCellUtils.SyncAfterSpecialChange(board, tile);
             }
         }
+
         ctx.OverrideImplantedTiles.Clear();
     }
 }
