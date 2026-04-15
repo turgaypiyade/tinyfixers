@@ -93,7 +93,7 @@ LineRenderer:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 0.13409758
+        value: 0.19424772
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -101,8 +101,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.1556257
-        value: 0.102544546
+        time: 0.14908731
+        value: 0.20781493
         inSlope: -1.4690787
         outSlope: -1.4690787
         tangentMode: 0
@@ -110,8 +110,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.33573478
-        value: 0.11869999
+        time: 0.33900017
+        value: 0.18637273
         inSlope: 0.46344575
         outSlope: 0.46344575
         tangentMode: 0
@@ -119,8 +119,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.5780763
-        value: 0.05180484
+        time: 0.56173414
+        value: 0.17210513
         inSlope: 0.09545687
         outSlope: 0.09545687
         tangentMode: 0
@@ -128,8 +128,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.7778496
-        value: 0.10630721
+        time: 0.77458423
+        value: 0.18150252
         inSlope: -0.1161376
         outSlope: -0.1161376
         tangentMode: 0
@@ -138,7 +138,7 @@ LineRenderer:
         outWeight: 0.33333334
       - serializedVersion: 3
         time: 1
-        value: 0.04102218
+        value: 0.093649745
         inSlope: 0
         outSlope: 0
         tangentMode: 0

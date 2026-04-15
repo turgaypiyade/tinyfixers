@@ -97,7 +97,7 @@ LineRenderer:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 0.28907776
+        value: 0.4469757
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -105,8 +105,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.110479504
-        value: 0.24810308
+        time: 0.10067573
+        value: 0.47366613
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -114,8 +114,8 @@ LineRenderer:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.19486135
-        value: 0.23893833
+        time: 0.20466512
+        value: 0.41187382
         inSlope: -1.2664653
         outSlope: -1.2664653
         tangentMode: 0
@@ -123,8 +123,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.3410107
-        value: 0.29913503
+        time: 0.3377453
+        value: 0.3968752
         inSlope: 0.23311248
         outSlope: 0.23311248
         tangentMode: 0
@@ -132,8 +132,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.49558267
-        value: 0.21864152
+        time: 0.47597513
+        value: 0.33142686
         inSlope: 0.3014058
         outSlope: 0.3014058
         tangentMode: 0
@@ -141,8 +141,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.66435677
-        value: 0.21202695
+        time: 0.64799935
+        value: 0.27969968
         inSlope: -1.9107918
         outSlope: -1.9107918
         tangentMode: 0
@@ -150,8 +150,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.84008807
-        value: 0.23707011
+        time: 0.8760378
+        value: 0.20699504
         inSlope: -3.0046299
         outSlope: -3.0046299
         tangentMode: 0
@@ -160,7 +160,7 @@ LineRenderer:
         outWeight: 0.33333334
       - serializedVersion: 3
         time: 1
-        value: 0.274765
+        value: 0.13191223
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -173,7 +173,7 @@ LineRenderer:
     colorGradient:
       serializedVersion: 2
       key0: {r: 0.9433962, g: 0.67039686, b: 0.18244925, a: 1}
-      key1: {r: 1, g: 1, b: 1, a: 1}
+      key1: {r: 0.8867924, g: 0.23342524, b: 0.09620863, a: 1}
       key2: {r: 0, g: 0, b: 0, a: 0}
       key3: {r: 0, g: 0, b: 0, a: 0}
       key4: {r: 0, g: 0, b: 0, a: 0}
@@ -223,7 +223,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RocketTrailBeam
   jaggedness: 0.15
-  noiseScale: 0.5
+  noiseScale: 0.7
   minSegments: 6
   segmentsPerUnit: 15
   tailAlpha: 0
