@@ -56,9 +56,11 @@ public class SpecialFanoutService
                 ctx.OverrideFanoutOrigin.X,
                 ctx.OverrideFanoutOrigin.Y);
 
+            // Önce implant et ki deferred pulse listesi dolsun
             if (ctx.PendingOverrideImplants.Count > 0)
                 implantService.ApplyPendingOverrideImplants(ctx);
 
+            // Sonra action oluştur; güncel deferred pulse listesini alsın
             actions.Add(new SystemOverrideFanoutPlacementAction(
                 board,
                 originCoord,
@@ -72,14 +74,10 @@ public class SpecialFanoutService
             implantService.ApplyPendingOverrideImplants(ctx);
         }
 
-        // KRITIK:
-        // Override+Line batch modunda erken queue/process yapma.
-        // Yoksa line special'lar batch aksiyonuna kalmadan patlar.
-        if (!ctx.SuppressImmediateOverrideQueueProcessing)
+        queueProcessor.EnqueueChainSpecials(ctx);
+        if (ctx.Queue.Count > 0)
         {
-            queueProcessor.EnqueueChainSpecials(ctx);
-            if (ctx.Queue.Count > 0)
-                queueProcessor.ProcessQueue(ctx);
+            queueProcessor.ProcessQueue(ctx);
         }
 
         return actions;

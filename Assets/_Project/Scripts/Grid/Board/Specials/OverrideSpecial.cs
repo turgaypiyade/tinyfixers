@@ -129,7 +129,9 @@ public sealed class OverrideSpecial
             rt.Context.OverrideRadialClearDelays.Count > 0)
         {
             Debug.Log($"[Override.Finalize] origin={(rt.Context.OverrideFanoutOrigin != null ? $"({rt.Context.OverrideFanoutOrigin.X},{rt.Context.OverrideFanoutOrigin.Y})" : "null")} radialDelays={(rt.Context.OverrideRadialClearDelays != null ? rt.Context.OverrideRadialClearDelays.Count : 0)} affected={rt.Context.Affected.Count}");
-            rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
+            rt.FireOverrideOverrideSpecialVisuals?.Invoke(
+                rt.Context.Affected,
+                rt.Context.OverrideRadialClearDelays);
         }
 
         result.Actions.Add(BuildClearAction(rt.Context));
@@ -204,7 +206,12 @@ public sealed class OverrideSpecial
         plan.IncludeAdjacentOverTileBlockerDamage = true;
         plan.ObstacleHitContext = ObstacleHitContext.SpecialActivation;
 
-        plan.Effects.Add(new OverrideRadialEffectDescriptor(targetTiles,targetCells,delayMap,originTile,originCell));
+        plan.Effects.Add(new OverrideRadialEffectDescriptor(
+            targetTiles,
+            targetCells,
+            delayMap,
+            originTile,
+            originCell));
 
         foreach (var tile in targetTiles)
             plan.FinalClearTiles.Add(tile);

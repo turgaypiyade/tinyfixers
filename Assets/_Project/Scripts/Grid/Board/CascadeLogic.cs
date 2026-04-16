@@ -103,6 +103,7 @@ public class CascadeLogic
 
         for (int x = 0; x < board.Width; x++)
         {
+            // Reuse pooled per-column buffers
             _colTiles.Clear();
             _colTargetY.Clear();
             _colDuration.Clear();
@@ -112,14 +113,14 @@ public class CascadeLogic
             int segmentTop = board.Height - 1;
             while (segmentTop >= 0)
             {
-                while (segmentTop >= 0 && IsGravityBlockedCell(x, segmentTop))
+                while (segmentTop >= 0 && IsObstacleBlockedCell(x, segmentTop))
                     segmentTop--;
 
                 if (segmentTop < 0)
                     break;
 
                 int segmentBottom = segmentTop;
-                while (segmentBottom >= 0 && !IsGravityBlockedCell(x, segmentBottom))
+                while (segmentBottom >= 0 && !IsObstacleBlockedCell(x, segmentBottom))
                     segmentBottom--;
 
                 int topY = segmentBottom + 1;
@@ -149,6 +150,7 @@ public class CascadeLogic
                     var tile = _existing[i];
                     int fromY = tile.Y;
 
+                    // ── MovableObstacle: taşınmadan önce logical state sync ──
                     if (fromY != targetY
                         && board.ObstacleStateService != null
                         && board.ObstacleStateService.IsMovableObstacleAt(x, fromY))
@@ -185,6 +187,7 @@ public class CascadeLogic
                         int spawnFromY = nextSpawnY;
                         TileView view = null;
 
+                        // Aynı fall/collapse pass'inde sadece 1 tane movable obstacle üret
                         if (!spawnedMovableThisPass && TryPickMovableGoalToSpawn(out var goalObstacleId))
                         {
                             view = SpawnMovableObstacleTileForFall(x, y, spawnFromY, goalObstacleId);
@@ -273,7 +276,7 @@ public class CascadeLogic
         {
             for (int x = 0; x < board.Width; x++)
             {
-                if (board.IsMaskHoleCell(x, y) || IsGravityBlockedCell(x, y))
+                if (board.IsMaskHoleCell(x, y) || IsObstacleBlockedCell(x, y))
                     continue;
 
                 if (board.Tiles[x, y] != null) continue;
@@ -282,12 +285,12 @@ public class CascadeLogic
                 bool TrySource(int sx, int sy)
                 {
                     if (sx < 0 || sx >= board.Width || sy < 0 || sy >= board.Height) return false;
-                    if (board.IsMaskHoleCell(sx, sy) || IsGravityBlockedCell(sx, sy)) return false;
+                    if (board.IsMaskHoleCell(sx, sy) || IsObstacleBlockedCell(sx, sy)) return false;
 
                     var t = board.Tiles[sx, sy];
                     if (t == null) return false;
 
-                    bool targetIsObstaclePocket = IsGravityBlockedCell(x, y - 1);
+                    bool targetIsObstaclePocket = IsObstacleBlockedCell(x, y - 1);
 
                     bool HasUsableOtherSource()
                     {
@@ -297,7 +300,7 @@ public class CascadeLogic
                         if (otherSx < 0 || otherSx >= board.Width || otherSy < 0 || otherSy >= board.Height)
                             return false;
 
-                        if (board.IsMaskHoleCell(otherSx, otherSy) || IsGravityBlockedCell(otherSx, otherSy))
+                        if (board.IsMaskHoleCell(otherSx, otherSy) || IsObstacleBlockedCell(otherSx, otherSy))
                             return false;
 
                         return board.Tiles[otherSx, otherSy] != null;
@@ -327,7 +330,7 @@ public class CascadeLogic
             int segStartY = board.Height - 1;
             for (int y = board.Height - 1; y >= -1; y--)
             {
-                bool isBoundary = (y == -1) || IsGravityBlockedCell(x, y);
+                bool isBoundary = (y == -1) || IsObstacleBlockedCell(x, y);
 
                 if (!isBoundary)
                     continue;
@@ -363,6 +366,7 @@ public class CascadeLogic
                         var tile = _existing[i];
                         int fromY = tile.Y;
 
+                        // ── MovableObstacle: pozisyon sync ──
                         if (fromY != toY
                             && board.ObstacleStateService != null
                             && board.ObstacleStateService.IsMovableObstacleAt(x, fromY))
@@ -397,10 +401,10 @@ public class CascadeLogic
     }
 
     private bool TryDiagonalFrom(
-       int fromX, int fromY,
-       int toX, int toY,
-       HashSet<TileView> movedThisPass,
-       FallAction action)
+        int fromX, int fromY,
+        int toX, int toY,
+        HashSet<TileView> movedThisPass,
+        FallAction action)
     {
         int cax = fromX, cay = toY;
         int cbx = toX, cby = fromY;
@@ -408,9 +412,6 @@ public class CascadeLogic
         if (cax < 0 || cax >= board.Width || cay < 0 || cay >= board.Height) return false;
         if (cbx < 0 || cbx >= board.Width || cby < 0 || cby >= board.Height) return false;
         if (board.IsMaskHoleCell(cax, cay) || board.IsMaskHoleCell(cbx, cby)) return false;
-
-        if (IsGravityBlockedCell(cax, cay) || IsGravityBlockedCell(cbx, cby))
-            return false;
 
         var obs = board.ObstacleStateService;
         if (obs != null)
@@ -485,7 +486,7 @@ public class CascadeLogic
 
         for (int y = topY - 1; y >= 0; y--)
         {
-            if (IsGravityBlockedCell(x, y))
+            if (IsObstacleBlockedCell(x, y))
                 return false;
 
             if (!board.IsSpawnPassThroughCell(x, y))
@@ -504,7 +505,7 @@ public class CascadeLogic
         if (IsNonObstacleHoleCell(x, y))
             return false;
 
-        bool obstacleAbove = IsGravityBlockedCell(x, y - 1);
+        bool obstacleAbove = IsObstacleBlockedCell(x, y - 1);
         if (IsAdjacentToMaskHole(x, y) && !obstacleAbove)
             return false;
 
@@ -521,7 +522,7 @@ public class CascadeLogic
             return false;
 
         int topY = y;
-        while (topY > 0 && !IsGravityBlockedCell(x, topY - 1))
+        while (topY > 0 && !IsObstacleBlockedCell(x, topY - 1))
             topY--;
 
         return !IsSegmentConnectedToSpawnEdge(x, topY);
@@ -538,7 +539,7 @@ public class CascadeLogic
     {
         for (int yy = y - 1; yy >= 0; yy--)
         {
-            if (IsGravityBlockedCell(x, yy)) break;
+            if (IsObstacleBlockedCell(x, yy)) break;
             if (IsNonObstacleHoleCell(x, yy)) continue;
             if (board.Tiles[x, yy] != null) return true;
         }
@@ -571,8 +572,8 @@ public class CascadeLogic
         int y = fromY + 1;
         while (y < board.Height)
         {
-            if (IsGravityBlockedCell(fromX, y)) return false;
-            if (board.Holes[fromX, y] && !IsGravityBlockedCell(fromX, y))
+            if (IsObstacleBlockedCell(fromX, y)) return false;
+            if (board.Holes[fromX, y] && !IsObstacleBlockedCell(fromX, y))
             {
                 y++;
                 continue;
@@ -733,9 +734,5 @@ public class CascadeLogic
         board.RefreshTileObstacleVisual(view);
 
         return view;
-    }
-    private bool IsGravityBlockedCell(int x, int y)
-    {
-        return IsObstacleBlockedCell(x, y) || board.IsPendingTriggeredSpecialCell(x, y);
     }
 }
