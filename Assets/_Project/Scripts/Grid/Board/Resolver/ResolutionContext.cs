@@ -39,12 +39,12 @@ public class ResolutionContext
     public bool DeferOverrideImplantVisualRefresh;
 
     public readonly List<Vector2Int> DeferredLineHitOverrideCells = new();
-
+    public bool SuppressImmediateOverrideQueueProcessing;
     public const float OverrideRadialClearDuration = 0.20f;
     public readonly List<Vector2Int> OverrideDeferredPulseActivations = new();
     public readonly List<Vector2Int> DeferredPulseComboOverrideCells = new();
     public readonly List<Vector2Int> ImpactCells = new();
-
+    public readonly List<SpecialActivation> OverrideDeferredLineVActivations = new();
     public bool IsPulsePulseComboActive;
     public bool IsPulseCoreActive;
     public bool SuppressOverridePulseSelectionVfx;
@@ -92,6 +92,7 @@ public class ResolutionContext
         IsPulsePulseComboActive = false;
         IsPulseCoreActive = false;
         SuppressOverridePulseSelectionVfx = false;
+        SuppressImmediateOverrideQueueProcessing = false;
         AffectedCells = new HashSet<Vector2Int>();
         Affected.Clear();
         Processed.Clear();
@@ -117,8 +118,10 @@ public class ResolutionContext
         DeferOverrideImplantVisualRefresh = false;
         OverrideDeferredPulseExplosions.Clear();
         OverrideDeferredPatchBotDashes.Clear();
+        OverrideDeferredLineVActivations.Clear();
         OverrideDeferredPulseActivations.Clear();
         DeferredLineHitOverrideCells.Clear();
         DeferredPulseComboOverrideCells.Clear();
+        
     }
 }
