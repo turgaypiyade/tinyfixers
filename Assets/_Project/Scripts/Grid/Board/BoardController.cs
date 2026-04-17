@@ -449,8 +449,22 @@ public class BoardController : MonoBehaviour
         tile.SetUseFullCellIcon(useFullCellIcons);
     }
 
-    public TileType[,] SimulateInitialTypes() => boardInitService.SimulateInitialTypes(width, height, holes, randomPool);
+    public TileType[,] SimulateInitialTypes()
+    {
+        var lockedMask = new bool[width, height];
 
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                lockedMask[x, y] = holes[x, y] ||
+                    (obstacleStateService != null &&
+                     obstacleStateService.IsMovableObstacleAt(x, y));
+            }
+        }
+
+        return boardInitService.SimulateInitialTypes(width, height, lockedMask, randomPool);
+    }
     // ═══════════════════════════════════════════════════════════════
     //  Busy / State
     // ═══════════════════════════════════════════════════════════════
