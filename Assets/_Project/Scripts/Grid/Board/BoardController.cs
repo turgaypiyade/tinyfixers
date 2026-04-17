@@ -227,6 +227,7 @@ public class BoardController : MonoBehaviour
     private BoardVfxService boardVfxService;
     private LineSweepService lineSweepService;
     private BoosterService boosterService;
+    private readonly HashSet<Vector2Int> pendingTriggeredSpecialCells = new();
 
     private int busyScopeDepth;
     public readonly System.Collections.Generic.List<PatchbotDashRequest> TempPatchbotDashRequests =
@@ -301,6 +302,35 @@ public class BoardController : MonoBehaviour
     internal GameObject ObstacleBreakFxPrefab => obstacleBreakFxPrefab;
     internal float ObstacleBreakFxLifetime => Mathf.Max(0f, obstacleBreakFxLifetime);
     internal BoardInitService BoardInitService => boardInitService;
+
+    internal bool IsPendingTriggeredSpecialCell(int x, int y)
+    {
+        return pendingTriggeredSpecialCells.Contains(new Vector2Int(x, y));
+    }
+
+    internal void SetPendingTriggeredSpecialCells(IEnumerable<Vector2Int> cells)
+    {
+        if (cells == null)
+            return;
+
+        foreach (var cell in cells)
+            pendingTriggeredSpecialCells.Add(cell);
+    }
+
+    internal void ClearPendingTriggeredSpecialCells(IEnumerable<Vector2Int> cells)
+    {
+        if (cells == null)
+            return;
+
+        foreach (var cell in cells)
+            pendingTriggeredSpecialCells.Remove(cell);
+    }
+
+    internal void ClearAllPendingTriggeredSpecialCells()
+    {
+        pendingTriggeredSpecialCells.Clear();
+    }
+
     // ═══════════════════════════════════════════════════════════════
     //  Lifecycle
     // ═══════════════════════════════════════════════════════════════
@@ -456,6 +486,8 @@ public class BoardController : MonoBehaviour
 
     public void ForceFullBoardSync()
     {
+        ClearAllPendingTriggeredSpecialCells();
+
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
             {
@@ -470,6 +502,7 @@ public class BoardController : MonoBehaviour
                     gridData[x, y] = null;
                 }
             }
+
         RefreshAllSortingOrders();
     }
 
