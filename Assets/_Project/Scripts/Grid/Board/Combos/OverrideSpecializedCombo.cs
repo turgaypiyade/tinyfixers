@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -50,106 +51,229 @@ public sealed class OverrideSpecializedCombo
         PrepareFanout(rt, overrideTile, targetSpecial);
         var deferredSpecials = CollectTargets(rt, overrideTile, otherTile, targetSpecial);
 
-        if (rt.FinalizeAtEnd)
+        if (!rt.FinalizeAtEnd)
+            return result;
+
+        bool useLineBatch =
+            rt.UseBatchClearSpike &&
+            (targetSpecial == TileSpecial.LineH || targetSpecial == TileSpecial.LineV);
+
+        if (useLineBatch)
+            return ExecuteOverrideLineInBatches(rt, result, deferredSpecials, overrideTile, otherTile);
+
+        ExecuteNonLineOverride(rt, result, deferredSpecials, targetSpecial);
+        return result;
+    }
+
+    private OverrideSpecializedComboExecutionResult ExecuteOverrideLineInBatches(
+       OverrideSpecializedComboExecutionRuntime rt,
+       OverrideSpecializedComboExecutionResult result,
+       List<Vector2Int> deferredSpecials,
+       TileView overrideTile,
+       TileView otherTile)
+    {
+        var emittedTiles = new HashSet<TileView>();
+        var emittedCells = new HashSet<Vector2Int>();
+
+        rt.Context.SuppressImmediateOverrideQueueProcessing = true;
+
+        var beforeFanout = CaptureSnapshot(rt.Context);
+
+        if (rt.ProcessFanout != null)
         {
-            bool useBatchClearSpike =
-                rt.UseBatchClearSpike &&
-                (targetSpecial == TileSpecial.LineH || targetSpecial == TileSpecial.LineV);
+            var fanoutActions = rt.ProcessFanout(rt.Context);
+            if (fanoutActions != null && fanoutActions.Count > 0)
+                result.Actions.AddRange(fanoutActions);
+        }
 
-            HashSet<TileView> emittedTiles = null;
-            HashSet<Vector2Int> emittedCells = null;
+        rt.Context.SuppressImmediateOverrideQueueProcessing = false;
 
-            // 1) Fanout
-            var beforeFanout = CaptureSnapshot(rt.Context);
+        // KRITIK:
+        // Source override + source line hemen tuketilsin.
+        // Ekranda kalmasin, fall'a katilmasin, sona kalmasin.
+        var sourcePayload = BuildSourcePairClearPayload(overrideTile, otherTile);
+        ConsumeSourcePairForBatchMode(rt, overrideTile, otherTile);
+        AppendDeltaClearAction(
+            result.Actions,
+            sourcePayload,
+            emittedTiles,
+            emittedCells);
 
-            if (rt.ProcessFanout != null)
+        var batchActivations = BuildBatchActivations(rt, deferredSpecials);
+
+        // Pending'e AKTIF batch'i degil, henuz patlatilmamis GELECEK batch seed'lerini koy.
+        // Boylece batch clear sonrasi fall sirasinda sirasi gelmemis special'lar yerinde kilitli kalir.
+        if (batchActivations.Count > 0)
+        {
+            var allPendingCells = new List<Vector2Int>(batchActivations.Count);
+            foreach (var activation in batchActivations)
+                allPendingCells.Add(activation.cell);
+
+            result.Actions.Add(new PendingTriggeredSpecialScopeAction(allPendingCells, true));
+        }
+
+        var fanoutPayload = BuildDeltaClearPayload(
+            rt.Context,
+            beforeFanout,
+            enqueueCascadeOnComplete: false);
+
+        if (fanoutPayload.Action != null)
+        {
+            result.Actions.Add(new InlineClearPayloadAction(
+                this,
+                fanoutPayload,
+                emittedTiles,
+                emittedCells,
+                rt.EnqueueCascadeBetweenBatches));
+        }
+
+        if (batchActivations.Count > 0)
+        {
+            QueueDeferredLineActivationBatches(
+                rt,
+                batchActivations,
+                result.Actions,
+                emittedTiles,
+                emittedCells);
+
+            var allPendingCells = new List<Vector2Int>(batchActivations.Count);
+            foreach (var activation in batchActivations)
+                allPendingCells.Add(activation.cell);
+
+            result.Actions.Add(new PendingTriggeredSpecialScopeAction(allPendingCells, false));
+        }
+
+        rt.Context.OverrideDeferredLineVActivations.Clear();
+
+        result.Actions.Add(new FinalizeRemainingSeedAction(
+            this,
+            rt.Context,
+            emittedTiles,
+            emittedCells,
+            runCascadeInline: false));
+
+        if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
+            rt.CleanupImplantedTiles?.Invoke(rt.Context);
+
+        if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
+            rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
+
+        return result;
+    }
+
+    private void ExecuteNonLineOverride(
+        OverrideSpecializedComboExecutionRuntime rt,
+        OverrideSpecializedComboExecutionResult result,
+        List<Vector2Int> deferredSpecials,
+        TileSpecial targetSpecial)
+    {
+        if (rt.ProcessFanout != null)
+        {
+            var fanoutActions = rt.ProcessFanout(rt.Context);
+            if (fanoutActions != null && fanoutActions.Count > 0)
+                result.Actions.AddRange(fanoutActions);
+        }
+
+        if (deferredSpecials != null && deferredSpecials.Count > 0)
+        {
+            foreach (var cell in deferredSpecials)
+                rt.Context.Processed.Remove(cell);
+
+            rt.EnqueueChainSpecials?.Invoke(rt.Context);
+            rt.ProcessQueue?.Invoke(rt.Context);
+        }
+
+        if (targetSpecial == TileSpecial.PulseCore && rt.ActivateSpecial != null)
+        {
+            rt.Context.SuppressOverridePulseSelectionVfx = true;
+
+            foreach (var cell in rt.Context.OverrideDeferredPulseExplosions)
             {
-                var fanoutActions = rt.ProcessFanout(rt.Context);
-                if (fanoutActions != null && fanoutActions.Count > 0)
-                    result.Actions.AddRange(fanoutActions);
+                if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+                    continue;
+
+                var tile = rt.Board.Tiles[cell.x, cell.y];
+                if (tile == null || tile.GetSpecial() != TileSpecial.PulseCore)
+                    continue;
+
+                rt.ActivateSpecial(rt.Context, tile, null);
             }
 
-            if (useBatchClearSpike)
+            rt.Context.SuppressOverridePulseSelectionVfx = false;
+        }
+
+        if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
+            rt.CleanupImplantedTiles?.Invoke(rt.Context);
+
+        if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
+            rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
+
+        result.Actions.Add(BuildClearAction(rt.Context, targetSpecial));
+    }
+
+    private List<ResolutionContext.SpecialActivation> BuildBatchActivations(
+       OverrideSpecializedComboExecutionRuntime rt,
+       List<Vector2Int> deferredSpecials)
+    {
+        var activations = new List<ResolutionContext.SpecialActivation>();
+        var seen = new HashSet<Vector2Int>();
+
+        if (rt.Context.OverrideDeferredLineVActivations != null)
+        {
+            foreach (var activation in rt.Context.OverrideDeferredLineVActivations)
             {
-                emittedTiles = new HashSet<TileView>();
-                emittedCells = new HashSet<Vector2Int>();
-
-                // Fanout'un ürettiği chain etkilerini ilk batch gibi clear et
-                AppendDeltaClearAction(
-                    result.Actions,
-                    BuildDeltaClearPayload(rt.Context, beforeFanout, rt.EnqueueCascadeBetweenBatches),
-                    emittedTiles,
-                    emittedCells);
-            }
-
-            // 2) Deferred same-color mevcut special'lar
-            if (deferredSpecials != null && deferredSpecials.Count > 0)
-            {
-                if (useBatchClearSpike)
-                {
-                    ReleaseDeferredSpecialsInBatches(
-                        rt,
-                        deferredSpecials,
-                        result.Actions,
-                        emittedTiles,
-                        emittedCells);
-                }
-                else
-                {
-                    foreach (var cell in deferredSpecials)
-                        rt.Context.Processed.Remove(cell);
-
-                    rt.EnqueueChainSpecials?.Invoke(rt.Context);
-                    rt.ProcessQueue?.Invoke(rt.Context);
-                }
-            }
-
-            // 3) Pulse yolu ilk spike'ta aynen kalsın
-            if (targetSpecial == TileSpecial.PulseCore && rt.ActivateSpecial != null)
-            {
-                rt.Context.SuppressOverridePulseSelectionVfx = true;
-
-                foreach (var cell in rt.Context.OverrideDeferredPulseExplosions)
-                {
-                    if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
-                        continue;
-
-                    var tile = rt.Board.Tiles[cell.x, cell.y];
-                    if (tile == null || tile.GetSpecial() != TileSpecial.PulseCore)
-                        continue;
-
-                    rt.ActivateSpecial(rt.Context, tile, null);
-                }
-
-                rt.Context.SuppressOverridePulseSelectionVfx = false;
-            }
-
-            if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
-                rt.CleanupImplantedTiles?.Invoke(rt.Context);
-
-            if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
-                rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
-
-            if (useBatchClearSpike)
-            {
-                // En sonda origin / partner / deferred source hücreleri gibi
-                // delta clear'lara girmemiş kalanları temizle.
-                var tail = BuildRemainingSeedClearPayload(
-                    rt.Context,
-                    emittedTiles,
-                    emittedCells,
-                    rt.EnqueueCascadeBetweenBatches);
-
-                if (tail.Action != null)
-                    result.Actions.Add(tail.Action);
-            }
-            else
-            {
-                result.Actions.Add(BuildClearAction(rt.Context, targetSpecial));
+                if (seen.Add(activation.cell))
+                    activations.Add(activation);
             }
         }
 
-        return result;
+        if (deferredSpecials != null)
+        {
+            foreach (var cell in deferredSpecials)
+            {
+                if (seen.Add(cell))
+                    activations.Add(new ResolutionContext.SpecialActivation(cell, null));
+            }
+        }
+
+        activations.Sort((a, b) =>
+        {
+            int y = a.cell.y.CompareTo(b.cell.y);
+            if (y != 0) return y;
+            return a.cell.x.CompareTo(b.cell.x);
+        });
+
+        return activations;
+    }
+
+    private void QueueDeferredLineActivationBatches(
+      OverrideSpecializedComboExecutionRuntime rt,
+      List<ResolutionContext.SpecialActivation> activations,
+      List<BoardAction> actions,
+      HashSet<TileView> emittedTiles,
+      HashSet<Vector2Int> emittedCells)
+    {
+        if (activations == null || activations.Count == 0)
+            return;
+
+        int batchSize = Mathf.Max(1, rt.DeferredSpecialBatchSize);
+
+        for (int start = 0; start < activations.Count; start += batchSize)
+        {
+            int end = Mathf.Min(start + batchSize, activations.Count);
+            var batch = new List<ResolutionContext.SpecialActivation>(end - start);
+
+            for (int i = start; i < end; i++)
+                batch.Add(activations[i]);
+
+            actions.Add(new ResolveDeferredLineActivationBatchAction(
+                this,
+                rt,
+                batch,
+                emittedTiles,
+                emittedCells,
+                rt.EnqueueCascadeBetweenBatches));
+        }
     }
 
     private bool CanExecute(OverrideSpecializedComboExecutionRuntime rt)
@@ -188,7 +312,11 @@ public sealed class OverrideSpecializedCombo
             targetSpecial);
     }
 
-    private List<Vector2Int> CollectTargets(OverrideSpecializedComboExecutionRuntime rt, TileView overrideTile, TileView otherTile, TileSpecial targetSpecial)
+    private List<Vector2Int> CollectTargets(
+        OverrideSpecializedComboExecutionRuntime rt,
+        TileView overrideTile,
+        TileView otherTile,
+        TileSpecial targetSpecial)
     {
         TileType baseType = otherTile.GetTileType();
         List<Vector2Int> deferredSpecialCells = null;
@@ -200,8 +328,6 @@ public sealed class OverrideSpecializedCombo
                 if (!SpecialUtils.CanAffectCell(rt.Board, x, y))
                     continue;
 
-                // KRITIK FIX:
-                // Movable obstacle ustundeki tile'lari override+special fanout hedefine alma
                 if (rt.Board.ObstacleStateService != null &&
                     rt.Board.ObstacleStateService.IsMovableObstacleAt(x, y))
                     continue;
@@ -236,6 +362,7 @@ public sealed class OverrideSpecializedCombo
 
         return deferredSpecialCells;
     }
+
     private void AddOrigin(OverrideSpecializedComboExecutionRuntime rt, TileView tile)
     {
         if (tile == null)
@@ -249,9 +376,6 @@ public sealed class OverrideSpecializedCombo
 
     private MatchClearAction BuildClearAction(ResolutionContext ctx, TileSpecial targetSpecial)
     {
-        // Chain'den gelen line activation varsa lightning sweep animasyonu kullan.
-        // OverrideForceDefaultClearAnim sadece override fanout'un kendi clear'ı için geçerli,
-        // chain special'lar kendi animasyonlarını kullanmalı.
         bool hasChainLightning = ctx.HasLineActivation
             && ctx.LightningLineStrikes != null
             && ctx.LightningLineStrikes.Count > 0;
@@ -272,48 +396,79 @@ public sealed class OverrideSpecializedCombo
             isSpecialPhase: true,
             presentationPlan: null);
     }
-    private void ReleaseDeferredSpecialsAllAtOnce(
-    OverrideSpecializedComboExecutionRuntime rt,
-    List<Vector2Int> deferredSpecials)
-    {
-        for (int i = 0; i < deferredSpecials.Count; i++)
-            rt.Context.Processed.Remove(deferredSpecials[i]);
 
-        rt.EnqueueChainSpecials?.Invoke(rt.Context);
-        rt.ProcessQueue?.Invoke(rt.Context);
+    private ClearPayload BuildSourcePairClearPayload(TileView overrideTile, TileView otherTile)
+    {
+        var tiles = new HashSet<TileView>();
+        var cells = new HashSet<Vector2Int>();
+
+        if (overrideTile != null)
+        {
+            tiles.Add(overrideTile);
+            cells.Add(new Vector2Int(overrideTile.X, overrideTile.Y));
+        }
+
+        if (otherTile != null)
+        {
+            tiles.Add(otherTile);
+            cells.Add(new Vector2Int(otherTile.X, otherTile.Y));
+        }
+
+        if (tiles.Count == 0)
+            return new ClearPayload(null, null, null);
+
+        var action = new MatchClearAction(
+            tiles,
+            doShake: false,
+            animationMode: ClearAnimationMode.Default,
+            affectedCells: cells,
+            impactCells: null,
+            includeAdjacentOverTileBlockerDamage: false,
+            lightningVisualTargets: null,
+            lightningLineStrikes: null,
+            suppressPerTileClearVfx: false,
+            perTileClearDelays: null,
+            isSpecialPhase: true,
+            presentationPlan: null,
+            enqueueCascadeOnComplete: false);
+
+        return new ClearPayload(action, tiles, cells);
     }
 
-    private void ReleaseDeferredSpecialsInBatches(
+    private void ConsumeSourcePairForBatchMode(
         OverrideSpecializedComboExecutionRuntime rt,
-        List<Vector2Int> deferredSpecials)
+        TileView overrideTile,
+        TileView otherTile)
     {
-        if (deferredSpecials == null || deferredSpecials.Count == 0)
+        ConsumeSourceTileForBatchMode(rt, overrideTile);
+        ConsumeSourceTileForBatchMode(rt, otherTile);
+    }
+
+    private void ConsumeSourceTileForBatchMode(
+        OverrideSpecializedComboExecutionRuntime rt,
+        TileView tile)
+    {
+        if (rt == null || rt.Context == null || rt.Board == null || tile == null)
             return;
 
-        int batchSize = Mathf.Max(1, rt.DeferredSpecialBatchSize);
+        var cell = new Vector2Int(tile.X, tile.Y);
 
-        // İstersen bu sırayı explicit hale getirebilirsin.
-        // Mevcut CollectTargets x/y scan ile zaten deterministik bir sıra üretiyor.
-        // Güvenli olmak için ayrıca sırala:
-        deferredSpecials.Sort((a, b) =>
+        rt.Context.Affected.Remove(tile);
+        rt.Context.AffectedCells?.Remove(cell);
+        rt.Context.LightningVisualTargets?.Remove(tile);
+        rt.Context.Processed.Remove(cell);
+        rt.Context.Queued.Remove(cell);
+
+        if (rt.Context.OverrideRadialClearDelays != null)
+            rt.Context.OverrideRadialClearDelays.Remove(tile);
+
+        if (tile.X >= 0 && tile.X < rt.Board.Width && tile.Y >= 0 && tile.Y < rt.Board.Height)
         {
-            int y = a.y.CompareTo(b.y);
-            if (y != 0) return y;
-            return a.x.CompareTo(b.x);
-        });
-
-        for (int start = 0; start < deferredSpecials.Count; start += batchSize)
-        {
-            int end = Mathf.Min(start + batchSize, deferredSpecials.Count);
-
-            // Sadece bu batch açılıyor
-            for (int i = start; i < end; i++)
-                rt.Context.Processed.Remove(deferredSpecials[i]);
-
-            rt.EnqueueChainSpecials?.Invoke(rt.Context);
-            rt.ProcessQueue?.Invoke(rt.Context);
+            if (rt.Board.Tiles[tile.X, tile.Y] == tile)
+                rt.Board.ClearCell(tile.X, tile.Y);
         }
     }
+
     private readonly struct ClearSnapshot
     {
         public readonly HashSet<TileView> Affected;
@@ -361,44 +516,6 @@ public sealed class OverrideSpecializedCombo
             ctx.ImpactCells.Count);
     }
 
-    private void ReleaseDeferredSpecialsInBatches(
-        OverrideSpecializedComboExecutionRuntime rt,
-        List<Vector2Int> deferredSpecials,
-        List<BoardAction> actions,
-        HashSet<TileView> emittedTiles,
-        HashSet<Vector2Int> emittedCells)
-    {
-        if (deferredSpecials == null || deferredSpecials.Count == 0)
-            return;
-
-        deferredSpecials.Sort((a, b) =>
-        {
-            int y = a.y.CompareTo(b.y);
-            if (y != 0) return y;
-            return a.x.CompareTo(b.x);
-        });
-
-        int batchSize = Mathf.Max(1, rt.DeferredSpecialBatchSize);
-
-        for (int start = 0; start < deferredSpecials.Count; start += batchSize)
-        {
-            var beforeBatch = CaptureSnapshot(rt.Context);
-
-            int end = Mathf.Min(start + batchSize, deferredSpecials.Count);
-            for (int i = start; i < end; i++)
-                rt.Context.Processed.Remove(deferredSpecials[i]);
-
-            rt.EnqueueChainSpecials?.Invoke(rt.Context);
-            rt.ProcessQueue?.Invoke(rt.Context);
-
-            AppendDeltaClearAction(
-                actions,
-                BuildDeltaClearPayload(rt.Context, beforeBatch, rt.EnqueueCascadeBetweenBatches),
-                emittedTiles,
-                emittedCells);
-        }
-    }
-
     private void AppendDeltaClearAction(
         List<BoardAction> actions,
         ClearPayload payload,
@@ -408,19 +525,12 @@ public sealed class OverrideSpecializedCombo
         if (payload.Action == null)
             return;
 
-        actions.Add(payload.Action);
-
-        if (payload.Tiles != null)
-        {
-            foreach (var t in payload.Tiles)
-                emittedTiles.Add(t);
-        }
-
-        if (payload.Cells != null)
-        {
-            foreach (var c in payload.Cells)
-                emittedCells.Add(c);
-        }
+        actions.Add(new InlineClearPayloadAction(
+            this,
+            payload,
+            emittedTiles,
+            emittedCells,
+            false));
     }
 
     private ClearPayload BuildDeltaClearPayload(
@@ -459,12 +569,10 @@ public sealed class OverrideSpecializedCombo
         if (impactDelta > 0)
             deltaImpacts = ctx.ImpactCells.GetRange(before.ImpactCount, impactDelta);
 
-        if (deltaTiles.Count == 0 &&
-            deltaCells.Count == 0 &&
-            (deltaStrikes == null || deltaStrikes.Count == 0))
-        {
+        // KRITIK FIX:
+        // Gercek temizlenecek tile yoksa matches=0 clear zinciri uretme.
+        if (deltaTiles.Count == 0)
             return new ClearPayload(null, null, null);
-        }
 
         Dictionary<TileView, float> batchRadialDelays = null;
         if (ctx.OverrideRadialClearDelays != null)
@@ -483,10 +591,8 @@ public sealed class OverrideSpecializedCombo
 
         var action = new MatchClearAction(
             deltaTiles,
-            doShake: true,
-            animationMode: hasChainLightning
-                ? ClearAnimationMode.LightningStrike
-                : ClearAnimationMode.Default,
+            true,
+            hasChainLightning ? ClearAnimationMode.LightningStrike : ClearAnimationMode.Default,
             affectedCells: deltaCells.Count > 0 ? deltaCells : null,
             impactCells: deltaImpacts,
             includeAdjacentOverTileBlockerDamage: false,
@@ -521,11 +627,10 @@ public sealed class OverrideSpecializedCombo
                 remainingCells.Add(cell);
         }
 
-        if (remainingTiles.Count == 0 &&
-            remainingCells.Count == 0)
-        {
+        // KRITIK FIX:
+        // Gercek tile yoksa tail clear uretme.
+        if (remainingTiles.Count == 0)
             return new ClearPayload(null, null, null);
-        }
 
         Dictionary<TileView, float> tailDelays = null;
         if (ctx.OverrideRadialClearDelays != null)
@@ -542,8 +647,8 @@ public sealed class OverrideSpecializedCombo
 
         var action = new MatchClearAction(
             remainingTiles,
-            doShake: true,
-            animationMode: ClearAnimationMode.Default,
+            true,
+            ClearAnimationMode.Default,
             affectedCells: remainingCells.Count > 0 ? remainingCells : null,
             impactCells: null,
             includeAdjacentOverTileBlockerDamage: false,
@@ -556,5 +661,212 @@ public sealed class OverrideSpecializedCombo
             enqueueCascadeOnComplete: enqueueCascadeOnComplete);
 
         return new ClearPayload(action, remainingTiles, remainingCells);
+    }
+
+    private void MergeEmitted(
+        ClearPayload payload,
+        HashSet<TileView> emittedTiles,
+        HashSet<Vector2Int> emittedCells)
+    {
+        if (payload.Tiles != null && emittedTiles != null)
+        {
+            foreach (var t in payload.Tiles)
+                emittedTiles.Add(t);
+        }
+
+        if (payload.Cells != null && emittedCells != null)
+        {
+            foreach (var c in payload.Cells)
+                emittedCells.Add(c);
+        }
+    }
+
+    private IEnumerator ExecutePayloadInline(
+        ActionSequencer sequencer,
+        ClearPayload payload,
+        HashSet<TileView> emittedTiles,
+        HashSet<Vector2Int> emittedCells,
+        bool runCascadeInline)
+    {
+        if (payload.Action == null)
+            yield break;
+
+        yield return payload.Action.ExecuteVisuals(sequencer);
+        MergeEmitted(payload, emittedTiles, emittedCells);
+
+        if (!runCascadeInline)
+            yield break;
+
+        var cascades = sequencer.Board.CascadeLogic.CalculateCascades();
+        if (cascades == null || cascades.Count == 0)
+            yield break;
+
+        for (int i = 0; i < cascades.Count; i++)
+            yield return cascades[i].ExecuteVisuals(sequencer);
+
+        sequencer.Board.RefreshAllSortingOrders();
+    }
+
+    private sealed class InlineClearPayloadAction : BoardAction
+    {
+        private readonly OverrideSpecializedCombo owner;
+        private readonly ClearPayload payload;
+        private readonly HashSet<TileView> emittedTiles;
+        private readonly HashSet<Vector2Int> emittedCells;
+        private readonly bool runCascadeInline;
+
+        public override bool Blocking => true;
+
+        public InlineClearPayloadAction(
+            OverrideSpecializedCombo owner,
+            ClearPayload payload,
+            HashSet<TileView> emittedTiles,
+            HashSet<Vector2Int> emittedCells,
+            bool runCascadeInline)
+        {
+            this.owner = owner;
+            this.payload = payload;
+            this.emittedTiles = emittedTiles;
+            this.emittedCells = emittedCells;
+            this.runCascadeInline = runCascadeInline;
+        }
+
+        public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
+        {
+            yield return owner.ExecutePayloadInline(
+                sequencer,
+                payload,
+                emittedTiles,
+                emittedCells,
+                runCascadeInline);
+        }
+    }
+
+    private sealed class FinalizeRemainingSeedAction : BoardAction
+    {
+        private readonly OverrideSpecializedCombo owner;
+        private readonly ResolutionContext ctx;
+        private readonly HashSet<TileView> emittedTiles;
+        private readonly HashSet<Vector2Int> emittedCells;
+        private readonly bool runCascadeInline;
+
+        public override bool Blocking => true;
+
+        public FinalizeRemainingSeedAction(
+            OverrideSpecializedCombo owner,
+            ResolutionContext ctx,
+            HashSet<TileView> emittedTiles,
+            HashSet<Vector2Int> emittedCells,
+            bool runCascadeInline)
+        {
+            this.owner = owner;
+            this.ctx = ctx;
+            this.emittedTiles = emittedTiles;
+            this.emittedCells = emittedCells;
+            this.runCascadeInline = runCascadeInline;
+        }
+
+        public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
+        {
+            var payload = owner.BuildRemainingSeedClearPayload(
+                ctx,
+                emittedTiles,
+                emittedCells,
+                enqueueCascadeOnComplete: false);
+
+            bool hasRealTiles = payload.Tiles != null && payload.Tiles.Count > 0;
+            if (!hasRealTiles)
+                yield break;
+
+            yield return owner.ExecutePayloadInline(
+                sequencer,
+                payload,
+                emittedTiles,
+                emittedCells,
+                runCascadeInline);
+        }
+    }
+
+    private sealed class ResolveDeferredLineActivationBatchAction : BoardAction
+    {
+        private readonly OverrideSpecializedCombo owner;
+        private readonly OverrideSpecializedComboExecutionRuntime rt;
+        private readonly List<ResolutionContext.SpecialActivation> batchActivations;
+        private readonly HashSet<TileView> emittedTiles;
+        private readonly HashSet<Vector2Int> emittedCells;
+        private readonly bool runCascadeInline;
+
+        public override bool Blocking => true;
+
+        public ResolveDeferredLineActivationBatchAction(
+            OverrideSpecializedCombo owner,
+            OverrideSpecializedComboExecutionRuntime rt,
+            List<ResolutionContext.SpecialActivation> batchActivations,
+            HashSet<TileView> emittedTiles,
+            HashSet<Vector2Int> emittedCells,
+            bool runCascadeInline)
+        {
+            this.owner = owner;
+            this.rt = rt;
+            this.batchActivations = batchActivations ?? new List<ResolutionContext.SpecialActivation>();
+            this.emittedTiles = emittedTiles;
+            this.emittedCells = emittedCells;
+            this.runCascadeInline = runCascadeInline;
+        }
+
+        public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
+        {
+            if (batchActivations == null || batchActivations.Count == 0)
+                yield break;
+
+            var currentBatchCells = new List<Vector2Int>(batchActivations.Count);
+            foreach (var activation in batchActivations)
+                currentBatchCells.Add(activation.cell);
+
+            // Bu batch artık patlayacağı için pending'den çıkar.
+            // Pending'de sadece henüz sıra gelmemiş diğer batchler kalsın.
+            rt.Board.ClearPendingTriggeredSpecialCells(currentBatchCells);
+
+            var beforeBatch = owner.CaptureSnapshot(rt.Context);
+
+            foreach (var activation in batchActivations)
+            {
+                var cell = activation.cell;
+
+                if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+                    continue;
+
+                var tile = rt.Board.Tiles[cell.x, cell.y];
+                if (tile == null)
+                    continue;
+
+                var special = tile.GetSpecial();
+                if (special == TileSpecial.None)
+                    continue;
+
+                rt.Context.Processed.Remove(cell);
+                rt.Context.Queued.Remove(cell);
+
+                TileView partner = activation.partnerCell.HasValue
+                    ? rt.Board.Tiles[activation.partnerCell.Value.x, activation.partnerCell.Value.y]
+                    : null;
+
+                rt.EnqueueActivation?.Invoke(rt.Context, tile, partner);
+            }
+
+            rt.ProcessQueue?.Invoke(rt.Context);
+
+            var payload = owner.BuildDeltaClearPayload(
+                rt.Context,
+                beforeBatch,
+                enqueueCascadeOnComplete: false);
+
+            yield return owner.ExecutePayloadInline(
+                sequencer,
+                payload,
+                emittedTiles,
+                emittedCells,
+                runCascadeInline);
+        }
     }
 }

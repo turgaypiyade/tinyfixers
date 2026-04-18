@@ -85,6 +85,12 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float pulseMicroShakeStrength = 4f;
     [SerializeField] private PatchbotDashUI patchbotDashUI;
 
+    [SerializeField] private AudioClip sfxTileFall;
+    [SerializeField, Range(0f, 1f)] private float sfxTileFallVolume = 0.32f;
+    [SerializeField] private float sfxTileFallMinInterval = 0.18f;
+
+    private float lastTileFallSfxTime = -999f;
+
     [Header("Break FX")]
     [SerializeField] private GameObject tileBreakFxPrefab;
     [SerializeField] private float tileBreakFxLifetime = 0.35f;
@@ -127,6 +133,26 @@ public class BoardController : MonoBehaviour
     public bool IsBusy => CurrentState == BoardState.Resolving;
     public event Action OnBecameIdle;
 
+    internal void PlayTileFallSfx(int tileCount, int maxDist)
+    {
+        if (sfxSource == null || sfxTileFall == null)
+            return;
+
+        if (Time.time - lastTileFallSfxTime < sfxTileFallMinInterval)
+            return;
+
+        // Tek kliple hafif yoğunluk hissi ver
+        float volumeMul = 1f;
+
+        if (tileCount >= 6 || maxDist >= 4)
+            volumeMul = 1.15f;
+        else if (tileCount >= 3 || maxDist >= 2)
+            volumeMul = 1.05f;
+
+        sfxSource.PlayOneShot(sfxTileFall, sfxTileFallVolume * volumeMul);
+        lastTileFallSfxTime = Time.time;
+    }
+    
     [System.Serializable]
     public struct PatchBotPairGhostTuning
     {

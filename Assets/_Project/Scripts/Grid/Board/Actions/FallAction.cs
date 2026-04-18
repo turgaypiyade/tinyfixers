@@ -86,6 +86,8 @@ public class FallAction : BoardAction
         }
         Debug.Log($"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} dur=[{minDur:0.000}-{maxDur:0.000}]s baseDelay=[0-{maxBaseDelay:0.000}]s");
 
+        sequencer.Board.PlayTileFallSfx(fallRecords.Count, maxDist);
+        
         var moves = new List<IEnumerator>(fallRecords.Count);
         var delays = new List<float>(fallRecords.Count);
 
