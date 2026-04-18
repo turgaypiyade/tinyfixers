@@ -67,10 +67,15 @@ public class PulseCoreImpactService
             board.BoardVfxPlayer.PlayPulseVfx(anchored, radiusCells: radiusCells, tileSize: board.TileSize);
         }
 
-        if (board.SfxSource != null)
+        if (board.Audio != null)
+        {
+            board.Audio.Emit(BoardSfxRequest.SpecialActivate(TileSpecial.PulseCore, intensity: radiusCells));
+        }
+        else if (board.SfxSource != null)
         {
             if (board.SfxPulseCoreBoom != null)
                 board.SfxSource.PlayOneShot(board.SfxPulseCoreBoom);
+
             if (board.SfxPulseCoreWave != null)
                 board.SfxSource.PlayOneShot(board.SfxPulseCoreWave);
         }
@@ -100,10 +105,15 @@ public class PulseCoreImpactService
         if (board.BoardVfxPlayer != null)
             board.BoardVfxPlayer.PlayPulseVfx(GetTileAnchoredPos(tile), radiusCells: radiusCells, tileSize: board.TileSize);
 
-        if (board.SfxSource != null)
+        if (board.Audio != null)
+        {
+            board.Audio.Emit(BoardSfxRequest.SpecialActivate(TileSpecial.PulseCore, intensity: radiusCells));
+        }
+        else if (board.SfxSource != null)
         {
             if (board.SfxPulseCoreBoom != null)
                 board.SfxSource.PlayOneShot(board.SfxPulseCoreBoom);
+
             if (board.SfxPulseCoreWave != null)
                 board.SfxSource.PlayOneShot(board.SfxPulseCoreWave);
         }

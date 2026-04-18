@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: caabea677a969a847b5f9cd17d53cc29, type: 3}
+  m_Name: BoardSfxProfile_Main
+  m_EditorClassIdentifier: Assembly-CSharp::BoardSfxProfile
+  fallLight:
+    clips: []
+    volume: 1
+    minInterval: 0.05
+  fallMedium:
+    clips: []
+    volume: 1
+    minInterval: 0.05
+  fallHeavy:
+    clips: []
+    volume: 1
+    minInterval: 0.05
+  createLine:
+    clips: []
+    volume: 1
+    minInterval: 0.05
+  createPatchBot:
+    clips: []
+    volume: 1
+    minInterval: 0.05
+  createPulseCore:
+    clips: []
+    volume: 1
+    minInterval: 0.05
+  createSystemOverride:
+    clips: []
+    volume: 1
+    minInterval: 0.05
+  activateLine:
+    clips: []
+    volume: 1
+    minInterval: 0.05
+  activatePatchBot:
+    clips: []
+    volume: 1
+    minInterval: 0.05
+  activatePulseCore:
+    clips: []
+    volume: 1
+    minInterval: 0.05
+  activateSystemOverride:
+    clips: []
+    volume: 1
+    minInterval: 0.05
+  comboStart:
+    clips: []
+    volume: 1
+    minInterval: 0.05
+  comboImpact:
+    clips: []
+    volume: 1
+    minInterval: 0.05

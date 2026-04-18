@@ -62,6 +62,7 @@ public class BoardController : MonoBehaviour
     [SerializeField] private LightningSpawner lightningSpawner;
     public LineTravelSplitSwapTestUI lineTravelPlayer;
     [SerializeField] private Transform lineTravelSpawnParent;
+    [SerializeField] private BoardAudioDirector audioDirector;
 
     [Header("HUD / Goal Fly FX")]
     [SerializeField] private TopHudController topHud;
@@ -110,6 +111,7 @@ public class BoardController : MonoBehaviour
 #endif
 
     public PatchbotDashUI PatchbotDashUI => patchbotDashUI;
+    public BoardAudioDirector Audio => audioDirector;
     private Vector2 shakeBasePos;
 
     private TileView[,] tiles;
@@ -135,6 +137,12 @@ public class BoardController : MonoBehaviour
 
     internal void PlayTileFallSfx(int tileCount, int maxDist)
     {
+        if (audioDirector != null)
+        {
+            audioDirector.ScheduleFallBatch(tileCount, maxDist, CurrentResolvePass);
+            return;
+        }
+
         if (sfxSource == null || sfxTileFall == null)
             return;
 
@@ -152,7 +160,7 @@ public class BoardController : MonoBehaviour
         sfxSource.PlayOneShot(sfxTileFall, sfxTileFallVolume * volumeMul);
         lastTileFallSfxTime = Time.time;
     }
-    
+
     [System.Serializable]
     public struct PatchBotPairGhostTuning
     {
@@ -364,6 +372,8 @@ public class BoardController : MonoBehaviour
     private void Awake()
     {
         if (shakeTarget != null) shakeBasePos = shakeTarget.anchoredPosition;
+        if (audioDirector == null)
+            audioDirector = GetComponentInChildren<BoardAudioDirector>(true);
         EnsureServices();
         TryResolveLightningSpawner();
         if (lineTravelSpawnParent == null && lineTravelPlayer != null && lineTravelPlayer.transform.parent != null)
@@ -1591,6 +1601,7 @@ public class BoardController : MonoBehaviour
 
         lastSwapUserMove = false;
         CpLog($"special_creation({createdSpecialTiles.Count})");
+        EmitCreatedSpecialSfx(createdSpecialTiles);
 
         // Normal clear hiçbir durumda existing/new special'ları otomatik silmesin.
         matchTiles.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
@@ -1626,6 +1637,32 @@ public class BoardController : MonoBehaviour
 
         CpLog("clear+cascade_done");
         onResult?.Invoke(true);
+    }
+
+    private void EmitCreatedSpecialSfx(List<TileView> createdSpecialTiles)
+    {
+        if (audioDirector == null || createdSpecialTiles == null || createdSpecialTiles.Count == 0)
+            return;
+
+        Dictionary<TileSpecial, int> counts = new Dictionary<TileSpecial, int>();
+
+        for (int i = 0; i < createdSpecialTiles.Count; i++)
+        {
+            TileView tile = createdSpecialTiles[i];
+            if (tile == null)
+                continue;
+
+            TileSpecial special = tile.GetSpecial();
+            if (special == TileSpecial.None)
+                continue;
+
+            int current;
+            counts.TryGetValue(special, out current);
+            counts[special] = current + 1;
+        }
+
+        foreach (var kv in counts)
+            audioDirector.Emit(BoardSfxRequest.SpecialCreate(kv.Key, kv.Value));
     }
 
     private ClearPresentationPlan BuildCreatedSpecialPresentationPlan(List<TileView> createdTiles, HashSet<TileView> clearTiles, bool doShake)

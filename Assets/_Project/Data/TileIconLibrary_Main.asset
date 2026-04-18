@@ -16,10 +16,10 @@ MonoBehaviour:
   core: {fileID: 8125538113083972513, guid: c3fe8f8d791688840b787dfac7ca9376, type: 3}
   bolt: {fileID: 1021567464087608536, guid: ef5be64a9eac6457ca43bc1014dd0908, type: 3}
   plate: {fileID: 9062128055545656746, guid: cc77e809942f6194792f583be8d6009f, type: 3}
-  lineH: {fileID: -1864291419074630407, guid: b77f3bf70ccdbfe4991f3b64171f1b2f, type: 3}
-  lineV: {fileID: 2922673007561258990, guid: 193a16943f59e0048bd2abda04875de5, type: 3}
+  lineH: {fileID: -640474625499943912, guid: 9976d19b41125c0409de241eda2923a1, type: 3}
+  lineV: {fileID: 1782740223840774778, guid: 15eec964dfc3bbd468cf9b108eef4373, type: 3}
   patchBot: {fileID: 6553379424239023069, guid: fc95b24f6b35f409eb40e07fd12e0be8, type: 3}
-  pulseCore: {fileID: 298100483814048671, guid: d90bf76c44b7d4ddabde0472de49d60a, type: 3}
+  pulseCore: {fileID: 5240213395630594912, guid: 6fbcec3ed13a7ea4daa17c29473fcb81, type: 3}
   overrideRed: {fileID: 2789401260304263213, guid: c3a8b514c271d423a8b244956105e471, type: 3}
   overrideYellow: {fileID: 2619745284460239960, guid: 1ee04c023b6744671a13a4b6288e4c16, type: 3}
   overrideBlue: {fileID: 7842146363385098208, guid: b01b13ad3457545b494f352c26060846, type: 3}
