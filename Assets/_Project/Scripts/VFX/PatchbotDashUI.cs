@@ -16,6 +16,15 @@ public class PatchbotDashUI : MonoBehaviour
     [SerializeField] private float arriveEps = 2f;
     [SerializeField, Range(0.5f, 1.5f)] private float syncedDurationMultiplier = 1f;
 
+    [Header("Flight Audio")]
+    [SerializeField] private AudioClip flightLoopClip;
+    [SerializeField, Min(0f)] private float flightLoopVolume = 0.18f;
+    [SerializeField, Min(0f)] private float flightFadeIn = 0.015f;
+    [SerializeField, Min(0f)] private float flightFadeOut = 0.04f;
+    [SerializeField, Range(0.5f, 2f)] private float flightPitch = 1.12f;
+    [SerializeField, Range(0f, 0.25f)] private float flightPitchJitter = 0.05f;
+    [SerializeField, Range(0f, 0.15f)] private float flightVolumeJitter = 0.03f;
+
     [Header("AfterImage")]
     [SerializeField] private float spawnEvery = 0.02f;
     [SerializeField] private float afterLife = 0.28f;
@@ -95,7 +104,7 @@ public class PatchbotDashUI : MonoBehaviour
         System.Action onComplete)
     {
         req.onStart?.Invoke();
-        
+
         // Per-patchbot instance
         var go = new GameObject("PatchbotRunnerInstance", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(vfxRoot, false);
@@ -121,6 +130,9 @@ public class PatchbotDashUI : MonoBehaviour
         if (runnerImage != null && runnerImage.rectTransform != null && runnerImage.rectTransform.sizeDelta.sqrMagnitude > 1f)
             size = runnerImage.rectTransform.sizeDelta;
         rt.sizeDelta = size;
+
+        AudioSource flightSource = CreateFlightAudioSource(rt);
+        StartFlightAudio(flightSource);
 
         Vector3 fromWorld = board.GetCellWorldPosition(req.from.x, req.from.y);
         Vector3 toWorld   = board.GetCellWorldPosition(req.to.x, req.to.y);
@@ -154,8 +166,10 @@ public class PatchbotDashUI : MonoBehaviour
             yield return null;
         }
 
-        Destroy(go);
         req.onArrived?.Invoke();
+        yield return StopFlightAudioRoutine(flightSource);
+
+        Destroy(go);
         onComplete?.Invoke();
     }
 
@@ -185,6 +199,9 @@ public class PatchbotDashUI : MonoBehaviour
         runnerImage.rectTransform.SetAsLastSibling();
         runnerImage.rectTransform.anchoredPosition = WorldToAnchoredIn(vfxRoot, path[0].position);
 
+        AudioSource flightSource = CreateFlightAudioSource(runnerImage.rectTransform);
+        StartFlightAudio(flightSource);
+
         float tAfter = 0f;
 
         for (int i = 0; i < path.Count; i++)
@@ -213,6 +230,8 @@ public class PatchbotDashUI : MonoBehaviour
         rt.localScale = baseScale * 1.15f;
         yield return new WaitForSeconds(0.06f);
         rt.localScale = baseScale;
+
+        yield return StopFlightAudioRoutine(flightSource);
 
         runnerImage.enabled = false;
         co = null;
@@ -265,7 +284,6 @@ public class PatchbotDashUI : MonoBehaviour
         Destroy(go);
     }
 
-
     public float EstimateDashDuration(BoardController board, Vector2Int fromCell, Vector2Int toCell, float syncDuration = -1f)
     {
         if (board == null || vfxRoot == null) return 0f;
@@ -283,6 +301,99 @@ public class PatchbotDashUI : MonoBehaviour
 
         float speed = Mathf.Max(1f, dashSpeed);
         return distance / speed;
+    }
+
+    private AudioSource CreateFlightAudioSource(RectTransform attachTo)
+    {
+        if (attachTo == null || flightLoopClip == null)
+            return null;
+
+        var go = new GameObject("PatchbotFlightAudio", typeof(AudioSource));
+        go.transform.SetParent(attachTo, false);
+        go.transform.localPosition = Vector3.zero;
+        go.transform.localRotation = Quaternion.identity;
+        go.transform.localScale = Vector3.one;
+
+        var source = go.GetComponent<AudioSource>();
+        source.playOnAwake = false;
+        source.loop = true;
+        source.clip = flightLoopClip;
+        source.spatialBlend = 0f;
+        source.dopplerLevel = 0f;
+        source.volume = Mathf.Max(0f, flightLoopVolume + Random.Range(-flightVolumeJitter, flightVolumeJitter));
+        source.pitch = Mathf.Max(0.01f, flightPitch + Random.Range(-flightPitchJitter, flightPitchJitter));
+        source.priority = 160;
+        return source;
+    }
+
+    private void StartFlightAudio(AudioSource source)
+    {
+        if (source == null || source.clip == null)
+            return;
+
+        float targetVolume = source.volume;
+        if (flightFadeIn > 0f)
+            source.volume = 0f;
+
+        source.Play();
+
+        if (flightFadeIn > 0f && targetVolume > 0f)
+            StartCoroutine(FadeAudioVolumeRoutine(source, targetVolume, flightFadeIn));
+    }
+
+    private IEnumerator StopFlightAudioRoutine(AudioSource source)
+    {
+        if (source == null)
+            yield break;
+
+        if (flightFadeOut <= 0f || !source.isPlaying)
+        {
+            source.Stop();
+            if (source.gameObject != null)
+                Destroy(source.gameObject);
+            yield break;
+        }
+
+        float startVolume = source.volume;
+        float elapsed = 0f;
+        while (elapsed < flightFadeOut && source != null)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / Mathf.Max(0.0001f, flightFadeOut));
+            source.volume = Mathf.Lerp(startVolume, 0f, t);
+            yield return null;
+        }
+
+        if (source != null)
+        {
+            source.Stop();
+            if (source.gameObject != null)
+                Destroy(source.gameObject);
+        }
+    }
+
+    private IEnumerator FadeAudioVolumeRoutine(AudioSource source, float targetVolume, float duration)
+    {
+        if (source == null)
+            yield break;
+
+        if (duration <= 0f)
+        {
+            source.volume = targetVolume;
+            yield break;
+        }
+
+        float elapsed = 0f;
+        while (elapsed < duration && source != null)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            source.volume = Mathf.Lerp(0f, targetVolume, t);
+            yield return null;
+        }
+
+        if (source != null)
+            source.volume = targetVolume;
     }
 
     static Vector2 WorldToAnchoredIn(RectTransform targetSpace, Vector3 worldPos)
