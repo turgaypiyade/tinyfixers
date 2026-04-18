@@ -440,16 +440,40 @@ public class BoardAnimator
         {
             if (lightningLineStrikes != null && lightningLineStrikes.Count > 0)
             {
-                lightningDuration = board.PlayLightningLineStrikes(lightningLineStrikes, cell => TryClearTileOnLineSweepHit(cell));
-                    if (lightningDuration <= 0.001f)
-                    {
-                        suppressPerTileClearVfx = false; // tile bazlı animasyonlara izin ver
-                    }
+                if (board.Audio != null)
+                {
+                    TileSpecial lineSpecial = TileSpecial.LineH;
+
+                    if (!lightningLineStrikes[0].isHorizontal)
+                        lineSpecial = TileSpecial.LineV;
+
+                    board.Audio.Emit(
+                        BoardSfxRequest.SpecialActivate(
+                            lineSpecial,
+                            intensity: Mathf.Max(1, lightningLineStrikes.Count)
+                        )
+                    );
+                }
+
+                lightningDuration = board.PlayLightningLineStrikes(
+                    lightningLineStrikes,
+                    cell => TryClearTileOnLineSweepHit(cell)
+                );
+
+                if (lightningDuration <= 0.001f)
+                {
+                    suppressPerTileClearVfx = false; // tile bazlı animasyonlara izin ver
+                }
             }
             else
             {
                 var strikeTargets = orderedStrikeTargets ?? list;
-                lightningDuration = board.PlayLightningStrikeForTiles(strikeTargets, lightningOriginTile, lightningOriginCell, strikeTargets);
+                lightningDuration = board.PlayLightningStrikeForTiles(
+                    strikeTargets,
+                    lightningOriginTile,
+                    lightningOriginCell,
+                    strikeTargets
+                );
             }
         }
 

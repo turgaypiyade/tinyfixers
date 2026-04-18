@@ -19,6 +19,21 @@ public sealed class LineSweepEffectPlayer : IClearEffectPlayer
 
         var strikes = new List<LightningLineStrike>(line.LineStrikes);
 
+        if (board.Audio != null)
+        {
+            TileSpecial lineSpecial = TileSpecial.LineH;
+
+            if (strikes.Count > 0 && !strikes[0].isHorizontal)
+                lineSpecial = TileSpecial.LineV;
+
+            board.Audio.Emit(
+                BoardSfxRequest.SpecialActivate(
+                    lineSpecial,
+                    intensity: Mathf.Max(1, strikes.Count)
+                )
+            );
+        }
+
         float duration = board.PlayLightningLineStrikes(
             strikes,
             delegate (Vector2Int cell)
