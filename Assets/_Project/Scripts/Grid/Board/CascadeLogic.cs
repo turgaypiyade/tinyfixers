@@ -711,7 +711,7 @@ public class CascadeLogic
         view.MarkPlannedToMoveThisFallPass(true);
         view.SetUseFullCellIcon(false);
         view.SetMovableObstacleTile(true);
-
+        view.SetVisualLayout(TileView.TileVisualLayout.Centered);
         view.SetCoords(x, spawnFromY);
         view.SnapToGrid(board.TileSize);
 

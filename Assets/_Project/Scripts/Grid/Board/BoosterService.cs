@@ -113,6 +113,8 @@ public class BoosterService
         yield return SafeShuffleBoardRoutine(board.BoardInitService);
     }
 
+    // BoosterService.cs
+
     public IEnumerator SafeShuffleBoardRoutine(BoardInitService boardInitService)
     {
         board.BeginBusy();
@@ -125,16 +127,167 @@ public class BoosterService
         if (boardInitService != null &&
             boardInitService.TryBuildSafeShuffleTypes(currentTypes, lockedMask, board.RandomPool, out var finalTypes))
         {
-            ApplyShuffledTypes(finalTypes, lockedMask);
+            var sourceForDest = new Vector2Int[board.Width, board.Height];
+
+            bool hasMapping = BuildShuffleSourceMap(currentTypes, finalTypes, lockedMask, sourceForDest);
+
+            if (hasMapping)
+            {
+                yield return AnimateShufflePreview(sourceForDest, lockedMask);
+                CommitShuffleFromSourceMap(sourceForDest, lockedMask);
+            }
+            else
+            {
+                // çok nadir fallback
+                ApplyShuffledTypes(finalTypes, lockedMask);
+            }
+
             board.SyncAllTilesToGridData();
             board.RefreshAllTileObstacleVisuals();
             board.RefreshAllSortingOrders();
         }
 
         board.EndBusy();
-        yield break;
+    }
+    private bool BuildShuffleSourceMap(
+        TileType[,] currentTypes,
+        TileType[,] finalTypes,
+        bool[,] lockedMask,
+        Vector2Int[,] sourceForDest)
+    {
+        var buckets = new Dictionary<TileType, Queue<Vector2Int>>();
+
+        for (int y = 0; y < board.Height; y++)
+        {
+            for (int x = 0; x < board.Width; x++)
+            {
+                sourceForDest[x, y] = new Vector2Int(x, y);
+
+                if (lockedMask[x, y])
+                    continue;
+
+                var type = currentTypes[x, y];
+                if (!buckets.TryGetValue(type, out var q))
+                {
+                    q = new Queue<Vector2Int>();
+                    buckets[type] = q;
+                }
+
+                q.Enqueue(new Vector2Int(x, y));
+            }
+        }
+
+        for (int y = 0; y < board.Height; y++)
+        {
+            for (int x = 0; x < board.Width; x++)
+            {
+                if (lockedMask[x, y])
+                    continue;
+
+                var finalType = finalTypes[x, y];
+
+                if (!buckets.TryGetValue(finalType, out var q) || q.Count == 0)
+                    return false;
+
+                sourceForDest[x, y] = q.Dequeue();
+            }
+        }
+
+        return true;
     }
 
+    private IEnumerator AnimateShufflePreview(Vector2Int[,] sourceForDest, bool[,] lockedMask)
+    {
+        var movingTiles = new List<TileView>();
+        var starts = new List<Vector2>();
+        var ends = new List<Vector2>();
+
+        for (int y = 0; y < board.Height; y++)
+        {
+            for (int x = 0; x < board.Width; x++)
+            {
+                if (lockedMask[x, y])
+                    continue;
+
+                var src = sourceForDest[x, y];
+                if (src.x == x && src.y == y)
+                    continue;
+
+                var tile = board.Tiles[src.x, src.y];
+                if (tile == null)
+                    continue;
+
+                movingTiles.Add(tile);
+                starts.Add(tile.RectTransform.anchoredPosition);
+                ends.Add(new Vector2(x * board.TileSize, -y * board.TileSize));
+
+                // üstte çizilsin
+                tile.transform.SetAsLastSibling();
+            }
+        }
+
+        if (movingTiles.Count == 0)
+            yield break;
+
+        float duration = Mathf.Max(0.08f, board.SwapDurationWithMultiplier * 0.85f);
+        var curve = board.SwapMoveCurve;
+
+        float t = 0f;
+        while (t < 1f)
+        {
+            t += Time.deltaTime / duration;
+            float k = Mathf.Clamp01(t);
+            float s = (curve != null && curve.length > 0)
+                ? Mathf.Clamp01(curve.Evaluate(k))
+                : k;
+
+            for (int i = 0; i < movingTiles.Count; i++)
+            {
+                var tile = movingTiles[i];
+                if (tile == null) continue;
+                tile.RectTransform.anchoredPosition = Vector2.LerpUnclamped(starts[i], ends[i], s);
+            }
+
+            yield return null;
+        }
+
+        for (int i = 0; i < movingTiles.Count; i++)
+        {
+            var tile = movingTiles[i];
+            if (tile == null) continue;
+            tile.RectTransform.anchoredPosition = ends[i];
+        }
+    }
+
+    private void CommitShuffleFromSourceMap(Vector2Int[,] sourceForDest, bool[,] lockedMask)
+    {
+        var snapshot = new TileView[board.Width, board.Height];
+
+        for (int y = 0; y < board.Height; y++)
+            for (int x = 0; x < board.Width; x++)
+                snapshot[x, y] = board.Tiles[x, y];
+
+        for (int y = 0; y < board.Height; y++)
+        {
+            for (int x = 0; x < board.Width; x++)
+            {
+                if (lockedMask[x, y])
+                    continue;
+
+                var src = sourceForDest[x, y];
+                var tile = snapshot[src.x, src.y];
+
+                board.Tiles[x, y] = tile;
+
+                if (tile != null)
+                {
+                    tile.SetCoords(x, y);
+                    tile.SnapToGrid(board.TileSize);
+                    board.RefreshTileObstacleVisual(tile);
+                }
+            }
+        }
+    }
     public void AddRow(HashSet<TileView> matches, int y)
     {
         if (y < 0 || y >= board.Height) return;

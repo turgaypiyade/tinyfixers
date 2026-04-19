@@ -1722,8 +1722,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.03671706}
-  m_AnchorMax: {x: 1, y: 0.9492441}
+  m_AnchorMin: {x: 0, y: 0.051567238}
+  m_AnchorMax: {x: 1.4394618, y: 1.3331648}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -3121,7 +3121,7 @@ Camera:
   m_TargetEye: 3
   m_HDR: 1
   m_AllowMSAA: 1
-  m_AllowDynamicResolution: 0
+  m_AllowDynamicResolution: 1
   m_ForceIntoRT: 0
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
@@ -3161,10 +3161,10 @@ MonoBehaviour:
   m_RendererIndex: -1
   m_VolumeLayerMask:
     serializedVersion: 2
-    m_Bits: 32
+    m_Bits: 4294967295
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
@@ -8363,7 +8363,7 @@ MonoBehaviour:
   tilePrefab: {fileID: 8082158129049703175, guid: 43636d30932ce457da74ebb3ece6a14c, type: 3}
   iconLibrary: {fileID: 11400000, guid: 44f21392c67a14dfbb8782561221acf8, type: 2}
   board: {fileID: 0}
-  tileSize: 106
+  tileSize: 105
   fitSafetyMarginPx: 3
   fitScale: 1
   borderDrawer: {fileID: 0}
@@ -8371,7 +8371,7 @@ MonoBehaviour:
   cellBgPrefab: {fileID: 5469896378372082776, guid: 24b7e8f0e6f6e924ba247a059d975e1b, type: 3}
   underTileCellBgTint: {r: 0.75, g: 0.8732394, b: 1, a: 1}
   iconScale: 1
-  iconSize: {x: 95, y: 115}
+  iconSize: {x: 100, y: 100}
   fullCellIcons: 0
   spawnParent: {fileID: 1410826443}
   cellBgRoot: {fileID: 0}
@@ -8388,9 +8388,10 @@ MonoBehaviour:
   drawObstacles: 1
   resolveInitialOnStart: 0
   randomPool: 00000000010000000200000003000000
-  referenceCols: 10
+  referenceCols: 9
   referenceRows: 11
   useReferenceGridSizing: 1
+  useFixedTileSize: 1
 --- !u!114 &1410826445
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8598,7 +8599,7 @@ MonoBehaviour:
   debugMasks: 0
   debugBorderLogs: 0
   debugFont: {fileID: 0}
-  tileSize: 106
+  tileSize: 105
   contentOffset: {x: 8, y: -8}
   borderThickness: 8
   borderOutside: 4
@@ -8732,7 +8733,7 @@ MonoBehaviour:
   profile: {fileID: 11400000, guid: 52eb5b9978e94054e8793a92f89e3e0a, type: 2}
   transientSource: {fileID: 1410826449}
   accentSource: {fileID: 1410826449}
-  debugLogs: 0
+  debugLogs: 1
 --- !u!1 &1437935556
 GameObject:
   m_ObjectHideFlags: 0
@@ -9005,13 +9006,13 @@ GameObject:
   m_Component:
   - component: {fileID: 1521048439}
   - component: {fileID: 1521048438}
-  m_Layer: 6
+  m_Layer: 5
   m_Name: GlobalVolume
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1521048438
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9857,7 +9858,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -7526559735462566807, guid: 468fa1d75f4bb4b1f9b463638a37a561, type: 3}
+  m_Sprite: {fileID: -1616775910957784261, guid: 1eb363d5388600c4fa8fc15fdc77d0aa, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1

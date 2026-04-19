@@ -9,7 +9,7 @@ public class TileView : MonoBehaviour,
     IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     private static readonly Vector2 CenterPivot = new Vector2(0.5f, 0.5f);
-    private static readonly Vector2 IconReferenceSize = new Vector2(100f, 120f);
+    private static readonly Vector2 IconReferenceSize = new Vector2(100f, 100f);
     private const float IconReferenceTileSize = 100f;
 
     [SerializeField] private Image iconImage;
@@ -31,7 +31,7 @@ public class TileView : MonoBehaviour,
     [SerializeField, Range(0.5f, 1f)]
     [FormerlySerializedAs("runtimeIconScale")]
     private float iconScale = 0.98f;
-    [SerializeField] private Vector2 iconSize = new Vector2(100f, 120f);
+    [SerializeField] private Vector2 iconSize = new Vector2(100f, 100f);
 
     [SerializeField] private bool useFullCellIcon = false;
 
@@ -42,7 +42,7 @@ public class TileView : MonoBehaviour,
         FillCell
     }
 
-    [SerializeField] private TileVisualLayout visualLayout = TileVisualLayout.BottomAligned;
+    [SerializeField] private TileVisualLayout visualLayout = TileVisualLayout.Centered;
 
     private bool isMovableObstacleTile = false;
 
@@ -491,7 +491,7 @@ public class TileView : MonoBehaviour,
 
         // Sadece movable obstacle biraz küçülsün
         if (isMovable)
-            scaledIconSize *= 0.88f;
+            scaledIconSize *= 0.95f;
 
         irt.anchorMin = new Vector2(0.5f, 0.5f);
         irt.anchorMax = new Vector2(0.5f, 0.5f);

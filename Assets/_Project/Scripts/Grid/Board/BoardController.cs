@@ -127,7 +127,7 @@ public class BoardController : MonoBehaviour
     private RectTransform parent;
     private int tileSize;
     private float tileIconScale = 0.98f;
-    private Vector2 tileIconSize = new Vector2(100f, 120f);
+    private Vector2 tileIconSize = new Vector2(100f, 100f);
     private bool useFullCellIcons;
     private BoardBreakFxService boardBreakFxService;
 
@@ -470,7 +470,7 @@ public class BoardController : MonoBehaviour
         this.tileSize = tileSize;
         this.randomPool = randomPool;
         this.tileIconScale = Mathf.Clamp(tileIconScale, 0.5f, 1f);
-        this.tileIconSize = tileIconSize ?? new Vector2(100f, 120f);
+        this.tileIconSize = tileIconSize ?? new Vector2(100f, 100f);
         this.useFullCellIcons = useFullCellIcons;
         EnsureServices();
     }

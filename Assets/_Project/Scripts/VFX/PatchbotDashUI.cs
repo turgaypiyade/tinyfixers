@@ -74,8 +74,10 @@ public class PatchbotDashUI : MonoBehaviour
 
         // Reliable sprite source
         Sprite patchbotSprite = null;
-        if (tileIcons != null && tileIcons.patchBot != null) patchbotSprite = tileIcons.patchBot;
-        if (patchbotSprite == null && runnerImage != null) patchbotSprite = runnerImage.sprite;
+        if (runnerImage != null && runnerImage.sprite != null)
+            patchbotSprite = runnerImage.sprite;
+        else if (tileIcons != null && tileIcons.patchBot != null)
+            patchbotSprite = tileIcons.patchBot;
 
         const float stagger = 0.02f; // tiny visual offset
         int remaining = 0;
@@ -181,7 +183,8 @@ public class PatchbotDashUI : MonoBehaviour
         if (transform.parent != vfxRoot)
             transform.SetParent(vfxRoot, false);
 
-        runnerImage.sprite = tileIcons.patchBot;
+        if (runnerImage.sprite == null && tileIcons != null)
+            runnerImage.sprite = tileIcons.patchBot;
         runnerImage.raycastTarget = false;
         runnerImage.enabled = true;
         runnerImage.color = Color.white;

@@ -14,17 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BoardSfxProfile
   fallLight:
     clips:
-    - {fileID: 8300000, guid: 607bc76a49ec7aa45be1831d9c1172c5, type: 3}
+    - {fileID: 8300000, guid: d220e22a7808648e9bb7f643380c2d59, type: 3}
     volume: 1
     minInterval: 0.05
   fallMedium:
     clips:
-    - {fileID: 8300000, guid: 607bc76a49ec7aa45be1831d9c1172c5, type: 3}
+    - {fileID: 8300000, guid: d220e22a7808648e9bb7f643380c2d59, type: 3}
     volume: 1
     minInterval: 0.05
   fallHeavy:
     clips:
-    - {fileID: 8300000, guid: 607bc76a49ec7aa45be1831d9c1172c5, type: 3}
+    - {fileID: 8300000, guid: d220e22a7808648e9bb7f643380c2d59, type: 3}
     volume: 1
     minInterval: 0.05
   createLine:

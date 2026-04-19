@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class GridSpawner : MonoBehaviour
 {
-    private static readonly Vector2 IconReferenceSize = new Vector2(100f, 120f);
+    private static readonly Vector2 IconReferenceSize = new Vector2(100f, 100f);
 
     [Header("Level")]
     public LevelData level;
@@ -17,10 +17,10 @@ public class GridSpawner : MonoBehaviour
     public BoardController board;
 
     [Header("Layout")]
-    public int tileSize = 100;
+    public int tileSize = 105;
     // Auto-fit ayarları
     [SerializeField] private int fitSafetyMarginPx = 8;   // border güvenlik payı
-    [SerializeField, Range(0.8f, 1f)] private float fitScale = 0.96f; // ekstra küçültme oranı
+    [SerializeField, Range(0.8f, 1f)] private float fitScale = 1f; // ekstra küçültme oranı
 
     [Header("Border System")]
     public DynamicBoardBorder borderDrawer;
@@ -33,8 +33,8 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private Color underTileCellBgTint = new Color(0.72f, 0.86f, 1f, 1f);
 
     [SerializeField, Range(0.5f, 1f)]
-    private float iconScale = 0.82f;
-    [SerializeField] private Vector2 iconSize = new Vector2(100f, 120f);
+    private float iconScale = 0.95f;
+    [SerializeField] private Vector2 iconSize = new Vector2(100f, 100f);
     [SerializeField] private bool fullCellIcons = false;
 
     [Header("Spawn Parent (BoardMask altındaki BoardContent)")]
@@ -63,10 +63,11 @@ public class GridSpawner : MonoBehaviour
     [Header("Random Pool")]
     public TileType[] randomPool = { TileType.Gear, TileType.Core, TileType.Bolt, TileType.Plate };
 
-    [SerializeField] private int referenceCols = 10;
+    [SerializeField] private int referenceCols = 9;
     [SerializeField] private int referenceRows = 11;
     [SerializeField] private bool useReferenceGridSizing = true;
-  
+    [SerializeField] private bool useFixedTileSize = true;
+
     private int width;
     private int height;
     private LevelData resolvedLevel;
@@ -126,7 +127,9 @@ public class GridSpawner : MonoBehaviour
         width = resolvedLevel.width;
         height = resolvedLevel.height;
 
-        AutoFitTileSizeToMask();
+        if (!useFixedTileSize)
+            AutoFitTileSizeToMask();
+
         EnsureRoots();
         ApplyPaddingToSpawnParent();
 
@@ -172,23 +175,17 @@ public class GridSpawner : MonoBehaviour
         float gridW = width * tileSize;
         float gridH = height * tileSize;
 
-        float iconOverflowY = 0f;
-        if (!fullCellIcons)
-        {
-            float tileRatio = Mathf.Max(0.01f, tileSize / Mathf.Max(1f, IconReferenceSize.x));
-            float scaledIconH = iconSize.y * tileRatio * iconScale;
-            iconOverflowY = Mathf.Max(0f, (scaledIconH - tileSize) * 0.5f);
-        }
-        float vertPadding = boardPadding + iconOverflowY;
-
         spawnParent.anchorMin = new Vector2(0.5f, 0.5f);
         spawnParent.anchorMax = new Vector2(0.5f, 0.5f);
         spawnParent.pivot = new Vector2(0.5f, 0.5f);
         spawnParent.anchoredPosition = Vector2.zero;
 
-        spawnParent.sizeDelta = new Vector2(gridW + boardPadding * 2f, gridH + vertPadding * 2f);
+        spawnParent.sizeDelta = new Vector2(
+            gridW + boardPadding * 2f,
+            gridH + boardPadding * 2f
+        );
 
-        Vector2 inner = new Vector2(boardPadding, -vertPadding);
+        Vector2 inner = new Vector2(boardPadding, -boardPadding);
 
         if (cellBgRoot != null) cellBgRoot.anchoredPosition = inner;
         if (gridLinesRoot != null) gridLinesRoot.anchoredPosition = inner;
@@ -359,10 +356,7 @@ public class GridSpawner : MonoBehaviour
         view.SetIconSize(iconSize);
         view.SetUseFullCellIcon(false);
         view.SetMovableObstacleTile(true);
-
-        // ÖNEMLİ: Centered değil, BottomAligned
-        view.SetVisualLayout(TileView.TileVisualLayout.BottomAligned);
-
+        view.SetVisualLayout(TileView.TileVisualLayout.Centered);
         view.ApplyTileSize(tileSize);
 
         board.RegisterTile(view, x, y);
@@ -698,7 +692,7 @@ public class GridSpawner : MonoBehaviour
         view.SetIconScale(iconScale);
         view.SetIconSize(iconSize);
         view.SetUseFullCellIcon(fullCellIcons);
-        view.SetVisualLayout(TileView.TileVisualLayout.BottomAligned);
+        view.SetVisualLayout(TileView.TileVisualLayout.Centered);
         view.ApplyTileSize(tileSize);
 
         board.RegisterTile(view, x, y); // Init + coords + ilk SyncTileData (tipi henüz default olabilir)
