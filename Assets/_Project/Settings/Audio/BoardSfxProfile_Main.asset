@@ -13,47 +13,58 @@ MonoBehaviour:
   m_Name: BoardSfxProfile_Main
   m_EditorClassIdentifier: Assembly-CSharp::BoardSfxProfile
   fallLight:
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 607bc76a49ec7aa45be1831d9c1172c5, type: 3}
     volume: 1
     minInterval: 0.05
   fallMedium:
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 607bc76a49ec7aa45be1831d9c1172c5, type: 3}
     volume: 1
     minInterval: 0.05
   fallHeavy:
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 607bc76a49ec7aa45be1831d9c1172c5, type: 3}
     volume: 1
     minInterval: 0.05
   createLine:
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 1323266ee11014c418025a85f3dd3b3b, type: 3}
     volume: 1
     minInterval: 0.05
   createPatchBot:
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 1323266ee11014c418025a85f3dd3b3b, type: 3}
     volume: 1
     minInterval: 0.05
   createPulseCore:
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 1323266ee11014c418025a85f3dd3b3b, type: 3}
     volume: 1
     minInterval: 0.05
   createSystemOverride:
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 1323266ee11014c418025a85f3dd3b3b, type: 3}
     volume: 1
     minInterval: 0.05
   activateLine:
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 60fd4c828f6fca145a07b8744d59929a, type: 3}
     volume: 1
     minInterval: 0.05
   activatePatchBot:
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 516d7e3d256ecf14d8e5336cad8c777f, type: 3}
     volume: 1
     minInterval: 0.05
   activatePulseCore:
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: c0031682a893836479324737a876a0d5, type: 3}
     volume: 1
     minInterval: 0.05
   activateSystemOverride:
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: e5a560213bbb1b34d9736be5e87087d0, type: 3}
     volume: 1
     minInterval: 0.05
   comboStart:

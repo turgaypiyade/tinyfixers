@@ -670,13 +670,13 @@ MonoBehaviour:
   dashSpeed: 750
   arriveEps: 5
   syncedDurationMultiplier: 1
-  flightLoopClip: {fileID: 8300000, guid: 4e3d6cb39186e114bb5d149dc48391c9, type: 3}
-  flightLoopVolume: 0.18
-  flightFadeIn: 0.015
-  flightFadeOut: 0.04
+  flightLoopClip: {fileID: 8300000, guid: 516d7e3d256ecf14d8e5336cad8c777f, type: 3}
+  flightLoopVolume: 0.28
+  flightFadeIn: 0.005
+  flightFadeOut: 0.01
   flightPitch: 1.12
-  flightPitchJitter: 0.05
-  flightVolumeJitter: 0.03
+  flightPitchJitter: 0.024
+  flightVolumeJitter: 0
   spawnEvery: 0.04
   afterLife: 0.1
   afterColor: {r: 0.65, g: 0.9, b: 1, a: 0.8509804}
@@ -8482,8 +8482,8 @@ MonoBehaviour:
     duration: 0.18
     startRadiusFactor: 0.16
     endRadiusFactor: 0.05
-    spinDegrees: 180
-    riseFactor: 0.08
+    spinDegrees: 360
+    riseFactor: 0.1
     travelStartRadiusFactor: 0.16
     travelEndRadiusFactor: 0.05
     travelSpinSpeed: 300
@@ -8536,7 +8536,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-  specialChainDurationMultiplier: 0.35
+  specialChainDurationMultiplier: 0.42
   pulseImpactDelayStep: 0.008
   pulseImpactAnimTime: 0.06
   boardVfxPlayer: {fileID: 874639811}
@@ -9857,7 +9857,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -7526559735462566807, guid: 468fa1d75f4bb4b1f9b463638a37a561, type: 3}
+  m_Sprite: {fileID: -1616775910957784261, guid: 1eb363d5388600c4fa8fc15fdc77d0aa, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
