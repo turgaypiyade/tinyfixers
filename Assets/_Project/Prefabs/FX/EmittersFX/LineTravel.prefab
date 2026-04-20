@@ -35,7 +35,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 700, y: 0}
-  m_SizeDelta: {x: 210, y: 210}
+  m_SizeDelta: {x: 100, y: 1}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7038342533788588591
 CanvasRenderer:
@@ -65,9 +65,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 9b1446485c01505458ba38595e6f6fec, type: 3}
+  m_Sprite: {fileID: 1027493723618482156, guid: 46f02814f3895455ebb4d2c1088c8464, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -129,10 +129,10 @@ MonoBehaviour:
   impactParent: {fileID: 0}
   leftImage: {fileID: 8020222179218502511}
   rightImage: {fileID: 8231684973272254807}
-  rocketLeftSprite: {fileID: 21300000, guid: cd42cc49e1233e246b913a4211549c6c, type: 3}
-  rocketRightSprite: {fileID: 21300000, guid: 9b1446485c01505458ba38595e6f6fec, type: 3}
-  splitLeftSprite: {fileID: 21300000, guid: d57bdb38ec26cd3418cbc02fda99811b, type: 3}
-  splitRightSprite: {fileID: 21300000, guid: 9a02e83a393f61742bfbf1911e0b52ec, type: 3}
+  rocketLeftSprite: {fileID: 833778479501033089, guid: 5e7807c33a86a4fa2887956c588822c9, type: 3}
+  rocketRightSprite: {fileID: 1027493723618482156, guid: 46f02814f3895455ebb4d2c1088c8464, type: 3}
+  splitLeftSprite: {fileID: -5993706444623453034, guid: a385e50e15a8945799410a3ec2cac8c6, type: 3}
+  splitRightSprite: {fileID: 2943454175622845307, guid: 654acdd73b235433eb895a1f8b9f18cc, type: 3}
   startDelay: 0.004
   splitTime: 0.005
   splitOffset: 60
@@ -143,6 +143,9 @@ MonoBehaviour:
   afterImageLife: 0.1
   afterImageAlpha: 0.55
   afterImageScaleUp: 1.08
+  trailBeamPrefab: {fileID: 0}
+  trailParent: {fileID: 0}
+  enableTrailBeam: 1
   stepDuration: 0.005
   postDelay: 0.004
   hideOnComplete: 1
@@ -182,7 +185,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: -700, y: 0}
-  m_SizeDelta: {x: 210, y: 210}
+  m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4713194121684003119
 CanvasRenderer:
@@ -212,9 +215,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: cd42cc49e1233e246b913a4211549c6c, type: 3}
+  m_Sprite: {fileID: 833778479501033089, guid: 5e7807c33a86a4fa2887956c588822c9, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1

@@ -37,6 +37,9 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     public float afterImageAlpha = 0.55f;
     public float afterImageScaleUp = 1.08f;
 
+    [Header("Sizing")]
+    [SerializeField, Range(0.5f, 1.2f)] private float headSizeFactor = 0.95f;
+    [SerializeField, Range(0.2f, 1f)] private float splitOffsetFactor = 0.55f;
     // ────────────────────────────────────────────────
     // ✅ Beam Trail
     // ────────────────────────────────────────────────
@@ -137,7 +140,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
         _stepCount = Mathf.Max(0, steps);
         _cellSizePx = Mathf.Max(1f, cellSizePxOverride);
-
+        ApplyCellScaledVisualSize();
         KillTrails();
 
         if (leftImage)
@@ -186,8 +189,10 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         else if (rightImage) originWorldPos = rightImage.rectTransform.position;
         originWorldPos.z = 0f;
 
-        Vector2 leftTarget = leftStart + negDir * splitOffset;
-        Vector2 rightTarget = rightStart + posDir * splitOffset;
+        float dynamicSplitOffset = _cellSizePx * splitOffsetFactor;
+
+        Vector2 leftTarget = leftStart + negDir * dynamicSplitOffset;
+        Vector2 rightTarget = rightStart + posDir * dynamicSplitOffset;
 
         float st = 0f;
         while (st < splitTime)
@@ -330,6 +335,24 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         CompleteOnce();
     }
 
+    private void ApplyCellScaledVisualSize()
+    {
+        float visualSize = Mathf.Max(1f, _cellSizePx * headSizeFactor);
+
+        if (leftImage)
+        {
+            var rt = leftImage.rectTransform;
+            rt.sizeDelta = new Vector2(visualSize, visualSize);
+            rt.localScale = Vector3.one;
+        }
+
+        if (rightImage)
+        {
+            var rt = rightImage.rectTransform;
+            rt.sizeDelta = new Vector2(visualSize, visualSize);
+            rt.localScale = Vector3.one;
+        }
+    }
     // ────────────────────────────────────────────────
     // ✅ Trail yönetimi
     // ────────────────────────────────────────────────

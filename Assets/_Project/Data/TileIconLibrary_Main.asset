@@ -18,7 +18,7 @@ MonoBehaviour:
   plate: {fileID: 3609372343292057520, guid: e0ce5236b87e64ffcab2bd4845d286f6, type: 3}
   lineH: {fileID: 1649446296917653178, guid: 81ec88c01d8db4acdb3ee153ec8834f9, type: 3}
   lineV: {fileID: 1188245323905451034, guid: e18cab110372a4fe18e1d8bbd3bd5083, type: 3}
-  patchBot: {fileID: 6553379424239023069, guid: fc95b24f6b35f409eb40e07fd12e0be8, type: 3}
+  patchBot: {fileID: -8991408967745056988, guid: a4a7e67a5c959444c9e0ddfd646613c9, type: 3}
   pulseCore: {fileID: 5240213395630594912, guid: 6fbcec3ed13a7ea4daa17c29473fcb81, type: 3}
   overrideRed: {fileID: 2789401260304263213, guid: c3a8b514c271d423a8b244956105e471, type: 3}
   overrideYellow: {fileID: 2619745284460239960, guid: 1ee04c023b6744671a13a4b6288e4c16, type: 3}

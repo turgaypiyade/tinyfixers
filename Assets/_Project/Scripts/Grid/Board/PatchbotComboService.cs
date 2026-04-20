@@ -16,23 +16,40 @@ public class PatchbotComboService
         return board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
     }
 
-    public void EnqueueDash(TileView fromTile, int targetX, int targetY, System.Action onDashStart = null, System.Action onArrived = null)
+    public void EnqueueDash(
+        TileView fromTile,
+        int targetX,
+        int targetY,
+        TileView carriedTile = null,
+        System.Action onDashStart = null,
+        System.Action onArrived = null)
     {
         if (fromTile == null) return;
 
         board.ActiveBackgroundJobs++;
+
+        Sprite carriedSprite = null;
+        bool orbitCarry = false;
+
+        if (carriedTile != null && carriedTile.GetSpecial() != TileSpecial.None)
+        {
+            carriedSprite = carriedTile.GetIconSprite();
+            orbitCarry = carriedSprite != null;
+        }
 
         board.EnqueuePatchbotDash(
             new BoardController.PatchbotDashRequest
             {
                 from = new Vector2Int(fromTile.X, fromTile.Y),
                 to = new Vector2Int(targetX, targetY),
+                carriedSprite = carriedSprite,
+                orbitCarry = orbitCarry,
                 onStart = onDashStart,
                 onArrived = () =>
                 {
                     try
                     {
-                        if (onArrived != null) onArrived();
+                        onArrived?.Invoke();
                     }
                     finally
                     {
@@ -42,14 +59,6 @@ public class PatchbotComboService
             }
         );
     }
-    /*public void ConsumeSwapSource(HashSet<TileView> matches, TileView patchBotTile, TileView partnerTile, System.Action<TileView> markAffectedCell)
-    {
-        if (patchBotTile == null || partnerTile == null) return;
-        matches.Add(patchBotTile);
-        matches.Add(partnerTile);
-        markAffectedCell?.Invoke(patchBotTile);
-        markAffectedCell?.Invoke(partnerTile);
-    }*/
 
     public void ConsumePatchBotOnly(HashSet<TileView> matches, TileView patchBotTile, System.Action<TileView> markAffectedCell)
     {

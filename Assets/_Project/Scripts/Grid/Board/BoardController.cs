@@ -220,7 +220,18 @@ public class BoardController : MonoBehaviour
     }
 
     [System.Serializable]
-    public struct PatchbotDashRequest { public Vector2Int from; public Vector2Int to; public System.Action onStart; public System.Action onArrived; }
+    public struct PatchbotDashRequest
+    {
+        public Vector2Int from;
+        public Vector2Int to;
+
+        public Sprite carriedSprite;
+        public bool orbitCarry;
+
+        public System.Action onStart;
+        public System.Action onArrived;
+    }
+    
     private readonly List<PatchbotDashRequest> _patchbotDashRequests = new();
 
     public bool InputLocked => CurrentState == BoardState.Locked || IsBusy;

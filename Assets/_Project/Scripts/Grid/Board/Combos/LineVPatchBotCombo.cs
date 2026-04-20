@@ -54,13 +54,13 @@ public sealed class LineVPatchBotCombo
         rt.VisualService.PlayTeleportMarkers(patchBotTile, tx, ty);
         rt.VisualService.PlayTeleportMarkers(lineTile, tx, ty);
 
-        rt.VisualService.PlayTravelingSpecialPairGhost(
+       /* rt.VisualService.PlayTravelingSpecialPairGhost(
             patchBotTile,
             lineTile,
             new Vector2Int(patchBotTile.X, patchBotTile.Y),
             new Vector2Int(tx, ty),
             travelDuration,
-            true);
+            true);*/
 
         rt.Context.Affected.Add(patchBotTile);
         rt.Context.Affected.Add(lineTile);
@@ -80,8 +80,8 @@ public sealed class LineVPatchBotCombo
 
         rt.Board.ActiveBackgroundJobs++;
 
-        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty, null, () =>
-        {
+        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty, lineTile, null, () =>
+                {
             var arrivalCtx = new ResolutionContext();
             arrivalCtx.HasLineActivation = true;
             var arrivalRt = new LineVPatchBotComboExecutionRuntime

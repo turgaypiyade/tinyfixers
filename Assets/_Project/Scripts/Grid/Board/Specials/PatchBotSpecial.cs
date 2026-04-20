@@ -68,8 +68,13 @@ public sealed class PatchBotSpecial
         var cachedPartnerSpecial = rt.Partner != null ? rt.Partner.GetSpecial() : TileSpecial.None;
         rt.VisualService.PlayTeleportMarkers(rt.Origin, target.x, target.y);
 
-        rt.PatchbotService.EnqueueDash(rt.Origin, target.x, target.y, null, () =>
-        {
+        TileView carriedPartner =
+            (rt.Partner != null && rt.Partner.GetSpecial() != TileSpecial.None)
+                ? rt.Partner
+                : null;
+
+        rt.PatchbotService.EnqueueDash(rt.Origin, target.x, target.y, carriedPartner, null, () =>
+                {
             var arrivalCtx = new ResolutionContext();
             var arrivalRt = new PatchBotExecutionRuntime
             {

@@ -67,13 +67,13 @@ public sealed class PulseCorePatchBotCombo
         rt.VisualService.PlayTeleportMarkers(patchBotTile, tx, ty);
         rt.VisualService.PlayTeleportMarkers(pulseTile, tx, ty);
 
-        rt.VisualService.PlayTravelingSpecialPairGhost(
+       /* rt.VisualService.PlayTravelingSpecialPairGhost(
             patchBotTile,
             pulseTile,
             new Vector2Int(patchBotTile.X, patchBotTile.Y),
             new Vector2Int(tx, ty),
             travelDuration,
-            true);
+            true);*/
 
         rt.Context.Affected.Add(patchBotTile);
         rt.Context.Affected.Add(pulseTile);
@@ -91,8 +91,8 @@ public sealed class PulseCorePatchBotCombo
             result.Actions.Add(initialClearAction);
         }
 
-        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty, null, () =>
-        {
+        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty, pulseTile, null, () =>
+                {
             var arrivalCtx = new ResolutionContext();
             var arrivalRt = new PulseCorePatchBotComboExecutionRuntime
             {

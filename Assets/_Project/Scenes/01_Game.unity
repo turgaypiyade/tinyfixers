@@ -680,6 +680,10 @@ MonoBehaviour:
   spawnEvery: 0.04
   afterLife: 0.1
   afterColor: {r: 0.65, g: 0.9, b: 1, a: 0.8509804}
+  runnerSpinSpeed: 540
+  carryOrbitSpeed: 720
+  carrySizeFactor: 0.72
+  carryOrbitRadiusFactor: 0.32
 --- !u!114 &164518322
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -700,7 +704,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 6553379424239023069, guid: fc95b24f6b35f409eb40e07fd12e0be8, type: 3}
+  m_Sprite: {fileID: -6125242823325468556, guid: 8a7df669041e14de5bacac99a92d9c92, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1723,7 +1727,7 @@ RectTransform:
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.051567238}
-  m_AnchorMax: {x: 1.4394618, y: 1.3331648}
+  m_AnchorMax: {x: 1.4235033, y: 1.3331648}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8370,7 +8374,7 @@ MonoBehaviour:
   boardPadding: 2
   cellBgPrefab: {fileID: 5469896378372082776, guid: 24b7e8f0e6f6e924ba247a059d975e1b, type: 3}
   underTileCellBgTint: {r: 0.75, g: 0.8732394, b: 1, a: 1}
-  iconScale: 1
+  iconScale: 0.95
   iconSize: {x: 100, y: 100}
   fullCellIcons: 0
   spawnParent: {fileID: 1410826443}

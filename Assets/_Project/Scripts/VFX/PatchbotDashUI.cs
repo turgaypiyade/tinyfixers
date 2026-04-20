@@ -29,7 +29,11 @@ public class PatchbotDashUI : MonoBehaviour
     [SerializeField] private float spawnEvery = 0.02f;
     [SerializeField] private float afterLife = 0.28f;
     [SerializeField] private Color afterColor = new Color(0.55f, 0.85f, 1f, 0.85f);
-
+    [Header("Carry Orbit")]
+    [SerializeField] private float runnerSpinSpeed = 540f;
+    [SerializeField] private float carryOrbitSpeed = 720f;
+    [SerializeField, Range(0.2f, 1f)] private float carrySizeFactor = 0.72f;
+    [SerializeField, Range(0.05f, 0.6f)] private float carryOrbitRadiusFactor = 0.32f;
     private Coroutine co;
 
     void Reset()
@@ -99,15 +103,14 @@ public class PatchbotDashUI : MonoBehaviour
     }
 
     private IEnumerator SingleDashRoutine(
-        BoardController.PatchbotDashRequest req,
-        BoardController board,
-        Sprite sprite,
-        float syncDuration,
-        System.Action onComplete)
+       BoardController.PatchbotDashRequest req,
+       BoardController board,
+       Sprite sprite,
+       float syncDuration,
+       System.Action onComplete)
     {
         req.onStart?.Invoke();
 
-        // Per-patchbot instance
         var go = new GameObject("PatchbotRunnerInstance", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(vfxRoot, false);
 
@@ -119,30 +122,56 @@ public class PatchbotDashUI : MonoBehaviour
         img.enabled = true;
         img.color = Color.white;
 
-        // Ensure visible above board UI
         rt.SetAsLastSibling();
-
-        // Safe anchors/pivot for anchoredPosition motion
         rt.anchorMin = new Vector2(0.5f, 0.5f);
         rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
 
-        // Size fallback
         Vector2 size = new Vector2(90f, 90f);
-        if (runnerImage != null && runnerImage.rectTransform != null && runnerImage.rectTransform.sizeDelta.sqrMagnitude > 1f)
+        if (runnerImage != null &&
+            runnerImage.rectTransform != null &&
+            runnerImage.rectTransform.sizeDelta.sqrMagnitude > 1f)
+        {
             size = runnerImage.rectTransform.sizeDelta;
+        }
         rt.sizeDelta = size;
+
+        RectTransform carryRt = null;
+        Image carryImg = null;
+
+        if (req.orbitCarry && req.carriedSprite != null)
+        {
+            var carryGo = new GameObject("PatchbotCarrySpecial", typeof(RectTransform), typeof(Image));
+            carryGo.transform.SetParent(rt, false);
+
+            carryRt = carryGo.GetComponent<RectTransform>();
+            carryImg = carryGo.GetComponent<Image>();
+
+            carryRt.anchorMin = new Vector2(0.5f, 0.5f);
+            carryRt.anchorMax = new Vector2(0.5f, 0.5f);
+            carryRt.pivot = new Vector2(0.5f, 0.5f);
+            carryRt.sizeDelta = size * carrySizeFactor;
+            carryRt.anchoredPosition = Vector2.right * (Mathf.Min(size.x, size.y) * carryOrbitRadiusFactor);
+
+            carryImg.sprite = req.carriedSprite;
+            carryImg.preserveAspect = true;
+            carryImg.raycastTarget = false;
+            carryImg.color = Color.white;
+
+            carryRt.SetAsLastSibling();
+        }
 
         AudioSource flightSource = CreateFlightAudioSource(rt);
         StartFlightAudio(flightSource);
 
         Vector3 fromWorld = board.GetCellWorldPosition(req.from.x, req.from.y);
-        Vector3 toWorld   = board.GetCellWorldPosition(req.to.x, req.to.y);
+        Vector3 toWorld = board.GetCellWorldPosition(req.to.x, req.to.y);
 
         rt.anchoredPosition = WorldToAnchoredIn(vfxRoot, fromWorld);
         Vector2 target = WorldToAnchoredIn(vfxRoot, toWorld);
 
         float tAfter = 0f;
+        float elapsed = 0f;
 
         float effectiveSpeed = dashSpeed;
         if (syncDuration > 0f)
@@ -155,8 +184,26 @@ public class PatchbotDashUI : MonoBehaviour
 
         while (Vector2.Distance(rt.anchoredPosition, target) > arriveEps)
         {
+            elapsed += Time.deltaTime;
+
             rt.anchoredPosition =
                 Vector2.MoveTowards(rt.anchoredPosition, target, effectiveSpeed * Time.deltaTime);
+
+            // Patchbot kendi etrafında dönmesin
+            rt.localRotation = Quaternion.identity;
+
+            // Special sadece patchbot'un etrafında dolaşsın
+            if (carryRt != null)
+            {
+                float angle = elapsed * carryOrbitSpeed * Mathf.Deg2Rad;
+                float radius = Mathf.Min(size.x, size.y) * carryOrbitRadiusFactor;
+
+                carryRt.anchoredPosition =
+                    new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+
+                // Special kendi etrafında dönmesin
+                carryRt.localRotation = Quaternion.identity;
+            }
 
             tAfter += Time.deltaTime;
             if (tAfter >= spawnEvery)
@@ -167,6 +214,11 @@ public class PatchbotDashUI : MonoBehaviour
 
             yield return null;
         }
+
+        rt.localRotation = Quaternion.identity;
+
+        if (carryRt != null)
+            carryRt.localRotation = Quaternion.identity;
 
         req.onArrived?.Invoke();
         yield return StopFlightAudioRoutine(flightSource);
