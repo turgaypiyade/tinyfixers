@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 1d1b6b71016542343b0e436cd67c91c1
+guid: 1b3215a28ef563a4a9930ac2a547cfdc
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 2691139114625808499
-    second: test_core_1_0
+      213: -345208224687259545
+    second: GreenStonev2_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -37,7 +37,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 0
+    filterMode: 1
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -46,12 +46,12 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
-  spriteMeshType: 1
+  spriteMeshType: 0
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 128
+  spritePixelsToUnits: 256
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: test_core_1_0
+      name: GreenStonev2_0
       rect:
         serializedVersion: 2
-        x: 114
-        y: 121
-        width: 795
-        height: 785
+        x: 0
+        y: 0
+        width: 1100
+        height: 1100
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 3783e6834c8d85520800000000000000
-      internalID: 2691139114625808499
+      spriteID: 76009f9d2f2953bf0800000000000000
+      internalID: -345208224687259545
       vertices: []
       indices: 
       edges: []
@@ -138,7 +138,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      test_core_1_0: 2691139114625808499
+      GreenStonev2_0: -345208224687259545
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
