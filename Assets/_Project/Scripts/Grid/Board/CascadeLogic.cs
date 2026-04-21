@@ -237,14 +237,27 @@ public class CascadeLogic
                 int fromY = _colFromY[i];
 
                 bool useFallSettle = false;
-                if (board.ShouldEnableFallSettleThisPass())
+                float settleDur = board.FallSettleDuration;
+                float settleStr = board.FallSettleStrength;
+
+                if (board.ShouldEnableFallSettleThisPass() && dist > 0)
                 {
                     int belowY = targetY + 1;
-                    if (belowY < board.Height)
+
+                    bool hasSupport =
+                        belowY >= board.Height ||
+                        IsGravityBlockedCell(x, belowY) ||
+                        (belowY < board.Height &&
+                         board.Tiles[x, belowY] != null &&
+                         !board.Tiles[x, belowY].IsPlannedToMoveThisFallPass);
+
+                    if (hasSupport)
                     {
-                        var belowTile = board.Tiles[x, belowY];
-                        if (belowTile != null && !belowTile.IsPlannedToMoveThisFallPass && dist == 1)
-                            useFallSettle = true;
+                        useFallSettle = true;
+
+                        float dist01 = Mathf.Clamp01((dist - 1f) / 4f);
+                        settleDur *= Mathf.Lerp(0.92f, 1.12f, dist01);
+                        settleStr *= Mathf.Lerp(0.88f, 1.08f, dist01);
                     }
                 }
 
@@ -254,8 +267,8 @@ public class CascadeLogic
                     targetY,
                     _colDuration[i],
                     useFallSettle,
-                    board.FallSettleDuration,
-                    board.FallSettleStrength,
+                    settleDur,
+                    settleStr,
                     board.FallMoveCurve);
             }
         }
@@ -376,14 +389,28 @@ public class CascadeLogic
 
                         if (fromY != toY)
                         {
+                            int dist = Mathf.Abs(toY - fromY);
+                            float moveDuration = board.GetFallDurationForDistance(dist);
+
+                            bool useFallSettle = board.EnableFallSettle && dist > 0;
+                            float settleDur = board.FallSettleDuration;
+                            float settleStr = board.FallSettleStrength;
+
+                            if (useFallSettle)
+                            {
+                                float dist01 = Mathf.Clamp01((dist - 1f) / 4f);
+                                settleDur *= Mathf.Lerp(0.92f, 1.10f, dist01);
+                                settleStr *= Mathf.Lerp(0.90f, 1.06f, dist01);
+                            }
+
                             action.AddMove(
                                 tile,
                                 fromY,
                                 toY,
-                                board.GetFallDurationForDistance(Mathf.Abs(toY - fromY)),
-                                board.EnableFallSettle,
-                                board.FallSettleDuration,
-                                board.FallSettleStrength,
+                                moveDuration,
+                                useFallSettle,
+                                settleDur,
+                                settleStr,
                                 board.FallMoveCurve);
                         }
                     }
@@ -448,7 +475,20 @@ public class CascadeLogic
         board.SyncTileData(toX, toY);
 
         float slideDuration = board.GetFallDurationForDistance(1);
-        action.AddMove(tile, fromY, toY, slideDuration, false, 0f, 0f, board.FallMoveCurve);
+
+        bool useSlideSettle = board.EnableFallSettle;
+        float slideSettleDur = board.FallSettleDuration * 0.82f;
+        float slideSettleStr = board.FallSettleStrength * 0.60f;
+
+        action.AddMove(
+            tile,
+            fromY,
+            toY,
+            slideDuration,
+            useSlideSettle,
+            slideSettleDur,
+            slideSettleStr,
+            board.FallMoveCurve);
 
         movedThisPass.Add(tile);
         return true;

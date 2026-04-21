@@ -205,57 +205,96 @@ public class TileView : MonoBehaviour,
     }
 
     public IEnumerator MoveToGrid(
-        int tileSize,
-        float duration,
-        AnimationCurve easingCurve = null,
-        bool enableSettle = false,
-        float settleDuration = 0.06f,
-        float settleStrength = 0.04f,
-        float settleStretchX = 0f,
-        float settleOvershoot = 0f)
+      int tileSize,
+      float duration,
+      AnimationCurve easingCurve = null,
+      bool enableSettle = false,
+      float settleDuration = 0.06f,
+      float settleStrength = 0.04f,
+      float settleStretchX = 0f,
+      float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
 
-        if (rt == null || !rt) yield break;
+        if (rt == null || !rt)
+            yield break;
+
+        RectTransform visualRt = iconImage != null ? iconImage.rectTransform : null;
+        Vector3 visualBaseScale = visualRt != null ? visualRt.localScale : Vector3.one;
 
         Vector2 start = rt.anchoredPosition;
         Vector2 end = new Vector2(X * tileSize, -Y * tileSize);
 
+        bool movedDown = end.y < start.y - 0.5f;
+        float travelPx = Mathf.Abs(end.y - start.y);
+        float fallCells = tileSize > 0 ? travelPx / tileSize : 0f;
+        float fallAmp = Mathf.Clamp01(fallCells / 4f);
+
+        float airStretchY = Mathf.Lerp(0.015f, 0.050f, fallAmp);
+        float airStretchX = airStretchY * 0.55f;
+
         float t = 0f;
-        
         while (t < 1f)
         {
-            if (rt == null || !rt) yield break;
+            if (rt == null || !rt)
+                yield break;
+
             t += Time.deltaTime / Mathf.Max(0.0001f, duration);
             float normalizedT = Mathf.Clamp01(t);
-            float s;
 
+            float s;
             if (easingCurve != null && easingCurve.length > 0)
                 s = Mathf.Clamp01(easingCurve.Evaluate(normalizedT));
             else
                 s = normalizedT * normalizedT * normalizedT * (normalizedT * (6f * normalizedT - 15f) + 10f);
 
             rt.anchoredPosition = Vector2.Lerp(start, end, s);
+
+            if (visualRt != null)
+            {
+                if (movedDown)
+                {
+                    float mid = Mathf.Sin(normalizedT * Mathf.PI);
+                    float speedBias = Mathf.SmoothStep(0f, 1f, normalizedT);
+                    float stretchWeight = mid * Mathf.Lerp(0.55f, 1f, speedBias);
+
+                    float sx = 1f - airStretchX * stretchWeight;
+                    float sy = 1f + airStretchY * stretchWeight;
+                    visualRt.localScale = new Vector3(sx, sy, 1f);
+                }
+                else
+                {
+                    visualRt.localScale = visualBaseScale;
+                }
+            }
+
             yield return null;
         }
 
-        if (rt == null || !rt) yield break;
+        if (rt == null || !rt)
+            yield break;
+
         rt.anchoredPosition = end;
 
-        // Toon Blast tarzı düşüş settle: Y-squash, X sabit, pivot alt-merkez.
-        // Fire-and-forget: squash arka planda devam ederken MoveToGrid biter.
-        bool movedDown = end.y < start.y - 0.5f;
-        Debug.Log($"[Squash] check movedDown={movedDown} enableSettle={enableSettle} active={isActiveAndEnabled} dur={settleDuration} str={settleStrength}");
-        if (movedDown && enableSettle && rt != null && rt && isActiveAndEnabled)
+        if (visualRt != null)
+            visualRt.localScale = visualBaseScale;
+
+        if (movedDown && enableSettle && isActiveAndEnabled)
         {
-            Debug.Log($"[Squash] FIRED on {name}");
-            StartCoroutine(CoFallSettleSquash(settleDuration, settleStrength));
+            yield return CoFallSettleImpact(
+                tileSize,
+                settleDuration,
+                settleStrength,
+                settleStretchX,
+                settleOvershoot);
         }
+
+        if (visualRt != null)
+            visualRt.localScale = visualBaseScale;
 
         if (rt != null && rt)
             SnapToGrid(tileSize);
     }
-
     private void SetPivotWithoutVisualJump(Vector2 newPivot)
     {
         if (rt == null)
@@ -525,7 +564,101 @@ public class TileView : MonoBehaviour,
         if (iconRt != null)
             iconRt.localScale = normal;
     }
+    private IEnumerator CoFallSettleImpact(
+        int tileSize,
+        float duration,
+        float strength,
+        float stretchX,
+        float overshootRatio)
+    {
+        if (rt == null || !rt)
+            yield break;
 
+        RectTransform iconRt = iconImage != null ? iconImage.rectTransform : null;
+
+        Vector2 basePos = rt.anchoredPosition;
+        Vector3 baseScale = iconRt != null ? iconRt.localScale : Vector3.one;
+
+        float dur = Mathf.Max(0.01f, duration);
+
+        // Inspector’daki mevcut alanları gerçek kullanıma sokuyoruz.
+        float squashY = Mathf.Clamp(strength, 0.02f, 0.28f);
+        float squashX = Mathf.Clamp(stretchX, 0.00f, 0.16f);
+        float overshootPx = tileSize * Mathf.Clamp(overshootRatio, 0.00f, 0.10f);
+
+        Vector2 downPos = basePos + new Vector2(0f, -overshootPx);
+        Vector2 reboundPos = basePos + new Vector2(0f, overshootPx * 0.30f);
+
+        Vector3 impactScale = new Vector3(1f + squashX, 1f - squashY, 1f);
+        Vector3 reboundScale = new Vector3(1f - squashX * 0.35f, 1f + squashY * 0.20f, 1f);
+
+        float p1Dur = dur * 0.22f;
+        float p2Dur = dur * 0.30f;
+        float p3Dur = dur * 0.48f;
+
+        // Phase 1: impact
+        float t = 0f;
+        while (t < p1Dur)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, p1Dur));
+            float e = 1f - (1f - k) * (1f - k);
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(basePos, downPos, e);
+
+            if (iconRt != null)
+                iconRt.localScale = Vector3.LerpUnclamped(baseScale, impactScale, e);
+
+            yield return null;
+        }
+
+        // Phase 2: rebound
+        t = 0f;
+        while (t < p2Dur)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, p2Dur));
+            float e = 1f - (1f - k) * (1f - k);
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(downPos, reboundPos, e);
+
+            if (iconRt != null)
+                iconRt.localScale = Vector3.LerpUnclamped(impactScale, reboundScale, e);
+
+            yield return null;
+        }
+
+        // Phase 3: settle
+        t = 0f;
+        while (t < p3Dur)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, p3Dur));
+            float e = k * k * (3f - 2f * k);
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(reboundPos, basePos, e);
+
+            if (iconRt != null)
+                iconRt.localScale = Vector3.LerpUnclamped(reboundScale, baseScale, e);
+
+            yield return null;
+        }
+
+        if (rt != null && rt)
+            rt.anchoredPosition = basePos;
+
+        if (iconRt != null)
+            iconRt.localScale = baseScale;
+    }
     private void RestorePivot(Vector2 originalPivot)
     {
         if (rt == null || !rt) return;
