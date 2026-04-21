@@ -87,7 +87,7 @@ public class FallAction : BoardAction
         Debug.Log($"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} dur=[{minDur:0.000}-{maxDur:0.000}]s baseDelay=[0-{maxBaseDelay:0.000}]s");
 
         sequencer.Board.PlayTileFallSfx(fallRecords.Count, maxDist);
-        
+
         var moves = new List<IEnumerator>(fallRecords.Count);
         var delays = new List<float>(fallRecords.Count);
 
@@ -105,7 +105,8 @@ public class FallAction : BoardAction
             {
                 moves.Add(r.tile.MoveToGrid(
                     sequencer.Board.TileSize, r.duration, r.curve,
-                    r.useSettle, r.settleDuration, r.settleStrength));
+                    r.useSettle, r.settleDuration, r.settleStrength,
+                    sequencer.Board.FallSettleStretchX, sequencer.Board.FallSettleOvershoot));
 
                 float colDelay = columnStep > 0f ? r.tile.X * columnStep : 0f;
                 float rowDelay = (cascadeStep > 0f && globalMaxFromY > int.MinValue)

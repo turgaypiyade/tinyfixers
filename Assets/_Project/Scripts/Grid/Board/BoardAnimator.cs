@@ -335,7 +335,7 @@ public class BoardAnimator
                 impactCells.Add(new Vector2Int(tile.X, tile.Y));
             }
         }
-        
+
         if (suppressPerTileClearVfx
             && animationMode == ClearAnimationMode.LightningStrike
             && (lightningLineStrikes == null || lightningLineStrikes.Count == 0))
@@ -351,7 +351,7 @@ public class BoardAnimator
         {
             lineHitWindowOpen = true; // Sadece o spesifik hatlar için takip açılır.
         }
-        
+
 
         for (int i = 0; i < list.Count; i++)
         {
@@ -432,7 +432,7 @@ public class BoardAnimator
 
                 if (useLightningEffect)
                     lightningIndex++;
-           }
+            }
         }
 
         float lightningDuration = 0f;
@@ -665,7 +665,7 @@ public class BoardAnimator
 
         yield return tileAnimator.PlaySpecialCreationMerge(createdTile, sourceTiles, duration);
     }
-    
+
     public IEnumerator PlayClearPresentation(ClearPresentationPlan plan)
     {
         if (plan == null)
@@ -955,7 +955,9 @@ public class BoardAnimator
                                 board.FallMoveCurve,
                                 useFallSettle,
                                 board.FallSettleDuration,
-                                board.FallSettleStrength
+                                board.FallSettleStrength,
+                                board.FallSettleStretchX,
+                                board.FallSettleOvershoot
                             ));
                             moveDelays.Add(0f);
                         }
@@ -1021,7 +1023,9 @@ public class BoardAnimator
                     board.FallMoveCurve,
                     board.ShouldEnableFallSettleThisPass(),
                     board.FallSettleDuration,
-                    board.FallSettleStrength
+                    board.FallSettleStrength,
+                    board.FallSettleStretchX,
+                    board.FallSettleOvershoot
                 ));
             }
         }
@@ -1032,7 +1036,7 @@ public class BoardAnimator
         board.RefreshAllTileObstacleVisuals();
     }
 
-    
+
     [System.Obsolete("Use CascadeLogic.CalculateCascades() instead. This method will be removed.")]
     public IEnumerator CollapseAndSpawnAnimated()
     {
@@ -1166,17 +1170,9 @@ public class BoardAnimator
                 int targetY = colTargetY[i];
                 int dist = colDist[i];
 
-                bool useFallSettle = false;
-                if (board.ShouldEnableFallSettleThisPass())
-                {
-                    int belowY = targetY + 1;
-                    if (belowY < board.Height)
-                    {
-                        var belowTile = board.Tiles[x, belowY];
-                        if (belowTile != null && !belowTile.IsPlannedToMoveThisFallPass && dist == 1)
-                            useFallSettle = true;
-                    }
-                }
+                // Videoda her düşen taş kendi settle'ını yapıyor — dist veya altındaki taşın
+                // hareket durumuna bakmıyoruz. Pass bayrağına göre açık/kapalı karar veriyoruz.
+                bool useFallSettle = board.ShouldEnableFallSettleThisPass() && dist > 0;
 
                 moves.Add(tile.MoveToGrid(
                     board.TileSize,
@@ -1184,7 +1180,9 @@ public class BoardAnimator
                     board.FallMoveCurve,
                     useFallSettle,
                     board.FallSettleDuration,
-                    board.FallSettleStrength
+                    board.FallSettleStrength,
+                    board.FallSettleStretchX,
+                    board.FallSettleOvershoot
                 ));
                 moveDelays.Add(0f);
             }
@@ -1290,10 +1288,10 @@ public class BoardAnimator
                 if (board.IsMaskHoleCell(x, y) || IsObstacleBlockedCell(x, y))
                     continue;
 
-                if (board.Tiles[x, y] != null) 
+                if (board.Tiles[x, y] != null)
                     continue;
 
-                if (!IsSlideFillTarget(x, y)) 
+                if (!IsSlideFillTarget(x, y))
                     continue;
 
                 return true; // hâlâ hedef boşluk var
@@ -1487,15 +1485,15 @@ public class BoardAnimator
         return true;
     }
 
-   /* private bool TryDiagonalFrom(
-        int fromX, int fromY,
-        int toX, int toY,
-        HashSet<TileView> movedThisPass,
-        List<IEnumerator> moves,
-        List<float> delays)
-    {
-        return TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, moves, delays);
-    }*/
+    /* private bool TryDiagonalFrom(
+         int fromX, int fromY,
+         int toX, int toY,
+         HashSet<TileView> movedThisPass,
+         List<IEnumerator> moves,
+         List<float> delays)
+     {
+         return TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, moves, delays);
+     }*/
 
     private bool TryDiagonalFrom(
         int fromX, int fromY,
@@ -1506,7 +1504,7 @@ public class BoardAnimator
     {
         // Corner hücreler
         int cax = fromX, cay = toY;
-        int cbx = toX,  cby = fromY;
+        int cbx = toX, cby = fromY;
 
         LogVerbose($"[DIAG-TRY] from=({fromX},{fromY}) to=({toX},{toY})");
 
@@ -1535,7 +1533,7 @@ public class BoardAnimator
         bool ok = TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, moves, delays);
         LogVerbose($"[DIAG-RESULT] from=({fromX},{fromY}) to=({toX},{toY}) ok={ok}");
         return ok;
-       // return TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, moves, delays);
+        // return TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, moves, delays);
     }
     public IEnumerator PlayTilesImplodeToCell(
     Vector2Int targetCell,
@@ -1568,6 +1566,4 @@ public class BoardAnimator
     {
         Debug.Log(message);
     }
-
-
 }

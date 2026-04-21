@@ -210,7 +210,9 @@ public class TileView : MonoBehaviour,
         AnimationCurve easingCurve = null,
         bool enableSettle = false,
         float settleDuration = 0.06f,
-        float settleStrength = 0.04f)
+        float settleStrength = 0.04f,
+        float settleStretchX = 0f,
+        float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
 
@@ -220,6 +222,7 @@ public class TileView : MonoBehaviour,
         Vector2 end = new Vector2(X * tileSize, -Y * tileSize);
 
         float t = 0f;
+        
         while (t < 1f)
         {
             if (rt == null || !rt) yield break;
@@ -239,51 +242,14 @@ public class TileView : MonoBehaviour,
         if (rt == null || !rt) yield break;
         rt.anchoredPosition = end;
 
-        // Toon Blast gravity bounce: taş KENDİSİ zıplayarak oturuyor
-        // Eski: alttaki taşa squash uyguluyordu → çoğu zaman altta taş yok, efekt görünmüyordu
-        // Yeni: düşen taş hedefi aşar (overshoot) → geri gelir → küçük bir daha → oturur
+        // Toon Blast tarzı düşüş settle: Y-squash, X sabit, pivot alt-merkez.
+        // Fire-and-forget: squash arka planda devam ederken MoveToGrid biter.
         bool movedDown = end.y < start.y - 0.5f;
-        if (movedDown && enableSettle && rt != null && rt)
+        Debug.Log($"[Squash] check movedDown={movedDown} enableSettle={enableSettle} active={isActiveAndEnabled} dur={settleDuration} str={settleStrength}");
+        if (movedDown && enableSettle && rt != null && rt && isActiveAndEnabled)
         {
-            float bounceAmount = tileSize * settleStrength;
-            float bounceDur = Mathf.Max(0.01f, settleDuration);
-
-            // Bounce 1: hedefin altına overshoot
-            float b1 = 0f;
-            Vector2 overshoot = end + new Vector2(0f, -bounceAmount);
-            while (b1 < bounceDur * 0.35f)
-            {
-                if (rt == null || !rt) yield break;
-                b1 += Time.deltaTime;
-                float k = Mathf.Clamp01(b1 / (bounceDur * 0.35f));
-                rt.anchoredPosition = Vector2.LerpUnclamped(end, overshoot, k);
-                yield return null;
-            }
-
-            // Bounce 2: geri gel + küçük overshoot yukarı
-            float b2 = 0f;
-            Vector2 overUp = end + new Vector2(0f, bounceAmount * 0.3f);
-            while (b2 < bounceDur * 0.35f)
-            {
-                if (rt == null || !rt) yield break;
-                b2 += Time.deltaTime;
-                float k = Mathf.Clamp01(b2 / (bounceDur * 0.35f));
-                float eased = 1f - (1f - k) * (1f - k);
-                rt.anchoredPosition = Vector2.LerpUnclamped(overshoot, overUp, eased);
-                yield return null;
-            }
-
-            // Bounce 3: son oturma
-            float b3 = 0f;
-            while (b3 < bounceDur * 0.3f)
-            {
-                if (rt == null || !rt) yield break;
-                b3 += Time.deltaTime;
-                float k = Mathf.Clamp01(b3 / (bounceDur * 0.3f));
-                float eased = k * k;
-                rt.anchoredPosition = Vector2.LerpUnclamped(overUp, end, eased);
-                yield return null;
-            }
+            Debug.Log($"[Squash] FIRED on {name}");
+            StartCoroutine(CoFallSettleSquash(settleDuration, settleStrength));
         }
 
         if (rt != null && rt)
@@ -447,7 +413,7 @@ public class TileView : MonoBehaviour,
         if (lastAppliedTileSize > 0)
             ApplyTileSize(lastAppliedTileSize);
     }
-    
+
     public void SetIconSize(Vector2 size)
     {
         iconSize = new Vector2(Mathf.Max(1f, size.x), Mathf.Max(1f, size.y));
@@ -510,53 +476,61 @@ public class TileView : MonoBehaviour,
             irt.anchoredPosition = new Vector2(0f, -scaledIconSize.y * 0.5f);
         }
     }
-    public void PlayBeingLandedOnSquash(float duration = 0.22f, float strength = 0.20f)
+    public void PlayBeingLandedOnSquash(float duration = 0.22f, float strength = 0.46f)
     {
-        if (this == null) return;
-        StartCoroutine(CoLandedOnSquash(duration, strength));
+        if (this == null || !isActiveAndEnabled) return;
+        StartCoroutine(CoFallSettleSquash(duration, strength));
     }
 
-    private IEnumerator CoLandedOnSquash(float duration, float strength)
+    /// <summary>
+    /// Basit Y-ekseni squash: scaleY 1 → (1-strength) → 1, pivot alt-merkez, X sabit.
+    /// %20 ezilme + %80 geri açılma.
+    /// </summary>
+    private IEnumerator CoFallSettleSquash(float duration, float strength)
     {
-        Transform tr = (iconImage != null) ? (Transform)iconImage.rectTransform : transform;
-        if (tr == null) yield break;
+        if (iconImage == null) yield break;
+        var iconRt = iconImage.rectTransform;
+        if (iconRt == null) yield break;
 
         float s = Mathf.Clamp(strength, 0f, 0.9f);
-        float squashY = Mathf.Max(0.6f, 1f - s * 0.9f);
-        float stretchX = 1f + s * 0.35f;
-
+        float squashY = Mathf.Max(0.1f, 1f - s);
         Vector3 normal = Vector3.one;
-        Vector3 squashed = new Vector3(stretchX, squashY, 1f);
+        Vector3 squashed = new Vector3(1f, squashY, 1f);
 
-        float half = Mathf.Max(0.001f, duration * 0.32f);
-        float back = Mathf.Max(0.001f, duration * 0.68f);
+        float downTime = Mathf.Max(0.001f, duration * 0.20f);
+        float upTime = Mathf.Max(0.001f, duration * 0.80f);
 
         float t = 0f;
-        while (t < half)
+        while (t < downTime)
         {
-            if (tr == null) yield break;
-
+            if (iconRt == null) yield break;
             t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / half);
-            float e = 1f - (1f - k) * (1f - k);
-            tr.localScale = Vector3.LerpUnclamped(normal, squashed, e);
+            float k = Mathf.Clamp01(t / downTime);
+            float e = k * k;
+            iconRt.localScale = Vector3.LerpUnclamped(normal, squashed, e);
             yield return null;
         }
 
         t = 0f;
-        while (t < back)
+        while (t < upTime)
         {
-            if (tr == null) yield break;
-
+            if (iconRt == null) yield break;
             t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / back);
+            float k = Mathf.Clamp01(t / upTime);
             float e = 1f - (1f - k) * (1f - k);
-            tr.localScale = Vector3.LerpUnclamped(squashed, normal, e);
+            iconRt.localScale = Vector3.LerpUnclamped(squashed, normal, e);
             yield return null;
         }
 
-        if (tr != null)
-            tr.localScale = normal;
+        if (iconRt != null)
+            iconRt.localScale = normal;
+    }
+
+    private void RestorePivot(Vector2 originalPivot)
+    {
+        if (rt == null || !rt) return;
+        if (rt.pivot != originalPivot)
+            SetPivotWithoutVisualJump(originalPivot);
     }
 
     public void SetOverrideBaseType(TileType type) => model.SetOverrideBaseType(type);

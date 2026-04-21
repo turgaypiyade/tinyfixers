@@ -31,9 +31,14 @@ public class BoardController : MonoBehaviour
     [SerializeField] private AnimationCurve fallMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
     [Header("Fall Settle")]
-    [SerializeField] private bool enableFallSettle;
-    [SerializeField] private float fallSettleDuration = 0.06f;
-    [SerializeField] private float fallSettleStrength = 0.04f;
+    [SerializeField] private bool enableFallSettle = true;
+    [SerializeField] private float fallSettleDuration = 0.22f;
+    [Tooltip("Min scaleY = 1 - strength. 0.46 → 0.54 (video ölçümü). Üstü 0.9 ile capped.")]
+    [SerializeField, Range(0f, 0.9f)] private float fallSettleStrength = 0.46f;
+    [Tooltip("Çarpma anında X genişleme oranı. 0 = sabit, 0.2 = %20 geniş (jelly his). Volume-preserving değil.")]
+    [SerializeField, Range(0f, 0.6f)] private float fallSettleStretchX = 0.20f;
+    [Tooltip("Çarpma anında hedefin altına inme oranı (hücre boyuna göre). 0.12 = hücre yüksekliğinin %12'si kadar aşağı taşar.")]
+    [SerializeField, Range(0f, 0.4f)] private float fallSettleOvershoot = 0.12f;
     [SerializeField] private float fallCascadeStep = 0.02f;
     internal float FallColumnStep => Mathf.Max(0f, fallColumnStep);
 
@@ -231,7 +236,7 @@ public class BoardController : MonoBehaviour
         public System.Action onStart;
         public System.Action onArrived;
     }
-    
+
     private readonly List<PatchbotDashRequest> _patchbotDashRequests = new();
 
     public bool InputLocked => CurrentState == BoardState.Locked || IsBusy;
@@ -295,6 +300,8 @@ public class BoardController : MonoBehaviour
     internal bool EnableFallSettle => enableFallSettle;
     internal float FallSettleDuration => Mathf.Max(0f, fallSettleDuration);
     internal float FallSettleStrength => Mathf.Max(0f, fallSettleStrength);
+    internal float FallSettleStretchX => Mathf.Max(0f, fallSettleStretchX);
+    internal float FallSettleOvershoot => Mathf.Max(0f, fallSettleOvershoot);
     internal float FallCascadeStep => Mathf.Max(0f, fallCascadeStep);
     internal float PreClearDelay => preClearDelay;
     internal float ShakeDuration => shakeDuration;
@@ -1864,7 +1871,7 @@ public class BoardController : MonoBehaviour
     }
 
     internal float GetClearDurationForCurrentPass() => Mathf.Max(0.03f, ApplySpecialChainTempo(ClearDuration * GetCascadeClearSpeedMultiplier()));
-    internal bool ShouldEnableFallSettleThisPass() => EnableFallSettle && CurrentResolvePass <= 3;
+    internal bool ShouldEnableFallSettleThisPass() => EnableFallSettle;
 
     private float GetCascadeFallSpeedMultiplier()
     {
@@ -1977,7 +1984,7 @@ public class BoardController : MonoBehaviour
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-    Debug.LogWarning("[Board] No playable move found even after safe shuffle retries.");
+        Debug.LogWarning("[Board] No playable move found even after safe shuffle retries.");
 #endif
     }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
