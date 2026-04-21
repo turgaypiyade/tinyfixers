@@ -16,10 +16,10 @@ MonoBehaviour:
   height: 9
   moves: 50
   goals:
-  - targetType: 0
+  - targetType: 1
     tileType: 0
-    obstacleId: 1
-    amount: 99
+    obstacleId: 6
+    amount: 3
   - targetType: 0
     tileType: 2
     obstacleId: 2

@@ -16,6 +16,7 @@ public sealed class LineVPatchBotComboExecutionRuntime
     public SpecialEffectOrchestrator Effects;
 
     public Action<ResolutionContext, TileView, TileView> ActivateSpecial;
+    public Func<ResolutionContext, TileView, TileView, List<BoardAction>> ExecuteSpecialActions;
 }
 
 public sealed class LineVPatchBotComboExecutionResult
@@ -54,13 +55,13 @@ public sealed class LineVPatchBotCombo
         rt.VisualService.PlayTeleportMarkers(patchBotTile, tx, ty);
         rt.VisualService.PlayTeleportMarkers(lineTile, tx, ty);
 
-       /* rt.VisualService.PlayTravelingSpecialPairGhost(
-            patchBotTile,
-            lineTile,
-            new Vector2Int(patchBotTile.X, patchBotTile.Y),
-            new Vector2Int(tx, ty),
-            travelDuration,
-            true);*/
+        /* rt.VisualService.PlayTravelingSpecialPairGhost(
+             patchBotTile,
+             lineTile,
+             new Vector2Int(patchBotTile.X, patchBotTile.Y),
+             new Vector2Int(tx, ty),
+             travelDuration,
+             true);*/
 
         rt.Context.Affected.Add(patchBotTile);
         rt.Context.Affected.Add(lineTile);
@@ -82,41 +83,43 @@ public sealed class LineVPatchBotCombo
 
         rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty, lineTile, null, () =>
                 {
-            var arrivalCtx = new ResolutionContext();
-            arrivalCtx.HasLineActivation = true;
-            var arrivalRt = new LineVPatchBotComboExecutionRuntime
-            {
-                Board = rt.Board,
-                Context = arrivalCtx,
-                Origin = patchBotTile,
-                Partner = lineTile,
-                PatchbotService = rt.PatchbotService,
-                VisualService = rt.VisualService,
-                Effects = rt.Effects,
-                ActivateSpecial = rt.ActivateSpecial,
-                FinalizeAtEnd = true
-            };
+                    var arrivalCtx = new ResolutionContext();
+                    arrivalCtx.HasLineActivation = true;
+                    var arrivalRt = new LineVPatchBotComboExecutionRuntime
+                    {
+                        Board = rt.Board,
+                        Context = arrivalCtx,
+                        Origin = patchBotTile,
+                        Partner = lineTile,
+                        PatchbotService = rt.PatchbotService,
+                        VisualService = rt.VisualService,
+                        Effects = rt.Effects,
+                        ActivateSpecial = rt.ActivateSpecial,
+                        ExecuteSpecialActions = rt.ExecuteSpecialActions,
+                        FinalizeAtEnd = true
+                    };
 
-            CollectColumnAtTarget(arrivalRt, tx);
-            BuildLineVisuals(arrivalRt, tx, ty, 0f);
-            ExecuteChain(arrivalRt);
+                    CollectColumnAtTarget(arrivalRt, tx);
+                    BuildLineVisuals(arrivalRt, tx, ty, 0f);
 
-            var deferredActions = new List<BoardAction>();
-            if (arrivalRt.FinalizeAtEnd)
-            {
-                var clearAction = BuildClearAction(arrivalRt);
-                if (clearAction != null)
-                    deferredActions.Add(clearAction);
-            }
+                    var deferredActions = new List<BoardAction>();
+                    if (arrivalRt.FinalizeAtEnd)
+                    {
+                        ExecuteChain(arrivalRt, deferredActions);
 
-            var sequencer = arrivalRt.Board.GetComponent<ActionSequencer>();
-            if (sequencer != null && deferredActions.Count > 0)
-            {
-                sequencer.Enqueue(deferredActions);
-            }
+                        var clearAction = BuildClearAction(arrivalRt);
+                        if (clearAction != null)
+                            deferredActions.Add(clearAction);
+                    }
 
-            rt.Board.ActiveBackgroundJobs--;
-        });
+                    var sequencer = arrivalRt.Board.GetComponent<ActionSequencer>();
+                    if (sequencer != null && deferredActions.Count > 0)
+                    {
+                        sequencer.Enqueue(deferredActions);
+                    }
+
+                    rt.Board.ActiveBackgroundJobs--;
+                });
 
         return result;
     }
@@ -171,7 +174,7 @@ public sealed class LineVPatchBotCombo
                 delaySeconds));
     }
 
-    private void ExecuteChain(LineVPatchBotComboExecutionRuntime rt)
+    private void ExecuteChain(LineVPatchBotComboExecutionRuntime rt, List<BoardAction> deferredActions)
     {
         var pending = new Queue<TileView>();
 
@@ -195,8 +198,22 @@ public sealed class LineVPatchBotCombo
 
             rt.Context.Queued.Remove(pos);
 
-            rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
-            rt.Context.Processed.Add(pos);
+            if (rt.ExecuteSpecialActions != null)
+            {
+                rt.Context.Processed.Remove(pos);
+
+                var nestedActions = rt.ExecuteSpecialActions(rt.Context, tile, null);
+
+                rt.Context.Processed.Add(pos);
+
+                if (nestedActions != null && nestedActions.Count > 0)
+                    deferredActions.AddRange(nestedActions);
+            }
+            else
+            {
+                rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
+                rt.Context.Processed.Add(pos);
+            }
 
             foreach (var affectedTile in rt.Context.Affected)
                 TryQueue(rt, pending, affectedTile);

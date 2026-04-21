@@ -16,6 +16,8 @@ public sealed class LineHPatchBotComboExecutionRuntime
     public SpecialEffectOrchestrator Effects;
 
     public Action<ResolutionContext, TileView, TileView> ActivateSpecial;
+    public Func<ResolutionContext, TileView, TileView, List<BoardAction>> ExecuteSpecialActions;
+
 }
 
 public sealed class LineHPatchBotComboExecutionResult
@@ -54,13 +56,13 @@ public sealed class LineHPatchBotCombo
         rt.VisualService.PlayTeleportMarkers(patchBotTile, tx, ty);
         rt.VisualService.PlayTeleportMarkers(lineTile, tx, ty);
 
-       /* rt.VisualService.PlayTravelingSpecialPairGhost(
-            patchBotTile,
-            lineTile,
-            new Vector2Int(patchBotTile.X, patchBotTile.Y),
-            new Vector2Int(tx, ty),
-            travelDuration,
-            true);*/
+        /* rt.VisualService.PlayTravelingSpecialPairGhost(
+             patchBotTile,
+             lineTile,
+             new Vector2Int(patchBotTile.X, patchBotTile.Y),
+             new Vector2Int(tx, ty),
+             travelDuration,
+             true);*/
 
         rt.Context.Affected.Add(patchBotTile);
         rt.Context.Affected.Add(lineTile);
@@ -80,7 +82,7 @@ public sealed class LineHPatchBotCombo
 
         rt.Board.ActiveBackgroundJobs++;
 
-        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty, lineTile, null, ()  =>
+        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty, lineTile, null, () =>
         {
             var arrivalCtx = new ResolutionContext();
             arrivalCtx.HasLineActivation = true;
@@ -94,16 +96,19 @@ public sealed class LineHPatchBotCombo
                 VisualService = rt.VisualService,
                 Effects = rt.Effects,
                 ActivateSpecial = rt.ActivateSpecial,
+                ExecuteSpecialActions = rt.ExecuteSpecialActions,
                 FinalizeAtEnd = true
             };
 
             CollectRowAtTarget(arrivalRt, ty);
             BuildLineVisuals(arrivalRt, tx, ty, 0f);
-            ExecuteChain(arrivalRt);
 
             var deferredActions = new List<BoardAction>();
+
             if (arrivalRt.FinalizeAtEnd)
             {
+                ExecuteChain(arrivalRt, deferredActions);
+
                 var clearAction = BuildClearAction(arrivalRt);
                 if (clearAction != null)
                     deferredActions.Add(clearAction);
@@ -171,7 +176,7 @@ public sealed class LineHPatchBotCombo
                 delaySeconds));
     }
 
-    private void ExecuteChain(LineHPatchBotComboExecutionRuntime rt)
+    private void ExecuteChain(LineHPatchBotComboExecutionRuntime rt, List<BoardAction> deferredActions)
     {
         var pending = new Queue<TileView>();
 
@@ -195,8 +200,22 @@ public sealed class LineHPatchBotCombo
 
             rt.Context.Queued.Remove(pos);
 
-            rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
-            rt.Context.Processed.Add(pos);
+            if (rt.ExecuteSpecialActions != null)
+            {
+                rt.Context.Processed.Remove(pos);
+
+                var nestedActions = rt.ExecuteSpecialActions(rt.Context, tile, null);
+
+                rt.Context.Processed.Add(pos);
+
+                if (nestedActions != null && nestedActions.Count > 0)
+                    deferredActions.AddRange(nestedActions);
+            }
+            else
+            {
+                rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
+                rt.Context.Processed.Add(pos);
+            }
 
             foreach (var affectedTile in rt.Context.Affected)
                 TryQueue(rt, pending, affectedTile);

@@ -244,7 +244,8 @@ public class SpecialResolver
                 Origin = b,
                 Partner = a,
                 FinalizeAtEnd = true,
-                ExecuteSpecialActions = ExecuteSpecialActionsNoFinalize,
+                ExecuteSpecialActions = (resolution, tile, partner) =>
+                    ExecuteSpecialActions(resolution, tile, partner),
                 DebugLog = msg => Debug.Log(msg),
                 EmitComboTriggered = (sa, sb, cell) => effectOrchestrator.EmitComboTriggered(sa, sb, cell),
                 EmitPulseEmitterComboTriggered = cell => effectOrchestrator.EmitPulseEmitterComboTriggered(cell)

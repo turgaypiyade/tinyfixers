@@ -40,19 +40,11 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     [Header("Sizing")]
     [SerializeField, Range(0.5f, 1.2f)] private float headSizeFactor = 0.95f;
     [SerializeField, Range(0.2f, 1f)] private float splitOffsetFactor = 0.55f;
-    // ────────────────────────────────────────────────
-    // ✅ Beam Trail
-    // ────────────────────────────────────────────────
+
     [Header("Beam Trail")]
-    [Tooltip("RocketTrailBeam prefab. Null bırakırsan trail çıkmaz.")]
     public RocketTrailBeam trailBeamPrefab;
-
-    [Tooltip("Trail beam'lerin spawn edileceği parent. Yoksa afterImageParent kullanılır.")]
     public RectTransform trailParent;
-
-    [Tooltip("Trail spawn etme — false yaparak kapatabilirsin")]
     public bool enableTrailBeam = true;
-    // ────────────────────────────────────────────────
 
     [Header("Timing")]
     public float stepDuration = 0.06f;
@@ -86,10 +78,27 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     private RocketTrailBeam _leftTrail;
     private RocketTrailBeam _rightTrail;
 
+    private RectTransform SafeRect(Image img)
+    {
+        if (!img) return null;
+        try
+        {
+            return img.rectTransform;
+        }
+        catch (MissingReferenceException)
+        {
+            return null;
+        }
+    }
+
+    private bool IsAlive(Image img) => SafeRect(img) != null;
+
     private void Awake()
     {
-        if (leftImage) leftStart = leftImage.rectTransform.anchoredPosition;
-        if (rightImage) rightStart = rightImage.rectTransform.anchoredPosition;
+        var leftRt = SafeRect(leftImage);
+        var rightRt = SafeRect(rightImage);
+        if (leftRt) leftStart = leftRt.anchoredPosition;
+        if (rightRt) rightStart = rightRt.anchoredPosition;
     }
 
     public void Play(
@@ -143,24 +152,26 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         ApplyCellScaledVisualSize();
         KillTrails();
 
-        if (leftImage)
+        var leftRt = SafeRect(leftImage);
+        if (leftRt)
         {
-            leftImage.rectTransform.anchoredPosition = leftStart;
-            leftImage.rectTransform.localScale = Vector3.one;
+            leftRt.anchoredPosition = leftStart;
+            leftRt.localScale = Vector3.one;
             if (splitLeftSprite) leftImage.sprite = splitLeftSprite;
         }
 
-        if (rightImage)
+        var rightRt = SafeRect(rightImage);
+        if (rightRt)
         {
-            rightImage.rectTransform.anchoredPosition = rightStart;
-            rightImage.rectTransform.localScale = Vector3.one;
+            rightRt.anchoredPosition = rightStart;
+            rightRt.localScale = Vector3.one;
             if (splitRightSprite) rightImage.sprite = splitRightSprite;
         }
 
         ApplyAxisVisualRotation();
 
-        if (leftImage) leftImage.enabled = true;
-        if (rightImage) rightImage.enabled = true;
+        if (leftImage && leftRt) leftImage.enabled = true;
+        if (rightImage && rightRt) rightImage.enabled = true;
 
         StopAllCoroutines();
         StartCoroutine(Run());
@@ -178,15 +189,15 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         Vector2 posDir = (axis == LineAxis.Horizontal) ? Vector2.right : Vector2.down;
         Vector2 negDir = -posDir;
 
-        if (leftImage && splitLeftSprite) leftImage.sprite = splitLeftSprite;
-        if (rightImage && splitRightSprite) rightImage.sprite = splitRightSprite;
+        if (leftImage && splitLeftSprite && IsAlive(leftImage)) leftImage.sprite = splitLeftSprite;
+        if (rightImage && splitRightSprite && IsAlive(rightImage)) rightImage.sprite = splitRightSprite;
         ApplyAxisVisualRotation();
 
-        // ✅ Split ÖNCESI origin world pozisyonunu yakala
-        //    İki trail de bu noktadan başlayacak → tüm yolu kapsayacak
         Vector3 originWorldPos = Vector3.zero;
-        if (leftImage) originWorldPos = leftImage.rectTransform.position;
-        else if (rightImage) originWorldPos = rightImage.rectTransform.position;
+        var leftRt0 = SafeRect(leftImage);
+        var rightRt0 = SafeRect(rightImage);
+        if (leftRt0) originWorldPos = leftRt0.position;
+        else if (rightRt0) originWorldPos = rightRt0.position;
         originWorldPos.z = 0f;
 
         float dynamicSplitOffset = _cellSizePx * splitOffsetFactor;
@@ -201,23 +212,27 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             float u = Mathf.Clamp01(st / splitTime);
             u = u * u * (3f - 2f * u);
 
-            if (leftImage)
-                leftImage.rectTransform.anchoredPosition = Vector2.LerpUnclamped(leftStart, leftTarget, u);
-            if (rightImage)
-                rightImage.rectTransform.anchoredPosition = Vector2.LerpUnclamped(rightStart, rightTarget, u);
+            var leftRt = SafeRect(leftImage);
+            if (leftRt)
+                leftRt.anchoredPosition = Vector2.LerpUnclamped(leftStart, leftTarget, u);
+
+            var rightRt = SafeRect(rightImage);
+            if (rightRt)
+                rightRt.anchoredPosition = Vector2.LerpUnclamped(rightStart, rightTarget, u);
 
             yield return null;
         }
 
-        if (leftImage) leftImage.rectTransform.anchoredPosition = leftTarget;
-        if (rightImage) rightImage.rectTransform.anchoredPosition = rightTarget;
+        var leftRt1 = SafeRect(leftImage);
+        if (leftRt1) leftRt1.anchoredPosition = leftTarget;
+        var rightRt1 = SafeRect(rightImage);
+        if (rightRt1) rightRt1.anchoredPosition = rightTarget;
 
-        if (leftImage && rocketLeftSprite) leftImage.sprite = rocketLeftSprite;
-        if (rightImage && rocketRightSprite) rightImage.sprite = rocketRightSprite;
+        if (leftImage && rocketLeftSprite && leftRt1) leftImage.sprite = rocketLeftSprite;
+        if (rightImage && rocketRightSprite && rightRt1) rightImage.sprite = rocketRightSprite;
         ApplyAxisVisualRotation();
         rocketMode = true;
 
-        // ✅ Trail'leri başlat — her iki trail de origin merkez noktasından başlar
         SpawnTrails(originWorldPos);
 
         if (_originCellValid && OnStepCell != null)
@@ -229,8 +244,11 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
         for (int i = 0; i < stepCount; i++)
         {
-            Vector2 rStart = rightImage ? rightImage.rectTransform.anchoredPosition : Vector2.zero;
-            Vector2 lStart = leftImage ? leftImage.rectTransform.anchoredPosition : Vector2.zero;
+            var rightStartRt = SafeRect(rightImage);
+            var leftStartRt = SafeRect(leftImage);
+
+            Vector2 rStart = rightStartRt ? rightStartRt.anchoredPosition : Vector2.zero;
+            Vector2 lStart = leftStartRt ? leftStartRt.anchoredPosition : Vector2.zero;
 
             Vector2 rTarget = rStart + posDir * cellSizePx;
             Vector2 lTarget = lStart + negDir * cellSizePx;
@@ -245,18 +263,22 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
                 float u = Mathf.Clamp01(mt / moveTime);
                 u = u * u * (3f - 2f * u);
 
-                if (rightImage)
-                    rightImage.rectTransform.anchoredPosition = Vector2.LerpUnclamped(rStart, rTarget, u);
-                if (leftImage)
-                    leftImage.rectTransform.anchoredPosition = Vector2.LerpUnclamped(lStart, lTarget, u);
+                var rightRt = SafeRect(rightImage);
+                if (rightRt)
+                    rightRt.anchoredPosition = Vector2.LerpUnclamped(rStart, rTarget, u);
+
+                var leftRt = SafeRect(leftImage);
+                if (leftRt)
+                    leftRt.anchoredPosition = Vector2.LerpUnclamped(lStart, lTarget, u);
 
                 UpdateTrailHeads();
-
                 yield return null;
             }
 
-            if (rightImage) rightImage.rectTransform.anchoredPosition = rTarget;
-            if (leftImage) leftImage.rectTransform.anchoredPosition = lTarget;
+            var rightRt2 = SafeRect(rightImage);
+            if (rightRt2) rightRt2.anchoredPosition = rTarget;
+            var leftRt2 = SafeRect(leftImage);
+            if (leftRt2) leftRt2.anchoredPosition = lTarget;
 
             UpdateTrailHeads();
 
@@ -288,7 +310,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
             if (emittersImpactPrefab && impactParent)
             {
-                if (rightImage && HasTileAtStep(i, true))
+                if (rightRt2 && HasTileAtStep(i, true))
                 {
                     var goR = Instantiate(emittersImpactPrefab, impactParent);
                     var rtR = goR.GetComponent<RectTransform>();
@@ -296,7 +318,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
                     EnsureAutoDestroy(goR, 0.15f);
                 }
 
-                if (leftImage && HasTileAtStep(i, false))
+                if (leftRt2 && HasTileAtStep(i, false))
                 {
                     var goL = Instantiate(emittersImpactPrefab, impactParent);
                     var rtL = goL.GetComponent<RectTransform>();
@@ -305,8 +327,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
                 }
             }
 
-            if (rightImage) SpawnAfterImage(rightImage, rTarget);
-            if (leftImage) SpawnAfterImage(leftImage, lTarget);
+            if (rightRt2 && rightImage) SpawnAfterImage(rightImage, rTarget);
+            if (leftRt2 && leftImage) SpawnAfterImage(leftImage, lTarget);
 
             if (restTime > 0f)
             {
@@ -320,7 +342,6 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         }
 
         rocketMode = false;
-
         FadeOutTrails();
 
         if (hideOnComplete)
@@ -328,8 +349,10 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             if (leftImage) leftImage.enabled = false;
             if (rightImage) rightImage.enabled = false;
 
-            if (leftImage) leftImage.rectTransform.anchoredPosition = leftStart;
-            if (rightImage) rightImage.rectTransform.anchoredPosition = rightStart;
+            var leftRt = SafeRect(leftImage);
+            if (leftRt) leftRt.anchoredPosition = leftStart;
+            var rightRt = SafeRect(rightImage);
+            if (rightRt) rightRt.anchoredPosition = rightStart;
         }
 
         CompleteOnce();
@@ -339,53 +362,54 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     {
         float visualSize = Mathf.Max(1f, _cellSizePx * headSizeFactor);
 
-        if (leftImage)
+        var leftRt = SafeRect(leftImage);
+        if (leftRt)
         {
-            var rt = leftImage.rectTransform;
-            rt.sizeDelta = new Vector2(visualSize, visualSize);
-            rt.localScale = Vector3.one;
+            leftRt.sizeDelta = new Vector2(visualSize, visualSize);
+            leftRt.localScale = Vector3.one;
         }
 
-        if (rightImage)
+        var rightRt = SafeRect(rightImage);
+        if (rightRt)
         {
-            var rt = rightImage.rectTransform;
-            rt.sizeDelta = new Vector2(visualSize, visualSize);
-            rt.localScale = Vector3.one;
+            rightRt.sizeDelta = new Vector2(visualSize, visualSize);
+            rightRt.localScale = Vector3.one;
         }
     }
-    // ────────────────────────────────────────────────
-    // ✅ Trail yönetimi
-    // ────────────────────────────────────────────────
+
     private void SpawnTrails(Vector3 originWorldPos)
     {
         if (!enableTrailBeam || !trailBeamPrefab)
-        {
-            Debug.LogWarning($"[LineTravelSplit.SpawnTrails] SKIP — enableTrailBeam={enableTrailBeam} prefab={trailBeamPrefab}");
             return;
-        }
 
         RectTransform parent = trailParent ? trailParent : afterImageParent;
         if (!parent)
-        {
-            Debug.LogWarning("[LineTravelSplit.SpawnTrails] SKIP — no parent");
             return;
+
+        var leftRt = SafeRect(leftImage);
+        if (_leftTrail && !leftRt)
+        {
+            _leftTrail.Kill();
+            _leftTrail = null;
         }
 
-        // ✅ Her iki trail de aynı merkez noktasından başlar
-        //    Böylece trail, origin cell'den board kenarına kadar tüm yolu kapsar
-        Debug.Log($"[LineTravelSplit.SpawnTrails] originWorldPos={originWorldPos}");
-
-        if (leftImage)
+        if (leftRt)
         {
             _leftTrail = CreateTrailInstance(parent, originWorldPos);
-            // İlk head = roketin şu anki pozisyonu (split sonrası)
-            _leftTrail.UpdateHead(leftImage.rectTransform.position);
+            _leftTrail.UpdateHead(leftRt.position);
         }
 
-        if (rightImage)
+        var rightRt = SafeRect(rightImage);
+        if (_rightTrail && !rightRt)
+        {
+            _rightTrail.Kill();
+            _rightTrail = null;
+        }
+
+        if (rightRt)
         {
             _rightTrail = CreateTrailInstance(parent, originWorldPos);
-            _rightTrail.UpdateHead(rightImage.rectTransform.position);
+            _rightTrail.UpdateHead(rightRt.position);
         }
     }
 
@@ -395,17 +419,25 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         beam.transform.position = Vector3.zero;
         beam.transform.localRotation = Quaternion.identity;
         beam.transform.localScale = Vector3.one;
-
-        Debug.Log($"[LineTravelSplit.CreateTrail] parent={parent.name} beamWorldScale={beam.transform.lossyScale} originWorld={originWorld}");
-
         beam.Init(originWorld);
         return beam;
     }
 
     private void UpdateTrailHeads()
     {
-        if (_rightTrail && rightImage) _rightTrail.UpdateHead(rightImage.rectTransform.position);
-        if (_leftTrail && leftImage) _leftTrail.UpdateHead(leftImage.rectTransform.position);
+        var rightRt = SafeRect(rightImage);
+        if (_rightTrail != null)
+        {
+            if (rightRt != null) _rightTrail.UpdateHead(rightRt.position);
+            else { _rightTrail.Kill(); _rightTrail = null; }
+        }
+
+        var leftRt = SafeRect(leftImage);
+        if (_leftTrail != null)
+        {
+            if (leftRt != null) _leftTrail.UpdateHead(leftRt.position);
+            else { _leftTrail.Kill(); _leftTrail = null; }
+        }
     }
 
     private void FadeOutTrails()
@@ -421,7 +453,6 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         if (_leftTrail) { _leftTrail.Kill(); _leftTrail = null; }
         if (_rightTrail) { _rightTrail.Kill(); _rightTrail = null; }
     }
-    // ────────────────────────────────────────────────
 
     private void CompleteOnce()
     {
@@ -452,6 +483,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     private void SpawnAfterImage(Image sourceImage, Vector2 anchoredPos)
     {
         if (!rocketAfterImagePrefab || !afterImageParent || !sourceImage) return;
+        var sourceRt = SafeRect(sourceImage);
+        if (!sourceRt) return;
 
         var go = Instantiate(rocketAfterImagePrefab, afterImageParent);
         EnsureAutoDestroy(go, afterImageLife + 0.05f);
@@ -463,12 +496,12 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         img.sprite = sourceImage.sprite;
         img.color = new Color(1f, 1f, 1f, afterImageAlpha);
 
-        rt.anchorMin = sourceImage.rectTransform.anchorMin;
-        rt.anchorMax = sourceImage.rectTransform.anchorMax;
-        rt.pivot = sourceImage.rectTransform.pivot;
-        rt.sizeDelta = sourceImage.rectTransform.sizeDelta;
-        rt.localScale = sourceImage.rectTransform.localScale;
-        rt.localRotation = sourceImage.rectTransform.localRotation;
+        rt.anchorMin = sourceRt.anchorMin;
+        rt.anchorMax = sourceRt.anchorMax;
+        rt.pivot = sourceRt.pivot;
+        rt.sizeDelta = sourceRt.sizeDelta;
+        rt.localScale = sourceRt.localScale;
+        rt.localRotation = sourceRt.localRotation;
         rt.anchoredPosition = anchoredPos;
 
         StartCoroutine(FadeOnly(img, rt, afterImageLife, afterImageScaleUp));
@@ -503,17 +536,19 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
     private void ApplyAxisVisualRotation()
     {
-        if (!leftImage || !rightImage) return;
+        var leftRt = SafeRect(leftImage);
+        var rightRt = SafeRect(rightImage);
+        if (!leftRt || !rightRt) return;
 
         if (axis == LineAxis.Horizontal)
         {
-            leftImage.rectTransform.localEulerAngles = Vector3.zero;
-            rightImage.rectTransform.localEulerAngles = Vector3.zero;
+            leftRt.localEulerAngles = Vector3.zero;
+            rightRt.localEulerAngles = Vector3.zero;
         }
         else
         {
-            rightImage.rectTransform.localEulerAngles = new Vector3(0f, 0f, -90f);
-            leftImage.rectTransform.localEulerAngles = new Vector3(0f, 0f, -90f);
+            rightRt.localEulerAngles = new Vector3(0f, 0f, -90f);
+            leftRt.localEulerAngles = new Vector3(0f, 0f, -90f);
         }
     }
 
@@ -523,8 +558,11 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
         float scaleOffset = 1f + Mathf.Sin(Time.time * pulseSpeed) * pulseAmount;
 
-        if (leftImage) leftImage.rectTransform.localScale = new Vector3(scaleOffset, 1f, 1f);
-        if (rightImage) rightImage.rectTransform.localScale = new Vector3(scaleOffset, 1f, 1f);
+        var leftRt = SafeRect(leftImage);
+        if (leftRt) leftRt.localScale = new Vector3(scaleOffset, 1f, 1f);
+
+        var rightRt = SafeRect(rightImage);
+        if (rightRt) rightRt.localScale = new Vector3(scaleOffset, 1f, 1f);
     }
 
     public float EstimateDuration(int steps)
