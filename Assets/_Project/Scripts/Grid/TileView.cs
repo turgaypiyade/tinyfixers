@@ -204,10 +204,31 @@ public class TileView : MonoBehaviour,
         ApplyTileSize(tileSize);
     }
 
+
+    // ============================================================
+    // MoveToGrid v3 — SÜTUN TRENİ DÜZELTMESİ
+    // 
+    // SORUN: v=13.3'ten başlayıp anticipation fazıyla birlikte
+    //        her taş kendi ivme curve'ünü izliyordu → kısa mesafe
+    //        taşları erken duruyor, üstten gelenler üste biniyordu.
+    //
+    // ÇÖZÜM: Anticipation kaldırıldı. Tüm taşlar aynı anda,
+    //        v_start = V_MAX ile başlar. Hepsi sabit v_max hızında
+    //        iner → aralarındaki mesafe DAİMA korunur → rigid tren.
+    //        İvme tam başlangıç anında bitirildiği için
+    //        görsel olarak "beraber akma" hissi verir.
+    //
+    // TileView.cs içinde mevcut MoveToGrid'i BU VERSIYONLA değiştir.
+    // Sınıf üstüne const'ları koy.
+    // ============================================================
+
+    // Videoya kalibre edilmiş terminal hız (hücre/saniye)
+    private const float FALL_VELOCITY_CELLS_PER_SEC = 19.9f;  // ~2820 px/s @ 142px hücre
+
     public IEnumerator MoveToGrid(
        int tileSize,
-       float duration,
-       AnimationCurve easingCurve = null,
+       float duration,           // YOK SAYILIR
+       AnimationCurve easingCurve = null,   // YOK SAYILIR
        bool enableSettle = false,
        float settleDuration = 0.06f,
        float settleStrength = 0.04f,
@@ -215,9 +236,7 @@ public class TileView : MonoBehaviour,
        float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
-
-        if (rt == null || !rt)
-            yield break;
+        if (rt == null || !rt) yield break;
 
         RectTransform visualRt = iconImage != null ? iconImage.rectTransform : null;
         Vector3 visualBaseScale = visualRt != null ? visualRt.localScale : Vector3.one;
@@ -227,74 +246,67 @@ public class TileView : MonoBehaviour,
 
         bool movedDown = end.y < start.y - 0.5f;
         float travelPx = Mathf.Abs(end.y - start.y);
-        float fallCells = tileSize > 0 ? travelPx / tileSize : 0f;
-        float fallAmp = Mathf.Clamp01(fallCells / 4f);
 
-        // Havada çok hafif stretch: referans videoda okunaklı ama abartısız.
-        float airStretchY = Mathf.Lerp(0.015f, 0.050f, fallAmp);
-        float airStretchX = airStretchY * 0.55f;
-
-        float t = 0f;
-        while (t < 1f)
+        if (!movedDown || travelPx < 1f)
         {
-            if (rt == null || !rt)
-                yield break;
+            rt.anchoredPosition = end;
+            if (rt != null && rt) SnapToGrid(tileSize);
+            yield break;
+        }
 
-            t += Time.deltaTime / Mathf.Max(0.0001f, duration);
-            float normalizedT = Mathf.Clamp01(t);
+        // Sabit hız — tüm taşlar aynı hızda iner, mesafe farkları doğal olarak korunur
+        float velocityPx = FALL_VELOCITY_CELLS_PER_SEC * tileSize;
 
-            float s;
-            if (easingCurve != null && easingCurve.length > 0)
-                s = Mathf.Clamp01(easingCurve.Evaluate(normalizedT));
-            else
-                s = normalizedT * normalizedT * normalizedT * (normalizedT * (6f * normalizedT - 15f) + 10f);
+        float fallCells = travelPx / tileSize;
+        float fallAmp = Mathf.Clamp01(fallCells / 4f);
+        float stretchY = Mathf.Lerp(0.015f, 0.050f, fallAmp);
+        float stretchX = stretchY * 0.55f;
 
-            rt.anchoredPosition = Vector2.Lerp(start, end, s);
+        Vector2 dir = (end - start).normalized;
+        Vector2 current = start;
+        float remaining = travelPx;
 
-            if (visualRt != null)
+        // Havada hafif stretch
+        if (visualRt != null)
+        {
+            float sx = 1f - stretchX;
+            float sy = 1f + stretchY;
+            visualRt.localScale = new Vector3(sx, sy, 1f);
+        }
+
+        while (remaining > 0.5f)
+        {
+            if (rt == null || !rt) yield break;
+            float dt = Time.deltaTime;
+            float step = velocityPx * dt;
+
+            if (step >= remaining)
             {
-                if (movedDown)
-                {
-                    float mid = Mathf.Sin(normalizedT * Mathf.PI);
-                    float speedBias = Mathf.SmoothStep(0f, 1f, normalizedT);
-                    float stretchWeight = mid * Mathf.Lerp(0.55f, 1f, speedBias);
-
-                    float sx = 1f - airStretchX * stretchWeight;
-                    float sy = 1f + airStretchY * stretchWeight;
-                    visualRt.localScale = new Vector3(sx, sy, 1f);
-                }
-                else
-                {
-                    visualRt.localScale = visualBaseScale;
-                }
+                rt.anchoredPosition = end;
+                break;
             }
+
+            current += dir * step;
+            rt.anchoredPosition = current;
+            remaining -= step;
 
             yield return null;
         }
 
-        if (rt == null || !rt)
-            yield break;
+        if (rt == null || !rt) yield break;
 
         rt.anchoredPosition = end;
-
-        if (visualRt != null)
-            visualRt.localScale = visualBaseScale;
+        if (visualRt != null) visualRt.localScale = visualBaseScale;
 
         if (movedDown && enableSettle && isActiveAndEnabled)
         {
             yield return CoFallSettleImpact(
-                tileSize,
-                settleDuration,
-                settleStrength,
-                settleStretchX,
-                settleOvershoot);
+                tileSize, settleDuration, settleStrength,
+                settleStretchX, settleOvershoot);
         }
 
-        if (visualRt != null)
-            visualRt.localScale = visualBaseScale;
-
-        if (rt != null && rt)
-            SnapToGrid(tileSize);
+        if (visualRt != null) visualRt.localScale = visualBaseScale;
+        if (rt != null && rt) SnapToGrid(tileSize);
     }
     private IEnumerator CoFallSettleImpact(
         int tileSize,

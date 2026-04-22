@@ -213,7 +213,7 @@ public class CascadeLogic
                             board.RefreshTileObstacleVisual(view);
                         }
 
-                        nextSpawnY--;
+                        //nextSpawnY--;
 
                         int dist = Mathf.Abs(y - spawnFromY);
                         float duration = board.GetFallDurationForDistance(dist);

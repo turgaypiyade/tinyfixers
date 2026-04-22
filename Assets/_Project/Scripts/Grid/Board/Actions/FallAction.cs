@@ -64,6 +64,35 @@ public class FallAction : BoardAction
         return max;
     }
 
+    // ============================================================
+    // FallAction.cs — ExecuteVisuals metodunu BU VERSIYONLA değiştir
+    //
+    // SORUN: CascadeLogic taşları üstten aşağı spawn ediyor:
+    //   - İlk yaratılan taş: fromY=-2, toY=en_üst_boş (kısa mesafe)
+    //   - Son yaratılan taş: fromY=-9, toY=en_dip (uzun mesafe)
+    //   Hepsi aynı hızla düşünce, ilk yaratılan (kısa mesafe) önce duruyor,
+    //   arkadan gelen (uzun mesafe) onun üstüne biniyor.
+    //
+    // ÇÖZÜM: toY'si büyük olan (dibe gidecek) önce başlasın,
+    //        toY'si küçük olan (üste yerleşecek) sonra başlasın.
+    //        Aradaki delay = 1 hücre düşme süresi ≈ 0.05s
+    //        Böylece doğal tren oluşur: alttaki önce, üstteki son.
+    // ============================================================
+
+    // ============================================================
+    // FallAction.cs — ExecuteVisuals metodunu BU VERSIYONLA değiştir
+    //
+    // SORUN ZİNCİRİ:
+    //  1. Taşlar farklı Y'lerden spawn oluyordu (-2, -3, -4, -5...)
+    //     → üst üste binme, ekran dışında "yığılma"
+    //  2. Şimdi (CascadeLogic düzeltmesiyle) aynı Y'den spawn olacaklar
+    //     → hepsi aynı mesafe gitmeyecek, dibe giden 14, üste giden 4 hücre
+    //
+    // ÇÖZÜM: toY'si büyük olan (dibe gidecek) önce başlasın.
+    //        rowDelay = (maxToY - r.toY) * PER_CELL_DELAY
+    //        PER_CELL_DELAY ≈ 1 hücre düşme süresi = 1 / v_max = 1 / 19.9 ≈ 0.050s
+    // ============================================================
+
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
         if (fallRecords.Count == 0) yield break;
@@ -71,9 +100,7 @@ public class FallAction : BoardAction
         float _faStart = Time.realtimeSinceStartup;
 
         float columnStep = sequencer.Board.FallColumnStep;
-        float cascadeStep = sequencer.Board.FallCascadeStep;
 
-        // Debug info
         float maxDur = 0f, minDur = float.MaxValue, maxBaseDelay = 0f;
         int maxDist = 0;
         foreach (var r in fallRecords)
@@ -84,9 +111,23 @@ public class FallAction : BoardAction
             if (dist > maxDist) maxDist = dist;
             if (r.startDelay > maxBaseDelay) maxBaseDelay = r.startDelay;
         }
-        Debug.Log($"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} dur=[{minDur:0.000}-{maxDur:0.000}]s baseDelay=[0-{maxBaseDelay:0.000}]s");
+        Debug.Log($"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} dur=[{minDur:0.000}-{maxDur:0.000}]s");
 
         sequencer.Board.PlayTileFallSfx(fallRecords.Count, maxDist);
+
+        // Bir hücre düşme süresi — v_max = 19.9 hücre/s'ye karşılık gelir.
+        // MoveToGrid v3'teki sabit hızla birebir uyumlu.
+        const float PER_CELL_DELAY = 0.050f;
+
+        // Her sütunda en büyük toY'yi bul (dip referans)
+        var maxToYPerColumn = new Dictionary<int, int>();
+        foreach (var r in fallRecords)
+        {
+            if (r.tile == null) continue;
+            int col = r.tile.X;
+            if (!maxToYPerColumn.ContainsKey(col) || r.toY > maxToYPerColumn[col])
+                maxToYPerColumn[col] = r.toY;
+        }
 
         var moves = new List<IEnumerator>(fallRecords.Count);
         var delays = new List<float>(fallRecords.Count);
@@ -101,22 +142,23 @@ public class FallAction : BoardAction
                     r.useSettle, r.settleDuration, r.settleStrength,
                     sequencer.Board.FallSettleStretchX, sequencer.Board.FallSettleOvershoot));
 
-                // İstenen his:
-                // Aynı kolon içindeki taşlar row row waterfall gibi değil,
-                // tek kolon treni gibi birlikte aksın.
-                // Bu yüzden rowDelay kaldırılıyor.
+                // Dibe giden taş önce başlar (delay=0),
+                // üste gidecek taş her 1 hücre üst için +PER_CELL_DELAY bekler.
+                int maxToY = maxToYPerColumn[r.tile.X];
+                float rowDelay = (maxToY - r.toY) * PER_CELL_DELAY;
+
                 float colDelay = columnStep > 0f ? r.tile.X * columnStep : 0f;
-                float totalDelay = r.startDelay + colDelay;
+                float totalDelay = r.startDelay + colDelay + rowDelay;
 
                 delays.Add(totalDelay);
                 if (totalDelay > maxTotalDelay) maxTotalDelay = totalDelay;
             }
         }
 
-        Debug.Log($"[Fall] stagger maxDelay={maxTotalDelay:0.000}s colStep={columnStep} cascStep={cascadeStep}");
+        Debug.Log($"[Fall] stagger maxDelay={maxTotalDelay:0.000}s perCellDelay={PER_CELL_DELAY}");
 
         yield return sequencer.Animator.RunManyWithDelays(moves, delays);
 
-        Debug.Log($"[Fall] DONE +{(Time.realtimeSinceStartup - _faStart):0.000}s (expected ~{maxDur + maxTotalDelay:0.000}s)");
+        Debug.Log($"[Fall] DONE +{(Time.realtimeSinceStartup - _faStart):0.000}s");
     }
 }
