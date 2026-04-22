@@ -41,7 +41,7 @@ public class CascadeLogic
         // Yeni: 1 merged FallAction = ~0.25s
         var merged = new FallAction();
         float cumulativeDelay = 0f;
-        const float overlapRatio = 0.4f; // önceki pass'ın %40'ında sonraki başlar
+        const float overlapRatio = 1f; // önceki pass'ın %40'ında sonraki başlar
 
         for (int pass = 0; pass < maxPass; pass++)
         {
@@ -229,6 +229,8 @@ public class CascadeLogic
                 segmentTop = segmentBottom - 1;
             }
 
+            // Sütundaki maksimum mesafeyi bul — en geç inen taş bu
+            // Alttaki taşlar bekler ki üstekilere yetişsin → sütun bütün halinde iner
             for (int i = 0; i < _colTiles.Count; i++)
             {
                 var tile = _colTiles[i];
@@ -240,6 +242,8 @@ public class CascadeLogic
                 float settleDur = board.FallSettleDuration;
                 float settleStr = board.FallSettleStrength;
 
+                // Sadece gerçekten stabil bir desteğe oturuyorsa settle ver.
+                // Referans videodaki his: havadaki zincir taşlara toplu jelly settle yok.
                 if (board.ShouldEnableFallSettleThisPass() && dist > 0)
                 {
                     int belowY = targetY + 1;

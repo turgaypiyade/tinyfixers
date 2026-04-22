@@ -205,14 +205,14 @@ public class TileView : MonoBehaviour,
     }
 
     public IEnumerator MoveToGrid(
-      int tileSize,
-      float duration,
-      AnimationCurve easingCurve = null,
-      bool enableSettle = false,
-      float settleDuration = 0.06f,
-      float settleStrength = 0.04f,
-      float settleStretchX = 0f,
-      float settleOvershoot = 0f)
+       int tileSize,
+       float duration,
+       AnimationCurve easingCurve = null,
+       bool enableSettle = false,
+       float settleDuration = 0.06f,
+       float settleStrength = 0.04f,
+       float settleStretchX = 0f,
+       float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
 
@@ -230,6 +230,7 @@ public class TileView : MonoBehaviour,
         float fallCells = tileSize > 0 ? travelPx / tileSize : 0f;
         float fallAmp = Mathf.Clamp01(fallCells / 4f);
 
+        // Havada çok hafif stretch: referans videoda okunaklı ama abartısız.
         float airStretchY = Mathf.Lerp(0.015f, 0.050f, fallAmp);
         float airStretchX = airStretchY * 0.55f;
 
@@ -295,6 +296,136 @@ public class TileView : MonoBehaviour,
         if (rt != null && rt)
             SnapToGrid(tileSize);
     }
+    private IEnumerator CoFallSettleImpact(
+        int tileSize,
+        float duration,
+        float strength,
+        float stretchX,
+        float overshootRatio)
+    {
+        if (rt == null || !rt)
+            yield break;
+
+        RectTransform iconRt = iconImage != null ? iconImage.rectTransform : null;
+
+        Vector2 basePos = rt.anchoredPosition;
+        Vector3 baseScale = iconRt != null ? iconRt.localScale : Vector3.one;
+
+        float dur = Mathf.Max(0.01f, duration);
+
+        float squashY = Mathf.Clamp(strength, 0.02f, 0.28f);
+        float squashX = Mathf.Clamp(stretchX, 0.00f, 0.16f);
+        float overshootPx = tileSize * Mathf.Clamp(overshootRatio, 0.00f, 0.10f);
+
+        Vector2 downPos = basePos + new Vector2(0f, -overshootPx);
+        Vector2 reboundPos = basePos + new Vector2(0f, overshootPx * 0.30f);
+
+        Vector3 impactScale = new Vector3(1f + squashX, 1f - squashY, 1f);
+        Vector3 reboundScale = new Vector3(1f - squashX * 0.35f, 1f + squashY * 0.20f, 1f);
+
+        float p1Dur = dur * 0.22f;
+        float p2Dur = dur * 0.30f;
+        float p3Dur = dur * 0.48f;
+
+        float t = 0f;
+        while (t < p1Dur)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, p1Dur));
+            float e = 1f - (1f - k) * (1f - k);
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(basePos, downPos, e);
+
+            if (iconRt != null)
+                iconRt.localScale = Vector3.LerpUnclamped(baseScale, impactScale, e);
+
+            yield return null;
+        }
+
+        t = 0f;
+        while (t < p2Dur)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, p2Dur));
+            float e = 1f - (1f - k) * (1f - k);
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(downPos, reboundPos, e);
+
+            if (iconRt != null)
+                iconRt.localScale = Vector3.LerpUnclamped(impactScale, reboundScale, e);
+
+            yield return null;
+        }
+
+        t = 0f;
+        while (t < p3Dur)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, p3Dur));
+            float e = k * k * (3f - 2f * k);
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(reboundPos, basePos, e);
+
+            if (iconRt != null)
+                iconRt.localScale = Vector3.LerpUnclamped(reboundScale, baseScale, e);
+
+            yield return null;
+        }
+
+        if (rt != null && rt)
+            rt.anchoredPosition = basePos;
+
+        if (iconRt != null)
+            iconRt.localScale = baseScale;
+    }
+    private IEnumerator CoSubtleImpact(float duration, float strength)
+    {
+        if (iconImage == null) yield break;
+        var iconRt = iconImage.rectTransform;
+        if (iconRt == null) yield break;
+
+        float s = Mathf.Clamp(strength, 0.02f, 0.2f);
+        float dur = Mathf.Max(0.04f, duration);
+        Vector3 normal = Vector3.one;
+        Vector3 squashed = new Vector3(1f, 1f - s, 1f);
+
+        float down = dur * 0.30f;
+        float up = dur * 0.70f;
+
+        float t = 0f;
+        while (t < down)
+        {
+            if (this == null || iconImage == null || iconRt == null) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / down);
+            iconRt.localScale = Vector3.LerpUnclamped(normal, squashed, k);
+            yield return null;
+        }
+
+        t = 0f;
+        while (t < up)
+        {
+            if (this == null || iconImage == null || iconRt == null) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / up);
+            float e = 1f - (1f - k) * (1f - k);
+            iconRt.localScale = Vector3.LerpUnclamped(squashed, normal, e);
+            yield return null;
+        }
+
+        if (this != null && iconImage != null && iconRt != null)
+            iconRt.localScale = normal;
+    }
+
     private void SetPivotWithoutVisualJump(Vector2 newPivot)
     {
         if (rt == null)
@@ -521,10 +652,62 @@ public class TileView : MonoBehaviour,
         StartCoroutine(CoFallSettleSquash(duration, strength));
     }
 
-    /// <summary>
-    /// Basit Y-ekseni squash: scaleY 1 → (1-strength) → 1, pivot alt-merkez, X sabit.
-    /// %20 ezilme + %80 geri açılma.
-    /// </summary>
+    private IEnumerator CoImpactSquash(float duration, float strength, float stretchX, float overshoot, int tileSize)
+    {
+        if (iconImage == null) yield break;
+        var iconRt = iconImage.rectTransform;
+        if (iconRt == null) yield break;
+
+        float sy = Mathf.Clamp(strength, 0.05f, 0.7f);
+        float sx = Mathf.Clamp(stretchX, 0f, 0.5f);
+        float dur = Mathf.Max(0.05f, duration);
+
+        Vector3 normal = Vector3.one;
+        Vector3 squashed = new Vector3(1f + sx, 1f - sy, 1f);
+        Vector3 stretched = new Vector3(1f - sx * 0.3f, 1f + sy * 0.15f, 1f);
+
+        float p1 = dur * 0.25f;
+        float p2 = dur * 0.35f;
+        float p3 = dur * 0.40f;
+
+        float t = 0f;
+        while (t < p1)
+        {
+            if (this == null || iconImage == null || iconRt == null) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / p1);
+            float e = 1f - (1f - k) * (1f - k);
+            iconRt.localScale = Vector3.LerpUnclamped(normal, squashed, e);
+            yield return null;
+        }
+
+        t = 0f;
+        while (t < p2)
+        {
+            if (this == null || iconImage == null || iconRt == null) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / p2);
+            float e = 1f - (1f - k) * (1f - k);
+            iconRt.localScale = Vector3.LerpUnclamped(squashed, stretched, e);
+            yield return null;
+        }
+
+        t = 0f;
+        while (t < p3)
+        {
+            if (this == null || iconImage == null || iconRt == null) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / p3);
+            float e = 1f - (1f - k) * (1f - k);
+            iconRt.localScale = Vector3.LerpUnclamped(stretched, normal, e);
+            yield return null;
+        }
+
+        if (this != null && iconImage != null && iconRt != null)
+            iconRt.localScale = normal;
+    }
+
+    // Legacy — PlayBeingLandedOnSquash için
     private IEnumerator CoFallSettleSquash(float duration, float strength)
     {
         if (iconImage == null) yield break;
@@ -532,9 +715,8 @@ public class TileView : MonoBehaviour,
         if (iconRt == null) yield break;
 
         float s = Mathf.Clamp(strength, 0f, 0.9f);
-        float squashY = Mathf.Max(0.1f, 1f - s);
         Vector3 normal = Vector3.one;
-        Vector3 squashed = new Vector3(1f, squashY, 1f);
+        Vector3 squashed = new Vector3(1f, Mathf.Max(0.1f, 1f - s), 1f);
 
         float downTime = Mathf.Max(0.001f, duration * 0.20f);
         float upTime = Mathf.Max(0.001f, duration * 0.80f);
@@ -545,8 +727,7 @@ public class TileView : MonoBehaviour,
             if (iconRt == null) yield break;
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / downTime);
-            float e = k * k;
-            iconRt.localScale = Vector3.LerpUnclamped(normal, squashed, e);
+            iconRt.localScale = Vector3.LerpUnclamped(normal, squashed, k * k);
             yield return null;
         }
 
@@ -561,104 +742,9 @@ public class TileView : MonoBehaviour,
             yield return null;
         }
 
-        if (iconRt != null)
-            iconRt.localScale = normal;
+        if (iconRt != null) iconRt.localScale = normal;
     }
-    private IEnumerator CoFallSettleImpact(
-        int tileSize,
-        float duration,
-        float strength,
-        float stretchX,
-        float overshootRatio)
-    {
-        if (rt == null || !rt)
-            yield break;
 
-        RectTransform iconRt = iconImage != null ? iconImage.rectTransform : null;
-
-        Vector2 basePos = rt.anchoredPosition;
-        Vector3 baseScale = iconRt != null ? iconRt.localScale : Vector3.one;
-
-        float dur = Mathf.Max(0.01f, duration);
-
-        // Inspector’daki mevcut alanları gerçek kullanıma sokuyoruz.
-        float squashY = Mathf.Clamp(strength, 0.02f, 0.28f);
-        float squashX = Mathf.Clamp(stretchX, 0.00f, 0.16f);
-        float overshootPx = tileSize * Mathf.Clamp(overshootRatio, 0.00f, 0.10f);
-
-        Vector2 downPos = basePos + new Vector2(0f, -overshootPx);
-        Vector2 reboundPos = basePos + new Vector2(0f, overshootPx * 0.30f);
-
-        Vector3 impactScale = new Vector3(1f + squashX, 1f - squashY, 1f);
-        Vector3 reboundScale = new Vector3(1f - squashX * 0.35f, 1f + squashY * 0.20f, 1f);
-
-        float p1Dur = dur * 0.22f;
-        float p2Dur = dur * 0.30f;
-        float p3Dur = dur * 0.48f;
-
-        // Phase 1: impact
-        float t = 0f;
-        while (t < p1Dur)
-        {
-            if (rt == null || !rt)
-                yield break;
-
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, p1Dur));
-            float e = 1f - (1f - k) * (1f - k);
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(basePos, downPos, e);
-
-            if (iconRt != null)
-                iconRt.localScale = Vector3.LerpUnclamped(baseScale, impactScale, e);
-
-            yield return null;
-        }
-
-        // Phase 2: rebound
-        t = 0f;
-        while (t < p2Dur)
-        {
-            if (rt == null || !rt)
-                yield break;
-
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, p2Dur));
-            float e = 1f - (1f - k) * (1f - k);
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(downPos, reboundPos, e);
-
-            if (iconRt != null)
-                iconRt.localScale = Vector3.LerpUnclamped(impactScale, reboundScale, e);
-
-            yield return null;
-        }
-
-        // Phase 3: settle
-        t = 0f;
-        while (t < p3Dur)
-        {
-            if (rt == null || !rt)
-                yield break;
-
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, p3Dur));
-            float e = k * k * (3f - 2f * k);
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(reboundPos, basePos, e);
-
-            if (iconRt != null)
-                iconRt.localScale = Vector3.LerpUnclamped(reboundScale, baseScale, e);
-
-            yield return null;
-        }
-
-        if (rt != null && rt)
-            rt.anchoredPosition = basePos;
-
-        if (iconRt != null)
-            iconRt.localScale = baseScale;
-    }
     private void RestorePivot(Vector2 originalPivot)
     {
         if (rt == null || !rt) return;

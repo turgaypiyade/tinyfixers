@@ -39,7 +39,6 @@ public class BoardController : MonoBehaviour
     [SerializeField, Range(0f, 0.6f)] private float fallSettleStretchX = 0.20f;
     [Tooltip("Çarpma anında hedefin altına inme oranı (hücre boyuna göre). 0.12 = hücre yüksekliğinin %12'si kadar aşağı taşar.")]
     [SerializeField, Range(0f, 0.4f)] private float fallSettleOvershoot = 0.12f;
-    [SerializeField] private float fallCascadeStep = 0.02f;
     internal float FallColumnStep => Mathf.Max(0f, fallColumnStep);
 
     [Header("Juice (Only 4+ / Power)")]
@@ -302,7 +301,7 @@ public class BoardController : MonoBehaviour
     internal float FallSettleStrength => Mathf.Max(0f, fallSettleStrength);
     internal float FallSettleStretchX => Mathf.Max(0f, fallSettleStretchX);
     internal float FallSettleOvershoot => Mathf.Max(0f, fallSettleOvershoot);
-    internal float FallCascadeStep => Mathf.Max(0f, fallCascadeStep);
+    internal float FallCascadeStep => 0f;
     internal float PreClearDelay => preClearDelay;
     internal float ShakeDuration => shakeDuration;
     internal float ShakeStrength => shakeStrength;

@@ -36,12 +36,12 @@ MonoBehaviour:
     legacyBehavior: 1
   - id: 3
     stages:
-    - sprite: {fileID: 4844588828632880817, guid: b9a80a10099174f1c81be828c7ad077f, type: 3}
+    - sprite: {fileID: -4472124559623194235, guid: c8a2cdf202f32428fa2a7b5cbc886ff2, type: 3}
       damageRule: 1
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
-    - sprite: {fileID: -8576216015541136995, guid: b9a80a10099174f1c81be828c7ad077f, type: 3}
+    - sprite: {fileID: 3881975661396130273, guid: c8a2cdf202f32428fa2a7b5cbc886ff2, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
@@ -50,7 +50,7 @@ MonoBehaviour:
     size: {x: 1, y: 1}
     hits: 2
     drawUnderTiles: 0
-    legacySprite: {fileID: 4844588828632880817, guid: b9a80a10099174f1c81be828c7ad077f, type: 3}
+    legacySprite: {fileID: -4472124559623194235, guid: c8a2cdf202f32428fa2a7b5cbc886ff2, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1

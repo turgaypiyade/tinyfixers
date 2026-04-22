@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 99c168f2190fb4ed892dd06fd9bf3be6, type: 3}
   m_Name: TileIconLibrary_Main
   m_EditorClassIdentifier: Assembly-CSharp::TileIconLibrary
-  gear: {fileID: -6008229646115953181, guid: b4e4641bbe2cb462ba1b2dfcbe6fbfe0, type: 3}
-  core: {fileID: -567308104083627945, guid: 44c6107ffd2ce4e72bc2f47bd2a2a6ad, type: 3}
+  gear: {fileID: 6387019998946701085, guid: 9a3f698e0043a4c2b9d82662fea462d7, type: 3}
+  core: {fileID: -1423335278942962143, guid: 61d3eece3a93240f7945b81a6644ee4b, type: 3}
   bolt: {fileID: -4712363700191047613, guid: f4807caae06f74a0a83142b35043a7c3, type: 3}
   plate: {fileID: 3609372343292057520, guid: e0ce5236b87e64ffcab2bd4845d286f6, type: 3}
   lineH: {fileID: 1649446296917653178, guid: 81ec88c01d8db4acdb3ee153ec8834f9, type: 3}

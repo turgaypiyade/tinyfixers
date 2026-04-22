@@ -606,45 +606,82 @@ public class GridSpawner : MonoBehaviour
     }
     private void DrawGridLines()
     {
-        if (gridLinesRoot == null)
+        if (gridLinesRoot == null || board == null)
             return;
 
-        float gridW = width * tileSize;
-        float gridH = height * tileSize;
         float thickness = Mathf.Max(1f, runtimeGridLineThickness);
 
-        for (int x = 0; x <= width; x++)
+        bool IsVisibleCell(int x, int y)
         {
-            var go = new GameObject($"GridLine_V_{x}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            if (x < 0 || x >= width || y < 0 || y >= height)
+                return false;
+
+            return !board.Holes[x, y];
+        }
+
+        void CreateLine(string name, Vector2 anchoredPos, Vector2 size)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             go.transform.SetParent(gridLinesRoot, false);
 
             var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(0, 1);
             rt.anchorMax = new Vector2(0, 1);
             rt.pivot = new Vector2(0, 1);
-            rt.anchoredPosition = new Vector2(x * tileSize - thickness * 0.5f, 0f);
-            rt.sizeDelta = new Vector2(thickness, gridH);
+            rt.anchoredPosition = anchoredPos;
+            rt.sizeDelta = size;
 
             var img = go.GetComponent<Image>();
             img.color = runtimeGridLineColor;
             img.raycastTarget = false;
         }
 
-        for (int y = 0; y <= height; y++)
+        for (int y = 0; y < height; y++)
         {
-            var go = new GameObject($"GridLine_H_{y}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            go.transform.SetParent(gridLinesRoot, false);
+            for (int x = 0; x < width; x++)
+            {
+                if (!IsVisibleCell(x, y))
+                    continue;
 
-            var rt = go.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0, 1);
-            rt.anchorMax = new Vector2(0, 1);
-            rt.pivot = new Vector2(0, 1);
-            rt.anchoredPosition = new Vector2(0f, -y * tileSize + thickness * 0.5f);
-            rt.sizeDelta = new Vector2(gridW, thickness);
+                float x0 = x * tileSize;
+                float y0 = -y * tileSize;
+                float x1 = x0 + tileSize;
+                float y1 = y0 - tileSize;
 
-            var img = go.GetComponent<Image>();
-            img.color = runtimeGridLineColor;
-            img.raycastTarget = false;
+                // Top edge: her visible cell için çiz
+                CreateLine(
+                    $"GridLine_T_{x}_{y}",
+                    new Vector2(x0, y0 + thickness * 0.5f),
+                    new Vector2(tileSize, thickness)
+                );
+
+                // Left edge: her visible cell için çiz
+                CreateLine(
+                    $"GridLine_L_{x}_{y}",
+                    new Vector2(x0 - thickness * 0.5f, y0),
+                    new Vector2(thickness, tileSize)
+                );
+
+                // Right edge: sadece sağ komşu yoksa / hole ise çiz
+                if (!IsVisibleCell(x + 1, y))
+                {
+                    CreateLine(
+                        $"GridLine_R_{x}_{y}",
+                        new Vector2(x1 - thickness * 0.5f, y0),
+                        new Vector2(thickness, tileSize)
+                    );
+                }
+
+                // Bottom edge: sadece alt komşu yoksa / hole ise çiz
+                if (!IsVisibleCell(x, y + 1))
+                {
+                    CreateLine(
+                        $"GridLine_B_{x}_{y}",
+                        new Vector2(x0, y1 + thickness * 0.5f),
+                        new Vector2(tileSize, thickness)
+                    );
+                }
+            }
         }
     }
     private void SpawnCellBg(int x, int y)

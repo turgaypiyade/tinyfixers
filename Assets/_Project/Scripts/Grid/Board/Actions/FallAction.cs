@@ -20,7 +20,7 @@ public class FallAction : BoardAction
     private List<FallRecord> fallRecords = new List<FallRecord>();
     public bool HasMoves => fallRecords.Count > 0;
 
-    public void AddMove(TileView tile, int fromY, int toY, float duration, bool useSettle, float settleDur, float settleStr, AnimationCurve curve)
+    public void AddMove(TileView tile, int fromY, int toY, float duration, bool useSettle, float settleDur, float settleStr, AnimationCurve curve, float startDelay = 0f)
     {
         fallRecords.Add(new FallRecord
         {
@@ -32,7 +32,7 @@ public class FallAction : BoardAction
             settleDuration = settleDur,
             settleStrength = settleStr,
             curve = curve,
-            startDelay = 0f
+            startDelay = startDelay
         });
     }
 
@@ -91,13 +91,6 @@ public class FallAction : BoardAction
         var moves = new List<IEnumerator>(fallRecords.Count);
         var delays = new List<float>(fallRecords.Count);
 
-        int globalMaxFromY = int.MinValue;
-        if (cascadeStep > 0f)
-        {
-            foreach (var r in fallRecords)
-                if (r.tile != null && r.fromY > globalMaxFromY) globalMaxFromY = r.fromY;
-        }
-
         float maxTotalDelay = 0f;
         foreach (var r in fallRecords)
         {
@@ -108,11 +101,13 @@ public class FallAction : BoardAction
                     r.useSettle, r.settleDuration, r.settleStrength,
                     sequencer.Board.FallSettleStretchX, sequencer.Board.FallSettleOvershoot));
 
+                // İstenen his:
+                // Aynı kolon içindeki taşlar row row waterfall gibi değil,
+                // tek kolon treni gibi birlikte aksın.
+                // Bu yüzden rowDelay kaldırılıyor.
                 float colDelay = columnStep > 0f ? r.tile.X * columnStep : 0f;
-                float rowDelay = (cascadeStep > 0f && globalMaxFromY > int.MinValue)
-                    ? Mathf.Max(0, globalMaxFromY - r.fromY) * cascadeStep
-                    : 0f;
-                float totalDelay = r.startDelay + colDelay + rowDelay;
+                float totalDelay = r.startDelay + colDelay;
+
                 delays.Add(totalDelay);
                 if (totalDelay > maxTotalDelay) maxTotalDelay = totalDelay;
             }

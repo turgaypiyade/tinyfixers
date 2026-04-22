@@ -275,7 +275,16 @@ public class LevelDataEditor : Editor
         float ox = area.x + 6;
         float oy = area.y + 6;
 
-        // cells
+        bool IsNormal(int x, int y)
+        {
+            if (x < 0 || x >= level.width || y < 0 || y >= level.height)
+                return false;
+
+            int idx = level.Index(x, y);
+            return level.cells[idx] == (int)CellType.Normal;
+        }
+
+        // Cells
         for (int y = 0; y < level.height; y++)
         {
             for (int x = 0; x < level.width; x++)
@@ -285,16 +294,14 @@ public class LevelDataEditor : Editor
 
                 bool isNormal = level.cells[idx] == (int)CellType.Normal;
 
+                // Hole hücreyi hiç çizme
                 if (isNormal)
                     EditorGUI.DrawRect(r, normalCell);
-                else
-                    EditorGUI.DrawRect(r, holeCell);
 
-                // obstacle overlay
+                // Obstacle overlay
                 var obs = (ObstacleId)level.obstacles[idx];
-                if (obs != ObstacleId.None)
+                if (isNormal && obs != ObstacleId.None)
                 {
-                    // origin değilse hafif overlay
                     if (level.obstacleOrigins[idx] != idx)
                         EditorGUI.DrawRect(r, occupiedOverlay);
                 }
@@ -308,21 +315,27 @@ public class LevelDataEditor : Editor
             }
         }
 
-        // Draw obstacles sprites (origin cells only)
+        // Obstacle sprite çizimi (sadece origin cell)
         var library = level.obstacleLibrary;
         for (int y = 0; y < level.height; y++)
         {
             for (int x = 0; x < level.width; x++)
             {
                 int idx = level.Index(x, y);
-                var obs = (ObstacleId)level.obstacles[idx];
-                if (obs == ObstacleId.None) continue;
 
-                // sadece origin hücre çizsin
-                if (level.obstacleOrigins[idx] != idx) continue;
+                if (level.cells[idx] != (int)CellType.Normal)
+                    continue;
+
+                var obs = (ObstacleId)level.obstacles[idx];
+                if (obs == ObstacleId.None)
+                    continue;
+
+                if (level.obstacleOrigins[idx] != idx)
+                    continue;
 
                 var def = library != null ? library.Get(obs) : null;
-                if (def == null || def.GetPreviewSprite() == null) continue;
+                if (def == null || def.GetPreviewSprite() == null)
+                    continue;
 
                 int w = Mathf.Max(1, def.size.x);
                 int h = Mathf.Max(1, def.size.y);
@@ -338,22 +351,40 @@ public class LevelDataEditor : Editor
             }
         }
 
-        // Grid lines
+        // Grid çizgileri: tüm dikdörtgeni değil, sadece normal hücre sınırlarını çiz
         Handles.BeginGUI();
         Handles.color = gridLine;
-        for (int x = 0; x <= level.width; x++)
+
+        for (int y = 0; y < level.height; y++)
         {
-            float px = ox + x * cellPx;
-            Handles.DrawLine(new Vector3(px, oy), new Vector3(px, oy + level.height * cellPx));
+            for (int x = 0; x < level.width; x++)
+            {
+                if (!IsNormal(x, y))
+                    continue;
+
+                float x0 = ox + x * cellPx;
+                float y0 = oy + y * cellPx;
+                float x1 = x0 + cellPx;
+                float y1 = y0 + cellPx;
+
+                // Top
+                Handles.DrawLine(new Vector3(x0, y0), new Vector3(x1, y0));
+
+                // Left
+                Handles.DrawLine(new Vector3(x0, y0), new Vector3(x0, y1));
+
+                // Sağ kenar sadece komşu yoksa/hole ise
+                if (!IsNormal(x + 1, y))
+                    Handles.DrawLine(new Vector3(x1, y0), new Vector3(x1, y1));
+
+                // Alt kenar sadece komşu yoksa/hole ise
+                if (!IsNormal(x, y + 1))
+                    Handles.DrawLine(new Vector3(x0, y1), new Vector3(x1, y1));
+            }
         }
-        for (int y = 0; y <= level.height; y++)
-        {
-            float py = oy + y * cellPx;
-            Handles.DrawLine(new Vector3(ox, py), new Vector3(ox + level.width * cellPx, py));
-        }
+
         Handles.EndGUI();
     }
-
     private void ApplyPaint(LevelData level, int x, int y)
     {
         int idx = level.Index(x, y);
@@ -396,13 +427,24 @@ public class LevelDataEditor : Editor
         int w = Mathf.Max(1, size.x);
         int h = Mathf.Max(1, size.y);
 
-        // bounds
+        // Bounds
         if (!level.InBounds(ax, ay) || !level.InBounds(ax + w - 1, ay + h - 1))
             return;
 
+        // Hole üstüne obstacle stamp etme
+        for (int y = ay; y < ay + h; y++)
+        {
+            for (int x = ax; x < ax + w; x++)
+            {
+                int idx = level.Index(x, y);
+                if (level.cells[idx] != (int)CellType.Normal)
+                    return;
+            }
+        }
+
         int originIdx = level.Index(ax, ay);
 
-        // stamp all cells in area
+        // Stamp all cells in area
         for (int y = ay; y < ay + h; y++)
         {
             for (int x = ax; x < ax + w; x++)
@@ -410,11 +452,9 @@ public class LevelDataEditor : Editor
                 int idx = level.Index(x, y);
                 level.obstacles[idx] = (int)id;
                 level.obstacleOrigins[idx] = originIdx;
-
             }
         }
 
-        // origin hücre: origins[idx] == idx olsun ki çizim tek yerde olsun
         level.obstacleOrigins[originIdx] = originIdx;
     }
 
