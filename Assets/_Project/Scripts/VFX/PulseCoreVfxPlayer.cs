@@ -32,10 +32,21 @@ public class PulseCoreVfxPlayer : MonoBehaviour
 
     public void PlayPulseVfx(Vector2 centerLocalPos, int radiusCells, int tileSize)
     {
-        if (vfxRoot == null || pulsePrefab == null)
-            return;
+        if (vfxRoot == null || pulsePrefab == null) return;
 
-        StartCoroutine(Play(centerLocalPos, radiusCells, tileSize));
+        // Yeni prefab sistemini kullan
+        var go = Instantiate(pulsePrefab, vfxRoot);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchoredPosition = centerLocalPos;
+        rt.localScale = Vector3.one;
+        rt.SetAsLastSibling();
+
+        // Yeni script'in boyutunu hücre sayısına göre ayarla
+        var fx = go.GetComponent<PulseCoreExplosionFX>();
+        if (fx != null)
+            fx.SetRadiusCells(radiusCells, tileSize);
+
+        // Eski coroutine'e gerek yok, prefab kendi OnEnable'ında başlıyor
     }
 
     public void PlayLightningAtTile(TileView tile, float duration)

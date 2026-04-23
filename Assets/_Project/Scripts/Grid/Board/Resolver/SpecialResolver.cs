@@ -316,7 +316,7 @@ public class SpecialResolver
                 EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
                 ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution),
                 UseBatchClearSpike = true,
-                DeferredSpecialBatchSize = 4,
+                DeferredSpecialBatchSize = 6,
                 EnqueueCascadeBetweenBatches = true
             });
 

@@ -1726,8 +1726,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.094444446}
-  m_AnchorMax: {x: 0.8392157, y: 2.4416666}
+  m_AnchorMin: {x: 0, y: 0.03671706}
+  m_AnchorMax: {x: 1, y: 0.9492441}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -2140,7 +2140,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PulseCoreVfxPlayer
   vfxRoot: {fileID: 1732843066}
-  pulsePrefab: {fileID: 3209808608802077291, guid: eb068a7048ab145b4baebbd3fa2c7201, type: 3}
+  pulsePrefab: {fileID: 4968833841863743568, guid: 9c88ac6c98dbb4cadb241d07d95087ad, type: 3}
   lightningPrefab: {fileID: 681422386}
   lightningFallbackSprite: {fileID: 4858321211234734463, guid: 2254ec7787b0c4002ac6e8e93e960104, type: 3}
   lightningFallbackSize: {x: 180, y: 180}
@@ -8576,7 +8576,7 @@ MonoBehaviour:
   pulsePulseExplosionPrefab: {fileID: 89739832858321300, guid: faa00e8a44ed34466b9a9aec6e73f687, type: 3}
   pulsePulseExplosionLifetime: 2.5
   pulsePulseChargeDuration: 2
-  pulsePulseExplosionRadius: 5
+  pulsePulseExplosionRadius: 4
   sfxSource: {fileID: 1410826449}
   sfxPulseCoreBoom: {fileID: 0}
   sfxPulseCoreWave: {fileID: 0}
