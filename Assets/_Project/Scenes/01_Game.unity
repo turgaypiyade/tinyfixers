@@ -8494,9 +8494,9 @@ MonoBehaviour:
     m_RotationOrder: 4
   enableFallSettle: 1
   fallSettleDuration: 0.12
-  fallSettleStrength: 0.18
+  fallSettleStrength: 0.25
   fallSettleStretchX: 0.1
-  fallSettleOvershoot: 0.02
+  fallSettleOvershoot: 0.05
   preClearDelay: 0
   shakeDuration: 0.04
   shakeStrength: 2
