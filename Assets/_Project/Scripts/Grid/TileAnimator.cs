@@ -15,6 +15,19 @@ public sealed class TileAnimator
         this.board = board;
     }
 
+    // ============================================================
+    // ROYAL MATCH TARZI CLEAR BURST
+    // Taş küçülür + halka (glow ring) açılır + yıldızlar dans eder + altın shardlar saçılır.
+    // Burst VFX TileClearBurstVfx sınıfı tarafından üretilir (runtime UI, prefab gerekmez).
+    //
+    // Hissiyat ayarları:
+    //   BURST_DURATION    = toplam efekt süresi (0.30s referans Royal Match)
+    //   TILE_SHRINK_RATIO = taşın küçülme bitiş oranı (0.0 = tamamen kaybolsun)
+    // ============================================================
+    private const float BURST_DURATION = 0.30f;   // Toplam efekt süresi
+    private const float TILE_SHRINK_END = 0.00f;  // Taş scale sonu
+    private const float TILE_SHRINK_MID = 0.55f;  // Taş scale orta (shrink hissini verir)
+
     public IEnumerator PlayPop(TileView tile, float duration)
     {
         if (tile == null || !tile)
@@ -57,26 +70,51 @@ public sealed class TileAnimator
             yield break;
         }
 
-        // Toon Blast tarzı: kısa punch → anında kaybol
-        // Eski: uzun shrink+rotate (0.05s+) → "yavaş erime" hissi
-        // Yeni: micro punch (1 frame) → snap kaybolma
-        float snapDuration = Mathf.Min(0.03f, duration);
+        // Burst VFX'i paralel tetikle (taşın pozisyonunda spawn olur, kendi coroutine'iyle biter)
+        // Fire-and-forget: TileAnimator coroutine bekleme, burst kendi life'ını yaşar
+        if (board != null)
+        {
+            board.StartCoroutine(TileClearBurstVfx.CoPlayBurst(tile, board, BURST_DURATION));
+        }
+
+        // Taş animasyonu — çağıran taraftaki duration parametresini dikkate al
+        // (cascade sırasında farklı sürede oynatmak isteyebilir)
+        float shrinkDuration = Mathf.Max(0.10f, Mathf.Min(duration, BURST_DURATION));
         float t = 0f;
 
-        while (t < snapDuration)
+        while (t < shrinkDuration)
         {
             if (tile == null || !tile || root == null) yield break;
 
             try
             {
                 t += Time.deltaTime;
-                float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, snapDuration));
-                // Kısa punch scale up → hemen shrink
-                float scale = Mathf.Lerp(1f, 0f, k * k);
+                float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, shrinkDuration));
+
+                // 2 fazlı scale: 1.0 → 0.55 → 0.0
+                // Faz 1 (0-0.4): 1.0 → 0.55 (hızlı küçülme, burst ile senkronize)
+                // Faz 2 (0.4-1.0): 0.55 → 0.0 (yavaş kayboluş)
+                float scale;
+                if (k < 0.4f)
+                {
+                    float kk = k / 0.4f;
+                    float eased = 1f - (1f - kk) * (1f - kk); // easeOutQuad
+                    scale = Mathf.Lerp(1f, TILE_SHRINK_MID, eased);
+                }
+                else
+                {
+                    float kk = (k - 0.4f) / 0.6f;
+                    scale = Mathf.Lerp(TILE_SHRINK_MID, TILE_SHRINK_END, kk);
+                }
+
                 root.localScale = new Vector3(scale, scale, 1f);
 
+                // Alpha: ilk %60 tam opak, sonra hızlı solma
                 if (canvasGroup != null)
-                    canvasGroup.alpha = 1f - k;
+                {
+                    float alpha = (k < 0.6f) ? 1f : 1f - (k - 0.6f) / 0.4f;
+                    canvasGroup.alpha = Mathf.Clamp01(alpha);
+                }
             }
             catch (MissingReferenceException)
             {
@@ -339,6 +377,17 @@ public sealed class TileAnimator
             createdBaseColor.b,
             0f);
 
+        // Created tile'ın üstünde burst (merkezi, special'ın doğduğu nokta)
+        // Icon rt sprite'ın görünen merkezini verir
+        if (board != null && createdIconRt != null)
+        {
+            Vector3[] _cornersCreated = new Vector3[4];
+            createdIconRt.GetWorldCorners(_cornersCreated);
+            Vector3 _createdWorldCenter = (_cornersCreated[0] + _cornersCreated[2]) * 0.5f;
+            board.StartCoroutine(TileClearBurstVfx.CoPlayBurstAtWorldPosition(
+                _createdWorldCenter, ghostParent, board, 0.30f));
+        }
+
         Vector2 targetPos = GetRectCenterInParentSpace(ghostParent, createdIconRt);
 
         var ghosts = new List<SpecialCreationGhostState>();
@@ -399,6 +448,21 @@ public sealed class TileAnimator
                     sourceIcon.color.g,
                     sourceIcon.color.b,
                     0f);
+
+                // Merge olan her source tile için de burst (halka + yıldız + shard)
+                // iconRt yerine tile.RectTransform — ikon tile içinde offset'li olabilir
+                if (board != null)
+                {
+                    RectTransform tileRootRt = tile.RectTransform;
+                    if (tileRootRt != null)
+                    {
+                        Vector3[] _cornersSource = new Vector3[4];
+                        tileRootRt.GetWorldCorners(_cornersSource);
+                        Vector3 _srcWorldCenter = (_cornersSource[0] + _cornersSource[2]) * 0.5f;
+                        board.StartCoroutine(TileClearBurstVfx.CoPlayBurstAtWorldPosition(
+                            _srcWorldCenter, ghostParent, board, 0.30f));
+                    }
+                }
             }
         }
 
@@ -495,6 +559,17 @@ public sealed class TileAnimator
         CanvasGroup createdGroup = createdTile.GetComponent<CanvasGroup>();
         if (createdGroup == null)
             createdGroup = createdTile.gameObject.AddComponent<CanvasGroup>();
+
+        // Special appear fallback — burst'ü de tetikle
+        // Icon rt sprite'ın gerçek konumunu verir (tile rootu offsetli olabilir)
+        if (board != null && board.Parent != null && createdIconRt != null)
+        {
+            Vector3[] _cornersAppear = new Vector3[4];
+            createdIconRt.GetWorldCorners(_cornersAppear);
+            Vector3 _appearCenter = (_cornersAppear[0] + _cornersAppear[2]) * 0.5f;
+            board.StartCoroutine(TileClearBurstVfx.CoPlayBurstAtWorldPosition(
+                _appearCenter, board.Parent, board, 0.30f));
+        }
 
         Vector3 baseScale = createdIconRt.localScale;
         Quaternion baseRotation = createdIconRt.localRotation;
