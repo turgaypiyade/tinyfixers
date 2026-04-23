@@ -69,7 +69,15 @@ public class BoardVfxService
             go.transform.position = worldMid;
         }
 
-        Object.Destroy(go, lifetime);
+        // DISARI DAN destroy ETME
+        // Object.Destroy(go, lifetime);
+
+        // İsteğe bağlı: prefab scripti varsa süreyi buradan senkronlayabilirsin
+        var fx = go.GetComponent<PulseCoreExplosionFX>();
+        if (fx != null)
+        {
+            // fx.SetLifetime(lifetime);  // aşağıda ekleyeceğiz
+        }
     }
 
 

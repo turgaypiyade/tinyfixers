@@ -88,7 +88,19 @@ public static class TileClearBurstVfx
 
         // KRİTİK: anchoredPosition yerine DOĞRUDAN world position ata
         // Bu, parent'ın anchor/pivot ayarından bağımsız kesin sonuç verir
-        rootRt.position = worldPosition;
+        RectTransform parentRt = parent as RectTransform;
+
+        if (parentRt != null)
+        {
+            if (board != null)
+                rootRt.anchoredPosition = board.WorldToAnchoredIn(parentRt, worldPosition);
+            else
+                rootRt.localPosition = parentRt.InverseTransformPoint(worldPosition);
+        }
+        else
+        {
+            rootRt.position = worldPosition;
+        }
 
         if (DebugPositionLogging)
         {

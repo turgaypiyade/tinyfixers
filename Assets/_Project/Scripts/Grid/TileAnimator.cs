@@ -694,8 +694,13 @@ public sealed class TileAnimator
             return;
 
         Vector2 size = rt.rect.size;
-        Vector2 pivotDelta = rt.pivot - newPivot;
-        Vector2 anchoredOffset = new Vector2(pivotDelta.x * size.x, pivotDelta.y * size.y);
+
+        // ESKİSİ TERS YÖNDEYDİ
+        Vector2 pivotDelta = newPivot - rt.pivot;
+        Vector2 anchoredOffset = new Vector2(
+            pivotDelta.x * size.x,
+            pivotDelta.y * size.y);
+
         rt.pivot = newPivot;
         rt.anchoredPosition += anchoredOffset;
     }
