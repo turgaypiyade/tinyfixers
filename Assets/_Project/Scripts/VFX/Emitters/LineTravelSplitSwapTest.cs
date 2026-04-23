@@ -42,7 +42,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     [SerializeField, Range(0.2f, 1f)] private float splitOffsetFactor = 0.55f;
 
     [Header("Beam Trail")]
-    public RocketTrailBeam trailBeamPrefab;
+    public RocketTrailBeam trailBeamPrefab;       // Core
+    public RocketTrailBeam glowTrailBeamPrefab;   // Glow
     public RectTransform trailParent;
     public bool enableTrailBeam = true;
 
@@ -77,6 +78,9 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
     private RocketTrailBeam _leftTrail;
     private RocketTrailBeam _rightTrail;
+
+    private RocketTrailBeam _leftGlowTrail;
+    private RocketTrailBeam _rightGlowTrail;
 
     private RectTransform SafeRect(Image img)
     {
@@ -379,7 +383,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
     private void SpawnTrails(Vector3 originWorldPos)
     {
-        if (!enableTrailBeam || !trailBeamPrefab)
+        if (!enableTrailBeam)
             return;
 
         RectTransform parent = trailParent ? trailParent : afterImageParent;
@@ -392,11 +396,25 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             _leftTrail.Kill();
             _leftTrail = null;
         }
+        if (_leftGlowTrail && !leftRt)
+        {
+            _leftGlowTrail.Kill();
+            _leftGlowTrail = null;
+        }
 
         if (leftRt)
         {
-            _leftTrail = CreateTrailInstance(parent, originWorldPos);
-            _leftTrail.UpdateHead(leftRt.position);
+            if (trailBeamPrefab)
+            {
+                _leftTrail = CreateTrailInstance(trailBeamPrefab, parent, originWorldPos);
+                _leftTrail.UpdateHead(leftRt.position);
+            }
+
+            if (glowTrailBeamPrefab)
+            {
+                _leftGlowTrail = CreateTrailInstance(glowTrailBeamPrefab, parent, originWorldPos);
+                _leftGlowTrail.UpdateHead(leftRt.position);
+            }
         }
 
         var rightRt = SafeRect(rightImage);
@@ -405,17 +423,31 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             _rightTrail.Kill();
             _rightTrail = null;
         }
+        if (_rightGlowTrail && !rightRt)
+        {
+            _rightGlowTrail.Kill();
+            _rightGlowTrail = null;
+        }
 
         if (rightRt)
         {
-            _rightTrail = CreateTrailInstance(parent, originWorldPos);
-            _rightTrail.UpdateHead(rightRt.position);
+            if (trailBeamPrefab)
+            {
+                _rightTrail = CreateTrailInstance(trailBeamPrefab, parent, originWorldPos);
+                _rightTrail.UpdateHead(rightRt.position);
+            }
+
+            if (glowTrailBeamPrefab)
+            {
+                _rightGlowTrail = CreateTrailInstance(glowTrailBeamPrefab, parent, originWorldPos);
+                _rightGlowTrail.UpdateHead(rightRt.position);
+            }
         }
     }
 
-    private RocketTrailBeam CreateTrailInstance(RectTransform parent, Vector3 originWorld)
+    private RocketTrailBeam CreateTrailInstance(RocketTrailBeam prefab, RectTransform parent, Vector3 originWorld)
     {
-        var beam = Instantiate(trailBeamPrefab, parent);
+        var beam = Instantiate(prefab, parent);
         beam.transform.position = Vector3.zero;
         beam.transform.localRotation = Quaternion.identity;
         beam.transform.localScale = Vector3.one;
@@ -431,6 +463,11 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             if (rightRt != null) _rightTrail.UpdateHead(rightRt.position);
             else { _rightTrail.Kill(); _rightTrail = null; }
         }
+        if (_rightGlowTrail != null)
+        {
+            if (rightRt != null) _rightGlowTrail.UpdateHead(rightRt.position);
+            else { _rightGlowTrail.Kill(); _rightGlowTrail = null; }
+        }
 
         var leftRt = SafeRect(leftImage);
         if (_leftTrail != null)
@@ -438,20 +475,33 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             if (leftRt != null) _leftTrail.UpdateHead(leftRt.position);
             else { _leftTrail.Kill(); _leftTrail = null; }
         }
+        if (_leftGlowTrail != null)
+        {
+            if (leftRt != null) _leftGlowTrail.UpdateHead(leftRt.position);
+            else { _leftGlowTrail.Kill(); _leftGlowTrail = null; }
+        }
     }
 
     private void FadeOutTrails()
     {
         if (_leftTrail) _leftTrail.FadeOutAndDestroy();
         if (_rightTrail) _rightTrail.FadeOutAndDestroy();
+        if (_leftGlowTrail) _leftGlowTrail.FadeOutAndDestroy();
+        if (_rightGlowTrail) _rightGlowTrail.FadeOutAndDestroy();
+
         _leftTrail = null;
         _rightTrail = null;
+        _leftGlowTrail = null;
+        _rightGlowTrail = null;
     }
 
     private void KillTrails()
     {
         if (_leftTrail) { _leftTrail.Kill(); _leftTrail = null; }
         if (_rightTrail) { _rightTrail.Kill(); _rightTrail = null; }
+
+        if (_leftGlowTrail) { _leftGlowTrail.Kill(); _leftGlowTrail = null; }
+        if (_rightGlowTrail) { _rightGlowTrail.Kill(); _rightGlowTrail = null; }
     }
 
     private void CompleteOnce()

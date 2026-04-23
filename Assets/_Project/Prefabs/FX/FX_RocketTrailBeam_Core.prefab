@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 807241287269191232}
   - component: {fileID: 864241499568937563}
   m_Layer: 5
-  m_Name: FX_RocketTrailBeam
+  m_Name: FX_RocketTrailBeam_Core
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -63,7 +63,7 @@ LineRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: f220f3df321f4462e81f44e42ebab4a8, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -91,13 +91,13 @@ LineRenderer:
   - {x: 0, y: 0, z: 1}
   m_Parameters:
     serializedVersion: 3
-    widthMultiplier: 1.2
+    widthMultiplier: 0.7
     widthCurve:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 0.19573975
+        value: 0.96850586
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -105,8 +105,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.28806314
-        value: 0.16580434
+        time: 0.2983323
+        value: 0.95541614
         inSlope: 0.23311248
         outSlope: 0.23311248
         tangentMode: 1
@@ -114,8 +114,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.9941101
-        value: 0.17475891
+        time: 1
+        value: 0.96884155
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -127,9 +127,9 @@ LineRenderer:
       m_RotationOrder: 4
     colorGradient:
       serializedVersion: 2
-      key0: {r: 0.098039225, g: 0.28509197, b: 0.8980392, a: 1}
-      key1: {r: 0.9528302, g: 0.91237986, b: 0.91237986, a: 1}
-      key2: {r: 0.18943575, g: 0.2160447, b: 0.9339623, a: 0}
+      key0: {r: 0.745283, g: 0.088921115, b: 0.017577427, a: 1}
+      key1: {r: 0.8490566, g: 0.06007475, b: 0.24372828, a: 1}
+      key2: {r: 0.9150943, g: 0.13381095, b: 0.27233657, a: 0}
       key3: {r: 0, g: 0, b: 0, a: 0}
       key4: {r: 0, g: 0, b: 0, a: 0}
       key5: {r: 0, g: 0, b: 0, a: 0}
@@ -137,13 +137,13 @@ LineRenderer:
       key7: {r: 0, g: 0, b: 0, a: 0}
       ctime0: 0
       ctime1: 35466
-      ctime2: 52621
+      ctime2: 53006
       ctime3: 0
       ctime4: 0
       ctime5: 0
       ctime6: 0
       ctime7: 0
-      atime0: 0
+      atime0: 15035
       atime1: 57247
       atime2: 0
       atime3: 0
@@ -177,12 +177,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d38cfcfa9f7584fa28538e78bb694bb0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RocketTrailBeam
-  jaggedness: 0
-  noiseScale: 0
-  minSegments: 10
-  segmentsPerUnit: 22
-  tailAlpha: 0.5
-  headAlpha: 1
-  fadeOutDuration: 0.25
+  jaggedness: 0.05
+  noiseScale: 2.5
+  minSegments: 12
+  segmentsPerUnit: 26
+  tailAlpha: 0.6
+  headAlpha: 0.95
+  fadeOutDuration: 0.3
   sortingLayerName: 
-  sortingOrder: 100
+  sortingOrder: 101

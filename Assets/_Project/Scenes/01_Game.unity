@@ -1726,8 +1726,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.051567238}
-  m_AnchorMax: {x: 1.5052755, y: 1.3331648}
+  m_AnchorMin: {x: 0, y: 0.094444446}
+  m_AnchorMax: {x: 0.8392157, y: 2.4416666}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -9989,23 +9989,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: postDelay
-      value: 0.02
+      value: 0.015
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: splitTime
-      value: 0
+      value: 0.05
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: pulseSpeed
-      value: 20
+      value: 45
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: startDelay
-      value: 0.06
+      value: 0.01
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: pulseAmount
-      value: 0.05
+      value: 0.12
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: splitOffset
@@ -10021,31 +10021,43 @@ PrefabInstance:
       objectReference: {fileID: 1732843066}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: stepDuration
-      value: 0.05
+      value: 0.065
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: afterImageLife
-      value: 0.15
+      value: 0.04
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: afterImageAlpha
-      value: 0.55
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: trailBeamPrefab
       value: 
-      objectReference: {fileID: 864241499568937563, guid: 05809187aac444fd0bca3a365ad53a74, type: 3}
+      objectReference: {fileID: 864241499568937563, guid: 2a34a70c133e94af295259358bb22c18, type: 3}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: afterImageParent
       value: 
       objectReference: {fileID: 1732843066}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: afterImageScaleUp
-      value: 1.08
+      value: 1.01
       objectReference: {fileID: 0}
+    - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
+      propertyPath: glowTrailBeamPrefab
+      value: 
+      objectReference: {fileID: 864241499568937563, guid: 53232f1cb02754fcab293a96a19fd8b6, type: 3}
+    - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
+      propertyPath: rocketAfterImagePrefab
+      value: 
+      objectReference: {fileID: 1073926442982439361, guid: 553f0821b2b41614586f70ec6b63b022, type: 3}
     - target: {fileID: 4099223387412905361, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: m_Layer
       value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5087424495216748136, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 100
       objectReference: {fileID: 0}
     - target: {fileID: 6951413210752950108, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: m_Name

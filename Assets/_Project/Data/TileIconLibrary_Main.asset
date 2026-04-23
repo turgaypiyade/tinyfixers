@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: TileIconLibrary_Main
   m_EditorClassIdentifier: Assembly-CSharp::TileIconLibrary
   gear: {fileID: 6387019998946701085, guid: 9a3f698e0043a4c2b9d82662fea462d7, type: 3}
-  core: {fileID: -1423335278942962143, guid: 61d3eece3a93240f7945b81a6644ee4b, type: 3}
+  core: {fileID: -910297206132949408, guid: 404e184d2a1694d58a4f6ce2783d6e30, type: 3}
   bolt: {fileID: -4712363700191047613, guid: f4807caae06f74a0a83142b35043a7c3, type: 3}
-  plate: {fileID: 3609372343292057520, guid: e0ce5236b87e64ffcab2bd4845d286f6, type: 3}
+  plate: {fileID: -3036297057377480920, guid: f4bc80d4b0c494dd2a2a9c2c1d0181a7, type: 3}
   lineH: {fileID: 1649446296917653178, guid: 81ec88c01d8db4acdb3ee153ec8834f9, type: 3}
   lineV: {fileID: 1188245323905451034, guid: e18cab110372a4fe18e1d8bbd3bd5083, type: 3}
   patchBot: {fileID: -8991408967745056988, guid: a4a7e67a5c959444c9e0ddfd646613c9, type: 3}
-  pulseCore: {fileID: 5240213395630594912, guid: 6fbcec3ed13a7ea4daa17c29473fcb81, type: 3}
+  pulseCore: {fileID: -5286613768862992708, guid: aeaf2c89ef70045589b271ee4008b1ce, type: 3}
   overrideRed: {fileID: 2789401260304263213, guid: c3a8b514c271d423a8b244956105e471, type: 3}
   overrideYellow: {fileID: 2619745284460239960, guid: 1ee04c023b6744671a13a4b6288e4c16, type: 3}
   overrideBlue: {fileID: 7842146363385098208, guid: b01b13ad3457545b494f352c26060846, type: 3}
