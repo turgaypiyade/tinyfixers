@@ -40,12 +40,6 @@ public class SpecialBehaviorDispatcher
     {
         if (IsLineCombo(sa, sb))
         {
-            //var comboOrigin = sa == TileSpecial.LineV ? a : b;
-            //var comboPartner = comboOrigin == a ? b : a;
-
-            var comboOrigin = a;
-            var comboPartner = b;
-
             lineVLineHCombo.Execute(new LineVLineHComboExecutionRuntime
             {
                 Board = board,
@@ -146,7 +140,14 @@ public class SpecialBehaviorDispatcher
                 PatchbotService = patchbotComboService,
                 VisualService = visualService,
                 Effects = effectOrchestrator,
-                ActivateSpecial = ApplySpecialActivation
+                ActivateSpecial = ApplySpecialActivation,
+                ProcessFanout = resolution => QueueProcessor.ProcessFanout(resolution),
+                CleanupImplantedTiles = resolution => QueueProcessor.CleanupImplantedTiles(resolution),
+                FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                    QueueProcessor.FireOverrideOverrideSpecialVisuals(affected, delays),
+                EmitBoardSignal = signal => QueueProcessor.EmitBoardSignal(signal),
+                EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
+                ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
             });
 
             return;
@@ -467,6 +468,7 @@ public class SpecialBehaviorDispatcher
 
         return actions;
     }
+
     private void ActivateViaRegistry(ResolutionContext ctx, TileSpecial special, int ox, int oy)
     {
         var behavior = board.SpecialBehaviors.Get(special);
@@ -500,5 +502,4 @@ public class SpecialBehaviorDispatcher
     {
         return special == TileSpecial.PulseCore;
     }
-
 }
