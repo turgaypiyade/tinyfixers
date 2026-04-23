@@ -21,6 +21,7 @@ public sealed class PulseCoreExecutionRuntime
     public Action<ResolutionContext> EnqueueChainSpecials;
     public Action<ResolutionContext> ProcessQueue;
     public bool SuppressVisualSideEffects;
+    public bool SkipOriginRegistration;
 }
 
 public sealed class PulseCoreExecutionResult
@@ -57,7 +58,9 @@ public sealed class PulseCoreSpecial
         if (!CanExecute(rt))
             return result;
 
-        RegisterOrigin(rt);
+        if (!rt.SkipOriginRegistration)
+            RegisterOrigin(rt);
+
         PlayPulseActivationVisual(rt, rt.Origin.X, rt.Origin.Y);
         CollectArea(rt, rt.Origin.X, rt.Origin.Y);
         ExecuteQueuedChain(rt);
@@ -78,7 +81,9 @@ public sealed class PulseCoreSpecial
         if (targetX < 0 || targetX >= rt.Board.Width || targetY < 0 || targetY >= rt.Board.Height)
             return result;
 
-        RegisterOrigin(rt);
+        if (!rt.SkipOriginRegistration)
+            RegisterOrigin(rt);
+
         PlayPulseActivationVisual(rt, targetX, targetY);
         CollectArea(rt, targetX, targetY);
         ExecuteQueuedChain(rt);
@@ -101,7 +106,7 @@ public sealed class PulseCoreSpecial
             return false;
 
         var cell = new Vector2Int(rt.Origin.X, rt.Origin.Y);
-        if (rt.Context.Processed.Contains(cell))
+        if (!rt.SkipOriginRegistration && rt.Context.Processed.Contains(cell))
             return false;
 
         return true;
@@ -123,9 +128,10 @@ public sealed class PulseCoreSpecial
 
         PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(centerX, centerY));
 
-        if (!rt.FinalizeAtEnd && rt.Board?.PulseCoreImpactService != null)
+        if (rt.Board?.PulseCoreImpactService != null)
             rt.Board.PulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(centerX, centerY, radiusCells: ComputeVfxRadius());
     }
+
     private void CollectArea(PulseCoreExecutionRuntime rt, int centerX, int centerY)
     {
         int side = Mathf.CeilToInt(Mathf.Sqrt(affectedCellCount));
