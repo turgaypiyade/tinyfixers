@@ -31,4 +31,11 @@ public class BoardSfxProfile : ScriptableObject
     [Header("Combo")]
     public VariantSet comboStart;
     public VariantSet comboImpact;
+
+    [Header("Override Combo")]
+    public VariantSet overrideNormalStart;
+    public VariantSet overrideSpecialStart;
+
+    [Header("Pulse Combo")]
+    public VariantSet pulsePulseCharge;
 }
