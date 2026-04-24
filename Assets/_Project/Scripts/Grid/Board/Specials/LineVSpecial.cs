@@ -9,6 +9,10 @@ public sealed class LineVExecutionRuntime
     public TileView Origin;
     public TileView Partner;
 
+    // Allows combos to delegate the vertical line effect to LineV without
+    // requiring a physical LineV tile at the target cell.
+    public Vector2Int? VirtualOriginCell;
+
     // true => top-level çağrı, final clear action üretir
     // false => nested chain çağrısı, sadece context büyütür
     public bool FinalizeAtEnd;
@@ -58,7 +62,7 @@ public sealed class LineVSpecial
     public LineVExecutionResult Execute(LineVExecutionRuntime rt)
     {
         var result = new LineVExecutionResult();
-        Debug.Log($"[LineV.Execute] BEGIN origin=({rt.Origin.X},{rt.Origin.Y}) finalize={rt.FinalizeAtEnd}");
+        Debug.Log($"[LineV.Execute] BEGIN origin={DescribeOrigin(rt)} finalize={(rt != null && rt.FinalizeAtEnd)}");
         if (!CanExecute(rt))
             return result;
 
@@ -87,12 +91,13 @@ public sealed class LineVSpecial
             if (clearAction != null)
                 result.Actions.Add(clearAction);
 
+            var originCell = GetOriginCell(rt);
             rt.EmitBoardSignal?.Invoke(new SpecialBoardSignal(
                 SpecialBoardSignalType.SpecialPassFinished,
-                new Vector2Int(rt.Origin.X, rt.Origin.Y),
+                originCell,
                 rt.Origin));
         }
-        Debug.Log($"[LineV.Execute] PRE-FINALIZE origin=({rt.Origin.X},{rt.Origin.Y}) affected={rt.Context.Affected.Count} lightningTargets={rt.Context.LightningVisualTargets.Count} strikes={rt.Context.LightningLineStrikes.Count}");
+        Debug.Log($"[LineV.Execute] PRE-FINALIZE origin={DescribeOrigin(rt)} affected={rt.Context.Affected.Count} lightningTargets={rt.Context.LightningVisualTargets.Count} strikes={rt.Context.LightningLineStrikes.Count}");
         return result;
     }
 
@@ -100,6 +105,15 @@ public sealed class LineVSpecial
     {
         if (rt == null || rt.Board == null || rt.Context == null)
             return false;
+
+        if (rt.VirtualOriginCell.HasValue)
+        {
+            var cell = rt.VirtualOriginCell.Value;
+            if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+                return false;
+
+            return !rt.Context.Processed.Contains(cell) || rt.Origin == null;
+        }
 
         if (rt.Origin == null)
             return false;
@@ -137,11 +151,19 @@ public sealed class LineVSpecial
     }
     private void RegisterOrigin(LineVExecutionRuntime rt)
     {
-        var originCell = new Vector2Int(rt.Origin.X, rt.Origin.Y);
-        Debug.Log($"[LineV.RegisterOrigin] origin=({rt.Origin.X},{rt.Origin.Y}) finalize={rt.FinalizeAtEnd} hasLineBefore={rt.Context.HasLineActivation}");
-        rt.Context.Processed.Add(originCell);
-        rt.Context.Affected.Add(rt.Origin);
-        SpecialCellUtils.MarkAffectedCell(rt.Context, rt.Origin, rt.Board);
+        var originCell = GetOriginCell(rt);
+        Debug.Log($"[LineV.RegisterOrigin] origin={originCell} finalize={rt.FinalizeAtEnd} hasLineBefore={rt.Context.HasLineActivation}");
+
+        if (rt.Origin != null)
+        {
+            rt.Context.Processed.Add(originCell);
+            rt.Context.Affected.Add(rt.Origin);
+            SpecialCellUtils.MarkAffectedCell(rt.Context, rt.Origin, rt.Board);
+        }
+        else
+        {
+            SpecialCellUtils.MarkAffectedCell(rt.Context, originCell.x, originCell.y, rt.Board);
+        }
 
         if (!rt.SuppressVisualSideEffects)
             rt.Context.HasLineActivation = true;
@@ -149,7 +171,8 @@ public sealed class LineVSpecial
 
     private void CollectColumn(LineVExecutionRuntime rt)
     {
-        int x = rt.Origin.X;
+        var originCell = GetOriginCell(rt);
+        int x = originCell.x;
 
         for (int y = 0; y < rt.Board.Height; y++)
         {
@@ -161,7 +184,7 @@ public sealed class LineVSpecial
             var tile = rt.Board.Tiles[x, y];
             if (tile == null)
                 continue;
-            Debug.Log($"[LineV.CollectColumn] origin=({rt.Origin.X},{rt.Origin.Y}) addTarget=({x},{y}) tile={(tile != null ? tile.GetSpecial().ToString() : "null")}");
+            Debug.Log($"[LineV.CollectColumn] origin={originCell} addTarget=({x},{y}) tile={(tile != null ? tile.GetSpecial().ToString() : "null")}");
             rt.Context.Affected.Add(tile);
 
             if (!rt.SuppressVisualSideEffects)
@@ -173,10 +196,11 @@ public sealed class LineVSpecial
     {
         if (rt.SuppressVisualSideEffects)
             return;
-        Debug.Log($"[LineV.BuildLineVisuals] origin=({rt.Origin.X},{rt.Origin.Y}) finalize={rt.FinalizeAtEnd}");
+        var originCell = GetOriginCell(rt);
+        Debug.Log($"[LineV.BuildLineVisuals] origin={originCell} finalize={rt.FinalizeAtEnd}");
         rt.Context.LightningLineStrikes.Add(
             new LightningLineStrike(
-                new Vector2Int(rt.Origin.X, rt.Origin.Y),
+                originCell,
                 false));
     }
 
@@ -213,5 +237,27 @@ public sealed class LineVSpecial
             isSpecialPhase: true,
             presentationPlan: null
         );
+    }
+
+    private static Vector2Int GetOriginCell(LineVExecutionRuntime rt)
+    {
+        if (rt != null && rt.VirtualOriginCell.HasValue)
+            return rt.VirtualOriginCell.Value;
+
+        if (rt != null && rt.Origin != null)
+            return new Vector2Int(rt.Origin.X, rt.Origin.Y);
+
+        return Vector2Int.zero;
+    }
+
+    private static string DescribeOrigin(LineVExecutionRuntime rt)
+    {
+        if (rt == null)
+            return "<null-runtime>";
+
+        if (rt.VirtualOriginCell.HasValue)
+            return $"virtual({rt.VirtualOriginCell.Value.x},{rt.VirtualOriginCell.Value.y})";
+
+        return rt.Origin != null ? $"({rt.Origin.X},{rt.Origin.Y})" : "<null-origin>";
     }
 }
