@@ -1034,7 +1034,7 @@ MonoBehaviour:
   m_MinWidth: -1
   m_MinHeight: -1
   m_PreferredWidth: 120
-  m_PreferredHeight: 140
+  m_PreferredHeight: 120
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
@@ -1058,7 +1058,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -1527128223165861515, guid: 92dc7fc939f4747f2af44261e5a0721b, type: 3}
+  m_Sprite: {fileID: -8754169827985547997, guid: c28aa88c51ea04c9ba84bf993a0bb493, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1449,7 +1449,7 @@ MonoBehaviour:
   m_MinWidth: -1
   m_MinHeight: -1
   m_PreferredWidth: 120
-  m_PreferredHeight: 140
+  m_PreferredHeight: 120
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
@@ -1473,7 +1473,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 3487552426384398446, guid: abc82ce70649d400690c9a2723388adf, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 58cee451e284f439dbeaa09cc29d3d67, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1726,8 +1726,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.06398996}
-  m_AnchorMax: {x: 0.64555055, y: 1.6543287}
+  m_AnchorMin: {x: 0, y: 0.061519902}
+  m_AnchorMax: {x: 0.6429644, y: 1.5904704}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -2552,7 +2552,7 @@ RectTransform:
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1220861052
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2606,7 +2606,7 @@ MonoBehaviour:
   m_IgnoreLayout: 0
   m_MinWidth: -1
   m_MinHeight: -1
-  m_PreferredWidth: 110
+  m_PreferredWidth: 120
   m_PreferredHeight: 120
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
@@ -3243,7 +3243,7 @@ MonoBehaviour:
   m_IgnoreLayout: 0
   m_MinWidth: -1
   m_MinHeight: -1
-  m_PreferredWidth: 110
+  m_PreferredWidth: 120
   m_PreferredHeight: 120
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
@@ -3268,7 +3268,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -201665368978123810, guid: 751c7279ac7d64425b93d499828ce8cc, type: 3}
+  m_Sprite: {fileID: 5408540551926591692, guid: 00c98c3df2dc649f78c93f9d7ee4f4a8, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -8253,7 +8253,7 @@ MonoBehaviour:
   m_MinWidth: -1
   m_MinHeight: -1
   m_PreferredWidth: 120
-  m_PreferredHeight: 140
+  m_PreferredHeight: 120
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
@@ -8277,7 +8277,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 660827292650899163, guid: 9a3783832173b442f9d76b099985018a, type: 3}
+  m_Sprite: {fileID: 21300000, guid: d7f358535eeaf4bcf91584c858f8ce88, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -9137,7 +9137,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 4
-  m_Spacing: 40
+  m_Spacing: 50
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 1
@@ -9166,7 +9166,7 @@ MonoBehaviour:
   useProceduralSelectionFrame: 0
   selectedFrameSpriteName: Top_border_img_v2
   selectedFramePadding: 10
-  selectedFrameOutlineColor: {r: 1, g: 0.85, b: 0.25, a: 1}
+  selectedFrameOutlineColor: {r: 1, g: 0.80386245, b: 0.0141509175, a: 1}
   disabledJokerAlpha: 0.35
   selectedJokerScale: 1.1
   selectedGlowSpriteName: 

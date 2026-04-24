@@ -34,7 +34,7 @@ public sealed class OverrideSpecializedComboExecutionResult
 
 public sealed class OverrideSpecializedCombo
 {
-    private const float OverridePulseCoreStaggerSeconds = 0.055f;
+    private const float OverridePulseCoreStaggerSeconds = 0.075f;
 
     public OverrideSpecializedComboExecutionResult Execute(OverrideSpecializedComboExecutionRuntime rt)
     {
