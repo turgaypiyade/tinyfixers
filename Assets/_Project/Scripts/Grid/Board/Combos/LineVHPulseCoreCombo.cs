@@ -47,15 +47,10 @@ public sealed class LineVHPulseCoreCombo
 
         RegisterComboTiles(rt, lineTile, pulseTile);
 
-        if (lineTile.GetSpecial() == TileSpecial.LineV)
-            return ExecuteLineVCombo(rt, comboCenterCell);
-
-        if (lineTile.GetSpecial() == TileSpecial.LineH)
-            return ExecuteLineHCombo(rt, comboCenterCell);
-
+        // Alan üstündeki special'lar aşağıdaki LineVHPulseCoreComboAction içinde
+        // executeSpecialActions üzerinden kendi special davranışlarıyla tetiklenir.
         var comboLightningVisualTargets = new List<TileView>();
         BuildAffectedArea(rt, comboCenterTile, comboLightningVisualTargets);
-
         // Combo'nun kendi alanını snapshot al.
         // Path üstünde sonradan tetiklenecek special'lar bu clear'a karışmasın.
         var comboAffected = new HashSet<TileView>(rt.Context.Affected);
