@@ -15,6 +15,30 @@ public class DynamicBoardBorder : MonoBehaviour
     public GameObject cornerLBPrefab;
     public GameObject cornerRBPrefab;
 
+    [Header("3D Edge Prefabs")]
+    public GameObject edgeTopPrefab;
+    public GameObject edgeBottomPrefab;
+    public GameObject edgeLeftPrefab;
+    public GameObject edgeRightPrefab;
+
+    [Header("3D Outer Corner Prefabs")]
+    public GameObject outerLTPrefab;
+    public GameObject outerRTPrefab;
+    public GameObject outerLBPrefab;
+    public GameObject outerRBPrefab;
+
+    [Header("3D Inner Corner Prefabs")]
+    public GameObject innerLTPrefab;
+    public GameObject innerRTPrefab;
+    public GameObject innerLBPrefab;
+    public GameObject innerRBPrefab;
+
+    [Header("3D Border Join Settings")]
+    public bool use3DBorderPrefabs = true;
+    public float cornerVisualSize = 48f;
+    public float outerJoinOverlap = 8f;
+    public float innerJoinOverlap = 4f;
+
     [Header("Debug")]
     public bool debugMasks = false;
     public bool debugBorderLogs = false;
@@ -33,11 +57,19 @@ public class DynamicBoardBorder : MonoBehaviour
 
     private bool[] _holes;
 
-    public float cornerSize       => borderThickness;
+    public float cornerSize       => use3DBorderPrefabs ? cornerVisualSize : borderThickness;
     public float straightH_height => borderThickness;
     public float straightV_width  => borderThickness;
 
     public void SetLevelData(LevelData value) => level = value;
+
+    private void OnValidate()
+    {
+        borderThickness = Mathf.Max(1f, borderThickness);
+        cornerVisualSize = Mathf.Max(borderThickness, cornerVisualSize);
+        outerJoinOverlap = Mathf.Max(0f, outerJoinOverlap);
+        innerJoinOverlap = Mathf.Max(0f, innerJoinOverlap);
+    }
 
     public void Draw(bool[] blocked = null, bool[] holes = null)
     {
@@ -67,41 +99,55 @@ public class DynamicBoardBorder : MonoBehaviour
             PlaceStraightV(nodeX, y, solidIsRight: rightCell, blocked);
         }
 
-        // Köşeler en son → render sırasında en üstte
+        // Corners render last, so they cover the straight-piece joins.
         for (int ny = 0; ny <= H; ny++)
         for (int nx = 0; nx <= W; nx++)
             PlaceCorner(nx, ny, blocked);
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  TRIM MANTIĞI
+    //  TRIM / JOIN LOGIC
     //
-    //  Outer corner (mask 1,2,4,8):
-    //    Köşe grid DIŞINDA, düz parça uzayıp köşenin altına girmeli.
-    //    trim = -borderOutside → düz parça borderOutside kadar uzar.
-    //    Köşe üstte çizildiği için birleşim görünmez.
+    //  Classic 2D mode:
+    //    Keeps the previous white-line behaviour.
     //
-    //  Inner corner (mask 7,11,13,14) + Diagonal (mask 5,10):
-    //    Köşe grid İÇİNDE, düz parça kısalmalı yoksa "+" olur.
-    //    trim = +thickness/2 → düz parça köşe merkezine kadar gelir.
-    //
-    //  Düz kenar (mask 3,6,9,12): köşe yok → trim = 0
+    //  3D mode:
+    //    Outer corners: straight pieces extend under the corner sprite.
+    //    Inner corners: straight pieces are shortened enough to avoid a plus sign,
+    //    but still keep a small overlap under the inner corner sprite.
     // ═══════════════════════════════════════════════════════════
 
     private float GetTrim(int nodeMask)
     {
+        if (!use3DBorderPrefabs)
+        {
+            switch (nodeMask)
+            {
+                // Outer: extend to reach the old flat corner.
+                case 1: case 2: case 4: case 8:
+                    return -borderOutside;
+
+                // Inner + Diagonal: shorten to avoid a plus sign.
+                case 7: case 11: case 13: case 14:
+                case 5: case 10:
+                    return borderThickness * 0.5f;
+
+                default:
+                    return 0f;
+            }
+        }
+
         switch (nodeMask)
         {
-            // Outer: uzat (köşe dışarıda, düz parça yetişmeli)
+            // Outer corner: straight piece goes slightly under the corner cap.
             case 1: case 2: case 4: case 8:
-                return -borderOutside;
+                return -outerJoinOverlap;
 
-            // Inner + Diagonal: kısalt ("+" olmasın)
+            // Inner corner / diagonal: prevent plus artefacts while preserving overlap.
             case 7: case 11: case 13: case 14:
             case 5: case 10:
-                return borderThickness * 0.5f;
+                return Mathf.Max(0f, borderThickness * 0.5f - innerJoinOverlap);
 
-            // Düz kenar: trim yok
             default:
                 return 0f;
         }
@@ -123,7 +169,7 @@ public class DynamicBoardBorder : MonoBehaviour
         float centerX = nL.x + trimL + rawLen * 0.5f;
         float centerY = nL.y + (solidIsBelow ? 1f : -1f) * (borderOutside + halfT);
 
-        SpawnStraight(straightHPrefab, new Vector2(centerX, centerY),
+        SpawnStraight(PickHorizontalPrefab(solidIsBelow), new Vector2(centerX, centerY),
                       new Vector2(rawLen, borderThickness));
 
         if (debugBorderLogs)
@@ -147,7 +193,7 @@ public class DynamicBoardBorder : MonoBehaviour
         float centerY = nT.y - trimT - rawLen * 0.5f;
         float centerX = nT.x + (solidIsRight ? -1f : 1f) * (borderOutside + halfT);
 
-        SpawnStraight(straightVPrefab, new Vector2(centerX, centerY),
+        SpawnStraight(PickVerticalPrefab(solidIsRight), new Vector2(centerX, centerY),
                       new Vector2(borderThickness, rawLen));
 
         if (debugBorderLogs)
@@ -155,12 +201,36 @@ public class DynamicBoardBorder : MonoBehaviour
                       $"pos=({centerX:F1},{centerY:F1}) len={rawLen:F1} tT={trimT} tB={trimB}");
     }
 
+    private GameObject PickHorizontalPrefab(bool solidIsBelow)
+    {
+        if (!use3DBorderPrefabs)
+            return straightHPrefab;
+
+        // If the solid area is below the node line, this is the top edge of that area.
+        if (solidIsBelow)
+            return edgeTopPrefab != null ? edgeTopPrefab : straightHPrefab;
+
+        return edgeBottomPrefab != null ? edgeBottomPrefab : straightHPrefab;
+    }
+
+    private GameObject PickVerticalPrefab(bool solidIsRight)
+    {
+        if (!use3DBorderPrefabs)
+            return straightVPrefab;
+
+        // If the solid area is right of the node line, this is the left edge of that area.
+        if (solidIsRight)
+            return edgeLeftPrefab != null ? edgeLeftPrefab : straightVPrefab;
+
+        return edgeRightPrefab != null ? edgeRightPrefab : straightVPrefab;
+    }
+
     // ═══════════════════════════════════════════════════════════
-    //  KÖŞE
+    //  CORNERS
     //
     //  center = node + dir × (borderOutside + thickness/2)
-    //  pivot  = (0.5, 0.5) her zaman
-    //  size   = thickness × thickness
+    //  pivot  = (0.5, 0.5)
+    //  3D mode uses cornerVisualSize, allowing the corner cap to cover joins.
     // ═══════════════════════════════════════════════════════════
 
     private void PlaceCorner(int nx, int ny, bool[] blocked)
@@ -169,39 +239,54 @@ public class DynamicBoardBorder : MonoBehaviour
         if (mask == 0 || mask == 15) return;
 
         Vector2 node = NodePos(nx, ny);
-        float t   = borderThickness;
-        float off = borderOutside + t * 0.5f;
+        float t    = borderThickness;
+        float off  = borderOutside + t * 0.5f;
+        float size = cornerSize;
 
         if (debugMasks) SpawnMaskLabel(node, mask);
 
         switch (mask)
         {
-            case 4:  Place(cornerLTPrefab, -off, +off); break;
-            case 8:  Place(cornerRTPrefab, +off, +off); break;
-            case 2:  Place(cornerLBPrefab, -off, -off); break;
-            case 1:  Place(cornerRBPrefab, +off, -off); break;
+            // OUTER corners
+            case 4:  Place(PickOuterLT(), -off, +off); break;
+            case 8:  Place(PickOuterRT(), +off, +off); break;
+            case 2:  Place(PickOuterLB(), -off, -off); break;
+            case 1:  Place(PickOuterRB(), +off, -off); break;
 
-            case 11: Place(cornerLTPrefab, +off, -off); break;
-            case 7:  Place(cornerRTPrefab, -off, -off); break;
-            case 13: Place(cornerLBPrefab, +off, +off); break;
-            case 14: Place(cornerRBPrefab, -off, +off); break;
+            // INNER corners
+            case 11: Place(PickInnerLT(), +off, -off); break;
+            case 7:  Place(PickInnerRT(), -off, -off); break;
+            case 13: Place(PickInnerLB(), +off, +off); break;
+            case 14: Place(PickInnerRB(), -off, +off); break;
 
+            // Diagonal touch: draw two separate outside corner caps.
             case 5:
-                Place(cornerRBPrefab, +off, -off);
-                Place(cornerLTPrefab, -off, +off);
+                Place(PickOuterRB(), +off, -off);
+                Place(PickOuterLT(), -off, +off);
                 break;
+
             case 10:
-                Place(cornerLBPrefab, -off, -off);
-                Place(cornerRTPrefab, +off, +off);
+                Place(PickOuterLB(), -off, -off);
+                Place(PickOuterRT(), +off, +off);
                 break;
         }
 
         void Place(GameObject prefab, float dx, float dy)
         {
             SpawnCorner(prefab, node + new Vector2(dx, dy),
-                        new Vector2(t, t), mask);
+                        new Vector2(size, size), mask);
         }
     }
+
+    private GameObject PickOuterLT() => use3DBorderPrefabs && outerLTPrefab != null ? outerLTPrefab : cornerLTPrefab;
+    private GameObject PickOuterRT() => use3DBorderPrefabs && outerRTPrefab != null ? outerRTPrefab : cornerRTPrefab;
+    private GameObject PickOuterLB() => use3DBorderPrefabs && outerLBPrefab != null ? outerLBPrefab : cornerLBPrefab;
+    private GameObject PickOuterRB() => use3DBorderPrefabs && outerRBPrefab != null ? outerRBPrefab : cornerRBPrefab;
+
+    private GameObject PickInnerLT() => use3DBorderPrefabs && innerLTPrefab != null ? innerLTPrefab : cornerLTPrefab;
+    private GameObject PickInnerRT() => use3DBorderPrefabs && innerRTPrefab != null ? innerRTPrefab : cornerRTPrefab;
+    private GameObject PickInnerLB() => use3DBorderPrefabs && innerLBPrefab != null ? innerLBPrefab : cornerLBPrefab;
+    private GameObject PickInnerRB() => use3DBorderPrefabs && innerRBPrefab != null ? innerRBPrefab : cornerRBPrefab;
 
     // ═══════════════════════════════════════════════════════════
     //  SPAWN
@@ -234,7 +319,7 @@ public class DynamicBoardBorder : MonoBehaviour
 
     private void SpawnStraight(GameObject prefab, Vector2 center, Vector2 size)
     {
-        if (prefab == null) return;
+        if (prefab == null || borderRoot == null) return;
 
         var go = Instantiate(prefab, borderRoot);
         var rt = go.GetComponent<RectTransform>();
@@ -255,7 +340,7 @@ public class DynamicBoardBorder : MonoBehaviour
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  YARDIMCI
+    //  HELPERS
     // ═══════════════════════════════════════════════════════════
 
     private Vector2 NodePos(int x, int y)
