@@ -50,6 +50,9 @@ public sealed class LineVHPulseCoreCombo
         if (lineTile.GetSpecial() == TileSpecial.LineV)
             return ExecuteLineVCombo(rt, comboCenterCell);
 
+        if (lineTile.GetSpecial() == TileSpecial.LineH)
+            return ExecuteLineHCombo(rt, comboCenterCell);
+
         var comboLightningVisualTargets = new List<TileView>();
         BuildAffectedArea(rt, comboCenterTile, comboLightningVisualTargets);
 
@@ -120,6 +123,31 @@ public sealed class LineVHPulseCoreCombo
         return result;
     }
 
+    private LineVHPulseCoreComboExecutionResult ExecuteLineHCombo(
+        LineVHPulseCoreComboExecutionRuntime rt,
+        Vector2Int comboCenterCell)
+    {
+        var result = new LineVHPulseCoreComboExecutionResult();
+        var origins = BuildLineHVirtualOrigins(rt.Board, comboCenterCell);
+
+        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] LineH delegate origins={origins.Count} center={comboCenterCell}");
+        rt.EmitPulseEmitterComboTriggered?.Invoke(comboCenterCell);
+
+        for (int i = 0; i < origins.Count; i++)
+        {
+            var originCell = origins[i];
+            bool finalizeAtEnd = rt.FinalizeAtEnd && i == origins.Count - 1;
+
+            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] delegate LineH origin=virtual({originCell.x},{originCell.y}) finalize={finalizeAtEnd}");
+
+            var lineResult = ExecuteLineHAtVirtualOrigin(rt, originCell, finalizeAtEnd);
+            if (lineResult != null && lineResult.Actions != null && lineResult.Actions.Count > 0)
+                result.Actions.AddRange(lineResult.Actions);
+        }
+
+        return result;
+    }
+
     private static List<Vector2Int> BuildLineVVirtualOrigins(BoardController board, Vector2Int comboCenterCell)
     {
         var origins = new List<Vector2Int>();
@@ -135,6 +163,26 @@ public sealed class LineVHPulseCoreCombo
                 continue;
 
             origins.Add(new Vector2Int(x, comboCenterCell.y));
+        }
+
+        return origins;
+    }
+
+    private static List<Vector2Int> BuildLineHVirtualOrigins(BoardController board, Vector2Int comboCenterCell)
+    {
+        var origins = new List<Vector2Int>();
+        if (board == null)
+            return origins;
+
+        if (comboCenterCell.x < 0 || comboCenterCell.x >= board.Width)
+            return origins;
+
+        for (int y = comboCenterCell.y - 1; y <= comboCenterCell.y + 1; y++)
+        {
+            if (y < 0 || y >= board.Height)
+                continue;
+
+            origins.Add(new Vector2Int(comboCenterCell.x, y));
         }
 
         return origins;
@@ -163,7 +211,39 @@ public sealed class LineVHPulseCoreCombo
                 rt.ExecuteSpecialActions?.Invoke(resolution, tile, partner);
             },
             EnqueueChainSpecials = resolution => EnqueueNewlyAffectedSpecials(rt, pending),
-            ProcessQueue = resolution => ProcessPendingChainQueue(rt, pending, nestedResult)
+            ProcessQueue = resolution => ProcessPendingChainQueue(rt, pending, nestedResult, "LineV")
+        });
+
+        if (result != null && nestedResult.Actions.Count > 0)
+            result.Actions.InsertRange(0, nestedResult.Actions);
+
+        return result;
+    }
+
+    private LineHExecutionResult ExecuteLineHAtVirtualOrigin(
+        LineVHPulseCoreComboExecutionRuntime rt,
+        Vector2Int virtualOriginCell,
+        bool finalizeAtEnd)
+    {
+        var pending = new Queue<TileView>();
+        var nestedResult = new LineVHPulseCoreComboExecutionResult();
+        var lineH = new LineHSpecial();
+
+        var result = lineH.Execute(new LineHExecutionRuntime
+        {
+            Board = rt.Board,
+            Context = rt.Context,
+            Origin = null,
+            Partner = null,
+            VirtualOriginCell = virtualOriginCell,
+            FinalizeAtEnd = finalizeAtEnd,
+            SuppressVisualSideEffects = false,
+            ActivateSpecial = (resolution, tile, partner) =>
+            {
+                rt.ExecuteSpecialActions?.Invoke(resolution, tile, partner);
+            },
+            EnqueueChainSpecials = resolution => EnqueueNewlyAffectedSpecials(rt, pending),
+            ProcessQueue = resolution => ProcessPendingChainQueue(rt, pending, nestedResult, "LineH")
         });
 
         if (result != null && nestedResult.Actions.Count > 0)
@@ -175,12 +255,15 @@ public sealed class LineVHPulseCoreCombo
     private void ProcessPendingChainQueue(
         LineVHPulseCoreComboExecutionRuntime rt,
         Queue<TileView> pending,
-        LineVHPulseCoreComboExecutionResult result)
+        LineVHPulseCoreComboExecutionResult result,
+        string ownerLabel)
     {
         if (rt == null || pending == null || result == null)
             return;
 
-        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] LineV chain seed count={pending.Count}");
+        ownerLabel = string.IsNullOrEmpty(ownerLabel) ? "Line" : ownerLabel;
+
+        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] {ownerLabel} chain seed count={pending.Count}");
 
         while (pending.Count > 0)
         {
@@ -197,7 +280,7 @@ public sealed class LineVHPulseCoreCombo
                 continue;
 
             rt.DebugLog?.Invoke(
-                $"[LineVHPulseCoreCombo] LineV candidate cell={cell} special={special} processed={rt.Context.Processed.Contains(cell)}");
+                $"[LineVHPulseCoreCombo] {ownerLabel} candidate cell={cell} special={special} processed={rt.Context.Processed.Contains(cell)}");
 
             if (rt.Context.Processed.Contains(cell))
                 continue;
@@ -210,7 +293,7 @@ public sealed class LineVHPulseCoreCombo
             if (!rt.Context.ChainExecutionOrder.Contains(cell))
                 rt.Context.ChainExecutionOrder.Add(cell);
 
-            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] LineV EXECUTE special={special} cell={cell}");
+            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] {ownerLabel} EXECUTE special={special} cell={cell}");
 
             rt.Context.Processed.Remove(cell);
             var nestedActions = rt.ExecuteSpecialActions?.Invoke(rt.Context, tile, null);
@@ -219,7 +302,7 @@ public sealed class LineVHPulseCoreCombo
             if (nestedActions != null && nestedActions.Count > 0)
             {
                 rt.DebugLog?.Invoke(
-                    $"[LineVHPulseCoreCombo] LineV IGNORE nested finalize actions count={nestedActions.Count} from {special} at {cell}; final LineV clear owns the accumulated context");
+                    $"[LineVHPulseCoreCombo] {ownerLabel} IGNORE nested finalize actions count={nestedActions.Count} from {special} at {cell}; final {ownerLabel} clear owns the accumulated context");
             }
 
             EnqueueNewlyAffectedSpecials(rt, pending);
