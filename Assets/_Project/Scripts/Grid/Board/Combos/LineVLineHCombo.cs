@@ -38,8 +38,16 @@ public sealed class LineVLineHCombo
             return result;
 
         RegisterOrigins(rt);
-        CollectCross(rt);
-        BuildLineVisuals(rt);
+
+        var centerCell = GetCenterCell(rt);
+        Debug.Log($"[LineVLineHCombo] delegate cross origin=virtual({centerCell.x},{centerCell.y})");
+
+        // Ownership direction:
+        // LineV+LineH combo decides the cross center.
+        // Row/column collection and line visuals are delegated to LineHSpecial/LineVSpecial.
+        ExecuteLineHAtVirtualOrigin(rt, centerCell);
+        ExecuteLineVAtVirtualOrigin(rt, centerCell);
+
         ExecuteChain(rt);
         RemoveDeferredOverrideOriginsFromLineClear(rt);
 
@@ -69,7 +77,40 @@ public sealed class LineVLineHCombo
                 center));
         }
 
+        Debug.Log($"[LineVLineHCombo] PRE-FINALIZE center=virtual({centerCell.x},{centerCell.y}) affected={rt.Context.Affected.Count} lightningTargets={rt.Context.LightningVisualTargets.Count} strikes={rt.Context.LightningLineStrikes.Count}");
         return result;
+    }
+
+    private void ExecuteLineHAtVirtualOrigin(LineVLineHComboExecutionRuntime rt, Vector2Int centerCell)
+    {
+        var lineH = new LineHSpecial();
+        lineH.Execute(new LineHExecutionRuntime
+        {
+            Board = rt.Board,
+            Context = rt.Context,
+            Origin = null,
+            Partner = null,
+            VirtualOriginCell = centerCell,
+            FinalizeAtEnd = false,
+            ActivateSpecial = rt.ActivateSpecial,
+            SuppressVisualSideEffects = false
+        });
+    }
+
+    private void ExecuteLineVAtVirtualOrigin(LineVLineHComboExecutionRuntime rt, Vector2Int centerCell)
+    {
+        var lineV = new LineVSpecial();
+        lineV.Execute(new LineVExecutionRuntime
+        {
+            Board = rt.Board,
+            Context = rt.Context,
+            Origin = null,
+            Partner = null,
+            VirtualOriginCell = centerCell,
+            FinalizeAtEnd = false,
+            ActivateSpecial = rt.ActivateSpecial,
+            SuppressVisualSideEffects = false
+        });
     }
 
     private void RemoveDeferredOverrideOriginsFromLineClear(LineVLineHComboExecutionRuntime rt)
@@ -119,34 +160,6 @@ public sealed class LineVLineHCombo
         rt.Context.HasLineActivation = true;
     }
 
-    private void CollectCross(LineVLineHComboExecutionRuntime rt)
-    {
-        var center = GetCenterTile(rt);
-        int cx = center.X;
-        int cy = center.Y;
-
-        for (int x = 0; x < rt.Board.Width; x++)
-            AddCell(rt, x, cy);
-
-        for (int y = 0; y < rt.Board.Height; y++)
-            AddCell(rt, cx, y);
-    }
-
-    private void BuildLineVisuals(LineVLineHComboExecutionRuntime rt)
-    {
-        //var center = GetCenterTile(rt);
-        //var cell = new Vector2Int(center.X, center.Y);
-
-        var center = rt.Partner; // swap target
-
-        Debug.Log("center x:" + center.X + "centery" + center.Y);
-        rt.Context.LightningLineStrikes.Add(new LightningLineStrike(new Vector2Int(center.X, center.Y), true));
-        rt.Context.LightningLineStrikes.Add(new LightningLineStrike(new Vector2Int(center.X, center.Y), false));
-
-        // rt.Context.LightningLineStrikes.Add(new LightningLineStrike(cell, true));
-        // rt.Context.LightningLineStrikes.Add(new LightningLineStrike(cell, false));
-    }
-
     private void ExecuteChain(LineVLineHComboExecutionRuntime rt)
     {
         var pending = new Queue<TileView>();
@@ -170,20 +183,12 @@ public sealed class LineVLineHCombo
 
             rt.Context.Queued.Remove(pos);
 
-            if (special == TileSpecial.LineV || special == TileSpecial.LineH)
-            {
-                if (!rt.Context.Processed.Contains(pos))
-                    rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
+            Debug.Log($"[LineVLineHCombo] EXECUTE special={special} cell={pos}");
 
-                rt.Context.Processed.Add(pos);
-            }
-            else
-            {
-                if (!rt.Context.Processed.Contains(pos))
-                    rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
+            if (!rt.Context.Processed.Contains(pos))
+                rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
 
-                rt.Context.Processed.Add(pos);
-            }
+            rt.Context.Processed.Add(pos);
 
             EnqueueNewlyAffectedSpecials(rt, pending);
         }
@@ -249,21 +254,6 @@ public sealed class LineVLineHCombo
         pending.Enqueue(tile);
     }
 
-    private void AddCell(LineVLineHComboExecutionRuntime rt, int x, int y)
-    {
-        if (!SpecialUtils.CanAffectCell(rt.Board, x, y))
-            return;
-
-        SpecialCellUtils.MarkAffectedCell(rt.Context, x, y, rt.Board);
-
-        var tile = rt.Board.Tiles[x, y];
-        if (tile == null)
-            return;
-
-        rt.Context.Affected.Add(tile);
-        rt.Context.LightningVisualTargets.Add(tile);
-    }
-
     private void AddTile(LineVLineHComboExecutionRuntime rt, TileView tile)
     {
         if (tile == null)
@@ -278,6 +268,12 @@ public sealed class LineVLineHCombo
     private TileView GetCenterTile(LineVLineHComboExecutionRuntime rt)
     {
         return rt.Center != null ? rt.Center : (rt.Partner != null ? rt.Partner : rt.Origin);
+    }
+
+    private Vector2Int GetCenterCell(LineVLineHComboExecutionRuntime rt)
+    {
+        var center = GetCenterTile(rt);
+        return center != null ? new Vector2Int(center.X, center.Y) : Vector2Int.zero;
     }
 
     private MatchClearAction BuildClearAction(LineVLineHComboExecutionRuntime rt)
