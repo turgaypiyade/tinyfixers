@@ -35,8 +35,32 @@ public class DynamicBoardBorder : MonoBehaviour
 
     [Header("3D Border Join Settings")]
     public bool use3DBorderPrefabs = true;
+
+    [Tooltip("If true, corner size and overlap are calculated from the source sprite metrics and borderThickness. Turn off only for manual tuning.")]
+    public bool autoSize3DBorderFromSprites = true;
+
+    [Tooltip("For the v3 node-centered sprites this is 48 for the 48px folder, 96 for the 96px_hd folder.")]
+    public float sourceBorderThicknessPx = 48f;
+
+    [Tooltip("For the v3 node-centered sprites this is 96 for the 48px folder, 192 for the 96px_hd folder.")]
+    public float sourceCornerCanvasPx = 96f;
+
+    [Tooltip("Source-pixel overlap for outer corners. Runtime value is scaled by borderThickness / sourceBorderThicknessPx.")]
+    public float sourceOuterJoinOverlapPx = 14f;
+
+    [Tooltip("Source-pixel overlap for inner corners. Runtime value is scaled by borderThickness / sourceBorderThicknessPx.")]
+    public float sourceInnerJoinOverlapPx = 8f;
+
+    [Tooltip("Use this with node-centered corner sprites. Corner center is placed exactly on the grid node.")]
+    public bool center3DCornersOnGridNode = true;
+
+    [Tooltip("Manual corner size. Used only when autoSize3DBorderFromSprites is false.")]
     public float cornerVisualSize = 48f;
+
+    [Tooltip("Manual outer overlap. Used only when autoSize3DBorderFromSprites is false.")]
     public float outerJoinOverlap = 8f;
+
+    [Tooltip("Manual inner overlap. Used only when autoSize3DBorderFromSprites is false.")]
     public float innerJoinOverlap = 4f;
 
     [Header("Debug")]
@@ -57,7 +81,18 @@ public class DynamicBoardBorder : MonoBehaviour
 
     private bool[] _holes;
 
-    public float cornerSize       => use3DBorderPrefabs ? cornerVisualSize : borderThickness;
+    private float BorderSpriteScale => borderThickness / Mathf.Max(1f, sourceBorderThicknessPx);
+    private float RuntimeCornerSize => use3DBorderPrefabs && autoSize3DBorderFromSprites
+        ? sourceCornerCanvasPx * BorderSpriteScale
+        : cornerVisualSize;
+    private float RuntimeOuterJoinOverlap => use3DBorderPrefabs && autoSize3DBorderFromSprites
+        ? sourceOuterJoinOverlapPx * BorderSpriteScale
+        : outerJoinOverlap;
+    private float RuntimeInnerJoinOverlap => use3DBorderPrefabs && autoSize3DBorderFromSprites
+        ? sourceInnerJoinOverlapPx * BorderSpriteScale
+        : innerJoinOverlap;
+
+    public float cornerSize       => use3DBorderPrefabs ? RuntimeCornerSize : borderThickness;
     public float straightH_height => borderThickness;
     public float straightV_width  => borderThickness;
 
@@ -66,6 +101,10 @@ public class DynamicBoardBorder : MonoBehaviour
     private void OnValidate()
     {
         borderThickness = Mathf.Max(1f, borderThickness);
+        sourceBorderThicknessPx = Mathf.Max(1f, sourceBorderThicknessPx);
+        sourceCornerCanvasPx = Mathf.Max(sourceBorderThicknessPx, sourceCornerCanvasPx);
+        sourceOuterJoinOverlapPx = Mathf.Max(0f, sourceOuterJoinOverlapPx);
+        sourceInnerJoinOverlapPx = Mathf.Max(0f, sourceInnerJoinOverlapPx);
         cornerVisualSize = Mathf.Max(borderThickness, cornerVisualSize);
         outerJoinOverlap = Mathf.Max(0f, outerJoinOverlap);
         innerJoinOverlap = Mathf.Max(0f, innerJoinOverlap);
@@ -115,6 +154,9 @@ public class DynamicBoardBorder : MonoBehaviour
     //    Outer corners: straight pieces extend under the corner sprite.
     //    Inner corners: straight pieces are shortened enough to avoid a plus sign,
     //    but still keep a small overlap under the inner corner sprite.
+    //
+    //  The important part is that the values are derived from the source sprite
+    //  metrics. Changing only borderThickness scales the whole system.
     // ═══════════════════════════════════════════════════════════
 
     private float GetTrim(int nodeMask)
@@ -141,12 +183,12 @@ public class DynamicBoardBorder : MonoBehaviour
         {
             // Outer corner: straight piece goes slightly under the corner cap.
             case 1: case 2: case 4: case 8:
-                return -outerJoinOverlap;
+                return -RuntimeOuterJoinOverlap;
 
             // Inner corner / diagonal: prevent plus artefacts while preserving overlap.
             case 7: case 11: case 13: case 14:
             case 5: case 10:
-                return Mathf.Max(0f, borderThickness * 0.5f - innerJoinOverlap);
+                return Mathf.Max(0f, borderThickness * 0.5f - RuntimeInnerJoinOverlap);
 
             default:
                 return 0f;
@@ -228,9 +270,17 @@ public class DynamicBoardBorder : MonoBehaviour
     // ═══════════════════════════════════════════════════════════
     //  CORNERS
     //
-    //  center = node + dir × (borderOutside + thickness/2)
-    //  pivot  = (0.5, 0.5)
-    //  3D mode uses cornerVisualSize, allowing the corner cap to cover joins.
+    //  Old flat mode:
+    //    center = node + dir × (borderOutside + thickness/2)
+    //    size   = thickness
+    //
+    //  Node-centered 3D mode:
+    //    center = node
+    //    size   = sourceCornerCanvasPx × borderThickness / sourceBorderThicknessPx
+    //
+    //  This removes the trial-and-error corner offset. The sprite is authored around
+    //  the grid node, so the same placement works for outer corners, inner corners,
+    //  holes and diagonal touches.
     // ═══════════════════════════════════════════════════════════
 
     private void PlaceCorner(int nx, int ny, bool[] blocked)
@@ -242,6 +292,7 @@ public class DynamicBoardBorder : MonoBehaviour
         float t    = borderThickness;
         float off  = borderOutside + t * 0.5f;
         float size = cornerSize;
+        bool centered3D = use3DBorderPrefabs && center3DCornersOnGridNode;
 
         if (debugMasks) SpawnMaskLabel(node, mask);
 
@@ -271,10 +322,13 @@ public class DynamicBoardBorder : MonoBehaviour
                 break;
         }
 
-        void Place(GameObject prefab, float dx, float dy)
+        void Place(GameObject prefab, float oldDx, float oldDy)
         {
-            SpawnCorner(prefab, node + new Vector2(dx, dy),
-                        new Vector2(size, size), mask);
+            Vector2 center = centered3D
+                ? node
+                : node + new Vector2(oldDx, oldDy);
+
+            SpawnCorner(prefab, center, new Vector2(size, size), mask);
         }
     }
 
