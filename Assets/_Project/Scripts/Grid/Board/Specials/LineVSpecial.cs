@@ -108,11 +108,13 @@ public sealed class LineVSpecial
 
         if (rt.VirtualOriginCell.HasValue)
         {
-            var cell = rt.VirtualOriginCell.Value;
-            if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+            var virtualCell = rt.VirtualOriginCell.Value;
+
+            if (virtualCell.x < 0 || virtualCell.x >= rt.Board.Width ||
+                virtualCell.y < 0 || virtualCell.y >= rt.Board.Height)
                 return false;
 
-            return !rt.Context.Processed.Contains(cell) || rt.Origin == null;
+            return !rt.Context.Processed.Contains(virtualCell) || rt.Origin == null;
         }
 
         if (rt.Origin == null)
@@ -121,8 +123,9 @@ public sealed class LineVSpecial
         if (rt.Origin.GetSpecial() != TileSpecial.LineV)
             return false;
 
-        var cell = new Vector2Int(rt.Origin.X, rt.Origin.Y);
-        if (rt.Context.Processed.Contains(cell))
+        var originCell = new Vector2Int(rt.Origin.X, rt.Origin.Y);
+
+        if (rt.Context.Processed.Contains(originCell))
             return false;
 
         return true;

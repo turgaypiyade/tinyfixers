@@ -662,7 +662,7 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             if (action != null)
                 yield return action.ExecuteVisuals(sequencer);
         }
-        
+
         foreach (var kvp in targetVisuals)
         {
             if (IsProtected(kvp.Key))
