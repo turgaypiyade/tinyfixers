@@ -30,6 +30,7 @@ public class ActivationQueueProcessor
             return;
 
         Vector2Int pos = new Vector2Int(special.X, special.Y);
+        TileSpecial specialType = special.GetSpecial();
 
         if (ctx.Queued.Contains(pos))
             return;
@@ -37,8 +38,14 @@ public class ActivationQueueProcessor
         if (ctx.Processed.Contains(pos))
             return;
 
-        if (special.GetSpecial() == TileSpecial.None)
+        if (specialType == TileSpecial.None)
             return;
+
+        if (ShouldSuppressActivation(ctx, specialType))
+        {
+            Debug.Log($"[ActivationQueue] suppress special={specialType} cell={pos} reason=OverridePulseCoreSequence");
+            return;
+        }
 
         ctx.Queued.Add(pos);
 
@@ -103,8 +110,16 @@ public class ActivationQueueProcessor
             if (actSpecial == null)
                 continue;
 
-            if (actSpecial.GetSpecial() == TileSpecial.None)
+            TileSpecial specialType = actSpecial.GetSpecial();
+
+            if (specialType == TileSpecial.None)
                 continue;
+
+            if (ShouldSuppressActivation(ctx, specialType))
+            {
+                Debug.Log($"[ActivationQueue] suppress-dequeued special={specialType} cell={activation.cell} reason=OverridePulseCoreSequence");
+                continue;
+            }
 
             dispatcher.ApplySpecialActivation(ctx, actSpecial, actPartner);
 
@@ -113,5 +128,12 @@ public class ActivationQueueProcessor
 
             EnqueueChainSpecials(ctx);
         }
+    }
+
+    private static bool ShouldSuppressActivation(ResolutionContext ctx, TileSpecial specialType)
+    {
+        return ctx != null
+            && ctx.SuppressPulseCoreToPulseCoreChain
+            && specialType == TileSpecial.PulseCore;
     }
 }
