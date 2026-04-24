@@ -62,6 +62,7 @@ public sealed class PulseCoreSpecial
             RegisterOrigin(rt);
 
         PlayPulseActivationVisual(rt, rt.Origin.X, rt.Origin.Y);
+        HideOriginVisualAfterPulse(rt);
         CollectArea(rt, rt.Origin.X, rt.Origin.Y);
         ExecuteQueuedChain(rt);
 
@@ -144,6 +145,18 @@ public sealed class PulseCoreSpecial
 
         if (rt.Board?.PulseCoreImpactService != null)
             rt.Board.PulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(centerX, centerY, radiusCells: ComputeVfxRadius());
+    }
+
+    private void HideOriginVisualAfterPulse(PulseCoreExecutionRuntime rt)
+    {
+        if (rt == null || rt.SuppressVisualSideEffects || rt.Origin == null)
+            return;
+
+        if (rt.Origin.GetSpecial() != TileSpecial.PulseCore)
+            return;
+
+        SpecialVisualService.HideTileVisualForCombo(rt.Origin);
+        Debug.Log($"[PulseCore.Execute] HIDE origin=({rt.Origin.X},{rt.Origin.Y}) after-pulse");
     }
 
     private void CollectArea(PulseCoreExecutionRuntime rt, int centerX, int centerY)
