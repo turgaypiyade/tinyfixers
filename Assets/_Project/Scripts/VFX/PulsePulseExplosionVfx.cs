@@ -4,13 +4,14 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Pulse+Pulse combo — SADECE charge animasyonu.
-/// Glow + bomba sprite: şişer, titrer, nefes alır.
+/// Squash → Stretch → Wobble (şişip inen + yamuk) → Peak Hold
 ///
 /// Patlama bu component'te YOK — BoardController charge bittikten sonra
 /// mevcut PulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell() ile
 /// daha geniş alanda (5x5) patlatır.
 ///
-/// Start()'ta otomatik başlar.
+/// Start()'ta otomatik başlar. ChargeDuration property'si BoardController
+/// tarafından senkron için okunur — değeri koruyoruz.
 /// </summary>
 public class PulsePulseExplosionVfx : MonoBehaviour
 {
@@ -20,17 +21,36 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     [SerializeField] private float bombBaseSize = 130f;
     [SerializeField] private float chargeDuration = 2.0f;
 
-    [Header("Charge — Scale")]
-    [SerializeField] private float chargeStartScale = 0.9f;
-    [SerializeField] private float chargeMaxScale = 2.5f;
-    [SerializeField] private float breathSpeed = 6f;
-    [SerializeField] private float breathAmount = 0.15f;
+    [Header("Charge — Phase Ratios (toplamı 1.0 olmalı)")]
+    [Tooltip("Çöküp genişleme (anticipation)")]
+    [SerializeField, Range(0f, 1f)] private float phaseSquashRatio = 0.15f;
+    [Tooltip("Yukarı uzayıp incelme")]
+    [SerializeField, Range(0f, 1f)] private float phaseStretchRatio = 0.15f;
+    [Tooltip("Şişip inen + yamuk salınımlı büyüme")]
+    [SerializeField, Range(0f, 1f)] private float phaseWobbleRatio = 0.55f;
+    [Tooltip("En büyükte nabız atan duruş")]
+    [SerializeField, Range(0f, 1f)] private float phasePeakRatio = 0.15f;
 
-    [Header("Charge — Shake")]
-    [SerializeField] private float shakeStartNormalized = 0.25f;
-    [SerializeField] private float shakeIntensityStart = 0.5f;
-    [SerializeField] private float shakeIntensityEnd = 6f;
-    [SerializeField] private float shakeSpeed = 40f;
+    [Header("Charge — Squash/Stretch Amounts")]
+    [SerializeField] private float squashScaleX = 1.22f;
+    [SerializeField] private float squashScaleY = 0.75f;
+    [SerializeField] private float stretchScaleX = 0.82f;
+    [SerializeField] private float stretchScaleY = 1.32f;
+
+    [Header("Charge — Wobble (yamuk/şişen his)")]
+    [Tooltip("x ve y ekseninde zıt fazlı sinüs genliği (0.12 = %12)")]
+    [SerializeField] private float wobbleAmplitude = 0.14f;
+    [Tooltip("Saniyede kaç şişip-inme döngüsü")]
+    [SerializeField] private float wobbleFrequency = 5.5f;
+    [Tooltip("Z ekseninde hafif rotasyon salınımı — yamuk hissi verir")]
+    [SerializeField] private float tiltDegrees = 8f;
+
+    [Header("Charge — Peak")]
+    [Tooltip("Wobble sonunda ulaşılan maksimum uniform scale")]
+    [SerializeField] private float peakScale = 1.45f;
+    [Tooltip("Peak hold'daki hızlı nabız genliği (%)")]
+    [SerializeField] private float peakPulseAmplitude = 0.03f;
+    [SerializeField] private float peakPulseFrequency = 18f;
 
     [Header("Charge — Glow")]
     [Tooltip("Glow sprite (Knob). Bombanın arkasında yumuşak parlama.")]
@@ -59,7 +79,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
 
     private void Start()
     {
-        Debug.Log("[PulsePulseExplosionVfx] Start — charge begin");
+        Debug.Log("[PulsePulseExplosionVfx] Start — squash/stretch charge begin");
         StartCoroutine(CoCharge());
     }
 
@@ -69,7 +89,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     }
 
     // ════════════════════════════════════════════════
-    //  CHARGE: Glow + Bomba — şişer, titrer
+    //  CHARGE: Squash → Stretch → Wobble → Peak
     // ════════════════════════════════════════════════
     private IEnumerator CoCharge()
     {
@@ -87,68 +107,169 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             glowImg.color = glowColorStart;
         }
 
-        // Bomba (önde)
+        // Bomba (önde) — deformasyon bunun üstünde yaşayacak
+        RectTransform bombRt = null;
         Image bombImg = null;
         if (bombSprite)
         {
             bombImg = CreateUIImage("ChargeBomb", container, bombSprite, bombBaseSize);
             bombImg.preserveAspect = true;
             bombImg.color = Color.white;
+            bombRt = bombImg.rectTransform;
         }
 
-        float elapsed = 0f;
-        float shakeSeed = Random.Range(0f, 100f);
+        // Evre süreleri — ratio'lar 1'e toplanmayabilir, normalize et
+        float ratioSum = Mathf.Max(0.0001f,
+            phaseSquashRatio + phaseStretchRatio + phaseWobbleRatio + phasePeakRatio);
+        float tSquash = chargeDuration * (phaseSquashRatio / ratioSum);
+        float tStretch = chargeDuration * (phaseStretchRatio / ratioSum);
+        float tWobble = chargeDuration * (phaseWobbleRatio / ratioSum);
+        float tPeak = chargeDuration * (phasePeakRatio / ratioSum);
 
-        while (elapsed < chargeDuration)
+        Vector3 baseScale = Vector3.one;
+        float totalElapsed = 0f;
+
+        // ─── 1) SQUASH — çöküp yanlara genişle ─────────────────
+        Vector3 squashTarget = new Vector3(squashScaleX, squashScaleY, 1f);
+        yield return AnimatePhase(tSquash, (k, dt) =>
         {
-            elapsed += Time.unscaledDeltaTime;
-            float u = Mathf.Clamp01(elapsed / chargeDuration);
+            totalElapsed += dt;
+            float eased = EaseOutQuad(k);
+            Vector3 s = Vector3.LerpUnclamped(baseScale, squashTarget, eased);
+            ApplyScale(container, bombRt, s);
+            UpdateGlow(glowImg, totalElapsed, bombImg);
+        });
 
-            // Büyüme: ease-in
-            float grow = u * u;
-            float baseScale = Mathf.Lerp(chargeStartScale, chargeMaxScale, grow);
+        // ─── 2) STRETCH — yukarı uzayıp incelme ────────────────
+        Vector3 stretchTarget = new Vector3(stretchScaleX, stretchScaleY, 1f);
+        yield return AnimatePhase(tStretch, (k, dt) =>
+        {
+            totalElapsed += dt;
+            float eased = EaseInOutQuad(k);
+            Vector3 s = Vector3.LerpUnclamped(squashTarget, stretchTarget, eased);
+            ApplyScale(container, bombRt, s);
+            UpdateGlow(glowImg, totalElapsed, bombImg);
+        });
 
-            // Nefes
-            float breathU = Mathf.Clamp01((u - 0.15f) / 0.85f);
-            float curBreathSpeed = Mathf.Lerp(breathSpeed * 0.6f, breathSpeed * 2f, breathU);
-            float curBreathAmt = Mathf.Lerp(breathAmount * 0.3f, breathAmount, breathU * breathU);
-            float breath = Mathf.Sin(elapsed * curBreathSpeed) * curBreathAmt;
+        // ─── 3) WOBBLE — şişip inen + yamuk salınımlı büyüme ───
+        Vector3 wobbleStart = stretchTarget;
+        Vector3 wobbleEnd = Vector3.one * peakScale;
+        float wobbleElapsed = 0f;
+        yield return AnimatePhase(tWobble, (k, dt) =>
+        {
+            totalElapsed += dt;
+            wobbleElapsed += dt;
+            float eased = EaseOutCubic(k);
 
-            container.localScale = Vector3.one * (baseScale + breath);
+            // Ana büyüme: stretch → peak
+            Vector3 mid = Vector3.Lerp(wobbleStart, wobbleEnd, eased);
 
-            // Shake
-            float shakeU = Mathf.Clamp01((u - shakeStartNormalized) / (1f - shakeStartNormalized));
-            float intensity = Mathf.Lerp(shakeIntensityStart, shakeIntensityEnd, shakeU * shakeU);
+            // Non-uniform sinüs: x ve y zıt fazda → şişip inen his
+            // Sönümlü: (1 - k) çarpanı ile salınım peak'e yaklaştıkça azalır
+            float phase = wobbleElapsed * wobbleFrequency * Mathf.PI * 2f;
+            float damp = 1f - k;
+            float sx = 1f + Mathf.Sin(phase) * wobbleAmplitude * damp;
+            float sy = 1f + Mathf.Sin(phase + Mathf.PI) * wobbleAmplitude * damp;
 
-            float sx = (Mathf.PerlinNoise(elapsed * shakeSpeed + shakeSeed, 0f) - 0.5f) * 2f * intensity;
-            float sy = (Mathf.PerlinNoise(0f, elapsed * shakeSpeed + shakeSeed + 50f) - 0.5f) * 2f * intensity;
-            container.anchoredPosition = new Vector2(sx, sy);
+            Vector3 deformed = new Vector3(mid.x * sx, mid.y * sy, 1f);
+            ApplyScale(container, bombRt, deformed);
 
-            // Glow: fade in
-            if (glowImg)
-            {
-                Color gc = Color.Lerp(glowColorStart, glowColorPeak, u * u);
-                if (u > 0.7f)
-                {
-                    float flashPulse = Mathf.Sin(elapsed * breathSpeed * 2f) * 0.15f;
-                    gc.a = Mathf.Clamp01(gc.a + flashPulse);
-                }
-                glowImg.color = gc;
-            }
+            // Yamuk his — Z rotasyonu damped sine
+            float tilt = Mathf.Sin(phase * 0.8f) * tiltDegrees * damp;
+            if (bombRt) bombRt.localRotation = Quaternion.Euler(0f, 0f, tilt);
 
-            // Bomba: son %25'te flash
-            if (bombImg)
-            {
-                float flashU = Mathf.Clamp01((u - 0.75f) / 0.25f);
-                float flashBeat = Mathf.Sin(elapsed * breathSpeed * 3f) * 0.5f + 0.5f;
-                bombImg.color = Color.Lerp(Color.white, new Color(1f, 0.9f, 0.75f), flashU * flashBeat);
-            }
+            UpdateGlow(glowImg, totalElapsed, bombImg);
+        });
 
-            yield return null;
-        }
+        // ─── 4) PEAK HOLD — en büyükte hızlı nabız ─────────────
+        if (bombRt) bombRt.localRotation = Quaternion.identity;
+        float peakElapsed = 0f;
+        yield return AnimatePhase(tPeak, (k, dt) =>
+        {
+            totalElapsed += dt;
+            peakElapsed += dt;
+
+            float pulse = Mathf.Sin(peakElapsed * peakPulseFrequency) * peakPulseAmplitude;
+            Vector3 s = wobbleEnd * (1f + pulse);
+            ApplyScale(container, bombRt, s);
+
+            // Son evrede glow full-peak + hafif flash
+            UpdateGlowPeak(glowImg, totalElapsed, bombImg, k);
+        });
 
         Destroy(container.gameObject);
         Debug.Log("[PulsePulseExplosionVfx] Charge done");
+    }
+
+    // ────────────────────────────────────────────────
+    //  Phase runner — süre bitene kadar her frame callback çağırır
+    //  Callback: (k = normalized progress, dt = unscaledDeltaTime)
+    // ────────────────────────────────────────────────
+    private IEnumerator AnimatePhase(float duration, System.Action<float, float> onTick)
+    {
+        if (duration <= 0f) yield break;
+
+        float t = 0f;
+        while (t < duration)
+        {
+            float dt = Time.unscaledDeltaTime;
+            t += dt;
+            float k = Mathf.Clamp01(t / duration);
+            onTick(k, dt);
+            yield return null;
+        }
+    }
+
+    // Scale'i hem container hem bomb'a uygula. Glow'u bozmamak için
+    // sadece bomb üzerinde non-uniform deformasyon yapıyoruz; container'a
+    // uniform genel ölçek veriyoruz ki glow da büyüsün ama yamulmasın.
+    private void ApplyScale(RectTransform container, RectTransform bombRt, Vector3 nonUniform)
+    {
+        // Container uniform: ortalama büyüme (glow da orantılı büyür)
+        float uniform = (nonUniform.x + nonUniform.y) * 0.5f;
+        container.localScale = Vector3.one * uniform;
+
+        // Bomb non-uniform üstüne binecek — container zaten uniform büyüttü,
+        // yani bomb'un kendi local scale'i sadece "oran farkını" vermeli:
+        if (bombRt)
+        {
+            float bx = uniform > 0.0001f ? nonUniform.x / uniform : 1f;
+            float by = uniform > 0.0001f ? nonUniform.y / uniform : 1f;
+            bombRt.localScale = new Vector3(bx, by, 1f);
+        }
+    }
+
+    private void UpdateGlow(Image glowImg, float totalElapsed, Image bombImg)
+    {
+        if (!glowImg) return;
+        float u = Mathf.Clamp01(totalElapsed / chargeDuration);
+        Color gc = Color.Lerp(glowColorStart, glowColorPeak, u * u);
+        glowImg.color = gc;
+
+        if (bombImg)
+        {
+            float flashU = Mathf.Clamp01((u - 0.75f) / 0.25f);
+            bombImg.color = Color.Lerp(Color.white, new Color(1f, 0.92f, 0.78f), flashU);
+        }
+    }
+
+    private void UpdateGlowPeak(Image glowImg, float totalElapsed, Image bombImg, float peakK)
+    {
+        if (glowImg)
+        {
+            Color gc = glowColorPeak;
+            // Peak hold'da hafif titreyen alfa
+            float pulse = Mathf.Sin(totalElapsed * peakPulseFrequency) * 0.1f;
+            gc.a = Mathf.Clamp01(gc.a + pulse);
+            glowImg.color = gc;
+        }
+
+        if (bombImg)
+        {
+            // Peak'in son %40'ında beyaza doğru çok hafif yıkama
+            float bleach = Mathf.Clamp01((peakK - 0.6f) / 0.4f) * 0.35f;
+            bombImg.color = Color.Lerp(new Color(1f, 0.92f, 0.78f), Color.white, bleach);
+        }
     }
 
     // ────────────────────────────────────────────────
@@ -181,4 +302,9 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         img.raycastTarget = false;
         return img;
     }
+
+    // Easing
+    private static float EaseOutQuad(float t) => 1f - (1f - t) * (1f - t);
+    private static float EaseInOutQuad(float t) => t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
+    private static float EaseOutCubic(float t) => 1f - Mathf.Pow(1f - t, 3f);
 }

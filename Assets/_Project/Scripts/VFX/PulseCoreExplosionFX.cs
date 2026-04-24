@@ -15,6 +15,18 @@ public class PulseCoreExplosionFX : MonoBehaviour
     [SerializeField] private float totalDuration = 0.85f;
     [SerializeField] private bool destroyOnFinish = true;
 
+    // ───────────────────────── FIREWORK RANDOMIZATION ─────────────────────────
+    [Header("Firework Randomization")]
+    [Tooltip("Her patlamada rastgele renk ve boyut seçilir (havai fişek hissi).")]
+    [SerializeField] private bool randomizeOnPlay = true;
+
+    [Tooltip("Boyut çarpanı min (orijinal peak size bu değerle çarpılır)")]
+    [SerializeField, Range(0.5f, 3f)] private float sizeMultiplierMin = 1f;
+
+    [Tooltip("Boyut çarpanı max (orijinal peak size bu değerle çarpılır)")]
+    [SerializeField, Range(0.5f, 4f)] private float sizeMultiplierMax = 2f;
+    // ──────────────────────────────────────────────────────────────────────────
+
     [SerializeField, Range(0.1f, 2f)] private float flashPeakSizeRatio = 0.75f;
     [SerializeField] private float flashInTime = 0.05f;
     [SerializeField] private float flashOutTime = 0.22f;
@@ -55,6 +67,18 @@ public class PulseCoreExplosionFX : MonoBehaviour
     private Coroutine playRoutine;
     private bool isShuttingDown;
 
+    // Randomization orijinal (baseline) değerleri cache'ler ki her OnEnable'da
+    // çarpanlar birikmesin (2x × 2x = 4x olmasın).
+    private bool baselineCached;
+    private float origFlashPeakSizeRatio;
+    private float origGlowPeakSizeRatio;
+    private float origRaysPeakSizeRatio;
+    private float origRingPeakSizeRatio;
+    private Color origFlashColor;
+    private Color origGlowColor;
+    private Color origRaysColor;
+    private Color origRingColor;
+
     public void SetRadiusCells(int radiusCells, float tileSize)
     {
         int sideCells = radiusCells * 2 + 1;
@@ -79,6 +103,13 @@ public class PulseCoreExplosionFX : MonoBehaviour
     private void OnEnable()
     {
         isShuttingDown = false;
+
+        CacheBaselineOnce();
+        if (randomizeOnPlay)
+            ApplyRandomization();
+        else
+            RestoreBaseline();
+
         HideAll();
 
         if (playRoutine != null)
@@ -102,6 +133,67 @@ public class PulseCoreExplosionFX : MonoBehaviour
     {
         isShuttingDown = true;
     }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  RANDOMIZATION
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private void CacheBaselineOnce()
+    {
+        if (baselineCached) return;
+
+        origFlashPeakSizeRatio = flashPeakSizeRatio;
+        origGlowPeakSizeRatio = glowPeakSizeRatio;
+        origRaysPeakSizeRatio = raysPeakSizeRatio;
+        origRingPeakSizeRatio = ringPeakSizeRatio;
+
+        origFlashColor = flashColor;
+        origGlowColor = glowColor;
+        origRaysColor = raysColor;
+        origRingColor = ringColor;
+
+        baselineCached = true;
+    }
+
+    private void RestoreBaseline()
+    {
+        flashPeakSizeRatio = origFlashPeakSizeRatio;
+        glowPeakSizeRatio = origGlowPeakSizeRatio;
+        raysPeakSizeRatio = origRaysPeakSizeRatio;
+        ringPeakSizeRatio = origRingPeakSizeRatio;
+
+        flashColor = origFlashColor;
+        glowColor = origGlowColor;
+        raysColor = origRaysColor;
+        ringColor = origRingColor;
+    }
+
+    private void ApplyRandomization()
+    {
+        // 1) Renk paletinden rastgele bir ton seç (aynı aileden 4 katman)
+        var variant = PulseFireworkPalette.PickRandomVariant();
+
+        // Prefab'daki orijinal alpha karakterlerini koru (glow 0.75, rays 0.95, ring 1.0, flash 1.0).
+        // Paletteki RGB'yi al, alpha'yı orijinalden.
+        flashColor = WithAlpha(variant.flash, origFlashColor.a);
+        glowColor = WithAlpha(variant.glow, origGlowColor.a);
+        raysColor = WithAlpha(variant.rays, origRaysColor.a);
+        ringColor = WithAlpha(variant.ring, origRingColor.a);
+
+        // 2) Boyut çarpanı — tek çarpan, tüm katmanlara aynı oranda uygulanır.
+        //    Orantı bozulmaz, sadece toplam büyüklük değişir.
+        float sizeMul = Random.Range(sizeMultiplierMin, sizeMultiplierMax);
+
+        // Flash'ı biraz daha az büyüt (merkez parlaklığı glow'u bastırmasın)
+        float flashMul = Mathf.Lerp(1f, sizeMul, 0.7f);
+
+        flashPeakSizeRatio = origFlashPeakSizeRatio * flashMul;
+        glowPeakSizeRatio = origGlowPeakSizeRatio * sizeMul;
+        raysPeakSizeRatio = origRaysPeakSizeRatio * sizeMul;
+        ringPeakSizeRatio = origRingPeakSizeRatio * sizeMul;
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
 
     private IEnumerator DeferredStart()
     {
@@ -276,5 +368,134 @@ public class PulseCoreExplosionFX : MonoBehaviour
     private static Color WithAlpha(Color c, float a)
     {
         return new Color(c.r, c.g, c.b, a);
+    }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  FIREWORK COLOR PALETTE
+//  4 aile (mavi / kırmızı / sarı / yeşil) × 3 ton = 12 varyant
+//  Her varyant 4 katman için RGB üretir. Alpha değerleri prefab'dan korunur.
+// ═════════════════════════════════════════════════════════════════════════════
+public static class PulseFireworkPalette
+{
+    public struct Variant
+    {
+        public Color flash;  // merkez — en parlak
+        public Color glow;   // yumuşak halka
+        public Color rays;   // ışın accent
+        public Color ring;   // shockwave
+    }
+
+    private static readonly Variant[] Variants =
+    {
+        // ─── 🔵 MAVİ AİLESİ ──────────────────────────────────────────────
+        // Klasik mavi — kraliyet mavisi → açık sky
+        new Variant
+        {
+            flash = new Color(0.85f, 0.95f, 1.00f),  // buzlu beyaz
+            glow  = new Color(0.30f, 0.55f, 1.00f),  // kraliyet mavisi
+            rays  = new Color(0.55f, 0.80f, 1.00f),  // açık sky
+            ring  = new Color(0.20f, 0.45f, 1.00f),  // doygun mavi
+        },
+        // Açık mavi / cyan — buzul havai fişek
+        new Variant
+        {
+            flash = new Color(0.92f, 1.00f, 1.00f),
+            glow  = new Color(0.50f, 0.85f, 1.00f),
+            rays  = new Color(0.70f, 0.95f, 1.00f),
+            ring  = new Color(0.35f, 0.75f, 1.00f),
+        },
+        // Turkuaz / aqua
+        new Variant
+        {
+            flash = new Color(0.85f, 1.00f, 0.98f),
+            glow  = new Color(0.20f, 0.80f, 0.75f),
+            rays  = new Color(0.45f, 0.95f, 0.85f),
+            ring  = new Color(0.10f, 0.70f, 0.70f),
+        },
+
+        // ─── 🔴 KIRMIZI AİLESİ ───────────────────────────────────────────
+        // Saf kırmızı
+        new Variant
+        {
+            flash = new Color(1.00f, 0.90f, 0.90f),
+            glow  = new Color(1.00f, 0.25f, 0.20f),
+            rays  = new Color(1.00f, 0.50f, 0.40f),
+            ring  = new Color(0.95f, 0.15f, 0.15f),
+        },
+        // Kızıl-turuncu
+        new Variant
+        {
+            flash = new Color(1.00f, 0.95f, 0.85f),
+            glow  = new Color(1.00f, 0.45f, 0.15f),
+            rays  = new Color(1.00f, 0.65f, 0.30f),
+            ring  = new Color(1.00f, 0.35f, 0.10f),
+        },
+        // Fuşya / hot pink
+        new Variant
+        {
+            flash = new Color(1.00f, 0.92f, 0.96f),
+            glow  = new Color(1.00f, 0.30f, 0.65f),
+            rays  = new Color(1.00f, 0.55f, 0.80f),
+            ring  = new Color(0.95f, 0.20f, 0.60f),
+        },
+
+        // ─── 🟡 SARI AİLESİ ──────────────────────────────────────────────
+        // Altın sarısı
+        new Variant
+        {
+            flash = new Color(1.00f, 0.98f, 0.85f),
+            glow  = new Color(1.00f, 0.75f, 0.15f),
+            rays  = new Color(1.00f, 0.88f, 0.40f),
+            ring  = new Color(1.00f, 0.70f, 0.10f),
+        },
+        // Limon sarısı — parlak
+        new Variant
+        {
+            flash = new Color(1.00f, 1.00f, 0.90f),
+            glow  = new Color(0.98f, 0.95f, 0.30f),
+            rays  = new Color(1.00f, 1.00f, 0.55f),
+            ring  = new Color(0.95f, 0.90f, 0.20f),
+        },
+        // Amber / sıcak altın
+        new Variant
+        {
+            flash = new Color(1.00f, 0.94f, 0.80f),
+            glow  = new Color(1.00f, 0.65f, 0.10f),
+            rays  = new Color(1.00f, 0.82f, 0.35f),
+            ring  = new Color(0.95f, 0.60f, 0.08f),
+        },
+
+        // ─── 🟢 YEŞİL AİLESİ ─────────────────────────────────────────────
+        // Saf yeşil
+        new Variant
+        {
+            flash = new Color(0.90f, 1.00f, 0.90f),
+            glow  = new Color(0.20f, 0.85f, 0.30f),
+            rays  = new Color(0.50f, 1.00f, 0.55f),
+            ring  = new Color(0.10f, 0.75f, 0.25f),
+        },
+        // Lime / neon yeşil
+        new Variant
+        {
+            flash = new Color(0.95f, 1.00f, 0.88f),
+            glow  = new Color(0.60f, 0.95f, 0.20f),
+            rays  = new Color(0.80f, 1.00f, 0.45f),
+            ring  = new Color(0.50f, 0.90f, 0.15f),
+        },
+        // Zümrüt / koyu yeşil
+        new Variant
+        {
+            flash = new Color(0.88f, 1.00f, 0.92f),
+            glow  = new Color(0.10f, 0.65f, 0.40f),
+            rays  = new Color(0.35f, 0.85f, 0.55f),
+            ring  = new Color(0.05f, 0.55f, 0.35f),
+        },
+    };
+
+    public static Variant PickRandomVariant()
+    {
+        int i = Random.Range(0, Variants.Length);
+        return Variants[i];
     }
 }
