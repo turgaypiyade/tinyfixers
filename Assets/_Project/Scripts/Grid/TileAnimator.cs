@@ -20,13 +20,15 @@ public sealed class TileAnimator
     // Taş küçülür + halka (glow ring) açılır + yıldızlar dans eder + altın shardlar saçılır.
     // Burst VFX TileClearBurstVfx sınıfı tarafından üretilir (runtime UI, prefab gerekmez).
     //
-    // Hissiyat ayarları:
-    //   BURST_DURATION    = toplam efekt süresi (0.30s referans Royal Match)
-    //   TILE_SHRINK_RATIO = taşın küçülme bitiş oranı (0.0 = tamamen kaybolsun)
+    // Hissiyat ayarları (hızlandırıldı):
+    //   BURST_DURATION = 0.08s (PlayPop coroutine bekleme, eski 0.12)
+    //   Burst kendisi arka planda 0.30s yaşamaya devam eder (fire-and-forget),
+    //   sadece PlayPop'un coroutine beklemesi 0.08s → clear anim blokaj azaldı.
     // ============================================================
-    private const float BURST_DURATION = 0.30f;   // Toplam efekt süresi
+    private const float BURST_DURATION = 0.08f;   // Taş küçülme süresi (PlayPop coroutine bekleme)
     private const float TILE_SHRINK_END = 0.00f;  // Taş scale sonu
     private const float TILE_SHRINK_MID = 0.55f;  // Taş scale orta (shrink hissini verir)
+    private const float BURST_VFX_DURATION = 0.30f; // Halka/yıldız/shard yaşam süresi (paralel)
 
     public IEnumerator PlayPop(TileView tile, float duration)
     {
@@ -70,11 +72,11 @@ public sealed class TileAnimator
             yield break;
         }
 
-        // Burst VFX'i paralel tetikle (taşın pozisyonunda spawn olur, kendi coroutine'iyle biter)
-        // Fire-and-forget: TileAnimator coroutine bekleme, burst kendi life'ını yaşar
+        // Burst VFX'i paralel tetikle (kendi life'ını yaşar, PlayPop bekleme zorunda değil)
+        // Fire-and-forget: burst 300ms yaşar ama PlayPop sadece 120ms blokluyor
         if (board != null)
         {
-            board.StartCoroutine(TileClearBurstVfx.CoPlayBurst(tile, board, BURST_DURATION));
+            board.StartCoroutine(TileClearBurstVfx.CoPlayBurst(tile, board, BURST_VFX_DURATION));
         }
 
         // Taş animasyonu — çağıran taraftaki duration parametresini dikkate al
@@ -355,7 +357,7 @@ public sealed class TileAnimator
             yield break;
         }
 
-        float animDuration = Mathf.Max(0.08f, duration);
+        float animDuration = Mathf.Max(0.025f, duration);
 
         Transform createdRoot = createdTile.transform;
         CanvasGroup createdGroup = createdTile.GetComponent<CanvasGroup>();
@@ -385,7 +387,7 @@ public sealed class TileAnimator
             createdIconRt.GetWorldCorners(_cornersCreated);
             Vector3 _createdWorldCenter = (_cornersCreated[0] + _cornersCreated[2]) * 0.5f;
             board.StartCoroutine(TileClearBurstVfx.CoPlayBurstAtWorldPosition(
-                _createdWorldCenter, ghostParent, board, 0.30f));
+                _createdWorldCenter, ghostParent, board, BURST_VFX_DURATION));
         }
 
         Vector2 targetPos = GetRectCenterInParentSpace(ghostParent, createdIconRt);
@@ -460,7 +462,7 @@ public sealed class TileAnimator
                         tileRootRt.GetWorldCorners(_cornersSource);
                         Vector3 _srcWorldCenter = (_cornersSource[0] + _cornersSource[2]) * 0.5f;
                         board.StartCoroutine(TileClearBurstVfx.CoPlayBurstAtWorldPosition(
-                            _srcWorldCenter, ghostParent, board, 0.30f));
+                            _srcWorldCenter, ghostParent, board, BURST_VFX_DURATION));
                     }
                 }
             }
@@ -485,6 +487,8 @@ public sealed class TileAnimator
                 createdFadeEase = 0f;
             else
                 createdFadeEase = Mathf.Clamp01((k - 0.52f) / 0.48f);
+                
+            createdFadeEase = Mathf.Clamp01(k * 1.4f);
 
             float createdScaleFactor = EvaluateCreatedSpecialScale(k);
 
@@ -568,7 +572,7 @@ public sealed class TileAnimator
             createdIconRt.GetWorldCorners(_cornersAppear);
             Vector3 _appearCenter = (_cornersAppear[0] + _cornersAppear[2]) * 0.5f;
             board.StartCoroutine(TileClearBurstVfx.CoPlayBurstAtWorldPosition(
-                _appearCenter, board.Parent, board, 0.30f));
+                _appearCenter, board.Parent, board, BURST_VFX_DURATION));
         }
 
         Vector3 baseScale = createdIconRt.localScale;

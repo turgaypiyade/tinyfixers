@@ -124,17 +124,27 @@ public class SpecialResolver
             SpecialCellUtils.MarkAffectedCell(ctx, a, board);
             SpecialCellUtils.MarkAffectedCell(ctx, b, board);
 
+            var patchBotTile = originalSaIsPatchBot ? a : b;
+            var pulseTile = originalSaIsPulse ? a : b;
+
             var result = pulseCorePatchBotCombo.Execute(new PulseCorePatchBotComboExecutionRuntime
             {
                 Board = board,
                 Context = ctx,
-                Origin = b,
-                Partner = a,
+                Origin = patchBotTile,
+                Partner = pulseTile,
                 FinalizeAtEnd = true,
                 PatchbotService = patchbotComboService,
                 VisualService = visualService,
                 Effects = effectOrchestrator,
-                ActivateSpecial = dispatcher.ApplySpecialActivation
+                ActivateSpecial = dispatcher.ApplySpecialActivation,
+                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
+                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
+                FireOverrideOverrideSpecialVisuals = (affected, delays) =>
+                    visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                EmitBoardSignal = signal => { },
+                EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
             });
 
             actions.AddRange(result.Actions);
@@ -142,7 +152,6 @@ public class SpecialResolver
             board.IsSpecialActivationPhase = false;
             return actions;
         }
-
         if ((originalSaIsPatchBot && originalSb == TileSpecial.LineV) ||
             (originalSbIsPatchBot && originalSa == TileSpecial.LineV))
         {

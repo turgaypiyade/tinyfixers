@@ -36,7 +36,7 @@ public sealed class SpecialCreationFormationEffectDescriptor : ClearEffectDescri
         Duration = duration;
         MergeTargetCell = null;
         ClearAtNormalizedTime = 1f;
-        TailHoldSeconds = 0.02f;
+        TailHoldSeconds = 0.001f;
     }
 
     // pulse implode

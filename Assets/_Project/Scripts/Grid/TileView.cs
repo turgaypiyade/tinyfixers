@@ -56,9 +56,20 @@ public class TileView : MonoBehaviour,
 
     public bool IsPlannedToMoveThisFallPass { get; private set; }
 
-    private const float FALL_V_START = 3.0f;   // Başlangıç hızı (cell/s)
-    private const float FALL_V_MAX = 20.0f;  // Terminal velocity (cell/s) — ölçümle kalibre
-    private const float FALL_GRAVITY = 150.0f; // İvme (cell/s²) — üst/alt aralık farkına kalibre
+    // ============================================================
+    // SABİT HIZ fall modeli (kullanıcı vizyonu — hızlandırıldı)
+    //
+    // Tüm taşlar V_MAX ile başlar ve V_MAX'ta devam eder. İvmelenme yok.
+    // Düşüş süresi = mesafe / V_MAX (deterministik, basit).
+    //
+    // Akordiyon hissi FallAction içindeki adaptive start delay ile gelir:
+    //   - Farklı taşlar farklı zamanlarda BAŞLAR
+    //   - Ama hepsi AYNI hızda iner
+    //   - Aralarındaki görsel mesafe = start delay farkı × V_MAX
+    //
+    // 35 → 42: %20 daha hızlı fall motion.
+    // ============================================================
+    private const float FALL_VELOCITY = 42.0f;  // cell/sec — sabit hız
 
     public void MarkPlannedToMoveThisFallPass(bool value)
     {
@@ -76,10 +87,6 @@ public class TileView : MonoBehaviour,
     private void UpdateSiblingOrder()
     {
         if (transform.parent == null || board == null) return;
-        // Üst satırlar (Y küçük) ÖNE gelmeli → büyük sibling index.
-        // Unity UI'da büyük sibling index = en son çizilir = en önde.
-        // Y=0 → totalTiles-1 (en önde)
-        // Y=height-1 → 0 (en arkada)
         int tilesPerRow = board.Width;
         int totalTiles = board.Width * board.Height;
         int idx = totalTiles - 1 - (Y * tilesPerRow + X);
@@ -172,7 +179,6 @@ public class TileView : MonoBehaviour,
 
         if (model.special == TileSpecial.SystemOverride)
         {
-            // Use color-keyed Override icon based on the tiles that formed the 5-match
             Sprite sp = null;
             if (model.hasOverrideBaseType)
                 sp = board.GetOverrideIcon(model.overrideBaseType);
@@ -202,7 +208,6 @@ public class TileView : MonoBehaviour,
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
 
-        // Root her zaman grid hücresinin top-left noktasına snap olur.
         rt.anchoredPosition = new Vector2(X * tileSize, -Y * tileSize);
 
         ApplyTileSize(tileSize);
@@ -210,50 +215,16 @@ public class TileView : MonoBehaviour,
 
 
     // ============================================================
-    // MoveToGrid v3 — SÜTUN TRENİ DÜZELTMESİ
-    // 
-    // SORUN: v=13.3'ten başlayıp anticipation fazıyla birlikte
-    //        her taş kendi ivme curve'ünü izliyordu → kısa mesafe
-    //        taşları erken duruyor, üstten gelenler üste biniyordu.
+    // MoveToGrid v4 — İVMELİ FİZİK + HIZLANDIRILMIŞ PARAMETRELER
     //
-    // ÇÖZÜM: Anticipation kaldırıldı. Tüm taşlar aynı anda,
-    //        v_start = V_MAX ile başlar. Hepsi sabit v_max hızında
-    //        iner → aralarındaki mesafe DAİMA korunur → rigid tren.
-    //        İvme tam başlangıç anında bitirildiği için
-    //        görsel olarak "beraber akma" hissi verir.
-    //
-    // TileView.cs içinde mevcut MoveToGrid'i BU VERSIYONLA değiştir.
-    // Sınıf üstüne const'ları koy.
-    // ============================================================
-
-    // Videoya kalibre edilmiş terminal hız (hücre/saniye)
-    private const float FALL_VELOCITY_CELLS_PER_SEC = 19.9f;  // ~2820 px/s @ 142px hücre
-
-    // ============================================================
-    // MoveToGrid v4 — İVMELİ FİZİK (Royal Match ölçümlerine kalibre)
-    //
-    // ÖLÇÜMLER (referans videonun 4. sütunundan, frame 5-6-7):
-    //   Frame 6: aralıklar üstten → alta: 1.16, 1.55, 2.00, 2.04, 1.99
-    //   Üstteki taşlar daha yakın (1.2h), alttakiler daha uzak (2.0h)
-    //   → Sadece İVMELİ fizik ile mümkün, sabit hız bunu üretemez.
-    //
-    // MODEL:
+    // Model:
     //   v(t) = min(V_START + GRAVITY * t, V_MAX)
-    //   traveled(t) = integral v(t)
-    //   duration = traveled == distance olduğu t
-    //
-    //   V_START = 3.0 cells/s   (yumuşak başlangıç, anlık tepki)
-    //   V_MAX   = 20.0 cells/s  (terminal velocity, ölçümle kalibre)
-    //   GRAVITY = 150 cells/s²  (ivme, üst→alt aralık farkına kalibre)
+    //   traveled(t) = integral v(t) dt
+    //   bitiş: traveled == distance
     //
     // duration parametresi YOK SAYILIR — süre fizik tarafından türetilir.
     // easingCurve YOK SAYILIR — curve yerine fizik denklemi.
-    //
-    // TileView.cs içinde mevcut MoveToGrid'i BU VERSIYONLA değiştir.
-    // Sınıf üstüne const'ları koy (varsa FALL_VELOCITY'i değiştir).
     // ============================================================
-
-    // === İvmeli fizik sabitleri (Inspector'dan yapmak istersen SerializeField yap) ===
 
     public IEnumerator MoveToGrid(
        int tileSize,
@@ -294,12 +265,10 @@ public class TileView : MonoBehaviour,
             end = new Vector2(X * tileSize, -Y * tileSize);
         }
 
-        // ======= İVMELİ FİZİK =======
-        // Mesafe hesabı: piksel olarak, sonra hücreye çevir
+        // ======= SABİT HIZ FİZİĞİ =======
         float totalPixels = Mathf.Abs(end.y - start.y);
         if (totalPixels < 0.5f)
         {
-            // Hareket yok, hemen bitir
             if (rt != null && rt)
             {
                 rt.anchoredPosition = end;
@@ -310,10 +279,9 @@ public class TileView : MonoBehaviour,
 
         float totalCells = totalPixels / Mathf.Max(1f, (float)tileSize);
 
-        // Yönü belirle (normalde aşağı, ama ters de olabilir)
         float direction = end.y < start.y ? -1f : 1f;
 
-        float velocity = FALL_V_START;   // cell/s
+        // Sabit hız — ivmelenme yok, taş tam hızında başlar ve tam hızında biter
         float traveledCells = 0f;
 
         while (traveledCells < totalCells)
@@ -322,18 +290,12 @@ public class TileView : MonoBehaviour,
 
             float dt = Time.deltaTime;
 
-            // İvmelen ama V_MAX'ı geçme
-            velocity = Mathf.Min(velocity + FALL_GRAVITY * dt, FALL_V_MAX);
-
-            // Bu frame'de kat edilen mesafe
-            float deltaCells = velocity * dt;
+            float deltaCells = FALL_VELOCITY * dt;
             traveledCells += deltaCells;
 
-            // Hedefi aşma
             if (traveledCells > totalCells)
                 traveledCells = totalCells;
 
-            // Pozisyonu uygula (piksel cinsinden)
             float traveledPixels = traveledCells * tileSize * direction;
             rt.anchoredPosition = new Vector2(end.x, start.y + traveledPixels);
 
@@ -344,7 +306,7 @@ public class TileView : MonoBehaviour,
         rt.anchoredPosition = end;
         SnapToGrid(tileSize);
 
-        // ======= SETTLE / BOUNCE (mevcut mantığı koru) =======
+        // ======= SETTLE / BOUNCE =======
         if (!enableSettle || settleDuration <= 0f)
             yield break;
 
@@ -353,7 +315,6 @@ public class TileView : MonoBehaviour,
 
         float bounceDur = settleDuration;
 
-        // Bounce 1: aşağıya batma (squash)
         float b1 = 0f;
         while (b1 < bounceDur * 0.35f)
         {
@@ -363,7 +324,6 @@ public class TileView : MonoBehaviour,
             float eased = 1f - (1f - k) * (1f - k);
             rt.anchoredPosition = Vector2.LerpUnclamped(end, overshoot, eased);
 
-            // İsteğe bağlı squash X stretch
             if (visualRt != null && settleStretchX > 0f)
             {
                 float sx = 1f + settleStretchX * eased;
@@ -374,7 +334,6 @@ public class TileView : MonoBehaviour,
             yield return null;
         }
 
-        // Bounce 2: yukarı geri gelme
         float b2 = 0f;
         while (b2 < bounceDur * 0.35f)
         {
@@ -395,7 +354,6 @@ public class TileView : MonoBehaviour,
             yield return null;
         }
 
-        // Bounce 3: son oturma
         float b3 = 0f;
         while (b3 < bounceDur * 0.3f)
         {
@@ -579,7 +537,7 @@ public class TileView : MonoBehaviour,
         }
 
         iconImage.sprite = sprite;
-        iconImage.color = Color.white; // Sade beyaz = sprite'ın orijinal rengi
+        iconImage.color = Color.white;
     }
     public void SetIconAlpha(float alpha)
     {
@@ -714,7 +672,6 @@ public class TileView : MonoBehaviour,
 
         if (rt == null) rt = GetComponent<RectTransform>();
 
-        // Root her zaman kare hücre boyutunda kalsın
         rt.sizeDelta = new Vector2(tileSize, tileSize);
 
         if (iconImage == null)
@@ -742,7 +699,6 @@ public class TileView : MonoBehaviour,
         float tileRatio = Mathf.Max(0.01f, tileSize / IconReferenceTileSize);
         Vector2 scaledIconSize = iconSize * (tileRatio * iconScale);
 
-        // Sadece movable obstacle biraz küçülsün
         if (isMovable)
             scaledIconSize *= 0.95f;
 
@@ -758,7 +714,6 @@ public class TileView : MonoBehaviour,
         }
         else
         {
-            // Hücrenin tabanına otursun
             irt.pivot = new Vector2(0.5f, 0f);
             irt.anchoredPosition = new Vector2(0f, -scaledIconSize.y * 0.5f);
         }

@@ -22,6 +22,10 @@ public sealed class PulseCoreExecutionRuntime
     public Action<ResolutionContext> ProcessQueue;
     public bool SuppressVisualSideEffects;
     public bool SkipOriginRegistration;
+
+    // PatchBot+Pulse target execution için:
+    public TileSpecial ForcedOriginSpecial;
+    public TileView SignalSourceTile;
 }
 
 public sealed class PulseCoreExecutionResult
@@ -93,21 +97,29 @@ public sealed class PulseCoreSpecial
         if (rt == null || rt.Board == null || rt.Context == null)
             return false;
 
-        if (rt.Origin == null)
-            return false;
+        bool forcedPulseOrigin = rt.ForcedOriginSpecial == TileSpecial.PulseCore;
 
-        if (rt.Origin.GetSpecial() != TileSpecial.PulseCore)
-            return false;
+        if (!forcedPulseOrigin)
+        {
+            if (rt.Origin == null)
+                return false;
 
-        var cell = new Vector2Int(rt.Origin.X, rt.Origin.Y);
-        if (!rt.SkipOriginRegistration && rt.Context.Processed.Contains(cell))
-            return false;
+            if (rt.Origin.GetSpecial() != TileSpecial.PulseCore)
+                return false;
+
+            var cell = new Vector2Int(rt.Origin.X, rt.Origin.Y);
+            if (!rt.SkipOriginRegistration && rt.Context.Processed.Contains(cell))
+                return false;
+        }
 
         return true;
     }
 
     private void RegisterOrigin(PulseCoreExecutionRuntime rt)
     {
+        if (rt.Origin == null)
+            return;
+
         var originCell = new Vector2Int(rt.Origin.X, rt.Origin.Y);
 
         rt.Context.Processed.Add(originCell);
@@ -185,10 +197,12 @@ public sealed class PulseCoreSpecial
         if (clearAction != null)
             result.Actions.Add(clearAction);
 
+        TileView signalTile = rt.SignalSourceTile != null ? rt.SignalSourceTile : rt.Origin;
+
         rt.EmitBoardSignal?.Invoke(new SpecialBoardSignal(
             SpecialBoardSignalType.SpecialPassFinished,
             new Vector2Int(signalX, signalY),
-            rt.Origin));
+            signalTile));
     }
 
     private MatchClearAction BuildClearAction(PulseCoreExecutionRuntime rt)

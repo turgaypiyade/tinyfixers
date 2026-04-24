@@ -83,12 +83,16 @@ public sealed class PulseCorePatchBotCombo
         rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty, pulseTile, null, () =>
         {
             var arrivalCtx = new ResolutionContext();
+
             var pulseResult = pulseCoreSpecial.ExecuteAtTarget(new PulseCoreExecutionRuntime
             {
                 Board = rt.Board,
                 Context = arrivalCtx,
+
+                // Kaynak pulse taşı arrival anında artık canlı olmayabilir.
                 Origin = pulseTile,
                 Partner = patchBotTile,
+
                 FinalizeAtEnd = true,
                 ActivateSpecial = rt.ActivateSpecial,
                 ProcessFanout = rt.ProcessFanout,
@@ -97,8 +101,11 @@ public sealed class PulseCorePatchBotCombo
                 EmitBoardSignal = rt.EmitBoardSignal,
                 EnqueueChainSpecials = rt.EnqueueChainSpecials,
                 ProcessQueue = rt.ProcessQueue,
+
                 SuppressVisualSideEffects = false,
-                SkipOriginRegistration = true
+                SkipOriginRegistration = true,
+                ForcedOriginSpecial = TileSpecial.PulseCore,
+                SignalSourceTile = pulseTile
             }, tx, ty);
 
             var sequencer = rt.Board.GetComponent<ActionSequencer>();

@@ -9,7 +9,7 @@ public class FallAction : BoardAction
         public TileView tile;
         public int fromY;
         public int toY;
-        public float duration;       // YOK SAYILIR (ivmeli fizik türetir)
+        public float duration;       // YOK SAYILIR (sabit hız kullanılıyor)
         public bool useSettle;
         public float settleDuration;
         public float settleStrength;
@@ -36,10 +36,6 @@ public class FallAction : BoardAction
         });
     }
 
-    /// <summary>
-    /// Baska bir FallAction'in tum move'larini bu action'a ekler.
-    /// delayOffset ile pass'lar arasi overlap saglanir.
-    /// </summary>
     public void MergeFrom(FallAction other, float delayOffset)
     {
         if (other == null) return;
@@ -51,9 +47,6 @@ public class FallAction : BoardAction
         other.fallRecords.Clear();
     }
 
-    /// <summary>
-    /// En uzun move suresi (delay haric). Pass-arasi overlap hesabi icin.
-    /// </summary>
     public float GetMaxMoveDuration()
     {
         float max = 0f;
@@ -63,21 +56,42 @@ public class FallAction : BoardAction
     }
 
     // ============================================================
-    // İVMELİ FİZİK + SPAWN RİTMİ
+    // SABİT HIZ + ADAPTIVE START DELAY (kullanıcı vizyonu — hızlandırıldı)
     //
-    // ÖLÇÜMLER (referans videonun 4. sütunundan, frame 6):
-    //   Üstteki taşlar arası aralık: ~1.2 hücre
-    //   Ortadaki: ~1.6 hücre
-    //   Alttaki: ~2.0 hücre (terminal)
+    // Tüm taşlar V_MAX sabit hızda iner (TileView.FALL_VELOCITY = 42 cell/s).
+    // Aralarındaki görsel mesafe sadece "başlama zamanı" farkından gelir.
     //
-    // MANTIK:
-    //   Taşlar aynı ivme ile düşer (TileView.MoveToGrid içinde).
-    //   Her taş, öncekinden SPAWN_INTERVAL kadar sonra başlar.
-    //   SPAWN_INTERVAL ~0.10s → 2 hücre terminal aralığa denk.
-    //   Üstteki taşlar henüz ivmelenmekte olduğu için araları dar (1.2h).
-    //   Alttaki taşlar terminal'e ulaştığı için araları geniş (2.0h).
-    //   Bu desen KENDİLİĞİNDEN oluşur — müdahale gereksiz.
+    // AKORDIYON — rank bazlı cumulative delay (hızlandırıldı):
+    //   rank 0 (en dip): delay = 0         (hemen başlar)
+    //   rank 0 → 1:      0.018s            (üstte sıkışık)
+    //   rank 1 → 2:      0.023s
+    //   rank 2 → 3:      0.030s
+    //   rank 3+:         0.035s            (dipte rahat)
+    //
+    // Eski: [0.025, 0.032, 0.040, 0.045] → Yeni: [0.018, 0.023, 0.030, 0.035]
+    // %28 daha sıkı, akordiyon hissi korundu (oranlar aynı).
     // ============================================================
+
+    private static readonly float[] SPAWN_INTERVALS = new float[]
+    {
+        0.018f,
+        0.023f,
+        0.030f,
+    };
+    private const float SPAWN_INTERVAL_TERMINAL = 0.035f;
+
+    private static float CumulativeSpawnDelay(int rank)
+    {
+        if (rank <= 0) return 0f;
+        float total = 0f;
+        for (int i = 0; i < rank; i++)
+        {
+            total += (i < SPAWN_INTERVALS.Length)
+                ? SPAWN_INTERVALS[i]
+                : SPAWN_INTERVAL_TERMINAL;
+        }
+        return total;
+    }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
@@ -87,33 +101,22 @@ public class FallAction : BoardAction
 
         float columnStep = sequencer.Board.FallColumnStep;
 
-        float maxDur = 0f, minDur = float.MaxValue, maxBaseDelay = 0f;
         int maxDist = 0;
         foreach (var r in fallRecords)
         {
-            if (r.duration > maxDur) maxDur = r.duration;
-            if (r.duration < minDur) minDur = r.duration;
             int dist = Mathf.Abs(r.toY - r.fromY);
             if (dist > maxDist) maxDist = dist;
-            if (r.startDelay > maxBaseDelay) maxBaseDelay = r.startDelay;
         }
 
-        Debug.Log($"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} (physics-driven timing)");
+        Debug.Log($"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} (constant velocity, adaptive delay)");
 
         sequencer.Board.PlayTileFallSfx(fallRecords.Count, maxDist);
 
-        // === SPAWN RİTMİ PARAMETRELERİ ===
-        // Ardışık taşlar arası başlama farkı
-        // 0.10s × 20 cell/s (V_MAX) = 2.0 hücre aralık (terminal kısımda)
-        const float SPAWN_INTERVAL = 0.10f;
-
         // Her sütunda en dip hedefi bul (rank hesabı için)
         var maxToYPerColumn = new Dictionary<int, int>();
-
         foreach (var r in fallRecords)
         {
             if (r.tile == null) continue;
-
             int col = r.tile.X;
             if (!maxToYPerColumn.ContainsKey(col) || r.toY > maxToYPerColumn[col])
                 maxToYPerColumn[col] = r.toY;
@@ -128,11 +131,10 @@ public class FallAction : BoardAction
         {
             if (r.tile == null) continue;
 
-            // duration ve curve YOK SAYILIR — TileView.MoveToGrid ivmeli fizik kullanır
             moves.Add(r.tile.MoveToGrid(
                 sequencer.Board.TileSize,
-                r.duration,              // ignored
-                r.curve,                 // ignored
+                r.duration,
+                r.curve,
                 r.useSettle,
                 r.settleDuration,
                 r.settleStrength,
@@ -142,20 +144,18 @@ public class FallAction : BoardAction
             int col = r.tile.X;
             int maxToY = maxToYPerColumn[col];
 
-            // SPAWN RİTMİ: en dipteki (rank=0) hemen, her üst taş SPAWN_INTERVAL kadar sonra
+            // Tek stagger: rank'e göre cumulative spawn delay
             int rankFromBottom = maxToY - r.toY;
-            float spawnDelay = rankFromBottom * SPAWN_INTERVAL;
+            float spawnDelay = CumulativeSpawnDelay(rankFromBottom);
 
-            // Sütunlar arası stagger (mevcut sistem korundu, çok küçük)
             float colDelay = columnStep > 0f ? col * columnStep : 0f;
-
             float totalDelay = r.startDelay + colDelay + spawnDelay;
 
             delays.Add(totalDelay);
             if (totalDelay > maxTotalDelay) maxTotalDelay = totalDelay;
         }
 
-        Debug.Log($"[Fall] spawn rhythm maxDelay={maxTotalDelay:0.000}s interval={SPAWN_INTERVAL}s");
+        Debug.Log($"[Fall] stagger maxDelay={maxTotalDelay:0.000}s");
 
         yield return sequencer.Animator.RunManyWithDelays(moves, delays);
 
