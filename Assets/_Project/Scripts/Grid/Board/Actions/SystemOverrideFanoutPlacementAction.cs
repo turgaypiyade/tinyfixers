@@ -36,9 +36,6 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         if (origin.x >= 0 && origin.x < board.Width && origin.y >= 0 && origin.y < board.Height)
             originTile = board.Tiles[origin.x, origin.y];
 
-        var patchbotService = (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0)
-            ? new PatchbotComboService(board) : null;
-
         foreach (var pos in targets)
         {
             if (pos.x < 0 || pos.x >= board.Width || pos.y < 0 || pos.y >= board.Height)
@@ -118,78 +115,14 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             }
         }
 
-        // Override+PatchBot fanout:
-        // Override only performs placement. Generated PatchBots are activated through
-        // PatchBotSpecial so target selection, dash, and impact remain owned by PatchBotSpecial.
-        if (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0 && patchbotService != null)
+        if (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0)
         {
-            yield return LaunchDeferredPatchBotsViaSpecial(patchbotService);
+            var airborne = new OverridePatchBotAirborneGroupAction(board, deferredPatchBotCells);
+            yield return airborne.ExecuteVisuals(sequencer);
         }
 
         if (originTile != null)
             SpecialVisualService.HideTileVisualForCombo(originTile);
-    }
-
-    private IEnumerator LaunchDeferredPatchBotsViaSpecial(PatchbotComboService patchbotService)
-    {
-        var patchBotEntries = new List<TileView>();
-
-        for (int i = 0; i < deferredPatchBotCells.Count; i++)
-        {
-            var cell = deferredPatchBotCells[i];
-
-            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
-                continue;
-
-            var tile = board.Tiles[cell.x, cell.y];
-            if (tile == null)
-                continue;
-
-            if (tile.GetSpecial() != TileSpecial.PatchBot)
-                continue;
-
-            patchBotEntries.Add(tile);
-        }
-
-        if (patchBotEntries.Count == 0)
-            yield break;
-
-        var coordinator = new PatchBotTargetCoordinator(board, patchbotService);
-        var visualService = new SpecialVisualService(board, board.boardAnimatorRef, patchbotService);
-        var patchBotSpecial = new PatchBotSpecial();
-
-        const float staggerInterval = 0.04f;
-        Debug.Log($"[SystemOverrideFanoutPlacementAction] PatchBot sequence count={patchBotEntries.Count}");
-
-        for (int i = 0; i < patchBotEntries.Count; i++)
-        {
-            var patchBot = patchBotEntries[i];
-            if (patchBot == null)
-                continue;
-
-            if (patchBot.GetSpecial() != TileSpecial.PatchBot)
-                continue;
-
-            var cell = new Vector2Int(patchBot.X, patchBot.Y);
-            Debug.Log($"[SystemOverrideFanoutPlacementAction] PatchBot sequence step={i + 1}/{patchBotEntries.Count} cell={cell}");
-
-            var ctx = new ResolutionContext();
-            patchBotSpecial.Execute(new PatchBotExecutionRuntime
-            {
-                Board = board,
-                Context = ctx,
-                Origin = patchBot,
-                Partner = null,
-                PatchbotService = patchbotService,
-                TargetCoordinator = coordinator,
-                VisualService = visualService,
-                Effects = null,
-                FinalizeAtEnd = false,
-                ClearOriginOnDashStart = true
-            });
-
-            yield return new WaitForSeconds(board.ApplySpecialChainTempo(staggerInterval));
-        }
     }
 
     private void PlayPulseCoreExplosionVfx(TileView tile)
@@ -203,7 +136,6 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             return;
         }
 
-        // Güvenli fallback
         if (board.BoardVfxPlayer != null)
             board.BoardVfxPlayer.PlayPulseVfx(GetTileAnchoredPos(tile), radiusCells: 2, tileSize: board.TileSize);
 
@@ -245,9 +177,6 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         HashSet<Vector2Int> futurePulseCells)
     {
         var result = new HashSet<TileView>();
-
-        // PulseCore etki alanı artık PulseCoreSpecial tarafından yürütülüyor.
-        // Bu yüzden zincirdeki pulse temizliği burada doğrudan 3x3 olarak hesaplanıyor.
         const int half = 1;
 
         for (int x = centerCell.x - half; x <= centerCell.x + half; x++)
@@ -261,8 +190,6 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                     continue;
 
                 var cell = new Vector2Int(x, y);
-
-                // Sonraki pulse'ları erken yok etme
                 if (futurePulseCells.Contains(cell))
                     continue;
 
