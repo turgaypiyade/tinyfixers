@@ -5,6 +5,12 @@ using UnityEngine.UI;
 
 public class PatchbotDashUI : MonoBehaviour
 {
+    private sealed class DashMotionState
+    {
+        public float elapsed;
+        public float afterTimer;
+    }
+
     [Header("Refs")]
     [SerializeField] private RectTransform boardContent;   // Tile'ların bulunduğu root (sadece test/path bulma için)
     [SerializeField] private RectTransform vfxRoot;        // VFXRoot (runner + afterimage burada)
@@ -179,9 +185,6 @@ public class PatchbotDashUI : MonoBehaviour
         Vector2 target = WorldToAnchoredIn(vfxRoot, toWorld);
         rt.anchoredPosition = start;
 
-        float tAfter = 0f;
-        float elapsed = 0f;
-
         float totalDistance = Vector2.Distance(start, target);
         float effectiveSpeed = Mathf.Max(1f, dashSpeed * Mathf.Max(0.01f, diveSpeedMultiplier));
         float travelDuration = totalDistance > arriveEps ? totalDistance / effectiveSpeed : 0f;
@@ -200,9 +203,10 @@ public class PatchbotDashUI : MonoBehaviour
 
         Debug.Log($"[PatchbotDashUI] DRONE_DASH from={req.from} to={req.to} takeoff={takeoffDuration:0.000} hover={hoverDuration:0.000} dive={diveDuration:0.000}");
 
-        yield return RunTakeoffBurst(rt, carryRt, size, sprite, start, takeoff, takeoffDuration, ref elapsed, ref tAfter);
-        yield return RunHoverHold(rt, carryRt, size, sprite, takeoff, hoverDuration, ref elapsed, ref tAfter);
-        yield return RunDive(rt, carryRt, size, sprite, takeoff, target, diveDuration, ref elapsed, ref tAfter);
+        var motion = new DashMotionState();
+        yield return RunTakeoffBurst(rt, carryRt, size, sprite, start, takeoff, takeoffDuration, motion);
+        yield return RunHoverHold(rt, carryRt, size, sprite, takeoff, hoverDuration, motion);
+        yield return RunDive(rt, carryRt, size, sprite, takeoff, target, diveDuration, motion);
 
         rt.anchoredPosition = target;
         rt.localRotation = Quaternion.identity;
@@ -226,8 +230,7 @@ public class PatchbotDashUI : MonoBehaviour
         Vector2 start,
         Vector2 takeoff,
         float duration,
-        ref float elapsed,
-        ref float tAfter)
+        DashMotionState motion)
     {
         if (duration <= 0f)
         {
@@ -240,7 +243,7 @@ public class PatchbotDashUI : MonoBehaviour
         {
             float dt = Time.deltaTime;
             local += dt;
-            elapsed += dt;
+            motion.elapsed += dt;
 
             float t = Mathf.Clamp01(local / duration);
             float eased = 1f - Mathf.Pow(1f - t, 3f);
@@ -250,8 +253,8 @@ public class PatchbotDashUI : MonoBehaviour
             rt.localRotation = Quaternion.identity;
             rt.localScale = Vector3.one * Mathf.Lerp(1f, 1.16f, Mathf.Sin(t * Mathf.PI));
 
-            UpdateCarryOrbit(carryRt, size, elapsed);
-            TickAfterImage(rt, sprite, ref tAfter);
+            UpdateCarryOrbit(carryRt, size, motion.elapsed);
+            TickAfterImage(rt, sprite, motion);
             yield return null;
         }
     }
@@ -263,8 +266,7 @@ public class PatchbotDashUI : MonoBehaviour
         Sprite sprite,
         Vector2 hover,
         float duration,
-        ref float elapsed,
-        ref float tAfter)
+        DashMotionState motion)
     {
         if (duration <= 0f)
             yield break;
@@ -274,17 +276,17 @@ public class PatchbotDashUI : MonoBehaviour
         {
             float dt = Time.deltaTime;
             local += dt;
-            elapsed += dt;
+            motion.elapsed += dt;
 
-            float wobbleX = Mathf.Sin(elapsed * 8.5f) * Mathf.Min(size.x, size.y) * 0.035f;
-            float wobbleY = Mathf.Sin(elapsed * 10.0f) * Mathf.Min(size.x, size.y) * 0.025f;
+            float wobbleX = Mathf.Sin(motion.elapsed * 8.5f) * Mathf.Min(size.x, size.y) * 0.035f;
+            float wobbleY = Mathf.Sin(motion.elapsed * 10.0f) * Mathf.Min(size.x, size.y) * 0.025f;
 
             rt.anchoredPosition = hover + new Vector2(wobbleX, wobbleY);
             rt.localRotation = Quaternion.identity;
             rt.localScale = Vector3.one * 1.08f;
 
-            UpdateCarryOrbit(carryRt, size, elapsed);
-            TickAfterImage(rt, sprite, ref tAfter);
+            UpdateCarryOrbit(carryRt, size, motion.elapsed);
+            TickAfterImage(rt, sprite, motion);
             yield return null;
         }
     }
@@ -297,8 +299,7 @@ public class PatchbotDashUI : MonoBehaviour
         Vector2 start,
         Vector2 target,
         float duration,
-        ref float elapsed,
-        ref float tAfter)
+        DashMotionState motion)
     {
         Vector2 delta = target - start;
         Vector2 normal = delta.sqrMagnitude > 0.001f ? new Vector2(-delta.y, delta.x).normalized : Vector2.up;
@@ -309,7 +310,7 @@ public class PatchbotDashUI : MonoBehaviour
         {
             float dt = Time.deltaTime;
             local += dt;
-            elapsed += dt;
+            motion.elapsed += dt;
 
             float t = Mathf.Clamp01(local / duration);
             float eased = t * t * (3f - 2f * t);
@@ -320,8 +321,8 @@ public class PatchbotDashUI : MonoBehaviour
             rt.localRotation = Quaternion.identity;
             rt.localScale = Vector3.one * Mathf.Lerp(1.08f, 0.94f, t);
 
-            UpdateCarryOrbit(carryRt, size, elapsed);
-            TickAfterImage(rt, sprite, ref tAfter);
+            UpdateCarryOrbit(carryRt, size, motion.elapsed);
+            TickAfterImage(rt, sprite, motion);
             yield return null;
         }
     }
@@ -340,13 +341,13 @@ public class PatchbotDashUI : MonoBehaviour
         carryRt.localRotation = Quaternion.identity;
     }
 
-    private void TickAfterImage(RectTransform rt, Sprite sprite, ref float tAfter)
+    private void TickAfterImage(RectTransform rt, Sprite sprite, DashMotionState motion)
     {
-        tAfter += Time.deltaTime;
-        if (tAfter < spawnEvery)
+        motion.afterTimer += Time.deltaTime;
+        if (motion.afterTimer < spawnEvery)
             return;
 
-        tAfter = 0f;
+        motion.afterTimer = 0f;
         SpawnAfterImageAt(rt, sprite);
     }
 
