@@ -24,6 +24,11 @@ public sealed class PatchBotExecutionRuntime
     public Action<HashSet<TileView>, Dictionary<TileView, float>> FireOverrideOverrideSpecialVisuals;
     public Action<SpecialBoardSignal> EmitBoardSignal;
     public Func<ResolutionContext, TileView, TileView, List<BoardAction>> ExecuteSpecialActions;
+
+    // Used by generated PatchBots, e.g. PatchBot+Override fanout.
+    // The source cell is hidden/cleared when the dash starts, while PatchBotSpecial
+    // still owns target selection, dash enqueue, and arrival impact.
+    public bool ClearOriginOnDashStart;
 }
 
 public sealed class PatchBotExecutionResult
@@ -63,10 +68,22 @@ public sealed class PatchBotSpecial
             result.Actions.Add(initialClearAction);
         }
 
-        var target = rt.PatchbotService.FindTarget(rt.Origin, rt.Partner, null);
-        if (!target.hasCell) return result;
+        var target = rt.TargetCoordinator != null
+            ? rt.TargetCoordinator.ReserveTarget(rt.Origin, rt.Partner, null)
+            : rt.PatchbotService.FindTarget(rt.Origin, rt.Partner, null);
+
+        if (!target.hasCell)
+        {
+            if (rt.ClearOriginOnDashStart)
+                ClearPatchBotOriginVisualAndData(rt.Board, rt.Origin, new Vector2Int(rt.Origin.X, rt.Origin.Y), rt.Origin.GetTileType());
+            return result;
+        }
 
         var cachedPartnerSpecial = rt.Partner != null ? rt.Partner.GetSpecial() : TileSpecial.None;
+        var originTile = rt.Origin;
+        var originCell = new Vector2Int(originTile.X, originTile.Y);
+        var originSourceType = originTile.GetTileType();
+
         rt.VisualService.PlayTeleportMarkers(rt.Origin, target.x, target.y);
 
         TileView carriedPartner =
@@ -74,8 +91,19 @@ public sealed class PatchBotSpecial
                 ? rt.Partner
                 : null;
 
-        rt.PatchbotService.EnqueueDash(rt.Origin, target.x, target.y, carriedPartner, null, () =>
+        Action dashStart = null;
+        if (rt.ClearOriginOnDashStart)
+        {
+            dashStart = () =>
+            {
+                ClearPatchBotOriginVisualAndData(rt.Board, originTile, originCell, originSourceType);
+            };
+        }
+
+        rt.PatchbotService.EnqueueDash(rt.Origin, target.x, target.y, carriedPartner, dashStart, () =>
                 {
+                    rt.TargetCoordinator?.ReleaseReservation(target.x, target.y);
+
                     var arrivalCtx = new ResolutionContext();
                     var arrivalRt = new PatchBotExecutionRuntime
                     {
@@ -157,6 +185,23 @@ public sealed class PatchBotSpecial
             return false;
 
         return true;
+    }
+
+    private void ClearPatchBotOriginVisualAndData(BoardController board, TileView tile, Vector2Int cell, TileType sourceType)
+    {
+        if (board == null || tile == null)
+            return;
+
+        SpecialVisualService.HideTileVisualForCombo(tile);
+
+        if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+            return;
+
+        if (board.Tiles[cell.x, cell.y] == tile)
+        {
+            board.ClearCell(cell.x, cell.y);
+            board.ClearCellVisualOnly(cell, sourceType, tile);
+        }
     }
 
     private void ApplyPatchBotSoloHitDeferred(PatchBotExecutionRuntime arrivalRt, int targetX, int targetY)
@@ -321,74 +366,58 @@ public sealed class PatchBotSpecial
     }
     /// <summary>
     /// Tüm auto-PatchBot'ları sıralı olarak havalandırır.
-    /// Her biri önce hücresinden kalkar, sonra koordinatörden hedef alır,
-    /// dash animasyonu başlatılır. Aralarında kısa süre bırakılarak
-    /// önceki botların vurduğu hedefler güncellenmiş olur.
+    /// Her bot PatchBotSpecial üzerinden çalışır; bu sınıf hedef bulma, dash enqueue
+    /// ve hedefte vuruş davranışının tek sahibi olarak kalır.
     /// </summary>
     private IEnumerator CoStaggeredPatchBotLaunch(
         PatchBotExecutionRuntime arrivalRt,
         List<(TileView tile, Vector2Int sourceCell, TileType sourceType)> autoPatchBots,
         PatchBotTargetCoordinator coordinator)
     {
-        const float staggerInterval = 0.04f;   // Botlar arası bekleme
-        const float dashTravelTime = 0.25f;     // Dash animasyon süresi tahmini
+        const float staggerInterval = 0.04f;
+
+        Debug.Log($"[PatchBotSpecial] Override auto PatchBot sequence count={autoPatchBots.Count}");
 
         for (int i = 0; i < autoPatchBots.Count; i++)
         {
             var (autoPatchBot, sourceCell, sourceType) = autoPatchBots[i];
             if (autoPatchBot == null) continue;
 
-            // ── Koordinatörden hedef al ──
-            var target = coordinator.ReserveTarget(autoPatchBot, null, null);
-
-            if (!target.hasCell)
-            {
-                // Hedef bulamayan PatchBot'u temizle — ekranda kalmasın
-                autoPatchBot.SetSpecial(TileSpecial.None);
-                SpecialCellUtils.SyncAfterSpecialChange(arrivalRt.Board, autoPatchBot);
-                arrivalRt.Board.ClearCell(sourceCell.x, sourceCell.y);
-                arrivalRt.Board.ClearCellVisualOnly(sourceCell, sourceType, autoPatchBot);
+            if (autoPatchBot.GetSpecial() != TileSpecial.PatchBot)
                 continue;
+
+            Debug.Log($"[PatchBotSpecial] Override auto PatchBot step={i + 1}/{autoPatchBots.Count} cell={sourceCell}");
+
+            var nestedCtx = new ResolutionContext();
+            var nestedRt = new PatchBotExecutionRuntime
+            {
+                Board = arrivalRt.Board,
+                Context = nestedCtx,
+                Origin = autoPatchBot,
+                Partner = null,
+                PatchbotService = arrivalRt.PatchbotService,
+                TargetCoordinator = coordinator,
+                VisualService = arrivalRt.VisualService,
+                Effects = arrivalRt.Effects,
+                ActivateSpecial = arrivalRt.ActivateSpecial,
+                ExecuteSpecialActions = arrivalRt.ExecuteSpecialActions,
+                ProcessFanout = arrivalRt.ProcessFanout,
+                CleanupImplantedTiles = arrivalRt.CleanupImplantedTiles,
+                FireOverrideOverrideSpecialVisuals = arrivalRt.FireOverrideOverrideSpecialVisuals,
+                EmitBoardSignal = arrivalRt.EmitBoardSignal,
+                FinalizeAtEnd = false,
+                ClearOriginOnDashStart = true
+            };
+
+            var nestedResult = Execute(nestedRt);
+            if (nestedResult != null && nestedResult.Actions != null && nestedResult.Actions.Count > 0)
+            {
+                var sequencer = arrivalRt.Board.GetComponent<ActionSequencer>();
+                if (sequencer != null)
+                    sequencer.Enqueue(nestedResult.Actions);
             }
 
-            // Closure için yakala
-            var capturedBot = autoPatchBot;
-            var capturedSource = sourceCell;
-            var capturedSourceType = sourceType;
-            var capturedTarget = target;
-
-            // ── Dash animasyonunu başlat ──
-            arrivalRt.VisualService.FireImmediateDash(
-                capturedBot.X,
-                capturedBot.Y,
-                capturedTarget.x,
-                capturedTarget.y,
-                delay: 0f,
-                onDashStart: () =>
-                {
-                    if (capturedBot == null) return;
-
-                    SpecialVisualService.HideTileVisualForCombo(capturedBot);
-
-                    if (capturedSource.x < 0 || capturedSource.x >= arrivalRt.Board.Width ||
-                        capturedSource.y < 0 || capturedSource.y >= arrivalRt.Board.Height)
-                        return;
-
-                    if (arrivalRt.Board.Tiles[capturedSource.x, capturedSource.y] == capturedBot)
-                    {
-                        arrivalRt.Board.ClearCell(capturedSource.x, capturedSource.y);
-                        arrivalRt.Board.ClearCellVisualOnly(capturedSource, capturedSourceType, capturedBot);
-                    }
-                });
-
-            // ── Varış sonrası vuruş ve temizlik — koordinatör bilgilendirilir ──
-            arrivalRt.Board.StartCoroutine(CoDeferredHitVanish(
-                arrivalRt, capturedTarget.x, capturedTarget.y, capturedTarget.tile,
-                dashTravelTime, coordinator));
-
-            // ── Sonraki bot için kısa bekle — bu sürede önceki botun vurduğu
-            //    hedef kayıtlardan düşer, obstacle kalan vuruşu güncellenir ──
-            yield return new WaitForSeconds(staggerInterval);
+            yield return new WaitForSeconds(arrivalRt.Board.ApplySpecialChainTempo(staggerInterval));
         }
     }
 
