@@ -23,7 +23,6 @@ public class SpecialBehaviorDispatcher
     private readonly PulsePulseCombo pulsePulseCombo = new();
     internal ActivationQueueProcessor QueueProcessor;
 
-
     public SpecialBehaviorDispatcher(
         BoardController board,
         PatchbotComboService patchbotComboService,
@@ -50,9 +49,9 @@ public class SpecialBehaviorDispatcher
                 FinalizeAtEnd = false,
                 ActivateSpecial = ApplySpecialActivation
             });
-
             return;
         }
+
         if (sa == TileSpecial.PulseCore && sb == TileSpecial.PulseCore)
         {
             pulsePulseCombo.Execute(new PulsePulseComboExecutionRuntime
@@ -67,7 +66,6 @@ public class SpecialBehaviorDispatcher
                 EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
                 ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
             });
-
             return;
         }
 
@@ -85,7 +83,6 @@ public class SpecialBehaviorDispatcher
                 EmitComboTriggered = (comboSa, comboSb, cell) => effectOrchestrator.EmitComboTriggered(comboSa, comboSb, cell),
                 EmitPulseEmitterComboTriggered = cell => effectOrchestrator.EmitPulseEmitterComboTriggered(cell)
             });
-
             return;
         }
 
@@ -104,7 +101,6 @@ public class SpecialBehaviorDispatcher
                 Effects = effectOrchestrator,
                 ActivateSpecial = ApplySpecialActivation
             });
-
             return;
         }
 
@@ -123,7 +119,6 @@ public class SpecialBehaviorDispatcher
                 Effects = effectOrchestrator,
                 ActivateSpecial = ApplySpecialActivation
             });
-
             return;
         }
 
@@ -141,15 +136,9 @@ public class SpecialBehaviorDispatcher
                 VisualService = visualService,
                 Effects = effectOrchestrator,
                 ActivateSpecial = ApplySpecialActivation,
-                ProcessFanout = resolution => QueueProcessor.ProcessFanout(resolution),
-                CleanupImplantedTiles = resolution => QueueProcessor.CleanupImplantedTiles(resolution),
-                FireOverrideOverrideSpecialVisuals = (affected, delays) =>
-                    QueueProcessor.FireOverrideOverrideSpecialVisuals(affected, delays),
-                EmitBoardSignal = signal => QueueProcessor.EmitBoardSignal(signal),
                 EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
                 ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
             });
-
             return;
         }
 
@@ -165,7 +154,6 @@ public class SpecialBehaviorDispatcher
                 VisualService = visualService,
                 Effects = effectOrchestrator
             });
-
             return;
         }
 
@@ -181,7 +169,6 @@ public class SpecialBehaviorDispatcher
                 FinalizeAtEnd = false,
                 EnqueueActivation = (resolution, tile, partner) => QueueProcessor.EnqueueActivation(resolution, tile, partner)
             });
-
             return;
         }
 
@@ -199,7 +186,6 @@ public class SpecialBehaviorDispatcher
                 Effects = effectOrchestrator,
                 ActivateSpecial = ApplySpecialActivation
             });
-
             return;
         }
 
@@ -209,8 +195,7 @@ public class SpecialBehaviorDispatcher
         ApplyGenericCombo(ctx, combo, a, b, sa, sb);
     }
 
-    private void ApplyGenericCombo(ResolutionContext ctx, IComboBehavior combo, TileView a, TileView b,
-        TileSpecial sa, TileSpecial sb)
+    private void ApplyGenericCombo(ResolutionContext ctx, IComboBehavior combo, TileView a, TileView b, TileSpecial sa, TileSpecial sb)
     {
         ComboBehaviorEvents.EmitComboTriggered(sa, sb, new Vector2Int(a.X, a.Y));
 
@@ -220,9 +205,7 @@ public class SpecialBehaviorDispatcher
             SpecialCellUtils.MarkAffectedCell(ctx, c.x, c.y, board);
             if (board.Tiles[c.x, c.y] != null) ctx.Affected.Add(board.Tiles[c.x, c.y]);
         }
-
     }
-
 
     public void ApplySpecialActivation(ResolutionContext ctx, TileView specialTile, TileView partnerTile)
     {
@@ -314,33 +297,27 @@ public class SpecialBehaviorDispatcher
 
                     if (ctx.IsPulsePulseComboActive)
                     {
-                        Debug.Log(
-                            $"[OverrideDefer] reason=PulsePulse cell={cell} " +
-                            $"deferredBefore={ctx.DeferredPulseComboOverrideCells.Count}");
+                        Debug.Log($"[OverrideDefer] reason=PulsePulse cell={cell} " +
+                                  $"deferredBefore={ctx.DeferredPulseComboOverrideCells.Count}");
 
                         if (!ctx.DeferredPulseComboOverrideCells.Contains(cell))
                             ctx.DeferredPulseComboOverrideCells.Add(cell);
 
-                        Debug.Log(
-                            $"[OverrideDefer] reason=PulsePulse cell={cell} " +
-                            $"deferredAfter={ctx.DeferredPulseComboOverrideCells.Count}");
-
+                        Debug.Log($"[OverrideDefer] reason=PulsePulse cell={cell} " +
+                                  $"deferredAfter={ctx.DeferredPulseComboOverrideCells.Count}");
                         break;
                     }
 
                     if (ctx.IsPulseCoreActive)
                     {
-                        Debug.Log(
-                            $"[OverrideDefer] reason=PulseCore cell={cell} " +
-                            $"deferredBefore={ctx.DeferredPulseComboOverrideCells.Count}");
+                        Debug.Log($"[OverrideDefer] reason=PulseCore cell={cell} " +
+                                  $"deferredBefore={ctx.DeferredPulseComboOverrideCells.Count}");
 
                         if (!ctx.DeferredPulseComboOverrideCells.Contains(cell))
                             ctx.DeferredPulseComboOverrideCells.Add(cell);
 
-                        Debug.Log(
-                            $"[OverrideDefer] reason=PulseCore cell={cell} " +
-                            $"deferredAfter={ctx.DeferredPulseComboOverrideCells.Count}");
-
+                        Debug.Log($"[OverrideDefer] reason=PulseCore cell={cell} " +
+                                  $"deferredAfter={ctx.DeferredPulseComboOverrideCells.Count}");
                         break;
                     }
 
@@ -387,9 +364,7 @@ public class SpecialBehaviorDispatcher
                         EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
                         ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
                     });
-
-                    if (res != null && res.Actions != null)
-                        actions.AddRange(res.Actions);
+                    if (res != null && res.Actions != null) actions.AddRange(res.Actions);
                     break;
                 }
 
@@ -406,9 +381,7 @@ public class SpecialBehaviorDispatcher
                         EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
                         ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
                     });
-
-                    if (res != null && res.Actions != null)
-                        actions.AddRange(res.Actions);
+                    if (res != null && res.Actions != null) actions.AddRange(res.Actions);
                     break;
                 }
 
@@ -426,9 +399,7 @@ public class SpecialBehaviorDispatcher
                         ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution),
                         SuppressVisualSideEffects = ctx.IsPulsePulseComboActive || ctx.SuppressOverridePulseSelectionVfx
                     });
-
-                    if (res != null && res.Actions != null)
-                        actions.AddRange(res.Actions);
+                    if (res != null && res.Actions != null) actions.AddRange(res.Actions);
                     break;
                 }
 
@@ -446,24 +417,20 @@ public class SpecialBehaviorDispatcher
                         Effects = effectOrchestrator,
                         ActivateSpecial = ApplySpecialActivation
                     });
-
-                    if (res != null && res.Actions != null)
-                        actions.AddRange(res.Actions);
+                    if (res != null && res.Actions != null) actions.AddRange(res.Actions);
                     break;
                 }
 
             case TileSpecial.SystemOverride:
+                overrideSpecial.Execute(new OverrideExecutionRuntime
                 {
-                    overrideSpecial.Execute(new OverrideExecutionRuntime
-                    {
-                        Board = board,
-                        Context = ctx,
-                        Origin = tile,
-                        Partner = partner,
-                        FinalizeAtEnd = false
-                    });
-                    break;
-                }
+                    Board = board,
+                    Context = ctx,
+                    Origin = tile,
+                    Partner = partner,
+                    FinalizeAtEnd = false
+                });
+                break;
         }
 
         return actions;
@@ -480,26 +447,10 @@ public class SpecialBehaviorDispatcher
             SpecialCellUtils.MarkAffectedCell(ctx, c.x, c.y, board);
             if (board.Tiles[c.x, c.y] != null) ctx.Affected.Add(board.Tiles[c.x, c.y]);
         }
-
     }
 
-    private static bool IsLineCombo(TileSpecial a, TileSpecial b)
-    {
-        return IsLine(a) && IsLine(b);
-    }
-
-    private static bool IsLine(TileSpecial special)
-    {
-        return special == TileSpecial.LineH || special == TileSpecial.LineV;
-    }
-
-    private static bool IsPulseLineCombo(TileSpecial a, TileSpecial b)
-    {
-        return (IsPulse(a) && IsLine(b)) || (IsPulse(b) && IsLine(a));
-    }
-
-    private static bool IsPulse(TileSpecial special)
-    {
-        return special == TileSpecial.PulseCore;
-    }
+    private static bool IsLineCombo(TileSpecial a, TileSpecial b) => IsLine(a) && IsLine(b);
+    private static bool IsLine(TileSpecial special) => special == TileSpecial.LineH || special == TileSpecial.LineV;
+    private static bool IsPulseLineCombo(TileSpecial a, TileSpecial b) => (IsPulse(a) && IsLine(b)) || (IsPulse(b) && IsLine(a));
+    private static bool IsPulse(TileSpecial special) => special == TileSpecial.PulseCore;
 }
