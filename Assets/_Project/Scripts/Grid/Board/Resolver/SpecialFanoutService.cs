@@ -64,8 +64,8 @@ public class SpecialFanoutService
                 originCoord,
                 targetCoords,
                 ctx.OverrideFanoutNormalSelectionPulse,
-                new List<Vector2Int>(ctx.OverrideDeferredPulseExplosions),
-                new List<Vector2Int>(ctx.OverrideDeferredPatchBotDashes)));
+                deferredPulseExplosionCells: null,
+                deferredPatchBotCells: new List<Vector2Int>(ctx.OverrideDeferredPatchBotDashes)));
         }
         else if (ctx.PendingOverrideImplants.Count > 0)
         {
