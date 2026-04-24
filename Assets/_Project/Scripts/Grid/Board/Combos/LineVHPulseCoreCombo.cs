@@ -43,11 +43,14 @@ public sealed class LineVHPulseCoreCombo
         var comboCenterTile = rt.Partner != null ? rt.Partner : pulseTile;
         var comboCenterCell = new Vector2Int(comboCenterTile.X, comboCenterTile.Y);
 
-        var comboLightningVisualTargets = new List<TileView>();
-
         rt.EmitComboTriggered?.Invoke(lineTile.GetSpecial(), pulseTile.GetSpecial(), comboCenterCell);
 
         RegisterComboTiles(rt, lineTile, pulseTile);
+
+        if (lineTile.GetSpecial() == TileSpecial.LineV)
+            return ExecuteLineVCombo(rt, comboCenterCell);
+
+        var comboLightningVisualTargets = new List<TileView>();
         BuildAffectedArea(rt, comboCenterTile, comboLightningVisualTargets);
 
         // Combo'nun kendi alanını snapshot al.
@@ -91,6 +94,139 @@ public sealed class LineVHPulseCoreCombo
 
         return result;
     }
+
+    private LineVHPulseCoreComboExecutionResult ExecuteLineVCombo(
+        LineVHPulseCoreComboExecutionRuntime rt,
+        Vector2Int comboCenterCell)
+    {
+        var result = new LineVHPulseCoreComboExecutionResult();
+        var origins = BuildLineVVirtualOrigins(rt.Board, comboCenterCell);
+
+        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] LineV delegate origins={origins.Count} center={comboCenterCell}");
+        rt.EmitPulseEmitterComboTriggered?.Invoke(comboCenterCell);
+
+        for (int i = 0; i < origins.Count; i++)
+        {
+            var originCell = origins[i];
+            bool finalizeAtEnd = rt.FinalizeAtEnd && i == origins.Count - 1;
+
+            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] delegate LineV origin=virtual({originCell.x},{originCell.y}) finalize={finalizeAtEnd}");
+
+            var lineResult = ExecuteLineVAtVirtualOrigin(rt, originCell, finalizeAtEnd);
+            if (lineResult != null && lineResult.Actions != null && lineResult.Actions.Count > 0)
+                result.Actions.AddRange(lineResult.Actions);
+        }
+
+        return result;
+    }
+
+    private static List<Vector2Int> BuildLineVVirtualOrigins(BoardController board, Vector2Int comboCenterCell)
+    {
+        var origins = new List<Vector2Int>();
+        if (board == null)
+            return origins;
+
+        for (int x = comboCenterCell.x - 1; x <= comboCenterCell.x + 1; x++)
+        {
+            if (x < 0 || x >= board.Width)
+                continue;
+
+            if (comboCenterCell.y < 0 || comboCenterCell.y >= board.Height)
+                continue;
+
+            origins.Add(new Vector2Int(x, comboCenterCell.y));
+        }
+
+        return origins;
+    }
+
+    private LineVExecutionResult ExecuteLineVAtVirtualOrigin(
+        LineVHPulseCoreComboExecutionRuntime rt,
+        Vector2Int virtualOriginCell,
+        bool finalizeAtEnd)
+    {
+        var pending = new Queue<TileView>();
+        var nestedResult = new LineVHPulseCoreComboExecutionResult();
+        var lineV = new LineVSpecial();
+
+        var result = lineV.Execute(new LineVExecutionRuntime
+        {
+            Board = rt.Board,
+            Context = rt.Context,
+            Origin = null,
+            Partner = null,
+            VirtualOriginCell = virtualOriginCell,
+            FinalizeAtEnd = finalizeAtEnd,
+            SuppressVisualSideEffects = false,
+            ActivateSpecial = (resolution, tile, partner) =>
+            {
+                rt.ExecuteSpecialActions?.Invoke(resolution, tile, partner);
+            },
+            EnqueueChainSpecials = resolution => EnqueueNewlyAffectedSpecials(rt, pending),
+            ProcessQueue = resolution => ProcessPendingChainQueue(rt, pending, nestedResult)
+        });
+
+        if (result != null && nestedResult.Actions.Count > 0)
+            result.Actions.InsertRange(0, nestedResult.Actions);
+
+        return result;
+    }
+
+    private void ProcessPendingChainQueue(
+        LineVHPulseCoreComboExecutionRuntime rt,
+        Queue<TileView> pending,
+        LineVHPulseCoreComboExecutionResult result)
+    {
+        if (rt == null || pending == null || result == null)
+            return;
+
+        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] LineV chain seed count={pending.Count}");
+
+        while (pending.Count > 0)
+        {
+            var tile = pending.Dequeue();
+            if (tile == null)
+                continue;
+
+            var cell = new Vector2Int(tile.X, tile.Y);
+            var special = tile.GetSpecial();
+
+            rt.Context.Queued.Remove(cell);
+
+            if (tile == rt.Origin || tile == rt.Partner)
+                continue;
+
+            rt.DebugLog?.Invoke(
+                $"[LineVHPulseCoreCombo] LineV candidate cell={cell} special={special} processed={rt.Context.Processed.Contains(cell)}");
+
+            if (rt.Context.Processed.Contains(cell))
+                continue;
+
+            if (special == TileSpecial.None)
+                continue;
+
+            rt.Context.Processed.Add(cell);
+
+            if (!rt.Context.ChainExecutionOrder.Contains(cell))
+                rt.Context.ChainExecutionOrder.Add(cell);
+
+            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] LineV EXECUTE special={special} cell={cell}");
+
+            rt.Context.Processed.Remove(cell);
+            var nestedActions = rt.ExecuteSpecialActions?.Invoke(rt.Context, tile, null);
+            rt.Context.Processed.Add(cell);
+
+            if (nestedActions != null && nestedActions.Count > 0)
+            {
+                rt.DebugLog?.Invoke(
+                    $"[LineVHPulseCoreCombo] LineV MERGE nested actions count={nestedActions.Count} from {special} at {cell}");
+                result.Actions.AddRange(nestedActions);
+            }
+
+            EnqueueNewlyAffectedSpecials(rt, pending);
+        }
+    }
+
     private static void RemoveDeferredOverrideOriginsFromClear(
         HashSet<TileView> affected,
         HashSet<Vector2Int> affectedCells,
