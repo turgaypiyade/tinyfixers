@@ -8,6 +8,7 @@ public class BoardAudioDirector : MonoBehaviour
     [SerializeField] private AudioSource transientSource;
     [SerializeField] private AudioSource accentSource;
     [SerializeField] private bool debugLogs;
+    [SerializeField] private bool listenToBoardBehaviorEvents = true;
 
     private readonly Dictionary<string, float> lastPlayTimes = new Dictionary<string, float>(16);
     private float suppressFallsUntil = -999f;
@@ -19,6 +20,38 @@ public class BoardAudioDirector : MonoBehaviour
         public AudioSource source;
         public BoardSfxProfile.VariantSet set;
         public float volumeMultiplier;
+    }
+
+    private void OnEnable()
+    {
+        if (!listenToBoardBehaviorEvents)
+            return;
+
+        ComboBehaviorEvents.ComboTriggered += HandleComboTriggered;
+        SystemOverrideBehaviorEvents.OverrideFanoutStarted += HandleOverrideFanoutStarted;
+    }
+
+    private void OnDisable()
+    {
+        ComboBehaviorEvents.ComboTriggered -= HandleComboTriggered;
+        SystemOverrideBehaviorEvents.OverrideFanoutStarted -= HandleOverrideFanoutStarted;
+    }
+
+    private void HandleComboTriggered(TileSpecial a, TileSpecial b, Vector2Int originCell)
+    {
+        if (a == TileSpecial.PulseCore && b == TileSpecial.PulseCore)
+            Emit(BoardSfxRequest.PulsePulseCharge());
+    }
+
+    private void HandleOverrideFanoutStarted(Vector2Int originCell, TileSpecial targetSpecial)
+    {
+        if (targetSpecial == TileSpecial.None)
+        {
+            Emit(BoardSfxRequest.OverrideNormalStart());
+            return;
+        }
+
+        Emit(BoardSfxRequest.OverrideSpecialStart(targetSpecial, intensity: 2));
     }
 
     public void SuppressFallsFor(float seconds)
@@ -151,6 +184,33 @@ public class BoardAudioDirector : MonoBehaviour
                 r.source = accentSource != null ? accentSource : transientSource;
                 r.set = profile.comboImpact;
                 r.volumeMultiplier = 1f + Mathf.Clamp01((request.Intensity - 1) * 0.15f);
+                break;
+            }
+
+            case BoardSfxCue.OverrideNormalStart:
+            {
+                r.familyKey = "override_normal_start";
+                r.source = accentSource != null ? accentSource : transientSource;
+                r.set = profile.overrideNormalStart;
+                r.volumeMultiplier = 1f;
+                break;
+            }
+
+            case BoardSfxCue.OverrideSpecialStart:
+            {
+                r.familyKey = "override_special_start_" + request.Special;
+                r.source = accentSource != null ? accentSource : transientSource;
+                r.set = profile.overrideSpecialStart;
+                r.volumeMultiplier = 1.05f + Mathf.Clamp01((request.Intensity - 1) * 0.08f);
+                break;
+            }
+
+            case BoardSfxCue.PulsePulseCharge:
+            {
+                r.familyKey = "pulse_pulse_charge";
+                r.source = accentSource != null ? accentSource : transientSource;
+                r.set = profile.pulsePulseCharge;
+                r.volumeMultiplier = 1f;
                 break;
             }
 
