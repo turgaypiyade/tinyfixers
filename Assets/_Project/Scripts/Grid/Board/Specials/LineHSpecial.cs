@@ -9,6 +9,10 @@ public sealed class LineHExecutionRuntime
     public TileView Origin;
     public TileView Partner;
 
+    // Allows combos to delegate the horizontal line effect to LineH without
+    // requiring a physical LineH tile at the target cell.
+    public Vector2Int? VirtualOriginCell;
+
     public bool FinalizeAtEnd;
 
     public Action<ResolutionContext, TileView, TileView> ActivateSpecial;
@@ -31,7 +35,7 @@ public sealed class LineHSpecial
     public LineHExecutionResult Execute(LineHExecutionRuntime rt)
     {
         var result = new LineHExecutionResult();
-        Debug.Log($"[LineH.Execute] BEGIN origin=({rt.Origin.X},{rt.Origin.Y}) finalize={rt.FinalizeAtEnd}");
+        Debug.Log($"[LineH.Execute] BEGIN origin={DescribeOrigin(rt)} finalize={(rt != null && rt.FinalizeAtEnd)}");
         if (!CanExecute(rt))
             return result;
 
@@ -60,12 +64,13 @@ public sealed class LineHSpecial
             if (clearAction != null)
                 result.Actions.Add(clearAction);
 
+            var originCell = GetOriginCell(rt);
             rt.EmitBoardSignal?.Invoke(new SpecialBoardSignal(
                 SpecialBoardSignalType.SpecialPassFinished,
-                new Vector2Int(rt.Origin.X, rt.Origin.Y),
+                originCell,
                 rt.Origin));
         }
-        Debug.Log($"[LineH.Execute] PRE-FINALIZE origin=({rt.Origin.X},{rt.Origin.Y}) affected={rt.Context.Affected.Count} lightningTargets={rt.Context.LightningVisualTargets.Count} strikes={rt.Context.LightningLineStrikes.Count}");
+        Debug.Log($"[LineH.Execute] PRE-FINALIZE origin={DescribeOrigin(rt)} affected={rt.Context.Affected.Count} lightningTargets={rt.Context.LightningVisualTargets.Count} strikes={rt.Context.LightningLineStrikes.Count}");
         return result;
     }
 
@@ -103,14 +108,23 @@ public sealed class LineHSpecial
         if (rt == null || rt.Board == null || rt.Context == null)
             return false;
 
+        if (rt.VirtualOriginCell.HasValue)
+        {
+            var cell = rt.VirtualOriginCell.Value;
+            if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+                return false;
+
+            return !rt.Context.Processed.Contains(cell) || rt.Origin == null;
+        }
+
         if (rt.Origin == null)
             return false;
 
         if (rt.Origin.GetSpecial() != TileSpecial.LineH)
             return false;
 
-        var cell = new Vector2Int(rt.Origin.X, rt.Origin.Y);
-        if (rt.Context.Processed.Contains(cell))
+        var originCell = new Vector2Int(rt.Origin.X, rt.Origin.Y);
+        if (rt.Context.Processed.Contains(originCell))
             return false;
 
         return true;
@@ -118,11 +132,19 @@ public sealed class LineHSpecial
 
     private void RegisterOrigin(LineHExecutionRuntime rt)
     {
-        var originCell = new Vector2Int(rt.Origin.X, rt.Origin.Y);
-        Debug.Log($"[LineH.RegisterOrigin] origin=({rt.Origin.X},{rt.Origin.Y}) finalize={rt.FinalizeAtEnd} hasLineBefore={rt.Context.HasLineActivation}");
-        rt.Context.Processed.Add(originCell);
-        rt.Context.Affected.Add(rt.Origin);
-        SpecialCellUtils.MarkAffectedCell(rt.Context, rt.Origin, rt.Board);
+        var originCell = GetOriginCell(rt);
+        Debug.Log($"[LineH.RegisterOrigin] origin={originCell} finalize={rt.FinalizeAtEnd} hasLineBefore={rt.Context.HasLineActivation}");
+
+        if (rt.Origin != null)
+        {
+            rt.Context.Processed.Add(originCell);
+            rt.Context.Affected.Add(rt.Origin);
+            SpecialCellUtils.MarkAffectedCell(rt.Context, rt.Origin, rt.Board);
+        }
+        else
+        {
+            SpecialCellUtils.MarkAffectedCell(rt.Context, originCell.x, originCell.y, rt.Board);
+        }
 
         if (!rt.SuppressVisualSideEffects)
             rt.Context.HasLineActivation = true;
@@ -130,7 +152,8 @@ public sealed class LineHSpecial
 
     private void CollectRow(LineHExecutionRuntime rt)
     {
-        int y = rt.Origin.Y;
+        var originCell = GetOriginCell(rt);
+        int y = originCell.y;
 
         for (int x = 0; x < rt.Board.Width; x++)
         {
@@ -142,7 +165,7 @@ public sealed class LineHSpecial
             var tile = rt.Board.Tiles[x, y];
             if (tile == null)
                 continue;
-            Debug.Log($"[LineH.CollectRow] origin=({rt.Origin.X},{rt.Origin.Y}) addTarget=({x},{y}) tile={(tile != null ? tile.GetSpecial().ToString() : "null")}");
+            Debug.Log($"[LineH.CollectRow] origin={originCell} addTarget=({x},{y}) tile={(tile != null ? tile.GetSpecial().ToString() : "null")}");
             rt.Context.Affected.Add(tile);
 
             if (!rt.SuppressVisualSideEffects)
@@ -154,10 +177,11 @@ public sealed class LineHSpecial
     {
         if (rt.SuppressVisualSideEffects)
             return;
-        Debug.Log($"[LineH.BuildLineVisuals] origin=({rt.Origin.X},{rt.Origin.Y}) finalize={rt.FinalizeAtEnd}");
+        var originCell = GetOriginCell(rt);
+        Debug.Log($"[LineH.BuildLineVisuals] origin={originCell} finalize={rt.FinalizeAtEnd}");
         rt.Context.LightningLineStrikes.Add(
             new LightningLineStrike(
-                new Vector2Int(rt.Origin.X, rt.Origin.Y),
+                originCell,
                 true));
     }
 
@@ -182,5 +206,27 @@ public sealed class LineHSpecial
             isSpecialPhase: true,
             presentationPlan: null
         );
+    }
+
+    private static Vector2Int GetOriginCell(LineHExecutionRuntime rt)
+    {
+        if (rt != null && rt.VirtualOriginCell.HasValue)
+            return rt.VirtualOriginCell.Value;
+
+        if (rt != null && rt.Origin != null)
+            return new Vector2Int(rt.Origin.X, rt.Origin.Y);
+
+        return Vector2Int.zero;
+    }
+
+    private static string DescribeOrigin(LineHExecutionRuntime rt)
+    {
+        if (rt == null)
+            return "<null-runtime>";
+
+        if (rt.VirtualOriginCell.HasValue)
+            return $"virtual({rt.VirtualOriginCell.Value.x},{rt.VirtualOriginCell.Value.y})";
+
+        return rt.Origin != null ? $"({rt.Origin.X},{rt.Origin.Y})" : "<null-origin>";
     }
 }
