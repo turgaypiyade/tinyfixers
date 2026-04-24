@@ -206,7 +206,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             Debug.Log($"[OverridePatchBotAirborne] acquire step={i + 1}/{bots.Count} from={bot.sourceCell} target=({target.x},{target.y})");
 
             active++;
-            board.StartCoroutine(CoDive(bot, target.x, target.y, patchbotService, coordinator, groupCtx, () => active--));
+            board.StartCoroutine(CoDive(bot, target.x, target.y, patchbotService, groupCtx, () => active--));
 
             yield return new WaitForSeconds(board.ApplySpecialChainTempo(stagger));
         }
@@ -245,7 +245,6 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         int targetX,
         int targetY,
         PatchbotComboService patchbotService,
-        PatchBotTargetCoordinator coordinator,
         ResolutionContext groupCtx,
         System.Action onComplete)
     {
@@ -287,7 +286,10 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         }
 
         bot.arrived = true;
-        coordinator.ReleaseReservation(targetX, targetY);
+
+        // Keep group reservations until this action ends. Releasing on arrival allowed a late
+        // PatchBot in the same Override group to reacquire the exact same normal tile.
+        // The coordinator is local to this action, so keeping reservations is safe.
 
         if (bot.ghost != null)
             Object.Destroy(bot.ghost);
