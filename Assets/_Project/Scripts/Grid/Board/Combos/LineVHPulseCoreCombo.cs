@@ -296,7 +296,10 @@ public sealed class LineVHPulseCoreCombo
             rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] {ownerLabel} EXECUTE special={special} cell={cell}");
 
             rt.Context.Processed.Remove(cell);
-            var nestedActions = rt.ExecuteSpecialActions?.Invoke(rt.Context, tile, null);
+            var handledWithoutFinalize = TryExecuteNestedLineWithoutFinalize(rt, pending, tile, ownerLabel);
+            var nestedActions = handledWithoutFinalize
+                ? null
+                : rt.ExecuteSpecialActions?.Invoke(rt.Context, tile, null);
             rt.Context.Processed.Add(cell);
 
             if (nestedActions != null && nestedActions.Count > 0)
@@ -307,6 +310,63 @@ public sealed class LineVHPulseCoreCombo
 
             EnqueueNewlyAffectedSpecials(rt, pending);
         }
+    }
+
+    private bool TryExecuteNestedLineWithoutFinalize(
+        LineVHPulseCoreComboExecutionRuntime rt,
+        Queue<TileView> pending,
+        TileView tile,
+        string ownerLabel)
+    {
+        if (rt == null || pending == null || tile == null)
+            return false;
+
+        var special = tile.GetSpecial();
+        if (special == TileSpecial.LineV)
+        {
+            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] {ownerLabel} nested LineV no-finalize cell=({tile.X},{tile.Y})");
+            var lineV = new LineVSpecial();
+            lineV.Execute(new LineVExecutionRuntime
+            {
+                Board = rt.Board,
+                Context = rt.Context,
+                Origin = tile,
+                Partner = null,
+                FinalizeAtEnd = false,
+                SuppressVisualSideEffects = false,
+                ActivateSpecial = (resolution, nestedTile, partner) =>
+                {
+                    rt.ExecuteSpecialActions?.Invoke(resolution, nestedTile, partner);
+                },
+                EnqueueChainSpecials = resolution => EnqueueNewlyAffectedSpecials(rt, pending),
+                ProcessQueue = resolution => { }
+            });
+            return true;
+        }
+
+        if (special == TileSpecial.LineH)
+        {
+            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] {ownerLabel} nested LineH no-finalize cell=({tile.X},{tile.Y})");
+            var lineH = new LineHSpecial();
+            lineH.Execute(new LineHExecutionRuntime
+            {
+                Board = rt.Board,
+                Context = rt.Context,
+                Origin = tile,
+                Partner = null,
+                FinalizeAtEnd = false,
+                SuppressVisualSideEffects = false,
+                ActivateSpecial = (resolution, nestedTile, partner) =>
+                {
+                    rt.ExecuteSpecialActions?.Invoke(resolution, nestedTile, partner);
+                },
+                EnqueueChainSpecials = resolution => EnqueueNewlyAffectedSpecials(rt, pending),
+                ProcessQueue = resolution => { }
+            });
+            return true;
+        }
+
+        return false;
     }
 
     private static void RemoveDeferredOverrideOriginsFromClear(
