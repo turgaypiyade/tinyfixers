@@ -7,6 +7,9 @@ public enum BoardSfxCue
     SpecialActivated,
     ComboStart,
     ComboImpact,
+    OverrideNormalStart,
+    OverrideSpecialStart,
+    PulsePulseCharge,
     ObstacleHit,
     ObstacleBreak,
     Swap,
@@ -96,6 +99,42 @@ public struct BoardSfxRequest
             TileSpecial.None,
             1,
             Mathf.Max(1, intensity),
+            delay,
+            priority: 90,
+            duckFalls: true);
+    }
+
+    public static BoardSfxRequest OverrideNormalStart(float delay = 0f)
+    {
+        return new BoardSfxRequest(
+            BoardSfxCue.OverrideNormalStart,
+            TileSpecial.SystemOverride,
+            1,
+            1,
+            delay,
+            priority: 75,
+            duckFalls: true);
+    }
+
+    public static BoardSfxRequest OverrideSpecialStart(TileSpecial targetSpecial, int intensity = 2, float delay = 0f)
+    {
+        return new BoardSfxRequest(
+            BoardSfxCue.OverrideSpecialStart,
+            targetSpecial,
+            1,
+            Mathf.Max(1, intensity),
+            delay,
+            priority: 85,
+            duckFalls: true);
+    }
+
+    public static BoardSfxRequest PulsePulseCharge(float delay = 0f)
+    {
+        return new BoardSfxRequest(
+            BoardSfxCue.PulsePulseCharge,
+            TileSpecial.PulseCore,
+            1,
+            3,
             delay,
             priority: 90,
             duckFalls: true);
