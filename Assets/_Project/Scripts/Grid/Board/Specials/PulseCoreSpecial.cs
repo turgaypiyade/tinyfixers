@@ -38,12 +38,6 @@ public sealed class PulseCoreSpecial
         this.affectedCellCount = Mathf.Max(1, affectedCellCount);
     }
 
-    /// <summary>
-    /// Etkilenen alan boyutundan VFX radius'unu türetir.
-    /// affectedCellCount=9  → side=3 → radius=1 (3x3 alan)
-    /// affectedCellCount=25 → side=5 → radius=2 (5x5 alan)
-    /// affectedCellCount=49 → side=7 → radius=3 (7x7 alan)
-    /// </summary>
     private int ComputeVfxRadius()
     {
         int side = Mathf.CeilToInt(Mathf.Sqrt(affectedCellCount));
