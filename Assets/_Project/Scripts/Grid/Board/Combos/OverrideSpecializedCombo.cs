@@ -809,26 +809,36 @@ public sealed class OverrideSpecializedCombo
         {
             Debug.Log($"[OverrideSpecializedCombo] PulseCore sequence count={pulseCells.Count} stagger={staggerSeconds:0.000}");
 
-            for (int i = 0; i < pulseCells.Count; i++)
+            bool previousSuppressPulseCoreChain = rt.Context.SuppressPulseCoreToPulseCoreChain;
+            rt.Context.SuppressPulseCoreToPulseCoreChain = true;
+
+            try
             {
-                var cell = pulseCells[i];
+                for (int i = 0; i < pulseCells.Count; i++)
+                {
+                    var cell = pulseCells[i];
 
-                if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
-                    continue;
+                    if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+                        continue;
 
-                var tile = rt.Board.Tiles[cell.x, cell.y];
-                if (tile == null || tile.GetSpecial() != TileSpecial.PulseCore)
-                    continue;
+                    var tile = rt.Board.Tiles[cell.x, cell.y];
+                    if (tile == null || tile.GetSpecial() != TileSpecial.PulseCore)
+                        continue;
 
-                rt.Context.Processed.Remove(cell);
-                rt.Context.Queued.Remove(cell);
+                    rt.Context.Processed.Remove(cell);
+                    rt.Context.Queued.Remove(cell);
 
-                Debug.Log($"[OverrideSpecializedCombo] PulseCore sequence step={i + 1}/{pulseCells.Count} cell={cell}");
+                    Debug.Log($"[OverrideSpecializedCombo] PulseCore sequence step={i + 1}/{pulseCells.Count} cell={cell}");
 
-                rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
+                    rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
 
-                if (staggerSeconds > 0f && i < pulseCells.Count - 1)
-                    yield return new WaitForSeconds(rt.Board.ApplySpecialChainTempo(staggerSeconds));
+                    if (staggerSeconds > 0f && i < pulseCells.Count - 1)
+                        yield return new WaitForSeconds(rt.Board.ApplySpecialChainTempo(staggerSeconds));
+                }
+            }
+            finally
+            {
+                rt.Context.SuppressPulseCoreToPulseCoreChain = previousSuppressPulseCoreChain;
             }
 
             if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)

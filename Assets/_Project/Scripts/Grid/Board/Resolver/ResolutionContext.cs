@@ -48,6 +48,13 @@ public class ResolutionContext
     public bool IsPulsePulseComboActive;
     public bool IsPulseCoreActive;
     public bool SuppressOverridePulseSelectionVfx;
+
+    // Override+PulseCore presentation scope:
+    // When true, PulseCoreSpecial may still collect affected cells and trigger other specials,
+    // but PulseCore -> PulseCore chain reactions are skipped so the explicit Override sequence
+    // owns the pulse order.
+    public bool SuppressPulseCoreToPulseCoreChain;
+
     /// <summary>
     /// DTO for decoupling logic from visuals — pending override implant data.
     /// </summary>
@@ -92,6 +99,7 @@ public class ResolutionContext
         IsPulsePulseComboActive = false;
         IsPulseCoreActive = false;
         SuppressOverridePulseSelectionVfx = false;
+        SuppressPulseCoreToPulseCoreChain = false;
         SuppressImmediateOverrideQueueProcessing = false;
         AffectedCells = new HashSet<Vector2Int>();
         Affected.Clear();
@@ -122,6 +130,5 @@ public class ResolutionContext
         OverrideDeferredPulseActivations.Clear();
         DeferredLineHitOverrideCells.Clear();
         DeferredPulseComboOverrideCells.Clear();
-        
     }
 }
