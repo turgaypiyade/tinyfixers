@@ -52,8 +52,8 @@ public class PulseCoreExplosionFX : MonoBehaviour
     private AnimationCurve easeIn =
         new AnimationCurve(new Keyframe(0, 0, 0, 0), new Keyframe(1, 1, 3, 3));
 
-    private Coroutine _playRoutine;
-    private bool _isShuttingDown;
+    private Coroutine playRoutine;
+    private bool isShuttingDown;
 
     public void SetRadiusCells(int radiusCells, float tileSize)
     {
@@ -78,40 +78,40 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
     private void OnEnable()
     {
-        _isShuttingDown = false;
+        isShuttingDown = false;
         HideAll();
 
-        if (_playRoutine != null)
-            StopCoroutine(_playRoutine);
+        if (playRoutine != null)
+            StopCoroutine(playRoutine);
 
-        _playRoutine = StartCoroutine(DeferredStart());
+        playRoutine = StartCoroutine(DeferredStart());
     }
 
     private void OnDisable()
     {
-        _isShuttingDown = true;
+        isShuttingDown = true;
 
-        if (_playRoutine != null)
+        if (playRoutine != null)
         {
-            StopCoroutine(_playRoutine);
-            _playRoutine = null;
+            StopCoroutine(playRoutine);
+            playRoutine = null;
         }
     }
 
     private void OnDestroy()
     {
-        _isShuttingDown = true;
+        isShuttingDown = true;
     }
 
     private IEnumerator DeferredStart()
     {
         yield return null;
 
-        if (_isShuttingDown || this == null || !isActiveAndEnabled)
+        if (isShuttingDown || this == null || !isActiveAndEnabled)
             yield break;
 
         yield return PlayExplosion();
-        _playRoutine = null;
+        playRoutine = null;
     }
 
     private void HideAll()
@@ -126,7 +126,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
     {
         yield return StartCoroutine(CoPlayExplosion());
 
-        if (!_isShuttingDown && destroyOnFinish && gameObject != null)
+        if (!isShuttingDown && destroyOnFinish && gameObject != null)
             Destroy(gameObject);
     }
 
@@ -139,7 +139,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
         yield return new WaitForSeconds(totalDuration);
 
-        if (_isShuttingDown)
+        if (isShuttingDown)
             yield break;
 
         if (flash != null) StopCoroutine(flash);
@@ -208,7 +208,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
         float t = 0f;
         while (t < duration)
         {
-            if (_isShuttingDown || img == null || rt == null)
+            if (isShuttingDown || img == null || rt == null)
                 yield break;
 
             t += Time.deltaTime;
@@ -222,7 +222,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
             yield return null;
         }
 
-        if (_isShuttingDown || img == null || rt == null)
+        if (isShuttingDown || img == null || rt == null)
             yield break;
 
         rt.sizeDelta = new Vector2(toSize, toSize);
@@ -251,7 +251,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
         float t = 0f;
         while (t < duration)
         {
-            if (_isShuttingDown || img == null || rt == null)
+            if (isShuttingDown || img == null || rt == null)
                 yield break;
 
             t += Time.deltaTime;
@@ -266,7 +266,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
             yield return null;
         }
 
-        if (_isShuttingDown || img == null || rt == null)
+        if (isShuttingDown || img == null || rt == null)
             yield break;
 
         rt.sizeDelta = new Vector2(toSize, toSize);
