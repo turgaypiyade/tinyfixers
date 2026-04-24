@@ -245,7 +245,8 @@ public class LineSweepService
                     board.TileSize,
                     delaySeconds,
                     onSweepCellReached,
-                    onCompleted);
+                    onCompleted,
+                    emitActivationSfx: false);
 
                 float duration = lineTravelPlayer.EstimateDuration(steps);
                 return delaySeconds + duration;
@@ -320,7 +321,7 @@ public class LineSweepService
 
     private IEnumerator CoEmitLineSweepCellCallbacks(float delaySeconds, float stepInterval, int maxDistance, Action<int> emitStep)
     {
-        if (delaySeconds > 0f) yield return new WaitForSeconds(delaySeconds);
+        if (delaySeconds > 0f) yield return new WaitForSecondsRealtime(delaySeconds);
         for (int step = 0; step <= maxDistance; step++)
         {
             emitStep?.Invoke(step);
@@ -335,9 +336,21 @@ public class LineSweepService
         Vector2 originAnchored, Vector2Int originCell,
         int steps, float cellSizePx, float delaySeconds,
         Action<Vector2Int> onStep,
-        Action onCompleted = null)
+        Action onCompleted = null,
+        bool emitActivationSfx = true)
     {
         if (lineTravelPlayer == null) return 0f;
+
+        if (emitActivationSfx && board.Audio != null)
+        {
+            var special = axis == LineTravelSplitSwapTestUI.LineAxis.Horizontal
+                ? TileSpecial.LineH
+                : TileSpecial.LineV;
+
+            board.Audio.Emit(BoardSfxRequest.SpecialActivate(
+                special,
+                intensity: Mathf.Max(1, steps)));
+        }
 
         Transform parentTr = board.LineTravelSpawnParent != null
             ? board.LineTravelSpawnParent
