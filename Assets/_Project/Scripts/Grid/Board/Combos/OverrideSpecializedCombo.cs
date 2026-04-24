@@ -34,6 +34,8 @@ public sealed class OverrideSpecializedComboExecutionResult
 
 public sealed class OverrideSpecializedCombo
 {
+    private const float OverridePulseCoreStaggerSeconds = 0.055f;
+
     public OverrideSpecializedComboExecutionResult Execute(OverrideSpecializedComboExecutionRuntime rt)
     {
         var result = new OverrideSpecializedComboExecutionResult();
@@ -185,21 +187,13 @@ public sealed class OverrideSpecializedCombo
 
         if (targetSpecial == TileSpecial.PulseCore && rt.ActivateSpecial != null)
         {
-            rt.Context.SuppressOverridePulseSelectionVfx = true;
-
-            foreach (var cell in rt.Context.OverrideDeferredPulseExplosions)
-            {
-                if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
-                    continue;
-
-                var tile = rt.Board.Tiles[cell.x, cell.y];
-                if (tile == null || tile.GetSpecial() != TileSpecial.PulseCore)
-                    continue;
-
-                rt.ActivateSpecial(rt.Context, tile, null);
-            }
-
-            rt.Context.SuppressOverridePulseSelectionVfx = false;
+            result.Actions.Add(new ResolveDeferredPulseCoreActivationSequenceAction(
+                this,
+                rt,
+                new List<Vector2Int>(rt.Context.OverrideDeferredPulseExplosions),
+                targetSpecial,
+                OverridePulseCoreStaggerSeconds));
+            return;
         }
 
         if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
@@ -771,8 +765,8 @@ public sealed class OverrideSpecializedCombo
             var payload = owner.BuildRemainingSeedClearPayload(
                 ctx,
                 emittedTiles,
-                emittedCells,
-                enqueueCascadeOnComplete: false);
+                enqueueCascadeOnComplete: false,
+                emittedCells: emittedCells);
 
             bool hasRealTiles = payload.Tiles != null && payload.Tiles.Count > 0;
             if (!hasRealTiles)
@@ -784,6 +778,68 @@ public sealed class OverrideSpecializedCombo
                 emittedTiles,
                 emittedCells,
                 runCascadeInline);
+        }
+    }
+
+    private sealed class ResolveDeferredPulseCoreActivationSequenceAction : BoardAction
+    {
+        private readonly OverrideSpecializedCombo owner;
+        private readonly OverrideSpecializedComboExecutionRuntime rt;
+        private readonly List<Vector2Int> pulseCells;
+        private readonly TileSpecial targetSpecial;
+        private readonly float staggerSeconds;
+
+        public override bool Blocking => true;
+
+        public ResolveDeferredPulseCoreActivationSequenceAction(
+            OverrideSpecializedCombo owner,
+            OverrideSpecializedComboExecutionRuntime rt,
+            List<Vector2Int> pulseCells,
+            TileSpecial targetSpecial,
+            float staggerSeconds)
+        {
+            this.owner = owner;
+            this.rt = rt;
+            this.pulseCells = pulseCells ?? new List<Vector2Int>();
+            this.targetSpecial = targetSpecial;
+            this.staggerSeconds = Mathf.Max(0f, staggerSeconds);
+        }
+
+        public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
+        {
+            Debug.Log($"[OverrideSpecializedCombo] PulseCore sequence count={pulseCells.Count} stagger={staggerSeconds:0.000}");
+
+            for (int i = 0; i < pulseCells.Count; i++)
+            {
+                var cell = pulseCells[i];
+
+                if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+                    continue;
+
+                var tile = rt.Board.Tiles[cell.x, cell.y];
+                if (tile == null || tile.GetSpecial() != TileSpecial.PulseCore)
+                    continue;
+
+                rt.Context.Processed.Remove(cell);
+                rt.Context.Queued.Remove(cell);
+
+                Debug.Log($"[OverrideSpecializedCombo] PulseCore sequence step={i + 1}/{pulseCells.Count} cell={cell}");
+
+                rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
+
+                if (staggerSeconds > 0f && i < pulseCells.Count - 1)
+                    yield return new WaitForSeconds(rt.Board.ApplySpecialChainTempo(staggerSeconds));
+            }
+
+            if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
+                rt.CleanupImplantedTiles?.Invoke(rt.Context);
+
+            if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
+                rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
+
+            var clearAction = owner.BuildClearAction(rt.Context, targetSpecial);
+            if (clearAction != null)
+                yield return clearAction.ExecuteVisuals(sequencer);
         }
     }
 
