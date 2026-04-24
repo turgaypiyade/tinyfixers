@@ -357,7 +357,11 @@ public sealed class TileAnimator
             yield break;
         }
 
-        float animDuration = Mathf.Max(0.025f, duration);
+        // Special creation hızlandırıldı: maksimum 80ms ile cap'lendi
+        // Eski: duration 145-170ms arasında geliyordu (log'dan)
+        // Yeni: Mathf.Clamp ile 60-80ms arasında tutuluyor
+        // Merge animasyonu (ghost'ların special'a akması) daha hızlı hissettiriyor
+        float animDuration = Mathf.Clamp(duration, 0.06f, 0.08f);
 
         Transform createdRoot = createdTile.transform;
         CanvasGroup createdGroup = createdTile.GetComponent<CanvasGroup>();
@@ -487,8 +491,6 @@ public sealed class TileAnimator
                 createdFadeEase = 0f;
             else
                 createdFadeEase = Mathf.Clamp01((k - 0.52f) / 0.48f);
-                
-            createdFadeEase = Mathf.Clamp01(k * 1.4f);
 
             float createdScaleFactor = EvaluateCreatedSpecialScale(k);
 
@@ -586,7 +588,8 @@ public sealed class TileAnimator
         createdIconRt.localRotation = Quaternion.identity;
         createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
 
-        float animDuration = Mathf.Max(0.08f, duration);
+        // Special appear fallback hızlandırıldı: 60-80ms cap
+        float animDuration = Mathf.Clamp(duration, 0.06f, 0.08f);
         float t = 0f;
         while (t < animDuration)
         {

@@ -1,13 +1,10 @@
 fileFormatVersion: 2
-guid: 46f02814f3895455ebb4d2c1088c8464
+guid: 39e30acfa112f4694a6023be6a039895
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1027493723618482156
-    second: LineHRightRocket_0
-  - first:
-      213: 8315202898410539421
-    second: LineHRightRocket_1
+      213: -916626329225963005
+    second: BG_Bottom_Area_v4_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -54,7 +51,7 @@ TextureImporter:
   spriteMeshType: 0
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 256
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -78,7 +75,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 2
+    textureCompression: 0
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -116,23 +113,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LineHRightRocket_0
+      name: BG_Bottom_Area_v4_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 1558
-        height: 1100
+        width: 8280
+        height: 1856
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: ce719350914624e00800000000000000
-      internalID: 1027493723618482156
+      spriteID: 30a57b6c53d7743f0800000000000000
+      internalID: -916626329225963005
       vertices: []
       indices: 
       edges: []
@@ -141,7 +138,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: cc09e1117e8374d528467ac887c035ab
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -149,11 +146,9 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     spriteCustomMetadata:
-      entries:
-      - key: SpriteEditor.SliceSettings
-        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":1558.0,"y":1100.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":2,"keepEmptyRects":false,"isAlternate":false}'
+      entries: []
     nameFileIdTable:
-      LineHRightRocket_0: 1027493723618482156
+      BG_Bottom_Area_v4_0: -916626329225963005
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
