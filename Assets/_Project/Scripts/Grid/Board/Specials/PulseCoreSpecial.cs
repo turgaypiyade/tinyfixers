@@ -56,12 +56,16 @@ public sealed class PulseCoreSpecial
         if (!CanExecute(rt))
             return result;
 
+        Debug.Log($"[PulseCore.Execute] BEGIN origin=({rt.Origin.X},{rt.Origin.Y}) finalize={rt.FinalizeAtEnd} suppressVfx={rt.SuppressVisualSideEffects}");
+
         if (!rt.SkipOriginRegistration)
             RegisterOrigin(rt);
 
         PlayPulseActivationVisual(rt, rt.Origin.X, rt.Origin.Y);
         CollectArea(rt, rt.Origin.X, rt.Origin.Y);
         ExecuteQueuedChain(rt);
+
+        Debug.Log($"[PulseCore.Execute] PRE-FINALIZE origin=({rt.Origin.X},{rt.Origin.Y}) affected={rt.Context.Affected.Count} finalize={rt.FinalizeAtEnd}");
 
         if (rt.FinalizeAtEnd)
             Finalize(rt, result, rt.Origin.X, rt.Origin.Y);
@@ -79,12 +83,16 @@ public sealed class PulseCoreSpecial
         if (targetX < 0 || targetX >= rt.Board.Width || targetY < 0 || targetY >= rt.Board.Height)
             return result;
 
+        Debug.Log($"[PulseCore.ExecuteAtTarget] BEGIN origin=({rt.Origin.X},{rt.Origin.Y}) target=({targetX},{targetY}) finalize={rt.FinalizeAtEnd} suppressVfx={rt.SuppressVisualSideEffects}");
+
         if (!rt.SkipOriginRegistration)
             RegisterOrigin(rt);
 
         PlayPulseActivationVisual(rt, targetX, targetY);
         CollectArea(rt, targetX, targetY);
         ExecuteQueuedChain(rt);
+
+        Debug.Log($"[PulseCore.ExecuteAtTarget] PRE-FINALIZE target=({targetX},{targetY}) affected={rt.Context.Affected.Count} finalize={rt.FinalizeAtEnd}");
 
         if (rt.FinalizeAtEnd)
             Finalize(rt, result, targetX, targetY);
