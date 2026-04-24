@@ -38,7 +38,6 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
         var patchbotService = (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0)
             ? new PatchbotComboService(board) : null;
-        var launchedPatchBots = new List<(TileView tile, int targetX, int targetY)>();
 
         foreach (var pos in targets)
         {
@@ -119,141 +118,80 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             }
         }
 
-        // ── Deferred PatchBot dashes — staggered launch with coordinator ──
+        // Override+PatchBot fanout:
+        // Override only performs placement. Generated PatchBots are activated through
+        // PatchBotSpecial so target selection, dash, and impact remain owned by PatchBotSpecial.
         if (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0 && patchbotService != null)
         {
-            var coordinator = new PatchBotTargetCoordinator(board, patchbotService);
-
-            // Phase 1: Topla — hangi tile'lar PatchBot?
-            var patchBotEntries = new List<(Vector2Int cell, TileView tile, TileType sourceType)>();
-
-            for (int i = 0; i < deferredPatchBotCells.Count; i++)
-            {
-                var cell = deferredPatchBotCells[i];
-
-                if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
-                    continue;
-
-                var tile = board.Tiles[cell.x, cell.y];
-                if (tile == null)
-                    continue;
-
-                if (tile.GetSpecial() != TileSpecial.PatchBot)
-                    continue;
-
-                patchBotEntries.Add((cell, tile, tile.GetTileType()));
-            }
-
-            // Phase 2: Staggered launch — her bot sırayla hedef alıp uçar
-            const float staggerInterval = 0.04f;
-
-            for (int i = 0; i < patchBotEntries.Count; i++)
-            {
-                var (cell, tile, sourceType) = patchBotEntries[i];
-
-                // ── Launch anında hedef al (baştan değil!) ──
-                var pbTarget = coordinator.ReserveTarget(tile, null, null);
-
-                if (!pbTarget.hasCell)
-                {
-                    // Hedef bulamayan PatchBot'u temizle — ekranda kalmasın
-                    tile.SetSpecial(TileSpecial.None);
-                    SpecialCellUtils.SyncAfterSpecialChange(board, tile);
-                    board.ClearCell(cell.x, cell.y);
-                    board.ClearCellVisualOnly(cell, sourceType, tile);
-                    continue;
-                }
-
-                // Closure captures
-                var capturedTile = tile;
-                var capturedFrom = cell;
-                var capturedSourceType = sourceType;
-                var capturedTargetX = pbTarget.x;
-                var capturedTargetY = pbTarget.y;
-
-                board.ActiveBackgroundJobs++;
-
-                var request = new BoardController.PatchbotDashRequest
-                {
-                    from = capturedFrom,
-                    to = new Vector2Int(capturedTargetX, capturedTargetY),
-                    onStart = () =>
-                    {
-                        if (capturedTile == null)
-                            return;
-
-                        SpecialVisualService.HideTileVisualForCombo(capturedTile);
-
-                        if (capturedFrom.x < 0 || capturedFrom.x >= board.Width ||
-                            capturedFrom.y < 0 || capturedFrom.y >= board.Height)
-                            return;
-
-                        if (board.Tiles[capturedFrom.x, capturedFrom.y] == capturedTile)
-                        {
-                            board.ClearCell(capturedFrom.x, capturedFrom.y);
-                            board.ClearCellVisualOnly(capturedFrom, capturedSourceType, capturedTile);
-                        }
-                    },
-                    onArrived = () =>
-                    {
-                        // ── Koordinatör rezervasyonunu serbest bırak ──
-                        coordinator.ReleaseReservation(capturedTargetX, capturedTargetY);
-
-                        var arrivalCtx = new ResolutionContext();
-                        var dataMatches = new HashSet<TileData>();
-
-                        bool hasObstacle = patchbotService.HasObstacleAt(capturedTargetX, capturedTargetY);
-
-                        patchbotService.ResolveTargetImpact(
-                            dataMatches,
-                            capturedTargetX,
-                            capturedTargetY,
-                            hasObstacle,
-                            (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalCtx, x, y, board),
-                            t => SpecialCellUtils.MarkAffectedCell(arrivalCtx, t, board)
-                        );
-
-                        foreach (var data in dataMatches)
-                        {
-                            if (data == null) continue;
-                            if (data.X < 0 || data.X >= board.Width || data.Y < 0 || data.Y >= board.Height) continue;
-
-                            var t = board.Tiles[data.X, data.Y];
-                            if (t != null) arrivalCtx.Affected.Add(t);
-                        }
-
-                        var clearAction = new MatchClearAction(
-                            arrivalCtx.Affected,
-                            doShake: true,
-                            animationMode: ClearAnimationMode.Default,
-                            affectedCells: arrivalCtx.AffectedCells,
-                            impactCells: arrivalCtx.ImpactCells,
-                            isSpecialPhase: true
-                        );
-                        sequencer.Enqueue(new List<BoardAction> { clearAction });
-
-                        board.ActiveBackgroundJobs--;
-                    }
-                };
-
-                // Tek tek dash başlat (PlayDashParallel yerine)
-                if (board.PatchbotDashUI != null)
-                    board.PatchbotDashUI.PlayDashParallel(new List<BoardController.PatchbotDashRequest> { request }, board);
-                else
-                {
-                    request.onStart?.Invoke();
-                    request.onArrived?.Invoke();
-                }
-
-                // ── Sonraki bot için stagger bekle — bu sürede önceki botun
-                //    vurduğu hedef kayıtlardan düşer ──
-                yield return new WaitForSeconds(board.ApplySpecialChainTempo(staggerInterval));
-            }
+            yield return LaunchDeferredPatchBotsViaSpecial(patchbotService);
         }
 
         if (originTile != null)
             SpecialVisualService.HideTileVisualForCombo(originTile);
     }
+
+    private IEnumerator LaunchDeferredPatchBotsViaSpecial(PatchbotComboService patchbotService)
+    {
+        var patchBotEntries = new List<TileView>();
+
+        for (int i = 0; i < deferredPatchBotCells.Count; i++)
+        {
+            var cell = deferredPatchBotCells[i];
+
+            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                continue;
+
+            var tile = board.Tiles[cell.x, cell.y];
+            if (tile == null)
+                continue;
+
+            if (tile.GetSpecial() != TileSpecial.PatchBot)
+                continue;
+
+            patchBotEntries.Add(tile);
+        }
+
+        if (patchBotEntries.Count == 0)
+            yield break;
+
+        var coordinator = new PatchBotTargetCoordinator(board, patchbotService);
+        var visualService = new SpecialVisualService(board, board.boardAnimatorRef, patchbotService);
+        var patchBotSpecial = new PatchBotSpecial();
+
+        const float staggerInterval = 0.04f;
+        Debug.Log($"[SystemOverrideFanoutPlacementAction] PatchBot sequence count={patchBotEntries.Count}");
+
+        for (int i = 0; i < patchBotEntries.Count; i++)
+        {
+            var patchBot = patchBotEntries[i];
+            if (patchBot == null)
+                continue;
+
+            if (patchBot.GetSpecial() != TileSpecial.PatchBot)
+                continue;
+
+            var cell = new Vector2Int(patchBot.X, patchBot.Y);
+            Debug.Log($"[SystemOverrideFanoutPlacementAction] PatchBot sequence step={i + 1}/{patchBotEntries.Count} cell={cell}");
+
+            var ctx = new ResolutionContext();
+            patchBotSpecial.Execute(new PatchBotExecutionRuntime
+            {
+                Board = board,
+                Context = ctx,
+                Origin = patchBot,
+                Partner = null,
+                PatchbotService = patchbotService,
+                TargetCoordinator = coordinator,
+                VisualService = visualService,
+                Effects = null,
+                FinalizeAtEnd = false,
+                ClearOriginOnDashStart = true
+            });
+
+            yield return new WaitForSeconds(board.ApplySpecialChainTempo(staggerInterval));
+        }
+    }
+
     private void PlayPulseCoreExplosionVfx(TileView tile)
     {
         if (tile == null)
