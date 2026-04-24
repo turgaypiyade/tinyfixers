@@ -16,6 +16,14 @@ public class PatchbotDashUI : MonoBehaviour
     [SerializeField] private float arriveEps = 2f;
     [SerializeField, Range(0.5f, 1.5f)] private float syncedDurationMultiplier = 1f;
 
+    [Header("Drone Flight Feel")]
+    [SerializeField, Min(0f)] private float takeoffBurstDuration = 0.12f;
+    [SerializeField, Range(0f, 1.5f)] private float takeoffLateralFactor = 0.46f;
+    [SerializeField, Range(0f, 2f)] private float takeoffLiftFactor = 0.78f;
+    [SerializeField, Min(0f)] private float hoverHoldDuration = 0.035f;
+    [SerializeField, Range(0f, 1f)] private float diveArcFactor = 0.11f;
+    [SerializeField, Range(0.5f, 2f)] private float diveSpeedMultiplier = 1.28f;
+
     [Header("Flight Audio")]
     [SerializeField] private AudioClip flightLoopClip;
     [SerializeField, Min(0f)] private float flightLoopVolume = 0.18f;
@@ -167,55 +175,38 @@ public class PatchbotDashUI : MonoBehaviour
         Vector3 fromWorld = board.GetCellWorldPosition(req.from.x, req.from.y);
         Vector3 toWorld = board.GetCellWorldPosition(req.to.x, req.to.y);
 
-        rt.anchoredPosition = WorldToAnchoredIn(vfxRoot, fromWorld);
+        Vector2 start = WorldToAnchoredIn(vfxRoot, fromWorld);
         Vector2 target = WorldToAnchoredIn(vfxRoot, toWorld);
+        rt.anchoredPosition = start;
 
         float tAfter = 0f;
         float elapsed = 0f;
 
-        float effectiveSpeed = dashSpeed;
+        float totalDistance = Vector2.Distance(start, target);
+        float effectiveSpeed = Mathf.Max(1f, dashSpeed * Mathf.Max(0.01f, diveSpeedMultiplier));
+        float travelDuration = totalDistance > arriveEps ? totalDistance / effectiveSpeed : 0f;
+
         if (syncDuration > 0f)
-        {
-            syncDuration *= Mathf.Max(0.01f, syncedDurationMultiplier);
-            float dist = Vector2.Distance(rt.anchoredPosition, target);
-            if (dist > 0.001f)
-                effectiveSpeed = Mathf.Max(1f, dist / syncDuration);
-        }
+            travelDuration = Mathf.Max(0f, syncDuration * Mathf.Max(0.01f, syncedDurationMultiplier));
 
-        while (Vector2.Distance(rt.anchoredPosition, target) > arriveEps)
-        {
-            elapsed += Time.deltaTime;
+        float takeoffDuration = Mathf.Min(Mathf.Max(0f, takeoffBurstDuration), Mathf.Max(0f, travelDuration * 0.35f));
+        float hoverDuration = Mathf.Min(Mathf.Max(0f, hoverHoldDuration), Mathf.Max(0f, travelDuration * 0.18f));
+        float diveDuration = Mathf.Max(0.01f, travelDuration - takeoffDuration - hoverDuration);
 
-            rt.anchoredPosition =
-                Vector2.MoveTowards(rt.anchoredPosition, target, effectiveSpeed * Time.deltaTime);
+        int side = ((req.from.x + req.from.y + req.to.x + req.to.y) & 1) == 0 ? -1 : 1;
+        Vector2 takeoff = start + new Vector2(
+            side * Mathf.Min(size.x, size.y) * takeoffLateralFactor,
+            Mathf.Min(size.x, size.y) * takeoffLiftFactor);
 
-            // Patchbot kendi etrafında dönmesin
-            rt.localRotation = Quaternion.identity;
+        Debug.Log($"[PatchbotDashUI] DRONE_DASH from={req.from} to={req.to} takeoff={takeoffDuration:0.000} hover={hoverDuration:0.000} dive={diveDuration:0.000}");
 
-            // Special sadece patchbot'un etrafında dolaşsın
-            if (carryRt != null)
-            {
-                float angle = elapsed * carryOrbitSpeed * Mathf.Deg2Rad;
-                float radius = Mathf.Min(size.x, size.y) * carryOrbitRadiusFactor;
+        yield return RunTakeoffBurst(rt, carryRt, size, sprite, start, takeoff, takeoffDuration, ref elapsed, ref tAfter);
+        yield return RunHoverHold(rt, carryRt, size, sprite, takeoff, hoverDuration, ref elapsed, ref tAfter);
+        yield return RunDive(rt, carryRt, size, sprite, takeoff, target, diveDuration, ref elapsed, ref tAfter);
 
-                carryRt.anchoredPosition =
-                    new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
-
-                // Special kendi etrafında dönmesin
-                carryRt.localRotation = Quaternion.identity;
-            }
-
-            tAfter += Time.deltaTime;
-            if (tAfter >= spawnEvery)
-            {
-                tAfter = 0f;
-                SpawnAfterImageAt(rt, sprite);
-            }
-
-            yield return null;
-        }
-
+        rt.anchoredPosition = target;
         rt.localRotation = Quaternion.identity;
+        rt.localScale = Vector3.one;
 
         if (carryRt != null)
             carryRt.localRotation = Quaternion.identity;
@@ -225,6 +216,138 @@ public class PatchbotDashUI : MonoBehaviour
 
         Destroy(go);
         onComplete?.Invoke();
+    }
+
+    private IEnumerator RunTakeoffBurst(
+        RectTransform rt,
+        RectTransform carryRt,
+        Vector2 size,
+        Sprite sprite,
+        Vector2 start,
+        Vector2 takeoff,
+        float duration,
+        ref float elapsed,
+        ref float tAfter)
+    {
+        if (duration <= 0f)
+        {
+            rt.anchoredPosition = takeoff;
+            yield break;
+        }
+
+        float local = 0f;
+        while (local < duration)
+        {
+            float dt = Time.deltaTime;
+            local += dt;
+            elapsed += dt;
+
+            float t = Mathf.Clamp01(local / duration);
+            float eased = 1f - Mathf.Pow(1f - t, 3f);
+            float punch = Mathf.Sin(t * Mathf.PI) * Mathf.Min(size.x, size.y) * 0.08f;
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(start, takeoff, eased) + Vector2.up * punch;
+            rt.localRotation = Quaternion.identity;
+            rt.localScale = Vector3.one * Mathf.Lerp(1f, 1.16f, Mathf.Sin(t * Mathf.PI));
+
+            UpdateCarryOrbit(carryRt, size, elapsed);
+            TickAfterImage(rt, sprite, ref tAfter);
+            yield return null;
+        }
+    }
+
+    private IEnumerator RunHoverHold(
+        RectTransform rt,
+        RectTransform carryRt,
+        Vector2 size,
+        Sprite sprite,
+        Vector2 hover,
+        float duration,
+        ref float elapsed,
+        ref float tAfter)
+    {
+        if (duration <= 0f)
+            yield break;
+
+        float local = 0f;
+        while (local < duration)
+        {
+            float dt = Time.deltaTime;
+            local += dt;
+            elapsed += dt;
+
+            float wobbleX = Mathf.Sin(elapsed * 8.5f) * Mathf.Min(size.x, size.y) * 0.035f;
+            float wobbleY = Mathf.Sin(elapsed * 10.0f) * Mathf.Min(size.x, size.y) * 0.025f;
+
+            rt.anchoredPosition = hover + new Vector2(wobbleX, wobbleY);
+            rt.localRotation = Quaternion.identity;
+            rt.localScale = Vector3.one * 1.08f;
+
+            UpdateCarryOrbit(carryRt, size, elapsed);
+            TickAfterImage(rt, sprite, ref tAfter);
+            yield return null;
+        }
+    }
+
+    private IEnumerator RunDive(
+        RectTransform rt,
+        RectTransform carryRt,
+        Vector2 size,
+        Sprite sprite,
+        Vector2 start,
+        Vector2 target,
+        float duration,
+        ref float elapsed,
+        ref float tAfter)
+    {
+        Vector2 delta = target - start;
+        Vector2 normal = delta.sqrMagnitude > 0.001f ? new Vector2(-delta.y, delta.x).normalized : Vector2.up;
+        float arc = Mathf.Clamp(delta.magnitude * Mathf.Max(0f, diveArcFactor), Mathf.Min(size.x, size.y) * 0.10f, Mathf.Min(size.x, size.y) * 0.45f);
+
+        float local = 0f;
+        while (local < duration)
+        {
+            float dt = Time.deltaTime;
+            local += dt;
+            elapsed += dt;
+
+            float t = Mathf.Clamp01(local / duration);
+            float eased = t * t * (3f - 2f * t);
+            float curve = Mathf.Sin(t * Mathf.PI) * arc;
+            float snap = Mathf.Sin(t * Mathf.PI * 2f) * Mathf.Min(size.x, size.y) * 0.025f;
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(start, target, eased) + normal * (curve + snap);
+            rt.localRotation = Quaternion.identity;
+            rt.localScale = Vector3.one * Mathf.Lerp(1.08f, 0.94f, t);
+
+            UpdateCarryOrbit(carryRt, size, elapsed);
+            TickAfterImage(rt, sprite, ref tAfter);
+            yield return null;
+        }
+    }
+
+    private void UpdateCarryOrbit(RectTransform carryRt, Vector2 size, float elapsed)
+    {
+        if (carryRt == null)
+            return;
+
+        float angle = elapsed * carryOrbitSpeed * Mathf.Deg2Rad;
+        float radius = Mathf.Min(size.x, size.y) * carryOrbitRadiusFactor;
+
+        carryRt.anchoredPosition =
+            new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+
+        carryRt.localRotation = Quaternion.identity;
+    }
+
+    private void TickAfterImage(RectTransform rt, Sprite sprite, ref float tAfter)
+    {
+        tAfter += Time.deltaTime;
+        if (tAfter < spawnEvery)
+            return;
+
+        tAfter = 0f;
+        SpawnAfterImageAt(rt, sprite);
     }
 
     private IEnumerator DashRoutine(List<RectTransform> path)
@@ -354,8 +477,11 @@ public class PatchbotDashUI : MonoBehaviour
         if (syncDuration > 0f)
             return syncDuration * Mathf.Max(0.01f, syncedDurationMultiplier);
 
-        float speed = Mathf.Max(1f, dashSpeed);
-        return distance / speed;
+        float speed = Mathf.Max(1f, dashSpeed * Mathf.Max(0.01f, diveSpeedMultiplier));
+        float travel = distance / speed;
+        float takeoff = Mathf.Min(Mathf.Max(0f, takeoffBurstDuration), Mathf.Max(0f, travel * 0.35f));
+        float hover = Mathf.Min(Mathf.Max(0f, hoverHoldDuration), Mathf.Max(0f, travel * 0.18f));
+        return takeoff + hover + Mathf.Max(0.01f, travel - takeoff - hover);
     }
 
     private AudioSource CreateFlightAudioSource(RectTransform attachTo)
