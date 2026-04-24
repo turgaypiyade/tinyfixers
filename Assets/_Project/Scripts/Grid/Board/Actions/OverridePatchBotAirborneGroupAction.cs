@@ -11,7 +11,10 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         public TileType sourceType;
         public GameObject ghost;
         public RectTransform rect;
+        public RectTransform flightRoot;
         public Image image;
+        public Vector2 hoverAnchor;
+        public bool diving;
         public bool arrived;
     }
 
@@ -64,7 +67,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             if (tile == null || tile.GetSpecial() != TileSpecial.PatchBot)
                 continue;
 
-            var bot = CreateGhost(cell, tile, sprite);
+            var bot = CreateGhost(cell, tile, sprite, i);
             if (bot == null)
                 continue;
 
@@ -76,35 +79,41 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             board.ClearCell(cell.x, cell.y);
             board.ClearCellVisualOnly(cell, bot.sourceType, tile);
 
-            board.StartCoroutine(CoHover(bot, i));
+            board.StartCoroutine(CoTakeoffAndHover(bot, i));
         }
 
         return bots;
     }
 
-    private AirborneBot CreateGhost(Vector2Int cell, TileView tile, Sprite sprite)
+    private AirborneBot CreateGhost(Vector2Int cell, TileView tile, Sprite sprite, int index)
     {
-        var parent = board.Parent;
-        if (parent == null)
+        var flightRoot = GetFlightRoot();
+        if (flightRoot == null)
             return null;
 
         var ghost = new GameObject("OverridePatchBotAirborne", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         var rect = ghost.GetComponent<RectTransform>();
         var image = ghost.GetComponent<Image>();
 
-        rect.SetParent(parent, false);
+        rect.SetParent(flightRoot, false);
         rect.anchorMin = new Vector2(0.5f, 0.5f);
         rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.pivot = new Vector2(0.5f, 0.5f);
         rect.sizeDelta = new Vector2(board.TileSize, board.TileSize);
-        rect.anchoredPosition = CellAnchored(cell.x, cell.y);
+        rect.anchoredPosition = CellAnchored(cell.x, cell.y, flightRoot);
         rect.localScale = Vector3.one;
         rect.SetAsLastSibling();
 
-        image.sprite = sprite != null ? sprite : tile.GetIconSprite();
+        image.sprite = sprite != null ? sprite : board.GetSpecialIcon(TileSpecial.PatchBot);
         image.preserveAspect = true;
         image.raycastTarget = false;
         image.color = Color.white;
+
+        int side = ((cell.x + cell.y + index) & 1) == 0 ? -1 : 1;
+        float lateral = board.TileSize * (0.46f + 0.08f * (index % 3));
+        float altitude = board.TileSize * (0.90f + 0.05f * (index % 2));
+        Vector2 start = rect.anchoredPosition;
+        Vector2 hoverAnchor = start + new Vector2(side * lateral, altitude);
 
         return new AirborneBot
         {
@@ -112,31 +121,46 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             sourceType = tile.GetTileType(),
             ghost = ghost,
             rect = rect,
-            image = image
+            flightRoot = flightRoot,
+            image = image,
+            hoverAnchor = hoverAnchor
         };
     }
 
-    private IEnumerator CoHover(AirborneBot bot, int index)
+    private IEnumerator CoTakeoffAndHover(AirborneBot bot, int index)
     {
         if (bot == null || bot.rect == null)
             yield break;
 
-        Vector2 basePos = CellAnchored(bot.sourceCell.x, bot.sourceCell.y);
-        float phase = index * 0.73f;
-        float lift = board.TileSize * 0.42f;
-        float sway = board.TileSize * 0.16f;
-        float takeoffDuration = board.ApplySpecialChainTempo(0.18f);
+        Vector2 start = bot.rect.anchoredPosition;
+        Vector2 hover = bot.hoverAnchor;
+        float phase = index * 0.77f;
+        float burstDuration = board.ApplySpecialChainTempo(0.13f);
         float elapsed = 0f;
 
-        while (bot != null && bot.rect != null && !bot.arrived)
+        Debug.Log($"[OverridePatchBotAirborne] takeoff_burst cell={bot.sourceCell} hover={hover}");
+
+        while (elapsed < burstDuration && bot != null && bot.rect != null && !bot.arrived && !bot.diving)
         {
             elapsed += Time.deltaTime;
-            float t = takeoffDuration <= 0f ? 1f : Mathf.Clamp01(elapsed / takeoffDuration);
-            float wobble = Mathf.Sin((elapsed * 9f) + phase) * sway;
-            float bob = Mathf.Sin((elapsed * 11f) + phase) * board.TileSize * 0.035f;
+            float t = burstDuration <= 0f ? 1f : Mathf.Clamp01(elapsed / burstDuration);
+            float eased = 1f - Mathf.Pow(1f - t, 3f);
+            float punch = Mathf.Sin(t * Mathf.PI) * board.TileSize * 0.10f;
 
-            bot.rect.anchoredPosition = basePos + new Vector2(wobble, lift * t + bob);
-            bot.rect.localScale = Vector3.one * Mathf.Lerp(1.0f, 1.16f, Mathf.Sin(t * Mathf.PI));
+            bot.rect.anchoredPosition = Vector2.LerpUnclamped(start, hover, eased) + Vector2.up * punch;
+            bot.rect.localScale = Vector3.one * Mathf.Lerp(1.00f, 1.18f, Mathf.Sin(t * Mathf.PI));
+            yield return null;
+        }
+
+        while (bot != null && bot.rect != null && !bot.arrived && !bot.diving)
+        {
+            elapsed += Time.deltaTime;
+            float wobbleX = Mathf.Sin(elapsed * 8.5f + phase) * board.TileSize * 0.055f;
+            float wobbleY = Mathf.Sin(elapsed * 10.0f + phase) * board.TileSize * 0.035f;
+
+            bot.rect.anchoredPosition = hover + new Vector2(wobbleX, wobbleY);
+            bot.rect.localScale = Vector3.one * 1.08f;
+            bot.rect.SetAsLastSibling();
             yield return null;
         }
     }
@@ -225,13 +249,24 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         ResolutionContext groupCtx,
         System.Action onComplete)
     {
-        Vector2 start = bot.rect != null ? bot.rect.anchoredPosition : CellAnchored(bot.sourceCell.x, bot.sourceCell.y);
-        Vector2 end = CellAnchored(targetX, targetY);
+        if (bot == null || bot.rect == null)
+        {
+            onComplete?.Invoke();
+            yield break;
+        }
+
+        bot.diving = true;
+        bot.rect.SetAsLastSibling();
+
+        Vector2 start = bot.rect.anchoredPosition;
+        Vector2 end = CellAnchored(targetX, targetY, bot.flightRoot);
         Vector2 delta = end - start;
         Vector2 normal = delta.sqrMagnitude > 0.001f ? new Vector2(-delta.y, delta.x).normalized : Vector2.up;
-        float arc = Mathf.Clamp(delta.magnitude * 0.18f, board.TileSize * 0.18f, board.TileSize * 0.80f);
-        float duration = board.ApplySpecialChainTempo(Mathf.Clamp(delta.magnitude / 760f, 0.18f, 0.42f));
+        float arc = Mathf.Clamp(delta.magnitude * 0.11f, board.TileSize * 0.14f, board.TileSize * 0.48f);
+        float duration = board.ApplySpecialChainTempo(Mathf.Clamp(delta.magnitude / 980f, 0.13f, 0.30f));
         float elapsed = 0f;
+
+        Debug.Log($"[OverridePatchBotAirborne] dive from={bot.sourceCell} target=({targetX},{targetY}) duration={duration:0.000}");
 
         while (elapsed < duration)
         {
@@ -239,12 +274,13 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             float t = duration <= 0f ? 1f : Mathf.Clamp01(elapsed / duration);
             float eased = t * t * (3f - 2f * t);
             float curve = Mathf.Sin(t * Mathf.PI) * arc;
-            float wiggle = Mathf.Sin(t * Mathf.PI * 4f) * board.TileSize * 0.04f;
+            float snap = Mathf.Sin(t * Mathf.PI * 2f) * board.TileSize * 0.025f;
 
             if (bot.rect != null)
             {
-                bot.rect.anchoredPosition = Vector2.LerpUnclamped(start, end, eased) + normal * (curve + wiggle);
-                bot.rect.localScale = Vector3.one * Mathf.Lerp(1.12f, 0.92f, t);
+                bot.rect.anchoredPosition = Vector2.LerpUnclamped(start, end, eased) + normal * (curve + snap);
+                bot.rect.localScale = Vector3.one * Mathf.Lerp(1.10f, 0.92f, t);
+                bot.rect.SetAsLastSibling();
             }
 
             yield return null;
@@ -298,10 +334,26 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         return cell.x >= 0 && cell.x < board.Width && cell.y >= 0 && cell.y < board.Height;
     }
 
-    private Vector2 CellAnchored(int x, int y)
+    private RectTransform GetFlightRoot()
     {
-        return new Vector2(
-            x * board.TileSize + board.TileSize * 0.5f,
-            -y * board.TileSize - board.TileSize * 0.5f);
+        if (board.BoardVfxPlayer != null && board.BoardVfxPlayer.VfxRoot != null)
+            return board.BoardVfxPlayer.VfxRoot;
+
+        return board.Parent;
+    }
+
+    private Vector2 CellAnchored(int x, int y, RectTransform targetSpace)
+    {
+        if (targetSpace == null)
+            return Vector2.zero;
+
+        Vector3 worldPos = board.GetCellWorldPosition(x, y);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            targetSpace,
+            RectTransformUtility.WorldToScreenPoint(null, worldPos),
+            null,
+            out var localPoint);
+
+        return localPoint;
     }
 }
