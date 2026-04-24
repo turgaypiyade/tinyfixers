@@ -219,8 +219,7 @@ public sealed class LineVHPulseCoreCombo
             if (nestedActions != null && nestedActions.Count > 0)
             {
                 rt.DebugLog?.Invoke(
-                    $"[LineVHPulseCoreCombo] LineV MERGE nested actions count={nestedActions.Count} from {special} at {cell}");
-                result.Actions.AddRange(nestedActions);
+                    $"[LineVHPulseCoreCombo] LineV IGNORE nested finalize actions count={nestedActions.Count} from {special} at {cell}; final LineV clear owns the accumulated context");
             }
 
             EnqueueNewlyAffectedSpecials(rt, pending);
