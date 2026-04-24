@@ -75,7 +75,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd7a156413a7b4ecc923d41dc03f710b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  bombSprite: {fileID: 775674652969251136, guid: fda4d5a44613545f0a69986fce85c4d6, type: 3}
+  bombSprite: {fileID: 21300000, guid: aeaf2c89ef70045589b271ee4008b1ce, type: 3}
   bombBaseSize: 256
   chargeDuration: 1.9
   chargeStartScale: 0.3

@@ -179,7 +179,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RocketTrailBeam
   jaggedness: 0.05
   noiseScale: 2.5
-  minSegments: 12
+  minSegments: 10
   segmentsPerUnit: 26
   tailAlpha: 0.6
   headAlpha: 0.95
