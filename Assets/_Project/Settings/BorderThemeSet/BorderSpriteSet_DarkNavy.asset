@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78895d134f6f74172967c758b8b08480, type: 3}
+  m_Name: BorderSpriteSet_DarkNavy
+  m_EditorClassIdentifier: Assembly-CSharp::BorderSpriteSet
+  colorId: 3
+  edgeTopPrefab: {fileID: 6574422976558452149, guid: 3b1136bfdb07d4f158d63799e6134687, type: 3}
+  edgeBottomPrefab: {fileID: 6574422976558452149, guid: 7731304c19c294352bb5cf0e3c2b1232, type: 3}
+  edgeLeftPrefab: {fileID: 6574422976558452149, guid: 988a15dece4f04bf6a825db459169613, type: 3}
+  edgeRightPrefab: {fileID: 6574422976558452149, guid: 405bd415f52ae4f0cbd6293212ad47ce, type: 3}
+  outerLTPrefab: {fileID: 7522899034841235240, guid: 0985ddfb50cb6429184916224bbaa8aa, type: 3}
+  outerRTPrefab: {fileID: 731866519192217463, guid: 32b7ee3e796d541b1b671c4959a6d620, type: 3}
+  outerLBPrefab: {fileID: 1257187865206446350, guid: f7e562657b2c14fa6b82fc1c17759991, type: 3}
+  outerRBPrefab: {fileID: 190114846152896381, guid: e4ff7aa8f509644628df9fe999ec8a6e, type: 3}
+  innerLTPrefab: {fileID: 1266194054284808458, guid: b1070c1064142401f8ec478aebc87b2c, type: 3}
+  innerRTPrefab: {fileID: 1266194054284808458, guid: ca13962335901461a85a0b50b767cc57, type: 3}
+  innerLBPrefab: {fileID: 1266194054284808458, guid: 0050c9441aaf0447498a436afd7959b4, type: 3}
+  innerRBPrefab: {fileID: 1266194054284808458, guid: ee2fba1f23ded4fc593aa10b20537ad0, type: 3}
