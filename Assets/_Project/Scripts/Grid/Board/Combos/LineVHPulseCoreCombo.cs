@@ -765,7 +765,6 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
                 }
             }
         }
-
         if (board.lineTravelPlayer == null)
         {
             bool IsComboOrigin(Vector2Int cell) =>
@@ -809,7 +808,7 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             yield break;
         }
 
-        emitPulseEmitterComboTriggered?.Invoke(comboCenterCell);
+       // emitPulseEmitterComboTriggered?.Invoke(comboCenterCell);
 
         void OnStep(Vector2Int cell)
         {
