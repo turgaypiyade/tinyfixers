@@ -123,7 +123,7 @@ public class GridSpawner : MonoBehaviour
             enabled = false;
             return;
         }
-
+        PlayLevelMusic(resolvedLevel);
         width = resolvedLevel.width;
         height = resolvedLevel.height;
 
@@ -149,6 +149,22 @@ public class GridSpawner : MonoBehaviour
             StartCoroutine(board.ResolveInitial());
     }
 
+    private void PlayLevelMusic(LevelData activeLevel)
+    {
+        if (activeLevel == null)
+            return;
+
+        if (activeLevel.musicClip == null)
+            return;
+
+        if (MusicManager.Instance == null)
+        {
+            Debug.LogWarning("GridSpawner: MusicManager sahnede yok, level müziği çalınamadı.");
+            return;
+        }
+
+        MusicManager.Instance.Play(activeLevel.musicClip, activeLevel.musicVolume);
+    }
     private void BindBoardEvents()
     {
         UnbindBoardEvents();
@@ -407,6 +423,8 @@ public class GridSpawner : MonoBehaviour
         clone.width = source.width;
         clone.height = source.height;
         clone.moves = source.moves;
+        clone.musicClip = source.musicClip;
+        clone.musicVolume = source.musicVolume;
         clone.obstacleLibrary = source.obstacleLibrary;
         clone.goals = CloneGoals(source.goals);
 

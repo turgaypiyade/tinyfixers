@@ -63,11 +63,31 @@ public class LevelDataEditor : Editor
         EditorGUILayout.HelpBox(
             $"Grid size limits: Width {LevelData.MinWidth}-{LevelData.MaxWidth}, Height {LevelData.MinHeight}-{LevelData.MaxHeight}.",
             MessageType.Info);
+
         level.moves = EditorGUILayout.IntField("Moves", level.moves);
 
         DrawGoals(level);
+        DrawAudio(level);
     }
+    private void DrawAudio(LevelData level)
+    {
+        EditorGUILayout.Space(8);
+        EditorGUILayout.LabelField("Audio", EditorStyles.boldLabel);
 
+        level.musicClip = (AudioClip)EditorGUILayout.ObjectField(
+            "Music Clip",
+            level.musicClip,
+            typeof(AudioClip),
+            false
+        );
+
+        level.musicVolume = EditorGUILayout.Slider(
+            "Music Volume",
+            level.musicVolume,
+            0f,
+            1f
+        );
+    }
     private void DrawGoals(LevelData level)
     {
         EditorGUILayout.Space(4);

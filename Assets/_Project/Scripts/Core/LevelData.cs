@@ -47,7 +47,12 @@ public class LevelData : ScriptableObject
     public int height = 9;
     public int moves = 25;
     public LevelGoalDefinition[] goals;
+    [Header("Audio")]
+    public AudioClip musicClip;
 
+    [Range(0f, 1f)]
+    public float musicVolume = 1f;
+    
     [Header("Libraries")]
     public ObstacleLibrary obstacleLibrary;
 

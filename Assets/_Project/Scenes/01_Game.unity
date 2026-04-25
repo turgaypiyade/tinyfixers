@@ -1548,8 +1548,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.27868852}
-  m_AnchorMax: {x: 0.61026615, y: 7.204918}
+  m_AnchorMin: {x: 0, y: 0.18411553}
+  m_AnchorMax: {x: 0.84031415, y: 4.7599277}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -3469,18 +3469,18 @@ MonoBehaviour:
   cornerRTPrefab: {fileID: 731866519192217463, guid: 7cad9b26a56b44f32b30ad821c194900, type: 3}
   cornerLBPrefab: {fileID: 1257187865206446350, guid: fd847c5922db740ffb9396ba1c4f39ee, type: 3}
   cornerRBPrefab: {fileID: 190114846152896381, guid: 1a4731807a7ad4216b98add0254ee598, type: 3}
-  edgeTopPrefab: {fileID: 6574422976558452149, guid: 78736d4318b714951bf7cb92767e221c, type: 3}
-  edgeBottomPrefab: {fileID: 6574422976558452149, guid: 76064ae6f0f40406986b1689a838fbbd, type: 3}
-  edgeLeftPrefab: {fileID: 6574422976558452149, guid: 17c853766f3544b8a960de18e38b2595, type: 3}
-  edgeRightPrefab: {fileID: 6574422976558452149, guid: 006dc9440a5f84a4c99364ae744ce9c0, type: 3}
-  outerLTPrefab: {fileID: 7522899034841235240, guid: 41026ac079726487bb310f654b801301, type: 3}
-  outerRTPrefab: {fileID: 731866519192217463, guid: 183106d17d07f4f4aa54768ac93100c5, type: 3}
-  outerLBPrefab: {fileID: 1257187865206446350, guid: 8064dc96f551745ff94c9d31ab7fc32f, type: 3}
-  outerRBPrefab: {fileID: 190114846152896381, guid: 8a50b7448606d4f9f9ef3cf81e33b2b3, type: 3}
-  innerLTPrefab: {fileID: 1266194054284808458, guid: 39dd866d644a64edca5c6d949c97cbec, type: 3}
-  innerRTPrefab: {fileID: 1266194054284808458, guid: 30e0359e4ae0246ee885d5f73673ea1f, type: 3}
-  innerLBPrefab: {fileID: 1266194054284808458, guid: 338f92a0c5d1b4629aecea20b03dd240, type: 3}
-  innerRBPrefab: {fileID: 1266194054284808458, guid: b95a60ddc6f2a4208a3fd09e6745c7da, type: 3}
+  edgeTopPrefab: {fileID: 6574422976558452149, guid: 9e579d06433d843e08f3fc93b5829400, type: 3}
+  edgeBottomPrefab: {fileID: 6574422976558452149, guid: acc37aa3c739c4bf896ad6a03974581d, type: 3}
+  edgeLeftPrefab: {fileID: 6574422976558452149, guid: 517d0451464e64d789a685a90dd0f2a9, type: 3}
+  edgeRightPrefab: {fileID: 6574422976558452149, guid: be801f023134949c7b4a9dcbf1bfa4fa, type: 3}
+  outerLTPrefab: {fileID: 7522899034841235240, guid: 7273a1fe74ef443c381c143702214461, type: 3}
+  outerRTPrefab: {fileID: 731866519192217463, guid: 29e68922089e749f781329397bd5555a, type: 3}
+  outerLBPrefab: {fileID: 1257187865206446350, guid: db3fe703b4bd94c0cbfb2562c0747f5a, type: 3}
+  outerRBPrefab: {fileID: 190114846152896381, guid: a5daa0e35b5e448b6b2ede3190beefe9, type: 3}
+  innerLTPrefab: {fileID: 1266194054284808458, guid: 36971520efe5a40df982a08596b7eaec, type: 3}
+  innerRTPrefab: {fileID: 1266194054284808458, guid: c9eee63d64ae0453f8c1d5a026020c25, type: 3}
+  innerLBPrefab: {fileID: 1266194054284808458, guid: e1c4805f8b6ec419a8492257cac672e2, type: 3}
+  innerRBPrefab: {fileID: 1266194054284808458, guid: 49dd5d4f0103844c1ab6b47f5c7262b3, type: 3}
   use3DBorderPrefabs: 1
   debugMasks: 0
   debugBorderLogs: 0
@@ -3637,7 +3637,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 249f21ed907384d93822dece98655725, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BoardBorderThemeApplier
-  borderColor: 1
+  borderColor: 2
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
   borderDrawer: {fileID: 1410826447}
 --- !u!1 &1437935556
@@ -5012,6 +5012,10 @@ PrefabInstance:
       value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
+      propertyPath: splitLeftSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 5e7807c33a86a4fa2887956c588822c9, type: 3}
+    - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: trailBeamPrefab
       value: 
       objectReference: {fileID: 864241499568937563, guid: 2a34a70c133e94af295259358bb22c18, type: 3}
@@ -5020,9 +5024,21 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1732843066}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
+      propertyPath: rocketLeftSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 5e7807c33a86a4fa2887956c588822c9, type: 3}
+    - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
+      propertyPath: splitRightSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 46f02814f3895455ebb4d2c1088c8464, type: 3}
+    - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: afterImageScaleUp
       value: 1.01
       objectReference: {fileID: 0}
+    - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
+      propertyPath: rocketRightSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 46f02814f3895455ebb4d2c1088c8464, type: 3}
     - target: {fileID: 4018447783952155811, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: glowTrailBeamPrefab
       value: 
@@ -5047,6 +5063,14 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 5
       objectReference: {fileID: 0}
+    - target: {fileID: 8020222179218502511, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: a385e50e15a8945799410a3ec2cac8c6, type: 3}
+    - target: {fileID: 8231684973272254807, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 654acdd73b235433eb895a1f8b9f18cc, type: 3}
     - target: {fileID: 8507573183615892037, guid: 77e9bbf46d3418540b72d958dfc37c07, type: 3}
       propertyPath: m_Layer
       value: 5

@@ -19,12 +19,17 @@ public class PulseCoreExplosionFX : MonoBehaviour
     [Header("Firework Randomization")]
     [Tooltip("Her patlamada rastgele renk ve boyut seçilir (havai fişek hissi).")]
     [SerializeField] private bool randomizeOnPlay = true;
+    [Tooltip("Glow kalınlık/yoğunluk çarpanı min. Çapı değiştirmez.")]
+    [SerializeField, Range(1f, 2f)] private float glowThicknessMin = 1f;
 
-    [Tooltip("Boyut çarpanı min (orijinal peak size bu değerle çarpılır)")]
-    [SerializeField, Range(0.5f, 3f)] private float sizeMultiplierMin = 1f;
+    [Tooltip("Glow kalınlık/yoğunluk çarpanı max. Çapı değiştirmez.")]
+    [SerializeField, Range(1f, 2f)] private float glowThicknessMax = 2f;
 
-    [Tooltip("Boyut çarpanı max (orijinal peak size bu değerle çarpılır)")]
-    [SerializeField, Range(0.5f, 4f)] private float sizeMultiplierMax = 2f;
+    [Tooltip("Ring kalınlık/yoğunluk çarpanı min. Çapı değiştirmez.")]
+    [SerializeField, Range(1f, 2f)] private float ringThicknessMin = 1f;
+
+    [Tooltip("Ring kalınlık/yoğunluk çarpanı max. Çapı değiştirmez.")]
+    [SerializeField, Range(1f, 2f)] private float ringThicknessMax = 2f;
     // ──────────────────────────────────────────────────────────────────────────
 
     [SerializeField, Range(0.1f, 2f)] private float flashPeakSizeRatio = 0.75f;
@@ -170,27 +175,32 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
     private void ApplyRandomization()
     {
-        // 1) Renk paletinden rastgele bir ton seç (aynı aileden 4 katman)
+        // 1) Renk paletinden rastgele bir ton seç.
         var variant = PulseFireworkPalette.PickRandomVariant();
 
-        // Prefab'daki orijinal alpha karakterlerini koru (glow 0.75, rays 0.95, ring 1.0, flash 1.0).
-        // Paletteki RGB'yi al, alpha'yı orijinalden.
         flashColor = WithAlpha(variant.flash, origFlashColor.a);
-        glowColor = WithAlpha(variant.glow, origGlowColor.a);
         raysColor = WithAlpha(variant.rays, origRaysColor.a);
-        ringColor = WithAlpha(variant.ring, origRingColor.a);
 
-        // 2) Boyut çarpanı — tek çarpan, tüm katmanlara aynı oranda uygulanır.
-        //    Orantı bozulmaz, sadece toplam büyüklük değişir.
-        float sizeMul = Random.Range(sizeMultiplierMin, sizeMultiplierMax);
+        // 2) ÇAP RANDOM YOK.
+        // Glow ve ring çapı artık büyümeyecek/uzamayacak.
+        flashPeakSizeRatio = origFlashPeakSizeRatio;
+        glowPeakSizeRatio = origGlowPeakSizeRatio;
+        raysPeakSizeRatio = origRaysPeakSizeRatio;
+        ringPeakSizeRatio = origRingPeakSizeRatio;
 
-        // Flash'ı biraz daha az büyüt (merkez parlaklığı glow'u bastırmasın)
-        float flashMul = Mathf.Lerp(1f, sizeMul, 0.7f);
+        // 3) Kalınlık hissi 1 ile 2 arasında random.
+        float glowThickness = Random.Range(glowThicknessMin, glowThicknessMax);
+        float ringThickness = Random.Range(ringThicknessMin, ringThicknessMax);
 
-        flashPeakSizeRatio = origFlashPeakSizeRatio * flashMul;
-        glowPeakSizeRatio = origGlowPeakSizeRatio * sizeMul;
-        raysPeakSizeRatio = origRaysPeakSizeRatio * sizeMul;
-        ringPeakSizeRatio = origRingPeakSizeRatio * sizeMul;
+        glowColor = WithAlpha(
+            variant.glow,
+            Mathf.Clamp01(origGlowColor.a * glowThickness)
+        );
+
+        ringColor = WithAlpha(
+            variant.ring,
+            Mathf.Clamp01(origRingColor.a * ringThickness)
+        );
     }
 
     // ═════════════════════════════════════════════════════════════════════════
