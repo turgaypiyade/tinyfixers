@@ -75,3 +75,18 @@ MonoBehaviour:
     clips: []
     volume: 1
     minInterval: 0.05
+  overrideNormalStart:
+    clips:
+    - {fileID: 8300000, guid: 56be64fdcf2344825bf271fb492eaa9e, type: 3}
+    volume: 1
+    minInterval: 0.05
+  overrideSpecialStart:
+    clips:
+    - {fileID: 8300000, guid: 56be64fdcf2344825bf271fb492eaa9e, type: 3}
+    volume: 1
+    minInterval: 0.05
+  pulsePulseCharge:
+    clips:
+    - {fileID: 8300000, guid: 4b8e364de9f604921897adf964198c39, type: 3}
+    volume: 1
+    minInterval: 0.05

@@ -1,13 +1,28 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// V4 — Sprite içine "outside padding" entegre.
+///
+/// Sprite kanonik boyutu T+2P (örn 160), içinde profil T çapında (128), etrafında P padding (16).
+/// Unity'de borderThickness ile sprite'ı T+2P boyutunda kullanırız:
+///   - Görünür profil kalınlığı = T * (CORE/TOTAL) = T * 0.8
+///   - Padding = T * (PAD/TOTAL) = T * 0.1 (her yöne)
+///   - Sprite tile sınırından otomatik %10 dışa taşar
+///
+/// Bu yaklaşımın faydası:
+///   - borderOutside parametresine gerek yok (sprite kendi dışa taşmasını taşıyor)
+///   - Tüm konum mantığı tek ve tutarlı: HER SPRITE NODE-MERKEZLİ
+///   - Outer corner ve straight aynı koordinat sisteminde
+///   - Çift profil/çakışma sorunu yok
+/// </summary>
 public class DynamicBoardBorder : MonoBehaviour
 {
     [Header("Dependencies")]
     public LevelData level;
     public RectTransform borderRoot;
 
-    [Header("Prefabs")]
+    [Header("Legacy Flat Prefabs (fallback only)")]
     public GameObject straightHPrefab;
     public GameObject straightVPrefab;
     public GameObject cornerLTPrefab;
@@ -33,39 +48,14 @@ public class DynamicBoardBorder : MonoBehaviour
     public GameObject innerLBPrefab;
     public GameObject innerRBPrefab;
 
-    [Header("3D Border Join Settings")]
+    [Header("3D Border Settings")]
     public bool use3DBorderPrefabs = true;
-
-    [Tooltip("If true, corner size and overlap are calculated from the source sprite metrics and borderThickness. Turn off only for manual tuning.")]
-    public bool autoSize3DBorderFromSprites = true;
-
-    [Tooltip("For the v3 node-centered sprites this is 48 for the 48px folder, 96 for the 96px_hd folder.")]
-    public float sourceBorderThicknessPx = 48f;
-
-    [Tooltip("For the v3 node-centered sprites this is 96 for the 48px folder, 192 for the 96px_hd folder.")]
-    public float sourceCornerCanvasPx = 96f;
-
-    [Tooltip("Source-pixel overlap for outer corners. Runtime value is scaled by borderThickness / sourceBorderThicknessPx.")]
-    public float sourceOuterJoinOverlapPx = 14f;
-
-    [Tooltip("Source-pixel overlap for inner corners. Runtime value is scaled by borderThickness / sourceBorderThicknessPx.")]
-    public float sourceInnerJoinOverlapPx = 8f;
-
-    [Tooltip("Use this with node-centered corner sprites. Corner center is placed exactly on the grid node.")]
-    public bool center3DCornersOnGridNode = true;
-
-    [Tooltip("Manual corner size. Used only when autoSize3DBorderFromSprites is false.")]
-    public float cornerVisualSize = 48f;
-
-    [Tooltip("Manual outer overlap. Used only when autoSize3DBorderFromSprites is false.")]
-    public float outerJoinOverlap = 8f;
-
-    [Tooltip("Manual inner overlap. Used only when autoSize3DBorderFromSprites is false.")]
-    public float innerJoinOverlap = 4f;
 
     [Header("Debug")]
     public bool debugMasks = false;
     public bool debugBorderLogs = false;
+    [Tooltip("Her border sprite'ın etrafına outline çizer (gerçek konumu görmek için).")]
+    public bool debugDrawOutlines = false;
     public Font debugFont;
 
     [Header("Layout")]
@@ -73,42 +63,54 @@ public class DynamicBoardBorder : MonoBehaviour
     public Vector2 contentOffset = Vector2.zero;
 
     [Header("Border Settings")]
-    public float borderThickness = 10f;
-    public float borderOutside = 0f;
+    [Tooltip("Sprite'ın RectTransform total boyutu. Yüklediğin 160px sprite'larda görünür core yaklaşık %80 olduğu için gerçek görünen kalınlık = borderThickness * spriteCoreRatio.")]
+    public float borderThickness = 30f;
+
+    [Tooltip("Sprite içindeki görünür border/core oranı. Yüklediğin 160px sprite'larda alpha alanı 128px olduğu için 128/160 = 0.8.")]
+    [Range(0.1f, 1f)]
+    public float spriteCoreRatio = 0.8f;
+
+    [Tooltip("Görünür border'ın iç kenarı grid çizgisinden kaç px dışarıda dursun? İstediğin değer: 2.")]
+    public float outsideGap = 2f;
+
+    [Tooltip("Açıkken border gridin üstüne binmez; görünür border grid çizgisinin dışına taşınır.")]
+    public bool keepBorderOutsideGrid = true;
+
+    private float VisibleBorderThickness => borderThickness * spriteCoreRatio;
+
+    // Görünür stroke'un iç kenarını grid çizgisinden outsideGap kadar dışarı almak için
+    // center offset = visibleThickness/2 + gap.
+    private float OutsideCenterOffset =>
+        keepBorderOutsideGrid ? (outsideGap + VisibleBorderThickness * 0.5f) : 0f;
 
     [Header("Obstacle")]
     public bool includeObstaclesAsSolid = true;
 
     private bool[] _holes;
 
-    private float BorderSpriteScale => borderThickness / Mathf.Max(1f, sourceBorderThicknessPx);
-    private float RuntimeCornerSize => use3DBorderPrefabs && autoSize3DBorderFromSprites
-        ? sourceCornerCanvasPx * BorderSpriteScale
-        : cornerVisualSize;
-    private float RuntimeOuterJoinOverlap => use3DBorderPrefabs && autoSize3DBorderFromSprites
-        ? sourceOuterJoinOverlapPx * BorderSpriteScale
-        : outerJoinOverlap;
-    private float RuntimeInnerJoinOverlap => use3DBorderPrefabs && autoSize3DBorderFromSprites
-        ? sourceInnerJoinOverlapPx * BorderSpriteScale
-        : innerJoinOverlap;
+    public float CornerSize => borderThickness;
+    public float StraightThickness => borderThickness;
 
-    public float cornerSize       => use3DBorderPrefabs ? RuntimeCornerSize : borderThickness;
+    // ─── Backward-compatible aliases ───
+    public float cornerSize => borderThickness;
     public float straightH_height => borderThickness;
-    public float straightV_width  => borderThickness;
+    public float straightV_width => borderThickness;
+
+    // GridSpawner uyumluluğu için (eski borderOutside kullananlar)
+    [HideInInspector] public float borderOutside = 0f;
 
     public void SetLevelData(LevelData value) => level = value;
 
     private void OnValidate()
     {
         borderThickness = Mathf.Max(1f, borderThickness);
-        sourceBorderThicknessPx = Mathf.Max(1f, sourceBorderThicknessPx);
-        sourceCornerCanvasPx = Mathf.Max(sourceBorderThicknessPx, sourceCornerCanvasPx);
-        sourceOuterJoinOverlapPx = Mathf.Max(0f, sourceOuterJoinOverlapPx);
-        sourceInnerJoinOverlapPx = Mathf.Max(0f, sourceInnerJoinOverlapPx);
-        cornerVisualSize = Mathf.Max(borderThickness, cornerVisualSize);
-        outerJoinOverlap = Mathf.Max(0f, outerJoinOverlap);
-        innerJoinOverlap = Mathf.Max(0f, innerJoinOverlap);
+        spriteCoreRatio = Mathf.Clamp(spriteCoreRatio, 0.1f, 1f);
+        outsideGap = Mathf.Max(0f, outsideGap);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    //  ENTRY POINT
+    // ═══════════════════════════════════════════════════════════
 
     public void Draw(bool[] blocked = null, bool[] holes = null)
     {
@@ -121,78 +123,65 @@ public class DynamicBoardBorder : MonoBehaviour
         int H = level.height;
 
         for (int nodeY = 0; nodeY <= H; nodeY++)
-        for (int x = 0; x < W; x++)
-        {
-            bool above = IsSolid(x, nodeY - 1, blocked);
-            bool below = IsSolid(x, nodeY, blocked);
-            if (above == below) continue;
-            PlaceStraightH(x, nodeY, solidIsBelow: below, blocked);
-        }
+            for (int x = 0; x < W; x++)
+            {
+                bool above = IsSolid(x, nodeY - 1, blocked);
+                bool below = IsSolid(x, nodeY, blocked);
+                if (above == below) continue;
+                PlaceStraightH(x, nodeY, solidIsBelow: below, blocked);
+            }
 
         for (int y = 0; y < H; y++)
-        for (int nodeX = 0; nodeX <= W; nodeX++)
-        {
-            bool leftCell  = IsSolid(nodeX - 1, y, blocked);
-            bool rightCell = IsSolid(nodeX, y, blocked);
-            if (leftCell == rightCell) continue;
-            PlaceStraightV(nodeX, y, solidIsRight: rightCell, blocked);
-        }
+            for (int nodeX = 0; nodeX <= W; nodeX++)
+            {
+                bool leftCell = IsSolid(nodeX - 1, y, blocked);
+                bool rightCell = IsSolid(nodeX, y, blocked);
+                if (leftCell == rightCell) continue;
+                PlaceStraightV(nodeX, y, solidIsRight: rightCell, blocked);
+            }
 
-        // Corners render last, so they cover the straight-piece joins.
         for (int ny = 0; ny <= H; ny++)
-        for (int nx = 0; nx <= W; nx++)
-            PlaceCorner(nx, ny, blocked);
+            for (int nx = 0; nx <= W; nx++)
+                PlaceCorner(nx, ny, blocked);
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  TRIM / JOIN LOGIC
-    //
-    //  Classic 2D mode:
-    //    Keeps the previous white-line behaviour.
-    //
-    //  3D mode:
-    //    Outer corners: straight pieces extend under the corner sprite.
-    //    Inner corners: straight pieces are shortened enough to avoid a plus sign,
-    //    but still keep a small overlap under the inner corner sprite.
-    //
-    //  The important part is that the values are derived from the source sprite
-    //  metrics. Changing only borderThickness scales the whole system.
+    //  STRAIGHTS
+    //  
+    //  Tüm sprite'lar NODE-MERKEZLİ T×T (T = borderThickness, sprite total).
+    //  Straight kalınlık merkezi tam node hattında.
+    //  Straight uçları her köşede T/2 kısalır (varsa köşe).
+    //  Pass-through (mask 3, 12, 6, 9): trim 0, kesintisiz çizgi.
     // ═══════════════════════════════════════════════════════════
 
     private float GetTrim(int nodeMask)
     {
-        if (!use3DBorderPrefabs)
-        {
-            switch (nodeMask)
-            {
-                // Outer: extend to reach the old flat corner.
-                case 1: case 2: case 4: case 8:
-                    return -borderOutside;
+        if (!HasCornerAtNode(nodeMask)) return 0f;
 
-                // Inner + Diagonal: shorten to avoid a plus sign.
-                case 7: case 11: case 13: case 14:
-                case 5: case 10:
-                    return borderThickness * 0.5f;
+        // Outer corner sprites have padding. With borderThickness=24,
+        // that padding scales to 2.4 px. The visible corner side
+        // starts outside the node by outsideGap, so the straight
+        // must extend past the node by outsideGap on outer corners.
+        if (IsOuterCornerMask(nodeMask))
+            return keepBorderOutsideGrid ? -outsideGap : 0f;
 
-                default:
-                    return 0f;
-            }
-        }
+        // Inner corners already sit well, so keep the previous trim.
+        float trim = borderThickness * 0.5f - OutsideCenterOffset;
+        return Mathf.Max(0f, trim);
+    }
 
-        switch (nodeMask)
-        {
-            // Outer corner: straight piece goes slightly under the corner cap.
-            case 1: case 2: case 4: case 8:
-                return -RuntimeOuterJoinOverlap;
+    private bool IsOuterCornerMask(int nodeMask)
+    {
+        return nodeMask == 1 || nodeMask == 2 || nodeMask == 4 || nodeMask == 8 ||
+               nodeMask == 5 || nodeMask == 10;
+    }
 
-            // Inner corner / diagonal: prevent plus artefacts while preserving overlap.
-            case 7: case 11: case 13: case 14:
-            case 5: case 10:
-                return Mathf.Max(0f, borderThickness * 0.5f - RuntimeInnerJoinOverlap);
-
-            default:
-                return 0f;
-        }
+    private bool HasCornerAtNode(int nodeMask)
+    {
+        if (nodeMask == 0 || nodeMask == 15) return false;
+        if (nodeMask == 3 || nodeMask == 12) return false;
+        if (nodeMask == 9 || nodeMask == 6) return false;
+        return true;
     }
 
     private void PlaceStraightH(int cx, int nodeY, bool solidIsBelow, bool[] blocked)
@@ -203,20 +192,23 @@ public class DynamicBoardBorder : MonoBehaviour
         float trimL = GetTrim(maskL);
         float trimR = GetTrim(maskR);
 
-        Vector2 nL   = NodePos(cx, nodeY);
-        float rawLen  = tileSize - trimL - trimR;
+        Vector2 nL = NodePos(cx, nodeY);
+        float rawLen = tileSize - trimL - trimR;
         if (rawLen <= 0.01f) return;
 
-        float halfT   = borderThickness * 0.5f;
         float centerX = nL.x + trimL + rawLen * 0.5f;
-        float centerY = nL.y + (solidIsBelow ? 1f : -1f) * (borderOutside + halfT);
+        float centerY = nL.y;
 
-        SpawnStraight(PickHorizontalPrefab(solidIsBelow), new Vector2(centerX, centerY),
+        Vector2 outsideNormal = solidIsBelow ? Vector2.up : Vector2.down;
+        Vector2 center = new Vector2(centerX, centerY) + outsideNormal * OutsideCenterOffset;
+
+        SpawnStraight(PickHorizontalPrefab(solidIsBelow),
+                      center,
                       new Vector2(rawLen, borderThickness));
 
         if (debugBorderLogs)
             Debug.Log($"[Border][H] cell=({cx},{nodeY}) below={solidIsBelow} " +
-                      $"pos=({centerX:F1},{centerY:F1}) len={rawLen:F1} tL={trimL} tR={trimR}");
+                      $"pos=({center.x:F1},{center.y:F1}) base=({centerX:F1},{centerY:F1}) len={rawLen:F1} tL={trimL} tR={trimR}");
     }
 
     private void PlaceStraightV(int nodeX, int cy, bool solidIsRight, bool[] blocked)
@@ -227,107 +219,86 @@ public class DynamicBoardBorder : MonoBehaviour
         float trimT = GetTrim(maskT);
         float trimB = GetTrim(maskB);
 
-        Vector2 nT   = NodePos(nodeX, cy);
-        float rawLen  = tileSize - trimT - trimB;
+        Vector2 nT = NodePos(nodeX, cy);
+        float rawLen = tileSize - trimT - trimB;
         if (rawLen <= 0.01f) return;
 
-        float halfT   = borderThickness * 0.5f;
         float centerY = nT.y - trimT - rawLen * 0.5f;
-        float centerX = nT.x + (solidIsRight ? -1f : 1f) * (borderOutside + halfT);
+        float centerX = nT.x;
 
-        SpawnStraight(PickVerticalPrefab(solidIsRight), new Vector2(centerX, centerY),
+        Vector2 outsideNormal = solidIsRight ? Vector2.left : Vector2.right;
+        Vector2 center = new Vector2(centerX, centerY) + outsideNormal * OutsideCenterOffset;
+
+        SpawnStraight(PickVerticalPrefab(solidIsRight),
+                      center,
                       new Vector2(borderThickness, rawLen));
 
         if (debugBorderLogs)
             Debug.Log($"[Border][V] node=({nodeX},{cy}) right={solidIsRight} " +
-                      $"pos=({centerX:F1},{centerY:F1}) len={rawLen:F1} tT={trimT} tB={trimB}");
+                      $"pos=({center.x:F1},{center.y:F1}) base=({centerX:F1},{centerY:F1}) len={rawLen:F1} tT={trimT} tB={trimB}");
     }
 
     private GameObject PickHorizontalPrefab(bool solidIsBelow)
     {
-        if (!use3DBorderPrefabs)
-            return straightHPrefab;
-
-        // If the solid area is below the node line, this is the top edge of that area.
+        if (!use3DBorderPrefabs) return straightHPrefab;
         if (solidIsBelow)
             return edgeTopPrefab != null ? edgeTopPrefab : straightHPrefab;
-
         return edgeBottomPrefab != null ? edgeBottomPrefab : straightHPrefab;
     }
 
     private GameObject PickVerticalPrefab(bool solidIsRight)
     {
-        if (!use3DBorderPrefabs)
-            return straightVPrefab;
-
-        // If the solid area is right of the node line, this is the left edge of that area.
+        if (!use3DBorderPrefabs) return straightVPrefab;
         if (solidIsRight)
             return edgeLeftPrefab != null ? edgeLeftPrefab : straightVPrefab;
-
         return edgeRightPrefab != null ? edgeRightPrefab : straightVPrefab;
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  CORNERS
-    //
-    //  Old flat mode:
-    //    center = node + dir × (borderOutside + thickness/2)
-    //    size   = thickness
-    //
-    //  Node-centered 3D mode:
-    //    center = node
-    //    size   = sourceCornerCanvasPx × borderThickness / sourceBorderThicknessPx
-    //
-    //  This removes the trial-and-error corner offset. The sprite is authored around
-    //  the grid node, so the same placement works for outer corners, inner corners,
-    //  holes and diagonal touches.
+    //  CORNERS — TÜMÜ NODE-MERKEZLİ
     // ═══════════════════════════════════════════════════════════
 
     private void PlaceCorner(int nx, int ny, bool[] blocked)
     {
         int mask = GetNodeMask(nx, ny, blocked);
         if (mask == 0 || mask == 15) return;
+        if (mask == 3 || mask == 12 || mask == 9 || mask == 6) return;
 
         Vector2 node = NodePos(nx, ny);
-        float t    = borderThickness;
-        float off  = borderOutside + t * 0.5f;
-        float size = cornerSize;
-        bool centered3D = use3DBorderPrefabs && center3DCornersOnGridNode;
+        float size = CornerSize;
 
         if (debugMasks) SpawnMaskLabel(node, mask);
 
         switch (mask)
         {
-            // OUTER corners
-            case 4:  Place(PickOuterLT(), -off, +off); break;
-            case 8:  Place(PickOuterRT(), +off, +off); break;
-            case 2:  Place(PickOuterLB(), -off, -off); break;
-            case 1:  Place(PickOuterRB(), +off, -off); break;
+            // Tek solid quadrant: corner'ı solid hücreden uzağa, yani dışarıya al.
+            case 1: PlaceOffset(PickOuterLT(), Vector2.right + Vector2.down); break; // TL solid
+            case 2: PlaceOffset(PickOuterRT(), Vector2.left + Vector2.down); break;  // TR solid
+            case 4: PlaceOffset(PickOuterRB(), Vector2.left + Vector2.up); break;    // BR solid
+            case 8: PlaceOffset(PickOuterLB(), Vector2.right + Vector2.up); break;   // BL solid
 
-            // INNER corners
-            case 11: Place(PickInnerLT(), +off, -off); break;
-            case 7:  Place(PickInnerRT(), -off, -off); break;
-            case 13: Place(PickInnerLB(), +off, +off); break;
-            case 14: Place(PickInnerRB(), -off, +off); break;
+            // Üç solid quadrant: eksik/boş quadrant tarafı dışarıdır.
+            case 14: PlaceOffset(PickInnerLT(), Vector2.left + Vector2.up); break;    // TL boş
+            case 13: PlaceOffset(PickInnerRT(), Vector2.right + Vector2.up); break;   // TR boş
+            case 11: PlaceOffset(PickInnerRB(), Vector2.right + Vector2.down); break; // BR boş
+            case 7:  PlaceOffset(PickInnerLB(), Vector2.left + Vector2.down); break;  // BL boş
 
-            // Diagonal touch: draw two separate outside corner caps.
+            // Diagonal temas: iki ayrı dış corner var; aynı node'da değil, kendi dış yönlerine offsetlenmeli.
             case 5:
-                Place(PickOuterRB(), +off, -off);
-                Place(PickOuterLT(), -off, +off);
+                PlaceOffset(PickOuterLT(), Vector2.right + Vector2.down); // TL solid
+                PlaceOffset(PickOuterRB(), Vector2.left + Vector2.up);     // BR solid
                 break;
-
             case 10:
-                Place(PickOuterLB(), -off, -off);
-                Place(PickOuterRT(), +off, +off);
+                PlaceOffset(PickOuterRT(), Vector2.left + Vector2.down);   // TR solid
+                PlaceOffset(PickOuterLB(), Vector2.right + Vector2.up);    // BL solid
                 break;
         }
 
-        void Place(GameObject prefab, float oldDx, float oldDy)
+        void PlaceOffset(GameObject prefab, Vector2 dir)
         {
-            Vector2 center = centered3D
-                ? node
-                : node + new Vector2(oldDx, oldDy);
-
+            // Diagonal yönlerde normalize etmiyoruz; x ve y eksenlerinde ayrı ayrı aynı offset gerekli.
+            Vector2 sign = new Vector2(Mathf.Sign(dir.x), Mathf.Sign(dir.y));
+            Vector2 center = node + sign * OutsideCenterOffset;
             SpawnCorner(prefab, center, new Vector2(size, size), mask);
         }
     }
@@ -343,64 +314,88 @@ public class DynamicBoardBorder : MonoBehaviour
     private GameObject PickInnerRB() => use3DBorderPrefabs && innerRBPrefab != null ? innerRBPrefab : cornerRBPrefab;
 
     // ═══════════════════════════════════════════════════════════
-    //  SPAWN
+    //  SPAWN HELPERS
     // ═══════════════════════════════════════════════════════════
 
     private void SpawnCorner(GameObject prefab, Vector2 center, Vector2 size, int mask)
     {
         if (prefab == null || borderRoot == null) return;
-
         var go = Instantiate(prefab, borderRoot);
         var rt = go.GetComponent<RectTransform>();
-
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot            = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = center;
-        rt.sizeDelta        = size;
-        rt.localRotation    = Quaternion.identity;
-        rt.localScale       = Vector3.one;
-
+        rt.sizeDelta = size;
+        rt.localRotation = Quaternion.identity;
+        rt.localScale = Vector3.one;
         if (go.TryGetComponent(out Image img))
         {
-            img.raycastTarget  = false;
+            img.raycastTarget = false;
             img.preserveAspect = false;
-            img.type           = Image.Type.Simple;
+            img.type = Image.Type.Simple;
         }
-
+        if (debugDrawOutlines) SpawnDebugOutline(center, size, new Color(1f, 0f, 0f, 0.9f));
         if (debugBorderLogs)
-            Debug.Log($"[Border][Corner] mask={mask} center={center} size={size}");
+            Debug.Log($"[Border][Corner] mask={mask} center=({center.x:F2}, {center.y:F2}) size=({size.x:F2}, {size.y:F2})");
     }
 
     private void SpawnStraight(GameObject prefab, Vector2 center, Vector2 size)
     {
         if (prefab == null || borderRoot == null) return;
-
         var go = Instantiate(prefab, borderRoot);
         var rt = go.GetComponent<RectTransform>();
-
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot            = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = center;
-        rt.sizeDelta        = size;
-        rt.localRotation    = Quaternion.identity;
-        rt.localScale       = Vector3.one;
-
+        rt.sizeDelta = size;
+        rt.localRotation = Quaternion.identity;
+        rt.localScale = Vector3.one;
         if (go.TryGetComponent(out Image img))
         {
-            img.raycastTarget  = false;
+            img.raycastTarget = false;
             img.preserveAspect = false;
-            img.type           = Image.Type.Tiled;
+            img.type = Image.Type.Simple;
         }
+        if (debugDrawOutlines) SpawnDebugOutline(center, size, new Color(0f, 1f, 0f, 0.9f));
+    }
+
+    private void SpawnDebugOutline(Vector2 center, Vector2 size, Color color)
+    {
+        var go = new GameObject("DbgOutline", typeof(RectTransform));
+        go.transform.SetParent(borderRoot, false);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = center;
+        rt.sizeDelta = size;
+        AddDebugEdge(rt, new Vector2(0, size.y * 0.5f), new Vector2(size.x, 1f), color);
+        AddDebugEdge(rt, new Vector2(0, -size.y * 0.5f), new Vector2(size.x, 1f), color);
+        AddDebugEdge(rt, new Vector2(-size.x * 0.5f, 0), new Vector2(1f, size.y), color);
+        AddDebugEdge(rt, new Vector2(size.x * 0.5f, 0), new Vector2(1f, size.y), color);
+    }
+
+    private void AddDebugEdge(RectTransform parent, Vector2 pos, Vector2 size, Color color)
+    {
+        var e = new GameObject("e", typeof(RectTransform), typeof(Image));
+        e.transform.SetParent(parent, false);
+        var rt = e.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
+        var img = e.GetComponent<Image>();
+        img.color = color;
+        img.raycastTarget = false;
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  HELPERS
+    //  GRID HELPERS
     // ═══════════════════════════════════════════════════════════
 
     private Vector2 NodePos(int x, int y)
     {
-        float ox = -(level.width  * tileSize) * 0.5f;
-        float oy =  (level.height * tileSize) * 0.5f;
+        float ox = -(level.width * tileSize) * 0.5f;
+        float oy = (level.height * tileSize) * 0.5f;
         return new Vector2(
             ox + x * tileSize + contentOffset.x,
             oy - y * tileSize + contentOffset.y);
@@ -409,9 +404,9 @@ public class DynamicBoardBorder : MonoBehaviour
     private int GetNodeMask(int nx, int ny, bool[] blocked)
     {
         bool tl = IsSolid(nx - 1, ny - 1, blocked);
-        bool tr = IsSolid(nx,     ny - 1, blocked);
-        bool br = IsSolid(nx,     ny,     blocked);
-        bool bl = IsSolid(nx - 1, ny,     blocked);
+        bool tr = IsSolid(nx, ny - 1, blocked);
+        bool br = IsSolid(nx, ny, blocked);
+        bool bl = IsSolid(nx - 1, ny, blocked);
         return (tl ? 1 : 0) | (tr ? 2 : 0) | (br ? 4 : 0) | (bl ? 8 : 0);
     }
 
@@ -419,19 +414,14 @@ public class DynamicBoardBorder : MonoBehaviour
     {
         if (!level.InBounds(x, y)) return false;
         int idx = level.Index(x, y);
-
         bool isBlocked = blocked != null && idx >= 0 && idx < blocked.Length && blocked[idx];
-
         if (includeObstaclesAsSolid && isBlocked) return true;
         if (!includeObstaclesAsSolid && isBlocked) return false;
-
         if (_holes != null && idx >= 0 && idx < _holes.Length && _holes[idx])
             return false;
-
         if (level.cells != null && idx >= 0 && idx < level.cells.Length &&
             level.cells[idx] == (int)CellType.Empty)
             return false;
-
         return true;
     }
 
@@ -445,11 +435,10 @@ public class DynamicBoardBorder : MonoBehaviour
         rt.anchoredPosition = pos;
         rt.sizeDelta = new Vector2(60, 30);
         var t = go.GetComponent<Text>();
-        t.text      = mask.ToString();
-        t.font      = debugFont != null ? debugFont
-                      : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        t.fontSize  = 18;
-        t.color     = Color.magenta;
+        t.text = mask.ToString();
+        t.font = debugFont != null ? debugFont : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        t.fontSize = 18;
+        t.color = Color.magenta;
         t.alignment = TextAnchor.MiddleCenter;
         t.raycastTarget = false;
     }
