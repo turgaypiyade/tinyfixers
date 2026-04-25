@@ -17,32 +17,38 @@ public class PulseCoreImpactService
     {
         Dictionary<TileView, float> stagger = null;
         var pulseCenters = new List<TileView>();
+
         foreach (var t in processed)
         {
-            if (t == null) continue;
+            if (t == null)
+                continue;
+
             if (t.GetSpecial() == TileSpecial.PulseCore)
                 pulseCenters.Add(t);
         }
 
-        for (int i = 0; i < pulseCenters.Count; i++)
-        {
-            PlayPulseCoreExplosionVfxAtTile(pulseCenters[i], radiusCells: 2);
-        }
+        // Burada VFX oynatma yok.
+        // Bu method sadece delay hesaplamalı.
+        // Pulse VFX zaten PulseCoreSpecial.PlayPulseActivationVisual içinde doğru radius ile oynatılıyor.
 
         if (pulseCenters.Count > 0)
         {
             stagger = new Dictionary<TileView, float>(affected.Count);
+
             foreach (var tile in affected)
             {
-                if (tile == null) continue;
+                if (tile == null)
+                    continue;
 
-                // En yakın PulseCore merkezine göre delay
                 int best = int.MaxValue;
+
                 for (int i = 0; i < pulseCenters.Count; i++)
                 {
                     var c = pulseCenters[i];
+
                     int dist = Mathf.Abs(tile.X - c.X) + Mathf.Abs(tile.Y - c.Y);
-                    if (dist < best) best = dist;
+                    if (dist < best)
+                        best = dist;
                 }
 
                 stagger[tile] = best * board.PulseImpactDelayStep;

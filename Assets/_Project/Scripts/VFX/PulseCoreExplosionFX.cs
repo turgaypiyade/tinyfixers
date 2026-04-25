@@ -17,19 +17,24 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
     // ───────────────────────── FIREWORK RANDOMIZATION ─────────────────────────
     [Header("Firework Randomization")]
-    [Tooltip("Her patlamada rastgele renk ve boyut seçilir (havai fişek hissi).")]
+    [Tooltip("Her patlamada rastgele renk ve glow/ring kalınlığı seçilir. Çap random değişmez.")]
     [SerializeField] private bool randomizeOnPlay = true;
-    [Tooltip("Glow kalınlık/yoğunluk çarpanı min. Çapı değiştirmez.")]
+
+    [Header("Thickness Randomization")]
+    [Tooltip("Glow outline kalınlığı min. Çapı değiştirmez.")]
     [SerializeField, Range(1f, 2f)] private float glowThicknessMin = 1f;
 
-    [Tooltip("Glow kalınlık/yoğunluk çarpanı max. Çapı değiştirmez.")]
+    [Tooltip("Glow outline kalınlığı max. Çapı değiştirmez.")]
     [SerializeField, Range(1f, 2f)] private float glowThicknessMax = 2f;
 
-    [Tooltip("Ring kalınlık/yoğunluk çarpanı min. Çapı değiştirmez.")]
+    [Tooltip("Ring outline kalınlığı min. Çapı değiştirmez.")]
     [SerializeField, Range(1f, 2f)] private float ringThicknessMin = 1f;
 
-    [Tooltip("Ring kalınlık/yoğunluk çarpanı max. Çapı değiştirmez.")]
+    [Tooltip("Ring outline kalınlığı max. Çapı değiştirmez.")]
     [SerializeField, Range(1f, 2f)] private float ringThicknessMax = 2f;
+
+    [Tooltip("Outline renginin alpha çarpanı. Kalınlık random, ana glow/ring alpha random değildir.")]
+    [SerializeField, Range(0f, 1f)] private float thicknessAlphaMultiplier = 0.65f;
     // ──────────────────────────────────────────────────────────────────────────
 
     [SerializeField, Range(0.1f, 2f)] private float flashPeakSizeRatio = 0.75f;
@@ -72,17 +77,20 @@ public class PulseCoreExplosionFX : MonoBehaviour
     private Coroutine playRoutine;
     private bool isShuttingDown;
 
-    // Randomization orijinal (baseline) değerleri cache'ler ki her OnEnable'da
-    // çarpanlar birikmesin (2x × 2x = 4x olmasın).
     private bool baselineCached;
+
     private float origFlashPeakSizeRatio;
     private float origGlowPeakSizeRatio;
     private float origRaysPeakSizeRatio;
     private float origRingPeakSizeRatio;
+
     private Color origFlashColor;
     private Color origGlowColor;
     private Color origRaysColor;
     private Color origRingColor;
+
+    private Outline glowOutline;
+    private Outline ringOutline;
 
     public void SetRadiusCells(int radiusCells, float tileSize)
     {
@@ -110,6 +118,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
         isShuttingDown = false;
 
         CacheBaselineOnce();
+
         if (randomizeOnPlay)
             ApplyRandomization();
         else
@@ -145,7 +154,8 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
     private void CacheBaselineOnce()
     {
-        if (baselineCached) return;
+        if (baselineCached)
+            return;
 
         origFlashPeakSizeRatio = flashPeakSizeRatio;
         origGlowPeakSizeRatio = glowPeakSizeRatio;
@@ -156,6 +166,9 @@ public class PulseCoreExplosionFX : MonoBehaviour
         origGlowColor = glowColor;
         origRaysColor = raysColor;
         origRingColor = ringColor;
+
+        glowOutline = innerGlow != null ? innerGlow.GetComponent<Outline>() : null;
+        ringOutline = shockwaveRing != null ? shockwaveRing.GetComponent<Outline>() : null;
 
         baselineCached = true;
     }
@@ -171,36 +184,64 @@ public class PulseCoreExplosionFX : MonoBehaviour
         glowColor = origGlowColor;
         raysColor = origRaysColor;
         ringColor = origRingColor;
+
+        DisableOutline(glowOutline);
+        DisableOutline(ringOutline);
     }
 
     private void ApplyRandomization()
     {
-        // 1) Renk paletinden rastgele bir ton seç.
         var variant = PulseFireworkPalette.PickRandomVariant();
 
+        // Renk random kalır ama alpha random değişmez.
+        // Alpha random olursa glow gradient dışarı daha görünür ve çap büyümüş gibi durur.
         flashColor = WithAlpha(variant.flash, origFlashColor.a);
+        glowColor = WithAlpha(variant.glow, origGlowColor.a);
         raysColor = WithAlpha(variant.rays, origRaysColor.a);
+        ringColor = WithAlpha(variant.ring, origRingColor.a);
 
-        // 2) ÇAP RANDOM YOK.
-        // Glow ve ring çapı artık büyümeyecek/uzamayacak.
+        // Radius / çap sistemi korunur.
+        // Normal Pulse radius 2, Pulse+Pulse radius 4 gibi değerler
+        // dışarıdan SetRadiusCells ile gelmeye devam eder.
+        //
+        // Burada random olarak baseSize, radius veya peak ratio değiştirmiyoruz.
         flashPeakSizeRatio = origFlashPeakSizeRatio;
         glowPeakSizeRatio = origGlowPeakSizeRatio;
         raysPeakSizeRatio = origRaysPeakSizeRatio;
         ringPeakSizeRatio = origRingPeakSizeRatio;
 
-        // 3) Kalınlık hissi 1 ile 2 arasında random.
+        // Sadece glow/ring kalınlığı 1 ile 2 arasında random değişir.
         float glowThickness = Random.Range(glowThicknessMin, glowThicknessMax);
         float ringThickness = Random.Range(ringThicknessMin, ringThicknessMax);
 
-        glowColor = WithAlpha(
-            variant.glow,
-            Mathf.Clamp01(origGlowColor.a * glowThickness)
-        );
+        ApplyOutlineThickness(innerGlow, ref glowOutline, glowColor, glowThickness);
+        ApplyOutlineThickness(shockwaveRing, ref ringOutline, ringColor, ringThickness);
+    }
 
-        ringColor = WithAlpha(
-            variant.ring,
-            Mathf.Clamp01(origRingColor.a * ringThickness)
-        );
+    private void ApplyOutlineThickness(Image img, ref Outline outline, Color color, float thickness)
+    {
+        if (img == null)
+            return;
+
+        if (outline == null)
+            outline = img.GetComponent<Outline>();
+
+        if (outline == null)
+            outline = img.gameObject.AddComponent<Outline>();
+
+        outline.enabled = true;
+        outline.useGraphicAlpha = true;
+
+        // Sadece outline mesafesi değişiyor.
+        // RectTransform sizeDelta değişmiyor, yani radius/çap değişmiyor.
+        outline.effectDistance = new Vector2(thickness, thickness);
+        outline.effectColor = WithAlpha(color, color.a * thicknessAlphaMultiplier);
+    }
+
+    private void DisableOutline(Outline outline)
+    {
+        if (outline != null)
+            outline.enabled = false;
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -252,23 +293,31 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
     private IEnumerator AnimFlash()
     {
-        if (coreFlash == null) yield break;
+        if (coreFlash == null)
+            yield break;
+
         float peak = baseSize * flashPeakSizeRatio;
-        yield return AnimateLayer(coreFlash, flashColor, peak * flashStartRatio, peak, 0f, 1f, flashInTime, easeOut);
-        yield return AnimateLayer(coreFlash, flashColor, peak, peak * flashEndRatio, 1f, 0f, flashOutTime, easeIn);
+
+        yield return AnimateLayer(coreFlash, flashColor, peak * flashStartRatio, peak, 0f, flashColor.a, flashInTime, easeOut);
+        yield return AnimateLayer(coreFlash, flashColor, peak, peak * flashEndRatio, flashColor.a, 0f, flashOutTime, easeIn);
     }
 
     private IEnumerator AnimGlow()
     {
-        if (innerGlow == null) yield break;
+        if (innerGlow == null)
+            yield break;
+
         float peak = baseSize * glowPeakSizeRatio;
+
         yield return AnimateLayer(innerGlow, glowColor, peak * glowStartRatio, peak, 0f, glowColor.a, glowInTime, easeOut);
         yield return AnimateLayer(innerGlow, glowColor, peak, peak * glowEndRatio, glowColor.a, 0f, glowOutTime, easeIn);
     }
 
     private IEnumerator AnimRays()
     {
-        if (sunburstRays == null) yield break;
+        if (sunburstRays == null)
+            yield break;
+
         float peak = baseSize * raysPeakSizeRatio;
 
         if (sunburstRays.rectTransform == null)
@@ -282,8 +331,11 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
     private IEnumerator AnimRing()
     {
-        if (shockwaveRing == null) yield break;
+        if (shockwaveRing == null)
+            yield break;
+
         float peak = baseSize * ringPeakSizeRatio;
+
         yield return AnimateLayer(shockwaveRing, ringColor, peak * ringStartRatio, peak, 0f, ringColor.a, ringInTime, easeOut);
         yield return AnimateLayer(shockwaveRing, ringColor, peak, peak * ringEndRatio, ringColor.a, 0f, ringOutTime, easeOut);
     }
@@ -308,12 +360,14 @@ public class PulseCoreExplosionFX : MonoBehaviour
         rt.localScale = Vector3.one;
 
         float t = 0f;
+
         while (t < duration)
         {
             if (isShuttingDown || img == null || rt == null)
                 yield break;
 
             t += Time.deltaTime;
+
             float u = Mathf.Clamp01(t / duration);
             float eased = curve.Evaluate(u);
             float size = Mathf.Lerp(fromSize, toSize, eased);
@@ -351,12 +405,14 @@ public class PulseCoreExplosionFX : MonoBehaviour
         rt.localScale = Vector3.one;
 
         float t = 0f;
+
         while (t < duration)
         {
             if (isShuttingDown || img == null || rt == null)
                 yield break;
 
             t += Time.deltaTime;
+
             float u = Mathf.Clamp01(t / duration);
             float eased = curve.Evaluate(u);
             float size = Mathf.Lerp(fromSize, toSize, eased);
@@ -380,7 +436,6 @@ public class PulseCoreExplosionFX : MonoBehaviour
         return new Color(c.r, c.g, c.b, a);
     }
 }
-
 // ═════════════════════════════════════════════════════════════════════════════
 //  FIREWORK COLOR PALETTE
 //  4 aile (mavi / kırmızı / sarı / yeşil) × 3 ton = 12 varyant
