@@ -1504,8 +1504,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.03671706}
-  m_AnchorMax: {x: 1, y: 0.9492441}
+  m_AnchorMin: {x: 0, y: 0.10472279}
+  m_AnchorMax: {x: 0.8436268, y: 2.7073922}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -3588,18 +3588,18 @@ MonoBehaviour:
   cornerRTPrefab: {fileID: 731866519192217463, guid: 7cad9b26a56b44f32b30ad821c194900, type: 3}
   cornerLBPrefab: {fileID: 1257187865206446350, guid: fd847c5922db740ffb9396ba1c4f39ee, type: 3}
   cornerRBPrefab: {fileID: 190114846152896381, guid: 1a4731807a7ad4216b98add0254ee598, type: 3}
-  edgeTopPrefab: {fileID: 6574422976558452149, guid: 9e579d06433d843e08f3fc93b5829400, type: 3}
-  edgeBottomPrefab: {fileID: 6574422976558452149, guid: acc37aa3c739c4bf896ad6a03974581d, type: 3}
-  edgeLeftPrefab: {fileID: 6574422976558452149, guid: 517d0451464e64d789a685a90dd0f2a9, type: 3}
-  edgeRightPrefab: {fileID: 6574422976558452149, guid: be801f023134949c7b4a9dcbf1bfa4fa, type: 3}
-  outerLTPrefab: {fileID: 7522899034841235240, guid: 7273a1fe74ef443c381c143702214461, type: 3}
-  outerRTPrefab: {fileID: 731866519192217463, guid: 29e68922089e749f781329397bd5555a, type: 3}
-  outerLBPrefab: {fileID: 1257187865206446350, guid: db3fe703b4bd94c0cbfb2562c0747f5a, type: 3}
-  outerRBPrefab: {fileID: 190114846152896381, guid: a5daa0e35b5e448b6b2ede3190beefe9, type: 3}
-  innerLTPrefab: {fileID: 1266194054284808458, guid: 36971520efe5a40df982a08596b7eaec, type: 3}
-  innerRTPrefab: {fileID: 1266194054284808458, guid: c9eee63d64ae0453f8c1d5a026020c25, type: 3}
-  innerLBPrefab: {fileID: 1266194054284808458, guid: e1c4805f8b6ec419a8492257cac672e2, type: 3}
-  innerRBPrefab: {fileID: 1266194054284808458, guid: 49dd5d4f0103844c1ab6b47f5c7262b3, type: 3}
+  edgeTopPrefab: {fileID: 6574422976558452149, guid: 3b1136bfdb07d4f158d63799e6134687, type: 3}
+  edgeBottomPrefab: {fileID: 6574422976558452149, guid: 7731304c19c294352bb5cf0e3c2b1232, type: 3}
+  edgeLeftPrefab: {fileID: 6574422976558452149, guid: 988a15dece4f04bf6a825db459169613, type: 3}
+  edgeRightPrefab: {fileID: 6574422976558452149, guid: 405bd415f52ae4f0cbd6293212ad47ce, type: 3}
+  outerLTPrefab: {fileID: 7522899034841235240, guid: 0985ddfb50cb6429184916224bbaa8aa, type: 3}
+  outerRTPrefab: {fileID: 731866519192217463, guid: 32b7ee3e796d541b1b671c4959a6d620, type: 3}
+  outerLBPrefab: {fileID: 1257187865206446350, guid: f7e562657b2c14fa6b82fc1c17759991, type: 3}
+  outerRBPrefab: {fileID: 190114846152896381, guid: e4ff7aa8f509644628df9fe999ec8a6e, type: 3}
+  innerLTPrefab: {fileID: 1266194054284808458, guid: b1070c1064142401f8ec478aebc87b2c, type: 3}
+  innerRTPrefab: {fileID: 1266194054284808458, guid: ca13962335901461a85a0b50b767cc57, type: 3}
+  innerLBPrefab: {fileID: 1266194054284808458, guid: 0050c9441aaf0447498a436afd7959b4, type: 3}
+  innerRBPrefab: {fileID: 1266194054284808458, guid: ee2fba1f23ded4fc593aa10b20537ad0, type: 3}
   use3DBorderPrefabs: 1
   debugMasks: 0
   debugBorderLogs: 0
@@ -3756,7 +3756,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 249f21ed907384d93822dece98655725, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BoardBorderThemeApplier
-  borderColor: 2
+  borderColor: 3
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
   borderDrawer: {fileID: 1410826447}
 --- !u!1 &1437935556
@@ -4616,6 +4616,14 @@ PrefabInstance:
     m_TransformParent: {fileID: 664581181}
     m_Modifications:
     - target: {fileID: -4941751650384736555, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
+      propertyPath: board
+      value: 
+      objectReference: {fileID: 1410826445}
+    - target: {fileID: -4941751650384736555, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
+      propertyPath: topHud
+      value: 
+      objectReference: {fileID: 1264084363}
+    - target: {fileID: -4941751650384736555, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
       propertyPath: failPopupRoot
       value: 
       objectReference: {fileID: 280351300}
@@ -4677,7 +4685,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3825252484552138203, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4237830037142928447, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
       propertyPath: m_Name
@@ -4685,7 +4693,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4237830037142928447, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6142077479267113075, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
       propertyPath: m_Pivot.x

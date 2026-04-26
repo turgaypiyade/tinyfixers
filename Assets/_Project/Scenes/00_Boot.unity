@@ -363,7 +363,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -3171723470996340727, guid: 4b27cd870e4d140cdae06d310015a77a, type: 3}
+  m_Sprite: {fileID: -2926525690976928703, guid: f3e28ef17a1c9437f9d3233271856206, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -619,7 +619,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 977c6fb785f494fefb1cb031712b67fc, type: 3}
+  m_Sprite: {fileID: -2926525690976928703, guid: f3e28ef17a1c9437f9d3233271856206, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -667,7 +667,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BootLoader
   waitSeconds: 2
-  nextSceneName: 01_Game
+  nextSceneName: MainMenu
 --- !u!4 &2071100972
 Transform:
   m_ObjectHideFlags: 0
