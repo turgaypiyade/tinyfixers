@@ -1504,8 +1504,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.10472279}
-  m_AnchorMax: {x: 0.8436268, y: 2.7073922}
+  m_AnchorMin: {x: 0, y: 0.15178572}
+  m_AnchorMax: {x: 0.6167147, y: 3.924107}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -1644,6 +1644,7 @@ RectTransform:
   - {fileID: 2104090221}
   - {fileID: 627117530}
   - {fileID: 1878813680}
+  - {fileID: 1650051969}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -3626,6 +3627,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelRuntimeSelector
   levelCatalog: {fileID: 11400000, guid: b262d96b9882475ca6cdf6517f9f0880, type: 2}
+  usePlayerPrefsLevel: 1
+  prefsLevelKey: current_level
+  prefsDefaultLevel: 1
   useLevelKey: 0
   levelKey: 
   chapter: 1
@@ -4070,6 +4074,113 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1650051968
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1650051969}
+  - component: {fileID: 1650051972}
+  - component: {fileID: 1650051971}
+  - component: {fileID: 1650051970}
+  m_Layer: 5
+  m_Name: SuccessVideoRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &1650051969
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1650051968}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 664581181}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!328 &1650051970
+VideoPlayer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1650051968}
+  m_Enabled: 1
+  m_VideoClip: {fileID: 32900000, guid: c0d22a73f2ab04bf48a922757adcc9a4, type: 3}
+  m_TargetCameraAlpha: 1
+  m_TargetCamera3DLayout: 0
+  m_TargetCamera: {fileID: 0}
+  m_TargetTexture: {fileID: 8400000, guid: ee8cfd4e69e164a139befbc47516ca9f, type: 2}
+  m_TimeReference: 0
+  m_TargetMaterialRenderer: {fileID: 0}
+  m_TargetMaterialProperty: <noninit>
+  m_RenderMode: 2
+  m_AspectRatio: 2
+  m_DataSource: 0
+  m_TimeUpdateMode: 2
+  m_PlaybackSpeed: 1
+  m_AudioOutputMode: 2
+  m_TargetAudioSources: []
+  m_DirectAudioVolumes: []
+  m_Url: 
+  m_EnabledAudioTracks: 
+  m_DirectAudioMutes: 
+  m_ControlledAudioTrackCount: 0
+  m_PlayOnAwake: 1
+  m_SkipOnDrop: 1
+  m_Looping: 0
+  m_WaitForFirstFrame: 1
+  m_FrameReadyEventEnabled: 0
+  m_VideoShaders: []
+--- !u!114 &1650051971
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1650051968}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Texture: {fileID: 8400000, guid: ee8cfd4e69e164a139befbc47516ca9f, type: 2}
+  m_UVRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 1
+    height: 1
+--- !u!222 &1650051972
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1650051968}
+  m_CullTransparentMesh: 1
 --- !u!1 &1687263896
 GameObject:
   m_ObjectHideFlags: 0
@@ -4640,9 +4751,21 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1814612189}
     - target: {fileID: -4941751650384736555, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
+      propertyPath: successVideoRoot
+      value: 
+      objectReference: {fileID: 1650051968}
+    - target: {fileID: -4941751650384736555, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
       propertyPath: successCloseButton
       value: 
       objectReference: {fileID: 287181505}
+    - target: {fileID: -4941751650384736555, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
+      propertyPath: successVideoPlayer
+      value: 
+      objectReference: {fileID: 1650051970}
+    - target: {fileID: -4941751650384736555, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
+      propertyPath: successVideoFallbackSeconds
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 351346567649329487, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
       propertyPath: m_Type
       value: 0

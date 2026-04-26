@@ -3,12 +3,20 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.Video;
 
 public class LevelEndSimplePopupController : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private BoardController board;
     [SerializeField] private TopHudController topHud;
+    [Header("Success Video")]
+    [SerializeField] private bool playSuccessVideoBeforeMainMenu = true;
+    [SerializeField] private GameObject successVideoRoot;
+    [SerializeField] private VideoPlayer successVideoPlayer;
+    [SerializeField] private float successVideoStartDelay = 0.4f;
+    [SerializeField] private float successVideoFallbackSeconds = 8f;
+
 
     [Header("Popup Roots")]
     [SerializeField] private GameObject failPopupRoot;
@@ -53,6 +61,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private bool failPopupShown;
     private bool successPopupShown;
+    private bool successReturnQueued;
 
     // We may receive moves/goal events while the board is still resolving cascades.
     // This gate ensures we only evaluate & show end popups after the board becomes idle.
@@ -95,6 +104,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
             if (successContinue != null)
                 successContinueButton = successContinue.GetComponent<Button>();
         }
+        if (successVideoRoot != null && successVideoPlayer == null)
+            successVideoPlayer = successVideoRoot.GetComponent<VideoPlayer>();
     }
 
     private void OnEnable()
@@ -159,9 +170,73 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void HandleSuccessCloseClicked()
     {
-        CompleteSuccessAndReturnToMainMenu();
+        QueueSuccessReturnToMainMenu();
+    }
+    private void QueueSuccessReturnToMainMenu()
+    {
+        if (board == null || topHud == null)
+            return;
+
+        if (successPopupShown || successReturnQueued)
+            return;
+
+        successReturnQueued = true;
+
+        Debug.Log("[LevelEnd] Success queued. Waiting board settle...");
+
+        StartCoroutine(CompleteSuccessAfterBoardSettled());
     }
 
+    private IEnumerator CompleteSuccessAfterBoardSettled()
+    {
+        // Goal completed event clear/fall sırasında gelebilir.
+        // Bu yüzden önce en az 1 frame bekliyoruz.
+        yield return null;
+
+        const int requiredStableFrames = 3;
+        int stableFrames = 0;
+
+        while (board != null && stableFrames < requiredStableFrames)
+        {
+            bool boardStillWorking =
+                board.IsBusy ||
+                board.ActiveBackgroundJobs > 0;
+
+            if (boardStillWorking)
+            {
+                stableFrames = 0;
+            }
+            else
+            {
+                stableFrames++;
+            }
+
+            yield return null;
+        }
+
+        // Son bir güvenlik: aynı anda tekrar busy olduysa bekle.
+        while (board != null && (board.IsBusy || board.ActiveBackgroundJobs > 0))
+            yield return null;
+
+        // Görsel yumuşak geçiş. Bu delay artık SADECE burada var.
+        if (successVideoStartDelay > 0f)
+            yield return new WaitForSecondsRealtime(successVideoStartDelay);
+
+        successReturnQueued = false;
+
+        if (board == null || topHud == null)
+            yield break;
+
+        if (!topHud.AreAllGoalsCompleted)
+        {
+            Debug.Log("[LevelEnd] Success cancelled after settle; goals no longer completed.");
+            yield break;
+        }
+
+        Debug.Log("[LevelEnd] Board settled. Completing success.");
+
+        CompleteSuccessAndReturnToMainMenu();
+    }
     private void CompleteSuccessAndReturnToMainMenu()
     {
         if (successPopupShown)
@@ -178,10 +253,87 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         HideAllPopups();
 
-        Debug.Log($"[LevelEnd] Success direct return. Stars: {stars}, Coins: {coins}");
+        Debug.Log($"[LevelEnd] Success completed. Stars={stars}, Coins={coins}. Playing success video before loading={mainMenuSceneName}");
+
+        StartCoroutine(PlaySuccessVideoThenReturnToMainMenu());
+    }
+    private IEnumerator PlaySuccessVideoThenReturnToMainMenu()
+    {
+        if (!playSuccessVideoBeforeMainMenu || successVideoRoot == null || successVideoPlayer == null)
+        {
+            Debug.Log("[LevelEnd] Success video disabled or missing references. Returning to main menu.");
+            ReturnToMainMenu();
+            yield break;
+        }
+
+        SetBlockerVisible(true);
+
+        successVideoRoot.SetActive(true);
+        successVideoRoot.transform.SetAsLastSibling();
+
+        bool finished = false;
+
+        void HandleFinished(VideoPlayer player)
+        {
+            finished = true;
+        }
+
+        void HandleError(VideoPlayer player, string message)
+        {
+            Debug.LogWarning($"[LevelEnd] Success video error: {message}");
+            finished = true;
+        }
+
+        successVideoPlayer.loopPointReached += HandleFinished;
+        successVideoPlayer.errorReceived += HandleError;
+
+        successVideoPlayer.playOnAwake = false;
+        successVideoPlayer.isLooping = false;
+        successVideoPlayer.waitForFirstFrame = true;
+
+        successVideoPlayer.Stop();
+        successVideoPlayer.time = 0;
+        successVideoPlayer.Prepare();
+
+        float prepareTimer = 0f;
+        const float prepareTimeout = 3f;
+
+        while (!successVideoPlayer.isPrepared && prepareTimer < prepareTimeout)
+        {
+            prepareTimer += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (!successVideoPlayer.isPrepared)
+        {
+            Debug.LogWarning("[LevelEnd] Success video prepare timeout. Returning to main menu.");
+
+            successVideoPlayer.loopPointReached -= HandleFinished;
+            successVideoPlayer.errorReceived -= HandleError;
+
+            ReturnToMainMenu();
+            yield break;
+        }
+
+        Debug.Log("[LevelEnd] Success video prepared. Playing.");
+
+        successVideoPlayer.Play();
+
+        float timer = 0f;
+
+        while (!finished && timer < successVideoFallbackSeconds)
+        {
+            timer += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        successVideoPlayer.loopPointReached -= HandleFinished;
+        successVideoPlayer.errorReceived -= HandleError;
+
+        successVideoPlayer.Stop();
+
         ReturnToMainMenu();
     }
-
     private void AdvanceToNextLevel()
     {
         int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
@@ -218,8 +370,14 @@ public class LevelEndSimplePopupController : MonoBehaviour
         RequestEvaluateLevelEndState();
     }
 
-    private void HandleGoalsCompletionChanged(bool _)
+    private void HandleGoalsCompletionChanged(bool completed)
     {
+        if (completed)
+        {
+            QueueSuccessReturnToMainMenu();
+            return;
+        }
+
         RequestEvaluateLevelEndState();
     }
 
@@ -254,7 +412,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (topHud.AreAllGoalsCompleted)
         {
-            CompleteSuccessAndReturnToMainMenu();
+            QueueSuccessReturnToMainMenu();
             return;
         }
 
@@ -404,6 +562,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (successPopupRoot != null)
             successPopupRoot.SetActive(false);
+
+        if (successVideoRoot != null)
+            successVideoRoot.SetActive(false);
 
         SetBlockerVisible(false);
     }
