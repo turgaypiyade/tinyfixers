@@ -19,11 +19,11 @@ MonoBehaviour:
   - targetType: 0
     tileType: 0
     obstacleId: 0
-    amount: 8
+    amount: 50
   - targetType: 0
     tileType: 2
     obstacleId: 0
-    amount: 8
+    amount: 90
   musicClip: {fileID: 8300000, guid: a75116037af37490bb9f00591892d8d6, type: 3}
   musicVolume: 1
   obstacleLibrary: {fileID: 11400000, guid: 542e279c729681244b475a353cdd0e8f, type: 2}

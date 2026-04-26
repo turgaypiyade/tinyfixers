@@ -133,7 +133,7 @@ MonoBehaviour:
     legacyBehavior: 1
   - id: 7
     stages:
-    - sprite: {fileID: -5753328692003189620, guid: 9003a1911785e422dbd939795f9f2ded, type: 3}
+    - sprite: {fileID: 21300000, guid: 09be70b7d992948a789acae55d7a13f3, type: 3}
       damageRule: 0
       blocksCells: 0
       behavior: 3
@@ -144,7 +144,7 @@ MonoBehaviour:
     hitParticleSprites: []
     breakParticleSprites: []
     drawUnderTiles: 0
-    legacySprite: {fileID: -5753328692003189620, guid: 9003a1911785e422dbd939795f9f2ded, type: 3}
+    legacySprite: {fileID: 21300000, guid: 09be70b7d992948a789acae55d7a13f3, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 0

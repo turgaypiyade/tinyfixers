@@ -434,14 +434,20 @@ public class LevelEndSimplePopupController : MonoBehaviour
         failPopupShown = true;
         successPopupShown = false;
 
+        // Önemli olan popup root'unu değil,
+        // LevelEndPopup controller objesini en üste almak.
+        transform.SetAsLastSibling();
+
         if (failPopupRoot != null)
         {
             failPopupRoot.SetActive(true);
-            Debug.Log("[Level end fail popu set active true");
-        }    
+            Debug.Log("[LevelEnd] fail popup set active true");
+        }
         else
+        {
             Debug.LogError("[LevelEndSimplePopupController] failPopupRoot is NULL. Fail popup cannot be shown.");
-       
+        }
+
         if (successPopupRoot != null)
             successPopupRoot.SetActive(false);
 

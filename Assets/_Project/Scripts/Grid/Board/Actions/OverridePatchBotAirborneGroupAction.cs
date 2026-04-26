@@ -16,12 +16,23 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         public Vector2 hoverAnchor;
         public bool diving;
         public bool arrived;
+
+        // Bot'un hafızası — neyi hedefliyor?
+        public PatchBotIntent intent;
+
+        // Dive sonu hedef cell (resolve sonrası)
+        public int targetX = -1;
+        public int targetY = -1;
+        public bool hasTarget;
     }
 
     private readonly BoardController board;
     private readonly List<Vector2Int> sourceCells;
 
     public override bool Blocking => true;
+
+    // Tüm botların aynı anda inmesi için sabit dive süresi (saniye).
+    private const float SYNC_DIVE_DURATION = 0.22f;
 
     public OverridePatchBotAirborneGroupAction(BoardController board, List<Vector2Int> sourceCells)
     {
@@ -34,25 +45,34 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         if (board == null || sequencer == null || sourceCells.Count == 0)
             yield break;
 
+        float startTime = Time.realtimeSinceStartup;
+        Debug.Log($"[OverridePatchBotAirborne] BEGIN sources={sourceCells.Count}");
+
         var patchbotService = new PatchbotComboService(board);
         var coordinator = new PatchBotTargetCoordinator(board, patchbotService);
-        var bots = BuildAndLiftBots();
+        var bots = BuildAndLiftBots(coordinator);
 
-        Debug.Log($"[OverridePatchBotAirborne] takeoff count={bots.Count}");
+        Debug.Log($"[OverridePatchBotAirborne] takeoff count={bots.Count} t={Time.realtimeSinceStartup - startTime:0.000}s");
 
         if (bots.Count == 0)
             yield break;
 
-        // Source cells are already empty now; let the board settle while bots hover.
+        // Cascade boyunca botlar hover'da, board match'leri ve düşüşü çalışır.
         yield return RunInitialCascadeWhileHovering(sequencer);
+        Debug.Log($"[OverridePatchBotAirborne] cascade_done t={Time.realtimeSinceStartup - startTime:0.000}s");
 
-        // Targets are selected after the board has changed, so PatchBots use the fresh board.
-        yield return DiveBotsAgainstCurrentBoard(sequencer, bots, patchbotService, coordinator);
+        // Cascade bitti. Her bot intent'ini yeniden değerlendirir, dive hedefini netleştirir.
+        ResolveAllDiveTargets(bots, coordinator);
+        Debug.Log($"[OverridePatchBotAirborne] targets_resolved t={Time.realtimeSinceStartup - startTime:0.000}s");
+
+        // Tüm botlar AYNI ANDA dive eder, AYNI ANDA iner. Hepsi indikten sonra TEK clear.
+        yield return SynchronizedDiveAndClear(sequencer, bots, patchbotService, coordinator);
+        Debug.Log($"[OverridePatchBotAirborne] END t={Time.realtimeSinceStartup - startTime:0.000}s");
 
         DestroyGhosts(bots);
     }
 
-    private List<AirborneBot> BuildAndLiftBots()
+    private List<AirborneBot> BuildAndLiftBots(PatchBotTargetCoordinator coordinator)
     {
         var bots = new List<AirborneBot>();
         var sprite = board.GetSpecialIcon(TileSpecial.PatchBot);
@@ -71,10 +91,15 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             if (bot == null)
                 continue;
 
+            // Kalkış anında soft reservation — hedef bilgisi.
+            // Cascade sonrasında bu intent ya canlı kalır (TileView ref'i ile takip),
+            // ya da yenilenir (ResolveAllDiveTargets içinde).
+            var (intent, hasIntent) = coordinator.PickIntent(null, null, null);
+            bot.intent = hasIntent ? intent : null;
+
             bots.Add(bot);
 
-            // The source is consumed immediately so normal board fall/cascade can happen
-            // while the PatchBot is airborne.
+            // Source cell'i ANINDA boşalt — cascade buradan akabilsin.
             SpecialVisualService.HideTileVisualForCombo(tile);
             board.ClearCell(cell.x, cell.y);
             board.ClearCellVisualOnly(cell, bot.sourceType, tile);
@@ -138,8 +163,6 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         float burstDuration = board.ApplySpecialChainTempo(0.13f);
         float elapsed = 0f;
 
-        Debug.Log($"[OverridePatchBotAirborne] takeoff_burst cell={bot.sourceCell} hover={hover}");
-
         while (elapsed < burstDuration && bot != null && bot.rect != null && !bot.arrived && !bot.diving)
         {
             elapsed += Time.deltaTime;
@@ -179,41 +202,148 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         board.RefreshAllSortingOrders();
     }
 
-    private IEnumerator DiveBotsAgainstCurrentBoard(
+    /// <summary>
+    /// Cascade bittikten sonra her botun intent'ini yeniden değerlendirir.
+    /// Intent canlıysa GÜNCEL cell'i kullanır (taş düştü → yeni y).
+    /// Intent öldüyse (taş match'te yok oldu) → coordinator yeni hedef seçer.
+    /// </summary>
+    private void ResolveAllDiveTargets(List<AirborneBot> bots, PatchBotTargetCoordinator coordinator)
+    {
+        for (int i = 0; i < bots.Count; i++)
+        {
+            var bot = bots[i];
+            if (bot == null || bot.rect == null) continue;
+
+            var resolved = coordinator.ResolveIntentToCell(bot.intent, null, null, null);
+            if (!resolved.hasCell)
+            {
+                bot.hasTarget = false;
+                Debug.Log($"[OverridePatchBotAirborne] no_target step={i} from={bot.sourceCell}");
+                continue;
+            }
+
+            bot.intent = resolved.intent;
+            bot.targetX = resolved.cell.x;
+            bot.targetY = resolved.cell.y;
+            bot.hasTarget = true;
+
+            Debug.Log($"[OverridePatchBotAirborne] target_resolved step={i} from={bot.sourceCell} target=({bot.targetX},{bot.targetY})");
+        }
+    }
+
+    /// <summary>
+    /// Tüm botlar AYNI ANDA dive coroutine başlatır.
+    /// Hepsi SYNC_DIVE_DURATION süresinde iner.
+    /// Hepsi indikten sonra → ghost'lar destroy + TEK MatchClearAction yield ile çalışır.
+    /// → "Hepsi aynı anda iner, hepsi aynı anda patlar."
+    /// </summary>
+    private IEnumerator SynchronizedDiveAndClear(
         ActionSequencer sequencer,
         List<AirborneBot> bots,
         PatchbotComboService patchbotService,
         PatchBotTargetCoordinator coordinator)
     {
-        var groupCtx = new ResolutionContext();
-        const float stagger = 0.035f;
-        int active = 0;
-
+        // ─── PHASE 1: Tüm dive'ları AYNI ANDA başlat ───
+        int diveCount = 0;
         for (int i = 0; i < bots.Count; i++)
         {
             var bot = bots[i];
-            if (bot == null || bot.rect == null)
-                continue;
+            if (bot == null || bot.rect == null) continue;
 
-            var target = coordinator.ReserveTarget(null, null, null);
-            if (!target.hasCell)
+            if (!bot.hasTarget)
             {
+                // Hedef yok — bot sessizce yok ol.
                 bot.arrived = true;
                 if (bot.ghost != null) Object.Destroy(bot.ghost);
                 continue;
             }
 
-            Debug.Log($"[OverridePatchBotAirborne] acquire step={i + 1}/{bots.Count} from={bot.sourceCell} target=({target.x},{target.y})");
-
-            active++;
-            board.StartCoroutine(CoDive(bot, target.x, target.y, patchbotService, groupCtx, () => active--));
-
-            yield return new WaitForSeconds(board.ApplySpecialChainTempo(stagger));
+            diveCount++;
+            board.StartCoroutine(CoSynchronizedDive(bot));
         }
 
-        while (active > 0)
-            yield return null;
+        Debug.Log($"[OverridePatchBotAirborne] sync_dive_start count={diveCount} duration={SYNC_DIVE_DURATION}");
 
+        if (diveCount == 0)
+            yield break;
+
+        // ─── PHASE 2: Tüm dive'lar bitene kadar bekle ───
+        // Sabit süreli bekleme + güvenlik için kalan diving bot kontrolü.
+        yield return new WaitForSeconds(board.ApplySpecialChainTempo(SYNC_DIVE_DURATION));
+
+        bool anyDiving = true;
+        float guard = 0f;
+        while (anyDiving && guard < 0.5f)
+        {
+            anyDiving = false;
+            for (int i = 0; i < bots.Count; i++)
+            {
+                if (bots[i] != null && bots[i].diving && !bots[i].arrived)
+                {
+                    anyDiving = true;
+                    break;
+                }
+            }
+            if (anyDiving)
+            {
+                yield return null;
+                guard += Time.deltaTime;
+            }
+        }
+
+        Debug.Log($"[OverridePatchBotAirborne] all_arrived");
+
+        // ─── PHASE 3: Topla — tüm hedef cell'lerin TileData/TileView'ları ───
+        var groupCtx = new ResolutionContext();
+        for (int i = 0; i < bots.Count; i++)
+        {
+            var bot = bots[i];
+            if (bot == null || !bot.hasTarget) continue;
+
+            bool hasObstacle = patchbotService.HasObstacleAt(bot.targetX, bot.targetY);
+            var dataMatches = new HashSet<TileData>();
+
+            patchbotService.ResolveTargetImpact(
+                dataMatches,
+                bot.targetX,
+                bot.targetY,
+                hasObstacle,
+                (x, y) => SpecialCellUtils.MarkAffectedCell(groupCtx, x, y, board),
+                t => SpecialCellUtils.MarkAffectedCell(groupCtx, t, board));
+
+            foreach (var data in dataMatches)
+            {
+                if (data == null) continue;
+                if (data.X < 0 || data.X >= board.Width || data.Y < 0 || data.Y >= board.Height) continue;
+
+                var tile = board.Tiles[data.X, data.Y];
+                if (tile != null)
+                    groupCtx.Affected.Add(tile);
+            }
+
+            // Intent serbest.
+            if (bot.intent != null)
+            {
+                coordinator.ReleaseIntent(bot.intent);
+                bot.intent = null;
+            }
+        }
+
+        // ─── PHASE 4: Ghost'ları destroy — clear başlamadan ÖNCE ───
+        // Görsel: "bot taşa değdi, taş patladı, bot da o anda kayboldu" (senkron).
+        for (int i = 0; i < bots.Count; i++)
+        {
+            var bot = bots[i];
+            if (bot != null && bot.ghost != null)
+            {
+                Object.Destroy(bot.ghost);
+                bot.ghost = null;
+            }
+        }
+
+        Debug.Log($"[OverridePatchBotAirborne] group_clear affected={groupCtx.Affected.Count} cells={groupCtx.AffectedCells.Count}");
+
+        // ─── PHASE 5: TEK MatchClearAction — sequencer'ı bypass eden direct call ───
         if (groupCtx.Affected.Count > 0 || groupCtx.AffectedCells.Count > 0 || groupCtx.ImpactCells.Count > 0)
         {
             var clearAction = new MatchClearAction(
@@ -223,12 +353,18 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
                 affectedCells: groupCtx.AffectedCells,
                 impactCells: groupCtx.ImpactCells,
                 includeAdjacentOverTileBlockerDamage: false,
+                staggerDelays: null,           // EXPLICIT: hiç stagger yok
+                staggerAnimTime: 0f,           // EXPLICIT: tüm taşlar AYNI ANDA patlar
                 isSpecialPhase: true,
-                enqueueCascadeOnComplete: false);
+                enqueueCascadeOnComplete: false); // Cascade'i biz manuel çalıştırıyoruz
 
+            // Direct ExecuteVisuals çağrısı = sequencer kuyruğunu bypass.
+            // Bu şu an Blocking action'ın koroutine'i içinde çalışıyor,
+            // sequencer queue'ya yeni action girmiyor → ANINDA başlar.
             yield return clearAction.ExecuteVisuals(sequencer);
         }
 
+        // ─── PHASE 6: Tek cascade ───
         var cascades = board.CascadeLogic.CalculateCascades();
         Debug.Log($"[OverridePatchBotAirborne] final_cascade actions={(cascades != null ? cascades.Count : 0)}");
         if (cascades != null)
@@ -240,32 +376,28 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         board.RefreshAllSortingOrders();
     }
 
-    private IEnumerator CoDive(
-        AirborneBot bot,
-        int targetX,
-        int targetY,
-        PatchbotComboService patchbotService,
-        ResolutionContext groupCtx,
-        System.Action onComplete)
+    /// <summary>
+    /// Bot için sabit süreli dive. SYNC_DIVE_DURATION ile tüm botlar aynı anda biter.
+    /// Mesafe ne olursa olsun süre sabit — hız mesafeye göre kendi kendine ölçeklenir.
+    /// Ghost burada DESTROY EDİLMEZ — toplu clear başlamadan önce merkez tarafından destroy edilir.
+    /// </summary>
+    private IEnumerator CoSynchronizedDive(AirborneBot bot)
     {
         if (bot == null || bot.rect == null)
-        {
-            onComplete?.Invoke();
             yield break;
-        }
 
         bot.diving = true;
         bot.rect.SetAsLastSibling();
 
         Vector2 start = bot.rect.anchoredPosition;
-        Vector2 end = CellAnchored(targetX, targetY, bot.flightRoot);
+        Vector2 end = CellAnchored(bot.targetX, bot.targetY, bot.flightRoot);
         Vector2 delta = end - start;
-        Vector2 normal = delta.sqrMagnitude > 0.001f ? new Vector2(-delta.y, delta.x).normalized : Vector2.up;
+        Vector2 normal = delta.sqrMagnitude > 0.001f
+            ? new Vector2(-delta.y, delta.x).normalized
+            : Vector2.up;
         float arc = Mathf.Clamp(delta.magnitude * 0.11f, board.TileSize * 0.14f, board.TileSize * 0.48f);
-        float duration = board.ApplySpecialChainTempo(Mathf.Clamp(delta.magnitude / 980f, 0.13f, 0.30f));
+        float duration = board.ApplySpecialChainTempo(SYNC_DIVE_DURATION);
         float elapsed = 0f;
-
-        Debug.Log($"[OverridePatchBotAirborne] dive from={bot.sourceCell} target=({targetX},{targetY}) duration={duration:0.000}");
 
         while (elapsed < duration)
         {
@@ -286,43 +418,11 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         }
 
         bot.arrived = true;
-
-        // Keep group reservations until this action ends. Releasing on arrival allowed a late
-        // PatchBot in the same Override group to reacquire the exact same normal tile.
-        // The coordinator is local to this action, so keeping reservations is safe.
-
-        if (bot.ghost != null)
-            Object.Destroy(bot.ghost);
-
-        bool hasObstacle = patchbotService.HasObstacleAt(targetX, targetY);
-        var dataMatches = new HashSet<TileData>();
-
-        patchbotService.ResolveTargetImpact(
-            dataMatches,
-            targetX,
-            targetY,
-            hasObstacle,
-            (x, y) => SpecialCellUtils.MarkAffectedCell(groupCtx, x, y, board),
-            t => SpecialCellUtils.MarkAffectedCell(groupCtx, t, board));
-
-        foreach (var data in dataMatches)
-        {
-            if (data == null) continue;
-            if (data.X < 0 || data.X >= board.Width || data.Y < 0 || data.Y >= board.Height) continue;
-
-            var tile = board.Tiles[data.X, data.Y];
-            if (tile != null)
-                groupCtx.Affected.Add(tile);
-        }
-
-        Debug.Log($"[OverridePatchBotAirborne] arrived target=({targetX},{targetY}) affected={groupCtx.Affected.Count}");
-        onComplete?.Invoke();
     }
 
     private void DestroyGhosts(List<AirborneBot> bots)
     {
-        if (bots == null)
-            return;
+        if (bots == null) return;
 
         for (int i = 0; i < bots.Count; i++)
         {
