@@ -69,8 +69,11 @@ MonoBehaviour:
     allowCrossContextFallback: 0
     size: {x: 1, y: 1}
     hits: 1
-    hitParticleSprites: []
-    breakParticleSprites: []
+    hitParticleSprites:
+    - {fileID: -4137343928191711293, guid: 1fa292475361c4958978f0dafabdb94c, type: 3}
+    breakParticleSprites:
+    - {fileID: -3734881870064638914, guid: 1fa292475361c4958978f0dafabdb94c, type: 3}
+    - {fileID: 5628360442248681413, guid: 1fa292475361c4958978f0dafabdb94c, type: 3}
     drawUnderTiles: 0
     legacySprite: {fileID: -4608977120082464864, guid: 044b6a924defc4a7fa1daa77f9c52cfa, type: 3}
     legacyStageSprites: []

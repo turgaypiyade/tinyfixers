@@ -159,16 +159,35 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void HandleSuccessCloseClicked()
     {
+        CompleteSuccessAndReturnToMainMenu();
+    }
+
+    private void CompleteSuccessAndReturnToMainMenu()
+    {
+        if (successPopupShown)
+            return;
+
+        successPopupShown = true;
+        failPopupShown = false;
+
+        int stars = CalculateStars();
+        int coins = CalculateCoins();
+
+        SaveRewards(stars, coins);
+        AdvanceToNextLevel();
+
         HideAllPopups();
 
-        // Level++
-        int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
-        PlayerPrefs.SetInt(prefsLevelKey, level + 1);
-        PlayerPrefs.Save();
-
+        Debug.Log($"[LevelEnd] Success direct return. Stars: {stars}, Coins: {coins}");
         ReturnToMainMenu();
     }
 
+    private void AdvanceToNextLevel()
+    {
+        int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
+        PlayerPrefs.SetInt(prefsLevelKey, level + 1);
+        PlayerPrefs.Save();
+    }
     private void ReturnToMainMenu() => SceneManager.LoadScene(mainMenuSceneName);
 
     private void SetBlockerVisible(bool isVisible)
@@ -230,13 +249,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (board == null || topHud == null)
             return;
 
-                // If a popup is already shown, don't try to show another.
         if (failPopupShown || successPopupShown)
             return;
 
         if (topHud.AreAllGoalsCompleted)
         {
-            ShowSuccessPopup();
+            CompleteSuccessAndReturnToMainMenu();
             return;
         }
 
@@ -247,7 +265,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         Debug.Log($"[LevelEndSimplePopupController] End check skipped. RemainingMoves={board.RemainingMoves}, GoalsCompleted={topHud.AreAllGoalsCompleted}");
-
     }
 
     private void ShowFailPopup()

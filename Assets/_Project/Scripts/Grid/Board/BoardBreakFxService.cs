@@ -27,8 +27,19 @@ public class BoardBreakFxService
 
     public void PlayObstacleBreak(ObstacleVisualChange change)
     {
+        Debug.Log(
+            $"[ObstacleFX] PlayObstacleBreak called. " +
+            $"id={change.obstacleId}, cleared={change.cleared}, origin={change.originIndex}, remaining={change.remainingHits}"
+        );
+
         if (change.originIndex < 0 || board.Width <= 0 || board.Height <= 0)
+        {
+            Debug.LogWarning(
+                $"[ObstacleFX] Abort: invalid origin/board. " +
+                $"origin={change.originIndex}, board={board.Width}x{board.Height}"
+            );
             return;
+        }
 
         GameObject prefab = change.cleared
             ? board.ObstacleBreakFxPrefab
@@ -38,13 +49,30 @@ public class BoardBreakFxService
             ? board.ObstacleBreakFxLifetime
             : board.ObstacleHitFxLifetime;
 
+        if (prefab == null)
+        {
+            Debug.LogWarning(
+                $"[ObstacleFX] Abort: prefab is NULL. " +
+                $"cleared={change.cleared}, expected={(change.cleared ? "ObstacleBreakFxPrefab" : "ObstacleHitFxPrefab")}"
+            );
+            return;
+        }
+
         int x = change.originIndex % board.Width;
         int y = change.originIndex / board.Width;
 
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+        {
+            Debug.LogWarning($"[ObstacleFX] Abort: invalid cell. x={x}, y={y}");
             return;
+        }
 
         IReadOnlyList<Sprite> particleSprites = ResolveObstacleParticleSprites(change);
+
+        Debug.Log(
+            $"[ObstacleFX] Spawn request. prefab={prefab.name}, cell=({x},{y}), " +
+            $"lifetime={lifetime}, sprites={(particleSprites != null ? particleSprites.Count : 0)}"
+        );
 
         SpawnAtWorld(
             prefab,
@@ -56,32 +84,64 @@ public class BoardBreakFxService
 
     private IReadOnlyList<Sprite> ResolveObstacleParticleSprites(ObstacleVisualChange change)
     {
-        if (board.LevelData == null || board.LevelData.obstacleLibrary == null)
+        if (board.LevelData == null)
+        {
+            Debug.LogWarning("[ObstacleFX] No LevelData.");
             return null;
+        }
+
+        if (board.LevelData.obstacleLibrary == null)
+        {
+            Debug.LogWarning("[ObstacleFX] No ObstacleLibrary on LevelData.");
+            return null;
+        }
 
         var def = board.LevelData.obstacleLibrary.Get(change.obstacleId);
         if (def == null)
+        {
+            Debug.LogWarning($"[ObstacleFX] No ObstacleDef found for id={change.obstacleId}");
             return null;
+        }
 
         List<Sprite> sprites = change.cleared
             ? def.breakParticleSprites
             : def.hitParticleSprites;
 
         if (sprites != null && sprites.Count > 0)
-            return sprites;
+        {
+            int nonNullCount = 0;
+            for (int i = 0; i < sprites.Count; i++)
+            {
+                if (sprites[i] != null)
+                    nonNullCount++;
+            }
 
-        // Fallback: özel particle sprite verilmediyse obstacle'ın kendi stage sprite'ını kullan.
+            Debug.Log(
+                $"[ObstacleFX] Using custom obstacle particle sprites. " +
+                $"id={change.obstacleId}, cleared={change.cleared}, count={sprites.Count}, nonNull={nonNullCount}"
+            );
+
+            return sprites;
+        }
+
         Sprite fallback = change.sprite;
 
         if (fallback == null)
             fallback = def.GetPreviewSprite();
 
         if (fallback == null)
+        {
+            Debug.LogWarning(
+                $"[ObstacleFX] No custom sprites and no fallback sprite. " +
+                $"id={change.obstacleId}, cleared={change.cleared}"
+            );
             return null;
+        }
+
+        Debug.Log($"[ObstacleFX] Using fallback sprite: {fallback.name}");
 
         return new[] { fallback };
     }
-
     private void SpawnAtWorld(
         GameObject prefab,
         float lifetime,
@@ -119,7 +179,9 @@ public class BoardBreakFxService
         go.SetActive(true);
 
         ApplyColor(go, color);
-        ApplyParticleSprites(go, particleSprites);
+
+        if (particleSprites != null && particleSprites.Count > 0)
+            ApplyParticleSprites(go, particleSprites);
 
         if (lifetime > 0f)
             Object.Destroy(go, lifetime);
@@ -140,28 +202,71 @@ public class BoardBreakFxService
 
     private void ApplyParticleSprites(GameObject go, IReadOnlyList<Sprite> sprites)
     {
-        if (go == null || sprites == null || sprites.Count == 0)
+        if (go == null)
+        {
+            Debug.LogWarning("[ObstacleFX] ApplyParticleSprites abort: go is null.");
             return;
+        }
 
         ParticleSystem[] systems = go.GetComponentsInChildren<ParticleSystem>(true);
+
+        Debug.Log(
+            $"[ObstacleFX] ApplyParticleSprites. go={go.name}, " +
+            $"particleSystems={systems.Length}, sprites={(sprites != null ? sprites.Count : 0)}"
+        );
+
+        if (systems.Length == 0)
+        {
+            Debug.LogWarning($"[ObstacleFX] No ParticleSystem found under prefab instance: {go.name}");
+            return;
+        }
+
+        if (sprites == null || sprites.Count == 0)
+        {
+            Debug.LogWarning("[ObstacleFX] No sprites provided for particle texture sheet.");
+            return;
+        }
 
         for (int i = 0; i < systems.Length; i++)
         {
             var ps = systems[i];
-            var textureSheet = ps.textureSheetAnimation;
 
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            var textureSheet = ps.textureSheetAnimation;
             textureSheet.enabled = true;
             textureSheet.mode = ParticleSystemAnimationMode.Sprites;
 
-            // Prefab içinde eski sprite kalmışsa temizle.
             for (int s = textureSheet.spriteCount - 1; s >= 0; s--)
                 textureSheet.RemoveSprite(s);
 
+            int added = 0;
+
             for (int s = 0; s < sprites.Count; s++)
             {
-                if (sprites[s] != null)
-                    textureSheet.AddSprite(sprites[s]);
+                if (sprites[s] == null)
+                    continue;
+
+                textureSheet.AddSprite(sprites[s]);
+                added++;
             }
+
+            Debug.Log(
+                $"[ObstacleFX] ParticleSystem configured. " +
+                $"system={ps.gameObject.name}, addedSprites={added}, finalSpriteCount={textureSheet.spriteCount}"
+            );
+
+            ps.Clear(true);
+            ps.Play(true);
+
+            // Debug/test: prefab emission ayarlarından bağımsız olarak particle çıkar.
+            // Bunu görürsek sorun kodda değil, prefab emission/burst ayarındadır.
+            ps.Emit(24);
+
+            Debug.Log(
+                $"[ObstacleFX] ParticleSystem played. " +
+                $"system={ps.gameObject.name}, isPlaying={ps.isPlaying}, particleCount={ps.particleCount}"
+            );
         }
     }
 
