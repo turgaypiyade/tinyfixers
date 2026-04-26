@@ -314,11 +314,11 @@ public class LevelDataEditor : Editor
 
                 bool isNormal = level.cells[idx] == (int)CellType.Normal;
 
-                // Hole hücreyi hiç çizme
-                if (isNormal)
-                    EditorGUI.DrawRect(r, normalCell);
+                // Normal hücre açık, hole hücre koyu çizilsin.
+                // Önceden hole hiç çizilmiyordu; bu yüzden arkadaki boardBg açık mavi görünüyordu.
+                EditorGUI.DrawRect(r, isNormal ? normalCell : holeCell);
 
-                // Obstacle overlay
+                // Obstacle overlay sadece normal hücrelerde geçerli.
                 var obs = (ObstacleId)level.obstacles[idx];
                 if (isNormal && obs != ObstacleId.None)
                 {

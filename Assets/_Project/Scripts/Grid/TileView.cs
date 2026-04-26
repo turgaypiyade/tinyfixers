@@ -227,14 +227,14 @@ public class TileView : MonoBehaviour,
     // ============================================================
 
     public IEnumerator MoveToGrid(
-       int tileSize,
-       float duration,                      // YOK SAYILIR (backward compat)
-       AnimationCurve easingCurve = null,   // YOK SAYILIR (backward compat)
-       bool enableSettle = false,
-       float settleDuration = 0.06f,
-       float settleStrength = 0.04f,
-       float settleStretchX = 0f,
-       float settleOvershoot = 0f)
+      int tileSize,
+      float duration,                      // YOK SAYILIR (backward compat)
+      AnimationCurve easingCurve = null,   // YOK SAYILIR (backward compat)
+      bool enableSettle = false,
+      float settleDuration = 0.06f,
+      float settleStrength = 0.04f,
+      float settleStretchX = 0f,
+      float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
         if (rt == null || !rt) yield break;
@@ -245,19 +245,32 @@ public class TileView : MonoBehaviour,
         Vector2 start = rt.anchoredPosition;
         Vector2 end;
 
-        bool isSpecialOrMovable = (model != null && model.special != TileSpecial.None) || isMovableObstacleTile;
-        if (isSpecialOrMovable)
+        bool isSpecial = model != null && model.special != TileSpecial.None;
+        bool isMovable = isMovableObstacleTile;
+
+        // Movable obstacle tile gibi hareket eder ama special offset almaz.
+        // Böylece hücre merkezine/pozisyonuna tam oturur.
+        if (isMovable)
+        {
+            end = new Vector2(X * tileSize, -Y * tileSize);
+        }
+        else if (isSpecial)
         {
             float cellH;
+
             if (useFullCellIcon)
+            {
                 cellH = tileSize;
+            }
             else
             {
                 float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
                 cellH = tileSize * Mathf.Max(0.1f, ratioY);
             }
+
             float elemH = cellH * (110f / 115f);
             float yOffset = (cellH - elemH) * 0.5f;
+
             end = new Vector2(X * tileSize, -Y * tileSize - yOffset);
         }
         else
@@ -267,6 +280,7 @@ public class TileView : MonoBehaviour,
 
         // ======= SABİT HIZ FİZİĞİ =======
         float totalPixels = Mathf.Abs(end.y - start.y);
+
         if (totalPixels < 0.5f)
         {
             if (rt != null && rt)
@@ -274,11 +288,11 @@ public class TileView : MonoBehaviour,
                 rt.anchoredPosition = end;
                 SnapToGrid(tileSize);
             }
+
             yield break;
         }
 
         float totalCells = totalPixels / Mathf.Max(1f, (float)tileSize);
-
         float direction = end.y < start.y ? -1f : 1f;
 
         // Sabit hız — ivmelenme yok, taş tam hızında başlar ve tam hızında biter
@@ -303,6 +317,7 @@ public class TileView : MonoBehaviour,
         }
 
         if (rt == null || !rt) yield break;
+
         rt.anchoredPosition = end;
         SnapToGrid(tileSize);
 
@@ -319,16 +334,24 @@ public class TileView : MonoBehaviour,
         while (b1 < bounceDur * 0.35f)
         {
             if (rt == null || !rt) yield break;
+
             b1 += Time.deltaTime;
+
             float k = Mathf.Clamp01(b1 / (bounceDur * 0.35f));
             float eased = 1f - (1f - k) * (1f - k);
+
             rt.anchoredPosition = Vector2.LerpUnclamped(end, overshoot, eased);
 
             if (visualRt != null && settleStretchX > 0f)
             {
                 float sx = 1f + settleStretchX * eased;
                 float sy = 1f - settleStretchX * eased * 0.5f;
-                visualRt.localScale = new Vector3(visualBaseScale.x * sx, visualBaseScale.y * sy, visualBaseScale.z);
+
+                visualRt.localScale = new Vector3(
+                    visualBaseScale.x * sx,
+                    visualBaseScale.y * sy,
+                    visualBaseScale.z
+                );
             }
 
             yield return null;
@@ -338,9 +361,12 @@ public class TileView : MonoBehaviour,
         while (b2 < bounceDur * 0.35f)
         {
             if (rt == null || !rt) yield break;
+
             b2 += Time.deltaTime;
+
             float k = Mathf.Clamp01(b2 / (bounceDur * 0.35f));
             float eased = 1f - (1f - k) * (1f - k);
+
             rt.anchoredPosition = Vector2.LerpUnclamped(overshoot, overUp, eased);
 
             if (visualRt != null && settleStretchX > 0f)
@@ -348,7 +374,12 @@ public class TileView : MonoBehaviour,
                 float revK = 1f - k;
                 float sx = 1f + settleStretchX * revK;
                 float sy = 1f - settleStretchX * revK * 0.5f;
-                visualRt.localScale = new Vector3(visualBaseScale.x * sx, visualBaseScale.y * sy, visualBaseScale.z);
+
+                visualRt.localScale = new Vector3(
+                    visualBaseScale.x * sx,
+                    visualBaseScale.y * sy,
+                    visualBaseScale.z
+                );
             }
 
             yield return null;
@@ -358,10 +389,14 @@ public class TileView : MonoBehaviour,
         while (b3 < bounceDur * 0.3f)
         {
             if (rt == null || !rt) yield break;
+
             b3 += Time.deltaTime;
+
             float k = Mathf.Clamp01(b3 / (bounceDur * 0.3f));
             float eased = k * k;
+
             rt.anchoredPosition = Vector2.LerpUnclamped(overUp, end, eased);
+
             yield return null;
         }
 
@@ -682,8 +717,15 @@ public class TileView : MonoBehaviour,
         bool isSpecial = model != null && model.special != TileSpecial.None;
         bool isMovable = isMovableObstacleTile;
 
-        bool shouldFillCell = useFullCellIcon || visualLayout == TileVisualLayout.FillCell;
-        bool shouldCenter = visualLayout == TileVisualLayout.Centered || isSpecial;
+        // Static obstacle zaten GridSpawner.DrawObstacleImage() ile ayrı çiziliyor
+        // ve hücreyi tamamen kaplıyor.
+        //
+        // Movable obstacle ise TileView üzerinden geldiği için burada özellikle
+        // FillCell/useFullCellIcon yoluna sokmuyoruz.
+        bool shouldFillCell = !isMovable && (useFullCellIcon || visualLayout == TileVisualLayout.FillCell);
+
+        // Movable obstacle her zaman hücre merkezinde dursun.
+        bool shouldCenter = visualLayout == TileVisualLayout.Centered || isSpecial || isMovable;
 
         if (shouldFillCell)
         {
@@ -692,6 +734,8 @@ public class TileView : MonoBehaviour,
             irt.pivot = new Vector2(0.5f, 0.5f);
             irt.anchoredPosition = Vector2.zero;
             irt.sizeDelta = Vector2.zero;
+
+            // Sadece static olmayan, normal full-cell tile/special görsellerde kullanılır.
             iconImage.preserveAspect = false;
             return;
         }
@@ -699,6 +743,8 @@ public class TileView : MonoBehaviour,
         float tileRatio = Mathf.Max(0.01f, tileSize / IconReferenceTileSize);
         Vector2 scaledIconSize = iconSize * (tileRatio * iconScale);
 
+        // Movable obstacle hücreyi tam kaplamasın.
+        // Static obstacle bu metoda girmediği için bu scale sadece movable için güvenli.
         if (isMovable)
             scaledIconSize *= 0.95f;
 

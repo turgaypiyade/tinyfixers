@@ -40,6 +40,12 @@ public class ObstacleDef
     public Vector2Int size = Vector2Int.one;   // örn 4x4, 1x2
     [Min(1)]
     public int hits = 1;                       // ileride: 1 vuruş, 2 vuruş
+    [Header("Particle Sprites")]
+    [Tooltip("Obstacle hasar aldığında kullanılacak particle sprite sheet parçaları.")]
+    public List<Sprite> hitParticleSprites = new();
+
+    [Tooltip("Obstacle tamamen kırıldığında kullanılacak particle sprite sheet parçaları.")]
+    public List<Sprite> breakParticleSprites = new();
     [HideInInspector] public bool drawUnderTiles = false;        // legacy serialized flag
 
     [SerializeField, HideInInspector, FormerlySerializedAs("sprite")]

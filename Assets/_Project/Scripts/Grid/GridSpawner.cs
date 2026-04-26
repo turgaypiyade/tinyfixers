@@ -629,12 +629,46 @@ public class GridSpawner : MonoBehaviour
 
         float thickness = Mathf.Max(1f, runtimeGridLineThickness);
 
+        bool IsInside(int x, int y)
+        {
+            return x >= 0 && x < width && y >= 0 && y < height;
+        }
+
+        bool IsObstacleCell(int x, int y)
+        {
+            if (!IsInside(x, y))
+                return false;
+
+            if (resolvedLevel == null || resolvedLevel.obstacles == null)
+                return false;
+
+            int idx = resolvedLevel.Index(x, y);
+
+            if (idx < 0 || idx >= resolvedLevel.obstacles.Length)
+                return false;
+
+            return (ObstacleId)resolvedLevel.obstacles[idx] != ObstacleId.None;
+        }
+
         bool IsVisibleCell(int x, int y)
         {
-            if (x < 0 || x >= width || y < 0 || y >= height)
+            if (!IsInside(x, y))
                 return false;
 
             return !board.Holes[x, y];
+        }
+
+        bool ShouldDrawLineTouchingCells(int ax, int ay, int bx, int by)
+        {
+            // Çizginin iki tarafından biri obstacle ise çizme.
+            // Bu sayede obstacle içinden veya obstacle kenarından grid line geçmez.
+            if (IsObstacleCell(ax, ay))
+                return false;
+
+            if (IsObstacleCell(bx, by))
+                return false;
+
+            return true;
         }
 
         void CreateLine(string name, Vector2 anchoredPos, Vector2 size)
@@ -658,7 +692,11 @@ public class GridSpawner : MonoBehaviour
         {
             for (int x = 0; x < width; x++)
             {
+                // Obstacle hücresinin kendi üstüne çizgi çizme.
                 if (!IsVisibleCell(x, y))
+                    continue;
+
+                if (IsObstacleCell(x, y))
                     continue;
 
                 float x0 = x * tileSize;
@@ -666,22 +704,29 @@ public class GridSpawner : MonoBehaviour
                 float x1 = x0 + tileSize;
                 float y1 = y0 - tileSize;
 
-                // Top edge: her visible cell için çiz
-                CreateLine(
-                    $"GridLine_T_{x}_{y}",
-                    new Vector2(x0, y0 + thickness * 0.5f),
-                    new Vector2(tileSize, thickness)
-                );
+                // Top edge
+                if (ShouldDrawLineTouchingCells(x, y, x, y - 1))
+                {
+                    CreateLine(
+                        $"GridLine_T_{x}_{y}",
+                        new Vector2(x0, y0 + thickness * 0.5f),
+                        new Vector2(tileSize, thickness)
+                    );
+                }
 
-                // Left edge: her visible cell için çiz
-                CreateLine(
-                    $"GridLine_L_{x}_{y}",
-                    new Vector2(x0 - thickness * 0.5f, y0),
-                    new Vector2(thickness, tileSize)
-                );
+                // Left edge
+                if (ShouldDrawLineTouchingCells(x, y, x - 1, y))
+                {
+                    CreateLine(
+                        $"GridLine_L_{x}_{y}",
+                        new Vector2(x0 - thickness * 0.5f, y0),
+                        new Vector2(thickness, tileSize)
+                    );
+                }
 
-                // Right edge: sadece sağ komşu yoksa / hole ise çiz
-                if (!IsVisibleCell(x + 1, y))
+                // Right edge: sadece sağ komşu görünür değilse çiz,
+                // ama obstacle'a temas ediyorsa çizme.
+                if (!IsVisibleCell(x + 1, y) && ShouldDrawLineTouchingCells(x, y, x + 1, y))
                 {
                     CreateLine(
                         $"GridLine_R_{x}_{y}",
@@ -690,8 +735,9 @@ public class GridSpawner : MonoBehaviour
                     );
                 }
 
-                // Bottom edge: sadece alt komşu yoksa / hole ise çiz
-                if (!IsVisibleCell(x, y + 1))
+                // Bottom edge: sadece alt komşu görünür değilse çiz,
+                // ama obstacle'a temas ediyorsa çizme.
+                if (!IsVisibleCell(x, y + 1) && ShouldDrawLineTouchingCells(x, y, x, y + 1))
                 {
                     CreateLine(
                         $"GridLine_B_{x}_{y}",
@@ -825,6 +871,14 @@ public class GridSpawner : MonoBehaviour
 
     private Image DrawObstacleImage(ObstacleDef def, int x, int y)
     {
+        if (def == null)
+            return null;
+
+        // Movable obstacle burada ASLA büyütülmez.
+        // O TileView üzerinden normal ikon gibi davranacak.
+        if (def.IsMovableObstacle)
+            return null;
+
         Sprite sprite = def.GetPreviewSprite();
         if (sprite == null) return null;
 
@@ -838,23 +892,35 @@ public class GridSpawner : MonoBehaviour
         var parent = drawUnder ? underTilesObstaclesRoot : overTilesObstaclesRoot;
         go.transform.SetParent(parent, false);
 
+        // Sadece static obstacle için grid çizgisi payını kapatıyoruz.
+        float gridOverlap = Mathf.Max(1f, Mathf.Ceil(runtimeGridLineThickness * 0.5f));
+
         var rt = go.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
-        rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
-        rt.sizeDelta = new Vector2(w * tileSize, h * tileSize);
+
+        rt.anchoredPosition = new Vector2(
+            x * tileSize - gridOverlap,
+            -y * tileSize + gridOverlap
+        );
+
+        rt.sizeDelta = new Vector2(
+            w * tileSize + gridOverlap * 2f,
+            h * tileSize + gridOverlap * 2f
+        );
 
         var img = go.GetComponent<Image>();
         img.sprite = sprite;
+        img.type = Image.Type.Simple;
         img.preserveAspect = false;
         img.raycastTarget = true;
 
         var clickProxy = go.AddComponent<ObstacleClickProxy>();
         clickProxy.Init(board, x, y);
+
         return img;
     }
-
     private void HandleObstacleVisualChanged(ObstacleVisualChange change)
     {
         if (!obstacleViewsByOrigin.TryGetValue(change.originIndex, out var image) || image == null)
