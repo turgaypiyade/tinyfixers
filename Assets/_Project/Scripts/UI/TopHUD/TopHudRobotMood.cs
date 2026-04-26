@@ -21,20 +21,21 @@ public class TopHudRobotMood : MonoBehaviour
     [SerializeField] private Sprite sadSprite;
     [SerializeField] private Sprite excitedSprite;
 
-    [Header("Behaviour")]
-    [SerializeField] private bool setIdleOnStart = true;
-    [SerializeField] private bool playMoodPunch = true;
+    [Header("Animation")]
+    [SerializeField] private bool animateMoodChange = true;
     [SerializeField] private float punchScale = 1.08f;
     [SerializeField] private float punchUpTime = 0.08f;
     [SerializeField] private float punchDownTime = 0.12f;
 
-    private Coroutine moodRoutine;
+    private Coroutine temporaryMoodRoutine;
     private Coroutine punchRoutine;
-    private Mood currentMood = Mood.Idle;
     private Vector3 originalScale = Vector3.one;
 
     private void Awake()
     {
+        if (robotImage == null)
+            robotImage = GetComponent<Image>();
+
         if (robotImage == null)
             robotImage = GetComponentInChildren<Image>(true);
 
@@ -48,8 +49,7 @@ public class TopHudRobotMood : MonoBehaviour
 
     private void Start()
     {
-        if (setIdleOnStart)
-            SetMood(Mood.Idle, false);
+        SetMood(Mood.Idle, animate: false);
     }
 
     public void SetIdle()
@@ -72,15 +72,37 @@ public class TopHudRobotMood : MonoBehaviour
         SetMood(Mood.Excited);
     }
 
-    public void SetMood(Mood mood)
+    public void SetMood(Mood mood, bool animate = true)
     {
-        SetMood(mood, true);
+        if (temporaryMoodRoutine != null)
+        {
+            StopCoroutine(temporaryMoodRoutine);
+            temporaryMoodRoutine = null;
+        }
+
+        ApplyMood(mood, animate);
     }
 
-    public void SetMood(Mood mood, bool animate)
+    public void PlayTemporaryMood(Mood mood, float duration)
     {
-        currentMood = mood;
+        if (temporaryMoodRoutine != null)
+            StopCoroutine(temporaryMoodRoutine);
 
+        temporaryMoodRoutine = StartCoroutine(CoTemporaryMood(mood, duration));
+    }
+
+    private IEnumerator CoTemporaryMood(Mood mood, float duration)
+    {
+        ApplyMood(mood, animate: true);
+
+        yield return new WaitForSeconds(Mathf.Max(0f, duration));
+
+        ApplyMood(Mood.Idle, animate: true);
+        temporaryMoodRoutine = null;
+    }
+
+    private void ApplyMood(Mood mood, bool animate)
+    {
         if (robotImage == null)
             return;
 
@@ -90,27 +112,8 @@ public class TopHudRobotMood : MonoBehaviour
 
         robotImage.enabled = robotImage.sprite != null;
 
-        if (animate && playMoodPunch)
+        if (animate && animateMoodChange)
             PlayPunch();
-    }
-
-    public void PlayTemporaryMood(Mood mood, float duration = 0.85f)
-    {
-        if (moodRoutine != null)
-            StopCoroutine(moodRoutine);
-
-        moodRoutine = StartCoroutine(CoTemporaryMood(mood, duration));
-    }
-
-    private IEnumerator CoTemporaryMood(Mood mood, float duration)
-    {
-        Mood previousMood = currentMood;
-
-        SetMood(mood, true);
-        yield return new WaitForSeconds(Mathf.Max(0f, duration));
-
-        SetMood(previousMood, true);
-        moodRoutine = null;
     }
 
     private Sprite GetSprite(Mood mood)
@@ -124,7 +127,11 @@ public class TopHudRobotMood : MonoBehaviour
                 return sadSprite != null ? sadSprite : idleSprite;
 
             case Mood.Excited:
-                return excitedSprite != null ? excitedSprite : happySprite != null ? happySprite : idleSprite;
+                return excitedSprite != null
+                    ? excitedSprite
+                    : happySprite != null
+                        ? happySprite
+                        : idleSprite;
 
             case Mood.Idle:
             default:
