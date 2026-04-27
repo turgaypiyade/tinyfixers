@@ -267,7 +267,9 @@ public class CascadeLogic
 
                 action.AddMove(
                     tile,
+                    x,
                     fromY,
+                    x,
                     targetY,
                     _colDuration[i],
                     useFallSettle,
@@ -342,6 +344,7 @@ public class CascadeLogic
         for (int x = 0; x < board.Width; x++)
         {
             int segStartY = board.Height - 1;
+
             for (int y = board.Height - 1; y >= -1; y--)
             {
                 bool isBoundary = (y == -1) || IsGravityBlockedCell(x, y);
@@ -350,20 +353,28 @@ public class CascadeLogic
                     continue;
 
                 int segEndY = y + 1;
+
                 if (segEndY <= segStartY)
                 {
                     _slots.Clear();
+
                     for (int yy = segStartY; yy >= segEndY; yy--)
                     {
-                        if (board.Holes[x, yy]) continue;
+                        if (board.Holes[x, yy])
+                            continue;
+
                         _slots.Add(yy);
                     }
 
                     _existing.Clear();
+
                     for (int yy = segStartY; yy >= segEndY; yy--)
                     {
-                        if (board.Holes[x, yy]) continue;
+                        if (board.Holes[x, yy])
+                            continue;
+
                         var tv = board.Tiles[x, yy];
+
                         if (tv != null)
                             _existing.Add(tv);
                     }
@@ -409,7 +420,9 @@ public class CascadeLogic
 
                             action.AddMove(
                                 tile,
+                                x,
                                 fromY,
+                                x,
                                 toY,
                                 moveDuration,
                                 useFallSettle,
@@ -428,44 +441,44 @@ public class CascadeLogic
     }
 
     private bool TryDiagonalFrom(
-       int fromX, int fromY,
-       int toX, int toY,
-       HashSet<TileView> movedThisPass,
-       FallAction action)
+      int fromX, int fromY,
+      int toX, int toY,
+      HashSet<TileView> movedThisPass,
+      FallAction action)
     {
-        int cax = fromX, cay = toY;
-        int cbx = toX, cby = fromY;
+        int cax = fromX;
+        int cay = toY;
+        int cbx = toX;
+        int cby = fromY;
 
-        if (cax < 0 || cax >= board.Width || cay < 0 || cay >= board.Height) return false;
-        if (cbx < 0 || cbx >= board.Width || cby < 0 || cby >= board.Height) return false;
-        if (board.IsMaskHoleCell(cax, cay) || board.IsMaskHoleCell(cbx, cby)) return false;
-
-        if (IsGravityBlockedCell(cax, cay) || IsGravityBlockedCell(cbx, cby))
+        if (!IsDiagonalPassableCell(cax, cay))
             return false;
 
-        var obs = board.ObstacleStateService;
-        if (obs != null)
-        {
-            if (obs.IsCellBlocked(cax, cay) && !obs.GetAllowDiagonalAt(cax, cay)) return false;
-            if (obs.IsCellBlocked(cbx, cby) && !obs.GetAllowDiagonalAt(cbx, cby)) return false;
-        }
+        if (!IsDiagonalPassableCell(cbx, cby))
+            return false;
 
         return TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, action);
     }
-
     private bool TrySlideFrom(
-        int fromX, int fromY,
-        int toX, int toY,
-        HashSet<TileView> movedThisPass,
-        FallAction action)
+      int fromX, int fromY,
+      int toX, int toY,
+      HashSet<TileView> movedThisPass,
+      FallAction action)
     {
-        if (fromX < 0 || fromX >= board.Width || fromY < 0 || fromY >= board.Height) return false;
-        if (board.Holes[fromX, fromY]) return false;
+        if (fromX < 0 || fromX >= board.Width || fromY < 0 || fromY >= board.Height)
+            return false;
+
+        if (toX < 0 || toX >= board.Width || toY < 0 || toY >= board.Height)
+            return false;
+
+        if (board.Holes[fromX, fromY])
+            return false;
 
         var tile = board.Tiles[fromX, fromY];
-        if (tile == null || movedThisPass.Contains(tile)) return false;
 
-        // ── MovableObstacle: diagonal/slide taşıma sırasında pozisyon sync ──
+        if (tile == null || movedThisPass.Contains(tile))
+            return false;
+
         if (board.ObstacleStateService != null
             && board.ObstacleStateService.IsMovableObstacleAt(fromX, fromY))
         {
@@ -474,11 +487,17 @@ public class CascadeLogic
 
         board.Tiles[fromX, fromY] = null;
         board.Tiles[toX, toY] = tile;
+
         tile.SetCoords(toX, toY);
+
         board.SyncTileData(fromX, fromY);
         board.SyncTileData(toX, toY);
 
-        float slideDuration = board.GetFallDurationForDistance(1);
+        float slideDistanceCells = Vector2.Distance(
+            new Vector2(fromX, fromY),
+            new Vector2(toX, toY));
+
+        float slideDuration = board.GetFallDurationForDistance(1) * Mathf.Max(1f, slideDistanceCells);
 
         bool useSlideSettle = board.EnableFallSettle;
         float slideSettleDur = board.FallSettleDuration * 0.82f;
@@ -486,7 +505,9 @@ public class CascadeLogic
 
         action.AddMove(
             tile,
+            fromX,
             fromY,
+            toX,
             toY,
             slideDuration,
             useSlideSettle,
@@ -498,6 +519,27 @@ public class CascadeLogic
         return true;
     }
 
+    private bool IsDiagonalPassableCell(int x, int y)
+    {
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+
+        if (board.IsMaskHoleCell(x, y))
+            return false;
+
+        if (board.IsPendingTriggeredSpecialCell(x, y))
+            return false;
+
+        var obs = board.ObstacleStateService;
+
+        if (obs == null)
+            return true;
+
+        if (!obs.IsCellBlocked(x, y))
+            return true;
+
+        return obs.GetAllowDiagonalAt(x, y);
+    }
     public bool HasAnyEmptyPlayableCell()
     {
         for (int y = 0; y < board.Height; y++)

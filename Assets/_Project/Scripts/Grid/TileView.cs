@@ -69,7 +69,7 @@ public class TileView : MonoBehaviour,
     //
     // 35 → 42: %20 daha hızlı fall motion.
     // ============================================================
-    private const float FALL_VELOCITY = 42.0f;  // cell/sec — sabit hız
+    private const float FALL_VELOCITY = 30.0f;
 
     public void MarkPlannedToMoveThisFallPass(bool value)
     {
@@ -396,6 +396,196 @@ public class TileView : MonoBehaviour,
             float eased = k * k;
 
             rt.anchoredPosition = Vector2.LerpUnclamped(overUp, end, eased);
+
+            yield return null;
+        }
+
+        if (visualRt != null)
+            visualRt.localScale = visualBaseScale;
+
+        if (rt != null && rt)
+            SnapToGrid(tileSize);
+    }
+    private Vector2 GetFallCellAnchoredPosition(int cellX, int cellY, int tileSize)
+    {
+        bool isSpecial = model != null && model.special != TileSpecial.None;
+        bool isMovable = isMovableObstacleTile;
+
+        if (isMovable)
+            return new Vector2(cellX * tileSize, -cellY * tileSize);
+
+        if (isSpecial)
+        {
+            float cellH;
+
+            if (useFullCellIcon)
+            {
+                cellH = tileSize;
+            }
+            else
+            {
+                float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
+                cellH = tileSize * Mathf.Max(0.1f, ratioY);
+            }
+
+            float elemH = cellH * (110f / 115f);
+            float yOffset = (cellH - elemH) * 0.5f;
+
+            return new Vector2(cellX * tileSize, -cellY * tileSize - yOffset);
+        }
+
+        return new Vector2(cellX * tileSize, -cellY * tileSize);
+    }
+
+    public IEnumerator MoveToGridCell(
+        int tileSize,
+        int fromX,
+        int fromY,
+        int toX,
+        int toY,
+        float duration,
+        AnimationCurve easingCurve = null,
+        bool enableSettle = false,
+        float settleDuration = 0.06f,
+        float settleStrength = 0.04f,
+        float settleStretchX = 0f,
+        float settleOvershoot = 0f)
+    {
+        lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+
+        if (rt == null)
+            rt = GetComponent<RectTransform>();
+
+        if (rt == null || !rt)
+            yield break;
+
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+
+        RectTransform visualRt = iconImage != null ? iconImage.rectTransform : null;
+        Vector3 visualBaseScale = visualRt != null ? visualRt.localScale : Vector3.one;
+
+        Vector2 start = GetFallCellAnchoredPosition(fromX, fromY, tileSize);
+        Vector2 end = GetFallCellAnchoredPosition(toX, toY, tileSize);
+
+        // Kritik: TileView.X/Y zaten logical final state olabilir.
+        // Bu nedenle visual baslangici record.from'dan zorla kuruyoruz.
+        rt.anchoredPosition = start;
+
+        float totalPixels = Vector2.Distance(start, end);
+
+        if (totalPixels < 0.5f)
+        {
+            rt.anchoredPosition = end;
+            SnapToGrid(tileSize);
+            yield break;
+        }
+
+        float totalCells = totalPixels / Mathf.Max(1f, tileSize);
+        float traveledCells = 0f;
+
+        while (traveledCells < totalCells)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            float deltaCells = FALL_VELOCITY * Time.deltaTime;
+            traveledCells += deltaCells;
+
+            if (traveledCells > totalCells)
+                traveledCells = totalCells;
+
+            float t = Mathf.Clamp01(traveledCells / totalCells);
+
+            // Easing kullanmiyoruz; referans videodaki gibi sabit hiz.
+            rt.anchoredPosition = Vector2.LerpUnclamped(start, end, t);
+
+            yield return null;
+        }
+
+        if (rt == null || !rt)
+            yield break;
+
+        rt.anchoredPosition = end;
+        SnapToGrid(tileSize);
+
+        if (!enableSettle || settleDuration <= 0f)
+            yield break;
+
+        Vector2 basePos = rt.anchoredPosition;
+        Vector2 overshoot = basePos + new Vector2(0f, -settleStrength * tileSize);
+        Vector2 overUp = basePos + new Vector2(0f, settleStrength * tileSize * 0.3f);
+
+        float bounceDur = settleDuration;
+
+        float b1 = 0f;
+        while (b1 < bounceDur * 0.35f)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            b1 += Time.deltaTime;
+
+            float k = Mathf.Clamp01(b1 / Mathf.Max(0.0001f, bounceDur * 0.35f));
+            float eased = 1f - (1f - k) * (1f - k);
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(basePos, overshoot, eased);
+
+            if (visualRt != null && settleStretchX > 0f)
+            {
+                float sx = 1f + settleStretchX * eased;
+                float sy = 1f - settleStretchX * eased * 0.5f;
+
+                visualRt.localScale = new Vector3(
+                    visualBaseScale.x * sx,
+                    visualBaseScale.y * sy,
+                    visualBaseScale.z);
+            }
+
+            yield return null;
+        }
+
+        float b2 = 0f;
+        while (b2 < bounceDur * 0.35f)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            b2 += Time.deltaTime;
+
+            float k = Mathf.Clamp01(b2 / Mathf.Max(0.0001f, bounceDur * 0.35f));
+            float eased = 1f - (1f - k) * (1f - k);
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(overshoot, overUp, eased);
+
+            if (visualRt != null && settleStretchX > 0f)
+            {
+                float revK = 1f - k;
+                float sx = 1f + settleStretchX * revK;
+                float sy = 1f - settleStretchX * revK * 0.5f;
+
+                visualRt.localScale = new Vector3(
+                    visualBaseScale.x * sx,
+                    visualBaseScale.y * sy,
+                    visualBaseScale.z);
+            }
+
+            yield return null;
+        }
+
+        float b3 = 0f;
+        while (b3 < bounceDur * 0.3f)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            b3 += Time.deltaTime;
+
+            float k = Mathf.Clamp01(b3 / Mathf.Max(0.0001f, bounceDur * 0.3f));
+            float eased = k * k;
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(overUp, basePos, eased);
 
             yield return null;
         }
