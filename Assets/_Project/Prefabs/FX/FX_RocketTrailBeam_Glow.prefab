@@ -199,8 +199,8 @@ MonoBehaviour:
   noiseScale: 2.5
   minSegments: 12
   segmentsPerUnit: 22
-  tailAlpha: 0.4
+  tailAlpha: 0.6
   headAlpha: 1
-  fadeOutDuration: 0.34
+  fadeOutDuration: 0.2
   sortingLayerName: 
   sortingOrder: 100

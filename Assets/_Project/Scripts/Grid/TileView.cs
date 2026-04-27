@@ -31,9 +31,18 @@ public class TileView : MonoBehaviour,
     [SerializeField, Range(0.5f, 1f)]
     [FormerlySerializedAs("runtimeIconScale")]
     private float iconScale = 0.98f;
-    [SerializeField] private Vector2 iconSize = new Vector2(100f, 100f);
 
+    [SerializeField] private Vector2 iconSize = new Vector2(100f, 100f);
     [SerializeField] private bool useFullCellIcon = false;
+
+    private Coroutine specialCreationRevealRoutine;
+    private GameObject specialCreationRevealRoot;
+    private static Sprite specialRevealHaloSprite;
+
+    private bool specialRevealVisualCaptured;
+    private Vector3 specialRevealIconBaseScale = Vector3.one;
+    private Quaternion specialRevealIconBaseRotation = Quaternion.identity;
+    private Color specialRevealIconBaseColor = Color.white;
 
     public enum TileVisualLayout
     {
@@ -45,7 +54,6 @@ public class TileView : MonoBehaviour,
     [SerializeField] private TileVisualLayout visualLayout = TileVisualLayout.Centered;
 
     private bool isMovableObstacleTile = false;
-
     private int lastAppliedTileSize;
 
     // Bu taşın düştüğü CollapseAndSpawnAnimated nesil ID'si. -1 = hiç düşmedi.
@@ -57,17 +65,7 @@ public class TileView : MonoBehaviour,
     public bool IsPlannedToMoveThisFallPass { get; private set; }
 
     // ============================================================
-    // SABİT HIZ fall modeli (kullanıcı vizyonu — hızlandırıldı)
-    //
-    // Tüm taşlar V_MAX ile başlar ve V_MAX'ta devam eder. İvmelenme yok.
-    // Düşüş süresi = mesafe / V_MAX (deterministik, basit).
-    //
-    // Akordiyon hissi FallAction içindeki adaptive start delay ile gelir:
-    //   - Farklı taşlar farklı zamanlarda BAŞLAR
-    //   - Ama hepsi AYNI hızda iner
-    //   - Aralarındaki görsel mesafe = start delay farkı × V_MAX
-    //
-    // 35 → 42: %20 daha hızlı fall motion.
+    // SABİT HIZ fall modeli
     // ============================================================
     private const float FALL_VELOCITY = 30.0f;
 
@@ -86,10 +84,13 @@ public class TileView : MonoBehaviour,
 
     private void UpdateSiblingOrder()
     {
-        if (transform.parent == null || board == null) return;
+        if (transform.parent == null || board == null)
+            return;
+
         int tilesPerRow = board.Width;
         int totalTiles = board.Width * board.Height;
         int idx = totalTiles - 1 - (Y * tilesPerRow + X);
+
         transform.SetSiblingIndex(Mathf.Clamp(idx, 0, totalTiles - 1));
     }
 
@@ -118,6 +119,11 @@ public class TileView : MonoBehaviour,
     private void OnEnable()
     {
         ResetVisualState();
+    }
+
+    private void OnDisable()
+    {
+        StopSpecialCreationReveal();
     }
 
     public void Init(BoardController board, int x, int y)
@@ -150,6 +156,7 @@ public class TileView : MonoBehaviour,
                 Debug.Log($"[TileDebug] Parent Image: {img.gameObject.name} color={img.color} raycast={img.raycastTarget}");
         }
     }
+
     private void ResetVisualState()
     {
         transform.localScale = Vector3.one;
@@ -164,6 +171,7 @@ public class TileView : MonoBehaviour,
             iconImage.transform.localScale = Vector3.one;
             iconImage.transform.localRotation = Quaternion.identity;
         }
+
     }
 
     public bool TryGetCellState(out BoardCellStateSnapshot state)
@@ -172,26 +180,34 @@ public class TileView : MonoBehaviour,
         return board != null && board.TryGetCellState(X, Y, out state);
     }
 
-
     public void RefreshIcon()
     {
-        if (model == null || board == null) return;
+        if (model == null || board == null)
+            return;
 
         if (model.special == TileSpecial.SystemOverride)
         {
             Sprite sp = null;
+
             if (model.hasOverrideBaseType)
                 sp = board.GetOverrideIcon(model.overrideBaseType);
+
             if (sp == null)
                 sp = board.GetSpecialIcon(model.special);
-            if (sp != null) SetIcon(sp);
-            else SetIcon(board.GetIcon(model.type));
+
+            if (sp != null)
+                SetIcon(sp);
+            else
+                SetIcon(board.GetIcon(model.type));
         }
         else if (model.special != TileSpecial.None)
         {
             var sp = board.GetSpecialIcon(model.special);
-            if (sp != null) SetIcon(sp);
-            else SetIcon(board.GetIcon(model.type));
+
+            if (sp != null)
+                SetIcon(sp);
+            else
+                SetIcon(board.GetIcon(model.type));
         }
         else
         {
@@ -201,8 +217,11 @@ public class TileView : MonoBehaviour,
 
     public void SnapToGrid(int tileSize)
     {
-        if (rt == null) rt = GetComponent<RectTransform>();
-        if (parentRt == null) parentRt = rt.parent as RectTransform;
+        if (rt == null)
+            rt = GetComponent<RectTransform>();
+
+        if (parentRt == null)
+            parentRt = rt.parent as RectTransform;
 
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(0, 1);
@@ -213,31 +232,20 @@ public class TileView : MonoBehaviour,
         ApplyTileSize(tileSize);
     }
 
-
-    // ============================================================
-    // MoveToGrid v4 — İVMELİ FİZİK + HIZLANDIRILMIŞ PARAMETRELER
-    //
-    // Model:
-    //   v(t) = min(V_START + GRAVITY * t, V_MAX)
-    //   traveled(t) = integral v(t) dt
-    //   bitiş: traveled == distance
-    //
-    // duration parametresi YOK SAYILIR — süre fizik tarafından türetilir.
-    // easingCurve YOK SAYILIR — curve yerine fizik denklemi.
-    // ============================================================
-
     public IEnumerator MoveToGrid(
-      int tileSize,
-      float duration,                      // YOK SAYILIR (backward compat)
-      AnimationCurve easingCurve = null,   // YOK SAYILIR (backward compat)
-      bool enableSettle = false,
-      float settleDuration = 0.06f,
-      float settleStrength = 0.04f,
-      float settleStretchX = 0f,
-      float settleOvershoot = 0f)
+        int tileSize,
+        float duration,
+        AnimationCurve easingCurve = null,
+        bool enableSettle = false,
+        float settleDuration = 0.06f,
+        float settleStrength = 0.04f,
+        float settleStretchX = 0f,
+        float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
-        if (rt == null || !rt) yield break;
+
+        if (rt == null || !rt)
+            yield break;
 
         RectTransform visualRt = iconImage != null ? iconImage.rectTransform : null;
         Vector3 visualBaseScale = visualRt != null ? visualRt.localScale : Vector3.one;
@@ -248,8 +256,6 @@ public class TileView : MonoBehaviour,
         bool isSpecial = model != null && model.special != TileSpecial.None;
         bool isMovable = isMovableObstacleTile;
 
-        // Movable obstacle tile gibi hareket eder ama special offset almaz.
-        // Böylece hücre merkezine/pozisyonuna tam oturur.
         if (isMovable)
         {
             end = new Vector2(X * tileSize, -Y * tileSize);
@@ -278,7 +284,6 @@ public class TileView : MonoBehaviour,
             end = new Vector2(X * tileSize, -Y * tileSize);
         }
 
-        // ======= SABİT HIZ FİZİĞİ =======
         float totalPixels = Mathf.Abs(end.y - start.y);
 
         if (totalPixels < 0.5f)
@@ -294,17 +299,14 @@ public class TileView : MonoBehaviour,
 
         float totalCells = totalPixels / Mathf.Max(1f, (float)tileSize);
         float direction = end.y < start.y ? -1f : 1f;
-
-        // Sabit hız — ivmelenme yok, taş tam hızında başlar ve tam hızında biter
         float traveledCells = 0f;
 
         while (traveledCells < totalCells)
         {
-            if (rt == null || !rt) yield break;
+            if (rt == null || !rt)
+                yield break;
 
-            float dt = Time.deltaTime;
-
-            float deltaCells = FALL_VELOCITY * dt;
+            float deltaCells = FALL_VELOCITY * Time.deltaTime;
             traveledCells += deltaCells;
 
             if (traveledCells > totalCells)
@@ -316,12 +318,12 @@ public class TileView : MonoBehaviour,
             yield return null;
         }
 
-        if (rt == null || !rt) yield break;
+        if (rt == null || !rt)
+            yield break;
 
         rt.anchoredPosition = end;
         SnapToGrid(tileSize);
 
-        // ======= SETTLE / BOUNCE =======
         if (!enableSettle || settleDuration <= 0f)
             yield break;
 
@@ -333,11 +335,12 @@ public class TileView : MonoBehaviour,
         float b1 = 0f;
         while (b1 < bounceDur * 0.35f)
         {
-            if (rt == null || !rt) yield break;
+            if (rt == null || !rt)
+                yield break;
 
             b1 += Time.deltaTime;
 
-            float k = Mathf.Clamp01(b1 / (bounceDur * 0.35f));
+            float k = Mathf.Clamp01(b1 / Mathf.Max(0.0001f, bounceDur * 0.35f));
             float eased = 1f - (1f - k) * (1f - k);
 
             rt.anchoredPosition = Vector2.LerpUnclamped(end, overshoot, eased);
@@ -350,8 +353,7 @@ public class TileView : MonoBehaviour,
                 visualRt.localScale = new Vector3(
                     visualBaseScale.x * sx,
                     visualBaseScale.y * sy,
-                    visualBaseScale.z
-                );
+                    visualBaseScale.z);
             }
 
             yield return null;
@@ -360,11 +362,12 @@ public class TileView : MonoBehaviour,
         float b2 = 0f;
         while (b2 < bounceDur * 0.35f)
         {
-            if (rt == null || !rt) yield break;
+            if (rt == null || !rt)
+                yield break;
 
             b2 += Time.deltaTime;
 
-            float k = Mathf.Clamp01(b2 / (bounceDur * 0.35f));
+            float k = Mathf.Clamp01(b2 / Mathf.Max(0.0001f, bounceDur * 0.35f));
             float eased = 1f - (1f - k) * (1f - k);
 
             rt.anchoredPosition = Vector2.LerpUnclamped(overshoot, overUp, eased);
@@ -378,8 +381,7 @@ public class TileView : MonoBehaviour,
                 visualRt.localScale = new Vector3(
                     visualBaseScale.x * sx,
                     visualBaseScale.y * sy,
-                    visualBaseScale.z
-                );
+                    visualBaseScale.z);
             }
 
             yield return null;
@@ -388,11 +390,12 @@ public class TileView : MonoBehaviour,
         float b3 = 0f;
         while (b3 < bounceDur * 0.3f)
         {
-            if (rt == null || !rt) yield break;
+            if (rt == null || !rt)
+                yield break;
 
             b3 += Time.deltaTime;
 
-            float k = Mathf.Clamp01(b3 / (bounceDur * 0.3f));
+            float k = Mathf.Clamp01(b3 / Mathf.Max(0.0001f, bounceDur * 0.3f));
             float eased = k * k;
 
             rt.anchoredPosition = Vector2.LerpUnclamped(overUp, end, eased);
@@ -406,6 +409,7 @@ public class TileView : MonoBehaviour,
         if (rt != null && rt)
             SnapToGrid(tileSize);
     }
+
     private Vector2 GetFallCellAnchoredPosition(int cellX, int cellY, int tileSize)
     {
         bool isSpecial = model != null && model.special != TileSpecial.None;
@@ -469,8 +473,6 @@ public class TileView : MonoBehaviour,
         Vector2 start = GetFallCellAnchoredPosition(fromX, fromY, tileSize);
         Vector2 end = GetFallCellAnchoredPosition(toX, toY, tileSize);
 
-        // Kritik: TileView.X/Y zaten logical final state olabilir.
-        // Bu nedenle visual baslangici record.from'dan zorla kuruyoruz.
         rt.anchoredPosition = start;
 
         float totalPixels = Vector2.Distance(start, end);
@@ -497,8 +499,6 @@ public class TileView : MonoBehaviour,
                 traveledCells = totalCells;
 
             float t = Mathf.Clamp01(traveledCells / totalCells);
-
-            // Easing kullanmiyoruz; referans videodaki gibi sabit hiz.
             rt.anchoredPosition = Vector2.LerpUnclamped(start, end, t);
 
             yield return null;
@@ -596,6 +596,307 @@ public class TileView : MonoBehaviour,
         if (rt != null && rt)
             SnapToGrid(tileSize);
     }
+
+    public void PlaySpecialCreationReveal(TileSpecial special, int tileSize)
+    {
+        if (special == TileSpecial.None)
+            return;
+
+        if (!gameObject.activeInHierarchy)
+            return;
+
+        if (iconImage == null)
+            return;
+
+        StopSpecialCreationReveal();
+
+        specialCreationRevealRoutine = StartCoroutine(CoSpecialCreationRevealSimple(special, tileSize));
+    }
+
+    private void StopSpecialCreationReveal()
+    {
+        if (specialCreationRevealRoutine != null)
+        {
+            StopCoroutine(specialCreationRevealRoutine);
+            specialCreationRevealRoutine = null;
+        }
+
+        if (specialRevealVisualCaptured && iconImage != null)
+        {
+            RectTransform iconRt = iconImage.rectTransform;
+
+            if (iconRt != null)
+            {
+                iconRt.localScale = specialRevealIconBaseScale;
+                iconRt.localRotation = specialRevealIconBaseRotation;
+            }
+
+            iconImage.color = specialRevealIconBaseColor;
+        }
+
+        specialRevealVisualCaptured = false;
+
+        if (specialCreationRevealRoot != null)
+        {
+            Destroy(specialCreationRevealRoot);
+            specialCreationRevealRoot = null;
+        }
+
+        Transform oldHalo = transform.Find("__SpecialCreationHalo");
+        if (oldHalo != null)
+            Destroy(oldHalo.gameObject);
+    }
+
+    private IEnumerator CoSpecialCreationRevealSimple(TileSpecial special, int tileSize)
+    {
+        // PendingCreationApplicator already calls this after RefreshIcon and obstacle refresh.
+        // Wait one frame so final icon sprite/layout is definitely ready.
+        yield return null;
+
+        if (iconImage == null || iconImage.sprite == null)
+            yield break;
+
+        RectTransform iconRt = iconImage.rectTransform;
+
+        if (iconRt == null)
+            yield break;
+
+        specialRevealIconBaseScale = iconRt.localScale;
+        specialRevealIconBaseRotation = iconRt.localRotation;
+        specialRevealIconBaseColor = iconImage.color;
+        specialRevealIconBaseColor.a = 1f;
+        specialRevealVisualCaptured = true;
+
+        iconImage.color = specialRevealIconBaseColor;
+
+        specialCreationRevealRoot = new GameObject(
+            "__SpecialCreationHalo",
+            typeof(RectTransform),
+            typeof(Image));
+
+        specialCreationRevealRoot.transform.SetParent(transform, false);
+        specialCreationRevealRoot.transform.SetAsLastSibling();
+
+        RectTransform haloRt = specialCreationRevealRoot.GetComponent<RectTransform>();
+        haloRt.anchorMin = new Vector2(0.5f, 0.5f);
+        haloRt.anchorMax = new Vector2(0.5f, 0.5f);
+        haloRt.pivot = new Vector2(0.5f, 0.5f);
+        haloRt.anchoredPosition = iconRt.anchoredPosition;
+        haloRt.sizeDelta = new Vector2(tileSize * 2.6f, tileSize * 2.6f);
+        haloRt.localScale = Vector3.zero;
+        haloRt.localRotation = Quaternion.identity;
+
+        Image haloImage = specialCreationRevealRoot.GetComponent<Image>();
+        haloImage.sprite = GetOrCreateSpecialRevealHaloSprite();
+        haloImage.raycastTarget = false;
+        haloImage.color = new Color(1f, 1f, 1f, 0f);
+
+        // LineH: yatay eksende dönüyormuş hissi -> Y ölçeği sıkışır
+        // Diğerleri: dikey eksende dönüyormuş hissi -> X ölçeği sıkışır
+        // Gerçek 3D rotation kullanmıyoruz çünkü 2D sprite kenara gelince
+        // ince çizgi olup arkasını (ayna) gösterir.
+        bool spinAroundHorizontal = (special == TileSpecial.LineH);
+
+        // Faz sırası:
+        // 1) grow    : imaj + halo birlikte büyür (halo baştan görünür)
+        // 2) spin    : büyümüş + halolu halde 360° "döner" (fake spin: scale ile)
+        // 3) settle  : halo söner + imaj normal boyutuna oturur
+        const float growDuration = 0.22f;
+        const float spinDuration = 0.55f;
+        const float settleDuration = 0.22f;
+
+        const float maxScale = 1.85f;
+        const float haloMaxScale = 1.35f;  // büyümüş imajı saran geniş hale
+        const float haloStartScale = 0.55f;  // baştan görünür, imajla beraber büyür
+        const float haloEndScale = 0.45f;  // sönerken hafifçe küçülür (imajla beraber)
+        const float haloPeakAlpha = 0.55f;  // halo en parlak halinde bile yarı saydam
+
+        float totalDuration = growDuration + spinDuration + settleDuration;
+        float elapsed = 0f;
+
+        // Halo başlangıçta küçük ama görünür — imajla beraber büyüyecek.
+        haloRt.localScale = Vector3.one * haloStartScale;
+        if (haloImage != null)
+            haloImage.color = new Color(1f, 1f, 1f, haloPeakAlpha);
+
+        while (elapsed < totalDuration)
+        {
+            if (this == null || iconImage == null || iconRt == null || specialCreationRevealRoot == null)
+                yield break;
+
+            elapsed += Time.deltaTime;
+
+            float angle;        // 0..360 fake spin açısı
+            float baseScale;    // imajın büyüme ölçeği
+            float haloScale;
+            float haloAlpha;
+
+            if (elapsed < growDuration)
+            {
+                // 1) İmaj + halo birlikte büyür, dönüş yok
+                float t = Mathf.Clamp01(elapsed / growDuration);
+                float e = EaseOutBackLight(t);
+
+                baseScale = Mathf.LerpUnclamped(1f, maxScale, e);
+                haloScale = Mathf.LerpUnclamped(haloStartScale, haloMaxScale, e);
+                haloAlpha = haloPeakAlpha;
+                angle = 0f;
+            }
+            else if (elapsed < growDuration + spinDuration)
+            {
+                // 2) Fake spin: büyümüş + halolu halde 360°
+                float t = Mathf.Clamp01((elapsed - growDuration) / spinDuration);
+                float e = EaseInOut(t);
+
+                baseScale = maxScale;
+                haloScale = haloMaxScale + Mathf.Sin(t * Mathf.PI) * 0.06f;
+                haloAlpha = haloPeakAlpha;
+                angle = Mathf.LerpUnclamped(0f, 360f, e);
+            }
+            else
+            {
+                // 3) Halo söner + imaj normale oturur
+                float t = Mathf.Clamp01((elapsed - growDuration - spinDuration) / settleDuration);
+                float e = EaseOut(t);
+
+                baseScale = Mathf.LerpUnclamped(maxScale, 1f, e);
+                haloScale = Mathf.LerpUnclamped(haloMaxScale, haloEndScale, e);
+                haloAlpha = haloPeakAlpha * (1f - t);
+                angle = 360f;
+            }
+
+            // Fake spin: cos(angle) ile sıkıştırma. cos(0)=1, cos(90)=0, cos(180)=-1.
+            // Negatif değerler "arka taraf" gibi görünür — Abs alıp ayna kontrolü
+            // yapmıyoruz, sprite simetrik göründüğü için yeterli.
+            float spinFactor = Mathf.Cos(angle * Mathf.Deg2Rad);
+            float squashedAxis = Mathf.Abs(spinFactor);
+            // Tam 90°/270°'de sıfıra inmesin, ince bir minimum bırak.
+            squashedAxis = Mathf.Max(0.05f, squashedAxis);
+
+            float scaleX, scaleY;
+            if (spinAroundHorizontal)
+            {
+                // LineH: yatay eksende dönüş -> Y sıkışır, X sabit kalır
+                scaleX = baseScale;
+                scaleY = baseScale * squashedAxis;
+            }
+            else
+            {
+                // Diğerleri: dikey eksende dönüş -> X sıkışır, Y sabit kalır
+                scaleX = baseScale * squashedAxis;
+                scaleY = baseScale;
+            }
+
+            iconRt.localScale = new Vector3(
+                specialRevealIconBaseScale.x * scaleX,
+                specialRevealIconBaseScale.y * scaleY,
+                specialRevealIconBaseScale.z);
+            iconRt.localRotation = specialRevealIconBaseRotation;
+
+            haloRt.localScale = Vector3.one * haloScale;
+            haloRt.localRotation = Quaternion.identity;
+
+            if (haloImage != null)
+                haloImage.color = new Color(1f, 1f, 1f, haloAlpha);
+
+            yield return null;
+        }
+
+        if (iconRt != null)
+        {
+            iconRt.localScale = specialRevealIconBaseScale;
+            iconRt.localRotation = specialRevealIconBaseRotation;
+        }
+
+        if (iconImage != null)
+            iconImage.color = specialRevealIconBaseColor;
+
+        specialRevealVisualCaptured = false;
+
+        if (specialCreationRevealRoot != null)
+        {
+            Destroy(specialCreationRevealRoot);
+            specialCreationRevealRoot = null;
+        }
+
+        specialCreationRevealRoutine = null;
+    }
+
+    private static float EaseOut(float t)
+    {
+        t = Mathf.Clamp01(t);
+        return 1f - (1f - t) * (1f - t);
+    }
+
+    private static float EaseInOut(float t)
+    {
+        t = Mathf.Clamp01(t);
+        return t * t * (3f - 2f * t);
+    }
+
+    private static float EaseOutBackLight(float t)
+    {
+        t = Mathf.Clamp01(t);
+
+        const float c1 = 1.10f;
+        const float c3 = c1 + 1f;
+
+        return 1f + c3 * Mathf.Pow(t - 1f, 3f) + c1 * Mathf.Pow(t - 1f, 2f);
+    }
+
+    private static Sprite GetOrCreateSpecialRevealHaloSprite()
+    {
+        if (specialRevealHaloSprite != null)
+            return specialRevealHaloSprite;
+
+        const int size = 128;
+        const float outerRadius = 0.50f;
+        const float ringRadius = 0.34f;
+        const float ringThickness = 0.085f;
+
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.name = "GeneratedSpecialCreationHalo";
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+
+        Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+        float maxR = size * 0.5f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Vector2 p = new Vector2(x, y);
+                Vector2 dir = p - center;
+                float d = dir.magnitude / maxR;
+
+                float ring = 1f - Mathf.Clamp01(Mathf.Abs(d - ringRadius) / ringThickness);
+                ring *= ring;
+
+                float glow = 1f - Mathf.Clamp01(d / outerRadius);
+                glow = glow * glow * 0.55f;
+
+                float inner = 1f - Mathf.Clamp01(d / 0.24f);
+                inner = inner * inner * 0.14f;
+
+                float alpha = Mathf.Clamp01(ring * 1.15f + glow + inner);
+
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+            }
+        }
+
+        tex.Apply(false, true);
+
+        specialRevealHaloSprite = Sprite.Create(
+            tex,
+            new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f),
+            100f);
+
+        return specialRevealHaloSprite;
+    }
+
+
     private IEnumerator CoFallSettleImpact(
         int tileSize,
         float duration,
@@ -687,14 +988,20 @@ public class TileView : MonoBehaviour,
         if (iconRt != null)
             iconRt.localScale = baseScale;
     }
+
     private IEnumerator CoSubtleImpact(float duration, float strength)
     {
-        if (iconImage == null) yield break;
+        if (iconImage == null)
+            yield break;
+
         var iconRt = iconImage.rectTransform;
-        if (iconRt == null) yield break;
+
+        if (iconRt == null)
+            yield break;
 
         float s = Mathf.Clamp(strength, 0.02f, 0.2f);
         float dur = Mathf.Max(0.04f, duration);
+
         Vector3 normal = Vector3.one;
         Vector3 squashed = new Vector3(1f, 1f - s, 1f);
 
@@ -704,21 +1011,30 @@ public class TileView : MonoBehaviour,
         float t = 0f;
         while (t < down)
         {
-            if (this == null || iconImage == null || iconRt == null) yield break;
+            if (this == null || iconImage == null || iconRt == null)
+                yield break;
+
             t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / down);
+
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, down));
             iconRt.localScale = Vector3.LerpUnclamped(normal, squashed, k);
+
             yield return null;
         }
 
         t = 0f;
         while (t < up)
         {
-            if (this == null || iconImage == null || iconRt == null) yield break;
+            if (this == null || iconImage == null || iconRt == null)
+                yield break;
+
             t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / up);
+
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, up));
             float e = 1f - (1f - k) * (1f - k);
+
             iconRt.localScale = Vector3.LerpUnclamped(squashed, normal, e);
+
             yield return null;
         }
 
@@ -734,6 +1050,7 @@ public class TileView : MonoBehaviour,
         Vector2 size = rt.rect.size;
         Vector2 pivotDelta = rt.pivot - newPivot;
         Vector2 anchoredOffset = new Vector2(pivotDelta.x * size.x, pivotDelta.y * size.y);
+
         rt.pivot = newPivot;
         rt.anchoredPosition += anchoredOffset;
     }
@@ -745,13 +1062,13 @@ public class TileView : MonoBehaviour,
     public void SetType(TileType type)
     {
         model.type = type;
+
         if (board != null)
         {
             var sprite = board.GetIcon(type);
             SetIcon(sprite);
         }
     }
-
 
     public void SetIcon(Sprite sprite)
     {
@@ -764,9 +1081,11 @@ public class TileView : MonoBehaviour,
         iconImage.sprite = sprite;
         iconImage.color = Color.white;
     }
+
     public void SetIconAlpha(float alpha)
     {
-        if (iconImage == null) return;
+        if (iconImage == null)
+            return;
 
         var c = iconImage.color;
         c.a = Mathf.Clamp01(alpha);
@@ -775,8 +1094,11 @@ public class TileView : MonoBehaviour,
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        if (board == null || board.IsBusy) return;
-        if (board.ActiveBooster != BoardController.BoosterMode.None) return;
+        if (board == null || board.IsBusy)
+            return;
+
+        if (board.ActiveBooster != BoardController.BoosterMode.None)
+            return;
 
         transform.localScale = Vector3.one;
 
@@ -786,32 +1108,46 @@ public class TileView : MonoBehaviour,
         dragStartAnchored = rt.anchoredPosition;
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            parentRt, eventData.position, eventData.pressEventCamera, out dragStartLocalPointer
-        );
+            parentRt,
+            eventData.position,
+            eventData.pressEventCamera,
+            out dragStartLocalPointer);
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (board == null || board.IsBusy) return;
-        if (board.ActiveBooster != BoardController.BoosterMode.None) return;
-        if (dragConsumedSwap) return;
+        if (board == null || board.IsBusy)
+            return;
+
+        if (board.ActiveBooster != BoardController.BoosterMode.None)
+            return;
+
+        if (dragConsumedSwap)
+            return;
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            parentRt, eventData.position, eventData.pressEventCamera, out var curLocal
-        );
+            parentRt,
+            eventData.position,
+            eventData.pressEventCamera,
+            out var curLocal);
 
         var delta = curLocal - dragStartLocalPointer;
 
         float max = board.TileSize * 0.45f;
+
         delta.x = Mathf.Clamp(delta.x, -max, max);
         delta.y = Mathf.Clamp(delta.y, -max, max);
 
         rt.anchoredPosition = dragStartAnchored + delta;
 
         float threshold = board.TileSize * 0.25f;
-        if (Mathf.Abs(delta.x) < threshold && Mathf.Abs(delta.y) < threshold) return;
 
-        int dirX = 0, dirY = 0;
+        if (Mathf.Abs(delta.x) < threshold && Mathf.Abs(delta.y) < threshold)
+            return;
+
+        int dirX = 0;
+        int dirY = 0;
+
         if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
             dirX = delta.x > 0 ? 1 : -1;
         else
@@ -831,7 +1167,7 @@ public class TileView : MonoBehaviour,
         StartCoroutine(ResetWasDragging());
     }
 
-    IEnumerator ResetWasDragging()
+    private IEnumerator ResetWasDragging()
     {
         yield return null;
         wasDragging = false;
@@ -839,7 +1175,9 @@ public class TileView : MonoBehaviour,
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (wasDragging) return;
+        if (wasDragging)
+            return;
+
         board?.OnTileClicked(this);
     }
 
@@ -848,9 +1186,11 @@ public class TileView : MonoBehaviour,
     public void SetSpecial(TileSpecial sp, bool deferVisualUpdate = false)
     {
         model.SetSpecial(sp);
+
         if (!deferVisualUpdate)
         {
             RefreshIcon();
+
             if (lastAppliedTileSize > 0)
                 ApplyTileSize(lastAppliedTileSize);
         }
@@ -859,6 +1199,7 @@ public class TileView : MonoBehaviour,
     public void SetIconScale(float scale)
     {
         iconScale = Mathf.Clamp(scale, 0.5f, 1f);
+
         if (lastAppliedTileSize > 0)
             ApplyTileSize(lastAppliedTileSize);
     }
@@ -866,6 +1207,7 @@ public class TileView : MonoBehaviour,
     public void SetUseFullCellIcon(bool useFullCell)
     {
         useFullCellIcon = useFullCell;
+
         if (lastAppliedTileSize > 0)
             ApplyTileSize(lastAppliedTileSize);
     }
@@ -873,6 +1215,7 @@ public class TileView : MonoBehaviour,
     public void SetMovableObstacleTile(bool value)
     {
         isMovableObstacleTile = value;
+
         if (lastAppliedTileSize > 0)
             ApplyTileSize(lastAppliedTileSize);
     }
@@ -880,6 +1223,7 @@ public class TileView : MonoBehaviour,
     public void SetVisualLayout(TileVisualLayout layout)
     {
         visualLayout = layout;
+
         if (lastAppliedTileSize > 0)
             ApplyTileSize(lastAppliedTileSize);
     }
@@ -887,6 +1231,7 @@ public class TileView : MonoBehaviour,
     public void SetIconSize(Vector2 size)
     {
         iconSize = new Vector2(Mathf.Max(1f, size.x), Mathf.Max(1f, size.y));
+
         if (lastAppliedTileSize > 0)
             ApplyTileSize(lastAppliedTileSize);
     }
@@ -895,7 +1240,8 @@ public class TileView : MonoBehaviour,
     {
         lastAppliedTileSize = tileSize;
 
-        if (rt == null) rt = GetComponent<RectTransform>();
+        if (rt == null)
+            rt = GetComponent<RectTransform>();
 
         rt.sizeDelta = new Vector2(tileSize, tileSize);
 
@@ -907,15 +1253,14 @@ public class TileView : MonoBehaviour,
         bool isSpecial = model != null && model.special != TileSpecial.None;
         bool isMovable = isMovableObstacleTile;
 
-        // Static obstacle zaten GridSpawner.DrawObstacleImage() ile ayrı çiziliyor
-        // ve hücreyi tamamen kaplıyor.
-        //
-        // Movable obstacle ise TileView üzerinden geldiği için burada özellikle
-        // FillCell/useFullCellIcon yoluna sokmuyoruz.
-        bool shouldFillCell = !isMovable && (useFullCellIcon || visualLayout == TileVisualLayout.FillCell);
+        bool shouldFillCell =
+            !isMovable &&
+            (useFullCellIcon || visualLayout == TileVisualLayout.FillCell);
 
-        // Movable obstacle her zaman hücre merkezinde dursun.
-        bool shouldCenter = visualLayout == TileVisualLayout.Centered || isSpecial || isMovable;
+        bool shouldCenter =
+            visualLayout == TileVisualLayout.Centered ||
+            isSpecial ||
+            isMovable;
 
         if (shouldFillCell)
         {
@@ -925,7 +1270,6 @@ public class TileView : MonoBehaviour,
             irt.anchoredPosition = Vector2.zero;
             irt.sizeDelta = Vector2.zero;
 
-            // Sadece static olmayan, normal full-cell tile/special görsellerde kullanılır.
             iconImage.preserveAspect = false;
             return;
         }
@@ -933,14 +1277,13 @@ public class TileView : MonoBehaviour,
         float tileRatio = Mathf.Max(0.01f, tileSize / IconReferenceTileSize);
         Vector2 scaledIconSize = iconSize * (tileRatio * iconScale);
 
-        // Movable obstacle hücreyi tam kaplamasın.
-        // Static obstacle bu metoda girmediği için bu scale sadece movable için güvenli.
         if (isMovable)
             scaledIconSize *= 0.95f;
 
         irt.anchorMin = new Vector2(0.5f, 0.5f);
         irt.anchorMax = new Vector2(0.5f, 0.5f);
         irt.sizeDelta = scaledIconSize;
+
         iconImage.preserveAspect = true;
 
         if (shouldCenter)
@@ -954,17 +1297,24 @@ public class TileView : MonoBehaviour,
             irt.anchoredPosition = new Vector2(0f, -scaledIconSize.y * 0.5f);
         }
     }
+
     public void PlayBeingLandedOnSquash(float duration = 0.22f, float strength = 0.46f)
     {
-        if (this == null || !isActiveAndEnabled) return;
+        if (this == null || !isActiveAndEnabled)
+            return;
+
         StartCoroutine(CoFallSettleSquash(duration, strength));
     }
 
     private IEnumerator CoImpactSquash(float duration, float strength, float stretchX, float overshoot, int tileSize)
     {
-        if (iconImage == null) yield break;
+        if (iconImage == null)
+            yield break;
+
         var iconRt = iconImage.rectTransform;
-        if (iconRt == null) yield break;
+
+        if (iconRt == null)
+            yield break;
 
         float sy = Mathf.Clamp(strength, 0.05f, 0.7f);
         float sx = Mathf.Clamp(stretchX, 0f, 0.5f);
@@ -981,33 +1331,45 @@ public class TileView : MonoBehaviour,
         float t = 0f;
         while (t < p1)
         {
-            if (this == null || iconImage == null || iconRt == null) yield break;
+            if (this == null || iconImage == null || iconRt == null)
+                yield break;
+
             t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / p1);
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, p1));
             float e = 1f - (1f - k) * (1f - k);
+
             iconRt.localScale = Vector3.LerpUnclamped(normal, squashed, e);
+
             yield return null;
         }
 
         t = 0f;
         while (t < p2)
         {
-            if (this == null || iconImage == null || iconRt == null) yield break;
+            if (this == null || iconImage == null || iconRt == null)
+                yield break;
+
             t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / p2);
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, p2));
             float e = 1f - (1f - k) * (1f - k);
+
             iconRt.localScale = Vector3.LerpUnclamped(squashed, stretched, e);
+
             yield return null;
         }
 
         t = 0f;
         while (t < p3)
         {
-            if (this == null || iconImage == null || iconRt == null) yield break;
+            if (this == null || iconImage == null || iconRt == null)
+                yield break;
+
             t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / p3);
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, p3));
             float e = 1f - (1f - k) * (1f - k);
+
             iconRt.localScale = Vector3.LerpUnclamped(stretched, normal, e);
+
             yield return null;
         }
 
@@ -1018,11 +1380,16 @@ public class TileView : MonoBehaviour,
     // Legacy — PlayBeingLandedOnSquash için
     private IEnumerator CoFallSettleSquash(float duration, float strength)
     {
-        if (iconImage == null) yield break;
+        if (iconImage == null)
+            yield break;
+
         var iconRt = iconImage.rectTransform;
-        if (iconRt == null) yield break;
+
+        if (iconRt == null)
+            yield break;
 
         float s = Mathf.Clamp(strength, 0f, 0.9f);
+
         Vector3 normal = Vector3.one;
         Vector3 squashed = new Vector3(1f, Mathf.Max(0.1f, 1f - s), 1f);
 
@@ -1032,35 +1399,53 @@ public class TileView : MonoBehaviour,
         float t = 0f;
         while (t < downTime)
         {
-            if (iconRt == null) yield break;
+            if (iconRt == null)
+                yield break;
+
             t += Time.deltaTime;
+
             float k = Mathf.Clamp01(t / downTime);
             iconRt.localScale = Vector3.LerpUnclamped(normal, squashed, k * k);
+
             yield return null;
         }
 
         t = 0f;
         while (t < upTime)
         {
-            if (iconRt == null) yield break;
+            if (iconRt == null)
+                yield break;
+
             t += Time.deltaTime;
+
             float k = Mathf.Clamp01(t / upTime);
             float e = 1f - (1f - k) * (1f - k);
+
             iconRt.localScale = Vector3.LerpUnclamped(squashed, normal, e);
+
             yield return null;
         }
 
-        if (iconRt != null) iconRt.localScale = normal;
+        if (iconRt != null)
+            iconRt.localScale = normal;
     }
 
     private void RestorePivot(Vector2 originalPivot)
     {
-        if (rt == null || !rt) return;
+        if (rt == null || !rt)
+            return;
+
         if (rt.pivot != originalPivot)
             SetPivotWithoutVisualJump(originalPivot);
     }
 
-    public void SetOverrideBaseType(TileType type) => model.SetOverrideBaseType(type);
+    public void SetOverrideBaseType(TileType type)
+    {
+        model.SetOverrideBaseType(type);
+    }
 
-    public bool GetOverrideBaseType(out TileType type) => model.TryGetOverrideBaseType(out type);
+    public bool GetOverrideBaseType(out TileType type)
+    {
+        return model.TryGetOverrideBaseType(out type);
+    }
 }

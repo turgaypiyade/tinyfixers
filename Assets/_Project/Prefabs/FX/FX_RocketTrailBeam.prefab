@@ -97,7 +97,7 @@ LineRenderer:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 0.19573975
+        value: 0.25201416
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -105,8 +105,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.28806314
-        value: 0.16580434
+        time: 0.2303544
+        value: 0.17878957
         inSlope: 0.23311248
         outSlope: 0.23311248
         tangentMode: 1
@@ -114,8 +114,17 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.9941101
-        value: 0.17475891
+        time: 0.45631278
+        value: 0.097353
+        inSlope: -0.3312151
+        outSlope: -0.3312151
+        tangentMode: 1
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      - serializedVersion: 3
+        time: 0.8786926
+        value: 0
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -180,8 +189,8 @@ MonoBehaviour:
   jaggedness: 0
   noiseScale: 0
   minSegments: 10
-  segmentsPerUnit: 22
-  tailAlpha: 0.5
+  segmentsPerUnit: 20
+  tailAlpha: 0.3
   headAlpha: 1
   fadeOutDuration: 0.25
   sortingLayerName: 

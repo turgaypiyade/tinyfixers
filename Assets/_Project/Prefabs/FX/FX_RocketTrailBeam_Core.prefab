@@ -178,10 +178,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RocketTrailBeam
   jaggedness: 0.05
-  noiseScale: 2.5
+  noiseScale: 2
   minSegments: 10
-  segmentsPerUnit: 26
-  tailAlpha: 0.6
+  segmentsPerUnit: 20
+  tailAlpha: 0.3
   headAlpha: 0.95
   fadeOutDuration: 0.3
   sortingLayerName: 

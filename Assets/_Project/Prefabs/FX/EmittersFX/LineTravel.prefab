@@ -135,7 +135,7 @@ MonoBehaviour:
   splitRightSprite: {fileID: 2943454175622845307, guid: 654acdd73b235433eb895a1f8b9f18cc, type: 3}
   startDelay: 0.01
   splitTime: 0.02
-  splitOffset: 60
+  splitOffset: 40
   pulseSpeed: 45
   pulseAmount: 0.12
   rocketAfterImagePrefab: {fileID: 1073926442982439361, guid: 553f0821b2b41614586f70ec6b63b022, type: 3}
@@ -143,7 +143,7 @@ MonoBehaviour:
   afterImageLife: 0.04
   afterImageAlpha: 0.1
   afterImageScaleUp: 1.02
-  headSizeFactor: 0.95
+  headSizeFactor: 0.898
   splitOffsetFactor: 0.55
   trailBeamPrefab: {fileID: 864241499568937563, guid: 2a34a70c133e94af295259358bb22c18, type: 3}
   glowTrailBeamPrefab: {fileID: 864241499568937563, guid: 53232f1cb02754fcab293a96a19fd8b6, type: 3}

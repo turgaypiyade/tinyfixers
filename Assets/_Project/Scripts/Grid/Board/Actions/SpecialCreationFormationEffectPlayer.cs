@@ -39,6 +39,19 @@ public sealed class SpecialCreationFormationEffectPlayer : IClearEffectPlayer
                 contributors,
                 creation.Duration);
 
+            // Yaratım reveal: imaj + halo birlikte büyür, sonra 360° döner ve oturur.
+            // Animasyondan sonra tile destroy edilmiş olabilir (örn. PatchBot uçuşu)
+            // bu yüzden Unity null kontrolü (== null) ile destroyed kontrolü yapıyoruz.
+            if (creation.CreatedTile != null
+                && creation.CreatedTile.gameObject != null
+                && creation.CreatedTile.gameObject.activeInHierarchy
+                && creation.CreatedTile.GetSpecial() != TileSpecial.None)
+            {
+                creation.CreatedTile.PlaySpecialCreationReveal(
+                    creation.CreatedTile.GetSpecial(),
+                    board.TileSize);
+            }
+
             if (context != null && context.NotifyCellImpactNow != null)
             {
                 for (int i = 0; i < contributors.Count; i++)

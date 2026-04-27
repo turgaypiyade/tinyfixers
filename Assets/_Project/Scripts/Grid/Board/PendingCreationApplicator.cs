@@ -32,6 +32,7 @@ public sealed class PendingCreationApplicator
         if (targetTile == null)
         {
             targetTile = FindAndDropTile(pending.x, pending.y);
+
             if (targetTile == null)
                 targetTile = SpawnTileAt(pending.x, pending.y);
         }
@@ -43,26 +44,39 @@ public sealed class PendingCreationApplicator
         if (targetTile.GetSpecial() != TileSpecial.None)
             return;
 
-        targetTile.SetSpecial(pending.special);
+        targetTile.SetSpecial(pending.special, deferVisualUpdate: true);
 
         if (pending.special == TileSpecial.SystemOverride)
             targetTile.SetOverrideBaseType(targetTile.GetTileType());
 
-        board.SyncTileData(targetTile.X, targetTile.Y);
+        targetTile.RefreshIcon();
+
+        int finalX = targetTile.X;
+        int finalY = targetTile.Y;
+
+        board.SyncTileData(finalX, finalY);
         board.RefreshTileObstacleVisual(targetTile);
+
+        // Yaratım efekti RefreshIcon ve obstacle refresh bittikten sonra çağrılır.
+        if (targetTile != null && targetTile.gameObject.activeInHierarchy)
+            targetTile.PlaySpecialCreationReveal(pending.special, board.TileSize);
     }
 
     private TileView FindAndDropTile(int x, int y)
     {
         for (int yy = y - 1; yy >= 0; yy--)
         {
-            if (board.Holes[x, yy]) continue;
+            if (board.Holes[x, yy])
+                continue;
 
             var tile = board.Tiles[x, yy];
-            if (tile == null) continue;
+
+            if (tile == null)
+                continue;
 
             // Kazanılmış special'ı donor olarak çekip başka yere taşıma.
-            if (tile.GetSpecial() != TileSpecial.None) continue;
+            if (tile.GetSpecial() != TileSpecial.None)
+                continue;
 
             TeleportTile(tile, x, y);
             return tile;
@@ -73,9 +87,14 @@ public sealed class PendingCreationApplicator
 
     private TileView SpawnTileAt(int x, int y)
     {
-        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return null;
-        if (board.Holes[x, y]) return null;
-        if (board.Tiles[x, y] != null) return board.Tiles[x, y];
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return null;
+
+        if (board.Holes[x, y])
+            return null;
+
+        if (board.Tiles[x, y] != null)
+            return board.Tiles[x, y];
 
         var go = Object.Instantiate(board.TilePrefab, board.Parent);
         var tile = go.GetComponent<TileView>();
@@ -88,12 +107,14 @@ public sealed class PendingCreationApplicator
 
         tile.Init(board, x, y);
         board.ConfigureTileView(tile);
+
         tile.SetCoords(x, y);
         tile.SnapToGrid(board.TileSize);
 
         board.Tiles[x, y] = tile;
 
         var pool = board.RandomPool;
+
         if (pool != null && pool.Length > 0)
             tile.SetType(pool[Random.Range(0, pool.Length)]);
 
@@ -107,15 +128,22 @@ public sealed class PendingCreationApplicator
 
     private void TeleportTile(TileView tile, int targetX, int targetY)
     {
-        if (tile == null) return;
-        if (targetX < 0 || targetX >= board.Width || targetY < 0 || targetY >= board.Height) return;
-        if (board.Holes[targetX, targetY]) return;
+        if (tile == null)
+            return;
+
+        if (targetX < 0 || targetX >= board.Width || targetY < 0 || targetY >= board.Height)
+            return;
+
+        if (board.Holes[targetX, targetY])
+            return;
 
         var targetTile = board.Tiles[targetX, targetY];
+
         int sourceX = tile.X;
         int sourceY = tile.Y;
 
         board.Tiles[sourceX, sourceY] = targetTile;
+
         if (targetTile != null)
         {
             targetTile.SetCoords(sourceX, sourceY);
@@ -123,6 +151,7 @@ public sealed class PendingCreationApplicator
         }
 
         board.Tiles[targetX, targetY] = tile;
+
         tile.SetCoords(targetX, targetY);
         tile.SnapToGrid(board.TileSize);
 
