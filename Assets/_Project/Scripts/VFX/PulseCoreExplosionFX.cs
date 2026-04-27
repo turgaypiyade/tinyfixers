@@ -17,23 +17,29 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
     // ───────────────────────── FIREWORK RANDOMIZATION ─────────────────────────
     [Header("Firework Randomization")]
-    [Tooltip("Her patlamada rastgele renk ve glow/ring kalınlığı seçilir. Çap random değişmez.")]
+    [Tooltip("Her patlamada rastgele renk ve glow/core/ring kalınlığı seçilir. Çap random değişmez.")]
     [SerializeField] private bool randomizeOnPlay = true;
 
     [Header("Thickness Randomization")]
-    [Tooltip("Glow outline kalınlığı min. Çapı değiştirmez.")]
-    [SerializeField, Range(1f, 2f)] private float glowThicknessMin = 1f;
+    [Tooltip("Glow outline kalınlığı min. Eski 1-2 aralığının üzerinde başlar. Çapı değiştirmez.")]
+    [SerializeField, Range(2f, 6f)] private float glowThicknessMin = 2.2f;
 
     [Tooltip("Glow outline kalınlığı max. Çapı değiştirmez.")]
-    [SerializeField, Range(1f, 2f)] private float glowThicknessMax = 2f;
+    [SerializeField, Range(2f, 6f)] private float glowThicknessMax = 3.6f;
+
+    [Tooltip("Core/flash outline kalınlığı min. Eski 1-2 aralığının üzerinde başlar. Çapı değiştirmez.")]
+    [SerializeField, Range(2f, 6f)] private float coreThicknessMin = 2.4f;
+
+    [Tooltip("Core/flash outline kalınlığı max. Çapı değiştirmez.")]
+    [SerializeField, Range(2f, 6f)] private float coreThicknessMax = 4.2f;
 
     [Tooltip("Ring outline kalınlığı min. Çapı değiştirmez.")]
-    [SerializeField, Range(1f, 2f)] private float ringThicknessMin = 1f;
+    [SerializeField, Range(1f, 3f)] private float ringThicknessMin = 1.2f;
 
     [Tooltip("Ring outline kalınlığı max. Çapı değiştirmez.")]
-    [SerializeField, Range(1f, 2f)] private float ringThicknessMax = 2f;
+    [SerializeField, Range(1f, 3f)] private float ringThicknessMax = 2.4f;
 
-    [Tooltip("Outline renginin alpha çarpanı. Kalınlık random, ana glow/ring alpha random değildir.")]
+    [Tooltip("Outline renginin alpha çarpanı. Kalınlık random, ana glow/core/ring alpha random değildir.")]
     [SerializeField, Range(0f, 1f)] private float thicknessAlphaMultiplier = 0.65f;
     // ──────────────────────────────────────────────────────────────────────────
 
@@ -90,6 +96,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
     private Color origRingColor;
 
     private Outline glowOutline;
+    private Outline coreOutline;
     private Outline ringOutline;
 
     public void SetRadiusCells(int radiusCells, float tileSize)
@@ -168,6 +175,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
         origRingColor = ringColor;
 
         glowOutline = innerGlow != null ? innerGlow.GetComponent<Outline>() : null;
+        coreOutline = coreFlash != null ? coreFlash.GetComponent<Outline>() : null;
         ringOutline = shockwaveRing != null ? shockwaveRing.GetComponent<Outline>() : null;
 
         baselineCached = true;
@@ -186,6 +194,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
         ringColor = origRingColor;
 
         DisableOutline(glowOutline);
+        DisableOutline(coreOutline);
         DisableOutline(ringOutline);
     }
 
@@ -210,11 +219,14 @@ public class PulseCoreExplosionFX : MonoBehaviour
         raysPeakSizeRatio = origRaysPeakSizeRatio;
         ringPeakSizeRatio = origRingPeakSizeRatio;
 
-        // Sadece glow/ring kalınlığı 1 ile 2 arasında random değişir.
+        // Glow ve core kalınlığı eski 1-2 aralığının üzerinde random değişir.
+        // Radius / çap değişmez; sadece Outline.effectDistance değişir.
         float glowThickness = Random.Range(glowThicknessMin, glowThicknessMax);
+        float coreThickness = Random.Range(coreThicknessMin, coreThicknessMax);
         float ringThickness = Random.Range(ringThicknessMin, ringThicknessMax);
 
         ApplyOutlineThickness(innerGlow, ref glowOutline, glowColor, glowThickness);
+        ApplyOutlineThickness(coreFlash, ref coreOutline, flashColor, coreThickness);
         ApplyOutlineThickness(shockwaveRing, ref ringOutline, ringColor, ringThickness);
     }
 

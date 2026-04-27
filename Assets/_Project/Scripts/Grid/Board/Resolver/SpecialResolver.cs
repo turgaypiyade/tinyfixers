@@ -708,9 +708,15 @@ public class SpecialResolver
     private List<BoardAction> ExecuteSpecialActionsNoFinalize(ResolutionContext ctx, TileView tile, TileView partner)
     {
         var actions = new List<BoardAction>();
-        Debug.Log($"[ExecuteSpecialActionsNoFinalize] tile=({tile.X},{tile.Y}) special={tile.GetSpecial()} partner={(partner != null ? $"({partner.X},{partner.Y})/{partner.GetSpecial()}" : "null")}");
+
         if (tile == null)
             return actions;
+
+        string partnerLabel = "null";
+        if (partner != null)
+            partnerLabel = $"({partner.X},{partner.Y})/{partner.GetSpecial()}";
+
+        Debug.Log($"[ExecuteSpecialActionsNoFinalize] tile=({tile.X},{tile.Y}) special={tile.GetSpecial()} partner={partnerLabel}");
 
         var special = tile.GetSpecial();
 
@@ -1583,7 +1589,8 @@ public class SpecialResolver
 
     private void DrainDeferredLineOverrides(List<BoardAction> actions)
     {
-        Debug.Log($"[DrainDeferredLineOverrides] start count={ctx.DeferredLineHitOverrideCells.Count}");
+        int deferredLineCount = ctx.DeferredLineHitOverrideCells != null ? ctx.DeferredLineHitOverrideCells.Count : 0;
+        Debug.Log($"[DrainDeferredLineOverrides] start count={deferredLineCount}");
         if (ctx.DeferredLineHitOverrideCells == null || ctx.DeferredLineHitOverrideCells.Count == 0)
             return;
 

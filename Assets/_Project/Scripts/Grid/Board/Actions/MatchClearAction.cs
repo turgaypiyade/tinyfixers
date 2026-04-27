@@ -75,6 +75,8 @@ public class MatchClearAction : BoardAction
         if (!isBlocking)
             sequencer.Board.ActiveBackgroundJobs++;
 
+        PruneDeadReferences(sequencer != null ? sequencer.Board : null);
+
         bool hasMatches = matches != null && matches.Count > 0;
         bool hasImpacts = impactCells != null && impactCells.Count > 0;
         bool hasAffected = affectedCells != null && affectedCells.Count > 0;
@@ -136,5 +138,86 @@ public class MatchClearAction : BoardAction
         var cascades = sequencer.Board.CascadeLogic.CalculateCascades();
         if (cascades.Count > 0)
             sequencer.Enqueue(cascades);
+    }
+
+    private void PruneDeadReferences(BoardController board)
+    {
+        if (board == null)
+            return;
+
+        if (matches != null)
+        {
+            var liveMatches = new HashSet<TileView>();
+            foreach (var tile in matches)
+            {
+                if (IsLiveTile(board, tile))
+                    liveMatches.Add(tile);
+            }
+            matches = liveMatches;
+        }
+
+        if (lightningVisualTargets != null)
+        {
+            var liveTargets = new List<TileView>();
+            foreach (var tile in lightningVisualTargets)
+            {
+                if (IsLiveTile(board, tile))
+                    liveTargets.Add(tile);
+            }
+            lightningVisualTargets = liveTargets;
+        }
+
+        if (perTileClearDelays != null)
+        {
+            var liveDelays = new Dictionary<TileView, float>();
+            foreach (var pair in perTileClearDelays)
+            {
+                if (IsLiveTile(board, pair.Key))
+                    liveDelays[pair.Key] = pair.Value;
+            }
+            perTileClearDelays = liveDelays;
+        }
+
+        if (staggerDelays != null)
+        {
+            var liveStagger = new Dictionary<TileView, float>();
+            foreach (var pair in staggerDelays)
+            {
+                if (IsLiveTile(board, pair.Key))
+                    liveStagger[pair.Key] = pair.Value;
+            }
+            staggerDelays = liveStagger;
+        }
+
+        if (!IsLiveTile(board, lightningOriginTile))
+            lightningOriginTile = null;
+
+        if (PresentationPlan != null && PresentationPlan.FinalClearTiles != null)
+        {
+            var liveFinalTiles = new List<TileView>();
+            foreach (var tile in PresentationPlan.FinalClearTiles)
+            {
+                if (IsLiveTile(board, tile))
+                    liveFinalTiles.Add(tile);
+            }
+
+            PresentationPlan.FinalClearTiles.Clear();
+            foreach (var tile in liveFinalTiles)
+                PresentationPlan.FinalClearTiles.Add(tile);
+        }
+    }
+
+    private static bool IsLiveTile(BoardController board, TileView tile)
+    {
+        if (board == null || tile == null)
+            return false;
+
+        int x = tile.X;
+        int y = tile.Y;
+
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+
+        return board.Tiles[x, y] == tile;
     }
 }

@@ -239,6 +239,7 @@ public class BoardAnimator
         var obstacleDamageCounts = new Dictionary<Vector2Int, int>();
 
         board.ConsumePatchbotDashRequests(_patchbotDashBuffer);
+        Coroutine patchbotDashRoutine = null;
 
         // Line sweep modunda PatchBot taşına sıra gelene kadar beklenmeli,
         // ama sweep'i bloklamadan asenkron çalışmalı.
@@ -252,11 +253,11 @@ public class BoardAnimator
                 if (hasLineStrikes)
                 {
                     float syncedDashDuration = EstimateLineStrikeDuration(lightningLineStrikes);
-                    board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board, syncedDashDuration);
+                    patchbotDashRoutine = board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board, syncedDashDuration);
                 }
                 else
                 {
-                    board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board);
+                    patchbotDashRoutine = board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board);
                 }
             }
             else
@@ -533,6 +534,14 @@ public class BoardAnimator
             var __w = Wait(maxStaggerDelay + staggerAnimTime);
             if (__w != null) yield return __w;
         }
+
+        // KRITIK:
+        // PatchBot dash'leri onArrived içinde kendi clear action'larını enqueue ediyor.
+        // Bu clear action'lar current clear/cascade bitmeden çalışmamalı.
+        // Aksi halde cascade/fall eski TileView referanslarıyla çakışıp
+        // MissingReferenceException üretebiliyor.
+        if (patchbotDashRoutine != null)
+            yield return patchbotDashRoutine;
 
         for (int i = 0; i < list.Count; i++)
         {

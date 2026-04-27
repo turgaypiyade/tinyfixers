@@ -358,37 +358,39 @@ MonoBehaviour:
   coreFlash: {fileID: 3764555681437666637}
   baseSize: 10
   areaOvershoot: 1.106
-  totalDuration: 0.25
+  totalDuration: 0.45
   destroyOnFinish: 1
   randomizeOnPlay: 1
-  glowThicknessMin: 1.318
-  glowThicknessMax: 2
-  ringThicknessMin: 1.318
-  ringThicknessMax: 2
-  thicknessAlphaMultiplier: 0.65
-  flashPeakSizeRatio: 1.08
-  flashInTime: 0.08
+  glowThicknessMin: 2.94
+  glowThicknessMax: 4.21
+  coreThicknessMin: 2.96
+  coreThicknessMax: 4.2
+  ringThicknessMin: 1.471
+  ringThicknessMax: 2.129
+  thicknessAlphaMultiplier: 0.703
+  flashPeakSizeRatio: 1.251
+  flashInTime: 0.1
   flashOutTime: 0.22
   flashStartRatio: 0.3
   flashEndRatio: 1.15
   flashColor: {r: 1, g: 1, b: 1, a: 1}
   glowPeakSizeRatio: 0.9
-  glowInTime: 0.1
+  glowInTime: 0.15
   glowOutTime: 0.5
   glowStartRatio: 0.3
   glowEndRatio: 1.1
   glowColor: {r: 1, g: 0.55, b: 0.1, a: 0.75}
-  raysPeakSizeRatio: 1
-  raysInTime: 0.1
-  raysOutTime: 0.6
+  raysPeakSizeRatio: 1.13
+  raysInTime: 0.15
+  raysOutTime: 0.8
   raysStartRatio: 0.2
   raysEndRatio: 1.1
   raysRotateSpeed: 90
   raysColor: {r: 1, g: 0.82, b: 0.25, a: 0.95}
-  ringPeakSizeRatio: 1.1
-  ringInTime: 0.03
+  ringPeakSizeRatio: 1.201
+  ringInTime: 0.06
   ringOutTime: 0.5
-  ringStartRatio: 0.2
+  ringStartRatio: 0.3
   ringEndRatio: 1.15
   ringColor: {r: 1, g: 0.75, b: 0.2, a: 1}
   easeOut:

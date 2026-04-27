@@ -85,7 +85,9 @@ public sealed class LineVHPulseCoreCombo
             rt.EmitPulseEmitterComboTriggered,
             rt.Context?.DeferredLineHitOverrideCells,
             rt.Context,
-            rt.ExecuteSpecialActions);
+            rt.ExecuteSpecialActions,
+            lineTile,
+            pulseTile);
 
         if (pulseAction != null)
             result.Actions.Insert(0, pulseAction);
@@ -593,7 +595,9 @@ public sealed class LineVHPulseCoreCombo
         Action<Vector2Int> emitPulseEmitterComboTriggered,
         ICollection<Vector2Int> deferredLineHitOverrideCells,
         ResolutionContext context,
-        Func<ResolutionContext, TileView, TileView, List<BoardAction>> executeSpecialActions)
+        Func<ResolutionContext, TileView, TileView, List<BoardAction>> executeSpecialActions,
+        TileView orbitLineTile,
+        TileView orbitPulseTile)
     {
         var targets = board.BuildPulseEmitterTargets(cx, cy);
 
@@ -676,7 +680,9 @@ public sealed class LineVHPulseCoreCombo
             new Vector2Int(cx, cy),
             emitPulseEmitterComboTriggered,
             context,
-            executeSpecialActions);
+            executeSpecialActions,
+            orbitLineTile,
+            orbitPulseTile);
     }
 
     private static bool IsLine(TileSpecial s)
@@ -703,6 +709,16 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
     private readonly ResolutionContext context;
     private readonly Func<ResolutionContext, TileView, TileView, List<BoardAction>> executeSpecialActions;
     private readonly Queue<BoardAction> pendingInlineActions = new();
+    private readonly TileView orbitLineTile;
+    private readonly TileView orbitPulseTile;
+
+    // Orbit intro animasyon ayarları
+    private const float OrbitRiseHeight = 60f;     // yukarı kalkma yüksekliği (pixel)
+    private const float OrbitRiseDuration = 0.20f; // yukarı kalkma süresi
+    private const float OrbitSpinDuration = 0.50f; // dönme süresi
+    private const float OrbitTurns = 2f;            // tam tur sayısı
+    private const float OrbitGapPixels = 3f;        // ikonlar arası ekstra boşluk
+
     public LineVHPulseCoreComboAction(
        BoardController board,
        HashSet<Vector2Int> targets,
@@ -713,7 +729,9 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
        Vector2Int comboCenterCell,
        Action<Vector2Int> emitPulseEmitterComboTriggered,
        ResolutionContext context,
-       Func<ResolutionContext, TileView, TileView, List<BoardAction>> executeSpecialActions)
+       Func<ResolutionContext, TileView, TileView, List<BoardAction>> executeSpecialActions,
+       TileView orbitLineTile,
+       TileView orbitPulseTile)
     {
         this.board = board;
         this.targets = targets;
@@ -725,10 +743,103 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         this.emitPulseEmitterComboTriggered = emitPulseEmitterComboTriggered;
         this.context = context;
         this.executeSpecialActions = executeSpecialActions;
+        this.orbitLineTile = orbitLineTile;
+        this.orbitPulseTile = orbitPulseTile;
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
+        // ===== ORBIT INTRO ANIMASYONU =====
+        // Akış:
+        //  1) Her iki tile'a PlaySpecialCreationReveal çağır → halo + grow efekti (proje stili)
+        //  2) Tile'ları yukarı kaldır
+        //  3) Pivot etrafında birbirinin etrafında döndür (aralarında 2-3 px gap)
+        //  4) Başlangıç pozisyonlarına geri koy
+        //  5) Mevcut akış (line travel + clear) normal çalışsın
+        Debug.Log($"[OrbitIntro] ENTER line={(orbitLineTile != null ? $"({orbitLineTile.X},{orbitLineTile.Y})" : "NULL")} pulse={(orbitPulseTile != null ? $"({orbitPulseTile.X},{orbitPulseTile.Y})" : "NULL")}");
+
+        if (orbitLineTile != null && orbitPulseTile != null
+            && orbitLineTile.gameObject != null && orbitPulseTile.gameObject != null)
+        {
+            var lineRect = orbitLineTile.GetComponent<RectTransform>();
+            var pulseRect = orbitPulseTile.GetComponent<RectTransform>();
+
+            if (lineRect != null && pulseRect != null)
+            {
+                // HALO yok — sadece yukarı kalkma + dönme. Önce temelin çalıştığını görelim.
+                // (Daha sonra projedeki halo metoduyla zenginleştirebiliriz)
+
+                // Başlangıç pozisyonlarını kaydet
+                Vector2 lineStart = lineRect.anchoredPosition;
+                Vector2 pulseStart = pulseRect.anchoredPosition;
+                Vector2 pivot = (lineStart + pulseStart) * 0.5f;
+
+                // En üstte gözüksün
+                int lineSibling = lineRect.GetSiblingIndex();
+                int pulseSibling = pulseRect.GetSiblingIndex();
+                lineRect.SetAsLastSibling();
+                pulseRect.SetAsLastSibling();
+
+                // ===== AŞAMA A: yukarı kalkma =====
+                float t = 0f;
+                while (t < OrbitRiseDuration)
+                {
+                    t += Time.unscaledDeltaTime;
+                    float k = Mathf.Clamp01(t / OrbitRiseDuration);
+                    float eased = k * k * (3f - 2f * k);
+
+                    float rise = OrbitRiseHeight * eased;
+                    lineRect.anchoredPosition = lineStart + new Vector2(0f, rise);
+                    pulseRect.anchoredPosition = pulseStart + new Vector2(0f, rise);
+
+                    yield return null;
+                }
+
+                // Yükselmiş pivot
+                Vector2 risenPivot = pivot + new Vector2(0f, OrbitRiseHeight);
+
+                // Yarıçap = orijinal mesafenin yarısı + 2-3 px gap
+                float halfDist = Vector2.Distance(lineStart, pulseStart) * 0.5f;
+                float radius = halfDist + OrbitGapPixels;
+
+                // Başlangıç açısı (pulse'un pivota göre yönü)
+                Vector2 pulseDir = pulseStart - pivot;
+                if (pulseDir.sqrMagnitude < 0.0001f) pulseDir = Vector2.right;
+                float startAngle = Mathf.Atan2(pulseDir.y, pulseDir.x);
+
+                // ===== AŞAMA B: pivot etrafında dönüş =====
+                float twoPi = Mathf.PI * 2f;
+                t = 0f;
+                while (t < OrbitSpinDuration)
+                {
+                    t += Time.unscaledDeltaTime;
+                    float k = Mathf.Clamp01(t / OrbitSpinDuration);
+                    float eased = k * k * (3f - 2f * k);
+
+                    float angle = startAngle + eased * OrbitTurns * twoPi;
+
+                    Vector2 pulseOffset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+                    Vector2 lineOffset = -pulseOffset;
+
+                    pulseRect.anchoredPosition = risenPivot + pulseOffset;
+                    lineRect.anchoredPosition = risenPivot + lineOffset;
+
+                    yield return null;
+                }
+
+                // ===== BİTİŞ: pozisyonları başlangıca geri koy =====
+                lineRect.anchoredPosition = lineStart;
+                pulseRect.anchoredPosition = pulseStart;
+
+                // Sibling sırasını geri al
+                lineRect.SetSiblingIndex(lineSibling);
+                pulseRect.SetSiblingIndex(pulseSibling);
+
+                Debug.Log("[OrbitIntro] DONE");
+            }
+        }
+        // ===== /ORBIT INTRO ANIMASYONU =====
+
         var cleared = new HashSet<Vector2Int>();
         var hiddenOrigins = new HashSet<TileView>();
 
@@ -808,7 +919,7 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             yield break;
         }
 
-       // emitPulseEmitterComboTriggered?.Invoke(comboCenterCell);
+        // emitPulseEmitterComboTriggered?.Invoke(comboCenterCell);
 
         void OnStep(Vector2Int cell)
         {

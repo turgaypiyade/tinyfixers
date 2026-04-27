@@ -66,13 +66,13 @@ public sealed class PatchBotCombo
 
         if (rt.FinalizeAtEnd)
         {
-            if (rt.ProcessFanout != null)
-            {
-                var fanoutActions = rt.ProcessFanout(rt.Context);
-                if (fanoutActions != null && fanoutActions.Count > 0)
-                    result.Actions.AddRange(fanoutActions);
-            }
-
+            // PatchBot + PatchBot combo kendi içinde iki dash üretir.
+            // Context içinde iki source PatchBot hâlâ Affected olarak durduğu için
+            // ProcessFanout burada çalışırsa aynı PatchBot'lar tekrar chain activation'a girip
+            // ikinci kez dash üretebilir.
+            //
+            // Bu yüzden PatchBot + PatchBot combo'da fanout'u burada çalıştırmıyoruz.
+            // Arrival tarafı zaten kendi hedef clear action'larını enqueue ediyor.
             if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
                 rt.CleanupImplantedTiles?.Invoke(rt.Context);
         }
@@ -83,6 +83,9 @@ public sealed class PatchBotCombo
     private bool CanExecute(PatchBotComboExecutionRuntime rt)
     {
         if (rt == null || rt.Board == null || rt.Context == null)
+            return false;
+
+        if (rt.PatchbotService == null)
             return false;
 
         if (rt.Origin == null || rt.Partner == null)
@@ -116,6 +119,9 @@ public sealed class PatchBotCombo
         TileView otherPatchBot,
         HashSet<TileView> usedTargets)
     {
+        if (rt == null || rt.Board == null || rt.PatchbotService == null)
+            return;
+
         if (actor == null)
             return;
 
@@ -123,28 +129,44 @@ public sealed class PatchBotCombo
         if (!target.hasCell)
             return;
 
+        if (!IsInside(rt.Board, target.x, target.y))
+            return;
+
         if (target.tile != null)
             usedTargets.Add(target.tile);
 
-        rt.VisualService.PlayTeleportMarkers(actor, target.x, target.y);
+        if (rt.VisualService != null)
+            rt.VisualService.PlayTeleportMarkers(actor, target.x, target.y);
 
         rt.PatchbotService.EnqueueDash(actor, target.x, target.y, null, () =>
         {
+            if (rt == null || rt.Board == null || rt.PatchbotService == null)
+                return;
+
+            if (!IsInside(rt.Board, target.x, target.y))
+                return;
+
             var arrivalCtx = new ResolutionContext();
             var dataMatches = new HashSet<TileData>();
+
+            TileView liveTargetTile = rt.Board.Tiles[target.x, target.y];
 
             rt.PatchbotService.HitCellOnce(
                 dataMatches,
                 target.x,
                 target.y,
-                rt.Board.Tiles[target.x, target.y],
+                liveTargetTile,
                 (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalCtx, x, y, rt.Board),
-                tile => SpecialCellUtils.MarkAffectedCell(arrivalCtx, tile, rt.Board));
+                tile =>
+                {
+                    if (tile != null)
+                        SpecialCellUtils.MarkAffectedCell(arrivalCtx, tile, rt.Board);
+                });
 
             foreach (var data in dataMatches)
             {
                 if (data == null) continue;
-                if (data.X < 0 || data.X >= rt.Board.Width || data.Y < 0 || data.Y >= rt.Board.Height) continue;
+                if (!IsInside(rt.Board, data.X, data.Y)) continue;
 
                 var tile = rt.Board.Tiles[data.X, data.Y];
                 if (tile == null) continue;
@@ -152,44 +174,32 @@ public sealed class PatchBotCombo
                 arrivalCtx.Affected.Add(tile);
             }
 
+            if (arrivalCtx.Affected.Count == 0 &&
+                (arrivalCtx.AffectedCells == null || arrivalCtx.AffectedCells.Count == 0) &&
+                (arrivalCtx.ImpactCells == null || arrivalCtx.ImpactCells.Count == 0))
+            {
+                return;
+            }
+
             var clearAction = BuildClearAction(arrivalCtx);
-            
+
             var deferredActions = new List<BoardAction>();
-            if (clearAction != null && arrivalCtx.Affected.Count > 0)
+            if (clearAction != null)
                 deferredActions.Add(clearAction);
 
             var sequencer = rt.Board.GetComponent<ActionSequencer>();
             if (sequencer != null && deferredActions.Count > 0)
-            {
                 sequencer.Enqueue(deferredActions);
-            }
         });
     }
 
-    private void Finalize(
-        PatchBotComboExecutionRuntime rt,
-        PatchBotComboExecutionResult result)
+    private static bool IsInside(BoardController board, int x, int y)
     {
-        if (rt.ProcessFanout != null)
-        {
-            var fanoutActions = rt.ProcessFanout(rt.Context);
-            if (fanoutActions != null && fanoutActions.Count > 0)
-                result.Actions.AddRange(fanoutActions);
-        }
-
-        if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
-            rt.CleanupImplantedTiles?.Invoke(rt.Context);
-
-        if (rt.Context.OverrideRadialClearDelays != null &&
-            rt.Context.OverrideRadialClearDelays.Count > 0)
-        {
-            rt.FireOverrideOverrideSpecialVisuals?.Invoke(
-                rt.Context.Affected,
-                rt.Context.OverrideRadialClearDelays);
-        }
-
-        result.Actions.Add(BuildClearAction(rt.Context));
+        return board != null &&
+               x >= 0 && x < board.Width &&
+               y >= 0 && y < board.Height;
     }
+
 
     private MatchClearAction BuildClearAction(ResolutionContext ctx)
     {
