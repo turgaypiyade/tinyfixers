@@ -78,14 +78,20 @@ MonoBehaviour:
   bombSprite: {fileID: 21300000, guid: aeaf2c89ef70045589b271ee4008b1ce, type: 3}
   bombBaseSize: 256
   chargeDuration: 1.9
-  chargeStartScale: 0.3
-  chargeMaxScale: 1.2
-  breathSpeed: 5
-  breathAmount: 0.05
-  shakeStartNormalized: 0.25
-  shakeIntensityStart: 1
-  shakeIntensityEnd: 8
-  shakeSpeed: 45
+  phaseSquashRatio: 0.15
+  phaseStretchRatio: 0.15
+  phaseWobbleRatio: 0.55
+  phasePeakRatio: 0.15
+  squashScaleX: 1.22
+  squashScaleY: 0.75
+  stretchScaleX: 0.82
+  stretchScaleY: 1.32
+  wobbleAmplitude: 0.14
+  wobbleFrequency: 5.5
+  tiltDegrees: 8
+  peakScale: 1.45
+  peakPulseAmplitude: 0.03
+  peakPulseFrequency: 18
   glowSprite: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
   glowSizeMultiplier: 2
   glowColorStart: {r: 0.5, g: 0.75, b: 1, a: 0}
@@ -248,7 +254,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.1882353, g: 0.682353, b: 0.7490196, a: 0.627451}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -406,7 +412,7 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 0.25
+      scalar: 0.35
       minScalar: 5
       maxCurve:
         serializedVersion: 2
@@ -577,7 +583,7 @@ ParticleSystem:
     startSize:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 0.18
+      scalar: 0.2
       minScalar: 1
       maxCurve:
         serializedVersion: 2
@@ -5244,7 +5250,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.1882353, g: 0.682353, b: 0.7490196, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:

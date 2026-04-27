@@ -73,10 +73,10 @@ public class BoardVfxService
         // Object.Destroy(go, lifetime);
 
         // İsteğe bağlı: prefab scripti varsa süreyi buradan senkronlayabilirsin
-        var fx = go.GetComponent<PulseCoreExplosionFX>();
+        var fx = go.GetComponentInChildren<PulseCoreExplosionFX>(true);
         if (fx != null)
         {
-            // fx.SetLifetime(lifetime);  // aşağıda ekleyeceğiz
+            fx.SetLifetime(lifetime);
         }
     }
 

@@ -357,17 +357,23 @@ MonoBehaviour:
   shockwaveRing: {fileID: 4092801349851170011}
   coreFlash: {fileID: 3764555681437666637}
   baseSize: 10
-  areaOvershoot: 0.9
-  totalDuration: 0.95
+  areaOvershoot: 1.106
+  totalDuration: 0.25
   destroyOnFinish: 1
-  flashPeakSizeRatio: 0.75
-  flashInTime: 0.05
+  randomizeOnPlay: 1
+  glowThicknessMin: 1.318
+  glowThicknessMax: 2
+  ringThicknessMin: 1.318
+  ringThicknessMax: 2
+  thicknessAlphaMultiplier: 0.65
+  flashPeakSizeRatio: 1.08
+  flashInTime: 0.08
   flashOutTime: 0.22
   flashStartRatio: 0.3
   flashEndRatio: 1.15
   flashColor: {r: 1, g: 1, b: 1, a: 1}
   glowPeakSizeRatio: 0.9
-  glowInTime: 0.08
+  glowInTime: 0.1
   glowOutTime: 0.5
   glowStartRatio: 0.3
   glowEndRatio: 1.1
