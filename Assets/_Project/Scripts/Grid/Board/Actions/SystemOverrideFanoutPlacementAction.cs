@@ -58,7 +58,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                     beamReached = true;
                 });
 
-            float timeout = Mathf.Max(duration, board.ApplySpecialChainTempo(0.03f)) + board.ApplySpecialChainTempo(0.02f);
+            float timeout = Mathf.Max(duration, board.ApplySpecialChainTempo(0.03f)) + board.ApplySpecialChainTempo(0.04f);
 
             float elapsed = 0f;
             while (!beamReached && elapsed < timeout)
@@ -87,14 +87,14 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                     downTime: 0.10f);
             }
 
-            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.03f));
+            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.05f));
         }
 
         yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.002f));
 
         if (deferredPulseExplosionCells != null && deferredPulseExplosionCells.Count > 0)
         {
-            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.01f));
+            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.05f));
 
             for (int i = 0; i < deferredPulseExplosionCells.Count; i++)
             {
@@ -111,7 +111,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 // tarafından PulseCoreSpecial üzerinden zaten yapıldı.
                 PlayPulseCoreExplosionVfx(tile);
 
-                yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.015f));
+                yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.05f));
             }
         }
 
