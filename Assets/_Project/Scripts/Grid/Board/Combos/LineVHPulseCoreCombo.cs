@@ -1004,7 +1004,7 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         orbitRt.anchorMin = new Vector2(0.5f, 0.5f);
         orbitRt.anchorMax = new Vector2(0.5f, 0.5f);
         orbitRt.pivot = new Vector2(0.5f, 0.5f);
-        orbitRt.sizeDelta = new Vector2(board.TileSize * 3.25f, board.TileSize * 3.25f);
+        orbitRt.sizeDelta = new Vector2(board.TileSize * 3.80f, board.TileSize * 3.80f);
         orbitRt.anchoredPosition = pulseStart;
         orbitRt.localScale = Vector3.one;
         orbitRt.localRotation = Quaternion.identity;
@@ -1300,12 +1300,12 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
 
     private float ResolveOrbitIconSize()
     {
-        float fallback = board != null ? board.TileSize * 0.92f : 48f;
+        float fallback = board != null ? board.TileSize * 1.08f : 56f;
 
         float lineSize = GetIconVisualSize(orbitLineTile, fallback);
         float pulseSize = GetIconVisualSize(orbitPulseTile, fallback);
 
-        return Mathf.Max(1f, Mathf.Max(lineSize, pulseSize));
+        return Mathf.Max(1f, Mathf.Max(lineSize, pulseSize) * 1.22f);
     }
 
     private static float GetIconVisualSize(TileView tile, float fallback)

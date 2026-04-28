@@ -237,13 +237,18 @@ public sealed class PulseCoreSpecial
                 processedViews.Add(rt.Board.Tiles[pos.x, pos.y]);
         }
 
-        Dictionary<TileView, float> stagger =
+        Dictionary<TileView, float> pulseDelays =
             rt.Board.PulseCoreImpactService.BuildStaggerDelays(ctx.Affected, processedViews);
+
+        Dictionary<TileView, float> clearDelays =
+            ctx.OverrideRadialClearDelays != null && ctx.OverrideRadialClearDelays.Count > 0
+                ? ctx.OverrideRadialClearDelays
+                : pulseDelays;
 
         return new MatchClearAction(
             ctx.Affected,
             doShake: true,
-            staggerDelays: stagger,
+            staggerDelays: null,
             staggerAnimTime: rt.Board.ApplySpecialChainTempo(rt.Board.PulseImpactAnimTime),
             animationMode: ctx.HasLineActivation && !ctx.OverrideForceDefaultClearAnim
                 ? ClearAnimationMode.LightningStrike
@@ -254,7 +259,7 @@ public sealed class PulseCoreSpecial
             lightningVisualTargets: ctx.LightningVisualTargets,
             lightningLineStrikes: ctx.LightningLineStrikes,
             suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
-            perTileClearDelays: ctx.OverrideRadialClearDelays,
+            perTileClearDelays: clearDelays,
             isSpecialPhase: true,
             presentationPlan: null
         );

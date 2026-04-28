@@ -238,6 +238,15 @@ public class BoardAnimator
         var impactCells = new List<Vector2Int>();
         var obstacleDamageCounts = new Dictionary<Vector2Int, int>();
 
+        Debug.Log(
+            $"[PulseClearDebug][BA] ENTER " +
+            $"list={list.Count} " +
+            $"mode={animationMode} " +
+            $"specialPhase={board.IsSpecialActivationPhase} " +
+            $"stagger={(staggerDelays != null ? staggerDelays.Count : 0)} " +
+            $"perTile={(perTileClearDelays != null ? perTileClearDelays.Count : 0)} " +
+            $"suppress={suppressPerTileClearVfx}");
+
         board.ConsumePatchbotDashRequests(_patchbotDashBuffer);
         Coroutine patchbotDashRoutine = null;
 
@@ -333,6 +342,22 @@ public class BoardAnimator
             {
                 var tile = list[i];
                 if (tile == null) continue;
+                bool debugLive =
+                tile.X >= 0 && tile.X < board.Width &&
+                tile.Y >= 0 && tile.Y < board.Height &&
+                board.Tiles[tile.X, tile.Y] == tile;
+
+                bool debugHasStagger =
+                    staggerDelays != null && staggerDelays.ContainsKey(tile);
+
+                bool debugHasPerTile =
+                    perTileClearDelays != null && perTileClearDelays.ContainsKey(tile);
+
+                Debug.Log(
+                    $"[PulseClearDebug][BA] LOOP tile=({tile.X},{tile.Y}) " +
+                    $"type={tile.GetTileType()} special={tile.GetSpecial()} " +
+                    $"live={debugLive} hasStagger={debugHasStagger} hasPerTile={debugHasPerTile}");
+
                 impactCells.Add(new Vector2Int(tile.X, tile.Y));
             }
         }
@@ -382,6 +407,7 @@ public class BoardAnimator
 
             if (!shouldSuppressVfx && staggerDelays != null && staggerDelays.TryGetValue(tile, out var d))
             {
+                Debug.Log($"[PulseClearDebug][BA] STAGGER_BRANCH tile=({tile.X},{tile.Y}) delay={d:0.000}");
                 pulseImpacts.Add(tileAnimator.PlayPulseImpact(tile, d, staggerAnimTime));
                 if (d > maxStaggerDelay) maxStaggerDelay = d;
             }
@@ -423,7 +449,9 @@ public class BoardAnimator
                 var tileAnimationMode =
                     isGoalTile ? ClearAnimationMode.GoalFlyToHud :
                     (useLightningEffect ? ClearAnimationMode.LightningStrike : ClearAnimationMode.Default);
-
+                Debug.Log(
+                    $"[PulseClearDebug][BA] POP_BRANCH tile=({tile.X},{tile.Y}) " +
+                    $"delay={delay:0.000} mode={tileAnimationMode}");
                 pops.Add(clearEffectOrchestrator.Play(tile, tileAnimationMode, delay, board.GetClearDurationForCurrentPass()));
 
                 if (!isSweptOff)
@@ -541,11 +569,16 @@ public class BoardAnimator
         // Aksi halde cascade/fall eski TileView referanslarıyla çakışıp
         // MissingReferenceException üretebiliyor.
         if (patchbotDashRoutine != null)
-            yield return patchbotDashRoutine;
+           // yield return patchbotDashRoutine;
 
         for (int i = 0; i < list.Count; i++)
         {
-            var tile = list[i];
+                Debug.Log(
+        $"[PulseClearDebug][BA] BEFORE_FINAL " +
+        $"list={list.Count} shouldClear={shouldClearTile.Count} " +
+        $"pulseImpacts={pulseImpacts.Count} pops={pops.Count}");
+        
+                var tile = list[i];
             if (tile == null) continue;
             if (lineHitClearedTiles.Contains(tile)) continue;
 
@@ -595,7 +628,20 @@ public class BoardAnimator
         void FinalizeTileClear(TileView tile)
         {
             if (tile == null)
+            {
+                Debug.Log("[PulseClearDebug] FinalizeTileClear skip tile=null");
                 return;
+            }
+
+            bool live =
+                tile.X >= 0 && tile.X < board.Width &&
+                tile.Y >= 0 && tile.Y < board.Height &&
+                board.Tiles[tile.X, tile.Y] == tile;
+
+            Debug.Log(
+                $"[PulseClearDebug] FinalizeTileClear tile=({tile.X},{tile.Y}) " +
+                $"type={tile.GetTileType()} special={tile.GetSpecial()} " +
+                $"live={live} specialPhase={board.IsSpecialActivationPhase}");
 
             if (!skipBreakFxTiles.Contains(tile))
                 board.BreakFx?.PlayTileBreak(tile);

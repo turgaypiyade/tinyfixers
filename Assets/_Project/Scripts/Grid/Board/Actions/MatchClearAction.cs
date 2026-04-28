@@ -75,7 +75,16 @@ public class MatchClearAction : BoardAction
         if (!isBlocking)
             sequencer.Board.ActiveBackgroundJobs++;
 
-        PruneDeadReferences(sequencer != null ? sequencer.Board : null);
+        Debug.Log(
+            $"[PulseClearDebug][MCA] ENTER " +
+            $"isSpecialPhase={isSpecialActivationPhase} " +
+            $"matches={(matches != null ? matches.Count : -1)} " +
+            $"stagger={(staggerDelays != null ? staggerDelays.Count : 0)} " +
+            $"perTile={(perTileClearDelays != null ? perTileClearDelays.Count : 0)} " +
+            $"plan={(PresentationPlan != null)}");
+            
+        if (!isSpecialActivationPhase)
+            PruneDeadReferences(sequencer != null ? sequencer.Board : null);
 
         bool hasMatches = matches != null && matches.Count > 0;
         bool hasImpacts = impactCells != null && impactCells.Count > 0;

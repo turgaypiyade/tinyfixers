@@ -245,7 +245,9 @@ public class GridSpawner : MonoBehaviour
         bool[] blocked = BuildBlockedMap();
 
         if (drawObstacles)
+        {
             DrawObstacleVisuals();
+        }
 
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
@@ -893,7 +895,69 @@ public class GridSpawner : MonoBehaviour
         go.transform.SetParent(parent, false);
 
         // Sadece static obstacle için grid çizgisi payını kapatıyoruz.
+        // Static obstacle grid çizgisini kapatacak kadar büyür.
+        // Böylece obstacle ile board grid çizgisi arasında boşluk kalmaz.
+        // Obstacle dış kenarlarda grid çizgisini kapatsın,
+        // ama başka bir obstacle ile ortak kenarda üst üste binmesin.
         float gridOverlap = Mathf.Max(1f, Mathf.Ceil(runtimeGridLineThickness * 0.5f));
+
+        int originIndex = resolvedLevel.Index(x, y);
+
+        bool HasDifferentObstacleAt(int cx, int cy)
+        {
+            if (cx < 0 || cx >= width || cy < 0 || cy >= height)
+                return false;
+
+            if (resolvedLevel == null ||
+                resolvedLevel.obstacles == null ||
+                resolvedLevel.obstacleOrigins == null)
+                return false;
+
+            int idx = resolvedLevel.Index(cx, cy);
+
+            if (idx < 0 || idx >= resolvedLevel.obstacles.Length)
+                return false;
+
+            if ((ObstacleId)resolvedLevel.obstacles[idx] == ObstacleId.None)
+                return false;
+
+            if (idx >= resolvedLevel.obstacleOrigins.Length)
+                return false;
+
+            // Aynı obstacle'ın kendi hücreleri değil,
+            // farklı origin'e sahip başka bir obstacle mı?
+            return resolvedLevel.obstacleOrigins[idx] != originIndex;
+        }
+
+        bool hasDifferentLeft = false;
+        bool hasDifferentRight = false;
+        bool hasDifferentTop = false;
+        bool hasDifferentBottom = false;
+
+        for (int yy = y; yy < y + h; yy++)
+        {
+            if (HasDifferentObstacleAt(x - 1, yy))
+                hasDifferentLeft = true;
+
+            if (HasDifferentObstacleAt(x + w, yy))
+                hasDifferentRight = true;
+        }
+
+        for (int xx = x; xx < x + w; xx++)
+        {
+            if (HasDifferentObstacleAt(xx, y - 1))
+                hasDifferentTop = true;
+
+            if (HasDifferentObstacleAt(xx, y + h))
+                hasDifferentBottom = true;
+        }
+
+        // Başka obstacle olmayan dış kenarlarda grid çizgisini kapat.
+        // Başka obstacle varsa o ortak kenarda taşma yapma.
+        float leftOverlap = hasDifferentLeft ? 0f : gridOverlap;
+        float rightOverlap = hasDifferentRight ? 0f : gridOverlap;
+        float topOverlap = hasDifferentTop ? 0f : gridOverlap;
+        float bottomOverlap = hasDifferentBottom ? 0f : gridOverlap;
 
         var rt = go.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0, 1);
@@ -901,13 +965,13 @@ public class GridSpawner : MonoBehaviour
         rt.pivot = new Vector2(0, 1);
 
         rt.anchoredPosition = new Vector2(
-            x * tileSize - gridOverlap,
-            -y * tileSize + gridOverlap
+            x * tileSize - leftOverlap,
+            -y * tileSize + topOverlap
         );
 
         rt.sizeDelta = new Vector2(
-            w * tileSize + gridOverlap * 2f,
-            h * tileSize + gridOverlap * 2f
+            w * tileSize + leftOverlap + rightOverlap,
+            h * tileSize + topOverlap + bottomOverlap
         );
 
         var img = go.GetComponent<Image>();

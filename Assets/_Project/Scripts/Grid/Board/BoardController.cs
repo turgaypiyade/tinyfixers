@@ -791,6 +791,10 @@ public class BoardController : MonoBehaviour
 
     internal void ClearAndDestroyTile(TileView tile, Dictionary<TileType, int> clearedByType = null)
     {
+        Debug.Log(
+                $"[PulseClearDebug] ClearAndDestroyTile ENTER tile=({tile?.X},{tile?.Y}) " +
+                $"type={(tile != null ? tile.GetTileType().ToString() : "null")} " +
+                $"special={(tile != null ? tile.GetSpecial().ToString() : "null")}");
         if (tile == null || !tile) return;
         int x = tile.X, y = tile.Y;
         if (x >= 0 && x < width && y >= 0 && y < height && tiles[x, y] == tile) ClearCell(x, y);

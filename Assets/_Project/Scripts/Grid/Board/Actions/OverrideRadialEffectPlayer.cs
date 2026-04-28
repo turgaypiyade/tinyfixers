@@ -251,7 +251,7 @@ public sealed class OverrideRadialEffectPlayer : IClearEffectPlayer
 
     private void PlayOverrideCenterVfx(BoardController board, OverrideRadialEffectDescriptor radial)
     {
-        if (radial.OriginCell.HasValue)
+       /* if (radial.OriginCell.HasValue)
             ComboBehaviorEvents.EmitComboTriggered(TileSpecial.SystemOverride, TileSpecial.None, radial.OriginCell.Value);
 
         if (radial.OriginTile == null)
@@ -264,7 +264,7 @@ public sealed class OverrideRadialEffectPlayer : IClearEffectPlayer
         }
 
         if (board.SfxSource != null && board.SfxPulseCoreBoom != null)
-            board.SfxSource.PlayOneShot(board.SfxPulseCoreBoom);
+            board.SfxSource.PlayOneShot(board.SfxPulseCoreBoom);*/
     }
 
     private Vector2 GetTileAnchoredPos(BoardController board, TileView tile)

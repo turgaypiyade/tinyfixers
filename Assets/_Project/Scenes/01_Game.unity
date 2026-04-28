@@ -192,7 +192,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 39e30acfa112f4694a6023be6a039895, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 77759131cf5654adc9a0c43d0e63b100, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -595,15 +595,15 @@ MonoBehaviour:
   vfxRoot: {fileID: 1732843066}
   runnerImage: {fileID: 164518322}
   tileIcons: {fileID: 11400000, guid: 44f21392c67a14dfbb8782561221acf8, type: 2}
-  dashSpeed: 750
-  arriveEps: 5
-  syncedDurationMultiplier: 1
-  takeoffBurstDuration: 0.12
-  takeoffLateralFactor: 0.46
-  takeoffLiftFactor: 0.78
-  hoverHoldDuration: 0.035
-  diveArcFactor: 0.11
-  diveSpeedMultiplier: 1.28
+  dashSpeed: 450
+  arriveEps: 10
+  syncedDurationMultiplier: 0.896
+  takeoffBurstDuration: 0.18
+  takeoffLateralFactor: 0.83
+  takeoffLiftFactor: 1.279
+  hoverHoldDuration: 0.5
+  diveArcFactor: 0.68
+  diveSpeedMultiplier: 0.926
   flightLoopClip: {fileID: 8300000, guid: 4e3d6cb39186e114bb5d149dc48391c9, type: 3}
   flightLoopVolume: 0.18
   flightFadeIn: 0.015
@@ -1504,8 +1504,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.13350785}
-  m_AnchorMax: {x: 0.6167147, y: 3.4515707}
+  m_AnchorMin: {x: 0, y: 0.051567238}
+  m_AnchorMax: {x: 1.0717863, y: 1.3331648}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -2419,7 +2419,7 @@ RectTransform:
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 1}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1220861052
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3380,13 +3380,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BoardController
   iconLibrary: {fileID: 0}
   levelData: {fileID: 0}
-  swapDuration: 0.005
-  fallDuration: 0.1
-  clearDuration: 0.00001
-  spawnStartOffsetY: -4
+  swapDuration: 0.12
+  fallDuration: 0.22
+  clearDuration: 0.08
+  spawnStartOffsetY: -3
   swapDurationMultiplier: 1
-  fallColumnStep: 0.01
-  fallDurationMultiplier: 1.1
+  fallColumnStep: 0.008
+  fallDurationMultiplier: 1.8
   swapMoveCurve:
     serializedVersion: 2
     m_Curve:
@@ -3464,11 +3464,11 @@ MonoBehaviour:
     m_RotationOrder: 4
   enableFallSettle: 1
   fallSettleDuration: 0.08
-  fallSettleStrength: 0.18
-  fallSettleStretchX: 0.05
-  fallSettleOvershoot: 0.05
-  preClearDelay: 0
-  shakeDuration: 0.04
+  fallSettleStrength: 0.06
+  fallSettleStretchX: 0.02
+  fallSettleOvershoot: 0.01
+  preClearDelay: 0.02
+  shakeDuration: 0.02
   shakeStrength: 2
   shakeTarget: {fileID: 1939332386}
   patchBotPulseComboSize: 4
@@ -3530,9 +3530,9 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-  specialChainDurationMultiplier: 0.252
-  pulseImpactDelayStep: 0.008
-  pulseImpactAnimTime: 0.02
+  specialChainDurationMultiplier: 0.35
+  pulseImpactDelayStep: 0.05
+  pulseImpactAnimTime: 0.1
   boardVfxPlayer: {fileID: 874639811}
   lightningSpawner: {fileID: 1732843067}
   lineTravelPlayer: {fileID: 1244073440}
@@ -4252,7 +4252,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 4
-  m_Spacing: 50
+  m_Spacing: 10
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 1
