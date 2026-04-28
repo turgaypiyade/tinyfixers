@@ -713,11 +713,15 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
     private readonly TileView orbitPulseTile;
 
     // Orbit intro animasyon ayarları
-    private const float OrbitRiseHeight = 60f;     // yukarı kalkma yüksekliği (pixel)
-    private const float OrbitRiseDuration = 0.20f; // yukarı kalkma süresi
-    private const float OrbitSpinDuration = 0.50f; // dönme süresi
-    private const float OrbitTurns = 2f;            // tam tur sayısı
-    private const float OrbitGapPixels = 3f;        // ikonlar arası ekstra boşluk
+    private const float OrbitRiseHeight = 36f;          // ghost ikonların yukarı kalkma yüksekliği (pixel)
+    private const float OrbitRiseDuration = 0.12f;      // kısa sahneye alma süresi
+    private const float OrbitSpinDuration = 2.00f;      // PulseCore/emitter ana dönüş süresi
+    private const float EmitterOrbitTurns = 2f;         // emitter PulseCore etrafında Y eksenli orbit yapar
+    private const float EmitterSelfSpinTurns = 2f;      // emitter orbit sırasında kendi etrafında döner
+    private const float PulseCoreSelfSpinTurns = 2f;    // PulseCore kendi merkezinde döner
+    private const float OrbitGapPixels = 3f;            // ikon kenarları arasındaki boşluk
+    private const float LightningThickness = 5f;        // bağ şimşeği kalınlığı
+    private const float LightningJitter = 8f;           // şimşeğin kırıklı görünmesi için sapma
 
     public LineVHPulseCoreComboAction(
        BoardController board,
@@ -749,96 +753,8 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
-        // ===== ORBIT INTRO ANIMASYONU =====
-        // Akış:
-        //  1) Her iki tile'a PlaySpecialCreationReveal çağır → halo + grow efekti (proje stili)
-        //  2) Tile'ları yukarı kaldır
-        //  3) Pivot etrafında birbirinin etrafında döndür (aralarında 2-3 px gap)
-        //  4) Başlangıç pozisyonlarına geri koy
-        //  5) Mevcut akış (line travel + clear) normal çalışsın
-        Debug.Log($"[OrbitIntro] ENTER line={(orbitLineTile != null ? $"({orbitLineTile.X},{orbitLineTile.Y})" : "NULL")} pulse={(orbitPulseTile != null ? $"({orbitPulseTile.X},{orbitPulseTile.Y})" : "NULL")}");
+        yield return PlayOrbitIntroGhost();
 
-        if (orbitLineTile != null && orbitPulseTile != null
-            && orbitLineTile.gameObject != null && orbitPulseTile.gameObject != null)
-        {
-            var lineRect = orbitLineTile.GetComponent<RectTransform>();
-            var pulseRect = orbitPulseTile.GetComponent<RectTransform>();
-
-            if (lineRect != null && pulseRect != null)
-            {
-                // HALO yok — sadece yukarı kalkma + dönme. Önce temelin çalıştığını görelim.
-                // (Daha sonra projedeki halo metoduyla zenginleştirebiliriz)
-
-                // Başlangıç pozisyonlarını kaydet
-                Vector2 lineStart = lineRect.anchoredPosition;
-                Vector2 pulseStart = pulseRect.anchoredPosition;
-                Vector2 pivot = (lineStart + pulseStart) * 0.5f;
-
-                // En üstte gözüksün
-                int lineSibling = lineRect.GetSiblingIndex();
-                int pulseSibling = pulseRect.GetSiblingIndex();
-                lineRect.SetAsLastSibling();
-                pulseRect.SetAsLastSibling();
-
-                // ===== AŞAMA A: yukarı kalkma =====
-                float t = 0f;
-                while (t < OrbitRiseDuration)
-                {
-                    t += Time.unscaledDeltaTime;
-                    float k = Mathf.Clamp01(t / OrbitRiseDuration);
-                    float eased = k * k * (3f - 2f * k);
-
-                    float rise = OrbitRiseHeight * eased;
-                    lineRect.anchoredPosition = lineStart + new Vector2(0f, rise);
-                    pulseRect.anchoredPosition = pulseStart + new Vector2(0f, rise);
-
-                    yield return null;
-                }
-
-                // Yükselmiş pivot
-                Vector2 risenPivot = pivot + new Vector2(0f, OrbitRiseHeight);
-
-                // Yarıçap = orijinal mesafenin yarısı + 2-3 px gap
-                float halfDist = Vector2.Distance(lineStart, pulseStart) * 0.5f;
-                float radius = halfDist + OrbitGapPixels;
-
-                // Başlangıç açısı (pulse'un pivota göre yönü)
-                Vector2 pulseDir = pulseStart - pivot;
-                if (pulseDir.sqrMagnitude < 0.0001f) pulseDir = Vector2.right;
-                float startAngle = Mathf.Atan2(pulseDir.y, pulseDir.x);
-
-                // ===== AŞAMA B: pivot etrafında dönüş =====
-                float twoPi = Mathf.PI * 2f;
-                t = 0f;
-                while (t < OrbitSpinDuration)
-                {
-                    t += Time.unscaledDeltaTime;
-                    float k = Mathf.Clamp01(t / OrbitSpinDuration);
-                    float eased = k * k * (3f - 2f * k);
-
-                    float angle = startAngle + eased * OrbitTurns * twoPi;
-
-                    Vector2 pulseOffset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
-                    Vector2 lineOffset = -pulseOffset;
-
-                    pulseRect.anchoredPosition = risenPivot + pulseOffset;
-                    lineRect.anchoredPosition = risenPivot + lineOffset;
-
-                    yield return null;
-                }
-
-                // ===== BİTİŞ: pozisyonları başlangıca geri koy =====
-                lineRect.anchoredPosition = lineStart;
-                pulseRect.anchoredPosition = pulseStart;
-
-                // Sibling sırasını geri al
-                lineRect.SetSiblingIndex(lineSibling);
-                pulseRect.SetSiblingIndex(pulseSibling);
-
-                Debug.Log("[OrbitIntro] DONE");
-            }
-        }
-        // ===== /ORBIT INTRO ANIMASYONU =====
 
         var cleared = new HashSet<Vector2Int>();
         var hiddenOrigins = new HashSet<TileView>();
@@ -1063,4 +979,404 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             }
         }
     }
+    private IEnumerator PlayOrbitIntroGhost()
+    {
+        if (board == null || orbitLineTile == null || orbitPulseTile == null)
+            yield break;
+
+        var emitterSprite = ResolveOrbitSprite(orbitLineTile);
+        var pulseSprite = ResolveOrbitSprite(orbitPulseTile);
+
+        if (emitterSprite == null || pulseSprite == null)
+            yield break;
+
+        var parent = ResolveOrbitGhostParent();
+        if (parent == null)
+            yield break;
+
+        Vector2 emitterStart = GetTileCenterAnchoredPosition(parent, orbitLineTile);
+        Vector2 pulseStart = GetTileCenterAnchoredPosition(parent, orbitPulseTile);
+
+        var orbitGo = new GameObject("LinePulseYOrbitIntroGhost", typeof(RectTransform), typeof(CanvasGroup));
+        var orbitRt = orbitGo.GetComponent<RectTransform>();
+        orbitRt.SetParent(parent, false);
+        orbitRt.SetAsLastSibling();
+        orbitRt.anchorMin = new Vector2(0.5f, 0.5f);
+        orbitRt.anchorMax = new Vector2(0.5f, 0.5f);
+        orbitRt.pivot = new Vector2(0.5f, 0.5f);
+        orbitRt.sizeDelta = new Vector2(board.TileSize * 3.25f, board.TileSize * 3.25f);
+        orbitRt.anchoredPosition = pulseStart;
+        orbitRt.localScale = Vector3.one;
+        orbitRt.localRotation = Quaternion.identity;
+
+        var cg = orbitGo.GetComponent<CanvasGroup>();
+        cg.alpha = 1f;
+        cg.blocksRaycasts = false;
+        cg.interactable = false;
+
+        float iconSize = ResolveOrbitIconSize();
+        float orbitRadius = iconSize + OrbitGapPixels;
+
+        var lightningSegments = CreateLightningSegments(orbitRt, 4);
+        var pulseImage = CreateOrbitGhostImage(orbitRt, "PulseCoreGhost", pulseSprite, iconSize);
+        var emitterImage = CreateOrbitGhostImage(orbitRt, "EmitterGhost", emitterSprite, iconSize);
+
+        pulseImage.rectTransform.anchoredPosition = Vector2.zero;
+        emitterImage.rectTransform.anchoredPosition = Vector2.right * orbitRadius;
+
+        // Gerçek tile root'larını oynatma; sadece ghost ikonları oynat.
+        // Böylece beyaz tile/background karesi görünmez.
+        HideTileCanvasGroup(orbitLineTile);
+        HideTileCanvasGroup(orbitPulseTile);
+
+        // Kısa sahneye alma: ikili PulseCore merkezine taşınıp biraz yukarı alınır.
+        float t = 0f;
+        Vector2 sceneStart = pulseStart;
+        Vector2 sceneEnd = pulseStart + new Vector2(0f, OrbitRiseHeight);
+        Vector2 emitterLocalStart = emitterStart - pulseStart;
+        if (emitterLocalStart.sqrMagnitude < 0.0001f)
+            emitterLocalStart = Vector2.right * orbitRadius;
+        else
+            emitterLocalStart = emitterLocalStart.normalized * orbitRadius;
+
+        while (t < OrbitRiseDuration)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, OrbitRiseDuration));
+            float eased = EaseInOut(k);
+
+            orbitRt.anchoredPosition = Vector2.LerpUnclamped(sceneStart, sceneEnd, eased);
+            orbitRt.localScale = Vector3.one * Mathf.LerpUnclamped(0.96f, 1.04f, eased);
+
+            Vector2 emitterPos = Vector2.LerpUnclamped(emitterLocalStart, Vector2.right * orbitRadius, eased);
+            pulseImage.rectTransform.anchoredPosition = Vector2.zero;
+            emitterImage.rectTransform.anchoredPosition = emitterPos;
+            UpdateLightningSegments(lightningSegments, Vector2.zero, emitterPos, 1f, 0f);
+
+            yield return null;
+        }
+
+        orbitRt.anchoredPosition = sceneEnd;
+        orbitRt.localScale = Vector3.one;
+
+        // Ana 2 saniyelik animasyon:
+        // 1) PulseCore merkezde kalır ve kendi merkezinde döner.
+        // 2) Emitter, PulseCore etrafında Y eksenli orbit yapar.
+        //    Y ekseni hissi için ekranda sağ-sol hareket + öne/arkaya scale/alpha kullanılır.
+        // 3) Emitter orbit yaparken kendi merkezinde de döner.
+        // 4) PulseCore ve emitter arasındaki 3 px boşluk korunur; aralarında kırıklı lightning bağ kalır.
+        t = 0f;
+        float twoPi = Mathf.PI * 2f;
+        while (t < OrbitSpinDuration)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, OrbitSpinDuration));
+            float linear = k;
+
+            float emitterOrbitAngle = linear * EmitterOrbitTurns * twoPi;
+            float x = Mathf.Cos(emitterOrbitAngle) * orbitRadius;
+            float depth = Mathf.Sin(emitterOrbitAngle); // +1: önde, -1: arkada
+
+            Vector2 emitterPos = new Vector2(x, 0f);
+            emitterImage.rectTransform.anchoredPosition = emitterPos;
+            pulseImage.rectTransform.anchoredPosition = Vector2.zero;
+
+            float pulseSelfZ = -linear * PulseCoreSelfSpinTurns * 360f;
+            float emitterSelfZ = linear * EmitterSelfSpinTurns * 360f;
+
+            pulseImage.rectTransform.localRotation = Quaternion.Euler(0f, 0f, pulseSelfZ);
+            emitterImage.rectTransform.localRotation = Quaternion.Euler(0f, 0f, emitterSelfZ);
+
+            float depth01 = (depth + 1f) * 0.5f;
+            float emitterScale = Mathf.LerpUnclamped(0.72f, 1.12f, depth01);
+            float emitterAlpha = Mathf.LerpUnclamped(0.42f, 1f, depth01);
+
+            emitterImage.rectTransform.localScale = Vector3.one * emitterScale;
+            SetImageAlpha(emitterImage, emitterAlpha);
+
+            float pulsePunch = 1f + Mathf.Sin(linear * Mathf.PI * 4f) * 0.035f;
+            pulseImage.rectTransform.localScale = Vector3.one * pulsePunch;
+            SetImageAlpha(pulseImage, 1f);
+
+            UpdateLightningSegments(lightningSegments, Vector2.zero, emitterPos, Mathf.LerpUnclamped(0.55f, 1f, depth01), linear);
+
+            // Emitter arkaya geçtiğinde PulseCore'un arkasında görünsün,
+            // öne geldiğinde üstte görünsün. Lightning her zaman ikonların arasında kalsın.
+            if (depth < 0f)
+            {
+                foreach (var segment in lightningSegments)
+                    if (segment != null) segment.rectTransform.SetSiblingIndex(0);
+                emitterImage.rectTransform.SetSiblingIndex(1);
+                pulseImage.rectTransform.SetAsLastSibling();
+            }
+            else
+            {
+                pulseImage.rectTransform.SetSiblingIndex(0);
+                foreach (var segment in lightningSegments)
+                    if (segment != null) segment.rectTransform.SetAsLastSibling();
+                emitterImage.rectTransform.SetAsLastSibling();
+            }
+
+            yield return null;
+        }
+
+        pulseImage.rectTransform.anchoredPosition = Vector2.zero;
+        pulseImage.rectTransform.localRotation = Quaternion.identity;
+        pulseImage.rectTransform.localScale = Vector3.one;
+        SetImageAlpha(pulseImage, 1f);
+
+        emitterImage.rectTransform.anchoredPosition = Vector2.right * orbitRadius;
+        emitterImage.rectTransform.localRotation = Quaternion.identity;
+        emitterImage.rectTransform.localScale = Vector3.one;
+        SetImageAlpha(emitterImage, 1f);
+        UpdateLightningSegments(lightningSegments, Vector2.zero, Vector2.right * orbitRadius, 1f, 0f);
+
+        // Çok kısa kapanış; bundan sonra mevcut LineV/H tetiklenir.
+        const float settleDuration = 0.08f;
+        Vector2 endCenter = GetCellAnchoredPosition(comboCenterCell.x, comboCenterCell.y);
+        Vector2 settleStart = orbitRt.anchoredPosition;
+
+        t = 0f;
+        while (t < settleDuration)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, settleDuration));
+            float eased = EaseInOut(k);
+
+            orbitRt.anchoredPosition = Vector2.LerpUnclamped(settleStart, endCenter, eased);
+            orbitRt.localScale = Vector3.one * Mathf.LerpUnclamped(1f, 0.90f, eased);
+            cg.alpha = Mathf.LerpUnclamped(1f, 0f, eased);
+
+            yield return null;
+        }
+
+        if (orbitRt != null)
+            UnityEngine.Object.Destroy(orbitRt.gameObject);
+    }
+
+    private static List<UnityEngine.UI.Image> CreateLightningSegments(RectTransform parent, int count)
+    {
+        var segments = new List<UnityEngine.UI.Image>();
+        for (int i = 0; i < count; i++)
+        {
+            var go = new GameObject($"LightningLink_{i}", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+            var rt = go.GetComponent<RectTransform>();
+            rt.SetParent(parent, false);
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(1f, LightningThickness);
+            rt.localScale = Vector3.one;
+            rt.localRotation = Quaternion.identity;
+
+            var image = go.GetComponent<UnityEngine.UI.Image>();
+            image.raycastTarget = false;
+            image.color = new Color(0.55f, 0.95f, 1f, 0.95f);
+            segments.Add(image);
+        }
+
+        return segments;
+    }
+
+    private static void UpdateLightningSegments(
+        List<UnityEngine.UI.Image> segments,
+        Vector2 from,
+        Vector2 to,
+        float alpha,
+        float phase)
+    {
+        if (segments == null || segments.Count == 0)
+            return;
+
+        Vector2 delta = to - from;
+        float distance = delta.magnitude;
+        if (distance < 0.001f)
+        {
+            foreach (var segment in segments)
+                SetImageAlpha(segment, 0f);
+            return;
+        }
+
+        Vector2 dir = delta / distance;
+        Vector2 normal = new Vector2(-dir.y, dir.x);
+
+        var points = new Vector2[segments.Count + 1];
+        points[0] = from;
+        points[segments.Count] = to;
+
+        for (int i = 1; i < points.Length - 1; i++)
+        {
+            float p = i / (float)segments.Count;
+            float sign = (i % 2 == 0) ? -1f : 1f;
+            float flicker = Mathf.Sin((phase * 24f + i * 1.73f) * Mathf.PI) * 0.45f;
+            points[i] = Vector2.LerpUnclamped(from, to, p) + normal * sign * LightningJitter * (1f + flicker);
+        }
+
+        for (int i = 0; i < segments.Count; i++)
+        {
+            var segment = segments[i];
+            if (segment == null)
+                continue;
+
+            Vector2 a = points[i];
+            Vector2 b = points[i + 1];
+            Vector2 mid = (a + b) * 0.5f;
+            Vector2 segDelta = b - a;
+            float segLength = segDelta.magnitude;
+            float angle = Mathf.Atan2(segDelta.y, segDelta.x) * Mathf.Rad2Deg;
+
+            var rt = segment.rectTransform;
+            rt.anchoredPosition = mid;
+            rt.sizeDelta = new Vector2(segLength, LightningThickness);
+            rt.localRotation = Quaternion.Euler(0f, 0f, angle);
+
+            var c = segment.color;
+            c.a = alpha;
+            segment.color = c;
+        }
+    }
+
+
+    private Sprite ResolveOrbitSprite(TileView tile)
+    {
+        if (tile == null)
+            return null;
+
+        var special = tile.GetSpecial();
+        if (board != null && special != TileSpecial.None)
+        {
+            var specialSprite = board.GetSpecialIcon(special);
+            if (specialSprite != null)
+                return specialSprite;
+        }
+
+        return tile.GetIconSprite();
+    }
+
+    private RectTransform ResolveOrbitGhostParent()
+    {
+        if (board == null)
+            return null;
+
+        if (board.Parent != null)
+            return board.Parent;
+
+        if (board.LineTravelSpawnParent is RectTransform lineTravelParent)
+            return lineTravelParent;
+
+        if (board.lineTravelPlayer != null && board.lineTravelPlayer.afterImageParent != null)
+            return board.lineTravelPlayer.afterImageParent;
+
+        if (orbitLineTile != null && orbitLineTile.transform.parent is RectTransform lineParent)
+            return lineParent;
+
+        if (orbitPulseTile != null && orbitPulseTile.transform.parent is RectTransform pulseParent)
+            return pulseParent;
+
+        return null;
+    }
+
+    private Vector2 GetTileCenterAnchoredPosition(RectTransform parent, TileView tile)
+    {
+        if (parent == null || tile == null)
+            return Vector2.zero;
+
+        var rt = tile.GetComponent<RectTransform>();
+        if (rt != null)
+        {
+            Vector3 worldCenter = rt.TransformPoint(rt.rect.center);
+            return board.WorldToAnchoredIn(parent, worldCenter);
+        }
+
+        return GetCellAnchoredPosition(tile.X, tile.Y);
+    }
+
+    private Vector2 GetCellAnchoredPosition(int x, int y)
+    {
+        return new Vector2(
+            x * board.TileSize + board.TileSize * 0.5f,
+            -y * board.TileSize - board.TileSize * 0.5f);
+    }
+
+    private float ResolveOrbitIconSize()
+    {
+        float fallback = board != null ? board.TileSize * 0.92f : 48f;
+
+        float lineSize = GetIconVisualSize(orbitLineTile, fallback);
+        float pulseSize = GetIconVisualSize(orbitPulseTile, fallback);
+
+        return Mathf.Max(1f, Mathf.Max(lineSize, pulseSize));
+    }
+
+    private static float GetIconVisualSize(TileView tile, float fallback)
+    {
+        if (tile == null || tile.IconImage == null)
+            return fallback;
+
+        var rt = tile.IconImage.rectTransform;
+        if (rt == null)
+            return fallback;
+
+        Vector2 size = rt.rect.size;
+        if (size.x <= 1f || size.y <= 1f)
+            size = rt.sizeDelta;
+
+        float max = Mathf.Max(size.x, size.y);
+        return max > 1f ? max : fallback;
+    }
+
+    private static UnityEngine.UI.Image CreateOrbitGhostImage(
+        RectTransform parent,
+        string name,
+        Sprite sprite,
+        float size)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(size, size);
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
+
+        var image = go.GetComponent<UnityEngine.UI.Image>();
+        image.sprite = sprite;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        image.color = new Color(1f, 1f, 1f, 0.95f);
+
+        return image;
+    }
+
+    private static void HideTileCanvasGroup(TileView tile)
+    {
+        if (tile == null)
+            return;
+
+        if (!tile.TryGetComponent<CanvasGroup>(out var cg))
+            cg = tile.gameObject.AddComponent<CanvasGroup>();
+
+        cg.alpha = 0f;
+        cg.blocksRaycasts = false;
+        cg.interactable = false;
+    }
+
+    private static void SetImageAlpha(UnityEngine.UI.Image image, float alpha)
+    {
+        if (image == null)
+            return;
+
+        var color = image.color;
+        color.a = alpha;
+        image.color = color;
+    }
+
+    private static float EaseInOut(float t)
+    {
+        t = Mathf.Clamp01(t);
+        return t * t * (3f - 2f * t);
+    }
+
 }

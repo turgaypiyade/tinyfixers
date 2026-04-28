@@ -358,38 +358,38 @@ MonoBehaviour:
   coreFlash: {fileID: 3764555681437666637}
   baseSize: 10
   areaOvershoot: 1.106
-  totalDuration: 0.45
+  totalDuration: 2
   destroyOnFinish: 1
   randomizeOnPlay: 1
-  glowThicknessMin: 2.94
-  glowThicknessMax: 4.21
-  coreThicknessMin: 2.96
-  coreThicknessMax: 4.2
-  ringThicknessMin: 1.471
-  ringThicknessMax: 2.129
+  glowThicknessMin: 2.19
+  glowThicknessMax: 2.73
+  coreThicknessMin: 2.13
+  coreThicknessMax: 2.43
+  ringThicknessMin: 1.135
+  ringThicknessMax: 1.299
   thicknessAlphaMultiplier: 0.703
-  flashPeakSizeRatio: 1.251
+  flashPeakSizeRatio: 0.881
   flashInTime: 0.1
-  flashOutTime: 0.22
+  flashOutTime: 0.7
   flashStartRatio: 0.3
   flashEndRatio: 1.15
   flashColor: {r: 1, g: 1, b: 1, a: 1}
   glowPeakSizeRatio: 0.9
   glowInTime: 0.15
-  glowOutTime: 0.5
+  glowOutTime: 1
   glowStartRatio: 0.3
   glowEndRatio: 1.1
   glowColor: {r: 1, g: 0.55, b: 0.1, a: 0.75}
   raysPeakSizeRatio: 1.13
   raysInTime: 0.15
-  raysOutTime: 0.8
+  raysOutTime: 1.1
   raysStartRatio: 0.2
   raysEndRatio: 1.1
   raysRotateSpeed: 90
   raysColor: {r: 1, g: 0.82, b: 0.25, a: 0.95}
   ringPeakSizeRatio: 1.201
   ringInTime: 0.06
-  ringOutTime: 0.5
+  ringOutTime: 1.1
   ringStartRatio: 0.3
   ringEndRatio: 1.15
   ringColor: {r: 1, g: 0.75, b: 0.2, a: 1}
