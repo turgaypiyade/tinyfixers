@@ -27,6 +27,8 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float swapDurationMultiplier = 1f;
     [SerializeField] private float fallColumnStep = 0.015f;
     [SerializeField] private float fallDurationMultiplier = 1f;
+    [Tooltip("Cell/second cinsinden tek gerçek düşüş hızı. Dikey ve diyagonal tüm fall/slide süreleri bundan türetilir.")]
+    [SerializeField] private float fallVelocityCellsPerSecond = 30f;
     [SerializeField] private AnimationCurve swapMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve fallMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
@@ -294,6 +296,7 @@ public class BoardController : MonoBehaviour
     internal float FallDuration => fallDuration;
     internal float SwapDurationWithMultiplier => swapDuration * Mathf.Max(0.01f, swapDurationMultiplier);
     internal float FallDurationWithMultiplier => fallDuration * Mathf.Max(0.01f, fallDurationMultiplier);
+    internal float FallVelocityCellsPerSecond => Mathf.Max(0.0001f, fallVelocityCellsPerSecond) / Mathf.Max(0.01f, fallDurationMultiplier);
     internal AnimationCurve SwapMoveCurve => swapMoveCurve;
     internal AnimationCurve FallMoveCurve => fallMoveCurve;
     internal bool EnableFallSettle => enableFallSettle;
@@ -1863,14 +1866,25 @@ public class BoardController : MonoBehaviour
 
     internal float GetFallDurationForDistance(int cellDistance)
     {
-        // Gravity modeli: süre ∝ √mesafe (gerçek fizik: t = √(2d/g))
-        // EaseIn curve ile birleşince: taş yavaş başlar, hızlanarak düşer
-        // Toon Blast / Candy Crush hissi
         int d = Mathf.Max(1, cellDistance);
-        float baseDur = FallDurationWithMultiplier;
-        float perCell = baseDur * 0.35f; // FallDuration=0.22 → perCell=0.077
-        float duration = perCell * Mathf.Sqrt(d);
-        return Mathf.Max(0.05f, duration * Mathf.Max(0.5f, GetCascadeFallSpeedMultiplier()));
+        return GetFallDurationForMove(0, 0, 0, d);
+    }
+
+    internal float GetFallDurationForMove(int fromX, int fromY, int toX, int toY)
+    {
+        float distanceCells = Vector2.Distance(
+            new Vector2(fromX, fromY),
+            new Vector2(toX, toY));
+
+        return GetFallDurationForDistanceCells(distanceCells);
+    }
+
+    internal float GetFallDurationForDistanceCells(float distanceCells)
+    {
+        float d = Mathf.Max(0.0001f, distanceCells);
+        float duration = d / FallVelocityCellsPerSecond;
+
+        return Mathf.Max(0.01f, duration * Mathf.Max(0.5f, GetCascadeFallSpeedMultiplier()));
     }
 
     internal float GetClearDurationForCurrentPass() => Mathf.Max(0.03f, ApplySpecialChainTempo(ClearDuration * GetCascadeClearSpeedMultiplier()));

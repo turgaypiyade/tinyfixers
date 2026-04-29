@@ -4,8 +4,6 @@ using UnityEngine;
 
 public class FallAction : BoardAction
 {
-    private const float FALL_VELOCITY_CELLS_PER_SECOND = 42.0f;
-
     private class FallRecord
     {
         public TileView tile;
@@ -21,6 +19,8 @@ public class FallAction : BoardAction
         public float settleStrength;
         public AnimationCurve curve;
         public float startDelay;
+        public float phaseDelay;
+        public bool hasPhaseDelay;
     }
 
     private readonly List<FallRecord> fallRecords = new List<FallRecord>();
@@ -70,7 +70,8 @@ public class FallAction : BoardAction
         AnimationCurve curve,
         float startDelay = 0f)
     {
-        float estimatedDuration = EstimateMoveDuration(fromX, fromY, toX, toY);
+        if (tile == null || !tile)
+            return;
 
         fallRecords.Add(new FallRecord
         {
@@ -79,12 +80,12 @@ public class FallAction : BoardAction
             fromY = fromY,
             toX = toX,
             toY = toY,
-            duration = Mathf.Max(duration, estimatedDuration),
+            duration = Mathf.Max(0.0001f, duration),
             useSettle = useSettle,
-            settleDuration = settleDur,
+            settleDuration = Mathf.Max(0f, settleDur),
             settleStrength = settleStr,
             curve = curve,
-            startDelay = startDelay
+            startDelay = Mathf.Max(0f, startDelay)
         });
     }
 
@@ -115,20 +116,35 @@ public class FallAction : BoardAction
         return max;
     }
 
-    private static float EstimateMoveDuration(int fromX, int fromY, int toX, int toY)
+    public float GetEstimatedVisualDuration(BoardController board)
     {
-        float distanceCells = Vector2.Distance(
-            new Vector2(fromX, fromY),
-            new Vector2(toX, toY));
+        if (fallRecords.Count == 0)
+            return 0f;
 
-        return distanceCells / Mathf.Max(0.0001f, FALL_VELOCITY_CELLS_PER_SECOND);
+        EnsurePhaseDelays(board);
+
+        float maxEnd = 0f;
+
+        foreach (var r in fallRecords)
+        {
+            if (r.tile == null || !r.tile)
+                continue;
+
+            float settleTime = r.useSettle ? Mathf.Max(0f, r.settleDuration) : 0f;
+            float endTime = r.startDelay + r.phaseDelay + r.duration + settleTime;
+
+            if (endTime > maxEnd)
+                maxEnd = endTime;
+        }
+
+        return maxEnd;
     }
 
     // ============================================================
     // SABIT HIZ + ADAPTIVE START DELAY
     //
-    // Tum taslar ayni cell/sec hizla akar.
-    // Akordiyon hissi sadece baslama gecikmelerinden gelir.
+    // Sureler CascadeLogic/BoardController tarafinda tek fall velocity
+    // kaynagindan hesaplanir. Bu sinif sadece scheduling yapar.
     // ============================================================
 
     private static readonly float[] SPAWN_INTERVALS = new float[]
@@ -157,13 +173,65 @@ public class FallAction : BoardAction
         return total;
     }
 
+    private void EnsurePhaseDelays(BoardController board)
+    {
+        bool allFrozen = true;
+
+        foreach (var r in fallRecords)
+        {
+            if (!r.hasPhaseDelay)
+            {
+                allFrozen = false;
+                break;
+            }
+        }
+
+        if (allFrozen)
+            return;
+
+        float columnStep = board != null ? board.FallColumnStep : 0f;
+        var maxToYPerColumn = new Dictionary<int, int>();
+
+        foreach (var r in fallRecords)
+        {
+            if (r.hasPhaseDelay)
+                continue;
+
+            if (r.tile == null || !r.tile)
+                continue;
+
+            int col = r.toX;
+
+            if (!maxToYPerColumn.ContainsKey(col) || r.toY > maxToYPerColumn[col])
+                maxToYPerColumn[col] = r.toY;
+        }
+
+        foreach (var r in fallRecords)
+        {
+            if (r.hasPhaseDelay)
+                continue;
+
+            if (r.tile == null || !r.tile)
+                continue;
+
+            int rankFromBottom = 0;
+            if (maxToYPerColumn.TryGetValue(r.toX, out int maxToY))
+                rankFromBottom = Mathf.Max(0, maxToY - r.toY);
+
+            float spawnDelay = CumulativeSpawnDelay(rankFromBottom);
+            float colDelay = columnStep > 0f ? r.toX * columnStep : 0f;
+
+            r.phaseDelay = colDelay + spawnDelay;
+            r.hasPhaseDelay = true;
+        }
+    }
+
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
         if (fallRecords.Count == 0)
             yield break;
 
         float faStart = Time.realtimeSinceStartup;
-        float columnStep = sequencer.Board.FallColumnStep;
 
         int maxDist = 0;
 
@@ -181,20 +249,10 @@ public class FallAction : BoardAction
 
         sequencer.Board.PlayTileFallSfx(fallRecords.Count, maxDist);
 
-        // Rank hesabi icin TileView.X degil, record.toX kullan.
-        // TileView.X/Y hesap sirasinda final state'e cekilmis olabilir.
-        var maxToYPerColumn = new Dictionary<int, int>();
-
-        foreach (var r in fallRecords)
-        {
-            if (r.tile == null)
-                continue;
-
-            int col = r.toX;
-
-            if (!maxToYPerColumn.ContainsKey(col) || r.toY > maxToYPerColumn[col])
-                maxToYPerColumn[col] = r.toY;
-        }
+        // Phase delay'ler action merge edilmeden once dondurulur.
+        // Boylece ayni tile'in sonraki diagonal/dikey segmentleri, onceki
+        // segmentin rank/stagger hesabini sonradan degistirmez.
+        EnsurePhaseDelays(sequencer.Board);
 
         var moves = new List<IEnumerator>(fallRecords.Count);
         var delays = new List<float>(fallRecords.Count);
@@ -203,7 +261,7 @@ public class FallAction : BoardAction
 
         foreach (var r in fallRecords)
         {
-            if (r.tile == null)
+            if (r.tile == null || !r.tile)
                 continue;
 
             moves.Add(r.tile.MoveToGridCell(
@@ -220,14 +278,7 @@ public class FallAction : BoardAction
                 sequencer.Board.FallSettleStretchX,
                 sequencer.Board.FallSettleOvershoot));
 
-            int col = r.toX;
-            int maxToY = maxToYPerColumn[col];
-
-            int rankFromBottom = maxToY - r.toY;
-            float spawnDelay = CumulativeSpawnDelay(rankFromBottom);
-
-            float colDelay = columnStep > 0f ? col * columnStep : 0f;
-            float totalDelay = r.startDelay + colDelay + spawnDelay;
+            float totalDelay = r.startDelay + r.phaseDelay;
 
             delays.Add(totalDelay);
 
@@ -235,7 +286,7 @@ public class FallAction : BoardAction
                 maxTotalDelay = totalDelay;
         }
 
-        Debug.Log($"[Fall] stagger maxDelay={maxTotalDelay:0.000}s");
+        Debug.Log($"[Fall] stagger maxDelay={maxTotalDelay:0.000}s estimatedEnd={GetEstimatedVisualDuration(sequencer.Board):0.000}s");
 
         yield return sequencer.Animator.RunManyWithDelays(moves, delays);
 

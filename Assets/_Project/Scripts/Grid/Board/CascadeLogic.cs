@@ -50,7 +50,7 @@ public class CascadeLogic
             var collapseAction = CalculateCollapseAndSpawn();
             if (collapseAction != null && collapseAction.HasMoves)
             {
-                float dur = collapseAction.GetMaxMoveDuration();
+                float dur = collapseAction.GetEstimatedVisualDuration(board);
                 merged.MergeFrom(collapseAction, cumulativeDelay);
                 cumulativeDelay += dur * overlapRatio;
             }
@@ -60,14 +60,14 @@ public class CascadeLogic
             var slideAction = CalculateSlideFill();
             if (slideAction != null && slideAction.HasMoves)
             {
-                float slideDur = slideAction.GetMaxMoveDuration();
+                float slideDur = slideAction.GetEstimatedVisualDuration(board);
                 merged.MergeFrom(slideAction, cumulativeDelay);
                 cumulativeDelay += slideDur * overlapRatio;
 
                 var postSlideCollapse = CalculateCollapseColumns();
                 if (postSlideCollapse != null && postSlideCollapse.HasMoves)
                 {
-                    float postDur = postSlideCollapse.GetMaxMoveDuration();
+                    float postDur = postSlideCollapse.GetEstimatedVisualDuration(board);
                     merged.MergeFrom(postSlideCollapse, cumulativeDelay);
                     cumulativeDelay += postDur * overlapRatio;
                 }
@@ -164,7 +164,7 @@ public class CascadeLogic
                     if (dist > 0)
                     {
                         tile.MarkPlannedToMoveThisFallPass(true);
-                        float duration = board.GetFallDurationForDistance(dist);
+                        float duration = board.GetFallDurationForMove(x, fromY, x, targetY);
                         _colTiles.Add(tile);
                         _colTargetY.Add(targetY);
                         _colDuration.Add(duration);
@@ -216,7 +216,7 @@ public class CascadeLogic
                         //nextSpawnY--;
 
                         int dist = Mathf.Abs(y - spawnFromY);
-                        float duration = board.GetFallDurationForDistance(dist);
+                        float duration = board.GetFallDurationForMove(x, spawnFromY, x, y);
 
                         _colTiles.Add(view);
                         _colTargetY.Add(y);
@@ -405,7 +405,7 @@ public class CascadeLogic
                         if (fromY != toY)
                         {
                             int dist = Mathf.Abs(toY - fromY);
-                            float moveDuration = board.GetFallDurationForDistance(dist);
+                            float moveDuration = board.GetFallDurationForMove(x, fromY, x, toY);
 
                             bool useFallSettle = board.EnableFallSettle && dist > 0;
                             float settleDur = board.FallSettleDuration;
@@ -493,11 +493,7 @@ public class CascadeLogic
         board.SyncTileData(fromX, fromY);
         board.SyncTileData(toX, toY);
 
-        float slideDistanceCells = Vector2.Distance(
-            new Vector2(fromX, fromY),
-            new Vector2(toX, toY));
-
-        float slideDuration = board.GetFallDurationForDistance(1) * Mathf.Max(1f, slideDistanceCells);
+        float slideDuration = board.GetFallDurationForMove(fromX, fromY, toX, toY);
 
         bool useSlideSettle = board.EnableFallSettle;
         float slideSettleDur = board.FallSettleDuration * 0.82f;

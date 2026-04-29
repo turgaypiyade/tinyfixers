@@ -64,11 +64,6 @@ public class TileView : MonoBehaviour,
 
     public bool IsPlannedToMoveThisFallPass { get; private set; }
 
-    // ============================================================
-    // SABİT HIZ fall modeli
-    // ============================================================
-    private const float FALL_VELOCITY = 30.0f;
-
     public void MarkPlannedToMoveThisFallPass(bool value)
     {
         IsPlannedToMoveThisFallPass = value;
@@ -297,23 +292,21 @@ public class TileView : MonoBehaviour,
             yield break;
         }
 
-        float totalCells = totalPixels / Mathf.Max(1f, (float)tileSize);
-        float direction = end.y < start.y ? -1f : 1f;
-        float traveledCells = 0f;
+        float elapsed = 0f;
+        float safeDuration = Mathf.Max(0.0001f, duration);
 
-        while (traveledCells < totalCells)
+        while (elapsed < safeDuration)
         {
             if (rt == null || !rt)
                 yield break;
 
-            float deltaCells = FALL_VELOCITY * Time.deltaTime;
-            traveledCells += deltaCells;
+            elapsed += Time.deltaTime;
 
-            if (traveledCells > totalCells)
-                traveledCells = totalCells;
+            float t = Mathf.Clamp01(elapsed / safeDuration);
+            if (easingCurve != null)
+                t = easingCurve.Evaluate(t);
 
-            float traveledPixels = traveledCells * tileSize * direction;
-            rt.anchoredPosition = new Vector2(end.x, start.y + traveledPixels);
+            rt.anchoredPosition = Vector2.LerpUnclamped(start, end, t);
 
             yield return null;
         }
@@ -457,6 +450,9 @@ public class TileView : MonoBehaviour,
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
 
+        if (this == null || !this)
+            yield break;
+
         if (rt == null)
             rt = GetComponent<RectTransform>();
 
@@ -484,21 +480,20 @@ public class TileView : MonoBehaviour,
             yield break;
         }
 
-        float totalCells = totalPixels / Mathf.Max(1f, tileSize);
-        float traveledCells = 0f;
+        float elapsed = 0f;
+        float safeDuration = Mathf.Max(0.0001f, duration);
 
-        while (traveledCells < totalCells)
+        while (elapsed < safeDuration)
         {
             if (rt == null || !rt)
                 yield break;
 
-            float deltaCells = FALL_VELOCITY * Time.deltaTime;
-            traveledCells += deltaCells;
+            elapsed += Time.deltaTime;
 
-            if (traveledCells > totalCells)
-                traveledCells = totalCells;
+            float t = Mathf.Clamp01(elapsed / safeDuration);
+            if (easingCurve != null)
+                t = easingCurve.Evaluate(t);
 
-            float t = Mathf.Clamp01(traveledCells / totalCells);
             rt.anchoredPosition = Vector2.LerpUnclamped(start, end, t);
 
             yield return null;
@@ -590,8 +585,10 @@ public class TileView : MonoBehaviour,
             yield return null;
         }
 
-        if (visualRt != null)
+        if (visualRt != null && visualRt)
+        {
             visualRt.localScale = visualBaseScale;
+        }
 
         if (rt != null && rt)
             SnapToGrid(tileSize);
