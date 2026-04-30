@@ -82,7 +82,7 @@ public class MatchClearAction : BoardAction
             $"stagger={(staggerDelays != null ? staggerDelays.Count : 0)} " +
             $"perTile={(perTileClearDelays != null ? perTileClearDelays.Count : 0)} " +
             $"plan={(PresentationPlan != null)}");
-            
+
         if (!isSpecialActivationPhase)
             PruneDeadReferences(sequencer != null ? sequencer.Board : null);
 

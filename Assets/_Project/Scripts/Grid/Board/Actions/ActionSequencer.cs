@@ -5,7 +5,7 @@ using UnityEngine;
 public class ActionSequencer : MonoBehaviour
 {
     public BoardController Board { get; private set; }
-    
+
     // Gives actions access to the animator to play specific visual effects
     public BoardAnimator Animator => Board.boardAnimatorRef;
 
@@ -47,7 +47,7 @@ public class ActionSequencer : MonoBehaviour
         while (actionQueue.Count > 0)
         {
             BoardAction action = actionQueue.Dequeue();
-            
+
             if (action.Blocking)
             {
                 yield return StartCoroutine(action.ExecuteVisuals(this));
@@ -59,9 +59,9 @@ public class ActionSequencer : MonoBehaviour
         }
 
         IsPlaying = false;
-        
+
         // Let the controller know the visual sequence is finished,
         // so it can check for falls, collapses, or level end states.
-        Board.OnActionSequenceFinished(); 
+        Board.OnActionSequenceFinished();
     }
 }

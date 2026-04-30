@@ -84,7 +84,11 @@ public sealed class PulseCoreSpecial
         if (targetX < 0 || targetX >= rt.Board.Width || targetY < 0 || targetY >= rt.Board.Height)
             return result;
 
-        Debug.Log($"[PulseCore.ExecuteAtTarget] BEGIN origin=({rt.Origin.X},{rt.Origin.Y}) target=({targetX},{targetY}) finalize={rt.FinalizeAtEnd} suppressVfx={rt.SuppressVisualSideEffects}");
+        string originLabel = (rt.Origin != null && rt.Origin)
+            ? $"({rt.Origin.X},{rt.Origin.Y})"
+            : "(dead)";
+
+        Debug.Log($"[PulseCore.ExecuteAtTarget] BEGIN origin={originLabel} target=({targetX},{targetY}) finalize={rt.FinalizeAtEnd} suppressVfx={rt.SuppressVisualSideEffects}");
 
         if (!rt.SkipOriginRegistration)
             RegisterOrigin(rt);

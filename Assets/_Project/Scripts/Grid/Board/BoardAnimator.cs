@@ -564,21 +564,22 @@ public class BoardAnimator
         }
 
         // KRITIK:
-        // PatchBot dash'leri onArrived içinde kendi clear action'larını enqueue ediyor.
-        // Bu clear action'lar current clear/cascade bitmeden çalışmamalı.
-        // Aksi halde cascade/fall eski TileView referanslarıyla çakışıp
-        // MissingReferenceException üretebiliyor.
+        // PatchBot dash bilerek beklenmiyor. PatchBot ucarken board cascade/fall
+        // devam etmeli. Arrival sonrasi actionlar board bitmeden takip edilmeli.
+        // Bunu PulseCorePatchBotCombo tarafindaki ActiveBackgroundJobs lifecycle yapar.
         if (patchbotDashRoutine != null)
-           // yield return patchbotDashRoutine;
+        {
+            // no-op by design
+        }
+
+        Debug.Log(
+            $"[PulseClearDebug][BA] BEFORE_FINAL " +
+            $"list={list.Count} shouldClear={shouldClearTile.Count} " +
+            $"pulseImpacts={pulseImpacts.Count} pops={pops.Count}");
 
         for (int i = 0; i < list.Count; i++)
         {
-                Debug.Log(
-        $"[PulseClearDebug][BA] BEFORE_FINAL " +
-        $"list={list.Count} shouldClear={shouldClearTile.Count} " +
-        $"pulseImpacts={pulseImpacts.Count} pops={pops.Count}");
-        
-                var tile = list[i];
+            var tile = list[i];
             if (tile == null) continue;
             if (lineHitClearedTiles.Contains(tile)) continue;
 

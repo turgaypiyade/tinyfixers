@@ -5,6 +5,12 @@ using UnityEngine.UI;
 
 public sealed class OverridePatchBotAirborneGroupAction : BoardAction
 {
+    private enum AirborneImpactMode
+    {
+        StandardPatchBot,
+        PulseCoreAtTarget
+    }
+
     private sealed class AirborneBot
     {
         public Vector2Int sourceCell;
@@ -28,6 +34,11 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
 
     private readonly BoardController board;
     private readonly List<Vector2Int> sourceCells;
+    private readonly AirborneImpactMode impactMode;
+    private readonly PulseCorePatchBotComboExecutionRuntime pulseRuntime;
+    private readonly PulseCoreSpecial pulseCoreSpecial;
+    private readonly TileView patchBotSourceTile;
+    private readonly TileView pulseSourceTile;
 
     public override bool Blocking => true;
 
@@ -38,6 +49,24 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
     {
         this.board = board;
         this.sourceCells = sourceCells != null ? new List<Vector2Int>(sourceCells) : new List<Vector2Int>();
+        this.impactMode = AirborneImpactMode.StandardPatchBot;
+    }
+
+    public OverridePatchBotAirborneGroupAction(
+        BoardController board,
+        Vector2Int patchBotCell,
+        TileView patchBotSourceTile,
+        TileView pulseSourceTile,
+        PulseCorePatchBotComboExecutionRuntime pulseRuntime,
+        int pulseAffectedCellCount)
+    {
+        this.board = board;
+        this.sourceCells = new List<Vector2Int> { patchBotCell };
+        this.impactMode = AirborneImpactMode.PulseCoreAtTarget;
+        this.patchBotSourceTile = patchBotSourceTile;
+        this.pulseSourceTile = pulseSourceTile;
+        this.pulseRuntime = pulseRuntime;
+        this.pulseCoreSpecial = new PulseCoreSpecial(Mathf.Max(1, pulseAffectedCellCount));
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
@@ -51,6 +80,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         var patchbotService = new PatchbotComboService(board);
         var coordinator = new PatchBotTargetCoordinator(board, patchbotService);
         var bots = BuildAndLiftBots(coordinator);
+        ClearPulseSourceForPulseMode();
 
         Debug.Log($"[OverridePatchBotAirborne] takeoff count={bots.Count} t={Time.realtimeSinceStartup - startTime:0.000}s");
 
@@ -188,6 +218,31 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         }
     }
 
+    private void ClearPulseSourceForPulseMode()
+    {
+        if (impactMode != AirborneImpactMode.PulseCoreAtTarget)
+            return;
+
+        if (board == null || pulseSourceTile == null)
+            return;
+
+        int x = pulseSourceTile.X;
+        int y = pulseSourceTile.Y;
+
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return;
+
+        if (board.Tiles[x, y] != pulseSourceTile)
+            return;
+
+        var cell = new Vector2Int(x, y);
+        var sourceType = pulseSourceTile.GetTileType();
+
+        SpecialVisualService.HideTileVisualForCombo(pulseSourceTile);
+        board.ClearCell(x, y);
+        board.ClearCellVisualOnly(cell, sourceType, pulseSourceTile);
+    }
+
     private IEnumerator RunInitialCascadeWhileHovering(ActionSequencer sequencer)
     {
         var cascades = board.CascadeLogic.CalculateCascades();
@@ -293,6 +348,12 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
 
         Debug.Log($"[OverridePatchBotAirborne] all_arrived");
 
+        if (impactMode == AirborneImpactMode.PulseCoreAtTarget)
+        {
+            yield return ExecutePulseCoreImpactAndFinalCascade(sequencer, bots, coordinator);
+            yield break;
+        }
+
         // ─── PHASE 3: Topla — tüm hedef cell'lerin TileData/TileView'ları ───
         var groupCtx = new ResolutionContext();
         for (int i = 0; i < bots.Count; i++)
@@ -365,6 +426,90 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         }
 
         // ─── PHASE 6: Tek cascade ───
+        var cascades = board.CascadeLogic.CalculateCascades();
+        Debug.Log($"[OverridePatchBotAirborne] final_cascade actions={(cascades != null ? cascades.Count : 0)}");
+        if (cascades != null)
+        {
+            for (int i = 0; i < cascades.Count; i++)
+                yield return cascades[i].ExecuteVisuals(sequencer);
+        }
+
+        board.RefreshAllSortingOrders();
+    }
+
+    private IEnumerator ExecutePulseCoreImpactAndFinalCascade(
+        ActionSequencer sequencer,
+        List<AirborneBot> bots,
+        PatchBotTargetCoordinator coordinator)
+    {
+        AirborneBot impactBot = null;
+
+        for (int i = 0; i < bots.Count; i++)
+        {
+            var bot = bots[i];
+            if (bot != null && bot.hasTarget)
+            {
+                impactBot = bot;
+                break;
+            }
+        }
+
+        for (int i = 0; i < bots.Count; i++)
+        {
+            var bot = bots[i];
+            if (bot != null && bot.ghost != null)
+            {
+                Object.Destroy(bot.ghost);
+                bot.ghost = null;
+            }
+        }
+
+        if (impactBot != null && pulseRuntime != null && pulseCoreSpecial != null)
+        {
+            Debug.Log($"[OverridePatchBotAirborne] pulsecore_impact target=({impactBot.targetX},{impactBot.targetY})");
+
+            var arrivalCtx = new ResolutionContext();
+            var pulseResult = pulseCoreSpecial.ExecuteAtTarget(new PulseCoreExecutionRuntime
+            {
+                Board = board,
+                Context = arrivalCtx,
+                Origin = pulseSourceTile,
+                Partner = patchBotSourceTile,
+                FinalizeAtEnd = true,
+                ActivateSpecial = pulseRuntime.ActivateSpecial,
+                ProcessFanout = pulseRuntime.ProcessFanout,
+                CleanupImplantedTiles = pulseRuntime.CleanupImplantedTiles,
+                FireOverrideOverrideSpecialVisuals = pulseRuntime.FireOverrideOverrideSpecialVisuals,
+                EmitBoardSignal = pulseRuntime.EmitBoardSignal,
+                EnqueueChainSpecials = pulseRuntime.EnqueueChainSpecials,
+                ProcessQueue = pulseRuntime.ProcessQueue,
+                SuppressVisualSideEffects = false,
+                SkipOriginRegistration = true,
+                ForcedOriginSpecial = TileSpecial.PulseCore,
+                SignalSourceTile = pulseSourceTile
+            }, impactBot.targetX, impactBot.targetY);
+
+            if (pulseResult != null && pulseResult.Actions != null)
+            {
+                for (int i = 0; i < pulseResult.Actions.Count; i++)
+                {
+                    var action = pulseResult.Actions[i];
+                    if (action != null)
+                        yield return action.ExecuteVisuals(sequencer);
+                }
+            }
+        }
+
+        for (int i = 0; i < bots.Count; i++)
+        {
+            var bot = bots[i];
+            if (bot != null && bot.intent != null)
+            {
+                coordinator.ReleaseIntent(bot.intent);
+                bot.intent = null;
+            }
+        }
+
         var cascades = board.CascadeLogic.CalculateCascades();
         Debug.Log($"[OverridePatchBotAirborne] final_cascade actions={(cascades != null ? cascades.Count : 0)}");
         if (cascades != null)
