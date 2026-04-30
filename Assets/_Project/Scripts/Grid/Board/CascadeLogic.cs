@@ -35,51 +35,50 @@ public class CascadeLogic
         _actionsBuffer.Clear();
         const int maxPass = 32;
 
-        // Tüm pass'ları tek FallAction'a birleştir
-        // Her pass öncekinin %40'ı kadar gecikmeli başlar → overlap
-        // Eski: 6 sıralı FallAction = 0.65s
-        // Yeni: 1 merged FallAction = ~0.25s
-        var merged = new FallAction();
-        float cumulativeDelay = 0f;
-        const float overlapRatio = 1f; // önceki pass'ın %40'ında sonraki başlar
-
+        // ÖNEMLİ:
+        // FallAction'ları artık tek bir overlapped action'a merge etmiyoruz.
+        // Özellikle mask/obstacle ağırlıklı board'larda aynı tile kısa aralıklarla
+        // vertical -> diagonal -> vertical zinciri alabiliyor ve görselde titreme
+        // / sürekli kaymaya çalışma hissi yaratıyor.
+        //
+        // Yeni sıra:
+        //   1) Önce bütün düz aşağı collapse/spawn biter.
+        //   2) Sonra sadece gerçekten gerekli obstacle-cebi diagonal slide yapılır.
+        //   3) Slide kaynak hücresini boşalttıysa tekrar düz collapse yapılır.
+        // Her faz ayrı blocking FallAction olarak oynar.
         for (int pass = 0; pass < maxPass; pass++)
         {
-            if (!HasAnyEmptyPlayableCell()) break;
+            if (!HasAnyEmptyPlayableCell())
+                break;
+
+            bool movedThisPass = false;
 
             var collapseAction = CalculateCollapseAndSpawn();
             if (collapseAction != null && collapseAction.HasMoves)
             {
-                float dur = collapseAction.GetEstimatedVisualDuration(board);
-                merged.MergeFrom(collapseAction, cumulativeDelay);
-                cumulativeDelay += dur * overlapRatio;
+                _actionsBuffer.Add(collapseAction);
+                movedThisPass = true;
             }
 
-            if (!HasAnyEmptyPlayableCell()) break;
+            if (!HasAnyEmptyPlayableCell())
+                break;
 
             var slideAction = CalculateSlideFill();
             if (slideAction != null && slideAction.HasMoves)
             {
-                float slideDur = slideAction.GetEstimatedVisualDuration(board);
-                merged.MergeFrom(slideAction, cumulativeDelay);
-                cumulativeDelay += slideDur * overlapRatio;
+                _actionsBuffer.Add(slideAction);
+                movedThisPass = true;
 
                 var postSlideCollapse = CalculateCollapseColumns();
                 if (postSlideCollapse != null && postSlideCollapse.HasMoves)
-                {
-                    float postDur = postSlideCollapse.GetEstimatedVisualDuration(board);
-                    merged.MergeFrom(postSlideCollapse, cumulativeDelay);
-                    cumulativeDelay += postDur * overlapRatio;
-                }
+                    _actionsBuffer.Add(postSlideCollapse);
             }
-            else
-            {
-                break;
-            }
-        }
 
-        if (merged.HasMoves)
-            _actionsBuffer.Add(merged);
+            // Eğer bu pass'te hiçbir şey hareket etmediyse kalan boşluklar
+            // cascade ile doldurulamaz ceplerdir. Sonsuz diagonal denemesine girme.
+            if (!movedThisPass)
+                break;
+        }
 
         return new List<BoardAction>(_actionsBuffer);
     }
@@ -306,25 +305,10 @@ public class CascadeLogic
                     var t = board.Tiles[sx, sy];
                     if (t == null) return false;
 
-                    bool targetIsObstaclePocket = IsGravityBlockedCell(x, y - 1);
-
-                    bool HasUsableOtherSource()
-                    {
-                        int otherSx = (sx == x - 1) ? (x + 1) : (x - 1);
-                        int otherSy = y - 1;
-
-                        if (otherSx < 0 || otherSx >= board.Width || otherSy < 0 || otherSy >= board.Height)
-                            return false;
-
-                        if (board.IsMaskHoleCell(otherSx, otherSy) || IsGravityBlockedCell(otherSx, otherSy))
-                            return false;
-
-                        return board.Tiles[otherSx, otherSy] != null;
-                    }
-
-                    bool otherSourceExists = HasUsableOtherSource();
-
-                    if (!targetIsObstaclePocket && otherSourceExists && CanTileFallStraightDown(sx, sy))
+                    // Dikey gravity her zaman öncelikli.
+                    // Taş kendi kolonunda aşağı gidebiliyorsa diagonal aday olmasın.
+                    // Bu, mask/hole ağırlıklı sahnelerde sağ-sol titreme zincirini keser.
+                    if (CanTileFallStraightDown(sx, sy))
                         return false;
 
                     return TryDiagonalFrom(sx, sy, x, y, _movedThisPassSet, action);
@@ -581,20 +565,18 @@ public class CascadeLogic
     {
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
             return false;
+
         if (board.Tiles[x, y] != null)
             return false;
+
         if (IsNonObstacleHoleCell(x, y))
             return false;
 
+        // Şimdilik diagonal slide sadece gerçek obstacle/blocker cebini doldursun.
+        // Floor pocket ve non-spawnable segment hedefleri mask/hole ağırlıklı board'larda
+        // sürekli küçük sağ-sol kayma denemeleri ve görsel titreme üretiyor.
         bool obstacleAbove = IsGravityBlockedCell(x, y - 1);
-        if (IsAdjacentToMaskHole(x, y) && !obstacleAbove)
-            return false;
-
-        if (obstacleAbove) return true;
-        if (IsFloorPocketTarget(x, y)) return true;
-        if (IsInNonSpawnableSegment(x, y)) return true;
-
-        return false;
+        return obstacleAbove;
     }
 
     private bool IsInNonSpawnableSegment(int x, int y)
