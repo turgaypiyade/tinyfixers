@@ -157,7 +157,29 @@ public class LevelDataEditor : Editor
             for (int i = 0; i < size; i++) level.obstacleOrigins[i] = -1;
         }
     }
+    private void ValidateUnknownObstacles(LevelData level)
+    {
+        var library = level.obstacleLibrary;
+        if (library == null || level.obstacles == null)
+            return;
 
+        for (int i = 0; i < level.obstacles.Length; i++)
+        {
+            var id = (ObstacleId)level.obstacles[i];
+
+            if (id == ObstacleId.None)
+                continue;
+
+            if (library.Get(id) == null)
+            {
+                Debug.LogWarning(
+                    $"{level.name}: Unknown obstacle id {id} ({(int)id}) at index {i}. " +
+                    "It will not render in editor and may not block cascade correctly.",
+                    level
+                );
+            }
+        }
+    }
     private void DrawPalette(LevelData level)
     {
         EditorGUILayout.LabelField("Obstacle Palette", EditorStyles.boldLabel);

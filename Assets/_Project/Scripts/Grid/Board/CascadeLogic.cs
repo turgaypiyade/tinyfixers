@@ -21,6 +21,12 @@ public class CascadeLogic
 
     // Slide fill
     private readonly HashSet<TileView> _movedThisPassSet = new HashSet<TileView>();
+    private readonly HashSet<Vector2Int> _reservedSlideTargets = new HashSet<Vector2Int>();
+    private readonly List<Vector2Int> _slideTargetsSnapshot = new List<Vector2Int>(16);
+    private readonly HashSet<Vector2Int> _verticalOnlySlideGaps = new HashSet<Vector2Int>();
+    // NOT: _verticalOnlySlideColumns kaldırıldı (Aşama 1).
+    // Kolon-bazlı kilit, aynı kolondaki bağımsız boşlukları yanlışlıkla
+    // diagonal hedef olmaktan çıkarıyordu. Artık sadece hücre-bazlı kilit var.
 
     // Goal buffer
     private readonly List<TopHudController.ActiveGoal> _activeGoalsBuffer = new List<TopHudController.ActiveGoal>(4);
@@ -29,36 +35,28 @@ public class CascadeLogic
     {
         this.board = board;
     }
-
     public List<BoardAction> CalculateCascades()
     {
         _actionsBuffer.Clear();
-        const int maxPass = 32;
 
-        // ÖNEMLİ:
-        // FallAction'ları artık tek bir overlapped action'a merge etmiyoruz.
-        // Özellikle mask/obstacle ağırlıklı board'larda aynı tile kısa aralıklarla
-        // vertical -> diagonal -> vertical zinciri alabiliyor ve görselde titreme
-        // / sürekli kaymaya çalışma hissi yaratıyor.
+        // Cascade sadece FLOW ile doldurulabilir boşlukları çözer.
         //
-        // Yeni sıra:
-        //   1) Önce bütün düz aşağı collapse/spawn biter.
-        //   2) Sonra sadece gerçekten gerekli obstacle-cebi diagonal slide yapılır.
-        //   3) Slide kaynak hücresini boşalttıysa tekrar düz collapse yapılır.
-        // Her faz ayrı blocking FallAction olarak oynar.
-        for (int pass = 0; pass < maxPass; pass++)
+        // ÖNEMLİ:
+        // state.canAcceptTile olan ama taş akışı olmayan kapalı cepler
+        // cascade boşluğu değildir. Bunlar MatchFinder/shuffle'ı bloklamamalı.
+        //
+        // Faz sırası:
+        //   1) Dikey düşüş/spawn gidebildiği yere kadar.
+        //   2) Diyagonal slide; obstacle içinden/üstünden geçiş yok.
+        //   3) Slide sonrası tekrar dikey düşüş/spawn.
+        //   4) Hâlâ flow-fillable boşluk varsa 1-2-3 tekrar.
+        const int maxSettleCycles = 16;
+
+        for (int cycle = 0; cycle < maxSettleCycles; cycle++)
         {
-            if (!HasAnyEmptyPlayableCell())
-                break;
+            bool movedThisCycle = false;
 
-            bool movedThisPass = false;
-
-            var collapseAction = CalculateCollapseAndSpawn();
-            if (collapseAction != null && collapseAction.HasMoves)
-            {
-                _actionsBuffer.Add(collapseAction);
-                movedThisPass = true;
-            }
+            movedThisCycle |= AppendVerticalSettleActions();
 
             if (!HasAnyEmptyPlayableCell())
                 break;
@@ -67,20 +65,47 @@ public class CascadeLogic
             if (slideAction != null && slideAction.HasMoves)
             {
                 _actionsBuffer.Add(slideAction);
-                movedThisPass = true;
+                movedThisCycle = true;
 
-                var postSlideCollapse = CalculateCollapseColumns();
-                if (postSlideCollapse != null && postSlideCollapse.HasMoves)
-                    _actionsBuffer.Add(postSlideCollapse);
+                movedThisCycle |= AppendVerticalSettleActions();
             }
 
-            // Eğer bu pass'te hiçbir şey hareket etmediyse kalan boşluklar
-            // cascade ile doldurulamaz ceplerdir. Sonsuz diagonal denemesine girme.
-            if (!movedThisPass)
+            if (!HasAnyEmptyPlayableCell())
                 break;
+
+            if (!movedThisCycle)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.LogWarning("[CascadeLogic] Flow-fillable empty cells remain but no cascade action was produced.");
+#endif
+                break;
+            }
         }
 
         return new List<BoardAction>(_actionsBuffer);
+    }
+
+
+    private bool AppendVerticalSettleActions()
+    {
+        bool moved = false;
+
+        // CalculateCollapseAndSpawn bir çağrıda segment içindeki taşları tamamen
+        // sıkıştırır ve spawn'a bağlı boşlukları doldurur. Yine de obstacle/slide
+        // gibi ara durumlarda güvenli olmak için sınırlı tekrar bırakıyoruz.
+        const int maxVerticalPasses = 8;
+
+        for (int i = 0; i < maxVerticalPasses; i++)
+        {
+            var action = CalculateCollapseAndSpawn();
+            if (action == null || !action.HasMoves)
+                break;
+
+            _actionsBuffer.Add(action);
+            moved = true;
+        }
+
+        return moved;
     }
 
     public FallAction CalculateCollapseAndSpawn()
@@ -129,7 +154,7 @@ public class CascadeLogic
 
                 for (int y = segmentTop; y >= topY; y--)
                 {
-                    if (board.Holes[x, y]) continue;
+                    if (!IsTileSlotCell(x, y)) continue;
                     _slots.Add(y);
 
                     if (board.Tiles[x, y] != null)
@@ -178,7 +203,7 @@ public class CascadeLogic
 
                     for (int y = topY; y <= segmentTop; y++)
                     {
-                        if (board.Holes[x, y]) continue;
+                        if (!IsTileSlotCell(x, y)) continue;
                         if (board.Tiles[x, y] != null) continue;
 
                         int spawnFromY = nextSpawnY;
@@ -281,41 +306,57 @@ public class CascadeLogic
         board.RefreshAllTileObstacleVisuals();
         return action;
     }
-
     public FallAction CalculateSlideFill()
     {
         var action = new FallAction();
         _movedThisPassSet.Clear();
+        _reservedSlideTargets.Clear();
+        _slideTargetsSnapshot.Clear();
 
+        PruneVerticalOnlySlideLocks();
+
+        // ÖNEMLİ:
+        // Diyagonal pass canlı board taramasıyla zincirleme çalışmamalı.
+        // Önce bu pass başındaki hedef boşlukları snapshot alıyoruz.
+        // Slide'ın açtığı yeni boşluklar bu pass içinde yeni diagonal target olmaz.
         for (int y = board.Height - 1; y >= 0; y--)
         {
             for (int x = 0; x < board.Width; x++)
             {
-                if (board.IsMaskHoleCell(x, y) || IsGravityBlockedCell(x, y))
-                    continue;
-
-                if (board.Tiles[x, y] != null) continue;
-                if (!IsSlideFillTarget(x, y)) continue;
-
-                bool TrySource(int sx, int sy)
-                {
-                    if (sx < 0 || sx >= board.Width || sy < 0 || sy >= board.Height) return false;
-                    if (board.IsMaskHoleCell(sx, sy) || IsGravityBlockedCell(sx, sy)) return false;
-
-                    var t = board.Tiles[sx, sy];
-                    if (t == null) return false;
-
-                    // Dikey gravity her zaman öncelikli.
-                    // Taş kendi kolonunda aşağı gidebiliyorsa diagonal aday olmasın.
-                    // Bu, mask/hole ağırlıklı sahnelerde sağ-sol titreme zincirini keser.
-                    if (CanTileFallStraightDown(sx, sy))
-                        return false;
-
-                    return TryDiagonalFrom(sx, sy, x, y, _movedThisPassSet, action);
-                }
-
-                bool _ = TrySource(x - 1, y - 1) || TrySource(x + 1, y - 1);
+                if (IsSlideFillTarget(x, y))
+                    _slideTargetsSnapshot.Add(new Vector2Int(x, y));
             }
+        }
+
+        for (int i = 0; i < _slideTargetsSnapshot.Count; i++)
+        {
+            int x = _slideTargetsSnapshot[i].x;
+            int y = _slideTargetsSnapshot[i].y;
+
+            // Önceki slide bu hedefi doldurmuş veya source column lock üretmiş olabilir.
+            if (!IsSlideFillTarget(x, y))
+                continue;
+
+            bool TrySource(int sx, int sy)
+            {
+                if (!TryGetTileSource(sx, sy, out var sourceTile))
+                    return false;
+
+                if (sourceTile == null)
+                    return false;
+
+                // Dikey gravity her zaman öncelikli.
+                // Kaynak taş kendi kolonunda aşağı gidebiliyorsa diagonal alma.
+                if (CanTileFallStraightDown(sx, sy))
+                    return false;
+
+                return TryDiagonalFrom(sx, sy, x, y, _movedThisPassSet, action);
+            }
+
+            // Bir hedef boşluk yalnızca tek komşu sütundan doldurulur.
+            // Sağ-üst (x+1) önce denenir, sol-üst (x-1) sonra.
+            // Aşama 1: kaynak önceliği sağa çevrildi.
+            bool _ = TrySource(x + 1, y - 1) || TrySource(x - 1, y - 1);
         }
 
         return action;
@@ -344,7 +385,7 @@ public class CascadeLogic
 
                     for (int yy = segStartY; yy >= segEndY; yy--)
                     {
-                        if (board.Holes[x, yy])
+                        if (!IsTileSlotCell(x, yy))
                             continue;
 
                         _slots.Add(yy);
@@ -354,7 +395,7 @@ public class CascadeLogic
 
                     for (int yy = segStartY; yy >= segEndY; yy--)
                     {
-                        if (board.Holes[x, yy])
+                        if (!IsTileSlotCell(x, yy))
                             continue;
 
                         var tv = board.Tiles[x, yy];
@@ -423,7 +464,6 @@ public class CascadeLogic
 
         return action;
     }
-
     private bool TryDiagonalFrom(
       int fromX, int fromY,
       int toX, int toY,
@@ -435,10 +475,14 @@ public class CascadeLogic
         int cbx = toX;
         int cby = fromY;
 
-        if (!IsDiagonalPassableCell(cax, cay))
-            return false;
+        // Diagonal yol için EN AZ BİR köşe açık olsun yeter.
+        // Obstacle bir köşeyi kapatabilir; ikisi de kapalıysa fiziksel yol yok.
+        // (cax,cay) = kaynak sütun + hedef satır
+        // (cbx,cby) = hedef sütun + kaynak satır
+        bool cornerA = IsDiagonalPassableCell(cax, cay);
+        bool cornerB = IsDiagonalPassableCell(cbx, cby);
 
-        if (!IsDiagonalPassableCell(cbx, cby))
+        if (!cornerA && !cornerB)
             return false;
 
         return TrySlideFrom(fromX, fromY, toX, toY, movedThisPass, action);
@@ -449,19 +493,26 @@ public class CascadeLogic
       HashSet<TileView> movedThisPass,
       FallAction action)
     {
-        if (fromX < 0 || fromX >= board.Width || fromY < 0 || fromY >= board.Height)
+        if (!TryGetTileSource(fromX, fromY, out var tile))
             return false;
 
-        if (toX < 0 || toX >= board.Width || toY < 0 || toY >= board.Height)
+        if (tile == null)
             return false;
 
-        if (board.Holes[fromX, fromY])
+        if (movedThisPass.Contains(tile))
             return false;
 
-        var tile = board.Tiles[fromX, fromY];
-
-        if (tile == null || movedThisPass.Contains(tile))
+        if (!IsEmptyPlayableCell(toX, toY))
             return false;
+
+        if (IsVerticalOnlySlideTarget(toX, toY))
+            return false;
+
+        var targetCell = new Vector2Int(toX, toY);
+        if (_reservedSlideTargets.Contains(targetCell))
+            return false;
+
+        _reservedSlideTargets.Add(targetCell);
 
         if (board.ObstacleStateService != null
             && board.ObstacleStateService.IsMovableObstacleAt(fromX, fromY))
@@ -476,6 +527,13 @@ public class CascadeLogic
 
         board.SyncTileData(fromX, fromY);
         board.SyncTileData(toX, toY);
+
+        // Bu slide'ın açtığı kaynak boşluğu diagonal ile doldurulmayacak.
+        // Aşama 1: sadece o hücre kilitlenir, kaynak sütunun tamamı değil.
+        // Kaynak sütun aynı pass içinde başka boşluklar için hâlâ
+        // diagonal hedef olabilir veya kaynak olmaya devam edebilir.
+        var sourceGap = new Vector2Int(fromX, fromY);
+        _verticalOnlySlideGaps.Add(sourceGap);
 
         float slideDuration = board.GetFallDurationForMove(fromX, fromY, toX, toY);
 
@@ -498,51 +556,48 @@ public class CascadeLogic
         movedThisPass.Add(tile);
         return true;
     }
-
     private bool IsDiagonalPassableCell(int x, int y)
     {
-        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+        if (!TryGetCellState(x, y, out var state))
             return false;
 
-        if (board.IsMaskHoleCell(x, y))
+        if (!state.inBounds)
             return false;
 
-        if (board.IsPendingTriggeredSpecialCell(x, y))
+        if (state.isMaskHole)
             return false;
 
-        var obs = board.ObstacleStateService;
+        if (state.isPendingTriggeredSpecial)
+            return false;
 
-        if (obs == null)
-            return true;
+        // Chest / Stone / OverTileBlocker içinden veya üstünden diagonal geçiş yok.
+        // Diagonal sadece blocker'ın etrafındaki gerçek açık hücrelerden yapılır.
+        if (state.isObstacleBlocked)
+            return false;
 
-        if (!obs.IsCellBlocked(x, y))
-            return true;
-
-        return obs.GetAllowDiagonalAt(x, y);
+        return true;
     }
     public bool HasAnyEmptyPlayableCell()
     {
+        PruneVerticalOnlySlideLocks();
+
         for (int y = 0; y < board.Height; y++)
         {
             for (int x = 0; x < board.Width; x++)
             {
-                if (board.Holes[x, y]) continue;
-                if (board.Tiles[x, y] == null) return true;
+                if (IsCascadeReachableEmptyCell(x, y))
+                    return true;
             }
         }
+
         return false;
     }
-
     private bool IsObstacleBlockedCell(int x, int y)
     {
-        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+        if (!TryGetCellState(x, y, out var state))
             return false;
 
-        var obstacleStateService = board.ObstacleStateService;
-        if (obstacleStateService == null)
-            return false;
-
-        return obstacleStateService.IsCellBlocked(x, y);
+        return state.isObstacleBlocked;
     }
 
     private bool IsSegmentConnectedToSpawnEdge(int x, int topY)
@@ -560,23 +615,148 @@ public class CascadeLogic
 
         return true;
     }
-
     private bool IsSlideFillTarget(int x, int y)
     {
-        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+        // Target aktif boş olmalı ve şu anda gerçek diagonal kaynakla doldurulabilmeli.
+        // Akışa bağlı olmayan kapalı cepler slide target değildir.
+        //
+        // Daha önce source olarak kullanılan hücreler diagonal target olamaz;
+        // onları yalnızca kendi dikey akışı doldurabilir.
+        if (IsVerticalOnlySlideTarget(x, y))
             return false;
 
-        if (board.Tiles[x, y] != null)
+        return IsEmptyPlayableCell(x, y) && HasValidDiagonalSourceFor(x, y);
+    }
+    private bool IsCascadeReachableEmptyCell(int x, int y)
+    {
+        if (!IsEmptyPlayableCell(x, y))
             return false;
 
-        if (IsNonObstacleHoleCell(x, y))
+        // Aynı kolon spawn edge'e veya üstteki tile'a bağlıysa vertical collapse/spawn doldurabilir.
+        if (HasVerticalFillPathFor(x, y))
+            return true;
+
+        // Slide kaynak boşluğu vertical-only'dir.
+        // Diğer sütunlardan diagonal ile doldurulmayacağı için cascade'i bloklamaz.
+        if (IsVerticalOnlySlideTarget(x, y))
             return false;
 
-        // Şimdilik diagonal slide sadece gerçek obstacle/blocker cebini doldursun.
-        // Floor pocket ve non-spawnable segment hedefleri mask/hole ağırlıklı board'larda
-        // sürekli küçük sağ-sol kayma denemeleri ve görsel titreme üretiyor.
-        bool obstacleAbove = IsGravityBlockedCell(x, y - 1);
-        return obstacleAbove;
+        // Aksi halde yalnızca şu an geçerli diagonal kaynak varsa cascade doldurabilir.
+        return HasValidDiagonalSourceFor(x, y);
+    }
+
+    private bool HasVerticalFillPathFor(int x, int y)
+    {
+        if (!IsEmptyPlayableCell(x, y))
+            return false;
+
+        int segmentTop = FindSegmentTopY(x, y);
+
+        // Segment spawn edge'e bağlıysa CalculateCollapseAndSpawn bu boşluğu doldurabilir.
+        if (IsSegmentConnectedToSpawnEdge(x, segmentTop))
+            return true;
+
+        // Spawn'a bağlı değilse bile, aynı gravity segmentinde yukarıda gerçek bir tile
+        // varsa collapse ile aşağı sıkışabilir.
+        for (int yy = y - 1; yy >= segmentTop; yy--)
+        {
+            if (IsGravityBlockedCell(x, yy))
+                break;
+
+            if (IsPassThroughVoidCell(x, yy))
+                continue;
+
+            if (TryGetTileSource(x, yy, out _))
+                return true;
+        }
+
+        return false;
+    }
+
+    private int FindSegmentTopY(int x, int y)
+    {
+        int topY = y;
+
+        while (topY > 0 && !IsGravityBlockedCell(x, topY - 1))
+            topY--;
+
+        return topY;
+    }
+    private bool HasValidDiagonalSourceFor(int x, int y)
+    {
+        if (IsVerticalOnlySlideTarget(x, y))
+            return false;
+
+        return CanSlideFromTo(x - 1, y - 1, x, y) ||
+               CanSlideFromTo(x + 1, y - 1, x, y);
+    }
+    private bool CanSlideFromTo(int fromX, int fromY, int toX, int toY)
+    {
+        if (IsVerticalOnlySlideTarget(toX, toY))
+            return false;
+
+        if (!IsEmptyPlayableCell(toX, toY))
+            return false;
+
+        if (!TryGetTileSource(fromX, fromY, out _))
+            return false;
+
+        // Dikey düşüş hakkı varsa diagonal kaynak olarak kullanılmaz.
+        if (CanTileFallStraightDown(fromX, fromY))
+            return false;
+
+        int cax = fromX;
+        int cay = toY;
+        int cbx = toX;
+        int cby = fromY;
+
+        // En az bir köşe açıksa diagonal yol mümkün.
+        return IsDiagonalPassableCell(cax, cay) ||
+               IsDiagonalPassableCell(cbx, cby);
+    }
+
+
+
+
+    private bool IsVerticalOnlySlideTarget(int x, int y)
+    {
+        // Aşama 1: kolon-bazlı kilit kaldırıldı.
+        // Sadece slide kaynağı olarak kullanılmış spesifik hücre kilitlidir.
+        return _verticalOnlySlideGaps.Contains(new Vector2Int(x, y));
+    }
+
+    private void PruneVerticalOnlySlideLocks()
+    {
+        if (_verticalOnlySlideGaps.Count == 0)
+            return;
+
+        List<Vector2Int> toRemove = null;
+
+        foreach (var gap in _verticalOnlySlideGaps)
+        {
+            bool stillEmpty = IsEmptyPlayableCell(gap.x, gap.y);
+
+            // Kilit ancak şu durumlarda anlamlıdır:
+            //   - Hücre hâlâ boş VE vertical fill ile dolabilir.
+            //
+            // Hücre dolduysa kilit gereksiz.
+            // Hücre boş ama vertical fill imkansızsa (üstü obstacle / segment closed),
+            // kilit kalıcı deadlock yaratır — bırakırsak hücre asla dolmaz.
+            // Bu durumda diagonal alıcı olabilmesi için kilidi kaldır.
+            bool keepLock = stillEmpty && HasVerticalFillPathFor(gap.x, gap.y);
+
+            if (!keepLock)
+            {
+                toRemove ??= new List<Vector2Int>();
+                toRemove.Add(gap);
+            }
+        }
+
+        if (toRemove != null)
+        {
+            for (int i = 0; i < toRemove.Count; i++)
+                _verticalOnlySlideGaps.Remove(toRemove[i]);
+        }
     }
 
     private bool IsInNonSpawnableSegment(int x, int y)
@@ -590,12 +770,12 @@ public class CascadeLogic
 
         return !IsSegmentConnectedToSpawnEdge(x, topY);
     }
-
     private bool IsNonObstacleHoleCell(int hx, int hy)
     {
-        return hx >= 0 && hx < board.Width && hy >= 0 && hy < board.Height
-               && board.Holes[hx, hy]
-               && !IsObstacleBlockedCell(hx, hy);
+        if (!TryGetCellState(hx, hy, out var state))
+            return false;
+
+        return state.isMaskHole && !state.isObstacleBlocked;
     }
 
     private bool HasAnyTileAboveInSameSegment(int x, int y)
@@ -626,24 +806,85 @@ public class CascadeLogic
         if (y < board.Height - 1 && IsNonObstacleHoleCell(x, y + 1)) return true;
         return false;
     }
-
     private bool CanTileFallStraightDown(int fromX, int fromY)
     {
-        if (fromX < 0 || fromX >= board.Width || fromY < 0 || fromY >= board.Height)
+        if (!TryGetTileSource(fromX, fromY, out _))
             return false;
 
         int y = fromY + 1;
         while (y < board.Height)
         {
-            if (IsGravityBlockedCell(fromX, y)) return false;
-            if (board.Holes[fromX, y] && !IsGravityBlockedCell(fromX, y))
+            if (IsGravityBlockedCell(fromX, y))
+                return false;
+
+            if (IsPassThroughVoidCell(fromX, y))
             {
                 y++;
                 continue;
             }
-            return board.Tiles[fromX, y] == null;
+
+            return IsEmptyPlayableCell(fromX, y);
         }
+
         return false;
+    }
+
+
+    private bool TryGetCellState(int x, int y, out BoardCellStateSnapshot state)
+    {
+        state = default;
+        return board != null && board.TryGetCellState(x, y, out state);
+    }
+    private bool IsTileSlotCell(int x, int y)
+    {
+        if (!TryGetCellState(x, y, out var state))
+            return false;
+
+        return state.canContainTile;
+    }
+    private bool IsEmptyPlayableCell(int x, int y)
+    {
+        if (!TryGetCellState(x, y, out var state))
+            return false;
+
+        return state.canAcceptTile;
+    }
+    private bool TryGetTileSource(int x, int y, out TileView tile)
+    {
+        tile = null;
+
+        if (!TryGetCellState(x, y, out var state))
+            return false;
+
+        if (!state.canProvideTile || state.tile == null)
+            return false;
+
+        tile = state.tile;
+
+        // TileView kendi koordinatıyla board snapshot'ı aynı şeyi göstermeli.
+        if (tile.X != x || tile.Y != y)
+            return false;
+
+        if (tile.TryGetCellState(out var tileState))
+        {
+            if (!tileState.inBounds || tileState.x != x || tileState.y != y)
+                return false;
+
+            if (!tileState.hasTile || tileState.tile != tile)
+                return false;
+
+            if (!tileState.canProvideTile)
+                return false;
+        }
+
+        return true;
+    }
+    private bool IsPassThroughVoidCell(int x, int y)
+    {
+        if (!TryGetCellState(x, y, out var state))
+            return false;
+
+        return state.isPassThroughVoid;
     }
 
     private TileType GetRandomType()
@@ -697,7 +938,7 @@ public class CascadeLogic
     {
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
             return false;
-        if (board.Holes[x, y])
+        if (!IsTileSlotCell(x, y))
             return false;
 
         var tile = board.Tiles[x, y];
@@ -800,6 +1041,9 @@ public class CascadeLogic
     }
     private bool IsGravityBlockedCell(int x, int y)
     {
-        return IsObstacleBlockedCell(x, y) || board.IsPendingTriggeredSpecialCell(x, y);
+        if (!TryGetCellState(x, y, out var state))
+            return false;
+
+        return state.isObstacleBlocked || board.IsPendingTriggeredSpecialCell(x, y);
     }
 }

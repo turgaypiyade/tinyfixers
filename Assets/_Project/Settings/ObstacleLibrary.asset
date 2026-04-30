@@ -149,3 +149,21 @@ MonoBehaviour:
     legacyStageDamageRules: 
     legacyBlocksCells: 0
     legacyBehavior: 3
+  - id: 1
+    stages:
+    - sprite: {fileID: 3268830964253682241, guid: 1f635237031a852419555c40c74820b7, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 3
+      allowDiagonal: 1
+    allowCrossContextFallback: 1
+    size: {x: 1, y: 1}
+    hits: 1
+    hitParticleSprites: []
+    breakParticleSprites: []
+    drawUnderTiles: 0
+    legacySprite: {fileID: 3268830964253682241, guid: 1f635237031a852419555c40c74820b7, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules: 
+    legacyBlocksCells: 1
+    legacyBehavior: 3

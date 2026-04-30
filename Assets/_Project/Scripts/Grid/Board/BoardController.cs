@@ -1438,18 +1438,8 @@ public class BoardController : MonoBehaviour
         float _rbStart = Time.realtimeSinceStartup;
         isSpecialActivationPhase = false;
 
-        if (resolveEmptyCellsFirst)
-        {
-            var initialCascades = cascadeLogic.CalculateCascades();
-            if (initialCascades.Count > 0)
-            {
-                Debug.Log($"[Resolve] initial_cascade actions={initialCascades.Count}");
-                actionSequencer.Enqueue(initialCascades);
-                while (actionSequencer.IsPlaying) yield return null;
-                RefreshAllSortingOrders();
-                Debug.Log($"[Resolve] initial_cascade_done +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
-            }
-        }
+        // Cascade/match sırası artık while loop başındaki strict barrier tarafından yönetiliyor.
+        // resolveEmptyCellsFirst parametresi backward-compatible olarak bırakıldı.
 
         int safety = 0;
         const int MaxResolveLoops = 250;
@@ -1462,6 +1452,39 @@ public class BoardController : MonoBehaviour
                 yield break;
 
             CurrentResolvePass = safety;
+
+            // ─────────────────────────────────────────────
+            // STRICT ORDER BARRIER:
+            // MatchFinder asla aktif boş hücre varken çalışmamalı.
+            // Her resolve pass başında önce cascade settle yapılır:
+            // 1) vertical, 2) diagonal, 3) vertical, 4) pocket fill.
+            // Ancak boşluk kapandıktan sonra match aranır.
+            // ─────────────────────────────────────────────
+            if (cascadeLogic != null && cascadeLogic.HasAnyEmptyPlayableCell())
+            {
+                var preMatchCascades = cascadeLogic.CalculateCascades();
+
+                if (preMatchCascades.Count > 0)
+                {
+                    Debug.Log($"[Resolve] pass={safety} pre_match_cascade actions={preMatchCascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+                    actionSequencer.Enqueue(preMatchCascades);
+
+                    while (actionSequencer.IsPlaying)
+                        yield return null;
+
+                    RefreshAllSortingOrders();
+                    continue;
+                }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.LogWarning(
+                    $"[Resolve] pass={safety} flow-fillable empty cells remain, but cascade produced no actions. " +
+                    "Continuing to MatchFinder to avoid a hard lock.");
+#endif
+                // Güvenlik: board'u kilitleme. Normalde buraya düşmemeli;
+                // CascadeLogic.HasAnyEmptyPlayableCell artık sadece flow-reachable boşlukları sayar.
+            }
+
 
             var matches = matchFinder.FindAllMatches();
 
@@ -1654,7 +1677,7 @@ public class BoardController : MonoBehaviour
             doShake,
             isSpecialPhase: allowSpecialActivation && hasAnySpecialActivation,
             presentationPlan: presentationPlan,
-            enqueueCascadeOnComplete: true));
+            enqueueCascadeOnComplete: false));
 
         while (actionSequencer.IsPlaying)
             yield return null;
