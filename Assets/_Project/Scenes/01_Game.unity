@@ -3564,6 +3564,9 @@ MonoBehaviour:
   obstacleHitFxLifetime: 1.2
   obstacleBreakFxPrefab: {fileID: 1851070113503770558, guid: 84c2cc22fd6664f148afccf4fe0599c3, type: 3}
   obstacleBreakFxLifetime: 1.2
+  hammerBoosterFxPrefab: {fileID: 3587498911280161232, guid: 9397f041fbc3947d4a7218642a06ed42, type: 3}
+  boosterFxParent: {fileID: 415868972}
+  hammerBoosterFallbackSprite: {fileID: 21300000, guid: e200b3928e79346e2ab4da678e139c53, type: 3}
   allowPostSwapSettleValidation: 1
   enableTileSyncValidation: 1
   enableSpecialChainTrace: 0
