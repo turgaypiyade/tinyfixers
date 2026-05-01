@@ -16,7 +16,7 @@ MonoBehaviour:
   - chapter: 1
     level: 1
     levelKey: Level_001
-    levelData: {fileID: 11400000, guid: 3e34a283f0cef444e970522d927f31ea, type: 2}
+    levelData: {fileID: 11400000, guid: ed75dbf300be94e508f4bbc4a5233186, type: 2}
   - chapter: 1
     level: 2
     levelKey: Level_002

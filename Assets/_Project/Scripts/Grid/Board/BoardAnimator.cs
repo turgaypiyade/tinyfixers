@@ -222,7 +222,8 @@ public class BoardAnimator
         IReadOnlyCollection<TileView> lightningVisualTargets = null,
         IReadOnlyList<LightningLineStrike> lightningLineStrikes = null,
         bool suppressPerTileClearVfx = false,
-        Dictionary<TileView, float> perTileClearDelays = null)
+        Dictionary<TileView, float> perTileClearDelays = null,
+        Vector2Int? implodeTargetCell = null)
     {
         var list = new List<TileView>(matches);
         var pops = new List<IEnumerator>();
@@ -232,6 +233,7 @@ public class BoardAnimator
         var lineHitClearedTiles = new HashSet<TileView>();
         var lineSweepCandidates = new HashSet<TileView>();
         var skipBreakFxTiles = new HashSet<TileView>();
+        var implodeTiles = new List<TileView>();
         bool lineHitWindowOpen = false;
 
         float maxStaggerDelay = 0f;
@@ -452,9 +454,17 @@ public class BoardAnimator
                 Debug.Log(
                     $"[PulseClearDebug][BA] POP_BRANCH tile=({tile.X},{tile.Y}) " +
                     $"delay={delay:0.000} mode={tileAnimationMode}");
-                pops.Add(clearEffectOrchestrator.Play(tile, tileAnimationMode, delay, board.GetClearDurationForCurrentPass()));
+                
+                if (tileAnimationMode == ClearAnimationMode.Default && implodeTargetCell.HasValue && !shouldSuppressVfx)
+                {
+                    implodeTiles.Add(tile);
+                }
+                else
+                {
+                    pops.Add(clearEffectOrchestrator.Play(tile, tileAnimationMode, delay, board.GetClearDurationForCurrentPass()));
+                }
 
-                if (!isSweptOff)
+                if (!isSweptOff && !implodeTiles.Contains(tile))
                 {
                     board.StartCoroutine(ClearCellDataAfterDelay(tile, delay));
                 }
@@ -544,6 +554,28 @@ public class BoardAnimator
         {
             for (int i = 0; i < pulseImpacts.Count; i++)
                 board.StartCoroutine(pulseImpacts[i]);
+        }
+
+        if (implodeTiles.Count > 0 && implodeTargetCell.HasValue)
+        {
+            // Burst VFX'i taşlar birleştiğinde göster (küçük gecikme ile)
+            float implodeDuration = board.GetClearDurationForCurrentPass();
+            if (board != null && board.Parent != null)
+            {
+                board.StartCoroutine(DelayedImplodeBurst(implodeTargetCell.Value, Mathf.Max(0.05f, implodeDuration * 0.6f)));
+            }
+
+            pops.Add(tileAnimator.PlayTilesImplodeToCell(
+                implodeTargetCell.Value,
+                implodeTiles,
+                implodeDuration,
+                0.7f,
+                tile =>
+                {
+                    if (tile == null) return;
+                    FinalizeTileClear(tile);
+                }
+            ));
         }
 
         if (pops.Count > 0)
@@ -948,6 +980,40 @@ public class BoardAnimator
             if (w != null) yield return w;
         }
         yield return MicroShake(duration, strength);
+    }
+
+    private IEnumerator DelayedImplodeBurst(Vector2Int cell, float delay)
+    {
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        if (board == null || board.Parent == null)
+            yield break;
+
+        // Hücrenin world pozisyonunu tile'ın kendisinden al (en doğru yol)
+        TileView tileAtCell = (cell.x >= 0 && cell.x < board.Width && cell.y >= 0 && cell.y < board.Height)
+            ? board.Tiles[cell.x, cell.y]
+            : null;
+
+        Vector3 worldCenter;
+        if (tileAtCell != null && tileAtCell.IconImage != null && tileAtCell.IconImage.rectTransform != null)
+        {
+            Vector3[] corners = new Vector3[4];
+            tileAtCell.IconImage.rectTransform.GetWorldCorners(corners);
+            worldCenter = (corners[0] + corners[2]) * 0.5f;
+        }
+        else
+        {
+            // Fallback: grid koordinatından hesapla
+            RectTransform parent = board.Parent;
+            Vector2 localPos = new Vector2(
+                cell.x * board.TileSize + board.TileSize * 0.5f,
+                -cell.y * board.TileSize - board.TileSize * 0.5f);
+            worldCenter = parent.TransformPoint(localPos);
+        }
+
+        board.StartCoroutine(TileClearBurstVfx.CoPlayBurstAtWorldPosition(
+            worldCenter, board.Parent, board, 0.35f));
     }
 
     public IEnumerator CollapseColumnsAnimated()
@@ -1524,7 +1590,7 @@ public class BoardAnimator
         board.Tiles[fromX, fromY] = null;
         board.Tiles[toX, toY] = tile;
         tile.SetCoords(toX, toY);
-
+        Debug.Log($"[Slide] PATH ({fromX},{fromY}) -> ({fromX},{toY}) -> ({toX},{toY})");
         float slideDuration = board.GetFallDurationForDistance(1) * 0.6f;
         moves.Add(tile.MoveToGrid(
             board.TileSize,

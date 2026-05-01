@@ -594,6 +594,191 @@ public class TileView : MonoBehaviour,
             SnapToGrid(tileSize);
     }
 
+    /// <summary>
+    /// Multi-segment yörünge ile hareket. Diagonal slide gibi durumlarda kullanılır:
+    /// Taş kaynak sütunda corner hizasına kadar düz iner, sonra diagonal step yapar,
+    /// sonra hedef sütunda final pozisyona iner. Tek smooth path olarak çalışır.
+    ///
+    /// waypoints[0]   = başlangıç hücresi
+    /// waypoints[N]   = son hücre (tile.X/Y'ye snap edilir)
+    /// segmentDurations[i] = waypoints[i] -> waypoints[i+1] arası süre
+    ///
+    /// Segment'ler arası SnapToGrid YOK — flicker olmaz.
+    /// Sadece son waypoint sonrası SnapToGrid + opsiyonel settle.
+    /// </summary>
+    public IEnumerator MoveToGridPath(
+        int tileSize,
+        Vector2Int[] waypoints,
+        float[] segmentDurations,
+        AnimationCurve easingCurve = null,
+        bool enableSettle = false,
+        float settleDuration = 0.06f,
+        float settleStrength = 0.04f,
+        float settleStretchX = 0f,
+        float settleOvershoot = 0f)
+    {
+        lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+
+        if (this == null || !this)
+            yield break;
+
+        if (waypoints == null || waypoints.Length < 2)
+            yield break;
+
+        if (segmentDurations == null || segmentDurations.Length < waypoints.Length - 1)
+            yield break;
+
+        if (rt == null)
+            rt = GetComponent<RectTransform>();
+
+        if (rt == null || !rt)
+            yield break;
+
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+
+        RectTransform visualRt = iconImage != null ? iconImage.rectTransform : null;
+        Vector3 visualBaseScale = visualRt != null ? visualRt.localScale : Vector3.one;
+
+        // İlk waypoint'e konumlan
+        Vector2 startPos = GetFallCellAnchoredPosition(waypoints[0].x, waypoints[0].y, tileSize);
+        rt.anchoredPosition = startPos;
+
+        // Her segment'i sırayla lerp'le. Aralarda snap YOK.
+        int segmentCount = waypoints.Length - 1;
+
+        for (int seg = 0; seg < segmentCount; seg++)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            Vector2 segStart = GetFallCellAnchoredPosition(waypoints[seg].x, waypoints[seg].y, tileSize);
+            Vector2 segEnd = GetFallCellAnchoredPosition(waypoints[seg + 1].x, waypoints[seg + 1].y, tileSize);
+
+            float segDur = Mathf.Max(0.0001f, segmentDurations[seg]);
+            float pixelDist = Vector2.Distance(segStart, segEnd);
+
+            if (pixelDist < 0.5f)
+            {
+                rt.anchoredPosition = segEnd;
+                continue;
+            }
+
+            float elapsed = 0f;
+            while (elapsed < segDur)
+            {
+                if (rt == null || !rt)
+                    yield break;
+
+                elapsed += Time.deltaTime;
+
+                float t = Mathf.Clamp01(elapsed / segDur);
+                if (easingCurve != null)
+                    t = easingCurve.Evaluate(t);
+
+                rt.anchoredPosition = Vector2.LerpUnclamped(segStart, segEnd, t);
+
+                yield return null;
+            }
+
+            if (rt == null || !rt)
+                yield break;
+
+            rt.anchoredPosition = segEnd;
+            // SnapToGrid YOK — bir sonraki segment kaldığı yerden başlar
+        }
+
+        // Son waypoint sonrası snap
+        SnapToGrid(tileSize);
+
+        if (!enableSettle || settleDuration <= 0f)
+            yield break;
+
+        Vector2 basePos = rt.anchoredPosition;
+        Vector2 overshootPos = basePos + new Vector2(0f, -settleStrength * tileSize);
+        Vector2 overUpPos = basePos + new Vector2(0f, settleStrength * tileSize * 0.3f);
+
+        float bounceDur = settleDuration;
+
+        float b1 = 0f;
+        while (b1 < bounceDur * 0.35f)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            b1 += Time.deltaTime;
+
+            float k = Mathf.Clamp01(b1 / Mathf.Max(0.0001f, bounceDur * 0.35f));
+            float eased = 1f - (1f - k) * (1f - k);
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(basePos, overshootPos, eased);
+
+            if (visualRt != null && settleStretchX > 0f)
+            {
+                float sx = 1f + settleStretchX * eased;
+                float sy = 1f - settleStretchX * eased * 0.5f;
+
+                visualRt.localScale = new Vector3(
+                    visualBaseScale.x * sx,
+                    visualBaseScale.y * sy,
+                    visualBaseScale.z);
+            }
+
+            yield return null;
+        }
+
+        float b2 = 0f;
+        while (b2 < bounceDur * 0.35f)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            b2 += Time.deltaTime;
+
+            float k = Mathf.Clamp01(b2 / Mathf.Max(0.0001f, bounceDur * 0.35f));
+            float eased = 1f - (1f - k) * (1f - k);
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(overshootPos, overUpPos, eased);
+
+            if (visualRt != null && settleStretchX > 0f)
+            {
+                float revK = 1f - k;
+                float sx = 1f + settleStretchX * revK;
+                float sy = 1f - settleStretchX * revK * 0.5f;
+
+                visualRt.localScale = new Vector3(
+                    visualBaseScale.x * sx,
+                    visualBaseScale.y * sy,
+                    visualBaseScale.z);
+            }
+
+            yield return null;
+        }
+
+        float b3 = 0f;
+        while (b3 < bounceDur * 0.3f)
+        {
+            if (rt == null || !rt)
+                yield break;
+
+            b3 += Time.deltaTime;
+
+            float k = Mathf.Clamp01(b3 / Mathf.Max(0.0001f, bounceDur * 0.3f));
+            float eased = k * k;
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(overUpPos, basePos, eased);
+
+            yield return null;
+        }
+
+        if (visualRt != null && visualRt)
+            visualRt.localScale = visualBaseScale;
+
+        if (rt != null && rt)
+            SnapToGrid(tileSize);
+    }
+
     public void PlaySpecialCreationReveal(TileSpecial special, int tileSize)
     {
         if (special == TileSpecial.None)
@@ -688,30 +873,21 @@ public class TileView : MonoBehaviour,
         haloImage.raycastTarget = false;
         haloImage.color = new Color(1f, 1f, 1f, 0f);
 
-        // LineH: yatay eksende dönüyormuş hissi -> Y ölçeği sıkışır
-        // Diğerleri: dikey eksende dönüyormuş hissi -> X ölçeği sıkışır
-        // Gerçek 3D rotation kullanmıyoruz çünkü 2D sprite kenara gelince
-        // ince çizgi olup arkasını (ayna) gösterir.
-        bool spinAroundHorizontal = (special == TileSpecial.LineH);
+        // Faz sırası (rotasyon yok, sadece büyüme):
+        // 1) grow    : imaj + halo birlikte küçükten büyüğe büyür
+        // 2) settle  : halo söner + imaj normal boyutuna oturur
+        const float growDuration = 0.28f;
+        const float settleDuration = 0.20f;
 
-        // Faz sırası:
-        // 1) grow    : imaj + halo birlikte büyür (halo baştan görünür)
-        // 2) spin    : büyümüş + halolu halde 360° "döner" (fake spin: scale ile)
-        // 3) settle  : halo söner + imaj normal boyutuna oturur
-        const float growDuration = 0.22f;
-        const float spinDuration = 0.55f;
-        const float settleDuration = 0.22f;
+        const float maxScale = 1.25f;
+        const float haloMaxScale = 1.35f;
+        const float haloStartScale = 0.40f;
+        const float haloEndScale = 0.45f;
+        const float haloPeakAlpha = 0.55f;
 
-        const float maxScale = 1.85f;
-        const float haloMaxScale = 1.35f;  // büyümüş imajı saran geniş hale
-        const float haloStartScale = 0.55f;  // baştan görünür, imajla beraber büyür
-        const float haloEndScale = 0.45f;  // sönerken hafifçe küçülür (imajla beraber)
-        const float haloPeakAlpha = 0.55f;  // halo en parlak halinde bile yarı saydam
-
-        float totalDuration = growDuration + spinDuration + settleDuration;
+        float totalDuration = growDuration + settleDuration;
         float elapsed = 0f;
 
-        // Halo başlangıçta küçük ama görünür — imajla beraber büyüyecek.
         haloRt.localScale = Vector3.one * haloStartScale;
         if (haloImage != null)
             haloImage.color = new Color(1f, 1f, 1f, haloPeakAlpha);
@@ -723,70 +899,34 @@ public class TileView : MonoBehaviour,
 
             elapsed += Time.deltaTime;
 
-            float angle;        // 0..360 fake spin açısı
-            float baseScale;    // imajın büyüme ölçeği
+            float baseScale;
             float haloScale;
             float haloAlpha;
 
             if (elapsed < growDuration)
             {
-                // 1) İmaj + halo birlikte büyür, dönüş yok
+                // 1) İmaj + halo birlikte büyür, rotasyon yok
                 float t = Mathf.Clamp01(elapsed / growDuration);
                 float e = EaseOutBackLight(t);
 
-                baseScale = Mathf.LerpUnclamped(1f, maxScale, e);
+                baseScale = Mathf.LerpUnclamped(0.10f, maxScale, e);
                 haloScale = Mathf.LerpUnclamped(haloStartScale, haloMaxScale, e);
                 haloAlpha = haloPeakAlpha;
-                angle = 0f;
-            }
-            else if (elapsed < growDuration + spinDuration)
-            {
-                // 2) Fake spin: büyümüş + halolu halde 360°
-                float t = Mathf.Clamp01((elapsed - growDuration) / spinDuration);
-                float e = EaseInOut(t);
-
-                baseScale = maxScale;
-                haloScale = haloMaxScale + Mathf.Sin(t * Mathf.PI) * 0.06f;
-                haloAlpha = haloPeakAlpha;
-                angle = Mathf.LerpUnclamped(0f, 360f, e);
             }
             else
             {
-                // 3) Halo söner + imaj normale oturur
-                float t = Mathf.Clamp01((elapsed - growDuration - spinDuration) / settleDuration);
+                // 2) Halo söner + imaj normale oturur
+                float t = Mathf.Clamp01((elapsed - growDuration) / settleDuration);
                 float e = EaseOut(t);
 
                 baseScale = Mathf.LerpUnclamped(maxScale, 1f, e);
                 haloScale = Mathf.LerpUnclamped(haloMaxScale, haloEndScale, e);
                 haloAlpha = haloPeakAlpha * (1f - t);
-                angle = 360f;
-            }
-
-            // Fake spin: cos(angle) ile sıkıştırma. cos(0)=1, cos(90)=0, cos(180)=-1.
-            // Negatif değerler "arka taraf" gibi görünür — Abs alıp ayna kontrolü
-            // yapmıyoruz, sprite simetrik göründüğü için yeterli.
-            float spinFactor = Mathf.Cos(angle * Mathf.Deg2Rad);
-            float squashedAxis = Mathf.Abs(spinFactor);
-            // Tam 90°/270°'de sıfıra inmesin, ince bir minimum bırak.
-            squashedAxis = Mathf.Max(0.05f, squashedAxis);
-
-            float scaleX, scaleY;
-            if (spinAroundHorizontal)
-            {
-                // LineH: yatay eksende dönüş -> Y sıkışır, X sabit kalır
-                scaleX = baseScale;
-                scaleY = baseScale * squashedAxis;
-            }
-            else
-            {
-                // Diğerleri: dikey eksende dönüş -> X sıkışır, Y sabit kalır
-                scaleX = baseScale * squashedAxis;
-                scaleY = baseScale;
             }
 
             iconRt.localScale = new Vector3(
-                specialRevealIconBaseScale.x * scaleX,
-                specialRevealIconBaseScale.y * scaleY,
+                specialRevealIconBaseScale.x * baseScale,
+                specialRevealIconBaseScale.y * baseScale,
                 specialRevealIconBaseScale.z);
             iconRt.localRotation = specialRevealIconBaseRotation;
 

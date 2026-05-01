@@ -81,7 +81,7 @@ public class BoardController : MonoBehaviour
     [SerializeField] private GameObject pulsePulseExplosionPrefab;
     [SerializeField] private float pulsePulseExplosionLifetime = 1.0f;
     [SerializeField] private float pulsePulseChargeDuration = 2.0f;
-    [SerializeField] private int pulsePulseExplosionRadius = 4;
+    [SerializeField] private int pulsePulseExplosionRadius = 2;
 
     [Header("Obstacle Visual Tuning")]
     [SerializeField] private AudioSource sfxSource;
@@ -1020,7 +1020,8 @@ public class BoardController : MonoBehaviour
                         actionSequencer.Enqueue(new MatchClearAction(
                             normalMatches,
                             doShake: false,
-                            suppressPerTileClearVfx: createdTiles.Count > 0));
+                            suppressPerTileClearVfx: createdTiles.Count > 0,
+                            implodeTargetCell: new Vector2Int(a.X, a.Y)));
                         yield return AnimateQueuedActions();
                         FlowLog("normal_side_clear");
                     }
@@ -1041,7 +1042,7 @@ public class BoardController : MonoBehaviour
                 yield return new WaitForSeconds(pulsePulseChargeDuration);
 
                 if (pulseCoreImpactService != null)
-                    pulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(chargeX, chargeY, radiusCells: pulsePulseExplosionRadius);
+                    pulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(chargeX, chargeY, radiusCells: 2); // 5x5 alan — Inspector override'a bağımlı değil
             }
 
             actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb));
@@ -1106,7 +1107,7 @@ public class BoardController : MonoBehaviour
             yield break;
         }
 
-        yield return ExecuteClearPass(matches, allowSpecialActivation: true);
+        yield return ExecuteClearPass(matches, allowSpecialActivation: true, swapCell: new Vector2Int(a.X, a.Y));
         FlowLog("clear_pass");
         yield return ResolveBoard(resolveEmptyCellsFirst: true);
         FlowLog("resolve_board");
@@ -1572,7 +1573,7 @@ public class BoardController : MonoBehaviour
     // Public wrapper for services (BoosterService)
     internal IEnumerator ResolveBoardPublic(bool allowSpecial = true) => ResolveBoard(allowSpecial, resolveEmptyCellsFirst: true);
 
-    IEnumerator ExecuteClearPass(HashSet<TileView> matchTiles, bool allowSpecialActivation, Action<bool> onResult = null)
+    IEnumerator ExecuteClearPass(HashSet<TileView> matchTiles, bool allowSpecialActivation, Action<bool> onResult = null, Vector2Int? swapCell = null)
     {
         float _cpStart = Time.realtimeSinceStartup;
         float _cpLast = _cpStart;
@@ -1672,12 +1673,40 @@ public class BoardController : MonoBehaviour
 
         CpLog($"pre_clear(tiles={matchTiles.Count} plan={presentationPlan != null})");
 
+        // Swap cell varsa onu kullan, yoksa geometrik merkezi hesapla
+        Vector2Int implodeCenter;
+        if (swapCell.HasValue)
+        {
+            implodeCenter = swapCell.Value;
+        }
+        else
+        {
+            Vector2Int centerCell = Vector2Int.zero;
+            int validTileCount = 0;
+            foreach (var t in matchTiles)
+            {
+                if (t != null)
+                {
+                    centerCell.x += t.X;
+                    centerCell.y += t.Y;
+                    validTileCount++;
+                }
+            }
+            if (validTileCount > 0)
+            {
+                centerCell.x = Mathf.RoundToInt((float)centerCell.x / validTileCount);
+                centerCell.y = Mathf.RoundToInt((float)centerCell.y / validTileCount);
+            }
+            implodeCenter = centerCell;
+        }
+
         actionSequencer.Enqueue(new MatchClearAction(
             matchTiles,
             doShake,
             isSpecialPhase: allowSpecialActivation && hasAnySpecialActivation,
             presentationPlan: presentationPlan,
-            enqueueCascadeOnComplete: false));
+            enqueueCascadeOnComplete: false,
+            implodeTargetCell: implodeCenter));
 
         while (actionSequencer.IsPlaying)
             yield return null;

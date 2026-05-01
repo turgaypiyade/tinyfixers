@@ -21,6 +21,11 @@ public class FallAction : BoardAction
         public float startDelay;
         public float phaseDelay;
         public bool hasPhaseDelay;
+
+        // Multi-segment path desteği. null ise klasik tek segment hareket
+        // (fromX,fromY -> toX,toY) kullanılır.
+        public Vector2Int[] pathWaypoints;
+        public float[] pathSegmentDurations;
     }
 
     private readonly List<FallRecord> fallRecords = new List<FallRecord>();
@@ -86,6 +91,60 @@ public class FallAction : BoardAction
             settleStrength = settleStr,
             curve = curve,
             startDelay = Mathf.Max(0f, startDelay)
+        });
+    }
+
+    /// <summary>
+    /// Multi-segment yörüngeli hareket ekler. Diagonal slide gibi durumlarda
+    /// taşın "L şekli" yörünge çizmesi için kullanılır:
+    ///   waypoints = [(fromX,fromY), (fromX,toY), (toX,toY)]
+    ///
+    /// Animasyon TileView.MoveToGridPath ile oynatılır.
+    /// Phase delay/stagger hesabı için record'un toX/toY'si SON waypoint olur.
+    /// duration = toplam süre (TÜM segment'lerin toplamı).
+    /// </summary>
+    public void AddPathMove(
+        TileView tile,
+        Vector2Int[] waypoints,
+        float[] segmentDurations,
+        bool useSettle,
+        float settleDur,
+        float settleStr,
+        AnimationCurve curve,
+        float startDelay = 0f)
+    {
+        if (tile == null || !tile)
+            return;
+
+        if (waypoints == null || waypoints.Length < 2)
+            return;
+
+        if (segmentDurations == null || segmentDurations.Length < waypoints.Length - 1)
+            return;
+
+        // Toplam süre ve from/to bilgisi (stagger ve mesafe hesabı için)
+        float totalDuration = 0f;
+        for (int i = 0; i < waypoints.Length - 1; i++)
+            totalDuration += Mathf.Max(0.0001f, segmentDurations[i]);
+
+        Vector2Int firstWp = waypoints[0];
+        Vector2Int lastWp = waypoints[waypoints.Length - 1];
+
+        fallRecords.Add(new FallRecord
+        {
+            tile = tile,
+            fromX = firstWp.x,
+            fromY = firstWp.y,
+            toX = lastWp.x,
+            toY = lastWp.y,
+            duration = Mathf.Max(0.0001f, totalDuration),
+            useSettle = useSettle,
+            settleDuration = Mathf.Max(0f, settleDur),
+            settleStrength = settleStr,
+            curve = curve,
+            startDelay = Mathf.Max(0f, startDelay),
+            pathWaypoints = waypoints,
+            pathSegmentDurations = segmentDurations,
         });
     }
 
@@ -264,19 +323,44 @@ public class FallAction : BoardAction
             if (r.tile == null || !r.tile)
                 continue;
 
-            moves.Add(r.tile.MoveToGridCell(
-                sequencer.Board.TileSize,
-                r.fromX,
-                r.fromY,
-                r.toX,
-                r.toY,
-                r.duration,
-                r.curve,
-                r.useSettle,
-                r.settleDuration,
-                r.settleStrength,
-                sequencer.Board.FallSettleStretchX,
-                sequencer.Board.FallSettleOvershoot));
+            bool isPath = r.pathWaypoints != null && r.pathWaypoints.Length >= 2;
+            Debug.Log($"[FallExec] tile=({r.fromX},{r.fromY})->({r.toX},{r.toY}) path={isPath} delay={r.startDelay + r.phaseDelay:0.000}");
+
+            IEnumerator move;
+
+            if (isPath)
+            {
+                // Multi-segment yörünge (diagonal slide vb.)
+                move = r.tile.MoveToGridPath(
+                    sequencer.Board.TileSize,
+                    r.pathWaypoints,
+                    r.pathSegmentDurations,
+                    r.curve,
+                    r.useSettle,
+                    r.settleDuration,
+                    r.settleStrength,
+                    sequencer.Board.FallSettleStretchX,
+                    sequencer.Board.FallSettleOvershoot);
+            }
+            else
+            {
+                // Klasik tek segment hareket
+                move = r.tile.MoveToGridCell(
+                    sequencer.Board.TileSize,
+                    r.fromX,
+                    r.fromY,
+                    r.toX,
+                    r.toY,
+                    r.duration,
+                    r.curve,
+                    r.useSettle,
+                    r.settleDuration,
+                    r.settleStrength,
+                    sequencer.Board.FallSettleStretchX,
+                    sequencer.Board.FallSettleOvershoot);
+            }
+
+            moves.Add(move);
 
             float totalDelay = r.startDelay + r.phaseDelay;
 

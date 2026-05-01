@@ -22,6 +22,7 @@ public class MatchClearAction : BoardAction
     private IReadOnlyList<Vector2Int> impactCells;
     private bool isBlocking;
     private bool enqueueCascadeOnComplete;
+    private Vector2Int? implodeTargetCell;
     public override bool Blocking => isBlocking;
     // NEW: future-facing generic presentation payload
     public ClearPresentationPlan PresentationPlan { get; }
@@ -45,7 +46,8 @@ public class MatchClearAction : BoardAction
         ClearPresentationPlan presentationPlan = null,
         IReadOnlyList<Vector2Int> impactCells = null,
         bool isBlocking = true,
-        bool enqueueCascadeOnComplete = false)
+        bool enqueueCascadeOnComplete = false,
+        Vector2Int? implodeTargetCell = null)
     {
         this.matches = matches != null ? new HashSet<TileView>(matches) : new HashSet<TileView>();
         this.doShake = doShake;
@@ -66,6 +68,7 @@ public class MatchClearAction : BoardAction
         this.impactCells = impactCells;
         this.isBlocking = isBlocking;
         this.enqueueCascadeOnComplete = enqueueCascadeOnComplete;
+        this.implodeTargetCell = implodeTargetCell;
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
@@ -126,7 +129,7 @@ public class MatchClearAction : BoardAction
             animationMode, affectedCells, impactCells, obstacleHitContext,
             includeAdjacentOverTileBlockerDamage, lightningOriginTile,
             lightningOriginCell, lightningVisualTargets, lightningLineStrikes,
-            suppressPerTileClearVfx, perTileClearDelays);
+            suppressPerTileClearVfx, perTileClearDelays, implodeTargetCell);
 
         UnityEngine.Debug.Log($"[MatchClear] clear_anim_done +{(UnityEngine.Time.realtimeSinceStartup - _mcStart):0.000}s");
 

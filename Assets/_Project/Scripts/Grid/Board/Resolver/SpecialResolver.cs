@@ -49,13 +49,13 @@ public class SpecialResolver
     {
         var actions = new List<BoardAction>();
 
-        if (a == null || b == null)
+        if (a == null && b == null)
         {
             board.IsSpecialActivationPhase = false;
             return actions;
         }
 
-        Debug.Log($"[ResolveSpecialSwap] a=({a.X},{a.Y}) currentA={a.GetSpecial()} originalA={originalSa} | b=({b.X},{b.Y}) currentB={b.GetSpecial()} originalB={originalSb}");
+        Debug.Log($"[ResolveSpecialSwap] a={((a != null) ? $"({a.X},{a.Y}) currentA={a.GetSpecial()}" : "null")} originalA={originalSa} | b={((b != null) ? $"({b.X},{b.Y}) currentB={b.GetSpecial()}" : "null")} originalB={originalSb}");
 
         board.ShakeNextClear = true;
         board.LastSwapUserMove = false;
@@ -79,7 +79,8 @@ public class SpecialResolver
         bool originalSbIsPulse = originalSb == TileSpecial.PulseCore;
 
         bool consumeNormalPartner = bothOriginallySpecial;
-        visualService.HideSwapSourceVisuals(a, b, originalSa, originalSb, consumeNormalPartner);
+        if (a != null && b != null)
+            visualService.HideSwapSourceVisuals(a, b, originalSa, originalSb, consumeNormalPartner);
 
         ctx.Reset();
 

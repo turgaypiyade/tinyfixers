@@ -393,6 +393,12 @@ MonoBehaviour:
   ringStartRatio: 0.3
   ringEndRatio: 1.15
   ringColor: {r: 1, g: 0.75, b: 0.2, a: 1}
+  coronaBlobCountMin: 7
+  coronaBlobCountMax: 8
+  coronaBlobScaleMin: 0.22
+  coronaBlobScaleMax: 0.4
+  coronaRadiusRatio: 0.362
+  coronaAlphaMultiplier: 0.45
   easeOut:
     serializedVersion: 2
     m_Curve:

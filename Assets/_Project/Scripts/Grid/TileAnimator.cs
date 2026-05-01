@@ -347,131 +347,42 @@ public sealed class TileAnimator
         if (createdTile == null)
             yield break;
 
-        RectTransform ghostParent = board != null ? board.Parent : null;
         Image createdIcon = createdTile.IconImage;
         RectTransform createdIconRt = createdIcon != null ? createdIcon.rectTransform : null;
-
-        if (ghostParent == null || createdIcon == null || createdIconRt == null)
+        if (createdIcon == null || createdIconRt == null)
         {
-            yield return PlayCreatedSpecialAppearOnly(createdTile, duration);
+            RestoreTileVisualState(createdTile);
             yield break;
         }
 
-        // Special creation hızlandırıldı: maksimum 80ms ile cap'lendi
-        // Eski: duration 145-170ms arasında geliyordu (log'dan)
-        // Yeni: Mathf.Clamp ile 60-80ms arasında tutuluyor
-        // Merge animasyonu (ghost'ların special'a akması) daha hızlı hissettiriyor
-        float animDuration = Mathf.Clamp(duration, 0.06f, 0.08f);
-
-        Transform createdRoot = createdTile.transform;
         CanvasGroup createdGroup = createdTile.GetComponent<CanvasGroup>();
         if (createdGroup == null)
             createdGroup = createdTile.gameObject.AddComponent<CanvasGroup>();
 
-        Vector3 createdBaseScale = createdIconRt.localScale;
-        Quaternion createdBaseRotation = createdIconRt.localRotation;
-        Color createdBaseColor = createdIcon.color;
-
-        createdRoot.localScale = Vector3.one;
-        createdRoot.localRotation = Quaternion.identity;
-        createdGroup.alpha = 0f;
-        createdIconRt.localScale = createdBaseScale * 0.18f;
-        createdIconRt.localRotation = Quaternion.identity;
-        createdIcon.color = new Color(
-            createdBaseColor.r,
-            createdBaseColor.g,
-            createdBaseColor.b,
-            0f);
-
-        // Created tile'ın üstünde burst (merkezi, special'ın doğduğu nokta)
-        // Icon rt sprite'ın görünen merkezini verir
-        if (board != null && createdIconRt != null)
+        // Yeni animasyon: Taşların birleşmesi yerine merkezden "pop" ve halka efektiyle ortaya çıkması
+        if (board != null && board.Parent != null && createdIconRt != null)
         {
-            Vector3[] _cornersCreated = new Vector3[4];
-            createdIconRt.GetWorldCorners(_cornersCreated);
-            Vector3 _createdWorldCenter = (_cornersCreated[0] + _cornersCreated[2]) * 0.5f;
+            Vector3[] _cornersAppear = new Vector3[4];
+            createdIconRt.GetWorldCorners(_cornersAppear);
+            Vector3 _appearCenter = (_cornersAppear[0] + _cornersAppear[2]) * 0.5f;
+            // Burst animasyonu (halka ve yıldızlar)
             board.StartCoroutine(TileClearBurstVfx.CoPlayBurstAtWorldPosition(
-                _createdWorldCenter, ghostParent, board, BURST_VFX_DURATION));
+                _appearCenter, board.Parent, board, BURST_VFX_DURATION));
         }
 
-        Vector2 targetPos = GetRectCenterInParentSpace(ghostParent, createdIconRt);
+        Vector3 baseScale = createdIconRt.localScale;
+        Quaternion baseRotation = createdIconRt.localRotation;
+        Color baseColor = createdIcon.color;
 
-        var ghosts = new List<SpecialCreationGhostState>();
-        var seenTiles = new HashSet<TileView>();
+        createdTile.transform.localScale = Vector3.one;
+        createdTile.transform.localRotation = Quaternion.identity;
+        createdGroup.alpha = 0f;
+        createdIconRt.localScale = baseScale * 0.10f;
+        createdIconRt.localRotation = Quaternion.identity;
+        createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
 
-        if (sourceTiles != null)
-        {
-            foreach (TileView tile in sourceTiles)
-            {
-                if (tile == null || tile == createdTile || !seenTiles.Add(tile))
-                    continue;
-
-                Image sourceIcon = tile.IconImage;
-                RectTransform sourceIconRt = sourceIcon != null ? sourceIcon.rectTransform : null;
-                if (sourceIcon == null || sourceIconRt == null || sourceIcon.sprite == null)
-                    continue;
-
-                GameObject ghostGo = new GameObject(
-                    "SpecialCreationGhost",
-                    typeof(RectTransform),
-                    typeof(CanvasGroup),
-                    typeof(Image));
-
-                RectTransform ghostRt = ghostGo.GetComponent<RectTransform>();
-                ghostRt.SetParent(ghostParent, false);
-                ghostRt.anchorMin = CenterPivot;
-                ghostRt.anchorMax = CenterPivot;
-                ghostRt.pivot = CenterPivot;
-                ghostRt.SetAsLastSibling();
-                ghostRt.sizeDelta = GetRectSizeInParentSpace(sourceIconRt, ghostParent);
-                ghostRt.anchoredPosition = GetRectCenterInParentSpace(ghostParent, sourceIconRt);
-                ghostRt.localScale = Vector3.one;
-                ghostRt.localRotation = Quaternion.identity;
-
-                Image ghostImage = ghostGo.GetComponent<Image>();
-                ghostImage.sprite = sourceIcon.sprite;
-                ghostImage.type = sourceIcon.type;
-                ghostImage.preserveAspect = sourceIcon.preserveAspect;
-                ghostImage.material = sourceIcon.material;
-                ghostImage.raycastTarget = false;
-                ghostImage.color = sourceIcon.color;
-
-                CanvasGroup ghostGroup = ghostGo.GetComponent<CanvasGroup>();
-                ghostGroup.alpha = sourceIcon.color.a;
-
-                ghosts.Add(new SpecialCreationGhostState
-                {
-                    tile = tile,
-                    sourceImage = sourceIcon,
-                    sourceColor = sourceIcon.color,
-                    ghostRect = ghostRt,
-                    ghostGroup = ghostGroup,
-                    startPos = ghostRt.anchoredPosition
-                });
-
-                sourceIcon.color = new Color(
-                    sourceIcon.color.r,
-                    sourceIcon.color.g,
-                    sourceIcon.color.b,
-                    0f);
-
-                // Merge olan her source tile için de burst (halka + yıldız + shard)
-                // iconRt yerine tile.RectTransform — ikon tile içinde offset'li olabilir
-                if (board != null)
-                {
-                    RectTransform tileRootRt = tile.RectTransform;
-                    if (tileRootRt != null)
-                    {
-                        Vector3[] _cornersSource = new Vector3[4];
-                        tileRootRt.GetWorldCorners(_cornersSource);
-                        Vector3 _srcWorldCenter = (_cornersSource[0] + _cornersSource[2]) * 0.5f;
-                        board.StartCoroutine(TileClearBurstVfx.CoPlayBurstAtWorldPosition(
-                            _srcWorldCenter, ghostParent, board, BURST_VFX_DURATION));
-                    }
-                }
-            }
-        }
-
+        // Ufaktan büyümeye başlama süresini biraz daha hissedilir yaptık (0.2s civarı)
+        float animDuration = Mathf.Clamp(duration, 0.20f, 0.28f);
         float t = 0f;
         while (t < animDuration)
         {
@@ -483,62 +394,25 @@ public sealed class TileAnimator
 
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / animDuration);
-            float travelEase = EaseOutCubic(k);
-            float ghostFadeEase = Mathf.Clamp01(k * 0.95f);
-
-            float createdFadeEase;
-            if (k < 0.52f)
-                createdFadeEase = 0f;
-            else
-                createdFadeEase = Mathf.Clamp01((k - 0.52f) / 0.48f);
-
+            
+            // Hızlıca belirsin
+            float fadeEase = Mathf.Clamp01(k * 1.5f);
+            // Ufaktan esneyerek büyüsün (overshoot and settle)
             float createdScaleFactor = EvaluateCreatedSpecialScale(k);
 
-            for (int i = 0; i < ghosts.Count; i++)
-            {
-                SpecialCreationGhostState ghost = ghosts[i];
-                if (ghost.ghostRect == null)
-                    continue;
-
-                ghost.ghostRect.anchoredPosition =
-                    Vector2.LerpUnclamped(ghost.startPos, targetPos, travelEase);
-                ghost.ghostRect.localScale =
-                    Vector3.LerpUnclamped(Vector3.one, Vector3.one * 0.28f, travelEase);
-                ghost.ghostRect.localRotation =
-                    Quaternion.SlerpUnclamped(
-                        Quaternion.identity,
-                        Quaternion.Euler(0f, 0f, 42f),
-                        travelEase);
-
-                if (ghost.ghostGroup != null)
-                    ghost.ghostGroup.alpha = Mathf.Lerp(ghost.sourceColor.a, 0f, ghostFadeEase);
-            }
-
-            createdIconRt.localScale = createdBaseScale * createdScaleFactor;
+            createdIconRt.localScale = baseScale * createdScaleFactor;
             createdIconRt.localRotation = Quaternion.identity;
-            createdGroup.alpha = createdFadeEase;
-            createdIcon.color = new Color(
-                createdBaseColor.r,
-                createdBaseColor.g,
-                createdBaseColor.b,
-                createdFadeEase);
-
+            createdGroup.alpha = fadeEase;
+            createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, fadeEase);
             yield return null;
         }
 
-        for (int i = 0; i < ghosts.Count; i++)
-        {
-            SpecialCreationGhostState ghost = ghosts[i];
-            if (ghost.ghostRect != null)
-                Object.Destroy(ghost.ghostRect.gameObject);
-        }
-
-        createdRoot.localScale = Vector3.one;
-        createdRoot.localRotation = Quaternion.identity;
-        createdIconRt.localScale = createdBaseScale;
-        createdIconRt.localRotation = createdBaseRotation;
+        createdTile.transform.localScale = Vector3.one;
+        createdTile.transform.localRotation = Quaternion.identity;
         createdGroup.alpha = 1f;
-        createdIcon.color = createdBaseColor;
+        createdIconRt.localScale = baseScale;
+        createdIconRt.localRotation = baseRotation;
+        createdIcon.color = baseColor;
 
         RestoreTileVisualState(createdTile);
     }
@@ -843,12 +717,8 @@ public sealed class TileAnimator
                 ghost.ghostRect.anchoredPosition =
                     Vector2.LerpUnclamped(ghost.startPos, targetPos, travelEase);
                 ghost.ghostRect.localScale =
-                    Vector3.LerpUnclamped(Vector3.one, Vector3.one * 0.28f, travelEase);
-                ghost.ghostRect.localRotation =
-                    Quaternion.SlerpUnclamped(
-                        Quaternion.identity,
-                        Quaternion.Euler(0f, 0f, 20f),
-                        travelEase);
+                    Vector3.LerpUnclamped(Vector3.one, Vector3.one * 0.15f, travelEase);
+                ghost.ghostRect.localRotation = Quaternion.identity;
 
                 if (ghost.ghostGroup != null)
                     ghost.ghostGroup.alpha = Mathf.Lerp(ghost.sourceColor.a, 0f, k);
@@ -883,9 +753,12 @@ public sealed class TileAnimator
         if (board == null || parent == null)
             return Vector2.zero;
 
-        TileView tile = board.Tiles[cell.x, cell.y];
-        if (tile != null && tile.IconImage != null && tile.IconImage.rectTransform != null)
-            return GetRectCenterInParentSpace(parent, tile.IconImage.rectTransform);
+        if (cell.x >= 0 && cell.x < board.Width && cell.y >= 0 && cell.y < board.Height)
+        {
+            TileView tile = board.Tiles[cell.x, cell.y];
+            if (tile != null && tile.IconImage != null && tile.IconImage.rectTransform != null)
+                return GetRectCenterInParentSpace(parent, tile.IconImage.rectTransform);
+        }
 
         Vector2 basePos = new Vector2(cell.x * board.TileSize, -cell.y * board.TileSize);
         return basePos + new Vector2(board.TileSize * 0.5f, -board.TileSize * 0.5f);

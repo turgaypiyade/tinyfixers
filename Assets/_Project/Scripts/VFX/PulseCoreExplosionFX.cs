@@ -10,7 +10,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
     [SerializeField] private Image coreFlash;
 
     [SerializeField] private float baseSize = 300f;
-    [SerializeField, Range(0.5f, 2.0f)] private float areaOvershoot = 1.15f;
+    [SerializeField, Range(0.5f, 2.0f)] private float areaOvershoot = 1.0f;
 
     [SerializeField] private float totalDuration = 0.85f;
     [SerializeField] private bool destroyOnFinish = true;
@@ -47,30 +47,44 @@ public class PulseCoreExplosionFX : MonoBehaviour
     [SerializeField] private float flashInTime = 0.05f;
     [SerializeField] private float flashOutTime = 0.22f;
     [SerializeField] private float flashStartRatio = 0.3f;
-    [SerializeField] private float flashEndRatio = 1.15f;
+    [SerializeField] private float flashEndRatio = 0.95f;
     [SerializeField] private Color flashColor = new Color(1f, 1f, 1f, 1f);
 
     [SerializeField, Range(0.1f, 2f)] private float glowPeakSizeRatio = 0.90f;
     [SerializeField] private float glowInTime = 0.08f;
     [SerializeField] private float glowOutTime = 0.50f;
     [SerializeField] private float glowStartRatio = 0.3f;
-    [SerializeField] private float glowEndRatio = 1.1f;
+    [SerializeField] private float glowEndRatio = 0.95f;
     [SerializeField] private Color glowColor = new Color(1f, 0.55f, 0.1f, 0.75f);
 
-    [SerializeField, Range(0.1f, 2f)] private float raysPeakSizeRatio = 1.00f;
+    [SerializeField, Range(0.1f, 2f)] private float raysPeakSizeRatio = 0.95f;
     [SerializeField] private float raysInTime = 0.10f;
     [SerializeField] private float raysOutTime = 0.60f;
     [SerializeField] private float raysStartRatio = 0.2f;
-    [SerializeField] private float raysEndRatio = 1.1f;
+    [SerializeField] private float raysEndRatio = 0.98f;
     [SerializeField] private float raysRotateSpeed = 90f;
     [SerializeField] private Color raysColor = new Color(1f, 0.82f, 0.25f, 0.95f);
 
-    [SerializeField, Range(0.1f, 2f)] private float ringPeakSizeRatio = 1.10f;
+    [SerializeField, Range(0.1f, 2f)] private float ringPeakSizeRatio = 1.0f;
     [SerializeField] private float ringInTime = 0.03f;
     [SerializeField] private float ringOutTime = 0.50f;
     [SerializeField] private float ringStartRatio = 0.2f;
-    [SerializeField] private float ringEndRatio = 1.15f;
+    [SerializeField] private float ringEndRatio = 1.0f;
     [SerializeField] private Color ringColor = new Color(1f, 0.75f, 0.2f, 1f);
+
+    [Header("Noisy Ring (Halka Kenar Düzensizliği)")]
+    [Tooltip("Shockwave ring kenarını Perlin noise ile boz")]
+    [SerializeField] private bool useNoisyRing = true;
+    [Tooltip("Noise genliği — kenar ne kadar düzensiz")]
+    [SerializeField, Range(0.05f, 0.50f)] private float noiseAmplitude = 0.25f;
+    [Tooltip("Noise frekansı — kaç tane çıkıntı/girinti")]
+    [SerializeField, Range(2f, 10f)] private float noiseFrequency = 5f;
+    [Tooltip("Kenar yumuşaklığı — blur genişliği")]
+    [SerializeField, Range(0.03f, 0.25f)] private float edgeSoftness = 0.15f;
+    [Tooltip("Halka kalınlığı (0=ince, 0.4=kalın)")]
+    [SerializeField, Range(0.08f, 0.50f)] private float ringThickness = 0.22f;
+    [Tooltip("Prosedürel texture çözünürlüğü")]
+    [SerializeField] private int noiseTexSize = 128;
 
     [SerializeField]
     private AnimationCurve easeOut =
@@ -95,9 +109,10 @@ public class PulseCoreExplosionFX : MonoBehaviour
     private Color origRaysColor;
     private Color origRingColor;
 
-    private Outline glowOutline;
-    private Outline coreOutline;
-    private Outline ringOutline;
+    private Shadow[] glowShadows;
+    private Shadow[] coreShadows;
+    private Shadow[] ringShadows;
+    private const int BlurLayerCount = 4; // kaç katman shadow ile blur oluşturulacak
 
     public void SetRadiusCells(int radiusCells, float tileSize)
     {
@@ -174,9 +189,10 @@ public class PulseCoreExplosionFX : MonoBehaviour
         origRaysColor = raysColor;
         origRingColor = ringColor;
 
-        glowOutline = innerGlow != null ? innerGlow.GetComponent<Outline>() : null;
-        coreOutline = coreFlash != null ? coreFlash.GetComponent<Outline>() : null;
-        ringOutline = shockwaveRing != null ? shockwaveRing.GetComponent<Outline>() : null;
+        // Eski Outline varsa kaldır, yeni Shadow tabanlı blur kullanacağız
+        RemoveOldOutline(innerGlow);
+        RemoveOldOutline(coreFlash);
+        RemoveOldOutline(shockwaveRing);
 
         baselineCached = true;
     }
@@ -193,9 +209,9 @@ public class PulseCoreExplosionFX : MonoBehaviour
         raysColor = origRaysColor;
         ringColor = origRingColor;
 
-        DisableOutline(glowOutline);
-        DisableOutline(coreOutline);
-        DisableOutline(ringOutline);
+        DisableShadows(glowShadows);
+        DisableShadows(coreShadows);
+        DisableShadows(ringShadows);
     }
 
     private void ApplyRandomization()
@@ -210,7 +226,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
         ringColor = WithAlpha(variant.ring, origRingColor.a);
 
         // Radius / çap sistemi korunur.
-        // Normal Pulse radius 2, Pulse+Pulse radius 4 gibi değerler
+        // Normal Pulse radius 1, Pulse+Pulse radius 2 (5x5) gibi değerler
         // dışarıdan SetRadiusCells ile gelmeye devam eder.
         //
         // Burada random olarak baseSize, radius veya peak ratio değiştirmiyoruz.
@@ -225,35 +241,72 @@ public class PulseCoreExplosionFX : MonoBehaviour
         float coreThickness = Random.Range(coreThicknessMin, coreThicknessMax);
         float ringThickness = Random.Range(ringThicknessMin, ringThicknessMax);
 
-        ApplyOutlineThickness(innerGlow, ref glowOutline, glowColor, glowThickness);
-        ApplyOutlineThickness(coreFlash, ref coreOutline, flashColor, coreThickness);
-        ApplyOutlineThickness(shockwaveRing, ref ringOutline, ringColor, ringThickness);
+        ApplyBlurShadows(innerGlow, ref glowShadows, glowColor, glowThickness);
+        ApplyBlurShadows(coreFlash, ref coreShadows, flashColor, coreThickness);
+        ApplyBlurShadows(shockwaveRing, ref ringShadows, ringColor, ringThickness);
     }
 
-    private void ApplyOutlineThickness(Image img, ref Outline outline, Color color, float thickness)
+    private void RemoveOldOutline(Image img)
+    {
+        if (img == null) return;
+        var old = img.GetComponent<Outline>();
+        if (old != null) Destroy(old);
+    }
+
+    private void ApplyBlurShadows(Image img, ref Shadow[] shadows, Color color, float thickness)
     {
         if (img == null)
             return;
 
-        if (outline == null)
-            outline = img.GetComponent<Outline>();
+        // Eski shadow'ları temizle
+        if (shadows != null)
+        {
+            for (int i = 0; i < shadows.Length; i++)
+            {
+                if (shadows[i] != null)
+                    Destroy(shadows[i]);
+            }
+        }
 
-        if (outline == null)
-            outline = img.gameObject.AddComponent<Outline>();
+        shadows = new Shadow[BlurLayerCount];
+        Color shadowColor = WithAlpha(color, color.a * thicknessAlphaMultiplier);
 
-        outline.enabled = true;
-        outline.useGraphicAlpha = true;
+        // Farklı açı ve mesafelerde shadow katmanları oluştur
+        // Düzensiz offset'ler organik/pürüzlü bir glow hissi verir
+        float[] angles = { 25f, 110f, 200f, 310f };
+        float[] distMults = { 1.0f, 0.75f, 1.15f, 0.6f };
 
-        // Sadece outline mesafesi değişiyor.
-        // RectTransform sizeDelta değişmiyor, yani radius/çap değişmiyor.
-        outline.effectDistance = new Vector2(thickness, thickness);
-        outline.effectColor = WithAlpha(color, color.a * thicknessAlphaMultiplier);
+        for (int i = 0; i < BlurLayerCount; i++)
+        {
+            var shadow = img.gameObject.AddComponent<Shadow>();
+            shadow.useGraphicAlpha = true;
+
+            float angle = angles[i % angles.Length] * Mathf.Deg2Rad;
+            float dist = thickness * distMults[i % distMults.Length];
+            // Hafif jitter — her patlamada biraz farklı çıkıntılar
+            float jitterX = Random.Range(-thickness * 0.25f, thickness * 0.25f);
+            float jitterY = Random.Range(-thickness * 0.25f, thickness * 0.25f);
+
+            shadow.effectDistance = new Vector2(
+                Mathf.Cos(angle) * dist + jitterX,
+                Mathf.Sin(angle) * dist + jitterY);
+
+            // Dış katmanlar daha soluk — doğal blur gradyan
+            float alphaFalloff = Mathf.Lerp(1.0f, 0.35f, (float)i / (BlurLayerCount - 1));
+            shadow.effectColor = WithAlpha(shadowColor, shadowColor.a * alphaFalloff);
+
+            shadows[i] = shadow;
+        }
     }
 
-    private void DisableOutline(Outline outline)
+    private void DisableShadows(Shadow[] shadows)
     {
-        if (outline != null)
-            outline.enabled = false;
+        if (shadows == null) return;
+        for (int i = 0; i < shadows.Length; i++)
+        {
+            if (shadows[i] != null)
+                shadows[i].enabled = false;
+        }
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -285,8 +338,14 @@ public class PulseCoreExplosionFX : MonoBehaviour
             Destroy(gameObject);
     }
 
+    private Texture2D noisyGlowTexture; // cleanup için referans
+
     private IEnumerator CoPlayExplosion()
     {
+        // Ring sprite'ını prosedürel noisy halka texture ile değiştir
+        if (useNoisyRing && shockwaveRing != null)
+            ApplyNoisyRingSprite();
+
         Coroutine flash = StartCoroutine(AnimFlash());
         Coroutine glow = StartCoroutine(AnimGlow());
         Coroutine rays = StartCoroutine(AnimRays());
@@ -301,6 +360,33 @@ public class PulseCoreExplosionFX : MonoBehaviour
         if (glow != null) StopCoroutine(glow);
         if (rays != null) StopCoroutine(rays);
         if (ring != null) StopCoroutine(ring);
+
+        // Prosedürel texture temizliği
+        if (noisyGlowTexture != null)
+        {
+            Destroy(noisyGlowTexture);
+            noisyGlowTexture = null;
+        }
+    }
+
+    private void ApplyNoisyRingSprite()
+    {
+        if (shockwaveRing == null) return;
+
+        int size = Mathf.Max(32, noiseTexSize);
+        float seed = Random.Range(0f, 1000f);
+
+        noisyGlowTexture = GenerateNoisyRingTexture(size, seed);
+
+        var sprite = Sprite.Create(
+            noisyGlowTexture,
+            new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f),
+            100f);
+
+        shockwaveRing.sprite = sprite;
+        shockwaveRing.type = Image.Type.Simple;
+        shockwaveRing.preserveAspect = false;
     }
 
     private IEnumerator AnimFlash()
@@ -446,6 +532,78 @@ public class PulseCoreExplosionFX : MonoBehaviour
     private static Color WithAlpha(Color c, float a)
     {
         return new Color(c.r, c.g, c.b, a);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  NOISY RING — prosedürel düzensiz kenarlı halka (simit) texture
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Simit (halka) şeklinde texture üretir.
+    /// Dış ve iç kenar Perlin noise ile düzensizleştirilir.
+    /// </summary>
+    private Texture2D GenerateNoisyRingTexture(int size, float seed)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+
+        float center = size * 0.5f;
+        float maxRadius = center;
+
+        // Halka parametreleri (normalize: 0..1 aralığında)
+        float outerR = 1.0f;
+        float innerR = Mathf.Max(0.1f, outerR - ringThickness);
+        float soft = Mathf.Max(0.02f, edgeSoftness);
+
+        var pixels = new Color[size * size];
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - center;
+                float dy = y - center;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy) / maxRadius; // 0..1+
+
+                float angle = Mathf.Atan2(dy, dx);
+
+                // Dış kenar noise
+                float outerNX = Mathf.Cos(angle * noiseFrequency) * 1.5f + seed;
+                float outerNY = Mathf.Sin(angle * noiseFrequency) * 1.5f + seed;
+                float outerNoise = Mathf.PerlinNoise(outerNX, outerNY); // 0..1
+                float noisyOuter = outerR + (outerNoise - 0.5f) * noiseAmplitude * 2f;
+                noisyOuter = Mathf.Clamp(noisyOuter, outerR - noiseAmplitude, outerR + noiseAmplitude * 0.3f);
+
+                // İç kenar noise (farklı seed offset ile farklı pattern)
+                float innerNX = Mathf.Cos(angle * noiseFrequency * 0.8f) * 1.5f + seed + 500f;
+                float innerNY = Mathf.Sin(angle * noiseFrequency * 0.8f) * 1.5f + seed + 500f;
+                float innerNoise = Mathf.PerlinNoise(innerNX, innerNY);
+                float noisyInner = innerR + (innerNoise - 0.5f) * noiseAmplitude * 1.2f;
+                noisyInner = Mathf.Clamp(noisyInner, 0.05f, noisyOuter - 0.05f);
+
+                // Alpha hesapla
+                float alpha = 0f;
+
+                if (dist >= noisyInner && dist <= noisyOuter)
+                {
+                    // Dış kenara doğru fade out
+                    float outerFade = Mathf.Clamp01((noisyOuter - dist) / (soft * 0.5f));
+                    // İç kenara doğru fade in
+                    float innerFade = Mathf.Clamp01((dist - noisyInner) / (soft * 0.5f));
+
+                    alpha = Mathf.Min(outerFade, innerFade);
+                    // Smoothstep
+                    alpha = alpha * alpha * (3f - 2f * alpha);
+                }
+
+                pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
+            }
+        }
+
+        tex.SetPixels(pixels);
+        tex.Apply();
+        return tex;
     }
 }
 // ═════════════════════════════════════════════════════════════════════════════

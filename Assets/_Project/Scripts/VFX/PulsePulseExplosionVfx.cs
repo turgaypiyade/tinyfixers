@@ -55,9 +55,9 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     [Header("Charge — Glow")]
     [Tooltip("Glow sprite (Knob). Bombanın arkasında yumuşak parlama.")]
     [SerializeField] private Sprite glowSprite;
-    [SerializeField] private float glowSizeMultiplier = 2.8f;
-    [SerializeField] private Color glowColorStart = new Color(0.4f, 0.6f, 1f, 0f);
-    [SerializeField] private Color glowColorPeak = new Color(1f, 0.95f, 0.7f, 0.8f);
+    [SerializeField] private float glowSizeMultiplier = 2.2f;
+    [SerializeField] private Color glowColorStart = new Color(0.7f, 0.85f, 1f, 0f);
+    [SerializeField] private Color glowColorPeak = new Color(1f, 1f, 1f, 0.25f);
 
     private Animator animator;
 
@@ -80,6 +80,12 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     private void Start()
     {
         Debug.Log("[PulsePulseExplosionVfx] Start — squash/stretch charge begin");
+
+        // Inspector-kayıtlı sarı glow değerlerini eziyoruz — sadece beyaz düşük alpha glow istiyoruz.
+        glowColorStart = new Color(0.7f, 0.85f, 1f, 0f);
+        glowColorPeak  = new Color(1f, 1f, 1f, 0.25f);
+        glowSizeMultiplier = 2.2f;
+
         StartCoroutine(CoCharge());
     }
 

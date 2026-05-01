@@ -715,7 +715,7 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
     // Orbit intro animasyon ayarları
     private const float OrbitRiseHeight = 36f;          // ghost ikonların yukarı kalkma yüksekliği (pixel)
     private const float OrbitRiseDuration = 0.12f;      // kısa sahneye alma süresi
-    private const float OrbitSpinDuration = 2.00f;      // PulseCore/emitter ana dönüş süresi
+    private const float OrbitSpinDuration = 1.00f;      // PulseCore/emitter ana dönüş süresi
     private const float EmitterOrbitTurns = 2f;         // emitter PulseCore etrafında Y eksenli orbit yapar
     private const float EmitterSelfSpinTurns = 2f;      // emitter orbit sırasında kendi etrafında döner
     private const float PulseCoreSelfSpinTurns = 2f;    // PulseCore kendi merkezinde döner
