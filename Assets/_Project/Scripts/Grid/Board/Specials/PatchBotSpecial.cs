@@ -111,7 +111,14 @@ public sealed class PatchBotSpecial
             };
         }
 
-        rt.PatchbotService.EnqueueDashFromIntent(rt.Origin, picked.intent, coordinator, carriedPartner, dashStart,
+        rt.PatchbotService.EnqueueDashFromIntent(
+            rt.Origin,
+            picked.intent,
+            coordinator,
+            rt.Partner,
+            null,
+            carriedPartner,
+            dashStart,
             (hitX, hitY, liveIntent) =>
             {
                 try

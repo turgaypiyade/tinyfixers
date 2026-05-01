@@ -151,6 +151,8 @@ public sealed class PatchBotCombo
             actor,
             picked.intent,
             coordinator,
+            otherPatchBot,
+            usedTargets,
             null,
             null,
             (hitX, hitY, liveIntent) =>

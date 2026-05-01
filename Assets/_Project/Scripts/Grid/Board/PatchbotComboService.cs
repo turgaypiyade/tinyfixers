@@ -76,10 +76,43 @@ public class PatchbotComboService
         );
     }
 
+    /// <summary>
+    /// Backward-compatible entry point.
+    /// Existing callers keep working, but fallback re-targeting has no partner/excluded context.
+    /// Prefer the overload below for PatchBot + PatchBot and partner combos.
+    /// </summary>
     public void EnqueueDashFromIntent(
         TileView fromTile,
         PatchBotIntent intent,
         PatchBotTargetCoordinator coordinator,
+        TileView carriedTile = null,
+        System.Action onDashStart = null,
+        System.Action<int, int, PatchBotIntent> onArrived = null)
+    {
+        EnqueueDashFromIntent(
+            fromTile,
+            intent,
+            coordinator,
+            partnerTile: null,
+            excluded: null,
+            carriedTile,
+            onDashStart,
+            onArrived);
+    }
+
+    /// <summary>
+    /// Preferred PatchBot dash path.
+    /// The intent is picked before the visual dash is queued, but resolved again exactly when
+    /// PatchbotDashUI leaves hover and starts the dive. If the original intent died during
+    /// cascade, the coordinator can pick a fresh target while still knowing the actor, partner,
+    /// and already-used targets.
+    /// </summary>
+    public void EnqueueDashFromIntent(
+        TileView fromTile,
+        PatchBotIntent intent,
+        PatchBotTargetCoordinator coordinator,
+        TileView partnerTile,
+        HashSet<TileView> excluded,
         TileView carriedTile = null,
         System.Action onDashStart = null,
         System.Action<int, int, PatchBotIntent> onArrived = null)
@@ -92,12 +125,20 @@ public class PatchbotComboService
         if (!IsInside(initialTarget.x, initialTarget.y))
             initialTarget = intent.InitialCell;
 
+        if (!IsInside(initialTarget.x, initialTarget.y))
+            return;
+
         PatchBotIntent liveIntent = intent;
         Vector2Int liveTarget = initialTarget;
 
         PatchbotLiveDashTargetRegistry.Register(fromCell, initialTarget, () =>
         {
-            var resolved = coordinator.ResolveIntentToCell(liveIntent, null, null, null);
+            var resolved = coordinator.ResolveIntentToCell(
+                liveIntent,
+                fromTile,
+                partnerTile,
+                excluded);
+
             if (!resolved.hasCell || !IsInside(resolved.cell.x, resolved.cell.y))
                 return null;
 

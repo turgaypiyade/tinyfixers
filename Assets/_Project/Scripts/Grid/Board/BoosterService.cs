@@ -210,7 +210,7 @@ public class BoosterService
 
         canvasGroup.alpha = 1f;
 
-        Vector2 targetPos = GetColumnBottomAnchoredCenter(columnX);
+        Vector2 targetPos = GetColumnBottomAnchoredCenter(columnX, parent);
 
         // BottomArea'nın altından geliyormuş gibi board'un altından başlatıyoruz.
         // Daha aşağıdan gelsin istersen 2.4f değerini büyüt.
@@ -395,17 +395,26 @@ public class BoosterService
         return rootRt;
     }
 
-    private Vector2 GetColumnBottomAnchoredCenter(int columnX)
+    private Vector2 GetColumnBottomAnchoredCenter(int columnX, RectTransform parent)
     {
         float size = board.TileSize;
 
-        // Hücrenin X merkezi.
+        if (TryGetColumnAnchoredCenter(columnX, parent, out var columnCenter))
+        {
+            // X artik secilen sutundaki gercek TileView RectTransform merkezinden gelir.
+            // 0.15f cannon sprite'inin namlusunu sutun merkezine oturtmak icin korunuyor.
+            //
+            // Y icin board altini hedefliyoruz:
+            // en alttaki tile merkezinden yaklasik 1.38 tile asagi, onceki manuel
+            // davranisin gercek coordinate sistemindeki karsiligi.
+            return new Vector2(
+                columnCenter.x + size * 0.15f,
+                columnCenter.y - size * 2.20f);
+        }
+
+        // Fallback: eski manuel hesap.
         float x = columnX * size + size * 0.5f + size * 0.15f;
-
-        // Grid'in altı: son row'un altından biraz aşağı.
-        // Board top-left anchored olduğu için aşağı yön negatif Y.
         float y = -board.Height * size - size * 0.88f;
-
         return new Vector2(x, y);
     }
 
@@ -452,48 +461,79 @@ public class BoosterService
 
         canvasGroup.alpha = 1f;
 
-        Vector2 targetPos = GetCellAnchoredCenter(cell);
+        Vector2 cellCenter = GetCellAnchoredCenter(cell, parent);
 
-        // Başlangıçta çekiç hedefin biraz üst-solunda dursun.
-        // UI coordinate sisteminde yukarı = pozitif Y.
-        Vector2 startPos = targetPos + new Vector2(-board.TileSize * 0.10f, board.TileSize * 0.14f);
+        // Hammer prefab/sprite görsel ağırlığı pivot'a göre yukarıda kaldığı için
+        // root hedefini tile merkezinden biraz aşağı alıyoruz.
+        // Eğer hâlâ yukarıda kalırsa 0.30f değerini 0.40f / 0.50f yapabilirsin.
+        Vector2 targetPos = cellCenter + new Vector2(-board.TileSize * 0.60f, -board.TileSize * 0.01f);
 
-        // Vuruş anında merkeze biraz daha yaklaşsın.
-        Vector2 hitPos = targetPos + new Vector2(board.TileSize * 0.015f, -board.TileSize * 0.03f);
+        // Hareket iki fazlı:
+        // 1) Çekiç önce yukarı kalkar ve Y eksenine/vertical poza yaklaşır.
+        // 2) Sonra X eksenine/horizontal poza doğru hedefe vurur.
+        Vector2 readyPos = targetPos + new Vector2(-board.TileSize * 0.08f, board.TileSize * 0.22f);
+        Vector2 liftPos = targetPos + new Vector2(-board.TileSize * 0.18f, board.TileSize * 0.45f);
+        Vector2 hitPos = targetPos + new Vector2(board.TileSize * 0.02f, -board.TileSize * 0.05f);
 
-        hammer.anchoredPosition = startPos;
-        hammer.localScale = Vector3.one * 1.15f;
+        hammer.anchoredPosition = readyPos;
+        hammer.localScale = Vector3.one * 1.12f;
 
-        // Senin istediğin hareket:
-        // 45 derece diyagonal başla, 0 dereceye vur.
-        const float startAngle = 45f;
-        const float hitAngle = -20f;
+        // Sprite'ın 0 derecesini X ekseni/horizontal kabul ediyoruz.
+        // Önce Y eksenine yaklaşır, sonra tekrar X eksenine vurur.
+        const float readyAngle = 12f;
+        const float liftAngle = 78f;
+        const float hitAngle = 0f;
 
-        hammer.localRotation = Quaternion.Euler(0f, 0f, startAngle);
+        hammer.localRotation = Quaternion.Euler(0f, 0f, readyAngle);
 
-        // Çok kısa ama görülebilir swing.
-        // 1 frame çok hızlı kaçabiliyor; bu yüzden 0.07 sn daha iyi vuruş hissi verir.
-        const float swingDuration = 0.085f;
+        const float liftDuration = 0.070f;
+        const float strikeDuration = 0.085f;
 
         float t = 0f;
 
-        while (t < swingDuration)
+        // Lift: x ekseninden y eksenine doğru kalkış.
+        while (t < liftDuration)
         {
             if (hammer == null || !hammer)
                 yield break;
 
             t += Time.deltaTime;
 
-            float k = Mathf.Clamp01(t / swingDuration);
+            float k = Mathf.Clamp01(t / liftDuration);
+            float eased = EaseOut(k);
 
-            // Hızlanarak vurur.
+            hammer.anchoredPosition = Vector2.LerpUnclamped(readyPos, liftPos, eased);
+            hammer.localRotation = Quaternion.LerpUnclamped(
+                Quaternion.Euler(0f, 0f, readyAngle),
+                Quaternion.Euler(0f, 0f, liftAngle),
+                eased);
+            hammer.localScale = Vector3.LerpUnclamped(Vector3.one * 1.12f, Vector3.one * 1.18f, eased);
+
+            yield return null;
+        }
+
+        if (hammer == null || !hammer)
+            yield break;
+
+        t = 0f;
+
+        // Strike: y ekseninden x eksenine doğru vuruş.
+        while (t < strikeDuration)
+        {
+            if (hammer == null || !hammer)
+                yield break;
+
+            t += Time.deltaTime;
+
+            float k = Mathf.Clamp01(t / strikeDuration);
             float eased = k * k;
 
-            hammer.anchoredPosition = Vector2.LerpUnclamped(startPos, hitPos, eased);
+            hammer.anchoredPosition = Vector2.LerpUnclamped(liftPos, hitPos, eased);
             hammer.localRotation = Quaternion.LerpUnclamped(
-                Quaternion.Euler(0f, 0f, startAngle),
+                Quaternion.Euler(0f, 0f, liftAngle),
                 Quaternion.Euler(0f, 0f, hitAngle),
                 eased);
+            hammer.localScale = Vector3.LerpUnclamped(Vector3.one * 1.18f, Vector3.one * 1.20f, eased);
 
             yield return null;
         }
@@ -685,13 +725,95 @@ public class BoosterService
         img.color = new Color(0.60f, 0.36f, 0.18f, 1f);
     }
 
-    private Vector2 GetCellAnchoredCenter(Vector2Int cell)
+    private bool TryGetColumnAnchoredCenter(int columnX, RectTransform parent, out Vector2 center)
     {
-        float size = board.TileSize;
+        center = default;
 
+        if (parent == null || columnX < 0 || columnX >= board.Width)
+            return false;
+
+        // Prefer the lowest visible tile in the column because cannon sits at board bottom.
+        for (int y = board.Height - 1; y >= 0; y--)
+        {
+            TileView tile = board.GetTileViewAt(columnX, y);
+            RectTransform tileRt = tile != null ? tile.RectTransform : null;
+            if (tileRt == null)
+                continue;
+
+            Vector3 worldCenter = tileRt.TransformPoint(tileRt.rect.center);
+            center = WorldToAnchoredInParent(parent, worldCenter, new Vector2(0f, 1f));
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryGetRowAnchoredCenter(int rowY, RectTransform parent, out Vector2 center)
+    {
+        center = default;
+
+        if (parent == null || rowY < 0 || rowY >= board.Height)
+            return false;
+
+        // Prefer the leftmost visible tile in the row because vertical booster enters from left.
+        for (int x = 0; x < board.Width; x++)
+        {
+            TileView tile = board.GetTileViewAt(x, rowY);
+            RectTransform tileRt = tile != null ? tile.RectTransform : null;
+            if (tileRt == null)
+                continue;
+
+            Vector3 worldCenter = tileRt.TransformPoint(tileRt.rect.center);
+            center = WorldToAnchoredInParent(parent, worldCenter, new Vector2(0f, 1f));
+            return true;
+        }
+
+        return false;
+    }
+
+    private Vector2 GetCellAnchoredCenter(Vector2Int cell, RectTransform parent)
+    {
+        if (parent != null)
+        {
+            TileView tile = board.GetTileViewAt(cell.x, cell.y);
+            RectTransform tileRt = tile != null ? tile.RectTransform : null;
+
+            if (tileRt != null)
+            {
+                Vector3 worldCenter = tileRt.TransformPoint(tileRt.rect.center);
+                return WorldToAnchoredInParent(parent, worldCenter, new Vector2(0f, 1f));
+            }
+        }
+
+        // Fallback: eski manuel hesap.
+        float size = board.TileSize;
         return new Vector2(
             cell.x * size + size * 0.5f,
             -cell.y * size - size * 0.5f);
+    }
+
+    private static Vector2 WorldToAnchoredInParent(RectTransform parent, Vector3 worldPos, Vector2 childAnchor)
+    {
+        Canvas canvas = parent.GetComponentInParent<Canvas>();
+        Camera camera = null;
+
+        if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            camera = canvas.worldCamera;
+
+        Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(camera, worldPos);
+
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            parent,
+            screenPoint,
+            camera,
+            out var localPoint);
+
+        Rect rect = parent.rect;
+        Vector2 anchorReference = new Vector2(
+            Mathf.Lerp(rect.xMin, rect.xMax, childAnchor.x),
+            Mathf.Lerp(rect.yMin, rect.yMax, childAnchor.y));
+
+        return localPoint - anchorReference;
     }
 
     private static float EaseOut(float t)
@@ -748,7 +870,7 @@ public class BoosterService
 
         canvasGroup.alpha = 1f;
 
-        Vector2 targetPos = GetRowStartAnchoredCenter(rowY);
+        Vector2 targetPos = GetRowStartAnchoredCenter(rowY, parent);
 
         // Soldan / ekran disindan biraz daha iceri kayarak gelsin.
         // Govde zaten disarida kalacagi icin start da target'a yakin.
@@ -899,17 +1021,21 @@ public class BoosterService
         return null;
     }
 
-    private Vector2 GetRowStartAnchoredCenter(int rowY)
+    private Vector2 GetRowStartAnchoredCenter(int rowY, RectTransform parent)
     {
         float size = board.TileSize;
 
-        // Satirin Y merkezi.
+        if (TryGetRowAnchoredCenter(rowY, parent, out var rowCenter))
+        {
+            // Y artik secilen satirdaki gercek TileView RectTransform merkezinden gelir.
+            // X board'un sol disinda kalir; gorsel govdenin ne kadar iceri girecegi
+            // asagidaki 0.60f ile ayarlanabilir.
+            return new Vector2(rowCenter.x - size * 1.5f, rowCenter.y);
+        }
+
+        // Fallback: eski manuel hesap.
         float y = -rowY * size - size * 1.5f;
-
-        // Board'un sol disina koyuyoruz.
-        // Bu degeri arttirip azaltarak govdenin ne kadar disarida kalacagini ayarlarsin.
         float x = -size * 0.10f;
-
         return new Vector2(x, y);
     }
 
