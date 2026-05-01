@@ -182,6 +182,8 @@ public class FallAction : BoardAction
 
         EnsurePhaseDelays(board);
 
+        var maxToYPerVerticalSpawnSource = BuildMaxToYPerVerticalSpawnSource();
+
         float maxEnd = 0f;
 
         foreach (var r in fallRecords)
@@ -190,7 +192,9 @@ public class FallAction : BoardAction
                 continue;
 
             float settleTime = r.useSettle ? Mathf.Max(0f, r.settleDuration) : 0f;
-            float endTime = r.startDelay + r.phaseDelay + r.duration + settleTime;
+            float moveDuration = GetEffectiveMoveDuration(board, r, maxToYPerVerticalSpawnSource);
+
+            float endTime = r.startDelay + r.phaseDelay + moveDuration + settleTime;
 
             if (endTime > maxEnd)
                 maxEnd = endTime;
@@ -285,6 +289,200 @@ public class FallAction : BoardAction
         }
     }
 
+    // ============================================================
+    // VISUAL-ONLY SPAWN SEPARATION
+    //
+    // CascadeLogic'teki Path / nextSpawnY / diagonal slide mantigina
+    // dokunmadan, sadece ayni negatif spawn kaynagindan gelen DIKEY
+    // spawn hareketlerini gorselde ayirir.
+    //
+    // Guvenlik kurallari:
+    // - Original r.pathWaypoints mutate edilmez.
+    // - Sadece kopya array animasyona verilir.
+    // - Diagonal path etkilenmez.
+    // - Board state / tile coords etkilenmez.
+    // ============================================================
+
+    private static bool IsVerticalSpawnForVisualSpacing(FallRecord r)
+    {
+        if (r == null)
+            return false;
+
+        // Sadece yukaridan spawn edilenler.
+        if (r.fromY >= 0)
+            return false;
+
+        // Path varsa, sadece tamamen dikey path kabul edilir.
+        if (r.pathWaypoints != null && r.pathWaypoints.Length >= 2)
+        {
+            int x = r.pathWaypoints[0].x;
+
+            for (int i = 1; i < r.pathWaypoints.Length; i++)
+            {
+                if (r.pathWaypoints[i].x != x)
+                    return false;
+            }
+
+            return true;
+        }
+
+        // Path yoksa klasik tek segment dikey hareket.
+        return r.fromX == r.toX;
+    }
+
+    private static long GetVerticalSpawnSourceKey(FallRecord r)
+    {
+        return ((long)r.fromX << 32) ^ (uint)r.fromY;
+    }
+
+    private Dictionary<long, int> BuildMaxToYPerVerticalSpawnSource()
+    {
+        var result = new Dictionary<long, int>();
+
+        foreach (var r in fallRecords)
+        {
+            if (r.tile == null || !r.tile)
+                continue;
+
+            if (!IsVerticalSpawnForVisualSpacing(r))
+                continue;
+
+            long key = GetVerticalSpawnSourceKey(r);
+
+            if (!result.ContainsKey(key) || r.toY > result[key])
+                result[key] = r.toY;
+        }
+
+        return result;
+    }
+
+    private static int GetVerticalSpawnVisualOffsetCells(
+        FallRecord r,
+        Dictionary<long, int> maxToYPerVerticalSpawnSource)
+    {
+        if (!IsVerticalSpawnForVisualSpacing(r))
+            return 0;
+
+        if (maxToYPerVerticalSpawnSource == null)
+            return 0;
+
+        long key = GetVerticalSpawnSourceKey(r);
+
+        if (!maxToYPerVerticalSpawnSource.TryGetValue(key, out int maxToY))
+            return 0;
+
+        // En alttaki hedefe giden taş offset 0 alır.
+        // Üst hedeflere gidenler 1, 2, 3... hücre daha yukarıdan görünür.
+        return Mathf.Max(0, maxToY - r.toY);
+    }
+
+    private Vector2Int[] BuildVisualWaypoints(
+        FallRecord r,
+        Dictionary<long, int> maxToYPerVerticalSpawnSource)
+    {
+        if (r.pathWaypoints == null || r.pathWaypoints.Length < 2)
+            return r.pathWaypoints;
+
+        int visualOffset = GetVerticalSpawnVisualOffsetCells(
+            r,
+            maxToYPerVerticalSpawnSource);
+
+        if (visualOffset <= 0)
+            return r.pathWaypoints;
+
+        // Original path mutate edilmez.
+        var visualWaypoints = new Vector2Int[r.pathWaypoints.Length];
+
+        for (int i = 0; i < r.pathWaypoints.Length; i++)
+            visualWaypoints[i] = r.pathWaypoints[i];
+
+        // Sadece ilk waypoint gorsel olarak yukariya alinir.
+        visualWaypoints[0] = new Vector2Int(
+            visualWaypoints[0].x,
+            visualWaypoints[0].y - visualOffset);
+
+        return visualWaypoints;
+    }
+
+    private float[] BuildVisualSegmentDurations(
+        BoardController board,
+        FallRecord r,
+        Vector2Int[] visualWaypoints)
+    {
+        if (r.pathSegmentDurations == null ||
+            visualWaypoints == null ||
+            visualWaypoints.Length < 2)
+        {
+            return r.pathSegmentDurations;
+        }
+
+        var visualDurations = new float[r.pathSegmentDurations.Length];
+
+        for (int i = 0; i < r.pathSegmentDurations.Length; i++)
+            visualDurations[i] = r.pathSegmentDurations[i];
+
+        if (board != null)
+        {
+            // Sadece ilk segment uzadiysa, onun suresini yeniden hesapla.
+            // Diger segmentler aynen kalir.
+            visualDurations[0] = board.GetFallDurationForMove(
+                visualWaypoints[0].x,
+                visualWaypoints[0].y,
+                visualWaypoints[1].x,
+                visualWaypoints[1].y);
+        }
+
+        return visualDurations;
+    }
+
+    private float GetEffectiveMoveDuration(
+        BoardController board,
+        FallRecord r,
+        Dictionary<long, int> maxToYPerVerticalSpawnSource)
+    {
+        int visualOffset = GetVerticalSpawnVisualOffsetCells(
+            r,
+            maxToYPerVerticalSpawnSource);
+
+        if (visualOffset <= 0)
+            return r.duration;
+
+        bool isPath = r.pathWaypoints != null && r.pathWaypoints.Length >= 2;
+
+        if (isPath)
+        {
+            Vector2Int[] visualWaypoints = BuildVisualWaypoints(
+                r,
+                maxToYPerVerticalSpawnSource);
+
+            float[] visualDurations = BuildVisualSegmentDurations(
+                board,
+                r,
+                visualWaypoints);
+
+            if (visualDurations == null)
+                return r.duration;
+
+            float total = 0f;
+
+            for (int i = 0; i < visualDurations.Length; i++)
+                total += Mathf.Max(0.0001f, visualDurations[i]);
+
+            return total;
+        }
+
+        if (board == null)
+            return r.duration;
+
+        int visualFromY = r.fromY - visualOffset;
+
+        return board.GetFallDurationForMove(
+            r.fromX,
+            visualFromY,
+            r.toX,
+            r.toY);
+    }
+
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
         if (fallRecords.Count == 0)
@@ -292,12 +490,20 @@ public class FallAction : BoardAction
 
         float faStart = Time.realtimeSinceStartup;
 
+        var maxToYPerVerticalSpawnSource = BuildMaxToYPerVerticalSpawnSource();
+
         int maxDist = 0;
 
         foreach (var r in fallRecords)
         {
+            int visualOffset = GetVerticalSpawnVisualOffsetCells(
+                r,
+                maxToYPerVerticalSpawnSource);
+
+            int visualFromY = r.fromY - visualOffset;
+
             int dist = Mathf.CeilToInt(Vector2.Distance(
-                new Vector2(r.fromX, r.fromY),
+                new Vector2(r.fromX, visualFromY),
                 new Vector2(r.toX, r.toY)));
 
             if (dist > maxDist)
@@ -324,17 +530,44 @@ public class FallAction : BoardAction
                 continue;
 
             bool isPath = r.pathWaypoints != null && r.pathWaypoints.Length >= 2;
-            Debug.Log($"[FallExec] tile=({r.fromX},{r.fromY})->({r.toX},{r.toY}) path={isPath} delay={r.startDelay + r.phaseDelay:0.000}");
+
+            int visualOffset = GetVerticalSpawnVisualOffsetCells(
+                r,
+                maxToYPerVerticalSpawnSource);
+
+            int visualFromY = r.fromY - visualOffset;
+
+            float moveDuration = GetEffectiveMoveDuration(
+                sequencer.Board,
+                r,
+                maxToYPerVerticalSpawnSource);
+
+            string visualNote = visualOffset > 0
+                ? $" visualFromY={visualFromY} visualOffset={visualOffset} visualDuration={moveDuration:0.000}"
+                : string.Empty;
+
+            Debug.Log($"[FallExec] tile=({r.fromX},{r.fromY})->({r.toX},{r.toY}) path={isPath} delay={r.startDelay + r.phaseDelay:0.000}{visualNote}");
 
             IEnumerator move;
 
             if (isPath)
             {
-                // Multi-segment yörünge (diagonal slide vb.)
+                Vector2Int[] visualWaypoints = BuildVisualWaypoints(
+                    r,
+                    maxToYPerVerticalSpawnSource);
+
+                float[] visualSegmentDurations = BuildVisualSegmentDurations(
+                    sequencer.Board,
+                    r,
+                    visualWaypoints);
+
+                // Multi-segment yörünge.
+                // Eğer path tamamen dikey spawn ise sadece ilk waypoint kopyası görsel olarak yukarı alınır.
+                // Diagonal path ise original path aynen kullanılır.
                 move = r.tile.MoveToGridPath(
                     sequencer.Board.TileSize,
-                    r.pathWaypoints,
-                    r.pathSegmentDurations,
+                    visualWaypoints,
+                    visualSegmentDurations,
                     r.curve,
                     r.useSettle,
                     r.settleDuration,
@@ -344,14 +577,16 @@ public class FallAction : BoardAction
             }
             else
             {
-                // Klasik tek segment hareket
+                // Klasik tek segment hareket.
+                // Ayni negatif spawn kaynagindan gelen dikey taşlar sadece
+                // gorsel baslangicta ayrilir; CascadeLogic path'i degismez.
                 move = r.tile.MoveToGridCell(
                     sequencer.Board.TileSize,
                     r.fromX,
-                    r.fromY,
+                    visualFromY,
                     r.toX,
                     r.toY,
-                    r.duration,
+                    moveDuration,
                     r.curve,
                     r.useSettle,
                     r.settleDuration,
