@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   width: 9
   height: 9
-  moves: 30
+  moves: 35
   goals:
   - targetType: 1
     tileType: 0

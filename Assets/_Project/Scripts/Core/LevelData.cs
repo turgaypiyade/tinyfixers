@@ -31,6 +31,7 @@ public enum ObstacleId : int
     chest2 = 5,
     chest3 = 6,
     plastic = 7,
+    plastic_orange = 8,
     PipeV_1x2 = 10,
     Big_4x4 = 20
 }
@@ -47,12 +48,12 @@ public class LevelData : ScriptableObject
     public int height = 9;
     public int moves = 25;
     public LevelGoalDefinition[] goals;
+
     [Header("Audio")]
     public AudioClip musicClip;
 
-    [Range(0f, 1f)]
-    public float musicVolume = 1f;
-    
+    [Range(0f, 1f)] public float musicVolume = 1f;
+
     [Header("Libraries")]
     public ObstacleLibrary obstacleLibrary;
 
@@ -66,7 +67,9 @@ public class LevelData : ScriptableObject
     public int[] obstacleOrigins;
 
     public int Index(int x, int y) => y * width + x;
-    public bool InBounds(int x, int y) => x >= 0 && y >= 0 && x < width && y < height;
+
+    public bool InBounds(int x, int y) =>
+        x >= 0 && y >= 0 && x < width && y < height;
 
     private void OnValidate()
     {
@@ -77,19 +80,22 @@ public class LevelData : ScriptableObject
         if (cells == null || cells.Length != size)
         {
             cells = new int[size];
-            for (int i = 0; i < size; i++) cells[i] = (int)CellType.Normal;
+            for (int i = 0; i < size; i++)
+                cells[i] = (int)CellType.Normal;
         }
 
         if (obstacles == null || obstacles.Length != size)
         {
             obstacles = new int[size];
-            for (int i = 0; i < size; i++) obstacles[i] = (int)ObstacleId.None;
+            for (int i = 0; i < size; i++)
+                obstacles[i] = (int)ObstacleId.None;
         }
 
         if (obstacleOrigins == null || obstacleOrigins.Length != size)
         {
             obstacleOrigins = new int[size];
-            for (int i = 0; i < size; i++) obstacleOrigins[i] = -1;
+            for (int i = 0; i < size; i++)
+                obstacleOrigins[i] = -1;
         }
 
         if (goals == null)

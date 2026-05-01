@@ -18,12 +18,8 @@ MonoBehaviour:
   goals:
   - targetType: 1
     tileType: 0
-    obstacleId: 5
-    amount: 30
-  - targetType: 1
-    tileType: 0
     obstacleId: 7
-    amount: 49
+    amount: 54
   musicClip: {fileID: 8300000, guid: a75116037af37490bb9f00591892d8d6, type: 3}
   musicVolume: 0.593
   obstacleLibrary: {fileID: 11400000, guid: 542e279c729681244b475a353cdd0e8f, type: 2}
