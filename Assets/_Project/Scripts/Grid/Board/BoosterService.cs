@@ -114,6 +114,8 @@ public class BoosterService
             }
 
             Coroutine hammerExitRoutine = null;
+            Coroutine cannonExitRoutine = null;
+            Coroutine verticalExitRoutine = null;
 
             if (mode == BoardController.BoosterMode.Single && targetCell.HasValue)
             {
@@ -122,6 +124,24 @@ public class BoosterService
 
                 if (hammerExit != null)
                     hammerExitRoutine = board.StartCoroutine(hammerExit);
+            }
+
+            if (mode == BoardController.BoosterMode.Column && targetCell.HasValue)
+            {
+                IEnumerator cannonExit = null;
+                yield return PlayCannonBoosterEnterAndFireFx(targetCell.Value.x, exitRoutine: r => cannonExit = r);
+
+                if (cannonExit != null)
+                    cannonExitRoutine = board.StartCoroutine(cannonExit);
+            }
+
+            if (mode == BoardController.BoosterMode.Row && targetCell.HasValue)
+            {
+                IEnumerator verticalExit = null;
+                yield return PlayVerticalBoosterEnterAndFireFx(targetCell.Value.y, exitRoutine: r => verticalExit = r);
+
+                if (verticalExit != null)
+                    verticalExitRoutine = board.StartCoroutine(verticalExit);
             }
 
             actionSequencer.Enqueue(new MatchClearAction(
@@ -143,13 +163,261 @@ public class BoosterService
             if (hammerExitRoutine != null)
                 yield return hammerExitRoutine;
 
+            if (cannonExitRoutine != null)
+                yield return cannonExitRoutine;
+
+            if (verticalExitRoutine != null)
+                yield return verticalExitRoutine;
+
             yield return board.ResolveBoardPublic();
         }
 
         board.IsSpecialActivationPhase = false;
         board.EndBusy();
     }
+    // ============================================================
+    // CANNON BOOSTER FX
+    //
+    // Column booster icin gorsel top/cannon animasyonu.
+    // Sütunu bu animasyon silmez; asil kirma MatchClearAction tarafinda kalir.
+    // ============================================================
 
+    private IEnumerator PlayCannonBoosterEnterAndFireFx(int columnX, Action<IEnumerator> exitRoutine)
+    {
+        RectTransform cannon = CreateCannonFxInstance();
+
+        if (cannon == null)
+            yield break;
+
+        RectTransform parent = board.BoosterFxParent;
+        if (parent == null)
+        {
+            UnityEngine.Object.Destroy(cannon.gameObject);
+            yield break;
+        }
+
+        cannon.SetParent(parent, false);
+        cannon.SetAsLastSibling();
+
+        // BoardRoot coordinate sistemiyle aynı çalışsın.
+        cannon.anchorMin = new Vector2(0f, 1f);
+        cannon.anchorMax = new Vector2(0f, 1f);
+        cannon.pivot = new Vector2(0.5f, 0.5f);
+
+        CanvasGroup canvasGroup = cannon.GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
+            canvasGroup = cannon.gameObject.AddComponent<CanvasGroup>();
+
+        canvasGroup.alpha = 1f;
+
+        Vector2 targetPos = GetColumnBottomAnchoredCenter(columnX);
+
+        // BottomArea'nın altından geliyormuş gibi board'un altından başlatıyoruz.
+        // Daha aşağıdan gelsin istersen 2.4f değerini büyüt.
+        Vector2 startPos = targetPos + new Vector2(0f, -board.TileSize * 2.4f);
+
+        cannon.anchoredPosition = startPos;
+        cannon.localScale = Vector3.one;
+        cannon.localRotation = Quaternion.identity;
+
+        const float enterDuration = 0.32f;
+
+        float t = 0f;
+
+        while (t < enterDuration)
+        {
+            if (cannon == null || !cannon)
+                yield break;
+
+            t += Time.deltaTime;
+
+            float k = Mathf.Clamp01(t / enterDuration);
+            float eased = EaseOutBackLight(k);
+
+            cannon.anchoredPosition = Vector2.LerpUnclamped(startPos, targetPos, eased);
+
+            yield return null;
+        }
+
+        if (cannon == null || !cannon)
+            yield break;
+
+        cannon.anchoredPosition = targetPos;
+
+        // Fire/recoil: cannon tetikleniyor hissi.
+        yield return PlayCannonFirePulse(cannon, targetPos);
+
+        // Impact/fire anından sonra mevcut Column clear başlasın.
+        exitRoutine?.Invoke(PlayCannonBoosterExitFx(cannon, canvasGroup, targetPos));
+    }
+
+    private IEnumerator PlayCannonFirePulse(RectTransform cannon, Vector2 basePos)
+    {
+        if (cannon == null || !cannon)
+            yield break;
+
+        const float recoilDuration = 0.075f;
+        const float recoverDuration = 0.10f;
+
+        Vector2 recoilPos = basePos + new Vector2(0f, -board.TileSize * 0.16f);
+
+        Vector3 baseScale = cannon.localScale;
+        Vector3 fireScale = new Vector3(
+            baseScale.x * 1.08f,
+            baseScale.y * 0.92f,
+            baseScale.z);
+
+        float t = 0f;
+
+        while (t < recoilDuration)
+        {
+            if (cannon == null || !cannon)
+                yield break;
+
+            t += Time.deltaTime;
+
+            float k = Mathf.Clamp01(t / recoilDuration);
+            float eased = k * k;
+
+            cannon.anchoredPosition = Vector2.LerpUnclamped(basePos, recoilPos, eased);
+            cannon.localScale = Vector3.LerpUnclamped(baseScale, fireScale, eased);
+
+            yield return null;
+        }
+
+        t = 0f;
+
+        while (t < recoverDuration)
+        {
+            if (cannon == null || !cannon)
+                yield break;
+
+            t += Time.deltaTime;
+
+            float k = Mathf.Clamp01(t / recoverDuration);
+            float eased = EaseOut(k);
+
+            cannon.anchoredPosition = Vector2.LerpUnclamped(recoilPos, basePos, eased);
+            cannon.localScale = Vector3.LerpUnclamped(fireScale, baseScale, eased);
+
+            yield return null;
+        }
+
+        if (cannon != null && cannon)
+        {
+            cannon.anchoredPosition = basePos;
+            cannon.localScale = baseScale;
+        }
+    }
+
+    private IEnumerator PlayCannonBoosterExitFx(RectTransform cannon, CanvasGroup canvasGroup, Vector2 targetPos)
+    {
+        if (cannon == null || !cannon)
+            yield break;
+
+        const float holdDuration = 0.05f;
+        const float exitDuration = 0.18f;
+
+        yield return new WaitForSeconds(holdDuration);
+
+        Vector2 startPos = cannon.anchoredPosition;
+        Vector2 exitPos = targetPos + new Vector2(0f, -board.TileSize * 1.7f);
+
+        Vector3 startScale = cannon.localScale;
+        Vector3 endScale = startScale * 0.92f;
+
+        float t = 0f;
+
+        while (t < exitDuration)
+        {
+            if (cannon == null || !cannon)
+                yield break;
+
+            t += Time.deltaTime;
+
+            float k = Mathf.Clamp01(t / exitDuration);
+            float eased = k * k;
+
+            cannon.anchoredPosition = Vector2.LerpUnclamped(startPos, exitPos, eased);
+            cannon.localScale = Vector3.LerpUnclamped(startScale, endScale, eased);
+
+            if (canvasGroup != null)
+                canvasGroup.alpha = 1f - k;
+
+            yield return null;
+        }
+
+        if (cannon != null && cannon)
+            UnityEngine.Object.Destroy(cannon.gameObject);
+    }
+
+    private RectTransform CreateCannonFxInstance()
+    {
+        RectTransform prefab = board.CannonBoosterFxPrefab;
+
+        if (prefab != null)
+            return UnityEngine.Object.Instantiate(prefab);
+
+        return CreateFallbackCannonFx();
+    }
+
+    private RectTransform CreateFallbackCannonFx()
+    {
+        GameObject root = new GameObject(
+            "__CannonBoosterFx",
+            typeof(RectTransform),
+            typeof(CanvasGroup));
+
+        RectTransform rootRt = root.GetComponent<RectTransform>();
+        rootRt.anchorMin = new Vector2(0f, 1f);
+        rootRt.anchorMax = new Vector2(0f, 1f);
+        rootRt.pivot = new Vector2(0.5f, 0.5f);
+        rootRt.sizeDelta = new Vector2(board.TileSize * 1.15f, board.TileSize * 1.15f);
+
+        GameObject body = new GameObject(
+            "Body",
+            typeof(RectTransform),
+            typeof(Image));
+
+        body.transform.SetParent(rootRt, false);
+
+        RectTransform bodyRt = body.GetComponent<RectTransform>();
+        bodyRt.anchorMin = new Vector2(0.5f, 0.5f);
+        bodyRt.anchorMax = new Vector2(0.5f, 0.5f);
+        bodyRt.pivot = new Vector2(0.5f, 0.5f);
+        bodyRt.anchoredPosition = Vector2.zero;
+        bodyRt.sizeDelta = new Vector2(board.TileSize * 0.85f, board.TileSize * 0.85f);
+
+        Image img = body.GetComponent<Image>();
+        img.raycastTarget = false;
+        img.color = new Color(0.18f, 0.22f, 0.28f, 1f);
+
+        return rootRt;
+    }
+
+    private Vector2 GetColumnBottomAnchoredCenter(int columnX)
+    {
+        float size = board.TileSize;
+
+        // Hücrenin X merkezi.
+        float x = columnX * size + size * 0.5f + size * 0.15f;
+
+        // Grid'in altı: son row'un altından biraz aşağı.
+        // Board top-left anchored olduğu için aşağı yön negatif Y.
+        float y = -board.Height * size - size * 0.88f;
+
+        return new Vector2(x, y);
+    }
+
+    private static float EaseOutBackLight(float t)
+    {
+        t = Mathf.Clamp01(t);
+
+        const float c1 = 1.15f;
+        const float c3 = c1 + 1f;
+
+        return 1f + c3 * Mathf.Pow(t - 1f, 3f) + c1 * Mathf.Pow(t - 1f, 2f);
+    }
     // ============================================================
     // HAMMER BOOSTER FX
     //
@@ -440,6 +708,209 @@ public class BoosterService
         const float c3 = c1 + 1f;
 
         return c3 * t * t * t - c1 * t * t;
+    }
+
+
+    // ============================================================
+    // VERTICAL / ROW BOOSTER FX
+    //
+    // Row booster icin gorsel animasyon.
+    // Booster, secilen satirin basina yerlestirilir.
+    // Govdenin buyuk kismi board disinda kalabilir.
+    // Satiri bu animasyon silmez; asil temizleme MatchClearAction tarafinda kalir.
+    // ============================================================
+
+    private IEnumerator PlayVerticalBoosterEnterAndFireFx(int rowY, Action<IEnumerator> exitRoutine)
+    {
+        RectTransform booster = CreateVerticalBoosterFxInstance();
+
+        if (booster == null)
+            yield break;
+
+        RectTransform parent = board.BoosterFxParent;
+        if (parent == null)
+        {
+            UnityEngine.Object.Destroy(booster.gameObject);
+            yield break;
+        }
+
+        booster.SetParent(parent, false);
+        booster.SetAsLastSibling();
+
+        // BoardRoot coordinate sistemiyle ayni calissin.
+        booster.anchorMin = new Vector2(0f, 1f);
+        booster.anchorMax = new Vector2(0f, 1f);
+        booster.pivot = new Vector2(0.5f, 0.5f);
+
+        CanvasGroup canvasGroup = booster.GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
+            canvasGroup = booster.gameObject.AddComponent<CanvasGroup>();
+
+        canvasGroup.alpha = 1f;
+
+        Vector2 targetPos = GetRowStartAnchoredCenter(rowY);
+
+        // Soldan / ekran disindan biraz daha iceri kayarak gelsin.
+        // Govde zaten disarida kalacagi icin start da target'a yakin.
+        Vector2 startPos = targetPos + new Vector2(-board.TileSize * 0.55f, 0f);
+
+        booster.anchoredPosition = startPos;
+        booster.localScale = Vector3.one;
+        booster.localRotation = Quaternion.identity;
+
+        const float enterDuration = 0.16f;
+
+        float t = 0f;
+
+        while (t < enterDuration)
+        {
+            if (booster == null || !booster)
+                yield break;
+
+            t += Time.deltaTime;
+
+            float k = Mathf.Clamp01(t / enterDuration);
+            float eased = EaseOut(k);
+
+            booster.anchoredPosition = Vector2.LerpUnclamped(startPos, targetPos, eased);
+
+            yield return null;
+        }
+
+        if (booster == null || !booster)
+            yield break;
+
+        booster.anchoredPosition = targetPos;
+
+        yield return PlayVerticalBoosterFirePulse(booster, targetPos);
+
+        // Fire anindan sonra mevcut Row clear baslasin.
+        exitRoutine?.Invoke(PlayVerticalBoosterExitFx(booster, canvasGroup, targetPos));
+    }
+
+    private IEnumerator PlayVerticalBoosterFirePulse(RectTransform booster, Vector2 basePos)
+    {
+        if (booster == null || !booster)
+            yield break;
+
+        const float recoilDuration = 0.07f;
+        const float recoverDuration = 0.10f;
+
+        // Row temizleme soldan saga oldugu icin recoil biraz sola.
+        Vector2 recoilPos = basePos + new Vector2(-board.TileSize * 0.16f, 0f);
+
+        Vector3 baseScale = booster.localScale;
+        Vector3 fireScale = new Vector3(
+            baseScale.x * 0.94f,
+            baseScale.y * 1.06f,
+            baseScale.z);
+
+        float t = 0f;
+
+        while (t < recoilDuration)
+        {
+            if (booster == null || !booster)
+                yield break;
+
+            t += Time.deltaTime;
+
+            float k = Mathf.Clamp01(t / recoilDuration);
+            float eased = k * k;
+
+            booster.anchoredPosition = Vector2.LerpUnclamped(basePos, recoilPos, eased);
+            booster.localScale = Vector3.LerpUnclamped(baseScale, fireScale, eased);
+
+            yield return null;
+        }
+
+        t = 0f;
+
+        while (t < recoverDuration)
+        {
+            if (booster == null || !booster)
+                yield break;
+
+            t += Time.deltaTime;
+
+            float k = Mathf.Clamp01(t / recoverDuration);
+            float eased = EaseOut(k);
+
+            booster.anchoredPosition = Vector2.LerpUnclamped(recoilPos, basePos, eased);
+            booster.localScale = Vector3.LerpUnclamped(fireScale, baseScale, eased);
+
+            yield return null;
+        }
+
+        if (booster != null && booster)
+        {
+            booster.anchoredPosition = basePos;
+            booster.localScale = baseScale;
+        }
+    }
+
+    private IEnumerator PlayVerticalBoosterExitFx(RectTransform booster, CanvasGroup canvasGroup, Vector2 targetPos)
+    {
+        if (booster == null || !booster)
+            yield break;
+
+        const float holdDuration = 0.04f;
+        const float exitDuration = 0.14f;
+
+        yield return new WaitForSeconds(holdDuration);
+
+        Vector2 startPos = booster.anchoredPosition;
+        Vector2 exitPos = targetPos + new Vector2(-board.TileSize * 0.85f, 0f);
+
+        Vector3 startScale = booster.localScale;
+        Vector3 endScale = startScale * 0.94f;
+
+        float t = 0f;
+
+        while (t < exitDuration)
+        {
+            if (booster == null || !booster)
+                yield break;
+
+            t += Time.deltaTime;
+
+            float k = Mathf.Clamp01(t / exitDuration);
+            float eased = k * k;
+
+            booster.anchoredPosition = Vector2.LerpUnclamped(startPos, exitPos, eased);
+            booster.localScale = Vector3.LerpUnclamped(startScale, endScale, eased);
+
+            if (canvasGroup != null)
+                canvasGroup.alpha = 1f - k;
+
+            yield return null;
+        }
+
+        if (booster != null && booster)
+            UnityEngine.Object.Destroy(booster.gameObject);
+    }
+
+    private RectTransform CreateVerticalBoosterFxInstance()
+    {
+        RectTransform prefab = board.VerticalBoosterFxPrefab;
+
+        if (prefab != null)
+            return UnityEngine.Object.Instantiate(prefab);
+
+        return null;
+    }
+
+    private Vector2 GetRowStartAnchoredCenter(int rowY)
+    {
+        float size = board.TileSize;
+
+        // Satirin Y merkezi.
+        float y = -rowY * size - size * 1.5f;
+
+        // Board'un sol disina koyuyoruz.
+        // Bu degeri arttirip azaltarak govdenin ne kadar disarida kalacagini ayarlarsin.
+        float x = -size * 0.10f;
+
+        return new Vector2(x, y);
     }
 
     public IEnumerator ShuffleBoardRoutine(ActionSequencer actionSequencer)

@@ -107,12 +107,17 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float obstacleBreakFxLifetime = 0.40f;
     [Header("Booster FX")]
     [SerializeField] private RectTransform hammerBoosterFxPrefab;
+    [SerializeField] private RectTransform cannonBoosterFxPrefab;
+    [SerializeField] private RectTransform verticalBoosterFxPrefab;
     [SerializeField] private RectTransform boosterFxParent;
     [SerializeField] private Sprite hammerBoosterFallbackSprite;
 
     internal RectTransform HammerBoosterFxPrefab => hammerBoosterFxPrefab;
+    internal RectTransform CannonBoosterFxPrefab => cannonBoosterFxPrefab;
+    internal RectTransform VerticalBoosterFxPrefab => verticalBoosterFxPrefab;
     internal RectTransform BoosterFxParent => boosterFxParent != null ? boosterFxParent : parent;
     internal Sprite HammerBoosterFallbackSprite => hammerBoosterFallbackSprite;
+
     [SerializeField] private bool allowPostSwapSettleValidation = true;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

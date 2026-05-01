@@ -3565,6 +3565,8 @@ MonoBehaviour:
   obstacleBreakFxPrefab: {fileID: 1851070113503770558, guid: 84c2cc22fd6664f148afccf4fe0599c3, type: 3}
   obstacleBreakFxLifetime: 1.2
   hammerBoosterFxPrefab: {fileID: 3587498911280161232, guid: 9397f041fbc3947d4a7218642a06ed42, type: 3}
+  cannonBoosterFxPrefab: {fileID: 7678512554813887660, guid: 96f15dca5f77149318355bae7ee48545, type: 3}
+  verticalBoosterFxPrefab: {fileID: 7678512554813887660, guid: fa55f156c7113402e8e9465d0f144110, type: 3}
   boosterFxParent: {fileID: 415868972}
   hammerBoosterFallbackSprite: {fileID: 21300000, guid: e200b3928e79346e2ab4da678e139c53, type: 3}
   allowPostSwapSettleValidation: 1
