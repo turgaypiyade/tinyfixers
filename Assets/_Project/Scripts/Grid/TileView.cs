@@ -30,7 +30,7 @@ public class TileView : MonoBehaviour,
 
     [SerializeField, Range(0.5f, 1f)]
     [FormerlySerializedAs("runtimeIconScale")]
-    private float iconScale = 0.98f;
+    private float iconScale = 0.89f;
 
     [SerializeField] private Vector2 iconSize = new Vector2(100f, 100f);
     [SerializeField] private bool useFullCellIcon = false;

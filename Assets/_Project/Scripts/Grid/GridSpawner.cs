@@ -637,53 +637,13 @@ public class GridSpawner : MonoBehaviour
             return x >= 0 && x < width && y >= 0 && y < height;
         }
 
-        bool IsStaticObstacleCell(int x, int y)
-        {
-            if (!IsInside(x, y))
-                return false;
-
-            if (resolvedLevel == null ||
-                resolvedLevel.obstacles == null ||
-                resolvedLevel.obstacleLibrary == null)
-                return false;
-
-            int idx = resolvedLevel.Index(x, y);
-
-            if (idx < 0 || idx >= resolvedLevel.obstacles.Length)
-                return false;
-
-            var obsId = (ObstacleId)resolvedLevel.obstacles[idx];
-            if (obsId == ObstacleId.None)
-                return false;
-
-            var def = resolvedLevel.obstacleLibrary.Get(obsId);
-            if (def == null)
-                return false;
-
-            // Movable obstacle tile gibi davranır; grid çizgisi görünmeli.
-            // Sadece movable olmayan/static obstacle grid çizgisini bastırır.
-            return !def.IsMovableObstacle;
-        }
-
         bool IsVisibleCell(int x, int y)
         {
             if (!IsInside(x, y))
                 return false;
 
-            return !board.Holes[x, y];
-        }
-
-        bool ShouldDrawLineTouchingCells(int ax, int ay, int bx, int by)
-        {
-            // Çizginin iki tarafından biri static obstacle ise çizme.
-            // Movable obstacle tile gibi davranır; kenarındaki grid line görünür.
-            if (IsStaticObstacleCell(ax, ay))
-                return false;
-
-            if (IsStaticObstacleCell(bx, by))
-                return false;
-
-            return true;
+            int idx = resolvedLevel.Index(x, y);
+            return cellBgByIndex.ContainsKey(idx) && cellBgByIndex[idx] != null;
         }
 
         void CreateLine(string name, Vector2 anchoredPos, Vector2 size)
@@ -707,11 +667,7 @@ public class GridSpawner : MonoBehaviour
         {
             for (int x = 0; x < width; x++)
             {
-                // Static obstacle hücresinin kendi üstüne çizgi çizme.
                 if (!IsVisibleCell(x, y))
-                    continue;
-
-                if (IsStaticObstacleCell(x, y))
                     continue;
 
                 float x0 = x * tileSize;
@@ -720,28 +676,21 @@ public class GridSpawner : MonoBehaviour
                 float y1 = y0 - tileSize;
 
                 // Top edge
-                if (ShouldDrawLineTouchingCells(x, y, x, y - 1))
-                {
-                    CreateLine(
-                        $"GridLine_T_{x}_{y}",
-                        new Vector2(x0, y0 + thickness * 0.5f),
-                        new Vector2(tileSize, thickness)
-                    );
-                }
+                CreateLine(
+                    $"GridLine_T_{x}_{y}",
+                    new Vector2(x0, y0 + thickness * 0.5f),
+                    new Vector2(tileSize, thickness)
+                );
 
                 // Left edge
-                if (ShouldDrawLineTouchingCells(x, y, x - 1, y))
-                {
-                    CreateLine(
-                        $"GridLine_L_{x}_{y}",
-                        new Vector2(x0 - thickness * 0.5f, y0),
-                        new Vector2(thickness, tileSize)
-                    );
-                }
+                CreateLine(
+                    $"GridLine_L_{x}_{y}",
+                    new Vector2(x0 - thickness * 0.5f, y0),
+                    new Vector2(thickness, tileSize)
+                );
 
-                // Right edge: sadece sağ komşu görünür değilse çiz,
-                // ama static obstacle'a temas ediyorsa çizme.
-                if (!IsVisibleCell(x + 1, y) && ShouldDrawLineTouchingCells(x, y, x + 1, y))
+                // Right edge: sadece sağ komşu görünür değilse çiz.
+                if (!IsVisibleCell(x + 1, y))
                 {
                     CreateLine(
                         $"GridLine_R_{x}_{y}",
@@ -750,9 +699,8 @@ public class GridSpawner : MonoBehaviour
                     );
                 }
 
-                // Bottom edge: sadece alt komşu görünür değilse çiz,
-                // ama static obstacle'a temas ediyorsa çizme.
-                if (!IsVisibleCell(x, y + 1) && ShouldDrawLineTouchingCells(x, y, x, y + 1))
+                // Bottom edge: sadece alt komşu görünür değilse çiz.
+                if (!IsVisibleCell(x, y + 1))
                 {
                     CreateLine(
                         $"GridLine_B_{x}_{y}",
