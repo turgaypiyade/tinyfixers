@@ -68,12 +68,23 @@ public sealed class PatchBotSpecial
             result.Actions.Add(initialClearAction);
         }
 
-        var target = rt.TargetCoordinator != null
-            ? rt.TargetCoordinator.ReserveTarget(rt.Origin, rt.Partner, null)
-            : rt.PatchbotService.FindTarget(rt.Origin, rt.Partner, null);
+        var coordinator = rt.TargetCoordinator ?? new PatchBotTargetCoordinator(rt.Board, rt.PatchbotService);
+        var picked = coordinator.PickIntent(rt.Origin, rt.Partner, null);
 
-        if (!target.hasCell)
+        if (!picked.hasIntent || picked.intent == null)
         {
+            if (rt.ClearOriginOnDashStart)
+                ClearPatchBotOriginVisualAndData(rt.Board, rt.Origin, new Vector2Int(rt.Origin.X, rt.Origin.Y), rt.Origin.GetTileType());
+            return result;
+        }
+
+        var initialTarget = picked.intent.CurrentCell(rt.Board);
+        if (!IsInside(rt.Board, initialTarget.x, initialTarget.y))
+            initialTarget = picked.intent.InitialCell;
+
+        if (!IsInside(rt.Board, initialTarget.x, initialTarget.y))
+        {
+            coordinator.ReleaseIntent(picked.intent);
             if (rt.ClearOriginOnDashStart)
                 ClearPatchBotOriginVisualAndData(rt.Board, rt.Origin, new Vector2Int(rt.Origin.X, rt.Origin.Y), rt.Origin.GetTileType());
             return result;
@@ -84,7 +95,7 @@ public sealed class PatchBotSpecial
         var originCell = new Vector2Int(originTile.X, originTile.Y);
         var originSourceType = originTile.GetTileType();
 
-        rt.VisualService.PlayTeleportMarkers(rt.Origin, target.x, target.y);
+        rt.VisualService.PlayTeleportMarkers(rt.Origin, initialTarget.x, initialTarget.y);
 
         TileView carriedPartner =
             (rt.Partner != null && rt.Partner.GetSpecial() != TileSpecial.None)
@@ -100,10 +111,11 @@ public sealed class PatchBotSpecial
             };
         }
 
-        rt.PatchbotService.EnqueueDash(rt.Origin, target.x, target.y, carriedPartner, dashStart, () =>
+        rt.PatchbotService.EnqueueDashFromIntent(rt.Origin, picked.intent, coordinator, carriedPartner, dashStart,
+            (hitX, hitY, liveIntent) =>
+            {
+                try
                 {
-                    rt.TargetCoordinator?.ReleaseReservation(target.x, target.y);
-
                     var arrivalCtx = new ResolutionContext();
                     var arrivalRt = new PatchBotExecutionRuntime
                     {
@@ -127,27 +139,15 @@ public sealed class PatchBotSpecial
 
                     if (cachedPartnerSpecial != TileSpecial.None)
                     {
-                        if (TriggerPartnerEffectAtDeferred(arrivalRt, cachedPartnerSpecial, target.x, target.y, deferredActions))
+                        if (TriggerPartnerEffectAtDeferred(arrivalRt, cachedPartnerSpecial, hitX, hitY, deferredActions))
                             arrivalRt.Context.HasLineActivation = true;
                     }
                     else if (rt.Partner != null)
                     {
-                        int hitX = target.x, hitY = target.y;
-                        if (!rt.PatchbotService.HasContentAt(hitX, hitY))
-                        {
-                            var fallback = rt.PatchbotService.FindTarget(null, null, null);
-                            if (fallback.hasCell) { hitX = fallback.x; hitY = fallback.y; }
-                        }
                         ApplyPatchBotTeleportToCellDeferred(arrivalRt, hitX, hitY);
                     }
                     else
                     {
-                        int hitX = target.x, hitY = target.y;
-                        if (!rt.PatchbotService.HasContentAt(hitX, hitY))
-                        {
-                            var fallback = rt.PatchbotService.FindTarget(null, null, null);
-                            if (fallback.hasCell) { hitX = fallback.x; hitY = fallback.y; }
-                        }
                         ApplyPatchBotSoloHitDeferred(arrivalRt, hitX, hitY);
                     }
                     if (arrivalRt.FinalizeAtEnd)
@@ -171,7 +171,7 @@ public sealed class PatchBotSpecial
 
                         arrivalRt.EmitBoardSignal?.Invoke(new SpecialBoardSignal(
                             SpecialBoardSignalType.SpecialPassFinished,
-                            new Vector2Int(target.x, target.y),
+                            new Vector2Int(hitX, hitY),
                             rt.Origin));
                     }
 
@@ -180,7 +180,12 @@ public sealed class PatchBotSpecial
                     {
                         sequencer.Enqueue(deferredActions);
                     }
-                });
+                }
+                finally
+                {
+                    coordinator.ReleaseIntent(liveIntent ?? picked.intent);
+                }
+            });
 
         return result;
     }
@@ -197,6 +202,11 @@ public sealed class PatchBotSpecial
             return false;
 
         return true;
+    }
+
+    private static bool IsInside(BoardController board, int x, int y)
+    {
+        return board != null && x >= 0 && x < board.Width && y >= 0 && y < board.Height;
     }
 
     private void ClearPatchBotOriginVisualAndData(BoardController board, TileView tile, Vector2Int cell, TileType sourceType)

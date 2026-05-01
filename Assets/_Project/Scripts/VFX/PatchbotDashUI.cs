@@ -55,9 +55,6 @@ public class PatchbotDashUI : MonoBehaviour
         runnerImage = GetComponent<Image>();
     }
 
-    /// <summary>
-    /// Legacy/test: runs a single runnerImage along a UI-RectTransform path.
-    /// </summary>
     public void PlayDash(List<RectTransform> pathTiles)
     {
         if (!gameObject.activeInHierarchy)
@@ -67,10 +64,6 @@ public class PatchbotDashUI : MonoBehaviour
         co = StartCoroutine(DashRoutine(pathTiles));
     }
 
-    /// <summary>
-    /// Main: launches MANY patchbots in parallel (tiny stagger) using per-dash instances,
-    /// so multi-patchbot cases don't take 30 seconds.
-    /// </summary>
     public Coroutine PlayDashParallel(List<BoardController.PatchbotDashRequest> requests, BoardController board, float syncDuration = -1f)
     {
         if (!gameObject.activeInHierarchy)
@@ -86,18 +79,15 @@ public class PatchbotDashUI : MonoBehaviour
         if (vfxRoot == null || board == null) yield break;
         if (requests == null || requests.Count == 0) yield break;
 
-        // IMPORTANT: keep this GameObject active so Fade coroutines can run.
-        // Template image is not used for movement in parallel mode.
         if (runnerImage != null) runnerImage.enabled = false;
 
-        // Reliable sprite source
         Sprite patchbotSprite = null;
         if (runnerImage != null && runnerImage.sprite != null)
             patchbotSprite = runnerImage.sprite;
         else if (tileIcons != null && tileIcons.patchBot != null)
             patchbotSprite = tileIcons.patchBot;
 
-        const float stagger = 0.02f; // tiny visual offset
+        const float stagger = 0.02f;
         int remaining = 0;
 
         for (int i = 0; i < requests.Count; i++)
@@ -206,6 +196,9 @@ public class PatchbotDashUI : MonoBehaviour
         var motion = new DashMotionState();
         yield return RunTakeoffBurst(rt, carryRt, size, sprite, start, takeoff, takeoffDuration, motion);
         yield return RunHoverHold(rt, carryRt, size, sprite, takeoff, hoverDuration, motion);
+
+        target = ResolveTargetAtDiveStart(req, board, target);
+
         yield return RunDive(rt, carryRt, size, sprite, takeoff, target, diveDuration, motion);
 
         rt.anchoredPosition = target;
@@ -220,6 +213,21 @@ public class PatchbotDashUI : MonoBehaviour
 
         Destroy(go);
         onComplete?.Invoke();
+    }
+
+    private Vector2 ResolveTargetAtDiveStart(BoardController.PatchbotDashRequest req, BoardController board, Vector2 fallbackTarget)
+    {
+        if (board == null || vfxRoot == null)
+            return fallbackTarget;
+
+        if (!PatchbotLiveDashTargetRegistry.TryResolveAtDiveStart(req.from, req.to, out var cell))
+            return fallbackTarget;
+
+        if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+            return fallbackTarget;
+
+        Vector3 world = board.GetCellWorldPosition(cell.x, cell.y);
+        return WorldToAnchoredIn(vfxRoot, world);
     }
 
     private IEnumerator RunTakeoffBurst(
@@ -403,7 +411,6 @@ public class PatchbotDashUI : MonoBehaviour
             }
         }
 
-        // tiny pop
         var rt = runnerImage.rectTransform;
         Vector3 baseScale = rt.localScale;
         rt.localScale = baseScale * 1.15f;
@@ -414,9 +421,6 @@ public class PatchbotDashUI : MonoBehaviour
 
         runnerImage.enabled = false;
         co = null;
-
-        // Don't deactivate the GameObject: we want afterimage Fade coroutines to complete.
-        // gameObject.SetActive(false);
     }
 
     private void SpawnAfterImageAt(RectTransform source, Sprite sprite)
@@ -441,7 +445,6 @@ public class PatchbotDashUI : MonoBehaviour
         rt.anchoredPosition = source.anchoredPosition;
         rt.localScale = source.localScale;
 
-        // Keep it behind the runner
         rt.SetSiblingIndex(Mathf.Max(0, source.GetSiblingIndex() - 1));
 
         StartCoroutine(FadeAndDestroy(go, img, afterLife));

@@ -60,9 +60,10 @@ public sealed class PatchBotCombo
         result.Actions.Add(initialClearAction);
 
         var usedTargets = new HashSet<TileView>();
+        var coordinator = new PatchBotTargetCoordinator(rt.Board, rt.PatchbotService);
 
-        ExecuteSingleDash(rt, firstPatchBot, secondPatchBot, usedTargets);
-        ExecuteSingleDash(rt, secondPatchBot, firstPatchBot, usedTargets);
+        ExecuteSingleDash(rt, coordinator, firstPatchBot, secondPatchBot, usedTargets);
+        ExecuteSingleDash(rt, coordinator, secondPatchBot, firstPatchBot, usedTargets);
 
         if (rt.FinalizeAtEnd)
         {
@@ -115,91 +116,103 @@ public sealed class PatchBotCombo
 
     private void ExecuteSingleDash(
         PatchBotComboExecutionRuntime rt,
+        PatchBotTargetCoordinator coordinator,
         TileView actor,
         TileView otherPatchBot,
         HashSet<TileView> usedTargets)
     {
-        if (rt == null || rt.Board == null || rt.PatchbotService == null)
+        if (rt == null || rt.Board == null || rt.PatchbotService == null || coordinator == null)
             return;
 
         if (actor == null)
             return;
 
-        var target = rt.PatchbotService.FindTarget(actor, otherPatchBot, usedTargets);
-        if (!target.hasCell)
+        var picked = coordinator.PickIntent(actor, otherPatchBot, usedTargets);
+        if (!picked.hasIntent || picked.intent == null)
             return;
 
-        if (!IsInside(rt.Board, target.x, target.y))
-            return;
+        var initialCell = picked.intent.CurrentCell(rt.Board);
+        if (!IsInside(rt.Board, initialCell.x, initialCell.y))
+            initialCell = picked.intent.InitialCell;
 
-        if (target.tile != null)
-            usedTargets.Add(target.tile);
+        if (!IsInside(rt.Board, initialCell.x, initialCell.y))
+        {
+            coordinator.ReleaseIntent(picked.intent);
+            return;
+        }
+
+        if (picked.intent.TargetTile != null)
+            usedTargets.Add(picked.intent.TargetTile);
 
         if (rt.VisualService != null)
-            rt.VisualService.PlayTeleportMarkers(actor, target.x, target.y);
+            rt.VisualService.PlayTeleportMarkers(actor, initialCell.x, initialCell.y);
 
-        rt.PatchbotService.EnqueueDash(actor, target.x, target.y, null, () =>
-        {
-            if (rt == null || rt.Board == null || rt.PatchbotService == null)
-                return;
-
-            // Hedef uçuş sırasında cascade ile temizlenmiş olabilir — canlı koordinatı çöz.
-            int hitX = target.x;
-            int hitY = target.y;
-            if (!IsInside(rt.Board, hitX, hitY) || !rt.PatchbotService.HasContentAt(hitX, hitY))
+        rt.PatchbotService.EnqueueDashFromIntent(
+            actor,
+            picked.intent,
+            coordinator,
+            null,
+            null,
+            (hitX, hitY, liveIntent) =>
             {
-                var fallback = rt.PatchbotService.FindTarget(null, null, usedTargets);
-                if (fallback.hasCell) { hitX = fallback.x; hitY = fallback.y; }
-            }
-
-            if (!IsInside(rt.Board, hitX, hitY))
-                return;
-
-            var arrivalCtx = new ResolutionContext();
-            var dataMatches = new HashSet<TileData>();
-
-            TileView liveTargetTile = rt.Board.Tiles[hitX, hitY];
-
-            rt.PatchbotService.HitCellOnce(
-                dataMatches,
-                hitX,
-                hitY,
-                liveTargetTile,
-                (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalCtx, x, y, rt.Board),
-                tile =>
+                try
                 {
-                    if (tile != null)
-                        SpecialCellUtils.MarkAffectedCell(arrivalCtx, tile, rt.Board);
-                });
+                    if (rt == null || rt.Board == null || rt.PatchbotService == null)
+                        return;
 
-            foreach (var data in dataMatches)
-            {
-                if (data == null) continue;
-                if (!IsInside(rt.Board, data.X, data.Y)) continue;
+                    if (!IsInside(rt.Board, hitX, hitY))
+                        return;
 
-                var tile = rt.Board.Tiles[data.X, data.Y];
-                if (tile == null) continue;
+                    var arrivalCtx = new ResolutionContext();
+                    var dataMatches = new HashSet<TileData>();
 
-                arrivalCtx.Affected.Add(tile);
-            }
+                    TileView liveTargetTile = rt.Board.Tiles[hitX, hitY];
 
-            if (arrivalCtx.Affected.Count == 0 &&
-                (arrivalCtx.AffectedCells == null || arrivalCtx.AffectedCells.Count == 0) &&
-                (arrivalCtx.ImpactCells == null || arrivalCtx.ImpactCells.Count == 0))
-            {
-                return;
-            }
+                    rt.PatchbotService.HitCellOnce(
+                        dataMatches,
+                        hitX,
+                        hitY,
+                        liveTargetTile,
+                        (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalCtx, x, y, rt.Board),
+                        tile =>
+                        {
+                            if (tile != null)
+                                SpecialCellUtils.MarkAffectedCell(arrivalCtx, tile, rt.Board);
+                        });
 
-            var clearAction = BuildClearAction(arrivalCtx);
+                    foreach (var data in dataMatches)
+                    {
+                        if (data == null) continue;
+                        if (!IsInside(rt.Board, data.X, data.Y)) continue;
 
-            var deferredActions = new List<BoardAction>();
-            if (clearAction != null)
-                deferredActions.Add(clearAction);
+                        var tile = rt.Board.Tiles[data.X, data.Y];
+                        if (tile == null) continue;
 
-            var sequencer = rt.Board.GetComponent<ActionSequencer>();
-            if (sequencer != null && deferredActions.Count > 0)
-                sequencer.Enqueue(deferredActions);
-        });
+                        arrivalCtx.Affected.Add(tile);
+                    }
+
+                    if (arrivalCtx.Affected.Count == 0 &&
+                        (arrivalCtx.AffectedCells == null || arrivalCtx.AffectedCells.Count == 0) &&
+                        (arrivalCtx.ImpactCells == null || arrivalCtx.ImpactCells.Count == 0))
+                    {
+                        return;
+                    }
+
+                    var clearAction = BuildClearAction(arrivalCtx);
+
+                    var deferredActions = new List<BoardAction>();
+                    if (clearAction != null)
+                        deferredActions.Add(clearAction);
+
+                    var sequencer = rt.Board.GetComponent<ActionSequencer>();
+                    if (sequencer != null && deferredActions.Count > 0)
+                        sequencer.Enqueue(deferredActions);
+                }
+                finally
+                {
+                    coordinator.ReleaseIntent(liveIntent ?? picked.intent);
+                }
+            });
     }
 
     private static bool IsInside(BoardController board, int x, int y)
