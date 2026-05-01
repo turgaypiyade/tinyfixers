@@ -790,10 +790,27 @@ public class BoardAnimator
         var ctx = new ClearEffectPlaybackContext();
         var cleared = new System.Collections.Generic.HashSet<TileView>();
 
+        // Presentation path normal match ise, final clear tile'ların type bilgisini
+        // merkezi plana yaz. Böylece effect impact'i sonradan geldiğinde obstacle damage
+        // doğru TileType ile üretilebilir.
+        if (plan.ObstacleHitContext == ObstacleHitContext.NormalMatch)
+        {
+            foreach (var tile in plan.FinalClearTiles)
+                plan.RegisterNormalMatchSource(tile);
+        }
+
         void FinalizePresentationTileClear(TileView tile)
         {
             if (tile == null || cleared.Contains(tile))
                 return;
+
+            var cell = new Vector2Int(tile.X, tile.Y);
+
+            if (plan.ObstacleHitContext == ObstacleHitContext.NormalMatch)
+                plan.RegisterNormalMatchSource(tile);
+
+            if (!impactedCells.Contains(cell))
+                impactedCells.Add(cell);
 
             cleared.Add(tile);
             board.BreakFx?.PlayTileBreak(tile);
@@ -836,34 +853,54 @@ public class BoardAnimator
     }
 
     private void ApplyPresentationObstacleDamage(
-    System.Collections.Generic.List<Vector2Int> impactedCells,
-    ClearPresentationPlan plan)
+        System.Collections.Generic.List<Vector2Int> impactedCells,
+        ClearPresentationPlan plan)
     {
         if (board.ObstacleStateService == null || impactedCells == null || impactedCells.Count == 0)
             return;
 
-        System.Collections.Generic.Dictionary<Vector2Int, int> obstacleDamageCounts =
-            new System.Collections.Generic.Dictionary<Vector2Int, int>();
+        var obstacleDamageRequests =
+            new System.Collections.Generic.Dictionary<Vector2Int, System.Collections.Generic.List<ObstacleDamageRequest>>();
+
+        void AddDamageRequest(ObstacleDamageRequest request)
+        {
+            if (obstacleDamageRequests.TryGetValue(request.cell, out var requests))
+            {
+                requests.Add(request);
+            }
+            else
+            {
+                obstacleDamageRequests[request.cell] =
+                    new System.Collections.Generic.List<ObstacleDamageRequest> { request };
+            }
+        }
 
         for (int i = 0; i < impactedCells.Count; i++)
         {
             Vector2Int cell = impactedCells[i];
 
-            int existing;
-            if (obstacleDamageCounts.TryGetValue(cell, out existing))
-                obstacleDamageCounts[cell] = existing + 1;
-            else
-                obstacleDamageCounts[cell] = 1;
+            TileType? sourceTileType = plan.GetNormalMatchSourceTileType(cell);
+
+            var request = new ObstacleDamageRequest(
+                cell,
+                plan.ObstacleHitContext,
+                sourceTileType);
+
+            AddDamageRequest(request);
 
             if (plan.IncludeAdjacentOverTileBlockerDamage)
-                CollectAdjacentOverTileBlockers(cell, obstacleDamageCounts);
+                CollectAdjacentOverTileBlockers(cell, obstacleDamageRequests, request);
         }
 
-        foreach (var kv in obstacleDamageCounts)
+        foreach (var kv in obstacleDamageRequests)
         {
-            for (int i = 0; i < kv.Value; i++)
+            var requests = kv.Value;
+            if (requests == null)
+                continue;
+
+            for (int i = 0; i < requests.Count; i++)
             {
-                var hit = board.ApplyObstacleDamageAt(kv.Key.x, kv.Key.y, plan.ObstacleHitContext);
+                var hit = board.ApplyObstacleDamage(requests[i]);
                 if (hit.didHit)
                     board.TriggerObstacleVisualChange(hit.visualChange);
             }
@@ -924,6 +961,7 @@ public class BoardAnimator
         }
     }
 
+
     private void CollectAdjacentOverTileBlockers(
         Vector2Int centerCell,
         Dictionary<Vector2Int, List<TileType?>> obstacleDamageSources,
@@ -932,26 +970,96 @@ public class BoardAnimator
         if (board == null || board.Obstacles == null || obstacleDamageSources == null)
             return;
 
-        for (int dir = 0; dir < 4; dir++)
+        void AddDamageSource(Vector2Int cell)
         {
-            Vector2Int neighbor = dir switch
+            if (obstacleDamageSources.TryGetValue(cell, out var sources))
             {
-                0 => new Vector2Int(centerCell.x + 1, centerCell.y),
-                1 => new Vector2Int(centerCell.x - 1, centerCell.y),
-                2 => new Vector2Int(centerCell.x, centerCell.y + 1),
-                _ => new Vector2Int(centerCell.x, centerCell.y - 1),
-            };
-
-            if (neighbor.x < 0 || neighbor.x >= board.Width || neighbor.y < 0 || neighbor.y >= board.Height)
-                continue;
-
-            if (!board.Obstacles.IsOverTileBlockerAt(neighbor.x, neighbor.y))
-                continue;
-
-            if (obstacleDamageSources.TryGetValue(neighbor, out var sources))
                 sources.Add(sourceTileType);
+            }
             else
-                obstacleDamageSources[neighbor] = new List<TileType?> { sourceTileType };
+            {
+                obstacleDamageSources[cell] = new List<TileType?> { sourceTileType };
+            }
+        }
+
+        void TryCollect(Vector2Int cell)
+        {
+            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                return;
+
+            if (!board.Obstacles.IsOverTileBlockerAt(cell.x, cell.y))
+                return;
+
+            AddDamageSource(cell);
+        }
+
+        for (int i = 0; i < OrthogonalDirs.Length; i++)
+            TryCollect(centerCell + OrthogonalDirs[i]);
+
+        for (int i = 0; i < DiagonalDirs.Length; i++)
+        {
+            Vector2Int diagonal = centerCell + DiagonalDirs[i];
+
+            if (diagonal.x < 0 || diagonal.x >= board.Width || diagonal.y < 0 || diagonal.y >= board.Height)
+                continue;
+
+            if (!board.Obstacles.IsDiagonalAllowedAt(diagonal.x, diagonal.y))
+                continue;
+
+            TryCollect(diagonal);
+        }
+    }
+
+    private void CollectAdjacentOverTileBlockers(
+        Vector2Int centerCell,
+        Dictionary<Vector2Int, List<ObstacleDamageRequest>> obstacleDamageRequests,
+        ObstacleDamageRequest sourceRequest)
+    {
+        if (board == null || board.Obstacles == null || obstacleDamageRequests == null)
+            return;
+
+        void AddRequest(Vector2Int cell)
+        {
+            var request = new ObstacleDamageRequest(
+                cell,
+                sourceRequest.context,
+                sourceRequest.normalMatchTileType);
+
+            if (obstacleDamageRequests.TryGetValue(cell, out var requests))
+            {
+                requests.Add(request);
+            }
+            else
+            {
+                obstacleDamageRequests[cell] = new List<ObstacleDamageRequest> { request };
+            }
+        }
+
+        void TryCollect(Vector2Int cell)
+        {
+            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                return;
+
+            if (!board.Obstacles.IsOverTileBlockerAt(cell.x, cell.y))
+                return;
+
+            AddRequest(cell);
+        }
+
+        for (int i = 0; i < OrthogonalDirs.Length; i++)
+            TryCollect(centerCell + OrthogonalDirs[i]);
+
+        for (int i = 0; i < DiagonalDirs.Length; i++)
+        {
+            Vector2Int diagonal = centerCell + DiagonalDirs[i];
+
+            if (diagonal.x < 0 || diagonal.x >= board.Width || diagonal.y < 0 || diagonal.y >= board.Height)
+                continue;
+
+            if (!board.Obstacles.IsDiagonalAllowedAt(diagonal.x, diagonal.y))
+                continue;
+
+            TryCollect(diagonal);
         }
     }
 

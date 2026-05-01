@@ -15,7 +15,7 @@ public sealed class ObstacleResolutionService
 
     public ObstacleStateService.ObstacleHitResult ApplyDamageAt(int x, int y, ObstacleHitContext context)
     {
-        return ApplyDamageAt(x, y, context, null);
+        return ApplyDamage(new ObstacleDamageRequest(x, y, context, null));
     }
 
     public ObstacleStateService.ObstacleHitResult ApplyDamageAt(
@@ -24,22 +24,27 @@ public sealed class ObstacleResolutionService
         ObstacleHitContext context,
         TileType? sourceTileType)
     {
+        return ApplyDamage(new ObstacleDamageRequest(x, y, context, sourceTileType));
+    }
+
+    public ObstacleStateService.ObstacleHitResult ApplyDamage(ObstacleDamageRequest request)
+    {
         var obstacleStateService = board.ObstacleStateService;
         if (obstacleStateService == null)
             return default;
 
-        bool patchBotForcedHit = ConsumePatchBotForcedHit(x, y);
-        var result = obstacleStateService.TryDamageAt(x, y, context, sourceTileType);
+        bool patchBotForcedHit = ConsumePatchBotForcedHit(request.cell.x, request.cell.y);
+        var result = obstacleStateService.TryDamageAt(request);
 
         ObstacleStateService.ObstacleHitResult TryFallback(ObstacleHitContext fallbackContext)
         {
-            if (fallbackContext == context)
+            if (fallbackContext == request.context)
                 return default;
 
-            return obstacleStateService.TryDamageAt(x, y, fallbackContext, sourceTileType);
+            return obstacleStateService.TryDamageAt(request.WithContext(fallbackContext));
         }
 
-        if (!result.didHit && context == ObstacleHitContext.Booster)
+        if (!result.didHit && request.context == ObstacleHitContext.Booster)
         {
             result = TryFallback(ObstacleHitContext.SpecialActivation);
             if (!result.didHit) result = TryFallback(ObstacleHitContext.NormalMatch);
@@ -51,7 +56,7 @@ public sealed class ObstacleResolutionService
             if (!result.didHit) result = TryFallback(ObstacleHitContext.NormalMatch);
             if (!result.didHit) result = TryFallback(ObstacleHitContext.Scripted);
         }
-        else if (!result.didHit && IsCrossContextFallbackAllowedAt(x, y))
+        else if (!result.didHit && IsCrossContextFallbackAllowedAt(request.cell.x, request.cell.y))
         {
             result = TryFallback(ObstacleHitContext.SpecialActivation);
             if (!result.didHit) result = TryFallback(ObstacleHitContext.Booster);

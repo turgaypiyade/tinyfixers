@@ -143,18 +143,27 @@ public sealed class PatchBotCombo
             if (rt == null || rt.Board == null || rt.PatchbotService == null)
                 return;
 
-            if (!IsInside(rt.Board, target.x, target.y))
+            // Hedef uçuş sırasında cascade ile temizlenmiş olabilir — canlı koordinatı çöz.
+            int hitX = target.x;
+            int hitY = target.y;
+            if (!IsInside(rt.Board, hitX, hitY) || !rt.PatchbotService.HasContentAt(hitX, hitY))
+            {
+                var fallback = rt.PatchbotService.FindTarget(null, null, usedTargets);
+                if (fallback.hasCell) { hitX = fallback.x; hitY = fallback.y; }
+            }
+
+            if (!IsInside(rt.Board, hitX, hitY))
                 return;
 
             var arrivalCtx = new ResolutionContext();
             var dataMatches = new HashSet<TileData>();
 
-            TileView liveTargetTile = rt.Board.Tiles[target.x, target.y];
+            TileView liveTargetTile = rt.Board.Tiles[hitX, hitY];
 
             rt.PatchbotService.HitCellOnce(
                 dataMatches,
-                target.x,
-                target.y,
+                hitX,
+                hitY,
                 liveTargetTile,
                 (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalCtx, x, y, rt.Board),
                 tile =>

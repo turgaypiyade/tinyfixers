@@ -184,6 +184,15 @@ public class ObstacleStateService
         return TryDamageAt(x, y, context, null);
     }
 
+    public ObstacleHitResult TryDamageAt(ObstacleDamageRequest request)
+    {
+        return TryDamageAt(
+            request.cell.x,
+            request.cell.y,
+            request.context,
+            request.normalMatchTileType);
+    }
+
     public ObstacleHitResult TryDamageAt(int x, int y, ObstacleHitContext context, TileType? sourceTileType)
     {
         ObstacleVisualChange change = default;

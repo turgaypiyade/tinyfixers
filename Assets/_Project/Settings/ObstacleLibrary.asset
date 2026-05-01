@@ -208,7 +208,7 @@ MonoBehaviour:
       blocksCells: 0
       behavior: 3
       allowDiagonal: 0
-    allowCrossContextFallback: 1
+    allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 0
     size: {x: 1, y: 1}
@@ -228,7 +228,7 @@ MonoBehaviour:
       blocksCells: 0
       behavior: 3
       allowDiagonal: 0
-    allowCrossContextFallback: 1
+    allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 2
     size: {x: 1, y: 1}
@@ -248,7 +248,7 @@ MonoBehaviour:
       blocksCells: 0
       behavior: 3
       allowDiagonal: 0
-    allowCrossContextFallback: 1
+    allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 1
     size: {x: 1, y: 1}
@@ -268,7 +268,7 @@ MonoBehaviour:
       blocksCells: 0
       behavior: 3
       allowDiagonal: 0
-    allowCrossContextFallback: 1
+    allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 3
     size: {x: 1, y: 1}

@@ -1836,17 +1836,29 @@ public class BoardController : MonoBehaviour
     // ═══════════════════════════════════════════════════════════════
     //  Obstacle Handling
     // ═══════════════════════════════════════════════════════════════
-    internal ObstacleStateService.ObstacleHitResult ApplyObstacleDamageAt(int x, int y, ObstacleHitContext context)
-        => ApplyObstacleDamageAt(x, y, context, null);
+    internal ObstacleStateService.ObstacleHitResult ApplyObstacleDamage(ObstacleDamageRequest request)
+    {
+        return obstacleResolutionService != null
+            ? obstacleResolutionService.ApplyDamage(request)
+            : default;
+    }
+
+    internal ObstacleStateService.ObstacleHitResult ApplyObstacleDamageAt(
+        int x,
+        int y,
+        ObstacleHitContext context)
+    {
+        return ApplyObstacleDamage(new ObstacleDamageRequest(x, y, context, null));
+    }
 
     internal ObstacleStateService.ObstacleHitResult ApplyObstacleDamageAt(
         int x,
         int y,
         ObstacleHitContext context,
         TileType? sourceTileType)
-        => obstacleResolutionService != null
-            ? obstacleResolutionService.ApplyDamageAt(x, y, context, sourceTileType)
-            : default;
+    {
+        return ApplyObstacleDamage(new ObstacleDamageRequest(x, y, context, sourceTileType));
+    }
 
     public void TriggerObstacleVisualChange(ObstacleVisualChange change)
     {

@@ -16,6 +16,14 @@ public class PatchbotComboService
         return board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
     }
 
+    public bool HasContentAt(int x, int y)
+    {
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return false;
+        if (HasObstacleAt(x, y)) return true;
+        if (board.Holes[x, y]) return false;
+        return board.GridData[x, y] != null;
+    }
+
     public void EnqueueDash(
         TileView fromTile,
         int targetX,

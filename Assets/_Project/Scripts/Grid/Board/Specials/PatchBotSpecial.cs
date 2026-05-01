@@ -132,11 +132,23 @@ public sealed class PatchBotSpecial
                     }
                     else if (rt.Partner != null)
                     {
-                        ApplyPatchBotTeleportToCellDeferred(arrivalRt, target.x, target.y);
+                        int hitX = target.x, hitY = target.y;
+                        if (!rt.PatchbotService.HasContentAt(hitX, hitY))
+                        {
+                            var fallback = rt.PatchbotService.FindTarget(null, null, null);
+                            if (fallback.hasCell) { hitX = fallback.x; hitY = fallback.y; }
+                        }
+                        ApplyPatchBotTeleportToCellDeferred(arrivalRt, hitX, hitY);
                     }
                     else
                     {
-                        ApplyPatchBotSoloHitDeferred(arrivalRt, target.x, target.y);
+                        int hitX = target.x, hitY = target.y;
+                        if (!rt.PatchbotService.HasContentAt(hitX, hitY))
+                        {
+                            var fallback = rt.PatchbotService.FindTarget(null, null, null);
+                            if (fallback.hasCell) { hitX = fallback.x; hitY = fallback.y; }
+                        }
+                        ApplyPatchBotSoloHitDeferred(arrivalRt, hitX, hitY);
                     }
                     if (arrivalRt.FinalizeAtEnd)
                     {
