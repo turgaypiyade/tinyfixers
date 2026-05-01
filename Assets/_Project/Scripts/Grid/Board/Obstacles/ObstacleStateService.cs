@@ -181,6 +181,11 @@ public class ObstacleStateService
 
     public ObstacleHitResult TryDamageAt(int x, int y, ObstacleHitContext context)
     {
+        return TryDamageAt(x, y, context, null);
+    }
+
+    public ObstacleHitResult TryDamageAt(int x, int y, ObstacleHitContext context, TileType? sourceTileType)
+    {
         ObstacleVisualChange change = default;
 
         if (level == null || level.obstacles == null || level.obstacleOrigins == null)
@@ -207,7 +212,7 @@ public class ObstacleStateService
         if (remaining < 0)
             remaining = Mathf.Max(1, def != null ? def.hits : 1);
 
-        if (!CanConsumeHit(def, remaining, context))
+        if (!CanConsumeHit(def, remaining, context, sourceTileType))
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
 
         int[] affectedCells = CollectCellsForOrigin(origin, id);
@@ -355,13 +360,27 @@ public class ObstacleStateService
             && level.InBounds(x, y);
     }
 
-    private bool CanConsumeHit(ObstacleDef def, int remainingHits, ObstacleHitContext context)
+    private bool CanConsumeHit(
+        ObstacleDef def,
+        int remainingHits,
+        ObstacleHitContext context,
+        TileType? sourceTileType)
     {
         if (def == null)
             return true;
 
         ObstacleDamageSourceRule rule = def.GetDamageRuleForRemainingHits(remainingHits);
-        return DoesContextMatchRule(context, rule);
+
+        if (!DoesContextMatchRule(context, rule))
+            return false;
+
+        if (context == ObstacleHitContext.NormalMatch && def.restrictNormalMatchTileType)
+        {
+            return sourceTileType.HasValue &&
+                   sourceTileType.Value == def.requiredNormalMatchTileType;
+        }
+
+        return true;
     }
 
     private bool DoesContextMatchRule(ObstacleHitContext context, ObstacleDamageSourceRule rule)

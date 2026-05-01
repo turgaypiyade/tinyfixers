@@ -15,19 +15,28 @@ public sealed class ObstacleResolutionService
 
     public ObstacleStateService.ObstacleHitResult ApplyDamageAt(int x, int y, ObstacleHitContext context)
     {
+        return ApplyDamageAt(x, y, context, null);
+    }
+
+    public ObstacleStateService.ObstacleHitResult ApplyDamageAt(
+        int x,
+        int y,
+        ObstacleHitContext context,
+        TileType? sourceTileType)
+    {
         var obstacleStateService = board.ObstacleStateService;
         if (obstacleStateService == null)
             return default;
 
         bool patchBotForcedHit = ConsumePatchBotForcedHit(x, y);
-        var result = obstacleStateService.TryDamageAt(x, y, context);
+        var result = obstacleStateService.TryDamageAt(x, y, context, sourceTileType);
 
         ObstacleStateService.ObstacleHitResult TryFallback(ObstacleHitContext fallbackContext)
         {
             if (fallbackContext == context)
                 return default;
 
-            return obstacleStateService.TryDamageAt(x, y, fallbackContext);
+            return obstacleStateService.TryDamageAt(x, y, fallbackContext, sourceTileType);
         }
 
         if (!result.didHit && context == ObstacleHitContext.Booster)

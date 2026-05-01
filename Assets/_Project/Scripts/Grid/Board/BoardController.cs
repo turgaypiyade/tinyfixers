@@ -1837,7 +1837,16 @@ public class BoardController : MonoBehaviour
     //  Obstacle Handling
     // ═══════════════════════════════════════════════════════════════
     internal ObstacleStateService.ObstacleHitResult ApplyObstacleDamageAt(int x, int y, ObstacleHitContext context)
-        => obstacleResolutionService != null ? obstacleResolutionService.ApplyDamageAt(x, y, context) : default;
+        => ApplyObstacleDamageAt(x, y, context, null);
+
+    internal ObstacleStateService.ObstacleHitResult ApplyObstacleDamageAt(
+        int x,
+        int y,
+        ObstacleHitContext context,
+        TileType? sourceTileType)
+        => obstacleResolutionService != null
+            ? obstacleResolutionService.ApplyDamageAt(x, y, context, sourceTileType)
+            : default;
 
     public void TriggerObstacleVisualChange(ObstacleVisualChange change)
     {

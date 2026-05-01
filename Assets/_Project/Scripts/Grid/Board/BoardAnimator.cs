@@ -238,7 +238,8 @@ public class BoardAnimator
 
         float maxStaggerDelay = 0f;
         var impactCells = new List<Vector2Int>();
-        var obstacleDamageCounts = new Dictionary<Vector2Int, int>();
+        var impactSourceTileTypes = new List<TileType?>();
+        var obstacleDamageSources = new Dictionary<Vector2Int, List<TileType?>>();
 
         Debug.Log(
             $"[PulseClearDebug][BA] ENTER " +
@@ -330,14 +331,20 @@ public class BoardAnimator
         if (explicitImpactCells != null && explicitImpactCells.Count > 0)
         {
             for (int i = 0; i < explicitImpactCells.Count; i++)
+            {
                 impactCells.Add(explicitImpactCells[i]);
+                impactSourceTileTypes.Add(null);
+            }
         }
         else
         {
             if (affectedCells != null)
             {
                 foreach (var cell in affectedCells)
+                {
                     impactCells.Add(cell);
+                    impactSourceTileTypes.Add(null);
+                }
             }
 
             for (int i = 0; i < list.Count; i++)
@@ -361,6 +368,10 @@ public class BoardAnimator
                     $"live={debugLive} hasStagger={debugHasStagger} hasPerTile={debugHasPerTile}");
 
                 impactCells.Add(new Vector2Int(tile.X, tile.Y));
+                impactSourceTileTypes.Add(
+                    damageContext == ObstacleHitContext.NormalMatch
+                        ? tile.GetTileType()
+                        : (TileType?)null);
             }
         }
 
@@ -454,7 +465,7 @@ public class BoardAnimator
                 Debug.Log(
                     $"[PulseClearDebug][BA] POP_BRANCH tile=({tile.X},{tile.Y}) " +
                     $"delay={delay:0.000} mode={tileAnimationMode}");
-                
+
                 if (tileAnimationMode == ClearAnimationMode.Default && implodeTargetCell.HasValue && !shouldSuppressVfx)
                 {
                     implodeTiles.Add(tile);
@@ -688,32 +699,44 @@ public class BoardAnimator
         if (board.ObstacleStateService == null)
             yield break;
 
-        void AddObstacleDamageCell(Vector2Int cell, int amount = 1)
+        void AddObstacleDamageCell(Vector2Int cell, TileType? sourceTileType)
         {
-            if (amount <= 0) return;
-
-            if (obstacleDamageCounts.TryGetValue(cell, out int existing))
-                obstacleDamageCounts[cell] = existing + amount;
+            if (obstacleDamageSources.TryGetValue(cell, out var sources))
+            {
+                sources.Add(sourceTileType);
+            }
             else
-                obstacleDamageCounts[cell] = amount;
+            {
+                obstacleDamageSources[cell] = new List<TileType?> { sourceTileType };
+            }
         }
 
-        foreach (var cell in impactCells)
+        for (int impactIndex = 0; impactIndex < impactCells.Count; impactIndex++)
         {
-            AddObstacleDamageCell(cell, 1);
+            var cell = impactCells[impactIndex];
+
+            TileType? sourceTileType =
+                impactIndex >= 0 && impactIndex < impactSourceTileTypes.Count
+                    ? impactSourceTileTypes[impactIndex]
+                    : null;
+
+            AddObstacleDamageCell(cell, sourceTileType);
 
             if (includeAdjacentOverTileBlockerDamage)
-                CollectAdjacentOverTileBlockers(cell, obstacleDamageCounts);
+                CollectAdjacentOverTileBlockers(cell, obstacleDamageSources, sourceTileType);
         }
 
-        foreach (var kv in obstacleDamageCounts)
+        foreach (var kv in obstacleDamageSources)
         {
             var cell = kv.Key;
-            int hitCount = kv.Value;
+            var sources = kv.Value;
 
-            for (int i = 0; i < hitCount; i++)
+            if (sources == null)
+                continue;
+
+            for (int i = 0; i < sources.Count; i++)
             {
-                var hit = board.ApplyObstacleDamageAt(cell.x, cell.y, damageContext);
+                var hit = board.ApplyObstacleDamageAt(cell.x, cell.y, damageContext, sources[i]);
                 if (hit.didHit)
                     board.TriggerObstacleVisualChange(hit.visualChange);
             }
@@ -898,6 +921,37 @@ public class BoardAnimator
                 obstacleDamageCounts[neighbor] = existing + 1;
             else
                 obstacleDamageCounts[neighbor] = 1;
+        }
+    }
+
+    private void CollectAdjacentOverTileBlockers(
+        Vector2Int centerCell,
+        Dictionary<Vector2Int, List<TileType?>> obstacleDamageSources,
+        TileType? sourceTileType)
+    {
+        if (board == null || board.Obstacles == null || obstacleDamageSources == null)
+            return;
+
+        for (int dir = 0; dir < 4; dir++)
+        {
+            Vector2Int neighbor = dir switch
+            {
+                0 => new Vector2Int(centerCell.x + 1, centerCell.y),
+                1 => new Vector2Int(centerCell.x - 1, centerCell.y),
+                2 => new Vector2Int(centerCell.x, centerCell.y + 1),
+                _ => new Vector2Int(centerCell.x, centerCell.y - 1),
+            };
+
+            if (neighbor.x < 0 || neighbor.x >= board.Width || neighbor.y < 0 || neighbor.y >= board.Height)
+                continue;
+
+            if (!board.Obstacles.IsOverTileBlockerAt(neighbor.x, neighbor.y))
+                continue;
+
+            if (obstacleDamageSources.TryGetValue(neighbor, out var sources))
+                sources.Add(sourceTileType);
+            else
+                obstacleDamageSources[neighbor] = new List<TileType?> { sourceTileType };
         }
     }
 

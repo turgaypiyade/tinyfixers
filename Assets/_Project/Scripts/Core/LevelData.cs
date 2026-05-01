@@ -32,7 +32,13 @@ public enum ObstacleId : int
     chest3 = 6,
     plastic = 7,
     plastic_orange = 8,
+
+    Plastic_Yellow = 9,
     PipeV_1x2 = 10,
+    Plastic_Blue = 11,
+    Plastic_Red = 12,
+    Plastic_Green = 13,
+
     Big_4x4 = 20
 }
 

@@ -37,6 +37,11 @@ public class ObstacleDef
     public List<StageRule> stages = new();
     [Tooltip("Açık ise kural reddinde alternatif context ile tekrar denemeye izin verir. Varsayılan kapalıdır.")]
     public bool allowCrossContextFallback = false;
+    [Tooltip("Açık ise normal match hasarı sadece requiredNormalMatchTileType ile gelir. Special/Booster etkilenmez.")]
+    public bool restrictNormalMatchTileType = false;
+
+    [Tooltip("restrictNormalMatchTileType açıkken, obstacle'a normal match ile hasar verebilecek taş tipi.")]
+    public TileType requiredNormalMatchTileType = TileType.Gear;
     public Vector2Int size = Vector2Int.one;   // örn 4x4, 1x2
     [Min(1)]
     public int hits = 1;                       // ileride: 1 vuruş, 2 vuruş
@@ -179,7 +184,7 @@ public class ObstacleDef
 
         return stage.behavior == ObstacleBehaviorType.OverTileBlocker
                || stage.behavior == ObstacleBehaviorType.RevealOnBreak
-               || stage.behavior == ObstacleBehaviorType.MovableObstacle; 
+               || stage.behavior == ObstacleBehaviorType.MovableObstacle;
     }
 
     public bool GetAllowDiagonalForRemainingHits(int remainingHits)

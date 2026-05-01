@@ -3633,13 +3633,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelRuntimeSelector
   levelCatalog: {fileID: 11400000, guid: b262d96b9882475ca6cdf6517f9f0880, type: 2}
-  usePlayerPrefsLevel: 1
+  usePlayerPrefsLevel: 0
   prefsLevelKey: current_level
   prefsDefaultLevel: 1
   useLevelKey: 0
   levelKey: 
   chapter: 1
-  level: 1
+  level: 11
 --- !u!82 &1410826449
 AudioSource:
   m_ObjectHideFlags: 0
