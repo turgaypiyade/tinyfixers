@@ -76,6 +76,45 @@ public class PatchbotComboService
         );
     }
 
+    public void EnqueueDashFromIntent(
+        TileView fromTile,
+        PatchBotIntent intent,
+        PatchBotTargetCoordinator coordinator,
+        TileView carriedTile = null,
+        System.Action onDashStart = null,
+        System.Action<int, int, PatchBotIntent> onArrived = null)
+    {
+        if (fromTile == null || intent == null || coordinator == null)
+            return;
+
+        var fromCell = new Vector2Int(fromTile.X, fromTile.Y);
+        var initialTarget = intent.CurrentCell(board);
+        if (!IsInside(initialTarget.x, initialTarget.y))
+            initialTarget = intent.InitialCell;
+
+        PatchBotIntent liveIntent = intent;
+        Vector2Int liveTarget = initialTarget;
+
+        PatchbotLiveDashTargetRegistry.Register(fromCell, initialTarget, () =>
+        {
+            var resolved = coordinator.ResolveIntentToCell(liveIntent, null, null, null);
+            if (!resolved.hasCell || !IsInside(resolved.cell.x, resolved.cell.y))
+                return null;
+
+            liveIntent = resolved.intent;
+            liveTarget = resolved.cell;
+            return liveTarget;
+        });
+
+        EnqueueDash(
+            fromTile,
+            initialTarget.x,
+            initialTarget.y,
+            carriedTile,
+            onDashStart,
+            () => onArrived?.Invoke(liveTarget.x, liveTarget.y, liveIntent));
+    }
+
     public void ConsumePatchBotOnly(HashSet<TileView> matches, TileView patchBotTile, System.Action<TileView> markAffectedCell)
     {
         if (patchBotTile == null) return;
@@ -221,5 +260,10 @@ public class PatchbotComboService
         }
 
         return (null, -1, -1, false);
+    }
+
+    private bool IsInside(int x, int y)
+    {
+        return x >= 0 && x < board.Width && y >= 0 && y < board.Height;
     }
 }
