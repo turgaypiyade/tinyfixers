@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 99c168f2190fb4ed892dd06fd9bf3be6, type: 3}
   m_Name: TileIconLibrary_Main
   m_EditorClassIdentifier: Assembly-CSharp::TileIconLibrary
-  gear: {fileID: 4698975804663268887, guid: 873c3f088ac2f4c8a8ea2e3902919c41, type: 3}
-  core: {fileID: -6705607016808534150, guid: 68d608023778e4cf4a73d3446ac49213, type: 3}
-  bolt: {fileID: -7011318999700485639, guid: 873c3f088ac2f4c8a8ea2e3902919c41, type: 3}
-  plate: {fileID: -1766626844834357960, guid: 873c3f088ac2f4c8a8ea2e3902919c41, type: 3}
+  gear: {fileID: 21300000, guid: da4a82862d6bb461789b5a5bb7e6aeeb, type: 3}
+  core: {fileID: 21300000, guid: e46d339b5358a4d0b90d2a6baf60d797, type: 3}
+  bolt: {fileID: 21300000, guid: 97a76bde1349c4b788c44e7604175411, type: 3}
+  plate: {fileID: 21300000, guid: ba100b692e45a41f08ac77c98d72bedc, type: 3}
   lineH: {fileID: 21300000, guid: c6ee696fcdadd4109954ea8a6a815238, type: 3}
   lineV: {fileID: 21300000, guid: e18cab110372a4fe18e1d8bbd3bd5083, type: 3}
   patchBot: {fileID: 21300000, guid: a4a7e67a5c959444c9e0ddfd646613c9, type: 3}

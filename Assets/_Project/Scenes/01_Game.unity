@@ -1504,8 +1504,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.051567238}
-  m_AnchorMax: {x: 1.1651542, y: 1.3331648}
+  m_AnchorMin: {x: 0, y: 0.204}
+  m_AnchorMax: {x: 0.5949954, y: 5.274}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -3344,8 +3344,8 @@ MonoBehaviour:
   boardPadding: 2
   cellBgPrefab: {fileID: 5469896378372082776, guid: 24b7e8f0e6f6e924ba247a059d975e1b, type: 3}
   underTileCellBgTint: {r: 0.5798772, g: 0.68144804, b: 0.7830189, a: 1}
-  iconScale: 0.95
-  iconSize: {x: 100, y: 100}
+  iconScale: 0.89
+  iconSize: {x: 95, y: 95}
   fullCellIcons: 0
   spawnParent: {fileID: 1410826443}
   cellBgRoot: {fileID: 0}
@@ -3356,7 +3356,7 @@ MonoBehaviour:
   runtimeBoardBg: {r: 0.60008013, g: 0.7150148, b: 0.8207547, a: 1}
   runtimeNormalCell: {r: 1, g: 1, b: 1, a: 1}
   gridLinesRoot: {fileID: 0}
-  runtimeGridLineColor: {r: 0.5176471, g: 0.5372549, b: 0.5568628, a: 0.35}
+  runtimeGridLineColor: {r: 1, g: 1, b: 0.9843137, a: 0.35}
   runtimeGridLineThickness: 3
   boardBgRoot: {fileID: 0}
   drawObstacles: 1
@@ -3633,13 +3633,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelRuntimeSelector
   levelCatalog: {fileID: 11400000, guid: b262d96b9882475ca6cdf6517f9f0880, type: 2}
-  usePlayerPrefsLevel: 0
+  usePlayerPrefsLevel: 1
   prefsLevelKey: current_level
   prefsDefaultLevel: 1
   useLevelKey: 0
   levelKey: 
   chapter: 1
-  level: 11
+  level: 1
 --- !u!82 &1410826449
 AudioSource:
   m_ObjectHideFlags: 0
@@ -5234,7 +5234,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.8235294}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.7254902}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

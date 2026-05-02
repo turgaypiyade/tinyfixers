@@ -382,7 +382,7 @@ public sealed class TileAnimator
         createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
 
         // Ufaktan büyümeye başlama süresini biraz daha hissedilir yaptık (0.2s civarı)
-        float animDuration = Mathf.Clamp(duration, 0.20f, 0.28f);
+        float animDuration = Mathf.Clamp(duration, 0.10f, 0.16f);
         float t = 0f;
         while (t < animDuration)
         {

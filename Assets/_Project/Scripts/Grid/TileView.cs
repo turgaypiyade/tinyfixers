@@ -876,8 +876,8 @@ public class TileView : MonoBehaviour,
         // Faz sırası (rotasyon yok, sadece büyüme):
         // 1) grow    : imaj + halo birlikte küçükten büyüğe büyür
         // 2) settle  : halo söner + imaj normal boyutuna oturur
-        const float growDuration = 0.28f;
-        const float settleDuration = 0.20f;
+        const float growDuration = 0.22f;
+        const float settleDuration = 0.14f;
 
         const float maxScale = 1.25f;
         const float haloMaxScale = 1.35f;
