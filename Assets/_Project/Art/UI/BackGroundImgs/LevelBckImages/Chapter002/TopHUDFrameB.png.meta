@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 36f11aadb11b5f24fbf043adbf79664f
+guid: f8a93619d69a44c1ab32de36715b1cf7
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 6556515120053955710
-    second: BG_Level_001_v2_0
+      213: 8927617310516288318
+    second: TopHUDFrameB_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,12 +46,12 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 0
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 512
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -72,10 +72,10 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 1024
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 1
+    textureCompression: 2
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: BG_Level_001_v2_0
+      name: TopHUDFrameB_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 1365
-        height: 2048
+        x: 20
+        y: 45
+        width: 2021
+        height: 670
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: e7c2b4783cb6dfa50800000000000000
-      internalID: 6556515120053955710
+      spriteID: e3b93f3b4a445eb70800000000000000
+      internalID: 8927617310516288318
       vertices: []
       indices: 
       edges: []
@@ -138,7 +138,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      BG_Level_001_v2_0: 6556515120053955710
+      TopHUDFrameB_0: 8927617310516288318
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

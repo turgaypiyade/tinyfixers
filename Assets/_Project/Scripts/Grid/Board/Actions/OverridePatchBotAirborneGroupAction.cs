@@ -322,31 +322,25 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         if (diveCount == 0)
             yield break;
 
-        // ─── PHASE 2: Tüm dive'lar bitene kadar bekle ───
-        // Sabit süreli bekleme + güvenlik için kalan diving bot kontrolü.
+        // ─── PHASE 2: Tüm dive'lar bitene kadar sabit süreli bekle ───
         yield return new WaitForSeconds(board.ApplySpecialChainTempo(SYNC_DIVE_DURATION));
 
-        bool anyDiving = true;
-        float guard = 0f;
-        while (anyDiving && guard < 0.5f)
-        {
-            anyDiving = false;
-            for (int i = 0; i < bots.Count; i++)
-            {
-                if (bots[i] != null && bots[i].diving && !bots[i].arrived)
-                {
-                    anyDiving = true;
-                    break;
-                }
-            }
-            if (anyDiving)
-            {
-                yield return null;
-                guard += Time.deltaTime;
-            }
-        }
-
         Debug.Log($"[OverridePatchBotAirborne] all_arrived");
+
+        // ─── PHASE 2.5: Ghost'ları hedef konuma SNAP et ve ANINDA gizle ───
+        // SetActive(false) immediate'tır — Object.Destroy'un aksine end-of-frame'e
+        // ertelenmez. Bu sayede ghost kayboluşu ve taş kırılışı aynı frame'de başlar.
+        for (int i = 0; i < bots.Count; i++)
+        {
+            var bot = bots[i];
+            if (bot == null || !bot.hasTarget) continue;
+
+            if (bot.rect != null)
+                bot.rect.anchoredPosition = CellAnchored(bot.targetX, bot.targetY, bot.flightRoot);
+
+            if (bot.ghost != null)
+                bot.ghost.SetActive(false);
+        }
 
         if (impactMode == AirborneImpactMode.PulseCoreAtTarget)
         {
@@ -382,23 +376,10 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
                     groupCtx.Affected.Add(tile);
             }
 
-            // Intent serbest.
             if (bot.intent != null)
             {
                 coordinator.ReleaseIntent(bot.intent);
                 bot.intent = null;
-            }
-        }
-
-        // ─── PHASE 4: Ghost'ları destroy — clear başlamadan ÖNCE ───
-        // Görsel: "bot taşa değdi, taş patladı, bot da o anda kayboldu" (senkron).
-        for (int i = 0; i < bots.Count; i++)
-        {
-            var bot = bots[i];
-            if (bot != null && bot.ghost != null)
-            {
-                Object.Destroy(bot.ghost);
-                bot.ghost = null;
             }
         }
 
@@ -546,6 +527,13 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
 
         while (elapsed < duration)
         {
+            // Ana coroutine ghost'u SetActive(false) yaptıysa devam etme.
+            if (bot.ghost == null || !bot.ghost.activeSelf)
+            {
+                bot.arrived = true;
+                yield break;
+            }
+
             elapsed += Time.deltaTime;
             float t = duration <= 0f ? 1f : Mathf.Clamp01(elapsed / duration);
             float eased = t * t * (3f - 2f * t);
@@ -571,8 +559,9 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
 
         for (int i = 0; i < bots.Count; i++)
         {
-            if (bots[i]?.ghost != null)
-                Object.Destroy(bots[i].ghost);
+            var ghost = bots[i]?.ghost;
+            if (ghost != null)
+                Object.Destroy(ghost);
         }
     }
 

@@ -317,13 +317,29 @@ public class GridSpawner : MonoBehaviour
         }
         // ─── END DEBUG ─────────────────────────────────────────────────────
 
-        // Sıralama: CellBG < Tiles < GridLines < Static Obstacles
+        // Sıralama: CellBG < Tiles < GridLines < Static Obstacles < Line-Travel VFX
         // Normal tile ve movable obstacle üzerinde grid çizgileri görünür.
-        // Movable olmayan/static obstacle ise mevcut davranışı koruyarak çizgiyi kapatabilir.
+        // Animasyon VFX parent'ları (lineTravelSpawnParent, afterImageParent) spawnParent'ın
+        // direkt çocuğuysa son sıraya alınır — böylece combo animasyonları grid çizgilerinin
+        // üstünde render edilir.
         if (cellBgRoot != null) cellBgRoot.SetAsFirstSibling();
         if (tilesRoot != null) tilesRoot.SetAsLastSibling();
         if (gridLinesRoot != null) gridLinesRoot.SetAsLastSibling();
         if (obstaclesRoot != null) obstaclesRoot.SetAsLastSibling();
+
+        if (board != null && spawnParent != null)
+        {
+            var lineTravelParent = board.LineTravelSpawnParent as RectTransform;
+            if (lineTravelParent != null && lineTravelParent.parent == spawnParent)
+                lineTravelParent.SetAsLastSibling();
+
+            if (board.lineTravelPlayer != null)
+            {
+                var afterImgParent = board.lineTravelPlayer.afterImageParent;
+                if (afterImgParent != null && afterImgParent.parent == spawnParent)
+                    afterImgParent.SetAsLastSibling();
+            }
+        }
 
         // var drawer = GetComponent<DynamicBoardBorder>();
         var drawer = borderDrawer;

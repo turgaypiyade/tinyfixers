@@ -1258,6 +1258,11 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         if (board == null)
             return null;
 
+        // ContentRoot = spawnParent (tilesRoot.parent). Ghost burada SetAsLastSibling()
+        // yapılınca gridLinesRoot ve obstaclesRoot'un üstünde render edilir.
+        if (board.ContentRoot != null)
+            return board.ContentRoot;
+
         if (board.Parent != null)
             return board.Parent;
 

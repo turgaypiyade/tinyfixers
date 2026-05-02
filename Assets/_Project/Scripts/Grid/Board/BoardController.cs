@@ -324,6 +324,9 @@ public class BoardController : MonoBehaviour
     internal int SpawnStartOffsetY => spawnStartOffsetY;
     internal GameObject TilePrefab => tilePrefab;
     internal RectTransform Parent => parent;
+    // tilesRoot.parent = spawnParent; animasyon ghostları buraya parentlanırsa
+    // gridLinesRoot ve obstaclesRoot'un üstünde render edilebilir.
+    internal RectTransform ContentRoot => parent?.parent as RectTransform;
     internal TileType[] RandomPool => randomPool;
     internal LevelData LevelData => levelData;
     internal int PatchBotPulseComboSize => patchBotPulseComboSize;

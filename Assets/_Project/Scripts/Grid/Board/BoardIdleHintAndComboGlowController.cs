@@ -394,7 +394,14 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
         if (board.Holes[x, y])
             return false;
 
-        return board.Tiles[x, y] != null;
+        if (board.Tiles[x, y] == null)
+            return false;
+
+        // Movable obstacle tile'ları normal match/swap hint'ine dahil etme (MatchFinder ile tutarlı)
+        if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(x, y))
+            return false;
+
+        return true;
     }
 
     private static bool WouldSwapCreateMatch(BoardController board, int ax, int ay, int bx, int by)
@@ -531,8 +538,16 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
         if (board.Holes[x, y])
             return false;
 
-        TileView tile;
+        // Swap sonrası gerçek hücreyi belirle
+        int realX = x, realY = y;
+        if (x == ax && y == ay) { realX = bx; realY = by; }
+        else if (x == bx && y == by) { realX = ax; realY = ay; }
 
+        // Hedef hücre movable obstacle ise match'e sayma
+        if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(realX, realY))
+            return false;
+
+        TileView tile;
         if (x == ax && y == ay)
             tile = board.Tiles[bx, by];
         else if (x == bx && y == by)
