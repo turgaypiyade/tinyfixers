@@ -105,7 +105,8 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
     private List<AirborneBot> BuildAndLiftBots(PatchBotTargetCoordinator coordinator)
     {
         var bots = new List<AirborneBot>();
-        var sprite = board.GetSpecialIcon(TileSpecial.PatchBot);
+        // var sprite = board.GetSpecialIcon(TileSpecial.PatchBot);
+        var sprite = board.GetPatchBotFlightIcon();
 
         for (int i = 0; i < sourceCells.Count; i++)
         {
@@ -159,7 +160,12 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         rect.localScale = Vector3.one;
         rect.SetAsLastSibling();
 
-        image.sprite = sprite != null ? sprite : board.GetSpecialIcon(TileSpecial.PatchBot);
+        // image.sprite = sprite != null ? sprite : board.GetSpecialIcon(TileSpecial.PatchBot);
+        image.sprite = sprite != null
+            ? sprite
+            : board.GetPatchBotFlightIcon() != null
+                ? board.GetPatchBotFlightIcon()
+                : board.GetSpecialIcon(TileSpecial.PatchBot);
         image.preserveAspect = true;
         image.raycastTarget = false;
         image.color = Color.white;

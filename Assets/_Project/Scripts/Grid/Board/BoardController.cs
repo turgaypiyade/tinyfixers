@@ -709,7 +709,10 @@ public class BoardController : MonoBehaviour
     public Sprite GetIcon(TileType type) => iconLibrary != null ? iconLibrary.Get(type) : null;
     public Sprite GetSpecialIcon(TileSpecial special) => iconLibrary != null ? iconLibrary.GetSpecialIcon(special) : null;
     public Sprite GetOverrideIcon(TileType baseType) => iconLibrary != null ? iconLibrary.GetOverrideIcon(baseType) : null;
-
+    public Sprite GetPatchBotFlightIcon()
+    {
+        return iconLibrary != null ? iconLibrary.GetPatchBotFlightIcon() : null;
+    }
     public void RegisterTile(TileView tile, int x, int y)
     {
         if (x < 0 || x >= width || y < 0 || y >= height) return;

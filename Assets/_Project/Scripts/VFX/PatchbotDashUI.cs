@@ -84,8 +84,8 @@ public class PatchbotDashUI : MonoBehaviour
         Sprite patchbotSprite = null;
         if (runnerImage != null && runnerImage.sprite != null)
             patchbotSprite = runnerImage.sprite;
-        else if (tileIcons != null && tileIcons.patchBot != null)
-            patchbotSprite = tileIcons.patchBot;
+        else if (tileIcons != null)
+            patchbotSprite = tileIcons.GetPatchBotFlightIcon();
 
         const float stagger = 0.02f;
         int remaining = 0;
@@ -368,7 +368,7 @@ public class PatchbotDashUI : MonoBehaviour
             transform.SetParent(vfxRoot, false);
 
         if (runnerImage.sprite == null && tileIcons != null)
-            runnerImage.sprite = tileIcons.patchBot;
+            runnerImage.sprite = tileIcons.GetPatchBotFlightIcon();
         runnerImage.raycastTarget = false;
         runnerImage.enabled = true;
         runnerImage.color = Color.white;
