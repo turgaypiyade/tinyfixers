@@ -5,15 +5,6 @@ TextureImporter:
   - first:
       213: -164670965451011144
     second: VF6_0
-  - first:
-      213: 4907801957710952380
-    second: VF6_1
-  - first:
-      213: -398700151819120605
-    second: VF6_2
-  - first:
-      213: -6974107889058001537
-    second: VF6_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -125,10 +116,10 @@ TextureImporter:
       name: VF6_0
       rect:
         serializedVersion: 2
-        x: 445
-        y: 1046
-        width: 351
-        height: 383
+        x: 0
+        y: 0
+        width: 1536
+        height: 2730
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -139,72 +130,6 @@ TextureImporter:
       bones: []
       spriteID: 8bbc87f11a8f6bdf0800000000000000
       internalID: -164670965451011144
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: VF6_1
-      rect:
-        serializedVersion: 2
-        x: 21
-        y: 99
-        width: 257
-        height: 375
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: cb7f35db0e30c1440800000000000000
-      internalID: 4907801957710952380
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: VF6_2
-      rect:
-        serializedVersion: 2
-        x: 294
-        y: 104
-        width: 262
-        height: 382
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 3205de60358877af0800000000000000
-      internalID: -398700151819120605
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: VF6_3
-      rect:
-        serializedVersion: 2
-        x: 554
-        y: 103
-        width: 294
-        height: 359
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: f7dc27743ddf63f90800000000000000
-      internalID: -6974107889058001537
       vertices: []
       indices: 
       edges: []
@@ -224,9 +149,6 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       VF6_0: -164670965451011144
-      VF6_1: 4907801957710952380
-      VF6_2: -398700151819120605
-      VF6_3: -6974107889058001537
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

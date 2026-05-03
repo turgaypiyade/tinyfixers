@@ -14,6 +14,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [Header("Success Animation (image sequence — takes priority over video)")]
     [SerializeField] private SuccessAnimationPlayer successAnimationPlayer;
 
+    [Header("Bonus Round Skip")]
+    [Tooltip("Transparent fullscreen button shown during the bonus round. Tap to skip the comet animation.")]
+    [SerializeField] private Button skipBonusRoundButton;
+
     [Header("Success Video")]
     [SerializeField] private bool playSuccessVideoBeforeMainMenu = true;
     [SerializeField] private GameObject successVideoRoot;
@@ -66,6 +70,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private bool failPopupShown;
     private bool successPopupShown;
     private bool successReturnQueued;
+    private int  _movesAtWin;
 
     // We may receive moves/goal events while the board is still resolving cascades.
     // This gate ensures we only evaluate & show end popups after the board becomes idle.
@@ -130,6 +135,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (successContinueButton != null)
             successContinueButton.onClick.AddListener(HandleSuccessCloseClicked);
 
+        if (skipBonusRoundButton != null)
+        {
+            skipBonusRoundButton.onClick.AddListener(HandleSkipBonusRound);
+            skipBonusRoundButton.gameObject.SetActive(false);
+        }
     }
 
     private void OnDisable()
@@ -144,6 +154,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
             successCloseButton.onClick.RemoveListener(HandleSuccessCloseClicked);
         if (successContinueButton != null)
             successContinueButton.onClick.RemoveListener(HandleSuccessCloseClicked);
+
+        if (skipBonusRoundButton != null)
+            skipBonusRoundButton.onClick.RemoveListener(HandleSkipBonusRound);
     }
 
     private IEnumerator InitializeWhenReady()
@@ -222,9 +235,17 @@ public class LevelEndSimplePopupController : MonoBehaviour
         while (board != null && (board.IsBusy || board.ActiveBackgroundJobs > 0))
             yield return null;
 
+        // Capture remaining moves BEFORE the bonus round — used for star/coin rewards.
+        _movesAtWin = board != null ? board.RemainingMoves : 0;
+
         // Kalan moves varsa bonus round: her move için random normal tile'a LineV/LineH at.
         if (bonusMovesService != null && board != null && board.RemainingMoves > 0)
+        {
+            board.SetInputLocked(true);
+            SetSkipBonusOverlayVisible(true);
             yield return StartCoroutine(bonusMovesService.RunBonusRound());
+            SetSkipBonusOverlayVisible(false);
+        }
 
         // Görsel yumuşak geçiş. Bu delay artık SADECE burada var.
         if (successVideoStartDelay > 0f)
@@ -364,6 +385,18 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         if (blockerRoot != null)
             blockerRoot.SetActive(isVisible);
+    }
+
+    private void SetSkipBonusOverlayVisible(bool visible)
+    {
+        if (skipBonusRoundButton != null)
+            skipBonusRoundButton.gameObject.SetActive(visible);
+    }
+
+    private void HandleSkipBonusRound()
+    {
+        if (bonusMovesService != null)
+            bonusMovesService.RequestSkip();
     }
 
     private void Subscribe()
@@ -508,7 +541,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (totalMoves <= 0)
             return 1;
 
-        float ratio = (float)board.RemainingMoves / totalMoves;
+        float ratio = (float)_movesAtWin / totalMoves;
 
         if (ratio >= star3Ratio) return 3;
         if (ratio >= star2Ratio) return 2;
@@ -517,8 +550,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private int CalculateCoins()
     {
-        int remaining = board != null ? board.RemainingMoves : 0;
-        return baseCoins + remaining * coinsPerRemainingMove;
+        return baseCoins + _movesAtWin * coinsPerRemainingMove;
     }
 
     private void ApplyRewardVisuals(int stars, int coins)

@@ -1,19 +1,10 @@
 fileFormatVersion: 2
-guid: aaaf4c24df3104cf99af704dbfc476bf
+guid: 6b7850f8d5a6d4e83a15fc5e7b2a0f22
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -6558877975826212749
-    second: VF9_0
-  - first:
-      213: -3793976953787958990
-    second: VF9_1
-  - first:
-      213: 7345907176719699449
-    second: VF9_2
-  - first:
-      213: 5467929663710422523
-    second: VF9_3
+      213: -1817300324726068703
+    second: VF6_mask_t6_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -84,7 +75,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 2
+    textureCompression: 0
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -122,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: VF9_0
+      name: VF6_mask_t6_0
       rect:
         serializedVersion: 2
-        x: 189
-        y: 886
-        width: 540
-        height: 589
+        x: 0
+        y: 0
+        width: 1152
+        height: 2048
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -137,74 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 378debd3b3f2af4a0800000000000000
-      internalID: -6558877975826212749
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: VF9_1
-      rect:
-        serializedVersion: 2
-        x: 340
-        y: 885
-        width: 6
-        height: 6
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 2393377df06195bc0800000000000000
-      internalID: -3793976953787958990
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: VF9_2
-      rect:
-        serializedVersion: 2
-        x: 19
-        y: 115
-        width: 317
-        height: 421
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 9fdce5d28a7e1f560800000000000000
-      internalID: 7345907176719699449
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: VF9_3
-      rect:
-        serializedVersion: 2
-        x: 330
-        y: 115
-        width: 589
-        height: 413
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: bf5e74e0f0df1eb40800000000000000
-      internalID: 5467929663710422523
+      spriteID: 12a208eabf6a7c6e0800000000000000
+      internalID: -1817300324726068703
       vertices: []
       indices: 
       edges: []
@@ -223,10 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      VF9_0: -6558877975826212749
-      VF9_1: -3793976953787958990
-      VF9_2: 7345907176719699449
-      VF9_3: 5467929663710422523
+      VF6_mask_t6_0: -1817300324726068703
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

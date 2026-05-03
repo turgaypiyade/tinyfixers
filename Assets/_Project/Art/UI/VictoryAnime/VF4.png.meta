@@ -5,9 +5,6 @@ TextureImporter:
   - first:
       213: -3353861116237889588
     second: VF4_0
-  - first:
-      213: 8862253165964680526
-    second: VF4_1
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -119,10 +116,10 @@ TextureImporter:
       name: VF4_0
       rect:
         serializedVersion: 2
-        x: 12
-        y: 285
-        width: 626
-        height: 364
+        x: 0
+        y: 0
+        width: 1536
+        height: 2730
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -133,28 +130,6 @@ TextureImporter:
       bones: []
       spriteID: ccf35a49511b471d0800000000000000
       internalID: -3353861116237889588
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: VF4_1
-      rect:
-        serializedVersion: 2
-        x: 647
-        y: 592
-        width: 266
-        height: 356
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: e4dd7eadc4c0dfa70800000000000000
-      internalID: 8862253165964680526
       vertices: []
       indices: 
       edges: []
@@ -174,7 +149,6 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       VF4_0: -3353861116237889588
-      VF4_1: 8862253165964680526
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

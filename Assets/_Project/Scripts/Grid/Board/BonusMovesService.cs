@@ -26,8 +26,14 @@ public class BonusMovesService : MonoBehaviour
     [SerializeField] private float tailEndSize = 0.07f; // smallest tail dot fraction
 
     // ─────────────────────────────────────────────────────────────────
+    private bool _skipRequested;
+    public void RequestSkip() => _skipRequested = true;
+
+    // ─────────────────────────────────────────────────────────────────
     public IEnumerator RunBonusRound()
     {
+        _skipRequested = false;
+
         if (board == null) yield break;
 
         int total = board.RemainingMoves;
@@ -50,36 +56,63 @@ public class BonusMovesService : MonoBehaviour
 
         // ── Phase 1: fire comets with stagger, place specials on landing ──
         RectTransform movesRect = topHud != null ? topHud.MovesTextRect : null;
-        int  placed  = placements.Count;
-        bool[] done  = new bool[placed];
+        int    placed = placements.Count;
+        bool[] done   = new bool[placed];
 
         for (int i = 0; i < placed; i++)
         {
             int idx = i;
-            StartCoroutine(CometAndPlace(movesRect, placements[idx], () => done[idx] = true));
-
-            if (i < placed - 1)
-                yield return new WaitForSeconds(cometStagger);
+            if (!_skipRequested)
+            {
+                StartCoroutine(CometAndPlace(movesRect, placements[idx], () => done[idx] = true));
+                if (i < placed - 1)
+                    yield return new WaitForSeconds(cometStagger);
+            }
+            else
+            {
+                PlaceSpecialInstant(placements[idx]);
+                done[idx] = true;
+            }
         }
 
-        // Wait for the last comet to land
+        // Wait for the last comet to land (skippable)
         if (placed > 0)
         {
-            float remaining = cometDuration + 0.06f;
-            yield return new WaitForSeconds(remaining);
+            float waitTime = cometDuration + 0.06f;
+            float elapsed  = 0f;
+            while (elapsed < waitTime && !_skipRequested)
+            {
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            // Instantly place anything still in-flight
+            if (_skipRequested)
+            {
+                for (int i = 0; i < placed; i++)
+                {
+                    if (!done[i])
+                    {
+                        PlaceSpecialInstant(placements[i]);
+                        done[i] = true;
+                    }
+                }
+            }
         }
 
         // Drain moves that had no target cell
         for (int i = 0; i < noPlacement; i++)
         {
             board.ConsumeBonusMove();
-            yield return new WaitForSeconds(drainMoveDelay);
+            if (!_skipRequested)
+                yield return new WaitForSeconds(drainMoveDelay);
         }
 
         if (placed == 0) yield break;
 
-        // Brief pause before mass trigger
-        yield return new WaitForSeconds(preTriggerPause);
+        // Brief pause before mass trigger (skip if requested)
+        if (!_skipRequested)
+            yield return new WaitForSeconds(preTriggerPause);
 
         // ── Phase 2: trigger all at once ──
         var validPlacements = new List<BoardController.BonusLinePlacement>(placed);
@@ -101,6 +134,19 @@ public class BonusMovesService : MonoBehaviour
         // Wait for full cascade
         while (board.IsBusy || board.ActiveBackgroundJobs > 0)
             yield return null;
+    }
+
+    // Instant placement without comet visual — used in skip mode
+    private void PlaceSpecialInstant(BoardController.BonusLinePlacement p)
+    {
+        var tileView = board.GetTileViewAt(p.x, p.y);
+        if (tileView != null && tileView.GetSpecial() == TileSpecial.None)
+        {
+            var specialType = p.isHorizontal ? TileSpecial.LineH : TileSpecial.LineV;
+            tileView.SetSpecial(specialType);
+            SpecialCellUtils.SyncAfterSpecialChange(board, tileView);
+        }
+        board.ConsumeBonusMove();
     }
 
     // ─────────────────────────────────────────────────────────────────

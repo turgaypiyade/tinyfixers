@@ -23,8 +23,9 @@ public class SuccessAnimationPlayer : MonoBehaviour
     [SerializeField] private float boardFadeAlpha = 0.35f;
 
     [Header("Fade Transition")]
-    [SerializeField] private float fadeInDuration  = 0.2f;
-    [SerializeField] private float fadeOutDuration = 0.2f;
+    [SerializeField] private float fadeInDuration      = 0.2f;
+    [SerializeField] private float fadeOutDuration     = 0.2f;
+    [SerializeField] private float holdLastFrameSeconds = 1.0f;
 
     // ─────────────────────────────────────────────────────────────────
 
@@ -61,11 +62,9 @@ public class SuccessAnimationPlayer : MonoBehaviour
             }
         }
 
-        // Fade board back up
-        if (boardCanvasGroup != null)
-            yield return FadeCanvasGroup(boardCanvasGroup, boardCanvasGroup.alpha, 1f, fadeOutDuration);
-
-        gameObject.SetActive(false);
+        // Hold last frame before transitioning
+        if (holdLastFrameSeconds > 0f)
+            yield return new WaitForSeconds(holdLastFrameSeconds);
     }
 
     // ─────────────────────────────────────────────────────────────────

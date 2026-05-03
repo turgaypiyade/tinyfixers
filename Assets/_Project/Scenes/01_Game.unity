@@ -1354,6 +1354,57 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!1 &533975019
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 533975021}
+  - component: {fileID: 533975020}
+  m_Layer: 0
+  m_Name: ChapterThemeApplier
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &533975020
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 533975019}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7415895e259bf4f249bb08d21ad81c5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChapterThemeApplier
+  themeLibrary: {fileID: 11400000, guid: ae6f456ca03dd43cf80c6bb731003d1b, type: 2}
+  backgroundImage: {fileID: 2104090222}
+  topHudImage: {fileID: 1735422097}
+  bottomAreaImage: {fileID: 57487749}
+  levelSelectorBtnImage: {fileID: 0}
+  boardBorderApplier: {fileID: 1410826451}
+  successAnimationPlayer: {fileID: 906654962}
+--- !u!4 &533975021
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 533975019}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.13335, y: 4.34324, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &627117529
 GameObject:
   m_ObjectHideFlags: 0
@@ -1389,8 +1440,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.07034483}
-  m_AnchorMax: {x: 0.8121442, y: 1.8186207}
+  m_AnchorMin: {x: 0, y: 0.074344024}
+  m_AnchorMax: {x: 0.8121442, y: 1.9220116}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -1849,7 +1900,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 2, y: -2018}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &906654962
 MonoBehaviour:
@@ -1872,15 +1923,15 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 983f59fb77b7447b099a40d47c305884, type: 3}
   - {fileID: 21300000, guid: d9408d7e28d61496ca5c2b40440a9207, type: 3}
   - {fileID: 21300000, guid: 25b5d85c70b7649559884c4e1f1a26dd, type: 3}
-  - {fileID: 21300000, guid: aaaf4c24df3104cf99af704dbfc476bf, type: 3}
-  fps: 12
+  fps: 4
   loopCount: 1
   frameImage: {fileID: 1797090098}
   backgroundImage: {fileID: 1290552556}
   boardCanvasGroup: {fileID: 0}
   boardFadeAlpha: 0.35
-  fadeInDuration: 0.2
-  fadeOutDuration: 0.2
+  fadeInDuration: 0.25
+  fadeOutDuration: 0.25
+  holdLastFrameSeconds: 0.65
 --- !u!1 &919883043
 GameObject:
   m_ObjectHideFlags: 0
@@ -2864,7 +2915,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 642, y: 1389}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1290552556
@@ -4324,7 +4375,7 @@ MonoBehaviour:
   bottomAreaImage: {fileID: 57487749}
   levelSelectorBtnImage: {fileID: 0}
   boardBorderApplier: {fileID: 1410826451}
-  successAnimationPlayer: {fileID: 0}
+  successAnimationPlayer: {fileID: 906654962}
 --- !u!4 &1584925970
 Transform:
   m_ObjectHideFlags: 0
@@ -4934,8 +4985,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 642, y: 1389}
-  m_SizeDelta: {x: -880, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1797090098
 MonoBehaviour:
@@ -4949,7 +5000,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 2100000, guid: 047549f592a0942ef827a1ee5b8208a6, type: 2}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
@@ -5911,3 +5962,4 @@ SceneRoots:
   - {fileID: 1521048439}
   - {fileID: 1116296235}
   - {fileID: 1584925970}
+  - {fileID: 533975021}
