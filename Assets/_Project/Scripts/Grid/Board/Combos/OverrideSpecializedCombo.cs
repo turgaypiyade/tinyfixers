@@ -346,9 +346,13 @@ public sealed class OverrideSpecializedCombo
                 }
 
                 rt.Context.OverrideFanoutTargets.Add(tile);
+                var implantSpecial = (targetSpecial == TileSpecial.LineH || targetSpecial == TileSpecial.LineV)
+                    ? (UnityEngine.Random.value < 0.5f ? TileSpecial.LineH : TileSpecial.LineV)
+                    : targetSpecial;
+
                 rt.Context.PendingOverrideImplants.Add(new ResolutionContext.PendingOverrideImplant(
                     new Vector2Int(tile.X, tile.Y),
-                    targetSpecial,
+                    implantSpecial,
                     new Vector2Int(otherTile.X, otherTile.Y),
                     new Vector2Int(overrideTile.X, overrideTile.Y)));
             }

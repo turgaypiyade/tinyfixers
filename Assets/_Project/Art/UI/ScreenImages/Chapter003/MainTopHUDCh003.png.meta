@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 7e31c520c348c49ce9972a3ff19ab3d9
+guid: f542ccaaf300c4839b6bd184cd231bca
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 3140382459403870640
-    second: TopHUDFrameC_0
+      213: -2915342978375386512
+    second: MainTopHUDCh003_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -52,7 +52,7 @@ TextureImporter:
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
-  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteBorder: {x: 0, y: 11, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
   alphaIsTransparency: 1
@@ -113,23 +113,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: TopHUDFrameC_0
+      name: MainTopHUDCh003_0
       rect:
         serializedVersion: 2
-        x: 18
-        y: 11
-        width: 1930
-        height: 758
+        x: 0
+        y: 0
+        width: 2115
+        height: 587
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 0b1a2a75531e49b20800000000000000
-      internalID: 3140382459403870640
+      spriteID: 07a718fd10f9a87d0800000000000000
+      internalID: -2915342978375386512
       vertices: []
       indices: 
       edges: []
@@ -139,7 +139,7 @@ TextureImporter:
     physicsShape: []
     bones: []
     spriteID: 5e97eb03825dee720800000000000000
-    internalID: 0
+    internalID: 1537655665
     vertices: []
     indices: 
     edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      TopHUDFrameC_0: 3140382459403870640
+      MainTopHUDCh003_0: -2915342978375386512
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

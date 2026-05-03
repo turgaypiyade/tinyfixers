@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 43100f132650f431d8220fe3bd41a631
+guid: 0ceb36f54868c4558b14ebb180c4091d
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -8991408967745056988
-    second: PatchBotStay_0
+      213: -5789784552886612681
+    second: MainBGChapter003_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: PatchBotStay_0
+      name: MainBGChapter003_0
       rect:
         serializedVersion: 2
-        x: 5
-        y: 23
-        width: 1043
-        height: 985
+        x: 0
+        y: 0
+        width: 941
+        height: 1672
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 42f4b4fae29183380800000000000000
-      internalID: -8991408967745056988
+      spriteID: 73d462fef9d86afa0800000000000000
+      internalID: -5789784552886612681
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      PatchBotStay_0: -8991408967745056988
+      MainBGChapter003_0: -5789784552886612681
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -38,6 +38,16 @@ public sealed class OverrideSpecial
 
         AddAffected(rt, overrideTile);
 
+        // Override tile'ı hemen Processed'a ekle: ProcessFanout içindeki
+        // EnqueueChainSpecials bu tile'ı yeniden kuyruğa almayacak ve
+        // Execute() gereksiz ikinci kez çağrılmayacak.
+        rt.Context.Processed.Add(new Vector2Int(overrideTile.X, overrideTile.Y));
+
+        // Partner tile'ı erken ekle: AddAllOfType onu bulamazsa dahi
+        // FinalClearTiles'da mutlaka yer alsın.
+        if (partnerTile != null)
+            AddAffected(rt, partnerTile);
+
         TileType type;
         if (partnerTile != null)
         {
