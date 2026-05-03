@@ -19,6 +19,7 @@ MonoBehaviour:
   lineH: {fileID: 21300000, guid: c6ee696fcdadd4109954ea8a6a815238, type: 3}
   lineV: {fileID: 21300000, guid: e18cab110372a4fe18e1d8bbd3bd5083, type: 3}
   patchBot: {fileID: 21300000, guid: 43100f132650f431d8220fe3bd41a631, type: 3}
+  patchBotFly: {fileID: 21300000, guid: de4bf6a45b0894cc2aecc5726e9e8fce, type: 3}
   pulseCore: {fileID: 21300000, guid: aeaf2c89ef70045589b271ee4008b1ce, type: 3}
   overrideRed: {fileID: 21300000, guid: 40431c64b3fc44e9fa09dc2b89901c9d, type: 3}
   overrideYellow: {fileID: 21300000, guid: 40431c64b3fc44e9fa09dc2b89901c9d, type: 3}

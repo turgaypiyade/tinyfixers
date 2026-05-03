@@ -32,6 +32,8 @@ public class TopHudController : MonoBehaviour
     [SerializeField] private string movesPrefix = "MOVES";
     [SerializeField] private Sprite fallbackGoalIcon;
 
+    public RectTransform MovesTextRect => movesText != null ? movesText.rectTransform : null;
+
     private readonly List<RuntimeGoal> runtimeGoals = new();
     private bool initialized;
 

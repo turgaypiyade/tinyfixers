@@ -10,6 +10,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [Header("References")]
     [SerializeField] private BoardController board;
     [SerializeField] private TopHudController topHud;
+    [SerializeField] private BonusMovesService bonusMovesService;
+    [Header("Success Animation (image sequence — takes priority over video)")]
+    [SerializeField] private SuccessAnimationPlayer successAnimationPlayer;
+
     [Header("Success Video")]
     [SerializeField] private bool playSuccessVideoBeforeMainMenu = true;
     [SerializeField] private GameObject successVideoRoot;
@@ -218,6 +222,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
         while (board != null && (board.IsBusy || board.ActiveBackgroundJobs > 0))
             yield return null;
 
+        // Kalan moves varsa bonus round: her move için random normal tile'a LineV/LineH at.
+        if (bonusMovesService != null && board != null && board.RemainingMoves > 0)
+            yield return StartCoroutine(bonusMovesService.RunBonusRound());
+
         // Görsel yumuşak geçiş. Bu delay artık SADECE burada var.
         if (successVideoStartDelay > 0f)
             yield return new WaitForSecondsRealtime(successVideoStartDelay);
@@ -259,6 +267,16 @@ public class LevelEndSimplePopupController : MonoBehaviour
     }
     private IEnumerator PlaySuccessVideoThenReturnToMainMenu()
     {
+        // Image-sequence animation takes priority over video when assigned
+        if (successAnimationPlayer != null)
+        {
+            SetBlockerVisible(true);
+            Debug.Log("[LevelEnd] successAnimationPlayer atandı, animasyon başlıyor");
+            yield return StartCoroutine(successAnimationPlayer.Play());
+            ReturnToMainMenu();
+            yield break;
+        }
+
         if (!playSuccessVideoBeforeMainMenu || successVideoRoot == null || successVideoPlayer == null)
         {
             Debug.Log("[LevelEnd] Success video disabled or missing references. Returning to main menu.");

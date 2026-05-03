@@ -448,6 +448,13 @@ public class BoardController : MonoBehaviour
 
     public void OnActionSequenceFinished() { }
 
+    public struct BonusLinePlacement
+    {
+        public int x, y;
+        public bool isHorizontal;
+        public BonusLinePlacement(int x, int y, bool isHorizontal) { this.x = x; this.y = y; this.isHorizontal = isHorizontal; }
+    }
+
     private void OnDestroy()
     {
         if (obstacleStateService == null) return;
@@ -2000,6 +2007,71 @@ public class BoardController : MonoBehaviour
     private TileType GetRandomType() => randomPool[UnityEngine.Random.Range(0, randomPool.Length)];
     private void ConsumeMove() { RemainingMoves = Mathf.Max(0, RemainingMoves - 1); OnMovesChanged?.Invoke(RemainingMoves); }
     public void AddMoves(int amount) { if (amount <= 0) return; RemainingMoves += amount; OnMovesChanged?.Invoke(RemainingMoves); }
+    internal void ConsumeBonusMove() => ConsumeMove();
+
+    internal Coroutine StartBonusLinesRoutine(System.Collections.Generic.List<BonusLinePlacement> placements)
+    {
+        if (boosterService == null || tiles == null || placements == null || placements.Count == 0) return null;
+        return StartCoroutine(BonusLinesRoutineInternal(placements));
+    }
+
+    private IEnumerator BonusLinesRoutineInternal(System.Collections.Generic.List<BonusLinePlacement> placements)
+    {
+        BeginBusy();
+        IsSpecialActivationPhase = true;
+
+        var matches      = new HashSet<TileView>();
+        var affectedCells = new HashSet<Vector2Int>();
+        var visualTargets = new HashSet<TileView>();
+        var strikes      = new System.Collections.Generic.List<LightningLineStrike>(placements.Count);
+
+        foreach (var p in placements)
+        {
+            if (p.isHorizontal)
+            {
+                boosterService.AddRow(matches, p.y);
+                boosterService.AddRowCells(affectedCells, p.y);
+            }
+            else
+            {
+                boosterService.AddColumn(matches, p.x);
+                boosterService.AddColumnCells(affectedCells, p.x);
+            }
+            strikes.Add(new LightningLineStrike(new Vector2Int(p.x, p.y), p.isHorizontal));
+        }
+
+        visualTargets = new HashSet<TileView>(matches);
+
+        if (matches.Count > 0 || affectedCells.Count > 0)
+        {
+            var chainStrikes = new System.Collections.Generic.List<LightningLineStrike>();
+            specialResolver.ExpandSpecialChain(
+                matches, affectedCells,
+                out _, out _,
+                lightningVisualTargets: visualTargets,
+                lightningLineStrikes: chainStrikes);
+            strikes.AddRange(chainStrikes);
+
+            actionSequencer.Enqueue(new MatchClearAction(
+                matches,
+                doShake: true,
+                animationMode: ClearAnimationMode.LightningStrike,
+                affectedCells: affectedCells,
+                obstacleHitContext: ObstacleHitContext.Booster,
+                includeAdjacentOverTileBlockerDamage: false,
+                lightningVisualTargets: visualTargets,
+                lightningLineStrikes: strikes.Count > 0 ? strikes : null,
+                enqueueCascadeOnComplete: true));
+
+            while (actionSequencer.IsPlaying)
+                yield return null;
+
+            yield return ResolveBoardPublic();
+        }
+
+        IsSpecialActivationPhase = false;
+        EndBusy();
+    }
     internal void NotifyTilesCleared(TileType tileType, int amount) { if (amount > 0) OnTilesCleared?.Invoke(tileType, amount); }
 
     internal void SyncAllTilesToGridData() { for (int sy = 0; sy < height; sy++) for (int sx = 0; sx < width; sx++) if (tiles[sx, sy] != null) SyncTileData(sx, sy); }

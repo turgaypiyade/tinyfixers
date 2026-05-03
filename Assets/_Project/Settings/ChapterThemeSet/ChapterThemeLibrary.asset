@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6f7a5e4ef7b84de3871d08c88ace686, type: 3}
+  m_Name: ChapterThemeLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::ChapterThemeLibrary
+  levelsPerChapter: 5
+  prefsLevelKey: current_level
+  themes:
+  - {fileID: 11400000, guid: bc46bf23f33e848629e918a93ef57a49, type: 2}
+  - {fileID: 11400000, guid: 5b72e76c1a5264291a27d0287b89c1a2, type: 2}
+  - {fileID: 11400000, guid: ddf60be1d54a34f1d916458d32866542, type: 2}

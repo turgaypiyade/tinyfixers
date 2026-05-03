@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ccf9c1f5b8bab4124a7ecfe61a413be7, type: 3}
+  m_Name: ChapterTheme_2
+  m_EditorClassIdentifier: Assembly-CSharp::ChapterTheme
+  chapterIndex: 2
+  gameBackground: {fileID: 21300000, guid: fe424584fc0d8460c87e0863276124d5, type: 3}
+  gameTopHud: {fileID: 21300000, guid: 95963472021284a918e39e8684acf2a6, type: 3}
+  gameBottomArea: {fileID: 21300000, guid: f63a23039ec4b46e686e8f891a68d00e, type: 3}
+  menuBackground: {fileID: 21300000, guid: 5789c4f8f3c634dbe89ba9f746107760, type: 3}
+  menuTopHud: {fileID: 21300000, guid: 45e6cdf4db2314a77829877c26e79471, type: 3}
+  menuBottomArea: {fileID: 21300000, guid: 8dae26868da6c4f279ca8a4aa20d6cce, type: 3}
+  menuLevelSelectorBtn: {fileID: 21300000, guid: 0c203ffc6c9304d37bc24efc6b9d2768, type: 3}
+  borderColorId: 3
+  borderSpriteLibrary: {fileID: 0}
