@@ -57,6 +57,10 @@ public sealed class PendingCreationApplicator
         board.SyncTileData(finalX, finalY);
         board.RefreshTileObstacleVisual(targetTile);
 
+        // Force correct special-tile layout before the reveal animation starts.
+        // Prevents a 1-frame fill-cell flash that the coroutine guard (after yield return null) misses.
+        targetTile.ApplyTileSize(board.TileSize);
+
         // Yaratım efekti RefreshIcon ve obstacle refresh bittikten sonra çağrılır.
         if (targetTile != null && targetTile.gameObject.activeInHierarchy)
             targetTile.PlaySpecialCreationReveal(pending.special, board.TileSize);

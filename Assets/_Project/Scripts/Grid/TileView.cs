@@ -838,14 +838,10 @@ public class TileView : MonoBehaviour,
         if (iconImage == null || iconImage.sprite == null)
             yield break;
 
-        // Guard: if icon ended up in fill-cell mode (stretch anchors, sizeDelta zero)
-        // despite being a special, force a layout correction before capturing base values.
+        // Always re-enforce correct layout after 1-frame wait. Catches preserveAspect
+        // and sizeDelta resets from Canvas layout rebuilds that the anchor check missed.
         if (lastAppliedTileSize > 0)
-        {
-            RectTransform _irt = iconImage.rectTransform;
-            if (_irt != null && _irt.anchorMin != new Vector2(0.5f, 0.5f))
-                ApplyTileSize(lastAppliedTileSize);
-        }
+            ApplyTileSize(lastAppliedTileSize);
 
         RectTransform iconRt = iconImage.rectTransform;
 

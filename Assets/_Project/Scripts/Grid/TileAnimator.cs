@@ -370,6 +370,11 @@ public sealed class TileAnimator
                 _appearCenter, board.Parent, board, BURST_VFX_DURATION));
         }
 
+        // Force correct special-tile layout before capture — prevents fill-cell bleed
+        // from the tile's normal-tile layout state when it was still a regular match piece.
+        if (board != null)
+            createdTile.ApplyTileSize(board.TileSize);
+
         Vector3 baseScale = createdIconRt.localScale;
         Quaternion baseRotation = createdIconRt.localRotation;
         Color baseColor = createdIcon.color;

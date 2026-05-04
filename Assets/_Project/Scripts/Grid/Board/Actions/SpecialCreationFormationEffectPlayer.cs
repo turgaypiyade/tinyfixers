@@ -47,6 +47,10 @@ public sealed class SpecialCreationFormationEffectPlayer : IClearEffectPlayer
                 && creation.CreatedTile.gameObject.activeInHierarchy
                 && creation.CreatedTile.GetSpecial() != TileSpecial.None)
             {
+                // Re-enforce correct layout right before reveal — the merge animation may
+                // have left the tile's icon in fill-cell state if it was previously a normal tile.
+                creation.CreatedTile.ApplyTileSize(board.TileSize);
+
                 creation.CreatedTile.PlaySpecialCreationReveal(
                     creation.CreatedTile.GetSpecial(),
                     board.TileSize);

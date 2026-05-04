@@ -46,6 +46,18 @@ public class SuccessAnimationPlayer : MonoBehaviour
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
 
+        if (frameImage != null)
+        {
+            frameImage.enabled = true;
+            frameImage.color = Color.white;
+            frameImage.material = null;
+        }
+
+        if (backgroundImage != null && backgroundImage.sprite == null)
+        {
+            backgroundImage.enabled = false;
+        }
+
         // Fade board down
         if (boardCanvasGroup != null)
             yield return FadeCanvasGroup(boardCanvasGroup, boardCanvasGroup.alpha, boardFadeAlpha, fadeInDuration);

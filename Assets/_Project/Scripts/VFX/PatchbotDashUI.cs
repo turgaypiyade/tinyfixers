@@ -259,7 +259,7 @@ public class PatchbotDashUI : MonoBehaviour
 
             rt.anchoredPosition = Vector2.LerpUnclamped(start, takeoff, eased) + Vector2.up * punch;
             rt.localRotation = Quaternion.identity;
-            rt.localScale = Vector3.one * Mathf.Lerp(1f, 1.16f, Mathf.Sin(t * Mathf.PI));
+            rt.localScale = Vector3.one * Mathf.Lerp(1f, 2.5f, eased);
 
             UpdateCarryOrbit(carryRt, size, motion.elapsed);
             TickAfterImage(rt, sprite, motion);
@@ -291,7 +291,7 @@ public class PatchbotDashUI : MonoBehaviour
 
             rt.anchoredPosition = hover + new Vector2(wobbleX, wobbleY);
             rt.localRotation = Quaternion.identity;
-            rt.localScale = Vector3.one * 1.08f;
+            rt.localScale = Vector3.one * 2.5f;
 
             UpdateCarryOrbit(carryRt, size, motion.elapsed);
             TickAfterImage(rt, sprite, motion);
@@ -327,7 +327,7 @@ public class PatchbotDashUI : MonoBehaviour
 
             rt.anchoredPosition = Vector2.LerpUnclamped(start, target, eased) + normal * (curve + snap);
             rt.localRotation = Quaternion.identity;
-            rt.localScale = Vector3.one * Mathf.Lerp(1.08f, 0.94f, t);
+            rt.localScale = Vector3.one * Mathf.Lerp(2.5f, 1.0f, t);
 
             UpdateCarryOrbit(carryRt, size, motion.elapsed);
             TickAfterImage(rt, sprite, motion);

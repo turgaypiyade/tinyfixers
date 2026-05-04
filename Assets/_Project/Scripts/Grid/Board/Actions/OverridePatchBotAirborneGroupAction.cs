@@ -30,6 +30,9 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         public int targetX = -1;
         public int targetY = -1;
         public bool hasTarget;
+
+        // Orbit carry (PulseCore gibi taşınan special)
+        public RectTransform carryRt;
     }
 
     private readonly BoardController board;
@@ -176,6 +179,33 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         Vector2 start = rect.anchoredPosition;
         Vector2 hoverAnchor = start + new Vector2(side * lateral, altitude);
 
+        RectTransform carryRt = null;
+        if (impactMode == AirborneImpactMode.PulseCoreAtTarget)
+        {
+            var pulseSprite = board.GetSpecialIcon(TileSpecial.PulseCore);
+            if (pulseSprite != null)
+            {
+                var carryGo = new GameObject("PatchbotCarryPulse", typeof(RectTransform), typeof(Image));
+                carryGo.transform.SetParent(rect, false);
+
+                carryRt = carryGo.GetComponent<RectTransform>();
+                var carryImg = carryGo.GetComponent<Image>();
+
+                float carrySize = board.TileSize * 0.72f;
+                carryRt.anchorMin = new Vector2(0.5f, 0.5f);
+                carryRt.anchorMax = new Vector2(0.5f, 0.5f);
+                carryRt.pivot = new Vector2(0.5f, 0.5f);
+                carryRt.sizeDelta = new Vector2(carrySize, carrySize);
+                carryRt.anchoredPosition = Vector2.right * (board.TileSize * 0.32f);
+                carryRt.localRotation = Quaternion.identity;
+
+                carryImg.sprite = pulseSprite;
+                carryImg.preserveAspect = true;
+                carryImg.raycastTarget = false;
+                carryImg.color = Color.white;
+            }
+        }
+
         return new AirborneBot
         {
             sourceCell = cell,
@@ -184,7 +214,8 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             rect = rect,
             flightRoot = flightRoot,
             image = image,
-            hoverAnchor = hoverAnchor
+            hoverAnchor = hoverAnchor,
+            carryRt = carryRt
         };
     }
 
@@ -207,7 +238,8 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             float punch = Mathf.Sin(t * Mathf.PI) * board.TileSize * 0.10f;
 
             bot.rect.anchoredPosition = Vector2.LerpUnclamped(start, hover, eased) + Vector2.up * punch;
-            bot.rect.localScale = Vector3.one * Mathf.Lerp(1.00f, 1.18f, Mathf.Sin(t * Mathf.PI));
+            bot.rect.localScale = Vector3.one * Mathf.Lerp(1.00f, 2.5f, eased);
+            UpdateCarryOrbit(bot, elapsed);
             yield return null;
         }
 
@@ -218,8 +250,9 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             float wobbleY = Mathf.Sin(elapsed * 10.0f + phase) * board.TileSize * 0.035f;
 
             bot.rect.anchoredPosition = hover + new Vector2(wobbleX, wobbleY);
-            bot.rect.localScale = Vector3.one * 1.08f;
+            bot.rect.localScale = Vector3.one * 2.5f;
             bot.rect.SetAsLastSibling();
+            UpdateCarryOrbit(bot, elapsed);
             yield return null;
         }
     }
@@ -549,14 +582,27 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             if (bot.rect != null)
             {
                 bot.rect.anchoredPosition = Vector2.LerpUnclamped(start, end, eased) + normal * (curve + snap);
-                bot.rect.localScale = Vector3.one * Mathf.Lerp(1.10f, 0.92f, t);
+                bot.rect.localScale = Vector3.one * Mathf.Lerp(2.5f, 1.0f, t);
                 bot.rect.SetAsLastSibling();
+                UpdateCarryOrbit(bot, elapsed);
             }
 
             yield return null;
         }
 
         bot.arrived = true;
+    }
+
+    private void UpdateCarryOrbit(AirborneBot bot, float elapsed)
+    {
+        if (bot.carryRt == null)
+            return;
+
+        const float orbitSpeed = 720f;
+        float radius = board.TileSize * 0.32f;
+        float angle = elapsed * orbitSpeed * Mathf.Deg2Rad;
+        bot.carryRt.anchoredPosition = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+        bot.carryRt.localRotation = Quaternion.identity;
     }
 
     private void DestroyGhosts(List<AirborneBot> bots)

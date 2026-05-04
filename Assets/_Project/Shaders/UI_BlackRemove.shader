@@ -3,9 +3,13 @@ Shader "UI/BlackRemoveForVictory"
     Properties
     {
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
-        _MaskTex ("Alpha Mask", 2D) = "white" {}
         _Color ("Tint", Color) = (1,1,1,1)
-        _Alpha ("Alpha", Range(0,1)) = 1
+
+        _Brightness ("Brightness", Range(0.4, 1.2)) = 0.82
+        _Saturation ("Saturation", Range(0, 1.5)) = 0.82
+        _GreenReduce ("Green Reduce", Range(0.4, 1.1)) = 0.82
+        _HighlightReduce ("Highlight Reduce", Range(0.3, 1.0)) = 0.65
+        _HighlightStart ("Highlight Start", Range(0.3, 1.0)) = 0.62
     }
 
     SubShader
@@ -46,9 +50,13 @@ Shader "UI/BlackRemoveForVictory"
             };
 
             sampler2D _MainTex;
-            sampler2D _MaskTex;
             fixed4 _Color;
-            float _Alpha;
+
+            float _Brightness;
+            float _Saturation;
+            float _GreenReduce;
+            float _HighlightReduce;
+            float _HighlightStart;
 
             v2f vert(appdata_t v)
             {
@@ -62,9 +70,22 @@ Shader "UI/BlackRemoveForVictory"
             fixed4 frag(v2f i) : SV_Target
             {
                 fixed4 col = tex2D(_MainTex, i.texcoord) * i.color;
-                fixed mask = tex2D(_MaskTex, i.texcoord).r;
 
-                col.a *= mask * _Alpha;
+                // Genel parlaklık
+                col.rgb *= _Brightness;
+
+                // Saturation azaltma
+                float lum = dot(col.rgb, float3(0.299, 0.587, 0.114));
+                col.rgb = lerp(float3(lum, lum, lum), col.rgb, _Saturation);
+
+                // Yeşil kanalını kontrollü düşür
+                col.g *= _GreenReduce;
+
+                // Çok parlak alanları bastır
+                float maxChannel = max(col.r, max(col.g, col.b));
+                float highlightMask = smoothstep(_HighlightStart, 1.0, maxChannel);
+                col.rgb = lerp(col.rgb, col.rgb * _HighlightReduce, highlightMask);
+
                 return col;
             }
             ENDCG

@@ -65,6 +65,7 @@ Material:
     - _BlackCutoff: 0.0018
     - _Blend: 2
     - _BlendOp: 0
+    - _Brightness: 0.78
     - _CameraFadingEnabled: 0
     - _CameraFarFadeDistance: 2
     - _CameraNearFadeDistance: 1
@@ -81,10 +82,14 @@ Material:
     - _EnableExternalAlpha: 0
     - _FlipbookBlending: 0
     - _FlipbookMode: 0
+    - _GreenReduce: 0.75
+    - _HighlightReduce: 0.6
+    - _HighlightStart: 0.58
     - _Intensity: 0.477
     - _Mode: 0
     - _QueueOffset: 0
     - _SampleGI: 0
+    - _Saturation: 0.8
     - _SoftParticlesEnabled: 0
     - _SoftParticlesFarFadeDistance: 1
     - _SoftParticlesNearFadeDistance: 0
