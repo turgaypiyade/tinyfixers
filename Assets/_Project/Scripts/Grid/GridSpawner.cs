@@ -298,6 +298,7 @@ public class GridSpawner : MonoBehaviour
 
         // Tüm tile'lar spawn edildikten sonra sıralamayı toplu yenile
         board.RefreshAllSortingOrders();
+        board.RefreshOilOverlays();
 
         // ─── DEBUG: İlk yerleşim snapshot'u ───────────────────────────────
         {

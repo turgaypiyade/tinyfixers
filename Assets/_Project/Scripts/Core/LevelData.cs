@@ -38,6 +38,7 @@ public enum ObstacleId : int
     Plastic_Blue = 11,
     Plastic_Red = 12,
     Plastic_Green = 13,
+    Oil = 14,
 
     Big_4x4 = 20
 }

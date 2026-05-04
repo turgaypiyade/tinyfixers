@@ -1040,7 +1040,8 @@ public class BoardAnimator
             if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
                 return;
 
-            if (!board.Obstacles.IsOverTileBlockerAt(cell.x, cell.y))
+            if (!board.Obstacles.IsOverTileBlockerAt(cell.x, cell.y)
+                && !board.ObstacleStateService.IsOilAt(cell.x, cell.y))
                 return;
 
             AddRequest(cell);

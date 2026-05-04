@@ -8,7 +8,8 @@ public enum ObstacleBehaviorType
     UnderTileLayered = 0,
     OverTileBlocker = 1,
     RevealOnBreak = 2,
-    MovableObstacle = 3    // ← YENİ
+    MovableObstacle = 3,
+    CellAnchoredOverlay = 4   // Oil: gravity geçer, swap+match kilitler, görsel dim
 }
 
 public enum ObstacleDamageSourceRule
@@ -27,6 +28,8 @@ public class StageRule
     public bool blocksCells = true;
     public ObstacleBehaviorType behavior = ObstacleBehaviorType.OverTileBlocker;
     public bool allowDiagonal = false;
+    [Tooltip("Swap ve match kilitleri (Oil). CellAnchoredOverlay behavior ile kullanılır.")]
+    public bool locksInteraction = false;
 }
 
 [Serializable]

@@ -570,4 +570,61 @@ public class ObstacleStateService
 
         return true;
     }
+
+    // ── Oil helpers ──────────────────────────────────────────────────────────
+
+    public bool IsOilAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx] == ObstacleId.Oil;
+    }
+
+    public bool IsCellInteractionLockedByOil(int x, int y)
+    {
+        if (!IsOilAt(x, y)) return false;
+        var def = library != null ? library.Get(ObstacleId.Oil) : null;
+        if (def == null) return true;
+        var stage = def.GetStageRuleForRemainingHits(1);
+        return stage == null || stage.locksInteraction;
+    }
+
+    public bool TryAddOilAt(int x, int y)
+    {
+        bool added = TrySpawnSingleCellObstacleAt(x, y, ObstacleId.Oil);
+        if (added)
+            Debug.Log($"[Oil] Added at ({x},{y}). Total oil: {CountAliveOrigins(ObstacleId.Oil)}");
+        return added;
+    }
+
+    public bool TryRemoveOilAt(int x, int y)
+    {
+        if (!IsOilAt(x, y)) return false;
+        int idx = level.Index(x, y);
+        ClearObstacleFromLevel(idx, ObstacleId.Oil);
+        Debug.Log($"[Oil] Removed at ({x},{y}). Total oil: {CountAliveOrigins(ObstacleId.Oil)}");
+        return true;
+    }
+
+    public List<Vector2Int> GetAllOilCells()
+    {
+        var result = new List<Vector2Int>();
+        if (level == null || level.obstacles == null) return result;
+
+        for (int i = 0; i < level.obstacles.Length; i++)
+        {
+            if ((ObstacleId)level.obstacles[i] != ObstacleId.Oil) continue;
+            int x = i % level.width;
+            int y = i / level.width;
+            result.Add(new Vector2Int(x, y));
+        }
+        return result;
+    }
+
+    public bool CanOilSpreadTo(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx] == ObstacleId.None;
+    }
 }

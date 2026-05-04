@@ -62,7 +62,6 @@ public class MatchFinder
         if (data == null || data.Special != TileSpecial.None)
             return false;
 
-        // Movable obstacle olan hücredeki tile match'e dahil edilmez
         if (board.ObstacleStateService != null
             && board.ObstacleStateService.IsMovableObstacleAt(data.X, data.Y))
             return false;
@@ -75,7 +74,6 @@ public class MatchFinder
         if (tile == null || tile.GetSpecial() != TileSpecial.None)
             return false;
 
-        // Movable obstacle olan hücredeki tile match'e dahil edilmez
         if (board.ObstacleStateService != null
             && board.ObstacleStateService.IsMovableObstacleAt(tile.X, tile.Y))
             return false;

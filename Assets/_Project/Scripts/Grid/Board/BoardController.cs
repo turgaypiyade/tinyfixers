@@ -285,6 +285,8 @@ public class BoardController : MonoBehaviour
     private PendingCreationStore pendingCreationStore;
     private PendingCreationApplicator pendingCreationApplicator;
 
+    private OilSpreadService oilSpreadService;
+
     // ── Extracted services ──
     private BoardInitService boardInitService;
     private BoardVfxService boardVfxService;
@@ -431,6 +433,7 @@ public class BoardController : MonoBehaviour
         pendingCreationApplicator ??= new PendingCreationApplicator(this);
         obstacleStateService ??= new ObstacleStateService();
         obstacleResolutionService ??= new ObstacleResolutionService(this);
+        oilSpreadService ??= new OilSpreadService(this, obstacleStateService);
         cascadeLogic ??= new CascadeLogic(this);
         boardInitService ??= new BoardInitService();
         boardVfxService ??= new BoardVfxService(this);
@@ -490,12 +493,14 @@ public class BoardController : MonoBehaviour
             obstacleStateService.OnCellUnlocked -= HandleCellUnlocked;
         }
 
-        if (levelData == null) { obstacleStateService = null; return; }
+        if (levelData == null) { obstacleStateService = null; oilSpreadService = null; return; }
 
         obstacleStateService ??= new ObstacleStateService();
         obstacleStateService.Initialize(levelData);
+        oilSpreadService = new OilSpreadService(this, obstacleStateService);
         RebuildMaskHoleMap();
         BindObstacleEvents();
+        RefreshOilOverlays();
     }
 
     public void SetupFactory(
@@ -778,6 +783,21 @@ public class BoardController : MonoBehaviour
         for (int y = 0; y < height; y++) for (int x = 0; x < width; x++) RefreshTileObstacleVisual(tiles[x, y]);
     }
 
+    internal void RefreshOilOverlays()
+    {
+        if (tiles == null) return;
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+                tiles[x, y]?.SetCoveredByCellOverlay(false);
+
+        if (obstacleStateService == null) return;
+        foreach (var cell in obstacleStateService.GetAllOilCells())
+        {
+            if (cell.x >= 0 && cell.x < width && cell.y >= 0 && cell.y < height)
+                tiles[cell.x, cell.y]?.SetCoveredByCellOverlay(true);
+        }
+    }
+
     internal void RestoreTilePresentation(TileView tile)
     {
         if (tile == null)
@@ -882,6 +902,9 @@ public class BoardController : MonoBehaviour
         int nx = from.X + dirX, ny = from.Y + dirY;
         if (nx < 0 || nx >= width || ny < 0 || ny >= height) return;
         if (holes[nx, ny] && (obstacleStateService == null || !obstacleStateService.HasObstacleAt(nx, ny))) return;
+        if (obstacleStateService != null
+            && (obstacleStateService.IsCellInteractionLockedByOil(from.X, from.Y)
+                || obstacleStateService.IsCellInteractionLockedByOil(nx, ny))) return;
         TileView other = tiles[nx, ny]; if (other == null) return;
         StartCoroutine(ProcessSwap(from, other));
     }
@@ -1523,6 +1546,7 @@ public class BoardController : MonoBehaviour
                         yield return null;
 
                     RefreshAllSortingOrders();
+                    RefreshOilOverlays();
                     continue;
                 }
 
@@ -1541,11 +1565,15 @@ public class BoardController : MonoBehaviour
             if (matches.Count > 0)
             {
                 var matchTiles = new HashSet<TileView>();
+                var matchCells = new List<Vector2Int>();
                 foreach (var t in matches)
                 {
                     var tile = tiles[t.X, t.Y];
                     if (tile != null)
+                    {
                         matchTiles.Add(tile);
+                        matchCells.Add(new Vector2Int(t.X, t.Y));
+                    }
                 }
 
                 if (matchTiles.Count > 0)
@@ -1556,7 +1584,20 @@ public class BoardController : MonoBehaviour
                     yield return ExecuteClearPass(matchTiles, allowSpecialActivation, result => cleared = result);
 
                     if (cleared)
+                    {
+                        if (oilSpreadService != null && matchCells.Count > 0)
+                        {
+                            var spreadTargets = oilSpreadService.CalculateSpread(matchCells);
+                            if (spreadTargets.Count > 0)
+                            {
+                                Debug.Log($"[Oil] Spreading to {spreadTargets.Count} cells this pass.");
+                                actionSequencer.Enqueue(new OilSpreadAction(this, spreadTargets));
+                                while (actionSequencer.IsPlaying)
+                                    yield return null;
+                            }
+                        }
                         continue;
+                    }
                 }
             }
 
@@ -1570,6 +1611,7 @@ public class BoardController : MonoBehaviour
                     yield return null;
 
                 RefreshAllSortingOrders();
+                RefreshOilOverlays();
                 continue;
             }
 
@@ -1930,17 +1972,22 @@ public class BoardController : MonoBehaviour
     {
         OnObstacleDestroyed?.Invoke(originIndex, obstacleId);
 
-        // MovableObstacle kırıldığında o hücredeki tile'ı da yok et
         int ox = originIndex % width;
         int oy = originIndex / width;
-        if (ox >= 0 && ox < width && oy >= 0 && oy < height)
+        if (ox < 0 || ox >= width || oy < 0 || oy >= height) return;
+
+        if (obstacleId == ObstacleId.Oil)
         {
-            var tile = tiles[ox, oy];
-            if (tile != null)
-            {
-                NotifyTilesCleared(tile.GetTileType(), 1);
-                ClearAndDestroyTile(tile);
-            }
+            tiles[ox, oy]?.SetCoveredByCellOverlay(false);
+            return;
+        }
+
+        // MovableObstacle kırıldığında o hücredeki tile'ı da yok et
+        var tile = tiles[ox, oy];
+        if (tile != null)
+        {
+            NotifyTilesCleared(tile.GetTileType(), 1);
+            ClearAndDestroyTile(tile);
         }
     }
 
