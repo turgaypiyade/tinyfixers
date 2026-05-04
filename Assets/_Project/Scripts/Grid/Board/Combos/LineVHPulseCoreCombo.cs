@@ -880,10 +880,16 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
                 return;
             }
 
-            board.ClearCellDataOnly(cell);
-
             if (targetVisuals.TryGetValue(cell, out var visualData))
+            {
+                board.BreakFx?.PlayTileBreak(visualData.view);
+                board.ClearCellDataOnly(cell);
                 board.ClearCellVisualOnly(cell, visualData.type, visualData.view);
+            }
+            else
+            {
+                board.ClearCellDataOnly(cell);
+            }
         }
 
         int pendingTravels = 0;
@@ -900,18 +906,20 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
 
         foreach (var h in hOrigins)
         {
-            int steps = Mathf.Max(h.cell.x, width - 1 - h.cell.x);
+            int stepsPos = (width - 1 - h.cell.x) + 3;
+            int stepsNeg = h.cell.x + 3;
             expectedMaxDuration = Mathf.Max(
                 expectedMaxDuration,
-                board.lineTravelPlayer != null ? board.lineTravelPlayer.EstimateDuration(steps) : 0f);
+                board.lineTravelPlayer != null ? board.lineTravelPlayer.EstimateDuration(stepsPos, stepsNeg) : 0f);
 
             pendingTravels++;
 
-            board.PlayLineTravelInstanceWithStep(
+            board.PlayLineTravelInstanceAsymmetric(
                 LineTravelSplitSwapTestUI.LineAxis.Horizontal,
                 h.anch,
                 h.cell,
-                steps,
+                stepsPos,
+                stepsNeg,
                 tileSize,
                 0f,
                 OnStep,
@@ -920,18 +928,20 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
 
         foreach (var v in vOrigins)
         {
-            int steps = Mathf.Max(v.cell.y, height - 1 - v.cell.y);
+            int stepsPos = (height - 1 - v.cell.y) + 3;
+            int stepsNeg = v.cell.y + 3;
             expectedMaxDuration = Mathf.Max(
                 expectedMaxDuration,
-                board.lineTravelPlayer != null ? board.lineTravelPlayer.EstimateDuration(steps) : 0f);
+                board.lineTravelPlayer != null ? board.lineTravelPlayer.EstimateDuration(stepsPos, stepsNeg) : 0f);
 
             pendingTravels++;
 
-            board.PlayLineTravelInstanceWithStep(
+            board.PlayLineTravelInstanceAsymmetric(
                 LineTravelSplitSwapTestUI.LineAxis.Vertical,
                 v.anch,
                 v.cell,
-                steps,
+                stepsPos,
+                stepsNeg,
                 tileSize,
                 0f,
                 OnStep,

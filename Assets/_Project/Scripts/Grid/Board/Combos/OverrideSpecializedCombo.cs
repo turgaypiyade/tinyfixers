@@ -179,7 +179,25 @@ public sealed class OverrideSpecializedCombo
         if (deferredSpecials != null && deferredSpecials.Count > 0)
         {
             foreach (var cell in deferredSpecials)
+            {
+                // Existing PulseCore tiles must not be activated immediately via ProcessQueue —
+                // that fires their explosion VFX during the logic phase before any visual starts.
+                // Defer them into the stagger sequence instead.
+                if (targetSpecial == TileSpecial.PulseCore)
+                {
+                    var dTile = (cell.x >= 0 && cell.x < rt.Board.Width && cell.y >= 0 && cell.y < rt.Board.Height)
+                        ? rt.Board.Tiles[cell.x, cell.y]
+                        : null;
+                    if (dTile != null && dTile.GetSpecial() == TileSpecial.PulseCore)
+                    {
+                        if (!rt.Context.OverrideDeferredPulseExplosions.Contains(cell))
+                            rt.Context.OverrideDeferredPulseExplosions.Add(cell);
+                        continue;
+                    }
+                }
+
                 rt.Context.Processed.Remove(cell);
+            }
 
             rt.EnqueueChainSpecials?.Invoke(rt.Context);
             rt.ProcessQueue?.Invoke(rt.Context);

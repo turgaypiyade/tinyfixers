@@ -53,6 +53,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
     [Header("Cleanup")]
     public bool hideOnComplete = true;
+    public float headFadeOutTime = 0.12f;
 
     public enum LineAxis { Horizontal, Vertical }
 
@@ -64,6 +65,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     private Vector2 rightStart;
 
     private int _stepCount = 6;
+    private int _stepCountPos = 6;
+    private int _stepCountNeg = 6;
     private float _cellSizePx = 110f;
 
     public Action<Vector2Int> OnStepCell;
@@ -139,6 +142,33 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         Play(axisMode, originAnchoredPos, steps, cellSizePxOverride);
     }
 
+    public void Play(
+        LineAxis axisMode,
+        Vector2 originAnchoredPos,
+        Vector2Int originCell,
+        int stepsPos,
+        int stepsNeg,
+        float cellSizePxOverride,
+        int boardWidth,
+        int boardHeight,
+        Action<Vector2Int> onStepCell,
+        Action onCompleted = null)
+    {
+        OnStepCell = onStepCell;
+        OnCompleted = onCompleted;
+        _originCell = originCell;
+        _originCellValid = true;
+        _boardWidth = Mathf.Max(1, boardWidth);
+        _boardHeight = Mathf.Max(1, boardHeight);
+        _completionRaised = false;
+
+        // Base Play sets _stepCountPos = _stepCountNeg = Max(stepsPos, stepsNeg);
+        // then we override with the asymmetric values. Run() starts on next frame so this is safe.
+        Play(axisMode, originAnchoredPos, Mathf.Max(stepsPos, stepsNeg), cellSizePxOverride);
+        _stepCountPos = Mathf.Max(0, stepsPos);
+        _stepCountNeg = Mathf.Max(0, stepsNeg);
+    }
+
     public void Play(LineAxis axisMode, Vector2 originAnchoredPos, int steps, float cellSizePxOverride)
     {
         if (leftImage) leftImage.enabled = false;
@@ -152,6 +182,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         rightStart = originAnchoredPos;
 
         _stepCount = Mathf.Max(0, steps);
+        _stepCountPos = _stepCount;
+        _stepCountNeg = _stepCount;
         _cellSizePx = Mathf.Max(1f, cellSizePxOverride);
         ApplyCellScaledVisualSize();
         KillTrails();
@@ -244,18 +276,26 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
         float movePortion = 0.1f;
         float cellSizePx = _cellSizePx;
-        int stepCount = _stepCount;
+        int stepCountPos = _stepCountPos;
+        int stepCountNeg = _stepCountNeg;
+        int totalSteps = Mathf.Max(stepCountPos, stepCountNeg);
 
-        for (int i = 0; i < stepCount; i++)
+        for (int i = 0; i < totalSteps; i++)
         {
+            bool movePos = i < stepCountPos;
+            bool moveNeg = i < stepCountNeg;
+
             var rightStartRt = SafeRect(rightImage);
             var leftStartRt = SafeRect(leftImage);
 
             Vector2 rStart = rightStartRt ? rightStartRt.anchoredPosition : Vector2.zero;
             Vector2 lStart = leftStartRt ? leftStartRt.anchoredPosition : Vector2.zero;
 
-            Vector2 rTarget = rStart + posDir * cellSizePx;
-            Vector2 lTarget = lStart + negDir * cellSizePx;
+            // First step compensates for split-phase offset so the callback fires
+            // exactly when the rocket center is over the tile center.
+            float stepPx = (i == 0) ? cellSizePx - dynamicSplitOffset : cellSizePx;
+            Vector2 rTarget = rStart + posDir * stepPx;
+            Vector2 lTarget = lStart + negDir * stepPx;
 
             float moveTime = stepDuration * movePortion;
             float restTime = stepDuration - moveTime;
@@ -267,21 +307,27 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
                 float u = Mathf.Clamp01(mt / moveTime);
                 u = u * u * (3f - 2f * u);
 
-                var rightRt = SafeRect(rightImage);
-                if (rightRt)
-                    rightRt.anchoredPosition = Vector2.LerpUnclamped(rStart, rTarget, u);
+                if (movePos)
+                {
+                    var rightRt = SafeRect(rightImage);
+                    if (rightRt)
+                        rightRt.anchoredPosition = Vector2.LerpUnclamped(rStart, rTarget, u);
+                }
 
-                var leftRt = SafeRect(leftImage);
-                if (leftRt)
-                    leftRt.anchoredPosition = Vector2.LerpUnclamped(lStart, lTarget, u);
+                if (moveNeg)
+                {
+                    var leftRt = SafeRect(leftImage);
+                    if (leftRt)
+                        leftRt.anchoredPosition = Vector2.LerpUnclamped(lStart, lTarget, u);
+                }
 
                 UpdateTrailHeads();
                 yield return null;
             }
 
-            var rightRt2 = SafeRect(rightImage);
+            var rightRt2 = movePos ? SafeRect(rightImage) : null;
             if (rightRt2) rightRt2.anchoredPosition = rTarget;
-            var leftRt2 = SafeRect(leftImage);
+            var leftRt2 = moveNeg ? SafeRect(leftImage) : null;
             if (leftRt2) leftRt2.anchoredPosition = lTarget;
 
             UpdateTrailHeads();
@@ -350,8 +396,23 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
         if (hideOnComplete)
         {
-            if (leftImage) leftImage.enabled = false;
-            if (rightImage) rightImage.enabled = false;
+            float ft = 0f;
+            float fadeDur = Mathf.Max(0.01f, headFadeOutTime);
+            while (ft < fadeDur)
+            {
+                ft += Time.unscaledDeltaTime;
+                float alpha = Mathf.Lerp(1f, 0f, ft / fadeDur);
+
+                if (leftImage && IsAlive(leftImage))
+                    leftImage.color = new Color(leftImage.color.r, leftImage.color.g, leftImage.color.b, alpha);
+                if (rightImage && IsAlive(rightImage))
+                    rightImage.color = new Color(rightImage.color.r, rightImage.color.g, rightImage.color.b, alpha);
+
+                yield return null;
+            }
+
+            if (leftImage) { leftImage.enabled = false; leftImage.color = new Color(leftImage.color.r, leftImage.color.g, leftImage.color.b, 1f); }
+            if (rightImage) { rightImage.enabled = false; rightImage.color = new Color(rightImage.color.r, rightImage.color.g, rightImage.color.b, 1f); }
 
             var leftRt = SafeRect(leftImage);
             if (leftRt) leftRt.anchoredPosition = leftStart;
@@ -617,7 +678,12 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
     public float EstimateDuration(int steps)
     {
-        return startDelay + splitTime + (steps * stepDuration) + postDelay;
+        return startDelay + splitTime + (steps * stepDuration) + postDelay + headFadeOutTime;
+    }
+
+    public float EstimateDuration(int stepsPos, int stepsNeg)
+    {
+        return EstimateDuration(Mathf.Max(stepsPos, stepsNeg));
     }
 
     [ContextMenu("DEBUG Play Horizontal")]

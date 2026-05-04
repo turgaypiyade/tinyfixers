@@ -1440,8 +1440,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.074344024}
-  m_AnchorMax: {x: 0.8121442, y: 1.9220116}
+  m_AnchorMin: {x: 0, y: 0.078947365}
+  m_AnchorMax: {x: 0.8131729, y: 2.0410216}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -1923,15 +1923,15 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 983f59fb77b7447b099a40d47c305884, type: 3}
   - {fileID: 21300000, guid: d9408d7e28d61496ca5c2b40440a9207, type: 3}
   - {fileID: 21300000, guid: 25b5d85c70b7649559884c4e1f1a26dd, type: 3}
-  fps: 4
+  fps: 6
   loopCount: 1
   frameImage: {fileID: 1797090098}
   backgroundImage: {fileID: 1290552556}
   boardCanvasGroup: {fileID: 0}
   boardFadeAlpha: 0.35
-  fadeInDuration: 0.25
-  fadeOutDuration: 0.25
-  holdLastFrameSeconds: 0.65
+  fadeInDuration: 0.2
+  fadeOutDuration: 0.2
+  holdLastFrameSeconds: 0.5
 --- !u!1 &919883043
 GameObject:
   m_ObjectHideFlags: 0
@@ -5000,7 +5000,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 2100000, guid: 047549f592a0942ef827a1ee5b8208a6, type: 2}
+  m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}

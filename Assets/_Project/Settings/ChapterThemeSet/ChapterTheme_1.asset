@@ -22,4 +22,4 @@ MonoBehaviour:
   menuLevelSelectorBtn: {fileID: 21300000, guid: fda82192295aa4c9ebba5c7a8e0bd25a, type: 3}
   borderColorId: 0
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
-  successAnimationBackground: {fileID: 21300000, guid: fecafb482d5524a6e91519041cbd15ac, type: 3}
+  successAnimationBackground: {fileID: 0}

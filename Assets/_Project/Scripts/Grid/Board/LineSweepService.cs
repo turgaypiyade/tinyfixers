@@ -226,9 +226,11 @@ public class LineSweepService
             if (spaceRt != null)
             {
                 Vector2 originAnchored = board.WorldToAnchoredIn(spaceRt, worldCenter);
-                int steps = isHorizontal
-                    ? Mathf.Max(originX, board.Width - 1 - originX)
-                    : Mathf.Max(originY, board.Height - 1 - originY);
+                // Each direction travels to its own board edge + 1 step off-screen.
+                int stepsPos = isHorizontal ? (board.Width - 1 - originX) : (board.Height - 1 - originY);
+                int stepsNeg = isHorizontal ? originX : originY;
+                stepsPos += 3;
+                stepsNeg += 3;
 
                 var axis = isHorizontal
                     ? LineTravelSplitSwapTestUI.LineAxis.Horizontal
@@ -236,19 +238,19 @@ public class LineSweepService
 
                 var originCell = new Vector2Int(originX, originY);
 
-                PlayLineTravelInstanceWithStep(
+                PlayLineTravelInstanceAsymmetric(
                     lineTravelPlayer,
                     axis,
                     originAnchored,
                     originCell,
-                    steps,
+                    stepsPos,
+                    stepsNeg,
                     board.TileSize,
                     delaySeconds,
                     onSweepCellReached,
-                    onCompleted,
-                    emitActivationSfx: false);
+                    onCompleted);
 
-                float duration = lineTravelPlayer.EstimateDuration(steps);
+                float duration = lineTravelPlayer.EstimateDuration(stepsPos, stepsNeg);
                 return delaySeconds + duration;
             }
         }
@@ -422,6 +424,62 @@ public class LineSweepService
         {
             onCompleted?.Invoke();
         }
+    }
+
+    internal float PlayLineTravelInstanceAsymmetric(
+        LineTravelSplitSwapTestUI lineTravelPlayer,
+        LineTravelSplitSwapTestUI.LineAxis axis,
+        Vector2 originAnchored, Vector2Int originCell,
+        int stepsPos, int stepsNeg, float cellSizePx, float delaySeconds,
+        Action<Vector2Int> onStep, Action onCompleted = null)
+    {
+        if (lineTravelPlayer == null) return 0f;
+
+        Transform parentTr = board.LineTravelSpawnParent != null
+            ? board.LineTravelSpawnParent
+            : (lineTravelPlayer.transform.parent != null ? lineTravelPlayer.transform.parent : board.transform);
+
+        var go = UnityEngine.Object.Instantiate(lineTravelPlayer.gameObject, parentTr);
+        go.SetActive(true);
+
+        var inst = go.GetComponent<LineTravelSplitSwapTestUI>();
+        if (inst == null) { UnityEngine.Object.Destroy(go); return 0f; }
+
+        if (inst.afterImageParent == null && lineTravelPlayer.afterImageParent != null)
+            inst.afterImageParent = lineTravelPlayer.afterImageParent;
+        if (inst.impactParent == null && lineTravelPlayer.impactParent != null)
+            inst.impactParent = lineTravelPlayer.impactParent;
+
+        board.StartCoroutine(
+            CoPlayLineTravelAsymmetric(
+                inst, axis, originAnchored, originCell,
+                stepsPos, stepsNeg, cellSizePx, delaySeconds, onStep, () =>
+                {
+                    onCompleted?.Invoke();
+                    if (go != null) UnityEngine.Object.Destroy(go);
+                }));
+
+        float dur = lineTravelPlayer.EstimateDuration(stepsPos, stepsNeg);
+        float safetyTimeout = Mathf.Max(0f, delaySeconds) + dur + 2.0f;
+        board.StartCoroutine(CoDestroyAfterUnscaled(go, safetyTimeout));
+
+        return delaySeconds + dur;
+    }
+
+    private IEnumerator CoPlayLineTravelAsymmetric(
+        LineTravelSplitSwapTestUI inst,
+        LineTravelSplitSwapTestUI.LineAxis axis,
+        Vector2 originAnchored, Vector2Int originCell,
+        int stepsPos, int stepsNeg, float cellSizePx, float delaySeconds,
+        Action<Vector2Int> onStep, Action onCompleted)
+    {
+        if (delaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(delaySeconds);
+
+        if (inst != null)
+            inst.Play(axis, originAnchored, originCell, stepsPos, stepsNeg, cellSizePx, board.Width, board.Height, onStep, onCompleted);
+        else
+            onCompleted?.Invoke();
     }
 
     private IEnumerator CoDestroyAfterUnscaled(GameObject go, float delaySeconds)

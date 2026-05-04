@@ -664,6 +664,30 @@ public class BoardController : MonoBehaviour
             onCompleted);
     }
 
+    internal float PlayLineTravelInstanceAsymmetric(
+        LineTravelSplitSwapTestUI.LineAxis axis,
+        Vector2 originAnchored,
+        Vector2Int originCell,
+        int stepsPos,
+        int stepsNeg,
+        float cellSizePx,
+        float delaySeconds,
+        Action<Vector2Int> onStep,
+        Action onCompleted = null)
+    {
+        return lineSweepService.PlayLineTravelInstanceAsymmetric(
+            lineTravelPlayer,
+            axis,
+            originAnchored,
+            originCell,
+            stepsPos,
+            stepsNeg,
+            cellSizePx,
+            delaySeconds,
+            onStep,
+            onCompleted);
+    }
+
     internal float GetLightningStrikeStepDelay()
     {
         TryResolveLightningSpawner();
