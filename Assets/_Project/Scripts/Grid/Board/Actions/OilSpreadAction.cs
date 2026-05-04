@@ -15,12 +15,15 @@ public sealed class OilSpreadAction : BoardAction
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
-        foreach (var cell in _spreadTargets)
-            _board.ObstacleStateService.TryAddOilAt(cell.x, cell.y);
+        if (_board == null || _spreadTargets == null || _spreadTargets.Count == 0)
+            yield break;
 
         var animator = _board.GetComponent<OilSpreadAnimator>();
         if (animator != null)
             yield return animator.PlaySpread(_spreadTargets);
+
+        foreach (var cell in _spreadTargets)
+            _board.ObstacleStateService?.TryAddOilAt(cell.x, cell.y);
 
         _board.RefreshOilOverlays();
     }
