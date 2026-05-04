@@ -1,56 +1,118 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public sealed class OilSpreadAnimator : MonoBehaviour
 {
-    [SerializeField] private OilSpreadVisualConfig config;
+    [SerializeField] private GameObject spreadFxPrefab;  // UI_OilSpreadFX
     [SerializeField] private BoardController board;
+    [SerializeField] private float duration = 0.50f;
 
-    public IEnumerator PlaySpread(IReadOnlyList<Vector2Int> targets)
+    public IEnumerator PlaySpread(IReadOnlyList<OilSpreadPair> pairs)
     {
-        if (targets == null || targets.Count == 0)
-            yield break;
+        if (pairs == null || pairs.Count == 0) yield break;
 
-        float duration = config != null ? config.spreadDuration : 0.22f;
-        float stagger = config != null ? config.staggerDelay : 0.04f;
-        Color targetColor = config != null ? config.overlayColor : new Color(0f, 0f, 0f, 0.45f);
+        int done = 0;
+        foreach (var pair in pairs)
+            StartCoroutine(PlayOnePair(pair, () => done++));
 
-        for (int i = 0; i < targets.Count; i++)
+        while (done < pairs.Count)
+            yield return null;
+    }
+
+    private IEnumerator PlayOnePair(OilSpreadPair pair, System.Action onDone)
+    {
+        if (spreadFxPrefab == null || board == null) { onDone?.Invoke(); yield break; }
+
+        // TilesRoot: board'un tile'ları yerleştirdiği parent.
+        // DrawObstacleImage ile aynı koordinat sistemi: (x*ts, -y*ts) top-left origin.
+        var tilesRoot = board.TilesRoot;
+        if (tilesRoot == null) { onDone?.Invoke(); yield break; }
+
+        float ts = board.TileSize;
+        bool isH = pair.Source.y == pair.Target.y;
+
+        // Hücre merkezleri: DrawObstacleImage ile aynı formül
+        Vector2 srcCenter = new Vector2(pair.Source.x * ts + ts * 0.5f, -pair.Source.y * ts - ts * 0.5f);
+        Vector2 tgtCenter = new Vector2(pair.Target.x * ts + ts * 0.5f, -pair.Target.y * ts - ts * 0.5f);
+        Vector2 midCenter = (srcCenter + tgtCenter) * 0.5f;
+
+        var go = Instantiate(spreadFxPrefab, tilesRoot);
+        go.transform.SetAsLastSibling();
+
+        var fxRt = go.GetComponent<RectTransform>();
+        fxRt.anchorMin = new Vector2(0f, 1f);
+        fxRt.anchorMax = new Vector2(0f, 1f);
+        fxRt.pivot     = new Vector2(0.5f, 0.5f);
+        fxRt.anchoredPosition = midCenter;
+
+        var bridgeH   = go.transform.Find("Bridge_H");
+        var bridgeV   = go.transform.Find("Bridge_V");
+        var targetOil = go.transform.Find("TargetOil");
+
+        if (bridgeH   != null) bridgeH.gameObject.SetActive(isH);
+        if (bridgeV   != null) bridgeV.gameObject.SetActive(!isH);
+        if (targetOil != null) targetOil.gameObject.SetActive(false);
+
+        var activeGo  = isH ? bridgeH : bridgeV;
+        var activeImg = activeGo?.GetComponent<Image>();
+        var bridgeRt  = activeGo?.GetComponent<RectTransform>();
+
+        // Bridge: ortala, tile arası mesafe = tileSize
+        if (bridgeRt != null)
         {
-            var cell = targets[i];
-            var tile = board != null ? board.GetTileViewAt(cell.x, cell.y) : null;
-            if (tile != null)
-                StartCoroutine(FadeInOverlay(tile, duration, targetColor));
-
-            if (stagger > 0f && i < targets.Count - 1)
-                yield return new WaitForSeconds(stagger);
+            bridgeRt.anchorMin = new Vector2(0.5f, 0.5f);
+            bridgeRt.anchorMax = new Vector2(0.5f, 0.5f);
+            bridgeRt.pivot     = new Vector2(0.5f, 0.5f);
+            bridgeRt.anchoredPosition = Vector2.zero;
+            float crossSize = isH
+                ? (bridgeRt.sizeDelta.y > 1f ? bridgeRt.sizeDelta.y : 24f)
+                : (bridgeRt.sizeDelta.x > 1f ? bridgeRt.sizeDelta.x : 24f);
+            bridgeRt.sizeDelta = isH ? new Vector2(ts, crossSize) : new Vector2(crossSize, ts);
         }
 
-        yield return new WaitForSeconds(duration);
-    }
+        // Image Fill modu
+        if (activeImg != null)
+        {
+            activeImg.type       = Image.Type.Filled;
+            activeImg.fillMethod = isH ? Image.FillMethod.Horizontal : Image.FillMethod.Vertical;
+            bool positiveDir = isH ? (pair.Target.x > pair.Source.x) : (pair.Target.y > pair.Source.y);
+            activeImg.fillOrigin = isH
+                ? (int)(positiveDir ? Image.OriginHorizontal.Left  : Image.OriginHorizontal.Right)
+                : (int)(positiveDir ? Image.OriginVertical.Bottom  : Image.OriginVertical.Top);
+            activeImg.fillAmount = 0f;
+        }
 
-    public IEnumerator PlayRemove(Vector2Int cell)
-    {
-        var tile = board != null ? board.GetTileViewAt(cell.x, cell.y) : null;
-        if (tile != null)
-            tile.SetCoveredByCellOverlay(false);
-        yield break;
-    }
-
-    private IEnumerator FadeInOverlay(TileView tile, float duration, Color targetColor)
-    {
-        tile.SetCoveredByCellOverlay(true);
-
-        float elapsed = 0f;
-        while (elapsed < duration)
+        // Aşama 1: Bridge akışı
+        float elapsed  = 0f;
+        float growTime = duration * 0.65f;
+        while (elapsed < growTime)
         {
             elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
-            tile.SetOverlayAlpha(Mathf.Lerp(0f, targetColor.a, t));
+            if (activeImg != null) activeImg.fillAmount = Mathf.SmoothStep(0f, 1f, elapsed / growTime);
             yield return null;
         }
+        if (activeImg != null) activeImg.fillAmount = 1f;
 
-        tile.SetOverlayAlpha(targetColor.a);
+        // Aşama 2: TargetOil hedef hücre merkezine yerleştir
+        if (targetOil != null)
+        {
+            var tOilRt = targetOil.GetComponent<RectTransform>();
+            if (tOilRt != null)
+            {
+                // FX root local space'inde hedef hücrenin merkezi
+                tOilRt.anchorMin = new Vector2(0.5f, 0.5f);
+                tOilRt.anchorMax = new Vector2(0.5f, 0.5f);
+                tOilRt.pivot     = new Vector2(0.5f, 0.5f);
+                tOilRt.anchoredPosition = tgtCenter - midCenter;
+            }
+            targetOil.gameObject.SetActive(true);
+        }
+
+        yield return new WaitForSeconds(duration * 0.35f);
+
+        Destroy(go);
+        onDone?.Invoke();
     }
 }

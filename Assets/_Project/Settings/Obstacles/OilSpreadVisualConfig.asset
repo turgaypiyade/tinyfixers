@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4cc436ee452654a92af607809a0eab50, type: 3}
   m_Name: OilSpreadVisualConfig
   m_EditorClassIdentifier: Assembly-CSharp::OilSpreadVisualConfig
-  spreadFxPrefab: {fileID: 0}
+  spreadFxPrefab: {fileID: 6112419243108842376, guid: 2a6fdecff9e614da491554f275fbbc7f, type: 3}
   spreadDuration: 0.22
   staggerDelay: 0.04
   overlayColor: {r: 0, g: 0, b: 0, a: 0.5294118}

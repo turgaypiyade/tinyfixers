@@ -951,7 +951,7 @@ public class BoardAnimator
             if (neighbor.x < 0 || neighbor.x >= board.Width || neighbor.y < 0 || neighbor.y >= board.Height)
                 continue;
 
-            if (!board.Obstacles.IsOverTileBlockerAt(neighbor.x, neighbor.y))
+            if (!board.Obstacles.IsOverTileBlockerAt(neighbor.x, neighbor.y) && !board.ObstacleStateService.IsOilAt(neighbor.x, neighbor.y))
                 continue;
 
             if (obstacleDamageCounts.TryGetValue(neighbor, out int existing))
@@ -987,7 +987,8 @@ public class BoardAnimator
             if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
                 return;
 
-            if (!board.Obstacles.IsOverTileBlockerAt(cell.x, cell.y))
+            if (!board.Obstacles.IsOverTileBlockerAt(cell.x, cell.y)
+                && !board.ObstacleStateService.IsOilAt(cell.x, cell.y))
                 return;
 
             AddDamageSource(cell);

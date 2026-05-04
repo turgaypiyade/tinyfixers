@@ -513,7 +513,9 @@ public class CascadeLogic
     private bool IsGravityBlockedCell(int x, int y)
     {
         if (!TryGetCellState(x, y, out var state)) return false;
-        return state.isObstacleBlocked || board.IsPendingTriggeredSpecialCell(x, y);
+        if (state.isObstacleBlocked || board.IsPendingTriggeredSpecialCell(x, y)) return true;
+        // holdsTile=true obstacle (Oil): tile dikey olarak bu hücreden kayamaz, kalır
+        return board.ObstacleStateService?.HoldsTileAt(x, y) ?? false;
     }
 
     private bool IsSegmentConnectedToSpawnEdge(int x, int topY)

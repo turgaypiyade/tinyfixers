@@ -1440,8 +1440,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.1722973}
-  m_AnchorMax: {x: 0.7082184, y: 4.454392}
+  m_AnchorMin: {x: 0, y: 0.14739884}
+  m_AnchorMax: {x: 0.5228013, y: 3.8106937}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -4042,8 +4042,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 34c8ce1de020046ef9666f5366e4d4d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OilSpreadAnimator
-  config: {fileID: 11400000, guid: ca9fde10228ad4484abc89b6a2468ee8, type: 2}
+  spreadFxPrefab: {fileID: 6112419243108842376, guid: 2a6fdecff9e614da491554f275fbbc7f, type: 3}
   board: {fileID: 1410826445}
+  duration: 0.3
 --- !u!1 &1437935556
 GameObject:
   m_ObjectHideFlags: 0

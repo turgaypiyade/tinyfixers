@@ -580,14 +580,33 @@ public class ObstacleStateService
         return (ObstacleId)level.obstacles[idx] == ObstacleId.Oil;
     }
 
-    public bool IsCellInteractionLockedByOil(int x, int y)
+    // Oil (veya herhangi bir holdsTile=true obstacle) bu hücredeki taşı tutuyorsa true.
+    // allowDiagonal=true ise çapraz akış yine izinli — bu method sadece dikey blok için.
+    public bool HoldsTileAt(int x, int y)
     {
-        if (!IsOilAt(x, y)) return false;
-        var def = library != null ? library.Get(ObstacleId.Oil) : null;
-        if (def == null) return true;
-        var stage = def.GetStageRuleForRemainingHits(1);
-        return stage == null || stage.locksInteraction;
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        var obsId = (ObstacleId)level.obstacles[idx];
+        if (obsId == ObstacleId.None) return false;
+        var def = library?.Get(obsId);
+        if (def == null) return false;
+        var stage = def.GetStageRuleForRemainingHits(remainingHitsByOrigin[idx]);
+        return stage != null && stage.holdsTile;
     }
+
+    // HoldsTile + allowDiagonal => çapraz akış hâlâ izinli mi?
+    public bool AllowsDiagonalAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        var obsId = (ObstacleId)level.obstacles[idx];
+        if (obsId == ObstacleId.None) return false;
+        var def = library?.Get(obsId);
+        if (def == null) return false;
+        var stage = def.GetStageRuleForRemainingHits(remainingHitsByOrigin[idx]);
+        return stage != null && stage.allowDiagonal;
+    }
+
 
     public bool TryAddOilAt(int x, int y)
     {

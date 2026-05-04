@@ -1,73 +1,88 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public readonly struct OilSpreadPair
+{
+    public readonly Vector2Int Source;
+    public readonly Vector2Int Target;
+    public OilSpreadPair(Vector2Int source, Vector2Int target) { Source = source; Target = target; }
+}
+
+/// <summary>
+/// Rule: if ANY Oil was hit during this player move → no spread.
+/// Otherwise one Oil cell spreads to one valid neighbour after board stabilises.
+/// </summary>
 public sealed class OilSpreadService
 {
-    private static readonly Vector2Int[] _fourDirs =
+    private static readonly Vector2Int[] Dirs =
     {
         new Vector2Int(0,  1),
         new Vector2Int(0, -1),
-        new Vector2Int( 1, 0),
+        new Vector2Int(1,  0),
         new Vector2Int(-1, 0),
     };
 
-    private readonly BoardController _board;
-    private readonly ObstacleStateService _obstacles;
+    private readonly BoardController board;
+    private readonly ObstacleStateService obstacles;
 
     public OilSpreadService(BoardController board, ObstacleStateService obstacles)
     {
-        _board = board;
-        _obstacles = obstacles;
+        this.board = board;
+        this.obstacles = obstacles;
     }
 
-    // Returns cells Oil should spread to this pass.
-    // Spread rule: each Oil cell checks 4-adjacent neighbours.
-    //   If neighbour was cleared this turn (in clearedCells) AND CanOilSpreadTo → add to result.
-    public List<Vector2Int> CalculateSpread(IReadOnlyCollection<Vector2Int> clearedCells)
+    public List<OilSpreadPair> CalculateSpread(IReadOnlyCollection<Vector2Int> oilHitCellsThisMove)
     {
-        if (clearedCells == null || clearedCells.Count == 0)
-            return new List<Vector2Int>();
+        var result = new List<OilSpreadPair>();
 
-        var clearedSet = new HashSet<Vector2Int>(clearedCells);
-        var oilCells = _obstacles.GetAllOilCells();
-        var result = new List<Vector2Int>();
-        var seen = new HashSet<Vector2Int>();
+        if (board == null || obstacles == null)
+            return result;
+
+        if (oilHitCellsThisMove != null && oilHitCellsThisMove.Count > 0)
+        {
+            Debug.Log($"[Oil] Spread skipped. Oil hit this move: {oilHitCellsThisMove.Count}");
+            return result;
+        }
+
+        var oilCells = obstacles.GetAllOilCells();
+        if (oilCells == null || oilCells.Count == 0)
+            return result;
+
+        var reserved = new HashSet<Vector2Int>();
 
         foreach (var oil in oilCells)
         {
-            foreach (var dir in _fourDirs)
+            if (TryPickTarget(oil, reserved, out var target))
             {
-                var neighbour = oil + dir;
-                if (!clearedSet.Contains(neighbour)) continue;
-                if (!IsValidSpreadTarget(neighbour.x, neighbour.y)) continue;
-                if (seen.Add(neighbour))
-                    result.Add(neighbour);
+                reserved.Add(target);
+                result.Add(new OilSpreadPair(oil, target));
+                Debug.Log($"[Oil] Spread source=({oil.x},{oil.y}) target=({target.x},{target.y})");
+                break;
             }
         }
 
         return result;
     }
 
-    public bool HasPendingSpread(IReadOnlyCollection<Vector2Int> clearedCells)
+    private bool TryPickTarget(Vector2Int source, HashSet<Vector2Int> reserved, out Vector2Int target)
     {
-        if (clearedCells == null || clearedCells.Count == 0) return false;
-        var clearedSet = new HashSet<Vector2Int>(clearedCells);
-        foreach (var oil in _obstacles.GetAllOilCells())
-            foreach (var dir in _fourDirs)
-            {
-                var nb = oil + dir;
-                if (clearedSet.Contains(nb) && IsValidSpreadTarget(nb.x, nb.y))
-                    return true;
-            }
+        foreach (var dir in Dirs)
+        {
+            var candidate = source + dir;
+            if (reserved.Contains(candidate)) continue;
+            if (!CanSpreadTo(candidate)) continue;
+            target = candidate;
+            return true;
+        }
+        target = default;
         return false;
     }
 
-    // Spread hedefi: bounds içinde, hole değil, şu an başka obstacle yok.
-    // Tile varlığı kontrol EDİLMEZ — cleared hücre boş olur, cascade sonra tile koyar.
-    private bool IsValidSpreadTarget(int x, int y)
+    private bool CanSpreadTo(Vector2Int cell)
     {
-        if (x < 0 || x >= _board.Width || y < 0 || y >= _board.Height) return false;
-        if (_board.Holes[x, y]) return false;
-        return _obstacles.CanOilSpreadTo(x, y);
+        if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height) return false;
+        if (board.Holes[cell.x, cell.y]) return false;
+        if (board.GetTileViewAt(cell.x, cell.y) == null) return false;
+        return obstacles.CanOilSpreadTo(cell.x, cell.y);
     }
 }

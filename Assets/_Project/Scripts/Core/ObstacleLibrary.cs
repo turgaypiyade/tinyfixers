@@ -30,6 +30,8 @@ public class StageRule
     public bool allowDiagonal = false;
     [Tooltip("Swap ve match kilitleri (Oil). CellAnchoredOverlay behavior ile kullanılır.")]
     public bool locksInteraction = false;
+    [Tooltip("Bu hücredeki taşın düşmesini engeller (Oil). allowDiagonal=true ise çapraz akış yine çalışır.")]
+    public bool holdsTile = false;
 }
 
 [Serializable]

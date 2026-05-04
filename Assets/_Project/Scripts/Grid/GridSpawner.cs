@@ -170,18 +170,20 @@ public class GridSpawner : MonoBehaviour
         UnbindBoardEvents();
         if (board == null) return;
 
-        board.OnObstacleStageChanged += HandleObstacleStageChanged;
-        board.OnObstacleDestroyed += HandleObstacleDestroyed;
-        board.OnCellUnlocked += HandleCellUnlocked;
+        board.OnObstacleStageChanged       += HandleObstacleStageChanged;
+        board.OnObstacleDestroyed           += HandleObstacleDestroyed;
+        board.OnCellUnlocked                += HandleCellUnlocked;
+        board.OnObstacleCreatedDynamic      += HandleObstacleCreatedDynamic;
     }
 
     private void UnbindBoardEvents()
     {
         if (board == null) return;
 
-        board.OnObstacleStageChanged -= HandleObstacleStageChanged;
-        board.OnObstacleDestroyed -= HandleObstacleDestroyed;
-        board.OnCellUnlocked -= HandleCellUnlocked;
+        board.OnObstacleStageChanged       -= HandleObstacleStageChanged;
+        board.OnObstacleDestroyed          -= HandleObstacleDestroyed;
+        board.OnCellUnlocked               -= HandleCellUnlocked;
+        board.OnObstacleCreatedDynamic     -= HandleObstacleCreatedDynamic;
     }
 
     private void ApplyPaddingToSpawnParent()
@@ -963,6 +965,27 @@ public class GridSpawner : MonoBehaviour
 
         return img;
     }
+    private void HandleObstacleCreatedDynamic(int x, int y)
+    {
+        if (resolvedLevel == null || resolvedLevel.obstacleLibrary == null) return;
+        int idx = resolvedLevel.Index(x, y);
+        if (obstacleViewsByOrigin.ContainsKey(idx)) return;
+        if (resolvedLevel.obstacleOrigins[idx] != idx) return;
+
+        var obsId = (ObstacleId)resolvedLevel.obstacles[idx];
+        if (obsId == ObstacleId.None) return;
+
+        var def = resolvedLevel.obstacleLibrary.Get(obsId);
+        if (def == null || def.IsMovableObstacle) return;
+
+        var image = DrawObstacleImage(def, x, y);
+        if (image != null)
+        {
+            obstacleViewsByOrigin[idx] = image;
+            obstacleDefsByOrigin[idx] = def;
+        }
+    }
+
     private void HandleObstacleVisualChanged(ObstacleVisualChange change)
     {
         if (!obstacleViewsByOrigin.TryGetValue(change.originIndex, out var image) || image == null)

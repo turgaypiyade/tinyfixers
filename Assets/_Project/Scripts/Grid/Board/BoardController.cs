@@ -150,6 +150,7 @@ public class BoardController : MonoBehaviour
     private BoardBreakFxService boardBreakFxService;
 
     public int TileSize => tileSize;
+    public RectTransform TilesRoot => parent;
     public bool IsBusy => CurrentState == BoardState.Resolving;
     public event Action OnBecameIdle;
 
@@ -259,6 +260,7 @@ public class BoardController : MonoBehaviour
     public event Action<int, ObstacleStageSnapshot> OnObstacleStageChanged;
     public event Action<int, ObstacleId> OnObstacleDestroyed;
     public event Action<int> OnCellUnlocked;
+    public event Action<int, int> OnObstacleCreatedDynamic;
     public event Action<int> OnMovesChanged;
     public event Action<TileType, int> OnTilesCleared;
     public event Action<bool> OnBoosterTargetingChanged;
@@ -286,6 +288,8 @@ public class BoardController : MonoBehaviour
     private PendingCreationApplicator pendingCreationApplicator;
 
     private OilSpreadService oilSpreadService;
+    private readonly HashSet<Vector2Int> oilSuppressionCellsThisMove = new();
+    private bool oilSpreadResolvedThisMove = true;
 
     // ── Extracted services ──
     private BoardInitService boardInitService;
@@ -791,10 +795,16 @@ public class BoardController : MonoBehaviour
                 tiles[x, y]?.SetCoveredByCellOverlay(false);
 
         if (obstacleStateService == null) return;
-        foreach (var cell in obstacleStateService.GetAllOilCells())
+        var oilCells = obstacleStateService.GetAllOilCells();
+        Debug.Log($"[OilOverlay] RefreshOilOverlays: {oilCells.Count} oil cells");
+        foreach (var cell in oilCells)
         {
             if (cell.x >= 0 && cell.x < width && cell.y >= 0 && cell.y < height)
-                tiles[cell.x, cell.y]?.SetCoveredByCellOverlay(true);
+            {
+                var tile = tiles[cell.x, cell.y];
+                Debug.Log($"[OilOverlay] ({cell.x},{cell.y}) tile={tile != null}");
+                tile?.SetCoveredByCellOverlay(true);
+            }
         }
     }
 
@@ -902,9 +912,9 @@ public class BoardController : MonoBehaviour
         int nx = from.X + dirX, ny = from.Y + dirY;
         if (nx < 0 || nx >= width || ny < 0 || ny >= height) return;
         if (holes[nx, ny] && (obstacleStateService == null || !obstacleStateService.HasObstacleAt(nx, ny))) return;
-        if (obstacleStateService != null
-            && (obstacleStateService.IsCellInteractionLockedByOil(from.X, from.Y)
-                || obstacleStateService.IsCellInteractionLockedByOil(nx, ny))) return;
+        if (obstacleStateService != null &&
+            (obstacleStateService.IsOilAt(from.X, from.Y) || obstacleStateService.IsOilAt(nx, ny)))
+            return;
         TileView other = tiles[nx, ny]; if (other == null) return;
         StartCoroutine(ProcessSwap(from, other));
     }
@@ -969,6 +979,12 @@ public class BoardController : MonoBehaviour
 
     IEnumerator ProcessSwap(TileView a, TileView b)
     {
+        if (a == null || b == null)
+            yield break;
+
+        oilSuppressionCellsThisMove.Clear();
+        oilSpreadResolvedThisMove = false;
+
         float _flowStart = Time.realtimeSinceStartup;
         float _flowLast = _flowStart;
         void FlowLog(string step)
@@ -1585,17 +1601,6 @@ public class BoardController : MonoBehaviour
 
                     if (cleared)
                     {
-                        if (oilSpreadService != null && matchCells.Count > 0)
-                        {
-                            var spreadTargets = oilSpreadService.CalculateSpread(matchCells);
-                            if (spreadTargets.Count > 0)
-                            {
-                                Debug.Log($"[Oil] Spreading to {spreadTargets.Count} cells this pass.");
-                                actionSequencer.Enqueue(new OilSpreadAction(this, spreadTargets));
-                                while (actionSequencer.IsPlaying)
-                                    yield return null;
-                            }
-                        }
                         continue;
                     }
                 }
@@ -1613,6 +1618,25 @@ public class BoardController : MonoBehaviour
                 RefreshAllSortingOrders();
                 RefreshOilOverlays();
                 continue;
+            }
+
+            if (!oilSpreadResolvedThisMove
+                && oilSpreadService != null)
+            {
+                var spreadTargets = oilSpreadService.CalculateSpread(oilSuppressionCellsThisMove);
+                oilSpreadResolvedThisMove = true;
+
+                if (spreadTargets.Count > 0)
+                {
+                    Debug.Log($"[Oil] Spreading to {spreadTargets.Count} cells after board stabilized.");
+                    actionSequencer.Enqueue(new OilSpreadAction(this, spreadTargets));
+
+                    while (actionSequencer.IsPlaying)
+                        yield return null;
+
+                    RefreshOilOverlays();
+                    continue;
+                }
             }
 
             if (ActiveBackgroundJobs > 0 || actionSequencer.IsPlaying)
@@ -1742,7 +1766,6 @@ public class BoardController : MonoBehaviour
         CpLog($"special_creation({createdSpecialTiles.Count})");
         EmitCreatedSpecialSfx(createdSpecialTiles);
 
-        // Normal clear hiçbir durumda existing/new special'ları otomatik silmesin.
         matchTiles.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
 
         // ── 2. Special ACTIVATION — bu path yalnızca explicit effect kaynaklı zincirlerde kullanılmalı ──
@@ -1805,6 +1828,7 @@ public class BoardController : MonoBehaviour
         CpLog("clear+cascade_done");
         onResult?.Invoke(true);
     }
+
 
     private void EmitCreatedSpecialSfx(List<TileView> createdSpecialTiles)
     {
@@ -1917,9 +1941,16 @@ public class BoardController : MonoBehaviour
     // ═══════════════════════════════════════════════════════════════
     internal ObstacleStateService.ObstacleHitResult ApplyObstacleDamage(ObstacleDamageRequest request)
     {
-        return obstacleResolutionService != null
+        var result = obstacleResolutionService != null
             ? obstacleResolutionService.ApplyDamage(request)
             : default;
+
+        if (result.didHit && (result.visualChange.obstacleId == ObstacleId.Oil || result.stageTransition.obstacleId == ObstacleId.Oil))
+        {
+            oilSuppressionCellsThisMove.Add(request.cell);
+        }
+
+        return result;
     }
 
     internal ObstacleStateService.ObstacleHitResult ApplyObstacleDamageAt(
@@ -1950,6 +1981,9 @@ public class BoardController : MonoBehaviour
 
     internal void RaiseObstacleStageChanged(int originIndex, ObstacleStageSnapshot stage)
         => OnObstacleStageChanged?.Invoke(originIndex, stage);
+
+    internal void RaiseObstacleCreatedDynamic(int x, int y)
+        => OnObstacleCreatedDynamic?.Invoke(x, y);
 
     internal void SetHoleStateFromObstacle(int x, int y)
     {
@@ -2091,10 +2125,10 @@ public class BoardController : MonoBehaviour
         BeginBusy();
         IsSpecialActivationPhase = true;
 
-        var matches      = new HashSet<TileView>();
+        var matches = new HashSet<TileView>();
         var affectedCells = new HashSet<Vector2Int>();
         var visualTargets = new HashSet<TileView>();
-        var strikes      = new System.Collections.Generic.List<LightningLineStrike>(placements.Count);
+        var strikes = new System.Collections.Generic.List<LightningLineStrike>(placements.Count);
 
         foreach (var p in placements)
         {
