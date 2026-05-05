@@ -21,12 +21,14 @@ MonoBehaviour:
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 0
+      holdsTile: 0
     - sprite: {fileID: -310889430209091948, guid: 0278d4caff6064af996f50c58523a808, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 0
+      holdsTile: 0
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -48,12 +50,14 @@ MonoBehaviour:
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 0
+      holdsTile: 0
     - sprite: {fileID: -4608977120082464864, guid: 044b6a924defc4a7fa1daa77f9c52cfa, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 0
+      holdsTile: 0
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -69,12 +73,13 @@ MonoBehaviour:
     legacyBehavior: 1
   - id: 4
     stages:
-    - sprite: {fileID: -8497522645540332224, guid: 312783bd3272c4e28a02b5c049846d2b, type: 3}
+    - sprite: {fileID: 21300000, guid: d29e0409dcb0c432a9a308ac2094f85e, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 0
+      holdsTile: 0
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -86,31 +91,34 @@ MonoBehaviour:
     - {fileID: -3734881870064638914, guid: 1fa292475361c4958978f0dafabdb94c, type: 3}
     - {fileID: 5628360442248681413, guid: 1fa292475361c4958978f0dafabdb94c, type: 3}
     drawUnderTiles: 0
-    legacySprite: {fileID: -8497522645540332224, guid: 312783bd3272c4e28a02b5c049846d2b, type: 3}
+    legacySprite: {fileID: 21300000, guid: d29e0409dcb0c432a9a308ac2094f85e, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1
     legacyBehavior: 1
   - id: 6
     stages:
-    - sprite: {fileID: -8262638739438853885, guid: 6e1599cc8a6134eeaba955908acfc52d, type: 3}
+    - sprite: {fileID: 21300000, guid: bb81329fdeec84e8f82a1b3eb761013c, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 0
-    - sprite: {fileID: 6922309104581501977, guid: 564b2e57bc027494abb0b76fb5a0bcff, type: 3}
+      holdsTile: 0
+    - sprite: {fileID: 21300000, guid: dbc998d69c4e54be89c6474914ea7e90, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 0
-    - sprite: {fileID: -8497522645540332224, guid: 312783bd3272c4e28a02b5c049846d2b, type: 3}
+      holdsTile: 0
+    - sprite: {fileID: 21300000, guid: d29e0409dcb0c432a9a308ac2094f85e, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 0
+      holdsTile: 0
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -119,25 +127,27 @@ MonoBehaviour:
     hitParticleSprites: []
     breakParticleSprites: []
     drawUnderTiles: 0
-    legacySprite: {fileID: -8262638739438853885, guid: 6e1599cc8a6134eeaba955908acfc52d, type: 3}
+    legacySprite: {fileID: 21300000, guid: bb81329fdeec84e8f82a1b3eb761013c, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1
     legacyBehavior: 1
   - id: 5
     stages:
-    - sprite: {fileID: 6922309104581501977, guid: 564b2e57bc027494abb0b76fb5a0bcff, type: 3}
+    - sprite: {fileID: 21300000, guid: dbc998d69c4e54be89c6474914ea7e90, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 0
-    - sprite: {fileID: -8497522645540332224, guid: 312783bd3272c4e28a02b5c049846d2b, type: 3}
+      holdsTile: 0
+    - sprite: {fileID: 21300000, guid: d29e0409dcb0c432a9a308ac2094f85e, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 0
+      holdsTile: 0
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -146,7 +156,7 @@ MonoBehaviour:
     hitParticleSprites: []
     breakParticleSprites: []
     drawUnderTiles: 0
-    legacySprite: {fileID: 6922309104581501977, guid: 564b2e57bc027494abb0b76fb5a0bcff, type: 3}
+    legacySprite: {fileID: 21300000, guid: dbc998d69c4e54be89c6474914ea7e90, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1
@@ -159,6 +169,7 @@ MonoBehaviour:
       behavior: 3
       allowDiagonal: 1
       locksInteraction: 0
+      holdsTile: 0
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -180,6 +191,7 @@ MonoBehaviour:
       behavior: 3
       allowDiagonal: 1
       locksInteraction: 0
+      holdsTile: 0
     allowCrossContextFallback: 1
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -201,6 +213,7 @@ MonoBehaviour:
       behavior: 3
       allowDiagonal: 0
       locksInteraction: 0
+      holdsTile: 0
     allowCrossContextFallback: 1
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -222,6 +235,7 @@ MonoBehaviour:
       behavior: 3
       allowDiagonal: 0
       locksInteraction: 0
+      holdsTile: 0
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 0
@@ -243,6 +257,7 @@ MonoBehaviour:
       behavior: 3
       allowDiagonal: 0
       locksInteraction: 0
+      holdsTile: 0
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 2
@@ -264,6 +279,7 @@ MonoBehaviour:
       behavior: 3
       allowDiagonal: 0
       locksInteraction: 0
+      holdsTile: 0
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 1
@@ -285,6 +301,7 @@ MonoBehaviour:
       behavior: 3
       allowDiagonal: 0
       locksInteraction: 0
+      holdsTile: 0
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 3
@@ -304,8 +321,9 @@ MonoBehaviour:
       damageRule: 0
       blocksCells: 0
       behavior: 4
-      allowDiagonal: 0
+      allowDiagonal: 1
       locksInteraction: 1
+      holdsTile: 1
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 3
@@ -319,3 +337,53 @@ MonoBehaviour:
     legacyStageDamageRules: 
     legacyBlocksCells: 0
     legacyBehavior: 4
+  - id: 21
+    stages:
+    - sprite: {fileID: 21300000, guid: ed7f19307b8064defbe605aa529abe1a, type: 3}
+      damageRule: 1
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 1
+      holdsTile: 0
+    - sprite: {fileID: 21300000, guid: 71f9d43899561438f98e4706731116ef, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 1
+      holdsTile: 0
+    - sprite: {fileID: 21300000, guid: 71f9d43899561438f98e4706731116ef, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 1
+      holdsTile: 0
+    - sprite: {fileID: 21300000, guid: 71f9d43899561438f98e4706731116ef, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 1
+      holdsTile: 0
+    - sprite: {fileID: 21300000, guid: 71f9d43899561438f98e4706731116ef, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 1
+      holdsTile: 0
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 3
+    size: {x: 2, y: 2}
+    hits: 5
+    hitParticleSprites: []
+    breakParticleSprites: []
+    drawUnderTiles: 0
+    legacySprite: {fileID: 21300000, guid: ed7f19307b8064defbe605aa529abe1a, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules: 
+    legacyBlocksCells: 1
+    legacyBehavior: 1

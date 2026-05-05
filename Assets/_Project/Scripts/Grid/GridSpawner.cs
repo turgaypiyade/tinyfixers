@@ -56,6 +56,8 @@ public class GridSpawner : MonoBehaviour
 
     [Header("Obstacle Visual (UI)")]
     [SerializeField] private bool drawObstacles = true;
+    [Tooltip("ColorChest icin katmanli gorsel prefabi (ChestObstacleView component'i olmali)")]
+    [SerializeField] private ChestObstacleView chestObstacleViewPrefab;
 
     [Header("Initial Resolve")]
     [SerializeField] private bool resolveInitialOnStart = false;
@@ -74,6 +76,7 @@ public class GridSpawner : MonoBehaviour
     private bool ownsResolvedLevelInstance;
     private readonly Dictionary<int, Image> obstacleViewsByOrigin = new();
     private readonly Dictionary<int, ObstacleDef> obstacleDefsByOrigin = new();
+    private readonly Dictionary<int, ChestObstacleView> _chestViews = new();
     private readonly Dictionary<int, GameObject> cellBgByIndex = new();
     private readonly Dictionary<int, Image> cellBgImageByIndex = new();
     private readonly Dictionary<int, Color> baseCellBgColorByIndex = new();
@@ -174,6 +177,8 @@ public class GridSpawner : MonoBehaviour
         board.OnObstacleDestroyed           += HandleObstacleDestroyed;
         board.OnCellUnlocked                += HandleCellUnlocked;
         board.OnObstacleCreatedDynamic      += HandleObstacleCreatedDynamic;
+        board.OnChestOpened                 += HandleChestOpened;
+        board.OnChestColorRemoved           += HandleChestColorRemoved;
     }
 
     private void UnbindBoardEvents()
@@ -184,6 +189,8 @@ public class GridSpawner : MonoBehaviour
         board.OnObstacleDestroyed          -= HandleObstacleDestroyed;
         board.OnCellUnlocked               -= HandleCellUnlocked;
         board.OnObstacleCreatedDynamic     -= HandleObstacleCreatedDynamic;
+        board.OnChestOpened                -= HandleChestOpened;
+        board.OnChestColorRemoved          -= HandleChestColorRemoved;
     }
 
     private void ApplyPaddingToSpawnParent()
@@ -209,8 +216,8 @@ public class GridSpawner : MonoBehaviour
         if (gridLinesRoot != null) gridLinesRoot.anchoredPosition = inner;
         if (tilesRoot != null) tilesRoot.anchoredPosition = inner;
         if (obstaclesRoot != null) obstaclesRoot.anchoredPosition = inner;
-        if (underTilesObstaclesRoot != null) underTilesObstaclesRoot.anchoredPosition = inner;
-        if (overTilesObstaclesRoot != null) overTilesObstaclesRoot.anchoredPosition = inner;
+        if (underTilesObstaclesRoot != null) underTilesObstaclesRoot.anchoredPosition = Vector2.zero;
+        if (overTilesObstaclesRoot != null) overTilesObstaclesRoot.anchoredPosition = Vector2.zero;
     }
 
     private void AlignBorderRootToSpawnParent()
@@ -240,6 +247,7 @@ public class GridSpawner : MonoBehaviour
         ClearChildren(tilesRoot);
         obstacleViewsByOrigin.Clear();
         obstacleDefsByOrigin.Clear();
+        _chestViews.Clear();
         cellBgByIndex.Clear();
         cellBgImageByIndex.Clear();
         baseCellBgColorByIndex.Clear();
@@ -552,6 +560,7 @@ public class GridSpawner : MonoBehaviour
 
         obstacleViewsByOrigin.Remove(originIndex);
         obstacleDefsByOrigin.Remove(originIndex);
+        _chestViews.Remove(originIndex);
         ApplyUnderTileCellBgTint();
     }
 
@@ -851,6 +860,103 @@ public class GridSpawner : MonoBehaviour
         obstacleRect.SetParent(targetRoot, false);
     }
 
+    private void HandleChestOpened(int originIndex)
+    {
+        if (_chestViews.TryGetValue(originIndex, out var view) && view != null)
+            view.ShowAll();
+    }
+
+    private void HandleChestColorRemoved(int originIndex, ChestColorMask removedColor)
+    {
+        if (_chestViews.TryGetValue(originIndex, out var view) && view != null)
+        {
+            view.HideColor(removedColor);
+            view.Shake();
+        }
+    }
+
+    // ColorChest'i katmanli prefab olarak spawn eder.
+    // Pozisyon ve boyut hesabi DrawObstacleImage ile aynidir (2x2 = 2*tileSize).
+    private Image SpawnChestObstacleView(ObstacleDef def, int x, int y)
+    {
+        bool drawUnder = ResolveBehaviorForOrigin(resolvedLevel.Index(x, y), def) == ObstacleBehaviorType.UnderTileLayered;
+        var parent = drawUnder ? underTilesObstaclesRoot : overTilesObstaclesRoot;
+
+        int w = Mathf.Max(1, def.size.x);
+        int h = Mathf.Max(1, def.size.y);
+        float gridOverlap = Mathf.Max(1f, Mathf.Ceil(runtimeGridLineThickness * 0.5f));
+        int originIndex = resolvedLevel.Index(x, y);
+
+        bool HasDifferentAt(int cx, int cy)
+        {
+            if (cx < 0 || cx >= width || cy < 0 || cy >= height) return false;
+            int idx = resolvedLevel.Index(cx, cy);
+            if (idx < 0 || idx >= resolvedLevel.obstacles.Length) return false;
+            if ((ObstacleId)resolvedLevel.obstacles[idx] == ObstacleId.None) return false;
+            return resolvedLevel.obstacleOrigins[idx] != originIndex;
+        }
+
+        bool diffLeft = false, diffRight = false, diffTop = false, diffBottom = false;
+        for (int yy = y; yy < y + h; yy++) { if (HasDifferentAt(x - 1, yy)) diffLeft  = true; if (HasDifferentAt(x + w, yy)) diffRight  = true; }
+        for (int xx = x; xx < x + w; xx++) { if (HasDifferentAt(xx, y - 1)) diffTop   = true; if (HasDifferentAt(xx, y + h)) diffBottom = true; }
+
+        float lo = diffLeft   ? 0f : gridOverlap;
+        float ro = diffRight  ? 0f : gridOverlap;
+        float to = diffTop    ? 0f : gridOverlap;
+        float bo = diffBottom ? 0f : gridOverlap;
+
+        ChestObstacleView view;
+        Image rootImage;
+
+        if (chestObstacleViewPrefab != null)
+        {
+            view = Instantiate(chestObstacleViewPrefab, parent);
+            rootImage = view.GetComponent<Image>();
+            if (rootImage == null) rootImage = view.gameObject.AddComponent<Image>();
+        }
+        else
+        {
+            // Prefab atanmamissa plain Image ile devam et (sprite guncelleme calismaya devam eder)
+            var fallback = new GameObject($"Obs_ColorChest_{x}_{y}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            fallback.transform.SetParent(parent, false);
+            rootImage = fallback.GetComponent<Image>();
+            view = null;
+        }
+
+        Sprite closedSprite = def.GetPreviewSprite();
+        if (rootImage != null && closedSprite != null)
+        {
+            rootImage.sprite = closedSprite;
+            rootImage.type = Image.Type.Simple;
+            rootImage.preserveAspect = false;
+        }
+
+        var rt = rootImage != null ? rootImage.GetComponent<RectTransform>() : null;
+        if (rt != null)
+        {
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot = new Vector2(0, 1);
+            rt.anchoredPosition = new Vector2(x * tileSize - lo, -y * tileSize + to);
+            rt.sizeDelta = new Vector2(w * tileSize + lo + ro, h * tileSize + to + bo);
+        }
+
+        if (rootImage != null)
+        {
+            var clickProxy = rootImage.gameObject.AddComponent<ObstacleClickProxy>();
+            clickProxy.Init(board, x, y);
+        }
+
+        if (view != null)
+        {
+            view.ApplyLayout(); // parent RT boyutu kesinleştikten sonra icon konumlarını set et
+            view.HideAll();     // kapalı durum: renkli objeler gizli
+            _chestViews[originIndex] = view;
+        }
+
+        return rootImage;
+    }
+
     private Image DrawObstacleImage(ObstacleDef def, int x, int y)
     {
         if (def == null)
@@ -860,6 +966,9 @@ public class GridSpawner : MonoBehaviour
         // O TileView üzerinden normal ikon gibi davranacak.
         if (def.IsMovableObstacle)
             return null;
+
+        if (def.id == ObstacleId.ColorChest)
+            return SpawnChestObstacleView(def, x, y);
 
         Sprite sprite = def.GetPreviewSprite();
         if (sprite == null) return null;

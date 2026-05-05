@@ -88,9 +88,15 @@ public class ObstacleStateService
     // Sadece origin hücre indexi anlamlıdır. -1 => obstacle yok.
     private int[] remainingHitsByOrigin = Array.Empty<int>();
 
+    // ColorChest: origin index → kalan renk maskesi
+    private readonly Dictionary<int, ChestColorMask> _chestColorStates = new();
+
     public event Action<int, ObstacleStageSnapshot> OnObstacleStageChanged;
     public event Action<int, ObstacleId> OnObstacleDestroyed;
     public event Action<int> OnCellUnlocked;
+    // ColorChest açılış ve renk kırılması bildirimleri
+    public event Action<int> OnChestOpened;
+    public event Action<int, ChestColorMask> OnChestColorRemoved;
 
     public readonly struct ObstacleHitResult
     {
@@ -152,6 +158,8 @@ public class ObstacleStateService
         for (int i = 0; i < size; i++)
             remainingHitsByOrigin[i] = -1;
 
+        _chestColorStates.Clear();
+
         for (int idx = 0; idx < size; idx++)
         {
             var id = (ObstacleId)level.obstacles[idx];
@@ -164,6 +172,9 @@ public class ObstacleStateService
             var def = library != null ? library.Get(id) : null;
             int hits = Mathf.Max(1, def != null ? def.hits : 1);
             remainingHitsByOrigin[origin] = hits;
+
+            if (id == ObstacleId.ColorChest)
+                _chestColorStates[origin] = ChestColorMask.All;
         }
     }
 
@@ -224,11 +235,48 @@ public class ObstacleStateService
         if (!CanConsumeHit(def, remaining, context, sourceTileType))
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
 
+        // ColorChest renk validasyonu
+        ChestColorMask removedColor = ChestColorMask.None;
+        if (id == ObstacleId.ColorChest)
+        {
+            bool isOpen = def != null && remaining < def.hits;
+
+            if (context == ObstacleHitContext.NormalMatch)
+            {
+                // Açık dolap: sadece içinde kalan renk hasar verir
+                var colorFlag = sourceTileType.ToChestColor();
+                if (colorFlag == ChestColorMask.None ||
+                    !_chestColorStates.TryGetValue(origin, out var chestMask) ||
+                    (chestMask & colorFlag) == 0)
+                    return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+                removedColor = colorFlag;
+            }
+            else if (context == ObstacleHitContext.SpecialActivation && isOpen)
+            {
+                // Açık dolap + special: kalan renklerden rastgele biri kırılır
+                if (!_chestColorStates.TryGetValue(origin, out var chestMask) || chestMask == ChestColorMask.None)
+                    return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+                removedColor = PickRandomChestColor(chestMask);
+            }
+            // isOpen=false + SpecialActivation: kapalı dolabı açma işlemi, removedColor = None
+        }
+
         int[] affectedCells = CollectCellsForOrigin(origin, id);
         var previousStage = CreateSnapshot(def, id, remaining);
+        bool wasChestClosed = id == ObstacleId.ColorChest
+                              && context == ObstacleHitContext.SpecialActivation
+                              && (def == null || remaining == def.hits);
 
         remaining--;
         remainingHitsByOrigin[origin] = remaining;
+
+        // Renk maskesini güncelle ve bildirimi gönder
+        if (removedColor != ChestColorMask.None)
+        {
+            if (_chestColorStates.TryGetValue(origin, out var currentMask))
+                _chestColorStates[origin] = currentMask & ~removedColor;
+            OnChestColorRemoved?.Invoke(origin, removedColor);
+        }
 
         if (remaining <= 0)
         {
@@ -237,6 +285,9 @@ public class ObstacleStateService
             var transition = new ObstacleStageTransition(true, origin, id, 0, true, previousStage, default);
             return new ObstacleHitResult(true, true, false, change, transition, affectedCells);
         }
+
+        if (wasChestClosed)
+            OnChestOpened?.Invoke(origin);
 
         var currentStage = CreateSnapshot(def, id, remaining);
         var sprite = ResolveStageSprite(def, id, remaining);
@@ -471,6 +522,10 @@ public class ObstacleStateService
         }
 
         remainingHitsByOrigin[origin] = -1;
+
+        if (originId == ObstacleId.ColorChest)
+            _chestColorStates.Remove(origin);
+
         OnObstacleDestroyed?.Invoke(origin, originId);
     }
 
@@ -572,6 +627,30 @@ public class ObstacleStateService
     }
 
     // ── Oil helpers ──────────────────────────────────────────────────────────
+
+    public ChestColorMask GetChestColorsAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return ChestColorMask.None;
+        int idx = level.Index(x, y);
+        if ((ObstacleId)level.obstacles[idx] != ObstacleId.ColorChest) return ChestColorMask.None;
+        int origin = level.obstacleOrigins[idx];
+        if (origin < 0 || !_chestColorStates.TryGetValue(origin, out var mask)) return ChestColorMask.None;
+        return mask;
+    }
+
+    private static ChestColorMask PickRandomChestColor(ChestColorMask mask)
+    {
+        // Kalan bayrakları listeye al, rastgele birini seç
+        ChestColorMask[] all = { ChestColorMask.Gear, ChestColorMask.Core, ChestColorMask.Bolt, ChestColorMask.Plate };
+        int start = UnityEngine.Random.Range(0, all.Length);
+        for (int i = 0; i < all.Length; i++)
+        {
+            var candidate = all[(start + i) % all.Length];
+            if ((mask & candidate) != 0)
+                return candidate;
+        }
+        return ChestColorMask.None;
+    }
 
     public bool IsOilAt(int x, int y)
     {

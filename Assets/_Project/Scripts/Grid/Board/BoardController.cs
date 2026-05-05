@@ -261,6 +261,8 @@ public class BoardController : MonoBehaviour
     public event Action<int, ObstacleId> OnObstacleDestroyed;
     public event Action<int> OnCellUnlocked;
     public event Action<int, int> OnObstacleCreatedDynamic;
+    public event Action<int> OnChestOpened;
+    public event Action<int, ChestColorMask> OnChestColorRemoved;
     public event Action<int> OnMovesChanged;
     public event Action<TileType, int> OnTilesCleared;
     public event Action<bool> OnBoosterTargetingChanged;
@@ -2000,7 +2002,17 @@ public class BoardController : MonoBehaviour
         obstacleStateService.OnCellUnlocked -= HandleCellUnlocked;
         obstacleStateService.OnObstacleDestroyed += HandleObstacleDestroyed;
         obstacleStateService.OnCellUnlocked += HandleCellUnlocked;
+        obstacleStateService.OnChestOpened -= HandleChestOpened;
+        obstacleStateService.OnChestColorRemoved -= HandleChestColorRemoved;
+        obstacleStateService.OnChestOpened += HandleChestOpened;
+        obstacleStateService.OnChestColorRemoved += HandleChestColorRemoved;
     }
+
+    private void HandleChestOpened(int originIndex)
+        => OnChestOpened?.Invoke(originIndex);
+
+    private void HandleChestColorRemoved(int originIndex, ChestColorMask removedColor)
+        => OnChestColorRemoved?.Invoke(originIndex, removedColor);
 
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
     {
