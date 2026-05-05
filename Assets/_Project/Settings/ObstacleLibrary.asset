@@ -185,11 +185,11 @@ MonoBehaviour:
     legacyBehavior: 3
   - id: 1
     stages:
-    - sprite: {fileID: 3268830964253682241, guid: 1f635237031a852419555c40c74820b7, type: 3}
+    - sprite: {fileID: 21300000, guid: 85f801a4f66684bc688f00d09c9c09c9, type: 3}
       damageRule: 0
-      blocksCells: 1
-      behavior: 3
-      allowDiagonal: 1
+      blocksCells: 0
+      behavior: 1
+      allowDiagonal: 0
       locksInteraction: 0
       holdsTile: 0
     allowCrossContextFallback: 1
@@ -200,11 +200,11 @@ MonoBehaviour:
     hitParticleSprites: []
     breakParticleSprites: []
     drawUnderTiles: 0
-    legacySprite: {fileID: 3268830964253682241, guid: 1f635237031a852419555c40c74820b7, type: 3}
+    legacySprite: {fileID: 21300000, guid: 85f801a4f66684bc688f00d09c9c09c9, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
-    legacyBlocksCells: 1
-    legacyBehavior: 3
+    legacyBlocksCells: 0
+    legacyBehavior: 1
   - id: 8
     stages:
     - sprite: {fileID: -5753328692003189620, guid: 9003a1911785e422dbd939795f9f2ded, type: 3}

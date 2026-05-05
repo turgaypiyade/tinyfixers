@@ -50,8 +50,11 @@ public sealed class OilSpreadService
 
         var reserved = new HashSet<Vector2Int>();
 
-        foreach (var oil in oilCells)
+        // Hangi oil hücresinin yayılacağı da rastgele seçilsin
+        int startCell = Random.Range(0, oilCells.Count);
+        for (int i = 0; i < oilCells.Count; i++)
         {
+            var oil = oilCells[(startCell + i) % oilCells.Count];
             if (TryPickTarget(oil, reserved, out var target))
             {
                 reserved.Add(target);
@@ -66,9 +69,11 @@ public sealed class OilSpreadService
 
     private bool TryPickTarget(Vector2Int source, HashSet<Vector2Int> reserved, out Vector2Int target)
     {
-        foreach (var dir in Dirs)
+        // Rastgele bir yönden baslayarak döngüsel tara
+        int start = Random.Range(0, Dirs.Length);
+        for (int i = 0; i < Dirs.Length; i++)
         {
-            var candidate = source + dir;
+            var candidate = source + Dirs[(start + i) % Dirs.Length];
             if (reserved.Contains(candidate)) continue;
             if (!CanSpreadTo(candidate)) continue;
             target = candidate;
