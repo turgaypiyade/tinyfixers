@@ -30,6 +30,8 @@ public sealed class EnergyContainerFx : MonoBehaviour
     [SerializeField] private float flyDuration = 0.42f;
     [SerializeField] private float orbStagger = 0.035f;
     [SerializeField] private float arcHeight = 130f;
+    [Tooltip("When enabled, the flying orb is parented to the top canvas instead of the board VFX root, so it can travel outside BoardMask toward TopHUD without being clipped.")]
+    [SerializeField] private bool flyOrbOnTopCanvas = true;
 
     [Header("Container Feedback")]
     [SerializeField] private float pulseScale = 1.08f;
@@ -213,7 +215,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
         if (hud == null || !hud.TryGetGoalTargetRectForCollectible(collectibleId, out var targetSlot) || targetSlot == null)
             yield break;
 
-        RectTransform root = overlayRoot != null ? overlayRoot : (board.ContentRoot != null ? board.ContentRoot : board.Parent);
+        RectTransform root = ResolveOrbFlyRoot(targetSlot);
         if (root == null)
             yield break;
 
@@ -229,6 +231,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
         rt.localScale = Vector3.one;
         rt.localRotation = Quaternion.identity;
         rt.anchoredPosition = start;
+        rt.SetAsLastSibling();
 
         var image = go.GetComponent<Image>();
         image.sprite = energyOrbSprite;
@@ -239,6 +242,13 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
         var cg = go.GetComponent<CanvasGroup>();
         cg.alpha = 1f;
+
+        if (logDebug)
+        {
+            Debug.Log(
+                $"[EnergyContainerFx] FlyOrb root={root.name} start={start} end={end} " +
+                $"sprite={(energyOrbSprite != null ? energyOrbSprite.name : "null")}");
+        }
 
         Vector2 mid = (start + end) * 0.5f;
         float dir = end.x >= start.x ? 1f : -1f;
@@ -265,6 +275,22 @@ public sealed class EnergyContainerFx : MonoBehaviour
             Destroy(go);
 
         yield return PunchTarget(targetSlot);
+    }
+
+    private RectTransform ResolveOrbFlyRoot(RectTransform targetSlot)
+    {
+        if (!flyOrbOnTopCanvas && overlayRoot != null)
+            return overlayRoot;
+
+        Canvas targetCanvas = targetSlot != null ? targetSlot.GetComponentInParent<Canvas>() : null;
+        Canvas boardCanvas = board != null && board.ContentRoot != null ? board.ContentRoot.GetComponentInParent<Canvas>() : null;
+        Canvas selectedCanvas = targetCanvas != null ? targetCanvas.rootCanvas : (boardCanvas != null ? boardCanvas.rootCanvas : null);
+
+        RectTransform canvasRoot = selectedCanvas != null ? selectedCanvas.transform as RectTransform : null;
+        if (canvasRoot != null)
+            return canvasRoot;
+
+        return overlayRoot != null ? overlayRoot : (board != null && board.ContentRoot != null ? board.ContentRoot : board?.Parent);
     }
 
     private RectTransform FindObstacleRect(int originIndex)
@@ -295,12 +321,6 @@ public sealed class EnergyContainerFx : MonoBehaviour
         for (int i = 0; i < images.Length; i++)
         {
             Image image = images[i];
-            if (image == null || image.raycastTarget)
-            {
-                // Most obstacle/tile visuals disable raycasts, but keep raycast-enabled
-                // images out of the broad fallback so HUD or overlay blockers are not selected.
-            }
-
             RectTransform rt = image != null ? image.rectTransform : null;
             if (rt == null)
                 continue;
