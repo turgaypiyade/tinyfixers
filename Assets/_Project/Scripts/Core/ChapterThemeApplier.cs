@@ -15,6 +15,9 @@ public class ChapterThemeApplier : MonoBehaviour
     [Header("Library (shared ScriptableObject)")]
     [SerializeField] private ChapterThemeLibrary themeLibrary;
 
+    public ChapterThemeLibrary ThemeLibrary => themeLibrary;
+    public ChapterTheme CurrentTheme => themeLibrary != null ? themeLibrary.GetCurrentTheme() : null;
+
     [Header("Background")]
     [SerializeField] private Image backgroundImage;
 
