@@ -11,14 +11,9 @@ using UnityEngine;
 /// EnergyOrb collectible and the container becomes visually exhausted after its
 /// configured capacity is depleted.
 ///
-/// Recommended ObstacleLibrary setup:
-/// - id: EnergyContainer
-/// - hits: energyPerContainer + 1
-/// - stages 0..energyPerContainer-1: active visuals, damageRule=Any
-/// - final stage: exhausted/passive visual, damageRule=Disabled
-///
-/// This service does not clear/destroy the obstacle. With the final Disabled stage,
-/// the container remains visible but no longer consumes hits after its energy is depleted.
+/// Energy capacity is level-driven through LevelData.energyPerContainer. The
+/// serialized fallbackEnergyPerContainer value is only used when there is no active
+/// level/source level available.
 /// </summary>
 public sealed class EnergyContainerService : MonoBehaviour
 {
@@ -28,7 +23,7 @@ public sealed class EnergyContainerService : MonoBehaviour
     [SerializeField] private EnergyContainerFx energyFx;
 
     [Header("Rules")]
-    [SerializeField, Min(1)] private int energyPerContainer = 10;
+    [SerializeField, Min(1)] private int fallbackEnergyPerContainer = 10;
     [SerializeField] private CollectibleId collectibleId = CollectibleId.EnergyOrb;
 
     [Header("Debug")]
@@ -37,7 +32,7 @@ public sealed class EnergyContainerService : MonoBehaviour
     private readonly Dictionary<int, int> releasedByOrigin = new();
     private readonly Dictionary<int, int> lastProcessedRemainingHitsByOrigin = new();
 
-    public int EnergyPerContainer => Mathf.Max(1, energyPerContainer);
+    public int EnergyPerContainer => ResolveEnergyPerContainer();
 
     private void Awake()
     {
@@ -74,6 +69,21 @@ public sealed class EnergyContainerService : MonoBehaviour
                        ?? FindFirstObjectByType<EnergyContainerFx>();
     }
 
+    private int ResolveEnergyPerContainer()
+    {
+        // Prefer the source LevelData on GridSpawner because GridSpawner currently
+        // clones LevelData at runtime. This keeps the value level-authored even if an
+        // older runtime clone omitted newer serialized fields.
+        var spawner = FindFirstObjectByType<GridSpawner>();
+        if (spawner != null && spawner.level != null)
+            return Mathf.Max(1, spawner.level.energyPerContainer);
+
+        if (board != null && board.ActiveLevelData != null)
+            return Mathf.Max(1, board.ActiveLevelData.energyPerContainer);
+
+        return Mathf.Max(1, fallbackEnergyPerContainer);
+    }
+
     private IEnumerator BindWhenReady()
     {
         while (board == null)
@@ -85,14 +95,11 @@ public sealed class EnergyContainerService : MonoBehaviour
         board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
         board.ObstacleVisualChanged += HandleObstacleVisualChanged;
 
-        // Some obstacle presentation paths use the stage-change event as the primary
-        // runtime visual notification. Listen to both events and de-duplicate by
-        // origin + remaining hits so each accepted hit releases exactly one orb.
         board.OnObstacleStageChanged -= HandleObstacleStageChanged;
         board.OnObstacleStageChanged += HandleObstacleStageChanged;
 
         if (logHits)
-            Debug.Log("[EnergyContainer] Bound to board obstacle events.");
+            Debug.Log($"[EnergyContainer] Bound to board obstacle events. energyPerContainer={EnergyPerContainer}");
     }
 
     private void HandleObstacleStageChanged(int originIndex, ObstacleStageSnapshot stage)
@@ -139,8 +146,9 @@ public sealed class EnergyContainerService : MonoBehaviour
 
         ResolveReferences();
 
+        int capacity = EnergyPerContainer;
         int released = releasedByOrigin.TryGetValue(origin, out int current) ? current : 0;
-        if (released >= EnergyPerContainer)
+        if (released >= capacity)
         {
             energyFx?.SetExhausted(origin, sprite);
             return;
@@ -149,7 +157,7 @@ public sealed class EnergyContainerService : MonoBehaviour
         released++;
         releasedByOrigin[origin] = released;
 
-        int remainingEnergy = Mathf.Max(0, EnergyPerContainer - released);
+        int remainingEnergy = Mathf.Max(0, capacity - released);
 
         if (topHud == null)
             topHud = FindFirstObjectByType<TopHudController>();
@@ -160,7 +168,7 @@ public sealed class EnergyContainerService : MonoBehaviour
         {
             Debug.Log(
                 $"[EnergyContainer] source={source} origin={origin} " +
-                $"remainingHits={remainingHits} released={released}/{EnergyPerContainer} " +
+                $"remainingHits={remainingHits} released={released}/{capacity} " +
                 $"remainingEnergy={remainingEnergy} goalAccepted={goalAccepted} " +
                 $"hasFx={energyFx != null} hasHud={topHud != null}");
         }
