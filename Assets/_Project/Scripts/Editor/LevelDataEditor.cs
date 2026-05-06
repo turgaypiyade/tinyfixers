@@ -58,7 +58,16 @@ public class LevelDataEditor : Editor
         EditorGUILayout.HelpBox($"Grid size limits: Width {LevelData.MinWidth}-{LevelData.MaxWidth}, Height {LevelData.MinHeight}-{LevelData.MaxHeight}.", MessageType.Info);
         level.moves = EditorGUILayout.IntField("Moves", level.moves);
         DrawGoals(level);
+        DrawEnergyContainerSettings(level);
         DrawAudio(level);
+    }
+
+    private void DrawEnergyContainerSettings(LevelData level)
+    {
+        EditorGUILayout.Space(8);
+        EditorGUILayout.LabelField("Energy Container", EditorStyles.boldLabel);
+        level.energyPerContainer = Mathf.Max(1, EditorGUILayout.IntField("Energy Per Container", Mathf.Max(1, level.energyPerContainer)));
+        EditorGUILayout.HelpBox("Bu değer level bazlıdır. EnergyContainerRuntime sadece fallback olarak kalır.", MessageType.None);
     }
 
     private void DrawAudio(LevelData level)
