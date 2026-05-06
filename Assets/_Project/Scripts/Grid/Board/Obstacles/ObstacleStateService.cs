@@ -447,6 +447,9 @@ public class ObstacleStateService
     {
         switch (rule)
         {
+            case ObstacleDamageSourceRule.Disabled:
+                return false;
+
             case ObstacleDamageSourceRule.SpecialOnly:
                 return context == ObstacleHitContext.SpecialActivation;
 
@@ -640,7 +643,7 @@ public class ObstacleStateService
 
     private static ChestColorMask PickRandomChestColor(ChestColorMask mask)
     {
-        // Kalan bayrakları listeye al, rastgele birini seç
+        // Kalan bayrakları listeye al, rastgele biri seç
         ChestColorMask[] all = { ChestColorMask.Gear, ChestColorMask.Core, ChestColorMask.Bolt, ChestColorMask.Plate };
         int start = UnityEngine.Random.Range(0, all.Length);
         for (int i = 0; i < all.Length; i++)

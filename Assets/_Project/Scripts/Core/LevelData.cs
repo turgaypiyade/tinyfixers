@@ -3,7 +3,14 @@ using UnityEngine;
 public enum LevelGoalTargetType : int
 {
     Tile = 0,
-    Obstacle = 1
+    Obstacle = 1,
+    Collectible = 2
+}
+
+public enum CollectibleId : int
+{
+    None = 0,
+    EnergyOrb = 1
 }
 
 [System.Serializable]
@@ -12,6 +19,9 @@ public class LevelGoalDefinition
     public LevelGoalTargetType targetType = LevelGoalTargetType.Tile;
     public TileType tileType = TileType.Gear;
     public ObstacleId obstacleId = ObstacleId.Stone;
+    public CollectibleId collectibleId = CollectibleId.EnergyOrb;
+    [Tooltip("Optional HUD icon override for this goal. If empty, TopHUD uses the default tile / obstacle / collectible icon resolution.")]
+    public Sprite iconOverride;
     [Min(1)] public int amount = 1;
 }
 
@@ -42,7 +52,8 @@ public enum ObstacleId : int
 
     Big_4x4 = 20,
 
-    ColorChest = 21
+    ColorChest = 21,
+    EnergyContainer = 22
 }
 
 [CreateAssetMenu(fileName = "Level_001", menuName = "CoreCollapse/Level Data", order = 1)]
@@ -57,6 +68,10 @@ public class LevelData : ScriptableObject
     public int height = 9;
     public int moves = 25;
     public LevelGoalDefinition[] goals;
+
+    [Header("Energy Container")]
+    [Tooltip("How many EnergyOrb collectibles each EnergyContainer releases in this level. EnergyContainerRuntime can still provide a fallback, but level data owns the tuning.")]
+    [Min(1)] public int energyPerContainer = 10;
 
     [Header("Audio")]
     public AudioClip musicClip;
@@ -84,6 +99,7 @@ public class LevelData : ScriptableObject
     {
         width = Mathf.Clamp(width, MinWidth, MaxWidth);
         height = Mathf.Clamp(height, MinHeight, MaxHeight);
+        energyPerContainer = Mathf.Max(1, energyPerContainer);
         int size = width * height;
 
         if (cells == null || cells.Length != size)

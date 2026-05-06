@@ -214,6 +214,8 @@ public class PatchbotComboService
             var goal = activeGoalsBuffer[i];
             if (goal.targetType == LevelGoalTargetType.Obstacle && goal.obstacleId != ObstacleId.None)
                 activeObstacleGoals.Add(goal.obstacleId);
+            else if (goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId == CollectibleId.EnergyOrb)
+                activeObstacleGoals.Add(ObstacleId.EnergyContainer);
             else if (goal.targetType == LevelGoalTargetType.Tile)
                 activeTileGoals.Add(goal.tileType);
         }

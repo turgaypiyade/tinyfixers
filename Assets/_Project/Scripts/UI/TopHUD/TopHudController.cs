@@ -11,13 +11,15 @@ public class TopHudController : MonoBehaviour
         public readonly LevelGoalTargetType targetType;
         public readonly TileType tileType;
         public readonly ObstacleId obstacleId;
+        public readonly CollectibleId collectibleId;
         public readonly int remaining;
 
-        public ActiveGoal(LevelGoalTargetType targetType, TileType tileType, ObstacleId obstacleId, int remaining)
+        public ActiveGoal(LevelGoalTargetType targetType, TileType tileType, ObstacleId obstacleId, CollectibleId collectibleId, int remaining)
         {
             this.targetType = targetType;
             this.tileType = tileType;
             this.obstacleId = obstacleId;
+            this.collectibleId = collectibleId;
             this.remaining = remaining;
         }
     }
@@ -84,7 +86,6 @@ public class TopHudController : MonoBehaviour
 
         BuildGoals(board.ActiveLevelData);
         RefreshMoves(board.RemainingMoves);
-
         initialized = true;
     }
 
@@ -114,7 +115,7 @@ public class TopHudController : MonoBehaviour
             {
                 definition = goal,
                 remaining = goal.amount,
-                slot = CreateSlot(goal)
+                slot = CreateSlot(goal, i)
             };
 
             runtime.slot?.SetRemaining(runtime.remaining);
@@ -124,26 +125,36 @@ public class TopHudController : MonoBehaviour
         UpdateGoalsCompletionState();
     }
 
-    private TopHudGoalSlot CreateSlot(LevelGoalDefinition goal)
+    private TopHudGoalSlot CreateSlot(LevelGoalDefinition goal, int goalIndex)
     {
         if (goalSlotPrefab == null || goalsRoot == null)
             return null;
 
         var slot = Instantiate(goalSlotPrefab, goalsRoot);
-        slot.Setup(ResolveGoalIcon(goal), goal.amount);
+        slot.Setup(ResolveGoalIcon(goal, goalIndex), goal.amount);
         return slot;
     }
 
-    private Sprite ResolveGoalIcon(LevelGoalDefinition goal)
+    private Sprite ResolveGoalIcon(LevelGoalDefinition goal, int goalIndex)
     {
         if (goal == null)
             return fallbackGoalIcon;
+
+        if (goal.iconOverride != null)
+            return goal.iconOverride;
+
+        Sprite sourceOverride = ResolveSourceLevelIconOverride(goalIndex);
+        if (sourceOverride != null)
+            return sourceOverride;
 
         if (goal.targetType == LevelGoalTargetType.Tile)
         {
             var sprite = board != null ? board.GetIcon(goal.tileType) : null;
             return sprite != null ? sprite : fallbackGoalIcon;
         }
+
+        if (goal.targetType == LevelGoalTargetType.Collectible)
+            return fallbackGoalIcon;
 
         var levelData = board != null ? board.ActiveLevelData : null;
         var obstacleDef = levelData != null && levelData.obstacleLibrary != null
@@ -152,6 +163,20 @@ public class TopHudController : MonoBehaviour
 
         var preview = obstacleDef != null ? obstacleDef.GetPreviewSprite() : null;
         return preview != null ? preview : fallbackGoalIcon;
+    }
+
+    private Sprite ResolveSourceLevelIconOverride(int goalIndex)
+    {
+        if (goalIndex < 0)
+            return null;
+
+        var spawner = FindFirstObjectByType<GridSpawner>();
+        var sourceLevel = spawner != null ? spawner.level : null;
+        if (sourceLevel == null || sourceLevel.goals == null || goalIndex >= sourceLevel.goals.Length)
+            return null;
+
+        var sourceGoal = sourceLevel.goals[goalIndex];
+        return sourceGoal != null ? sourceGoal.iconOverride : null;
     }
 
     private void HandleMovesChanged(int remainingMoves)
@@ -176,9 +201,7 @@ public class TopHudController : MonoBehaviour
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
             var goal = runtimeGoals[i];
-            if (goal.definition.targetType != LevelGoalTargetType.Tile)
-                continue;
-            if (goal.definition.tileType != tileType)
+            if (goal.definition.targetType != LevelGoalTargetType.Tile || goal.definition.tileType != tileType)
                 continue;
 
             int previous = goal.remaining;
@@ -198,9 +221,7 @@ public class TopHudController : MonoBehaviour
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
             var goal = runtimeGoals[i];
-            if (goal.definition.targetType != LevelGoalTargetType.Obstacle)
-                continue;
-            if (goal.definition.obstacleId != obstacleId)
+            if (goal.definition.targetType != LevelGoalTargetType.Obstacle || goal.definition.obstacleId != obstacleId)
                 continue;
 
             int previous = goal.remaining;
@@ -211,6 +232,31 @@ public class TopHudController : MonoBehaviour
 
         if (anyGoalUpdated)
             UpdateGoalsCompletionState();
+    }
+
+    public bool NotifyCollectibleCollected(CollectibleId collectibleId, int amount)
+    {
+        if (amount <= 0)
+            return false;
+
+        bool anyGoalUpdated = false;
+
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var goal = runtimeGoals[i];
+            if (goal.definition.targetType != LevelGoalTargetType.Collectible || goal.definition.collectibleId != collectibleId)
+                continue;
+
+            int previous = goal.remaining;
+            goal.remaining = Mathf.Max(0, goal.remaining - amount);
+            goal.slot?.SetRemaining(goal.remaining);
+            anyGoalUpdated |= goal.remaining != previous;
+        }
+
+        if (anyGoalUpdated)
+            UpdateGoalsCompletionState();
+
+        return anyGoalUpdated;
     }
 
     private void UpdateGoalsCompletionState()
@@ -232,7 +278,6 @@ public class TopHudController : MonoBehaviour
         OnGoalsCompletionChanged?.Invoke(AreAllGoalsCompleted);
     }
 
-    // --- Goal slot lookup for fly-to-HUD effects ---
     public bool HasGoalForTile(TileType tileType)
     {
         for (int i = 0; i < runtimeGoals.Count; i++)
@@ -241,7 +286,21 @@ public class TopHudController : MonoBehaviour
             if (g.definition == null) continue;
             if (g.definition.targetType != LevelGoalTargetType.Tile) continue;
             if (g.definition.tileType != tileType) continue;
-            if (g.remaining <= 0) continue; // already completed, optional: still fly or not
+            if (g.remaining <= 0) continue;
+            return true;
+        }
+        return false;
+    }
+
+    public bool HasGoalForCollectible(CollectibleId collectibleId)
+    {
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var g = runtimeGoals[i];
+            if (g.definition == null) continue;
+            if (g.definition.targetType != LevelGoalTargetType.Collectible) continue;
+            if (g.definition.collectibleId != collectibleId) continue;
+            if (g.remaining <= 0) continue;
             return true;
         }
         return false;
@@ -281,10 +340,23 @@ public class TopHudController : MonoBehaviour
         return false;
     }
 
-    /// <summary>
-    /// 0→1 arası. Tüm hedeflerin ortalama tamamlanma oranı.
-    /// Oyun sırasında canlı yıldız hesabı için kullanılır.
-    /// </summary>
+    public bool TryGetGoalTargetRectForCollectible(CollectibleId collectibleId, out RectTransform rect)
+    {
+        rect = null;
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var g = runtimeGoals[i];
+            if (g.definition == null) continue;
+            if (g.definition.targetType != LevelGoalTargetType.Collectible) continue;
+            if (g.definition.collectibleId != collectibleId) continue;
+            if (g.slot == null) continue;
+
+            rect = g.slot.IconRectTransform != null ? g.slot.IconRectTransform : g.slot.transform as RectTransform;
+            return rect != null;
+        }
+        return false;
+    }
+
     public float GetGoalProgressRatio()
     {
         if (runtimeGoals == null || runtimeGoals.Count == 0) return 0f;
@@ -321,8 +393,8 @@ public class TopHudController : MonoBehaviour
                 goal.definition.targetType,
                 goal.definition.tileType,
                 goal.definition.obstacleId,
+                goal.definition.collectibleId,
                 goal.remaining));
         }
     }
-
 }

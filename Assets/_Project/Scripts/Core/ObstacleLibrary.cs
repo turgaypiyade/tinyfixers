@@ -17,7 +17,8 @@ public enum ObstacleDamageSourceRule
     Any = 0,
     SpecialOnly = 1,
     NormalOnly = 2,
-    BoosterOnly = 3
+    BoosterOnly = 3,
+    Disabled = 4
 }
 
 [Serializable]
@@ -89,8 +90,6 @@ public class ObstacleDef
 
     public bool IsUnderTileBehavior => GetPrimaryStage().behavior == ObstacleBehaviorType.UnderTileLayered;
     public bool IsOverTileDamageBehavior => IsOverTileDamageBehaviorForRemainingHits(hits);
-
-    // ObstacleDef sınıfı içine ekle:
 
     /// <summary>
     /// Bu obstacle hareket edebilir mi? (düşme, swap)
