@@ -11,13 +11,15 @@ public class TopHudController : MonoBehaviour
         public readonly LevelGoalTargetType targetType;
         public readonly TileType tileType;
         public readonly ObstacleId obstacleId;
+        public readonly CollectibleId collectibleId;
         public readonly int remaining;
 
-        public ActiveGoal(LevelGoalTargetType targetType, TileType tileType, ObstacleId obstacleId, int remaining)
+        public ActiveGoal(LevelGoalTargetType targetType, TileType tileType, ObstacleId obstacleId, CollectibleId collectibleId, int remaining)
         {
             this.targetType = targetType;
             this.tileType = tileType;
             this.obstacleId = obstacleId;
+            this.collectibleId = collectibleId;
             this.remaining = remaining;
         }
     }
@@ -31,6 +33,7 @@ public class TopHudController : MonoBehaviour
     [Header("Display")]
     [SerializeField] private string movesPrefix = "MOVES";
     [SerializeField] private Sprite fallbackGoalIcon;
+    [SerializeField] private Sprite energyOrbGoalIcon;
 
     public RectTransform MovesTextRect => movesText != null ? movesText.rectTransform : null;
 
@@ -145,6 +148,14 @@ public class TopHudController : MonoBehaviour
             return sprite != null ? sprite : fallbackGoalIcon;
         }
 
+        if (goal.targetType == LevelGoalTargetType.Collectible)
+        {
+            if (goal.collectibleId == CollectibleId.EnergyOrb && energyOrbGoalIcon != null)
+                return energyOrbGoalIcon;
+
+            return fallbackGoalIcon;
+        }
+
         var levelData = board != null ? board.ActiveLevelData : null;
         var obstacleDef = levelData != null && levelData.obstacleLibrary != null
             ? levelData.obstacleLibrary.Get(goal.obstacleId)
@@ -213,6 +224,33 @@ public class TopHudController : MonoBehaviour
             UpdateGoalsCompletionState();
     }
 
+    public bool NotifyCollectibleCollected(CollectibleId collectibleId, int amount)
+    {
+        if (amount <= 0)
+            return false;
+
+        bool anyGoalUpdated = false;
+
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var goal = runtimeGoals[i];
+            if (goal.definition.targetType != LevelGoalTargetType.Collectible)
+                continue;
+            if (goal.definition.collectibleId != collectibleId)
+                continue;
+
+            int previous = goal.remaining;
+            goal.remaining = Mathf.Max(0, goal.remaining - amount);
+            goal.slot?.SetRemaining(goal.remaining);
+            anyGoalUpdated |= goal.remaining != previous;
+        }
+
+        if (anyGoalUpdated)
+            UpdateGoalsCompletionState();
+
+        return anyGoalUpdated;
+    }
+
     private void UpdateGoalsCompletionState()
     {
         bool allCompleted = runtimeGoals.Count > 0;
@@ -232,7 +270,6 @@ public class TopHudController : MonoBehaviour
         OnGoalsCompletionChanged?.Invoke(AreAllGoalsCompleted);
     }
 
-    // --- Goal slot lookup for fly-to-HUD effects ---
     public bool HasGoalForTile(TileType tileType)
     {
         for (int i = 0; i < runtimeGoals.Count; i++)
@@ -241,7 +278,21 @@ public class TopHudController : MonoBehaviour
             if (g.definition == null) continue;
             if (g.definition.targetType != LevelGoalTargetType.Tile) continue;
             if (g.definition.tileType != tileType) continue;
-            if (g.remaining <= 0) continue; // already completed, optional: still fly or not
+            if (g.remaining <= 0) continue;
+            return true;
+        }
+        return false;
+    }
+
+    public bool HasGoalForCollectible(CollectibleId collectibleId)
+    {
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var g = runtimeGoals[i];
+            if (g.definition == null) continue;
+            if (g.definition.targetType != LevelGoalTargetType.Collectible) continue;
+            if (g.definition.collectibleId != collectibleId) continue;
+            if (g.remaining <= 0) continue;
             return true;
         }
         return false;
@@ -281,10 +332,23 @@ public class TopHudController : MonoBehaviour
         return false;
     }
 
-    /// <summary>
-    /// 0→1 arası. Tüm hedeflerin ortalama tamamlanma oranı.
-    /// Oyun sırasında canlı yıldız hesabı için kullanılır.
-    /// </summary>
+    public bool TryGetGoalTargetRectForCollectible(CollectibleId collectibleId, out RectTransform rect)
+    {
+        rect = null;
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var g = runtimeGoals[i];
+            if (g.definition == null) continue;
+            if (g.definition.targetType != LevelGoalTargetType.Collectible) continue;
+            if (g.definition.collectibleId != collectibleId) continue;
+            if (g.slot == null) continue;
+
+            rect = g.slot.IconRectTransform != null ? g.slot.IconRectTransform : g.slot.transform as RectTransform;
+            return rect != null;
+        }
+        return false;
+    }
+
     public float GetGoalProgressRatio()
     {
         if (runtimeGoals == null || runtimeGoals.Count == 0) return 0f;
@@ -321,8 +385,8 @@ public class TopHudController : MonoBehaviour
                 goal.definition.targetType,
                 goal.definition.tileType,
                 goal.definition.obstacleId,
+                goal.definition.collectibleId,
                 goal.remaining));
         }
     }
-
 }
