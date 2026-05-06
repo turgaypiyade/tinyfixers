@@ -5,15 +5,24 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Lightweight VFX helper for EnergyContainerService.
-/// It intentionally uses runtime UI ghosts and existing obstacle visuals so no prefab
-/// is required for the first integration pass. You can later replace this with a
-/// dedicated prefab under Assets/_Project/Prefabs/FX/EnergyContainer.
+/// Uses three container frame sprites: closed -> half open -> full open.
+/// The energy orb starts flying only after the full-open frame is shown.
 /// </summary>
 public sealed class EnergyContainerFx : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private BoardController board;
     [SerializeField] private RectTransform overlayRoot;
+
+    [Header("Container Frames")]
+    [SerializeField] private Sprite closedSprite;
+    [SerializeField] private Sprite halfOpenSprite;
+    [SerializeField] private Sprite fullOpenSprite;
+    [SerializeField] private Sprite exhaustedSprite;
+    [SerializeField, Min(0f)] private float halfOpenDelay = 0.07f;
+    [SerializeField, Min(0f)] private float fullOpenDelay = 0.08f;
+    [SerializeField, Min(0f)] private float fullOpenHold = 0.04f;
+    [SerializeField, Min(0f)] private float closeDelay = 0.12f;
 
     [Header("Orb Visual")]
     [SerializeField] private Sprite energyOrbSprite;
@@ -28,6 +37,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
     [SerializeField, Range(0.1f, 1f)] private float exhaustedAlpha = 0.42f;
 
     private readonly Dictionary<int, int> hitVisualCounters = new();
+    private readonly Dictionary<int, int> activeReleaseSequences = new();
     private readonly HashSet<int> exhaustedOrigins = new();
 
     private void Awake()
@@ -49,26 +59,73 @@ public sealed class EnergyContainerFx : MonoBehaviour
         hitVisualCounters.TryGetValue(originIndex, out int hitIndex);
         hitVisualCounters[originIndex] = hitIndex + 1;
 
-        StartCoroutine(CoPulseObstacle(originIndex));
-
-        if (goalAccepted)
-            StartCoroutine(CoFlyOrb(originIndex, collectibleId, hitIndex * Mathf.Max(0f, orbStagger)));
-
-        if (remainingEnergy <= 0)
-            SetExhausted(originIndex, null);
+        float delay = hitIndex * Mathf.Max(0f, orbStagger);
+        StartCoroutine(CoPlayReleaseSequence(originIndex, collectibleId, remainingEnergy, goalAccepted, delay));
     }
 
-    public void SetExhausted(int originIndex, Sprite exhaustedSprite)
+    public void SetExhausted(int originIndex, Sprite overrideExhaustedSprite)
     {
         if (originIndex < 0 || !exhaustedOrigins.Add(originIndex))
             return;
 
-        StartCoroutine(CoSetExhausted(originIndex, exhaustedSprite));
+        StartCoroutine(CoSetExhausted(originIndex, overrideExhaustedSprite));
     }
 
-    private IEnumerator CoPulseObstacle(int originIndex)
+    private IEnumerator CoPlayReleaseSequence(
+        int originIndex,
+        CollectibleId collectibleId,
+        int remainingEnergy,
+        bool goalAccepted,
+        float delay)
     {
+        IncrementActiveSequence(originIndex);
+
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
         RectTransform target = FindObstacleRect(originIndex);
+        Image image = GetObstacleImage(originIndex);
+
+        if (target != null)
+            StartCoroutine(CoPulseObstacle(target));
+
+        if (image != null)
+        {
+            ApplyFrame(image, halfOpenSprite);
+            if (halfOpenDelay > 0f)
+                yield return new WaitForSeconds(halfOpenDelay);
+
+            ApplyFrame(image, fullOpenSprite);
+            if (fullOpenDelay > 0f)
+                yield return new WaitForSeconds(fullOpenDelay);
+        }
+        else if (halfOpenDelay + fullOpenDelay > 0f)
+        {
+            yield return new WaitForSeconds(halfOpenDelay + fullOpenDelay);
+        }
+
+        if (fullOpenHold > 0f)
+            yield return new WaitForSeconds(fullOpenHold);
+
+        if (goalAccepted)
+            StartCoroutine(CoFlyOrb(originIndex, collectibleId, 0f));
+
+        if (closeDelay > 0f)
+            yield return new WaitForSeconds(closeDelay);
+
+        int activeAfterThis = DecrementActiveSequence(originIndex);
+        if (remainingEnergy <= 0)
+        {
+            SetExhausted(originIndex, null);
+            yield break;
+        }
+
+        if (activeAfterThis <= 0 && image != null && !exhaustedOrigins.Contains(originIndex))
+            ApplyFrame(image, closedSprite);
+    }
+
+    private IEnumerator CoPulseObstacle(RectTransform target)
+    {
         if (target == null)
             yield break;
 
@@ -104,23 +161,23 @@ public sealed class EnergyContainerFx : MonoBehaviour
             target.localScale = baseScale;
     }
 
-    private IEnumerator CoSetExhausted(int originIndex, Sprite exhaustedSprite)
+    private IEnumerator CoSetExhausted(int originIndex, Sprite overrideExhaustedSprite)
     {
         yield return null;
 
-        RectTransform target = FindObstacleRect(originIndex);
-        if (target == null)
+        Image image = GetObstacleImage(originIndex);
+        if (image == null)
             yield break;
 
-        if (target.TryGetComponent<Image>(out var image))
-        {
-            if (exhaustedSprite != null)
-                image.sprite = exhaustedSprite;
+        Sprite finalSprite = overrideExhaustedSprite != null
+            ? overrideExhaustedSprite
+            : (exhaustedSprite != null ? exhaustedSprite : fullOpenSprite);
 
-            Color c = image.color;
-            c.a = exhaustedAlpha;
-            image.color = c;
-        }
+        ApplyFrame(image, finalSprite);
+
+        Color c = image.color;
+        c.a = exhaustedAlpha;
+        image.color = c;
     }
 
     private IEnumerator CoFlyOrb(int originIndex, CollectibleId collectibleId, float delay)
@@ -239,6 +296,50 @@ public sealed class EnergyContainerFx : MonoBehaviour
         }
 
         return bestDistance <= board.TileSize * board.TileSize ? best : null;
+    }
+
+    private Image GetObstacleImage(int originIndex)
+    {
+        RectTransform rect = FindObstacleRect(originIndex);
+        if (rect == null)
+            return null;
+
+        return rect.TryGetComponent<Image>(out var image) ? image : rect.GetComponentInChildren<Image>(true);
+    }
+
+    private void ApplyFrame(Image image, Sprite sprite)
+    {
+        if (image == null)
+            return;
+
+        if (sprite != null)
+            image.sprite = sprite;
+
+        Color c = image.color;
+        c.a = 1f;
+        image.color = c;
+    }
+
+    private int IncrementActiveSequence(int originIndex)
+    {
+        activeReleaseSequences.TryGetValue(originIndex, out int count);
+        count++;
+        activeReleaseSequences[originIndex] = count;
+        return count;
+    }
+
+    private int DecrementActiveSequence(int originIndex)
+    {
+        if (!activeReleaseSequences.TryGetValue(originIndex, out int count))
+            return 0;
+
+        count = Mathf.Max(0, count - 1);
+        if (count <= 0)
+            activeReleaseSequences.Remove(originIndex);
+        else
+            activeReleaseSequences[originIndex] = count;
+
+        return count;
     }
 
     private Vector2 GetOriginCenterIn(RectTransform root, int originIndex)
