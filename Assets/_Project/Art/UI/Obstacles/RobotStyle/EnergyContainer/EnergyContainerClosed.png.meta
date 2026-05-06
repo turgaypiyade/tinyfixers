@@ -116,17 +116,10 @@ TextureImporter:
       name: EnergyContainerClosed_0
       rect:
         serializedVersion: 2
-<<<<<<< Updated upstream
-        x: 112
-        y: 112
-        width: 1024
-        height: 1018
-=======
-        x: 111
-        y: 95
-        width: 1026
-        height: 1035
->>>>>>> Stashed changes
+        x: 0
+        y: 0
+        width: 0
+        height: 0
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -135,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 34cee0ce27496c3f0800000000000000
-      internalID: -880853455796769725
+      spriteID: 
+      internalID: 0
       vertices: []
       indices: 
       edges: []
@@ -154,8 +147,7 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable:
-      EnergyContainerClosed_0: -880853455796769725
+    nameFileIdTable: {}
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
