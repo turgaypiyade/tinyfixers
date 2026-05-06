@@ -69,6 +69,10 @@ public class LevelData : ScriptableObject
     public int moves = 25;
     public LevelGoalDefinition[] goals;
 
+    [Header("Energy Container")]
+    [Tooltip("How many EnergyOrb collectibles each EnergyContainer releases in this level. EnergyContainerRuntime can still provide a fallback, but level data owns the tuning.")]
+    [Min(1)] public int energyPerContainer = 10;
+
     [Header("Audio")]
     public AudioClip musicClip;
 
@@ -95,6 +99,7 @@ public class LevelData : ScriptableObject
     {
         width = Mathf.Clamp(width, MinWidth, MaxWidth);
         height = Mathf.Clamp(height, MinHeight, MaxHeight);
+        energyPerContainer = Mathf.Max(1, energyPerContainer);
         int size = width * height;
 
         if (cells == null || cells.Length != size)
