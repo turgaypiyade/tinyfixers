@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 8b6d8ac3b686f463a8d5839ec237df17
+guid: f813b574fe7814017b28f6eb0234b447
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -880853455796769725
-    second: EnergyContainerClosed_0
+      213: 8229552244200740785
+    second: EnergyContainerFullOpen_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,20 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: EnergyContainerClosed_0
+      name: EnergyContainerFullOpen_0
       rect:
         serializedVersion: 2
-<<<<<<< Updated upstream
-        x: 112
-        y: 112
-        width: 1024
-        height: 1018
-=======
-        x: 111
-        y: 95
-        width: 1026
-        height: 1035
->>>>>>> Stashed changes
+        x: 145
+        y: 79
+        width: 959
+        height: 1104
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -135,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 34cee0ce27496c3f0800000000000000
-      internalID: -880853455796769725
+      spriteID: 1b79a100a2e353270800000000000000
+      internalID: 8229552244200740785
       vertices: []
       indices: 
       edges: []
@@ -155,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      EnergyContainerClosed_0: -880853455796769725
+      EnergyContainerFullOpen_0: 8229552244200740785
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
