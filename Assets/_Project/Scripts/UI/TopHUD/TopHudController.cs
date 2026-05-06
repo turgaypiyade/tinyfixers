@@ -115,7 +115,7 @@ public class TopHudController : MonoBehaviour
             {
                 definition = goal,
                 remaining = goal.amount,
-                slot = CreateSlot(goal)
+                slot = CreateSlot(goal, i)
             };
 
             runtime.slot?.SetRemaining(runtime.remaining);
@@ -125,23 +125,27 @@ public class TopHudController : MonoBehaviour
         UpdateGoalsCompletionState();
     }
 
-    private TopHudGoalSlot CreateSlot(LevelGoalDefinition goal)
+    private TopHudGoalSlot CreateSlot(LevelGoalDefinition goal, int goalIndex)
     {
         if (goalSlotPrefab == null || goalsRoot == null)
             return null;
 
         var slot = Instantiate(goalSlotPrefab, goalsRoot);
-        slot.Setup(ResolveGoalIcon(goal), goal.amount);
+        slot.Setup(ResolveGoalIcon(goal, goalIndex), goal.amount);
         return slot;
     }
 
-    private Sprite ResolveGoalIcon(LevelGoalDefinition goal)
+    private Sprite ResolveGoalIcon(LevelGoalDefinition goal, int goalIndex)
     {
         if (goal == null)
             return fallbackGoalIcon;
 
         if (goal.iconOverride != null)
             return goal.iconOverride;
+
+        Sprite sourceOverride = ResolveSourceLevelIconOverride(goalIndex);
+        if (sourceOverride != null)
+            return sourceOverride;
 
         if (goal.targetType == LevelGoalTargetType.Tile)
         {
@@ -159,6 +163,20 @@ public class TopHudController : MonoBehaviour
 
         var preview = obstacleDef != null ? obstacleDef.GetPreviewSprite() : null;
         return preview != null ? preview : fallbackGoalIcon;
+    }
+
+    private Sprite ResolveSourceLevelIconOverride(int goalIndex)
+    {
+        if (goalIndex < 0)
+            return null;
+
+        var spawner = FindFirstObjectByType<GridSpawner>();
+        var sourceLevel = spawner != null ? spawner.level : null;
+        if (sourceLevel == null || sourceLevel.goals == null || goalIndex >= sourceLevel.goals.Length)
+            return null;
+
+        var sourceGoal = sourceLevel.goals[goalIndex];
+        return sourceGoal != null ? sourceGoal.iconOverride : null;
     }
 
     private void HandleMovesChanged(int remainingMoves)
