@@ -92,7 +92,7 @@ public sealed class LineVPatchBotCombo
                 var sequencer = rt.Board.GetComponent<ActionSequencer>();
                 if (sequencer != null && deferredActions.Count > 0)
                 {
-                    sequencer.Enqueue(deferredActions);
+                    sequencer.EnqueueFront(deferredActions);
                 }
             }
             finally

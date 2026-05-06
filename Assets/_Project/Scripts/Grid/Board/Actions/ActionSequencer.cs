@@ -40,6 +40,25 @@ public class ActionSequencer : MonoBehaviour
         }
     }
 
+    // Inserts actions at the FRONT of the queue so they play before any already-queued actions.
+    // Used by PatchBot combos so the LineH/V fires immediately on arrival, before cascade.
+    public void EnqueueFront(IEnumerable<BoardAction> actions)
+    {
+        var incoming = new List<BoardAction>(actions);
+        if (incoming.Count == 0) return;
+
+        var remaining = new List<BoardAction>(actionQueue);
+        actionQueue.Clear();
+        foreach (var a in incoming)  actionQueue.Enqueue(a);
+        foreach (var a in remaining) actionQueue.Enqueue(a);
+
+        if (!IsPlaying && actionQueue.Count > 0)
+        {
+            IsPlaying = true;
+            StartCoroutine(PlaySequence());
+        }
+    }
+
     private IEnumerator PlaySequence()
     {
         // IsPlaying is already set to true by Enqueue() — no race window

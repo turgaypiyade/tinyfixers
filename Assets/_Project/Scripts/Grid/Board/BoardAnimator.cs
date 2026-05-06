@@ -233,6 +233,7 @@ public class BoardAnimator
         var lineHitClearedTiles = new HashSet<TileView>();
         var lineSweepCandidates = new HashSet<TileView>();
         var skipBreakFxTiles = new HashSet<TileView>();
+        var lineHitDamagedObstacleCells = new HashSet<Vector2Int>();
         var implodeTiles = new List<TileView>();
         bool lineHitWindowOpen = false;
 
@@ -507,7 +508,11 @@ public class BoardAnimator
 
                 lightningDuration = board.PlayLightningLineStrikes(
                     lightningLineStrikes,
-                    cell => TryClearTileOnLineSweepHit(cell)
+                    cell =>
+                    {
+                        TryClearTileOnLineSweepHit(cell);
+                        ApplyObstacleDamageOnLineSweepHit(cell);
+                    }
                 );
 
                 if (lightningDuration <= 0.001f)
@@ -644,6 +649,36 @@ public class BoardAnimator
             }
         }
 
+        void ApplyObstacleDamageOnLineSweepHit(Vector2Int tileCell)
+        {
+            if (!useLineHitDrivenClear || !lineHitWindowOpen) return;
+            if (tileCell.x < 0 || tileCell.x >= board.Width || tileCell.y < 0 || tileCell.y >= board.Height) return;
+            if (board.ObstacleStateService == null) return;
+
+            void TryHit(Vector2Int c)
+            {
+                if (c.x < 0 || c.x >= board.Width || c.y < 0 || c.y >= board.Height) return;
+                if (lineHitDamagedObstacleCells.Contains(c)) return;
+                if (!board.ObstacleStateService.HasObstacleAt(c.x, c.y)) return;
+                lineHitDamagedObstacleCells.Add(c);
+                var hit = board.ApplyObstacleDamageAt(c.x, c.y, damageContext, null);
+                if (hit.didHit) board.TriggerObstacleVisualChange(hit.visualChange);
+            }
+
+            // Beam hücresini her durumda hit et (chest gibi blocked hücreler dahil).
+            TryHit(tileCell);
+
+            // Adjacent hit'ler sadece normal tile varsa — chest hücrelerinin çapraz
+            // komşularını zincirlememek için.
+            if (board.Tiles[tileCell.x, tileCell.y] != null)
+            {
+                TryHit(new Vector2Int(tileCell.x + 1, tileCell.y));
+                TryHit(new Vector2Int(tileCell.x - 1, tileCell.y));
+                TryHit(new Vector2Int(tileCell.x, tileCell.y + 1));
+                TryHit(new Vector2Int(tileCell.x, tileCell.y - 1));
+            }
+        }
+
         void TryClearTileOnLineSweepHit(Vector2Int cell)
         {
             if (!useLineHitDrivenClear || !lineHitWindowOpen)
@@ -729,6 +764,8 @@ public class BoardAnimator
         foreach (var kv in obstacleDamageSources)
         {
             var cell = kv.Key;
+            if (lineHitDamagedObstacleCells.Contains(cell)) continue;
+
             var sources = kv.Value;
 
             if (sources == null)
