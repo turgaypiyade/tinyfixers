@@ -94,9 +94,6 @@ public sealed class EnergyContainerFx : MonoBehaviour
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
 
-        // Let GridSpawner finish applying the obstacle stage sprite for this hit first.
-        // Otherwise the stage handler can overwrite the first half-open frame in the
-        // same event dispatch frame.
         yield return null;
 
         RectTransform target = FindObstacleRect(originIndex);
@@ -192,7 +189,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
             target.localScale = baseScale;
     }
 
-    private IEnumerator CoSetExhausted(int originIndex, Sprite overrideExhaustedSprite)
+    private IEnumerator CoSetExhausted(int originIndex, Sprite stageSpriteFallback)
     {
         yield return null;
 
@@ -206,9 +203,11 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
         FitContainerImageToCell(image, originIndex);
 
-        Sprite finalSprite = overrideExhaustedSprite != null
-            ? overrideExhaustedSprite
-            : (exhaustedSprite != null ? exhaustedSprite : fullOpenSprite);
+        // Explicit exhausted frame must win over the ObstacleLibrary final-stage sprite.
+        // The stage sprite is only a fallback for older setups with no exhausted sprite assigned.
+        Sprite finalSprite = exhaustedSprite != null
+            ? exhaustedSprite
+            : (stageSpriteFallback != null ? stageSpriteFallback : fullOpenSprite);
 
         ApplyFrame(image, finalSprite, originIndex);
 
@@ -365,7 +364,6 @@ public sealed class EnergyContainerFx : MonoBehaviour
         if (best != null && bestDistance <= maxDistanceSq)
             return best;
 
-        // Fallback for older obstacle objects without predictable names/sprites.
         if (bestLoose != null && bestLooseDistance <= maxDistanceSq)
             return bestLoose;
 
