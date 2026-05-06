@@ -24,6 +24,12 @@ public sealed class EnergyContainerFx : MonoBehaviour
     [SerializeField, Min(0f)] private float fullOpenHold = 0.04f;
     [SerializeField, Min(0f)] private float closeDelay = 0.12f;
 
+    [Header("Container Cell Fit")]
+    [SerializeField] private bool fitContainerToCell = true;
+    [SerializeField, Range(0.5f, 1.25f)] private float containerCellScale = 1f;
+    [SerializeField] private Vector2 containerCellOffset = Vector2.zero;
+    [SerializeField] private bool preserveContainerAspect = true;
+
     [Header("Orb Visual")]
     [SerializeField] private Sprite energyOrbSprite;
     [SerializeField] private Vector2 orbSize = new Vector2(42f, 42f);
@@ -96,6 +102,12 @@ public sealed class EnergyContainerFx : MonoBehaviour
         RectTransform target = FindObstacleRect(originIndex);
         Image image = GetObstacleImage(originIndex);
 
+        if (image != null)
+        {
+            FitContainerImageToCell(image, originIndex);
+            target = image.rectTransform;
+        }
+
         if (logDebug)
         {
             Debug.Log(
@@ -110,11 +122,11 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
         if (image != null)
         {
-            ApplyFrame(image, halfOpenSprite);
+            ApplyFrame(image, halfOpenSprite, originIndex);
             if (halfOpenDelay > 0f)
                 yield return new WaitForSeconds(halfOpenDelay);
 
-            ApplyFrame(image, fullOpenSprite);
+            ApplyFrame(image, fullOpenSprite, originIndex);
             if (fullOpenDelay > 0f)
                 yield return new WaitForSeconds(fullOpenDelay);
         }
@@ -140,7 +152,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
         }
 
         if (activeAfterThis <= 0 && image != null && !exhaustedOrigins.Contains(originIndex))
-            ApplyFrame(image, closedSprite);
+            ApplyFrame(image, closedSprite, originIndex);
     }
 
     private IEnumerator CoPulseObstacle(RectTransform target)
@@ -192,11 +204,13 @@ public sealed class EnergyContainerFx : MonoBehaviour
             yield break;
         }
 
+        FitContainerImageToCell(image, originIndex);
+
         Sprite finalSprite = overrideExhaustedSprite != null
             ? overrideExhaustedSprite
             : (exhaustedSprite != null ? exhaustedSprite : fullOpenSprite);
 
-        ApplyFrame(image, finalSprite);
+        ApplyFrame(image, finalSprite, originIndex);
 
         Color c = image.color;
         c.a = exhaustedAlpha;
@@ -407,10 +421,67 @@ public sealed class EnergyContainerFx : MonoBehaviour
         return false;
     }
 
-    private void ApplyFrame(Image image, Sprite sprite)
+    private void FitContainerImageToCell(Image image, int originIndex)
+    {
+        if (!fitContainerToCell || image == null || board == null || board.Width <= 0 || board.TileSize <= 0)
+            return;
+
+        RectTransform rt = image.rectTransform;
+        if (rt == null)
+            return;
+
+        RectTransform parent = rt.parent as RectTransform;
+        if (parent == null)
+            return;
+
+        int x = originIndex % board.Width;
+        int y = originIndex / board.Width;
+        float size = board.TileSize * Mathf.Max(0.01f, containerCellScale);
+        Vector3 worldCenter;
+
+        RectTransform tilesRoot = board.Parent;
+        if (tilesRoot != null)
+        {
+            Vector3 localInTilesRoot = new Vector3(
+                x * board.TileSize + board.TileSize * 0.5f + containerCellOffset.x,
+                -y * board.TileSize - board.TileSize * 0.5f + containerCellOffset.y,
+                0f);
+            worldCenter = tilesRoot.TransformPoint(localInTilesRoot);
+        }
+        else
+        {
+            worldCenter = parent.TransformPoint(new Vector3(
+                x * board.TileSize + board.TileSize * 0.5f + containerCellOffset.x,
+                -y * board.TileSize - board.TileSize * 0.5f + containerCellOffset.y,
+                0f));
+        }
+
+        Vector2 parentLocalCenter = parent.InverseTransformPoint(worldCenter);
+
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = parentLocalCenter;
+        rt.sizeDelta = new Vector2(size, size);
+        rt.localRotation = Quaternion.identity;
+        rt.localScale = Vector3.one;
+        image.preserveAspect = preserveContainerAspect;
+        image.raycastTarget = false;
+
+        if (logDebug)
+        {
+            Debug.Log(
+                $"[EnergyContainerFx] FitToCell origin={originIndex} image={image.name} " +
+                $"pos={rt.anchoredPosition} size={rt.sizeDelta} preserveAspect={image.preserveAspect}");
+        }
+    }
+
+    private void ApplyFrame(Image image, Sprite sprite, int originIndex)
     {
         if (image == null)
             return;
+
+        FitContainerImageToCell(image, originIndex);
 
         if (sprite != null)
             image.sprite = sprite;
