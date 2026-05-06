@@ -3,7 +3,14 @@ using UnityEngine;
 public enum LevelGoalTargetType : int
 {
     Tile = 0,
-    Obstacle = 1
+    Obstacle = 1,
+    Collectible = 2
+}
+
+public enum CollectibleId : int
+{
+    None = 0,
+    EnergyOrb = 1
 }
 
 [System.Serializable]
@@ -12,6 +19,7 @@ public class LevelGoalDefinition
     public LevelGoalTargetType targetType = LevelGoalTargetType.Tile;
     public TileType tileType = TileType.Gear;
     public ObstacleId obstacleId = ObstacleId.Stone;
+    public CollectibleId collectibleId = CollectibleId.EnergyOrb;
     [Min(1)] public int amount = 1;
 }
 
@@ -42,7 +50,8 @@ public enum ObstacleId : int
 
     Big_4x4 = 20,
 
-    ColorChest = 21
+    ColorChest = 21,
+    EnergyContainer = 22
 }
 
 [CreateAssetMenu(fileName = "Level_001", menuName = "CoreCollapse/Level Data", order = 1)]
