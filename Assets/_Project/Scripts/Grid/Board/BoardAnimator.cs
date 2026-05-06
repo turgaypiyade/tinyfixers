@@ -404,7 +404,11 @@ public class BoardAnimator
 
             bool clearTile = true;
             if (board.ObstacleStateService != null)
-                clearTile = !board.ObstacleStateService.IsCellBlocked(tile.X, tile.Y);
+            {
+                clearTile =
+                    !board.ObstacleStateService.IsCellBlocked(tile.X, tile.Y) &&
+                    !board.ObstacleStateService.IsInteractionLockedAt(tile.X, tile.Y);
+            }
 
             shouldClearTile[tile] = clearTile;
             if (!clearTile) continue;
@@ -670,7 +674,7 @@ public class BoardAnimator
 
             // Adjacent hit'ler sadece normal tile varsa — chest hücrelerinin çapraz
             // komşularını zincirlememek için.
-            if (board.Tiles[tileCell.x, tileCell.y] != null)
+            if (board.Tiles[tileCell.x, tileCell.y] != null && !board.ObstacleStateService.IsInteractionLockedAt(tileCell.x, tileCell.y))
             {
                 TryHit(new Vector2Int(tileCell.x + 1, tileCell.y));
                 TryHit(new Vector2Int(tileCell.x - 1, tileCell.y));
@@ -821,6 +825,7 @@ public class BoardAnimator
 
         System.Collections.Generic.List<Vector2Int> impactedCells =
             new System.Collections.Generic.List<Vector2Int>();
+
         System.Collections.Generic.Dictionary<TileType, int> clearedByType =
             new System.Collections.Generic.Dictionary<TileType, int>();
 
@@ -836,6 +841,29 @@ public class BoardAnimator
                 plan.RegisterNormalMatchSource(tile);
         }
 
+        bool IsInteractionLocked(TileView tile)
+        {
+            if (tile == null)
+                return false;
+
+            if (board == null || board.ObstacleStateService == null)
+                return false;
+
+            if (tile.X < 0 || tile.X >= board.Width || tile.Y < 0 || tile.Y >= board.Height)
+                return false;
+
+            return board.ObstacleStateService.IsInteractionLockedAt(tile.X, tile.Y);
+        }
+
+        void AddImpactedCell(Vector2Int cell)
+        {
+            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                return;
+
+            if (!impactedCells.Contains(cell))
+                impactedCells.Add(cell);
+        }
+
         void FinalizePresentationTileClear(TileView tile)
         {
             if (tile == null || cleared.Contains(tile))
@@ -846,8 +874,14 @@ public class BoardAnimator
             if (plan.ObstacleHitContext == ObstacleHitContext.NormalMatch)
                 plan.RegisterNormalMatchSource(tile);
 
-            if (!impactedCells.Contains(cell))
-                impactedCells.Add(cell);
+            // Önemli:
+            // Oil / CellAnchoredOverlay gibi locksInteraction olan hücrelerde
+            // alttaki tile temizlenmez; ama cell impact olarak kalır.
+            // Böylece special/clear presentation oil'i vurur, tile'a dokunmaz.
+            AddImpactedCell(cell);
+
+            if (IsInteractionLocked(tile))
+                return;
 
             cleared.Add(tile);
             board.BreakFx?.PlayTileBreak(tile);
@@ -861,7 +895,7 @@ public class BoardAnimator
 
         ctx.NotifyCellImpactNow = delegate (Vector2Int cell)
         {
-            impactedCells.Add(cell);
+            AddImpactedCell(cell);
         };
 
         if (plan.DoBoardShake && board.ShakeTarget != null)

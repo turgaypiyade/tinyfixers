@@ -62,9 +62,14 @@ public class MatchFinder
         if (data == null || data.Special != TileSpecial.None)
             return false;
 
-        if (board.ObstacleStateService != null
-            && board.ObstacleStateService.IsMovableObstacleAt(data.X, data.Y))
-            return false;
+        if (board.ObstacleStateService != null)
+        {
+            if (board.ObstacleStateService.IsMovableObstacleAt(data.X, data.Y))
+                return false;
+
+            if (board.ObstacleStateService.IsInteractionLockedAt(data.X, data.Y))
+                return false;
+        }
 
         return true;
     }
@@ -74,9 +79,14 @@ public class MatchFinder
         if (tile == null || tile.GetSpecial() != TileSpecial.None)
             return false;
 
-        if (board.ObstacleStateService != null
-            && board.ObstacleStateService.IsMovableObstacleAt(tile.X, tile.Y))
-            return false;
+        if (board.ObstacleStateService != null)
+        {
+            if (board.ObstacleStateService.IsMovableObstacleAt(tile.X, tile.Y))
+                return false;
+
+            if (board.ObstacleStateService.IsInteractionLockedAt(tile.X, tile.Y))
+                return false;
+        }
 
         return true;
     }
@@ -825,8 +835,14 @@ public class MatchFinder
     {
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
             return false;
+
         if (board.Holes[x, y])
             return false;
+
+        if (board.ObstacleStateService != null &&
+            board.ObstacleStateService.IsInteractionLockedAt(x, y))
+            return false;
+
         return board.Tiles[x, y] != null;
     }
 
@@ -834,15 +850,21 @@ public class MatchFinder
     {
         if (tile == null)
             return false;
+
         if (tile.GetSpecial() != TileSpecial.None)
             return false;
-        if (board.ObstacleStateService != null &&
-            board.ObstacleStateService.IsMovableObstacleAt(tile.X, tile.Y))
-            return false;
+
+        if (board.ObstacleStateService != null)
+        {
+            if (board.ObstacleStateService.IsMovableObstacleAt(tile.X, tile.Y))
+                return false;
+
+            if (board.ObstacleStateService.IsInteractionLockedAt(tile.X, tile.Y))
+                return false;
+        }
 
         return true;
     }
-
     private bool WouldSwapCreateMatch(int ax, int ay, int bx, int by)
     {
         if (bx < 0 || bx >= board.Width || by < 0 || by >= board.Height)

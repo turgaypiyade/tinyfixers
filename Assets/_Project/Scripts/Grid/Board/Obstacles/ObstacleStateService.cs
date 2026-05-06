@@ -420,6 +420,25 @@ public class ObstacleStateService
             && level.InBounds(x, y);
     }
 
+    public bool IsInteractionLockedAt(int x, int y)
+    {
+        if (!IsValidCell(x, y))
+            return false;
+
+        int idx = level.Index(x, y);
+        var obsId = (ObstacleId)level.obstacles[idx];
+        if (obsId == ObstacleId.None)
+            return false;
+
+        var def = library?.Get(obsId);
+        if (def == null)
+            return false;
+
+        int remaining = ResolveRemainingHitsForCell(idx, def);
+        var stage = def.GetStageRuleForRemainingHits(remaining);
+
+        return stage != null && stage.locksInteraction;
+    }
     private bool CanConsumeHit(
         ObstacleDef def,
         int remainingHits,
