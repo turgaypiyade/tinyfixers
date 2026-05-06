@@ -109,10 +109,20 @@ public class LevelDataEditor : Editor
             EditorGUILayout.EndHorizontal();
 
             goal.targetType = (LevelGoalTargetType)EditorGUILayout.EnumPopup("Target Type", goal.targetType);
-            if (goal.targetType == LevelGoalTargetType.Tile)
-                goal.tileType = (TileType)EditorGUILayout.EnumPopup("Tile", goal.tileType);
-            else
-                goal.obstacleId = (ObstacleId)EditorGUILayout.EnumPopup("Obstacle", goal.obstacleId);
+            switch (goal.targetType)
+            {
+                case LevelGoalTargetType.Tile:
+                    goal.tileType = (TileType)EditorGUILayout.EnumPopup("Tile", goal.tileType);
+                    break;
+
+                case LevelGoalTargetType.Obstacle:
+                    goal.obstacleId = (ObstacleId)EditorGUILayout.EnumPopup("Obstacle", goal.obstacleId);
+                    break;
+
+                case LevelGoalTargetType.Collectible:
+                    goal.collectibleId = (CollectibleId)EditorGUILayout.EnumPopup("Collectible", goal.collectibleId);
+                    break;
+            }
 
             goal.amount = Mathf.Max(1, EditorGUILayout.IntField("Amount", goal.amount));
             EditorGUILayout.EndVertical();
