@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
 /// Runtime companion for ObstacleId.EnergyContainer.
@@ -15,17 +14,17 @@ using UnityEngine.UI;
 /// Recommended ObstacleLibrary setup:
 /// - id: EnergyContainer
 /// - hits: energyPerContainer + 1
-/// - stages 0..energyPerContainer-1: normal active visuals, damageRule=Any
-/// - final stage: exhausted visual, blocksCells as desired, damageRule set to a
-///   rule that will not be reached in your level, until a Disabled rule is added.
+/// - stages 0..energyPerContainer-1: active visuals, damageRule=Any
+/// - final stage: exhausted/passive visual, damageRule=Disabled
 ///
-/// This service never clears/destroys the obstacle. It stops emitting after the
-/// configured capacity so it remains a passive shell on the board.
+/// This service does not clear/destroy the obstacle. With the final Disabled stage,
+/// the container remains visible but no longer consumes hits after its energy is depleted.
 /// </summary>
 public sealed class EnergyContainerService : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private BoardController board;
+    [SerializeField] private TopHudController topHud;
     [SerializeField] private EnergyContainerFx energyFx;
 
     [Header("Rules")]
@@ -41,15 +40,7 @@ public sealed class EnergyContainerService : MonoBehaviour
 
     private void Awake()
     {
-        if (board == null)
-            board = GetComponent<BoardController>()
-                    ?? GetComponentInParent<BoardController>(true)
-                    ?? FindFirstObjectByType<BoardController>();
-
-        if (energyFx == null)
-            energyFx = GetComponent<EnergyContainerFx>()
-                       ?? GetComponentInChildren<EnergyContainerFx>(true)
-                       ?? FindFirstObjectByType<EnergyContainerFx>();
+        ResolveReferences();
     }
 
     private void OnEnable()
@@ -63,11 +54,27 @@ public sealed class EnergyContainerService : MonoBehaviour
             board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
     }
 
+    private void ResolveReferences()
+    {
+        if (board == null)
+            board = GetComponent<BoardController>()
+                    ?? GetComponentInParent<BoardController>(true)
+                    ?? FindFirstObjectByType<BoardController>();
+
+        if (topHud == null)
+            topHud = FindFirstObjectByType<TopHudController>();
+
+        if (energyFx == null)
+            energyFx = GetComponent<EnergyContainerFx>()
+                       ?? GetComponentInChildren<EnergyContainerFx>(true)
+                       ?? FindFirstObjectByType<EnergyContainerFx>();
+    }
+
     private IEnumerator BindWhenReady()
     {
         while (board == null)
         {
-            board = FindFirstObjectByType<BoardController>();
+            ResolveReferences();
             yield return null;
         }
 
@@ -80,9 +87,6 @@ public sealed class EnergyContainerService : MonoBehaviour
         if (change.obstacleId != ObstacleId.EnergyContainer)
             return;
 
-        // If the current obstacle pipeline reports it as cleared, do not emit a bonus
-        // from that terminal clear. EnergyContainer is intended to remain visible; this
-        // guard keeps accidental destroy-stage hits from over-counting goals.
         if (change.cleared)
             return;
 
@@ -104,10 +108,10 @@ public sealed class EnergyContainerService : MonoBehaviour
             Debug.Log($"[EnergyContainer] origin={origin} released={released}/{EnergyPerContainer} remainingEnergy={remainingEnergy}");
         }
 
-        bool goalAccepted = false;
-        var hud = board != null ? board.TopHud : null;
-        if (hud != null)
-            goalAccepted = hud.NotifyCollectibleCollected(collectibleId, 1);
+        if (topHud == null)
+            topHud = FindFirstObjectByType<TopHudController>();
+
+        bool goalAccepted = topHud != null && topHud.NotifyCollectibleCollected(collectibleId, 1);
 
         energyFx?.PlayHit(origin, collectibleId, remainingEnergy, goalAccepted);
 
