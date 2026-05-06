@@ -359,21 +359,32 @@ public sealed class TileAnimator
         if (createdGroup == null)
             createdGroup = createdTile.gameObject.AddComponent<CanvasGroup>();
 
+        // FIX:
+        // Special oluşurken doğru special layout'u baştan garantiye al.
+        // Normal tile'dan kalan FillCell / stretch state'i baseScale'e karışmasın.
+        if (board != null)
+            createdTile.ApplyTileSize(board.TileSize);
+
+        // Layout sonrası tekrar referansı alalım; aynı obje olur ama güvenli.
+        createdIcon = createdTile.IconImage;
+        createdIconRt = createdIcon != null ? createdIcon.rectTransform : null;
+        if (createdIcon == null || createdIconRt == null)
+        {
+            RestoreTileVisualState(createdTile);
+            yield break;
+        }
+
         // Yeni animasyon: Taşların birleşmesi yerine merkezden "pop" ve halka efektiyle ortaya çıkması
         if (board != null && board.Parent != null && createdIconRt != null)
         {
             Vector3[] _cornersAppear = new Vector3[4];
             createdIconRt.GetWorldCorners(_cornersAppear);
             Vector3 _appearCenter = (_cornersAppear[0] + _cornersAppear[2]) * 0.5f;
+
             // Burst animasyonu (halka ve yıldızlar)
             board.StartCoroutine(TileClearBurstVfx.CoPlayBurstAtWorldPosition(
                 _appearCenter, board.Parent, board, BURST_VFX_DURATION));
         }
-
-        // Force correct special-tile layout before capture — prevents fill-cell bleed
-        // from the tile's normal-tile layout state when it was still a regular match piece.
-        if (board != null)
-            createdTile.ApplyTileSize(board.TileSize);
 
         Vector3 baseScale = createdIconRt.localScale;
         Quaternion baseRotation = createdIconRt.localRotation;
@@ -389,6 +400,7 @@ public sealed class TileAnimator
         // Ufaktan büyümeye başlama süresini biraz daha hissedilir yaptık (0.2s civarı)
         float animDuration = Mathf.Clamp(duration, 0.10f, 0.16f);
         float t = 0f;
+
         while (t < animDuration)
         {
             if (createdTile == null || createdIconRt == null)
@@ -399,9 +411,10 @@ public sealed class TileAnimator
 
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / animDuration);
-            
+
             // Hızlıca belirsin
             float fadeEase = Mathf.Clamp01(k * 1.5f);
+
             // Ufaktan esneyerek büyüsün (overshoot and settle)
             float createdScaleFactor = EvaluateCreatedSpecialScale(k);
 
@@ -409,6 +422,7 @@ public sealed class TileAnimator
             createdIconRt.localRotation = Quaternion.identity;
             createdGroup.alpha = fadeEase;
             createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, fadeEase);
+
             yield return null;
         }
 
@@ -420,8 +434,13 @@ public sealed class TileAnimator
         createdIcon.color = baseColor;
 
         RestoreTileVisualState(createdTile);
-    }
 
+        // FIX:
+        // RestoreTileVisualState iconRt.localScale'i Vector3.one yapıyor.
+        // Bu yüzden animasyon bittikten sonra special layout'u tekrar uygula.
+        if (board != null && createdTile != null)
+            createdTile.ApplyTileSize(board.TileSize);
+    }
     private static float EaseOutCubic(float t)
     {
         float inv = 1f - Mathf.Clamp01(t);
@@ -445,6 +464,21 @@ public sealed class TileAnimator
         if (createdGroup == null)
             createdGroup = createdTile.gameObject.AddComponent<CanvasGroup>();
 
+        // FIX:
+        // Fallback path'te de special layout'u baştan garantiye al.
+        // Aksi halde baseScale bazen eski normal tile / FillCell state'inden yakalanabiliyor.
+        if (board != null)
+            createdTile.ApplyTileSize(board.TileSize);
+
+        // Layout sonrası tekrar referansı alalım; aynı obje olur ama güvenli.
+        createdIcon = createdTile.IconImage;
+        createdIconRt = createdIcon != null ? createdIcon.rectTransform : null;
+        if (createdIcon == null || createdIconRt == null)
+        {
+            RestoreTileVisualState(createdTile);
+            yield break;
+        }
+
         // Special appear fallback — burst'ü de tetikle
         // Icon rt sprite'ın gerçek konumunu verir (tile rootu offsetli olabilir)
         if (board != null && board.Parent != null && createdIconRt != null)
@@ -452,6 +486,7 @@ public sealed class TileAnimator
             Vector3[] _cornersAppear = new Vector3[4];
             createdIconRt.GetWorldCorners(_cornersAppear);
             Vector3 _appearCenter = (_cornersAppear[0] + _cornersAppear[2]) * 0.5f;
+
             board.StartCoroutine(TileClearBurstVfx.CoPlayBurstAtWorldPosition(
                 _appearCenter, board.Parent, board, BURST_VFX_DURATION));
         }
@@ -470,6 +505,7 @@ public sealed class TileAnimator
         // Special appear fallback hızlandırıldı: 60-80ms cap
         float animDuration = Mathf.Clamp(duration, 0.06f, 0.08f);
         float t = 0f;
+
         while (t < animDuration)
         {
             if (createdTile == null || createdIconRt == null)
@@ -487,6 +523,7 @@ public sealed class TileAnimator
             createdIconRt.localRotation = Quaternion.identity;
             createdGroup.alpha = fadeEase;
             createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, fadeEase);
+
             yield return null;
         }
 
@@ -498,6 +535,12 @@ public sealed class TileAnimator
         createdIcon.color = baseColor;
 
         RestoreTileVisualState(createdTile);
+
+        // FIX:
+        // RestoreTileVisualState iconRt.localScale'i Vector3.one yapıyor.
+        // Bu yüzden animasyon bittikten sonra special layout'u tekrar uygula.
+        if (board != null && createdTile != null)
+            createdTile.ApplyTileSize(board.TileSize);
     }
 
     private Vector2 GetRectCenterInParentSpace(RectTransform parent, RectTransform rect)

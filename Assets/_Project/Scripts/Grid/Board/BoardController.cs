@@ -875,16 +875,47 @@ public class BoardController : MonoBehaviour
 
     internal void ClearAndDestroyTile(TileView tile, Dictionary<TileType, int> clearedByType = null)
     {
+        if (tile == null || !tile)
+            return;
+
+        int x;
+        int y;
+        TileType tileType;
+        TileSpecial special;
+        bool wasLiveInGrid = false;
+
+        try
+        {
+            x = tile.X;
+            y = tile.Y;
+            tileType = tile.GetTileType();
+            special = tile.GetSpecial();
+
+            wasLiveInGrid =
+                x >= 0 && x < width &&
+                y >= 0 && y < height &&
+                tiles[x, y] == tile;
+        }
+        catch (MissingReferenceException)
+        {
+            return;
+        }
+
         Debug.Log(
-                $"[PulseClearDebug] ClearAndDestroyTile ENTER tile=({tile?.X},{tile?.Y}) " +
-                $"type={(tile != null ? tile.GetTileType().ToString() : "null")} " +
-                $"special={(tile != null ? tile.GetSpecial().ToString() : "null")}");
-        if (tile == null || !tile) return;
-        int x = tile.X, y = tile.Y;
-        if (x >= 0 && x < width && y >= 0 && y < height && tiles[x, y] == tile) ClearCell(x, y);
-        tile.SetSpecial(TileSpecial.None);
-        if (clearedByType != null) { var tt = tile.GetTileType(); clearedByType.TryGetValue(tt, out int c); clearedByType[tt] = c + 1; }
-        Destroy(tile.gameObject);
+            $"[PulseClearDebug] ClearAndDestroyTile ENTER tile=({x},{y}) " +
+            $"type={tileType} special={special} live={wasLiveInGrid}");
+
+        if (wasLiveInGrid)
+            ClearCell(x, y);
+
+        if (clearedByType != null)
+        {
+            clearedByType.TryGetValue(tileType, out int c);
+            clearedByType[tileType] = c + 1;
+        }
+
+        if (tile != null && tile)
+            Destroy(tile.gameObject);
     }
 
     internal void ClearCellDataOnly(Vector2Int c)
