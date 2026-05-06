@@ -32,4 +32,21 @@ public class ChapterTheme : ScriptableObject
     [Header("Success Animation")]
     [Tooltip("Background shown behind the success frame animation. Leave null to hide the background.")]
     public Sprite successAnimationBackground;
+
+    [Header("Pre-Level Special Popup")]
+    [Tooltip("Chapter-specific popup panel/background image shown before entering a level.")]
+    public Sprite preLevelPopupBackground;
+    [Tooltip("Optional chapter-specific Continue button sprite.")]
+    public Sprite preLevelContinueButton;
+    [Tooltip("Optional chapter-specific Cancel icon/button sprite. This button may be icon-only.")]
+    public Sprite preLevelCancelButton;
+    [Tooltip("Check mark sprite shown on selected pre-level special slots.")]
+    public Sprite preLevelCheckMark;
+
+    [Header("Pre-Level Popup Colors")]
+    public Color preLevelDimColor = new Color(0f, 0f, 0f, 0.55f);
+    public Color preLevelSlotNormalTint = new Color(1f, 1f, 1f, 0.18f);
+    public Color preLevelSlotSelectedTint = new Color(1f, 0.86f, 0.25f, 0.72f);
+    public Color preLevelCountTextColor = Color.white;
+    public Color preLevelButtonTextColor = Color.white;
 }
