@@ -11,7 +11,11 @@ public class TopHudGoalSlot : MonoBehaviour
     public void Setup(Sprite sprite, int remaining)
     {
         if (icon != null)
+        {
             icon.sprite = sprite;
+            icon.enabled = sprite != null;
+            icon.preserveAspect = true;
+        }
 
         SetRemaining(remaining);
     }
@@ -40,5 +44,4 @@ public class TopHudGoalSlot : MonoBehaviour
     }
 
     public Sprite IconSprite => icon != null ? icon.sprite : null;
-
 }
