@@ -53,56 +53,93 @@ public static class SpecialCellUtils
             }
     }
 
-    public static void AddAllOfType(HashSet<TileView> matches, ResolutionContext ctx, BoardController board,
-        TileType type, bool excludeSpecials = false)
+    public static void AddAllOfType(
+      HashSet<TileView> matches,
+      ResolutionContext ctx,
+      BoardController board,
+      TileType type,
+      bool excludeSpecials = false)
     {
         for (int x = 0; x < board.Width; x++)
+        {
             for (int y = 0; y < board.Height; y++)
             {
-                if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
-
-                var t = board.Tiles[x, y];
-                if (t == null) continue;
-
-                // Movable obstacle üstündeki tile'ları override hedef listesine alma
-                if (board.ObstacleStateService != null &&
-                    board.ObstacleStateService.IsMovableObstacleAt(x, y))
+                if (!SpecialUtils.CanAffectCell(board, x, y))
                     continue;
 
-                if (!t.GetTileType().Equals(type)) continue;
-                if (excludeSpecials && t.GetSpecial() != TileSpecial.None) continue;
+                var t = board.Tiles[x, y];
+                if (t == null)
+                    continue;
+
+                if (board.ObstacleStateService != null)
+                {
+                    // Movable obstacle üstündeki tile'ları override hedef listesine alma.
+                    if (board.ObstacleStateService.IsMovableObstacleAt(x, y))
+                        continue;
+
+                    // Oil / CellAnchoredOverlay / locksInteraction altındaki tile'ları
+                    // override hedef listesine alma. MarkAffectedCell de çağrılmadığı için
+                    // oil impact/hit de almaz.
+                    if (board.ObstacleStateService.IsInteractionLockedAt(x, y))
+                        continue;
+                }
+
+                if (!t.GetTileType().Equals(type))
+                    continue;
+
+                if (excludeSpecials && t.GetSpecial() != TileSpecial.None)
+                    continue;
 
                 MarkAffectedCell(ctx, x, y, board);
                 matches.Add(t);
             }
+        }
     }
 
-    public static void CollectAllOfType(List<TileView> buffer, BoardController board,
-        TileType type, bool excludeSpecials)
+    public static void CollectAllOfType(
+        List<TileView> buffer,
+        BoardController board,
+        TileType type,
+        bool excludeSpecials)
     {
-        if (buffer == null) return;
+        if (buffer == null)
+            return;
+
         buffer.Clear();
 
         for (int x = 0; x < board.Width; x++)
+        {
             for (int y = 0; y < board.Height; y++)
             {
-                if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
-
-                var t = board.Tiles[x, y];
-                if (t == null) continue;
-
-                // Movable obstacle üstündeki tile'ları override hedef listesine alma
-                if (board.ObstacleStateService != null &&
-                    board.ObstacleStateService.IsMovableObstacleAt(x, y))
+                if (!SpecialUtils.CanAffectCell(board, x, y))
                     continue;
 
-                if (!t.GetTileType().Equals(type)) continue;
-                if (excludeSpecials && t.GetSpecial() != TileSpecial.None) continue;
+                var t = board.Tiles[x, y];
+                if (t == null)
+                    continue;
+
+                if (board.ObstacleStateService != null)
+                {
+                    // Movable obstacle üstündeki tile'ları override hedef listesine alma.
+                    if (board.ObstacleStateService.IsMovableObstacleAt(x, y))
+                        continue;
+
+                    // Oil / locksInteraction altındaki tile'ları görsel fanout listesine alma.
+                    // Böylece override efekti o hücreye gitmez.
+                    if (board.ObstacleStateService.IsInteractionLockedAt(x, y))
+                        continue;
+                }
+
+                if (!t.GetTileType().Equals(type))
+                    continue;
+
+                if (excludeSpecials && t.GetSpecial() != TileSpecial.None)
+                    continue;
 
                 buffer.Add(t);
             }
+        }
     }
-
     public static void SyncAfterSpecialChange(BoardController board, TileView tile)
     {
         if (tile == null) return;
