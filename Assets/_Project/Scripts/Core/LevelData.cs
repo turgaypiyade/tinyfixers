@@ -20,6 +20,8 @@ public class LevelGoalDefinition
     public TileType tileType = TileType.Gear;
     public ObstacleId obstacleId = ObstacleId.Stone;
     public CollectibleId collectibleId = CollectibleId.EnergyOrb;
+    [Tooltip("Optional HUD icon override for this goal. If empty, TopHUD uses the default tile / obstacle / collectible icon resolution.")]
+    public Sprite iconOverride;
     [Min(1)] public int amount = 1;
 }
 
