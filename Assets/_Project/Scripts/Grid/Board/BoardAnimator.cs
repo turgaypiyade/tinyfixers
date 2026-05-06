@@ -1000,52 +1000,37 @@ public class BoardAnimator
 
 
     private void CollectAdjacentOverTileBlockers(
-        Vector2Int centerCell,
-        Dictionary<Vector2Int, List<TileType?>> obstacleDamageSources,
-        TileType? sourceTileType)
+     Vector2Int centerCell,
+     Dictionary<Vector2Int, List<TileType?>> result,
+     TileType? sourceTileType)
     {
-        if (board == null || board.Obstacles == null || obstacleDamageSources == null)
+        if (board == null || board.ObstacleStateService == null || result == null)
             return;
-
-        void AddDamageSource(Vector2Int cell)
-        {
-            if (obstacleDamageSources.TryGetValue(cell, out var sources))
-            {
-                sources.Add(sourceTileType);
-            }
-            else
-            {
-                obstacleDamageSources[cell] = new List<TileType?> { sourceTileType };
-            }
-        }
 
         void TryCollect(Vector2Int cell)
         {
             if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
                 return;
 
-            if (!board.Obstacles.IsOverTileBlockerAt(cell.x, cell.y)
-                && !board.ObstacleStateService.IsOilAt(cell.x, cell.y))
+            bool isDamageableOverTile =
+                board.Obstacles != null && board.Obstacles.IsOverTileBlockerAt(cell.x, cell.y);
+
+            bool isOil =
+                board.ObstacleStateService.IsOilAt(cell.x, cell.y);
+
+            if (!isDamageableOverTile && !isOil)
                 return;
 
-            AddDamageSource(cell);
+            if (result.TryGetValue(cell, out var sources))
+                sources.Add(sourceTileType);
+            else
+                result[cell] = new List<TileType?> { sourceTileType };
         }
 
+        // Normal match obstacle damage sadece 4 yön komşuluk kullanır.
+        // AllowDiagonal burada kullanılmaz; o sadece cascade/fall diagonal kayma içindir.
         for (int i = 0; i < OrthogonalDirs.Length; i++)
             TryCollect(centerCell + OrthogonalDirs[i]);
-
-        for (int i = 0; i < DiagonalDirs.Length; i++)
-        {
-            Vector2Int diagonal = centerCell + DiagonalDirs[i];
-
-            if (diagonal.x < 0 || diagonal.x >= board.Width || diagonal.y < 0 || diagonal.y >= board.Height)
-                continue;
-
-            if (!board.Obstacles.IsDiagonalAllowedAt(diagonal.x, diagonal.y))
-                continue;
-
-            TryCollect(diagonal);
-        }
     }
 
     private void CollectAdjacentOverTileBlockers(
