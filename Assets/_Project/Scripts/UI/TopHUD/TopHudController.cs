@@ -87,7 +87,6 @@ public class TopHudController : MonoBehaviour
 
         BuildGoals(board.ActiveLevelData);
         RefreshMoves(board.RemainingMoves);
-
         initialized = true;
     }
 
@@ -142,6 +141,9 @@ public class TopHudController : MonoBehaviour
         if (goal == null)
             return fallbackGoalIcon;
 
+        if (goal.iconOverride != null)
+            return goal.iconOverride;
+
         if (goal.targetType == LevelGoalTargetType.Tile)
         {
             var sprite = board != null ? board.GetIcon(goal.tileType) : null;
@@ -187,9 +189,7 @@ public class TopHudController : MonoBehaviour
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
             var goal = runtimeGoals[i];
-            if (goal.definition.targetType != LevelGoalTargetType.Tile)
-                continue;
-            if (goal.definition.tileType != tileType)
+            if (goal.definition.targetType != LevelGoalTargetType.Tile || goal.definition.tileType != tileType)
                 continue;
 
             int previous = goal.remaining;
@@ -209,9 +209,7 @@ public class TopHudController : MonoBehaviour
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
             var goal = runtimeGoals[i];
-            if (goal.definition.targetType != LevelGoalTargetType.Obstacle)
-                continue;
-            if (goal.definition.obstacleId != obstacleId)
+            if (goal.definition.targetType != LevelGoalTargetType.Obstacle || goal.definition.obstacleId != obstacleId)
                 continue;
 
             int previous = goal.remaining;
@@ -234,9 +232,7 @@ public class TopHudController : MonoBehaviour
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
             var goal = runtimeGoals[i];
-            if (goal.definition.targetType != LevelGoalTargetType.Collectible)
-                continue;
-            if (goal.definition.collectibleId != collectibleId)
+            if (goal.definition.targetType != LevelGoalTargetType.Collectible || goal.definition.collectibleId != collectibleId)
                 continue;
 
             int previous = goal.remaining;
