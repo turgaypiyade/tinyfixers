@@ -106,7 +106,6 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
     private IEnumerator CoSetExhausted(int originIndex, Sprite exhaustedSprite)
     {
-        // Wait one frame so GridSpawner has applied the stage visual change first.
         yield return null;
 
         RectTransform target = FindObstacleRect(originIndex);
@@ -132,17 +131,16 @@ public sealed class EnergyContainerFx : MonoBehaviour
         if (board == null)
             yield break;
 
-        var hud = board.TopHud;
+        var hud = FindFirstObjectByType<TopHudController>();
         if (hud == null || !hud.TryGetGoalTargetRectForCollectible(collectibleId, out var targetSlot) || targetSlot == null)
-            yield break;
-
-        RectTransform source = FindObstacleRect(originIndex);
-        if (source == null)
             yield break;
 
         RectTransform root = overlayRoot != null ? overlayRoot : (board.ContentRoot != null ? board.ContentRoot : board.Parent);
         if (root == null)
             yield break;
+
+        Vector2 start = GetOriginCenterIn(root, originIndex);
+        Vector2 end = WorldToLocalIn(root, targetSlot);
 
         var go = new GameObject("EnergyOrbFlyGhost", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
         var rt = (RectTransform)go.transform;
@@ -152,6 +150,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
         rt.sizeDelta = orbSize;
         rt.localScale = Vector3.one;
         rt.localRotation = Quaternion.identity;
+        rt.anchoredPosition = start;
 
         var image = go.GetComponent<Image>();
         image.sprite = energyOrbSprite;
@@ -163,8 +162,6 @@ public sealed class EnergyContainerFx : MonoBehaviour
         var cg = go.GetComponent<CanvasGroup>();
         cg.alpha = 1f;
 
-        Vector2 start = WorldToLocalIn(root, source);
-        Vector2 end = WorldToLocalIn(root, targetSlot);
         Vector2 mid = (start + end) * 0.5f;
         float dir = end.x >= start.x ? 1f : -1f;
         Vector2 control = mid + new Vector2(80f * dir, arcHeight);
@@ -206,7 +203,58 @@ public sealed class EnergyContainerFx : MonoBehaviour
                 return rt;
         }
 
-        return null;
+        return FindObstacleRectByApproximateCell(originIndex, rects);
+    }
+
+    private RectTransform FindObstacleRectByApproximateCell(int originIndex, RectTransform[] rects)
+    {
+        if (board == null || rects == null || board.Width <= 0 || board.TileSize <= 0)
+            return null;
+
+        int x = originIndex % board.Width;
+        int y = originIndex / board.Width;
+        Vector2 expected = new Vector2(
+            x * board.TileSize + board.TileSize * 0.5f,
+            -y * board.TileSize - board.TileSize * 0.5f);
+
+        RectTransform best = null;
+        float bestDistance = float.MaxValue;
+
+        for (int i = 0; i < rects.Length; i++)
+        {
+            var rt = rects[i];
+            if (rt == null || !rt.TryGetComponent<Image>(out _))
+                continue;
+
+            if (rt.name.StartsWith("GridLine") || rt.name.Contains("CellBG"))
+                continue;
+
+            Vector2 pos = rt.anchoredPosition + rt.rect.size * 0.5f;
+            float d = Vector2.SqrMagnitude(pos - expected);
+            if (d < bestDistance)
+            {
+                best = rt;
+                bestDistance = d;
+            }
+        }
+
+        return bestDistance <= board.TileSize * board.TileSize ? best : null;
+    }
+
+    private Vector2 GetOriginCenterIn(RectTransform root, int originIndex)
+    {
+        RectTransform obstacle = FindObstacleRect(originIndex);
+        if (obstacle != null)
+            return WorldToLocalIn(root, obstacle);
+
+        if (board == null || board.Width <= 0)
+            return Vector2.zero;
+
+        int x = originIndex % board.Width;
+        int y = originIndex / board.Width;
+        return new Vector2(
+            x * board.TileSize + board.TileSize * 0.5f,
+            -y * board.TileSize - board.TileSize * 0.5f);
     }
 
     private static Vector2 WorldToLocalIn(RectTransform root, RectTransform source)
