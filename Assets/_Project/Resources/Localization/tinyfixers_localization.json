@@ -1,0 +1,29 @@
+{
+  "defaultLanguage": "tr",
+  "languages": [
+    {
+      "code": "tr",
+      "entries": [
+        { "key": "prelevel_popup_title_level", "value": "Seviye {0}" },
+        { "key": "prelevel_popup_continue", "value": "Devam" },
+        { "key": "prelevel_popup_cancel", "value": "İptal" },
+        { "key": "prelevel_special_lineh_name", "value": "Line H" },
+        { "key": "prelevel_special_pulsecore_name", "value": "Pulse Core" },
+        { "key": "prelevel_special_override_name", "value": "Override" },
+        { "key": "prelevel_special_count_format", "value": "{0}" }
+      ]
+    },
+    {
+      "code": "en",
+      "entries": [
+        { "key": "prelevel_popup_title_level", "value": "Level {0}" },
+        { "key": "prelevel_popup_continue", "value": "Continue" },
+        { "key": "prelevel_popup_cancel", "value": "Cancel" },
+        { "key": "prelevel_special_lineh_name", "value": "Line H" },
+        { "key": "prelevel_special_pulsecore_name", "value": "Pulse Core" },
+        { "key": "prelevel_special_override_name", "value": "Override" },
+        { "key": "prelevel_special_count_format", "value": "{0}" }
+      ]
+    }
+  ]
+}
