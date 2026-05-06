@@ -102,7 +102,7 @@ public class PreLevelSpecialInjector : MonoBehaviour
 
         if (tile.TryGetCellState(out var state))
         {
-            if (state.hasObstacle)
+            if (state.hasObstacle || !state.canContainTile)
                 return false;
         }
 
@@ -154,10 +154,10 @@ public class PreLevelSpecialInjector : MonoBehaviour
 
         RectTransform rt = imageTarget.RectTransform;
         Vector3 baseScale = rt.localScale;
-        Color baseColor = imageTarget.Color;
+        UnityEngine.Color baseColor = imageTarget.Color;
 
         rt.localScale = baseScale * startScale;
-        imageTarget.Color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
+        imageTarget.Color = new UnityEngine.Color(baseColor.r, baseColor.g, baseColor.b, 0f);
 
         PlayOneShot(placeSfx);
 
@@ -191,7 +191,7 @@ public class PreLevelSpecialInjector : MonoBehaviour
 
             float alpha = Mathf.Clamp01(t / 0.18f);
             rt.localScale = baseScale * scale;
-            imageTarget.Color = new Color(baseColor.r, baseColor.g, baseColor.b, alpha * baseColor.a);
+            imageTarget.Color = new UnityEngine.Color(baseColor.r, baseColor.g, baseColor.b, alpha * baseColor.a);
 
             yield return null;
         }
@@ -219,9 +219,9 @@ public class PreLevelSpecialInjector : MonoBehaviour
         private readonly UnityEngine.UI.Image image;
         public readonly RectTransform RectTransform;
         public bool IsValid => image != null && RectTransform != null;
-        public Color Color
+        public UnityEngine.Color Color
         {
-            get => image != null ? image.color : Color.white;
+            get => image != null ? image.color : UnityEngine.Color.white;
             set
             {
                 if (image != null)
