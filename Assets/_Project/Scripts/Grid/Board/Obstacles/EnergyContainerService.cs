@@ -35,6 +35,7 @@ public sealed class EnergyContainerService : MonoBehaviour
     [SerializeField] private bool logHits;
 
     private readonly Dictionary<int, int> releasedByOrigin = new();
+    private readonly Dictionary<int, int> lastProcessedRemainingHitsByOrigin = new();
 
     public int EnergyPerContainer => Mathf.Max(1, energyPerContainer);
 
@@ -50,8 +51,11 @@ public sealed class EnergyContainerService : MonoBehaviour
 
     private void OnDisable()
     {
-        if (board != null)
-            board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
+        if (board == null)
+            return;
+
+        board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
+        board.OnObstacleStageChanged -= HandleObstacleStageChanged;
     }
 
     private void ResolveReferences()
@@ -80,6 +84,36 @@ public sealed class EnergyContainerService : MonoBehaviour
 
         board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
         board.ObstacleVisualChanged += HandleObstacleVisualChanged;
+
+        // Some obstacle presentation paths use the stage-change event as the primary
+        // runtime visual notification. Listen to both events and de-duplicate by
+        // origin + remaining hits so each accepted hit releases exactly one orb.
+        board.OnObstacleStageChanged -= HandleObstacleStageChanged;
+        board.OnObstacleStageChanged += HandleObstacleStageChanged;
+
+        if (logHits)
+            Debug.Log("[EnergyContainer] Bound to board obstacle events.");
+    }
+
+    private void HandleObstacleStageChanged(int originIndex, ObstacleStageSnapshot stage)
+    {
+        if (board == null || board.ObstacleStateService == null)
+            return;
+
+        if (originIndex < 0 || board.Width <= 0)
+            return;
+
+        int x = originIndex % board.Width;
+        int y = originIndex / board.Width;
+
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return;
+
+        if (board.ObstacleStateService.GetObstacleIdAt(x, y) != ObstacleId.EnergyContainer)
+            return;
+
+        int remainingHits = board.ObstacleStateService.GetRemainingHitsAt(x, y);
+        ProcessEnergyContainerHit(originIndex, remainingHits, stage.sprite, source: "stage");
     }
 
     private void HandleObstacleVisualChanged(ObstacleVisualChange change)
@@ -90,11 +124,25 @@ public sealed class EnergyContainerService : MonoBehaviour
         if (change.cleared)
             return;
 
-        int origin = change.originIndex;
+        ProcessEnergyContainerHit(change.originIndex, change.remainingHits, change.sprite, source: "visual");
+    }
+
+    private void ProcessEnergyContainerHit(int origin, int remainingHits, Sprite sprite, string source)
+    {
+        if (origin < 0)
+            return;
+
+        if (lastProcessedRemainingHitsByOrigin.TryGetValue(origin, out int lastRemaining) && lastRemaining == remainingHits)
+            return;
+
+        lastProcessedRemainingHitsByOrigin[origin] = remainingHits;
+
+        ResolveReferences();
+
         int released = releasedByOrigin.TryGetValue(origin, out int current) ? current : 0;
         if (released >= EnergyPerContainer)
         {
-            energyFx?.SetExhausted(origin, change.sprite);
+            energyFx?.SetExhausted(origin, sprite);
             return;
         }
 
@@ -103,20 +151,24 @@ public sealed class EnergyContainerService : MonoBehaviour
 
         int remainingEnergy = Mathf.Max(0, EnergyPerContainer - released);
 
-        if (logHits)
-        {
-            Debug.Log($"[EnergyContainer] origin={origin} released={released}/{EnergyPerContainer} remainingEnergy={remainingEnergy}");
-        }
-
         if (topHud == null)
             topHud = FindFirstObjectByType<TopHudController>();
 
         bool goalAccepted = topHud != null && topHud.NotifyCollectibleCollected(collectibleId, 1);
 
+        if (logHits)
+        {
+            Debug.Log(
+                $"[EnergyContainer] source={source} origin={origin} " +
+                $"remainingHits={remainingHits} released={released}/{EnergyPerContainer} " +
+                $"remainingEnergy={remainingEnergy} goalAccepted={goalAccepted} " +
+                $"hasFx={energyFx != null} hasHud={topHud != null}");
+        }
+
         energyFx?.PlayHit(origin, collectibleId, remainingEnergy, goalAccepted);
 
         if (remainingEnergy <= 0)
-            energyFx?.SetExhausted(origin, change.sprite);
+            energyFx?.SetExhausted(origin, sprite);
     }
 
     public bool IsExhausted(int originIndex)
