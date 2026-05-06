@@ -36,6 +36,9 @@ public sealed class EnergyContainerFx : MonoBehaviour
     [SerializeField] private float pulseDuration = 0.10f;
     [SerializeField, Range(0.1f, 1f)] private float exhaustedAlpha = 0.42f;
 
+    [Header("Debug")]
+    [SerializeField] private bool logDebug;
+
     private readonly Dictionary<int, int> hitVisualCounters = new();
     private readonly Dictionary<int, int> activeReleaseSequences = new();
     private readonly HashSet<int> exhaustedOrigins = new();
@@ -83,8 +86,22 @@ public sealed class EnergyContainerFx : MonoBehaviour
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
 
+        // Let GridSpawner finish applying the obstacle stage sprite for this hit first.
+        // Otherwise the stage handler can overwrite the first half-open frame in the
+        // same event dispatch frame.
+        yield return null;
+
         RectTransform target = FindObstacleRect(originIndex);
         Image image = GetObstacleImage(originIndex);
+
+        if (logDebug)
+        {
+            Debug.Log(
+                $"[EnergyContainerFx] release origin={originIndex} " +
+                $"target={(target != null ? target.name : "null")} " +
+                $"image={(image != null ? image.name : "null")} " +
+                $"goalAccepted={goalAccepted} remainingEnergy={remainingEnergy}");
+        }
 
         if (target != null)
             StartCoroutine(CoPulseObstacle(target));
@@ -167,7 +184,11 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
         Image image = GetObstacleImage(originIndex);
         if (image == null)
+        {
+            if (logDebug)
+                Debug.LogWarning($"[EnergyContainerFx] Exhausted image not found. origin={originIndex}");
             yield break;
+        }
 
         Sprite finalSprite = overrideExhaustedSprite != null
             ? overrideExhaustedSprite
@@ -248,63 +269,122 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
     private RectTransform FindObstacleRect(int originIndex)
     {
-        if (board == null || board.ContentRoot == null)
-            return null;
-
-        string expectedName = $"Obstacle_{originIndex}";
-        var rects = board.ContentRoot.GetComponentsInChildren<RectTransform>(true);
-        for (int i = 0; i < rects.Length; i++)
-        {
-            var rt = rects[i];
-            if (rt != null && rt.name == expectedName)
-                return rt;
-        }
-
-        return FindObstacleRectByApproximateCell(originIndex, rects);
-    }
-
-    private RectTransform FindObstacleRectByApproximateCell(int originIndex, RectTransform[] rects)
-    {
-        if (board == null || rects == null || board.Width <= 0 || board.TileSize <= 0)
-            return null;
-
-        int x = originIndex % board.Width;
-        int y = originIndex / board.Width;
-        Vector2 expected = new Vector2(
-            x * board.TileSize + board.TileSize * 0.5f,
-            -y * board.TileSize - board.TileSize * 0.5f);
-
-        RectTransform best = null;
-        float bestDistance = float.MaxValue;
-
-        for (int i = 0; i < rects.Length; i++)
-        {
-            var rt = rects[i];
-            if (rt == null || !rt.TryGetComponent<Image>(out _))
-                continue;
-
-            if (rt.name.StartsWith("GridLine") || rt.name.Contains("CellBG"))
-                continue;
-
-            Vector2 pos = rt.anchoredPosition + rt.rect.size * 0.5f;
-            float d = Vector2.SqrMagnitude(pos - expected);
-            if (d < bestDistance)
-            {
-                best = rt;
-                bestDistance = d;
-            }
-        }
-
-        return bestDistance <= board.TileSize * board.TileSize ? best : null;
+        Image image = FindObstacleImage(originIndex);
+        return image != null ? image.rectTransform : null;
     }
 
     private Image GetObstacleImage(int originIndex)
     {
-        RectTransform rect = FindObstacleRect(originIndex);
-        if (rect == null)
+        return FindObstacleImage(originIndex);
+    }
+
+    private Image FindObstacleImage(int originIndex)
+    {
+        if (board == null || board.ContentRoot == null || board.Width <= 0 || board.TileSize <= 0)
             return null;
 
-        return rect.TryGetComponent<Image>(out var image) ? image : rect.GetComponentInChildren<Image>(true);
+        RectTransform root = board.ContentRoot;
+        Vector2 expected = GetOriginCenterIn(root, originIndex, allowObstacleLookup: false);
+        Image[] images = root.GetComponentsInChildren<Image>(true);
+
+        Image best = null;
+        float bestDistance = float.MaxValue;
+        Image bestLoose = null;
+        float bestLooseDistance = float.MaxValue;
+
+        for (int i = 0; i < images.Length; i++)
+        {
+            Image image = images[i];
+            if (image == null || image.raycastTarget)
+            {
+                // Most obstacle/tile visuals disable raycasts, but keep raycast-enabled
+                // images out of the broad fallback so HUD or overlay blockers are not selected.
+            }
+
+            RectTransform rt = image != null ? image.rectTransform : null;
+            if (rt == null)
+                continue;
+
+            if (ShouldIgnoreImage(image))
+                continue;
+
+            Vector2 center = WorldToLocalIn(root, rt);
+            float distance = Vector2.SqrMagnitude(center - expected);
+
+            bool strongCandidate = IsContainerFrameSprite(image.sprite) || IsLikelyObstacleHierarchy(rt);
+            if (strongCandidate && distance < bestDistance)
+            {
+                best = image;
+                bestDistance = distance;
+            }
+
+            if (distance < bestLooseDistance)
+            {
+                bestLoose = image;
+                bestLooseDistance = distance;
+            }
+        }
+
+        float maxDistance = Mathf.Max(8f, board.TileSize * 0.75f);
+        float maxDistanceSq = maxDistance * maxDistance;
+
+        if (best != null && bestDistance <= maxDistanceSq)
+            return best;
+
+        // Fallback for older obstacle objects without predictable names/sprites.
+        if (bestLoose != null && bestLooseDistance <= maxDistanceSq)
+            return bestLoose;
+
+        if (logDebug)
+        {
+            Debug.LogWarning(
+                $"[EnergyContainerFx] No obstacle image found. origin={originIndex} " +
+                $"expected={expected} best={(best != null ? best.name : "null")} bestDist={Mathf.Sqrt(bestDistance):0.0} " +
+                $"loose={(bestLoose != null ? bestLoose.name : "null")} looseDist={Mathf.Sqrt(bestLooseDistance):0.0}");
+        }
+
+        return null;
+    }
+
+    private bool ShouldIgnoreImage(Image image)
+    {
+        if (image == null)
+            return true;
+
+        string n = image.name;
+        if (n.StartsWith("GridLine") || n.Contains("CellBG") || n.Contains("EnergyOrbFlyGhost"))
+            return true;
+
+        Transform t = image.transform;
+        while (t != null)
+        {
+            string tn = t.name;
+            if (tn.Contains("TopHUD") || tn.Contains("Goal") || tn.Contains("VFXRoot"))
+                return true;
+            t = t.parent;
+        }
+
+        return false;
+    }
+
+    private bool IsContainerFrameSprite(Sprite sprite)
+    {
+        return sprite != null &&
+               (sprite == closedSprite || sprite == halfOpenSprite || sprite == fullOpenSprite || sprite == exhaustedSprite);
+    }
+
+    private static bool IsLikelyObstacleHierarchy(RectTransform rt)
+    {
+        Transform t = rt;
+        while (t != null)
+        {
+            string n = t.name;
+            if (n.Contains("Obstacle") || n.Contains("Obstacles") || n.Contains("OverTiles") || n.Contains("UnderTiles"))
+                return true;
+            t = t.parent;
+        }
+
+        return false;
     }
 
     private void ApplyFrame(Image image, Sprite sprite)
@@ -318,6 +398,9 @@ public sealed class EnergyContainerFx : MonoBehaviour
         Color c = image.color;
         c.a = 1f;
         image.color = c;
+
+        if (logDebug)
+            Debug.Log($"[EnergyContainerFx] ApplyFrame image={image.name} sprite={(image.sprite != null ? image.sprite.name : "null")}");
     }
 
     private int IncrementActiveSequence(int originIndex)
@@ -344,18 +427,36 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
     private Vector2 GetOriginCenterIn(RectTransform root, int originIndex)
     {
-        RectTransform obstacle = FindObstacleRect(originIndex);
-        if (obstacle != null)
-            return WorldToLocalIn(root, obstacle);
+        return GetOriginCenterIn(root, originIndex, allowObstacleLookup: true);
+    }
 
-        if (board == null || board.Width <= 0)
+    private Vector2 GetOriginCenterIn(RectTransform root, int originIndex, bool allowObstacleLookup)
+    {
+        if (allowObstacleLookup)
+        {
+            RectTransform obstacle = FindObstacleRect(originIndex);
+            if (obstacle != null)
+                return WorldToLocalIn(root, obstacle);
+        }
+
+        if (root == null || board == null || board.Width <= 0)
             return Vector2.zero;
 
         int x = originIndex % board.Width;
         int y = originIndex / board.Width;
-        return new Vector2(
+        Vector3 localInTilesRoot = new Vector3(
             x * board.TileSize + board.TileSize * 0.5f,
-            -y * board.TileSize - board.TileSize * 0.5f);
+            -y * board.TileSize - board.TileSize * 0.5f,
+            0f);
+
+        RectTransform tilesRoot = board.Parent;
+        if (tilesRoot != null)
+        {
+            Vector3 world = tilesRoot.TransformPoint(localInTilesRoot);
+            return root.InverseTransformPoint(world);
+        }
+
+        return new Vector2(localInTilesRoot.x, localInTilesRoot.y);
     }
 
     private static Vector2 WorldToLocalIn(RectTransform root, RectTransform source)
