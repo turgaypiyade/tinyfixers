@@ -11,9 +11,8 @@ using UnityEngine;
 /// EnergyOrb collectible and the container becomes visually exhausted after its
 /// configured capacity is depleted.
 ///
-/// Energy capacity is level-driven through LevelData.energyPerContainer. The
-/// serialized fallbackEnergyPerContainer value is only used when there is no active
-/// level/source level available.
+/// Energy capacity is level-driven through LevelData.energyPerContainer.
+/// The collectible target is resolved from the active LevelData goals.
 /// </summary>
 public sealed class EnergyContainerService : MonoBehaviour
 {
@@ -21,10 +20,6 @@ public sealed class EnergyContainerService : MonoBehaviour
     [SerializeField] private BoardController board;
     [SerializeField] private TopHudController topHud;
     [SerializeField] private EnergyContainerFx energyFx;
-
-    [Header("Rules")]
-    [SerializeField, Min(1)] private int fallbackEnergyPerContainer = 10;
-    [SerializeField] private CollectibleId collectibleId = CollectibleId.EnergyOrb;
 
     [Header("Debug")]
     [SerializeField] private bool logHits;
@@ -71,17 +66,36 @@ public sealed class EnergyContainerService : MonoBehaviour
 
     private int ResolveEnergyPerContainer()
     {
-        // Prefer the source LevelData on GridSpawner because GridSpawner currently
-        // clones LevelData at runtime. This keeps the value level-authored even if an
-        // older runtime clone omitted newer serialized fields.
-        var spawner = FindFirstObjectByType<GridSpawner>();
-        if (spawner != null && spawner.level != null)
-            return Mathf.Max(1, spawner.level.energyPerContainer);
+        LevelData level = ResolveActiveLevelData();
+        return Mathf.Max(1, level != null ? level.energyPerContainer : 1);
+    }
 
+    private CollectibleId ResolveCollectibleId()
+    {
+        LevelData level = ResolveActiveLevelData();
+        if (level != null && level.goals != null)
+        {
+            for (int i = 0; i < level.goals.Length; i++)
+            {
+                var goal = level.goals[i];
+                if (goal == null)
+                    continue;
+
+                if (goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId != CollectibleId.None)
+                    return goal.collectibleId;
+            }
+        }
+
+        return CollectibleId.None;
+    }
+
+    private LevelData ResolveActiveLevelData()
+    {
         if (board != null && board.ActiveLevelData != null)
-            return Mathf.Max(1, board.ActiveLevelData.energyPerContainer);
+            return board.ActiveLevelData;
 
-        return Mathf.Max(1, fallbackEnergyPerContainer);
+        var spawner = FindFirstObjectByType<GridSpawner>();
+        return spawner != null ? spawner.level : null;
     }
 
     private IEnumerator BindWhenReady()
@@ -162,7 +176,10 @@ public sealed class EnergyContainerService : MonoBehaviour
         if (topHud == null)
             topHud = FindFirstObjectByType<TopHudController>();
 
-        bool goalAccepted = topHud != null && topHud.NotifyCollectibleCollected(collectibleId, 1);
+        CollectibleId collectible = ResolveCollectibleId();
+        bool goalAccepted = collectible != CollectibleId.None
+                            && topHud != null
+                            && topHud.NotifyCollectibleCollected(collectible, 1);
 
         if (logHits)
         {
@@ -170,13 +187,11 @@ public sealed class EnergyContainerService : MonoBehaviour
                 $"[EnergyContainer] source={source} origin={origin} " +
                 $"remainingHits={remainingHits} released={released}/{capacity} " +
                 $"remainingEnergy={remainingEnergy} goalAccepted={goalAccepted} " +
+                $"collectible={collectible} " +
                 $"hasFx={energyFx != null} hasHud={topHud != null}");
         }
 
-        energyFx?.PlayHit(origin, collectibleId, remainingEnergy, goalAccepted);
-
-        if (remainingEnergy <= 0)
-            energyFx?.SetExhausted(origin, sprite);
+        energyFx?.PlayHit(origin, collectible, remainingEnergy, goalAccepted);
     }
 
     public bool IsExhausted(int originIndex)

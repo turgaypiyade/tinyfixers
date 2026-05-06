@@ -209,7 +209,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
             ? exhaustedSprite
             : (stageSpriteFallback != null ? stageSpriteFallback : fullOpenSprite);
 
-        ApplyFrame(image, finalSprite, originIndex);
+        ApplyFrame(image, finalSprite, originIndex, allowExhaustedOverride: true);
 
         Color c = image.color;
         c.a = exhaustedAlpha;
@@ -286,8 +286,6 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
         if (go != null)
             Destroy(go);
-
-        yield return PunchTarget(targetSlot);
     }
 
     private RectTransform ResolveOrbFlyRoot(RectTransform targetSlot)
@@ -474,9 +472,12 @@ public sealed class EnergyContainerFx : MonoBehaviour
         }
     }
 
-    private void ApplyFrame(Image image, Sprite sprite, int originIndex)
+    private void ApplyFrame(Image image, Sprite sprite, int originIndex, bool allowExhaustedOverride = false)
     {
         if (image == null)
+            return;
+
+        if (!allowExhaustedOverride && exhaustedOrigins.Contains(originIndex))
             return;
 
         FitContainerImageToCell(image, originIndex);
@@ -569,41 +570,4 @@ public sealed class EnergyContainerFx : MonoBehaviour
         return t * t * (3f - 2f * t);
     }
 
-    private IEnumerator PunchTarget(RectTransform target)
-    {
-        if (target == null)
-            yield break;
-
-        RectTransform punchTarget = (target.parent as RectTransform) ?? target;
-        Vector3 baseScale = punchTarget.localScale;
-        Vector3 peak = baseScale * 1.10f;
-        float dur = 0.08f;
-
-        float t = 0f;
-        while (t < dur)
-        {
-            if (punchTarget == null)
-                yield break;
-
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / dur);
-            punchTarget.localScale = Vector3.LerpUnclamped(baseScale, peak, 1f - (1f - k) * (1f - k));
-            yield return null;
-        }
-
-        t = 0f;
-        while (t < dur)
-        {
-            if (punchTarget == null)
-                yield break;
-
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / dur);
-            punchTarget.localScale = Vector3.LerpUnclamped(peak, baseScale, k * k);
-            yield return null;
-        }
-
-        if (punchTarget != null)
-            punchTarget.localScale = baseScale;
-    }
 }

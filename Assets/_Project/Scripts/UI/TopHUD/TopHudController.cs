@@ -131,8 +131,15 @@ public class TopHudController : MonoBehaviour
             return null;
 
         var slot = Instantiate(goalSlotPrefab, goalsRoot);
-        slot.Setup(ResolveGoalIcon(goal, goalIndex), goal.amount);
+        slot.Setup(ResolveGoalIcon(goal, goalIndex), goal.amount, ShouldUseLargeGoalIcon(goal));
         return slot;
+    }
+
+    private static bool ShouldUseLargeGoalIcon(LevelGoalDefinition goal)
+    {
+        return goal != null
+               && goal.targetType == LevelGoalTargetType.Collectible
+               && goal.collectibleId == CollectibleId.EnergyOrb;
     }
 
     private Sprite ResolveGoalIcon(LevelGoalDefinition goal, int goalIndex)

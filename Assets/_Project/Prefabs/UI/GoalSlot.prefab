@@ -210,6 +210,8 @@ MonoBehaviour:
   icon: {fileID: 6352146941500913658}
   countText: {fileID: 5837622484012462081}
   completedCheck: {fileID: 7693005772710732005}
+  defaultIconSize: {x: 70, y: 70}
+  largeIconSize: {x: 95, y: 95}
 --- !u!1 &4271565035866166385
 GameObject:
   m_ObjectHideFlags: 0

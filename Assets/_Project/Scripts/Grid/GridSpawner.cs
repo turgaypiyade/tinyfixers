@@ -80,6 +80,7 @@ public class GridSpawner : MonoBehaviour
     private readonly Dictionary<int, GameObject> cellBgByIndex = new();
     private readonly Dictionary<int, Image> cellBgImageByIndex = new();
     private readonly Dictionary<int, Color> baseCellBgColorByIndex = new();
+    private EnergyContainerService energyContainerService;
 
     private void Awake()
     {
@@ -453,6 +454,7 @@ public class GridSpawner : MonoBehaviour
         clone.width = source.width;
         clone.height = source.height;
         clone.moves = source.moves;
+        clone.energyPerContainer = Mathf.Max(1, source.energyPerContainer);
         clone.musicClip = source.musicClip;
         clone.musicVolume = source.musicVolume;
         clone.obstacleLibrary = source.obstacleLibrary;
@@ -494,6 +496,8 @@ public class GridSpawner : MonoBehaviour
                 targetType = source.targetType,
                 tileType = source.tileType,
                 obstacleId = source.obstacleId,
+                collectibleId = source.collectibleId,
+                iconOverride = source.iconOverride,
                 amount = Mathf.Max(1, source.amount)
             };
         }
@@ -544,6 +548,9 @@ public class GridSpawner : MonoBehaviour
     private void HandleObstacleStageChanged(int originIndex, ObstacleStageSnapshot nextStage)
     {
         if (!obstacleViewsByOrigin.TryGetValue(originIndex, out var image) || image == null)
+            return;
+
+        if (ShouldLetEnergyContainerOwnVisual(originIndex))
             return;
 
         if (nextStage.sprite != null)
@@ -1109,8 +1116,25 @@ public class GridSpawner : MonoBehaviour
             return;
         }
 
+        if (ShouldLetEnergyContainerOwnVisual(change.originIndex))
+            return;
+
         if (change.sprite != null)
             image.sprite = change.sprite;
+    }
+
+    private bool ShouldLetEnergyContainerOwnVisual(int originIndex)
+    {
+        if (originIndex < 0 || resolvedLevel == null || resolvedLevel.obstacles == null || originIndex >= resolvedLevel.obstacles.Length)
+            return false;
+
+        if ((ObstacleId)resolvedLevel.obstacles[originIndex] != ObstacleId.EnergyContainer)
+            return false;
+
+        if (energyContainerService == null)
+            energyContainerService = FindFirstObjectByType<EnergyContainerService>();
+
+        return energyContainerService != null && energyContainerService.IsExhausted(originIndex);
     }
     private void AutoFitTileSizeToMask()
     {
