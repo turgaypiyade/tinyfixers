@@ -33,7 +33,6 @@ public class TopHudController : MonoBehaviour
     [Header("Display")]
     [SerializeField] private string movesPrefix = "MOVES";
     [SerializeField] private Sprite fallbackGoalIcon;
-    [SerializeField] private Sprite energyOrbGoalIcon;
 
     public RectTransform MovesTextRect => movesText != null ? movesText.rectTransform : null;
 
@@ -151,12 +150,7 @@ public class TopHudController : MonoBehaviour
         }
 
         if (goal.targetType == LevelGoalTargetType.Collectible)
-        {
-            if (goal.collectibleId == CollectibleId.EnergyOrb && energyOrbGoalIcon != null)
-                return energyOrbGoalIcon;
-
             return fallbackGoalIcon;
-        }
 
         var levelData = board != null ? board.ActiveLevelData : null;
         var obstacleDef = levelData != null && levelData.obstacleLibrary != null
