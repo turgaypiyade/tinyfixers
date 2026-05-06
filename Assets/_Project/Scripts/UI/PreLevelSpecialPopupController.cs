@@ -1,0 +1,344 @@
+using System.Collections;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
+public class PreLevelSpecialPopupController : MonoBehaviour
+{
+    [Header("Scene Flow")]
+    [SerializeField] private string gameSceneName = "01_Game";
+    [SerializeField] private string prefsLevelKey = "current_level";
+    [SerializeField] private ChapterThemeApplier chapterThemeApplier;
+    [SerializeField] private ChapterThemeLibrary fallbackThemeLibrary;
+
+    [Header("Main Screen Dim")]
+    [SerializeField] private CanvasGroup mainScreenCanvasGroup;
+    [SerializeField] private Image dimImage;
+    [SerializeField, Range(0f, 1f)] private float dimmedMainAlpha = 0.45f;
+
+    [Header("Popup Root")]
+    [SerializeField] private CanvasGroup popupCanvasGroup;
+    [SerializeField] private RectTransform popupRoot;
+    [SerializeField] private Image popupBackgroundImage;
+
+    [Header("Texts")]
+    [SerializeField] private TMP_Text titleText;
+    [SerializeField] private TMP_Text continueText;
+    [SerializeField] private TMP_Text cancelText;
+    [SerializeField] private string titleLocalizationKey = "prelevel_popup_title_level";
+    [SerializeField] private string continueLocalizationKey = "prelevel_popup_continue";
+    [SerializeField] private string cancelLocalizationKey = "prelevel_popup_cancel";
+
+    [Header("Buttons")]
+    [SerializeField] private Button continueButton;
+    [SerializeField] private Image continueButtonImage;
+    [SerializeField] private Button cancelButton;
+    [SerializeField] private Image cancelButtonImage;
+
+    [Header("Special Slots")]
+    [SerializeField] private TileIconLibrary tileIconLibrary;
+    [SerializeField] private PreLevelSpecialSlotView lineHSlot;
+    [SerializeField] private PreLevelSpecialSlotView pulseCoreSlot;
+    [SerializeField] private PreLevelSpecialSlotView overrideSlot;
+
+    [Header("Audio")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip openSfx;
+    [SerializeField] private AudioClip selectSfx;
+    [SerializeField] private AudioClip continueSfx;
+    [SerializeField] private AudioClip cancelSfx;
+
+    [Header("Motion")]
+    [SerializeField] private float openDuration = 0.22f;
+    [SerializeField] private float closeDuration = 0.16f;
+    [SerializeField] private Vector3 openStartScale = new Vector3(0.92f, 0.92f, 1f);
+
+    private readonly List<PreLevelSpecialSlotView> slots = new();
+    private Coroutine transitionRoutine;
+    private ChapterTheme currentTheme;
+
+    private void Awake()
+    {
+        if (popupCanvasGroup == null)
+            popupCanvasGroup = GetComponent<CanvasGroup>();
+
+        if (popupRoot == null)
+            popupRoot = transform as RectTransform;
+
+        if (continueButton != null)
+            continueButton.onClick.AddListener(HandleContinueClicked);
+
+        if (cancelButton != null)
+            cancelButton.onClick.AddListener(HandleCancelClicked);
+
+        RegisterSlot(lineHSlot);
+        RegisterSlot(pulseCoreSlot);
+        RegisterSlot(overrideSlot);
+
+        SetPopupVisible(false, true);
+    }
+
+    private void OnEnable()
+    {
+        GameLocalization.OnLanguageChanged += RefreshLocalizedTexts;
+        RefreshLocalizedTexts();
+    }
+
+    private void OnDisable()
+    {
+        GameLocalization.OnLanguageChanged -= RefreshLocalizedTexts;
+    }
+
+    public void Open()
+    {
+        currentTheme = ResolveTheme();
+        ApplyTheme(currentTheme);
+        ConfigureSlots();
+        RefreshLocalizedTexts();
+        RefreshCounts();
+        PreLevelSpecialSelectionState.Clear();
+
+        if (transitionRoutine != null)
+            StopCoroutine(transitionRoutine);
+
+        transitionRoutine = StartCoroutine(CoOpen());
+    }
+
+    public void ApplyTheme(ChapterTheme theme)
+    {
+        currentTheme = theme;
+
+        if (popupBackgroundImage != null && theme != null && theme.preLevelPopupBackground != null)
+            popupBackgroundImage.sprite = theme.preLevelPopupBackground;
+
+        if (continueButtonImage != null && theme != null && theme.preLevelContinueButton != null)
+            continueButtonImage.sprite = theme.preLevelContinueButton;
+
+        if (cancelButtonImage != null && theme != null && theme.preLevelCancelButton != null)
+            cancelButtonImage.sprite = theme.preLevelCancelButton;
+
+        if (continueText != null && theme != null)
+            continueText.color = theme.preLevelButtonTextColor;
+
+        if (cancelText != null && theme != null)
+            cancelText.color = theme.preLevelButtonTextColor;
+
+        for (int i = 0; i < slots.Count; i++)
+            slots[i].ApplyTheme(theme);
+
+        if (dimImage != null && theme != null)
+            dimImage.color = theme.preLevelDimColor;
+    }
+
+    private void RegisterSlot(PreLevelSpecialSlotView slot)
+    {
+        if (slot == null || slots.Contains(slot))
+            return;
+
+        slots.Add(slot);
+        slot.Clicked += HandleSlotClicked;
+    }
+
+    private void ConfigureSlots()
+    {
+        if (tileIconLibrary == null)
+            return;
+
+        if (lineHSlot != null)
+            lineHSlot.Configure(TileSpecial.LineH, tileIconLibrary.GetSpecialIcon(TileSpecial.LineH), currentTheme);
+
+        if (pulseCoreSlot != null)
+            pulseCoreSlot.Configure(TileSpecial.PulseCore, tileIconLibrary.GetSpecialIcon(TileSpecial.PulseCore), currentTheme);
+
+        if (overrideSlot != null)
+            overrideSlot.Configure(TileSpecial.SystemOverride, tileIconLibrary.GetSpecialIcon(TileSpecial.SystemOverride), currentTheme);
+    }
+
+    private ChapterTheme ResolveTheme()
+    {
+        if (chapterThemeApplier != null && chapterThemeApplier.CurrentTheme != null)
+            return chapterThemeApplier.CurrentTheme;
+
+        if (fallbackThemeLibrary != null)
+            return fallbackThemeLibrary.GetCurrentTheme();
+
+        return null;
+    }
+
+    private void HandleSlotClicked(PreLevelSpecialSlotView slot)
+    {
+        if (slot == null)
+            return;
+
+        slot.ToggleSelected();
+        PlayOneShot(selectSfx);
+    }
+
+    private void HandleContinueClicked()
+    {
+        var selected = new List<TileSpecial>();
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var slot = slots[i];
+            if (slot == null || !slot.IsSelected)
+                continue;
+
+            selected.Add(slot.Special);
+            PreLevelSpecialInventory.Spend(slot.Special, 1);
+        }
+
+        PreLevelSpecialSelectionState.SetSelection(selected);
+        RefreshCounts();
+        PlayOneShot(continueSfx);
+        SceneManager.LoadScene(gameSceneName);
+    }
+
+    private void HandleCancelClicked()
+    {
+        PreLevelSpecialSelectionState.Clear();
+        PlayOneShot(cancelSfx);
+
+        if (transitionRoutine != null)
+            StopCoroutine(transitionRoutine);
+
+        transitionRoutine = StartCoroutine(CoClose());
+    }
+
+    private void RefreshLocalizedTexts()
+    {
+        if (titleText != null)
+        {
+            int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
+            titleText.text = GameLocalization.GetFormat(titleLocalizationKey, level);
+        }
+
+        if (continueText != null)
+            continueText.text = GameLocalization.Get(continueLocalizationKey);
+
+        if (cancelText != null)
+            cancelText.text = GameLocalization.Get(cancelLocalizationKey);
+    }
+
+    private void RefreshCounts()
+    {
+        for (int i = 0; i < slots.Count; i++)
+        {
+            if (slots[i] != null)
+                slots[i].RefreshCount();
+        }
+    }
+
+    private IEnumerator CoOpen()
+    {
+        SetPopupVisible(true, false);
+        PlayOneShot(openSfx);
+
+        float elapsed = 0f;
+        float duration = Mathf.Max(0.01f, openDuration);
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float eased = EaseOut(t);
+
+            if (mainScreenCanvasGroup != null)
+                mainScreenCanvasGroup.alpha = Mathf.Lerp(1f, dimmedMainAlpha, eased);
+
+            if (popupCanvasGroup != null)
+                popupCanvasGroup.alpha = eased;
+
+            if (popupRoot != null)
+                popupRoot.localScale = Vector3.LerpUnclamped(openStartScale, Vector3.one, EaseOutBackLight(t));
+
+            yield return null;
+        }
+
+        if (mainScreenCanvasGroup != null)
+            mainScreenCanvasGroup.alpha = dimmedMainAlpha;
+
+        if (popupCanvasGroup != null)
+        {
+            popupCanvasGroup.alpha = 1f;
+            popupCanvasGroup.interactable = true;
+            popupCanvasGroup.blocksRaycasts = true;
+        }
+
+        if (popupRoot != null)
+            popupRoot.localScale = Vector3.one;
+
+        transitionRoutine = null;
+    }
+
+    private IEnumerator CoClose()
+    {
+        float elapsed = 0f;
+        float duration = Mathf.Max(0.01f, closeDuration);
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float eased = EaseOut(t);
+
+            if (mainScreenCanvasGroup != null)
+                mainScreenCanvasGroup.alpha = Mathf.Lerp(dimmedMainAlpha, 1f, eased);
+
+            if (popupCanvasGroup != null)
+                popupCanvasGroup.alpha = 1f - eased;
+
+            if (popupRoot != null)
+                popupRoot.localScale = Vector3.LerpUnclamped(Vector3.one, openStartScale, eased);
+
+            yield return null;
+        }
+
+        if (mainScreenCanvasGroup != null)
+            mainScreenCanvasGroup.alpha = 1f;
+
+        SetPopupVisible(false, true);
+        transitionRoutine = null;
+    }
+
+    private void SetPopupVisible(bool visible, bool instant)
+    {
+        if (popupCanvasGroup != null)
+        {
+            popupCanvasGroup.alpha = visible ? 1f : 0f;
+            popupCanvasGroup.interactable = visible;
+            popupCanvasGroup.blocksRaycasts = visible;
+        }
+
+        if (popupRoot != null)
+        {
+            popupRoot.gameObject.SetActive(visible);
+            popupRoot.localScale = instant ? Vector3.one : popupRoot.localScale;
+        }
+
+        if (!visible && mainScreenCanvasGroup != null)
+            mainScreenCanvasGroup.alpha = 1f;
+    }
+
+    private void PlayOneShot(AudioClip clip)
+    {
+        if (audioSource != null && clip != null)
+            audioSource.PlayOneShot(clip);
+    }
+
+    private static float EaseOut(float t)
+    {
+        t = Mathf.Clamp01(t);
+        return 1f - (1f - t) * (1f - t);
+    }
+
+    private static float EaseOutBackLight(float t)
+    {
+        t = Mathf.Clamp01(t);
+        const float c1 = 1.12f;
+        const float c3 = c1 + 1f;
+        return 1f + c3 * Mathf.Pow(t - 1f, 3f) + c1 * Mathf.Pow(t - 1f, 2f);
+    }
+}
