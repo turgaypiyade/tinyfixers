@@ -190,7 +190,9 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             PreLevelSpecialInventory.Spend(slot.Special, 1);
         }
 
+        Debug.Log($"[PreLevelSpecialPopup] Continue selected={selected.Count}");
         PreLevelSpecialSelectionState.SetSelection(selected);
+        PreLevelSpecialRuntimeInjector.EnsureForSelection(selected);
         RefreshCounts();
         PlayOneShot(continueSfx);
         SceneManager.LoadScene(gameSceneName);

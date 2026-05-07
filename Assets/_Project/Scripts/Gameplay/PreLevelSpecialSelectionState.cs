@@ -6,6 +6,7 @@ public static class PreLevelSpecialSelectionState
 {
     private const string PrefsKey = "prelevel_selected_specials";
     private static readonly List<TileSpecial> selectedSpecials = new();
+    private static bool loadedFromPrefs;
 
     public static IReadOnlyList<TileSpecial> SelectedSpecials
     {
@@ -27,6 +28,7 @@ public static class PreLevelSpecialSelectionState
 
     public static void SetSelection(IEnumerable<TileSpecial> specials)
     {
+        loadedFromPrefs = true;
         selectedSpecials.Clear();
 
         if (specials != null)
@@ -45,14 +47,25 @@ public static class PreLevelSpecialSelectionState
 
     public static void Clear()
     {
+        loadedFromPrefs = true;
         selectedSpecials.Clear();
         PlayerPrefs.DeleteKey(PrefsKey);
+        PlayerPrefs.Save();
+    }
+
+    public static List<TileSpecial> GetSelectionSnapshot()
+    {
+        EnsureLoadedFromPrefs();
+        return new List<TileSpecial>(selectedSpecials);
     }
 
     private static void EnsureLoadedFromPrefs()
     {
-        if (selectedSpecials.Count > 0)
+        if (loadedFromPrefs)
             return;
+
+        loadedFromPrefs = true;
+        selectedSpecials.Clear();
 
         string raw = PlayerPrefs.GetString(PrefsKey, string.Empty);
         if (string.IsNullOrEmpty(raw))
@@ -75,6 +88,7 @@ public static class PreLevelSpecialSelectionState
         if (selectedSpecials.Count == 0)
         {
             PlayerPrefs.DeleteKey(PrefsKey);
+            PlayerPrefs.Save();
             return;
         }
 
@@ -88,5 +102,6 @@ public static class PreLevelSpecialSelectionState
         }
 
         PlayerPrefs.SetString(PrefsKey, sb.ToString());
+        PlayerPrefs.Save();
     }
 }

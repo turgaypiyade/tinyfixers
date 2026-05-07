@@ -26,9 +26,9 @@ MonoBehaviour:
   preLevelPopupBackground: {fileID: 21300000, guid: ffba4f6377dd34a3ea02f59d4a01001c, type: 3}
   preLevelContinueButton: {fileID: 0}
   preLevelCancelButton: {fileID: 0}
-  preLevelCheckMark: {fileID: 21300000, guid: 51e0f74eed2c14cebb4aa5b35b7d8d47, type: 3}
+  preLevelCheckMark: {fileID: 21300000, guid: 4d7e3c1a8d2a049e7862849181984ab4, type: 3}
   preLevelDimColor: {r: 0, g: 0, b: 0, a: 0.55}
-  preLevelSlotNormalTint: {r: 1, g: 1, b: 1, a: 0.18}
-  preLevelSlotSelectedTint: {r: 1, g: 0.86, b: 0.25, a: 0.72}
+  preLevelSlotNormalTint: {r: 1, g: 0.62352943, b: 0.10980392, a: 0.23529412}
+  preLevelSlotSelectedTint: {r: 0.42745098, g: 1, b: 0.23921569, a: 0.21568628}
   preLevelCountTextColor: {r: 1, g: 1, b: 1, a: 1}
   preLevelButtonTextColor: {r: 1, g: 1, b: 1, a: 1}
