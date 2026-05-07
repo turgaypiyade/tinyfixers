@@ -106,9 +106,9 @@ public sealed class LineHPatchBotCombo
     }
 
     private List<BoardAction> ExecuteLineHAtTarget(
-        LineHPatchBotComboExecutionRuntime rt,
-        ResolutionContext arrivalCtx,
-        Vector2Int targetCell)
+      LineHPatchBotComboExecutionRuntime rt,
+      ResolutionContext arrivalCtx,
+      Vector2Int targetCell)
     {
         var actions = new List<BoardAction>();
 
@@ -145,6 +145,11 @@ public sealed class LineHPatchBotCombo
             Partner = null,
             VirtualOriginCell = targetCell,
             FinalizeAtEnd = true,
+
+            // PatchBot dash callback'i resolve sonrasına sarkarsa,
+            // bu LineH clear kendi refill/cascade'ini sahiplenmeli.
+            EnqueueCascadeOnComplete = true,
+
             ActivateSpecial = dispatcher.ApplySpecialActivation,
             ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
             CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
@@ -166,7 +171,6 @@ public sealed class LineHPatchBotCombo
 
         return actions;
     }
-
     private void DrainDeferredLineOverrides(
         LineHPatchBotComboExecutionRuntime rt,
         ResolutionContext context,

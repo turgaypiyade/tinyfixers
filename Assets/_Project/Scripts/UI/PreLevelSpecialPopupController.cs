@@ -187,16 +187,27 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             if (goal == null || goal.amount <= 0)
                 continue;
 
+            Sprite goalIcon = ResolvePreviewGoalIcon(levelData, goal);
+
+            // Icon yoksa slot basma.
+            // Böylece ikon görünmeyip sadece sayı görünmesi engellenir.
+            if (goalIcon == null)
+            {
+                Debug.LogWarning(
+                    $"[PreLevelSpecialPopup] Goal preview skipped because icon is missing. index={i}, targetType={goal.targetType}");
+                continue;
+            }
+
             TopHudGoalSlot slot = Instantiate(goalSlotPrefab, goalsPreviewRoot);
-            slot.Setup(ResolvePreviewGoalIcon(levelData, goal), goal.amount, ShouldUseLargeGoalIcon(goal));
+            slot.Setup(goalIcon, goal.amount, ShouldUseLargeGoalIcon(goal));
             ApplyGoalPreviewScale(slot);
+
             spawned++;
         }
 
         if (goalsPreviewRoot is RectTransform rootRt)
             LayoutRebuilder.ForceRebuildLayoutImmediate(rootRt);
     }
-
     private void ApplyGoalPreviewScale(TopHudGoalSlot slot)
     {
         if (slot == null)

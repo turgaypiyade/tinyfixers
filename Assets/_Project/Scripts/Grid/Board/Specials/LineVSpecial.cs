@@ -17,6 +17,10 @@ public sealed class LineVExecutionRuntime
     // false => nested chain çağrısı, sadece context büyütür
     public bool FinalizeAtEnd;
 
+    // Only true for late/deferred PatchBot+LineV arrival clears that must own refill.
+    // Default false keeps normal LineV behavior unchanged.
+    public bool EnqueueCascadeOnComplete;
+
     // LineV dışındaki special'ları mevcut yoldan çağırmak için
     public Action<ResolutionContext, TileView, TileView> ActivateSpecial;
 
@@ -238,7 +242,8 @@ public sealed class LineVSpecial
             suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
             perTileClearDelays: ctx.OverrideRadialClearDelays,
             isSpecialPhase: true,
-            presentationPlan: null
+            presentationPlan: null,
+            enqueueCascadeOnComplete: rt.EnqueueCascadeOnComplete
         );
     }
 

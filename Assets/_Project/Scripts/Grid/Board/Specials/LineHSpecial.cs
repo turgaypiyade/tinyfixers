@@ -15,6 +15,10 @@ public sealed class LineHExecutionRuntime
 
     public bool FinalizeAtEnd;
 
+    // Only true for late/deferred PatchBot+LineH arrival clears that must own refill.
+    // Default false keeps normal LineH behavior unchanged.
+    public bool EnqueueCascadeOnComplete;
+
     public Action<ResolutionContext, TileView, TileView> ActivateSpecial;
 
     public Func<ResolutionContext, List<BoardAction>> ProcessFanout;
@@ -204,10 +208,10 @@ public sealed class LineHSpecial
             suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
             perTileClearDelays: ctx.OverrideRadialClearDelays,
             isSpecialPhase: true,
-            presentationPlan: null
+            presentationPlan: null,
+            enqueueCascadeOnComplete: rt.EnqueueCascadeOnComplete
         );
     }
-
     private static Vector2Int GetOriginCell(LineHExecutionRuntime rt)
     {
         if (rt != null && rt.VirtualOriginCell.HasValue)
