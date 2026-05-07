@@ -16,6 +16,11 @@ public class PreLevelSpecialSlotView : MonoBehaviour
     [SerializeField] private TMP_Text countText;
     [SerializeField] private TMP_Text nameText;
 
+    [Header("Slot Background Sprites")]
+    [SerializeField] private Sprite normalBackgroundSprite;
+    [SerializeField] private Sprite selectedBackgroundSprite;
+    [SerializeField] private bool hideCountWhenSelected = true;
+
     [Header("Localization")]
     [SerializeField] private string nameLocalizationKey;
 
@@ -122,20 +127,9 @@ public class PreLevelSpecialSlotView : MonoBehaviour
 
     private void ApplySelectionVisual(bool animate)
     {
-        if (selectionTintImage != null)
-        {
-            Color color = Color.white;
-            if (theme != null)
-                color = isSelected ? theme.preLevelSlotSelectedTint : theme.preLevelSlotNormalTint;
-            selectionTintImage.color = color;
-        }
-
-        if (checkMarkImage != null)
-        {
-            checkMarkImage.gameObject.SetActive(isSelected);
-            if (!animate || !isSelected)
-                checkMarkImage.rectTransform.localScale = Vector3.one;
-        }
+        ApplyBackgroundVisual();
+        ApplyCountVisual();
+        ApplyCheckVisual(animate);
 
         if (!animate)
             return;
@@ -144,6 +138,46 @@ public class PreLevelSpecialSlotView : MonoBehaviour
             StopCoroutine(selectionRoutine);
 
         selectionRoutine = StartCoroutine(CoSelectionPulse());
+    }
+
+    private void ApplyBackgroundVisual()
+    {
+        if (selectionTintImage == null)
+            return;
+
+        Sprite targetSprite = isSelected ? selectedBackgroundSprite : normalBackgroundSprite;
+        if (targetSprite != null)
+        {
+            selectionTintImage.sprite = targetSprite;
+            selectionTintImage.color = Color.white;
+            selectionTintImage.enabled = true;
+            return;
+        }
+
+        Color color = Color.white;
+        if (theme != null)
+            color = isSelected ? theme.preLevelSlotSelectedTint : theme.preLevelSlotNormalTint;
+
+        selectionTintImage.color = color;
+        selectionTintImage.enabled = color.a > 0f;
+    }
+
+    private void ApplyCountVisual()
+    {
+        if (countText == null)
+            return;
+
+        countText.gameObject.SetActive(!isSelected || !hideCountWhenSelected);
+    }
+
+    private void ApplyCheckVisual(bool animate)
+    {
+        if (checkMarkImage == null)
+            return;
+
+        checkMarkImage.gameObject.SetActive(isSelected);
+        if (!animate || !isSelected)
+            checkMarkImage.rectTransform.localScale = Vector3.one;
     }
 
     private System.Collections.IEnumerator CoSelectionPulse()
