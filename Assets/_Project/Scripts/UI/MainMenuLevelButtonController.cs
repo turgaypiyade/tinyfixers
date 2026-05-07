@@ -35,6 +35,9 @@ public class MainMenuLevelButtonController : MonoBehaviour
 
     public void OnLevelButtonClicked()
     {
+        if (preLevelSpecialPopup == null)
+            preLevelSpecialPopup = FindPreLevelPopupInScene();
+
         if (preLevelSpecialPopup != null)
         {
             preLevelSpecialPopup.Open();
@@ -42,5 +45,21 @@ public class MainMenuLevelButtonController : MonoBehaviour
         }
 
         SceneManager.LoadScene(gameSceneName);
+    }
+
+    private static PreLevelSpecialPopupController FindPreLevelPopupInScene()
+    {
+        var popups = Resources.FindObjectsOfTypeAll<PreLevelSpecialPopupController>();
+        for (int i = 0; i < popups.Length; i++)
+        {
+            var popup = popups[i];
+            if (popup == null || popup.gameObject.scene.name == null)
+                continue;
+
+            if (popup.gameObject.scene.isLoaded)
+                return popup;
+        }
+
+        return null;
     }
 }
