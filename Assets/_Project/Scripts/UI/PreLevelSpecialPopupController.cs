@@ -39,7 +39,8 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
     [Header("Goal Preview")]
     [SerializeField] private LevelCatalog levelCatalog;
-    [SerializeField, Min(1)] private int chapter = 1;
+    [Tooltip("Used only if no ChapterThemeLibrary is assigned. Normally chapter is calculated automatically from current_level.")]
+    [SerializeField, Min(1)] private int fallbackChapter = 1;
     [SerializeField] private Transform goalsPreviewRoot;
     [SerializeField] private TopHudGoalSlot goalSlotPrefab;
     [SerializeField, Min(1)] private int maxPreviewGoals = 4;
@@ -206,7 +207,22 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             return null;
 
         int level = Mathf.Max(1, PlayerPrefs.GetInt(prefsLevelKey, 1));
-        return levelCatalog.TryGetLevel(chapter, level, out LevelData levelData) ? levelData : null;
+        int previewChapter = ResolvePreviewChapter(level);
+        return levelCatalog.TryGetLevel(previewChapter, level, out LevelData levelData) ? levelData : null;
+    }
+
+    private int ResolvePreviewChapter(int globalLevel)
+    {
+        ChapterThemeLibrary library = ResolveThemeLibrary();
+        return library != null ? library.GetChapterForLevel(globalLevel) : Mathf.Max(1, fallbackChapter);
+    }
+
+    private ChapterThemeLibrary ResolveThemeLibrary()
+    {
+        if (chapterThemeApplier != null && chapterThemeApplier.ThemeLibrary != null)
+            return chapterThemeApplier.ThemeLibrary;
+
+        return fallbackThemeLibrary;
     }
 
     private Sprite ResolvePreviewGoalIcon(LevelData levelData, LevelGoalDefinition goal)
