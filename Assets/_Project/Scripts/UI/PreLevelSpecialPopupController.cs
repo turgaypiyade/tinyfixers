@@ -37,6 +37,14 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     [SerializeField] private Button cancelButton;
     [SerializeField] private Image cancelButtonImage;
 
+    [Header("Goal Preview")]
+    [SerializeField] private LevelCatalog levelCatalog;
+    [SerializeField, Min(1)] private int chapter = 1;
+    [SerializeField] private Transform goalsPreviewRoot;
+    [SerializeField] private TopHudGoalSlot goalSlotPrefab;
+    [SerializeField, Min(1)] private int maxPreviewGoals = 4;
+    [SerializeField] private Sprite fallbackGoalIcon;
+
     [Header("Special Slots")]
     [SerializeField] private TileIconLibrary tileIconLibrary;
     [SerializeField] private PreLevelSpecialSlotView lineHSlot;
@@ -98,6 +106,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         ConfigureSlots();
         RefreshLocalizedTexts();
         RefreshCounts();
+        RefreshGoalsPreview();
         PreLevelSpecialSelectionState.Clear();
 
         if (transitionRoutine != null)
@@ -154,6 +163,84 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
         if (overrideSlot != null)
             overrideSlot.Configure(TileSpecial.SystemOverride, tileIconLibrary.GetSpecialIcon(TileSpecial.SystemOverride), currentTheme);
+    }
+
+    private void RefreshGoalsPreview()
+    {
+        ClearGoalsPreview();
+
+        if (goalsPreviewRoot == null || goalSlotPrefab == null)
+            return;
+
+        LevelData levelData = ResolvePreviewLevelData();
+        if (levelData == null || levelData.goals == null)
+            return;
+
+        int spawned = 0;
+        int limit = Mathf.Max(1, maxPreviewGoals);
+
+        for (int i = 0; i < levelData.goals.Length && spawned < limit; i++)
+        {
+            LevelGoalDefinition goal = levelData.goals[i];
+            if (goal == null || goal.amount <= 0)
+                continue;
+
+            TopHudGoalSlot slot = Instantiate(goalSlotPrefab, goalsPreviewRoot);
+            slot.Setup(ResolvePreviewGoalIcon(levelData, goal), goal.amount, ShouldUseLargeGoalIcon(goal));
+            spawned++;
+        }
+    }
+
+    private void ClearGoalsPreview()
+    {
+        if (goalsPreviewRoot == null)
+            return;
+
+        for (int i = goalsPreviewRoot.childCount - 1; i >= 0; i--)
+            Destroy(goalsPreviewRoot.GetChild(i).gameObject);
+    }
+
+    private LevelData ResolvePreviewLevelData()
+    {
+        if (levelCatalog == null)
+            return null;
+
+        int level = Mathf.Max(1, PlayerPrefs.GetInt(prefsLevelKey, 1));
+        return levelCatalog.TryGetLevel(chapter, level, out LevelData levelData) ? levelData : null;
+    }
+
+    private Sprite ResolvePreviewGoalIcon(LevelData levelData, LevelGoalDefinition goal)
+    {
+        if (goal == null)
+            return fallbackGoalIcon;
+
+        if (goal.iconOverride != null)
+            return goal.iconOverride;
+
+        if (goal.targetType == LevelGoalTargetType.Tile)
+        {
+            Sprite sprite = tileIconLibrary != null ? tileIconLibrary.Get(goal.tileType) : null;
+            return sprite != null ? sprite : fallbackGoalIcon;
+        }
+
+        if (goal.targetType == LevelGoalTargetType.Obstacle)
+        {
+            var obstacleDef = levelData != null && levelData.obstacleLibrary != null
+                ? levelData.obstacleLibrary.Get(goal.obstacleId)
+                : null;
+
+            Sprite preview = obstacleDef != null ? obstacleDef.GetPreviewSprite() : null;
+            return preview != null ? preview : fallbackGoalIcon;
+        }
+
+        return fallbackGoalIcon;
+    }
+
+    private static bool ShouldUseLargeGoalIcon(LevelGoalDefinition goal)
+    {
+        return goal != null
+               && goal.targetType == LevelGoalTargetType.Collectible
+               && goal.collectibleId == CollectibleId.EnergyOrb;
     }
 
     private ChapterTheme ResolveTheme()
