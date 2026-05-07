@@ -256,8 +256,8 @@ RectTransform:
   - {fileID: 377572861}
   m_Father: {fileID: 72406}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.075780086}
-  m_AnchorMax: {x: 0.7882136, y: 1.9591382}
+  m_AnchorMin: {x: 0, y: 0.06910569}
+  m_AnchorMax: {x: 0.7882136, y: 1.7865853}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -451,7 +451,6 @@ RectTransform:
   - {fileID: 1512667917}
   - {fileID: 1186452841}
   - {fileID: 1548940136}
-  - {fileID: 1783895818}
   - {fileID: 1116542821}
   - {fileID: 1334764873}
   m_Father: {fileID: 1235175122}
@@ -2309,6 +2308,7 @@ RectTransform:
   m_Children:
   - {fileID: 713876398}
   - {fileID: 160185576}
+  - {fileID: 1783895818}
   m_Father: {fileID: 72406}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -2349,10 +2349,11 @@ MonoBehaviour:
   cancelButton: {fileID: 1783895819}
   cancelButtonImage: {fileID: 1783895820}
   levelCatalog: {fileID: 11400000, guid: b262d96b9882475ca6cdf6517f9f0880, type: 2}
-  chapter: 1
+  fallbackChapter: 1
   goalsPreviewRoot: {fileID: 1334764873}
   goalSlotPrefab: {fileID: 8598178808890510351, guid: 5185880da700e4021a652744b8a70fe0, type: 3}
   maxPreviewGoals: 4
+  goalPreviewScale: 2
   fallbackGoalIcon: {fileID: 0}
   tileIconLibrary: {fileID: 11400000, guid: 44f21392c67a14dfbb8782561221acf8, type: 2}
   lineHSlot: {fileID: 1355977608}
@@ -3304,16 +3305,16 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1783895817}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 160185576}
+  m_Father: {fileID: 1235175122}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 400, y: 500}
+  m_AnchoredPosition: {x: 420, y: 460}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1783895819
@@ -3373,7 +3374,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

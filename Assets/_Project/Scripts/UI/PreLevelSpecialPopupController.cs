@@ -44,6 +44,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     [SerializeField] private Transform goalsPreviewRoot;
     [SerializeField] private TopHudGoalSlot goalSlotPrefab;
     [SerializeField, Min(1)] private int maxPreviewGoals = 4;
+    [SerializeField, Min(0.1f)] private float goalPreviewScale = 2f;
     [SerializeField] private Sprite fallbackGoalIcon;
 
     [Header("Special Slots")]
@@ -188,8 +189,83 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
             TopHudGoalSlot slot = Instantiate(goalSlotPrefab, goalsPreviewRoot);
             slot.Setup(ResolvePreviewGoalIcon(levelData, goal), goal.amount, ShouldUseLargeGoalIcon(goal));
+            ApplyGoalPreviewScale(slot);
             spawned++;
         }
+
+        if (goalsPreviewRoot is RectTransform rootRt)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rootRt);
+    }
+
+    private void ApplyGoalPreviewScale(TopHudGoalSlot slot)
+    {
+        if (slot == null)
+            return;
+
+        float scale = Mathf.Max(0.1f, goalPreviewScale);
+
+        if (slot.transform is RectTransform rt)
+        {
+            LayoutElement slotLayoutElement = slot.GetComponent<LayoutElement>();
+            float baseWidth = ResolveLayoutSize(slotLayoutElement != null ? slotLayoutElement.preferredWidth : -1f, rt.rect.width, rt.sizeDelta.x);
+            float baseHeight = ResolveLayoutSize(slotLayoutElement != null ? slotLayoutElement.preferredHeight : -1f, rt.rect.height, rt.sizeDelta.y);
+            WrapGoalPreviewSlotForLayout(slot, rt, baseWidth, baseHeight, scale);
+            rt.localScale = Vector3.one * scale;
+        }
+        else
+        {
+            slot.transform.localScale = Vector3.one * scale;
+        }
+    }
+
+    private void WrapGoalPreviewSlotForLayout(TopHudGoalSlot slot, RectTransform slotRt, float baseWidth, float baseHeight, float scale)
+    {
+        if (slot == null || slotRt == null || goalsPreviewRoot == null)
+            return;
+
+        int siblingIndex = slotRt.GetSiblingIndex();
+        var wrapper = new GameObject("GoalPreviewSlotLayout", typeof(RectTransform), typeof(LayoutElement));
+        var wrapperRt = wrapper.GetComponent<RectTransform>();
+        wrapperRt.SetParent(goalsPreviewRoot, false);
+        wrapperRt.SetSiblingIndex(siblingIndex);
+        wrapperRt.anchorMin = new Vector2(0.5f, 0.5f);
+        wrapperRt.anchorMax = new Vector2(0.5f, 0.5f);
+        wrapperRt.pivot = new Vector2(0.5f, 0.5f);
+        wrapperRt.anchoredPosition = Vector2.zero;
+        wrapperRt.localScale = Vector3.one;
+
+        var wrapperLayout = wrapper.GetComponent<LayoutElement>();
+        wrapperLayout.preferredWidth = baseWidth > 0f ? baseWidth * scale : -1f;
+        wrapperLayout.preferredHeight = baseHeight > 0f ? baseHeight * scale : -1f;
+
+        slotRt.SetParent(wrapperRt, false);
+        slotRt.anchorMin = new Vector2(0.5f, 0.5f);
+        slotRt.anchorMax = new Vector2(0.5f, 0.5f);
+        slotRt.pivot = new Vector2(0.5f, 0.5f);
+        slotRt.anchoredPosition = Vector2.zero;
+        if (baseWidth > 0f)
+            slotRt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, baseWidth);
+
+        if (baseHeight > 0f)
+            slotRt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, baseHeight);
+
+        LayoutElement slotLayout = slot.GetComponent<LayoutElement>();
+        if (slotLayout != null)
+            slotLayout.ignoreLayout = true;
+    }
+
+    private static float ResolveLayoutSize(float preferred, float rectSize, float sizeDelta)
+    {
+        if (preferred > 0f)
+            return preferred;
+
+        if (rectSize > 0f)
+            return rectSize;
+
+        if (sizeDelta > 0f)
+            return sizeDelta;
+
+        return -1f;
     }
 
     private void ClearGoalsPreview()
