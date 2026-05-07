@@ -9,8 +9,7 @@ public static class PreLevelSpecialInjectorBootstrapper
         if (!PreLevelSpecialSelectionState.HasSelection)
             return;
 
-        // If the scene already has an injector, let that one run.
-        var existing = Object.FindObjectOfType<PreLevelSpecialInjector>(true);
+        var existing = Object.FindObjectOfType<PreLevelSpecialRuntimeInjector>(true);
         if (existing != null)
             return;
 
@@ -19,6 +18,6 @@ public static class PreLevelSpecialInjectorBootstrapper
         if (activeScene.IsValid())
             SceneManager.MoveGameObjectToScene(go, activeScene);
 
-        go.AddComponent<PreLevelSpecialInjector>();
+        go.AddComponent<PreLevelSpecialRuntimeInjector>();
     }
 }
