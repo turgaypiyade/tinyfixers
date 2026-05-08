@@ -13,7 +13,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private TopHudController topHud;
     [SerializeField] private BonusMovesService bonusMovesService;
     [SerializeField] private TileIconLibrary tileIconLibrary;
-    [Header("Success Animation (image sequence — takes priority over video)")]
+    [SerializeField] private ChapterThemeApplier chapterThemeApplier;
+
+    [Header("Success Animation (image sequence - takes priority over video)")]
     [SerializeField] private SuccessAnimationPlayer successAnimationPlayer;
 
     [Header("Bonus Round Skip")]
@@ -27,11 +29,18 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private float successVideoStartDelay = 0.4f;
     [SerializeField] private float successVideoFallbackSeconds = 8f;
 
-
     [Header("Popup Roots")]
     [SerializeField] private GameObject failPopupRoot;
     [SerializeField] private GameObject successPopupRoot;
     [SerializeField] private GameObject blockerRoot;
+
+    [Header("Level End Popup Images")]
+    [SerializeField] private Image failPopupImage;
+    [SerializeField] private Image successPopupImage;
+    [SerializeField] private Image failContinueButtonImage;
+    [SerializeField] private Image successContinueButtonImage;
+    [SerializeField] private Image failCloseButtonImage;
+    [SerializeField] private Image successCloseButtonImage;
 
     [Header("Optional Text")]
     [SerializeField] private TMP_Text failDescriptionText;
@@ -56,10 +65,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private TMP_Text failMessageText;
     [SerializeField] private TMP_Text failContinueText;
 
-    [Header("Success — Yıldız Görselleri (sırayla 1., 2., 3. yıldız)")]
-    [SerializeField] private UnityEngine.UI.Image[] starImages;
+    [Header("Success - Star Images")]
+    [SerializeField] private Image[] starImages;
     [SerializeField] private Sprite starFilledSprite;
     [SerializeField] private Sprite starEmptySprite;
+    [SerializeField, Min(0f)] private float starRevealDelay = 0.4f;
 
     [Header("Success Content")]
     [SerializeField] private TMP_Text successTitleText;
@@ -68,18 +78,19 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private TMP_Text scoreValueText;
     [SerializeField] private GameObject[] goalResultRoots = new GameObject[4];
     [SerializeField] private Image[] goalIconImages = new Image[4];
-    [SerializeField] private GameObject[] goalCheckMarks = new GameObject[4];
+    [SerializeField] private Image[] goalCheckMarkImages = new Image[4];
+    [SerializeField] private Sprite goalCheckMarkSprite;
 
-    [Header("Success — Para Metni")]
+    [Header("Success - Coin Text")]
     [SerializeField] private TMP_Text coinsEarnedText;
     [SerializeField] private string coinsPrefix = "+";
     [SerializeField] private string coinsSuffix = " coin";
 
-    [Header("Yıldız Eşikleri (kalan hamle / başlangıç hamle)")]
-    [Range(0f, 1f)] [SerializeField] private float star3Ratio = 0.5f;  // >= %50 kalan → 3 yıldız
-    [Range(0f, 1f)] [SerializeField] private float star2Ratio = 0.2f;  // >= %20 kalan → 2 yıldız
+    [Header("Star Thresholds (remaining moves / starting moves)")]
+    [Range(0f, 1f)] [SerializeField] private float star3Ratio = 0.5f;
+    [Range(0f, 1f)] [SerializeField] private float star2Ratio = 0.2f;
 
-    [Header("Coin Ödülü")]
+    [Header("Coin Reward")]
     [SerializeField] private int baseCoins = 100;
     [SerializeField] private int coinsPerRemainingMove = 20;
 
@@ -90,18 +101,17 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private bool failPopupShown;
     private bool successPopupShown;
     private bool successReturnQueued;
-    private int  _movesAtWin;
+    private int _movesAtWin;
     private int currentOfferAmount;
     private int currentCost;
-
-    // We may receive moves/goal events while the board is still resolving cascades.
-    // This gate ensures we only evaluate & show end popups after the board becomes idle.
     private bool endCheckQueued;
+    private Coroutine starRevealRoutine;
 
     private void ResolveSerializedReferences()
     {
-        // Prefer deterministic lookup by object name under this popup root.
-        // This protects us from broken scene override references on prefab instances.
+        if (chapterThemeApplier == null)
+            chapterThemeApplier = FindFirstObjectByType<ChapterThemeApplier>(FindObjectsInactive.Include);
+
         var failRootByName = transform.Find("FailPopupRoot");
         if (failRootByName != null)
             failPopupRoot = failRootByName.gameObject;
@@ -116,6 +126,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (failPopupRoot != null)
         {
+            failPopupImage = FindComponent<Image>(failPopupRoot.transform, "FailPopupImage") ?? failPopupImage;
+
             var failContinue = failPopupRoot.transform.Find("UI/BtnContinue");
             if (failContinue != null)
                 buyMovesButton = failContinue.GetComponent<Button>();
@@ -124,6 +136,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
             if (failClose != null)
                 failCloseButton = failClose.GetComponent<Button>();
 
+            failContinueButtonImage = FindComponent<Image>(failPopupRoot.transform, "UI/BtnContinue") ?? failContinueButtonImage;
+            failCloseButtonImage = FindComponent<Image>(failPopupRoot.transform, "UI/BtnClose") ?? failCloseButtonImage;
             failTitleText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/FailTitleText") ?? failTitleText;
             extraMovesIcon = FindComponent<Image>(failPopupRoot.transform, "UI/ExtraMovesIcon") ?? extraMovesIcon;
             failMessageText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/FailMessageText") ?? failMessageText;
@@ -135,6 +149,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (successPopupRoot != null)
         {
+            successPopupImage = FindComponent<Image>(successPopupRoot.transform, "SuccessPopupImage") ?? successPopupImage;
+
             var successClose = successPopupRoot.transform.Find("UIS/BtnSClose");
             if (successClose != null)
                 successCloseButton = successClose.GetComponent<Button>();
@@ -143,6 +159,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
             if (successContinue != null)
                 successContinueButton = successContinue.GetComponent<Button>();
 
+            successContinueButtonImage = FindComponent<Image>(successPopupRoot.transform, "UIS/BtnsContinue") ?? successContinueButtonImage;
+            successCloseButtonImage = FindComponent<Image>(successPopupRoot.transform, "UIS/BtnSClose") ?? successCloseButtonImage;
             successTitleText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/SuccessTitleText") ?? successTitleText;
             successContinueText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/BtnsContinue/BtnContinueText") ?? successContinueText;
             scoreLabelText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/ScoreRow/ScoreLabelText") ?? scoreLabelText;
@@ -163,12 +181,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
                     goalResultRoots[i] = result.gameObject;
 
                 goalIconImages[i] = FindComponent<Image>(successPopupRoot.transform, $"{resultPath}/GoalIcon") ?? goalIconImages[i];
-
-                var checkMark = successPopupRoot.transform.Find($"{resultPath}/CheckMark");
-                if (checkMark != null)
-                    goalCheckMarks[i] = checkMark.gameObject;
+                goalCheckMarkImages[i] = FindComponent<Image>(successPopupRoot.transform, $"{resultPath}/CheckMark") ?? goalCheckMarkImages[i];
             }
         }
+
         if (successVideoRoot != null && successVideoPlayer == null)
             successVideoPlayer = successVideoRoot.GetComponent<VideoPlayer>();
     }
@@ -179,6 +195,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         successPopupShown = false;
         successReturnQueued = false;
         ResolveSerializedReferences();
+        ApplyChapterThemeVisuals();
         HideAllPopups();
         RegisterButtonListeners();
 
@@ -209,6 +226,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         UnregisterButtonListeners();
         ResolveSerializedReferences();
+        ApplyChapterThemeVisuals();
         RegisterButtonListeners();
         Subscribe();
         RefreshPopupCopy();
@@ -227,6 +245,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         HideAllPopups();
         ReturnToMainMenu();
     }
+
     private void QueueSuccessReturnToMainMenu()
     {
         if (board == null || topHud == null)
@@ -236,16 +255,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
             return;
 
         successReturnQueued = true;
-
         Debug.Log("[LevelEnd] Success queued. Waiting board settle...");
-
         StartCoroutine(CompleteSuccessAfterBoardSettled());
     }
 
     private IEnumerator CompleteSuccessAfterBoardSettled()
     {
-        // Goal completed event clear/fall sırasında gelebilir.
-        // Bu yüzden önce en az 1 frame bekliyoruz.
         yield return null;
 
         const int requiredStableFrames = 3;
@@ -253,30 +268,16 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         while (board != null && stableFrames < requiredStableFrames)
         {
-            bool boardStillWorking =
-                board.IsBusy ||
-                board.ActiveBackgroundJobs > 0;
-
-            if (boardStillWorking)
-            {
-                stableFrames = 0;
-            }
-            else
-            {
-                stableFrames++;
-            }
-
+            bool boardStillWorking = board.IsBusy || board.ActiveBackgroundJobs > 0;
+            stableFrames = boardStillWorking ? 0 : stableFrames + 1;
             yield return null;
         }
 
-        // Son bir güvenlik: aynı anda tekrar busy olduysa bekle.
         while (board != null && (board.IsBusy || board.ActiveBackgroundJobs > 0))
             yield return null;
 
-        // Capture remaining moves BEFORE the bonus round — used for star/coin rewards.
         _movesAtWin = board != null ? board.RemainingMoves : 0;
 
-        // Kalan moves varsa bonus round: her move için random normal tile'a LineV/LineH at.
         if (bonusMovesService != null && board != null && board.RemainingMoves > 0)
         {
             board.SetInputLocked(true);
@@ -285,7 +286,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
             SetSkipBonusOverlayVisible(false);
         }
 
-        // Görsel yumuşak geçiş. Bu delay artık SADECE burada var.
         if (successVideoStartDelay > 0f)
             yield return new WaitForSecondsRealtime(successVideoStartDelay);
 
@@ -301,16 +301,15 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         Debug.Log("[LevelEnd] Board settled. Showing success popup.");
-
         ShowSuccessPopup();
     }
+
     private IEnumerator PlaySuccessVideoThenReturnToMainMenu()
     {
-        // Image-sequence animation takes priority over video when assigned
         if (successAnimationPlayer != null)
         {
             SetBlockerVisible(true);
-            Debug.Log("[LevelEnd] successAnimationPlayer atandı, animasyon başlıyor");
+            Debug.Log("[LevelEnd] successAnimationPlayer assigned; animation starts.");
             yield return StartCoroutine(successAnimationPlayer.Play());
             ReturnToMainMenu();
             yield break;
@@ -324,17 +323,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         SetBlockerVisible(true);
-
         successVideoRoot.SetActive(true);
         successVideoRoot.transform.SetAsLastSibling();
 
         bool finished = false;
 
-        void HandleFinished(VideoPlayer player)
-        {
-            finished = true;
-        }
-
+        void HandleFinished(VideoPlayer player) => finished = true;
         void HandleError(VideoPlayer player, string message)
         {
             Debug.LogWarning($"[LevelEnd] Success video error: {message}");
@@ -343,11 +337,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         successVideoPlayer.loopPointReached += HandleFinished;
         successVideoPlayer.errorReceived += HandleError;
-
         successVideoPlayer.playOnAwake = false;
         successVideoPlayer.isLooping = false;
         successVideoPlayer.waitForFirstFrame = true;
-
         successVideoPlayer.Stop();
         successVideoPlayer.time = 0;
         successVideoPlayer.Prepare();
@@ -364,20 +356,16 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (!successVideoPlayer.isPrepared)
         {
             Debug.LogWarning("[LevelEnd] Success video prepare timeout. Returning to main menu.");
-
             successVideoPlayer.loopPointReached -= HandleFinished;
             successVideoPlayer.errorReceived -= HandleError;
-
             ReturnToMainMenu();
             yield break;
         }
 
         Debug.Log("[LevelEnd] Success video prepared. Playing.");
-
         successVideoPlayer.Play();
 
         float timer = 0f;
-
         while (!finished && timer < successVideoFallbackSeconds)
         {
             timer += Time.unscaledDeltaTime;
@@ -386,17 +374,17 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         successVideoPlayer.loopPointReached -= HandleFinished;
         successVideoPlayer.errorReceived -= HandleError;
-
         successVideoPlayer.Stop();
-
         ReturnToMainMenu();
     }
+
     private void AdvanceToNextLevel()
     {
         int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
         PlayerPrefs.SetInt(prefsLevelKey, level + 1);
         PlayerPrefs.Save();
     }
+
     private void ReturnToMainMenu() => SceneManager.LoadScene(mainMenuSceneName);
 
     private void SetBlockerVisible(bool isVisible)
@@ -420,7 +408,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private void Subscribe()
     {
         Unsubscribe();
-
         board.OnMovesChanged += HandleMovesChanged;
         topHud.OnGoalsCompletionChanged += HandleGoalsCompletionChanged;
     }
@@ -429,15 +416,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         if (board != null)
             board.OnMovesChanged -= HandleMovesChanged;
-
         if (topHud != null)
             topHud.OnGoalsCompletionChanged -= HandleGoalsCompletionChanged;
     }
 
-    private void HandleMovesChanged(int _)
-    {
-        RequestEvaluateLevelEndState();
-    }
+    private void HandleMovesChanged(int _) => RequestEvaluateLevelEndState();
 
     private void HandleGoalsCompletionChanged(bool completed)
     {
@@ -461,8 +444,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
         Debug.Log("[LevelEnd] RequestEvaluate queued. Waiting idle...");
         endCheckQueued = true;
 
-        // If board is still resolving cascades (fall/spawn/matches/specials), wait.
-        // When it becomes idle, we re-check the conditions and only then show the popup.
         board.RunAfterIdle(() =>
         {
             Debug.Log("[LevelEnd] Board idle -> Evaluate");
@@ -502,10 +483,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         failPopupShown = true;
         successPopupShown = false;
+        ApplyChapterThemeVisuals();
         RefreshFailOfferVisuals();
-
-        // Önemli olan popup root'unu değil,
-        // LevelEndPopup controller objesini en üste almak.
         transform.SetAsLastSibling();
 
         if (failPopupRoot != null)
@@ -536,10 +515,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         int coins = CalculateCoins();
         int score = CalculateScore();
 
-        ApplyRewardVisuals(stars, coins, score);
-        SaveRewards(stars, coins);
-        AdvanceToNextLevel();
-
+        ApplyChapterThemeVisuals();
         transform.SetAsLastSibling();
 
         if (successVideoRoot != null)
@@ -550,12 +526,16 @@ public class LevelEndSimplePopupController : MonoBehaviour
             successPopupRoot.SetActive(true);
             successPopupRoot.transform.SetAsLastSibling();
         }
+
         if (failPopupRoot != null)
             failPopupRoot.SetActive(false);
 
         SetBlockerVisible(true);
+        ApplyRewardVisuals(stars, coins, score);
+        SaveRewards(stars, coins);
+        AdvanceToNextLevel();
 
-        Debug.Log($"[LevelEnd] Success — Yıldız: {stars}, Coin: {coins}, Score: {score}");
+        Debug.Log($"[LevelEnd] Success - Stars: {stars}, Coin: {coins}, Score: {score}");
     }
 
     private int CalculateStars()
@@ -568,21 +548,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
             return 1;
 
         float ratio = (float)_movesAtWin / totalMoves;
-
         if (ratio >= star3Ratio) return 3;
         if (ratio >= star2Ratio) return 2;
         return 1;
     }
 
-    private int CalculateCoins()
-    {
-        return baseCoins + _movesAtWin * coinsPerRemainingMove;
-    }
-
-    private int CalculateScore()
-    {
-        return 1000 + _movesAtWin * 250;
-    }
+    private int CalculateCoins() => baseCoins + _movesAtWin * coinsPerRemainingMove;
+    private int CalculateScore() => 1000 + _movesAtWin * 250;
 
     private void ApplyRewardVisuals(int stars, int coins, int score)
     {
@@ -600,27 +572,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (scoreValueText != null)
             scoreValueText.text = score.ToString("N0");
 
-        // Yıldızlar
-        if (starImages != null)
-        {
-            for (int i = 0; i < starImages.Length; i++)
-            {
-                if (starImages[i] == null) continue;
+        PlayStarReveal(stars);
 
-                bool filled = i < stars;
-
-                if (filled && starFilledSprite != null)
-                    starImages[i].sprite = starFilledSprite;
-                else if (!filled && starEmptySprite != null)
-                    starImages[i].sprite = starEmptySprite;
-
-                var c = starImages[i].color;
-                c.a = filled ? 1f : 0.35f;
-                starImages[i].color = c;
-            }
-        }
-
-        // Para
         if (coinsEarnedText != null)
             coinsEarnedText.text = coinsPrefix + coins + coinsSuffix;
 
@@ -652,11 +605,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         board.AddMoves(currentOfferAmount);
         extraMoveOfferAttempt++;
-
         failPopupShown = false;
         HideAllPopups();
-
-        // Force full board sync to prevent any accumulated drift after popup
         board.ForceFullBoardSync();
     }
 
@@ -721,7 +671,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         ResolveCurrentFailOffer();
 
         if (failTitleText != null)
-            failTitleText.text = LocalizedText("level_end_fail_title", "Hamle Kalmadı!");
+            failTitleText.text = LocalizedText("level_end_fail_title", "Hamle Kalmadi!");
 
         string message = LocalizedFormat("level_end_fail_extra_moves_text", "{0} hamle ekleyerek devam et", currentOfferAmount);
         if (failMessageText != null)
@@ -756,34 +706,99 @@ public class LevelEndSimplePopupController : MonoBehaviour
         return extraMoveOfferSprites[index];
     }
 
+    private void ApplyChapterThemeVisuals()
+    {
+        if (chapterThemeApplier == null)
+            chapterThemeApplier = FindFirstObjectByType<ChapterThemeApplier>(FindObjectsInactive.Include);
+
+        ChapterTheme theme = chapterThemeApplier != null ? chapterThemeApplier.CurrentTheme : null;
+        if (theme == null)
+            return;
+
+        SetImageSpriteIfPresent(failPopupImage, theme.levelEndPopupBackground);
+        SetImageSpriteIfPresent(successPopupImage, theme.levelEndPopupBackground);
+        SetImageSpriteIfPresent(failContinueButtonImage, theme.levelEndContinueButton);
+        SetImageSpriteIfPresent(successContinueButtonImage, theme.levelEndContinueButton);
+        SetImageSpriteIfPresent(failCloseButtonImage, theme.levelEndCloseButton);
+        SetImageSpriteIfPresent(successCloseButtonImage, theme.levelEndCloseButton);
+
+        if (theme.levelEndStarFilled != null)
+            starFilledSprite = theme.levelEndStarFilled;
+        if (theme.levelEndStarEmpty != null)
+            starEmptySprite = theme.levelEndStarEmpty;
+        if (theme.levelEndGoalCheckMark != null)
+            goalCheckMarkSprite = theme.levelEndGoalCheckMark;
+
+        if (theme.levelEndExtraMoves5 != null || theme.levelEndExtraMoves10 != null || theme.levelEndExtraMoves15 != null)
+        {
+            EnsureExtraMoveOfferSpriteArray();
+
+            if (theme.levelEndExtraMoves5 != null)
+                extraMoveOfferSprites[0] = theme.levelEndExtraMoves5;
+            if (theme.levelEndExtraMoves10 != null)
+                extraMoveOfferSprites[1] = theme.levelEndExtraMoves10;
+            if (theme.levelEndExtraMoves15 != null)
+                extraMoveOfferSprites[2] = theme.levelEndExtraMoves15;
+        }
+    }
+
+    private static void SetImageSpriteIfPresent(Image image, Sprite sprite)
+    {
+        if (image == null || sprite == null)
+            return;
+
+        image.sprite = sprite;
+        image.enabled = true;
+    }
+
+    private void EnsureExtraMoveOfferSpriteArray()
+    {
+        if (extraMoveOfferSprites == null || extraMoveOfferSprites.Length < 3)
+            Array.Resize(ref extraMoveOfferSprites, 3);
+    }
+
     private void ApplyGoalVisuals()
     {
         EnsureGoalResultArrays();
 
         var levelData = board != null ? board.ActiveLevelData : null;
         var goals = levelData != null ? levelData.goals : null;
+        int slotIndex = 0;
 
         for (int i = 0; i < 4; i++)
+            SetGoalResultVisible(i, false);
+
+        if (goals == null)
+            return;
+
+        for (int i = 0; i < goals.Length && slotIndex < 4; i++)
         {
-            var goal = goals != null && i < goals.Length ? goals[i] : null;
+            var goal = goals[i];
             var icon = ResolveGoalResultIcon(goal);
 
-            if (goal == null || icon == null)
-            {
-                SetGoalResultVisible(i, false);
+            if (goal == null || goal.amount <= 0 || icon == null)
                 continue;
-            }
 
-            SetGoalResultVisible(i, true);
+            SetGoalResultVisible(slotIndex, true);
 
-            if (goalIconImages[i] != null)
+            if (goalIconImages[slotIndex] != null)
             {
-                goalIconImages[i].sprite = icon;
-                goalIconImages[i].enabled = true;
+                goalIconImages[slotIndex].sprite = icon;
+                goalIconImages[slotIndex].enabled = true;
             }
 
-            if (goalCheckMarks[i] != null)
-                goalCheckMarks[i].SetActive(true);
+            if (goalCheckMarkImages[slotIndex] != null)
+            {
+                Sprite checkSprite = goalCheckMarkSprite != null
+                    ? goalCheckMarkSprite
+                    : goalCheckMarkImages[slotIndex].sprite;
+
+                goalCheckMarkImages[slotIndex].sprite = checkSprite;
+                goalCheckMarkImages[slotIndex].enabled = checkSprite != null;
+                goalCheckMarkImages[slotIndex].gameObject.SetActive(checkSprite != null);
+            }
+
+            slotIndex++;
         }
     }
 
@@ -827,8 +842,82 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (goalIconImages != null && index < goalIconImages.Length && goalIconImages[index] != null)
             goalIconImages[index].gameObject.SetActive(visible);
-        if (goalCheckMarks != null && index < goalCheckMarks.Length && goalCheckMarks[index] != null)
-            goalCheckMarks[index].SetActive(visible);
+        if (goalCheckMarkImages != null && index < goalCheckMarkImages.Length && goalCheckMarkImages[index] != null)
+            goalCheckMarkImages[index].gameObject.SetActive(visible);
+    }
+
+    private void PlayStarReveal(int earnedStars)
+    {
+        if (starRevealRoutine != null)
+            StopCoroutine(starRevealRoutine);
+
+        starRevealRoutine = StartCoroutine(RevealStarsRoutine(earnedStars));
+    }
+
+    private IEnumerator RevealStarsRoutine(int earnedStars)
+    {
+        if (starImages == null)
+            yield break;
+
+        earnedStars = Mathf.Clamp(earnedStars, 0, starImages.Length);
+
+        for (int i = 0; i < starImages.Length; i++)
+        {
+            if (starImages[i] == null)
+                continue;
+
+            if (starEmptySprite != null)
+                starImages[i].sprite = starEmptySprite;
+
+            var color = starImages[i].color;
+            color.a = 0.35f;
+            starImages[i].color = color;
+            starImages[i].transform.localScale = Vector3.one;
+        }
+
+        for (int i = 0; i < earnedStars; i++)
+        {
+            if (starImages[i] == null)
+                continue;
+
+            if (i > 0 && starRevealDelay > 0f)
+                yield return new WaitForSecondsRealtime(starRevealDelay);
+
+            if (starFilledSprite != null)
+                starImages[i].sprite = starFilledSprite;
+
+            var color = starImages[i].color;
+            color.a = 1f;
+            starImages[i].color = color;
+
+            yield return StartCoroutine(PunchStarRoutine(starImages[i].transform));
+        }
+
+        starRevealRoutine = null;
+    }
+
+    private IEnumerator PunchStarRoutine(Transform target)
+    {
+        if (target == null)
+            yield break;
+
+        const float duration = 0.18f;
+        const float punchScale = 1.18f;
+        float t = 0f;
+
+        while (t < duration)
+        {
+            t += Time.unscaledDeltaTime;
+            float normalized = Mathf.Clamp01(t / duration);
+            float scale = normalized < 0.5f
+                ? Mathf.Lerp(1f, punchScale, normalized / 0.5f)
+                : Mathf.Lerp(punchScale, 1f, (normalized - 0.5f) / 0.5f);
+
+            target.localScale = Vector3.one * scale;
+            yield return null;
+        }
+
+        target.localScale = Vector3.one;
     }
 
     private void EnsureStarImageArray()
@@ -843,8 +932,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
             Array.Resize(ref goalResultRoots, 4);
         if (goalIconImages == null || goalIconImages.Length < 4)
             Array.Resize(ref goalIconImages, 4);
-        if (goalCheckMarks == null || goalCheckMarks.Length < 4)
-            Array.Resize(ref goalCheckMarks, 4);
+        if (goalCheckMarkImages == null || goalCheckMarkImages.Length < 4)
+            Array.Resize(ref goalCheckMarkImages, 4);
     }
 
     private static T FindComponent<T>(Transform root, string path) where T : Component
@@ -878,6 +967,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     public void HideAllPopups()
     {
+        if (starRevealRoutine != null)
+        {
+            StopCoroutine(starRevealRoutine);
+            starRevealRoutine = null;
+        }
+
         if (failPopupRoot != null)
             failPopupRoot.SetActive(false);
 
