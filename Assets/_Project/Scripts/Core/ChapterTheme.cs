@@ -57,4 +57,13 @@ public class ChapterTheme : ScriptableObject
     public Sprite levelEndContinueButton;
     [Tooltip("Optional chapter-specific Close button sprite for level end popups.")]
     public Sprite levelEndCloseButton;
+
+    // Shared level-end icons are assigned on LevelEndSimplePopupController, not per chapter.
+    // These hidden fields keep older serialized/controller references compile-safe while the controller is being migrated.
+    [HideInInspector] public Sprite levelEndStarFilled;
+    [HideInInspector] public Sprite levelEndStarEmpty;
+    [HideInInspector] public Sprite levelEndGoalCheckMark;
+    [HideInInspector] public Sprite levelEndExtraMoves5;
+    [HideInInspector] public Sprite levelEndExtraMoves10;
+    [HideInInspector] public Sprite levelEndExtraMoves15;
 }
