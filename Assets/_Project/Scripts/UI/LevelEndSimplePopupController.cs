@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -33,6 +34,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private GameObject failPopupRoot;
     [SerializeField] private GameObject successPopupRoot;
     [SerializeField] private GameObject blockerRoot;
+
+    [Header("Main Screen Dim")]
+    [SerializeField] private CanvasGroup mainScreenCanvasGroup;
+    [SerializeField] private Image dimImage;
+    [SerializeField, Range(0f, 1f)] private float dimmedMainAlpha = 0.45f;
+    [SerializeField, Min(0f)] private float dimTransitionDuration = 0.22f;
 
     [Header("Level End Popup Images")]
     [SerializeField] private Image failPopupImage;
@@ -106,6 +113,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private int currentCost;
     private bool endCheckQueued;
     private Coroutine starRevealRoutine;
+    private Coroutine mainScreenDimRoutine;
+    private readonly List<CanvasGroup> mainScreenDimTargets = new();
 
     private void ResolveSerializedReferences()
     {
@@ -123,6 +132,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
         var blockerByName = transform.Find("Blocker") ?? transform.Find("blocker");
         if (blockerByName != null)
             blockerRoot = blockerByName.gameObject;
+
+        if (blockerRoot != null && dimImage == null)
+            dimImage = blockerRoot.GetComponent<Image>() ?? blockerRoot.GetComponentInChildren<Image>(true);
+
+        ResolveMainScreenDimTargets();
 
         if (failPopupRoot != null)
         {
@@ -209,6 +223,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         Unsubscribe();
         UnregisterButtonListeners();
+        StopMainScreenDimRoutine();
+        SetMainScreenAlpha(1f);
     }
 
     private IEnumerator InitializeWhenReady()
@@ -389,6 +405,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void SetBlockerVisible(bool isVisible)
     {
+        if (isVisible)
+            ApplyDimImageColor();
+
         if (blockerRoot != null)
             blockerRoot.SetActive(isVisible);
     }
@@ -500,6 +519,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (successPopupRoot != null)
             successPopupRoot.SetActive(false);
 
+        SetMainScreenDimmed(true);
         SetBlockerVisible(true);
     }
 
@@ -530,6 +550,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (failPopupRoot != null)
             failPopupRoot.SetActive(false);
 
+        SetMainScreenDimmed(true);
         SetBlockerVisible(true);
         ApplyRewardVisuals(stars, coins, score);
         SaveRewards(stars, coins);
@@ -722,6 +743,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         SetImageSpriteIfPresent(failCloseButtonImage, theme.levelEndCloseButton);
         SetImageSpriteIfPresent(successCloseButtonImage, theme.levelEndCloseButton);
 
+        ApplyDimImageColor(theme);
+
         if (theme.levelEndStarFilled != null)
             starFilledSprite = theme.levelEndStarFilled;
         if (theme.levelEndStarEmpty != null)
@@ -749,6 +772,141 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         image.sprite = sprite;
         image.enabled = true;
+    }
+
+    private void ResolveMainScreenDimTargets()
+    {
+        mainScreenDimTargets.Clear();
+
+        if (mainScreenCanvasGroup != null)
+            AddMainScreenDimTarget(mainScreenCanvasGroup);
+
+        Transform canvasRoot = transform.parent;
+        if (canvasRoot == null)
+            return;
+
+        // Mirrors PreLevelSpecialPopupController's mainScreenCanvasGroup setup.
+        // In 01_Game the visual screen is split between GameBG and SafeArea.
+        AddMainScreenDimTarget(FindOrCreateCanvasGroup(canvasRoot.Find("GameBG")));
+        AddMainScreenDimTarget(FindOrCreateCanvasGroup(canvasRoot.Find("BackgroundImage")));
+        AddMainScreenDimTarget(FindOrCreateCanvasGroup(canvasRoot.Find("SafeArea")));
+    }
+
+    private void AddMainScreenDimTarget(CanvasGroup canvasGroup)
+    {
+        if (canvasGroup == null || mainScreenDimTargets.Contains(canvasGroup))
+            return;
+
+        mainScreenDimTargets.Add(canvasGroup);
+    }
+
+    private static CanvasGroup FindOrCreateCanvasGroup(Transform target)
+    {
+        if (target == null)
+            return null;
+
+        var canvasGroup = target.GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
+            canvasGroup = target.gameObject.AddComponent<CanvasGroup>();
+
+        return canvasGroup;
+    }
+
+    private void SetMainScreenDimmed(bool dimmed)
+    {
+        ResolveMainScreenDimTargets();
+        StopMainScreenDimRoutine();
+
+        float targetAlpha = dimmed ? Mathf.Clamp01(dimmedMainAlpha) : 1f;
+        if (!isActiveAndEnabled || dimTransitionDuration <= 0f)
+        {
+            SetMainScreenAlpha(targetAlpha);
+            return;
+        }
+
+        mainScreenDimRoutine = StartCoroutine(CoFadeMainScreenAlpha(targetAlpha));
+    }
+
+    private IEnumerator CoFadeMainScreenAlpha(float targetAlpha)
+    {
+        int count = mainScreenDimTargets.Count;
+        if (count == 0)
+        {
+            mainScreenDimRoutine = null;
+            yield break;
+        }
+
+        var targets = mainScreenDimTargets.ToArray();
+        var startAlphas = new float[targets.Length];
+        for (int i = 0; i < targets.Length; i++)
+            startAlphas[i] = targets[i] != null ? targets[i].alpha : 1f;
+
+        float elapsed = 0f;
+        float duration = Mathf.Max(0.01f, dimTransitionDuration);
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float eased = EaseOut(t);
+
+            for (int i = 0; i < targets.Length; i++)
+            {
+                if (targets[i] == null)
+                    continue;
+
+                targets[i].alpha = Mathf.Lerp(startAlphas[i], targetAlpha, eased);
+            }
+
+            yield return null;
+        }
+
+        for (int i = 0; i < targets.Length; i++)
+        {
+            if (targets[i] != null)
+                targets[i].alpha = targetAlpha;
+        }
+
+        mainScreenDimRoutine = null;
+    }
+
+    private void SetMainScreenAlpha(float alpha)
+    {
+        ResolveMainScreenDimTargets();
+        alpha = Mathf.Clamp01(alpha);
+
+        for (int i = 0; i < mainScreenDimTargets.Count; i++)
+        {
+            if (mainScreenDimTargets[i] != null)
+                mainScreenDimTargets[i].alpha = alpha;
+        }
+    }
+
+    private void StopMainScreenDimRoutine()
+    {
+        if (mainScreenDimRoutine == null)
+            return;
+
+        StopCoroutine(mainScreenDimRoutine);
+        mainScreenDimRoutine = null;
+    }
+
+    private void ApplyDimImageColor(ChapterTheme theme = null)
+    {
+        if (dimImage == null)
+            return;
+
+        if (theme == null && chapterThemeApplier != null)
+            theme = chapterThemeApplier.CurrentTheme;
+
+        Color color = theme != null ? theme.preLevelDimColor : new Color(0f, 0f, 0f, 0.55f);
+        dimImage.color = color;
+    }
+
+    private static float EaseOut(float t)
+    {
+        t = Mathf.Clamp01(t);
+        return 1f - (1f - t) * (1f - t);
     }
 
     private void EnsureExtraMoveOfferSpriteArray()
@@ -982,6 +1140,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (successVideoRoot != null)
             successVideoRoot.SetActive(false);
 
+        SetMainScreenDimmed(false);
         SetBlockerVisible(false);
     }
 }

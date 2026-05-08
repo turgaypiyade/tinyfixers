@@ -32,3 +32,12 @@ MonoBehaviour:
   preLevelSlotSelectedTint: {r: 1, g: 0.86, b: 0.25, a: 0.72}
   preLevelCountTextColor: {r: 1, g: 1, b: 1, a: 1}
   preLevelButtonTextColor: {r: 1, g: 1, b: 1, a: 1}
+  levelEndPopupBackground: {fileID: 21300000, guid: 8d6904d384f9949bb91bac1eda082b45, type: 3}
+  levelEndContinueButton: {fileID: 0}
+  levelEndCloseButton: {fileID: 0}
+  levelEndStarFilled: {fileID: 0}
+  levelEndStarEmpty: {fileID: 0}
+  levelEndGoalCheckMark: {fileID: 0}
+  levelEndExtraMoves5: {fileID: 0}
+  levelEndExtraMoves10: {fileID: 0}
+  levelEndExtraMoves15: {fileID: 0}

@@ -467,7 +467,9 @@ public class ObstacleStateService
         switch (rule)
         {
             case ObstacleDamageSourceRule.Disabled:
-                return false;
+                // UI "joker" boosters are direct tools: they can break even
+                // exhausted/disabled stages such as EnergyContainer.
+                return context == ObstacleHitContext.Booster;
 
             case ObstacleDamageSourceRule.SpecialOnly:
                 return context == ObstacleHitContext.SpecialActivation;
