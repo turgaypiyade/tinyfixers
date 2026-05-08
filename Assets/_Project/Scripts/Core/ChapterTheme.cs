@@ -53,10 +53,11 @@ public class ChapterTheme : ScriptableObject
     [Header("Level End Popup")]
     [Tooltip("Chapter-specific shared popup panel/background image for fail and success end popups.")]
     public Sprite levelEndPopupBackground;
-    [Tooltip("Optional chapter-specific Continue button sprite for level end popups.")]
-    public Sprite levelEndContinueButton;
-    [Tooltip("Optional chapter-specific Close button sprite for level end popups.")]
-    public Sprite levelEndCloseButton;
+
+    // Level-end button art is part of the popup background image.
+    // These hidden fields keep older serialized/controller references compile-safe.
+    [HideInInspector] public Sprite levelEndContinueButton;
+    [HideInInspector] public Sprite levelEndCloseButton;
 
     // Shared level-end icons are assigned on LevelEndSimplePopupController, not per chapter.
     // These hidden fields keep older serialized/controller references compile-safe while the controller is being migrated.
