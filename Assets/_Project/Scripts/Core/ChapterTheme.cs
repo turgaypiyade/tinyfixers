@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Holds all visual assets for one chapter.
-/// Create one asset per chapter via Assets  Create  TinyFixers  Chapter Theme.
+/// Create one asset per chapter via Assets > Create > TinyFixers > Chapter Theme.
 /// </summary>
 [CreateAssetMenu(fileName = "ChapterTheme_1",
                  menuName  = "TinyFixers/Chapter Theme",
@@ -57,16 +57,4 @@ public class ChapterTheme : ScriptableObject
     public Sprite levelEndContinueButton;
     [Tooltip("Optional chapter-specific Close button sprite for level end popups.")]
     public Sprite levelEndCloseButton;
-    [Tooltip("Filled star sprite used on the success popup.")]
-    public Sprite levelEndStarFilled;
-    [Tooltip("Empty star sprite used on the success popup.")]
-    public Sprite levelEndStarEmpty;
-    [Tooltip("Check mark sprite shown near completed goals on the success popup.")]
-    public Sprite levelEndGoalCheckMark;
-    [Tooltip("Extra moves offer icon shown on the fail popup for +5 moves.")]
-    public Sprite levelEndExtraMoves5;
-    [Tooltip("Extra moves offer icon shown on the fail popup for +10 moves.")]
-    public Sprite levelEndExtraMoves10;
-    [Tooltip("Extra moves offer icon shown on the fail popup for +15 moves.")]
-    public Sprite levelEndExtraMoves15;
 }
