@@ -10,7 +10,13 @@
         { "key": "prelevel_special_lineh_name", "value": "Line H" },
         { "key": "prelevel_special_pulsecore_name", "value": "Pulse Core" },
         { "key": "prelevel_special_override_name", "value": "Override" },
-        { "key": "prelevel_special_count_format", "value": "{0}" }
+        { "key": "prelevel_special_count_format", "value": "{0}" },
+        { "key": "level_end_fail_title", "value": "Hamle Kalmadı!" },
+        { "key": "level_end_fail_extra_moves_text", "value": "{0} hamle ekleyerek devam et" },
+        { "key": "level_end_fail_continue_cost", "value": "Devam Et {0}" },
+        { "key": "level_end_success_title_level", "value": "Seviye {0}" },
+        { "key": "level_end_continue", "value": "Devam Et" },
+        { "key": "level_end_score_label", "value": "Puan:" }
       ]
     },
     {
@@ -22,7 +28,13 @@
         { "key": "prelevel_special_lineh_name", "value": "Line H" },
         { "key": "prelevel_special_pulsecore_name", "value": "Pulse Core" },
         { "key": "prelevel_special_override_name", "value": "Override" },
-        { "key": "prelevel_special_count_format", "value": "{0}" }
+        { "key": "prelevel_special_count_format", "value": "{0}" },
+        { "key": "level_end_fail_title", "value": "No Moves Left!" },
+        { "key": "level_end_fail_extra_moves_text", "value": "Continue with {0} extra moves" },
+        { "key": "level_end_fail_continue_cost", "value": "Continue {0}" },
+        { "key": "level_end_success_title_level", "value": "Level {0}" },
+        { "key": "level_end_continue", "value": "Continue" },
+        { "key": "level_end_score_label", "value": "Score:" }
       ]
     }
   ]

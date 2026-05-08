@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -11,6 +12,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private BoardController board;
     [SerializeField] private TopHudController topHud;
     [SerializeField] private BonusMovesService bonusMovesService;
+    [SerializeField] private TileIconLibrary tileIconLibrary;
     [Header("Success Animation (image sequence — takes priority over video)")]
     [SerializeField] private SuccessAnimationPlayer successAnimationPlayer;
 
@@ -42,13 +44,31 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private Button successContinueButton; // BtnsContinue
 
     [Header("Fail Offer")]
-    [SerializeField] private int extraMovesAmount = 5;
-    [SerializeField] private int extraMovesCost = 900;
+    [SerializeField] private int[] extraMoveOfferAmounts = { 5, 10, 15 };
+    [SerializeField] private int baseExtraMovesCost = 900;
+    [SerializeField] private float extraMoveCostMultiplier = 1.5f;
+    [SerializeField] private Sprite[] extraMoveOfferSprites;
+    [SerializeField] private int extraMoveOfferAttempt;
+
+    [Header("Fail Content")]
+    [SerializeField] private TMP_Text failTitleText;
+    [SerializeField] private Image extraMovesIcon;
+    [SerializeField] private TMP_Text failMessageText;
+    [SerializeField] private TMP_Text failContinueText;
 
     [Header("Success — Yıldız Görselleri (sırayla 1., 2., 3. yıldız)")]
     [SerializeField] private UnityEngine.UI.Image[] starImages;
     [SerializeField] private Sprite starFilledSprite;
     [SerializeField] private Sprite starEmptySprite;
+
+    [Header("Success Content")]
+    [SerializeField] private TMP_Text successTitleText;
+    [SerializeField] private TMP_Text successContinueText;
+    [SerializeField] private TMP_Text scoreLabelText;
+    [SerializeField] private TMP_Text scoreValueText;
+    [SerializeField] private GameObject[] goalResultRoots = new GameObject[4];
+    [SerializeField] private Image[] goalIconImages = new Image[4];
+    [SerializeField] private GameObject[] goalCheckMarks = new GameObject[4];
 
     [Header("Success — Para Metni")]
     [SerializeField] private TMP_Text coinsEarnedText;
@@ -71,6 +91,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private bool successPopupShown;
     private bool successReturnQueued;
     private int  _movesAtWin;
+    private int currentOfferAmount;
+    private int currentCost;
 
     // We may receive moves/goal events while the board is still resolving cascades.
     // This gate ensures we only evaluate & show end popups after the board becomes idle.
@@ -101,6 +123,14 @@ public class LevelEndSimplePopupController : MonoBehaviour
             var failClose = failPopupRoot.transform.Find("UI/BtnClose");
             if (failClose != null)
                 failCloseButton = failClose.GetComponent<Button>();
+
+            failTitleText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/FailTitleText") ?? failTitleText;
+            extraMovesIcon = FindComponent<Image>(failPopupRoot.transform, "UI/ExtraMovesIcon") ?? extraMovesIcon;
+            failMessageText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/FailMessageText") ?? failMessageText;
+            failContinueText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/BtnContinue/BtnContinueText") ?? failContinueText;
+
+            if (failDescriptionText == null)
+                failDescriptionText = failMessageText;
         }
 
         if (successPopupRoot != null)
@@ -112,6 +142,32 @@ public class LevelEndSimplePopupController : MonoBehaviour
             var successContinue = successPopupRoot.transform.Find("UIS/BtnsContinue");
             if (successContinue != null)
                 successContinueButton = successContinue.GetComponent<Button>();
+
+            successTitleText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/SuccessTitleText") ?? successTitleText;
+            successContinueText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/BtnsContinue/BtnContinueText") ?? successContinueText;
+            scoreLabelText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/ScoreRow/ScoreLabelText") ?? scoreLabelText;
+            scoreValueText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/ScoreRow/ScoreValueText") ?? scoreValueText;
+
+            EnsureGoalResultArrays();
+            EnsureStarImageArray();
+
+            starImages[0] = FindComponent<Image>(successPopupRoot.transform, "UIS/StarsRow/Star1") ?? starImages[0];
+            starImages[1] = FindComponent<Image>(successPopupRoot.transform, "UIS/StarsRow/Star2") ?? starImages[1];
+            starImages[2] = FindComponent<Image>(successPopupRoot.transform, "UIS/StarsRow/Star3") ?? starImages[2];
+
+            for (int i = 0; i < 4; i++)
+            {
+                string resultPath = $"UIS/GoalsRow/GoalResult_{i + 1}";
+                var result = successPopupRoot.transform.Find(resultPath);
+                if (result != null)
+                    goalResultRoots[i] = result.gameObject;
+
+                goalIconImages[i] = FindComponent<Image>(successPopupRoot.transform, $"{resultPath}/GoalIcon") ?? goalIconImages[i];
+
+                var checkMark = successPopupRoot.transform.Find($"{resultPath}/CheckMark");
+                if (checkMark != null)
+                    goalCheckMarks[i] = checkMark.gameObject;
+            }
         }
         if (successVideoRoot != null && successVideoPlayer == null)
             successVideoPlayer = successVideoRoot.GetComponent<VideoPlayer>();
@@ -121,42 +177,21 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         failPopupShown = false;
         successPopupShown = false;
+        successReturnQueued = false;
+        ResolveSerializedReferences();
         HideAllPopups();
-
-        StartCoroutine(InitializeWhenReady());
-
-        if (buyMovesButton != null)
-            buyMovesButton.onClick.AddListener(HandleBuyMovesClicked);
-        if (failCloseButton != null)
-            failCloseButton.onClick.AddListener(HandleFailCloseClicked);
-        if (successCloseButton != null)
-            successCloseButton.onClick.AddListener(HandleSuccessCloseClicked);
-
-        if (successContinueButton != null)
-            successContinueButton.onClick.AddListener(HandleSuccessCloseClicked);
+        RegisterButtonListeners();
 
         if (skipBonusRoundButton != null)
-        {
-            skipBonusRoundButton.onClick.AddListener(HandleSkipBonusRound);
             skipBonusRoundButton.gameObject.SetActive(false);
-        }
+
+        StartCoroutine(InitializeWhenReady());
     }
 
     private void OnDisable()
     {
         Unsubscribe();
-
-        if (buyMovesButton != null)
-            buyMovesButton.onClick.RemoveListener(HandleBuyMovesClicked);
-        if (failCloseButton != null)
-            failCloseButton.onClick.RemoveListener(HandleFailCloseClicked);
-        if (successCloseButton != null)
-            successCloseButton.onClick.RemoveListener(HandleSuccessCloseClicked);
-        if (successContinueButton != null)
-            successContinueButton.onClick.RemoveListener(HandleSuccessCloseClicked);
-
-        if (skipBonusRoundButton != null)
-            skipBonusRoundButton.onClick.RemoveListener(HandleSkipBonusRound);
+        UnregisterButtonListeners();
     }
 
     private IEnumerator InitializeWhenReady()
@@ -172,9 +207,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
         while (board == null || topHud == null || board.ActiveLevelData == null)
             yield return null;
 
+        UnregisterButtonListeners();
+        ResolveSerializedReferences();
+        RegisterButtonListeners();
         Subscribe();
         RefreshPopupCopy();
-        ResolveSerializedReferences();
         SetBlockerVisible(false);
         RequestEvaluateLevelEndState();
     }
@@ -187,7 +224,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void HandleSuccessCloseClicked()
     {
-        QueueSuccessReturnToMainMenu();
+        HideAllPopups();
+        ReturnToMainMenu();
     }
     private void QueueSuccessReturnToMainMenu()
     {
@@ -262,29 +300,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
             yield break;
         }
 
-        Debug.Log("[LevelEnd] Board settled. Completing success.");
+        Debug.Log("[LevelEnd] Board settled. Showing success popup.");
 
-        CompleteSuccessAndReturnToMainMenu();
-    }
-    private void CompleteSuccessAndReturnToMainMenu()
-    {
-        if (successPopupShown)
-            return;
-
-        successPopupShown = true;
-        failPopupShown = false;
-
-        int stars = CalculateStars();
-        int coins = CalculateCoins();
-
-        SaveRewards(stars, coins);
-        AdvanceToNextLevel();
-
-        HideAllPopups();
-
-        Debug.Log($"[LevelEnd] Success completed. Stars={stars}, Coins={coins}. Playing success video before loading={mainMenuSceneName}");
-
-        StartCoroutine(PlaySuccessVideoThenReturnToMainMenu());
+        ShowSuccessPopup();
     }
     private IEnumerator PlaySuccessVideoThenReturnToMainMenu()
     {
@@ -484,6 +502,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         failPopupShown = true;
         successPopupShown = false;
+        RefreshFailOfferVisuals();
 
         // Önemli olan popup root'unu değil,
         // LevelEndPopup controller objesini en üste almak.
@@ -513,6 +532,19 @@ public class LevelEndSimplePopupController : MonoBehaviour
         successPopupShown = true;
         failPopupShown = false;
 
+        int stars = CalculateStars();
+        int coins = CalculateCoins();
+        int score = CalculateScore();
+
+        ApplyRewardVisuals(stars, coins, score);
+        SaveRewards(stars, coins);
+        AdvanceToNextLevel();
+
+        transform.SetAsLastSibling();
+
+        if (successVideoRoot != null)
+            successVideoRoot.SetActive(false);
+
         if (successPopupRoot != null)
         {
             successPopupRoot.SetActive(true);
@@ -523,13 +555,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         SetBlockerVisible(true);
 
-        int stars = CalculateStars();
-        int coins = CalculateCoins();
-
-        ApplyRewardVisuals(stars, coins);
-        SaveRewards(stars, coins);
-
-        Debug.Log($"[LevelEnd] Success — Yıldız: {stars}, Coin: {coins}");
+        Debug.Log($"[LevelEnd] Success — Yıldız: {stars}, Coin: {coins}, Score: {score}");
     }
 
     private int CalculateStars()
@@ -553,8 +579,27 @@ public class LevelEndSimplePopupController : MonoBehaviour
         return baseCoins + _movesAtWin * coinsPerRemainingMove;
     }
 
-    private void ApplyRewardVisuals(int stars, int coins)
+    private int CalculateScore()
     {
+        return 1000 + _movesAtWin * 250;
+    }
+
+    private void ApplyRewardVisuals(int stars, int coins, int score)
+    {
+        int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
+
+        if (successTitleText != null)
+            successTitleText.text = LocalizedFormat("level_end_success_title_level", "Seviye {0}", level);
+
+        if (successContinueText != null)
+            successContinueText.text = LocalizedText("level_end_continue", "Devam Et");
+
+        if (scoreLabelText != null)
+            scoreLabelText.text = LocalizedText("level_end_score_label", "Puan:");
+
+        if (scoreValueText != null)
+            scoreValueText.text = score.ToString("N0");
+
         // Yıldızlar
         if (starImages != null)
         {
@@ -578,6 +623,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
         // Para
         if (coinsEarnedText != null)
             coinsEarnedText.text = coinsPrefix + coins + coinsSuffix;
+
+        if (successDescriptionText != null && scoreValueText == null)
+            successDescriptionText.text = $"{LocalizedText("level_end_score_label", "Puan:")} {score:N0}";
+
+        ApplyGoalVisuals();
     }
 
     private void SaveRewards(int stars, int coins)
@@ -592,8 +642,16 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (board == null)
             return;
 
-        // Ekonomi entegrasyonu henüz yok. Şimdilik direkt +hamle veriyoruz.
-        board.AddMoves(extraMovesAmount);
+        ResolveCurrentFailOffer();
+
+        if (!PlayerWallet.SpendCoins(currentCost))
+        {
+            Debug.LogWarning($"[LevelEnd] Extra move purchase failed. RequiredCoins={currentCost}, PlayerCoins={PlayerWallet.Coins}");
+            return;
+        }
+
+        board.AddMoves(currentOfferAmount);
+        extraMoveOfferAttempt++;
 
         failPopupShown = false;
         HideAllPopups();
@@ -604,11 +662,218 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void RefreshPopupCopy()
     {
-        if (failDescriptionText != null)
-            failDescriptionText.text = $"Hedefe ulaşamadın. {extraMovesCost} coin ile +{extraMovesAmount} hamle alıp devam edebilirsin.";
+        RefreshFailOfferVisuals();
 
-        if (successDescriptionText != null)
-            successDescriptionText.text = "Hedefler tamamlandı! Kalan hamleler bonusa dönüşecek.";
+        if (successContinueText != null)
+            successContinueText.text = LocalizedText("level_end_continue", "Devam Et");
+
+        if (scoreLabelText != null)
+            scoreLabelText.text = LocalizedText("level_end_score_label", "Puan:");
+    }
+
+    private void RegisterButtonListeners()
+    {
+        if (buyMovesButton != null)
+            buyMovesButton.onClick.AddListener(HandleBuyMovesClicked);
+        if (failCloseButton != null)
+            failCloseButton.onClick.AddListener(HandleFailCloseClicked);
+        if (successCloseButton != null)
+            successCloseButton.onClick.AddListener(HandleSuccessCloseClicked);
+        if (successContinueButton != null)
+            successContinueButton.onClick.AddListener(HandleSuccessCloseClicked);
+        if (skipBonusRoundButton != null)
+            skipBonusRoundButton.onClick.AddListener(HandleSkipBonusRound);
+    }
+
+    private void UnregisterButtonListeners()
+    {
+        if (buyMovesButton != null)
+            buyMovesButton.onClick.RemoveListener(HandleBuyMovesClicked);
+        if (failCloseButton != null)
+            failCloseButton.onClick.RemoveListener(HandleFailCloseClicked);
+        if (successCloseButton != null)
+            successCloseButton.onClick.RemoveListener(HandleSuccessCloseClicked);
+        if (successContinueButton != null)
+            successContinueButton.onClick.RemoveListener(HandleSuccessCloseClicked);
+        if (skipBonusRoundButton != null)
+            skipBonusRoundButton.onClick.RemoveListener(HandleSkipBonusRound);
+    }
+
+    private void ResolveCurrentFailOffer()
+    {
+        int safeAttempt = Mathf.Max(0, extraMoveOfferAttempt);
+        int offerIndex = 0;
+
+        if (extraMoveOfferAmounts != null && extraMoveOfferAmounts.Length > 0)
+            offerIndex = Mathf.Min(safeAttempt, extraMoveOfferAmounts.Length - 1);
+
+        currentOfferAmount = extraMoveOfferAmounts != null && extraMoveOfferAmounts.Length > 0
+            ? Mathf.Max(1, extraMoveOfferAmounts[offerIndex])
+            : 5;
+
+        float multiplier = Mathf.Max(0f, extraMoveCostMultiplier);
+        currentCost = Mathf.RoundToInt(baseExtraMovesCost * Mathf.Pow(multiplier, safeAttempt));
+        currentCost = Mathf.Max(0, currentCost);
+    }
+
+    private void RefreshFailOfferVisuals()
+    {
+        ResolveCurrentFailOffer();
+
+        if (failTitleText != null)
+            failTitleText.text = LocalizedText("level_end_fail_title", "Hamle Kalmadı!");
+
+        string message = LocalizedFormat("level_end_fail_extra_moves_text", "{0} hamle ekleyerek devam et", currentOfferAmount);
+        if (failMessageText != null)
+            failMessageText.text = message;
+
+        if (failDescriptionText != null && failDescriptionText != failMessageText)
+            failDescriptionText.text = message;
+
+        if (failContinueText != null)
+            failContinueText.text = LocalizedFormat("level_end_fail_continue_cost", "Devam Et {0}", currentCost);
+
+        if (extraMovesIcon != null)
+        {
+            var sprite = ResolveExtraMoveOfferSprite();
+            if (sprite != null)
+                extraMovesIcon.sprite = sprite;
+
+            extraMovesIcon.enabled = sprite != null;
+        }
+    }
+
+    private Sprite ResolveExtraMoveOfferSprite()
+    {
+        if (extraMoveOfferSprites == null || extraMoveOfferSprites.Length == 0)
+            return null;
+
+        int index = extraMoveOfferAmounts != null && extraMoveOfferAmounts.Length > 0
+            ? Mathf.Min(Mathf.Max(0, extraMoveOfferAttempt), extraMoveOfferAmounts.Length - 1)
+            : 0;
+
+        index = Mathf.Min(index, extraMoveOfferSprites.Length - 1);
+        return extraMoveOfferSprites[index];
+    }
+
+    private void ApplyGoalVisuals()
+    {
+        EnsureGoalResultArrays();
+
+        var levelData = board != null ? board.ActiveLevelData : null;
+        var goals = levelData != null ? levelData.goals : null;
+
+        for (int i = 0; i < 4; i++)
+        {
+            var goal = goals != null && i < goals.Length ? goals[i] : null;
+            var icon = ResolveGoalResultIcon(goal);
+
+            if (goal == null || icon == null)
+            {
+                SetGoalResultVisible(i, false);
+                continue;
+            }
+
+            SetGoalResultVisible(i, true);
+
+            if (goalIconImages[i] != null)
+            {
+                goalIconImages[i].sprite = icon;
+                goalIconImages[i].enabled = true;
+            }
+
+            if (goalCheckMarks[i] != null)
+                goalCheckMarks[i].SetActive(true);
+        }
+    }
+
+    private Sprite ResolveGoalResultIcon(LevelGoalDefinition goal)
+    {
+        if (goal == null)
+            return null;
+
+        if (goal.iconOverride != null)
+            return goal.iconOverride;
+
+        if (goal.targetType == LevelGoalTargetType.Tile)
+        {
+            var sprite = tileIconLibrary != null ? tileIconLibrary.Get(goal.tileType) : null;
+            return sprite != null ? sprite : board != null ? board.GetIcon(goal.tileType) : null;
+        }
+
+        if (goal.targetType == LevelGoalTargetType.Obstacle)
+        {
+            var levelData = board != null ? board.ActiveLevelData : null;
+            var obstacleDef = levelData != null && levelData.obstacleLibrary != null
+                ? levelData.obstacleLibrary.Get(goal.obstacleId)
+                : null;
+
+            return obstacleDef != null ? obstacleDef.GetPreviewSprite() : null;
+        }
+
+        return null;
+    }
+
+    private void SetGoalResultVisible(int index, bool visible)
+    {
+        if (index < 0 || index >= 4)
+            return;
+
+        if (goalResultRoots != null && index < goalResultRoots.Length && goalResultRoots[index] != null)
+        {
+            goalResultRoots[index].SetActive(visible);
+            return;
+        }
+
+        if (goalIconImages != null && index < goalIconImages.Length && goalIconImages[index] != null)
+            goalIconImages[index].gameObject.SetActive(visible);
+        if (goalCheckMarks != null && index < goalCheckMarks.Length && goalCheckMarks[index] != null)
+            goalCheckMarks[index].SetActive(visible);
+    }
+
+    private void EnsureStarImageArray()
+    {
+        if (starImages == null || starImages.Length < 3)
+            Array.Resize(ref starImages, 3);
+    }
+
+    private void EnsureGoalResultArrays()
+    {
+        if (goalResultRoots == null || goalResultRoots.Length < 4)
+            Array.Resize(ref goalResultRoots, 4);
+        if (goalIconImages == null || goalIconImages.Length < 4)
+            Array.Resize(ref goalIconImages, 4);
+        if (goalCheckMarks == null || goalCheckMarks.Length < 4)
+            Array.Resize(ref goalCheckMarks, 4);
+    }
+
+    private static T FindComponent<T>(Transform root, string path) where T : Component
+    {
+        if (root == null)
+            return null;
+
+        var child = root.Find(path);
+        return child != null ? child.GetComponent<T>() : null;
+    }
+
+    private static string LocalizedText(string key, string fallback)
+    {
+        string value = GameLocalization.Get(key);
+        return string.IsNullOrEmpty(value) || value == key ? fallback : value;
+    }
+
+    private static string LocalizedFormat(string key, string fallback, params object[] args)
+    {
+        string format = LocalizedText(key, fallback);
+
+        try
+        {
+            return string.Format(format, args);
+        }
+        catch (FormatException)
+        {
+            return format;
+        }
     }
 
     public void HideAllPopups()
