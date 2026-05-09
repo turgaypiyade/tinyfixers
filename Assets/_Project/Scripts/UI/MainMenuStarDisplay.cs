@@ -69,7 +69,7 @@ public sealed class MainMenuStarDisplay : MonoBehaviour
         if (starCountText == null && !hasWarnedMissingText)
         {
             hasWarnedMissingText = true;
-            Debug.LogWarning("[MainMenuStarDisplay] StarCount text not found. Star display will be skipped.");
+            Debug.LogWarning("[MainMenuStarDisplay] Star count text not found. Checked StarCount, ChipStar, Stars, StarText and TotalStars paths. Star display will be skipped until a TMP text is assigned or renamed.");
         }
     }
 
@@ -79,9 +79,9 @@ public sealed class MainMenuStarDisplay : MonoBehaviour
 
         if (searchRoot != null)
         {
-            text = FindTextAtPath(searchRoot, "MainMenuRoot/TopBar/StarCount")
+            text = FindTextAtPath(searchRoot, "MainRoot/TopBar/StarCount")
                    ?? FindTextAtPath(searchRoot, "TopBar/StarCount")
-                   ?? FindTextAtPath(searchRoot.root, "MainMenuRoot/TopBar/StarCount")
+                   ?? FindTextAtPath(searchRoot.root, "MainRoot/TopBar/StarCount")
                    ?? FindTextAtPath(searchRoot.root, "TopBar/StarCount");
         }
 
@@ -91,13 +91,80 @@ public sealed class MainMenuStarDisplay : MonoBehaviour
         var topBar = GameObject.Find("TopBar");
         if (topBar != null)
         {
-            text = FindTextAtPath(topBar.transform, "StarCount");
+            text = FindStarTextNear(topBar.transform)
+                   ?? FindTextAtAnyPath(topBar.transform, TopBarRelativeStarTextPaths);
             if (text != null)
                 return text;
         }
 
-        var starCount = GameObject.Find("StarCount");
-        return starCount != null ? starCount.GetComponent<TMP_Text>() : null;
+        foreach (string objectName in StarObjectNames)
+        {
+            var go = GameObject.Find(objectName);
+            text = GetTextOnOrUnder(go != null ? go.transform : null);
+            if (text != null)
+                return text;
+        }
+
+        return null;
+    }
+
+    private static readonly string[] StarTextPaths =
+    {
+        "MainRoot/TopBar/StarCount",
+        "MainRoot/TopBar/ChipStar",
+        "MainRoot/TopBar/ChipStar/Text",
+        "MainRoot/TopBar/ChipStar/StarText",
+        "MainRoot/TopBar/ChipStar/StarCount",
+        "MainRoot/TopBar/Stars",
+        "MainRoot/TopBar/Stars/Text",
+        "MainRoot/TopBar/StarText",
+        "MainRoot/TopBar/TotalStars",
+        "TopBar/StarCount",
+        "TopBar/ChipStar",
+        "TopBar/ChipStar/Text",
+        "TopBar/ChipStar/StarText",
+        "TopBar/ChipStar/StarCount",
+        "TopBar/Stars",
+        "TopBar/Stars/Text",
+        "TopBar/StarText",
+        "TopBar/TotalStars"
+    };
+
+    private static readonly string[] TopBarRelativeStarTextPaths =
+    {
+        "StarCount",
+        "ChipStar",
+        "ChipStar/Text",
+        "ChipStar/StarText",
+        "ChipStar/StarCount",
+        "Stars",
+        "Stars/Text",
+        "StarText",
+        "TotalStars"
+    };
+
+    private static readonly string[] StarObjectNames =
+    {
+        "StarCount",
+        "ChipStar",
+        "Stars",
+        "StarText",
+        "TotalStars"
+    };
+
+    private static TMP_Text FindTextAtAnyPath(Transform root, string[] paths)
+    {
+        if (root == null || paths == null)
+            return null;
+
+        for (int i = 0; i < paths.Length; i++)
+        {
+            TMP_Text text = FindTextAtPath(root, paths[i]);
+            if (text != null)
+                return text;
+        }
+
+        return null;
     }
 
     private static TMP_Text FindTextAtPath(Transform root, string path)
@@ -106,7 +173,43 @@ public sealed class MainMenuStarDisplay : MonoBehaviour
             return null;
 
         var child = root.Find(path);
-        return child != null ? child.GetComponent<TMP_Text>() : null;
+        return GetTextOnOrUnder(child);
+    }
+
+    private static TMP_Text GetTextOnOrUnder(Transform transform)
+    {
+        if (transform == null)
+            return null;
+
+        TMP_Text text = transform.GetComponent<TMP_Text>();
+        if (text != null)
+            return text;
+
+        return transform.GetComponentInChildren<TMP_Text>(true);
+    }
+
+    private static TMP_Text FindStarTextNear(Transform root)
+    {
+        if (root == null)
+            return null;
+
+        TMP_Text[] texts = root.GetComponentsInChildren<TMP_Text>(true);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            TMP_Text text = texts[i];
+            if (text == null)
+                continue;
+
+            string objectName = text.gameObject.name.ToLowerInvariant();
+            string parentName = text.transform.parent != null
+                ? text.transform.parent.name.ToLowerInvariant()
+                : string.Empty;
+
+            if (objectName.Contains("star") || parentName.Contains("star"))
+                return text;
+        }
+
+        return null;
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
