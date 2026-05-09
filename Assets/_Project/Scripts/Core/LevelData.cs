@@ -67,6 +67,7 @@ public class LevelData : ScriptableObject
     public int width = 9;
     public int height = 9;
     public int moves = 25;
+    [Min(0)] public int baseCoinReward = 100;
     public LevelGoalDefinition[] goals;
 
     [Header("Energy Container")]
@@ -99,6 +100,7 @@ public class LevelData : ScriptableObject
     {
         width = Mathf.Clamp(width, MinWidth, MaxWidth);
         height = Mathf.Clamp(height, MinHeight, MaxHeight);
+        baseCoinReward = Mathf.Max(0, baseCoinReward);
         energyPerContainer = Mathf.Max(1, energyPerContainer);
         int size = width * height;
 

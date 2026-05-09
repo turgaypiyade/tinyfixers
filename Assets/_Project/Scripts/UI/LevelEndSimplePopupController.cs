@@ -98,8 +98,14 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float star2Ratio = 0.2f;
 
     [Header("Coin Reward")]
+    [Tooltip("Fallback only when ActiveLevelData is unavailable. Normal rewards come from LevelData.baseCoinReward.")]
+    [Min(0)]
     [SerializeField] private int baseCoins = 100;
-    [SerializeField] private int coinsPerRemainingMove = 20;
+    [SerializeField, Range(0f, 2f)] private float remainingMoveBonusRatio = 0.5f;
+#pragma warning disable 0414
+    [Obsolete("Use LevelData.baseCoinReward and remainingMoveBonusRatio instead.")]
+    [SerializeField, HideInInspector] private int coinsPerRemainingMove = 20;
+#pragma warning restore 0414
 
     [Header("Progression")]
     [SerializeField] private string mainMenuSceneName = "MainMenu";
@@ -574,7 +580,18 @@ public class LevelEndSimplePopupController : MonoBehaviour
         return 1;
     }
 
-    private int CalculateCoins() => baseCoins + _movesAtWin * coinsPerRemainingMove;
+    private int CalculateCoins()
+    {
+        LevelData levelData = board != null ? board.ActiveLevelData : null;
+        int baseReward = Mathf.Max(0, levelData != null ? levelData.baseCoinReward : baseCoins);
+        if (levelData == null || levelData.moves <= 0)
+            return baseReward;
+
+        float remainingRatio = Mathf.Clamp01((float)_movesAtWin / levelData.moves);
+        int remainingBonus = Mathf.RoundToInt(baseReward * remainingRatio * Mathf.Max(0f, remainingMoveBonusRatio));
+        return baseReward + Mathf.Max(0, remainingBonus);
+    }
+
     private int CalculateScore() => 1000 + _movesAtWin * 250;
 
     private void ApplyRewardVisuals(int stars, int coins, int score)
@@ -587,11 +604,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (successContinueText != null)
             successContinueText.text = LocalizedText("level_end_continue", "Devam Et");
 
+        string scoreLabel = LocalizedText("level_end_score_label", "Puan:");
+
         if (scoreLabelText != null)
-            scoreLabelText.text = LocalizedText("level_end_score_label", "Puan:");
+            scoreLabelText.text = $"{scoreLabel} {score:N0}";
 
         if (scoreValueText != null)
-            scoreValueText.text = score.ToString("N0");
+            scoreValueText.gameObject.SetActive(false);
 
         PlayStarReveal(stars);
 
@@ -606,9 +625,43 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void SaveRewards(int stars, int coins)
     {
-        int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
-        PlayerWallet.SetLevelStars(level, stars);
+        int currentLevel = PlayerPrefs.GetInt(prefsLevelKey, 1);
+        int previousStars = PlayerWallet.GetLevelStars(currentLevel);
+        int earnedStars = Mathf.Clamp(stars, 0, 3);
+        int gainedStars = Mathf.Max(0, earnedStars - previousStars);
+        int starBefore = PlayerWallet.TotalStars;
+
+        if (gainedStars > 0)
+        {
+            PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingRewardKey, gainedStars);
+            PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingBeforeKey, starBefore);
+            PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingAfterKey, starBefore + gainedStars);
+            PlayerPrefs.Save();
+            Debug.Log($"[LevelEnd] Pending star reward saved. Level={currentLevel}, Previous={previousStars}, Earned={earnedStars}, Gained={gainedStars}, Before={starBefore}, After={starBefore + gainedStars}");
+        }
+        else
+        {
+            StarFlyToWalletAnimator.ClearPendingReward();
+            Debug.Log($"[LevelEnd] No pending star reward. Level={currentLevel}, Previous={previousStars}, Earned={earnedStars}");
+        }
+
+        PlayerWallet.SetLevelStars(currentLevel, earnedStars);
+
+        int coinBefore = PlayerWallet.Coins;
         PlayerWallet.AddCoins(coins);
+        int coinAfter = PlayerWallet.Coins;
+
+        if (coins > 0)
+        {
+            PlayerPrefs.SetInt(CoinFlyToWalletAnimator.PendingRewardKey, coins);
+            PlayerPrefs.SetInt(CoinFlyToWalletAnimator.PendingBeforeKey, coinBefore);
+            PlayerPrefs.SetInt(CoinFlyToWalletAnimator.PendingAfterKey, coinAfter);
+            PlayerPrefs.Save();
+        }
+        else
+        {
+            CoinFlyToWalletAnimator.ClearPendingReward();
+        }
     }
 
     private void HandleBuyMovesClicked()

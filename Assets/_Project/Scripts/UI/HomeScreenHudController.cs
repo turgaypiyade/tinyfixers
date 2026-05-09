@@ -52,12 +52,18 @@ public class HomeScreenHudController : MonoBehaviour
     private void RefreshCoins(int amount)
     {
         if (coinsText == null) return;
+        if (CoinFlyToWalletAnimator.TryGetPendingReward(out _, out int pendingBefore, out _))
+            amount = pendingBefore;
+
         coinsText.text = amount.ToString("N0");   // "1.400" gibi binlik ayraçlı
     }
 
     private void RefreshStars(int amount)
     {
         if (totalStarsText == null) return;
+        if (StarFlyToWalletAnimator.TryGetPendingReward(out _, out int pendingBefore, out _))
+            amount = pendingBefore;
+
         totalStarsText.text = amount.ToString();
     }
 }

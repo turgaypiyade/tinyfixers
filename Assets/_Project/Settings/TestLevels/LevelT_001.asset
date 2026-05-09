@@ -14,21 +14,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   width: 7
   height: 7
-  moves: 30
+  moves: 5
+  baseCoinReward: 100
   goals:
   - targetType: 0
     tileType: 0
     obstacleId: 1
     collectibleId: 1
     iconOverride: {fileID: 0}
-    amount: 30
+    amount: 1
   - targetType: 2
     tileType: 0
     obstacleId: 22
     collectibleId: 1
     iconOverride: {fileID: 21300000, guid: ceb006989970849ea86f6d7b7da439b0, type: 3}
-    amount: 30
-  energyPerContainer: 10
+    amount: 1
+  energyPerContainer: 1
   musicClip: {fileID: 8300000, guid: a75116037af37490bb9f00591892d8d6, type: 3}
   musicVolume: 0.593
   obstacleLibrary: {fileID: 11400000, guid: 542e279c729681244b475a353cdd0e8f, type: 2}

@@ -57,6 +57,7 @@ public class LevelDataEditor : Editor
         level.height = EditorGUILayout.IntSlider("Height", level.height, LevelData.MinHeight, LevelData.MaxHeight);
         EditorGUILayout.HelpBox($"Grid size limits: Width {LevelData.MinWidth}-{LevelData.MaxWidth}, Height {LevelData.MinHeight}-{LevelData.MaxHeight}.", MessageType.Info);
         level.moves = EditorGUILayout.IntField("Moves", level.moves);
+        level.baseCoinReward = Mathf.Max(0, EditorGUILayout.IntField("Base Coin Reward", Mathf.Max(0, level.baseCoinReward)));
         DrawGoals(level);
         DrawEnergyContainerSettings(level);
         DrawAudio(level);
