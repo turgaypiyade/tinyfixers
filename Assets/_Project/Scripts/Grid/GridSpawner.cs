@@ -562,6 +562,15 @@ public class GridSpawner : MonoBehaviour
 
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
     {
+        if (obstacleId == ObstacleId.EnergyContainer)
+        {
+            // Don't destroy the image — EnergyContainerFx will apply the exhausted
+            // visual on the same GameObject. Just stop tracking it here.
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+            return;
+        }
+
         if (obstacleViewsByOrigin.TryGetValue(originIndex, out var image) && image != null)
             Destroy(image.gameObject);
 
@@ -1109,6 +1118,13 @@ public class GridSpawner : MonoBehaviour
 
         if (change.cleared)
         {
+            if (change.obstacleId == ObstacleId.EnergyContainer)
+            {
+                // Don't destroy — EnergyContainerFx takes over to show the exhausted state.
+                obstacleViewsByOrigin.Remove(change.originIndex);
+                obstacleDefsByOrigin.Remove(change.originIndex);
+                return;
+            }
             Destroy(image.gameObject);
             obstacleViewsByOrigin.Remove(change.originIndex);
             obstacleDefsByOrigin.Remove(change.originIndex);

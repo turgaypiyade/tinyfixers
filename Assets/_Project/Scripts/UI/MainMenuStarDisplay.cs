@@ -79,9 +79,9 @@ public sealed class MainMenuStarDisplay : MonoBehaviour
 
         if (searchRoot != null)
         {
-            text = FindTextAtPath(searchRoot, "MainRoot/TopBar/StarCount")
+            text = FindTextAtPath(searchRoot, "MainMenuRoot/TopBar/StarCount")
                    ?? FindTextAtPath(searchRoot, "TopBar/StarCount")
-                   ?? FindTextAtPath(searchRoot.root, "MainRoot/TopBar/StarCount")
+                   ?? FindTextAtPath(searchRoot.root, "MainMenuRoot/TopBar/StarCount")
                    ?? FindTextAtPath(searchRoot.root, "TopBar/StarCount");
         }
 

@@ -170,7 +170,20 @@ public class ObstacleStateService
             if (origin < 0 || origin >= size) continue;
 
             var def = library != null ? library.Get(id) : null;
-            int hits = Mathf.Max(1, def != null ? def.hits : 1);
+            int hits;
+            if (id == ObstacleId.EnergyContainer)
+            {
+                // hits = energyPerContainer (active) + 1 (exhausted/FullyDisabled stage).
+                // This lets each level set a different ball count via LevelData.energyPerContainer
+                // without touching ObstacleLibrary. ObstacleLibrary only needs 2 stages:
+                //   stage 0 → Any (active), stage 1 → FullyDisabled (exhausted).
+                int perContainer = level != null ? Mathf.Max(1, level.energyPerContainer) : 1;
+                hits = perContainer + 1;
+            }
+            else
+            {
+                hits = Mathf.Max(1, def != null ? def.hits : 1);
+            }
             remainingHitsByOrigin[origin] = hits;
 
             if (id == ObstacleId.ColorChest)
@@ -466,6 +479,9 @@ public class ObstacleStateService
     {
         switch (rule)
         {
+            case ObstacleDamageSourceRule.FullyDisabled:
+                return false;
+
             case ObstacleDamageSourceRule.Disabled:
                 // UI "joker" boosters are direct tools: they can break even
                 // exhausted/disabled stages such as EnergyContainer.
@@ -674,6 +690,31 @@ public class ObstacleStateService
                 return candidate;
         }
         return ChestColorMask.None;
+    }
+
+    public bool IsFullyDisabledAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None) return false;
+        var def = library?.Get(id);
+        if (def == null) return false;
+        int remaining = ResolveRemainingHitsForCell(idx, def);
+        return def.GetDamageRuleForRemainingHits(remaining) == ObstacleDamageSourceRule.FullyDisabled;
+    }
+
+    public bool IsUnderTileObstacleAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None) return false;
+        var def = library?.Get(id);
+        if (def == null) return false;
+        int remaining = ResolveRemainingHitsForCell(idx, def);
+        var stage = def.GetStageRuleForRemainingHits(remaining);
+        return stage != null && stage.behavior == ObstacleBehaviorType.UnderTileLayered;
     }
 
     public bool IsOilAt(int x, int y)

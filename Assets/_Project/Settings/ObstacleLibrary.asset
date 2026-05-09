@@ -397,70 +397,7 @@ MonoBehaviour:
       locksInteraction: 1
       holdsTile: 0
     - sprite: {fileID: 21300000, guid: 8b6d8ac3b686f463a8d5839ec237df17, type: 3}
-      damageRule: 0
-      blocksCells: 1
-      behavior: 1
-      allowDiagonal: 1
-      locksInteraction: 1
-      holdsTile: 0
-    - sprite: {fileID: 21300000, guid: 8b6d8ac3b686f463a8d5839ec237df17, type: 3}
-      damageRule: 0
-      blocksCells: 1
-      behavior: 1
-      allowDiagonal: 1
-      locksInteraction: 1
-      holdsTile: 0
-    - sprite: {fileID: 21300000, guid: 8b6d8ac3b686f463a8d5839ec237df17, type: 3}
-      damageRule: 0
-      blocksCells: 1
-      behavior: 1
-      allowDiagonal: 1
-      locksInteraction: 1
-      holdsTile: 0
-    - sprite: {fileID: 21300000, guid: 8b6d8ac3b686f463a8d5839ec237df17, type: 3}
-      damageRule: 0
-      blocksCells: 1
-      behavior: 1
-      allowDiagonal: 1
-      locksInteraction: 1
-      holdsTile: 0
-    - sprite: {fileID: 21300000, guid: 8b6d8ac3b686f463a8d5839ec237df17, type: 3}
-      damageRule: 0
-      blocksCells: 1
-      behavior: 1
-      allowDiagonal: 1
-      locksInteraction: 1
-      holdsTile: 0
-    - sprite: {fileID: 21300000, guid: 8b6d8ac3b686f463a8d5839ec237df17, type: 3}
-      damageRule: 0
-      blocksCells: 1
-      behavior: 1
-      allowDiagonal: 1
-      locksInteraction: 1
-      holdsTile: 0
-    - sprite: {fileID: 21300000, guid: 8b6d8ac3b686f463a8d5839ec237df17, type: 3}
-      damageRule: 0
-      blocksCells: 1
-      behavior: 1
-      allowDiagonal: 1
-      locksInteraction: 1
-      holdsTile: 0
-    - sprite: {fileID: 21300000, guid: 8b6d8ac3b686f463a8d5839ec237df17, type: 3}
-      damageRule: 0
-      blocksCells: 1
-      behavior: 1
-      allowDiagonal: 1
-      locksInteraction: 1
-      holdsTile: 0
-    - sprite: {fileID: 21300000, guid: 8b6d8ac3b686f463a8d5839ec237df17, type: 3}
-      damageRule: 0
-      blocksCells: 1
-      behavior: 1
-      allowDiagonal: 1
-      locksInteraction: 1
-      holdsTile: 0
-    - sprite: {fileID: 21300000, guid: 8b6d8ac3b686f463a8d5839ec237df17, type: 3}
-      damageRule: 4
+      damageRule: 5
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
@@ -470,7 +407,7 @@ MonoBehaviour:
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 3
     size: {x: 1, y: 1}
-    hits: 11
+    hits: 2
     hitParticleSprites: []
     breakParticleSprites: []
     drawUnderTiles: 0

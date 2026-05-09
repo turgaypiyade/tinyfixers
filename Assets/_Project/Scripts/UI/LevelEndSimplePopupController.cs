@@ -16,6 +16,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private TileIconLibrary tileIconLibrary;
     [SerializeField] private ChapterThemeApplier chapterThemeApplier;
 
+    [Header("Level Completion Logo Animation")]
+    [SerializeField] private LevelCompletionLogoAnimation levelCompletionLogoAnimation;
+
     [Header("Success Animation (image sequence - takes priority over video)")]
     [SerializeField] private SuccessAnimationPlayer successAnimationPlayer;
 
@@ -211,6 +214,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void OnEnable()
     {
+        Debug.Log("[LevelEnd] OnEnable çağrıldı.");
         failPopupShown = false;
         successPopupShown = false;
         successReturnQueued = false;
@@ -246,11 +250,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
         while (board == null || topHud == null || board.ActiveLevelData == null)
             yield return null;
 
+        Debug.Log($"[LevelEnd] InitializeWhenReady tamamlandı. board={board != null} topHud={topHud != null} levelData={board?.ActiveLevelData != null}");
         UnregisterButtonListeners();
         ResolveSerializedReferences();
         ApplyChapterThemeVisuals();
         RegisterButtonListeners();
         Subscribe();
+        Debug.Log("[LevelEnd] Subscribe() çağrıldı — event dinleniyor.");
         RefreshPopupCopy();
         SetBlockerVisible(false);
         RequestEvaluateLevelEndState();
@@ -298,12 +304,30 @@ public class LevelEndSimplePopupController : MonoBehaviour
         while (board != null && (board.IsBusy || board.ActiveBackgroundJobs > 0))
             yield return null;
 
+        Debug.Log($"[LevelEnd] Logo anim ref: {(levelCompletionLogoAnimation != null ? levelCompletionLogoAnimation.name : "NULL")}");
+        if (levelCompletionLogoAnimation != null)
+        {
+            Debug.Log("[LevelEnd] Logo anim Play() başlıyor.");
+            yield return StartCoroutine(levelCompletionLogoAnimation.Play());
+            Debug.Log("[LevelEnd] Logo anim Play() bitti.");
+        }
+
         _movesAtWin = board != null ? board.RemainingMoves : 0;
+
+        // Logo animasyonu double-click ile atlandıysa bonus round da atlanır.
+        bool logoSkipped = levelCompletionLogoAnimation != null && levelCompletionLogoAnimation.WasSkipped;
 
         if (bonusMovesService != null && board != null && board.RemainingMoves > 0)
         {
             board.SetInputLocked(true);
-            SetSkipBonusOverlayVisible(true);
+            if (logoSkipped)
+            {
+                bonusMovesService.RequestSkip();
+            }
+            else
+            {
+                SetSkipBonusOverlayVisible(true);
+            }
             yield return StartCoroutine(bonusMovesService.RunBonusRound());
             SetSkipBonusOverlayVisible(false);
         }

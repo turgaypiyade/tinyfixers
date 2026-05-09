@@ -18,7 +18,8 @@ public enum ObstacleDamageSourceRule
     SpecialOnly = 1,
     NormalOnly = 2,
     BoosterOnly = 3,
-    Disabled = 4
+    Disabled = 4,        // Only Booster can hit (legacy — use FullyDisabled for exhausted states)
+    FullyDisabled = 5    // Nothing can hit — used for exhausted EnergyContainer last stage
 }
 
 [Serializable]

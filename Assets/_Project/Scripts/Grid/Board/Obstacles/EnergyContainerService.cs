@@ -142,9 +142,9 @@ public sealed class EnergyContainerService : MonoBehaviour
         if (change.obstacleId != ObstacleId.EnergyContainer)
             return;
 
-        if (change.cleared)
-            return;
-
+        // Process cleared events too: cleared means the final hit arrived and the
+        // obstacle was removed from level data. We still need to release the last
+        // ball and show the exhausted state instead of letting the image disappear.
         ProcessEnergyContainerHit(change.originIndex, change.remainingHits, change.sprite, source: "visual");
     }
 

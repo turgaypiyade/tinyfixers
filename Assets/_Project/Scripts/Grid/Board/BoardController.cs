@@ -948,6 +948,9 @@ public class BoardController : MonoBehaviour
         if (obstacleStateService != null &&
             (obstacleStateService.IsOilAt(from.X, from.Y) || obstacleStateService.IsOilAt(nx, ny)))
             return;
+        if (obstacleStateService != null &&
+            (obstacleStateService.IsUnderTileObstacleAt(from.X, from.Y) || obstacleStateService.IsUnderTileObstacleAt(nx, ny)))
+            return;
         TileView other = tiles[nx, ny]; if (other == null) return;
         StartCoroutine(ProcessSwap(from, other));
     }
@@ -958,7 +961,16 @@ public class BoardController : MonoBehaviour
         if (TryUseBooster(tile)) return;
         if (selected == null) { selected = tile; return; }
         if (selected == tile) { selected = null; return; }
-        if (AreNeighbors(selected, tile)) { var a = selected; selected = null; StartCoroutine(ProcessSwap(a, tile)); return; }
+        if (AreNeighbors(selected, tile))
+        {
+            var a = selected;
+            selected = null;
+            bool underTileBlocked = obstacleStateService != null &&
+                (obstacleStateService.IsUnderTileObstacleAt(a.X, a.Y) || obstacleStateService.IsUnderTileObstacleAt(tile.X, tile.Y));
+            if (!underTileBlocked)
+                StartCoroutine(ProcessSwap(a, tile));
+            return;
+        }
         selected = tile;
     }
 

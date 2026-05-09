@@ -31,12 +31,13 @@ public sealed class PatchBotIntent
             var obstacleService = board.ObstacleStateService;
             if (obstacleService == null) return false;
 
-            // Origin'i tara — obstacle hâlâ o origin index'inde duruyor mu?
+            // Origin'i tara — obstacle hâlâ o origin index'inde duruyor mu ve hit alabilir mi?
             for (int x = 0; x < board.Width; x++)
                 for (int y = 0; y < board.Height; y++)
                 {
                     if (obstacleService.GetObstacleOriginAt(x, y) == ObstacleOriginIndex
-                        && obstacleService.GetRemainingHitsAt(x, y) > 0)
+                        && obstacleService.GetRemainingHitsAt(x, y) > 0
+                        && !obstacleService.IsFullyDisabledAt(x, y))
                         return true;
                 }
             return false;
@@ -62,12 +63,13 @@ public sealed class PatchBotIntent
         if (IsObstacle)
         {
             var obstacleService = board.ObstacleStateService;
-            // İlk bulduğun origin-eşleşen hücreyi döndür (multi-cell obstacle olabilir).
+            // İlk bulduğun origin-eşleşen ve hit alabilir hücreyi döndür.
             for (int x = 0; x < board.Width; x++)
                 for (int y = 0; y < board.Height; y++)
                 {
                     if (obstacleService.GetObstacleOriginAt(x, y) == ObstacleOriginIndex
-                        && obstacleService.GetRemainingHitsAt(x, y) > 0)
+                        && obstacleService.GetRemainingHitsAt(x, y) > 0
+                        && !obstacleService.IsFullyDisabledAt(x, y))
                         return new Vector2Int(x, y);
                 }
             return new Vector2Int(-1, -1);
@@ -277,6 +279,10 @@ public class PatchBotTargetCoordinator
     {
         var obstacleService = board.ObstacleStateService;
         if (obstacleService == null) return 0;
+
+        // FullyDisabled stage hiçbir context'ten hit almaz — efektif hedef değil.
+        if (obstacleService.IsFullyDisabledAt(x, y))
+            return 0;
 
         int actual = obstacleService.GetRemainingHitsAt(x, y);
         int origin = obstacleService.GetObstacleOriginAt(x, y);
