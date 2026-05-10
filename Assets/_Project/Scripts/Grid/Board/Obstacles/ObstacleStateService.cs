@@ -245,10 +245,7 @@ public class ObstacleStateService
         if (remaining < 0)
             remaining = Mathf.Max(1, def != null ? def.hits : 1);
 
-        bool canConsume = CanConsumeHit(def, remaining, context, sourceTileType);
-        if (id == ObstacleId.ColorChest)
-            Debug.Log($"[ChestDebug] TryDamageAt ({x},{y}) ctx={context} src={sourceTileType} remaining={remaining} canConsume={canConsume}");
-        if (!canConsume)
+        if (!CanConsumeHit(def, remaining, context, sourceTileType))
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
 
         // ColorChest renk validasyonu
@@ -261,8 +258,6 @@ public class ObstacleStateService
             {
                 // Açık dolap: sadece içinde kalan renk hasar verir
                 var colorFlag = sourceTileType.ToChestColor();
-                _chestColorStates.TryGetValue(origin, out var dbgMask);
-                Debug.Log($"[ChestDebug] NormalMatch colorFlag={colorFlag} chestMask={dbgMask} isOpen={isOpen} hasState={_chestColorStates.ContainsKey(origin)}");
                 if (colorFlag == ChestColorMask.None ||
                     !_chestColorStates.TryGetValue(origin, out var chestMask) ||
                     (chestMask & colorFlag) == 0)
@@ -490,11 +485,9 @@ public class ObstacleStateService
         switch (rule)
         {
             case ObstacleDamageSourceRule.FullyDisabled:
-                return false;
-
             case ObstacleDamageSourceRule.Disabled:
-                // UI "joker" boosters are direct tools: they can break even
-                // exhausted/disabled stages such as EnergyContainer.
+                // Boosters (jokers) are direct tools that must always deal a hit to every
+                // obstacle type, including exhausted/fully-disabled stages.
                 return context == ObstacleHitContext.Booster;
 
             case ObstacleDamageSourceRule.SpecialOnly:

@@ -32,19 +32,46 @@ public class ChestObstacleView : MonoBehaviour
     [Tooltip("Tum ikon bandini dikey kaydirma (0 = ortada, pozitif = yukari, negatif = asagi).")]
     [SerializeField, Range(-0.3f, 0.3f)] private float verticalShift = 0f;
 
+    [Tooltip("Ampul sprite oranı. Sabit boyut değil, sadece oran korunur. 341 / 402.")]
+    [SerializeField] private Vector2 bulbAspectSourceSize = new Vector2(341f, 402f);
+
+    [Tooltip("Sol ampuller sağa, sağ ampuller sola bu kadar px yaklaşır.")]
+    [SerializeField, Range(0f, 8f)] private float horizontalInwardNudge = 6f;
+
+    // GridSpawner, parent RT boyutunu set ettikten sonra cagirmalı.
     // GridSpawner, parent RT boyutunu set ettikten sonra cagirmalı.
     public void ApplyLayout()
     {
-        float s  = verticalShift;
-        float h  = innerSpacing * 0.5f;
-        // Her quadrant icin: ic kenara innerSpacing/2, dis kenara iconPadding
-        // offsetMin = (left, bottom), offsetMax = (-right, -top)
-        PlaceIcon(gearObject,  0f,   0.5f + s, 0.5f, 1.0f + s,  iconPadding,  h,           h,           iconPadding);
-        PlaceIcon(coreObject,  0.5f, 0.5f + s, 1.0f, 1.0f + s,  h,            iconPadding, h,           iconPadding);
-        PlaceIcon(boltObject,  0f,   0.0f + s, 0.5f, 0.5f + s,  iconPadding,  h,           iconPadding, h);
-        PlaceIcon(plateObject, 0.5f, 0.0f + s, 1.0f, 0.5f + s,  h,            iconPadding, iconPadding, h);
-    }
+        float s = verticalShift;
+        float h = innerSpacing * 0.5f;
+        float n = horizontalInwardNudge;
 
+        // Sol taraf +n: sağa yaklaşır
+        // Sağ taraf -n: sola yaklaşır
+        PlaceIconAspectFit(
+            gearObject,
+            0f, 0.5f + s, 0.5f, 1.0f + s,
+            iconPadding, h, h, iconPadding,
+            +n);
+
+        PlaceIconAspectFit(
+            coreObject,
+            0.5f, 0.5f + s, 1.0f, 1.0f + s,
+            h, iconPadding, h, iconPadding,
+            -n);
+
+        PlaceIconAspectFit(
+            boltObject,
+            0f, 0.0f + s, 0.5f, 0.5f + s,
+            iconPadding, h, iconPadding, h,
+            +n);
+
+        PlaceIconAspectFit(
+            plateObject,
+            0.5f, 0.0f + s, 1.0f, 0.5f + s,
+            h, iconPadding, iconPadding, h,
+            -n);
+    }
     public void HideColor(ChestColorMask color)
     {
         switch (color)
@@ -99,15 +126,63 @@ public class ChestObstacleView : MonoBehaviour
         _shakeRoutine = null;
     }
 
-    private void PlaceIcon(Image img, float xMin, float yMin, float xMax, float yMax,
-                           float left, float right, float bottom, float top)
+    private void PlaceIconAspectFit(
+        Image img,
+        float xMin,
+        float yMin,
+        float xMax,
+        float yMax,
+        float left,
+        float right,
+        float bottom,
+        float top,
+        float xNudge)
     {
         if (img == null) return;
+
         var rt = img.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(xMin, yMin);
-        rt.anchorMax = new Vector2(xMax, yMax);
-        rt.offsetMin = new Vector2( left,    bottom);
-        rt.offsetMax = new Vector2(-right,  -top);
+        var parent = rt.parent as RectTransform;
+        if (parent == null) return;
+
+        Rect parentRect = parent.rect;
+
+        float areaX0 = parentRect.xMin + parentRect.width * xMin + left;
+        float areaX1 = parentRect.xMin + parentRect.width * xMax - right;
+        float areaY0 = parentRect.yMin + parentRect.height * yMin + bottom;
+        float areaY1 = parentRect.yMin + parentRect.height * yMax - top;
+
+        float availableW = Mathf.Max(0f, areaX1 - areaX0);
+        float availableH = Mathf.Max(0f, areaY1 - areaY0);
+
+        float aspect = bulbAspectSourceSize.x / bulbAspectSourceSize.y;
+
+        float finalW = availableW;
+        float finalH = finalW / aspect;
+
+        if (finalH > availableH)
+        {
+            finalH = availableH;
+            finalW = finalH * aspect;
+        }
+
+        Vector2 localCenter = new Vector2(
+            (areaX0 + areaX1) * 0.5f + xNudge,
+            (areaY0 + areaY1) * 0.5f
+        );
+
+        Vector2 parentCenter = new Vector2(
+            parentRect.xMin + parentRect.width * 0.5f,
+            parentRect.yMin + parentRect.height * 0.5f
+        );
+
+        img.preserveAspect = true;
+
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = localCenter - parentCenter;
+        rt.sizeDelta = new Vector2(finalW, finalH);
+        rt.localScale = Vector3.one;
     }
 
     private static void SetActive(Image img, bool active)

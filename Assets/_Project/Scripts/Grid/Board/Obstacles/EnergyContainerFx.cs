@@ -462,7 +462,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
         rt.localRotation = Quaternion.identity;
         rt.localScale = Vector3.one;
         image.preserveAspect = preserveContainerAspect;
-        image.raycastTarget = false;
+        image.raycastTarget = true;
 
         if (logDebug)
         {
