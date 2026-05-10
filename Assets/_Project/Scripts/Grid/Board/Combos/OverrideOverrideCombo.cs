@@ -95,12 +95,15 @@ public sealed class OverrideOverrideCombo
 
         rt.Context.OverrideVfxDuration = comboVfxDuration;
 
-        float maxDelay = comboVfxDuration > 0f
-            ? Mathf.Max(ResolutionContext.OverrideRadialClearDuration, comboVfxDuration * 0.55f)
-            : ResolutionContext.OverrideRadialClearDuration;
+        float preClearDelay = rt.Board.GetSystemOverrideComboPreClearDuration();
+        float waveDuration   = rt.Board.GetSystemOverrideComboWaveDuration();
+        float maxDelay       = preClearDelay + waveDuration;
+
+        if (maxDelay <= 0f)
+            maxDelay = ResolutionContext.OverrideRadialClearDuration;
 
         rt.Context.OverrideRadialClearDelays = rt.VisualService != null
-            ? rt.VisualService.BuildCenterOutClearDelays(rt.Context.Affected, maxDelay)
+            ? rt.VisualService.BuildCenterOutClearDelays(rt.Context.Affected, maxDelay, preClearDelay)
             : null;
     }
 

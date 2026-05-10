@@ -342,7 +342,16 @@ public class JokerFocusOverlayController : MonoBehaviour
         int boosterIndex = jokerBoosterIndices[tappedIndex];
         if (boosterIndex < 0) return;
 
-        if (selectedJokerIndex == tappedIndex) { CancelActiveJoker(); return; }
+        if (selectedJokerIndex == tappedIndex)
+        {
+            if (board == null || board.IsBoosterModeActive)
+            {
+                CancelActiveJoker();
+                return;
+            }
+            // Board already consumed the booster but UI didn't reset — desync, fall through to re-activate
+            selectedJokerIndex = -1;
+        }
 
         ActivateFocusFor(boosterIndex);
         ActivateBooster(boosterIndex);

@@ -284,7 +284,10 @@ public class PatchBotTargetCoordinator
         if (obstacleService.IsFullyDisabledAt(x, y))
             return 0;
 
-        int actual = obstacleService.GetRemainingHitsAt(x, y);
+        // FullyDisabled olan final stage'ler (EnergyContainer exhausted stage gibi)
+        // gerçek hit sayımından dışlanır; aksi halde birden fazla PatchBot aynı
+        // kapsiteye sahip olmayan hedefe yönlendirilebilir.
+        int actual = obstacleService.GetActiveMeaningfulHitsAt(x, y);
         int origin = obstacleService.GetObstacleOriginAt(x, y);
         if (origin < 0) return actual;
 
@@ -328,6 +331,8 @@ public class PatchBotTargetCoordinator
             var goal = activeGoalsBuffer[i];
             if (goal.targetType == LevelGoalTargetType.Obstacle && goal.obstacleId != ObstacleId.None)
                 activeObstacleGoals.Add(goal.obstacleId);
+            else if (goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId == CollectibleId.EnergyOrb)
+                activeObstacleGoals.Add(ObstacleId.EnergyContainer);
             else if (goal.targetType == LevelGoalTargetType.Tile)
                 activeTileGoals.Add(goal.tileType);
         }

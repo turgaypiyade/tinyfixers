@@ -622,6 +622,12 @@ public class BoardController : MonoBehaviour
         Sprite sprB = lastSwapB != null ? GetOverrideIcon(lastSwapB.GetTileType()) : null;
         return boardVfxService.PlaySystemOverrideComboVfxAndGetDuration(systemOverrideComboVfx, sprA, sprB);
     }
+
+    public float GetSystemOverrideComboPreClearDuration() =>
+        systemOverrideComboVfx != null ? systemOverrideComboVfx.GetPreClearDuration() : 0f;
+
+    public float GetSystemOverrideComboWaveDuration() =>
+        systemOverrideComboVfx != null ? systemOverrideComboVfx.GetRadialWaveDuration() : ResolutionContext.OverrideRadialClearDuration;
     public void PlayPulseEmitterComboVfxAtCell(int x, int y) => boardVfxService.PlayPulseEmitterComboVfxAtCell(pulseEmitterComboVfx, vfxSpace, x, y);
     public void PlayPulsePulseExplosionVfxAtCell(int x, int y) => boardVfxService.PlayPulsePulseExplosionVfxAtCell(pulsePulseExplosionPrefab, vfxSpace, pulsePulseExplosionLifetime, x, y);
     internal HashSet<Vector2Int> BuildPulseEmitterTargets(int cx, int cy) => boardVfxService.BuildPulseEmitterTargets(cx, cy);
@@ -996,7 +1002,14 @@ public class BoardController : MonoBehaviour
         }
     }
 
-    void SetBoosterMode(BoosterMode mode) { activeBooster = mode; OnBoosterTargetingChanged?.Invoke(activeBooster != BoosterMode.None); }
+    void SetBoosterMode(BoosterMode mode)
+    {
+        activeBooster = mode;
+        if (mode != BoosterMode.None)
+            BoardIdleHintAndComboGlowController.CancelHintsForBoard(this);
+        OnBoosterTargetingChanged?.Invoke(activeBooster != BoosterMode.None);
+    }
+    public bool IsBoosterModeActive => activeBooster != BoosterMode.None;
 
     bool TryUseBooster(TileView tile)
     {

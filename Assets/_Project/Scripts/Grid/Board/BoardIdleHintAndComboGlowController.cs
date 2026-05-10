@@ -319,6 +319,13 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
             rt.anchoredPosition = to;
     }
 
+    public static void CancelHintsForBoard(BoardController board)
+    {
+        if (instance == null || board == null) return;
+        if (instance.states.TryGetValue(board, out var state))
+            instance.CancelHint(board, state);
+    }
+
     private void CancelHint(BoardController board, BoardFxState state)
     {
         if (state.hintRoutine != null)

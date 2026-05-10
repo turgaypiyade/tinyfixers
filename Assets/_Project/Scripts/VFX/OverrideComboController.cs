@@ -5,21 +5,26 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Override + Override combo VFX controller.
-/// 
-/// PHASES:
-///   1) ORBIT        – Two swapped override icons orbit each other (~2s), stormParticles emitting sparkles.
-///   2) MERGE        – Icons compress to center, bright flash, burst emission, merged icon appears.
-///   3) RADIAL CLEAR – A shockwave ring expands from center, clearing the board radius by radius.
-///   4) FADE OUT     – Everything fades.
 ///
-/// IconA, IconB, MergedIcon Image objects are AUTO-CREATED at runtime if not assigned in Inspector.
-/// Sprites come from Play(spriteA, spriteB) — BoardController provides them automatically.
+/// PHASES:
+///   1) ORBIT  – Icons grow to 2.5x, self-spin + orbit each other, energy glow trails behind them.
+///   2) SMASH  – Icons rush together and collide violently (configurable duration, default 1.5 s).
+///               Post-impact they continue orbiting intensely. Glow persists.
+///   3) WAVE   – Shockwave ring expands from center. Board tiles clear IN SYNC with the wave.
+///               Icons keep spinning while the wave rolls out, then fade as wave reaches the edge.
+///   4) FADE   – Quick canvas fade and cleanup.
+///
+/// Tile-clearing is deliberately delayed until the WAVE phase starts so players see
+/// the shockwave "destroy" tiles as it sweeps through (preClearDelay = orbit + smash duration).
+///
+/// GlowA / GlowB Images are AUTO-CREATED at runtime (same sprite as icon, warm tint, 2x scale).
+/// Placed as siblings BEHIND their icon counterparts in the pivot's hierarchy.
 /// </summary>
 public class OverrideComboController : MonoBehaviour
 {
-    // ──────────────────────────────────────────────
+    // ─────────────────────────────────────────
     //  REFERENCES
-    // ──────────────────────────────────────────────
+    // ─────────────────────────────────────────
     [Header("Core Refs (Assign in Inspector)")]
     [SerializeField] private RectTransform pivot;
     [SerializeField] private Image centerFlash;
@@ -32,175 +37,202 @@ public class OverrideComboController : MonoBehaviour
 
     [Header("Particles")]
     [SerializeField] private ParticleSystem stormParticles;
-    [SerializeField] private int mergeBurstCount = 60;
+    [SerializeField] private int mergeBurstCount = 80;
 
     [Header("Radial Clear (optional – shockwave ring)")]
     [SerializeField] private Image shockwaveImage;
     [SerializeField] private float shockwaveMaxScale = 25f;
     [SerializeField] private float shockwaveStartScale = 0.1f;
 
-    // ──────────────────────────────────────────────
+    // ─────────────────────────────────────────
     //  TIMINGS
-    // ──────────────────────────────────────────────
+    // ─────────────────────────────────────────
     [Header("Phase Timings")]
-    [SerializeField] private float orbitDuration = 2.0f;
-    [SerializeField] private float mergeDuration = 0.30f;
-    [SerializeField] private float radialClearDuration = 0.70f;
-    [SerializeField] private float fadeOutDuration = 0.30f;
+    [SerializeField] private float orbitDuration     = 2.0f;
+    [SerializeField] private float mergeDuration     = 1.5f;   // smash / collision phase
+    [SerializeField] private float radialClearDuration = 0.50f; // wave phase (faster than before)
+    [SerializeField] private float fadeOutDuration   = 0.20f;
 
-    // ──────────────────────────────────────────────
+    // ─────────────────────────────────────────
     //  ORBIT SETTINGS
-    // ──────────────────────────────────────────────
+    // ─────────────────────────────────────────
     [Header("Orbit")]
-    [SerializeField] private float orbitRadiusStart = 130f;
-    [SerializeField] private float orbitRadiusEnd = 50f;
-    [SerializeField] private float orbitTurns = 4.0f;
-    [SerializeField] private float orbitScaleFrom = 0.8f;
-    [SerializeField] private float orbitScaleTo = 1.3f;
+    [SerializeField] private float orbitRadiusStart  = 130f;
+    [SerializeField] private float orbitRadiusEnd    = 50f;
+    [SerializeField] private float orbitTurns        = 3.5f;
+    [SerializeField] private float orbitScaleTarget  = 2.5f;   // grow to 2.5x during orbit
     [SerializeField] private float iconGlowPulseSpeed = 8f;
-    [SerializeField] private float iconSize = 80f; // Width & height of auto-created icon Images
+    [SerializeField] private float iconSize          = 80f;
 
-    [Header("Merge")]
-    [SerializeField] private float mergeScalePunch = 1.6f;
-    [SerializeField] private float flashMaxAlpha = 0.95f;
+    [Header("Glow")]
+    [SerializeField] private Color glowColor         = new Color(1f, 0.72f, 0.18f, 0.65f);
+    [SerializeField] private float glowSizeMultiplier = 1.85f;
+
+    [Header("Smash / Merge")]
+    [SerializeField] private float smashImpactFraction = 0.22f; // 0..1 — when within smash the hit fires
+    [SerializeField] private float flashMaxAlpha     = 0.95f;
 
     [Header("Shockwave")]
-    [SerializeField] private Color shockwaveColor = new Color(1f, 0.85f, 0.3f, 0.7f);
+    [SerializeField] private Color shockwaveColor    = new Color(1f, 0.85f, 0.3f, 0.75f);
 
-    // ──────────────────────────────────────────────
+    [Header("Wave Glow")]
+    [SerializeField] private Sprite waveGlowSprite;
+    [SerializeField] private Color  waveGlowColor    = new Color(1f, 0.85f, 0.3f, 0.40f);
+
+    // ─────────────────────────────────────────
     //  CALLBACKS
-    // ──────────────────────────────────────────────
-
-    /// <summary>
-    /// Fired as the radial clear wave expands. Parameter: normalized radius (0 = center, 1 = edge).
-    /// </summary>
+    // ─────────────────────────────────────────
     public event Action<float> OnRadialClearProgress;
+    public event Action        OnComboFinished;
+    public event Action        OnImpact;
 
-    /// <summary>
-    /// Fired once when the entire VFX sequence is complete.
-    /// </summary>
-    public event Action OnComboFinished;
-
-    // ──────────────────────────────────────────────
+    // ─────────────────────────────────────────
     //  PRIVATE
-    // ──────────────────────────────────────────────
+    // ─────────────────────────────────────────
     private Coroutine _routine;
     private float _savedEmissionRate;
     private float _savedStartSpeed;
     private float _savedStartSize;
     private float _savedStartLifetime;
-    private bool _savedLoop;
+    private bool  _savedLoop;
 
-    private RectTransform IconRectA => iconImageA.rectTransform;
-    private RectTransform IconRectB => iconImageB.rectTransform;
+    private Image glowImageA;
+    private Image glowImageB;
+    private Image waveGlowImage;
 
-    // ──────────────────────────────────────────────
+    private RectTransform IconRectA  => iconImageA.rectTransform;
+    private RectTransform IconRectB  => iconImageB.rectTransform;
+
+    // ─────────────────────────────────────────
     //  LIFECYCLE
-    // ──────────────────────────────────────────────
+    // ─────────────────────────────────────────
+    private void Reset() { canvasGroup = GetComponent<CanvasGroup>(); }
 
-    private void Reset()
-    {
-        canvasGroup = GetComponent<CanvasGroup>();
-    }
+    // ─────────────────────────────────────────
+    //  TIMING ACCESSORS  (used by board to sync tile-clear delays)
+    // ─────────────────────────────────────────
 
-    // ──────────────────────────────────────────────
-    //  AUTO-CREATE MISSING ICON IMAGES
-    // ──────────────────────────────────────────────
+    /// <summary>Seconds before the radial wave starts (orbit + smash phases).</summary>
+    public float GetPreClearDuration()     => orbitDuration + mergeDuration;
+    /// <summary>Duration of the radial clear wave phase.</summary>
+    public float GetRadialWaveDuration()   => radialClearDuration;
+    /// <summary>Total VFX duration.</summary>
+    public float GetTotalDuration()        => orbitDuration + mergeDuration + radialClearDuration + fadeOutDuration;
 
-    /// <summary>
-    /// Creates a UI Image as a child of pivot if the reference is null.
-    /// </summary>
+    // ─────────────────────────────────────────
+    //  AUTO-CREATE ICONS
+    // ─────────────────────────────────────────
     private Image EnsureIconImage(ref Image field, string objectName)
     {
         if (field != null) return field;
-
-        var go = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+        var go  = new GameObject(objectName, typeof(RectTransform), typeof(Image));
         go.transform.SetParent(pivot, false);
-
-        var rt = go.GetComponent<RectTransform>();
+        var rt  = go.GetComponent<RectTransform>();
         rt.sizeDelta = new Vector2(iconSize, iconSize);
         rt.anchoredPosition = Vector2.zero;
         rt.localScale = Vector3.one;
-
         var img = go.GetComponent<Image>();
         img.raycastTarget = false;
-
         field = img;
         return img;
     }
 
     private void EnsureAllIcons()
     {
-        EnsureIconImage(ref iconImageA, "IconA_Auto");
-        EnsureIconImage(ref iconImageB, "IconB_Auto");
+        EnsureIconImage(ref iconImageA,    "IconA_Auto");
+        EnsureIconImage(ref iconImageB,    "IconB_Auto");
         EnsureIconImage(ref mergedIconImage, "MergedIcon_Auto");
     }
 
-    // ──────────────────────────────────────────────
-    //  PUBLIC API
-    // ──────────────────────────────────────────────
+    private void EnsureGlowImages()
+    {
+        if (glowImageA == null) glowImageA = CreateGlowBehind(iconImageA, "GlowA_Auto");
+        if (glowImageB == null) glowImageB = CreateGlowBehind(iconImageB, "GlowB_Auto");
 
-    public void PlayAtAnchoredPosition(Vector2 anchoredPos, Sprite overrideSpriteA, Sprite overrideSpriteB, Sprite mergedSprite = null)
+        if (waveGlowImage == null)
+        {
+            var go  = new GameObject("WaveGlow_Auto", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(pivot, false);
+            var rt  = go.GetComponent<RectTransform>();
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta        = Vector2.one * iconSize;
+            rt.localScale       = Vector3.one;
+            waveGlowImage = go.GetComponent<Image>();
+            waveGlowImage.raycastTarget = false;
+            waveGlowImage.color = waveGlowColor;
+            // Inspector'dan sprite atandıysa onu kullan, yoksa shockwave sprite'ı dene
+            if (waveGlowSprite != null)
+                waveGlowImage.sprite = waveGlowSprite;
+            else if (shockwaveImage != null && shockwaveImage.sprite != null)
+                waveGlowImage.sprite = shockwaveImage.sprite;
+            go.transform.SetSiblingIndex(0);
+        }
+    }
+
+    private Image CreateGlowBehind(Image anchor, string name)
+    {
+        var go  = new GameObject(name, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(pivot, false);
+        var rt  = go.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(iconSize, iconSize);
+        rt.anchoredPosition = Vector2.zero;
+        rt.localScale = Vector3.one;
+        var img = go.GetComponent<Image>();
+        img.raycastTarget = false;
+        img.color = glowColor;
+        // Place BEHIND the anchor icon in sibling order
+        if (anchor != null)
+            go.transform.SetSiblingIndex(anchor.transform.GetSiblingIndex());
+        return img;
+    }
+
+    // ─────────────────────────────────────────
+    //  PUBLIC API
+    // ─────────────────────────────────────────
+    public void PlayAtAnchoredPosition(Vector2 anchoredPos, Sprite sprA, Sprite sprB, Sprite merged = null)
     {
         var rt = transform as RectTransform;
         if (rt != null) rt.anchoredPosition = anchoredPos;
-        Play(overrideSpriteA, overrideSpriteB, mergedSprite);
+        Play(sprA, sprB, merged);
     }
 
-    public void Play(Sprite overrideSpriteA, Sprite overrideSpriteB, Sprite mergedSprite = null)
+    public void Play(Sprite sprA, Sprite sprB, Sprite merged = null)
     {
         if (!IsWired())
         {
-            Debug.LogError("[OverrideComboController] Missing CORE refs (pivot/flash/canvasGroup/stormParticles)!");
+            Debug.LogError("[OverrideComboController] Missing core refs (pivot/flash/canvasGroup/stormParticles)!");
             return;
         }
-
-        // Auto-create icon Images if not assigned in Inspector
         EnsureAllIcons();
+        EnsureGlowImages();
 
-        // Set sprites from the swapped override tiles
-        iconImageA.sprite = overrideSpriteA;
-        iconImageB.sprite = overrideSpriteB;
-        mergedIconImage.sprite = mergedSprite != null ? mergedSprite : overrideSpriteA;
+        iconImageA.sprite    = sprA;
+        iconImageB.sprite    = sprB;
+        mergedIconImage.sprite = merged != null ? merged : sprA;
+
+        // Glow uses same sprite as its icon
+        if (glowImageA != null) glowImageA.sprite = sprA;
+        if (glowImageB != null) glowImageB.sprite = sprB;
 
         if (_routine != null) StopCoroutine(_routine);
         _routine = StartCoroutine(Co_Play());
     }
 
-    public float GetTotalDuration()
-    {
-        // Orbit + Merge compress + simultaneous (flash+shockwave+clear) + Fade
-        return orbitDuration + mergeDuration + radialClearDuration + fadeOutDuration;
-    }
-
     public void Stop()
     {
-        if (_routine != null)
-        {
-            StopCoroutine(_routine);
-            _routine = null;
-        }
+        if (_routine != null) { StopCoroutine(_routine); _routine = null; }
         Cleanup();
     }
 
-    // ──────────────────────────────────────────────
-    //  WIRING CHECK (only truly required refs)
-    // ──────────────────────────────────────────────
-
+    // ─────────────────────────────────────────
+    //  WIRING CHECK
+    // ─────────────────────────────────────────
     private bool IsWired()
-    {
-        return pivot != null
-               && centerFlash != null
-               && canvasGroup != null
-               && stormParticles != null;
-        // iconImageA, iconImageB, mergedIconImage → auto-created if null
-        // shockwaveImage → optional, null-checked at use
-    }
+        => pivot != null && centerFlash != null && canvasGroup != null && stormParticles != null;
 
-    // ──────────────────────────────────────────────
-    //  CLEANUP (always runs, even on error)
-    // ──────────────────────────────────────────────
-
+    // ─────────────────────────────────────────
+    //  CLEANUP
+    // ─────────────────────────────────────────
     private void Cleanup()
     {
         RestoreStormDefaults();
@@ -210,10 +242,9 @@ public class OverrideComboController : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    // ──────────────────────────────────────────────
+    // ─────────────────────────────────────────
     //  MAIN COROUTINE
-    // ──────────────────────────────────────────────
-
+    // ─────────────────────────────────────────
     private IEnumerator Co_Play()
     {
         bool finished = false;
@@ -222,234 +253,316 @@ public class OverrideComboController : MonoBehaviour
             // ── INIT ──
             gameObject.SetActive(true);
             canvasGroup.alpha = 1f;
-
             pivot.localRotation = Quaternion.identity;
-            pivot.localScale = Vector3.one;
+            pivot.localScale    = Vector3.one;
 
-            // Merged icon: hidden initially
             SetAlpha(mergedIconImage, 0f);
             mergedIconImage.rectTransform.localScale = Vector3.zero;
 
-            // Shockwave: hidden initially (optional)
             if (shockwaveImage != null)
             {
                 SetAlpha(shockwaveImage, 0f);
                 shockwaveImage.rectTransform.localScale = Vector3.one * shockwaveStartScale;
             }
 
-            // Show orbit icons
+            if (waveGlowImage != null)
+            {
+                waveGlowImage.color = waveGlowColor;
+                SetAlpha(waveGlowImage, 0f);
+                waveGlowImage.rectTransform.localScale = Vector3.one * shockwaveStartScale;
+            }
+
             SetAlpha(iconImageA, 1f);
             SetAlpha(iconImageB, 1f);
-            IconRectA.localScale = Vector3.one * orbitScaleFrom;
-            IconRectB.localScale = Vector3.one * orbitScaleFrom;
+            IconRectA.localScale    = Vector3.one;
+            IconRectB.localScale    = Vector3.one;
+            IconRectA.localRotation = Quaternion.identity;
+            IconRectB.localRotation = Quaternion.identity;
+
+            SetAlpha(glowImageA, 0f);
+            SetAlpha(glowImageB, 0f);
+            SetGlowPos(glowImageA, Vector2.zero, Quaternion.identity, Vector3.one);
+            SetGlowPos(glowImageB, Vector2.zero, Quaternion.identity, Vector3.one);
 
             SetFlashAlpha(0f);
-
             SaveStormDefaults();
             StormStop(true);
 
-            // ════════════════════════════════════════════
-            //  PHASE 1: ORBIT (~2s)
-            // ════════════════════════════════════════════
-
+            // ════════════════════════════════════════
+            //  PHASE 1 — ORBIT + GROW  (orbitDuration)
+            // ════════════════════════════════════════
             var main = stormParticles.main;
-            main.loop = true;
-            main.startSpeed = _savedStartSpeed;
-            main.startSize = _savedStartSize;
+            main.loop          = true;
+            main.startSpeed    = _savedStartSpeed;
+            main.startSize     = _savedStartSize;
             main.startLifetime = _savedStartLifetime;
-
             stormParticles.Play();
 
             float orbitTime = 0f;
-            float baseAngle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+            float baseAngle  = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+            float selfRotA   = 0f;
+            float selfRotB   = 0f;
 
             while (orbitTime < orbitDuration)
             {
                 orbitTime += Time.deltaTime;
-                float t = Mathf.Clamp01(orbitTime / orbitDuration);
-
+                float t     = Mathf.Clamp01(orbitTime / orbitDuration);
                 float easeT = EaseInOutCubic(t);
-                float currentRadius = Mathf.Lerp(orbitRadiusStart, orbitRadiusEnd, t * t);
 
-                float iconScale = Mathf.Lerp(orbitScaleFrom, orbitScaleTo, t);
+                // Spiral inward
+                float radius = Mathf.Lerp(orbitRadiusStart, orbitRadiusEnd * 1.4f, t * t);
+
+                // Grow to orbitScaleTarget
+                float iconScale = Mathf.Lerp(1.0f, orbitScaleTarget, easeT);
                 IconRectA.localScale = Vector3.one * iconScale;
                 IconRectB.localScale = Vector3.one * iconScale;
 
-                float ang = baseAngle + (easeT * orbitTurns * Mathf.PI * 2f);
+                // Self-spin (accelerates slowly)
+                float spinSpeed = Mathf.Lerp(40f, 160f, t);
+                selfRotA += spinSpeed * Time.deltaTime;
+                selfRotB -= spinSpeed * Time.deltaTime;
+                IconRectA.localRotation = Quaternion.Euler(0f, 0f, selfRotA);
+                IconRectB.localRotation = Quaternion.Euler(0f, 0f, selfRotB);
 
-                Vector2 offset = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * currentRadius;
-                IconRectA.anchoredPosition = offset;
-                IconRectB.anchoredPosition = -offset;
+                // Orbital offset
+                float ang = baseAngle + easeT * orbitTurns * Mathf.PI * 2f;
+                Vector2 off = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * radius;
+                IconRectA.anchoredPosition =  off;
+                IconRectB.anchoredPosition = -off;
 
-                float glowPulse = 0.85f + 0.15f * Mathf.Sin(orbitTime * iconGlowPulseSpeed);
-                SetAlpha(iconImageA, glowPulse);
-                SetAlpha(iconImageB, glowPulse);
+                // Glow: fade in, pulse
+                float glowAlpha = Mathf.Lerp(0f, 0.65f, t) + 0.2f * Mathf.Sin(orbitTime * 6f);
+                float glowScale = iconScale * glowSizeMultiplier;
+                SetGlowPos(glowImageA,  off, IconRectA.localRotation, Vector3.one * glowScale);
+                SetGlowPos(glowImageB, -off, IconRectB.localRotation, Vector3.one * glowScale);
+                SetAlpha(glowImageA, Mathf.Clamp01(glowAlpha));
+                SetAlpha(glowImageB, Mathf.Clamp01(glowAlpha));
 
-                var shape = stormParticles.shape;
-                shape.radius = currentRadius * 0.8f;
+                // Icon alpha pulse
+                float alphaPulse = 0.85f + 0.15f * Mathf.Sin(orbitTime * iconGlowPulseSpeed);
+                SetAlpha(iconImageA, alphaPulse);
+                SetAlpha(iconImageB, alphaPulse);
 
+                // Particles
+                var shape    = stormParticles.shape;
+                shape.radius = radius * 0.8f;
                 var emission = stormParticles.emission;
-                emission.rateOverTimeMultiplier = Mathf.Lerp(30f, 150f, t);
+                emission.rateOverTimeMultiplier = Mathf.Lerp(30f, 160f, t);
 
-                if (t > 0.8f)
-                {
-                    float preFlashT = (t - 0.8f) / 0.2f;
-                    SetFlashAlpha(preFlashT * 0.15f);
-                }
+                // Pre-flash buildup in last 15%
+                if (t > 0.85f)
+                    SetFlashAlpha(((t - 0.85f) / 0.15f) * 0.18f);
 
                 yield return null;
             }
 
-            // ════════════════════════════════════════════
-            //  PHASE 2: MERGE
-            // ════════════════════════════════════════════
-
+            // ════════════════════════════════════════
+            //  PHASE 2 — SMASH / COLLISION  (mergeDuration)
+            // ════════════════════════════════════════
             stormParticles.Stop(false, ParticleSystemStopBehavior.StopEmitting);
 
-            float mergeTime = 0f;
-            Vector2 aStart = IconRectA.anchoredPosition;
-            Vector2 bStart = IconRectB.anchoredPosition;
-            Vector3 aScaleStart = IconRectA.localScale;
-            Vector3 bScaleStart = IconRectB.localScale;
+            Vector2 aOrbitalStart = IconRectA.anchoredPosition;
+            Vector2 bOrbitalStart = IconRectB.anchoredPosition;
+            float   smashTime     = 0f;
+            bool    impactFired   = false;
 
-            while (mergeTime < mergeDuration)
+            while (smashTime < mergeDuration)
             {
-                mergeTime += Time.deltaTime;
-                float t = Mathf.Clamp01(mergeTime / mergeDuration);
-                float smoothT = EaseInBack(t);
+                smashTime += Time.deltaTime;
+                float t = Mathf.Clamp01(smashTime / mergeDuration);
 
-                IconRectA.anchoredPosition = Vector2.Lerp(aStart, Vector2.zero, smoothT);
-                IconRectB.anchoredPosition = Vector2.Lerp(bStart, Vector2.zero, smoothT);
+                // ── APPROACH (0 → impactFraction) ──
+                if (t <= smashImpactFraction)
+                {
+                    float rt = t / smashImpactFraction;
+                    float rushT = rt * rt * rt; // ease-in: slow start, violent acceleration
+                    IconRectA.anchoredPosition = Vector2.Lerp(aOrbitalStart, Vector2.zero, rushT);
+                    IconRectB.anchoredPosition = Vector2.Lerp(bOrbitalStart, Vector2.zero, rushT);
 
-                float compressScale = Mathf.Lerp(1f, 0.5f, smoothT);
-                IconRectA.localScale = aScaleStart * compressScale;
-                IconRectB.localScale = bScaleStart * compressScale;
+                    float spinSpeed = Mathf.Lerp(160f, 360f, rt);
+                    selfRotA += spinSpeed * Time.deltaTime;
+                    selfRotB -= spinSpeed * Time.deltaTime;
+                    IconRectA.localRotation = Quaternion.Euler(0f, 0f, selfRotA);
+                    IconRectB.localRotation = Quaternion.Euler(0f, 0f, selfRotB);
+                }
+                // ── IMPACT + REBOUND (impactFraction → 1) ──
+                else
+                {
+                    if (!impactFired)
+                    {
+                        impactFired = true;
+                        OnImpact?.Invoke();
+                        SetFlashAlpha(flashMaxAlpha);
 
-                float flashT = Mathf.Clamp01((t - 0.3f) / 0.7f);
-                SetFlashAlpha(flashT * flashMaxAlpha);
+                        // Burst
+                        var bm = stormParticles.main;
+                        bm.startSpeed    = _savedStartSpeed * 5f;
+                        bm.startSize     = _savedStartSize  * 1.8f;
+                        bm.startLifetime = 0.5f;
+                        stormParticles.Emit(mergeBurstCount * 2);
+
+                        // Continuous blast after impact
+                        bm.loop          = true;
+                        bm.startSpeed    = _savedStartSpeed * 4f;
+                        bm.startSize     = _savedStartSize  * 1.6f;
+                        bm.startLifetime = 0.55f;
+                        var be = stormParticles.emission;
+                        be.rateOverTimeMultiplier = 220f;
+                        var bs = stormParticles.shape;
+                        bs.radius = orbitRadiusEnd * 0.5f;
+                        stormParticles.Play();
+                    }
+
+                    // Post-impact orbit (tight orbit, high speed)
+                    float prt    = (t - smashImpactFraction) / (1f - smashImpactFraction);
+                    float rRadius = Mathf.Lerp(orbitRadiusEnd * 0.5f, orbitRadiusEnd * 0.9f, EaseOutQuad(prt));
+                    float rAngle  = baseAngle + t * orbitTurns * 2f * Mathf.PI;
+                    Vector2 rOff  = new Vector2(Mathf.Cos(rAngle), Mathf.Sin(rAngle)) * rRadius;
+                    IconRectA.anchoredPosition =  rOff;
+                    IconRectB.anchoredPosition = -rOff;
+
+                    // Continue spinning post-impact
+                    selfRotA += 360f * Time.deltaTime;
+                    selfRotB -= 360f * Time.deltaTime;
+                    IconRectA.localRotation = Quaternion.Euler(0f, 0f, selfRotA);
+                    IconRectB.localRotation = Quaternion.Euler(0f, 0f, selfRotB);
+
+                    // Flash fades quickly
+                    SetFlashAlpha(Mathf.Lerp(flashMaxAlpha, 0f, Mathf.Clamp01(prt * 4f)));
+                }
+
+                // Scale stays at 2.5x throughout smash
+                IconRectA.localScale = Vector3.one * orbitScaleTarget;
+                IconRectB.localScale = Vector3.one * orbitScaleTarget;
+
+                // Glow: bright and pulsing, stays throughout
+                float gPulse = 0.7f + 0.2f * Mathf.Sin(smashTime * 12f);
+                float gScale = orbitScaleTarget * glowSizeMultiplier;
+                SetGlowPos(glowImageA, IconRectA.anchoredPosition, IconRectA.localRotation, Vector3.one * gScale);
+                SetGlowPos(glowImageB, IconRectB.anchoredPosition, IconRectB.localRotation, Vector3.one * gScale);
+                SetAlpha(glowImageA, Mathf.Clamp01(gPulse));
+                SetAlpha(glowImageB, Mathf.Clamp01(gPulse));
+                SetAlpha(iconImageA, 1f);
+                SetAlpha(iconImageB, 1f);
 
                 yield return null;
             }
 
-            // ════════════════════════════════════════════
-            //  PHASE 3: FLASH + BURST + SHOCKWAVE + NUCLEAR BLAST (simultaneous)
-            // ════════════════════════════════════════════
+            // ════════════════════════════════════════
+            //  PHASE 3 — RADIAL WAVE + CONTINUED SPIN  (radialClearDuration)
+            // ════════════════════════════════════════
 
-            // Everything fires at once: flash, burst, merged icon, shockwave
-            SetFlashAlpha(flashMaxAlpha);
-            SetAlpha(iconImageA, 0f);
-            SetAlpha(iconImageB, 0f);
-
-            // Initial merge burst
-            var burstMain = stormParticles.main;
-            burstMain.startSpeed = _savedStartSpeed * 3f;
-            burstMain.startSize = _savedStartSize * 1.4f;
-            burstMain.startLifetime = 0.5f;
-            stormParticles.Emit(mergeBurstCount);
-
-            // Now switch stormParticles to "nuclear blast" mode:
-            // continuous emission, expanding radius, particles flying outward
-            burstMain.loop = true;
-            burstMain.startSpeed = _savedStartSpeed * 5f;   // fast outward push
-            burstMain.startSize = _savedStartSize * 1.8f;   // big bright particles
-            burstMain.startLifetime = 0.6f;
-
+            // Switch particles to nuclear-blast mode
+            var blastMain = stormParticles.main;
+            blastMain.loop          = true;
+            blastMain.startSpeed    = _savedStartSpeed * 5f;
+            blastMain.startSize     = _savedStartSize  * 1.8f;
+            blastMain.startLifetime = 0.6f;
             var blastShape = stormParticles.shape;
             blastShape.shapeType = ParticleSystemShapeType.Circle;
-            blastShape.radius = 0.1f; // starts tiny, expands in the loop
-
-            var blastEmission = stormParticles.emission;
-            blastEmission.rateOverTimeMultiplier = 200f; // dense particle cloud
-
+            blastShape.radius = 0.1f;
+            var blastEmit = stormParticles.emission;
+            blastEmit.rateOverTimeMultiplier = 250f;
             stormParticles.Play();
 
-            // Show merged icon with scale punch
-            SetAlpha(mergedIconImage, 1f);
-            mergedIconImage.rectTransform.localScale = Vector3.one * mergeScalePunch;
-
-            // Start shockwave immediately
             if (shockwaveImage != null)
             {
-                SetAlpha(shockwaveImage, shockwaveColor.a);
                 shockwaveImage.color = shockwaveColor;
+                SetAlpha(shockwaveImage, shockwaveColor.a);
                 shockwaveImage.rectTransform.localScale = Vector3.one * shockwaveStartScale;
             }
 
-            // All animate together: flash + merged icon + shockwave + nuclear particle wave
             float clearTime = 0f;
             float lastReportedRadius = -1f;
 
             while (clearTime < radialClearDuration)
             {
                 clearTime += Time.deltaTime;
-                float t = Mathf.Clamp01(clearTime / radialClearDuration);
-
+                float t       = Mathf.Clamp01(clearTime / radialClearDuration);
                 float expandT = EaseOutQuad(t);
 
-                // Flash fades out in first 30%
-                float flashFade = Mathf.Lerp(flashMaxAlpha, 0f, Mathf.Clamp01(t / 0.3f));
-                SetFlashAlpha(flashFade);
+                // Icons: spiral toward center while continuing to spin
+                float postRadius = Mathf.Lerp(orbitRadiusEnd * 0.9f, 0f, EaseInOutCubic(t));
+                float postAngle  = (selfRotA * Mathf.Deg2Rad) * 0.5f;
+                Vector2 postOff  = new Vector2(Mathf.Cos(postAngle), Mathf.Sin(postAngle)) * postRadius;
+                IconRectA.anchoredPosition =  postOff;
+                IconRectB.anchoredPosition = -postOff;
 
-                // Shockwave ring expands
+                float spinDecay = Mathf.Lerp(360f, 45f, t);
+                selfRotA += spinDecay * Time.deltaTime;
+                selfRotB -= spinDecay * Time.deltaTime;
+                IconRectA.localRotation = Quaternion.Euler(0f, 0f, selfRotA);
+                IconRectB.localRotation = Quaternion.Euler(0f, 0f, selfRotB);
+
+                // Icons + glow fade out as wave passes
+                float iconAlpha = Mathf.Clamp01(1f - Mathf.SmoothStep(0f, 1f, t));
+                SetAlpha(iconImageA, iconAlpha);
+                SetAlpha(iconImageB, iconAlpha);
+                float gAlpha = iconAlpha * 0.65f;
+                float gScalePost = orbitScaleTarget * glowSizeMultiplier;
+                SetGlowPos(glowImageA,  postOff, IconRectA.localRotation, Vector3.one * gScalePost);
+                SetGlowPos(glowImageB, -postOff, IconRectB.localRotation, Vector3.one * gScalePost);
+                SetAlpha(glowImageA, gAlpha);
+                SetAlpha(glowImageB, gAlpha);
+
+                // Shockwave ring expands (faster, more prominent)
                 if (shockwaveImage != null)
                 {
                     float ringScale = Mathf.Lerp(shockwaveStartScale, shockwaveMaxScale, expandT);
                     shockwaveImage.rectTransform.localScale = Vector3.one * ringScale;
-
-                    float ringAlpha = Mathf.Lerp(shockwaveColor.a, 0f, t * t);
-                    SetAlpha(shockwaveImage, ringAlpha);
+                    float ringAlpha = Mathf.Lerp(shockwaveColor.a, 0f, t * t * 0.8f);
+                    SetAlpha(shockwaveImage, Mathf.Clamp01(ringAlpha));
                 }
 
-                // Nuclear blast: particle shape radius expands with the shockwave
-                float blastRadius = Mathf.Lerp(0.1f, orbitRadiusStart * 2f, expandT);
-                var shape = stormParticles.shape;
-                shape.radius = blastRadius;
+                // Wavy glow fills the board from center outward (synchronized with tile clearing)
+                if (waveGlowImage != null)
+                {
+                    // Slight scale wobble for organic/wavy edge feel
+                    float wobble = 1f + 0.04f * Mathf.Sin(clearTime * 28f);
+                    float glowScale = Mathf.Lerp(shockwaveStartScale, shockwaveMaxScale * 0.88f, expandT) * wobble;
+                    waveGlowImage.rectTransform.localScale = Vector3.one * glowScale;
+                    // Fade in fast, then linger and fade out
+                    float glowAlpha = waveGlowColor.a * Mathf.Clamp01(expandT * 3f) * (1f - t * 0.7f);
+                    SetAlpha(waveGlowImage, Mathf.Clamp01(glowAlpha));
+                }
 
-                // Emission fades as blast expands (dense center, sparse edges)
-                var emission = stormParticles.emission;
-                emission.rateOverTimeMultiplier = Mathf.Lerp(250f, 30f, t);
-
-                // Particle speed slows as wave reaches edges
-                var blastMain = stormParticles.main;
-                blastMain.startSpeed = Mathf.Lerp(_savedStartSpeed * 5f, _savedStartSpeed * 1.5f, t);
-
-                // Merged icon: elastic settle then fade
-                float scaleT = EaseOutElastic(Mathf.Clamp01(t / 0.4f));
-                float s = Mathf.Lerp(mergeScalePunch, 1.0f, scaleT);
-                float iconFade = Mathf.Lerp(1f, 0f, Mathf.Clamp01((t - 0.3f) / 0.4f));
-                mergedIconImage.rectTransform.localScale = Vector3.one * s;
-                SetAlpha(mergedIconImage, iconFade);
+                // Particle blast expands with wave
+                float blastRadius = Mathf.Lerp(0.1f, orbitRadiusStart * 2.5f, expandT);
+                var bShape = stormParticles.shape;
+                bShape.radius = blastRadius;
+                var bEmit = stormParticles.emission;
+                bEmit.rateOverTimeMultiplier = Mathf.Lerp(250f, 20f, t);
+                var bMain2 = stormParticles.main;
+                bMain2.startSpeed = Mathf.Lerp(_savedStartSpeed * 5f, _savedStartSpeed * 1.2f, t);
 
                 // Board clear progress callback
-                float radiusNorm = expandT;
-                if (radiusNorm - lastReportedRadius >= 0.05f)
+                if (expandT - lastReportedRadius >= 0.04f)
                 {
-                    lastReportedRadius = radiusNorm;
-                    OnRadialClearProgress?.Invoke(radiusNorm);
+                    lastReportedRadius = expandT;
+                    OnRadialClearProgress?.Invoke(expandT);
                 }
 
                 yield return null;
             }
 
-            // Stop nuclear blast emission, let remaining particles fade
             stormParticles.Stop(false, ParticleSystemStopBehavior.StopEmitting);
-
             SetFlashAlpha(0f);
-            SetAlpha(mergedIconImage, 0f);
+            SetAlpha(iconImageA, 0f);
+            SetAlpha(iconImageB, 0f);
+            SetAlpha(glowImageA, 0f);
+            SetAlpha(glowImageB, 0f);
+            if (shockwaveImage != null) SetAlpha(shockwaveImage, 0f);
+            if (waveGlowImage  != null) SetAlpha(waveGlowImage, 0f);
             OnRadialClearProgress?.Invoke(1f);
 
-            // ════════════════════════════════════════════
-            //  PHASE 4: FADE OUT
-            // ════════════════════════════════════════════
-
+            // ════════════════════════════════════════
+            //  PHASE 4 — FADE OUT
+            // ════════════════════════════════════════
             float fadeTime = 0f;
-            float startAlpha = canvasGroup.alpha;
-
             while (fadeTime < fadeOutDuration)
             {
                 fadeTime += Time.deltaTime;
-                float t = Mathf.Clamp01(fadeTime / fadeOutDuration);
-                canvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, t);
+                canvasGroup.alpha = Mathf.Lerp(1f, 0f, Mathf.Clamp01(fadeTime / fadeOutDuration));
                 yield return null;
             }
 
@@ -458,25 +571,47 @@ public class OverrideComboController : MonoBehaviour
         finally
         {
             Cleanup();
-
             if (finished)
                 OnComboFinished?.Invoke();
             else
-                Debug.LogError("[OverrideComboController] Coroutine died unexpectedly — cleaned up. Check Console for errors above.");
+                Debug.LogError("[OverrideComboController] Coroutine died unexpectedly — cleaned up.");
         }
     }
 
-    // ──────────────────────────────────────────────
-    //  STORM PARTICLE HELPERS
-    // ──────────────────────────────────────────────
+    // ─────────────────────────────────────────
+    //  HELPERS
+    // ─────────────────────────────────────────
+    private void SetGlowPos(Image glow, Vector2 pos, Quaternion rot, Vector3 scale)
+    {
+        if (glow == null) return;
+        var rt = glow.rectTransform;
+        rt.anchoredPosition = pos;
+        rt.localRotation    = rot;
+        rt.localScale       = scale;
+    }
 
+    private void SetFlashAlpha(float a)
+    {
+        if (centerFlash == null) return;
+        var c = centerFlash.color; c.a = a; centerFlash.color = c;
+    }
+
+    private static void SetAlpha(Image img, float a)
+    {
+        if (img == null) return;
+        var c = img.color; c.a = a; img.color = c;
+    }
+
+    // ─────────────────────────────────────────
+    //  STORM HELPERS
+    // ─────────────────────────────────────────
     private void SaveStormDefaults()
     {
         if (stormParticles == null) return;
         var m = stormParticles.main;
         _savedEmissionRate = stormParticles.emission.rateOverTimeMultiplier;
-        _savedStartSpeed = m.startSpeed.constant;
-        _savedStartSize = m.startSize.constant;
+        _savedStartSpeed   = m.startSpeed.constant;
+        _savedStartSize    = m.startSize.constant;
         _savedStartLifetime = m.startLifetime.constant;
         _savedLoop = m.loop;
     }
@@ -485,12 +620,12 @@ public class OverrideComboController : MonoBehaviour
     {
         if (stormParticles == null) return;
         var m = stormParticles.main;
-        m.startSpeed = _savedStartSpeed;
-        m.startSize = _savedStartSize;
+        m.startSpeed    = _savedStartSpeed;
+        m.startSize     = _savedStartSize;
         m.startLifetime = _savedStartLifetime;
         m.loop = _savedLoop;
-        var emission = stormParticles.emission;
-        emission.rateOverTimeMultiplier = _savedEmissionRate;
+        var em = stormParticles.emission;
+        em.rateOverTimeMultiplier = _savedEmissionRate;
     }
 
     private void StormStop(bool clear)
@@ -501,65 +636,13 @@ public class OverrideComboController : MonoBehaviour
             : ParticleSystemStopBehavior.StopEmitting);
     }
 
-    // ──────────────────────────────────────────────
-    //  HELPERS
-    // ──────────────────────────────────────────────
-
-    private void SetFlashAlpha(float a)
-    {
-        if (centerFlash == null) return;
-        var c = centerFlash.color;
-        c.a = a;
-        centerFlash.color = c;
-    }
-
-    private static void SetAlpha(Image img, float a)
-    {
-        if (img == null) return;
-        var c = img.color;
-        c.a = a;
-        img.color = c;
-    }
-
-    // ──────────────────────────────────────────────
-    //  EASING FUNCTIONS
-    // ──────────────────────────────────────────────
-
+    // ─────────────────────────────────────────
+    //  EASING
+    // ─────────────────────────────────────────
     private static float EaseInOutCubic(float t)
-    {
-        return t < 0.5f
-            ? 4f * t * t * t
-            : 1f - Mathf.Pow(-2f * t + 2f, 3f) / 2f;
-    }
+        => t < 0.5f ? 4f * t * t * t : 1f - Mathf.Pow(-2f * t + 2f, 3f) / 2f;
 
-    private static float EaseOutCubic(float t)
-    {
-        return 1f - Mathf.Pow(1f - t, 3f);
-    }
+    private static float EaseOutQuad(float t) => 1f - (1f - t) * (1f - t);
 
-    private static float EaseInCubic(float t)
-    {
-        return t * t * t;
-    }
-
-    private static float EaseOutQuad(float t)
-    {
-        return 1f - (1f - t) * (1f - t);
-    }
-
-    private static float EaseInBack(float t)
-    {
-        const float c1 = 1.70158f;
-        const float c3 = c1 + 1f;
-        return c3 * t * t * t - c1 * t * t;
-    }
-
-    private static float EaseOutElastic(float t)
-    {
-        if (t <= 0f) return 0f;
-        if (t >= 1f) return 1f;
-
-        const float c4 = (2f * Mathf.PI) / 3f;
-        return Mathf.Pow(2f, -10f * t) * Mathf.Sin((t * 10f - 0.75f) * c4) + 1f;
-    }
+    private static float EaseInOutCubicUnclamped(float t) => EaseInOutCubic(Mathf.Clamp01(t));
 }

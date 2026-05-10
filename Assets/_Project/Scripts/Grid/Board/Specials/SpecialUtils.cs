@@ -17,8 +17,11 @@ public static class SpecialUtils
 
         if (!board.Holes[x, y])
         {
-            // OverTileBlocker altındaki tile'ı speciallardan korur; engel kırılmadan vurulamaz.
-            if (board.ObstacleStateService != null && board.ObstacleStateService.IsOverTileBlockerAt(x, y))
+            // Yalnızca sabit OverTileBlocker (Stone vb.) altındaki tile korunur.
+            // MovableObstacle (Plastic vb.) kendisi hedef olduğundan engellenmez.
+            if (board.ObstacleStateService != null
+                && board.ObstacleStateService.IsOverTileBlockerAt(x, y)
+                && !board.ObstacleStateService.IsMovableObstacleAt(x, y))
                 return false;
             return true;
         }

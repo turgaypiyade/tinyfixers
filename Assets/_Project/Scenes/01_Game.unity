@@ -1619,8 +1619,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.04028436}
-  m_AnchorMax: {x: 1, y: 0.9443128}
+  m_AnchorMin: {x: 0, y: 0.07634731}
+  m_AnchorMax: {x: 0.8239437, y: 1.7896707}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -6414,15 +6414,88 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
+      propertyPath: pivot
+      value: 
+      objectReference: {fileID: 5272410967715334030}
+    - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
+      propertyPath: orbitTurns
+      value: 3.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
+      propertyPath: centerFlash
+      value: 
+      objectReference: {fileID: 5272410967715334031}
+    - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
+      propertyPath: flashMaxAlpha
+      value: 0.95
+      objectReference: {fileID: 0}
+    - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
+      propertyPath: mergeDuration
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
+      propertyPath: stormParticles
+      value: 
+      objectReference: {fileID: 5272410967715334029}
+    - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
+      propertyPath: waveGlowSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 90a7205e9795442588316c5be3f4fcae, type: 3}
+    - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
+      propertyPath: fadeOutDuration
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
+      propertyPath: mergeBurstCount
+      value: 80
+      objectReference: {fileID: 0}
+    - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
+      propertyPath: mergedIconImage
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
+      propertyPath: shockwaveColor.a
+      value: 0.75
+      objectReference: {fileID: 0}
+    - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
+      propertyPath: radialClearDuration
+      value: 0.5
+      objectReference: {fileID: 0}
     - target: {fileID: 9180893627907113881, guid: a184fd355378a42268662980030cee3f, type: 3}
       propertyPath: m_Name
       value: VFX_SystemOverrideCombo
+      objectReference: {fileID: 0}
+    - target: {fileID: 9180893627907113881, guid: a184fd355378a42268662980030cee3f, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a184fd355378a42268662980030cee3f, type: 3}
+--- !u!198 &5272410967715334029 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: 3307997318140347403, guid: a184fd355378a42268662980030cee3f, type: 3}
+  m_PrefabInstance: {fileID: 5272410967715334028}
+  m_PrefabAsset: {fileID: 0}
+--- !u!224 &5272410967715334030 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 914704892196622738, guid: a184fd355378a42268662980030cee3f, type: 3}
+  m_PrefabInstance: {fileID: 5272410967715334028}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5272410967715334031 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2451989593454257479, guid: a184fd355378a42268662980030cee3f, type: 3}
+  m_PrefabInstance: {fileID: 5272410967715334028}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!1001 &5651883892125161781
 PrefabInstance:
   m_ObjectHideFlags: 0

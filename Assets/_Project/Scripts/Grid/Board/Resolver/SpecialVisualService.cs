@@ -514,7 +514,7 @@ public class SpecialVisualService
     /// <summary>
     /// Builds center-out radial clear delays for Override+Override combo.
     /// </summary>
-    public Dictionary<TileView, float> BuildCenterOutClearDelays(HashSet<TileView> targets, float maxDelay)
+    public Dictionary<TileView, float> BuildCenterOutClearDelays(HashSet<TileView> targets, float maxDelay, float minDelay = 0f)
     {
         if (targets == null || targets.Count == 0 || maxDelay <= 0f)
             return null;
@@ -542,7 +542,7 @@ public class SpecialVisualService
             float distance = Vector2.Distance(new Vector2(tile.X, tile.Y), center);
             float normalized = Mathf.Clamp01(distance / maxDistance);
             float eased = 1f - (1f - normalized) * (1f - normalized);
-            delays[tile] = eased * maxDelay;
+            delays[tile] = Mathf.Lerp(minDelay, maxDelay, eased);
         }
 
         return delays;

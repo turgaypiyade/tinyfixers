@@ -245,7 +245,10 @@ public class ObstacleStateService
         if (remaining < 0)
             remaining = Mathf.Max(1, def != null ? def.hits : 1);
 
-        if (!CanConsumeHit(def, remaining, context, sourceTileType))
+        bool canConsume = CanConsumeHit(def, remaining, context, sourceTileType);
+        if (id == ObstacleId.ColorChest)
+            Debug.Log($"[ChestDebug] TryDamageAt ({x},{y}) ctx={context} src={sourceTileType} remaining={remaining} canConsume={canConsume}");
+        if (!canConsume)
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
 
         // ColorChest renk validasyonu
@@ -258,6 +261,8 @@ public class ObstacleStateService
             {
                 // Açık dolap: sadece içinde kalan renk hasar verir
                 var colorFlag = sourceTileType.ToChestColor();
+                _chestColorStates.TryGetValue(origin, out var dbgMask);
+                Debug.Log($"[ChestDebug] NormalMatch colorFlag={colorFlag} chestMask={dbgMask} isOpen={isOpen} hasState={_chestColorStates.ContainsKey(origin)}");
                 if (colorFlag == ChestColorMask.None ||
                     !_chestColorStates.TryGetValue(origin, out var chestMask) ||
                     (chestMask & colorFlag) == 0)
@@ -438,9 +443,9 @@ public class ObstacleStateService
         if (!IsValidCell(x, y))
             return false;
 
-        // OverTileBlocker davranışındaki engeller altındaki tile'ı her zaman kilitler;
-        // Inspector'da locksInteraction işaretlemeye gerek kalmaz.
-        if (IsOverTileBlockerAt(x, y))
+        // Yalnızca sabit OverTileBlocker (Stone vb.) altındaki tile'ı kilitler.
+        // MovableObstacle (Plastic vb.) swap edilebilir — interaction kilitlenmez.
+        if (IsOverTileBlockerAt(x, y) && !IsMovableObstacleAt(x, y))
             return true;
 
         int idx = level.Index(x, y);
@@ -707,6 +712,35 @@ public class ObstacleStateService
         if (def == null) return false;
         int remaining = ResolveRemainingHitsForCell(idx, def);
         return def.GetDamageRuleForRemainingHits(remaining) == ObstacleDamageSourceRule.FullyDisabled;
+    }
+
+    /// <summary>
+    /// Kaç kez daha anlamlı hit alabilir? FullyDisabled stage'ler sayılmaz.
+    /// PatchBot koordinatörü bu değeri kullanarak birden fazla botu boşa yollamaz.
+    /// </summary>
+    public int GetActiveMeaningfulHitsAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return 0;
+
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None) return 0;
+
+        var def = library?.Get(id);
+        if (def == null) return 0;
+
+        int current = ResolveRemainingHitsForCell(idx, def);
+        int count = 0;
+
+        for (int r = current; r > 0; r--)
+        {
+            var stage = def.GetStageRuleForRemainingHits(r);
+            if (stage == null || stage.damageRule == ObstacleDamageSourceRule.FullyDisabled)
+                break;
+            count++;
+        }
+
+        return count;
     }
 
     public bool IsUnderTileObstacleAt(int x, int y)

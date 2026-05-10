@@ -22,6 +22,24 @@ public class BoardVfxService
         Sprite mergedSprite = null)
     {
         if (vfx == null) return 0f;
+
+        // One-shot: fire H+V lightning from board center when icons collide
+        System.Action impactHandler = null;
+        impactHandler = () =>
+        {
+            vfx.OnImpact -= impactHandler;
+            int cx = board.Width  / 2;
+            int cy = board.Height / 2;
+            var strikes = new List<LightningLineStrike>
+            {
+                new LightningLineStrike(new Vector2Int(cx, cy), true),
+                new LightningLineStrike(new Vector2Int(cx, cy), false),
+            };
+            board.PlayLightningLineStrikes(strikes, null);
+        };
+        vfx.OnImpact -= impactHandler; // guard against double-subscribe
+        vfx.OnImpact += impactHandler;
+
         vfx.gameObject.SetActive(true);
         vfx.Play(overrideSpriteA, overrideSpriteB, mergedSprite);
         float duration = vfx.GetTotalDuration();

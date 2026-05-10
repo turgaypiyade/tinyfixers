@@ -750,6 +750,8 @@ public class BoardAnimator
             }
         }
 
+        Debug.Log($"[ChestDebug] ObstacleDamagePhase ctx={damageContext} impactCount={impactCells.Count} includeAdjacent={includeAdjacentOverTileBlockerDamage}");
+
         for (int impactIndex = 0; impactIndex < impactCells.Count; impactIndex++)
         {
             var cell = impactCells[impactIndex];
@@ -759,11 +761,15 @@ public class BoardAnimator
                     ? impactSourceTileTypes[impactIndex]
                     : null;
 
+            Debug.Log($"[ChestDebug] impactCell=({cell.x},{cell.y}) src={sourceTileType}");
+
             AddObstacleDamageCell(cell, sourceTileType);
 
             if (includeAdjacentOverTileBlockerDamage)
                 CollectAdjacentOverTileBlockers(cell, obstacleDamageSources, sourceTileType);
         }
+
+        Debug.Log($"[ChestDebug] obstacleDamageSources count={obstacleDamageSources.Count}");
 
         foreach (var kv in obstacleDamageSources)
         {
@@ -777,7 +783,9 @@ public class BoardAnimator
 
             for (int i = 0; i < sources.Count; i++)
             {
+                Debug.Log($"[ChestDebug] ApplyDamage cell=({cell.x},{cell.y}) src={sources[i]} ctx={damageContext}");
                 var hit = board.ApplyObstacleDamageAt(cell.x, cell.y, damageContext, sources[i]);
+                Debug.Log($"[ChestDebug] hit=({cell.x},{cell.y}) didHit={hit.didHit}");
                 if (hit.didHit)
                     board.TriggerObstacleVisualChange(hit.visualChange);
             }
@@ -1051,6 +1059,8 @@ public class BoardAnimator
 
             bool isOil =
                 board.ObstacleStateService.IsOilAt(cell.x, cell.y);
+
+            Debug.Log($"[ChestDebug] TryCollect cell=({cell.x},{cell.y}) isOverTile={isDamageableOverTile} isOil={isOil}");
 
             if (!isDamageableOverTile && !isOil)
                 return;

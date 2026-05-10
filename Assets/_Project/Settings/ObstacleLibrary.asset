@@ -339,35 +339,35 @@ MonoBehaviour:
     legacyBehavior: 4
   - id: 21
     stages:
-    - sprite: {fileID: 21300000, guid: ed7f19307b8064defbe605aa529abe1a, type: 3}
+    - sprite: {fileID: 1423822320020870481, guid: ed7f19307b8064defbe605aa529abe1a, type: 3}
       damageRule: 1
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
-    - sprite: {fileID: 21300000, guid: 71f9d43899561438f98e4706731116ef, type: 3}
+    - sprite: {fileID: 4307159941797744895, guid: 873d4c3d26a1a48b8898723a9906d92d, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
-    - sprite: {fileID: 21300000, guid: 71f9d43899561438f98e4706731116ef, type: 3}
+    - sprite: {fileID: -652907274281192367, guid: 73218c3b01ded4e1b8a5d002992fb1a6, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
-    - sprite: {fileID: 21300000, guid: 71f9d43899561438f98e4706731116ef, type: 3}
+    - sprite: {fileID: 4458188058141760352, guid: 71f9d43899561438f98e4706731116ef, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
-    - sprite: {fileID: 21300000, guid: 71f9d43899561438f98e4706731116ef, type: 3}
+    - sprite: {fileID: 4458188058141760352, guid: 71f9d43899561438f98e4706731116ef, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
@@ -382,7 +382,7 @@ MonoBehaviour:
     hitParticleSprites: []
     breakParticleSprites: []
     drawUnderTiles: 0
-    legacySprite: {fileID: 21300000, guid: ed7f19307b8064defbe605aa529abe1a, type: 3}
+    legacySprite: {fileID: 1423822320020870481, guid: ed7f19307b8064defbe605aa529abe1a, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1
