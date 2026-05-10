@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -49,6 +50,10 @@ public class ChapterTheme : ScriptableObject
     public Color preLevelSlotSelectedTint = new Color(1f, 0.86f, 0.25f, 0.72f);
     public Color preLevelCountTextColor = Color.white;
     public Color preLevelButtonTextColor = Color.white;
+
+    [Header("Loading Screen")]
+    [Tooltip("Geçiş yüklenme ekranında rastgele seçilecek görseller. Boş bırakılırsa siyah ekran gösterilir.")]
+    public List<Sprite> loadingScreenImages = new();
 
     [Header("Level End Popup")]
     [Tooltip("Chapter-specific shared popup panel/background image for fail and success end popups.")]

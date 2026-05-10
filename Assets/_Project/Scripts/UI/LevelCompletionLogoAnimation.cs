@@ -1,56 +1,64 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Level tamamlanma logosu animasyonu.
-/// Üç logo parçası farklı yönlerden uçarak ortada buluşur, fişek patlar.
-/// Herhangi bir yere çift tıklama animasyonu atlar (WasSkipped=true).
+/// Level completion logo animation.
+/// Three logo parts fly to the center and fireworks play.
+/// Double click during this animation skips only the logo animation.
+///
+/// Important: this component does not disable its root object at the end.
+/// The skipButton can live under the same LogoAnimPanel and still work during BonusMovesService.RunBonusRound().
 /// </summary>
 public class LevelCompletionLogoAnimation : MonoBehaviour
 {
-    [Header("Arkaplan Karartma")]
+    [Header("Arkaplan / Overlay")]
     [SerializeField] private Image overlayImage;
+    [SerializeField] private bool keepOverlayTransparent = true;
     [SerializeField, Range(0f, 1f)] private float overlayTargetAlpha = 0.75f;
     [SerializeField, Min(0.05f)] private float dimFadeDuration = 0.22f;
     [SerializeField] private int canvasSortOrder = 200;
 
-    [Header("Logo Parçaları (atanmayanlar atlanır)")]
+    [Header("Logo Parcalari (atanmayanlar atlanir)")]
     [SerializeField] private RectTransform tinysImage;
     [SerializeField] private RectTransform fixersLeftImage;
     [SerializeField] private RectTransform fixersRightImage;
 
-    [Header("Fişek VFX")]
+    [Header("Fisek VFX")]
     [SerializeField] private RectTransform vfxRoot;
     [SerializeField] private int fireworkBurstCount = 4;
 
     [Header("Zamanlama")]
-    [SerializeField, Min(0.1f)] private float flyInDuration    = 0.55f;
-    [SerializeField, Min(0f)]   private float holdDuration     = 0.65f;
-    [SerializeField, Min(0f)]   private float fireworkDelay    = 0.18f;
+    [SerializeField, Min(0.1f)] private float flyInDuration = 0.55f;
+    [SerializeField, Min(0f)] private float holdDuration = 0.65f;
+    [SerializeField, Min(0f)] private float fireworkDelay = 0.18f;
     [SerializeField, Min(0.05f)] private float fireworkInterval = 0.25f;
 
-    [Header("Giriş Mesafeleri (piksel)")]
-    [SerializeField] private float tinysTopOffset     = 1100f;
+    [Header("Giris Mesafeleri (piksel)")]
+    [SerializeField] private float tinysTopOffset = 1100f;
     [SerializeField] private float fixersBottomOffset = 1200f;
-    [SerializeField] private float fixersSideOffset   = 600f;
+    [SerializeField] private float fixersSideOffset = 600f;
 
-    [Header("Çift Tıklama Skip")]
+    [Header("Cift Tiklama Skip")]
     [SerializeField, Min(0.05f)] private float doubleTapWindow = 0.40f;
 
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // -------------------------------------------------------------------------
     public bool WasSkipped { get; private set; }
 
-    private bool  _playing;
-    private bool  _skipRequested;
+    private bool _playing;
+    private bool _skipRequested;
     private float _lastTapTime = -99f;
     private Canvas _canvas;
+    private readonly List<GameObject> spawnedFireworkVfx = new();
+
+    private float TargetOverlayAlpha => keepOverlayTransparent ? 0f : Mathf.Clamp01(overlayTargetAlpha);
 
     private void Update()
     {
-        if (!_playing) return;
+        if (!_playing)
+            return;
 
         bool tapped = false;
 
@@ -62,11 +70,11 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
         if (!tapped && touch != null && touch.primaryTouch.press.wasPressedThisFrame)
             tapped = true;
 
-        if (!tapped) return;
+        if (!tapped)
+            return;
 
         float now = Time.unscaledTime;
         float gap = now - _lastTapTime;
-        Debug.Log($"[LogoAnim] Tapped. gap={gap:F2}s window={doubleTapWindow}s → skip={gap <= doubleTapWindow}");
 
         if (gap <= doubleTapWindow)
             _skipRequested = true;
@@ -74,68 +82,67 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
         _lastTapTime = now;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-
+    // -------------------------------------------------------------------------
     public IEnumerator Play()
     {
-        WasSkipped     = false;
+        WasSkipped = false;
         _skipRequested = false;
-        _playing       = false;
-        _lastTapTime   = -99f;
+        _playing = false;
+        _lastTapTime = -99f;
 
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
 
-        // Canvas sort order'ı yüksek tut — board canvas'ın üzerinde render edilsin.
         if (_canvas == null)
             _canvas = GetComponent<Canvas>() ?? GetComponentInParent<Canvas>(true);
+
         if (_canvas != null)
         {
             _canvas.overrideSorting = true;
             _canvas.sortingOrder = canvasSortOrder;
         }
 
-        Debug.Log($"[LogoAnim] Play — overlay={overlayImage != null}  tinys={tinysImage != null}  fixersL={fixersLeftImage != null}  fixersR={fixersRightImage != null}  vfx={vfxRoot != null}  canvas={(_canvas != null ? _canvas.sortingOrder.ToString() : "null")}");
-
+        ClearSpawnedFireworks();
+        SetLogoPiecesVisible(true);
+        SetVfxRootVisible(true);
+        PrepareOverlayForAnimation();
         SetOverlayAlpha(0f);
 
-        // Çift tıklama algılamayı hemen aç — fade sırasında da tıklama kabul edilsin.
         _playing = true;
 
-        // Fade-in overlay
-        yield return StartCoroutine(FadeOverlay(0f, overlayTargetAlpha, dimFadeDuration));
+        float targetAlpha = TargetOverlayAlpha;
+        yield return StartCoroutine(FadeOverlay(0f, targetAlpha, dimFadeDuration));
 
         if (_skipRequested)
         {
-            _playing   = false;
+            _playing = false;
             WasSkipped = true;
-            yield return StartCoroutine(FadeOverlay(overlayTargetAlpha, 0f, dimFadeDuration));
-            gameObject.SetActive(false);
+            yield return StartCoroutine(FadeOverlay(targetAlpha, 0f, dimFadeDuration));
+            HideVisualsAfterPlay();
             yield break;
         }
 
-        // Logo parçalarını başlangıç pozisyonlarına al
         var startOffsets = new Vector2[]
         {
-            new Vector2(0f,               tinysTopOffset),      // tinys — yukarıdan
-            new Vector2(-fixersSideOffset, -fixersBottomOffset), // sol  — sol alttan
-            new Vector2( fixersSideOffset, -fixersBottomOffset), // sağ  — sağ alttan
+            new Vector2(0f, tinysTopOffset),
+            new Vector2(-fixersSideOffset, -fixersBottomOffset),
+            new Vector2(fixersSideOffset, -fixersBottomOffset),
         };
 
-        var pieces  = new RectTransform[] { tinysImage, fixersLeftImage, fixersRightImage };
+        var pieces = new RectTransform[] { tinysImage, fixersLeftImage, fixersRightImage };
         var centers = new Vector2[pieces.Length];
 
         for (int i = 0; i < pieces.Length; i++)
         {
-            if (pieces[i] == null) continue;
+            if (pieces[i] == null)
+                continue;
+
             centers[i] = pieces[i].anchoredPosition;
             pieces[i].anchoredPosition = centers[i] + startOffsets[i];
         }
 
-        // Fişekleri arka planda başlat
         StartCoroutine(PlayFireworks());
 
-        // Uçuş animasyonu
         float elapsed = 0f;
         while (elapsed < flyInDuration && !_skipRequested)
         {
@@ -144,19 +151,22 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
 
             for (int i = 0; i < pieces.Length; i++)
             {
-                if (pieces[i] == null) continue;
+                if (pieces[i] == null)
+                    continue;
+
                 pieces[i].anchoredPosition = Vector2.LerpUnclamped(
                     centers[i] + startOffsets[i], centers[i], e);
             }
+
             yield return null;
         }
 
-        // Merkeze kilitle
         for (int i = 0; i < pieces.Length; i++)
+        {
             if (pieces[i] != null)
                 pieces[i].anchoredPosition = centers[i];
+        }
 
-        // Bekleme
         float holdElapsed = 0f;
         while (holdElapsed < holdDuration && !_skipRequested)
         {
@@ -164,30 +174,42 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
             yield return null;
         }
 
-        _playing   = false;
+        _playing = false;
         WasSkipped = _skipRequested;
 
-        // Fade-out overlay
-        yield return StartCoroutine(FadeOverlay(overlayTargetAlpha, 0f, dimFadeDuration));
-
-        gameObject.SetActive(false);
+        yield return StartCoroutine(FadeOverlay(targetAlpha, 0f, dimFadeDuration));
+        HideVisualsAfterPlay();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // OVERLAY
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
+    private void PrepareOverlayForAnimation()
+    {
+        if (overlayImage == null)
+            return;
+
+        overlayImage.enabled = true;
+        overlayImage.raycastTarget = false;
+
+        var c = overlayImage.color;
+        c.a = 0f;
+        overlayImage.color = c;
+    }
 
     private void SetOverlayAlpha(float a)
     {
-        if (overlayImage == null) return;
+        if (overlayImage == null)
+            return;
+
         var c = overlayImage.color;
-        c.a = a;
+        c.a = keepOverlayTransparent ? 0f : Mathf.Clamp01(a);
         overlayImage.color = c;
     }
 
     private IEnumerator FadeOverlay(float from, float to, float duration)
     {
-        if (overlayImage == null) yield break;
+        if (overlayImage == null)
+            yield break;
+
         float elapsed = 0f;
         while (elapsed < duration)
         {
@@ -195,29 +217,79 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
             SetOverlayAlpha(Mathf.Lerp(from, to, Mathf.Clamp01(elapsed / duration)));
             yield return null;
         }
+
         SetOverlayAlpha(to);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // FİŞEK
-    // ─────────────────────────────────────────────────────────────────────────
+    private void HideVisualsAfterPlay()
+    {
+        _playing = false;
+        _skipRequested = false;
 
+        SetOverlayAlpha(0f);
+
+        if (overlayImage != null)
+        {
+            overlayImage.enabled = keepOverlayTransparent ? false : overlayImage.enabled;
+            overlayImage.raycastTarget = false;
+        }
+
+        SetLogoPiecesVisible(false);
+        SetVfxRootVisible(false);
+        ClearSpawnedFireworks();
+
+        // Do not disable gameObject here. The bonus-round skipButton may be a child of this root.
+    }
+
+    private void SetLogoPiecesVisible(bool visible)
+    {
+        SetGraphicVisible(tinysImage, visible);
+        SetGraphicVisible(fixersLeftImage, visible);
+        SetGraphicVisible(fixersRightImage, visible);
+    }
+
+    private static void SetGraphicVisible(RectTransform target, bool visible)
+    {
+        if (target == null)
+            return;
+
+        var image = target.GetComponent<Image>();
+        if (image != null)
+        {
+            image.enabled = visible;
+            image.raycastTarget = false;
+        }
+
+        var canvasGroup = target.GetComponent<CanvasGroup>();
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = visible ? 1f : 0f;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+        }
+    }
+
+    private void SetVfxRootVisible(bool visible)
+    {
+        if (vfxRoot != null)
+            vfxRoot.gameObject.SetActive(visible);
+    }
+
+    // -------------------------------------------------------------------------
     private IEnumerator PlayFireworks()
     {
         if (vfxRoot == null)
-        {
-            Debug.LogWarning("[LogoAnim] vfxRoot atanmamış — fişek çalışmaz.");
             yield break;
-        }
 
         yield return new WaitForSecondsRealtime(fireworkDelay);
 
         for (int i = 0; i < fireworkBurstCount && !_skipRequested; i++)
         {
             Vector2 pos = new Vector2(Random.Range(-200f, 200f), Random.Range(-60f, 280f));
-            Color   col = (Random.value > 0.5f)
+            Color col = Random.value > 0.5f
                 ? new Color(1f, 0.18f, 0.08f)
                 : new Color(1f, 0.85f, 0.10f);
+
             StartCoroutine(BurstAt(pos, col));
             yield return new WaitForSecondsRealtime(fireworkInterval);
         }
@@ -226,11 +298,11 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
     private IEnumerator BurstAt(Vector2 center, Color baseColor)
     {
         const float duration = 0.70f;
-        const float gravity  = 300f;
+        const float gravity = 300f;
         int count = Random.Range(12, 20);
 
-        var rts  = new RectTransform[count];
-        var cgs  = new CanvasGroup[count];
+        var rts = new RectTransform[count];
+        var cgs = new CanvasGroup[count];
         var vels = new Vector2[count];
 
         for (int i = 0; i < count; i++)
@@ -247,48 +319,73 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
         }
 
         float elapsed = 0f;
-        while (elapsed < duration)
+        while (elapsed < duration && !_skipRequested)
         {
             elapsed += Time.unscaledDeltaTime;
             float t = elapsed / duration;
+
             for (int i = 0; i < count; i++)
             {
-                if (rts[i] == null) continue;
+                if (rts[i] == null)
+                    continue;
+
                 vels[i].y -= gravity * Time.unscaledDeltaTime;
                 rts[i].anchoredPosition += vels[i] * Time.unscaledDeltaTime;
-                if (cgs[i] != null) cgs[i].alpha = 1f - t * t;
+
+                if (cgs[i] != null)
+                    cgs[i].alpha = 1f - t * t;
             }
+
             yield return null;
         }
 
         for (int i = 0; i < count; i++)
-            if (rts[i] != null) Destroy(rts[i].gameObject);
+        {
+            if (rts[i] != null)
+            {
+                spawnedFireworkVfx.Remove(rts[i].gameObject);
+                Destroy(rts[i].gameObject);
+            }
+        }
+
+        spawnedFireworkVfx.RemoveAll(go => go == null);
     }
 
     private RectTransform CreateDot(Vector2 pos, float size, Color color)
     {
-        var go = new GameObject("FwDot",
-            typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+        var go = new GameObject("FwDot", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+        spawnedFireworkVfx.Add(go);
+
         go.transform.SetParent(vfxRoot, false);
         go.transform.localScale = Vector3.one;
 
         var rt = go.GetComponent<RectTransform>();
-        rt.sizeDelta        = new Vector2(size, size);
+        rt.sizeDelta = new Vector2(size, size);
         rt.anchoredPosition = pos;
 
         var img = go.GetComponent<Image>();
-        img.color         = color;
+        img.color = color;
         img.raycastTarget = false;
 
         var cg = go.GetComponent<CanvasGroup>();
         cg.blocksRaycasts = false;
-        cg.interactable   = false;
+        cg.interactable = false;
 
         return rt;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
+    private void ClearSpawnedFireworks()
+    {
+        for (int i = 0; i < spawnedFireworkVfx.Count; i++)
+        {
+            if (spawnedFireworkVfx[i] != null)
+                Destroy(spawnedFireworkVfx[i]);
+        }
 
+        spawnedFireworkVfx.Clear();
+    }
+
+    // -------------------------------------------------------------------------
     private static float EaseOutBack(float t)
     {
         const float c1 = 1.70158f;

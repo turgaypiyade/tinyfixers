@@ -612,18 +612,36 @@ public sealed class LineVHPulseCoreCombo
         var hOrigins = new List<(Vector2Int cell, Vector2 anch)>();
         var vOrigins = new List<(Vector2Int cell, Vector2 anch)>();
 
+        // Tile parent is used as fallback when board.Tiles[x,y] is null (combo tiles are
+        // data-cleared before ExecuteVisuals runs). Parent transform is stable and gives
+        // correct world positions for any grid cell regardless of which tile is the center.
+        var anyTileRect = orbitPulseTile?.GetComponent<RectTransform>()
+                          ?? orbitLineTile?.GetComponent<RectTransform>();
+        var tileParent = anyTileRect?.parent as RectTransform;
+
         for (int yy = cy - 1; yy <= cy + 1; yy++)
         {
             if (yy < 0 || yy >= board.Height)
                 continue;
 
+            Vector2 anchoredPos;
             var originTile = board.Tiles[cx, yy];
-            if (originTile == null)
+            if (originTile != null)
+            {
+                var originRect = originTile.GetComponent<RectTransform>();
+                var worldCenter = originRect.TransformPoint(new Vector3(board.TileSize * 0.5f, -board.TileSize * 0.5f, 0f));
+                anchoredPos = board.WorldToAnchoredIn(space, worldCenter);
+            }
+            else if (tileParent != null)
+            {
+                var localCenter = new Vector3(cx * board.TileSize + board.TileSize * 0.5f,
+                                              -yy * board.TileSize - board.TileSize * 0.5f, 0f);
+                anchoredPos = board.WorldToAnchoredIn(space, tileParent.TransformPoint(localCenter));
+            }
+            else
                 continue;
 
-            var originRect = originTile.GetComponent<RectTransform>();
-            var worldCenter = originRect.TransformPoint(new Vector3(board.TileSize * 0.5f, -board.TileSize * 0.5f, 0f));
-            hOrigins.Add((new Vector2Int(cx, yy), board.WorldToAnchoredIn(space, worldCenter)));
+            hOrigins.Add((new Vector2Int(cx, yy), anchoredPos));
         }
 
         for (int xx = cx - 1; xx <= cx + 1; xx++)
@@ -631,13 +649,24 @@ public sealed class LineVHPulseCoreCombo
             if (xx < 0 || xx >= board.Width)
                 continue;
 
+            Vector2 anchoredPos;
             var originTile = board.Tiles[xx, cy];
-            if (originTile == null)
+            if (originTile != null)
+            {
+                var originRect = originTile.GetComponent<RectTransform>();
+                var worldCenter = originRect.TransformPoint(new Vector3(board.TileSize * 0.5f, -board.TileSize * 0.5f, 0f));
+                anchoredPos = board.WorldToAnchoredIn(space, worldCenter);
+            }
+            else if (tileParent != null)
+            {
+                var localCenter = new Vector3(xx * board.TileSize + board.TileSize * 0.5f,
+                                              -cy * board.TileSize - board.TileSize * 0.5f, 0f);
+                anchoredPos = board.WorldToAnchoredIn(space, tileParent.TransformPoint(localCenter));
+            }
+            else
                 continue;
 
-            var originRect = originTile.GetComponent<RectTransform>();
-            var worldCenter = originRect.TransformPoint(new Vector3(board.TileSize * 0.5f, -board.TileSize * 0.5f, 0f));
-            vOrigins.Add((new Vector2Int(xx, cy), board.WorldToAnchoredIn(space, worldCenter)));
+            vOrigins.Add((new Vector2Int(xx, cy), anchoredPos));
         }
 
         var targetVisuals = new Dictionary<Vector2Int, (TileType type, TileView view)>();

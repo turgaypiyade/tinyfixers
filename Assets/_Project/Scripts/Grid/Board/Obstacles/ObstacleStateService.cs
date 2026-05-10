@@ -438,6 +438,11 @@ public class ObstacleStateService
         if (!IsValidCell(x, y))
             return false;
 
+        // OverTileBlocker davranışındaki engeller altındaki tile'ı her zaman kilitler;
+        // Inspector'da locksInteraction işaretlemeye gerek kalmaz.
+        if (IsOverTileBlockerAt(x, y))
+            return true;
+
         int idx = level.Index(x, y);
         var obsId = (ObstacleId)level.obstacles[idx];
         if (obsId == ObstacleId.None)

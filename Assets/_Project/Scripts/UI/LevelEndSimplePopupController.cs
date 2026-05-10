@@ -23,7 +23,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private SuccessAnimationPlayer successAnimationPlayer;
 
     [Header("Bonus Round Skip")]
-    [Tooltip("Transparent fullscreen button shown during the bonus round. Tap to skip the comet animation.")]
+    [Tooltip("Transparent fullscreen button shown during the bonus round. Tap once to hard-skip remaining-moves effects and open success popup.")]
     [SerializeField] private Button skipBonusRoundButton;
 
     [Header("Success Video")]
@@ -97,8 +97,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private string coinsSuffix = " coin";
 
     [Header("Star Thresholds (remaining moves / starting moves)")]
-    [Range(0f, 1f)] [SerializeField] private float star3Ratio = 0.5f;
-    [Range(0f, 1f)] [SerializeField] private float star2Ratio = 0.2f;
+    [Range(0f, 1f)][SerializeField] private float star3Ratio = 0.5f;
+    [Range(0f, 1f)][SerializeField] private float star2Ratio = 0.2f;
 
     [Header("Coin Reward")]
     [Tooltip("Fallback only when ActiveLevelData is unavailable. Normal rewards come from LevelData.baseCoinReward.")]
@@ -125,10 +125,16 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private Coroutine mainScreenDimRoutine;
     private readonly List<CanvasGroup> mainScreenDimTargets = new();
 
+    private bool isBonusRoundRunning;
+    private bool hardSkipBonusRoundRequested;
+
     private void ResolveSerializedReferences()
     {
         if (chapterThemeApplier == null)
             chapterThemeApplier = FindFirstObjectByType<ChapterThemeApplier>(FindObjectsInactive.Include);
+
+        if (levelCompletionLogoAnimation == null)
+            levelCompletionLogoAnimation = FindFirstObjectByType<LevelCompletionLogoAnimation>(FindObjectsInactive.Include);
 
         var failRootByName = transform.Find("FailPopupRoot");
         if (failRootByName != null)
@@ -144,6 +150,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (blockerRoot != null && dimImage == null)
             dimImage = blockerRoot.GetComponent<Image>() ?? blockerRoot.GetComponentInChildren<Image>(true);
+
+        if (skipBonusRoundButton == null)
+            skipBonusRoundButton = ResolveSkipBonusButton();
 
         ResolveMainScreenDimTargets();
 
@@ -212,12 +221,26 @@ public class LevelEndSimplePopupController : MonoBehaviour
             successVideoPlayer = successVideoRoot.GetComponent<VideoPlayer>();
     }
 
+    private Button ResolveSkipBonusButton()
+    {
+        Transform canvasRoot = transform.parent != null ? transform.parent : transform;
+
+        Transform skip = canvasRoot.Find("LogoAnimPanel/skipButton")
+            ?? canvasRoot.Find("LogoAnimPanel/SkipButton")
+            ?? FindDeepChild(canvasRoot, "skipButton")
+            ?? FindDeepChild(canvasRoot, "SkipButton");
+
+        return skip != null ? skip.GetComponent<Button>() : null;
+    }
+
     private void OnEnable()
     {
-        Debug.Log("[LevelEnd] OnEnable çağrıldı.");
         failPopupShown = false;
         successPopupShown = false;
         successReturnQueued = false;
+        isBonusRoundRunning = false;
+        hardSkipBonusRoundRequested = false;
+
         ResolveSerializedReferences();
         ApplyChapterThemeVisuals();
         HideAllPopups();
@@ -235,6 +258,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         UnregisterButtonListeners();
         StopMainScreenDimRoutine();
         SetMainScreenAlpha(1f);
+        isBonusRoundRunning = false;
+        hardSkipBonusRoundRequested = false;
     }
 
     private IEnumerator InitializeWhenReady()
@@ -250,13 +275,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
         while (board == null || topHud == null || board.ActiveLevelData == null)
             yield return null;
 
-        Debug.Log($"[LevelEnd] InitializeWhenReady tamamlandı. board={board != null} topHud={topHud != null} levelData={board?.ActiveLevelData != null}");
         UnregisterButtonListeners();
         ResolveSerializedReferences();
         ApplyChapterThemeVisuals();
         RegisterButtonListeners();
         Subscribe();
-        Debug.Log("[LevelEnd] Subscribe() çağrıldı — event dinleniyor.");
         RefreshPopupCopy();
         SetBlockerVisible(false);
         RequestEvaluateLevelEndState();
@@ -264,14 +287,46 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void HandleFailCloseClicked()
     {
-        HideAllPopups();
-        ReturnToMainMenu();
+        ReturnToMainMenuImmediate();
     }
+
+    private bool returningToMainMenu;
 
     private void HandleSuccessCloseClicked()
     {
-        HideAllPopups();
-        ReturnToMainMenu();
+        ReturnToMainMenuImmediate();
+    }
+
+    private void ReturnToMainMenuImmediate()
+    {
+        if (returningToMainMenu)
+            return;
+
+        returningToMainMenu = true;
+
+        // Kullanıcı devam dediği anda arkayı göstermemek için popup'ı kapatma.
+        // Sadece input'u kilitle ve blocker'ı en üstte tut.
+        if (board != null)
+            board.SetInputLocked(true);
+
+        transform.SetAsLastSibling();
+
+        if (blockerRoot != null)
+        {
+            blockerRoot.SetActive(true);
+            blockerRoot.transform.SetAsLastSibling();
+        }
+
+        if (dimImage != null)
+        {
+            dimImage.enabled = true;
+            dimImage.raycastTarget = true;
+            dimImage.color = Color.black; // Tam siyah geçiş perdesi
+        }
+
+        var library = chapterThemeApplier != null ? chapterThemeApplier.ThemeLibrary : null;
+        LoadingScreenManager.Show(library != null ? library.GetRandomLoadingImage() : null);
+        SceneManager.LoadScene(mainMenuSceneName, LoadSceneMode.Single);
     }
 
     private void QueueSuccessReturnToMainMenu()
@@ -304,35 +359,26 @@ public class LevelEndSimplePopupController : MonoBehaviour
         while (board != null && (board.IsBusy || board.ActiveBackgroundJobs > 0))
             yield return null;
 
-        Debug.Log($"[LevelEnd] Logo anim ref: {(levelCompletionLogoAnimation != null ? levelCompletionLogoAnimation.name : "NULL")}");
         if (levelCompletionLogoAnimation != null)
-        {
-            Debug.Log("[LevelEnd] Logo anim Play() başlıyor.");
             yield return StartCoroutine(levelCompletionLogoAnimation.Play());
-            Debug.Log("[LevelEnd] Logo anim Play() bitti.");
-        }
 
         _movesAtWin = board != null ? board.RemainingMoves : 0;
 
-        // Logo animasyonu double-click ile atlandıysa bonus round da atlanır.
-        bool logoSkipped = levelCompletionLogoAnimation != null && levelCompletionLogoAnimation.WasSkipped;
+        hardSkipBonusRoundRequested = false;
 
         if (bonusMovesService != null && board != null && board.RemainingMoves > 0)
         {
             board.SetInputLocked(true);
-            if (logoSkipped)
-            {
-                bonusMovesService.RequestSkip();
-            }
-            else
-            {
-                SetSkipBonusOverlayVisible(true);
-            }
+            isBonusRoundRunning = true;
+            SetSkipBonusOverlayVisible(true);
+
             yield return StartCoroutine(bonusMovesService.RunBonusRound());
+
+            isBonusRoundRunning = false;
             SetSkipBonusOverlayVisible(false);
         }
 
-        if (successVideoStartDelay > 0f)
+        if (successVideoStartDelay > 0f && !hardSkipBonusRoundRequested)
             yield return new WaitForSecondsRealtime(successVideoStartDelay);
 
         successReturnQueued = false;
@@ -346,7 +392,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
             yield break;
         }
 
-        Debug.Log("[LevelEnd] Board settled. Showing success popup.");
+        Debug.Log(hardSkipBonusRoundRequested
+            ? "[LevelEnd] Bonus round hard skipped. Showing success popup."
+            : "[LevelEnd] Board settled. Showing success popup.");
+
         ShowSuccessPopup();
     }
 
@@ -431,7 +480,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
         PlayerPrefs.Save();
     }
 
-    private void ReturnToMainMenu() => SceneManager.LoadScene(mainMenuSceneName);
+    private void ReturnToMainMenu()
+    {
+        var library = chapterThemeApplier != null ? chapterThemeApplier.ThemeLibrary : null;
+        LoadingScreenManager.Show(library != null ? library.GetRandomLoadingImage() : null);
+        SceneManager.LoadScene(mainMenuSceneName);
+    }
 
     private void SetBlockerVisible(bool isVisible)
     {
@@ -444,14 +498,39 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void SetSkipBonusOverlayVisible(bool visible)
     {
-        if (skipBonusRoundButton != null)
-            skipBonusRoundButton.gameObject.SetActive(visible);
+        if (skipBonusRoundButton == null)
+            return;
+
+        if (visible)
+        {
+            EnsureParentHierarchyActive(skipBonusRoundButton.transform);
+            skipBonusRoundButton.transform.SetAsLastSibling();
+
+            var image = skipBonusRoundButton.GetComponent<Image>();
+            if (image != null)
+            {
+                image.enabled = true;
+                image.raycastTarget = true;
+                var c = image.color;
+                c.a = 0f;
+                image.color = c;
+            }
+        }
+
+        skipBonusRoundButton.gameObject.SetActive(visible);
     }
 
     private void HandleSkipBonusRound()
     {
+        if (!isBonusRoundRunning || hardSkipBonusRoundRequested)
+            return;
+
+        hardSkipBonusRoundRequested = true;
+
         if (bonusMovesService != null)
-            bonusMovesService.RequestSkip();
+            bonusMovesService.RequestHardSkip();
+
+        SetSkipBonusOverlayVisible(false);
     }
 
     private void Subscribe()
@@ -532,6 +611,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         failPopupShown = true;
         successPopupShown = false;
+
+        LivesManager.SpendLife();
         ApplyChapterThemeVisuals();
         RefreshFailOfferVisuals();
         transform.SetAsLastSibling();
@@ -700,6 +781,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
             Debug.LogWarning($"[LevelEnd] Extra move purchase failed. RequiredCoins={currentCost}, PlayerCoins={PlayerWallet.Coins}");
             return;
         }
+
+        // Fail popup açılırken harcanan hakkı geri ver; oyuncu devam ediyor.
+        LivesManager.AddLives(1);
 
         board.AddMoves(currentOfferAmount);
         extraMoveOfferAttempt++;
@@ -1105,7 +1189,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
                 starImages[i].sprite = starEmptySprite;
 
             var color = starImages[i].color;
-            color.a = 0.35f;
+            color.a = 1f;
             starImages[i].color = color;
             starImages[i].transform.localScale = Vector3.one;
         }
@@ -1178,6 +1262,46 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         var child = root.Find(path);
         return child != null ? child.GetComponent<T>() : null;
+    }
+
+    private static Transform FindDeepChild(Transform parent, string childName)
+    {
+        if (parent == null)
+            return null;
+
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child.name == childName)
+                return child;
+
+            Transform nested = FindDeepChild(child, childName);
+            if (nested != null)
+                return nested;
+        }
+
+        return null;
+    }
+
+    private static void EnsureParentHierarchyActive(Transform target)
+    {
+        if (target == null)
+            return;
+
+        var stack = new Stack<GameObject>();
+        Transform current = target;
+        while (current != null)
+        {
+            stack.Push(current.gameObject);
+            current = current.parent;
+        }
+
+        while (stack.Count > 0)
+        {
+            GameObject go = stack.Pop();
+            if (go != null && !go.activeSelf)
+                go.SetActive(true);
+        }
     }
 
     private static string LocalizedText(string key, string fallback)

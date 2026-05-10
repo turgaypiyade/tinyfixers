@@ -63,4 +63,18 @@ public class ChapterThemeLibrary : ScriptableObject
     {
         return GetChapterForLevel(PlayerPrefs.GetInt(prefsLevelKey, 1));
     }
+
+    /// <summary>
+    /// Mevcut chapter'ın loading screen görselleri listesinden rastgele bir Sprite döner.
+    /// Liste boşsa null döner.
+    /// </summary>
+    public Sprite GetRandomLoadingImage()
+    {
+        var theme = GetCurrentTheme();
+        if (theme == null || theme.loadingScreenImages == null || theme.loadingScreenImages.Count == 0)
+            return null;
+
+        var list = theme.loadingScreenImages;
+        return list[Random.Range(0, list.Count)];
+    }
 }

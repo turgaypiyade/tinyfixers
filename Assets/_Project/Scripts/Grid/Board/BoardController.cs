@@ -951,6 +951,9 @@ public class BoardController : MonoBehaviour
         if (obstacleStateService != null &&
             (obstacleStateService.IsUnderTileObstacleAt(from.X, from.Y) || obstacleStateService.IsUnderTileObstacleAt(nx, ny)))
             return;
+        if (obstacleStateService != null &&
+            (obstacleStateService.IsInteractionLockedAt(from.X, from.Y) || obstacleStateService.IsInteractionLockedAt(nx, ny)))
+            return;
         TileView other = tiles[nx, ny]; if (other == null) return;
         StartCoroutine(ProcessSwap(from, other));
     }
@@ -966,7 +969,8 @@ public class BoardController : MonoBehaviour
             var a = selected;
             selected = null;
             bool underTileBlocked = obstacleStateService != null &&
-                (obstacleStateService.IsUnderTileObstacleAt(a.X, a.Y) || obstacleStateService.IsUnderTileObstacleAt(tile.X, tile.Y));
+                (obstacleStateService.IsUnderTileObstacleAt(a.X, a.Y) || obstacleStateService.IsUnderTileObstacleAt(tile.X, tile.Y)
+                 || obstacleStateService.IsInteractionLockedAt(a.X, a.Y) || obstacleStateService.IsInteractionLockedAt(tile.X, tile.Y));
             if (!underTileBlocked)
                 StartCoroutine(ProcessSwap(a, tile));
             return;

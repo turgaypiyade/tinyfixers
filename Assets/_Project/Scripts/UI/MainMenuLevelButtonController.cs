@@ -8,11 +8,22 @@ public class MainMenuLevelButtonController : MonoBehaviour
     [SerializeField] private string gameSceneName = "01_Game";
     [SerializeField] private string prefsLevelKey = "current_level";
     [SerializeField] private PreLevelSpecialPopupController preLevelSpecialPopup;
+    [SerializeField] private ChapterThemeLibrary themeLibrary;
+
+    [Header("Can Sistemi")]
+    [Tooltip("Can = 0 iken level butonuna basılınca yönlendirilecek can göstergesi.")]
+    [SerializeField] private MainMenuLivesDisplay livesDisplay;
+
+    [Header("İlk Açılış")]
+    [Tooltip("Oyunu ilk kez açan kullanıcıya verilecek altın miktarı.")]
+    [SerializeField] private int initialCoins = 500;
 
     private int currentLevel;
 
     private void Start()
     {
+        LivesTimerService.InitialCoins = initialCoins;
+        LivesTimerService.EnsureExists();
         currentLevel = PlayerPrefs.GetInt(prefsLevelKey, 1);
         UpdateVisual();
     }
@@ -35,15 +46,26 @@ public class MainMenuLevelButtonController : MonoBehaviour
 
     public void OnLevelButtonClicked()
     {
+        if (!LivesManager.HasLives)
+        {
+            // Can yoksa reklam akışını lives display üzerinden başlat.
+            if (livesDisplay == null)
+                livesDisplay = FindFirstObjectByType<MainMenuLivesDisplay>();
+            livesDisplay?.OnAreaClicked();
+            return;
+        }
+
         if (preLevelSpecialPopup == null)
             preLevelSpecialPopup = FindPreLevelPopupInScene();
 
         if (preLevelSpecialPopup != null)
         {
+            // Pre-level popup kendi içinde scene yüklediğinde LoadingScreen'i kendisi gösterir.
             preLevelSpecialPopup.Open();
             return;
         }
 
+        LoadingScreenManager.Show(themeLibrary != null ? themeLibrary.GetRandomLoadingImage() : null);
         SceneManager.LoadScene(gameSceneName);
     }
 

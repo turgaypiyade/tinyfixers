@@ -385,6 +385,9 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         PreLevelSpecialRuntimeInjector.EnsureForSelection(selected);
         RefreshCounts();
         PlayOneShot(continueSfx);
+
+        var library = ResolveThemeLibrary();
+        LoadingScreenManager.Show(library != null ? library.GetRandomLoadingImage() : null);
         SceneManager.LoadScene(gameSceneName);
     }
 
