@@ -53,7 +53,8 @@ public enum ObstacleId : int
     Big_4x4 = 20,
 
     ColorChest = 21,
-    EnergyContainer = 22
+    EnergyContainer = 22,
+    BatteryBox = 23
 }
 
 [CreateAssetMenu(fileName = "Level_001", menuName = "CoreCollapse/Level Data", order = 1)]

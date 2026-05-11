@@ -62,6 +62,7 @@ public class TopHudController : MonoBehaviour
         board.OnMovesChanged -= HandleMovesChanged;
         board.OnTilesCleared -= HandleTilesCleared;
         board.OnObstacleDestroyed -= HandleObstacleDestroyed;
+        board.OnBatteryHit -= HandleBatteryHit;
         initialized = false;
     }
 
@@ -79,10 +80,12 @@ public class TopHudController : MonoBehaviour
         board.OnMovesChanged -= HandleMovesChanged;
         board.OnTilesCleared -= HandleTilesCleared;
         board.OnObstacleDestroyed -= HandleObstacleDestroyed;
+        board.OnBatteryHit -= HandleBatteryHit;
 
         board.OnMovesChanged += HandleMovesChanged;
         board.OnTilesCleared += HandleTilesCleared;
         board.OnObstacleDestroyed += HandleObstacleDestroyed;
+        board.OnBatteryHit += HandleBatteryHit;
 
         BuildGoals(board.ActiveLevelData);
         RefreshMoves(board.RemainingMoves);
@@ -223,12 +226,36 @@ public class TopHudController : MonoBehaviour
 
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
     {
+        // BatteryBox goal'u per-hit (HandleBatteryHit) takip edilir, yıkılınca çift sayma olmasın.
+        if (obstacleId == ObstacleId.BatteryBox)
+            return;
+
         bool anyGoalUpdated = false;
 
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
             var goal = runtimeGoals[i];
             if (goal.definition.targetType != LevelGoalTargetType.Obstacle || goal.definition.obstacleId != obstacleId)
+                continue;
+
+            int previous = goal.remaining;
+            goal.remaining = Mathf.Max(0, goal.remaining - 1);
+            goal.slot?.SetRemaining(goal.remaining);
+            anyGoalUpdated |= goal.remaining != previous;
+        }
+
+        if (anyGoalUpdated)
+            UpdateGoalsCompletionState();
+    }
+
+    private void HandleBatteryHit(int originIndex, ChestColorMask color, int remaining)
+    {
+        bool anyGoalUpdated = false;
+
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var goal = runtimeGoals[i];
+            if (goal.definition.targetType != LevelGoalTargetType.Obstacle || goal.definition.obstacleId != ObstacleId.BatteryBox)
                 continue;
 
             int previous = goal.remaining;

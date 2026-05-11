@@ -58,6 +58,8 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private bool drawObstacles = true;
     [Tooltip("ColorChest icin katmanli gorsel prefabi (ChestObstacleView component'i olmali)")]
     [SerializeField] private ChestObstacleView chestObstacleViewPrefab;
+    [Tooltip("BatteryBox icin katmanli gorsel prefabi (BatteryBoxView component'i olmali)")]
+    [SerializeField] private BatteryBoxView batteryBoxViewPrefab;
 
     [Header("Initial Resolve")]
     [SerializeField] private bool resolveInitialOnStart = false;
@@ -77,6 +79,7 @@ public class GridSpawner : MonoBehaviour
     private readonly Dictionary<int, Image> obstacleViewsByOrigin = new();
     private readonly Dictionary<int, ObstacleDef> obstacleDefsByOrigin = new();
     private readonly Dictionary<int, ChestObstacleView> _chestViews = new();
+    private readonly Dictionary<int, BatteryBoxView> _batteryBoxViews = new();
     private readonly Dictionary<int, GameObject> cellBgByIndex = new();
     private readonly Dictionary<int, Image> cellBgImageByIndex = new();
     private readonly Dictionary<int, Color> baseCellBgColorByIndex = new();
@@ -180,6 +183,7 @@ public class GridSpawner : MonoBehaviour
         board.OnObstacleCreatedDynamic      += HandleObstacleCreatedDynamic;
         board.OnChestOpened                 += HandleChestOpened;
         board.OnChestColorRemoved           += HandleChestColorRemoved;
+        board.OnBatteryHit                  += HandleBatteryHit;
     }
 
     private void UnbindBoardEvents()
@@ -192,6 +196,7 @@ public class GridSpawner : MonoBehaviour
         board.OnObstacleCreatedDynamic     -= HandleObstacleCreatedDynamic;
         board.OnChestOpened                -= HandleChestOpened;
         board.OnChestColorRemoved          -= HandleChestColorRemoved;
+        board.OnBatteryHit                 -= HandleBatteryHit;
     }
 
     private void ApplyPaddingToSpawnParent()
@@ -973,6 +978,115 @@ public class GridSpawner : MonoBehaviour
         return rootImage;
     }
 
+    // BatteryBox: ColorChest ile aynı layout, fakat piller baştan açık ve 3 state'e sahip.
+    private Image SpawnBatteryBoxView(ObstacleDef def, int x, int y)
+    {
+        bool drawUnder = ResolveBehaviorForOrigin(resolvedLevel.Index(x, y), def) == ObstacleBehaviorType.UnderTileLayered;
+        var parent = drawUnder ? underTilesObstaclesRoot : overTilesObstaclesRoot;
+
+        int w = Mathf.Max(1, def.size.x);
+        int h = Mathf.Max(1, def.size.y);
+        float gridOverlap = Mathf.Max(1f, Mathf.Ceil(runtimeGridLineThickness * 0.5f));
+        int originIndex = resolvedLevel.Index(x, y);
+
+        bool HasDifferentAt(int cx, int cy)
+        {
+            if (cx < 0 || cx >= width || cy < 0 || cy >= height) return false;
+            int idx = resolvedLevel.Index(cx, cy);
+            if (idx < 0 || idx >= resolvedLevel.obstacles.Length) return false;
+            if ((ObstacleId)resolvedLevel.obstacles[idx] == ObstacleId.None) return false;
+            return resolvedLevel.obstacleOrigins[idx] != originIndex;
+        }
+
+        bool dL = false, dR = false, dT = false, dB = false;
+        for (int yy = y; yy < y + h; yy++) { if (HasDifferentAt(x - 1, yy)) dL = true; if (HasDifferentAt(x + w, yy)) dR = true; }
+        for (int xx = x; xx < x + w; xx++) { if (HasDifferentAt(xx, y - 1)) dT = true; if (HasDifferentAt(xx, y + h)) dB = true; }
+
+        float lo = dL ? 0f : gridOverlap;
+        float ro = dR ? 0f : gridOverlap;
+        float to = dT ? 0f : gridOverlap;
+        float bo = dB ? 0f : gridOverlap;
+
+        BatteryBoxView view;
+        Image rootImage;
+
+        if (batteryBoxViewPrefab != null)
+        {
+            view = Instantiate(batteryBoxViewPrefab, parent);
+            rootImage = view.GetComponent<Image>();
+            if (rootImage == null) rootImage = view.gameObject.AddComponent<Image>();
+        }
+        else
+        {
+            var fallback = new GameObject($"Obs_BatteryBox_{x}_{y}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            fallback.transform.SetParent(parent, false);
+            rootImage = fallback.GetComponent<Image>();
+            view = fallback.AddComponent<BatteryBoxView>();
+            CreateBatteryChildImages(view, fallback.transform);
+        }
+
+        Sprite boxSprite = def.GetPreviewSprite();
+        if (rootImage != null && boxSprite != null)
+        {
+            rootImage.sprite = boxSprite;
+            rootImage.type = Image.Type.Simple;
+            rootImage.preserveAspect = false;
+        }
+
+        var rt = rootImage != null ? rootImage.GetComponent<RectTransform>() : null;
+        if (rt != null)
+        {
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot     = new Vector2(0, 1);
+            rt.anchoredPosition = new Vector2(x * tileSize - lo, -y * tileSize + to);
+            rt.sizeDelta = new Vector2(w * tileSize + lo + ro, h * tileSize + to + bo);
+        }
+
+        if (rootImage != null)
+        {
+            var clickProxy = rootImage.gameObject.AddComponent<ObstacleClickProxy>();
+            clickProxy.Init(board, x, y);
+            rootImage.raycastTarget = true;
+        }
+
+        if (view != null)
+        {
+            view.ApplyLayout();
+            // BatteryBox baştan açık — tüm piller gösterilir, tam dolu state ile
+            int hitsPerBattery = Mathf.Max(1, def.hits);
+            view.ApplyBatteryState(ChestColorMask.Gear,  hitsPerBattery, hitsPerBattery);
+            view.ApplyBatteryState(ChestColorMask.Core,  hitsPerBattery, hitsPerBattery);
+            view.ApplyBatteryState(ChestColorMask.Bolt,  hitsPerBattery, hitsPerBattery);
+            view.ApplyBatteryState(ChestColorMask.Plate, hitsPerBattery, hitsPerBattery);
+            _batteryBoxViews[originIndex] = view;
+        }
+
+        return rootImage;
+    }
+
+    private static void CreateBatteryChildImages(BatteryBoxView view, Transform parent)
+    {
+        ChestColorMask[] colors = { ChestColorMask.Gear, ChestColorMask.Core, ChestColorMask.Bolt, ChestColorMask.Plate };
+        foreach (var color in colors)
+        {
+            var go = new GameObject($"Battery_{color}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            img.raycastTarget = false;
+            view.SetBatteryImage(color, img);
+        }
+    }
+
+    private void HandleBatteryHit(int originIndex, ChestColorMask color, int remaining)
+    {
+        if (!_batteryBoxViews.TryGetValue(originIndex, out var view) || view == null) return;
+        if (!obstacleDefsByOrigin.TryGetValue(originIndex, out var def) || def == null) return;
+        int maxHits = Mathf.Max(1, def.hits);
+        view.ApplyBatteryState(color, remaining, maxHits);
+        view.Shake();
+    }
+
     private Image DrawObstacleImage(ObstacleDef def, int x, int y)
     {
         if (def == null)
@@ -985,6 +1099,9 @@ public class GridSpawner : MonoBehaviour
 
         if (def.id == ObstacleId.ColorChest)
             return SpawnChestObstacleView(def, x, y);
+
+        if (def.id == ObstacleId.BatteryBox)
+            return SpawnBatteryBoxView(def, x, y);
 
         Sprite sprite = def.GetPreviewSprite();
         if (sprite == null) return null;

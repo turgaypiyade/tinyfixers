@@ -263,6 +263,7 @@ public class BoardController : MonoBehaviour
     public event Action<int, int> OnObstacleCreatedDynamic;
     public event Action<int> OnChestOpened;
     public event Action<int, ChestColorMask> OnChestColorRemoved;
+    public event Action<int, ChestColorMask, int> OnBatteryHit;
     public event Action<int> OnMovesChanged;
     public event Action<TileType, int> OnTilesCleared;
     public event Action<bool> OnBoosterTargetingChanged;
@@ -2066,6 +2067,8 @@ public class BoardController : MonoBehaviour
         obstacleStateService.OnChestColorRemoved -= HandleChestColorRemoved;
         obstacleStateService.OnChestOpened += HandleChestOpened;
         obstacleStateService.OnChestColorRemoved += HandleChestColorRemoved;
+        obstacleStateService.OnBatteryHit -= HandleBatteryHit;
+        obstacleStateService.OnBatteryHit += HandleBatteryHit;
     }
 
     private void HandleChestOpened(int originIndex)
@@ -2073,6 +2076,9 @@ public class BoardController : MonoBehaviour
 
     private void HandleChestColorRemoved(int originIndex, ChestColorMask removedColor)
         => OnChestColorRemoved?.Invoke(originIndex, removedColor);
+
+    private void HandleBatteryHit(int originIndex, ChestColorMask color, int remaining)
+        => OnBatteryHit?.Invoke(originIndex, color, remaining);
 
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
     {

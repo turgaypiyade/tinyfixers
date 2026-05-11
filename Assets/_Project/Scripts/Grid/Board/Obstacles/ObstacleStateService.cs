@@ -91,12 +91,17 @@ public class ObstacleStateService
     // ColorChest: origin index → kalan renk maskesi
     private readonly Dictionary<int, ChestColorMask> _chestColorStates = new();
 
+    // BatteryBox: origin index → int[4] kalan hit (Gear/Core/Bolt/Plate sırasıyla)
+    private readonly Dictionary<int, int[]> _batteryHitsByOrigin = new();
+
     public event Action<int, ObstacleStageSnapshot> OnObstacleStageChanged;
     public event Action<int, ObstacleId> OnObstacleDestroyed;
     public event Action<int> OnCellUnlocked;
     // ColorChest açılış ve renk kırılması bildirimleri
     public event Action<int> OnChestOpened;
     public event Action<int, ChestColorMask> OnChestColorRemoved;
+    // BatteryBox: origin, hangi renk pilin kaç hiti kaldı
+    public event Action<int, ChestColorMask, int> OnBatteryHit;
 
     public readonly struct ObstacleHitResult
     {
@@ -159,6 +164,7 @@ public class ObstacleStateService
             remainingHitsByOrigin[i] = -1;
 
         _chestColorStates.Clear();
+        _batteryHitsByOrigin.Clear();
 
         for (int idx = 0; idx < size; idx++)
         {
@@ -174,11 +180,15 @@ public class ObstacleStateService
             if (id == ObstacleId.EnergyContainer)
             {
                 // hits = energyPerContainer (active) + 1 (exhausted/FullyDisabled stage).
-                // This lets each level set a different ball count via LevelData.energyPerContainer
-                // without touching ObstacleLibrary. ObstacleLibrary only needs 2 stages:
-                //   stage 0 → Any (active), stage 1 → FullyDisabled (exhausted).
                 int perContainer = level != null ? Mathf.Max(1, level.energyPerContainer) : 1;
                 hits = perContainer + 1;
+            }
+            else if (id == ObstacleId.BatteryBox)
+            {
+                // def.hits = hit sayısı (per battery). 4 renk × def.hits = toplam.
+                int hitsPerBattery = Mathf.Max(1, def != null ? def.hits : 1);
+                hits = hitsPerBattery * 4;
+                _batteryHitsByOrigin[origin] = new int[] { hitsPerBattery, hitsPerBattery, hitsPerBattery, hitsPerBattery };
             }
             else
             {
@@ -274,6 +284,32 @@ public class ObstacleStateService
             // isOpen=false + SpecialActivation: kapalı dolabı açma işlemi, removedColor = None
         }
 
+        // BatteryBox renk-pil validasyonu
+        ChestColorMask batteryHitColor = ChestColorMask.None;
+        int batteryColorIndex = -1;
+        if (id == ObstacleId.BatteryBox)
+        {
+            if (!_batteryHitsByOrigin.TryGetValue(origin, out var batteryHits))
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            if (context == ObstacleHitContext.NormalMatch)
+            {
+                var colorFlag = sourceTileType.ToChestColor();
+                batteryColorIndex = BatteryColorToIndex(colorFlag);
+                if (batteryColorIndex < 0 || batteryHits[batteryColorIndex] <= 0)
+                    return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+                batteryHitColor = colorFlag;
+            }
+            else
+            {
+                // Special / Booster: kalan hit'i olan rastgele bir pili vur
+                batteryHitColor = PickRandomBatteryColor(batteryHits);
+                batteryColorIndex = BatteryColorToIndex(batteryHitColor);
+                if (batteryColorIndex < 0)
+                    return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+            }
+        }
+
         int[] affectedCells = CollectCellsForOrigin(origin, id);
         var previousStage = CreateSnapshot(def, id, remaining);
         bool wasChestClosed = id == ObstacleId.ColorChest
@@ -289,6 +325,14 @@ public class ObstacleStateService
             if (_chestColorStates.TryGetValue(origin, out var currentMask))
                 _chestColorStates[origin] = currentMask & ~removedColor;
             OnChestColorRemoved?.Invoke(origin, removedColor);
+        }
+
+        // BatteryBox pil hit'ini güncelle ve bildir
+        if (batteryHitColor != ChestColorMask.None && batteryColorIndex >= 0
+            && _batteryHitsByOrigin.TryGetValue(origin, out var hits))
+        {
+            hits[batteryColorIndex]--;
+            OnBatteryHit?.Invoke(origin, batteryHitColor, hits[batteryColorIndex]);
         }
 
         if (remaining <= 0)
@@ -569,6 +613,9 @@ public class ObstacleStateService
         if (originId == ObstacleId.ColorChest)
             _chestColorStates.Remove(origin);
 
+        if (originId == ObstacleId.BatteryBox)
+            _batteryHitsByOrigin.Remove(origin);
+
         OnObstacleDestroyed?.Invoke(origin, originId);
     }
 
@@ -683,7 +730,6 @@ public class ObstacleStateService
 
     private static ChestColorMask PickRandomChestColor(ChestColorMask mask)
     {
-        // Kalan bayrakları listeye al, rastgele biri seç
         ChestColorMask[] all = { ChestColorMask.Gear, ChestColorMask.Core, ChestColorMask.Bolt, ChestColorMask.Plate };
         int start = UnityEngine.Random.Range(0, all.Length);
         for (int i = 0; i < all.Length; i++)
@@ -691,6 +737,29 @@ public class ObstacleStateService
             var candidate = all[(start + i) % all.Length];
             if ((mask & candidate) != 0)
                 return candidate;
+        }
+        return ChestColorMask.None;
+    }
+
+    // int[4] → [Gear, Core, Bolt, Plate] index mapping
+    private static int BatteryColorToIndex(ChestColorMask color) => color switch
+    {
+        ChestColorMask.Gear  => 0,
+        ChestColorMask.Core  => 1,
+        ChestColorMask.Bolt  => 2,
+        ChestColorMask.Plate => 3,
+        _                    => -1
+    };
+
+    private static ChestColorMask PickRandomBatteryColor(int[] batteryHits)
+    {
+        ChestColorMask[] all = { ChestColorMask.Gear, ChestColorMask.Core, ChestColorMask.Bolt, ChestColorMask.Plate };
+        int start = UnityEngine.Random.Range(0, all.Length);
+        for (int i = 0; i < all.Length; i++)
+        {
+            int idx = (start + i) % all.Length;
+            if (batteryHits[idx] > 0)
+                return all[idx];
         }
         return ChestColorMask.None;
     }
