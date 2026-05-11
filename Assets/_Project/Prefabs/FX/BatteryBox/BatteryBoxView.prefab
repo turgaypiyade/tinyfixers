@@ -229,12 +229,12 @@ MonoBehaviour:
   shakeDuration: 0.3
   shakeMagnitude: 6
   shakeFrequency: 35
-  iconPadding: 8
+  iconPadding: 12
   innerSpacing: 0
-  verticalShift: 0
+  verticalShift: 0.11
   batteryAspect: {x: 1, y: 1}
   horizontalNudge: 0
-  iconScale: 0.8
+  iconScale: 0.85
 --- !u!1 &7067992316902756215
 GameObject:
   m_ObjectHideFlags: 0

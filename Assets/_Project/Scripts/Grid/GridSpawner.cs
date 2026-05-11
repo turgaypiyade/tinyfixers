@@ -552,6 +552,16 @@ public class GridSpawner : MonoBehaviour
 
     private void HandleObstacleStageChanged(int originIndex, ObstacleStageSnapshot nextStage)
     {
+        if (nextStage.behavior == ObstacleBehaviorType.MovableObstacle)
+        {
+            int mx = originIndex % width;
+            int my = originIndex / width;
+            var tileView = board.GetTileViewAt(mx, my);
+            if (tileView != null && nextStage.sprite != null && tileView.IconImage != null)
+                tileView.IconImage.sprite = nextStage.sprite;
+            return;
+        }
+
         if (!obstacleViewsByOrigin.TryGetValue(originIndex, out var image) || image == null)
             return;
 

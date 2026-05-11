@@ -1,10 +1,13 @@
 fileFormatVersion: 2
-guid: 108097bce56f74ffebbf62ea579f7eee
+guid: 7433fe5ae201f4343bf6086445143cab
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 7586767890124107699
-    second: BatteryBlue2_0
+      213: 6268507453053954130
+    second: OmegaModulV1_0
+  - first:
+      213: 4946729563842133885
+    second: OmegaModulV1_1
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +49,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 0
   alignment: 0
@@ -72,7 +75,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 1024
+    maxTextureSize: 512
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 2
@@ -113,23 +116,45 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: BatteryBlue2_0
+      name: OmegaOff
       rect:
         serializedVersion: 2
-        x: 201
-        y: 34
-        width: 599
-        height: 948
+        x: 0
+        y: 0
+        width: 417
+        height: 442
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 3bfef2c133d994960800000000000000
-      internalID: 7586767890124107699
+      spriteID: 2586b2b01563ef650800000000000000
+      internalID: 6268507453053954130
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OmegaOn
+      rect:
+        serializedVersion: 2
+        x: 468
+        y: 0
+        width: 416
+        height: 442
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d7fbbb4545056a440800000000000000
+      internalID: 4946729563842133885
       vertices: []
       indices: 
       edges: []
@@ -138,7 +163,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 18002f95de630462caf1931e1218550a
     internalID: 0
     vertices: []
     indices: 
@@ -148,7 +173,8 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      BatteryBlue2_0: 7586767890124107699
+      OmegaOff: 6268507453053954130
+      OmegaOn: 4946729563842133885
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
