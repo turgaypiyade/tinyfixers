@@ -325,7 +325,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         var library = chapterThemeApplier != null ? chapterThemeApplier.ThemeLibrary : null;
-        LoadingScreenManager.Show(library != null ? library.GetRandomLoadingImage() : null);
+        LoadingScreenManager.Show(library != null ? library.GetRandomLoadingImage() : null, minimumDisplayTime: 0f);
         SceneManager.LoadScene(mainMenuSceneName, LoadSceneMode.Single);
     }
 
@@ -483,7 +483,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private void ReturnToMainMenu()
     {
         var library = chapterThemeApplier != null ? chapterThemeApplier.ThemeLibrary : null;
-        LoadingScreenManager.Show(library != null ? library.GetRandomLoadingImage() : null);
+        LoadingScreenManager.Show(library != null ? library.GetRandomLoadingImage() : null, minimumDisplayTime: 0f);
         SceneManager.LoadScene(mainMenuSceneName);
     }
 

@@ -62,6 +62,62 @@ public class BoardAnimator
         clearEffectPlayers.Add(new SpecialCreationFormationEffectPlayer());
     }
 
+    private void StartPatchbotDashRequests(IReadOnlyList<BoardController.PatchbotDashRequest> requests)
+    {
+        if (requests == null || requests.Count == 0)
+            return;
+
+        if (board.PatchbotDashUI != null)
+        {
+            board.PatchbotDashUI.PlayDashParallel(
+                new List<BoardController.PatchbotDashRequest>(requests),
+                board);
+            return;
+        }
+
+        for (int i = 0; i < requests.Count; i++)
+        {
+            var request = requests[i];
+            request.onArrived?.Invoke();
+        }
+    }
+
+    private void StartPatchbotDashRequestsForLineCell(
+        List<BoardController.PatchbotDashRequest> pendingRequests,
+        Vector2Int cell)
+    {
+        if (pendingRequests == null || pendingRequests.Count == 0)
+            return;
+
+        List<BoardController.PatchbotDashRequest> readyRequests = null;
+        for (int i = pendingRequests.Count - 1; i >= 0; i--)
+        {
+            var request = pendingRequests[i];
+            if (request.from != cell)
+                continue;
+
+            readyRequests ??= new List<BoardController.PatchbotDashRequest>();
+            readyRequests.Add(request);
+            pendingRequests.RemoveAt(i);
+        }
+
+        if (readyRequests == null || readyRequests.Count == 0)
+            return;
+
+        readyRequests.Reverse();
+        StartPatchbotDashRequests(readyRequests);
+    }
+
+    private void FlushPendingPatchbotDashRequests(
+        List<BoardController.PatchbotDashRequest> pendingRequests)
+    {
+        if (pendingRequests == null || pendingRequests.Count == 0)
+            return;
+
+        StartPatchbotDashRequests(pendingRequests);
+        pendingRequests.Clear();
+    }
+
     /// <summary>
     /// Short "selected" pulse: scale up then back to original.
     /// Call this when a lightning/marker reaches a target to give feedback.
@@ -252,7 +308,7 @@ public class BoardAnimator
             $"suppress={suppressPerTileClearVfx}");
 
         board.ConsumePatchbotDashRequests(_patchbotDashBuffer);
-        Coroutine patchbotDashRoutine = null;
+        List<BoardController.PatchbotDashRequest> lineSweepPatchbotDashes = null;
 
         // Line sweep modunda PatchBot taşına sıra gelene kadar beklenmeli,
         // ama sweep'i bloklamadan asenkron çalışmalı.
@@ -261,44 +317,14 @@ public class BoardAnimator
 
         if (_patchbotDashBuffer.Count > 0)
         {
-            if (board.PatchbotDashUI != null)
+            if (hasLineStrikes)
             {
-                if (hasLineStrikes)
-                {
-                    float syncedDashDuration = EstimateLineStrikeDuration(lightningLineStrikes);
-                    patchbotDashRoutine = board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board, syncedDashDuration);
-                }
-                else
-                {
-                    patchbotDashRoutine = board.PatchbotDashUI.PlayDashParallel(_patchbotDashBuffer, board);
-                }
+                lineSweepPatchbotDashes = new List<BoardController.PatchbotDashRequest>(_patchbotDashBuffer);
             }
             else
             {
-                foreach (var req in _patchbotDashBuffer)
-                {
-                    req.onArrived?.Invoke();
-                }
+                StartPatchbotDashRequests(_patchbotDashBuffer);
             }
-        }
-
-        float EstimateLineStrikeDuration(IReadOnlyList<LightningLineStrike> strikes)
-        {
-            if (strikes == null || strikes.Count == 0) return -1f;
-
-            // PatchBot+Line senaryosunda dash'in hedefe varış anı,
-            // line strike başlangıç gecikmesi ile hizalanmalı.
-            // Strike'ın tüm sweep süresini (delay + duration) kullanmak,
-            // dash'i gereksiz uzatıp line'ın "daha erken varmış" görünmesine neden olur.
-            float maxStartDelay = 0f;
-            for (int i = 0; i < strikes.Count; i++)
-            {
-                var strike = strikes[i];
-                float strikeDelay = 0.03f * i + Mathf.Max(0f, strike.startDelaySeconds);
-                if (strikeDelay > maxStartDelay) maxStartDelay = strikeDelay;
-            }
-
-            return maxStartDelay > 0f ? maxStartDelay : -1f;
         }
 
         ObstacleHitContext damageContext = obstacleHitContext ?? (board.IsSpecialActivationPhase
@@ -514,6 +540,7 @@ public class BoardAnimator
                     lightningLineStrikes,
                     cell =>
                     {
+                        StartPatchbotDashRequestsForLineCell(lineSweepPatchbotDashes, cell);
                         TryClearTileOnLineSweepHit(cell);
                         ApplyObstacleDamageOnLineSweepHit(cell);
                     }
@@ -607,21 +634,13 @@ public class BoardAnimator
             if (__w != null) yield return __w;
         }
 
+        FlushPendingPatchbotDashRequests(lineSweepPatchbotDashes);
         lineHitWindowOpen = false;
 
         if (pulseImpacts.Count > 0)
         {
             var __w = Wait(maxStaggerDelay + staggerAnimTime);
             if (__w != null) yield return __w;
-        }
-
-        // KRITIK:
-        // PatchBot dash bilerek beklenmiyor. PatchBot ucarken board cascade/fall
-        // devam etmeli. Arrival sonrasi actionlar board bitmeden takip edilmeli.
-        // Bunu PulseCorePatchBotCombo tarafindaki ActiveBackgroundJobs lifecycle yapar.
-        if (patchbotDashRoutine != null)
-        {
-            // no-op by design
         }
 
         Debug.Log(

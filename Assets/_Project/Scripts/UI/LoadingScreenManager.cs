@@ -16,8 +16,10 @@ public class LoadingScreenManager : MonoBehaviour
     private static LoadingScreenManager _instance;
 
     private CanvasGroup _canvasGroup;
-    private float _fadeOutDuration = 0.35f;
-    private float _fadeOutDelay    = 0.08f;
+    private float _fadeOutDuration    = 0.35f;
+    private float _fadeOutDelay       = 0.08f;
+    private float _minimumDisplayTime = 2.0f;
+    private float _showTime;
 
     // ─────────────────────────────────────────────────────────────────
 
@@ -26,7 +28,8 @@ public class LoadingScreenManager : MonoBehaviour
     /// sprite null ise düz siyah ekran gösterilir.
     /// Yeni sahne yüklendiğinde otomatik olarak fade-out yapılır.
     /// </summary>
-    public static void Show(Sprite sprite, float fadeOutDuration = 0.35f, float fadeOutDelay = 0.08f)
+    public static void Show(Sprite sprite, float fadeOutDuration = 0.35f, float fadeOutDelay = 0.08f,
+                            float minimumDisplayTime = 2.0f)
     {
         if (_instance != null)
             Destroy(_instance.gameObject);
@@ -40,9 +43,11 @@ public class LoadingScreenManager : MonoBehaviour
         cg.interactable = false;
 
         var mgr = root.AddComponent<LoadingScreenManager>();
-        mgr._canvasGroup     = cg;
-        mgr._fadeOutDuration = fadeOutDuration;
-        mgr._fadeOutDelay    = fadeOutDelay;
+        mgr._canvasGroup        = cg;
+        mgr._fadeOutDuration    = fadeOutDuration;
+        mgr._fadeOutDelay       = fadeOutDelay;
+        mgr._minimumDisplayTime = minimumDisplayTime;
+        mgr._showTime           = Time.realtimeSinceStartup;
 
         _instance = mgr;
         DontDestroyOnLoad(root);
@@ -60,15 +65,20 @@ public class LoadingScreenManager : MonoBehaviour
 
     private IEnumerator FadeOutAndDestroy()
     {
+        float elapsed = Time.realtimeSinceStartup - _showTime;
+        float remaining = _minimumDisplayTime - elapsed;
+        if (remaining > 0f)
+            yield return new WaitForSecondsRealtime(remaining);
+
         if (_fadeOutDelay > 0f)
             yield return new WaitForSecondsRealtime(_fadeOutDelay);
 
-        float elapsed = 0f;
-        while (elapsed < _fadeOutDuration)
+        float fadeElapsed = 0f;
+        while (fadeElapsed < _fadeOutDuration)
         {
-            elapsed += Time.unscaledDeltaTime;
+            fadeElapsed += Time.unscaledDeltaTime;
             if (_canvasGroup != null)
-                _canvasGroup.alpha = 1f - Mathf.Clamp01(elapsed / _fadeOutDuration);
+                _canvasGroup.alpha = 1f - Mathf.Clamp01(fadeElapsed / _fadeOutDuration);
             yield return null;
         }
 

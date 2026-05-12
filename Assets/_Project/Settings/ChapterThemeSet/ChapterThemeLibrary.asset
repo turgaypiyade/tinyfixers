@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d6f7a5e4ef7b84de3871d08c88ace686, type: 3}
   m_Name: ChapterThemeLibrary
   m_EditorClassIdentifier: Assembly-CSharp::ChapterThemeLibrary
-  levelsPerChapter: 5
+  levelsPerChapter: 15
   prefsLevelKey: current_level
   themes:
   - {fileID: 11400000, guid: bc46bf23f33e848629e918a93ef57a49, type: 2}

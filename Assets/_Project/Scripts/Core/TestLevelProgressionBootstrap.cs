@@ -2,19 +2,34 @@ using UnityEngine;
 
 public static class TestLevelProgressionBootstrap
 {
-    private const string PrefsLevelKey = "current_level";
-    private const string ResetOnBootKey = "debug_reset_current_level_on_boot";
+    private const string KeyCurrentLevel = "current_level";
+    private const string KeyCoins = "player_coins";
+    private const string KeyTotalStars = "player_total_stars";
+    private const string KeyLevelStarsPrefix = "level_stars_";
+
+    private const string KeyPendingStarReward = "pending_star_reward";
+    private const string KeyPendingStarBefore = "pending_star_before";
+    private const string KeyPendingStarAfter = "pending_star_after";
+
+    private const int MaxLevelStarsReset = 500;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void ResetCurrentLevelForTestSession()
+    private static void ResetProgressOnFreshAppLaunch()
     {
-        if (PlayerPrefs.GetInt(ResetOnBootKey, 0) == 0)
-            return;
+        // Fresh app launch: start as a new player.
+        PlayerPrefs.SetInt(KeyCurrentLevel, 1);
+        PlayerPrefs.SetInt(KeyCoins, 0);
 
-        PlayerPrefs.SetInt(PrefsLevelKey, 1);
-        PlayerPrefs.DeleteKey(ResetOnBootKey);
+        PlayerPrefs.DeleteKey(KeyTotalStars);
+        PlayerPrefs.DeleteKey(KeyPendingStarReward);
+        PlayerPrefs.DeleteKey(KeyPendingStarBefore);
+        PlayerPrefs.DeleteKey(KeyPendingStarAfter);
+
+        for (int i = 1; i <= MaxLevelStarsReset; i++)
+            PlayerPrefs.DeleteKey(KeyLevelStarsPrefix + i);
+
         PlayerPrefs.Save();
 
-        Debug.Log("[TestLevelProgressionBootstrap] current_level reset to 1.");
+        Debug.Log("[TestLevelProgressionBootstrap] Fresh app launch. Progress, wallet and stars reset.");
     }
 }

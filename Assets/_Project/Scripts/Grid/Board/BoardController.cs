@@ -2235,6 +2235,10 @@ public class BoardController : MonoBehaviour
                 lightningLineStrikes: chainStrikes);
             strikes.AddRange(chainStrikes);
 
+            // ExpandSpecialChain may add chain tiles to matches; keep visualTargets in sync
+            // so all matched tiles get swept by the line animation (not per-tile pop).
+            visualTargets.UnionWith(matches);
+
             actionSequencer.Enqueue(new MatchClearAction(
                 matches,
                 doShake: true,
@@ -2244,6 +2248,7 @@ public class BoardController : MonoBehaviour
                 includeAdjacentOverTileBlockerDamage: false,
                 lightningVisualTargets: visualTargets,
                 lightningLineStrikes: strikes.Count > 0 ? strikes : null,
+                isSpecialPhase: true,
                 enqueueCascadeOnComplete: true));
 
             while (actionSequencer.IsPlaying)

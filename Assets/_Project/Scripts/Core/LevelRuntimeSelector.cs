@@ -30,7 +30,7 @@ public class LevelRuntimeSelector : MonoBehaviour
 
             Debug.Log($"[LevelRuntimeSelector] Loading from PlayerPrefs. Chapter={chapter}, Level={selectedLevel}");
 
-            if (levelCatalog.TryGetLevel(chapter, selectedLevel, out var byPrefsLevel))
+            if (levelCatalog.TryGetGlobalLevel(selectedLevel, out var byPrefsLevel))
                 return byPrefsLevel;
 
             Debug.LogWarning($"[LevelRuntimeSelector] PlayerPrefs level not found in catalog. Chapter={chapter}, Level={selectedLevel}. Falling back to inspector selection.");

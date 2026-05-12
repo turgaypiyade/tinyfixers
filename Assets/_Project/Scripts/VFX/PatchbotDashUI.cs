@@ -69,8 +69,12 @@ public class PatchbotDashUI : MonoBehaviour
         if (!gameObject.activeInHierarchy)
             gameObject.SetActive(true);
 
+        var requestCopy = requests != null
+            ? new List<BoardController.PatchbotDashRequest>(requests)
+            : null;
+
         if (co != null) StopCoroutine(co);
-        co = StartCoroutine(DashParallelRoutine(requests, board, syncDuration));
+        co = StartCoroutine(DashParallelRoutine(requestCopy, board, syncDuration));
         return co;
     }
 
@@ -94,6 +98,7 @@ public class PatchbotDashUI : MonoBehaviour
         {
             var req = requests[i];
             remaining++;
+
             StartCoroutine(SingleDashRoutine(req, board, patchbotSprite, syncDuration, () => remaining--));
 
             if (stagger > 0f)

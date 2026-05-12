@@ -46,6 +46,7 @@ public class TopHudController : MonoBehaviour
     {
         public LevelGoalDefinition definition;
         public int remaining;
+        public int dynamicTotal; // grows when spreading obstacles (e.g. Oil) add new cells
         public TopHudGoalSlot slot;
     }
 
@@ -63,6 +64,7 @@ public class TopHudController : MonoBehaviour
         board.OnTilesCleared -= HandleTilesCleared;
         board.OnObstacleDestroyed -= HandleObstacleDestroyed;
         board.OnBatteryHit -= HandleBatteryHit;
+        board.OnObstacleCreatedDynamic -= HandleObstacleCreatedDynamic;
         initialized = false;
     }
 
@@ -81,11 +83,13 @@ public class TopHudController : MonoBehaviour
         board.OnTilesCleared -= HandleTilesCleared;
         board.OnObstacleDestroyed -= HandleObstacleDestroyed;
         board.OnBatteryHit -= HandleBatteryHit;
+        board.OnObstacleCreatedDynamic -= HandleObstacleCreatedDynamic;
 
         board.OnMovesChanged += HandleMovesChanged;
         board.OnTilesCleared += HandleTilesCleared;
         board.OnObstacleDestroyed += HandleObstacleDestroyed;
         board.OnBatteryHit += HandleBatteryHit;
+        board.OnObstacleCreatedDynamic += HandleObstacleCreatedDynamic;
 
         BuildGoals(board.ActiveLevelData);
         RefreshMoves(board.RemainingMoves);
@@ -118,6 +122,7 @@ public class TopHudController : MonoBehaviour
             {
                 definition = goal,
                 remaining = goal.amount,
+                dynamicTotal = goal.amount,
                 slot = CreateSlot(goal, i)
             };
 
@@ -293,6 +298,29 @@ public class TopHudController : MonoBehaviour
         return anyGoalUpdated;
     }
 
+    private void HandleObstacleCreatedDynamic(int x, int y)
+    {
+        if (board?.ObstacleStateService == null) return;
+        if (!board.ObstacleStateService.IsOilAt(x, y)) return;
+
+        bool anyGoalUpdated = false;
+
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var goal = runtimeGoals[i];
+            if (goal.definition.targetType != LevelGoalTargetType.Obstacle || goal.definition.obstacleId != ObstacleId.Oil)
+                continue;
+
+            goal.remaining++;
+            goal.dynamicTotal++;
+            goal.slot?.SetRemaining(goal.remaining);
+            anyGoalUpdated = true;
+        }
+
+        if (anyGoalUpdated)
+            UpdateGoalsCompletionState();
+    }
+
     private void UpdateGoalsCompletionState()
     {
         bool allCompleted = runtimeGoals.Count > 0;
@@ -401,9 +429,9 @@ public class TopHudController : MonoBehaviour
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
             var g = runtimeGoals[i];
-            if (g == null || g.definition == null || g.definition.amount <= 0) continue;
-            int cleared = g.definition.amount - g.remaining;
-            total += Mathf.Clamp01((float)cleared / g.definition.amount);
+            if (g == null || g.definition == null || g.dynamicTotal <= 0) continue;
+            int cleared = g.dynamicTotal - g.remaining;
+            total += Mathf.Clamp01((float)cleared / g.dynamicTotal);
             validCount++;
         }
 

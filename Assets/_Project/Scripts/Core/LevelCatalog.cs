@@ -43,7 +43,24 @@ public class LevelCatalog : ScriptableObject
         levelData = null;
         return false;
     }
+    public bool TryGetGlobalLevel(int level, out LevelData levelData)
+    {
+        for (int i = 0; i < entries.Count; i++)
+        {
+            var entry = entries[i];
+            if (entry == null || entry.levelData == null)
+                continue;
 
+            if (entry.level == level)
+            {
+                levelData = entry.levelData;
+                return true;
+            }
+        }
+
+        levelData = null;
+        return false;
+    }
     public bool TryGetLevel(string levelKey, out LevelData levelData)
     {
         if (string.IsNullOrWhiteSpace(levelKey))

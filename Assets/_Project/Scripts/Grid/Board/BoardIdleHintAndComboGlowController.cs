@@ -408,6 +408,10 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
         if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(x, y))
             return false;
 
+        // Over-tile (locksInteraction) obstacle altındaki tile'lar swap edilemez — hint'e alma
+        if (board.ObstacleStateService != null && board.ObstacleStateService.IsInteractionLockedAt(x, y))
+            return false;
+
         return true;
     }
 
@@ -550,8 +554,10 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
         if (x == ax && y == ay) { realX = bx; realY = by; }
         else if (x == bx && y == by) { realX = ax; realY = ay; }
 
-        // Hedef hücre movable obstacle ise match'e sayma
+        // Hedef hücre movable veya interaction-locked obstacle ise match'e sayma
         if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(realX, realY))
+            return false;
+        if (board.ObstacleStateService != null && board.ObstacleStateService.IsInteractionLockedAt(realX, realY))
             return false;
 
         TileView tile;
