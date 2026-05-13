@@ -36,7 +36,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 6}
-  m_SizeDelta: {x: 70, y: 70}
+  m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2756818325932249285
 CanvasRenderer:
@@ -247,7 +247,7 @@ RectTransform:
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
   m_AnchoredPosition: {x: -6, y: 10}
-  m_SizeDelta: {x: 34, y: 22}
+  m_SizeDelta: {x: 40, y: 22}
   m_Pivot: {x: 1, y: 0}
 --- !u!1 &7693005772710732005
 GameObject:
@@ -391,8 +391,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 50
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: e2517b5d297b04d8183eb6b2f7e5c0cf, type: 2}
-  m_sharedMaterial: {fileID: -6892342328736476212, guid: e2517b5d297b04d8183eb6b2f7e5c0cf, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 61895e4bd80f84ba08ace13715b084c3, type: 2}
+  m_sharedMaterial: {fileID: 8447141886115782946, guid: 61895e4bd80f84ba08ace13715b084c3, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -416,8 +416,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25
-  m_fontSizeBase: 25
+  m_fontSize: 35
+  m_fontSizeBase: 35
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18

@@ -420,8 +420,7 @@ public class BoardController : MonoBehaviour
             audioDirector = GetComponentInChildren<BoardAudioDirector>(true);
         EnsureServices();
         TryResolveLightningSpawner();
-        if (lineTravelSpawnParent == null && lineTravelPlayer != null && lineTravelPlayer.transform.parent != null)
-            lineTravelSpawnParent = lineTravelPlayer.transform.parent;
+        TryResolveLineTravelPlayer();
         EnsureGoalFlyFx();
 
         if (lightningSpawner == null)
@@ -657,6 +656,7 @@ public class BoardController : MonoBehaviour
     internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineStrikes, Action<Vector2Int> onSweepCellReached = null)
     {
         TryResolveLightningSpawner();
+        TryResolveLineTravelPlayer();
         return lineSweepService.PlayLightningLineStrikes(lightningSpawner, lineTravelPlayer, lineStrikes, onSweepCellReached);
     }
 
@@ -670,6 +670,7 @@ public class BoardController : MonoBehaviour
         Action<Vector2Int> onStep,
         Action onCompleted = null)
     {
+        TryResolveLineTravelPlayer();
         return lineSweepService.PlayLineTravelInstanceWithStep(
             lineTravelPlayer,
             axis,
@@ -693,6 +694,7 @@ public class BoardController : MonoBehaviour
         Action<Vector2Int> onStep,
         Action onCompleted = null)
     {
+        TryResolveLineTravelPlayer();
         return lineSweepService.PlayLineTravelInstanceAsymmetric(
             lineTravelPlayer,
             axis,
@@ -728,6 +730,40 @@ public class BoardController : MonoBehaviour
         lightningSpawner = GetComponentInChildren<LightningSpawner>(true);
         if (lightningSpawner == null && transform.parent != null)
             lightningSpawner = transform.parent.GetComponentInChildren<LightningSpawner>(true);
+    }
+
+    private void TryResolveLineTravelPlayer()
+    {
+        if (lineTravelPlayer == null)
+        {
+            lineTravelPlayer = GetComponentInChildren<LineTravelSplitSwapTestUI>(true);
+
+            if (lineTravelPlayer == null && transform.parent != null)
+                lineTravelPlayer = transform.parent.GetComponentInChildren<LineTravelSplitSwapTestUI>(true);
+        }
+
+        if (lineTravelPlayer == null)
+            return;
+
+        if (lineTravelSpawnParent == null)
+        {
+            if (lineTravelPlayer.afterImageParent != null)
+                lineTravelSpawnParent = lineTravelPlayer.afterImageParent;
+            else if (lineTravelPlayer.transform.parent != null)
+                lineTravelSpawnParent = lineTravelPlayer.transform.parent;
+        }
+
+        if (lineTravelSpawnParent is RectTransform lineTravelParent)
+        {
+            if (lineTravelPlayer.afterImageParent == null)
+                lineTravelPlayer.afterImageParent = lineTravelParent;
+
+            if (lineTravelPlayer.impactParent == null)
+                lineTravelPlayer.impactParent = lineTravelParent;
+
+            if (lineTravelPlayer.trailParent == null)
+                lineTravelPlayer.trailParent = lineTravelParent;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -2317,13 +2353,7 @@ public class BoardController : MonoBehaviour
     {
         if (targetParent == null) return Vector2.zero;
 
-        var canvas = targetParent.GetComponentInParent<Canvas>();
-        Camera cam = null;
-
-        if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay) cam = canvas.worldCamera;
-
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(targetParent, RectTransformUtility.WorldToScreenPoint(cam, worldPos), cam, out Vector2 localPoint);
-        return localPoint;
+        return targetParent.InverseTransformPoint(worldPos);
     }
 
 

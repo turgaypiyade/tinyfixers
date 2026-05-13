@@ -13,6 +13,7 @@ public class PreLevelSpecialSlotView : MonoBehaviour
     [SerializeField] private Image iconImage;
     [SerializeField] private Image selectionTintImage;
     [SerializeField] private Image checkMarkImage;
+    [SerializeField] private Image numberBG;
     [SerializeField] private TMP_Text countText;
     [SerializeField] private TMP_Text nameText;
 
@@ -46,6 +47,13 @@ public class PreLevelSpecialSlotView : MonoBehaviour
     {
         if (button == null)
             button = GetComponent<Button>();
+
+        if (numberBG == null)
+        {
+            Transform numberBgTransform = transform.Find("NumberBG");
+            if (numberBgTransform != null)
+                numberBG = numberBgTransform.GetComponent<Image>();
+        }
 
         if (button != null)
             button.onClick.AddListener(HandleClick);
@@ -164,10 +172,13 @@ public class PreLevelSpecialSlotView : MonoBehaviour
 
     private void ApplyCountVisual()
     {
-        if (countText == null)
-            return;
+        bool visible = !isSelected || !hideCountWhenSelected;
 
-        countText.gameObject.SetActive(!isSelected || !hideCountWhenSelected);
+        if (countText != null)
+            countText.gameObject.SetActive(visible);
+
+        if (numberBG != null)
+            numberBG.gameObject.SetActive(visible);
     }
 
     private void ApplyCheckVisual(bool animate)

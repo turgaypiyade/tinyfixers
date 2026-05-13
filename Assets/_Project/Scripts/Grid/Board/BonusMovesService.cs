@@ -132,6 +132,12 @@ public class BonusMovesService : MonoBehaviour
                     }
                 }
             }
+
+            // The fixed wait above is only a visual minimum. On device, coroutine resume
+            // order can differ by a frame; do not build validPlacements until every
+            // CometAndPlace has actually written its special to the board.
+            while (!_hardSkipRequested && !AreAllCometsDone(done, placed))
+                yield return null;
         }
 
         if (_hardSkipRequested)
@@ -261,6 +267,21 @@ public class BonusMovesService : MonoBehaviour
             elapsed += Time.deltaTime;
             yield return null;
         }
+    }
+
+    private static bool AreAllCometsDone(bool[] done, int count)
+    {
+        if (done == null)
+            return true;
+
+        int limit = Mathf.Min(count, done.Length);
+        for (int i = 0; i < limit; i++)
+        {
+            if (!done[i])
+                return false;
+        }
+
+        return true;
     }
 
     private IEnumerator RunSkippableRoutine(IEnumerator routine)
