@@ -65,8 +65,26 @@ public class MainMenuLevelButtonController : MonoBehaviour
             return;
         }
 
-        LoadingScreenManager.Show(themeLibrary != null ? themeLibrary.GetRandomLoadingImage() : null);
+        ShowLoadingScreen();
         SceneManager.LoadScene(gameSceneName);
+    }
+
+    private void ShowLoadingScreen()
+    {
+        if (themeLibrary == null)
+        {
+            LoadingScreenManager.Show((Sprite)null);
+            return;
+        }
+
+        LoadingHintEntry hint = themeLibrary.GetRandomLoadingHint();
+        if (hint != null)
+        {
+            LoadingScreenManager.Show(hint);
+            return;
+        }
+
+        LoadingScreenManager.Show(themeLibrary.GetRandomLoadingImage());
     }
 
     private static PreLevelSpecialPopupController FindPreLevelPopupInScene()
