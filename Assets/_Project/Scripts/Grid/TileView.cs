@@ -120,6 +120,7 @@ public class TileView : MonoBehaviour,
     private void OnDisable()
     {
         StopSpecialCreationReveal();
+        ResetVisualState();
     }
 
     public void Init(BoardController board, int x, int y)
@@ -804,6 +805,11 @@ public class TileView : MonoBehaviour,
             specialCreationRevealRoutine = null;
         }
 
+        CleanupSpecialCreationReveal();
+    }
+
+    private void CleanupSpecialCreationReveal()
+    {
         if (specialRevealVisualCaptured && iconImage != null)
         {
             RectTransform iconRt = iconImage.rectTransform;
@@ -825,9 +831,14 @@ public class TileView : MonoBehaviour,
             specialCreationRevealRoot = null;
         }
 
-        Transform oldHalo = transform.Find("__SpecialCreationHalo");
-        if (oldHalo != null)
-            Destroy(oldHalo.gameObject);
+        if (this != null)
+        {
+            Transform oldHalo = transform.Find("__SpecialCreationHalo");
+            if (oldHalo != null)
+                Destroy(oldHalo.gameObject);
+        }
+
+        specialCreationRevealRoutine = null;
     }
 
     private IEnumerator CoSpecialCreationRevealSimple(TileSpecial special, int tileSize)
@@ -836,8 +847,11 @@ public class TileView : MonoBehaviour,
         // Wait one frame so final icon sprite/layout is definitely ready.
         yield return null;
 
-        if (iconImage == null || iconImage.sprite == null)
+        if (this == null || iconImage == null || iconImage.sprite == null)
+        {
+            CleanupSpecialCreationReveal();
             yield break;
+        }
 
         // Always re-enforce correct layout after 1-frame wait. Catches preserveAspect
         // and sizeDelta resets from Canvas layout rebuilds that the anchor check missed.
@@ -847,7 +861,10 @@ public class TileView : MonoBehaviour,
         RectTransform iconRt = iconImage.rectTransform;
 
         if (iconRt == null)
+        {
+            CleanupSpecialCreationReveal();
             yield break;
+        }
 
         specialRevealIconBaseScale = iconRt.localScale;
         specialRevealIconBaseRotation = iconRt.localRotation;
@@ -901,7 +918,10 @@ public class TileView : MonoBehaviour,
         while (elapsed < totalDuration)
         {
             if (this == null || iconImage == null || iconRt == null || specialCreationRevealRoot == null)
+            {
+                CleanupSpecialCreationReveal();
                 yield break;
+            }
 
             elapsed += Time.deltaTime;
 
@@ -945,24 +965,7 @@ public class TileView : MonoBehaviour,
             yield return null;
         }
 
-        if (iconRt != null)
-        {
-            iconRt.localScale = specialRevealIconBaseScale;
-            iconRt.localRotation = specialRevealIconBaseRotation;
-        }
-
-        if (iconImage != null)
-            iconImage.color = specialRevealIconBaseColor;
-
-        specialRevealVisualCaptured = false;
-
-        if (specialCreationRevealRoot != null)
-        {
-            Destroy(specialCreationRevealRoot);
-            specialCreationRevealRoot = null;
-        }
-
-        specialCreationRevealRoutine = null;
+        CleanupSpecialCreationReveal();
     }
 
     private static float EaseOut(float t)

@@ -2239,17 +2239,11 @@ public class BoardController : MonoBehaviour
             // so all matched tiles get swept by the line animation (not per-tile pop).
             visualTargets.UnionWith(matches);
 
-            actionSequencer.Enqueue(new MatchClearAction(
+            actionSequencer.Enqueue(BuildBonusLineClearAction(
                 matches,
-                doShake: true,
-                animationMode: ClearAnimationMode.LightningStrike,
-                affectedCells: affectedCells,
-                obstacleHitContext: ObstacleHitContext.Booster,
-                includeAdjacentOverTileBlockerDamage: false,
-                lightningVisualTargets: visualTargets,
-                lightningLineStrikes: strikes.Count > 0 ? strikes : null,
-                isSpecialPhase: true,
-                enqueueCascadeOnComplete: true));
+                affectedCells,
+                visualTargets,
+                strikes));
 
             while (actionSequencer.IsPlaying)
                 yield return null;
@@ -2259,6 +2253,45 @@ public class BoardController : MonoBehaviour
 
         IsSpecialActivationPhase = false;
         EndBusy();
+    }
+
+    private MatchClearAction BuildBonusLineClearAction(
+        HashSet<TileView> matches,
+        HashSet<Vector2Int> affectedCells,
+        HashSet<TileView> visualTargets,
+        System.Collections.Generic.List<LightningLineStrike> strikes)
+    {
+        var presentationPlan = new ClearPresentationPlan();
+        presentationPlan.DoBoardShake = true;
+        presentationPlan.IncludeAdjacentOverTileBlockerDamage = false;
+        presentationPlan.ObstacleHitContext = ObstacleHitContext.Booster;
+
+        var targetTiles = new System.Collections.Generic.List<TileView>(visualTargets);
+        var targetCells = new System.Collections.Generic.List<Vector2Int>(affectedCells);
+
+        presentationPlan.Effects.Add(new LineSweepEffectDescriptor(
+            targetTiles,
+            targetCells,
+            strikes,
+            originTile: null,
+            originCell: null));
+
+        foreach (var tile in matches)
+        {
+            if (tile != null)
+                presentationPlan.FinalClearTiles.Add(tile);
+        }
+
+        return new MatchClearAction(
+            matches,
+            doShake: true,
+            animationMode: ClearAnimationMode.Default,
+            affectedCells: affectedCells,
+            obstacleHitContext: ObstacleHitContext.Booster,
+            includeAdjacentOverTileBlockerDamage: false,
+            isSpecialPhase: true,
+            presentationPlan: presentationPlan,
+            enqueueCascadeOnComplete: true);
     }
     internal void NotifyTilesCleared(TileType tileType, int amount) { if (amount > 0) OnTilesCleared?.Invoke(tileType, amount); }
 
@@ -2283,9 +2316,12 @@ public class BoardController : MonoBehaviour
     internal Vector2 WorldToAnchoredIn(RectTransform targetParent, Vector3 worldPos)
     {
         if (targetParent == null) return Vector2.zero;
-        var canvas = FindFirstObjectByType<Canvas>();
+
+        var canvas = targetParent.GetComponentInParent<Canvas>();
         Camera cam = null;
+
         if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay) cam = canvas.worldCamera;
+
         RectTransformUtility.ScreenPointToLocalPointInRectangle(targetParent, RectTransformUtility.WorldToScreenPoint(cam, worldPos), cam, out Vector2 localPoint);
         return localPoint;
     }
