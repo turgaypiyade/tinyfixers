@@ -65,6 +65,20 @@ public class ChapterThemeLibrary : ScriptableObject
     }
 
     /// <summary>
+    /// Mevcut chapter'ın localized loading hint listesinden rastgele bir entry döner.
+    /// Liste boşsa null döner. Eski loadingScreenImages listesini değiştirmez.
+    /// </summary>
+    public LoadingHintEntry GetRandomLoadingHint()
+    {
+        var theme = GetCurrentTheme();
+        if (theme == null || theme.loadingHints == null || theme.loadingHints.Count == 0)
+            return null;
+
+        var list = theme.loadingHints;
+        return list[Random.Range(0, list.Count)];
+    }
+
+    /// <summary>
     /// Mevcut chapter'ın loading screen görselleri listesinden rastgele bir Sprite döner.
     /// Liste boşsa null döner.
     /// </summary>
