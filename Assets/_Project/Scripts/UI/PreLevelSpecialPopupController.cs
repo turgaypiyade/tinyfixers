@@ -386,9 +386,27 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         RefreshCounts();
         PlayOneShot(continueSfx);
 
-        var library = ResolveThemeLibrary();
-        LoadingScreenManager.Show(library != null ? library.GetRandomLoadingImage() : null);
+        ShowLoadingScreen();
         SceneManager.LoadScene(gameSceneName);
+    }
+
+    private void ShowLoadingScreen()
+    {
+        var library = ResolveThemeLibrary();
+        if (library == null)
+        {
+            LoadingScreenManager.Show((Sprite)null);
+            return;
+        }
+
+        LoadingHintEntry hint = library.GetRandomLoadingHint();
+        if (hint != null)
+        {
+            LoadingScreenManager.Show(hint);
+            return;
+        }
+
+        LoadingScreenManager.Show(library.GetRandomLoadingImage());
     }
 
     private void HandleCancelClicked()
