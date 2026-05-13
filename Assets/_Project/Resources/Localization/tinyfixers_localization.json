@@ -16,7 +16,18 @@
         { "key": "level_end_fail_continue_cost", "value": "Devam Et {0}" },
         { "key": "level_end_success_title_level", "value": "Seviye {0}" },
         { "key": "level_end_continue", "value": "Devam Et" },
-        { "key": "level_end_score_label", "value": "Puan:" }
+        { "key": "level_end_score_label", "value": "Puan:" },
+        { "key": "loading_hint_loading", "value": "Yükleniyor..." },
+        { "key": "loading_hint_3match_title", "value": "3 Taş Eşleşir" },
+        { "key": "loading_hint_3match_desc", "value": "Aynı renk taşları kırar" },
+        { "key": "loading_hint_lineh_title", "value": "4 Yatay Eşleşme" },
+        { "key": "loading_hint_lineh_desc", "value": "LineH oluşturur" },
+        { "key": "loading_hint_linev_title", "value": "4 Düşey Eşleşme" },
+        { "key": "loading_hint_linev_desc", "value": "LineV oluşturur" },
+        { "key": "loading_hint_pulse_title", "value": "Köşeli 5 Eşleşme" },
+        { "key": "loading_hint_pulse_desc", "value": "PulseCore oluşturur" },
+        { "key": "loading_hint_override_title", "value": "5 Taş Eşleşme" },
+        { "key": "loading_hint_override_desc", "value": "Override oluşturur" }
       ]
     },
     {
@@ -34,7 +45,18 @@
         { "key": "level_end_fail_continue_cost", "value": "Continue {0}" },
         { "key": "level_end_success_title_level", "value": "Level {0}" },
         { "key": "level_end_continue", "value": "Continue" },
-        { "key": "level_end_score_label", "value": "Score:" }
+        { "key": "level_end_score_label", "value": "Score:" },
+        { "key": "loading_hint_loading", "value": "Loading..." },
+        { "key": "loading_hint_3match_title", "value": "Match 3 Tiles" },
+        { "key": "loading_hint_3match_desc", "value": "Clears same-colored tiles" },
+        { "key": "loading_hint_lineh_title", "value": "Match 4 Horizontally" },
+        { "key": "loading_hint_lineh_desc", "value": "Creates a LineH booster" },
+        { "key": "loading_hint_linev_title", "value": "Match 4 Vertically" },
+        { "key": "loading_hint_linev_desc", "value": "Creates a LineV booster" },
+        { "key": "loading_hint_pulse_title", "value": "Match 5 in a Corner" },
+        { "key": "loading_hint_pulse_desc", "value": "Creates a PulseCore" },
+        { "key": "loading_hint_override_title", "value": "Match 5 Tiles" },
+        { "key": "loading_hint_override_desc", "value": "Creates an Override" }
       ]
     }
   ]
