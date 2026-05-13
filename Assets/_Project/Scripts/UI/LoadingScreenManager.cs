@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -8,8 +9,9 @@ using UnityEngine.UI;
 /// DontDestroyOnLoad ile sahneler arası yaşar; yeni sahne yüklenince fade-out yapar.
 ///
 /// Kullanım:
-///   LoadingScreenManager.Show(sprite);   // LoadScene() çağrısından ÖNCE
-///   SceneManager.LoadScene("SahnAdı");
+///   LoadingScreenManager.Show(sprite);   // eski sistem, sadece tam ekran görsel
+///   LoadingScreenManager.Show(hint);     // yeni sistem, görsel + localized TMP text
+///   SceneManager.LoadScene("SahneAdı");
 /// </summary>
 public class LoadingScreenManager : MonoBehaviour
 {
@@ -21,28 +23,51 @@ public class LoadingScreenManager : MonoBehaviour
     private float _minimumDisplayTime = 2.0f;
     private float _showTime;
 
+    // Optional prefab references. If you create a prefab in the scene/resources later,
+    // you can still wire these names manually by adding this component to the prefab.
+    [Header("Optional Prefab References")]
+    [SerializeField] private Image hintImage;
+    [SerializeField] private TMP_Text titleText;
+    [SerializeField] private TMP_Text descriptionText;
+    [SerializeField] private TMP_Text loadingText;
+
     // ─────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Tam ekran yükleme ekranını gösterir.
+    /// Eski sistem: tam ekran yükleme ekranını sadece Sprite ile gösterir.
     /// sprite null ise düz siyah ekran gösterilir.
-    /// Yeni sahne yüklendiğinde otomatik olarak fade-out yapılır.
     /// </summary>
     public static void Show(Sprite sprite, float fadeOutDuration = 0.35f, float fadeOutDelay = 0.08f,
                             float minimumDisplayTime = 2.0f)
+    {
+        CreateAndShow(sprite, null, fadeOutDuration, fadeOutDelay, minimumDisplayTime);
+    }
+
+    /// <summary>
+    /// Yeni sistem: image + localized title/description/loading text gösterir.
+    /// hint null ise eski fallback davranışıyla siyah ekran gösterilir.
+    /// </summary>
+    public static void Show(LoadingHintEntry hint, float fadeOutDuration = 0.35f, float fadeOutDelay = 0.08f,
+                            float minimumDisplayTime = 2.0f)
+    {
+        CreateAndShow(hint != null ? hint.image : null, hint, fadeOutDuration, fadeOutDelay, minimumDisplayTime);
+    }
+
+    private static void CreateAndShow(Sprite sprite, LoadingHintEntry hint, float fadeOutDuration, float fadeOutDelay,
+                                      float minimumDisplayTime)
     {
         if (_instance != null)
             Destroy(_instance.gameObject);
 
         var root = BuildCanvas();
-        BuildImage(root.transform, sprite);
+        var mgr = root.AddComponent<LoadingScreenManager>();
+        mgr.BuildVisuals(root.transform, sprite, hint);
 
         var cg = root.AddComponent<CanvasGroup>();
         cg.alpha = 1f;
         cg.blocksRaycasts = true;
         cg.interactable = false;
 
-        var mgr = root.AddComponent<LoadingScreenManager>();
         mgr._canvasGroup        = cg;
         mgr._fadeOutDuration    = fadeOutDuration;
         mgr._fadeOutDelay       = fadeOutDelay;
@@ -93,7 +118,7 @@ public class LoadingScreenManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // Canvas & Image inşası
+    // Canvas & UI inşası
     // ─────────────────────────────────────────────────────────────────
 
     private static GameObject BuildCanvas()
@@ -113,7 +138,31 @@ public class LoadingScreenManager : MonoBehaviour
         return go;
     }
 
-    private static void BuildImage(Transform parent, Sprite sprite)
+    private void BuildVisuals(Transform parent, Sprite sprite, LoadingHintEntry hint)
+    {
+        hintImage = BuildImage(parent, sprite);
+
+        if (hint == null)
+            return;
+
+        titleText = BuildText(parent, "HintTitle", GameLocalization.Get(hint.titleLocalizationKey),
+            new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -150f),
+            new Vector2(900f, 120f), 56, TextAlignmentOptions.Center);
+
+        descriptionText = BuildText(parent, "HintDescription", GameLocalization.Get(hint.descriptionLocalizationKey),
+            new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -265f),
+            new Vector2(880f, 92f), 34, TextAlignmentOptions.Center);
+
+        string loadingKey = string.IsNullOrWhiteSpace(hint.loadingLocalizationKey)
+            ? "loading_hint_loading"
+            : hint.loadingLocalizationKey;
+
+        loadingText = BuildText(parent, "LoadingText", GameLocalization.Get(loadingKey),
+            new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 120f),
+            new Vector2(720f, 80f), 34, TextAlignmentOptions.Center);
+    }
+
+    private static Image BuildImage(Transform parent, Sprite sprite)
     {
         var go = new GameObject("BG");
         go.transform.SetParent(parent, false);
@@ -138,5 +187,39 @@ public class LoadingScreenManager : MonoBehaviour
             img.sprite = null;
             img.color  = Color.black;
         }
+
+        return img;
+    }
+
+    private static TMP_Text BuildText(Transform parent, string name, string value, Vector2 anchorMin, Vector2 anchorMax,
+                                      Vector2 anchoredPosition, Vector2 sizeDelta, float fontSize,
+                                      TextAlignmentOptions alignment)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+
+        var rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = anchorMin;
+        rt.anchorMax = anchorMax;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = anchoredPosition;
+        rt.sizeDelta = sizeDelta;
+
+        var text = go.AddComponent<TextMeshProUGUI>();
+        text.text = value ?? string.Empty;
+        text.fontSize = fontSize;
+        text.enableAutoSizing = true;
+        text.fontSizeMin = Mathf.Max(18f, fontSize * 0.55f);
+        text.fontSizeMax = fontSize;
+        text.alignment = alignment;
+        text.color = new Color(1f, 0.96f, 0.78f, 1f);
+        text.raycastTarget = false;
+        text.enableWordWrapping = true;
+        text.overflowMode = TextOverflowModes.Ellipsis;
+
+        text.outlineColor = new Color32(8, 79, 123, 255);
+        text.outlineWidth = 0.22f;
+
+        return text;
     }
 }
