@@ -52,8 +52,11 @@ public class ChapterTheme : ScriptableObject
     public Color preLevelButtonTextColor = Color.white;
 
     [Header("Loading Screen")]
-    [Tooltip("Geçiş yüklenme ekranında rastgele seçilecek görseller. Boş bırakılırsa siyah ekran gösterilir.")]
+    [Tooltip("Legacy: Geçiş yüklenme ekranında rastgele seçilecek tam ekran görseller. Yeni sistem yoksa kullanılır.")]
     public List<Sprite> loadingScreenImages = new();
+
+    [Tooltip("Localized loading hints. Image is language-neutral; text is resolved from localization keys at runtime.")]
+    public List<LoadingHintEntry> loadingHints = new();
 
     [Header("Level End Popup")]
     [Tooltip("Chapter-specific shared popup panel/background image for fail and success end popups.")]
