@@ -149,7 +149,10 @@ public class LoadingScreenManager : MonoBehaviour
 
     private bool TryBuildPrefabView(Transform parent, Sprite sprite, LoadingHintEntry hint)
     {
-        LoadingHintView prefab = Resources.Load<LoadingHintView>(LoadingHintViewResourcePath);
+        LoadingHintView prefab = LoadingScreenPrefabProvider.LoadingHintViewPrefab;
+        if (prefab == null)
+            prefab = Resources.Load<LoadingHintView>(LoadingHintViewResourcePath);
+
         if (prefab == null)
             return false;
 
