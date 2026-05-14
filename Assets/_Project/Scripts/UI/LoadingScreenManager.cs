@@ -15,6 +15,8 @@ using UnityEngine.UI;
 /// </summary>
 public class LoadingScreenManager : MonoBehaviour
 {
+    private const string LoadingHintViewResourcePath = "UI/LoadingHintView";
+
     private static LoadingScreenManager _instance;
 
     private CanvasGroup _canvasGroup;
@@ -23,9 +25,8 @@ public class LoadingScreenManager : MonoBehaviour
     private float _minimumDisplayTime = 2.0f;
     private float _showTime;
 
-    // Optional prefab references. If you create a prefab in the scene/resources later,
-    // you can still wire these names manually by adding this component to the prefab.
-    [Header("Optional Prefab References")]
+    // Runtime fallback references. Prefab-backed LoadingHintView owns its own styling.
+    [Header("Runtime Fallback References")]
     [SerializeField] private Image hintImage;
     [SerializeField] private TMP_Text titleText;
     [SerializeField] private TMP_Text descriptionText;
@@ -139,6 +140,41 @@ public class LoadingScreenManager : MonoBehaviour
     }
 
     private void BuildVisuals(Transform parent, Sprite sprite, LoadingHintEntry hint)
+    {
+        if (TryBuildPrefabView(parent, sprite, hint))
+            return;
+
+        BuildRuntimeFallback(parent, sprite, hint);
+    }
+
+    private bool TryBuildPrefabView(Transform parent, Sprite sprite, LoadingHintEntry hint)
+    {
+        LoadingHintView prefab = Resources.Load<LoadingHintView>(LoadingHintViewResourcePath);
+        if (prefab == null)
+            return false;
+
+        LoadingHintView view = Instantiate(prefab, parent, false);
+        view.name = "LoadingHintView";
+        view.gameObject.SetActive(true);
+
+        if (view.transform is RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            rt.localScale = Vector3.one;
+        }
+
+        if (hint != null)
+            view.Apply(hint);
+        else
+            view.Apply(sprite);
+
+        return true;
+    }
+
+    private void BuildRuntimeFallback(Transform parent, Sprite sprite, LoadingHintEntry hint)
     {
         hintImage = BuildImage(parent, sprite);
 
