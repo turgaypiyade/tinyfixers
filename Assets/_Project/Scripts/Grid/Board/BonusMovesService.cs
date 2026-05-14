@@ -160,7 +160,10 @@ public class BonusMovesService : MonoBehaviour
 
         // Brief pause before mass trigger.
         if (!_skipRequested)
+        {
             yield return StartCoroutine(InterruptibleWait(preTriggerPause));
+            yield return StartCoroutine(WaitForPlacedSpecialReveals(placements));
+        }
 
         if (_hardSkipRequested)
             yield break;
@@ -267,6 +270,35 @@ public class BonusMovesService : MonoBehaviour
             elapsed += Time.deltaTime;
             yield return null;
         }
+    }
+
+    private IEnumerator WaitForPlacedSpecialReveals(List<BoardController.BonusLinePlacement> placements)
+    {
+        const float maxWaitSeconds = 0.45f;
+        float elapsed = 0f;
+
+        while (!_hardSkipRequested && elapsed < maxWaitSeconds && HasActivePlacedSpecialReveal(placements))
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    private bool HasActivePlacedSpecialReveal(List<BoardController.BonusLinePlacement> placements)
+    {
+        if (placements == null || board == null)
+            return false;
+
+        for (int i = 0; i < placements.Count; i++)
+        {
+            var p = placements[i];
+            var tile = board.GetTileViewAt(p.x, p.y);
+
+            if (tile != null && tile.IsSpecialCreationRevealPlaying)
+                return true;
+        }
+
+        return false;
     }
 
     private static bool AreAllCometsDone(bool[] done, int count)

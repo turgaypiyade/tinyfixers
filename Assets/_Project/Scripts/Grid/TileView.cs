@@ -169,7 +169,12 @@ public class TileView : MonoBehaviour,
             iconImage.transform.localRotation = Quaternion.identity;
         }
 
+        if (lastAppliedTileSize > 0)
+            ApplyTileSize(lastAppliedTileSize);
     }
+
+    public bool IsSpecialCreationRevealPlaying =>
+        specialCreationRevealRoutine != null || specialCreationRevealRoot != null;
 
     public bool TryGetCellState(out BoardCellStateSnapshot state)
     {
@@ -838,6 +843,9 @@ public class TileView : MonoBehaviour,
                 Destroy(oldHalo.gameObject);
         }
 
+        if (this != null && lastAppliedTileSize > 0)
+            ApplyTileSize(lastAppliedTileSize);
+
         specialCreationRevealRoutine = null;
     }
 
@@ -1226,6 +1234,9 @@ public class TileView : MonoBehaviour,
 
         iconImage.sprite = sprite;
         iconImage.color = Color.white;
+
+        if (lastAppliedTileSize > 0)
+            ApplyTileSize(lastAppliedTileSize);
     }
 
     public void SetIconAlpha(float alpha)

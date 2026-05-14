@@ -656,7 +656,7 @@ public class BoardController : MonoBehaviour
     internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineStrikes, Action<Vector2Int> onSweepCellReached = null)
     {
         TryResolveLightningSpawner();
-        TryResolveLineTravelPlayer();
+        EnsureLineTravelVisualReady();
         return lineSweepService.PlayLightningLineStrikes(lightningSpawner, lineTravelPlayer, lineStrikes, onSweepCellReached);
     }
 
@@ -670,7 +670,7 @@ public class BoardController : MonoBehaviour
         Action<Vector2Int> onStep,
         Action onCompleted = null)
     {
-        TryResolveLineTravelPlayer();
+        EnsureLineTravelVisualReady();
         return lineSweepService.PlayLineTravelInstanceWithStep(
             lineTravelPlayer,
             axis,
@@ -694,7 +694,7 @@ public class BoardController : MonoBehaviour
         Action<Vector2Int> onStep,
         Action onCompleted = null)
     {
-        TryResolveLineTravelPlayer();
+        EnsureLineTravelVisualReady();
         return lineSweepService.PlayLineTravelInstanceAsymmetric(
             lineTravelPlayer,
             axis,
@@ -763,6 +763,39 @@ public class BoardController : MonoBehaviour
 
             if (lineTravelPlayer.trailParent == null)
                 lineTravelPlayer.trailParent = lineTravelParent;
+        }
+    }
+
+    private void EnsureLineTravelVisualReady()
+    {
+        TryResolveLineTravelPlayer();
+
+        if (lineTravelSpawnParent != null)
+        {
+            EnsureTransformHierarchyActive(lineTravelSpawnParent);
+            lineTravelSpawnParent.SetAsLastSibling();
+        }
+
+        if (lineTravelPlayer == null)
+            return;
+
+        if (lineTravelPlayer.transform.parent != null)
+        {
+            EnsureTransformHierarchyActive(lineTravelPlayer.transform.parent);
+            lineTravelPlayer.transform.parent.SetAsLastSibling();
+        }
+
+        EnsureTransformHierarchyActive(lineTravelPlayer.afterImageParent);
+        EnsureTransformHierarchyActive(lineTravelPlayer.impactParent);
+        EnsureTransformHierarchyActive(lineTravelPlayer.trailParent);
+    }
+
+    private static void EnsureTransformHierarchyActive(Transform transformToActivate)
+    {
+        for (Transform current = transformToActivate; current != null; current = current.parent)
+        {
+            if (!current.gameObject.activeSelf)
+                current.gameObject.SetActive(true);
         }
     }
 
@@ -2231,64 +2264,69 @@ public class BoardController : MonoBehaviour
     internal Coroutine StartBonusLinesRoutine(System.Collections.Generic.List<BonusLinePlacement> placements)
     {
         if (boosterService == null || tiles == null || placements == null || placements.Count == 0) return null;
+        BeginBusy();
+        IsSpecialActivationPhase = true;
+        EnsureLineTravelVisualReady();
         return StartCoroutine(BonusLinesRoutineInternal(placements));
     }
 
     private IEnumerator BonusLinesRoutineInternal(System.Collections.Generic.List<BonusLinePlacement> placements)
     {
-        BeginBusy();
-        IsSpecialActivationPhase = true;
-
-        var matches = new HashSet<TileView>();
-        var affectedCells = new HashSet<Vector2Int>();
-        var visualTargets = new HashSet<TileView>();
-        var strikes = new System.Collections.Generic.List<LightningLineStrike>(placements.Count);
-
-        foreach (var p in placements)
+        try
         {
-            if (p.isHorizontal)
+            var matches = new HashSet<TileView>();
+            var affectedCells = new HashSet<Vector2Int>();
+            var visualTargets = new HashSet<TileView>();
+            var strikes = new System.Collections.Generic.List<LightningLineStrike>(placements.Count);
+
+            foreach (var p in placements)
             {
-                boosterService.AddRow(matches, p.y);
-                boosterService.AddRowCells(affectedCells, p.y);
+                if (p.isHorizontal)
+                {
+                    boosterService.AddRow(matches, p.y);
+                    boosterService.AddRowCells(affectedCells, p.y);
+                }
+                else
+                {
+                    boosterService.AddColumn(matches, p.x);
+                    boosterService.AddColumnCells(affectedCells, p.x);
+                }
+                strikes.Add(new LightningLineStrike(new Vector2Int(p.x, p.y), p.isHorizontal));
             }
-            else
+
+            visualTargets = new HashSet<TileView>(matches);
+
+            if (matches.Count > 0 || affectedCells.Count > 0)
             {
-                boosterService.AddColumn(matches, p.x);
-                boosterService.AddColumnCells(affectedCells, p.x);
+                var chainStrikes = new System.Collections.Generic.List<LightningLineStrike>();
+                specialResolver.ExpandSpecialChain(
+                    matches, affectedCells,
+                    out _, out _,
+                    lightningVisualTargets: visualTargets,
+                    lightningLineStrikes: chainStrikes);
+                strikes.AddRange(chainStrikes);
+
+                // ExpandSpecialChain may add chain tiles to matches; keep visualTargets in sync
+                // so all matched tiles get swept by the line animation (not per-tile pop).
+                visualTargets.UnionWith(matches);
+
+                actionSequencer.Enqueue(BuildBonusLineClearAction(
+                    matches,
+                    affectedCells,
+                    visualTargets,
+                    strikes));
+
+                while (actionSequencer.IsPlaying)
+                    yield return null;
+
+                yield return ResolveBoardPublic();
             }
-            strikes.Add(new LightningLineStrike(new Vector2Int(p.x, p.y), p.isHorizontal));
         }
-
-        visualTargets = new HashSet<TileView>(matches);
-
-        if (matches.Count > 0 || affectedCells.Count > 0)
+        finally
         {
-            var chainStrikes = new System.Collections.Generic.List<LightningLineStrike>();
-            specialResolver.ExpandSpecialChain(
-                matches, affectedCells,
-                out _, out _,
-                lightningVisualTargets: visualTargets,
-                lightningLineStrikes: chainStrikes);
-            strikes.AddRange(chainStrikes);
-
-            // ExpandSpecialChain may add chain tiles to matches; keep visualTargets in sync
-            // so all matched tiles get swept by the line animation (not per-tile pop).
-            visualTargets.UnionWith(matches);
-
-            actionSequencer.Enqueue(BuildBonusLineClearAction(
-                matches,
-                affectedCells,
-                visualTargets,
-                strikes));
-
-            while (actionSequencer.IsPlaying)
-                yield return null;
-
-            yield return ResolveBoardPublic();
+            IsSpecialActivationPhase = false;
+            EndBusy();
         }
-
-        IsSpecialActivationPhase = false;
-        EndBusy();
     }
 
     private MatchClearAction BuildBonusLineClearAction(
