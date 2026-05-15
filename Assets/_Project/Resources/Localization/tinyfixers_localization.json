@@ -21,11 +21,11 @@
         { "key": "loading_hint_3match_title", "value": "3 Taş Eşleşir" },
         { "key": "loading_hint_3match_desc", "value": "Aynı renk taşları kırar" },
         { "key": "loading_hint_lineh_title", "value": "4 Yatay Eşleşme" },
-        { "key": "loading_hint_lineh_desc", "value": "LineH oluşturur" },
+        { "key": "loading_hint_lineh_desc", "value": "Emitter oluşturur" },
         { "key": "loading_hint_linev_title", "value": "4 Düşey Eşleşme" },
-        { "key": "loading_hint_linev_desc", "value": "LineV oluşturur" },
+        { "key": "loading_hint_linev_desc", "value": "Emitter oluştur" },
         { "key": "loading_hint_pulse_title", "value": "Köşeli 5 Eşleşme" },
-        { "key": "loading_hint_pulse_desc", "value": "PulseCore oluşturur" },
+        { "key": "loading_hint_pulse_desc", "value": "PulseCore Oluşturur" },
         { "key": "loading_hint_override_title", "value": "5 Taş Eşleşme" },
         { "key": "loading_hint_override_desc", "value": "Override oluşturur" }
       ]

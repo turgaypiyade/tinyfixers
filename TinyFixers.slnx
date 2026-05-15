@@ -48,6 +48,7 @@
   <Project Path="Unity.AI.Generators.Sdk.csproj" />
   <Project Path="Unity.Burst.CodeGen.csproj" />
   <Project Path="Unity.VisualScripting.Flow.csproj" />
+  <Project Path="Unity.AI.Toolkit.Accounts.csproj" />
   <Project Path="Unity.PerformanceTesting.csproj" />
   <Project Path="Unity.AI.ModelSelector.csproj" />
   <Project Path="Unity.AI.Animate.csproj" />
@@ -57,7 +58,6 @@
   <Project Path="glTFast.Export.csproj" />
   <Project Path="Unity.TextMeshPro.Editor.csproj" />
   <Project Path="PsdPlugin.csproj" />
-  <Project Path="Unity.AI.Toolkit.Accounts.csproj" />
   <Project Path="Unity.2D.IK.Editor.csproj" />
   <Project Path="Unity.InternalAPIEngineBridge.001.csproj" />
   <Project Path="Unity.Burst.Editor.csproj" />
