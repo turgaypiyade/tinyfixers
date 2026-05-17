@@ -28,8 +28,11 @@ public static class TestLevelProgressionBootstrap
         for (int i = 1; i <= MaxLevelStarsReset; i++)
             PlayerPrefs.DeleteKey(KeyLevelStarsPrefix + i);
 
+        TutorialManager.ResetAll();
+        ComboTutorialManager.ResetAll();
+
         PlayerPrefs.Save();
 
-        Debug.Log("[TestLevelProgressionBootstrap] Fresh app launch. Progress, wallet and stars reset.");
+        Debug.Log("[TestLevelProgressionBootstrap] Fresh app launch. Progress, wallet, stars and tutorials reset.");
     }
 }

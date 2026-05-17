@@ -874,7 +874,11 @@ public class TileView : MonoBehaviour,
             yield break;
         }
 
-        specialRevealIconBaseScale = iconRt.localScale;
+        // Special tile icon localScale should always be Vector3.one at rest.
+        // Capturing iconRt.localScale here can pick up a mid-animation value from
+        // a concurrent PlaySpecialCreationMerge (which shrinks/overshoots localScale).
+        iconRt.localScale = Vector3.one;
+        specialRevealIconBaseScale = Vector3.one;
         specialRevealIconBaseRotation = iconRt.localRotation;
         specialRevealIconBaseColor = iconImage.color;
         specialRevealIconBaseColor.a = 1f;

@@ -397,49 +397,43 @@ public sealed class TileAnimator
         createdIconRt.localRotation = Quaternion.identity;
         createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
 
-        // Ufaktan büyümeye başlama süresini biraz daha hissedilir yaptık (0.2s civarı)
         float animDuration = Mathf.Clamp(duration, 0.10f, 0.16f);
         float t = 0f;
 
-        while (t < animDuration)
+        try
         {
-            if (createdTile == null || createdIconRt == null)
+            while (t < animDuration)
             {
-                RestoreTileVisualState(createdTile);
-                yield break;
+                if (createdTile == null || createdIconRt == null)
+                    yield break;
+
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / animDuration);
+
+                float fadeEase = Mathf.Clamp01(k * 1.5f);
+                float createdScaleFactor = EvaluateCreatedSpecialScale(k);
+
+                createdIconRt.localScale = baseScale * createdScaleFactor;
+                createdIconRt.localRotation = Quaternion.identity;
+                createdGroup.alpha = fadeEase;
+                createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, fadeEase);
+
+                yield return null;
             }
-
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / animDuration);
-
-            // Hızlıca belirsin
-            float fadeEase = Mathf.Clamp01(k * 1.5f);
-
-            // Ufaktan esneyerek büyüsün (overshoot and settle)
-            float createdScaleFactor = EvaluateCreatedSpecialScale(k);
-
-            createdIconRt.localScale = baseScale * createdScaleFactor;
-            createdIconRt.localRotation = Quaternion.identity;
-            createdGroup.alpha = fadeEase;
-            createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, fadeEase);
-
-            yield return null;
         }
-
-        createdTile.transform.localScale = Vector3.one;
-        createdTile.transform.localRotation = Quaternion.identity;
-        createdGroup.alpha = 1f;
-        createdIconRt.localScale = baseScale;
-        createdIconRt.localRotation = baseRotation;
-        createdIcon.color = baseColor;
-
-        RestoreTileVisualState(createdTile);
-
-        // FIX:
-        // RestoreTileVisualState iconRt.localScale'i Vector3.one yapıyor.
-        // Bu yüzden animasyon bittikten sonra special layout'u tekrar uygula.
-        if (board != null && createdTile != null)
-            createdTile.ApplyTileSize(board.TileSize);
+        finally
+        {
+            try
+            {
+                if (createdTile != null && createdTile)
+                {
+                    RestoreTileVisualState(createdTile);
+                    if (board != null)
+                        createdTile.ApplyTileSize(board.TileSize);
+                }
+            }
+            catch (MissingReferenceException) { }
+        }
     }
     private static float EaseOutCubic(float t)
     {
@@ -502,45 +496,42 @@ public sealed class TileAnimator
         createdIconRt.localRotation = Quaternion.identity;
         createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
 
-        // Special appear fallback hızlandırıldı: 60-80ms cap
         float animDuration = Mathf.Clamp(duration, 0.06f, 0.08f);
         float t = 0f;
 
-        while (t < animDuration)
+        try
         {
-            if (createdTile == null || createdIconRt == null)
+            while (t < animDuration)
             {
-                RestoreTileVisualState(createdTile);
-                yield break;
+                if (createdTile == null || createdIconRt == null)
+                    yield break;
+
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / animDuration);
+                float fadeEase = Mathf.Clamp01(k * 1.15f);
+                float createdScaleFactor = EvaluateCreatedSpecialScale(k);
+
+                createdIconRt.localScale = baseScale * createdScaleFactor;
+                createdIconRt.localRotation = Quaternion.identity;
+                createdGroup.alpha = fadeEase;
+                createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, fadeEase);
+
+                yield return null;
             }
-
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / animDuration);
-            float fadeEase = Mathf.Clamp01(k * 1.15f);
-            float createdScaleFactor = EvaluateCreatedSpecialScale(k);
-
-            createdIconRt.localScale = baseScale * createdScaleFactor;
-            createdIconRt.localRotation = Quaternion.identity;
-            createdGroup.alpha = fadeEase;
-            createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, fadeEase);
-
-            yield return null;
         }
-
-        createdTile.transform.localScale = Vector3.one;
-        createdTile.transform.localRotation = Quaternion.identity;
-        createdGroup.alpha = 1f;
-        createdIconRt.localScale = baseScale;
-        createdIconRt.localRotation = baseRotation;
-        createdIcon.color = baseColor;
-
-        RestoreTileVisualState(createdTile);
-
-        // FIX:
-        // RestoreTileVisualState iconRt.localScale'i Vector3.one yapıyor.
-        // Bu yüzden animasyon bittikten sonra special layout'u tekrar uygula.
-        if (board != null && createdTile != null)
-            createdTile.ApplyTileSize(board.TileSize);
+        finally
+        {
+            try
+            {
+                if (createdTile != null && createdTile)
+                {
+                    RestoreTileVisualState(createdTile);
+                    if (board != null)
+                        createdTile.ApplyTileSize(board.TileSize);
+                }
+            }
+            catch (MissingReferenceException) { }
+        }
     }
 
     private Vector2 GetRectCenterInParentSpace(RectTransform parent, RectTransform rect)

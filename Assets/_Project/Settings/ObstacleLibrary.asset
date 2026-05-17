@@ -86,10 +86,10 @@ MonoBehaviour:
     size: {x: 1, y: 1}
     hits: 1
     hitParticleSprites:
-    - {fileID: -4137343928191711293, guid: 1fa292475361c4958978f0dafabdb94c, type: 3}
+    - {fileID: 6983484670779300310, guid: bd3bcfa2aad6042e087bfcca6ae8fbc2, type: 3}
     breakParticleSprites:
-    - {fileID: -3734881870064638914, guid: 1fa292475361c4958978f0dafabdb94c, type: 3}
-    - {fileID: 5628360442248681413, guid: 1fa292475361c4958978f0dafabdb94c, type: 3}
+    - {fileID: 6275468428838378410, guid: bd3bcfa2aad6042e087bfcca6ae8fbc2, type: 3}
+    - {fileID: -6609095479032132508, guid: bd3bcfa2aad6042e087bfcca6ae8fbc2, type: 3}
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: d29e0409dcb0c432a9a308ac2094f85e, type: 3}
     legacyStageSprites: []
@@ -153,8 +153,10 @@ MonoBehaviour:
     requiredNormalMatchTileType: 0
     size: {x: 1, y: 1}
     hits: 2
-    hitParticleSprites: []
-    breakParticleSprites: []
+    hitParticleSprites:
+    - {fileID: 6983484670779300310, guid: bd3bcfa2aad6042e087bfcca6ae8fbc2, type: 3}
+    breakParticleSprites:
+    - {fileID: 6275468428838378410, guid: bd3bcfa2aad6042e087bfcca6ae8fbc2, type: 3}
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: dbc998d69c4e54be89c6474914ea7e90, type: 3}
     legacyStageSprites: []

@@ -58,6 +58,15 @@ public class ObstacleDef
 
     [Tooltip("Obstacle tamamen kırıldığında kullanılacak particle sprite sheet parçaları.")]
     public List<Sprite> breakParticleSprites = new();
+
+    [Header("Audio")]
+    [Tooltip("Obstacle hasar aldığında (kırılmadan) çalınacak ses.")]
+    public AudioClip hitSound;
+    [Range(0f, 1f)] public float hitSoundVolume = 1f;
+
+    [Tooltip("Obstacle tamamen kırıldığında çalınacak ses.")]
+    public AudioClip breakSound;
+    [Range(0f, 1f)] public float breakSoundVolume = 1f;
     [HideInInspector] public bool drawUnderTiles = false;        // legacy serialized flag
 
     [SerializeField, HideInInspector, FormerlySerializedAs("sprite")]

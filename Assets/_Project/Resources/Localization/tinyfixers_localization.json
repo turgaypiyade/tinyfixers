@@ -23,11 +23,17 @@
         { "key": "loading_hint_lineh_title", "value": "4 Yatay Eşleşme" },
         { "key": "loading_hint_lineh_desc", "value": "Emitter oluşturur" },
         { "key": "loading_hint_linev_title", "value": "4 Düşey Eşleşme" },
-        { "key": "loading_hint_linev_desc", "value": "Emitter oluştur" },
+        { "key": "loading_hint_linev_desc", "value": "Emitter oluşturur" },
         { "key": "loading_hint_pulse_title", "value": "Köşeli 5 Eşleşme" },
         { "key": "loading_hint_pulse_desc", "value": "PulseCore Oluşturur" },
         { "key": "loading_hint_override_title", "value": "5 Taş Eşleşme" },
-        { "key": "loading_hint_override_desc", "value": "Override oluşturur" }
+        { "key": "loading_hint_override_desc", "value": "Override oluşturur" },
+        { "key": "tutorial_basic_match_desc", "value": "Aynı renkteki taşları yan yana getir!" },
+        { "key": "tutorial_emitter_created_desc", "value": "Emitter oluştu! Aktive etmek için sürükle." },
+        { "key": "tutorial_patchbot_created_desc", "value": "PatchBot oluştu! Aktive etmek için sürükle." },
+        { "key": "tutorial_emitter_activated_desc", "value": "Emitter tüm bir satırı temizler. Herhangi bir taşla değiştir!" },
+        { "key": "tutorial_pulsecore_created_desc", "value": "PulseCore oluştu! Çevresini patlatır, aktive etmek için sürükle." },
+        { "key": "tutorial_override_created_desc", "value": "Override oluştu! Aynı renkteki tüm taşları temizler." }
       ]
     },
     {
@@ -56,7 +62,13 @@
         { "key": "loading_hint_pulse_title", "value": "Match 5 in a Corner" },
         { "key": "loading_hint_pulse_desc", "value": "Creates a PulseCore" },
         { "key": "loading_hint_override_title", "value": "Match 5 Tiles" },
-        { "key": "loading_hint_override_desc", "value": "Creates an Override" }
+        { "key": "loading_hint_override_desc", "value": "Creates an Override" },
+        { "key": "tutorial_basic_match_desc", "value": "Match same-colored tiles in a row!" },
+        { "key": "tutorial_emitter_created_desc", "value": "Emitter created! Swipe it to activate." },
+        { "key": "tutorial_patchbot_created_desc", "value": "PatchBot created! Swipe it to activate." },
+        { "key": "tutorial_emitter_activated_desc", "value": "The Emitter clears an entire row. Swap it with any tile!" },
+        { "key": "tutorial_pulsecore_created_desc", "value": "PulseCore created! Explodes the surrounding area. Swipe to activate." },
+        { "key": "tutorial_override_created_desc", "value": "Override created! Clears all tiles of the same color." }
       ]
     }
   ]

@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af84d6b19c1a84a989b9c2df12949209, type: 3}
+  m_Name: TutorialContentLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialContentLibrary
+  entries:
+  - id: 0
+    locKey: tutorial_basic_match_desc
+    illustrationSprite: {fileID: 0}
+  - id: 1
+    locKey: tutorial_emitter_created_desc
+    illustrationSprite: {fileID: 0}
+  - id: 2
+    locKey: tutorial_patchbot_created_desc
+    illustrationSprite: {fileID: 0}
+  - id: 3
+    locKey: tutorial_emitter_activated_desc
+    illustrationSprite: {fileID: 0}
+  - id: 4
+    locKey: tutorial_pulsecore_created_desc
+    illustrationSprite: {fileID: 0}
+  - id: 5
+    locKey: tutorial_override_created_desc
+    illustrationSprite: {fileID: 0}

@@ -77,6 +77,10 @@ public class LevelData : ScriptableObject
     [Tooltip("How many EnergyOrb collectibles each EnergyContainer releases in this level. EnergyContainerRuntime can still provide a fallback, but level data owns the tuning.")]
     [Min(1)] public int energyPerContainer = 10;
 
+    [Header("Tutorial")]
+    [Tooltip("Bu level açılınca board'a inject edilecek combo tutorial. None = normal level.")]
+    public ComboTutorialId comboTutorial = ComboTutorialId.None;
+
     [Header("Audio")]
     public AudioClip musicClip;
 

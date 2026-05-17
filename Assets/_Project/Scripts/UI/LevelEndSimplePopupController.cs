@@ -364,6 +364,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         _movesAtWin = board != null ? board.RemainingMoves : 0;
 
+        // Snapshot goals BEFORE bonus round — bonus cascade must not cancel a win that already happened.
+        bool goalsWereCompleted = topHud != null && topHud.AreAllGoalsCompleted;
+
         hardSkipBonusRoundRequested = false;
 
         if (bonusMovesService != null && board != null && board.RemainingMoves > 0)
@@ -376,6 +379,15 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
             isBonusRoundRunning = false;
             SetSkipBonusOverlayVisible(false);
+
+            // Hard-skip stops the bonus coroutine mid-execution; wait for board to fully settle.
+            const float settleTimeout = 5f;
+            float settleElapsed = 0f;
+            while (board != null && (board.IsBusy || board.ActiveBackgroundJobs > 0) && settleElapsed < settleTimeout)
+            {
+                settleElapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
         }
 
         if (successVideoStartDelay > 0f && !hardSkipBonusRoundRequested)
@@ -386,9 +398,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (board == null || topHud == null)
             yield break;
 
-        if (!topHud.AreAllGoalsCompleted)
+        if (!goalsWereCompleted)
         {
-            Debug.Log("[LevelEnd] Success cancelled after settle; goals no longer completed.");
+            Debug.LogWarning("[LevelEnd] Success cancelled; goals were not completed before bonus round.");
             yield break;
         }
 

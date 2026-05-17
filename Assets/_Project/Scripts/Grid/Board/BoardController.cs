@@ -257,6 +257,37 @@ public class BoardController : MonoBehaviour
     public int RemainingMoves { get; private set; }
     public LevelData ActiveLevelData => levelData;
 
+    // ── Tutorial swap filter ──
+    private bool _tutorialSwapFilterActive;
+    private Vector2Int _tutorialSwapFrom;
+    private Vector2Int _tutorialSwapTo;
+    private System.Action _tutorialSwapCompleted;
+
+    public void SetTutorialSwapFilter(Vector2Int from, Vector2Int to, System.Action onCompleted = null)
+    {
+        _tutorialSwapFilterActive = true;
+        _tutorialSwapFrom = from;
+        _tutorialSwapTo = to;
+        _tutorialSwapCompleted = onCompleted;
+        SetInputLocked(true);
+    }
+
+    private void ClearTutorialSwapFilter()
+    {
+        _tutorialSwapFilterActive = false;
+        var cb = _tutorialSwapCompleted;
+        _tutorialSwapCompleted = null;
+        SetInputLocked(false);
+        cb?.Invoke();
+    }
+
+    private bool IsTutorialSwapAllowed(int ax, int ay, int bx, int by)
+    {
+        return _tutorialSwapFilterActive
+            && ((ax == _tutorialSwapFrom.x && ay == _tutorialSwapFrom.y && bx == _tutorialSwapTo.x && by == _tutorialSwapTo.y)
+             || (ax == _tutorialSwapTo.x   && ay == _tutorialSwapTo.y   && bx == _tutorialSwapFrom.x && by == _tutorialSwapFrom.y));
+    }
+
     public event Action<int, ObstacleStageSnapshot> OnObstacleStageChanged;
     public event Action<int, ObstacleId> OnObstacleDestroyed;
     public event Action<int> OnCellUnlocked;
@@ -1016,9 +1047,17 @@ public class BoardController : MonoBehaviour
 
     public void RequestSwapFromDrag(TileView from, int dirX, int dirY)
     {
-        if (IsBusy || InputLocked) return;
-        if (activeBooster != BoosterMode.None) return;
+        if (IsBusy) return;
+
         int nx = from.X + dirX, ny = from.Y + dirY;
+
+        if (InputLocked)
+        {
+            if (!IsTutorialSwapAllowed(from.X, from.Y, nx, ny)) return;
+            ClearTutorialSwapFilter();
+        }
+
+        if (activeBooster != BoosterMode.None) return;
         if (nx < 0 || nx >= width || ny < 0 || ny >= height) return;
         if (holes[nx, ny] && (obstacleStateService == null || !obstacleStateService.HasObstacleAt(nx, ny))) return;
         if (obstacleStateService != null &&
@@ -1036,7 +1075,24 @@ public class BoardController : MonoBehaviour
 
     public void OnTileClicked(TileView tile)
     {
-        if (IsBusy || InputLocked) return;
+        if (IsBusy) return;
+
+        if (InputLocked)
+        {
+            if (!_tutorialSwapFilterActive) return;
+            // Tutorial click-to-swap: iki tıkla hedef hamlesi yapılabilir
+            if (selected == null) { selected = tile; return; }
+            if (selected == tile) { selected = null; return; }
+            if (AreNeighbors(selected, tile) && IsTutorialSwapAllowed(selected.X, selected.Y, tile.X, tile.Y))
+            {
+                var a = selected; selected = null;
+                ClearTutorialSwapFilter();
+                StartCoroutine(ProcessSwap(a, tile));
+            }
+            else { selected = null; }
+            return;
+        }
+
         if (TryUseBooster(tile)) return;
         if (selected == null) { selected = tile; return; }
         if (selected == tile) { selected = null; return; }
@@ -1707,6 +1763,10 @@ public class BoardController : MonoBehaviour
                 // CascadeLogic.HasAnyEmptyPlayableCell artık sadece flow-reachable boşlukları sayar.
             }
 
+            // Hamle kalmadıysa cascade settle beklendi; yeni match aramaya gerek yok.
+            // Board idle olur, popup hemen açılır.
+            if (RemainingMoves <= 0)
+                yield break;
 
             var matches = matchFinder.FindAllMatches();
 

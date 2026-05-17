@@ -74,12 +74,31 @@ public class BoardBreakFxService
             $"lifetime={lifetime}, sprites={(particleSprites != null ? particleSprites.Count : 0)}"
         );
 
+        PlayObstacleSound(change);
+
         SpawnAtWorld(
             prefab,
             lifetime,
             board.GetCellWorldCenterPosition(x, y),
             Color.white,
             particleSprites);
+    }
+
+    private void PlayObstacleSound(ObstacleVisualChange change)
+    {
+        if (board.LevelData?.obstacleLibrary == null) return;
+
+        var def = board.LevelData.obstacleLibrary.Get(change.obstacleId);
+        if (def == null) return;
+
+        AudioClip clip  = change.cleared ? def.breakSound   : def.hitSound;
+        float     vol   = change.cleared ? def.breakSoundVolume : def.hitSoundVolume;
+
+        if (clip == null) return;
+
+        int x = change.originIndex % board.Width;
+        int y = change.originIndex / board.Width;
+        AudioSource.PlayClipAtPoint(clip, board.GetCellWorldCenterPosition(x, y), vol);
     }
 
     private IReadOnlyList<Sprite> ResolveObstacleParticleSprites(ObstacleVisualChange change)
@@ -182,6 +201,8 @@ public class BoardBreakFxService
 
         if (particleSprites != null && particleSprites.Count > 0)
             ApplyParticleSprites(go, particleSprites);
+        else
+            PlayWithFanBurst(go);
 
         if (lifetime > 0f)
             Object.Destroy(go, lifetime);
@@ -242,13 +263,26 @@ public class BoardBreakFxService
 
             int added = 0;
 
+            Sprite firstSprite = null;
             for (int s = 0; s < sprites.Count; s++)
             {
                 if (sprites[s] == null)
                     continue;
 
                 textureSheet.AddSprite(sprites[s]);
+                if (firstSprite == null) firstSprite = sprites[s];
                 added++;
+            }
+
+            if (firstSprite != null)
+            {
+                var psr = ps.GetComponent<ParticleSystemRenderer>();
+                if (psr != null)
+                {
+                    var mat = psr.material;
+                    if (mat != null)
+                        mat.SetTexture("_MainTex", firstSprite.texture);
+                }
             }
 
             Debug.Log(
@@ -259,14 +293,23 @@ public class BoardBreakFxService
             ps.Clear(true);
             ps.Play(true);
 
-            // Debug/test: prefab emission ayarlarından bağımsız olarak particle çıkar.
-            // Bunu görürsek sorun kodda değil, prefab emission/burst ayarındadır.
-            ps.Emit(24);
-
             Debug.Log(
                 $"[ObstacleFX] ParticleSystem played. " +
                 $"system={ps.gameObject.name}, isPlaying={ps.isPlaying}, particleCount={ps.particleCount}"
             );
+        }
+    }
+
+    private static void PlayWithFanBurst(GameObject go)
+    {
+        if (go == null) return;
+        ParticleSystem[] systems = go.GetComponentsInChildren<ParticleSystem>(true);
+        for (int i = 0; i < systems.Length; i++)
+        {
+            var ps = systems[i];
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            ps.Clear(true);
+            ps.Play(true);
         }
     }
 
