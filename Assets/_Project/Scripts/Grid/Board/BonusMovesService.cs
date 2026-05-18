@@ -197,7 +197,13 @@ public class BonusMovesService : MonoBehaviour
                 yield return null;
 
             if (_hardSkipRequested && routine != null)
+            {
+                // StopCoroutine never executes finally blocks, so EndBusy() in
+                // BonusLinesRoutineInternal would be skipped, leaving busyScopeDepth > 0.
+                bool stillBusy = board.IsBusy;
                 board.StopCoroutine(routine);
+                if (stillBusy) board.EndBusy();
+            }
         }
 
         if (_hardSkipRequested)

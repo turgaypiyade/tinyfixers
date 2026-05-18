@@ -594,8 +594,14 @@ public class BoardController : MonoBehaviour
     internal void EndBusy()
     {
         if (busyScopeDepth > 0) busyScopeDepth--;
-        if (busyScopeDepth == 0 && CurrentState == BoardState.Resolving)
-        { CurrentState = BoardState.Idle; OnBecameIdle?.Invoke(); }
+        if (busyScopeDepth == 0)
+        {
+            if (CurrentState == BoardState.Resolving)
+                CurrentState = BoardState.Idle;
+            // Fire regardless of whether state was Locked — ensures RunAfterIdleRoutine
+            // callbacks always complete even if SetInputLocked was called mid-resolve.
+            OnBecameIdle?.Invoke();
+        }
     }
 
     public void SetInputLocked(bool isLocked)
@@ -634,13 +640,35 @@ public class BoardController : MonoBehaviour
 
     private IEnumerator RunAfterIdleRoutine(Action action)
     {
-        if (!IsBusy) { action(); yield break; }
-        bool idle = false;
-        void Handler() { OnBecameIdle -= Handler; idle = true; }
-        OnBecameIdle += Handler;
-        while (!idle) yield return null;
-        yield return null;
-        action();
+        const float timeoutSeconds = 3f;
+        float elapsed = 0f;
+
+        while (true)
+        {
+            bool busy = IsBusy || ActiveBackgroundJobs > 0;
+
+            if (!busy)
+            {
+                yield return null;
+                action?.Invoke();
+                yield break;
+            }
+
+            elapsed += Time.unscaledDeltaTime;
+
+            if (elapsed >= timeoutSeconds)
+            {
+                Debug.LogWarning(
+                    $"[Board] RunAfterIdle timeout. " +
+                    $"IsBusy={IsBusy}, CurrentState={CurrentState}, " +
+                    $"busyScopeDepth={busyScopeDepth}, ActiveBackgroundJobs={ActiveBackgroundJobs}");
+
+                action?.Invoke();
+                yield break;
+            }
+
+            yield return null;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -2325,8 +2353,6 @@ public class BoardController : MonoBehaviour
     {
         if (boosterService == null || tiles == null || placements == null || placements.Count == 0) return null;
         BeginBusy();
-        IsSpecialActivationPhase = true;
-        EnsureLineTravelVisualReady();
         return StartCoroutine(BonusLinesRoutineInternal(placements));
     }
 
@@ -2334,53 +2360,26 @@ public class BoardController : MonoBehaviour
     {
         try
         {
-            var matches = new HashSet<TileView>();
-            var affectedCells = new HashSet<Vector2Int>();
-            var visualTargets = new HashSet<TileView>();
-            var strikes = new System.Collections.Generic.List<LightningLineStrike>(placements.Count);
+            IsSpecialActivationPhase = true;
 
             foreach (var p in placements)
             {
-                if (p.isHorizontal)
-                {
-                    boosterService.AddRow(matches, p.y);
-                    boosterService.AddRowCells(affectedCells, p.y);
-                }
-                else
-                {
-                    boosterService.AddColumn(matches, p.x);
-                    boosterService.AddColumnCells(affectedCells, p.x);
-                }
-                strikes.Add(new LightningLineStrike(new Vector2Int(p.x, p.y), p.isHorizontal));
-            }
+                var tile = (p.x >= 0 && p.x < width && p.y >= 0 && p.y < height)
+                    ? tiles[p.x, p.y] : null;
+                if (tile == null) continue;
 
-            visualTargets = new HashSet<TileView>(matches);
+                var sp = tile.GetSpecial();
+                if (sp != TileSpecial.LineV && sp != TileSpecial.LineH) continue;
 
-            if (matches.Count > 0 || affectedCells.Count > 0)
-            {
-                var chainStrikes = new System.Collections.Generic.List<LightningLineStrike>();
-                specialResolver.ExpandSpecialChain(
-                    matches, affectedCells,
-                    out _, out _,
-                    lightningVisualTargets: visualTargets,
-                    lightningLineStrikes: chainStrikes);
-                strikes.AddRange(chainStrikes);
+                var actions = specialResolver.ResolveSpecialSolo(tile);
+                if (actions == null || actions.Count == 0) continue;
 
-                // ExpandSpecialChain may add chain tiles to matches; keep visualTargets in sync
-                // so all matched tiles get swept by the line animation (not per-tile pop).
-                visualTargets.UnionWith(matches);
-
-                actionSequencer.Enqueue(BuildBonusLineClearAction(
-                    matches,
-                    affectedCells,
-                    visualTargets,
-                    strikes));
-
+                actionSequencer.Enqueue(actions);
                 while (actionSequencer.IsPlaying)
                     yield return null;
-
-                yield return ResolveBoardPublic();
             }
+
+            yield return ResolveBoardPublic();
         }
         finally
         {

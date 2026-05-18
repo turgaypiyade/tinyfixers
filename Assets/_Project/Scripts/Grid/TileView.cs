@@ -815,17 +815,19 @@ public class TileView : MonoBehaviour,
 
     private void CleanupSpecialCreationReveal()
     {
-        if (specialRevealVisualCaptured && iconImage != null)
+        if (iconImage != null)
         {
             RectTransform iconRt = iconImage.rectTransform;
 
             if (iconRt != null)
             {
-                iconRt.localScale = specialRevealIconBaseScale;
-                iconRt.localRotation = specialRevealIconBaseRotation;
+                iconRt.localScale = Vector3.one;
+                if (specialRevealVisualCaptured)
+                    iconRt.localRotation = specialRevealIconBaseRotation;
             }
 
-            iconImage.color = specialRevealIconBaseColor;
+            if (specialRevealVisualCaptured)
+                iconImage.color = specialRevealIconBaseColor;
         }
 
         specialRevealVisualCaptured = false;
@@ -1455,6 +1457,9 @@ public class TileView : MonoBehaviour,
             irt.pivot = new Vector2(0.5f, 0f);
             irt.anchoredPosition = new Vector2(0f, -scaledIconSize.y * 0.5f);
         }
+
+        if (isSpecial)
+            irt.localScale = Vector3.one;
     }
 
     public void SetCoveredByCellOverlay(bool covered)

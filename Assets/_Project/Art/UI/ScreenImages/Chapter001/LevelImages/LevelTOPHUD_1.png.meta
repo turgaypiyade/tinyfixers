@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: bb81329fdeec84e8f82a1b3eb761013c
+guid: ba582bd9965ec4d8f9f41dab99e51df7
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8311516553258623355
-    second: ChestStage3_0
+      213: 8205446479619079933
+    second: LevelTOPHUD_1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 512
+    maxTextureSize: 1024
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 2
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: ChestStage3_0
+      name: LevelTOPHUD_1_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 1237
-        height: 1234
+        x: 9
+        y: 15
+        width: 2060
+        height: 608
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: b7162c5d440785370800000000000000
-      internalID: 8311516553258623355
+      spriteID: dfebc21591a9fd170800000000000000
+      internalID: 8205446479619079933
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      ChestStage3_0: 8311516553258623355
+      LevelTOPHUD_1_0: 8205446479619079933
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -62,25 +62,26 @@ public class ActionSequencer : MonoBehaviour
     private IEnumerator PlaySequence()
     {
         // IsPlaying is already set to true by Enqueue() — no race window
-
-        while (actionQueue.Count > 0)
+        try
         {
-            BoardAction action = actionQueue.Dequeue();
+            while (actionQueue.Count > 0)
+            {
+                BoardAction action = actionQueue.Dequeue();
 
-            if (action.Blocking)
-            {
-                yield return StartCoroutine(action.ExecuteVisuals(this));
-            }
-            else
-            {
-                StartCoroutine(action.ExecuteVisuals(this));
+                if (action.Blocking)
+                {
+                    yield return StartCoroutine(action.ExecuteVisuals(this));
+                }
+                else
+                {
+                    StartCoroutine(action.ExecuteVisuals(this));
+                }
             }
         }
-
-        IsPlaying = false;
-
-        // Let the controller know the visual sequence is finished,
-        // so it can check for falls, collapses, or level end states.
-        Board.OnActionSequenceFinished();
+        finally
+        {
+            IsPlaying = false;
+            Board.OnActionSequenceFinished();
+        }
     }
 }

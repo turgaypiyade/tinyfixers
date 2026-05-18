@@ -28,8 +28,9 @@ MonoBehaviour:
     obstacleId: 21
     collectibleId: 1
     iconOverride: {fileID: 0}
-    amount: 8
+    amount: 2
   energyPerContainer: 5
+  comboTutorial: 0
   musicClip: {fileID: 8300000, guid: a75116037af37490bb9f00591892d8d6, type: 3}
   musicVolume: 0.8
   obstacleLibrary: {fileID: 11400000, guid: 542e279c729681244b475a353cdd0e8f, type: 2}

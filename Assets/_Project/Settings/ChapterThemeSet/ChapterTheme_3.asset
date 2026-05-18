@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ChapterTheme
   chapterIndex: 3
   gameBackground: {fileID: 21300000, guid: 86607145c44944a5e8960dc77773c1a0, type: 3}
-  gameTopHud: {fileID: 21300000, guid: 009d0a2ba352c49d3b3a9010271ffbf3, type: 3}
+  gameTopHud: {fileID: 21300000, guid: cd5802463ef4b4031a598361c568cc19, type: 3}
   gameBottomArea: {fileID: 21300000, guid: 0c35b99143f9b4dbcb999896ec7ce37a, type: 3}
   menuBackground: {fileID: 21300000, guid: 0ceb36f54868c4558b14ebb180c4091d, type: 3}
   menuTopHud: {fileID: 21300000, guid: f542ccaaf300c4839b6bd184cd231bca, type: 3}
@@ -39,6 +39,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 1b84d161e03ef41329ba93986ee4f316, type: 3}
   - {fileID: 21300000, guid: 2ffe2b14db1084a7182210ce7ae161d6, type: 3}
   - {fileID: 21300000, guid: 8498b48c28ced4e79904859e2a7cb13e, type: 3}
+  loadingHints: []
   levelEndPopupBackground: {fileID: 21300000, guid: d698651cd4883474f9da105e3ba16e2b, type: 3}
   levelEndContinueButton: {fileID: 0}
   levelEndCloseButton: {fileID: 0}

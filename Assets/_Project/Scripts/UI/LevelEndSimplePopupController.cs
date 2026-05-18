@@ -264,15 +264,21 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void Update()
     {
-        // When the board is still animating after moves ran out, a user tap skips
-        // the remaining animation and shows the popup immediately.
-        if (!endCheckQueued) return;
-        if (board == null || !board.IsBusy || board.RemainingMoves > 0) return;
-        if (failPopupShown || successPopupShown) return;
+        if (!endCheckQueued || failPopupShown || successPopupShown) return;
+        if (board == null || board.RemainingMoves > 0) return;
 
-        bool tapped = Input.GetMouseButtonDown(0);
-        if (!tapped && Input.touchCount > 0)
-            tapped = Input.GetTouch(0).phase == TouchPhase.Began;
+        // Board already idle but OnBecameIdle may not have fired — act as fallback.
+        if (!board.IsBusy)
+        {
+            Debug.Log("[LevelEnd] Update fallback: board idle, moves exhausted, evaluating.");
+            endCheckQueued = false;
+            EvaluateAndShowIfEnded();
+            return;
+        }
+
+        // Board still animating — a user tap skips the remaining animation.
+        bool tapped = UnityEngine.InputSystem.Pointer.current != null
+            && UnityEngine.InputSystem.Pointer.current.press.wasPressedThisFrame;
         if (!tapped) return;
 
         Debug.Log("[LevelEnd] User tap: skipping out-of-moves animation, showing popup now.");
@@ -374,8 +380,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             yield return null;
         }
 
-        while (board != null && (board.IsBusy || board.ActiveBackgroundJobs > 0))
-            yield return null;
+        yield return StartCoroutine(WaitBoardQuietForLevelEnd(3f, "before_success_logo"));
 
         if (levelCompletionLogoAnimation != null)
             yield return StartCoroutine(levelCompletionLogoAnimation.Play());
@@ -428,7 +433,25 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         ShowSuccessPopup();
     }
+    private IEnumerator WaitBoardQuietForLevelEnd(float timeoutSeconds, string context)
+    {
+        float elapsed = 0f;
 
+        while (board != null && (board.IsBusy || board.ActiveBackgroundJobs > 0))
+        {
+            elapsed += Time.unscaledDeltaTime;
+
+            if (elapsed >= timeoutSeconds)
+            {
+                Debug.LogWarning(
+                    $"[LevelEnd] Wait timeout. context={context}, " +
+                    $"IsBusy={board.IsBusy}, ActiveBackgroundJobs={board.ActiveBackgroundJobs}");
+                yield break;
+            }
+
+            yield return null;
+        }
+    }
     private IEnumerator PlaySuccessVideoThenReturnToMainMenu()
     {
         if (successAnimationPlayer != null)
@@ -618,6 +641,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (failPopupShown || successPopupShown)
             return;
 
+        Debug.Log(
+            $"[LevelEnd] Evaluate. " +
+            $"RemainingMoves={board.RemainingMoves}, " +
+            $"GoalsCompleted={topHud.AreAllGoalsCompleted}, " +
+            $"IsBusy={board.IsBusy}, " +
+            $"ActiveBackgroundJobs={board.ActiveBackgroundJobs}");
+            
         if (topHud.AreAllGoalsCompleted)
         {
             QueueSuccessReturnToMainMenu();

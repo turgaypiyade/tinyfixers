@@ -17,7 +17,7 @@ public static class TestLevelProgressionBootstrap
     private static void ResetProgressOnFreshAppLaunch()
     {
         // Fresh app launch: start as a new player.
-       // PlayerPrefs.SetInt(KeyCurrentLevel, 1);
+        PlayerPrefs.SetInt(KeyCurrentLevel, 1);
         PlayerPrefs.SetInt(KeyCoins, 0);
 
         PlayerPrefs.DeleteKey(KeyTotalStars);
