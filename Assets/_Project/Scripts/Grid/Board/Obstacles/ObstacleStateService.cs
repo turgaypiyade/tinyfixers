@@ -80,7 +80,7 @@ public readonly struct ObstacleStageTransition
     }
 }
 
-public class ObstacleStateService
+public class ObstacleStateService : ISimObstacleQuery
 {
     private LevelData level;
     private ObstacleLibrary library;
