@@ -3,7 +3,14 @@ using UnityEngine;
 
 public class BoardBreakFxService
 {
+    private const bool EnableObstacleFxDebug = false;
+    private const float MinSafeFxLifetime = 0.75f;
+
+    private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
+    private static readonly MaterialPropertyBlock ParticlePropertyBlock = new();
+
     private readonly BoardController board;
+    private readonly List<Sprite> fallbackSpriteBuffer = new(1);
 
     public BoardBreakFxService(BoardController board)
     {
@@ -27,14 +34,14 @@ public class BoardBreakFxService
 
     public void PlayObstacleBreak(ObstacleVisualChange change)
     {
-        Debug.Log(
+        FxLog(
             $"[ObstacleFX] PlayObstacleBreak called. " +
             $"id={change.obstacleId}, cleared={change.cleared}, origin={change.originIndex}, remaining={change.remainingHits}"
         );
 
         if (change.originIndex < 0 || board.Width <= 0 || board.Height <= 0)
         {
-            Debug.LogWarning(
+            FxWarn(
                 $"[ObstacleFX] Abort: invalid origin/board. " +
                 $"origin={change.originIndex}, board={board.Width}x{board.Height}"
             );
@@ -51,7 +58,7 @@ public class BoardBreakFxService
 
         if (prefab == null)
         {
-            Debug.LogWarning(
+            FxWarn(
                 $"[ObstacleFX] Abort: prefab is NULL. " +
                 $"cleared={change.cleared}, expected={(change.cleared ? "ObstacleBreakFxPrefab" : "ObstacleHitFxPrefab")}"
             );
@@ -63,13 +70,13 @@ public class BoardBreakFxService
 
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
         {
-            Debug.LogWarning($"[ObstacleFX] Abort: invalid cell. x={x}, y={y}");
+            FxWarn($"[ObstacleFX] Abort: invalid cell. x={x}, y={y}");
             return;
         }
 
         IReadOnlyList<Sprite> particleSprites = ResolveObstacleParticleSprites(change);
 
-        Debug.Log(
+        FxLog(
             $"[ObstacleFX] Spawn request. prefab={prefab.name}, cell=({x},{y}), " +
             $"lifetime={lifetime}, sprites={(particleSprites != null ? particleSprites.Count : 0)}"
         );
@@ -86,18 +93,22 @@ public class BoardBreakFxService
 
     private void PlayObstacleSound(ObstacleVisualChange change)
     {
-        if (board.LevelData?.obstacleLibrary == null) return;
+        if (board.LevelData?.obstacleLibrary == null)
+            return;
 
         var def = board.LevelData.obstacleLibrary.Get(change.obstacleId);
-        if (def == null) return;
+        if (def == null)
+            return;
 
-        AudioClip clip  = change.cleared ? def.breakSound   : def.hitSound;
-        float     vol   = change.cleared ? def.breakSoundVolume : def.hitSoundVolume;
+        AudioClip clip = change.cleared ? def.breakSound : def.hitSound;
+        float vol = change.cleared ? def.breakSoundVolume : def.hitSoundVolume;
 
-        if (clip == null) return;
+        if (clip == null)
+            return;
 
         int x = change.originIndex % board.Width;
         int y = change.originIndex / board.Width;
+
         AudioSource.PlayClipAtPoint(clip, board.GetCellWorldCenterPosition(x, y), vol);
     }
 
@@ -105,20 +116,20 @@ public class BoardBreakFxService
     {
         if (board.LevelData == null)
         {
-            Debug.LogWarning("[ObstacleFX] No LevelData.");
+            FxWarn("[ObstacleFX] No LevelData.");
             return null;
         }
 
         if (board.LevelData.obstacleLibrary == null)
         {
-            Debug.LogWarning("[ObstacleFX] No ObstacleLibrary on LevelData.");
+            FxWarn("[ObstacleFX] No ObstacleLibrary on LevelData.");
             return null;
         }
 
         var def = board.LevelData.obstacleLibrary.Get(change.obstacleId);
         if (def == null)
         {
-            Debug.LogWarning($"[ObstacleFX] No ObstacleDef found for id={change.obstacleId}");
+            FxWarn($"[ObstacleFX] No ObstacleDef found for id={change.obstacleId}");
             return null;
         }
 
@@ -128,17 +139,20 @@ public class BoardBreakFxService
 
         if (sprites != null && sprites.Count > 0)
         {
-            int nonNullCount = 0;
-            for (int i = 0; i < sprites.Count; i++)
+            if (EnableObstacleFxDebug)
             {
-                if (sprites[i] != null)
-                    nonNullCount++;
-            }
+                int nonNullCount = 0;
+                for (int i = 0; i < sprites.Count; i++)
+                {
+                    if (sprites[i] != null)
+                        nonNullCount++;
+                }
 
-            Debug.Log(
-                $"[ObstacleFX] Using custom obstacle particle sprites. " +
-                $"id={change.obstacleId}, cleared={change.cleared}, count={sprites.Count}, nonNull={nonNullCount}"
-            );
+                FxLog(
+                    $"[ObstacleFX] Using custom obstacle particle sprites. " +
+                    $"id={change.obstacleId}, cleared={change.cleared}, count={sprites.Count}, nonNull={nonNullCount}"
+                );
+            }
 
             return sprites;
         }
@@ -150,17 +164,20 @@ public class BoardBreakFxService
 
         if (fallback == null)
         {
-            Debug.LogWarning(
+            FxWarn(
                 $"[ObstacleFX] No custom sprites and no fallback sprite. " +
                 $"id={change.obstacleId}, cleared={change.cleared}"
             );
             return null;
         }
 
-        Debug.Log($"[ObstacleFX] Using fallback sprite: {fallback.name}");
+        FxLog($"[ObstacleFX] Using fallback sprite: {fallback.name}");
 
-        return new[] { fallback };
+        fallbackSpriteBuffer.Clear();
+        fallbackSpriteBuffer.Add(fallback);
+        return fallbackSpriteBuffer;
     }
+
     private void SpawnAtWorld(
         GameObject prefab,
         float lifetime,
@@ -197,60 +214,95 @@ public class BoardBreakFxService
 
         go.SetActive(true);
 
-        ApplyColor(go, color);
+        ParticleSystem[] systems = go.GetComponentsInChildren<ParticleSystem>(true);
+
+        ApplyColor(systems, color);
 
         if (particleSprites != null && particleSprites.Count > 0)
-            ApplyParticleSprites(go, particleSprites);
+            ApplyParticleSprites(go, systems, particleSprites);
         else
-            PlayWithFanBurst(go);
+            PlayWithFanBurst(systems);
 
-        if (lifetime > 0f)
-            Object.Destroy(go, lifetime);
+        float safeLifetime = CalculateSafeLifetime(lifetime, systems);
+        Object.Destroy(go, safeLifetime);
     }
 
-    private void ApplyColor(GameObject go, Color color)
+    private float CalculateSafeLifetime(float requestedLifetime, ParticleSystem[] systems)
     {
-        if (go == null)
-            return;
+        float safeLifetime = Mathf.Max(MinSafeFxLifetime, requestedLifetime);
 
-        ParticleSystem[] systems = go.GetComponentsInChildren<ParticleSystem>(true);
+        if (systems == null)
+            return safeLifetime;
+
         for (int i = 0; i < systems.Length; i++)
         {
-            var main = systems[i].main;
+            var ps = systems[i];
+            if (ps == null)
+                continue;
+
+            var main = ps.main;
+
+            float duration = main.duration;
+            float maxParticleLifetime = main.startLifetime.constantMax;
+            float startDelay = main.startDelay.constantMax;
+
+            safeLifetime = Mathf.Max(
+                safeLifetime,
+                startDelay + duration + maxParticleLifetime + 0.05f);
+        }
+
+        return safeLifetime;
+    }
+
+    private void ApplyColor(ParticleSystem[] systems, Color color)
+    {
+        if (systems == null)
+            return;
+
+        for (int i = 0; i < systems.Length; i++)
+        {
+            var ps = systems[i];
+            if (ps == null)
+                continue;
+
+            var main = ps.main;
             main.startColor = color;
         }
     }
 
-    private void ApplyParticleSprites(GameObject go, IReadOnlyList<Sprite> sprites)
+    private void ApplyParticleSprites(
+        GameObject go,
+        ParticleSystem[] systems,
+        IReadOnlyList<Sprite> sprites)
     {
         if (go == null)
         {
-            Debug.LogWarning("[ObstacleFX] ApplyParticleSprites abort: go is null.");
+            FxWarn("[ObstacleFX] ApplyParticleSprites abort: go is null.");
             return;
         }
 
-        ParticleSystem[] systems = go.GetComponentsInChildren<ParticleSystem>(true);
-
-        Debug.Log(
+        FxLog(
             $"[ObstacleFX] ApplyParticleSprites. go={go.name}, " +
-            $"particleSystems={systems.Length}, sprites={(sprites != null ? sprites.Count : 0)}"
+            $"particleSystems={(systems != null ? systems.Length : 0)}, sprites={(sprites != null ? sprites.Count : 0)}"
         );
 
-        if (systems.Length == 0)
+        if (systems == null || systems.Length == 0)
         {
-            Debug.LogWarning($"[ObstacleFX] No ParticleSystem found under prefab instance: {go.name}");
+            FxWarn($"[ObstacleFX] No ParticleSystem found under prefab instance: {go.name}");
             return;
         }
 
         if (sprites == null || sprites.Count == 0)
         {
-            Debug.LogWarning("[ObstacleFX] No sprites provided for particle texture sheet.");
+            FxWarn("[ObstacleFX] No sprites provided for particle texture sheet.");
             return;
         }
 
         for (int i = 0; i < systems.Length; i++)
         {
             var ps = systems[i];
+            if (ps == null)
+                continue;
 
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
@@ -262,30 +314,25 @@ public class BoardBreakFxService
                 textureSheet.RemoveSprite(s);
 
             int added = 0;
-
             Sprite firstSprite = null;
+
             for (int s = 0; s < sprites.Count; s++)
             {
-                if (sprites[s] == null)
+                Sprite sprite = sprites[s];
+                if (sprite == null)
                     continue;
 
-                textureSheet.AddSprite(sprites[s]);
-                if (firstSprite == null) firstSprite = sprites[s];
+                textureSheet.AddSprite(sprite);
+
+                if (firstSprite == null)
+                    firstSprite = sprite;
+
                 added++;
             }
 
-            if (firstSprite != null)
-            {
-                var psr = ps.GetComponent<ParticleSystemRenderer>();
-                if (psr != null)
-                {
-                    var mat = psr.material;
-                    if (mat != null)
-                        mat.SetTexture("_MainTex", firstSprite.texture);
-                }
-            }
+            ApplyParticleMainTexture(ps, firstSprite);
 
-            Debug.Log(
+            FxLog(
                 $"[ObstacleFX] ParticleSystem configured. " +
                 $"system={ps.gameObject.name}, addedSprites={added}, finalSpriteCount={textureSheet.spriteCount}"
             );
@@ -293,20 +340,39 @@ public class BoardBreakFxService
             ps.Clear(true);
             ps.Play(true);
 
-            Debug.Log(
+            FxLog(
                 $"[ObstacleFX] ParticleSystem played. " +
                 $"system={ps.gameObject.name}, isPlaying={ps.isPlaying}, particleCount={ps.particleCount}"
             );
         }
     }
 
-    private static void PlayWithFanBurst(GameObject go)
+    private void ApplyParticleMainTexture(ParticleSystem ps, Sprite firstSprite)
     {
-        if (go == null) return;
-        ParticleSystem[] systems = go.GetComponentsInChildren<ParticleSystem>(true);
+        if (ps == null || firstSprite == null || firstSprite.texture == null)
+            return;
+
+        var psr = ps.GetComponent<ParticleSystemRenderer>();
+        if (psr == null)
+            return;
+
+        psr.GetPropertyBlock(ParticlePropertyBlock);
+        ParticlePropertyBlock.SetTexture(MainTexId, firstSprite.texture);
+        psr.SetPropertyBlock(ParticlePropertyBlock);
+        ParticlePropertyBlock.Clear();
+    }
+
+    private static void PlayWithFanBurst(ParticleSystem[] systems)
+    {
+        if (systems == null)
+            return;
+
         for (int i = 0; i < systems.Length; i++)
         {
             var ps = systems[i];
+            if (ps == null)
+                continue;
+
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             ps.Clear(true);
             ps.Play(true);
@@ -328,12 +394,11 @@ public class BoardBreakFxService
 
         return type switch
         {
-            TileType.Gear => new Color(1.00f, 0.78f, 0.25f, 1f), // sari
-            TileType.Core => new Color(0.95f, 0.30f, 0.30f, 1f), // kirmizi
-            TileType.Bolt => new Color(0.30f, 0.60f, 1.00f, 1f), // mavi
-            TileType.Plate => new Color(0.35f, 0.85f, 0.45f, 1f), // yesil
+            TileType.Gear => new Color(1.00f, 0.78f, 0.25f, 1f),
+            TileType.Core => new Color(0.95f, 0.30f, 0.30f, 1f),
+            TileType.Bolt => new Color(0.30f, 0.60f, 1.00f, 1f),
+            TileType.Plate => new Color(0.35f, 0.85f, 0.45f, 1f),
 
-            // fallback'ler
             TileType.LineEmitter_H => new Color(0.95f, 0.30f, 0.30f, 1f),
             TileType.LineEmitter_V => new Color(0.30f, 0.60f, 1.00f, 1f),
             TileType.PatchBot => new Color(1.00f, 0.78f, 0.25f, 1f),
@@ -341,5 +406,17 @@ public class BoardBreakFxService
             TileType.Normal => Color.white,
             _ => Color.white
         };
+    }
+
+    private static void FxLog(string message)
+    {
+        if (EnableObstacleFxDebug)
+            Debug.Log(message);
+    }
+
+    private static void FxWarn(string message)
+    {
+        if (EnableObstacleFxDebug)
+            Debug.LogWarning(message);
     }
 }

@@ -4,6 +4,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
+
 public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
 {
     private const float IdleHintDelay = 5f;
@@ -173,21 +177,33 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
 
     private static bool PointerDownThisFrame()
     {
-        try
-        {
-            if (Input.GetMouseButtonDown(0))
-                return true;
+#if ENABLE_INPUT_SYSTEM
+        if (Pointer.current != null && Pointer.current.press.wasPressedThisFrame)
+            return true;
 
-            for (int i = 0; i < Input.touchCount; i++)
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            return true;
+
+        if (Touchscreen.current != null)
+        {
+            foreach (var touch in Touchscreen.current.touches)
             {
-                if (Input.GetTouch(i).phase == TouchPhase.Began)
+                if (touch.press.wasPressedThisFrame)
                     return true;
             }
         }
-        catch (InvalidOperationException)
-        {
-            return false;
-        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+    if (UnityEngine.Input.GetMouseButtonDown(0))
+        return true;
+
+    for (int i = 0; i < UnityEngine.Input.touchCount; i++)
+    {
+        if (UnityEngine.Input.GetTouch(i).phase == TouchPhase.Began)
+            return true;
+    }
+#endif
 
         return false;
     }
