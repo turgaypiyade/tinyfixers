@@ -36,6 +36,10 @@ MonoBehaviour:
     hits: 2
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: -1181487658951336156, guid: 55157247f7a0242e7a94e7ae60e13097, type: 3}
     legacyStageSprites: []
@@ -65,6 +69,10 @@ MonoBehaviour:
     hits: 2
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: -5135063369267319643, guid: 40fe176a9f1bb4d63a51cc94f86b968f, type: 3}
     legacyStageSprites: []
@@ -88,8 +96,12 @@ MonoBehaviour:
     hitParticleSprites:
     - {fileID: 6983484670779300310, guid: bd3bcfa2aad6042e087bfcca6ae8fbc2, type: 3}
     breakParticleSprites:
-    - {fileID: 6275468428838378410, guid: bd3bcfa2aad6042e087bfcca6ae8fbc2, type: 3}
+    - {fileID: 6983484670779300310, guid: bd3bcfa2aad6042e087bfcca6ae8fbc2, type: 3}
     - {fileID: -6609095479032132508, guid: bd3bcfa2aad6042e087bfcca6ae8fbc2, type: 3}
+    hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
+    hitSoundVolume: 1
+    breakSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: d29e0409dcb0c432a9a308ac2094f85e, type: 3}
     legacyStageSprites: []
@@ -126,6 +138,10 @@ MonoBehaviour:
     hits: 3
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: bb81329fdeec84e8f82a1b3eb761013c, type: 3}
     legacyStageSprites: []
@@ -157,6 +173,10 @@ MonoBehaviour:
     - {fileID: 6983484670779300310, guid: bd3bcfa2aad6042e087bfcca6ae8fbc2, type: 3}
     breakParticleSprites:
     - {fileID: 6275468428838378410, guid: bd3bcfa2aad6042e087bfcca6ae8fbc2, type: 3}
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: dbc998d69c4e54be89c6474914ea7e90, type: 3}
     legacyStageSprites: []
@@ -179,6 +199,10 @@ MonoBehaviour:
     hits: 1
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: 09be70b7d992948a789acae55d7a13f3, type: 3}
     legacyStageSprites: []
@@ -187,7 +211,7 @@ MonoBehaviour:
     legacyBehavior: 3
   - id: 1
     stages:
-    - sprite: {fileID: 21300000, guid: 9043de947746c4f1186bae6637a895f2, type: 3}
+    - sprite: {fileID: 21300000, guid: 3071a5b77ca9946d28279d0d551e5e90, type: 3}
       damageRule: 0
       blocksCells: 0
       behavior: 1
@@ -201,8 +225,12 @@ MonoBehaviour:
     hits: 1
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 8300000, guid: 3c4279e5756bb4ba8b67fd8fb549d0da, type: 3}
+    hitSoundVolume: 1
+    breakSound: {fileID: 8300000, guid: 3c4279e5756bb4ba8b67fd8fb549d0da, type: 3}
+    breakSoundVolume: 1
     drawUnderTiles: 0
-    legacySprite: {fileID: 21300000, guid: 9043de947746c4f1186bae6637a895f2, type: 3}
+    legacySprite: {fileID: 21300000, guid: 3071a5b77ca9946d28279d0d551e5e90, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 0
@@ -223,6 +251,10 @@ MonoBehaviour:
     hits: 1
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: -5753328692003189620, guid: 9003a1911785e422dbd939795f9f2ded, type: 3}
     legacyStageSprites: []
@@ -245,6 +277,10 @@ MonoBehaviour:
     hits: 1
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: 436e6581af9f84f7a85c3beaf3ce2345, type: 3}
     legacyStageSprites: []
@@ -267,6 +303,10 @@ MonoBehaviour:
     hits: 1
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: 734f56ae5125c4b9ab06f1f804184eb4, type: 3}
     legacyStageSprites: []
@@ -289,6 +329,10 @@ MonoBehaviour:
     hits: 1
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: b1e1d5bcd6cbb46e39b66e1fb1f63e07, type: 3}
     legacyStageSprites: []
@@ -311,6 +355,10 @@ MonoBehaviour:
     hits: 1
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: a245a9862b95646f990a6e9e4740cf82, type: 3}
     legacyStageSprites: []
@@ -333,6 +381,10 @@ MonoBehaviour:
     hits: 1
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: 4fb957199723e4e31b14cafc3773d05d, type: 3}
     legacyStageSprites: []
@@ -383,6 +435,10 @@ MonoBehaviour:
     hits: 5
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 1423822320020870481, guid: ed7f19307b8064defbe605aa529abe1a, type: 3}
     legacyStageSprites: []
@@ -412,6 +468,10 @@ MonoBehaviour:
     hits: 2
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: 8b6d8ac3b686f463a8d5839ec237df17, type: 3}
     legacyStageSprites: []
@@ -448,6 +508,10 @@ MonoBehaviour:
     hits: 3
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: 351adc4fc3cec4b5f9d1b86a27ea690f, type: 3}
     legacyStageSprites: []
@@ -477,6 +541,10 @@ MonoBehaviour:
     hits: 2
     hitParticleSprites: []
     breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 6268507453053954130, guid: 7433fe5ae201f4343bf6086445143cab, type: 3}
     legacyStageSprites: []

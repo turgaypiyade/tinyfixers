@@ -262,6 +262,24 @@ public class LevelEndSimplePopupController : MonoBehaviour
         hardSkipBonusRoundRequested = false;
     }
 
+    private void Update()
+    {
+        // When the board is still animating after moves ran out, a user tap skips
+        // the remaining animation and shows the popup immediately.
+        if (!endCheckQueued) return;
+        if (board == null || !board.IsBusy || board.RemainingMoves > 0) return;
+        if (failPopupShown || successPopupShown) return;
+
+        bool tapped = Input.GetMouseButtonDown(0);
+        if (!tapped && Input.touchCount > 0)
+            tapped = Input.GetTouch(0).phase == TouchPhase.Began;
+        if (!tapped) return;
+
+        Debug.Log("[LevelEnd] User tap: skipping out-of-moves animation, showing popup now.");
+        endCheckQueued = false;
+        EvaluateAndShowIfEnded();
+    }
+
     private IEnumerator InitializeWhenReady()
     {
         if (board == null)

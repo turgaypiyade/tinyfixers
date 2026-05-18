@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: f813b574fe7814017b28f6eb0234b447
+guid: 3071a5b77ca9946d28279d0d551e5e90
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8229552244200740785
-    second: EnergyContainerFullOpen_0
+      213: 1523144230823880181
+    second: CanleObstacleV1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -52,7 +52,7 @@ TextureImporter:
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
-  spriteBorder: {x: 145, y: 84, z: 145, w: 64}
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
   alphaIsTransparency: 1
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 2048
+    maxTextureSize: 512
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 2
@@ -113,23 +113,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: EnergyContainerFullOpen_0
+      name: CanleObstacleV1_0
       rect:
         serializedVersion: 2
-        x: 145
-        y: 79
-        width: 959
-        height: 1104
+        x: 0
+        y: 2
+        width: 1138
+        height: 1132
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 1b79a100a2e353270800000000000000
-      internalID: 8229552244200740785
+      spriteID: 5f561f3ab9b432510800000000000000
+      internalID: 1523144230823880181
       vertices: []
       indices: 
       edges: []
@@ -139,7 +139,7 @@ TextureImporter:
     physicsShape: []
     bones: []
     spriteID: 5e97eb03825dee720800000000000000
-    internalID: 1537655665
+    internalID: 0
     vertices: []
     indices: 
     edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      EnergyContainerFullOpen_0: 8229552244200740785
+      CanleObstacleV1_0: 1523144230823880181
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

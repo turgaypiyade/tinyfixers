@@ -179,7 +179,13 @@ public sealed class PulseCoreSpecial
                     continue;
 
                 if (!SpecialUtils.CanAffectCell(rt.Board, x, y))
+                {
+                    // OverTileBlocker obstacles are blocked by CanAffectCell but PulseCore
+                    // should still damage them directly (same as LineV's lightning sweep).
+                    if (rt.Board.ObstacleStateService != null && rt.Board.ObstacleStateService.HasObstacleAt(x, y))
+                        rt.Context.ImpactCells.Add(new Vector2Int(x, y));
                     continue;
+                }
 
                 SpecialCellUtils.MarkAffectedCell(rt.Context, x, y, rt.Board);
 

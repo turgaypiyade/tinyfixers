@@ -239,7 +239,15 @@ public sealed class PatchBotSpecial
         var dataMatches = new HashSet<TileData>();
 
         arrivalRt.PatchbotService.ResolveTargetImpact(dataMatches, targetX, targetY, hasObstacleAtTarget,
-            (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, x, y, arrivalRt.Board),
+            (x, y) =>
+            {
+                SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, x, y, arrivalRt.Board);
+                // OverTileBlocker obstacles are blocked by CanAffectCell in MarkAffectedCell.
+                // Add them directly to ImpactCells so the forced hit is consumed in ClearMatchesAnimated.
+                if (!SpecialUtils.CanAffectCell(arrivalRt.Board, x, y) &&
+                    arrivalRt.Board.ObstacleStateService?.HasObstacleAt(x, y) == true)
+                    arrivalRt.Context.ImpactCells.Add(new Vector2Int(x, y));
+            },
             (tile) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, tile, arrivalRt.Board));
 
         foreach (var data in dataMatches)
@@ -262,7 +270,13 @@ public sealed class PatchBotSpecial
             targetX,
             targetY,
             hasObstacleAtTarget,
-            (x, y) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, x, y, arrivalRt.Board),
+            (x, y) =>
+            {
+                SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, x, y, arrivalRt.Board);
+                if (!SpecialUtils.CanAffectCell(arrivalRt.Board, x, y) &&
+                    arrivalRt.Board.ObstacleStateService?.HasObstacleAt(x, y) == true)
+                    arrivalRt.Context.ImpactCells.Add(new Vector2Int(x, y));
+            },
             (tile) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, tile, arrivalRt.Board));
 
         foreach (var data in matchDatas)
