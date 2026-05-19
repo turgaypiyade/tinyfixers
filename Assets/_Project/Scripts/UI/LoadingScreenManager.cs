@@ -253,7 +253,7 @@ public class LoadingScreenManager : MonoBehaviour
         text.alignment = alignment;
         text.color = new Color(1f, 0.96f, 0.78f, 1f);
         text.raycastTarget = false;
-        text.enableWordWrapping = true;
+        text.textWrappingMode = TextWrappingModes.Normal;
         text.overflowMode = TextOverflowModes.Ellipsis;
 
         text.outlineColor = new Color32(8, 79, 123, 255);

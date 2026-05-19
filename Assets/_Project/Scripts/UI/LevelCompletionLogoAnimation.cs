@@ -238,6 +238,11 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
         SetVfxRootVisible(false);
         ClearSpawnedFireworks();
 
+        // Reset canvas override so world-space renderers (RocketTrailBeam, sortingOrder=100)
+        // are not occluded on iOS Metal during the bonus round.
+        if (_canvas != null)
+            _canvas.overrideSorting = false;
+
         // Do not disable gameObject here. The bonus-round skipButton may be a child of this root.
     }
 

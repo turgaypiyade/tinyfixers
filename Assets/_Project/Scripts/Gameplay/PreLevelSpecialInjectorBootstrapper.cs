@@ -9,7 +9,7 @@ public static class PreLevelSpecialInjectorBootstrapper
         if (!PreLevelSpecialSelectionState.HasSelection)
             return;
 
-        var existing = Object.FindObjectOfType<PreLevelSpecialRuntimeInjector>(true);
+        var existing = Object.FindAnyObjectByType<PreLevelSpecialRuntimeInjector>(FindObjectsInactive.Include);
         if (existing != null)
             return;
 

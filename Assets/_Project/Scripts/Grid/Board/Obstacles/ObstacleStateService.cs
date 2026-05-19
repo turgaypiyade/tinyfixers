@@ -17,14 +17,16 @@ public readonly struct ObstacleVisualChange
     public readonly bool cleared;
     public readonly int remainingHits;
     public readonly Sprite sprite;
+    public readonly ChestColorMask removedColor;
 
-    public ObstacleVisualChange(int originIndex, ObstacleId obstacleId, bool cleared, int remainingHits, Sprite sprite)
+    public ObstacleVisualChange(int originIndex, ObstacleId obstacleId, bool cleared, int remainingHits, Sprite sprite, ChestColorMask removedColor = ChestColorMask.None)
     {
         this.originIndex = originIndex;
         this.obstacleId = obstacleId;
         this.cleared = cleared;
         this.remainingHits = remainingHits;
         this.sprite = sprite;
+        this.removedColor = removedColor;
     }
 }
 
@@ -266,6 +268,9 @@ public class ObstacleStateService : ISimObstacleQuery
 
             if (context == ObstacleHitContext.NormalMatch)
             {
+                if (!isOpen)
+                    return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
                 // Açık dolap: sadece içinde kalan renk hasar verir
                 var colorFlag = sourceTileType.ToChestColor();
                 if (colorFlag == ChestColorMask.None ||
@@ -348,7 +353,7 @@ public class ObstacleStateService : ISimObstacleQuery
 
         var currentStage = CreateSnapshot(def, id, remaining);
         var sprite = ResolveStageSprite(def, id, remaining);
-        change = new ObstacleVisualChange(origin, id, false, remaining, sprite);
+        change = new ObstacleVisualChange(origin, id, false, remaining, sprite, removedColor);
 
         var stageTransition = new ObstacleStageTransition(
             true,

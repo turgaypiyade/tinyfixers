@@ -24,8 +24,7 @@ public class SuccessAnimationPlayer : MonoBehaviour
 
     [Header("Fade Transition")]
     [SerializeField] private float fadeInDuration      = 0.2f;
-    [SerializeField] private float fadeOutDuration     = 0.2f;
-    [SerializeField] private float holdLastFrameSeconds = 1.0f;
+[SerializeField] private float holdLastFrameSeconds = 1.0f;
 
     // ─────────────────────────────────────────────────────────────────
 

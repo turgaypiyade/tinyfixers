@@ -269,8 +269,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 20
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 61895e4bd80f84ba08ace13715b084c3, type: 2}
-  m_sharedMaterial: {fileID: 8447141886115782946, guid: 61895e4bd80f84ba08ace13715b084c3, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: dfb223bc9e8104d1bb5c39d4779b069c, type: 2}
+  m_sharedMaterial: {fileID: 6539114651135786830, guid: dfb223bc9e8104d1bb5c39d4779b069c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -883,8 +883,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Hedef
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 61895e4bd80f84ba08ace13715b084c3, type: 2}
-  m_sharedMaterial: {fileID: 8447141886115782946, guid: 61895e4bd80f84ba08ace13715b084c3, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: dfb223bc9e8104d1bb5c39d4779b069c, type: 2}
+  m_sharedMaterial: {fileID: 6539114651135786830, guid: dfb223bc9e8104d1bb5c39d4779b069c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -908,8 +908,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 45
+  m_fontSizeBase: 45
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -2396,7 +2396,6 @@ MonoBehaviour:
   boardCanvasGroup: {fileID: 0}
   boardFadeAlpha: 0.35
   fadeInDuration: 0.2
-  fadeOutDuration: 0.2
   holdLastFrameSeconds: 0.5
 --- !u!1 &919883043
 GameObject:
@@ -3872,8 +3871,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Hamle
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 61895e4bd80f84ba08ace13715b084c3, type: 2}
-  m_sharedMaterial: {fileID: 8447141886115782946, guid: 61895e4bd80f84ba08ace13715b084c3, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: dfb223bc9e8104d1bb5c39d4779b069c, type: 2}
+  m_sharedMaterial: {fileID: 6539114651135786830, guid: dfb223bc9e8104d1bb5c39d4779b069c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3897,8 +3896,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 35
-  m_fontSizeBase: 35
+  m_fontSize: 40
+  m_fontSizeBase: 40
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -4581,7 +4580,6 @@ MonoBehaviour:
   pulsePulseExplosionPrefab: {fileID: 89739832858321300, guid: faa00e8a44ed34466b9a9aec6e73f687, type: 3}
   pulsePulseExplosionLifetime: 2.5
   pulsePulseChargeDuration: 2
-  pulsePulseExplosionRadius: 4
   sfxSource: {fileID: 1410826449}
   sfxPulseCoreBoom: {fileID: 0}
   sfxPulseCoreWave: {fileID: 0}
@@ -5349,8 +5347,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: New Text
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 61895e4bd80f84ba08ace13715b084c3, type: 2}
-  m_sharedMaterial: {fileID: 8447141886115782946, guid: 61895e4bd80f84ba08ace13715b084c3, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: dfb223bc9e8104d1bb5c39d4779b069c, type: 2}
+  m_sharedMaterial: {fileID: 6539114651135786830, guid: dfb223bc9e8104d1bb5c39d4779b069c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -5374,8 +5372,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 50
-  m_fontSizeBase: 50
+  m_fontSize: 55
+  m_fontSizeBase: 55
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18

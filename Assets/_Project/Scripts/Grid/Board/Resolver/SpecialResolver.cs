@@ -45,7 +45,7 @@ public class SpecialResolver
         dispatcher.QueueProcessor = queueProcessor;
     }
 
-    public List<BoardAction> ResolveSpecialSwap(TileView a, TileView b, TileSpecial originalSa, TileSpecial originalSb)
+    public List<BoardAction> ResolveSpecialSwap(TileView a, TileView b, TileSpecial originalSa, TileSpecial originalSb, TileType? capturedOverridePartnerType = null)
     {
         var actions = new List<BoardAction>();
 
@@ -380,6 +380,7 @@ public class SpecialResolver
                 Origin = overrideTile,
                 Partner = normalTile,
                 FinalizeAtEnd = true,
+                ForcedPartnerType = capturedOverridePartnerType,
                 ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                 CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
                 FireOverrideOverrideSpecialVisuals =

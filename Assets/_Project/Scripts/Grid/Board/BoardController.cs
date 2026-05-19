@@ -81,8 +81,6 @@ public class BoardController : MonoBehaviour
     [SerializeField] private GameObject pulsePulseExplosionPrefab;
     [SerializeField] private float pulsePulseExplosionLifetime = 1.0f;
     [SerializeField] private float pulsePulseChargeDuration = 2.0f;
-    [SerializeField] private int pulsePulseExplosionRadius = 2;
-
     [Header("Obstacle Visual Tuning")]
     [SerializeField] private AudioSource sfxSource;
     [SerializeField] private AudioClip sfxPulseCoreBoom;
@@ -1244,6 +1242,16 @@ public class BoardController : MonoBehaviour
 
         Debug.Log($"[ProcessSwap] SNAPSHOT a=({a.X},{a.Y}) specialA={originalSa} | b=({b.X},{b.Y}) specialB={originalSb} | origPos a=({ax},{ay}) b=({bx},{by})");
 
+        // Override+Normal: normal partner tile kendi match'ine girip temizlenirse,
+        // frame sınırı sonrasında Unity fake-null devreye girer. Type'ı şimdi yakala.
+        TileType? capturedOverridePartnerType = null;
+        if ((originalSa == TileSpecial.SystemOverride && originalSb == TileSpecial.None) ||
+            (originalSa == TileSpecial.None           && originalSb == TileSpecial.SystemOverride))
+        {
+            var normalPartner = (originalSa == TileSpecial.None) ? a : b;
+            capturedOverridePartnerType = normalPartner.GetTileType();
+        }
+
         // ══════════════════════════════════════════════════════════
         //  Special swap path — en az bir taraf başlangıçta special
         // ══════════════════════════════════════════════════════════
@@ -1349,7 +1357,7 @@ public class BoardController : MonoBehaviour
                     pulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(chargeX, chargeY, radiusCells: 2); // 5x5 alan — Inspector override'a bağımlı değil
             }
 
-            actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb));
+            actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb, capturedOverridePartnerType));
             yield return AnimateQueuedActions();
             FlowLog("special_resolve");
 
@@ -2362,24 +2370,63 @@ public class BoardController : MonoBehaviour
         {
             IsSpecialActivationPhase = true;
 
+            var matches       = new HashSet<TileView>();
+            var affectedCells = new HashSet<Vector2Int>();
+            var visualTargets = new HashSet<TileView>();
+            var strikes       = new System.Collections.Generic.List<LightningLineStrike>(placements.Count);
+            var chainStrikes  = new System.Collections.Generic.List<LightningLineStrike>();
+
             foreach (var p in placements)
             {
-                var tile = (p.x >= 0 && p.x < width && p.y >= 0 && p.y < height)
-                    ? tiles[p.x, p.y] : null;
-                if (tile == null) continue;
-
-                var sp = tile.GetSpecial();
-                if (sp != TileSpecial.LineV && sp != TileSpecial.LineH) continue;
-
-                var actions = specialResolver.ResolveSpecialSolo(tile);
-                if (actions == null || actions.Count == 0) continue;
-
-                actionSequencer.Enqueue(actions);
-                while (actionSequencer.IsPlaying)
-                    yield return null;
+                if (p.isHorizontal)
+                {
+                    boosterService.AddRow(matches, p.y);
+                    boosterService.AddRowCells(affectedCells, p.y);
+                }
+                else
+                {
+                    boosterService.AddColumn(matches, p.x);
+                    boosterService.AddColumnCells(affectedCells, p.x);
+                }
+                strikes.Add(new LightningLineStrike(new Vector2Int(p.x, p.y), p.isHorizontal));
             }
 
-            yield return ResolveBoardPublic();
+            if (matches.Count > 0 || affectedCells.Count > 0)
+            {
+                visualTargets = new HashSet<TileView>(matches);
+
+                specialResolver.ExpandSpecialChain(
+                    matches, affectedCells,
+                    out _, out _,
+                    lightningVisualTargets: visualTargets,
+                    lightningLineStrikes: chainStrikes);
+                strikes.AddRange(chainStrikes);
+                visualTargets.UnionWith(matches);
+
+                // presentationPlan:null → ClearMatchesAnimated → PlayLightningLineStrikes
+                // (same path as normal LineV/H activation, works on iPhone).
+                // lineHitClearedTiles inside ClearMatchesAnimated prevents double-clear
+                // at row/column intersections when multiple strikes sweep the same cell.
+                var action = new MatchClearAction(
+                    matches,
+                    doShake: true,
+                    animationMode: ClearAnimationMode.LightningStrike,
+                    affectedCells: affectedCells,
+                    obstacleHitContext: ObstacleHitContext.Booster,
+                    includeAdjacentOverTileBlockerDamage: false,
+                    lightningVisualTargets: new System.Collections.Generic.List<TileView>(visualTargets),
+                    lightningLineStrikes: strikes,
+                    isSpecialPhase: true,
+                    presentationPlan: null,
+                    enqueueCascadeOnComplete: true);
+
+                actionSequencer.Enqueue(action);
+
+                while (actionSequencer.IsPlaying)
+                    yield return null;
+
+                yield return ResolveBoardPublic();
+            }
         }
         finally
         {

@@ -34,6 +34,10 @@ public class StageRule
     public bool locksInteraction = false;
     [Tooltip("Bu hücredeki taşın düşmesini engeller (Oil). allowDiagonal=true ise çapraz akış yine çalışır.")]
     public bool holdsTile = false;
+    [Tooltip("Açık ise bu stage'de hit particle efekti tamamen kapatılır (sprite listesi yok sayılır).")]
+    public bool suppressHitParticles = false;
+    [Tooltip("Bu stage'e özgü hit particle sprite'ları. Boş ise ObstacleDef düzeyindeki hitParticleSprites kullanılır.")]
+    public List<Sprite> hitParticleSprites = new();
 }
 
 [Serializable]
@@ -53,7 +57,9 @@ public class ObstacleDef
     [Min(1)]
     public int hits = 1;                       // ileride: 1 vuruş, 2 vuruş
     [Header("Particle Sprites")]
-    [Tooltip("Obstacle hasar aldığında kullanılacak particle sprite sheet parçaları.")]
+    [Tooltip("Açık ise tüm stage'lerde hit particle efekti kapatılır. Stage düzeyinde ayrıca override edilebilir.")]
+    public bool suppressHitParticles = false;
+    [Tooltip("Obstacle hasar aldığında kullanılacak particle sprite sheet parçaları (stage override yoksa).")]
     public List<Sprite> hitParticleSprites = new();
 
     [Tooltip("Obstacle tamamen kırıldığında kullanılacak particle sprite sheet parçaları.")]
@@ -121,6 +127,32 @@ public class ObstacleDef
     {
         var stage = GetStageRuleForRemainingHits(remainingHits);
         return stage != null && stage.behavior == ObstacleBehaviorType.MovableObstacle;
+    }
+
+    /// <summary>
+    /// Belirtilen stage için hit particle'ların tamamen kapatılıp kapatılmadığını döner.
+    /// Stage-level flag def-level'ı override eder.
+    /// </summary>
+    public bool IsHitParticlesSuppressedForRemainingHits(int remainingHits)
+    {
+        var stage = GetStageRuleForRemainingHits(remainingHits);
+        if (stage != null && stage.suppressHitParticles)
+            return true;
+        return suppressHitParticles;
+    }
+
+    /// <summary>
+    /// Belirtilen kalan vuruş için hit particle sprite listesini döner.
+    /// Suppress açıksa null döner. Sonra stage'e özgü listeye, boşsa def düzeyine bakar.
+    /// </summary>
+    public List<Sprite> GetHitParticleSpritesForRemainingHits(int remainingHits)
+    {
+        if (IsHitParticlesSuppressedForRemainingHits(remainingHits))
+            return null;
+        var stage = GetStageRuleForRemainingHits(remainingHits);
+        if (stage != null && stage.hitParticleSprites != null && stage.hitParticleSprites.Count > 0)
+            return stage.hitParticleSprites;
+        return hitParticleSprites;
     }
 
     public void MigrateLegacyFieldsIfNeeded()

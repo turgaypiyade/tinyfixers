@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class BoardBreakFxService
 {
-    private const bool EnableObstacleFxDebug = false;
     private const float MinSafeFxLifetime = 0.75f;
 
     private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
@@ -74,6 +73,16 @@ public class BoardBreakFxService
             return;
         }
 
+        if (!change.cleared)
+        {
+            var def = board.LevelData?.obstacleLibrary?.Get(change.obstacleId);
+            if (def != null && def.IsHitParticlesSuppressedForRemainingHits(change.remainingHits))
+            {
+                PlayObstacleSound(change);
+                return;
+            }
+        }
+
         IReadOnlyList<Sprite> particleSprites = ResolveObstacleParticleSprites(change);
 
         FxLog(
@@ -83,12 +92,25 @@ public class BoardBreakFxService
 
         PlayObstacleSound(change);
 
+        Color fxColor = ResolveObstacleHitColor(change);
         SpawnAtWorld(
             prefab,
             lifetime,
             board.GetCellWorldCenterPosition(x, y),
-            Color.white,
+            fxColor,
             particleSprites);
+    }
+
+    private static Color ResolveObstacleHitColor(ObstacleVisualChange change)
+    {
+        return change.removedColor switch
+        {
+            ChestColorMask.Gear  => new Color(1.00f, 0.78f, 0.25f, 1f),
+            ChestColorMask.Core  => new Color(0.95f, 0.30f, 0.30f, 1f),
+            ChestColorMask.Bolt  => new Color(0.30f, 0.60f, 1.00f, 1f),
+            ChestColorMask.Plate => new Color(0.35f, 0.85f, 0.45f, 1f),
+            _                    => Color.white
+        };
     }
 
     private void PlayObstacleSound(ObstacleVisualChange change)
@@ -133,27 +155,24 @@ public class BoardBreakFxService
             return null;
         }
 
+        if (!change.cleared && def.IsHitParticlesSuppressedForRemainingHits(change.remainingHits))
+            return null;
+
         List<Sprite> sprites = change.cleared
             ? def.breakParticleSprites
-            : def.hitParticleSprites;
+            : def.GetHitParticleSpritesForRemainingHits(change.remainingHits);
 
         if (sprites != null && sprites.Count > 0)
         {
-            if (EnableObstacleFxDebug)
+#if OBSTACLE_FX_DEBUG
+            int nonNullCount = 0;
+            for (int i = 0; i < sprites.Count; i++)
             {
-                int nonNullCount = 0;
-                for (int i = 0; i < sprites.Count; i++)
-                {
-                    if (sprites[i] != null)
-                        nonNullCount++;
-                }
-
-                FxLog(
-                    $"[ObstacleFX] Using custom obstacle particle sprites. " +
-                    $"id={change.obstacleId}, cleared={change.cleared}, count={sprites.Count}, nonNull={nonNullCount}"
-                );
+                if (sprites[i] != null)
+                    nonNullCount++;
             }
-
+            FxLog($"[ObstacleFX] Using custom obstacle particle sprites. id={change.obstacleId}, cleared={change.cleared}, count={sprites.Count}, nonNull={nonNullCount}");
+#endif
             return sprites;
         }
 
@@ -410,13 +429,15 @@ public class BoardBreakFxService
 
     private static void FxLog(string message)
     {
-        if (EnableObstacleFxDebug)
-            Debug.Log(message);
+#if OBSTACLE_FX_DEBUG
+        Debug.Log(message);
+#endif
     }
 
     private static void FxWarn(string message)
     {
-        if (EnableObstacleFxDebug)
-            Debug.LogWarning(message);
+#if OBSTACLE_FX_DEBUG
+        Debug.LogWarning(message);
+#endif
     }
 }

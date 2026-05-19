@@ -10,6 +10,7 @@ public sealed class OverrideExecutionRuntime
     public TileView Partner;
 
     public bool FinalizeAtEnd;
+    public TileType? ForcedPartnerType;
 
     public Func<ResolutionContext, List<BoardAction>> ProcessFanout;
     public Action<ResolutionContext> CleanupImplantedTiles;
@@ -49,7 +50,13 @@ public sealed class OverrideSpecial
             AddAffected(rt, partnerTile);
 
         TileType type;
-        if (partnerTile != null)
+        if (rt.ForcedPartnerType.HasValue)
+        {
+            // Normal partner tile swap'tan önce yakalandı; frame sınırı sonrası
+            // Unity fake-null'dan etkilenmeden doğru type'ı kullan.
+            type = rt.ForcedPartnerType.Value;
+        }
+        else if (partnerTile != null)
         {
             type = partnerTile.GetTileType();
         }
@@ -77,7 +84,7 @@ public sealed class OverrideSpecial
 
         SpecialCellUtils.CollectAllOfType(rt.Context.OverrideFanoutTargets, rt.Board, type, excludeSpecials: true);
         SpecialCellUtils.AddAllOfType(rt.Context.Affected, rt.Context, rt.Board, type, excludeSpecials: true);
-        Debug.Log($"[Override.Execute] fanoutType={(partnerTile != null ? partnerTile.GetTileType().ToString() : overrideTile.GetTileType().ToString())} fanoutTargets={rt.Context.OverrideFanoutTargets.Count} affected={rt.Context.Affected.Count}");
+        Debug.Log($"[Override.Execute] fanoutType={type} forced={rt.ForcedPartnerType.HasValue} fanoutTargets={rt.Context.OverrideFanoutTargets.Count} affected={rt.Context.Affected.Count}");
         if (rt.FinalizeAtEnd)
             Finalize(rt, result);
 

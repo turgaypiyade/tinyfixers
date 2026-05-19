@@ -15,7 +15,7 @@ public sealed class SimFidelityTest : MonoBehaviour
 
     private void Reset()
     {
-        board = FindObjectOfType<BoardController>();
+        board = FindAnyObjectByType<BoardController>();
     }
 
     private void Update()

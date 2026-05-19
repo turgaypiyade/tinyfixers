@@ -109,7 +109,7 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
         nextBoardScanTime = Time.unscaledTime + BoardScanInterval;
         boards.Clear();
 
-        var foundBoards = FindObjectsOfType<BoardController>();
+        var foundBoards = FindObjectsByType<BoardController>(FindObjectsSortMode.None);
         for (int i = 0; i < foundBoards.Length; i++)
         {
             if (foundBoards[i] != null && foundBoards[i].isActiveAndEnabled)

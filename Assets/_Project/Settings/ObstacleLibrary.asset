@@ -22,6 +22,8 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     - sprite: {fileID: -310889430209091948, guid: 0278d4caff6064af996f50c58523a808, type: 3}
       damageRule: 0
       blocksCells: 1
@@ -29,11 +31,14 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
     size: {x: 1, y: 1}
     hits: 2
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}
@@ -55,6 +60,8 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     - sprite: {fileID: -4608977120082464864, guid: 044b6a924defc4a7fa1daa77f9c52cfa, type: 3}
       damageRule: 0
       blocksCells: 1
@@ -62,11 +69,14 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
     size: {x: 1, y: 1}
     hits: 2
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}
@@ -88,11 +98,14 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
     size: {x: 1, y: 1}
     hits: 1
+    suppressHitParticles: 0
     hitParticleSprites:
     - {fileID: 6983484670779300310, guid: bd3bcfa2aad6042e087bfcca6ae8fbc2, type: 3}
     breakParticleSprites:
@@ -117,6 +130,8 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     - sprite: {fileID: 21300000, guid: dbc998d69c4e54be89c6474914ea7e90, type: 3}
       damageRule: 0
       blocksCells: 1
@@ -124,6 +139,8 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     - sprite: {fileID: 21300000, guid: d29e0409dcb0c432a9a308ac2094f85e, type: 3}
       damageRule: 0
       blocksCells: 1
@@ -131,11 +148,14 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
     size: {x: 1, y: 1}
     hits: 3
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}
@@ -157,6 +177,8 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     - sprite: {fileID: 21300000, guid: d29e0409dcb0c432a9a308ac2094f85e, type: 3}
       damageRule: 0
       blocksCells: 1
@@ -164,11 +186,14 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
     size: {x: 1, y: 1}
     hits: 2
+    suppressHitParticles: 0
     hitParticleSprites:
     - {fileID: 6983484670779300310, guid: bd3bcfa2aad6042e087bfcca6ae8fbc2, type: 3}
     breakParticleSprites:
@@ -192,11 +217,14 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
     size: {x: 1, y: 1}
     hits: 1
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}
@@ -218,11 +246,14 @@ MonoBehaviour:
       allowDiagonal: 0
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 1
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
     size: {x: 1, y: 1}
     hits: 1
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 8300000, guid: 3c4279e5756bb4ba8b67fd8fb549d0da, type: 3}
@@ -244,11 +275,14 @@ MonoBehaviour:
       allowDiagonal: 0
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 1
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
     size: {x: 1, y: 1}
     hits: 1
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}
@@ -270,11 +304,14 @@ MonoBehaviour:
       allowDiagonal: 0
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 0
     size: {x: 1, y: 1}
     hits: 1
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}
@@ -296,11 +333,14 @@ MonoBehaviour:
       allowDiagonal: 0
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 2
     size: {x: 1, y: 1}
     hits: 1
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}
@@ -322,11 +362,14 @@ MonoBehaviour:
       allowDiagonal: 0
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 1
     size: {x: 1, y: 1}
     hits: 1
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}
@@ -348,11 +391,14 @@ MonoBehaviour:
       allowDiagonal: 0
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 3
     size: {x: 1, y: 1}
     hits: 1
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}
@@ -374,11 +420,14 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 1
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 3
     size: {x: 1, y: 1}
     hits: 1
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}
@@ -393,46 +442,61 @@ MonoBehaviour:
     legacyBehavior: 4
   - id: 21
     stages:
-    - sprite: {fileID: 1423822320020870481, guid: ed7f19307b8064defbe605aa529abe1a, type: 3}
+    - sprite: {fileID: 21300000, guid: 8cf8effa30db14eff87577a3b8b60303, type: 3}
       damageRule: 1
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
-    - sprite: {fileID: 4458188058141760352, guid: 71f9d43899561438f98e4706731116ef, type: 3}
+      suppressHitParticles: 0
+      hitParticleSprites: []
+    - sprite: {fileID: 21300000, guid: fbea5f8030f704152af3b64f850f75d4, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
-    - sprite: {fileID: 4458188058141760352, guid: 71f9d43899561438f98e4706731116ef, type: 3}
+      suppressHitParticles: 0
+      hitParticleSprites:
+      - {fileID: 21300000, guid: 6cedd97d0bd1f4c5a893e8a62d035291, type: 3}
+      - {fileID: 21300000, guid: b8eb54bf099554686a62ca2b3f87dc56, type: 3}
+    - sprite: {fileID: 21300000, guid: fbea5f8030f704152af3b64f850f75d4, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
-    - sprite: {fileID: 4458188058141760352, guid: 71f9d43899561438f98e4706731116ef, type: 3}
+      suppressHitParticles: 1
+      hitParticleSprites:
+      - {fileID: 21300000, guid: 6cedd97d0bd1f4c5a893e8a62d035291, type: 3}
+      - {fileID: 21300000, guid: b8eb54bf099554686a62ca2b3f87dc56, type: 3}
+    - sprite: {fileID: 21300000, guid: fbea5f8030f704152af3b64f850f75d4, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
-    - sprite: {fileID: 4458188058141760352, guid: 71f9d43899561438f98e4706731116ef, type: 3}
+      suppressHitParticles: 1
+      hitParticleSprites: []
+    - sprite: {fileID: 21300000, guid: fbea5f8030f704152af3b64f850f75d4, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
+      suppressHitParticles: 1
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 3
     size: {x: 2, y: 2}
     hits: 5
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}
@@ -440,7 +504,7 @@ MonoBehaviour:
     breakSound: {fileID: 0}
     breakSoundVolume: 1
     drawUnderTiles: 0
-    legacySprite: {fileID: 1423822320020870481, guid: ed7f19307b8064defbe605aa529abe1a, type: 3}
+    legacySprite: {fileID: 21300000, guid: 8cf8effa30db14eff87577a3b8b60303, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1
@@ -454,6 +518,8 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     - sprite: {fileID: 21300000, guid: 8b6d8ac3b686f463a8d5839ec237df17, type: 3}
       damageRule: 5
       blocksCells: 1
@@ -461,11 +527,14 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 3
     size: {x: 1, y: 1}
     hits: 2
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}
@@ -487,6 +556,8 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     - sprite: {fileID: 0}
       damageRule: 0
       blocksCells: 1
@@ -494,6 +565,8 @@ MonoBehaviour:
       allowDiagonal: 0
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     - sprite: {fileID: 0}
       damageRule: 0
       blocksCells: 1
@@ -501,11 +574,14 @@ MonoBehaviour:
       allowDiagonal: 0
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
     size: {x: 2, y: 2}
     hits: 3
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}
@@ -527,6 +603,8 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     - sprite: {fileID: 4946729563842133885, guid: 7433fe5ae201f4343bf6086445143cab, type: 3}
       damageRule: 0
       blocksCells: 0
@@ -534,11 +612,14 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
     size: {x: 1, y: 1}
     hits: 2
+    suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
     hitSound: {fileID: 0}

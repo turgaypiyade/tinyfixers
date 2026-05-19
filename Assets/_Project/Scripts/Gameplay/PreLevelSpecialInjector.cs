@@ -18,7 +18,7 @@ public class PreLevelSpecialInjector : MonoBehaviour
     private void Awake()
     {
         if (board == null)
-            board = FindObjectOfType<BoardController>();
+            board = FindAnyObjectByType<BoardController>();
     }
 
     private IEnumerator Start()
@@ -27,7 +27,7 @@ public class PreLevelSpecialInjector : MonoBehaviour
             yield break;
 
         if (board == null)
-            board = FindObjectOfType<BoardController>();
+            board = FindAnyObjectByType<BoardController>();
 
         if (board == null)
         {
