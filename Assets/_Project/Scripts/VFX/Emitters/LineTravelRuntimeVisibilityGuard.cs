@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public sealed class LineTravelRuntimeVisibilityGuard : MonoBehaviour
 {
     private static LineTravelRuntimeVisibilityGuard instance;
+    private static Sprite fallbackSprite;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Install()
@@ -96,12 +97,28 @@ public sealed class LineTravelRuntimeVisibilityGuard : MonoBehaviour
 
         image.raycastTarget = false;
         image.maskable = false;
+        image.material = null;
+        image.canvasRenderer.cull = false;
+        image.canvasRenderer.SetAlpha(1f);
+
+        if (image.sprite == null)
+        {
+            image.sprite = GetFallbackSprite();
+            image.type = Image.Type.Simple;
+            changed = true;
+        }
 
         var rt = image.rectTransform;
         Vector3 lp = rt.localPosition;
         if (Mathf.Abs(lp.z) > 0.001f)
         {
             rt.localPosition = new Vector3(lp.x, lp.y, 0f);
+            changed = true;
+        }
+
+        if (rt.sizeDelta.x < 8f || rt.sizeDelta.y < 8f)
+        {
+            rt.sizeDelta = new Vector2(Mathf.Max(rt.sizeDelta.x, 48f), Mathf.Max(rt.sizeDelta.y, 48f));
             changed = true;
         }
 
@@ -135,5 +152,19 @@ public sealed class LineTravelRuntimeVisibilityGuard : MonoBehaviour
 
         image.transform.SetAsLastSibling();
         return changed;
+    }
+
+    private static Sprite GetFallbackSprite()
+    {
+        if (fallbackSprite != null)
+            return fallbackSprite;
+
+        fallbackSprite = Sprite.Create(
+            Texture2D.whiteTexture,
+            new Rect(0f, 0f, Texture2D.whiteTexture.width, Texture2D.whiteTexture.height),
+            new Vector2(0.5f, 0.5f),
+            100f);
+        fallbackSprite.name = "LineTravelFallbackWhiteSprite";
+        return fallbackSprite;
     }
 }
