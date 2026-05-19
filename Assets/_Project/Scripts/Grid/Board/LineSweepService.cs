@@ -159,7 +159,6 @@ public class LineSweepService
         }
 
         targets.Add(new Vector3(originWorldPos.x, minY, originWorldPos.z));
-        targets.Add(new Vector3(originWorldPos.x, maxY, originWorldPos.z));
     }
 
     public float PlayLightningLineStrikes(
@@ -212,21 +211,12 @@ public class LineSweepService
     {
         if (lineTravelPlayer != null)
         {
-            Vector3 worldCenter = GetCellWorldCenterPosition(
-                isHorizontal ? originX : originX,
-                isHorizontal ? originY : originY);
+            Vector3 worldCenter = GetCellWorldCenterPosition(originX, originY);
+            RectTransform travelSpace = ResolveLineTravelSpace(lineTravelPlayer);
 
-            RectTransform spaceRt = lineTravelPlayer.afterImageParent != null
-                ? lineTravelPlayer.afterImageParent
-                : (board.LineTravelSpawnParent as RectTransform);
-
-            if (spaceRt == null && lineTravelPlayer.transform.parent != null)
-                spaceRt = lineTravelPlayer.transform.parent as RectTransform;
-
-            if (spaceRt != null)
+            if (travelSpace != null)
             {
-                Vector2 originAnchored = board.WorldToAnchoredIn(spaceRt, worldCenter);
-                // Each direction travels to its own board edge + 1 step off-screen.
+                Vector2 originAnchored = board.WorldToAnchoredIn(travelSpace, worldCenter);
                 int stepsPos = isHorizontal ? (board.Width - 1 - originX) : (board.Height - 1 - originY);
                 int stepsNeg = isHorizontal ? originX : originY;
                 stepsPos += 3;
@@ -248,7 +238,8 @@ public class LineSweepService
                     board.TileSize,
                     delaySeconds,
                     onSweepCellReached,
-                    onCompleted);
+                    onCompleted,
+                    travelSpace);
 
                 float duration = lineTravelPlayer.EstimateDuration(stepsPos, stepsNeg);
                 return delaySeconds + duration;
@@ -292,6 +283,33 @@ public class LineSweepService
             EmitSweepCallbacks(originX, originY, false, delaySeconds, sweepDur, onSweepCellReached);
             return delaySeconds + sweepDur;
         }
+    }
+
+    private RectTransform ResolveLineTravelSpace(LineTravelSplitSwapTestUI lineTravelPlayer)
+    {
+        RectTransform spawnParent = board.LineTravelSpawnParent as RectTransform;
+        if (spawnParent != null && spawnParent.gameObject.activeInHierarchy)
+            return spawnParent;
+
+        if (lineTravelPlayer != null && lineTravelPlayer.afterImageParent != null &&
+            lineTravelPlayer.afterImageParent.gameObject.activeInHierarchy)
+        {
+            return lineTravelPlayer.afterImageParent;
+        }
+
+        if (lineTravelPlayer != null && lineTravelPlayer.trailParent != null &&
+            lineTravelPlayer.trailParent.gameObject.activeInHierarchy)
+        {
+            return lineTravelPlayer.trailParent;
+        }
+
+        if (lineTravelPlayer != null && lineTravelPlayer.transform.parent is RectTransform playerParent &&
+            playerParent.gameObject.activeInHierarchy)
+        {
+            return playerParent;
+        }
+
+        return board.transform as RectTransform;
     }
 
     private void EmitSweepCallbacks(int originX, int originY, bool horizontal,
@@ -374,19 +392,11 @@ public class LineSweepService
                 inst, axis, originAnchored, originCell,
                 steps, cellSizePx, delaySeconds, onStep, () =>
                 {
-                    // Animasyon gerçekten bitince callback ile cleanup
-                    // Eski: CoDestroyAfterUnscaled(go, estimatedDuration) → frame drop olunca
-                    // animasyon hâlâ çalışıyorken obje siliniyor → MissingReferenceException
-                    // Yeni: OnCompleted callback → animasyon ne kadar sürerse sürsün güvenli
                     onCompleted?.Invoke();
                     if (go != null) UnityEngine.Object.Destroy(go);
                 }));
 
         float dur = lineTravelPlayer.EstimateDuration(steps);
-
-        // Güvenlik ağı: eğer callback hiç çağrılmazsa (obje disable vb.)
-        // LineTravelSplitSwapTestUI.OnDestroy/OnDisable zaten CompleteOnce çağırır
-        // ama ekstra güvenlik olarak çok uzun bir timeout koy
         float safetyTimeout = Mathf.Max(0f, delaySeconds) + dur + 2.0f;
         board.StartCoroutine(CoDestroyAfterUnscaled(go, safetyTimeout));
 
@@ -431,24 +441,41 @@ public class LineSweepService
         LineTravelSplitSwapTestUI.LineAxis axis,
         Vector2 originAnchored, Vector2Int originCell,
         int stepsPos, int stepsNeg, float cellSizePx, float delaySeconds,
-        Action<Vector2Int> onStep, Action onCompleted = null)
+        Action<Vector2Int> onStep, Action onCompleted = null,
+        Transform parentOverride = null)
     {
         if (lineTravelPlayer == null) return 0f;
 
-        Transform parentTr = board.LineTravelSpawnParent != null
-            ? board.LineTravelSpawnParent
-            : (lineTravelPlayer.transform.parent != null ? lineTravelPlayer.transform.parent : board.transform);
+        Transform parentTr = parentOverride != null
+            ? parentOverride
+            : (board.LineTravelSpawnParent != null
+                ? board.LineTravelSpawnParent
+                : (lineTravelPlayer.transform.parent != null ? lineTravelPlayer.transform.parent : board.transform));
 
         var go = UnityEngine.Object.Instantiate(lineTravelPlayer.gameObject, parentTr);
         go.SetActive(true);
+        go.transform.SetAsLastSibling();
 
         var inst = go.GetComponent<LineTravelSplitSwapTestUI>();
         if (inst == null) { UnityEngine.Object.Destroy(go); return 0f; }
+
+        var parentRt = parentTr as RectTransform;
+        if (parentRt != null)
+        {
+            if (inst.afterImageParent == null || !inst.afterImageParent.gameObject.activeInHierarchy)
+                inst.afterImageParent = parentRt;
+            if (inst.trailParent == null || !inst.trailParent.gameObject.activeInHierarchy)
+                inst.trailParent = parentRt;
+            if (inst.impactParent == null || !inst.impactParent.gameObject.activeInHierarchy)
+                inst.impactParent = parentRt;
+        }
 
         if (inst.afterImageParent == null && lineTravelPlayer.afterImageParent != null)
             inst.afterImageParent = lineTravelPlayer.afterImageParent;
         if (inst.impactParent == null && lineTravelPlayer.impactParent != null)
             inst.impactParent = lineTravelPlayer.impactParent;
+        if (inst.trailParent == null && lineTravelPlayer.trailParent != null)
+            inst.trailParent = lineTravelPlayer.trailParent;
 
         board.StartCoroutine(
             CoPlayLineTravelAsymmetric(
