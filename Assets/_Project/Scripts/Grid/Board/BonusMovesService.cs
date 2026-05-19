@@ -168,7 +168,8 @@ public class BonusMovesService : MonoBehaviour
         if (_hardSkipRequested)
             yield break;
 
-        // Phase 2: trigger all placed specials together.
+        // Phase 2: trigger all placed specials together using the same queued
+        // LineV/LineH activation path as OverrideSpecialized line batches.
         var validPlacements = new List<BoardController.BonusLinePlacement>(placed);
         foreach (var p in placements)
         {
@@ -189,21 +190,13 @@ public class BonusMovesService : MonoBehaviour
 
         if (validPlacements.Count > 0)
         {
-            Coroutine routine = board.StartBonusLinesRoutine(validPlacements);
+            yield return BonusLineOverrideStyleRunner.Run(
+                board,
+                validPlacements,
+                () => _hardSkipRequested);
 
-            // BoardController.StartBonusLinesRoutine zaten Coroutine başlatıp Coroutine döndürüyor.
-            // Bu yüzden tekrar StartCoroutine içine verilmemeli.
             while (!_hardSkipRequested && (board.IsBusy || board.ActiveBackgroundJobs > 0))
                 yield return null;
-
-            if (_hardSkipRequested && routine != null)
-            {
-                // StopCoroutine never executes finally blocks, so EndBusy() in
-                // BonusLinesRoutineInternal would be skipped, leaving busyScopeDepth > 0.
-                bool stillBusy = board.IsBusy;
-                board.StopCoroutine(routine);
-                if (stillBusy) board.EndBusy();
-            }
         }
 
         if (_hardSkipRequested)
