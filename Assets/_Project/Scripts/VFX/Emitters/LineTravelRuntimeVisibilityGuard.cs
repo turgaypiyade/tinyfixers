@@ -3,12 +3,6 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Runtime safety net for LineTravelSplitSwapTestUI instances.
-///
-/// Device builds can end up with the line-travel head Image GameObjects inactive
-/// or alpha-zero while the trail beam still runs from their RectTransforms. When
-/// that happens RocketTrailBeam is visible, but the actual LineTravel lightning
-/// heads/ghosts are invisible. This guard only touches active line-travel players
-/// whose Image components are currently enabled by Play().
 /// </summary>
 [DefaultExecutionOrder(10000)]
 public sealed class LineTravelRuntimeVisibilityGuard : MonoBehaviour
@@ -45,19 +39,46 @@ public sealed class LineTravelRuntimeVisibilityGuard : MonoBehaviour
             return;
 
         bool changed = false;
+        changed |= ForceRectOnCanvasPlane(player.transform);
         changed |= ForceImageVisible(player.leftImage, player.transform);
         changed |= ForceImageVisible(player.rightImage, player.transform);
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (changed)
         {
+            var rt = player.transform as RectTransform;
             Debug.Log(
-                $"[LineTravelVisibilityGuard] forcedVisible " +
-                $"player={player.name} " +
+                $"[LineTravelVisibilityGuard] forcedVisible player={player.name} " +
+                $"localZ={(rt != null ? rt.localPosition.z.ToString("0.###") : "n/a")} " +
                 $"left={(player.leftImage != null ? player.leftImage.gameObject.activeInHierarchy.ToString() : "null")} " +
                 $"right={(player.rightImage != null ? player.rightImage.gameObject.activeInHierarchy.ToString() : "null")}");
         }
 #endif
+    }
+
+    private static bool ForceRectOnCanvasPlane(Transform target)
+    {
+        var rt = target as RectTransform;
+        if (rt == null)
+            return false;
+
+        bool changed = false;
+        Vector3 lp = rt.localPosition;
+        if (Mathf.Abs(lp.z) > 0.001f)
+        {
+            rt.localPosition = new Vector3(lp.x, lp.y, 0f);
+            changed = true;
+        }
+
+        Vector3 ls = rt.localScale;
+        if (ls.z != 1f)
+        {
+            rt.localScale = new Vector3(ls.x, ls.y, 1f);
+            changed = true;
+        }
+
+        target.SetAsLastSibling();
+        return changed;
     }
 
     private static bool ForceImageVisible(Image image, Transform ownerRoot)
@@ -74,6 +95,15 @@ public sealed class LineTravelRuntimeVisibilityGuard : MonoBehaviour
         }
 
         image.raycastTarget = false;
+        image.maskable = false;
+
+        var rt = image.rectTransform;
+        Vector3 lp = rt.localPosition;
+        if (Mathf.Abs(lp.z) > 0.001f)
+        {
+            rt.localPosition = new Vector3(lp.x, lp.y, 0f);
+            changed = true;
+        }
 
         var color = image.color;
         if (color.a < 0.95f)
