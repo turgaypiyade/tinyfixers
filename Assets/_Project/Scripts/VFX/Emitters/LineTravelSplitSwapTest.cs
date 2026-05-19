@@ -591,19 +591,57 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
     private bool HasTileAtStep(int stepIndex, bool isRight) => true;
 
+    private RectTransform ResolveAfterImageParent()
+    {
+        if (afterImageParent && afterImageParent.gameObject.activeInHierarchy)
+            return afterImageParent;
+
+        if (trailParent && trailParent.gameObject.activeInHierarchy)
+            return trailParent;
+
+        if (impactParent && impactParent.gameObject.activeInHierarchy)
+            return impactParent;
+
+        var ownParent = transform.parent as RectTransform;
+        if (ownParent && ownParent.gameObject.activeInHierarchy)
+            return ownParent;
+
+        return transform as RectTransform;
+    }
+
     private void SpawnAfterImage(Image sourceImage, Vector2 anchoredPos)
     {
-        if (!rocketAfterImagePrefab || !afterImageParent || !sourceImage) return;
+        if (!sourceImage) return;
         var sourceRt = SafeRect(sourceImage);
         if (!sourceRt) return;
 
-        var go = Instantiate(rocketAfterImagePrefab, afterImageParent);
+        RectTransform parent = ResolveAfterImageParent();
+        if (!parent) return;
+
+        GameObject go;
+        if (rocketAfterImagePrefab)
+        {
+            go = Instantiate(rocketAfterImagePrefab, parent);
+        }
+        else
+        {
+            go = new GameObject("LineTravelAfterImage", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+            go.transform.SetParent(parent, false);
+        }
+
+        go.SetActive(true);
         EnsureAutoDestroy(go, afterImageLife + 0.05f);
 
         var img = go.GetComponentInChildren<Image>(true);
+        if (!img)
+            img = go.AddComponent<Image>();
+
         var rt = img ? img.rectTransform : go.GetComponent<RectTransform>();
         if (!img || !rt) return;
 
+        img.gameObject.SetActive(true);
+        img.enabled = true;
+        img.raycastTarget = false;
         img.sprite = sourceImage.sprite;
         img.color = new Color(1f, 1f, 1f, afterImageAlpha);
 
@@ -614,6 +652,12 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         rt.localScale = sourceRt.localScale;
         rt.localRotation = sourceRt.localRotation;
         rt.anchoredPosition = anchoredPos;
+
+        var cg = go.GetComponent<CanvasGroup>();
+        if (!cg) cg = go.AddComponent<CanvasGroup>();
+        cg.alpha = 1f;
+        cg.blocksRaycasts = false;
+        cg.interactable = false;
 
         StartCoroutine(FadeOnly(img, rt, afterImageLife, afterImageScaleUp));
     }
