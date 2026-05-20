@@ -632,3 +632,41 @@ MonoBehaviour:
     legacyStageDamageRules: 
     legacyBlocksCells: 0
     legacyBehavior: 3
+  - id: 25
+    stages:
+    - sprite: {fileID: 6268507453053954130, guid: 7433fe5ae201f4343bf6086445143cab, type: 3}
+      damageRule: 0
+      blocksCells: 0
+      behavior: 0
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+    - sprite: {fileID: 4946729563842133885, guid: 7433fe5ae201f4343bf6086445143cab, type: 3}
+      damageRule: 0
+      blocksCells: 0
+      behavior: 0
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 0
+    size: {x: 1, y: 1}
+    hits: 2
+    suppressHitParticles: 0
+    hitParticleSprites: []
+    breakParticleSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
+    drawUnderTiles: 1
+    legacySprite: {fileID: 6268507453053954130, guid: 7433fe5ae201f4343bf6086445143cab, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules: 
+    legacyBlocksCells: 0
+    legacyBehavior: 0

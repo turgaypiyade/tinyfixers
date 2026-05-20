@@ -830,6 +830,15 @@ public class ObstacleStateService : ISimObstacleQuery
         return (ObstacleId)level.obstacles[idx] == ObstacleId.Oil;
     }
 
+    // Mud sadece görsel overlay; swap/interaction'ı bloklamaz.
+    // BoardController IsUnderTileObstacleAt check'inde Mud'u istisna yapmak için kullanılır.
+    public bool IsMudAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx] == ObstacleId.Mud;
+    }
+
     // Oil (veya herhangi bir holdsTile=true obstacle) bu hücredeki taşı tutuyorsa true.
     // allowDiagonal=true ise çapraz akış yine izinli — bu method sadece dikey blok için.
     public bool HoldsTileAt(int x, int y)

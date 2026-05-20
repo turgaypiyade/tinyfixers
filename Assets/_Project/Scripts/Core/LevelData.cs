@@ -56,7 +56,11 @@ public enum ObstacleId : int
     EnergyContainer = 22,
     BatteryBox = 23,
 
-    OmegaModul = 24
+    OmegaModul = 24,
+
+    // Seamless dirt/mud overlay. Doesn't block, sits visually under the tile.
+    // Damaged by adjacent matches; cleared after N hits.
+    Mud = 25
 }
 
 [CreateAssetMenu(fileName = "Level_001", menuName = "CoreCollapse/Level Data", order = 1)]

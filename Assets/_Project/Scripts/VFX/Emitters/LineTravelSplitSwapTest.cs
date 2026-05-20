@@ -21,6 +21,11 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     public Sprite splitLeftSprite;
     public Sprite splitRightSprite;
 
+    [Header("Trail Sprites (sadece alev — opsiyonel)")]
+    [Tooltip("Atanmışsa trail ghost'ları bu sprite ile çizilir (saf alev görünümü). Boş bırakılırsa roket sprite'ı tekrar kullanılır.")]
+    public Sprite flameLeftSprite;
+    public Sprite flameRightSprite;
+
     [Header("Tuning")]
     public float startDelay = 0.15f;
     public float splitTime = 0.06f;
@@ -33,19 +38,35 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     [Header("AfterImage Trail")]
     public GameObject rocketAfterImagePrefab;
     public RectTransform afterImageParent;
-    public float afterImageLife = 0.15f;
-    public float afterImageAlpha = 0.55f;
-    public float afterImageScaleUp = 1.08f;
+    [Tooltip("Saniye cinsinden bir ghost'un alfası 0'a düşene kadar geçen süre. DÜŞÜK = roketin gerisinde kalan ghost'lar hızla sönüp daha koyu görünür (güçlü head-bright/tail-dim gradient). YÜKSEK = trail daha uzun süre kalır ama düz görünür.")]
+    public float afterImageLife = 0.6f;
+    [Tooltip("Ghost'un spawn anındaki alfası. Sonra FadeOnly tarafından 0'a indirilir.")]
+    public float afterImageAlpha = 0.95f;
+    [Tooltip("Fade eğrisi üssü. 1 = lineer (düz gradient). 2-4 = ghost yaşam başında hızla söner, sonunda yavaş söner → tail çok daha koyu, head canlı. Yüksek = daha keskin kontrast.")]
+    [Range(0.5f, 6f)] public float afterImageFadePower = 2.5f;
+    [Tooltip("Tek bir step'in substep ghost'ları arasındaki başlangıç-alfa gradyanı. 0 = tüm substep'ler aynı alfada doğar (düz hat). 1 = roketten en uzak substep alfası 0'dan başlar (en güçlü kontrast).")]
+    [Range(0f, 1f)] public float afterImageSubStepDimBias = 0.55f;
+    [Tooltip("Ghost'un spawn anındaki KALINLIK çarpanı (sprite'ın Y eksenine = rokete dik yöne uygulanır). 1'den büyük = daha kalın alev izi.")]
+    public float afterImageThicknessScale = 1.2f;
+    [Tooltip("Ghost'un spawn anındaki UZUNLUK çarpanı (sprite'ın X eksenine = roket gövdesi yönüne uygulanır). Genelde 1.0 — alev izini gereksiz uzatma.")]
+    public float afterImageLengthScale = 1.0f;
+    [Tooltip("Ghost yaşam süresi boyunca uygulanacak büyüme çarpanı (her iki eksene de). 1'den büyük = alev yaşlandıkça dağılır/yayılır.")]
+    public float afterImageScaleUp = 1.4f;
+    [Tooltip("Her step'in başlangıç-bitiş yoluna yerleştirilecek ghost sayısı. Yüksek = yoğun alev izi.")]
+    [Range(1, 12)] public int afterImageSubSteps = 6;
+    [Tooltip("Step'ler arası beklemede roket başında ek time-based spawn. 0 = devre dışı.")]
+    public float afterImageSpawnInterval = 0f;
 
     [Header("Sizing")]
     [SerializeField, Range(0.5f, 1.2f)] private float headSizeFactor = 0.95f;
     [SerializeField, Range(0.2f, 1f)] private float splitOffsetFactor = 0.55f;
 
-    [Header("Beam Trail")]
-    public RocketTrailBeam trailBeamPrefab;       // Core
-    public RocketTrailBeam glowTrailBeamPrefab;   // Glow
+    [Header("Beam Trail (Obsolete)")]
+    [Tooltip("Unused — legacy LineRenderer trail fields kept only so existing prefab references do not break. Trail is now a sprite afterimage stream.")]
+    public RocketTrailBeam trailBeamPrefab;
+    public RocketTrailBeam glowTrailBeamPrefab;
     public RectTransform trailParent;
-    public bool enableTrailBeam = true;
+    public bool enableTrailBeam = false;
 
     [Header("Timing")]
     public float stepDuration = 0.06f;
@@ -79,11 +100,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
     public Action OnCompleted;
 
-    private RocketTrailBeam _leftTrail;
-    private RocketTrailBeam _rightTrail;
-
-    private RocketTrailBeam _leftGlowTrail;
-    private RocketTrailBeam _rightGlowTrail;
+    private float _leftAfterImageTimer;
+    private float _rightAfterImageTimer;
 
     private RectTransform SafeRect(Image img)
     {
@@ -185,12 +203,15 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         _stepCountPos = _stepCount;
         _stepCountNeg = _stepCount;
         _cellSizePx = Mathf.Max(1f, cellSizePxOverride);
+        PrepareRootForUiPlayback();
         ApplyCellScaledVisualSize();
-        KillTrails();
+        _leftAfterImageTimer = 0f;
+        _rightAfterImageTimer = 0f;
 
         var leftRt = SafeRect(leftImage);
         if (leftRt)
         {
+            PrepareImageForPlayback(leftImage);
             leftRt.anchoredPosition = leftStart;
             leftRt.localScale = Vector3.one;
             if (splitLeftSprite) leftImage.sprite = splitLeftSprite;
@@ -199,6 +220,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         var rightRt = SafeRect(rightImage);
         if (rightRt)
         {
+            PrepareImageForPlayback(rightImage);
             rightRt.anchoredPosition = rightStart;
             rightRt.localScale = Vector3.one;
             if (splitRightSprite) rightImage.sprite = splitRightSprite;
@@ -229,12 +251,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         if (rightImage && splitRightSprite && IsAlive(rightImage)) rightImage.sprite = splitRightSprite;
         ApplyAxisVisualRotation();
 
-        Vector3 originWorldPos = Vector3.zero;
         var leftRt0 = SafeRect(leftImage);
         var rightRt0 = SafeRect(rightImage);
-        if (leftRt0) originWorldPos = leftRt0.position;
-        else if (rightRt0) originWorldPos = rightRt0.position;
-        originWorldPos.z = 0f;
 
         float dynamicSplitOffset = _cellSizePx * splitOffsetFactor;
 
@@ -269,7 +287,11 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         ApplyAxisVisualRotation();
         rocketMode = true;
 
-        SpawnTrails(originWorldPos);
+        // Seed the trail at the split point so the very first frame already
+        // shows ghost sprites trailing from where the rockets emerged.
+        SpawnTrailSamples();
+        _leftAfterImageTimer = 0f;
+        _rightAfterImageTimer = 0f;
 
         if (_originCellValid && OnStepCell != null)
             OnStepCell(_originCell);
@@ -321,7 +343,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
                         leftRt.anchoredPosition = Vector2.LerpUnclamped(lStart, lTarget, u);
                 }
 
-                UpdateTrailHeads();
+                TickTrailSpawn(Time.unscaledDeltaTime, movePos, moveNeg);
                 yield return null;
             }
 
@@ -330,7 +352,9 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             var leftRt2 = moveNeg ? SafeRect(leftImage) : null;
             if (leftRt2) leftRt2.anchoredPosition = lTarget;
 
-            UpdateTrailHeads();
+            // Distribute ghost sprites along this step's path so the trail
+            // shows the rocket between cells instead of only at rest points.
+            SpawnSubStepGhosts(rStart, rTarget, lStart, lTarget, movePos, moveNeg);
 
             if (_originCellValid && OnStepCell != null)
             {
@@ -358,11 +382,12 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
                 }
             }
 
-            if (emittersImpactPrefab && impactParent)
+            RectTransform impactSpace = emittersImpactPrefab ? ResolveLocalEffectParent() : null;
+            if (emittersImpactPrefab && impactSpace)
             {
                 if (rightRt2 && HasTileAtStep(i, true))
                 {
-                    var goR = Instantiate(emittersImpactPrefab, impactParent);
+                    var goR = Instantiate(emittersImpactPrefab, impactSpace);
                     var rtR = goR.GetComponent<RectTransform>();
                     if (rtR) rtR.anchoredPosition = rTarget;
                     EnsureAutoDestroy(goR, 0.15f);
@@ -370,15 +395,12 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
                 if (leftRt2 && HasTileAtStep(i, false))
                 {
-                    var goL = Instantiate(emittersImpactPrefab, impactParent);
+                    var goL = Instantiate(emittersImpactPrefab, impactSpace);
                     var rtL = goL.GetComponent<RectTransform>();
                     if (rtL) rtL.anchoredPosition = lTarget;
                     EnsureAutoDestroy(goL, 0.15f);
                 }
             }
-
-            if (rightRt2 && rightImage) SpawnAfterImage(rightImage, rTarget);
-            if (leftRt2 && leftImage) SpawnAfterImage(leftImage, lTarget);
 
             if (restTime > 0f)
             {
@@ -386,13 +408,13 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
                 while (rt2 < restTime)
                 {
                     rt2 += Time.unscaledDeltaTime;
+                    TickTrailSpawn(Time.unscaledDeltaTime, movePos, moveNeg);
                     yield return null;
                 }
             }
         }
 
         rocketMode = false;
-        FadeOutTrails();
 
         if (hideOnComplete)
         {
@@ -442,127 +464,67 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         }
     }
 
-    private void SpawnTrails(Vector3 originWorldPos)
+    private void SpawnTrailSamples()
     {
-        if (!enableTrailBeam)
-            return;
-
-        RectTransform parent = trailParent ? trailParent : afterImageParent;
-        if (!parent)
-            return;
-
         var leftRt = SafeRect(leftImage);
-        if (_leftTrail && !leftRt)
-        {
-            _leftTrail.Kill();
-            _leftTrail = null;
-        }
-        if (_leftGlowTrail && !leftRt)
-        {
-            _leftGlowTrail.Kill();
-            _leftGlowTrail = null;
-        }
-
-        if (leftRt)
-        {
-            if (trailBeamPrefab)
-            {
-                _leftTrail = CreateTrailInstance(trailBeamPrefab, parent, originWorldPos);
-                _leftTrail.UpdateHead(leftRt.position);
-            }
-
-            if (glowTrailBeamPrefab)
-            {
-                _leftGlowTrail = CreateTrailInstance(glowTrailBeamPrefab, parent, originWorldPos);
-                _leftGlowTrail.UpdateHead(leftRt.position);
-            }
-        }
+        if (leftImage && leftRt) SpawnAfterImage(leftImage, leftRt.anchoredPosition);
 
         var rightRt = SafeRect(rightImage);
-        if (_rightTrail && !rightRt)
-        {
-            _rightTrail.Kill();
-            _rightTrail = null;
-        }
-        if (_rightGlowTrail && !rightRt)
-        {
-            _rightGlowTrail.Kill();
-            _rightGlowTrail = null;
-        }
+        if (rightImage && rightRt) SpawnAfterImage(rightImage, rightRt.anchoredPosition);
+    }
 
-        if (rightRt)
+    private void SpawnSubStepGhosts(
+        Vector2 rStart, Vector2 rTarget,
+        Vector2 lStart, Vector2 lTarget,
+        bool rightActive, bool leftActive)
+    {
+        int count = Mathf.Max(1, afterImageSubSteps);
+        float bias = Mathf.Clamp01(afterImageSubStepDimBias);
+        for (int j = 1; j <= count; j++)
         {
-            if (trailBeamPrefab)
+            float frac = (float)j / count;
+            // Substep'ler step başından (rocket'tan en uzak) → step sonuna (rocket konumu) doğru
+            // alpha çarpanı artar. bias=0 → tüm substep aynı; bias=1 → en uzak substep alfası 0'dan başlar.
+            float alphaScale = Mathf.Lerp(1f - bias, 1f, frac);
+            if (rightActive && rightImage)
             {
-                _rightTrail = CreateTrailInstance(trailBeamPrefab, parent, originWorldPos);
-                _rightTrail.UpdateHead(rightRt.position);
+                Vector2 rSub = Vector2.LerpUnclamped(rStart, rTarget, frac);
+                SpawnAfterImage(rightImage, rSub, alphaScale);
             }
-
-            if (glowTrailBeamPrefab)
+            if (leftActive && leftImage)
             {
-                _rightGlowTrail = CreateTrailInstance(glowTrailBeamPrefab, parent, originWorldPos);
-                _rightGlowTrail.UpdateHead(rightRt.position);
+                Vector2 lSub = Vector2.LerpUnclamped(lStart, lTarget, frac);
+                SpawnAfterImage(leftImage, lSub, alphaScale);
             }
         }
     }
 
-    private RocketTrailBeam CreateTrailInstance(RocketTrailBeam prefab, RectTransform parent, Vector3 originWorld)
+    private void TickTrailSpawn(float dt, bool leftActive, bool rightActive)
     {
-        var beam = Instantiate(prefab, parent);
-        beam.transform.position = Vector3.zero;
-        beam.transform.localRotation = Quaternion.identity;
-        beam.transform.localScale = Vector3.one;
-        beam.Init(originWorld);
-        return beam;
-    }
+        if (afterImageSpawnInterval <= 0f) return;
+        float interval = Mathf.Max(0.005f, afterImageSpawnInterval);
 
-    private void UpdateTrailHeads()
-    {
-        var rightRt = SafeRect(rightImage);
-        if (_rightTrail != null)
+        if (leftActive)
         {
-            if (rightRt != null) _rightTrail.UpdateHead(rightRt.position);
-            else { _rightTrail.Kill(); _rightTrail = null; }
-        }
-        if (_rightGlowTrail != null)
-        {
-            if (rightRt != null) _rightGlowTrail.UpdateHead(rightRt.position);
-            else { _rightGlowTrail.Kill(); _rightGlowTrail = null; }
+            _leftAfterImageTimer += dt;
+            if (_leftAfterImageTimer >= interval)
+            {
+                _leftAfterImageTimer = 0f;
+                var leftRt = SafeRect(leftImage);
+                if (leftImage && leftRt) SpawnAfterImage(leftImage, leftRt.anchoredPosition);
+            }
         }
 
-        var leftRt = SafeRect(leftImage);
-        if (_leftTrail != null)
+        if (rightActive)
         {
-            if (leftRt != null) _leftTrail.UpdateHead(leftRt.position);
-            else { _leftTrail.Kill(); _leftTrail = null; }
+            _rightAfterImageTimer += dt;
+            if (_rightAfterImageTimer >= interval)
+            {
+                _rightAfterImageTimer = 0f;
+                var rightRt = SafeRect(rightImage);
+                if (rightImage && rightRt) SpawnAfterImage(rightImage, rightRt.anchoredPosition);
+            }
         }
-        if (_leftGlowTrail != null)
-        {
-            if (leftRt != null) _leftGlowTrail.UpdateHead(leftRt.position);
-            else { _leftGlowTrail.Kill(); _leftGlowTrail = null; }
-        }
-    }
-
-    private void FadeOutTrails()
-    {
-        if (_leftTrail) _leftTrail.FadeOutAndDestroy();
-        if (_rightTrail) _rightTrail.FadeOutAndDestroy();
-        if (_leftGlowTrail) _leftGlowTrail.FadeOutAndDestroy();
-        if (_rightGlowTrail) _rightGlowTrail.FadeOutAndDestroy();
-
-        _leftTrail = null;
-        _rightTrail = null;
-        _leftGlowTrail = null;
-        _rightGlowTrail = null;
-    }
-
-    private void KillTrails()
-    {
-        if (_leftTrail) { _leftTrail.Kill(); _leftTrail = null; }
-        if (_rightTrail) { _rightTrail.Kill(); _rightTrail = null; }
-
-        if (_leftGlowTrail) { _leftGlowTrail.Kill(); _leftGlowTrail = null; }
-        if (_rightGlowTrail) { _rightGlowTrail.Kill(); _rightGlowTrail = null; }
     }
 
     private void CompleteOnce()
@@ -578,20 +540,27 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     private void OnDisable()
     {
         if (!Application.isPlaying) return;
-        KillTrails();
         CompleteOnce();
     }
 
     private void OnDestroy()
     {
         if (!Application.isPlaying) return;
-        KillTrails();
         CompleteOnce();
     }
 
     private bool HasTileAtStep(int stepIndex, bool isRight) => true;
 
-    private RectTransform ResolveAfterImageParent()
+    private RectTransform ResolveLocalEffectParent()
+    {
+        var ownRoot = transform as RectTransform;
+        if (ownRoot && ownRoot.gameObject.activeInHierarchy)
+            return ownRoot;
+
+        return ResolveExternalEffectParent();
+    }
+
+    private RectTransform ResolveExternalEffectParent()
     {
         if (afterImageParent && afterImageParent.gameObject.activeInHierarchy)
             return afterImageParent;
@@ -609,13 +578,20 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         return transform as RectTransform;
     }
 
-    private void SpawnAfterImage(Image sourceImage, Vector2 anchoredPos)
+    private Sprite ResolveTrailSprite(Image sourceImage)
+    {
+        if (sourceImage == leftImage && flameLeftSprite) return flameLeftSprite;
+        if (sourceImage == rightImage && flameRightSprite) return flameRightSprite;
+        return sourceImage ? sourceImage.sprite : null;
+    }
+
+    private void SpawnAfterImage(Image sourceImage, Vector2 anchoredPos, float alphaScale = 1f)
     {
         if (!sourceImage) return;
         var sourceRt = SafeRect(sourceImage);
         if (!sourceRt) return;
 
-        RectTransform parent = ResolveAfterImageParent();
+        RectTransform parent = ResolveLocalEffectParent();
         if (!parent) return;
 
         GameObject go;
@@ -642,14 +618,16 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         img.gameObject.SetActive(true);
         img.enabled = true;
         img.raycastTarget = false;
-        img.sprite = sourceImage.sprite;
-        img.color = new Color(1f, 1f, 1f, afterImageAlpha);
+        img.sprite = ResolveTrailSprite(sourceImage);
+        img.color = new Color(1f, 1f, 1f, afterImageAlpha * Mathf.Clamp01(alphaScale));
 
         rt.anchorMin = sourceRt.anchorMin;
         rt.anchorMax = sourceRt.anchorMax;
         rt.pivot = sourceRt.pivot;
         rt.sizeDelta = sourceRt.sizeDelta;
-        rt.localScale = sourceRt.localScale;
+        float lengthScale = Mathf.Max(0.01f, afterImageLengthScale);
+        float thicknessScale = Mathf.Max(0.01f, afterImageThicknessScale);
+        rt.localScale = new Vector3(lengthScale, thicknessScale, 1f);
         rt.localRotation = sourceRt.localRotation;
         rt.anchoredPosition = anchoredPos;
 
@@ -676,17 +654,51 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         Color c0 = img ? img.color : Color.white;
         Vector3 s0 = rt ? rt.localScale : Vector3.one;
         Vector3 s1 = s0 * scaleUp;
+        float power = Mathf.Max(0.5f, afterImageFadePower);
 
         while (ft < life)
         {
             ft += Time.unscaledDeltaTime;
             float u = Mathf.Clamp01(ft / life);
+            // Power > 1 → ghost yaşam başında hızla söner, sonunda yavaş → tail koyu, head canlı.
+            float k = Mathf.Pow(1f - u, power);
 
-            if (img) img.color = new Color(1f, 1f, 1f, Mathf.Lerp(c0.a, 0f, u));
+            if (img) img.color = new Color(1f, 1f, 1f, c0.a * k);
             if (rt) rt.localScale = Vector3.LerpUnclamped(s0, s1, u);
 
             yield return null;
         }
+    }
+
+    private void PrepareRootForUiPlayback()
+    {
+        var rt = transform as RectTransform;
+        if (rt == null)
+            return;
+
+        Vector3 localPos = rt.localPosition;
+        if (Mathf.Abs(localPos.z) > 0.001f)
+            rt.localPosition = new Vector3(localPos.x, localPos.y, 0f);
+
+        Vector3 localScale = rt.localScale;
+        if (Mathf.Abs(localScale.z - 1f) > 0.001f)
+            rt.localScale = new Vector3(localScale.x, localScale.y, 1f);
+    }
+
+    private void PrepareImageForPlayback(Image image)
+    {
+        if (!image)
+            return;
+
+        image.gameObject.SetActive(true);
+        image.enabled = true;
+        image.raycastTarget = false;
+        image.color = new Color(image.color.r, image.color.g, image.color.b, 1f);
+
+        var rt = image.rectTransform;
+        Vector3 localPos = rt.localPosition;
+        if (Mathf.Abs(localPos.z) > 0.001f)
+            rt.localPosition = new Vector3(localPos.x, localPos.y, 0f);
     }
 
     private void ApplyAxisVisualRotation()

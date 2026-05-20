@@ -42,10 +42,15 @@ public class GridSpawner : MonoBehaviour
 
     [Header("Roots (auto create)")]
     [SerializeField] private RectTransform cellBgRoot;
+    [SerializeField] private RectTransform mudOverlayRoot;
     [SerializeField] private RectTransform obstaclesRoot;
     [SerializeField] private RectTransform underTilesObstaclesRoot;
     [SerializeField] private RectTransform overTilesObstaclesRoot;
     [SerializeField] private RectTransform tilesRoot;
+
+    [Header("Mud Overlay")]
+    [SerializeField] private MudOverlayService mudOverlayService;
+    [SerializeField] private int mudDefaultHits = 2;
     [SerializeField] private Color runtimeBoardBg = new Color(0.78f, 0.88f, 0.97f, 1f);
     [SerializeField] private Color runtimeNormalCell = new Color(1f, 1f, 1f, 0.16f);
     [SerializeField] private RectTransform gridLinesRoot;
@@ -219,6 +224,7 @@ public class GridSpawner : MonoBehaviour
         Vector2 inner = new Vector2(boardPadding, -boardPadding);
 
         if (cellBgRoot != null) cellBgRoot.anchoredPosition = inner;
+        if (mudOverlayRoot != null) mudOverlayRoot.anchoredPosition = inner;
         if (gridLinesRoot != null) gridLinesRoot.anchoredPosition = inner;
         if (tilesRoot != null) tilesRoot.anchoredPosition = inner;
         if (obstaclesRoot != null) obstaclesRoot.anchoredPosition = inner;
@@ -263,6 +269,7 @@ public class GridSpawner : MonoBehaviour
         if (drawObstacles)
         {
             DrawObstacleVisuals();
+            DrawMudOverlays();
         }
 
         for (int y = 0; y < height; y++)
@@ -281,6 +288,9 @@ public class GridSpawner : MonoBehaviour
                 SpawnCellBg(x, y);
                 if (isBlockedByObstacle)
                 {
+                    // DEBUG: Mud bloklamamalı; bloklanıyorsa def'i veya stage flag'lerini logla.
+                    if ((ObstacleId)resolvedLevel.obstacles[idx] == ObstacleId.Mud)
+                        Debug.LogError($"[MudDebug] Cell ({x},{y}) Mud OLMASINA RAĞMEN blocked sayıldı → hole olarak işaretleniyor!");
                     board.SetHole(x, y, true);
                     continue;
                 }
@@ -340,8 +350,12 @@ public class GridSpawner : MonoBehaviour
         // direkt çocuğuysa son sıraya alınır — böylece combo animasyonları grid çizgilerinin
         // üstünde render edilir.
         if (cellBgRoot != null) cellBgRoot.SetAsFirstSibling();
+        // Mud overlay grid çizgilerinin de üstünde durmalı ki cell sınırları boyunca
+        // seamless texture kesintisiz görünsün. Tile altında, grid line üstünde.
+        if (mudOverlayRoot != null) mudOverlayRoot.SetSiblingIndex(1);
         if (tilesRoot != null) tilesRoot.SetAsLastSibling();
-        if (gridLinesRoot != null) gridLinesRoot.SetAsLastSibling();
+        if (gridLinesRoot != null) gridLinesRoot.SetSiblingIndex(1);
+        if (mudOverlayRoot != null) mudOverlayRoot.SetSiblingIndex(2);
         if (obstaclesRoot != null) obstaclesRoot.SetAsLastSibling();
 
         if (board != null && spawnParent != null)
@@ -541,6 +555,9 @@ public class GridSpawner : MonoBehaviour
                 // ── MovableObstacle tile olarak yönetilir, ayrı visual çizilmez ──
                 if (def.IsMovableObstacle) continue;
 
+                // Mud kendi seamless renderer'ını kullanır, default sprite Image üretme.
+                if (obsId == ObstacleId.Mud) continue;
+
                 var image = DrawObstacleImage(def, x, y);
                 if (image != null)
                 {
@@ -548,6 +565,56 @@ public class GridSpawner : MonoBehaviour
                     obstacleDefsByOrigin[idx] = def;
                 }
             }
+    }
+
+    private void DrawMudOverlays()
+    {
+        if (mudOverlayService == null) return;
+        if (resolvedLevel?.obstacles == null || resolvedLevel.obstacleOrigins == null) return;
+        if (mudOverlayRoot == null) return;
+
+        mudOverlayService.Init(board, width, height);
+
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            int idx = resolvedLevel.Index(x, y);
+            if ((ObstacleId)resolvedLevel.obstacles[idx] != ObstacleId.Mud) continue;
+            // Mud her cell için 1x1 — origin kendi cell'i olmalı.
+            if (resolvedLevel.obstacleOrigins[idx] != idx) continue;
+
+            // Empty cell (hole) üzerine mud çizme — irregular grid shape'leri için.
+            bool isEmpty = resolvedLevel.cells != null
+                && idx < resolvedLevel.cells.Length
+                && resolvedLevel.cells[idx] == (int)CellType.Empty;
+            if (isEmpty) continue;
+
+            var go = new GameObject(
+                $"Mud_{x}_{y}",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(UnityEngine.UI.RawImage),
+                typeof(MudCellView));
+            go.transform.SetParent(mudOverlayRoot, false);
+
+            var view = go.GetComponent<MudCellView>();
+            view.Init(
+                mudOverlayService.SharedMudTexture,
+                x, y,
+                width, height,
+                mudOverlayService.DarkTint,
+                mudOverlayService.LightTint,
+                mudOverlayService.MinAlphaAtLastStage);
+            view.PlaceInCell(tileSize);
+
+            int remaining = board != null && board.ObstacleStateService != null
+                ? board.ObstacleStateService.GetRemainingHitsAt(x, y)
+                : mudDefaultHits;
+            if (remaining <= 0) remaining = mudDefaultHits;
+
+            int max = Mathf.Max(remaining, mudDefaultHits);
+            mudOverlayService.RegisterCell(x, y, view, remaining, max);
+        }
     }
 
     private void HandleObstacleStageChanged(int originIndex, ObstacleStageSnapshot nextStage)
@@ -611,6 +678,9 @@ public class GridSpawner : MonoBehaviour
 
         if (cellBgRoot == null)
             cellBgRoot = GetOrCreateChildRoot(root, "CellBGs");
+
+        if (mudOverlayRoot == null)
+            mudOverlayRoot = GetOrCreateChildRoot(root, "MudOverlay");
 
         if (gridLinesRoot == null)
             gridLinesRoot = GetOrCreateChildRoot(root, "GridLines");

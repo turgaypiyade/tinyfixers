@@ -35,7 +35,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 700, y: 0}
-  m_SizeDelta: {x: 100, y: 1}
+  m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7038342533788588591
 CanvasRenderer:
@@ -100,7 +100,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6951413210752950108}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -5}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -140,15 +140,21 @@ MonoBehaviour:
   pulseAmount: 0.12
   rocketAfterImagePrefab: {fileID: 1073926442982439361, guid: 553f0821b2b41614586f70ec6b63b022, type: 3}
   afterImageParent: {fileID: 0}
-  afterImageLife: 0.04
-  afterImageAlpha: 0.1
-  afterImageScaleUp: 1.02
+  afterImageLife: 0.6
+  afterImageAlpha: 0.95
+  afterImageFadePower: 2.5
+  afterImageSubStepDimBias: 0.55
+  afterImageThicknessScale: 1.35
+  afterImageLengthScale: 1
+  afterImageScaleUp: 1.4
+  afterImageSubSteps: 6
+  afterImageSpawnInterval: 0
   headSizeFactor: 0.898
   splitOffsetFactor: 0.55
-  trailBeamPrefab: {fileID: 864241499568937563, guid: 2a34a70c133e94af295259358bb22c18, type: 3}
-  glowTrailBeamPrefab: {fileID: 864241499568937563, guid: 53232f1cb02754fcab293a96a19fd8b6, type: 3}
+  trailBeamPrefab: {fileID: 0}
+  glowTrailBeamPrefab: {fileID: 0}
   trailParent: {fileID: 0}
-  enableTrailBeam: 1
+  enableTrailBeam: 0
   stepDuration: 0.045
   postDelay: 0.01
   hideOnComplete: 1

@@ -1090,7 +1090,8 @@ public class BoardController : MonoBehaviour
             (obstacleStateService.IsOilAt(from.X, from.Y) || obstacleStateService.IsOilAt(nx, ny)))
             return;
         if (obstacleStateService != null &&
-            (obstacleStateService.IsUnderTileObstacleAt(from.X, from.Y) || obstacleStateService.IsUnderTileObstacleAt(nx, ny)))
+            ((obstacleStateService.IsUnderTileObstacleAt(from.X, from.Y) && !obstacleStateService.IsMudAt(from.X, from.Y))
+             || (obstacleStateService.IsUnderTileObstacleAt(nx, ny) && !obstacleStateService.IsMudAt(nx, ny))))
             return;
         if (obstacleStateService != null &&
             (obstacleStateService.IsInteractionLockedAt(from.X, from.Y) || obstacleStateService.IsInteractionLockedAt(nx, ny)))
@@ -1127,7 +1128,8 @@ public class BoardController : MonoBehaviour
             var a = selected;
             selected = null;
             bool underTileBlocked = obstacleStateService != null &&
-                (obstacleStateService.IsUnderTileObstacleAt(a.X, a.Y) || obstacleStateService.IsUnderTileObstacleAt(tile.X, tile.Y)
+                ((obstacleStateService.IsUnderTileObstacleAt(a.X, a.Y) && !obstacleStateService.IsMudAt(a.X, a.Y))
+                 || (obstacleStateService.IsUnderTileObstacleAt(tile.X, tile.Y) && !obstacleStateService.IsMudAt(tile.X, tile.Y))
                  || obstacleStateService.IsInteractionLockedAt(a.X, a.Y) || obstacleStateService.IsInteractionLockedAt(tile.X, tile.Y));
             if (!underTileBlocked)
                 StartCoroutine(ProcessSwap(a, tile));
