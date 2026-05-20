@@ -634,23 +634,23 @@ MonoBehaviour:
     legacyBehavior: 3
   - id: 25
     stages:
-    - sprite: {fileID: 6268507453053954130, guid: 7433fe5ae201f4343bf6086445143cab, type: 3}
+    - sprite: {fileID: 21300000, guid: c60773f8cd8dd434dafb55954e7f4155, type: 3}
       damageRule: 0
       blocksCells: 0
       behavior: 0
       allowDiagonal: 0
       locksInteraction: 0
       holdsTile: 0
-      suppressHitParticles: 0
+      suppressHitParticles: 1
       hitParticleSprites: []
-    - sprite: {fileID: 4946729563842133885, guid: 7433fe5ae201f4343bf6086445143cab, type: 3}
+    - sprite: {fileID: 21300000, guid: cba37f0d402704bfaac748f2169bb942, type: 3}
       damageRule: 0
       blocksCells: 0
       behavior: 0
       allowDiagonal: 1
       locksInteraction: 0
       holdsTile: 0
-      suppressHitParticles: 0
+      suppressHitParticles: 1
       hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
@@ -665,7 +665,7 @@ MonoBehaviour:
     breakSound: {fileID: 0}
     breakSoundVolume: 1
     drawUnderTiles: 1
-    legacySprite: {fileID: 6268507453053954130, guid: 7433fe5ae201f4343bf6086445143cab, type: 3}
+    legacySprite: {fileID: 21300000, guid: c60773f8cd8dd434dafb55954e7f4155, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 0

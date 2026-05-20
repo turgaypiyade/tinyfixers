@@ -782,21 +782,6 @@ public class BoardAnimator
 
             if (includeAdjacentOverTileBlockerDamage)
                 CollectAdjacentOverTileBlockers(cell, obstacleDamageSources, sourceTileType);
-
-            CollectAdjacentMudCells(cell, obstacleDamageSources, sourceTileType);
-        }
-
-        // Mud per-match max 1 hit (line-sweep tarafı da)
-        if (board.ObstacleStateService != null)
-        {
-            foreach (var kvp in obstacleDamageSources)
-            {
-                if (kvp.Value == null || kvp.Value.Count <= 1) continue;
-                if (board.ObstacleStateService.GetObstacleIdAt(kvp.Key.x, kvp.Key.y) != ObstacleId.Mud) continue;
-                var first = kvp.Value[0];
-                kvp.Value.Clear();
-                kvp.Value.Add(first);
-            }
         }
 
         foreach (var kv in obstacleDamageSources)
@@ -993,42 +978,8 @@ public class BoardAnimator
 
             AddDamageRequest(request);
 
-            // DEBUG: match'in dahil olduğu cell'de Mud var mı?
-            if (board.ObstacleStateService != null
-                && board.ObstacleStateService.GetObstacleIdAt(cell.x, cell.y) == ObstacleId.Mud)
-            {
-                Debug.Log($"[MudDebug] Match cell ({cell.x},{cell.y}) Mud içeriyor, damage request eklendi");
-            }
-
             if (plan.IncludeAdjacentOverTileBlockerDamage)
                 CollectAdjacentOverTileBlockers(cell, obstacleDamageRequests, request);
-
-            // Mud her zaman match'in komşularına yayılır — opt-in flag'e gerek yok.
-            CollectAdjacentMudCells(cell, obstacleDamageRequests, request);
-        }
-
-        // Mud per-match max 1 hit garantisi: aynı cell birden fazla request taşıyorsa
-        // ilkine indir. (Match'in ortasındaki Mud cell self + neighbor olarak çift kuyruğa girebiliyor.)
-        if (board.ObstacleStateService != null)
-        {
-            foreach (var kvp in obstacleDamageRequests)
-            {
-                if (kvp.Value == null || kvp.Value.Count <= 1) continue;
-                if (board.ObstacleStateService.GetObstacleIdAt(kvp.Key.x, kvp.Key.y) != ObstacleId.Mud) continue;
-                var first = kvp.Value[0];
-                kvp.Value.Clear();
-                kvp.Value.Add(first);
-            }
-        }
-
-        // DEBUG: kuyruğa alınan Mud cell'leri tek tek logla
-        foreach (var kvp in obstacleDamageRequests)
-        {
-            if (board.ObstacleStateService != null
-                && board.ObstacleStateService.GetObstacleIdAt(kvp.Key.x, kvp.Key.y) == ObstacleId.Mud)
-            {
-                Debug.Log($"[MudDebug] Queued damage for Mud cell ({kvp.Key.x},{kvp.Key.y}) — {kvp.Value.Count} request(s)");
-            }
         }
 
         foreach (var kv in obstacleDamageRequests)
@@ -1189,54 +1140,6 @@ public class BoardAnimator
         }
     }
 
-    // Match'in 4 yön komşularındaki Mud hücrelerine ek damage request kuyruğa alır.
-    // Mud her match'in komşusunda otomatik damage alır (Candy Crush / Homescapes davranışı).
-    // ÖNEMLİ: Bir Mud cell aynı match içinde zaten kuyruğa alındıysa tekrar eklenmez —
-    // aksi takdirde match çizgisinin ortasındaki Mud cell 2-3 hit birden alır ve
-    // stage geçişi göze çarpmaz.
-    private void CollectAdjacentMudCells(
-        Vector2Int centerCell,
-        Dictionary<Vector2Int, List<ObstacleDamageRequest>> obstacleDamageRequests,
-        ObstacleDamageRequest sourceRequest)
-    {
-        if (board == null || board.ObstacleStateService == null || obstacleDamageRequests == null)
-            return;
-
-        for (int i = 0; i < OrthogonalDirs.Length; i++)
-        {
-            Vector2Int n = centerCell + OrthogonalDirs[i];
-            if (n.x < 0 || n.x >= board.Width || n.y < 0 || n.y >= board.Height) continue;
-            if (board.ObstacleStateService.GetObstacleIdAt(n.x, n.y) != ObstacleId.Mud) continue;
-
-            // Bu Mud cell için zaten bir request varsa atla — Mud per-match en fazla 1 hit alsın.
-            if (obstacleDamageRequests.ContainsKey(n)) continue;
-
-            var request = new ObstacleDamageRequest(n, sourceRequest.context, sourceRequest.normalMatchTileType);
-            obstacleDamageRequests[n] = new List<ObstacleDamageRequest> { request };
-        }
-    }
-
-    // Line sweep / lightning yolu için aynı işin sourceTileType-tabanlı versiyonu.
-    private void CollectAdjacentMudCells(
-        Vector2Int centerCell,
-        Dictionary<Vector2Int, List<TileType?>> obstacleDamageSources,
-        TileType? sourceTileType)
-    {
-        if (board == null || board.ObstacleStateService == null || obstacleDamageSources == null)
-            return;
-
-        for (int i = 0; i < OrthogonalDirs.Length; i++)
-        {
-            Vector2Int n = centerCell + OrthogonalDirs[i];
-            if (n.x < 0 || n.x >= board.Width || n.y < 0 || n.y >= board.Height) continue;
-            if (board.ObstacleStateService.GetObstacleIdAt(n.x, n.y) != ObstacleId.Mud) continue;
-
-            // Mud için per-match max 1 hit.
-            if (obstacleDamageSources.ContainsKey(n)) continue;
-
-            obstacleDamageSources[n] = new List<TileType?> { sourceTileType };
-        }
-    }
 
     public IEnumerator ShakeBoard(float duration, float strength)
     {

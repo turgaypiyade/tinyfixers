@@ -99,6 +99,9 @@ public class ObstacleStateService : ISimObstacleQuery
     public event Action<int, ObstacleStageSnapshot> OnObstacleStageChanged;
     public event Action<int, ObstacleId> OnObstacleDestroyed;
     public event Action<int> OnCellUnlocked;
+
+    /// Set by TubeObstacleService. Called with the tube's ORIGIN cell index when any tube cell is hit.
+    public Action<int> TubeHitInterceptor;
     // ColorChest açılış ve renk kırılması bildirimleri
     public event Action<int> OnChestOpened;
     public event Action<int, ChestColorMask> OnChestColorRemoved;
@@ -250,6 +253,14 @@ public class ObstacleStateService : ISimObstacleQuery
         int origin = level.obstacleOrigins[idx];
         if (origin < 0 || origin >= remainingHitsByOrigin.Length)
             return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        // Tube cells are handled entirely by TubeObstacleService.
+        if (id == ObstacleId.Tube)
+        {
+            TubeHitInterceptor?.Invoke(origin);
+            var tubeChange = new ObstacleVisualChange(origin, id, false, 0, null);
+            return new ObstacleHitResult(true, true, false, tubeChange, default, Array.Empty<int>());
+        }
 
         var def = library != null ? library.Get(id) : null;
 
@@ -420,6 +431,7 @@ public class ObstacleStateService : ISimObstacleQuery
         int idx = level.Index(x, y);
         var id = (ObstacleId)level.obstacles[idx];
         if (id == ObstacleId.None) return false;
+        if (id == ObstacleId.Tube) return true;
 
         var def = library != null ? library.Get(id) : null;
         int remaining = ResolveRemainingHitsForCell(idx, def);
@@ -433,6 +445,7 @@ public class ObstacleStateService : ISimObstacleQuery
         int idx = level.Index(x, y);
         var id = (ObstacleId)level.obstacles[idx];
         if (id == ObstacleId.None) return false;
+        if (id == ObstacleId.Tube) return true;
 
         var def = library != null ? library.Get(id) : null;
         int remaining = ResolveRemainingHitsForCell(idx, def);
@@ -821,6 +834,23 @@ public class ObstacleStateService : ISimObstacleQuery
         int remaining = ResolveRemainingHitsForCell(idx, def);
         var stage = def.GetStageRuleForRemainingHits(remaining);
         return stage != null && stage.behavior == ObstacleBehaviorType.UnderTileLayered;
+    }
+
+    /// Frees a single tube cell from the obstacle layer and fires OnCellUnlocked.
+    /// Called by TubeObstacleService when the tube shrinks.
+    public void FreeTubeCell(int cellIndex)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
+        if (cellIndex < 0 || cellIndex >= level.obstacles.Length) return;
+
+        int origin = level.obstacleOrigins[cellIndex];
+        level.obstacles[cellIndex]      = (int)ObstacleId.None;
+        level.obstacleOrigins[cellIndex] = -1;
+
+        if (origin >= 0 && origin < remainingHitsByOrigin.Length)
+            remainingHitsByOrigin[origin] = -1;
+
+        OnCellUnlocked?.Invoke(cellIndex);
     }
 
     public bool IsOilAt(int x, int y)

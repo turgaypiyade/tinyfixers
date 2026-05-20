@@ -18,9 +18,14 @@ public class CascadeLogic
         public TileView View;
         public TileType SpawnType;
         public bool IsSpawned;
-        
+
         public bool IsMovableObstacle;
         public ObstacleId SpawnObstacleId;
+
+        // True after this tile has made one diagonal slide in this cascade simulation.
+        // Prevents chain-sliding: a tile may only slide diagonally once per cascade pass,
+        // so spread is limited to ~1 column per resolve pass (natural pyramid accumulation).
+        public bool HasSlidDiagonally;
 
         public List<Vector2Int> Path = new List<Vector2Int>();
     }
@@ -384,6 +389,12 @@ public class CascadeLogic
 
         if (sourceTile == null) return false;
 
+        // Each tile may only slide diagonally once per cascade simulation.
+        // This limits spread to ~1 column per resolve pass, producing natural
+        // pyramid accumulation over successive cascades instead of one-shot
+        // cross-board propagation.
+        if (sourceTile.HasSlidDiagonally) return false;
+
         // Check if diagonal pass is possible (at least one corner must be open)
         bool cornerA = IsDiagonalPassableCell(fromX, toY);
         bool cornerB = IsDiagonalPassableCell(toX, fromY);
@@ -391,6 +402,7 @@ public class CascadeLogic
         if (!cornerA && !cornerB) return false;
 
         // Move it
+        sourceTile.HasSlidDiagonally = true;
         virtualBoard[fromX, sourceY] = null;
         virtualBoard[toX, toY] = sourceTile;
 

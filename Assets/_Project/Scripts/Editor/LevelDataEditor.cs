@@ -4,19 +4,25 @@ using UnityEngine;
 [CustomEditor(typeof(LevelData))]
 public class LevelDataEditor : Editor
 {
-    private enum PaintMode { Mask, Obstacle, Erase }
+    private enum PaintMode { Mask, Obstacle, Tube, Erase }
 
     private PaintMode mode = PaintMode.Obstacle;
     private ObstacleId selectedObstacle = ObstacleId.Stone;
 
+    // Tube settings
+    private TubeDirection selectedTubeDir = TubeDirection.Up;
+    private int selectedTubeLength = 3;
+
     private const int cellPx = 30;
     private const int paletteIcon = 44;
 
-    private static readonly Color boardBg = new Color(0.70f, 0.83f, 0.95f, 1f);
-    private static readonly Color normalCell = new Color(1f, 1f, 1f, 0.08f);
-    private static readonly Color holeCell = new Color(0.03f, 0.06f, 0.10f, 0.95f);
-    private static readonly Color gridLine = new Color(1f, 1f, 1f, 0.35f);
+    private static readonly Color boardBg       = new Color(0.70f, 0.83f, 0.95f, 1f);
+    private static readonly Color normalCell    = new Color(1f, 1f, 1f, 0.08f);
+    private static readonly Color holeCell      = new Color(0.03f, 0.06f, 0.10f, 0.95f);
+    private static readonly Color gridLine      = new Color(1f, 1f, 1f, 0.35f);
     private static readonly Color occupiedOverlay = new Color(0f, 0f, 0f, 0.12f);
+    private static readonly Color tubeBaseColor = new Color(0.20f, 0.80f, 0.40f, 0.75f);
+    private static readonly Color tubeBodyColor = new Color(0.15f, 0.65f, 0.30f, 0.55f);
 
     public override void OnInspectorGUI()
     {
@@ -34,10 +40,12 @@ public class LevelDataEditor : Editor
 
         EditorGUILayout.Space(6);
 
-        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Erase" });
+        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Erase" });
 
         if (mode == PaintMode.Obstacle)
             DrawPalette(level);
+        else if (mode == PaintMode.Tube)
+            DrawTubePalette(level);
         else
             EditorGUILayout.HelpBox("Mask: ilk tık hücreyi Empty (hole), ikinci tık veya Erase hücreyi Normal yapar.", MessageType.None);
 
@@ -149,6 +157,8 @@ public class LevelDataEditor : Editor
             level.obstacleOrigins = new int[size];
             for (int i = 0; i < size; i++) level.obstacleOrigins[i] = -1;
         }
+        if (level.tubes == null)
+            level.tubes = System.Array.Empty<TubeEntry>();
     }
 
     private void ValidateUnknownObstacles(LevelData level)
@@ -305,6 +315,45 @@ public class LevelDataEditor : Editor
             DrawSpriteInRect(def.GetPreviewSprite(), big, 2);
         }
 
+        // Draw tube overlays
+        if (level.tubes != null)
+        {
+            for (int t = 0; t < level.tubes.Length; t++)
+            {
+                var entry = level.tubes[t];
+                int[] cells = TubeObstacleService.GetCellIndices(entry, level.width, level.height);
+                if (cells == null) continue;
+
+                for (int ci = 0; ci < cells.Length; ci++)
+                {
+                    int cx = cells[ci] % level.width;
+                    int cy = cells[ci] / level.width;
+                    Rect tr = new Rect(ox + cx * cellPx, oy + cy * cellPx, cellPx - 1, cellPx - 1);
+                    Color col = (ci == 0) ? tubeBaseColor : tubeBodyColor;
+                    EditorGUI.DrawRect(tr, col);
+
+                    // Direction arrow on base cell
+                    if (ci == 0)
+                    {
+                        string arrow = entry.direction switch
+                        {
+                            TubeDirection.Up    => "▲",
+                            TubeDirection.Down  => "▼",
+                            TubeDirection.Left  => "◄",
+                            TubeDirection.Right => "►",
+                            _                   => "?"
+                        };
+                        GUI.Label(tr, arrow + $"{entry.length}", new GUIStyle(EditorStyles.boldLabel)
+                        {
+                            alignment  = TextAnchor.MiddleCenter,
+                            fontSize   = 9,
+                            normal     = { textColor = Color.white }
+                        });
+                    }
+                }
+            }
+        }
+
         Handles.BeginGUI();
         Handles.color = gridLine;
         for (int y = 0; y < level.height; y++)
@@ -334,12 +383,75 @@ public class LevelDataEditor : Editor
                 break;
             case PaintMode.Erase:
                 ClearCell(level, idx);
+                RemoveTubeAtCell(level, idx);
                 level.cells[idx] = (int)CellType.Normal;
                 break;
             case PaintMode.Obstacle:
                 StampObstacle(level, x, y, selectedObstacle);
                 break;
+            case PaintMode.Tube:
+                PlaceTube(level, x, y);
+                break;
         }
+    }
+
+    private void PlaceTube(LevelData level, int bx, int by)
+    {
+        int originIdx = level.Index(bx, by);
+        if (!level.InBounds(bx, by)) return;
+        if (level.cells[originIdx] != (int)CellType.Normal) return;
+
+        // Remove existing tube at this cell if any
+        RemoveTubeAtCell(level, originIdx);
+
+        var entry = new TubeEntry
+        {
+            originCellIndex = originIdx,
+            direction       = selectedTubeDir,
+            length          = Mathf.Max(2, selectedTubeLength)
+        };
+
+        // Validate all cells in bounds and not occupied by other obstacles
+        int[] cells = TubeObstacleService.GetCellIndices(entry, level.width, level.height);
+        if (cells == null)
+        {
+            Debug.LogWarning($"[TubeEditor] Tube at ({bx},{by}) dir={selectedTubeDir} len={selectedTubeLength} goes out of bounds.");
+            return;
+        }
+        foreach (int ci in cells)
+        {
+            if (level.cells[ci] != (int)CellType.Normal)
+            {
+                Debug.LogWarning($"[TubeEditor] Tube cell {ci} is not a normal cell.");
+                return;
+            }
+            // Check for conflicting obstacles (not tubes – those were already removed)
+            var existingObs = (ObstacleId)level.obstacles[ci];
+            if (existingObs != ObstacleId.None && existingObs != ObstacleId.Tube)
+            {
+                Debug.LogWarning($"[TubeEditor] Tube cell {ci} already has obstacle {existingObs}.");
+                return;
+            }
+        }
+
+        var list = new System.Collections.Generic.List<TubeEntry>(level.tubes) { entry };
+        level.tubes = list.ToArray();
+    }
+
+    private void RemoveTubeAtCell(LevelData level, int cellIndex)
+    {
+        if (level.tubes == null || level.tubes.Length == 0) return;
+
+        var list = new System.Collections.Generic.List<TubeEntry>(level.tubes);
+        for (int t = list.Count - 1; t >= 0; t--)
+        {
+            int[] cells = TubeObstacleService.GetCellIndices(list[t], level.width, level.height);
+            if (cells == null) continue;
+            bool found = false;
+            foreach (int ci in cells) if (ci == cellIndex) { found = true; break; }
+            if (found) list.RemoveAt(t);
+        }
+        level.tubes = list.ToArray();
     }
 
     private void ClearCell(LevelData level, int idx)
@@ -371,6 +483,31 @@ public class LevelDataEditor : Editor
             level.obstacleOrigins[idx] = originIdx;
         }
         level.obstacleOrigins[originIdx] = originIdx;
+    }
+
+    private void DrawTubePalette(LevelData level)
+    {
+        EditorGUILayout.LabelField("Tube Obstacle", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox(
+            "Grid'de bir hücreye tıkla → o hücreden başlayan tüp eklenir.\n" +
+            "Erase modu veya mevcut tüp hücresine tekrar tıklamak tüpü siler.",
+            MessageType.Info);
+
+        EditorGUI.BeginChangeCheck();
+        selectedTubeDir    = (TubeDirection)EditorGUILayout.EnumPopup("Yön (base→open end)", selectedTubeDir);
+        selectedTubeLength = EditorGUILayout.IntSlider("Uzunluk (hücre)", selectedTubeLength, 2, 9);
+        if (EditorGUI.EndChangeCheck())
+            EditorUtility.SetDirty(level);
+
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField($"Mevcut tüpler: {(level.tubes != null ? level.tubes.Length : 0)}", EditorStyles.miniLabel);
+
+        if (level.tubes != null && level.tubes.Length > 0 && GUILayout.Button("Tüm tüpleri temizle"))
+        {
+            Undo.RecordObject(level, "Clear All Tubes");
+            level.tubes = System.Array.Empty<TubeEntry>();
+            EditorUtility.SetDirty(level);
+        }
     }
 
     private void DrawSpriteInRect(Sprite sprite, Rect r, float padding)

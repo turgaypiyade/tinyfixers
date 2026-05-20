@@ -60,7 +60,24 @@ public enum ObstacleId : int
 
     // Seamless dirt/mud overlay. Doesn't block, sits visually under the tile.
     // Damaged by adjacent matches; cleared after N hits.
-    Mud = 25
+    Mud = 25,
+
+    // Multi-cell shrinking tube obstacle. Managed by TubeObstacleService.
+    // Cells are stamped into obstacles[] at runtime from LevelData.tubes[].
+    Tube = 26,
+}
+
+public enum TubeDirection { Up, Down, Left, Right }
+
+[System.Serializable]
+public struct TubeEntry
+{
+    [Tooltip("Flat cell index (y*width+x) of the BASE cell (socket end).")]
+    public int originCellIndex;
+    [Tooltip("Direction from base toward the open end.")]
+    public TubeDirection direction;
+    [Tooltip("Total number of cells the tube occupies (including base).")]
+    [Min(2)] public int length;
 }
 
 [CreateAssetMenu(fileName = "Level_001", menuName = "CoreCollapse/Level Data", order = 1)]
@@ -102,6 +119,9 @@ public class LevelData : ScriptableObject
     [Tooltip("For multi-cell obstacles: stores the origin cell index. -1 means none.")]
     public int[] obstacleOrigins;
 
+    [Tooltip("Shrinking tube obstacles. Cells are stamped into obstacles[] at runtime by GridSpawner.")]
+    public TubeEntry[] tubes;
+
     public int Index(int x, int y) => y * width + x;
 
     public bool InBounds(int x, int y) =>
@@ -135,6 +155,9 @@ public class LevelData : ScriptableObject
             for (int i = 0; i < size; i++)
                 obstacleOrigins[i] = -1;
         }
+
+        if (tubes == null)
+            tubes = System.Array.Empty<TubeEntry>();
 
         if (goals == null)
             goals = System.Array.Empty<LevelGoalDefinition>();

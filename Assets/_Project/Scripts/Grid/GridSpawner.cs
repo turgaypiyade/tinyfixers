@@ -59,6 +59,11 @@ public class GridSpawner : MonoBehaviour
 
     [SerializeField] private RectTransform boardBgRoot;
 
+    [Header("Tube Obstacle")]
+    [SerializeField] private TubeObstacleService tubeObstacleService;
+    [SerializeField] private TubeView tubeViewPrefab;
+    [SerializeField] private RectTransform tubeRoot;
+
     [Header("Obstacle Visual (UI)")]
     [SerializeField] private bool drawObstacles = true;
     [Tooltip("ColorChest icin katmanli gorsel prefabi (ChestObstacleView component'i olmali)")]
@@ -128,6 +133,7 @@ public class GridSpawner : MonoBehaviour
     {
         resolvedLevel = ResolveLevelData();
         ApplyResolvedLevelToConsumers(resolvedLevel);
+        StampTubeCellsIntoLevel(resolvedLevel); // must happen before SetLevelData
 
         if (board == null || resolvedLevel == null || tilePrefab == null || iconLibrary == null || cellBgPrefab == null)
         {
@@ -270,6 +276,7 @@ public class GridSpawner : MonoBehaviour
         {
             DrawObstacleVisuals();
             DrawMudOverlays();
+            DrawTubeObstacles();
         }
 
         for (int y = 0; y < height; y++)
@@ -303,6 +310,23 @@ public class GridSpawner : MonoBehaviour
         DrawGridLines();
 
         var initialTypes = board.SimulateInitialTypes();
+
+        // Bir sütunda over-tile blocker varsa, onun altındaki hücreler tile spawner'ından
+        // erişilemez — başlangıçta oralara taş spawn etme.
+        var unreachableFromAbove = new bool[width, height];
+        for (int x = 0; x < width; x++)
+        {
+            bool blockerAbove = false;
+            for (int y = 0; y < height; y++)
+            {
+                int idx2 = resolvedLevel.Index(x, y);
+                if (blocked[idx2])
+                    blockerAbove = true;
+                else if (blockerAbove)
+                    unreachableFromAbove[x, y] = true;
+            }
+        }
+
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
             {
@@ -316,7 +340,7 @@ public class GridSpawner : MonoBehaviour
                 {
                     SpawnMovableObstacleTile(x, y);
                 }
-                else
+                else if (!unreachableFromAbove[x, y])
                 {
                     SpawnTile(x, y, initialTypes[x, y]);
                 }
@@ -478,6 +502,9 @@ public class GridSpawner : MonoBehaviour
         clone.musicVolume = source.musicVolume;
         clone.obstacleLibrary = source.obstacleLibrary;
         clone.goals = CloneGoals(source.goals);
+        clone.tubes = source.tubes != null
+            ? (TubeEntry[])source.tubes.Clone()
+            : System.Array.Empty<TubeEntry>();
 
         int size = Mathf.Max(1, source.width * source.height);
 
@@ -557,6 +584,8 @@ public class GridSpawner : MonoBehaviour
 
                 // Mud kendi seamless renderer'ını kullanır, default sprite Image üretme.
                 if (obsId == ObstacleId.Mud) continue;
+                // Tube kendi TubeView renderer'ını kullanır.
+                if (obsId == ObstacleId.Tube) continue;
 
                 var image = DrawObstacleImage(def, x, y);
                 if (image != null)
@@ -614,6 +643,52 @@ public class GridSpawner : MonoBehaviour
 
             int max = Mathf.Max(remaining, mudDefaultHits);
             mudOverlayService.RegisterCell(x, y, view, remaining, max);
+        }
+    }
+
+    private void StampTubeCellsIntoLevel(LevelData lvl)
+    {
+        if (lvl?.tubes == null || lvl.tubes.Length == 0) return;
+        if (lvl.obstacles == null || lvl.obstacleOrigins == null) return;
+
+        foreach (var entry in lvl.tubes)
+        {
+            int[] cells = TubeObstacleService.GetCellIndices(entry, lvl.width, lvl.height);
+            if (cells == null) continue;
+
+            foreach (int cellIdx in cells)
+            {
+                if (cellIdx < 0 || cellIdx >= lvl.obstacles.Length) continue;
+                lvl.obstacles[cellIdx]       = (int)ObstacleId.Tube;
+                lvl.obstacleOrigins[cellIdx] = entry.originCellIndex;
+            }
+        }
+    }
+
+    private void DrawTubeObstacles()
+    {
+        if (tubeObstacleService == null || tubeViewPrefab == null) return;
+        if (resolvedLevel?.tubes == null || resolvedLevel.tubes.Length == 0) return;
+        if (tubeRoot == null) return;
+
+        tubeObstacleService.Init(board.ObstacleStateService);
+        board.ObstacleStateService.TubeHitInterceptor = tubeObstacleService.HandleTubeHit;
+
+        foreach (var entry in resolvedLevel.tubes)
+        {
+            int[] cellIndices = TubeObstacleService.GetCellIndices(entry, resolvedLevel.width, resolvedLevel.height);
+            if (cellIndices == null || cellIndices.Length == 0) continue;
+
+            var go   = Instantiate(tubeViewPrefab.gameObject);
+            var view = go.GetComponent<TubeView>();
+            if (view == null) { Destroy(go); continue; }
+
+            view.Init(entry.direction, entry.length, tileSize);
+
+            var (tlX, tlY) = TubeObstacleService.GetTopLeftCell(entry, resolvedLevel.width);
+            view.PlaceOnGrid(tubeRoot, tlX, tlY);
+
+            tubeObstacleService.RegisterTube(entry.originCellIndex, cellIndices, view);
         }
     }
 
@@ -681,6 +756,9 @@ public class GridSpawner : MonoBehaviour
 
         if (mudOverlayRoot == null)
             mudOverlayRoot = GetOrCreateChildRoot(root, "MudOverlay");
+
+        if (tubeRoot == null)
+            tubeRoot = GetOrCreateChildRoot(root, "TubeObstacles");
 
         if (gridLinesRoot == null)
             gridLinesRoot = GetOrCreateChildRoot(root, "GridLines");

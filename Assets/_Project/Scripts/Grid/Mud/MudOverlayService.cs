@@ -99,16 +99,10 @@ public class MudOverlayService : MonoBehaviour
 
     private void HandleVisualChanged(ObstacleVisualChange change)
     {
-        // DEBUG: hangi obstacle için event geldi?
-        Debug.Log($"[MudDebug] HandleVisualChanged: obstacle={change.obstacleId} originIdx={change.originIndex} cleared={change.cleared} remaining={change.remainingHits}");
-
         if (change.obstacleId != ObstacleId.Mud) return;
 
         if (!viewsByCellIndex.TryGetValue(change.originIndex, out var view) || view == null)
-        {
-            Debug.LogWarning($"[MudDebug] Mud event geldi ama originIdx={change.originIndex} için kayıtlı view yok!");
             return;
-        }
 
         if (change.cleared)
         {
