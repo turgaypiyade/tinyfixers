@@ -17,7 +17,7 @@ MonoBehaviour:
   gameTopHud: {fileID: 21300000, guid: ba582bd9965ec4d8f9f41dab99e51df7, type: 3}
   gameBottomArea: {fileID: 21300000, guid: 19f3f4169d35a4d3c8cf0f407a17728d, type: 3}
   menuBackground: {fileID: 21300000, guid: 4550b43a86ffe4702abe64aaf0ee1df3, type: 3}
-  menuTopHud: {fileID: 21300000, guid: f819017d70c12452e8aa57d8640866f3, type: 3}
+  menuTopHud: {fileID: 21300000, guid: dbf581e29a5bc46898feaad019204ebf, type: 3}
   menuBottomArea: {fileID: 21300000, guid: b8a7979567ffa4d0d8c7ff4ccdd4e33e, type: 3}
   menuLevelSelectorBtn: {fileID: 21300000, guid: fda82192295aa4c9ebba5c7a8e0bd25a, type: 3}
   borderColorId: 0

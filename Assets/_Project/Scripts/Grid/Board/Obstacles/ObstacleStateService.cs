@@ -255,10 +255,11 @@ public class ObstacleStateService : ISimObstacleQuery
             return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
 
         // Tube cells are handled entirely by TubeObstacleService.
+        // originIndex=-1 so BoardBreakFxService skips the particle FX (TubeView owns its visuals).
         if (id == ObstacleId.Tube)
         {
             TubeHitInterceptor?.Invoke(origin);
-            var tubeChange = new ObstacleVisualChange(origin, id, false, 0, null);
+            var tubeChange = new ObstacleVisualChange(-1, id, false, 0, null);
             return new ObstacleHitResult(true, true, false, tubeChange, default, Array.Empty<int>());
         }
 

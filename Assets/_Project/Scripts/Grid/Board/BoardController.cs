@@ -567,7 +567,7 @@ public class BoardController : MonoBehaviour
         tile.SetUseFullCellIcon(useFullCellIcons);
     }
 
-    public TileType[,] SimulateInitialTypes()
+    public TileType[,] SimulateInitialTypes(bool[,] unreachableCells = null)
     {
         var lockedMask = new bool[width, height];
 
@@ -577,7 +577,9 @@ public class BoardController : MonoBehaviour
             {
                 lockedMask[x, y] = holes[x, y] ||
                     (obstacleStateService != null &&
-                     obstacleStateService.IsMovableObstacleAt(x, y));
+                     (obstacleStateService.IsMovableObstacleAt(x, y) ||
+                      obstacleStateService.IsInteractionLockedAt(x, y))) ||
+                    (unreachableCells != null && unreachableCells[x, y]);
             }
         }
 

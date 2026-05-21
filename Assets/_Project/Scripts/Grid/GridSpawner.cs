@@ -93,6 +93,7 @@ public class GridSpawner : MonoBehaviour
     private readonly Dictionary<int, GameObject> cellBgByIndex = new();
     private readonly Dictionary<int, Image> cellBgImageByIndex = new();
     private readonly Dictionary<int, Color> baseCellBgColorByIndex = new();
+    private readonly Dictionary<int, GameObject> tubeClickProxyByCell = new();
     private EnergyContainerService energyContainerService;
 
     private void Awake()
@@ -269,6 +270,7 @@ public class GridSpawner : MonoBehaviour
         cellBgByIndex.Clear();
         cellBgImageByIndex.Clear();
         baseCellBgColorByIndex.Clear();
+        tubeClickProxyByCell.Clear();
 
         bool[] blocked = BuildBlockedMap();
 
@@ -309,10 +311,9 @@ public class GridSpawner : MonoBehaviour
 
         DrawGridLines();
 
-        var initialTypes = board.SimulateInitialTypes();
-
         // Bir sütunda over-tile blocker varsa, onun altındaki hücreler tile spawner'ından
-        // erişilemez — başlangıçta oralara taş spawn etme.
+        // erişilemez — SimulateInitialTypes'a ÖNCE geçilmeli ki match garantisi gerçek
+        // taş pozisyonlarına göre yapılsın.
         var unreachableFromAbove = new bool[width, height];
         for (int x = 0; x < width; x++)
         {
@@ -326,6 +327,8 @@ public class GridSpawner : MonoBehaviour
                     unreachableFromAbove[x, y] = true;
             }
         }
+
+        var initialTypes = board.SimulateInitialTypes(unreachableFromAbove);
 
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
@@ -689,6 +692,49 @@ public class GridSpawner : MonoBehaviour
             view.PlaceOnGrid(tubeRoot, tlX, tlY);
 
             tubeObstacleService.RegisterTube(entry.originCellIndex, cellIndices, view);
+
+            AddTubeCellClickProxies(cellIndices);
+        }
+    }
+
+    // TubeView görselleri raycastTarget=false. Tube hücresi blocked → tile yok.
+    // Hammer (Single booster) gibi tek hücre hedefli joker'lerin Tube'u vurabilmesi için
+    // her tube hücresine görünmez bir click proxy serilir.
+    private void AddTubeCellClickProxies(int[] cellIndices)
+    {
+        if (cellIndices == null || tubeRoot == null) return;
+
+        foreach (int idx in cellIndices)
+        {
+            if (tubeClickProxyByCell.ContainsKey(idx)) continue;
+
+            int cx = idx % width;
+            int cy = idx / width;
+
+            var clickGo = new GameObject(
+                $"TubeClick_{cx}_{cy}",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(ObstacleClickProxy));
+            clickGo.transform.SetParent(tubeRoot, false);
+
+            var rt = clickGo.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot     = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(cx * tileSize, -cy * tileSize);
+            rt.sizeDelta = new Vector2(tileSize, tileSize);
+
+            var img = clickGo.GetComponent<Image>();
+            img.color = new Color(0f, 0f, 0f, 0f);
+            img.raycastTarget = true;
+
+            var proxy = clickGo.GetComponent<ObstacleClickProxy>();
+            proxy.Init(board, cx, cy);
+
+            clickGo.transform.SetAsFirstSibling();
+            tubeClickProxyByCell[idx] = clickGo;
         }
     }
 
@@ -745,6 +791,12 @@ public class GridSpawner : MonoBehaviour
 
         if (!cellBgByIndex.ContainsKey(cellIndex) || cellBgByIndex[cellIndex] == null)
             SpawnCellBg(x, y);
+
+        if (tubeClickProxyByCell.TryGetValue(cellIndex, out var clickGo))
+        {
+            if (clickGo != null) Destroy(clickGo);
+            tubeClickProxyByCell.Remove(cellIndex);
+        }
     }
 
     private void EnsureRoots()
