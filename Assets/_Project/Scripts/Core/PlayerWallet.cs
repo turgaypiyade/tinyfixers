@@ -78,4 +78,23 @@ public static class PlayerWallet
 
     public static int GetLevelStars(int level)
         => PlayerPrefs.GetInt(KeyLevelStars + level, 0);
+
+    /// <summary>
+    /// Toplam yıldızdan harcar (workshop/atölye tamiri için).
+    /// Yeterli yıldız yoksa false döner, düşülmez.
+    /// </summary>
+    public static bool SpendStars(int amount)
+    {
+        if (amount <= 0) return true;
+        int current = TotalStars;
+        if (current < amount) return false;
+
+        int newVal = current - amount;
+        PlayerPrefs.SetInt(KeyTotalStars, newVal);
+        PlayerPrefs.Save();
+        OnTotalStarsChanged?.Invoke(newVal);
+        return true;
+    }
+
+    public static bool HasEnoughStars(int amount) => TotalStars >= amount;
 }

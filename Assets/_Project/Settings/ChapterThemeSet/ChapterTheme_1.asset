@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ChapterTheme
   chapterIndex: 1
   gameBackground: {fileID: 21300000, guid: cce6788ad4e9e4e81af5259f0306b2f4, type: 3}
-  gameTopHud: {fileID: 21300000, guid: ba582bd9965ec4d8f9f41dab99e51df7, type: 3}
+  gameTopHud: {fileID: 21300000, guid: bbc643dcd189c479f8b2e1c9b3d29b1e, type: 3}
   gameBottomArea: {fileID: 21300000, guid: 19f3f4169d35a4d3c8cf0f407a17728d, type: 3}
   menuBackground: {fileID: 21300000, guid: 4550b43a86ffe4702abe64aaf0ee1df3, type: 3}
   menuTopHud: {fileID: 21300000, guid: dbf581e29a5bc46898feaad019204ebf, type: 3}
