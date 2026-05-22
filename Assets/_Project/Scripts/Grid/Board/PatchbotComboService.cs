@@ -168,6 +168,20 @@ public class PatchbotComboService
     {
         if (hasObstacleAtTarget)
         {
+            // Under-tile obstacle (Mud vb.) + üstte tile varsa: taşı kır,
+            // doğal hasar yoluyla obstacle zaten hit alır.
+            var obstacleService = board.ObstacleStateService;
+            bool isUnderTile = obstacleService != null && obstacleService.IsUnderTileObstacleAt(targetX, targetY);
+            var tileOnTop = board.Tiles[targetX, targetY];
+
+            if (isUnderTile && tileOnTop != null)
+            {
+                // Tile clear path — Mud kendiliğinden hasar alır
+                HitCellOnce(matches, targetX, targetY, tileOnTop, markAffectedCell, markAffectedTile);
+                return;
+            }
+
+            // Over-tile blocker veya taşı olmayan under-tile → direkt obstacle hit
             board.MarkPatchBotForcedObstacleHit(targetX, targetY);
             markAffectedCell?.Invoke(targetX, targetY);
             return;
@@ -184,6 +198,22 @@ public class PatchbotComboService
         var obstacleService = board.ObstacleStateService;
         if (obstacleService != null && obstacleService.GetObstacleIdAt(x, y) != ObstacleId.None)
         {
+            // Under-tile + tile varsa: taşı kır (Mud doğal hit alır)
+            bool isUnderTile = obstacleService.IsUnderTileObstacleAt(x, y);
+            var tileOnTop = tileAtCell ?? board.Tiles[x, y];
+
+            if (isUnderTile && tileOnTop != null)
+            {
+                var tdUnder = board.GridData[x, y];
+                if (tdUnder != null)
+                {
+                    matches.Add(tdUnder);
+                    markAffectedTile?.Invoke(tileOnTop);
+                    return;
+                }
+            }
+
+            // Over-tile blocker veya tile yok → obstacle hit yolu
             markAffectedCell?.Invoke(x, y);
             return;
         }
@@ -260,14 +290,31 @@ public class PatchbotComboService
 
                 if (hasObstacle)
                 {
-                    // Obstacle layer is the source-of-truth for this cell.
-                    // Tile exclusion and tile-goal checks are only relevant when there is no obstacle.
                     var obstacleId = board.ObstacleStateService.GetObstacleIdAt(x, y);
                     bool isObstacleGoalCell = activeObstacleGoals.Contains(obstacleId);
-                    if (isObstacleGoalCell)
+
+                    // Under-tile obstacle (Mud vb.): üzerinde taş varsa taşı hedefle —
+                    // taş kırılınca obstacle zaten hit alır (doğal hasar yolu).
+                    // Üzerinde taş yoksa direkt obstacle'a vurulur.
+                    bool isUnderTile = board.ObstacleStateService.IsUnderTileObstacleAt(x, y);
+                    bool hasTileOnTop = tile != null && !IsExcludedTile(tile);
+
+                    if (isUnderTile && hasTileOnTop)
+                    {
+                        // Taşı hedefle; obstacle goal'sa yine yüksek öncelikli (tile goal kovasına koy).
+                        if (isObstacleGoalCell || IsGoalTile(tile))
+                            tileGoalCells.Add((x, y, tile));
+                        else
+                            normalCells.Add((x, y, tile));
+                    }
+                    else if (isObstacleGoalCell)
+                    {
                         obstacleGoalCells.Add((x, y, tile));
+                    }
                     else
+                    {
                         otherObstacleCells.Add((x, y, tile));
+                    }
                 }
                 else if (tile != null && !IsExcludedTile(tile))
                 {

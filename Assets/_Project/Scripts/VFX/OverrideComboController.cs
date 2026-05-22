@@ -203,8 +203,34 @@ public class OverrideComboController : MonoBehaviour
             Debug.LogError("[OverrideComboController] Missing core refs (pivot/flash/canvasGroup/stormParticles)!");
             return;
         }
+        // KRİTİK ÖNEMLİ: gameObject SetActive(true) BoardVfxService'de çağrılıyor → bu noktada child'lar
+        // önceki combo'dan kalma state'le bir frame görünebilir. canvasGroup.alpha=0 hepsini gizler,
+        // ek olarak tüm görsel state'leri elle sıfırlıyoruz ki Co_Play öncesi flash olmasın.
+        if (canvasGroup != null) canvasGroup.alpha = 0f;
+
         EnsureAllIcons();
         EnsureGlowImages();
+
+        // Hierarchy'deki TÜM Image component'lerini bul ve alpha 0'a indir (custom/unutulmuş sprite'lar dahil).
+        var allImages = GetComponentsInChildren<Image>(includeInactive: true);
+        for (int i = 0; i < allImages.Length; i++)
+        {
+            if (allImages[i] == null) continue;
+            var c = allImages[i].color;
+            c.a = 0f;
+            allImages[i].color = c;
+        }
+
+        if (mergedIconImage != null)
+        {
+            mergedIconImage.rectTransform.localScale = Vector3.zero;
+        }
+
+        // Shockwave / WaveGlow scale reset (büyük kalmasın geçen combo'dan)
+        if (shockwaveImage != null)
+            shockwaveImage.rectTransform.localScale = Vector3.one * shockwaveStartScale;
+        if (waveGlowImage != null)
+            waveGlowImage.rectTransform.localScale = Vector3.one * shockwaveStartScale;
 
         iconImageA.sprite    = sprA;
         iconImageB.sprite    = sprB;

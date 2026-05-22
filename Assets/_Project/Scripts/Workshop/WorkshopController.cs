@@ -16,7 +16,11 @@ using UnityEngine.InputSystem;
 public class WorkshopController : MonoBehaviour
 {
     [Header("Data")]
-    [SerializeField] private WorkshopStageData stageData;
+    [Tooltip("Mevcut chapter'ı veren library. Workshop içeriği ChapterTheme.workshopStages'ten alınır.")]
+    [SerializeField] private ChapterThemeLibrary chapterThemeLibrary;
+    [Tooltip("Fallback: chapterThemeLibrary null veya chapter'da workshopStages yoksa kullanılır. " +
+             "Production'da chapterThemeLibrary kullan, bu sadece test/legacy için.")]
+    [SerializeField] private WorkshopStageData fallbackStageData;
 
     [Header("Background Images (üst üste iki katman)")]
     [SerializeField] private Image currentImage;
@@ -37,16 +41,56 @@ public class WorkshopController : MonoBehaviour
     [SerializeField, Min(0f)]    private float shakeDuration     = 0.25f;
     [SerializeField, Min(0f)]    private float shakeStrength     = 14f;
     [SerializeField, Min(0f)]    private float vfxLifetime       = 2.0f;
-    [SerializeField, Min(0f)]    private float starFlyToTargetDelay = 0.0f; // future: yıldız uçma anim entegrasyonu
+    [SerializeField, Min(0f)]    private float starFlyToTargetDelay = 0.45f; // panel'den uçan yıldızların hedeflerine varması için bekleme
 
-    private const string KeyCurrentStage = "workshop_current_stage";
+    [Header("Sparkle Stars (Transition Sırasında)")]
+    [Tooltip("Crossfade sırasında atölye alanına serpilen yıldız sprite'ı (parlama efekti).")]
+    [SerializeField] private Sprite sparkleStarSprite;
+    [Tooltip("Toplam kaç yıldız serpilecek.")]
+    [SerializeField, Range(0, 200)] private int sparkleStarCount = 25;
+    [Tooltip("Yıldızların yayılma genişliği (vfxFocus etrafındaki yarıçap, piksel).")]
+    [SerializeField, Min(50f)] private float sparkleSpreadRadius = 350f;
+    [Tooltip("Tek bir yıldız animasyonu süresi.")]
+    [SerializeField, Min(0.1f)] private float sparkleDuration = 0.9f;
+    [Tooltip("Yıldızların arasındaki spawn gecikmesi (stagger).")]
+    [SerializeField, Min(0f)] private float sparkleSpawnStagger = 0.04f;
+    [Tooltip("Yıldız boyutu (pixel).")]
+    [SerializeField, Min(10f)] private float sparkleSize = 60f;
+    [Tooltip("Yıldız renkleri — her yıldız bu listeden rastgele bir renk seçer. Boş ise beyaz kullanılır.")]
+    [SerializeField] private Color[] sparkleColors = new Color[]
+    {
+        new Color(1.00f, 0.92f, 0.30f, 1f), // sarı
+        new Color(0.30f, 0.65f, 1.00f, 1f), // mavi
+        new Color(0.40f, 0.85f, 0.40f, 1f), // yeşil
+        new Color(1.00f, 0.40f, 0.40f, 1f), // kırmızı/pembe
+    };
+    [Tooltip("Tüm yıldızlar workshop alanı boyunca rastgele dağılsın mı (true), yoksa vfxFocus etrafında mı toplansın (false)?")]
+    [SerializeField] private bool sparkleScatterFullArea = true;
 
-    public WorkshopStageData StageData => stageData;
+    // ChapterTheme.workshopStages → mevcut chapter'ın stage data'sı. Yoksa fallback'e döner.
+    public WorkshopStageData StageData
+    {
+        get
+        {
+            if (chapterThemeLibrary != null)
+            {
+                var theme = chapterThemeLibrary.GetCurrentTheme();
+                if (theme != null && theme.workshopStages != null)
+                    return theme.workshopStages;
+            }
+            return fallbackStageData;
+        }
+    }
+
+    public int CurrentChapterIndex => chapterThemeLibrary != null ? chapterThemeLibrary.GetCurrentChapter() : 1;
+
+    // Per-chapter PlayerPrefs key'leri — her chapter'ın progress'i ayrı.
+    private string KeyCurrentStage => $"workshop_chapter_{CurrentChapterIndex}_stage";
     public bool IsTransitioning { get; private set; }
     public event Action<int> OnStageCompleted; // tamamlanan stage index
-    public event Action<WorkshopReward> OnFinalRewardGranted; // tüm aşamalar bitti, ödül verildi
+    public event Action<WorkshopRewardBundle> OnFinalRewardGranted; // tüm aşamalar bitti, ödül paketi verildi
 
-    private const string KeyFinalRewardClaimed = "workshop_final_reward_claimed";
+    private string KeyFinalRewardClaimed => $"workshop_chapter_{CurrentChapterIndex}_reward_claimed";
 
     public bool FinalRewardClaimed
     {
@@ -54,8 +98,11 @@ public class WorkshopController : MonoBehaviour
         private set { PlayerPrefs.SetInt(KeyFinalRewardClaimed, value ? 1 : 0); PlayerPrefs.Save(); }
     }
 
-    public int TotalStages => stageData != null ? stageData.stages.Count : 0;
-    public float ProgressNormalized => TotalStages > 0 ? Mathf.Clamp01((float)CurrentStage / TotalStages) : 0f;
+    // stages[0] = initial broken görsel (task değil), stages[1..N-1] = ödenen tasklar.
+    // Yani toplam task = stages.Count - 1.
+    public int TotalTasks => StageData != null ? Mathf.Max(0, StageData.stages.Count - 1) : 0;
+    public int TasksCompleted => CurrentStage;
+    public float ProgressNormalized => TotalTasks > 0 ? Mathf.Clamp01((float)TasksCompleted / TotalTasks) : 0f;
 
     public int CurrentStage
     {
@@ -63,20 +110,43 @@ public class WorkshopController : MonoBehaviour
         private set { PlayerPrefs.SetInt(KeyCurrentStage, value); PlayerPrefs.Save(); }
     }
 
-    public bool IsAllCompleted => stageData != null && CurrentStage >= stageData.stages.Count;
+    public bool IsAllCompleted => StageData != null && CurrentStage >= TotalTasks;
 
+    /// Şu an yapılacak sıradaki task (stages[CurrentStage + 1]). Hepsi bittiyse null.
     public WorkshopStage GetActiveStage()
     {
-        if (stageData == null || CurrentStage >= stageData.stages.Count) return null;
-        return stageData.stages[CurrentStage];
+        var data = StageData;
+        if (data == null) return null;
+        int idx = CurrentStage + 1;
+        if (idx >= data.stages.Count) return null;
+        return data.stages[idx];
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Lifecycle
     // ─────────────────────────────────────────────────────────────────────────
 
+    private int lastAppliedChapter = -1;
+
     private void Start()
     {
+        ApplyAndCacheChapter();
+    }
+
+    private void OnEnable()
+    {
+        // Sahne yeniden aktif olduysa (örn levelden geri dönüş) chapter değişmiş olabilir.
+        ApplyAndCacheChapter();
+    }
+
+    private void ApplyAndCacheChapter()
+    {
+        int cur = CurrentChapterIndex;
+        if (cur != lastAppliedChapter)
+        {
+            Debug.Log($"[Workshop] Chapter değişti: {lastAppliedChapter} → {cur}. Yeniden uygulanıyor.");
+            lastAppliedChapter = cur;
+        }
         ApplyCurrentStageInstant();
     }
 
@@ -138,24 +208,30 @@ public class WorkshopController : MonoBehaviour
     /// </summary>
     private void ApplyCurrentStageInstant()
     {
-        if (stageData == null || stageData.stages.Count == 0)
+        var data = StageData;
+        if (data == null || data.stages.Count == 0)
         {
-            Debug.LogWarning("[Workshop] StageData boş — gösterilecek aşama yok.");
+            Debug.LogWarning($"[Workshop] StageData boş — Chapter {CurrentChapterIndex} için gösterilecek aşama yok.");
             return;
         }
 
         // Tamir edildikçe yeni görsele geçeriz. Yani:
         //   CurrentStage = 0 → henüz hiç tamir yok → stages[0] göster
         //   CurrentStage = 5 → 5 tamir yapılmış → stages[5] göster (varsa)
-        int visibleIndex = Mathf.Clamp(CurrentStage, 0, stageData.stages.Count - 1);
-        var stage = stageData.stages[visibleIndex];
+        int visibleIndex = Mathf.Clamp(CurrentStage, 0, data.stages.Count - 1);
+        var stage = data.stages[visibleIndex];
 
         if (currentImage != null)
         {
+            if (!currentImage.gameObject.activeSelf) currentImage.gameObject.SetActive(true);
             currentImage.sprite = stage.stageImage;
             SetImageAlpha(currentImage, 1f);
         }
-        if (nextImage != null) SetImageAlpha(nextImage, 0f);
+        if (nextImage != null)
+        {
+            if (!nextImage.gameObject.activeSelf) nextImage.gameObject.SetActive(true);
+            SetImageAlpha(nextImage, 0f);
+        }
         if (flashOverlay != null) flashOverlay.alpha = 0f;
     }
 
@@ -169,28 +245,35 @@ public class WorkshopController : MonoBehaviour
     /// </summary>
     public bool TryRepairCurrent()
     {
-        if (IsTransitioning) return false;
-        if (IsAllCompleted) return false;
-        if (stageData == null) return false;
+        if (IsTransitioning) { Debug.Log("[Workshop] TryRepair FAIL: zaten transition var"); return false; }
+        if (IsAllCompleted)  { Debug.Log("[Workshop] TryRepair FAIL: tüm tasklar bitti"); return false; }
+        var data = StageData;
+        if (data == null) { Debug.LogWarning("[Workshop] TryRepair FAIL: StageData null (chapter library veya theme'da workshop yok?)"); return false; }
 
-        // Bir sonraki aşamaya geçeceğiz → ondan stageImage'i alacağız
         int nextIndex = CurrentStage + 1;
-        if (nextIndex >= stageData.stages.Count)
+        if (nextIndex >= data.stages.Count)
         {
-            // Son aşama da tamamlandı, daha yeni görsel yok
-            // İsterse "son" diye marker bir state
+            Debug.Log($"[Workshop] TryRepair FAIL: nextIndex {nextIndex} >= stagesCount {data.stages.Count}");
             return false;
         }
 
-        var nextStage = stageData.stages[nextIndex];
+        var nextStage = data.stages[nextIndex];
         int cost = nextStage.starCost;
+        Debug.Log($"[Workshop] TryRepair: cost={cost}, stars={PlayerWallet.TotalStars}, nextIndex={nextIndex}");
 
         if (!PlayerWallet.HasEnoughStars(cost))
+        {
+            Debug.LogWarning($"[Workshop] TryRepair FAIL: yetersiz yıldız ({PlayerWallet.TotalStars} < {cost})");
             return false;
+        }
 
         if (!PlayerWallet.SpendStars(cost))
+        {
+            Debug.LogError("[Workshop] TryRepair FAIL: SpendStars başarısız");
             return false;
+        }
 
+        Debug.Log($"[Workshop] TryRepair OK: stages[{nextIndex}] yükleniyor, sprite={(nextStage.stageImage != null ? nextStage.stageImage.name : "NULL")}");
         StartCoroutine(PlayStageTransition(nextIndex));
         return true;
     }
@@ -212,10 +295,11 @@ public class WorkshopController : MonoBehaviour
     public bool DebugForceRepairCurrent()
     {
         if (IsTransitioning) return false;
-        if (stageData == null) return false;
+        var data = StageData;
+        if (data == null) return false;
 
         int nextIndex = CurrentStage + 1;
-        if (nextIndex >= stageData.stages.Count) return false;
+        if (nextIndex >= data.stages.Count) return false;
 
         StartCoroutine(PlayStageTransition(nextIndex));
         return true;
@@ -228,8 +312,10 @@ public class WorkshopController : MonoBehaviour
     private IEnumerator PlayStageTransition(int nextIndex)
     {
         IsTransitioning = true;
+        Debug.Log($"[Workshop] PlayStageTransition START → stages[{nextIndex}]. currentImage={(currentImage != null ? "OK" : "NULL")}, nextImage={(nextImage != null ? "OK" : "NULL")}");
 
-        var nextStage = stageData.stages[nextIndex];
+        var nextStage = StageData.stages[nextIndex];
+        Debug.Log($"[Workshop] nextStage.stageImage = {(nextStage.stageImage != null ? nextStage.stageImage.name : "NULL")}");
 
         // 0. Yıldız uçma animasyonu için kısa gecikme (gelecek entegrasyon)
         if (starFlyToTargetDelay > 0f)
@@ -238,12 +324,21 @@ public class WorkshopController : MonoBehaviour
         // 1. nextImage'i hazırla (henüz görünmez)
         if (nextImage != null)
         {
+            if (!nextImage.gameObject.activeSelf) nextImage.gameObject.SetActive(true);
             nextImage.sprite = nextStage.stageImage;
             SetImageAlpha(nextImage, 0f);
+            Debug.Log($"[Workshop] NextImage sprite set, alpha=0, ready to crossfade");
+        }
+        else
+        {
+            Debug.LogWarning("[Workshop] NextImage NULL! Crossfade çalışmayacak.");
         }
 
-        // 2. Sparkle VFX patlat (focus point'te)
+        // 2. Sparkle VFX patlat (focus point'te) — varsa prefab
         SpawnVfx(sparkleBurstPrefab, nextStage.vfxFocusNormalized);
+
+        // 2b. Procedural sparkle stars — atölye boyunca yıldızlar saçılır (parlama efekti)
+        StartCoroutine(SpawnSparkleStars(nextStage.vfxFocusNormalized));
 
         // 3. Flash overlay (kısa beyaz parlama)
         if (flashOverlay != null)
@@ -277,6 +372,7 @@ public class WorkshopController : MonoBehaviour
             currentImage.sprite = nextStage.stageImage;
             SetImageAlpha(currentImage, 1f);
             SetImageAlpha(nextImage, 0f);
+            Debug.Log($"[Workshop] Crossfade DONE. currentImage.sprite = {nextStage.stageImage.name}");
         }
 
         // 9. Save progress
@@ -291,14 +387,17 @@ public class WorkshopController : MonoBehaviour
 
     private void TryGrantFinalReward()
     {
-        if (stageData == null || stageData.finalReward == null) return;
+        var data = StageData;
+        if (data == null || data.finalReward == null) return;
         if (!IsAllCompleted) return;
         if (FinalRewardClaimed) return;
 
-        WorkshopRewardService.Grant(stageData.finalReward);
+        WorkshopRewardService.Grant(data.finalReward);
         FinalRewardClaimed = true;
-        OnFinalRewardGranted?.Invoke(stageData.finalReward);
-        Debug.Log($"[Workshop] Final reward verildi: {stageData.finalReward.type} x{stageData.finalReward.amount}");
+        OnFinalRewardGranted?.Invoke(data.finalReward);
+
+        int itemCount = data.finalReward.items != null ? data.finalReward.items.Count : 0;
+        Debug.Log($"[Workshop] Final reward bundle verildi: {itemCount} item.");
     }
 
     private IEnumerator PlayFlash()
@@ -336,6 +435,104 @@ public class WorkshopController : MonoBehaviour
             yield return null;
         }
         shakeRoot.anchoredPosition3D = origin;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Sparkle Stars (procedural — atölye temizlenirken parlama)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private IEnumerator SpawnSparkleStars(Vector2 focusNormalized)
+    {
+        if (sparkleStarSprite == null || vfxParent == null) yield break;
+        if (sparkleStarCount <= 0) yield break;
+
+        var parentRect = vfxParent.rect;
+        Vector2 focusPos = new Vector2(parentRect.width * focusNormalized.x,
+                                       parentRect.height * focusNormalized.y);
+
+        for (int i = 0; i < sparkleStarCount; i++)
+        {
+            Vector2 pos;
+            if (sparkleScatterFullArea)
+            {
+                // Atölye alanı boyunca rastgele dağıt
+                pos = new Vector2(
+                    UnityEngine.Random.Range(parentRect.width * 0.1f, parentRect.width * 0.9f),
+                    UnityEngine.Random.Range(parentRect.height * 0.1f, parentRect.height * 0.9f));
+            }
+            else
+            {
+                // Focus point etrafında topla
+                Vector2 offset = UnityEngine.Random.insideUnitCircle * sparkleSpreadRadius;
+                pos = focusPos + offset;
+            }
+
+            StartCoroutine(AnimateOneSparkleStar(pos));
+
+            if (sparkleSpawnStagger > 0f)
+                yield return new WaitForSeconds(sparkleSpawnStagger);
+        }
+    }
+
+    private IEnumerator AnimateOneSparkleStar(Vector2 anchoredPos)
+    {
+        var go = new GameObject("Sparkle", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(vfxParent, false);
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.zero;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = anchoredPos;
+
+        // Hafif boyut varyasyonu
+        float sizeMul = UnityEngine.Random.Range(0.7f, 1.3f);
+        rt.sizeDelta = Vector2.one * sparkleSize * sizeMul;
+
+        // Rastgele başlangıç rotasyonu
+        rt.localRotation = Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(0f, 360f));
+
+        var img = go.GetComponent<Image>();
+        img.sprite = sparkleStarSprite;
+        img.raycastTarget = false;
+
+        // Renk paletinden rastgele bir renk seç (boş ise beyaz)
+        Color pickedColor = (sparkleColors != null && sparkleColors.Length > 0)
+            ? sparkleColors[UnityEngine.Random.Range(0, sparkleColors.Length)]
+            : Color.white;
+
+        Color start = pickedColor; start.a = 0f;
+        img.color = start;
+
+        float halfDur = sparkleDuration * 0.5f;
+        float t = 0f;
+
+        // Faz 1: fade in + scale up + rotate
+        while (t < halfDur)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / halfDur);
+            float ek = Mathf.SmoothStep(0f, 1f, k);
+            var c = pickedColor; c.a = ek; img.color = c;
+            rt.localScale = Vector3.one * Mathf.Lerp(0.2f, 1.3f, ek);
+            rt.Rotate(0f, 0f, 90f * Time.deltaTime);
+            yield return null;
+        }
+
+        // Faz 2: fade out + scale down + rotate
+        t = 0f;
+        while (t < halfDur)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / halfDur);
+            float ek = Mathf.SmoothStep(0f, 1f, k);
+            var c = pickedColor; c.a = 1f - ek; img.color = c;
+            rt.localScale = Vector3.one * Mathf.Lerp(1.3f, 0.4f, ek);
+            rt.Rotate(0f, 0f, 90f * Time.deltaTime);
+            yield return null;
+        }
+
+        Destroy(go);
     }
 
     private void SpawnVfx(GameObject prefab, Vector2 normalized)

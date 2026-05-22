@@ -38,6 +38,7 @@ public class WorkshopStageData : ScriptableObject
     public List<WorkshopStage> stages = new List<WorkshopStage>();
 
     [Header("Final Reward (Sandık)")]
-    [Tooltip("Tüm aşamalar tamamlanınca verilecek ödül. Progress bar'ın sonunda chestIcon gösterilir.")]
-    public WorkshopReward finalReward;
+    [Tooltip("Tüm aşamalar tamamlanınca verilecek ödül paketi. Birden fazla item içerebilir " +
+             "(örn. 100 altın + 1 joker + 1 booster). Progress bar sonunda bundle.chestIcon gösterilir.")]
+    public WorkshopRewardBundle finalReward;
 }

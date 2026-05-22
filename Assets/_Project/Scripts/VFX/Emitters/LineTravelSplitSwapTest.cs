@@ -356,6 +356,31 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             // shows the rocket between cells instead of only at rest points.
             SpawnSubStepGhosts(rStart, rTarget, lStart, lTarget, movePos, moveNeg);
 
+            // ÖNEMLİ SIRALAMA: Impact VFX ÖNCE spawn olsun ki rocket "çarpma" hissi versin,
+            // sonra OnStepCell fire → tile clear. Aksi halde tile, impact daha gelmeden kaybolur
+            // ve "senkron değil" hissi verir.
+            RectTransform impactSpace = emittersImpactPrefab ? ResolveLocalEffectParent() : null;
+            if (emittersImpactPrefab && impactSpace)
+            {
+                if (rightRt2 && HasTileAtStep(i, true))
+                {
+                    var goR = Instantiate(emittersImpactPrefab, impactSpace);
+                    var rtR = goR.GetComponent<RectTransform>();
+                    if (rtR) rtR.anchoredPosition = rTarget;
+                    EnsureAutoDestroy(goR, 0.15f);
+                }
+
+                if (leftRt2 && HasTileAtStep(i, false))
+                {
+                    var goL = Instantiate(emittersImpactPrefab, impactSpace);
+                    var rtL = goL.GetComponent<RectTransform>();
+                    if (rtL) rtL.anchoredPosition = lTarget;
+                    EnsureAutoDestroy(goL, 0.15f);
+                }
+            }
+
+            // OnStepCell şimdi fire et — impact prefab spawn olduktan SONRA.
+            // Bu sıralama "rocket çarpar → impact patlar → tile kırılır" hissini verir.
             if (_originCellValid && OnStepCell != null)
             {
                 int s = i + 1;
@@ -379,26 +404,6 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
                         OnStepCell(new Vector2Int(_originCell.x, downY));
                     if (upY >= 0 && upY < _boardHeight)
                         OnStepCell(new Vector2Int(_originCell.x, upY));
-                }
-            }
-
-            RectTransform impactSpace = emittersImpactPrefab ? ResolveLocalEffectParent() : null;
-            if (emittersImpactPrefab && impactSpace)
-            {
-                if (rightRt2 && HasTileAtStep(i, true))
-                {
-                    var goR = Instantiate(emittersImpactPrefab, impactSpace);
-                    var rtR = goR.GetComponent<RectTransform>();
-                    if (rtR) rtR.anchoredPosition = rTarget;
-                    EnsureAutoDestroy(goR, 0.15f);
-                }
-
-                if (leftRt2 && HasTileAtStep(i, false))
-                {
-                    var goL = Instantiate(emittersImpactPrefab, impactSpace);
-                    var rtL = goL.GetComponent<RectTransform>();
-                    if (rtL) rtL.anchoredPosition = lTarget;
-                    EnsureAutoDestroy(goL, 0.15f);
                 }
             }
 

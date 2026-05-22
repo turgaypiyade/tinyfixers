@@ -67,8 +67,8 @@ public class RepairProgressBar : MonoBehaviour
     private void UpdateProgressText()
     {
         if (progressText == null) return;
-        int cur = workshop.CurrentStage;
-        int tot = workshop.TotalStages;
+        int cur = workshop.TasksCompleted;
+        int tot = workshop.TotalTasks;
         progressText.text = $"{cur} / {tot}";
     }
 
@@ -76,13 +76,16 @@ public class RepairProgressBar : MonoBehaviour
     {
         if (chestImage == null) return;
 
-        var reward = workshop.StageData != null ? workshop.StageData.finalReward : null;
-        if (reward == null) return;
+        var bundle = workshop.StageData != null ? workshop.StageData.finalReward : null;
+        if (bundle == null) return;
 
-        if (workshop.FinalRewardClaimed && chestOpenedSprite != null)
-            chestImage.sprite = chestOpenedSprite;
-        else if (reward.chestIcon != null)
-            chestImage.sprite = reward.chestIcon;
+        // Bundle'da chestOpenedSprite varsa onu kullan; yoksa inspector'daki fallback.
+        Sprite openedSprite = bundle.chestOpenedSprite != null ? bundle.chestOpenedSprite : chestOpenedSprite;
+
+        if (workshop.FinalRewardClaimed && openedSprite != null)
+            chestImage.sprite = openedSprite;
+        else if (bundle.chestIcon != null)
+            chestImage.sprite = bundle.chestIcon;
     }
 
     private void HandleStageCompleted(int completedIndex)
@@ -91,7 +94,7 @@ public class RepairProgressBar : MonoBehaviour
         StartCoroutine(TweenFillTo(workshop.ProgressNormalized));
     }
 
-    private void HandleFinalReward(WorkshopReward reward)
+    private void HandleFinalReward(WorkshopRewardBundle bundle)
     {
         if (!gameObject.activeInHierarchy) return;
         StartCoroutine(PlayChestOpenAnimation());

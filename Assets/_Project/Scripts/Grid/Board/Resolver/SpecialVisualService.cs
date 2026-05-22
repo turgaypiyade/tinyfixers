@@ -487,7 +487,11 @@ public class SpecialVisualService
         {
             case TileSpecial.PulseCore:
                 Debug.Log($"[DelayedSpecialVisualTrigger] PLAY pulse cell=({x},{y})");
-                board.PlayPulsePulseExplosionVfxAtCell(x, y);
+                // Normal PulseCore aktivasyon VFX'i — PulseCoreSpecial.PlayPulseActivationVisual ile aynı yol.
+                // ⚠️ board.PlayPulsePulseExplosionVfxAtCell kullanma — o pulse+pulse COMBO VFX'i (bomb grow+shake),
+                // override+override fanout sırasında tek PulseCore'a uygulanırsa yanlış görsel verir.
+                if (board.PulseCoreImpactService != null)
+                    board.PulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(x, y, radiusCells: 1);
                 board.StartCoroutine(boardAnimator.MicroShake(0.08f, board.ShakeStrength * 0.4f));
                 break;
 

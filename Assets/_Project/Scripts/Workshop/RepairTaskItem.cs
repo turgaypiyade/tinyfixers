@@ -53,8 +53,19 @@ public class RepairTaskItem : MonoBehaviour
         if (starCountText != null)
             starCountText.text = stage.starCost.ToString();
 
-        if (repairLabelText != null && !string.IsNullOrEmpty(repairButtonLocalizationKey))
-            repairLabelText.text = GameLocalization.Get(repairButtonLocalizationKey);
+        if (repairLabelText != null)
+        {
+            if (!string.IsNullOrEmpty(repairButtonLocalizationKey))
+            {
+                string localizedRepair = GameLocalization.Get(repairButtonLocalizationKey);
+                // GameLocalization.Get key bulunamazsa key'in kendisini döner — bu durumda boş bırak.
+                repairLabelText.text = (localizedRepair == repairButtonLocalizationKey) ? string.Empty : localizedRepair;
+            }
+            else
+            {
+                repairLabelText.text = string.Empty;
+            }
+        }
 
         if (canvasGroup != null) canvasGroup.alpha = 1f;
         RefreshActiveState(isActive);

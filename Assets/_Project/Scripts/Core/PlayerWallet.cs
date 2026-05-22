@@ -80,6 +80,19 @@ public static class PlayerWallet
         => PlayerPrefs.GetInt(KeyLevelStars + level, 0);
 
     /// <summary>
+    /// Toplam yıldıza ekler (başlangıç bonusu, etkinlik ödülü gibi durumlar için).
+    /// OnTotalStarsChanged event'i tetiklenir → wallet UI güncellenir.
+    /// </summary>
+    public static void AddStars(int amount)
+    {
+        if (amount <= 0) return;
+        int newTotal = TotalStars + amount;
+        PlayerPrefs.SetInt(KeyTotalStars, newTotal);
+        PlayerPrefs.Save();
+        OnTotalStarsChanged?.Invoke(newTotal);
+    }
+
+    /// <summary>
     /// Toplam yıldızdan harcar (workshop/atölye tamiri için).
     /// Yeterli yıldız yoksa false döner, düşülmez.
     /// </summary>

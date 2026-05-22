@@ -1838,8 +1838,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.07122905}
-  m_AnchorMax: {x: 0.9027778, y: 1.6696928}
+  m_AnchorMin: {x: 0, y: 0.07931571}
+  m_AnchorMax: {x: 0.73957014, y: 1.8592535}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -4482,9 +4482,9 @@ MonoBehaviour:
   clearDuration: 0.08
   spawnStartOffsetY: -3
   swapDurationMultiplier: 1
-  fallColumnStep: 0.008
-  fallDurationMultiplier: 1.8
-  fallVelocityCellsPerSecond: 30
+  fallColumnStep: 0.015
+  fallDurationMultiplier: 1.3
+  fallVelocityCellsPerSecond: 40
   swapMoveCurve:
     serializedVersion: 2
     m_Curve:
@@ -4562,12 +4562,12 @@ MonoBehaviour:
     m_RotationOrder: 4
   enableFallSettle: 1
   fallSettleDuration: 0.08
-  fallSettleStrength: 0.06
-  fallSettleStretchX: 0.02
+  fallSettleStrength: 0.2
+  fallSettleStretchX: 0.05
   fallSettleOvershoot: 0.01
   preClearDelay: 0.02
   shakeDuration: 0.02
-  shakeStrength: 2
+  shakeStrength: 4
   shakeTarget: {fileID: 1939332386}
   patchBotPulseComboSize: 4
   patchBotPairGhostTuning:
@@ -4628,7 +4628,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-  specialChainDurationMultiplier: 0.35
+  specialChainDurationMultiplier: 0.25
   pulseImpactDelayStep: 0.05
   pulseImpactAnimTime: 0.1
   boardVfxPlayer: {fileID: 874639811}
@@ -4655,11 +4655,11 @@ MonoBehaviour:
   sfxTileFallVolume: 0.32
   sfxTileFallMinInterval: 0.18
   tileBreakFxPrefab: {fileID: 1851070113503770558, guid: cfef197805386a74f90977ba54da8af3, type: 3}
-  tileBreakFxLifetime: 0.25
+  tileBreakFxLifetime: 0.15
   obstacleHitFxPrefab: {fileID: 1851070113503770558, guid: 84c2cc22fd6664f148afccf4fe0599c3, type: 3}
-  obstacleHitFxLifetime: 1.2
+  obstacleHitFxLifetime: 0.08
   obstacleBreakFxPrefab: {fileID: 1851070113503770558, guid: 84c2cc22fd6664f148afccf4fe0599c3, type: 3}
-  obstacleBreakFxLifetime: 1.2
+  obstacleBreakFxLifetime: 0.08
   hammerBoosterFxPrefab: {fileID: 3587498911280161232, guid: 9397f041fbc3947d4a7218642a06ed42, type: 3}
   cannonBoosterFxPrefab: {fileID: 7678512554813887660, guid: 96f15dca5f77149318355bae7ee48545, type: 3}
   verticalBoosterFxPrefab: {fileID: 7678512554813887660, guid: fa55f156c7113402e8e9465d0f144110, type: 3}

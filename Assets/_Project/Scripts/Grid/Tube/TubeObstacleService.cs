@@ -49,6 +49,10 @@ public class TubeObstacleService : MonoBehaviour
         {
             tubesByOrigin.Remove(originCellIndex);
             tube.View.DestroyView();
+
+            // Goal counter güncellensin diye OnObstacleDestroyed fire edilir.
+            // (Normal obstacle path bu event'i kendisi fire eder; tube kendi akışında olduğu için elle çağırıyoruz.)
+            obstacleStateService?.NotifyTubeFullyDestroyed(originCellIndex);
         }
         else
         {

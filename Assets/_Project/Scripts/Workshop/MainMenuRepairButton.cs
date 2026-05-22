@@ -56,7 +56,7 @@ public class MainMenuRepairButton : MonoBehaviour
         if (notificationDot != null)
         {
             bool hasPlayable = !allDone
-                               && workshop.CurrentStage < workshop.TotalStages
+                               && workshop.CurrentStage < workshop.TotalTasks
                                && PlayerWallet.HasEnoughStars(GetActiveStarCost());
             notificationDot.SetActive(hasPlayable);
         }

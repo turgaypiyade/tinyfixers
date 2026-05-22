@@ -33,7 +33,21 @@
         { "key": "tutorial_patchbot_created_desc", "value": "PatchBot oluştu! Aktive etmek için sürükle." },
         { "key": "tutorial_emitter_activated_desc", "value": "Emitter tüm bir satırı temizler. Herhangi bir taşla değiştir!" },
         { "key": "tutorial_pulsecore_created_desc", "value": "PulseCore oluştu! Çevresini patlatır, aktive etmek için sürükle." },
-        { "key": "tutorial_override_created_desc", "value": "Override oluştu! Aynı renkteki tüm taşları temizler." }
+        { "key": "tutorial_override_created_desc", "value": "Override oluştu! Aynı renkteki tüm taşları temizler." },
+        { "key": "workshop_repair_button", "value": "ONAR" },
+        { "key": "workshop_task_1", "value": "Zemini süpür" },
+        { "key": "workshop_task_2", "value": "Sol bacağı yerleştir" },
+        { "key": "workshop_task_3", "value": "Sağ bacağı yerleştir" },
+        { "key": "workshop_task_4", "value": "Gövdeyi tamir et" },
+        { "key": "workshop_task_5", "value": "Sol kolu tak" },
+        { "key": "workshop_task_6", "value": "Sağ kolu tak" },
+        { "key": "workshop_task_7", "value": "Başı yerleştir" },
+        { "key": "workshop_task_8", "value": "Gözleri yak" },
+        { "key": "workshop_task_9", "value": "Son rötuş" },
+        { "key": "workshop_all_completed", "value": "Atölye tamamlandı!" },
+        { "key": "workshop_reward_coins", "value": "{0} Altın" },
+        { "key": "workshop_reward_bundle", "value": "Atölye Ödülü" },
+        { "key": "workshop_tutorial_tap_repair", "value": "Atölyeyi tamir et!\n10 yıldız ile başlıyorsun." }
       ]
     },
     {
@@ -68,7 +82,21 @@
         { "key": "tutorial_patchbot_created_desc", "value": "PatchBot created! Swipe it to activate." },
         { "key": "tutorial_emitter_activated_desc", "value": "The Emitter clears an entire row. Swap it with any tile!" },
         { "key": "tutorial_pulsecore_created_desc", "value": "PulseCore created! Explodes the surrounding area. Swipe to activate." },
-        { "key": "tutorial_override_created_desc", "value": "Override created! Clears all tiles of the same color." }
+        { "key": "tutorial_override_created_desc", "value": "Override created! Clears all tiles of the same color." },
+        { "key": "workshop_repair_button", "value": "REPAIR" },
+        { "key": "workshop_task_1", "value": "Sweep the floor" },
+        { "key": "workshop_task_2", "value": "Attach left leg" },
+        { "key": "workshop_task_3", "value": "Attach right leg" },
+        { "key": "workshop_task_4", "value": "Fix the body" },
+        { "key": "workshop_task_5", "value": "Install left arm" },
+        { "key": "workshop_task_6", "value": "Install right arm" },
+        { "key": "workshop_task_7", "value": "Mount the head" },
+        { "key": "workshop_task_8", "value": "Light up the eyes" },
+        { "key": "workshop_task_9", "value": "Final polish" },
+        { "key": "workshop_all_completed", "value": "Workshop complete!" },
+        { "key": "workshop_reward_coins", "value": "{0} Coins" },
+        { "key": "workshop_reward_bundle", "value": "Workshop Reward" },
+        { "key": "workshop_tutorial_tap_repair", "value": "Repair the workshop!\nYou start with 10 stars." }
       ]
     }
   ]

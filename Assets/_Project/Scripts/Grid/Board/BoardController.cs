@@ -1177,17 +1177,24 @@ public class BoardController : MonoBehaviour
 
     public bool TryUseBoosterAtCell(int x, int y)
     {
+        Debug.Log($"[Booster] TryUseBoosterAtCell ({x},{y}) mode={activeBooster} busy={IsBusy} inputLocked={InputLocked}");
+
         if (activeBooster == BoosterMode.None) return false;
-        if (IsBusy || InputLocked) return true;
+        if (IsBusy || InputLocked) { Debug.LogWarning("[Booster] Skip: busy or input locked"); return true; }
         if (x < 0 || x >= width || y < 0 || y >= height) return true;
         var mode = activeBooster; SetBoosterMode(BoosterMode.None); selected = null;
         var targetCell = new Vector2Int(x, y); var targetTile = tiles[x, y];
 
         if (mode == BoosterMode.Shuffle)
+        {
+            Debug.Log("[Booster] Shuffle mode → ShuffleBoardRoutine başlatılıyor.");
             StartCoroutine(boosterService.ShuffleBoardRoutine(actionSequencer));
+        }
         else
+        {
             StartCoroutine(boosterService.ApplyBoosterRoutine(mode, targetTile, targetCell,
                 specialResolver, actionSequencer, cascadeLogic, lineSweepService, lightningSpawner, lineTravelPlayer));
+        }
         return true;
     }
 

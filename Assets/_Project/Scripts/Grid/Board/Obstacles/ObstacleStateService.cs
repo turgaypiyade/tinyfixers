@@ -837,6 +837,13 @@ public class ObstacleStateService : ISimObstacleQuery
         return stage != null && stage.behavior == ObstacleBehaviorType.UnderTileLayered;
     }
 
+    /// Fires OnObstacleDestroyed for a fully-destroyed tube. Called by TubeObstacleService
+    /// when the last cell of a tube is freed. Triggers goal counters etc.
+    public void NotifyTubeFullyDestroyed(int originIndex)
+    {
+        OnObstacleDestroyed?.Invoke(originIndex, ObstacleId.Tube);
+    }
+
     /// Frees a single tube cell from the obstacle layer and fires OnCellUnlocked.
     /// Called by TubeObstacleService when the tube shrinks.
     public void FreeTubeCell(int cellIndex)

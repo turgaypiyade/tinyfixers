@@ -1,0 +1,88 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 540732217af034588930b3c7abef7eee, type: 3}
+  m_Name: WorkshopStageData_Chapter1_Robot
+  m_EditorClassIdentifier: Assembly-CSharp::WorkshopStageData
+  stages:
+  - nameLocalizationKey: 
+    stageName: "Tamirata ba\u015Fla..."
+    starCost: 2
+    stageImage: {fileID: 21300000, guid: 364b9a6684f404522ac4f94dbfabd945, type: 3}
+    taskIcon: {fileID: 21300000, guid: e684ed7c70253417fb9d85e09bf981c3, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+  - nameLocalizationKey: 
+    stageName: "\u0130skele kur..."
+    starCost: 3
+    stageImage: {fileID: 21300000, guid: 8ec6afff600294794b6167670ae8c29e, type: 3}
+    taskIcon: {fileID: 21300000, guid: e525d338077304ffba5150f8aff6ce96, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+  - nameLocalizationKey: 
+    stageName: Boya...
+    starCost: 3
+    stageImage: {fileID: 21300000, guid: 4026ee8fe2d904620a6d875711c43169, type: 3}
+    taskIcon: {fileID: 21300000, guid: 55bb4b901816846dbbf9e84595b2d60d, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+  - nameLocalizationKey: 
+    stageName: Meydan...
+    starCost: 2
+    stageImage: {fileID: 21300000, guid: 22639497dd15a49f6b0c06df6ec7fabd, type: 3}
+    taskIcon: {fileID: 21300000, guid: 0c7a153968bea4346a1fad0601bf7f0b, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+  - nameLocalizationKey: 
+    stageName: Tabelalar...
+    starCost: 2
+    stageImage: {fileID: 21300000, guid: ae58ccaaed68a432c8672f6cc3fe71c9, type: 3}
+    taskIcon: {fileID: 21300000, guid: f6cb5f5185ad94f6ab5015c0c3fc4dcb, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+  - nameLocalizationKey: 
+    stageName: Havuz ve banklar.
+    starCost: 3
+    stageImage: {fileID: 21300000, guid: 75b58c0e469f6447fb1c668f3fbca714, type: 3}
+    taskIcon: {fileID: 21300000, guid: 475d466171d45417a897f3af57f19579, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+  - nameLocalizationKey: 
+    stageName: "F\u0131skiye..."
+    starCost: 4
+    stageImage: {fileID: 21300000, guid: 8cb93f39ef21d4cedb1063a27c1d6c9a, type: 3}
+    taskIcon: {fileID: 21300000, guid: 667475bc444194f9293250a6ab437926, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+  - nameLocalizationKey: 
+    stageName: "Ho\u015Fgeldin..."
+    starCost: 2
+    stageImage: {fileID: 21300000, guid: d3044aea2106f4628b081c0145da688f, type: 3}
+    taskIcon: {fileID: 21300000, guid: 3c616fd04712f469185f0e725737a232, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+  finalReward:
+    items:
+    - type: 0
+      amount: 100
+      rewardIcon: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
+      nameLocalizationKey: 
+    - type: 10
+      amount: 1
+      rewardIcon: {fileID: 21300000, guid: 81ec88c01d8db4acdb3ee153ec8834f9, type: 3}
+      nameLocalizationKey: 
+    - type: 20
+      amount: 1
+      rewardIcon: {fileID: 21300000, guid: e200b3928e79346e2ab4da678e139c53, type: 3}
+      nameLocalizationKey: 
+    chestIcon: {fileID: 21300000, guid: 4158f6743c7c545678bc1ad5daed3817, type: 3}
+    chestOpenedSprite: {fileID: 0}
+    nameLocalizationKey: workshop_reward_coins

@@ -51,6 +51,11 @@ public class ChapterTheme : ScriptableObject
     public Color preLevelCountTextColor = Color.white;
     public Color preLevelButtonTextColor = Color.white;
 
+    [Header("Workshop (MainMenu repair sahnesi)")]
+    [Tooltip("Bu chapter'ın atölye/tamir görevleri. Her chapter kendi imajlarını ve task'larını içeren " +
+             "WorkshopStageData asset'i kullanır. Null bırakırsan bu chapter'da workshop yok.")]
+    public WorkshopStageData workshopStages;
+
     [Header("Loading Screen")]
     [Tooltip("Legacy: Geçiş yüklenme ekranında rastgele seçilecek tam ekran görseller. Yeni sistem yoksa kullanılır.")]
     public List<Sprite> loadingScreenImages = new();

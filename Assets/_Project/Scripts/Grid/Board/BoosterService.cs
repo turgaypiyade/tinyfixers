@@ -1048,6 +1048,7 @@ public class BoosterService
 
     public IEnumerator SafeShuffleBoardRoutine(BoardInitService boardInitService)
     {
+        Debug.Log("[Shuffle] SafeShuffleBoardRoutine START");
         board.BeginBusy();
 
         var currentTypes = new TileType[board.Width, board.Height];
@@ -1055,12 +1056,28 @@ public class BoosterService
 
         BuildSafeShuffleState(currentTypes, lockedMask);
 
-        if (boardInitService != null &&
-            boardInitService.TryBuildSafeShuffleTypes(currentTypes, lockedMask, board.RandomPool, out var finalTypes))
+        int unlockedCount = 0;
+        for (int y = 0; y < board.Height; y++)
+            for (int x = 0; x < board.Width; x++)
+                if (!lockedMask[x, y]) unlockedCount++;
+        Debug.Log($"[Shuffle] Unlocked cells: {unlockedCount} / {board.Width * board.Height}");
+
+        if (boardInitService == null)
+        {
+            Debug.LogError("[Shuffle] boardInitService NULL! Shuffle çalışmaz.");
+            board.EndBusy();
+            yield break;
+        }
+
+        bool ok = boardInitService.TryBuildSafeShuffleTypes(currentTypes, lockedMask, board.RandomPool, out var finalTypes);
+        Debug.Log($"[Shuffle] TryBuildSafeShuffleTypes returned {ok}");
+
+        if (ok)
         {
             var sourceForDest = new Vector2Int[board.Width, board.Height];
 
             bool hasMapping = BuildShuffleSourceMap(currentTypes, finalTypes, lockedMask, sourceForDest);
+            Debug.Log($"[Shuffle] BuildShuffleSourceMap hasMapping={hasMapping}");
 
             if (hasMapping)
             {
@@ -1069,13 +1086,18 @@ public class BoosterService
             }
             else
             {
-                // çok nadir fallback
+                Debug.LogWarning("[Shuffle] Mapping failed, applying types directly (no animation)");
                 ApplyShuffledTypes(finalTypes, lockedMask);
             }
 
             board.SyncAllTilesToGridData();
             board.RefreshAllTileObstacleVisuals();
             board.RefreshAllSortingOrders();
+            Debug.Log("[Shuffle] COMPLETE");
+        }
+        else
+        {
+            Debug.LogWarning("[Shuffle] TryBuildSafeShuffleTypes FAILED — board değişmedi.");
         }
 
         board.EndBusy();
