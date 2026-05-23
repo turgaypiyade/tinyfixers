@@ -2,23 +2,23 @@ using UnityEngine;
 using UnityEngine.Audio;
 
 [DefaultExecutionOrder(-50)]
-public class MusicSettingsBridge : MonoBehaviour
+public class SoundSettingsBridge : MonoBehaviour
 {
     [SerializeField] private AudioMixer mixer;
-    private const string Param = "MusicVolume";
+    private const string Param = "SFXVolume";
 
     private void OnEnable()
     {
-        GameSettings.OnMusicChanged += ApplyMusic;
-        ApplyMusic(GameSettings.MusicEnabled);
+        GameSettings.OnSoundChanged += ApplySound;
+        ApplySound(GameSettings.SoundEnabled);
     }
 
     private void OnDisable()
     {
-        GameSettings.OnMusicChanged -= ApplyMusic;
+        GameSettings.OnSoundChanged -= ApplySound;
     }
 
-    private void ApplyMusic(bool enabled)
+    private void ApplySound(bool enabled)
     {
         if (mixer != null) mixer.SetFloat(Param, enabled ? 0f : -80f);
     }
