@@ -270,6 +270,9 @@ public class DailySlotMachineController : MonoBehaviour
     }
 
 #if UNITY_EDITOR
+    [ContextMenu("Test Open")]
+    private void TestOpen() => Open();
+
     [ContextMenu("Reset Daily Spin")]
     private void ResetDailySpin()
     {

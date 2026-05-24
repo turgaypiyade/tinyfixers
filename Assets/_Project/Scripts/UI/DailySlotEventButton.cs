@@ -5,7 +5,7 @@ public class DailySlotEventButton : MonoBehaviour
 {
     [SerializeField] private Button button;
     [SerializeField] private GameObject notifBadge;
-    [SerializeField] private DailySlotMachineController slotMachine;
+    [SerializeField] private FortuneWheelController fortuneWheel;
 
     private void Awake()
     {
@@ -19,13 +19,13 @@ public class DailySlotEventButton : MonoBehaviour
 
     private void OnClicked()
     {
-        if (slotMachine != null) slotMachine.Open();
+        if (fortuneWheel != null) fortuneWheel.Open();
         RefreshBadge();
     }
 
     private void RefreshBadge()
     {
         if (notifBadge != null)
-            notifBadge.SetActive(DailySlotMachineController.HasAvailableSpin());
+            notifBadge.SetActive(FortuneWheelController.HasAvailableSpin());
     }
 }
