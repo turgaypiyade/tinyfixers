@@ -47,7 +47,29 @@
         { "key": "workshop_all_completed", "value": "Atölye tamamlandı!" },
         { "key": "workshop_reward_coins", "value": "{0} Altın" },
         { "key": "workshop_reward_bundle", "value": "Atölye Ödülü" },
-        { "key": "workshop_tutorial_tap_repair", "value": "Atölyeyi tamir et!\n10 yıldız ile başlıyorsun." }
+        { "key": "workshop_tutorial_tap_repair", "value": "Atölyeyi tamir et!\n10 yıldız ile başlıyorsun." },
+
+        { "key": "hint_obstacle_stone",            "value": "Yanında eşleştirme yap, taşı kır." },
+        { "key": "hint_obstacle_shield1",           "value": "Kalkanı kırmak için yanında bir eşleştirme yeterli." },
+        { "key": "hint_obstacle_shield2",           "value": "Çift kalkanlı! İki kez yanında eşleştirmen gerekiyor." },
+        { "key": "hint_obstacle_chest1",            "value": "Sandığın yanında eşleştir, aç." },
+        { "key": "hint_obstacle_chest2",            "value": "İki kez yanında eşleştirince açılır." },
+        { "key": "hint_obstacle_chest3",            "value": "Güçlü sandık. Üç kez yanında eşleştir." },
+        { "key": "hint_obstacle_plastic",           "value": "Plastik engel. Yanında eşleştirme yaparak kır." },
+        { "key": "hint_obstacle_plastic_orange",    "value": "Turuncu plastik. Yanında eşleştirme yaparak kır." },
+        { "key": "hint_obstacle_plastic_yellow",    "value": "Sarı plastik. Yanında eşleştirme yaparak kır." },
+        { "key": "hint_obstacle_plastic_blue",      "value": "Mavi plastik. Yanında eşleştirme yaparak kır." },
+        { "key": "hint_obstacle_plastic_red",       "value": "Kırmızı plastik. Yanında eşleştirme yaparak kır." },
+        { "key": "hint_obstacle_plastic_green",     "value": "Yeşil plastik. Yanında eşleştirme yaparak kır." },
+        { "key": "hint_obstacle_pipev_1x2",         "value": "Dikey boru. Yanında eşleştirme yaparak kır." },
+        { "key": "hint_obstacle_oil",               "value": "Yağ hücreyi kilitler! Yanında eşleştirme yaparak temizle." },
+        { "key": "hint_obstacle_big_4x4",           "value": "Dev engel. Kırmak için çok sayıda eşleştirme gerekiyor." },
+        { "key": "hint_obstacle_colorchest",        "value": "Renkli sandık. Her renk paneli için o rengi yanında eşleştir." },
+        { "key": "hint_obstacle_energycontainer",   "value": "Enerji deposu. Yanında eşleştirerek enerji topla." },
+        { "key": "hint_obstacle_batterybox",        "value": "Dört pil içerir. Her pili o renkteki taşlarla eşleştirerek bitir." },
+        { "key": "hint_obstacle_omegamodul",        "value": "Güçlü modül. Özel taşlar ile daha hızlı kırılır." },
+        { "key": "hint_obstacle_mud",               "value": "Çamur taşın altında birikir. Yanına eşleştirme yap, temizle." },
+        { "key": "hint_obstacle_tube",              "value": "Boru açık uçtan küçülür. Açık ucuna yakın eşleştirme yap." }
       ]
     },
     {
@@ -96,7 +118,29 @@
         { "key": "workshop_all_completed", "value": "Workshop complete!" },
         { "key": "workshop_reward_coins", "value": "{0} Coins" },
         { "key": "workshop_reward_bundle", "value": "Workshop Reward" },
-        { "key": "workshop_tutorial_tap_repair", "value": "Repair the workshop!\nYou start with 10 stars." }
+        { "key": "workshop_tutorial_tap_repair", "value": "Repair the workshop!\nYou start with 10 stars." },
+
+        { "key": "hint_obstacle_stone",            "value": "Match tiles next to it to break the stone." },
+        { "key": "hint_obstacle_shield1",           "value": "One match adjacent breaks the shield." },
+        { "key": "hint_obstacle_shield2",           "value": "Double shield! Match twice next to it to break through." },
+        { "key": "hint_obstacle_chest1",            "value": "Match tiles next to the chest to open it." },
+        { "key": "hint_obstacle_chest2",            "value": "Match twice next to it to open." },
+        { "key": "hint_obstacle_chest3",            "value": "Strong chest. Match three times to break it open." },
+        { "key": "hint_obstacle_plastic",           "value": "Plastic obstacle. Match adjacent tiles to shatter it." },
+        { "key": "hint_obstacle_plastic_orange",    "value": "Orange plastic. Match adjacent tiles to shatter it." },
+        { "key": "hint_obstacle_plastic_yellow",    "value": "Yellow plastic. Match adjacent tiles to shatter it." },
+        { "key": "hint_obstacle_plastic_blue",      "value": "Blue plastic. Match adjacent tiles to shatter it." },
+        { "key": "hint_obstacle_plastic_red",       "value": "Red plastic. Match adjacent tiles to shatter it." },
+        { "key": "hint_obstacle_plastic_green",     "value": "Green plastic. Match adjacent tiles to shatter it." },
+        { "key": "hint_obstacle_pipev_1x2",         "value": "Vertical pipe. Match adjacent tiles to break it." },
+        { "key": "hint_obstacle_oil",               "value": "Oil locks the cell! Match adjacent tiles to clear it." },
+        { "key": "hint_obstacle_big_4x4",           "value": "Huge obstacle. Needs many matches around it to break." },
+        { "key": "hint_obstacle_colorchest",        "value": "Color chest. Match each color next to it to unlock its panels." },
+        { "key": "hint_obstacle_energycontainer",   "value": "Energy container. Match nearby to collect energy." },
+        { "key": "hint_obstacle_batterybox",        "value": "Has four batteries. Match each battery's color tiles to drain it." },
+        { "key": "hint_obstacle_omegamodul",        "value": "Powerful module. Special tiles break it faster." },
+        { "key": "hint_obstacle_mud",               "value": "Mud builds up under tiles. Match nearby to clean it up." },
+        { "key": "hint_obstacle_tube",              "value": "The pipe shrinks from the open end. Match near the opening." }
       ]
     }
   ]

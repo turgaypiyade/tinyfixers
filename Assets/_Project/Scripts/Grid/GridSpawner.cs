@@ -311,24 +311,16 @@ public class GridSpawner : MonoBehaviour
 
         DrawGridLines();
 
-        // Bir sütunda over-tile blocker varsa, onun altındaki hücreler tile spawner'ından
-        // erişilemez — SimulateInitialTypes'a ÖNCE geçilmeli ki match garantisi gerçek
-        // taş pozisyonlarına göre yapılsın.
-        var unreachableFromAbove = new bool[width, height];
-        for (int x = 0; x < width; x++)
-        {
-            bool blockerAbove = false;
-            for (int y = 0; y < height; y++)
-            {
-                int idx2 = resolvedLevel.Index(x, y);
-                if (blocked[idx2])
-                    blockerAbove = true;
-                else if (blockerAbove)
-                    unreachableFromAbove[x, y] = true;
-            }
-        }
+        // Hangi hücreler yerçekimi ile ulaşılabilir (dikey düşme + diyagonal kayma)?
+        // CascadeLogic ile aynı köşe-geçirgenlik kurallarını kullanarak flood-fill yapılır.
+        var reachable = ComputeReachable(board.Holes);
 
-        var initialTypes = board.SimulateInitialTypes(unreachableFromAbove);
+        var notReachable = new bool[width, height];
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+                notReachable[x, y] = !reachable[x, y];
+
+        var initialTypes = board.SimulateInitialTypes(notReachable);
 
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
@@ -343,7 +335,7 @@ public class GridSpawner : MonoBehaviour
                 {
                     SpawnMovableObstacleTile(x, y);
                 }
-                else if (!unreachableFromAbove[x, y])
+                else if (reachable[x, y])
                 {
                     SpawnTile(x, y, initialTypes[x, y]);
                 }
@@ -458,12 +450,11 @@ public class GridSpawner : MonoBehaviour
             ? randomPool[0]
             : TileType.Gear;
         view.SetType(dummyType);
+        board.SyncTileData(x, y);
 
         Sprite obstacleSprite = def.GetPreviewSprite();
         if (obstacleSprite != null && view.IconImage != null)
             view.IconImage.sprite = obstacleSprite;
-
-        board.SyncTileData(x, y);
     }
     private void ApplyResolvedLevelToConsumers(LevelData activeLevel)
     {
@@ -552,6 +543,46 @@ public class GridSpawner : MonoBehaviour
         }
 
         return cloned;
+    }
+
+    // Yukarıdan dikey düşme veya diyagonal kayma ile ulaşılabilen hücreleri hesaplar.
+    // Algoritma CascadeLogic.TrySlide ile aynı köşe-geçirgenlik kurallarını kullanır:
+    // diyagonal için iki köşeden en az biri geçilebilir olmalı (!hole && !blocked).
+    // Tek top-to-bottom geçiş yeterlidir; her hücre yalnızca bir önceki satırdan beslenir.
+    private bool[,] ComputeReachable(bool[,] holes)
+    {
+        var reachable = new bool[width, height];
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                if (holes[x, y]) continue;
+
+                if (y == 0) { reachable[x, y] = true; continue; }
+
+                // Dikey düşme
+                if (reachable[x, y - 1]) { reachable[x, y] = true; continue; }
+
+                // Sol diyagonal: (x-1, y-1) → (x, y)
+                // köşeA=(fromX=x-1, toY=y), köşeB=(toX=x, fromY=y-1)
+                if (x > 0 && reachable[x - 1, y - 1])
+                {
+                    if (!holes[x - 1, y] || !holes[x, y - 1])
+                    { reachable[x, y] = true; continue; }
+                }
+
+                // Sağ diyagonal: (x+1, y-1) → (x, y)
+                // köşeA=(fromX=x+1, toY=y), köşeB=(toX=x, fromY=y-1)
+                if (x < width - 1 && reachable[x + 1, y - 1])
+                {
+                    if (!holes[x + 1, y] || !holes[x, y - 1])
+                        reachable[x, y] = true;
+                }
+            }
+        }
+
+        return reachable;
     }
 
     private bool[] BuildBlockedMap()

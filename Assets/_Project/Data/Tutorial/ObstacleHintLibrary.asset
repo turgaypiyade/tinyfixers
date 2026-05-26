@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a020025be62fd48d8a834d5d435f7de8, type: 3}
+  m_Name: ObstacleHintLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::ObstacleHintLibrary
+  entries:
+  - id: 4
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_chest1
+    fallbackText: 
+  - id: 5
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_chest2
+    fallbackText: 
+  - id: 6
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_chest3
+    fallbackText: 
+  - id: 7
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_plastic
+    fallbackText: 
+  - id: 8
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_plastic_orange
+    fallbackText: 
+  - id: 9
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_plastic_yellow
+    fallbackText: 
+  - id: 11
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_plastic_blue
+    fallbackText: 
+  - id: 12
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_plastic_red
+    fallbackText: 
+  - id: 13
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_plastic_green
+    fallbackText: 
+  - id: 14
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_oil
+    fallbackText: 
+  - id: 21
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_color_chest
+    fallbackText: 
+  - id: 22
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_energy_container
+    fallbackText: 
+  - id: 23
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_battery_box
+    fallbackText: 
+  - id: 24
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_omega_modul
+    fallbackText: 
+  - id: 25
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_mud
+    fallbackText: 
+  - id: 26
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_tube
+    fallbackText: 

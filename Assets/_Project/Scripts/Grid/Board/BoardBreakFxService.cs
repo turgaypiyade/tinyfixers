@@ -33,10 +33,7 @@ public class BoardBreakFxService
 
     public void PlayObstacleBreak(ObstacleVisualChange change)
     {
-        FxLog(
-            $"[ObstacleFX] PlayObstacleBreak called. " +
-            $"id={change.obstacleId}, cleared={change.cleared}, origin={change.originIndex}, remaining={change.remainingHits}"
-        );
+        Debug.Log($"[ObstacleFX] id={change.obstacleId} cleared={change.cleared} remaining={change.remainingHits} hitPrefab={(board.ObstacleHitFxPrefab != null ? board.ObstacleHitFxPrefab.name : "NULL")}");
 
         if (change.originIndex < 0 || board.Width <= 0 || board.Height <= 0)
         {
@@ -57,10 +54,7 @@ public class BoardBreakFxService
 
         if (prefab == null)
         {
-            FxWarn(
-                $"[ObstacleFX] Abort: prefab is NULL. " +
-                $"cleared={change.cleared}, expected={(change.cleared ? "ObstacleBreakFxPrefab" : "ObstacleHitFxPrefab")}"
-            );
+            Debug.LogWarning($"[ObstacleFX] Abort: prefab NULL. cleared={change.cleared}");
             return;
         }
 
@@ -78,12 +72,15 @@ public class BoardBreakFxService
             var def = board.LevelData?.obstacleLibrary?.Get(change.obstacleId);
             if (def != null && def.IsHitParticlesSuppressedForRemainingHits(change.remainingHits))
             {
+                Debug.LogWarning($"[ObstacleFX] Suppressed for id={change.obstacleId} remaining={change.remainingHits}");
                 PlayObstacleSound(change);
                 return;
             }
         }
 
         IReadOnlyList<Sprite> particleSprites = ResolveObstacleParticleSprites(change);
+        string spriteNames = particleSprites != null ? string.Join(",", System.Linq.Enumerable.Select(particleSprites, s => s != null ? s.name : "null")) : "null";
+        Debug.Log($"[ObstacleFX] sprites={particleSprites?.Count ?? 0} id={change.obstacleId} names=[{spriteNames}]");
 
         FxLog(
             $"[ObstacleFX] Spawn request. prefab={prefab.name}, cell=({x},{y}), " +
@@ -351,18 +348,12 @@ public class BoardBreakFxService
 
             ApplyParticleMainTexture(ps, firstSprite);
 
-            FxLog(
-                $"[ObstacleFX] ParticleSystem configured. " +
-                $"system={ps.gameObject.name}, addedSprites={added}, finalSpriteCount={textureSheet.spriteCount}"
-            );
+            Debug.Log($"[ObstacleFX] PS={ps.gameObject.name} addedSprites={added} sheetCount={textureSheet.spriteCount} firstSprite={(firstSprite != null ? firstSprite.name : "null")} tex={(firstSprite?.texture != null ? firstSprite.texture.name : "null")}");
 
             ps.Clear(true);
             ps.Play(true);
 
-            FxLog(
-                $"[ObstacleFX] ParticleSystem played. " +
-                $"system={ps.gameObject.name}, isPlaying={ps.isPlaying}, particleCount={ps.particleCount}"
-            );
+            Debug.Log($"[ObstacleFX] PS played={ps.isPlaying} particleCount={ps.particleCount}");
         }
     }
 
@@ -375,10 +366,10 @@ public class BoardBreakFxService
         if (psr == null)
             return;
 
-        psr.GetPropertyBlock(ParticlePropertyBlock);
-        ParticlePropertyBlock.SetTexture(MainTexId, firstSprite.texture);
-        psr.SetPropertyBlock(ParticlePropertyBlock);
-        ParticlePropertyBlock.Clear();
+        // psr.material creates an instance; safe to modify since GO is destroyed after lifetime
+        var mat = psr.material;
+        if (mat != null)
+            mat.SetTexture(MainTexId, firstSprite.texture);
     }
 
     private static void PlayWithFanBurst(ParticleSystem[] systems)

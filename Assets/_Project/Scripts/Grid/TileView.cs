@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.Serialization;
 
 public class TileView : MonoBehaviour,
-    IPointerClickHandler,
+    IPointerClickHandler, IPointerDownHandler,
     IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     private static readonly Vector2 CenterPivot = new Vector2(0.5f, 0.5f);
@@ -27,6 +27,7 @@ public class TileView : MonoBehaviour,
     private Vector2 dragStartLocalPointer;
     private bool dragConsumedSwap;
     private bool wasDragging;
+    private bool boosterFiredOnDown;
 
     [SerializeField, Range(0.5f, 1f)]
     [FormerlySerializedAs("runtimeIconScale")]
@@ -1336,9 +1337,19 @@ public class TileView : MonoBehaviour,
         wasDragging = false;
     }
 
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        boosterFiredOnDown = false;
+        if (board != null && board.ActiveBooster != BoardController.BoosterMode.None)
+        {
+            boosterFiredOnDown = true;
+            board.OnTileClicked(this);
+        }
+    }
+
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (wasDragging)
+        if (wasDragging || boosterFiredOnDown)
             return;
 
         board?.OnTileClicked(this);

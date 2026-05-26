@@ -20,6 +20,10 @@ public class TubeView : MonoBehaviour
              "If assigned, it stays at the shrinking edge so the tip shape is never clipped.")]
     [SerializeField] private Sprite openEndCapSprite;
 
+    [Header("Layout")]
+    [Tooltip("Body'nin base sprite içine kaç pixel overlap yapacağı (grid çizgisini gizler).")]
+    [SerializeField, Min(0f)] private float baseBodyOverlap = 2f;
+
     [Header("Animation")]
     [SerializeField, Min(0.05f)] private float shrinkDuration = 0.2f;
     [SerializeField, Min(0f)] private float shakeAmplitude = 6f;
@@ -115,9 +119,9 @@ public class TubeView : MonoBehaviour
         var mask = maskGo.GetComponent<Mask>();
         mask.showMaskGraphic = false;
         SetAnchorForBaseEnd(maskContainer, stretchCross: true);
-        ApplyOpenEndOffset(maskContainer, cellSize * 0.65f);
+        ApplyOpenEndOffset(maskContainer, cellSize - baseBodyOverlap);
 
-        // ── EnergyBody (Image inside mask, always full length) ─────────────
+        // ── EnergyBody (mask içinde sabit yükseklik — mask clips from top) ──
         var bodyGo = new GameObject("EnergyBody",
             typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         bodyGo.transform.SetParent(maskContainer, false);
@@ -126,8 +130,8 @@ public class TubeView : MonoBehaviour
         energyBody.type   = Image.Type.Sliced;
         energyBody.raycastTarget = false;
         var bodyRt = energyBody.rectTransform;
-        float capInset = (openEndCapSprite != null) ? cellSize * 0.4f : 0f;
-        SetBodyAnchor(bodyRt, capInset);
+        float fullBodyHeight = (totalLength - 1) * cellSize + baseBodyOverlap;
+        SetBodyAnchor(bodyRt, fullBodyHeight);
 
         // ── OpenEndCap (inside mask, pinned to the open end) ──────────────
         if (openEndCapSprite != null)
@@ -140,7 +144,7 @@ public class TubeView : MonoBehaviour
             capImg.raycastTarget = false;
             capRt = capImg.rectTransform;
             SetAnchorForOpenEnd(capRt, stretchCross: true);
-            SetMainAxisSize(capRt, cellSize * 0.4f);
+            SetMainAxisSize(capRt, cellSize * 0.25f);
         }
     }
 
@@ -173,17 +177,14 @@ public class TubeView : MonoBehaviour
         rt.sizeDelta = new Vector2(rt.sizeDelta.x, size);
     }
 
-    // Body stretches the full mask but leaves an inset gap at the open end for the cap.
-    private void SetBodyAnchor(RectTransform rt, float openEndInset)
+    // Body: sabit yükseklik, alta dayalı. Mask'ın yüksekliği değişince üstten kesilir (crop).
+    private void SetBodyAnchor(RectTransform rt, float fullHeight)
     {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.pivot     = new Vector2(0.5f, 0.5f);
-
-        // Layout is always Up: inset from the top (open end).
-        float half = openEndInset * 0.5f;
-        rt.anchoredPosition = new Vector2(0f, -half);
-        rt.sizeDelta = new Vector2(0f, -openEndInset);
+        rt.anchorMin = new Vector2(0f, 0f);
+        rt.anchorMax = new Vector2(1f, 0f);
+        rt.pivot     = new Vector2(0.5f, 0f);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = new Vector2(0f, fullHeight);
     }
 
     private void ApplyOpenEndOffset(RectTransform rt, float offset)
@@ -195,7 +196,7 @@ public class TubeView : MonoBehaviour
     private void SetMaskSize(int cells)
     {
         if (maskContainer == null) return;
-        float size = Mathf.Max(0f, cells * cellSize - cellSize * 0.65f);
+        float size = cells <= 1 ? 0f : (cells - 1) * cellSize + baseBodyOverlap;
         SetMainAxisSize(maskContainer, size);
     }
 
@@ -225,7 +226,7 @@ public class TubeView : MonoBehaviour
 
     private IEnumerator ShrinkCoroutine(int remainingCells)
     {
-        float targetSize = Mathf.Max(0f, remainingCells * cellSize - cellSize * 0.65f);
+        float targetSize = remainingCells <= 1 ? 0f : (remainingCells - 1) * cellSize + baseBodyOverlap;
         float startSize  = maskContainer.sizeDelta.y; // always Y: layout is always vertical
 
         float elapsed = 0f;

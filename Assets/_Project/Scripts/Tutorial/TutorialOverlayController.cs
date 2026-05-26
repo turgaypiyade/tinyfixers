@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -17,6 +18,10 @@ public class TutorialOverlayController : MonoBehaviour
     [Tooltip("Description alt kenarı ile grid üst kenarı arasındaki boşluk (piksel, pozitif = grid üstünden uzaklaş)")]
     [SerializeField] private float descriptionYOffset = 10f;
 
+    [Header("Obstacle Hint")]
+    [SerializeField] private Image obstacleIconImage;
+    [SerializeField] private Button hintDismissButton;
+
     [Header("Hand + Tile Swap (synchronized)")]
     [SerializeField] private RectTransform handIcon;
     [Tooltip("Sprite içinde parmak ucunun pivot noktası. Alt-orta = (0.5, 0)")]
@@ -31,6 +36,7 @@ public class TutorialOverlayController : MonoBehaviour
     private TileView tutorialTo;
     private Coroutine swapRoutine;
     private Coroutine fadeRoutine;
+    private Action pendingHintDismiss;
 
     private void Awake()
     {
@@ -42,11 +48,21 @@ public class TutorialOverlayController : MonoBehaviour
             c.a = 0f;
             dimImage.color = c;
             dimImage.raycastTarget = false;
+
+            var dimBtn = dimImage.GetComponent<Button>() ?? dimImage.gameObject.AddComponent<Button>();
+            dimBtn.transition = Selectable.Transition.None;
+            dimBtn.onClick.AddListener(OnHintDismissClicked);
         }
 
         if (handIcon != null)
             foreach (var g in handIcon.GetComponentsInChildren<Graphic>(true))
                 g.raycastTarget = false;
+
+        if (hintDismissButton != null)
+        {
+            hintDismissButton.onClick.AddListener(OnHintDismissClicked);
+            hintDismissButton.gameObject.SetActive(false);
+        }
 
         gameObject.SetActive(false);
     }
@@ -57,6 +73,8 @@ public class TutorialOverlayController : MonoBehaviour
 
         tutorialFrom = from;
         tutorialTo   = to;
+
+        if (dimImage != null) dimImage.raycastTarget = false;
 
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
@@ -81,12 +99,54 @@ public class TutorialOverlayController : MonoBehaviour
             swapRoutine = StartCoroutine(LoopSwapWithHand(from, to));
     }
 
+    public void ShowHint(Sprite icon, string description, Action onDismiss)
+    {
+        if (board == null) board = FindFirstObjectByType<BoardController>();
+
+        pendingHintDismiss = onDismiss;
+
+        if (dimImage != null) dimImage.raycastTarget = true;
+        gameObject.SetActive(true);
+        transform.SetAsLastSibling();
+
+        bool hasText = !string.IsNullOrEmpty(description);
+        if (descriptionRoot != null)  descriptionRoot.SetActive(hasText || icon != null);
+        if (descriptionText != null)  descriptionText.text = description;
+        if (obstacleIconImage != null)
+        {
+            obstacleIconImage.sprite = icon;
+            obstacleIconImage.gameObject.SetActive(icon != null);
+        }
+
+        if (hintDismissButton != null)
+            hintDismissButton.gameObject.SetActive(true);
+
+        if (hasText || icon != null)
+            RepositionDescriptionAboveGrid();
+
+        StopFade();
+        fadeRoutine = StartCoroutine(FadeDim(dimAlpha));
+    }
+
     public void Hide()
     {
         StopSwap();
         SnapTilesBack();
         StopFade();
         fadeRoutine = StartCoroutine(FadeOutThenHide());
+    }
+
+    private void OnHintDismissClicked()
+    {
+        if (dimImage != null) dimImage.raycastTarget = false;
+        if (hintDismissButton != null)
+            hintDismissButton.gameObject.SetActive(false);
+
+        var callback = pendingHintDismiss;
+        pendingHintDismiss = null;
+
+        Hide();
+        callback?.Invoke();
     }
 
     // ── Synchronized swap + hand loop ──

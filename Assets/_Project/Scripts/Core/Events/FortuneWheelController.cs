@@ -6,14 +6,22 @@ using UnityEngine.UI;
 
 public class FortuneWheelController : MonoBehaviour
 {
-    private const string KeyLastSpinTime = "fortune_wheel_last_spin_time"; // UTC ticks as string
-
+    private const string KeyLastSpinTime = "fortune_wheel_last_spin_time";
     private static int s_cooldownHours = 24;
 
     [Header("Config")]
-    [SerializeField] private DailySlotRewardConfig rewardConfig;
-    [Tooltip("Spin hakları arasındaki süre (saat). Örn: 12 veya 24.")]
+    [Tooltip("Spin hakları arasındaki süre (saat).")]
     [SerializeField, Min(1)] private int spinCooldownHours = 24;
+
+    [Header("Free Spin Rewards")]
+    [Tooltip("Ücretsiz spin için level bazlı ödül havuzu.")]
+    [SerializeField] private LeveledWheelRewardConfig freeSpinConfig;
+
+    [Header("Paid Spin Rewards")]
+    [Tooltip("Ücretli spin için level bazlı ödül havuzu. Boş bırakılırsa freeSpinConfig kullanılır.")]
+    [SerializeField] private LeveledWheelRewardConfig paidSpinConfig;
+    [Tooltip("Ücretli spin maliyeti (altın).")]
+    [SerializeField, Min(1)] private int paidSpinCost = 100;
 
     [Header("Panel")]
     [SerializeField] private GameObject panelRoot;
@@ -24,7 +32,7 @@ public class FortuneWheelController : MonoBehaviour
     [SerializeField] private RectTransform innerWheel;
     [SerializeField] private float iconRadius = 190f;
     [SerializeField] private float iconSize = 60f;
-    [Tooltip("İkonun container içindeki Y pozisyonu (dışa/merkeze doğru kayma).")]
+    [Tooltip("İkonun container içindeki Y pozisyonu.")]
     [SerializeField] private float iconOffsetY = 29f;
     [SerializeField] private float amountFontSize = 18f;
     [SerializeField] private TMP_FontAsset amountFont;
@@ -33,10 +41,15 @@ public class FortuneWheelController : MonoBehaviour
     [Header("UI")]
     [SerializeField] private TMP_Text rewardNameText;
     [SerializeField] private Button spinButton;
+    [Tooltip("Spin butonundaki yazı (FREE SPIN / 100 🪙 vb.).")]
+    [SerializeField] private TMP_Text spinButtonText;
     [SerializeField] private Button claimButton;
+    [Tooltip("Ücretsiz spin geri sayımı için label container.")]
     [SerializeField] private GameObject noSpinAvailableLabel;
-    [Tooltip("noSpinAvailableLabel içindeki geri sayım texti (opsiyonel).")]
+    [Tooltip("noSpinAvailableLabel içindeki geri sayım texti.")]
     [SerializeField] private TMP_Text countdownText;
+    [Tooltip("Yeterli altın yoksa gösterilecek label (opsiyonel).")]
+    [SerializeField] private GameObject insufficientCoinsLabel;
 
     [Header("Win Feedback")]
     [SerializeField, Range(1f, 2f)] private float winPunchScale = 1.2f;
@@ -48,10 +61,10 @@ public class FortuneWheelController : MonoBehaviour
     [Header("Spin")]
     [SerializeField] private int fullRotations = 4;
     [SerializeField] private float spinDuration = 3.5f;
-    [Tooltip("Wheel görselinin segment 0'ı 12 o'clock'tan ne kadar offset'li (derece). Yanlış segment kazanıyorsa ayarla.")]
+    [Tooltip("Wheel görselinin segment 0'ı 12 o'clock'tan ne kadar offset'li. Yanlış segment kazanıyorsa ayarla.")]
     [SerializeField] private float wheelSegmentOffset = 0f;
     [SerializeField, Range(0.5f, 2f)] private float spinPitchStart = 1.4f;
-    [SerializeField, Range(0.1f, 1f)] private float spinPitchEnd   = 0.6f;
+    [SerializeField, Range(0.1f, 1f)] private float spinPitchEnd = 0.6f;
 
     [Header("Fade")]
     [SerializeField] private float fadeDuration = 0.2f;
@@ -70,9 +83,11 @@ public class FortuneWheelController : MonoBehaviour
     [SerializeField, Range(1f, 1.5f)] private float winnerHighlightScale = 1.25f;
 
     private DailySlotReward selectedReward;
+    private DailySlotRewardConfig activeSpinConfig;
     private int selectedIndex;
     private bool isSpinning;
     private bool rewardClaimed;
+    private bool isFreeSpin;
     private Coroutine glowRoutine;
     private Coroutine spinButtonPulse;
     private Coroutine countdownRoutine;
@@ -115,23 +130,26 @@ public class FortuneWheelController : MonoBehaviour
         if (!gameObject.activeSelf) gameObject.SetActive(true);
         panelRoot.SetActive(true);
 
-        isSpinning    = false;
-        rewardClaimed = false;
+        isSpinning     = false;
+        rewardClaimed  = false;
         selectedReward = null;
 
         if (innerWheel != null) innerWheel.localEulerAngles = Vector3.zero;
 
-        bool canSpin = HasAvailableSpin();
-        if (noSpinAvailableLabel != null) noSpinAvailableLabel.SetActive(!canSpin);
-        if (spinButton  != null) { spinButton.gameObject.SetActive(true); spinButton.interactable = canSpin; }
-        if (claimButton != null)   claimButton.gameObject.SetActive(false);
+        if (claimButton  != null) claimButton.gameObject.SetActive(false);
         if (rewardNameText != null) rewardNameText.text = "";
         if (winnerDisplay  != null) winnerDisplay.SetActive(false);
-        if (dimOverlay != null) { dimOverlay.gameObject.SetActive(false); var c = dimOverlay.color; c.a = 0f; dimOverlay.color = c; }
+        if (dimOverlay != null)
+        {
+            dimOverlay.gameObject.SetActive(false);
+            var c = dimOverlay.color; c.a = 0f; dimOverlay.color = c;
+        }
 
-        // Countdown
+        RefreshSpinButtonState();
+
         if (countdownRoutine != null) StopCoroutine(countdownRoutine);
-        if (!canSpin && countdownText != null)
+        bool canFree = HasAvailableSpin();
+        if (!canFree && countdownText != null)
             countdownRoutine = StartCoroutine(CountdownRoutine());
         else if (countdownText != null)
             countdownText.text = "";
@@ -142,7 +160,8 @@ public class FortuneWheelController : MonoBehaviour
         if (pointerGlow != null) glowRoutine = StartCoroutine(PulseGlow());
 
         if (spinButtonPulse != null) StopCoroutine(spinButtonPulse);
-        if (spinButton != null && canSpin) spinButtonPulse = StartCoroutine(PulseSpinButton());
+        if (spinButton != null && spinButton.interactable)
+            spinButtonPulse = StartCoroutine(PulseSpinButton());
 
         if (panelGroup != null) panelGroup.alpha = 0f;
         StartCoroutine(FadePanel(0f, 1f));
@@ -155,70 +174,119 @@ public class FortuneWheelController : MonoBehaviour
         StartCoroutine(CloseRoutine());
     }
 
+    // ── Spin Button State ─────────────────────────────────────────────────────
+
+    private void RefreshSpinButtonState()
+    {
+        bool canFree  = HasAvailableSpin();
+        bool canAfford = PlayerWallet.Coins >= paidSpinCost;
+
+        bool canSpin = canFree || canAfford;
+
+        if (spinButton != null)
+        {
+            spinButton.gameObject.SetActive(true);
+            spinButton.interactable = canSpin;
+        }
+
+        if (spinButtonText != null)
+            spinButtonText.text = canFree ? "FREE SPIN" : $"{paidSpinCost} ⛏";
+
+        if (noSpinAvailableLabel != null) noSpinAvailableLabel.SetActive(!canFree);
+        if (insufficientCoinsLabel != null) insufficientCoinsLabel.SetActive(!canFree && !canAfford);
+    }
+
     // ── Icon Placement ───────────────────────────────────────────────────────
 
     private void PlaceIcons()
     {
-        if (innerWheel == null || rewardConfig == null) return;
+        if (innerWheel == null) return;
+        var config = GetDisplayConfig();
+        Debug.Log($"[Wheel] PlaceIcons config={config?.name ?? "NULL"} free={freeSpinConfig?.name ?? "NULL"} paid={paidSpinConfig?.name ?? "NULL"}");
+        if (config == null) return;
 
         for (int i = innerWheel.childCount - 1; i >= 0; i--)
             Destroy(innerWheel.GetChild(i).gameObject);
 
-        int count = Mathf.Min(rewardConfig.rewards.Count, 8);
+        int count = Mathf.Min(config.rewards.Count, 8);
+        if (count <= 0) return;
+
         float segmentAngle = 360f / count;
 
         for (int i = 0; i < count; i++)
         {
-            var reward = rewardConfig.rewards[i];
+            var reward = config.rewards[i];
             if (reward == null) continue;
 
             float angleCW = i * segmentAngle + segmentAngle * 0.5f;
-            float rad     = angleCW * Mathf.Deg2Rad;
+            float rad = angleCW * Mathf.Deg2Rad;
 
             var container = new GameObject($"Segment_{i}", typeof(RectTransform));
             container.transform.SetParent(innerWheel, false);
+
             var crt = container.GetComponent<RectTransform>();
-            crt.sizeDelta = new Vector2(iconSize * 1.5f, iconSize * 2f);
+            crt.sizeDelta = new Vector2(iconSize * 2.2f, iconSize * 2.4f);
+            crt.pivot     = new Vector2(0.5f, 0.5f);
+            crt.anchorMin = new Vector2(0.5f, 0.5f);
+            crt.anchorMax = new Vector2(0.5f, 0.5f);
             crt.anchoredPosition = new Vector2(iconRadius * Mathf.Sin(rad), iconRadius * Mathf.Cos(rad));
             crt.localEulerAngles = new Vector3(0f, 0f, -angleCW);
 
-            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image));
-            iconGo.transform.SetParent(container.transform, false);
-            var irt = iconGo.GetComponent<RectTransform>();
-            irt.sizeDelta = new Vector2(iconSize, iconSize);
-            irt.anchoredPosition = new Vector2(0f, iconOffsetY);
+            if (reward.icon != null)
+            {
+                var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+                iconGo.transform.SetParent(container.transform, false);
 
-            var img = iconGo.GetComponent<Image>();
-            img.sprite = reward.icon;
-            img.preserveAspect = true;
+                var irt = iconGo.GetComponent<RectTransform>();
+                irt.sizeDelta = new Vector2(iconSize, iconSize);
+                irt.pivot     = new Vector2(0.5f, 0.5f);
+                irt.anchorMin = new Vector2(0.5f, 0.5f);
+                irt.anchorMax = new Vector2(0.5f, 0.5f);
+                irt.anchoredPosition = new Vector2(0f, iconOffsetY);
+
+                var img = iconGo.GetComponent<Image>();
+                img.sprite = reward.icon;
+                img.preserveAspect = true;
+            }
 
             TMP_Text tmp;
             if (amountTextTemplate != null)
             {
                 var textGo = Instantiate(amountTextTemplate.gameObject, container.transform, false);
                 textGo.name = "Amount";
-                var textRt = textGo.GetComponent<RectTransform>();
-                textRt.pivot            = new Vector2(0.5f, 1f);
-                textRt.anchoredPosition = new Vector2(0f, -(iconSize * 0.5f) - 10f);
                 textGo.SetActive(true);
+
+                var textRt = textGo.GetComponent<RectTransform>();
+                textRt.localEulerAngles = new Vector3(0f, 0f, 90f);
+
                 tmp = textGo.GetComponent<TMP_Text>();
             }
             else
             {
                 var textGo = new GameObject("Amount", typeof(RectTransform), typeof(TextMeshProUGUI));
                 textGo.transform.SetParent(container.transform, false);
+
                 var textRt = textGo.GetComponent<RectTransform>();
-                textRt.sizeDelta        = new Vector2(iconSize * 1.4f, 80f);
-                textRt.pivot            = new Vector2(0.5f, 1f);
-                textRt.anchoredPosition = new Vector2(0f, -(iconSize * 0.5f));
+                textRt.sizeDelta = new Vector2(130f, 42f);
+                textRt.pivot     = new Vector2(0.5f, 0.5f);
+                textRt.anchorMin = new Vector2(0.5f, 0.5f);
+                textRt.anchorMax = new Vector2(0.5f, 0.5f);
+                textRt.anchoredPosition  = new Vector2(0f, -49f);
+                textRt.localEulerAngles  = new Vector3(0f, 0f, 90f);
+
                 tmp = textGo.GetComponent<TextMeshProUGUI>();
                 tmp.fontSize  = amountFontSize;
-                tmp.alignment = TextAlignmentOptions.Top;
+                tmp.alignment = TextAlignmentOptions.Left;
                 tmp.color     = Color.white;
-                if (amountFont != null) tmp.font = amountFont;
+                tmp.fontStyle = FontStyles.Bold;
+                tmp.outlineWidth = 0.2f;
+                tmp.outlineColor = Color.black;
             }
 
             tmp.text = "+" + reward.amount.ToString();
+            if (amountFont != null) tmp.font = amountFont;
+            tmp.enableWordWrapping = false;
+            tmp.overflowMode = TextOverflowModes.Overflow;
         }
     }
 
@@ -227,16 +295,31 @@ public class FortuneWheelController : MonoBehaviour
     private void OnSpinClicked()
     {
         if (isSpinning) return;
-        if (!HasAvailableSpin()) return;
-        if (rewardConfig == null || rewardConfig.rewards.Count == 0) return;
 
-        int count = Mathf.Min(rewardConfig.rewards.Count, 8);
-        selectedIndex = PickRandomIndex(count);
+        isFreeSpin = HasAvailableSpin();
+
+        if (isFreeSpin)
+        {
+            activeSpinConfig = ResolveConfig(freeSpinConfig);
+            PlayerPrefs.SetString(KeyLastSpinTime, DateTime.UtcNow.Ticks.ToString());
+            PlayerPrefs.Save();
+        }
+        else
+        {
+            if (!PlayerWallet.SpendCoins(paidSpinCost))
+            {
+                RefreshSpinButtonState();
+                return;
+            }
+            activeSpinConfig = ResolveConfig(paidSpinConfig) ?? ResolveConfig(freeSpinConfig);
+        }
+
+        if (activeSpinConfig == null || activeSpinConfig.rewards.Count == 0) return;
+
+        int count = Mathf.Min(activeSpinConfig.rewards.Count, 8);
+        selectedIndex = PickRandomIndex(count, activeSpinConfig);
         if (selectedIndex < 0) return;
-        selectedReward = rewardConfig.rewards[selectedIndex];
-
-        PlayerPrefs.SetString(KeyLastSpinTime, DateTime.UtcNow.Ticks.ToString());
-        PlayerPrefs.Save();
+        selectedReward = activeSpinConfig.rewards[selectedIndex];
 
         StartCoroutine(SpinRoutine());
     }
@@ -245,12 +328,13 @@ public class FortuneWheelController : MonoBehaviour
     {
         isSpinning = true;
         if (spinButtonPulse != null) { StopCoroutine(spinButtonPulse); spinButtonPulse = null; }
-        if (spinButton   != null) spinButton.interactable = false;
-        if (rewardNameText != null) rewardNameText.text  = "";
+        if (spinButton    != null) spinButton.interactable = false;
+        if (rewardNameText != null) rewardNameText.text   = "";
 
-        int   count        = Mathf.Min(rewardConfig.rewards.Count, 8);
+        int   count        = Mathf.Min(activeSpinConfig.rewards.Count, 8);
         float segmentAngle = 360f / count;
-        Debug.Log($"[FortuneWheel] selectedIndex={selectedIndex} reward={selectedReward?.fallbackName}");
+        Debug.Log($"[FortuneWheel] {(isFreeSpin ? "FREE" : "PAID")} selectedIndex={selectedIndex} reward={selectedReward?.fallbackName}");
+
         float landingOffset = UnityEngine.Random.Range(-segmentAngle * 0.25f, segmentAngle * 0.25f);
         float targetCW = (fullRotations + 1) * 360f
                        - selectedIndex * segmentAngle
@@ -266,22 +350,22 @@ public class FortuneWheelController : MonoBehaviour
             sfxSource.Play();
         }
 
-        int lastTickSeg = -1;
+        int   lastTickSeg = -1;
         float elapsed = 0f;
         while (elapsed < spinDuration)
         {
             elapsed += Time.unscaledDeltaTime;
-            float t     = Mathf.Clamp01(elapsed / spinDuration);
-            float eased = 1f - Mathf.Pow(1f - t, 3f);
-            float currentCW = Mathf.Lerp(0f, targetCW, eased);
-            innerWheel.localEulerAngles = new Vector3(0f, 0f, -currentCW);
+            float t      = Mathf.Clamp01(elapsed / spinDuration);
+            float eased  = 1f - Mathf.Pow(1f - t, 3f);
+            float current = Mathf.Lerp(0f, targetCW, eased);
+            innerWheel.localEulerAngles = new Vector3(0f, 0f, -current);
 
             if (sfxSource != null) sfxSource.pitch = Mathf.Lerp(spinPitchStart, spinPitchEnd, eased);
 
-            int currentSeg = (int)(currentCW / segmentAngle) % count;
-            if (currentSeg != lastTickSeg)
+            int seg = (int)(current / segmentAngle) % count;
+            if (seg != lastTickSeg)
             {
-                lastTickSeg = currentSeg;
+                lastTickSeg = seg;
                 if (sfxSource != null && tickSfx != null) sfxSource.PlayOneShot(tickSfx);
             }
             yield return null;
@@ -322,20 +406,36 @@ public class FortuneWheelController : MonoBehaviour
         innerWheel.localScale = start;
     }
 
+    // ── Config Helpers ───────────────────────────────────────────────────────
+
+    private DailySlotRewardConfig GetDisplayConfig()
+    {
+        bool canFree = HasAvailableSpin();
+        return canFree
+            ? (ResolveConfig(freeSpinConfig) ?? ResolveConfig(paidSpinConfig))
+            : (ResolveConfig(paidSpinConfig) ?? ResolveConfig(freeSpinConfig));
+    }
+
+    private DailySlotRewardConfig ResolveConfig(LeveledWheelRewardConfig leveled)
+    {
+        if (leveled == null) return null;
+        return leveled.GetForCurrentLevel() ?? leveled.defaultConfig;
+    }
+
     // ── Weighted Random ──────────────────────────────────────────────────────
 
-    private int PickRandomIndex(int count)
+    private int PickRandomIndex(int count, DailySlotRewardConfig config)
     {
         int total = 0;
         for (int i = 0; i < count; i++)
-            if (rewardConfig.rewards[i] != null) total += Mathf.Max(0, rewardConfig.rewards[i].weight);
+            if (config.rewards[i] != null) total += Mathf.Max(0, config.rewards[i].weight);
         if (total <= 0) return 0;
         int roll = UnityEngine.Random.Range(0, total);
-        int acc = 0;
+        int acc  = 0;
         for (int i = 0; i < count; i++)
         {
-            if (rewardConfig.rewards[i] == null) continue;
-            acc += Mathf.Max(0, rewardConfig.rewards[i].weight);
+            if (config.rewards[i] == null) continue;
+            acc += Mathf.Max(0, config.rewards[i].weight);
             if (roll < acc) return i;
         }
         return count - 1;
@@ -351,11 +451,10 @@ public class FortuneWheelController : MonoBehaviour
             if (remaining <= TimeSpan.Zero)
             {
                 if (countdownText != null) countdownText.text = "";
-                // Spin hakkı geldi — UI'ı güncelle
-                if (noSpinAvailableLabel != null) noSpinAvailableLabel.SetActive(false);
-                if (spinButton != null) { spinButton.gameObject.SetActive(true); spinButton.interactable = true; }
+                RefreshSpinButtonState();
                 if (spinButtonPulse != null) StopCoroutine(spinButtonPulse);
-                if (spinButton != null) spinButtonPulse = StartCoroutine(PulseSpinButton());
+                if (spinButton != null && spinButton.interactable)
+                    spinButtonPulse = StartCoroutine(PulseSpinButton());
                 yield break;
             }
             if (countdownText != null)
@@ -444,14 +543,14 @@ public class FortuneWheelController : MonoBehaviour
         if (innerWheel == null || selectedIndex < 0 || selectedIndex >= innerWheel.childCount)
             yield break;
 
-        var winner = innerWheel.GetChild(selectedIndex);
-        Vector3 baseScale = winner.localScale;
-        Vector3 peak = baseScale * winnerHighlightScale;
-        float dur = 0.25f;
+        var winner    = innerWheel.GetChild(selectedIndex);
+        Vector3 base_ = winner.localScale;
+        Vector3 peak  = base_ * winnerHighlightScale;
+        float   dur   = 0.25f;
 
         for (float t = 0f; t < dur; t += Time.unscaledDeltaTime)
         {
-            winner.localScale = Vector3.Lerp(baseScale, peak, Mathf.SmoothStep(0f, 1f, t / dur));
+            winner.localScale = Vector3.Lerp(base_, peak, Mathf.SmoothStep(0f, 1f, t / dur));
             yield return null;
         }
         winner.localScale = peak;
@@ -472,9 +571,9 @@ public class FortuneWheelController : MonoBehaviour
 
     private IEnumerator CloseRoutine()
     {
-        if (countdownRoutine != null) { StopCoroutine(countdownRoutine); countdownRoutine = null; }
-        if (glowRoutine != null) { StopCoroutine(glowRoutine); glowRoutine = null; }
-        if (spinButtonPulse != null) { StopCoroutine(spinButtonPulse); spinButtonPulse = null; }
+        if (countdownRoutine  != null) { StopCoroutine(countdownRoutine);  countdownRoutine  = null; }
+        if (glowRoutine       != null) { StopCoroutine(glowRoutine);       glowRoutine       = null; }
+        if (spinButtonPulse   != null) { StopCoroutine(spinButtonPulse);   spinButtonPulse   = null; }
         yield return FadePanel(panelGroup != null ? panelGroup.alpha : 1f, 0f);
         if (panelRoot != null) panelRoot.SetActive(false);
     }

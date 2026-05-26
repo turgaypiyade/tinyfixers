@@ -13,6 +13,8 @@ public static class DailySlotRewardService
 
         switch (reward.type)
         {
+            case DailySlotRewardType.Empty:
+                break;
             case DailySlotRewardType.Coins:
                 PlayerWallet.AddCoins(amt);
                 break;

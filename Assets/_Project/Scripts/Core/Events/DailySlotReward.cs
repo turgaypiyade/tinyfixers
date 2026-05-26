@@ -3,6 +3,8 @@ using UnityEngine;
 
 public enum DailySlotRewardType
 {
+    Empty                = 99,
+
     Coins                = 0,
     Lives                = 1,
     Stars                = 2,
@@ -47,7 +49,6 @@ public class DailySlotRewardConfig : ScriptableObject
     [Tooltip("Slot machine'de spawn olabilecek ödüller. Weight'lere göre rastgele seçilir.")]
     public List<DailySlotReward> rewards = new();
 
-    /// Toplam weight (normalize için).
     public int TotalWeight
     {
         get
@@ -59,7 +60,6 @@ public class DailySlotRewardConfig : ScriptableObject
         }
     }
 
-    /// Weight'lere göre rastgele bir ödül seç.
     public DailySlotReward PickRandom()
     {
         if (rewards == null || rewards.Count == 0) return null;
@@ -77,3 +77,4 @@ public class DailySlotRewardConfig : ScriptableObject
         return rewards[rewards.Count - 1];
     }
 }
+

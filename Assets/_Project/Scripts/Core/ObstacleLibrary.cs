@@ -129,27 +129,32 @@ public class ObstacleDef
         return stage != null && stage.behavior == ObstacleBehaviorType.MovableObstacle;
     }
 
-    /// <summary>
-    /// Belirtilen stage için hit particle'ların tamamen kapatılıp kapatılmadığını döner.
-    /// Stage-level flag def-level'ı override eder.
-    /// </summary>
+    // Hit particle stage indexing: Stage 0 = ilk vuruş, Stage 1 = ikinci vuruş, ...
+    // Visual sprite indexing'den (damageTaken) farklı: burada damageTaken-1 kullanılır.
+    private StageRule GetHitParticleStageForRemainingHits(int remainingHits)
+    {
+        EnsureStageSlots();
+        if (stages == null || stages.Count == 0) return null;
+        int normalizedMaxHits = Mathf.Max(1, hits);
+        int normalizedHits    = Mathf.Clamp(remainingHits, 0, normalizedMaxHits);
+        int damageTaken       = normalizedMaxHits - normalizedHits;
+        int idx               = Mathf.Clamp(damageTaken - 1, 0, stages.Count - 1);
+        return stages[idx] ?? stages[0];
+    }
+
     public bool IsHitParticlesSuppressedForRemainingHits(int remainingHits)
     {
-        var stage = GetStageRuleForRemainingHits(remainingHits);
+        var stage = GetHitParticleStageForRemainingHits(remainingHits);
         if (stage != null && stage.suppressHitParticles)
             return true;
         return suppressHitParticles;
     }
 
-    /// <summary>
-    /// Belirtilen kalan vuruş için hit particle sprite listesini döner.
-    /// Suppress açıksa null döner. Sonra stage'e özgü listeye, boşsa def düzeyine bakar.
-    /// </summary>
     public List<Sprite> GetHitParticleSpritesForRemainingHits(int remainingHits)
     {
         if (IsHitParticlesSuppressedForRemainingHits(remainingHits))
             return null;
-        var stage = GetStageRuleForRemainingHits(remainingHits);
+        var stage = GetHitParticleStageForRemainingHits(remainingHits);
         if (stage != null && stage.hitParticleSprites != null && stage.hitParticleSprites.Count > 0)
             return stage.hitParticleSprites;
         return hitParticleSprites;
