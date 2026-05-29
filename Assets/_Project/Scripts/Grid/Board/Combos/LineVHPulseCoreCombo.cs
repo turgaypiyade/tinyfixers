@@ -40,7 +40,8 @@ public sealed class LineVHPulseCoreCombo
 
         var pulseTile = GetPulseTile(rt);
         var lineTile = GetLineTile(rt);
-        var comboCenterTile = rt.Partner != null ? rt.Partner : pulseTile;
+        // PulseCore'un swap'tan önceki hücresi = swap sonrası Line'ın bulunduğu konum.
+        var comboCenterTile = lineTile;
         var comboCenterCell = new Vector2Int(comboCenterTile.X, comboCenterTile.Y);
 
         rt.EmitComboTriggered?.Invoke(lineTile.GetSpecial(), pulseTile.GetSpecial(), comboCenterCell);
@@ -1044,7 +1045,9 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         orbitRt.anchorMax = new Vector2(0.5f, 0.5f);
         orbitRt.pivot = new Vector2(0.5f, 0.5f);
         orbitRt.sizeDelta = new Vector2(board.TileSize * 3.80f, board.TileSize * 3.80f);
-        orbitRt.anchoredPosition = pulseStart;
+        // Orbit container'ı PulseCore'un ORIJINAL hücresine (swap'tan önceki) yerleştir.
+        // Swap sonrası bu hücrede lineTile (= orbitLineTile) bulunuyor → emitterStart.
+        orbitRt.anchoredPosition = emitterStart;
         orbitRt.localScale = Vector3.one;
         orbitRt.localRotation = Quaternion.identity;
 
@@ -1068,11 +1071,12 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         HideTileCanvasGroup(orbitLineTile);
         HideTileCanvasGroup(orbitPulseTile);
 
-        // Kısa sahneye alma: ikili PulseCore merkezine taşınıp biraz yukarı alınır.
+        // Kısa sahneye alma: container yeni merkeze (PulseCore'un orijinal hücresine) taşınıp yukarı alınır.
+        // Emitter (Line) ikonu, pulseStart'tan (PulseCore'un yeni konumu) orbit yarıçapına doğru gelir.
         float t = 0f;
-        Vector2 sceneStart = pulseStart;
-        Vector2 sceneEnd = pulseStart + new Vector2(0f, OrbitRiseHeight);
-        Vector2 emitterLocalStart = emitterStart - pulseStart;
+        Vector2 sceneStart = emitterStart;
+        Vector2 sceneEnd = emitterStart + new Vector2(0f, OrbitRiseHeight);
+        Vector2 emitterLocalStart = pulseStart - emitterStart;
         if (emitterLocalStart.sqrMagnitude < 0.0001f)
             emitterLocalStart = Vector2.right * orbitRadius;
         else
