@@ -636,7 +636,7 @@ public class GridSpawner : MonoBehaviour
         if (resolvedLevel?.obstacles == null || resolvedLevel.obstacleOrigins == null) return;
         if (mudOverlayRoot == null) return;
 
-        mudOverlayService.Init(board, width, height);
+        mudOverlayService.Init(board, width, height, tileSize);
 
         for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++)

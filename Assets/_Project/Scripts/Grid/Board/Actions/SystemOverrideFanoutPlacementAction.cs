@@ -139,7 +139,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         if (board.BoardVfxPlayer != null)
             board.BoardVfxPlayer.PlayPulseVfx(GetTileAnchoredPos(tile), radiusCells: 2, tileSize: board.TileSize);
 
-        if (board.SfxSource != null)
+        if (GameSettings.SoundEnabled && board.SfxSource != null)
         {
             if (board.SfxPulseCoreBoom != null)
                 board.SfxSource.PlayOneShot(board.SfxPulseCoreBoom);

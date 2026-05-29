@@ -33,6 +33,8 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
 
         // Orbit carry (PulseCore gibi taşınan special)
         public RectTransform carryRt;
+
+        public PatchBotPropellerView propellerView;
     }
 
     private readonly BoardController board;
@@ -48,11 +50,14 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
     // Tüm botların aynı anda inmesi için sabit dive süresi (saniye).
     private const float SYNC_DIVE_DURATION = 0.22f;
 
-    public OverridePatchBotAirborneGroupAction(BoardController board, List<Vector2Int> sourceCells)
+    private readonly int bonusPhantomBots;
+
+    public OverridePatchBotAirborneGroupAction(BoardController board, List<Vector2Int> sourceCells, int bonusPhantomBots = 0)
     {
         this.board = board;
         this.sourceCells = sourceCells != null ? new List<Vector2Int>(sourceCells) : new List<Vector2Int>();
         this.impactMode = AirborneImpactMode.StandardPatchBot;
+        this.bonusPhantomBots = Mathf.Max(0, bonusPhantomBots);
     }
 
     public OverridePatchBotAirborneGroupAction(
@@ -128,12 +133,14 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             // Kalkış anında soft reservation — hedef bilgisi.
             // Cascade sonrasında bu intent ya canlı kalır (TileView ref'i ile takip),
             // ya da yenilenir (ResolveAllDiveTargets içinde).
-            var (intent, hasIntent) = coordinator.PickIntent(null, null, null);
+            // tile'ı geçerek en uzak hedefin seçilmesi sağlanır.
+            var (intent, hasIntent) = coordinator.PickIntent(tile, null, null);
             bot.intent = hasIntent ? intent : null;
 
             bots.Add(bot);
 
             // Source cell'i ANINDA boşalt — cascade buradan akabilsin.
+            tile.PropellerView?.Stop();
             SpecialVisualService.HideTileVisualForCombo(tile);
             board.ClearCell(cell.x, cell.y);
             board.ClearCellVisualOnly(cell, bot.sourceType, tile);
@@ -141,7 +148,111 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             board.StartCoroutine(CoTakeoffAndHover(bot, i));
         }
 
+        // Phantom bots: extra ghosts that fly from midpoint between real bots.
+        int realBotCount = bots.Count;
+        var flightRootForPhantom = GetFlightRoot();
+        for (int b = 0; b < bonusPhantomBots && realBotCount > 0; b++)
+        {
+            var template = bots[b % realBotCount];
+            int phantomIndex = realBotCount + b;
+
+            // Start phantom from midpoint of the two real source cells so it doesn't overlap either bot.
+            Vector2 phantomStart;
+            if (flightRootForPhantom != null && realBotCount >= 2)
+            {
+                Vector2 p0 = CellAnchored(bots[0].sourceCell.x, bots[0].sourceCell.y, flightRootForPhantom);
+                Vector2 p1 = CellAnchored(bots[1 % realBotCount].sourceCell.x, bots[1 % realBotCount].sourceCell.y, flightRootForPhantom);
+                phantomStart = (p0 + p1) * 0.5f;
+            }
+            else if (flightRootForPhantom != null)
+            {
+                phantomStart = CellAnchored(template.sourceCell.x, template.sourceCell.y, flightRootForPhantom)
+                               + new Vector2(board.TileSize * 0.4f, 0f);
+            }
+            else
+            {
+                phantomStart = Vector2.zero;
+            }
+
+            var phantom = CreatePhantomBot(template, sprite, phantomIndex, phantomStart);
+            if (phantom == null) continue;
+
+            var (pIntent, pHasIntent) = coordinator.PickIntentFrom(template.sourceCell);
+            phantom.intent = pHasIntent ? pIntent : null;
+
+            bots.Add(phantom);
+            board.StartCoroutine(CoTakeoffAndHover(phantom, phantomIndex));
+        }
+
         return bots;
+    }
+
+    private AirborneBot CreatePhantomBot(AirborneBot template, Sprite sprite, int index, Vector2 startAnchoredPos)
+    {
+        var flightRoot = GetFlightRoot();
+        if (flightRoot == null || template == null)
+            return null;
+
+        var ghost = new GameObject("PatchBotPhantom", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        var rect = ghost.GetComponent<RectTransform>();
+        var image = ghost.GetComponent<Image>();
+
+        rect.SetParent(flightRoot, false);
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = new Vector2(board.TileSize, board.TileSize);
+        rect.anchoredPosition = startAnchoredPos;
+        rect.localScale = Vector3.one;
+        rect.SetAsLastSibling();
+
+        image.sprite = sprite != null ? sprite : board.GetSpecialIcon(TileSpecial.PatchBot);
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        image.color = Color.white;
+
+        var cell = template.sourceCell;
+        int side = ((cell.x + cell.y + index) & 1) == 0 ? -1 : 1;
+        float lateral = board.TileSize * (0.46f + 0.08f * (index % 3));
+        float altitude = board.TileSize * (0.90f + 0.05f * (index % 2));
+        Vector2 hoverAnchor = rect.anchoredPosition + new Vector2(side * lateral, altitude);
+
+        PatchBotPropellerView propellerView = null;
+        var propellerSprite = board.PatchBotPropellerSprite;
+        if (propellerSprite != null)
+        {
+            var propGo = new GameObject("PatchBotPropeller",
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(PatchBotPropellerView));
+            propGo.transform.SetParent(rect, false);
+
+            var propRt = propGo.GetComponent<RectTransform>();
+            propRt.anchorMin = new Vector2(0.5f, 0.5f);
+            propRt.anchorMax = new Vector2(0.5f, 0.5f);
+            propRt.pivot    = new Vector2(0.5f, 0.5f);
+            propRt.sizeDelta = new Vector2(board.TileSize, board.TileSize);
+            propRt.anchoredPosition = Vector2.zero;
+
+            var propImg = propGo.GetComponent<Image>();
+            propImg.sprite = propellerSprite;
+            propImg.preserveAspect = true;
+            propImg.raycastTarget = false;
+            propImg.color = Color.white;
+
+            propellerView = propGo.GetComponent<PatchBotPropellerView>();
+            propellerView.StartActivationSpin(board.PatchBotPropellerFlightSpeed);
+        }
+
+        return new AirborneBot
+        {
+            sourceCell = template.sourceCell,
+            sourceType = template.sourceType,
+            ghost = ghost,
+            rect = rect,
+            flightRoot = flightRoot,
+            image = image,
+            hoverAnchor = hoverAnchor,
+            propellerView = propellerView
+        };
     }
 
     private AirborneBot CreateGhost(Vector2Int cell, TileView tile, Sprite sprite, int index)
@@ -206,6 +317,31 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             }
         }
 
+        PatchBotPropellerView propellerView = null;
+        var propellerSprite = board.PatchBotPropellerSprite;
+        if (propellerSprite != null)
+        {
+            var propGo = new GameObject("PatchBotPropeller",
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(PatchBotPropellerView));
+            propGo.transform.SetParent(rect, false);
+
+            var propRt = propGo.GetComponent<RectTransform>();
+            propRt.anchorMin = new Vector2(0.5f, 0.5f);
+            propRt.anchorMax = new Vector2(0.5f, 0.5f);
+            propRt.pivot    = new Vector2(0.5f, 0.5f);
+            propRt.sizeDelta = new Vector2(board.TileSize, board.TileSize);
+            propRt.anchoredPosition = Vector2.zero;
+
+            var propImg = propGo.GetComponent<Image>();
+            propImg.sprite = propellerSprite;
+            propImg.preserveAspect = true;
+            propImg.raycastTarget = false;
+            propImg.color = Color.white;
+
+            propellerView = propGo.GetComponent<PatchBotPropellerView>();
+            propellerView.StartActivationSpin(board.PatchBotPropellerFlightSpeed);
+        }
+
         return new AirborneBot
         {
             sourceCell = cell,
@@ -215,7 +351,8 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             flightRoot = flightRoot,
             image = image,
             hoverAnchor = hoverAnchor,
-            carryRt = carryRt
+            carryRt = carryRt,
+            propellerView = propellerView
         };
     }
 
@@ -308,7 +445,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             var bot = bots[i];
             if (bot == null || bot.rect == null) continue;
 
-            var resolved = coordinator.ResolveIntentToCell(bot.intent, null, null, null);
+            var resolved = coordinator.ResolveIntentFrom(bot.intent, bot.sourceCell);
             if (!resolved.hasCell)
             {
                 bot.hasTarget = false;

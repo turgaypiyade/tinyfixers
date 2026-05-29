@@ -199,9 +199,8 @@ public class BoosterService
         cannon.SetParent(parent, false);
         cannon.SetAsLastSibling();
 
-        // BoardRoot coordinate sistemiyle aynı çalışsın.
-        cannon.anchorMin = new Vector2(0f, 1f);
-        cannon.anchorMax = new Vector2(0f, 1f);
+        cannon.anchorMin = new Vector2(0.5f, 0.5f);
+        cannon.anchorMax = new Vector2(0.5f, 0.5f);
         cannon.pivot = new Vector2(0.5f, 0.5f);
 
         CanvasGroup canvasGroup = cannon.GetComponent<CanvasGroup>();
@@ -209,6 +208,8 @@ public class BoosterService
             canvasGroup = cannon.gameObject.AddComponent<CanvasGroup>();
 
         canvasGroup.alpha = 1f;
+
+        Canvas.ForceUpdateCanvases();
 
         Vector2 targetPos = GetColumnBottomAnchoredCenter(columnX, parent);
 
@@ -401,20 +402,18 @@ public class BoosterService
 
         if (TryGetColumnAnchoredCenter(columnX, parent, out var columnCenter))
         {
-            // X artik secilen sutundaki gercek TileView RectTransform merkezinden gelir.
-            // 0.15f cannon sprite'inin namlusunu sutun merkezine oturtmak icin korunuyor.
-            //
-            // Y icin board altini hedefliyoruz:
-            // en alttaki tile merkezinden yaklasik 1.38 tile asagi, onceki manuel
-            // davranisin gercek coordinate sistemindeki karsiligi.
+            // columnCenter.y = visual bottom row (Height-1) center.
+            // Grid bottom line = columnCenter.y - size * 0.5f.
+            // Cannon fires from the bottom grid line: center 1 tile below row center
+            // = top of cannon at the grid bottom line.
             return new Vector2(
-                columnCenter.x + size * 0.15f,
-                columnCenter.y - size * 2.20f);
+                columnCenter.x,
+                columnCenter.y - size * 1.0f);
         }
 
         // Fallback: eski manuel hesap.
-        float x = columnX * size + size * 0.5f + size * 0.15f;
-        float y = -board.Height * size - size * 0.88f;
+        float x = columnX * size + size * 0.5f;
+        float y = -board.Height * size - size * 0.5f;
         return new Vector2(x, y);
     }
 
@@ -729,46 +728,28 @@ public class BoosterService
     {
         center = default;
 
-        if (parent == null || columnX < 0 || columnX >= board.Width)
+        if (parent == null || columnX < 0 || columnX >= board.Width || board.Height <= 0)
             return false;
 
-        // Prefer the lowest visible tile in the column because cannon sits at board bottom.
-        for (int y = board.Height - 1; y >= 0; y--)
-        {
-            TileView tile = board.GetTileViewAt(columnX, y);
-            RectTransform tileRt = tile != null ? tile.RectTransform : null;
-            if (tileRt == null)
-                continue;
-
-            Vector3 worldCenter = tileRt.TransformPoint(tileRt.rect.center);
-            center = WorldToAnchoredInParent(parent, worldCenter, new Vector2(0f, 1f));
-            return true;
-        }
-
-        return false;
+        // GetCellWorldCenterPosition works for any cell type (tile, obstacle, or hole).
+        // Use the grid bottom row of this column as the reference point.
+        Vector3 worldCenter = board.GetCellWorldCenterPosition(columnX, board.Height - 1);
+        center = WorldToAnchoredInParent(parent, worldCenter, new Vector2(0.5f, 0.5f));
+        return true;
     }
 
     private bool TryGetRowAnchoredCenter(int rowY, RectTransform parent, out Vector2 center)
     {
         center = default;
 
-        if (parent == null || rowY < 0 || rowY >= board.Height)
+        if (parent == null || rowY < 0 || rowY >= board.Height || board.Width <= 0)
             return false;
 
-        // Prefer the leftmost visible tile in the row because vertical booster enters from left.
-        for (int x = 0; x < board.Width; x++)
-        {
-            TileView tile = board.GetTileViewAt(x, rowY);
-            RectTransform tileRt = tile != null ? tile.RectTransform : null;
-            if (tileRt == null)
-                continue;
-
-            Vector3 worldCenter = tileRt.TransformPoint(tileRt.rect.center);
-            center = WorldToAnchoredInParent(parent, worldCenter, new Vector2(0f, 1f));
-            return true;
-        }
-
-        return false;
+        // GetCellWorldCenterPosition works for any cell type (tile, obstacle, or hole).
+        // Use the grid left column of this row as the reference point.
+        Vector3 worldCenter = board.GetCellWorldCenterPosition(0, rowY);
+        center = WorldToAnchoredInParent(parent, worldCenter, new Vector2(0.5f, 0.5f));
+        return true;
     }
 
     private Vector2 GetCellAnchoredCenter(Vector2Int cell, RectTransform parent)
@@ -794,26 +775,12 @@ public class BoosterService
 
     private static Vector2 WorldToAnchoredInParent(RectTransform parent, Vector3 worldPos, Vector2 childAnchor)
     {
-        Canvas canvas = parent.GetComponentInParent<Canvas>();
-        Camera camera = null;
-
-        if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
-            camera = canvas.worldCamera;
-
-        Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(camera, worldPos);
-
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            parent,
-            screenPoint,
-            camera,
-            out var localPoint);
-
+        Vector2 localPos = parent.InverseTransformPoint(worldPos);
         Rect rect = parent.rect;
         Vector2 anchorReference = new Vector2(
             Mathf.Lerp(rect.xMin, rect.xMax, childAnchor.x),
             Mathf.Lerp(rect.yMin, rect.yMax, childAnchor.y));
-
-        return localPoint - anchorReference;
+        return localPos - anchorReference;
     }
 
     private static float EaseOut(float t)
@@ -859,9 +826,8 @@ public class BoosterService
         booster.SetParent(parent, false);
         booster.SetAsLastSibling();
 
-        // BoardRoot coordinate sistemiyle ayni calissin.
-        booster.anchorMin = new Vector2(0f, 1f);
-        booster.anchorMax = new Vector2(0f, 1f);
+        booster.anchorMin = new Vector2(0.5f, 0.5f);
+        booster.anchorMax = new Vector2(0.5f, 0.5f);
         booster.pivot = new Vector2(0.5f, 0.5f);
 
         CanvasGroup canvasGroup = booster.GetComponent<CanvasGroup>();
@@ -869,6 +835,10 @@ public class BoosterService
             canvasGroup = booster.gameObject.AddComponent<CanvasGroup>();
 
         canvasGroup.alpha = 1f;
+
+        // Ensure canvas layout is fully calculated before reading parent.rect or InverseTransformPoint.
+        // On the very first activation parent.rect can be default-sized (zero), causing wrong positions.
+        Canvas.ForceUpdateCanvases();
 
         Vector2 targetPos = GetRowStartAnchoredCenter(rowY, parent);
 
@@ -1027,15 +997,21 @@ public class BoosterService
 
         if (TryGetRowAnchoredCenter(rowY, parent, out var rowCenter))
         {
-            // Y artik secilen satirdaki gercek TileView RectTransform merkezinden gelir.
-            // X board'un sol disinda kalir; gorsel govdenin ne kadar iceri girecegi
-            // asagidaki 0.60f ile ayarlanabilir.
-            return new Vector2(rowCenter.x - size * 1.5f, rowCenter.y);
+            // rowCenter.x = visual left column (0) center X.
+            // Grid left line = rowCenter.x - size * 0.5f.
+            // Ideal: booster right edge at grid left line = center at gridLeft - boosterHalfW.
+            // Clamp: keep booster inside screen. Screen left in (0.5,0.5) anchor space = -width/2
+            // regardless of parent pivot — rect.width is pivot-independent.
+            float gridLeftX   = rowCenter.x - size * 0.5f;
+            float halfW       = size * 0.5f;
+            float screenLeftX = -parent.rect.width * 0.5f;
+            float targetX     = Mathf.Max(gridLeftX - halfW, screenLeftX + halfW);
+            return new Vector2(targetX, rowCenter.y);
         }
 
         // Fallback: eski manuel hesap.
-        float y = -rowY * size - size * 1.5f;
-        float x = -size * 0.10f;
+        float y = -rowY * size - size * 0.5f;
+        float x = -size * 0.5f;
         return new Vector2(x, y);
     }
 

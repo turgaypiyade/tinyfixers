@@ -37,7 +37,7 @@ public sealed class PulseCoreSpecial
 {
     private readonly int affectedCellCount;
 
-    public PulseCoreSpecial(int affectedCellCount = 9)
+    public PulseCoreSpecial(int affectedCellCount = 25)
     {
         this.affectedCellCount = Mathf.Max(1, affectedCellCount);
     }

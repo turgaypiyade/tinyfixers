@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: 104d5f2d03d2b4502b9665a0f7fd64d9, type: 3}
   m_Name: PaidSpin_Early
   m_EditorClassIdentifier: Assembly-CSharp::DailySlotRewardConfig
   rewards:
@@ -19,26 +19,20 @@ MonoBehaviour:
     nameLocalizationKey: 
     fallbackName: 
     weight: 5
+  - type: 1
+    amount: 5
+    icon: {fileID: 21300000, guid: 6cf1f4c3f7e1b4091b6e777688baf04e, type: 3}
+    nameLocalizationKey: 
+    fallbackName: 
+    weight: 5
   - type: 11
     amount: 2
     icon: {fileID: 5240213395630594912, guid: f06b2ac3720c846f39aaed49e5856f87, type: 3}
     nameLocalizationKey: 
     fallbackName: 
     weight: 15
-  - type: 2
-    amount: 10
-    icon: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
-    nameLocalizationKey: 
-    fallbackName: 
-    weight: 15
-  - type: 0
-    amount: 200
-    icon: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
-    nameLocalizationKey: 
-    fallbackName: 
-    weight: 15
   - type: 12
-    amount: 2
+    amount: 1
     icon: {fileID: 21300000, guid: 40431c64b3fc44e9fa09dc2b89901c9d, type: 3}
     nameLocalizationKey: 
     fallbackName: 
@@ -48,16 +42,22 @@ MonoBehaviour:
     icon: {fileID: 21300000, guid: e80512acde4c9498bb2774285e6930da, type: 3}
     nameLocalizationKey: 
     fallbackName: 
-    weight: 10
-  - type: 21
-    amount: 2
-    icon: {fileID: 21300000, guid: 00c98c3df2dc649f78c93f9d7ee4f4a8, type: 3}
+    weight: 15
+  - type: 0
+    amount: 200
+    icon: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
     nameLocalizationKey: 
     fallbackName: 
-    weight: 10
+    weight: 5
   - type: 99
     amount: 0
     icon: {fileID: 21300000, guid: a81f8a7f61a90447cb809f008d33b512, type: 3}
     nameLocalizationKey: 
     fallbackName: 
-    weight: 20
+    weight: 25
+  - type: 23
+    amount: 2
+    icon: {fileID: 21300000, guid: d7f358535eeaf4bcf91584c858f8ce88, type: 3}
+    nameLocalizationKey: 
+    fallbackName: 
+    weight: 15

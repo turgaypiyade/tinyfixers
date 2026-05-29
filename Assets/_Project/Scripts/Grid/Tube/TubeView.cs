@@ -24,6 +24,9 @@ public class TubeView : MonoBehaviour
     [Tooltip("Body'nin base sprite içine kaç pixel overlap yapacağı (grid çizgisini gizler).")]
     [SerializeField, Min(0f)] private float baseBodyOverlap = 2f;
 
+    [Tooltip("TubeCap'ın üst hücreyi tam doldurmasına ek olarak alt komşu hücreyle kaç pixel overlap yapacağı.")]
+    [SerializeField, Min(0f)] private float capCellOverlap = 8f;
+
     [Header("Animation")]
     [SerializeField, Min(0.05f)] private float shrinkDuration = 0.2f;
     [SerializeField, Min(0f)] private float shakeAmplitude = 6f;
@@ -33,6 +36,7 @@ public class TubeView : MonoBehaviour
     private Image energyBody;
     private Image baseImage;
     private RectTransform capRt;
+    private float capOffsetY = 0f;
 
     private TubeDirection direction;
     private int totalLength;
@@ -130,21 +134,21 @@ public class TubeView : MonoBehaviour
         energyBody.type   = Image.Type.Sliced;
         energyBody.raycastTarget = false;
         var bodyRt = energyBody.rectTransform;
-        float fullBodyHeight = (totalLength - 1) * cellSize + baseBodyOverlap;
+        float fullBodyHeight = Mathf.Max(0f, (totalLength - 2) * cellSize + baseBodyOverlap);
         SetBodyAnchor(bodyRt, fullBodyHeight);
 
-        // ── OpenEndCap (inside mask, pinned to the open end) ──────────────
+        // ── OpenEndCap (root'a bağlı, mask dışında — kendi animasyonuyla kayar) ──
         if (openEndCapSprite != null)
         {
             var capGo = new GameObject("OpenEndCap",
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            capGo.transform.SetParent(maskContainer, false);
+            capGo.transform.SetParent(transform, false);
             var capImg = capGo.GetComponent<Image>();
             capImg.sprite = openEndCapSprite;
             capImg.raycastTarget = false;
             capRt = capImg.rectTransform;
             SetAnchorForOpenEnd(capRt, stretchCross: true);
-            SetMainAxisSize(capRt, cellSize * 0.25f);
+            SetMainAxisSize(capRt, cellSize + capCellOverlap);
         }
     }
 
@@ -196,7 +200,7 @@ public class TubeView : MonoBehaviour
     private void SetMaskSize(int cells)
     {
         if (maskContainer == null) return;
-        float size = cells <= 1 ? 0f : (cells - 1) * cellSize + baseBodyOverlap;
+        float size = cells <= 2 ? 0f : (cells - 2) * cellSize + baseBodyOverlap;
         SetMainAxisSize(maskContainer, size);
     }
 
@@ -226,21 +230,33 @@ public class TubeView : MonoBehaviour
 
     private IEnumerator ShrinkCoroutine(int remainingCells)
     {
-        float targetSize = remainingCells <= 1 ? 0f : (remainingCells - 1) * cellSize + baseBodyOverlap;
-        float startSize  = maskContainer.sizeDelta.y; // always Y: layout is always vertical
+        float targetMaskSize = remainingCells <= 2 ? 0f : (remainingCells - 2) * cellSize + baseBodyOverlap;
+        float startMaskSize  = maskContainer.sizeDelta.y;
+
+        float targetOffset = (totalLength - remainingCells) * cellSize;
+        float startOffset  = capOffsetY;
 
         float elapsed = 0f;
         while (elapsed < shrinkDuration)
         {
             elapsed += Time.deltaTime;
-            float t       = Mathf.Clamp01(elapsed / shrinkDuration);
-            float current = Mathf.Lerp(startSize, targetSize, t);
-            SetMainAxisSize(maskContainer, current);
+            float t = Mathf.Clamp01(elapsed / shrinkDuration);
+            SetMainAxisSize(maskContainer, Mathf.Lerp(startMaskSize, targetMaskSize, t));
+            if (capRt != null)
+            {
+                capOffsetY = Mathf.Lerp(startOffset, targetOffset, t);
+                capRt.anchoredPosition = new Vector2(0f, -capOffsetY);
+            }
             yield return null;
         }
 
-        SetMainAxisSize(maskContainer, targetSize);
-        if (targetSize <= 0f && capRt != null)
-            capRt.gameObject.SetActive(false);
+        SetMainAxisSize(maskContainer, targetMaskSize);
+        if (capRt != null)
+        {
+            capOffsetY = targetOffset;
+            capRt.anchoredPosition = new Vector2(0f, -capOffsetY);
+            if (remainingCells <= 1)
+                capRt.gameObject.SetActive(false);
+        }
     }
 }

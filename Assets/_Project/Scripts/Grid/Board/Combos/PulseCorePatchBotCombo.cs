@@ -37,7 +37,7 @@ public sealed class PulseCorePatchBotCombo
     private readonly int affectedCellCount;
     private readonly PulseCoreSpecial pulseCoreSpecial;
 
-    public PulseCorePatchBotCombo(int affectedCellCount = 9)
+    public PulseCorePatchBotCombo(int affectedCellCount = 25)
     {
         this.affectedCellCount = Mathf.Max(1, affectedCellCount);
         pulseCoreSpecial = new PulseCoreSpecial(this.affectedCellCount);

@@ -26,6 +26,15 @@ public class PreLevelSpecialInjector : MonoBehaviour
         if (!PreLevelSpecialSelectionState.HasSelection)
             yield break;
 
+        // Defer to PreLevelSpecialRuntimeInjector when it is present; it waits for board-ready
+        // and uses its own pendingSelection, so running both causes double-injection conflicts.
+        var runtimeInjector = FindAnyObjectByType<PreLevelSpecialRuntimeInjector>(FindObjectsInactive.Include);
+        if (runtimeInjector != null)
+        {
+            Debug.Log("[PreLevelSpecialInjector] RuntimeInjector found; skipping scene-based injection.");
+            yield break;
+        }
+
         if (board == null)
             board = FindAnyObjectByType<BoardController>();
 
@@ -204,6 +213,7 @@ public class PreLevelSpecialInjector : MonoBehaviour
 
     private void PlayOneShot(AudioClip clip)
     {
+        if (!GameSettings.SoundEnabled) return;
         if (audioSource != null && clip != null)
             audioSource.PlayOneShot(clip);
     }

@@ -66,7 +66,8 @@ public sealed class PatchBotCombo
             {
                 new Vector2Int(firstPatchBot.X, firstPatchBot.Y),
                 new Vector2Int(secondPatchBot.X, secondPatchBot.Y)
-            }));
+            },
+            bonusPhantomBots: 1));
 
         if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
             rt.CleanupImplantedTiles?.Invoke(rt.Context);

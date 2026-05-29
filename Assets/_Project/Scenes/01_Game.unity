@@ -2031,8 +2031,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.10920771}
-  m_AnchorMax: {x: 0.5738107, y: 2.5599573}
+  m_AnchorMin: {x: 0, y: 1.4166666}
+  m_AnchorMax: {x: 0.3567073, y: 33.208332}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -2504,7 +2504,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 750, y: 350}
+  m_SizeDelta: {x: 800, y: 500}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &717060776
 MonoBehaviour:
@@ -2897,7 +2897,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: -50}
+  m_AnchoredPosition: {x: 0, y: -80}
   m_SizeDelta: {x: 105, y: 105}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!1 &903992483
@@ -2937,7 +2937,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 100, y: 100}
+  m_AnchoredPosition: {x: 100, y: 150}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 1, y: 1}
 --- !u!114 &903992485
@@ -3293,7 +3293,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Button
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -3912,7 +3912,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Button
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -5447,14 +5447,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BoardController
   iconLibrary: {fileID: 0}
   levelData: {fileID: 0}
-  swapDuration: 0.12
-  fallDuration: 0.22
+  swapDuration: 0.05
+  fallDuration: 0.4
   clearDuration: 0.08
   spawnStartOffsetY: -3
   swapDurationMultiplier: 1
-  fallColumnStep: 0.015
-  fallDurationMultiplier: 1.3
-  fallVelocityCellsPerSecond: 40
+  fallColumnStep: 0
+  fallDurationMultiplier: 1.1
+  fallVelocityCellsPerSecond: 35
+  maxDiagonalSlidesPerCascade: 2
   swapMoveCurve:
     serializedVersion: 2
     m_Curve:
@@ -5505,14 +5506,14 @@ MonoBehaviour:
     m_RotationOrder: 4
   enableFallSettle: 1
   fallSettleDuration: 0.08
-  fallSettleStrength: 0.2
+  fallSettleStrength: 0.095
   fallSettleStretchX: 0.05
   fallSettleOvershoot: 0.01
   preClearDelay: 0.02
   shakeDuration: 0.02
   shakeStrength: 4
   shakeTarget: {fileID: 1939332386}
-  patchBotPulseComboSize: 4
+  patchBotPulseComboSize: 5
   patchBotPairGhostTuning:
     duration: 0.18
     startRadiusFactor: 0.16
@@ -5598,7 +5599,7 @@ MonoBehaviour:
   sfxTileFallVolume: 0.32
   sfxTileFallMinInterval: 0.18
   tileBreakFxPrefab: {fileID: 1851070113503770558, guid: cfef197805386a74f90977ba54da8af3, type: 3}
-  tileBreakFxLifetime: 0.15
+  tileBreakFxLifetime: 0.1
   obstacleHitFxPrefab: {fileID: 1851070113503770558, guid: 84c2cc22fd6664f148afccf4fe0599c3, type: 3}
   obstacleHitFxLifetime: 0.08
   obstacleBreakFxPrefab: {fileID: 1851070113503770558, guid: 84c2cc22fd6664f148afccf4fe0599c3, type: 3}
@@ -5608,8 +5609,12 @@ MonoBehaviour:
   verticalBoosterFxPrefab: {fileID: 7678512554813887660, guid: fa55f156c7113402e8e9465d0f144110, type: 3}
   boosterFxParent: {fileID: 415868972}
   hammerBoosterFallbackSprite: {fileID: 21300000, guid: e200b3928e79346e2ab4da678e139c53, type: 3}
+  patchBotPropellerSprite: {fileID: 21300000, guid: 8f96fc85558ef4d5a85280bded3e12e0, type: 3}
+  patchBotPropellerFlightSpeed: 1440
+  specialFillCell: 1
+  specialElevation: 0
   allowPostSwapSettleValidation: 1
-  enableTileSyncValidation: 1
+  enableTileSyncValidation: 0
   enableSpecialChainTrace: 0
   throwOnTileSyncMismatch: 0
   tilePositionEpsilon: 0.25
@@ -5653,8 +5658,8 @@ MonoBehaviour:
   debugFont: {fileID: 0}
   tileSize: 105
   contentOffset: {x: 8, y: -8}
-  borderThickness: 12
-  spriteCoreRatio: 0.8
+  borderThickness: 16
+  spriteCoreRatio: 0.1
   outsideGap: 2
   keepBorderOutsideGrid: 1
   includeObstaclesAsSolid: 1
@@ -6044,7 +6049,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Button
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -6599,7 +6604,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -150}
+  m_AnchoredPosition: {x: 0, y: -100}
   m_SizeDelta: {x: 600, y: 300}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1628117816
@@ -7054,7 +7059,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Button
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

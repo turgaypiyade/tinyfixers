@@ -69,6 +69,27 @@ public class SettingsPanel : MonoBehaviour
         if (savedConfirmationLabel != null) savedConfirmationLabel.SetActive(false);
     }
 
+    private void OnEnable()
+    {
+        GameSettings.OnMusicChanged        += OnSettingChanged;
+        GameSettings.OnSoundChanged        += OnSettingChanged;
+        GameSettings.OnVibrationChanged    += OnSettingChanged;
+        GameSettings.OnHintChanged         += OnSettingChanged;
+        GameSettings.OnNotificationChanged += OnSettingChanged;
+        SyncTogglesFromSettings();
+    }
+
+    private void OnDisable()
+    {
+        GameSettings.OnMusicChanged        -= OnSettingChanged;
+        GameSettings.OnSoundChanged        -= OnSettingChanged;
+        GameSettings.OnVibrationChanged    -= OnSettingChanged;
+        GameSettings.OnHintChanged         -= OnSettingChanged;
+        GameSettings.OnNotificationChanged -= OnSettingChanged;
+    }
+
+    private void OnSettingChanged(bool _) => SyncTogglesFromSettings();
+
     // ── Public API ───────────────────────────────────────────────────────────
 
     public void Open()

@@ -12,8 +12,8 @@ public class TileIconLibrary : ScriptableObject
     [Header("Special Tile Icons")]
     public Sprite lineH;
     public Sprite lineV;
-    public Sprite patchBot;
-    public Sprite patchBotFly;
+    public Sprite patchBotAlone;
+    public Sprite patchBotAll;
     public Sprite pulseCore;
 
     [Header("Override Icons (color-keyed)")]
@@ -34,7 +34,7 @@ public class TileIconLibrary : ScriptableObject
                 return lineV;
 
             case TileSpecial.PatchBot:
-                return patchBot;
+                return patchBotAlone;
 
             case TileSpecial.PulseCore:
                 return pulseCore;
@@ -62,14 +62,9 @@ public class TileIconLibrary : ScriptableObject
             default:              return overrideRed;
         }
     }
-    /// <summary>
-    /// PatchBot uçarken/dash yaparken kullanılan sprite.
-    /// Eski assetlerde patchBotFly boşsa patchBot'a fallback eder.
-    /// </summary>
-    public Sprite GetPatchBotFlightIcon()
-    {
-        return patchBotFly != null ? patchBotFly : patchBot;
-    }
+    public Sprite GetPatchBotFlightIcon() => patchBotAlone;
+
+    public Sprite GetPatchBotFullIcon() => patchBotAll != null ? patchBotAll : patchBotAlone;
     public Sprite Get(TileType type)
     {
         return type switch

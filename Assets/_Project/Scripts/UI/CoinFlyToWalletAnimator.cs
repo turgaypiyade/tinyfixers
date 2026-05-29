@@ -423,6 +423,7 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
 
     private void PlayOneShot(AudioClip clip)
     {
+        if (!GameSettings.SoundEnabled) return;
         if (audioSource != null && clip != null)
             audioSource.PlayOneShot(clip);
     }

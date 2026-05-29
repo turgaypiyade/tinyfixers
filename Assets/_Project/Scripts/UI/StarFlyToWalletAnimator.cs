@@ -513,6 +513,7 @@ public sealed class StarFlyToWalletAnimator : MonoBehaviour
 
     private void PlayOneShot(AudioClip clip)
     {
+        if (!GameSettings.SoundEnabled) return;
         if (audioSource != null && clip != null)
             audioSource.PlayOneShot(clip);
     }

@@ -314,6 +314,15 @@ public class BoardBreakFxService
             return;
         }
 
+        int validCount = 0;
+        Sprite firstValidSprite = null;
+        for (int s = 0; s < sprites.Count; s++)
+        {
+            if (sprites[s] == null) continue;
+            if (firstValidSprite == null) firstValidSprite = sprites[s];
+            validCount++;
+        }
+
         for (int i = 0; i < systems.Length; i++)
         {
             var ps = systems[i];
@@ -322,39 +331,64 @@ public class BoardBreakFxService
 
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
-            var textureSheet = ps.textureSheetAnimation;
-            textureSheet.enabled = true;
-            textureSheet.mode = ParticleSystemAnimationMode.Sprites;
-
-            for (int s = textureSheet.spriteCount - 1; s >= 0; s--)
-                textureSheet.RemoveSprite(s);
-
-            int added = 0;
-            Sprite firstSprite = null;
-
-            for (int s = 0; s < sprites.Count; s++)
+            if (validCount == 1 && firstValidSprite != null)
             {
-                Sprite sprite = sprites[s];
-                if (sprite == null)
-                    continue;
+                // Single sprite: bypass TextureSheet atlas creation and set material directly.
+                // TextureSheet Sprites mode creates an internal atlas requiring Read/Write-enabled
+                // textures; standalone sprites may fail silently. Direct material approach is robust.
+                var textureSheet = ps.textureSheetAnimation;
+                textureSheet.enabled = false;
+                ApplyDirectSpriteToMaterial(ps, firstValidSprite);
+            }
+            else if (validCount > 1)
+            {
+                var textureSheet = ps.textureSheetAnimation;
+                textureSheet.enabled = true;
+                textureSheet.mode = ParticleSystemAnimationMode.Sprites;
 
-                textureSheet.AddSprite(sprite);
+                for (int s = textureSheet.spriteCount - 1; s >= 0; s--)
+                    textureSheet.RemoveSprite(s);
 
-                if (firstSprite == null)
-                    firstSprite = sprite;
+                for (int s = 0; s < sprites.Count; s++)
+                {
+                    if (sprites[s] != null)
+                        textureSheet.AddSprite(sprites[s]);
+                }
 
-                added++;
+                ApplyParticleMainTexture(ps, firstValidSprite);
             }
 
-            ApplyParticleMainTexture(ps, firstSprite);
-
-            Debug.Log($"[ObstacleFX] PS={ps.gameObject.name} addedSprites={added} sheetCount={textureSheet.spriteCount} firstSprite={(firstSprite != null ? firstSprite.name : "null")} tex={(firstSprite?.texture != null ? firstSprite.texture.name : "null")}");
+            Debug.Log($"[ObstacleFX] PS={ps.gameObject.name} validSprites={validCount} sprite={(firstValidSprite != null ? firstValidSprite.name : "null")} tex={(firstValidSprite?.texture != null ? firstValidSprite.texture.name : "null")}");
 
             ps.Clear(true);
             ps.Play(true);
 
             Debug.Log($"[ObstacleFX] PS played={ps.isPlaying} particleCount={ps.particleCount}");
         }
+    }
+
+    private void ApplyDirectSpriteToMaterial(ParticleSystem ps, Sprite sprite)
+    {
+        if (ps == null || sprite == null || sprite.texture == null)
+            return;
+
+        var psr = ps.GetComponent<ParticleSystemRenderer>();
+        if (psr == null)
+            return;
+
+        var mat = new Material(psr.sharedMaterial);
+        mat.SetTexture(MainTexId, sprite.texture);
+
+        float texW = sprite.texture.width;
+        float texH = sprite.texture.height;
+        if (texW > 0f && texH > 0f)
+        {
+            Rect rect = sprite.textureRect;
+            mat.SetTextureOffset(MainTexId, new Vector2(rect.x / texW, rect.y / texH));
+            mat.SetTextureScale(MainTexId, new Vector2(rect.width / texW, rect.height / texH));
+        }
+
+        psr.material = mat;
     }
 
     private void ApplyParticleMainTexture(ParticleSystem ps, Sprite firstSprite)
@@ -366,7 +400,6 @@ public class BoardBreakFxService
         if (psr == null)
             return;
 
-        // psr.material creates an instance; safe to modify since GO is destroyed after lifetime
         var mat = psr.material;
         if (mat != null)
             mat.SetTexture(MainTexId, firstSprite.texture);

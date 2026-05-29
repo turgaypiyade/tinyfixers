@@ -133,6 +133,8 @@ MonoBehaviour:
   rocketRightSprite: {fileID: 21300000, guid: 46f02814f3895455ebb4d2c1088c8464, type: 3}
   splitLeftSprite: {fileID: 21300000, guid: a385e50e15a8945799410a3ec2cac8c6, type: 3}
   splitRightSprite: {fileID: 21300000, guid: 654acdd73b235433eb895a1f8b9f18cc, type: 3}
+  flameLeftSprite: {fileID: 0}
+  flameRightSprite: {fileID: 0}
   startDelay: 0.01
   splitTime: 0.02
   splitOffset: 40
@@ -158,6 +160,7 @@ MonoBehaviour:
   stepDuration: 0.045
   postDelay: 0.01
   hideOnComplete: 1
+  headFadeOutTime: 0.05
   axis: 0
 --- !u!1 &8507573183615892037
 GameObject:

@@ -16,10 +16,14 @@ public class FortuneWheelController : MonoBehaviour
     [Header("Free Spin Rewards")]
     [Tooltip("Ücretsiz spin için level bazlı ödül havuzu.")]
     [SerializeField] private LeveledWheelRewardConfig freeSpinConfig;
+    [Tooltip("freeSpinConfig resolve edilemezse kullanılacak direkt ödül havuzu.")]
+    [SerializeField] private DailySlotRewardConfig freeSpinDirectConfig;
 
     [Header("Paid Spin Rewards")]
     [Tooltip("Ücretli spin için level bazlı ödül havuzu. Boş bırakılırsa freeSpinConfig kullanılır.")]
     [SerializeField] private LeveledWheelRewardConfig paidSpinConfig;
+    [Tooltip("paidSpinConfig resolve edilemezse kullanılacak direkt ödül havuzu.")]
+    [SerializeField] private DailySlotRewardConfig paidSpinDirectConfig;
     [Tooltip("Ücretli spin maliyeti (altın).")]
     [SerializeField, Min(1)] private int paidSpinCost = 100;
 
@@ -41,8 +45,18 @@ public class FortuneWheelController : MonoBehaviour
     [Header("UI")]
     [SerializeField] private TMP_Text rewardNameText;
     [SerializeField] private Button spinButton;
-    [Tooltip("Spin butonundaki yazı (FREE SPIN / 100 🪙 vb.).")]
+    [Tooltip("Spin butonundaki yazı.")]
     [SerializeField] private TMP_Text spinButtonText;
+    [Tooltip("Free spin butonu yazısı.")]
+    [SerializeField] private string freeSpinLabel = "SPIN";
+    [Tooltip("Ücretli spin butonu sol yazısı (ikon ve miktar ayrıca gösterilir).")]
+    [SerializeField] private string paidSpinLabel = "Spin";
+    [Tooltip("Ücretli spin butonunda gösterilecek ikon (altın vb.).")]
+    [SerializeField] private Sprite paidSpinButtonIcon;
+    [Tooltip("Spin butonu üzerindeki ikon Image bileşeni.")]
+    [SerializeField] private Image spinButtonIconImage;
+    [Tooltip("İkonun sağındaki miktar texti (paid spin için paidSpinCost gösterir, free spin'de gizlenir).")]
+    [SerializeField] private TMP_Text spinButtonAmountText;
     [SerializeField] private Button claimButton;
     [Tooltip("Ücretsiz spin geri sayımı için label container.")]
     [SerializeField] private GameObject noSpinAvailableLabel;
@@ -102,6 +116,11 @@ public class FortuneWheelController : MonoBehaviour
         if (spinButton  != null) spinButton.onClick.AddListener(OnSpinClicked);
         if (claimButton != null) claimButton.onClick.AddListener(OnClaimClicked);
         if (panelRoot   != null) panelRoot.SetActive(false);
+
+        Debug.Log($"[FortuneWheel] Awake — " +
+                  $"freeSpinConfig={SafeName(freeSpinConfig)} " +
+                  $"freeDefaultConfig={SafeName(freeSpinConfig != null ? freeSpinConfig.defaultConfig : null)} " +
+                  $"freeDirectConfig={SafeName(freeSpinDirectConfig)}", this);
     }
 
     // ── Public API ───────────────────────────────────────────────────────────
@@ -178,19 +197,33 @@ public class FortuneWheelController : MonoBehaviour
 
     private void RefreshSpinButtonState()
     {
-        bool canFree  = HasAvailableSpin();
+        bool canFree   = HasAvailableSpin();
         bool canAfford = PlayerWallet.Coins >= paidSpinCost;
-
-        bool canSpin = canFree || canAfford;
 
         if (spinButton != null)
         {
             spinButton.gameObject.SetActive(true);
-            spinButton.interactable = canSpin;
+            spinButton.interactable = true; // always clickable; paid spin is always an option
         }
 
         if (spinButtonText != null)
-            spinButtonText.text = canFree ? "FREE SPIN" : $"{paidSpinCost} ⛏";
+            spinButtonText.text = canFree ? freeSpinLabel : paidSpinLabel;
+
+        bool showPaidExtras = !canFree;
+
+        if (spinButtonIconImage != null)
+        {
+            spinButtonIconImage.gameObject.SetActive(showPaidExtras && paidSpinButtonIcon != null);
+            if (showPaidExtras && paidSpinButtonIcon != null)
+                spinButtonIconImage.sprite = paidSpinButtonIcon;
+        }
+
+        if (spinButtonAmountText != null)
+        {
+            spinButtonAmountText.gameObject.SetActive(showPaidExtras);
+            if (showPaidExtras)
+                spinButtonAmountText.text = paidSpinCost.ToString();
+        }
 
         if (noSpinAvailableLabel != null) noSpinAvailableLabel.SetActive(!canFree);
         if (insufficientCoinsLabel != null) insufficientCoinsLabel.SetActive(!canFree && !canAfford);
@@ -202,8 +235,16 @@ public class FortuneWheelController : MonoBehaviour
     {
         if (innerWheel == null) return;
         var config = GetDisplayConfig();
-        Debug.Log($"[Wheel] PlaceIcons config={config?.name ?? "NULL"} free={freeSpinConfig?.name ?? "NULL"} paid={paidSpinConfig?.name ?? "NULL"}");
-        if (config == null) return;
+        Debug.Log($"[Wheel] PlaceIcons config={SafeName(config)} " +
+                  $"free={SafeName(freeSpinConfig)}(def={SafeName(freeSpinConfig != null ? freeSpinConfig.defaultConfig : null)})(direct={SafeName(freeSpinDirectConfig)}) " +
+                  $"paid={SafeName(paidSpinConfig)}(def={SafeName(paidSpinConfig != null ? paidSpinConfig.defaultConfig : null)})(direct={SafeName(paidSpinDirectConfig)})");
+        if (config == null)
+        {
+            Debug.LogWarning("[Wheel] PlaceIcons: config NULL — LeveledWheelRewardConfig içindeki defaultConfig atanmamış " +
+                             "veya DailySlotRewardConfig build'a dahil edilmemiş. " +
+                             "FortuneWheelController inspector'ında freeSpinDirectConfig / paidSpinDirectConfig'i ata.");
+            return;
+        }
 
         for (int i = innerWheel.childCount - 1; i >= 0; i--)
             Destroy(innerWheel.GetChild(i).gameObject);
@@ -285,12 +326,14 @@ public class FortuneWheelController : MonoBehaviour
 
             tmp.text = "+" + reward.amount.ToString();
             if (amountFont != null) tmp.font = amountFont;
-            tmp.enableWordWrapping = false;
+            tmp.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
             tmp.overflowMode = TextOverflowModes.Overflow;
         }
     }
 
     // ── Spin ─────────────────────────────────────────────────────────────────
+
+    private static string SafeName(UnityEngine.Object obj) => obj != null ? obj.name : "NULL";
 
     private void OnSpinClicked()
     {
@@ -300,7 +343,8 @@ public class FortuneWheelController : MonoBehaviour
 
         if (isFreeSpin)
         {
-            activeSpinConfig = ResolveConfig(freeSpinConfig);
+            activeSpinConfig = ResolveConfig(freeSpinConfig, freeSpinDirectConfig)
+                            ?? ResolveConfig(paidSpinConfig, paidSpinDirectConfig);
             PlayerPrefs.SetString(KeyLastSpinTime, DateTime.UtcNow.Ticks.ToString());
             PlayerPrefs.Save();
         }
@@ -311,7 +355,8 @@ public class FortuneWheelController : MonoBehaviour
                 RefreshSpinButtonState();
                 return;
             }
-            activeSpinConfig = ResolveConfig(paidSpinConfig) ?? ResolveConfig(freeSpinConfig);
+            activeSpinConfig = ResolveConfig(paidSpinConfig, paidSpinDirectConfig)
+                            ?? ResolveConfig(freeSpinConfig, freeSpinDirectConfig);
         }
 
         if (activeSpinConfig == null || activeSpinConfig.rewards.Count == 0) return;
@@ -342,7 +387,7 @@ public class FortuneWheelController : MonoBehaviour
                        + wheelSegmentOffset
                        + landingOffset;
 
-        if (sfxSource != null && spinSfx != null)
+        if (GameSettings.SoundEnabled && sfxSource != null && spinSfx != null)
         {
             sfxSource.clip  = spinSfx;
             sfxSource.loop  = true;
@@ -366,7 +411,7 @@ public class FortuneWheelController : MonoBehaviour
             if (seg != lastTickSeg)
             {
                 lastTickSeg = seg;
-                if (sfxSource != null && tickSfx != null) sfxSource.PlayOneShot(tickSfx);
+                if (GameSettings.SoundEnabled && sfxSource != null && tickSfx != null) sfxSource.PlayOneShot(tickSfx);
             }
             yield return null;
         }
@@ -374,7 +419,7 @@ public class FortuneWheelController : MonoBehaviour
         if (sfxSource != null) { sfxSource.Stop(); sfxSource.loop = false; sfxSource.pitch = 1f; }
         innerWheel.localEulerAngles = new Vector3(0f, 0f, -targetCW);
 
-        if (sfxSource != null && winSfx != null) sfxSource.PlayOneShot(winSfx);
+        if (GameSettings.SoundEnabled && sfxSource != null && winSfx != null) sfxSource.PlayOneShot(winSfx);
 
         yield return HighlightWinner();
         yield return PlayWinPunch();
@@ -412,14 +457,18 @@ public class FortuneWheelController : MonoBehaviour
     {
         bool canFree = HasAvailableSpin();
         return canFree
-            ? (ResolveConfig(freeSpinConfig) ?? ResolveConfig(paidSpinConfig))
-            : (ResolveConfig(paidSpinConfig) ?? ResolveConfig(freeSpinConfig));
+            ? (ResolveConfig(freeSpinConfig, freeSpinDirectConfig) ?? ResolveConfig(paidSpinConfig, paidSpinDirectConfig))
+            : (ResolveConfig(paidSpinConfig, paidSpinDirectConfig) ?? ResolveConfig(freeSpinConfig, freeSpinDirectConfig));
     }
 
-    private DailySlotRewardConfig ResolveConfig(LeveledWheelRewardConfig leveled)
+    private DailySlotRewardConfig ResolveConfig(LeveledWheelRewardConfig leveled, DailySlotRewardConfig direct = null)
     {
-        if (leveled == null) return null;
-        return leveled.GetForCurrentLevel() ?? leveled.defaultConfig;
+        if (leveled != null)
+        {
+            var resolved = leveled.GetForCurrentLevel() ?? leveled.defaultConfig;
+            if (resolved != null) return resolved;
+        }
+        return direct;
     }
 
     // ── Weighted Random ──────────────────────────────────────────────────────
@@ -593,6 +642,24 @@ public class FortuneWheelController : MonoBehaviour
     }
 
 #if UNITY_EDITOR
+    private void OnValidate()
+    {
+        ValidateSpinConfig("freeSpinConfig",  freeSpinConfig,  freeSpinDirectConfig);
+        ValidateSpinConfig("paidSpinConfig",  paidSpinConfig,  paidSpinDirectConfig);
+    }
+
+    private void ValidateSpinConfig(string label, LeveledWheelRewardConfig leveled, DailySlotRewardConfig direct)
+    {
+        bool leveledOk = leveled != null && leveled.defaultConfig != null;
+        bool directOk  = direct != null;
+        if (!leveledOk && !directOk)
+            Debug.LogWarning(
+                $"[FortuneWheel] {label} çözülemiyor! " +
+                $"LeveledConfig='{SafeName(leveled)}' defaultConfig={SafeName(leveled != null ? leveled.defaultConfig : null)}, " +
+                $"DirectConfig={SafeName(direct)}. " +
+                $"En az birini ata.", this);
+    }
+
     [ContextMenu("Test Open")]
     private void TestOpen() => Open();
 

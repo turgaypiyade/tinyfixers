@@ -13,6 +13,8 @@ public class TileView : MonoBehaviour,
     private const float IconReferenceTileSize = 100f;
 
     [SerializeField] private Image iconImage;
+    [SerializeField] private PatchBotPropellerView propellerView;
+    [SerializeField] private OverrideSpecialView overrideSpecialView;
     private TileModel model;
 
     public int X { get; private set; }
@@ -63,6 +65,8 @@ public class TileView : MonoBehaviour,
 
     public RectTransform RectTransform => rt != null ? rt : (RectTransform)transform;
     public Image IconImage => iconImage;
+    public PatchBotPropellerView PropellerView => propellerView;
+    public OverrideSpecialView OverrideSpecialView => overrideSpecialView;
 
     public bool IsPlannedToMoveThisFallPass { get; private set; }
 
@@ -170,6 +174,9 @@ public class TileView : MonoBehaviour,
             iconImage.transform.localRotation = Quaternion.identity;
         }
 
+        propellerView?.Stop();
+        overrideSpecialView?.Stop();
+
         if (lastAppliedTileSize > 0)
             ApplyTileSize(lastAppliedTileSize);
     }
@@ -216,6 +223,9 @@ public class TileView : MonoBehaviour,
         {
             SetIcon(board.GetIcon(model.type));
         }
+
+        if (propellerView != null)
+            propellerView.gameObject.SetActive(model.special == TileSpecial.PatchBot);
     }
 
     public void SnapToGrid(int tileSize)
@@ -801,6 +811,12 @@ public class TileView : MonoBehaviour,
         StopSpecialCreationReveal();
 
         specialCreationRevealRoutine = StartCoroutine(CoSpecialCreationRevealSimple(special, tileSize));
+
+        if (special == TileSpecial.PatchBot)
+            propellerView?.PlayCreationAnimation();
+
+        if (special == TileSpecial.SystemOverride)
+            overrideSpecialView?.PlayCreation();
     }
 
     private void StopSpecialCreationReveal()
@@ -1470,7 +1486,42 @@ public class TileView : MonoBehaviour,
         }
 
         if (isSpecial)
+        {
             irt.localScale = Vector3.one;
+
+            if (board != null)
+            {
+                if (board.SpecialFillCell)
+                {
+                    irt.sizeDelta = new Vector2(tileSize, tileSize);
+                    iconImage.preserveAspect = true;
+                }
+
+                // Always apply anchoredPosition so elevation (including negative = shift down)
+                // overrides any stale offset. With elevation=0 this is a no-op vs Vector2.zero.
+                irt.anchoredPosition = new Vector2(0f, tileSize * board.SpecialElevation);
+            }
+        }
+
+        if (propellerView != null)
+        {
+            var prt = (RectTransform)propellerView.transform;
+            prt.anchorMin        = irt.anchorMin;
+            prt.anchorMax        = irt.anchorMax;
+            prt.pivot            = irt.pivot;
+            prt.sizeDelta        = irt.sizeDelta;
+            prt.anchoredPosition = irt.anchoredPosition;
+        }
+
+        if (overrideSpecialView != null)
+        {
+            var ort = (RectTransform)overrideSpecialView.transform;
+            ort.anchorMin        = irt.anchorMin;
+            ort.anchorMax        = irt.anchorMax;
+            ort.pivot            = irt.pivot;
+            ort.sizeDelta        = irt.sizeDelta;
+            ort.anchoredPosition = irt.anchoredPosition;
+        }
     }
 
     public void SetCoveredByCellOverlay(bool covered)

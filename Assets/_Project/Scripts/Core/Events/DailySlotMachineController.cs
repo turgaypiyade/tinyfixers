@@ -150,7 +150,7 @@ public class DailySlotMachineController : MonoBehaviour
         if (spinButton != null) spinButton.interactable = false;
         if (rewardNameText != null) rewardNameText.text = "";
 
-        if (sfxSource != null && spinSfx != null) sfxSource.PlayOneShot(spinSfx);
+        if (GameSettings.SoundEnabled && sfxSource != null && spinSfx != null) sfxSource.PlayOneShot(spinSfx);
 
         float elapsed = 0f;
         int iconCount = rewardConfig.rewards.Count;
@@ -182,7 +182,7 @@ public class DailySlotMachineController : MonoBehaviour
             reelIconImage.sprite = selectedReward.icon;
 
         // Win SFX
-        if (sfxSource != null && winSfx != null) sfxSource.PlayOneShot(winSfx);
+        if (GameSettings.SoundEnabled && sfxSource != null && winSfx != null) sfxSource.PlayOneShot(winSfx);
 
         // Ödül adı
         if (rewardNameText != null)

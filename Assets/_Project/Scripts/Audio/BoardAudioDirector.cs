@@ -85,6 +85,9 @@ public class BoardAudioDirector : MonoBehaviour
 
     private void PlayNow(BoardSfxRequest request)
     {
+        if (!GameSettings.SoundEnabled)
+            return;
+
         if (profile == null)
             return;
 

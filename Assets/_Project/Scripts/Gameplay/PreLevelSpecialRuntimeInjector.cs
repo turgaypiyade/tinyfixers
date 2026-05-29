@@ -32,8 +32,14 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
             DontDestroyOnLoad(go);
             existing = go.AddComponent<PreLevelSpecialRuntimeInjector>();
         }
+        else
+        {
+            // Ensure existing GO survives the scene change regardless of where it lives.
+            DontDestroyOnLoad(existing.gameObject);
+        }
 
         existing.Initialize(selected);
+        Debug.Log($"[PreLevelSpecialRuntimeInjector] EnsureForSelection count={selected.Count}");
         return existing;
     }
 
@@ -300,7 +306,7 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         if (audioSource != null)
         {
             AudioClip clip = placeSfx != null ? placeSfx : audioSource.clip;
-            if (clip != null)
+            if (clip != null && GameSettings.SoundEnabled)
                 audioSource.PlayOneShot(clip, placeSfxVolume);
 
             return;

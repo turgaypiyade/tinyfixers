@@ -135,9 +135,10 @@ public class BoardInitService
         if (unlockedCells.Count < 2)
             return false;
 
-        TileType[,] fallbackCandidate = null;
+        TileType[,] fallbackCandidate = null;     // no immediate match, no playable move yet
+        TileType[,] lastResortCandidate = null;  // has immediate match — absolute last resort
 
-        const int maxAttempts = 96;
+        const int maxAttempts = 200;
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
             var candidate = CloneTypes(currentTypes);
@@ -150,7 +151,10 @@ public class BoardInitService
             }
 
             if (HasImmediateMatch(candidate, lockedMask))
+            {
+                lastResortCandidate ??= candidate;
                 continue;
+            }
 
             if (HasAnyPlayableMove(candidate, lockedMask))
             {
@@ -161,10 +165,19 @@ public class BoardInitService
             fallbackCandidate ??= candidate;
         }
 
-        if (fallbackCandidate != null &&
-            TryInjectPlayableMove(fallbackCandidate, lockedMask, randomPool))
+        // Try to inject a playable move into the best clean candidate.
+        var injectTarget = fallbackCandidate ?? lastResortCandidate;
+        if (injectTarget != null &&
+            TryInjectPlayableMove(injectTarget, lockedMask, randomPool))
         {
-            resultTypes = fallbackCandidate;
+            resultTypes = injectTarget;
+            return true;
+        }
+
+        // Accept any shuffled arrangement rather than leaving board unchanged.
+        if (injectTarget != null)
+        {
+            resultTypes = injectTarget;
             return true;
         }
 

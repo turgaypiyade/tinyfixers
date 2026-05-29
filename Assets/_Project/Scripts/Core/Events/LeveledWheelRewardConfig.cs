@@ -34,14 +34,27 @@ public class LeveledWheelRewardConfig : ScriptableObject
         return GetForLevel(level);
     }
 
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        bool hasAnyConfig = defaultConfig != null
+            || (levelOverrides != null && levelOverrides.Exists(e => e.config != null));
+        if (!hasAnyConfig)
+            Debug.LogWarning($"[LeveledWheelRewardConfig] '{name}': defaultConfig atanmamış ve hiçbir levelOverride'da config yok!", this);
+        else if (defaultConfig == null)
+            Debug.LogWarning($"[LeveledWheelRewardConfig] '{name}': defaultConfig boş — level eşiği tutmazsa fallback çalışmaz.", this);
+    }
+#endif
+
     public DailySlotRewardConfig GetForLevel(int level)
     {
-        DailySlotRewardConfig result = defaultConfig;
+        // Unity's == handles destroyed objects; C#'s ?. and ?? do NOT — always use ternary here.
+        DailySlotRewardConfig result = defaultConfig != null ? defaultConfig : null;
         foreach (var entry in levelOverrides)
         {
             if (entry.config != null && level >= entry.fromLevel)
                 result = entry.config;
         }
-        return result != null ? result : defaultConfig;
+        return result != null ? result : null;
     }
 }

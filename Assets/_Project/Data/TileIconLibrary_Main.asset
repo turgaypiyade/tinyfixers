@@ -16,12 +16,12 @@ MonoBehaviour:
   core: {fileID: 21300000, guid: 83b04579e3dfd4bb1b547c6aad5b16ca, type: 3}
   bolt: {fileID: 21300000, guid: c8d7818a89f1d4c1394e308a47e40fde, type: 3}
   plate: {fileID: 21300000, guid: b823e6e3acff34eb1a8f1c557fe1ae85, type: 3}
-  lineH: {fileID: 21300000, guid: c6ee696fcdadd4109954ea8a6a815238, type: 3}
-  lineV: {fileID: 21300000, guid: e18cab110372a4fe18e1d8bbd3bd5083, type: 3}
-  patchBot: {fileID: 21300000, guid: 43100f132650f431d8220fe3bd41a631, type: 3}
-  patchBotFly: {fileID: 21300000, guid: de4bf6a45b0894cc2aecc5726e9e8fce, type: 3}
-  pulseCore: {fileID: 21300000, guid: aeaf2c89ef70045589b271ee4008b1ce, type: 3}
-  overrideRed: {fileID: 21300000, guid: 40431c64b3fc44e9fa09dc2b89901c9d, type: 3}
-  overrideYellow: {fileID: 21300000, guid: 40431c64b3fc44e9fa09dc2b89901c9d, type: 3}
-  overrideBlue: {fileID: 21300000, guid: 40431c64b3fc44e9fa09dc2b89901c9d, type: 3}
-  overrideGreen: {fileID: 21300000, guid: 40431c64b3fc44e9fa09dc2b89901c9d, type: 3}
+  lineH: {fileID: 21300000, guid: 75f7e723afb19424ca2ecdcec91ac5fd, type: 3}
+  lineV: {fileID: 21300000, guid: a9241c3bca9a04021b799ae4da6ffc1d, type: 3}
+  patchBotAlone: {fileID: 21300000, guid: 3e6f5f85094c34b92a1a16c49a783c8f, type: 3}
+  patchBotAll: {fileID: 21300000, guid: 895fe6275a0364dfdb05072df5415d47, type: 3}
+  pulseCore: {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
+  overrideRed: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+  overrideYellow: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+  overrideBlue: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+  overrideGreen: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}

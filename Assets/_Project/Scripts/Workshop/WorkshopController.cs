@@ -363,7 +363,7 @@ public class WorkshopController : MonoBehaviour
         SpawnVfx(confettiPrefab, nextStage.vfxFocusNormalized);
 
         // 7. SFX
-        if (nextStage.sfxOnComplete != null && sfxSource != null)
+        if (GameSettings.SoundEnabled && nextStage.sfxOnComplete != null && sfxSource != null)
             sfxSource.PlayOneShot(nextStage.sfxOnComplete);
 
         // 8. Görseli currentImage'a sabitle (sonraki transition için)

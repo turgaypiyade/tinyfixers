@@ -62,7 +62,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
             overlayRoot = board.ContentRoot != null ? board.ContentRoot : board.Parent;
     }
 
-    public void PlayHit(int originIndex, CollectibleId collectibleId, int remainingEnergy, bool goalAccepted)
+    public void PlayHit(int originIndex, CollectibleId collectibleId, int remainingEnergy, bool goalAccepted, System.Action onOrbArrived = null)
     {
         if (originIndex < 0 || board == null)
             return;
@@ -71,7 +71,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
         hitVisualCounters[originIndex] = hitIndex + 1;
 
         float delay = hitIndex * Mathf.Max(0f, orbStagger);
-        StartCoroutine(CoPlayReleaseSequence(originIndex, collectibleId, remainingEnergy, goalAccepted, delay));
+        StartCoroutine(CoPlayReleaseSequence(originIndex, collectibleId, remainingEnergy, goalAccepted, delay, onOrbArrived));
     }
 
     public void SetExhausted(int originIndex, Sprite overrideExhaustedSprite)
@@ -87,7 +87,8 @@ public sealed class EnergyContainerFx : MonoBehaviour
         CollectibleId collectibleId,
         int remainingEnergy,
         bool goalAccepted,
-        float delay)
+        float delay,
+        System.Action onOrbArrived = null)
     {
         IncrementActiveSequence(originIndex);
 
@@ -136,7 +137,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
             yield return new WaitForSeconds(fullOpenHold);
 
         if (goalAccepted)
-            StartCoroutine(CoFlyOrb(originIndex, collectibleId, 0f));
+            StartCoroutine(CoFlyOrb(originIndex, collectibleId, 0f, onOrbArrived));
 
         if (closeDelay > 0f)
             yield return new WaitForSeconds(closeDelay);
@@ -216,76 +217,86 @@ public sealed class EnergyContainerFx : MonoBehaviour
         image.color = c;
     }
 
-    private IEnumerator CoFlyOrb(int originIndex, CollectibleId collectibleId, float delay)
+    private IEnumerator CoFlyOrb(int originIndex, CollectibleId collectibleId, float delay, System.Action onArrived = null)
     {
-        if (delay > 0f)
-            yield return new WaitForSeconds(delay);
-
-        if (board == null)
-            yield break;
-
-        var hud = FindFirstObjectByType<TopHudController>();
-        if (hud == null || !hud.TryGetGoalTargetRectForCollectible(collectibleId, out var targetSlot) || targetSlot == null)
-            yield break;
-
-        RectTransform root = ResolveOrbFlyRoot(targetSlot);
-        if (root == null)
-            yield break;
-
-        Vector2 start = GetOriginCenterIn(root, originIndex);
-        Vector2 end = WorldToLocalIn(root, targetSlot);
-
-        var go = new GameObject("EnergyOrbFlyGhost", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
-        var rt = (RectTransform)go.transform;
-        rt.SetParent(root, false);
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.sizeDelta = orbSize;
-        rt.localScale = Vector3.one;
-        rt.localRotation = Quaternion.identity;
-        rt.anchoredPosition = start;
-        rt.SetAsLastSibling();
-
-        var image = go.GetComponent<Image>();
-        image.sprite = energyOrbSprite;
-        image.raycastTarget = false;
-        image.preserveAspect = true;
-        if (energyOrbSprite == null)
-            image.color = new Color(0.35f, 0.9f, 1f, 1f);
-
-        var cg = go.GetComponent<CanvasGroup>();
-        cg.alpha = 1f;
-
-        if (logDebug)
+        // onArrived, orb görsel olarak hedefe varınca çağrılır.
+        // Erken çıkış (board null, hud null vb.) durumunda da mutlaka çağrılmalı
+        // ki hedef sayacı her koşulda güncellenmis olsun.
+        try
         {
-            Debug.Log(
-                $"[EnergyContainerFx] FlyOrb root={root.name} start={start} end={end} " +
-                $"sprite={(energyOrbSprite != null ? energyOrbSprite.name : "null")}");
-        }
+            if (delay > 0f)
+                yield return new WaitForSeconds(delay);
 
-        Vector2 mid = (start + end) * 0.5f;
-        float dir = end.x >= start.x ? 1f : -1f;
-        Vector2 control = mid + new Vector2(80f * dir, arcHeight);
-
-        float duration = Mathf.Max(0.08f, flyDuration);
-        float t = 0f;
-        while (t < duration)
-        {
-            if (rt == null)
+            if (board == null)
                 yield break;
 
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / duration);
-            float e = EaseInOut(k);
-            rt.anchoredPosition = Bezier2(start, control, end, e);
-            float s = Mathf.Lerp(1.15f, 0.25f, k * k);
-            rt.localScale = new Vector3(s, s, 1f);
-            cg.alpha = k < 0.82f ? 1f : 1f - Mathf.InverseLerp(0.82f, 1f, k);
-            yield return null;
-        }
+            var hud = FindFirstObjectByType<TopHudController>();
+            if (hud == null || !hud.TryGetGoalTargetRectForCollectible(collectibleId, out var targetSlot) || targetSlot == null)
+                yield break;
 
-        if (go != null)
-            Destroy(go);
+            RectTransform root = ResolveOrbFlyRoot(targetSlot);
+            if (root == null)
+                yield break;
+
+            Vector2 start = GetOriginCenterIn(root, originIndex);
+            Vector2 end = WorldToLocalIn(root, targetSlot);
+
+            var go = new GameObject("EnergyOrbFlyGhost", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(root, false);
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = orbSize;
+            rt.localScale = Vector3.one;
+            rt.localRotation = Quaternion.identity;
+            rt.anchoredPosition = start;
+            rt.SetAsLastSibling();
+
+            var image = go.GetComponent<Image>();
+            image.sprite = energyOrbSprite;
+            image.raycastTarget = false;
+            image.preserveAspect = true;
+            if (energyOrbSprite == null)
+                image.color = new Color(0.35f, 0.9f, 1f, 1f);
+
+            var cg = go.GetComponent<CanvasGroup>();
+            cg.alpha = 1f;
+
+            if (logDebug)
+            {
+                Debug.Log(
+                    $"[EnergyContainerFx] FlyOrb root={root.name} start={start} end={end} " +
+                    $"sprite={(energyOrbSprite != null ? energyOrbSprite.name : "null")}");
+            }
+
+            Vector2 mid = (start + end) * 0.5f;
+            float dir = end.x >= start.x ? 1f : -1f;
+            Vector2 control = mid + new Vector2(80f * dir, arcHeight);
+
+            float duration = Mathf.Max(0.08f, flyDuration);
+            float t = 0f;
+            while (t < duration)
+            {
+                if (rt == null)
+                    break;
+
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / duration);
+                float e = EaseInOut(k);
+                rt.anchoredPosition = Bezier2(start, control, end, e);
+                float s = Mathf.Lerp(1.15f, 0.25f, k * k);
+                rt.localScale = new Vector3(s, s, 1f);
+                cg.alpha = k < 0.82f ? 1f : 1f - Mathf.InverseLerp(0.82f, 1f, k);
+                yield return null;
+            }
+
+            if (go != null)
+                Destroy(go);
+        }
+        finally
+        {
+            onArrived?.Invoke();
+        }
     }
 
     private RectTransform ResolveOrbFlyRoot(RectTransform targetSlot)

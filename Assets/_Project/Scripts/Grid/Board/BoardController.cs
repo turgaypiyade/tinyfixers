@@ -29,6 +29,8 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float fallDurationMultiplier = 1f;
     [Tooltip("Cell/second cinsinden tek gerçek düşüş hızı. Dikey ve diyagonal tüm fall/slide süreleri bundan türetilir.")]
     [SerializeField] private float fallVelocityCellsPerSecond = 30f;
+    [Tooltip("Bir cascade simülasyonunda her tile'ın kaç kez diyagonal kayma yapabileceği. 1=klasik (daha fazla cascade round), 2-3=daha akıcı akış.")]
+    [SerializeField, Range(1, 4)] private int maxDiagonalSlidesPerCascade = 2;
     [SerializeField] private AnimationCurve swapMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve fallMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
@@ -42,6 +44,7 @@ public class BoardController : MonoBehaviour
     [Tooltip("Çarpma anında hedefin altına inme oranı (hücre boyuna göre). 0.12 = hücre yüksekliğinin %12'si kadar aşağı taşar.")]
     [SerializeField, Range(0f, 0.4f)] private float fallSettleOvershoot = 0.12f;
     internal float FallColumnStep => Mathf.Max(0f, fallColumnStep);
+    internal int MaxDiagonalSlidesPerCascade => Mathf.Max(1, maxDiagonalSlidesPerCascade);
 
     [Header("Juice (Only 4+ / Power)")]
     [SerializeField] private float preClearDelay = 0.06f;
@@ -109,12 +112,23 @@ public class BoardController : MonoBehaviour
     [SerializeField] private RectTransform verticalBoosterFxPrefab;
     [SerializeField] private RectTransform boosterFxParent;
     [SerializeField] private Sprite hammerBoosterFallbackSprite;
+    [SerializeField] private Sprite patchBotPropellerSprite;
+    [SerializeField] private float patchBotPropellerFlightSpeed = 1440f;
 
     internal RectTransform HammerBoosterFxPrefab => hammerBoosterFxPrefab;
     internal RectTransform CannonBoosterFxPrefab => cannonBoosterFxPrefab;
     internal RectTransform VerticalBoosterFxPrefab => verticalBoosterFxPrefab;
     internal RectTransform BoosterFxParent => boosterFxParent != null ? boosterFxParent : parent;
     internal Sprite HammerBoosterFallbackSprite => hammerBoosterFallbackSprite;
+    internal Sprite PatchBotPropellerSprite => patchBotPropellerSprite;
+    internal float PatchBotPropellerFlightSpeed => patchBotPropellerFlightSpeed;
+
+    [Header("Special Tile Visual")]
+    [SerializeField] private bool specialFillCell = false;
+    [SerializeField, Range(-0.4f, 0.4f)] private float specialElevation = 0f;
+
+    internal bool SpecialFillCell => specialFillCell;
+    internal float SpecialElevation => specialElevation;
 
     [SerializeField] private bool allowPostSwapSettleValidation = true;
 
@@ -159,6 +173,9 @@ public class BoardController : MonoBehaviour
             audioDirector.ScheduleFallBatch(tileCount, maxDist, CurrentResolvePass);
             return;
         }
+
+        if (!GameSettings.SoundEnabled)
+            return;
 
         if (sfxSource == null || sfxTileFall == null)
             return;
@@ -886,10 +903,8 @@ public class BoardController : MonoBehaviour
     public Sprite GetIcon(TileType type) => iconLibrary != null ? iconLibrary.Get(type) : null;
     public Sprite GetSpecialIcon(TileSpecial special) => iconLibrary != null ? iconLibrary.GetSpecialIcon(special) : null;
     public Sprite GetOverrideIcon(TileType baseType) => iconLibrary != null ? iconLibrary.GetOverrideIcon(baseType) : null;
-    public Sprite GetPatchBotFlightIcon()
-    {
-        return iconLibrary != null ? iconLibrary.GetPatchBotFlightIcon() : null;
-    }
+    public Sprite GetPatchBotFlightIcon() => iconLibrary != null ? iconLibrary.GetPatchBotFlightIcon() : null;
+    public Sprite GetPatchBotFullIcon()   => iconLibrary != null ? iconLibrary.GetPatchBotFullIcon()   : null;
     public void RegisterTile(TileView tile, int x, int y)
     {
         if (x < 0 || x >= width || y < 0 || y >= height) return;
@@ -1811,8 +1826,9 @@ public class BoardController : MonoBehaviour
             }
 
             // Hamle kalmadıysa cascade settle beklendi; yeni match aramaya gerek yok.
-            // Board idle olur, popup hemen açılır.
-            if (RemainingMoves <= 0)
+            // Ama uçan animasyonlar (PatchBot, EnergyBall) bitmeden çıkılmaz —
+            // aksi hâlde hedef sayısı güncellenip popup açılmadan önce board idle olur.
+            if (RemainingMoves <= 0 && ActiveBackgroundJobs == 0 && !actionSequencer.IsPlaying)
                 yield break;
 
             var matches = matchFinder.FindAllMatches();

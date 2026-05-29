@@ -20,7 +20,7 @@ public class SpecialResolver
     private readonly LineVHPulseCoreCombo lineVHPulseCoreCombo = new();
     private readonly LineHPatchBotCombo lineHPatchBotCombo = new();
     private readonly LineVPatchBotCombo lineVPatchBotCombo = new();
-    private readonly PulseCorePatchBotCombo pulseCorePatchBotCombo = new();
+    private readonly PulseCorePatchBotCombo pulseCorePatchBotCombo = new(25);
     private readonly OverrideSpecial overrideSpecial = new();
     private readonly PatchBotCombo patchBotCombo = new();
     private readonly OverrideSpecializedCombo overrideSpecializedCombo = new();

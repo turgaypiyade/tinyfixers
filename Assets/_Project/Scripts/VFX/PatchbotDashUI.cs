@@ -144,6 +144,29 @@ public class PatchbotDashUI : MonoBehaviour
         }
         rt.sizeDelta = size;
 
+        var propellerSprite = board.PatchBotPropellerSprite;
+        if (propellerSprite != null)
+        {
+            var propGo = new GameObject("PatchBotPropeller",
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(PatchBotPropellerView));
+            propGo.transform.SetParent(rt, false);
+
+            var propRt = propGo.GetComponent<RectTransform>();
+            propRt.anchorMin = new Vector2(0.5f, 0.5f);
+            propRt.anchorMax = new Vector2(0.5f, 0.5f);
+            propRt.pivot     = new Vector2(0.5f, 0.5f);
+            propRt.sizeDelta = size;
+            propRt.anchoredPosition = Vector2.zero;
+
+            var propImg = propGo.GetComponent<Image>();
+            propImg.sprite = propellerSprite;
+            propImg.preserveAspect = true;
+            propImg.raycastTarget = false;
+            propImg.color = Color.white;
+
+            propGo.GetComponent<PatchBotPropellerView>().StartActivationSpin(board.PatchBotPropellerFlightSpeed);
+        }
+
         RectTransform carryRt = null;
         Image carryImg = null;
 

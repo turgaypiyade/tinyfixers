@@ -66,7 +66,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: de4bf6a45b0894cc2aecc5726e9e8fce, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 3e6f5f85094c34b92a1a16c49a783c8f, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -111,7 +111,6 @@ MonoBehaviour:
   spawnEvery: 0.04
   afterLife: 0.1
   afterColor: {r: 0.65, g: 0.9, b: 1, a: 0.8509804}
-  runnerSpinSpeed: 540
   carryOrbitSpeed: 720
   carrySizeFactor: 0.72
   carryOrbitRadiusFactor: 0.32

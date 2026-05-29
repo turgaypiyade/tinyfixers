@@ -32,7 +32,7 @@ public sealed class PulsePulseCombo
 {
     private readonly int radius;
 
-    public PulsePulseCombo(int radius = 2)
+    public PulsePulseCombo(int radius = 4)
     {
         this.radius = Mathf.Max(1, radius);
     }

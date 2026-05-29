@@ -24,7 +24,7 @@ public sealed class EnergyContainerService : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool logHits;
 
-    private readonly Dictionary<int, int> releasedByOrigin = new();
+    private int totalGroupReleased;
     private readonly Dictionary<int, int> lastProcessedRemainingHitsByOrigin = new();
 
     public int EnergyPerContainer => ResolveEnergyPerContainer();
@@ -106,6 +106,9 @@ public sealed class EnergyContainerService : MonoBehaviour
             yield return null;
         }
 
+        totalGroupReleased = 0;
+        lastProcessedRemainingHitsByOrigin.Clear();
+
         board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
         board.ObstacleVisualChanged += HandleObstacleVisualChanged;
 
@@ -161,41 +164,69 @@ public sealed class EnergyContainerService : MonoBehaviour
         ResolveReferences();
 
         int capacity = EnergyPerContainer;
-        int released = releasedByOrigin.TryGetValue(origin, out int current) ? current : 0;
-        if (released >= capacity)
+
+        if (totalGroupReleased >= capacity)
         {
             energyFx?.SetExhausted(origin, sprite);
             return;
         }
 
-        released++;
-        releasedByOrigin[origin] = released;
-
-        int remainingEnergy = Mathf.Max(0, capacity - released);
+        totalGroupReleased++;
+        int remainingEnergy = Mathf.Max(0, capacity - totalGroupReleased);
+        bool isGroupExhausted = totalGroupReleased >= capacity;
 
         if (topHud == null)
             topHud = FindFirstObjectByType<TopHudController>();
 
         CollectibleId collectible = ResolveCollectibleId();
-        bool goalAccepted = collectible != CollectibleId.None
-                            && topHud != null
-                            && topHud.NotifyCollectibleCollected(collectible, 1);
+
+        // Orb animasyonu hedefe VARDIĞINDA sayacı güncelle — anlık güncelleme görsel tutarsızlığa yol açıyor.
+        bool goalExists = collectible != CollectibleId.None
+                          && topHud != null
+                          && topHud.HasGoalForCollectible(collectible);
+
+        System.Action onOrbArrived = goalExists
+            ? () => topHud.NotifyCollectibleCollected(collectible, 1)
+            : null;
 
         if (logHits)
         {
             Debug.Log(
                 $"[EnergyContainer] source={source} origin={origin} " +
-                $"remainingHits={remainingHits} released={released}/{capacity} " +
-                $"remainingEnergy={remainingEnergy} goalAccepted={goalAccepted} " +
-                $"collectible={collectible} " +
+                $"remainingHits={remainingHits} totalReleased={totalGroupReleased}/{capacity} " +
+                $"remainingEnergy={remainingEnergy} goalExists={goalExists} " +
+                $"collectible={collectible} groupExhausted={isGroupExhausted} " +
                 $"hasFx={energyFx != null} hasHud={topHud != null}");
         }
 
-        energyFx?.PlayHit(origin, collectible, remainingEnergy, goalAccepted);
+        if (energyFx != null)
+            energyFx.PlayHit(origin, collectible, remainingEnergy, goalExists, onOrbArrived);
+        else
+            onOrbArrived?.Invoke();
+
+        if (isGroupExhausted)
+            ExhaustAllContainers();
     }
 
-    public bool IsExhausted(int originIndex)
+    private void ExhaustAllContainers()
     {
-        return releasedByOrigin.TryGetValue(originIndex, out int released) && released >= EnergyPerContainer;
+        if (board == null || board.ObstacleStateService == null)
+            return;
+
+        LevelData level = ResolveActiveLevelData();
+        if (level?.obstacles != null && level.obstacleOrigins != null)
+        {
+            int size = Mathf.Min(level.obstacles.Length, level.obstacleOrigins.Length);
+            for (int i = 0; i < size; i++)
+            {
+                if ((ObstacleId)level.obstacles[i] != ObstacleId.EnergyContainer) continue;
+                if (level.obstacleOrigins[i] != i) continue;
+                energyFx?.SetExhausted(i, null);
+            }
+        }
+
+        board.ObstacleStateService.ForceRemoveAllEnergyContainers();
     }
+
+    public bool IsExhausted(int originIndex) => totalGroupReleased >= EnergyPerContainer;
 }

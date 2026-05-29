@@ -128,7 +128,32 @@ public class PatchBotTargetCoordinator
         HashSet<TileView> excluded,
         params TileView[] additionalExcluded)
     {
-        var pick = FindTargetWithReservations(patchBotTile, partnerTile, excluded, additionalExcluded);
+        Vector2Int fromCell = patchBotTile != null
+            ? new Vector2Int(patchBotTile.X, patchBotTile.Y)
+            : new Vector2Int(-1, -1);
+        return PickIntentCore(patchBotTile, partnerTile, excluded, additionalExcluded, fromCell);
+    }
+
+    /// <summary>
+    /// Kaynak hücresi bilinen ama tile'ı temizlenmiş botlar için (phantom, resolve sonrası).
+    /// </summary>
+    public (PatchBotIntent intent, bool hasIntent) PickIntentFrom(
+        Vector2Int fromCell,
+        TileView patchBotTile = null,
+        TileView partnerTile = null,
+        HashSet<TileView> excluded = null)
+    {
+        return PickIntentCore(patchBotTile, partnerTile, excluded, null, fromCell);
+    }
+
+    private (PatchBotIntent intent, bool hasIntent) PickIntentCore(
+        TileView patchBotTile,
+        TileView partnerTile,
+        HashSet<TileView> excluded,
+        TileView[] additionalExcluded,
+        Vector2Int fromCell)
+    {
+        var pick = FindTargetWithReservations(patchBotTile, partnerTile, excluded, additionalExcluded, fromCell);
         if (!pick.hasCell)
             return (null, false);
 
@@ -192,6 +217,40 @@ public class PatchBotTargetCoordinator
             ReleaseIntent(intent);
 
         var (newIntent, hasNew) = PickIntent(patchBotTile, partnerTile, excluded, additionalExcluded);
+        if (!hasNew)
+            return (new Vector2Int(-1, -1), null, false);
+
+        var cell = newIntent.CurrentCell(board);
+        if (cell.x < 0)
+        {
+            ReleaseIntent(newIntent);
+            return (new Vector2Int(-1, -1), null, false);
+        }
+
+        return (cell, newIntent, true);
+    }
+
+    /// <summary>
+    /// Kaynak hücresi bilinen ama tile'ı temizlenmiş botlar için (phantom, ResolveAllDiveTargets).
+    /// </summary>
+    public (Vector2Int cell, PatchBotIntent intent, bool hasCell) ResolveIntentFrom(
+        PatchBotIntent intent,
+        Vector2Int fromCell,
+        TileView patchBotTile = null,
+        TileView partnerTile = null,
+        HashSet<TileView> excluded = null)
+    {
+        if (intent != null && intent.IsAlive(board))
+        {
+            var current = intent.CurrentCell(board);
+            if (current.x >= 0)
+                return (current, intent, true);
+        }
+
+        if (intent != null)
+            ReleaseIntent(intent);
+
+        var (newIntent, hasNew) = PickIntentFrom(fromCell, patchBotTile, partnerTile, excluded);
         if (!hasNew)
             return (new Vector2Int(-1, -1), null, false);
 
@@ -309,11 +368,78 @@ public class PatchBotTargetCoordinator
 
     private readonly List<TopHudController.ActiveGoal> activeGoalsBuffer = new();
 
+    private static int FarthestIndex(List<(int x, int y, TileView tile)> cells, Vector2Int from)
+    {
+        int best = 0, bestDist = -1;
+        for (int i = 0; i < cells.Count; i++)
+        {
+            int dx = cells[i].x - from.x;
+            int dy = cells[i].y - from.y;
+            int d = dx * dx + dy * dy;
+            if (d > bestDist) { bestDist = d; best = i; }
+        }
+        return best;
+    }
+
+    // Her adayın, zaten seçilmiş hedeflere minimum mesafesini hesaplar ve
+    // bu minimum mesafeyi maksimize eden adayı seçer (botlar arası yayılım).
+    private static int MaxSpreadIndex(List<(int x, int y, TileView tile)> cells, List<Vector2Int> reservedCells)
+    {
+        int best = 0, bestScore = -1;
+        for (int i = 0; i < cells.Count; i++)
+        {
+            int cx = cells[i].x, cy = cells[i].y;
+            int minDist = int.MaxValue;
+            for (int r = 0; r < reservedCells.Count; r++)
+            {
+                int dx = cx - reservedCells[r].x;
+                int dy = cy - reservedCells[r].y;
+                int d = dx * dx + dy * dy;
+                if (d < minDist) minDist = d;
+            }
+            if (minDist == int.MaxValue) minDist = 0;
+            if (minDist > bestScore) { bestScore = minDist; best = i; }
+        }
+        return best;
+    }
+
+    // Şu an rezerve edilmiş hedeflerin board üzerindeki hücrelerini döner.
+    private List<Vector2Int> GetReservedTargetCells()
+    {
+        var cells = new List<Vector2Int>(tileReservations.Count + obstacleReservationsByOrigin.Count);
+
+        foreach (var tile in tileReservations)
+        {
+            if (tile != null)
+                cells.Add(new Vector2Int(tile.X, tile.Y));
+        }
+
+        if (obstacleReservationsByOrigin.Count > 0)
+        {
+            var obstacleService = board.ObstacleStateService;
+            if (obstacleService != null)
+            {
+                foreach (var kvp in obstacleReservationsByOrigin)
+                {
+                    if (kvp.Value <= 0) continue;
+                    bool found = false;
+                    for (int x = 0; x < board.Width && !found; x++)
+                        for (int y = 0; y < board.Height && !found; y++)
+                            if (obstacleService.GetObstacleOriginAt(x, y) == kvp.Key)
+                            { cells.Add(new Vector2Int(x, y)); found = true; }
+                }
+            }
+        }
+
+        return cells;
+    }
+
     private (TileView tile, int x, int y, bool hasCell) FindTargetWithReservations(
         TileView patchBotTile,
         TileView partnerTile,
         HashSet<TileView> excluded,
-        TileView[] additionalExcluded)
+        TileView[] additionalExcluded,
+        Vector2Int fromCell)
     {
         var obstacleGoalCells = new List<(int x, int y, TileView tile)>();
         var tileGoalCells = new List<(int x, int y, TileView tile)>();
@@ -401,27 +527,41 @@ public class PatchBotTargetCoordinator
             }
         }
 
+        bool hasFar = fromCell.x >= 0;
+
+        // Zaten seçilmiş hedefler varsa yayılım modunu kullan; yoksa kendi konumundan en uzağı.
+        var reservedCells = GetReservedTargetCells();
+        bool useSpread = reservedCells.Count > 0;
+
+        int PickIdx(List<(int x, int y, TileView tile)> list)
+        {
+            if (list.Count == 1) return 0;
+            if (useSpread)  return MaxSpreadIndex(list, reservedCells);
+            if (hasFar)     return FarthestIndex(list, fromCell);
+            return Random.Range(0, list.Count);
+        }
+
         if (obstacleGoalCells.Count > 0)
         {
-            var pick = obstacleGoalCells[Random.Range(0, obstacleGoalCells.Count)];
+            var pick = obstacleGoalCells[PickIdx(obstacleGoalCells)];
             return (pick.tile, pick.x, pick.y, true);
         }
 
         if (tileGoalCells.Count > 0)
         {
-            var pick = tileGoalCells[Random.Range(0, tileGoalCells.Count)];
+            var pick = tileGoalCells[PickIdx(tileGoalCells)];
             return (pick.tile, pick.x, pick.y, true);
         }
 
         if (otherObstacleCells.Count > 0)
         {
-            var pick = otherObstacleCells[Random.Range(0, otherObstacleCells.Count)];
+            var pick = otherObstacleCells[PickIdx(otherObstacleCells)];
             return (pick.tile, pick.x, pick.y, true);
         }
 
         if (normalCells.Count > 0)
         {
-            var pick = normalCells[Random.Range(0, normalCells.Count)];
+            var pick = normalCells[PickIdx(normalCells)];
             return (pick.tile, pick.x, pick.y, true);
         }
 

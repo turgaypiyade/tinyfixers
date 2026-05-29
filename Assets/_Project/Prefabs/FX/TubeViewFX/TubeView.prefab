@@ -48,9 +48,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f27cfb555c7e44d448f4d27e286170bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TubeView
-  bodySprite: {fileID: 21300000, guid: 1285d6504c1964c6fafa615baf0c8dde, type: 3}
-  baseSprite: {fileID: 21300000, guid: ceb456c74702c4aa38f5ca6bdfc78854, type: 3}
-  openEndCapSprite: {fileID: 21300000, guid: a4de252ded3b24143a6a29d94fad0cd7, type: 3}
+  bodySprite: {fileID: 21300000, guid: 78ecc13ca8c5842aabafbcb9b1ef16e7, type: 3}
+  baseSprite: {fileID: 21300000, guid: 421c2abf9ab394a7b908b90349d0ae03, type: 3}
+  openEndCapSprite: {fileID: 21300000, guid: f4a3900a0ad2b4aceaf52975ef03b510, type: 3}
+  baseBodyOverlap: 4
   shrinkDuration: 0.3
   shakeAmplitude: 6
   shakeDuration: 0.25

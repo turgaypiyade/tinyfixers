@@ -844,6 +844,28 @@ public class ObstacleStateService : ISimObstacleQuery
         OnObstacleDestroyed?.Invoke(originIndex, ObstacleId.Tube);
     }
 
+    /// Removes all EnergyContainer cells from the obstacle layer and fires OnCellUnlocked
+    /// for each, triggering gravity. Called by EnergyContainerService when the group
+    /// hit quota is reached.
+    public void ForceRemoveAllEnergyContainers()
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return;
+
+        int size = Mathf.Min(level.obstacles.Length, level.obstacleOrigins.Length);
+        var origins = new List<int>();
+
+        for (int i = 0; i < size; i++)
+        {
+            if ((ObstacleId)level.obstacles[i] != ObstacleId.EnergyContainer) continue;
+            if (level.obstacleOrigins[i] != i) continue;
+            origins.Add(i);
+        }
+
+        foreach (int origin in origins)
+            ClearObstacleFromLevel(origin, ObstacleId.EnergyContainer);
+    }
+
     /// Frees a single tube cell from the obstacle layer and fires OnCellUnlocked.
     /// Called by TubeObstacleService when the tube shrinks.
     public void FreeTubeCell(int cellIndex)

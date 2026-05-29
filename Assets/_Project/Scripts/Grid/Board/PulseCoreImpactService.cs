@@ -77,7 +77,7 @@ public class PulseCoreImpactService
         {
             board.Audio.Emit(BoardSfxRequest.SpecialActivate(TileSpecial.PulseCore, intensity: radiusCells));
         }
-        else if (board.SfxSource != null)
+        else if (GameSettings.SoundEnabled && board.SfxSource != null)
         {
             if (board.SfxPulseCoreBoom != null)
                 board.SfxSource.PlayOneShot(board.SfxPulseCoreBoom);
@@ -115,7 +115,7 @@ public class PulseCoreImpactService
         {
             board.Audio.Emit(BoardSfxRequest.SpecialActivate(TileSpecial.PulseCore, intensity: radiusCells));
         }
-        else if (board.SfxSource != null)
+        else if (GameSettings.SoundEnabled && board.SfxSource != null)
         {
             if (board.SfxPulseCoreBoom != null)
                 board.SfxSource.PlayOneShot(board.SfxPulseCoreBoom);
