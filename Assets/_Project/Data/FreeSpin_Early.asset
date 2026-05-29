@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: 104d5f2d03d2b4502b9665a0f7fd64d9, type: 3}
   m_Name: FreeSpin_Early
   m_EditorClassIdentifier: Assembly-CSharp::DailySlotRewardConfig
   rewards:
