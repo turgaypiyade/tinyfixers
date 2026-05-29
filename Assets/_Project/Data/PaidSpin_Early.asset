@@ -42,19 +42,19 @@ MonoBehaviour:
     icon: {fileID: 21300000, guid: e80512acde4c9498bb2774285e6930da, type: 3}
     nameLocalizationKey: 
     fallbackName: 
-    weight: 15
+    weight: 10
   - type: 0
     amount: 200
     icon: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
     nameLocalizationKey: 
     fallbackName: 
     weight: 5
-  - type: 99
-    amount: 0
-    icon: {fileID: 21300000, guid: a81f8a7f61a90447cb809f008d33b512, type: 3}
+  - type: 0
+    amount: 25
+    icon: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
     nameLocalizationKey: 
     fallbackName: 
-    weight: 25
+    weight: 30
   - type: 23
     amount: 2
     icon: {fileID: 21300000, guid: d7f358535eeaf4bcf91584c858f8ce88, type: 3}
