@@ -1045,8 +1045,19 @@ public class BoosterService
             yield break;
         }
 
-        bool ok = boardInitService.TryBuildSafeShuffleTypes(currentTypes, lockedMask, board.RandomPool, out var finalTypes);
-        Debug.Log($"[Shuffle] TryBuildSafeShuffleTypes returned {ok}");
+        // Initial simulation gibi: randomPool'dan tek tek yerleştir, match oluşmadan.
+        var simResult = boardInitService.SimulateInitialTypes(
+            board.Width, board.Height, lockedMask, board.RandomPool);
+
+        // Locked hücrelerin tiplerini koru (special, obstacle vb.)
+        for (int y = 0; y < board.Height; y++)
+            for (int x = 0; x < board.Width; x++)
+                if (lockedMask[x, y])
+                    simResult[x, y] = currentTypes[x, y];
+
+        TileType[,] finalTypes = simResult;
+        bool ok = finalTypes != null;
+        Debug.Log($"[Shuffle] SimulateInitialTypes returned ok={ok}");
 
         if (ok)
         {

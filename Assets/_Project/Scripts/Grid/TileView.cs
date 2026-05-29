@@ -1378,10 +1378,12 @@ public class TileView : MonoBehaviour,
         model.SetSpecial(sp);
 
         if (!deferVisualUpdate)
+        {
             RefreshIcon();
 
-        if (lastAppliedTileSize > 0)
-            ApplyTileSize(lastAppliedTileSize);
+            if (lastAppliedTileSize > 0)
+                ApplyTileSize(lastAppliedTileSize);
+        }
     }
 
     public void SetIconScale(float scale)

@@ -382,6 +382,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         yield return StartCoroutine(WaitBoardQuietForLevelEnd(3f, "before_success_logo"));
 
+        if (board != null)
+            board.SetInputLocked(true);
+
         if (levelCompletionLogoAnimation != null)
             yield return StartCoroutine(levelCompletionLogoAnimation.Play());
 
@@ -672,6 +675,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
         failPopupShown = true;
         successPopupShown = false;
 
+        if (board != null)
+            board.SetInputLocked(true);
+
         LivesManager.SpendLife();
         ApplyChapterThemeVisuals();
         RefreshFailOfferVisuals();
@@ -846,6 +852,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         LivesManager.AddLives(1);
 
         board.AddMoves(currentOfferAmount);
+        board.SetInputLocked(false);
         extraMoveOfferAttempt++;
         failPopupShown = false;
         HideAllPopups();

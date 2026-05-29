@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -49,6 +50,7 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
 
     private Coroutine pulseRoutine;
     private bool dismissed;
+    private readonly List<Button> blockedButtons = new();
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
@@ -79,6 +81,7 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
     private void OnDestroy()
     {
         if (repairButton != null) repairButton.onClick.RemoveListener(OnRepairButtonClicked);
+        RestoreBackgroundButtons();
     }
 
     // ── Show / Hide ──────────────────────────────────────────────────────────
@@ -101,7 +104,9 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
         }
 
         if (tutorialOverlay != null && !tutorialOverlay.activeSelf) tutorialOverlay.SetActive(true);
-        if (overlayGroup != null) overlayGroup.blocksRaycasts = false; // tutorial tıklamayı engellemesin
+        if (overlayGroup != null) overlayGroup.blocksRaycasts = false;
+
+        BlockBackgroundButtons();
 
         // Description text
         if (descriptionText != null)
@@ -142,6 +147,7 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
 
         if (repairButton != null) repairButton.onClick.RemoveListener(OnRepairButtonClicked);
 
+        RestoreBackgroundButtons();
         StartCoroutine(FadeOutAndHide());
         MarkSeen();
     }
@@ -153,6 +159,31 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
         // ama script'in GameObject'i aktif kalsın.
         if (tutorialOverlay != null && tutorialOverlay != gameObject)
             tutorialOverlay.SetActive(false);
+    }
+
+    // ── Background blocking ──────────────────────────────────────────────────
+
+    private void BlockBackgroundButtons()
+    {
+        blockedButtons.Clear();
+        var allButtons = Object.FindObjectsOfType<Button>();
+        foreach (var btn in allButtons)
+        {
+            if (btn == repairButton) continue;
+            if (!btn.interactable) continue;
+            btn.interactable = false;
+            blockedButtons.Add(btn);
+        }
+    }
+
+    private void RestoreBackgroundButtons()
+    {
+        foreach (var btn in blockedButtons)
+        {
+            if (btn != null)
+                btn.interactable = true;
+        }
+        blockedButtons.Clear();
     }
 
     // ── Position & Animation ────────────────────────────────────────────────

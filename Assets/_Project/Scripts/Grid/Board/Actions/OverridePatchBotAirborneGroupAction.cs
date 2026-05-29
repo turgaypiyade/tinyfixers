@@ -307,7 +307,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
                 carryRt.anchorMax = new Vector2(0.5f, 0.5f);
                 carryRt.pivot = new Vector2(0.5f, 0.5f);
                 carryRt.sizeDelta = new Vector2(carrySize, carrySize);
-                carryRt.anchoredPosition = Vector2.right * (board.TileSize * 0.32f);
+                carryRt.anchoredPosition = Vector2.down * (board.TileSize * 0.32f);
                 carryRt.localRotation = Quaternion.identity;
 
                 carryImg.sprite = pulseSprite;
@@ -735,10 +735,8 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         if (bot.carryRt == null)
             return;
 
-        const float orbitSpeed = 720f;
-        float radius = board.TileSize * 0.32f;
-        float angle = elapsed * orbitSpeed * Mathf.Deg2Rad;
-        bot.carryRt.anchoredPosition = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+        float footOffset = board.TileSize * 0.32f;
+        bot.carryRt.anchoredPosition = Vector2.down * footOffset;
         bot.carryRt.localRotation = Quaternion.identity;
     }
 

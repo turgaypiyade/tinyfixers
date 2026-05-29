@@ -182,7 +182,7 @@ public class PatchbotDashUI : MonoBehaviour
             carryRt.anchorMax = new Vector2(0.5f, 0.5f);
             carryRt.pivot = new Vector2(0.5f, 0.5f);
             carryRt.sizeDelta = size * carrySizeFactor;
-            carryRt.anchoredPosition = Vector2.right * (Mathf.Min(size.x, size.y) * carryOrbitRadiusFactor);
+            carryRt.anchoredPosition = Vector2.down * (Mathf.Min(size.x, size.y) * carryOrbitRadiusFactor);
 
             carryImg.sprite = req.carriedSprite;
             carryImg.preserveAspect = true;
@@ -367,12 +367,8 @@ public class PatchbotDashUI : MonoBehaviour
         if (carryRt == null)
             return;
 
-        float angle = elapsed * carryOrbitSpeed * Mathf.Deg2Rad;
-        float radius = Mathf.Min(size.x, size.y) * carryOrbitRadiusFactor;
-
-        carryRt.anchoredPosition =
-            new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
-
+        float footOffset = Mathf.Min(size.x, size.y) * carryOrbitRadiusFactor;
+        carryRt.anchoredPosition = Vector2.down * footOffset;
         carryRt.localRotation = Quaternion.identity;
     }
 

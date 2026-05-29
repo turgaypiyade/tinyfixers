@@ -26,6 +26,9 @@ public sealed class PulseCoreExecutionRuntime
     // PatchBot+Pulse target execution için:
     public TileSpecial ForcedOriginSpecial;
     public TileView SignalSourceTile;
+
+    // Aynı swap'ta normal tile'dan oluşan yeni special hücreler — PulseCore bu hücreleri tüketmez.
+    public HashSet<Vector2Int> ProtectedCells;
 }
 
 public sealed class PulseCoreExecutionResult
@@ -176,6 +179,10 @@ public sealed class PulseCoreSpecial
             for (int y = centerY - half; y <= centerY + half; y++)
             {
                 if (x < 0 || x >= rt.Board.Width || y < 0 || y >= rt.Board.Height)
+                    continue;
+
+                // Swap sırasında yeni oluşan special hücreler PulseCore tarafından tüketilmez.
+                if (rt.ProtectedCells != null && rt.ProtectedCells.Contains(new Vector2Int(x, y)))
                     continue;
 
                 if (!SpecialUtils.CanAffectCell(rt.Board, x, y))
