@@ -229,6 +229,7 @@ public class SpecialBehaviorDispatcher
                     EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
                     ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
                 });
+                DrainDeferredLineOverrides(ctx);
                 break;
 
             case TileSpecial.LineH:
@@ -243,6 +244,7 @@ public class SpecialBehaviorDispatcher
                     EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
                     ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
                 });
+                DrainDeferredLineOverrides(ctx);
                 break;
 
             case TileSpecial.PulseCore:
@@ -446,6 +448,32 @@ public class SpecialBehaviorDispatcher
         {
             SpecialCellUtils.MarkAffectedCell(ctx, c.x, c.y, board);
             if (board.Tiles[c.x, c.y] != null) ctx.Affected.Add(board.Tiles[c.x, c.y]);
+        }
+    }
+
+    // When a Line special fires inside a chain (FinalizeAtEnd=false), Override tiles in its
+    // path are deferred instead of immediately cleared. Drain them here so they still activate.
+    private void DrainDeferredLineOverrides(ResolutionContext ctx)
+    {
+        if (ctx?.DeferredLineHitOverrideCells == null || ctx.DeferredLineHitOverrideCells.Count == 0)
+            return;
+
+        var deferred = new System.Collections.Generic.List<Vector2Int>(ctx.DeferredLineHitOverrideCells);
+        ctx.DeferredLineHitOverrideCells.Clear();
+
+        foreach (var cell in deferred)
+        {
+            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                continue;
+
+            var tile = board.Tiles[cell.x, cell.y];
+            if (tile == null || tile.GetSpecial() != TileSpecial.SystemOverride)
+                continue;
+
+            ctx.Processed.Remove(cell);
+            ctx.Queued.Remove(cell);
+
+            ExecuteSpecialActions(ctx, tile, null);
         }
     }
 

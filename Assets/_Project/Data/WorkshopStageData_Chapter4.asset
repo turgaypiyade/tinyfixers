@@ -1,0 +1,105 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 540732217af034588930b3c7abef7eee, type: 3}
+  m_Name: WorkshopStageData_Chapter4
+  m_EditorClassIdentifier: Assembly-CSharp::WorkshopStageData
+  mode: 0
+  stages:
+  - nameLocalizationKey: 
+    stageName: Yaza Merhaba...
+    starCost: 2
+    stageImage: {fileID: 21300000, guid: c5d84dd50ee2747119af15fa13ca6e2b, type: 3}
+    taskIcon: {fileID: 21300000, guid: e684ed7c70253417fb9d85e09bf981c3, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 0}
+    flyInFrom: 2
+  - nameLocalizationKey: 
+    stageName: "A\u011Fa\xE7lar ..."
+    starCost: 3
+    stageImage: {fileID: 0}
+    taskIcon: {fileID: 21300000, guid: e525d338077304ffba5150f8aff6ce96, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 21300000, guid: d810766eed2e34c68a2ef140996a86cd, type: 3}
+    flyInFrom: 1
+  - nameLocalizationKey: 
+    stageName: Tabelalar...
+    starCost: 3
+    stageImage: {fileID: 0}
+    taskIcon: {fileID: 21300000, guid: 55bb4b901816846dbbf9e84595b2d60d, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 21300000, guid: 85ed3fe0c305b4a8fb62cddb2c9b0353, type: 3}
+    flyInFrom: 0
+  - nameLocalizationKey: 
+    stageName: "\u0130skele..."
+    starCost: 2
+    stageImage: {fileID: 0}
+    taskIcon: {fileID: 21300000, guid: 0c7a153968bea4346a1fad0601bf7f0b, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 21300000, guid: ed2622fa543994ae5a412fd40fdbb023, type: 3}
+    flyInFrom: 1
+  - nameLocalizationKey: 
+    stageName: Tekne
+    starCost: 2
+    stageImage: {fileID: 0}
+    taskIcon: {fileID: 21300000, guid: f6cb5f5185ad94f6ab5015c0c3fc4dcb, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 21300000, guid: 70234c01f9bf445999e4a9d4d95197cb, type: 3}
+    flyInFrom: 1
+  - nameLocalizationKey: 
+    stageName: "S\xF6rf..."
+    starCost: 3
+    stageImage: {fileID: 0}
+    taskIcon: {fileID: 21300000, guid: 475d466171d45417a897f3af57f19579, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 21300000, guid: 9c8306fdd48054e3c84a9c2c46caefbe, type: 3}
+    flyInFrom: 1
+  - nameLocalizationKey: 
+    stageName: Masa...
+    starCost: 4
+    stageImage: {fileID: 0}
+    taskIcon: {fileID: 21300000, guid: 667475bc444194f9293250a6ab437926, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 21300000, guid: d01c4b61774474058bb7b9a35ea9cda0, type: 3}
+    flyInFrom: 0
+  - nameLocalizationKey: 
+    stageName: "\u015Eezlong ve \u015Femsiye"
+    starCost: 2
+    stageImage: {fileID: 0}
+    taskIcon: {fileID: 21300000, guid: 3c616fd04712f469185f0e725737a232, type: 3}
+    vfxFocusNormalized: {x: 0.5, y: 0.5}
+    sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 21300000, guid: 1667305b2ae964580bef6812c0ff9bbe, type: 3}
+    flyInFrom: 0
+  finalReward:
+    items:
+    - type: 0
+      amount: 100
+      rewardIcon: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
+      nameLocalizationKey: 
+    - type: 10
+      amount: 1
+      rewardIcon: {fileID: 21300000, guid: 81ec88c01d8db4acdb3ee153ec8834f9, type: 3}
+      nameLocalizationKey: 
+    - type: 20
+      amount: 1
+      rewardIcon: {fileID: 21300000, guid: e200b3928e79346e2ab4da678e139c53, type: 3}
+      nameLocalizationKey: 
+    chestIcon: {fileID: 21300000, guid: 4158f6743c7c545678bc1ad5daed3817, type: 3}
+    chestOpenedSprite: {fileID: 0}
+    nameLocalizationKey: workshop_reward_coins

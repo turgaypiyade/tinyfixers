@@ -175,6 +175,10 @@ MonoBehaviour:
   lightTint: {r: 0.65, g: 0.5, b: 0.35, a: 1}
   defaultMaxHits: 2
   minAlphaAtLastStage: 0.7
+  mudEdgeSpriteH: {fileID: 0}
+  mudEdgeSpriteV: {fileID: 0}
+  borderThicknessRatio: 0.18
+  borderOutwardRatio: 0.5
 --- !u!224 &52612327 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 2871947645122392570, guid: a184fd355378a42268662980030cee3f, type: 3}
@@ -914,7 +918,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 20, y: -60}
+  m_AnchoredPosition: {x: 20, y: -50}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &214283127
@@ -2031,8 +2035,8 @@ RectTransform:
   - {fileID: 1734065519}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1.4166666}
-  m_AnchorMax: {x: 0.3567073, y: 33.208332}
+  m_AnchorMin: {x: 0, y: 0.06710526}
+  m_AnchorMax: {x: 0.79429734, y: 1.5730263}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -4139,7 +4143,7 @@ MonoBehaviour:
   flyOrbOnTopCanvas: 1
   pulseScale: 1.08
   pulseDuration: 0.1
-  exhaustedAlpha: 0.934
+  exhaustedAlpha: 1
   logDebug: 0
 --- !u!114 &1204447920
 MonoBehaviour:
@@ -4873,7 +4877,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 64, y: -55}
+  m_AnchoredPosition: {x: 64, y: -45}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1299973476
@@ -5450,11 +5454,11 @@ MonoBehaviour:
   swapDuration: 0.05
   fallDuration: 0.4
   clearDuration: 0.08
-  spawnStartOffsetY: -3
+  spawnStartOffsetY: -1
   swapDurationMultiplier: 1
   fallColumnStep: 0
   fallDurationMultiplier: 1.1
-  fallVelocityCellsPerSecond: 35
+  fallVelocityCellsPerSecond: 20
   maxDiagonalSlidesPerCascade: 2
   swapMoveCurve:
     serializedVersion: 2
@@ -5505,10 +5509,10 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   enableFallSettle: 1
-  fallSettleDuration: 0.08
-  fallSettleStrength: 0.095
-  fallSettleStretchX: 0.05
-  fallSettleOvershoot: 0.01
+  fallSettleDuration: 0.1
+  fallSettleStrength: 0.116
+  fallSettleStretchX: 0.101
+  fallSettleOvershoot: 0.021
   preClearDelay: 0.02
   shakeDuration: 0.02
   shakeStrength: 4
@@ -8062,14 +8066,6 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: 7fc0a3576e2194b19822a1f8eaec994a, type: 2}
     - target: {fileID: 4377817237275430142, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
-      propertyPath: m_hasFontAssetChanged
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4533592472396230919, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
-      propertyPath: m_fontAsset
-      value: 
-      objectReference: {fileID: 11400000, guid: 7fc0a3576e2194b19822a1f8eaec994a, type: 2}
-    - target: {fileID: 4533592472396230919, guid: 1be9370a982bc4223962cd68d5c33465, type: 3}
       propertyPath: m_hasFontAssetChanged
       value: 1
       objectReference: {fileID: 0}

@@ -96,6 +96,11 @@ MonoBehaviour:
   wobbleHalfSteps: 4
   spinSpeed: 960
   spinUpTime: 0.1
+  idleDelay: 2
+  idleRepeatMin: 3
+  idleRepeatMax: 6
+  idleSpinTurns: 2
+  idleSpinDuration: 0.75
 --- !u!1 &4017335894988476762
 GameObject:
   m_ObjectHideFlags: 0
@@ -171,6 +176,70 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1 &4571354340752802766
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6944227255526923626}
+  - component: {fileID: 656804247279960155}
+  m_Layer: 5
+  m_Name: FuseSparkle
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &6944227255526923626
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4571354340752802766}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3093883840377603799}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &656804247279960155
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4571354340752802766}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc95a0d03b3f245d2ba85c728f5bf9b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PulseFuseSparkleView
+  sparkleSprite: {fileID: 21300000, guid: 90a7205e9795442588316c5be3f4fcae, type: 3}
+  fuseLocalOffset: {x: 10, y: 50}
+  emitInterval: 0.2
+  sparkLifetime: 0.4
+  spreadRadius: 8
+  sparkSizeMin: 10
+  sparkSizeMax: 20
+  sparkColorA: {r: 0.9433962, g: 0.93545604, b: 0.84994656, a: 1}
+  sparkColorB: {r: 1, g: 0.6, b: 0.1, a: 1}
+  breathTarget: {fileID: 3329209792297574190}
+  breathIdleDelay: 2
+  breathInDuration: 0.55
+  breathOutDuration: 0.7
+  breathAmplitude: 0.05
+  breathPauseMin: 1.5
+  breathPauseMax: 3.5
 --- !u!1 &8082158129049703175
 GameObject:
   m_ObjectHideFlags: 0
@@ -207,6 +276,7 @@ RectTransform:
   - {fileID: 3329209792297574190}
   - {fileID: 4511208263057242948}
   - {fileID: 7456961817750906789}
+  - {fileID: 6944227255526923626}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
@@ -252,6 +322,7 @@ MonoBehaviour:
   iconImage: {fileID: 5310917763237610214}
   propellerView: {fileID: 3906672644494819645}
   overrideSpecialView: {fileID: 3442276349837178895}
+  fuseSparkleView: {fileID: 656804247279960155}
   iconScale: 1
   iconSize: {x: 105, y: 105}
   useFullCellIcon: 0
@@ -373,3 +444,4 @@ MonoBehaviour:
   spinSeparationRatio: 0.362
   settleDuration: 0.5
   settleOvershootScale: 1.25
+  idleDelay: 2

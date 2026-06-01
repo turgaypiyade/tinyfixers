@@ -15,7 +15,7 @@ MonoBehaviour:
   obstacles:
   - id: 2
     stages:
-    - sprite: {fileID: -1181487658951336156, guid: 55157247f7a0242e7a94e7ae60e13097, type: 3}
+    - sprite: {fileID: 4563923505258141410, guid: 81daec767c3da473c9a36982987e6470, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
@@ -46,7 +46,7 @@ MonoBehaviour:
     breakSound: {fileID: 0}
     breakSoundVolume: 1
     drawUnderTiles: 0
-    legacySprite: {fileID: -1181487658951336156, guid: 55157247f7a0242e7a94e7ae60e13097, type: 3}
+    legacySprite: {fileID: 4563923505258141410, guid: 81daec767c3da473c9a36982987e6470, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1
@@ -522,7 +522,7 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
-      suppressHitParticles: 0
+      suppressHitParticles: 1
       hitParticleSprites: []
     - sprite: {fileID: 21300000, guid: 8b6d8ac3b686f463a8d5839ec237df17, type: 3}
       damageRule: 5
@@ -531,7 +531,7 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
-      suppressHitParticles: 0
+      suppressHitParticles: 1
       hitParticleSprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0

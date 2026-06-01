@@ -15,6 +15,7 @@ public class TileView : MonoBehaviour,
     [SerializeField] private Image iconImage;
     [SerializeField] private PatchBotPropellerView propellerView;
     [SerializeField] private OverrideSpecialView overrideSpecialView;
+    [SerializeField] private PulseFuseSparkleView fuseSparkleView;
     private TileModel model;
 
     public int X { get; private set; }
@@ -176,6 +177,7 @@ public class TileView : MonoBehaviour,
 
         propellerView?.Stop();
         overrideSpecialView?.Stop();
+        fuseSparkleView?.Stop();
 
         if (lastAppliedTileSize > 0)
             ApplyTileSize(lastAppliedTileSize);
@@ -226,6 +228,9 @@ public class TileView : MonoBehaviour,
 
         if (propellerView != null)
             propellerView.gameObject.SetActive(model.special == TileSpecial.PatchBot);
+
+        if (fuseSparkleView != null)
+            fuseSparkleView.gameObject.SetActive(model.special == TileSpecial.PulseCore);
     }
 
     public void SnapToGrid(int tileSize)

@@ -24,11 +24,15 @@ public sealed class OverrideSpecialView : MonoBehaviour
     [SerializeField] private float settleDuration = 0.20f;
     [SerializeField] private float settleOvershootScale = 1.45f;
 
+    [Header("Idle (boşta creation tekrarı)")]
+    [SerializeField] private float idleDelay = 2f;
+
     private RectTransform rt;
     private Image topImage;
     private Image bottomImage;
     private Image fullImage;
     private Coroutine routine;
+    private Coroutine idleRoutine;
 
     private void Awake()
     {
@@ -55,7 +59,8 @@ public sealed class OverrideSpecialView : MonoBehaviour
 
     public void Stop()
     {
-        if (routine != null) { StopCoroutine(routine); routine = null; }
+        if (routine     != null) { StopCoroutine(routine);     routine     = null; }
+        if (idleRoutine != null) { StopCoroutine(idleRoutine); idleRoutine = null; }
         HideAll();
     }
 
@@ -186,6 +191,17 @@ public sealed class OverrideSpecialView : MonoBehaviour
         if (fullImage != null) { fullImage.color = Color.white; fullImage.rectTransform.localScale = Vector3.one; }
 
         routine = null;
+
+        if (idleDelay > 0f && gameObject.activeInHierarchy)
+            idleRoutine = StartCoroutine(CoIdleWatch());
+    }
+
+    private IEnumerator CoIdleWatch()
+    {
+        yield return new WaitForSeconds(idleDelay);
+        idleRoutine = null;
+        if (gameObject.activeInHierarchy)
+            PlayCreation();
     }
 
     private static void SpinHalf(Image img, float yOffset, float zAngle, float alpha)

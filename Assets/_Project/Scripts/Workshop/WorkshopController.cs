@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 #if UNITY_EDITOR && ENABLE_INPUT_SYSTEM
@@ -34,6 +35,14 @@ public class WorkshopController : MonoBehaviour
     [SerializeField] private CanvasGroup flashOverlay;
     [SerializeField] private RectTransform shakeRoot;
     [SerializeField] private AudioSource sfxSource;
+
+    [Header("Layer Fly-In (mode=LayerFlyIn)")]
+    [Tooltip("Fly-in parçalarının spawn edileceği parent. currentImage ile aynı boyutta, onun üstünde bir RectTransform.")]
+    [SerializeField] private RectTransform layerParent;
+    [Tooltip("Parçanın ekrana uçma süresi (saniye).")]
+    [SerializeField, Min(0.1f)] private float flyInDuration = 0.55f;
+    [Tooltip("Uçuş easing curve'ü. Ease Out Back gibi bir şey iyi durur.")]
+    [SerializeField] private AnimationCurve flyInCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
     [Header("Animation Tuning")]
     [SerializeField, Min(0.05f)] private float crossfadeDuration = 0.8f;
@@ -127,6 +136,7 @@ public class WorkshopController : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
 
     private int lastAppliedChapter = -1;
+    private readonly List<GameObject> spawnedLayers = new();
 
     private void Start()
     {
@@ -215,9 +225,20 @@ public class WorkshopController : MonoBehaviour
             return;
         }
 
-        // Tamir edildikçe yeni görsele geçeriz. Yani:
-        //   CurrentStage = 0 → henüz hiç tamir yok → stages[0] göster
-        //   CurrentStage = 5 → 5 tamir yapılmış → stages[5] göster (varsa)
+        if (flashOverlay != null) flashOverlay.alpha = 0f;
+
+        var s0img = data.stages.Count > 0 ? data.stages[0].stageImage : null;
+        Debug.Log($"[Workshop] ApplyInstant — mode={data.mode} chapter={CurrentChapterIndex} stage={CurrentStage} " +
+                  $"stages[0].stageImage={(s0img != null ? s0img.name : "NULL")} " +
+                  $"currentImage={(currentImage != null ? currentImage.name : "NULL")}");
+
+        if (data.mode == WorkshopMode.LayerFlyIn)
+        {
+            ApplyCurrentStageInstant_LayerFlyIn(data);
+            return;
+        }
+
+        // ── SpriteSwap (mevcut davranış) ──────────────────────────────────────
         int visibleIndex = Mathf.Clamp(CurrentStage, 0, data.stages.Count - 1);
         var stage = data.stages[visibleIndex];
 
@@ -232,7 +253,41 @@ public class WorkshopController : MonoBehaviour
             if (!nextImage.gameObject.activeSelf) nextImage.gameObject.SetActive(true);
             SetImageAlpha(nextImage, 0f);
         }
-        if (flashOverlay != null) flashOverlay.alpha = 0f;
+    }
+
+    private void ApplyCurrentStageInstant_LayerFlyIn(WorkshopStageData data)
+    {
+        // CurrentStage'in stageImage'ı varsa onu göster — en temiz birleşik resim.
+        // Yoksa bir önceki stage'in stageImage'ından itibaren kalan layerları spawn et.
+        ClearSpawnedLayers();
+
+        int compositeStage = -1;
+        for (int i = CurrentStage; i >= 0; i--)
+        {
+            if (data.stages[i].stageImage != null) { compositeStage = i; break; }
+        }
+
+        Sprite bg = compositeStage >= 0 ? data.stages[compositeStage].stageImage : null;
+        Debug.Log($"[Workshop] LayerFlyIn apply — compositeStage={compositeStage} bg={(bg != null ? bg.name : "NULL")}");
+        if (currentImage != null)
+        {
+            if (!currentImage.gameObject.activeSelf) currentImage.gameObject.SetActive(true);
+            currentImage.sprite = bg;
+            SetImageAlpha(currentImage, 1f);
+            Debug.Log($"[Workshop] currentImage.sprite SET → {(currentImage.sprite != null ? currentImage.sprite.name : "NULL")} alpha={currentImage.color.a}");
+        }
+        StartCoroutine(DebugCheckSpriteNextFrame());
+        if (nextImage != null) SetImageAlpha(nextImage, 0f);
+
+        // compositeStage'den sonra stageImage'sız kalmış parçaları layerSprite olarak ekle.
+        for (int i = compositeStage + 1; i <= CurrentStage && i < data.stages.Count; i++)
+        {
+            var s = data.stages[i];
+            if (s.layerSprite == null) continue;
+            var go = SpawnLayerImage(s.layerSprite);
+            go.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
+            spawnedLayers.Add(go);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -311,6 +366,81 @@ public class WorkshopController : MonoBehaviour
 
     private IEnumerator PlayStageTransition(int nextIndex)
     {
+        if (StageData?.mode == WorkshopMode.LayerFlyIn)
+        {
+            yield return StartCoroutine(PlayLayerFlyInTransition(nextIndex));
+            yield break;
+        }
+        yield return StartCoroutine(PlaySpriteSwapTransition(nextIndex));
+    }
+
+    private IEnumerator PlayLayerFlyInTransition(int nextIndex)
+    {
+        IsTransitioning = true;
+        var nextStage = StageData.stages[nextIndex];
+
+        if (starFlyToTargetDelay > 0f)
+            yield return new WaitForSeconds(starFlyToTargetDelay);
+
+        // Parçayı ekran dışından başlat
+        var go = SpawnLayerImage(nextStage.layerSprite);
+        var rt = go.GetComponent<RectTransform>();
+
+        var parent = layerParent != null ? layerParent : vfxParent;
+        float canvasW = parent.rect.width;
+        float canvasH = parent.rect.height;
+
+        Vector2 startPos = nextStage.flyInFrom switch
+        {
+            FlyInFrom.Right  => new Vector2( canvasW * 1.2f, 0f),
+            FlyInFrom.Bottom => new Vector2(0f, -canvasH * 1.2f),
+            FlyInFrom.Top    => new Vector2(0f,  canvasH * 1.2f),
+            _                => new Vector2(-canvasW * 1.2f, 0f), // Left
+        };
+        rt.anchoredPosition = startPos;
+
+        // Uçuş animasyonu
+        float t = 0f;
+        while (t < flyInDuration)
+        {
+            t += Time.deltaTime;
+            float k = flyInCurve.Evaluate(Mathf.Clamp01(t / flyInDuration));
+            rt.anchoredPosition = Vector2.Lerp(startPos, Vector2.zero, k);
+            yield return null;
+        }
+        rt.anchoredPosition = Vector2.zero;
+
+        // Landing: stageImage varsa currentImage'a geçir ve layer'ları temizle.
+        // Yoksa layer birikmeye devam eder (stageImage opsiyonel).
+        if (nextStage.stageImage != null)
+        {
+            if (currentImage != null) currentImage.sprite = nextStage.stageImage;
+            ClearSpawnedLayers();
+            Destroy(go);
+        }
+        else
+        {
+            spawnedLayers.Add(go);
+        }
+
+        // VFX & SFX
+        SpawnVfx(sparkleBurstPrefab, nextStage.vfxFocusNormalized);
+        StartCoroutine(SpawnSparkleStars(nextStage.vfxFocusNormalized));
+        if (flashOverlay != null) StartCoroutine(PlayFlash());
+        if (shakeRoot != null)    StartCoroutine(PlayShake());
+        SpawnVfx(confettiPrefab, nextStage.vfxFocusNormalized);
+
+        if (GameSettings.SoundEnabled && nextStage.sfxOnComplete != null && sfxSource != null)
+            sfxSource.PlayOneShot(nextStage.sfxOnComplete);
+
+        CurrentStage = nextIndex;
+        IsTransitioning = false;
+        OnStageCompleted?.Invoke(nextIndex);
+        TryGrantFinalReward();
+    }
+
+    private IEnumerator PlaySpriteSwapTransition(int nextIndex)
+    {
         IsTransitioning = true;
         Debug.Log($"[Workshop] PlayStageTransition START → stages[{nextIndex}]. currentImage={(currentImage != null ? "OK" : "NULL")}, nextImage={(nextImage != null ? "OK" : "NULL")}");
 
@@ -372,7 +502,7 @@ public class WorkshopController : MonoBehaviour
             currentImage.sprite = nextStage.stageImage;
             SetImageAlpha(currentImage, 1f);
             SetImageAlpha(nextImage, 0f);
-            Debug.Log($"[Workshop] Crossfade DONE. currentImage.sprite = {nextStage.stageImage.name}");
+            Debug.Log($"[Workshop] Crossfade DONE. currentImage.sprite = {(nextStage.stageImage != null ? nextStage.stageImage.name : "NULL")}");
         }
 
         // 9. Save progress
@@ -562,5 +692,50 @@ public class WorkshopController : MonoBehaviour
         var c = img.color;
         c.a = a;
         img.color = c;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Layer Fly-In Helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private GameObject SpawnLayerImage(Sprite sprite)
+    {
+        var parent = layerParent != null ? layerParent : (vfxParent != null ? vfxParent : currentImage?.rectTransform?.parent as RectTransform);
+        if (parent == null)
+        {
+            Debug.LogWarning("[Workshop] LayerParent bulunamadı — layerParent alanını Inspector'da ata.");
+            return new GameObject("Layer_Fallback");
+        }
+
+        var go = new GameObject("WorkshopLayer", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot     = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = parent.rect.size; // background ile aynı canvas boyutu
+
+        var img = go.GetComponent<Image>();
+        img.sprite = sprite;
+        img.raycastTarget = false;
+
+        return go;
+    }
+
+    private void ClearSpawnedLayers()
+    {
+        foreach (var go in spawnedLayers)
+            if (go != null) Destroy(go);
+        spawnedLayers.Clear();
+    }
+
+    private void OnDestroy() => ClearSpawnedLayers();
+
+    private System.Collections.IEnumerator DebugCheckSpriteNextFrame()
+    {
+        yield return null;
+        if (currentImage != null)
+            Debug.Log($"[Workshop] 1 frame sonra currentImage.sprite={(currentImage.sprite != null ? currentImage.sprite.name : "NULL")} alpha={currentImage.color.a}");
     }
 }

@@ -897,7 +897,7 @@ MonoBehaviour:
 
 '
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 7fc0a3576e2194b19822a1f8eaec994a, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -905,7 +905,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_fontColor: {r: 0.05513528, g: 0.17883073, b: 0.5566038, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -922,8 +922,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 60
-  m_fontSizeBase: 60
+  m_fontSize: 55
+  m_fontSizeBase: 55
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -964,7 +964,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 0
+  m_hasFontAssetChanged: 1
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &2765415992971814065
@@ -1571,6 +1571,7 @@ MonoBehaviour:
   bonusMovesService: {fileID: 0}
   tileIconLibrary: {fileID: 11400000, guid: 44f21392c67a14dfbb8782561221acf8, type: 2}
   chapterThemeApplier: {fileID: 0}
+  levelCompletionLogoAnimation: {fileID: 0}
   successAnimationPlayer: {fileID: 0}
   skipBonusRoundButton: {fileID: 0}
   playSuccessVideoBeforeMainMenu: 0
@@ -1581,6 +1582,10 @@ MonoBehaviour:
   failPopupRoot: {fileID: 3825252484552138203}
   successPopupRoot: {fileID: 7701384900856317521}
   blockerRoot: {fileID: 1905128348902651094}
+  mainScreenCanvasGroup: {fileID: 0}
+  dimImage: {fileID: 0}
+  dimmedMainAlpha: 0.45
+  dimTransitionDuration: 0.22
   failPopupImage: {fileID: 0}
   successPopupImage: {fileID: 0}
   failContinueButtonImage: {fileID: 0}
@@ -1638,6 +1643,7 @@ MonoBehaviour:
   star3Ratio: 0.5
   star2Ratio: 0.2
   baseCoins: 100
+  remainingMoveBonusRatio: 0.5
   coinsPerRemainingMove: 20
   mainMenuSceneName: MainMenu
   prefsLevelKey: current_level

@@ -15,7 +15,7 @@ MonoBehaviour:
   width: 9
   height: 9
   moves: 20
-  baseCoinReward: 100
+  baseCoinReward: 15
   goals:
   - targetType: 1
     tileType: 0

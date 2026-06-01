@@ -45,7 +45,7 @@ public class SpecialResolver
         dispatcher.QueueProcessor = queueProcessor;
     }
 
-    public List<BoardAction> ResolveSpecialSwap(TileView a, TileView b, TileSpecial originalSa, TileSpecial originalSb, TileType? capturedOverridePartnerType = null)
+    public List<BoardAction> ResolveSpecialSwap(TileView a, TileView b, TileSpecial originalSa, TileSpecial originalSb, TileType? capturedOverridePartnerType = null, HashSet<Vector2Int> externalProtectedCells = null)
     {
         var actions = new List<BoardAction>();
 
@@ -411,6 +411,7 @@ public class SpecialResolver
                     Origin = specialTile,
                     Partner = null,
                     FinalizeAtEnd = true,
+                    ProtectedCells = externalProtectedCells,
                     ActivateSpecial = dispatcher.ApplySpecialActivation,
                     ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                     CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
@@ -437,6 +438,7 @@ public class SpecialResolver
                     Origin = specialTile,
                     Partner = null,
                     FinalizeAtEnd = true,
+                    ProtectedCells = externalProtectedCells,
                     ActivateSpecial = dispatcher.ApplySpecialActivation,
                     ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                     CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
@@ -457,14 +459,23 @@ public class SpecialResolver
                 ctx.Affected.Add(specialTile);
                 SpecialCellUtils.MarkAffectedCell(ctx, specialTile, board);
 
-                // Swap sırasında normal tile'dan oluşan yeni special'ı koru.
+                // Swap sırasında normal taraftan oluşan yeni special hücrelerini koru.
+                // externalProtectedCells: ProcessSwap'tan gelen kesin liste (winner herhangi bir tile olabilir).
+                // normalPartner fallback: externalProtectedCells yoksa veya eksikse ek güvence.
+                HashSet<Vector2Int> protectedCells = externalProtectedCells != null
+                    ? new HashSet<Vector2Int>(externalProtectedCells)
+                    : null;
+
                 var normalPartner = aOriginallySpecial ? b : a;
-                HashSet<Vector2Int> protectedCells = null;
                 if (normalPartner != null && normalPartner.GetSpecial() != TileSpecial.None)
                 {
-                    protectedCells = new HashSet<Vector2Int> { new Vector2Int(normalPartner.X, normalPartner.Y) };
-                    Debug.Log($"[PulseCore] protecting newly-created special at ({normalPartner.X},{normalPartner.Y}) from PulseCore consumption");
+                    var cell = new Vector2Int(normalPartner.X, normalPartner.Y);
+                    (protectedCells ??= new HashSet<Vector2Int>()).Add(cell);
+                    Debug.Log($"[PulseCore] protecting normalPartner special at ({cell.x},{cell.y})");
                 }
+
+                if (protectedCells != null && protectedCells.Count > 0)
+                    Debug.Log($"[PulseCore] total protected cells={protectedCells.Count}: [{string.Join(", ", protectedCells)}]");
 
                 var result = pulseCoreSpecial.Execute(new PulseCoreExecutionRuntime
                 {

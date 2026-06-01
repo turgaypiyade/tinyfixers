@@ -311,16 +311,9 @@ public class GridSpawner : MonoBehaviour
 
         DrawGridLines();
 
-        // Hangi hücreler yerçekimi ile ulaşılabilir (dikey düşme + diyagonal kayma)?
-        // CascadeLogic ile aynı köşe-geçirgenlik kurallarını kullanarak flood-fill yapılır.
-        var reachable = ComputeReachable(board.Holes);
-
-        var notReachable = new bool[width, height];
-        for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x++)
-                notReachable[x, y] = !reachable[x, y];
-
-        var initialTypes = board.SimulateInitialTypes(notReachable);
+        // Tüm non-hole hücreler için tip simülasyonu — reachability'den bağımsız.
+        // + şeklindeki grids gibi gravity ile ulaşılamayan kanatlar da dahil.
+        var initialTypes = board.SimulateInitialTypes(board.Holes);
 
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
@@ -332,13 +325,9 @@ public class GridSpawner : MonoBehaviour
                     && board.ObstacleStateService.IsMovableObstacleAt(x, y);
 
                 if (isMovableObstacle)
-                {
                     SpawnMovableObstacleTile(x, y);
-                }
-                else if (reachable[x, y])
-                {
+                else
                     SpawnTile(x, y, initialTypes[x, y]);
-                }
             }
 
         // Tüm tile'lar spawn edildikten sonra sıralamayı toplu yenile

@@ -362,13 +362,13 @@ MonoBehaviour:
   destroyOnFinish: 1
   randomizeOnPlay: 1
   glowThicknessMin: 2.19
-  glowThicknessMax: 2.73
+  glowThicknessMax: 2.19
   coreThicknessMin: 2.13
   coreThicknessMax: 2.43
-  ringThicknessMin: 1.135
-  ringThicknessMax: 1.299
-  thicknessAlphaMultiplier: 0.703
-  flashPeakSizeRatio: 0.881
+  ringThicknessMin: 1.215
+  ringThicknessMax: 1.386
+  thicknessAlphaMultiplier: 0.623
+  flashPeakSizeRatio: 0.766
   flashInTime: 0.1
   flashOutTime: 0.7
   flashStartRatio: 0.3
@@ -393,12 +393,12 @@ MonoBehaviour:
   ringStartRatio: 0.3
   ringEndRatio: 1.15
   ringColor: {r: 1, g: 0.75, b: 0.2, a: 1}
-  coronaBlobCountMin: 7
-  coronaBlobCountMax: 8
-  coronaBlobScaleMin: 0.22
-  coronaBlobScaleMax: 0.4
-  coronaRadiusRatio: 0.362
-  coronaAlphaMultiplier: 0.45
+  useNoisyRing: 1
+  noiseAmplitude: 0.055
+  noiseFrequency: 5
+  edgeSoftness: 0.15
+  ringThickness: 0.167
+  noiseTexSize: 128
   easeOut:
     serializedVersion: 2
     m_Curve:

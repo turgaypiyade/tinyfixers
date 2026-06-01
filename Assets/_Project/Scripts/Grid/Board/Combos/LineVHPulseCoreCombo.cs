@@ -40,8 +40,7 @@ public sealed class LineVHPulseCoreCombo
 
         var pulseTile = GetPulseTile(rt);
         var lineTile = GetLineTile(rt);
-        // PulseCore'un swap'tan önceki hücresi = swap sonrası Line'ın bulunduğu konum.
-        var comboCenterTile = lineTile;
+        var comboCenterTile = rt.Partner != null ? rt.Partner : pulseTile;
         var comboCenterCell = new Vector2Int(comboCenterTile.X, comboCenterTile.Y);
 
         rt.EmitComboTriggered?.Invoke(lineTile.GetSpecial(), pulseTile.GetSpecial(), comboCenterCell);
@@ -1045,9 +1044,7 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         orbitRt.anchorMax = new Vector2(0.5f, 0.5f);
         orbitRt.pivot = new Vector2(0.5f, 0.5f);
         orbitRt.sizeDelta = new Vector2(board.TileSize * 3.80f, board.TileSize * 3.80f);
-        // Orbit container'ı PulseCore'un ORIJINAL hücresine (swap'tan önceki) yerleştir.
-        // Swap sonrası bu hücrede lineTile (= orbitLineTile) bulunuyor → emitterStart.
-        orbitRt.anchoredPosition = emitterStart;
+        orbitRt.anchoredPosition = pulseStart;
         orbitRt.localScale = Vector3.one;
         orbitRt.localRotation = Quaternion.identity;
 
@@ -1071,12 +1068,11 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         HideTileCanvasGroup(orbitLineTile);
         HideTileCanvasGroup(orbitPulseTile);
 
-        // Kısa sahneye alma: container yeni merkeze (PulseCore'un orijinal hücresine) taşınıp yukarı alınır.
-        // Emitter (Line) ikonu, pulseStart'tan (PulseCore'un yeni konumu) orbit yarıçapına doğru gelir.
+        // Kısa sahneye alma: PulseCore merkezine taşınıp biraz yukarı alınır.
         float t = 0f;
-        Vector2 sceneStart = emitterStart;
-        Vector2 sceneEnd = emitterStart + new Vector2(0f, OrbitRiseHeight);
-        Vector2 emitterLocalStart = pulseStart - emitterStart;
+        Vector2 sceneStart = pulseStart;
+        Vector2 sceneEnd = pulseStart + new Vector2(0f, OrbitRiseHeight);
+        Vector2 emitterLocalStart = emitterStart - pulseStart;
         if (emitterLocalStart.sqrMagnitude < 0.0001f)
             emitterLocalStart = Vector2.right * orbitRadius;
         else
@@ -1175,8 +1171,10 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         UpdateLightningSegments(lightningSegments, Vector2.zero, Vector2.right * orbitRadius, 1f, 0f);
 
         // Çok kısa kapanış; bundan sonra mevcut LineV/H tetiklenir.
+        // Settle hedefi: PulseCore'un yeni (swap sonrası) konumu — comboCenterCell değil,
+        // çünkü comboCenterCell her zaman PulseCore hücresi olmayabilir (Line sürüklenirse a=Line).
         const float settleDuration = 0.08f;
-        Vector2 endCenter = GetCellAnchoredPosition(comboCenterCell.x, comboCenterCell.y);
+        Vector2 endCenter = pulseStart;
         Vector2 settleStart = orbitRt.anchoredPosition;
 
         t = 0f;

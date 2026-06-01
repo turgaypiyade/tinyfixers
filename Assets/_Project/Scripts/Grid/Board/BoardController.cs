@@ -1286,6 +1286,10 @@ public class BoardController : MonoBehaviour
             bool bothOriginallySpecial = originalSa != TileSpecial.None && originalSb != TileSpecial.None;
             ConsumeMove();
 
+            // Swap sırasında normal taraf eşleşmesinden oluşan yeni special hücreleri izler.
+            // PulseCore bu hücreleri tüketmemeli — ResolveSpecialSwap'a geçirilir.
+            HashSet<Vector2Int> swapProtectedCells = null;
+
             if (!bothOriginallySpecial)
             {
                 var specialTile = (originalSa != TileSpecial.None) ? a : b;
@@ -1332,6 +1336,10 @@ public class BoardController : MonoBehaviour
                                 continue;
 
                             createdTiles.Add(created);
+
+                            // Bu hücreyi PulseCore'dan koru — winner normalPartner olmayabilir.
+                            (swapProtectedCells ??= new HashSet<Vector2Int>())
+                                .Add(new Vector2Int(created.X, created.Y));
 
                             normalMatches.Remove(created);
                             candidates.Remove(created);
@@ -1383,7 +1391,7 @@ public class BoardController : MonoBehaviour
                     pulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(chargeX, chargeY, radiusCells: 2); // 5x5 alan — Inspector override'a bağımlı değil
             }
 
-            actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb, capturedOverridePartnerType));
+            actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb, capturedOverridePartnerType, swapProtectedCells));
             yield return AnimateQueuedActions();
             FlowLog("special_resolve");
 

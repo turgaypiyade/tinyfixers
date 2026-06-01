@@ -502,11 +502,20 @@ public class PatchBotTargetCoordinator
 
                 if (hasObstacle)
                 {
+                    var obstacleId = board.ObstacleStateService.GetObstacleIdAt(x, y);
+
+                    // Tube: only the base (origin) cell is a valid target.
+                    if (obstacleId == ObstacleId.Tube)
+                    {
+                        int origin = board.ObstacleStateService.GetObstacleOriginAt(x, y);
+                        if (origin < 0 || origin % board.Width != x || origin / board.Width != y)
+                            continue;
+                    }
+
                     int effectiveHits = GetEffectiveObstacleHitsRemaining(x, y);
                     if (effectiveHits <= 0)
                         continue;
 
-                    var obstacleId = board.ObstacleStateService.GetObstacleIdAt(x, y);
                     bool isObstacleGoalCell = activeObstacleGoals.Contains(obstacleId);
 
                     if (isObstacleGoalCell)

@@ -19,15 +19,26 @@ public sealed class PatchBotPropellerView : MonoBehaviour
     [SerializeField] private float spinSpeed  = 960f;
     [SerializeField] private float spinUpTime = 0.10f;
 
+    [Header("Idle Spin (dokunulmayınca)")]
+    [SerializeField] private float idleDelay       = 2f;
+    [SerializeField] private float idleRepeatMin   = 3f;
+    [SerializeField] private float idleRepeatMax   = 6f;
+    [SerializeField] private int   idleSpinTurns   = 2;      // tam tur → 0'da biter
+    [SerializeField] private float idleSpinDuration = 0.75f;
+
     public float SpinSpeed => spinSpeed;
 
     private RectTransform rt;
     private Coroutine routine;
+    private Coroutine idleRoutine;
 
     private void Awake()
     {
         rt = GetComponent<RectTransform>();
     }
+
+    private void OnEnable()  => idleRoutine = StartCoroutine(CoIdleWatch());
+    private void OnDisable() => StopAll();
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -47,10 +58,43 @@ public sealed class PatchBotPropellerView : MonoBehaviour
         routine = StartCoroutine(CoActivationSpin());
     }
 
+    // Ana animasyonu durdurur; idle watch çalışmaya devam eder.
     public void Stop()
     {
         if (routine != null) { StopCoroutine(routine); routine = null; }
         if (rt != null) rt.localEulerAngles = Vector3.zero;
+    }
+
+    private void StopAll()
+    {
+        if (routine     != null) { StopCoroutine(routine);     routine     = null; }
+        if (idleRoutine != null) { StopCoroutine(idleRoutine); idleRoutine = null; }
+        if (rt != null) rt.localEulerAngles = Vector3.zero;
+    }
+
+    // ── Idle watch ────────────────────────────────────────────────────────────
+
+    private IEnumerator CoIdleWatch()
+    {
+        yield return new WaitForSeconds(idleDelay);
+
+        while (true)
+        {
+            if (routine == null)
+                yield return CoIdleSpin();
+
+            yield return new WaitForSeconds(Random.Range(idleRepeatMin, idleRepeatMax));
+        }
+    }
+
+    private IEnumerator CoIdleSpin()
+    {
+        // Sadece dinlenme konumundayken spin yap (yaratma/aktivasyon animasyonu bitmemişse atla)
+        float curZ = rt.localEulerAngles.z;
+        if (curZ > 0.5f && curZ < 359.5f) yield break;
+
+        yield return CoPhase(idleSpinTurns * 360f, idleSpinDuration);
+        // Tam tur kullandığımız için z=0'da biter, snap gerekmez
     }
 
     // ── Creation coroutine ────────────────────────────────────────────────────

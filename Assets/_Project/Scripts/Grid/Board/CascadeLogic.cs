@@ -543,7 +543,6 @@ public class CascadeLogic
     {
         if (!TryGetCellState(x, y, out var state)) return false;
         if (!state.inBounds) return false;
-        if (state.isMaskHole) return false;
         if (state.isPendingTriggeredSpecial) return false;
         if (state.isObstacleBlocked) return false;
         return true;

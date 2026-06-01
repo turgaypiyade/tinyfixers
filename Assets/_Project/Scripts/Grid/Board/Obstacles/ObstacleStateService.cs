@@ -102,6 +102,9 @@ public class ObstacleStateService : ISimObstacleQuery
 
     /// Set by TubeObstacleService. Called with the tube's ORIGIN cell index when any tube cell is hit.
     public Action<int> TubeHitInterceptor;
+    /// Set by EnergyContainerService. Called with the ORIGIN cell index when an active container is hit.
+    /// The container state is NOT decremented; exhaustion is handled globally by EnergyContainerService.
+    public Action<int> EnergyContainerHitInterceptor;
     // ColorChest açılış ve renk kırılması bildirimleri
     public event Action<int> OnChestOpened;
     public event Action<int, ChestColorMask> OnChestColorRemoved;
@@ -261,6 +264,21 @@ public class ObstacleStateService : ISimObstacleQuery
             TubeHitInterceptor?.Invoke(origin);
             var tubeChange = new ObstacleVisualChange(-1, id, false, 0, null);
             return new ObstacleHitResult(true, true, false, tubeChange, default, Array.Empty<int>());
+        }
+
+        // EnergyContainer: hits are fully managed by EnergyContainerService via the interceptor.
+        // Active (interceptor set)   → fire interceptor, no decrement, container stays on board.
+        // Exhausted (interceptor null) → block all hits; container is permanent and invincible.
+        if (id == ObstacleId.EnergyContainer)
+        {
+            if (EnergyContainerHitInterceptor != null)
+            {
+                EnergyContainerHitInterceptor.Invoke(origin);
+                var ecChange = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+                return new ObstacleHitResult(true, true, false, ecChange, default, Array.Empty<int>());
+            }
+            // Interceptor null = exhausted → invincible, block hit without clearing
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
         }
 
         var def = library != null ? library.Get(id) : null;
@@ -447,6 +465,8 @@ public class ObstacleStateService : ISimObstacleQuery
         var id = (ObstacleId)level.obstacles[idx];
         if (id == ObstacleId.None) return false;
         if (id == ObstacleId.Tube) return true;
+        // EnergyContainer always blocks regardless of stage — interceptor handles active vs exhausted.
+        if (id == ObstacleId.EnergyContainer) return true;
 
         var def = library != null ? library.Get(id) : null;
         int remaining = ResolveRemainingHitsForCell(idx, def);
@@ -807,6 +827,8 @@ public class ObstacleStateService : ISimObstacleQuery
         var id = (ObstacleId)level.obstacles[idx];
         if (id == ObstacleId.None) return 0;
 
+        if (id == ObstacleId.Tube) return 1;
+
         var def = library?.Get(id);
         if (def == null) return 0;
 
@@ -845,8 +867,8 @@ public class ObstacleStateService : ISimObstacleQuery
     }
 
     /// Removes all EnergyContainer cells from the obstacle layer and fires OnCellUnlocked
-    /// for each, triggering gravity. Called by EnergyContainerService when the group
-    /// hit quota is reached.
+    /// for each, triggering gravity. Called only when a booster directly destroys an
+    /// exhausted container (remaining goes to 0 via normal TryDamageAt flow).
     public void ForceRemoveAllEnergyContainers()
     {
         if (level == null || level.obstacles == null || level.obstacleOrigins == null)
@@ -864,6 +886,25 @@ public class ObstacleStateService : ISimObstacleQuery
 
         foreach (int origin in origins)
             ClearObstacleFromLevel(origin, ObstacleId.EnergyContainer);
+    }
+
+    /// Sets all alive EnergyContainers to remaining=1 (FullyDisabled stage) WITHOUT
+    /// removing them from the obstacle layer. The cell stays blocked; only a booster
+    /// can clear the container. Called by EnergyContainerService when the group energy
+    /// quota is depleted.
+    public void SetAllEnergyContainersExhausted()
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return;
+
+        int size = Mathf.Min(level.obstacles.Length, level.obstacleOrigins.Length);
+        for (int i = 0; i < size; i++)
+        {
+            if ((ObstacleId)level.obstacles[i] != ObstacleId.EnergyContainer) continue;
+            if (level.obstacleOrigins[i] != i) continue;
+            if (remainingHitsByOrigin[i] > 1)
+                remainingHitsByOrigin[i] = 1; // FullyDisabled stage — cell stays blocked
+        }
     }
 
     /// Frees a single tube cell from the obstacle layer and fires OnCellUnlocked.

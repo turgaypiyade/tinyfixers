@@ -290,6 +290,7 @@ public class BoardAnimator
         var lineSweepCandidates = new HashSet<TileView>();
         var skipBreakFxTiles = new HashSet<TileView>();
         var lineHitDamagedObstacleCells = new HashSet<Vector2Int>();
+        var hitObstacleOrigins = new HashSet<int>();
         var implodeTiles = new List<TileView>();
         bool lineHitWindowOpen = false;
 
@@ -683,6 +684,10 @@ public class BoardAnimator
                 if (c.x < 0 || c.x >= board.Width || c.y < 0 || c.y >= board.Height) return;
                 if (lineHitDamagedObstacleCells.Contains(c)) return;
                 if (!board.ObstacleStateService.HasObstacleAt(c.x, c.y)) return;
+                // Per-origin deduplication: 2x2+ obstacles (ColorChest etc.) must take
+                // only one hit per pass, regardless of how many cells the line crosses.
+                int origin = board.ObstacleStateService.GetObstacleOriginAt(c.x, c.y);
+                if (origin >= 0 && !hitObstacleOrigins.Add(origin)) return;
                 lineHitDamagedObstacleCells.Add(c);
                 var hit = board.ApplyObstacleDamageAt(c.x, c.y, damageContext, null);
                 if (hit.didHit) board.TriggerObstacleVisualChange(hit.visualChange);
@@ -793,6 +798,14 @@ public class BoardAnimator
 
             if (sources == null)
                 continue;
+
+            // Per-origin deduplication: prevents 2x2+ obstacles from taking multiple
+            // hits when several of their cells appear in the impact list.
+            if (board.ObstacleStateService != null)
+            {
+                int origin = board.ObstacleStateService.GetObstacleOriginAt(cell.x, cell.y);
+                if (origin >= 0 && !hitObstacleOrigins.Add(origin)) continue;
+            }
 
             for (int i = 0; i < sources.Count; i++)
             {
@@ -1125,19 +1138,6 @@ public class BoardAnimator
 
         for (int i = 0; i < OrthogonalDirs.Length; i++)
             TryCollect(centerCell + OrthogonalDirs[i]);
-
-        for (int i = 0; i < DiagonalDirs.Length; i++)
-        {
-            Vector2Int diagonal = centerCell + DiagonalDirs[i];
-
-            if (diagonal.x < 0 || diagonal.x >= board.Width || diagonal.y < 0 || diagonal.y >= board.Height)
-                continue;
-
-            if (!board.Obstacles.IsDiagonalAllowedAt(diagonal.x, diagonal.y))
-                continue;
-
-            TryCollect(diagonal);
-        }
     }
 
 

@@ -48,7 +48,8 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
     public override bool Blocking => true;
 
     // Tüm botların aynı anda inmesi için sabit dive süresi (saniye).
-    private const float SYNC_DIVE_DURATION = 0.22f;
+    // Chain tempo multiplier kasıtlı uygulanmıyor — combo animasyonu çok hızlı görünüyor.
+    private const float SYNC_DIVE_DURATION = 0.35f;
 
     private readonly int bonusPhantomBots;
 
@@ -364,7 +365,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         Vector2 start = bot.rect.anchoredPosition;
         Vector2 hover = bot.hoverAnchor;
         float phase = index * 0.77f;
-        float burstDuration = board.ApplySpecialChainTempo(0.13f);
+        float burstDuration = 0.20f;
         float elapsed = 0f;
 
         while (elapsed < burstDuration && bot != null && bot.rect != null && !bot.arrived && !bot.diving)
@@ -499,7 +500,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             yield break;
 
         // ─── PHASE 2: Tüm dive'lar bitene kadar sabit süreli bekle ───
-        yield return new WaitForSeconds(board.ApplySpecialChainTempo(SYNC_DIVE_DURATION));
+        yield return new WaitForSeconds(SYNC_DIVE_DURATION);
 
         Debug.Log($"[OverridePatchBotAirborne] all_arrived");
 
@@ -698,7 +699,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             ? new Vector2(-delta.y, delta.x).normalized
             : Vector2.up;
         float arc = Mathf.Clamp(delta.magnitude * 0.11f, board.TileSize * 0.14f, board.TileSize * 0.48f);
-        float duration = board.ApplySpecialChainTempo(SYNC_DIVE_DURATION);
+        float duration = SYNC_DIVE_DURATION;
         float elapsed = 0f;
 
         while (elapsed < duration)

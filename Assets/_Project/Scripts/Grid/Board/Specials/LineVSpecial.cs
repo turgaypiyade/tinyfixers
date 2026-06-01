@@ -34,6 +34,9 @@ public sealed class LineVExecutionRuntime
     public Action<ResolutionContext> EnqueueChainSpecials;
     public Action<ResolutionContext> ProcessQueue;
     public bool SuppressVisualSideEffects;
+
+    // Swap sırasında normal taraftan oluşan yeni special hücreler — LineV bu hücreleri tüketmez.
+    public HashSet<Vector2Int> ProtectedCells;
 }
 
 public sealed class LineVExecutionResult
@@ -183,6 +186,9 @@ public sealed class LineVSpecial
 
         for (int y = 0; y < rt.Board.Height; y++)
         {
+            if (rt.ProtectedCells != null && rt.ProtectedCells.Contains(new Vector2Int(x, y)))
+                continue;
+
             if (!SpecialUtils.CanAffectCell(rt.Board, x, y))
                 continue;
 
