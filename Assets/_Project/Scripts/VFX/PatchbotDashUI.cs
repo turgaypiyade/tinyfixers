@@ -147,14 +147,13 @@ public class PatchbotDashUI : MonoBehaviour
         var propellerSprite = board.PatchBotPropellerSprite;
         if (propellerSprite != null)
         {
-            var propGo = new GameObject("PatchBotPropeller",
-                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(PatchBotPropellerView));
+            var propGo = new GameObject("PatchBotPropeller", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(PatchBotPropellerView));
             propGo.transform.SetParent(rt, false);
 
             var propRt = propGo.GetComponent<RectTransform>();
             propRt.anchorMin = new Vector2(0.5f, 0.5f);
             propRt.anchorMax = new Vector2(0.5f, 0.5f);
-            propRt.pivot     = new Vector2(0.5f, 0.5f);
+            propRt.pivot = new Vector2(0.5f, 0.5f);
             propRt.sizeDelta = size;
             propRt.anchoredPosition = Vector2.zero;
 
@@ -164,7 +163,7 @@ public class PatchbotDashUI : MonoBehaviour
             propImg.raycastTarget = false;
             propImg.color = Color.white;
 
-            propGo.GetComponent<PatchBotPropellerView>().StartActivationSpin(board.PatchBotPropellerFlightSpeed);
+            propGo.GetComponent<PatchBotPropellerView>().StartActivationSpin(5400f);
         }
 
         RectTransform carryRt = null;
@@ -604,7 +603,7 @@ public class PatchbotDashUI : MonoBehaviour
             source.volume = targetVolume;
     }
 
-    static Vector2 WorldToAnchoredIn(RectTransform targetSpace, Vector3 worldPos)
+static Vector2 WorldToAnchoredIn(RectTransform targetSpace, Vector3 worldPos)
     {
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             targetSpace,

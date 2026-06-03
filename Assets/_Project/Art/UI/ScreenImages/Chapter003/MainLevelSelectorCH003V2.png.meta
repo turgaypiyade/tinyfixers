@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 8f47d89b0f7fe4435b5e176a1f531f13
+guid: ffebb0c8f0a9e4c18aa15c8439bdd081
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1055983782364355613
-    second: BottomAreaCH004_0
+      213: 2319013252736750497
+    second: MainLevelSelectorCH003V2_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 2048
+    maxTextureSize: 1024
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 2
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: BottomAreaCH004_0
+      name: MainLevelSelectorCH003V2_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 2171
-        height: 422
+        width: 2016
+        height: 511
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d1c966cb7ab97ae00800000000000000
-      internalID: 1055983782364355613
+      spriteID: 1a31cc6444ace2020800000000000000
+      internalID: 2319013252736750497
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      BottomAreaCH004_0: 1055983782364355613
+      MainLevelSelectorCH003V2_0: 2319013252736750497
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

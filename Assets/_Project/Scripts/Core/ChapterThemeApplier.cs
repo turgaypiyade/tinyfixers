@@ -29,6 +29,7 @@ public class ChapterThemeApplier : MonoBehaviour
 
     [Header("Main Menu extras")]
     [SerializeField] private Image levelSelectorBtnImage;
+    [SerializeField] private Image repairBtnImage;
 
     [Header("Board Border (game scene only)")]
     [SerializeField] private BoardBorderThemeApplier boardBorderApplier;
@@ -68,6 +69,7 @@ public class ChapterThemeApplier : MonoBehaviour
             SetSprite(topHudImage,        theme.menuTopHud);
             SetSprite(bottomAreaImage,    theme.menuBottomArea);
             SetSprite(levelSelectorBtnImage, theme.menuLevelSelectorBtn);
+            SetSprite(repairBtnImage,        theme.menuRepairBtn);
         }
 
         ApplyBoardBorder(theme);

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 540732217af034588930b3c7abef7eee, type: 3}
   m_Name: WorkshopStageData_Chapter4
   m_EditorClassIdentifier: Assembly-CSharp::WorkshopStageData
-  mode: 0
+  mode: 1
   stages:
   - nameLocalizationKey: 
     stageName: Yaza Merhaba...

@@ -113,7 +113,7 @@ public class BoardController : MonoBehaviour
     [SerializeField] private RectTransform boosterFxParent;
     [SerializeField] private Sprite hammerBoosterFallbackSprite;
     [SerializeField] private Sprite patchBotPropellerSprite;
-    [SerializeField] private float patchBotPropellerFlightSpeed = 1440f;
+    [SerializeField] private Sprite patchBotPropellerHubSprite;
 
     internal RectTransform HammerBoosterFxPrefab => hammerBoosterFxPrefab;
     internal RectTransform CannonBoosterFxPrefab => cannonBoosterFxPrefab;
@@ -121,7 +121,7 @@ public class BoardController : MonoBehaviour
     internal RectTransform BoosterFxParent => boosterFxParent != null ? boosterFxParent : parent;
     internal Sprite HammerBoosterFallbackSprite => hammerBoosterFallbackSprite;
     internal Sprite PatchBotPropellerSprite => patchBotPropellerSprite;
-    internal float PatchBotPropellerFlightSpeed => patchBotPropellerFlightSpeed;
+    internal Sprite PatchBotPropellerHubSprite => patchBotPropellerHubSprite;
 
     [Header("Special Tile Visual")]
     [SerializeField] private bool specialFillCell = false;

@@ -24,6 +24,7 @@ public class ChapterTheme : ScriptableObject
     public Sprite menuTopHud;
     public Sprite menuBottomArea;
     public Sprite menuLevelSelectorBtn;
+    public Sprite menuRepairBtn;
 
     [Header("Board Border / Grid")]
     public BorderColorId    borderColorId      = BorderColorId.Orange;

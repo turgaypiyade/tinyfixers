@@ -94,7 +94,7 @@ MonoBehaviour:
   wobbleDuration: 0.15
   wobbleDecay: 0.38
   wobbleHalfSteps: 4
-  spinSpeed: 960
+  spinSpeed: 9000
   spinUpTime: 0.1
   idleDelay: 2
   idleRepeatMin: 3

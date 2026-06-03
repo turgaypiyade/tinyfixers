@@ -16,10 +16,11 @@ MonoBehaviour:
   gameBackground: {fileID: 21300000, guid: cce6788ad4e9e4e81af5259f0306b2f4, type: 3}
   gameTopHud: {fileID: 21300000, guid: bbc643dcd189c479f8b2e1c9b3d29b1e, type: 3}
   gameBottomArea: {fileID: 21300000, guid: 19f3f4169d35a4d3c8cf0f407a17728d, type: 3}
-  menuBackground: {fileID: 21300000, guid: 4ba4920980b144e99a3620a3dc357620, type: 3}
-  menuTopHud: {fileID: 21300000, guid: 4ba4920980b144e99a3620a3dc357620, type: 3}
+  menuBackground: {fileID: 21300000, guid: c5d84dd50ee2747119af15fa13ca6e2b, type: 3}
+  menuTopHud: {fileID: 21300000, guid: 8ff13e10cc2a54670be4b76d1f74dc6f, type: 3}
   menuBottomArea: {fileID: 21300000, guid: 8f47d89b0f7fe4435b5e176a1f531f13, type: 3}
-  menuLevelSelectorBtn: {fileID: 21300000, guid: fda82192295aa4c9ebba5c7a8e0bd25a, type: 3}
+  menuLevelSelectorBtn: {fileID: 21300000, guid: 5fe57ed158f89401b939e3b20398f51c, type: 3}
+  menuRepairBtn: {fileID: 21300000, guid: 5fe57ed158f89401b939e3b20398f51c, type: 3}
   borderColorId: 0
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
   successAnimationBackground: {fileID: 0}
@@ -32,7 +33,7 @@ MonoBehaviour:
   preLevelSlotSelectedTint: {r: 0.42745098, g: 1, b: 0.23921569, a: 0.6666667}
   preLevelCountTextColor: {r: 1, g: 1, b: 1, a: 1}
   preLevelButtonTextColor: {r: 1, g: 1, b: 1, a: 1}
-  workshopStages: {fileID: 11400000, guid: 5021c7c9971e74ceabd57fa47b3807e5, type: 2}
+  workshopStages: {fileID: 11400000, guid: ee94cc6fba5bc40eb9422268cd24e711, type: 2}
   loadingScreenImages:
   - {fileID: 21300000, guid: 195efa70a7541414a9d5f30ca5630078, type: 3}
   - {fileID: 21300000, guid: e33a13330145a40e9b9c1307d4abe674, type: 3}

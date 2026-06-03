@@ -218,19 +218,28 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         float altitude = board.TileSize * (0.90f + 0.05f * (index % 2));
         Vector2 hoverAnchor = rect.anchoredPosition + new Vector2(side * lateral, altitude);
 
-        PatchBotPropellerView propellerView = null;
         var propellerSprite = board.PatchBotPropellerSprite;
         if (propellerSprite != null)
         {
-            var propGo = new GameObject("PatchBotPropeller",
-                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(PatchBotPropellerView));
+            float tileSize = board.TileSize;
+            var tileVec = new Vector2(tileSize, tileSize);
+
+            var spinGo = new GameObject("PropellerSpin", typeof(RectTransform), typeof(PropellerSpinRotator));
+            spinGo.transform.SetParent(rect, false);
+            var spinRt = spinGo.GetComponent<RectTransform>();
+            spinRt.anchorMin = new Vector2(0.5f, 0.5f);
+            spinRt.anchorMax = new Vector2(0.5f, 0.5f);
+            spinRt.pivot = new Vector2(0.5f, 0.5f);
+            spinRt.sizeDelta = tileVec;
+            spinRt.anchoredPosition = Vector2.zero;
+            var propGo = new GameObject("PatchBotPropeller", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(PatchBotPropellerView));
             propGo.transform.SetParent(rect, false);
 
             var propRt = propGo.GetComponent<RectTransform>();
             propRt.anchorMin = new Vector2(0.5f, 0.5f);
             propRt.anchorMax = new Vector2(0.5f, 0.5f);
-            propRt.pivot    = new Vector2(0.5f, 0.5f);
-            propRt.sizeDelta = new Vector2(board.TileSize, board.TileSize);
+            propRt.pivot = new Vector2(0.5f, 0.5f);
+            propRt.sizeDelta = tileVec;
             propRt.anchoredPosition = Vector2.zero;
 
             var propImg = propGo.GetComponent<Image>();
@@ -239,8 +248,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             propImg.raycastTarget = false;
             propImg.color = Color.white;
 
-            propellerView = propGo.GetComponent<PatchBotPropellerView>();
-            propellerView.StartActivationSpin(board.PatchBotPropellerFlightSpeed);
+            propGo.GetComponent<PatchBotPropellerView>().StartActivationSpin(5400f);
         }
 
         return new AirborneBot
@@ -252,7 +260,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             flightRoot = flightRoot,
             image = image,
             hoverAnchor = hoverAnchor,
-            propellerView = propellerView
+            propellerView = null
         };
     }
 
@@ -318,19 +326,28 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             }
         }
 
-        PatchBotPropellerView propellerView = null;
         var propellerSprite = board.PatchBotPropellerSprite;
         if (propellerSprite != null)
         {
-            var propGo = new GameObject("PatchBotPropeller",
-                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(PatchBotPropellerView));
+            float tileSize = board.TileSize;
+            var tileVec = new Vector2(tileSize, tileSize);
+
+            var spinGo = new GameObject("PropellerSpin", typeof(RectTransform), typeof(PropellerSpinRotator));
+            spinGo.transform.SetParent(rect, false);
+            var spinRt = spinGo.GetComponent<RectTransform>();
+            spinRt.anchorMin = new Vector2(0.5f, 0.5f);
+            spinRt.anchorMax = new Vector2(0.5f, 0.5f);
+            spinRt.pivot = new Vector2(0.5f, 0.5f);
+            spinRt.sizeDelta = tileVec;
+            spinRt.anchoredPosition = Vector2.zero;
+            var propGo = new GameObject("PatchBotPropeller", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(PatchBotPropellerView));
             propGo.transform.SetParent(rect, false);
 
             var propRt = propGo.GetComponent<RectTransform>();
             propRt.anchorMin = new Vector2(0.5f, 0.5f);
             propRt.anchorMax = new Vector2(0.5f, 0.5f);
-            propRt.pivot    = new Vector2(0.5f, 0.5f);
-            propRt.sizeDelta = new Vector2(board.TileSize, board.TileSize);
+            propRt.pivot = new Vector2(0.5f, 0.5f);
+            propRt.sizeDelta = tileVec;
             propRt.anchoredPosition = Vector2.zero;
 
             var propImg = propGo.GetComponent<Image>();
@@ -339,8 +356,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             propImg.raycastTarget = false;
             propImg.color = Color.white;
 
-            propellerView = propGo.GetComponent<PatchBotPropellerView>();
-            propellerView.StartActivationSpin(board.PatchBotPropellerFlightSpeed);
+            propGo.GetComponent<PatchBotPropellerView>().StartActivationSpin(5400f);
         }
 
         return new AirborneBot
@@ -353,7 +369,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             image = image,
             hoverAnchor = hoverAnchor,
             carryRt = carryRt,
-            propellerView = propellerView
+            propellerView = null
         };
     }
 

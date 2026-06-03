@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 8f47d89b0f7fe4435b5e176a1f531f13
+guid: 5fe57ed158f89401b939e3b20398f51c
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1055983782364355613
-    second: BottomAreaCH004_0
+      213: -5842970958602245087
+    second: MenuLevelRepairCh004V2_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -52,7 +52,7 @@ TextureImporter:
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
-  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteBorder: {x: 80, y: 81, z: 87, w: 98}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
   alphaIsTransparency: 1
@@ -113,23 +113,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: BottomAreaCH004_0
+      name: MenuLevelRepairCh004V2_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 2171
-        height: 422
+        width: 1890
+        height: 523
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d1c966cb7ab97ae00800000000000000
-      internalID: 1055983782364355613
+      spriteID: 12ce69bded899eea0800000000000000
+      internalID: -5842970958602245087
       vertices: []
       indices: 
       edges: []
@@ -139,7 +139,7 @@ TextureImporter:
     physicsShape: []
     bones: []
     spriteID: 5e97eb03825dee720800000000000000
-    internalID: 0
+    internalID: 1537655665
     vertices: []
     indices: 
     edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      BottomAreaCH004_0: 1055983782364355613
+      MenuLevelRepairCh004V2_0: -5842970958602245087
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
