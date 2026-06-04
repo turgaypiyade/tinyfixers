@@ -79,6 +79,15 @@ public sealed class OverrideOverrideCombo
     private void CollectAllTargets(OverrideOverrideComboExecutionRuntime rt)
     {
         SpecialCellUtils.AddAllTiles(rt.Context.Affected, rt.Context, rt.Board);
+
+        // Override+Override tüm tahtayı tek seferde temizler.
+        // EnqueueChainSpecials'ın PulseCore, LineH/V vb. özel tile'ları
+        // chain-activate etmesini engellemek için hepsini Processed'a ekle.
+        foreach (var tile in rt.Context.Affected)
+        {
+            if (tile != null && tile.GetSpecial() != TileSpecial.None)
+                rt.Context.Processed.Add(new Vector2Int(tile.X, tile.Y));
+        }
     }
 
     private void PreparePresentation(OverrideOverrideComboExecutionRuntime rt)

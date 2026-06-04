@@ -741,3 +741,61 @@ MonoBehaviour:
     legacyStageDamageRules: 
     legacyBlocksCells: 1
     legacyBehavior: 1
+  - id: 28
+    stages:
+    - sprite: {fileID: -6610227217709057127, guid: d8bbd002619c541f89147cb97ffa675d, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+    - sprite: {fileID: 8673582621098912736, guid: d8bbd002619c541f89147cb97ffa675d, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+    - sprite: {fileID: 1422399218521640864, guid: d8bbd002619c541f89147cb97ffa675d, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 0
+    size: {x: 1, y: 1}
+    hits: 3
+    suppressHitParticles: 0
+    hitParticleSprites: []
+    breakParticleSprites: []
+    wardrobeItemSprites:
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
+    drawUnderTiles: 0
+    legacySprite: {fileID: -6610227217709057127, guid: d8bbd002619c541f89147cb97ffa675d, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules: 
+    legacyBlocksCells: 1
+    legacyBehavior: 1

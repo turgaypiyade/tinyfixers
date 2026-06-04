@@ -10,6 +10,12 @@ public enum BoardSfxCue
     OverrideNormalStart,
     OverrideSpecialStart,
     PulsePulseCharge,
+    ComboLineLine,
+    ComboPulseLine,
+    ComboPatchBotLine,
+    ComboPulsePatchBot,
+    ComboPatchBotPatchBot,
+    ComboOverrideOverride,
     ObstacleHit,
     ObstacleBreak,
     Swap,
@@ -139,4 +145,22 @@ public struct BoardSfxRequest
             priority: 90,
             duckFalls: true);
     }
+
+    public static BoardSfxRequest ComboLineLine(float delay = 0f)
+        => new BoardSfxRequest(BoardSfxCue.ComboLineLine,       TileSpecial.None,             1, 2, delay, 85, true);
+
+    public static BoardSfxRequest ComboPulseLine(float delay = 0f)
+        => new BoardSfxRequest(BoardSfxCue.ComboPulseLine,      TileSpecial.PulseCore,        1, 2, delay, 85, true);
+
+    public static BoardSfxRequest ComboPatchBotLine(float delay = 0f)
+        => new BoardSfxRequest(BoardSfxCue.ComboPatchBotLine,   TileSpecial.PatchBot,         1, 2, delay, 85, true);
+
+    public static BoardSfxRequest ComboPulsePatchBot(float delay = 0f)
+        => new BoardSfxRequest(BoardSfxCue.ComboPulsePatchBot,  TileSpecial.PulseCore,        1, 2, delay, 85, true);
+
+    public static BoardSfxRequest ComboPatchBotPatchBot(float delay = 0f)
+        => new BoardSfxRequest(BoardSfxCue.ComboPatchBotPatchBot, TileSpecial.PatchBot,       1, 2, delay, 85, true);
+
+    public static BoardSfxRequest ComboOverrideOverride(float delay = 0f)
+        => new BoardSfxRequest(BoardSfxCue.ComboOverrideOverride, TileSpecial.SystemOverride, 1, 3, delay, 90, true);
 }

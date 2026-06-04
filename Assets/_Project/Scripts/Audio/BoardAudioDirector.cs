@@ -39,8 +39,51 @@ public class BoardAudioDirector : MonoBehaviour
 
     private void HandleComboTriggered(TileSpecial a, TileSpecial b, Vector2Int originCell)
     {
+        bool aIsLine = a == TileSpecial.LineH || a == TileSpecial.LineV;
+        bool bIsLine = b == TileSpecial.LineH || b == TileSpecial.LineV;
+
         if (a == TileSpecial.PulseCore && b == TileSpecial.PulseCore)
+        {
             Emit(BoardSfxRequest.PulsePulseCharge());
+            return;
+        }
+
+        if (aIsLine && bIsLine)
+        {
+            Emit(BoardSfxRequest.ComboLineLine());
+            return;
+        }
+
+        if ((a == TileSpecial.PulseCore && bIsLine) || (b == TileSpecial.PulseCore && aIsLine))
+        {
+            Emit(BoardSfxRequest.ComboPulseLine());
+            return;
+        }
+
+        if ((a == TileSpecial.PatchBot && bIsLine) || (b == TileSpecial.PatchBot && aIsLine))
+        {
+            Emit(BoardSfxRequest.ComboPatchBotLine());
+            return;
+        }
+
+        if ((a == TileSpecial.PulseCore && b == TileSpecial.PatchBot) ||
+            (b == TileSpecial.PulseCore && a == TileSpecial.PatchBot))
+        {
+            Emit(BoardSfxRequest.ComboPulsePatchBot());
+            return;
+        }
+
+        if (a == TileSpecial.PatchBot && b == TileSpecial.PatchBot)
+        {
+            Emit(BoardSfxRequest.ComboPatchBotPatchBot());
+            return;
+        }
+
+        if (a == TileSpecial.SystemOverride && b == TileSpecial.SystemOverride)
+        {
+            Emit(BoardSfxRequest.ComboOverrideOverride());
+            return;
+        }
     }
 
     private void HandleOverrideFanoutStarted(Vector2Int originCell, TileSpecial targetSpecial)
@@ -214,6 +257,60 @@ public class BoardAudioDirector : MonoBehaviour
                 r.source = accentSource != null ? accentSource : transientSource;
                 r.set = profile.pulsePulseCharge;
                 r.volumeMultiplier = 1f;
+                break;
+            }
+
+            case BoardSfxCue.ComboLineLine:
+            {
+                r.familyKey = "combo_line_line";
+                r.source = accentSource != null ? accentSource : transientSource;
+                r.set = profile.comboLineLine;
+                r.volumeMultiplier = 1f;
+                break;
+            }
+
+            case BoardSfxCue.ComboPulseLine:
+            {
+                r.familyKey = "combo_pulse_line";
+                r.source = accentSource != null ? accentSource : transientSource;
+                r.set = profile.comboPulseLine;
+                r.volumeMultiplier = 1f;
+                break;
+            }
+
+            case BoardSfxCue.ComboPatchBotLine:
+            {
+                r.familyKey = "combo_patchbot_line";
+                r.source = accentSource != null ? accentSource : transientSource;
+                r.set = profile.comboPatchBotLine;
+                r.volumeMultiplier = 1f;
+                break;
+            }
+
+            case BoardSfxCue.ComboPulsePatchBot:
+            {
+                r.familyKey = "combo_pulse_patchbot";
+                r.source = accentSource != null ? accentSource : transientSource;
+                r.set = profile.comboPulsePatchBot;
+                r.volumeMultiplier = 1f;
+                break;
+            }
+
+            case BoardSfxCue.ComboPatchBotPatchBot:
+            {
+                r.familyKey = "combo_patchbot_patchbot";
+                r.source = accentSource != null ? accentSource : transientSource;
+                r.set = profile.comboPatchBotPatchBot;
+                r.volumeMultiplier = 1f;
+                break;
+            }
+
+            case BoardSfxCue.ComboOverrideOverride:
+            {
+                r.familyKey = "combo_override_override";
+                r.source = accentSource != null ? accentSource : transientSource;
+                r.set = profile.comboOverrideOverride;
+                r.volumeMultiplier = 1.1f;
                 break;
             }
 

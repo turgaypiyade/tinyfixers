@@ -38,4 +38,18 @@ public class BoardSfxProfile : ScriptableObject
 
     [Header("Pulse Combo")]
     public VariantSet pulsePulseCharge;
+
+    [Header("Combo - Line")]
+    public VariantSet comboLineLine;
+    public VariantSet comboPulseLine;
+    public VariantSet comboPatchBotLine;
+
+    [Header("Combo - PulseCore")]
+    public VariantSet comboPulsePatchBot;
+
+    [Header("Combo - PatchBot")]
+    public VariantSet comboPatchBotPatchBot;
+
+    [Header("Combo - Override")]
+    public VariantSet comboOverrideOverride;
 }

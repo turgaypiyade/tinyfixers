@@ -69,6 +69,10 @@ public enum ObstacleId : int
     // Cabinet-style obstacle. First hit opens the door; each subsequent normal
     // hit removes one item inside (front-to-back depth order).
     Wardrobe = 27,
+
+    // Multi-stage sculpting obstacle. Looks like a solid stone, reveals a carved
+    // shape progressively with each hit. Standard OverTileBlocker behavior.
+    SculptingStone = 28,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
