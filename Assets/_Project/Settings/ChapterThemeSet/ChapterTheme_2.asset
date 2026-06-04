@@ -20,10 +20,11 @@ MonoBehaviour:
   menuTopHud: {fileID: 21300000, guid: 45e6cdf4db2314a77829877c26e79471, type: 3}
   menuBottomArea: {fileID: 21300000, guid: 8dae26868da6c4f279ca8a4aa20d6cce, type: 3}
   menuLevelSelectorBtn: {fileID: 21300000, guid: 0c203ffc6c9304d37bc24efc6b9d2768, type: 3}
+  menuRepairBtn: {fileID: 0}
   borderColorId: 3
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
   successAnimationBackground: {fileID: 0}
-  preLevelPopupBackground: {fileID: 21300000, guid: 6b37ce26dba4e40f6b8aa04c14a5657a, type: 3}
+  preLevelPopupBackground: {fileID: 21300000, guid: e9e44705536804d9188f07b70a3b02e7, type: 3}
   preLevelContinueButton: {fileID: 0}
   preLevelCancelButton: {fileID: 0}
   preLevelCheckMark: {fileID: 21300000, guid: 4d7e3c1a8d2a049e7862849181984ab4, type: 3}
@@ -32,6 +33,7 @@ MonoBehaviour:
   preLevelSlotSelectedTint: {r: 1, g: 0.86, b: 0.25, a: 0.72}
   preLevelCountTextColor: {r: 1, g: 1, b: 1, a: 1}
   preLevelButtonTextColor: {r: 1, g: 1, b: 1, a: 1}
+  workshopStages: {fileID: 0}
   loadingScreenImages:
   - {fileID: 21300000, guid: 195efa70a7541414a9d5f30ca5630078, type: 3}
   - {fileID: 21300000, guid: e33a13330145a40e9b9c1307d4abe674, type: 3}

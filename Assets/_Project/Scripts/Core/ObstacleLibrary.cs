@@ -65,6 +65,11 @@ public class ObstacleDef
     [Tooltip("Obstacle tamamen kırıldığında kullanılacak particle sprite sheet parçaları.")]
     public List<Sprite> breakParticleSprites = new();
 
+    [Header("Wardrobe")]
+    [Tooltip("Wardrobe obstacle'ının içindeki item sprite'ları. Sıra: soldan sağa fiziksel pozisyon. " +
+             "hits = 1 (kapı açma) + bu liste uzunluğu olarak ayarlanmalı.")]
+    public List<Sprite> wardrobeItemSprites = new();
+
     [Header("Audio")]
     [Tooltip("Obstacle hasar aldığında (kırılmadan) çalınacak ses.")]
     public AudioClip hitSound;

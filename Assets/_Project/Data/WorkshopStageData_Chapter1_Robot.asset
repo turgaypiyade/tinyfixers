@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 540732217af034588930b3c7abef7eee, type: 3}
   m_Name: WorkshopStageData_Chapter1_Robot
   m_EditorClassIdentifier: Assembly-CSharp::WorkshopStageData
+  mode: 0
   stages:
   - nameLocalizationKey: 
     stageName: "Tamirata ba\u015Fla..."
@@ -20,6 +21,8 @@ MonoBehaviour:
     taskIcon: {fileID: 21300000, guid: e684ed7c70253417fb9d85e09bf981c3, type: 3}
     vfxFocusNormalized: {x: 0.5, y: 0.5}
     sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 0}
+    flyInFrom: 0
   - nameLocalizationKey: 
     stageName: "\u0130skele kur..."
     starCost: 3
@@ -27,6 +30,8 @@ MonoBehaviour:
     taskIcon: {fileID: 21300000, guid: e525d338077304ffba5150f8aff6ce96, type: 3}
     vfxFocusNormalized: {x: 0.5, y: 0.5}
     sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 0}
+    flyInFrom: 0
   - nameLocalizationKey: 
     stageName: Boya...
     starCost: 3
@@ -34,6 +39,8 @@ MonoBehaviour:
     taskIcon: {fileID: 21300000, guid: 55bb4b901816846dbbf9e84595b2d60d, type: 3}
     vfxFocusNormalized: {x: 0.5, y: 0.5}
     sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 0}
+    flyInFrom: 0
   - nameLocalizationKey: 
     stageName: Meydan...
     starCost: 2
@@ -41,6 +48,8 @@ MonoBehaviour:
     taskIcon: {fileID: 21300000, guid: 0c7a153968bea4346a1fad0601bf7f0b, type: 3}
     vfxFocusNormalized: {x: 0.5, y: 0.5}
     sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 0}
+    flyInFrom: 0
   - nameLocalizationKey: 
     stageName: Tabelalar...
     starCost: 2
@@ -48,6 +57,8 @@ MonoBehaviour:
     taskIcon: {fileID: 21300000, guid: f6cb5f5185ad94f6ab5015c0c3fc4dcb, type: 3}
     vfxFocusNormalized: {x: 0.5, y: 0.5}
     sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 0}
+    flyInFrom: 0
   - nameLocalizationKey: 
     stageName: Havuz ve banklar.
     starCost: 3
@@ -55,6 +66,8 @@ MonoBehaviour:
     taskIcon: {fileID: 21300000, guid: 475d466171d45417a897f3af57f19579, type: 3}
     vfxFocusNormalized: {x: 0.5, y: 0.5}
     sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 0}
+    flyInFrom: 0
   - nameLocalizationKey: 
     stageName: "F\u0131skiye..."
     starCost: 4
@@ -62,6 +75,8 @@ MonoBehaviour:
     taskIcon: {fileID: 21300000, guid: 667475bc444194f9293250a6ab437926, type: 3}
     vfxFocusNormalized: {x: 0.5, y: 0.5}
     sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 0}
+    flyInFrom: 0
   - nameLocalizationKey: 
     stageName: "Ho\u015Fgeldin..."
     starCost: 2
@@ -69,6 +84,8 @@ MonoBehaviour:
     taskIcon: {fileID: 21300000, guid: 3c616fd04712f469185f0e725737a232, type: 3}
     vfxFocusNormalized: {x: 0.5, y: 0.5}
     sfxOnComplete: {fileID: 0}
+    layerSprite: {fileID: 0}
+    flyInFrom: 0
   finalReward:
     items:
     - type: 0
@@ -84,5 +101,5 @@ MonoBehaviour:
       rewardIcon: {fileID: 21300000, guid: e200b3928e79346e2ab4da678e139c53, type: 3}
       nameLocalizationKey: 
     chestIcon: {fileID: 21300000, guid: 4158f6743c7c545678bc1ad5daed3817, type: 3}
-    chestOpenedSprite: {fileID: 0}
+    chestOpenedSprite: {fileID: 21300000, guid: e2ca9e0f34b7f401e949f0682cb1c32d, type: 3}
     nameLocalizationKey: workshop_reward_coins

@@ -49,7 +49,7 @@ MonoBehaviour:
     vfxFocusNormalized: {x: 0.5, y: 0.5}
     sfxOnComplete: {fileID: 0}
     layerSprite: {fileID: 21300000, guid: ed2622fa543994ae5a412fd40fdbb023, type: 3}
-    flyInFrom: 1
+    flyInFrom: 2
   - nameLocalizationKey: 
     stageName: Tekne
     starCost: 2
@@ -67,7 +67,7 @@ MonoBehaviour:
     vfxFocusNormalized: {x: 0.5, y: 0.5}
     sfxOnComplete: {fileID: 0}
     layerSprite: {fileID: 21300000, guid: 9c8306fdd48054e3c84a9c2c46caefbe, type: 3}
-    flyInFrom: 1
+    flyInFrom: 2
   - nameLocalizationKey: 
     stageName: Masa...
     starCost: 4
@@ -85,7 +85,7 @@ MonoBehaviour:
     vfxFocusNormalized: {x: 0.5, y: 0.5}
     sfxOnComplete: {fileID: 0}
     layerSprite: {fileID: 21300000, guid: 1667305b2ae964580bef6812c0ff9bbe, type: 3}
-    flyInFrom: 0
+    flyInFrom: 2
   finalReward:
     items:
     - type: 0
@@ -101,5 +101,5 @@ MonoBehaviour:
       rewardIcon: {fileID: 21300000, guid: e200b3928e79346e2ab4da678e139c53, type: 3}
       nameLocalizationKey: 
     chestIcon: {fileID: 21300000, guid: 4158f6743c7c545678bc1ad5daed3817, type: 3}
-    chestOpenedSprite: {fileID: 0}
+    chestOpenedSprite: {fileID: 21300000, guid: e2ca9e0f34b7f401e949f0682cb1c32d, type: 3}
     nameLocalizationKey: workshop_reward_coins

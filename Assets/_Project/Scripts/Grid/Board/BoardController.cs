@@ -310,6 +310,8 @@ public class BoardController : MonoBehaviour
     public event Action<int> OnChestOpened;
     public event Action<int, ChestColorMask> OnChestColorRemoved;
     public event Action<int, ChestColorMask, int> OnBatteryHit;
+    public event Action<int> OnWardrobeOpened;
+    public event Action<int, int> OnWardrobeItemRemoved;
     public event Action<int> OnMovesChanged;
     public event Action<TileType, int> OnTilesCleared;
     public event Action<bool> OnBoosterTargetingChanged;
@@ -2269,7 +2271,17 @@ public class BoardController : MonoBehaviour
         obstacleStateService.OnChestColorRemoved += HandleChestColorRemoved;
         obstacleStateService.OnBatteryHit -= HandleBatteryHit;
         obstacleStateService.OnBatteryHit += HandleBatteryHit;
+        obstacleStateService.OnWardrobeOpened -= HandleWardrobeOpened;
+        obstacleStateService.OnWardrobeOpened += HandleWardrobeOpened;
+        obstacleStateService.OnWardrobeItemRemoved -= HandleWardrobeItemRemoved;
+        obstacleStateService.OnWardrobeItemRemoved += HandleWardrobeItemRemoved;
     }
+
+    private void HandleWardrobeOpened(int originIndex)
+        => OnWardrobeOpened?.Invoke(originIndex);
+
+    private void HandleWardrobeItemRemoved(int originIndex, int itemsRemaining)
+        => OnWardrobeItemRemoved?.Invoke(originIndex, itemsRemaining);
 
     private void HandleChestOpened(int originIndex)
         => OnChestOpened?.Invoke(originIndex);

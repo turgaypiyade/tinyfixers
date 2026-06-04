@@ -20,10 +20,11 @@ MonoBehaviour:
   menuTopHud: {fileID: 21300000, guid: f542ccaaf300c4839b6bd184cd231bca, type: 3}
   menuBottomArea: {fileID: 21300000, guid: 8799681f684604c098acba019fb90018, type: 3}
   menuLevelSelectorBtn: {fileID: 21300000, guid: 615f8b36853ba44ec80102599d1b0696, type: 3}
+  menuRepairBtn: {fileID: 0}
   borderColorId: 2
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
   successAnimationBackground: {fileID: 0}
-  preLevelPopupBackground: {fileID: 21300000, guid: cd7979eae484c4dad9be25df304132fe, type: 3}
+  preLevelPopupBackground: {fileID: 21300000, guid: 9b9154e178f2c427999b351b2cfec982, type: 3}
   preLevelContinueButton: {fileID: 0}
   preLevelCancelButton: {fileID: 0}
   preLevelCheckMark: {fileID: 21300000, guid: 4d7e3c1a8d2a049e7862849181984ab4, type: 3}

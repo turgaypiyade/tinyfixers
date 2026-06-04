@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: d698651cd4883474f9da105e3ba16e2b
+guid: ca5087db03ed64851bbcff460aa2e84f
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8482938549098731038
-    second: LevelEndPopupCH3_0
+      213: -7915365977794693794
+    second: HelmetLockerClosed_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LevelEndPopupCH3_0
+      name: HelmetLockerClosed_0
       rect:
         serializedVersion: 2
         x: 0
-        y: 0
-        width: 1114
-        height: 1394
+        y: 1
+        width: 983
+        height: 982
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: e165f767aa379b570800000000000000
-      internalID: 8482938549098731038
+      spriteID: e55b552a498f62290800000000000000
+      internalID: -7915365977794693794
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LevelEndPopupCH3_0: 8482938549098731038
+      HelmetLockerClosed_0: -7915365977794693794
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -37,12 +37,7 @@ public sealed class PatchBotPropellerView : MonoBehaviour
         rt = GetComponent<RectTransform>();
     }
 
-    private void OnEnable()
-    {
-        idleRoutine = StartCoroutine(CoIdleWatch());
-        if (routine == null)
-            StartActivationSpin();
-    }
+    private void OnEnable()  => idleRoutine = StartCoroutine(CoIdleWatch());
     private void OnDisable() => StopAll();
 
     // ── Public API ────────────────────────────────────────────────────────────

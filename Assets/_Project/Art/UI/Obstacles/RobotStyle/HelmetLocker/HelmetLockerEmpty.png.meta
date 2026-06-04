@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: ffba4f6377dd34a3ea02f59d4a01001c
+guid: 97f34790e3a5d4689a12c5ddf304da45
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 5905710763132229561
-    second: CHP1LevelPopup_0
+      213: 7296741186782852990
+    second: HelmetLockerEmpty_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: CHP1LevelPopup_0
+      name: HelmetLockerEmpty_0
       rect:
         serializedVersion: 2
         x: 0
-        y: 3
-        width: 827
-        height: 1124
+        y: 0
+        width: 1212
+        height: 1212
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 9b792b636ac45f150800000000000000
-      internalID: 5905710763132229561
+      spriteID: e777728137b334560800000000000000
+      internalID: 7296741186782852990
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      CHP1LevelPopup_0: 5905710763132229561
+      HelmetLockerEmpty_0: 7296741186782852990
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

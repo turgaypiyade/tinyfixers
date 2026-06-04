@@ -70,6 +70,8 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private ChestObstacleView chestObstacleViewPrefab;
     [Tooltip("BatteryBox icin katmanli gorsel prefabi (BatteryBoxView component'i olmali)")]
     [SerializeField] private BatteryBoxView batteryBoxViewPrefab;
+    [Tooltip("Wardrobe obstacle prefabi (WardrobeObstacleView component'i olmali). Null bırakılırsa fallback ile spawn edilir.")]
+    [SerializeField] private WardrobeObstacleView wardrobeObstacleViewPrefab;
 
     [Header("Initial Resolve")]
     [SerializeField] private bool resolveInitialOnStart = false;
@@ -90,6 +92,7 @@ public class GridSpawner : MonoBehaviour
     private readonly Dictionary<int, ObstacleDef> obstacleDefsByOrigin = new();
     private readonly Dictionary<int, ChestObstacleView> _chestViews = new();
     private readonly Dictionary<int, BatteryBoxView> _batteryBoxViews = new();
+    private readonly Dictionary<int, WardrobeObstacleView> _wardrobeViews = new();
     private readonly Dictionary<int, GameObject> cellBgByIndex = new();
     private readonly Dictionary<int, Image> cellBgImageByIndex = new();
     private readonly Dictionary<int, Color> baseCellBgColorByIndex = new();
@@ -196,6 +199,8 @@ public class GridSpawner : MonoBehaviour
         board.OnChestOpened                 += HandleChestOpened;
         board.OnChestColorRemoved           += HandleChestColorRemoved;
         board.OnBatteryHit                  += HandleBatteryHit;
+        board.OnWardrobeOpened              += HandleWardrobeOpened;
+        board.OnWardrobeItemRemoved         += HandleWardrobeItemRemoved;
     }
 
     private void UnbindBoardEvents()
@@ -209,6 +214,8 @@ public class GridSpawner : MonoBehaviour
         board.OnChestOpened                -= HandleChestOpened;
         board.OnChestColorRemoved          -= HandleChestColorRemoved;
         board.OnBatteryHit                 -= HandleBatteryHit;
+        board.OnWardrobeOpened             -= HandleWardrobeOpened;
+        board.OnWardrobeItemRemoved        -= HandleWardrobeItemRemoved;
     }
 
     private void ApplyPaddingToSpawnParent()
@@ -1317,6 +1324,100 @@ public class GridSpawner : MonoBehaviour
         view.Shake();
     }
 
+    // ─── Wardrobe ───────────────────────────────────────────────────────────
+
+    private Image SpawnWardrobeView(ObstacleDef def, int x, int y)
+    {
+        bool drawUnder = ResolveBehaviorForOrigin(resolvedLevel.Index(x, y), def) == ObstacleBehaviorType.UnderTileLayered;
+        var parent = drawUnder ? underTilesObstaclesRoot : overTilesObstaclesRoot;
+
+        int w = Mathf.Max(1, def.size.x);
+        int h = Mathf.Max(1, def.size.y);
+        float gridOverlap = Mathf.Max(1f, Mathf.Ceil(runtimeGridLineThickness * 0.5f));
+        int originIndex = resolvedLevel.Index(x, y);
+
+        bool HasDifferentAt(int cx, int cy)
+        {
+            if (cx < 0 || cx >= width || cy < 0 || cy >= height) return false;
+            int idx = resolvedLevel.Index(cx, cy);
+            if (idx < 0 || idx >= resolvedLevel.obstacles.Length) return false;
+            if ((ObstacleId)resolvedLevel.obstacles[idx] == ObstacleId.None) return false;
+            return resolvedLevel.obstacleOrigins[idx] != originIndex;
+        }
+
+        bool dL = false, dR = false, dT = false, dB = false;
+        for (int yy = y; yy < y + h; yy++) { if (HasDifferentAt(x - 1, yy)) dL = true; if (HasDifferentAt(x + w, yy)) dR = true; }
+        for (int xx = x; xx < x + w; xx++) { if (HasDifferentAt(xx, y - 1)) dT = true; if (HasDifferentAt(xx, y + h)) dB = true; }
+
+        float lo = dL ? 0f : gridOverlap;
+        float ro = dR ? 0f : gridOverlap;
+        float to = dT ? 0f : gridOverlap;
+        float bo = dB ? 0f : gridOverlap;
+
+        WardrobeObstacleView view;
+        Image rootImage;
+
+        if (wardrobeObstacleViewPrefab != null)
+        {
+            view = Instantiate(wardrobeObstacleViewPrefab, parent);
+            rootImage = view.GetComponent<Image>();
+            if (rootImage == null) rootImage = view.gameObject.AddComponent<Image>();
+        }
+        else
+        {
+            var fallback = new GameObject($"Obs_Wardrobe_{x}_{y}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            fallback.transform.SetParent(parent, false);
+            rootImage = fallback.GetComponent<Image>();
+            view = fallback.AddComponent<WardrobeObstacleView>();
+        }
+
+        Sprite closedSprite = def.GetPreviewSprite();
+        if (rootImage != null)
+        {
+            rootImage.sprite = closedSprite;
+            rootImage.type = Image.Type.Simple;
+            rootImage.preserveAspect = false;
+        }
+
+        var rt = rootImage != null ? rootImage.GetComponent<RectTransform>() : null;
+        if (rt != null)
+        {
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot = new Vector2(0, 1);
+            rt.anchoredPosition = new Vector2(x * tileSize - lo, -y * tileSize + to);
+            rt.sizeDelta = new Vector2(w * tileSize + lo + ro, h * tileSize + to + bo);
+        }
+
+        if (rootImage != null)
+        {
+            var clickProxy = rootImage.gameObject.AddComponent<ObstacleClickProxy>();
+            clickProxy.Init(board, x, y);
+        }
+
+        view.SetClosedSprite(closedSprite);
+        _wardrobeViews[originIndex] = view;
+        return rootImage;
+    }
+
+    private void HandleWardrobeOpened(int originIndex)
+    {
+        if (!_wardrobeViews.TryGetValue(originIndex, out var view) || view == null) return;
+        if (!obstacleDefsByOrigin.TryGetValue(originIndex, out var def) || def == null) return;
+
+        Sprite openBg = def.stages != null && def.stages.Count > 1 ? def.stages[1].sprite : null;
+        int shelfCount = Mathf.Max(1, def.size.y);
+        view.OpenDoor(openBg, def.wardrobeItemSprites, shelfCount);
+        view.Shake();
+    }
+
+    private void HandleWardrobeItemRemoved(int originIndex, int itemsRemaining)
+    {
+        if (!_wardrobeViews.TryGetValue(originIndex, out var view) || view == null) return;
+        view.RemoveFrontItem();
+        view.Shake();
+    }
+
     private Image DrawObstacleImage(ObstacleDef def, int x, int y)
     {
         if (def == null)
@@ -1332,6 +1433,9 @@ public class GridSpawner : MonoBehaviour
 
         if (def.id == ObstacleId.BatteryBox)
             return SpawnBatteryBoxView(def, x, y);
+
+        if (def.id == ObstacleId.Wardrobe)
+            return SpawnWardrobeView(def, x, y);
 
         Sprite sprite = def.GetPreviewSprite();
         if (sprite == null) return null;

@@ -65,6 +65,10 @@ public enum ObstacleId : int
     // Multi-cell shrinking tube obstacle. Managed by TubeObstacleService.
     // Cells are stamped into obstacles[] at runtime from LevelData.tubes[].
     Tube = 26,
+
+    // Cabinet-style obstacle. First hit opens the door; each subsequent normal
+    // hit removes one item inside (front-to-back depth order).
+    Wardrobe = 27,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }

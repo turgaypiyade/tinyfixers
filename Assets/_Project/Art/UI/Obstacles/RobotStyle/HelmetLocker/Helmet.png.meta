@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 6b37ce26dba4e40f6b8aa04c14a5657a
+guid: efaa3a7e71bf84bb3886de77bce99d6d
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 7531131843280132040
-    second: CHP2LevelPopup_0
+      213: 309628545801974608
+    second: Helmet_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: CHP2LevelPopup_0
+      name: Helmet_0
       rect:
         serializedVersion: 2
-        x: 0
+        x: 4
         y: 0
-        width: 793
-        height: 1105
+        width: 1173
+        height: 1186
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 8c758538284f38860800000000000000
-      internalID: 7531131843280132040
+      spriteID: 053f8dc95850c4400800000000000000
+      internalID: 309628545801974608
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      CHP2LevelPopup_0: 7531131843280132040
+      Helmet_0: 309628545801974608
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

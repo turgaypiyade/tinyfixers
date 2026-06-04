@@ -96,6 +96,9 @@ public class ObstacleStateService : ISimObstacleQuery
     // BatteryBox: origin index → int[4] kalan hit (Gear/Core/Bolt/Plate sırasıyla)
     private readonly Dictionary<int, int[]> _batteryHitsByOrigin = new();
 
+    // Wardrobe: origin index → kalan item sayısı (kapı açıldıktan sonra)
+    private readonly Dictionary<int, int> _wardrobeItemCounts = new();
+
     public event Action<int, ObstacleStageSnapshot> OnObstacleStageChanged;
     public event Action<int, ObstacleId> OnObstacleDestroyed;
     public event Action<int> OnCellUnlocked;
@@ -110,6 +113,9 @@ public class ObstacleStateService : ISimObstacleQuery
     public event Action<int, ChestColorMask> OnChestColorRemoved;
     // BatteryBox: origin, hangi renk pilin kaç hiti kaldı
     public event Action<int, ChestColorMask, int> OnBatteryHit;
+    // Wardrobe: kapı açılması ve item kırılması
+    public event Action<int> OnWardrobeOpened;
+    public event Action<int, int> OnWardrobeItemRemoved;  // (origin, itemsRemaining)
 
     public readonly struct ObstacleHitResult
     {
@@ -173,6 +179,7 @@ public class ObstacleStateService : ISimObstacleQuery
 
         _chestColorStates.Clear();
         _batteryHitsByOrigin.Clear();
+        _wardrobeItemCounts.Clear();
 
         for (int idx = 0; idx < size; idx++)
         {
@@ -197,6 +204,14 @@ public class ObstacleStateService : ISimObstacleQuery
                 int hitsPerBattery = Mathf.Max(1, def != null ? def.hits : 1);
                 hits = hitsPerBattery * 4;
                 _batteryHitsByOrigin[origin] = new int[] { hitsPerBattery, hitsPerBattery, hitsPerBattery, hitsPerBattery };
+            }
+            else if (id == ObstacleId.Wardrobe)
+            {
+                // Wardrobe her zaman 2 hit: stage 0 = kapalı, stage 1 = açık.
+                // İçindeki item'lar ayrı dictionary'de tutulur; tümü bitince obstacle yıkılır.
+                hits = 2;
+                int itemCount = def != null ? def.wardrobeItemSprites.Count : 0;
+                _wardrobeItemCounts[origin] = Mathf.Max(0, itemCount);
             }
             else
             {
@@ -351,6 +366,26 @@ public class ObstacleStateService : ISimObstacleQuery
                               && context == ObstacleHitContext.SpecialActivation
                               && (def == null || remaining == def.hits);
 
+        // Wardrobe açık durum (remaining==1): her vuruş bir item kırar; remaining değişmez.
+        // Tüm itemler bittiğinde remaining-- çalışır → remaining=0 → obstacle yıkılır.
+        if (id == ObstacleId.Wardrobe && remaining == 1)
+        {
+            if (_wardrobeItemCounts.TryGetValue(origin, out int itemsLeft) && itemsLeft > 0)
+            {
+                int newCount = itemsLeft - 1;
+                _wardrobeItemCounts[origin] = newCount;
+                OnWardrobeItemRemoved?.Invoke(origin, newCount);
+
+                if (newCount > 0)
+                {
+                    // Hâlâ item var: remaining sabit, erken dön
+                    change = new ObstacleVisualChange(origin, id, false, remaining, null);
+                    return new ObstacleHitResult(true, true, false, change, default, affectedCells);
+                }
+                // newCount == 0: düş → remaining-- → obstacle yıkılır
+            }
+        }
+
         remaining--;
         remainingHitsByOrigin[origin] = remaining;
 
@@ -380,6 +415,10 @@ public class ObstacleStateService : ISimObstacleQuery
 
         if (wasChestClosed)
             OnChestOpened?.Invoke(origin);
+
+        // Wardrobe: kapı açıldı (remaining 2→1)
+        if (id == ObstacleId.Wardrobe && remaining == 1)
+            OnWardrobeOpened?.Invoke(origin);
 
         var currentStage = CreateSnapshot(def, id, remaining);
         var sprite = ResolveStageSprite(def, id, remaining);
@@ -654,6 +693,9 @@ public class ObstacleStateService : ISimObstacleQuery
 
         if (originId == ObstacleId.BatteryBox)
             _batteryHitsByOrigin.Remove(origin);
+
+        if (originId == ObstacleId.Wardrobe)
+            _wardrobeItemCounts.Remove(origin);
 
         OnObstacleDestroyed?.Invoke(origin, originId);
     }
