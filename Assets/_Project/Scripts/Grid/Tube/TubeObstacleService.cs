@@ -6,6 +6,11 @@ using UnityEngine;
 /// when any of its cells is damaged (by a neighboring match or by a special).
 public class TubeObstacleService : MonoBehaviour
 {
+    [Header("Audio")]
+    [SerializeField] private AudioClip hitSound;
+    [Range(0f, 1f)] [SerializeField] private float hitSoundVolume = 1f;
+    [SerializeField] private AudioSource sfxSource;
+
     private readonly Dictionary<int, TubeInstance> tubesByOrigin = new();
     private readonly Dictionary<int, int> cellIndexToOrigin = new();
     private ObstacleStateService obstacleStateService;
@@ -15,6 +20,9 @@ public class TubeObstacleService : MonoBehaviour
     public void Init(ObstacleStateService service)
     {
         obstacleStateService = service;
+
+        if (sfxSource == null)
+            sfxSource = FindFirstObjectByType<BoardController>()?.SfxSource;
         tubesByOrigin.Clear();
         cellIndexToOrigin.Clear();
     }
@@ -39,6 +47,9 @@ public class TubeObstacleService : MonoBehaviour
     public void HandleTubeHit(int originCellIndex)
     {
         if (!tubesByOrigin.TryGetValue(originCellIndex, out var tube)) return;
+
+        if (hitSound != null && GameSettings.SoundEnabled)
+            sfxSource?.PlayOneShot(hitSound, hitSoundVolume);
 
         int freedCell = tube.PopOpenEnd();
         cellIndexToOrigin.Remove(freedCell);

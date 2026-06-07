@@ -50,7 +50,6 @@ public class GridSpawner : MonoBehaviour
 
     [Header("Mud Overlay")]
     [SerializeField] private MudOverlayService mudOverlayService;
-    [SerializeField] private int mudDefaultHits = 2;
     [SerializeField] private Color runtimeBoardBg = new Color(0.78f, 0.88f, 0.97f, 1f);
     [SerializeField] private Color runtimeNormalCell = new Color(1f, 1f, 1f, 0.16f);
     [SerializeField] private RectTransform gridLinesRoot;
@@ -63,6 +62,11 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private TubeObstacleService tubeObstacleService;
     [SerializeField] private TubeView tubeViewPrefab;
     [SerializeField] private RectTransform tubeRoot;
+
+    [Header("Magnet Obstacle")]
+    [SerializeField] private MagnetObstacleService magnetObstacleService;
+    [SerializeField] private MagnetView magnetViewPrefab;
+    [SerializeField] private RectTransform magnetRoot;
 
     [Header("Obstacle Visual (UI)")]
     [SerializeField] private bool drawObstacles = true;
@@ -137,7 +141,8 @@ public class GridSpawner : MonoBehaviour
     {
         resolvedLevel = ResolveLevelData();
         ApplyResolvedLevelToConsumers(resolvedLevel);
-        StampTubeCellsIntoLevel(resolvedLevel); // must happen before SetLevelData
+        StampTubeCellsIntoLevel(resolvedLevel);   // must happen before SetLevelData
+        StampMagnetCellsIntoLevel(resolvedLevel); // must happen before SetLevelData
 
         if (board == null || resolvedLevel == null || tilePrefab == null || iconLibrary == null || cellBgPrefab == null)
         {
@@ -286,6 +291,7 @@ public class GridSpawner : MonoBehaviour
             DrawObstacleVisuals();
             DrawMudOverlays();
             DrawTubeObstacles();
+            DrawMagnetObstacles();
         }
 
         for (int y = 0; y < height; y++)
@@ -332,9 +338,39 @@ public class GridSpawner : MonoBehaviour
                     && board.ObstacleStateService.IsMovableObstacleAt(x, y);
 
                 if (isMovableObstacle)
+                {
                     SpawnMovableObstacleTile(x, y);
+                }
                 else
-                    SpawnTile(x, y, initialTypes[x, y]);
+                {
+                    int idx = resolvedLevel.Index(x, y);
+                    TileType tileType = initialTypes[x, y];
+                    TileSpecial pinnedSpecial = TileSpecial.None;
+
+                    if (resolvedLevel.pinnedTileTypes != null && idx < resolvedLevel.pinnedTileTypes.Length)
+                    {
+                        int pinVal = resolvedLevel.pinnedTileTypes[idx];
+                        if (pinVal > 0)
+                            tileType = (TileType)(pinVal - 1);
+                    }
+
+                    if (resolvedLevel.pinnedSpecialTypes != null && idx < resolvedLevel.pinnedSpecialTypes.Length)
+                        pinnedSpecial = (TileSpecial)resolvedLevel.pinnedSpecialTypes[idx];
+
+                    SpawnTile(x, y, tileType);
+
+                    if (pinnedSpecial != TileSpecial.None)
+                    {
+                        var view = board.GetTileViewAt(x, y);
+                        if (view != null)
+                        {
+                            if (pinnedSpecial == TileSpecial.SystemOverride)
+                                view.SetOverrideBaseType(tileType, deferVisualUpdate: true);
+                            view.SetSpecial(pinnedSpecial);
+                            board.SyncTileData(x, y);
+                        }
+                    }
+                }
             }
 
         // Tüm tile'lar spawn edildikten sonra sıralamayı toplu yenile
@@ -437,6 +473,7 @@ public class GridSpawner : MonoBehaviour
         view.SetIconSize(iconSize);
         view.SetUseFullCellIcon(false);
         view.SetMovableObstacleTile(true);
+        view.SetFullCellMovableSprite(def.fullCellSprite);
         view.SetVisualLayout(TileView.TileVisualLayout.Centered);
         view.ApplyTileSize(tileSize);
 
@@ -508,6 +545,17 @@ public class GridSpawner : MonoBehaviour
             System.Array.Copy(source.obstacles, clone.obstacles, Mathf.Min(size, source.obstacles.Length));
         if (source.obstacleOrigins != null)
             System.Array.Copy(source.obstacleOrigins, clone.obstacleOrigins, Mathf.Min(size, source.obstacleOrigins.Length));
+
+        clone.pinnedTileTypes   = new int[size];
+        clone.pinnedSpecialTypes = new int[size];
+        if (source.pinnedTileTypes != null)
+            System.Array.Copy(source.pinnedTileTypes,   clone.pinnedTileTypes,   Mathf.Min(size, source.pinnedTileTypes.Length));
+        if (source.pinnedSpecialTypes != null)
+            System.Array.Copy(source.pinnedSpecialTypes, clone.pinnedSpecialTypes, Mathf.Min(size, source.pinnedSpecialTypes.Length));
+
+        clone.magnets = source.magnets != null
+            ? (MagnetEntry[])source.magnets.Clone()
+            : System.Array.Empty<MagnetEntry>();
 
         return clone;
     }
@@ -652,27 +700,22 @@ public class GridSpawner : MonoBehaviour
                 $"Mud_{x}_{y}",
                 typeof(RectTransform),
                 typeof(CanvasRenderer),
-                typeof(UnityEngine.UI.RawImage),
+                typeof(UnityEngine.UI.Image),
                 typeof(MudCellView));
             go.transform.SetParent(mudOverlayRoot, false);
 
             var view = go.GetComponent<MudCellView>();
             view.Init(
-                mudOverlayService.SharedMudTexture,
+                mudOverlayService.BorderedMudSprite,
                 x, y,
-                width, height,
-                mudOverlayService.DarkTint,
-                mudOverlayService.LightTint,
-                mudOverlayService.MinAlphaAtLastStage);
+                width, height);
             view.PlaceInCell(tileSize);
 
-            int remaining = board != null && board.ObstacleStateService != null
-                ? board.ObstacleStateService.GetRemainingHitsAt(x, y)
-                : mudDefaultHits;
-            if (remaining <= 0) remaining = mudDefaultHits;
+            int mudMaxHits = resolvedLevel.obstacleLibrary?.Get(ObstacleId.Mud)?.hits ?? 1;
+            int remaining  = board?.ObstacleStateService?.GetRemainingHitsAt(x, y) ?? mudMaxHits;
+            if (remaining <= 0) remaining = mudMaxHits;
 
-            int max = Mathf.Max(remaining, mudDefaultHits);
-            mudOverlayService.RegisterCell(x, y, view, remaining, max);
+            mudOverlayService.RegisterCell(x, y, view, remaining, mudMaxHits);
         }
     }
 
@@ -692,6 +735,49 @@ public class GridSpawner : MonoBehaviour
                 lvl.obstacles[cellIdx]       = (int)ObstacleId.Tube;
                 lvl.obstacleOrigins[cellIdx] = entry.originCellIndex;
             }
+        }
+    }
+
+    private void StampMagnetCellsIntoLevel(LevelData lvl)
+    {
+        if (lvl?.magnets == null || lvl.magnets.Length == 0) return;
+        if (lvl.obstacles == null || lvl.obstacleOrigins == null) return;
+
+        foreach (var entry in lvl.magnets)
+        {
+            if (entry.pathCellIndices == null || entry.pathCellIndices.Length < 2) continue;
+            int origin = entry.pathCellIndices[0];
+
+            foreach (int cellIdx in entry.pathCellIndices)
+            {
+                if (cellIdx < 0 || cellIdx >= lvl.obstacles.Length) continue;
+                lvl.obstacles[cellIdx]       = (int)ObstacleId.Magnet;
+                lvl.obstacleOrigins[cellIdx] = origin;
+            }
+        }
+    }
+
+    private void DrawMagnetObstacles()
+    {
+        if (magnetObstacleService == null || magnetViewPrefab == null) return;
+        if (resolvedLevel?.magnets == null || resolvedLevel.magnets.Length == 0) return;
+        if (magnetRoot == null) return;
+
+        magnetObstacleService.Init(board.ObstacleStateService);
+        board.ObstacleStateService.MagnetHitInterceptor = magnetObstacleService.HandleMagnetHit;
+
+        foreach (var entry in resolvedLevel.magnets)
+        {
+            if (entry.pathCellIndices == null || entry.pathCellIndices.Length < 2) continue;
+
+            var go   = Instantiate(magnetViewPrefab.gameObject);
+            var view = go.GetComponent<MagnetView>();
+            if (view == null) { Destroy(go); continue; }
+
+            view.Init(entry.pathCellIndices, resolvedLevel.width, tileSize, magnetRoot);
+
+            int origin = entry.pathCellIndices[0];
+            magnetObstacleService.RegisterMagnet(origin, entry.pathCellIndices, view);
         }
     }
 
@@ -838,6 +924,9 @@ public class GridSpawner : MonoBehaviour
 
         if (tubeRoot == null)
             tubeRoot = GetOrCreateChildRoot(root, "TubeObstacles");
+
+        if (magnetRoot == null)
+            magnetRoot = GetOrCreateChildRoot(root, "MagnetObstacles");
 
         if (gridLinesRoot == null)
             gridLinesRoot = GetOrCreateChildRoot(root, "GridLines");

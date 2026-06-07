@@ -11,7 +11,12 @@ public static class TestLevelProgressionBootstrap
 #else
         int level = 1;
 #endif
+        // Progress event verilerini koru, geri kalanı sıfırla.
+        string savedStartTime = PlayerPrefs.GetString("progress_event_v1_start_time", "");
+        string savedGoals     = PlayerPrefs.GetString("progress_event_v1_goals", "");
         PlayerPrefs.DeleteAll();
+        if (!string.IsNullOrEmpty(savedStartTime)) PlayerPrefs.SetString("progress_event_v1_start_time", savedStartTime);
+        if (!string.IsNullOrEmpty(savedGoals))     PlayerPrefs.SetString("progress_event_v1_goals", savedGoals);
         PlayerPrefs.SetInt("current_level", level);
         PlayerPrefs.SetInt("player_coins", 100);
         PlayerPrefs.SetInt("player_total_stars", 10);

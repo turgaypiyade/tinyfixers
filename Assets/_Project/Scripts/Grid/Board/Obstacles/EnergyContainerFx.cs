@@ -42,6 +42,10 @@ public sealed class EnergyContainerFx : MonoBehaviour
     [Header("Container Feedback")]
     [SerializeField] private float pulseScale = 1.08f;
     [SerializeField] private float pulseDuration = 0.10f;
+    [Tooltip("Squash efekti: X ekseninde büyütme çarpanı (>1 = yanlara şişer). 0 = uniform pulse kullan.")]
+    [SerializeField] private float squashX = 0f;
+    [Tooltip("Squash efekti: Y ekseninde küçültme çarpanı (<1 = yukarı kısalır). 0 = uniform pulse kullan.")]
+    [SerializeField] private float squashY = 0f;
     [SerializeField, Range(0.1f, 1f)] private float exhaustedAlpha = 0.42f;
 
     [Header("Debug")]
@@ -136,8 +140,8 @@ public sealed class EnergyContainerFx : MonoBehaviour
         if (fullOpenHold > 0f)
             yield return new WaitForSeconds(fullOpenHold);
 
-        if (goalAccepted)
-            StartCoroutine(CoFlyOrb(originIndex, collectibleId, 0f, onOrbArrived));
+        // Orb her zaman görsel olarak uçar; onOrbArrived sadece goal kabul edilmişse çağrılır.
+        StartCoroutine(CoFlyOrb(originIndex, collectibleId, 0f, goalAccepted ? onOrbArrived : null));
 
         if (closeDelay > 0f)
             yield return new WaitForSeconds(closeDelay);
@@ -159,15 +163,20 @@ public sealed class EnergyContainerFx : MonoBehaviour
             yield break;
 
         Vector3 baseScale = target.localScale;
-        Vector3 peak = baseScale * Mathf.Max(1f, pulseScale);
+        Vector3 peak;
+
+        bool useSquash = squashX > 0f && squashY > 0f;
+        if (useSquash)
+            peak = new Vector3(baseScale.x * squashX, baseScale.y * squashY, baseScale.z);
+        else
+            peak = baseScale * Mathf.Max(1f, pulseScale);
+
         float half = Mathf.Max(0.01f, pulseDuration * 0.5f);
 
         float t = 0f;
         while (t < half)
         {
-            if (target == null)
-                yield break;
-
+            if (target == null) yield break;
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / half);
             target.localScale = Vector3.LerpUnclamped(baseScale, peak, 1f - (1f - k) * (1f - k));
@@ -177,9 +186,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
         t = 0f;
         while (t < half)
         {
-            if (target == null)
-                yield break;
-
+            if (target == null) yield break;
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / half);
             target.localScale = Vector3.LerpUnclamped(peak, baseScale, k * k);
@@ -231,15 +238,20 @@ public sealed class EnergyContainerFx : MonoBehaviour
                 yield break;
 
             var hud = FindFirstObjectByType<TopHudController>();
-            if (hud == null || !hud.TryGetGoalTargetRectForCollectible(collectibleId, out var targetSlot) || targetSlot == null)
-                yield break;
+            RectTransform targetSlot = null;
+            hud?.TryGetGoalTargetRectForCollectible(collectibleId, out targetSlot);
 
-            RectTransform root = ResolveOrbFlyRoot(targetSlot);
+            RectTransform root = targetSlot != null
+                ? ResolveOrbFlyRoot(targetSlot)
+                : (overlayRoot != null ? overlayRoot : board.ContentRoot);
+
             if (root == null)
                 yield break;
 
             Vector2 start = GetOriginCenterIn(root, originIndex);
-            Vector2 end = WorldToLocalIn(root, targetSlot);
+            Vector2 end = targetSlot != null
+                ? WorldToLocalIn(root, targetSlot)
+                : start + new Vector2(0f, root.rect.height * 0.45f); // hedef yok → yukarı uç
 
             var go = new GameObject("EnergyOrbFlyGhost", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
             var rt = (RectTransform)go.transform;

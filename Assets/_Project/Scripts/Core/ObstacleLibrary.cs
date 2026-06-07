@@ -38,6 +38,11 @@ public class StageRule
     public bool suppressHitParticles = false;
     [Tooltip("Bu stage'e özgü hit particle sprite'ları. Boş ise ObstacleDef düzeyindeki hitParticleSprites kullanılır.")]
     public List<Sprite> hitParticleSprites = new();
+
+    [Header("Audio (Stage Override)")]
+    [Tooltip("Bu stage'e girilirken çalınacak ses. Boş ise ObstacleDef düzeyindeki hitSound kullanılır.")]
+    public AudioClip hitSound;
+    [Range(0f, 1f)] public float hitSoundVolume = 1f;
 }
 
 [Serializable]
@@ -56,6 +61,8 @@ public class ObstacleDef
     public Vector2Int size = Vector2Int.one;   // örn 4x4, 1x2
     [Min(1)]
     public int hits = 1;                       // ileride: 1 vuruş, 2 vuruş
+    [Tooltip("MovableObstacle sprite'ını tam hücreye stretch eder (preserveAspect=false). Kare sprite'lar için uygundur.")]
+    public bool fullCellSprite = false;
     [Header("Particle Sprites")]
     [Tooltip("Açık ise tüm stage'lerde hit particle efekti kapatılır. Stage düzeyinde ayrıca override edilebilir.")]
     public bool suppressHitParticles = false;
@@ -153,6 +160,23 @@ public class ObstacleDef
         if (stage != null && stage.suppressHitParticles)
             return true;
         return suppressHitParticles;
+    }
+
+    public (AudioClip clip, float volume) GetHitSoundForRemainingHits(int remainingHits)
+    {
+        // damageTaken-1 indexing: stage[0]=first hit, stage[1]=second hit — same as hit particles.
+        EnsureStageSlots();
+        if (stages != null && stages.Count > 0)
+        {
+            int normalizedMaxHits = Mathf.Max(1, hits);
+            int normalizedHits    = Mathf.Clamp(remainingHits, 0, normalizedMaxHits);
+            int damageTaken       = normalizedMaxHits - normalizedHits;
+            int idx               = Mathf.Clamp(damageTaken - 1, 0, stages.Count - 1);
+            var stage             = stages[idx];
+            if (stage != null && stage.hitSound != null)
+                return (stage.hitSound, stage.hitSoundVolume);
+        }
+        return (hitSound, hitSoundVolume);
     }
 
     public List<Sprite> GetHitParticleSpritesForRemainingHits(int remainingHits)

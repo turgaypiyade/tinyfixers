@@ -2520,7 +2520,7 @@ public class BoardController : MonoBehaviour
             presentationPlan: presentationPlan,
             enqueueCascadeOnComplete: true);
     }
-    internal void NotifyTilesCleared(TileType tileType, int amount) { if (amount > 0) OnTilesCleared?.Invoke(tileType, amount); }
+    internal void NotifyTilesCleared(TileType tileType, int amount) { if (amount > 0) { OnTilesCleared?.Invoke(tileType, amount); GameEventBus.EmitTileCleared(tileType, amount); } }
 
     internal void SyncAllTilesToGridData() { for (int sy = 0; sy < height; sy++) for (int sx = 0; sx < width; sx++) if (tiles[sx, sy] != null) SyncTileData(sx, sy); }
     private IEnumerator AnimateQueuedActions() { while (actionSequencer.IsPlaying) yield return null; }

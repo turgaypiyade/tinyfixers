@@ -13,18 +13,18 @@ MonoBehaviour:
   m_Name: ChapterTheme_1
   m_EditorClassIdentifier: Assembly-CSharp::ChapterTheme
   chapterIndex: 1
-  gameBackground: {fileID: 21300000, guid: cce6788ad4e9e4e81af5259f0306b2f4, type: 3}
-  gameTopHud: {fileID: 21300000, guid: bbc643dcd189c479f8b2e1c9b3d29b1e, type: 3}
-  gameBottomArea: {fileID: 21300000, guid: 19f3f4169d35a4d3c8cf0f407a17728d, type: 3}
-  menuBackground: {fileID: 21300000, guid: c5d84dd50ee2747119af15fa13ca6e2b, type: 3}
+  gameBackground: {fileID: 21300000, guid: 32bfd6b6901b84b00b9a70e03ebf30ee, type: 3}
+  gameTopHud: {fileID: 21300000, guid: 8db41c7f0d113456f90294e7a0c1eb17, type: 3}
+  gameBottomArea: {fileID: 21300000, guid: 73c7ffcb79c8b4006882debf2313cff0, type: 3}
+  menuBackground: {fileID: 21300000, guid: ad08026f3352e4695826a23e8f01eda0, type: 3}
   menuTopHud: {fileID: 21300000, guid: 8ff13e10cc2a54670be4b76d1f74dc6f, type: 3}
   menuBottomArea: {fileID: 21300000, guid: 8f47d89b0f7fe4435b5e176a1f531f13, type: 3}
-  menuLevelSelectorBtn: {fileID: 21300000, guid: 5fe57ed158f89401b939e3b20398f51c, type: 3}
+  menuLevelSelectorBtn: {fileID: 21300000, guid: 2a359a17c91cc4af5a15eaf2a5043f4d, type: 3}
   menuRepairBtn: {fileID: 21300000, guid: 5fe57ed158f89401b939e3b20398f51c, type: 3}
   borderColorId: 0
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
   successAnimationBackground: {fileID: 0}
-  preLevelPopupBackground: {fileID: 21300000, guid: 018a3afdc11bf42cb8f6c2435b7fe4e2, type: 3}
+  preLevelPopupBackground: {fileID: 21300000, guid: 12263da3459344e3d95a781fcdae50f7, type: 3}
   preLevelContinueButton: {fileID: 0}
   preLevelCancelButton: {fileID: 0}
   preLevelCheckMark: {fileID: 21300000, guid: 4d7e3c1a8d2a049e7862849181984ab4, type: 3}
@@ -62,7 +62,7 @@ MonoBehaviour:
     titleLocalizationKey: loading_hint_override_title
     descriptionLocalizationKey: loading_hint_override_desc
     loadingLocalizationKey: loading_hint_loading
-  levelEndPopupBackground: {fileID: 21300000, guid: 636730fe64fce4c2b930bc11a9a7c8a4, type: 3}
+  levelEndPopupBackground: {fileID: 21300000, guid: b4fedd365c75347b3b42b2238a931f62, type: 3}
   levelEndContinueButton: {fileID: 0}
   levelEndCloseButton: {fileID: 0}
   levelEndStarFilled: {fileID: 0}

@@ -69,7 +69,14 @@
         { "key": "hint_obstacle_batterybox",        "value": "Dört pil içerir. Her pili o renkteki taşlarla eşleştirerek bitir." },
         { "key": "hint_obstacle_omegamodul",        "value": "Güçlü modül. Özel taşlar ile daha hızlı kırılır." },
         { "key": "hint_obstacle_mud",               "value": "Çamur taşın altında birikir. Yanına eşleştirme yap, temizle." },
-        { "key": "hint_obstacle_tube",              "value": "Boru açık uçtan küçülür. Açık ucuna yakın eşleştirme yap." }
+        { "key": "hint_obstacle_tube",              "value": "Boru açık uçtan küçülür. Açık ucuna yakın eşleştirme yap." },
+
+        { "key": "progress_timer_days_hours",       "value": "{0}g {1}s" },
+        { "key": "progress_timer_days",             "value": "{0}g" },
+        { "key": "progress_timer_hours_mins",       "value": "{0}s {1}d" },
+        { "key": "progress_timer_hours",            "value": "{0}s" },
+        { "key": "progress_timer_mins",             "value": "{0}d" },
+        { "key": "progress_timer_ended",            "value": "Bitti" }
       ]
     },
     {
@@ -140,7 +147,14 @@
         { "key": "hint_obstacle_batterybox",        "value": "Has four batteries. Match each battery's color tiles to drain it." },
         { "key": "hint_obstacle_omegamodul",        "value": "Powerful module. Special tiles break it faster." },
         { "key": "hint_obstacle_mud",               "value": "Mud builds up under tiles. Match nearby to clean it up." },
-        { "key": "hint_obstacle_tube",              "value": "The pipe shrinks from the open end. Match near the opening." }
+        { "key": "hint_obstacle_tube",              "value": "The pipe shrinks from the open end. Match near the opening." },
+
+        { "key": "progress_timer_days_hours",       "value": "{0}d {1}h" },
+        { "key": "progress_timer_days",             "value": "{0}d" },
+        { "key": "progress_timer_hours_mins",       "value": "{0}h {1}m" },
+        { "key": "progress_timer_hours",            "value": "{0}h" },
+        { "key": "progress_timer_mins",             "value": "{0}m" },
+        { "key": "progress_timer_ended",            "value": "Ended" }
       ]
     }
   ]

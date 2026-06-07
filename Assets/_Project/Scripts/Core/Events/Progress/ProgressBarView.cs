@@ -1,0 +1,183 @@
+using System.Collections;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+/// Tek bir progress hedefinin UI satırı.
+/// ProgressEventPanel tarafından yönetilir — doğrudan OnEnable'da servis okumaz.
+public class ProgressBarView : MonoBehaviour
+{
+    [Header("Hedef")]
+    [SerializeField] private int goalIndex = 0;
+    public int GoalIndex => goalIndex;
+
+    public void SetGoalIndex(int index)       => goalIndex      = index;
+    public void SetParticleOrigin(RectTransform o) => particleOrigin = o;
+
+    [Header("UI")]
+    [SerializeField] private Image         goalIconImage;
+    [SerializeField] private Image         progressFill;   // Image Type: Sliced, 9-slice yeşil sprite
+    [SerializeField] private RectTransform barTrack;       // Mavi dikdörtgenin RectTransform'u
+    [SerializeField] private TMP_Text      progressText;   // "47 / 100"
+    [SerializeField] private TMP_Text      descriptionText;
+    [SerializeField] private Image         rewardIconImage;
+    [SerializeField] private GameObject    claimedOverlay;
+
+    [Header("Akış Animasyonu")]
+    [Tooltip("Partiküllerin çıkış noktası (ekran üstündeki event ikonu).")]
+    [SerializeField] private RectTransform particleOrigin;
+    [Tooltip("Uçan küçük ikon prefabı (Image component'li).")]
+    [SerializeField] private GameObject    particlePrefab;
+    [SerializeField] private float flightDuration  = 0.35f;
+    [SerializeField] private float particleInterval = 0.06f;
+    [SerializeField] private int   maxParticles    = 15;
+
+    private IProgressEventService service;
+    private Coroutine             activeRoutine;
+
+    // ── Panel tarafından çağrılır ─────────────────────────────────
+
+    public void RefreshDisplay()
+    {
+        service = ProgressEventService.Instance;
+        if (service == null || goalIndex >= service.Goals.Count) return;
+
+        var goal = service.Goals[goalIndex];
+        var def  = goal.Definition;
+
+        if (goalIconImage   != null) goalIconImage.sprite   = goal.DisplayIcon;
+        if (rewardIconImage != null && def.reward != null)
+            rewardIconImage.sprite = def.reward.icon;
+        if (descriptionText != null) descriptionText.text   = def.fallbackDescription;
+        if (claimedOverlay  != null) claimedOverlay.SetActive(goal.IsRewardClaimed);
+
+        StartCoroutine(CoApplyFillNextFrame(goal.NormalizedProgress, goal.CurrentCount, def.targetCount));
+    }
+
+    private IEnumerator CoApplyFillNextFrame(float normalized, int current, int target)
+    {
+        yield return null;
+        yield return null; // anchor layout'un settle olması için 2 frame bekle
+        ApplyFill(normalized, current, target);
+    }
+
+    public void StartSessionAnimation(SessionGainRecord gain)
+    {
+        service = ProgressEventService.Instance;
+        if (service == null || goalIndex >= service.Goals.Count) return;
+        if (activeRoutine != null) StopCoroutine(activeRoutine);
+        activeRoutine = StartCoroutine(CoAnimateGains(gain));
+    }
+
+    // ── Animasyonlar ─────────────────────────────────────────────
+
+    private IEnumerator CoAnimateGains(SessionGainRecord gain)
+    {
+        var goal   = service.Goals[goalIndex];
+        int target = goal.Definition.targetCount;
+
+        int   startCount = Mathf.Max(0, goal.CurrentCount - gain.GainedCount);
+        float startFill  = (float)startCount / target;
+        float endFill    = goal.NormalizedProgress;
+
+        int   particleCount   = Mathf.Clamp(gain.GainedCount, 1, maxParticles);
+        float fillPerParticle = (endFill - startFill) / particleCount;
+        float displayFill     = startFill;
+        int   displayCount    = startCount;
+
+        ApplyFill(displayFill, displayCount, target);
+
+        for (int i = 0; i < particleCount; i++)
+        {
+            SpawnParticle();
+            yield return new WaitForSeconds(particleInterval);
+
+            displayFill  += fillPerParticle;
+            displayCount  = startCount + Mathf.RoundToInt((displayFill - startFill) * target);
+            ApplyFill(displayFill, Mathf.Clamp(displayCount, 0, target), target);
+        }
+
+        ApplyFill(endFill, goal.CurrentCount, target);
+
+        if (gain.RewardGranted)
+        {
+            yield return new WaitForSeconds(0.15f);
+            yield return StartCoroutine(CoCelebrate());
+            RefreshDisplay();
+        }
+    }
+
+    private void ApplyFill(float normalized, int current, int target)
+    {
+        if (progressFill != null)
+        {
+            var fillRt   = progressFill.rectTransform;
+            var parentRt = (RectTransform)fillRt.parent;
+
+            if (barTrack != null && parentRt != barTrack)
+            {
+                // progressFill, BarTrack'in dışında — oranı hesapla.
+                float parentW = parentRt.rect.width;
+                float trackW  = barTrack.rect.width;
+                // BarTrack'in parent içindeki sol kenarı
+                float trackLeft = barTrack.anchoredPosition.x - barTrack.rect.width * barTrack.pivot.x;
+
+                float anchorStart = parentW > 0f ? trackLeft / parentW              : 0f;
+                float anchorEnd   = parentW > 0f ? (trackLeft + trackW * normalized) / parentW : normalized;
+
+                fillRt.anchorMin = new Vector2(anchorStart, fillRt.anchorMin.y);
+                fillRt.anchorMax = new Vector2(anchorEnd,   fillRt.anchorMax.y);
+                fillRt.offsetMin = new Vector2(0f,          fillRt.offsetMin.y);
+                fillRt.offsetMax = new Vector2(0f,          fillRt.offsetMax.y);
+            }
+            else
+            {
+                // progressFill zaten BarTrack'in içinde — direkt anchor kullan.
+                fillRt.anchorMin = new Vector2(0f,        fillRt.anchorMin.y);
+                fillRt.anchorMax = new Vector2(normalized, fillRt.anchorMax.y);
+                fillRt.offsetMin = new Vector2(0f,         fillRt.offsetMin.y);
+                fillRt.offsetMax = new Vector2(0f,         fillRt.offsetMax.y);
+            }
+        }
+        if (progressText != null) progressText.text = $"{current} / {target}";
+    }
+
+    private void SpawnParticle()
+    {
+        if (particlePrefab == null || particleOrigin == null || progressFill == null) return;
+        var go = Instantiate(particlePrefab, transform);
+        var rt = go.GetComponent<RectTransform>();
+        if (rt == null) { Destroy(go); return; }
+        StartCoroutine(CoFly(rt, particleOrigin.anchoredPosition,
+                             progressFill.rectTransform.anchoredPosition));
+    }
+
+    private IEnumerator CoFly(RectTransform rt, Vector2 from, Vector2 to)
+    {
+        rt.anchoredPosition = from;
+        float elapsed = 0f;
+        while (elapsed < flightDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            rt.anchoredPosition = Vector2.Lerp(from, to,
+                Mathf.SmoothStep(0f, 1f, elapsed / flightDuration));
+            yield return null;
+        }
+        Destroy(rt.gameObject);
+    }
+
+    private IEnumerator CoCelebrate()
+    {
+        if (progressFill == null) yield break;
+        var rt = progressFill.rectTransform;
+        var original = rt.localScale;
+        float dur = 0.3f, elapsed = 0f;
+        while (elapsed < dur)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            rt.localScale = original * (1f + 0.18f * Mathf.Sin((elapsed / dur) * Mathf.PI));
+            yield return null;
+        }
+        rt.localScale = original;
+    }
+}

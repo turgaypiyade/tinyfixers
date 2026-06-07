@@ -18,8 +18,11 @@ public readonly struct ObstacleVisualChange
     public readonly int remainingHits;
     public readonly Sprite sprite;
     public readonly ChestColorMask removedColor;
+    /// remainingHits değişmeden tekrar hit geldi (örn. Wardrobe item kırılması).
+    /// Ses sistemi genel hitSound'a düşer; stage sesi çalmaz.
+    public readonly bool isRepeatHit;
 
-    public ObstacleVisualChange(int originIndex, ObstacleId obstacleId, bool cleared, int remainingHits, Sprite sprite, ChestColorMask removedColor = ChestColorMask.None)
+    public ObstacleVisualChange(int originIndex, ObstacleId obstacleId, bool cleared, int remainingHits, Sprite sprite, ChestColorMask removedColor = ChestColorMask.None, bool isRepeatHit = false)
     {
         this.originIndex = originIndex;
         this.obstacleId = obstacleId;
@@ -27,6 +30,7 @@ public readonly struct ObstacleVisualChange
         this.remainingHits = remainingHits;
         this.sprite = sprite;
         this.removedColor = removedColor;
+        this.isRepeatHit = isRepeatHit;
     }
 }
 
@@ -108,6 +112,12 @@ public class ObstacleStateService : ISimObstacleQuery
     /// Set by EnergyContainerService. Called with the ORIGIN cell index when an active container is hit.
     /// The container state is NOT decremented; exhaustion is handled globally by EnergyContainerService.
     public Action<int> EnergyContainerHitInterceptor;
+    /// Set by MagnetObstacleService. Called with the ACTUAL HIT cell index (not origin) so the
+    /// service can determine which magnet endpoint was struck.
+    public Action<int> MagnetHitInterceptor;
+
+    /// <summary>HatLauncher: set by HatLauncherService. Null = invincible (exhausted).</summary>
+    public Action<int> HatLauncherHitInterceptor;
     // ColorChest açılış ve renk kırılması bildirimleri
     public event Action<int> OnChestOpened;
     public event Action<int, ChestColorMask> OnChestColorRemoved;
@@ -281,6 +291,27 @@ public class ObstacleStateService : ISimObstacleQuery
             return new ObstacleHitResult(true, true, false, tubeChange, default, Array.Empty<int>());
         }
 
+        // Magnet cells are handled entirely by MagnetObstacleService.
+        // We pass the actual hit cell index (idx) so the service knows which endpoint was hit.
+        if (id == ObstacleId.Magnet)
+        {
+            MagnetHitInterceptor?.Invoke(idx);
+            var magnetChange = new ObstacleVisualChange(-1, id, false, 0, null);
+            return new ObstacleHitResult(true, true, false, magnetChange, default, Array.Empty<int>());
+        }
+
+        // HatLauncher: same interception pattern as EnergyContainer.
+        if (id == ObstacleId.HatLauncher)
+        {
+            if (HatLauncherHitInterceptor != null)
+            {
+                HatLauncherHitInterceptor.Invoke(origin);
+                var hlChange = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+                return new ObstacleHitResult(true, true, false, hlChange, default, Array.Empty<int>());
+            }
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+        }
+
         // EnergyContainer: hits are fully managed by EnergyContainerService via the interceptor.
         // Active (interceptor set)   → fire interceptor, no decrement, container stays on board.
         // Exhausted (interceptor null) → block all hits; container is permanent and invincible.
@@ -379,7 +410,7 @@ public class ObstacleStateService : ISimObstacleQuery
                 if (newCount > 0)
                 {
                     // Hâlâ item var: remaining sabit, erken dön
-                    change = new ObstacleVisualChange(origin, id, false, remaining, null);
+                    change = new ObstacleVisualChange(origin, id, false, remaining, null, ChestColorMask.None, isRepeatHit: true);
                     return new ObstacleHitResult(true, true, false, change, default, affectedCells);
                 }
                 // newCount == 0: düş → remaining-- → obstacle yıkılır
@@ -504,8 +535,9 @@ public class ObstacleStateService : ISimObstacleQuery
         var id = (ObstacleId)level.obstacles[idx];
         if (id == ObstacleId.None) return false;
         if (id == ObstacleId.Tube) return true;
-        // EnergyContainer always blocks regardless of stage — interceptor handles active vs exhausted.
+        // EnergyContainer / HatLauncher always block regardless of stage — interceptor handles active vs exhausted.
         if (id == ObstacleId.EnergyContainer) return true;
+        if (id == ObstacleId.HatLauncher) return true;
 
         var def = library != null ? library.Get(id) : null;
         int remaining = ResolveRemainingHitsForCell(idx, def);
@@ -906,6 +938,26 @@ public class ObstacleStateService : ISimObstacleQuery
     public void NotifyTubeFullyDestroyed(int originIndex)
     {
         OnObstacleDestroyed?.Invoke(originIndex, ObstacleId.Tube);
+    }
+
+    /// Fires OnObstacleDestroyed for a fully-destroyed magnet pair. Called by MagnetObstacleService
+    /// when the two magnets meet and the pair is cleared.
+    public void NotifyMagnetFullyDestroyed(int originIndex)
+    {
+        OnObstacleDestroyed?.Invoke(originIndex, ObstacleId.Magnet);
+    }
+
+    /// Frees a single magnet cell from the obstacle layer and fires OnCellUnlocked.
+    /// Called by MagnetObstacleService as magnets step toward each other.
+    public void FreeMagnetCell(int cellIndex)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
+        if (cellIndex < 0 || cellIndex >= level.obstacles.Length) return;
+
+        level.obstacles[cellIndex]       = (int)ObstacleId.None;
+        level.obstacleOrigins[cellIndex] = -1;
+
+        OnCellUnlocked?.Invoke(cellIndex);
     }
 
     /// Removes all EnergyContainer cells from the obstacle layer and fires OnCellUnlocked

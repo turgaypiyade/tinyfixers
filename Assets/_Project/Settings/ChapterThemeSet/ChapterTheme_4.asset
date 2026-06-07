@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ccf9c1f5b8bab4124a7ecfe61a413be7, type: 3}
+  m_Name: ChapterTheme_4
+  m_EditorClassIdentifier: Assembly-CSharp::ChapterTheme
+  chapterIndex: 3
+  gameBackground: {fileID: 21300000, guid: 86607145c44944a5e8960dc77773c1a0, type: 3}
+  gameTopHud: {fileID: 21300000, guid: cd5802463ef4b4031a598361c568cc19, type: 3}
+  gameBottomArea: {fileID: 21300000, guid: 0c35b99143f9b4dbcb999896ec7ce37a, type: 3}
+  menuBackground: {fileID: 21300000, guid: 0ceb36f54868c4558b14ebb180c4091d, type: 3}
+  menuTopHud: {fileID: 21300000, guid: f542ccaaf300c4839b6bd184cd231bca, type: 3}
+  menuBottomArea: {fileID: 21300000, guid: 8799681f684604c098acba019fb90018, type: 3}
+  menuLevelSelectorBtn: {fileID: 21300000, guid: 615f8b36853ba44ec80102599d1b0696, type: 3}
+  menuRepairBtn: {fileID: 0}
+  borderColorId: 2
+  borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
+  successAnimationBackground: {fileID: 0}
+  preLevelPopupBackground: {fileID: 21300000, guid: 9b9154e178f2c427999b351b2cfec982, type: 3}
+  preLevelContinueButton: {fileID: 0}
+  preLevelCancelButton: {fileID: 0}
+  preLevelCheckMark: {fileID: 21300000, guid: 4d7e3c1a8d2a049e7862849181984ab4, type: 3}
+  preLevelDimColor: {r: 0, g: 0, b: 0, a: 0.55}
+  preLevelSlotNormalTint: {r: 1, g: 1, b: 1, a: 0.18}
+  preLevelSlotSelectedTint: {r: 1, g: 0.86, b: 0.25, a: 0.72}
+  preLevelCountTextColor: {r: 1, g: 1, b: 1, a: 1}
+  preLevelButtonTextColor: {r: 1, g: 1, b: 1, a: 1}
+  workshopStages: {fileID: 0}
+  loadingScreenImages:
+  - {fileID: 21300000, guid: 195efa70a7541414a9d5f30ca5630078, type: 3}
+  - {fileID: 21300000, guid: e33a13330145a40e9b9c1307d4abe674, type: 3}
+  - {fileID: 21300000, guid: 301141de716694c16a658eaa62748445, type: 3}
+  - {fileID: 21300000, guid: 1b84d161e03ef41329ba93986ee4f316, type: 3}
+  - {fileID: 21300000, guid: 2ffe2b14db1084a7182210ce7ae161d6, type: 3}
+  - {fileID: 21300000, guid: 8498b48c28ced4e79904859e2a7cb13e, type: 3}
+  loadingHints: []
+  levelEndPopupBackground: {fileID: 21300000, guid: d698651cd4883474f9da105e3ba16e2b, type: 3}
+  levelEndContinueButton: {fileID: 0}
+  levelEndCloseButton: {fileID: 0}
+  levelEndStarFilled: {fileID: 0}
+  levelEndStarEmpty: {fileID: 0}
+  levelEndGoalCheckMark: {fileID: 0}
+  levelEndExtraMoves5: {fileID: 0}
+  levelEndExtraMoves10: {fileID: 0}
+  levelEndExtraMoves15: {fileID: 0}

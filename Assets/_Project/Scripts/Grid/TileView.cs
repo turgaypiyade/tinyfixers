@@ -58,6 +58,7 @@ public class TileView : MonoBehaviour,
     [SerializeField] private TileVisualLayout visualLayout = TileVisualLayout.Centered;
 
     private bool isMovableObstacleTile = false;
+    private bool isFullCellMovableSprite = false;
     private int lastAppliedTileSize;
     private Image _cellOverlayImage;
 
@@ -207,23 +208,24 @@ public class TileView : MonoBehaviour,
             if (sp == null)
                 sp = board.GetSpecialIcon(model.special);
 
-            if (sp != null)
-                SetIcon(sp);
-            else
-                SetIcon(board.GetIcon(model.type));
+            if (sp == null)
+                sp = board.GetIcon(model.type);
+
+            if (sp != null) SetIcon(sp);
         }
         else if (model.special != TileSpecial.None)
         {
-            var sp = board.GetSpecialIcon(model.special);
+            Sprite sp = board.GetSpecialIcon(model.special);
 
-            if (sp != null)
-                SetIcon(sp);
-            else
-                SetIcon(board.GetIcon(model.type));
+            if (sp == null)
+                sp = board.GetIcon(model.type);
+
+            if (sp != null) SetIcon(sp);
         }
         else
         {
-            SetIcon(board.GetIcon(model.type));
+            Sprite sp = board.GetIcon(model.type);
+            if (sp != null) SetIcon(sp);
         }
 
         if (propellerView != null)
@@ -1378,6 +1380,13 @@ public class TileView : MonoBehaviour,
 
     public TileSpecial GetSpecial() => model.special;
 
+    public void SetOverrideBaseType(TileType baseType, bool deferVisualUpdate = false)
+    {
+        model?.SetOverrideBaseType(baseType);
+        if (!deferVisualUpdate)
+            RefreshIcon();
+    }
+
     public void SetSpecial(TileSpecial sp, bool deferVisualUpdate = false)
     {
         model.SetSpecial(sp);
@@ -1415,6 +1424,14 @@ public class TileView : MonoBehaviour,
             ApplyTileSize(lastAppliedTileSize);
     }
 
+    public void SetFullCellMovableSprite(bool value)
+    {
+        isFullCellMovableSprite = value;
+
+        if (lastAppliedTileSize > 0)
+            ApplyTileSize(lastAppliedTileSize);
+    }
+
     public void SetVisualLayout(TileVisualLayout layout)
     {
         visualLayout = layout;
@@ -1447,6 +1464,17 @@ public class TileView : MonoBehaviour,
 
         bool isSpecial = model != null && model.special != TileSpecial.None;
         bool isMovable = isMovableObstacleTile;
+
+        if (isMovable && isFullCellMovableSprite)
+        {
+            irt.anchorMin        = Vector2.zero;
+            irt.anchorMax        = Vector2.one;
+            irt.pivot            = new Vector2(0.5f, 0.5f);
+            irt.anchoredPosition = Vector2.zero;
+            irt.sizeDelta        = Vector2.zero;
+            iconImage.preserveAspect = false;
+            return;
+        }
 
         bool shouldFillCell =
             !isMovable && !isSpecial &&
@@ -1712,11 +1740,6 @@ public class TileView : MonoBehaviour,
 
         if (rt.pivot != originalPivot)
             SetPivotWithoutVisualJump(originalPivot);
-    }
-
-    public void SetOverrideBaseType(TileType type)
-    {
-        model.SetOverrideBaseType(type);
     }
 
     public bool GetOverrideBaseType(out TileType type)

@@ -35,6 +35,9 @@ public class BoardBreakFxService
     {
         Debug.Log($"[ObstacleFX] id={change.obstacleId} cleared={change.cleared} remaining={change.remainingHits} hitPrefab={(board.ObstacleHitFxPrefab != null ? board.ObstacleHitFxPrefab.name : "NULL")}");
 
+        // Sound is position-independent: play before origin validation so Tube (originIndex=-1) still gets audio.
+        PlayObstacleSound(change);
+
         if (change.originIndex < 0 || board.Width <= 0 || board.Height <= 0)
         {
             FxWarn(
@@ -73,7 +76,6 @@ public class BoardBreakFxService
             if (def != null && def.IsHitParticlesSuppressedForRemainingHits(change.remainingHits))
             {
                 Debug.LogWarning($"[ObstacleFX] Suppressed for id={change.obstacleId} remaining={change.remainingHits}");
-                PlayObstacleSound(change);
                 return;
             }
         }
@@ -86,8 +88,6 @@ public class BoardBreakFxService
             $"[ObstacleFX] Spawn request. prefab={prefab.name}, cell=({x},{y}), " +
             $"lifetime={lifetime}, sprites={(particleSprites != null ? particleSprites.Count : 0)}"
         );
-
-        PlayObstacleSound(change);
 
         Color fxColor = ResolveObstacleHitColor(change);
         SpawnAtWorld(
@@ -119,16 +119,35 @@ public class BoardBreakFxService
         if (def == null)
             return;
 
-        AudioClip clip = change.cleared ? def.breakSound : def.hitSound;
-        float vol = change.cleared ? def.breakSoundVolume : def.hitSoundVolume;
+        AudioClip clip;
+        float vol;
+        if (change.isRepeatHit)
+        {
+            // remaining değişmedi (Wardrobe item gibi): stage ses mantığını atla, genel sesi çal.
+            clip = def.hitSound;
+            vol  = def.hitSoundVolume;
+        }
+        else if (change.cleared)
+        {
+            clip = def.breakSound;
+            vol  = def.breakSoundVolume;
+            // breakSound tanımlı değilse son hit stage'inin sesine bak, o da yoksa genel sese düş.
+            if (clip == null)
+                (clip, vol) = def.GetHitSoundForRemainingHits(change.remainingHits);
+        }
+        else
+        {
+            (clip, vol) = def.GetHitSoundForRemainingHits(change.remainingHits);
+        }
 
         if (clip == null)
             return;
 
-        int x = change.originIndex % board.Width;
-        int y = change.originIndex / board.Width;
+        if (!GameSettings.SoundEnabled)
+            return;
 
-        AudioSource.PlayClipAtPoint(clip, board.GetCellWorldCenterPosition(x, y), vol);
+
+        board.SfxSource?.PlayOneShot(clip, vol);
     }
 
     private IReadOnlyList<Sprite> ResolveObstacleParticleSprites(ObstacleVisualChange change)

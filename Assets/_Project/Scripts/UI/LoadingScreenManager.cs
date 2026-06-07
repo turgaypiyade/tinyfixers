@@ -19,6 +19,9 @@ public class LoadingScreenManager : MonoBehaviour
 
     private static LoadingScreenManager _instance;
 
+    /// <summary>Loading screen hâlâ görünür veya fade-out yapıyor mu?</summary>
+    public static bool IsVisible => _instance != null;
+
     private CanvasGroup _canvasGroup;
     private float _fadeOutDuration    = 0.35f;
     private float _fadeOutDelay       = 0.08f;

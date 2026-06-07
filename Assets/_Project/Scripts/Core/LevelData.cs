@@ -73,6 +73,18 @@ public enum ObstacleId : int
     // Multi-stage sculpting obstacle. Looks like a solid stone, reveals a carved
     // shape progressively with each hit. Standard OverTileBlocker behavior.
     SculptingStone = 28,
+
+    // Paired magnet obstacle. Two magnets connected by a glowing energy path.
+    // Hit a magnet to move it toward the other. They vanish when they meet.
+    // Cells are stamped into obstacles[] at runtime from LevelData.magnets[].
+    Magnet = 29,
+
+    // Single-hit movable obstacle. Falls with gravity like plastic_orange.
+    HelmetPorcelain = 30,
+
+    // Hat-shaped dispenser. Each hit launches one energy orb toward the goal.
+    // Managed by HatLauncherService. Stays on board until manually cleared.
+    HatLauncher = 31,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
@@ -86,6 +98,14 @@ public struct TubeEntry
     public TubeDirection direction;
     [Tooltip("Total number of cells the tube occupies (including base).")]
     [Min(2)] public int length;
+}
+
+[System.Serializable]
+public struct MagnetEntry
+{
+    [Tooltip("Sıralı yol hücreleri: ilk eleman MagnetA başlangıcı, son eleman MagnetB başlangıcı.\n" +
+             "Flat index (y*width+x). En az 2 hücre gereklidir.")]
+    public int[] pathCellIndices;
 }
 
 [CreateAssetMenu(fileName = "Level_001", menuName = "CoreCollapse/Level Data", order = 1)]
@@ -130,6 +150,17 @@ public class LevelData : ScriptableObject
     [Tooltip("Shrinking tube obstacles. Cells are stamped into obstacles[] at runtime by GridSpawner.")]
     public TubeEntry[] tubes;
 
+    [Tooltip("Magnet pair obstacles. Cells are stamped into obstacles[] at runtime by GridSpawner.")]
+    public MagnetEntry[] magnets;
+
+    [Tooltip("Sabitlenmiş taş tipleri. 0 = rastgele (None), diğerleri TileType+1 değeri.\n" +
+             "size = width*height. GridSpawner spawn sırasında simulation yerine bu değeri kullanır.")]
+    public int[] pinnedTileTypes;
+
+    [Tooltip("Sabitlenmiş special'lar. 0 = yok (None), diğerleri TileSpecial enum değeri.\n" +
+             "size = width*height.")]
+    public int[] pinnedSpecialTypes;
+
     public int Index(int x, int y) => y * width + x;
 
     public bool InBounds(int x, int y) =>
@@ -166,6 +197,15 @@ public class LevelData : ScriptableObject
 
         if (tubes == null)
             tubes = System.Array.Empty<TubeEntry>();
+
+        if (magnets == null)
+            magnets = System.Array.Empty<MagnetEntry>();
+
+        if (pinnedTileTypes == null || pinnedTileTypes.Length != size)
+            pinnedTileTypes = new int[size];
+
+        if (pinnedSpecialTypes == null || pinnedSpecialTypes.Length != size)
+            pinnedSpecialTypes = new int[size];
 
         if (goals == null)
             goals = System.Array.Empty<LevelGoalDefinition>();

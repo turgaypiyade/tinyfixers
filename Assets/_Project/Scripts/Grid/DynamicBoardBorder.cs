@@ -51,6 +51,12 @@ public class DynamicBoardBorder : MonoBehaviour
     [Header("3D Border Settings")]
     public bool use3DBorderPrefabs = true;
 
+    [Header("Junction Decoration")]
+    public bool junctionEnabled = false;
+    public Color junctionColor = Color.white;
+    [Tooltip("Kavşak elmasının boyutu. 0 = borderThickness kullanır.")]
+    public float junctionSize = 0f;
+
     [Header("Debug")]
     public bool debugMasks = false;
     public bool debugBorderLogs = false;
@@ -258,6 +264,35 @@ public class DynamicBoardBorder : MonoBehaviour
     //  CORNERS — TÜMÜ NODE-MERKEZLİ
     // ═══════════════════════════════════════════════════════════
 
+    // Masks where both a horizontal AND a vertical grid line cross at the node.
+    // 5, 10 = diagonal-solid (full X), 7, 11, 13, 14 = three-solid (T-junction).
+    private static bool IsJunctionMask(int mask) =>
+        mask == 5 || mask == 7 || mask == 10 || mask == 11 || mask == 13 || mask == 14;
+
+    private void PlaceJunction(int nx, int ny)
+    {
+        if (!junctionEnabled) return;
+        if (borderRoot == null) return;
+
+        float sz = junctionSize > 0f ? junctionSize : borderThickness;
+        Vector2 pos = NodePos(nx, ny);
+
+        var go = new GameObject("Junction", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(borderRoot, false);
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = new Vector2(sz, sz);
+        rt.localRotation = Quaternion.Euler(0f, 0f, 45f);
+        rt.localScale = Vector3.one;
+
+        var img = go.GetComponent<Image>();
+        img.color = junctionColor;
+        img.raycastTarget = false;
+    }
+
     private void PlaceCorner(int nx, int ny, bool[] blocked)
     {
         int mask = GetNodeMask(nx, ny, blocked);
@@ -268,6 +303,8 @@ public class DynamicBoardBorder : MonoBehaviour
         float size = CornerSize;
 
         if (debugMasks) SpawnMaskLabel(node, mask);
+
+        if (IsJunctionMask(mask)) PlaceJunction(nx, ny);
 
         switch (mask)
         {

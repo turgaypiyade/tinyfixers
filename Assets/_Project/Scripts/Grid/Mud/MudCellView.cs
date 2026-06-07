@@ -1,55 +1,51 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-/// One UI cell that samples its own region out of a single shared mud texture.
-/// No per-cell texture clamping → adjacent cells look like one continuous mud surface.
+/// One UI cell showing bordered mud sprite (Sprite B, bevel baked on all 4 sides) as permanent base.
+/// Cover strips (plain mud texture) hide the bevel toward same-stage neighbours.
+/// Strip dimensions are trimmed at each call so they never cover a corner bevel
+/// that belongs to an inactive (exposed) neighbouring side.
+/// A full-cell damage overlay Image shows the library sprite for stage 1+.
 public class MudCellView : MonoBehaviour
 {
-    private RawImage rawImage;
+    private Image         baseImage;
+    private Image         damageOverlay;
     private RectTransform rt;
 
-    private int gridX;
-    private int gridY;
-    private int gridWidth;
-    private int gridHeight;
+    private int   gridX, gridY, gridWidth, gridHeight;
+    private int   maxHits = 1;
 
-    private Color darkTint = new Color(0.35f, 0.25f, 0.18f, 1f);
-    private Color lightTint = new Color(0.65f, 0.50f, 0.35f, 1f);
-    private float minAlphaAtLastStage = 0.7f;
+    // Stored cover geometry — set in InitCovers, used every SetCovers call.
+    private float coverBP, coverTS;
+    private float _uvX, _uvY, _uvW, _uvH, _bpUx, _bpUy;
 
-    // Border edges — only outer edges of the mud region are shown
-    private Image edgeTop, edgeRight, edgeBottom, edgeLeft;
+    private RawImage coverTop, coverRight, coverBottom, coverLeft;
 
-    public int GridX => gridX;
-    public int GridY => gridY;
+    public int  GridX     => gridX;
+    public int  GridY     => gridY;
+    public int  MaxHits   => maxHits;
+    public bool IsDamaged { get; private set; }
 
-    public void Init(
-        Texture sharedMudTexture,
-        int x, int y,
-        int gridW, int gridH,
-        Color dark, Color light,
-        float minAlpha)
+    // ── Init ─────────────────────────────────────────────────────────────────
+
+    public void Init(Sprite bordered, int x, int y, int gridW, int gridH)
     {
         rt = GetComponent<RectTransform>();
         if (rt == null) rt = gameObject.AddComponent<RectTransform>();
 
-        rawImage = GetComponent<RawImage>();
-        if (rawImage == null) rawImage = gameObject.AddComponent<RawImage>();
+        baseImage = GetComponent<Image>();
+        if (baseImage == null) baseImage = gameObject.AddComponent<Image>();
 
-        rawImage.raycastTarget = false;
-        rawImage.texture = sharedMudTexture;
+        baseImage.raycastTarget  = false;
+        baseImage.preserveAspect = false;
+        baseImage.sprite         = bordered;
 
         gridX = x; gridY = y;
         gridWidth  = Mathf.Max(1, gridW);
         gridHeight = Mathf.Max(1, gridH);
-        darkTint   = dark;
-        lightTint  = light;
-        minAlphaAtLastStage = Mathf.Clamp01(minAlpha);
-
-        float uvW = 1f / gridWidth;
-        float uvH = 1f / gridHeight;
-        rawImage.uvRect = new Rect(x * uvW, 1f - (y + 1) * uvH, uvW, uvH);
     }
+
+    public void SetMaxHits(int max) => maxHits = Mathf.Max(1, max);
 
     public void PlaceInCell(int tileSize)
     {
@@ -61,114 +57,141 @@ public class MudCellView : MonoBehaviour
         rt.sizeDelta        = new Vector2(tileSize, tileSize);
     }
 
-    // ── Border API ────────────────────────────────────────────────────────────
+    // ── Cover strips ──────────────────────────────────────────────────────────
 
-    /// spriteH : horizontal strip (bottom=dark, top=transparent) — top/bottom edges.
-    /// spriteV : vertical strip   (left=dark, right=transparent) — left/right edges.
-    ///           null → spriteH is used (gradient direction slightly off but position correct).
-    /// outwardRatio : 0 = border entirely inside cell,
-    ///                0.5 = centered on cell edge (half in / half out),
-    ///                1.0 = border entirely outside cell.
-    public void InitBorders(Sprite spriteH, Sprite spriteV,
-                            float thicknessRatio, int tileSize, float outwardRatio)
+    public void InitCovers(Texture plainTexture, float thicknessRatio, int tileSize)
     {
-        if (spriteH == null) return;
+        if (plainTexture == null) return;
 
-        Sprite sv  = spriteV != null ? spriteV : spriteH;
-        float  ts  = tileSize;
-        float  bp  = Mathf.Round(ts * Mathf.Clamp(thicknessRatio, 0.05f, 0.45f));
-        float  off = bp * Mathf.Clamp01(outwardRatio); // outward shift in pixels
+        coverTS = tileSize;
+        coverBP = Mathf.Round(tileSize * Mathf.Clamp(thicknessRatio, 0.05f, 0.45f));
 
-        // Anchor + pivot: same top-left origin as parent
-        Vector2 a = new Vector2(0f, 1f);
+        _uvW  = 1f / gridWidth;
+        _uvH  = 1f / gridHeight;
+        _uvX  = gridX * _uvW;
+        _uvY  = 1f - (gridY + 1) * _uvH;
+        _bpUx = coverBP / coverTS * _uvW;
+        _bpUy = coverBP / coverTS * _uvH;
 
-        // Bottom edge: dark faces down (outward). Shift down by `off`.
-        edgeBottom = MakeEdge("MudEdgeBottom", spriteH, a,
-            new Vector2(0f,      -(ts - bp + off)),
-            new Vector2(ts, bp),
-            Vector3.one);
+        Vector2 anc = new Vector2(0f, 1f);
+        coverTop    = MakeCover("MudCoverTop",    plainTexture, anc);
+        coverBottom = MakeCover("MudCoverBottom", plainTexture, anc);
+        coverLeft   = MakeCover("MudCoverLeft",   plainTexture, anc);
+        coverRight  = MakeCover("MudCoverRight",  plainTexture, anc);
 
-        // Top edge: flip Y so dark faces up (outward). Shift up by `off`.
-        edgeTop = MakeEdge("MudEdgeTop", spriteH, a,
-            new Vector2(0f,      off - bp),
-            new Vector2(ts, bp),
-            new Vector3(1f, -1f, 1f));
-
-        // Left edge: dark faces left (outward). Shift left by `off`.
-        edgeLeft = MakeEdge("MudEdgeLeft", sv, a,
-            new Vector2(-off,    0f),
-            new Vector2(bp, ts),
-            Vector3.one);
-
-        // Right edge: scale=(-1,1,1) → strip renders LEFTWARD from anchoredPosition.x.
-        // To center on boundary (x=ts): anchoredPosition.x = ts + off
-        // → strip covers (ts+off-bp) to (ts+off), centered at ts when off=bp/2.
-        edgeRight = MakeEdge("MudEdgeRight", sv, a,
-            new Vector2(ts + off, 0f),
-            new Vector2(bp, ts),
-            new Vector3(-1f, 1f, 1f));
-
-        SetBorders(false, false, false, false);
+        SetCovers(false, false, false, false);
     }
 
-    public void SetBorders(bool top, bool right, bool bottom, bool left)
+    /// Shows/hides each cover strip and trims its size so it never covers the
+    /// corner bevel area of an inactive (exposed) neighbouring side.
+    ///
+    /// TOP/BOTTOM strips: trimmed left by bp if left=false, trimmed right if right=false.
+    /// LEFT/RIGHT strips: trimmed top  by bp if top=false,  trimmed bottom if bottom=false.
+    public void SetCovers(bool top, bool right, bool bottom, bool left)
     {
-        if (edgeTop)    edgeTop.gameObject.SetActive(top);
-        if (edgeRight)  edgeRight.gameObject.SetActive(right);
-        if (edgeBottom) edgeBottom.gameObject.SetActive(bottom);
-        if (edgeLeft)   edgeLeft.gameObject.SetActive(left);
+        float bp = coverBP;
+        float ts = coverTS;
+
+        // Horizontal offsets for top/bottom strips
+        float hX = left  ? 0f : bp;
+        float hW = ts - (left ? 0f : bp) - (right ? 0f : bp);
+        float hUx = left  ? _uvX       : _uvX + _bpUx;
+        float hUw = _uvW - (left ? 0f : _bpUx) - (right ? 0f : _bpUx);
+
+        // Vertical offsets for left/right strips
+        float vY = top    ? 0f  : -bp;
+        float vH = ts - (top ? 0f : bp) - (bottom ? 0f : bp);
+        float vUy = bottom ? _uvY      : _uvY + _bpUy;
+        float vUh = _uvH - (top ? 0f : _bpUy) - (bottom ? 0f : _bpUy);
+
+        ApplyCover(coverTop,    top,    hX,         0f,        hW, bp, hUx,            _uvY + _uvH - _bpUy, hUw, _bpUy);
+        ApplyCover(coverBottom, bottom, hX,         -(ts-bp),  hW, bp, hUx,            _uvY,                hUw, _bpUy);
+        ApplyCover(coverLeft,   left,   0f,         vY,        bp, vH, _uvX,           vUy,                 _bpUx, vUh);
+        ApplyCover(coverRight,  right,  ts - bp,    vY,        bp, vH, _uvX+_uvW-_bpUx, vUy,                _bpUx, vUh);
     }
 
-    private Image MakeEdge(string name, Sprite sprite,
-        Vector2 anchor, Vector2 anchoredPos, Vector2 size, Vector3 localScale)
+    private void ApplyCover(RawImage cover, bool active,
+        float px, float py, float sw, float sh,
+        float uRx, float uRy, float uRw, float uRh)
     {
-        var go  = new GameObject(name, typeof(RectTransform), typeof(Image));
+        if (cover == null) return;
+        cover.gameObject.SetActive(active);
+        if (!active) return;
+        var crt = cover.rectTransform;
+        crt.anchoredPosition = new Vector2(px, py);
+        crt.sizeDelta        = new Vector2(sw, sh);
+        cover.uvRect         = new Rect(uRx, uRy, uRw, uRh);
+    }
+
+    private RawImage MakeCover(string name, Texture texture, Vector2 anchor)
+    {
+        var go  = new GameObject(name, typeof(RectTransform), typeof(RawImage));
         go.transform.SetParent(transform, false);
 
         var ert = go.GetComponent<RectTransform>();
-        ert.anchorMin        = anchor;
-        ert.anchorMax        = anchor;
-        ert.pivot            = new Vector2(0f, 1f);
-        ert.anchoredPosition = anchoredPos;
-        ert.sizeDelta        = size;
-        ert.localScale       = localScale;
+        ert.anchorMin = anchor;
+        ert.anchorMax = anchor;
+        ert.pivot     = new Vector2(0f, 1f);
 
-        var img = go.GetComponent<Image>();
-        img.sprite         = sprite;
-        img.raycastTarget  = false;
-        img.color          = Color.white;
-        img.preserveAspect = false;
-        return img;
+        var ri = go.GetComponent<RawImage>();
+        ri.texture       = texture;
+        ri.raycastTarget = false;
+        ri.color         = Color.white;
+        return ri;
     }
 
-    // ── Damage / Clear ────────────────────────────────────────────────────────
+    // ── Damage overlay ────────────────────────────────────────────────────────
+
+    /// Must be called AFTER InitCovers so the overlay renders on top of covers.
+    public void InitDamageOverlay()
+    {
+        var go = new GameObject("MudDamageOverlay", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(transform, false);
+
+        var ert = go.GetComponent<RectTransform>();
+        ert.anchorMin  = Vector2.zero;
+        ert.anchorMax  = Vector2.one;
+        ert.offsetMin  = Vector2.zero;
+        ert.offsetMax  = Vector2.zero;
+        ert.localScale = Vector3.one;
+
+        damageOverlay = go.GetComponent<Image>();
+        damageOverlay.raycastTarget  = false;
+        damageOverlay.preserveAspect = false;
+        damageOverlay.gameObject.SetActive(false);
+    }
+
+    public void SetDamageState(bool damaged, Sprite librarySprite)
+    {
+        IsDamaged = damaged;
+        if (damageOverlay == null) return;
+        damageOverlay.sprite = librarySprite;
+        damageOverlay.gameObject.SetActive(damaged && librarySprite != null);
+    }
+
+    // ── Visibility ────────────────────────────────────────────────────────────
 
     public void SetDamageLevel(int remaining, int maxHits)
     {
-        if (rawImage == null) return;
-        int max = Mathf.Max(1, maxHits);
-        int rem = Mathf.Clamp(remaining, 0, max);
+        bool visible = remaining > 0;
+        SetBaseAlpha(visible ? 1f : 0f);
+        if (!visible && damageOverlay != null)
+            damageOverlay.gameObject.SetActive(false);
+    }
 
-        if (rem <= 0) { rawImage.color = new Color(lightTint.r, lightTint.g, lightTint.b, 0f); return; }
-
-        float t    = (float)rem / max;
-        Color tint = Color.Lerp(lightTint, darkTint, t);
-        tint.a     = Mathf.Lerp(minAlphaAtLastStage, 1f, t);
-        rawImage.color = tint;
+    private void SetBaseAlpha(float alpha)
+    {
+        if (baseImage != null) { var c = baseImage.color; c.a = alpha; baseImage.color = c; }
+        void A(RawImage ri) { if (ri) { var c = ri.color; c.a = alpha; ri.color = c; } }
+        A(coverTop); A(coverRight); A(coverBottom); A(coverLeft);
     }
 
     public void Clear()
     {
-        if (rawImage != null) { var c = rawImage.color; c.a = 0f; rawImage.color = c; }
-        SetBorders(false, false, false, false);
+        SetBaseAlpha(0f);
+        SetCovers(false, false, false, false);
+        IsDamaged = false;
+        if (damageOverlay != null) damageOverlay.gameObject.SetActive(false);
         gameObject.SetActive(false);
-    }
-
-    public void ApplyStage(Texture stageTexture, bool visible)
-    {
-        if (rawImage == null) return;
-        if (!visible) { rawImage.color = new Color(1f, 1f, 1f, 0f); return; }
-        if (stageTexture != null) rawImage.texture = stageTexture;
-        rawImage.color = Color.white;
     }
 }

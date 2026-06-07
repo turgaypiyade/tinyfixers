@@ -538,6 +538,9 @@ public class PatchbotDashUI : MonoBehaviour
         if (source == null || source.clip == null)
             return;
 
+        if (!GameSettings.SoundEnabled)
+            return;
+
         float targetVolume = source.volume;
         if (flightFadeIn > 0f)
             source.volume = 0f;

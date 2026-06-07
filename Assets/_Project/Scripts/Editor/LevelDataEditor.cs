@@ -4,7 +4,7 @@ using UnityEngine;
 [CustomEditor(typeof(LevelData))]
 public class LevelDataEditor : Editor
 {
-    private enum PaintMode { Mask, Obstacle, Tube, Erase }
+    private enum PaintMode { Mask, Obstacle, Tube, Magnet, Tiles, Erase }
 
     private PaintMode mode = PaintMode.Obstacle;
     private ObstacleId selectedObstacle = ObstacleId.Stone;
@@ -12,6 +12,29 @@ public class LevelDataEditor : Editor
     // Tube settings
     private TubeDirection selectedTubeDir = TubeDirection.Up;
     private int selectedTubeLength = 3;
+
+    // Magnet settings
+    private readonly System.Collections.Generic.List<int> magnetPathBuilding = new();
+    private static readonly Color magnetEndpointColor = new Color(0.15f, 0.45f, 1f, 0.90f);
+    private static readonly Color magnetPathColor     = new Color(0.30f, 0.65f, 1f, 0.55f);
+    private static readonly Color magnetBuildingColor = new Color(0.80f, 0.95f, 0.40f, 0.75f);
+
+    // Tile pin settings  (-1 = rastgele, tile tipi pinlenmez)
+    private int selectedPinTileType = -1;
+    private TileSpecial selectedPinSpecial = TileSpecial.None;
+    private static readonly Color pinnedTileColor    = new Color(1.00f, 0.85f, 0.10f, 0.80f);
+    private static readonly Color pinnedSpecialColor = new Color(0.20f, 1.00f, 0.60f, 0.85f);
+    private TileIconLibrary _cachedIconLib;
+
+    private TileIconLibrary GetIconLibrary()
+    {
+        if (_cachedIconLib != null) return _cachedIconLib;
+        var guids = UnityEditor.AssetDatabase.FindAssets("t:TileIconLibrary");
+        if (guids.Length == 0) return null;
+        var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+        _cachedIconLib = UnityEditor.AssetDatabase.LoadAssetAtPath<TileIconLibrary>(path);
+        return _cachedIconLib;
+    }
 
     private const int cellPx = 30;
     private const int paletteIcon = 44;
@@ -40,12 +63,16 @@ public class LevelDataEditor : Editor
 
         EditorGUILayout.Space(6);
 
-        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Erase" });
+        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Erase" });
 
         if (mode == PaintMode.Obstacle)
             DrawPalette(level);
         else if (mode == PaintMode.Tube)
             DrawTubePalette(level);
+        else if (mode == PaintMode.Magnet)
+            DrawMagnetPalette(level);
+        else if (mode == PaintMode.Tiles)
+            DrawTilePinPalette(level);
         else
             EditorGUILayout.HelpBox("Mask: ilk tık hücreyi Empty (hole), ikinci tık veya Erase hücreyi Normal yapar.", MessageType.None);
 
@@ -159,6 +186,23 @@ public class LevelDataEditor : Editor
         }
         if (level.tubes == null)
             level.tubes = System.Array.Empty<TubeEntry>();
+
+        if (level.magnets == null)
+            level.magnets = System.Array.Empty<MagnetEntry>();
+
+        if (level.pinnedTileTypes == null || level.pinnedTileTypes.Length != size)
+        {
+            var old = level.pinnedTileTypes;
+            level.pinnedTileTypes = new int[size];
+            if (old != null) System.Array.Copy(old, level.pinnedTileTypes, Mathf.Min(size, old.Length));
+        }
+
+        if (level.pinnedSpecialTypes == null || level.pinnedSpecialTypes.Length != size)
+        {
+            var old = level.pinnedSpecialTypes;
+            level.pinnedSpecialTypes = new int[size];
+            if (old != null) System.Array.Copy(old, level.pinnedSpecialTypes, Mathf.Min(size, old.Length));
+        }
     }
 
     private void ValidateUnknownObstacles(LevelData level)
@@ -315,6 +359,94 @@ public class LevelDataEditor : Editor
             DrawSpriteInRect(def.GetPreviewSprite(), big, 2);
         }
 
+        // Draw pinned tile overlays
+        if (level.pinnedTileTypes != null || level.pinnedSpecialTypes != null)
+        {
+            for (int y = 0; y < level.height; y++)
+            for (int x = 0; x < level.width; x++)
+            {
+                int idx = level.Index(x, y);
+                Rect r = new Rect(ox + x * cellPx, oy + y * cellPx, cellPx - 1, cellPx - 1);
+
+                bool hasPin     = level.pinnedTileTypes   != null && idx < level.pinnedTileTypes.Length   && level.pinnedTileTypes[idx]   > 0;
+                bool hasSpecial = level.pinnedSpecialTypes != null && idx < level.pinnedSpecialTypes.Length && level.pinnedSpecialTypes[idx] > 0;
+
+                if (hasSpecial)
+                    EditorGUI.DrawRect(r, pinnedSpecialColor);
+                else if (hasPin)
+                    EditorGUI.DrawRect(r, pinnedTileColor);
+
+                if (hasPin || hasSpecial)
+                {
+                    var iconLib = GetIconLibrary();
+                    float half = r.width * 0.5f;
+                    if (hasPin && hasSpecial)
+                    {
+                        // Sol yarı = tile tipi, sağ yarı = special
+                        Rect leftR  = new Rect(r.x,          r.y, half, r.height);
+                        Rect rightR = new Rect(r.x + half,   r.y, half, r.height);
+                        var t = (TileType)(level.pinnedTileTypes[idx] - 1);
+                        var s = (TileSpecial)level.pinnedSpecialTypes[idx];
+                        Sprite tSprite = iconLib != null ? iconLib.Get(t)             : null;
+                        Sprite sSprite = iconLib != null ? iconLib.GetSpecialIcon(s)  : null;
+                        if (tSprite != null) DrawSpriteInRect(tSprite, leftR,  2);
+                        else GUI.Label(leftR,  t.ToString().Substring(0, 2), new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter, fontSize = 7, normal = { textColor = Color.black } });
+                        if (sSprite != null) DrawSpriteInRect(sSprite, rightR, 2);
+                        else GUI.Label(rightR, s.ToString().Substring(0, 2), new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter, fontSize = 7, normal = { textColor = Color.black } });
+                    }
+                    else if (hasPin)
+                    {
+                        var t = (TileType)(level.pinnedTileTypes[idx] - 1);
+                        Sprite tSprite = iconLib != null ? iconLib.Get(t) : null;
+                        if (tSprite != null) DrawSpriteInRect(tSprite, r, 3);
+                        else GUI.Label(r, t.ToString().Substring(0, 2), new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter, fontSize = 8, normal = { textColor = Color.black } });
+                    }
+                    else
+                    {
+                        var s = (TileSpecial)level.pinnedSpecialTypes[idx];
+                        Sprite sSprite = iconLib != null ? iconLib.GetSpecialIcon(s) : null;
+                        if (sSprite != null) DrawSpriteInRect(sSprite, r, 3);
+                        else GUI.Label(r, s.ToString().Substring(0, 2), new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter, fontSize = 8, normal = { textColor = Color.black } });
+                    }
+                }
+            }
+        }
+
+        // Draw magnet overlays
+        if (level.magnets != null)
+        {
+            foreach (var entry in level.magnets)
+            {
+                if (entry.pathCellIndices == null || entry.pathCellIndices.Length < 2) continue;
+                for (int mi = 0; mi < entry.pathCellIndices.Length; mi++)
+                {
+                    int ci = entry.pathCellIndices[mi];
+                    if (ci < 0 || ci >= level.obstacles.Length) continue;
+                    int cx = ci % level.width;
+                    int cy = ci / level.width;
+                    Rect mr = new Rect(ox + cx * cellPx, oy + cy * cellPx, cellPx - 1, cellPx - 1);
+                    bool isEndpoint = mi == 0 || mi == entry.pathCellIndices.Length - 1;
+                    EditorGUI.DrawRect(mr, isEndpoint ? magnetEndpointColor : magnetPathColor);
+                    if (isEndpoint)
+                        GUI.Label(mr, mi == 0 ? "A" : "B", new GUIStyle(EditorStyles.boldLabel)
+                            { alignment = TextAnchor.MiddleCenter, fontSize = 9, normal = { textColor = Color.white } });
+                }
+            }
+        }
+
+        // Draw building magnet path
+        for (int bi = 0; bi < magnetPathBuilding.Count; bi++)
+        {
+            int ci = magnetPathBuilding[bi];
+            if (ci < 0 || ci >= level.obstacles.Length) continue;
+            int cx = ci % level.width;
+            int cy = ci / level.width;
+            Rect mr = new Rect(ox + cx * cellPx, oy + cy * cellPx, cellPx - 1, cellPx - 1);
+            EditorGUI.DrawRect(mr, magnetBuildingColor);
+            GUI.Label(mr, bi == 0 ? "A" : bi.ToString(), new GUIStyle(EditorStyles.boldLabel)
+                { alignment = TextAnchor.MiddleCenter, fontSize = 9, normal = { textColor = Color.black } });
+        }
+
         // Draw tube overlays
         if (level.tubes != null)
         {
@@ -384,6 +516,9 @@ public class LevelDataEditor : Editor
             case PaintMode.Erase:
                 ClearCell(level, idx);
                 RemoveTubeAtCell(level, idx);
+                RemoveMagnetAtCell(level, idx);
+                magnetPathBuilding.Clear();
+                ClearPinnedTile(level, idx);
                 level.cells[idx] = (int)CellType.Normal;
                 break;
             case PaintMode.Obstacle:
@@ -391,6 +526,12 @@ public class LevelDataEditor : Editor
                 break;
             case PaintMode.Tube:
                 PlaceTube(level, x, y);
+                break;
+            case PaintMode.Magnet:
+                AddMagnetPathCell(level, idx);
+                break;
+            case PaintMode.Tiles:
+                PaintPinnedTile(level, idx);
                 break;
         }
     }
@@ -483,6 +624,214 @@ public class LevelDataEditor : Editor
             level.obstacleOrigins[idx] = originIdx;
         }
         level.obstacleOrigins[originIdx] = originIdx;
+    }
+
+    private void DrawTilePinPalette(LevelData level)
+    {
+        EditorGUILayout.LabelField("Tile Sabitleme", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox(
+            "Taş tipi + special seç → grid'de hücreye tıkla.\n" +
+            "Sarı = sabit normal taş  |  Yeşil = sabit special  |  Erase → temizle",
+            MessageType.Info);
+
+        var lib = GetIconLibrary();
+
+        // ── Normal Taş ───────────────────────────────────────────────────────
+        EditorGUILayout.LabelField("Normal Taş", EditorStyles.boldLabel);
+        var tileTypes = new[] { TileType.Gear, TileType.Core, TileType.Bolt, TileType.Plate };
+        EditorGUILayout.BeginHorizontal();
+        foreach (var t in tileTypes)
+        {
+            bool isSel = selectedPinTileType == (int)t && selectedPinSpecial == TileSpecial.None;
+            GUI.backgroundColor = isSel ? new Color(1f, 0.85f, 0.1f) : Color.white;
+            Rect r = GUILayoutUtility.GetRect(paletteIcon, paletteIcon, GUILayout.ExpandWidth(false));
+            if (GUI.Button(r, GUIContent.none))
+            {
+                selectedPinTileType = (int)t;
+                selectedPinSpecial  = TileSpecial.None;
+            }
+            GUI.backgroundColor = Color.white;
+            Sprite icon = lib != null ? lib.Get(t) : null;
+            if (icon != null) DrawSpriteInRect(icon, r, 3);
+            else              GUI.Label(r, t.ToString().Substring(0, 2), new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter });
+        }
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space(4);
+
+        // ── Special ──────────────────────────────────────────────────────────
+        EditorGUILayout.LabelField("Special", EditorStyles.boldLabel);
+        var specials = new[] { TileSpecial.LineH, TileSpecial.LineV, TileSpecial.PulseCore, TileSpecial.PatchBot, TileSpecial.SystemOverride };
+        EditorGUILayout.BeginHorizontal();
+        foreach (var s in specials)
+        {
+            bool isSel = selectedPinSpecial == s;
+            GUI.backgroundColor = isSel ? new Color(0.2f, 1f, 0.6f) : Color.white;
+            Rect r = GUILayoutUtility.GetRect(paletteIcon, paletteIcon, GUILayout.ExpandWidth(false));
+            if (GUI.Button(r, GUIContent.none))
+            {
+                selectedPinSpecial  = s;
+                selectedPinTileType = -1;
+            }
+            GUI.backgroundColor = Color.white;
+            Sprite icon = lib != null ? lib.GetSpecialIcon(s) : null;
+            if (icon != null) DrawSpriteInRect(icon, r, 3);
+            else GUI.Label(r, s.ToString().Substring(0, Mathf.Min(3, s.ToString().Length)), new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter, fontSize = 8 });
+        }
+        EditorGUILayout.EndHorizontal();
+
+        // ── SystemOverride renk seçimi ────────────────────────────────────────
+        if (selectedPinSpecial == TileSpecial.SystemOverride)
+        {
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField("Override Rengi", EditorStyles.boldLabel);
+            EditorGUILayout.BeginHorizontal();
+            foreach (var t in tileTypes)
+            {
+                bool isSel = selectedPinTileType == (int)t;
+                GUI.backgroundColor = isSel ? new Color(1f, 0.85f, 0.1f) : Color.white;
+                Rect r = GUILayoutUtility.GetRect(paletteIcon, paletteIcon, GUILayout.ExpandWidth(false));
+                if (GUI.Button(r, GUIContent.none)) selectedPinTileType = (int)t;
+                GUI.backgroundColor = Color.white;
+                Sprite icon = lib != null ? lib.Get(t) : null;
+                if (icon != null) DrawSpriteInRect(icon, r, 3);
+                else              GUI.Label(r, t.ToString().Substring(0, 2), new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter });
+            }
+            EditorGUILayout.EndHorizontal();
+            if (selectedPinTileType < 0)
+                EditorGUILayout.HelpBox("Override rengi seçilmeli.", MessageType.Warning);
+        }
+
+        EditorGUILayout.Space(6);
+
+        // ── İstatistik & Temizle ─────────────────────────────────────────────
+        int pinCount = 0;
+        if (level.pinnedTileTypes != null)
+            foreach (var v in level.pinnedTileTypes) if (v > 0) pinCount++;
+        EditorGUILayout.LabelField($"Sabitlenmiş hücre: {pinCount}", EditorStyles.miniLabel);
+
+        if (pinCount > 0 && GUILayout.Button("Tüm pinleri temizle"))
+        {
+            Undo.RecordObject(level, "Clear All Pinned Tiles");
+            if (level.pinnedTileTypes != null)   System.Array.Clear(level.pinnedTileTypes,   0, level.pinnedTileTypes.Length);
+            if (level.pinnedSpecialTypes != null) System.Array.Clear(level.pinnedSpecialTypes, 0, level.pinnedSpecialTypes.Length);
+            EditorUtility.SetDirty(level);
+        }
+    }
+
+    private void PaintPinnedTile(LevelData level, int idx)
+    {
+        if (idx < 0) return;
+        Undo.RecordObject(level, "Pin Tile");
+
+        if (selectedPinSpecial == TileSpecial.SystemOverride)
+        {
+            // Override: hem special hem renk (tile tipi) birlikte gerekli
+            if (selectedPinTileType < 0) return; // renk seçilmeden yerleştirme
+            if (level.pinnedSpecialTypes != null && idx < level.pinnedSpecialTypes.Length)
+                level.pinnedSpecialTypes[idx] = (int)selectedPinSpecial;
+            if (level.pinnedTileTypes != null && idx < level.pinnedTileTypes.Length)
+                level.pinnedTileTypes[idx] = selectedPinTileType + 1;
+        }
+        else if (selectedPinSpecial != TileSpecial.None)
+        {
+            // Diğer special'lar: sadece special, tile tipini temizle
+            if (level.pinnedSpecialTypes != null && idx < level.pinnedSpecialTypes.Length)
+                level.pinnedSpecialTypes[idx] = (int)selectedPinSpecial;
+            if (level.pinnedTileTypes != null && idx < level.pinnedTileTypes.Length)
+                level.pinnedTileTypes[idx] = 0;
+        }
+        else if (selectedPinTileType >= 0)
+        {
+            // Normal taş: sadece tile tipi, special'ı temizle
+            if (level.pinnedTileTypes != null && idx < level.pinnedTileTypes.Length)
+                level.pinnedTileTypes[idx] = selectedPinTileType + 1;
+            if (level.pinnedSpecialTypes != null && idx < level.pinnedSpecialTypes.Length)
+                level.pinnedSpecialTypes[idx] = 0;
+        }
+
+        EditorUtility.SetDirty(level);
+    }
+
+    private void ClearPinnedTile(LevelData level, int idx)
+    {
+        if (idx < 0) return;
+        if (level.pinnedTileTypes != null && idx < level.pinnedTileTypes.Length)
+            level.pinnedTileTypes[idx] = 0;
+        if (level.pinnedSpecialTypes != null && idx < level.pinnedSpecialTypes.Length)
+            level.pinnedSpecialTypes[idx] = 0;
+    }
+
+    private void DrawMagnetPalette(LevelData level)
+    {
+        EditorGUILayout.LabelField("Magnet Obstacle", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox(
+            "Grid'de hücrelere sırayla tıkla → mıknatıs yolu oluşturuluyor.\n" +
+            "İlk hücre = Magnet A, son hücre = Magnet B.\n" +
+            "En az 2 hücre seçince 'Magnet Kaydet' butonu aktif olur.\n" +
+            "Erase modu: mevcut mıknatısı siler.",
+            MessageType.Info);
+
+        EditorGUILayout.LabelField($"Oluşturulan yol: {magnetPathBuilding.Count} hücre", EditorStyles.miniLabel);
+
+        EditorGUILayout.BeginHorizontal();
+        EditorGUI.BeginDisabledGroup(magnetPathBuilding.Count < 2);
+        if (GUILayout.Button("Magnet Kaydet"))
+            FinalizeMagnet(level);
+        EditorGUI.EndDisabledGroup();
+
+        if (GUILayout.Button("Yolu Temizle"))
+            magnetPathBuilding.Clear();
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField($"Mevcut mıknatıslar: {(level.magnets != null ? level.magnets.Length : 0)}", EditorStyles.miniLabel);
+
+        if (level.magnets != null && level.magnets.Length > 0 && GUILayout.Button("Tüm mıknatısları temizle"))
+        {
+            Undo.RecordObject(level, "Clear All Magnets");
+            level.magnets = System.Array.Empty<MagnetEntry>();
+            EditorUtility.SetDirty(level);
+        }
+    }
+
+    private void AddMagnetPathCell(LevelData level, int cellIndex)
+    {
+        if (cellIndex < 0 || cellIndex >= level.cells.Length) return;
+        if (level.cells[cellIndex] != (int)CellType.Normal) return;
+        if (magnetPathBuilding.Contains(cellIndex)) return;
+
+        magnetPathBuilding.Add(cellIndex);
+    }
+
+    private void FinalizeMagnet(LevelData level)
+    {
+        if (magnetPathBuilding.Count < 2) return;
+
+        Undo.RecordObject(level, "Add Magnet");
+
+        var entry = new MagnetEntry { pathCellIndices = magnetPathBuilding.ToArray() };
+        var list = new System.Collections.Generic.List<MagnetEntry>(level.magnets) { entry };
+        level.magnets = list.ToArray();
+
+        magnetPathBuilding.Clear();
+        EditorUtility.SetDirty(level);
+    }
+
+    private void RemoveMagnetAtCell(LevelData level, int cellIndex)
+    {
+        if (level.magnets == null || level.magnets.Length == 0) return;
+
+        var list = new System.Collections.Generic.List<MagnetEntry>(level.magnets);
+        for (int m = list.Count - 1; m >= 0; m--)
+        {
+            var entry = list[m];
+            if (entry.pathCellIndices == null) continue;
+            bool found = false;
+            foreach (int ci in entry.pathCellIndices) if (ci == cellIndex) { found = true; break; }
+            if (found) list.RemoveAt(m);
+        }
+        level.magnets = list.ToArray();
     }
 
     private void DrawTubePalette(LevelData level)
