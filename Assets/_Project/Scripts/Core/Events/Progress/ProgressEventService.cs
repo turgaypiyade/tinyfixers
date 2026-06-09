@@ -8,51 +8,74 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
     [SerializeField] private ProgressEventConfig config;
 
-    // Resources/Events/ProgressEventConfig.asset yolundan otomatik yükler.
-    // Sahneye manuel eklenmeden her sahnede çalışır.
-    private static ProgressEventConfig s_pendingConfig;
+    private static ProgressEventConfig  s_pendingConfig;
+    private static ProgressEventScheduler s_pendingScheduler;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void AutoBootstrap()
     {
         if (Instance != null) return;
-        s_pendingConfig = Resources.Load<ProgressEventConfig>("Events/ProgressEventConfig");
-        if (s_pendingConfig == null)
+
+        // Önce scheduler'ı dene; yoksa direkt config'e bak.
+        s_pendingScheduler = Resources.Load<ProgressEventScheduler>("Events/ProgressEventScheduler");
+        if (s_pendingScheduler == null)
         {
-            Debug.LogWarning("[ProgressEvent] Resources/Events/ProgressEventConfig bulunamadı — ProgressEventConfig.asset dosyasını Resources/Events/ klasörüne taşı.");
-            return;
+            s_pendingConfig = Resources.Load<ProgressEventConfig>("Events/ProgressEventConfig");
+            if (s_pendingConfig == null)
+            {
+                Debug.LogWarning("[ProgressEvent] Resources/Events/ altında ne ProgressEventScheduler ne de ProgressEventConfig bulunamadı.");
+                return;
+            }
         }
+
         var go = new GameObject("ProgressEventService [Auto]");
         go.AddComponent<ProgressEventService>();
     }
 
+    // ── Persistence keys ────────────────────────────────────────
+
     private const string KeyStartTime = "progress_event_v1_start_time";
     private const string KeyGoals     = "progress_event_v1_goals";
+    private const string KeyCycleKey  = "progress_event_v1_cycle_key";
 
-    private ISaveStore saveStore;
-    private long       startTimeTicks;
+    // ── Runtime state ────────────────────────────────────────────
 
-    private readonly List<ProgressGoalRuntime>  goals        = new();
-    private readonly List<SessionGainRecord>    sessionGains = new();
+    private ProgressEventScheduler    scheduler;
+    private ScheduledProgressEvent    activeEvent;
+    private ISaveStore                saveStore;
+    private long                      startTimeTicks;
 
-    /// Oyun sahnesi FX driver'ı bu event'i dinler → +N animasyonu başlatır.
+    private readonly List<ProgressGoalRuntime> goals        = new();
+    private readonly List<SessionGainRecord>   sessionGains = new();
+
     public static event Action<int> OnProgressGained;
 
-    public ProgressEventState             State         { get; private set; }
-    public TimeSpan                       TimeRemaining => ComputeTimeRemaining();
-    public IReadOnlyList<ProgressGoalRuntime> Goals     => goals;
-    public string                         EventName     => config != null ? config.eventName : "";
+    public ProgressEventState                  State         { get; private set; }
+    public TimeSpan                            TimeRemaining => ComputeTimeRemaining();
+    public IReadOnlyList<ProgressGoalRuntime>  Goals         => goals;
+    public string                              EventName     => config != null ? config.eventName : "";
 
     // ── Lifecycle ────────────────────────────────────────────────
 
     private void Awake()
     {
-        if (config == null && s_pendingConfig != null) { config = s_pendingConfig; }
+        // Scheduler veya direkt config al.
+        scheduler = s_pendingScheduler;
+        s_pendingScheduler = null;
+
+        if (config == null && s_pendingConfig != null) config = s_pendingConfig;
         s_pendingConfig = null;
+
+        // Scheduler varsa aktif event'ten config'i çöz.
+        if (scheduler != null)
+        {
+            activeEvent = scheduler.GetActiveEvent();
+            config      = activeEvent?.config;
+        }
 
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
-        transform.SetParent(null); // DontDestroyOnLoad sadece root objelerde çalışır
+        transform.SetParent(null);
         DontDestroyOnLoad(gameObject);
 
         saveStore = new PlayerPrefsSaveStore();
@@ -73,7 +96,6 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
     // ── IProgressEventService ────────────────────────────────────
 
-    /// Ana menü bu metodu çağırır; session kazanımlarını alır ve listeyi temizler.
     public IReadOnlyList<SessionGainRecord> ConsumeSessionGains()
     {
         var copy = new List<SessionGainRecord>(sessionGains);
@@ -81,13 +103,12 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         return copy;
     }
 
-    // ── Sayma ve otomatik ödül ───────────────────────────────────
+    // ── Tile counting ────────────────────────────────────────────
 
     private void HandleTileCleared(TileType type, int count)
     {
         if (State != ProgressEventState.Active) return;
 
-        // SessionGain kayıtlarını başlat (index başına bir kayıt).
         EnsureSessionGainSlots();
 
         int remaining   = count;
@@ -133,12 +154,60 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
             sessionGains.Add(new SessionGainRecord { GoalIndex = sessionGains.Count });
     }
 
+    // ── State & time ────────────────────────────────────────────
+
+    private void RefreshState()
+    {
+        if (config == null) { State = ProgressEventState.Scheduled; return; }
+
+        // Scheduler varsa schedule'a göre kontrol et.
+        if (scheduler != null && activeEvent != null)
+        {
+            if (!activeEvent.schedule.IsActiveNow())
+            {
+                // Pencere kapandı; bir sonraki Awake'de yeni aktif event seçilecek.
+                State = ProgressEventState.Ended;
+                return;
+            }
+
+            // Always dışındaki tiplerde pencere bitişini kontrol et.
+            if (activeEvent.schedule.scheduleType != ProgressEventScheduleType.Always)
+            {
+                State = ProgressEventState.Active;
+                return;
+            }
+        }
+
+        // Always tipi veya scheduler yok → durationHours kullan.
+        double elapsed = TimeSpan.FromTicks(DateTime.UtcNow.Ticks - startTimeTicks).TotalHours;
+        State = elapsed >= config.durationHours ? ProgressEventState.Ended : ProgressEventState.Active;
+    }
+
+    private TimeSpan ComputeTimeRemaining()
+    {
+        if (State != ProgressEventState.Active || config == null) return TimeSpan.Zero;
+
+        DateTime end;
+
+        if (scheduler != null && activeEvent != null &&
+            activeEvent.schedule.scheduleType != ProgressEventScheduleType.Always)
+        {
+            end = scheduler.GetWindowEnd(activeEvent);
+        }
+        else
+        {
+            end = new DateTime(startTimeTicks, DateTimeKind.Utc).AddHours(config.durationHours);
+        }
+
+        var remaining = end - DateTime.UtcNow;
+        return remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
+    }
+
     // ── Helpers ──────────────────────────────────────────────────
 
     private static void GrantProgressReward(ProgressGoalDefinition def)
     {
         if (def.reward == null) return;
-
         if (def.rewardDurationMinutes > 0)
             TimedRewardService.Grant(def.reward.type, def.rewardDurationMinutes);
         else
@@ -172,6 +241,23 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
     private void LoadState()
     {
+        // Cycle key kontrolü: değiştiyse goal'leri sıfırla.
+        string currentCycleKey = scheduler != null && activeEvent != null
+            ? scheduler.GetCycleKey(activeEvent)
+            : "always";
+
+        string savedCycleKey = saveStore.Load(KeyCycleKey, "");
+        if (savedCycleKey != currentCycleKey)
+        {
+            Debug.Log($"[ProgressEvent] Yeni döngü: '{savedCycleKey}' → '{currentCycleKey}'. Goal'ler sıfırlanıyor.");
+            saveStore.Save(KeyCycleKey, currentCycleKey);
+            // Goal verisini temizle (start time'ı yenile).
+            startTimeTicks = DateTime.UtcNow.Ticks;
+            saveStore.Save(KeyStartTime, startTimeTicks.ToString());
+            return; // goals sıfır kalır
+        }
+
+        // Start time yükle (Always tipi için).
         string startStr = saveStore.Load(KeyStartTime, "");
         if (!long.TryParse(startStr, out startTimeTicks))
         {
@@ -179,6 +265,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
             saveStore.Save(KeyStartTime, startTimeTicks.ToString());
         }
 
+        // Goal durumlarını yükle.
         string json = saveStore.Load(KeyGoals, "");
         if (!string.IsNullOrEmpty(json))
         {
@@ -190,21 +277,6 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
                     goals[i].SetFromSave(wrapper.items[i].count, wrapper.items[i].claimed);
             }
         }
-    }
-
-    private void RefreshState()
-    {
-        if (config == null) { State = ProgressEventState.Scheduled; return; }
-        double elapsed = TimeSpan.FromTicks(DateTime.UtcNow.Ticks - startTimeTicks).TotalHours;
-        State = elapsed >= config.durationHours ? ProgressEventState.Ended : ProgressEventState.Active;
-    }
-
-    private TimeSpan ComputeTimeRemaining()
-    {
-        if (State != ProgressEventState.Active || config == null) return TimeSpan.Zero;
-        var end       = new DateTime(startTimeTicks, DateTimeKind.Utc).AddHours(config.durationHours);
-        var remaining = end - DateTime.UtcNow;
-        return remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
     }
 
     private void SaveGoals()

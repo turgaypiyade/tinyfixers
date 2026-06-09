@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60331f67fff66497ca73ef59354f86d2, type: 3}
+  m_Name: ProgressEventScheduler
+  m_EditorClassIdentifier: Assembly-CSharp::ProgressEventScheduler
+  events:
+  - label: "Haftal\u0131k G\xF6revler"
+    config: {fileID: 11400000, guid: 5fcd28381c9ea4927a3ec19115d9e47d, type: 2}
+    schedule:
+      enabled: 1
+      minLevel: 1
+      scheduleType: 0
+      weekStartDay: 0
+      eventDurationDays: 3
+      fixedStartDateUtc: 
+      fixedEndDateUtc: 
+    priority: 0

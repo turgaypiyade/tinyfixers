@@ -31,16 +31,16 @@ MonoBehaviour:
   - goalType: 2
     targetCount: 40
     reward:
-      type: 13
+      type: 11
       amount: 1
-      icon: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
+      icon: {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
       nameLocalizationKey: 
       fallbackName: 
       weight: 100
     rewardDurationMinutes: 15
     rewardWaveSprite: {fileID: 21300000, guid: b79cae8d55bdc485db315a11f3feb725, type: 3}
     fallbackDescription: 
-    goalIcon: {fileID: 21300000, guid: 041718fce0017463bb49b1a375b08078, type: 3}
+    goalIcon: {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
   - goalType: 2
     targetCount: 400
     reward:

@@ -19,12 +19,12 @@ MonoBehaviour:
   menuBackground: {fileID: 21300000, guid: 0ceb36f54868c4558b14ebb180c4091d, type: 3}
   menuTopHud: {fileID: 21300000, guid: f542ccaaf300c4839b6bd184cd231bca, type: 3}
   menuBottomArea: {fileID: 21300000, guid: 8799681f684604c098acba019fb90018, type: 3}
-  menuLevelSelectorBtn: {fileID: 21300000, guid: 615f8b36853ba44ec80102599d1b0696, type: 3}
-  menuRepairBtn: {fileID: 0}
+  menuLevelSelectorBtn: {fileID: 21300000, guid: ffebb0c8f0a9e4c18aa15c8439bdd081, type: 3}
+  menuRepairBtn: {fileID: 21300000, guid: 7632a495f11c04c67a1b56ea50a3407a, type: 3}
   borderColorId: 2
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
   successAnimationBackground: {fileID: 0}
-  preLevelPopupBackground: {fileID: 21300000, guid: 9b9154e178f2c427999b351b2cfec982, type: 3}
+  preLevelPopupBackground: {fileID: 21300000, guid: 58003b4d67ae242759710e9cbe84b230, type: 3}
   preLevelContinueButton: {fileID: 0}
   preLevelCancelButton: {fileID: 0}
   preLevelCheckMark: {fileID: 21300000, guid: 4d7e3c1a8d2a049e7862849181984ab4, type: 3}
@@ -42,7 +42,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 2ffe2b14db1084a7182210ce7ae161d6, type: 3}
   - {fileID: 21300000, guid: 8498b48c28ced4e79904859e2a7cb13e, type: 3}
   loadingHints: []
-  levelEndPopupBackground: {fileID: 21300000, guid: d698651cd4883474f9da105e3ba16e2b, type: 3}
+  levelEndPopupBackground: {fileID: 21300000, guid: 0523fdbfd222b4301a77ccac0f971596, type: 3}
   levelEndContinueButton: {fileID: 0}
   levelEndCloseButton: {fileID: 0}
   levelEndStarFilled: {fileID: 0}
