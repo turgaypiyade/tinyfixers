@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: f2ecc974fd63947be94915115ac8a55b
+guid: a4c6bf9a5e6dc48dfa624d182089a11e
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2483861239418304240
-    second: LBOverrideDefault_0
+      213: -8318199432470940267
+    second: SpecialBackground_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 1024
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 2
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LBOverrideDefault_0
+      name: SpecialBackground_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 1254
-        height: 1254
+        width: 1024
+        height: 1024
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 0194c11ec5d878dd0800000000000000
-      internalID: -2483861239418304240
+      spriteID: 595b6b810b1df8c80800000000000000
+      internalID: -8318199432470940267
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LBOverrideDefault_0: -2483861239418304240
+      SpecialBackground_0: -8318199432470940267
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

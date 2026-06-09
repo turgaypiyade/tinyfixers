@@ -16,8 +16,8 @@ MonoBehaviour:
   core: {fileID: 21300000, guid: 83b04579e3dfd4bb1b547c6aad5b16ca, type: 3}
   bolt: {fileID: 21300000, guid: 7a0d0849d33ab4800bd927115c228b39, type: 3}
   plate: {fileID: 21300000, guid: b823e6e3acff34eb1a8f1c557fe1ae85, type: 3}
-  lineH: {fileID: 21300000, guid: 75f7e723afb19424ca2ecdcec91ac5fd, type: 3}
-  lineV: {fileID: 21300000, guid: a9241c3bca9a04021b799ae4da6ffc1d, type: 3}
+  lineH: {fileID: 21300000, guid: a4789cacc2d6a426291a2ceac39cc946, type: 3}
+  lineV: {fileID: 21300000, guid: 041718fce0017463bb49b1a375b08078, type: 3}
   patchBotAlone: {fileID: 21300000, guid: 3e6f5f85094c34b92a1a16c49a783c8f, type: 3}
   patchBotAll: {fileID: 21300000, guid: 895fe6275a0364dfdb05072df5415d47, type: 3}
   pulseCore: {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}

@@ -66,6 +66,7 @@ public static class LivesManager
     public static bool SpendLife()
     {
         EnsureInit();
+        if (TimedRewardService.IsLivesFree()) return true; // ücretsiz can aktif
         if (_lives <= 0) return false;
 
         // RegenCap'teyken düşüyorsa timer'ı başlat.

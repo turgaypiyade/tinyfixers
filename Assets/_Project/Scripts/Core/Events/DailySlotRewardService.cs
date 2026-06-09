@@ -30,6 +30,10 @@ public static class DailySlotRewardService
             case DailySlotRewardType.Joker_LineH:
                 PreLevelSpecialInventory.Add(TileSpecial.LineH, amt);
                 break;
+            case DailySlotRewardType.Joker_Line:
+                var chosen = UnityEngine.Random.Range(0, 2) == 0 ? TileSpecial.LineH : TileSpecial.LineV;
+                PreLevelSpecialInventory.Add(chosen, amt);
+                break;
             case DailySlotRewardType.Joker_PulseCore:
                 PreLevelSpecialInventory.Add(TileSpecial.PulseCore, amt);
                 break;

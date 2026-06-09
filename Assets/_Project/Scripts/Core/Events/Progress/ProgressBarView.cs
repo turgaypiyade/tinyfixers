@@ -21,6 +21,8 @@ public class ProgressBarView : MonoBehaviour
     [SerializeField] private TMP_Text      progressText;   // "47 / 100"
     [SerializeField] private TMP_Text      descriptionText;
     [SerializeField] private Image         rewardIconImage;
+    [SerializeField] private Image         rewardWaveImage;
+    [SerializeField] private TMP_Text      rewardAmountText; // "+3" veya "15dk"
     [SerializeField] private GameObject    claimedOverlay;
 
     [Header("Akış Animasyonu")]
@@ -48,6 +50,17 @@ public class ProgressBarView : MonoBehaviour
         if (goalIconImage   != null) goalIconImage.sprite   = goal.DisplayIcon;
         if (rewardIconImage != null && def.reward != null)
             rewardIconImage.sprite = def.reward.icon;
+        if (rewardWaveImage != null)
+        {
+            rewardWaveImage.sprite  = def.rewardWaveSprite;
+            rewardWaveImage.enabled = def.rewardWaveSprite != null;
+        }
+        if (rewardAmountText != null && def.reward != null)
+        {
+            rewardAmountText.text = def.rewardDurationMinutes > 0
+                ? $"+{def.rewardDurationMinutes}dk"
+                : $"+{def.reward.amount}";
+        }
         if (descriptionText != null) descriptionText.text   = def.fallbackDescription;
         if (claimedOverlay  != null) claimedOverlay.SetActive(goal.IsRewardClaimed);
 

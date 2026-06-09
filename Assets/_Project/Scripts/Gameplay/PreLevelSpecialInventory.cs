@@ -26,6 +26,7 @@ public static class PreLevelSpecialInventory
 
     public static int Spend(TileSpecial special, int amount = 1)
     {
+        if (TimedRewardService.IsSpecialFree(special)) return GetCount(special); // tükenmez
         int value = GetCount(special) - Mathf.Max(0, amount);
         SetCount(special, value);
         return value;

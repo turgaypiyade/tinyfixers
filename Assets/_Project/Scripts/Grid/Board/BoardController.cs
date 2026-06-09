@@ -1062,8 +1062,14 @@ public class BoardController : MonoBehaviour
 
         if (clearedByType != null)
         {
-            clearedByType.TryGetValue(tileType, out int c);
-            clearedByType[tileType] = c + 1;
+            var effectiveType = special switch
+            {
+                TileSpecial.LineH => TileType.LineEmitter_H,
+                TileSpecial.LineV => TileType.LineEmitter_V,
+                _                 => tileType
+            };
+            clearedByType.TryGetValue(effectiveType, out int c);
+            clearedByType[effectiveType] = c + 1;
         }
 
         if (tile != null && tile)

@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 7a730614573dc4185941c595436090fc
+guid: 62c8a31be03e44a65adcd1407edae4be
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -5891678314229381836
-    second: LBPulseDefault_0
+      213: 298022056120656160
+    second: HeartInfinite_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 1024
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 2
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LBPulseDefault_0
+      name: HeartInfinite_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 1254
-        height: 1254
+        x: 6
+        y: 36
+        width: 992
+        height: 918
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 4354c75e9cd8c3ea0800000000000000
-      internalID: -5891678314229381836
+      spriteID: 021ad462b79c22400800000000000000
+      internalID: 298022056120656160
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LBPulseDefault_0: -5891678314229381836
+      HeartInfinite_0: 298022056120656160
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

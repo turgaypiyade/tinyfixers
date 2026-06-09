@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 1ca1418efdbdc42ef8599598f6581f90
+guid: 650979ab36e82413c836d5f94f118180
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 5981988527069988046
-    second: LBEmitterDefaultV2_0
+      213: 8532327713765833868
+    second: SpecialBGSelected_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 2
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LBEmitterDefaultV2_0
+      name: SpecialBGSelected_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 1254
-        height: 1254
+        width: 1024
+        height: 1024
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: ec408761fda440350800000000000000
-      internalID: 5981988527069988046
+      spriteID: c8cbb3679dae86670800000000000000
+      internalID: 8532327713765833868
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LBEmitterDefaultV2_0: 5981988527069988046
+      SpecialBGSelected_0: 8532327713765833868
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

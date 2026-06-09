@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 334d59143cb18459c8c04412d5e9ea60
+guid: d555b0e5421bf4e77ba8a17e0f5f73ad
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1645039082148421791
-    second: LBPulseDefaultV2_0
+      213: -1921190450906108482
+    second: LinevV745_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 1024
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 2
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LBPulseDefaultV2_0
+      name: LinevV745_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 1254
-        height: 1254
+        x: 4
+        y: 2
+        width: 375
+        height: 374
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: f906715545a54d610800000000000000
-      internalID: 1645039082148421791
+      spriteID: ebd6edbb67f8655e0800000000000000
+      internalID: -1921190450906108482
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LBPulseDefaultV2_0: 1645039082148421791
+      LinevV745_0: -1921190450906108482
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

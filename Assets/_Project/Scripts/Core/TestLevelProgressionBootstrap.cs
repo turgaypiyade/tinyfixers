@@ -11,12 +11,22 @@ public static class TestLevelProgressionBootstrap
 #else
         int level = 1;
 #endif
-        // Progress event verilerini koru, geri kalanı sıfırla.
+        // Progress event ve timed reward verilerini koru, geri kalanı sıfırla.
         string savedStartTime = PlayerPrefs.GetString("progress_event_v1_start_time", "");
         string savedGoals     = PlayerPrefs.GetString("progress_event_v1_goals", "");
+
+        var timedRewardTypes = new[] { 1, 10, 11, 12, 13 }; // Lives, Joker_LineH, PulseCore, Override, Joker_Line
+        var savedTimedRewards = new string[timedRewardTypes.Length];
+        for (int t = 0; t < timedRewardTypes.Length; t++)
+            savedTimedRewards[t] = PlayerPrefs.GetString($"timed_reward_{timedRewardTypes[t]}", "");
+
         PlayerPrefs.DeleteAll();
+
         if (!string.IsNullOrEmpty(savedStartTime)) PlayerPrefs.SetString("progress_event_v1_start_time", savedStartTime);
         if (!string.IsNullOrEmpty(savedGoals))     PlayerPrefs.SetString("progress_event_v1_goals", savedGoals);
+        for (int t = 0; t < timedRewardTypes.Length; t++)
+            if (!string.IsNullOrEmpty(savedTimedRewards[t]))
+                PlayerPrefs.SetString($"timed_reward_{timedRewardTypes[t]}", savedTimedRewards[t]);
         PlayerPrefs.SetInt("current_level", level);
         PlayerPrefs.SetInt("player_coins", 100);
         PlayerPrefs.SetInt("player_total_stars", 10);

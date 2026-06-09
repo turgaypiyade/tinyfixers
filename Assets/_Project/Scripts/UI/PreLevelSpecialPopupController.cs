@@ -368,7 +368,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
     private void HandleContinueClicked()
     {
-        var selected = new List<TileSpecial>();
+        var userSelected = new List<TileSpecial>();
 
         for (int i = 0; i < slots.Count; i++)
         {
@@ -376,18 +376,36 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             if (slot == null || !slot.IsSelected)
                 continue;
 
-            selected.Add(slot.Special);
+            userSelected.Add(slot.Special);
             PreLevelSpecialInventory.Spend(slot.Special, 1);
         }
 
-        Debug.Log($"[PreLevelSpecialPopup] Continue selected={selected.Count}");
-        PreLevelSpecialSelectionState.SetSelection(selected);
-        PreLevelSpecialRuntimeInjector.EnsureForSelection(selected);
+        // Timed specials are auto-injected regardless of user selection.
+        var timedSpecials = CollectTimedSpecials();
+        var combined = new List<TileSpecial>(timedSpecials);
+        combined.AddRange(userSelected);
+
+        Debug.Log($"[PreLevelSpecialPopup] Continue userSelected={userSelected.Count} timedAuto={timedSpecials.Count}");
+        PreLevelSpecialSelectionState.SetSelection(userSelected);
+        PreLevelSpecialRuntimeInjector.EnsureForSelection(combined);
         RefreshCounts();
         PlayOneShot(continueSfx);
 
         ShowLoadingScreen();
         SceneManager.LoadScene(gameSceneName);
+    }
+
+    private static List<TileSpecial> CollectTimedSpecials()
+    {
+        var list = new List<TileSpecial>();
+        if (TimedRewardService.IsActive(DailySlotRewardType.Joker_Line) ||
+            TimedRewardService.IsActive(DailySlotRewardType.Joker_LineH))
+            list.Add(TileSpecial.LineH);
+        if (TimedRewardService.IsActive(DailySlotRewardType.Joker_PulseCore))
+            list.Add(TileSpecial.PulseCore);
+        if (TimedRewardService.IsActive(DailySlotRewardType.Joker_SystemOverride))
+            list.Add(TileSpecial.SystemOverride);
+        return list;
     }
 
     private void ShowLoadingScreen()

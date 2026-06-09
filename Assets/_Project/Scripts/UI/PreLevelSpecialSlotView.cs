@@ -22,6 +22,14 @@ public class PreLevelSpecialSlotView : MonoBehaviour
     [SerializeField] private Sprite selectedBackgroundSprite;
     [SerializeField] private bool hideCountWhenSelected = true;
 
+    [Header("Timed Reward Overlay")]
+    [Tooltip("Süreli ödül aktifken gösterilecek overlay container.")]
+    [SerializeField] private GameObject timedOverlay;
+    [Tooltip("Süreli ödülün wave/reward ikonunu gösterir. Sprite runtime'da atanır.")]
+    [SerializeField] private Image timedWaveImage;
+    [Tooltip("Süreli ödülün geri sayım metni.")]
+    [SerializeField] private TMP_Text timedCountdownText;
+
     [Header("Localization")]
     [SerializeField] private string nameLocalizationKey;
 
@@ -35,6 +43,7 @@ public class PreLevelSpecialSlotView : MonoBehaviour
 
     public TileSpecial Special => special;
     public bool IsSelected => isSelected;
+    public bool IsTimedActive => TimedRewardService.IsSpecialFree(special);
 
     public event Action<PreLevelSpecialSlotView> Clicked;
 
@@ -70,18 +79,27 @@ public class PreLevelSpecialSlotView : MonoBehaviour
         GameLocalization.OnLanguageChanged -= RefreshLocalizedTexts;
     }
 
+    private void Update()
+    {
+        if (timedCountdownText == null) return;
+        if (!TimedRewardService.IsSpecialFree(special)) return;
+
+        timedCountdownText.text = FormatTimeSpan(GetTimedRemaining());
+    }
+
     public void Configure(TileSpecial slotSpecial, Sprite icon, ChapterTheme chapterTheme)
     {
         special = slotSpecial;
         theme = chapterTheme;
 
-        if (iconImage != null && icon != null)
+        if (iconImage != null && iconImage.sprite == null && icon != null)
             iconImage.sprite = icon;
 
         ApplyTheme(chapterTheme);
         RefreshCount();
         RefreshLocalizedTexts();
         SetSelected(false, false);
+        ApplyTimedState();
     }
 
     public void ApplyTheme(ChapterTheme chapterTheme)
@@ -119,6 +137,96 @@ public class PreLevelSpecialSlotView : MonoBehaviour
     {
         SetSelected(!isSelected, true);
     }
+
+    // ── Timed Reward ──────────────────────────────────────────────────────────
+
+    private void ApplyTimedState()
+    {
+        bool isFree = TimedRewardService.IsSpecialFree(special);
+
+        if (timedOverlay != null)
+            timedOverlay.SetActive(isFree);
+
+        if (button != null)
+            button.interactable = !isFree;
+
+        if (numberBG != null)
+            numberBG.gameObject.SetActive(!isFree);
+
+        if (countText != null)
+            countText.gameObject.SetActive(!isFree);
+
+        if (timedWaveImage != null)
+        {
+            Sprite waveSprite = isFree ? FindTimedWaveSprite() : null;
+            timedWaveImage.sprite = waveSprite;
+            timedWaveImage.enabled = waveSprite != null;
+        }
+
+        if (isFree && timedCountdownText != null)
+            timedCountdownText.text = FormatTimeSpan(GetTimedRemaining());
+    }
+
+    private Sprite FindTimedWaveSprite()
+    {
+        var service = ProgressEventService.Instance;
+        if (service == null) return null;
+
+        foreach (var goal in service.Goals)
+        {
+            var def = goal.Definition;
+            if (def.reward == null || def.rewardDurationMinutes <= 0 || def.rewardWaveSprite == null) continue;
+            if (IsMatchingRewardType(def.reward.type)) return def.rewardWaveSprite;
+        }
+        return null;
+    }
+
+    private bool IsMatchingRewardType(DailySlotRewardType type) => special switch
+    {
+        TileSpecial.LineH          => type == DailySlotRewardType.Joker_Line || type == DailySlotRewardType.Joker_LineH,
+        TileSpecial.LineV          => type == DailySlotRewardType.Joker_Line,
+        TileSpecial.PulseCore      => type == DailySlotRewardType.Joker_PulseCore,
+        TileSpecial.SystemOverride => type == DailySlotRewardType.Joker_SystemOverride,
+        _                          => false
+    };
+
+    private System.TimeSpan GetTimedRemaining()
+    {
+        switch (special)
+        {
+            case TileSpecial.LineH:
+                if (TimedRewardService.IsActive(DailySlotRewardType.Joker_LineH))
+                {
+                    var a = TimedRewardService.GetRemaining(DailySlotRewardType.Joker_LineH);
+                    var b = TimedRewardService.GetRemaining(DailySlotRewardType.Joker_Line);
+                    return a > b ? a : b;
+                }
+                return TimedRewardService.GetRemaining(DailySlotRewardType.Joker_Line);
+            case TileSpecial.LineV:
+                return TimedRewardService.GetRemaining(DailySlotRewardType.Joker_Line);
+            case TileSpecial.PulseCore:
+                return TimedRewardService.GetRemaining(DailySlotRewardType.Joker_PulseCore);
+            case TileSpecial.SystemOverride:
+                return TimedRewardService.GetRemaining(DailySlotRewardType.Joker_SystemOverride);
+            default:
+                return System.TimeSpan.Zero;
+        }
+    }
+
+    private static string FormatTimeSpan(System.TimeSpan span)
+    {
+        if (span.TotalSeconds <= 0) return "00:00";
+
+        int totalMinutes = (int)span.TotalMinutes;
+        int seconds      = span.Seconds;
+
+        if (totalMinutes >= 60)
+            return $"{(int)span.TotalHours:D2}:{span.Minutes:D2}:{seconds:D2}";
+
+        return $"{totalMinutes:D2}:{seconds:D2}";
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     private void HandleClick()
     {

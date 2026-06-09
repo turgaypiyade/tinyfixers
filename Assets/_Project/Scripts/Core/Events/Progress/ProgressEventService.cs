@@ -113,7 +113,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
             if (goal.IsCompleted && !goal.IsRewardClaimed)
             {
-                DailySlotRewardService.Grant(goal.Definition.reward);
+                GrantProgressReward(goal.Definition);
                 goal.MarkClaimed();
                 sessionGains[i].RewardGranted = true;
                 sessionGains[i].Reward        = goal.Definition.reward;
@@ -134,6 +134,16 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     }
 
     // ── Helpers ──────────────────────────────────────────────────
+
+    private static void GrantProgressReward(ProgressGoalDefinition def)
+    {
+        if (def.reward == null) return;
+
+        if (def.rewardDurationMinutes > 0)
+            TimedRewardService.Grant(def.reward.type, def.rewardDurationMinutes);
+        else
+            DailySlotRewardService.Grant(def.reward);
+    }
 
     private static bool Matches(ProgressGoalType goalType, TileType tile) =>
         goalType switch

@@ -55,6 +55,13 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private RectTransform gridLinesRoot;
     [SerializeField] private Color runtimeGridLineColor = new Color(1f, 1f, 1f, 0.35f);
     [SerializeField, Min(1f)] private float runtimeGridLineThickness = 2f;
+    [SerializeField] private bool gridJunctionEnabled = false;
+    [Tooltip("Diamond boyutu. 0 = otomatik (çizgi kalınlığı × 2.5).")]
+    [SerializeField, Min(0f)] private float gridJunctionSize = 0f;
+    [Tooltip("Yatay uzama. 1 = kare elmas ◇, >1 = geniş <> şekli.")]
+    [SerializeField, Min(0.1f)] private float gridJunctionAspectX = 1.6f;
+    [Tooltip("Dikey daralma. 1 = kare elmas ◇, <1 = yassı <> şekli.")]
+    [SerializeField, Min(0.1f)] private float gridJunctionAspectY = 0.6f;
 
     [SerializeField] private RectTransform boardBgRoot;
 
@@ -1082,6 +1089,56 @@ public class GridSpawner : MonoBehaviour
                         new Vector2(x0, y1 + thickness * 0.5f),
                         new Vector2(tileSize, thickness)
                     );
+                }
+            }
+        }
+
+        // Diamond junction'lar — çizgilerin kesiştiği node noktalara elmas koyar.
+        if (gridJunctionEnabled)
+        {
+            float jSize = gridJunctionSize > 0f ? gridJunctionSize : thickness * 2.5f;
+
+            for (int ny = 0; ny <= height; ny++)
+            {
+                for (int nx = 0; nx <= width; nx++)
+                {
+                    bool hasAbove = IsVisibleCell(nx - 1, ny - 1) || IsVisibleCell(nx, ny - 1);
+                    bool hasBelow = IsVisibleCell(nx - 1, ny)     || IsVisibleCell(nx, ny);
+                    bool hasLeft  = IsVisibleCell(nx - 1, ny - 1) || IsVisibleCell(nx - 1, ny);
+                    bool hasRight = IsVisibleCell(nx, ny - 1)     || IsVisibleCell(nx, ny);
+
+                    // Sadece hem H hem V çizgisi kesişen noktalara koy.
+                    bool hCross = (hasAbove || hasBelow);
+                    bool vCross = (hasLeft  || hasRight);
+                    if (!hCross || !vCross) continue;
+
+                    // Wrapper: konumlandırma + aspect ölçekleme
+                    var wrapper = new GameObject($"GridJunction_{nx}_{ny}", typeof(RectTransform));
+                    wrapper.transform.SetParent(gridLinesRoot, false);
+                    var wRt = wrapper.GetComponent<RectTransform>();
+                    wRt.anchorMin = new Vector2(0f, 1f);
+                    wRt.anchorMax = new Vector2(0f, 1f);
+                    wRt.pivot     = new Vector2(0.5f, 0.5f);
+                    wRt.anchoredPosition = new Vector2(nx * tileSize, -ny * tileSize);
+                    wRt.sizeDelta        = Vector2.zero;
+                    wRt.localScale       = new Vector3(gridJunctionAspectX, gridJunctionAspectY, 1f);
+                    wRt.localRotation    = Quaternion.identity;
+
+                    // Child: kare elmas (45° rotated square) → wrapper scale ile <> şekli
+                    var jGo = new GameObject("Diamond", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                    jGo.transform.SetParent(wrapper.transform, false);
+                    var jRt = jGo.GetComponent<RectTransform>();
+                    jRt.anchorMin = new Vector2(0.5f, 0.5f);
+                    jRt.anchorMax = new Vector2(0.5f, 0.5f);
+                    jRt.pivot     = new Vector2(0.5f, 0.5f);
+                    jRt.anchoredPosition = Vector2.zero;
+                    jRt.sizeDelta        = new Vector2(jSize, jSize);
+                    jRt.localRotation    = Quaternion.Euler(0f, 0f, 45f);
+                    jRt.localScale       = Vector3.one;
+
+                    var jImg = jGo.GetComponent<Image>();
+                    jImg.color         = runtimeGridLineColor;
+                    jImg.raycastTarget = false;
                 }
             }
         }

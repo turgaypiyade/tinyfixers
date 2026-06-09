@@ -24,10 +24,16 @@ public class ProgressGoalDefinition
     [Tooltip("Hedefe ulaşmak için gereken toplam sayı.")]
     [Min(1)] public int targetCount = 100;
 
-    [Tooltip("Hedef tamamlanınca verilecek ödül (çarkla aynı DailySlotReward yapısı).")]
+    [Tooltip("Hedef tamamlanınca verilecek ödül.")]
     public DailySlotReward reward;
 
-    [Tooltip("Progress bar'da gösterilecek açıklama. Örn: '200 yatay çizgi yap'")]
+    [Tooltip("0 = adet bazlı (reward.amount kadar), >0 = N dakika ücretsiz kullanım.")]
+    [Min(0)] public int rewardDurationMinutes = 0;
+
+    [Tooltip("Reward görseli arkasında dalga deseni. Null bırakırsan gösterilmez.")]
+    public Sprite rewardWaveSprite;
+
+    [Tooltip("Progress bar'da gösterilecek açıklama. Örn: '200 taş kır'")]
     public string fallbackDescription;
 
     [Tooltip("Progress bar sol tarafındaki ikon. Null bırakırsan reward.icon kullanılır.")]

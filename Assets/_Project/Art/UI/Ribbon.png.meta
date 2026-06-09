@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 78d06e43bd7a245c8899896ca7ef9bd4
+guid: 6379c55efaf2b4741a9b667d054c4928
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 821221514477448387
-    second: LBEmitterDefault_0
+      213: -7816762936476190851
+    second: Ribbon_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 1024
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 2
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LBEmitterDefault_0
+      name: Ribbon_0
       rect:
         serializedVersion: 2
         x: 0
-        y: 0
-        width: 1254
-        height: 1254
+        y: 3
+        width: 1519
+        height: 488
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 3cc265ccd90956b00800000000000000
-      internalID: 821221514477448387
+      spriteID: d77b5e53687458390800000000000000
+      internalID: -7816762936476190851
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LBEmitterDefault_0: 821221514477448387
+      Ribbon_0: -7816762936476190851
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

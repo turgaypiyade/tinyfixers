@@ -18,25 +18,29 @@ MonoBehaviour:
   - goalType: 3
     targetCount: 67
     reward:
-      type: 10
+      type: 1
       amount: 1
-      icon: {fileID: 21300000, guid: 3505defcd86f54b84a75a12b170029cb, type: 3}
+      icon: {fileID: 21300000, guid: 62c8a31be03e44a65adcd1407edae4be, type: 3}
       nameLocalizationKey: 
       fallbackName: 
       weight: 100
+    rewardDurationMinutes: 15
+    rewardWaveSprite: {fileID: 21300000, guid: b79cae8d55bdc485db315a11f3feb725, type: 3}
     fallbackDescription: 
     goalIcon: {fileID: 21300000, guid: 6a12756c63b26574bb12b794a8e4dca2, type: 3}
-  - goalType: 1
-    targetCount: 250
+  - goalType: 2
+    targetCount: 40
     reward:
-      type: 0
-      amount: 30
+      type: 13
+      amount: 1
       icon: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
       nameLocalizationKey: 
       fallbackName: 
       weight: 100
+    rewardDurationMinutes: 15
+    rewardWaveSprite: {fileID: 21300000, guid: b79cae8d55bdc485db315a11f3feb725, type: 3}
     fallbackDescription: 
-    goalIcon: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
+    goalIcon: {fileID: 21300000, guid: 041718fce0017463bb49b1a375b08078, type: 3}
   - goalType: 2
     targetCount: 400
     reward:
@@ -46,6 +50,8 @@ MonoBehaviour:
       nameLocalizationKey: 
       fallbackName: 
       weight: 0
+    rewardDurationMinutes: 0
+    rewardWaveSprite: {fileID: 0}
     fallbackDescription: 
     goalIcon: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
   - goalType: 5
@@ -57,6 +63,8 @@ MonoBehaviour:
       nameLocalizationKey: 
       fallbackName: 
       weight: 100
+    rewardDurationMinutes: 0
+    rewardWaveSprite: {fileID: 0}
     fallbackDescription: 
     goalIcon: {fileID: 21300000, guid: e80512acde4c9498bb2774285e6930da, type: 3}
   - goalType: 5
@@ -68,5 +76,7 @@ MonoBehaviour:
       nameLocalizationKey: 
       fallbackName: 
       weight: 100
+    rewardDurationMinutes: 0
+    rewardWaveSprite: {fileID: 0}
     fallbackDescription: 
     goalIcon: {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}

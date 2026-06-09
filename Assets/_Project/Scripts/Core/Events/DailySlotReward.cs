@@ -11,6 +11,7 @@ public enum DailySlotRewardType
     Joker_LineH          = 10,
     Joker_PulseCore      = 11,
     Joker_SystemOverride = 12,
+    Joker_Line           = 13, // LineH veya LineV — grant'te random, shared icon
 
     Booster_Hammer       = 20,
     Booster_Row          = 21,
