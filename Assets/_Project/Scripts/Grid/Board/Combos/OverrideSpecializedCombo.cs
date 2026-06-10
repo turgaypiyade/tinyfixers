@@ -169,6 +169,11 @@ public sealed class OverrideSpecializedCombo
         List<Vector2Int> deferredSpecials,
         TileSpecial targetSpecial)
     {
+        // For PulseCore target: suppress immediate activation of implanted PulseCores
+        // so they can fire sequentially after the placement animation.
+        if (targetSpecial == TileSpecial.PulseCore)
+            rt.Context.SuppressImmediateOverrideQueueProcessing = true;
+
         if (rt.ProcessFanout != null)
         {
             var fanoutActions = rt.ProcessFanout(rt.Context);
@@ -176,13 +181,27 @@ public sealed class OverrideSpecializedCombo
                 result.Actions.AddRange(fanoutActions);
         }
 
+        if (targetSpecial == TileSpecial.PulseCore)
+        {
+            rt.Context.SuppressImmediateOverrideQueueProcessing = false;
+
+            // Defer all implanted PulseCores (fanout targets) into the sequential explosion list.
+            // Add to Processed so EnqueueChainSpecials won't re-queue them.
+            foreach (var t in rt.Context.OverrideFanoutTargets)
+            {
+                if (t == null) continue;
+                var cell = new Vector2Int(t.X, t.Y);
+                rt.Context.Processed.Add(cell);
+                if (!rt.Context.OverrideDeferredPulseExplosions.Contains(cell))
+                    rt.Context.OverrideDeferredPulseExplosions.Add(cell);
+            }
+        }
+
         if (deferredSpecials != null && deferredSpecials.Count > 0)
         {
             foreach (var cell in deferredSpecials)
             {
-                // Existing PulseCore tiles must not be activated immediately via ProcessQueue —
-                // that fires their explosion VFX during the logic phase before any visual starts.
-                // Defer them into the stagger sequence instead.
+                // Existing PulseCore tiles on the board: defer into the stagger sequence.
                 if (targetSpecial == TileSpecial.PulseCore)
                 {
                     var dTile = (cell.x >= 0 && cell.x < rt.Board.Width && cell.y >= 0 && cell.y < rt.Board.Height)
@@ -198,10 +217,11 @@ public sealed class OverrideSpecializedCombo
 
                 rt.Context.Processed.Remove(cell);
             }
-
-            rt.EnqueueChainSpecials?.Invoke(rt.Context);
-            rt.ProcessQueue?.Invoke(rt.Context);
         }
+
+        // Process any non-PulseCore chain specials that may have been queued.
+        rt.EnqueueChainSpecials?.Invoke(rt.Context);
+        rt.ProcessQueue?.Invoke(rt.Context);
 
         if (targetSpecial == TileSpecial.PulseCore && rt.ActivateSpecial != null)
         {
@@ -834,6 +854,8 @@ public sealed class OverrideSpecializedCombo
             bool previousSuppressPulseCoreChain = rt.Context.SuppressPulseCoreToPulseCoreChain;
             rt.Context.SuppressPulseCoreToPulseCoreChain = true;
 
+            var clearedInSteps = new HashSet<TileView>();
+
             try
             {
                 for (int i = 0; i < pulseCells.Count; i++)
@@ -852,7 +874,51 @@ public sealed class OverrideSpecializedCombo
 
                     Debug.Log($"[OverrideSpecializedCombo] PulseCore sequence step={i + 1}/{pulseCells.Count} cell={cell}");
 
+                    var affectedBefore = new HashSet<TileView>(rt.Context.Affected);
                     rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
+
+                    // Tiles newly added by this PulseCore explosion
+                    var stepTiles = new HashSet<TileView>();
+                    foreach (var t in rt.Context.Affected)
+                    {
+                        if (t != null && !affectedBefore.Contains(t))
+                            stepTiles.Add(t);
+                    }
+
+                    if (stepTiles.Count > 0)
+                    {
+                        var delays = new Dictionary<TileView, float>();
+                        foreach (var t in stepTiles)
+                        {
+                            int dist = Mathf.Abs(t.X - cell.x) + Mathf.Abs(t.Y - cell.y);
+                            delays[t] = dist * rt.Board.PulseImpactDelayStep;
+                        }
+
+                        var stepCells = new HashSet<Vector2Int>();
+                        foreach (var t in stepTiles)
+                            stepCells.Add(new Vector2Int(t.X, t.Y));
+
+                        var stepClear = new MatchClearAction(
+                            stepTiles,
+                            doShake: i == 0,
+                            staggerDelays: null,
+                            staggerAnimTime: rt.Board.ApplySpecialChainTempo(rt.Board.PulseImpactAnimTime),
+                            animationMode: ClearAnimationMode.Default,
+                            affectedCells: stepCells,
+                            impactCells: null,
+                            includeAdjacentOverTileBlockerDamage: false,
+                            lightningVisualTargets: null,
+                            lightningLineStrikes: null,
+                            suppressPerTileClearVfx: false,
+                            perTileClearDelays: delays,
+                            isSpecialPhase: true,
+                            presentationPlan: null);
+
+                        yield return stepClear.ExecuteVisuals(sequencer);
+
+                        foreach (var t in stepTiles)
+                            clearedInSteps.Add(t);
+                    }
 
                     if (staggerSeconds > 0f && i < pulseCells.Count - 1)
                         yield return new WaitForSeconds(rt.Board.ApplySpecialChainTempo(staggerSeconds));
@@ -863,15 +929,22 @@ public sealed class OverrideSpecializedCombo
                 rt.Context.SuppressPulseCoreToPulseCoreChain = previousSuppressPulseCoreChain;
             }
 
+            // Remove per-step cleared tiles; only origin tiles remain for final clear
+            foreach (var t in clearedInSteps)
+                rt.Context.Affected.Remove(t);
+
             if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
                 rt.CleanupImplantedTiles?.Invoke(rt.Context);
 
             if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
                 rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
 
-            var clearAction = owner.BuildClearAction(rt.Context, targetSpecial);
-            if (clearAction != null)
-                yield return clearAction.ExecuteVisuals(sequencer);
+            if (rt.Context.Affected.Count > 0)
+            {
+                var clearAction = owner.BuildClearAction(rt.Context, targetSpecial);
+                if (clearAction != null)
+                    yield return clearAction.ExecuteVisuals(sequencer);
+            }
         }
     }
 

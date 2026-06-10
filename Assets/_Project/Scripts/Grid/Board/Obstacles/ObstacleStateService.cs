@@ -103,6 +103,12 @@ public class ObstacleStateService : ISimObstacleQuery
     // Wardrobe: origin index → kalan item sayısı (kapı açıldıktan sonra)
     private readonly Dictionary<int, int> _wardrobeItemCounts = new();
 
+    // Under-tile obstacle (Mud) bir movable obstacle (Helmet vb.) ALTINDA kaldığında
+    // saklanır. Movable obstacle aynı cell'i kapladığında level.obstacles[idx] ezilirdi
+    // ve mud kalıcı kaybolurdu; bunun yerine mud'ı burada saklayıp movable cell'i
+    // terk edince/kırılınca geri yüklüyoruz. Key = cell index.
+    private readonly Dictionary<int, (ObstacleId Id, int Remaining)> _underTileBeneathMovable = new();
+
     public event Action<int, ObstacleStageSnapshot> OnObstacleStageChanged;
     public event Action<int, ObstacleId> OnObstacleDestroyed;
     public event Action<int> OnCellUnlocked;
@@ -190,6 +196,7 @@ public class ObstacleStateService : ISimObstacleQuery
         _chestColorStates.Clear();
         _batteryHitsByOrigin.Clear();
         _wardrobeItemCounts.Clear();
+        _underTileBeneathMovable.Clear();
 
         for (int idx = 0; idx < size; idx++)
         {
@@ -355,14 +362,14 @@ public class ObstacleStateService : ISimObstacleQuery
                     return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
                 removedColor = colorFlag;
             }
-            else if (context == ObstacleHitContext.SpecialActivation && isOpen)
+            else if ((context == ObstacleHitContext.SpecialActivation || context == ObstacleHitContext.Booster) && isOpen)
             {
-                // Açık dolap + special: kalan renklerden rastgele biri kırılır
+                // Açık dolap + special/booster: kalan renklerden rastgele biri kırılır
                 if (!_chestColorStates.TryGetValue(origin, out var chestMask) || chestMask == ChestColorMask.None)
                     return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
                 removedColor = PickRandomChestColor(chestMask);
             }
-            // isOpen=false + SpecialActivation: kapalı dolabı açma işlemi, removedColor = None
+            // isOpen=false + SpecialActivation/Booster: kapalı dolabı açma işlemi, removedColor = None
         }
 
         // BatteryBox renk-pil validasyonu
@@ -712,6 +719,19 @@ public class ObstacleStateService : ISimObstacleQuery
             if ((ObstacleId)level.obstacles[i] != originId) continue;
             if (level.obstacleOrigins[i] != origin) continue;
 
+            // Bu cell bir movable obstacle'sa ve altında saklanan under-tile obstacle
+            // (Mud) varsa, cell'i boşaltmak yerine mud'ı geri yükle — movable kırılınca
+            // altındaki mud yok olmasın.
+            if (_underTileBeneathMovable.TryGetValue(i, out var beneath))
+            {
+                level.obstacles[i] = (int)beneath.Id;
+                level.obstacleOrigins[i] = i;
+                if (i < remainingHitsByOrigin.Length)
+                    remainingHitsByOrigin[i] = beneath.Remaining;
+                _underTileBeneathMovable.Remove(i);
+                continue;
+            }
+
             level.obstacles[i] = (int)ObstacleId.None;
             level.obstacleOrigins[i] = -1;
 
@@ -766,19 +786,42 @@ public class ObstacleStateService : ISimObstacleQuery
 
         int origin = level.obstacleOrigins[fromIdx];
 
-        level.obstacles[toIdx] = level.obstacles[fromIdx];
-        level.obstacleOrigins[toIdx] = toIdx; // yeni pozisyon yeni origin
+        // Hareket eden obstacle'ın kalan hit'ini önceden yakala.
+        int movingRemaining = (origin >= 0 && origin < remainingHitsByOrigin.Length)
+            ? remainingHitsByOrigin[origin]
+            : -1;
 
-        level.obstacles[fromIdx] = (int)ObstacleId.None;
-        level.obstacleOrigins[fromIdx] = -1;
-
-        if (origin >= 0 && origin < remainingHitsByOrigin.Length)
+        // Hedef hücrede under-tile obstacle (Mud) varsa onu KORU — movable obstacle
+        // üzerinden geçerken yok etmesin. Movable cell'i terk edince geri yüklenir.
+        var destId = (ObstacleId)level.obstacles[toIdx];
+        if (destId != ObstacleId.None && !IsMovableObstacleAt(toX, toY))
         {
-            int remaining = remainingHitsByOrigin[origin];
-            remainingHitsByOrigin[origin] = -1;
+            int destRemaining = (toIdx < remainingHitsByOrigin.Length) ? remainingHitsByOrigin[toIdx] : -1;
+            _underTileBeneathMovable[toIdx] = (destId, destRemaining);
+        }
 
-            if (toIdx < remainingHitsByOrigin.Length)
-                remainingHitsByOrigin[toIdx] = remaining;
+        // Movable'ı hedefe yerleştir.
+        level.obstacles[toIdx] = (int)id;
+        level.obstacleOrigins[toIdx] = toIdx; // yeni pozisyon yeni origin
+        if (toIdx < remainingHitsByOrigin.Length)
+            remainingHitsByOrigin[toIdx] = movingRemaining;
+
+        // Kaynak hücreyi boşalt: altında saklanan bir under-tile obstacle (Mud) varsa
+        // onu geri yükle, yoksa None yap.
+        if (_underTileBeneathMovable.TryGetValue(fromIdx, out var beneath))
+        {
+            level.obstacles[fromIdx] = (int)beneath.Id;
+            level.obstacleOrigins[fromIdx] = fromIdx;
+            if (fromIdx < remainingHitsByOrigin.Length)
+                remainingHitsByOrigin[fromIdx] = beneath.Remaining;
+            _underTileBeneathMovable.Remove(fromIdx);
+        }
+        else
+        {
+            level.obstacles[fromIdx] = (int)ObstacleId.None;
+            level.obstacleOrigins[fromIdx] = -1;
+            if (fromIdx < remainingHitsByOrigin.Length)
+                remainingHitsByOrigin[fromIdx] = -1;
         }
     }
 

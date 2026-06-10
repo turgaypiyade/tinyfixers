@@ -23,6 +23,7 @@ public class MatchClearAction : BoardAction
     private bool isBlocking;
     private bool enqueueCascadeOnComplete;
     private Vector2Int? implodeTargetCell;
+    private Dictionary<Vector2Int, System.Action> arrivalTriggers;
     public override bool Blocking => isBlocking;
     // NEW: future-facing generic presentation payload
     public ClearPresentationPlan PresentationPlan { get; }
@@ -47,7 +48,8 @@ public class MatchClearAction : BoardAction
         IReadOnlyList<Vector2Int> impactCells = null,
         bool isBlocking = true,
         bool enqueueCascadeOnComplete = false,
-        Vector2Int? implodeTargetCell = null)
+        Vector2Int? implodeTargetCell = null,
+        Dictionary<Vector2Int, System.Action> arrivalTriggers = null)
     {
         this.matches = matches != null ? new HashSet<TileView>(matches) : new HashSet<TileView>();
         this.doShake = doShake;
@@ -69,6 +71,7 @@ public class MatchClearAction : BoardAction
         this.isBlocking = isBlocking;
         this.enqueueCascadeOnComplete = enqueueCascadeOnComplete;
         this.implodeTargetCell = implodeTargetCell;
+        this.arrivalTriggers = arrivalTriggers;
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
@@ -129,7 +132,8 @@ public class MatchClearAction : BoardAction
             animationMode, affectedCells, impactCells, obstacleHitContext,
             includeAdjacentOverTileBlockerDamage, lightningOriginTile,
             lightningOriginCell, lightningVisualTargets, lightningLineStrikes,
-            suppressPerTileClearVfx, perTileClearDelays, implodeTargetCell);
+            suppressPerTileClearVfx, perTileClearDelays, implodeTargetCell,
+            arrivalTriggers);
 
         UnityEngine.Debug.Log($"[MatchClear] clear_anim_done +{(UnityEngine.Time.realtimeSinceStartup - _mcStart):0.000}s");
 
@@ -142,6 +146,20 @@ public class MatchClearAction : BoardAction
 
         if (!isBlocking)
             sequencer.Board.ActiveBackgroundJobs--;
+    }
+
+    public void RemoveFromMatches(TileView tile)
+    {
+        matches.Remove(tile);
+    }
+
+    public void AddArrivalTrigger(Vector2Int cell, System.Action trigger)
+    {
+        arrivalTriggers ??= new Dictionary<Vector2Int, System.Action>();
+        if (!arrivalTriggers.ContainsKey(cell))
+            arrivalTriggers[cell] = trigger;
+        else
+            arrivalTriggers[cell] += trigger;
     }
 
     private void EnqueueCascadeIfNeeded(ActionSequencer sequencer)

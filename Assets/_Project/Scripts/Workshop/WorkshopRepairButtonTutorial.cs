@@ -166,7 +166,7 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
     private void BlockBackgroundButtons()
     {
         blockedButtons.Clear();
-        var allButtons = Object.FindObjectsOfType<Button>();
+        var allButtons = Object.FindObjectsByType<Button>(FindObjectsSortMode.None);
         foreach (var btn in allButtons)
         {
             if (btn == repairButton) continue;

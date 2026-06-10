@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -352,6 +353,8 @@ public class SpecialResolver
                 Center = a,      // merkez hedef hücre
                 FinalizeAtEnd = true,
                 ActivateSpecial = dispatcher.ApplySpecialActivation,
+                EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
+                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution),
                 ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                 CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
                 FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
@@ -1191,6 +1194,11 @@ public class SpecialResolver
         if (ctx.OverrideDeferredPulseExplosions != null && ctx.OverrideDeferredPulseExplosions.Count > 0) return false;
         if (ctx.OverrideDeferredPatchBotDashes != null && ctx.OverrideDeferredPatchBotDashes.Count > 0) return false;
         if (ctx.PendingOverrideImplants != null && ctx.PendingOverrideImplants.Count > 0) return false;
+        // Deferred line-hit Override'lar ArrivalTrigger'larını MatchClearAction üzerinden ateşler;
+        // bunlar yalnızca ClearMatchesAnimated (lightning) yolunda okunur. PresentationPlan yoluna
+        // girersek erken yield break ile trigger'lar düşer → takılı Override. O yüzden bu durumda
+        // pure-solo-line presentation plan'ı kullanma.
+        if (ctx.DeferredLineHitOverrideCells != null && ctx.DeferredLineHitOverrideCells.Count > 0) return false;
 
         int specialCount = 0;
         bool hasNonLineSpecial = false;
@@ -1574,6 +1582,16 @@ public class SpecialResolver
         if (ctx.DeferredPulseComboOverrideCells == null || ctx.DeferredPulseComboOverrideCells.Count == 0)
             return;
 
+        MatchClearAction sweepAction = null;
+        for (int i = actions.Count - 1; i >= 0; i--)
+        {
+            if (actions[i] is MatchClearAction mca)
+            {
+                sweepAction = mca;
+                break;
+            }
+        }
+
         var deferred = new List<Vector2Int>(ctx.DeferredPulseComboOverrideCells);
         ctx.DeferredPulseComboOverrideCells.Clear();
 
@@ -1583,18 +1601,28 @@ public class SpecialResolver
                 continue;
 
             var tile = board.Tiles[cell.x, cell.y];
-            if (tile == null)
-                continue;
-
-            if (tile.GetSpecial() != TileSpecial.SystemOverride)
+            if (tile == null || tile.GetSpecial() != TileSpecial.SystemOverride)
                 continue;
 
             ctx.Processed.Remove(cell);
             ctx.Queued.Remove(cell);
 
             var overrideActions = ExecuteSpecialActions(ctx, tile, null);
-            if (overrideActions != null && overrideActions.Count > 0)
+            if (overrideActions == null || overrideActions.Count == 0)
+                continue;
+
+            if (sweepAction != null)
+            {
+                sweepAction.RemoveFromMatches(tile);
+                var capturedActions = new List<BoardAction>(overrideActions);
+                var capturedCell = cell;
+                sweepAction.AddArrivalTrigger(capturedCell, () =>
+                    board.StartImmediateActionSequence(capturedActions));
+            }
+            else
+            {
                 actions.AddRange(overrideActions);
+            }
         }
     }
     private void TraceSpecialChain(string stage, TileView a, TileView b)
@@ -1611,12 +1639,26 @@ public class SpecialResolver
 #endif
     }
 
+    // Processes deferred Override cells hit by a line sweep.
+    // Finds the sweep's MatchClearAction in the actions list, removes each
+    // Override tile from its matches (Override clears itself), and registers
+    // an ArrivalTrigger so Override fires exactly when the sweep reaches it.
     private void DrainDeferredLineOverrides(List<BoardAction> actions)
     {
         int deferredLineCount = ctx.DeferredLineHitOverrideCells != null ? ctx.DeferredLineHitOverrideCells.Count : 0;
         Debug.Log($"[DrainDeferredLineOverrides] start count={deferredLineCount}");
         if (ctx.DeferredLineHitOverrideCells == null || ctx.DeferredLineHitOverrideCells.Count == 0)
             return;
+
+        MatchClearAction sweepAction = null;
+        for (int i = actions.Count - 1; i >= 0; i--)
+        {
+            if (actions[i] is MatchClearAction mca)
+            {
+                sweepAction = mca;
+                break;
+            }
+        }
 
         var deferred = new List<Vector2Int>(ctx.DeferredLineHitOverrideCells);
         ctx.DeferredLineHitOverrideCells.Clear();
@@ -1628,20 +1670,31 @@ public class SpecialResolver
                 continue;
 
             var tile = board.Tiles[cell.x, cell.y];
-            if (tile == null)
-                continue;
-
-            if (tile.GetSpecial() != TileSpecial.SystemOverride)
+            if (tile == null || tile.GetSpecial() != TileSpecial.SystemOverride)
                 continue;
 
             ctx.Processed.Remove(cell);
             ctx.Queued.Remove(cell);
 
             var overrideActions = ExecuteSpecialActions(ctx, tile, null);
-            if (overrideActions != null && overrideActions.Count > 0)
-                actions.AddRange(overrideActions);
+            if (overrideActions == null || overrideActions.Count == 0)
+                continue;
+
+            if (sweepAction != null)
+            {
+                sweepAction.RemoveFromMatches(tile);
+                var capturedActions = new List<BoardAction>(overrideActions);
+                var capturedCell = cell;
+                sweepAction.AddArrivalTrigger(capturedCell, () =>
+                    board.StartImmediateActionSequence(capturedActions));
+            }
+            else
+            {
+                board.StartImmediateActionSequence(overrideActions);
+            }
         }
     }
+
     public readonly struct SpecialActivation
     {
         public readonly Vector2Int cell;

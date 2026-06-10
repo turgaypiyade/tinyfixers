@@ -263,6 +263,71 @@ public class CascadeLogic
         return false;
     }
 
+    // Builds a full-board mask of cells a spawned tile can ever reach via gravity,
+    // using the SAME rules as the cascade: holes are passable (tiles fall through
+    // them), diagonal slides work, only gravity-blocking obstacles (chest etc.) stop
+    // the flow. Used at INITIAL board setup to leave gravity-shadowed cells empty
+    // (e.g. mud directly under a chest stays bare until the chest breaks).
+    // NOTE: only for initial placement — runtime fill is handled by CalculateCascades,
+    // which naturally fills these cells once the blocking obstacle is cleared.
+    public bool[,] ComputeGravityReachableMask()
+    {
+        var reachable = new bool[board.Width, board.Height];
+        var queue = new Queue<Vector2Int>();
+
+        void Seed(int cx, int cy)
+        {
+            if (reachable[cx, cy]) return;
+            reachable[cx, cy] = true;
+            queue.Enqueue(new Vector2Int(cx, cy));
+        }
+
+        // Seed every tile-slot in a spawn-connected vertical segment. A segment spans
+        // holes (they're not gravity-blocked), so tiles falling through a side hole
+        // reach the slots below it.
+        for (int cx = 0; cx < board.Width; cx++)
+        {
+            int segTop = board.Height - 1;
+            while (segTop >= 0)
+            {
+                while (segTop >= 0 && IsGravityBlockedCell(cx, segTop)) segTop--;
+                if (segTop < 0) break;
+                int segBot = segTop;
+                while (segBot >= 0 && !IsGravityBlockedCell(cx, segBot)) segBot--;
+                int topY = segBot + 1;
+                if (IsSegmentConnectedToSpawnEdge(cx, topY))
+                    for (int sy = topY; sy <= segTop; sy++)
+                        if (IsTileSlotCell(cx, sy)) Seed(cx, sy);
+                segTop = segBot - 1;
+            }
+        }
+
+        // BFS: expand via gravity (straight down) and diagonal slide.
+        while (queue.Count > 0)
+        {
+            var c = queue.Dequeue();
+
+            int ny = c.y + 1;
+            if (ny >= board.Height) continue;
+
+            // Straight fall: (cx, cy) → (cx, cy+1)
+            if (IsTileSlotCell(c.x, ny) && !IsGravityBlockedCell(c.x, ny))
+                Seed(c.x, ny);
+
+            // Diagonal slide: (cx, cy) → (cx±1, cy+1), needs one open corner.
+            for (int dx = -1; dx <= 1; dx += 2)
+            {
+                int nx = c.x + dx;
+                if (nx < 0 || nx >= board.Width) continue;
+                if (!IsTileSlotCell(nx, ny) || IsGravityBlockedCell(nx, ny)) continue;
+                if (!IsDiagonalPassableCell(c.x, ny) && !IsDiagonalPassableCell(nx, c.y)) continue;
+                Seed(nx, ny);
+            }
+        }
+
+        return reachable;
+    }
+
     private bool ProcessVerticalGravityAndSpawn(VirtualTile[,] virtualBoard, int x, ref bool spawnedMovableThisPass, Dictionary<ObstacleId, int> spawnedMovableCounts)
     {
         bool moved = false;
@@ -668,8 +733,13 @@ public class CascadeLogic
         board.ConfigureTileView(view);
         view.SetUseFullCellIcon(false);
         view.SetMovableObstacleTile(true);
+        // İlk açılıştaki spawn (GridSpawner.SpawnMovableObstacleTile) gibi full-cell
+        // stretch bayrağını uygula — aksi hâlde runtime'da üretilen movable obstacle'lar
+        // hücreye tam stretch olmaz, merkezi küçük ikon olarak kalırdı.
+        view.SetFullCellMovableSprite(def.fullCellSprite);
         view.SetVisualLayout(TileView.TileVisualLayout.Centered);
-        
+        view.ApplyTileSize(board.TileSize);
+
         // Setup initial visual coordinate before falling
         view.SetCoords(startX, startY);
         view.SnapToGrid(board.TileSize);

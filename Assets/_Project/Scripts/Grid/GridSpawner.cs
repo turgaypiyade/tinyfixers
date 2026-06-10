@@ -331,9 +331,27 @@ public class GridSpawner : MonoBehaviour
 
         DrawGridLines();
 
-        // Tüm non-hole hücreler için tip simülasyonu — reachability'den bağımsız.
-        // + şeklindeki grids gibi gravity ile ulaşılamayan kanatlar da dahil.
-        var initialTypes = board.SimulateInitialTypes(board.Holes);
+        // İlk açılışta yalnızca gravity'nin GERÇEKTEN erişebildiği hücrelere taş koy.
+        // Normal kural: hole'lar geçirgen (taş hole'dan akar + yanından diagonal kayar),
+        // sadece gravity-blocklayan obstacle'lar (chest vb.) akışı durdurur. Erişilemeyen
+        // hücreler (örn. chest'in dikey gölgesindeki orta mud) boş bırakılır — chest
+        // kırılınca runtime cascade (CalculateCascades) o hücreleri kendi doldurur.
+        bool[,] gravityIsolated = new bool[width, height];
+        if (board.CascadeLogic != null)
+        {
+            bool[,] reachable = board.CascadeLogic.ComputeGravityReachableMask();
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    if (board.Holes[x, y]) continue;
+                    if (!reachable[x, y])
+                        gravityIsolated[x, y] = true;
+                }
+        }
+
+        // Tip simülasyonu/oynanabilirlik garantisi de izole hücreleri hariç tutmalı,
+        // aksi hâlde garanti edilen tek hamle boş bırakılan bölgeye düşebilir.
+        var initialTypes = board.SimulateInitialTypes(gravityIsolated);
 
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
@@ -350,6 +368,10 @@ public class GridSpawner : MonoBehaviour
                 }
                 else
                 {
+                    // Gravity'nin erişemediği hücre: ilk açılışta taş koyma (boş mud kalır).
+                    if (gravityIsolated[x, y])
+                        continue;
+
                     int idx = resolvedLevel.Index(x, y);
                     TileType tileType = initialTypes[x, y];
                     TileSpecial pinnedSpecial = TileSpecial.None;

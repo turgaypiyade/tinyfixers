@@ -44,8 +44,7 @@ public class PatchbotDashUI : MonoBehaviour
     [SerializeField] private float afterLife = 0.28f;
     [SerializeField] private Color afterColor = new Color(0.55f, 0.85f, 1f, 0.85f);
     [Header("Carry Orbit")]
-[SerializeField] private float carryOrbitSpeed = 720f;
-    [SerializeField, Range(0.2f, 1f)] private float carrySizeFactor = 0.72f;
+    [SerializeField] private float carrySizeFactor = 0.72f;
     [SerializeField, Range(0.05f, 0.6f)] private float carryOrbitRadiusFactor = 0.32f;
     private Coroutine co;
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -21,17 +22,23 @@ public sealed class LineSweepEffectDescriptor : ClearEffectDescriptorBase
     public TileView OriginTile { get; private set; }
     public Vector2Int? OriginCell { get; private set; }
 
+    // Cell → callback fired when sweep animation reaches that cell.
+    // Used for deferred specials (e.g. Override hit by a line sweep).
+    public Dictionary<Vector2Int, Action> ArrivalTriggers { get; private set; }
+
     public LineSweepEffectDescriptor(
         IList<TileView> targetTiles,
         IList<Vector2Int> targetCells,
         IList<LightningLineStrike> lineStrikes,
         TileView originTile,
-        Vector2Int? originCell)
+        Vector2Int? originCell,
+        Dictionary<Vector2Int, Action> arrivalTriggers = null)
     {
         TargetTiles = targetTiles;
         TargetCells = targetCells;
         LineStrikes = lineStrikes;
         OriginTile = originTile;
         OriginCell = originCell;
+        ArrivalTriggers = arrivalTriggers;
     }
 }

@@ -91,6 +91,11 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
             yield break;
         }
 
+        // Loading ekranı board'u örterken special yerleştirme animasyonu + SFX
+        // oynamasın — oyuncu sadece sesi duyup animasyonu göremiyor. Loading ekranı
+        // tamamen kapanıp board görünür olana kadar bekle.
+        yield return WaitForLoadingScreenHidden();
+
         BuildCandidates();
         Debug.Log($"[PreLevelSpecialRuntimeInjector] Board ready. candidates={candidates.Count}, selected={selected.Count}");
 
@@ -145,6 +150,20 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
                 stableFrames = 0;
             }
 
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+    }
+
+    private IEnumerator WaitForLoadingScreenHidden()
+    {
+        // Güvenlik tavanı: loading ekranı beklenmedik şekilde kapanmazsa sonsuza
+        // kadar takılmayalım.
+        const float maxWait = 10f;
+        float elapsed = 0f;
+
+        while (LoadingScreenManager.IsVisible && elapsed < maxWait)
+        {
             elapsed += Time.unscaledDeltaTime;
             yield return null;
         }

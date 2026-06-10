@@ -505,6 +505,41 @@ public class BoardController : MonoBehaviour
 
     public void OnActionSequenceFinished() { }
 
+    // Starts a board action immediately as a background job, running concurrently
+    // with any currently-playing ActionSequencer action.
+    // ResolveBoard's loop already polls ActiveBackgroundJobs > 0 to wait for completion.
+    public void StartImmediateAction(BoardAction action)
+    {
+        ActiveBackgroundJobs++;
+        StartCoroutine(RunImmediateAction(action));
+    }
+
+    private System.Collections.IEnumerator RunImmediateAction(BoardAction action)
+    {
+        yield return StartCoroutine(action.ExecuteVisuals(actionSequencer));
+        ActiveBackgroundJobs--;
+    }
+
+    // Runs a list of actions sequentially as a single background job.
+    // Use this when actions have a defined order (e.g. Override fanout → clear).
+    public void StartImmediateActionSequence(System.Collections.Generic.List<BoardAction> actions)
+    {
+        if (actions == null || actions.Count == 0) return;
+        ActiveBackgroundJobs++;
+        StartCoroutine(RunImmediateActionSequence(actions));
+    }
+
+    private System.Collections.IEnumerator RunImmediateActionSequence(System.Collections.Generic.List<BoardAction> actions)
+    {
+        foreach (var action in actions)
+        {
+            System.Collections.IEnumerator e = action.ExecuteVisuals(actionSequencer);
+            while (e.MoveNext())
+                yield return e.Current;
+        }
+        ActiveBackgroundJobs--;
+    }
+
     public struct BonusLinePlacement
     {
         public int x, y;

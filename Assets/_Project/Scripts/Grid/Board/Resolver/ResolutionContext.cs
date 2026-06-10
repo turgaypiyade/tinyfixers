@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -39,6 +40,10 @@ public class ResolutionContext
     public bool DeferOverrideImplantVisualRefresh;
 
     public readonly List<Vector2Int> DeferredLineHitOverrideCells = new();
+
+    // Filled before BuildClearAction: sweep animation fires these callbacks when
+    // it reaches the keyed cell, so deferred specials start concurrently.
+    public Dictionary<Vector2Int, Action> ArrivalTriggers;
     public bool SuppressImmediateOverrideQueueProcessing;
     public const float OverrideRadialClearDuration = 0.20f;
     public readonly List<Vector2Int> OverrideDeferredPulseActivations = new();
@@ -130,5 +135,6 @@ public class ResolutionContext
         OverrideDeferredPulseActivations.Clear();
         DeferredLineHitOverrideCells.Clear();
         DeferredPulseComboOverrideCells.Clear();
+        ArrivalTriggers = null;
     }
 }

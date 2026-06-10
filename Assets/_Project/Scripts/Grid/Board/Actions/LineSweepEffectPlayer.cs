@@ -38,6 +38,11 @@ public sealed class LineSweepEffectPlayer : IClearEffectPlayer
             strikes,
             delegate (Vector2Int cell)
             {
+                // Fire arrival trigger first — deferred specials start concurrently here.
+                if (line.ArrivalTriggers != null &&
+                    line.ArrivalTriggers.TryGetValue(cell, out var trigger))
+                    trigger?.Invoke();
+
                 if (context != null && context.NotifyCellImpactNow != null)
                     context.NotifyCellImpactNow(cell);
 

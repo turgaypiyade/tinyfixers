@@ -359,7 +359,7 @@ MonoBehaviour:
     requiredNormalMatchTileType: 0
     size: {x: 1, y: 1}
     hits: 1
-    fullCellSprite: 0
+    fullCellSprite: 1
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -392,7 +392,7 @@ MonoBehaviour:
     requiredNormalMatchTileType: 2
     size: {x: 1, y: 1}
     hits: 1
-    fullCellSprite: 0
+    fullCellSprite: 1
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -425,7 +425,7 @@ MonoBehaviour:
     requiredNormalMatchTileType: 1
     size: {x: 1, y: 1}
     hits: 1
-    fullCellSprite: 0
+    fullCellSprite: 1
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -458,7 +458,7 @@ MonoBehaviour:
     requiredNormalMatchTileType: 3
     size: {x: 1, y: 1}
     hits: 1
-    fullCellSprite: 0
+    fullCellSprite: 1
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []

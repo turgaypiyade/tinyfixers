@@ -16,7 +16,7 @@ MonoBehaviour:
   durationHours: 48
   goals:
   - goalType: 3
-    targetCount: 67
+    targetCount: 250
     reward:
       type: 1
       amount: 1
@@ -29,7 +29,7 @@ MonoBehaviour:
     fallbackDescription: 
     goalIcon: {fileID: 21300000, guid: 6a12756c63b26574bb12b794a8e4dca2, type: 3}
   - goalType: 2
-    targetCount: 40
+    targetCount: 200
     reward:
       type: 11
       amount: 1
@@ -41,12 +41,12 @@ MonoBehaviour:
     rewardWaveSprite: {fileID: 21300000, guid: b79cae8d55bdc485db315a11f3feb725, type: 3}
     fallbackDescription: 
     goalIcon: {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
-  - goalType: 2
+  - goalType: 5
     targetCount: 400
     reward:
       type: 2
       amount: 10
-      icon: {fileID: 21300000, guid: 5e50851b400604ef0b4d1627f825a302, type: 3}
+      icon: {fileID: 21300000, guid: 7a0d0849d33ab4800bd927115c228b39, type: 3}
       nameLocalizationKey: 
       fallbackName: 
       weight: 0
@@ -54,16 +54,16 @@ MonoBehaviour:
     rewardWaveSprite: {fileID: 0}
     fallbackDescription: 
     goalIcon: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
-  - goalType: 5
-    targetCount: 400
+  - goalType: 4
+    targetCount: 500
     reward:
       type: 20
-      amount: 0
-      icon: {fileID: 21300000, guid: e80512acde4c9498bb2774285e6930da, type: 3}
+      amount: 1
+      icon: {fileID: 21300000, guid: 83b04579e3dfd4bb1b547c6aad5b16ca, type: 3}
       nameLocalizationKey: 
       fallbackName: 
       weight: 100
-    rewardDurationMinutes: 0
+    rewardDurationMinutes: 15
     rewardWaveSprite: {fileID: 0}
     fallbackDescription: 
     goalIcon: {fileID: 21300000, guid: e80512acde4c9498bb2774285e6930da, type: 3}

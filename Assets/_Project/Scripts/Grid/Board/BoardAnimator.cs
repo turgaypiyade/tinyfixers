@@ -279,7 +279,8 @@ public class BoardAnimator
         IReadOnlyList<LightningLineStrike> lightningLineStrikes = null,
         bool suppressPerTileClearVfx = false,
         Dictionary<TileView, float> perTileClearDelays = null,
-        Vector2Int? implodeTargetCell = null)
+        Vector2Int? implodeTargetCell = null,
+        Dictionary<Vector2Int, System.Action> arrivalTriggers = null)
     {
         var list = new List<TileView>(matches);
         var pops = new List<IEnumerator>();
@@ -517,6 +518,29 @@ public class BoardAnimator
             }
         }
 
+        // Fire arrival triggers timed to pulse wave (e.g. Override tiles removed from matches)
+        if (arrivalTriggers != null && !useLineHitDrivenClear)
+        {
+            foreach (var kv in arrivalTriggers)
+            {
+                var cell = kv.Key;
+                var trigger = kv.Value;
+                float triggerDelay = 0f;
+                if (cell.x >= 0 && cell.x < board.Width && cell.y >= 0 && cell.y < board.Height)
+                {
+                    var targetTile = board.Tiles[cell.x, cell.y];
+                    if (targetTile != null)
+                    {
+                        if (staggerDelays != null && staggerDelays.TryGetValue(targetTile, out float sd))
+                            triggerDelay = sd;
+                        else if (perTileClearDelays != null && perTileClearDelays.TryGetValue(targetTile, out float pd))
+                            triggerDelay = pd;
+                    }
+                }
+                board.StartCoroutine(FireArrivalTriggerAfterDelay(trigger, triggerDelay));
+            }
+        }
+
         float lightningDuration = 0f;
         if (animationMode == ClearAnimationMode.LightningStrike)
         {
@@ -541,6 +565,10 @@ public class BoardAnimator
                     lightningLineStrikes,
                     cell =>
                     {
+                        if (arrivalTriggers != null &&
+                            arrivalTriggers.TryGetValue(cell, out var trigger))
+                            trigger?.Invoke();
+
                         StartPatchbotDashRequestsForLineCell(lineSweepPatchbotDashes, cell);
                         TryClearTileOnLineSweepHit(cell);
                         ApplyObstacleDamageOnLineSweepHit(cell);
@@ -671,6 +699,12 @@ public class BoardAnimator
             {
                 board.ClearCellDataOnly(new Vector2Int(t.X, t.Y));
             }
+        }
+
+        IEnumerator FireArrivalTriggerAfterDelay(System.Action trigger, float delay)
+        {
+            if (delay > 0f) yield return new WaitForSeconds(delay);
+            trigger?.Invoke();
         }
 
         void ApplyObstacleDamageOnLineSweepHit(Vector2Int tileCell)

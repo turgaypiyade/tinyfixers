@@ -121,6 +121,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private int currentOfferAmount;
     private int currentCost;
     private bool endCheckQueued;
+    private bool failSettleWaitRunning;
     private Coroutine starRevealRoutine;
     private Coroutine mainScreenDimRoutine;
     private readonly List<CanvasGroup> mainScreenDimTargets = new();
@@ -238,6 +239,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         failPopupShown = false;
         successPopupShown = false;
         successReturnQueued = false;
+        failSettleWaitRunning = false;
         isBonusRoundRunning = false;
         hardSkipBonusRoundRequested = false;
 
@@ -268,7 +270,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (board == null || board.RemainingMoves > 0) return;
 
         // Board already idle but OnBecameIdle may not have fired — act as fallback.
-        if (!board.IsBusy)
+        // Arka plan job'ları (deferred Override/PulseCore clear'ları) da bitmiş olmalı.
+        if (!board.IsBusy && board.ActiveBackgroundJobs == 0)
         {
             Debug.Log("[LevelEnd] Update fallback: board idle, moves exhausted, evaluating.");
             endCheckQueued = false;
@@ -644,6 +647,22 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (failPopupShown || successPopupShown)
             return;
 
+        // Son hamlenin board çözümü (cascade + special zinciri + arka plan job'lar)
+        // tamamen bitmeden sonucu değerlendirme. RunAfterIdle 3s timeout'u board hâlâ
+        // çözülürken erken tetiklenebilir; o anda "hamle kalmadı" değerlendirilirse
+        // hedefler cascade sırasında tamamlanacakken fail popup'ı erken açılır.
+        // Success yolu (CompleteSuccessAfterBoardSettled) zaten bu şekilde bekliyor;
+        // fail yolunu da gerçek idle'a kadar erteleyerek simetriyi sağlıyoruz.
+        if (board.IsBusy || board.ActiveBackgroundJobs > 0)
+        {
+            if (!failSettleWaitRunning)
+            {
+                failSettleWaitRunning = true;
+                StartCoroutine(EvaluateAfterBoardSettled());
+            }
+            return;
+        }
+
         Debug.Log(
             $"[LevelEnd] Evaluate. " +
             $"RemainingMoves={board.RemainingMoves}, " +
@@ -664,6 +683,26 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         Debug.Log($"[LevelEndSimplePopupController] End check skipped. RemainingMoves={board.RemainingMoves}, GoalsCompleted={topHud.AreAllGoalsCompleted}");
+    }
+
+    // Board tamamen oturana kadar (3 ardışık idle frame) bekleyip değerlendirmeyi
+    // yeniden çalıştırır. Bu sırada hedefler tamamlanırsa success yolu devreye girer
+    // ve fail popup'ı hiç açılmaz; gerçekten kaybedildiyse popup ancak son hamlenin
+    // tüm efektleri bittikten sonra çıkar.
+    private IEnumerator EvaluateAfterBoardSettled()
+    {
+        const int requiredStableFrames = 3;
+        int stableFrames = 0;
+
+        while (board != null && stableFrames < requiredStableFrames)
+        {
+            bool boardStillWorking = board.IsBusy || board.ActiveBackgroundJobs > 0;
+            stableFrames = boardStillWorking ? 0 : stableFrames + 1;
+            yield return null;
+        }
+
+        failSettleWaitRunning = false;
+        EvaluateAndShowIfEnded();
     }
 
     private void ShowFailPopup()

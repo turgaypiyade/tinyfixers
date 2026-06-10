@@ -47,7 +47,9 @@ public class SpecialBehaviorDispatcher
                 Partner = b,
                 Center = b,
                 FinalizeAtEnd = false,
-                ActivateSpecial = ApplySpecialActivation
+                ActivateSpecial = ApplySpecialActivation,
+                EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
+                ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution)
             });
             return;
         }

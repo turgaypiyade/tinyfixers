@@ -53,7 +53,6 @@ public sealed class PulsePulseCombo
         PlayComboVisuals(rt, centerX, centerY);
         CollectArea(rt, centerX, centerY);
         ExecuteQueuedChain(rt);
-        RemoveDeferredOverrideOriginsFromPulseClear(rt);
         rt.Context.IsPulsePulseComboActive = false;
 
         if (rt.FinalizeAtEnd)

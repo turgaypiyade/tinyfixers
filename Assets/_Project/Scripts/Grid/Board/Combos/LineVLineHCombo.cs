@@ -16,6 +16,8 @@ public sealed class LineVLineHComboExecutionRuntime
     public bool FinalizeAtEnd;
 
     public Action<ResolutionContext, TileView, TileView> ActivateSpecial;
+    public Action<ResolutionContext> EnqueueChainSpecials;
+    public Action<ResolutionContext> ProcessQueue;
 
     public Func<ResolutionContext, List<BoardAction>> ProcessFanout;
     public Action<ResolutionContext> CleanupImplantedTiles;
@@ -49,7 +51,6 @@ public sealed class LineVLineHCombo
         ExecuteLineVAtVirtualOrigin(rt, centerCell);
 
         ExecuteChain(rt);
-        RemoveDeferredOverrideOriginsFromLineClear(rt);
 
         if (rt.FinalizeAtEnd)
         {
@@ -113,29 +114,6 @@ public sealed class LineVLineHCombo
         });
     }
 
-    private void RemoveDeferredOverrideOriginsFromLineClear(LineVLineHComboExecutionRuntime rt)
-    {
-        if (rt?.Context?.DeferredLineHitOverrideCells == null || rt.Context.DeferredLineHitOverrideCells.Count == 0)
-            return;
-
-        foreach (var cell in rt.Context.DeferredLineHitOverrideCells)
-        {
-            if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
-                continue;
-
-            var tile = rt.Board.Tiles[cell.x, cell.y];
-            if (tile == null)
-                continue;
-
-            if (tile.GetSpecial() != TileSpecial.SystemOverride)
-                continue;
-
-            // Ertelenen Override'ı cross combo'nun clear action'ından çıkar.
-            // DrainDeferredLineOverrides onu kendi action'ıyla temizleyecek.
-            rt.Context.Affected.Remove(tile);
-        }
-    }
-
     private bool CanExecute(LineVLineHComboExecutionRuntime rt)
     {
         if (rt == null || rt.Board == null || rt.Context == null)
@@ -162,96 +140,8 @@ public sealed class LineVLineHCombo
 
     private void ExecuteChain(LineVLineHComboExecutionRuntime rt)
     {
-        var pending = new Queue<TileView>();
-
-        SeedCrossSpecials(rt, pending);
-
-        while (pending.Count > 0)
-        {
-            var tile = pending.Dequeue();
-            if (tile == null)
-                continue;
-
-            var pos = new Vector2Int(tile.X, tile.Y);
-
-            if (rt.Context.Processed.Contains(pos))
-                continue;
-
-            var special = tile.GetSpecial();
-            if (special == TileSpecial.None)
-                continue;
-
-            rt.Context.Queued.Remove(pos);
-
-            Debug.Log($"[LineVLineHCombo] EXECUTE special={special} cell={pos}");
-
-            if (!rt.Context.Processed.Contains(pos))
-                rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
-
-            rt.Context.Processed.Add(pos);
-
-            EnqueueNewlyAffectedSpecials(rt, pending);
-        }
-    }
-
-    private void SeedCrossSpecials(LineVLineHComboExecutionRuntime rt, Queue<TileView> pending)
-    {
-        var center = GetCenterTile(rt);
-        int cx = center.X;
-        int cy = center.Y;
-
-        for (int x = 0; x < rt.Board.Width; x++)
-        {
-            var tile = rt.Board.Tiles[x, cy];
-            if (tile == null)
-                continue;
-
-            TryQueue(rt, pending, tile);
-        }
-
-        for (int y = 0; y < rt.Board.Height; y++)
-        {
-            var tile = rt.Board.Tiles[cx, y];
-            if (tile == null)
-                continue;
-
-            TryQueue(rt, pending, tile);
-        }
-    }
-
-    private void EnqueueNewlyAffectedSpecials(LineVLineHComboExecutionRuntime rt, Queue<TileView> pending)
-    {
-        foreach (var tile in rt.Context.Affected)
-        {
-            if (tile == null)
-                continue;
-
-            TryQueue(rt, pending, tile);
-        }
-    }
-
-    private void TryQueue(LineVLineHComboExecutionRuntime rt, Queue<TileView> pending, TileView tile)
-    {
-        if (tile == null)
-            return;
-
-        if (tile.GetSpecial() == TileSpecial.None)
-            return;
-
-        var center = GetCenterTile(rt);
-        if (tile == center)
-            return;
-
-        var pos = new Vector2Int(tile.X, tile.Y);
-
-        if (rt.Context.Processed.Contains(pos))
-            return;
-
-        if (rt.Context.Queued.Contains(pos))
-            return;
-
-        rt.Context.Queued.Add(pos);
-        pending.Enqueue(tile);
+        rt.EnqueueChainSpecials?.Invoke(rt.Context);
+        rt.ProcessQueue?.Invoke(rt.Context);
     }
 
     private void AddTile(LineVLineHComboExecutionRuntime rt, TileView tile)
