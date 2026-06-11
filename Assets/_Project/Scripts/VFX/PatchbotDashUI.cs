@@ -11,6 +11,17 @@ public class PatchbotDashUI : MonoBehaviour
         public float afterTimer;
     }
 
+    // Dalış boyunca canlı hedef takibi. resolve her çağrıda hedefi mantıksal board
+    // durumundan yeniden doğrular (ölmüşse koordinatör yeni hücre seçer); goal son
+    // çözülen hedef, target ise drone'un o anda yöneldiği (yumuşatılmış) nokta.
+    private sealed class LiveTargetState
+    {
+        public Vector2 target;
+        public Vector2? goal;
+        public System.Func<Vector2?> resolve;
+        public float resolveTimer;
+    }
+
     [Header("Refs")]
     [SerializeField] private RectTransform boardContent;   // Tile'ların bulunduğu root (sadece test/path bulma için)
     [SerializeField] private RectTransform vfxRoot;        // VFXRoot (runner + afterimage burada)
@@ -29,6 +40,11 @@ public class PatchbotDashUI : MonoBehaviour
     [SerializeField, Min(0f)] private float hoverHoldDuration = 0.035f;
     [SerializeField, Range(0f, 1f)] private float diveArcFactor = 0.11f;
     [SerializeField, Range(0.5f, 2f)] private float diveSpeedMultiplier = 1.28f;
+
+    [Header("Live Retargeting")]
+    [SerializeField, Min(0.01f)] private float liveRetargetInterval = 0.05f;   // hedef doğrulama sıklığı (sn)
+    [SerializeField, Min(0.5f)] private float retargetSteerSpeed = 9f;         // yeni hedefe bank/kavis hızı
+    [SerializeField, Min(0f)] private float maxRetargetHomingDuration = 0.6f;  // dalış bitince hedefe kilitli ek uçuş sınırı
 
     [Header("Flight Audio")]
     [SerializeField] private AudioClip flightLoopClip;
@@ -222,11 +238,11 @@ public class PatchbotDashUI : MonoBehaviour
         yield return RunTakeoffBurst(rt, carryRt, size, sprite, start, takeoff, takeoffDuration, motion);
         yield return RunHoverHold(rt, carryRt, size, sprite, takeoff, hoverDuration, motion);
 
-        target = ResolveTargetAtDiveStart(req, board, target);
+        var live = AcquireLiveTarget(req, board, target);
 
-        yield return RunDive(rt, carryRt, size, sprite, takeoff, target, diveDuration, motion);
+        yield return RunDive(rt, carryRt, size, sprite, takeoff, live, diveDuration, effectiveSpeed, motion);
 
-        rt.anchoredPosition = target;
+        rt.anchoredPosition = live.target;
         rt.localRotation = Quaternion.identity;
         rt.localScale = Vector3.one;
 
@@ -240,19 +256,65 @@ public class PatchbotDashUI : MonoBehaviour
         onComplete?.Invoke();
     }
 
-    private Vector2 ResolveTargetAtDiveStart(BoardController.PatchbotDashRequest req, BoardController board, Vector2 fallbackTarget)
+    // Dive başında bu dash'ın canlı çözücüsünü teslim alır ve ilk hedefi çözer.
+    // Çözücü yoksa (sabit hedefli eski dash'lar) davranış birebir eski hâli: statik hedef.
+    private LiveTargetState AcquireLiveTarget(BoardController.PatchbotDashRequest req, BoardController board, Vector2 fallbackTarget)
     {
+        var live = new LiveTargetState { target = fallbackTarget };
+
         if (board == null || vfxRoot == null)
-            return fallbackTarget;
+            return live;
 
-        if (!PatchbotLiveDashTargetRegistry.TryResolveAtDiveStart(req.from, req.to, out var cell))
-            return fallbackTarget;
+        if (!PatchbotLiveDashTargetRegistry.TryAcquireLiveResolver(req.from, req.to, out var cellResolver))
+            return live;
 
-        if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
-            return fallbackTarget;
+        live.resolve = () =>
+        {
+            var maybeCell = cellResolver();
+            if (!maybeCell.HasValue)
+                return null;
 
-        Vector3 world = board.GetCellWorldPosition(cell.x, cell.y);
-        return WorldToAnchoredIn(vfxRoot, world);
+            var cell = maybeCell.Value;
+            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                return null;
+
+            return WorldToAnchoredIn(vfxRoot, board.GetCellWorldPosition(cell.x, cell.y));
+        };
+
+        var initial = live.resolve();
+        if (initial.HasValue)
+        {
+            live.target = initial.Value;
+            live.goal = initial.Value;
+        }
+
+        return live;
+    }
+
+    // Hedefi periyodik yeniden doğrular; hedef değiştiyse drone'un yöneldiği noktayı
+    // exponential smoothing ile yeni hedefe kaydırır (havada dönüş/bank hissi).
+    private void TickLiveRetarget(LiveTargetState live, float dt)
+    {
+        if (live.resolve == null)
+            return;
+
+        live.resolveTimer += dt;
+        if (live.resolveTimer >= liveRetargetInterval)
+        {
+            live.resolveTimer = 0f;
+            var desired = live.resolve();
+            if (desired.HasValue)
+                live.goal = desired.Value;
+        }
+
+        if (!live.goal.HasValue || live.goal.Value == live.target)
+            return;
+
+        float blend = 1f - Mathf.Exp(-retargetSteerSpeed * dt);
+        live.target = Vector2.Lerp(live.target, live.goal.Value, blend);
+
+        if ((live.target - live.goal.Value).sqrMagnitude <= 1f)
+            live.target = live.goal.Value;
     }
 
     private IEnumerator RunTakeoffBurst(
@@ -330,13 +392,13 @@ public class PatchbotDashUI : MonoBehaviour
         Vector2 size,
         Sprite sprite,
         Vector2 start,
-        Vector2 target,
+        LiveTargetState live,
         float duration,
+        float homingSpeed,
         DashMotionState motion)
     {
-        Vector2 delta = target - start;
-        Vector2 normal = delta.sqrMagnitude > 0.001f ? new Vector2(-delta.y, delta.x).normalized : Vector2.up;
-        float arc = Mathf.Clamp(delta.magnitude * Mathf.Max(0f, diveArcFactor), Mathf.Min(size.x, size.y) * 0.10f, Mathf.Min(size.x, size.y) * 0.45f);
+        Vector2 initialDelta = live.target - start;
+        float arc = Mathf.Clamp(initialDelta.magnitude * Mathf.Max(0f, diveArcFactor), Mathf.Min(size.x, size.y) * 0.10f, Mathf.Min(size.x, size.y) * 0.45f);
 
         float local = 0f;
         while (local < duration)
@@ -345,14 +407,42 @@ public class PatchbotDashUI : MonoBehaviour
             local += dt;
             motion.elapsed += dt;
 
+            // Hedef uçuş sırasında ölmüş olabilir — her tick mantıksal board'dan
+            // doğrula; değiştiyse target yumuşakça yeni hücreye kayar (kavisli dönüş).
+            TickLiveRetarget(live, dt);
+
             float t = Mathf.Clamp01(local / duration);
             float eased = t * t * (3f - 2f * t);
             float curve = Mathf.Sin(t * Mathf.PI) * arc;
             float snap = Mathf.Sin(t * Mathf.PI * 2f) * Mathf.Min(size.x, size.y) * 0.025f;
 
-            rt.anchoredPosition = Vector2.LerpUnclamped(start, target, eased) + normal * (curve + snap);
+            Vector2 delta = live.target - start;
+            Vector2 normal = delta.sqrMagnitude > 0.001f ? new Vector2(-delta.y, delta.x).normalized : Vector2.up;
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(start, live.target, eased) + normal * (curve + snap);
             rt.localRotation = Quaternion.identity;
             rt.localScale = Vector3.one * Mathf.Lerp(2.5f, 1.0f, t);
+
+            UpdateCarryOrbit(carryRt, size, motion.elapsed);
+            TickAfterImage(rt, sprite, motion);
+            yield return null;
+        }
+
+        // Hedef dalış sırasında değiştiyse süre dolduğunda hâlâ uzakta olabiliriz —
+        // canlı hedefe kilitli düz uçuşla tamamla (süre sınırlı; hedef yine ölürse
+        // takip devam eder, son bilinen hücreye konar).
+        float homingElapsed = 0f;
+        while ((rt.anchoredPosition - live.target).magnitude > arriveEps && homingElapsed < maxRetargetHomingDuration)
+        {
+            float dt = Time.deltaTime;
+            homingElapsed += dt;
+            motion.elapsed += dt;
+
+            TickLiveRetarget(live, dt);
+
+            rt.anchoredPosition = Vector2.MoveTowards(rt.anchoredPosition, live.target, Mathf.Max(1f, homingSpeed) * dt);
+            rt.localRotation = Quaternion.identity;
+            rt.localScale = Vector3.one;
 
             UpdateCarryOrbit(carryRt, size, motion.elapsed);
             TickAfterImage(rt, sprite, motion);

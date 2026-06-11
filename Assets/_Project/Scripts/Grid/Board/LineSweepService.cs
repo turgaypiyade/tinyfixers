@@ -161,11 +161,13 @@ public class LineSweepService
         targets.Add(new Vector3(originWorldPos.x, minY, originWorldPos.z));
     }
 
+    // onSweepCellReached: (cell, strikeIndex) — hangi beam'in o hücreye vardığı,
+    // obstacle hasarının strike başına ayrı sayılabilmesi için callback'e taşınır.
     public float PlayLightningLineStrikes(
         LightningSpawner lightningSpawner,
         LineTravelSplitSwapTestUI lineTravelPlayer,
         IReadOnlyList<LightningLineStrike> lineStrikes,
-        Action<Vector2Int> onSweepCellReached = null,
+        Action<Vector2Int, int> onSweepCellReached = null,
         Action onStrikeCompleted = null)
     {
         if (lineStrikes == null || lineStrikes.Count == 0) return 0f;
@@ -177,6 +179,7 @@ public class LineSweepService
         for (int i = 0; i < lineStrikes.Count; i++)
         {
             var strike = lineStrikes[i];
+            int strikeIndex = i;
             int x = strike.originCell.x;
             int y = strike.originCell.y;
             if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
@@ -187,7 +190,7 @@ public class LineSweepService
 
             void EmitSweepCell(Vector2Int cell)
             {
-                onSweepCellReached?.Invoke(cell);
+                onSweepCellReached?.Invoke(cell, strikeIndex);
                 board.OnLineSweepCellReachedInternal(cell, strike);
             }
 

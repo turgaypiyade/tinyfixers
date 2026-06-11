@@ -772,7 +772,7 @@ public class BoardController : MonoBehaviour
         return lineSweepService.PlayLightningStrikeForTiles(lightningSpawner, matches, originTile, fallbackOriginCell, visualTargets, allowCondense, onTargetBeamSpawned);
     }
 
-    internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineStrikes, Action<Vector2Int> onSweepCellReached = null)
+    internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineStrikes, Action<Vector2Int, int> onSweepCellReached = null)
     {
         TryResolveLightningSpawner();
         EnsureLineTravelVisualReady();

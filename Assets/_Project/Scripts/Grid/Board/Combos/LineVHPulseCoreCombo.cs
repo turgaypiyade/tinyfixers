@@ -834,6 +834,13 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
                 if (IsProtected(cell))
                     continue;
 
+                if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(cell.x, cell.y))
+                {
+                    var movableHit = board.ApplyObstacleDamageAt(cell.x, cell.y, ObstacleHitContext.SpecialActivation);
+                    if (movableHit.didHit) board.TriggerObstacleVisualChange(movableHit.visualChange);
+                    continue;
+                }
+
                 var tile = board.GetTileViewAt(cell.x, cell.y);
 
                 if (tile != null && tile.GetSpecial() != TileSpecial.None && !IsComboOrigin(cell))
@@ -877,6 +884,16 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             if (!cleared.Add(cell))
                 return;
 
+            // Movable obstacle (Plastic vb.): tile-clear değil obstacle hasarı —
+            // yıkılırsa view'ı HandleObstacleDestroyed kaldırır; çok-hit'liyse view'la
+            // birlikte yaşamaya devam eder (orphan-state önlenir).
+            if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(cell.x, cell.y))
+            {
+                var movableHit = board.ApplyObstacleDamageAt(cell.x, cell.y, ObstacleHitContext.SpecialActivation);
+                if (movableHit.didHit) board.TriggerObstacleVisualChange(movableHit.visualChange);
+                return;
+            }
+
             var tile = board.GetTileViewAt(cell.x, cell.y);
 
             if (tile != null && tile.GetSpecial() != TileSpecial.None)
@@ -909,11 +926,14 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
                 return;
             }
 
-            if (targetVisuals.TryGetValue(cell, out var visualData))
+            // Görsel temizlik CANLI view ile: gravity araya girdiyse hücredeki taş,
+            // action başında snapshot'lanan (targetVisuals) view olmayabilir — eski
+            // view'ı yok etmek "data yaşıyor, görsel öldü" orphan'ı üretir.
+            if (tile != null)
             {
-                board.BreakFx?.PlayTileBreak(visualData.view);
+                board.BreakFx?.PlayTileBreak(tile);
                 board.ClearCellDataOnly(cell);
-                board.ClearCellVisualOnly(cell, visualData.type, visualData.view);
+                board.ClearCellVisualOnly(cell, tile.GetTileType(), tile);
             }
             else
             {
@@ -1009,14 +1029,33 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             if (!cleared.Add(kvp.Key))
                 continue;
 
+            if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(kvp.Key.x, kvp.Key.y))
+            {
+                var movableHit = board.ApplyObstacleDamageAt(kvp.Key.x, kvp.Key.y, ObstacleHitContext.SpecialActivation);
+                if (movableHit.didHit) board.TriggerObstacleVisualChange(movableHit.visualChange);
+                continue;
+            }
+
             var tile = board.GetTileViewAt(kvp.Key.x, kvp.Key.y);
 
             if (tile == null || tile.GetSpecial() == TileSpecial.None)
             {
                 board.ClearCellDataOnly(kvp.Key);
-                board.ClearCellVisualOnly(kvp.Key, kvp.Value.type, kvp.Value.view);
+                if (tile != null)
+                    board.ClearCellVisualOnly(kvp.Key, tile.GetTileType(), tile);
             }
         }
+
+        // Beam'ler bitti, hücreler boşaldı: taş düşüşü HEMEN başlasın (SweepLine ile
+        // aynı ilerlemeli his). Arkadan gelen sessiz MatchClearAction origin tile'larını
+        // ve obstacle hasarını işler; kalan boşlukları board resolve cascade'leri doldurur.
+        var cascades = board.CascadeLogic.CalculateCascades();
+        if (cascades != null)
+        {
+            for (int i = 0; i < cascades.Count; i++)
+                board.StartImmediateAction(cascades[i]);
+        }
+        board.RefreshAllSortingOrders();
     }
     private IEnumerator PlayOrbitIntroGhost()
     {

@@ -10,7 +10,21 @@ public enum LevelGoalTargetType : int
 public enum CollectibleId : int
 {
     None = 0,
-    EnergyOrb = 1
+    EnergyOrb = 1,
+
+    // Boss Duel modunda boss'a verilen hasar. Goal amount = boss HP;
+    // BossDuelController her temizlenen taş için bu goal'ü ilerletir.
+    BossDamage = 2
+}
+
+public enum LevelKind : int
+{
+    Normal = 0,
+
+    // Robot düellosu mini-oyunu (her 5 levelde bir). Boss HP'si
+    // Collectible/BossDamage goal'üyle tanımlanır; boss her N hamlede
+    // board'a oil fırlatır. BossDuelController bu modda devreye girer.
+    BossDuel = 1
 }
 
 [System.Serializable]
@@ -121,6 +135,22 @@ public class LevelData : ScriptableObject
     public int moves = 25;
     [Min(0)] public int baseCoinReward = 100;
     public LevelGoalDefinition[] goals;
+
+    [Header("Level Kind")]
+    [Tooltip("BossDuel: robot düellosu mini-oyunu. Boss HP'si için Collectible/BossDamage " +
+             "goal'ü ekleyin (amount = HP, iconOverride = boss ikonu).")]
+    public LevelKind levelKind = LevelKind.Normal;
+
+    [Header("Boss Duel")]
+    [Tooltip("Boss kaç oyuncu hamlesinde bir saldırır.")]
+    [Min(1)] public int bossAttackEveryMoves = 3;
+    [Tooltip("Her boss saldırısında board'a fırlatılan oil sayısı.")]
+    [Min(0)] public int bossAttackOilCount = 2;
+
+    [Header("Random Pool")]
+    [Tooltip("Bu levelda random üretilecek taş tipleri. DOLUYSA GridSpawner'daki varsayılan " +
+             "havuz hiç kullanılmaz, yalnızca buradakiler üretilir. Boşsa GridSpawner'daki geçerlidir.")]
+    public TileType[] randomPool;
 
     [Header("Energy Container")]
     [Tooltip("How many EnergyOrb collectibles each EnergyContainer releases in this level. EnergyContainerRuntime can still provide a fallback, but level data owns the tuning.")]

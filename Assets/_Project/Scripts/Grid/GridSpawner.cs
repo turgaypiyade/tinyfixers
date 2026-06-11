@@ -88,7 +88,11 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private bool resolveInitialOnStart = false;
 
     [Header("Random Pool")]
+    [Tooltip("Varsayılan random havuz. LevelData.randomPool doluysa o levelda ONUN yerine level'inki kullanılır.")]
     public TileType[] randomPool = { TileType.Gear, TileType.Core, TileType.Bolt, TileType.Plate };
+
+    // Level bazlı override çözülmüş hali: LevelData.randomPool doluysa o, değilse yukarıdaki varsayılan.
+    private TileType[] effectiveRandomPool;
 
     [SerializeField] private int referenceCols = 9;
     [SerializeField] private int referenceRows = 11;
@@ -167,9 +171,18 @@ public class GridSpawner : MonoBehaviour
         EnsureRoots();
         ApplyPaddingToSpawnParent();
 
+        // Event item'ları level boyunca staging'de bekler: kazanınca commit,
+        // kaybetmeyi kabul edince discard (LevelEndSimplePopupController yönetir).
+        ProgressEventService.Instance?.BeginLevelStaging();
+
         board.Init(width, height, iconLibrary);
         board.SetLevelData(resolvedLevel);
-        board.SetupFactory(tilePrefab, tilesRoot, tileSize, randomPool, iconScale, fullCellIcons, iconSize);
+
+        effectiveRandomPool = resolvedLevel.randomPool != null && resolvedLevel.randomPool.Length > 0
+            ? resolvedLevel.randomPool
+            : randomPool;
+
+        board.SetupFactory(tilePrefab, tilesRoot, tileSize, effectiveRandomPool, iconScale, fullCellIcons, iconSize);
 
         BindBoardEvents();
 
@@ -508,8 +521,9 @@ public class GridSpawner : MonoBehaviour
 
         board.RegisterTile(view, x, y);
 
-        var dummyType = randomPool != null && randomPool.Length > 0
-            ? randomPool[0]
+        var pool = effectiveRandomPool ?? randomPool;
+        var dummyType = pool != null && pool.Length > 0
+            ? pool[0]
             : TileType.Gear;
         view.SetType(dummyType);
         board.SyncTileData(x, y);
@@ -558,6 +572,12 @@ public class GridSpawner : MonoBehaviour
         clone.musicVolume = source.musicVolume;
         clone.obstacleLibrary = source.obstacleLibrary;
         clone.goals = CloneGoals(source.goals);
+        clone.randomPool = source.randomPool != null && source.randomPool.Length > 0
+            ? (TileType[])source.randomPool.Clone()
+            : null;
+        clone.levelKind = source.levelKind;
+        clone.bossAttackEveryMoves = Mathf.Max(1, source.bossAttackEveryMoves);
+        clone.bossAttackOilCount = Mathf.Max(0, source.bossAttackOilCount);
         clone.tubes = source.tubes != null
             ? (TubeEntry[])source.tubes.Clone()
             : System.Array.Empty<TubeEntry>();

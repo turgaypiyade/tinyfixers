@@ -402,6 +402,29 @@ public class SpecialResolver
             var specialTile = aOriginallySpecial ? a : b;
             var originalSpecial = aOriginallySpecial ? originalSa : originalSb;
 
+            if (originalSpecial == TileSpecial.LineV || originalSpecial == TileSpecial.LineH)
+            {
+                // Swap'tan korunacak yeni special yoksa ve yolunda başka special varsa:
+                // sıralı motor (satır/sütun anında kırılır + gravity + havada yakalama).
+                var normalPartnerForLineGuard = aOriginallySpecial ? b : a;
+                bool hasProtectedForLineChain =
+                    (externalProtectedCells != null && externalProtectedCells.Count > 0)
+                    || (normalPartnerForLineGuard != null && normalPartnerForLineGuard.GetSpecial() != TileSpecial.None);
+
+                if (!hasProtectedForLineChain && IsSupportedSpecialChain(specialTile, PulseChainAreaHalf))
+                {
+                    actions.Add(new PulseChainSequenceAction(
+                        board,
+                        new List<TileView> { specialTile },
+                        PulseChainAreaHalf,
+                        board.PulseChainCatchOverlap,
+                        ResolveOtherSpecialInline));
+                    TraceSpecialChain("ResolveSpecialSwap.LineChain", a, b);
+                    board.IsSpecialActivationPhase = false;
+                    return actions;
+                }
+            }
+
             if (originalSpecial == TileSpecial.LineV)
             {
                 ctx.Affected.Add(specialTile);
@@ -466,7 +489,7 @@ public class SpecialResolver
                     (externalProtectedCells != null && externalProtectedCells.Count > 0)
                     || (normalPartnerForGuard != null && normalPartnerForGuard.GetSpecial() != TileSpecial.None);
 
-                if (!hasProtectedForChain && IsSupportedPulseChain(specialTile, PulseChainAreaHalf))
+                if (!hasProtectedForChain && IsSupportedSpecialChain(specialTile, PulseChainAreaHalf))
                 {
                     actions.Add(new PulseChainSequenceAction(
                         board,
@@ -634,6 +657,24 @@ public class SpecialResolver
 
         TileSpecial spec = specialTile.GetSpecial();
 
+        if (spec == TileSpecial.LineV || spec == TileSpecial.LineH)
+        {
+            // Yolunda başka special varsa: satır/sütun anında kırılır + gravity başlar
+            // + sıradaki special düşen taşları havada yakalar (pulse zinciriyle aynı motor).
+            if (IsSupportedSpecialChain(specialTile, PulseChainAreaHalf))
+            {
+                actions.Add(new PulseChainSequenceAction(
+                    board,
+                    new List<TileView> { specialTile },
+                    PulseChainAreaHalf,
+                    board.PulseChainCatchOverlap,
+                    ResolveOtherSpecialInline));
+                TraceSpecialChain("ResolveSpecialSolo.LineChain", specialTile, null);
+                board.IsSpecialActivationPhase = false;
+                return actions;
+            }
+        }
+
         if (spec == TileSpecial.LineV)
         {
             var result = lineVSpecial.Execute(new LineVExecutionRuntime
@@ -686,7 +727,7 @@ public class SpecialResolver
         {
             // Pulse-only zincir (2+ PulseCore, alanlarında pulse-olmayan special yok):
             // sıralı patlama + her patlamada anında clear + gravity + havada yakalama.
-            if (IsSupportedPulseChain(specialTile, PulseChainAreaHalf))
+            if (IsSupportedSpecialChain(specialTile, PulseChainAreaHalf))
             {
                 actions.Add(new PulseChainSequenceAction(
                     board,
@@ -770,18 +811,23 @@ public class SpecialResolver
     // Tekli PulseCore patlama alanı yarıçapı (affectedCellCount=25 → 5x5 → half=2).
     private const int PulseChainAreaHalf = 2;
 
-    // BFS ile PulseCore zincirini keşfeder. Zincir pulse + DESTEKLENEN special'lardan
-    // (PulseCore, LineV, LineH) oluşuyor ve 2+ special içeriyorsa true → ilerlemeli
-    // sıralı motor (PulseChainSequenceAction) kullanılır. DESTEKLENMEYEN bir special
-    // (Override/PatchBot/Bomb vb.) bulunursa false → eski birleşik yol (o kombolar
-    // bozulmasın). Sadece guard kararı için; sıralı action zinciri kendi keşfeder.
-    private bool IsSupportedPulseChain(TileView first, int areaHalf)
+    // BFS ile special zincirini keşfeder. Zincir DESTEKLENEN special'lardan oluşuyor
+    // ve 2+ special içeriyorsa true → ilerlemeli sıralı motor (PulseChainSequenceAction).
+    // PulseCore 5x5 alanını, LineV/LineH satır/sütununu gezer (expander); PatchBot ve
+    // Override leaf'tir (inline aktive edilir, bölgesi gezilmez). DESTEKLENMEYEN bir
+    // special bulunursa false → eski birleşik yol. Sadece guard kararı için; sıralı
+    // action zinciri playback'te canlı board üzerinden kendi keşfeder.
+    private bool IsSupportedSpecialChain(TileView first, int areaHalf)
     {
-        if (first == null || !first || first.GetSpecial() != TileSpecial.PulseCore)
+        if (first == null || !first)
             return false;
 
-        var pulses = new HashSet<TileView> { first };
-        var others = new HashSet<TileView>();
+        var firstSp = first.GetSpecial();
+        if (firstSp != TileSpecial.PulseCore && firstSp != TileSpecial.LineV && firstSp != TileSpecial.LineH)
+            return false;
+
+        var expanders = new HashSet<TileView> { first };
+        var leaves = new HashSet<TileView>();
         var queue = new Queue<TileView>();
         queue.Enqueue(first);
 
@@ -790,37 +836,57 @@ public class SpecialResolver
             var p = queue.Dequeue();
             if (p == null || !p) continue;
 
-            int cx = p.X, cy = p.Y;
-            for (int x = cx - areaHalf; x <= cx + areaHalf; x++)
+            foreach (var cell in EnumerateChainRegion(p, areaHalf))
             {
-                for (int y = cy - areaHalf; y <= cy + areaHalf; y++)
+                var t = board.Tiles[cell.x, cell.y];
+                if (t == null || t == p) continue;
+
+                var sp = t.GetSpecial();
+                if (sp == TileSpecial.None) continue;
+
+                if (sp == TileSpecial.PulseCore || sp == TileSpecial.LineV || sp == TileSpecial.LineH)
                 {
-                    if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
-
-                    var t = board.Tiles[x, y];
-                    if (t == null) continue;
-
-                    var sp = t.GetSpecial();
-                    if (sp == TileSpecial.None) continue;
-
-                    if (sp == TileSpecial.PulseCore)
-                    {
-                        if (pulses.Add(t)) queue.Enqueue(t);
-                    }
-                    else if (sp == TileSpecial.LineV || sp == TileSpecial.LineH || sp == TileSpecial.PatchBot)
-                    {
-                        others.Add(t); // inline aktive edilir; alanı burada gezilmez
-                    }
-                    else
-                    {
-                        // Desteklenmeyen special (Override vb.) → eski yola düş.
-                        return false;
-                    }
+                    if (expanders.Add(t)) queue.Enqueue(t);
+                }
+                else if (sp == TileSpecial.PatchBot || sp == TileSpecial.SystemOverride)
+                {
+                    leaves.Add(t); // inline aktive edilir; bölgesi burada gezilmez
+                }
+                else
+                {
+                    // Desteklenmeyen special → eski yola düş.
+                    return false;
                 }
             }
         }
 
-        return (pulses.Count + others.Count) >= 2;
+        return (expanders.Count + leaves.Count) >= 2;
+    }
+
+    // Bir expander special'ın zincir keşfinde gezilecek bölgesi:
+    // PulseCore → 5x5 alan, LineH → satırı, LineV → sütunu.
+    private IEnumerable<Vector2Int> EnumerateChainRegion(TileView p, int areaHalf)
+    {
+        var sp = p.GetSpecial();
+        int cx = p.X, cy = p.Y;
+
+        if (sp == TileSpecial.LineH)
+        {
+            for (int x = 0; x < board.Width; x++)
+                yield return new Vector2Int(x, cy);
+        }
+        else if (sp == TileSpecial.LineV)
+        {
+            for (int y = 0; y < board.Height; y++)
+                yield return new Vector2Int(cx, y);
+        }
+        else
+        {
+            for (int x = cx - areaHalf; x <= cx + areaHalf; x++)
+                for (int y = cy - areaHalf; y <= cy + areaHalf; y++)
+                    if (x >= 0 && x < board.Width && y >= 0 && y < board.Height)
+                        yield return new Vector2Int(x, y);
+        }
     }
 
     // PulseChainSequenceAction'ın playback'te pulse-olmayan bir special'ı (Line/PatchBot)
@@ -877,8 +943,19 @@ public class SpecialResolver
                     FireOverrideOverrideSpecialVisuals = (a, d) => visualService.FireOverrideOverrideSpecialVisuals(a, d)
                 }).Actions;
 
+            case TileSpecial.SystemOverride:
+                // Partner'sız (zincirde tetiklenen) Override: base type'ına göre fanout
+                // → o tipteki taşları temizler (implant yok, NormalSelectionPulse=true).
+                return overrideSpecial.Execute(new OverrideExecutionRuntime
+                {
+                    Board = board, Context = scoped, Origin = tile, Partner = null, FinalizeAtEnd = true,
+                    ProcessFanout = c => fanoutService.ProcessFanout(c),
+                    CleanupImplantedTiles = c => implantService.CleanupImplantedTiles(c),
+                    FireOverrideOverrideSpecialVisuals = (a, d) => visualService.FireOverrideOverrideSpecialVisuals(a, d)
+                }).Actions;
+
             default:
-                return null; // Override vb. henüz desteklenmiyor → guard zaten engeller.
+                return null; // Desteklenmeyen tip → guard zaten engeller.
         }
     }
 

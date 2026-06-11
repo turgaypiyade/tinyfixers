@@ -74,6 +74,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private Image extraMovesIcon;
     [SerializeField] private TMP_Text failMessageText;
     [SerializeField] private TMP_Text failContinueText;
+    [Tooltip("Opsiyonel: hamle eklenmezse kaybolacak event puanı uyarısı. Fail popup altına " +
+             "UI/EventLossWarningText adlı bir TMP_Text koyarsan otomatik bulunur.")]
+    [SerializeField] private TMP_Text failEventLossWarningText;
 
     [Header("Success - Star Images")]
     [SerializeField] private Image[] starImages;
@@ -175,6 +178,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             extraMovesIcon = FindComponent<Image>(failPopupRoot.transform, "UI/ExtraMovesIcon") ?? extraMovesIcon;
             failMessageText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/FailMessageText") ?? failMessageText;
             failContinueText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/BtnContinue/BtnContinueText") ?? failContinueText;
+            failEventLossWarningText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/EventLossWarningText") ?? failEventLossWarningText;
 
             if (failDescriptionText == null)
                 failDescriptionText = failMessageText;
@@ -314,6 +318,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void HandleFailCloseClicked()
     {
+        // Oyuncu hamle eklemeyi reddetti → bu levelda toplanan event item'ları kaybolur.
+        ProgressEventService.Instance?.DiscardStagedGains();
         ReturnToMainMenuImmediate();
     }
 
@@ -366,6 +372,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         successReturnQueued = true;
         Debug.Log("[LevelEnd] Success queued. Waiting board settle...");
+
+        // Level kazanıldı: staging'deki event item'larını kalıcılaştır. Bonus round
+        // bundan sonra koşar; oradaki temizlikler canlı (staging'siz) sayılır.
+        ProgressEventService.Instance?.CommitStagedGains();
+
         StartCoroutine(CompleteSuccessAfterBoardSettled());
     }
 
@@ -720,6 +731,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         LivesManager.SpendLife();
         ApplyChapterThemeVisuals();
         RefreshFailOfferVisuals();
+        RefreshEventLossWarning();
         transform.SetAsLastSibling();
 
         if (failPopupRoot != null)
@@ -737,6 +749,24 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         SetMainScreenDimmed(true);
         SetBlockerVisible(true);
+    }
+
+    // Hamle eklenmezse kaybolacak event puanı uyarısı — staging'de bir şey yoksa gizli.
+    private void RefreshEventLossWarning()
+    {
+        if (failEventLossWarningText == null)
+            return;
+
+        int staged = ProgressEventService.Instance != null
+            ? ProgressEventService.Instance.StagedGainTotal
+            : 0;
+
+        bool show = staged > 0;
+        failEventLossWarningText.gameObject.SetActive(show);
+
+        if (show)
+            failEventLossWarningText.text =
+                $"Hamle eklemezsen bu bölümde topladığın {staged} event puanı kaybolacak!";
     }
 
     private void ShowSuccessPopup()

@@ -49,8 +49,11 @@ public sealed class PatchBotIntent
         int tx = TargetTile.X;
         int ty = TargetTile.Y;
         if (tx < 0 || tx >= board.Width || ty < 0 || ty >= board.Height) return false;
+        if (board.Tiles[tx, ty] != TargetTile) return false;
 
-        return board.Tiles[tx, ty] == TargetTile;
+        // Mantıksal otorite GridData: view hâlâ sahnede dursa bile hücre verisi
+        // temizlendiyse hedef ölmüştür (clear animasyonu data'dan geç kalabilir).
+        return board.GridData[tx, ty] != null;
     }
 
     /// <summary>
@@ -523,7 +526,7 @@ public class PatchBotTargetCoordinator
                     else
                         otherObstacleCells.Add((x, y, tile));
                 }
-                else if (tile != null && !IsExcludedTile(tile))
+                else if (tile != null && board.GridData[x, y] != null && !IsExcludedTile(tile))
                 {
                     if (IsTileReserved(tile))
                         continue;

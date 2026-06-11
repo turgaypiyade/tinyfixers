@@ -93,6 +93,8 @@ public class LevelDataEditor : Editor
         EditorGUILayout.HelpBox($"Grid size limits: Width {LevelData.MinWidth}-{LevelData.MaxWidth}, Height {LevelData.MinHeight}-{LevelData.MaxHeight}.", MessageType.Info);
         level.moves = EditorGUILayout.IntField("Moves", level.moves);
         level.baseCoinReward = Mathf.Max(0, EditorGUILayout.IntField("Base Coin Reward", Mathf.Max(0, level.baseCoinReward)));
+        DrawLevelKind(level);
+        DrawRandomPool(level);
         DrawGoals(level);
         DrawEnergyContainerSettings(level);
         DrawAudio(level);
@@ -112,6 +114,104 @@ public class LevelDataEditor : Editor
         EditorGUILayout.LabelField("Audio", EditorStyles.boldLabel);
         level.musicClip = (AudioClip)EditorGUILayout.ObjectField("Music Clip", level.musicClip, typeof(AudioClip), false);
         level.musicVolume = EditorGUILayout.Slider("Music Volume", level.musicVolume, 0f, 1f);
+    }
+
+    private void DrawLevelKind(LevelData level)
+    {
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField("Level Kind", EditorStyles.boldLabel);
+        level.levelKind = (LevelKind)EditorGUILayout.EnumPopup("Kind", level.levelKind);
+
+        if (level.levelKind != LevelKind.BossDuel)
+            return;
+
+        level.bossAttackEveryMoves = Mathf.Max(1, EditorGUILayout.IntField("Boss Attack Every N Moves", Mathf.Max(1, level.bossAttackEveryMoves)));
+        level.bossAttackOilCount = Mathf.Max(0, EditorGUILayout.IntField("Oil Per Attack", Mathf.Max(0, level.bossAttackOilCount)));
+
+        bool hasBossGoal = false;
+        if (level.goals != null)
+        {
+            foreach (var g in level.goals)
+            {
+                if (g != null && g.targetType == LevelGoalTargetType.Collectible && g.collectibleId == CollectibleId.BossDamage)
+                {
+                    hasBossGoal = true;
+                    break;
+                }
+            }
+        }
+
+        if (hasBossGoal)
+        {
+            EditorGUILayout.HelpBox(
+                "Boss Duel hazır: BossDamage goal'ü boss HP'sini tanımlıyor. " +
+                "Sahnede BossDuelController bağlı olmalı.",
+                MessageType.Info);
+        }
+        else
+        {
+            EditorGUILayout.HelpBox(
+                "Boss HP tanımlı değil! Goals'a şunu ekle: Target Type = Collectible, " +
+                "Collectible = BossDamage, Amount = boss HP (örn. 150), Icon Override = boss ikonu.",
+                MessageType.Warning);
+        }
+    }
+
+    // Level havuzuna seçilebilecek temel taş tipleri. Yeni renk eklenirse buraya da ekle.
+    private static readonly TileType[] RandomPoolCandidates =
+    {
+        TileType.Gear, TileType.Core, TileType.Bolt, TileType.Plate
+    };
+
+    private void DrawRandomPool(LevelData level)
+    {
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField("Random Pool (Level Override)", EditorStyles.boldLabel);
+
+        if (level.randomPool == null)
+            level.randomPool = System.Array.Empty<TileType>();
+
+        var selected = new System.Collections.Generic.HashSet<TileType>(level.randomPool);
+
+        bool changed = false;
+        EditorGUILayout.BeginHorizontal();
+        foreach (var type in RandomPoolCandidates)
+        {
+            bool was = selected.Contains(type);
+            bool now = GUILayout.Toggle(was, type.ToString());
+            if (now != was)
+            {
+                changed = true;
+                if (now) selected.Add(type);
+                else selected.Remove(type);
+            }
+        }
+        EditorGUILayout.EndHorizontal();
+
+        if (changed)
+        {
+            // Aday sırasını koruyarak diziye yaz (deterministik asset diff'i için).
+            var list = new System.Collections.Generic.List<TileType>();
+            foreach (var type in RandomPoolCandidates)
+                if (selected.Contains(type))
+                    list.Add(type);
+            level.randomPool = list.ToArray();
+        }
+
+        if (level.randomPool.Length == 0)
+        {
+            EditorGUILayout.HelpBox(
+                "Hiçbiri seçili değil: GridSpawner'daki varsayılan havuz kullanılır. " +
+                "Seçim yapılırsa bu levelda YALNIZCA seçilenler üretilir.",
+                MessageType.None);
+        }
+        else if (level.randomPool.Length < 3)
+        {
+            EditorGUILayout.HelpBox(
+                $"Sadece {level.randomPool.Length} tip seçili — match-3 akışı için en az 3 tip önerilir " +
+                "(az tip = sürekli istemsiz match riski).",
+                MessageType.Warning);
+        }
     }
 
     private void DrawGoals(LevelData level)

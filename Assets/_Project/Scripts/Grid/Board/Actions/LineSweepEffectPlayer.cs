@@ -36,7 +36,7 @@ public sealed class LineSweepEffectPlayer : IClearEffectPlayer
 
         float duration = board.PlayLightningLineStrikes(
             strikes,
-            delegate (Vector2Int cell)
+            delegate (Vector2Int cell, int strikeIndex)
             {
                 // Fire arrival trigger first — deferred specials start concurrently here.
                 if (line.ArrivalTriggers != null &&

@@ -139,10 +139,14 @@ public class PatchbotComboService
                 partnerTile,
                 excluded);
 
+            // hasCell=false ise ölü intent koordinatörde ZATEN release edildi; referansı
+            // düşür ki bir sonraki çağrı aynı intent'i ikinci kez release etmesin
+            // (resolver artık uçuş boyunca tekrar tekrar çağrılıyor).
+            liveIntent = resolved.intent;
+
             if (!resolved.hasCell || !IsInside(resolved.cell.x, resolved.cell.y))
                 return null;
 
-            liveIntent = resolved.intent;
             liveTarget = resolved.cell;
             return liveTarget;
         });
@@ -297,7 +301,7 @@ public class PatchbotComboService
                     // taş kırılınca obstacle zaten hit alır (doğal hasar yolu).
                     // Üzerinde taş yoksa direkt obstacle'a vurulur.
                     bool isUnderTile = board.ObstacleStateService.IsUnderTileObstacleAt(x, y);
-                    bool hasTileOnTop = tile != null && !IsExcludedTile(tile);
+                    bool hasTileOnTop = tile != null && board.GridData[x, y] != null && !IsExcludedTile(tile);
 
                     if (isUnderTile && hasTileOnTop)
                     {
@@ -316,7 +320,7 @@ public class PatchbotComboService
                         otherObstacleCells.Add((x, y, tile));
                     }
                 }
-                else if (tile != null && !IsExcludedTile(tile))
+                else if (tile != null && board.GridData[x, y] != null && !IsExcludedTile(tile))
                 {
                     if (IsGoalTile(tile))
                         tileGoalCells.Add((x, y, tile));

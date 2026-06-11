@@ -103,12 +103,115 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         return copy;
     }
 
+    // ── Level staging ────────────────────────────────────────────
+    //
+    // Level sırasında toplanan event item'ları kalıcı goal'lere HEMEN yazılmaz;
+    // staging havuzunda bekletilir. Level kazanılırsa CommitStagedGains kalıcılaştırır,
+    // oyuncu kaybetmeyi kabul ederse DiscardStagedGains havuzu atar (item'lar kaybolur).
+    // Oyun içi "+N" feedback'i staging sırasında da canlı akar (sanal kapasite
+    // simülasyonu commit'le birebir aynı dağıtımı kullanır; commit sessiz uygular).
+
+    private struct StagedTileEvent { public TileType type; public int count; }
+
+    private bool stagingActive;
+    private readonly List<StagedTileEvent> stagedEvents = new();
+    private int[] stagedSpacePerGoal;
+    private int stagedGainTotal;
+
+    /// Fail popup'ının "X event puanı kaybolacak" uyarısı için.
+    public int StagedGainTotal => stagingActive ? stagedGainTotal : 0;
+
+    /// Level başında çağrılır (GridSpawner). Önceki kalıntıyı atar.
+    public void BeginLevelStaging()
+    {
+        stagingActive = true;
+        stagedEvents.Clear();
+        stagedGainTotal = 0;
+
+        stagedSpacePerGoal = new int[goals.Count];
+        for (int i = 0; i < goals.Count; i++)
+        {
+            stagedSpacePerGoal[i] = goals[i].IsRewardClaimed
+                ? 0
+                : Mathf.Max(0, goals[i].Definition.targetCount - goals[i].CurrentCount);
+        }
+    }
+
+    /// Level kazanılınca çağrılır: bekleyen kazanımları kalıcılaştırır (ödüller dahil).
+    /// "+N" feedback'i staging sırasında zaten aktığı için burada tekrar yayınlanmaz.
+    public void CommitStagedGains()
+    {
+        if (!stagingActive) return;
+        stagingActive = false;
+
+        for (int i = 0; i < stagedEvents.Count; i++)
+            ApplyTileCleared(stagedEvents[i].type, stagedEvents[i].count, fireGainEvent: false);
+
+        if (stagedGainTotal > 0)
+            Debug.Log($"[ProgressEvent] Staged commit: {stagedGainTotal} event puanı kalıcılaştı.");
+
+        stagedEvents.Clear();
+        stagedGainTotal = 0;
+    }
+
+    /// Oyuncu kaybetmeyi kabul edince çağrılır: bekleyen kazanımlar atılır.
+    public void DiscardStagedGains()
+    {
+        if (stagedGainTotal > 0)
+            Debug.Log($"[ProgressEvent] Staged discard: {stagedGainTotal} event puanı kaybedildi (level fail).");
+
+        stagingActive = false;
+        stagedEvents.Clear();
+        stagedGainTotal = 0;
+    }
+
+    // Staging sırasında "+N" feedback'i için: commit'in yapacağı dağıtımın birebir
+    // simülasyonu (sanal kalan kapasiteler üzerinden), kalıcı state'e dokunmaz.
+    private int SimulateStagedGain(TileType type, int count)
+    {
+        if (stagedSpacePerGoal == null) return 0;
+
+        int remaining = count;
+        int gained = 0;
+
+        for (int i = 0; i < goals.Count && remaining > 0; i++)
+        {
+            if (stagedSpacePerGoal[i] <= 0) continue;
+            if (!Matches(goals[i].Definition.goalType, type)) continue;
+
+            int take = Mathf.Min(stagedSpacePerGoal[i], remaining);
+            stagedSpacePerGoal[i] -= take;
+            remaining -= take;
+            gained += take;
+        }
+
+        return gained;
+    }
+
     // ── Tile counting ────────────────────────────────────────────
 
     private void HandleTileCleared(TileType type, int count)
     {
         if (State != ProgressEventState.Active) return;
 
+        if (stagingActive)
+        {
+            stagedEvents.Add(new StagedTileEvent { type = type, count = count });
+
+            int gained = SimulateStagedGain(type, count);
+            if (gained > 0)
+            {
+                stagedGainTotal += gained;
+                OnProgressGained?.Invoke(gained);
+            }
+            return;
+        }
+
+        ApplyTileCleared(type, count, fireGainEvent: true);
+    }
+
+    private void ApplyTileCleared(TileType type, int count, bool fireGainEvent)
+    {
         EnsureSessionGainSlots();
 
         int remaining   = count;
@@ -145,7 +248,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         }
 
         if (dirty) SaveGoals();
-        if (totalGained > 0) OnProgressGained?.Invoke(totalGained);
+        if (totalGained > 0 && fireGainEvent) OnProgressGained?.Invoke(totalGained);
     }
 
     private void EnsureSessionGainSlots()

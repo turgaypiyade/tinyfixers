@@ -292,6 +292,13 @@ public class BoardAnimator
         var skipBreakFxTiles = new HashSet<TileView>();
         var lineHitDamagedObstacleCells = new HashSet<Vector2Int>();
         var hitObstacleOrigins = new HashSet<int>();
+
+        // Sweep hasarı STRIKE bazında dedup'lanır: tek beam çok hücreli obstacle'ı
+        // bir kez vurur, ama zincirde her ayrı beam kendi vuruşunu yapar (örn. aynı
+        // kolondaki iki LineV → obstacle iki hit). Yukarıdaki action-geneli setler
+        // sadece pass-sonu affectedCells hasarının üstüne binmemesi için kayıt tutar.
+        var strikeDamagedObstacleCells = new HashSet<(int strike, Vector2Int cell)>();
+        var strikeHitObstacleOrigins = new HashSet<(int strike, int origin)>();
         var implodeTiles = new List<TileView>();
         bool lineHitWindowOpen = false;
 
@@ -563,7 +570,7 @@ public class BoardAnimator
 
                 lightningDuration = board.PlayLightningLineStrikes(
                     lightningLineStrikes,
-                    cell =>
+                    (cell, strikeIndex) =>
                     {
                         if (arrivalTriggers != null &&
                             arrivalTriggers.TryGetValue(cell, out var trigger))
@@ -571,7 +578,7 @@ public class BoardAnimator
 
                         StartPatchbotDashRequestsForLineCell(lineSweepPatchbotDashes, cell);
                         TryClearTileOnLineSweepHit(cell);
-                        ApplyObstacleDamageOnLineSweepHit(cell);
+                        ApplyObstacleDamageOnLineSweepHit(strikeIndex, cell);
                     }
                 );
 
@@ -707,7 +714,7 @@ public class BoardAnimator
             trigger?.Invoke();
         }
 
-        void ApplyObstacleDamageOnLineSweepHit(Vector2Int tileCell)
+        void ApplyObstacleDamageOnLineSweepHit(int strikeIndex, Vector2Int tileCell)
         {
             if (!useLineHitDrivenClear || !lineHitWindowOpen) return;
             if (tileCell.x < 0 || tileCell.x >= board.Width || tileCell.y < 0 || tileCell.y >= board.Height) return;
@@ -716,13 +723,20 @@ public class BoardAnimator
             void TryHit(Vector2Int c)
             {
                 if (c.x < 0 || c.x >= board.Width || c.y < 0 || c.y >= board.Height) return;
-                if (lineHitDamagedObstacleCells.Contains(c)) return;
+                if (strikeDamagedObstacleCells.Contains((strikeIndex, c))) return;
                 if (!board.ObstacleStateService.HasObstacleAt(c.x, c.y)) return;
-                // Per-origin deduplication: 2x2+ obstacles (ColorChest etc.) must take
-                // only one hit per pass, regardless of how many cells the line crosses.
+                // Per-origin deduplication STRIKE BAZINDA: 2x2+ obstacle (ColorChest vb.)
+                // tek beam'den kaç hücresi geçerse geçsin bir hit alır; ama zincirdeki
+                // her ayrı beam (örn. aynı kolonda iki LineV) kendi vuruşunu yapar.
                 int origin = board.ObstacleStateService.GetObstacleOriginAt(c.x, c.y);
-                if (origin >= 0 && !hitObstacleOrigins.Add(origin)) return;
+                if (origin >= 0 && !strikeHitObstacleOrigins.Add((strikeIndex, origin))) return;
+                strikeDamagedObstacleCells.Add((strikeIndex, c));
+
+                // Action-geneli kayıt: pass-sonu affectedCells hasarı bu hücre/origin'in
+                // üstüne binmesin (cross-check orada action-geneli kalır).
                 lineHitDamagedObstacleCells.Add(c);
+                if (origin >= 0) hitObstacleOrigins.Add(origin);
+
                 var hit = board.ApplyObstacleDamageAt(c.x, c.y, damageContext, null);
                 if (hit.didHit) board.TriggerObstacleVisualChange(hit.visualChange);
             }

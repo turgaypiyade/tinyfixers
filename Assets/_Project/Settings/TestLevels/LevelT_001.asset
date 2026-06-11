@@ -23,6 +23,7 @@ MonoBehaviour:
     collectibleId: 1
     iconOverride: {fileID: 0}
     amount: 36
+  randomPool: 
   energyPerContainer: 1
   comboTutorial: 0
   musicClip: {fileID: 8300000, guid: a75116037af37490bb9f00591892d8d6, type: 3}

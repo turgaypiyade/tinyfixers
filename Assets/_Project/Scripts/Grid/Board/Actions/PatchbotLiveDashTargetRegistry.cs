@@ -6,8 +6,9 @@ using UnityEngine;
 /// Bridges queued PatchBot dash visuals to live target resolution.
 ///
 /// BoardController.PatchbotDashRequest is consumed later by PatchbotDashUI. This registry lets
-/// gameplay code register a resolver when the dash is queued, then lets PatchbotDashUI ask for
-/// the real target exactly when the hover phase ends and dive begins.
+/// gameplay code register a resolver when the dash is queued; PatchbotDashUI acquires it at
+/// dive start and keeps calling it THROUGHOUT the dive — every call re-validates the target
+/// against logical board state and re-picks via the coordinator if the target died mid-flight.
 /// </summary>
 public static class PatchbotLiveDashTargetRegistry
 {
@@ -49,9 +50,14 @@ public static class PatchbotLiveDashTargetRegistry
         queue.Enqueue(new Entry { Resolver = resolver });
     }
 
-    public static bool TryResolveAtDiveStart(Vector2Int from, Vector2Int initialTo, out Vector2Int resolved)
+    /// <summary>
+    /// Hands this dash's live resolver to the flight visual. The resolver is meant to
+    /// be invoked repeatedly during the dive; null result = no valid target right now
+    /// (keep flying to the last known cell).
+    /// </summary>
+    public static bool TryAcquireLiveResolver(Vector2Int from, Vector2Int initialTo, out Func<Vector2Int?> resolver)
     {
-        resolved = initialTo;
+        resolver = null;
 
         var key = new DashKey(from, initialTo);
         if (!Entries.TryGetValue(key, out var queue) || queue.Count == 0)
@@ -64,11 +70,7 @@ public static class PatchbotLiveDashTargetRegistry
         if (entry?.Resolver == null)
             return false;
 
-        var maybeCell = entry.Resolver.Invoke();
-        if (!maybeCell.HasValue)
-            return false;
-
-        resolved = maybeCell.Value;
+        resolver = entry.Resolver;
         return true;
     }
 }

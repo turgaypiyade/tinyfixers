@@ -856,6 +856,26 @@ public sealed class OverrideSpecializedCombo
 
             var clearedInSteps = new HashSet<TileView>();
 
+            // Patlama sırası gelene kadar implant pulse'lar hücrelerinde çakılı
+            // (pending-triggered = gravity-blocked). Adımlar arası taş düşüşü açık
+            // olduğu için bu şart: pulse oyuncunun gördüğü yerde patlamalı, ve
+            // cell-bazlı Processed koruması ancak hücre sabitse geçerli kalır.
+            var anchoredCells = new HashSet<Vector2Int>();
+            foreach (var cell in pulseCells)
+            {
+                if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+                    continue;
+
+                var anchorTile = rt.Board.Tiles[cell.x, cell.y];
+                if (anchorTile != null && anchorTile.GetSpecial() == TileSpecial.PulseCore)
+                    anchoredCells.Add(cell);
+            }
+
+            if (anchoredCells.Count > 0)
+                rt.Board.SetPendingTriggeredSpecialCells(anchoredCells);
+
+            var releaseBuffer = new Vector2Int[1];
+
             try
             {
                 for (int i = 0; i < pulseCells.Count; i++)
@@ -864,6 +884,14 @@ public sealed class OverrideSpecializedCombo
 
                     if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
                         continue;
+
+                    // Sırası geldi: anchor'ı bırak (patlama + ardından gelen gravity
+                    // bu hücreyi artık normal işleyebilir).
+                    if (anchoredCells.Remove(cell))
+                    {
+                        releaseBuffer[0] = cell;
+                        rt.Board.ClearPendingTriggeredSpecialCells(releaseBuffer);
+                    }
 
                     var tile = rt.Board.Tiles[cell.x, cell.y];
                     if (tile == null || tile.GetSpecial() != TileSpecial.PulseCore)
@@ -920,13 +948,40 @@ public sealed class OverrideSpecializedCombo
                             clearedInSteps.Add(t);
                     }
 
-                    if (staggerSeconds > 0f && i < pulseCells.Count - 1)
-                        yield return new WaitForSeconds(rt.Board.ApplySpecialChainTempo(staggerSeconds));
+                    // Patlamanın boşalttığı alana taş düşüşü hemen başlar (background);
+                    // bekleyen pulse'lar anchor'lı olduğundan yerlerinde kalır. Sıradaki
+                    // patlama, düşmekte olan taşları havada yakalar.
+                    float fallDuration = 0f;
+                    var cascades = rt.Board.CascadeLogic.CalculateCascades();
+                    if (cascades != null && cascades.Count > 0)
+                    {
+                        for (int c = 0; c < cascades.Count; c++)
+                        {
+                            if (cascades[c] is FallAction fa)
+                                fallDuration = Mathf.Max(fallDuration, fa.GetEstimatedVisualDuration(rt.Board));
+                            rt.Board.StartImmediateAction(cascades[c]);
+                        }
+                    }
+                    rt.Board.RefreshAllSortingOrders();
+
+                    if (i < pulseCells.Count - 1)
+                    {
+                        float wait = Mathf.Max(
+                            rt.Board.ApplySpecialChainTempo(staggerSeconds),
+                            fallDuration * rt.Board.PulseChainCatchOverlap);
+                        if (wait > 0f)
+                            yield return new WaitForSeconds(wait);
+                    }
                 }
             }
             finally
             {
                 rt.Context.SuppressPulseCoreToPulseCoreChain = previousSuppressPulseCoreChain;
+
+                // Patlamadan atlanan (skip) pulse hücrelerinde anchor kalmasın —
+                // kalıcı pending hücre o sütunun gravity'sini sonsuza dek bloklar.
+                if (anchoredCells.Count > 0)
+                    rt.Board.ClearPendingTriggeredSpecialCells(anchoredCells);
             }
 
             // Remove per-step cleared tiles; only origin tiles remain for final clear

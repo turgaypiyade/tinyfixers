@@ -35,6 +35,7 @@ MonoBehaviour:
     collectibleId: 1
     iconOverride: {fileID: 0}
     amount: 20
+  randomPool: 000000000200000003000000
   energyPerContainer: 5
   comboTutorial: 0
   musicClip: {fileID: 0}

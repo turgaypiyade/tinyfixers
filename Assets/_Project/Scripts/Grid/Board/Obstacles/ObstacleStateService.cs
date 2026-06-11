@@ -404,15 +404,21 @@ public class ObstacleStateService : ISimObstacleQuery
                               && context == ObstacleHitContext.SpecialActivation
                               && (def == null || remaining == def.hits);
 
-        // Wardrobe açık durum (remaining==1): her vuruş bir item kırar; remaining değişmez.
-        // Tüm itemler bittiğinde remaining-- çalışır → remaining=0 → obstacle yıkılır.
+        // Wardrobe açık durum (remaining==1): normal vuruş BİR, special vuruşu İKİ item
+        // kırar; remaining değişmez. Tüm itemler bittiğinde remaining-- çalışır →
+        // remaining=0 → obstacle yıkılır.
         if (id == ObstacleId.Wardrobe && remaining == 1)
         {
             if (_wardrobeItemCounts.TryGetValue(origin, out int itemsLeft) && itemsLeft > 0)
             {
-                int newCount = itemsLeft - 1;
+                int breakCount = context == ObstacleHitContext.SpecialActivation ? 2 : 1;
+                int newCount = Mathf.Max(0, itemsLeft - breakCount);
                 _wardrobeItemCounts[origin] = newCount;
-                OnWardrobeItemRemoved?.Invoke(origin, newCount);
+
+                // View her event'te bir item söker (RemoveFrontItem) — kırılan her item
+                // için ayrı bildir ki çift kırılma görselde de iki item düşürsün.
+                for (int itemIdx = itemsLeft - 1; itemIdx >= newCount; itemIdx--)
+                    OnWardrobeItemRemoved?.Invoke(origin, itemIdx);
 
                 if (newCount > 0)
                 {
