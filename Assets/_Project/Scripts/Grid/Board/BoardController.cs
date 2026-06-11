@@ -66,6 +66,11 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float pulseImpactDelayStep = 0.02f;
     [SerializeField] private float pulseImpactAnimTime = 0.16f;
 
+    [Tooltip("Zincirli PulseCore patlamalarında, bir patlamanın düşüş animasyonunun ne " +
+             "kadarı geçince sıradaki patlamanın tetikleneceği (0..1). Yüksek = daha geç " +
+             "(taşlar oturmaya yakın), düşük = erken (havada yakalama belirgin).")]
+    [SerializeField, Range(0f, 1f)] private float pulseChainCatchOverlap = 0.4f;
+
     [Header("Board VFX/SFX")]
     [FormerlySerializedAs("pulseCoreVfxPlayer")][SerializeField] private PulseCoreVfxPlayer boardVfxPlayer;
     [SerializeField] private LightningSpawner lightningSpawner;
@@ -390,6 +395,7 @@ public class BoardController : MonoBehaviour
     internal PatchBotPairGhostTuning PatchBotGhostTuning => patchBotPairGhostTuning.Sanitized;
     internal float PulseImpactDelayStep => pulseImpactDelayStep;
     internal float PulseImpactAnimTime => pulseImpactAnimTime;
+    internal float PulseChainCatchOverlap => Mathf.Clamp01(pulseChainCatchOverlap);
     internal PulseCoreVfxPlayer BoardVfxPlayer => boardVfxPlayer;
     internal AudioSource SfxSource => sfxSource;
     internal AudioClip SfxPulseCoreBoom => sfxPulseCoreBoom;

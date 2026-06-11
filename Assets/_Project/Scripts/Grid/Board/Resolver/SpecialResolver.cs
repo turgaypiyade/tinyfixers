@@ -459,6 +459,26 @@ public class SpecialResolver
 
             if (originalSpecial == TileSpecial.PulseCore)
             {
+                // Pulse-only zincir (2+) ve swap'tan korunacak yeni special yoksa:
+                // sıralı patlama + gravity + havada yakalama. Aksi hâlde eski birleşik yol.
+                var normalPartnerForGuard = aOriginallySpecial ? b : a;
+                bool hasProtectedForChain =
+                    (externalProtectedCells != null && externalProtectedCells.Count > 0)
+                    || (normalPartnerForGuard != null && normalPartnerForGuard.GetSpecial() != TileSpecial.None);
+
+                if (!hasProtectedForChain && IsSupportedPulseChain(specialTile, PulseChainAreaHalf))
+                {
+                    actions.Add(new PulseChainSequenceAction(
+                        board,
+                        new List<TileView> { specialTile },
+                        PulseChainAreaHalf,
+                        board.PulseChainCatchOverlap,
+                        ResolveOtherSpecialInline));
+                    TraceSpecialChain("ResolveSpecialSwap.PulseChain", a, b);
+                    board.IsSpecialActivationPhase = false;
+                    return actions;
+                }
+
                 ctx.Affected.Add(specialTile);
                 SpecialCellUtils.MarkAffectedCell(ctx, specialTile, board);
 
@@ -664,6 +684,21 @@ public class SpecialResolver
 
         if (spec == TileSpecial.PulseCore)
         {
+            // Pulse-only zincir (2+ PulseCore, alanlarında pulse-olmayan special yok):
+            // sıralı patlama + her patlamada anında clear + gravity + havada yakalama.
+            if (IsSupportedPulseChain(specialTile, PulseChainAreaHalf))
+            {
+                actions.Add(new PulseChainSequenceAction(
+                    board,
+                    new List<TileView> { specialTile },
+                    PulseChainAreaHalf,
+                    board.PulseChainCatchOverlap,
+                    ResolveOtherSpecialInline));
+                TraceSpecialChain("ResolveSpecialSolo.PulseChain", specialTile, null);
+                board.IsSpecialActivationPhase = false;
+                return actions;
+            }
+
             var result = pulseCoreSpecial.Execute(new PulseCoreExecutionRuntime
             {
                 Board = board,
@@ -730,6 +765,121 @@ public class SpecialResolver
         TraceSpecialChain("ResolveSpecialSolo", specialTile, null);
         board.IsSpecialActivationPhase = false;
         return actions;
+    }
+
+    // Tekli PulseCore patlama alanı yarıçapı (affectedCellCount=25 → 5x5 → half=2).
+    private const int PulseChainAreaHalf = 2;
+
+    // BFS ile PulseCore zincirini keşfeder. Zincir pulse + DESTEKLENEN special'lardan
+    // (PulseCore, LineV, LineH) oluşuyor ve 2+ special içeriyorsa true → ilerlemeli
+    // sıralı motor (PulseChainSequenceAction) kullanılır. DESTEKLENMEYEN bir special
+    // (Override/PatchBot/Bomb vb.) bulunursa false → eski birleşik yol (o kombolar
+    // bozulmasın). Sadece guard kararı için; sıralı action zinciri kendi keşfeder.
+    private bool IsSupportedPulseChain(TileView first, int areaHalf)
+    {
+        if (first == null || !first || first.GetSpecial() != TileSpecial.PulseCore)
+            return false;
+
+        var pulses = new HashSet<TileView> { first };
+        var others = new HashSet<TileView>();
+        var queue = new Queue<TileView>();
+        queue.Enqueue(first);
+
+        while (queue.Count > 0)
+        {
+            var p = queue.Dequeue();
+            if (p == null || !p) continue;
+
+            int cx = p.X, cy = p.Y;
+            for (int x = cx - areaHalf; x <= cx + areaHalf; x++)
+            {
+                for (int y = cy - areaHalf; y <= cy + areaHalf; y++)
+                {
+                    if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
+
+                    var t = board.Tiles[x, y];
+                    if (t == null) continue;
+
+                    var sp = t.GetSpecial();
+                    if (sp == TileSpecial.None) continue;
+
+                    if (sp == TileSpecial.PulseCore)
+                    {
+                        if (pulses.Add(t)) queue.Enqueue(t);
+                    }
+                    else if (sp == TileSpecial.LineV || sp == TileSpecial.LineH || sp == TileSpecial.PatchBot)
+                    {
+                        others.Add(t); // inline aktive edilir; alanı burada gezilmez
+                    }
+                    else
+                    {
+                        // Desteklenmeyen special (Override vb.) → eski yola düş.
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return (pulses.Count + others.Count) >= 2;
+    }
+
+    // PulseChainSequenceAction'ın playback'te pulse-olmayan bir special'ı (Line/PatchBot)
+    // inline aktive etmesi için callback. Mevcut per-special mantığını scoped bir ctx ile
+    // FinalizeAtEnd=true çalıştırıp clear/effect action'larını döndürür. Desteklenmeyen
+    // tip → null (action normal taş gibi kırar).
+    private List<BoardAction> ResolveOtherSpecialInline(TileView tile)
+    {
+        if (tile == null || !tile) return null;
+
+        var sp = tile.GetSpecial();
+        var scoped = new ResolutionContext();
+        scoped.Affected.Add(tile);
+        SpecialCellUtils.MarkAffectedCell(scoped, tile, board);
+
+        switch (sp)
+        {
+            case TileSpecial.LineV:
+                scoped.HasLineActivation = true;
+                return lineVSpecial.Execute(new LineVExecutionRuntime
+                {
+                    Board = board, Context = scoped, Origin = tile, Partner = null, FinalizeAtEnd = true,
+                    ActivateSpecial = dispatcher.ApplySpecialActivation,
+                    ProcessFanout = c => fanoutService.ProcessFanout(c),
+                    CleanupImplantedTiles = c => implantService.CleanupImplantedTiles(c),
+                    FireOverrideOverrideSpecialVisuals = (a, d) => visualService.FireOverrideOverrideSpecialVisuals(a, d),
+                    EnqueueChainSpecials = res => queueProcessor.EnqueueChainSpecials(res),
+                    ProcessQueue = res => queueProcessor.ProcessQueue(res)
+                }).Actions;
+
+            case TileSpecial.LineH:
+                scoped.HasLineActivation = true;
+                return lineHSpecial.Execute(new LineHExecutionRuntime
+                {
+                    Board = board, Context = scoped, Origin = tile, Partner = null, FinalizeAtEnd = true,
+                    ActivateSpecial = dispatcher.ApplySpecialActivation,
+                    ProcessFanout = c => fanoutService.ProcessFanout(c),
+                    CleanupImplantedTiles = c => implantService.CleanupImplantedTiles(c),
+                    FireOverrideOverrideSpecialVisuals = (a, d) => visualService.FireOverrideOverrideSpecialVisuals(a, d),
+                    EnqueueChainSpecials = res => queueProcessor.EnqueueChainSpecials(res),
+                    ProcessQueue = res => queueProcessor.ProcessQueue(res)
+                }).Actions;
+
+            case TileSpecial.PatchBot:
+                return patchBotSpecial.Execute(new PatchBotExecutionRuntime
+                {
+                    Board = board, Context = scoped, Origin = tile, Partner = null, FinalizeAtEnd = true,
+                    PatchbotService = patchbotComboService,
+                    VisualService = visualService,
+                    Effects = effectOrchestrator,
+                    ActivateSpecial = dispatcher.ApplySpecialActivation,
+                    ProcessFanout = c => fanoutService.ProcessFanout(c),
+                    CleanupImplantedTiles = c => implantService.CleanupImplantedTiles(c),
+                    FireOverrideOverrideSpecialVisuals = (a, d) => visualService.FireOverrideOverrideSpecialVisuals(a, d)
+                }).Actions;
+
+            default:
+                return null; // Override vb. henüz desteklenmiyor → guard zaten engeller.
+        }
     }
 
     private List<BoardAction> ExecuteSpecialActionsNoFinalize(ResolutionContext ctx, TileView tile, TileView partner)
