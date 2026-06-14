@@ -268,6 +268,15 @@ public sealed class BossDuelController : MonoBehaviour
         if (bossVisual == null)
             return;
 
+        // Hop pozisyonun otoritesidir: süren bir shake'i durdur ve görseli temiz
+        // tabana oturt — yoksa ikisi aynı anchoredPosition için yarışır.
+        if (shakeCo != null)
+        {
+            StopCoroutine(shakeCo);
+            shakeCo = null;
+            bossVisual.anchoredPosition = shakeBasePos;
+        }
+
         if (hopCo != null) StopCoroutine(hopCo);
         hopCo = StartCoroutine(HopRoutine(GetBossAnchoredX(bossColumn)));
     }
@@ -401,25 +410,33 @@ public sealed class BossDuelController : MonoBehaviour
 
     // ─── Boss görsel tepkileri ────────────────────────────────────────────
 
+    private Vector2 shakeBasePos;
+
     private void PlayDamageShake()
     {
         if (bossVisual == null || damageShakeDuration <= 0f) return;
-        if (shakeCo != null) StopCoroutine(shakeCo);
+
+        // Taban pozisyonu yalnızca sallanmıyorken yakala — üst üste binen shake'ler
+        // kaymış pozisyonu taban sanıp görseli kalıcı yürütür (wardrobe'da yaşandı).
+        if (shakeCo != null)
+            StopCoroutine(shakeCo);
+        else
+            shakeBasePos = bossVisual.anchoredPosition;
+
         shakeCo = StartCoroutine(ShakeRoutine());
     }
 
     private IEnumerator ShakeRoutine()
     {
-        Vector2 basePos = bossVisual.anchoredPosition;
         float t = 0f;
         while (t < damageShakeDuration)
         {
             t += Time.deltaTime;
             float falloff = 1f - Mathf.Clamp01(t / damageShakeDuration);
-            bossVisual.anchoredPosition = basePos + Random.insideUnitCircle * (damageShakeStrength * falloff);
+            bossVisual.anchoredPosition = shakeBasePos + Random.insideUnitCircle * (damageShakeStrength * falloff);
             yield return null;
         }
-        bossVisual.anchoredPosition = basePos;
+        bossVisual.anchoredPosition = shakeBasePos;
         shakeCo = null;
     }
 

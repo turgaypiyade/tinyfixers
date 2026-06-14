@@ -180,6 +180,7 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         if (board.IsBusy || board.ActiveBackgroundJobs > 0)
             return false;
 
+        var obstacleService = board.ObstacleStateService;
         int filledCells = 0;
 
         for (int x = 0; x < board.Width; x++)
@@ -187,6 +188,14 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
             for (int y = 0; y < board.Height; y++)
             {
                 if (board.Holes[x, y])
+                    continue;
+
+                // Obstacle hücreleri tile barındırmayabilir (blocking olanlar zaten
+                // Holes=true, ama bazı obstacle'lar Holes=false + Tiles=null olur).
+                // Bunları board'un "hazır değil" sayılmasına sebep yapma — yerleştirmede
+                // zaten eligible değiller. Aksi halde obstacle-yoğun board hiç "ready"
+                // olmuyor, 8s timeout doluyor ve hiçbir special yerleşmiyordu.
+                if (obstacleService != null && obstacleService.HasObstacleAt(x, y))
                     continue;
 
                 var tile = board.Tiles[x, y];

@@ -23,6 +23,7 @@ public sealed class WardrobeObstacleView : MonoBehaviour
     // ── State ────────────────────────────────────────────────────────────────
     private Image _rootImage;
     private Coroutine _shakeRoutine;
+    private Vector2 _shakeBasePos;
 
     // Ön → arka sırasıyla tutulan item image'ları (index 0 = en önde = ilk kırılacak)
     private readonly List<Image> _frontToBack = new();
@@ -155,14 +156,23 @@ public sealed class WardrobeObstacleView : MonoBehaviour
 
     private void StartShake()
     {
-        if (_shakeRoutine != null) StopCoroutine(_shakeRoutine);
-        _shakeRoutine = StartCoroutine(CoShake());
+        var rt = GetComponent<RectTransform>();
+        if (rt == null) return;
+
+        // Taban pozisyonu yalnızca SALLANMIYORKEN yakala. Shake coroutine'i ilk
+        // yield'e kadar senkron koştuğu için pozisyonu anında kaydırır; üst üste
+        // gelen ikinci Shake (örn. special'ın çift item kırması aynı frame'de iki
+        // event yollar) kaymış pozisyonu taban sanıp dolabı kalıcı yürütüyordu.
+        if (_shakeRoutine != null)
+            StopCoroutine(_shakeRoutine);
+        else
+            _shakeBasePos = rt.anchoredPosition;
+
+        _shakeRoutine = StartCoroutine(CoShake(rt));
     }
 
-    private IEnumerator CoShake()
+    private IEnumerator CoShake(RectTransform rt)
     {
-        var rt      = GetComponent<RectTransform>();
-        var origPos = rt.anchoredPosition;
         float elapsed = 0f;
 
         while (elapsed < ShakeDuration)
@@ -171,11 +181,11 @@ public sealed class WardrobeObstacleView : MonoBehaviour
             float t     = elapsed / ShakeDuration;
             float damped = ShakeMagnitude * (1f - t);
             float offsetX = Mathf.Sin(t * Mathf.PI * 6f) * damped;
-            rt.anchoredPosition = origPos + new Vector2(offsetX, 0f);
+            rt.anchoredPosition = _shakeBasePos + new Vector2(offsetX, 0f);
             yield return null;
         }
 
-        rt.anchoredPosition = origPos;
+        rt.anchoredPosition = _shakeBasePos;
         _shakeRoutine = null;
     }
 
