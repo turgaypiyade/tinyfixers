@@ -28,6 +28,7 @@ public class TileView : MonoBehaviour,
     // Drag state
     private Vector2 dragStartAnchored;
     private Vector2 dragStartLocalPointer;
+    private Vector2 dragStartScreen;
     private bool dragConsumedSwap;
     private bool wasDragging;
     private bool boosterFiredOnDown;
@@ -1293,6 +1294,7 @@ public class TileView : MonoBehaviour,
         dragConsumedSwap = false;
 
         dragStartAnchored = rt.anchoredPosition;
+        dragStartScreen = eventData.position;
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             parentRt,
@@ -1312,33 +1314,35 @@ public class TileView : MonoBehaviour,
         if (dragConsumedSwap)
             return;
 
+        // Görsel takip (kozmetik): taş parmağı board'un kendi düzleminde takip etsin.
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             parentRt,
             eventData.position,
             eventData.pressEventCamera,
             out var curLocal);
 
-        var delta = curLocal - dragStartLocalPointer;
+        var localDelta = curLocal - dragStartLocalPointer;
 
         float max = board.TileSize * 0.45f;
+        localDelta.x = Mathf.Clamp(localDelta.x, -max, max);
+        localDelta.y = Mathf.Clamp(localDelta.y, -max, max);
+        rt.anchoredPosition = dragStartAnchored + localDelta;
 
-        delta.x = Mathf.Clamp(delta.x, -max, max);
-        delta.y = Mathf.Clamp(delta.y, -max, max);
+        // Swap YÖNÜ ekran hareketinden hesaplanır — board'un eğimi/perspektifi
+        // local düzlemi büküyor; ekran-uzayı "yukarı çektim = yukarı swap" garantisi verir.
+        Vector2 screenDelta = eventData.position - dragStartScreen;
+        float threshold = Screen.height * 0.022f;
 
-        rt.anchoredPosition = dragStartAnchored + delta;
-
-        float threshold = board.TileSize * 0.25f;
-
-        if (Mathf.Abs(delta.x) < threshold && Mathf.Abs(delta.y) < threshold)
+        if (Mathf.Abs(screenDelta.x) < threshold && Mathf.Abs(screenDelta.y) < threshold)
             return;
 
         int dirX = 0;
         int dirY = 0;
 
-        if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
-            dirX = delta.x > 0 ? 1 : -1;
+        if (Mathf.Abs(screenDelta.x) > Mathf.Abs(screenDelta.y))
+            dirX = screenDelta.x > 0 ? 1 : -1;
         else
-            dirY = delta.y > 0 ? -1 : 1;
+            dirY = screenDelta.y > 0 ? -1 : 1; // ekranda yukarı = grid yukarı (-1)
 
         dragConsumedSwap = true;
 
