@@ -13,14 +13,14 @@ MonoBehaviour:
   m_Name: ChapterTheme_1
   m_EditorClassIdentifier: Assembly-CSharp::ChapterTheme
   chapterIndex: 1
-  gameBackground: {fileID: 21300000, guid: 32bfd6b6901b84b00b9a70e03ebf30ee, type: 3}
-  gameTopHud: {fileID: 21300000, guid: 8db41c7f0d113456f90294e7a0c1eb17, type: 3}
-  gameBottomArea: {fileID: 21300000, guid: 73c7ffcb79c8b4006882debf2313cff0, type: 3}
-  menuBackground: {fileID: 21300000, guid: ad08026f3352e4695826a23e8f01eda0, type: 3}
-  menuTopHud: {fileID: 4385335559844558893, guid: 5af5ed90b55784d69ac47ce50c20f89e, type: 3}
+  gameBackground: {fileID: 21300000, guid: 4f82b027e054641469049f6a99e8122a, type: 3}
+  gameTopHud: {fileID: 21300000, guid: a613c7faccef449fc85b7943d52d4deb, type: 3}
+  gameBottomArea: {fileID: 21300000, guid: 5b5dd1eaa87934c67b2a7c3566b72974, type: 3}
+  menuBackground: {fileID: 21300000, guid: 4521c033365614105b1d105bdfdbc8e7, type: 3}
+  menuTopHud: {fileID: 21300000, guid: ecd5971b231564baeb9a49ca052b5a88, type: 3}
   menuBottomArea: {fileID: 21300000, guid: 8f47d89b0f7fe4435b5e176a1f531f13, type: 3}
-  menuLevelSelectorBtn: {fileID: 21300000, guid: 2a359a17c91cc4af5a15eaf2a5043f4d, type: 3}
-  menuRepairBtn: {fileID: 21300000, guid: 5fe57ed158f89401b939e3b20398f51c, type: 3}
+  menuLevelSelectorBtn: {fileID: 21300000, guid: c322b9cadec8b45aabd2f464edfc07e4, type: 3}
+  menuRepairBtn: {fileID: 21300000, guid: 618b39e0230a1406ebfba99542c755c5, type: 3}
   borderColorId: 0
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
   successAnimationBackground: {fileID: 0}

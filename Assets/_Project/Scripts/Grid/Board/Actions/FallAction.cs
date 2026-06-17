@@ -281,7 +281,8 @@ public class FallAction : BoardAction
             if (maxToYPerColumn.TryGetValue(r.toX, out int maxToY))
                 rankFromBottom = Mathf.Max(0, maxToY - r.toY);
 
-            float spawnDelay = CumulativeSpawnDelay(rankFromBottom);
+            float spawnStaggerMul = board != null ? board.FallSpawnStaggerMultiplier : 1f;
+            float spawnDelay = CumulativeSpawnDelay(rankFromBottom) * spawnStaggerMul;
             float colDelay = columnStep > 0f ? r.toX * columnStep : 0f;
 
             r.phaseDelay = colDelay + spawnDelay;

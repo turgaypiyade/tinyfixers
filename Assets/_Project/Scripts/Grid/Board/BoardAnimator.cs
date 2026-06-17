@@ -1393,7 +1393,7 @@ public class BoardAnimator
 
         for (int x = 0; x < board.Width; x++)
         {
-            int nextSpawnY = Mathf.Min(-1, board.SpawnStartOffsetY);
+            int nextSpawnY = -1 - board.SpawnFeedGap;
 
             for (int y = 0; y < board.Height; y++)
             {
@@ -1528,7 +1528,7 @@ public class BoardAnimator
 
                 if (touchesSpawnEdge)
                 {
-                    int nextSpawnY = topY + board.SpawnStartOffsetY;
+                    int nextSpawnY = topY - 1 - board.SpawnFeedGap;
 
                     for (int y = topY; y <= segmentTop; y++)
                     {

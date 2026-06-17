@@ -4,7 +4,7 @@
     {
       "code": "tr",
       "entries": [
-        { "key": "prelevel_popup_title_level", "value": "Seviye {0}" },
+        { "key": "prelevel_popup_title_level", "value": "SEVİYE {0}" },
         { "key": "prelevel_popup_continue", "value": "Devam" },
         { "key": "prelevel_popup_cancel", "value": "İptal" },
         { "key": "prelevel_special_lineh_name", "value": "Line H" },

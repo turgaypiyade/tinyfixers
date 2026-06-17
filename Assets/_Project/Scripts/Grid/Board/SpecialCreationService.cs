@@ -108,9 +108,19 @@ public sealed class SpecialCreationService
         TileSpecial bestSpecial = TileSpecial.None;
         int bestScore = 0;
 
+        // Bu, oyuncunun SWAP'ı sonucu special oluşumu — parmak hareketinin yönü 4'lü
+        // Line'ın yönünü belirler (yatay swap→LineH, dikey swap→LineV). Swap her zaman
+        // ya aynı satır (yatay) ya aynı sütundur (dikey).
+        bool? swapHorizontal = null;
+        if (a != null && b != null)
+        {
+            if (a.Y == b.Y && a.X != b.X) swapHorizontal = true;       // yatay swap
+            else if (a.X == b.X && a.Y != b.Y) swapHorizontal = false; // dikey swap
+        }
+
         if (a != null && matches.Contains(a) && a.GetSpecial() == TileSpecial.None)
         {
-            TileSpecial aSpec = matchFinder.DecideSpecialAt(a.X, a.Y);
+            TileSpecial aSpec = matchFinder.DecideSpecialAt(a.X, a.Y, swapHorizontal);
             int aScore = Score(aSpec);
 
             if (aScore > bestScore)
@@ -123,7 +133,7 @@ public sealed class SpecialCreationService
 
         if (b != null && matches.Contains(b) && b.GetSpecial() == TileSpecial.None)
         {
-            TileSpecial bSpec = matchFinder.DecideSpecialAt(b.X, b.Y);
+            TileSpecial bSpec = matchFinder.DecideSpecialAt(b.X, b.Y, swapHorizontal);
             int bScore = Score(bSpec);
 
             if (bScore > bestScore)
@@ -179,10 +189,17 @@ public sealed class SpecialCreationService
         switch (creation.special)
         {
             case TileSpecial.LineH:
-                return CollectHorizontalRun(matches, creation.winner);
-
             case TileSpecial.LineV:
-                return CollectVerticalRun(matches, creation.winner);
+            {
+                // Tüketilen tile'lar special TİPİNE değil, winner'ın bulunduğu asıl 4'lü
+                // diziye göre. Special tipi swap yönüyle belirlenebildiği için (yatay
+                // swap→LineH) tip, match geometrisinden farklı olabilir; tüketimi tipe
+                // bağlarsak dik yöndeki dizi tüketilmeden kalıp İKİNCİ bir special'a
+                // dönüşüyordu (yatay swap + dikey 4'lü → yanlışlıkla LineH+LineV).
+                var hRun = CollectHorizontalRun(matches, creation.winner);
+                var vRun = CollectVerticalRun(matches, creation.winner);
+                return hRun.Count >= vRun.Count ? hRun : vRun;
+            }
 
             case TileSpecial.PulseCore:
                 {

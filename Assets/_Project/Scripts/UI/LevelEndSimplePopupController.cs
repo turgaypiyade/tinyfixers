@@ -117,6 +117,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private string mainMenuSceneName = "MainMenu";
     [SerializeField] private string prefsLevelKey = "current_level";
 
+    [Header("Fail Guard")]
+    [Tooltip("Fail popup'ı göstermeden önceki doğrulama beklemesi (sn). Son hamlenin bazı " +
+             "geç efektleri (line-sweep beam varışı, obstacle kırılma kuyruğu) board 'idle' " +
+             "göründükten az sonra hedef kredisini verebiliyor. Bu sürede hedefler tamamlanırsa " +
+             "fail yerine success gösterilir.")]
+    [SerializeField, Min(0f)] private float failConfirmGraceSeconds = 0.6f;
+
     private bool failPopupShown;
     private bool successPopupShown;
     private bool successReturnQueued;
@@ -125,6 +132,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private int currentCost;
     private bool endCheckQueued;
     private bool failSettleWaitRunning;
+    private bool failConfirmRunning;
     private Coroutine starRevealRoutine;
     private Coroutine mainScreenDimRoutine;
     private readonly List<CanvasGroup> mainScreenDimTargets = new();
@@ -244,6 +252,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         successPopupShown = false;
         successReturnQueued = false;
         failSettleWaitRunning = false;
+        failConfirmRunning = false;
         isBonusRoundRunning = false;
         hardSkipBonusRoundRequested = false;
 
@@ -607,15 +616,35 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         Unsubscribe();
         board.OnMovesChanged += HandleMovesChanged;
+        board.OnLevelFailRequested += HandleForcedFail;
         topHud.OnGoalsCompletionChanged += HandleGoalsCompletionChanged;
     }
 
     private void Unsubscribe()
     {
         if (board != null)
+        {
             board.OnMovesChanged -= HandleMovesChanged;
+            board.OnLevelFailRequested -= HandleForcedFail;
+        }
         if (topHud != null)
             topHud.OnGoalsCompletionChanged -= HandleGoalsCompletionChanged;
+    }
+
+    // Player HP=0 gibi kesin kayıp (BossDuel). Hedefler aynı anda tamamlandıysa
+    // (düşman da öldüyse) galibiyet öncelikli; aksi hâlde direkt fail.
+    private void HandleForcedFail()
+    {
+        if (failPopupShown || successPopupShown)
+            return;
+
+        if (topHud != null && topHud.AreAllGoalsCompleted)
+        {
+            QueueSuccessReturnToMainMenu();
+            return;
+        }
+
+        ShowFailPopup();
     }
 
     private void HandleMovesChanged(int _) => RequestEvaluateLevelEndState();
@@ -689,11 +718,76 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (board.RemainingMoves <= 0)
         {
-            ShowFailPopup();
+            // Hemen fail gösterme: son hamlenin geç efektleri (beam varışı, obstacle
+            // kırılma kuyruğu) board idle göründükten az sonra hedefi tamamlayabilir.
+            // Kısa bir doğrulama beklemesiyle bu yarışı kapat.
+            BeginFailConfirmation();
             return;
         }
 
         Debug.Log($"[LevelEndSimplePopupController] End check skipped. RemainingMoves={board.RemainingMoves}, GoalsCompleted={topHud.AreAllGoalsCompleted}");
+    }
+
+    private void BeginFailConfirmation()
+    {
+        if (failConfirmRunning || failPopupShown || successPopupShown)
+            return;
+
+        failConfirmRunning = true;
+        StartCoroutine(ConfirmFailAfterGrace());
+    }
+
+    // Fail'i kesinleştirmeden önce kısa bir bekleme: bu sürede hedefler tamamlanırsa
+    // success'e geçer; board yeniden meşgul olursa (cascade/efekt) gerçek settle'ı bekler;
+    // yalnızca grace sonunda hâlâ hedefler eksik ve board idle ise gerçekten fail gösterir.
+    private IEnumerator ConfirmFailAfterGrace()
+    {
+        float t = 0f;
+        while (t < failConfirmGraceSeconds)
+        {
+            if (failPopupShown || successPopupShown)
+            {
+                failConfirmRunning = false;
+                yield break;
+            }
+
+            if (topHud != null && topHud.AreAllGoalsCompleted)
+            {
+                failConfirmRunning = false;
+                QueueSuccessReturnToMainMenu();
+                yield break;
+            }
+
+            // Board yeniden çalışmaya başladıysa (geç cascade/efekt) — gerçek idle'ı bekle,
+            // sonra yeniden değerlendir (oradan tekrar bu doğrulamaya girebilir).
+            if (board != null && (board.IsBusy || board.ActiveBackgroundJobs > 0))
+            {
+                failConfirmRunning = false;
+                if (!failSettleWaitRunning)
+                {
+                    failSettleWaitRunning = true;
+                    StartCoroutine(EvaluateAfterBoardSettled());
+                }
+                yield break;
+            }
+
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        failConfirmRunning = false;
+
+        if (failPopupShown || successPopupShown || board == null || topHud == null)
+            yield break;
+
+        if (topHud.AreAllGoalsCompleted)
+        {
+            QueueSuccessReturnToMainMenu();
+            yield break;
+        }
+
+        if (board.RemainingMoves <= 0 && !board.IsBusy && board.ActiveBackgroundJobs == 0)
+            ShowFailPopup();
     }
 
     // Board tamamen oturana kadar (3 ardışık idle frame) bekleyip değerlendirmeyi

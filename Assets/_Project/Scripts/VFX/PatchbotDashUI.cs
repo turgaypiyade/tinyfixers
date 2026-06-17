@@ -39,7 +39,11 @@ public class PatchbotDashUI : MonoBehaviour
     [SerializeField, Range(0f, 2f)] private float takeoffLiftFactor = 0.78f;
     [SerializeField, Min(0f)] private float hoverHoldDuration = 0.035f;
     [SerializeField, Range(0f, 1f)] private float diveArcFactor = 0.11f;
-    [SerializeField, Range(0.5f, 2f)] private float diveSpeedMultiplier = 1.28f;
+    [Tooltip("Pike (dalış) hızı = dashSpeed * bu çarpan. Büyüdükçe hedefe daha hızlı/keskin pike. " +
+             "Takeoff (2.5x büyüme) ve hover sabit kalır; yalnızca dalış hızlanır.")]
+    [SerializeField, Range(0.5f, 4f)] private float pikeSpeedMultiplier = 2.4f;
+    [Tooltip("Dalışın ivmelenme keskinliği. 1 = lineer, 2-2.5 = hedefe doğru hızlanan pike hissi.")]
+    [SerializeField, Range(1f, 3f)] private float diveEaseInPower = 2.2f;
 
     [Header("Live Retargeting")]
     [SerializeField, Min(0.01f)] private float liveRetargetInterval = 0.05f;   // hedef doğrulama sıklığı (sn)
@@ -217,15 +221,27 @@ public class PatchbotDashUI : MonoBehaviour
         rt.anchoredPosition = start;
 
         float totalDistance = Vector2.Distance(start, target);
-        float effectiveSpeed = Mathf.Max(1f, dashSpeed * Mathf.Max(0.01f, diveSpeedMultiplier));
-        float travelDuration = totalDistance > arriveEps ? totalDistance / effectiveSpeed : 0f;
+        float effectiveSpeed = Mathf.Max(1f, dashSpeed * Mathf.Max(0.01f, pikeSpeedMultiplier));
+
+        float takeoffDuration;
+        float hoverDuration;
+        float diveDuration;
 
         if (syncDuration > 0f)
-            travelDuration = Mathf.Max(0f, syncDuration * Mathf.Max(0.01f, syncedDurationMultiplier));
-
-        float takeoffDuration = Mathf.Min(Mathf.Max(0f, takeoffBurstDuration), Mathf.Max(0f, travelDuration * 0.35f));
-        float hoverDuration = Mathf.Min(Mathf.Max(0f, hoverHoldDuration), Mathf.Max(0f, travelDuration * 0.18f));
-        float diveDuration = Mathf.Max(0.01f, travelDuration - takeoffDuration - hoverDuration);
+        {
+            // Zincir/sync modunda toplam süre dışarıdan veriliyor; fazlara böl.
+            float travelDuration = Mathf.Max(0f, syncDuration * Mathf.Max(0.01f, syncedDurationMultiplier));
+            takeoffDuration = Mathf.Min(Mathf.Max(0f, takeoffBurstDuration), Mathf.Max(0f, travelDuration * 0.35f));
+            hoverDuration = Mathf.Min(Mathf.Max(0f, hoverHoldDuration), Mathf.Max(0f, travelDuration * 0.18f));
+            diveDuration = Mathf.Max(0.01f, travelDuration - takeoffDuration - hoverDuration);
+        }
+        else
+        {
+            // Solo dash: takeoff (2.5x şarj) ve hover SABİT; dalış pike hızıyla kısa ve keskin.
+            takeoffDuration = Mathf.Max(0f, takeoffBurstDuration);
+            hoverDuration = Mathf.Max(0f, hoverHoldDuration);
+            diveDuration = totalDistance > arriveEps ? Mathf.Max(0.05f, totalDistance / effectiveSpeed) : 0.01f;
+        }
 
         int side = ((req.from.x + req.from.y + req.to.x + req.to.y) & 1) == 0 ? -1 : 1;
         Vector2 takeoff = start + new Vector2(
@@ -412,7 +428,8 @@ public class PatchbotDashUI : MonoBehaviour
             TickLiveRetarget(live, dt);
 
             float t = Mathf.Clamp01(local / duration);
-            float eased = t * t * (3f - 2f * t);
+            // Ease-IN: hedefe doğru ivmelenen pike (smoothstep yerine).
+            float eased = Mathf.Pow(t, Mathf.Max(1f, diveEaseInPower));
             float curve = Mathf.Sin(t * Mathf.PI) * arc;
             float snap = Mathf.Sin(t * Mathf.PI * 2f) * Mathf.Min(size.x, size.y) * 0.025f;
 
@@ -592,11 +609,12 @@ public class PatchbotDashUI : MonoBehaviour
         if (syncDuration > 0f)
             return syncDuration * Mathf.Max(0.01f, syncedDurationMultiplier);
 
-        float speed = Mathf.Max(1f, dashSpeed * Mathf.Max(0.01f, diveSpeedMultiplier));
-        float travel = distance / speed;
-        float takeoff = Mathf.Min(Mathf.Max(0f, takeoffBurstDuration), Mathf.Max(0f, travel * 0.35f));
-        float hover = Mathf.Min(Mathf.Max(0f, hoverHoldDuration), Mathf.Max(0f, travel * 0.18f));
-        return takeoff + hover + Mathf.Max(0.01f, travel - takeoff - hover);
+        // Solo dash timing ile aynı: takeoff + hover sabit, dive pike hızıyla.
+        float speed = Mathf.Max(1f, dashSpeed * Mathf.Max(0.01f, pikeSpeedMultiplier));
+        float dive = Mathf.Max(0.05f, distance / speed);
+        float takeoff = Mathf.Max(0f, takeoffBurstDuration);
+        float hover = Mathf.Max(0f, hoverHoldDuration);
+        return takeoff + hover + dive;
     }
 
     private AudioSource CreateFlightAudioSource(RectTransform attachTo)

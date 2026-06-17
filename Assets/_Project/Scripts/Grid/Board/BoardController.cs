@@ -21,7 +21,11 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float swapDuration = 0.28f;
     [SerializeField] private float fallDuration = 0.22f;
     [SerializeField] private float clearDuration = 0.16f;
-    [SerializeField] private int spawnStartOffsetY = -2;
+    [Tooltip("Yeni taşların gridin üst kenarının KAÇ hücre üstünden akmaya başlayacağı (besleme boşluğu). " +
+             "Sabit hızda büyük bir mesafe, mevcut taşlar oturduktan sonra spawn'ın geç gelmesine ve " +
+             "arada şişen boşluğa yol açar. 0 = üst kenara bitişik (en sıkı, su gibi akış), " +
+             "1 = hafif nefes payı, 2+ = belirgin boşluk. Eski negatif 'spawnStartOffsetY'nin yerine geçer.")]
+    [SerializeField, Range(0, 4)] private int spawnFeedGap = 1;
 
     [Header("Movement Feel")]
     [SerializeField] private float swapDurationMultiplier = 1f;
@@ -31,6 +35,11 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float fallVelocityCellsPerSecond = 30f;
     [Tooltip("Bir cascade simülasyonunda her tile'ın kaç kez diyagonal kayma yapabileceği. 1=klasik (daha fazla cascade round), 2-3=daha akıcı akış.")]
     [SerializeField, Range(1, 4)] private int maxDiagonalSlidesPerCascade = 2;
+    [Tooltip("Yukarıdan spawn olan taşların birbirine göre EK zaman gecikmesi (stagger) çarpanı. " +
+             "Görsel pozisyon offset'i taşları zaten tam 1 hücre arayla dizdiği için bu ek gecikme " +
+             "kolonu esnetir ve 'geç giren / yalpalayan' his yaratır. 0 = su gibi sıkı rigid akış, " +
+             "1 = eski (esnek) davranış.")]
+    [SerializeField, Range(0f, 1f)] private float fallSpawnStaggerMultiplier = 0.15f;
     [SerializeField] private AnimationCurve swapMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve fallMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
@@ -60,7 +69,7 @@ public class BoardController : MonoBehaviour
     [SerializeField] private PatchBotPairGhostTuning patchBotPairGhostTuning = PatchBotPairGhostTuning.Default;
 
     [Header("Special Chain Tempo")]
-    [SerializeField, Range(0.2f, 1.5f)] private float specialChainDurationMultiplier = 0.55f;
+    [SerializeField, Range(0.2f, 1.5f)] private float specialChainDurationMultiplier = 0.4f;
 
     [Header("PulseCore Impact (premium stagger)")]
     [SerializeField] private float pulseImpactDelayStep = 0.02f;
@@ -170,6 +179,11 @@ public class BoardController : MonoBehaviour
     public RectTransform TilesRoot => parent;
     public bool IsBusy => CurrentState == BoardState.Resolving;
     public event Action OnBecameIdle;
+
+    // BossDuel/Battlefield: oyuncu HP'si 0'a düşünce gibi, hamle/goal'den bağımsız
+    // kesin kayıp tetiklenmesi için. LevelEndSimplePopupController dinler.
+    public event Action OnLevelFailRequested;
+    public void RequestLevelFail() => OnLevelFailRequested?.Invoke();
 
     internal void PlayTileFallSfx(int tileCount, int maxDist)
     {
@@ -371,6 +385,7 @@ public class BoardController : MonoBehaviour
     internal float SwapDurationWithMultiplier => swapDuration * Mathf.Max(0.01f, swapDurationMultiplier);
     internal float FallDurationWithMultiplier => fallDuration * Mathf.Max(0.01f, fallDurationMultiplier);
     internal float FallVelocityCellsPerSecond => Mathf.Max(0.0001f, fallVelocityCellsPerSecond) / Mathf.Max(0.01f, fallDurationMultiplier);
+    internal float FallSpawnStaggerMultiplier => Mathf.Clamp01(fallSpawnStaggerMultiplier);
     internal AnimationCurve SwapMoveCurve => swapMoveCurve;
     internal AnimationCurve FallMoveCurve => fallMoveCurve;
     internal bool EnableFallSettle => enableFallSettle;
@@ -383,7 +398,8 @@ public class BoardController : MonoBehaviour
     internal float ShakeDuration => shakeDuration;
     internal float ShakeStrength => shakeStrength;
     internal RectTransform ShakeTarget => shakeTarget;
-    internal int SpawnStartOffsetY => spawnStartOffsetY;
+    // Spawn taşının başlangıç Y'si = topY - 1 - SpawnFeedGap (gridin üstünden besleme).
+    internal int SpawnFeedGap => Mathf.Max(0, spawnFeedGap);
     internal GameObject TilePrefab => tilePrefab;
     internal RectTransform Parent => parent;
     // tilesRoot.parent = spawnParent; animasyon ghostları buraya parentlanırsa
@@ -1187,6 +1203,17 @@ public class BoardController : MonoBehaviour
         }
 
         if (TryUseBooster(tile)) return;
+
+        // Special'a tek tık → hareket ettirmeden solo aktive et. Swap (ve special+special
+        // combo) için sürükleme kullanılır; TileView tap'i sürüklemeden ayırdığı için
+        // sürüklenen special burada tetiklenmez, sadece gerçek tıklamada çalışır.
+        if (tile != null && tile.GetSpecial() != TileSpecial.None)
+        {
+            selected = null;
+            StartCoroutine(ProcessSpecialTap(tile));
+            return;
+        }
+
         if (selected == null) { selected = tile; return; }
         if (selected == tile) { selected = null; return; }
         if (AreNeighbors(selected, tile))
@@ -1265,6 +1292,32 @@ public class BoardController : MonoBehaviour
     // ═══════════════════════════════════════════════════════════════
     //  ProcessSwap
     // ═══════════════════════════════════════════════════════════════
+
+    // Special'ı yerinde (swap olmadan) tek tıkla aktive eder. Bir hamle tüketir,
+    // ResolveSpecialSolo'yu oynatır, sonra board'u (cascade) çözer — swap'ın special
+    // dalıyla aynı sonlandırma.
+    IEnumerator ProcessSpecialTap(TileView tile)
+    {
+        if (tile == null || tile.GetSpecial() == TileSpecial.None)
+            yield break;
+
+        if (IsBusy) yield break;
+
+        oilSuppressionCellsThisMove.Clear();
+        oilSpreadResolvedThisMove = false;
+
+        BeginBusy();
+        lastSwapA = tile; lastSwapB = null; lastSwapUserMove = true;
+        SyncAllTilesToGridData();
+
+        ConsumeMove();
+
+        actionSequencer.Enqueue(specialResolver.ResolveSpecialSolo(tile));
+        yield return AnimateQueuedActions();
+
+        yield return ResolveBoard(allowSpecialActivation: false, resolveEmptyCellsFirst: true);
+        EndBusy();
+    }
 
     IEnumerator ProcessSwap(TileView a, TileView b)
     {
@@ -2056,6 +2109,22 @@ public class BoardController : MonoBehaviour
                 matchTiles.Remove(created);
                 nonSpecialMatchTiles.Remove(created);
                 preservedSpecialTiles.Add(created);
+
+                // Special bu hücrede bir MATCH sonucu oluştu. Taş special'a dönüştüğü için
+                // clear setinden çıkarıldı; ama match mantıksal olarak burada gerçekleşti —
+                // hücrenin ALTINDAKİ obstacle (mud vb.) yine de bu match'ten hasar almalı.
+                // Aksi hâlde "swap'la special oluşan hücredeki obstacle hiç vurulmadı" olur.
+                if (obstacleStateService != null
+                    && obstacleStateService.HasObstacleAt(created.X, created.Y)
+                    && !obstacleStateService.IsMovableObstacleAt(created.X, created.Y))
+                {
+                    var createdCellContext = IsSpecialActivationPhase
+                        ? ObstacleHitContext.SpecialActivation
+                        : ObstacleHitContext.NormalMatch;
+                    var createdCellHit = ApplyObstacleDamageAt(created.X, created.Y, createdCellContext);
+                    if (createdCellHit.didHit)
+                        TriggerObstacleVisualChange(createdCellHit.visualChange);
+                }
 
                 shakeNextClear = true;
 

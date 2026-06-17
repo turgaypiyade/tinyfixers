@@ -17,7 +17,7 @@ MonoBehaviour:
   - nameLocalizationKey: 
     stageName: Yaza Merhaba...
     starCost: 2
-    stageImage: {fileID: 21300000, guid: c5d84dd50ee2747119af15fa13ca6e2b, type: 3}
+    stageImage: {fileID: 21300000, guid: 4521c033365614105b1d105bdfdbc8e7, type: 3}
     taskIcon: {fileID: 21300000, guid: e684ed7c70253417fb9d85e09bf981c3, type: 3}
     vfxFocusNormalized: {x: 0.5, y: 0.5}
     sfxOnComplete: {fileID: 0}

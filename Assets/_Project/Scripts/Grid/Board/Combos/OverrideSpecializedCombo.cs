@@ -63,7 +63,7 @@ public sealed class OverrideSpecializedCombo
         if (useLineBatch)
             return ExecuteOverrideLineInBatches(rt, result, deferredSpecials, overrideTile, otherTile);
 
-        ExecuteNonLineOverride(rt, result, deferredSpecials, targetSpecial);
+        ExecuteNonLineOverride(rt, result, deferredSpecials, targetSpecial, overrideTile, otherTile);
         return result;
     }
 
@@ -167,7 +167,9 @@ public sealed class OverrideSpecializedCombo
         OverrideSpecializedComboExecutionRuntime rt,
         OverrideSpecializedComboExecutionResult result,
         List<Vector2Int> deferredSpecials,
-        TileSpecial targetSpecial)
+        TileSpecial targetSpecial,
+        TileView overrideTile,
+        TileView otherTile)
     {
         // For PulseCore target: suppress immediate activation of implanted PulseCores
         // so they can fire sequentially after the placement animation.
@@ -179,6 +181,18 @@ public sealed class OverrideSpecializedCombo
             var fanoutActions = rt.ProcessFanout(rt.Context);
             if (fanoutActions != null && fanoutActions.Count > 0)
                 result.Actions.AddRange(fanoutActions);
+        }
+
+        // KRİTİK (PulseCore): kaynak override + pulse ikonları, fanout yerleşimi biter bitmez
+        // temizlensin. Aksi hâlde ctx.Affected'te kalıp tüm sıralı pulse patlamaları boyunca
+        // ekranda asılı durup ancak en sondaki BuildClearAction'da yok oluyorlardı
+        // ("bombaları koydu ama kendi ikonu ortada kaldı, en son kayboldu").
+        if (targetSpecial == TileSpecial.PulseCore)
+        {
+            var sourcePayload = BuildSourcePairClearPayload(overrideTile, otherTile);
+            ConsumeSourcePairForBatchMode(rt, overrideTile, otherTile);
+            if (sourcePayload.Action != null)
+                result.Actions.Add(sourcePayload.Action);
         }
 
         if (targetSpecial == TileSpecial.PulseCore)

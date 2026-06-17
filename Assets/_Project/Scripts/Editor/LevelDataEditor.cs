@@ -125,8 +125,16 @@ public class LevelDataEditor : Editor
         if (level.levelKind != LevelKind.BossDuel)
             return;
 
-        level.bossAttackEveryMoves = Mathf.Max(1, EditorGUILayout.IntField("Boss Attack Every N Moves", Mathf.Max(1, level.bossAttackEveryMoves)));
-        level.bossAttackOilCount = Mathf.Max(0, EditorGUILayout.IntField("Oil Per Attack", Mathf.Max(0, level.bossAttackOilCount)));
+        EditorGUILayout.LabelField("Battlefield", EditorStyles.miniBoldLabel);
+        level.playerMaxHp = Mathf.Max(1, EditorGUILayout.IntField("Player Max HP (yeşil bar)", Mathf.Max(1, level.playerMaxHp)));
+        level.damagePerClearedTile = Mathf.Max(0, EditorGUILayout.IntField("Damage Per Cleared Tile", Mathf.Max(0, level.damagePerClearedTile)));
+        level.enemyAttackBaseDamage = Mathf.Max(0, EditorGUILayout.IntField("Enemy Base Damage", Mathf.Max(0, level.enemyAttackBaseDamage)));
+        level.enemyAttackDamageGrowth = Mathf.Max(0, EditorGUILayout.IntField("Enemy Damage Growth / Attack", Mathf.Max(0, level.enemyAttackDamageGrowth)));
+
+        EditorGUILayout.Space(2);
+        EditorGUILayout.LabelField("Oil (opsiyonel baskı)", EditorStyles.miniBoldLabel);
+        level.bossAttackEveryMoves = Mathf.Max(1, EditorGUILayout.IntField("Oil Every N Turns", Mathf.Max(1, level.bossAttackEveryMoves)));
+        level.bossAttackOilCount = Mathf.Max(0, EditorGUILayout.IntField("Oil Per Attack (0 = kapalı)", Mathf.Max(0, level.bossAttackOilCount)));
 
         bool hasBossGoal = false;
         if (level.goals != null)

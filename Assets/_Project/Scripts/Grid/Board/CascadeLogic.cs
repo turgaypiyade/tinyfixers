@@ -382,7 +382,7 @@ public class CascadeLogic
             // 2. Spawn for remaining slots
             if (touchesSpawn)
             {
-                int nextSpawnY = topY + board.SpawnStartOffsetY;
+                int nextSpawnY = topY - 1 - board.SpawnFeedGap;
                 
                 for (int i = segmentTiles.Count; i < slotYs.Count; i++)
                 {

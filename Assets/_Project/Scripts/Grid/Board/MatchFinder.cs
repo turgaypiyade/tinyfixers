@@ -69,6 +69,11 @@ public class MatchFinder
 
             if (board.ObstacleStateService.IsInteractionLockedAt(data.X, data.Y))
                 return false;
+
+            // Oil-kaplı taş eşleşemez (Design B): oil yalnızca KOMŞU eşleşmelerle
+            // temizlenir; altındaki taş oil kalkana kadar match'e girmez.
+            if (board.ObstacleStateService.IsOilAt(data.X, data.Y))
+                return false;
         }
 
         return true;
@@ -85,6 +90,10 @@ public class MatchFinder
                 return false;
 
             if (board.ObstacleStateService.IsInteractionLockedAt(tile.X, tile.Y))
+                return false;
+
+            // Oil-kaplı taş eşleşemez (Design B): oil sadece komşu eşleşmelerle temizlenir.
+            if (board.ObstacleStateService.IsOilAt(tile.X, tile.Y))
                 return false;
         }
 
@@ -441,7 +450,11 @@ public class MatchFinder
     //  DecideSpecialAt — uses cached run lengths with auto-rebuild
     // ─────────────────────────────────────────────────────────────
 
-    public TileSpecial DecideSpecialAt(int x, int y)
+    // swapHorizontal: bu hücrede special, oyuncunun SWAP'ı sonucu oluşuyorsa parmak
+    // hareketinin yönü (true=yatay swap, false=dikey swap). 4'lü Line yönü buna göre
+    // belirlenir: yatay swap→LineH, dikey swap→LineV. null ise (cascade/otomatik match,
+    // hareket yok) eski davranış: match geometrisi (hLen>=vLen).
+    public TileSpecial DecideSpecialAt(int x, int y, bool? swapHorizontal = null)
     {
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return TileSpecial.None;
         if (!IsNormalMatchable(board.GridData[x, y])) return TileSpecial.None;
@@ -458,7 +471,12 @@ public class MatchFinder
 
         if (hLen >= 3 && vLen >= 3) return TileSpecial.PulseCore;
 
-        if (best == 4) return (hLen >= vLen) ? TileSpecial.LineH : TileSpecial.LineV;
+        if (best == 4)
+        {
+            if (swapHorizontal.HasValue)
+                return swapHorizontal.Value ? TileSpecial.LineH : TileSpecial.LineV;
+            return (hLen >= vLen) ? TileSpecial.LineH : TileSpecial.LineV;
+        }
 
         if (Has2x2At(x, y)) return TileSpecial.PatchBot;
 
@@ -840,7 +858,8 @@ public class MatchFinder
             return false;
 
         if (board.ObstacleStateService != null &&
-            board.ObstacleStateService.IsInteractionLockedAt(x, y))
+            (board.ObstacleStateService.IsInteractionLockedAt(x, y)
+             || board.ObstacleStateService.IsOilAt(x, y)))
             return false;
 
         return board.Tiles[x, y] != null;
@@ -860,6 +879,10 @@ public class MatchFinder
                 return false;
 
             if (board.ObstacleStateService.IsInteractionLockedAt(tile.X, tile.Y))
+                return false;
+
+            // Oil taşı swap edilemez → oynanabilir-hamle/deadlock tespitinde de sayılmaz.
+            if (board.ObstacleStateService.IsOilAt(tile.X, tile.Y))
                 return false;
         }
 

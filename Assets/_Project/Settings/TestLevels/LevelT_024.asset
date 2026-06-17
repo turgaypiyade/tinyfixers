@@ -17,15 +17,19 @@ MonoBehaviour:
   moves: 30
   baseCoinReward: 10
   goals:
-  - targetType: 1
+  - targetType: 2
     tileType: 0
-    obstacleId: 4
-    collectibleId: 1
+    obstacleId: 1
+    collectibleId: 2
     iconOverride: {fileID: 0}
-    amount: 36
-  levelKind: 0
+    amount: 600
+  levelKind: 1
   bossAttackEveryMoves: 3
   bossAttackOilCount: 2
+  playerMaxHp: 560
+  damagePerClearedTile: 10
+  enemyAttackBaseDamage: 20
+  enemyAttackDamageGrowth: 6
   randomPool: 
   energyPerContainer: 1
   comboTutorial: 0

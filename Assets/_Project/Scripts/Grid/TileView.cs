@@ -142,24 +142,6 @@ public class TileView : MonoBehaviour,
         dragConsumedSwap = false;
         wasDragging = false;
 
-        // ── DEBUG (sadece ilk tile için logla) ──
-        if (x == 1 && y == 1)
-        {
-            var cam = GetComponentInParent<Canvas>()?.worldCamera;
-            if (cam != null)
-            {
-                Debug.Log($"[TileDebug] Camera clearFlags: {cam.clearFlags}");
-                Debug.Log($"[TileDebug] Camera bgColor: {cam.backgroundColor}");
-                Debug.Log($"[TileDebug] Camera HDR: {cam.allowHDR}");
-
-                var vol = cam.GetComponent<UnityEngine.Rendering.Volume>();
-                Debug.Log($"[TileDebug] PostProcess Volume: {(vol != null ? "VAR" : "YOK")}");
-            }
-
-            var parentImages = GetComponentsInParent<UnityEngine.UI.Image>(true);
-            foreach (var img in parentImages)
-                Debug.Log($"[TileDebug] Parent Image: {img.gameObject.name} color={img.color} raycast={img.raycastTarget}");
-        }
     }
 
     private void ResetVisualState()

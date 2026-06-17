@@ -69,7 +69,9 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     public bool enableTrailBeam = false;
 
     [Header("Timing")]
-    public float stepDuration = 0.06f;
+    [Tooltip("Işının hücre başına seyahat süresi (sn). Düşük = LineV/LineH daha hızlı süpürür. " +
+             "0.06 eski, 0.05 ~%17 hızlı. Combo senkronu EstimateDuration üzerinden otomatik uyar.")]
+    public float stepDuration = 0.05f;
     public float postDelay = 0.02f;
 
     [Header("Cleanup")]

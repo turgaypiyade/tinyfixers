@@ -142,10 +142,20 @@ public class LevelData : ScriptableObject
     public LevelKind levelKind = LevelKind.Normal;
 
     [Header("Boss Duel")]
-    [Tooltip("Boss kaç oyuncu hamlesinde bir saldırır.")]
+    [Tooltip("Boss kaç oyuncu hamlesinde bir EKSTRA oil saldırısı yapar (lazer her tur vurur, bu sadece oil sıklığı).")]
     [Min(1)] public int bossAttackEveryMoves = 3;
-    [Tooltip("Her boss saldırısında board'a fırlatılan oil sayısı.")]
+    [Tooltip("Her oil saldırısında board'a fırlatılan oil sayısı. 0 = oil yok, sadece lazer.")]
     [Min(0)] public int bossAttackOilCount = 2;
+
+    [Header("Battlefield (BossDuel)")]
+    [Tooltip("Oyuncu (sol robot) başlangıç/maks canı. 0 olunca level kaybedilir. Düşman HP'si BossDamage goal amount'tan gelir.")]
+    [Min(1)] public int playerMaxHp = 560;
+    [Tooltip("Temizlenen taş başına düşmana verilen hasar (her taş = 1 vuruş).")]
+    [Min(0)] public int damagePerClearedTile = 10;
+    [Tooltip("Düşmanın ilk saldırısındaki temel hasar.")]
+    [Min(0)] public int enemyAttackBaseDamage = 20;
+    [Tooltip("Düşman saldırı hasarının her saldırıda artış miktarı (telgraflı yükseliş).")]
+    [Min(0)] public int enemyAttackDamageGrowth = 6;
 
     [Header("Random Pool")]
     [Tooltip("Bu levelda random üretilecek taş tipleri. DOLUYSA GridSpawner'daki varsayılan " +

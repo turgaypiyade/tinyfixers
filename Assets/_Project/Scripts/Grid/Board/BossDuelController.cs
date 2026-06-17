@@ -1,380 +1,512 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
-/// Robot Düellosu mini-oyunu (LevelKind.BossDuel) kontrolcüsü.
+/// Battlefield / Robot Düellosu (LevelKind.BossDuel).
 ///
-/// Boss, TopHUD ile grid arasındaki şeritte KOLON KOLON hareket eden bir hedeftir.
-/// Vurmak pozisyoneldir: boss'un o an üzerinde durduğu kolonda bir LineV patlatırsan
-/// büyük hasar; PulseCore patlaması boss kolonuna yakınsa orta hasar. Boss her oyuncu
-/// hamlesinden sonra yeni bir kolona kayar — önceden tahmin edip tuzak kurman gerekir.
+/// İki robot karşılıklı durur: sol = oyuncu (yeşil HP), sağ = düşman (mor HP).
+/// - Her hamlede temizlenen TAŞ SAYISI kadar oyuncu robotu rapid-fire lazer atar;
+///   her atış düşman HP'sinden hasar düşürür (büyük combo = çok atış = çok hasar).
+/// - Her hamleden SONRA düşman, kısa bir telgraf (yüklenme) sonrası oyuncuya lazer
+///   atar; hasar her saldırıda artar (escalating). Opsiyonel oil baskısı da yapar.
+/// - Düşman HP = Collectible/BossDamage goal (0 olunca mevcut WIN akışı tetiklenir).
+/// - Oyuncu HP 0 olunca board.RequestLevelFail() ile LOSE.
+/// - Hamle sınırsız: her turun sonunda tüketilen hamle geri eklenir.
 ///
-/// Boss her N hamlede bir karşılık verir: board'a oil fırlatır ya da bir special'ını
-/// etkisizleştirir (disarm: special → normal taş).
-///
-/// Kazanma koşulu mevcut goal sistemine bindirilmiştir: level'a Collectible/BossDamage
-/// goal'ü eklenir (amount = boss HP); goal bitince level normal akışla kazanılır.
-///
-/// Sahne kurulumu: BoardContent yanına ekle; board + topHud referansları; bossVisual =
-/// TopHUD ile grid arasına yerleştirilmiş boss Image'ı (Y'sini sen ayarla, X'i controller
-/// kolona göre sürer).
+/// Sahne kurulumu: BoardContent yanına ekle; board + topHud + iki robot RectTransform +
+/// iki HpBar + vfxRoot + bolt/impact prefab referanslarını bağla. Görseller placeholder
+/// olabilir; mantık sprite'sız da çalışır.
 /// </summary>
 public sealed class BossDuelController : MonoBehaviour
 {
-    [Header("Refs")]
+    [Header("Core Refs")]
     [SerializeField] private BoardController board;
     [SerializeField] private TopHudController topHud;
 
-    [Header("Boss Visual")]
-    [Tooltip("TopHUD ile grid arasındaki boss görseli. Y pozisyonu sahnede ayarlanır; X'i controller boss kolonuna göre sürer.")]
-    [SerializeField] private RectTransform bossVisual;
-    [SerializeField, Min(0.05f)] private float hopDuration = 0.25f;
-    [SerializeField, Min(0f)] private float damageShakeDuration = 0.12f;
-    [SerializeField, Min(0f)] private float damageShakeStrength = 8f;
-    [SerializeField, Min(0f)] private float attackPunchScale = 1.18f;
-    [SerializeField, Min(0f)] private float attackPunchDuration = 0.18f;
+    [Header("Robots")]
+    [SerializeField] private RectTransform playerRobot;     // sol
+    [SerializeField] private RectTransform enemyRobot;       // sağ
+    [Tooltip("İki top-kol (ikisi de öne ateş eder). Geri tepme bunlarda olur; boşsa gövde tween'lenir.")]
+    [SerializeField] private RectTransform playerArmA;
+    [SerializeField] private RectTransform playerArmB;
+    [SerializeField] private RectTransform enemyArmA;
+    [SerializeField] private RectTransform enemyArmB;
+    [Tooltip("Her kolun namlu ucu (lazer çıkış noktası). Boşsa robot merkezinden çıkar.")]
+    [SerializeField] private RectTransform playerMuzzleA;
+    [SerializeField] private RectTransform playerMuzzleB;
+    [SerializeField] private RectTransform enemyMuzzleA;
+    [SerializeField] private RectTransform enemyMuzzleB;
 
-    [Header("Hareket")]
-    [Tooltip("Her oyuncu hamlesinden sonra boss en fazla kaç kolon kayar.")]
-    [SerializeField, Range(1, 4)] private int maxHopColumns = 2;
+    [Header("HP Bars")]
+    [SerializeField] private HpBar playerHpBar;
+    [SerializeField] private HpBar enemyHpBar;
 
-    [Header("Hasar Ayarları")]
-    [Tooltip("Boss'un kolonunda patlayan LineV'nin verdiği hasar.")]
-    [SerializeField, Min(0)] private int lineVHitDamage = 30;
-    [Tooltip("PulseCore patlamasının hasarı (boss kolonuna yeterince yakınsa).")]
-    [SerializeField, Min(0)] private int pulseHitDamage = 15;
-    [Tooltip("Pulse patlaması boss kolonundan en fazla bu kadar kolon uzaktaysa isabet sayılır.")]
-    [SerializeField, Range(0, 4)] private int pulseHitColumnRadius = 2;
-    [Tooltip("Temizlenen taş başına çip hasarı (0 = sadece special'lar vurur).")]
-    [SerializeField, Min(0)] private int damagePerTileCleared = 0;
-    [Tooltip("Beam görseli boss'a ulaşana kadarki gecikme — hasar/sarsıntı bu kadar geç işlenir.")]
-    [SerializeField, Min(0f)] private float lineVHitVisualDelay = 0.15f;
+    [Header("Bolt / VFX")]
+    [Tooltip("Lazer mermisi spawn'lanacak kök (robotların ve board'ın üstünde bir RectTransform).")]
+    [SerializeField] private RectTransform vfxRoot;
+    [Tooltip("Oyuncu lazer mermisi (yeşil). Boşsa beyaz dikdörtgen üretilir.")]
+    [SerializeField] private Image playerBoltPrefab;
+    [Tooltip("Düşman lazer mermisi (kırmızı).")]
+    [SerializeField] private Image enemyBoltPrefab;
+    [Tooltip("Oyuncu namlu çakması (muzzleLeft).")]
+    [SerializeField] private Image playerMuzzleFlashPrefab;
+    [Tooltip("Düşman namlu çakması (muzzleRight).")]
+    [SerializeField] private Image enemyMuzzleFlashPrefab;
+    [SerializeField] private Image impactPrefab;
+    [SerializeField] private Vector2 boltSize = new Vector2(64f, 18f);
+    [Tooltip("Renkli sprite kullanıyorsan BEYAZ bırak (sprite'ı yeniden boyamasın). Placeholder için renk girilebilir.")]
+    [SerializeField] private Color playerBoltColor = Color.white;
+    [SerializeField] private Color enemyBoltColor = Color.white;
 
-    [Header("Saldırı")]
-    [Tooltip("Board'da special varken boss'un oil yerine special-disarm seçme olasılığı.")]
-    [SerializeField, Range(0f, 1f)] private float disarmChance = 0.5f;
+    [Header("Strike Feel")]
+    [SerializeField, Min(0.01f)] private float strikeInterval = 0.07f;     // atışlar arası
+    [SerializeField, Min(0.02f)] private float boltTravelDuration = 0.12f;
+    [Tooltip("Çok büyük combolarda görünen atış sayısı tavanı (hasar tamı uygulanır, sadece görsel azaltılır).")]
+    [SerializeField, Min(1)] private int maxVisualStrikes = 12;
+    [SerializeField, Min(0f)] private float recoilDistance = 16f;
+    [SerializeField, Min(0.02f)] private float recoilDuration = 0.08f;
 
-    private readonly List<TopHudController.ActiveGoal> goalsBuffer = new();
+    [Header("Enemy Turn")]
+    [Tooltip("Düşmanın ateşten önceki yüklenme (telgraf) süresi.")]
+    [SerializeField, Min(0f)] private float enemyTelegraphDuration = 0.4f;
+    [SerializeField, Min(0f)] private float robotHitShakeDuration = 0.16f;
+    [SerializeField, Min(0f)] private float robotHitShakeStrength = 10f;
 
+    // ── State ──
     private bool bossModeActive;
-    private int bossColumn;
+    private bool turnRunning;
+    private bool collectingClears;
+    private int clearsThisMove;
     private int previousRemainingMoves = -1;
-    private int movesSinceAttack;
-    private bool attackPending;
-    private Coroutine shakeCo;
-    private Coroutine hopCo;
 
-    private void Start()
-    {
-        StartCoroutine(InitWhenLevelReady());
-    }
+    private int enemyHp, enemyMaxHp;
+    private int playerHp, playerMaxHp;
+    private int enemyAttackCount;
+    private int movesSinceOil;
+
+    private int damagePerTile;
+    private int enemyBaseDamage;
+    private int enemyDamageGrowth;
+
+    private void Start() => StartCoroutine(InitWhenLevelReady());
 
     private IEnumerator InitWhenLevelReady()
     {
         while (board != null && board.ActiveLevelData == null)
             yield return null;
 
-        if (board == null || board.ActiveLevelData == null ||
-            board.ActiveLevelData.levelKind != LevelKind.BossDuel)
+        var level = board != null ? board.ActiveLevelData : null;
+
+        if (board == null || level == null || level.levelKind != LevelKind.BossDuel)
         {
-            if (bossVisual != null)
-                bossVisual.gameObject.SetActive(false);
+            SetRobotsVisible(false);
+            enabled = false;
+            yield break;
+        }
+
+        enemyMaxHp = ReadBossGoalAmount(level);
+        if (enemyMaxHp <= 0)
+        {
+            Debug.LogWarning("[Battlefield] BossDamage goal'ü yok/0 — düello çalışamaz. Level goals'a Collectible=BossDamage ekleyin.");
             enabled = false;
             yield break;
         }
 
         bossModeActive = true;
+        enemyHp = enemyMaxHp;
+        playerMaxHp = Mathf.Max(1, level.playerMaxHp);
+        playerHp = playerMaxHp;
+        damagePerTile = Mathf.Max(0, level.damagePerClearedTile);
+        enemyBaseDamage = Mathf.Max(0, level.enemyAttackBaseDamage);
+        enemyDamageGrowth = Mathf.Max(0, level.enemyAttackDamageGrowth);
         previousRemainingMoves = board.RemainingMoves;
-        bossColumn = board.Width / 2;
 
-        if (bossVisual != null)
-        {
-            bossVisual.gameObject.SetActive(true);
-            SnapBossVisualToColumn(bossColumn);
-        }
+        SetRobotsVisible(true);
+        playerHpBar?.Init(playerMaxHp);
+        enemyHpBar?.Init(enemyMaxHp);
 
         board.OnTilesCleared += HandleTilesCleared;
         board.OnMovesChanged += HandleMovesChanged;
-        board.OnLineSweepStarted += HandleLineSweepStarted;
-        PulseBehaviorEvents.PulseExplosionPlayed += HandlePulseExplosionPlayed;
-
-        if (topHud == null)
-            Debug.LogWarning("[BossDuel] topHud referansı yok — boss hasarı goal'e işlenemez.");
     }
 
     private void OnDestroy()
     {
-        PulseBehaviorEvents.PulseExplosionPlayed -= HandlePulseExplosionPlayed;
         if (board == null) return;
         board.OnTilesCleared -= HandleTilesCleared;
         board.OnMovesChanged -= HandleMovesChanged;
-        board.OnLineSweepStarted -= HandleLineSweepStarted;
     }
 
-    // ─── İsabetler ────────────────────────────────────────────────────────
-
-    private void HandleLineSweepStarted(LightningLineStrike strike, float delay)
+    private int ReadBossGoalAmount(LevelData level)
     {
-        if (!bossModeActive || lineVHitDamage <= 0 || IsBossDefeated())
-            return;
-
-        // Sadece dikey beam'ler yukarı taşar; boss'un o anki kolonuyla hizalıysa isabet.
-        if (strike.isHorizontal || strike.originCell.x != bossColumn)
-            return;
-
-        StartCoroutine(ApplyDamageAfterDelay(lineVHitDamage, delay + lineVHitVisualDelay));
+        if (level?.goals == null) return 0;
+        foreach (var g in level.goals)
+            if (g != null && g.targetType == LevelGoalTargetType.Collectible && g.collectibleId == CollectibleId.BossDamage)
+                return Mathf.Max(0, g.amount);
+        return 0;
     }
 
-    private void HandlePulseExplosionPlayed(Vector2Int cell)
+    private void SetRobotsVisible(bool visible)
     {
-        if (!bossModeActive || pulseHitDamage <= 0 || IsBossDefeated())
-            return;
-
-        if (Mathf.Abs(cell.x - bossColumn) > pulseHitColumnRadius)
-            return;
-
-        ApplyDamage(pulseHitDamage);
+        if (playerRobot != null) playerRobot.gameObject.SetActive(visible);
+        if (enemyRobot != null) enemyRobot.gameObject.SetActive(visible);
     }
+
+    // ── Hamle algılama + temizlenen taş sayımı ──
 
     private void HandleTilesCleared(TileType type, int amount)
     {
-        if (!bossModeActive || damagePerTileCleared <= 0 || amount <= 0 || IsBossDefeated())
-            return;
-
-        ApplyDamage(amount * damagePerTileCleared);
+        if (collectingClears && amount > 0)
+            clearsThisMove += amount;
     }
-
-    private IEnumerator ApplyDamageAfterDelay(int damage, float delay)
-    {
-        if (delay > 0f)
-            yield return new WaitForSeconds(delay);
-
-        if (bossModeActive && !IsBossDefeated())
-            ApplyDamage(damage);
-    }
-
-    private void ApplyDamage(int damage)
-    {
-        if (damage <= 0) return;
-        topHud?.NotifyCollectibleCollected(CollectibleId.BossDamage, damage);
-        PlayDamageShake();
-    }
-
-    private bool IsBossDefeated()
-    {
-        if (topHud == null) return false;
-
-        goalsBuffer.Clear();
-        topHud.GetActiveGoals(goalsBuffer);
-
-        for (int i = 0; i < goalsBuffer.Count; i++)
-        {
-            var goal = goalsBuffer[i];
-            if (goal.targetType == LevelGoalTargetType.Collectible &&
-                goal.collectibleId == CollectibleId.BossDamage)
-                return goal.remaining <= 0;
-        }
-
-        // BossDamage goal'ü tanımlanmamış — düello fiilen çalışamaz.
-        return true;
-    }
-
-    // ─── Hamle akışı: boss hareketi + saldırı sayacı ─────────────────────
 
     private void HandleMovesChanged(int remainingMoves)
     {
-        if (!bossModeActive)
-            return;
+        if (!bossModeActive) return;
 
-        // OnMovesChanged AddMoves'ta da tetiklenir; sadece azalma = hamle.
         bool moveConsumed = previousRemainingMoves >= 0 && remainingMoves < previousRemainingMoves;
         previousRemainingMoves = remainingMoves;
 
-        if (!moveConsumed || IsBossDefeated())
+        if (!moveConsumed || turnRunning || IsOver())
             return;
 
-        movesSinceAttack++;
-
-        // ÖNEMLİ: ConsumeMove swap kabulünde tetiklenir — yani bu hamlenin beam'leri
-        // HENÜZ ateşlenmedi. Boss'un sıçraması ve saldırısı hamlenin çözümü bittikten
-        // sonra yapılır; aksi hâlde oyuncu gördüğü hedefe nişan alamaz.
-        if (!attackPending)
-        {
-            attackPending = true;
-            StartCoroutine(ResolveBossTurn());
-        }
+        // ConsumeMove swap kabulünde tetiklenir — bu hamlenin taşları HENÜZ temizlenmedi.
+        // Şimdi sayıma başla; resolve boyunca biriksin.
+        clearsThisMove = 0;
+        collectingClears = true;
+        turnRunning = true;
+        StartCoroutine(ResolveBattleTurn());
     }
 
-    private IEnumerator ResolveBossTurn()
+    private bool IsOver() => enemyHp <= 0 || playerHp <= 0 || !bossModeActive;
+
+    private IEnumerator ResolveBattleTurn()
     {
-        try
+        // 1) Hamlenin tüm çözümünü bekle (cascade + special + arka plan job).
+        float safety = 0f;
+        while ((board.IsBusy || board.ActiveBackgroundJobs > 0) && safety < 12f)
         {
-            float safety = 0f;
-            while ((board.IsBusy || board.ActiveBackgroundJobs > 0) && safety < 12f)
-            {
-                safety += Time.deltaTime;
-                yield return null;
-            }
-
-            if (!bossModeActive || IsBossDefeated() || board.RemainingMoves <= 0)
-                yield break;
-
-            HopToNewColumn();
-
-            var level = board.ActiveLevelData;
-            if (level == null || movesSinceAttack < Mathf.Max(1, level.bossAttackEveryMoves))
-                yield break;
-
-            movesSinceAttack = 0;
-
-            // Sıçramanın oturmasını bekle, sonra saldır.
-            yield return new WaitForSeconds(hopDuration);
-
-            PlayAttackPunch();
-
-            // Board'da special varsa şansa göre disarm; yoksa / şans tutmazsa oil.
-            if (Random.value < disarmChance && TryDisarmRandomSpecial())
-                yield break;
-
-            ThrowOil(level.bossAttackOilCount);
-        }
-        finally
-        {
-            attackPending = false;
-        }
-    }
-
-    // ─── Boss hareketi ────────────────────────────────────────────────────
-
-    private void HopToNewColumn()
-    {
-        int width = Mathf.Max(1, board.Width);
-        if (width == 1) return;
-
-        // Yerinde kalmasın: ±1..maxHop aralığında, board içinde yeni kolon seç.
-        int newColumn = bossColumn;
-        for (int attempt = 0; attempt < 8 && newColumn == bossColumn; attempt++)
-        {
-            int offset = Random.Range(1, maxHopColumns + 1) * (Random.value < 0.5f ? -1 : 1);
-            newColumn = Mathf.Clamp(bossColumn + offset, 0, width - 1);
-        }
-
-        if (newColumn == bossColumn)
-            newColumn = bossColumn > 0 ? bossColumn - 1 : bossColumn + 1;
-
-        bossColumn = newColumn;
-
-        if (bossVisual == null)
-            return;
-
-        // Hop pozisyonun otoritesidir: süren bir shake'i durdur ve görseli temiz
-        // tabana oturt — yoksa ikisi aynı anchoredPosition için yarışır.
-        if (shakeCo != null)
-        {
-            StopCoroutine(shakeCo);
-            shakeCo = null;
-            bossVisual.anchoredPosition = shakeBasePos;
-        }
-
-        if (hopCo != null) StopCoroutine(hopCo);
-        hopCo = StartCoroutine(HopRoutine(GetBossAnchoredX(bossColumn)));
-    }
-
-    private float GetBossAnchoredX(int column)
-    {
-        var parentRt = bossVisual.parent as RectTransform;
-        if (parentRt == null)
-            return bossVisual.anchoredPosition.x;
-
-        // Kolonun üst hücresinin merkez X'i; Y sahnedeki ayarda kalır.
-        Vector3 world = board.GetCellWorldPosition(column, 0)
-                        + (board.Parent != null ? board.Parent.TransformVector(new Vector3(board.TileSize * 0.5f, 0f, 0f)) : Vector3.zero);
-        return board.WorldToAnchoredIn(parentRt, world).x;
-    }
-
-    private void SnapBossVisualToColumn(int column)
-    {
-        var pos = bossVisual.anchoredPosition;
-        pos.x = GetBossAnchoredX(column);
-        bossVisual.anchoredPosition = pos;
-    }
-
-    private IEnumerator HopRoutine(float targetX)
-    {
-        float startX = bossVisual.anchoredPosition.x;
-        float baseY = bossVisual.anchoredPosition.y;
-        float hopLift = board.TileSize * 0.25f;
-
-        float t = 0f;
-        while (t < hopDuration)
-        {
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / hopDuration);
-            float eased = k * k * (3f - 2f * k);
-            float lift = Mathf.Sin(k * Mathf.PI) * hopLift;
-
-            bossVisual.anchoredPosition = new Vector2(
-                Mathf.Lerp(startX, targetX, eased),
-                baseY + lift);
+            safety += Time.deltaTime;
             yield return null;
         }
 
-        bossVisual.anchoredPosition = new Vector2(targetX, baseY);
-        hopCo = null;
+        collectingClears = false;
+        int strikes = clearsThisMove;
+
+        // Vuruş + düşman fazı boyunca oyuncu araya hamle sokmasın (board idle ama tur sürüyor).
+        board.SetInputLocked(true);
+
+        try
+        {
+            // 2) Oyuncu rapid-fire: her taş = 1 vuruş.
+            if (strikes > 0 && damagePerTile > 0 && !IsOver())
+                yield return PlayerFireStrikes(strikes);
+
+            // Düşman bu turda öldüyse: WIN goal'den tetiklenir, karşılık yok.
+            if (IsOver())
+                yield break;
+
+            // 3) Düşman turu: telgraf + ateş → oyuncu HP.
+            yield return EnemyAttack();
+
+            // 4) Lose kontrolü.
+            if (playerHp <= 0)
+            {
+                bossModeActive = false;
+                board.RequestLevelFail();
+                yield break;
+            }
+
+            // 5) Hamle sınırsız: tüketilen hamleyi geri ekle.
+            board.AddMoves(1);
+        }
+        finally
+        {
+            turnRunning = false;
+            // Oyun devam ediyorsa input'u aç; win/lose'da LevelEnd akışı kilitler.
+            if (bossModeActive && enemyHp > 0 && playerHp > 0)
+                board.SetInputLocked(false);
+        }
     }
 
-    // ─── Boss saldırıları ─────────────────────────────────────────────────
+    // ── Oyuncu saldırısı ──
 
-    // Boss bir special'ı etkisizleştirir: special → normal taş ("vuruldu" hissi).
-    private bool TryDisarmRandomSpecial()
+    private IEnumerator PlayerFireStrikes(int strikes)
     {
-        var specials = new List<TileView>();
+        int totalDamage = strikes * damagePerTile;
+        int visualStrikes = Mathf.Clamp(strikes, 1, maxVisualStrikes);
+        int remainingDamage = totalDamage;
 
-        for (int x = 0; x < board.Width; x++)
+        for (int i = 0; i < visualStrikes && !IsOver(); i++)
         {
-            for (int y = 0; y < board.Height; y++)
-            {
-                var tile = board.Tiles[x, y];
-                if (tile == null || board.GridData[x, y] == null) continue;
-                if (tile.GetSpecial() == TileSpecial.None) continue;
-                if (board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y)) continue;
+            int dmg = (i == visualStrikes - 1)
+                ? remainingDamage
+                : Mathf.Max(1, Mathf.RoundToInt((float)totalDamage / visualStrikes));
+            dmg = Mathf.Min(dmg, remainingDamage);
+            remainingDamage -= dmg;
 
-                specials.Add(tile);
-            }
+            // İki kol sırayla ateşler (sol-sağ-sol...). Biri boşsa diğerine düşer.
+            bool useA = (i % 2 == 0);
+            var arm = Pick(playerArmA, playerArmB, useA);
+            var muzzle = Pick(playerMuzzleA, playerMuzzleB, useA);
+
+            PlayRecoil(arm != null ? arm : playerRobot, +1f);
+            FireBolt(GetMuzzleWorld(muzzle, playerRobot, +1f), enemyRobot, playerBoltColor, playerBoltPrefab, playerMuzzleFlashPrefab,
+                () => ApplyEnemyDamage(dmg));
+
+            yield return new WaitForSeconds(strikeInterval);
+        }
+    }
+
+    private void ApplyEnemyDamage(int dmg)
+    {
+        if (dmg <= 0 || enemyHp <= 0) return;
+
+        enemyHp = Mathf.Max(0, enemyHp - dmg);
+        enemyHpBar?.Set(enemyHp);
+        PlayRobotHitFeedback(enemyRobot);
+
+        // Mevcut goal/WIN akışını ilerlet (goal 0 → success otomatik).
+        topHud?.NotifyCollectibleCollected(CollectibleId.BossDamage, dmg);
+    }
+
+    // ── Düşman saldırısı ──
+
+    private IEnumerator EnemyAttack()
+    {
+        // Telgraf: iki top da geri çekilip "yükleniyor" hissi.
+        var aimA = enemyArmA != null ? enemyArmA : enemyRobot;
+        var aimB = enemyArmB; // ikinci kol opsiyonel
+        if (enemyTelegraphDuration > 0f)
+        {
+            if (aimB != null) StartCoroutine(ChargeTelegraph(aimB, enemyTelegraphDuration));
+            if (aimA != null) yield return ChargeTelegraph(aimA, enemyTelegraphDuration);
         }
 
-        if (specials.Count == 0)
-            return false;
+        int dmg = enemyBaseDamage + enemyDamageGrowth * enemyAttackCount;
+        enemyAttackCount++;
 
-        var target = specials[Random.Range(0, specials.Count)];
+        if (aimA != null) PlayRecoil(aimA, -1f);
+        if (aimB != null) PlayRecoil(aimB, -1f);
 
-        target.SetSpecial(TileSpecial.None);
-        board.SyncTileData(target.X, target.Y);
-        board.BreakFx?.PlayTileBreak(target);
+        bool landed = false;
 
-        Debug.Log($"[BossDuel] Disarm: ({target.X},{target.Y}) special etkisizleştirildi.");
-        return true;
+        // A topu hasarı uygular; B topu yalnızca görsel (çift namlu hissi).
+        FireBolt(GetMuzzleWorld(enemyMuzzleA, enemyRobot, -1f), playerRobot, enemyBoltColor, enemyBoltPrefab, enemyMuzzleFlashPrefab, () =>
+        {
+            landed = true;
+            ApplyPlayerDamage(dmg);
+        });
+
+        if (enemyMuzzleB != null || enemyArmB != null)
+            FireBolt(GetMuzzleWorld(enemyMuzzleB, enemyRobot, -1f), playerRobot, enemyBoltColor, enemyBoltPrefab, enemyMuzzleFlashPrefab, null);
+
+        float wait = 0f;
+        while (!landed && wait < 1.5f) { wait += Time.deltaTime; yield return null; }
+
+        // Opsiyonel oil baskısı: her N turda bir.
+        var level = board.ActiveLevelData;
+        if (level != null && level.bossAttackOilCount > 0)
+        {
+            movesSinceOil++;
+            if (movesSinceOil >= Mathf.Max(1, level.bossAttackEveryMoves))
+            {
+                movesSinceOil = 0;
+                ThrowOil(level.bossAttackOilCount);
+            }
+        }
     }
+
+    private void ApplyPlayerDamage(int dmg)
+    {
+        if (dmg <= 0) return;
+        playerHp = Mathf.Max(0, playerHp - dmg);
+        playerHpBar?.Set(playerHp);
+        PlayRobotHitFeedback(playerRobot);
+    }
+
+    // ── Bolt / muzzle / impact ──
+
+    private void FireBolt(Vector3 fromWorld, RectTransform targetRobot, Color color, Image boltPrefab, Image muzzleFlashPrefab, System.Action onHit)
+    {
+        if (vfxRoot == null || targetRobot == null)
+        {
+            onHit?.Invoke();
+            return;
+        }
+
+        Vector2 start = WorldToAnchoredIn(vfxRoot, fromWorld);
+        Vector2 end = WorldToAnchoredIn(vfxRoot, targetRobot.position);
+
+        SpawnMuzzleFlash(start, color, muzzleFlashPrefab);
+        StartCoroutine(BoltRoutine(start, end, color, boltPrefab, onHit));
+    }
+
+    private IEnumerator BoltRoutine(Vector2 start, Vector2 end, Color color, Image boltPrefab, System.Action onHit)
+    {
+        Image bolt;
+        if (boltPrefab != null)
+        {
+            bolt = Instantiate(boltPrefab, vfxRoot);
+            bolt.color = color;
+            bolt.rectTransform.sizeDelta = boltSize;
+            bolt.raycastTarget = false;
+        }
+        else
+        {
+            bolt = CreateImage("BattlefieldBolt", vfxRoot, color, boltSize);
+        }
+        var rt = bolt.rectTransform;
+        rt.anchoredPosition = start;
+
+        Vector2 dir = end - start;
+        float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+        rt.localRotation = Quaternion.Euler(0f, 0f, angle);
+
+        float dur = Mathf.Max(0.02f, boltTravelDuration);
+        float t = 0f;
+        while (t < dur)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            rt.anchoredPosition = Vector2.LerpUnclamped(start, end, k);
+            yield return null;
+        }
+
+        if (bolt != null) Destroy(bolt.gameObject);
+        SpawnImpact(end, color);
+        onHit?.Invoke();
+    }
+
+    private void SpawnMuzzleFlash(Vector2 anchoredPos, Color color, Image muzzleFlashPrefab)
+    {
+        Image flash = muzzleFlashPrefab != null
+            ? Instantiate(muzzleFlashPrefab, vfxRoot)
+            : CreateImage("MuzzleFlash", vfxRoot, color, boltSize * 0.9f);
+        flash.rectTransform.anchoredPosition = anchoredPos;
+        if (muzzleFlashPrefab != null) flash.color = color;
+        flash.raycastTarget = false;
+        StartCoroutine(FadeAndDestroy(flash, 0.1f));
+    }
+
+    private void SpawnImpact(Vector2 anchoredPos, Color color)
+    {
+        Image impact = impactPrefab != null
+            ? Instantiate(impactPrefab, vfxRoot)
+            : CreateImage("BoltImpact", vfxRoot, color, boltSize * 1.4f);
+        impact.rectTransform.anchoredPosition = anchoredPos;
+        if (impactPrefab != null) impact.color = color;
+        StartCoroutine(FadeAndDestroy(impact, 0.16f));
+    }
+
+    private Image CreateImage(string name, RectTransform parent, Color color, Vector2 size)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = size;
+        var img = go.GetComponent<Image>();
+        img.color = color;
+        img.raycastTarget = false;
+        return img;
+    }
+
+    private IEnumerator FadeAndDestroy(Image img, float life)
+    {
+        if (img == null) yield break;
+        Color c0 = img.color;
+        float t = 0f;
+        while (t < life && img != null)
+        {
+            t += Time.deltaTime;
+            float a = Mathf.Lerp(c0.a, 0f, t / life);
+            img.color = new Color(c0.r, c0.g, c0.b, a);
+            yield return null;
+        }
+        if (img != null) Destroy(img.gameObject);
+    }
+
+    // ── Tween feedback ──
+
+    private void PlayRecoil(RectTransform target, float facing)
+    {
+        if (target == null || recoilDuration <= 0f) return;
+        StartCoroutine(RecoilRoutine(target, -facing * recoilDistance));
+    }
+
+    private IEnumerator RecoilRoutine(RectTransform target, float dx)
+    {
+        Vector2 basePos = target.anchoredPosition;
+        Vector2 back = basePos + new Vector2(dx, 0f);
+        float half = recoilDuration * 0.5f;
+
+        float t = 0f;
+        while (t < half && target != null)
+        {
+            t += Time.deltaTime;
+            target.anchoredPosition = Vector2.Lerp(basePos, back, t / half);
+            yield return null;
+        }
+        t = 0f;
+        while (t < half && target != null)
+        {
+            t += Time.deltaTime;
+            target.anchoredPosition = Vector2.Lerp(back, basePos, t / half);
+            yield return null;
+        }
+        if (target != null) target.anchoredPosition = basePos;
+    }
+
+    private IEnumerator ChargeTelegraph(RectTransform target, float duration)
+    {
+        Vector3 baseScale = target.localScale;
+        Vector3 peak = baseScale * 1.15f;
+        float t = 0f;
+        while (t < duration && target != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Sin(Mathf.Clamp01(t / duration) * Mathf.PI);
+            target.localScale = Vector3.LerpUnclamped(baseScale, peak, k);
+            yield return null;
+        }
+        if (target != null) target.localScale = baseScale;
+    }
+
+    private void PlayRobotHitFeedback(RectTransform robot)
+    {
+        if (robot == null || robotHitShakeDuration <= 0f) return;
+        StartCoroutine(HitShakeRoutine(robot));
+    }
+
+    private IEnumerator HitShakeRoutine(RectTransform robot)
+    {
+        Vector2 basePos = robot.anchoredPosition;
+        float t = 0f;
+        while (t < robotHitShakeDuration && robot != null)
+        {
+            t += Time.deltaTime;
+            float falloff = 1f - Mathf.Clamp01(t / robotHitShakeDuration);
+            robot.anchoredPosition = basePos + Random.insideUnitCircle * (robotHitShakeStrength * falloff);
+            yield return null;
+        }
+        if (robot != null) robot.anchoredPosition = basePos;
+    }
+
+    // ── Oil (opsiyonel baskı) ──
 
     private void ThrowOil(int oilCount)
     {
-        if (oilCount <= 0)
-            return;
-
         var targets = PickOilTargets(oilCount);
-        if (targets.Count == 0)
-            return;
+        if (targets.Count == 0) return;
 
-        // Boss "yukarıdan" fırlatır: kaynak hücre hedef kolonun en üstü.
         var pairs = new List<OilSpreadPair>(targets.Count);
         foreach (var t in targets)
             pairs.Add(new OilSpreadPair(new Vector2Int(t.x, 0), t));
 
-        board.StartImmediateActionSequence(new List<BoardAction>
-        {
-            new OilSpreadAction(board, pairs)
-        });
+        board.StartImmediateActionSequence(new List<BoardAction> { new OilSpreadAction(board, pairs) });
     }
 
     private List<Vector2Int> PickOilTargets(int count)
@@ -383,19 +515,15 @@ public sealed class BossDuelController : MonoBehaviour
         var obstacleService = board.ObstacleStateService;
 
         for (int x = 0; x < board.Width; x++)
-        {
             for (int y = 0; y < board.Height; y++)
             {
                 if (board.Holes[x, y]) continue;
                 if (obstacleService != null && obstacleService.HasObstacleAt(x, y)) continue;
-
                 var tile = board.Tiles[x, y];
                 if (tile == null || board.GridData[x, y] == null) continue;
                 if (tile.GetSpecial() != TileSpecial.None) continue;
-
                 candidates.Add(new Vector2Int(x, y));
             }
-        }
 
         var picked = new List<Vector2Int>(count);
         for (int i = 0; i < count && candidates.Count > 0; i++)
@@ -404,69 +532,33 @@ public sealed class BossDuelController : MonoBehaviour
             picked.Add(candidates[idx]);
             candidates.RemoveAt(idx);
         }
-
         return picked;
     }
 
-    // ─── Boss görsel tepkileri ────────────────────────────────────────────
+    // ── Helpers ──
 
-    private Vector2 shakeBasePos;
-
-    private void PlayDamageShake()
+    // İki koldan birini seç; seçilen boşsa diğerine düş (tek kol atanmışsa yine çalışır).
+    private static RectTransform Pick(RectTransform a, RectTransform b, bool useA)
     {
-        if (bossVisual == null || damageShakeDuration <= 0f) return;
-
-        // Taban pozisyonu yalnızca sallanmıyorken yakala — üst üste binen shake'ler
-        // kaymış pozisyonu taban sanıp görseli kalıcı yürütür (wardrobe'da yaşandı).
-        if (shakeCo != null)
-            StopCoroutine(shakeCo);
-        else
-            shakeBasePos = bossVisual.anchoredPosition;
-
-        shakeCo = StartCoroutine(ShakeRoutine());
+        if (useA) return a != null ? a : b;
+        return b != null ? b : a;
     }
 
-    private IEnumerator ShakeRoutine()
+    private Vector3 GetMuzzleWorld(RectTransform muzzle, RectTransform robot, float facing)
     {
-        float t = 0f;
-        while (t < damageShakeDuration)
-        {
-            t += Time.deltaTime;
-            float falloff = 1f - Mathf.Clamp01(t / damageShakeDuration);
-            bossVisual.anchoredPosition = shakeBasePos + Random.insideUnitCircle * (damageShakeStrength * falloff);
-            yield return null;
-        }
-        bossVisual.anchoredPosition = shakeBasePos;
-        shakeCo = null;
+        if (muzzle != null) return muzzle.position;
+        if (robot == null) return Vector3.zero;
+        // Namlu yoksa robot merkezinden, bakış yönüne doğru hafif kaydır.
+        return robot.position;
     }
 
-    private void PlayAttackPunch()
+    private static Vector2 WorldToAnchoredIn(RectTransform targetSpace, Vector3 worldPos)
     {
-        if (bossVisual == null || attackPunchDuration <= 0f) return;
-        StartCoroutine(AttackPunchRoutine());
-    }
-
-    private IEnumerator AttackPunchRoutine()
-    {
-        Vector3 baseScale = bossVisual.localScale;
-        float half = attackPunchDuration * 0.5f;
-
-        float t = 0f;
-        while (t < half)
-        {
-            t += Time.deltaTime;
-            bossVisual.localScale = Vector3.Lerp(baseScale, baseScale * attackPunchScale, t / half);
-            yield return null;
-        }
-
-        t = 0f;
-        while (t < half)
-        {
-            t += Time.deltaTime;
-            bossVisual.localScale = Vector3.Lerp(baseScale * attackPunchScale, baseScale, t / half);
-            yield return null;
-        }
-
-        bossVisual.localScale = baseScale;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            targetSpace,
+            RectTransformUtility.WorldToScreenPoint(null, worldPos),
+            null,
+            out var localPoint);
+        return localPoint;
     }
 }
