@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: ChapterTheme_1
   m_EditorClassIdentifier: Assembly-CSharp::ChapterTheme
   chapterIndex: 1
-  gameBackground: {fileID: 21300000, guid: 4f82b027e054641469049f6a99e8122a, type: 3}
+  gameBackground: {fileID: 21300000, guid: 7d2715711bfad49e5a438bf071056d78, type: 3}
   gameTopHud: {fileID: 21300000, guid: a613c7faccef449fc85b7943d52d4deb, type: 3}
-  gameBottomArea: {fileID: 21300000, guid: 5b5dd1eaa87934c67b2a7c3566b72974, type: 3}
+  gameBottomArea: {fileID: 21300000, guid: 43e44e3d560a74958bf1278d0c4e96a1, type: 3}
   menuBackground: {fileID: 21300000, guid: 4521c033365614105b1d105bdfdbc8e7, type: 3}
   menuTopHud: {fileID: 21300000, guid: ecd5971b231564baeb9a49ca052b5a88, type: 3}
   menuBottomArea: {fileID: 21300000, guid: 8f47d89b0f7fe4435b5e176a1f531f13, type: 3}
@@ -24,7 +24,7 @@ MonoBehaviour:
   borderColorId: 0
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
   successAnimationBackground: {fileID: 0}
-  preLevelPopupBackground: {fileID: 21300000, guid: 12263da3459344e3d95a781fcdae50f7, type: 3}
+  preLevelPopupBackground: {fileID: 21300000, guid: 352fad001981d4e229487a0b185e42bc, type: 3}
   preLevelContinueButton: {fileID: 0}
   preLevelCancelButton: {fileID: 0}
   preLevelCheckMark: {fileID: 21300000, guid: 4d7e3c1a8d2a049e7862849181984ab4, type: 3}
@@ -62,7 +62,7 @@ MonoBehaviour:
     titleLocalizationKey: loading_hint_override_title
     descriptionLocalizationKey: loading_hint_override_desc
     loadingLocalizationKey: loading_hint_loading
-  levelEndPopupBackground: {fileID: 21300000, guid: b4fedd365c75347b3b42b2238a931f62, type: 3}
+  levelEndPopupBackground: {fileID: 21300000, guid: 0c4a595e7b4104c2494f465433b2e507, type: 3}
   levelEndContinueButton: {fileID: 0}
   levelEndCloseButton: {fileID: 0}
   levelEndStarFilled: {fileID: 0}

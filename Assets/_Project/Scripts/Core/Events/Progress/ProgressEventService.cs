@@ -54,6 +54,16 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     public TimeSpan                            TimeRemaining => ComputeTimeRemaining();
     public IReadOnlyList<ProgressGoalRuntime>  Goals         => goals;
     public string                              EventName     => config != null ? config.eventName : "";
+    public Sprite EventIcon
+    {
+        get
+        {
+            if (config == null || config.goals == null || config.goals.Count == 0) return null;
+            var g = config.goals[0];
+            if (g == null) return null;
+            return g.goalIcon != null ? g.goalIcon : (g.reward != null ? g.reward.icon : null);
+        }
+    }
 
     // ── Lifecycle ────────────────────────────────────────────────
 

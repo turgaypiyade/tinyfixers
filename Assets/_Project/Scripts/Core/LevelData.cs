@@ -156,6 +156,10 @@ public class LevelData : ScriptableObject
     [Min(0)] public int enemyAttackBaseDamage = 20;
     [Tooltip("Düşman saldırı hasarının her saldırıda artış miktarı (telgraflı yükseliş).")]
     [Min(0)] public int enemyAttackDamageGrowth = 6;
+    [Tooltip("Düşman kaç saniyede bir ateş eder (idle dahil). 0 = controller'daki default kullanılır.")]
+    [Min(0f)] public float enemyAttackInterval = 2f;
+    [Tooltip("Battlefield arena arka planı. ATANIRSA bu kullanılır; BOŞSA sahnedeki mevcut arka plan kalır.")]
+    public Sprite battlefieldBackground;
 
     [Header("Random Pool")]
     [Tooltip("Bu levelda random üretilecek taş tipleri. DOLUYSA GridSpawner'daki varsayılan " +

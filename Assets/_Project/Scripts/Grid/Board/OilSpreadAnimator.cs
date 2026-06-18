@@ -31,7 +31,12 @@ public sealed class OilSpreadAnimator : MonoBehaviour
         if (tilesRoot == null) { onDone?.Invoke(); yield break; }
 
         float ts = board.TileSize;
-        bool isH = pair.Source.y == pair.Target.y;
+        int dx = pair.Target.x - pair.Source.x;
+        int dy = pair.Target.y - pair.Source.y;
+        bool sameCell = dx == 0 && dy == 0;       // yeni oil: kendi hücresinde belirir
+        bool isH = !sameCell && dy == 0;          // aynı satır farklı sütun = yatay; aynı hücre = dikey
+        float spanTiles = sameCell ? 1f : Mathf.Max(1, Mathf.Abs(isH ? dx : dy));
+        float bridgeLen = spanTiles * ts;         // köprü kaynak↔hedef mesafesi kadar (bitişikte 1 tile)
 
         // Hücre merkezleri: DrawObstacleImage ile aynı formül
         Vector2 srcCenter = new Vector2(pair.Source.x * ts + ts * 0.5f, -pair.Source.y * ts - ts * 0.5f);
@@ -69,7 +74,7 @@ public sealed class OilSpreadAnimator : MonoBehaviour
             float crossSize = isH
                 ? (bridgeRt.sizeDelta.y > 1f ? bridgeRt.sizeDelta.y : 24f)
                 : (bridgeRt.sizeDelta.x > 1f ? bridgeRt.sizeDelta.x : 24f);
-            bridgeRt.sizeDelta = isH ? new Vector2(ts, crossSize) : new Vector2(crossSize, ts);
+            bridgeRt.sizeDelta = isH ? new Vector2(bridgeLen, crossSize) : new Vector2(crossSize, bridgeLen);
         }
 
         // Image Fill modu
@@ -77,10 +82,12 @@ public sealed class OilSpreadAnimator : MonoBehaviour
         {
             activeImg.type       = Image.Type.Filled;
             activeImg.fillMethod = isH ? Image.FillMethod.Horizontal : Image.FillMethod.Vertical;
-            bool positiveDir = isH ? (pair.Target.x > pair.Source.x) : (pair.Target.y > pair.Source.y);
+            bool positiveDir = isH ? (dx > 0) : (dy > 0);
+            // NOT: grid y AŞAĞI doğru büyür (target.y > source.y => target ekranda ALTTA, kaynak ÜSTTE).
+            // Dolum kaynaktan hedefe akmalı → target alttayken Top'tan başla (yatayda x normal yönde).
             activeImg.fillOrigin = isH
-                ? (int)(positiveDir ? Image.OriginHorizontal.Left  : Image.OriginHorizontal.Right)
-                : (int)(positiveDir ? Image.OriginVertical.Bottom  : Image.OriginVertical.Top);
+                ? (int)(positiveDir ? Image.OriginHorizontal.Left : Image.OriginHorizontal.Right)
+                : (int)(positiveDir ? Image.OriginVertical.Top    : Image.OriginVertical.Bottom);
             activeImg.fillAmount = 0f;
         }
 

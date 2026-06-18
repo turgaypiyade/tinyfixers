@@ -73,10 +73,19 @@ public class PatchbotDashUI : MonoBehaviour
         runnerImage = GetComponent<Image>();
     }
 
+    // Coroutine host'unun (bu obje) activeInHierarchy olması şart. Kendini açmak yetmez;
+    // bir ÜST parent kapalıysa activeInHierarchy false kalır → StartCoroutine patlar
+    // ("game object 'PatchbotRunner' is inactive"). Tüm ata zincirini aktif et.
+    private void EnsureHierarchyActive()
+    {
+        for (Transform t = transform; t != null; t = t.parent)
+            if (!t.gameObject.activeSelf)
+                t.gameObject.SetActive(true);
+    }
+
     public void PlayDash(List<RectTransform> pathTiles)
     {
-        if (!gameObject.activeInHierarchy)
-            gameObject.SetActive(true);
+        EnsureHierarchyActive();
 
         if (co != null) StopCoroutine(co);
         co = StartCoroutine(DashRoutine(pathTiles));
@@ -84,8 +93,7 @@ public class PatchbotDashUI : MonoBehaviour
 
     public Coroutine PlayDashParallel(List<BoardController.PatchbotDashRequest> requests, BoardController board, float syncDuration = -1f)
     {
-        if (!gameObject.activeInHierarchy)
-            gameObject.SetActive(true);
+        EnsureHierarchyActive();
 
         var requestCopy = requests != null
             ? new List<BoardController.PatchbotDashRequest>(requests)

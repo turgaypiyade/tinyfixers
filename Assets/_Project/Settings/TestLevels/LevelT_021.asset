@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   width: 9
   height: 10
-  moves: 25
+  moves: 40
   baseCoinReward: 10
   goals:
   - targetType: 1
@@ -23,6 +23,16 @@ MonoBehaviour:
     collectibleId: 1
     iconOverride: {fileID: 0}
     amount: 10
+  levelKind: 0
+  bossAttackEveryMoves: 3
+  bossAttackOilCount: 2
+  playerMaxHp: 560
+  damagePerClearedTile: 10
+  enemyAttackBaseDamage: 20
+  enemyAttackDamageGrowth: 6
+  enemyAttackInterval: 2
+  battlefieldBackground: {fileID: 0}
+  randomPool: 
   energyPerContainer: 5
   comboTutorial: 0
   musicClip: {fileID: 0}

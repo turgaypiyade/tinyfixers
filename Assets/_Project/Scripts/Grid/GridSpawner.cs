@@ -582,6 +582,8 @@ public class GridSpawner : MonoBehaviour
         clone.damagePerClearedTile = Mathf.Max(0, source.damagePerClearedTile);
         clone.enemyAttackBaseDamage = Mathf.Max(0, source.enemyAttackBaseDamage);
         clone.enemyAttackDamageGrowth = Mathf.Max(0, source.enemyAttackDamageGrowth);
+        clone.enemyAttackInterval = Mathf.Max(0f, source.enemyAttackInterval);
+        clone.battlefieldBackground = source.battlefieldBackground;
         clone.tubes = source.tubes != null
             ? (TubeEntry[])source.tubes.Clone()
             : System.Array.Empty<TubeEntry>();

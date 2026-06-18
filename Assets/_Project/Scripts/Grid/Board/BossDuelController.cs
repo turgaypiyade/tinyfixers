@@ -24,6 +24,8 @@ public sealed class BossDuelController : MonoBehaviour
     [Header("Core Refs")]
     [SerializeField] private BoardController board;
     [SerializeField] private TopHudController topHud;
+    [Tooltip("Arena arka plan Image'ı. LevelData.battlefieldBackground atanırsa sprite buna uygulanır; boşsa mevcut kalır.")]
+    [SerializeField] private Image arenaBackground;
 
     [Header("Robots")]
     [SerializeField] private RectTransform playerRobot;     // sol
@@ -60,25 +62,63 @@ public sealed class BossDuelController : MonoBehaviour
     [SerializeField] private Color playerBoltColor = Color.white;
     [SerializeField] private Color enemyBoltColor = Color.white;
 
+    [Header("Audio")]
+    [Tooltip("Lazer atış sesi (her bolt çıkışında).")]
+    [SerializeField] private AudioClip fireSfx;
+    [Tooltip("İsabet sesi (bolt hedefe varınca).")]
+    [SerializeField] private AudioClip hitSfx;
+    [SerializeField, Range(0f, 1f)] private float fireVolume = 0.5f;
+    [SerializeField, Range(0f, 1f)] private float hitVolume = 0.6f;
+    [Tooltip("Her seste rastgele perde sapması (monotonluğu kırar).")]
+    [SerializeField, Range(0f, 0.3f)] private float pitchJitter = 0.08f;
+    [Tooltip("Boşsa runtime'da otomatik AudioSource eklenir.")]
+    [SerializeField] private AudioSource sfxSource;
+
     [Header("Strike Feel")]
     [SerializeField, Min(0.01f)] private float strikeInterval = 0.07f;     // atışlar arası
     [SerializeField, Min(0.02f)] private float boltTravelDuration = 0.12f;
-    [Tooltip("Çok büyük combolarda görünen atış sayısı tavanı (hasar tamı uygulanır, sadece görsel azaltılır).")]
-    [SerializeField, Min(1)] private int maxVisualStrikes = 12;
     [SerializeField, Min(0f)] private float recoilDistance = 16f;
     [SerializeField, Min(0.02f)] private float recoilDuration = 0.08f;
 
     [Header("Enemy Turn")]
     [Tooltip("Düşmanın ateşten önceki yüklenme (telgraf) süresi.")]
     [SerializeField, Min(0f)] private float enemyTelegraphDuration = 0.4f;
-    [SerializeField, Min(0f)] private float robotHitShakeDuration = 0.16f;
-    [SerializeField, Min(0f)] private float robotHitShakeStrength = 10f;
+    [Tooltip("Düşman kaç saniyede bir ateş eder (oyuncu idle olsa da işler).")]
+    [SerializeField, Min(0.3f)] private float enemyAttackInterval = 2f;
+    [Tooltip("Vurulunca robotun geri sarsılma süresi.")]
+    [SerializeField, Min(0f)] private float robotHitKnockDuration = 0.18f;
+    [Tooltip("Vurulunca robotun geri itilme mesafesi (px).")]
+    [SerializeField, Min(0f)] private float robotHitKnockback = 22f;
+
+    [Header("Win Celebration")]
+    [SerializeField, Min(0f)] private float winHopHeight = 40f;
+    [SerializeField, Min(0.05f)] private float winHopDuration = 0.32f;
+    [SerializeField, Min(1)] private int winHopCount = 2;
+    [SerializeField, Min(1f)] private float winScalePunch = 1.18f;
+
+    [Header("Win Fireworks")]
+    [Tooltip("Kazanınca çalan havai fişek prefab'ı (ParticleSystem ya da UI efekt). Boşsa basit renkli patlamalar üretilir.")]
+    [SerializeField] private GameObject winFireworksPrefab;
+    [Tooltip("Tek patlama sprite'ı (BEYAZ/grayscale çiz; kod renklendirir). Boşsa renkli kare.")]
+    [SerializeField] private Sprite winFireworkBurstSprite;
+    [SerializeField, Min(0.3f)] private float winFireworksDuration = 2.5f;
+
+    [Header("Defeat (yenilince yığın)")]
+    [Tooltip("Robot gövde Image'ları — yenilince/kazanınca sprite'ı değişir.")]
+    [SerializeField] private Image playerBodyImage;
+    [SerializeField] private Image enemyBodyImage;
+    [Tooltip("Yenilgi (yığın) sprite'ları. Boşsa sadece çökme tween'i oynar.")]
+    [SerializeField] private Sprite playerDefeatedSprite;
+    [SerializeField] private Sprite enemyDefeatedSprite;
+    [SerializeField, Min(0f)] private float defeatCollapseDuration = 0.35f;
+    [Tooltip("Zafer (victory) sprite'ları. Boşsa kazanan sadece hop+scale kutlaması yapar (sprite değişmez).")]
+    [SerializeField] private Sprite playerWinSprite;
+    [SerializeField] private Sprite enemyWinSprite;
 
     // ── State ──
     private bool bossModeActive;
-    private bool turnRunning;
-    private bool collectingClears;
-    private int clearsThisMove;
+    private int pendingStrikes;   // temizlenen taşlardan biriken, henüz ateşlenmemiş vuruş stack'i
+    private int strikeIndex;      // kol sırası (sol-sağ-sol...)
     private int previousRemainingMoves = -1;
 
     private int enemyHp, enemyMaxHp;
@@ -89,6 +129,12 @@ public sealed class BossDuelController : MonoBehaviour
     private int damagePerTile;
     private int enemyBaseDamage;
     private int enemyDamageGrowth;
+
+    private readonly Dictionary<RectTransform, Coroutine> _hitCo = new();
+    private readonly Dictionary<RectTransform, Vector2> _hitBase = new();
+    private bool winCelebrationPlayed;
+    private bool enemyDefeated;
+    private bool playerDefeated;
 
     private void Start() => StartCoroutine(InitWhenLevelReady());
 
@@ -123,12 +169,22 @@ public sealed class BossDuelController : MonoBehaviour
         enemyDamageGrowth = Mathf.Max(0, level.enemyAttackDamageGrowth);
         previousRemainingMoves = board.RemainingMoves;
 
+        // Level bazlı atış aralığı (0 = controller default'u koru).
+        if (level.enemyAttackInterval > 0f)
+            enemyAttackInterval = level.enemyAttackInterval;
+
+        // Level bazlı arena arka planı: atanmışsa uygula, boşsa sahnedeki mevcut kalır.
+        if (arenaBackground != null && level.battlefieldBackground != null)
+            arenaBackground.sprite = level.battlefieldBackground;
+
         SetRobotsVisible(true);
         playerHpBar?.Init(playerMaxHp);
         enemyHpBar?.Init(enemyMaxHp);
 
         board.OnTilesCleared += HandleTilesCleared;
         board.OnMovesChanged += HandleMovesChanged;
+
+        StartCoroutine(BattleLoop());
     }
 
     private void OnDestroy()
@@ -149,114 +205,93 @@ public sealed class BossDuelController : MonoBehaviour
 
     private void SetRobotsVisible(bool visible)
     {
+        // Battlefield'a ait GÖRÜNÜR öğeler BossDuel olmayan levellarda gizlenir.
+        // vfxRoot'a DOKUNMUYORUZ: boş bir konteyner (normal levelda görünür bir şey yok) ve
+        // yanlışlıkla paylaşılan VFXRoot atanmışsa onu kapatmak PatchBot/line VFX'i bozar.
         if (playerRobot != null) playerRobot.gameObject.SetActive(visible);
         if (enemyRobot != null) enemyRobot.gameObject.SetActive(visible);
+        if (playerHpBar != null) playerHpBar.gameObject.SetActive(visible);
+        if (enemyHpBar != null) enemyHpBar.gameObject.SetActive(visible);
     }
 
-    // ── Hamle algılama + temizlenen taş sayımı ──
+    // ── Sürekli akış: temizlenen taşlar stack'e birikir, BattleLoop boşaltır ──
 
     private void HandleTilesCleared(TileType type, int amount)
     {
-        if (collectingClears && amount > 0)
-            clearsThisMove += amount;
+        // Oyuncu matlemeye devam ettikçe vuruşlar stack'e birikir; input kilidi yok.
+        if (bossModeActive && amount > 0 && !IsOver())
+            pendingStrikes += amount;
     }
 
     private void HandleMovesChanged(int remainingMoves)
     {
         if (!bossModeActive) return;
 
+        // Hamle sınırsız: tüketilen hamleyi geri ekle (refill OnMovesChanged'i artışla tetikler,
+        // o da moveConsumed=false olduğu için döngü yapmaz).
         bool moveConsumed = previousRemainingMoves >= 0 && remainingMoves < previousRemainingMoves;
         previousRemainingMoves = remainingMoves;
 
-        if (!moveConsumed || turnRunning || IsOver())
-            return;
-
-        // ConsumeMove swap kabulünde tetiklenir — bu hamlenin taşları HENÜZ temizlenmedi.
-        // Şimdi sayıma başla; resolve boyunca biriksin.
-        clearsThisMove = 0;
-        collectingClears = true;
-        turnRunning = true;
-        StartCoroutine(ResolveBattleTurn());
+        if (moveConsumed && !IsOver())
+            board.AddMoves(1);
     }
 
     private bool IsOver() => enemyHp <= 0 || playerHp <= 0 || !bossModeActive;
 
-    private IEnumerator ResolveBattleTurn()
+    // Kalıcı dövüş döngüsü: oyuncu stack'ten otomatik ateş eder (backlog yüksekse hızlanır),
+    // düşman kendi saatinde (idle dahil) ateşler. Input asla kilitlenmez.
+    private IEnumerator BattleLoop()
     {
-        // 1) Hamlenin tüm çözümünü bekle (cascade + special + arka plan job).
-        float safety = 0f;
-        while ((board.IsBusy || board.ActiveBackgroundJobs > 0) && safety < 12f)
+        float strikeTimer = 0f;
+        float enemyTimer = 0f;
+        bool enemyBusy = false;
+
+        while (bossModeActive && !IsOver())
         {
-            safety += Time.deltaTime;
-            yield return null;
-        }
+            float dt = Time.deltaTime;
 
-        collectingClears = false;
-        int strikes = clearsThisMove;
-
-        // Vuruş + düşman fazı boyunca oyuncu araya hamle sokmasın (board idle ama tur sürüyor).
-        board.SetInputLocked(true);
-
-        try
-        {
-            // 2) Oyuncu rapid-fire: her taş = 1 vuruş.
-            if (strikes > 0 && damagePerTile > 0 && !IsOver())
-                yield return PlayerFireStrikes(strikes);
-
-            // Düşman bu turda öldüyse: WIN goal'den tetiklenir, karşılık yok.
-            if (IsOver())
-                yield break;
-
-            // 3) Düşman turu: telgraf + ateş → oyuncu HP.
-            yield return EnemyAttack();
-
-            // 4) Lose kontrolü.
-            if (playerHp <= 0)
+            // Oyuncu: stack'ten boşalt. Backlog büyükse tek tick'te birden fazla ateşle (yetiş).
+            strikeTimer += dt;
+            if (pendingStrikes > 0 && damagePerTile > 0 && strikeTimer >= strikeInterval)
             {
-                bossModeActive = false;
-                board.RequestLevelFail();
-                yield break;
+                strikeTimer = 0f;
+                int burst = Mathf.Clamp(Mathf.CeilToInt(pendingStrikes * 0.25f), 1, 4);
+                for (int i = 0; i < burst && pendingStrikes > 0 && !IsOver(); i++)
+                {
+                    pendingStrikes--;
+                    FireOnePlayerStrike();
+                }
             }
 
-            // 5) Hamle sınırsız: tüketilen hamleyi geri ekle.
-            board.AddMoves(1);
-        }
-        finally
-        {
-            turnRunning = false;
-            // Oyun devam ediyorsa input'u aç; win/lose'da LevelEnd akışı kilitler.
-            if (bossModeActive && enemyHp > 0 && playerHp > 0)
-                board.SetInputLocked(false);
+            // Düşman: belirli aralıkla ateşler (oyuncu idle olsa da).
+            enemyTimer += dt;
+            if (enemyTimer >= enemyAttackInterval && !enemyBusy && !IsOver())
+            {
+                enemyTimer = 0f;
+                enemyBusy = true;
+                StartCoroutine(EnemyAttackThenClear(() => enemyBusy = false));
+            }
+
+            yield return null;
         }
     }
 
-    // ── Oyuncu saldırısı ──
-
-    private IEnumerator PlayerFireStrikes(int strikes)
+    private IEnumerator EnemyAttackThenClear(System.Action onDone)
     {
-        int totalDamage = strikes * damagePerTile;
-        int visualStrikes = Mathf.Clamp(strikes, 1, maxVisualStrikes);
-        int remainingDamage = totalDamage;
+        yield return EnemyAttack();
+        onDone?.Invoke();
+    }
 
-        for (int i = 0; i < visualStrikes && !IsOver(); i++)
-        {
-            int dmg = (i == visualStrikes - 1)
-                ? remainingDamage
-                : Mathf.Max(1, Mathf.RoundToInt((float)totalDamage / visualStrikes));
-            dmg = Mathf.Min(dmg, remainingDamage);
-            remainingDamage -= dmg;
+    // Tek oyuncu vuruşu: kollar sırayla ateşler, her vuruş damagePerTile hasar.
+    private void FireOnePlayerStrike()
+    {
+        bool useA = (strikeIndex++ % 2 == 0);
+        var arm = Pick(playerArmA, playerArmB, useA);
+        var muzzle = Pick(playerMuzzleA, playerMuzzleB, useA);
 
-            // İki kol sırayla ateşler (sol-sağ-sol...). Biri boşsa diğerine düşer.
-            bool useA = (i % 2 == 0);
-            var arm = Pick(playerArmA, playerArmB, useA);
-            var muzzle = Pick(playerMuzzleA, playerMuzzleB, useA);
-
-            PlayRecoil(arm != null ? arm : playerRobot, +1f);
-            FireBolt(GetMuzzleWorld(muzzle, playerRobot, +1f), enemyRobot, playerBoltColor, playerBoltPrefab, playerMuzzleFlashPrefab,
-                () => ApplyEnemyDamage(dmg));
-
-            yield return new WaitForSeconds(strikeInterval);
-        }
+        PlayRecoil(arm != null ? arm : playerRobot, +1f);
+        FireBolt(GetMuzzleWorld(muzzle, playerRobot, +1f), enemyRobot, playerBoltColor, playerBoltPrefab, playerMuzzleFlashPrefab,
+            () => ApplyEnemyDamage(damagePerTile));
     }
 
     private void ApplyEnemyDamage(int dmg)
@@ -265,10 +300,25 @@ public sealed class BossDuelController : MonoBehaviour
 
         enemyHp = Mathf.Max(0, enemyHp - dmg);
         enemyHpBar?.Set(enemyHp);
-        PlayRobotHitFeedback(enemyRobot);
+        PlayRobotHitFeedback(enemyRobot, +1f);   // düşman sağa itilir
 
         // Mevcut goal/WIN akışını ilerlet (goal 0 → success otomatik).
         topHud?.NotifyCollectibleCollected(CollectibleId.BossDamage, dmg);
+
+        if (enemyHp <= 0 && !enemyDefeated)
+        {
+            enemyDefeated = true;
+            bossModeActive = false;   // BattleLoop dursun (WIN goal tamamlanınca LevelEnd success açar)
+            StartCoroutine(PlayDefeat(enemyRobot, enemyBodyImage, enemyDefeatedSprite, enemyArmA, enemyArmB));
+
+            if (!winCelebrationPlayed)
+            {
+                winCelebrationPlayed = true;
+                if (playerRobot != null)
+                    StartCoroutine(WinCelebration(playerRobot, playerBodyImage, playerWinSprite, playerArmA, playerArmB));
+                PlayWinFireworks(playerRobot);   // 🎆 kazanan (oyuncu) robotun konumunda
+            }
+        }
     }
 
     // ── Düşman saldırısı ──
@@ -323,7 +373,23 @@ public sealed class BossDuelController : MonoBehaviour
         if (dmg <= 0) return;
         playerHp = Mathf.Max(0, playerHp - dmg);
         playerHpBar?.Set(playerHp);
-        PlayRobotHitFeedback(playerRobot);
+        PlayRobotHitFeedback(playerRobot, -1f);   // oyuncu sola itilir
+
+        if (playerHp <= 0 && !playerDefeated)
+        {
+            playerDefeated = true;
+            bossModeActive = false;   // BattleLoop dursun
+            board.RequestLevelFail();  // LOSE
+
+            StartCoroutine(PlayDefeat(playerRobot, playerBodyImage, playerDefeatedSprite, playerArmA, playerArmB));
+
+            if (!winCelebrationPlayed)
+            {
+                winCelebrationPlayed = true;
+                if (enemyRobot != null)
+                    StartCoroutine(WinCelebration(enemyRobot, enemyBodyImage, enemyWinSprite, enemyArmA, enemyArmB));
+            }
+        }
     }
 
     // ── Bolt / muzzle / impact ──
@@ -339,6 +405,7 @@ public sealed class BossDuelController : MonoBehaviour
         Vector2 start = WorldToAnchoredIn(vfxRoot, fromWorld);
         Vector2 end = WorldToAnchoredIn(vfxRoot, targetRobot.position);
 
+        PlaySfx(fireSfx, fireVolume);
         SpawnMuzzleFlash(start, color, muzzleFlashPrefab);
         StartCoroutine(BoltRoutine(start, end, color, boltPrefab, onHit));
     }
@@ -376,6 +443,7 @@ public sealed class BossDuelController : MonoBehaviour
 
         if (bolt != null) Destroy(bolt.gameObject);
         SpawnImpact(end, color);
+        PlaySfx(hitSfx, hitVolume);
         onHit?.Invoke();
     }
 
@@ -475,24 +543,187 @@ public sealed class BossDuelController : MonoBehaviour
         if (target != null) target.localScale = baseScale;
     }
 
-    private void PlayRobotHitFeedback(RectTransform robot)
+    // Vurulunca yönlü geri-sarsılma: knockDir = -1 (oyuncu sola) / +1 (düşman sağa).
+    // Rapid-fire'da üst üste binmesin diye robot-başına taban yakalanır + önceki durdurulur.
+    private void PlayRobotHitFeedback(RectTransform robot, float knockDir)
     {
-        if (robot == null || robotHitShakeDuration <= 0f) return;
-        StartCoroutine(HitShakeRoutine(robot));
+        if (robot == null || robotHitKnockDuration <= 0f) return;
+
+        if (!_hitCo.TryGetValue(robot, out var co) || co == null)
+            _hitBase[robot] = robot.anchoredPosition;   // sadece dururken taban yakala
+        else
+            StopCoroutine(co);
+
+        _hitCo[robot] = StartCoroutine(HitKnockRoutine(robot, knockDir));
     }
 
-    private IEnumerator HitShakeRoutine(RectTransform robot)
+    private IEnumerator HitKnockRoutine(RectTransform robot, float knockDir)
     {
-        Vector2 basePos = robot.anchoredPosition;
+        Vector2 basePos = _hitBase[robot];
+        Vector2 back = basePos + new Vector2(knockDir * robotHitKnockback, 0f);
+
+        float outDur = robotHitKnockDuration * 0.32f;
         float t = 0f;
-        while (t < robotHitShakeDuration && robot != null)
+        while (t < outDur && robot != null)
         {
             t += Time.deltaTime;
-            float falloff = 1f - Mathf.Clamp01(t / robotHitShakeDuration);
-            robot.anchoredPosition = basePos + Random.insideUnitCircle * (robotHitShakeStrength * falloff);
+            float k = Mathf.Clamp01(t / outDur);
+            float e = 1f - (1f - k) * (1f - k);
+            robot.anchoredPosition = Vector2.LerpUnclamped(basePos, back, e);
             yield return null;
         }
+
+        float backDur = robotHitKnockDuration * 0.68f;
+        t = 0f;
+        while (t < backDur && robot != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / backDur);
+            float e = 1f - (1f - k) * (1f - k);
+            robot.anchoredPosition = Vector2.LerpUnclamped(back, basePos, e);
+            yield return null;
+        }
+
         if (robot != null) robot.anchoredPosition = basePos;
+        _hitCo[robot] = null;
+    }
+
+    // ── Win / Defeat ──
+
+    private IEnumerator WinCelebration(RectTransform robot, Image bodyImage, Sprite winSprite,
+                                       RectTransform arm1, RectTransform arm2)
+    {
+        if (robot == null) yield break;
+
+        // Zafer sprite'ı varsa gövdeyi ona çevir + ayrı kolları gizle (poz kendi kollarını içerir).
+        if (winSprite != null && bodyImage != null)
+        {
+            bodyImage.sprite = winSprite;
+            if (arm1 != null) arm1.gameObject.SetActive(false);
+            if (arm2 != null) arm2.gameObject.SetActive(false);
+        }
+
+        Vector2 basePos = robot.anchoredPosition;
+        Vector3 baseScale = robot.localScale;
+
+        for (int h = 0; h < Mathf.Max(1, winHopCount) && robot != null; h++)
+        {
+            float t = 0f;
+            float dur = Mathf.Max(0.05f, winHopDuration);
+            while (t < dur && robot != null)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / dur);
+                float hop = Mathf.Sin(k * Mathf.PI);          // 0→1→0 yay
+                robot.anchoredPosition = basePos + new Vector2(0f, hop * winHopHeight);
+                float s = 1f + (winScalePunch - 1f) * hop;
+                robot.localScale = baseScale * s;
+                yield return null;
+            }
+        }
+
+        if (robot != null) { robot.anchoredPosition = basePos; robot.localScale = baseScale; }
+    }
+
+    // Kazanınca havai fişek — KAZANAN robotun konumunda. Prefab varsa onu çal; yoksa renkli patlamalar.
+    private void PlayWinFireworks(RectTransform origin)
+    {
+        var parent = vfxRoot != null ? vfxRoot : (RectTransform)transform;
+        Vector2 center = (origin != null && vfxRoot != null)
+            ? WorldToAnchoredIn(vfxRoot, origin.position)
+            : Vector2.zero;
+
+        if (winFireworksPrefab != null)
+        {
+            var go = Instantiate(winFireworksPrefab, parent);
+            go.transform.SetAsLastSibling();
+            if (go.transform is RectTransform grt)   // UI efektse kazananın üstüne konumla
+                grt.anchoredPosition = center;
+            Destroy(go, Mathf.Max(0.3f, winFireworksDuration) + 1f);
+            return;
+        }
+
+        if (vfxRoot != null)
+            StartCoroutine(WinFireworksRoutine(center));
+    }
+
+    private static readonly Color[] FireworkColors =
+    {
+        new Color(1f, 0.9f, 0.3f), new Color(1f, 0.4f, 0.5f), new Color(0.4f, 0.8f, 1f),
+        new Color(0.6f, 1f, 0.5f), new Color(1f, 0.6f, 0.2f), new Color(0.8f, 0.5f, 1f),
+    };
+
+    private IEnumerator WinFireworksRoutine(Vector2 center)
+    {
+        float endTime = Time.time + Mathf.Max(0.3f, winFireworksDuration);
+        float spread = Mathf.Max(vfxRoot.rect.width, vfxRoot.rect.height, 1f) * 0.16f; // robotun çevresinde küme
+
+        while (Time.time < endTime)
+        {
+            // Kazanan robotun çevresine, yukarı doğru hafif yığılmış patlamalar.
+            Vector2 off = new Vector2(
+                Random.Range(-spread, spread),
+                Random.Range(-spread * 0.3f, spread * 1.6f));
+            StartCoroutine(WinBurst(center + off, FireworkColors[Random.Range(0, FireworkColors.Length)]));
+            yield return new WaitForSeconds(Random.Range(0.12f, 0.28f));
+        }
+    }
+
+    private IEnumerator WinBurst(Vector2 anchoredPos, Color color)
+    {
+        Image img = CreateImage("WinFirework", vfxRoot, color, new Vector2(140f, 140f));
+        if (winFireworkBurstSprite != null)
+        {
+            img.sprite = winFireworkBurstSprite;   // beyaz sprite × color = renkli patlama
+            img.preserveAspect = true;
+        }
+        img.raycastTarget = false;
+
+        var rt = img.rectTransform;
+        rt.anchoredPosition = anchoredPos;
+
+        float dur = 0.6f;
+        float t = 0f;
+        while (t < dur && img != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float e = 1f - (1f - k) * (1f - k);              // ease-out büyüme
+            rt.localScale = Vector3.one * Mathf.LerpUnclamped(0.2f, 1.7f, e);
+            var c = img.color; c.a = 1f - k; img.color = c;  // sönerek kaybol
+            yield return null;
+        }
+        if (img != null) Destroy(img.gameObject);
+    }
+
+    // Yenilince: gövde sprite'ını 'yığın' ile değiştir + çökme (aşağı in + ezil), kolları gizle.
+    private IEnumerator PlayDefeat(RectTransform robot, Image bodyImage, Sprite defeatedSprite,
+                                   RectTransform arm1, RectTransform arm2)
+    {
+        if (robot == null) yield break;
+
+        if (arm1 != null) arm1.gameObject.SetActive(false);
+        if (arm2 != null) arm2.gameObject.SetActive(false);
+
+        if (bodyImage != null && defeatedSprite != null)
+            bodyImage.sprite = defeatedSprite;   // rect aynı kalır; yığın sprite'ını gövde footprint'ine göre çiz
+
+        Vector2 basePos = robot.anchoredPosition;
+        Vector3 baseScale = robot.localScale;
+        Vector2 downPos = basePos + new Vector2(0f, -winHopHeight * 0.5f);
+        Vector3 squashScale = new Vector3(baseScale.x * 1.08f, baseScale.y * 0.85f, baseScale.z);
+
+        float dur = Mathf.Max(0.05f, defeatCollapseDuration);
+        float t = 0f;
+        while (t < dur && robot != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float e = 1f - (1f - k) * (1f - k);
+            robot.anchoredPosition = Vector2.LerpUnclamped(basePos, downPos, e);
+            robot.localScale = Vector3.LerpUnclamped(baseScale, squashScale, e);
+            yield return null;
+        }
     }
 
     // ── Oil (opsiyonel baskı) ──
@@ -502,9 +733,10 @@ public sealed class BossDuelController : MonoBehaviour
         var targets = PickOilTargets(oilCount);
         if (targets.Count == 0) return;
 
+        // Yeni oil kendi hücresinde belirir (uzaktan köprü değil); kaynak = hedef.
         var pairs = new List<OilSpreadPair>(targets.Count);
         foreach (var t in targets)
-            pairs.Add(new OilSpreadPair(new Vector2Int(t.x, 0), t));
+            pairs.Add(new OilSpreadPair(t, t));
 
         board.StartImmediateActionSequence(new List<BoardAction> { new OilSpreadAction(board, pairs) });
     }
@@ -542,6 +774,25 @@ public sealed class BossDuelController : MonoBehaviour
     {
         if (useA) return a != null ? a : b;
         return b != null ? b : a;
+    }
+
+    // Atış/isabet sesi. AudioSource yoksa kendi oluşturur. Hafif perde sapmasıyla monotonluk kırılır.
+    private void PlaySfx(AudioClip clip, float volume)
+    {
+        if (clip == null || volume <= 0f) return;
+        if (!GameSettings.SoundEnabled) return;
+
+        if (sfxSource == null)
+        {
+            sfxSource = GetComponent<AudioSource>();
+            if (sfxSource == null) sfxSource = gameObject.AddComponent<AudioSource>();
+            sfxSource.playOnAwake = false;
+            sfxSource.spatialBlend = 0f;
+            sfxSource.dopplerLevel = 0f;
+        }
+
+        sfxSource.pitch = 1f + Random.Range(-pitchJitter, pitchJitter);
+        sfxSource.PlayOneShot(clip, Mathf.Clamp01(volume));
     }
 
     private Vector3 GetMuzzleWorld(RectTransform muzzle, RectTransform robot, float facing)

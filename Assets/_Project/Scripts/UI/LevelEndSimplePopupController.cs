@@ -74,9 +74,26 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private Image extraMovesIcon;
     [SerializeField] private TMP_Text failMessageText;
     [SerializeField] private TMP_Text failContinueText;
-    [Tooltip("Opsiyonel: hamle eklenmezse kaybolacak event puanı uyarısı. Fail popup altına " +
-             "UI/EventLossWarningText adlı bir TMP_Text koyarsan otomatik bulunur.")]
+    [Tooltip("Opsiyonel (eski/metin fallback): ikon satırları atanmamışsa bu TMP'ye birleşik metin yazılır.")]
     [SerializeField] private TMP_Text failEventLossWarningText;
+
+    [Header("Fail - Loss Icons (vazgeçince kaybedilecekler)")]
+    [Tooltip("Tüm kayıp özeti paneli. Kaybedilecek bir şey yoksa gizlenir.")]
+    [SerializeField] private GameObject lossSummaryRoot;
+    [Tooltip("Tek kayıp satırı prefab'ı (LossRowView: ikon + miktar). Her kayıp için biri instantiate edilir.")]
+    [SerializeField] private LossRowView lossRowPrefab;
+    [Tooltip("Satırların ekleneceği container (VerticalLayoutGroup önerilir).")]
+    [SerializeField] private Transform lossRowContainer;
+    [Tooltip("Altın ikonu sprite'ı.")]
+    [SerializeField] private Sprite coinIcon;
+    [Tooltip("Event ikonu yedeği (config.goalIcon boşsa kullanılır).")]
+    [SerializeField] private Sprite eventIconFallback;
+    [Tooltip("İlk cancel'da sağdan kayıp gelen kayıp paneli (RectTransform). Aşama 1'de gizli.")]
+    [SerializeField] private RectTransform lossSlidePanel;
+    [SerializeField, Min(0.05f)] private float lossSlideDuration = 0.35f;
+    private readonly System.Collections.Generic.List<GameObject> _lossRows = new();
+    private bool failSecondStage;   // false: ilk cancel kayıpları kaydırır; true: ikinci cancel → ana menü
+    private bool _hasLosses;        // gösterilecek kayıp var mı (RefreshFailLossSummary set eder)
 
     [Header("Success - Star Images")]
     [SerializeField] private Image[] starImages;
@@ -251,6 +268,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         failPopupShown = false;
         successPopupShown = false;
         successReturnQueued = false;
+        failSecondStage = false;
         failSettleWaitRunning = false;
         failConfirmRunning = false;
         isBonusRoundRunning = false;
@@ -327,9 +345,39 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void HandleFailCloseClicked()
     {
-        // Oyuncu hamle eklemeyi reddetti → bu levelda toplanan event item'ları kaybolur.
+        // 1. cancel: kaybedecekleri sağdan kaydırıp göster (ana menüye gitme). BtnContinue aynı kalır.
+        if (!failSecondStage && _hasLosses && lossSlidePanel != null)
+        {
+            failSecondStage = true;
+            lossSlidePanel.gameObject.SetActive(true);
+            StartCoroutine(SlideInFromRight(lossSlidePanel, lossSlideDuration));
+            return;
+        }
+
+        // 2. cancel (veya gösterilecek kayıp yok): hamle eklemeyi reddetti → event item'ları kaybolur, ana menü.
         ProgressEventService.Instance?.DiscardStagedGains();
         ReturnToMainMenuImmediate();
+    }
+
+    // Kayıp panelini ekran-dışı-sağdan, sahnede yazdığın hedef konuma kaydırır.
+    private System.Collections.IEnumerator SlideInFromRight(RectTransform panel, float dur)
+    {
+        Vector2 target = panel.anchoredPosition;   // sahnedeki yazılı (hedef) konum
+        float dist = (panel.parent is RectTransform p && p.rect.width > 1f) ? p.rect.width : Mathf.Max(panel.rect.width, 600f);
+        Vector2 start = target + new Vector2(dist, 0f);
+        panel.anchoredPosition = start;
+
+        float t = 0f;
+        float d = Mathf.Max(0.05f, dur);
+        while (t < d && panel != null)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / d);
+            float e = 1f - Mathf.Pow(1f - k, 3f);   // ease-out
+            panel.anchoredPosition = Vector2.LerpUnclamped(start, target, e);
+            yield return null;
+        }
+        if (panel != null) panel.anchoredPosition = target;
     }
 
     private bool returningToMainMenu;
@@ -826,6 +874,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
         ApplyChapterThemeVisuals();
         RefreshFailOfferVisuals();
         RefreshEventLossWarning();
+
+        // Aşama 1: kayıp paneli gizli; ilk cancel'da sağdan kaydırılır.
+        failSecondStage = false;
+        if (lossSlidePanel != null) lossSlidePanel.gameObject.SetActive(false);
+
         transform.SetAsLastSibling();
 
         if (failPopupRoot != null)
@@ -845,22 +898,74 @@ public class LevelEndSimplePopupController : MonoBehaviour
         SetBlockerVisible(true);
     }
 
-    // Hamle eklenmezse kaybolacak event puanı uyarısı — staging'de bir şey yoksa gizli.
+    // Vazgeçersen (hamle eklemezsen) neleri kaybedeceğinin özeti: kazanılacak altın ödülü +
+    // bu bölümde toplanan event puanı. İlgili olan satırlar gösterilir; hiçbiri yoksa gizli.
     private void RefreshEventLossWarning()
     {
-        if (failEventLossWarningText == null)
+        RefreshFailLossSummary();
+    }
+
+    // Vazgeçince kaybedilecekler — DİNAMİK ikon satırı listesi (coin, event(ler), ileride yıldız...).
+    // Her kayıp öğesi için lossRowPrefab instantiate edilir. Prefab/container yoksa metne düşer.
+    private void RefreshFailLossSummary()
+    {
+        // Eski satırları temizle
+        for (int i = 0; i < _lossRows.Count; i++)
+            if (_lossRows[i] != null) Destroy(_lossRows[i]);
+        _lossRows.Clear();
+
+        var items = BuildLossItems();
+        bool any = items.Count > 0;
+        _hasLosses = any;
+
+        if (lossRowPrefab != null && lossRowContainer != null)
+        {
+            foreach (var it in items)
+            {
+                var row = Instantiate(lossRowPrefab, lossRowContainer);
+                row.Set(it.icon, it.amount);
+                _lossRows.Add(row.gameObject);
+            }
+
+            if (lossSummaryRoot != null) lossSummaryRoot.SetActive(any);
+            if (failEventLossWarningText != null) failEventLossWarningText.gameObject.SetActive(false);
             return;
+        }
 
-        int staged = ProgressEventService.Instance != null
-            ? ProgressEventService.Instance.StagedGainTotal
-            : 0;
+        // ── Fallback: prefab yoksa birleşik metin ──
+        if (failEventLossWarningText != null)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var it in items) sb.AppendLine($"•  {it.amount}");
+            failEventLossWarningText.gameObject.SetActive(any);
+            if (any)
+                failEventLossWarningText.text = $"Vazgeçersen kaybedeceklerin:\n{sb.ToString().TrimEnd()}";
+        }
 
-        bool show = staged > 0;
-        failEventLossWarningText.gameObject.SetActive(show);
+        if (lossSummaryRoot != null) lossSummaryRoot.SetActive(any);
+    }
 
-        if (show)
-            failEventLossWarningText.text =
-                $"Hamle eklemezsen bu bölümde topladığın {staged} event puanı kaybolacak!";
+    // Kayıp öğeleri (ikon + miktar). Yeni kayıp türü (yıldız, çoklu event vb.) buraya eklenir.
+    private System.Collections.Generic.List<(Sprite icon, int amount)> BuildLossItems()
+    {
+        var items = new System.Collections.Generic.List<(Sprite icon, int amount)>();
+
+        // Altın (kazanılacak ödül)
+        var level = board != null ? board.ActiveLevelData : null;
+        int coinReward = level != null ? Mathf.Max(0, level.baseCoinReward) : 0;
+        if (coinReward > 0) items.Add((coinIcon, coinReward));
+
+        // Event(ler) — şu an tek aktif event; çoklu event eklenince burası döngüye döner.
+        var pe = ProgressEventService.Instance;
+        if (pe != null && pe.StagedGainTotal > 0)
+        {
+            Sprite evIcon = pe.EventIcon != null ? pe.EventIcon : eventIconFallback;
+            items.Add((evIcon, pe.StagedGainTotal));
+        }
+
+        // İleride: yıldız vb. → items.Add((starIcon, lostStars));
+
+        return items;
     }
 
     private void ShowSuccessPopup()

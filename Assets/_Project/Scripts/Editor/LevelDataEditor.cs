@@ -130,6 +130,8 @@ public class LevelDataEditor : Editor
         level.damagePerClearedTile = Mathf.Max(0, EditorGUILayout.IntField("Damage Per Cleared Tile", Mathf.Max(0, level.damagePerClearedTile)));
         level.enemyAttackBaseDamage = Mathf.Max(0, EditorGUILayout.IntField("Enemy Base Damage", Mathf.Max(0, level.enemyAttackBaseDamage)));
         level.enemyAttackDamageGrowth = Mathf.Max(0, EditorGUILayout.IntField("Enemy Damage Growth / Attack", Mathf.Max(0, level.enemyAttackDamageGrowth)));
+        level.enemyAttackInterval = Mathf.Max(0f, EditorGUILayout.FloatField("Enemy Attack Interval (sn, 0=default)", level.enemyAttackInterval));
+        level.battlefieldBackground = (Sprite)EditorGUILayout.ObjectField("Arena Background (boş=mevcut)", level.battlefieldBackground, typeof(Sprite), false);
 
         EditorGUILayout.Space(2);
         EditorGUILayout.LabelField("Oil (opsiyonel baskı)", EditorStyles.miniBoldLabel);
