@@ -32,7 +32,7 @@ MonoBehaviour:
   enemyAttackDamageGrowth: 6
   enemyAttackInterval: 2
   battlefieldBackground: {fileID: 0}
-  randomPool: 
+  randomPool: 000000000100000003000000
   energyPerContainer: 5
   comboTutorial: 0
   musicClip: {fileID: 0}

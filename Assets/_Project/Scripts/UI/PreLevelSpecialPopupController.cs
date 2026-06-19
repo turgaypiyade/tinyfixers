@@ -294,6 +294,15 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             return null;
 
         int level = Mathf.Max(1, PlayerPrefs.GetInt(prefsLevelKey, 1));
+
+        // Oyunun kendisi (LevelRuntimeSelector) level'ı GLOBAL level ile, chapter'dan bağımsız
+        // çözüyor. Popup goals'ı da aynısını yapmalı — yoksa theme library'nin hesapladığı
+        // previewChapter, catalog entry'lerinin chapter'ıyla uyuşmayınca (örn. 15'ten sonra)
+        // goals null döner ve görünmez.
+        if (levelCatalog.TryGetGlobalLevel(level, out LevelData byGlobal))
+            return byGlobal;
+
+        // Yedek: (chapter, level) eşleşmesi.
         int previewChapter = ResolvePreviewChapter(level);
         return levelCatalog.TryGetLevel(previewChapter, level, out LevelData levelData) ? levelData : null;
     }
