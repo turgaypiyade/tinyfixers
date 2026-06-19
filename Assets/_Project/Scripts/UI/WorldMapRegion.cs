@@ -3,13 +3,31 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Harita üzerinde bir bölge. Toplam yıldız >= unlockStars olunca sisi (fog) açılır.
-/// Şimdilik sadece bölge açma (level girişi yok). Bina/dekor ayrı; bu sadece sisi yönetir.
+/// Dünya haritasında açılabilir bir bölge (ada/alan).
+/// Yıldız HARCAMA modeli: görev listesinden tıklanınca starCost kadar yıldız düşülür,
+/// bölge kalıcı olarak "açıldı" işaretlenir ve sis (fog) animasyonla kalkar.
+///
+/// Açılma durumu PlayerPrefs'te regionId ile saklanır (toplam yıldıza bağlı DEĞİL).
+/// Bina/dekor ayrı; bu component sadece sisi + pin'i + kalıcı durumu yönetir.
 /// </summary>
 public sealed class WorldMapRegion : MonoBehaviour
 {
-    [Tooltip("Bu bölge kaç TOPLAM yıldızda açılır.")]
-    [SerializeField, Min(0)] private int unlockStars;
+    [Header("Kimlik & Liste Bilgisi")]
+    [Tooltip("Benzersiz kalıcı anahtar. Açılma durumu 'region_unlocked_<id>' olarak saklanır. " +
+             "Her bölgede FARKLI olmalı (örn: living_area, garden, harbor).")]
+    [SerializeField] private string regionId;
+    [Tooltip("Görev listesinde gösterilecek ad için lokalizasyon anahtarı (tinyfixers_localization.json).")]
+    [SerializeField] private string nameLocalizationKey;
+    [Tooltip("Lokalizasyon bulunamazsa kullanılacak yedek ad.")]
+    [SerializeField] private string fallbackName = "Bölge";
+    [Tooltip("Bu bölgeyi açmak için harcanacak yıldız.")]
+    [SerializeField, Min(0)] private int starCost = 10;
+    [Tooltip("Görev listesi satırında gösterilecek ikon (opsiyonel — bölge küçük görseli).")]
+    [SerializeField] private Sprite taskIcon;
+    [Tooltip("Oyun ilk açıldığında zaten açık başlasın mı? (örn. başlangıç/ev bölgesi).")]
+    [SerializeField] private bool startUnlocked;
+
+    [Header("Sis (Fog)")]
     [Tooltip("Bölgeyi örten sis/bulut. CanvasGroup'lu bir obje; açılınca fade-out olur.")]
     [SerializeField] private CanvasGroup fog;
     [Tooltip("Kilitliyken sis opaklığı. 1 = tam kapalı, 0.6-0.8 = altındaki siluet hafif görünür.")]
@@ -22,51 +40,75 @@ public sealed class WorldMapRegion : MonoBehaviour
     [SerializeField] private Sprite lockedPinSprite;
     [SerializeField] private Sprite unlockedPinSprite;
 
-    public int UnlockStars => unlockStars;
+    [Header("Hedef (görev listesi yıldızları buraya uçar)")]
+    [Tooltip("Sinematikte yıldızların uçacağı / kutlamanın patlayacağı nokta. " +
+             "Boşsa fog'un (yoksa bu objenin) transform'u kullanılır.")]
+    [SerializeField] private RectTransform revealFocus;
+
+    // ─── Public ──────────────────────────────────────────────────────────────
+
+    public string RegionId => regionId;
+    public string NameLocalizationKey => nameLocalizationKey;
+    public string FallbackName => fallbackName;
+    public int StarCost => starCost;
+    public Sprite TaskIcon => taskIcon;
+
+    public RectTransform RevealFocus =>
+        revealFocus != null ? revealFocus :
+        (fog != null ? (RectTransform)fog.transform : (RectTransform)transform);
+
+    private string Key => $"region_unlocked_{regionId}";
+
+    public bool IsUnlocked
+    {
+        get => startUnlocked || PlayerPrefs.GetInt(Key, 0) == 1;
+        private set { PlayerPrefs.SetInt(Key, value ? 1 : 0); PlayerPrefs.Save(); }
+    }
 
     private Coroutine fadeCo;
 
-    public void Apply(int totalStars, bool animate)
-    {
-        bool revealed = totalStars >= unlockStars;
+    // ─── State ───────────────────────────────────────────────────────────────
 
-        // Pin görseli (sisten bağımsız, hep görünür).
+    /// <summary>Kalıcı duruma göre sisi anında uygula (animasyonsuz). Sahne açılışında çağrılır.</summary>
+    public void ApplyInstant()
+    {
+        bool unlocked = IsUnlocked;
+
         if (pin != null)
         {
-            var s = revealed ? unlockedPinSprite : lockedPinSprite;
+            var s = unlocked ? unlockedPinSprite : lockedPinSprite;
             if (s != null) pin.sprite = s;
         }
 
         if (fog == null) return;
-
         if (fadeCo != null) { StopCoroutine(fadeCo); fadeCo = null; }
 
-        if (!revealed)
-        {
-            // Kilitli: sis kısmen saydam (siluet görünür).
-            fog.gameObject.SetActive(true);
-            fog.alpha = lockedFogAlpha;
-            return;
-        }
-
-        // Zaten gizliyse (alpha 0 / kapalı) animasyona gerek yok — direkt kapalı bırak.
-        bool alreadyHidden = !fog.gameObject.activeSelf || fog.alpha <= 0.001f;
-
-        if (!animate || alreadyHidden)
+        if (unlocked)
         {
             fog.alpha = 0f;
             fog.gameObject.SetActive(false);
-            return;
         }
-
-        // Görünürken açıldı → fade-out (sis objesi şu an aktif, coroutine güvenli).
-        fadeCo = StartCoroutine(FadeOut());
+        else
+        {
+            fog.gameObject.SetActive(true);
+            fog.alpha = lockedFogAlpha;
+        }
     }
 
-    private IEnumerator FadeOut()
+    /// <summary>Bölgeyi kalıcı aç + sisi animasyonla kaldır. WorldMapController çağırır.</summary>
+    public IEnumerator RevealRoutine()
     {
-        fog.gameObject.SetActive(true);
-        float start = fog.alpha;
+        IsUnlocked = true;   // kesinti olsa bile kaydedildi
+
+        if (pin != null && unlockedPinSprite != null) pin.sprite = unlockedPinSprite;
+
+        if (fog == null) yield break;
+        if (fadeCo != null) { StopCoroutine(fadeCo); fadeCo = null; }
+
+        if (!fog.gameObject.activeSelf) fog.gameObject.SetActive(true);
+        float start = fog.alpha <= 0.001f ? lockedFogAlpha : fog.alpha;
+        fog.alpha = start;
+
         float t = 0f;
         while (t < fadeDuration)
         {
@@ -76,6 +118,18 @@ public sealed class WorldMapRegion : MonoBehaviour
         }
         fog.alpha = 0f;
         fog.gameObject.SetActive(false);
-        fadeCo = null;
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (string.IsNullOrEmpty(regionId))
+            UnityEditor.EditorApplication.delayCall += () =>
+            {
+                if (this == null) return;
+                if (string.IsNullOrEmpty(regionId))
+                    Debug.LogWarning($"[WorldMapRegion] '{name}' için regionId boş — açılma durumu kaydedilemez.", this);
+            };
+    }
+#endif
 }
