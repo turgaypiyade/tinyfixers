@@ -38,6 +38,12 @@
         { "key": "worldmap_unlock_button", "value": "AÇ" },
         { "key": "worldmap_all_unlocked", "value": "Tüm bölgeler açıldı!" },
         { "key": "worldmap_region_living_area", "value": "Yaşam Alanını Aç" },
+        { "key": "worldmap_robot_hall_area", "value": "Eğlence Merkezi" },
+        {
+          "key": "worldmap_robot_factory_area",
+          "value": "Fabrika Alanını Aç"
+        },
+        
         { "key": "workshop_task_1", "value": "Zemini süpür" },
         { "key": "workshop_task_2", "value": "Sol bacağı yerleştir" },
         { "key": "workshop_task_3", "value": "Sağ bacağı yerleştir" },

@@ -30,7 +30,7 @@ MonoBehaviour:
   damagePerClearedTile: 10
   enemyAttackBaseDamage: 20
   enemyAttackDamageGrowth: 6
-  enemyAttackInterval: 2
+  enemyAttackInterval: 1
   battlefieldBackground: {fileID: 0}
   randomPool: 
   energyPerContainer: 1

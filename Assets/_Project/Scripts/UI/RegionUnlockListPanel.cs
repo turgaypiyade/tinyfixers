@@ -23,6 +23,8 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
     [SerializeField] private Button[] extraCloseButtons;
     [Tooltip("Tüm bölgeler açıldığında gösterilecek mesaj/panel.")]
     [SerializeField] private GameObject allCompletedMessage;
+    [Tooltip("Üstteki ilerleme barı (opsiyonel).")]
+    [SerializeField] private RegionProgressBar progressBar;
 
     [Header("Layout")]
     [SerializeField, Min(1)] private int visibleSlotCount = 3;
@@ -84,6 +86,7 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
         if (panelGroup != null) panelGroup.alpha = 0f;
 
         RebuildItemsInstant();
+        worldMap.FocusNextLocked(instant: true);   // boş ekranda açma — sıradaki pine konumlan
         StartCoroutine(FadePanel(0f, 1f, panelFadeDuration));
     }
 
@@ -228,6 +231,8 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
             item.Bind(locked[slot], this, isActive: slot == 0);
             items.Add(item);
         }
+
+        if (progressBar != null) progressBar.ApplyInstant();
     }
 
     private IEnumerator FadePanel(float from, float to, float dur)
