@@ -19,7 +19,7 @@ MonoBehaviour:
   edgeRightPrefab: {fileID: 6574422976558452149, guid: 939e9de2b2df843dc82c5ec8b618961d, type: 3}
   outerLTPrefab: {fileID: 7522899034841235240, guid: 8686be6e5f51240ac83c47593fce7045, type: 3}
   outerRTPrefab: {fileID: 731866519192217463, guid: c342112bfe90248b1894261b7d01de3d, type: 3}
-  outerLBPrefab: {fileID: 190114846152896381, guid: 138a7dbe8e2bf48faac3adc87270e6d9, type: 3}
+  outerLBPrefab: {fileID: 1257187865206446350, guid: b7052c5ed9d7f42b79644e281071ec99, type: 3}
   outerRBPrefab: {fileID: 190114846152896381, guid: 138a7dbe8e2bf48faac3adc87270e6d9, type: 3}
   innerLTPrefab: {fileID: 1266194054284808458, guid: 90c77d540796d4cd8942cbea78295704, type: 3}
   innerRTPrefab: {fileID: 1266194054284808458, guid: 91296007a613b4c43b2504d243b6f2ac, type: 3}

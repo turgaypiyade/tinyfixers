@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: d270b7bf8e46f4282ac4d88a7e7493b5
+guid: 11713e59ae9184dc9a90d2125d47565a
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 2165545484029532541
-    second: "verticalLI\u0307ne_0"
+      213: -1907931696567509958
+    second: verticalline_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,7 +113,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: "verticalLI\u0307ne_0"
+      name: verticalline_0
       rect:
         serializedVersion: 2
         x: 0
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d791888e4209d0e10800000000000000
-      internalID: 2165545484029532541
+      spriteID: a3c926a0b3aa585e0800000000000000
+      internalID: -1907931696567509958
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      "verticalLI\u0307ne_0": 2165545484029532541
+      verticalline_0: -1907931696567509958
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

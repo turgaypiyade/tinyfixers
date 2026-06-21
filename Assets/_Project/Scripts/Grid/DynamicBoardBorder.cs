@@ -59,6 +59,8 @@ public class DynamicBoardBorder : MonoBehaviour
 
     [Header("Debug")]
     public bool debugMasks = false;
+    [Tooltip("Her köşe node'una hangi prefabın kullanıldığını siyah fontla yazar (örn. outer_lb, inner_rt).")]
+    public bool debugCornerNames = false;
     public bool debugBorderLogs = false;
     [Tooltip("Her border sprite'ın etrafına outline çizer (gerçek konumu görmek için).")]
     public bool debugDrawOutlines = false;
@@ -303,6 +305,7 @@ public class DynamicBoardBorder : MonoBehaviour
         float size = CornerSize;
 
         if (debugMasks) SpawnMaskLabel(node, mask);
+        if (debugCornerNames) SpawnCornerNameLabel(node, CornerName(mask));
 
         if (IsJunctionMask(mask)) PlaceJunction(nx, ny);
 
@@ -460,6 +463,51 @@ public class DynamicBoardBorder : MonoBehaviour
             level.cells[idx] == (int)CellType.Empty)
             return false;
         return true;
+    }
+
+    private static string CornerName(int mask)
+    {
+        switch (mask)
+        {
+            case 1:  return "outer_lt";
+            case 2:  return "outer_rt";
+            case 4:  return "outer_rb";
+            case 8:  return "outer_lb";
+            case 14: return "inner_lt";
+            case 13: return "inner_rt";
+            case 11: return "inner_rb";
+            case 7:  return "inner_lb";
+            case 5:  return "oLT+oRB";
+            case 10: return "oRT+oLB";
+            default: return "?" + mask;
+        }
+    }
+
+    private void SpawnCornerNameLabel(Vector2 pos, string name)
+    {
+        var go = new GameObject("CornerName_" + name, typeof(RectTransform), typeof(Text));
+        go.transform.SetParent(borderRoot, false);
+        go.transform.SetAsLastSibling();
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = new Vector2(90, 24);
+        var t = go.GetComponent<Text>();
+        t.text = name;
+        t.font = debugFont != null ? debugFont : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        t.fontSize = 15;
+        t.fontStyle = FontStyle.Bold;
+        t.color = Color.white;
+        t.alignment = TextAnchor.MiddleCenter;
+        t.horizontalOverflow = HorizontalWrapMode.Overflow;
+        t.verticalOverflow = VerticalWrapMode.Overflow;
+        t.raycastTarget = false;
+
+        // Okunabilirlik için siyah kontur (açık/koyu her zeminde okunsun).
+        var outline = go.AddComponent<Outline>();
+        outline.effectColor = Color.black;
+        outline.effectDistance = new Vector2(1.5f, 1.5f);
     }
 
     private void SpawnMaskLabel(Vector2 pos, int mask)

@@ -23,6 +23,20 @@ MonoBehaviour:
     collectibleId: 1
     iconOverride: {fileID: 0}
     amount: 36
+  levelKind: 0
+  usesCustomIntro: 0
+  introLeftSprite: {fileID: 0}
+  introRightSprite: {fileID: 0}
+  introSlideInDuration: 0.6
+  introHoldDuration: 0.8
+  bossAttackEveryMoves: 3
+  bossAttackOilCount: 2
+  playerMaxHp: 560
+  damagePerClearedTile: 10
+  enemyAttackBaseDamage: 20
+  enemyAttackDamageGrowth: 6
+  enemyAttackInterval: 2
+  battlefieldBackground: {fileID: 0}
   randomPool: 
   energyPerContainer: 1
   comboTutorial: 0
