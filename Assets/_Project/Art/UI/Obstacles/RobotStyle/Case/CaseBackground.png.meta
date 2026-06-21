@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: a734466fad6ff4da59d52aef3779e940
+guid: 5f7b203dd6add404cb3b8697ca67d6b5
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 6477828186639409970
-    second: GoldMoney_0
+      213: 6693279720450241679
+    second: CaseBackground_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: GoldMoney_0
+      name: CaseBackground_0
       rect:
         serializedVersion: 2
-        x: 12
+        x: 0
         y: 0
-        width: 1222
-        height: 1249
+        width: 1095
+        height: 1097
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 233a7ac2a6ed5e950800000000000000
-      internalID: 6477828186639409970
+      spriteID: f8433c7717e43ec50800000000000000
+      internalID: 6693279720450241679
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      GoldMoney_0: 6477828186639409970
+      CaseBackground_0: 6693279720450241679
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -135,9 +135,18 @@ public sealed class EnergyContainerService : MonoBehaviour
                           && topHud != null
                           && topHud.HasGoalForCollectible(collectible);
 
-        System.Action onOrbArrived = goalExists
-            ? () => topHud.NotifyCollectibleCollected(collectible, 1)
-            : null;
+        // Goal collectible uçarken board'u "busy" tut → son hamlede orb varmadan FAIL gösterilmesin.
+        // Orb VARINCA önce goal ilerlet, sonra job'u kapat (end-eval o an goal'ü tamam görür).
+        System.Action onOrbArrived = null;
+        if (goalExists)
+        {
+            board?.BeginBackgroundJob();
+            onOrbArrived = () =>
+            {
+                topHud.NotifyCollectibleCollected(collectible, 1);
+                board?.EndBackgroundJob();
+            };
+        }
 
         if (logHits)
         {

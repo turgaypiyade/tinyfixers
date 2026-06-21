@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: a734466fad6ff4da59d52aef3779e940
+guid: 9c59a9a61bce14277950750292a0b871
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 6477828186639409970
-    second: GoldMoney_0
+      213: 4238245319126267331
+    second: CaseRedKnob_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: GoldMoney_0
+      name: CaseRedKnob_0
       rect:
         serializedVersion: 2
-        x: 12
-        y: 0
-        width: 1222
-        height: 1249
+        x: 0
+        y: 2
+        width: 729
+        height: 808
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 233a7ac2a6ed5e950800000000000000
-      internalID: 6477828186639409970
+      spriteID: 3c5bb7d99a541da30800000000000000
+      internalID: 4238245319126267331
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      GoldMoney_0: 6477828186639409970
+      CaseRedKnob_0: 4238245319126267331
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

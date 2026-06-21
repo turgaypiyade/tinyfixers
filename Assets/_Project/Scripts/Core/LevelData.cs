@@ -99,6 +99,18 @@ public enum ObstacleId : int
     // Hat-shaped dispenser. Each hit launches one energy orb toward the goal.
     // Managed by HatLauncherService. Stays on board until manually cleared.
     HatLauncher = 31,
+
+    // Bonus coin. Single-hit movable (falls like plastic_orange / HelmetPorcelain).
+    // Collected when an adjacent match clears it → +1 coin to PlayerWallet (GoldCoinCollectService).
+    // Not a level goal; pure bonus. Often hidden under a Safe.
+    GoldMoney = 32,
+
+    // Multi-cell vault that COVERS an NxN region (its cells keep their authored content
+    // underneath, frozen/locked). 3 sequential locks (red→yellow→green), each with its own
+    // hit count; each hit drops the active lock's knob a step. When all 3 are emptied the
+    // safe breaks and the underlying content joins the board. Authored via LevelData.safes[].
+    // Managed by SafeObstacleService; usually a level GOAL.
+    Safe = 33,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
@@ -120,6 +132,21 @@ public struct MagnetEntry
     [Tooltip("Sıralı yol hücreleri: ilk eleman MagnetA başlangıcı, son eleman MagnetB başlangıcı.\n" +
              "Flat index (y*width+x). En az 2 hücre gereklidir.")]
     public int[] pathCellIndices;
+}
+
+[System.Serializable]
+public struct SafeEntry
+{
+    [Tooltip("Kasanın SOL-ÜST hücresinin flat index'i (y*width+x).")]
+    public int originCellIndex;
+    [Tooltip("Kasanın kapladığı hücre boyutu (2x2, 3x3, 4x4...).")]
+    [Min(1)] public int width;
+    [Min(1)] public int height;
+    [Tooltip("Kilit hit sayıları — sıra: KIRMIZI, SARI, YEŞİL. Aktif kilit sırayla düşer; " +
+             "her kilit bitince knob en alta iner ve sıradakine geçilir.")]
+    [Min(1)] public int redHits;
+    [Min(1)] public int yellowHits;
+    [Min(1)] public int greenHits;
 }
 
 [CreateAssetMenu(fileName = "Level_001", menuName = "CoreCollapse/Level Data", order = 1)]
@@ -211,6 +238,10 @@ public class LevelData : ScriptableObject
     [Tooltip("Magnet pair obstacles. Cells are stamped into obstacles[] at runtime by GridSpawner.")]
     public MagnetEntry[] magnets;
 
+    [Tooltip("Safe (kasa) kapakları. Kapladıkları NxN bölgenin altındaki içerik dokunulmaz kalır; " +
+             "kasa kırılınca açılır. Cells runtime'da SafeObstacleService ile işlenir.")]
+    public SafeEntry[] safes;
+
     [Tooltip("Sabitlenmiş taş tipleri. 0 = rastgele (None), diğerleri TileType+1 değeri.\n" +
              "size = width*height. GridSpawner spawn sırasında simulation yerine bu değeri kullanır.")]
     public int[] pinnedTileTypes;
@@ -258,6 +289,9 @@ public class LevelData : ScriptableObject
 
         if (magnets == null)
             magnets = System.Array.Empty<MagnetEntry>();
+
+        if (safes == null)
+            safes = System.Array.Empty<SafeEntry>();
 
         if (pinnedTileTypes == null || pinnedTileTypes.Length != size)
             pinnedTileTypes = new int[size];

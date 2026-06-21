@@ -1,10 +1,13 @@
 fileFormatVersion: 2
-guid: a734466fad6ff4da59d52aef3779e940
+guid: 22d6428168e0543a4a4882d7c5b218eb
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 6477828186639409970
-    second: GoldMoney_0
+      213: -6575793561813674367
+    second: TeamIcon_0
+  - first:
+      213: 4509614106676153190
+    second: TeamIcon_1
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +116,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: GoldMoney_0
+      name: TeamIcon_0
       rect:
         serializedVersion: 2
-        x: 12
-        y: 0
-        width: 1222
-        height: 1249
+        x: 14
+        y: 36
+        width: 777
+        height: 650
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +131,30 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 233a7ac2a6ed5e950800000000000000
-      internalID: 6477828186639409970
+      spriteID: 1869bc778961eb4a0800000000000000
+      internalID: -6575793561813674367
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TeamIcon_1
+      rect:
+        serializedVersion: 2
+        x: 113
+        y: 611
+        width: 624
+        height: 187
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 66bc586132e559e30800000000000000
+      internalID: 4509614106676153190
       vertices: []
       indices: 
       edges: []
@@ -148,7 +173,8 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      GoldMoney_0: 6477828186639409970
+      TeamIcon_0: -6575793561813674367
+      TeamIcon_1: 4509614106676153190
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

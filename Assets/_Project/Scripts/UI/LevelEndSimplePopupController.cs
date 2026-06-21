@@ -667,6 +667,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         Unsubscribe();
         board.OnMovesChanged += HandleMovesChanged;
         board.OnLevelFailRequested += HandleForcedFail;
+        board.ObstacleVisualChanged += HandleGoldMoneyVisual;
         topHud.OnGoalsCompletionChanged += HandleGoalsCompletionChanged;
     }
 
@@ -676,6 +677,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         {
             board.OnMovesChanged -= HandleMovesChanged;
             board.OnLevelFailRequested -= HandleForcedFail;
+            board.ObstacleVisualChanged -= HandleGoldMoneyVisual;
         }
         if (topHud != null)
             topHud.OnGoalsCompletionChanged -= HandleGoalsCompletionChanged;
@@ -703,11 +705,35 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         if (completed)
         {
-            QueueSuccessReturnToMainMenu();
+            TryQueueSuccessOrDeferForGold();
             return;
         }
 
         RequestEvaluateLevelEndState();
+    }
+
+    // GoldMoney (bonus coin) board'da dururken ve hamle varken win'i ERTELE — oyuncu kalan
+    // hamlelerle altınları toplasın. Hamle biterse (mevcut akış zaten win verir) ya da tüm
+    // GoldMoney toplanırsa (HandleGoldMoneyVisual → re-eval) win gelir. Sadece GoldMoney'e özgü.
+    private bool ShouldDeferWinForGoldMoney()
+    {
+        return board != null
+            && board.RemainingMoves > 0
+            && board.ObstacleStateService != null
+            && board.ObstacleStateService.CountAliveOrigins(ObstacleId.GoldMoney) > 0;
+    }
+
+    private void TryQueueSuccessOrDeferForGold()
+    {
+        if (ShouldDeferWinForGoldMoney()) return;   // GoldMoney + hamle var → ertele, oynamaya devam
+        QueueSuccessReturnToMainMenu();
+    }
+
+    // Son GoldMoney toplanınca end-değerlendirmeyi yeniden tetikle → erteleme kalkar, win gelir.
+    private void HandleGoldMoneyVisual(ObstacleVisualChange change)
+    {
+        if (change.cleared && change.obstacleId == ObstacleId.GoldMoney)
+            RequestEvaluateLevelEndState();
     }
 
     private void RequestEvaluateLevelEndState()
@@ -762,7 +788,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             
         if (topHud.AreAllGoalsCompleted)
         {
-            QueueSuccessReturnToMainMenu();
+            TryQueueSuccessOrDeferForGold();
             return;
         }
 

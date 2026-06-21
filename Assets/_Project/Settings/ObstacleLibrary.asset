@@ -990,3 +990,46 @@ MonoBehaviour:
     legacyStageDamageRules: 
     legacyBlocksCells: 1
     legacyBehavior: 1
+  - id: 32
+    stages:
+    - sprite: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
+      damageRule: 0
+      blocksCells: 0
+      behavior: 3
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 8300000, guid: 1c291cb59bde541d1b3a1a8fb6b63dbc, type: 3}
+      hitSoundVolume: 1
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 0
+    size: {x: 1, y: 1}
+    hits: 1
+    fullCellSprite: 1
+    suppressHitParticles: 0
+    hitParticleSprites: []
+    breakParticleSprites: []
+    wardrobeItemSprites:
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    hitSound: {fileID: 8300000, guid: 1c291cb59bde541d1b3a1a8fb6b63dbc, type: 3}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
+    drawUnderTiles: 0
+    legacySprite: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules: 
+    legacyBlocksCells: 0
+    legacyBehavior: 3

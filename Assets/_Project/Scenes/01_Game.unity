@@ -2793,8 +2793,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.07254623}
-  m_AnchorMax: {x: 0.70143884, y: 1.700569}
+  m_AnchorMin: {x: 0, y: 0.16398714}
+  m_AnchorMax: {x: 0.5289331, y: 3.8440514}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -7293,6 +7293,7 @@ GameObject:
   - component: {fileID: 1410826452}
   - component: {fileID: 1410826453}
   - component: {fileID: 1410826454}
+  - component: {fileID: 1410826455}
   m_Layer: 5
   m_Name: BoardContent
   m_TagString: Untagged
@@ -7810,6 +7811,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SlowMoDebug
   slowScale: 0.2
   stepFactor: 1.25
+--- !u!114 &1410826455
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1410826442}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7494f98f096a64d6d96f3514174847fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GoldCoinCollectService
+  board: {fileID: 1410826445}
+  coinsPerPiece: 1
 --- !u!1 &1412688350
 GameObject:
   m_ObjectHideFlags: 0

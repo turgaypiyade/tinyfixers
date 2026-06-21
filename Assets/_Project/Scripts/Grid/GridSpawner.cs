@@ -519,6 +519,11 @@ public class GridSpawner : MonoBehaviour
         view.SetVisualLayout(TileView.TileVisualLayout.Centered);
         view.ApplyTileSize(tileSize);
 
+        // GoldMoney: ince idle "para dönme" animasyonu (arada bir sağa-sola).
+        if (obsId == ObstacleId.GoldMoney && view.IconImage != null &&
+            view.IconImage.GetComponent<CoinIdleWobble>() == null)
+            view.IconImage.gameObject.AddComponent<CoinIdleWobble>();
+
         board.RegisterTile(view, x, y);
 
         var pool = effectiveRandomPool ?? randomPool;

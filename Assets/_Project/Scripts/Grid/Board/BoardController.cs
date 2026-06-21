@@ -542,6 +542,13 @@ public class BoardController : MonoBehaviour
         ActiveBackgroundJobs--;
     }
 
+    // Manual background-job scope. Keeps the board "busy" for end-of-level evaluation
+    // while an async visual finishes (e.g. a goal collectible flying to the HUD), so an
+    // out-of-moves FAIL isn't shown before an in-flight collectible reaches its goal.
+    // Always pair Begin/End; the ResolveBoard 5s timeout is the leak safety net.
+    public void BeginBackgroundJob() => ActiveBackgroundJobs++;
+    public void EndBackgroundJob()   => ActiveBackgroundJobs = Mathf.Max(0, ActiveBackgroundJobs - 1);
+
     // Runs a list of actions sequentially as a single background job.
     // Use this when actions have a defined order (e.g. Override fanout → clear).
     public void StartImmediateActionSequence(System.Collections.Generic.List<BoardAction> actions)

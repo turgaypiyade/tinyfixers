@@ -95,9 +95,17 @@ public sealed class HatLauncherService : MonoBehaviour
                           && topHud != null
                           && topHud.HasGoalForCollectible(collectible);
 
-        System.Action onArrived = goalExists
-            ? () => topHud.NotifyCollectibleCollected(collectible, 1)
-            : null;
+        // Goal collectible uçarken board'u "busy" tut → son hamlede orb varmadan FAIL gösterilmesin.
+        System.Action onArrived = null;
+        if (goalExists)
+        {
+            board?.BeginBackgroundJob();
+            onArrived = () =>
+            {
+                topHud.NotifyCollectibleCollected(collectible, 1);
+                board?.EndBackgroundJob();
+            };
+        }
 
         Debug.Log($"[HatLauncher] HIT origin={originIndex} released={totalGroupReleased}/{capacity} " +
                   $"collectible={collectible} goalExists={goalExists} fx={(fx != null ? fx.name : "NULL")} topHud={(topHud != null ? "ok" : "NULL")}");
