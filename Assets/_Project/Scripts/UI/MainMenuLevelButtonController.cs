@@ -9,6 +9,8 @@ public class MainMenuLevelButtonController : MonoBehaviour
     [SerializeField] private string prefsLevelKey = "current_level";
     [SerializeField] private PreLevelSpecialPopupController preLevelSpecialPopup;
     [SerializeField] private ChapterThemeLibrary themeLibrary;
+    [Tooltip("LevelData.usesCustomIntro kontrolü için katalog. Boşsa default load her zaman çalışır.")]
+    [SerializeField] private LevelCatalog levelCatalog;
 
     [Header("Can Sistemi")]
     [Tooltip("Can = 0 iken level butonuna basılınca yönlendirilecek can göstergesi.")]
@@ -65,8 +67,25 @@ public class MainMenuLevelButtonController : MonoBehaviour
             return;
         }
 
+        // Custom intro varsa onu kullan (sahne yüklemesi manager'a ait); aksi halde default.
+        if (TryShowCustomIntro())
+            return;
+
         ShowLoadingScreen();
         SceneManager.LoadScene(gameSceneName);
+    }
+
+    private bool TryShowCustomIntro()
+    {
+        if (levelCatalog == null || !levelCatalog.TryGetGlobalLevel(currentLevel, out LevelData data) || data == null)
+            return false;
+        if (!data.usesCustomIntro || data.introLeftSprite == null || data.introRightSprite == null)
+            return false;
+
+        CustomIntroLoadingManager.Show(
+            data.introLeftSprite, data.introRightSprite, gameSceneName,
+            data.introSlideInDuration, data.introHoldDuration);
+        return true;
     }
 
     private void ShowLoadingScreen()

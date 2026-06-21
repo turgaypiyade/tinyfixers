@@ -141,6 +141,20 @@ public class LevelData : ScriptableObject
              "goal'ü ekleyin (amount = HP, iconOverride = boss ikonu).")]
     public LevelKind levelKind = LevelKind.Normal;
 
+    [Tooltip("Bu level'e girerken DEFAULT chapter loading screen yerine, aşağıdaki iki parçanın " +
+             "soldan/sağdan gelip ortada birleştiği özel intro 'load' olarak gösterilir. Intro " +
+             "kalıcı katmanda, sahne ASENKRON yüklenirken oynar → board hiç flash etmez. " +
+             "İşaret kapalıysa VEYA iki sprite'tan biri boşsa default load çalışır.")]
+    public bool usesCustomIntro = false;
+    [Tooltip("Soldan gelen parça (tam-ekran, transparan padding'li yarı).")]
+    public Sprite introLeftSprite;
+    [Tooltip("Sağdan gelen parça (tam-ekran, transparan padding'li yarı).")]
+    public Sprite introRightSprite;
+    [Tooltip("Parçaların ortada birleşme süresi (sn).")]
+    [Min(0.05f)] public float introSlideInDuration = 0.6f;
+    [Tooltip("Birleştikten sonra bekleme süresi (sn). Sahne bu süre içinde yüklenmezse intro hazır olana kadar bekler.")]
+    [Min(0f)] public float introHoldDuration = 0.8f;
+
     [Header("Boss Duel")]
     [Tooltip("Boss kaç oyuncu hamlesinde bir EKSTRA oil saldırısı yapar (lazer her tur vurur, bu sadece oil sıklığı).")]
     [Min(1)] public int bossAttackEveryMoves = 3;

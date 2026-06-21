@@ -8,6 +8,10 @@ public class MudOverlayService : MonoBehaviour
     [SerializeField] private Sprite borderedMudSprite;
     [Tooltip("Sprite A'nın texture'ı — kenarsız düz mud. Stage-0 komşular arasında bevel'ı kapatmak için UV-mapped cover olarak kullanılır.")]
     [SerializeField] private Texture plainMudTexture;
+    [Tooltip("Hasarlı (stage 1+) koyu mud texture'ı — kenarsız. Damaged hücreler bunu grid-slice UV ile çizer, böylece komşu koyu mud hücreleri seam olmadan birleşir. Boş ise eski per-cell sprite overlay'e düşülür.")]
+    [SerializeField] private Texture damagedMudTexture;
+    [Tooltip("Sprite B'nin koyu eşdeğeri — 4 kenarında bevel baked-in olan KOYU mud sprite'ı. Atanırsa damaged stage de stage-0 ile birebir maskelenir (bevel sadece dış kenarda, iç seamless). Boş ise yukarıdaki damagedMudTexture ile seamless dolgu kullanılır.")]
+    [SerializeField] private Sprite damagedBorderedMudSprite;
 
     [Header("Border Cover Thickness")]
     [Tooltip("Sprite B'deki bevel kalınlığı — tile boyutunun yüzdesi. Sprite art ile eşleşmeli.")]
@@ -53,8 +57,11 @@ public class MudOverlayService : MonoBehaviour
         if (plainMudTexture != null && tileSize > 0)
             view.InitCovers(plainMudTexture, borderThicknessRatio, tileSize);
 
+        // Dark-stage assets must be set before InitDamageOverlay so it can pick bevel vs fill.
+        view.SetDamagedVisuals(damagedBorderedMudSprite, damagedMudTexture);
+
         // Overlay must be created after covers so it renders on top.
-        view.InitDamageOverlay();
+        view.InitDamageOverlay(damagedMudTexture);
 
         ApplyToView(view, remaining);
     }
@@ -119,7 +126,19 @@ public class MudOverlayService : MonoBehaviour
 
         if (view.IsDamaged)
         {
-            // Stage 1+: covers kapalı, bevel her yerde görünür; damage overlay görünümü yönetir.
+            if (view.UsesBevelDamage)
+            {
+                // Bevel'li koyu stage: stage-0 ile aynı mantık, ama cover yalnızca aynı
+                // stage'deki (hasarlı) mud komşularına karşı açılır → bevel sadece dış kenarda.
+                view.SetCovers(
+                    top:    IsDamagedMudAt(x,     y - 1),
+                    right:  IsDamagedMudAt(x + 1, y    ),
+                    bottom: IsDamagedMudAt(x,     y + 1),
+                    left:   IsDamagedMudAt(x - 1, y    ));
+                return;
+            }
+
+            // Fallback (seamless fill, bevel yok): cover'lara gerek yok.
             view.SetCovers(false, false, false, false);
             return;
         }
@@ -138,6 +157,13 @@ public class MudOverlayService : MonoBehaviour
         if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return false;
         if (!viewsByCellIndex.TryGetValue(CellIndex(x, y), out var v) || v == null) return false;
         return !v.IsDamaged;
+    }
+
+    private bool IsDamagedMudAt(int x, int y)
+    {
+        if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return false;
+        if (!viewsByCellIndex.TryGetValue(CellIndex(x, y), out var v) || v == null) return false;
+        return v.IsDamaged;
     }
 
     private int CellIndex(int x, int y) => y * gridWidth + x;

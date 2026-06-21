@@ -24,6 +24,8 @@ public sealed class BossDuelController : MonoBehaviour
     [Header("Core Refs")]
     [SerializeField] private BoardController board;
     [SerializeField] private TopHudController topHud;
+    [Tooltip("Açılış animasyonu: iki parça soldan/sağdan gelip ortada birleşir, sonra oyun açılır. Boş bırakılırsa intro atlanır.")]
+    [SerializeField] private BossDuelIntroController intro;
     [Tooltip("Arena arka plan Image'ı. LevelData.battlefieldBackground atanırsa sprite buna uygulanır; boşsa mevcut kalır.")]
     [SerializeField] private Image arenaBackground;
 
@@ -148,6 +150,7 @@ public sealed class BossDuelController : MonoBehaviour
         if (board == null || level == null || level.levelKind != LevelKind.BossDuel)
         {
             SetRobotsVisible(false);
+            intro?.HideImmediate();   // boss değil → board'u baştan örten overlay'i hemen kaldır
             enabled = false;
             yield break;
         }
@@ -156,6 +159,7 @@ public sealed class BossDuelController : MonoBehaviour
         if (enemyMaxHp <= 0)
         {
             Debug.LogWarning("[Battlefield] BossDamage goal'ü yok/0 — düello çalışamaz. Level goals'a Collectible=BossDamage ekleyin.");
+            intro?.HideImmediate();
             enabled = false;
             yield break;
         }
@@ -180,6 +184,14 @@ public sealed class BossDuelController : MonoBehaviour
         SetRobotsVisible(true);
         playerHpBar?.Init(playerMaxHp);
         enemyHpBar?.Init(enemyMaxHp);
+
+        // Açılış: iki parça soldan/sağdan gelip ortada birleşir; bu sırada board kilitli.
+        if (intro != null && intro.HasIntro)
+        {
+            board.SetInputLocked(true);
+            yield return intro.Play();
+            board.SetInputLocked(false);
+        }
 
         board.OnTilesCleared += HandleTilesCleared;
         board.OnMovesChanged += HandleMovesChanged;

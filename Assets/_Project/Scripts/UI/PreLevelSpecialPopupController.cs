@@ -400,8 +400,26 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         RefreshCounts();
         PlayOneShot(continueSfx);
 
+        // Custom intro varsa (kalıcı katmanda, sahne async yüklenirken oynar) onu kullan; bu
+        // durumda sahne yüklemesi manager'a aittir, default loading + LoadScene ÇAĞIRMA.
+        if (TryShowCustomIntro())
+            return;
+
         ShowLoadingScreen();
         SceneManager.LoadScene(gameSceneName);
+    }
+
+    private bool TryShowCustomIntro()
+    {
+        var data = ResolvePreviewLevelData();
+        if (data == null || !data.usesCustomIntro ||
+            data.introLeftSprite == null || data.introRightSprite == null)
+            return false;
+
+        CustomIntroLoadingManager.Show(
+            data.introLeftSprite, data.introRightSprite, gameSceneName,
+            data.introSlideInDuration, data.introHoldDuration);
+        return true;
     }
 
     private static List<TileSpecial> CollectTimedSpecials()

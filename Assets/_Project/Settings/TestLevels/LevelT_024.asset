@@ -24,13 +24,18 @@ MonoBehaviour:
     iconOverride: {fileID: 21300000, guid: 991fec8e3ffcc47dc832d478a88e032c, type: 3}
     amount: 600
   levelKind: 1
+  usesCustomIntro: 1
+  introLeftSprite: {fileID: 21300000, guid: d6cc3409213204b239ccdaed773550fe, type: 3}
+  introRightSprite: {fileID: 21300000, guid: 27868adb39fde471ba75d6aef56ef1d8, type: 3}
+  introSlideInDuration: 0.9
+  introHoldDuration: 1.1
   bossAttackEveryMoves: 3
   bossAttackOilCount: 2
   playerMaxHp: 560
   damagePerClearedTile: 10
   enemyAttackBaseDamage: 20
   enemyAttackDamageGrowth: 6
-  enemyAttackInterval: 1
+  enemyAttackInterval: 3
   battlefieldBackground: {fileID: 0}
   randomPool: 
   energyPerContainer: 1

@@ -602,6 +602,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void AdvanceToNextLevel()
     {
+        PlayerStats.RecordLevelCleared();   // ilk-deneme/seri/haftalık istatistikleri güncelle
+
         int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
         PlayerPrefs.SetInt(prefsLevelKey, level + 1);
         PlayerPrefs.Save();
@@ -866,6 +868,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         failPopupShown = true;
         successPopupShown = false;
+
+        PlayerStats.MarkCurrentLevelFailed();   // güncel ilk-deneme serisi kırıldı
 
         if (board != null)
             board.SetInputLocked(true);

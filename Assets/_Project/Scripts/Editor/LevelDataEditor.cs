@@ -122,6 +122,29 @@ public class LevelDataEditor : Editor
         EditorGUILayout.LabelField("Level Kind", EditorStyles.boldLabel);
         level.levelKind = (LevelKind)EditorGUILayout.EnumPopup("Kind", level.levelKind);
 
+        level.usesCustomIntro = EditorGUILayout.Toggle(
+            new GUIContent("Uses Custom Intro",
+                "Açık: bu level'e girerken default loading screen yerine, iki parçanın soldan/sağdan " +
+                "gelip ortada birleştiği özel intro 'load' olur (sahne async yüklenirken oynar). " +
+                "Kapalı VEYA iki sprite'tan biri boşsa default load çalışır."),
+            level.usesCustomIntro);
+
+        if (level.usesCustomIntro)
+        {
+            EditorGUI.indentLevel++;
+            level.introLeftSprite = (Sprite)EditorGUILayout.ObjectField(
+                "Left Sprite (soldan)", level.introLeftSprite, typeof(Sprite), false);
+            level.introRightSprite = (Sprite)EditorGUILayout.ObjectField(
+                "Right Sprite (sağdan)", level.introRightSprite, typeof(Sprite), false);
+            level.introSlideInDuration = Mathf.Max(0.05f,
+                EditorGUILayout.FloatField("Slide In Duration (sn)", level.introSlideInDuration));
+            level.introHoldDuration = Mathf.Max(0f,
+                EditorGUILayout.FloatField("Hold Duration (sn)", level.introHoldDuration));
+            if (level.introLeftSprite == null || level.introRightSprite == null)
+                EditorGUILayout.HelpBox("İki sprite de atanmalı; biri boşsa default load çalışır.", MessageType.Info);
+            EditorGUI.indentLevel--;
+        }
+
         if (level.levelKind != LevelKind.BossDuel)
             return;
 

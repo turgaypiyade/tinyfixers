@@ -9,6 +9,7 @@ public class BootLoader : MonoBehaviour
 
     void Start()
     {
+        PlayerStats.EnsureInitialized();   // oyuna ilk giriş tarihini bir kez kaydet
         StartCoroutine(LoadNext());
     }
 

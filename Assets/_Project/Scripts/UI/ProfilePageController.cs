@@ -4,125 +4,158 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Avatar ikonuna tıklanınca açılan profil sayfası.
-/// View: mevcut avatar + isim. "Edit" → avatar grid + isim girişi (10. level sonrası açık).
-/// Kaydedince PlayerProfile güncellenir (AvatarView'lar otomatik yenilenir).
+/// Profil sayfası. Büyük avatar dairesine tıklanınca ALTTAKİ avatar şeridi açılır (popup yok);
+/// bir avatara dokununca büyük daire ANINDA güncellenir ve PlayerProfile'a kaydedilir
+/// (AvatarView'lar OnChanged ile otomatik yenilenir). İsim inline düzenlenir, focus çıkınca kaydedilir.
+/// Avatar/isim düzenleme 10. level sonrası açılır (PlayerProfile.CustomizationUnlocked).
 ///
-/// Açmak için: avatar dairesine bir Button koy, onClick → ProfilePageController.Open().
+/// Dairenin Button'ı → ToggleAvatarStrip(); sayfayı popup gibi açıyorsan Open()/Close() kullan.
 /// </summary>
 public sealed class ProfilePageController : MonoBehaviour
 {
     [Header("Core")]
-    [SerializeField] private GameObject profileRoot;     // tüm profil paneli
+    [Tooltip("Tüm profil paneli. Sayfa kalıcıysa boş bırakılabilir.")]
+    [SerializeField] private GameObject profileRoot;
     [SerializeField] private AvatarLibrary library;
-
-    [Header("View")]
-    [SerializeField] private Image currentAvatarImage;
-    [SerializeField] private TMP_Text currentNameText;
-    [SerializeField] private Button editButton;
-    [Tooltip("Kilitliyken gösterilecek ipucu (örn. '10. levelde açılır'). Opsiyonel.")]
-    [SerializeField] private GameObject editLockedHint;
     [SerializeField] private Button closeButton;
 
-    [Header("Edit")]
-    [SerializeField] private GameObject editRoot;
-    [SerializeField] private Transform avatarGridContainer;
-    [SerializeField] private AvatarOptionButton avatarOptionPrefab;
+    [Header("Avatar (büyük daire = canlı önizleme)")]
+    [SerializeField] private Image currentAvatarImage;
+    [Tooltip("Büyük dairenin Button'ı — tıklanınca avatar şeridini açar/kapatır.")]
+    [SerializeField] private Button avatarCircleButton;
+
+    [Header("İsim")]
     [SerializeField] private TMP_InputField nameInput;
     [SerializeField, Min(1)] private int nameMaxLength = 12;
-    [SerializeField] private Button saveButton;
-    [SerializeField] private Button cancelButton;
+
+    [Header("Avatar Şeridi (alttaki boş alan)")]
+    [Tooltip("Şerit paneli (ScrollRect + 'Avatar Seç' başlığı). Başta gizli; daireye tıklayınca açılır.")]
+    [SerializeField] private GameObject avatarStripRoot;
+    [Tooltip("ScrollRect içeriği — HorizontalLayoutGroup'lu content. Avatar hücreleri buraya dizilir.")]
+    [SerializeField] private Transform avatarStripContainer;
+    [SerializeField] private AvatarOptionButton avatarOptionPrefab;
+    [Tooltip("İstatistik paneli — şerit ile AYNI alanı paylaşır. Daireye tıklayınca gizlenir, " +
+             "avatar seçilince/şerit kapanınca geri gelir.")]
+    [SerializeField] private GameObject statsRoot;
+
+    [Header("Kilit")]
+    [Tooltip("Kilitliyken (10. level öncesi) gösterilecek ipucu. Opsiyonel.")]
+    [SerializeField] private GameObject editLockedHint;
 
     private int selectedAvatarId;
+    private bool stripBuilt;
     private readonly List<AvatarOptionButton> options = new();
 
     private void Awake()
     {
-        if (editButton   != null) editButton.onClick.AddListener(EnterEdit);
-        if (closeButton  != null) closeButton.onClick.AddListener(Close);
-        if (saveButton   != null) saveButton.onClick.AddListener(SaveEdit);
-        if (cancelButton != null) cancelButton.onClick.AddListener(ExitEdit);
-        if (nameInput    != null) nameInput.characterLimit = nameMaxLength;
+        if (avatarCircleButton != null) avatarCircleButton.onClick.AddListener(ToggleAvatarStrip);
+        if (closeButton        != null) closeButton.onClick.AddListener(Close);
 
-        if (profileRoot != null) profileRoot.SetActive(false);
+        if (nameInput != null)
+        {
+            nameInput.characterLimit = nameMaxLength;
+            nameInput.onEndEdit.AddListener(CommitName);
+        }
+
+        if (avatarStripRoot != null) avatarStripRoot.SetActive(false);
+        if (profileRoot     != null) profileRoot.SetActive(false);
     }
 
-    // Avatar dairesinin Button'ı bunu çağırır.
+    // Sayfayı popup gibi açıyorsan dairenin/menünün butonu bunu çağırır.
     public void Open()
     {
         if (profileRoot != null) profileRoot.SetActive(true);
-        ShowView();
+        Refresh();
     }
 
     public void Close()
     {
-        if (profileRoot != null) profileRoot.SetActive(false);
+        if (avatarStripRoot != null) avatarStripRoot.SetActive(false);
+        if (profileRoot     != null) profileRoot.SetActive(false);
     }
 
-    private void ShowView()
-    {
-        if (editRoot != null) editRoot.SetActive(false);
+    private void OnEnable() => Refresh();
 
-        if (currentAvatarImage != null && library != null)
+    private void Refresh()
+    {
+        selectedAvatarId = PlayerProfile.AvatarId;
+        ApplyPreview(selectedAvatarId);
+
+        if (nameInput != null)
         {
-            var s = library.Get(PlayerProfile.AvatarId);
-            if (s != null) { currentAvatarImage.sprite = s; currentAvatarImage.enabled = true; }
+            nameInput.SetTextWithoutNotify(PlayerProfile.PlayerName);
+            nameInput.interactable = PlayerProfile.CustomizationUnlocked;
         }
-        if (currentNameText != null) currentNameText.text = PlayerProfile.PlayerName;
 
         bool unlocked = PlayerProfile.CustomizationUnlocked;
-        if (editButton != null) editButton.interactable = unlocked;
-        if (editLockedHint != null) editLockedHint.SetActive(!unlocked);
+        if (avatarCircleButton != null) avatarCircleButton.interactable = unlocked;
+        if (editLockedHint     != null) editLockedHint.SetActive(!unlocked);
+
+        // Açılışta varsayılan görünüm: istatistikler görünür, şerit kapalı.
+        ShowAvatarStrip(false);
     }
 
-    private void EnterEdit()
+    private void ToggleAvatarStrip()
     {
-        if (!PlayerProfile.CustomizationUnlocked)
+        if (!PlayerProfile.CustomizationUnlocked || avatarStripRoot == null)
             return;
 
-        if (editRoot != null) editRoot.SetActive(true);
-
-        selectedAvatarId = PlayerProfile.AvatarId;
-        if (nameInput != null) nameInput.text = PlayerProfile.PlayerName;
-
-        BuildGrid();
+        ShowAvatarStrip(!avatarStripRoot.activeSelf);
     }
 
-    private void ExitEdit()
+    // Şerit açıkken istatistikler gizlenir; şerit kapanınca istatistikler geri gelir.
+    private void ShowAvatarStrip(bool show)
     {
-        if (editRoot != null) editRoot.SetActive(false);
-        ShowView();
+        if (show)
+        {
+            BuildStripOnce();
+            HighlightSelected();
+        }
+
+        if (avatarStripRoot != null) avatarStripRoot.SetActive(show);
+        if (statsRoot       != null) statsRoot.SetActive(!show);
     }
 
-    private void SaveEdit()
+    private void BuildStripOnce()
     {
-        string name = nameInput != null ? nameInput.text : PlayerProfile.PlayerName;
-        PlayerProfile.SetProfile(selectedAvatarId, name);   // AvatarView'lar OnChanged ile yenilenir
-        ExitEdit();
-    }
-
-    private void BuildGrid()
-    {
-        for (int i = 0; i < options.Count; i++)
-            if (options[i] != null) Destroy(options[i].gameObject);
-        options.Clear();
-
-        if (library == null || avatarOptionPrefab == null || avatarGridContainer == null)
-            return;
+        if (stripBuilt) return;
+        if (library == null || avatarOptionPrefab == null || avatarStripContainer == null) return;
 
         for (int i = 0; i < library.Count; i++)
         {
-            var opt = Instantiate(avatarOptionPrefab, avatarGridContainer);
+            var opt = Instantiate(avatarOptionPrefab, avatarStripContainer);
             opt.Setup(i, library.Get(i), OnAvatarPicked);
-            opt.SetSelected(i == selectedAvatarId);
             options.Add(opt);
         }
+        stripBuilt = true;
     }
 
     private void OnAvatarPicked(int id)
     {
         selectedAvatarId = id;
+        ApplyPreview(id);
+        HighlightSelected();
+        ShowAvatarStrip(false);   // seçim yapıldı → şerit kapanır, istatistikler geri gelir
+        PlayerProfile.AvatarId = id;   // anında kaydet → tüm AvatarView'lar yenilenir
+    }
+
+    private void ApplyPreview(int id)
+    {
+        if (currentAvatarImage == null || library == null) return;
+        var s = library.Get(id);
+        if (s != null) { currentAvatarImage.sprite = s; currentAvatarImage.enabled = true; }
+    }
+
+    private void HighlightSelected()
+    {
         for (int i = 0; i < options.Count; i++)
-            if (options[i] != null) options[i].SetSelected(i == id);
+            if (options[i] != null) options[i].SetSelected(i == selectedAvatarId);
+    }
+
+    private void CommitName(string value)
+    {
+        if (!PlayerProfile.CustomizationUnlocked) return;
+        PlayerProfile.PlayerName = value;   // boş ise PlayerProfile default'a çevirir
+        if (nameInput != null) nameInput.SetTextWithoutNotify(PlayerProfile.PlayerName);
     }
 }

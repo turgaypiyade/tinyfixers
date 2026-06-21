@@ -743,7 +743,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
-    - sprite: {fileID: 21300000, guid: cba37f0d402704bfaac748f2169bb942, type: 3}
+    - sprite: {fileID: 6732937940813381478, guid: 71bc61a4c9a3342a487068e980fafaa8, type: 3}
       damageRule: 0
       blocksCells: 0
       behavior: 0
