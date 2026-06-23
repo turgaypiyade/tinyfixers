@@ -2793,8 +2793,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.16398714}
-  m_AnchorMax: {x: 0.5289331, y: 3.8440514}
+  m_AnchorMin: {x: 0, y: 0.07589286}
+  m_AnchorMax: {x: 0.7381703, y: 1.7790178}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -7294,6 +7294,7 @@ GameObject:
   - component: {fileID: 1410826453}
   - component: {fileID: 1410826454}
   - component: {fileID: 1410826455}
+  - component: {fileID: 1410826456}
   m_Layer: 5
   m_Name: BoardContent
   m_TagString: Untagged
@@ -7371,6 +7372,8 @@ MonoBehaviour:
   magnetObstacleService: {fileID: 0}
   magnetViewPrefab: {fileID: 0}
   magnetRoot: {fileID: 0}
+  safeViewPrefab: {fileID: 1567251097211694555, guid: 11c016229b84d45d0a68bfa66a876e2c, type: 3}
+  safeRoot: {fileID: 0}
   drawObstacles: 1
   chestObstacleViewPrefab: {fileID: 8788648593920519707, guid: 3d750045db7854d31a8bf35930d6d781, type: 3}
   batteryBoxViewPrefab: {fileID: 1981404701829892573, guid: dd83cae9f7b1c414c84159b9f597a834, type: 3}
@@ -7825,6 +7828,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GoldCoinCollectService
   board: {fileID: 1410826445}
   coinsPerPiece: 1
+--- !u!114 &1410826456
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1410826442}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c197ab4b50334688bfadb1990162d49, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SafeObstacleService
+  board: {fileID: 1410826445}
 --- !u!1 &1412688350
 GameObject:
   m_ObjectHideFlags: 0

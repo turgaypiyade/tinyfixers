@@ -4,10 +4,23 @@ using UnityEngine;
 [CustomEditor(typeof(LevelData))]
 public class LevelDataEditor : Editor
 {
-    private enum PaintMode { Mask, Obstacle, Tube, Magnet, Tiles, Erase }
+    private enum PaintMode { Mask, Obstacle, Tube, Magnet, Tiles, Safe, Erase }
 
     private PaintMode mode = PaintMode.Obstacle;
     private ObstacleId selectedObstacle = ObstacleId.Stone;
+
+    // Safe (kasa) settings — tıklanan hücre sol-üst origin; NxN bölgeyi kaplar.
+    private int selectedSafeW = 2;
+    private int selectedSafeH = 2;
+    private int selectedSafeRed = 3;
+    private int selectedSafeYellow = 3;
+    private int selectedSafeGreen = 3;
+    private SafeLockHitMode selectedSafeHitMode = SafeLockHitMode.Ordered;
+    private SafeLockColor selectedSafeFirstLock = SafeLockColor.Red;
+    private SafeLockColor selectedSafeSecondLock = SafeLockColor.Yellow;
+    private SafeLockColor selectedSafeThirdLock = SafeLockColor.Green;
+    private static readonly Color safeFillColor   = new Color(0.55f, 0.30f, 0.85f, 0.55f);
+    private static readonly Color safeOriginColor = new Color(0.75f, 0.45f, 1.00f, 0.80f);
 
     // Tube settings
     private TubeDirection selectedTubeDir = TubeDirection.Up;
@@ -63,7 +76,7 @@ public class LevelDataEditor : Editor
 
         EditorGUILayout.Space(6);
 
-        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Erase" });
+        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Safe", "Erase" });
 
         if (mode == PaintMode.Obstacle)
             DrawPalette(level);
@@ -73,6 +86,8 @@ public class LevelDataEditor : Editor
             DrawMagnetPalette(level);
         else if (mode == PaintMode.Tiles)
             DrawTilePinPalette(level);
+        else if (mode == PaintMode.Safe)
+            DrawSafePalette(level);
         else
             EditorGUILayout.HelpBox("Mask: ilk tık hücreyi Empty (hole), ikinci tık veya Erase hücreyi Normal yapar.", MessageType.None);
 
@@ -322,6 +337,9 @@ public class LevelDataEditor : Editor
 
         if (level.magnets == null)
             level.magnets = System.Array.Empty<MagnetEntry>();
+
+        if (level.safes == null)
+            level.safes = System.Array.Empty<SafeEntry>();
 
         if (level.pinnedTileTypes == null || level.pinnedTileTypes.Length != size)
         {
@@ -619,6 +637,35 @@ public class LevelDataEditor : Editor
             }
         }
 
+        // Draw safe (kasa) region overlays
+        if (level.safes != null)
+        {
+            for (int s = 0; s < level.safes.Length; s++)
+            {
+                var e = level.safes[s];
+                int sox = e.originCellIndex % level.width;
+                int soy = e.originCellIndex / level.width;
+                int sw = Mathf.Max(1, e.width), sh = Mathf.Max(1, e.height);
+
+                for (int r = 0; r < sh; r++)
+                for (int c = 0; c < sw; c++)
+                {
+                    int cx = sox + c, cy = soy + r;
+                    if (cx >= level.width || cy >= level.height) continue;
+                    Rect sr = new Rect(ox + cx * cellPx, oy + cy * cellPx, cellPx - 1, cellPx - 1);
+                    EditorGUI.DrawRect(sr, (c == 0 && r == 0) ? safeOriginColor : safeFillColor);
+                }
+
+                Rect lr = new Rect(ox + sox * cellPx, oy + soy * cellPx, cellPx - 1, cellPx - 1);
+                GUI.Label(lr, $"🔒{e.redHits}/{e.yellowHits}/{e.greenHits}", new GUIStyle(EditorStyles.boldLabel)
+                {
+                    alignment = TextAnchor.UpperLeft,
+                    fontSize  = 8,
+                    normal    = { textColor = Color.white }
+                });
+            }
+        }
+
         Handles.BeginGUI();
         Handles.color = gridLine;
         for (int y = 0; y < level.height; y++)
@@ -650,6 +697,7 @@ public class LevelDataEditor : Editor
                 ClearCell(level, idx);
                 RemoveTubeAtCell(level, idx);
                 RemoveMagnetAtCell(level, idx);
+                RemoveSafeAtCell(level, idx);
                 magnetPathBuilding.Clear();
                 ClearPinnedTile(level, idx);
                 level.cells[idx] = (int)CellType.Normal;
@@ -666,7 +714,65 @@ public class LevelDataEditor : Editor
             case PaintMode.Tiles:
                 PaintPinnedTile(level, idx);
                 break;
+            case PaintMode.Safe:
+                PlaceSafe(level, x, y);
+                break;
         }
+    }
+
+    // Model (a): içerik AYRI yerleştirilir (Obstacle/Tiles/Mask modu); Safe sadece bir overlay
+    // bölgesi (origin + boyut + kilit hit'leri) safes[]'e eklenir. Altındaki içerik EZİLMEZ —
+    // runtime'da GridSpawner.StampSafeCellsIntoLevel kaydedip kaplar, kırılınca geri yükler.
+    private void PlaceSafe(LevelData level, int bx, int by)
+    {
+        if (!level.InBounds(bx, by)) return;
+        int originIdx = level.Index(bx, by);
+
+        int w = Mathf.Max(1, selectedSafeW);
+        int h = Mathf.Max(1, selectedSafeH);
+        if (bx + w > level.width || by + h > level.height)
+        {
+            Debug.LogWarning($"[SafeEditor] Safe at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
+            return;
+        }
+
+        // Aynı origin'de varsa değiştir.
+        RemoveSafeAtCell(level, originIdx);
+
+        var entry = new SafeEntry
+        {
+            originCellIndex = originIdx,
+            width           = w,
+            height          = h,
+            redHits         = Mathf.Max(1, selectedSafeRed),
+            yellowHits      = Mathf.Max(1, selectedSafeYellow),
+            greenHits       = Mathf.Max(1, selectedSafeGreen),
+            lockHitMode     = selectedSafeHitMode,
+            firstLock       = selectedSafeFirstLock,
+            secondLock      = selectedSafeSecondLock,
+            thirdLock       = selectedSafeThirdLock
+        };
+
+        var list = new System.Collections.Generic.List<SafeEntry>(level.safes ?? System.Array.Empty<SafeEntry>()) { entry };
+        level.safes = list.ToArray();
+    }
+
+    private void RemoveSafeAtCell(LevelData level, int cellIndex)
+    {
+        if (level.safes == null || level.safes.Length == 0) return;
+
+        int W = level.width;
+        var list = new System.Collections.Generic.List<SafeEntry>(level.safes);
+        for (int s = list.Count - 1; s >= 0; s--)
+        {
+            var e = list[s];
+            int ox = e.originCellIndex % W, oy = e.originCellIndex / W;
+            int cx = cellIndex % W, cy = cellIndex / W;
+            if (cx >= ox && cx < ox + Mathf.Max(1, e.width) &&
+                cy >= oy && cy < oy + Mathf.Max(1, e.height))
+                list.RemoveAt(s);
+        }
+        level.safes = list.ToArray();
     }
 
     private void PlaceTube(LevelData level, int bx, int by)
@@ -990,6 +1096,76 @@ public class LevelDataEditor : Editor
             level.tubes = System.Array.Empty<TubeEntry>();
             EditorUtility.SetDirty(level);
         }
+    }
+
+    private void DrawSafePalette(LevelData level)
+    {
+        EditorGUILayout.LabelField("Safe (Kasa) Obstacle", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox(
+            "Önce içeriği (mud/para/taş/obstacle) NORMAL şekilde yerleştir, SONRA Safe'i üstüne koy.\n" +
+            "Grid'de bir hücreye tıkla → o hücre sol-ÜST origin olur, NxN bölgeyi kaplar.\n" +
+            "Erase modu veya bölgeye tekrar tıklamak kasayı siler. (İçerik silinmez, sadece overlay.)",
+            MessageType.Info);
+
+        EditorGUI.BeginChangeCheck();
+        selectedSafeW = EditorGUILayout.IntSlider("Genişlik (hücre)", selectedSafeW, 1, 6);
+        selectedSafeH = EditorGUILayout.IntSlider("Yükseklik (hücre)", selectedSafeH, 1, 6);
+        EditorGUILayout.Space(2);
+        EditorGUILayout.LabelField("Kilit hit sayıları (kırılma sırası)", EditorStyles.miniBoldLabel);
+        selectedSafeRed    = EditorGUILayout.IntSlider("1) Kırmızı", selectedSafeRed, 1, 20);
+        selectedSafeYellow = EditorGUILayout.IntSlider("2) Sarı", selectedSafeYellow, 1, 20);
+        selectedSafeGreen  = EditorGUILayout.IntSlider("3) Yeşil", selectedSafeGreen, 1, 20);
+        EditorGUILayout.Space(2);
+        selectedSafeHitMode = (SafeLockHitMode)EditorGUILayout.EnumPopup("Hit Modu", selectedSafeHitMode);
+        EditorGUILayout.LabelField(
+            selectedSafeHitMode == SafeLockHitMode.Ordered
+                ? "Ordered: sadece sıradaki kilit kendi renginden hit alır."
+                : "AnyColor: hangi renk hit geldiyse o renkteki kilit düşer.",
+            EditorStyles.wordWrappedMiniLabel);
+        EditorGUILayout.LabelField("Sıra / Öncelik", EditorStyles.miniBoldLabel);
+        selectedSafeFirstLock  = (SafeLockColor)EditorGUILayout.EnumPopup("1", selectedSafeFirstLock);
+        selectedSafeSecondLock = (SafeLockColor)EditorGUILayout.EnumPopup("2", selectedSafeSecondLock);
+        selectedSafeThirdLock  = (SafeLockColor)EditorGUILayout.EnumPopup("3", selectedSafeThirdLock);
+        NormalizeSelectedSafeOrder();
+        if (EditorGUI.EndChangeCheck())
+            EditorUtility.SetDirty(level);
+
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField($"Mevcut kasalar: {(level.safes != null ? level.safes.Length : 0)}", EditorStyles.miniLabel);
+
+        if (level.safes != null && level.safes.Length > 0 && GUILayout.Button("Tüm kasaları temizle"))
+        {
+            Undo.RecordObject(level, "Clear All Safes");
+            level.safes = System.Array.Empty<SafeEntry>();
+            EditorUtility.SetDirty(level);
+        }
+    }
+
+    private void NormalizeSelectedSafeOrder()
+    {
+        var used = new System.Collections.Generic.HashSet<SafeLockColor>();
+        selectedSafeFirstLock = NormalizeLockSlot(selectedSafeFirstLock, used);
+        selectedSafeSecondLock = NormalizeLockSlot(selectedSafeSecondLock, used);
+        selectedSafeThirdLock = NormalizeLockSlot(selectedSafeThirdLock, used);
+    }
+
+    private static SafeLockColor NormalizeLockSlot(SafeLockColor value, System.Collections.Generic.HashSet<SafeLockColor> used)
+    {
+        if (!used.Contains(value))
+        {
+            used.Add(value);
+            return value;
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            var candidate = (SafeLockColor)i;
+            if (used.Contains(candidate)) continue;
+            used.Add(candidate);
+            return candidate;
+        }
+
+        return SafeLockColor.Red;
     }
 
     private void DrawSpriteInRect(Sprite sprite, Rect r, float padding)

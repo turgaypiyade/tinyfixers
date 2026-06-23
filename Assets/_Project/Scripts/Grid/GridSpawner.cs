@@ -75,6 +75,12 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private MagnetView magnetViewPrefab;
     [SerializeField] private RectTransform magnetRoot;
 
+    [Header("Safe (Kasa) Obstacle")]
+    [SerializeField] private SafeObstacleView safeViewPrefab;
+    [Tooltip("Boşsa obstaclesRoot kullanılır.")]
+    [SerializeField] private RectTransform safeRoot;
+    private SafeObstacleService safeObstacleService;   // StampSafeCellsIntoLevel'de bulunur
+
     [Header("Obstacle Visual (UI)")]
     [SerializeField] private bool drawObstacles = true;
     [Tooltip("ColorChest icin katmanli gorsel prefabi (ChestObstacleView component'i olmali)")]
@@ -112,6 +118,7 @@ public class GridSpawner : MonoBehaviour
     private readonly Dictionary<int, Image> cellBgImageByIndex = new();
     private readonly Dictionary<int, Color> baseCellBgColorByIndex = new();
     private readonly Dictionary<int, GameObject> tubeClickProxyByCell = new();
+    private readonly Dictionary<int, GameObject> safeClickProxyByCell = new();
     private EnergyContainerService energyContainerService;
 
     private void Awake()
@@ -154,6 +161,7 @@ public class GridSpawner : MonoBehaviour
         ApplyResolvedLevelToConsumers(resolvedLevel);
         StampTubeCellsIntoLevel(resolvedLevel);   // must happen before SetLevelData
         StampMagnetCellsIntoLevel(resolvedLevel); // must happen before SetLevelData
+        StampSafeCellsIntoLevel(resolvedLevel);   // must happen before SetLevelData (saves beneath content)
 
         if (board == null || resolvedLevel == null || tilePrefab == null || iconLibrary == null || cellBgPrefab == null)
         {
@@ -303,6 +311,7 @@ public class GridSpawner : MonoBehaviour
         cellBgImageByIndex.Clear();
         baseCellBgColorByIndex.Clear();
         tubeClickProxyByCell.Clear();
+        safeClickProxyByCell.Clear();
 
         bool[] blocked = BuildBlockedMap();
 
@@ -312,6 +321,7 @@ public class GridSpawner : MonoBehaviour
             DrawMudOverlays();
             DrawTubeObstacles();
             DrawMagnetObstacles();
+            DrawSafeObstacles();
         }
 
         for (int y = 0; y < height; y++)
@@ -592,6 +602,9 @@ public class GridSpawner : MonoBehaviour
         clone.tubes = source.tubes != null
             ? (TubeEntry[])source.tubes.Clone()
             : System.Array.Empty<TubeEntry>();
+        clone.safes = source.safes != null
+            ? (SafeEntry[])source.safes.Clone()
+            : System.Array.Empty<SafeEntry>();
 
         int size = Mathf.Max(1, source.width * source.height);
 
@@ -724,6 +737,8 @@ public class GridSpawner : MonoBehaviour
                 if (obsId == ObstacleId.Mud) continue;
                 // Tube kendi TubeView renderer'ını kullanır.
                 if (obsId == ObstacleId.Tube) continue;
+                // Safe kendi SafeObstacleView renderer'ını kullanır.
+                if (obsId == ObstacleId.Safe) continue;
 
                 var image = DrawObstacleImage(def, x, y);
                 if (image != null)
@@ -756,27 +771,40 @@ public class GridSpawner : MonoBehaviour
                 && resolvedLevel.cells[idx] == (int)CellType.Empty;
             if (isEmpty) continue;
 
-            var go = new GameObject(
-                $"Mud_{x}_{y}",
-                typeof(RectTransform),
-                typeof(CanvasRenderer),
-                typeof(UnityEngine.UI.Image),
-                typeof(MudCellView));
-            go.transform.SetParent(mudOverlayRoot, false);
-
-            var view = go.GetComponent<MudCellView>();
-            view.Init(
-                mudOverlayService.BorderedMudSprite,
-                x, y,
-                width, height);
-            view.PlaceInCell(tileSize);
-
-            int mudMaxHits = resolvedLevel.obstacleLibrary?.Get(ObstacleId.Mud)?.hits ?? 1;
-            int remaining  = board?.ObstacleStateService?.GetRemainingHitsAt(x, y) ?? mudMaxHits;
-            if (remaining <= 0) remaining = mudMaxHits;
-
-            mudOverlayService.RegisterCell(x, y, view, remaining, mudMaxHits);
+            SpawnMudOverlayCell(x, y);
         }
+    }
+
+    private void SpawnMudOverlayCell(int x, int y)
+    {
+        if (mudOverlayService == null || mudOverlayRoot == null || resolvedLevel == null)
+            return;
+
+        if (mudOverlayService.TryGetView(x, y, out var existing) && existing != null)
+            return;
+
+        mudOverlayService.Init(board, width, height, tileSize);
+
+        var go = new GameObject(
+            $"Mud_{x}_{y}",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(UnityEngine.UI.Image),
+            typeof(MudCellView));
+        go.transform.SetParent(mudOverlayRoot, false);
+
+        var view = go.GetComponent<MudCellView>();
+        view.Init(
+            mudOverlayService.BorderedMudSprite,
+            x, y,
+            width, height);
+        view.PlaceInCell(tileSize);
+
+        int mudMaxHits = resolvedLevel.obstacleLibrary?.Get(ObstacleId.Mud)?.hits ?? 1;
+        int remaining  = board?.ObstacleStateService?.GetRemainingHitsAt(x, y) ?? mudMaxHits;
+        if (remaining <= 0) remaining = mudMaxHits;
+
+        mudOverlayService.RegisterCell(x, y, view, remaining, mudMaxHits);
     }
 
     private void StampTubeCellsIntoLevel(LevelData lvl)
@@ -814,6 +842,184 @@ public class GridSpawner : MonoBehaviour
                 lvl.obstacles[cellIdx]       = (int)ObstacleId.Magnet;
                 lvl.obstacleOrigins[cellIdx] = origin;
             }
+        }
+    }
+
+    // Safe (kasa): NxN bölgeyi kaplar. Model (a): altındaki MEVCUT içeriği per-cell kaydeder
+    // (beneath store), sonra hücreleri Safe ile stamp eder. Kasa kırılınca içerik geri yüklenir.
+    private void StampSafeCellsIntoLevel(LevelData lvl)
+    {
+        if (lvl?.safes == null || lvl.safes.Length == 0) return;
+        if (lvl.obstacles == null || lvl.obstacleOrigins == null) return;
+
+        safeObstacleService = FindFirstObjectByType<SafeObstacleService>();
+        var safeService = safeObstacleService;
+        safeService?.Clear();
+
+        int W = lvl.width, H = lvl.height;
+        foreach (var entry in lvl.safes)
+        {
+            int origin = entry.originCellIndex;
+            if (origin < 0 || origin >= lvl.obstacles.Length) continue;
+
+            int ox = origin % W, oy = origin / W;
+            int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
+
+            var beneath = new System.Collections.Generic.List<SafeObstacleService.BeneathCell>();
+            for (int r = 0; r < h; r++)
+                for (int c = 0; c < w; c++)
+                {
+                    int cx = ox + c, cy = oy + r;
+                    if (cx >= W || cy >= H) continue;
+                    int cell = cy * W + cx;
+                    if (cell < 0 || cell >= lvl.obstacles.Length) continue;
+
+                    // 1) Altındaki mevcut içeriği kaydet.
+                    beneath.Add(new SafeObstacleService.BeneathCell
+                    {
+                        cell   = cell,
+                        id     = (ObstacleId)lvl.obstacles[cell],
+                        origin = lvl.obstacleOrigins[cell]
+                    });
+                    // 2) Safe ile stamp et.
+                    lvl.obstacles[cell]       = (int)ObstacleId.Safe;
+                    lvl.obstacleOrigins[cell] = origin;
+                }
+
+            safeService?.RegisterSafe(
+                origin,
+                entry.redHits,
+                entry.yellowHits,
+                entry.greenHits,
+                entry.lockHitMode,
+                entry.firstLock,
+                entry.secondLock,
+                entry.thirdLock);
+            safeService?.RegisterBeneath(origin, beneath);
+        }
+    }
+
+    // Her SafeEntry için bir SafeObstacleView spawn eder: NxN bölgeye konumlandır + boyutlandır,
+    // service event'lerine bağla. Body NxN'e göre ölçeklenir, LockPanel prefab'da ortalı/sabit.
+    private void DrawSafeObstacles()
+    {
+        if (safeViewPrefab == null) return;
+        if (resolvedLevel?.safes == null || resolvedLevel.safes.Length == 0) return;
+        if (safeObstacleService == null) safeObstacleService = FindFirstObjectByType<SafeObstacleService>();
+        if (safeObstacleService == null) return;
+
+        var root = safeRoot != null ? safeRoot : obstaclesRoot;
+        if (root == null) return;
+
+        int W = resolvedLevel.width, H = resolvedLevel.height;
+        foreach (var entry in resolvedLevel.safes)
+        {
+            int origin = entry.originCellIndex;
+            if (origin < 0 || origin >= W * H) continue;
+
+            int ox = origin % W, oy = origin / W;
+            int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
+
+            var view = Instantiate(safeViewPrefab, root);
+            var rt = (RectTransform)view.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);   // top-left, tile'larla aynı
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(ox * tileSize, -oy * tileSize);
+            rt.sizeDelta = new Vector2(w * tileSize, h * tileSize);
+
+            view.SetBodySize(w * tileSize, h * tileSize);
+            view.Setup(safeObstacleService, origin);
+
+            AddSafeCellClickProxies(entry, root);
+        }
+    }
+
+    private void AddSafeCellClickProxies(SafeEntry entry, RectTransform root)
+    {
+        if (root == null || resolvedLevel == null) return;
+
+        int W = resolvedLevel.width;
+        int H = resolvedLevel.height;
+        int origin = entry.originCellIndex;
+        if (origin < 0 || origin >= W * H) return;
+
+        int ox = origin % W;
+        int oy = origin / W;
+        int w = Mathf.Max(1, entry.width);
+        int h = Mathf.Max(1, entry.height);
+
+        for (int r = 0; r < h; r++)
+        for (int c = 0; c < w; c++)
+        {
+            int cx = ox + c;
+            int cy = oy + r;
+            if (cx < 0 || cx >= W || cy < 0 || cy >= H) continue;
+
+            int cell = cy * W + cx;
+            if (safeClickProxyByCell.ContainsKey(cell)) continue;
+
+            var clickGo = new GameObject(
+                $"SafeClick_{cx}_{cy}",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(ObstacleClickProxy));
+            clickGo.transform.SetParent(root, false);
+
+            var rt = clickGo.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(cx * tileSize, -cy * tileSize);
+            rt.sizeDelta = new Vector2(tileSize, tileSize);
+
+            var img = clickGo.GetComponent<Image>();
+            img.color = new Color(0f, 0f, 0f, 0f);
+            img.raycastTarget = true;
+
+            var proxy = clickGo.GetComponent<ObstacleClickProxy>();
+            proxy.Init(board, cx, cy);
+
+            clickGo.transform.SetAsLastSibling();
+            safeClickProxyByCell[cell] = clickGo;
+        }
+    }
+
+    private void RemoveSafeCellClickProxiesForOrigin(int origin)
+    {
+        if (resolvedLevel?.safes == null || resolvedLevel.safes.Length == 0)
+            return;
+
+        int W = resolvedLevel.width;
+        int H = resolvedLevel.height;
+
+        foreach (var entry in resolvedLevel.safes)
+        {
+            if (entry.originCellIndex != origin)
+                continue;
+
+            int ox = origin % W;
+            int oy = origin / W;
+            int w = Mathf.Max(1, entry.width);
+            int h = Mathf.Max(1, entry.height);
+
+            for (int r = 0; r < h; r++)
+            for (int c = 0; c < w; c++)
+            {
+                int cx = ox + c;
+                int cy = oy + r;
+                if (cx < 0 || cx >= W || cy < 0 || cy >= H) continue;
+
+                int cell = cy * W + cx;
+                if (!safeClickProxyByCell.TryGetValue(cell, out var clickGo))
+                    continue;
+
+                if (clickGo != null)
+                    Destroy(clickGo);
+                safeClickProxyByCell.Remove(cell);
+            }
+
+            return;
         }
     }
 
@@ -938,6 +1144,9 @@ public class GridSpawner : MonoBehaviour
 
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
     {
+        if (obstacleId == ObstacleId.Safe)
+            RemoveSafeCellClickProxiesForOrigin(originIndex);
+
         if (obstacleId == ObstacleId.EnergyContainer)
         {
             // Don't destroy the image — EnergyContainerFx will apply the exhausted
@@ -969,6 +1178,12 @@ public class GridSpawner : MonoBehaviour
         {
             if (clickGo != null) Destroy(clickGo);
             tubeClickProxyByCell.Remove(cellIndex);
+        }
+
+        if (safeClickProxyByCell.TryGetValue(cellIndex, out var safeClickGo))
+        {
+            if (safeClickGo != null) Destroy(safeClickGo);
+            safeClickProxyByCell.Remove(cellIndex);
         }
     }
 
@@ -1751,7 +1966,20 @@ public class GridSpawner : MonoBehaviour
         if (obsId == ObstacleId.None) return;
 
         var def = resolvedLevel.obstacleLibrary.Get(obsId);
-        if (def == null || def.IsMovableObstacle) return;
+        if (def == null || obsId == ObstacleId.Safe) return;
+
+        if (obsId == ObstacleId.Mud)
+        {
+            SpawnMudOverlayCell(x, y);
+            return;
+        }
+
+        if (def.IsMovableObstacle)
+        {
+            if (board != null && board.GetTileViewAt(x, y) == null)
+                SpawnMovableObstacleTile(x, y);
+            return;
+        }
 
         var image = DrawObstacleImage(def, x, y);
         if (image != null)

@@ -855,11 +855,17 @@ public class BoardAnimator
                 if (origin >= 0 && !hitObstacleOrigins.Add(origin)) continue;
             }
 
+            bool isSafeHit = board.ObstacleStateService.GetObstacleIdAt(cell.x, cell.y) == ObstacleId.Safe;
+
             for (int i = 0; i < sources.Count; i++)
             {
                 var hit = board.ApplyObstacleDamageAt(cell.x, cell.y, damageContext, sources[i]);
                 if (hit.didHit)
+                {
                     board.TriggerObstacleVisualChange(hit.visualChange);
+                    if (isSafeHit)
+                        break;
+                }
             }
         }
     }

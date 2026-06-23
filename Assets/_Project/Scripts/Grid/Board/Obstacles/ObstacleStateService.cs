@@ -124,6 +124,9 @@ public class ObstacleStateService : ISimObstacleQuery
 
     /// <summary>HatLauncher: set by HatLauncherService. Null = invincible (exhausted).</summary>
     public Action<int> HatLauncherHitInterceptor;
+    /// <summary>Safe: set by SafeObstacleService. Called with the safe's ORIGIN cell when any safe
+    /// cell is hit. Lock state + break/reveal are owned by SafeObstacleService.</summary>
+    public Func<int, ObstacleHitContext, TileType?, bool> SafeHitInterceptor;
     // ColorChest açılış ve renk kırılması bildirimleri
     public event Action<int> OnChestOpened;
     public event Action<int, ChestColorMask> OnChestColorRemoved;
@@ -334,6 +337,20 @@ public class ObstacleStateService : ISimObstacleQuery
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
         }
 
+        // Safe: hits are fully managed by SafeObstacleService via the interceptor (lock state,
+        // break + reveal). Hit is consumed; cells are NOT cleared here (safe stays until broken).
+        if (id == ObstacleId.Safe)
+        {
+            if (SafeHitInterceptor == null)
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            if (!SafeHitInterceptor.Invoke(origin, context, sourceTileType))
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            var safeChange = new ObstacleVisualChange(origin, id, false, 0, null);
+            return new ObstacleHitResult(true, true, false, safeChange, default, Array.Empty<int>());
+        }
+
         var def = library != null ? library.Get(id) : null;
 
         int remaining = remainingHitsByOrigin[origin];
@@ -534,6 +551,7 @@ public class ObstacleStateService : ISimObstacleQuery
         var id = (ObstacleId)level.obstacles[idx];
         if (id == ObstacleId.None) return false;
         if (id == ObstacleId.Tube) return true;
+        if (id == ObstacleId.Safe) return true;
 
         var def = library != null ? library.Get(id) : null;
         int remaining = ResolveRemainingHitsForCell(idx, def);
@@ -1065,6 +1083,74 @@ public class ObstacleStateService : ISimObstacleQuery
             remainingHitsByOrigin[origin] = -1;
 
         OnCellUnlocked?.Invoke(cellIndex);
+    }
+
+    // ── Safe reveal primitives ───────────────────────────────────────────────
+
+    /// Bir hücreyi belirtilen obstacle'a geri yükler (Safe reveal — beneath restore).
+    /// id==None ise hücre açılır (FreeTubeCell gibi: boşalt + OnCellUnlocked → board refill eder).
+    public void RestoreCellObstacle(int cell, ObstacleId id, int origin)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
+        if (cell < 0 || cell >= level.obstacles.Length) return;
+
+        if (id == ObstacleId.None)
+        {
+            FreeTubeCell(cell);   // None'a çevir + OnCellUnlocked
+            return;
+        }
+
+        level.obstacles[cell]       = (int)id;
+        level.obstacleOrigins[cell] = origin;
+
+        var def = library != null ? library.Get(id) : null;
+        int remaining = Mathf.Max(1, def != null ? def.hits : 1);
+        if (def == null || !def.GetBlocksCellsForRemainingHits(remaining))
+            OnCellUnlocked?.Invoke(cell);
+    }
+
+    /// Tek bir origin için obstacle hit-state'ini def'ten yeniden kurar (Safe altından çıkan
+    /// beneath obstacle'lar için). InitializeFromLevel loop gövdesinin tek-origin versiyonu.
+    public void InitObstacleStateAt(int origin)
+    {
+        if (level == null || origin < 0 || origin >= remainingHitsByOrigin.Length) return;
+        if (level.obstacles == null || origin >= level.obstacles.Length) return;
+
+        var id = (ObstacleId)level.obstacles[origin];
+        if (id == ObstacleId.None) { remainingHitsByOrigin[origin] = -1; return; }
+
+        var def = library != null ? library.Get(id) : null;
+        int hits;
+        if (id == ObstacleId.EnergyContainer)
+        {
+            hits = Mathf.Max(1, level.energyPerContainer) + 1;
+        }
+        else if (id == ObstacleId.BatteryBox)
+        {
+            int hitsPerBattery = Mathf.Max(1, def != null ? def.hits : 1);
+            hits = hitsPerBattery * 4;
+            _batteryHitsByOrigin[origin] = new int[] { hitsPerBattery, hitsPerBattery, hitsPerBattery, hitsPerBattery };
+        }
+        else if (id == ObstacleId.Wardrobe)
+        {
+            hits = 2;
+            int itemCount = def != null ? def.wardrobeItemSprites.Count : 0;
+            _wardrobeItemCounts[origin] = Mathf.Max(0, itemCount);
+        }
+        else
+        {
+            hits = Mathf.Max(1, def != null ? def.hits : 1);
+        }
+        remainingHitsByOrigin[origin] = hits;
+
+        if (id == ObstacleId.ColorChest)
+            _chestColorStates[origin] = ChestColorMask.All;
+    }
+
+    /// Safe kırıldı → goal (Obstacle/Safe) ilerlesin. NotifyTubeFullyDestroyed analoğu.
+    public void NotifySafeBroken(int origin)
+    {
+        OnObstacleDestroyed?.Invoke(origin, ObstacleId.Safe);
     }
 
     public bool IsOilAt(int x, int y)

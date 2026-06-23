@@ -2429,6 +2429,9 @@ public class BoardController : MonoBehaviour
             return;
         }
 
+        if (obstacleId == ObstacleId.Safe)
+            return;
+
         // MovableObstacle kırıldığında o hücredeki tile'ı da yok et
         var tile = tiles[ox, oy];
         if (tile != null)

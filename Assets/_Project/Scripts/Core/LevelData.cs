@@ -134,6 +134,19 @@ public struct MagnetEntry
     public int[] pathCellIndices;
 }
 
+public enum SafeLockHitMode : int
+{
+    Ordered = 0,
+    AnyColor = 1
+}
+
+public enum SafeLockColor : int
+{
+    Red = 0,
+    Yellow = 1,
+    Green = 2
+}
+
 [System.Serializable]
 public struct SafeEntry
 {
@@ -147,6 +160,12 @@ public struct SafeEntry
     [Min(1)] public int redHits;
     [Min(1)] public int yellowHits;
     [Min(1)] public int greenHits;
+    [Tooltip("Ordered: sadece sıradaki kilit hasar alır. AnyColor: hangi renk tile vurursa o kilit hasar alır.")]
+    public SafeLockHitMode lockHitMode;
+    [Tooltip("Ordered modda kilit sırası. AnyColor modda special/booster için öncelik sırası.")]
+    public SafeLockColor firstLock;
+    public SafeLockColor secondLock;
+    public SafeLockColor thirdLock;
 }
 
 [CreateAssetMenu(fileName = "Level_001", menuName = "CoreCollapse/Level Data", order = 1)]
