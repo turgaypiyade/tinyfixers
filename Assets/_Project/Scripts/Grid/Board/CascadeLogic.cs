@@ -5,6 +5,12 @@ public class CascadeLogic
 {
     private readonly BoardController board;
 
+    // True iken diagonal slide tamamen kapalı; taşlar yalnızca düz düşer.
+    // Override+PulseCore gibi anchor'lı (pending-triggered) special zincirlerinde kullanılır:
+    // anchor'lı special'lar geçici blocker gibi davrandığı için etraflarındaki taşlar diagonal
+    // kayıp "engel yokken kayıyor" gibi kötü bir görüntü oluşturuyordu. Zincir boyunca düz düşüş.
+    public bool SuppressDiagonalSlides { get; set; }
+
     // Buffer for active goals
     private readonly List<TopHudController.ActiveGoal> _activeGoalsBuffer = new List<TopHudController.ActiveGoal>(4);
 
@@ -21,6 +27,9 @@ public class CascadeLogic
 
         public bool IsMovableObstacle;
         public ObstacleId SpawnObstacleId;
+
+        // Cargo (exitAtBottom): yalnızca düz aşağı düşer, asla diagonal kaymaz.
+        public bool IsStraightFallOnly;
 
         // How many times this tile has slid diagonally in this cascade simulation.
         // Capped by BoardController.MaxDiagonalSlidesPerCascade to limit spread while
@@ -49,6 +58,8 @@ public class CascadeLogic
                     {
                         View = view,
                         IsSpawned = false,
+                        IsStraightFallOnly = board.ObstacleStateService != null
+                                             && board.ObstacleStateService.IsExitAtBottomAt(x, y),
                         Path = new List<Vector2Int> { new Vector2Int(x, y) }
                     };
                     board.Tiles[x, y] = null; // Clear actual board, we will re-assign at the end
@@ -77,28 +88,16 @@ public class CascadeLogic
             }
 
             // Step 2: Diagonal Slide
+            // SuppressDiagonalSlides açıksa hiç diagonal yapma — yalnızca düz düşüş (anchor'lı
+            // pulse zincirinde temiz görüntü için).
+            // Aksi hâlde: önce SADECE normal taşlar diagonal kaysın. Special'lar düz inmeyi
+            // tercih eder; yalnızca normal taşlarla hiç ilerleme olmazsa (son çare) special kayar.
             bool slided = false;
-            for (int y = board.Height - 1; y >= 0; y--)
+            if (!SuppressDiagonalSlides)
             {
-                for (int x = 0; x < board.Width; x++)
-                {
-                    if (IsSlotEmpty(virtualBoard, x, y) && !verticalOnlyGaps.Contains(new Vector2Int(x, y)))
-                    {
-                        // Right-top priority
-                        if (TrySlide(virtualBoard, x + 1, y - 1, x, y, verticalOnlyGaps))
-                        {
-                            slided = true;
-                            continue;
-                        }
-                        
-                        // Left-top fallback
-                        if (TrySlide(virtualBoard, x - 1, y - 1, x, y, verticalOnlyGaps))
-                        {
-                            slided = true;
-                            continue;
-                        }
-                    }
-                }
+                slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: true);
+                if (!slided)
+                    slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: false);
             }
             changed |= slided;
 
@@ -417,10 +416,40 @@ public class CascadeLogic
         return moved;
     }
 
-    private bool TrySlide(VirtualTile[,] virtualBoard, int fromX, int fromY, int toX, int toY, HashSet<Vector2Int> verticalOnlyGaps)
+    // Tek bir diagonal slide geçişi. skipSpecials=true ise special kaynaklar atlanır
+    // (special'lar düz inmeyi tercih etsin diye). En az bir slide olduysa true döner.
+    private bool DoDiagonalSlidePass(VirtualTile[,] virtualBoard, HashSet<Vector2Int> verticalOnlyGaps, bool skipSpecials)
+    {
+        bool slided = false;
+        for (int y = board.Height - 1; y >= 0; y--)
+        {
+            for (int x = 0; x < board.Width; x++)
+            {
+                if (IsSlotEmpty(virtualBoard, x, y) && !verticalOnlyGaps.Contains(new Vector2Int(x, y)))
+                {
+                    // Right-top priority
+                    if (TrySlide(virtualBoard, x + 1, y - 1, x, y, verticalOnlyGaps, skipSpecials))
+                    {
+                        slided = true;
+                        continue;
+                    }
+
+                    // Left-top fallback
+                    if (TrySlide(virtualBoard, x - 1, y - 1, x, y, verticalOnlyGaps, skipSpecials))
+                    {
+                        slided = true;
+                        continue;
+                    }
+                }
+            }
+        }
+        return slided;
+    }
+
+    private bool TrySlide(VirtualTile[,] virtualBoard, int fromX, int fromY, int toX, int toY, HashSet<Vector2Int> verticalOnlyGaps, bool skipSpecials = false)
     {
         if (fromX < 0 || fromX >= board.Width || fromY < 0 || fromY >= board.Height) return false;
-        
+
         VirtualTile sourceTile = virtualBoard[fromX, fromY];
         int sourceY = fromY;
 
@@ -453,6 +482,15 @@ public class CascadeLogic
         }
 
         if (sourceTile == null) return false;
+
+        // Cargo (exitAtBottom): asla diagonal kaymaz, yalnızca düz aşağı düşer.
+        if (sourceTile.IsStraightFallOnly) return false;
+
+        // Special'lar diagonal'e savrulmasın: düz inmeyi tercih ederler. skipSpecials=true
+        // olan ilk geçişte special kaynak atlanır; yalnızca son çare geçişinde (başka filler yoksa)
+        // diagonal kayabilirler. Böylece special'lar yana kaymadan normal taş gibi düz iner.
+        if (skipSpecials && sourceTile.View != null && sourceTile.View.GetSpecial() != TileSpecial.None)
+            return false;
 
         if (sourceTile.DiagonalSlideCount >= board.MaxDiagonalSlidesPerCascade) return false;
 
@@ -697,6 +735,9 @@ public class CascadeLogic
 
             if (!def.IsMovableObstacleForRemainingHits(Mathf.Max(1, def.hits))) continue;
 
+            // Cargo (exitAtBottom) yalnızca tasarımcı tarafından yerleştirilir — üstten auto-spawn edilmez.
+            if (def.exitAtBottom) continue;
+
             int alive = board.ObstacleStateService.CountAliveOrigins(goal.obstacleId);
             if (alive < goal.remaining)
             {
@@ -755,8 +796,8 @@ public class CascadeLogic
         view.SetSpecial(TileSpecial.None);
 
         Sprite obstacleSprite = def.GetPreviewSprite();
-        if (obstacleSprite != null && view.IconImage != null)
-            view.IconImage.sprite = obstacleSprite;
+        if (obstacleSprite != null)
+            view.SetMovableObstacleSprite(obstacleSprite);
 
         return view;
     }

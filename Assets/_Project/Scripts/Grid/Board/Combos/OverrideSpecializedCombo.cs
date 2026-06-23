@@ -888,6 +888,11 @@ public sealed class OverrideSpecializedCombo
             if (anchoredCells.Count > 0)
                 rt.Board.SetPendingTriggeredSpecialCells(anchoredCells);
 
+            // Zincir boyunca diagonal slide kapalı: anchor'lı pulse'lar geçici blocker olduğu için
+            // etraftaki taşlar/pulse'lar yana savrulmasın — patlama sırasında her şey düz düşsün.
+            bool previousSuppressDiagonal = rt.Board.CascadeLogic.SuppressDiagonalSlides;
+            rt.Board.CascadeLogic.SuppressDiagonalSlides = true;
+
             var releaseBuffer = new Vector2Int[1];
 
             try
@@ -980,8 +985,11 @@ public sealed class OverrideSpecializedCombo
 
                     if (i < pulseCells.Count - 1)
                     {
+                        // Taban ritim fall süresinden BAĞIMSIZ (tempo çarpanı uygulanmaz) — diagonal
+                        // kapalıyken düz/kısa düşüşte zincir aşırı hızlanmasın. Havada-yakalama hâlâ
+                        // fallDuration × overlap ile devrede; hangisi büyükse o kullanılır.
                         float wait = Mathf.Max(
-                            rt.Board.ApplySpecialChainTempo(staggerSeconds),
+                            rt.Board.OverridePulseChainStagger,
                             fallDuration * rt.Board.PulseChainCatchOverlap);
                         if (wait > 0f)
                             yield return new WaitForSeconds(wait);
@@ -991,6 +999,7 @@ public sealed class OverrideSpecializedCombo
             finally
             {
                 rt.Context.SuppressPulseCoreToPulseCoreChain = previousSuppressPulseCoreChain;
+                rt.Board.CascadeLogic.SuppressDiagonalSlides = previousSuppressDiagonal;
 
                 // Patlamadan atlanan (skip) pulse hücrelerinde anchor kalmasın —
                 // kalıcı pending hücre o sütunun gravity'sini sonsuza dek bloklar.

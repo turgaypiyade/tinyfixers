@@ -60,6 +60,10 @@ public class TileView : MonoBehaviour,
 
     private bool isMovableObstacleTile = false;
     private bool isFullCellMovableSprite = false;
+    // Movable obstacle (plastik vb.) sprite'ı model.type DIŞINDA tutulur. Saklanmazsa
+    // RefreshIcon/SetType ikonu model.type'a (dummy normal tip) döndürüp obstacle'ı
+    // ekranda normal taş gibi gösterir (görsel/mantık desync).
+    private Sprite movableObstacleSprite;
     private int lastAppliedTileSize;
     private Image _cellOverlayImage;
 
@@ -180,6 +184,19 @@ public class TileView : MonoBehaviour,
     {
         if (model == null || board == null)
             return;
+
+        // Movable obstacle: ikon model.type'a göre değil, saklanan obstacle sprite'ına göre.
+        // Aksi hâlde refresh, plastik/movable'ı dummy normal taşa çevirir (görsel/mantık desync).
+        if (isMovableObstacleTile && movableObstacleSprite != null)
+        {
+            SetIcon(movableObstacleSprite);
+
+            if (propellerView != null)
+                propellerView.gameObject.SetActive(false);
+            if (fuseSparkleView != null)
+                fuseSparkleView.gameObject.SetActive(false);
+            return;
+        }
 
         if (model.special == TileSpecial.SystemOverride)
         {
@@ -1230,6 +1247,13 @@ public class TileView : MonoBehaviour,
     {
         model.type = type;
 
+        // Movable obstacle ikonu model.type'tan bağımsızdır; dummy tip ataması sprite'ı ezmesin.
+        if (isMovableObstacleTile && movableObstacleSprite != null)
+        {
+            SetIcon(movableObstacleSprite);
+            return;
+        }
+
         if (board != null)
         {
             var sprite = board.GetIcon(type);
@@ -1416,6 +1440,15 @@ public class TileView : MonoBehaviour,
 
         if (lastAppliedTileSize > 0)
             ApplyTileSize(lastAppliedTileSize);
+    }
+
+    // Movable obstacle sprite'ını sakla + uygula. Saklandığı için RefreshIcon/SetType
+    // çağrılsa bile ikon obstacle sprite'ında kalır (model.type'a dönmez).
+    public void SetMovableObstacleSprite(Sprite sprite)
+    {
+        movableObstacleSprite = sprite;
+        if (sprite != null)
+            SetIcon(sprite);
     }
 
     public void SetVisualLayout(TileVisualLayout layout)

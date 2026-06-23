@@ -534,6 +534,11 @@ public class GridSpawner : MonoBehaviour
             view.IconImage.GetComponent<CoinIdleWobble>() == null)
             view.IconImage.gameObject.AddComponent<CoinIdleWobble>();
 
+        // Cargo (işçi robot): süzülerek iniyor hissi — sürekli hafif tilt sway.
+        if (def.exitAtBottom && view.IconImage != null &&
+            view.IconImage.GetComponent<CargoFloatSway>() == null)
+            view.IconImage.gameObject.AddComponent<CargoFloatSway>();
+
         board.RegisterTile(view, x, y);
 
         var pool = effectiveRandomPool ?? randomPool;
@@ -544,8 +549,8 @@ public class GridSpawner : MonoBehaviour
         board.SyncTileData(x, y);
 
         Sprite obstacleSprite = def.GetPreviewSprite();
-        if (obstacleSprite != null && view.IconImage != null)
-            view.IconImage.sprite = obstacleSprite;
+        if (obstacleSprite != null)
+            view.SetMovableObstacleSprite(obstacleSprite);
     }
     private void ApplyResolvedLevelToConsumers(LevelData activeLevel)
     {
@@ -1616,7 +1621,7 @@ public class GridSpawner : MonoBehaviour
         if (rootImage != null)
         {
             var clickProxy = rootImage.gameObject.AddComponent<ObstacleClickProxy>();
-            clickProxy.Init(board, x, y);
+            clickProxy.Init(board, x, y, w, h, tileSize);
         }
 
         if (view != null)
@@ -1697,7 +1702,7 @@ public class GridSpawner : MonoBehaviour
         if (rootImage != null)
         {
             var clickProxy = rootImage.gameObject.AddComponent<ObstacleClickProxy>();
-            clickProxy.Init(board, x, y);
+            clickProxy.Init(board, x, y, w, h, tileSize);
             rootImage.raycastTarget = true;
         }
 
@@ -1806,7 +1811,7 @@ public class GridSpawner : MonoBehaviour
         if (rootImage != null)
         {
             var clickProxy = rootImage.gameObject.AddComponent<ObstacleClickProxy>();
-            clickProxy.Init(board, x, y);
+            clickProxy.Init(board, x, y, w, h, tileSize);
         }
 
         view.SetClosedSprite(closedSprite);
@@ -1951,7 +1956,7 @@ public class GridSpawner : MonoBehaviour
         img.raycastTarget = true;
 
         var clickProxy = go.AddComponent<ObstacleClickProxy>();
-        clickProxy.Init(board, x, y);
+        clickProxy.Init(board, x, y, w, h, tileSize);
 
         return img;
     }

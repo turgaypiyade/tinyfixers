@@ -146,6 +146,141 @@ public class GoalFlyFx : MonoBehaviour
     }
 
 
+    // Cargo (işçi robot) çıkış animasyonu:
+    //   1) Bir hücre aşağı (board altındaki boşluğa) düşer
+    //   2) Dizini büküp yere konuyormuş gibi kısa squash (landing)
+    //   3) Oradan TopHUD goal slotuna yay çizerek zıplar + slot punch
+    // Ghost overlayRoot'ta oynar (board mask'i kırpmaz). Gerçek tile'ı çağıran taraf gizler/yok eder.
+    public IEnumerator PlayCargoExit(TileView fromTile, RectTransform targetSlot, float jumpDuration)
+    {
+        if (fromTile == null || overlayRoot == null)
+            yield break;
+
+        var sprite = fromTile.GetIconSprite();
+        if (sprite == null)
+            yield break;
+
+        var go = new GameObject("CargoExitGhost", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(overlayRoot, worldPositionStays: false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.localScale = Vector3.one;
+
+        var img = go.GetComponent<Image>();
+        img.sprite = sprite;
+        img.raycastTarget = false;
+        img.preserveAspect = true;
+
+        var srcRt = fromTile.RectTransform != null ? fromTile.RectTransform : (RectTransform)fromTile.transform;
+        rt.sizeDelta = srcRt.rect.size;
+
+        var cg = go.GetComponent<CanvasGroup>();
+        cg.alpha = 1f;
+
+        Vector2 startPos = WorldToLocalIn(overlayRoot, srcRt);
+        rt.anchoredPosition = startPos;
+
+        float cell = rt.rect.height > 1f ? rt.rect.height : rt.sizeDelta.y;
+
+        // 1) Bir hücre aşağı düş (ease-in, hızlanan iniş)
+        Vector2 landPos = startPos + new Vector2(0f, -cell);
+        const float dropDur = 0.16f;
+        float t = 0f;
+        while (t < dropDur)
+        {
+            t += Time.deltaTime;
+            rt.anchoredPosition = Vector2.LerpUnclamped(startPos, landPos, EaseIn(Mathf.Clamp01(t / dropDur)));
+            yield return null;
+        }
+        rt.anchoredPosition = landPos;
+
+        // 2) Diz bükme (landing squash) — ayaklar yerde kalsın diye squash sırasında biraz aşağı it
+        yield return KneeBendLanding(rt, landPos, cell);
+
+        // "Biraz sakin" — yere konup kısa bir an dur, sonra zıpla.
+        yield return new WaitForSeconds(0.12f);
+
+        // 3) HUD slotuna yay çizerek zıpla + punch
+        if (targetSlot != null)
+        {
+            Vector2 end = WorldToLocalIn(overlayRoot, targetSlot);
+            Vector2 mid = (landPos + end) * 0.5f;
+            float dir = (end.x >= landPos.x) ? 1f : -1f;
+            Vector2 control = mid + new Vector2(sideOffset * dir, arcHeight);
+
+            float jumpTime = Mathf.Max(0.18f, jumpDuration);
+            t = 0f;
+            while (t < jumpTime)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / jumpTime);
+                rt.anchoredPosition = Bezier2(landPos, control, end, EaseInOut(k));
+
+                float sx = Mathf.Lerp(1f, 0.25f, EaseIn(k));
+                float sy = Mathf.Lerp(1f, 0.40f, EaseInOut(k));
+                rt.localScale = new Vector3(sx, sy, 1f);
+
+                float fadeStart = 1f - Mathf.Clamp01(fadeOutPortion);
+                if (k >= fadeStart)
+                    cg.alpha = 1f - Mathf.InverseLerp(fadeStart, 1f, k);
+
+                yield return null;
+            }
+
+            Destroy(go);
+
+            var punchTarget = (targetSlot.parent as RectTransform) ?? targetSlot;
+            yield return PunchSafe(punchTarget);
+        }
+        else
+        {
+            // Hedef slot yoksa: yerde kısa bir an dur, sonra sönerek kaybol.
+            float fade = 0.18f;
+            t = 0f;
+            while (t < fade)
+            {
+                t += Time.deltaTime;
+                cg.alpha = 1f - Mathf.Clamp01(t / fade);
+                yield return null;
+            }
+            Destroy(go);
+        }
+    }
+
+    private IEnumerator KneeBendLanding(RectTransform rt, Vector2 footPos, float cell)
+    {
+        Vector3 baseScale = Vector3.one;
+        Vector3 squash = new Vector3(1.18f, 0.72f, 1f);
+        // Squash'ta merkez yukarı kalkmasın diye yarı-yükseklik kadar aşağı kaydır (ayak yerde hissi).
+        float drop = cell * (1f - squash.y) * 0.5f;
+        Vector2 squashPos = footPos + new Vector2(0f, -drop);
+
+        const float downDur = 0.08f;
+        const float upDur = 0.12f;
+
+        float t = 0f;
+        while (t < downDur)
+        {
+            t += Time.deltaTime;
+            float k = EaseOut(Mathf.Clamp01(t / downDur));
+            rt.localScale = Vector3.LerpUnclamped(baseScale, squash, k);
+            rt.anchoredPosition = Vector2.LerpUnclamped(footPos, squashPos, k);
+            yield return null;
+        }
+        t = 0f;
+        while (t < upDur)
+        {
+            t += Time.deltaTime;
+            float k = EaseOut(Mathf.Clamp01(t / upDur));
+            rt.localScale = Vector3.LerpUnclamped(squash, baseScale, k);
+            rt.anchoredPosition = Vector2.LerpUnclamped(squashPos, footPos, k);
+            yield return null;
+        }
+        rt.localScale = baseScale;
+        rt.anchoredPosition = footPos;
+    }
+
     private static readonly System.Collections.Generic.Dictionary<int, Vector3> _baseScales
         = new System.Collections.Generic.Dictionary<int, Vector3>();
 

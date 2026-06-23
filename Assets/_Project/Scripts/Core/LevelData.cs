@@ -111,6 +111,12 @@ public enum ObstacleId : int
     // safe breaks and the underlying content joins the board. Authored via LevelData.safes[].
     // Managed by SafeObstacleService; usually a level GOAL.
     Safe = 33,
+
+    // "Drop-to-bottom" collectible. Falls like a MovableObstacle (gravity), but is UNBREAKABLE
+    // (no source damages it). Collected when it reaches the bottom row and drops off the board —
+    // that's when the goal counts (+1). Straight-down only (no diagonal slide). Authored by the
+    // designer (placed via the obstacle palette). Requires ObstacleDef.exitAtBottom = true.
+    Cargo = 34,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }

@@ -32,6 +32,14 @@ public class FallAction : BoardAction
 
     public bool HasMoves => fallRecords.Count > 0;
 
+    // Settle (iniş bounce'u) yalnızca SON inişte oynamalı. Ara cascade'lerde su gibi
+    // akış için bu çağrılır → tüm record'ların settle'ı kapatılır.
+    public void DisableSettle()
+    {
+        foreach (var r in fallRecords)
+            r.useSettle = false;
+    }
+
     // Eski imza kalsin. Baska yerler kirilmasin.
     public void AddMove(
         TileView tile,

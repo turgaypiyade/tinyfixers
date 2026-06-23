@@ -63,6 +63,10 @@ public class ObstacleDef
     public int hits = 1;                       // ileride: 1 vuruş, 2 vuruş
     [Tooltip("MovableObstacle sprite'ını tam hücreye stretch eder (preserveAspect=false). Kare sprite'lar için uygundur.")]
     public bool fullCellSprite = false;
+    [Tooltip("'Alta indir' collectible: KIRILMAZ (hiçbir kaynak hasar vermez), sadece DÜZ düşer " +
+             "(diagonal yok) ve en alt satıra inip board'dan çıkınca toplanır (goal +1). " +
+             "behavior = MovableObstacle ile birlikte kullanılır.")]
+    public bool exitAtBottom = false;
     [Header("Particle Sprites")]
     [Tooltip("Açık ise tüm stage'lerde hit particle efekti kapatılır. Stage düzeyinde ayrıca override edilebilir.")]
     public bool suppressHitParticles = false;

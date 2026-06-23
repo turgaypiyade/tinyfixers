@@ -292,6 +292,11 @@ public class ObstacleStateService : ISimObstacleQuery
         if (origin < 0 || origin >= remainingHitsByOrigin.Length)
             return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
 
+        // Cargo (exitAtBottom): KIRILMAZ — hiçbir kaynak (match/special/booster) hasar veremez.
+        // Yalnızca en alta inip board'dan çıkınca toplanır (BoardController bottom-exit akışı).
+        if (IsExitAtBottomObstacle(id))
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
         // Tube cells are handled entirely by TubeObstacleService.
         // originIndex=-1 so BoardBreakFxService skips the particle FX (TubeView owns its visuals).
         if (id == ObstacleId.Tube)
@@ -789,6 +794,38 @@ public class ObstacleStateService : ISimObstacleQuery
 
         int remaining = ResolveRemainingHitsForCell(idx, def);
         return def.IsMovableObstacleForRemainingHits(remaining);
+    }
+
+    // Cargo türü: KIRILMAZ + sadece düz düşer + en altta toplanır.
+    private bool IsExitAtBottomObstacle(ObstacleId id)
+    {
+        if (id == ObstacleId.None) return false;
+        var def = library != null ? library.Get(id) : null;
+        return def != null && def.exitAtBottom;
+    }
+
+    public bool IsExitAtBottomAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return IsExitAtBottomObstacle((ObstacleId)level.obstacles[idx]);
+    }
+
+    // Cargo en alta inip board'dan çıktığında çağrılır: hücreyi temizler ve OnObstacleDestroyed
+    // tetikler (goal +1). Tile görseli BoardController tarafında ayrıca animasyonla çıkarılır.
+    // Toplanan cargo'nun id'sini döner (yoksa None).
+    public ObstacleId CollectExitObstacleAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return ObstacleId.None;
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (!IsExitAtBottomObstacle(id)) return ObstacleId.None;
+
+        int origin = level.obstacleOrigins[idx];
+        if (origin < 0 || origin >= remainingHitsByOrigin.Length) return ObstacleId.None;
+
+        ClearObstacleFromLevel(origin, id);
+        return id;
     }
 
     public void MoveObstacle(int fromX, int fromY, int toX, int toY)

@@ -80,6 +80,11 @@ public class BoardController : MonoBehaviour
              "(taşlar oturmaya yakın), düşük = erken (havada yakalama belirgin).")]
     [SerializeField, Range(0f, 1f)] private float pulseChainCatchOverlap = 0.4f;
 
+    [Tooltip("Override+PulseCore zincirinde iki patlama arası MINIMUM bekleme (sn). Düşüş " +
+             "süresinden bağımsız taban ritim — düz düşüşte zincirin çok hızlanmasını önler. " +
+             "Büyük = daha yavaş/belirgin zincir.")]
+    [SerializeField, Range(0f, 0.5f)] private float overridePulseChainStagger = 0.12f;
+
     [Header("Board VFX/SFX")]
     [FormerlySerializedAs("pulseCoreVfxPlayer")][SerializeField] private PulseCoreVfxPlayer boardVfxPlayer;
     [SerializeField] private LightningSpawner lightningSpawner;
@@ -412,6 +417,7 @@ public class BoardController : MonoBehaviour
     internal float PulseImpactDelayStep => pulseImpactDelayStep;
     internal float PulseImpactAnimTime => pulseImpactAnimTime;
     internal float PulseChainCatchOverlap => Mathf.Clamp01(pulseChainCatchOverlap);
+    internal float OverridePulseChainStagger => Mathf.Max(0f, overridePulseChainStagger);
     internal PulseCoreVfxPlayer BoardVfxPlayer => boardVfxPlayer;
     internal AudioSource SfxSource => sfxSource;
     internal AudioClip SfxPulseCoreBoom => sfxPulseCoreBoom;
@@ -997,6 +1003,31 @@ public class BoardController : MonoBehaviour
     internal void RefreshTileObstacleVisual(TileView tile)
     {
         RestoreTilePresentation(tile);
+
+        if (tile == null) return;
+
+        // Movable obstacle (plastik vb.): bu hücre hâlâ movable obstacle ise görünümü yeniden zorla.
+        // Fall/cascade/swap sonrası view yeniden oluşsa veya sprite normal taşa dönse bile
+        // (görsel/mantık desync) ekranda movable görünmeli — yoksa goal/match mantığı bu hücreyi
+        // movable sayar ama oyuncu normal taş görür (3'lü görünür ama kırılmaz, vb.).
+        if (obstacleStateService == null) return;
+
+        int tx = tile.X, ty = tile.Y;
+        if (tx < 0 || tx >= width || ty < 0 || ty >= height) return;
+        if (!obstacleStateService.IsMovableObstacleAt(tx, ty)) return;
+
+        var id = obstacleStateService.GetObstacleIdAt(tx, ty);
+        var lib = ActiveLevelData != null ? ActiveLevelData.obstacleLibrary : null;
+        var def = lib != null ? lib.Get(id) : null;
+        if (def == null) return;
+
+        var sprite = def.GetPreviewSprite();
+        if (sprite == null) return;
+
+        tile.SetMovableObstacleTile(true);
+        tile.SetUseFullCellIcon(false);
+        tile.SetFullCellMovableSprite(def.fullCellSprite);
+        tile.SetMovableObstacleSprite(sprite);
     }
 
     internal void RefreshAllTileObstacleVisuals()
@@ -1922,6 +1953,7 @@ public class BoardController : MonoBehaviour
 
                 if (preMatchCascades.Count > 0)
                 {
+                    DisableSettleIfMoreCascadesFollow(preMatchCascades);
                     Debug.Log($"[Resolve] pass={safety} pre_match_cascade actions={preMatchCascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
                     actionSequencer.Enqueue(preMatchCascades);
 
@@ -1981,6 +2013,7 @@ public class BoardController : MonoBehaviour
             var cascades = cascadeLogic.CalculateCascades();
             if (cascades.Count > 0)
             {
+                DisableSettleIfMoreCascadesFollow(cascades);
                 Debug.Log($"[Resolve] pass={safety} cascade_fall actions={cascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
                 actionSequencer.Enqueue(cascades);
 
@@ -1989,6 +2022,14 @@ public class BoardController : MonoBehaviour
 
                 RefreshAllSortingOrders();
                 RefreshOilOverlays();
+                continue;
+            }
+
+            // Bottom-exit cargo: board oturduktan sonra alt satıra inen Cargo obstacle'ları
+            // board'dan çıkar (goal +1) ve boşalan hücreleri refill için cascade'e bırak.
+            if (TryCollectBottomExitCargo())
+            {
+                RefreshAllSortingOrders();
                 continue;
             }
 
@@ -2508,6 +2549,102 @@ public class BoardController : MonoBehaviour
 
     internal float GetClearDurationForCurrentPass() => Mathf.Max(0.03f, ApplySpecialChainTempo(ClearDuration * GetCascadeClearSpeedMultiplier()));
     internal bool ShouldEnableFallSettleThisPass() => EnableFallSettle;
+
+    // Su gibi akış: settle (iniş bounce'u) yalnızca GERÇEK SON inişte oynamalı.
+    // CalculateCascades logical board'u final pozisyona güncellediği için, bu düşüşten
+    // sonra hâlâ match veya doldurulacak boşluk varsa bu bir ara cascade'dir → settle kapat.
+    // Böylece taşlar her ara inişte zıplayıp durmaz, akış kesilmez.
+    private void DisableSettleIfMoreCascadesFollow(List<BoardAction> cascades)
+    {
+        if (cascades == null || cascades.Count == 0)
+            return;
+
+        if (!EnableFallSettle)
+            return;
+
+        bool moreComing =
+            (matchFinder != null && matchFinder.FindAllMatches().Count > 0)
+            || (cascadeLogic != null && cascadeLogic.HasAnyEmptyPlayableCell());
+
+        if (!moreComing)
+            return;
+
+        foreach (var action in cascades)
+            if (action is FallAction fa)
+                fa.DisableSettle();
+    }
+
+    // En alt satıra inen Cargo (exitAtBottom) obstacle'larını board'dan çıkarır:
+    // hücre verisini temizler (OnObstacleDestroyed → goal +1), tile'ı tabandan aşağı
+    // animasyonla süzer. En az biri toplandıysa true döner (resolve loop refill etsin).
+    internal bool TryCollectBottomExitCargo()
+    {
+        if (obstacleStateService == null || height <= 0 || width <= 0)
+            return false;
+
+        int by = height - 1;
+        bool any = false;
+
+        for (int x = 0; x < width; x++)
+        {
+            if (!obstacleStateService.IsExitAtBottomAt(x, by))
+                continue;
+
+            var tile = tiles[x, by];
+
+            // Goal HUD slotunu önceden al (robot oraya zıplayacak).
+            RectTransform goalSlot = null;
+            var id = obstacleStateService.GetObstacleIdAt(x, by);
+            TopHud?.TryGetGoalTargetRectForObstacle(id, out goalSlot);
+
+            // Tile'ı önce ayır: CollectExitObstacleAt → OnObstacleDestroyed → HandleObstacleDestroyed
+            // bu hücredeki tile'ı da yok etmeye çalışmasın (biz ayrıca animasyonla çıkarıyoruz).
+            tiles[x, by] = null;
+            gridData[x, by] = null;
+
+            var collected = obstacleStateService.CollectExitObstacleAt(x, by);
+            if (collected == ObstacleId.None)
+            {
+                tiles[x, by] = tile;   // beklenmedik: geri koy
+                continue;
+            }
+
+            SetHoleStateFromObstacle(x, by);
+
+            if (tile != null)
+                StartCoroutine(CargoExitRoutine(tile, goalSlot));
+
+            any = true;
+        }
+
+        return any;
+    }
+
+    // İşçi robot çıkışı: bir hücre aşağı düşer → diz büküp yere konar → TopHUD goal slotuna zıplar.
+    // Animasyon boyunca board "busy" tutulur ki goal/level-end değerlendirmesi bunu beklesin.
+    private IEnumerator CargoExitRoutine(TileView tile, RectTransform goalSlot)
+    {
+        BeginBackgroundJob();
+        try
+        {
+            var fly = GoalFlyFx;
+            if (fly != null && tile != null && tile)
+            {
+                // PlayCargoExit ilk yield'e kadar sprite + pozisyonu senkron yakalar;
+                // hemen sonrasında gerçek tile'ı gizleyip ghost'a devrediyoruz (çift robot olmasın).
+                var running = StartCoroutine(fly.PlayCargoExit(tile, goalSlot, 0.42f));
+                if (tile != null && tile)
+                    tile.gameObject.SetActive(false);
+                yield return running;
+            }
+        }
+        finally
+        {
+            if (tile != null && tile)
+                Destroy(tile.gameObject);
+            EndBackgroundJob();
+        }
+    }
 
     private float GetCascadeFallSpeedMultiplier()
     {

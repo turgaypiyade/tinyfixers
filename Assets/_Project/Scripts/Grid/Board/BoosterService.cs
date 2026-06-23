@@ -49,10 +49,12 @@ public class BoosterService
         switch (mode)
         {
             case BoardController.BoosterMode.Single:
-                if (target != null)
+                // Cargo (exitAtBottom) KIRILMAZ — hammer/joker ile vurulsa da etkilenmez.
+                if (target != null && !IsUnbreakableCargo(target.X, target.Y))
                     matches.Add(target);
 
-                if (hasValidTargetCell && IsCellBoosterAffectable(targetCell.Value.x, targetCell.Value.y))
+                if (hasValidTargetCell && !IsUnbreakableCargo(targetCell.Value.x, targetCell.Value.y)
+                    && IsCellBoosterAffectable(targetCell.Value.x, targetCell.Value.y))
                     affectedCells.Add(targetCell.Value);
                 break;
 
@@ -1240,7 +1242,7 @@ public class BoosterService
             return;
 
         for (int x = 0; x < board.Width; x++)
-            if (!board.Holes[x, y] && board.Tiles[x, y] != null)
+            if (!board.Holes[x, y] && board.Tiles[x, y] != null && !IsUnbreakableCargo(x, y))
                 matches.Add(board.Tiles[x, y]);
     }
 
@@ -1250,9 +1252,13 @@ public class BoosterService
             return;
 
         for (int y = 0; y < board.Height; y++)
-            if (!board.Holes[x, y] && board.Tiles[x, y] != null)
+            if (!board.Holes[x, y] && board.Tiles[x, y] != null && !IsUnbreakableCargo(x, y))
                 matches.Add(board.Tiles[x, y]);
     }
+
+    // Cargo (exitAtBottom) KIRILMAZ — booster da onu temizleyemez; etrafından geçer, cargo düşer.
+    private bool IsUnbreakableCargo(int x, int y)
+        => board.ObstacleStateService != null && board.ObstacleStateService.IsExitAtBottomAt(x, y);
 
     public void AddRowCells(HashSet<Vector2Int> affectedCells, int y)
     {
