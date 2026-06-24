@@ -125,6 +125,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [Min(0)]
     [SerializeField] private int baseCoins = 100;
     [SerializeField, Range(0f, 2f)] private float remainingMoveBonusRatio = 0.5f;
+
+    [Tooltip("Açık ise level-sonu coin ödülü SABİT (küçük) bir değerdir; baseCoinReward + hamle " +
+             "bonusu formülü kullanılmaz. In-game gold'dan ayrıdır.")]
+    [SerializeField] private bool useFlatCoinReward = true;
+    [Tooltip("useFlatCoinReward açıkken verilecek sabit level-sonu coin.")]
+    [SerializeField, Min(0)] private int flatCoinReward = 10;
 #pragma warning disable 0414
     [Obsolete("Use LevelData.baseCoinReward and remainingMoveBonusRatio instead.")]
     [SerializeField, HideInInspector] private int coinsPerRemainingMove = 20;
@@ -980,9 +986,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         var items = new System.Collections.Generic.List<(Sprite icon, int amount)>();
 
-        // Altın (kazanılacak ödül)
+        // Altın (kazanılacak ödül) — gerçek level-sonu ödülüyle tutarlı (flat mod dahil).
         var level = board != null ? board.ActiveLevelData : null;
-        int coinReward = level != null ? Mathf.Max(0, level.baseCoinReward) : 0;
+        int coinReward = useFlatCoinReward
+            ? Mathf.Max(0, flatCoinReward)
+            : (level != null ? Mathf.Max(0, level.baseCoinReward) : 0);
         if (coinReward > 0) items.Add((coinIcon, coinReward));
 
         // Event(ler) — şu an tek aktif event; çoklu event eklenince burası döngüye döner.
@@ -1051,6 +1059,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private int CalculateCoins()
     {
+        // Sabit (küçük) level-sonu ödülü — in-game gold'dan ayrı. baseCoinReward/hamle bonusu
+        // formülü kullanılmaz; "her kazanışta ekstra ~10 coin" gibi öngörülebilir küçük ödül.
+        if (useFlatCoinReward)
+            return Mathf.Max(0, flatCoinReward);
+
         LevelData levelData = board != null ? board.ActiveLevelData : null;
         int baseReward = Mathf.Max(0, levelData != null ? levelData.baseCoinReward : baseCoins);
         if (levelData == null || levelData.moves <= 0)

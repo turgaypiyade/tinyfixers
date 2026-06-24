@@ -163,6 +163,7 @@ public class GoalFlyFx : MonoBehaviour
         var go = new GameObject("CargoExitGhost", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
         var rt = (RectTransform)go.transform;
         rt.SetParent(overlayRoot, worldPositionStays: false);
+        rt.SetAsLastSibling();
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.localScale = Vector3.one;

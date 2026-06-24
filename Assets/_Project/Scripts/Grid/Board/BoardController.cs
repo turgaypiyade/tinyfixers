@@ -968,7 +968,17 @@ public class BoardController : MonoBehaviour
     public void ConsumePatchbotDashRequests(List<PatchbotDashRequest> outList) { outList.Clear(); outList.AddRange(_patchbotDashRequests); _patchbotDashRequests.Clear(); }
 
     public TopHudController TopHud { get { if (topHud == null) topHud = FindFirstObjectByType<TopHudController>(); return topHud; } }
-    public GoalFlyFx GoalFlyFx { get { if (goalFlyFx == null) goalFlyFx = FindFirstObjectByType<GoalFlyFx>(); return goalFlyFx; } }
+    public GoalFlyFx GoalFlyFx
+    {
+        get
+        {
+            if (goalFlyFx == null) goalFlyFx = FindFirstObjectByType<GoalFlyFx>();
+            // Hâlâ yoksa kur (canvas altında "GoalFlyFx" + overlayRoot oluşturur, overlayRoot'u set eder).
+            // FindFirstObjectByType inactive bulmaz; EnsureGoalFlyFx isimle bulur/oluşturur.
+            if (goalFlyFx == null) EnsureGoalFlyFx();
+            return goalFlyFx;
+        }
+    }
 
     public void SetHole(int x, int y, bool isHole) => holes[x, y] = isHole;
     public TileView GetTileViewAt(int x, int y) { if (tiles == null || x < 0 || x >= width || y < 0 || y >= height) return null; return tiles[x, y]; }

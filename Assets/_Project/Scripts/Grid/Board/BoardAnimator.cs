@@ -283,6 +283,13 @@ public class BoardAnimator
         Dictionary<Vector2Int, System.Action> arrivalTriggers = null)
     {
         var list = new List<TileView>(matches);
+
+        // Cargo (exitAtBottom) KIRILMAZ: hiçbir clear (special/combo/booster/match) onu yok edemez.
+        // Tek choke point'te evrensel filtre — combo yolları CanAffectCell'i atlasa bile cargo korunur.
+        // Yalnızca en alta inip board'dan çıkınca toplanır (ayrı akış).
+        if (board.ObstacleStateService != null)
+            list.RemoveAll(t => t != null && board.ObstacleStateService.IsExitAtBottomAt(t.X, t.Y));
+
         var pops = new List<IEnumerator>();
         var pulseImpacts = new List<IEnumerator>();
         var shouldClearTile = new Dictionary<TileView, bool>();
