@@ -33,19 +33,30 @@ public class MagnetObstacleService : MonoBehaviour
 
     public bool HasMagnetAt(int cellIndex) => cellToOrigin.ContainsKey(cellIndex);
 
+    /// True if cellIndex is one of the CURRENT endpoints (A or B). Middle path cells → false.
+    public bool IsMagnetEndpoint(int cellIndex)
+    {
+        if (!cellToOrigin.TryGetValue(cellIndex, out int origin)) return false;
+        if (!magnetsByOrigin.TryGetValue(origin, out var magnet)) return false;
+        return cellIndex == magnet.Path[magnet.MagnetAIndex]
+            || cellIndex == magnet.Path[magnet.MagnetBIndex];
+    }
+
     // ── Hit handling ──────────────────────────────────────────────────────────
 
     /// Called by ObstacleStateService with the ACTUAL hit cell index (not origin).
-    public void HandleMagnetHit(int hitCellIndex)
+    /// Returns TRUE if this was a current endpoint (A/B) and the magnet shrank/destroyed;
+    /// FALSE if the cell is inert (middle path / not a magnet) → çağıran "no hit" sayar.
+    public bool HandleMagnetHit(int hitCellIndex)
     {
-        if (!cellToOrigin.TryGetValue(hitCellIndex, out int origin)) return;
-        if (!magnetsByOrigin.TryGetValue(origin, out var magnet)) return;
+        if (!cellToOrigin.TryGetValue(hitCellIndex, out int origin)) return false;
+        if (!magnetsByOrigin.TryGetValue(origin, out var magnet)) return false;
 
         bool isA = hitCellIndex == magnet.Path[magnet.MagnetAIndex];
         bool isB = hitCellIndex == magnet.Path[magnet.MagnetBIndex];
 
         // Only endpoint magnets react — middle path cells are inert blockers.
-        if (!isA && !isB) return;
+        if (!isA && !isB) return false;
 
         int prevAIdx = magnet.MagnetAIndex;
         int prevBIdx = magnet.MagnetBIndex;
@@ -68,10 +79,11 @@ public class MagnetObstacleService : MonoBehaviour
         if (magnet.MagnetAIndex >= magnet.MagnetBIndex)
         {
             DestroyMagnetPair(origin, magnet);
-            return;
+            return true;
         }
 
         magnet.View.UpdatePositions(magnet.MagnetAIndex, magnet.MagnetBIndex, prevAIdx, prevBIdx);
+        return true;
     }
 
     // ── Internal ──────────────────────────────────────────────────────────────

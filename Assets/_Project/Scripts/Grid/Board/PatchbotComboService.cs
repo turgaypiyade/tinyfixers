@@ -5,6 +5,7 @@ public class PatchbotComboService
 {
     private readonly BoardController board;
     private readonly List<TopHudController.ActiveGoal> activeGoalsBuffer = new();
+    private readonly List<(int x, int y, TileView tile)> bestImpactBuffer = new();
 
     public PatchbotComboService(BoardController board)
     {
@@ -249,7 +250,11 @@ public class PatchbotComboService
             if (goal.targetType == LevelGoalTargetType.Obstacle && goal.obstacleId != ObstacleId.None)
                 activeObstacleGoals.Add(goal.obstacleId);
             else if (goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId == CollectibleId.EnergyOrb)
+            {
+                // EnergyOrb hem EnergyContainer hem HatLauncher'dan çıkar → ikisi de goal obstacle.
                 activeObstacleGoals.Add(ObstacleId.EnergyContainer);
+                activeObstacleGoals.Add(ObstacleId.HatLauncher);
+            }
             else if (goal.targetType == LevelGoalTargetType.Tile)
                 activeTileGoals.Add(goal.tileType);
         }
@@ -301,7 +306,10 @@ public class PatchbotComboService
                     // taş kırılınca obstacle zaten hit alır (doğal hasar yolu).
                     // Üzerinde taş yoksa direkt obstacle'a vurulur.
                     bool isUnderTile = board.ObstacleStateService.IsUnderTileObstacleAt(x, y);
-                    bool hasTileOnTop = tile != null && board.GridData[x, y] != null && !IsExcludedTile(tile);
+                    bool hasTileOnTop = tile != null
+                                        && board.GridData[x, y] != null
+                                        && SpecialUtils.CanTargetTileContent(board, x, y)
+                                        && !IsExcludedTile(tile);
 
                     if (isUnderTile && hasTileOnTop)
                     {
@@ -320,7 +328,10 @@ public class PatchbotComboService
                         otherObstacleCells.Add((x, y, tile));
                     }
                 }
-                else if (tile != null && board.GridData[x, y] != null && !IsExcludedTile(tile))
+                else if (tile != null
+                         && board.GridData[x, y] != null
+                         && SpecialUtils.CanTargetTileContent(board, x, y)
+                         && !IsExcludedTile(tile))
                 {
                     if (IsGoalTile(tile))
                         tileGoalCells.Add((x, y, tile));
@@ -329,31 +340,65 @@ public class PatchbotComboService
                 }
             }
 
+        // Önce en yüksek öncelikli dolu kova; içinden RASTGELE değil, payload'ın en çok hücreye
+        // değeceği (en yoğun küme) hücre seçilir → bot tepedeki/kenardaki tek hücreyi değil,
+        // ortadaki yoğunluğu hedefler. Tüm patchbot kombinasyonları bu seçimi paylaşır.
         if (obstacleGoalCells.Count > 0)
-        {
-            var pick = obstacleGoalCells[Random.Range(0, obstacleGoalCells.Count)];
-            return (pick.tile, pick.x, pick.y, true);
-        }
+            return PickHighestImpact(obstacleGoalCells);
 
         if (tileGoalCells.Count > 0)
-        {
-            var pick = tileGoalCells[Random.Range(0, tileGoalCells.Count)];
-            return (pick.tile, pick.x, pick.y, true);
-        }
+            return PickHighestImpact(tileGoalCells);
 
         if (otherObstacleCells.Count > 0)
-        {
-            var pick = otherObstacleCells[Random.Range(0, otherObstacleCells.Count)];
-            return (pick.tile, pick.x, pick.y, true);
-        }
+            return PickHighestImpact(otherObstacleCells);
 
         if (normalCells.Count > 0)
-        {
-            var pick = normalCells[Random.Range(0, normalCells.Count)];
-            return (pick.tile, pick.x, pick.y, true);
-        }
+            return PickHighestImpact(normalCells);
 
         return (null, -1, -1, false);
+    }
+
+    // Payload'ın etki yarıçapı (PulseCore 5x5 ≈ 2; line/bomb için de yoğunluk iyi bir proxy).
+    private const int PatchbotImpactRadius = 2;
+
+    // Adayı, AYNI kovadaki kaç hücrenin payload yarıçapına girdiğine göre puanlar; en yüksek
+    // puanlıyı seçer, eşitlikte rastgele kırar (hep aynı hücreyi seçip tekdüze olmasın).
+    private (TileView tile, int x, int y, bool hasCell) PickHighestImpact(
+        List<(int x, int y, TileView tile)> candidates)
+    {
+        if (candidates == null || candidates.Count == 0)
+            return (null, -1, -1, false);
+
+        int bestScore = -1;
+        bestImpactBuffer.Clear();
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            var c = candidates[i];
+            int score = 0;
+            for (int j = 0; j < candidates.Count; j++)
+            {
+                if (j == i) continue;
+                var o = candidates[j];
+                if (Mathf.Abs(o.x - c.x) <= PatchbotImpactRadius &&
+                    Mathf.Abs(o.y - c.y) <= PatchbotImpactRadius)
+                    score++;
+            }
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestImpactBuffer.Clear();
+                bestImpactBuffer.Add(c);
+            }
+            else if (score == bestScore)
+            {
+                bestImpactBuffer.Add(c);
+            }
+        }
+
+        var pick = bestImpactBuffer[Random.Range(0, bestImpactBuffer.Count)];
+        return (pick.tile, pick.x, pick.y, true);
     }
 
     private bool IsInside(int x, int y)

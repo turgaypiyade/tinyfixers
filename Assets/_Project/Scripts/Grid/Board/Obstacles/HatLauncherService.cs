@@ -107,8 +107,11 @@ public sealed class HatLauncherService : MonoBehaviour
             };
         }
 
-        Debug.Log($"[HatLauncher] HIT origin={originIndex} released={totalGroupReleased}/{capacity} " +
-                  $"collectible={collectible} goalExists={goalExists} fx={(fx != null ? fx.name : "NULL")} topHud={(topHud != null ? "ok" : "NULL")}");
+        if (logHits)
+        {
+            Debug.Log($"[HatLauncher] HIT origin={originIndex} released={totalGroupReleased}/{capacity} " +
+                      $"collectible={collectible} goalExists={goalExists} fx={(fx != null ? fx.name : "NULL")} topHud={(topHud != null ? "ok" : "NULL")}");
+        }
 
         if (fx != null)
             fx.PlayHit(originIndex, collectible, remaining, goalExists, onArrived);

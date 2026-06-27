@@ -50,6 +50,7 @@ public sealed class PatchBotIntent
         int ty = TargetTile.Y;
         if (tx < 0 || tx >= board.Width || ty < 0 || ty >= board.Height) return false;
         if (board.Tiles[tx, ty] != TargetTile) return false;
+        if (!SpecialUtils.CanTargetTileContent(board, tx, ty)) return false;
 
         // Mantıksal otorite GridData: view hâlâ sahnede dursa bile hücre verisi
         // temizlendiyse hedef ölmüştür (clear animasyonu data'dan geç kalabilir).
@@ -461,7 +462,11 @@ public class PatchBotTargetCoordinator
             if (goal.targetType == LevelGoalTargetType.Obstacle && goal.obstacleId != ObstacleId.None)
                 activeObstacleGoals.Add(goal.obstacleId);
             else if (goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId == CollectibleId.EnergyOrb)
+            {
+                // EnergyOrb hem EnergyContainer hem HatLauncher'dan çıkar → ikisi de goal obstacle.
                 activeObstacleGoals.Add(ObstacleId.EnergyContainer);
+                activeObstacleGoals.Add(ObstacleId.HatLauncher);
+            }
             else if (goal.targetType == LevelGoalTargetType.Tile)
                 activeTileGoals.Add(goal.tileType);
         }
@@ -526,7 +531,10 @@ public class PatchBotTargetCoordinator
                     else
                         otherObstacleCells.Add((x, y, tile));
                 }
-                else if (tile != null && board.GridData[x, y] != null && !IsExcludedTile(tile))
+                else if (tile != null
+                         && board.GridData[x, y] != null
+                         && SpecialUtils.CanTargetTileContent(board, x, y)
+                         && !IsExcludedTile(tile))
                 {
                     if (IsTileReserved(tile))
                         continue;
@@ -539,18 +547,16 @@ public class PatchBotTargetCoordinator
             }
         }
 
-        bool hasFar = fromCell.x >= 0;
-
-        // Zaten seçilmiş hedefler varsa yayılım modunu kullan; yoksa kendi konumundan en uzağı.
+        // Hedef, "kaynaktan en uzak" veya rastgele DEĞİL; payload'ın en çok hücreye değeceği
+        // (en yoğun küme) hücre seçilir. Önceki davranış (FarthestIndex) bot'u en tepedeki/
+        // köşedeki tek hücreye gönderiyordu → en az hasar. Çoklu bot için, zaten rezerve edilmiş
+        // hedeflere yakın adaylar cezalandırılır → botlar farklı yoğun kümelere yayılır.
         var reservedCells = GetReservedTargetCells();
-        bool useSpread = reservedCells.Count > 0;
 
         int PickIdx(List<(int x, int y, TileView tile)> list)
         {
             if (list.Count == 1) return 0;
-            if (useSpread)  return MaxSpreadIndex(list, reservedCells);
-            if (hasFar)     return FarthestIndex(list, fromCell);
-            return Random.Range(0, list.Count);
+            return HighestImpactIndex(list, reservedCells);
         }
 
         if (obstacleGoalCells.Count > 0)
@@ -578,5 +584,61 @@ public class PatchBotTargetCoordinator
         }
 
         return (null, -1, -1, false);
+    }
+
+    // Payload etki yarıçapı (PulseCore 5x5 ≈ 2; line/bomb için de yoğunluk iyi bir proxy).
+    private const int PatchbotImpactRadius = 2;
+    private readonly List<int> impactPickBuffer = new();
+
+    // Adayı: yarıçap içindeki AYNI kovadaki hücre sayısı (yoğunluk) eksi rezerve hedeflere
+    // yakınlık cezası (botları farklı yoğun kümelere yaymak için). En yüksek skorlu seçilir,
+    // eşitlikte rastgele kırılır (tekdüze olmasın).
+    private int HighestImpactIndex(List<(int x, int y, TileView tile)> list, List<Vector2Int> reservedCells)
+    {
+        int bestScore = int.MinValue;
+        impactPickBuffer.Clear();
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            var c = list[i];
+
+            int density = 0;
+            for (int j = 0; j < list.Count; j++)
+            {
+                if (j == i) continue;
+                var o = list[j];
+                if (Mathf.Abs(o.x - c.x) <= PatchbotImpactRadius &&
+                    Mathf.Abs(o.y - c.y) <= PatchbotImpactRadius)
+                    density++;
+            }
+
+            int penalty = 0;
+            if (reservedCells != null)
+            {
+                for (int r = 0; r < reservedCells.Count; r++)
+                {
+                    var rc = reservedCells[r];
+                    if (Mathf.Abs(rc.x - c.x) <= PatchbotImpactRadius &&
+                        Mathf.Abs(rc.y - c.y) <= PatchbotImpactRadius)
+                        penalty += 3;
+                }
+            }
+
+            int score = density - penalty;
+            if (score > bestScore)
+            {
+                bestScore = score;
+                impactPickBuffer.Clear();
+                impactPickBuffer.Add(i);
+            }
+            else if (score == bestScore)
+            {
+                impactPickBuffer.Add(i);
+            }
+        }
+
+        return impactPickBuffer.Count > 0
+            ? impactPickBuffer[Random.Range(0, impactPickBuffer.Count)]
+            : 0;
     }
 }

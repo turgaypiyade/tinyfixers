@@ -23,7 +23,7 @@ public class SystemOverrideBehavior : ISpecialBehavior
         for (int x = 0; x < board.Width; x++)
             for (int y = 0; y < board.Height; y++)
             {
-                if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
+                if (!SpecialUtils.CanTargetTileContent(board, x, y)) continue;
 
                 var tile = board.Tiles[x, y];
                 if (tile == null) continue;

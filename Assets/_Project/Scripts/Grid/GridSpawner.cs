@@ -81,6 +81,11 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private RectTransform safeRoot;
     private SafeObstacleService safeObstacleService;   // StampSafeCellsIntoLevel'de bulunur
 
+    // Generic stacked-obstacle + Safe beneath kayıtları. Stamp aşaması (SetLevelData ÖNCESİ)
+    // burada toplar; ObstacleStateService SetLevelData'da oluştuğu için kayıt SONRASINDA yapılır.
+    private readonly System.Collections.Generic.List<(int cell, ObstacleId beneathId, int beneathOrigin, int overOrigin)>
+        pendingStampedBeneath = new();
+
     [Header("Obstacle Visual (UI)")]
     [SerializeField] private bool drawObstacles = true;
     [Tooltip("ColorChest icin katmanli gorsel prefabi (ChestObstacleView component'i olmali)")]
@@ -159,9 +164,11 @@ public class GridSpawner : MonoBehaviour
     {
         resolvedLevel = ResolveLevelData();
         ApplyResolvedLevelToConsumers(resolvedLevel);
-        StampTubeCellsIntoLevel(resolvedLevel);   // must happen before SetLevelData
-        StampMagnetCellsIntoLevel(resolvedLevel); // must happen before SetLevelData
-        StampSafeCellsIntoLevel(resolvedLevel);   // must happen before SetLevelData (saves beneath content)
+        pendingStampedBeneath.Clear();
+        StampTubeCellsIntoLevel(resolvedLevel);    // must happen before SetLevelData
+        StampMagnetCellsIntoLevel(resolvedLevel);  // must happen before SetLevelData
+        StampSafeCellsIntoLevel(resolvedLevel);    // must happen before SetLevelData (saves beneath content)
+        StampStackedObstaclesIntoLevel(resolvedLevel); // must happen before SetLevelData (saves beneath content)
 
         if (board == null || resolvedLevel == null || tilePrefab == null || iconLibrary == null || cellBgPrefab == null)
         {
@@ -185,6 +192,10 @@ public class GridSpawner : MonoBehaviour
 
         board.Init(width, height, iconLibrary);
         board.SetLevelData(resolvedLevel);
+
+        // ObstacleStateService artık var (SetLevelData onu init etti). Stamp aşamasında toplanan
+        // beneath kayıtlarını şimdi push et — init store'ları temizledikten SONRA.
+        RegisterPendingStampedBeneath();
 
         effectiveRandomPool = resolvedLevel.randomPool != null && resolvedLevel.randomPool.Length > 0
             ? resolvedLevel.randomPool
@@ -392,11 +403,26 @@ public class GridSpawner : MonoBehaviour
                 else
                 {
                     // Gravity'nin erişemediği hücre: ilk açılışta taş koyma (boş mud kalır).
-                    if (gravityIsolated[x, y])
+                    // İSTİSNA: holdsTile obstacle (Oil) cell'inde bir taş TUTULUR. Oil görseli
+                    // artık cell-anchored (OilOverlayRenderer) olduğu için GÖRSEL açıdan tile
+                    // gerekmez; ama gameplay için altta bir taş bulunmalı — oil temizlenince o taş
+                    // açığa çıksın (yoksa boş hücre kalır). Tamamı oil olan sütunlar gravity-izole
+                    // sayıldığından spawn'da hiç taş almıyordu; holdsTile hücrelerini izole olsalar
+                    // da seed et (gravity-blocked oldukları için taş yerinde kalır).
+                    bool holdsTileCell = board.ObstacleStateService != null
+                        && board.ObstacleStateService.HoldsTileAt(x, y);
+
+                    if (gravityIsolated[x, y] && !holdsTileCell)
                         continue;
 
                     int idx = resolvedLevel.Index(x, y);
                     TileType tileType = initialTypes[x, y];
+
+                    // İzole holdsTile hücresi SimulateInitialTypes'ta locked sayılıp default tip
+                    // (hep aynı) bırakıldı; bir sütun dolusu oil aynı taşı verirdi. Rastgele tip ver.
+                    if (gravityIsolated[x, y] && holdsTileCell
+                        && effectiveRandomPool != null && effectiveRandomPool.Length > 0)
+                        tileType = effectiveRandomPool[UnityEngine.Random.Range(0, effectiveRandomPool.Length)];
                     TileSpecial pinnedSpecial = TileSpecial.None;
 
                     if (resolvedLevel.pinnedTileTypes != null && idx < resolvedLevel.pinnedTileTypes.Length)
@@ -460,6 +486,15 @@ public class GridSpawner : MonoBehaviour
         if (gridLinesRoot != null) gridLinesRoot.SetSiblingIndex(1);
         if (mudOverlayRoot != null) mudOverlayRoot.SetSiblingIndex(2);
         if (obstaclesRoot != null) obstaclesRoot.SetAsLastSibling();
+
+        // Magnet path overlay'i (glow yol + uç sprite'ları) taşların ve obstacle'ların ÜSTÜNDE
+        // render edilmeli; aksi halde tilesRoot.SetAsLastSibling magnet'i taşların arkasında bırakır
+        // ve soft glow yol tamamen kaybolur. magnetRoot AYRI bir child root olmalı (spawnParent'ın
+        // KENDİSİ değil) — root'un kendisini reorder etmek anlamsızdır, o yüzden o durumu atlıyoruz.
+        // (Inspector'da magnetRoot None bırakılırsa GridSpawner otomatik "MagnetObstacles" child'ı kurar.)
+        var magnetBoardRoot = spawnParent != null ? spawnParent : (RectTransform)transform;
+        if (magnetRoot != null && magnetRoot != magnetBoardRoot)
+            magnetRoot.SetAsLastSibling();
 
         if (board != null && spawnParent != null)
         {
@@ -577,94 +612,22 @@ public class GridSpawner : MonoBehaviour
         return runtimeClone;
     }
 
+    // Runtime'da level üzerinde mutasyon yaparız (obstacle stamp'leme, hedef ilerlemesi vb.) ama
+    // kaynak ScriptableObject ASSET'i kirletmemeliyiz. Bu yüzden runtime için bağımsız bir kopya alırız.
+    //
+    // Unity'nin Instantiate'i serialization-tabanlı derin kopya yapar: TÜM serialized alanlar (diziler,
+    // [Serializable] sınıflar dahil) yeni instance olarak kopyalanır; UnityEngine.Object referansları
+    // (sprite, AudioClip, obstacleLibrary) paylaşılır. Bu sayede LevelData'ya eklenen YENİ alanlar
+    // otomatik kopyalanır — eski elle alan-alan kopyalamada her yeni alan sessizce düşüyordu
+    // (stackedObstacles bu tuzağa düşmüştü). Sayısal clamp'leri LevelData.OnValidate zaten uyguluyor.
     private LevelData CloneLevelDataForRuntime(LevelData source)
     {
         if (source == null)
             return null;
 
-        var clone = ScriptableObject.CreateInstance<LevelData>();
+        var clone = Instantiate(source);
         clone.name = $"{source.name}_Runtime";
-        clone.width = source.width;
-        clone.height = source.height;
-        clone.moves = source.moves;
-        clone.energyPerContainer = Mathf.Max(1, source.energyPerContainer);
-        clone.musicClip = source.musicClip;
-        clone.musicVolume = source.musicVolume;
-        clone.obstacleLibrary = source.obstacleLibrary;
-        clone.goals = CloneGoals(source.goals);
-        clone.randomPool = source.randomPool != null && source.randomPool.Length > 0
-            ? (TileType[])source.randomPool.Clone()
-            : null;
-        clone.levelKind = source.levelKind;
-        clone.bossAttackEveryMoves = Mathf.Max(1, source.bossAttackEveryMoves);
-        clone.bossAttackOilCount = Mathf.Max(0, source.bossAttackOilCount);
-        clone.playerMaxHp = Mathf.Max(1, source.playerMaxHp);
-        clone.damagePerClearedTile = Mathf.Max(0, source.damagePerClearedTile);
-        clone.enemyAttackBaseDamage = Mathf.Max(0, source.enemyAttackBaseDamage);
-        clone.enemyAttackDamageGrowth = Mathf.Max(0, source.enemyAttackDamageGrowth);
-        clone.enemyAttackInterval = Mathf.Max(0f, source.enemyAttackInterval);
-        clone.battlefieldBackground = source.battlefieldBackground;
-        clone.tubes = source.tubes != null
-            ? (TubeEntry[])source.tubes.Clone()
-            : System.Array.Empty<TubeEntry>();
-        clone.safes = source.safes != null
-            ? (SafeEntry[])source.safes.Clone()
-            : System.Array.Empty<SafeEntry>();
-
-        int size = Mathf.Max(1, source.width * source.height);
-
-        clone.cells = new int[size];
-        clone.obstacles = new int[size];
-        clone.obstacleOrigins = new int[size];
-
-        if (source.cells != null)
-            System.Array.Copy(source.cells, clone.cells, Mathf.Min(size, source.cells.Length));
-        if (source.obstacles != null)
-            System.Array.Copy(source.obstacles, clone.obstacles, Mathf.Min(size, source.obstacles.Length));
-        if (source.obstacleOrigins != null)
-            System.Array.Copy(source.obstacleOrigins, clone.obstacleOrigins, Mathf.Min(size, source.obstacleOrigins.Length));
-
-        clone.pinnedTileTypes   = new int[size];
-        clone.pinnedSpecialTypes = new int[size];
-        if (source.pinnedTileTypes != null)
-            System.Array.Copy(source.pinnedTileTypes,   clone.pinnedTileTypes,   Mathf.Min(size, source.pinnedTileTypes.Length));
-        if (source.pinnedSpecialTypes != null)
-            System.Array.Copy(source.pinnedSpecialTypes, clone.pinnedSpecialTypes, Mathf.Min(size, source.pinnedSpecialTypes.Length));
-
-        clone.magnets = source.magnets != null
-            ? (MagnetEntry[])source.magnets.Clone()
-            : System.Array.Empty<MagnetEntry>();
-
         return clone;
-    }
-
-    private LevelGoalDefinition[] CloneGoals(LevelGoalDefinition[] sourceGoals)
-    {
-        if (sourceGoals == null || sourceGoals.Length == 0)
-            return System.Array.Empty<LevelGoalDefinition>();
-
-        var cloned = new LevelGoalDefinition[sourceGoals.Length];
-        for (int i = 0; i < sourceGoals.Length; i++)
-        {
-            var source = sourceGoals[i];
-            if (source == null)
-            {
-                cloned[i] = new LevelGoalDefinition();
-                continue;
-            }
-
-            cloned[i] = new LevelGoalDefinition
-            {
-                targetType = source.targetType,
-                tileType = source.tileType,
-                obstacleId = source.obstacleId,
-                collectibleId = source.collectibleId,
-                iconOverride = source.iconOverride,
-                amount = Mathf.Max(1, source.amount)
-            };
-        }
-
-        return cloned;
     }
 
     // Yukarıdan dikey düşme veya diyagonal kayma ile ulaşılabilen hücreleri hesaplar.
@@ -870,7 +833,6 @@ public class GridSpawner : MonoBehaviour
             int ox = origin % W, oy = origin / W;
             int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
 
-            var beneath = new System.Collections.Generic.List<SafeObstacleService.BeneathCell>();
             for (int r = 0; r < h; r++)
                 for (int c = 0; c < w; c++)
                 {
@@ -879,13 +841,8 @@ public class GridSpawner : MonoBehaviour
                     int cell = cy * W + cx;
                     if (cell < 0 || cell >= lvl.obstacles.Length) continue;
 
-                    // 1) Altındaki mevcut içeriği kaydet.
-                    beneath.Add(new SafeObstacleService.BeneathCell
-                    {
-                        cell   = cell,
-                        id     = (ObstacleId)lvl.obstacles[cell],
-                        origin = lvl.obstacleOrigins[cell]
-                    });
+                    // 1) Altındaki mevcut içeriği generic beneath store için işaretle (kayıt SetLevelData sonrası).
+                    pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], origin));
                     // 2) Safe ile stamp et.
                     lvl.obstacles[cell]       = (int)ObstacleId.Safe;
                     lvl.obstacleOrigins[cell] = origin;
@@ -900,8 +857,62 @@ public class GridSpawner : MonoBehaviour
                 entry.firstLock,
                 entry.secondLock,
                 entry.thirdLock);
-            safeService?.RegisterBeneath(origin, beneath);
         }
+    }
+
+    // Generic stacking: stackedObstacles[] entry'lerini obstacles[]'a stamp eder; altındaki authored
+    // içeriği (Mud, Stone...) beneath store için işaretler. Safe ile aynı 'beneath' akışı, her obstacle
+    // için. SetLevelData ÖNCESİ çağrılır; beneath kaydı RegisterPendingStampedBeneath ile SONRA yapılır.
+    private void StampStackedObstaclesIntoLevel(LevelData lvl)
+    {
+        if (lvl?.stackedObstacles == null || lvl.stackedObstacles.Length == 0) return;
+        if (lvl.obstacles == null || lvl.obstacleOrigins == null) return;
+
+        int W = lvl.width, H = lvl.height;
+        var lib = lvl.obstacleLibrary;
+
+        foreach (var entry in lvl.stackedObstacles)
+        {
+            var overId = entry.obstacleId;
+            if (overId == ObstacleId.None) continue;
+
+            int origin = entry.originCellIndex;
+            if (origin < 0 || origin >= lvl.obstacles.Length) continue;
+
+            var def = lib != null ? lib.Get(overId) : null;
+            int w = def != null ? Mathf.Max(1, def.size.x) : 1;
+            int h = def != null ? Mathf.Max(1, def.size.y) : 1;
+            int ox = origin % W, oy = origin / W;
+
+            for (int r = 0; r < h; r++)
+                for (int c = 0; c < w; c++)
+                {
+                    int cx = ox + c, cy = oy + r;
+                    if (cx >= W || cy >= H) continue;
+                    int cell = cy * W + cx;
+                    if (cell < 0 || cell >= lvl.obstacles.Length) continue;
+
+                    // 1) Altındaki authored içeriği beneath store için işaretle.
+                    pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], origin));
+                    // 2) Üstteki obstacle ile stamp et.
+                    lvl.obstacles[cell]       = (int)overId;
+                    lvl.obstacleOrigins[cell] = origin;
+                }
+        }
+    }
+
+    // Stamp aşamasında toplanan beneath kayıtlarını ObstacleStateService'e push eder.
+    // SetLevelData (ObstacleStateService init + store clear) SONRASINDA çağrılmalıdır.
+    private void RegisterPendingStampedBeneath()
+    {
+        if (pendingStampedBeneath.Count == 0) return;
+
+        var state = board != null ? board.ObstacleStateService : null;
+        if (state != null)
+            foreach (var p in pendingStampedBeneath)
+                state.RegisterStampedBeneath(p.cell, p.beneathId, p.beneathOrigin, p.overOrigin);
+
+        pendingStampedBeneath.Clear();
     }
 
     // Her SafeEntry için bir SafeObstacleView spawn eder: NxN bölgeye konumlandır + boyutlandır,
@@ -1036,6 +1047,7 @@ public class GridSpawner : MonoBehaviour
 
         magnetObstacleService.Init(board.ObstacleStateService);
         board.ObstacleStateService.MagnetHitInterceptor = magnetObstacleService.HandleMagnetHit;
+        board.ObstacleStateService.MagnetEndpointQuery = magnetObstacleService.IsMagnetEndpoint;
 
         foreach (var entry in resolvedLevel.magnets)
         {
@@ -1156,16 +1168,22 @@ public class GridSpawner : MonoBehaviour
         {
             // Don't destroy the image — EnergyContainerFx will apply the exhausted
             // visual on the same GameObject. Just stop tracking it here.
-            obstacleViewsByOrigin.Remove(originIndex);
-            obstacleDefsByOrigin.Remove(originIndex);
+            if (IsTrackedObstacleViewFor(originIndex, obstacleId))
+            {
+                obstacleViewsByOrigin.Remove(originIndex);
+                obstacleDefsByOrigin.Remove(originIndex);
+            }
             return;
         }
 
-        if (obstacleViewsByOrigin.TryGetValue(originIndex, out var image) && image != null)
-            Destroy(image.gameObject);
+        if (IsTrackedObstacleViewFor(originIndex, obstacleId))
+        {
+            if (obstacleViewsByOrigin.TryGetValue(originIndex, out var image) && image != null)
+                Destroy(image.gameObject);
 
-        obstacleViewsByOrigin.Remove(originIndex);
-        obstacleDefsByOrigin.Remove(originIndex);
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+        }
         _chestViews.Remove(originIndex);
         ApplyUnderTileCellBgTint();
     }
@@ -1964,18 +1982,30 @@ public class GridSpawner : MonoBehaviour
     {
         if (resolvedLevel == null || resolvedLevel.obstacleLibrary == null) return;
         int idx = resolvedLevel.Index(x, y);
-        if (obstacleViewsByOrigin.ContainsKey(idx)) return;
         if (resolvedLevel.obstacleOrigins[idx] != idx) return;
 
         var obsId = (ObstacleId)resolvedLevel.obstacles[idx];
         if (obsId == ObstacleId.None) return;
 
-        var def = resolvedLevel.obstacleLibrary.Get(obsId);
-        if (def == null || obsId == ObstacleId.Safe) return;
-
+        // Mud ayrı overlay service'iyle çizilir; aynı origin'deki cover view henüz temizlenmemiş
+        // olsa bile Mud reveal view'ı skip'lenmemeli.
         if (obsId == ObstacleId.Mud)
         {
             SpawnMudOverlayCell(x, y);
+            return;
+        }
+
+        if (obstacleViewsByOrigin.ContainsKey(idx)) return;
+
+        var def = resolvedLevel.obstacleLibrary.Get(obsId);
+        if (def == null || obsId == ObstacleId.Safe) return;
+
+        // Oil ayrı bir overlay renderer'ı kullanır (obstacleViewsByOrigin değil). Bir cover'ın
+        // (Chest vb.) altından oil reveal edilince, oil overlay'lerini yenile — yoksa generic
+        // DrawObstacleImage yolu oil'i yanlış çizerdi.
+        if (obsId == ObstacleId.Oil)
+        {
+            board?.RefreshOilOverlays();
             return;
         }
 
@@ -1999,6 +2029,9 @@ public class GridSpawner : MonoBehaviour
         if (!obstacleViewsByOrigin.TryGetValue(change.originIndex, out var image) || image == null)
             return;
 
+        if (!IsTrackedObstacleViewFor(change.originIndex, change.obstacleId))
+            return;
+
         if (change.cleared)
         {
             if (change.obstacleId == ObstacleId.EnergyContainer)
@@ -2020,6 +2053,14 @@ public class GridSpawner : MonoBehaviour
 
         if (change.sprite != null)
             image.sprite = change.sprite;
+    }
+
+    private bool IsTrackedObstacleViewFor(int originIndex, ObstacleId obstacleId)
+    {
+        if (!obstacleDefsByOrigin.TryGetValue(originIndex, out var trackedDef) || trackedDef == null)
+            return true;
+
+        return trackedDef.id == obstacleId;
     }
 
     private bool ShouldLetEnergyContainerOwnVisual(int originIndex)

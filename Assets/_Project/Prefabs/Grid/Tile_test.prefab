@@ -323,6 +323,7 @@ MonoBehaviour:
   propellerView: {fileID: 3906672644494819645}
   overrideSpecialView: {fileID: 3442276349837178895}
   fuseSparkleView: {fileID: 656804247279960155}
+  oilOverlaySprite: {fileID: 21300000, guid: 5003bc0f577ff42479466f962e00a616, type: 3}
   iconScale: 1
   iconSize: {x: 105, y: 105}
   useFullCellIcon: 0

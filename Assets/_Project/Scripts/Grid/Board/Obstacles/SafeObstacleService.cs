@@ -31,16 +31,10 @@ public sealed class SafeObstacleService : MonoBehaviour
     [Header("References")]
     [SerializeField] private BoardController board;
 
-    /// Kasa altında saklanan içerik (per-cell). Model (a): stamp ederken kaydedilir, kırılınca restore.
-    public struct BeneathCell
-    {
-        public int cell;          // flat hücre index
-        public ObstacleId id;     // altındaki obstacle (None = boş/normal)
-        public int origin;        // altındaki obstacle'ın origin'i (single-cell ise == cell)
-    }
-
+    // Kasa altında saklanan içerik artık generic ObstacleStateService beneath store'unda tutulur
+    // (GridSpawner stamp aşamasında RegisterStampedBeneath ile kaydeder). Kasa kırılınca
+    // RevealStampedBeneathByOverOrigin ile geri yüklenir — Safe'e özel beneath store kaldırıldı.
     private readonly Dictionary<int, SafeState> _byOrigin = new();
-    private readonly Dictionary<int, List<BeneathCell>> _beneathByOrigin = new();
     private readonly Dictionary<int, int> _lastHitFrameByOrigin = new();
     private Func<int, ObstacleHitContext, TileType?, bool> _hitHandler;
 
@@ -88,7 +82,6 @@ public sealed class SafeObstacleService : MonoBehaviour
     public void Clear()
     {
         _byOrigin.Clear();
-        _beneathByOrigin.Clear();
         _lastHitFrameByOrigin.Clear();
     }
 
@@ -126,39 +119,18 @@ public sealed class SafeObstacleService : MonoBehaviour
         _byOrigin[origin] = s;
     }
 
-    /// Stamp sırasında kasa altındaki içerik kaydı (GridSpawner). Kırılınca restore edilir.
-    public void RegisterBeneath(int safeOrigin, List<BeneathCell> beneath)
-    {
-        _beneathByOrigin[safeOrigin] = beneath;
-    }
-
     // Kasa kırıldı → altındaki içeriği geri yükle, hedefi bildir, board refill etsin.
     private void Reveal(int safeOrigin)
     {
         var state = board != null ? board.ObstacleStateService : null;
 
-        if (state != null && _beneathByOrigin.TryGetValue(safeOrigin, out var beneath) && beneath != null)
-        {
-            // 1) Her hücreyi altındaki içeriğine geri yükle (None → hücre açılır + OnCellUnlocked).
-            foreach (var b in beneath)
-                state.RestoreCellObstacle(b.cell, b.id, b.origin);
+        // 1) Generic beneath store'dan bu kasanın altındaki içeriği geri yükle (restore + reinit + view).
+        state?.RevealStampedBeneathByOverOrigin(safeOrigin);
 
-            // 2) Restore edilen beneath obstacle origin'lerinin hit-state'ini yeniden kur.
-            var reinited = new HashSet<int>();
-            foreach (var b in beneath)
-                if (b.id != ObstacleId.None && b.origin == b.cell && reinited.Add(b.origin))
-                {
-                    state.InitObstacleStateAt(b.origin);
-                    board?.RaiseObstacleCreatedDynamic(b.origin % board.Width, b.origin / board.Width);
-                }
-        }
-
-        // 3) Goal (Obstacle/Safe) ilerlesin.
+        // 2) Goal (Obstacle/Safe) ilerlesin.
         state?.NotifySafeBroken(safeOrigin);
 
-        _beneathByOrigin.Remove(safeOrigin);
-
-        // 4) Açılan boş hücreler, devam eden resolve/cascade ile gravity+spawn'dan dolar
+        // 3) Açılan boş hücreler, devam eden resolve/cascade ile gravity+spawn'dan dolar
         //    (kasa kırılması bir match-clear sırasında olur). Gerekirse board kendi akışında refill eder.
         Debug.Log($"[Safe] REVEALED origin={safeOrigin}");
     }

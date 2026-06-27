@@ -189,7 +189,10 @@ public sealed class PulseCoreSpecial
                 {
                     // OverTileBlocker obstacles are blocked by CanAffectCell but PulseCore
                     // should still damage them directly (same as LineV's lightning sweep).
-                    if (rt.Board.ObstacleStateService != null && rt.Board.ObstacleStateService.HasObstacleAt(x, y))
+                    // Emitters (HatLauncher/EnergyContainer) fire directly here so each pulse's
+                    // payout stacks; other blockers go through the merged clear via ImpactCells.
+                    if (!SpecialCellUtils.TryMarkEmitterImpact(rt.Context, rt.Board, x, y)
+                        && rt.Board.ObstacleStateService != null && rt.Board.ObstacleStateService.HasObstacleAt(x, y))
                         rt.Context.ImpactCells.Add(new Vector2Int(x, y));
                     continue;
                 }

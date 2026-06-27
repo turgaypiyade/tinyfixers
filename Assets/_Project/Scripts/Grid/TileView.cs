@@ -65,7 +65,6 @@ public class TileView : MonoBehaviour,
     // ekranda normal taş gibi gösterir (görsel/mantık desync).
     private Sprite movableObstacleSprite;
     private int lastAppliedTileSize;
-    private Image _cellOverlayImage;
 
     // Bu taşın düştüğü CollapseAndSpawnAnimated nesil ID'si. -1 = hiç düşmedi.
     private int lastFallGeneration = -1;
@@ -1578,47 +1577,6 @@ public class TileView : MonoBehaviour,
         }
     }
 
-    public void SetCoveredByCellOverlay(bool covered)
-    {
-        if (covered)
-        {
-            if (_cellOverlayImage == null)
-                _cellOverlayImage = CreateCellOverlayImage();
-            if (_cellOverlayImage != null)
-            {
-                _cellOverlayImage.gameObject.SetActive(true);
-                _cellOverlayImage.color = new Color(0f, 0f, 0f, 0.45f);
-            }
-        }
-        else
-        {
-            if (_cellOverlayImage != null)
-                _cellOverlayImage.gameObject.SetActive(false);
-        }
-    }
-
-    public void SetOverlayAlpha(float alpha)
-    {
-        if (_cellOverlayImage == null) return;
-        var c = _cellOverlayImage.color;
-        c.a = alpha;
-        _cellOverlayImage.color = c;
-    }
-
-    private Image CreateCellOverlayImage()
-    {
-        var go = new GameObject("OilOverlay");
-        go.transform.SetParent(transform, false);
-        var img = go.AddComponent<Image>();
-        img.color = new Color(0f, 0f, 0f, 0f);
-        var overlayRt = img.rectTransform;
-        overlayRt.anchorMin = Vector2.zero;
-        overlayRt.anchorMax = Vector2.one;
-        overlayRt.offsetMin = Vector2.zero;
-        overlayRt.offsetMax = Vector2.zero;
-        go.transform.SetAsLastSibling();
-        return img;
-    }
 
     public void PlayBeingLandedOnSquash(float duration = 0.22f, float strength = 0.46f)
     {

@@ -252,7 +252,9 @@ public sealed class PatchBotSpecial
 
         foreach (var data in dataMatches)
         {
-            if (data != null && arrivalRt.Board.Tiles[data.X, data.Y] != null)
+            if (data != null
+                && SpecialUtils.CanTargetTileContent(arrivalRt.Board, data.X, data.Y)
+                && arrivalRt.Board.Tiles[data.X, data.Y] != null)
                 arrivalRt.Context.Affected.Add(arrivalRt.Board.Tiles[data.X, data.Y]);
         }
     }
@@ -281,7 +283,9 @@ public sealed class PatchBotSpecial
 
         foreach (var data in matchDatas)
         {
-            if (data != null && arrivalRt.Board.Tiles[data.X, data.Y] != null)
+            if (data != null
+                && SpecialUtils.CanTargetTileContent(arrivalRt.Board, data.X, data.Y)
+                && arrivalRt.Board.Tiles[data.X, data.Y] != null)
                 arrivalRt.Context.Affected.Add(arrivalRt.Board.Tiles[data.X, data.Y]);
         }
     }
@@ -304,7 +308,8 @@ public sealed class PatchBotSpecial
 
                 SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, x, originY, arrivalRt.Board);
 
-                if (arrivalRt.Board.Tiles[x, originY] != null)
+                if (SpecialUtils.CanTargetTileContent(arrivalRt.Board, x, originY)
+                    && arrivalRt.Board.Tiles[x, originY] != null)
                 {
                     arrivalRt.Context.Affected.Add(arrivalRt.Board.Tiles[x, originY]);
                     arrivalRt.Context.LightningVisualTargets.Add(arrivalRt.Board.Tiles[x, originY]);
@@ -329,7 +334,8 @@ public sealed class PatchBotSpecial
 
                 SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, originX, y, arrivalRt.Board);
 
-                if (arrivalRt.Board.Tiles[originX, y] != null)
+                if (SpecialUtils.CanTargetTileContent(arrivalRt.Board, originX, y)
+                    && arrivalRt.Board.Tiles[originX, y] != null)
                 {
                     arrivalRt.Context.Affected.Add(arrivalRt.Board.Tiles[originX, y]);
                     arrivalRt.Context.LightningVisualTargets.Add(arrivalRt.Board.Tiles[originX, y]);
@@ -563,6 +569,9 @@ public sealed class PatchBotSpecial
             return;
 
         var pos = new Vector2Int(tile.X, tile.Y);
+
+        if (!SpecialUtils.CanTargetTileContent(rt.Board, pos.x, pos.y))
+            return;
 
         if (rt.Context.Processed.Contains(pos))
             return;

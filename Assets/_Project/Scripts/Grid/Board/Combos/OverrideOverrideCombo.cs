@@ -74,20 +74,24 @@ public sealed class OverrideOverrideCombo
     {
         AddAffected(rt, rt.Origin);
         AddAffected(rt, rt.Partner);
+
+        // The two override origins must NOT be re-enqueued as chain specials (they'd re-run
+        // OverrideSpecial). Mark only THEM processed; every other covered special stays chainable.
+        if (rt.Origin != null)
+            rt.Context.Processed.Add(new Vector2Int(rt.Origin.X, rt.Origin.Y));
+        if (rt.Partner != null)
+            rt.Context.Processed.Add(new Vector2Int(rt.Partner.X, rt.Partner.Y));
     }
 
     private void CollectAllTargets(OverrideOverrideComboExecutionRuntime rt)
     {
         SpecialCellUtils.AddAllTiles(rt.Context.Affected, rt.Context, rt.Board);
 
-        // Override+Override tüm tahtayı tek seferde temizler.
-        // EnqueueChainSpecials'ın PulseCore, LineH/V vb. özel tile'ları
-        // chain-activate etmesini engellemek için hepsini Processed'a ekle.
-        foreach (var tile in rt.Context.Affected)
-        {
-            if (tile != null && tile.GetSpecial() != TileSpecial.None)
-                rt.Context.Processed.Add(new Vector2Int(tile.X, tile.Y));
-        }
+        // NOT: Eskiden buradaki tüm special tile'lar Processed'a eklenip chain BİLEREK kapatılıyordu
+        // ("tüm tahta tek dalgada temizleniyor zaten"). Artık zincir İSTİYORUZ: kapsanan PulseCore /
+        // LineH/V / PatchBot ProcessFanout (EnqueueChainSpecials) ile aktive olsun ki kendi
+        // alanlarındaki launcher'lardan EK enerji toplasınlar (tek-override ile aynı davranış).
+        // Sadece iki override origin'i Processed'da kalır (RegisterOrigins + OverrideSpecial bunu yapar).
     }
 
     private void PreparePresentation(OverrideOverrideComboExecutionRuntime rt)

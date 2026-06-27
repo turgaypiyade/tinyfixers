@@ -49,7 +49,8 @@ public class SpecialImplantService
             return;
 
         if (board.ObstacleStateService != null &&
-            board.ObstacleStateService.IsMovableObstacleAt(x, y))
+            (board.ObstacleStateService.IsMovableObstacleAt(x, y) ||
+             board.ObstacleStateService.IsInteractionLockedAt(x, y)))
         {
             return;
         }

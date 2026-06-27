@@ -371,7 +371,7 @@ public sealed class OverrideSpecializedCombo
         {
             for (int y = 0; y < rt.Board.Height; y++)
             {
-                if (!SpecialUtils.CanAffectCell(rt.Board, x, y))
+                if (!SpecialUtils.CanTargetTileContent(rt.Board, x, y))
                     continue;
 
                 if (rt.Board.ObstacleStateService != null &&
@@ -922,6 +922,7 @@ public sealed class OverrideSpecializedCombo
                     Debug.Log($"[OverrideSpecializedCombo] PulseCore sequence step={i + 1}/{pulseCells.Count} cell={cell}");
 
                     var affectedBefore = new HashSet<TileView>(rt.Context.Affected);
+                    int impactBefore = rt.Context.ImpactCells.Count;
                     rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
 
                     // Tiles newly added by this PulseCore explosion
@@ -932,7 +933,21 @@ public sealed class OverrideSpecializedCombo
                             stepTiles.Add(t);
                     }
 
-                    if (stepTiles.Count > 0)
+                    // Bu adımda CollectArea'nın ctx.ImpactCells'e eklediği hücreler — özellikle
+                    // CanAffectCell'in temizleyemediği over-tile blocker'lar (ColorChest, Stone...).
+                    // Bunları bu adımın clear'ına impactCells olarak taşı ki obstacle hasarı HER
+                    // pulse patlamasında uygulansın (normal pulse'la birebir aynı yol). Aksi halde
+                    // impactCells:null geçilince zincirdeki pulse'lar komşu/kaplı blocker'a hiç hit
+                    // vermiyordu ("3 pulse patladı ama ColorChest tek hit almadı").
+                    var stepImpact = new List<Vector2Int>();
+                    for (int k = impactBefore; k < rt.Context.ImpactCells.Count; k++)
+                        stepImpact.Add(rt.Context.ImpactCells[k]);
+                    // Bu adımın impact'i burada tüketildi; final BuildClearAction aynı blocker'ı
+                    // tekrar işleyip çift saymasın diye ctx.ImpactCells'i adım öncesine geri al.
+                    if (rt.Context.ImpactCells.Count > impactBefore)
+                        rt.Context.ImpactCells.RemoveRange(impactBefore, rt.Context.ImpactCells.Count - impactBefore);
+
+                    if (stepTiles.Count > 0 || stepImpact.Count > 0)
                     {
                         var delays = new Dictionary<TileView, float>();
                         foreach (var t in stepTiles)
@@ -952,7 +967,7 @@ public sealed class OverrideSpecializedCombo
                             staggerAnimTime: rt.Board.ApplySpecialChainTempo(rt.Board.PulseImpactAnimTime),
                             animationMode: ClearAnimationMode.Default,
                             affectedCells: stepCells,
-                            impactCells: null,
+                            impactCells: stepImpact.Count > 0 ? stepImpact : null,
                             includeAdjacentOverTileBlockerDamage: false,
                             lightningVisualTargets: null,
                             lightningLineStrikes: null,

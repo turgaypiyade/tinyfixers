@@ -34,4 +34,16 @@ public static class SpecialUtils
 
         return board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
     }
+
+    public static bool CanTargetTileContent(BoardController board, int x, int y)
+    {
+        if (!CanAffectCell(board, x, y))
+            return false;
+
+        if (board.ObstacleStateService != null &&
+            board.ObstacleStateService.IsInteractionLockedAt(x, y))
+            return false;
+
+        return true;
+    }
 }

@@ -298,6 +298,7 @@ public class BoardAnimator
         var lineSweepCandidates = new HashSet<TileView>();
         var skipBreakFxTiles = new HashSet<TileView>();
         var lineHitDamagedObstacleCells = new HashSet<Vector2Int>();
+        var clearedObstacleCellsThisPass = new HashSet<Vector2Int>();
         var hitObstacleOrigins = new HashSet<int>();
 
         // Sweep hasarı STRIKE bazında dedup'lanır: tek beam çok hücreli obstacle'ı
@@ -730,8 +731,14 @@ public class BoardAnimator
             void TryHit(Vector2Int c)
             {
                 if (c.x < 0 || c.x >= board.Width || c.y < 0 || c.y >= board.Height) return;
+                if (clearedObstacleCellsThisPass.Contains(c)) return;
                 if (strikeDamagedObstacleCells.Contains((strikeIndex, c))) return;
                 if (!board.ObstacleStateService.HasObstacleAt(c.x, c.y)) return;
+                // Magnet: sadece güncel uçlar hasar alır; orta yol hücreleri inert. Orta hücreyi
+                // strike-dedup'tan ÖNCE atla — yoksa beam orta hücrede slotu harcar, uç küçülmez.
+                if (board.ObstacleStateService.GetObstacleIdAt(c.x, c.y) == ObstacleId.Magnet
+                    && !board.ObstacleStateService.IsMagnetEndpoint(c.x, c.y))
+                    return;
                 // Per-origin deduplication STRIKE BAZINDA: 2x2+ obstacle (ColorChest vb.)
                 // tek beam'den kaç hücresi geçerse geçsin bir hit alır; ama zincirdeki
                 // her ayrı beam (örn. aynı kolonda iki LineV) kendi vuruşunu yapar.
@@ -745,15 +752,27 @@ public class BoardAnimator
                 if (origin >= 0) hitObstacleOrigins.Add(origin);
 
                 var hit = board.ApplyObstacleDamageAt(c.x, c.y, damageContext, null);
-                if (hit.didHit) board.TriggerObstacleVisualChange(hit.visualChange);
+                if (hit.didHit)
+                {
+                    board.TriggerObstacleVisualChange(hit.visualChange);
+                    if (hit.visualChange.cleared)
+                        MarkClearedObstacleCells(hit);
+                }
             }
+
+            // Kilit durumunu hit'ten ÖNCE yakala: TryHit(tileCell) oil'i (hits=1) kırarsa hücre
+            // artık interaction-locked OLMAKTAN ÇIKAR ve aşağıdaki guard yanlışlıkla komşu oilleri
+            // zincirler (xxxx → ortadakini vur → ___x). Kilit ÖN durumuna bakarak oil/chest
+            // hücrelerinden komşuya yayılımı doğru şekilde engelle.
+            bool beamCellWasInteractionLocked =
+                board.ObstacleStateService.IsInteractionLockedAt(tileCell.x, tileCell.y);
 
             // Beam hücresini her durumda hit et (chest gibi blocked hücreler dahil).
             TryHit(tileCell);
 
-            // Adjacent hit'ler sadece normal tile varsa — chest hücrelerinin çapraz
-            // komşularını zincirlememek için.
-            if (board.Tiles[tileCell.x, tileCell.y] != null && !board.ObstacleStateService.IsInteractionLockedAt(tileCell.x, tileCell.y))
+            // Adjacent hit'ler sadece beam hücresi (hit ÖNCESİNDE) kilitsiz normal tile ise —
+            // chest/oil hücrelerinin komşularını zincirlememek için.
+            if (board.Tiles[tileCell.x, tileCell.y] != null && !beamCellWasInteractionLocked)
             {
                 TryHit(new Vector2Int(tileCell.x + 1, tileCell.y));
                 TryHit(new Vector2Int(tileCell.x - 1, tileCell.y));
@@ -847,6 +866,7 @@ public class BoardAnimator
         foreach (var kv in obstacleDamageSources)
         {
             var cell = kv.Key;
+            if (clearedObstacleCellsThisPass.Contains(cell)) continue;
             if (lineHitDamagedObstacleCells.Contains(cell)) continue;
 
             var sources = kv.Value;
@@ -870,9 +890,40 @@ public class BoardAnimator
                 if (hit.didHit)
                 {
                     board.TriggerObstacleVisualChange(hit.visualChange);
+                    // Obstacle bu hit ile tamamen kırıldıysa (örn. altından bir beneath obstacle
+                    // açıldıysa), aynı match'in kalan komşuluk hitlerini taze beneath'e UYGULAMA.
+                    // Yoksa cover (Chest) ve altındaki (Mud) aynı anda silinir.
+                    if (hit.visualChange.cleared)
+                    {
+                        MarkClearedObstacleCells(hit);
+                        break;
+                    }
                     if (isSafeHit)
                         break;
                 }
+            }
+        }
+
+        void MarkClearedObstacleCells(ObstacleStateService.ObstacleHitResult hit)
+        {
+            var affected = hit.affectedCellIndices;
+            if (affected == null || affected.Length == 0)
+            {
+                int origin = hit.visualChange.originIndex;
+                if (origin >= 0)
+                    clearedObstacleCellsThisPass.Add(new Vector2Int(
+                        origin % board.Width,
+                        origin / board.Width));
+                return;
+            }
+
+            for (int i = 0; i < affected.Length; i++)
+            {
+                int idx = affected[i];
+                int x = idx % board.Width;
+                int y = idx / board.Width;
+                if (x >= 0 && x < board.Width && y >= 0 && y < board.Height)
+                    clearedObstacleCellsThisPass.Add(new Vector2Int(x, y));
             }
         }
     }
@@ -1025,6 +1076,7 @@ public class BoardAnimator
 
         var obstacleDamageRequests =
             new System.Collections.Generic.Dictionary<Vector2Int, System.Collections.Generic.List<ObstacleDamageRequest>>();
+        var clearedObstacleCellsThisPass = new System.Collections.Generic.HashSet<Vector2Int>();
 
         void AddDamageRequest(ObstacleDamageRequest request)
         {
@@ -1058,6 +1110,9 @@ public class BoardAnimator
 
         foreach (var kv in obstacleDamageRequests)
         {
+            if (clearedObstacleCellsThisPass.Contains(kv.Key))
+                continue;
+
             var requests = kv.Value;
             if (requests == null)
                 continue;
@@ -1066,7 +1121,38 @@ public class BoardAnimator
             {
                 var hit = board.ApplyObstacleDamage(requests[i]);
                 if (hit.didHit)
+                {
                     board.TriggerObstacleVisualChange(hit.visualChange);
+                    // Kırılınca aynı match'in kalan hitlerini taze beneath obstacle'a uygulama.
+                    if (hit.visualChange.cleared)
+                    {
+                        MarkClearedObstacleCells(hit);
+                        break;
+                    }
+                }
+            }
+        }
+
+        void MarkClearedObstacleCells(ObstacleStateService.ObstacleHitResult hit)
+        {
+            var affected = hit.affectedCellIndices;
+            if (affected == null || affected.Length == 0)
+            {
+                int origin = hit.visualChange.originIndex;
+                if (origin >= 0)
+                    clearedObstacleCellsThisPass.Add(new Vector2Int(
+                        origin % board.Width,
+                        origin / board.Width));
+                return;
+            }
+
+            for (int i = 0; i < affected.Length; i++)
+            {
+                int idx = affected[i];
+                int x = idx % board.Width;
+                int y = idx / board.Width;
+                if (x >= 0 && x < board.Width && y >= 0 && y < board.Height)
+                    clearedObstacleCellsThisPass.Add(new Vector2Int(x, y));
             }
         }
     }
@@ -1148,6 +1234,13 @@ public class BoardAnimator
             if (!isDamageableOverTile && !isOil)
                 return;
 
+            // Magnet: yalnızca GÜNCEL uçlar (A/B) hasar alır; orta yol hücreleri inert. Orta hücreyi
+            // damage source olarak toplama — yoksa per-origin dedup hit'i orta hücrede harcar, uç
+            // atlanır ve magnet küçülmez (tüm magnet hücreleri tek origin'i paylaşır).
+            if (board.ObstacleStateService.GetObstacleIdAt(cell.x, cell.y) == ObstacleId.Magnet
+                && !board.ObstacleStateService.IsMagnetEndpoint(cell.x, cell.y))
+                return;
+
             if (result.TryGetValue(cell, out var sources))
                 sources.Add(sourceTileType);
             else
@@ -1192,6 +1285,11 @@ public class BoardAnimator
 
             if (!board.Obstacles.IsOverTileBlockerAt(cell.x, cell.y)
                 && !board.ObstacleStateService.IsOilAt(cell.x, cell.y))
+                return;
+
+            // Magnet: sadece güncel uçlar hasar alır; orta yol hücreleri inert → toplama.
+            if (board.ObstacleStateService.GetObstacleIdAt(cell.x, cell.y) == ObstacleId.Magnet
+                && !board.ObstacleStateService.IsMagnetEndpoint(cell.x, cell.y))
                 return;
 
             AddRequest(cell);

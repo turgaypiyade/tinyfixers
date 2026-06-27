@@ -29,6 +29,35 @@ public static class SpecialCellUtils
         MarkAffectedCell(ctx, tile.X, tile.Y, board);
     }
 
+    /// <summary>
+    /// HatLauncher / EnergyContainer cells are permanent OverTileBlockers, so CanAffectCell
+    /// rejects them and they never enter a special's affected/impact set. But a special whose
+    /// footprint covers an emitter must still make it emit. We fire the hit DIRECTLY here (context
+    /// SpecialActivation) instead of routing it through the merged clear: each special activation
+    /// visits a covered cell exactly once, so chained specials (pulse+pulse+override) each pay out
+    /// and the energy STACKS. Cascade/normal-match adjacency hits stay capped per move in
+    /// ObstacleStateService, so a single move still can't drain the whole goal.
+    /// Returns true when the cell was an emitter (caller should treat it as handled).
+    /// </summary>
+    public static bool TryMarkEmitterImpact(ResolutionContext ctx, BoardController board, int x, int y)
+    {
+        if (board == null)
+            return false;
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+
+        var obstacles = board.ObstacleStateService;
+        if (obstacles == null)
+            return false;
+
+        var id = obstacles.GetObstacleIdAt(x, y);
+        if (id != ObstacleId.HatLauncher && id != ObstacleId.EnergyContainer)
+            return false;
+
+        board.ApplyObstacleDamageAt(x, y, ObstacleHitContext.SpecialActivation);
+        return true;
+    }
+
     public static void AddSquare(HashSet<TileView> matches, ResolutionContext ctx, BoardController board,
         int cx, int cy, int radius)
     {
@@ -36,9 +65,14 @@ public static class SpecialCellUtils
             for (int y = cy - radius; y <= cy + radius; y++)
             {
                 if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
-                if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
+                if (!SpecialUtils.CanAffectCell(board, x, y))
+                {
+                    TryMarkEmitterImpact(ctx, board, x, y);
+                    continue;
+                }
                 MarkAffectedCell(ctx, x, y, board);
-                if (board.Tiles[x, y] != null) matches.Add(board.Tiles[x, y]);
+                if (SpecialUtils.CanTargetTileContent(board, x, y) && board.Tiles[x, y] != null)
+                    matches.Add(board.Tiles[x, y]);
             }
     }
 
@@ -47,9 +81,14 @@ public static class SpecialCellUtils
         for (int x = 0; x < board.Width; x++)
             for (int y = 0; y < board.Height; y++)
             {
-                if (!SpecialUtils.CanAffectCell(board, x, y)) continue;
+                if (!SpecialUtils.CanAffectCell(board, x, y))
+                {
+                    TryMarkEmitterImpact(ctx, board, x, y);
+                    continue;
+                }
                 MarkAffectedCell(ctx, x, y, board);
-                if (board.Tiles[x, y] != null) matches.Add(board.Tiles[x, y]);
+                if (SpecialUtils.CanTargetTileContent(board, x, y) && board.Tiles[x, y] != null)
+                    matches.Add(board.Tiles[x, y]);
             }
     }
 
@@ -64,7 +103,7 @@ public static class SpecialCellUtils
         {
             for (int y = 0; y < board.Height; y++)
             {
-                if (!SpecialUtils.CanAffectCell(board, x, y))
+                if (!SpecialUtils.CanTargetTileContent(board, x, y))
                     continue;
 
                 var t = board.Tiles[x, y];
@@ -77,11 +116,6 @@ public static class SpecialCellUtils
                     if (board.ObstacleStateService.IsMovableObstacleAt(x, y))
                         continue;
 
-                    // Oil / CellAnchoredOverlay / locksInteraction altındaki tile'ları
-                    // override hedef listesine alma. MarkAffectedCell de çağrılmadığı için
-                    // oil impact/hit de almaz.
-                    if (board.ObstacleStateService.IsInteractionLockedAt(x, y))
-                        continue;
                 }
 
                 if (!t.GetTileType().Equals(type))
@@ -111,7 +145,7 @@ public static class SpecialCellUtils
         {
             for (int y = 0; y < board.Height; y++)
             {
-                if (!SpecialUtils.CanAffectCell(board, x, y))
+                if (!SpecialUtils.CanTargetTileContent(board, x, y))
                     continue;
 
                 var t = board.Tiles[x, y];
@@ -124,10 +158,6 @@ public static class SpecialCellUtils
                     if (board.ObstacleStateService.IsMovableObstacleAt(x, y))
                         continue;
 
-                    // Oil / locksInteraction altındaki tile'ları görsel fanout listesine alma.
-                    // Böylece override efekti o hücreye gitmez.
-                    if (board.ObstacleStateService.IsInteractionLockedAt(x, y))
-                        continue;
                 }
 
                 if (!t.GetTileType().Equals(type))

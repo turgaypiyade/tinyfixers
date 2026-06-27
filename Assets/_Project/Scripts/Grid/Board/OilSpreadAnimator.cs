@@ -8,6 +8,10 @@ public sealed class OilSpreadAnimator : MonoBehaviour
     [SerializeField] private GameObject spreadFxPrefab;  // UI_OilSpreadFX
     [SerializeField] private BoardController board;
     [SerializeField] private float duration = 0.50f;
+    [SerializeField] private Sprite oilOverlaySprite;
+
+    // Kalıcı oil görseli (cell-anchored) bu sprite ile çizilir — OilOverlayRenderer kullanır.
+    public Sprite OilOverlaySprite => oilOverlaySprite;
 
     public IEnumerator PlaySpread(IReadOnlyList<OilSpreadPair> pairs)
     {
@@ -113,7 +117,20 @@ public sealed class OilSpreadAnimator : MonoBehaviour
                 tOilRt.anchorMax = new Vector2(0.5f, 0.5f);
                 tOilRt.pivot     = new Vector2(0.5f, 0.5f);
                 tOilRt.anchoredPosition = tgtCenter - midCenter;
+                tOilRt.sizeDelta = new Vector2(ts, ts);
             }
+
+            var tOilImg = targetOil.GetComponent<Image>();
+            if (tOilImg != null)
+            {
+                if (oilOverlaySprite != null)
+                    tOilImg.sprite = oilOverlaySprite;
+                tOilImg.type = Image.Type.Simple;
+                tOilImg.preserveAspect = false;
+                tOilImg.color = Color.white;
+                tOilImg.raycastTarget = false;
+            }
+
             targetOil.gameObject.SetActive(true);
         }
 

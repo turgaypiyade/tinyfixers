@@ -190,7 +190,10 @@ public sealed class LineVSpecial
                 continue;
 
             if (!SpecialUtils.CanAffectCell(rt.Board, x, y))
+            {
+                SpecialCellUtils.TryMarkEmitterImpact(rt.Context, rt.Board, x, y);
                 continue;
+            }
 
             SpecialCellUtils.MarkAffectedCell(rt.Context, x, y, rt.Board);
 

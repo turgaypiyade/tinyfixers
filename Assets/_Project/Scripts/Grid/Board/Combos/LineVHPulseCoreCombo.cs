@@ -509,6 +509,12 @@ public sealed class LineVHPulseCoreCombo
         var cell = new Vector2Int(tile.X, tile.Y);
         var special = tile.GetSpecial();
 
+        if (!SpecialUtils.CanTargetTileContent(rt.Board, cell.x, cell.y))
+        {
+            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo.TryQueue] skip cell={cell} special={special} reason=interaction-locked");
+            return;
+        }
+
         if (tile == rt.Origin || tile == rt.Partner)
         {
             rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo.TryQueue] skip cell={cell} special={special} reason=origin-partner");
@@ -548,13 +554,20 @@ public sealed class LineVHPulseCoreCombo
             return;
 
         if (!SpecialUtils.CanAffectCell(rt.Board, x, y))
+        {
+            // Emitter blockers (HatLauncher/EnergyContainer) inside the combo footprint still emit once.
+            SpecialCellUtils.TryMarkEmitterImpact(rt.Context, rt.Board, x, y);
             return;
+        }
 
         var cell = new Vector2Int(x, y);
         SpecialCellUtils.MarkAffectedCell(rt.Context, x, y, rt.Board);
 
         var tile = rt.Board.GetTileViewAt(x, y);
         if (tile == null)
+            return;
+
+        if (!SpecialUtils.CanTargetTileContent(rt.Board, x, y))
             return;
 
         rt.Context.Affected.Add(tile);
@@ -834,6 +847,16 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
                 if (IsProtected(cell))
                     continue;
 
+                // Magnet (statik blocker): special etki alanı uca denk gelirse uç küçülür. Merkezi olarak
+                // orta hücre no-op (didHit=false), uç shrink. Magnet hücresi tile-clear EDİLMEZ.
+                if (board.ObstacleStateService != null
+                    && board.ObstacleStateService.GetObstacleIdAt(cell.x, cell.y) == ObstacleId.Magnet)
+                {
+                    var magHit = board.ApplyObstacleDamageAt(cell.x, cell.y, ObstacleHitContext.SpecialActivation);
+                    if (magHit.didHit) board.TriggerObstacleVisualChange(magHit.visualChange);
+                    continue;
+                }
+
                 if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(cell.x, cell.y))
                 {
                     var movableHit = board.ApplyObstacleDamageAt(cell.x, cell.y, ObstacleHitContext.SpecialActivation);
@@ -883,6 +906,15 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
 
             if (!cleared.Add(cell))
                 return;
+
+            // Magnet (statik blocker): special etki alanı uca denk gelirse uç küçülür (merkezi: orta no-op).
+            if (board.ObstacleStateService != null
+                && board.ObstacleStateService.GetObstacleIdAt(cell.x, cell.y) == ObstacleId.Magnet)
+            {
+                var magHit = board.ApplyObstacleDamageAt(cell.x, cell.y, ObstacleHitContext.SpecialActivation);
+                if (magHit.didHit) board.TriggerObstacleVisualChange(magHit.visualChange);
+                return;
+            }
 
             // Movable obstacle (Plastic vb.): tile-clear değil obstacle hasarı —
             // yıkılırsa view'ı HandleObstacleDestroyed kaldırır; çok-hit'liyse view'la
@@ -1028,6 +1060,15 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
 
             if (!cleared.Add(kvp.Key))
                 continue;
+
+            // Magnet (statik blocker): special etki alanı uca denk gelirse uç küçülür (merkezi: orta no-op).
+            if (board.ObstacleStateService != null
+                && board.ObstacleStateService.GetObstacleIdAt(kvp.Key.x, kvp.Key.y) == ObstacleId.Magnet)
+            {
+                var magHit = board.ApplyObstacleDamageAt(kvp.Key.x, kvp.Key.y, ObstacleHitContext.SpecialActivation);
+                if (magHit.didHit) board.TriggerObstacleVisualChange(magHit.visualChange);
+                continue;
+            }
 
             if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(kvp.Key.x, kvp.Key.y))
             {

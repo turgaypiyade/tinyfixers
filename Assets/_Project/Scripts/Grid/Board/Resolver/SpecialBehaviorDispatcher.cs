@@ -205,13 +205,15 @@ public class SpecialBehaviorDispatcher
         foreach (var c in cells)
         {
             SpecialCellUtils.MarkAffectedCell(ctx, c.x, c.y, board);
-            if (board.Tiles[c.x, c.y] != null) ctx.Affected.Add(board.Tiles[c.x, c.y]);
+            if (SpecialUtils.CanTargetTileContent(board, c.x, c.y) && board.Tiles[c.x, c.y] != null)
+                ctx.Affected.Add(board.Tiles[c.x, c.y]);
         }
     }
 
     public void ApplySpecialActivation(ResolutionContext ctx, TileView specialTile, TileView partnerTile)
     {
         if (specialTile == null) return;
+        if (IsInteractionLocked(specialTile.X, specialTile.Y)) return;
 
         var special = specialTile.GetSpecial();
         int ox = specialTile.X;
@@ -351,6 +353,9 @@ public class SpecialBehaviorDispatcher
         if (tile == null)
             return actions;
 
+        if (IsInteractionLocked(tile.X, tile.Y))
+            return actions;
+
         var special = tile.GetSpecial();
 
         switch (special)
@@ -449,7 +454,8 @@ public class SpecialBehaviorDispatcher
         foreach (var c in cells)
         {
             SpecialCellUtils.MarkAffectedCell(ctx, c.x, c.y, board);
-            if (board.Tiles[c.x, c.y] != null) ctx.Affected.Add(board.Tiles[c.x, c.y]);
+            if (SpecialUtils.CanTargetTileContent(board, c.x, c.y) && board.Tiles[c.x, c.y] != null)
+                ctx.Affected.Add(board.Tiles[c.x, c.y]);
         }
     }
 
@@ -472,6 +478,9 @@ public class SpecialBehaviorDispatcher
             if (tile == null || tile.GetSpecial() != TileSpecial.SystemOverride)
                 continue;
 
+            if (IsInteractionLocked(cell.x, cell.y))
+                continue;
+
             ctx.Processed.Remove(cell);
             ctx.Queued.Remove(cell);
 
@@ -483,4 +492,15 @@ public class SpecialBehaviorDispatcher
     private static bool IsLine(TileSpecial special) => special == TileSpecial.LineH || special == TileSpecial.LineV;
     private static bool IsPulseLineCombo(TileSpecial a, TileSpecial b) => (IsPulse(a) && IsLine(b)) || (IsPulse(b) && IsLine(a));
     private static bool IsPulse(TileSpecial special) => special == TileSpecial.PulseCore;
+
+    private bool IsInteractionLocked(int x, int y)
+    {
+        if (board == null || board.ObstacleStateService == null)
+            return false;
+
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+
+        return board.ObstacleStateService.IsInteractionLockedAt(x, y);
+    }
 }

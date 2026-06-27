@@ -1046,25 +1046,25 @@ public class BoardController : MonoBehaviour
         for (int y = 0; y < height; y++) for (int x = 0; x < width; x++) RefreshTileObstacleVisual(tiles[x, y]);
     }
 
+    private OilOverlayRenderer oilOverlayRenderer;
+
     internal void RefreshOilOverlays()
     {
-        if (tiles == null) return;
-        for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x++)
-                tiles[x, y]?.SetCoveredByCellOverlay(false);
-
         if (obstacleStateService == null) return;
-        var oilCells = obstacleStateService.GetAllOilCells();
-        Debug.Log($"[OilOverlay] RefreshOilOverlays: {oilCells.Count} oil cells");
-        foreach (var cell in oilCells)
+        if (parent == null || tileSize <= 0) return;
+
+        // Oil görseli artık CELL-ANCHORED (tile'dan bağımsız). Oil verisi nerede varsa orada
+        // çizilir; tile null olsa bile görünür. Eski tile-bound overlay (görünmez-oil/flicker)
+        // kaldırıldı.
+        if (oilOverlayRenderer == null)
         {
-            if (cell.x >= 0 && cell.x < width && cell.y >= 0 && cell.y < height)
-            {
-                var tile = tiles[cell.x, cell.y];
-                Debug.Log($"[OilOverlay] ({cell.x},{cell.y}) tile={tile != null}");
-                tile?.SetCoveredByCellOverlay(true);
-            }
+            var animator = GetComponent<OilSpreadAnimator>();
+            oilOverlayRenderer = new OilOverlayRenderer(
+                this,
+                animator != null ? animator.OilOverlaySprite : null);
         }
+
+        oilOverlayRenderer.Refresh(obstacleStateService.GetAllOilCells());
     }
 
     internal void RestoreTilePresentation(TileView tile)
@@ -1353,6 +1353,7 @@ public class BoardController : MonoBehaviour
 
         oilSuppressionCellsThisMove.Clear();
         oilSpreadResolvedThisMove = false;
+        obstacleStateService?.ResetPerMoveEmitGuard();
 
         BeginBusy();
         lastSwapA = tile; lastSwapB = null; lastSwapUserMove = true;
@@ -1374,6 +1375,7 @@ public class BoardController : MonoBehaviour
 
         oilSuppressionCellsThisMove.Clear();
         oilSpreadResolvedThisMove = false;
+        obstacleStateService?.ResetPerMoveEmitGuard();
 
         float _flowStart = Time.realtimeSinceStartup;
         float _flowLast = _flowStart;
@@ -2043,25 +2045,6 @@ public class BoardController : MonoBehaviour
                 continue;
             }
 
-            if (!oilSpreadResolvedThisMove
-                && oilSpreadService != null)
-            {
-                var spreadTargets = oilSpreadService.CalculateSpread(oilSuppressionCellsThisMove);
-                oilSpreadResolvedThisMove = true;
-
-                if (spreadTargets.Count > 0)
-                {
-                    Debug.Log($"[Oil] Spreading to {spreadTargets.Count} cells after board stabilized.");
-                    actionSequencer.Enqueue(new OilSpreadAction(this, spreadTargets));
-
-                    while (actionSequencer.IsPlaying)
-                        yield return null;
-
-                    RefreshOilOverlays();
-                    continue;
-                }
-            }
-
             if (ActiveBackgroundJobs > 0 || actionSequencer.IsPlaying)
             {
                 backgroundJobWaitTime += Time.deltaTime;
@@ -2077,6 +2060,30 @@ public class BoardController : MonoBehaviour
             }
 
             backgroundJobWaitTime = 0f;
+
+            // Oil spread: board TAMAMEN oturduktan sonra (ekrandaki cascade + tüm background
+            // job'lar bitince) ve bu hamlede HİÇ oil kırılmamışsa (oilSuppressionCellsThisMove
+            // boşsa) yayılır. Önceden bu blok background-job idle kontrolünden ÖNCEydi; ekrandaki
+            // cascade hâlâ koşarken spread tetikleniyor, o esnada kırılma oluşuyordu. Artık
+            // yalnızca board tam idle iken çalışır.
+            if (!oilSpreadResolvedThisMove
+                && oilSpreadService != null)
+            {
+                var spreadTargets = oilSpreadService.CalculateSpread(oilSuppressionCellsThisMove);
+                oilSpreadResolvedThisMove = true;
+
+                if (spreadTargets.Count > 0)
+                {
+                    Debug.Log($"[Oil] Spreading to {spreadTargets.Count} cells after board fully settled.");
+                    actionSequencer.Enqueue(new OilSpreadAction(this, spreadTargets));
+
+                    while (actionSequencer.IsPlaying)
+                        yield return null;
+
+                    RefreshOilOverlays();
+                    continue;
+                }
+            }
 
             // ─────────────────────────────────────────────
             // Deadlock kontrolü:
@@ -2100,6 +2107,10 @@ public class BoardController : MonoBehaviour
 
         RestoreAllTilePresentation();
         RefreshAllSortingOrders();
+
+        // Board tam oturduktan sonra oil overlay'lerini son kez senkronize et — resolve sırasında
+        // herhangi bir geçici gizleme/handoff olduysa, dinlenme hâlinde görsel = veri olsun.
+        RefreshOilOverlays();
 
         // Shake sonrası pozisyon kaymasını garanti et
         if (shakeTarget != null)
@@ -2449,6 +2460,10 @@ public class BoardController : MonoBehaviour
         obstacleStateService.OnWardrobeOpened += HandleWardrobeOpened;
         obstacleStateService.OnWardrobeItemRemoved -= HandleWardrobeItemRemoved;
         obstacleStateService.OnWardrobeItemRemoved += HandleWardrobeItemRemoved;
+
+        // Generic stacked-obstacle: üstteki kırılınca alttaki (Mud, Stone...) geri yüklenir;
+        // o beneath obstacle'a görsel oluşturmak için dynamic-create akışına bağla.
+        obstacleStateService.RequestObstacleViewCreate = RaiseObstacleCreatedDynamic;
     }
 
     private void HandleWardrobeOpened(int originIndex)
@@ -2476,7 +2491,7 @@ public class BoardController : MonoBehaviour
 
         if (obstacleId == ObstacleId.Oil)
         {
-            tiles[ox, oy]?.SetCoveredByCellOverlay(false);
+            oilOverlayRenderer?.Hide(new Vector2Int(ox, oy));
             return;
         }
 

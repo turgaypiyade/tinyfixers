@@ -32,6 +32,9 @@ public class ActivationQueueProcessor
         Vector2Int pos = new Vector2Int(special.X, special.Y);
         TileSpecial specialType = special.GetSpecial();
 
+        if (IsInteractionLocked(pos))
+            return;
+
         if (ctx.Queued.Contains(pos))
             return;
 
@@ -75,6 +78,9 @@ public class ActivationQueueProcessor
             if (special == TileSpecial.None)
                 continue;
 
+            if (IsInteractionLocked(pos))
+                continue;
+
             if (ctx.Processed.Contains(pos))
                 continue;
 
@@ -115,6 +121,9 @@ public class ActivationQueueProcessor
             if (specialType == TileSpecial.None)
                 continue;
 
+            if (IsInteractionLocked(activation.cell))
+                continue;
+
             if (ShouldSuppressActivation(ctx, specialType))
             {
                 Debug.Log($"[ActivationQueue] suppress-dequeued special={specialType} cell={activation.cell} reason=OverridePulseCoreSequence");
@@ -135,5 +144,16 @@ public class ActivationQueueProcessor
         return ctx != null
             && ctx.SuppressPulseCoreToPulseCoreChain
             && specialType == TileSpecial.PulseCore;
+    }
+
+    private bool IsInteractionLocked(Vector2Int cell)
+    {
+        if (board == null || board.ObstacleStateService == null)
+            return false;
+
+        if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+            return false;
+
+        return board.ObstacleStateService.IsInteractionLockedAt(cell.x, cell.y);
     }
 }

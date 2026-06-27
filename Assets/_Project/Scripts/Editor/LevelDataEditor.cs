@@ -4,7 +4,7 @@ using UnityEngine;
 [CustomEditor(typeof(LevelData))]
 public class LevelDataEditor : Editor
 {
-    private enum PaintMode { Mask, Obstacle, Tube, Magnet, Tiles, Safe, Erase }
+    private enum PaintMode { Mask, Obstacle, Tube, Magnet, Tiles, Safe, Overlay, Erase }
 
     private PaintMode mode = PaintMode.Obstacle;
     private ObstacleId selectedObstacle = ObstacleId.Stone;
@@ -21,6 +21,8 @@ public class LevelDataEditor : Editor
     private SafeLockColor selectedSafeThirdLock = SafeLockColor.Green;
     private static readonly Color safeFillColor   = new Color(0.55f, 0.30f, 0.85f, 0.55f);
     private static readonly Color safeOriginColor = new Color(0.75f, 0.45f, 1.00f, 0.80f);
+    private static readonly Color stackedFillColor   = new Color(0.95f, 0.55f, 0.15f, 0.45f);
+    private static readonly Color stackedOriginColor = new Color(1.00f, 0.70f, 0.25f, 0.75f);
 
     // Tube settings
     private TubeDirection selectedTubeDir = TubeDirection.Up;
@@ -76,7 +78,7 @@ public class LevelDataEditor : Editor
 
         EditorGUILayout.Space(6);
 
-        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Safe", "Erase" });
+        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Safe", "Overlay", "Erase" });
 
         if (mode == PaintMode.Obstacle)
             DrawPalette(level);
@@ -88,6 +90,8 @@ public class LevelDataEditor : Editor
             DrawTilePinPalette(level);
         else if (mode == PaintMode.Safe)
             DrawSafePalette(level);
+        else if (mode == PaintMode.Overlay)
+            DrawOverlayPalette(level);
         else
             EditorGUILayout.HelpBox("Mask: ilk tık hücreyi Empty (hole), ikinci tık veya Erase hücreyi Normal yapar.", MessageType.None);
 
@@ -341,6 +345,9 @@ public class LevelDataEditor : Editor
         if (level.safes == null)
             level.safes = System.Array.Empty<SafeEntry>();
 
+        if (level.stackedObstacles == null)
+            level.stackedObstacles = System.Array.Empty<StackedObstacleEntry>();
+
         if (level.pinnedTileTypes == null || level.pinnedTileTypes.Length != size)
         {
             var old = level.pinnedTileTypes;
@@ -489,7 +496,10 @@ public class LevelDataEditor : Editor
                 EditorGUI.DrawRect(r, occupiedOverlay);
             if (Event.current.type == EventType.MouseDown && r.Contains(Event.current.mousePosition))
             {
+                Undo.RecordObject(level, $"Paint Level {mode}");
                 ApplyPaint(level, x, y);
+                EditorUtility.SetDirty(level);
+                GUI.changed = true;
                 Event.current.Use();
             }
         }
@@ -666,6 +676,40 @@ public class LevelDataEditor : Editor
             }
         }
 
+        // Draw stacked-obstacle (overlay) markers. ÖNEMLİ: hücrenin TAMAMINI kaplamayız —
+        // altındaki authored obstacle (Mud, Oil...) görünür kalsın diye sadece ÜST-SAĞ köşeye
+        // bir rozet + origin köşesine küçük obstacle ikonu çizeriz. Veride alttaki içerik EZİLMEZ.
+        if (level.stackedObstacles != null)
+        {
+            var lib = level.obstacleLibrary;
+            for (int s = 0; s < level.stackedObstacles.Length; s++)
+            {
+                var e = level.stackedObstacles[s];
+                if (e.obstacleId == ObstacleId.None) continue;
+                var def = lib != null ? lib.Get(e.obstacleId) : null;
+                int sox = e.originCellIndex % level.width;
+                int soy = e.originCellIndex / level.width;
+                int sw = def != null ? Mathf.Max(1, def.size.x) : 1;
+                int sh = def != null ? Mathf.Max(1, def.size.y) : 1;
+
+                float band = cellPx * 0.40f;
+                for (int r = 0; r < sh; r++)
+                for (int c = 0; c < sw; c++)
+                {
+                    int cx = sox + c, cy = soy + r;
+                    if (cx >= level.width || cy >= level.height) continue;
+                    float bx = ox + cx * cellPx;
+                    float by = oy + cy * cellPx;
+                    Rect badge = new Rect(bx + cellPx - 1 - band, by, band, band);
+                    EditorGUI.DrawRect(badge, (c == 0 && r == 0) ? stackedOriginColor : stackedFillColor);
+                }
+
+                // Origin'in üst-sol köşesine üstteki obstacle'ın mini ikonu.
+                Rect lr = new Rect(ox + sox * cellPx, oy + soy * cellPx, cellPx * 0.55f, cellPx * 0.55f);
+                if (def != null) DrawSpriteInRect(def.GetPreviewSprite(), lr, 1);
+            }
+        }
+
         Handles.BeginGUI();
         Handles.color = gridLine;
         for (int y = 0; y < level.height; y++)
@@ -698,6 +742,7 @@ public class LevelDataEditor : Editor
                 RemoveTubeAtCell(level, idx);
                 RemoveMagnetAtCell(level, idx);
                 RemoveSafeAtCell(level, idx);
+                RemoveStackedAtCell(level, idx);
                 magnetPathBuilding.Clear();
                 ClearPinnedTile(level, idx);
                 level.cells[idx] = (int)CellType.Normal;
@@ -716,6 +761,9 @@ public class LevelDataEditor : Editor
                 break;
             case PaintMode.Safe:
                 PlaceSafe(level, x, y);
+                break;
+            case PaintMode.Overlay:
+                PlaceStackedObstacle(level, x, y);
                 break;
         }
     }
@@ -773,6 +821,71 @@ public class LevelDataEditor : Editor
                 list.RemoveAt(s);
         }
         level.safes = list.ToArray();
+    }
+
+    private void DrawOverlayPalette(LevelData level)
+    {
+        EditorGUILayout.HelpBox(
+            "Overlay (stacked obstacle): seçili obstacle, altındaki AUTHORED içeriğin (Obstacle modunda " +
+            "boyadığın Mud/Stone vb.) ÜSTÜNE konur. Üstteki kırılınca alttaki geri açılır. Safe ile aynı " +
+            "beneath mekanizması — örn. Chest'i bir Mud'ın üstüne koymak için: önce Obstacle modunda Mud " +
+            "boya, sonra burada Chest seçip aynı hücreye tıkla. Boyut obstacle'ın kendi def.size'ından gelir.",
+            MessageType.Info);
+        // Üste konacak obstacle, normal obstacle paleti ile seçilir (selectedObstacle paylaşılır).
+        DrawPalette(level);
+    }
+
+    // Overlay modu: stackedObstacles[]'a bir entry ekler (origin + obstacleId). Altındaki içerik
+    // EZİLMEZ — runtime'da GridSpawner.StampStackedObstaclesIntoLevel kaydedip kaplar, kırılınca
+    // ObstacleStateService geri yükler. Safe'in generic karşılığı.
+    private void PlaceStackedObstacle(LevelData level, int bx, int by)
+    {
+        if (!level.InBounds(bx, by)) return;
+        if (selectedObstacle == ObstacleId.None) return;
+
+        int originIdx = level.Index(bx, by);
+        var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(selectedObstacle) : null;
+        int w = def != null ? Mathf.Max(1, def.size.x) : 1;
+        int h = def != null ? Mathf.Max(1, def.size.y) : 1;
+        if (bx + w > level.width || by + h > level.height)
+        {
+            Debug.LogWarning($"[OverlayEditor] Stacked {selectedObstacle} at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
+            return;
+        }
+
+        // Aynı origin'de varsa değiştir.
+        RemoveStackedAtCell(level, originIdx);
+
+        var entry = new StackedObstacleEntry
+        {
+            originCellIndex = originIdx,
+            obstacleId      = selectedObstacle
+        };
+
+        var list = new System.Collections.Generic.List<StackedObstacleEntry>(
+            level.stackedObstacles ?? System.Array.Empty<StackedObstacleEntry>()) { entry };
+        level.stackedObstacles = list.ToArray();
+    }
+
+    private void RemoveStackedAtCell(LevelData level, int cellIndex)
+    {
+        if (level.stackedObstacles == null || level.stackedObstacles.Length == 0) return;
+
+        int W = level.width;
+        var lib = level.obstacleLibrary;
+        var list = new System.Collections.Generic.List<StackedObstacleEntry>(level.stackedObstacles);
+        for (int s = list.Count - 1; s >= 0; s--)
+        {
+            var e = list[s];
+            var def = lib != null ? lib.Get(e.obstacleId) : null;
+            int ox = e.originCellIndex % W, oy = e.originCellIndex / W;
+            int w = def != null ? Mathf.Max(1, def.size.x) : 1;
+            int h = def != null ? Mathf.Max(1, def.size.y) : 1;
+            int cx = cellIndex % W, cy = cellIndex / W;
+            if (cx >= ox && cx < ox + w && cy >= oy && cy < oy + h)
+                list.RemoveAt(s);
+        }
+        level.stackedObstacles = list.ToArray();
     }
 
     private void PlaceTube(LevelData level, int bx, int by)

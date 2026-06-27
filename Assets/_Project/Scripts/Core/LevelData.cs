@@ -174,6 +174,16 @@ public struct SafeEntry
     public SafeLockColor thirdLock;
 }
 
+[System.Serializable]
+public struct StackedObstacleEntry
+{
+    [Tooltip("Üstteki obstacle'ın SOL-ÜST (origin) hücresinin flat index'i (y*width+x).")]
+    public int originCellIndex;
+    [Tooltip("Altındaki AUTHORED içeriğin (Mud, Stone...) üstüne konacak obstacle. " +
+             "Kapladığı NxN boyut obstacle'ın kendi def.size'ından gelir.")]
+    public ObstacleId obstacleId;
+}
+
 [CreateAssetMenu(fileName = "Level_001", menuName = "CoreCollapse/Level Data", order = 1)]
 public class LevelData : ScriptableObject
 {
@@ -267,6 +277,12 @@ public class LevelData : ScriptableObject
              "kasa kırılınca açılır. Cells runtime'da SafeObstacleService ile işlenir.")]
     public SafeEntry[] safes;
 
+    [Tooltip("Üst üste bindirilmiş obstacle'lar (generic stacking). Her entry, kapladığı hücrelerdeki " +
+             "AUTHORED içeriği (Mud, Stone vb.) 'beneath' olarak saklayıp üstüne obstacleId'yi stamp eder; " +
+             "üstteki obstacle kırılınca alttaki geri açılır. Safe ile aynı beneath mekanizmasının her " +
+             "obstacle için çalışan generic hâli. Runtime'da GridSpawner + ObstacleStateService işler.")]
+    public StackedObstacleEntry[] stackedObstacles;
+
     [Tooltip("Sabitlenmiş taş tipleri. 0 = rastgele (None), diğerleri TileType+1 değeri.\n" +
              "size = width*height. GridSpawner spawn sırasında simulation yerine bu değeri kullanır.")]
     public int[] pinnedTileTypes;
@@ -317,6 +333,9 @@ public class LevelData : ScriptableObject
 
         if (safes == null)
             safes = System.Array.Empty<SafeEntry>();
+
+        if (stackedObstacles == null)
+            stackedObstacles = System.Array.Empty<StackedObstacleEntry>();
 
         if (pinnedTileTypes == null || pinnedTileTypes.Length != size)
             pinnedTileTypes = new int[size];

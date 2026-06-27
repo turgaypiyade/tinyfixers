@@ -109,6 +109,30 @@ public class ObstacleStateService : ISimObstacleQuery
     // terk edince/kırılınca geri yüklüyoruz. Key = cell index.
     private readonly Dictionary<int, (ObstacleId Id, int Remaining)> _underTileBeneathMovable = new();
 
+    // Generic "stacked obstacle" beneath store. Bir over-tile obstacle (Safe, Chest, Wardrobe...)
+    // authored içeriğin (Mud, Stone vb.) üstüne stamp edilince, alttaki içerik burada saklanır.
+    // Üstteki obstacle KIRILINCA geri yüklenir: ClearObstacleFromLevel (normal damage akışı) veya
+    // Safe için RevealStampedBeneathByOverOrigin. Key = cell index. Safe'in eski per-service
+    // beneath store'unun generic hâli — artık tüm obstacle'lar için tek mekanizma.
+    public readonly struct StampedBeneath
+    {
+        public readonly ObstacleId Id;     // alttaki obstacle (None = boş/normal)
+        public readonly int Origin;        // alttaki obstacle'ın origin'i (single-cell ise == cell)
+        public readonly int OverOrigin;    // üstteki obstacle'ın origin'i (Safe gibi origin-bazlı reveal için)
+
+        public StampedBeneath(ObstacleId id, int origin, int overOrigin)
+        {
+            Id = id;
+            Origin = origin;
+            OverOrigin = overOrigin;
+        }
+    }
+    private readonly Dictionary<int, StampedBeneath> _stampedBeneathByCell = new();
+
+    /// Set by BoardController → RaiseObstacleCreatedDynamic. Restore edilen beneath obstacle'a
+    /// (x,y) görselini oluşturmak için çağrılır.
+    public Action<int, int> RequestObstacleViewCreate;
+
     public event Action<int, ObstacleStageSnapshot> OnObstacleStageChanged;
     public event Action<int, ObstacleId> OnObstacleDestroyed;
     public event Action<int> OnCellUnlocked;
@@ -120,10 +144,28 @@ public class ObstacleStateService : ISimObstacleQuery
     public Action<int> EnergyContainerHitInterceptor;
     /// Set by MagnetObstacleService. Called with the ACTUAL HIT cell index (not origin) so the
     /// service can determine which magnet endpoint was struck.
-    public Action<int> MagnetHitInterceptor;
+    public Func<int, bool> MagnetHitInterceptor;
+
+    /// Set by GridSpawner → MagnetObstacleService.IsMagnetEndpoint. cell index → güncel uç (A/B) mu?
+    /// Adjacency hasarı sadece uçları hedeflesin diye kullanılır (orta yol hücreleri inert).
+    public Func<int, bool> MagnetEndpointQuery;
 
     /// <summary>HatLauncher: set by HatLauncherService. Null = invincible (exhausted).</summary>
     public Action<int> HatLauncherHitInterceptor;
+
+    // Per-move emit guard for HatLauncher / EnergyContainer. These obstacles never break per hit
+    // (they only "exhaust" once the shared goal capacity is reached), so without a per-move cap a
+    // single cascade-heavy combo re-hits the same emitters on every resolve pass and drains the
+    // whole goal in one move. Each origin may emit at most once per player move; reset at move start.
+    private readonly HashSet<int> emittedOriginsThisMove = new();
+
+    /// <summary>Called at the start of each player move so emitter obstacles can fire again.</summary>
+    public void ResetPerMoveEmitGuard() => emittedOriginsThisMove.Clear();
+
+    // Special activations each get their own emit (footprint visits a cell once), so they stack.
+    // Everything else (normal match / cascade adjacency) shares the per-move cap.
+    private static bool IsEmitStackingContext(ObstacleHitContext context)
+        => context == ObstacleHitContext.SpecialActivation;
     /// <summary>Safe: set by SafeObstacleService. Called with the safe's ORIGIN cell when any safe
     /// cell is hit. Lock state + break/reveal are owned by SafeObstacleService.</summary>
     public Func<int, ObstacleHitContext, TileType?, bool> SafeHitInterceptor;
@@ -200,6 +242,7 @@ public class ObstacleStateService : ISimObstacleQuery
         _batteryHitsByOrigin.Clear();
         _wardrobeItemCounts.Clear();
         _underTileBeneathMovable.Clear();
+        _stampedBeneathByCell.Clear();
 
         for (int idx = 0; idx < size; idx++)
         {
@@ -307,10 +350,16 @@ public class ObstacleStateService : ISimObstacleQuery
         }
 
         // Magnet cells are handled entirely by MagnetObstacleService.
-        // We pass the actual hit cell index (idx) so the service knows which endpoint was hit.
+        // Gerçek hit hücresini (idx) veririz; servis hangi ucun vurulduğunu belirler.
+        // Sadece GÜNCEL uçlar (A/B) hasar alır → endpoint ise didHit=true; orta yol hücresi
+        // inert → interceptor false döner ve burada GERÇEK no-op (didHit=false) döneriz. Böylece
+        // hangi hit kaynağı olursa olsun (match/beam/special combo) orta hücre hit'i tüketmez.
         if (id == ObstacleId.Magnet)
         {
-            MagnetHitInterceptor?.Invoke(idx);
+            bool magnetShrank = MagnetHitInterceptor != null && MagnetHitInterceptor.Invoke(idx);
+            if (!magnetShrank)
+                return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
             var magnetChange = new ObstacleVisualChange(-1, id, false, 0, null);
             return new ObstacleHitResult(true, true, false, magnetChange, default, Array.Empty<int>());
         }
@@ -320,6 +369,16 @@ public class ObstacleStateService : ISimObstacleQuery
         {
             if (HatLauncherHitInterceptor != null)
             {
+                // Special-footprint hits STACK: each distinct special activation emits one orb
+                // (its footprint visits the cell once), so chaining pulses+override pays out more.
+                // Only normal-match / cascade adjacency hits are capped per move, which is what
+                // prevented a single cascade-heavy move from draining the whole goal.
+                if (!IsEmitStackingContext(context) && !emittedOriginsThisMove.Add(origin))
+                {
+                    var capped = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+                    return new ObstacleHitResult(true, true, false, capped, default, Array.Empty<int>());
+                }
+
                 HatLauncherHitInterceptor.Invoke(origin);
                 var hlChange = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
                 return new ObstacleHitResult(true, true, false, hlChange, default, Array.Empty<int>());
@@ -334,6 +393,13 @@ public class ObstacleStateService : ISimObstacleQuery
         {
             if (EnergyContainerHitInterceptor != null)
             {
+                // See HatLauncher branch: special-footprint hits stack, normal/cascade hits cap per move.
+                if (!IsEmitStackingContext(context) && !emittedOriginsThisMove.Add(origin))
+                {
+                    var cappedEc = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+                    return new ObstacleHitResult(true, true, false, cappedEc, default, Array.Empty<int>());
+                }
+
                 EnergyContainerHitInterceptor.Invoke(origin);
                 var ecChange = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
                 return new ObstacleHitResult(true, true, false, ecChange, default, Array.Empty<int>());
@@ -349,11 +415,21 @@ public class ObstacleStateService : ISimObstacleQuery
             if (SafeHitInterceptor == null)
                 return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
 
+            int[] safeAffectedCells = CollectCellsForOrigin(origin, id);
+
             if (!SafeHitInterceptor.Invoke(origin, context, sourceTileType))
                 return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
 
-            var safeChange = new ObstacleVisualChange(origin, id, false, 0, null);
-            return new ObstacleHitResult(true, true, false, safeChange, default, Array.Empty<int>());
+            bool safeCleared = origin < 0
+                || origin >= level.obstacles.Length
+                || (ObstacleId)level.obstacles[origin] != ObstacleId.Safe
+                || level.obstacleOrigins[origin] != origin;
+
+            var safeChange = new ObstacleVisualChange(origin, id, safeCleared, 0, null);
+            var safeTransition = safeCleared
+                ? new ObstacleStageTransition(true, origin, id, 0, true, default, default)
+                : default;
+            return new ObstacleHitResult(true, true, false, safeChange, safeTransition, safeAffectedCells);
         }
 
         var def = library != null ? library.Get(id) : null;
@@ -373,16 +449,21 @@ public class ObstacleStateService : ISimObstacleQuery
 
             if (context == ObstacleHitContext.NormalMatch)
             {
+                // Kapalı ColorChest'te stage damage rule izin veriyorsa normal match kapıyı açar.
+                // Açıldıktan sonra normal match tekrar renk-validasyonuna tabidir.
                 if (!isOpen)
-                    return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+                    removedColor = ChestColorMask.None;
+                else
+                {
+                    // Açık dolap: sadece içinde kalan renk hasar verir
+                    var colorFlag = sourceTileType.ToChestColor();
+                    if (colorFlag == ChestColorMask.None ||
+                        !_chestColorStates.TryGetValue(origin, out var chestMask) ||
+                        (chestMask & colorFlag) == 0)
+                        return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
 
-                // Açık dolap: sadece içinde kalan renk hasar verir
-                var colorFlag = sourceTileType.ToChestColor();
-                if (colorFlag == ChestColorMask.None ||
-                    !_chestColorStates.TryGetValue(origin, out var chestMask) ||
-                    (chestMask & colorFlag) == 0)
-                    return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
-                removedColor = colorFlag;
+                    removedColor = colorFlag;
+                }
             }
             else if ((context == ObstacleHitContext.SpecialActivation || context == ObstacleHitContext.Booster) && isOpen)
             {
@@ -423,7 +504,6 @@ public class ObstacleStateService : ISimObstacleQuery
         int[] affectedCells = CollectCellsForOrigin(origin, id);
         var previousStage = CreateSnapshot(def, id, remaining);
         bool wasChestClosed = id == ObstacleId.ColorChest
-                              && context == ObstacleHitContext.SpecialActivation
                               && (def == null || remaining == def.hits);
 
         // Wardrobe açık durum (remaining==1): normal vuruş BİR, special vuruşu İKİ item
@@ -557,10 +637,23 @@ public class ObstacleStateService : ISimObstacleQuery
         if (id == ObstacleId.None) return false;
         if (id == ObstacleId.Tube) return true;
         if (id == ObstacleId.Safe) return true;
+        // Magnet path/uç hücreleri MagnetObstacleService ile yönetilir (normal hit-stage'i yok).
+        // Tüm magnet alanı işgal edilmiş sayılır → taş spawn olmaz. Uç hit alıp küçüldükçe
+        // FreeMagnetCell o hücreyi None yapar → hücre açılır ve gravity ile dolar (alan "kapanır").
+        if (id == ObstacleId.Magnet) return true;
 
         var def = library != null ? library.Get(id) : null;
         int remaining = ResolveRemainingHitsForCell(idx, def);
         return def != null && def.GetBlocksCellsForRemainingHits(remaining);
+    }
+
+    // Hücre Magnet ise ve GÜNCEL bir uç (A/B) ise true. Orta yol hücreleri inert → false.
+    public bool IsMagnetEndpoint(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        if ((ObstacleId)level.obstacles[idx] != ObstacleId.Magnet) return false;
+        return MagnetEndpointQuery != null && MagnetEndpointQuery(idx);
     }
 
     public bool IsOverTileBlockerAt(int x, int y)
@@ -571,6 +664,7 @@ public class ObstacleStateService : ISimObstacleQuery
         var id = (ObstacleId)level.obstacles[idx];
         if (id == ObstacleId.None) return false;
         if (id == ObstacleId.Tube) return true;
+        if (id == ObstacleId.Magnet) return true;
         // EnergyContainer / HatLauncher always block regardless of stage — interceptor handles active vs exhausted.
         if (id == ObstacleId.EnergyContainer) return true;
         if (id == ObstacleId.HatLauncher) return true;
@@ -743,6 +837,8 @@ public class ObstacleStateService : ISimObstacleQuery
         if (origin < 0 || origin >= level.obstacleOrigins.Length)
             return;
 
+        HashSet<int> restoredBeneathOrigins = null;
+
         for (int i = 0; i < level.obstacles.Length; i++)
         {
             if ((ObstacleId)level.obstacles[i] != originId) continue;
@@ -758,6 +854,17 @@ public class ObstacleStateService : ISimObstacleQuery
                 if (i < remainingHitsByOrigin.Length)
                     remainingHitsByOrigin[i] = beneath.Remaining;
                 _underTileBeneathMovable.Remove(i);
+                continue;
+            }
+
+            // Generic stacking: bu cell başka bir obstacle'ın (Chest, Wardrobe...) ÜSTÜNE
+            // stamp edilmişse, altındaki authored içeriği (Mud, Stone...) geri yükle.
+            if (_stampedBeneathByCell.TryGetValue(i, out var stamped))
+            {
+                _stampedBeneathByCell.Remove(i);
+                RestoreCellObstacle(i, stamped.Id, stamped.Origin);
+                if (stamped.Id != ObstacleId.None)
+                    (restoredBeneathOrigins ??= new HashSet<int>()).Add(stamped.Origin);
                 continue;
             }
 
@@ -779,6 +886,64 @@ public class ObstacleStateService : ISimObstacleQuery
             _wardrobeItemCounts.Remove(origin);
 
         OnObstacleDestroyed?.Invoke(origin, originId);
+
+        // Cover view'ı OnObstacleDestroyed dinleyicilerinde temizlendikten sonra beneath view'ı
+        // oluştur. Aynı origin key'i hâlâ cover'a aitken dynamic create skip'leniyordu.
+        if (restoredBeneathOrigins != null)
+            foreach (var beneathOrigin in restoredBeneathOrigins)
+                ReinitRestoredBeneathOrigin(beneathOrigin);
+    }
+
+    // ── Generic stacked-obstacle beneath store ───────────────────────────────
+
+    /// <summary>
+    /// Bir over-tile obstacle'ın (Safe, Chest, Wardrobe...) <paramref name="cell"/> hücresinde
+    /// üstüne stamp edildiği authored içeriği saklar. Üstteki obstacle kırılınca geri yüklenir.
+    /// GridSpawner stamp aşamasında (SetLevelData SONRASI) çağırır.
+    /// </summary>
+    public void RegisterStampedBeneath(int cell, ObstacleId beneathId, int beneathOrigin, int overOrigin)
+    {
+        if (level == null || level.obstacles == null) return;
+        if (cell < 0 || cell >= level.obstacles.Length) return;
+        _stampedBeneathByCell[cell] = new StampedBeneath(beneathId, beneathOrigin, overOrigin);
+    }
+
+    /// <summary>
+    /// Kırılması ClearObstacleFromLevel'dan GEÇMEYEN over-tile obstacle'lar (Safe) için: verilen
+    /// over-origin'e ait tüm stamped-beneath hücrelerini geri yükler. Normal damage ile kırılan
+    /// obstacle'lar bunu otomatik olarak ClearObstacleFromLevel içinde yapar; bu metod ekstra
+    /// tetikleme gerektirenler içindir.
+    /// </summary>
+    public void RevealStampedBeneathByOverOrigin(int overOrigin)
+    {
+        List<int> cells = null;
+        foreach (var kv in _stampedBeneathByCell)
+            if (kv.Value.OverOrigin == overOrigin)
+                (cells ??= new List<int>()).Add(kv.Key);
+
+        if (cells == null) return;
+
+        HashSet<int> restoredBeneathOrigins = null;
+        foreach (var cell in cells)
+        {
+            if (!_stampedBeneathByCell.TryGetValue(cell, out var stamped)) continue;
+            _stampedBeneathByCell.Remove(cell);
+            RestoreCellObstacle(cell, stamped.Id, stamped.Origin);
+            if (stamped.Id != ObstacleId.None)
+                (restoredBeneathOrigins ??= new HashSet<int>()).Add(stamped.Origin);
+        }
+
+        if (restoredBeneathOrigins != null)
+            foreach (var beneathOrigin in restoredBeneathOrigins)
+                ReinitRestoredBeneathOrigin(beneathOrigin);
+    }
+
+    // Geri yüklenen beneath obstacle'ın hit-state'ini def'ten taze kurar + görselini oluşturur.
+    private void ReinitRestoredBeneathOrigin(int beneathOrigin)
+    {
+        InitObstacleStateAt(beneathOrigin);
+        if (level != null && level.width > 0)
+            RequestObstacleViewCreate?.Invoke(beneathOrigin % level.width, beneathOrigin / level.width);
     }
 
     public bool IsMovableObstacleAt(int x, int y)

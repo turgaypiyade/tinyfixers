@@ -55,6 +55,16 @@ public sealed class EnergyContainerFx : MonoBehaviour
     private readonly Dictionary<int, int> activeReleaseSequences = new();
     private readonly HashSet<int> exhaustedOrigins = new();
 
+    // Per-origin obstacle Image cache. The full hierarchy scan in FindObstacleImageScan
+    // is expensive and used to run several times per hit; launcher/container images persist
+    // for the whole level (only faded on exhaust), so the lookup result is stable per origin.
+    private readonly Dictionary<int, Image> obstacleImageCache = new();
+    private TopHudController cachedHud;
+
+    // Flying orb ghosts are pooled instead of created/destroyed per hit. With a 750 goal and
+    // many launchers firing in the same frame this avoids a GameObject alloc + GC churn spike.
+    private readonly Stack<GameObject> orbPool = new();
+
     private void Awake()
     {
         if (board == null)
@@ -101,14 +111,11 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
         yield return null;
 
-        RectTransform target = FindObstacleRect(originIndex);
-        Image image = GetObstacleImage(originIndex);
+        Image image = FindObstacleImage(originIndex);
+        RectTransform target = image != null ? image.rectTransform : null;
 
         if (image != null)
-        {
             FitContainerImageToCell(image, originIndex);
-            target = image.rectTransform;
-        }
 
         if (logDebug)
         {
@@ -237,7 +244,9 @@ public sealed class EnergyContainerFx : MonoBehaviour
             if (board == null)
                 yield break;
 
-            var hud = FindFirstObjectByType<TopHudController>();
+            if (cachedHud == null)
+                cachedHud = FindFirstObjectByType<TopHudController>();
+            var hud = cachedHud;
             RectTransform targetSlot = null;
             hud?.TryGetGoalTargetRectForCollectible(collectibleId, out targetSlot);
 
@@ -253,9 +262,8 @@ public sealed class EnergyContainerFx : MonoBehaviour
                 ? WorldToLocalIn(root, targetSlot)
                 : start + new Vector2(0f, root.rect.height * 0.45f); // hedef yok → yukarı uç
 
-            var go = new GameObject("EnergyOrbFlyGhost", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+            GameObject go = RentOrb(root);
             var rt = (RectTransform)go.transform;
-            rt.SetParent(root, false);
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = orbSize;
@@ -268,8 +276,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
             image.sprite = energyOrbSprite;
             image.raycastTarget = false;
             image.preserveAspect = true;
-            if (energyOrbSprite == null)
-                image.color = new Color(0.35f, 0.9f, 1f, 1f);
+            image.color = energyOrbSprite == null ? new Color(0.35f, 0.9f, 1f, 1f) : Color.white;
 
             var cg = go.GetComponent<CanvasGroup>();
             cg.alpha = 1f;
@@ -303,12 +310,36 @@ public sealed class EnergyContainerFx : MonoBehaviour
             }
 
             if (go != null)
-                Destroy(go);
+                ReturnOrb(go);
         }
         finally
         {
             onArrived?.Invoke();
         }
+    }
+
+    private GameObject RentOrb(RectTransform root)
+    {
+        GameObject go = null;
+        while (orbPool.Count > 0 && go == null)
+            go = orbPool.Pop(); // skip any entries destroyed by scene teardown
+
+        if (go == null)
+            go = new GameObject("EnergyOrbFlyGhost", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(root, false);
+        go.SetActive(true);
+        return go;
+    }
+
+    private void ReturnOrb(GameObject go)
+    {
+        if (go == null)
+            return;
+
+        go.SetActive(false);
+        orbPool.Push(go);
     }
 
     private RectTransform ResolveOrbFlyRoot(RectTransform targetSlot)
@@ -339,6 +370,20 @@ public sealed class EnergyContainerFx : MonoBehaviour
     }
 
     private Image FindObstacleImage(int originIndex)
+    {
+        // Cache hit: launcher/container images are stable for the level, so we avoid the
+        // full GetComponentsInChildren<Image> scan on every hit (the main editor stall cause).
+        if (obstacleImageCache.TryGetValue(originIndex, out Image cached) && cached != null)
+            return cached;
+
+        Image found = FindObstacleImageScan(originIndex);
+        if (found != null)
+            obstacleImageCache[originIndex] = found;
+
+        return found;
+    }
+
+    private Image FindObstacleImageScan(int originIndex)
     {
         if (board == null || board.ContentRoot == null || board.Width <= 0 || board.TileSize <= 0)
             return null;
