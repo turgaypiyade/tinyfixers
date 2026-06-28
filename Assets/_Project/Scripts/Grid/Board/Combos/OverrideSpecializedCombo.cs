@@ -25,6 +25,13 @@ public sealed class OverrideSpecializedComboExecutionRuntime
     public bool UseBatchClearSpike;
     public int DeferredSpecialBatchSize;
     public bool EnqueueCascadeBetweenBatches;
+
+    // Implant edilen pulse hücrelerini patlatan tek-motor (SpecialChainRunner) action'ını üretir.
+    // Set ise bespoke ResolveDeferredPulseCoreActivationSequenceAction yerine bu kullanılır.
+    public Func<List<Vector2Int>, BoardAction> BuildPulseChainForCells;
+
+    // Implant edilen line hücrelerini süpüren tek-motor action'ını üretir (set ise batch yolu yerine).
+    public Func<List<Vector2Int>, BoardAction> BuildLineChainForCells;
 }
 
 public sealed class OverrideSpecializedComboExecutionResult
@@ -131,16 +138,16 @@ public sealed class OverrideSpecializedCombo
 
         if (batchActivations.Count > 0)
         {
-            QueueDeferredLineActivationBatches(
-                rt,
-                batchActivations,
-                result.Actions,
-                emittedTiles,
-                emittedCells);
-
             var allPendingCells = new List<Vector2Int>(batchActivations.Count);
             foreach (var activation in batchActivations)
                 allPendingCells.Add(activation.cell);
+
+            // Tek motor: implant line'lar SpecialChainRunner ile AYNI ANDA süpürülür (zincir arrival'da,
+            // tüm combolarla aynı dispatch). Factory yoksa eski bespoke batch yoluna düşülür.
+            if (rt.BuildLineChainForCells != null)
+                result.Actions.Add(rt.BuildLineChainForCells(allPendingCells));
+            else
+                QueueDeferredLineActivationBatches(rt, batchActivations, result.Actions, emittedTiles, emittedCells);
 
             result.Actions.Add(new PendingTriggeredSpecialScopeAction(allPendingCells, false));
         }
@@ -237,14 +244,18 @@ public sealed class OverrideSpecializedCombo
         rt.EnqueueChainSpecials?.Invoke(rt.Context);
         rt.ProcessQueue?.Invoke(rt.Context);
 
-        if (targetSpecial == TileSpecial.PulseCore && rt.ActivateSpecial != null)
+        if (targetSpecial == TileSpecial.PulseCore && rt.Context.OverrideDeferredPulseExplosions.Count > 0)
         {
-            result.Actions.Add(new ResolveDeferredPulseCoreActivationSequenceAction(
-                this,
-                rt,
-                new List<Vector2Int>(rt.Context.OverrideDeferredPulseExplosions),
-                targetSpecial,
-                OverridePulseCoreStaggerSeconds));
+            var pulseCells = new List<Vector2Int>(rt.Context.OverrideDeferredPulseExplosions);
+
+            // Tek motor: implant pulse'ları SpecialChainRunner sıralı/anchor'lı + ExplodePulse ile
+            // patlatır (tüm combolarla AYNI dispatch; override anında patlar, deferral yok).
+            if (rt.BuildPulseChainForCells != null)
+                result.Actions.Add(rt.BuildPulseChainForCells(pulseCells));
+            else if (rt.ActivateSpecial != null) // fallback (eski bespoke yol)
+                result.Actions.Add(new ResolveDeferredPulseCoreActivationSequenceAction(
+                    this, rt, pulseCells, targetSpecial, OverridePulseCoreStaggerSeconds));
+
             return;
         }
 

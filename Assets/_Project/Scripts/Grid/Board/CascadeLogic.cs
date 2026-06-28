@@ -402,7 +402,11 @@ public class CascadeLogic
                     }
                     else
                     {
-                        newTile.SpawnType = GetRandomTypeAvoidingImmediateMatch(virtualBoard, x, toY);
+                        // Refill SAF RANDOM → cascade'ler doğal oluşabilir (kullanıcının işini kolaylaştırır).
+                        // No-match garantisi yalnızca İLK YÜKLEMEDE (BoardInitService.SimulateInitialTypes).
+                        newTile.SpawnType = board.RandomPool != null && board.RandomPool.Length > 0
+                            ? board.RandomPool[UnityEngine.Random.Range(0, board.RandomPool.Length)]
+                            : TileType.Gear;
                     }
 
                     virtualBoard[x, toY] = newTile;
@@ -649,65 +653,6 @@ public class CascadeLogic
         if (state.isPendingTriggeredSpecial) return false;
         if (state.isObstacleBlocked) return false;
         return true;
-    }
-
-    private TileType GetRandomTypeAvoidingImmediateMatch(VirtualTile[,] virtualBoard, int x, int y)
-    {
-        if (board.RandomPool == null || board.RandomPool.Length == 0)
-            return TileType.Gear;
-
-        int len = board.RandomPool.Length;
-        int start = UnityEngine.Random.Range(0, len);
-
-        for (int i = 0; i < len; i++)
-        {
-            TileType candidate = board.RandomPool[(start + i) % len];
-            if (!WouldCreateImmediateMatch(virtualBoard, x, y, candidate))
-                return candidate;
-        }
-
-        return board.RandomPool[start];
-    }
-
-    private bool WouldCreateImmediateMatch(VirtualTile[,] virtualBoard, int x, int y, TileType type)
-    {
-        // Horizontal 3-run
-        if (HasTypeAt(virtualBoard, x - 1, y, type) && HasTypeAt(virtualBoard, x - 2, y, type)) return true;
-        if (HasTypeAt(virtualBoard, x + 1, y, type) && HasTypeAt(virtualBoard, x + 2, y, type)) return true;
-        if (HasTypeAt(virtualBoard, x - 1, y, type) && HasTypeAt(virtualBoard, x + 1, y, type)) return true;
-
-        // Vertical 3-run
-        if (HasTypeAt(virtualBoard, x, y - 1, type) && HasTypeAt(virtualBoard, x, y - 2, type)) return true;
-        if (HasTypeAt(virtualBoard, x, y + 1, type) && HasTypeAt(virtualBoard, x, y + 2, type)) return true;
-        if (HasTypeAt(virtualBoard, x, y - 1, type) && HasTypeAt(virtualBoard, x, y + 1, type)) return true;
-
-        // 2x2 patterns
-        if (HasTypeAt(virtualBoard, x - 1, y, type) && HasTypeAt(virtualBoard, x - 1, y - 1, type) && HasTypeAt(virtualBoard, x, y - 1, type)) return true;
-        if (HasTypeAt(virtualBoard, x + 1, y, type) && HasTypeAt(virtualBoard, x + 1, y - 1, type) && HasTypeAt(virtualBoard, x, y - 1, type)) return true;
-        if (HasTypeAt(virtualBoard, x - 1, y, type) && HasTypeAt(virtualBoard, x - 1, y + 1, type) && HasTypeAt(virtualBoard, x, y + 1, type)) return true;
-        if (HasTypeAt(virtualBoard, x + 1, y, type) && HasTypeAt(virtualBoard, x + 1, y + 1, type) && HasTypeAt(virtualBoard, x, y + 1, type)) return true;
-
-        return false;
-    }
-
-    private bool HasTypeAt(VirtualTile[,] virtualBoard, int x, int y, TileType type)
-    {
-        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return false;
-        var vTile = virtualBoard[x, y];
-        if (vTile == null) return false;
-        if (vTile.IsMovableObstacle) return false;
-
-        if (vTile.View != null)
-        {
-            var model = vTile.View.GetComponent<TileModel>();
-            if (model != null) return model.type == type;
-        }
-        else
-        {
-            return vTile.SpawnType == type;
-        }
-
-        return false;
     }
 
     private bool TryPickMovableGoalToSpawn(out ObstacleId obstacleId)

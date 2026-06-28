@@ -17,6 +17,10 @@ public sealed class OverrideOverrideComboExecutionRuntime
     public Func<ResolutionContext, List<BoardAction>> ProcessFanout;
     public Action<ResolutionContext> CleanupImplantedTiles;
     public Action<HashSet<TileView>, Dictionary<TileView, float>> FireOverrideOverrideSpecialVisuals;
+
+    // Board'daki karışık special hücrelerini tek-motor (SpecialChainRunner) ile paralel ateşleyen
+    // action'ı üretir. Set ise dispatcher zinciri yerine bu kullanılır.
+    public Func<List<Vector2Int>, BoardAction> BuildMixedChainForCells;
 }
 
 public sealed class OverrideOverrideComboExecutionResult
@@ -34,7 +38,7 @@ public sealed class OverrideOverrideCombo
             return result;
 
         RegisterOrigins(rt);
-        CollectAllTargets(rt);
+        var specialCells = CollectAllTargets(rt);
         PreparePresentation(rt);
 
         if (rt.FinalizeAtEnd)
@@ -52,7 +56,21 @@ public sealed class OverrideOverrideCombo
             if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
                 rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
 
+            bool useRunner = specialCells != null && specialCells.Count > 0;
+
+            // Sıra: special'ları anchor'la (clear sırasında düşmesinler) → tüm-board clear (special'lar
+            // hariç) → runner special'ları paralel ateşler (boş board'a, obstacle hit'leri uygulanır) →
+            // anchor release. Çift-temizleme güvenli (ClearAndDestroyTile idempotent).
+            if (useRunner)
+                result.Actions.Add(new PendingTriggeredSpecialScopeAction(specialCells, true));
+
             result.Actions.Add(BuildClearAction(rt.Context));
+
+            if (useRunner)
+            {
+                result.Actions.Add(rt.BuildMixedChainForCells(specialCells));
+                result.Actions.Add(new PendingTriggeredSpecialScopeAction(specialCells, false));
+            }
         }
 
         return result;
@@ -83,15 +101,32 @@ public sealed class OverrideOverrideCombo
             rt.Context.Processed.Add(new Vector2Int(rt.Partner.X, rt.Partner.Y));
     }
 
-    private void CollectAllTargets(OverrideOverrideComboExecutionRuntime rt)
+    // Board'daki special hücrelerini döner (tek motora verilecek). Factory yoksa null döner →
+    // eski dispatcher zinciri (special'lar Affected'ta kalır, ProcessFanout ile chain).
+    private List<Vector2Int> CollectAllTargets(OverrideOverrideComboExecutionRuntime rt)
     {
         SpecialCellUtils.AddAllTiles(rt.Context.Affected, rt.Context, rt.Board);
 
-        // NOT: Eskiden buradaki tüm special tile'lar Processed'a eklenip chain BİLEREK kapatılıyordu
-        // ("tüm tahta tek dalgada temizleniyor zaten"). Artık zincir İSTİYORUZ: kapsanan PulseCore /
-        // LineH/V / PatchBot ProcessFanout (EnqueueChainSpecials) ile aktive olsun ki kendi
-        // alanlarındaki launcher'lardan EK enerji toplasınlar (tek-override ile aynı davranış).
-        // Sadece iki override origin'i Processed'da kalır (RegisterOrigins + OverrideSpecial bunu yapar).
+        if (rt.BuildMixedChainForCells == null)
+            return null; // fallback: dispatcher zinciri
+
+        // Board'daki special'ları topla → dispatcher zincirinden çıkar (Processed) ve tüm-board
+        // clear'ından çıkar (Affected'tan sil). Runner bunları paralel sub-chain ile ateşleyecek.
+        // İki override origin'i RegisterOrigins zaten Processed; onları alma.
+        var specialCells = new List<Vector2Int>();
+        var toRemove = new List<TileView>();
+        foreach (var tile in rt.Context.Affected)
+        {
+            if (tile == null || tile == rt.Origin || tile == rt.Partner) continue;
+            if (tile.GetSpecial() == TileSpecial.None) continue;
+            specialCells.Add(new Vector2Int(tile.X, tile.Y));
+            rt.Context.Processed.Add(new Vector2Int(tile.X, tile.Y));
+            toRemove.Add(tile);
+        }
+        foreach (var tile in toRemove)
+            rt.Context.Affected.Remove(tile);
+
+        return specialCells;
     }
 
     private void PreparePresentation(OverrideOverrideComboExecutionRuntime rt)

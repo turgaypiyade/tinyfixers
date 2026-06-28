@@ -216,26 +216,19 @@ public class SpecialResolver
             SpecialCellUtils.MarkAffectedCell(ctx, a, board);
             SpecialCellUtils.MarkAffectedCell(ctx, b, board);
 
-            var result = pulsePulseCombo.Execute(new PulsePulseComboExecutionRuntime
-            {
-                Board = board,
-                Context = ctx,
-                Origin = a,
-                Partner = b,
-                FinalizeAtEnd = true,
-                Effects = effectOrchestrator,
-                ActivateSpecial = dispatcher.ApplySpecialActivation,
-                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                FireOverrideOverrideSpecialVisuals = (affected, delays) =>
-                    visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
-                EmitBoardSignal = signal => { },
-                EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
-                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
-            });
+            // Pulse+Pulse artık TEK gerçek-yayılım motorundan (SpecialChainRunner): merkez=a,
+            // yarıçap 4 tek patlama; alandaki special'lar zincirlenir (override resolveOtherSpecial
+            // ile ANINDA patlar — eski DeferredPulseComboOverrideCells deferral'ı yok). İkinci
+            // pulse (b) consume edilir → tek patlama.
+            effectOrchestrator.EmitComboTriggered(TileSpecial.PulseCore, TileSpecial.PulseCore, new Vector2Int(a.X, a.Y));
+            actions.Add(new SpecialChainRunner(
+                board,
+                new List<TileView> { a },
+                4,                              // Pulse+Pulse yarıçapı (eski PulsePulseCombo default)
+                board.PulseChainCatchOverlap,
+                ResolveOtherSpecialInline,
+                consumeTiles: new List<TileView> { a, b }));
 
-            actions.AddRange(result.Actions);
-            DrainDeferredPulseComboOverrides(actions);
             TraceSpecialChain("ResolveSpecialSwap.PulsePulse", a, b);
             board.IsSpecialActivationPhase = false;
             return actions;
@@ -248,22 +241,26 @@ public class SpecialResolver
             SpecialCellUtils.MarkAffectedCell(ctx, a, board);
             SpecialCellUtils.MarkAffectedCell(ctx, b, board);
 
-            var result = lineVHPulseCoreCombo.Execute(new LineVHPulseCoreComboExecutionRuntime
-            {
-                Board = board,
-                Context = ctx,
-                Origin = b,
-                Partner = a,
-                FinalizeAtEnd = true,
-                ExecuteSpecialActions = (resolution, tile, partner) =>
-                    ExecuteSpecialActions(resolution, tile, partner),
-                DebugLog = msg => Debug.Log(msg),
-                EmitComboTriggered = (sa, sb, cell) => effectOrchestrator.EmitComboTriggered(sa, sb, cell),
-                EmitPulseEmitterComboTriggered = cell => effectOrchestrator.EmitPulseEmitterComboTriggered(cell)
-            });
+            // Önce orbit intro (ghost iki ikon Y-orbit + şimşek bağ), 0.75 sn — sadece gösteri.
+            var pulseTile = originalSaIsPulse ? a : b;
+            var lineTile = originalSaIsPulse ? b : a;
+            actions.Add(new LineVHPulseCoreComboAction(board, lineTile, pulseTile, 0.75f));
 
-            actions.AddRange(result.Actions);
-            DrainDeferredLineOverrides(actions);
+            // Line+Pulse artık TEK gerçek-yayılım motorundan (SpecialChainRunner) geçer:
+            // fused 3x3 cross süpürülür, yol üstündeki her special VARDIĞI AN gerçek sınıfıyla
+            // (arrival sub-chain, paralel) tetiklenir — override dahil. Eski bespoke beam +
+            // DeferredLineHitOverrideCells ("override bazen patlamıyor" bug'ı) artık yok.
+            var crossCenter = new Vector2Int(a.X, a.Y);
+            actions.Add(new SpecialChainRunner(
+                board,
+                new List<TileView>(),
+                PulseChainAreaHalf,
+                board.PulseChainCatchOverlap,
+                ResolveOtherSpecialInline,
+                root: null,
+                linePulseCrossCenter: crossCenter,
+                consumeTiles: new List<TileView> { a, b }));
+
             TraceSpecialChain("ResolveSpecialSwap.LineVHPulseCore", a, b);
             board.IsSpecialActivationPhase = false;
             return actions;
@@ -295,7 +292,15 @@ public class SpecialResolver
                 ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                 CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
                 FireOverrideOverrideSpecialVisuals = (affected, delays) =>
-                    visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                    visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                // Board'daki karışık special'lar tek motordan: hepsi anchor'lı + paralel sub-chain.
+                BuildMixedChainForCells = cells => new SpecialChainRunner(
+                    board,
+                    new List<TileView>(),
+                    PulseChainAreaHalf,
+                    board.PulseChainCatchOverlap,
+                    ResolveOtherSpecialInline,
+                    simultaneousMixedCells: cells)
             });
 
             actions.AddRange(result.Actions);
@@ -328,7 +333,24 @@ public class SpecialResolver
                 ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution),
                 UseBatchClearSpike = true,
                 DeferredSpecialBatchSize = 15,
-                EnqueueCascadeBetweenBatches = true
+                EnqueueCascadeBetweenBatches = true,
+                // Implant edilen pulse'lar artık tek motordan (SpecialChainRunner) patlar: hepsi
+                // AYNI ANDA (yer değiştirme yok), zincirleri arrival ile = tüm combolarla AYNI dispatch.
+                BuildPulseChainForCells = cells => new SpecialChainRunner(
+                    board,
+                    new List<TileView>(),
+                    PulseChainAreaHalf,
+                    board.PulseChainCatchOverlap,
+                    ResolveOtherSpecialInline,
+                    simultaneousPulseCells: cells),
+                // Implant line'lar da tek motordan: hepsi aynı anda süpürür, zincir arrival'da.
+                BuildLineChainForCells = cells => new SpecialChainRunner(
+                    board,
+                    new List<TileView>(),
+                    PulseChainAreaHalf,
+                    board.PulseChainCatchOverlap,
+                    ResolveOtherSpecialInline,
+                    simultaneousLineCells: cells)
             });
 
             actions.AddRange(result.Actions);
@@ -344,24 +366,22 @@ public class SpecialResolver
             SpecialCellUtils.MarkAffectedCell(ctx, a, board);
             SpecialCellUtils.MarkAffectedCell(ctx, b, board);
 
-            var result = lineVLineHCombo.Execute(new LineVLineHComboExecutionRuntime
-            {
-                Board = board,
-                Context = ctx,
-                Origin = b,      // source
-                Partner = a,     // target
-                Center = a,      // merkez hedef hücre
-                FinalizeAtEnd = true,
-                ActivateSpecial = dispatcher.ApplySpecialActivation,
-                EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
-                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution),
-                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
-            });
+            // Line+Line artık TEK gerçek-yayılım motorundan (SpecialChainRunner): "+" haçı
+            // (crossHalf=0 → 1 satır + 1 sütun), merkez = a. Yol üstündeki special'lar Line+Pulse
+            // ile AYNI dispatch'e düşer: pulse→ExplodePulse, line→SweepLine, override→
+            // overrideSpecial.Execute (ANINDA, deferral yok).
+            var crossCenter = new Vector2Int(a.X, a.Y);
+            actions.Add(new SpecialChainRunner(
+                board,
+                new List<TileView>(),
+                PulseChainAreaHalf,
+                board.PulseChainCatchOverlap,
+                ResolveOtherSpecialInline,
+                root: null,
+                linePulseCrossCenter: crossCenter,
+                consumeTiles: new List<TileView> { a, b },
+                crossHalf: 0));
 
-            actions.AddRange(result.Actions);
-            DrainDeferredLineOverrides(actions);
             TraceSpecialChain("ResolveSpecialSwap.LineVLineH", a, b);
             board.IsSpecialActivationPhase = false;
             return actions;
@@ -413,7 +433,7 @@ public class SpecialResolver
 
                 if (!hasProtectedForLineChain && IsSupportedSpecialChain(specialTile, PulseChainAreaHalf))
                 {
-                    actions.Add(new PulseChainSequenceAction(
+                    actions.Add(new SpecialChainRunner(
                         board,
                         new List<TileView> { specialTile },
                         PulseChainAreaHalf,
@@ -491,7 +511,7 @@ public class SpecialResolver
 
                 if (!hasProtectedForChain && IsSupportedSpecialChain(specialTile, PulseChainAreaHalf))
                 {
-                    actions.Add(new PulseChainSequenceAction(
+                    actions.Add(new SpecialChainRunner(
                         board,
                         new List<TileView> { specialTile },
                         PulseChainAreaHalf,
@@ -663,7 +683,7 @@ public class SpecialResolver
             // + sıradaki special düşen taşları havada yakalar (pulse zinciriyle aynı motor).
             if (IsSupportedSpecialChain(specialTile, PulseChainAreaHalf))
             {
-                actions.Add(new PulseChainSequenceAction(
+                actions.Add(new SpecialChainRunner(
                     board,
                     new List<TileView> { specialTile },
                     PulseChainAreaHalf,
@@ -729,7 +749,7 @@ public class SpecialResolver
             // sıralı patlama + her patlamada anında clear + gravity + havada yakalama.
             if (IsSupportedSpecialChain(specialTile, PulseChainAreaHalf))
             {
-                actions.Add(new PulseChainSequenceAction(
+                actions.Add(new SpecialChainRunner(
                     board,
                     new List<TileView> { specialTile },
                     PulseChainAreaHalf,
@@ -812,7 +832,7 @@ public class SpecialResolver
     private const int PulseChainAreaHalf = 2;
 
     // BFS ile special zincirini keşfeder. Zincir DESTEKLENEN special'lardan oluşuyor
-    // ve 2+ special içeriyorsa true → ilerlemeli sıralı motor (PulseChainSequenceAction).
+    // ve 2+ special içeriyorsa true → ilerlemeli sıralı motor (SpecialChainRunner).
     // PulseCore 5x5 alanını, LineV/LineH satır/sütununu gezer (expander); PatchBot ve
     // Override leaf'tir (inline aktive edilir, bölgesi gezilmez). DESTEKLENMEYEN bir
     // special bulunursa false → eski birleşik yol. Sadece guard kararı için; sıralı
@@ -889,7 +909,7 @@ public class SpecialResolver
         }
     }
 
-    // PulseChainSequenceAction'ın playback'te pulse-olmayan bir special'ı (Line/PatchBot)
+    // SpecialChainRunner'ın playback'te pulse-olmayan bir special'ı (Line/PatchBot)
     // inline aktive etmesi için callback. Mevcut per-special mantığını scoped bir ctx ile
     // FinalizeAtEnd=true çalıştırıp clear/effect action'larını döndürür. Desteklenmeyen
     // tip → null (action normal taş gibi kırar).

@@ -372,41 +372,6 @@ public class PatchBotTargetCoordinator
 
     private readonly List<TopHudController.ActiveGoal> activeGoalsBuffer = new();
 
-    private static int FarthestIndex(List<(int x, int y, TileView tile)> cells, Vector2Int from)
-    {
-        int best = 0, bestDist = -1;
-        for (int i = 0; i < cells.Count; i++)
-        {
-            int dx = cells[i].x - from.x;
-            int dy = cells[i].y - from.y;
-            int d = dx * dx + dy * dy;
-            if (d > bestDist) { bestDist = d; best = i; }
-        }
-        return best;
-    }
-
-    // Her adayın, zaten seçilmiş hedeflere minimum mesafesini hesaplar ve
-    // bu minimum mesafeyi maksimize eden adayı seçer (botlar arası yayılım).
-    private static int MaxSpreadIndex(List<(int x, int y, TileView tile)> cells, List<Vector2Int> reservedCells)
-    {
-        int best = 0, bestScore = -1;
-        for (int i = 0; i < cells.Count; i++)
-        {
-            int cx = cells[i].x, cy = cells[i].y;
-            int minDist = int.MaxValue;
-            for (int r = 0; r < reservedCells.Count; r++)
-            {
-                int dx = cx - reservedCells[r].x;
-                int dy = cy - reservedCells[r].y;
-                int d = dx * dx + dy * dy;
-                if (d < minDist) minDist = d;
-            }
-            if (minDist == int.MaxValue) minDist = 0;
-            if (minDist > bestScore) { bestScore = minDist; best = i; }
-        }
-        return best;
-    }
-
     // Şu an rezerve edilmiş hedeflerin board üzerindeki hücrelerini döner.
     private List<Vector2Int> GetReservedTargetCells()
     {

@@ -95,277 +95,6 @@ public sealed class LineVHPulseCoreCombo
         return result;
     }
 
-    private LineVHPulseCoreComboExecutionResult ExecuteLineVCombo(
-        LineVHPulseCoreComboExecutionRuntime rt,
-        Vector2Int comboCenterCell)
-    {
-        var result = new LineVHPulseCoreComboExecutionResult();
-        var origins = BuildLineVVirtualOrigins(rt.Board, comboCenterCell);
-
-        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] LineV delegate origins={origins.Count} center={comboCenterCell}");
-        rt.EmitPulseEmitterComboTriggered?.Invoke(comboCenterCell);
-
-        for (int i = 0; i < origins.Count; i++)
-        {
-            var originCell = origins[i];
-            bool finalizeAtEnd = rt.FinalizeAtEnd && i == origins.Count - 1;
-
-            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] delegate LineV origin=virtual({originCell.x},{originCell.y}) finalize={finalizeAtEnd}");
-
-            var lineResult = ExecuteLineVAtVirtualOrigin(rt, originCell, finalizeAtEnd);
-            if (lineResult != null && lineResult.Actions != null && lineResult.Actions.Count > 0)
-                result.Actions.AddRange(lineResult.Actions);
-        }
-
-        return result;
-    }
-
-    private LineVHPulseCoreComboExecutionResult ExecuteLineHCombo(
-        LineVHPulseCoreComboExecutionRuntime rt,
-        Vector2Int comboCenterCell)
-    {
-        var result = new LineVHPulseCoreComboExecutionResult();
-        var origins = BuildLineHVirtualOrigins(rt.Board, comboCenterCell);
-
-        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] LineH delegate origins={origins.Count} center={comboCenterCell}");
-        rt.EmitPulseEmitterComboTriggered?.Invoke(comboCenterCell);
-
-        for (int i = 0; i < origins.Count; i++)
-        {
-            var originCell = origins[i];
-            bool finalizeAtEnd = rt.FinalizeAtEnd && i == origins.Count - 1;
-
-            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] delegate LineH origin=virtual({originCell.x},{originCell.y}) finalize={finalizeAtEnd}");
-
-            var lineResult = ExecuteLineHAtVirtualOrigin(rt, originCell, finalizeAtEnd);
-            if (lineResult != null && lineResult.Actions != null && lineResult.Actions.Count > 0)
-                result.Actions.AddRange(lineResult.Actions);
-        }
-
-        return result;
-    }
-
-    private static List<Vector2Int> BuildLineVVirtualOrigins(BoardController board, Vector2Int comboCenterCell)
-    {
-        var origins = new List<Vector2Int>();
-        if (board == null)
-            return origins;
-
-        for (int x = comboCenterCell.x - 1; x <= comboCenterCell.x + 1; x++)
-        {
-            if (x < 0 || x >= board.Width)
-                continue;
-
-            if (comboCenterCell.y < 0 || comboCenterCell.y >= board.Height)
-                continue;
-
-            origins.Add(new Vector2Int(x, comboCenterCell.y));
-        }
-
-        return origins;
-    }
-
-    private static List<Vector2Int> BuildLineHVirtualOrigins(BoardController board, Vector2Int comboCenterCell)
-    {
-        var origins = new List<Vector2Int>();
-        if (board == null)
-            return origins;
-
-        if (comboCenterCell.x < 0 || comboCenterCell.x >= board.Width)
-            return origins;
-
-        for (int y = comboCenterCell.y - 1; y <= comboCenterCell.y + 1; y++)
-        {
-            if (y < 0 || y >= board.Height)
-                continue;
-
-            origins.Add(new Vector2Int(comboCenterCell.x, y));
-        }
-
-        return origins;
-    }
-
-    private LineVExecutionResult ExecuteLineVAtVirtualOrigin(
-        LineVHPulseCoreComboExecutionRuntime rt,
-        Vector2Int virtualOriginCell,
-        bool finalizeAtEnd)
-    {
-        var pending = new Queue<TileView>();
-        var nestedResult = new LineVHPulseCoreComboExecutionResult();
-        var lineV = new LineVSpecial();
-
-        var result = lineV.Execute(new LineVExecutionRuntime
-        {
-            Board = rt.Board,
-            Context = rt.Context,
-            Origin = null,
-            Partner = null,
-            VirtualOriginCell = virtualOriginCell,
-            FinalizeAtEnd = finalizeAtEnd,
-            SuppressVisualSideEffects = false,
-            ActivateSpecial = (resolution, tile, partner) =>
-            {
-                rt.ExecuteSpecialActions?.Invoke(resolution, tile, partner);
-            },
-            EnqueueChainSpecials = resolution => EnqueueNewlyAffectedSpecials(rt, pending),
-            ProcessQueue = resolution => ProcessPendingChainQueue(rt, pending, nestedResult, "LineV")
-        });
-
-        if (result != null && nestedResult.Actions.Count > 0)
-            result.Actions.InsertRange(0, nestedResult.Actions);
-
-        return result;
-    }
-
-    private LineHExecutionResult ExecuteLineHAtVirtualOrigin(
-        LineVHPulseCoreComboExecutionRuntime rt,
-        Vector2Int virtualOriginCell,
-        bool finalizeAtEnd)
-    {
-        var pending = new Queue<TileView>();
-        var nestedResult = new LineVHPulseCoreComboExecutionResult();
-        var lineH = new LineHSpecial();
-
-        var result = lineH.Execute(new LineHExecutionRuntime
-        {
-            Board = rt.Board,
-            Context = rt.Context,
-            Origin = null,
-            Partner = null,
-            VirtualOriginCell = virtualOriginCell,
-            FinalizeAtEnd = finalizeAtEnd,
-            SuppressVisualSideEffects = false,
-            ActivateSpecial = (resolution, tile, partner) =>
-            {
-                rt.ExecuteSpecialActions?.Invoke(resolution, tile, partner);
-            },
-            EnqueueChainSpecials = resolution => EnqueueNewlyAffectedSpecials(rt, pending),
-            ProcessQueue = resolution => ProcessPendingChainQueue(rt, pending, nestedResult, "LineH")
-        });
-
-        if (result != null && nestedResult.Actions.Count > 0)
-            result.Actions.InsertRange(0, nestedResult.Actions);
-
-        return result;
-    }
-
-    private void ProcessPendingChainQueue(
-        LineVHPulseCoreComboExecutionRuntime rt,
-        Queue<TileView> pending,
-        LineVHPulseCoreComboExecutionResult result,
-        string ownerLabel)
-    {
-        if (rt == null || pending == null || result == null)
-            return;
-
-        ownerLabel = string.IsNullOrEmpty(ownerLabel) ? "Line" : ownerLabel;
-
-        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] {ownerLabel} chain seed count={pending.Count}");
-
-        while (pending.Count > 0)
-        {
-            var tile = pending.Dequeue();
-            if (tile == null)
-                continue;
-
-            var cell = new Vector2Int(tile.X, tile.Y);
-            var special = tile.GetSpecial();
-
-            rt.Context.Queued.Remove(cell);
-
-            if (tile == rt.Origin || tile == rt.Partner)
-                continue;
-
-            rt.DebugLog?.Invoke(
-                $"[LineVHPulseCoreCombo] {ownerLabel} candidate cell={cell} special={special} processed={rt.Context.Processed.Contains(cell)}");
-
-            if (rt.Context.Processed.Contains(cell))
-                continue;
-
-            if (special == TileSpecial.None)
-                continue;
-
-            rt.Context.Processed.Add(cell);
-
-            if (!rt.Context.ChainExecutionOrder.Contains(cell))
-                rt.Context.ChainExecutionOrder.Add(cell);
-
-            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] {ownerLabel} EXECUTE special={special} cell={cell}");
-
-            rt.Context.Processed.Remove(cell);
-            var handledWithoutFinalize = TryExecuteNestedLineWithoutFinalize(rt, pending, tile, ownerLabel);
-            var nestedActions = handledWithoutFinalize
-                ? null
-                : rt.ExecuteSpecialActions?.Invoke(rt.Context, tile, null);
-            rt.Context.Processed.Add(cell);
-
-            if (nestedActions != null && nestedActions.Count > 0)
-            {
-                rt.DebugLog?.Invoke(
-                    $"[LineVHPulseCoreCombo] {ownerLabel} IGNORE nested finalize actions count={nestedActions.Count} from {special} at {cell}; final {ownerLabel} clear owns the accumulated context");
-            }
-
-            EnqueueNewlyAffectedSpecials(rt, pending);
-        }
-    }
-
-    private bool TryExecuteNestedLineWithoutFinalize(
-        LineVHPulseCoreComboExecutionRuntime rt,
-        Queue<TileView> pending,
-        TileView tile,
-        string ownerLabel)
-    {
-        if (rt == null || pending == null || tile == null)
-            return false;
-
-        var special = tile.GetSpecial();
-        if (special == TileSpecial.LineV)
-        {
-            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] {ownerLabel} nested LineV no-finalize cell=({tile.X},{tile.Y})");
-            var lineV = new LineVSpecial();
-            lineV.Execute(new LineVExecutionRuntime
-            {
-                Board = rt.Board,
-                Context = rt.Context,
-                Origin = tile,
-                Partner = null,
-                FinalizeAtEnd = false,
-                SuppressVisualSideEffects = false,
-                ActivateSpecial = (resolution, nestedTile, partner) =>
-                {
-                    rt.ExecuteSpecialActions?.Invoke(resolution, nestedTile, partner);
-                },
-                EnqueueChainSpecials = resolution => EnqueueNewlyAffectedSpecials(rt, pending),
-                ProcessQueue = resolution => { }
-            });
-            return true;
-        }
-
-        if (special == TileSpecial.LineH)
-        {
-            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] {ownerLabel} nested LineH no-finalize cell=({tile.X},{tile.Y})");
-            var lineH = new LineHSpecial();
-            lineH.Execute(new LineHExecutionRuntime
-            {
-                Board = rt.Board,
-                Context = rt.Context,
-                Origin = tile,
-                Partner = null,
-                FinalizeAtEnd = false,
-                SuppressVisualSideEffects = false,
-                ActivateSpecial = (resolution, nestedTile, partner) =>
-                {
-                    rt.ExecuteSpecialActions?.Invoke(resolution, nestedTile, partner);
-                },
-                EnqueueChainSpecials = resolution => EnqueueNewlyAffectedSpecials(rt, pending),
-                ProcessQueue = resolution => { }
-            });
-            return true;
-        }
-
-        return false;
-    }
-
     private static void RemoveDeferredOverrideOriginsFromClear(
         HashSet<TileView> affected,
         HashSet<Vector2Int> affectedCells,
@@ -434,114 +163,6 @@ public sealed class LineVHPulseCoreCombo
             for (int y = 0; y < rt.Board.Height; y++)
                 AddCell(rt, x, y, comboLightningVisualTargets);
         }
-    }
-
-    private void ExpandChain(LineVHPulseCoreComboExecutionRuntime rt, LineVHPulseCoreComboExecutionResult result)
-    {
-        var pending = new Queue<TileView>();
-        EnqueueNewlyAffectedSpecials(rt, pending);
-
-        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] seed count={pending.Count}");
-
-        while (pending.Count > 0)
-        {
-            var tile = pending.Dequeue();
-            if (tile == null)
-                continue;
-
-            var cell = new Vector2Int(tile.X, tile.Y);
-            var special = tile.GetSpecial();
-
-            rt.Context.Queued.Remove(cell);
-
-            if (tile == rt.Origin || tile == rt.Partner)
-                continue;
-
-            rt.DebugLog?.Invoke(
-                $"[LineVHPulseCoreCombo] candidate cell={cell} special={special} processed={rt.Context.Processed.Contains(cell)}");
-
-            if (rt.Context.Processed.Contains(cell))
-                continue;
-
-            if (special == TileSpecial.None)
-                continue;
-
-            // Nested zincirde tekrar kuyruğa düşmemesi için önce işaretle,
-            // ama execute sırasında geçici olarak kaldır — çünkü LineVSpecial.CanExecute,
-            // LineHSpecial.CanExecute vs. Processed.Contains kontrolü yapıyor.
-            rt.Context.Processed.Add(cell);
-
-            if (!rt.Context.ChainExecutionOrder.Contains(cell))
-                rt.Context.ChainExecutionOrder.Add(cell);
-
-            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] EXECUTE special={special} cell={cell}");
-
-            // Geçici olarak Processed'dan çıkar ki special kendi CanExecute kontrolünü geçsin
-            rt.Context.Processed.Remove(cell);
-            var nestedActions = rt.ExecuteSpecialActions?.Invoke(rt.Context, tile, null);
-            // Geri ekle — artık çalıştı, tekrar kuyruğa düşmemeli
-            rt.Context.Processed.Add(cell);
-            if (nestedActions != null && nestedActions.Count > 0)
-            {
-                rt.DebugLog?.Invoke(
-                    $"[LineVHPulseCoreCombo] MERGE nested actions count={nestedActions.Count} from {special} at {cell}");
-                result.Actions.AddRange(nestedActions);
-            }
-
-            EnqueueNewlyAffectedSpecials(rt, pending);
-        }
-    }
-
-    private void EnqueueNewlyAffectedSpecials(LineVHPulseCoreComboExecutionRuntime rt, Queue<TileView> pending)
-    {
-        foreach (var tile in rt.Context.Affected)
-            TryQueue(rt, pending, tile);
-    }
-
-    private void TryQueue(LineVHPulseCoreComboExecutionRuntime rt, Queue<TileView> pending, TileView tile)
-    {
-        if (tile == null)
-        {
-            rt.DebugLog?.Invoke("[LineVHPulseCoreCombo.TryQueue] skip reason=tile-null");
-            return;
-        }
-
-        var cell = new Vector2Int(tile.X, tile.Y);
-        var special = tile.GetSpecial();
-
-        if (!SpecialUtils.CanTargetTileContent(rt.Board, cell.x, cell.y))
-        {
-            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo.TryQueue] skip cell={cell} special={special} reason=interaction-locked");
-            return;
-        }
-
-        if (tile == rt.Origin || tile == rt.Partner)
-        {
-            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo.TryQueue] skip cell={cell} special={special} reason=origin-partner");
-            return;
-        }
-
-        if (special == TileSpecial.None)
-        {
-            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo.TryQueue] skip cell={cell} special=None reason=no-special");
-            return;
-        }
-
-        if (rt.Context.Processed.Contains(cell))
-        {
-            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo.TryQueue] skip cell={cell} special={special} reason=processed");
-            return;
-        }
-
-        if (rt.Context.Queued.Contains(cell))
-        {
-            rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo.TryQueue] skip cell={cell} special={special} reason=already-queued");
-            return;
-        }
-
-        rt.Context.Queued.Add(cell);
-        pending.Enqueue(tile);
-        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo.TryQueue] enqueue cell={cell} special={special} pending={pending.Count}");
     }
 
     private void AddCell(
@@ -754,10 +375,13 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
     private readonly TileView orbitLineTile;
     private readonly TileView orbitPulseTile;
 
+    // Sadece orbit intro'yu oynatıp duran mod (combo'nun gerçek temizliği SpecialChainRunner'da).
+    private readonly bool introOnly;
+
     // Orbit intro animasyon ayarları
     private const float OrbitRiseHeight = 36f;          // ghost ikonların yukarı kalkma yüksekliği (pixel)
     private const float OrbitRiseDuration = 0.12f;      // kısa sahneye alma süresi
-    private const float OrbitSpinDuration = 1.00f;      // PulseCore/emitter ana dönüş süresi
+    private readonly float orbitSpinDuration = 1.00f;   // PulseCore/emitter ana dönüş süresi (intro-only: 0.75)
     private const float EmitterOrbitTurns = 2f;         // emitter PulseCore etrafında Y eksenli orbit yapar
     private const float EmitterSelfSpinTurns = 2f;      // emitter orbit sırasında kendi etrafında döner
     private const float PulseCoreSelfSpinTurns = 2f;    // PulseCore kendi merkezinde döner
@@ -793,9 +417,28 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         this.orbitPulseTile = orbitPulseTile;
     }
 
+    // Sadece orbit intro: gerçek temizlik artık SpecialChainRunner (cross) tarafından yapılıyor.
+    public LineVHPulseCoreComboAction(
+        BoardController board,
+        TileView orbitLineTile,
+        TileView orbitPulseTile,
+        float orbitSpinDuration)
+    {
+        this.board = board;
+        this.orbitLineTile = orbitLineTile;
+        this.orbitPulseTile = orbitPulseTile;
+        this.orbitSpinDuration = Mathf.Max(0.01f, orbitSpinDuration);
+        this.introOnly = true;
+        this.protectedOverrideCells = new HashSet<Vector2Int>();
+    }
+
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
         yield return PlayOrbitIntroGhost();
+
+        // Intro-only mod: gösteriyi oynat ve dur (cross'u SpecialChainRunner sürüyor).
+        if (introOnly)
+            yield break;
 
 
         var cleared = new HashSet<Vector2Int>();
@@ -1186,10 +829,10 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         // 4) PulseCore ve emitter arasındaki 3 px boşluk korunur; aralarında kırıklı lightning bağ kalır.
         t = 0f;
         float twoPi = Mathf.PI * 2f;
-        while (t < OrbitSpinDuration)
+        while (t < orbitSpinDuration)
         {
             t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, OrbitSpinDuration));
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, orbitSpinDuration));
             float linear = k;
 
             float emitterOrbitAngle = linear * EmitterOrbitTurns * twoPi;
