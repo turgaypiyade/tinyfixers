@@ -27,7 +27,7 @@ public sealed class OverrideSpecializedComboExecutionRuntime
     public bool EnqueueCascadeBetweenBatches;
 
     // Implant edilen pulse hücrelerini patlatan tek-motor (SpecialChainRunner) action'ını üretir.
-    // Set ise bespoke ResolveDeferredPulseCoreActivationSequenceAction yerine bu kullanılır.
+    // Pulse+Override'da implant pulse'lar bununla patlar (top-level swap'ta hep set edilir).
     public Func<List<Vector2Int>, BoardAction> BuildPulseChainForCells;
 
     // Implant edilen line hücrelerini süpüren tek-motor action'ını üretir (set ise batch yolu yerine).
@@ -41,7 +41,6 @@ public sealed class OverrideSpecializedComboExecutionResult
 
 public sealed class OverrideSpecializedCombo
 {
-    private const float OverridePulseCoreStaggerSeconds = 0.1f;
 
     public OverrideSpecializedComboExecutionResult Execute(OverrideSpecializedComboExecutionRuntime rt)
     {
@@ -248,13 +247,15 @@ public sealed class OverrideSpecializedCombo
         {
             var pulseCells = new List<Vector2Int>(rt.Context.OverrideDeferredPulseExplosions);
 
-            // Tek motor: implant pulse'ları SpecialChainRunner sıralı/anchor'lı + ExplodePulse ile
-            // patlatır (tüm combolarla AYNI dispatch; override anında patlar, deferral yok).
+            // NOT: Implant pulse'lar artık TEK MOTORDAN (SpecialChainRunner) patlar — eski bespoke
+            // ResolveDeferredPulseCoreActivationSequenceAction (sıralı dispatcher yolu) KALDIRILDI.
+            // BuildPulseChainForCells'i set eden tek yol SpecialResolver (top-level swap) ve buraya
+            // ulaşan başka çağrı yok. Yine de ileride biri factory'yi bağlamayı unutursa SESSİZCE
+            // patlamama olmasın diye gürültülü guard: hata konsola düşer, anında fark edilir.
             if (rt.BuildPulseChainForCells != null)
                 result.Actions.Add(rt.BuildPulseChainForCells(pulseCells));
-            else if (rt.ActivateSpecial != null) // fallback (eski bespoke yol)
-                result.Actions.Add(new ResolveDeferredPulseCoreActivationSequenceAction(
-                    this, rt, pulseCells, targetSpecial, OverridePulseCoreStaggerSeconds));
+            else
+                Debug.LogError("[OverrideSpecializedCombo] BuildPulseChainForCells bağlanmadı — Pulse+Override implant pulse'ları patlamayacak!");
 
             return;
         }
@@ -845,210 +846,6 @@ public sealed class OverrideSpecializedCombo
                 emittedTiles,
                 emittedCells,
                 runCascadeInline);
-        }
-    }
-
-    private sealed class ResolveDeferredPulseCoreActivationSequenceAction : BoardAction
-    {
-        private readonly OverrideSpecializedCombo owner;
-        private readonly OverrideSpecializedComboExecutionRuntime rt;
-        private readonly List<Vector2Int> pulseCells;
-        private readonly TileSpecial targetSpecial;
-        private readonly float staggerSeconds;
-
-        public override bool Blocking => true;
-
-        public ResolveDeferredPulseCoreActivationSequenceAction(
-            OverrideSpecializedCombo owner,
-            OverrideSpecializedComboExecutionRuntime rt,
-            List<Vector2Int> pulseCells,
-            TileSpecial targetSpecial,
-            float staggerSeconds)
-        {
-            this.owner = owner;
-            this.rt = rt;
-            this.pulseCells = pulseCells ?? new List<Vector2Int>();
-            this.targetSpecial = targetSpecial;
-            this.staggerSeconds = Mathf.Max(0f, staggerSeconds);
-        }
-
-        public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
-        {
-            Debug.Log($"[OverrideSpecializedCombo] PulseCore sequence count={pulseCells.Count} stagger={staggerSeconds:0.000}");
-
-            bool previousSuppressPulseCoreChain = rt.Context.SuppressPulseCoreToPulseCoreChain;
-            rt.Context.SuppressPulseCoreToPulseCoreChain = true;
-
-            var clearedInSteps = new HashSet<TileView>();
-
-            // Patlama sırası gelene kadar implant pulse'lar hücrelerinde çakılı
-            // (pending-triggered = gravity-blocked). Adımlar arası taş düşüşü açık
-            // olduğu için bu şart: pulse oyuncunun gördüğü yerde patlamalı, ve
-            // cell-bazlı Processed koruması ancak hücre sabitse geçerli kalır.
-            var anchoredCells = new HashSet<Vector2Int>();
-            foreach (var cell in pulseCells)
-            {
-                if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
-                    continue;
-
-                var anchorTile = rt.Board.Tiles[cell.x, cell.y];
-                if (anchorTile != null && anchorTile.GetSpecial() == TileSpecial.PulseCore)
-                    anchoredCells.Add(cell);
-            }
-
-            if (anchoredCells.Count > 0)
-                rt.Board.SetPendingTriggeredSpecialCells(anchoredCells);
-
-            // Zincir boyunca diagonal slide kapalı: anchor'lı pulse'lar geçici blocker olduğu için
-            // etraftaki taşlar/pulse'lar yana savrulmasın — patlama sırasında her şey düz düşsün.
-            bool previousSuppressDiagonal = rt.Board.CascadeLogic.SuppressDiagonalSlides;
-            rt.Board.CascadeLogic.SuppressDiagonalSlides = true;
-
-            var releaseBuffer = new Vector2Int[1];
-
-            try
-            {
-                for (int i = 0; i < pulseCells.Count; i++)
-                {
-                    var cell = pulseCells[i];
-
-                    if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
-                        continue;
-
-                    // Sırası geldi: anchor'ı bırak (patlama + ardından gelen gravity
-                    // bu hücreyi artık normal işleyebilir).
-                    if (anchoredCells.Remove(cell))
-                    {
-                        releaseBuffer[0] = cell;
-                        rt.Board.ClearPendingTriggeredSpecialCells(releaseBuffer);
-                    }
-
-                    var tile = rt.Board.Tiles[cell.x, cell.y];
-                    if (tile == null || tile.GetSpecial() != TileSpecial.PulseCore)
-                        continue;
-
-                    rt.Context.Processed.Remove(cell);
-                    rt.Context.Queued.Remove(cell);
-
-                    Debug.Log($"[OverrideSpecializedCombo] PulseCore sequence step={i + 1}/{pulseCells.Count} cell={cell}");
-
-                    var affectedBefore = new HashSet<TileView>(rt.Context.Affected);
-                    int impactBefore = rt.Context.ImpactCells.Count;
-                    rt.ActivateSpecial?.Invoke(rt.Context, tile, null);
-
-                    // Tiles newly added by this PulseCore explosion
-                    var stepTiles = new HashSet<TileView>();
-                    foreach (var t in rt.Context.Affected)
-                    {
-                        if (t != null && !affectedBefore.Contains(t))
-                            stepTiles.Add(t);
-                    }
-
-                    // Bu adımda CollectArea'nın ctx.ImpactCells'e eklediği hücreler — özellikle
-                    // CanAffectCell'in temizleyemediği over-tile blocker'lar (ColorChest, Stone...).
-                    // Bunları bu adımın clear'ına impactCells olarak taşı ki obstacle hasarı HER
-                    // pulse patlamasında uygulansın (normal pulse'la birebir aynı yol). Aksi halde
-                    // impactCells:null geçilince zincirdeki pulse'lar komşu/kaplı blocker'a hiç hit
-                    // vermiyordu ("3 pulse patladı ama ColorChest tek hit almadı").
-                    var stepImpact = new List<Vector2Int>();
-                    for (int k = impactBefore; k < rt.Context.ImpactCells.Count; k++)
-                        stepImpact.Add(rt.Context.ImpactCells[k]);
-                    // Bu adımın impact'i burada tüketildi; final BuildClearAction aynı blocker'ı
-                    // tekrar işleyip çift saymasın diye ctx.ImpactCells'i adım öncesine geri al.
-                    if (rt.Context.ImpactCells.Count > impactBefore)
-                        rt.Context.ImpactCells.RemoveRange(impactBefore, rt.Context.ImpactCells.Count - impactBefore);
-
-                    if (stepTiles.Count > 0 || stepImpact.Count > 0)
-                    {
-                        var delays = new Dictionary<TileView, float>();
-                        foreach (var t in stepTiles)
-                        {
-                            int dist = Mathf.Abs(t.X - cell.x) + Mathf.Abs(t.Y - cell.y);
-                            delays[t] = dist * rt.Board.PulseImpactDelayStep;
-                        }
-
-                        var stepCells = new HashSet<Vector2Int>();
-                        foreach (var t in stepTiles)
-                            stepCells.Add(new Vector2Int(t.X, t.Y));
-
-                        var stepClear = new MatchClearAction(
-                            stepTiles,
-                            doShake: i == 0,
-                            staggerDelays: null,
-                            staggerAnimTime: rt.Board.ApplySpecialChainTempo(rt.Board.PulseImpactAnimTime),
-                            animationMode: ClearAnimationMode.Default,
-                            affectedCells: stepCells,
-                            impactCells: stepImpact.Count > 0 ? stepImpact : null,
-                            includeAdjacentOverTileBlockerDamage: false,
-                            lightningVisualTargets: null,
-                            lightningLineStrikes: null,
-                            suppressPerTileClearVfx: false,
-                            perTileClearDelays: delays,
-                            isSpecialPhase: true,
-                            presentationPlan: null);
-
-                        yield return stepClear.ExecuteVisuals(sequencer);
-
-                        foreach (var t in stepTiles)
-                            clearedInSteps.Add(t);
-                    }
-
-                    // Patlamanın boşalttığı alana taş düşüşü hemen başlar (background);
-                    // bekleyen pulse'lar anchor'lı olduğundan yerlerinde kalır. Sıradaki
-                    // patlama, düşmekte olan taşları havada yakalar.
-                    float fallDuration = 0f;
-                    var cascades = rt.Board.CascadeLogic.CalculateCascades();
-                    if (cascades != null && cascades.Count > 0)
-                    {
-                        for (int c = 0; c < cascades.Count; c++)
-                        {
-                            if (cascades[c] is FallAction fa)
-                                fallDuration = Mathf.Max(fallDuration, fa.GetEstimatedVisualDuration(rt.Board));
-                            rt.Board.StartImmediateAction(cascades[c]);
-                        }
-                    }
-                    rt.Board.RefreshAllSortingOrders();
-
-                    if (i < pulseCells.Count - 1)
-                    {
-                        // Taban ritim fall süresinden BAĞIMSIZ (tempo çarpanı uygulanmaz) — diagonal
-                        // kapalıyken düz/kısa düşüşte zincir aşırı hızlanmasın. Havada-yakalama hâlâ
-                        // fallDuration × overlap ile devrede; hangisi büyükse o kullanılır.
-                        float wait = Mathf.Max(
-                            rt.Board.OverridePulseChainStagger,
-                            fallDuration * rt.Board.PulseChainCatchOverlap);
-                        if (wait > 0f)
-                            yield return new WaitForSeconds(wait);
-                    }
-                }
-            }
-            finally
-            {
-                rt.Context.SuppressPulseCoreToPulseCoreChain = previousSuppressPulseCoreChain;
-                rt.Board.CascadeLogic.SuppressDiagonalSlides = previousSuppressDiagonal;
-
-                // Patlamadan atlanan (skip) pulse hücrelerinde anchor kalmasın —
-                // kalıcı pending hücre o sütunun gravity'sini sonsuza dek bloklar.
-                if (anchoredCells.Count > 0)
-                    rt.Board.ClearPendingTriggeredSpecialCells(anchoredCells);
-            }
-
-            // Remove per-step cleared tiles; only origin tiles remain for final clear
-            foreach (var t in clearedInSteps)
-                rt.Context.Affected.Remove(t);
-
-            if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
-                rt.CleanupImplantedTiles?.Invoke(rt.Context);
-
-            if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
-                rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
-
-            if (rt.Context.Affected.Count > 0)
-            {
-                var clearAction = owner.BuildClearAction(rt.Context, targetSpecial);
-                if (clearAction != null)
-                    yield return clearAction.ExecuteVisuals(sequencer);
-            }
         }
     }
 

@@ -308,7 +308,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         // Board already idle but OnBecameIdle may not have fired — act as fallback.
         // Arka plan job'ları (deferred Override/PulseCore clear'ları) da bitmiş olmalı.
-        if (!board.IsBusy && board.ActiveBackgroundJobs == 0)
+        if (!IsBoardWorkingForLevelEnd())
         {
             Debug.Log("[LevelEnd] Update fallback: board idle, moves exhausted, evaluating.");
             endCheckQueued = false;
@@ -324,6 +324,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
         Debug.Log("[LevelEnd] User tap: skipping out-of-moves animation, showing popup now.");
         endCheckQueued = false;
         EvaluateAndShowIfEnded();
+    }
+
+    private bool IsBoardWorkingForLevelEnd()
+    {
+        return board != null
+            && (board.IsBusy || board.ActiveBackgroundJobs > 0 || board.IsActionSequencePlaying);
     }
 
     private IEnumerator InitializeWhenReady()
@@ -452,7 +458,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         while (board != null && stableFrames < requiredStableFrames)
         {
-            bool boardStillWorking = board.IsBusy || board.ActiveBackgroundJobs > 0;
+            bool boardStillWorking = IsBoardWorkingForLevelEnd();
             stableFrames = boardStillWorking ? 0 : stableFrames + 1;
             yield return null;
         }
@@ -486,7 +492,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             // Hard-skip stops the bonus coroutine mid-execution; wait for board to fully settle.
             const float settleTimeout = 5f;
             float settleElapsed = 0f;
-            while (board != null && (board.IsBusy || board.ActiveBackgroundJobs > 0) && settleElapsed < settleTimeout)
+            while (IsBoardWorkingForLevelEnd() && settleElapsed < settleTimeout)
             {
                 settleElapsed += Time.unscaledDeltaTime;
                 yield return null;
@@ -517,7 +523,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         float elapsed = 0f;
 
-        while (board != null && (board.IsBusy || board.ActiveBackgroundJobs > 0))
+        while (IsBoardWorkingForLevelEnd())
         {
             elapsed += Time.unscaledDeltaTime;
 
@@ -525,7 +531,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
             {
                 Debug.LogWarning(
                     $"[LevelEnd] Wait timeout. context={context}, " +
-                    $"IsBusy={board.IsBusy}, ActiveBackgroundJobs={board.ActiveBackgroundJobs}");
+                    $"IsBusy={board.IsBusy}, ActiveBackgroundJobs={board.ActiveBackgroundJobs}, " +
+                    $"ActionSequencePlaying={board.IsActionSequencePlaying}");
                 yield break;
             }
 
@@ -775,7 +782,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         // hedefler cascade sırasında tamamlanacakken fail popup'ı erken açılır.
         // Success yolu (CompleteSuccessAfterBoardSettled) zaten bu şekilde bekliyor;
         // fail yolunu da gerçek idle'a kadar erteleyerek simetriyi sağlıyoruz.
-        if (board.IsBusy || board.ActiveBackgroundJobs > 0)
+        if (IsBoardWorkingForLevelEnd())
         {
             if (!failSettleWaitRunning)
             {
@@ -790,7 +797,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
             $"RemainingMoves={board.RemainingMoves}, " +
             $"GoalsCompleted={topHud.AreAllGoalsCompleted}, " +
             $"IsBusy={board.IsBusy}, " +
-            $"ActiveBackgroundJobs={board.ActiveBackgroundJobs}");
+            $"ActiveBackgroundJobs={board.ActiveBackgroundJobs}, " +
+            $"ActionSequencePlaying={board.IsActionSequencePlaying}");
             
         if (topHud.AreAllGoalsCompleted)
         {
@@ -842,7 +850,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
             // Board yeniden çalışmaya başladıysa (geç cascade/efekt) — gerçek idle'ı bekle,
             // sonra yeniden değerlendir (oradan tekrar bu doğrulamaya girebilir).
-            if (board != null && (board.IsBusy || board.ActiveBackgroundJobs > 0))
+            if (IsBoardWorkingForLevelEnd())
             {
                 failConfirmRunning = false;
                 if (!failSettleWaitRunning)
@@ -868,7 +876,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             yield break;
         }
 
-        if (board.RemainingMoves <= 0 && !board.IsBusy && board.ActiveBackgroundJobs == 0)
+        if (board.RemainingMoves <= 0 && !IsBoardWorkingForLevelEnd())
             ShowFailPopup();
     }
 
@@ -883,7 +891,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         while (board != null && stableFrames < requiredStableFrames)
         {
-            bool boardStillWorking = board.IsBusy || board.ActiveBackgroundJobs > 0;
+            bool boardStillWorking = IsBoardWorkingForLevelEnd();
             stableFrames = boardStillWorking ? 0 : stableFrames + 1;
             yield return null;
         }

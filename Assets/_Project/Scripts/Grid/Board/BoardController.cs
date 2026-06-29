@@ -61,6 +61,14 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float shakeStrength = 10f;
     [SerializeField] private RectTransform shakeTarget;
 
+    [Header("Board Entrance (slide-in)")]
+    [Tooltip("Level yüklenince board taşlar dizili halde sağdan sola kayarak otursun.")]
+    [SerializeField] private bool enableEntranceSlide = true;
+    [SerializeField, Min(0.05f)] private float entranceSlideDuration = 0.5f;
+    [Tooltip("Başlangıçta board'un sağa kaydırılma mesafesi (px). 0 = otomatik (board genişliği).")]
+    [SerializeField, Min(0f)] private float entranceSlideOffsetX = 0f;
+    [SerializeField, Min(0f)] private float entranceStartDelay = 0.05f;
+
     [Header("Special Combos")]
     [SerializeField] private int patchBotPulseComboSize = 4;
 
@@ -161,7 +169,17 @@ public class BoardController : MonoBehaviour
 
     public PatchbotDashUI PatchbotDashUI => patchbotDashUI;
     public BoardAudioDirector Audio => audioDirector;
+
+    // Board'un OTORİTATİF ev (resting) pozisyonu. Level yüklenirken bir kez yakalanır ve
+    // asla shake/efekt sırasında canlı transformdan yeniden okunmaz — eşzamanlı patlamalar
+    // (level 26) üst üste shake tetiklediğinde, ikinci shake zaten kaymış pozisyonu base
+    // sanıp board'u kaydırıyordu. Tüm shake'ler bu sabit eve göre salınır ve eve döner.
     private Vector2 shakeBasePos;
+    private bool shakeHomeCaptured;
+
+    // Entrance slide sürerken board kasıtlı olarak ev DIŞINDA durur; ResolveBoard'un
+    // sonundaki "eve dön" garantisi bu sırada bastırılır (yoksa offscreen'i ezerdi).
+    private bool entranceInProgress;
 
     private TileView[,] tiles;
     private TileData[,] gridData;
@@ -183,6 +201,7 @@ public class BoardController : MonoBehaviour
     public int TileSize => tileSize;
     public RectTransform TilesRoot => parent;
     public bool IsBusy => CurrentState == BoardState.Resolving;
+    public bool IsActionSequencePlaying => actionSequencer != null && actionSequencer.IsPlaying;
     public event Action OnBecameIdle;
 
     // BossDuel/Battlefield: oyuncu HP'si 0'a düşünce gibi, hamle/goal'den bağımsız
@@ -425,7 +444,17 @@ public class BoardController : MonoBehaviour
     internal bool EnablePulseMicroShake => enablePulseMicroShake;
     internal float PulseMicroShakeDuration => pulseMicroShakeDuration;
     internal float PulseMicroShakeStrength => pulseMicroShakeStrength;
-    internal Vector2 ShakeBasePos { get => shakeBasePos; set => shakeBasePos = value; }
+    // Salt-okunur: ev pozisyonu yalnızca CaptureShakeHome ile, bir kez set edilir.
+    internal Vector2 ShakeBasePos => shakeBasePos;
+
+    // Ev pozisyonunu bir kez yakalar (idempotent). shakeTarget'ın dinlenme hâlindeki
+    // anchoredPosition'ı = ev. Sonradan asla shake/efekt tarafından ezilmez.
+    internal void CaptureShakeHome()
+    {
+        if (shakeHomeCaptured || shakeTarget == null) return;
+        shakeBasePos = shakeTarget.anchoredPosition;
+        shakeHomeCaptured = true;
+    }
     internal TileView LastSwapA => lastSwapA;
     internal TileView LastSwapB => lastSwapB;
     internal bool LastSwapUserMove { get => lastSwapUserMove; set => lastSwapUserMove = value; }
@@ -491,7 +520,7 @@ public class BoardController : MonoBehaviour
 
     private void Awake()
     {
-        if (shakeTarget != null) shakeBasePos = shakeTarget.anchoredPosition;
+        CaptureShakeHome();
         if (audioDirector == null)
             audioDirector = GetComponentInChildren<BoardAudioDirector>(true);
         EnsureServices();
@@ -535,7 +564,7 @@ public class BoardController : MonoBehaviour
 
     // Starts a board action immediately as a background job, running concurrently
     // with any currently-playing ActionSequencer action.
-    // ResolveBoard's loop already polls ActiveBackgroundJobs > 0 to wait for completion.
+    // ResolveBoard's loop polls BlockingBackgroundJobs/actionSequencer to wait for completion.
     public void StartImmediateAction(BoardAction action)
     {
         ActiveBackgroundJobs++;
@@ -554,6 +583,32 @@ public class BoardController : MonoBehaviour
     // Always pair Begin/End; the ResolveBoard 5s timeout is the leak safety net.
     public void BeginBackgroundJob() => ActiveBackgroundJobs++;
     public void EndBackgroundJob()   => ActiveBackgroundJobs = Mathf.Max(0, ActiveBackgroundJobs - 1);
+
+    // Subsets of ActiveBackgroundJobs that must keep end-of-level evaluation waiting
+    // (RunAfterIdle / fail-confirmation read ActiveBackgroundJobs), but should not park
+    // the ResolveBoard/SpecialChain settle loop. Goal orbs are cosmetic; PatchBot dash
+    // applies its hit on arrival, but the board is allowed to keep flowing while it flies.
+    public int FlyingGoalOrbs = 0;
+    public int FlyingPatchBotDashes = 0;
+
+    // Background jobs the resolve loop genuinely has to wait on (cascades, clears, combos),
+    // excluding non-blocking flights above.
+    public int BlockingBackgroundJobs =>
+        Mathf.Max(0, ActiveBackgroundJobs - FlyingGoalOrbs - FlyingPatchBotDashes);
+
+    public void BeginGoalOrbFlight() { ActiveBackgroundJobs++; FlyingGoalOrbs++; }
+    public void EndGoalOrbFlight()
+    {
+        ActiveBackgroundJobs = Mathf.Max(0, ActiveBackgroundJobs - 1);
+        FlyingGoalOrbs       = Mathf.Max(0, FlyingGoalOrbs - 1);
+    }
+
+    public void BeginPatchBotDashFlight() { ActiveBackgroundJobs++; FlyingPatchBotDashes++; }
+    public void EndPatchBotDashFlight()
+    {
+        ActiveBackgroundJobs  = Mathf.Max(0, ActiveBackgroundJobs - 1);
+        FlyingPatchBotDashes  = Mathf.Max(0, FlyingPatchBotDashes - 1);
+    }
 
     // Runs a list of actions sequentially as a single background job.
     // Use this when actions have a defined order (e.g. Override fanout → clear).
@@ -734,7 +789,7 @@ public class BoardController : MonoBehaviour
 
         while (true)
         {
-            bool busy = IsBusy || ActiveBackgroundJobs > 0;
+            bool busy = IsBusy || ActiveBackgroundJobs > 0 || IsActionSequencePlaying;
 
             if (!busy)
             {
@@ -750,7 +805,8 @@ public class BoardController : MonoBehaviour
                 Debug.LogWarning(
                     $"[Board] RunAfterIdle timeout. " +
                     $"IsBusy={IsBusy}, CurrentState={CurrentState}, " +
-                    $"busyScopeDepth={busyScopeDepth}, ActiveBackgroundJobs={ActiveBackgroundJobs}");
+                    $"busyScopeDepth={busyScopeDepth}, ActiveBackgroundJobs={ActiveBackgroundJobs}, " +
+                    $"ActionSequencePlaying={IsActionSequencePlaying}");
 
                 action?.Invoke();
                 yield break;
@@ -801,11 +857,24 @@ public class BoardController : MonoBehaviour
         return lineSweepService.PlayLightningStrikeForTiles(lightningSpawner, matches, originTile, fallbackOriginCell, visualTargets, allowCondense, onTargetBeamSpawned);
     }
 
+    internal LightningBeam BeginPersistentLightning(Func<Vector3> startWorldProvider, Func<Vector3> endWorldProvider, Color color)
+    {
+        TryResolveLightningSpawner();
+        return lightningSpawner != null
+            ? lightningSpawner.BeginPersistentLightning(startWorldProvider, endWorldProvider, color)
+            : null;
+    }
+
     internal float PlayLightningLineStrikes(IReadOnlyList<LightningLineStrike> lineStrikes, Action<Vector2Int, int> onSweepCellReached = null)
     {
         TryResolveLightningSpawner();
         EnsureLineTravelVisualReady();
-        return lineSweepService.PlayLightningLineStrikes(lightningSpawner, lineTravelPlayer, lineStrikes, onSweepCellReached);
+        float __dur = lineSweepService.PlayLightningLineStrikes(lightningSpawner, lineTravelPlayer, lineStrikes, onSweepCellReached);
+        Debug.Log($"[BonusDebug] gate4 PlayLightningLineStrikes strikes={(lineStrikes!=null?lineStrikes.Count:-1)} duration={__dur} " +
+                  $"lineTravelPlayer={(lineTravelPlayer==null?"NULL":"ok")} " +
+                  $"playerActive={(lineTravelPlayer!=null && lineTravelPlayer.gameObject.activeInHierarchy)} " +
+                  $"spawner={(lightningSpawner==null?"NULL":"ok")}");
+        return __dur;
     }
 
     internal float PlayLineTravelInstanceWithStep(
@@ -1987,9 +2056,10 @@ public class BoardController : MonoBehaviour
             }
 
             // Hamle kalmadıysa cascade settle beklendi; yeni match aramaya gerek yok.
-            // Ama uçan animasyonlar (PatchBot, EnergyBall) bitmeden çıkılmaz —
-            // aksi hâlde hedef sayısı güncellenip popup açılmadan önce board idle olur.
-            if (RemainingMoves <= 0 && ActiveBackgroundJobs == 0 && !actionSequencer.IsPlaying)
+            // Hamle yoksa cascade settle sonrası yeni match aramaya gerek yok.
+            // Non-blocking uçuşlar (goal orb, PatchBot dash) burada beklenmez; fail/idle
+            // değerlendirmesi ActiveBackgroundJobs üzerinden onları ayrıca bekler.
+            if (RemainingMoves <= 0 && BlockingBackgroundJobs == 0 && !actionSequencer.IsPlaying)
                 yield break;
 
             var matches = matchFinder.FindAllMatches();
@@ -2045,7 +2115,9 @@ public class BoardController : MonoBehaviour
                 continue;
             }
 
-            if (ActiveBackgroundJobs > 0 || actionSequencer.IsPlaying)
+            // Yalnızca gerçek blocking job'ları bekle. Goal-orb/PatchBot uçuşları
+            // hariç tutulur ki hedefe uçarken cascade/düşüş/zincir akışı donmasın.
+            if (BlockingBackgroundJobs > 0 || actionSequencer.IsPlaying)
             {
                 backgroundJobWaitTime += Time.deltaTime;
 
@@ -2053,6 +2125,8 @@ public class BoardController : MonoBehaviour
                 {
                     Debug.LogWarning($"[ResolveBoard] Background job timeout — forcing continue. ActiveBackgroundJobs={ActiveBackgroundJobs}, IsPlaying={actionSequencer.IsPlaying}");
                     ActiveBackgroundJobs = 0;
+                    FlyingGoalOrbs = 0;
+                    FlyingPatchBotDashes = 0;
                 }
 
                 yield return null;
@@ -2112,8 +2186,9 @@ public class BoardController : MonoBehaviour
         // herhangi bir geçici gizleme/handoff olduysa, dinlenme hâlinde görsel = veri olsun.
         RefreshOilOverlays();
 
-        // Shake sonrası pozisyon kaymasını garanti et
-        if (shakeTarget != null)
+        // Shake sonrası pozisyon kaymasını garanti et (eve dön).
+        // Entrance slide sürerken bastır: board şu an kasıtlı olarak ekran dışında.
+        if (shakeTarget != null && !entranceInProgress)
             shakeTarget.anchoredPosition = shakeBasePos;
 
         Debug.Log($"[Resolve] ═══ DONE ═══ passes={safety} total: {(Time.realtimeSinceStartup - _rbStart):0.000}s");
@@ -2325,6 +2400,7 @@ public class BoardController : MonoBehaviour
         {
             DoBoardShake = doShake,
             IncludeAdjacentOverTileBlockerDamage = true,
+            CommitFinalClearsBeforeEffects = true,
             ObstacleHitContext = IsSpecialActivationPhase
                 ? ObstacleHitContext.SpecialActivation
                 : ObstacleHitContext.NormalMatch
@@ -2376,6 +2452,66 @@ public class BoardController : MonoBehaviour
     }
 
     public IEnumerator ResolveInitial() { BeginBusy(); yield return ResolveBoard(false); EndBusy(); }
+
+    // Level girişi: board taşlar dizili halde sağdan sola kayarak otursun.
+    // settleRoutine (genelde ResolveInitial) ekran DIŞINDA çalışır → oyuncu önce arka planı
+    // görür, sonra hazır/oturmuş board kayarak gelir. Giriş boyunca input kilitli (BeginBusy).
+    public IEnumerator PlayBoardEntrance(IEnumerator settleRoutine)
+    {
+        CaptureShakeHome();
+        bool slide = enableEntranceSlide && shakeTarget != null;
+        Vector2 home = shakeBasePos;
+
+        BeginBusy();
+
+        if (slide)
+        {
+            entranceInProgress = true;
+            shakeTarget.anchoredPosition = home + new Vector2(ResolveEntranceOffsetX(), 0f);
+        }
+
+        if (settleRoutine != null)
+            yield return settleRoutine;   // offscreen'de oturur (entranceInProgress restore'u bastırır)
+
+        if (slide)
+        {
+            if (entranceStartDelay > 0f)
+                yield return new WaitForSeconds(entranceStartDelay);
+
+            Vector2 start = shakeTarget.anchoredPosition;
+            float dur = Mathf.Max(0.05f, entranceSlideDuration);
+            float t = 0f;
+            while (t < dur)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / dur);
+                float e = 1f - Mathf.Pow(1f - k, 3f); // ease-out cubic
+                shakeTarget.anchoredPosition = Vector2.LerpUnclamped(start, home, e);
+                yield return null;
+            }
+
+            shakeTarget.anchoredPosition = home;
+            entranceInProgress = false;
+        }
+
+        EndBusy();
+    }
+
+    private float ResolveEntranceOffsetX()
+    {
+        if (entranceSlideOffsetX > 0f) return entranceSlideOffsetX;
+
+        float w = shakeTarget != null ? shakeTarget.rect.width : 0f;
+        if (w < 1f)
+        {
+            Canvas canvas = shakeTarget != null ? shakeTarget.GetComponentInParent<Canvas>() : null;
+            RectTransform cr = canvas != null && canvas.rootCanvas != null
+                ? canvas.rootCanvas.transform as RectTransform
+                : null;
+            w = cr != null ? cr.rect.width : 1080f;
+        }
+        return w + 80f;
+    }
 
     internal IEnumerator ResolveEmptyPlayableCellsWithoutMatch()
     {
@@ -2498,6 +2634,10 @@ public class BoardController : MonoBehaviour
         if (obstacleId == ObstacleId.Safe)
             return;
 
+        // Mud gibi under-tile katmanlar, aynı match'te yeni oluşan special'ı silmemeli.
+        if (!DestroyedObstacleShouldClearTileContent(obstacleId))
+            return;
+
         // MovableObstacle kırıldığında o hücredeki tile'ı da yok et
         var tile = tiles[ox, oy];
         if (tile != null)
@@ -2505,6 +2645,23 @@ public class BoardController : MonoBehaviour
             NotifyTilesCleared(tile.GetTileType(), 1);
             ClearAndDestroyTile(tile);
         }
+    }
+
+    private bool DestroyedObstacleShouldClearTileContent(ObstacleId obstacleId)
+    {
+        if (obstacleId == ObstacleId.None)
+            return false;
+
+        var def = levelData != null ? levelData.obstacleLibrary?.Get(obstacleId) : null;
+        if (def == null)
+            return true;
+
+        var finalStage = def.GetStageRuleForRemainingHits(1);
+        if (finalStage == null)
+            return true;
+
+        return finalStage.behavior != ObstacleBehaviorType.UnderTileLayered
+            && finalStage.behavior != ObstacleBehaviorType.CellAnchoredOverlay;
     }
 
     private void HandleCellUnlocked(int cellIndex)

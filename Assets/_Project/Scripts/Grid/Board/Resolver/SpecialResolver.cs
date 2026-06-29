@@ -15,10 +15,8 @@ public class SpecialResolver
     private readonly PatchbotComboService patchbotComboService;
     private readonly LineVSpecial lineVSpecial = new();
     private readonly LineHSpecial lineHSpecial = new();
-    private readonly LineVLineHCombo lineVLineHCombo = new();
     private readonly PulseCoreSpecial pulseCoreSpecial = new();
     private readonly PatchBotSpecial patchBotSpecial = new();
-    private readonly LineVHPulseCoreCombo lineVHPulseCoreCombo = new();
     private readonly LineHPatchBotCombo lineHPatchBotCombo = new();
     private readonly LineVPatchBotCombo lineVPatchBotCombo = new();
     private readonly PulseCorePatchBotCombo pulseCorePatchBotCombo = new(25);
@@ -26,7 +24,6 @@ public class SpecialResolver
     private readonly PatchBotCombo patchBotCombo = new();
     private readonly OverrideSpecializedCombo overrideSpecializedCombo = new();
     private readonly OverrideOverrideCombo overrideOverrideCombo = new();
-    private readonly PulsePulseCombo pulsePulseCombo = new();
     private readonly ResolutionContext ctx = new();
     public bool SuppressVisualSideEffects;
     public SpecialResolver(BoardController board, BoardAnimator boardAnimator, PulseCoreImpactService pulseCoreImpactService)
@@ -1526,73 +1523,6 @@ public class SpecialResolver
         return !(hasNonPatchBotSpecial || specialCount > 1);
     }
 
-    private ClearPresentationPlan BuildPatchBotPresentationPlanIfNeeded()
-    {
-        if (!IsPureSoloPatchBotPresentationCandidate()) return null;
-
-        List<TileView> targetTiles = new List<TileView>();
-        List<Vector2Int> targetCells = new List<Vector2Int>();
-
-        foreach (var tile in ctx.Affected)
-        {
-            if (tile == null) continue;
-            targetTiles.Add(tile);
-            targetCells.Add(new Vector2Int(tile.X, tile.Y));
-        }
-
-        if (targetTiles.Count == 0) return null;
-
-        TileView originTile = null;
-        Vector2Int? originCell = null;
-
-        foreach (var tile in targetTiles)
-        {
-            if (tile == null) continue;
-            if (tile.GetSpecial() == TileSpecial.PatchBot)
-            {
-                originTile = tile;
-                originCell = new Vector2Int(tile.X, tile.Y);
-                break;
-            }
-        }
-
-        if (originTile == null || !originCell.HasValue) return null;
-
-        var target = patchbotComboService.FindTarget(originTile, null, null);
-        if (!target.hasCell) return null;
-
-        TileView targetTile = target.tile;
-        Vector2Int targetCell = new Vector2Int(target.x, target.y);
-
-        if (targetTile != null && !targetTiles.Contains(targetTile))
-        {
-            targetTiles.Add(targetTile);
-            targetCells.Add(targetCell);
-        }
-
-        var plan = new ClearPresentationPlan();
-        plan.DoBoardShake = true;
-        plan.IncludeAdjacentOverTileBlockerDamage = false;
-        plan.ObstacleHitContext = ObstacleHitContext.SpecialActivation;
-
-        plan.Effects.Add(new PatchBotDashEffectDescriptor(
-            targetTiles,
-            targetCells,
-            originTile,
-            originCell,
-            targetTile,
-            targetCell
-        ));
-
-        foreach (var tile in targetTiles)
-        {
-            if (tile != null)
-                plan.FinalClearTiles.Add(tile);
-        }
-
-        return plan;
-    }
-
     private ClearPresentationPlan BuildOverridePresentationPlanIfNeeded()
     {
         if (!IsPureSoloOverridePresentationCandidate()) return null;
@@ -1776,11 +1706,7 @@ public class SpecialResolver
             presentationPlan = BuildLinePresentationPlanIfNeeded();
         if (presentationPlan == null)
             presentationPlan = BuildOverridePresentationPlanIfNeeded();
-        // DISABLED: PatchBotSpecial now manages its own dash via EnqueueDash+onArrived.
-        // The legacy PatchBotDashEffectPlayer path would conflict (flush the dash queue,
-        // never decrement ActiveBackgroundJobs → deadlock in ResolveBoard).
-        // if (presentationPlan == null)
-        //     presentationPlan = BuildPatchBotPresentationPlanIfNeeded();
+        // NOTE: PatchBotSpecial manages its own dash via EnqueueDash+onArrived (no presentation-plan path).
 
         Dictionary<TileView, float> stagger = presentationPlan != null
             ? null
@@ -1798,12 +1724,6 @@ public class SpecialResolver
             && presentationPlan.Effects.Count > 0
             && presentationPlan.Effects[0] is OverrideRadialEffectDescriptor;
 
-        bool patchBotPresentationOwnsVisuals =
-            presentationPlan != null
-            && presentationPlan.Effects != null
-            && presentationPlan.Effects.Count > 0
-            && presentationPlan.Effects[0] is PatchBotDashEffectDescriptor;
-
         var animationMode = (ctx.HasLineActivation && !ctx.OverrideForceDefaultClearAnim && !linePresentationOwnsVisuals)
             ? ClearAnimationMode.LightningStrike
             : ClearAnimationMode.Default;
@@ -1819,7 +1739,7 @@ public class SpecialResolver
             lightningVisualTargets: linePresentationOwnsVisuals ? null : ctx.LightningVisualTargets,
             lightningLineStrikes: linePresentationOwnsVisuals ? null : ctx.LightningLineStrikes,
             suppressPerTileClearVfx: (suppressPerTileClearVfx || ctx.OverrideSuppressPerTileClearVfx),
-            perTileClearDelays: (overridePresentationOwnsVisuals || patchBotPresentationOwnsVisuals) ? null : ctx.OverrideRadialClearDelays,
+            perTileClearDelays: overridePresentationOwnsVisuals ? null : ctx.OverrideRadialClearDelays,
             isSpecialPhase: true,
             presentationPlan: presentationPlan);
     }
@@ -1952,22 +1872,6 @@ public class SpecialResolver
             this.cell = cell;
             this.partnerCell = partnerCell;
         }
-    }
-
-    private static void RestoreLineVisualState(
-        ResolutionContext ctx,
-        bool savedHasLineActivation,
-        HashSet<TileView> savedLightningTargets,
-        List<LightningLineStrike> savedLightningStrikes)
-    {
-        ctx.HasLineActivation = savedHasLineActivation;
-
-        ctx.LightningVisualTargets.Clear();
-        foreach (var tile in savedLightningTargets)
-            ctx.LightningVisualTargets.Add(tile);
-
-        ctx.LightningLineStrikes.Clear();
-        ctx.LightningLineStrikes.AddRange(savedLightningStrikes);
     }
 
     private Dictionary<TileView, float> BuildPulseStagger(HashSet<TileView> affected, HashSet<TileView> processedViews, bool suppressPulseImpact)

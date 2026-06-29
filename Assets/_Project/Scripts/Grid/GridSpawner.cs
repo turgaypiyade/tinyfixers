@@ -211,8 +211,9 @@ public class GridSpawner : MonoBehaviour
 
         BuildInitialGrid();
 
-        if (resolveInitialOnStart)
-            StartCoroutine(board.ResolveInitial());
+        // Board taşlar dizili halde sağdan sola kayarak otursun (giriş animasyonu).
+        // Initial settle (varsa) ekran dışında çalışır; sonra board kayarak gelir.
+        StartCoroutine(board.PlayBoardEntrance(resolveInitialOnStart ? board.ResolveInitial() : null));
     }
 
     private void PlayLevelMusic(LevelData activeLevel)

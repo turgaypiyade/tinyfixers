@@ -21,6 +21,9 @@ using UnityEngine.UI;
 /// </summary>
 public sealed class BossDuelController : MonoBehaviour
 {
+    private const ObstacleId PlayerShieldPickupId = ObstacleId.PlayerShieldPickup;
+    private const ObstacleId EnemyShieldPickupId = ObstacleId.EnemyShieldPickup;
+
     [Header("Core Refs")]
     [SerializeField] private BoardController board;
     [SerializeField] private TopHudController topHud;
@@ -92,6 +95,25 @@ public sealed class BossDuelController : MonoBehaviour
     [Tooltip("Vurulunca robotun geri itilme mesafesi (px).")]
     [SerializeField, Min(0f)] private float robotHitKnockback = 22f;
 
+    [Header("Shield Pickups")]
+    [Tooltip("Her PlayerShieldPickup / EnemyShieldPickup kırıldığında ilgili robota eklenecek kalkan süresi.")]
+    [SerializeField, Min(0f)] private float shieldSecondsPerPickup = 0.5f;
+    [Tooltip("Robot etrafındaki kalkan balonunun boyut çarpanı.")]
+    [SerializeField, Min(0.5f)] private float shieldBubbleScale = 1.25f;
+    [SerializeField, Min(1f)] private float shieldBubbleMinSize = 180f;
+    [SerializeField] private Image playerShieldBubble;
+    [SerializeField] private Image enemyShieldBubble;
+    [Tooltip("Ortak fallback kalkan sprite'ı. Per-side sprite atanmazsa bu kullanılır; o da boşsa otomatik daire üretilir.")]
+    [SerializeField] private Sprite shieldBubbleSprite;
+    [Tooltip("Oyuncu robotunun kalkan sprite'ı (yumuşak enerji bubble/dome). Boşsa shieldBubbleSprite kullanılır.")]
+    [SerializeField] private Sprite playerShieldSprite;
+    [Tooltip("Düşman robotunun kalkan sprite'ı (lazer halka / barrier ring). Boşsa shieldBubbleSprite kullanılır.")]
+    [SerializeField] private Sprite enemyShieldSprite;
+    [SerializeField] private Color playerShieldColor = new Color(0.25f, 1f, 0.45f, 0.42f);
+    [Tooltip("Düşman moru/kırmızısı — HP barıyla aynı dilde olsun ki oyuncu kalkanından ayrışsın.")]
+    [SerializeField] private Color enemyShieldColor = new Color(0.78f, 0.32f, 1f, 0.42f);
+    [SerializeField, Min(0f)] private float shieldAbsorbPulseDuration = 0.16f;
+
     [Header("Win Celebration")]
     [SerializeField, Min(0f)] private float winHopHeight = 40f;
     [SerializeField, Min(0.05f)] private float winHopDuration = 0.32f;
@@ -131,6 +153,10 @@ public sealed class BossDuelController : MonoBehaviour
     private int damagePerTile;
     private int enemyBaseDamage;
     private int enemyDamageGrowth;
+    private float playerShieldRemaining;
+    private float enemyShieldRemaining;
+    private static Sprite generatedPlayerShieldSprite;   // yumuşak dome
+    private static Sprite generatedEnemyShieldSprite;     // lazer halka
 
     private readonly Dictionary<RectTransform, Coroutine> _hitCo = new();
     private readonly Dictionary<RectTransform, Vector2> _hitBase = new();
@@ -195,6 +221,12 @@ public sealed class BossDuelController : MonoBehaviour
 
         board.OnTilesCleared += HandleTilesCleared;
         board.OnMovesChanged += HandleMovesChanged;
+        board.ObstacleVisualChanged += HandleObstacleVisualChanged;
+
+        EnsureShieldBubble(ref playerShieldBubble, playerRobot, playerShieldColor, playerShieldSprite, isEnemy: false);
+        EnsureShieldBubble(ref enemyShieldBubble, enemyRobot, enemyShieldColor, enemyShieldSprite, isEnemy: true);
+        UpdateShieldVisual(playerShieldBubble, playerShieldRemaining, playerShieldColor, playerRobot);
+        UpdateShieldVisual(enemyShieldBubble, enemyShieldRemaining, enemyShieldColor, enemyRobot);
 
         StartCoroutine(BattleLoop());
     }
@@ -204,6 +236,7 @@ public sealed class BossDuelController : MonoBehaviour
         if (board == null) return;
         board.OnTilesCleared -= HandleTilesCleared;
         board.OnMovesChanged -= HandleMovesChanged;
+        board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
     }
 
     private int ReadBossGoalAmount(LevelData level)
@@ -248,6 +281,21 @@ public sealed class BossDuelController : MonoBehaviour
             board.AddMoves(1);
     }
 
+    private void HandleObstacleVisualChanged(ObstacleVisualChange change)
+    {
+        if (!bossModeActive || !change.cleared)
+            return;
+
+        if (change.obstacleId == PlayerShieldPickupId)
+        {
+            AddShield(toPlayer: true);
+            return;
+        }
+
+        if (change.obstacleId == EnemyShieldPickupId)
+            AddShield(toPlayer: false);
+    }
+
     private bool IsOver() => enemyHp <= 0 || playerHp <= 0 || !bossModeActive;
 
     // Kalıcı dövüş döngüsü: oyuncu stack'ten otomatik ateş eder (backlog yüksekse hızlanır),
@@ -261,6 +309,7 @@ public sealed class BossDuelController : MonoBehaviour
         while (bossModeActive && !IsOver())
         {
             float dt = Time.deltaTime;
+            TickShields(dt);
 
             // Oyuncu: stack'ten boşalt. Backlog büyükse tek tick'te birden fazla ateşle (yetiş).
             strikeTimer += dt;
@@ -309,6 +358,12 @@ public sealed class BossDuelController : MonoBehaviour
     private void ApplyEnemyDamage(int dmg)
     {
         if (dmg <= 0 || enemyHp <= 0) return;
+
+        if (enemyShieldRemaining > 0f)
+        {
+            PlayShieldAbsorb(enemyShieldBubble, enemyShieldColor);
+            return;
+        }
 
         enemyHp = Mathf.Max(0, enemyHp - dmg);
         enemyHpBar?.Set(enemyHp);
@@ -383,6 +438,13 @@ public sealed class BossDuelController : MonoBehaviour
     private void ApplyPlayerDamage(int dmg)
     {
         if (dmg <= 0) return;
+
+        if (playerShieldRemaining > 0f)
+        {
+            PlayShieldAbsorb(playerShieldBubble, playerShieldColor);
+            return;
+        }
+
         playerHp = Mathf.Max(0, playerHp - dmg);
         playerHpBar?.Set(playerHp);
         PlayRobotHitFeedback(playerRobot, -1f);   // oyuncu sola itilir
@@ -404,7 +466,212 @@ public sealed class BossDuelController : MonoBehaviour
         }
     }
 
+    // ── Timed shields ──
+
+    private void AddShield(bool toPlayer)
+    {
+        float add = Mathf.Max(0f, shieldSecondsPerPickup);
+        if (add <= 0f)
+            return;
+
+        if (toPlayer)
+        {
+            playerShieldRemaining += add;
+            EnsureShieldBubble(ref playerShieldBubble, playerRobot, playerShieldColor, playerShieldSprite, isEnemy: false);
+            UpdateShieldVisual(playerShieldBubble, playerShieldRemaining, playerShieldColor, playerRobot);
+            PlayShieldAbsorb(playerShieldBubble, playerShieldColor);
+        }
+        else
+        {
+            enemyShieldRemaining += add;
+            EnsureShieldBubble(ref enemyShieldBubble, enemyRobot, enemyShieldColor, enemyShieldSprite, isEnemy: true);
+            UpdateShieldVisual(enemyShieldBubble, enemyShieldRemaining, enemyShieldColor, enemyRobot);
+            PlayShieldAbsorb(enemyShieldBubble, enemyShieldColor);
+        }
+    }
+
+    private void TickShields(float dt)
+    {
+        if (playerShieldRemaining > 0f)
+            playerShieldRemaining = Mathf.Max(0f, playerShieldRemaining - dt);
+
+        if (enemyShieldRemaining > 0f)
+            enemyShieldRemaining = Mathf.Max(0f, enemyShieldRemaining - dt);
+
+        UpdateShieldVisual(playerShieldBubble, playerShieldRemaining, playerShieldColor, playerRobot);
+        UpdateShieldVisual(enemyShieldBubble, enemyShieldRemaining, enemyShieldColor, enemyRobot);
+    }
+
+    private void EnsureShieldBubble(ref Image bubble, RectTransform robot, Color color, Sprite sideSprite, bool isEnemy)
+    {
+        if (bubble != null || robot == null)
+            return;
+
+        var go = new GameObject("ShieldBubble", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(robot, false);
+        go.transform.SetAsLastSibling();
+
+        bubble = go.GetComponent<Image>();
+        bubble.sprite = sideSprite != null ? sideSprite
+                      : (shieldBubbleSprite != null ? shieldBubbleSprite : GetGeneratedShieldSprite(isEnemy));
+        bubble.color = color;
+        bubble.raycastTarget = false;
+        bubble.preserveAspect = true;
+
+        var rt = bubble.rectTransform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+        go.SetActive(false);
+    }
+
+    private void UpdateShieldVisual(Image bubble, float remaining, Color color, RectTransform robot)
+    {
+        if (bubble == null)
+            return;
+
+        bool active = remaining > 0f && robot != null && robot.gameObject.activeInHierarchy;
+        if (bubble.gameObject.activeSelf != active)
+            bubble.gameObject.SetActive(active);
+
+        if (!active)
+            return;
+
+        var rt = bubble.rectTransform;
+        float robotW = robot != null ? robot.rect.width : 0f;
+        float robotH = robot != null ? robot.rect.height : 0f;
+        float size = Mathf.Max(shieldBubbleMinSize, Mathf.Max(robotW, robotH) * shieldBubbleScale);
+        rt.sizeDelta = new Vector2(size, size);
+
+        float pulse = 1f + Mathf.Sin(Time.time * 8f) * 0.035f;
+        rt.localScale = Vector3.one * pulse;
+        bubble.color = color;
+    }
+
+    private void PlayShieldAbsorb(Image bubble, Color color)
+    {
+        if (bubble == null || !bubble.gameObject.activeInHierarchy || shieldAbsorbPulseDuration <= 0f)
+            return;
+
+        StartCoroutine(ShieldAbsorbPulse(bubble, color));
+    }
+
+    private IEnumerator ShieldAbsorbPulse(Image bubble, Color color)
+    {
+        if (bubble == null)
+            yield break;
+
+        var rt = bubble.rectTransform;
+        Vector3 baseScale = rt.localScale;
+        float baseAlpha = color.a;
+        float dur = Mathf.Max(0.01f, shieldAbsorbPulseDuration);
+        float t = 0f;
+
+        while (t < dur && bubble != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float wave = Mathf.Sin(k * Mathf.PI);
+            rt.localScale = baseScale * (1f + wave * 0.18f);
+            bubble.color = new Color(color.r, color.g, color.b, Mathf.Clamp01(baseAlpha + wave * 0.25f));
+            yield return null;
+        }
+
+        if (bubble != null)
+        {
+            rt.localScale = baseScale;
+            bubble.color = color;
+        }
+    }
+
+    // Prosedürel kalkan sprite'ı (sprite atanmazsa kullanılır). Beyaz/grayscale üretir;
+    // rengi runtime'da Image.color tint'ler. Oyuncu = yumuşak enerji dome, düşman = keskin
+    // konsantrik lazer halka — sprite vermeden iki taraf görsel olarak ayrışsın diye.
+    private static Sprite GetGeneratedShieldSprite(bool isEnemy)
+    {
+        if (isEnemy && generatedEnemyShieldSprite != null)
+            return generatedEnemyShieldSprite;
+        if (!isEnemy && generatedPlayerShieldSprite != null)
+            return generatedPlayerShieldSprite;
+
+        const int size = 128;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp
+        };
+
+        Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Vector2 p = new Vector2(x, y);
+                Vector2 d = p - center;
+                float r = d.magnitude / (size * 0.5f);
+                if (r > 1f)
+                {
+                    tex.SetPixel(x, y, Color.clear);
+                    continue;
+                }
+
+                float alpha;
+                if (isEnemy)
+                {
+                    // Lazer halka: birkaç keskin konsantrik bant + dış kenarda taranmış (scanline) dişler.
+                    float band = RingBand(r, 0.92f, 0.05f) * 1.0f      // dış ana halka
+                               + RingBand(r, 0.66f, 0.04f) * 0.7f      // orta halka
+                               + RingBand(r, 0.40f, 0.035f) * 0.45f;   // iç halka
+                    float angle = Mathf.Atan2(d.y, d.x);
+                    float ticks = Mathf.Pow(Mathf.Abs(Mathf.Sin(angle * 18f)), 6f); // dış halkada dişler
+                    float outerTicks = RingBand(r, 0.92f, 0.06f) * ticks * 0.6f;
+                    float coreGlow = Mathf.SmoothStep(0.5f, 0f, r) * 0.10f;          // hafif iç parıltı
+                    alpha = Mathf.Clamp01(band + outerTicks + coreGlow);
+                }
+                else
+                {
+                    // Çift halkalı enerji kalkanı: iki keskin konsantrik bant + hafif iç dolgu.
+                    // Düşmandan ayrışsın diye açısal diş yok, daha yumuşak/savunmacı durur.
+                    float band = RingBand(r, 0.92f, 0.06f) * 1.0f       // dış halka
+                               + RingBand(r, 0.60f, 0.05f) * 0.8f;      // iç halka
+                    float fill = Mathf.SmoothStep(0.92f, 0f, r) * 0.10f; // çok hafif iç dolgu
+                    alpha = Mathf.Clamp01(band + fill);
+                }
+
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+            }
+        }
+
+        tex.Apply();
+        var sprite = Sprite.Create(
+            tex,
+            new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f),
+            pixelsPerUnit: size);
+
+        if (isEnemy) generatedEnemyShieldSprite = sprite;
+        else generatedPlayerShieldSprite = sprite;
+        return sprite;
+    }
+
+    // Belirli yarıçapta (radius) yumuşak kenarlı ince halka bandı. width = bandın yarı-kalınlığı.
+    private static float RingBand(float r, float radius, float width)
+    {
+        float d = Mathf.Abs(r - radius);
+        return Mathf.Clamp01(1f - d / Mathf.Max(0.0001f, width));
+    }
+
     // ── Bolt / muzzle / impact ──
+
+    // Hedef robotun şu an aktif (süresi olan, görünür) kalkan balonunu döndürür; yoksa null.
+    private Image GetActiveShieldBubbleFor(RectTransform robot)
+    {
+        if (robot == playerRobot && playerShieldRemaining > 0f && playerShieldBubble != null && playerShieldBubble.gameObject.activeInHierarchy)
+            return playerShieldBubble;
+        if (robot == enemyRobot && enemyShieldRemaining > 0f && enemyShieldBubble != null && enemyShieldBubble.gameObject.activeInHierarchy)
+            return enemyShieldBubble;
+        return null;
+    }
 
     private void FireBolt(Vector3 fromWorld, RectTransform targetRobot, Color color, Image boltPrefab, Image muzzleFlashPrefab, System.Action onHit)
     {
@@ -415,7 +682,20 @@ public sealed class BossDuelController : MonoBehaviour
         }
 
         Vector2 start = WorldToAnchoredIn(vfxRoot, fromWorld);
-        Vector2 end = WorldToAnchoredIn(vfxRoot, targetRobot.position);
+
+        // Hedefte aktif kalkan varsa mermi robota değil, kalkanın ön yüzeyine çarpsın
+        // (atış yönünde kalkan yarıçapı kadar geride dur).
+        Vector3 targetWorld = targetRobot.position;
+        Image shield = GetActiveShieldBubbleFor(targetRobot);
+        if (shield != null)
+        {
+            float radiusWorld = shield.rectTransform.rect.width * 0.5f * Mathf.Abs(shield.rectTransform.lossyScale.x);
+            Vector3 toShooter = fromWorld - targetRobot.position;
+            if (radiusWorld > 0.0001f && toShooter.sqrMagnitude > 0.0001f)
+                targetWorld = targetRobot.position + toShooter.normalized * radiusWorld;
+        }
+
+        Vector2 end = WorldToAnchoredIn(vfxRoot, targetWorld);
 
         PlaySfx(fireSfx, fireVolume);
         SpawnMuzzleFlash(start, color, muzzleFlashPrefab);

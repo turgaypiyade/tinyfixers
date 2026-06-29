@@ -135,16 +135,21 @@ public sealed class EnergyContainerService : MonoBehaviour
                           && topHud != null
                           && topHud.HasGoalForCollectible(collectible);
 
-        // Goal collectible uçarken board'u "busy" tut → son hamlede orb varmadan FAIL gösterilmesin.
-        // Orb VARINCA önce goal ilerlet, sonra job'u kapat (end-eval o an goal'ü tamam görür).
+        // Orb VARINCA goal ilerlesin. Goal kredisi her koşulda varışta verilir.
+        //
+        // Orb uçuşu "goal-orb flight" olarak işaretlenir (BeginGoalOrbFlight): end-of-level
+        // değerlendirmesi (fail) orb hedefe varmadan sonucu göstermez — son hamlede orb
+        // gelmeden FAIL çıkmaz. AMA bu sayaç ResolveBoard'un cascade/düşüş döngüsünü BEKLETMEZ;
+        // böylece orb hedefe uçarken board akmaya devam eder (level 26: çok container →
+        // sürekli staggered orb → eskiden board donuyordu).
         System.Action onOrbArrived = null;
         if (goalExists)
         {
-            board?.BeginBackgroundJob();
+            board?.BeginGoalOrbFlight();
             onOrbArrived = () =>
             {
                 topHud.NotifyCollectibleCollected(collectible, 1);
-                board?.EndBackgroundJob();
+                board?.EndGoalOrbFlight();
             };
         }
 

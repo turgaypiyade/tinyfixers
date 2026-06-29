@@ -48,6 +48,16 @@ public class LightningSpawner : MonoBehaviour
         StartCoroutine(CoPlay(emitterWorldPos, targetsCopy, onTargetBeamSpawned));
     }
 
+    public LightningBeam BeginPersistentLightning(Func<Vector3> startWorldProvider, Func<Vector3> endWorldProvider, Color color)
+    {
+        var beam = CreateBeamInstance();
+        if (beam == null)
+            return null;
+
+        beam.InitPersistent(startWorldProvider, endWorldProvider, color);
+        return beam;
+    }
+
     public void PlayLineSweepSteps(List<Vector3> stepWorldPositions)
     {
         if (stepWorldPositions == null || stepWorldPositions.Count == 0)
@@ -67,18 +77,9 @@ public class LightningSpawner : MonoBehaviour
 
             Debug.Log($"[LightningSpawn.Step] prev={V3(prev)} cur={V3(cur)}");
 
-            var beam = Instantiate(lightningPrefab, vfxRoot);
-            beam.transform.localPosition = Vector3.zero;
-            beam.transform.localRotation = Quaternion.identity;
-
-            var s = vfxRoot.lossyScale;
-            beam.transform.localScale = new Vector3(
-                1f / Mathf.Max(0.0001f, s.x),
-                1f / Mathf.Max(0.0001f, s.y),
-                1f / Mathf.Max(0.0001f, s.z)
-            );
-
-            beam.GetComponent<LineRenderer>().useWorldSpace = true;
+            var beam = CreateBeamInstance();
+            if (beam == null)
+                yield break;
             beam.Init(prev, cur);
 
             prev = cur;
@@ -99,18 +100,9 @@ public class LightningSpawner : MonoBehaviour
 
     private IEnumerator CoPlayLineSweep(Vector3 lineStartWorldPos, Vector3 lineEndWorldPos)
     {
-        var beam = Instantiate(lightningPrefab, vfxRoot);
-        beam.transform.localPosition = Vector3.zero;
-        beam.transform.localRotation = Quaternion.identity;
-
-        var s = vfxRoot.lossyScale;
-        beam.transform.localScale = new Vector3(
-            1f / Mathf.Max(0.0001f, s.x),
-            1f / Mathf.Max(0.0001f, s.y),
-            1f / Mathf.Max(0.0001f, s.z)
-        );
-
-        beam.GetComponent<LineRenderer>().useWorldSpace = true;
+        var beam = CreateBeamInstance();
+        if (beam == null)
+            yield break;
         beam.Init(lineStartWorldPos, lineEndWorldPos);
 
         yield return new WaitForSeconds(destroyDelay);
@@ -124,18 +116,9 @@ public class LightningSpawner : MonoBehaviour
 
             Debug.Log($"[LightningSpawn.CoPlay] index={i} start={V3(start)} end={V3(end)}");
 
-            var beam = Instantiate(lightningPrefab, vfxRoot);
-            beam.transform.localPosition = Vector3.zero;
-            beam.transform.localRotation = Quaternion.identity;
-
-            var s = vfxRoot.lossyScale;
-            beam.transform.localScale = new Vector3(
-                1f / Mathf.Max(0.0001f, s.x),
-                1f / Mathf.Max(0.0001f, s.y),
-                1f / Mathf.Max(0.0001f, s.z)
-            );
-
-            beam.GetComponent<LineRenderer>().useWorldSpace = true;
+            var beam = CreateBeamInstance();
+            if (beam == null)
+                yield break;
             beam.Init(start, end);
             onTargetBeamSpawned?.Invoke(i);
 
@@ -145,5 +128,28 @@ public class LightningSpawner : MonoBehaviour
         }
 
         yield return new WaitForSeconds(destroyDelay);
+    }
+
+    private LightningBeam CreateBeamInstance()
+    {
+        if (lightningPrefab == null || vfxRoot == null)
+            return null;
+
+        var beam = Instantiate(lightningPrefab, vfxRoot);
+        beam.transform.localPosition = Vector3.zero;
+        beam.transform.localRotation = Quaternion.identity;
+
+        var s = vfxRoot.lossyScale;
+        beam.transform.localScale = new Vector3(
+            1f / Mathf.Max(0.0001f, s.x),
+            1f / Mathf.Max(0.0001f, s.y),
+            1f / Mathf.Max(0.0001f, s.z)
+        );
+
+        var line = beam.GetComponent<LineRenderer>();
+        if (line != null)
+            line.useWorldSpace = true;
+
+        return beam;
     }
 }

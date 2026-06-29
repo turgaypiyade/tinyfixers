@@ -95,15 +95,17 @@ public sealed class HatLauncherService : MonoBehaviour
                           && topHud != null
                           && topHud.HasGoalForCollectible(collectible);
 
-        // Goal collectible uçarken board'u "busy" tut → son hamlede orb varmadan FAIL gösterilmesin.
+        // Goal-orb flight: end-of-level fail değerlendirmesi orb hedefe varmadan sonucu
+        // göstermez (son hamlede orb gelmeden FAIL çıkmaz), ama ResolveBoard cascade döngüsünü
+        // BEKLETMEZ → orb uçarken board akmaya devam eder.
         System.Action onArrived = null;
         if (goalExists)
         {
-            board?.BeginBackgroundJob();
+            board?.BeginGoalOrbFlight();
             onArrived = () =>
             {
                 topHud.NotifyCollectibleCollected(collectible, 1);
-                board?.EndBackgroundJob();
+                board?.EndGoalOrbFlight();
             };
         }
 

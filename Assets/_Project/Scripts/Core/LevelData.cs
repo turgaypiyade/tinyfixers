@@ -117,6 +117,15 @@ public enum ObstacleId : int
     // that's when the goal counts (+1). Straight-down only (no diagonal slide). Authored by the
     // designer (placed via the obstacle palette). Requires ObstacleDef.exitAtBottom = true.
     Cargo = 34,
+
+    // Single-hit movable shield pickups (fall with gravity like HelmetPorcelain). In a
+    // BossDuel level, breaking one grants timed damage-immunity to the matching robot:
+    //   PlayerShieldPickup → shields the PLAYER robot (absorbs enemy bolts for a few seconds)
+    //   EnemyShieldPickup  → shields the ENEMY robot (player's bolts are absorbed)
+    // Outside BossDuel they behave as plain breakable movable blocks (BossDuelController gates
+    // the shield effect on bossModeActive). See BossDuelController.HandleObstacleVisualChanged.
+    PlayerShieldPickup = 35,
+    EnemyShieldPickup = 36,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }

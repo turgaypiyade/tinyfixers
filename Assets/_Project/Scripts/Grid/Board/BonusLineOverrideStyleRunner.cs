@@ -13,6 +13,8 @@ using UnityEngine;
 /// </summary>
 public static class BonusLineOverrideStyleRunner
 {
+    private const int PulseChainAreaHalf = 2;
+
     public static IEnumerator Run(
         BoardController board,
         IReadOnlyList<BoardController.BonusLinePlacement> placements,
@@ -25,15 +27,17 @@ public static class BonusLineOverrideStyleRunner
             yield break;
 
         var activations = CollectActivations(board, placements);
+        Debug.Log($"[BonusDebug] gate2 Run placements={placements.Count} activations={activations.Count}");
         if (activations.Count == 0)
             yield break;
+
+        var lineCells = ExtractCells(activations);
 
         ActionSequencer sequencer = board.GetComponent<ActionSequencer>();
         if (sequencer == null)
             sequencer = board.gameObject.AddComponent<ActionSequencer>();
         sequencer.Initialize(board);
 
-        var ctx = new ResolutionContext();
         var services = new RuntimeServices(board);
 
         bool previousSpecialPhase = board.IsSpecialActivationPhase;
@@ -45,26 +49,15 @@ public static class BonusLineOverrideStyleRunner
 
         try
         {
-            List<Vector2Int> pendingCells = ExtractCells(activations);
-
-            yield return new PendingTriggeredSpecialScopeAction(pendingCells, true)
-                .ExecuteVisuals(sequencer);
-
-            yield return ExecuteActivationBatch(
+            var chain = new SpecialChainRunner(
                 board,
-                sequencer,
-                ctx,
-                services,
-                activations);
+                new List<TileView>(),
+                PulseChainAreaHalf,
+                board.PulseChainCatchOverlap,
+                services.ResolveOtherSpecialInline,
+                simultaneousLineCells: lineCells);
 
-            yield return new PendingTriggeredSpecialScopeAction(pendingCells, false)
-                .ExecuteVisuals(sequencer);
-
-            if (ctx.OverrideDeferredPulseExplosions.Count == 0)
-                services.Implants.CleanupImplantedTiles(ctx);
-
-            if (ctx.OverrideRadialClearDelays != null && ctx.OverrideRadialClearDelays.Count > 0)
-                services.Visuals.FireOverrideOverrideSpecialVisuals(ctx.Affected, ctx.OverrideRadialClearDelays);
+            yield return chain.ExecuteVisuals(sequencer);
 
             if (hardSkipRequested == null || !hardSkipRequested())
                 yield return board.ResolveBoardPublic();
@@ -244,6 +237,7 @@ public static class BonusLineOverrideStyleRunner
         if (impactDelta > 0)
             deltaImpacts = ctx.ImpactCells.GetRange(before.ImpactCount, impactDelta);
 
+        Debug.Log($"[BonusDebug] gate3 delta tiles={deltaTiles.Count} strikes={(deltaStrikes != null ? deltaStrikes.Count : 0)} ctxAffected={ctx.Affected.Count} ctxStrikes={ctx.LightningLineStrikes.Count}");
         if (deltaTiles.Count == 0)
             return new ClearPayload(null, null, null);
 
@@ -288,21 +282,130 @@ public static class BonusLineOverrideStyleRunner
 
     private sealed class RuntimeServices
     {
+        private readonly BoardController board;
+        private readonly SpecialBehaviorDispatcher dispatcher;
+        private readonly LineVSpecial lineVSpecial = new();
+        private readonly LineHSpecial lineHSpecial = new();
+        private readonly PulseCoreSpecial pulseCoreSpecial = new();
+        private readonly PatchBotSpecial patchBotSpecial = new();
+        private readonly OverrideSpecial overrideSpecial = new();
+
         public readonly SpecialVisualService Visuals;
         public readonly ActivationQueueProcessor Queue;
         public readonly SpecialImplantService Implants;
         public readonly SpecialFanoutService Fanout;
+        public readonly SpecialEffectOrchestrator Effects;
+        public readonly PatchbotComboService PatchbotComboService;
 
         public RuntimeServices(BoardController board)
         {
-            var patchbotComboService = new PatchbotComboService(board);
-            Visuals = new SpecialVisualService(board, board.boardAnimatorRef, patchbotComboService);
-            var effects = new SpecialEffectOrchestrator(board);
-            var dispatcher = new SpecialBehaviorDispatcher(board, patchbotComboService, Visuals, effects);
+            this.board = board;
+
+            PatchbotComboService = new PatchbotComboService(board);
+            Visuals = new SpecialVisualService(board, board.boardAnimatorRef, PatchbotComboService);
+            Effects = new SpecialEffectOrchestrator(board);
+            dispatcher = new SpecialBehaviorDispatcher(board, PatchbotComboService, Visuals, Effects);
             Queue = new ActivationQueueProcessor(board, dispatcher);
-            Implants = new SpecialImplantService(board, patchbotComboService, Visuals, Queue);
+            Implants = new SpecialImplantService(board, PatchbotComboService, Visuals, Queue);
             Fanout = new SpecialFanoutService(board, Implants, Queue, Visuals);
             dispatcher.QueueProcessor = Queue;
+        }
+
+        public List<BoardAction> ResolveOtherSpecialInline(TileView tile)
+        {
+            if (tile == null || !tile)
+                return null;
+
+            var sp = tile.GetSpecial();
+            var scoped = new ResolutionContext();
+            scoped.Affected.Add(tile);
+            SpecialCellUtils.MarkAffectedCell(scoped, tile, board);
+
+            switch (sp)
+            {
+                case TileSpecial.LineV:
+                    scoped.HasLineActivation = true;
+                    return lineVSpecial.Execute(new LineVExecutionRuntime
+                    {
+                        Board = board,
+                        Context = scoped,
+                        Origin = tile,
+                        Partner = null,
+                        FinalizeAtEnd = true,
+                        ActivateSpecial = dispatcher.ApplySpecialActivation,
+                        ProcessFanout = c => Fanout.ProcessFanout(c),
+                        CleanupImplantedTiles = c => Implants.CleanupImplantedTiles(c),
+                        FireOverrideOverrideSpecialVisuals = (affected, delays) => Visuals.FireOverrideOverrideSpecialVisuals(affected, delays),
+                        EnqueueChainSpecials = c => Queue.EnqueueChainSpecials(c),
+                        ProcessQueue = c => Queue.ProcessQueue(c)
+                    }).Actions;
+
+                case TileSpecial.LineH:
+                    scoped.HasLineActivation = true;
+                    return lineHSpecial.Execute(new LineHExecutionRuntime
+                    {
+                        Board = board,
+                        Context = scoped,
+                        Origin = tile,
+                        Partner = null,
+                        FinalizeAtEnd = true,
+                        ActivateSpecial = dispatcher.ApplySpecialActivation,
+                        ProcessFanout = c => Fanout.ProcessFanout(c),
+                        CleanupImplantedTiles = c => Implants.CleanupImplantedTiles(c),
+                        FireOverrideOverrideSpecialVisuals = (affected, delays) => Visuals.FireOverrideOverrideSpecialVisuals(affected, delays),
+                        EnqueueChainSpecials = c => Queue.EnqueueChainSpecials(c),
+                        ProcessQueue = c => Queue.ProcessQueue(c)
+                    }).Actions;
+
+                case TileSpecial.PulseCore:
+                    return pulseCoreSpecial.Execute(new PulseCoreExecutionRuntime
+                    {
+                        Board = board,
+                        Context = scoped,
+                        Origin = tile,
+                        Partner = null,
+                        FinalizeAtEnd = true,
+                        ActivateSpecial = dispatcher.ApplySpecialActivation,
+                        ProcessFanout = c => Fanout.ProcessFanout(c),
+                        CleanupImplantedTiles = c => Implants.CleanupImplantedTiles(c),
+                        FireOverrideOverrideSpecialVisuals = (affected, delays) => Visuals.FireOverrideOverrideSpecialVisuals(affected, delays),
+                        EnqueueChainSpecials = c => Queue.EnqueueChainSpecials(c),
+                        ProcessQueue = c => Queue.ProcessQueue(c)
+                    }).Actions;
+
+                case TileSpecial.PatchBot:
+                    return patchBotSpecial.Execute(new PatchBotExecutionRuntime
+                    {
+                        Board = board,
+                        Context = scoped,
+                        Origin = tile,
+                        Partner = null,
+                        FinalizeAtEnd = true,
+                        PatchbotService = PatchbotComboService,
+                        VisualService = Visuals,
+                        Effects = Effects,
+                        ActivateSpecial = dispatcher.ApplySpecialActivation,
+                        ProcessFanout = c => Fanout.ProcessFanout(c),
+                        CleanupImplantedTiles = c => Implants.CleanupImplantedTiles(c),
+                        FireOverrideOverrideSpecialVisuals = (affected, delays) => Visuals.FireOverrideOverrideSpecialVisuals(affected, delays)
+                    }).Actions;
+
+                case TileSpecial.SystemOverride:
+                    return overrideSpecial.Execute(new OverrideExecutionRuntime
+                    {
+                        Board = board,
+                        Context = scoped,
+                        Origin = tile,
+                        Partner = null,
+                        FinalizeAtEnd = true,
+                        ProcessFanout = c => Fanout.ProcessFanout(c),
+                        CleanupImplantedTiles = c => Implants.CleanupImplantedTiles(c),
+                        FireOverrideOverrideSpecialVisuals = (affected, delays) => Visuals.FireOverrideOverrideSpecialVisuals(affected, delays)
+                    }).Actions;
+
+                default:
+                    return null;
+            }
         }
     }
 

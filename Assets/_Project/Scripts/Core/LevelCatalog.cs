@@ -51,7 +51,7 @@ public class LevelCatalog : ScriptableObject
             if (entry == null || entry.levelData == null)
                 continue;
 
-            if (entry.level == level)
+            if (entry.level == level || TryGetGlobalLevelFromKey(entry.levelKey, out int keyLevel) && keyLevel == level)
             {
                 levelData = entry.levelData;
                 return true;
@@ -60,6 +60,27 @@ public class LevelCatalog : ScriptableObject
 
         levelData = null;
         return false;
+    }
+
+    private static bool TryGetGlobalLevelFromKey(string levelKey, out int level)
+    {
+        level = 0;
+
+        if (string.IsNullOrWhiteSpace(levelKey))
+            return false;
+
+        int digitEnd = levelKey.Length - 1;
+        while (digitEnd >= 0 && !char.IsDigit(levelKey[digitEnd]))
+            digitEnd--;
+
+        if (digitEnd < 0)
+            return false;
+
+        int digitStart = digitEnd;
+        while (digitStart > 0 && char.IsDigit(levelKey[digitStart - 1]))
+            digitStart--;
+
+        return int.TryParse(levelKey.Substring(digitStart, digitEnd - digitStart + 1), out level);
     }
     public bool TryGetLevel(string levelKey, out LevelData levelData)
     {

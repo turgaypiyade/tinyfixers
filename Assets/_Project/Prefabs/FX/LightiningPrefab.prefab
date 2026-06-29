@@ -87,13 +87,13 @@ LineRenderer:
   - {x: 0, y: 0, z: 0}
   m_Parameters:
     serializedVersion: 3
-    widthMultiplier: 1.2
+    widthMultiplier: 0.35
     widthCurve:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 0.21570158
+        value: 0.28244507
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -101,8 +101,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.12062204
-        value: 0.18945861
+        time: 0.19381845
+        value: 0.24705444
         inSlope: -1.4690787
         outSlope: -1.4690787
         tangentMode: 0
@@ -110,8 +110,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.20853752
-        value: 0.15667912
+        time: 0.30637687
+        value: 0.20172974
         inSlope: 0.46344575
         outSlope: 0.46344575
         tangentMode: 0
@@ -119,8 +119,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.4090852
-        value: 0.0825513
+        time: 0.45953077
+        value: 0.16913086
         inSlope: 0.09545687
         outSlope: 0.09545687
         tangentMode: 0
@@ -128,8 +128,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.62163013
-        value: 0.030776203
+        time: 0.6525139
+        value: 0.14406493
         inSlope: -0.1161376
         outSlope: -0.1161376
         tangentMode: 0
@@ -137,8 +137,8 @@ LineRenderer:
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.97216797
-        value: 0
+        time: 0.98431396
+        value: 0.07838012
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -178,8 +178,8 @@ LineRenderer:
       m_ColorSpace: 0
       m_NumColorKeys: 2
       m_NumAlphaKeys: 3
-    numCornerVertices: 10
-    numCapVertices: 10
+    numCornerVertices: 2
+    numCapVertices: 2
     alignment: 1
     textureMode: 0
     textureScale: {x: 1, y: 1}
@@ -200,11 +200,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 424e630a62a9643a6b7afda1847a1500, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LightningBeam
-  segments: 12
-  jaggednessRatio: 0.15
-  noiseScale: 2.5
+  segments: 10
+  jaggednessRatio: 0.157
+  noiseScale: 2
   liveFlicker: 1
-  lifeTime: 0.32
+  startWidthMultiplier: 0.15
+  endWidthMultiplier: 0.06
+  lifeTime: 0.35
   alphaOverLife:
     serializedVersion: 2
     m_Curve:
@@ -231,3 +233,5 @@ MonoBehaviour:
     m_RotationOrder: 4
   extraLength: 0.3
   impactFlashPrefab: {fileID: 430544794101158673, guid: 7e866f9cfe2f1411fb4c5fd79ea3c92e, type: 3}
+  persistentPulseAmplitude: 0.24
+  persistentPulseFrequency: 18

@@ -24,15 +24,11 @@ public sealed class SpecialCreationFormationEffectPlayer : IClearEffectPlayer
             : new List<TileView>();
 
         contributors.RemoveAll(tile => tile == null);
-        if (contributors.Count == 0)
-            yield break;
 
         // Eski davranış: created special formation
         if (creation.CreatedTile != null)
         {
             contributors.RemoveAll(tile => tile == creation.CreatedTile);
-            if (contributors.Count == 0)
-                yield break;
 
             yield return animator.PlayCreatedSpecialFormation(
                 creation.CreatedTile,
@@ -77,6 +73,9 @@ public sealed class SpecialCreationFormationEffectPlayer : IClearEffectPlayer
         // Yeni davranış: pulse implode-to-center
         if (creation.MergeTargetCell.HasValue)
         {
+            if (contributors.Count == 0)
+                yield break;
+
             yield return animator.PlayTilesImplodeToCell(
                 creation.MergeTargetCell.Value,
                 contributors,

@@ -58,7 +58,6 @@ public class BoardAnimator
         clearEffectPlayers.Add(new PulseWaveEffectPlayer());
         clearEffectPlayers.Add(new LineSweepEffectPlayer());
         clearEffectPlayers.Add(new OverrideRadialEffectPlayer());
-        clearEffectPlayers.Add(new PatchBotDashEffectPlayer());
         clearEffectPlayers.Add(new SpecialCreationFormationEffectPlayer());
     }
 
@@ -975,6 +974,7 @@ public class BoardAnimator
 
         var ctx = new ClearEffectPlaybackContext();
         var cleared = new System.Collections.Generic.HashSet<TileView>();
+        var committedImpactCells = new System.Collections.Generic.HashSet<Vector2Int>();
 
         // Presentation path normal match ise, final clear tile'ların type bilgisini
         // merkezi plana yaz. Böylece effect impact'i sonradan geldiğinde obstacle damage
@@ -1002,6 +1002,9 @@ public class BoardAnimator
         void AddImpactedCell(Vector2Int cell)
         {
             if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                return;
+
+            if (committedImpactCells.Contains(cell))
                 return;
 
             if (!impactedCells.Contains(cell))
@@ -1045,26 +1048,65 @@ public class BoardAnimator
         if (plan.DoBoardShake && board.ShakeTarget != null)
             board.StartCoroutine(ShakeBoard(board.ShakeDuration, board.ShakeStrength));
 
-        for (int i = 0; i < plan.Effects.Count; i++)
+        void FlushPresentationResults()
         {
-            var effect = plan.Effects[i];
-            if (effect == null)
-                continue;
+            foreach (var pair in clearedByType)
+                board.NotifyTilesCleared(pair.Key, pair.Value);
+            clearedByType.Clear();
 
-            var player = ResolveEffectPlayer(effect);
-            if (player == null)
-                continue;
+            ApplyPresentationObstacleDamage(impactedCells, plan);
 
-            yield return player.Play(effect, board, ctx);
+            for (int i = 0; i < impactedCells.Count; i++)
+                committedImpactCells.Add(impactedCells[i]);
+            impactedCells.Clear();
         }
 
-        foreach (TileView tile in plan.FinalClearTiles)
-            FinalizePresentationTileClear(tile);
+        IEnumerator PlayEffectsAndFinalize()
+        {
+            for (int i = 0; i < plan.Effects.Count; i++)
+            {
+                var effect = plan.Effects[i];
+                if (effect == null)
+                    continue;
 
-        foreach (var pair in clearedByType)
-            board.NotifyTilesCleared(pair.Key, pair.Value);
+                var player = ResolveEffectPlayer(effect);
+                if (player == null)
+                    continue;
 
-        ApplyPresentationObstacleDamage(impactedCells, plan);
+                yield return player.Play(effect, board, ctx);
+            }
+
+            foreach (TileView tile in plan.FinalClearTiles)
+                FinalizePresentationTileClear(tile);
+
+            FlushPresentationResults();
+        }
+
+        if (plan.CommitFinalClearsBeforeEffects)
+        {
+            foreach (TileView tile in plan.FinalClearTiles)
+                FinalizePresentationTileClear(tile);
+
+            FlushPresentationResults();
+
+            board.BeginBackgroundJob();
+            board.StartCoroutine(PlayEffectsInBackground());
+            yield break;
+        }
+
+        yield return PlayEffectsAndFinalize();
+
+        IEnumerator PlayEffectsInBackground()
+        {
+            try
+            {
+                yield return PlayEffectsAndFinalize();
+            }
+            finally
+            {
+                board.EndBackgroundJob();
+            }
+        }
     }
 
     private void ApplyPresentationObstacleDamage(
@@ -1304,7 +1346,10 @@ public class BoardAnimator
     {
         if (board.ShakeTarget == null) yield break;
 
-        board.ShakeBasePos = board.ShakeTarget.anchoredPosition;
+        // KRİTİK: base'i canlı transformdan YENİDEN OKUMA. Eşzamanlı shake'lerde (çok patlama)
+        // zaten kaymış pozisyon base sanılır ve board kalıcı kayardı. Sabit ev pozisyonunu kullan.
+        board.CaptureShakeHome();
+        Vector2 home = board.ShakeBasePos;
 
         float t = 0f;
         while (t < duration)
@@ -1315,11 +1360,11 @@ public class BoardAnimator
             float ox = UnityEngine.Random.Range(-strength, strength) * damper;
             float oy = UnityEngine.Random.Range(-strength, strength) * damper;
 
-            board.ShakeTarget.anchoredPosition = board.ShakeBasePos + new Vector2(ox, oy);
+            board.ShakeTarget.anchoredPosition = home + new Vector2(ox, oy);
             yield return null;
         }
 
-        board.ShakeTarget.anchoredPosition = board.ShakeBasePos;
+        board.ShakeTarget.anchoredPosition = home;
     }
 
     public IEnumerator MicroShake(float duration, float strength)
@@ -1329,7 +1374,11 @@ public class BoardAnimator
             target = board.GetComponent<RectTransform>();
         if (target == null) yield break;
 
-        Vector2 basePos = target.anchoredPosition;
+        // shakeTarget'ı sallıyorsak sabit ev pozisyonunu base al (canlı okuma overlapping
+        // shake'lerde drift yaratır). Fallback (Parent) için yerel base yeterli.
+        bool isBoardFrame = target == board.ShakeTarget;
+        if (isBoardFrame) board.CaptureShakeHome();
+        Vector2 basePos = isBoardFrame ? board.ShakeBasePos : target.anchoredPosition;
 
         float t = 0f;
         while (t < duration)

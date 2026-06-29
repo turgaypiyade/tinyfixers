@@ -176,9 +176,14 @@ public sealed class SpecialChainRunner : BoardAction
             // outlive the sub-chains: a released cell could let a not-yet-blasted
             // special fall away from its sub-chain mid-VFX.
             float safety = 0f;
-            while (board.ActiveBackgroundJobs > 0 && safety < 5f)
+            // Non-blocking uçuşları (goal orb, PatchBot dash) bekleme; hedefe uçarken
+            // special zincirinin final settle'ı donmasın. Gerçek background falls/sub-chain'leri
+            // beklemeye devam et (BlockingBackgroundJobs).
+            while (board.BlockingBackgroundJobs > 0 && safety < 5f)
             {
-                // KRİTİK: PatchBot dash'ı (veya herhangi bir background job) uçarken board DONMASIN.
+                // KRİTİK: background job'lar sürerken board DONMASIN.
+                // PatchBot dash artık BlockingBackgroundJobs dışında; burası hâlâ gerçek
+                // sub-chain/fall job'ları sırasında boş hücreleri kapatır.
                 // Runner Blocking olduğu için ResolveBoard loop'u şu an durmuş; gravity'yi onun yerine
                 // burada çalıştır. CalculateCascades board.Tiles'ı senkron günceller → HasAnyEmptyPlayableCell
                 // guard'ı kendini sınırlar (boş hücre kalmayınca durur). Patchbot HER yoldan tetiklense de
@@ -558,6 +563,7 @@ public sealed class SpecialChainRunner : BoardAction
                 if (!centers.Contains(cell) && tile.GetSpecial() != TileSpecial.None && !processed.Contains(tile))
                 {
                     processed.Add(tile);
+                    AnchorQueued(tile, x, y);
                     arrivalSpecials.Add(tile);
                     perTileDelays[tile] = delay;
                     continue;
@@ -646,6 +652,7 @@ public sealed class SpecialChainRunner : BoardAction
             if (!lineCellSet.Contains(cell) && tile.GetSpecial() != TileSpecial.None && !processed.Contains(tile))
             {
                 processed.Add(tile);
+                AnchorQueued(tile, x, y);
                 arrivalSpecials.Add(tile);
                 return;
             }

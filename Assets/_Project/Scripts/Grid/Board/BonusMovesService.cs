@@ -181,9 +181,12 @@ public class BonusMovesService : MonoBehaviour
                 continue;
 
             var sp = tile.GetSpecial();
+            Debug.Log($"[BonusDebug] gate1 cell=({p.x},{p.y}) wantH={p.isHorizontal} currentSpecial={sp}");
             if (sp == TileSpecial.LineH || sp == TileSpecial.LineV)
                 validPlacements.Add(p);
         }
+
+        Debug.Log($"[BonusDebug] gate1 SUMMARY placed={placed} validPlacements={validPlacements.Count}");
 
         if (_hardSkipRequested)
             yield break;

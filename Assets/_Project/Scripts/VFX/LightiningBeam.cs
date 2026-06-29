@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 [RequireComponent(typeof(LineRenderer))]
@@ -16,6 +17,12 @@ public class LightningBeam : MonoBehaviour
     [Tooltip("Her frame seed'ini değiştir (daha canlı flicker)")]
     [SerializeField] private bool liveFlicker = true;
 
+    [Header("Thickness")]
+    [Tooltip("Kaynak ucunun prefab kalınlığına göre çarpanı. Düşük değer = daha ince başlangıç.")]
+    [SerializeField, Range(0.01f, 1f)] private float startWidthMultiplier = 0.25f;
+    [Tooltip("Uç kalınlığının prefab kalınlığına göre çarpanı. Düşük değer = daha ip gibi görünüm.")]
+    [SerializeField, Range(0.01f, 1f)] private float endWidthMultiplier = 0.08f;
+
     [Header("Timing")]
     [SerializeField] private float lifeTime = 0.20f;
     [SerializeField]
@@ -24,6 +31,8 @@ public class LightningBeam : MonoBehaviour
 
     public float extraLength = 0.15f;
     [SerializeField] private GameObject impactFlashPrefab;
+    [SerializeField, Range(0f, 0.6f)] private float persistentPulseAmplitude = 0.24f;
+    [SerializeField] private float persistentPulseFrequency = 18f;
 
     private LineRenderer lr;
     private float t;
@@ -34,6 +43,12 @@ public class LightningBeam : MonoBehaviour
     private Vector3 b;
     private bool initialized;
     private float seed;
+    private bool persistent;
+    private bool fadingOut;
+    private float fadeOutDuration = 0.10f;
+    private float fadeOutElapsed;
+    private Func<Vector3> startProvider;
+    private Func<Vector3> endProvider;
 
     private void Awake()
     {
@@ -43,7 +58,8 @@ public class LightningBeam : MonoBehaviour
         startColor = lr.startColor;
         endColor = lr.endColor;
 
-        seed = Random.Range(0f, 1000f);
+        seed = UnityEngine.Random.Range(0f, 1000f);
+        ApplyWidthProfile();
     }
 
     public void Init(Vector3 start, Vector3 end)
@@ -60,6 +76,7 @@ public class LightningBeam : MonoBehaviour
 
         // Segment count'u garantile — positionCount yazılmadan önce set et
         lr.positionCount = Mathf.Max(3, segments);
+        ApplyWidthProfile();
 
         if (impactFlashPrefab != null)
         {
@@ -74,18 +91,75 @@ public class LightningBeam : MonoBehaviour
         BuildLightning();
     }
 
+    public void InitPersistent(Func<Vector3> startProvider, Func<Vector3> endProvider, Color color)
+    {
+        this.startProvider = startProvider;
+        this.endProvider = endProvider;
+
+        persistent = true;
+        fadingOut = false;
+        fadeOutElapsed = 0f;
+        t = 0f;
+
+        startColor = color;
+        endColor = Color.Lerp(Color.white, color, 0.72f);
+        endColor.a = color.a;
+        ApplyPersistentGradient(color);
+
+        initialized = true;
+        lr.positionCount = Mathf.Max(3, segments);
+        ApplyWidthProfile();
+
+        UpdatePersistentEndpoints();
+        BuildLightning();
+    }
+
+    public void FadeOutAndDestroy(float duration)
+    {
+        if (!persistent)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        fadingOut = true;
+        fadeOutDuration = Mathf.Max(0.02f, duration);
+        fadeOutElapsed = 0f;
+    }
+
     private void Update()
     {
         if (!initialized) return;
 
         t += Time.deltaTime;
+
+        if (persistent)
+        {
+            UpdatePersistentEndpoints();
+
+            float fade = 1f;
+            if (fadingOut)
+            {
+                fadeOutElapsed += Time.deltaTime;
+                fade = 1f - Mathf.Clamp01(fadeOutElapsed / fadeOutDuration);
+            }
+
+            float pulse = 1f - (persistentPulseAmplitude * (0.5f + 0.5f * Mathf.Sin((Time.time + seed) * persistentPulseFrequency)));
+            ApplyAlphaScaled(Mathf.Clamp01(fade * pulse));
+
+            if (liveFlicker)
+                BuildLightning();
+
+            if (fadingOut && fadeOutElapsed >= fadeOutDuration)
+                Destroy(gameObject);
+
+            return;
+        }
+
         float u = Mathf.Clamp01(t / lifeTime);
 
         float alpha = alphaOverLife.Evaluate(u);
-        var sc = startColor; sc.a = alpha;
-        var ec = endColor; ec.a = alpha;
-        lr.startColor = sc;
-        lr.endColor = ec;
+        ApplyAlphaAbsolute(alpha);
 
         // Yaşamının ilk %75'inde jagged şekli yeniden örer → flicker/animasyon
         if (u < 0.75f && liveFlicker)
@@ -93,6 +167,69 @@ public class LightningBeam : MonoBehaviour
 
         if (t >= lifeTime)
             Destroy(gameObject);
+    }
+
+    private void ApplyAlphaAbsolute(float alpha)
+    {
+        var sc = startColor; sc.a = alpha;
+        var ec = endColor; ec.a = alpha;
+        lr.startColor = sc;
+        lr.endColor = ec;
+    }
+
+    private void ApplyAlphaScaled(float alphaMultiplier)
+    {
+        var sc = startColor; sc.a = startColor.a * alphaMultiplier;
+        var ec = endColor; ec.a = endColor.a * alphaMultiplier;
+        lr.startColor = sc;
+        lr.endColor = ec;
+    }
+
+    private void ApplyPersistentGradient(Color color)
+    {
+        if (lr == null)
+            return;
+
+        var gradient = new Gradient();
+        gradient.SetKeys(
+            new[]
+            {
+                new GradientColorKey(color, 0f),
+                new GradientColorKey(Color.Lerp(Color.white, color, 0.5f), 0.65f),
+                new GradientColorKey(Color.white, 1f)
+            },
+            new[]
+            {
+                new GradientAlphaKey(color.a, 0f),
+                new GradientAlphaKey(color.a * 0.85f, 0.45f),
+                new GradientAlphaKey(0f, 1f)
+            });
+
+        lr.colorGradient = gradient;
+    }
+
+    private void UpdatePersistentEndpoints()
+    {
+        if (startProvider != null)
+            a = startProvider();
+
+        if (endProvider != null)
+            b = endProvider();
+
+        a.z = 0f;
+        b.z = 0f;
+    }
+
+    private void ApplyWidthProfile()
+    {
+        if (lr == null)
+            return;
+
+        float baseStart = lr.startWidth;
+        float baseEnd = lr.endWidth;
+
+        lr.startWidth = Mathf.Max(0.001f, baseStart * startWidthMultiplier);
+        lr.endWidth = Mathf.Max(0.001f, baseEnd * endWidthMultiplier);
     }
 
     private void BuildLightning()

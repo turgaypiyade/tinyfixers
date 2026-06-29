@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class SystemOverrideFanoutPlacementAction : BoardAction
 {
+    private const float PersistentBeamFadeOutSeconds = 0.10f;
+
     private readonly BoardController board;
     private readonly Vector2Int origin;
     private readonly List<Vector2Int> targets;
@@ -36,6 +38,8 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         if (origin.x >= 0 && origin.x < board.Width && origin.y >= 0 && origin.y < board.Height)
             originTile = board.Tiles[origin.x, origin.y];
 
+        var persistentBeams = new List<LightningBeam>();
+
         foreach (var pos in targets)
         {
             if (pos.x < 0 || pos.x >= board.Width || pos.y < 0 || pos.y >= board.Height)
@@ -46,6 +50,9 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 continue;
 
             bool beamReached = false;
+            LightningBeam persistentBeam = null;
+            Vector3 lastOriginWorld = ResolveTrackedWorldCenter(originTile, origin, Vector3.zero);
+            Vector3 lastTargetWorld = ResolveTrackedWorldCenter(target, pos, Vector3.zero);
 
             float duration = board.PlayLightningStrikeForTiles(
                 new List<TileView> { target },
@@ -56,6 +63,25 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 onTargetBeamSpawned: _ =>
                 {
                     beamReached = true;
+                    persistentBeam ??= board.BeginPersistentLightning(
+                        () =>
+                        {
+                            lastOriginWorld = ResolveTrackedWorldCenter(originTile, origin, lastOriginWorld);
+                            return lastOriginWorld;
+                        },
+                        () =>
+                        {
+                            TileView liveTarget = board.Tiles[pos.x, pos.y] != null
+                                ? board.Tiles[pos.x, pos.y]
+                                : target;
+
+                            lastTargetWorld = ResolveTrackedWorldCenter(liveTarget, pos, lastTargetWorld);
+                            return lastTargetWorld;
+                        },
+                        PickBeamColor(persistentBeams.Count));
+
+                    if (persistentBeam != null && !persistentBeams.Contains(persistentBeam))
+                        persistentBeams.Add(persistentBeam);
                 });
 
             float timeout = Mathf.Max(duration, board.ApplySpecialChainTempo(0.03f)) + board.ApplySpecialChainTempo(0.04f);
@@ -92,6 +118,17 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
         yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.002f));
 
+        if (persistentBeams.Count > 0)
+        {
+            for (int i = 0; i < persistentBeams.Count; i++)
+            {
+                if (persistentBeams[i] != null)
+                    persistentBeams[i].FadeOutAndDestroy(PersistentBeamFadeOutSeconds);
+            }
+
+            yield return new WaitForSeconds(PersistentBeamFadeOutSeconds);
+        }
+
         if (deferredPulseExplosionCells != null && deferredPulseExplosionCells.Count > 0)
         {
             yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.05f));
@@ -123,6 +160,38 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
         if (originTile != null)
             SpecialVisualService.HideTileVisualForCombo(originTile);
+    }
+
+    private Vector3 ResolveTrackedWorldCenter(TileView preferredTile, Vector2Int cell, Vector3 fallback)
+    {
+        if (preferredTile != null)
+            return board.GetTileWorldCenter(preferredTile);
+
+        if (cell.x >= 0 && cell.x < board.Width && cell.y >= 0 && cell.y < board.Height)
+        {
+            var liveTile = board.Tiles[cell.x, cell.y];
+            if (liveTile != null)
+                return board.GetTileWorldCenter(liveTile);
+        }
+
+        if (board.Parent != null)
+        {
+            var local = new Vector3(
+                cell.x * board.TileSize + board.TileSize * 0.5f,
+                -cell.y * board.TileSize - board.TileSize * 0.5f,
+                0f);
+            return board.Parent.TransformPoint(local);
+        }
+
+        return fallback;
+    }
+
+    private static Color PickBeamColor(int index)
+    {
+        float hue = Mathf.Repeat(0.54f + index * 0.61803398875f, 1f);
+        Color color = Color.HSVToRGB(hue, 0.78f, 1f);
+        color.a = 0.92f;
+        return color;
     }
 
     private void PlayPulseCoreExplosionVfx(TileView tile)

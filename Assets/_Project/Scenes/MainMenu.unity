@@ -768,8 +768,8 @@ RectTransform:
   - {fileID: 377572861}
   m_Father: {fileID: 72406}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.059509918}
-  m_AnchorMax: {x: 0.6103286, y: 1.3949825}
+  m_AnchorMin: {x: 0, y: 0.33333334}
+  m_AnchorMax: {x: 0.50300944, y: 7.8137255}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -34793,7 +34793,7 @@ MonoBehaviour:
   continueButtonImage: {fileID: 1548940138}
   cancelButton: {fileID: 1783895819}
   cancelButtonImage: {fileID: 1783895820}
-  levelCatalog: {fileID: 11400000, guid: b262d96b9882475ca6cdf6517f9f0880, type: 2}
+  levelCatalog: {fileID: 11400000, guid: 367d7d797cb5d4822954cf3848cac992, type: 2}
   fallbackChapter: 1
   goalsPreviewRoot: {fileID: 1334764873}
   goalSlotPrefab: {fileID: 8598178808890510351, guid: 5185880da700e4021a652744b8a70fe0, type: 3}
@@ -58605,7 +58605,7 @@ MonoBehaviour:
   prefsLevelKey: current_level
   preLevelSpecialPopup: {fileID: 0}
   themeLibrary: {fileID: 11400000, guid: ae6f456ca03dd43cf80c6bb731003d1b, type: 2}
-  levelCatalog: {fileID: 11400000, guid: b262d96b9882475ca6cdf6517f9f0880, type: 2}
+  levelCatalog: {fileID: 11400000, guid: 367d7d797cb5d4822954cf3848cac992, type: 2}
   livesDisplay: {fileID: 0}
   initialCoins: 500
 --- !u!114 &2123982246

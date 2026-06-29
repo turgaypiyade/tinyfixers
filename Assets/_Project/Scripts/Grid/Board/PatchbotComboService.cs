@@ -35,9 +35,9 @@ public class PatchbotComboService
     {
         if (fromTile == null) return;
 
-        // Dash başlangıcında background job sayacını yükselt — dash uçarken board
-        // taşlar düşmeye/cascade'e devam edebilir, ama "iş bitti" denilemez.
-        board.ActiveBackgroundJobs++;
+        // Dash uçarken board akışı devam edebilir, ama "iş bitti" denilemez.
+        // ActiveBackgroundJobs içinde kalır; BlockingBackgroundJobs hesabından düşülür.
+        board.BeginPatchBotDashFlight();
 
         Sprite carriedSprite = null;
         bool orbitCarry = false;
@@ -70,7 +70,7 @@ public class PatchbotComboService
                     {
                         // Dash kendisi bitti. Ancak combo callback yeni bir background job
                         // başlatmış olabilir; o iş kendi sayacını ayrı yönetiyor.
-                        board.ActiveBackgroundJobs = Mathf.Max(0, board.ActiveBackgroundJobs - 1);
+                        board.EndPatchBotDashFlight();
                     }
                 }
             }
