@@ -186,6 +186,7 @@ public sealed class PatchBotSpecial
                     if (sequencer != null && deferredActions.Count > 0)
                     {
                         sequencer.Enqueue(deferredActions);
+                        arrivalRt.Board.RequestResolveAfterActionSequence();
                     }
                 }
                 finally
@@ -512,6 +513,7 @@ public sealed class PatchBotSpecial
             if (sequencer != null)
             {
                 sequencer.Enqueue(new List<BoardAction> { clearAction });
+                arrivalRt.Board.RequestResolveAfterActionSequence();
             }
         }
     }

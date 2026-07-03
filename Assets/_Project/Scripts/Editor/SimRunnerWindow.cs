@@ -17,7 +17,7 @@ public class SimRunnerWindow : EditorWindow
 
     private void OnGUI()
     {
-        GUILayout.Label("Random Bot Simulation", EditorStyles.boldLabel);
+        GUILayout.Label("Smart Bot Simulation", EditorStyles.boldLabel);
         EditorGUILayout.Space();
 
         _level = (LevelData)EditorGUILayout.ObjectField("Level Data", _level, typeof(LevelData), false);

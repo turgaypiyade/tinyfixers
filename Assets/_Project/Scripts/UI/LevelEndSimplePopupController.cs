@@ -396,6 +396,15 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void HandleSuccessCloseClicked()
     {
+        // Bu levelde progress-event ödülü kazanıldıysa önce sandık açılış töreni,
+        // sonra ana menü. Overlay DontDestroyOnLoad; onDone sahne geçişini yapar.
+        var chestRewards = ProgressEventService.Instance?.ConsumePendingRewardReveals();
+        if (chestRewards != null && chestRewards.Count > 0)
+        {
+            RewardChestRevealOverlay.Show(chestRewards, ReturnToMainMenuImmediate);
+            return;
+        }
+
         ReturnToMainMenuImmediate();
     }
 
@@ -1161,11 +1170,27 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         ResolveCurrentFailOffer();
 
-        if (!PlayerWallet.SpendCoins(currentCost))
+        // Yeterli coin varsa: normal akış (coin harca → devam).
+        if (PlayerWallet.HasEnoughCoins(currentCost))
         {
-            Debug.LogWarning($"[LevelEnd] Extra move purchase failed. RequiredCoins={currentCost}, PlayerCoins={PlayerWallet.Coins}");
+            PlayerWallet.SpendCoins(currentCost);
+            PerformContinue();
             return;
         }
+
+        // Yeterli coin yok → reklam izle (bedava devam) ya da satın al (market) seçimi.
+        RuntimeChoicePopup.Show(
+            "Yetersiz Altın",
+            $"Devam için {currentCost} coin gerekli, {PlayerWallet.Coins} coinin var.\nReklam izleyerek bedava devam edebilir veya market'ten altın alabilirsin.",
+            new RuntimeChoicePopup.Choice("Reklam İzle", WatchAdThenContinue, primary: true),
+            new RuntimeChoicePopup.Choice("Satın Al", GoToMarketFromFail),
+            new RuntimeChoicePopup.Choice("Kapat", null));
+    }
+
+    // Coin harcandıktan (veya reklam ödülünden) sonra ortak "devam" akışı.
+    private void PerformContinue()
+    {
+        if (board == null) return;
 
         // Fail popup açılırken harcanan hakkı geri ver; oyuncu devam ediyor.
         LivesManager.AddLives(1);
@@ -1176,6 +1201,34 @@ public class LevelEndSimplePopupController : MonoBehaviour
         failPopupShown = false;
         HideAllPopups();
         board.ForceFullBoardSync();
+    }
+
+    private void WatchAdThenContinue()
+    {
+        StartCoroutine(CoWatchAdThenContinue());
+    }
+
+    private System.Collections.IEnumerator CoWatchAdThenContinue()
+    {
+        // TODO: Gerçek rewarded-ad SDK bağlanınca burada gösterilecek. Şimdilik
+        // editör/dev-build'de kısa bir bekleme ile ödül verilir (bedava devam).
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log("[LevelEnd] Reklam simülasyonu → bedava devam.");
+        yield return new WaitForSecondsRealtime(1f);
+        PerformContinue();
+#else
+        Debug.LogWarning("[LevelEnd] Rewarded ad SDK bağlı değil; bedava devam verilemedi.");
+        yield break;
+#endif
+    }
+
+    private void GoToMarketFromFail()
+    {
+        // 01_Game'de market yok → ana menüye dön, orada market otomatik açılsın.
+        // Devam reddedildiği için staged event item'ları da temizlenir.
+        ProgressEventService.Instance?.DiscardStagedGains();
+        MarketNavigator.PendingOpenMarket = true;
+        ReturnToMainMenuImmediate();
     }
 
     private void RefreshPopupCopy()

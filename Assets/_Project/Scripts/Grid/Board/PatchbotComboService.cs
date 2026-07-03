@@ -233,6 +233,7 @@ public class PatchbotComboService
 
     public (TileView tile, int x, int y, bool hasCell) FindTarget(TileView patchBotTile, TileView partnerTile, HashSet<TileView> excluded, params TileView[] additionalExcluded)
     {
+        var cargoDropPathCells = new List<(int x, int y, TileView tile)>();
         var obstacleGoalCells = new List<(int x, int y, TileView tile)>();
         var tileGoalCells = new List<(int x, int y, TileView tile)>();
         var otherObstacleCells = new List<(int x, int y, TileView tile)>();
@@ -300,6 +301,16 @@ public class PatchbotComboService
                 if (hasObstacle)
                 {
                     var obstacleId = board.ObstacleStateService.GetObstacleIdAt(x, y);
+
+                    // Cargo (exitAtBottom) KIRILMAZ; üstüne konmak faydasız. Bunun yerine
+                    // düşüş yolunu açmak için ALTINDAKI normal taşı hedefle → cargo aşağı
+                    // düşüp tabandan çıkar (hedef ilerler).
+                    if (board.ObstacleStateService.IsExitAtBottomAt(x, y))
+                    {
+                        TryAddCargoDropPathTarget(x, y, cargoDropPathCells, IsExcludedTile);
+                        continue;
+                    }
+
                     bool isObstacleGoalCell = activeObstacleGoals.Contains(obstacleId);
 
                     // Under-tile obstacle (Mud vb.): üzerinde taş varsa taşı hedefle —
@@ -343,6 +354,12 @@ public class PatchbotComboService
         // Önce en yüksek öncelikli dolu kova; içinden RASTGELE değil, payload'ın en çok hücreye
         // değeceği (en yoğun küme) hücre seçilir → bot tepedeki/kenardaki tek hücreyi değil,
         // ortadaki yoğunluğu hedefler. Tüm patchbot kombinasyonları bu seçimi paylaşır.
+
+        // Cargo düşüş yolu en yüksek öncelik: cargo başka türlü kırılamadığı için,
+        // altındaki taşı açmak hedefi ilerletmenin tek yolu.
+        if (cargoDropPathCells.Count > 0)
+            return PickHighestImpact(cargoDropPathCells);
+
         if (obstacleGoalCells.Count > 0)
             return PickHighestImpact(obstacleGoalCells);
 
@@ -356,6 +373,36 @@ public class PatchbotComboService
             return PickHighestImpact(normalCells);
 
         return (null, -1, -1, false);
+    }
+
+    // Cargo (exitAtBottom) kendisi kırılmaz. Onu ilerletmek için, (varsa cargo yığınının)
+    // hemen ALTINDAKI ilk normal taşı hedef listesine ekler — o taş temizlenince cargo bir
+    // sıra aşağı düşer, tabana ulaşınca board'dan çıkar. Alt hücre hole/başka obstacle ise
+    // ya da cargo zaten tabandaysa yardım edecek bir taş yoktur (eklemez).
+    private void TryAddCargoDropPathTarget(int cargoX, int cargoY,
+        List<(int x, int y, TileView tile)> outCells, System.Func<TileView, bool> isExcluded)
+    {
+        var obs = board.ObstacleStateService;
+        if (obs == null) return;
+
+        int by = cargoY + 1;
+        while (by < board.Height && obs.IsExitAtBottomAt(cargoX, by))
+            by++;                                  // üst üste cargo → yığının altına in
+
+        if (by >= board.Height) return;            // cargo zaten tabanda; sıradaki resolve toplar
+        if (obs.GetObstacleIdAt(cargoX, by) != ObstacleId.None) return; // altı başka obstacle
+        if (board.Holes[cargoX, by]) return;
+
+        var belowTile = board.Tiles[cargoX, by];
+        if (belowTile == null) return;
+        if (board.GridData[cargoX, by] == null) return;
+        if (!SpecialUtils.CanTargetTileContent(board, cargoX, by)) return;
+        if (isExcluded(belowTile)) return;
+
+        for (int i = 0; i < outCells.Count; i++)
+            if (outCells[i].x == cargoX && outCells[i].y == by) return; // aynı hücreyi iki kez ekleme
+
+        outCells.Add((cargoX, by, belowTile));
     }
 
     // Payload'ın etki yarıçapı (PulseCore 5x5 ≈ 2; line/bomb için de yoğunluk iyi bir proxy).

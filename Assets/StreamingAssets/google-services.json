@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "65499812126",
+    "project_id": "tinyfixers-bc1cd",
+    "storage_bucket": "tinyfixers-bc1cd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:65499812126:android:d4ab2b73674bd01158f90f",
+        "android_client_info": {
+          "package_name": "com.yigefep.tinyfixers"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfmbMldOXYlk1t8P7paRfWU6d4yz0hd0A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

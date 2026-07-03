@@ -8,8 +8,8 @@ using UnityEngine;
 public class BotConfig : ScriptableObject
 {
     [Header("Bot Havuzu")]
-    [Tooltip("Oyunda simüle edilecek toplam bot sayısı")]
-    [Min(1)] public int targetBotPoolSize = 100_000;
+    [Tooltip("Oyunda simüle edilecek toplam bot sayısı (isim havuzu ~10K)")]
+    [Min(1)] public int targetBotPoolSize = 10_000;
 
     [Tooltip("Bu kadar gerçek kullanıcı gelince botlar tamamen sıfırlanır")]
     [Min(1)] public int realUserThreshold = 100_000;

@@ -121,7 +121,8 @@ public sealed class SimMatchFinder
     }
 
     // Mirrors MatchFinder.DecideSpecialAt — picks the special that would form at (x,y).
-    public TileSpecial DecideSpecialAt(int x, int y)
+    // For player swaps, swapHorizontal decides the line direction for 4-matches.
+    public TileSpecial DecideSpecialAt(int x, int y, bool? swapHorizontal = null)
     {
         if (x < 0 || x >= _s.Width || y < 0 || y >= _s.Height) return TileSpecial.None;
         if (!IsNormalMatchable(_s.Grid[x, y])) return TileSpecial.None;
@@ -132,7 +133,12 @@ public sealed class SimMatchFinder
 
         if (best >= 5) return TileSpecial.SystemOverride;
         if (hLen >= 3 && vLen >= 3) return TileSpecial.PulseCore;
-        if (best == 4) return hLen >= vLen ? TileSpecial.LineH : TileSpecial.LineV;
+        if (best == 4)
+        {
+            if (swapHorizontal.HasValue)
+                return swapHorizontal.Value ? TileSpecial.LineH : TileSpecial.LineV;
+            return hLen >= vLen ? TileSpecial.LineH : TileSpecial.LineV;
+        }
         if (Has2x2At(x, y)) return TileSpecial.PatchBot;
 
         return TileSpecial.None;

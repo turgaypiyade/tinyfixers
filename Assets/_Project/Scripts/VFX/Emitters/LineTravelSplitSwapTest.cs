@@ -60,6 +60,9 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     [Header("Sizing")]
     [SerializeField, Range(0.5f, 1.2f)] private float headSizeFactor = 0.95f;
     [SerializeField, Range(0.2f, 1f)] private float splitOffsetFactor = 0.55f;
+    [Tooltip("Split bittikten sonra roket (LineHLeftRocket/RightRocket, alevli) sprite'ına geçince " +
+             "uygulanan ek boyut çarpanı. 1 = split ile aynı boyut; >1 = roket görseli daha büyük.")]
+    [SerializeField, Range(0.5f, 2.5f)] private float rocketSizeFactor = 1.35f;
 
     [Header("Beam Trail (Obsolete)")]
     [Tooltip("Unused — legacy LineRenderer trail fields kept only so existing prefab references do not break. Trail is now a sprite afterimage stream.")]
@@ -104,6 +107,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
     private float _leftAfterImageTimer;
     private float _rightAfterImageTimer;
+
+    private RectTransform _trailLayer;
 
     private RectTransform SafeRect(Image img)
     {
@@ -242,7 +247,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         float elapsed = 0f;
         while (elapsed < startDelay)
         {
-            elapsed += Time.unscaledDeltaTime;
+            elapsed += Time.deltaTime;
             yield return null;
         }
 
@@ -264,7 +269,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         float st = 0f;
         while (st < splitTime)
         {
-            st += Time.unscaledDeltaTime;
+            st += Time.deltaTime;
             float u = Mathf.Clamp01(st / splitTime);
             u = u * u * (3f - 2f * u);
 
@@ -286,6 +291,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
         if (leftImage && rocketLeftSprite && leftRt1) leftImage.sprite = rocketLeftSprite;
         if (rightImage && rocketRightSprite && rightRt1) rightImage.sprite = rocketRightSprite;
+        ApplyRocketVisualSize();   // roket sprite'ı split'ten büyük göster
         ApplyAxisVisualRotation();
         rocketMode = true;
 
@@ -327,7 +333,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             float mt = 0f;
             while (mt < moveTime)
             {
-                mt += Time.unscaledDeltaTime;
+                mt += Time.deltaTime;
                 float u = Mathf.Clamp01(mt / moveTime);
                 u = u * u * (3f - 2f * u);
 
@@ -345,7 +351,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
                         leftRt.anchoredPosition = Vector2.LerpUnclamped(lStart, lTarget, u);
                 }
 
-                TickTrailSpawn(Time.unscaledDeltaTime, movePos, moveNeg);
+                TickTrailSpawn(Time.deltaTime, movePos, moveNeg);
                 yield return null;
             }
 
@@ -414,8 +420,8 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
                 float rt2 = 0f;
                 while (rt2 < restTime)
                 {
-                    rt2 += Time.unscaledDeltaTime;
-                    TickTrailSpawn(Time.unscaledDeltaTime, movePos, moveNeg);
+                    rt2 += Time.deltaTime;
+                    TickTrailSpawn(Time.deltaTime, movePos, moveNeg);
                     yield return null;
                 }
             }
@@ -429,7 +435,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             float fadeDur = Mathf.Max(0.01f, headFadeOutTime);
             while (ft < fadeDur)
             {
-                ft += Time.unscaledDeltaTime;
+                ft += Time.deltaTime;
                 float alpha = Mathf.Lerp(1f, 0f, ft / fadeDur);
 
                 if (leftImage && IsAlive(leftImage))
@@ -469,6 +475,20 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             rightRt.sizeDelta = new Vector2(visualSize, visualSize);
             rightRt.localScale = Vector3.one;
         }
+    }
+
+    // Split fazından sonra roket sprite'ına geçince çağrılır: head görselini rocketSizeFactor
+    // kadar büyütür (split/semi boyutu değişmez). Update'teki pulse localScale'i ayrı işler,
+    // sizeDelta'ya dokunmaz; bu yüzden büyütme kalıcıdır.
+    private void ApplyRocketVisualSize()
+    {
+        float visualSize = Mathf.Max(1f, _cellSizePx * headSizeFactor * rocketSizeFactor);
+
+        var leftRt = SafeRect(leftImage);
+        if (leftRt) leftRt.sizeDelta = new Vector2(visualSize, visualSize);
+
+        var rightRt = SafeRect(rightImage);
+        if (rightRt) rightRt.sizeDelta = new Vector2(visualSize, visualSize);
     }
 
     private void SpawnTrailSamples()
@@ -567,6 +587,31 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         return ResolveExternalEffectParent();
     }
 
+    // Alev iz katmanı: root'un İLK child'ı olarak yaratılır → roket head'leri (Left/Rigth)
+    // her zaman bunun ÜSTÜNDE render olur. Tüm ghost'lar buraya doğar; head asla alevle örtülmez.
+    private RectTransform EnsureTrailLayer()
+    {
+        if (_trailLayer) return _trailLayer;
+
+        RectTransform host = ResolveLocalEffectParent();
+        if (!host) return null;
+
+        var go = new GameObject("TrailLayer", typeof(RectTransform));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(host, false);
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
+        rt.SetAsFirstSibling();   // head'lerin altında kalsın
+
+        _trailLayer = rt;
+        return rt;
+    }
+
     private RectTransform ResolveExternalEffectParent()
     {
         if (afterImageParent && afterImageParent.gameObject.activeInHierarchy)
@@ -598,7 +643,10 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         var sourceRt = SafeRect(sourceImage);
         if (!sourceRt) return;
 
-        RectTransform parent = ResolveLocalEffectParent();
+        // Alev hayaletleri roket head'lerinin ALTINDA kalan ayrı bir katmana gider.
+        // Aksi halde sonradan Instantiate edilen ghost'lar head'in üstüne render olur
+        // (her substep'te rokedin tam konumunda da bir ghost doğuyor) → head alevle örtülür.
+        RectTransform parent = EnsureTrailLayer();
         if (!parent) return;
 
         GameObject go;
@@ -665,7 +713,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
         while (ft < life)
         {
-            ft += Time.unscaledDeltaTime;
+            ft += Time.deltaTime;
             float u = Mathf.Clamp01(ft / life);
             // Power > 1 → ghost yaşam başında hızla söner, sonunda yavaş → tail koyu, head canlı.
             float k = Mathf.Pow(1f - u, power);
@@ -721,8 +769,10 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         }
         else
         {
-            rightRt.localEulerAngles = new Vector3(0f, 0f, -90f);
-            leftRt.localEulerAngles = new Vector3(0f, 0f, -90f);
+            // Dikey: +90 → başlıklar DIŞARI (leftImage yukarı çıkar → başlık yukarı,
+            // rightImage aşağı iner → başlık aşağı). -90 tersini yapıyordu (başlık içeri).
+            rightRt.localEulerAngles = new Vector3(0f, 0f, 90f);
+            leftRt.localEulerAngles = new Vector3(0f, 0f, 90f);
         }
     }
 

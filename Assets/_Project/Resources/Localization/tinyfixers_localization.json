@@ -53,10 +53,10 @@
         { "key": "workshop_task_7", "value": "Başı yerleştir" },
         { "key": "workshop_task_8", "value": "Gözleri yak" },
         { "key": "workshop_task_9", "value": "Son rötuş" },
-        { "key": "workshop_all_completed", "value": "Atölye tamamlandı!" },
+        { "key": "workshop_all_completed", "value": "Görev tamamlandı!" },
         { "key": "workshop_reward_coins", "value": "{0} Altın" },
         { "key": "workshop_reward_bundle", "value": "Atölye Ödülü" },
-        { "key": "workshop_tutorial_tap_repair", "value": "Atölyeyi tamir et!\n10 yıldız ile başlıyorsun." },
+        { "key": "workshop_tutorial_tap_repair", "value": "İlk görevin için!\n10 yıldız ile başlıyorsun." },
 
         { "key": "hint_obstacle_stone",            "value": "Yanında eşleştirme yap, taşı kır." },
         { "key": "hint_obstacle_shield1",           "value": "Kalkanı kırmak için yanında bir eşleştirme yeterli." },

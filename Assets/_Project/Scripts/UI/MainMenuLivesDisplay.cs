@@ -26,6 +26,12 @@ public class MainMenuLivesDisplay : MonoBehaviour
     [SerializeField] private bool simulateAdInEditor = true;
     [SerializeField, Min(0f)] private float simulatedAdDuration = 2f;
 
+    [Header("Can 0 iken satın alma")]
+    [Tooltip("Can 0 iken kalbe tıklayınca teklif edilen can paketi adedi.")]
+    [SerializeField, Min(1)] private int buyLivesPackAmount = 5;
+    [Tooltip("Can paketinin coin fiyatı.")]
+    [SerializeField, Min(0)] private int buyLivesPackCost = 900;
+
     // ─────────────────────────────────────────────────────────────────────────
 
     private bool _adInProgress;
@@ -62,8 +68,43 @@ public class MainMenuLivesDisplay : MonoBehaviour
     public void OnAreaClicked()
     {
         if (_adInProgress) return;
+
+        // Sonsuz can aktifken (timed reward) satın almaya gerek yok.
+        if (TimedRewardService.IsLivesFree()) return;
+
+        // Can 0 → paket satın alma onayı (coin ile). Coin yetmezse market.
+        if (LivesManager.Current <= 0)
+        {
+            ShowBuyLivesConfirm();
+            return;
+        }
+
         if (LivesManager.Current >= LivesManager.MaxLives) return;
         StartAd();
+    }
+
+    private void ShowBuyLivesConfirm()
+    {
+        string title = "Canın Bitti";
+        string message = $"{buyLivesPackAmount} can al: {buyLivesPackCost} coin";
+
+        RuntimeChoicePopup.Show(title, message,
+            new RuntimeChoicePopup.Choice($"Al ({buyLivesPackCost})", TryBuyLivesPack, primary: true),
+            new RuntimeChoicePopup.Choice("Vazgeç", null));
+    }
+
+    private void TryBuyLivesPack()
+    {
+        if (PlayerWallet.SpendCoins(buyLivesPackCost))
+        {
+            LivesManager.AddLives(buyLivesPackAmount);
+            RefreshDisplay();
+        }
+        else
+        {
+            // Yeterli coin yok → markete yönlendir.
+            MarketNavigator.OpenMarket();
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

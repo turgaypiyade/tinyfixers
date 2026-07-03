@@ -1618,6 +1618,17 @@ MonoBehaviour:
   enemyAttackInterval: 2
   robotHitKnockDuration: 0.18
   robotHitKnockback: 22
+  shieldSecondsPerPickup: 0.5
+  shieldBubbleScale: 1.25
+  shieldBubbleMinSize: 180
+  playerShieldBubble: {fileID: 0}
+  enemyShieldBubble: {fileID: 0}
+  shieldBubbleSprite: {fileID: 0}
+  playerShieldSprite: {fileID: 0}
+  enemyShieldSprite: {fileID: 0}
+  playerShieldColor: {r: 0.25, g: 1, b: 0.45, a: 0.42}
+  enemyShieldColor: {r: 0.78, g: 0.32, b: 1, a: 0.42}
+  shieldAbsorbPulseDuration: 0.16
   winHopHeight: 40
   winHopDuration: 0.32
   winHopCount: 2
@@ -2793,8 +2804,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.08916084}
-  m_AnchorMax: {x: 0.7878788, y: 2.090035}
+  m_AnchorMin: {x: 0, y: 0.14206128}
+  m_AnchorMax: {x: 0.5244285, y: 3.3300836}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -7466,6 +7477,10 @@ MonoBehaviour:
   shakeDuration: 0.02
   shakeStrength: 4
   shakeTarget: {fileID: 1939332386}
+  enableEntranceSlide: 1
+  entranceSlideDuration: 0.5
+  entranceSlideOffsetX: 0
+  entranceStartDelay: 0.5
   patchBotPulseComboSize: 5
   patchBotPairGhostTuning:
     duration: 0.18
@@ -7574,6 +7589,8 @@ MonoBehaviour:
   throwOnTileSyncMismatch: 0
   tilePositionEpsilon: 0.25
   ActiveBackgroundJobs: 0
+  FlyingGoalOrbs: 0
+  FlyingPatchBotDashes: 0
 --- !u!114 &1410826447
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7815,7 +7832,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d196c42b836f4b12ad1102e7c6eee65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SlowMoDebug
-  slowScale: 0.2
+  slowScale: 0.02
   stepFactor: 1.25
 --- !u!114 &1410826455
 MonoBehaviour:
@@ -7854,7 +7871,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d74d01aa8a0b6404c9b3bbcaab0bed40, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MagnetObstacleService
 --- !u!1 &1412688350
 GameObject:
@@ -10329,7 +10346,11 @@ MonoBehaviour:
   textColor: {r: 1, g: 0.9, b: 0.2, a: 1}
   floatDistance: 55
   duration: 0.75
-  fontSize: 30
+  fontSize: 37
+  tileCornerOffset: {x: 42, y: 42}
+  widthBoost: 1.5
+  faceDilate: 0.4
+  maxPerBatch: 8
 --- !u!1001 &1994596327
 PrefabInstance:
   m_ObjectHideFlags: 0

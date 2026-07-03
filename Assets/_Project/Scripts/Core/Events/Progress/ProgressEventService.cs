@@ -50,6 +50,10 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
     public static event Action<int> OnProgressGained;
 
+    /// OnProgressGained'in taş tipi taşıyan hali — FX driver "+1"leri kırılan
+    /// taşların pozisyonuyla eşleştirmek için kullanır.
+    public static event Action<TileType, int> OnProgressGainedTyped;
+
     public ProgressEventState                  State         { get; private set; }
     public TimeSpan                            TimeRemaining => ComputeTimeRemaining();
     public IReadOnlyList<ProgressGoalRuntime>  Goals         => goals;
@@ -130,6 +134,42 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
     /// Fail popup'ının "X event puanı kaybolacak" uyarısı için.
     public int StagedGainTotal => stagingActive ? stagedGainTotal : 0;
+
+    // Verilen ama henüz törenle (sandık açılışı) gösterilmemiş ödüller.
+    private readonly List<DailySlotReward> pendingRewardReveals = new();
+
+    /// <summary>
+    /// Son grant'lerden bekleyen sandık-töreni ödüllerini alır ve listeyi temizler.
+    /// Boşsa boş liste döner (null dönmez). UI: RewardChestRevealOverlay.Show(list).
+    /// </summary>
+    public List<DailySlotReward> ConsumePendingRewardReveals()
+    {
+        var copy = new List<DailySlotReward>(pendingRewardReveals);
+        pendingRewardReveals.Clear();
+        return copy;
+    }
+
+    // Ana menü "torbaya uçuş" animasyonu bekleyen ödüller (her grant, final şartı yok).
+    private readonly List<DailySlotReward> pendingMenuRewardFx = new();
+
+    /// <summary>Menü dönüşünde LevelSelector'a uçurulacak ödülleri alır ve temizler.</summary>
+    public List<DailySlotReward> ConsumePendingMenuRewardFx()
+    {
+        var copy = new List<DailySlotReward>(pendingMenuRewardFx);
+        pendingMenuRewardFx.Clear();
+        return copy;
+    }
+
+    // Event'in tüm hedefleri tamamlanıp ödülleri alındı mı? (= sandık anı)
+    private bool AllGoalsClaimed()
+    {
+        for (int i = 0; i < goals.Count; i++)
+        {
+            if (!goals[i].IsRewardClaimed)
+                return false;
+        }
+        return goals.Count > 0;
+    }
 
     /// Level başında çağrılır (GridSpawner). Önceki kalıntıyı atar.
     public void BeginLevelStaging()
@@ -213,6 +253,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
             {
                 stagedGainTotal += gained;
                 OnProgressGained?.Invoke(gained);
+                OnProgressGainedTyped?.Invoke(type, gained);
             }
             return;
         }
@@ -251,6 +292,17 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
                 goal.MarkClaimed();
                 sessionGains[i].RewardGranted = true;
                 sessionGains[i].Reward        = goal.Definition.reward;
+
+                // Sandık açılış töreni SADECE event'in tamamı bittiğinde (son adım
+                // = gerçek sandık anı) oynar. Ara adımların küçük ödülleri (altın vb.)
+                // sessizce verilir — her level sonunda popup çıkmasın.
+                if (goal.Definition.reward != null && AllGoalsClaimed())
+                    pendingRewardReveals.Add(goal.Definition.reward);
+
+                // Ana menü "ödülü torbaya at" uçuşu için HER grant biriktirilir
+                // (MainMenuRewardCollectFx, menüye dönünce LevelSelector'a uçurur).
+                if (goal.Definition.reward != null)
+                    pendingMenuRewardFx.Add(goal.Definition.reward);
             }
 
             remaining = overflow;
@@ -258,7 +310,11 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         }
 
         if (dirty) SaveGoals();
-        if (totalGained > 0 && fireGainEvent) OnProgressGained?.Invoke(totalGained);
+        if (totalGained > 0 && fireGainEvent)
+        {
+            OnProgressGained?.Invoke(totalGained);
+            OnProgressGainedTyped?.Invoke(type, totalGained);
+        }
     }
 
     private void EnsureSessionGainSlots()

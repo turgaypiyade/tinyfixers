@@ -38,6 +38,10 @@ public static class BotNameGenerator
 
     public static string Generate(BotNameLanguage language)
     {
+        // Büyük isim havuzu (Resources/SeedData/player_names) varsa oradan benzersiz isim ver.
+        if (NamePool.HasPlayers)
+            return NamePool.NextPlayerName();
+
         string[] firstNames = language == BotNameLanguage.Turkish
             ? TurkishFirstNames : EnglishFirstNames;
         string[] suffixes = language == BotNameLanguage.Turkish

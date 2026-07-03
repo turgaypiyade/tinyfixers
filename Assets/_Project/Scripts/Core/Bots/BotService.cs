@@ -32,6 +32,7 @@ public class BotService
     {
         pool.Clear();
         BotNameGenerator.ClearUsedNames();
+        NamePool.ResetCursors();   // isim havuzunu baştan benzersiz dağıt
 
         int activeBotCount = CalculateActiveBotCount();
         for (int i = 0; i < activeBotCount; i++)

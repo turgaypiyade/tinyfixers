@@ -80,3 +80,8 @@ TFIOSBuild/
 .vscode/
 *.blend
 *.blend1
+
+# Firebase Mac-Editor native bundle (>100MB, GitHub limiti). Yeni makinede
+# Firebase SDK unitypackage yeniden import edilerek geri gelir; build'e girmez.
+Assets/Firebase/Plugins/x86_64/FirebaseCppApp-*.bundle
+Assets/Firebase/Plugins/x86_64/FirebaseCppApp-*.bundle.meta

@@ -43,6 +43,11 @@ public sealed class BottomTabController : MonoBehaviour
     [Tooltip("Açılışta seçili sekme index'i (örn HOME).")]
     [SerializeField] private int defaultIndex = 2;
 
+    [Header("Sadece HOME'da görünür öğeler")]
+    [Tooltip("HOME dışı sekmelerde gizlenecek main-menu overlay'leri: RightEventPanel, üst HUD, " +
+             "event panelleri vb. HOME'a dönünce geri gelir.")]
+    [SerializeField] private GameObject[] homeOnlyElements;
+
     // Her tab'ın sahnedeki "seçili değil" hâli (default) — Awake'te yakalanır.
     private readonly List<Vector2> iconBasePos = new();
     private readonly List<Vector3> iconBaseScale = new();
@@ -69,6 +74,10 @@ public sealed class BottomTabController : MonoBehaviour
     private void Start()
     {
         Select(Mathf.Clamp(defaultIndex, 0, Mathf.Max(0, tabs.Count - 1)), force: true);
+
+        // Başka sahneden "marketi aç" istendiyse (ör. 01_Game fail popup → Satın Al),
+        // default sekmeden sonra market sekmesine geç.
+        MarketNavigator.ConsumePendingIfAny(this);
     }
 
     public void Select(int index) => Select(index, force: false);
@@ -85,6 +94,12 @@ public sealed class BottomTabController : MonoBehaviour
             bool selected = i == index;
             ApplyState(i, selected);
         }
+
+        // HOME dışı sekmelerde main-menu overlay'lerini (RightEventPanel vb.) gizle.
+        bool onHome = index == defaultIndex;
+        if (homeOnlyElements != null)
+            foreach (var go in homeOnlyElements)
+                if (go != null) go.SetActive(onHome);
     }
 
     private void ApplyState(int i, bool selected)

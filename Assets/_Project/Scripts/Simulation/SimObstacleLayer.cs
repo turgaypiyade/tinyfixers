@@ -51,6 +51,73 @@ public sealed class SimObstacleLayer : ISimObstacleQuery
             int hits = Mathf.Max(1, def != null ? def.hits : 1);
             _remaining[origin] = hits;
         }
+
+        // Çok-hücreli obstacle'lar asset'te obstacles[]'a değil ayrı dizilerde tutulur
+        // (oyun runtime'da stamp'ler). Sim de aynısını yapmalı, yoksa Tube/Magnet/Safe
+        // levellarında hedef asla dolmaz (yanlış %0).
+        StampMultiCellObstacles(level);
+    }
+
+    private void StampMultiCellObstacles(LevelData level)
+    {
+        if (level.tubes != null)
+            foreach (var t in level.tubes) StampTube(t);
+        if (level.magnets != null)
+            foreach (var m in level.magnets) StampMagnet(m);
+        if (level.safes != null)
+            foreach (var sf in level.safes) StampSafe(sf);
+    }
+
+    private void StampTube(TubeEntry t)
+    {
+        int ox = t.originCellIndex % _width, oy = t.originCellIndex / _width;
+        int dx = t.direction == TubeDirection.Left ? -1 : t.direction == TubeDirection.Right ? 1 : 0;
+        int dy = t.direction == TubeDirection.Up   ? -1 : t.direction == TubeDirection.Down  ? 1 : 0;
+        for (int i = 0; i < Mathf.Max(2, t.length); i++)
+        {
+            int cx = ox + dx * i, cy = oy + dy * i;
+            if (!InBounds(cx, cy)) break;
+            Stamp(Idx(cx, cy), t.originCellIndex, ObstacleId.Tube);
+        }
+        SetRemaining(t.originCellIndex, DefHits(ObstacleId.Tube, 3));
+    }
+
+    private void StampMagnet(MagnetEntry m)
+    {
+        if (m.pathCellIndices == null || m.pathCellIndices.Length == 0) return;
+        int origin = m.pathCellIndices[0];
+        foreach (int cell in m.pathCellIndices) Stamp(cell, origin, ObstacleId.Magnet);
+        SetRemaining(origin, DefHits(ObstacleId.Magnet, 1));
+    }
+
+    private void StampSafe(SafeEntry sf)
+    {
+        int ox = sf.originCellIndex % _width, oy = sf.originCellIndex / _width;
+        for (int dy = 0; dy < Mathf.Max(1, sf.height); dy++)
+            for (int dx = 0; dx < Mathf.Max(1, sf.width); dx++)
+            {
+                int cx = ox + dx, cy = oy + dy;
+                if (InBounds(cx, cy)) Stamp(Idx(cx, cy), sf.originCellIndex, ObstacleId.Safe);
+            }
+        SetRemaining(sf.originCellIndex, Mathf.Max(1, sf.redHits + sf.yellowHits + sf.greenHits));
+    }
+
+    private void Stamp(int cell, int origin, ObstacleId id)
+    {
+        if (cell < 0 || cell >= _obstacles.Length) return;
+        _obstacles[cell] = (int)id;
+        _origins[cell]   = origin;
+    }
+
+    private void SetRemaining(int origin, int hits)
+    {
+        if (origin >= 0 && origin < _remaining.Length) _remaining[origin] = Mathf.Max(1, hits);
+    }
+
+    private int DefHits(ObstacleId id, int fallback)
+    {
+        var def = _lib != null ? _lib.Get(id) : null;
+        return Mathf.Max(1, def != null ? def.hits : fallback);
     }
 
     // ── ISimObstacleQuery ────────────────────────────────────────────────────
@@ -59,6 +126,12 @@ public sealed class SimObstacleLayer : ISimObstacleQuery
     {
         if (!InBounds(x, y)) return false;
         return (ObstacleId)_obstacles[Idx(x, y)] != ObstacleId.None;
+    }
+
+    public ObstacleId ObstacleIdAt(int x, int y)
+    {
+        if (!InBounds(x, y)) return ObstacleId.None;
+        return (ObstacleId)_obstacles[Idx(x, y)];
     }
 
     public bool IsMovableObstacleAt(int x, int y)

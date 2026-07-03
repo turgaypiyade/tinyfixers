@@ -1,0 +1,128 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80dd4e5cbb47c480c87c9a2a957e4bd3, type: 3}
+  m_Name: ShopCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::ShopCatalog
+  sections:
+  - title: "\xD6zel Teklifler"
+    bandStyle: 1
+    offers:
+    - id: special_2000
+      displayName: "\xD6zel Teklif"
+      heroIcon: {fileID: 0}
+      heroAmount: 2000
+      contents:
+      - icon: {fileID: 0}
+        kind: 3
+        amount: 1
+        booster: 1
+        durationHours: 1
+        showInfinite: 0
+      - icon: {fileID: 0}
+        kind: 3
+        amount: 1
+        booster: 2
+        durationHours: 1
+        showInfinite: 0
+      - icon: {fileID: 0}
+        kind: 3
+        amount: 1
+        booster: 3
+        durationHours: 1
+        showInfinite: 0
+      - icon: {fileID: 0}
+        kind: 4
+        amount: 1
+        booster: 1
+        durationHours: 1
+        showInfinite: 0
+      availability: 0
+      cooldownHours: 24
+      priceType: 0
+      priceLabel: 99,99 TL
+      priceAmount: 0
+  - title: "Mega F\u0131rsatlar"
+    bandStyle: 0
+    offers:
+    - id: mega_5000
+      displayName: "Prestij Kupas\u0131"
+      heroIcon: {fileID: 0}
+      heroAmount: 5000
+      contents:
+      - icon: {fileID: 0}
+        kind: 3
+        amount: 5
+        booster: 1
+        durationHours: 1
+        showInfinite: 0
+      - icon: {fileID: 0}
+        kind: 3
+        amount: 5
+        booster: 4
+        durationHours: 1
+        showInfinite: 0
+      availability: 0
+      cooldownHours: 24
+      priceType: 0
+      priceLabel: 449,99 TL
+      priceAmount: 0
+  - title: Coin Paketleri
+    bandStyle: 0
+    offers:
+    - id: boost_pack_coins
+      displayName: Booster Paketi
+      heroIcon: {fileID: 0}
+      heroAmount: 0
+      contents:
+      - icon: {fileID: 0}
+        kind: 3
+        amount: 3
+        booster: 1
+        durationHours: 1
+        showInfinite: 0
+      availability: 0
+      cooldownHours: 24
+      priceType: 1
+      priceLabel: 99,99 TL
+      priceAmount: 300
+    - id: coins_for_stars
+      displayName: "Y\u0131ld\u0131zla Coin"
+      heroIcon: {fileID: 0}
+      heroAmount: 500
+      contents: []
+      availability: 0
+      cooldownHours: 24
+      priceType: 2
+      priceLabel: 99,99 TL
+      priceAmount: 50
+    - id: free_gift
+      displayName: "G\xFCnl\xFCk Hediye"
+      heroIcon: {fileID: 0}
+      heroAmount: 0
+      contents:
+      - icon: {fileID: 0}
+        kind: 0
+        amount: 100
+        booster: 1
+        durationHours: 1
+        showInfinite: 0
+      - icon: {fileID: 0}
+        kind: 2
+        amount: 1
+        booster: 1
+        durationHours: 1
+        showInfinite: 0
+      availability: 1
+      cooldownHours: 24
+      priceType: 3
+      priceLabel: 99,99 TL
+      priceAmount: 0

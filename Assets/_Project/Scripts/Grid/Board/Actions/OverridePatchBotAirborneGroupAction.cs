@@ -609,6 +609,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         }
 
         board.RefreshAllSortingOrders();
+        board.RequestResolveAfterActionSequence();
     }
 
     private IEnumerator ExecutePulseCoreImpactAndFinalCascade(
@@ -693,6 +694,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         }
 
         board.RefreshAllSortingOrders();
+        board.RequestResolveAfterActionSequence();
     }
 
     /// <summary>

@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0a626772fcd2404292c3811fe3f7358, type: 3}
+  m_Name: UITheme
+  m_EditorClassIdentifier: Assembly-CSharp::UITheme
+  screenBackground: {r: 0.16862746, g: 0.13725491, b: 0.3137255, a: 1}
+  panelSurface: {r: 0.31764707, g: 0.27058825, b: 0.54901963, a: 1}
+  creamSurface: {r: 0.9529412, g: 0.9137255, b: 0.84705883, a: 1}
+  headerBand: {r: 0.43137255, g: 0.32941177, b: 0.70980394, a: 1}
+  specialBand: {r: 0.5568628, g: 0.12941177, b: 0.3137255, a: 1}
+  accentAmber: {r: 1, g: 0.69803923, b: 0.24313726, a: 1}
+  goldTrim: {r: 0.9607843, g: 0.6509804, b: 0.13725491, a: 1}
+  ctaGreen: {r: 0.30980393, g: 0.7882353, b: 0.35686275, a: 1}
+  priceGreen: {r: 0.35686275, g: 0.81960785, b: 0.35686275, a: 1}
+  lifeRed: {r: 1, g: 0.3019608, b: 0.36862746, a: 1}
+  infoBlue: {r: 0.21176471, g: 0.6509804, b: 0.8784314, a: 1}
+  textLight: {r: 1, g: 1, b: 1, a: 1}
+  textSub: {r: 0.7882353, g: 0.74509805, b: 0.91764706, a: 1}
+  textOnCream: {r: 0.3529412, g: 0.24313726, b: 0.16862746, a: 1}
+  textHighlight: {r: 0.30980393, g: 0.7882353, b: 0.35686275, a: 1}
+  screenPadding: 24
+  sectionSpacing: 20
+  itemSpacing: 12
+  cardCornerRadius: 24
+  panelBackground: {fileID: 21300000, guid: 476fa6b6f46db40208ffc4e887721622, type: 3}
+  cardBackground: {fileID: 21300000, guid: 476fa6b6f46db40208ffc4e887721622, type: 3}
+  buttonBackground: {fileID: 21300000, guid: be72602cd3e1d447cae5cd7bf189e96c, type: 3}
+  sectionHeaderBackground: {fileID: 21300000, guid: 476fa6b6f46db40208ffc4e887721622, type: 3}
+  progressFill: {fileID: 21300000, guid: be72602cd3e1d447cae5cd7bf189e96c, type: 3}
+  coinIcon: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
+  starIcon: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
+  heartIcon: {fileID: 21300000, guid: 6cf1f4c3f7e1b4091b6e777688baf04e, type: 3}
+  headingFont: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  bodyFont: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

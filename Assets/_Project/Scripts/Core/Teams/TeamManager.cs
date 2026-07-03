@@ -125,6 +125,10 @@ public class TeamManager : MonoBehaviour
 
     private static string GenerateTeamName(int index)
     {
+        // Büyük takım isim havuzu (Resources/SeedData/team_names) varsa oradan benzersiz isim ver.
+        if (NamePool.HasTeams)
+            return NamePool.NextTeamName();
+
         string adj  = TeamAdjectives[index % TeamAdjectives.Length];
         string noun = TeamNouns[(index / TeamAdjectives.Length) % TeamNouns.Length];
         return $"{adj} {noun} #{index + 1}";

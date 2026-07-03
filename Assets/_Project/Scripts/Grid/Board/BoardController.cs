@@ -67,7 +67,8 @@ public class BoardController : MonoBehaviour
     [SerializeField, Min(0.05f)] private float entranceSlideDuration = 0.5f;
     [Tooltip("Başlangıçta board'un sağa kaydırılma mesafesi (px). 0 = otomatik (board genişliği).")]
     [SerializeField, Min(0f)] private float entranceSlideOffsetX = 0f;
-    [SerializeField, Min(0f)] private float entranceStartDelay = 0.05f;
+    [Tooltip("Loading ekranı kalkıp arka plan göründükten sonra, board slide'ı başlamadan önceki bekleme (sn). Örn. 1 = arka planı 1 sn gör, sonra board kaysın.")]
+    [SerializeField, Min(0f)] private float entranceStartDelay = 1.0f;
 
     [Header("Special Combos")]
     [SerializeField] private int patchBotPulseComboSize = 4;
@@ -203,6 +204,8 @@ public class BoardController : MonoBehaviour
     public bool IsBusy => CurrentState == BoardState.Resolving;
     public bool IsActionSequencePlaying => actionSequencer != null && actionSequencer.IsPlaying;
     public event Action OnBecameIdle;
+    private bool resolveAfterActionSequenceRequested;
+    private bool resolveAfterActionSequenceRunning;
 
     // BossDuel/Battlefield: oyuncu HP'si 0'a düşünce gibi, hamle/goal'den bağımsız
     // kesin kayıp tetiklenmesi için. LevelEndSimplePopupController dinler.
@@ -560,7 +563,40 @@ public class BoardController : MonoBehaviour
         }
     }
 
-    public void OnActionSequenceFinished() { }
+    public void OnActionSequenceFinished()
+    {
+        TryStartResolveAfterActionSequence();
+    }
+
+    internal void RequestResolveAfterActionSequence()
+    {
+        resolveAfterActionSequenceRequested = true;
+        TryStartResolveAfterActionSequence();
+    }
+
+    private void TryStartResolveAfterActionSequence()
+    {
+        if (!resolveAfterActionSequenceRequested || resolveAfterActionSequenceRunning)
+            return;
+
+        if (CurrentState == BoardState.Locked || IsBusy || BlockingBackgroundJobs > 0 || IsActionSequencePlaying)
+            return;
+
+        resolveAfterActionSequenceRunning = true;
+        StartCoroutine(ResolveAfterActionSequenceRoutine());
+    }
+
+    private IEnumerator ResolveAfterActionSequenceRoutine()
+    {
+        resolveAfterActionSequenceRequested = false;
+
+        BeginBusy();
+        yield return ResolveBoardPublic();
+        EndBusy();
+
+        resolveAfterActionSequenceRunning = false;
+        TryStartResolveAfterActionSequence();
+    }
 
     // Starts a board action immediately as a background job, running concurrently
     // with any currently-playing ActionSequencer action.
@@ -745,13 +781,18 @@ public class BoardController : MonoBehaviour
             // Fire regardless of whether state was Locked — ensures RunAfterIdleRoutine
             // callbacks always complete even if SetInputLocked was called mid-resolve.
             OnBecameIdle?.Invoke();
+            TryStartResolveAfterActionSequence();
         }
     }
 
     public void SetInputLocked(bool isLocked)
     {
         if (isLocked) CurrentState = BoardState.Locked;
-        else if (CurrentState == BoardState.Locked) CurrentState = BoardState.Idle;
+        else if (CurrentState == BoardState.Locked)
+        {
+            CurrentState = BoardState.Idle;
+            TryStartResolveAfterActionSequence();
+        }
     }
 
     public void ForceFullBoardSync()
@@ -1234,20 +1275,26 @@ public class BoardController : MonoBehaviour
         if (wasLiveInGrid)
             ClearCell(x, y);
 
+        var fxType = special switch
+        {
+            TileSpecial.LineH => TileType.LineEmitter_H,
+            TileSpecial.LineV => TileType.LineEmitter_V,
+            _                 => tileType
+        };
+
         if (clearedByType != null)
         {
-            var effectiveType = special switch
-            {
-                TileSpecial.LineH => TileType.LineEmitter_H,
-                TileSpecial.LineV => TileType.LineEmitter_V,
-                _                 => tileType
-            };
-            clearedByType.TryGetValue(effectiveType, out int c);
-            clearedByType[effectiveType] = c + 1;
+            clearedByType.TryGetValue(fxType, out int c);
+            clearedByType[fxType] = c + 1;
         }
 
         if (tile != null && tile)
+        {
+            // Progress-event "+1" FX'i taşın yanında doğsun diye dünya pozisyonunu yayınla
+            // (destroy'dan ÖNCE). Sayım NotifyTilesCleared'da; bu sadece görsel ipucu.
+            GameEventBus.EmitTileClearedAt(fxType, tile.transform.position);
             Destroy(tile.gameObject);
+        }
     }
 
     internal void ClearCellDataOnly(Vector2Int c)
@@ -1264,7 +1311,12 @@ public class BoardController : MonoBehaviour
     }
 
     internal void ClearCellVisualOnly(Vector2Int c, TileType type, TileView t)
-    { if (t != null && t.gameObject != null) { Destroy(t.gameObject); NotifyTilesCleared(type, 1); } }
+    {
+        if (t == null || t.gameObject == null) return;
+        GameEventBus.EmitTileClearedAt(type, t.transform.position);   // "+1" FX pozisyonu
+        Destroy(t.gameObject);
+        NotifyTilesCleared(type, 1);
+    }
 
     // ═══════════════════════════════════════════════════════════════
     //  Input / Click / Drag
@@ -2473,8 +2525,15 @@ public class BoardController : MonoBehaviour
         if (settleRoutine != null)
             yield return settleRoutine;   // offscreen'de oturur (entranceInProgress restore'u bastırır)
 
+        // Ana menüden gelirken LoadingScreenManager ekranı kaplıyor. Slide onun
+        // arkasında ziyan olmasın diye, giriş animasyonunu loading ekranı tamamen
+        // kalkana kadar beklet (fade dahil). Loading yoksa (ör. editörde direkt
+        // sahne) IsVisible zaten false, anında devam eder.
         if (slide)
         {
+            while (LoadingScreenManager.IsVisible)
+                yield return null;
+
             if (entranceStartDelay > 0f)
                 yield return new WaitForSeconds(entranceStartDelay);
 
@@ -2638,12 +2697,15 @@ public class BoardController : MonoBehaviour
         if (!DestroyedObstacleShouldClearTileContent(obstacleId))
             return;
 
-        // MovableObstacle kırıldığında o hücredeki tile'ı da yok et
+        // MovableObstacle kırıldığında o hücredeki tile'ı da yok et.
+        // Önce destroy (pozisyon FX'i ClearAndDestroyTile içinde yayınlanır), sonra sayım —
+        // böylece "+1" driver'ın buffer'ına gain event'inden ÖNCE düşer.
         var tile = tiles[ox, oy];
         if (tile != null)
         {
-            NotifyTilesCleared(tile.GetTileType(), 1);
+            var clearedType = tile.GetTileType();
             ClearAndDestroyTile(tile);
+            NotifyTilesCleared(clearedType, 1);
         }
     }
 
