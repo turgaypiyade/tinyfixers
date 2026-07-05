@@ -32,12 +32,12 @@ MonoBehaviour:
   itemSpacing: 12
   cardCornerRadius: 24
   panelBackground: {fileID: 21300000, guid: 476fa6b6f46db40208ffc4e887721622, type: 3}
-  cardBackground: {fileID: 21300000, guid: 476fa6b6f46db40208ffc4e887721622, type: 3}
+  cardBackground: {fileID: 21300000, guid: c2dddd86abf834e60854c27b9e4672d0, type: 3}
   buttonBackground: {fileID: 21300000, guid: be72602cd3e1d447cae5cd7bf189e96c, type: 3}
   sectionHeaderBackground: {fileID: 21300000, guid: 476fa6b6f46db40208ffc4e887721622, type: 3}
   progressFill: {fileID: 21300000, guid: be72602cd3e1d447cae5cd7bf189e96c, type: 3}
   coinIcon: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
   starIcon: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
   heartIcon: {fileID: 21300000, guid: 6cf1f4c3f7e1b4091b6e777688baf04e, type: 3}
-  headingFont: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  bodyFont: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  headingFont: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
+  bodyFont: {fileID: 11400000, guid: 5744a8aefd63d471b8967c121098f41d, type: 2}

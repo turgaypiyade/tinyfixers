@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 /// <summary>
 /// Sahte liderlik verisi. Kendi satırın gerçek (PlayerProfile adı + yıldız puanı);
@@ -18,10 +19,27 @@ public sealed class MockLeaderboardService : ILeaderboardService
         "SinanOzcan", "Yusuf", "Alex", "tuurr", "mehmet42", "ZeynepX"
     };
 
-    public List<LeaderboardEntry> GetEntries(LeaderboardTab tab)
+    private static readonly string[] TeamNames =
     {
-        // Sekmeye göre tohum kaydır → her sekme farklı sıralama görünür.
-        int seed = (int)tab * 7;
+        "BESIKTAS", "Badboyz", "TURKIYEe", "ASiLZADE", "FENERBAHCE", "GALATASARAYaile",
+        "East Coast", "all for you", "Together again", "Minions", "ALPHA TEAM", "Indiana"
+    };
+
+    public string[] GetSubFilters(LeaderboardTab tab) => tab switch
+    {
+        LeaderboardTab.Friends => new[] { "Arkadaş Listesi", "Arkadaş Ekle" },
+        LeaderboardTab.Players => new[] { "Dünya", "Türkiye" },
+        LeaderboardTab.Team    => new[] { "Dünya", "Türkiye" },
+        _                      => Array.Empty<string>(),
+    };
+
+    public List<LeaderboardEntry> GetEntries(LeaderboardTab tab, int subFilter)
+    {
+        if (tab == LeaderboardTab.Team)
+            return TeamEntries(subFilter);
+
+        // Sekme + alt-filtre tohumu → her görünüm farklı liste.
+        int seed = (int)tab * 7 + subFilter * 13;
         int count = tab == LeaderboardTab.Friends ? 6 : 12;
 
         var list = new List<LeaderboardEntry>();
@@ -32,21 +50,55 @@ public sealed class MockLeaderboardService : ILeaderboardService
             {
                 rank = i + 1,
                 playerName = Names[(i + seed) % Names.Length],
-                subtitle = "Bölüm " + (200 - i * 3),
-                score = UnityEngine.Mathf.Max(1, score),
+                subtitle = subFilter == 1 ? "Türkiye" : "Dünya",
+                score = Mathf.Max(1, score),
+                chapter = 4400 - (i * 37 + seed) % 900,
             });
         }
 
         // Kendi satırını araya gerçek veriyle yerleştir (örn 5. sıra).
-        int selfRank = UnityEngine.Mathf.Clamp(5, 1, list.Count);
+        int selfRank = Mathf.Clamp(5, 1, list.Count);
         list[selfRank - 1] = new LeaderboardEntry
         {
             rank = selfRank,
             playerName = PlayerProfile.PlayerName,
             subtitle = "Sen",
-            score = UnityEngine.Mathf.Max(1, PlayerWallet.TotalStars),
+            score = Mathf.Max(1, PlayerWallet.TotalStars),
             isSelf = true,
+            chapter = PlayerPrefs.GetInt("current_level", 1),
         };
+        return list;
+    }
+
+    private List<LeaderboardEntry> TeamEntries(int subFilter)
+    {
+        int seed = 3 + subFilter * 11;
+        var list = new List<LeaderboardEntry>();
+        for (int i = 0; i < 10; i++)
+        {
+            int members = 50 - (i + seed) % 4;
+            list.Add(new LeaderboardEntry
+            {
+                rank = i + 1,
+                playerName = TeamNames[(i + seed) % TeamNames.Length],
+                subtitle = "",
+                score = 241103 - i * 17022 - (seed * 913) % 4000,
+                capacityCurrent = members,
+                capacityMax = 50,
+            });
+        }
+
+        // Kendi takımın: alt sıralarda, yeşil vurgulu (pinned satır controller'da).
+        list.Add(new LeaderboardEntry
+        {
+            rank = 667,
+            playerName = PlayerTeamState.TeamName,
+            subtitle = "Senin takımın",
+            score = 2458,
+            isSelf = true,
+            capacityCurrent = 6,
+            capacityMax = 50,
+        });
         return list;
     }
 

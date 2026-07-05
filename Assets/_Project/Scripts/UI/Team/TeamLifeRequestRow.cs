@@ -46,7 +46,7 @@ public sealed class TeamLifeRequestRow : MonoBehaviour
 
         if (theme == null) return;
         UITheme.ApplySurface(panel, theme.cardBackground, theme.creamSurface);
-        theme.ApplyText(nameText, theme.textOnCream, heading: true);
+        theme.ApplyText(nameText, Color.black, heading: true);   // isim siyah (bold/boyut prefab'tan)
         theme.ApplyText(tagText, theme.lifeRed, heading: true);
         theme.ApplyText(progressText, theme.textOnCream, heading: true);
         UITheme.ApplySurface(progressFill, theme.progressFill, theme.ctaGreen);

@@ -24,8 +24,17 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
 
     private static FirebaseFirestore Db => FirebaseFirestore.DefaultInstance;
 
-    public List<LeaderboardEntry> GetEntries(LeaderboardTab tab)
+    // subFilter (Dünya/Türkiye) v1'de yok sayılır — tek havuz. Bölgesel board sonra.
+    public List<LeaderboardEntry> GetEntries(LeaderboardTab tab, int subFilter)
         => cache.TryGetValue(tab, out var list) ? list : new List<LeaderboardEntry>();
+
+    public string[] GetSubFilters(LeaderboardTab tab) => tab switch
+    {
+        LeaderboardTab.Friends => new[] { "Arkadaş Listesi", "Arkadaş Ekle" },
+        LeaderboardTab.Players => new[] { "Dünya", "Türkiye" },
+        LeaderboardTab.Team    => new[] { "Dünya", "Türkiye" },
+        _                      => System.Array.Empty<string>(),
+    };
 
     public string GetTimeLabel(LeaderboardTab tab)
         => tab == LeaderboardTab.Weekly ? WeeklyRemainingLabel() : "";
@@ -96,6 +105,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
             subtitle = "Sen",
             score = PlayerWallet.TotalStars,
             isSelf = true,
+            chapter = PlayerPrefs.GetInt("current_level", 1),
         });
         return list;
     }
@@ -155,6 +165,8 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
                 playerName = NamePool.TeamAt(i),
                 subtitle = members + "/" + TeamCapacity,
                 score = BotProgression.TeamWeeklyScore(i),
+                capacityCurrent = members,
+                capacityMax = TeamCapacity,
             });
         }
         list.Add(new LeaderboardEntry
@@ -163,6 +175,8 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
             subtitle = "Senin takımın",
             score = BotProgression.TeamWeeklyScore(9999),
             isSelf = true,
+            capacityCurrent = 6,
+            capacityMax = TeamCapacity,
         });
         return Rank(list);
     }

@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a6870e6b2855477eb5f157d77f8f37a, type: 3}
+  m_Name: LeaderboardSkin
+  m_EditorClassIdentifier: Assembly-CSharp::LeaderboardSkin
+  screenBackground: {fileID: 21300000, guid: 20eed42565b7c407b9b5860d27b1b50b, type: 3}
+  rowBackground: {fileID: 21300000, guid: c2dddd86abf834e60854c27b9e4672d0, type: 3}
+  selfRowBackground: {fileID: 21300000, guid: f9eb7cfb87e7b4aba9454afd3d034302, type: 3}
+  topThreeCardBackground: {fileID: 21300000, guid: f80ba7874665f413881bc2953990bb13, type: 3}
+  medalGold: {fileID: 21300000, guid: 8a71db147957a441a9d6ab1753d82371, type: 3}
+  medalSilver: {fileID: 21300000, guid: 900a69d3f984d4e4189445e1ba9611bf, type: 3}
+  medalBronze: {fileID: 21300000, guid: 61387709845f74910936c4ad8308de2b, type: 3}
+  rankPlate: {fileID: 21300000, guid: c66cba267404846fe9c633b0562801b1, type: 3}
+  avatarFrame: {fileID: 0}
+  teamEmblemFrame: {fileID: 0}
+  tabSelected: {fileID: 21300000, guid: c2b3e9751574045498572a402659bf6e, type: 3}
+  tabUnselected: {fileID: 21300000, guid: 4adaa19d28cf2486a839bb32749e0f93, type: 3}
+  togglePillSelected: {fileID: 21300000, guid: 4bb133f92d45046778e8dc7727978113, type: 3}
+  togglePillUnselected: {fileID: 21300000, guid: c1e516b2264eb43f79ce89a92a29c29e, type: 3}
+  connectedBand: {fileID: 21300000, guid: 908f20bcff4e5433cabd245305661735, type: 3}
+  tabSeamPatch: {fileID: 21300000, guid: f24640bba15644d4d8c99824b2605559, type: 3}
+  timerChip: {fileID: 21300000, guid: d6306d649f1174d0cb2b1cdcfe51e620, type: 3}
+  capacityChip: {fileID: 21300000, guid: 0a270cfbd9cbd482d8c01955a3c0f31e, type: 3}
+  trophyChip: {fileID: 0}
+  weeklyHeaderBand: {fileID: 0}
+  giftTier1: {fileID: 21300000, guid: bb16f926302314d70a4c1c84d80d0fbe, type: 3}
+  giftTier2: {fileID: 21300000, guid: 2da17fdccfb524a009821e8a1d5e6987, type: 3}
+  giftTier3: {fileID: 21300000, guid: de34a60528e624244800dffeedef3c5c, type: 3}
+  defaultRowBanner: {fileID: 0}
+  titleTopOffset: 70
+  timerChipPos: {x: 16, y: -6}
+  timerChipSize: {x: 150, y: 44}
+  tabsTopY: 100
+  tabsHeight: 120
+  tabsSideMargin: 8
+  tabGap: 4
+  bandTopY: 190
+  bandHeight: 100
+  bandSideOverflow: 24
+  tabLabelTopPadding: 12
+  seamPatchInset: 4
+  seamPatchHeight: 40
+  selectedTabRaise: 8
+  listTopOffset: 300
+  listBottomOffset: 130
+  togglePillSize: {x: 340, y: 62}
+  togglePillSpread: 190
+  rowHeight: 150
+  weeklyTopThreeRowHeight: 282
+  giftIconSize: 110
+  rankBadgeSize: 100
+  rankBadgeX: 12
+  avatarX: 96
+  avatarSize: 130
+  infoX: 206
+  scoreRightPad: 16

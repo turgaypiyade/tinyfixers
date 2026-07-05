@@ -26,7 +26,7 @@ public sealed class TeamChatRow : MonoBehaviour
 
         if (theme == null) return;
         UITheme.ApplySurface(bubble, theme.cardBackground, theme.creamSurface);
-        theme.ApplyText(senderText, theme.headerBand, heading: true);
+        theme.ApplyText(senderText, Color.black, heading: true);   // isim siyah (bold/boyut prefab'tan)
         theme.ApplyText(messageText, theme.textOnCream);
         theme.ApplyText(timeText, theme.textSub);
     }

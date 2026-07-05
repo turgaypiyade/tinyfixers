@@ -44,6 +44,42 @@ public static class MockupUI
 
     public static Sprite LoadSprite(string path) => AssetDatabase.LoadAssetAtPath<Sprite>(path);
 
+    // ProfileScreen'deki AvatarCircle'ın birebir kopyası: ProfileAvatarBG çerçeve +
+    // soft_circle mask (showMaskGraphic:0) + iç AvatarImage. Dönen Image = iç avatar;
+    // runtime sprite'ı buna yazılır. root = dış çember (konumlandırma/LayoutElement için).
+    public static Image BuildAvatarCircle(string name, Transform parent, float size, out RectTransform root)
+    {
+        var frameSprite = LoadSprite("Assets/_Project/Art/UI/ProfileUI/ProfileAvatarBG.png");
+        var maskSprite  = LoadSprite("Assets/_Project/Art/Icons/PulseCoreEffectsIcon/soft_circle.png");
+
+        var frame = NewImage(name, parent, Color.white);
+        root = frame.rectTransform;
+        root.sizeDelta = new Vector2(size, size);
+        frame.sprite = frameSprite;
+        frame.preserveAspect = true;
+        frame.raycastTarget = false;
+
+        // Daire kırpma katmanı
+        var maskRt = NewRect("Mask", root);
+        Stretch(maskRt);
+        var maskImg = maskRt.gameObject.AddComponent<Image>();
+        maskImg.sprite = maskSprite;
+        maskImg.raycastTarget = false;
+        var mask = maskRt.gameObject.AddComponent<Mask>();
+        mask.showMaskGraphic = false;
+
+        // İç avatar (kırpılır). Profildeki oran: 300/350.
+        var avatar = NewImage("AvatarImage", maskRt, Color.white);
+        var ar = avatar.rectTransform;
+        ar.anchorMin = ar.anchorMax = new Vector2(0.5f, 0.5f);
+        ar.pivot = new Vector2(0.5f, 0.5f);
+        ar.anchoredPosition = Vector2.zero;
+        ar.sizeDelta = new Vector2(size, size) * (300f / 350f);
+        avatar.preserveAspect = true;
+        avatar.raycastTarget = false;
+        return avatar;
+    }
+
     /// <summary>Mock avatar havuzu: TopHUD robot yüzleri + yükleme robotları. Bulunanları döner.</summary>
     public static Sprite[] AvatarPool()
     {

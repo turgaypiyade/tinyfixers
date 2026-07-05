@@ -13,8 +13,15 @@ public sealed class LeaderboardEntry
     public string subtitle;     // takım adı / ülke vb.
     public int score;
     public Sprite avatar;
-    public Sprite bannerArt;    // top-3 büyük kart görseli (opsiyonel)
+    public Sprite bannerArt;    // satırın sağındaki dekoratif art (opsiyonel)
     public bool isSelf;
+
+    // Oyuncu satırları: bulunduğu bölüm ("Bölüm 4401"). 0 = gösterme.
+    public int chapter;
+
+    // Takım satırları: üye doluluğu ("49/50"). max 0 = takım değil, çip gizlenir.
+    public int capacityCurrent;
+    public int capacityMax;
 }
 
 /// <summary>
@@ -23,8 +30,18 @@ public sealed class LeaderboardEntry
 /// </summary>
 public interface ILeaderboardService
 {
-    /// <summary>Şu an eldeki (cache'lenmiş) sıralı liste. Mock anında dolu; Firebase Fetch sonrası dolar.</summary>
-    List<LeaderboardEntry> GetEntries(LeaderboardTab tab);
+    /// <summary>
+    /// Şu an eldeki (cache'lenmiş) sıralı liste. subFilter = sekmenin alt-toggle indexi
+    /// (örn Oyuncular: 0=Dünya 1=Türkiye; Arkadaşlar: 0=Liste 1=Ekle). Toggle'ı olmayan
+    /// sekmede 0 geçilir.
+    /// </summary>
+    List<LeaderboardEntry> GetEntries(LeaderboardTab tab, int subFilter);
+
+    /// <summary>
+    /// Sekmenin alt-toggle etiketleri (örn {"Dünya","Türkiye"}).
+    /// Boş/null dizi = bu sekmede toggle çubuğu gizlenir (örn Haftalık).
+    /// </summary>
+    string[] GetSubFilters(LeaderboardTab tab);
 
     /// <summary>Yarışmanın kalan süre etiketi (örn "2g 20s", "Bitti").</summary>
     string GetTimeLabel(LeaderboardTab tab);

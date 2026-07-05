@@ -45,15 +45,15 @@ public static class TeamMockupSetup
     private static void BuildChatRowPrefab(UITheme theme)
     {
         var root = MockupUI.NewRect("TeamChatRow", null);
-        root.sizeDelta = new Vector2(820, 110);
-        MockupUI.LayoutElem(root.gameObject, preferredHeight: 110);
+        root.sizeDelta = new Vector2(820, 180);          // 150 avatarın sığması için yükseltildi
+        MockupUI.LayoutElem(root.gameObject, preferredHeight: 180);
         var h = MockupUI.HLayout(root.gameObject, 12);
         h.padding = new RectOffset(8, 8, 8, 8);
         var row = root.gameObject.AddComponent<TeamChatRow>();
 
-        var avatar = MockupUI.NewImage("Avatar", root, Color.white);
-        avatar.preserveAspect = true;
-        MockupUI.LayoutElem(avatar.gameObject, preferredWidth: 84, preferredHeight: 84);
+        // Avatar = ProfileScreen AvatarCircle kopyası, 150x150
+        var avatar = MockupUI.BuildAvatarCircle("AvatarCircle", root, 150f, out var avatarRoot);
+        MockupUI.LayoutElem(avatarRoot.gameObject, preferredWidth: 150, preferredHeight: 150);
 
         var bubble = MockupUI.NewRect("Bubble", root);
         var bubbleImg = bubble.gameObject.AddComponent<Image>();
@@ -64,7 +64,8 @@ public static class TeamMockupSetup
         var topRow = MockupUI.NewRect("TopRow", bubble);
         MockupUI.LayoutElem(topRow.gameObject, preferredHeight: 30);
         MockupUI.HLayout(topRow.gameObject, 8);
-        var sender = MockupUI.NewText("Sender", topRow, "Oyuncu", 26, theme.headerBand, TextAlignmentOptions.Left, theme.headingFont);
+        var sender = MockupUI.NewText("Sender", topRow, "Oyuncu", 36, Color.black, TextAlignmentOptions.Left, theme.headingFont);
+        sender.fontStyle = FontStyles.Bold;   // isim: siyah + bold + 10 punto büyük (26→36)
         var senderLE = MockupUI.LayoutElem(sender.gameObject); senderLE.flexibleWidth = 1;
         var time = MockupUI.NewText("Time", topRow, "3g", 20, theme.textSub, TextAlignmentOptions.Right, theme.bodyFont);
         MockupUI.LayoutElem(time.gameObject, preferredWidth: 120);
@@ -93,12 +94,13 @@ public static class TeamMockupSetup
 
         // Üst satır: avatar + isim + "Can İsteği!"
         var top = MockupUI.NewRect("Top", root);
-        MockupUI.LayoutElem(top.gameObject, preferredHeight: 56);
+        MockupUI.LayoutElem(top.gameObject, preferredHeight: 90);   // avatar circle'a yer
         MockupUI.HLayout(top.gameObject, 10);
-        var avatar = MockupUI.NewImage("Avatar", top, Color.white);
-        avatar.preserveAspect = true;
-        MockupUI.LayoutElem(avatar.gameObject, preferredWidth: 56, preferredHeight: 56);
-        var name = MockupUI.NewText("Name", top, "Oyuncu", 26, theme.textOnCream, TextAlignmentOptions.Left, theme.headingFont);
+        // Mini AvatarCircle (bu ikincil kartta 150 orantısız kaçtığı için 90; yapı/imaj aynı)
+        var avatar = MockupUI.BuildAvatarCircle("AvatarCircle", top, 90f, out var avatarRoot);
+        MockupUI.LayoutElem(avatarRoot.gameObject, preferredWidth: 90, preferredHeight: 90);
+        var name = MockupUI.NewText("Name", top, "Oyuncu", 36, Color.black, TextAlignmentOptions.Left, theme.headingFont);
+        name.fontStyle = FontStyles.Bold;   // isim: siyah + bold + 10 punto büyük (26→36)
         var nameLE = MockupUI.LayoutElem(name.gameObject); nameLE.flexibleWidth = 1;
         var tag = MockupUI.NewText("Tag", top, "Can İsteği!", 24, theme.lifeRed, TextAlignmentOptions.Right, theme.headingFont);
         MockupUI.LayoutElem(tag.gameObject, preferredWidth: 180);
