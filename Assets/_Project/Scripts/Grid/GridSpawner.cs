@@ -50,6 +50,9 @@ public class GridSpawner : MonoBehaviour
 
     [Header("Mud Overlay")]
     [SerializeField] private MudOverlayService mudOverlayService;
+
+    [Header("Rocket Basket")]
+    [SerializeField] private RocketBasketService rocketBasketService;
     [SerializeField] private Color runtimeBoardBg = new Color(0.78f, 0.88f, 0.97f, 1f);
     [SerializeField] private Color runtimeNormalCell = new Color(1f, 1f, 1f, 0.16f);
     [SerializeField] private RectTransform gridLinesRoot;
@@ -85,6 +88,13 @@ public class GridSpawner : MonoBehaviour
     // burada toplar; ObstacleStateService SetLevelData'da oluştuğu için kayıt SONRASINDA yapılır.
     private readonly System.Collections.Generic.List<(int cell, ObstacleId beneathId, int beneathOrigin, int overOrigin)>
         pendingStampedBeneath = new();
+
+    // Overlay altındaki obstacle'ı BAŞTAN göstermek için: stamp aşamasında toplanan beneath
+    // kayıtlarının kalıcı kopyası (pendingStampedBeneath register'da temizleniyor). Beneath
+    // view'ları overlay'in ARKASINA çizilir; overlay kırılınca reveal bu view'ı promote eder.
+    private readonly System.Collections.Generic.List<(int cell, ObstacleId beneathId, int beneathOrigin, int overOrigin)>
+        stampedBeneathVisuals = new();
+    private readonly Dictionary<int, Image> beneathViewsByCell = new();
 
     [Header("Obstacle Visual (UI)")]
     [SerializeField] private bool drawObstacles = true;
@@ -318,6 +328,7 @@ public class GridSpawner : MonoBehaviour
         ClearChildren(tilesRoot);
         obstacleViewsByOrigin.Clear();
         obstacleDefsByOrigin.Clear();
+        beneathViewsByCell.Clear();
         _chestViews.Clear();
         cellBgByIndex.Clear();
         cellBgImageByIndex.Clear();
@@ -330,6 +341,7 @@ public class GridSpawner : MonoBehaviour
         if (drawObstacles)
         {
             DrawObstacleVisuals();
+            DrawStampedBeneathVisuals();   // overlay altındaki obstacle'ı arkada baştan göster
             DrawMudOverlays();
             DrawTubeObstacles();
             DrawMagnetObstacles();
@@ -413,28 +425,36 @@ public class GridSpawner : MonoBehaviour
                     bool holdsTileCell = board.ObstacleStateService != null
                         && board.ObstacleStateService.HoldsTileAt(x, y);
 
-                    if (gravityIsolated[x, y] && !holdsTileCell)
-                        continue;
-
                     int idx = resolvedLevel.Index(x, y);
-                    TileType tileType = initialTypes[x, y];
 
-                    // İzole holdsTile hücresi SimulateInitialTypes'ta locked sayılıp default tip
-                    // (hep aynı) bırakıldı; bir sütun dolusu oil aynı taşı verirdi. Rastgele tip ver.
-                    if (gravityIsolated[x, y] && holdsTileCell
-                        && effectiveRandomPool != null && effectiveRandomPool.Length > 0)
-                        tileType = effectiveRandomPool[UnityEngine.Random.Range(0, effectiveRandomPool.Length)];
+                    // Designer'ın elle koyduğu pinned special (emitter) / pinned tile'ı ÖNCE oku.
+                    // Bunlar blocker'larla çevrili gravity-izole bir hücrede olsa bile spawn
+                    // EDİLMELİ — yoksa (örn. alt köşe emitter'ları) hiç yerleşmezdi ("2 eklendi,
+                    // gerisi eklenmedi" bug'ı).
                     TileSpecial pinnedSpecial = TileSpecial.None;
-
-                    if (resolvedLevel.pinnedTileTypes != null && idx < resolvedLevel.pinnedTileTypes.Length)
-                    {
-                        int pinVal = resolvedLevel.pinnedTileTypes[idx];
-                        if (pinVal > 0)
-                            tileType = (TileType)(pinVal - 1);
-                    }
-
                     if (resolvedLevel.pinnedSpecialTypes != null && idx < resolvedLevel.pinnedSpecialTypes.Length)
                         pinnedSpecial = (TileSpecial)resolvedLevel.pinnedSpecialTypes[idx];
+
+                    int pinnedTileVal = 0;
+                    if (resolvedLevel.pinnedTileTypes != null && idx < resolvedLevel.pinnedTileTypes.Length)
+                        pinnedTileVal = resolvedLevel.pinnedTileTypes[idx];
+
+                    bool hasPinned = pinnedSpecial != TileSpecial.None || pinnedTileVal > 0;
+
+                    if (gravityIsolated[x, y] && !holdsTileCell && !hasPinned)
+                        continue;
+
+                    TileType tileType = initialTypes[x, y];
+
+                    // İzole hücre (holdsTile veya pinned) SimulateInitialTypes'ta locked sayılıp
+                    // default tip (hep aynı) bırakıldı; bir sütun dolusu oil aynı taşı verirdi.
+                    // Rastgele tip ver (pinned tile type varsa aşağıda ezilir).
+                    if (gravityIsolated[x, y] && (holdsTileCell || hasPinned)
+                        && effectiveRandomPool != null && effectiveRandomPool.Length > 0)
+                        tileType = effectiveRandomPool[UnityEngine.Random.Range(0, effectiveRandomPool.Length)];
+
+                    if (pinnedTileVal > 0)
+                        tileType = (TileType)(pinnedTileVal - 1);
 
                     SpawnTile(x, y, tileType);
 
@@ -771,6 +791,9 @@ public class GridSpawner : MonoBehaviour
 
         int mudMaxHits = resolvedLevel.obstacleLibrary?.Get(ObstacleId.Mud)?.hits ?? 1;
         int remaining  = board?.ObstacleStateService?.GetRemainingHitsAt(x, y) ?? mudMaxHits;
+        // Overlay altında baştan çizilen mud kapalıyken üstteki obstacle'ın hit'ini okuyabilir;
+        // mud reveal'da full sayıldığından mudMaxHits'e clamp'le.
+        remaining = Mathf.Min(remaining, mudMaxHits);
         if (remaining <= 0) remaining = mudMaxHits;
 
         mudOverlayService.RegisterCell(x, y, view, remaining, mudMaxHits);
@@ -913,7 +936,73 @@ public class GridSpawner : MonoBehaviour
             foreach (var p in pendingStampedBeneath)
                 state.RegisterStampedBeneath(p.cell, p.beneathId, p.beneathOrigin, p.overOrigin);
 
+        // Beneath view'larını baştan çizebilmek için kalıcı kopya (pendingStampedBeneath temizlenir).
+        stampedBeneathVisuals.Clear();
+        stampedBeneathVisuals.AddRange(pendingStampedBeneath);
+
         pendingStampedBeneath.Clear();
+    }
+
+    // Overlay altındaki obstacle'ı overlay'in ARKASINDA baştan çizer. Yalnızca origin hücresinde,
+    // yalnızca "çizilebilir over-tile" beneath'ler için (movable/Mud/Oil/Safe/None hariç — bunların
+    // ayrı renderer'ları var). Overlay kırılınca HandleObstacleCreatedDynamic bu view'ı promote eder.
+    private void DrawStampedBeneathVisuals()
+    {
+        if (stampedBeneathVisuals.Count == 0 || resolvedLevel?.obstacleLibrary == null) return;
+
+        foreach (var p in stampedBeneathVisuals)
+        {
+            if (p.beneathId == ObstacleId.None) continue;
+            if (p.cell != p.beneathOrigin) continue;              // beneath'i yalnızca origin'inde çiz
+            if (beneathViewsByCell.ContainsKey(p.cell)) continue;
+
+            int bx = p.cell % resolvedLevel.width;
+            int by = p.cell / resolvedLevel.width;
+
+            // Mud: ayrı seamless renderer (mudOverlayRoot, taşların/obstacle'ların ALTINDA çizilir →
+            // z-order zaten arkada). Hücreyi geçici Mud'a çevirip mud view'ı spawn et. Kapalıyken
+            // full sayılır (StampedBeneath remaining tutmaz) — SpawnMudOverlayCell mudMaxHits'e clamp'ler.
+            if (p.beneathId == ObstacleId.Mud)
+            {
+                int sObs = resolvedLevel.obstacles[p.cell];
+                int sOrg = resolvedLevel.obstacleOrigins[p.cell];
+                resolvedLevel.obstacles[p.cell] = (int)ObstacleId.Mud;
+                resolvedLevel.obstacleOrigins[p.cell] = p.cell;
+                SpawnMudOverlayCell(bx, by);
+                resolvedLevel.obstacles[p.cell] = sObs;
+                resolvedLevel.obstacleOrigins[p.cell] = sOrg;
+                continue;   // mudOverlayService yönetir; beneathViewsByCell'e girmez
+            }
+
+            // Diğer ayrı renderer'lı / özel tipler v1'de kapsam dışı.
+            if (p.beneathId == ObstacleId.Oil ||
+                p.beneathId == ObstacleId.Safe || p.beneathId == ObstacleId.Tube ||
+                p.beneathId == ObstacleId.Magnet)
+                continue;
+
+            var def = resolvedLevel.obstacleLibrary.Get(p.beneathId);
+            if (def == null || def.IsMovableObstacle) continue;
+
+            // DrawObstacleImage level state'ini (obstacles/origins) beneath'e göre okusun diye
+            // hücreyi geçici olarak beneath'e çevir, çiz, sonra overlay'e geri al.
+            int savedObs = resolvedLevel.obstacles[p.cell];
+            int savedOrg = resolvedLevel.obstacleOrigins[p.cell];
+            resolvedLevel.obstacles[p.cell] = (int)p.beneathId;
+            resolvedLevel.obstacleOrigins[p.cell] = p.beneathOrigin;
+
+            Image beneathImage = DrawObstacleImage(def, bx, by);
+
+            resolvedLevel.obstacles[p.cell] = savedObs;
+            resolvedLevel.obstacleOrigins[p.cell] = savedOrg;
+
+            if (beneathImage != null)
+            {
+                // Overlay'in arkasına gönder (ayni root'ta ilk sibling → en altta çizilir).
+                beneathImage.rectTransform.SetAsFirstSibling();
+                beneathImage.raycastTarget = false;   // tıklama overlay'e gitsin
+                beneathViewsByCell[p.cell] = beneathImage;
+            }
+        }
     }
 
     // Her SafeEntry için bir SafeObstacleView spawn eder: NxN bölgeye konumlandır + boyutlandır,
@@ -1764,6 +1853,41 @@ public class GridSpawner : MonoBehaviour
 
     // ─── Wardrobe ───────────────────────────────────────────────────────────
 
+    private Image SpawnRocketBasketView(ObstacleDef def, int x, int y)
+    {
+        bool drawUnder = ResolveBehaviorForOrigin(resolvedLevel.Index(x, y), def) == ObstacleBehaviorType.UnderTileLayered;
+        var parent = drawUnder ? underTilesObstaclesRoot : overTilesObstaclesRoot;
+        int originIndex = resolvedLevel.Index(x, y);
+
+        var go = new GameObject($"Obs_RocketBasket_{x}_{y}",
+            typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(RocketBasketView));
+        go.transform.SetParent(parent, false);
+
+        var rootImage = go.GetComponent<Image>();
+        rootImage.sprite = def.GetPreviewSprite();
+        rootImage.type = Image.Type.Simple;
+        rootImage.preserveAspect = false;
+
+        var rt = rootImage.rectTransform;
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
+        rt.sizeDelta = new Vector2(tileSize, tileSize);
+
+        var clickProxy = rootImage.gameObject.AddComponent<ObstacleClickProxy>();
+        clickProxy.Init(board, x, y, 1, 1, tileSize);
+
+        if (rocketBasketService == null)
+            rocketBasketService = FindFirstObjectByType<RocketBasketService>();
+
+        var view = go.GetComponent<RocketBasketView>();
+        view.Init(rocketBasketService, rootImage, tileSize);
+        rocketBasketService?.RegisterView(originIndex, view);
+
+        return rootImage;
+    }
+
     private Image SpawnWardrobeView(ObstacleDef def, int x, int y)
     {
         bool drawUnder = ResolveBehaviorForOrigin(resolvedLevel.Index(x, y), def) == ObstacleBehaviorType.UnderTileLayered;
@@ -1874,6 +1998,9 @@ public class GridSpawner : MonoBehaviour
 
         if (def.id == ObstacleId.Wardrobe)
             return SpawnWardrobeView(def, x, y);
+
+        if (def.id == ObstacleId.RocketBasket)
+            return SpawnRocketBasketView(def, x, y);
 
         Sprite sprite = def.GetPreviewSprite();
         if (sprite == null) return null;
@@ -1987,6 +2114,19 @@ public class GridSpawner : MonoBehaviour
 
         var obsId = (ObstacleId)resolvedLevel.obstacles[idx];
         if (obsId == ObstacleId.None) return;
+
+        // Beneath baştan çizildiyse (overlay altında görünüyordu): yeni view çizme, mevcut olanı
+        // öne al ve obstacleViewsByOrigin'e promote et — böylece damage/visual event'leri çalışır.
+        if (beneathViewsByCell.TryGetValue(idx, out var pre) && pre != null)
+        {
+            beneathViewsByCell.Remove(idx);
+            pre.raycastTarget = true;
+            pre.rectTransform.SetAsLastSibling();
+            obstacleViewsByOrigin[idx] = pre;
+            var preDef = resolvedLevel.obstacleLibrary.Get(obsId);
+            if (preDef != null) obstacleDefsByOrigin[idx] = preDef;
+            return;
+        }
 
         // Mud ayrı overlay service'iyle çizilir; aynı origin'deki cover view henüz temizlenmemiş
         // olsa bile Mud reveal view'ı skip'lenmemeli.

@@ -5,7 +5,7 @@ using UnityEngine;
 public interface ITileClearEffect
 {
     bool CanHandle(ClearAnimationMode mode);
-    IEnumerator Play(TileView tile, float delay, float duration);
+    IEnumerator Play(TileView tile, float delay, float duration, bool suppressBurst = false);
 }
 
 public sealed class TileClearEffectOrchestrator
@@ -23,7 +23,7 @@ public sealed class TileClearEffectOrchestrator
         }
     }
 
-    public IEnumerator Play(TileView tile, ClearAnimationMode mode, float delay, float duration)
+    public IEnumerator Play(TileView tile, ClearAnimationMode mode, float delay, float duration, bool suppressBurst = false)
     {
         if (tile == null) yield break;
 
@@ -33,7 +33,7 @@ public sealed class TileClearEffectOrchestrator
             if (effect == null || !effect.CanHandle(mode))
                 continue;
 
-            yield return effect.Play(tile, delay, duration);
+            yield return effect.Play(tile, delay, duration, suppressBurst);
             yield break;
         }
 
@@ -52,13 +52,13 @@ public sealed class DefaultPopTileClearEffect : ITileClearEffect
 
     public bool CanHandle(ClearAnimationMode mode) => mode == ClearAnimationMode.Default;
 
-    public IEnumerator Play(TileView tile, float delay, float duration)
+    public IEnumerator Play(TileView tile, float delay, float duration, bool suppressBurst = false)
     {
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
 
         if (tile != null && tileAnimator != null)
-            yield return tileAnimator.PlayPop(tile, duration);
+            yield return tileAnimator.PlayPop(tile, duration, suppressBurst);
     }
 }
 
@@ -80,7 +80,7 @@ public sealed class LightningStrikeTileClearEffect : ITileClearEffect
 
     public bool CanHandle(ClearAnimationMode mode) => mode == ClearAnimationMode.LightningStrike;
 
-    public IEnumerator Play(TileView tile, float delay, float duration)
+    public IEnumerator Play(TileView tile, float delay, float duration, bool suppressBurst = false)
     {
         if (delay > 0f)
             yield return new WaitForSeconds(delay);

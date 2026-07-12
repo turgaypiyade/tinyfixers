@@ -30,6 +30,44 @@ public static class SpecialCellUtils
     }
 
     /// <summary>
+    /// Movable obstacle (HelmetPorcelain/plastik/coin/kalkan vb.) bir hücrede mi?
+    /// Öyleyse hücreyi SADECE ImpactCells'e ekler (obstacle hasarı) ve true döner — çağıran
+    /// continue etmeli, tile'ı Affected'a EKLEMEMELİ. Aksi halde tile-clear olur, cell
+    /// clearedObstacleCellsThisPass'e girer ve obstacle hasarı BoardAnimator dedup'ında bastırılır
+    /// → movable sağ kalır. Bu tek nokta, pulse/override toplama kodlarındaki "movable'a hasar yok"
+    /// bug sınıfını kapatır. (Line'lar line-sweep ile ayrıca vurur; onlar bunu çağırmaz.)
+    /// </summary>
+    public static bool TryRouteMovableToImpact(ResolutionContext ctx, BoardController board, int x, int y)
+    {
+        return TryRouteMovableToImpact(board, x, y, ctx?.ImpactCells);
+    }
+
+    public static bool TryRouteMovableToImpact(BoardController board, int x, int y, ICollection<Vector2Int> impactCells)
+    {
+        var obstacles = board != null ? board.ObstacleStateService : null;
+        if (obstacles == null || !obstacles.IsMovableObstacleAt(x, y))
+            return false;
+
+        impactCells?.Add(new Vector2Int(x, y));
+        return true;
+    }
+
+    public static bool TryAddObstacleImpact(BoardController board, int x, int y, ICollection<Vector2Int> impactCells)
+    {
+        if (board == null || impactCells == null)
+            return false;
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+
+        var obstacles = board.ObstacleStateService;
+        if (obstacles == null || !obstacles.HasObstacleAt(x, y))
+            return false;
+
+        impactCells.Add(new Vector2Int(x, y));
+        return true;
+    }
+
+    /// <summary>
     /// HatLauncher / EnergyContainer cells are permanent OverTileBlockers, so CanAffectCell
     /// rejects them and they never enter a special's affected/impact set. But a special whose
     /// footprint covers an emitter must still make it emit. We fire the hit DIRECTLY here (context
@@ -70,6 +108,9 @@ public static class SpecialCellUtils
                     TryMarkEmitterImpact(ctx, board, x, y);
                     continue;
                 }
+                // Movable obstacle → obstacle hasarı (ImpactCells), tile-clear değil. Bug sınıfı tek noktada.
+                if (TryRouteMovableToImpact(ctx, board, x, y))
+                    continue;
                 MarkAffectedCell(ctx, x, y, board);
                 if (SpecialUtils.CanTargetTileContent(board, x, y) && board.Tiles[x, y] != null)
                     matches.Add(board.Tiles[x, y]);
@@ -86,6 +127,9 @@ public static class SpecialCellUtils
                     TryMarkEmitterImpact(ctx, board, x, y);
                     continue;
                 }
+                // Movable obstacle → obstacle hasarı (ImpactCells), tile-clear değil. Bug sınıfı tek noktada.
+                if (TryRouteMovableToImpact(ctx, board, x, y))
+                    continue;
                 MarkAffectedCell(ctx, x, y, board);
                 if (SpecialUtils.CanTargetTileContent(board, x, y) && board.Tiles[x, y] != null)
                     matches.Add(board.Tiles[x, y]);

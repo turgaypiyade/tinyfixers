@@ -197,6 +197,10 @@ public sealed class PulseCoreSpecial
                     continue;
                 }
 
+                // Movable obstacle → obstacle hasarı (ImpactCells), tile-clear değil. Bug sınıfı tek noktada.
+                if (SpecialCellUtils.TryRouteMovableToImpact(rt.Context, rt.Board, x, y))
+                    continue;
+
                 SpecialCellUtils.MarkAffectedCell(rt.Context, x, y, rt.Board);
 
                 var tile = rt.Board.Tiles[x, y];

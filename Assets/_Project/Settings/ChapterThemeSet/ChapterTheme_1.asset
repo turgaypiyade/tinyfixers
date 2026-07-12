@@ -50,7 +50,7 @@ MonoBehaviour:
     titleLocalizationKey: loading_hint_lineh_title
     descriptionLocalizationKey: loading_hint_lineh_desc
     loadingLocalizationKey: loading_hint_loading
-  - image: {fileID: 21300000, guid: 2bd23bb2fe6974b7bbe02a86131ef469, type: 3}
+  - image: {fileID: 21300000, guid: cd89e89cd855449ac94eb2cd8885f355, type: 3}
     titleLocalizationKey: loading_hint_linev_title
     descriptionLocalizationKey: loading_hint_linev_desc
     loadingLocalizationKey: loading_hint_loading

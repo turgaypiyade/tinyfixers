@@ -65,6 +65,7 @@ public class TopHudController : MonoBehaviour
         board.OnObstacleDestroyed -= HandleObstacleDestroyed;
         board.OnBatteryHit -= HandleBatteryHit;
         board.OnObstacleCreatedDynamic -= HandleObstacleCreatedDynamic;
+        board.OnBarrelResolved -= HandleBarrelResolved;
         initialized = false;
     }
 
@@ -84,12 +85,14 @@ public class TopHudController : MonoBehaviour
         board.OnObstacleDestroyed -= HandleObstacleDestroyed;
         board.OnBatteryHit -= HandleBatteryHit;
         board.OnObstacleCreatedDynamic -= HandleObstacleCreatedDynamic;
+        board.OnBarrelResolved -= HandleBarrelResolved;
 
         board.OnMovesChanged += HandleMovesChanged;
         board.OnTilesCleared += HandleTilesCleared;
         board.OnObstacleDestroyed += HandleObstacleDestroyed;
         board.OnBatteryHit += HandleBatteryHit;
         board.OnObstacleCreatedDynamic += HandleObstacleCreatedDynamic;
+        board.OnBarrelResolved += HandleBarrelResolved;
 
         BuildGoals(board.ActiveLevelData);
         RefreshMoves(board.RemainingMoves);
@@ -118,11 +121,26 @@ public class TopHudController : MonoBehaviour
             if (goal == null || goal.amount <= 0)
                 continue;
 
+            int initialRemaining = goal.amount;
+
+            // Mud goal'ü dinamiktir: barrel'lar kırıldıkça mud saçılıp sayaç artar. Başlangıçta
+            // authored mud + board'daki barrel sayısı kadar placeholder ile başlar ("kaç tane
+            // varsa" otomatiği). Her kırılmamış barrel = 1 placeholder → mud oluşmadan goal
+            // erken tamamlanmaz. Barrel çözülünce (mud stamp'inden SONRA) placeholder düşürülür.
+            if (goal.targetType == LevelGoalTargetType.Obstacle && goal.obstacleId == ObstacleId.Mud)
+            {
+                int computed = CountObstacleCells(levelData, ObstacleId.Mud)
+                             + CountStampedBeneathCells(ObstacleId.Mud)
+                             + CountObstacleCells(levelData, ObstacleId.Barrel);
+                if (computed > 0)
+                    initialRemaining = computed;
+            }
+
             var runtime = new RuntimeGoal
             {
                 definition = goal,
-                remaining = goal.amount,
-                dynamicTotal = goal.amount,
+                remaining = initialRemaining,
+                dynamicTotal = initialRemaining,
                 slot = CreateSlot(goal, i)
             };
 
@@ -300,15 +318,21 @@ public class TopHudController : MonoBehaviour
 
     private void HandleObstacleCreatedDynamic(int x, int y)
     {
-        if (board?.ObstacleStateService == null) return;
-        if (!board.ObstacleStateService.IsOilAt(x, y)) return;
+        var svc = board?.ObstacleStateService;
+        if (svc == null) return;
+
+        // Yayılan (Oil) ya da barrel'dan saçılan (Mud) yeni hücre → eşleşen dinamik goal'ü büyüt.
+        ObstacleId createdId;
+        if (svc.IsOilAt(x, y)) createdId = ObstacleId.Oil;
+        else if (svc.IsMudAt(x, y)) createdId = ObstacleId.Mud;
+        else return;
 
         bool anyGoalUpdated = false;
 
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
             var goal = runtimeGoals[i];
-            if (goal.definition.targetType != LevelGoalTargetType.Obstacle || goal.definition.obstacleId != ObstacleId.Oil)
+            if (goal.definition.targetType != LevelGoalTargetType.Obstacle || goal.definition.obstacleId != createdId)
                 continue;
 
             goal.remaining++;
@@ -319,6 +343,59 @@ public class TopHudController : MonoBehaviour
 
         if (anyGoalUpdated)
             UpdateGoalsCompletionState();
+    }
+
+    // Bir barrel'ın mud yayılımı bittiğinde: o barrel'a ait placeholder'ı Mud goal'ünden düş.
+    // Gerçek mud hücreleri HandleObstacleCreatedDynamic ile zaten eklendiği için net etki doğru
+    // kalır; decrement mud stamp'inden SONRA geldiğinden sayaç asla erken 0'a inmez.
+    private void HandleBarrelResolved()
+    {
+        bool anyGoalUpdated = false;
+
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var goal = runtimeGoals[i];
+            if (goal.definition.targetType != LevelGoalTargetType.Obstacle || goal.definition.obstacleId != ObstacleId.Mud)
+                continue;
+            if (goal.remaining <= 0)
+                continue;
+
+            goal.remaining--;
+            if (goal.dynamicTotal > 0)
+                goal.dynamicTotal--;
+            goal.slot?.SetRemaining(goal.remaining);
+            anyGoalUpdated = true;
+        }
+
+        if (anyGoalUpdated)
+            UpdateGoalsCompletionState();
+    }
+
+    private static int CountObstacleCells(LevelData levelData, ObstacleId id)
+    {
+        if (levelData == null || levelData.obstacles == null)
+            return 0;
+
+        int count = 0;
+        for (int i = 0; i < levelData.obstacles.Length; i++)
+        {
+            if ((ObstacleId)levelData.obstacles[i] != id)
+                continue;
+            // Multi-cell obstacle'larda yalnızca origin hücresini say (Barrel/Mud zaten 1x1).
+            if (levelData.obstacleOrigins != null
+                && i < levelData.obstacleOrigins.Length
+                && levelData.obstacleOrigins[i] != i)
+                continue;
+            count++;
+        }
+        return count;
+    }
+
+    private int CountStampedBeneathCells(ObstacleId id)
+    {
+        return board != null && board.ObstacleStateService != null
+            ? board.ObstacleStateService.CountStampedBeneath(id)
+            : 0;
     }
 
     private void UpdateGoalsCompletionState()

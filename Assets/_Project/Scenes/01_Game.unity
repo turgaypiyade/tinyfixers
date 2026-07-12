@@ -2804,8 +2804,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.14206128}
-  m_AnchorMax: {x: 0.5244285, y: 3.3300836}
+  m_AnchorMin: {x: 0, y: 1.4166666}
+  m_AnchorMax: {x: 0.3567073, y: 33.208332}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -7307,6 +7307,9 @@ GameObject:
   - component: {fileID: 1410826455}
   - component: {fileID: 1410826456}
   - component: {fileID: 1410826457}
+  - component: {fileID: 1410826459}
+  - component: {fileID: 1410826458}
+  - component: {fileID: 1410826460}
   m_Layer: 5
   m_Name: BoardContent
   m_TagString: Untagged
@@ -7368,6 +7371,7 @@ MonoBehaviour:
   overTilesObstaclesRoot: {fileID: 0}
   tilesRoot: {fileID: 0}
   mudOverlayService: {fileID: 49188419}
+  rocketBasketService: {fileID: 1410826458}
   runtimeBoardBg: {r: 0.6627451, g: 0.654902, b: 0.8509804, a: 1}
   runtimeNormalCell: {r: 1, g: 1, b: 1, a: 1}
   gridLinesRoot: {fileID: 0}
@@ -7873,6 +7877,87 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d74d01aa8a0b6404c9b3bbcaab0bed40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MagnetObstacleService
+--- !u!114 &1410826458
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1410826442}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e5602e16a07d48b49eb0b58573d474d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RocketBasketService
+  board: {fileID: 1410826445}
+  basketBaseSprite: {fileID: 21300000, guid: 1d91d0a73cfb344f4b79df2a35370404, type: 3}
+  rockets:
+  - color: 1
+    flyingSprite: {fileID: 21300000, guid: a372e0f62f30d4d759987cc17c2667ed, type: 3}
+    basketOverlaySprite: {fileID: 21300000, guid: 9c61f03f232814e98af27c220f32d5a4, type: 3}
+    overlayAnchor: {x: -0.32, y: 0.22}
+    overlaySizeRatio: 0.65
+    overlayTiltDegrees: 9
+  - color: 0
+    flyingSprite: {fileID: 21300000, guid: 66beebce1c6fe4fc5a13b6bc019e5d41, type: 3}
+    basketOverlaySprite: {fileID: 21300000, guid: 499ca6fbbba044766ac15784ea423051, type: 3}
+    overlayAnchor: {x: 0, y: 0.24}
+    overlaySizeRatio: 0.65
+    overlayTiltDegrees: 0
+  - color: 2
+    flyingSprite: {fileID: 21300000, guid: 3b548a0dcc3e14c33828c4e68d81206a, type: 3}
+    basketOverlaySprite: {fileID: 21300000, guid: 939843fd82a774f57852ee961a62c10e, type: 3}
+    overlayAnchor: {x: 0.32, y: 0.22}
+    overlaySizeRatio: 0.65
+    overlayTiltDegrees: -9
+  logHits: 0
+--- !u!114 &1410826459
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1410826442}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ed11963949394969868936725195e22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RocketProjectileFlight
+  board: {fileID: 1410826445}
+  rocketSizeRatio: 0.673
+  peakScale: 1.689
+  bulgeScale: 1.402
+  baseDuration: 0.73
+  durationPerTile: 0.05
+  noseOffsetDeg: 0
+--- !u!114 &1410826460
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1410826442}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00672749eb94549e0ae5723c392bc5c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BarrelSplatterAnimator
+  board: {fileID: 1410826445}
+  splashSprites:
+  - {fileID: 21300000, guid: c0db466651e7f45e5b7e21c0695ef476, type: 3}
+  - {fileID: 21300000, guid: 0de7d40c9891e426788b813956928535, type: 3}
+  - {fileID: 21300000, guid: 85f1a4a7b410c44e3b22b2c42ebba368, type: 3}
+  - {fileID: 21300000, guid: c2e6cf55114a3424c934a85f4785ce28, type: 3}
+  dropletFlightDuration: 0.4
+  spreadWindow: 0.35
+  dropletSizeRatio: 0.701
+  arcHeightRatio: 0.5
+  arcHeightJitter: 0.39
+  splatSprite: {fileID: 21300000, guid: c2e6cf55114a3424c934a85f4785ce28, type: 3}
+  splatSizeRatio: 0.936
+  splashFxPrefab: {fileID: 0}
+  splashLifetime: 1
+  playCenterParticle: 0
 --- !u!1 &1412688350
 GameObject:
   m_ObjectHideFlags: 0
@@ -11484,7 +11569,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
       propertyPath: mergeDuration
-      value: 1.5
+      value: 0.08
       objectReference: {fileID: 0}
     - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
       propertyPath: stormParticles
@@ -11496,7 +11581,7 @@ PrefabInstance:
       objectReference: {fileID: 21300000, guid: 90a7205e9795442588316c5be3f4fcae, type: 3}
     - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
       propertyPath: fadeOutDuration
-      value: 0.2
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
       propertyPath: mergeBurstCount
@@ -11512,7 +11597,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8530950404532982447, guid: a184fd355378a42268662980030cee3f, type: 3}
       propertyPath: radialClearDuration
-      value: 0.5
+      value: 0.38
       objectReference: {fileID: 0}
     - target: {fileID: 9180893627907113881, guid: a184fd355378a42268662980030cee3f, type: 3}
       propertyPath: m_Name

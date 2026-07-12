@@ -126,6 +126,32 @@ public enum ObstacleId : int
     // the shield effect on bossModeActive). See BossDuelController.HandleObstacleVisualChanged.
     PlayerShieldPickup = 35,
     EnemyShieldPickup = 36,
+
+    // Single-hit blocker barrel. Breaking it splatters Mud across a ~4x4 region
+    // centered on the barrel (droplets scatter outward like a burst). Standard
+    // OverTileBlocker behavior for damage; the spread + mud-spawn is orchestrated
+    // by BoardController (BarrelSpreadAction) after the board settles. The resulting
+    // Mud is usually the level GOAL (dynamic count grows as barrels break).
+    Barrel = 37,
+
+    // Color-keyed rocket battery. Holds 3 rockets (default Core=red, Gear=yellow,
+    // Bolt=blue). An adjacent normal match of a loaded color launches that rocket;
+    // the rocket uses the SAME targeting/impact as PatchBot (RocketBasketService +
+    // RocketBasketLaunchAction). Each color fires once; when empty the basket clears.
+    // Interceptor-managed — never breaks via generic damage. Not a goal.
+    RocketBasket = 38,
+
+    // SculptingStone'un ikizi: birebir aynı çok-stage OverTileBlocker davranışı, yalnızca
+    // farklı sprite seti kullanılır. Tek fark: yalnızca SPECIAL ile hasar alır (ObstacleDef
+    // stage'lerinde damageRule = SpecialOnly). Koda gömülü özel mantığı yoktur — tamamen
+    // ObstacleLibrary asset'inden konfigüre edilir (SculptingStone gibi).
+    SculptingSpecial = 39,
+
+    // İki-stage movable blocker. Plastic/HelmetPorcelain gibi gravity ile düşer/swap olur,
+    // ama hits=2: ilk vuruş sprite'ı 2. stage'e çevirir, ikinci vuruş kırar. Koda gömülü
+    // mantığı yok — ObstacleDef'te behavior=MovableObstacle, hits=2, iki stage sprite ile
+    // konfigüre edilir. (İsim serbestçe değiştirilebilir; değer 40 sabit kalmalı.)
+    PlasticTwoStage = 40,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
@@ -254,6 +280,12 @@ public class LevelData : ScriptableObject
     [Header("Energy Container")]
     [Tooltip("How many EnergyOrb collectibles each EnergyContainer releases in this level. EnergyContainerRuntime can still provide a fallback, but level data owns the tuning.")]
     [Min(1)] public int energyPerContainer = 10;
+
+    [Header("Rocket Basket")]
+    [Tooltip("AÇIKSA: bu leveldeki TÜM RocketBasket sepetleri tek vuruşta yüklü kalan bütün " +
+             "roketleri aynı anda fırlatır (renk aranmaz, sepet o vuruşta tamamen boşalıp kalkar). " +
+             "KAPALI (varsayılan): her renk kendi eşleşmesinde ayrı ayrı fırlar (Core→Gear→Bolt).")]
+    public bool rocketBasketFireAllOnHit = false;
 
     [Header("Tutorial")]
     [Tooltip("Bu level açılınca board'a inject edilecek combo tutorial. None = normal level.")]

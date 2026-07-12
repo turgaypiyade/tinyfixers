@@ -131,6 +131,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private bool useFlatCoinReward = true;
     [Tooltip("useFlatCoinReward açıkken verilecek sabit level-sonu coin.")]
     [SerializeField, Min(0)] private int flatCoinReward = 10;
+
+    [Header("Score (Puan)")]
+    [Tooltip("Level kazanınca verilen taban puan. Leaderboard/team metriğine (TotalScore) eklenir.")]
+    [SerializeField, Min(0)] private int scoreBase = 100;
+    [Tooltip("Artakalan her hamle için eklenen puan. Küçük tut → puan yavaş birikir.")]
+    [SerializeField, Min(0)] private int scorePerRemainingMove = 15;
 #pragma warning disable 0414
     [Obsolete("Use LevelData.baseCoinReward and remainingMoveBonusRatio instead.")]
     [SerializeField, HideInInspector] private int coinsPerRemainingMove = 20;
@@ -1053,7 +1059,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         SetMainScreenDimmed(true);
         SetBlockerVisible(true);
         ApplyRewardVisuals(stars, coins, score);
-        SaveRewards(stars, coins);
+        SaveRewards(stars, coins, score);
         AdvanceToNextLevel();
 
         Debug.Log($"[LevelEnd] Success - Stars: {stars}, Coin: {coins}, Score: {score}");
@@ -1091,7 +1097,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         return baseReward + Mathf.Max(0, remainingBonus);
     }
 
-    private int CalculateScore() => 1000 + _movesAtWin * 250;
+    private int CalculateScore() => scoreBase + _movesAtWin * scorePerRemainingMove;
 
     private void ApplyRewardVisuals(int stars, int coins, int score)
     {
@@ -1122,9 +1128,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
         ApplyGoalVisuals();
     }
 
-    private void SaveRewards(int stars, int coins)
+    private void SaveRewards(int stars, int coins, int score)
     {
         int currentLevel = PlayerPrefs.GetInt(prefsLevelKey, 1);
+
+        // Kümülatif puan: level başına en iyi skor toplanır (leaderboard/team metriği).
+        PlayerWallet.SetLevelScore(currentLevel, score);
         int previousStars = PlayerWallet.GetLevelStars(currentLevel);
         int earnedStars = Mathf.Clamp(stars, 0, 3);
         int gainedStars = Mathf.Max(0, earnedStars - previousStars);

@@ -10,7 +10,7 @@ using UnityEngine;
 /// Hibrit liderlik panosu: yerel botlarla ANINDA dolar (gecikmesiz), arkasından gerçek
 /// Firestore verisi (gerçek oyuncular) karışır. Weekly + Players destekli; Friends/Team boş.
 /// Kendi skorun her zaman gösterilir (yerel), gerçek veri gelince güncellenir.
-/// Skor kaynağı: PlayerWallet.TotalStars. Botlar Firestore'a YAZILMAZ (sadece görünüm).
+/// Skor kaynağı: PlayerWallet.TotalScore. Botlar Firestore'a YAZILMAZ (sadece görünüm).
 /// </summary>
 public sealed class FirebaseLeaderboardService : ILeaderboardService
 {
@@ -103,7 +103,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
         {
             playerName = PlayerProfile.PlayerName,
             subtitle = "Sen",
-            score = PlayerWallet.TotalStars,
+            score = PlayerWallet.TotalScore,
             isSelf = true,
             chapter = PlayerPrefs.GetInt("current_level", 1),
         });
@@ -173,7 +173,9 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
         {
             playerName = PlayerTeamState.TeamName,
             subtitle = "Senin takımın",
-            score = BotProgression.TeamWeeklyScore(9999),
+            // Sim: takım puanı = senin toplam puanın (gerçek üye toplamı backend'le gelecek).
+            // Böylece oynadıkça takım skorun büyür ve puanın teams sekmesinde de görünür.
+            score = PlayerWallet.TotalScore,
             isSelf = true,
             capacityCurrent = 6,
             capacityMax = TeamCapacity,
@@ -198,7 +200,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
         {
             playerName = PlayerProfile.PlayerName,
             subtitle = "Sen",
-            score = PlayerWallet.TotalStars,
+            score = PlayerWallet.TotalScore,
             isSelf = true,
         });
         return Rank(list);
@@ -209,7 +211,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
         var data = new Dictionary<string, object>
         {
             { "name",      PlayerProfile.PlayerName },
-            { "score",     PlayerWallet.TotalStars },
+            { "score",     PlayerWallet.TotalScore },
             { "updatedAt", FieldValue.ServerTimestamp },
         };
         return col.Document(FirebaseAuthService.UserId).SetAsync(data, SetOptions.MergeAll);

@@ -219,10 +219,10 @@ public class LoadingScreenManager : MonoBehaviour
 
         if (sprite != null)
         {
-            img.sprite          = sprite;
-            img.color           = Color.white;
-            img.type            = Image.Type.Simple;
-            img.preserveAspect  = false;
+            img.sprite = sprite;
+            img.color  = Color.white;
+            // Esneme YOK: aspect'i koruyarak ekranı TAM DOLDUR (cover — taşan kenar kırpılır).
+            ApplyFitAspect(img, sprite);
         }
         else
         {
@@ -231,6 +231,29 @@ public class LoadingScreenManager : MonoBehaviour
         }
 
         return img;
+    }
+
+    /// <summary>
+    /// Loading görselini aspect'i koruyarak ekranı TAM DOLDURUR (cover / EnvelopeParent): resim her
+    /// yerden eşit büyütülür, ekranın tamamını kaplar, asla esnemez (oran farkı olan kenar kırpılır).
+    /// Runtime fallback + prefab yolu ortak.
+    /// </summary>
+    internal static void ApplyFitAspect(Image img, Sprite sprite)
+    {
+        if (img == null || sprite == null) return;
+
+        img.type = Image.Type.Simple;
+        img.preserveAspect = false;   // rect'in oranını AspectRatioFitter ayarlar; image rect'i tam doldurur
+
+        var rt = img.rectTransform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+
+        var fitter = img.GetComponent<AspectRatioFitter>();
+        if (fitter == null) fitter = img.gameObject.AddComponent<AspectRatioFitter>();
+        fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+        float h = sprite.rect.height;
+        fitter.aspectRatio = h > 0.0001f ? sprite.rect.width / h : 1f;
     }
 
     private static TMP_Text BuildText(Transform parent, string name, string value, Vector2 anchorMin, Vector2 anchorMax,

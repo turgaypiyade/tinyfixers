@@ -46,8 +46,11 @@ public sealed class LeaderboardRow : MonoBehaviour
     {
         if (e == null) return;
 
-        // ── Haftalık top-3: BÜYÜK kart yüksekliği + hediye kutusu ──
-        bool weeklyTop3 = tab == LeaderboardTab.Weekly && e.rank <= 3 && !e.isSelf;
+        // ── Haftalık top-3: BÜYÜK kart yüksekliği (self/yeşil satır DAHİL) + hediye kutusu ──
+        // Yükseklik self dahil tüm top-3 için büyük; hediye kutusu ise (mevcut davranış) yalnız
+        // self olmayan top-3'te gösterilir.
+        bool weeklyTop3     = tab == LeaderboardTab.Weekly && e.rank <= 3;
+        bool weeklyTop3Gift = weeklyTop3 && !e.isSelf;
         var le = GetComponent<UnityEngine.UI.LayoutElement>();
         if (le != null && skin != null)
             le.preferredHeight = weeklyTop3 ? skin.weeklyTopThreeRowHeight : skin.rowHeight;
@@ -55,7 +58,7 @@ public sealed class LeaderboardRow : MonoBehaviour
         if (giftIcon != null)
         {
             Sprite gift = null;
-            if (weeklyTop3 && skin != null)
+            if (weeklyTop3Gift && skin != null)
             {
                 gift = e.rank switch
                 {

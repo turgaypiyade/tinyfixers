@@ -17,31 +17,43 @@ public class BoardVfxService
 
     public float PlaySystemOverrideComboVfxAndGetDuration(
         OverrideComboController vfx,
+        RectTransform vfxSpace,
+        int originX,
+        int originY,
         Sprite overrideSpriteA,
         Sprite overrideSpriteB,
         Sprite mergedSprite = null)
     {
         if (vfx == null) return 0f;
 
-        // One-shot: fire H+V lightning from board center when icons collide
-        System.Action impactHandler = null;
-        impactHandler = () =>
-        {
-            vfx.OnImpact -= impactHandler;
-            int cx = board.Width  / 2;
-            int cy = board.Height / 2;
-            var strikes = new List<LightningLineStrike>
-            {
-                new LightningLineStrike(new Vector2Int(cx, cy), true),
-                new LightningLineStrike(new Vector2Int(cx, cy), false),
-            };
-            board.PlayLightningLineStrikes(strikes, null);
-        };
-        vfx.OnImpact -= impactHandler; // guard against double-subscribe
-        vfx.OnImpact += impactHandler;
-
         vfx.gameObject.SetActive(true);
-        vfx.Play(overrideSpriteA, overrideSpriteB, mergedSprite);
+        if (vfxSpace != null)
+        {
+            TileView ta = board.LastSwapA;
+            TileView tb = board.LastSwapB;
+            vfx.SetWaveMaxRadius(WaveMaxRadiusPx(originX, originY));
+
+            if (ta != null && tb != null)
+            {
+                Vector3 worldOrigin = ResolveWorldCenterForCell(originX, originY);
+                Vector2 localOrigin = board.WorldToAnchoredIn(vfxSpace, worldOrigin);
+
+                Vector2 localA = board.WorldToAnchoredIn(vfxSpace, board.GetTileWorldCenter(ta));
+                Vector2 localB = board.WorldToAnchoredIn(vfxSpace, board.GetTileWorldCenter(tb));
+                vfx.PlayAtAnchoredPositions(localA, localB, localOrigin, overrideSpriteA, overrideSpriteB, mergedSprite);
+            }
+            else
+            {
+                Vector3 worldMid = ResolveWorldCenterForCell(originX, originY);
+                Vector2 localMid = board.WorldToAnchoredIn(vfxSpace, worldMid);
+                vfx.PlayAtAnchoredPosition(localMid, overrideSpriteA, overrideSpriteB, mergedSprite);
+            }
+        }
+        else
+        {
+            vfx.Play(overrideSpriteA, overrideSpriteB, mergedSprite);
+        }
+
         float duration = vfx.GetTotalDuration();
         SystemOverrideBehaviorEvents.EmitOverrideComboVfxPlayed(duration);
         return duration;
@@ -98,6 +110,17 @@ public class BoardVfxService
         }
     }
 
+
+    // Dalga cephesinin varış yarıçapı: origin hücresinden en uzak board KÖŞESİNE px mesafe.
+    // Saf grid matematiği — RectTransform pivot/anchor geometrisine hiç dayanmaz.
+    // BuildWaveFrontClearDelays AYNI normalizasyonu kullanır → VFX ile temizleme birebir senkron.
+    public float WaveMaxRadiusPx(int originX, int originY)
+    {
+        float maxCells = SpecialVisualService.FarthestCornerDistanceCells(
+            board.Width, board.Height, originX, originY);
+        // +0.5: dalga son hücrenin merkezinden geçtikten sonra hücre SINIRINA kadar sürsün.
+        return (maxCells + 0.5f) * board.TileSize;
+    }
 
     private Vector3 ResolveWorldCenterForCell(int x, int y)
     {

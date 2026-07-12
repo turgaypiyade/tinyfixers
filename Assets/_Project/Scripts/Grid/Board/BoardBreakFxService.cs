@@ -213,6 +213,17 @@ public class BoardBreakFxService
         return fallbackSpriteBuffer;
     }
 
+    /// <summary>
+    /// Barrel oil-splash gibi ad-hoc particle burst'leri için: kanıtlanmış SpawnAtWorld hattını
+    /// (BreakFxParent + world→anchored konumlama + sprite sheet) dışarıya açar.
+    /// </summary>
+    public void PlaySplashFx(GameObject prefab, float lifetime, Vector3 worldPos, IReadOnlyList<Sprite> sprites = null)
+    {
+        if (prefab == null)
+            return;
+        SpawnAtWorld(prefab, lifetime, worldPos, Color.white, sprites);
+    }
+
     private void SpawnAtWorld(
         GameObject prefab,
         float lifetime,

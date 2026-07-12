@@ -515,17 +515,65 @@ public class SpecialVisualService
         }
     }
 
+    // Origin'den en uzak board köşesine hücre-mesafesi. BoardVfxService.WaveMaxRadiusPx ve
+    // BuildWaveFrontClearDelays aynı normalizasyonu paylaşsın diye TEK yerde.
+    public static float FarthestCornerDistanceCells(int width, int height, int originX, int originY)
+    {
+        var origin = new Vector2(originX, originY);
+        float best = Vector2.Distance(origin, new Vector2(0, 0));
+        best = Mathf.Max(best, Vector2.Distance(origin, new Vector2(width - 1, 0)));
+        best = Mathf.Max(best, Vector2.Distance(origin, new Vector2(0, height - 1)));
+        best = Mathf.Max(best, Vector2.Distance(origin, new Vector2(width - 1, height - 1)));
+        return best;
+    }
+
+    /// <summary>
+    /// Override+Override dalga cephesiyle BİREBİR senkron temizleme delay'leri.
+    /// Cephe VFX'te lineerdir (R(t) = t * maxR, maxR = origin'den en uzak KÖŞE + 0.5 hücre);
+    /// burada da aynı lineer harita ve aynı köşe normalizasyonu kullanılır →
+    /// cephe bir hücreye vardığı anda o hücre temizlenir. Easing YOK.
+    /// </summary>
+    public Dictionary<TileView, float> BuildWaveFrontClearDelays(
+        HashSet<TileView> targets,
+        Vector2Int originCell,
+        float minDelay,
+        float maxDelay)
+    {
+        if (targets == null || targets.Count == 0 || maxDelay <= minDelay)
+            return null;
+
+        float maxDistance = FarthestCornerDistanceCells(
+            board.Width, board.Height, originCell.x, originCell.y) + 0.5f;
+        if (maxDistance <= Mathf.Epsilon)
+            return null;
+
+        var center = new Vector2(originCell.x, originCell.y);
+        var delays = new Dictionary<TileView, float>(targets.Count);
+        foreach (var tile in targets)
+        {
+            if (tile == null) continue;
+            float normalized = Mathf.Clamp01(Vector2.Distance(new Vector2(tile.X, tile.Y), center) / maxDistance);
+            delays[tile] = Mathf.Lerp(minDelay, maxDelay, normalized);
+        }
+
+        return delays;
+    }
+
     /// <summary>
     /// Builds center-out radial clear delays for Override+Override combo.
     /// </summary>
-    public Dictionary<TileView, float> BuildCenterOutClearDelays(HashSet<TileView> targets, float maxDelay, float minDelay = 0f)
+    public Dictionary<TileView, float> BuildCenterOutClearDelays(
+        HashSet<TileView> targets,
+        float maxDelay,
+        float minDelay = 0f,
+        Vector2Int? originCell = null)
     {
         if (targets == null || targets.Count == 0 || maxDelay <= 0f)
             return null;
 
-        float centerX = (board.Width - 1) * 0.5f;
-        float centerY = (board.Height - 1) * 0.5f;
-        var center = new Vector2(centerX, centerY);
+        var center = originCell.HasValue
+            ? new Vector2(originCell.Value.x, originCell.Value.y)
+            : new Vector2((board.Width - 1) * 0.5f, (board.Height - 1) * 0.5f);
         float maxDistance = 0f;
 
         foreach (var tile in targets)

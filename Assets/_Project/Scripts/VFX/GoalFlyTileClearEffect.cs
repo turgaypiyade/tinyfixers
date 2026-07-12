@@ -19,7 +19,7 @@ public sealed class GoalFlyTileClearEffect : ITileClearEffect
 
     public bool CanHandle(ClearAnimationMode mode) => mode == ClearAnimationMode.GoalFlyToHud;
 
-    public IEnumerator Play(TileView tile, float delay, float duration)
+    public IEnumerator Play(TileView tile, float delay, float duration, bool suppressBurst = false)
     {
         if (delay > 0f)
             yield return new WaitForSeconds(delay);

@@ -26,6 +26,9 @@ public sealed class TeamChatMessage
     public Sprite avatar;
     public string text;
     public string timeLabel;
+
+    /// <summary>Bu mesajı BEN mi gönderdim? true → sağda + kendi avatarım; false → solda.</summary>
+    public bool isMine;
 }
 
 /// <summary>Bir takım üyesinin can isteği (current/needed).</summary>

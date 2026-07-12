@@ -51,6 +51,7 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
     private Coroutine pulseRoutine;
     private bool dismissed;
     private readonly List<Button> blockedButtons = new();
+    private GameObject delayBlocker;   // gecikme boyunca HER girişi yutan tam-ekran bloklayıcı
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
@@ -75,13 +76,37 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
             return;
         }
 
+        // ÖNEMLİ: input'u HEMEN kilitle (gecikme öncesi). Yoksa 0.6 sn içinde kullanıcı
+        // başka ekrana geçip RepairButton'ı kaybediyor ve tutorial tamamlanamıyor.
+        BlockBackgroundButtons();                        // butonları kapat (tutorial süresince)
+        delayBlocker = CreateFullscreenBlocker();        // gecikme boyunca HER şeyi engelle
+        if (repairButton != null) repairButton.onClick.AddListener(OnRepairButtonClicked);
+
         StartCoroutine(ShowTutorialDelayed());
+    }
+
+    // Tam ekran görünmez raycast yakalayıcı — pointer-handler'lı objeleri (level butonu vb.)
+    // de durdurur. Kendi ScreenSpaceOverlay canvas'ında en üstte durur.
+    private GameObject CreateFullscreenBlocker()
+    {
+        var go = new GameObject("TutorialDelayBlocker",
+            typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster), typeof(Image));
+        var canvas = go.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 30000;
+        var img = go.GetComponent<Image>();
+        img.color = new Color(0f, 0f, 0f, 0f);   // görünmez ama tıklamayı yutar
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+        return go;
     }
 
     private void OnDestroy()
     {
         if (repairButton != null) repairButton.onClick.RemoveListener(OnRepairButtonClicked);
         RestoreBackgroundButtons();
+        if (delayBlocker != null) Destroy(delayBlocker);
     }
 
     // ── Show / Hide ──────────────────────────────────────────────────────────
@@ -103,10 +128,13 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
             return;
         }
 
+        // Gecikme bloklayıcısını kaldır → artık repair tıklanabilir (diğer butonlar hâlâ kapalı).
+        if (delayBlocker != null) { Destroy(delayBlocker); delayBlocker = null; }
+
         if (tutorialOverlay != null && !tutorialOverlay.activeSelf) tutorialOverlay.SetActive(true);
         if (overlayGroup != null) overlayGroup.blocksRaycasts = false;
 
-        BlockBackgroundButtons();
+        // (BlockBackgroundButtons + repairButton aboneliği artık Start'ta yapılıyor.)
 
         // Description text
         if (descriptionText != null)
@@ -121,9 +149,6 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
 
         // Position hand above button
         PositionHandAboveButton();
-
-        // Subscribe to button click
-        repairButton.onClick.AddListener(OnRepairButtonClicked);
 
         // Start pulse + fade in
         if (pulseRoutine != null) StopCoroutine(pulseRoutine);
@@ -144,6 +169,7 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
         dismissed = true;
 
         if (pulseRoutine != null) StopCoroutine(pulseRoutine);
+        if (delayBlocker != null) { Destroy(delayBlocker); delayBlocker = null; }
 
         if (repairButton != null) repairButton.onClick.RemoveListener(OnRepairButtonClicked);
 

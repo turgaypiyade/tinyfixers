@@ -24,7 +24,7 @@ MonoBehaviour:
   lifeRed: {r: 1, g: 0.3019608, b: 0.36862746, a: 1}
   infoBlue: {r: 0.21176471, g: 0.6509804, b: 0.8784314, a: 1}
   textLight: {r: 1, g: 1, b: 1, a: 1}
-  textSub: {r: 0.7882353, g: 0.74509805, b: 0.91764706, a: 1}
+  textSub: {r: 0.26004583, g: 0.07943218, b: 0.8018868, a: 1}
   textOnCream: {r: 0.3529412, g: 0.24313726, b: 0.16862746, a: 1}
   textHighlight: {r: 0.30980393, g: 0.7882353, b: 0.35686275, a: 1}
   screenPadding: 24

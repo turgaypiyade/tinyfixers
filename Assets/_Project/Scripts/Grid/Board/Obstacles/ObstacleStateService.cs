@@ -119,13 +119,16 @@ public class ObstacleStateService : ISimObstacleQuery
         public readonly ObstacleId Id;     // alttaki obstacle (None = boş/normal)
         public readonly int Origin;        // alttaki obstacle'ın origin'i (single-cell ise == cell)
         public readonly int OverOrigin;    // üstteki obstacle'ın origin'i (Safe gibi origin-bazlı reveal için)
+        public readonly int Remaining;     // üst kapalıyken alttaki obstacle'ın kalan hit'i
 
-        public StampedBeneath(ObstacleId id, int origin, int overOrigin)
+        public StampedBeneath(ObstacleId id, int origin, int overOrigin, int remaining)
         {
             Id = id;
             Origin = origin;
             OverOrigin = overOrigin;
+            Remaining = remaining;
         }
+
     }
     private readonly Dictionary<int, StampedBeneath> _stampedBeneathByCell = new();
 
@@ -169,6 +172,11 @@ public class ObstacleStateService : ISimObstacleQuery
     /// <summary>Safe: set by SafeObstacleService. Called with the safe's ORIGIN cell when any safe
     /// cell is hit. Lock state + break/reveal are owned by SafeObstacleService.</summary>
     public Func<int, ObstacleHitContext, TileType?, bool> SafeHitInterceptor;
+    /// <summary>RocketBasket: set by RocketBasketService. Called with (origin, context, sourceTileType)
+    /// when a RocketBasket cell is hit. Returns true if a rocket launched → hit consumed. Normal match
+    /// launches only the MATCHING color; special/combo/booster/scripted hits ALWAYS launch a remaining
+    /// rocket (color-agnostic). false = no matching charge → no-op (basket stays, no break).</summary>
+    public Func<int, ObstacleHitContext, TileType?, bool> RocketBasketHitInterceptor;
     // ColorChest açılış ve renk kırılması bildirimleri
     public event Action<int> OnChestOpened;
     public event Action<int, ChestColorMask> OnChestColorRemoved;
@@ -382,6 +390,21 @@ public class ObstacleStateService : ISimObstacleQuery
                 HatLauncherHitInterceptor.Invoke(origin);
                 var hlChange = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
                 return new ObstacleHitResult(true, true, false, hlChange, default, Array.Empty<int>());
+            }
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+        }
+
+        // RocketBasket: color-keyed launcher fully managed by RocketBasketService via the interceptor.
+        // A hit only "counts" if the source is a normal-match color that matches a still-loaded rocket
+        // charge → interceptor launches that rocket and returns true (hit consumed). Wrong color / no
+        // charge / no color → no-op (basket stays, no break, no match credit). Never breaks via generic
+        // damage; the basket clears itself (ClearRocketBasket) once the last charge is spent.
+        if (id == ObstacleId.RocketBasket)
+        {
+            if (RocketBasketHitInterceptor != null && RocketBasketHitInterceptor.Invoke(origin, context, sourceTileType))
+            {
+                var rbChange = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+                return new ObstacleHitResult(true, true, false, rbChange, default, Array.Empty<int>());
             }
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
         }
@@ -838,6 +861,7 @@ public class ObstacleStateService : ISimObstacleQuery
             return;
 
         HashSet<int> restoredBeneathOrigins = null;
+        Dictionary<int, int> restoredMudRemainingByOrigin = null;
 
         for (int i = 0; i < level.obstacles.Length; i++)
         {
@@ -864,7 +888,11 @@ public class ObstacleStateService : ISimObstacleQuery
                 _stampedBeneathByCell.Remove(i);
                 RestoreCellObstacle(i, stamped.Id, stamped.Origin);
                 if (stamped.Id != ObstacleId.None)
+                {
                     (restoredBeneathOrigins ??= new HashSet<int>()).Add(stamped.Origin);
+                    if (stamped.Id == ObstacleId.Mud && stamped.Remaining > 0)
+                        (restoredMudRemainingByOrigin ??= new Dictionary<int, int>())[stamped.Origin] = stamped.Remaining;
+                }
                 continue;
             }
 
@@ -890,8 +918,16 @@ public class ObstacleStateService : ISimObstacleQuery
         // Cover view'ı OnObstacleDestroyed dinleyicilerinde temizlendikten sonra beneath view'ı
         // oluştur. Aynı origin key'i hâlâ cover'a aitken dynamic create skip'leniyordu.
         if (restoredBeneathOrigins != null)
+        {
             foreach (var beneathOrigin in restoredBeneathOrigins)
-                ReinitRestoredBeneathOrigin(beneathOrigin);
+            {
+                int remainingOverride = -1;
+                if (restoredMudRemainingByOrigin != null
+                    && restoredMudRemainingByOrigin.TryGetValue(beneathOrigin, out int restoredRemaining))
+                    remainingOverride = restoredRemaining;
+                ReinitRestoredBeneathOrigin(beneathOrigin, remainingOverride);
+            }
+        }
     }
 
     // ── Generic stacked-obstacle beneath store ───────────────────────────────
@@ -905,7 +941,33 @@ public class ObstacleStateService : ISimObstacleQuery
     {
         if (level == null || level.obstacles == null) return;
         if (cell < 0 || cell >= level.obstacles.Length) return;
-        _stampedBeneathByCell[cell] = new StampedBeneath(beneathId, beneathOrigin, overOrigin);
+
+        int remaining = 0;
+        if (beneathId != ObstacleId.None)
+        {
+            var def = library != null ? library.Get(beneathId) : null;
+            remaining = Mathf.Max(1, def != null ? def.hits : 1);
+        }
+
+        _stampedBeneathByCell[cell] = new StampedBeneath(beneathId, beneathOrigin, overOrigin, remaining);
+    }
+
+    public int CountStampedBeneath(ObstacleId obstacleId)
+    {
+        if (obstacleId == ObstacleId.None)
+            return 0;
+
+        int count = 0;
+        foreach (var kv in _stampedBeneathByCell)
+        {
+            var stamped = kv.Value;
+            if (stamped.Id != obstacleId)
+                continue;
+            if (stamped.Remaining <= 0)
+                continue;
+            count++;
+        }
+        return count;
     }
 
     /// <summary>
@@ -924,26 +986,60 @@ public class ObstacleStateService : ISimObstacleQuery
         if (cells == null) return;
 
         HashSet<int> restoredBeneathOrigins = null;
+        Dictionary<int, int> restoredMudRemainingByOrigin = null;
         foreach (var cell in cells)
         {
             if (!_stampedBeneathByCell.TryGetValue(cell, out var stamped)) continue;
             _stampedBeneathByCell.Remove(cell);
             RestoreCellObstacle(cell, stamped.Id, stamped.Origin);
             if (stamped.Id != ObstacleId.None)
+            {
                 (restoredBeneathOrigins ??= new HashSet<int>()).Add(stamped.Origin);
+                if (stamped.Id == ObstacleId.Mud && stamped.Remaining > 0)
+                    (restoredMudRemainingByOrigin ??= new Dictionary<int, int>())[stamped.Origin] = stamped.Remaining;
+            }
         }
 
         if (restoredBeneathOrigins != null)
+        {
             foreach (var beneathOrigin in restoredBeneathOrigins)
-                ReinitRestoredBeneathOrigin(beneathOrigin);
+            {
+                int remainingOverride = -1;
+                if (restoredMudRemainingByOrigin != null
+                    && restoredMudRemainingByOrigin.TryGetValue(beneathOrigin, out int restoredRemaining))
+                    remainingOverride = restoredRemaining;
+                ReinitRestoredBeneathOrigin(beneathOrigin, remainingOverride);
+            }
+        }
     }
 
     // Geri yüklenen beneath obstacle'ın hit-state'ini def'ten taze kurar + görselini oluşturur.
-    private void ReinitRestoredBeneathOrigin(int beneathOrigin)
+    private void ReinitRestoredBeneathOrigin(int beneathOrigin, int remainingOverride = -1)
     {
-        InitObstacleStateAt(beneathOrigin);
+        InitObstacleStateAt(beneathOrigin, remainingOverride);
         if (level != null && level.width > 0)
             RequestObstacleViewCreate?.Invoke(beneathOrigin % level.width, beneathOrigin / level.width);
+    }
+
+    private bool TryRestoreStampedBeneathCell(int cell, out int restoredOrigin, out int remainingOverride)
+    {
+        restoredOrigin = -1;
+        remainingOverride = -1;
+
+        if (!_stampedBeneathByCell.TryGetValue(cell, out var stamped))
+            return false;
+
+        _stampedBeneathByCell.Remove(cell);
+        RestoreCellObstacle(cell, stamped.Id, stamped.Origin);
+
+        if (stamped.Id == ObstacleId.None)
+            return true;
+
+        restoredOrigin = stamped.Origin;
+        if (stamped.Id == ObstacleId.Mud && stamped.Remaining > 0)
+            remainingOverride = stamped.Remaining;
+
+        return true;
     }
 
     public bool IsMovableObstacleAt(int x, int y)
@@ -1041,6 +1137,11 @@ public class ObstacleStateService : ISimObstacleQuery
             if (fromIdx < remainingHitsByOrigin.Length)
                 remainingHitsByOrigin[fromIdx] = beneath.Remaining;
             _underTileBeneathMovable.Remove(fromIdx);
+        }
+        else if (TryRestoreStampedBeneathCell(fromIdx, out int restoredOrigin, out int remainingOverride))
+        {
+            if (restoredOrigin >= 0)
+                ReinitRestoredBeneathOrigin(restoredOrigin, remainingOverride);
         }
         else
         {
@@ -1313,7 +1414,7 @@ public class ObstacleStateService : ISimObstacleQuery
 
     /// Tek bir origin için obstacle hit-state'ini def'ten yeniden kurar (Safe altından çıkan
     /// beneath obstacle'lar için). InitializeFromLevel loop gövdesinin tek-origin versiyonu.
-    public void InitObstacleStateAt(int origin)
+    public void InitObstacleStateAt(int origin, int remainingOverride = -1)
     {
         if (level == null || origin < 0 || origin >= remainingHitsByOrigin.Length) return;
         if (level.obstacles == null || origin >= level.obstacles.Length) return;
@@ -1343,7 +1444,7 @@ public class ObstacleStateService : ISimObstacleQuery
         {
             hits = Mathf.Max(1, def != null ? def.hits : 1);
         }
-        remainingHitsByOrigin[origin] = hits;
+        remainingHitsByOrigin[origin] = remainingOverride > 0 ? remainingOverride : hits;
 
         if (id == ObstacleId.ColorChest)
             _chestColorStates[origin] = ChestColorMask.All;
@@ -1405,6 +1506,22 @@ public class ObstacleStateService : ISimObstacleQuery
         if (added)
             Debug.Log($"[Oil] Added at ({x},{y}). Total oil: {CountAliveOrigins(ObstacleId.Oil)}");
         return added;
+    }
+
+    /// <summary>
+    /// RocketBasketService son roket fırlayınca çağırır: sepeti board verisinden temizler
+    /// (OnObstacleDestroyed → hücre serbest, cascade akar). Görsel teardown view'da.
+    /// </summary>
+    public void ClearRocketBasket(int origin)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return;
+        if (origin < 0 || origin >= level.obstacles.Length)
+            return;
+        if ((ObstacleId)level.obstacles[origin] != ObstacleId.RocketBasket)
+            return;
+
+        ClearObstacleFromLevel(origin, ObstacleId.RocketBasket);
     }
 
     public bool TryRemoveOilAt(int x, int y)

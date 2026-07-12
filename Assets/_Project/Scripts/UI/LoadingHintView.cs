@@ -45,6 +45,8 @@ public class LoadingHintView : MonoBehaviour
             hintImage.sprite = sprite;
             hintImage.enabled = true;
             hintImage.color = Color.white;
+            // Tam ekran chapter görseli: esneme YOK, aspect koruyarak ekrana sığdır (kırpma yok).
+            LoadingScreenManager.ApplyFitAspect(hintImage, sprite);
         }
 
         SetText(titleText, string.Empty);
@@ -65,6 +67,9 @@ public class LoadingHintView : MonoBehaviour
             hintImage.sprite = hint != null ? hint.image : null;
             hintImage.enabled = hintImage.sprite != null;
             hintImage.color = Color.white;
+            // ChapterTheme.loadingHints görselleri: esneme YOK, aspect koruyarak ekrana sığdır.
+            if (hintImage.sprite != null)
+                LoadingScreenManager.ApplyFitAspect(hintImage, hintImage.sprite);
         }
 
         string title = hint != null ? GameLocalization.Get(hint.titleLocalizationKey) : string.Empty;

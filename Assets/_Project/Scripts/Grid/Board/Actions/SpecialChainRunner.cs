@@ -237,23 +237,25 @@ public sealed class SpecialChainRunner : BoardAction
 
                 if (!SpecialUtils.CanAffectCell(board, x, y))
                 {
-                    if (board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y))
-                        impactCells.Add(new Vector2Int(x, y));
+                    SpecialCellUtils.TryAddObstacleImpact(board, x, y, impactCells);
                     continue;
                 }
 
-                affectedCells.Add(new Vector2Int(x, y));
-
-                var tile = board.Tiles[x, y];
-                if (tile == null) continue;
+                var cell = new Vector2Int(x, y);
+                affectedCells.Add(cell);
 
                 // Movable obstacle (Plastic vb.) tile-clear yoluna GİRMEZ: view'ın yaşam
-                // döngüsü obstacle hasarınındır (affectedCells hasarı vurur; yıkılırsa
+                // döngüsü obstacle hasarınındır (impactCells hasarı vurur; yıkılırsa
                 // HandleObstacleDestroyed view'ı kaldırır). Tile-clear + hücre-bazlı geç
                 // hasar, eşzamanlı gravity'de taş kayınca state'i ıskalayıp görünmez
                 // (orphan) obstacle bırakabiliyordu.
-                if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(x, y))
+                if (SpecialCellUtils.TryRouteMovableToImpact(board, x, y, impactCells))
                     continue;
+
+                impactCells.Add(cell);
+
+                var tile = board.Tiles[x, y];
+                if (tile == null) continue;
 
                 var sp = tile.GetSpecial();
 
@@ -545,17 +547,19 @@ public sealed class SpecialChainRunner : BoardAction
 
                 if (!SpecialUtils.CanAffectCell(board, x, y))
                 {
-                    if (board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y))
-                        impactCells.Add(new Vector2Int(x, y));
+                    SpecialCellUtils.TryAddObstacleImpact(board, x, y, impactCells);
                     continue;
                 }
 
                 var cell = new Vector2Int(x, y);
                 if (!affectedCells.Add(cell)) continue; // alan birleşimi: hücre bir kez
 
+                if (SpecialCellUtils.TryRouteMovableToImpact(board, x, y, impactCells)) continue;
+
+                impactCells.Add(cell);
+
                 var tile = board.Tiles[x, y];
                 if (tile == null) continue;
-                if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(x, y)) continue;
 
                 float delay = NearestCenterDist(x, y) * board.PulseImpactDelayStep;
 

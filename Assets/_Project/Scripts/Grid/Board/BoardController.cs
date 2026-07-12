@@ -353,6 +353,10 @@ public class BoardController : MonoBehaviour
     public event Action<int, ObstacleId> OnObstacleDestroyed;
     public event Action<int> OnCellUnlocked;
     public event Action<int, int> OnObstacleCreatedDynamic;
+    // Bir barrel'ın mud yayılımı (BarrelSpreadAction) tamamlandığında bir kez tetiklenir.
+    // Mud goal'ündeki o barrel'a ait placeholder, mud stamp edildikten SONRA düşürülür ki
+    // sayaç mud eklenmeden 0'a inip erken WIN tetiklemesin.
+    public event Action OnBarrelResolved;
     public event Action<int> OnChestOpened;
     public event Action<int, ChestColorMask> OnChestColorRemoved;
     public event Action<int, ChestColorMask, int> OnBatteryHit;
@@ -387,6 +391,14 @@ public class BoardController : MonoBehaviour
     private OilSpreadService oilSpreadService;
     private readonly HashSet<Vector2Int> oilSuppressionCellsThisMove = new();
     private bool oilSpreadResolvedThisMove = true;
+
+    // Bu hamlede kırılan barrel'ların hücreleri; board tam oturunca 4x4 mud saçarlar.
+    private readonly List<Vector2Int> barrelBreaksThisMove = new();
+    private bool barrelSpreadResolvedThisMove = true;
+
+    // Bu hamlede tetiklenen RocketBasket roketleri; board tam oturunca PatchBot gibi uçarlar.
+    private readonly List<RocketBasketLaunchAction.Launch> rocketLaunchesThisMove = new();
+    private bool rocketLaunchResolvedThisMove = true;
 
     // ── Extracted services ──
     private BoardInitService boardInitService;
@@ -863,9 +875,19 @@ public class BoardController : MonoBehaviour
 
     public float PlaySystemOverrideComboVfxAndGetDuration()
     {
+        Vector2Int originCell = lastSwapA != null
+            ? new Vector2Int(lastSwapA.X, lastSwapA.Y)
+            : lastSwapB != null
+                ? new Vector2Int(lastSwapB.X, lastSwapB.Y)
+                : new Vector2Int(Width / 2, Height / 2);
+        return PlaySystemOverrideComboVfxAndGetDuration(originCell);
+    }
+
+    public float PlaySystemOverrideComboVfxAndGetDuration(Vector2Int originCell)
+    {
         Sprite sprA = lastSwapA != null ? GetOverrideIcon(lastSwapA.GetTileType()) : null;
         Sprite sprB = lastSwapB != null ? GetOverrideIcon(lastSwapB.GetTileType()) : null;
-        return boardVfxService.PlaySystemOverrideComboVfxAndGetDuration(systemOverrideComboVfx, sprA, sprB);
+        return boardVfxService.PlaySystemOverrideComboVfxAndGetDuration(systemOverrideComboVfx, vfxSpace, originCell.x, originCell.y, sprA, sprB);
     }
 
     public float GetSystemOverrideComboPreClearDuration() =>
@@ -1141,7 +1163,11 @@ public class BoardController : MonoBehaviour
         var def = lib != null ? lib.Get(id) : null;
         if (def == null) return;
 
-        var sprite = def.GetPreviewSprite();
+        // Çok-stage movable (örn. 2-stage plastik): hasar alınca sprite güncel stage'e geçmeli.
+        // GetPreviewSprite hep stage-0 döndürür → refresh, hit sonrası görseli stage-0'a geri
+        // sıfırlardı. Kalan vuruşa göre doğru stage sprite'ını al (yoksa preview'a düş).
+        int remainingHits = obstacleStateService.GetRemainingHitsAt(tx, ty);
+        var sprite = def.GetSpriteForRemainingHits(remainingHits) ?? def.GetPreviewSprite();
         if (sprite == null) return;
 
         tile.SetMovableObstacleTile(true);
@@ -1474,6 +1500,10 @@ public class BoardController : MonoBehaviour
 
         oilSuppressionCellsThisMove.Clear();
         oilSpreadResolvedThisMove = false;
+        barrelBreaksThisMove.Clear();
+        barrelSpreadResolvedThisMove = false;
+        rocketLaunchesThisMove.Clear();
+        rocketLaunchResolvedThisMove = false;
         obstacleStateService?.ResetPerMoveEmitGuard();
 
         BeginBusy();
@@ -1496,6 +1526,10 @@ public class BoardController : MonoBehaviour
 
         oilSuppressionCellsThisMove.Clear();
         oilSpreadResolvedThisMove = false;
+        barrelBreaksThisMove.Clear();
+        barrelSpreadResolvedThisMove = false;
+        rocketLaunchesThisMove.Clear();
+        rocketLaunchResolvedThisMove = false;
         obstacleStateService?.ResetPerMoveEmitGuard();
 
         float _flowStart = Time.realtimeSinceStartup;
@@ -1563,7 +1597,15 @@ public class BoardController : MonoBehaviour
             // PulseCore bu hücreleri tüketmemeli — ResolveSpecialSwap'a geçirilir.
             HashSet<Vector2Int> swapProtectedCells = null;
 
-            if (!bothOriginallySpecial)
+            // Override + Normal'da normal-taraf match'ini ÖNDEN temizleme: Override zaten
+            // partner renginin TÜM taşlarını (match dahil) kendi fanout animasyonuyla süpürüyor.
+            // Önden clear taşları yerinde pat diye yok edip Override efektinden önce boşluk
+            // yaratıyordu ("taş kaymadan kayboluyor"). Bu yüzden override tarafında atla:
+            // akış = swap kaydırma → Override animasyon/efekt.
+            bool specialSideIsOverride =
+                originalSa == TileSpecial.SystemOverride || originalSb == TileSpecial.SystemOverride;
+
+            if (!bothOriginallySpecial && !specialSideIsOverride)
             {
                 var specialTile = (originalSa != TileSpecial.None) ? a : b;
                 var normalTile = (originalSa != TileSpecial.None) ? b : a;
@@ -2211,6 +2253,49 @@ public class BoardController : MonoBehaviour
                 }
             }
 
+            // Barrel spread: board tam oturunca, bu hamlede kırılan barrel'lar etraflarına
+            // 4x4 mud saçar (oil spread ile aynı idle koşulu). Mud under-tile olduğu için
+            // cascade/gravity'yi etkilemez; damla animasyonu sonrası hücrelere stamp edilir.
+            if (!barrelSpreadResolvedThisMove)
+            {
+                barrelSpreadResolvedThisMove = true;
+
+                if (barrelBreaksThisMove.Count > 0)
+                {
+                    var barrels = new List<Vector2Int>(barrelBreaksThisMove);
+                    barrelBreaksThisMove.Clear();
+
+                    Debug.Log($"[Barrel] Spreading mud from {barrels.Count} broken barrel(s) after board settled.");
+                    actionSequencer.Enqueue(new BarrelSpreadAction(this, barrels));
+
+                    while (actionSequencer.IsPlaying)
+                        yield return null;
+
+                    continue;
+                }
+            }
+
+            // RocketBasket: board tam oturunca, bu hamlede tetiklenen roketler PatchBot gibi
+            // hedefe uçup vurur (oil/barrel ile aynı idle koşulu, hamle başına bir kez).
+            if (!rocketLaunchResolvedThisMove)
+            {
+                rocketLaunchResolvedThisMove = true;
+
+                if (rocketLaunchesThisMove.Count > 0)
+                {
+                    var launches = new List<RocketBasketLaunchAction.Launch>(rocketLaunchesThisMove);
+                    rocketLaunchesThisMove.Clear();
+
+                    Debug.Log($"[RocketBasket] Launching {launches.Count} rocket(s) after board settled.");
+                    actionSequencer.Enqueue(new RocketBasketLaunchAction(this, launches));
+
+                    while (actionSequencer.IsPlaying)
+                        yield return null;
+
+                    continue;
+                }
+            }
+
             // ─────────────────────────────────────────────
             // Deadlock kontrolü:
             // Eğer board durmuşsa ve oynanabilir hiçbir swap yoksa
@@ -2630,6 +2715,23 @@ public class BoardController : MonoBehaviour
     internal void RaiseObstacleCreatedDynamic(int x, int y)
         => OnObstacleCreatedDynamic?.Invoke(x, y);
 
+    internal void RaiseBarrelResolved()
+        => OnBarrelResolved?.Invoke();
+
+    /// <summary>
+    /// RocketBasketService, komşu renk match'i bir roketi tetikleyince çağırır. Roketler board
+    /// tam oturunca (ResolveBoard idle bloğu) PatchBot gibi hedefe uçup vurur.
+    /// </summary>
+    public void QueueRocketLaunch(Vector2Int origin, TileType color, Sprite rocketSprite)
+    {
+        rocketLaunchesThisMove.Add(new RocketBasketLaunchAction.Launch
+        {
+            origin = origin,
+            color = color,
+            rocketSprite = rocketSprite
+        });
+    }
+
     internal void SetHoleStateFromObstacle(int x, int y)
     {
         if (x < 0 || x >= width || y < 0 || y >= height)
@@ -2683,6 +2785,10 @@ public class BoardController : MonoBehaviour
         int ox = originIndex % width;
         int oy = originIndex / width;
         if (ox < 0 || ox >= width || oy < 0 || oy >= height) return;
+
+        // Barrel kırıldı: bu hamlenin sonunda (board oturunca) etrafına 4x4 mud saçılacak.
+        if (obstacleId == ObstacleId.Barrel)
+            barrelBreaksThisMove.Add(new Vector2Int(ox, oy));
 
         if (obstacleId == ObstacleId.Oil)
         {

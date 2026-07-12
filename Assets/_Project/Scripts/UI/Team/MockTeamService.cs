@@ -49,11 +49,26 @@ public sealed class MockTeamService : ITeamService
         // Mock: kendi can isteğini listeye ekle (zaten varsa atla).
         if (!requests.Exists(r => r.requesterName == PlayerProfile.PlayerName))
             requests.Add(new TeamLifeRequest { requesterName = PlayerProfile.PlayerName, current = 0, needed = 5 });
+
+        // Sohbette de görünsün (kendi tarafımda, sağda).
+        chat.Add(new TeamChatMessage
+        {
+            senderName = PlayerProfile.PlayerName,
+            text = "❤️ Can istedi!",
+            timeLabel = "şimdi",
+            isMine = true,
+        });
     }
 
     public void SendMessage(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
-        chat.Add(new TeamChatMessage { senderName = PlayerProfile.PlayerName, text = text.Trim(), timeLabel = "şimdi" });
+        chat.Add(new TeamChatMessage
+        {
+            senderName = PlayerProfile.PlayerName,
+            text = text.Trim(),
+            timeLabel = "şimdi",
+            isMine = true,
+        });
     }
 }

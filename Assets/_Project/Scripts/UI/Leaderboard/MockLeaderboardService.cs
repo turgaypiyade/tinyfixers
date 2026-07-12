@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Sahte liderlik verisi. Kendi satırın gerçek (PlayerProfile adı + yıldız puanı);
+/// Sahte liderlik verisi. Kendi satırın gerçek (PlayerProfile adı + toplam puan);
 /// gerisi sabit isim havuzundan üretilir. Backend gelince bu sınıf değişir, controller değil.
 /// </summary>
 public sealed class MockLeaderboardService : ILeaderboardService
@@ -45,28 +45,35 @@ public sealed class MockLeaderboardService : ILeaderboardService
         var list = new List<LeaderboardEntry>();
         for (int i = 0; i < count; i++)
         {
-            int score = 140 - i * 9 - (seed % 5) - (i * seed) % 7;
+            // Gerçekçi puan aralığı (yıldız değil, oyun-içi puan). Oyuncu ilerledikçe
+            // TotalScore büyüyüp bu rakiplerin arasından yukarı tırmanır.
+            int score = 18000 - i * 1500 - (seed * 137) % 1000;
             list.Add(new LeaderboardEntry
             {
                 rank = i + 1,
                 playerName = Names[(i + seed) % Names.Length],
                 subtitle = subFilter == 1 ? "Türkiye" : "Dünya",
-                score = Mathf.Max(1, score),
+                score = Mathf.Max(500, score),
                 chapter = 4400 - (i * 37 + seed) % 900,
             });
         }
 
-        // Kendi satırını araya gerçek veriyle yerleştir (örn 5. sıra).
-        int selfRank = Mathf.Clamp(5, 1, list.Count);
-        list[selfRank - 1] = new LeaderboardEntry
+        // Kendi satırını gerçek toplam puanla EKLE (sabit sıraya sokma!).
+        list.Add(new LeaderboardEntry
         {
-            rank = selfRank,
             playerName = PlayerProfile.PlayerName,
             subtitle = "Sen",
-            score = Mathf.Max(1, PlayerWallet.TotalStars),
+            score = Mathf.Max(1, PlayerWallet.TotalScore),
             isSelf = true,
             chapter = PlayerPrefs.GetInt("current_level", 1),
-        };
+        });
+
+        // Puana göre sırala (yüksek → düşük) ve sıra numaralarını yeniden ver.
+        // Böylece self, gerçek puanının hak ettiği yerde görünür (backend de böyle döner).
+        list.Sort((a, b) => b.score.CompareTo(a.score));
+        for (int i = 0; i < list.Count; i++)
+            list[i].rank = i + 1;
+
         return list;
     }
 

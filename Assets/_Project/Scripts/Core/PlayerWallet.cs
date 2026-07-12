@@ -110,4 +110,42 @@ public static class PlayerWallet
     }
 
     public static bool HasEnoughStars(int amount) => TotalStars >= amount;
+
+    // -----------------------------------------------------------------------
+    // Score (puan) — leaderboard/team sıralama metriği.
+    // Yıldız kalıbının aynısı: level başına EN İYİ skor saklanır, sadece
+    // iyileştirme farkı toplam puana eklenir → level tekrar oynamak grind istismarı
+    // yaratmaz (yalnız kendi rekorunu geçince artar).
+
+    private const string KeyTotalScore = "player_total_score";
+    private const string KeyLevelScore = "level_score_";   // + level numarası
+
+    public static event Action<int> OnTotalScoreChanged;
+
+    public static int TotalScore => PlayerPrefs.GetInt(KeyTotalScore, 0);
+
+    public static int GetLevelScore(int level)
+        => PlayerPrefs.GetInt(KeyLevelScore + level, 0);
+
+    /// <summary>
+    /// Seviye bazında en iyi skoru kaydeder; önceki en iyiden yüksekse farkı
+    /// toplam puana ekler. (SetLevelStars ile birebir aynı mantık.)
+    /// </summary>
+    public static void SetLevelScore(int level, int score)
+    {
+        if (score < 0) score = 0;
+        string key = KeyLevelScore + level;
+
+        int prev = PlayerPrefs.GetInt(key, 0);
+        if (score <= prev) return;   // rekoru geçmediyse kaydetme
+
+        int gained = score - prev;
+        PlayerPrefs.SetInt(key, score);
+
+        int newTotal = TotalScore + gained;
+        PlayerPrefs.SetInt(KeyTotalScore, newTotal);
+        PlayerPrefs.Save();
+
+        OnTotalScoreChanged?.Invoke(newTotal);
+    }
 }

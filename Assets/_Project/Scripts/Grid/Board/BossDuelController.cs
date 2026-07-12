@@ -791,33 +791,49 @@ public sealed class BossDuelController : MonoBehaviour
 
     // ── Tween feedback ──
 
+    // Kolların GERÇEK home (dinlenme) pozisyonu — BİR KEZ yakalanır (drift önleme).
+    // Sonraki ateşlerde canlı/kaymış pozisyon değil, hep bu home baz alınır.
+    private readonly Dictionary<RectTransform, Vector2> _recoilHome = new();
+    private readonly Dictionary<RectTransform, Coroutine> _recoilCo = new();
+
     private void PlayRecoil(RectTransform target, float facing)
     {
         if (target == null || recoilDuration <= 0f) return;
-        StartCoroutine(RecoilRoutine(target, -facing * recoilDistance));
+
+        // İlk recoil'de (henüz kaymamışken) gerçek home'u yakala.
+        if (!_recoilHome.ContainsKey(target))
+            _recoilHome[target] = target.anchoredPosition;
+
+        // Önceki recoil hâlâ koşuyorsa durdur — üst üste binen darbelerde kavga/drift olmasın.
+        if (_recoilCo.TryGetValue(target, out var running) && running != null)
+            StopCoroutine(running);
+
+        _recoilCo[target] = StartCoroutine(RecoilRoutine(target, -facing * recoilDistance));
     }
 
     private IEnumerator RecoilRoutine(RectTransform target, float dx)
     {
-        Vector2 basePos = target.anchoredPosition;
-        Vector2 back = basePos + new Vector2(dx, 0f);
+        Vector2 home = _recoilHome[target];             // sabit home (canlı pozisyon DEĞİL)
+        Vector2 back = home + new Vector2(dx, 0f);
+        Vector2 startPos = target.anchoredPosition;      // yarıda kesilmiş olabilir; buradan başla
         float half = recoilDuration * 0.5f;
 
         float t = 0f;
         while (t < half && target != null)
         {
             t += Time.deltaTime;
-            target.anchoredPosition = Vector2.Lerp(basePos, back, t / half);
+            target.anchoredPosition = Vector2.Lerp(startPos, back, t / half);
             yield return null;
         }
         t = 0f;
         while (t < half && target != null)
         {
             t += Time.deltaTime;
-            target.anchoredPosition = Vector2.Lerp(back, basePos, t / half);
+            target.anchoredPosition = Vector2.Lerp(back, home, t / half);   // her zaman HOME'a dön
             yield return null;
         }
-        if (target != null) target.anchoredPosition = basePos;
+        if (target != null) target.anchoredPosition = home;   // kesin home'a otur
+        _recoilCo[target] = null;
     }
 
     private IEnumerator ChargeTelegraph(RectTransform target, float duration)

@@ -371,8 +371,15 @@ public sealed class LeaderboardScreenController : MonoBehaviour
     private void EnsureAvatar(LeaderboardEntry entry)
     {
         if (entry == null || entry.avatar != null) return;
-        if (avatarPool == null || avatarPool.Length == 0) return;
 
+        // Kendi satırın → ProfileScreen'de SEÇTİĞİN avatar (rastgele havuz değil).
+        if (entry.isSelf)
+        {
+            var mine = PlayerAvatarProvider.Current;
+            if (mine != null) { entry.avatar = mine; return; }
+        }
+
+        if (avatarPool == null || avatarPool.Length == 0) return;
         int hash = string.IsNullOrEmpty(entry.playerName) ? 0 : Mathf.Abs(entry.playerName.GetHashCode());
         entry.avatar = avatarPool[hash % avatarPool.Length];
     }

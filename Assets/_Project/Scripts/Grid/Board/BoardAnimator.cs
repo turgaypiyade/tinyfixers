@@ -498,12 +498,11 @@ public class BoardAnimator
                 else if (useLightningEffect)
                     delay = lightningIndex * lightningStepDelay;
 
-                // Override+Override radial wave: play a "hit" pulse on each tile as the
-                // shockwave reaches it, right before the clear animation kicks in.
+                // Override+Override radial wave owns the visual hit with the board-wide blast.
+                // Keep the per-tile delay, but skip the small per-cell pulse/burst rings.
                 if (isRadialWaveTile && !isGoalTile)
                 {
-                    float pulseDelay = Mathf.Max(0f, delay - 0.03f);
-                    pops.Add(DelayedSelectionPulse(tile, pulseDelay, 1.22f, 0.05f, 0.07f));
+                    skipBreakFxTiles.Add(tile);
                 }
 
                 var tileAnimationMode =
@@ -519,7 +518,10 @@ public class BoardAnimator
                 }
                 else
                 {
-                    pops.Add(clearEffectOrchestrator.Play(tile, tileAnimationMode, delay, board.GetClearDurationForCurrentPass()));
+                    // Radial wave (Override+Override) board-wide patlamayı zaten gösteriyor →
+                    // her hücrede ayrı burst dairelerini (halka/yıldız/shard) tetikleme.
+                    bool suppressBurst = isRadialWaveTile && !isGoalTile;
+                    pops.Add(clearEffectOrchestrator.Play(tile, tileAnimationMode, delay, board.GetClearDurationForCurrentPass(), suppressBurst));
                 }
 
                 if (!isSweptOff && !implodeTiles.Contains(tile))

@@ -150,8 +150,9 @@ public sealed class OverrideOverrideCombo
         if (maxDelay <= 0f)
             maxDelay = ResolutionContext.OverrideRadialClearDuration;
 
+        // LİNEER dalga haritası: VFX cephesi (R(t) = t * maxR) ile birebir aynı matematik.
         rt.Context.OverrideRadialClearDelays = rt.VisualService != null
-            ? rt.VisualService.BuildCenterOutClearDelays(rt.Context.Affected, maxDelay, preClearDelay)
+            ? rt.VisualService.BuildWaveFrontClearDelays(rt.Context.Affected, originCell, preClearDelay, maxDelay)
             : null;
     }
 

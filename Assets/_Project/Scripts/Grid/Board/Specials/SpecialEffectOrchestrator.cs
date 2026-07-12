@@ -47,7 +47,7 @@ public class SpecialEffectOrchestrator
 
     public float PlayOverrideComboVfxAndQueue(TileSpecial a, TileSpecial b, Vector2Int originCell)
     {
-        float duration = board.PlaySystemOverrideComboVfxAndGetDuration();
+        float duration = board.PlaySystemOverrideComboVfxAndGetDuration(originCell);
         EmitComboVisualQueued(a, b, originCell, duration);
         return duration;
     }

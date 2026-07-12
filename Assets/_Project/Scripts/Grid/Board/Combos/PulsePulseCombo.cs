@@ -125,6 +125,14 @@ public sealed class PulsePulseCombo
             for (int y = centerY - radius; y <= centerY + radius; y++)
             {
                 if (!SpecialUtils.CanAffectCell(rt.Board, x, y))
+                {
+                    if (!SpecialCellUtils.TryMarkEmitterImpact(rt.Context, rt.Board, x, y))
+                        SpecialCellUtils.TryAddObstacleImpact(rt.Board, x, y, rt.Context.ImpactCells);
+                    continue;
+                }
+
+                // Movable obstacle → obstacle hasarı (ImpactCells), tile-clear değil. Bug sınıfı tek noktada.
+                if (SpecialCellUtils.TryRouteMovableToImpact(rt.Context, rt.Board, x, y))
                     continue;
 
                 SpecialCellUtils.MarkAffectedCell(rt.Context, x, y, rt.Board);

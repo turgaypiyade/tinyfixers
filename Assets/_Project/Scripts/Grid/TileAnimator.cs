@@ -30,7 +30,7 @@ public sealed class TileAnimator
     private const float TILE_SHRINK_MID = 0.55f;  // Taş scale orta (shrink hissini verir)
     private const float BURST_VFX_DURATION = 0.30f; // Halka/yıldız/shard yaşam süresi (paralel)
 
-    public IEnumerator PlayPop(TileView tile, float duration)
+    public IEnumerator PlayPop(TileView tile, float duration, bool suppressBurst = false)
     {
         if (tile == null || !tile)
             yield break;
@@ -74,7 +74,9 @@ public sealed class TileAnimator
 
         // Burst VFX'i paralel tetikle (kendi life'ını yaşar, PlayPop bekleme zorunda değil)
         // Fire-and-forget: burst 300ms yaşar ama PlayPop sadece 120ms blokluyor
-        if (board != null)
+        // suppressBurst: Override+Override radial wave gibi board-wide bir efekt zaten patlamayı
+        // gösteriyorsa, her hücrede ayrı halka/yıldız/shard daireleri istemiyoruz.
+        if (board != null && !suppressBurst)
         {
             board.StartCoroutine(TileClearBurstVfx.CoPlayBurst(tile, board, BURST_VFX_DURATION));
         }

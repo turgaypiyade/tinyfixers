@@ -116,7 +116,20 @@ public class LevelDataEditor : Editor
         DrawRandomPool(level);
         DrawGoals(level);
         DrawEnergyContainerSettings(level);
+        DrawRocketBasketSettings(level);
         DrawAudio(level);
+    }
+
+    private void DrawRocketBasketSettings(LevelData level)
+    {
+        EditorGUILayout.Space(8);
+        EditorGUILayout.LabelField("Rocket Basket", EditorStyles.boldLabel);
+        level.rocketBasketFireAllOnHit = EditorGUILayout.Toggle(
+            "Fire All On Hit", level.rocketBasketFireAllOnHit);
+        EditorGUILayout.HelpBox(
+            "Açık: bu leveldeki tüm sepetler TEK vuruşta yüklü tüm roketleri fırlatır ve anında kalkar.\n" +
+            "Kapalı: her renk kendi eşleşmesinde ayrı ayrı fırlar (Core→Gear→Bolt).",
+            MessageType.None);
     }
 
     private void DrawEnergyContainerSettings(LevelData level)

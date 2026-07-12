@@ -4,8 +4,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Takım ekranı. Üst bilgi (amblem, isim, hediye ilerleme + sayaç + görev), altında
-/// sohbet + can istekleri akışı, en altta "Can İste" / "Mesaj". v1'de MockTeamService.
+/// Takım ekranı (sade sohbet). Üst bilgi (amblem, isim, üye sayısı), altında sohbet akışı
+/// (gelen mesaj solda, benimki sağda), en altta "Can İste" / "Mesaj". Mesaj'a basınca
+/// bottom bar üstünde tek satırlık input açılır. v1'de MockTeamService. (Event/hediye YOK.)
 /// </summary>
 public sealed class TeamScreenController : MonoBehaviour
 {
@@ -16,21 +17,23 @@ public sealed class TeamScreenController : MonoBehaviour
     [SerializeField] private Image emblemImage;
     [SerializeField] private TMP_Text teamNameText;
     [SerializeField] private TMP_Text memberCountText;   // "40/50"
-    [SerializeField] private Image giftFill;
-    [SerializeField] private TMP_Text timerText;
-    [SerializeField] private TMP_Text missionText;
 
     [Header("Akış")]
     [SerializeField] private RectTransform contentContainer;
     [SerializeField] private TeamChatRow chatRowPrefab;
-    [SerializeField] private TeamLifeRequestRow lifeRequestRowPrefab;
+    [SerializeField] private ScrollRect scrollRect;      // yeni mesajda alta kaydırmak için
 
     [Header("Alt butonlar")]
     [SerializeField] private Button requestLifeButton;
     [SerializeField] private Button messageButton;
 
+    [Header("Mesaj input (bottom bar üstü)")]
+    [SerializeField] private GameObject messageInputRoot;   // başta kapalı
+    [SerializeField] private TMP_InputField messageInput;
+    [SerializeField] private Button messagePostButton;
+
     [Header("Görsel")]
-    [Tooltip("Avatarı olmayan mesaj/isteklere isme göre deterministik dağıtılan mock avatar havuzu.")]
+    [Tooltip("Avatarı olmayan mesajlara isme göre deterministik dağıtılan mock avatar havuzu.")]
     [SerializeField] private Sprite[] avatarPool;
     [Tooltip("Takım amblemi yoksa kullanılacak varsayılan amblem.")]
     [SerializeField] private Sprite defaultEmblem;
@@ -43,6 +46,7 @@ public sealed class TeamScreenController : MonoBehaviour
     {
         service ??= BackendServices.Team;
         WireButtons();
+        if (messageInputRoot != null) messageInputRoot.SetActive(false);
         Refresh();
     }
 
@@ -50,7 +54,9 @@ public sealed class TeamScreenController : MonoBehaviour
     {
         if (wired) return;
         if (requestLifeButton != null) requestLifeButton.onClick.AddListener(OnRequestLife);
-        if (messageButton != null)     messageButton.onClick.AddListener(OnMessage);
+        if (messageButton != null)     messageButton.onClick.AddListener(ToggleMessageInput);
+        if (messagePostButton != null) messagePostButton.onClick.AddListener(OnPostMessage);
+        if (messageInput != null)      messageInput.onSubmit.AddListener(_ => OnPostMessage());
         wired = true;
     }
 
@@ -66,11 +72,8 @@ public sealed class TeamScreenController : MonoBehaviour
                 emblemImage.enabled = emblem != null;
                 emblemImage.preserveAspect = true;
             }
-            if (teamNameText != null)   teamNameText.text = info.teamName;
+            if (teamNameText != null)    teamNameText.text = info.teamName;
             if (memberCountText != null) memberCountText.text = info.MemberLabel;
-            if (giftFill != null)     giftFill.fillAmount = info.GiftProgress01;
-            if (timerText != null)    timerText.text = info.timerLabel;
-            if (missionText != null)  missionText.text = info.missionText;
         }
 
         BuildFeed();
@@ -80,29 +83,30 @@ public sealed class TeamScreenController : MonoBehaviour
     {
         foreach (var go in feed) if (go != null) Destroy(go);
         feed.Clear();
-        if (contentContainer == null) return;
+        if (contentContainer == null || chatRowPrefab == null) return;
 
-        if (chatRowPrefab != null)
+        foreach (var m in service.GetChat())
         {
-            foreach (var m in service.GetChat())
+            if (m.avatar == null)
             {
-                if (m.avatar == null) m.avatar = PickAvatar(m.senderName);
-                var row = Instantiate(chatRowPrefab, contentContainer);
-                row.Bind(m, theme);
-                feed.Add(row.gameObject);
+                // Benim mesajım → ProfileScreen'de SEÇTİĞİM avatar; gelen → havuzdan.
+                m.avatar = m.isMine
+                    ? (PlayerAvatarProvider.Current ?? PickAvatar(m.senderName))
+                    : PickAvatar(m.senderName);
             }
+            var row = Instantiate(chatRowPrefab, contentContainer);
+            row.Bind(m, theme);
+            feed.Add(row.gameObject);
         }
 
-        if (lifeRequestRowPrefab != null)
-        {
-            foreach (var r in service.GetLifeRequests())
-            {
-                if (r.avatar == null) r.avatar = PickAvatar(r.requesterName);
-                var row = Instantiate(lifeRequestRowPrefab, contentContainer);
-                row.Bind(r, theme, HandleHelp);
-                feed.Add(row.gameObject);
-            }
-        }
+        SnapToBottom();
+    }
+
+    private void SnapToBottom()
+    {
+        if (scrollRect == null) return;
+        Canvas.ForceUpdateCanvases();
+        scrollRect.verticalNormalizedPosition = 0f;   // en yeni mesaj altta
     }
 
     // İsme göre deterministik avatar (aynı isim her seferinde aynı robotu alır).
@@ -113,11 +117,7 @@ public sealed class TeamScreenController : MonoBehaviour
         return avatarPool[hash % avatarPool.Length];
     }
 
-    private void HandleHelp(TeamLifeRequest request)
-    {
-        service.Help(request);
-        BuildFeed();
-    }
+    // ── Aksiyonlar ──────────────────────────────────────────────────
 
     private void OnRequestLife()
     {
@@ -125,10 +125,28 @@ public sealed class TeamScreenController : MonoBehaviour
         BuildFeed();
     }
 
-    private void OnMessage()
+    // Mesaj butonu: tek satırlık input alanını aç/kapat.
+    private void ToggleMessageInput()
     {
-        // Mockup: sabit mesaj gönder (gerçekte input alanı açılır).
-        service.SendMessage("Merhaba takım!");
+        if (messageInputRoot == null) return;
+        bool show = !messageInputRoot.activeSelf;
+        messageInputRoot.SetActive(show);
+        if (show && messageInput != null)
+        {
+            messageInput.text = "";
+            messageInput.ActivateInputField();
+        }
+    }
+
+    private void OnPostMessage()
+    {
+        if (messageInput == null) return;
+        string text = messageInput.text;
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        service.SendMessage(text);
+        messageInput.text = "";
         BuildFeed();
+        if (messageInputRoot != null) messageInputRoot.SetActive(false);
     }
 }

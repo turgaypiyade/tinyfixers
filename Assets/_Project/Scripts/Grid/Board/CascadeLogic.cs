@@ -490,6 +490,14 @@ public class CascadeLogic
         // Cargo (exitAtBottom): asla diagonal kaymaz, yalnızca düz aşağı düşer.
         if (sourceTile.IsStraightFallOnly) return false;
 
+        // Kaynak taşın HEMEN ALTINDA patlamayı bekleyen (anchor'lı / pending-triggered)
+        // bir special varsa, taş onun üstünde DURSUN — diagonal kayıp kaçmasın. Special
+        // patlayınca boşalan hücreye düz düşer. Bu, "çok aksiyonlu" zincirlerde taşların
+        // altındaki special daha patlamadan yana kayması glitch'ini önler. Kalıcı
+        // obstacle'lar pending değildir → onların etrafından diagonal normal davranışını korur.
+        if (board.IsPendingTriggeredSpecialCell(fromX, sourceY + 1))
+            return false;
+
         // Special'lar diagonal'e savrulmasın: düz inmeyi tercih ederler. skipSpecials=true
         // olan ilk geçişte special kaynak atlanır; yalnızca son çare geçişinde (başka filler yoksa)
         // diagonal kayabilirler. Böylece special'lar yana kaymadan normal taş gibi düz iner.
