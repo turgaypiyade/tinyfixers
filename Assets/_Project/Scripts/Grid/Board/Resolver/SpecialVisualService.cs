@@ -560,6 +560,31 @@ public class SpecialVisualService
     }
 
     /// <summary>
+    /// Override+Override dalga cephesi için piksel bazlı mesafe haritası.
+    /// Event-driven clear sisteminde kullanılır. 
+    /// </summary>
+    public Dictionary<TileView, float> BuildWaveFrontClearDistances(
+        HashSet<TileView> targets,
+        Vector2Int originCell)
+    {
+        if (targets == null || targets.Count == 0)
+            return null;
+
+        var center = new Vector2(originCell.x, originCell.y);
+        var distances = new Dictionary<TileView, float>(targets.Count);
+        foreach (var tile in targets)
+        {
+            if (tile == null) continue;
+            float distCells = Vector2.Distance(new Vector2(tile.X, tile.Y), center);
+            // Biraz erken kırmak isterseniz - offset ekleyebilirsiniz. 
+            // Şimdilik çeyrek hücre kadar erken tetiklenmesi hissiyatı güçlendirir.
+            distances[tile] = Mathf.Max(0f, distCells * board.TileSize - board.TileSize * 0.25f);
+        }
+
+        return distances;
+    }
+
+    /// <summary>
     /// Builds center-out radial clear delays for Override+Override combo.
     /// </summary>
     public Dictionary<TileView, float> BuildCenterOutClearDelays(

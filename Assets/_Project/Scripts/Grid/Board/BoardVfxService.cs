@@ -53,6 +53,17 @@ public class BoardVfxService
         {
             vfx.Play(overrideSpriteA, overrideSpriteB, mergedSprite);
         }
+        
+        System.Action<float> onProgress = null;
+        onProgress = (r) => board.InvokeSystemOverrideWaveProgress(r);
+        vfx.OnWaveRadiusChanged += onProgress;
+        
+        System.Action onFinished = null;
+        onFinished = () => {
+            vfx.OnWaveRadiusChanged -= onProgress;
+            vfx.OnComboFinished -= onFinished;
+        };
+        vfx.OnComboFinished += onFinished;
 
         float duration = vfx.GetTotalDuration();
         SystemOverrideBehaviorEvents.EmitOverrideComboVfxPlayed(duration);

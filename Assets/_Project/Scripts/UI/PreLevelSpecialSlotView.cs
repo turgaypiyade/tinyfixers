@@ -22,6 +22,10 @@ public class PreLevelSpecialSlotView : MonoBehaviour
     [SerializeField] private Sprite selectedBackgroundSprite;
     [SerializeField] private bool hideCountWhenSelected = true;
 
+    [Header("Lock State")]
+    [Tooltip("İlk 10 level boyunca kilitli olan durum için gösterilecek görsel Obje")]
+    [SerializeField] private GameObject lockOverlay;
+
     [Header("Timed Reward Overlay")]
     [Tooltip("Süreli ödül aktifken gösterilecek overlay container.")]
     [SerializeField] private GameObject timedOverlay;
@@ -39,10 +43,12 @@ public class PreLevelSpecialSlotView : MonoBehaviour
 
     private ChapterTheme theme;
     private bool isSelected;
+    private bool isUnlocked = true;
     private Coroutine selectionRoutine;
 
     public TileSpecial Special => special;
     public bool IsSelected => isSelected;
+    public bool IsUnlocked => isUnlocked;
     public bool IsTimedActive => TimedRewardService.IsSpecialFree(special);
 
     public event Action<PreLevelSpecialSlotView> Clicked;
@@ -87,10 +93,11 @@ public class PreLevelSpecialSlotView : MonoBehaviour
         timedCountdownText.text = FormatTimeSpan(GetTimedRemaining());
     }
 
-    public void Configure(TileSpecial slotSpecial, Sprite icon, ChapterTheme chapterTheme)
+    public void Configure(TileSpecial slotSpecial, Sprite icon, ChapterTheme chapterTheme, bool unlocked = true)
     {
         special = slotSpecial;
         theme = chapterTheme;
+        isUnlocked = unlocked;
 
         if (iconImage != null && iconImage.sprite == null && icon != null)
             iconImage.sprite = icon;
@@ -99,7 +106,27 @@ public class PreLevelSpecialSlotView : MonoBehaviour
         RefreshCount();
         RefreshLocalizedTexts();
         SetSelected(false, false);
+        ApplyLockState();
         ApplyTimedState();
+    }
+
+    private void ApplyLockState()
+    {
+        if (lockOverlay != null)
+            lockOverlay.SetActive(!isUnlocked);
+            
+        if (button != null)
+        {
+            // Eğer kilitliyse buton tıklanamaz
+            if (!isUnlocked)
+                button.interactable = false;
+        }
+        
+        if (!isUnlocked)
+        {
+            if (countText != null) countText.gameObject.SetActive(false);
+            if (numberBG != null) numberBG.gameObject.SetActive(false);
+        }
     }
 
     public void ApplyTheme(ChapterTheme chapterTheme)
@@ -230,6 +257,12 @@ public class PreLevelSpecialSlotView : MonoBehaviour
 
     private void HandleClick()
     {
+        if (!isUnlocked) return;
+        
+        // Kilitli değil ama elimizde hiç joker kalmadıysa seçime izin verme
+        if (PreLevelSpecialInventory.GetCount(special) <= 0 && !IsTimedActive && !isSelected)
+            return; // Sınırsız kullanımı durdur!
+            
         Clicked?.Invoke(this);
     }
 

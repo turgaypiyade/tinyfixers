@@ -33,6 +33,8 @@ public class ResolutionContext
     public int OverrideFanoutPulseHitCount;
     public readonly List<PendingOverrideImplant> PendingOverrideImplants = new();
     public Dictionary<TileView, float> OverrideRadialClearDelays;
+    public Dictionary<TileView, float> OverrideRadialClearDistances;
+    public bool UseEventDrivenRadialClear;
     public float OverrideVfxDuration;
     public readonly HashSet<TileView> OverrideImplantedTiles = new();
     public readonly List<Vector2Int> OverrideDeferredPulseExplosions = new();
@@ -126,6 +128,8 @@ public class ResolutionContext
         OverrideFanoutPulseHitCount = 0;
         PendingOverrideImplants.Clear();
         OverrideRadialClearDelays = null;
+        OverrideRadialClearDistances = null;
+        UseEventDrivenRadialClear = false;
         OverrideVfxDuration = 0f;
         OverrideImplantedTiles.Clear();
         DeferOverrideImplantVisualRefresh = false;

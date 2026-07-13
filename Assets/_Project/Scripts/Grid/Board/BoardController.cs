@@ -353,6 +353,11 @@ public class BoardController : MonoBehaviour
     public event Action<int, ObstacleId> OnObstacleDestroyed;
     public event Action<int> OnCellUnlocked;
     public event Action<int, int> OnObstacleCreatedDynamic;
+    // Stacked-beneath restore: authored bir obstacle (Mud, Stone...) üstteki kırılınca geri
+    // yüklendi. Yalnızca view oluşturmak için — goal sayacı BÜYÜMEZ (obstacle yeni değil,
+    // level'ın authored goal amount'ında zaten sayılı; OnObstacleCreatedDynamic olsaydı
+    // TopHud onu dinamik yaratım sanıp +1 ekler, kırılınca net değişim 0 görünürdü).
+    public event Action<int, int> OnObstacleViewRestored;
     // Bir barrel'ın mud yayılımı (BarrelSpreadAction) tamamlandığında bir kez tetiklenir.
     // Mud goal'ündeki o barrel'a ait placeholder, mud stamp edildikten SONRA düşürülür ki
     // sayaç mud eklenmeden 0'a inip erken WIN tetiklemesin.
@@ -872,6 +877,9 @@ public class BoardController : MonoBehaviour
     // ═══════════════════════════════════════════════════════════════
     //  VFX Delegation
     // ═══════════════════════════════════════════════════════════════
+
+    public event System.Action<float> OnSystemOverrideWaveProgress;
+    public void InvokeSystemOverrideWaveProgress(float radiusPx) => OnSystemOverrideWaveProgress?.Invoke(radiusPx);
 
     public float PlaySystemOverrideComboVfxAndGetDuration()
     {
@@ -2715,6 +2723,9 @@ public class BoardController : MonoBehaviour
     internal void RaiseObstacleCreatedDynamic(int x, int y)
         => OnObstacleCreatedDynamic?.Invoke(x, y);
 
+    internal void RaiseObstacleViewRestored(int x, int y)
+        => OnObstacleViewRestored?.Invoke(x, y);
+
     internal void RaiseBarrelResolved()
         => OnBarrelResolved?.Invoke();
 
@@ -2759,8 +2770,9 @@ public class BoardController : MonoBehaviour
         obstacleStateService.OnWardrobeItemRemoved += HandleWardrobeItemRemoved;
 
         // Generic stacked-obstacle: üstteki kırılınca alttaki (Mud, Stone...) geri yüklenir;
-        // o beneath obstacle'a görsel oluşturmak için dynamic-create akışına bağla.
-        obstacleStateService.RequestObstacleViewCreate = RaiseObstacleCreatedDynamic;
+        // o beneath obstacle'a görsel oluşturmak için view-restore akışına bağla. Dynamic-create
+        // DEĞİL: restore edilen obstacle authored'dır, goal sayacı büyümemelidir.
+        obstacleStateService.RequestObstacleViewCreate = RaiseObstacleViewRestored;
     }
 
     private void HandleWardrobeOpened(int originIndex)

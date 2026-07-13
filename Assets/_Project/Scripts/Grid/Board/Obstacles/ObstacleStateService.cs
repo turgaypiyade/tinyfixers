@@ -862,6 +862,7 @@ public class ObstacleStateService : ISimObstacleQuery
 
         HashSet<int> restoredBeneathOrigins = null;
         Dictionary<int, int> restoredMudRemainingByOrigin = null;
+        bool originCellRestored = false;
 
         for (int i = 0; i < level.obstacles.Length; i++)
         {
@@ -878,6 +879,8 @@ public class ObstacleStateService : ISimObstacleQuery
                 if (i < remainingHitsByOrigin.Length)
                     remainingHitsByOrigin[i] = beneath.Remaining;
                 _underTileBeneathMovable.Remove(i);
+                if (i == origin)
+                    originCellRestored = true;
                 continue;
             }
 
@@ -902,7 +905,11 @@ public class ObstacleStateService : ISimObstacleQuery
             OnCellUnlocked?.Invoke(i);
         }
 
-        remainingHitsByOrigin[origin] = -1;
+        // Origin hücresine _underTileBeneathMovable'dan bir obstacle geri yüklendiyse onun
+        // remaining'i az önce yazıldı — ezme. (Stamped-beneath restore'u etkilenmez: onun
+        // remaining'i aşağıda ReinitRestoredBeneathOrigin ile bu satırdan SONRA kurulur.)
+        if (!originCellRestored)
+            remainingHitsByOrigin[origin] = -1;
 
         if (originId == ObstacleId.ColorChest)
             _chestColorStates.Remove(origin);

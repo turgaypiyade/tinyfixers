@@ -279,7 +279,8 @@ public class BoardAnimator
         bool suppressPerTileClearVfx = false,
         Dictionary<TileView, float> perTileClearDelays = null,
         Vector2Int? implodeTargetCell = null,
-        Dictionary<Vector2Int, System.Action> arrivalTriggers = null)
+        Dictionary<Vector2Int, System.Action> arrivalTriggers = null,
+        Dictionary<TileView, float> perTileClearDistances = null)
     {
         var list = new List<TileView>(matches);
 
@@ -433,7 +434,14 @@ public class BoardAnimator
         {
             lineHitWindowOpen = true; // Sadece o spesifik hatlar için takip açılır.
         }
-
+        
+        bool useEventDrivenClear = perTileClearDistances != null && perTileClearDistances.Count > 0;
+        var pendingEventTiles = new HashSet<TileView>();
+        if (useEventDrivenClear)
+        {
+            foreach (var kv in perTileClearDistances)
+                pendingEventTiles.Add(kv.Key);
+        }
 
         for (int i = 0; i < list.Count; i++)
         {
@@ -490,7 +498,11 @@ public class BoardAnimator
                 // Öncelik: goal fly > lightning per-tile > default
                 float delay = 0f;
                 bool isRadialWaveTile = false;
-                if (perTileClearDelays != null && perTileClearDelays.TryGetValue(tile, out float customDelay))
+                if (useEventDrivenClear && perTileClearDistances != null && perTileClearDistances.ContainsKey(tile))
+                {
+                    isRadialWaveTile = true;
+                }
+                else if (perTileClearDelays != null && perTileClearDelays.TryGetValue(tile, out float customDelay))
                 {
                     delay = Mathf.Max(0f, customDelay);
                     isRadialWaveTile = true;
@@ -521,12 +533,27 @@ public class BoardAnimator
                     // Radial wave (Override+Override) board-wide patlamayı zaten gösteriyor →
                     // her hücrede ayrı burst dairelerini (halka/yıldız/shard) tetikleme.
                     bool suppressBurst = isRadialWaveTile && !isGoalTile;
-                    pops.Add(clearEffectOrchestrator.Play(tile, tileAnimationMode, delay, board.GetClearDurationForCurrentPass(), suppressBurst));
+                    
+                    if (useEventDrivenClear && isRadialWaveTile)
+                    {
+                        // Pop efekti tetiklemesini event handler'a (onProgress) devret, listeye ekleme.
+                    }
+                    else
+                    {
+                        pops.Add(clearEffectOrchestrator.Play(tile, tileAnimationMode, delay, board.GetClearDurationForCurrentPass(), suppressBurst));
+                    }
                 }
 
                 if (!isSweptOff && !implodeTiles.Contains(tile))
                 {
-                    board.StartCoroutine(ClearCellDataAfterDelay(tile, delay));
+                    if (useEventDrivenClear && isRadialWaveTile)
+                    {
+                        // ClearCellDataAfterDelay işlemini event handler yapacak.
+                    }
+                    else
+                    {
+                        board.StartCoroutine(ClearCellDataAfterDelay(tile, delay));
+                    }
                 }
 
                 if (useLightningEffect)
@@ -642,6 +669,53 @@ public class BoardAnimator
             }
         }
 
+        if (useEventDrivenClear)
+        {
+            Action<float> onWaveProgress = null;
+            onWaveProgress = (radiusPx) => {
+                var toRemove = new List<TileView>();
+                foreach (var t in pendingEventTiles)
+                {
+                    if (t == null) { toRemove.Add(t); continue; }
+                    if (perTileClearDistances.TryGetValue(t, out float reqDist) && radiusPx >= reqDist)
+                    {
+                        toRemove.Add(t);
+                        bool isGoalTile = skipBreakFxTiles.Contains(t);
+                        var tileAnimationMode = isGoalTile ? ClearAnimationMode.GoalFlyToHud : ClearAnimationMode.Default;
+                        bool suppressBurst = !isGoalTile; // Radial wave olduğu için burst kapalı.
+                        
+                        TileView capturedTile = t;
+                        ClearAnimationMode capturedMode = tileAnimationMode;
+                        bool capturedSuppress = suppressBurst;
+                        
+                        IEnumerator ProcessTileEvent() {
+                            yield return clearEffectOrchestrator.Play(capturedTile, capturedMode, 0f, board.GetClearDurationForCurrentPass(), capturedSuppress);
+                            FinalizeTileClear(capturedTile);
+                        }
+                        
+                        board.StartCoroutine(ProcessTileEvent());
+                        board.StartCoroutine(ClearCellDataAfterDelay(capturedTile, 0f));
+                    }
+                }
+                for (int j = 0; j < toRemove.Count; j++)
+                {
+                    pendingEventTiles.Remove(toRemove[j]);
+                    list.Remove(toRemove[j]); // Sonda tekrar Finalize olmasın diye ana listeden de çıkar
+                }
+            };
+
+            board.OnSystemOverrideWaveProgress += onWaveProgress;
+            
+            // Dalga bitişinde veya MatchClear bittiğinde eventi temizle
+            IEnumerator CleanupEventAfterDelay() {
+                float waitTime = board.GetSystemOverrideComboWaveDuration() + 0.1f;
+                if (waitTime > 0f) yield return new WaitForSeconds(waitTime);
+                board.OnSystemOverrideWaveProgress -= onWaveProgress;
+                pendingEventTiles.Clear();
+            }
+            board.StartCoroutine(CleanupEventAfterDelay());
+        }
+
         if (pulseImpacts.Count > 0)
         {
             for (int i = 0; i < pulseImpacts.Count; i++)
@@ -686,6 +760,18 @@ public class BoardAnimator
         {
             var __w = Wait(maxStaggerDelay + staggerAnimTime);
             if (__w != null) yield return __w;
+        }
+
+        if (useEventDrivenClear)
+        {
+            // Olası bir takılmaya karşı, event tabanlı işlemlerin bitmesi için ekstra bekle (Orbit + Merge + Wave)
+            float maxWait = board.GetSystemOverrideComboPreClearDuration() + board.GetSystemOverrideComboWaveDuration() + 0.5f;
+            float waited = 0f;
+            while (pendingEventTiles.Count > 0 && waited < maxWait)
+            {
+                yield return null;
+                waited += Time.deltaTime;
+            }
         }
 
         Debug.Log(

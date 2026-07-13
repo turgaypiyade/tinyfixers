@@ -55,6 +55,10 @@ public sealed class OverrideOverrideCombo
 
             if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
                 rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
+            
+            // Eğer Event-driven clear açıksa ve özel görsel metodu (henüz event-driven desteklemiyorsa)
+            // FireOverrideOverrideSpecialVisuals eski delayleri kullanmaya devam edebilir (veya ileride güncellenebilir).
+            // Şimdilik sadece MatchClearAction için ayarları yapıyoruz.
 
             bool useRunner = specialCells != null && specialCells.Count > 0;
 
@@ -150,10 +154,16 @@ public sealed class OverrideOverrideCombo
         if (maxDelay <= 0f)
             maxDelay = ResolutionContext.OverrideRadialClearDuration;
 
-        // LİNEER dalga haritası: VFX cephesi (R(t) = t * maxR) ile birebir aynı matematik.
+        // Eski LİNEER dalga haritası: Geriye dönük uyumluluk veya delay isteyen sistemler için tutulabilir.
         rt.Context.OverrideRadialClearDelays = rt.VisualService != null
             ? rt.VisualService.BuildWaveFrontClearDelays(rt.Context.Affected, originCell, preClearDelay, maxDelay)
             : null;
+
+        // YENİ: Piksel bazlı EVENT-DRIVEN uzaklık haritası
+        rt.Context.OverrideRadialClearDistances = rt.VisualService != null
+            ? rt.VisualService.BuildWaveFrontClearDistances(rt.Context.Affected, originCell)
+            : null;
+        rt.Context.UseEventDrivenRadialClear = true;
     }
 
     private void AddAffected(OverrideOverrideComboExecutionRuntime rt, TileView tile)
@@ -179,7 +189,8 @@ public sealed class OverrideOverrideCombo
             lightningVisualTargets: ctx.LightningVisualTargets,
             lightningLineStrikes: ctx.LightningLineStrikes,
             suppressPerTileClearVfx: ctx.OverrideSuppressPerTileClearVfx,
-            perTileClearDelays: ctx.OverrideRadialClearDelays,
+            perTileClearDelays: ctx.UseEventDrivenRadialClear ? null : ctx.OverrideRadialClearDelays, // Event-driven ise MatchClearAction default delayi beklemesin!
+            perTileClearDistances: ctx.UseEventDrivenRadialClear ? ctx.OverrideRadialClearDistances : null,
             isSpecialPhase: true,
             presentationPlan: null);
     }

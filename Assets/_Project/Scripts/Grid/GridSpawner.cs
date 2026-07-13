@@ -251,6 +251,7 @@ public class GridSpawner : MonoBehaviour
         board.OnObstacleDestroyed           += HandleObstacleDestroyed;
         board.OnCellUnlocked                += HandleCellUnlocked;
         board.OnObstacleCreatedDynamic      += HandleObstacleCreatedDynamic;
+        board.OnObstacleViewRestored        += HandleObstacleCreatedDynamic;
         board.OnChestOpened                 += HandleChestOpened;
         board.OnChestColorRemoved           += HandleChestColorRemoved;
         board.OnBatteryHit                  += HandleBatteryHit;
@@ -266,6 +267,7 @@ public class GridSpawner : MonoBehaviour
         board.OnObstacleDestroyed          -= HandleObstacleDestroyed;
         board.OnCellUnlocked               -= HandleCellUnlocked;
         board.OnObstacleCreatedDynamic     -= HandleObstacleCreatedDynamic;
+        board.OnObstacleViewRestored       -= HandleObstacleCreatedDynamic;
         board.OnChestOpened                -= HandleChestOpened;
         board.OnChestColorRemoved          -= HandleChestColorRemoved;
         board.OnBatteryHit                 -= HandleBatteryHit;

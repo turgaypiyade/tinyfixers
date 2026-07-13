@@ -34,7 +34,7 @@ MonoBehaviour:
     obstacleId: 25
     collectibleId: 1
     iconOverride: {fileID: 0}
-    amount: 30
+    amount: 27
   levelKind: 0
   usesCustomIntro: 0
   introLeftSprite: {fileID: 0}

@@ -47,10 +47,10 @@ public class OverrideComboController : MonoBehaviour
     //  TIMINGS
     // ─────────────────────────────────────────
     [Header("Phase Timings")]
-    [SerializeField] private float orbitDuration     = 0.36f;  // lift / separation phase
-    [SerializeField] private float mergeDuration     = 0.08f;  // smash / collision phase
-    [SerializeField] private float radialClearDuration = 0.38f; // wave phase
-    [SerializeField] private float fadeOutDuration   = 0.10f;
+    [SerializeField] private float orbitDuration     = 0.55f;  // lift / separation phase
+    [SerializeField] private float mergeDuration     = 0.15f;  // smash / collision phase
+    [SerializeField] private float radialClearDuration = 1.50f; // wave phase
+    [SerializeField] private float fadeOutDuration   = 0.15f;
 
     // ─────────────────────────────────────────
     //  LIFT / SMASH SETTINGS
@@ -103,6 +103,7 @@ public class OverrideComboController : MonoBehaviour
     public event Action<float> OnRadialClearProgress;
     public event Action        OnComboFinished;
     public event Action        OnImpact;
+    public event Action<float> OnWaveRadiusChanged;
 
     // ─────────────────────────────────────────
     //  PRIVATE
@@ -139,6 +140,17 @@ public class OverrideComboController : MonoBehaviour
     // ─────────────────────────────────────────
     //  LIFECYCLE
     // ─────────────────────────────────────────
+    private void Awake()
+    {
+        canvasGroup = GetComponent<CanvasGroup>();
+        
+        // Unity Prefab serialize edilmiş değerleri ezmek için kodda zorluyoruz:
+        orbitDuration = 0.55f;
+        mergeDuration = 0.15f;
+        radialClearDuration = 1.50f;
+        fadeOutDuration = 0.15f;
+    }
+    
     private void Reset() { canvasGroup = GetComponent<CanvasGroup>(); }
 
     // ─────────────────────────────────────────
@@ -622,10 +634,9 @@ public class OverrideComboController : MonoBehaviour
                 float t       = Mathf.Clamp01(clearTime / radialClearDuration);
                 float expandT = EaseOutQuad(t);
 
-                // TEK doğruluk kaynağı: dalga cephesi LİNEER ilerler → R(t) = t * maxR.
-                // Taş temizleme delay'leri (BuildWaveFrontClearDelays) AYNI lineer haritayı ve
-                // AYNI köşe-normalizasyonunu kullanır → cephe hücreye vardığı anda hücre temizlenir.
-                float waveRadius = t * WaveMaxRadius;
+                // TEK doğruluk kaynağı: dalga cephesi görsel halkayla BİREBİR AYNI (EaseOutQuad) ilerler.
+                float waveRadius = expandT * WaveMaxRadius;
+                OnWaveRadiusChanged?.Invoke(waveRadius);
 
                 // Icons collapse and fade at the impact point while the blast wave does the clear.
                 IconRectA.anchoredPosition = Vector2.zero;
@@ -698,6 +709,7 @@ public class OverrideComboController : MonoBehaviour
             if (blastHaloImage != null) SetAlpha(blastHaloImage, 0f);
             HideBlastRays();
             OnRadialClearProgress?.Invoke(1f);
+            OnWaveRadiusChanged?.Invoke(WaveMaxRadius);
 
             // ════════════════════════════════════════
             //  PHASE 4 — FADE OUT

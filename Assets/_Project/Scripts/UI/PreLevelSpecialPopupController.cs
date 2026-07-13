@@ -103,9 +103,22 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
     public void Open()
     {
+        int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
+        bool isUnlocked = level > 10;
+
+        if (isUnlocked && PlayerPrefs.GetInt("prelevel_specials_rewarded", 0) == 0)
+        {
+            PlayerPrefs.SetInt("prelevel_specials_rewarded", 1);
+            PlayerPrefs.Save();
+            
+            PreLevelSpecialInventory.Add(TileSpecial.LineH, 3);
+            PreLevelSpecialInventory.Add(TileSpecial.PulseCore, 3);
+            PreLevelSpecialInventory.Add(TileSpecial.SystemOverride, 3);
+        }
+
         currentTheme = ResolveTheme();
         ApplyTheme(currentTheme);
-        ConfigureSlots();
+        ConfigureSlots(isUnlocked);
         RefreshLocalizedTexts();
         RefreshCounts();
         RefreshGoalsPreview();
@@ -152,19 +165,19 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         slot.Clicked += HandleSlotClicked;
     }
 
-    private void ConfigureSlots()
+    private void ConfigureSlots(bool isUnlocked)
     {
         if (tileIconLibrary == null)
             return;
 
         if (lineHSlot != null)
-            lineHSlot.Configure(TileSpecial.LineH, tileIconLibrary.GetSpecialIcon(TileSpecial.LineH), currentTheme);
+            lineHSlot.Configure(TileSpecial.LineH, tileIconLibrary.GetSpecialIcon(TileSpecial.LineH), currentTheme, isUnlocked);
 
         if (pulseCoreSlot != null)
-            pulseCoreSlot.Configure(TileSpecial.PulseCore, tileIconLibrary.GetSpecialIcon(TileSpecial.PulseCore), currentTheme);
+            pulseCoreSlot.Configure(TileSpecial.PulseCore, tileIconLibrary.GetSpecialIcon(TileSpecial.PulseCore), currentTheme, isUnlocked);
 
         if (overrideSlot != null)
-            overrideSlot.Configure(TileSpecial.SystemOverride, tileIconLibrary.GetSpecialIcon(TileSpecial.SystemOverride), currentTheme);
+            overrideSlot.Configure(TileSpecial.SystemOverride, tileIconLibrary.GetSpecialIcon(TileSpecial.SystemOverride), currentTheme, isUnlocked);
     }
 
     private void RefreshGoalsPreview()

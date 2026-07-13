@@ -16,6 +16,7 @@ public class MatchClearAction : BoardAction
     private IReadOnlyList<LightningLineStrike> lightningLineStrikes;
     private bool suppressPerTileClearVfx;
     private Dictionary<TileView, float> perTileClearDelays;
+    private Dictionary<TileView, float> perTileClearDistances;
     private Dictionary<TileView, float> staggerDelays;
     private float staggerAnimTime;
     private bool isSpecialActivationPhase;
@@ -49,7 +50,8 @@ public class MatchClearAction : BoardAction
         bool isBlocking = true,
         bool enqueueCascadeOnComplete = false,
         Vector2Int? implodeTargetCell = null,
-        Dictionary<Vector2Int, System.Action> arrivalTriggers = null)
+        Dictionary<Vector2Int, System.Action> arrivalTriggers = null,
+        Dictionary<TileView, float> perTileClearDistances = null)
     {
         this.matches = matches != null ? new HashSet<TileView>(matches) : new HashSet<TileView>();
         this.doShake = doShake;
@@ -72,6 +74,7 @@ public class MatchClearAction : BoardAction
         this.enqueueCascadeOnComplete = enqueueCascadeOnComplete;
         this.implodeTargetCell = implodeTargetCell;
         this.arrivalTriggers = arrivalTriggers;
+        this.perTileClearDistances = perTileClearDistances;
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
@@ -133,7 +136,7 @@ public class MatchClearAction : BoardAction
             includeAdjacentOverTileBlockerDamage, lightningOriginTile,
             lightningOriginCell, lightningVisualTargets, lightningLineStrikes,
             suppressPerTileClearVfx, perTileClearDelays, implodeTargetCell,
-            arrivalTriggers);
+            arrivalTriggers, perTileClearDistances);
 
         UnityEngine.Debug.Log($"[MatchClear] clear_anim_done +{(UnityEngine.Time.realtimeSinceStartup - _mcStart):0.000}s");
 
@@ -206,6 +209,17 @@ public class MatchClearAction : BoardAction
                     liveDelays[pair.Key] = pair.Value;
             }
             perTileClearDelays = liveDelays;
+        }
+
+        if (perTileClearDistances != null)
+        {
+            var liveDist = new Dictionary<TileView, float>();
+            foreach (var pair in perTileClearDistances)
+            {
+                if (IsLiveTile(board, pair.Key))
+                    liveDist[pair.Key] = pair.Value;
+            }
+            perTileClearDistances = liveDist;
         }
 
         if (staggerDelays != null)
