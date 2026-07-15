@@ -219,6 +219,41 @@ public struct StackedObstacleEntry
     public ObstacleId obstacleId;
 }
 
+/// <summary>
+/// BossDuel dalga tanımı. LevelData.bossWaves DOLUYSA her eleman bir düşman dalgasıdır;
+/// 0/-1 bırakılan sayısal alanlar level'daki Battlefield alanlarından devralınır.
+/// Liste BOŞSA dalgalar BossDifficulty formülünden üretilir (Docs/BossDuel_Plan.md).
+/// </summary>
+[System.Serializable]
+public class BossWaveDef
+{
+    [Tooltip("Bu dalganın toplam boss HP'sinden (BossDamage goal amount) aldığı pay. " +
+             "Dalgalar arasında normalize edilir; hepsi eşitse HP eşit bölünür.")]
+    [Min(0f)] public float hpWeight = 1f;
+
+    [Header("Saldırı")]
+    [Tooltip("Düşman kaç saniyede bir ateş eder. 0 = level'daki enemyAttackInterval.")]
+    [Min(0f)] public float attackInterval = 0f;
+    [Tooltip("İlk saldırı hasarı. 0 = level'daki enemyAttackBaseDamage.")]
+    [Min(0)] public int attackDamageBase = 0;
+    [Tooltip("Saldırı başına hasar artışı. -1 = level'daki enemyAttackDamageGrowth.")]
+    [Min(-1)] public int attackDamageGrowth = -1;
+
+    [Header("Oil Baskısı")]
+    [Tooltip("Oil saldırısı başına fırlatılan oil. 0 = bu dalgada oil yok, -1 = level'daki bossAttackOilCount.")]
+    [Min(-1)] public int oilCount = -1;
+    [Tooltip("Kaç hamlede bir oil. -1/0 = level'daki bossAttackEveryMoves.")]
+    [Min(-1)] public int oilEveryMoves = -1;
+
+    [Header("Görsel Varyant")]
+    [Tooltip("Bu dalganın robot gövde sprite'ı. Boşsa sahnedeki mevcut gövde kalır.")]
+    public Sprite bodySprite;
+    [Tooltip("Bu dalga yenilince kullanılacak yığın sprite'ı. Boşsa controller'daki default.")]
+    public Sprite defeatedSprite;
+    [Tooltip("Gövdeye uygulanacak tint (beyaz = değişiklik yok). Sprite çizmeden dalga varyantı sağlar.")]
+    public Color bodyTint = Color.white;
+}
+
 [CreateAssetMenu(fileName = "Level_001", menuName = "CoreCollapse/Level Data", order = 1)]
 public class LevelData : ScriptableObject
 {
@@ -271,6 +306,15 @@ public class LevelData : ScriptableObject
     [Min(0f)] public float enemyAttackInterval = 2f;
     [Tooltip("Battlefield arena arka planı. ATANIRSA bu kullanılır; BOŞSA sahnedeki mevcut arka plan kalır.")]
     public Sprite battlefieldBackground;
+
+    [Header("Boss Waves (BossDuel)")]
+    [Tooltip("Dalga listesi. BOŞSA dalga sayısı bossWaveCount/formülden gelir ve parametreler " +
+             "yukarıdaki Battlefield alanlarından BossDifficulty eskalasyonuyla türetilir " +
+             "(eski tek-dalga bosslar hiç dokunmadan çalışır). DOLUYSA tam manuel kontrol.")]
+    public BossWaveDef[] bossWaves;
+    [Tooltip("bossWaves boşken dalga sayısı. 0 = otomatik: boss index (current_level/5) " +
+             "BossDifficulty.AutoWaveCount ile belirler (erken bosslar 1, sonra 2, sonra 3).")]
+    [Min(0)] public int bossWaveCount = 0;
 
     [Header("Random Pool")]
     [Tooltip("Bu levelda random üretilecek taş tipleri. DOLUYSA GridSpawner'daki varsayılan " +

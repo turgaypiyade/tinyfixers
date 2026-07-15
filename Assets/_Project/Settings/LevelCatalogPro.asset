@@ -241,3 +241,23 @@ MonoBehaviour:
     level: 57
     levelKey: LevelCL_057
     levelData: {fileID: 11400000, guid: b94759c777e2746c4aae43fc01cdfe02, type: 2}
+  - chapter: 1
+    level: 58
+    levelKey: LevelCL_058
+    levelData: {fileID: 11400000, guid: 862fe1ffc34ae45c0b7378da202adf8f, type: 2}
+  - chapter: 1
+    level: 59
+    levelKey: LevelCL_059
+    levelData: {fileID: 11400000, guid: bbf7b9c14151c4969a7e17a00ed6e811, type: 2}
+  - chapter: 1
+    level: 60
+    levelKey: LevelCL_060
+    levelData: {fileID: 11400000, guid: 690b173f4bd8545d8be6d19948408dd6, type: 2}
+  - chapter: 1
+    level: 61
+    levelKey: LevelCL_061
+    levelData: {fileID: 11400000, guid: 7734102b0443a45749e8e1d4e958e5e3, type: 2}
+  - chapter: 1
+    level: 62
+    levelKey: LevelCL_062
+    levelData: {fileID: 11400000, guid: 379f21fdfecea452f9618a97005b766f, type: 2}

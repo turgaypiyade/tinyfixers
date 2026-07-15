@@ -67,6 +67,11 @@ public class ObstacleDef
              "(diagonal yok) ve en alt satıra inip board'dan çıkınca toplanır (goal +1). " +
              "behavior = MovableObstacle ile birlikte kullanılır.")]
     public bool exitAtBottom = false;
+    [Tooltip("AÇIK: bu obstacle'ın gravity-gölgesinde kalan boş hücrelere İLK DAĞITIMDA taş konur " +
+             "(örn. Oil duvarının altı dolu başlar; cep engel kırılana kadar refill almaz). " +
+             "KAPALI (varsayılan): gölge boş kalır (chest altı gibi). Bir hücrenin dolması için " +
+             "üstündeki kolondaki TÜM blocker'lar bu bayrağa sahip olmalıdır.")]
+    public bool fillsShadowBeneath = false;
     [Header("Particle Sprites")]
     [Tooltip("Açık ise tüm stage'lerde hit particle efekti kapatılır. Stage düzeyinde ayrıca override edilebilir.")]
     public bool suppressHitParticles = false;

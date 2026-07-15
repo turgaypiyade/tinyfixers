@@ -457,7 +457,12 @@ public class BoardAnimator
             {
                 clearTile =
                     !board.ObstacleStateService.IsCellBlocked(tile.X, tile.Y) &&
-                    !board.ObstacleStateService.IsInteractionLockedAt(tile.X, tile.Y);
+                    !board.ObstacleStateService.IsInteractionLockedAt(tile.X, tile.Y) &&
+                    // Canlı movable obstacle tile'ı normal clear ile YOK EDİLMEZ — sadece
+                    // obstacle hasarı alır; veri sıfırlanınca tile'ı HandleObstacleDestroyed
+                    // söker. Aksi hâlde çok-hit movable'da (PlasticTwoStage) tile ölüp veri
+                    // hücrede kalıyordu (hayalet movable → cascade'de veri ezilmesi).
+                    !board.ObstacleStateService.IsMovableObstacleAt(tile.X, tile.Y);
             }
 
             shouldClearTile[tile] = clearTile;

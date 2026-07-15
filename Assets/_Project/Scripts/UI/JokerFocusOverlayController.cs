@@ -353,6 +353,14 @@ public class JokerFocusOverlayController : MonoBehaviour
             selectedJokerIndex = -1;
         }
 
+        // Kilitli ya da hakkı kalmamış booster seçilemez (free oyunda serbest).
+        // İptal (yukarıdaki blok) her durumda çalışır.
+        if (!BoosterAccessService.CanUse(boosterIndex))
+        {
+            DebugLog($"[JokerFocus] Booster {boosterIndex} kullanılamaz (kilitli veya hak yok).");
+            return;
+        }
+
         ActivateFocusFor(boosterIndex);
         ActivateBooster(boosterIndex);
         SetSelectedJoker(tappedIndex);
@@ -467,6 +475,16 @@ public class JokerFocusOverlayController : MonoBehaviour
                 mapping = child.gameObject.AddComponent<JokerBoosterSlotMapping>();
                 ForceSetJokerMapping(mapping, true, inf);
                 DebugLog($"[JokerFocus] Auto-mapped '{child.name}' → boosterIndex={inf}");
+            }
+            else if (mapping.BoosterIndex < 0)
+            {
+                // Elle eklenmiş ama index'i ayarlanmamış (-1) mapping: index'i yine
+                // isim/sıradan çıkar — yoksa slot tap'leri sessizce yutulur.
+                int inf;
+                if (!TryInferBoosterIndex(child, out inf) && !TryInferBoosterIndexBySiblingOrder(child, out inf))
+                    continue;
+                ForceSetJokerMapping(mapping, true, inf);
+                DebugLog($"[JokerFocus] Mapping index -1 düzeltildi: '{child.name}' → boosterIndex={inf}");
             }
 
             entries.Add((child, mapping));

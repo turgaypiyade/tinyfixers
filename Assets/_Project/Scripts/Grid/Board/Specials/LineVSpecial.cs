@@ -195,6 +195,11 @@ public sealed class LineVSpecial
                 continue;
             }
 
+            // Movable obstacle → SADECE obstacle hasarı (ImpactCells), tile-clear değil.
+            // (Ayrıntı: LineHSpecial.CollectRow'daki aynı bloğun açıklaması.)
+            if (SpecialCellUtils.TryRouteMovableToImpact(rt.Context, rt.Board, x, y))
+                continue;
+
             SpecialCellUtils.MarkAffectedCell(rt.Context, x, y, rt.Board);
 
             var tile = rt.Board.Tiles[x, y];

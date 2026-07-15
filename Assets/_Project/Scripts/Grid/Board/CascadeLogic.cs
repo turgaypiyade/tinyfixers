@@ -108,6 +108,33 @@ public class CascadeLogic
         // COMPILE ACTION
         var action = new FallAction();
 
+        // Step 3a: Movable obstacle VERİ hareketlerini önce topla ve TEK batch'te uygula.
+        // Compile döngüsü içinde tek tek MoveObstacle çağırmak kolon işleme sırasına
+        // duyarlıydı: çapraz kayan bir movable'ın hedefi, henüz taşınmamış başka bir
+        // movable'ın kaynağıysa canlı veri eziliyordu (bkz. MoveMovablesBatch). Ayrıca
+        // batch'in spawn kayıtlarından ÖNCE koşması, spawn hedeflerinin taşınıp gitmiş
+        // eski movable verisine çarpmamasını sağlar.
+        if (board.ObstacleStateService != null)
+        {
+            List<(Vector2Int from, Vector2Int to)> movableMoves = null;
+            for (int x = 0; x < board.Width; x++)
+            {
+                for (int y = 0; y < board.Height; y++)
+                {
+                    var vTile = virtualBoard[x, y];
+                    if (vTile == null || vTile.IsSpawned || vTile.View == null) continue;
+
+                    var from = vTile.Path[0];
+                    if (from.x == x && from.y == y) continue;
+                    if (!board.ObstacleStateService.IsMovableObstacleAt(from.x, from.y)) continue;
+
+                    (movableMoves ??= new List<(Vector2Int, Vector2Int)>()).Add((from, new Vector2Int(x, y)));
+                }
+            }
+            if (movableMoves != null)
+                board.ObstacleStateService.MoveMovablesBatch(movableMoves);
+        }
+
         // Step 3: Apply virtual board back to actual board
         for (int x = 0; x < board.Width; x++)
         {
@@ -171,14 +198,7 @@ public class CascadeLogic
 
                 if (compressedPath.Count > 1)
                 {
-                    // If it was already an obstacle on the board (not spawned this pass), move its logical state
-                    if (board.ObstacleStateService != null && !vTile.IsSpawned && vTile.View != null)
-                    {
-                        if (board.ObstacleStateService.IsMovableObstacleAt(compressedPath[0].x, compressedPath[0].y))
-                        {
-                            board.ObstacleStateService.MoveObstacle(compressedPath[0].x, compressedPath[0].y, finalX, finalY);
-                        }
-                    }
+                    // Movable obstacle veri hareketi Step 3a'da batch olarak uygulandı.
 
                     // Calculate segments duration
                     float[] segmentDurations = new float[compressedPath.Count - 1];

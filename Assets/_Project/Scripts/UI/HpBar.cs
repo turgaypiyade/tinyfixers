@@ -29,6 +29,10 @@ public sealed class HpBar : MonoBehaviour
     private Coroutine shakeCo;
     private Vector2 shakeBase;
 
+    // Dalga pip'leri (BossDuel çok-dalga): bar üstünde küçük noktalar; sönük = yenilen dalga.
+    private RectTransform pipsRoot;
+    private Image[] pips;
+
     public int Current => current;
     public int Max => max;
 
@@ -55,6 +59,69 @@ public sealed class HpBar : MonoBehaviour
     {
         if (label != null)
             label.text = $"{current}/{max}";
+    }
+
+    // ── Dalga pip'leri (çok-dalga BossDuel) ──
+
+    /// <summary>
+    /// Bar üstünde dalga noktalarını kurar. 1 dalga = pip çizilmez (tek boss görünümü aynı kalır).
+    /// Sahne kurulumu gerektirmez; pip'ler prosedürel üretilir.
+    /// </summary>
+    public void InitWavePips(int totalWaves)
+    {
+        if (pipsRoot != null)
+        {
+            Destroy(pipsRoot.gameObject);
+            pipsRoot = null;
+            pips = null;
+        }
+
+        if (totalWaves <= 1)
+            return;
+
+        var go = new GameObject("WavePips", typeof(RectTransform));
+        pipsRoot = (RectTransform)go.transform;
+        pipsRoot.SetParent(transform, false);
+        pipsRoot.anchorMin = pipsRoot.anchorMax = new Vector2(0.5f, 1f);
+        pipsRoot.pivot = new Vector2(0.5f, 0f);
+        pipsRoot.anchoredPosition = new Vector2(0f, 4f);
+
+        const float pipSize = 12f;
+        const float gap = 6f;
+        float totalW = totalWaves * pipSize + (totalWaves - 1) * gap;
+
+        pips = new Image[totalWaves];
+        for (int i = 0; i < totalWaves; i++)
+        {
+            var pipGo = new GameObject($"Pip{i}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var rt = (RectTransform)pipGo.transform;
+            rt.SetParent(pipsRoot, false);
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.sizeDelta = new Vector2(pipSize, pipSize);
+            rt.anchoredPosition = new Vector2(-totalW * 0.5f + pipSize * 0.5f + i * (pipSize + gap), 0f);
+
+            var img = pipGo.GetComponent<Image>();
+            img.raycastTarget = false;
+            pips[i] = img;
+        }
+
+        SetWaveIndex(0);
+    }
+
+    /// <summary>Aktif dalga index'i (0 bazlı). Öncekiler sönük, aktif+sonrakiler parlak.</summary>
+    public void SetWaveIndex(int waveIndex)
+    {
+        if (pips == null)
+            return;
+
+        for (int i = 0; i < pips.Length; i++)
+        {
+            if (pips[i] == null) continue;
+            pips[i].color = i < waveIndex
+                ? new Color(0.25f, 0.25f, 0.25f, 0.55f)   // yenilen dalga
+                : new Color(1f, 0.85f, 0.25f, 0.95f);     // aktif/bekleyen dalga
+        }
     }
 
     private void Update()

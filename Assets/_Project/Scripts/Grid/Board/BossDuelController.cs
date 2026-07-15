@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -96,8 +97,12 @@ public sealed class BossDuelController : MonoBehaviour
     [SerializeField, Min(0f)] private float robotHitKnockback = 22f;
 
     [Header("Shield Pickups")]
-    [Tooltip("Her PlayerShieldPickup / EnemyShieldPickup kırıldığında ilgili robota eklenecek kalkan süresi.")]
-    [SerializeField, Min(0f)] private float shieldSecondsPerPickup = 0.5f;
+    [Tooltip("Her PlayerShieldPickup OYUNCUYA kaç düşman vuruşu bloklayan kalkan verir. " +
+             "Süre değil VURUŞ bazlı — düşman ateş etmeden sönme problemi yaşanmaz.")]
+    [SerializeField, Min(1)] private int playerShieldHitsPerPickup = 2;
+    [Tooltip("Her EnemyShieldPickup düşmana kaç saniyelik kalkan verir (oyuncu vuruşları hızlı " +
+             "aktığı için düşman tarafı süre bazlı kalır).")]
+    [SerializeField, Min(0.5f)] private float enemyShieldSecondsPerPickup = 2.5f;
     [Tooltip("Robot etrafındaki kalkan balonunun boyut çarpanı.")]
     [SerializeField, Min(0.5f)] private float shieldBubbleScale = 1.25f;
     [SerializeField, Min(1f)] private float shieldBubbleMinSize = 180f;
@@ -113,6 +118,14 @@ public sealed class BossDuelController : MonoBehaviour
     [Tooltip("Düşman moru/kırmızısı — HP barıyla aynı dilde olsun ki oyuncu kalkanından ayrışsın.")]
     [SerializeField] private Color enemyShieldColor = new Color(0.78f, 0.32f, 1f, 0.42f);
     [SerializeField, Min(0f)] private float shieldAbsorbPulseDuration = 0.16f;
+
+    [Header("Waves")]
+    [Tooltip("Dalga geçişinde oyuncunun iyileşme oranı (maks HP yüzdesi). Yeni dalgaya nefesle girilsin.")]
+    [SerializeField, Range(0f, 1f)] private float playerHealPerWavePct = 0.15f;
+    [Tooltip("Yeni dalga robotunun sağdan giriş mesafesi (px).")]
+    [SerializeField, Min(0f)] private float enemyEntranceOffset = 420f;
+    [Tooltip("Yeni dalga robotunun giriş süresi (sn).")]
+    [SerializeField, Min(0.05f)] private float waveEntranceDuration = 0.45f;
 
     [Header("Win Celebration")]
     [SerializeField, Min(0f)] private float winHopHeight = 40f;
@@ -139,11 +152,54 @@ public sealed class BossDuelController : MonoBehaviour
     [SerializeField] private Sprite playerWinSprite;
     [SerializeField] private Sprite enemyWinSprite;
 
+    [Header("Counterplay (Faz 2)")]
+    [Tooltip("Renk zayıflığı ikonunun sprite kaynağı. Boşsa ikon yerine renk rozeti çizilir.")]
+    [SerializeField] private TileIconLibrary tileIconLibrary;
+
+    [Header("Toast / Bildirimler")]
+    [Tooltip("AÇIK: toast konumu otomatik hesaplanır — robotların alt kenarının hemen altı. " +
+             "KAPALI: aşağıdaki sabit offset kullanılır.")]
+    [SerializeField] private bool toastAutoPosition = true;
+    [Tooltip("Otomatik konuma eklenecek dikey boşluk (px, robot altından aşağı).")]
+    [SerializeField] private float toastAutoGap = 30f;
+    [Tooltip("toastAutoPosition KAPALIYKEN kullanılan konum — vfxRoot merkezinden offset (px).")]
+    [SerializeField] private Vector2 toastAnchoredPos = new Vector2(0f, -150f);
+    [Tooltip("Normal toast'ın ekranda kalma süresi (sn).")]
+    [SerializeField, Min(0.4f)] private float toastDefaultDuration = 1.4f;
+
+    [Header("Board Yerleşimi")]
+    [Tooltip("BossDuel'de board'un ALT kenarı bu rect'in ÜSTÜNE hizalanır (BottomArea'yı sürükle). " +
+             "Boşsa board yerinden oynatılmaz. Üstte robotlar/HUD için maksimum alan açılır.")]
+    [SerializeField] private RectTransform boardBottomAnchor;
+    [Tooltip("Board alt kenarı ile anchor üstü arasındaki boşluk (px, board ölçeğinde).")]
+    [SerializeField] private float boardBottomGap = 10f;
+
     // ── State ──
     private bool bossModeActive;
-    private int pendingStrikes;   // temizlenen taşlardan biriken, henüz ateşlenmemiş vuruş stack'i
+    // Temizlenen taşlar TİP etiketiyle kuyruğa girer (renk zayıflığı çarpanı için).
+    private readonly Queue<TileType> strikeQueue = new();
     private int strikeIndex;      // kol sırası (sol-sağ-sol...)
     private int previousRemainingMoves = -1;
+
+    // ── Counterplay state ──
+    private TileType currentWeakType;
+    private float weaknessTimer;
+    private Image weaknessIcon;
+
+    private bool chargeActive;
+    private float chargeCooldown;
+    private int chargeTilesBroken;   // şarj penceresi içinde kırılan taş sayısı
+    private Image chargeRing;
+    private TMP_Text chargeCounterText;
+
+    private float stunRemaining;
+    private bool stunVisualActive;
+
+    // ── Toast kuyruğu (olay bildirimleri — üst üste binmez, sırayla oynar) ──
+    private readonly Queue<(string text, float duration, bool strong)> toastQueue = new();
+    private Coroutine toastRunner;
+    private TMP_Text weaknessMultLabel;   // rozetin "×2" etiketi
+    private TMP_Text chargeBreakLabel;    // ring'in "KIR!" etiketi
 
     private int enemyHp, enemyMaxHp;
     private int playerHp, playerMaxHp;
@@ -153,8 +209,19 @@ public sealed class BossDuelController : MonoBehaviour
     private int damagePerTile;
     private int enemyBaseDamage;
     private int enemyDamageGrowth;
-    private float playerShieldRemaining;
-    private float enemyShieldRemaining;
+    private int playerShieldHits;        // oyuncu kalkanı VURUŞ bazlı (kalan blok sayısı)
+    private float enemyShieldRemaining;  // düşman kalkanı süre bazlı
+
+    // ── Dalga durumu ──
+    private BossDifficulty.WaveParams[] waves;
+    private int waveIndex;
+    private bool waveTransitionActive;   // geçiş boyunca iki taraf da ateş etmez; strikes birikir
+    private int waveOilCount;
+    private int waveOilEveryMoves;
+    private Sprite enemyOriginalBodySprite;
+    private Color enemyOriginalBodyColor = Color.white;
+    private Vector2 enemyHomePos;
+    private Vector3 enemyHomeScale;
     private static Sprite generatedPlayerShieldSprite;   // yumuşak dome
     private static Sprite generatedEnemyShieldSprite;     // lazer halka
 
@@ -181,8 +248,8 @@ public sealed class BossDuelController : MonoBehaviour
             yield break;
         }
 
-        enemyMaxHp = ReadBossGoalAmount(level);
-        if (enemyMaxHp <= 0)
+        int totalEnemyHp = ReadBossGoalAmount(level);
+        if (totalEnemyHp <= 0)
         {
             Debug.LogWarning("[Battlefield] BossDamage goal'ü yok/0 — düello çalışamaz. Level goals'a Collectible=BossDamage ekleyin.");
             intro?.HideImmediate();
@@ -191,25 +258,38 @@ public sealed class BossDuelController : MonoBehaviour
         }
 
         bossModeActive = true;
-        enemyHp = enemyMaxHp;
+
+        // Zayıflık rozeti için ikon kaynağı: atanmadıysa yüklü asset'lerden bul
+        // (TopHud vb. referansladığı için oyun sahnesinde hep yüklüdür).
+        if (tileIconLibrary == null)
+        {
+            var libs = Resources.FindObjectsOfTypeAll<TileIconLibrary>();
+            if (libs != null && libs.Length > 0)
+                tileIconLibrary = libs[0];
+        }
+
+        // Dalga listesi: authored bossWaves varsa o, yoksa BossDifficulty formülü.
+        // Dalga 1 parametreleri level'ın Battlefield alanlarından gelir (eski davranış birebir).
+        waves = BossDifficulty.BuildWaves(level, totalEnemyHp);
         playerMaxHp = Mathf.Max(1, level.playerMaxHp);
         playerHp = playerMaxHp;
         damagePerTile = Mathf.Max(0, level.damagePerClearedTile);
-        enemyBaseDamage = Mathf.Max(0, level.enemyAttackBaseDamage);
-        enemyDamageGrowth = Mathf.Max(0, level.enemyAttackDamageGrowth);
         previousRemainingMoves = board.RemainingMoves;
-
-        // Level bazlı atış aralığı (0 = controller default'u koru).
-        if (level.enemyAttackInterval > 0f)
-            enemyAttackInterval = level.enemyAttackInterval;
 
         // Level bazlı arena arka planı: atanmışsa uygula, boşsa sahnedeki mevcut kalır.
         if (arenaBackground != null && level.battlefieldBackground != null)
             arenaBackground.sprite = level.battlefieldBackground;
 
+        // Board'u BottomArea'nın üstüne yasla — üstte düello sahnesi için alan açılır.
+        yield return AlignBoardAboveBottomArea();
+
         SetRobotsVisible(true);
         playerHpBar?.Init(playerMaxHp);
-        enemyHpBar?.Init(enemyMaxHp);
+
+        // Robotun ev pozisyonu/gövde sprite'ı BİR KEZ yakalanır — dalga geçişinde çöküş
+        // tween'i sonrası buradan tazelenir (shake-drift dersinin aynısı: home'u canlı okuma).
+        CaptureEnemyHomeState();
+        StartWave(0);
 
         // Açılış: iki parça soldan/sağdan gelip ortada birleşir; bu sırada board kilitli.
         if (intro != null && intro.HasIntro)
@@ -225,7 +305,7 @@ public sealed class BossDuelController : MonoBehaviour
 
         EnsureShieldBubble(ref playerShieldBubble, playerRobot, playerShieldColor, playerShieldSprite, isEnemy: false);
         EnsureShieldBubble(ref enemyShieldBubble, enemyRobot, enemyShieldColor, enemyShieldSprite, isEnemy: true);
-        UpdateShieldVisual(playerShieldBubble, playerShieldRemaining, playerShieldColor, playerRobot);
+        UpdateShieldVisual(playerShieldBubble, playerShieldHits, playerShieldColor, playerRobot);
         UpdateShieldVisual(enemyShieldBubble, enemyShieldRemaining, enemyShieldColor, enemyRobot);
 
         StartCoroutine(BattleLoop());
@@ -237,6 +317,47 @@ public sealed class BossDuelController : MonoBehaviour
         board.OnTilesCleared -= HandleTilesCleared;
         board.OnMovesChanged -= HandleMovesChanged;
         board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
+    }
+
+    // BossDuel'de board'un görsel alt kenarını boardBottomAnchor'ın (BottomArea) üstüne hizalar.
+    // Ev pozisyonu ShiftBoardHome ile taşınır — shake/entrance yeni evi kullanır.
+    private IEnumerator AlignBoardAboveBottomArea()
+    {
+        if (boardBottomAnchor == null || board == null)
+            yield break;
+
+        // Grid spawn + layout otursun (tileSize, rect'ler, canvas ölçekleri).
+        for (int wait = 0; wait < 30 && board.TileSize <= 0f; wait++)
+            yield return null;
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+
+        var shakeTarget = board.ShakeTarget;
+        if (shakeTarget == null || shakeTarget.parent is not RectTransform shakeParent)
+            yield break;
+        if (board.Height <= 0 || board.TileSize <= 0f)
+            yield break;
+
+        // Board'un görsel alt kenarı (world): son satır merkezinin yarım hücre altı.
+        Vector3 lastRowCenter = board.GetCellWorldCenterPosition(0, board.Height - 1);
+        float cellWorldH = board.Height >= 2
+            ? Mathf.Abs(lastRowCenter.y - board.GetCellWorldCenterPosition(0, board.Height - 2).y)
+            : Mathf.Abs(board.TileSize * shakeTarget.lossyScale.y);
+        if (cellWorldH <= 0.0001f)
+            yield break;
+
+        float boardBottomY = lastRowCenter.y - cellWorldH * 0.5f;
+
+        var corners = new Vector3[4];
+        boardBottomAnchor.GetWorldCorners(corners);
+        float anchorTopY = corners[1].y;   // sol-üst köşe
+
+        float gapWorld = boardBottomGap * (cellWorldH / board.TileSize);
+        float deltaWorldY = (anchorTopY + gapWorld) - boardBottomY;
+
+        Vector2 deltaAnchored = shakeParent.InverseTransformVector(new Vector3(0f, deltaWorldY, 0f));
+        if (Mathf.Abs(deltaAnchored.y) > 0.5f)
+            board.ShiftBoardHome(new Vector2(0f, deltaAnchored.y));
     }
 
     private int ReadBossGoalAmount(LevelData level)
@@ -263,9 +384,16 @@ public sealed class BossDuelController : MonoBehaviour
 
     private void HandleTilesCleared(TileType type, int amount)
     {
-        // Oyuncu matlemeye devam ettikçe vuruşlar stack'e birikir; input kilidi yok.
-        if (bossModeActive && amount > 0 && !IsOver())
-            pendingStrikes += amount;
+        if (!bossModeActive || amount <= 0 || IsOver())
+            return;
+
+        // Oyuncu matlemeye devam ettikçe vuruşlar (tip etiketli) kuyruğa birikir; input kilidi yok.
+        for (int i = 0; i < amount; i++)
+            strikeQueue.Enqueue(type);
+
+        // Şarj penceresi açıksa kırılan her taş kesme sayacına işler.
+        if (chargeActive)
+            chargeTilesBroken += amount;
     }
 
     private void HandleMovesChanged(int remainingMoves)
@@ -296,7 +424,11 @@ public sealed class BossDuelController : MonoBehaviour
             AddShield(toPlayer: false);
     }
 
-    private bool IsOver() => enemyHp <= 0 || playerHp <= 0 || !bossModeActive;
+    private bool IsLastWave => waves == null || waves.Length == 0 || waveIndex >= waves.Length - 1;
+
+    // Dalga geçişi sırasında (enemyHp=0 ama sıradaki dalga var) düello BİTMEMİŞTİR —
+    // strikes birikmeye devam eder, hamle refund'u işler, BattleLoop yaşar.
+    private bool IsOver() => playerHp <= 0 || !bossModeActive || (enemyHp <= 0 && IsLastWave);
 
     // Kalıcı dövüş döngüsü: oyuncu stack'ten otomatik ateş eder (backlog yüksekse hızlanır),
     // düşman kendi saatinde (idle dahil) ateşler. Input asla kilitlenmez.
@@ -309,24 +441,36 @@ public sealed class BossDuelController : MonoBehaviour
         while (bossModeActive && !IsOver())
         {
             float dt = Time.deltaTime;
-            TickShields(dt);
 
-            // Oyuncu: stack'ten boşalt. Backlog büyükse tek tick'te birden fazla ateşle (yetiş).
-            strikeTimer += dt;
-            if (pendingStrikes > 0 && damagePerTile > 0 && strikeTimer >= strikeInterval)
+            // Dalga geçişi: iki taraf da ateş etmez, timer'lar sıfır tutulur (geçiş bitince
+            // düşman anında ateşlemesin). pendingStrikes birikmeye devam eder — kayıp yok.
+            if (waveTransitionActive)
             {
                 strikeTimer = 0f;
-                int burst = Mathf.Clamp(Mathf.CeilToInt(pendingStrikes * 0.25f), 1, 4);
-                for (int i = 0; i < burst && pendingStrikes > 0 && !IsOver(); i++)
-                {
-                    pendingStrikes--;
-                    FireOnePlayerStrike();
-                }
+                enemyTimer = 0f;
+                yield return null;
+                continue;
+            }
+
+            TickShields(dt);
+            TickWeakness(dt);
+            TickStun(dt);
+            TickChargeScheduling(dt, enemyBusy);
+
+            // Oyuncu: kuyruktan boşalt. Backlog büyükse tek tick'te birden fazla ateşle (yetiş).
+            strikeTimer += dt;
+            if (strikeQueue.Count > 0 && damagePerTile > 0 && strikeTimer >= strikeInterval)
+            {
+                strikeTimer = 0f;
+                int burst = Mathf.Clamp(Mathf.CeilToInt(strikeQueue.Count * 0.25f), 1, 4);
+                for (int i = 0; i < burst && strikeQueue.Count > 0 && !IsOver(); i++)
+                    FireOnePlayerStrike(strikeQueue.Dequeue());
             }
 
             // Düşman: belirli aralıkla ateşler (oyuncu idle olsa da).
+            // Şarj sırasında ve sersemken normal saldırı yok.
             enemyTimer += dt;
-            if (enemyTimer >= enemyAttackInterval && !enemyBusy && !IsOver())
+            if (enemyTimer >= enemyAttackInterval && !enemyBusy && !chargeActive && stunRemaining <= 0f && !IsOver())
             {
                 enemyTimer = 0f;
                 enemyBusy = true;
@@ -343,21 +487,30 @@ public sealed class BossDuelController : MonoBehaviour
         onDone?.Invoke();
     }
 
-    // Tek oyuncu vuruşu: kollar sırayla ateşler, her vuruş damagePerTile hasar.
-    private void FireOnePlayerStrike()
+    // Tek oyuncu vuruşu: kollar sırayla ateşler. Zayıf renkten gelen vuruş çarpanlı (crit).
+    private void FireOnePlayerStrike(TileType tileType)
     {
         bool useA = (strikeIndex++ % 2 == 0);
         var arm = Pick(playerArmA, playerArmB, useA);
         var muzzle = Pick(playerMuzzleA, playerMuzzleB, useA);
 
+        var wave = waves != null && waves.Length > 0 ? waves[waveIndex] : default;
+        bool isWeakHit = wave.weaknessEnabled && tileType == currentWeakType;
+        int dmg = isWeakHit
+            ? Mathf.RoundToInt(damagePerTile * Mathf.Max(1f, wave.weaknessMultiplier))
+            : damagePerTile;
+
+        // Crit vuruş görsel olarak ayrışsın: parlak sıcak tonlu bolt.
+        Color boltColor = isWeakHit ? new Color(1f, 0.9f, 0.35f, 1f) : playerBoltColor;
+
         PlayRecoil(arm != null ? arm : playerRobot, +1f);
-        FireBolt(GetMuzzleWorld(muzzle, playerRobot, +1f), enemyRobot, playerBoltColor, playerBoltPrefab, playerMuzzleFlashPrefab,
-            () => ApplyEnemyDamage(damagePerTile));
+        FireBolt(GetMuzzleWorld(muzzle, playerRobot, +1f), enemyRobot, boltColor, playerBoltPrefab, playerMuzzleFlashPrefab,
+            () => ApplyEnemyDamage(dmg));
     }
 
     private void ApplyEnemyDamage(int dmg)
     {
-        if (dmg <= 0 || enemyHp <= 0) return;
+        if (dmg <= 0 || enemyHp <= 0 || waveTransitionActive) return;
 
         if (enemyShieldRemaining > 0f)
         {
@@ -365,18 +518,38 @@ public sealed class BossDuelController : MonoBehaviour
             return;
         }
 
-        enemyHp = Mathf.Max(0, enemyHp - dmg);
+        // Sersemlemiş boss 1.5× hasar alır (şarj saldırısını kesmenin ödülü).
+        if (stunRemaining > 0f)
+            dmg = Mathf.RoundToInt(dmg * 1.5f);
+
+        // Overkill dalga sınırında kırpılır: dalga HP'leri toplamı goal amount'a eşit
+        // olduğundan clamp'li bildirimle goal defteri hiç şaşmaz.
+        int applied = Mathf.Min(dmg, enemyHp);
+        enemyHp -= applied;
         enemyHpBar?.Set(enemyHp);
         PlayRobotHitFeedback(enemyRobot, +1f);   // düşman sağa itilir
 
         // Mevcut goal/WIN akışını ilerlet (goal 0 → success otomatik).
-        topHud?.NotifyCollectibleCollected(CollectibleId.BossDamage, dmg);
+        topHud?.NotifyCollectibleCollected(CollectibleId.BossDamage, applied);
 
-        if (enemyHp <= 0 && !enemyDefeated)
+        if (enemyHp > 0)
+            return;
+
+        if (!IsLastWave)
+        {
+            // Sıradaki dalga: çöküş → yeni robot girişi → savaş devam.
+            StartCoroutine(WaveTransitionRoutine());
+            return;
+        }
+
+        if (!enemyDefeated)
         {
             enemyDefeated = true;
             bossModeActive = false;   // BattleLoop dursun (WIN goal tamamlanınca LevelEnd success açar)
-            StartCoroutine(PlayDefeat(enemyRobot, enemyBodyImage, enemyDefeatedSprite, enemyArmA, enemyArmB));
+            var finalWave = waves != null && waves.Length > 0 ? waves[waveIndex] : default;
+            StartCoroutine(PlayDefeat(enemyRobot, enemyBodyImage,
+                finalWave.defeatedSprite != null ? finalWave.defeatedSprite : enemyDefeatedSprite,
+                enemyArmA, enemyArmB));
 
             if (!winCelebrationPlayed)
             {
@@ -388,10 +561,725 @@ public sealed class BossDuelController : MonoBehaviour
         }
     }
 
+    // ── Dalga makinesi ──
+
+    private void CaptureEnemyHomeState()
+    {
+        enemyOriginalBodySprite = enemyBodyImage != null ? enemyBodyImage.sprite : null;
+        enemyHomePos = enemyRobot != null ? enemyRobot.anchoredPosition : Vector2.zero;
+        enemyHomeScale = enemyRobot != null ? enemyRobot.localScale : Vector3.one;
+    }
+
+    private void StartWave(int index)
+    {
+        waveIndex = index;
+        var w = waves[index];
+
+        enemyMaxHp = Mathf.Max(1, w.hp);
+        enemyHp = enemyMaxHp;
+        enemyBaseDamage = w.attackDamageBase;
+        enemyDamageGrowth = w.attackDamageGrowth;
+        enemyAttackInterval = Mathf.Max(0.3f, w.attackInterval);
+        waveOilCount = w.oilCount;
+        waveOilEveryMoves = w.oilEveryMoves;
+        enemyAttackCount = 0;
+        movesSinceOil = 0;
+
+        ApplyWaveVisuals(w);
+
+        enemyHpBar?.Init(enemyMaxHp);
+        if (index == 0)
+            enemyHpBar?.InitWavePips(waves.Length);
+        enemyHpBar?.SetWaveIndex(index);
+
+        // Counterplay reset: yeni dalga temiz başlar (birikmiş strike kuyruğu KORUNUR).
+        stunRemaining = 0f;
+        SetEnemyStunVisual(false);
+        chargeActive = false;
+        chargeCooldown = 0f;
+        chargeTilesBroken = 0;
+        SetChargeRingVisible(false);
+
+        weaknessTimer = 0f;   // ilk tick'te yeni renk atanır
+        if (weaknessIcon != null)
+            weaknessIcon.transform.parent.gameObject.SetActive(w.weaknessEnabled);
+    }
+
+    // ── Toast sistemi ─────────────────────────────────────────────────────────
+
+    // Lokalize metin; anahtar yoksa fallback (Get eksik anahtarda anahtarı döndürür).
+    private static string Loc(string key, string fallback)
+    {
+        string s = GameLocalization.Get(key);
+        return string.IsNullOrEmpty(s) || s == key ? fallback : s;
+    }
+
+    private static string LocFormat(string key, string fallback, params object[] args)
+    {
+        string format = Loc(key, fallback);
+        try { return string.Format(format, args); }
+        catch (System.FormatException) { return format; }
+    }
+
+    // Tek seferlik öğretici toast: ilk görüşte uzun/strong gösterilir, sonra kısa normal.
+    private void ShowTeachableToast(string prefsKey, string tipKey, string tipFallback,
+                                    string toastKey, string toastFallback, params object[] args)
+    {
+        if (PlayerPrefs.GetInt(prefsKey, 0) == 0)
+        {
+            PlayerPrefs.SetInt(prefsKey, 1);
+            PlayerPrefs.Save();
+            ShowToast(LocFormat(tipKey, tipFallback, args), 3.2f, strong: true);
+        }
+        else
+        {
+            ShowToast(LocFormat(toastKey, toastFallback, args));
+        }
+    }
+
+    private void ShowToast(string text, float duration = -1f, bool strong = false)
+    {
+        if (string.IsNullOrEmpty(text))
+            return;
+
+        toastQueue.Enqueue((text, duration > 0f ? duration : toastDefaultDuration, strong));
+        if (toastRunner == null)
+            toastRunner = StartCoroutine(ToastRunner());
+    }
+
+    private IEnumerator ToastRunner()
+    {
+        while (toastQueue.Count > 0)
+        {
+            var (text, duration, strong) = toastQueue.Dequeue();
+            yield return PlaySingleToast(text, duration, strong);
+        }
+        toastRunner = null;
+    }
+
+    // Toast'ın hedef konumu: otomatik modda robotların ALT kenarının toastAutoGap altı
+    // (ekran/çözünürlük bağımsız), değilse sabit offset.
+    private Vector2 ResolveToastPosition(RectTransform parent)
+    {
+        if (!toastAutoPosition || parent == null)
+            return toastAnchoredPos;
+
+        float lowestY = float.MaxValue;
+        var corners = new Vector3[4];
+
+        foreach (var robot in new[] { playerRobot, enemyRobot })
+        {
+            if (robot == null || !robot.gameObject.activeInHierarchy) continue;
+            robot.GetWorldCorners(corners);
+            Vector2 local = parent.InverseTransformPoint(corners[0]);   // sol-alt köşe
+            if (local.y < lowestY) lowestY = local.y;
+        }
+
+        if (lowestY == float.MaxValue)
+            return toastAnchoredPos;
+
+        return new Vector2(0f, lowestY - toastAutoGap);
+    }
+
+    private IEnumerator PlaySingleToast(string text, float duration, bool strong)
+    {
+        var parent = vfxRoot != null ? vfxRoot : (RectTransform)transform;
+        Vector2 toastPos = ResolveToastPosition(parent);
+
+        var root = new GameObject("BossToast", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        var rootRt = (RectTransform)root.transform;
+        rootRt.SetParent(parent, false);
+        rootRt.SetAsLastSibling();
+        rootRt.anchorMin = rootRt.anchorMax = new Vector2(0.5f, 0.5f);
+        rootRt.pivot = new Vector2(0.5f, 0.5f);
+        rootRt.anchoredPosition = toastPos;
+
+        var bg = root.GetComponent<Image>();
+        bg.color = new Color(0f, 0f, 0f, 0.55f);
+        bg.raycastTarget = false;
+
+        var txtGo = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        txtGo.transform.SetParent(rootRt, false);
+        var txt = txtGo.GetComponent<TextMeshProUGUI>();
+        txt.text = text;
+        txt.fontSize = strong ? 40f : 32f;
+        txt.fontStyle = FontStyles.Bold;
+        txt.alignment = TextAlignmentOptions.Center;
+        txt.color = strong ? new Color(1f, 0.85f, 0.3f) : Color.white;
+        txt.raycastTarget = false;
+        txt.enableWordWrapping = true;
+
+        var txtRt = (RectTransform)txtGo.transform;
+        txtRt.anchorMin = Vector2.zero; txtRt.anchorMax = Vector2.one;
+        txtRt.offsetMin = new Vector2(18f, 8f);
+        txtRt.offsetMax = new Vector2(-18f, -8f);
+
+        // Genişlik metne göre (ekranı aşmasın).
+        float maxW = parent.rect.width * 0.86f;
+        Vector2 pref = txt.GetPreferredValues(text, maxW - 36f, 0f);
+        rootRt.sizeDelta = new Vector2(Mathf.Min(maxW, pref.x + 44f), pref.y + 22f);
+
+        var group = root.AddComponent<CanvasGroup>();
+
+        // In: fade + hafif yukarı kayış (+ strong'da scale punch).
+        const float inDur = 0.18f, outDur = 0.22f;
+        Vector2 from = toastPos + new Vector2(0f, -16f);
+        float t = 0f;
+        while (t < inDur && root != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / inDur);
+            float e = 1f - (1f - k) * (1f - k);
+            group.alpha = e;
+            rootRt.anchoredPosition = Vector2.LerpUnclamped(from, toastPos, e);
+            if (strong)
+                rootRt.localScale = Vector3.one * Mathf.LerpUnclamped(1.25f, 1f, e);
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(duration);
+
+        t = 0f;
+        while (t < outDur && root != null)
+        {
+            t += Time.deltaTime;
+            group.alpha = 1f - Mathf.Clamp01(t / outDur);
+            yield return null;
+        }
+
+        if (root != null)
+            Destroy(root);
+    }
+
+    // ── Counterplay: Renk zayıflığı ──────────────────────────────────────────
+
+    private void TickWeakness(float dt)
+    {
+        var w = waves != null && waves.Length > 0 ? waves[waveIndex] : default;
+        if (!w.weaknessEnabled || IsOver())
+            return;
+
+        weaknessTimer -= dt;
+        if (weaknessTimer > 0f)
+            return;
+
+        weaknessTimer = Mathf.Max(3f, w.weaknessRotateSeconds);
+        RollWeakType();
+    }
+
+    private void RollWeakType()
+    {
+        var pool = board != null ? board.RandomPool : null;
+        if (pool == null || pool.Length == 0)
+            return;
+
+        // Aynı renk üst üste gelmesin (havuzda tek renk yoksa).
+        TileType next = pool[Random.Range(0, pool.Length)];
+        for (int guard = 0; guard < 8 && next == currentWeakType && pool.Length > 1; guard++)
+            next = pool[Random.Range(0, pool.Length)];
+
+        currentWeakType = next;
+        EnsureWeaknessIcon();
+        RefreshWeaknessIcon();
+
+        // İlk karşılaşma öğreticisi (bir kez): rozet ne işe yarıyor?
+        if (PlayerPrefs.GetInt("boss_tip_weakness_seen", 0) == 0)
+        {
+            PlayerPrefs.SetInt("boss_tip_weakness_seen", 1);
+            PlayerPrefs.Save();
+            ShowToast(Loc("boss_tip_weakness", "Zayıf renk! Rozetteki renkten taş kır: ×2 hasar."), 3.2f, strong: true);
+        }
+    }
+
+    // Zayıf-renk rozeti: düşman HP barının SAĞ dışına oturur (robot kafasında diğer
+    // objelerin altında kalıyordu). HP barı yoksa robot üstüne düşer. Sahne işi yok.
+    private void EnsureWeaknessIcon()
+    {
+        if (weaknessIcon != null || enemyRobot == null)
+            return;
+
+        RectTransform badgeParent = enemyHpBar != null ? (RectTransform)enemyHpBar.transform : enemyRobot;
+
+        var root = new GameObject("WeaknessBadge", typeof(RectTransform));
+        var rootRt = (RectTransform)root.transform;
+        rootRt.SetParent(badgeParent, false);
+        root.transform.SetAsLastSibling();   // bar/robot görsellerinin üstünde çizilsin
+
+        if (enemyHpBar != null)
+        {
+            rootRt.anchorMin = rootRt.anchorMax = new Vector2(1f, 0.5f);   // barın sağ-orta noktası
+            rootRt.pivot = new Vector2(0f, 0.5f);
+            rootRt.anchoredPosition = new Vector2(6f, 0f);
+        }
+        else
+        {
+            rootRt.anchorMin = rootRt.anchorMax = new Vector2(0.5f, 1f);
+            rootRt.pivot = new Vector2(0.5f, 0f);
+            rootRt.anchoredPosition = new Vector2(0f, 46f);
+        }
+        rootRt.sizeDelta = new Vector2(88f, 88f);
+
+        // Arka rozet: DOLU koyu disk (okunurluk) + altın kenar halkası.
+        var bg = new GameObject("BG", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        bg.transform.SetParent(rootRt, false);
+        var bgImg = bg.GetComponent<Image>();
+        bgImg.sprite = GetGeneratedSolidCircleSprite();
+        bgImg.color = new Color(0.07f, 0.07f, 0.12f, 0.92f);
+        bgImg.raycastTarget = false;
+        var bgRt = (RectTransform)bg.transform;
+        bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
+        bgRt.offsetMin = bgRt.offsetMax = Vector2.zero;
+
+        var rim = new GameObject("Rim", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        rim.transform.SetParent(rootRt, false);
+        var rimImg = rim.GetComponent<Image>();
+        rimImg.sprite = GetGeneratedShieldSprite(isEnemy: false);
+        rimImg.color = new Color(1f, 0.85f, 0.3f, 0.95f);
+        rimImg.raycastTarget = false;
+        var rimRt = (RectTransform)rim.transform;
+        rimRt.anchorMin = Vector2.zero; rimRt.anchorMax = Vector2.one;
+        rimRt.offsetMin = rimRt.offsetMax = Vector2.zero;
+
+        var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        iconGo.transform.SetParent(rootRt, false);
+        weaknessIcon = iconGo.GetComponent<Image>();
+        weaknessIcon.raycastTarget = false;
+        weaknessIcon.preserveAspect = true;
+        var iconRt = (RectTransform)iconGo.transform;
+        iconRt.anchorMin = Vector2.zero; iconRt.anchorMax = Vector2.one;
+        iconRt.offsetMin = new Vector2(14f, 14f);
+        iconRt.offsetMax = new Vector2(-14f, -14f);
+
+        // "×2" etiketi — rozetin sağ-alt köşesinde, koyu mini plaka üstünde.
+        var multBg = new GameObject("MultPlate", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        multBg.transform.SetParent(rootRt, false);
+        var multBgImg = multBg.GetComponent<Image>();
+        multBgImg.sprite = GetGeneratedSolidCircleSprite();
+        multBgImg.color = new Color(0.05f, 0.05f, 0.09f, 0.95f);
+        multBgImg.raycastTarget = false;
+        var multBgRt = (RectTransform)multBg.transform;
+        multBgRt.anchorMin = multBgRt.anchorMax = new Vector2(1f, 0f);
+        multBgRt.pivot = new Vector2(0.6f, 0.4f);
+        multBgRt.anchoredPosition = new Vector2(-14f, 6f);   // rozetin içine doğru, taşmasın
+        multBgRt.sizeDelta = new Vector2(48f, 48f);
+
+        var multGo = new GameObject("MultLabel", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        multGo.transform.SetParent(multBgRt, false);
+        weaknessMultLabel = multGo.GetComponent<TextMeshProUGUI>();
+        weaknessMultLabel.fontSize = 30f;
+        weaknessMultLabel.fontStyle = FontStyles.Bold;
+        weaknessMultLabel.alignment = TextAlignmentOptions.Center;
+        weaknessMultLabel.color = new Color(1f, 0.85f, 0.3f);
+        weaknessMultLabel.raycastTarget = false;
+        var multRt = (RectTransform)multGo.transform;
+        multRt.anchorMin = Vector2.zero; multRt.anchorMax = Vector2.one;
+        multRt.offsetMin = multRt.offsetMax = Vector2.zero;
+    }
+
+    // Dolu yumuşak kenarlı beyaz daire (rozet zeminleri için) — bir kez üretilir.
+    private static Sprite generatedSolidCircleSprite;
+    private static Sprite GetGeneratedSolidCircleSprite()
+    {
+        if (generatedSolidCircleSprite != null)
+            return generatedSolidCircleSprite;
+
+        const int size = 96;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp
+        };
+
+        Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            float r = (new Vector2(x, y) - center).magnitude / (size * 0.5f);
+            float alpha = Mathf.Clamp01((1f - r) / 0.06f);   // keskin ama yumuşatılmış kenar
+            tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+        }
+        tex.Apply();
+
+        generatedSolidCircleSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+        return generatedSolidCircleSprite;
+    }
+
+    private void RefreshWeaknessIcon()
+    {
+        if (weaknessIcon == null)
+            return;
+
+        Sprite icon = tileIconLibrary != null ? tileIconLibrary.Get(currentWeakType) : null;
+        if (icon != null)
+        {
+            weaknessIcon.sprite = icon;
+            weaknessIcon.color = Color.white;
+        }
+        else
+        {
+            // Library atanmadıysa: tip rengiyle rozet (okunur fallback).
+            weaknessIcon.sprite = GetGeneratedShieldSprite(isEnemy: false);
+            weaknessIcon.color = GetTileTypeFallbackColor(currentWeakType);
+        }
+
+        if (weaknessMultLabel != null)
+        {
+            var w = waves != null && waves.Length > 0 ? waves[waveIndex] : default;
+            weaknessMultLabel.text = $"×{Mathf.Max(1f, w.weaknessMultiplier):0.#}";
+        }
+
+        // Küçük pop — renk değişimi fark edilsin.
+        StartCoroutine(WeaknessIconPop());
+    }
+
+    private IEnumerator WeaknessIconPop()
+    {
+        var rt = weaknessIcon != null ? weaknessIcon.rectTransform : null;
+        if (rt == null) yield break;
+
+        float t = 0f;
+        const float dur = 0.22f;
+        while (t < dur && rt != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float pop = 1f + Mathf.Sin(k * Mathf.PI) * 0.35f;
+            rt.localScale = Vector3.one * pop;
+            yield return null;
+        }
+        if (rt != null) rt.localScale = Vector3.one;
+    }
+
+    private static Color GetTileTypeFallbackColor(TileType type) => type switch
+    {
+        TileType.Gear  => new Color(1f, 0.85f, 0.25f),
+        TileType.Core  => new Color(0.95f, 0.3f, 0.3f),
+        TileType.Bolt  => new Color(0.35f, 0.6f, 1f),
+        TileType.Plate => new Color(0.4f, 0.9f, 0.45f),
+        _              => Color.white
+    };
+
+    // ── Counterplay: Şarj saldırısı + stun ───────────────────────────────────
+
+    private void TickStun(float dt)
+    {
+        if (stunRemaining <= 0f)
+            return;
+
+        stunRemaining -= dt;
+        if (stunRemaining <= 0f)
+        {
+            stunRemaining = 0f;
+            SetEnemyStunVisual(false);
+        }
+    }
+
+    private void TickChargeScheduling(float dt, bool enemyBusy)
+    {
+        var w = waves != null && waves.Length > 0 ? waves[waveIndex] : default;
+        if (!w.chargeEnabled || chargeActive || enemyBusy || stunRemaining > 0f || IsOver())
+            return;
+
+        chargeCooldown += dt;
+        if (chargeCooldown < Mathf.Max(4f, w.chargeIntervalSeconds))
+            return;
+
+        chargeCooldown = 0f;
+        StartCoroutine(ChargeAttackRoutine(w));
+    }
+
+    private IEnumerator ChargeAttackRoutine(BossDifficulty.WaveParams w)
+    {
+        chargeActive = true;
+        chargeTilesBroken = 0;
+
+        EnsureChargeRing();
+        SetChargeRingVisible(true);
+
+        float chargeDur = Mathf.Max(2f, w.chargeSeconds);
+        int needed = Mathf.Max(1, w.chargeInterruptTiles);
+
+        // İlk görüşte uzun öğretici, sonra kısa uyarı.
+        ShowTeachableToast("boss_tip_charge_seen",
+            "boss_tip_charge", "Boss şarj oluyor! Halka dolmadan {0} taş kırarsan saldırıyı kesersin.",
+            "boss_toast_charge", "Büyük saldırı geliyor — {0} taş kır!", needed);
+        float elapsed = 0f;
+
+        Vector3 baseScale = enemyRobot != null ? enemyRobot.localScale : Vector3.one;
+
+        while (elapsed < chargeDur && chargeTilesBroken < needed && !IsOver() && !waveTransitionActive)
+        {
+            elapsed += Time.deltaTime;
+            float k = Mathf.Clamp01(elapsed / chargeDur);
+
+            if (chargeRing != null)
+            {
+                chargeRing.fillAmount = k;
+                chargeRing.color = Color.Lerp(new Color(1f, 0.75f, 0.2f, 0.95f), new Color(1f, 0.2f, 0.15f, 1f), k);
+            }
+
+            if (chargeCounterText != null)
+                chargeCounterText.text = Mathf.Max(0, needed - chargeTilesBroken).ToString();
+
+            // Şarj olurken gövde gerilim pulse'ı.
+            if (enemyRobot != null)
+                enemyRobot.localScale = baseScale * (1f + Mathf.Sin(Time.time * 14f) * 0.02f * (0.5f + k));
+
+            yield return null;
+        }
+
+        if (enemyRobot != null)
+            enemyRobot.localScale = baseScale;
+
+        SetChargeRingVisible(false);
+
+        if (IsOver() || waveTransitionActive)
+        {
+            chargeActive = false;
+            yield break;
+        }
+
+        if (chargeTilesBroken >= needed)
+        {
+            // KESİLDİ → sersemletme (saldırılar durur, alınan hasar 1.5×).
+            stunRemaining = Mathf.Max(0.5f, w.chargeStunSeconds);
+            SetEnemyStunVisual(true);
+            PlayRobotHitFeedback(enemyRobot, +1f);
+            ShowToast(Loc("boss_toast_interrupted", "KESTİN! Boss sersemledi — ×1.5 hasar!"), 1.8f, strong: true);
+        }
+        else
+        {
+            ShowToast(Loc("boss_toast_bigattack", "BÜYÜK SALDIRI!"), 1.1f, strong: true);
+            // Kesilemedi → çarpanlı büyük atış (iki namlu birden).
+            int dmg = Mathf.RoundToInt((enemyBaseDamage + enemyDamageGrowth * enemyAttackCount) * Mathf.Max(1f, w.chargeDamageMult));
+            enemyAttackCount++;
+
+            if (enemyArmA != null) PlayRecoil(enemyArmA, -1f);
+            if (enemyArmB != null) PlayRecoil(enemyArmB, -1f);
+
+            FireBolt(GetMuzzleWorld(enemyMuzzleA, enemyRobot, -1f), playerRobot,
+                new Color(1f, 0.25f, 0.15f, 1f), enemyBoltPrefab, enemyMuzzleFlashPrefab, () =>
+                {
+                    if (!waveTransitionActive)
+                        ApplyPlayerDamage(dmg);
+                });
+
+            if (enemyMuzzleB != null || enemyArmB != null)
+                FireBolt(GetMuzzleWorld(enemyMuzzleB, enemyRobot, -1f), playerRobot,
+                    new Color(1f, 0.25f, 0.15f, 1f), enemyBoltPrefab, enemyMuzzleFlashPrefab, null);
+        }
+
+        chargeActive = false;
+    }
+
+    // Şarj ringi: düşman üstünde radyal dolan halka + ortasında "kaç taş kaldı" sayacı.
+    private void EnsureChargeRing()
+    {
+        if (chargeRing != null || enemyRobot == null)
+            return;
+
+        var root = new GameObject("ChargeRing", typeof(RectTransform));
+        var rootRt = (RectTransform)root.transform;
+        rootRt.SetParent(enemyRobot, false);
+        rootRt.anchorMin = rootRt.anchorMax = new Vector2(0.5f, 0.5f);
+        rootRt.pivot = new Vector2(0.5f, 0.5f);
+        rootRt.anchoredPosition = Vector2.zero;
+        float size = Mathf.Max(shieldBubbleMinSize, Mathf.Max(enemyRobot.rect.width, enemyRobot.rect.height) * 1.15f);
+        rootRt.sizeDelta = new Vector2(size, size);
+
+        var ringGo = new GameObject("Ring", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        ringGo.transform.SetParent(rootRt, false);
+        chargeRing = ringGo.GetComponent<Image>();
+        chargeRing.sprite = GetGeneratedShieldSprite(isEnemy: true);
+        chargeRing.type = Image.Type.Filled;
+        chargeRing.fillMethod = Image.FillMethod.Radial360;
+        chargeRing.fillOrigin = (int)Image.Origin360.Top;
+        chargeRing.fillClockwise = true;
+        chargeRing.raycastTarget = false;
+        var ringRt = (RectTransform)ringGo.transform;
+        ringRt.anchorMin = Vector2.zero; ringRt.anchorMax = Vector2.one;
+        ringRt.offsetMin = ringRt.offsetMax = Vector2.zero;
+
+        var txtGo = new GameObject("Counter", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        txtGo.transform.SetParent(rootRt, false);
+        chargeCounterText = txtGo.GetComponent<TextMeshProUGUI>();
+        chargeCounterText.fontSize = 46f;
+        chargeCounterText.fontStyle = FontStyles.Bold;
+        chargeCounterText.alignment = TextAlignmentOptions.Center;
+        chargeCounterText.color = new Color(1f, 0.95f, 0.85f, 1f);
+        chargeCounterText.raycastTarget = false;
+        var txtRt = (RectTransform)txtGo.transform;
+        txtRt.anchorMin = Vector2.zero; txtRt.anchorMax = Vector2.one;
+        txtRt.offsetMin = txtRt.offsetMax = Vector2.zero;
+
+        // "KIR!" etiketi — sayının "kırılacak taş" olduğu bir bakışta anlaşılsın.
+        var breakGo = new GameObject("BreakLabel", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        breakGo.transform.SetParent(rootRt, false);
+        chargeBreakLabel = breakGo.GetComponent<TextMeshProUGUI>();
+        chargeBreakLabel.fontSize = 24f;
+        chargeBreakLabel.fontStyle = FontStyles.Bold;
+        chargeBreakLabel.alignment = TextAlignmentOptions.Center;
+        chargeBreakLabel.color = new Color(1f, 0.6f, 0.25f, 1f);
+        chargeBreakLabel.raycastTarget = false;
+        chargeBreakLabel.text = Loc("boss_charge_break_label", "KIR!");
+        var breakRt = (RectTransform)breakGo.transform;
+        breakRt.anchorMin = breakRt.anchorMax = new Vector2(0.5f, 0.5f);
+        breakRt.pivot = new Vector2(0.5f, 1f);
+        breakRt.anchoredPosition = new Vector2(0f, -30f);
+        breakRt.sizeDelta = new Vector2(140f, 28f);
+    }
+
+    private void SetChargeRingVisible(bool visible)
+    {
+        if (chargeRing != null)
+            chargeRing.transform.parent.gameObject.SetActive(visible);
+    }
+
+    // Stun görseli: gövde soğuk gri tona düşer, çıkınca dalga tint'ine döner.
+    private void SetEnemyStunVisual(bool active)
+    {
+        if (stunVisualActive == active)
+            return;
+
+        stunVisualActive = active;
+        if (enemyBodyImage == null)
+            return;
+
+        var waveTint = waves != null && waves.Length > 0 ? waves[waveIndex].bodyTint : Color.white;
+        enemyBodyImage.color = active
+            ? Color.Lerp(waveTint, new Color(0.45f, 0.5f, 0.62f), 0.7f)
+            : waveTint;
+    }
+
+    private void ApplyWaveVisuals(BossDifficulty.WaveParams w)
+    {
+        if (enemyBodyImage == null)
+            return;
+
+        // Dalga sprite'ı yoksa ORİJİNAL gövde geri gelir (önceki dalganın defeat sprite'ı kalmasın).
+        enemyBodyImage.sprite = w.bodySprite != null ? w.bodySprite : enemyOriginalBodySprite;
+        enemyBodyImage.color = w.bodyTint;
+    }
+
+    private IEnumerator WaveTransitionRoutine()
+    {
+        waveTransitionActive = true;
+
+        // Ölen dalganın kalkanı onunla gider; oyuncununki kalır.
+        enemyShieldRemaining = 0f;
+        UpdateShieldVisual(enemyShieldBubble, 0f, enemyShieldColor, enemyRobot);
+
+        var deadWave = waves[waveIndex];
+        yield return PlayDefeat(enemyRobot, enemyBodyImage,
+            deadWave.defeatedSprite != null ? deadWave.defeatedSprite : enemyDefeatedSprite,
+            enemyArmA, enemyArmB);
+
+        yield return new WaitForSeconds(0.25f);
+
+        // Yeni dalga: robotu ekran dışına taşı, gövde/kolları tazele, parametreleri kur.
+        RestoreEnemyRobotForNextWave();
+        StartWave(waveIndex + 1);
+
+        // Oyuncuya nefes: küçük iyileşme (dalgalar maratonunda adil kalsın).
+        if (playerHp > 0 && playerHealPerWavePct > 0f)
+        {
+            playerHp = Mathf.Min(playerMaxHp, playerHp + Mathf.RoundToInt(playerMaxHp * playerHealPerWavePct));
+            playerHpBar?.Set(playerHp, flashDamage: false);
+        }
+
+        StartCoroutine(ShowWaveBanner(waveIndex + 1));
+        yield return EnemyEntranceSlide();
+
+        waveTransitionActive = false;
+    }
+
+    private void RestoreEnemyRobotForNextWave()
+    {
+        if (enemyRobot == null)
+            return;
+
+        enemyRobot.localScale = enemyHomeScale;
+        enemyRobot.anchoredPosition = enemyHomePos + new Vector2(enemyEntranceOffset, 0f);
+        if (enemyArmA != null) enemyArmA.gameObject.SetActive(true);
+        if (enemyArmB != null) enemyArmB.gameObject.SetActive(true);
+    }
+
+    private IEnumerator EnemyEntranceSlide()
+    {
+        if (enemyRobot == null)
+            yield break;
+
+        Vector2 from = enemyHomePos + new Vector2(enemyEntranceOffset, 0f);
+        float dur = Mathf.Max(0.05f, waveEntranceDuration);
+        float t = 0f;
+        while (t < dur && enemyRobot != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float e = 1f - (1f - k) * (1f - k);   // ease-out giriş
+            enemyRobot.anchoredPosition = Vector2.LerpUnclamped(from, enemyHomePos, e);
+            yield return null;
+        }
+        if (enemyRobot != null) enemyRobot.anchoredPosition = enemyHomePos;
+    }
+
+    // "WAVE N" banner'ı — sahne kurulumu gerektirmez, prosedürel TMP.
+    private IEnumerator ShowWaveBanner(int waveNumber)
+    {
+        var parent = vfxRoot != null ? vfxRoot : (RectTransform)transform;
+        var go = new GameObject("WaveBanner", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        go.transform.SetParent(parent, false);
+        go.transform.SetAsLastSibling();
+
+        var text = go.GetComponent<TextMeshProUGUI>();
+        text.text = $"WAVE {waveNumber}";
+        text.fontSize = 84f;
+        text.fontStyle = FontStyles.Bold;
+        text.alignment = TextAlignmentOptions.Center;
+        text.raycastTarget = false;
+
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = new Vector2(800f, 160f);
+
+        var baseColor = new Color(1f, 0.85f, 0.25f);
+        float inDur = 0.25f, hold = 0.8f, outDur = 0.3f;
+
+        float t = 0f;
+        while (t < inDur && text != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / inDur);
+            float e = 1f - (1f - k) * (1f - k);
+            text.color = new Color(baseColor.r, baseColor.g, baseColor.b, e);
+            rt.localScale = Vector3.one * Mathf.LerpUnclamped(1.6f, 1f, e);
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(hold);
+
+        t = 0f;
+        while (t < outDur && text != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / outDur);
+            text.color = new Color(baseColor.r, baseColor.g, baseColor.b, 1f - k);
+            yield return null;
+        }
+
+        if (go != null) Destroy(go);
+    }
+
     // ── Düşman saldırısı ──
 
     private IEnumerator EnemyAttack()
     {
+        // Dalga geçişi başladıysa (ölen boss) saldırı iptal.
+        if (waveTransitionActive || IsOver())
+            yield break;
+
         // Telgraf: iki top da geri çekilip "yükleniyor" hissi.
         var aimA = enemyArmA != null ? enemyArmA : enemyRobot;
         var aimB = enemyArmB; // ikinci kol opsiyonel
@@ -400,6 +1288,10 @@ public sealed class BossDuelController : MonoBehaviour
             if (aimB != null) StartCoroutine(ChargeTelegraph(aimB, enemyTelegraphDuration));
             if (aimA != null) yield return ChargeTelegraph(aimA, enemyTelegraphDuration);
         }
+
+        // Telgraf sırasında dalga ölmüş olabilir — ateşleme.
+        if (waveTransitionActive || IsOver())
+            yield break;
 
         int dmg = enemyBaseDamage + enemyDamageGrowth * enemyAttackCount;
         enemyAttackCount++;
@@ -413,7 +1305,9 @@ public sealed class BossDuelController : MonoBehaviour
         FireBolt(GetMuzzleWorld(enemyMuzzleA, enemyRobot, -1f), playerRobot, enemyBoltColor, enemyBoltPrefab, enemyMuzzleFlashPrefab, () =>
         {
             landed = true;
-            ApplyPlayerDamage(dmg);
+            // Mermi havadayken dalga öldüyse hasar yazma (ölü boss vuramaz).
+            if (!waveTransitionActive)
+                ApplyPlayerDamage(dmg);
         });
 
         if (enemyMuzzleB != null || enemyArmB != null)
@@ -422,15 +1316,14 @@ public sealed class BossDuelController : MonoBehaviour
         float wait = 0f;
         while (!landed && wait < 1.5f) { wait += Time.deltaTime; yield return null; }
 
-        // Opsiyonel oil baskısı: her N turda bir.
-        var level = board.ActiveLevelData;
-        if (level != null && level.bossAttackOilCount > 0)
+        // Opsiyonel oil baskısı: her N turda bir. Parametreler DALGA bazlı (StartWave kurar).
+        if (waveOilCount > 0 && !waveTransitionActive && !IsOver())
         {
             movesSinceOil++;
-            if (movesSinceOil >= Mathf.Max(1, level.bossAttackEveryMoves))
+            if (movesSinceOil >= Mathf.Max(1, waveOilEveryMoves))
             {
                 movesSinceOil = 0;
-                ThrowOil(level.bossAttackOilCount);
+                ThrowOil(waveOilCount);
             }
         }
     }
@@ -439,9 +1332,12 @@ public sealed class BossDuelController : MonoBehaviour
     {
         if (dmg <= 0) return;
 
-        if (playerShieldRemaining > 0f)
+        if (playerShieldHits > 0)
         {
+            // Kalkan bu vuruşu yutar (vuruş bazlı — 1 blok düşer).
+            playerShieldHits--;
             PlayShieldAbsorb(playerShieldBubble, playerShieldColor);
+            UpdateShieldVisual(playerShieldBubble, playerShieldHits, playerShieldColor, playerRobot);
             return;
         }
 
@@ -470,35 +1366,30 @@ public sealed class BossDuelController : MonoBehaviour
 
     private void AddShield(bool toPlayer)
     {
-        float add = Mathf.Max(0f, shieldSecondsPerPickup);
-        if (add <= 0f)
-            return;
-
         if (toPlayer)
         {
-            playerShieldRemaining += add;
+            playerShieldHits += Mathf.Max(1, playerShieldHitsPerPickup);
             EnsureShieldBubble(ref playerShieldBubble, playerRobot, playerShieldColor, playerShieldSprite, isEnemy: false);
-            UpdateShieldVisual(playerShieldBubble, playerShieldRemaining, playerShieldColor, playerRobot);
+            UpdateShieldVisual(playerShieldBubble, playerShieldHits, playerShieldColor, playerRobot);
             PlayShieldAbsorb(playerShieldBubble, playerShieldColor);
+            ShowToast(Loc("boss_toast_shield_player", "Kalkan aktif!"));
         }
         else
         {
-            enemyShieldRemaining += add;
+            enemyShieldRemaining += Mathf.Max(0.5f, enemyShieldSecondsPerPickup);
             EnsureShieldBubble(ref enemyShieldBubble, enemyRobot, enemyShieldColor, enemyShieldSprite, isEnemy: true);
             UpdateShieldVisual(enemyShieldBubble, enemyShieldRemaining, enemyShieldColor, enemyRobot);
             PlayShieldAbsorb(enemyShieldBubble, enemyShieldColor);
+            ShowToast(Loc("boss_toast_shield_enemy", "Boss kalkanlandı!"));
         }
     }
 
     private void TickShields(float dt)
     {
-        if (playerShieldRemaining > 0f)
-            playerShieldRemaining = Mathf.Max(0f, playerShieldRemaining - dt);
-
         if (enemyShieldRemaining > 0f)
             enemyShieldRemaining = Mathf.Max(0f, enemyShieldRemaining - dt);
 
-        UpdateShieldVisual(playerShieldBubble, playerShieldRemaining, playerShieldColor, playerRobot);
+        UpdateShieldVisual(playerShieldBubble, playerShieldHits, playerShieldColor, playerRobot);
         UpdateShieldVisual(enemyShieldBubble, enemyShieldRemaining, enemyShieldColor, enemyRobot);
     }
 
@@ -666,7 +1557,7 @@ public sealed class BossDuelController : MonoBehaviour
     // Hedef robotun şu an aktif (süresi olan, görünür) kalkan balonunu döndürür; yoksa null.
     private Image GetActiveShieldBubbleFor(RectTransform robot)
     {
-        if (robot == playerRobot && playerShieldRemaining > 0f && playerShieldBubble != null && playerShieldBubble.gameObject.activeInHierarchy)
+        if (robot == playerRobot && playerShieldHits > 0 && playerShieldBubble != null && playerShieldBubble.gameObject.activeInHierarchy)
             return playerShieldBubble;
         if (robot == enemyRobot && enemyShieldRemaining > 0f && enemyShieldBubble != null && enemyShieldBubble.gameObject.activeInHierarchy)
             return enemyShieldBubble;

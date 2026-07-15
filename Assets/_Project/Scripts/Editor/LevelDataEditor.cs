@@ -193,6 +193,24 @@ public class LevelDataEditor : Editor
         level.bossAttackEveryMoves = Mathf.Max(1, EditorGUILayout.IntField("Oil Every N Turns", Mathf.Max(1, level.bossAttackEveryMoves)));
         level.bossAttackOilCount = Mathf.Max(0, EditorGUILayout.IntField("Oil Per Attack (0 = kapalı)", Mathf.Max(0, level.bossAttackOilCount)));
 
+        EditorGUILayout.Space(2);
+        EditorGUILayout.LabelField("Waves (çok-dalga)", EditorStyles.miniBoldLabel);
+        level.bossWaveCount = Mathf.Max(0, EditorGUILayout.IntField(
+            new GUIContent("Wave Count (0 = otomatik)",
+                "bossWaves listesi BOŞKEN dalga sayısı. 0 = boss index'inden (current_level/5) " +
+                "BossDifficulty formülü: erken bosslar 1, orta 2, geç 3 dalga. Dalga parametreleri " +
+                "yukarıdaki Battlefield alanlarından eskalasyonla türetilir."),
+            level.bossWaveCount));
+
+        serializedObject.Update();
+        EditorGUILayout.PropertyField(
+            serializedObject.FindProperty("bossWaves"),
+            new GUIContent("Boss Waves (manuel)",
+                "DOLUYSA formül devre dışı: her eleman bir dalga. 0/-1 bırakılan sayısal alanlar " +
+                "Battlefield alanlarından devralınır; hpWeight'ler normalize edilir."),
+            includeChildren: true);
+        serializedObject.ApplyModifiedProperties();
+
         bool hasBossGoal = false;
         if (level.goals != null)
         {
@@ -1209,7 +1227,7 @@ public class LevelDataEditor : Editor
 
         EditorGUI.BeginChangeCheck();
         selectedTubeDir    = (TubeDirection)EditorGUILayout.EnumPopup("Yön (base→open end)", selectedTubeDir);
-        selectedTubeLength = EditorGUILayout.IntSlider("Uzunluk (hücre)", selectedTubeLength, 2, 9);
+        selectedTubeLength = EditorGUILayout.IntSlider("Uzunluk (hücre)", selectedTubeLength, 2, LevelData.MaxHeight);
         if (EditorGUI.EndChangeCheck())
             EditorUtility.SetDirty(level);
 

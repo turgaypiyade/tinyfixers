@@ -173,6 +173,15 @@ public sealed class LineHSpecial
                 continue;
             }
 
+            // Movable obstacle (PlasticTwoStage vb.) → SADECE obstacle hasarı (ImpactCells).
+            // Tile'ı Affected'a eklemek onu normal taş gibi YOK EDİYOR; çok-hit movable'da
+            // obstacle verisi hücrede sağ kalıyordu (hayalet veri → sonraki düşüşte movable
+            // hedefi dolu / veri ezilmesi). Sweep beam hücresini zaten vurur ve
+            // lineHitDamagedObstacleCells dedup'u çift hasarı engeller; sweep koşmayan
+            // modlarda (default anim) hasar ImpactCells üzerinden gelir.
+            if (SpecialCellUtils.TryRouteMovableToImpact(rt.Context, rt.Board, x, y))
+                continue;
+
             SpecialCellUtils.MarkAffectedCell(rt.Context, x, y, rt.Board);
 
             var tile = rt.Board.Tiles[x, y];

@@ -16,5 +16,5 @@ MonoBehaviour:
   prefsLevelKey: current_level
   themes:
   - {fileID: 11400000, guid: bc46bf23f33e848629e918a93ef57a49, type: 2}
-  - {fileID: 11400000, guid: 5b72e76c1a5264291a27d0287b89c1a2, type: 2}
-  - {fileID: 11400000, guid: ddf60be1d54a34f1d916458d32866542, type: 2}
+  - {fileID: 11400000, guid: f58bba26c424142eab2d7c34d1492732, type: 2}
+  - {fileID: 11400000, guid: d82b5bd9566554ce5bfa54592d2aa2b7, type: 2}

@@ -505,6 +505,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 1
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []

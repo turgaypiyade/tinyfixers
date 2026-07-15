@@ -31,11 +31,11 @@ MonoBehaviour:
   introHoldDuration: 1.1
   bossAttackEveryMoves: 3
   bossAttackOilCount: 0
-  playerMaxHp: 900
+  playerMaxHp: 750
   damagePerClearedTile: 10
-  enemyAttackBaseDamage: 20
-  enemyAttackDamageGrowth: 6
-  enemyAttackInterval: 3
+  enemyAttackBaseDamage: 18
+  enemyAttackDamageGrowth: 3
+  enemyAttackInterval: 3.0
   battlefieldBackground: {fileID: 0}
   randomPool: 
   energyPerContainer: 1

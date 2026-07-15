@@ -52,6 +52,9 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     [SerializeField] private PreLevelSpecialSlotView lineHSlot;
     [SerializeField] private PreLevelSpecialSlotView pulseCoreSlot;
     [SerializeField] private PreLevelSpecialSlotView overrideSlot;
+    [Tooltip("Special slotların açıldığı level. Öncesinde slotlar kilitli görünür (ikon açık, " +
+             "numberBG/count yerine lock görseli).")]
+    [SerializeField, Min(1)] private int specialsUnlockLevel = 6;
 
     [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
@@ -65,9 +68,12 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     [SerializeField] private float closeDuration = 0.16f;
     [SerializeField] private Vector3 openStartScale = new Vector3(0.92f, 0.92f, 1f);
 
+    private const string FreeSessionUsedKey = "prelevel_specials_free_used";
+
     private readonly List<PreLevelSpecialSlotView> slots = new();
     private Coroutine transitionRoutine;
     private ChapterTheme currentTheme;
+    private bool isFreeSession;   // açıldıktan sonraki İLK oyun: seçimler ücretsiz, hak düşmez
 
     private void Awake()
     {
@@ -104,17 +110,23 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     public void Open()
     {
         int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
-        bool isUnlocked = level > 10;
+        bool isUnlocked = level >= specialsUnlockLevel;
 
+        // Açılıştaki tek seferlik hediye: 3'er hak. Free oyunla aynı anda verilir ama free
+        // oyun bu hakları HARCAMAZ — free bitince oyuncu 3'er hakla devam eder.
         if (isUnlocked && PlayerPrefs.GetInt("prelevel_specials_rewarded", 0) == 0)
         {
             PlayerPrefs.SetInt("prelevel_specials_rewarded", 1);
             PlayerPrefs.Save();
-            
+
             PreLevelSpecialInventory.Add(TileSpecial.LineH, 3);
             PreLevelSpecialInventory.Add(TileSpecial.PulseCore, 3);
             PreLevelSpecialInventory.Add(TileSpecial.SystemOverride, 3);
         }
+
+        // İlk açılan oyun FREE: count yerine "ÜCRETSİZ" yazar, seçim hak düşürmez.
+        // Continue'ya basılınca tüketilir (seçim yapılmasa bile o oyuna özeldir).
+        isFreeSession = isUnlocked && PlayerPrefs.GetInt(FreeSessionUsedKey, 0) == 0;
 
         currentTheme = ResolveTheme();
         ApplyTheme(currentTheme);
@@ -171,13 +183,13 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             return;
 
         if (lineHSlot != null)
-            lineHSlot.Configure(TileSpecial.LineH, tileIconLibrary.GetSpecialIcon(TileSpecial.LineH), currentTheme, isUnlocked);
+            lineHSlot.Configure(TileSpecial.LineH, tileIconLibrary.GetSpecialIcon(TileSpecial.LineH), currentTheme, isUnlocked, isFreeSession);
 
         if (pulseCoreSlot != null)
-            pulseCoreSlot.Configure(TileSpecial.PulseCore, tileIconLibrary.GetSpecialIcon(TileSpecial.PulseCore), currentTheme, isUnlocked);
+            pulseCoreSlot.Configure(TileSpecial.PulseCore, tileIconLibrary.GetSpecialIcon(TileSpecial.PulseCore), currentTheme, isUnlocked, isFreeSession);
 
         if (overrideSlot != null)
-            overrideSlot.Configure(TileSpecial.SystemOverride, tileIconLibrary.GetSpecialIcon(TileSpecial.SystemOverride), currentTheme, isUnlocked);
+            overrideSlot.Configure(TileSpecial.SystemOverride, tileIconLibrary.GetSpecialIcon(TileSpecial.SystemOverride), currentTheme, isUnlocked, isFreeSession);
     }
 
     private void RefreshGoalsPreview()
@@ -399,7 +411,18 @@ public class PreLevelSpecialPopupController : MonoBehaviour
                 continue;
 
             userSelected.Add(slot.Special);
-            PreLevelSpecialInventory.Spend(slot.Special, 1);
+
+            // Free oyunda seçimler hak düşürmez.
+            if (!isFreeSession)
+                PreLevelSpecialInventory.Spend(slot.Special, 1);
+        }
+
+        // Free hakkı bu oyunla tüketilir — seçim yapılmamış olsa bile (o oyuna özeldi).
+        if (isFreeSession)
+        {
+            isFreeSession = false;
+            PlayerPrefs.SetInt(FreeSessionUsedKey, 1);
+            PlayerPrefs.Save();
         }
 
         // Timed specials are auto-injected regardless of user selection.

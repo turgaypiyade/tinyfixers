@@ -1109,6 +1109,7 @@ public class ObstacleStateService : ISimObstacleQuery
 
         if (fromIdx < 0 || fromIdx >= level.obstacles.Length) return;
         if (toIdx < 0 || toIdx >= level.obstacles.Length) return;
+        if (fromIdx == toIdx) return;
 
         var id = (ObstacleId)level.obstacles[fromIdx];
         if (id == ObstacleId.None) return;
@@ -1120,23 +1121,95 @@ public class ObstacleStateService : ISimObstacleQuery
             ? remainingHitsByOrigin[origin]
             : -1;
 
-        // Hedef hücrede under-tile obstacle (Mud) varsa onu KORU — movable obstacle
-        // üzerinden geçerken yok etmesin. Movable cell'i terk edince geri yüklenir.
-        var destId = (ObstacleId)level.obstacles[toIdx];
-        if (destId != ObstacleId.None && !IsMovableObstacleAt(toX, toY))
+        RestoreCellAfterMovableLeft(fromIdx);
+        PlaceMovableAt(toIdx, id, movingRemaining);
+    }
+
+    /// <summary>
+    /// CalculateCascades'in TÜM movable hareketlerini sıra-bağımsız uygular. Tek tek
+    /// MoveObstacle çağrısı sıraya duyarlıydı: bir movable'ın HEDEFİ, henüz taşınmamış
+    /// başka bir movable'ın KAYNAĞI ise (çapraz kayışlarda kolon işleme sırası bunu
+    /// garanti edemez) canlı veri eziliyor, ardından kaynak boşaltılırken beneath'teki
+    /// içerik (Mud) yeni gelenin ÜSTÜNE geri yükleniyordu → veri/görsel kopması,
+    /// "yoktan mud" ve kırılamayan hayalet movable. İki faz sırayı önemsiz kılar:
+    /// önce tüm kaynaklar boşaltılır (beneath restore), sonra tüm movable'lar hedefe
+    /// yerleştirilir (hedefteki under-tile içerik beneath'e alınır).
+    /// </summary>
+    public void MoveMovablesBatch(List<(Vector2Int from, Vector2Int to)> moves)
+    {
+        if (moves == null || moves.Count == 0) return;
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
+
+        var placements = new List<(int toIdx, ObstacleId id, int remaining)>(moves.Count);
+
+        // Faz 1: kimlikleri yakala + kaynak hücreleri boşalt. (Kaynak hücreler birbirinden
+        // farklıdır; boşaltma yalnızca kendi hücresine yazar → bu faz kendi içinde güvenli.)
+        for (int i = 0; i < moves.Count; i++)
         {
-            int destRemaining = (toIdx < remainingHitsByOrigin.Length) ? remainingHitsByOrigin[toIdx] : -1;
-            _underTileBeneathMovable[toIdx] = (destId, destRemaining);
+            var (from, to) = moves[i];
+            if (!level.InBounds(from.x, from.y) || !level.InBounds(to.x, to.y)) continue;
+
+            int fromIdx = level.Index(from.x, from.y);
+            int toIdx = level.Index(to.x, to.y);
+            if (fromIdx == toIdx) continue;
+            if (fromIdx < 0 || fromIdx >= level.obstacles.Length) continue;
+            if (toIdx < 0 || toIdx >= level.obstacles.Length) continue;
+
+            var id = (ObstacleId)level.obstacles[fromIdx];
+            if (id == ObstacleId.None) continue;
+
+            int origin = level.obstacleOrigins[fromIdx];
+            int remaining = (origin >= 0 && origin < remainingHitsByOrigin.Length)
+                ? remainingHitsByOrigin[origin]
+                : -1;
+
+            placements.Add((toIdx, id, remaining));
+            RestoreCellAfterMovableLeft(fromIdx);
         }
 
-        // Movable'ı hedefe yerleştir.
+        // Faz 2: hedeflere yerleştir. Artık hiçbir hedef "taşınmayı bekleyen" movable
+        // verisi içeremez — tümü Faz 1'de boşaltıldı.
+        for (int i = 0; i < placements.Count; i++)
+            PlaceMovableAt(placements[i].toIdx, placements[i].id, placements[i].remaining);
+    }
+
+    // Movable bir hücreye girerken oradaki non-movable içeriği (açığa çıkmış Mud gibi
+    // under-tile obstacle) beneath store'a alır ve movable'ı hücreye yazar. Movable
+    // hücreyi terk edince/kırılınca içerik geri açılır (RestoreCellAfterMovableLeft /
+    // ClearObstacleFromLevel).
+    private void PlaceMovableAt(int toIdx, ObstacleId id, int remaining)
+    {
+        var destId = (ObstacleId)level.obstacles[toIdx];
+        if (destId != ObstacleId.None)
+        {
+            int tx = toIdx % level.width;
+            int ty = toIdx / level.width;
+            if (IsMovableObstacleAt(tx, ty))
+            {
+                // Batch sonrası hedefte canlı movable kalamaz — kalıyorsa cascade planı
+                // hatalı demektir; sessiz veri kaybı yerine yüksek sesle işaretle.
+                Debug.LogError($"[Obstacle] Movable {id} hedefi ({tx},{ty}) başka bir movable ({destId}) tarafından dolu — veri ezildi!");
+            }
+            else
+            {
+                int destOrigin = level.obstacleOrigins[toIdx];
+                int destRemaining = (destOrigin >= 0 && destOrigin < remainingHitsByOrigin.Length)
+                    ? remainingHitsByOrigin[destOrigin]
+                    : -1;
+                _underTileBeneathMovable[toIdx] = (destId, destRemaining);
+            }
+        }
+
         level.obstacles[toIdx] = (int)id;
         level.obstacleOrigins[toIdx] = toIdx; // yeni pozisyon yeni origin
         if (toIdx < remainingHitsByOrigin.Length)
-            remainingHitsByOrigin[toIdx] = movingRemaining;
+            remainingHitsByOrigin[toIdx] = remaining;
+    }
 
-        // Kaynak hücreyi boşalt: altında saklanan bir under-tile obstacle (Mud) varsa
-        // onu geri yükle, yoksa None yap.
+    // Movable'ın terk ettiği hücreyi boşaltır: altında saklanan under-tile obstacle (Mud)
+    // varsa geri yükle, authored stamped-beneath varsa onu aç, yoksa None yap.
+    private void RestoreCellAfterMovableLeft(int fromIdx)
+    {
         if (_underTileBeneathMovable.TryGetValue(fromIdx, out var beneath))
         {
             level.obstacles[fromIdx] = (int)beneath.Id;
@@ -1184,10 +1257,6 @@ public class ObstacleStateService : ISimObstacleQuery
         if (!level.InBounds(x, y))
             return false;
 
-        int idx = level.Index(x, y);
-        if ((ObstacleId)level.obstacles[idx] != ObstacleId.None)
-            return false;
-
         var def = library != null ? library.Get(obstacleId) : null;
         if (def == null)
             return false;
@@ -1195,7 +1264,24 @@ public class ObstacleStateService : ISimObstacleQuery
         if (def.size.x != 1 || def.size.y != 1)
             return false;
 
+        int idx = level.Index(x, y);
         int initialHits = Mathf.Max(1, def.hits);
+
+        if ((ObstacleId)level.obstacles[idx] != ObstacleId.None)
+        {
+            // Dolu hücreye yalnızca MOVABLE spawn inebilir ve yalnızca altta kalabilen
+            // (non-blocking, non-movable) içeriğin — örn. movable kırılınca açığa çıkmış
+            // Mud — üstüne. İçerik beneath'e alınır, movable ayrılınca/kırılınca geri
+            // açılır (MoveObstacle ile aynı kural). Eskiden burada reddediliyordu:
+            // goal-movable spawn'ı mud hücresine denk gelince view'sız kalıyor, hücre
+            // sonsuza dek boş görünüyordu (komşu taşlar da akmıyordu).
+            if (!def.IsMovableObstacleForRemainingHits(initialHits)) return false;
+            if (IsMovableObstacleAt(x, y)) return false;
+            if (IsCellBlocked(x, y)) return false;
+
+            PlaceMovableAt(idx, obstacleId, initialHits);
+            return true;
+        }
 
         level.obstacles[idx] = (int)obstacleId;
         level.obstacleOrigins[idx] = idx;
@@ -1489,7 +1575,7 @@ public class ObstacleStateService : ISimObstacleQuery
         if (obsId == ObstacleId.None) return false;
         var def = library?.Get(obsId);
         if (def == null) return false;
-        var stage = def.GetStageRuleForRemainingHits(remainingHitsByOrigin[idx]);
+        var stage = def.GetStageRuleForRemainingHits(ResolveRemainingHitsForCell(idx, def));
         return stage != null && stage.holdsTile;
     }
 
@@ -1502,7 +1588,7 @@ public class ObstacleStateService : ISimObstacleQuery
         if (obsId == ObstacleId.None) return false;
         var def = library?.Get(obsId);
         if (def == null) return false;
-        var stage = def.GetStageRuleForRemainingHits(remainingHitsByOrigin[idx]);
+        var stage = def.GetStageRuleForRemainingHits(ResolveRemainingHitsForCell(idx, def));
         return stage != null && stage.allowDiagonal;
     }
 

@@ -443,17 +443,24 @@ public class GridSpawner : MonoBehaviour
 
                     bool hasPinned = pinnedSpecial != TileSpecial.None || pinnedTileVal > 0;
 
-                    if (gravityIsolated[x, y] && !holdsTileCell && !hasPinned)
+                    // Per-obstacle gölge dolgusu: hücrenin üstündeki kolondaki TÜM blocker'lar
+                    // fillsShadowBeneath=true ise (örn. Oil duvarı) gölge hücre de dolu başlar.
+                    // Chest gibi default-false blocker varsa eski davranış: boş kalır.
+                    bool fillShadowed = gravityIsolated[x, y] && !holdsTileCell && !hasPinned
+                        && ShadowCastersAllowFill(x, y);
+
+                    if (gravityIsolated[x, y] && !holdsTileCell && !hasPinned && !fillShadowed)
                         continue;
 
                     TileType tileType = initialTypes[x, y];
 
-                    // İzole hücre (holdsTile veya pinned) SimulateInitialTypes'ta locked sayılıp
-                    // default tip (hep aynı) bırakıldı; bir sütun dolusu oil aynı taşı verirdi.
-                    // Rastgele tip ver (pinned tile type varsa aşağıda ezilir).
-                    if (gravityIsolated[x, y] && (holdsTileCell || hasPinned)
+                    // İzole hücre (holdsTile/pinned/fillShadowed) SimulateInitialTypes'ta locked
+                    // sayılıp default tip (hep aynı) bırakıldı; bir sütun dolusu oil aynı taşı
+                    // verirdi. Rastgele tip ver — sol/üst komşuya bakarak anlık 3'lü oluşturma
+                    // (pinned tile type varsa aşağıda ezilir).
+                    if (gravityIsolated[x, y] && (holdsTileCell || hasPinned || fillShadowed)
                         && effectiveRandomPool != null && effectiveRandomPool.Length > 0)
-                        tileType = effectiveRandomPool[UnityEngine.Random.Range(0, effectiveRandomPool.Length)];
+                        tileType = PickIsolatedRandomType(x, y, effectiveRandomPool);
 
                     if (pinnedTileVal > 0)
                         tileType = (TileType)(pinnedTileVal - 1);
@@ -554,6 +561,56 @@ public class GridSpawner : MonoBehaviour
         }
 
 
+    }
+
+    // Gölgedeki boş hücre ilk dağıtımda doldurulsun mu? Hücrenin ÜSTÜNDEKİ kolonu tarar:
+    // en az bir gravity-blocker (blocksCells veya holdsTile) bulunmalı ve blocker'ların
+    // HEPSİ fillsShadowBeneath=true olmalı. Chest gibi default-false bir blocker varsa
+    // (veya kolonda hiç blocker yoksa — salt geometri gölgesi) eski davranış: boş kalır.
+    private bool ShadowCastersAllowFill(int x, int y)
+    {
+        var lib = resolvedLevel != null ? resolvedLevel.obstacleLibrary : null;
+        var obstacles = board != null ? board.ObstacleStateService : null;
+        if (lib == null || obstacles == null) return false;
+
+        bool anyBlocker = false;
+        for (int yy = y - 1; yy >= 0; yy--)
+        {
+            bool blocks = obstacles.IsCellBlocked(x, yy) || obstacles.HoldsTileAt(x, yy);
+            if (!blocks) continue;
+
+            anyBlocker = true;
+            var def = lib.Get(obstacles.GetObstacleIdAt(x, yy));
+            if (def == null || !def.fillsShadowBeneath)
+                return false;
+        }
+        return anyBlocker;
+    }
+
+    // İzole (gravity-gölgesi) hücre için rastgele tip: sol-sol ve üst-üst komşulara bakarak
+    // ilk dağıtımda anlık 3'lü match oluşturmayı önler. Spawn döngüsü satır-satır (üst→alt,
+    // sol→sağ) ilerlediğinden sol ve üst taşlar bu noktada zaten yerleşmiştir.
+    private TileType PickIsolatedRandomType(int x, int y, TileType[] pool)
+    {
+        TileType? banH = null, banV = null;
+
+        var l1 = board.GetTileViewAt(x - 1, y);
+        var l2 = board.GetTileViewAt(x - 2, y);
+        if (l1 != null && l2 != null && l1.GetTileType() == l2.GetTileType())
+            banH = l1.GetTileType();
+
+        var u1 = board.GetTileViewAt(x, y - 1);
+        var u2 = board.GetTileViewAt(x, y - 2);
+        if (u1 != null && u2 != null && u1.GetTileType() == u2.GetTileType())
+            banV = u1.GetTileType();
+
+        for (int attempt = 0; attempt < 12; attempt++)
+        {
+            var t = pool[UnityEngine.Random.Range(0, pool.Length)];
+            if ((banH == null || t != banH.Value) && (banV == null || t != banV.Value))
+                return t;
+        }
+        return pool[UnityEngine.Random.Range(0, pool.Length)];
     }
 
     private void SpawnMovableObstacleTile(int x, int y)

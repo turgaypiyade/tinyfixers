@@ -475,6 +475,17 @@ public class BoardController : MonoBehaviour
         shakeBasePos = shakeTarget.anchoredPosition;
         shakeHomeCaptured = true;
     }
+
+    // Board'u KALICI olarak kaydırır (BossDuel: board'u BottomArea üstüne yaslamak için).
+    // Ev pozisyonu ile mevcut pozisyonu BİRLİKTE taşır — home-invariantı korunur; shake,
+    // entrance ve tüm dönüşler yeni evi kullanır.
+    internal void ShiftBoardHome(Vector2 delta)
+    {
+        if (shakeTarget == null) return;
+        CaptureShakeHome();
+        shakeBasePos += delta;
+        shakeTarget.anchoredPosition += delta;
+    }
     internal TileView LastSwapA => lastSwapA;
     internal TileView LastSwapB => lastSwapB;
     internal bool LastSwapUserMove { get => lastSwapUserMove; set => lastSwapUserMove = value; }
@@ -1478,6 +1489,9 @@ public class BoardController : MonoBehaviour
         if (x < 0 || x >= width || y < 0 || y >= height) return true;
         var mode = activeBooster; SetBoosterMode(BoosterMode.None); selected = null;
         var targetCell = new Vector2Int(x, y); var targetTile = tiles[x, y];
+
+        // Hak düşümü: free oyunda düşmez, normalde 1 hak harcar (tek merkez: BoosterAccessService).
+        BoosterAccessService.OnBoosterUsed(mode);
 
         if (mode == BoosterMode.Shuffle)
         {
@@ -2638,11 +2652,14 @@ public class BoardController : MonoBehaviour
                 t += Time.deltaTime;
                 float k = Mathf.Clamp01(t / dur);
                 float e = 1f - Mathf.Pow(1f - k, 3f); // ease-out cubic
-                shakeTarget.anchoredPosition = Vector2.LerpUnclamped(start, home, e);
+                // Hedef CANLI evden okunur: entrance sırasında ev taşınmış olabilir
+                // (BossDuel ShiftBoardHome — board BottomArea üstüne yaslanır). Local
+                // 'home' kopyasına lerp'lemek board'u eski merkeze geri oturtuyordu.
+                shakeTarget.anchoredPosition = Vector2.LerpUnclamped(start, shakeBasePos, e);
                 yield return null;
             }
 
-            shakeTarget.anchoredPosition = home;
+            shakeTarget.anchoredPosition = shakeBasePos;
             entranceInProgress = false;
         }
 

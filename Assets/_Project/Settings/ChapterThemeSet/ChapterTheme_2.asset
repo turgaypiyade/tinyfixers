@@ -13,36 +13,56 @@ MonoBehaviour:
   m_Name: ChapterTheme_2
   m_EditorClassIdentifier: Assembly-CSharp::ChapterTheme
   chapterIndex: 2
-  gameBackground: {fileID: 21300000, guid: cce6788ad4e9e4e81af5259f0306b2f4, type: 3}
-  gameTopHud: {fileID: 21300000, guid: bbc643dcd189c479f8b2e1c9b3d29b1e, type: 3}
-  gameBottomArea: {fileID: 21300000, guid: 19f3f4169d35a4d3c8cf0f407a17728d, type: 3}
-  menuBackground: {fileID: 21300000, guid: 4550b43a86ffe4702abe64aaf0ee1df3, type: 3}
-  menuTopHud: {fileID: 21300000, guid: dbf581e29a5bc46898feaad019204ebf, type: 3}
-  menuBottomArea: {fileID: 21300000, guid: b8a7979567ffa4d0d8c7ff4ccdd4e33e, type: 3}
-  menuLevelSelectorBtn: {fileID: 21300000, guid: a0e6748cc23924a348246bb5e9eeb036, type: 3}
-  menuRepairBtn: {fileID: 21300000, guid: 52cbfc17341c8433ebbd44b5ce68f97d, type: 3}
+  gameBackground: {fileID: 21300000, guid: 7d2715711bfad49e5a438bf071056d78, type: 3}
+  gameTopHud: {fileID: 21300000, guid: a613c7faccef449fc85b7943d52d4deb, type: 3}
+  gameBottomArea: {fileID: 21300000, guid: 43e44e3d560a74958bf1278d0c4e96a1, type: 3}
+  menuBackground: {fileID: 21300000, guid: 4521c033365614105b1d105bdfdbc8e7, type: 3}
+  menuTopHud: {fileID: 21300000, guid: ecd5971b231564baeb9a49ca052b5a88, type: 3}
+  menuBottomArea: {fileID: 21300000, guid: 8f47d89b0f7fe4435b5e176a1f531f13, type: 3}
+  menuLevelSelectorBtn: {fileID: 21300000, guid: c322b9cadec8b45aabd2f464edfc07e4, type: 3}
+  menuRepairBtn: {fileID: 21300000, guid: 618b39e0230a1406ebfba99542c755c5, type: 3}
   borderColorId: 0
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
   successAnimationBackground: {fileID: 0}
-  preLevelPopupBackground: {fileID: 21300000, guid: 91b5356912e5e4d268f25623681020ed, type: 3}
+  preLevelPopupBackground: {fileID: 21300000, guid: 352fad001981d4e229487a0b185e42bc, type: 3}
   preLevelContinueButton: {fileID: 0}
   preLevelCancelButton: {fileID: 0}
   preLevelCheckMark: {fileID: 21300000, guid: 4d7e3c1a8d2a049e7862849181984ab4, type: 3}
   preLevelDimColor: {r: 0, g: 0, b: 0, a: 0.55}
-  preLevelSlotNormalTint: {r: 1, g: 1, b: 1, a: 0.18}
-  preLevelSlotSelectedTint: {r: 1, g: 0.86, b: 0.25, a: 0.72}
+  preLevelSlotNormalTint: {r: 1, g: 0.62352943, b: 0.10980392, a: 0.6862745}
+  preLevelSlotSelectedTint: {r: 0.42745098, g: 1, b: 0.23921569, a: 0.6666667}
   preLevelCountTextColor: {r: 1, g: 1, b: 1, a: 1}
   preLevelButtonTextColor: {r: 1, g: 1, b: 1, a: 1}
-  workshopStages: {fileID: 0}
+  workshopStages: {fileID: 11400000, guid: ee94cc6fba5bc40eb9422268cd24e711, type: 2}
   loadingScreenImages:
   - {fileID: 21300000, guid: 195efa70a7541414a9d5f30ca5630078, type: 3}
   - {fileID: 21300000, guid: e33a13330145a40e9b9c1307d4abe674, type: 3}
-  - {fileID: 21300000, guid: 301141de716694c16a658eaa62748445, type: 3}
-  - {fileID: 21300000, guid: 1b84d161e03ef41329ba93986ee4f316, type: 3}
+  - {fileID: 21300000, guid: 8498b48c28ced4e79904859e2a7cb13e, type: 3}
   - {fileID: 21300000, guid: 2ffe2b14db1084a7182210ce7ae161d6, type: 3}
   - {fileID: 21300000, guid: 8498b48c28ced4e79904859e2a7cb13e, type: 3}
-  loadingHints: []
-  levelEndPopupBackground: {fileID: 21300000, guid: 2fb83c69b5d504550882cbd693d1b379, type: 3}
+  - {fileID: 21300000, guid: 8498b48c28ced4e79904859e2a7cb13e, type: 3}
+  loadingHints:
+  - image: {fileID: 21300000, guid: 227f7f906fe094eb68e53870408ec840, type: 3}
+    titleLocalizationKey: loading_hint_3match_title
+    descriptionLocalizationKey: loading_hint_3match_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: e1a6c7cf92370451b95bba33bb5c73bb, type: 3}
+    titleLocalizationKey: loading_hint_lineh_title
+    descriptionLocalizationKey: loading_hint_lineh_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: cd89e89cd855449ac94eb2cd8885f355, type: 3}
+    titleLocalizationKey: loading_hint_linev_title
+    descriptionLocalizationKey: loading_hint_linev_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: 4a20593d56623495a8213363bcbf3e8f, type: 3}
+    titleLocalizationKey: loading_hint_pulse_title
+    descriptionLocalizationKey: loading_hint_pulse_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: 9693ddf5b0a474f4499f2c1051f5692b, type: 3}
+    titleLocalizationKey: loading_hint_override_title
+    descriptionLocalizationKey: loading_hint_override_desc
+    loadingLocalizationKey: loading_hint_loading
+  levelEndPopupBackground: {fileID: 21300000, guid: 0c4a595e7b4104c2494f465433b2e507, type: 3}
   levelEndContinueButton: {fileID: 0}
   levelEndCloseButton: {fileID: 0}
   levelEndStarFilled: {fileID: 0}

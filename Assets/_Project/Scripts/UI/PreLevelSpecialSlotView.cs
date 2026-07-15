@@ -23,8 +23,16 @@ public class PreLevelSpecialSlotView : MonoBehaviour
     [SerializeField] private bool hideCountWhenSelected = true;
 
     [Header("Lock State")]
-    [Tooltip("İlk 10 level boyunca kilitli olan durum için gösterilecek görsel Obje")]
+    [Tooltip("Slot kilitliyken (unlock level'ına ulaşılmadan) gösterilecek görsel obje — " +
+             "numberBG/count yerine bu görünür; ikon açık kalır.")]
     [SerializeField] private GameObject lockOverlay;
+    [Tooltip("Kilitliyken ikona uygulanan gri tint (açılınca beyaza döner).")]
+    [SerializeField] private Color lockedIconTint = new Color(0.55f, 0.55f, 0.55f, 1f);
+
+    [Header("Free Session")]
+    [Tooltip("İlk kilitsiz oyunda (free) numberBG/count YERİNE gösterilecek görsel obje " +
+             "(ÜCRETSİZ/FREE rozet sprite'ı).")]
+    [SerializeField] private GameObject freeBadge;
 
     [Header("Timed Reward Overlay")]
     [Tooltip("Süreli ödül aktifken gösterilecek overlay container.")]
@@ -44,6 +52,8 @@ public class PreLevelSpecialSlotView : MonoBehaviour
     private ChapterTheme theme;
     private bool isSelected;
     private bool isUnlocked = true;
+    private bool isFreeSession;   // ilk açılan oyun: count yerine "ÜCRETSİZ", seçim hak istemez
+    private TMP_Text freeBadgeLabel;   // freeBadge altındaki text (ör. freeBadgeTXT) — lazily bulunur
     private Coroutine selectionRoutine;
 
     public TileSpecial Special => special;
@@ -93,11 +103,12 @@ public class PreLevelSpecialSlotView : MonoBehaviour
         timedCountdownText.text = FormatTimeSpan(GetTimedRemaining());
     }
 
-    public void Configure(TileSpecial slotSpecial, Sprite icon, ChapterTheme chapterTheme, bool unlocked = true)
+    public void Configure(TileSpecial slotSpecial, Sprite icon, ChapterTheme chapterTheme, bool unlocked = true, bool freeSession = false)
     {
         special = slotSpecial;
         theme = chapterTheme;
         isUnlocked = unlocked;
+        isFreeSession = freeSession && unlocked;
 
         if (iconImage != null && iconImage.sprite == null && icon != null)
             iconImage.sprite = icon;
@@ -108,25 +119,53 @@ public class PreLevelSpecialSlotView : MonoBehaviour
         SetSelected(false, false);
         ApplyLockState();
         ApplyTimedState();
+        ApplyFreeState();
+    }
+
+    // Free oyunda numberBG/count yerine freeBadge sprite'ı görünür; lock da kapalı kalır
+    // (free yalnızca kilitsizken mümkün — sahnede açık unutulmuş lock'a karşı garanti).
+    private void ApplyFreeState()
+    {
+        if (freeBadge != null)
+            freeBadge.SetActive(isFreeSession);
+
+        if (isFreeSession && lockOverlay != null)
+            lockOverlay.SetActive(false);
+
+        RefreshCountVisibility();
     }
 
     private void ApplyLockState()
     {
         if (lockOverlay != null)
             lockOverlay.SetActive(!isUnlocked);
-            
+
         if (button != null)
         {
             // Eğer kilitliyse buton tıklanamaz
             if (!isUnlocked)
                 button.interactable = false;
         }
-        
-        if (!isUnlocked)
-        {
-            if (countText != null) countText.gameObject.SetActive(false);
-            if (numberBG != null) numberBG.gameObject.SetActive(false);
-        }
+
+        // Kilitliyken ikon grileşir.
+        if (iconImage != null)
+            iconImage.color = isUnlocked ? Color.white : lockedIconTint;
+
+        RefreshCountVisibility();
+    }
+
+    // numberBG + countText görünürlüğü TEK kuraldan yönetilir — kilit/free/timed/seçim
+    // durumlarının her biri ayrı ayrı set edince birbirini eziyordu (kilitliyken timed
+    // refresh'i tekrar açıyor, lock görselinin altından sayı görünüyordu).
+    private void RefreshCountVisibility()
+    {
+        bool visible = isUnlocked
+                    && !isFreeSession
+                    && !TimedRewardService.IsSpecialFree(special)
+                    && (!isSelected || !hideCountWhenSelected);
+
+        if (countText != null) countText.gameObject.SetActive(visible);
+        if (numberBG != null) numberBG.gameObject.SetActive(visible);
     }
 
     public void ApplyTheme(ChapterTheme chapterTheme)
@@ -145,6 +184,10 @@ public class PreLevelSpecialSlotView : MonoBehaviour
     public void RefreshCount()
     {
         if (countText == null)
+            return;
+
+        // Free oyunda count/numberBG zaten gizli (yerine freeBadge sprite'ı görünür).
+        if (isFreeSession)
             return;
 
         int count = PreLevelSpecialInventory.GetCount(special);
@@ -174,14 +217,11 @@ public class PreLevelSpecialSlotView : MonoBehaviour
         if (timedOverlay != null)
             timedOverlay.SetActive(isFree);
 
+        // Kilitli slotta timed durum butonu geri açmasın.
         if (button != null)
-            button.interactable = !isFree;
+            button.interactable = !isFree && isUnlocked;
 
-        if (numberBG != null)
-            numberBG.gameObject.SetActive(!isFree);
-
-        if (countText != null)
-            countText.gameObject.SetActive(!isFree);
+        RefreshCountVisibility();
 
         if (timedWaveImage != null)
         {
@@ -258,20 +298,35 @@ public class PreLevelSpecialSlotView : MonoBehaviour
     private void HandleClick()
     {
         if (!isUnlocked) return;
-        
-        // Kilitli değil ama elimizde hiç joker kalmadıysa seçime izin verme
-        if (PreLevelSpecialInventory.GetCount(special) <= 0 && !IsTimedActive && !isSelected)
+
+        // Kilitli değil ama elimizde hiç joker kalmadıysa seçime izin verme.
+        // Free oyunda hak gerekmez — seçim serbest.
+        if (!isFreeSession && PreLevelSpecialInventory.GetCount(special) <= 0 && !IsTimedActive && !isSelected)
             return; // Sınırsız kullanımı durdur!
-            
+
         Clicked?.Invoke(this);
     }
 
     private void RefreshLocalizedTexts()
     {
-        if (nameText == null || string.IsNullOrEmpty(nameLocalizationKey))
+        if (nameText != null && !string.IsNullOrEmpty(nameLocalizationKey))
+            nameText.text = GameLocalization.Get(nameLocalizationKey);
+
+        RefreshFreeBadgeLabel();
+    }
+
+    // freeBadge altındaki text'i (freeBadgeTXT) lokalize eder. Dil değişiminde
+    // RefreshLocalizedTexts üzerinden de tazelenir.
+    private void RefreshFreeBadgeLabel()
+    {
+        if (freeBadge == null)
             return;
 
-        nameText.text = GameLocalization.Get(nameLocalizationKey);
+        if (freeBadgeLabel == null)
+            freeBadgeLabel = freeBadge.GetComponentInChildren<TMP_Text>(true);
+
+        if (freeBadgeLabel != null)
+            freeBadgeLabel.text = GameLocalization.Get("prelevel_special_free");
     }
 
     private void ApplySelectionVisual(bool animate)
@@ -313,13 +368,7 @@ public class PreLevelSpecialSlotView : MonoBehaviour
 
     private void ApplyCountVisual()
     {
-        bool visible = !isSelected || !hideCountWhenSelected;
-
-        if (countText != null)
-            countText.gameObject.SetActive(visible);
-
-        if (numberBG != null)
-            numberBG.gameObject.SetActive(visible);
+        RefreshCountVisibility();
     }
 
     private void ApplyCheckVisual(bool animate)
