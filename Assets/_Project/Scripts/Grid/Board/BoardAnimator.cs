@@ -852,25 +852,10 @@ public class BoardAnimator
                 }
             }
 
-            // Kilit durumunu hit'ten ÖNCE yakala: TryHit(tileCell) oil'i (hits=1) kırarsa hücre
-            // artık interaction-locked OLMAKTAN ÇIKAR ve aşağıdaki guard yanlışlıkla komşu oilleri
-            // zincirler (xxxx → ortadakini vur → ___x). Kilit ÖN durumuna bakarak oil/chest
-            // hücrelerinden komşuya yayılımı doğru şekilde engelle.
-            bool beamCellWasInteractionLocked =
-                board.ObstacleStateService.IsInteractionLockedAt(tileCell.x, tileCell.y);
-
-            // Beam hücresini her durumda hit et (chest gibi blocked hücreler dahil).
+            // Beam yalnızca ÜZERİNDEN geçtiği hücreyi vurur (chest gibi blocked hücreler dahil).
+            // Komşu hücrelere sıçrama YOK — satırın/kolonun dışındaki obstacle'lar hasar almaz
+            // (pass-sonu yolunda da line clear'lar includeAdjacentOverTileBlockerDamage=false).
             TryHit(tileCell);
-
-            // Adjacent hit'ler sadece beam hücresi (hit ÖNCESİNDE) kilitsiz normal tile ise —
-            // chest/oil hücrelerinin komşularını zincirlememek için.
-            if (board.Tiles[tileCell.x, tileCell.y] != null && !beamCellWasInteractionLocked)
-            {
-                TryHit(new Vector2Int(tileCell.x + 1, tileCell.y));
-                TryHit(new Vector2Int(tileCell.x - 1, tileCell.y));
-                TryHit(new Vector2Int(tileCell.x, tileCell.y + 1));
-                TryHit(new Vector2Int(tileCell.x, tileCell.y - 1));
-            }
         }
 
         void TryClearTileOnLineSweepHit(Vector2Int cell)

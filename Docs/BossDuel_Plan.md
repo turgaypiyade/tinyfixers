@@ -71,8 +71,8 @@ Kesilebilir şarj saldırısı: b≥2'de açılır, radyal ring + ortada "kaç t
 **Faz 2.5 — Okunabilirlik** ✅ TAMAMLANDI (2026-07-15)
 Board BossDuel'de BottomArea üstüne yaslanır (`boardBottomAnchor` sahne ref'i + `ShiftBoardHome`; entrance slide hedefi canlı `shakeBasePos`'tan okur). Toast sistemi (kuyruklu, tek tek oynar, `toastAnchoredPos` ile konum): şarj başlangıcı ("X taş kır!"), kesme ("KESTİN! ×1.5"), büyük saldırı, kalkan bildirimleri. Kalıcı etiketler: zayıflık rozetinde "×2", şarj ringinde "KIR!". İlk-karşılaşma öğreticileri (bir kez, PlayerPrefs: boss_tip_charge_seen / boss_tip_weakness_seen) uzun+strong toast olarak. 8 lokalizasyon anahtarı (boss_toast_*/boss_tip_*/boss_charge_break_label).
 
-**Faz 3 — Oyuncu gücü**
-Süper lazer (şarj barı UI + buton + big beam) + special bonus hasarı (SpecialBoardSignal) + pickup runtime spawner.
+**Faz 3 — Oyuncu gücü** ✅ TAMAMLANDI (2026-07-16)
+Süper lazer: 40 taşta dolan radyal rozet (player HP barının SOL dışı, zayıflık rozetiyle simetrik), dolunca nabız + tıklanabilir; kalın beam, 12×damagePerTile, düşman kalkanını DELER ve söker; dalga geçişinde sıfırlanmaz. Special bonus: BoardController.OnSpecialActivated (SpecialBehaviorDispatcher.ApplySpecialActivation'dan yayınlanır — zincir dahil) → Line +5 / Pulse +8 / Override +12 düz vuruş (crit almaz), PatchBot boss'a direkt 6× mor mermi. Pickup spawner: dalga parametreli (yeşil b≥1 22sn, mor b≥3 30sn), board idle iken rastgele normal taş pickup'a dönüştürülür (TrySpawnSingleCellObstacleAt + RefreshTileObstacleVisual + pop). 2 lokalizasyon anahtarı (boss_toast_laser_ready, boss_tip_laser).
 
 **Faz 4 — Feel & denge**
 Hasar sayısı popup'ları, enrage, SFX/VFX pass, LevelDataEditor "Boss Auto-Fill" butonu, formül tuning (gerekirse SimBot'a duel simülasyonu eklenebilir — opsiyonel).

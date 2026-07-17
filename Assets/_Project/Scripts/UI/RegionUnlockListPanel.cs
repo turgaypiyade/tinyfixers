@@ -135,8 +135,8 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
     {
         isAnimating = true;
 
-        // 1. Yıldızlar bölgenin hedefine uçar (paralel).
-        StartCoroutine(FlyStarsFromTo(starSourceWorldPos, region.RevealFocus));
+        // 1. Yıldızlar bölgenin PIN'ine uçar (bölgeye özel nokta; kamera odağı ada bazlı).
+        StartCoroutine(FlyStarsFromTo(starSourceWorldPos, region.StarPoint));
 
         // 2. Kısa gecikme — yıldızlar yola çıksın.
         yield return new WaitForSeconds(0.1f);

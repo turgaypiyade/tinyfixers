@@ -12,7 +12,11 @@ using UnityEngine.UI;
 /// </summary>
 public sealed class WorldMapController : MonoBehaviour
 {
-    [Tooltip("Açılış SIRASIYLA tüm bölgeler. Liste, kilitli bölgeleri bu sırayla gösterir.")]
+    [Tooltip("Açılış SIRASIYLA adalar. Doluysa bölge sırası adaların hiyerarşisinden türetilir " +
+             "(Island objesinin altındaki Region'lar, hiyerarşi sırasıyla) ve regions listesi YOK SAYILIR.")]
+    [SerializeField] private WorldMapIsland[] islands;
+
+    [Tooltip("ESKİ yol (islands boşsa): açılış sırasıyla tüm bölgeler.")]
     [SerializeField] private WorldMapRegion[] regions;
 
     [Header("Kutlama (açılınca, bölgenin RevealFocus'unda)")]
@@ -66,10 +70,68 @@ public sealed class WorldMapController : MonoBehaviour
     /// <summary>Bir bölge açıldığında (sis kalkma bitince) tetiklenir.</summary>
     public event Action<WorldMapRegion> OnRegionUnlocked;
 
+    /// <summary>Bir adanın TÜM bölgeleri açılıp sandık töreni bitince tetiklenir.</summary>
+    public event Action<WorldMapIsland> OnIslandCompleted;
+
     /// <summary>Şu an bir sis kalkma animasyonu sürüyor mu? (panel buna göre bekler)</summary>
     public bool IsRevealing { get; private set; }
 
-    public IReadOnlyList<WorldMapRegion> Regions => regions;
+    private bool UseIslands => islands != null && islands.Length > 0;
+
+    // Ada modunda sıralı bölge listesi adalardan türetilir (cache'li — region setleri runtime'da değişmez).
+    private List<WorldMapRegion> orderedCache;
+    private IReadOnlyList<WorldMapRegion> Ordered
+    {
+        get
+        {
+            if (!UseIslands) return regions ?? Array.Empty<WorldMapRegion>();
+            if (orderedCache == null)
+            {
+                orderedCache = new List<WorldMapRegion>();
+                foreach (var island in islands)
+                {
+                    if (island == null) continue;
+                    foreach (var r in island.Regions)
+                        if (r != null) orderedCache.Add(r);
+                }
+            }
+            return orderedCache;
+        }
+    }
+
+    public IReadOnlyList<WorldMapRegion> Regions => Ordered;
+
+    /// <summary>İlk tamamlanmamış ada (görev paketi). Ada modu kapalıysa/hepsi bittiyse null.</summary>
+    public WorldMapIsland ActiveIsland
+    {
+        get
+        {
+            if (!UseIslands) return null;
+            foreach (var island in islands)
+                if (island != null && !island.AllRegionsUnlocked) return island;
+            return null;
+        }
+    }
+
+    private WorldMapIsland FindIslandOf(WorldMapRegion region)
+    {
+        if (!UseIslands || region == null) return null;
+        foreach (var island in islands)
+        {
+            if (island == null) continue;
+            foreach (var r in island.Regions)
+                if (r == region) return island;
+        }
+        return null;
+    }
+
+    // Kamera odağı ADA bazlı: bölge bir adadaysa adanın odağı (karo merkezi) kullanılır —
+    // ada içi her açılışta kadraj aynı kalır. Ada modu yoksa bölgenin kendi odağı.
+    private RectTransform FocusFor(WorldMapRegion region)
+    {
+        var island = FindIslandOf(region);
+        return island != null ? island.RevealFocus : region.RevealFocus;
+    }
 
     private void OnEnable()
     {
@@ -94,34 +156,35 @@ public sealed class WorldMapController : MonoBehaviour
     public void FocusOnRegion(WorldMapRegion region, bool instant)
     {
         if (region == null || scrollRect == null || scrollRect.content == null) return;
+        var focus = FocusFor(region);
         if (instant)
         {
             scrollRect.content.localScale = Vector3.one * browseScale;
             Canvas.ForceUpdateCanvases();   // rect/konum güncel olsun, doğru ortalansın
-            scrollRect.content.anchoredPosition = CenteredAnchoredPos(region.RevealFocus);
+            scrollRect.content.anchoredPosition = CenteredAnchoredPos(focus);
             scrollRect.velocity = Vector2.zero;
         }
         else
         {
-            StartCoroutine(PanZoomTo(region.RevealFocus, browseScale, panDuration));
+            StartCoroutine(PanZoomTo(focus, browseScale, panDuration));
         }
     }
 
     private void ApplyAllInstant()
     {
-        if (regions == null) return;
-        for (int i = 0; i < regions.Length; i++)
-            if (regions[i] != null) regions[i].ApplyInstant();
+        var all = Ordered;
+        for (int i = 0; i < all.Count; i++)
+            if (all[i] != null) all[i].ApplyInstant();
     }
 
     /// <summary>Sırayla ilk N kilitli bölgeyi döndürür (görev listesi için).</summary>
     public List<WorldMapRegion> GetLockedRegions(int max = int.MaxValue)
     {
         var list = new List<WorldMapRegion>();
-        if (regions == null) return list;
-        for (int i = 0; i < regions.Length && list.Count < max; i++)
+        var all = Ordered;
+        for (int i = 0; i < all.Count && list.Count < max; i++)
         {
-            var r = regions[i];
+            var r = all[i];
             if (r != null && !r.IsUnlocked) list.Add(r);
         }
         return list;
@@ -129,16 +192,28 @@ public sealed class WorldMapController : MonoBehaviour
 
     public bool AllUnlocked => GetLockedRegions(1).Count == 0;
 
-    /// <summary>Toplam (null olmayan) bölge sayısı.</summary>
+    /// <summary>Toplam bölge sayısı. Ada modunda AKTİF adanın bölge sayısı (görev paketi = ada).</summary>
     public int TotalRegions
     {
-        get { int c = 0; if (regions != null) foreach (var r in regions) if (r != null) c++; return c; }
+        get
+        {
+            var active = ActiveIsland;
+            if (active != null) return active.TotalRegions;
+            int c = 0; foreach (var r in Ordered) if (r != null) c++;
+            return c;
+        }
     }
 
-    /// <summary>Açılmış bölge sayısı.</summary>
+    /// <summary>Açılmış bölge sayısı. Ada modunda AKTİF adanın açılmış bölge sayısı.</summary>
     public int UnlockedCount
     {
-        get { int c = 0; if (regions != null) foreach (var r in regions) if (r != null && r.IsUnlocked) c++; return c; }
+        get
+        {
+            var active = ActiveIsland;
+            if (active != null) return active.UnlockedCount;
+            int c = 0; foreach (var r in Ordered) if (r != null && r.IsUnlocked) c++;
+            return c;
+        }
     }
 
     /// <summary>İlerleme (0-1) = açılmış / toplam.</summary>
@@ -170,7 +245,7 @@ public sealed class WorldMapController : MonoBehaviour
     {
         IsRevealing = true;
 
-        var focus = region.RevealFocus;     // ekran ortalama (kadraj)
+        var focus = FocusFor(region);        // ekran ortalama (kadraj) — ada modunda ada merkezi
         var starAt = region.StarPoint;       // yıldız/VFX = PIN konumu
         bool canPan = panToRegion && scrollRect != null && scrollRect.content != null;
 
@@ -193,16 +268,42 @@ public sealed class WorldMapController : MonoBehaviour
         // 4. Bir an izlet.
         if (holdAfterReveal > 0f) yield return new WaitForSeconds(holdAfterReveal);
 
+        // 4b. Ada tamamlandıysa: ödülleri hemen ver (kalıcılık önce — tören yarıda kesilse de
+        // ödül kaybolmaz), sonra sandık töreni oynat ve kapatılmasını bekle.
+        var island = FindIslandOf(region);
+        bool islandJustCompleted =
+            island != null && island.AllRegionsUnlocked && !island.ChestClaimed;
+        if (islandJustCompleted)
+        {
+            island.MarkChestClaimed();
+
+            var rewards = new List<DailySlotReward>();
+            if (island.ChestRewards != null)
+                foreach (var rw in island.ChestRewards)
+                    if (rw != null) rewards.Add(rw);
+
+            foreach (var rw in rewards)
+                DailySlotRewardService.Grant(rw);
+
+            bool chestDone = false;
+            RewardChestRevealOverlay.Show(rewards, () => chestDone = true,
+                island.ChestClosedSprite, island.ChestOpenedSprite);
+            yield return new WaitUntil(() => chestDone);
+        }
+
         // 5. Boş ekrana DÖNME: sıradaki kilitli bölgeye (yoksa mevcut bölgeye) normal zoom'la geç.
+        // Ada yeni bittiyse bu, otomatik olarak SIRADAKİ adanın ilk bölgesidir.
         if (canPan)
         {
             var next = GetLockedRegions(1);   // bu bölge artık açık → listeye girmez
-            var target = (goToNextAfterUnlock && next.Count > 0) ? next[0].RevealFocus : focus;
+            var target = (goToNextAfterUnlock && next.Count > 0) ? FocusFor(next[0]) : focus;
             yield return PanZoomTo(target, browseScale, panDuration);
         }
 
         IsRevealing = false;
         OnRegionUnlocked?.Invoke(region);
+        if (islandJustCompleted)
+            OnIslandCompleted?.Invoke(island);
     }
 
     /// <summary>Content'i focus ekran ortasına gelecek + targetScale'e zoom yapacak şekilde animasyonla taşır.</summary>

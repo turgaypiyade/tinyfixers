@@ -42,14 +42,7 @@ public sealed class RegionUnlockItem : MonoBehaviour
         }
 
         if (nameText != null)
-        {
-            string localized = !string.IsNullOrEmpty(region.NameLocalizationKey)
-                ? GameLocalization.Get(region.NameLocalizationKey)
-                : null;
-            if (string.IsNullOrEmpty(localized) || localized == region.NameLocalizationKey)
-                localized = region.FallbackName;
-            nameText.text = localized;
-        }
+            nameText.text = region.DisplayName;   // harita etiketiyle aynı kaynak (lokalize)
 
         if (starCountText != null) starCountText.text = region.StarCost.ToString();
 

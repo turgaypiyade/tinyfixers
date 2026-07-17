@@ -315,6 +315,9 @@ public class BoardController : MonoBehaviour
     private readonly List<PatchbotDashRequest> _patchbotDashRequests = new();
 
     public bool InputLocked => CurrentState == BoardState.Locked || IsBusy;
+    // Açık kilit (popup/intro SetInputLocked) — resolve kaynaklı IsBusy'den ayrışır;
+    // BossDuel düşman saldırısını popup açıkken durdurmak için okur.
+    public bool IsExplicitlyLocked => CurrentState == BoardState.Locked;
     public int RemainingMoves { get; private set; }
     public LevelData ActiveLevelData => levelData;
 
@@ -369,6 +372,8 @@ public class BoardController : MonoBehaviour
     public event Action<int, int> OnWardrobeItemRemoved;
     public event Action<int> OnMovesChanged;
     public event Action<TileType, int> OnTilesCleared;
+    // Her tekil special aktivasyonu (zincirdekiler dahil) — BossDuel bonus hasarı dinler.
+    public event Action<TileSpecial, Vector2Int> OnSpecialActivated;
     public event Action<bool> OnBoosterTargetingChanged;
     public event Action<LightningLineStrike, float> OnLineSweepStarted;
     public event Action<Vector2Int, LightningLineStrike> OnLineSweepCellReached;
@@ -503,6 +508,7 @@ public class BoardController : MonoBehaviour
     internal Transform LineTravelSpawnParent => lineTravelSpawnParent;
 
     // ── Event forwarders for LineSweepService ──
+    internal void RaiseSpecialActivated(TileSpecial special, Vector2Int cell) => OnSpecialActivated?.Invoke(special, cell);
     internal void OnLineSweepStartedInternal(LightningLineStrike strike, float delay) => OnLineSweepStarted?.Invoke(strike, delay);
     internal void OnLineSweepCellReachedInternal(Vector2Int cell, LightningLineStrike strike) => OnLineSweepCellReached?.Invoke(cell, strike);
     internal ObstacleResolutionService Obstacles => obstacleResolutionService;
@@ -654,11 +660,12 @@ public class BoardController : MonoBehaviour
     // applies its hit on arrival, but the board is allowed to keep flowing while it flies.
     public int FlyingGoalOrbs = 0;
     public int FlyingPatchBotDashes = 0;
+    public int DrainingBossStrikes = 0;
 
     // Background jobs the resolve loop genuinely has to wait on (cascades, clears, combos),
     // excluding non-blocking flights above.
     public int BlockingBackgroundJobs =>
-        Mathf.Max(0, ActiveBackgroundJobs - FlyingGoalOrbs - FlyingPatchBotDashes);
+        Mathf.Max(0, ActiveBackgroundJobs - FlyingGoalOrbs - FlyingPatchBotDashes - DrainingBossStrikes);
 
     public void BeginGoalOrbFlight() { ActiveBackgroundJobs++; FlyingGoalOrbs++; }
     public void EndGoalOrbFlight()
@@ -672,6 +679,15 @@ public class BoardController : MonoBehaviour
     {
         ActiveBackgroundJobs  = Mathf.Max(0, ActiveBackgroundJobs - 1);
         FlyingPatchBotDashes  = Mathf.Max(0, FlyingPatchBotDashes - 1);
+    }
+
+    // BossDuel: son hamle harcandı ama vuruş kuyruğu/havadaki boltlar hâlâ hasar
+    // yazacak — out-of-moves fail bunlar boşalana kadar bekler (resolve parklanmaz).
+    public void BeginBossStrikeDrain() { ActiveBackgroundJobs++; DrainingBossStrikes++; }
+    public void EndBossStrikeDrain()
+    {
+        ActiveBackgroundJobs = Mathf.Max(0, ActiveBackgroundJobs - 1);
+        DrainingBossStrikes  = Mathf.Max(0, DrainingBossStrikes - 1);
     }
 
     // Runs a list of actions sequentially as a single background job.

@@ -142,7 +142,7 @@
         },
         {
           "key": "worldmap_region_living_area",
-          "value": "Yaşam Alanını Aç"
+          "value": "Yaşam Alanı"
         },
         {
           "key": "worldmap_robot_hall_area",
@@ -343,6 +343,218 @@
         {
           "key": "boss_charge_break_label",
           "value": "KIR!"
+        },
+        {
+          "key": "boss_toast_laser_ready",
+          "value": "Süper lazer hazır!"
+        },
+        {
+          "key": "boss_tip_laser",
+          "value": "Süper lazer hazır! Butona bas — kalkan delen dev atış."
+        },
+        {
+          "key": "worldmap_region_robot_hall",
+          "value": "Robot Salonu"
+        },
+        {
+          "key": "worldmap_region_robo_factory",
+          "value": "Robot Fabrikası"
+        },
+        {
+          "key": "worldmap_region_robo_workshop",
+          "value": "Atölye"
+        },
+        {
+          "key": "worldmap_region_robo_firestation",
+          "value": "İtfaiye"
+        },
+        {
+          "key": "worldmap_region_robo_repairstation",
+          "value": "Tamir İstasyonu"
+        },
+        {
+          "key": "worldmap_region_robo_laboratory",
+          "value": "Laboratuvar"
+        },
+        {
+          "key": "worldmap_region_robo_academy",
+          "value": "Akademi"
+        },
+        {
+          "key": "worldmap_region_robo_statue",
+          "value": "Heykel"
+        },
+        {
+          "key": "worldmap_region_park_gate",
+          "value": "Park Kapısı"
+        },
+        {
+          "key": "worldmap_region_ticket_booth",
+          "value": "Bilet Gişesi"
+        },
+        {
+          "key": "worldmap_region_snack_bar_1",
+          "value": "Atıştırmalık Büfesi"
+        },
+        {
+          "key": "worldmap_region_snack_bar_2",
+          "value": "Atıştırmalık Büfesi"
+        },
+        {
+          "key": "worldmap_region_mirror_maze",
+          "value": "Ayna Labirenti"
+        },
+        {
+          "key": "worldmap_region_bots_arena_1",
+          "value": "Bot Arenası"
+        },
+        {
+          "key": "worldmap_region_robo_coaster",
+          "value": "Robo Hız Treni"
+        },
+        {
+          "key": "worldmap_region_bots_arena_2",
+          "value": "Bot Arenası"
+        },
+        {
+          "key": "worldmap_region_carousel",
+          "value": "Atlıkarınca"
+        },
+        {
+          "key": "worldmap_region_spinner",
+          "value": "Fırıldak"
+        },
+        {
+          "key": "worldmap_region_park_statue",
+          "value": "Heykel"
+        },
+        {
+          "key": "worldmap_region_grand_hall",
+          "value": "Büyük Salon"
+        },
+        {
+          "key": "worldmap_region_rocket_hall",
+          "value": "Roket Salonu"
+        },
+        {
+          "key": "worldmap_region_ancient_bot_hall",
+          "value": "Antik Bot Salonu"
+        },
+        {
+          "key": "worldmap_region_celestial_gear_monument",
+          "value": "Göksel Dişli Anıtı"
+        },
+        {
+          "key": "worldmap_region_golden_robo_statue",
+          "value": "Altın Robo Heykeli"
+        },
+        {
+          "key": "worldmap_region_hologram_archive",
+          "value": "Hologram Arşivi"
+        },
+        {
+          "key": "worldmap_region_repair_history_workshop",
+          "value": "Tamir Tarihi Atölyesi"
+        },
+        {
+          "key": "worldmap_region_robo_library",
+          "value": "Robo Kütüphanesi"
+        },
+        {
+          "key": "worldmap_region_gift_shop_1",
+          "value": "Hediyelik Dükkânı"
+        },
+        {
+          "key": "worldmap_region_gift_shop_2",
+          "value": "Hediyelik Dükkânı"
+        },
+        {
+          "key": "worldmap_region_info_desk",
+          "value": "Danışma"
+        },
+        {
+          "key": "worldmap_region_skyport_terminal",
+          "value": "Gök Limanı Terminali"
+        },
+        {
+          "key": "worldmap_region_control_tower",
+          "value": "Kontrol Kulesi"
+        },
+        {
+          "key": "worldmap_region_drone_pad",
+          "value": "Drone Pisti"
+        },
+        {
+          "key": "worldmap_region_hover_taxi",
+          "value": "Uçan Taksi"
+        },
+        {
+          "key": "worldmap_region_vehicle_hangar",
+          "value": "Araç Hangarı"
+        },
+        {
+          "key": "worldmap_region_cargo_dock",
+          "value": "Kargo İskelesi"
+        },
+        {
+          "key": "worldmap_region_airship_dock",
+          "value": "Zeplin İskelesi"
+        },
+        {
+          "key": "worldmap_region_fuel_reactor",
+          "value": "Yakıt Reaktörü"
+        },
+        {
+          "key": "worldmap_region_boarding_gate",
+          "value": "Biniş Kapısı"
+        },
+        {
+          "key": "worldmap_region_sky_lounge",
+          "value": "Gök Salonu"
+        },
+        {
+          "key": "worldmap_region_robo_barn",
+          "value": "Robo Ahırı"
+        },
+        {
+          "key": "worldmap_region_gear_windmill",
+          "value": "Dişli Yel Değirmeni"
+        },
+        {
+          "key": "worldmap_region_battery_orchard",
+          "value": "Batarya Bahçesi"
+        },
+        {
+          "key": "worldmap_region_solar_greenhouse",
+          "value": "Güneş Serası"
+        },
+        {
+          "key": "worldmap_region_energy_silo",
+          "value": "Enerji Silosu"
+        },
+        {
+          "key": "worldmap_region_tractor_garage",
+          "value": "Traktör Garajı"
+        },
+        {
+          "key": "worldmap_region_hydro_crop_beds",
+          "value": "Su Tarımı Yatakları"
+        },
+        {
+          "key": "worldmap_region_water_bot_pond",
+          "value": "Su Botu Göleti"
+        },
+        {
+          "key": "worldmap_region_harvest_drone",
+          "value": "Hasat Drone'u"
+        },
+        {
+          "key": "worldmap_region_robo_market",
+          "value": "Robo Pazarı"
+        },
+        {
+          "key": "worldmap_region_milk_stall",
+          "value": "Süt Tezgâhı"
         }
       ]
     },
@@ -487,7 +699,7 @@
         },
         {
           "key": "worldmap_region_living_area",
-          "value": "Open the Living Area"
+          "value": "Living Area"
         },
         {
           "key": "workshop_task_1",
@@ -680,6 +892,218 @@
         {
           "key": "boss_charge_break_label",
           "value": "BREAK!"
+        },
+        {
+          "key": "boss_toast_laser_ready",
+          "value": "Super laser ready!"
+        },
+        {
+          "key": "boss_tip_laser",
+          "value": "Super laser ready! Tap the button — a shield-piercing mega shot."
+        },
+        {
+          "key": "worldmap_region_robot_hall",
+          "value": "Robot Hall"
+        },
+        {
+          "key": "worldmap_region_robo_factory",
+          "value": "Robot Factory"
+        },
+        {
+          "key": "worldmap_region_robo_workshop",
+          "value": "Workshop"
+        },
+        {
+          "key": "worldmap_region_robo_firestation",
+          "value": "Fire Station"
+        },
+        {
+          "key": "worldmap_region_robo_repairstation",
+          "value": "Repair Station"
+        },
+        {
+          "key": "worldmap_region_robo_laboratory",
+          "value": "Laboratory"
+        },
+        {
+          "key": "worldmap_region_robo_academy",
+          "value": "Academy"
+        },
+        {
+          "key": "worldmap_region_robo_statue",
+          "value": "Statue"
+        },
+        {
+          "key": "worldmap_region_park_gate",
+          "value": "Park Gate"
+        },
+        {
+          "key": "worldmap_region_ticket_booth",
+          "value": "Ticket Booth"
+        },
+        {
+          "key": "worldmap_region_snack_bar_1",
+          "value": "Snack Bar"
+        },
+        {
+          "key": "worldmap_region_snack_bar_2",
+          "value": "Snack Bar"
+        },
+        {
+          "key": "worldmap_region_mirror_maze",
+          "value": "Mirror Maze"
+        },
+        {
+          "key": "worldmap_region_bots_arena_1",
+          "value": "Bots Arena"
+        },
+        {
+          "key": "worldmap_region_robo_coaster",
+          "value": "Robo Coaster"
+        },
+        {
+          "key": "worldmap_region_bots_arena_2",
+          "value": "Bots Arena"
+        },
+        {
+          "key": "worldmap_region_carousel",
+          "value": "Carousel"
+        },
+        {
+          "key": "worldmap_region_spinner",
+          "value": "Spinner"
+        },
+        {
+          "key": "worldmap_region_park_statue",
+          "value": "Statue"
+        },
+        {
+          "key": "worldmap_region_grand_hall",
+          "value": "Grand Hall"
+        },
+        {
+          "key": "worldmap_region_rocket_hall",
+          "value": "Rocket Hall"
+        },
+        {
+          "key": "worldmap_region_ancient_bot_hall",
+          "value": "Ancient Bot Hall"
+        },
+        {
+          "key": "worldmap_region_celestial_gear_monument",
+          "value": "Celestial Gear Monument"
+        },
+        {
+          "key": "worldmap_region_golden_robo_statue",
+          "value": "Golden Robo Statue"
+        },
+        {
+          "key": "worldmap_region_hologram_archive",
+          "value": "Hologram Archive"
+        },
+        {
+          "key": "worldmap_region_repair_history_workshop",
+          "value": "Repair History Workshop"
+        },
+        {
+          "key": "worldmap_region_robo_library",
+          "value": "Robo Library"
+        },
+        {
+          "key": "worldmap_region_gift_shop_1",
+          "value": "Gift Shop"
+        },
+        {
+          "key": "worldmap_region_gift_shop_2",
+          "value": "Gift Shop"
+        },
+        {
+          "key": "worldmap_region_info_desk",
+          "value": "Info Desk"
+        },
+        {
+          "key": "worldmap_region_skyport_terminal",
+          "value": "Skyport Terminal"
+        },
+        {
+          "key": "worldmap_region_control_tower",
+          "value": "Control Tower"
+        },
+        {
+          "key": "worldmap_region_drone_pad",
+          "value": "Drone Pad"
+        },
+        {
+          "key": "worldmap_region_hover_taxi",
+          "value": "Hover Taxi"
+        },
+        {
+          "key": "worldmap_region_vehicle_hangar",
+          "value": "Vehicle Hangar"
+        },
+        {
+          "key": "worldmap_region_cargo_dock",
+          "value": "Cargo Dock"
+        },
+        {
+          "key": "worldmap_region_airship_dock",
+          "value": "Airship Dock"
+        },
+        {
+          "key": "worldmap_region_fuel_reactor",
+          "value": "Fuel Reactor"
+        },
+        {
+          "key": "worldmap_region_boarding_gate",
+          "value": "Boarding Gate"
+        },
+        {
+          "key": "worldmap_region_sky_lounge",
+          "value": "Sky Lounge"
+        },
+        {
+          "key": "worldmap_region_robo_barn",
+          "value": "Robo Barn"
+        },
+        {
+          "key": "worldmap_region_gear_windmill",
+          "value": "Gear Windmill"
+        },
+        {
+          "key": "worldmap_region_battery_orchard",
+          "value": "Battery Orchard"
+        },
+        {
+          "key": "worldmap_region_solar_greenhouse",
+          "value": "Solar Greenhouse"
+        },
+        {
+          "key": "worldmap_region_energy_silo",
+          "value": "Energy Silo"
+        },
+        {
+          "key": "worldmap_region_tractor_garage",
+          "value": "Tractor Garage"
+        },
+        {
+          "key": "worldmap_region_hydro_crop_beds",
+          "value": "Hydro Crop Beds"
+        },
+        {
+          "key": "worldmap_region_water_bot_pond",
+          "value": "Water Bot Pond"
+        },
+        {
+          "key": "worldmap_region_harvest_drone",
+          "value": "Harvest Drone"
+        },
+        {
+          "key": "worldmap_region_robo_market",
+          "value": "Robo Market"
+        },
+        {
+          "key": "worldmap_region_milk_stall",
+          "value": "Milk Stall"
         }
       ]
     }

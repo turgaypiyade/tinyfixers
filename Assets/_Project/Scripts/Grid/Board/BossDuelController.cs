@@ -14,7 +14,8 @@ using UnityEngine.UI;
 ///   atar; hasar her saldırıda artar (escalating). Opsiyonel oil baskısı da yapar.
 /// - Düşman HP = Collectible/BossDamage goal (0 olunca mevcut WIN akışı tetiklenir).
 /// - Oyuncu HP 0 olunca board.RequestLevelFail() ile LOSE.
-/// - Hamle sınırsız: her turun sonunda tüketilen hamle geri eklenir.
+/// - Hamle SINIRLI: level'ın moves değeri normal levellerdeki gibi tükenir; hamle
+///   bitince (kuyruktaki vuruşlar boşaldıktan sonra) standart fail akışı çalışır.
 ///
 /// Sahne kurulumu: BoardContent yanına ekle; board + topHud + iki robot RectTransform +
 /// iki HpBar + vfxRoot + bolt/impact prefab referanslarını bağla. Görseller placeholder
@@ -167,6 +168,22 @@ public sealed class BossDuelController : MonoBehaviour
     [Tooltip("Normal toast'ın ekranda kalma süresi (sn).")]
     [SerializeField, Min(0.4f)] private float toastDefaultDuration = 1.4f;
 
+    [Header("Süper Lazer (Faz 3)")]
+    [Tooltip("Barın dolması için kırılması gereken taş sayısı.")]
+    [SerializeField, Min(5)] private int superLaserChargeTiles = 40;
+    [Tooltip("Süper lazer hasarı = damagePerTile × bu çarpan. Kalkanı DELER ve söker.")]
+    [SerializeField, Min(1f)] private float superLaserDamageMult = 12f;
+
+    [Header("Special Bonus (Faz 3)")]
+    [Tooltip("LineH/LineV aktivasyonu başına bonus vuruş.")]
+    [SerializeField, Min(0)] private int lineBonusStrikes = 5;
+    [Tooltip("PulseCore aktivasyonu başına bonus vuruş.")]
+    [SerializeField, Min(0)] private int pulseBonusStrikes = 8;
+    [Tooltip("SystemOverride aktivasyonu başına bonus vuruş.")]
+    [SerializeField, Min(0)] private int overrideBonusStrikes = 12;
+    [Tooltip("PatchBot boss'a direkt uçar: hasar = damagePerTile × bu çarpan.")]
+    [SerializeField, Min(1f)] private float patchBotDamageMult = 6f;
+
     [Header("Board Yerleşimi")]
     [Tooltip("BossDuel'de board'un ALT kenarı bu rect'in ÜSTÜNE hizalanır (BottomArea'yı sürükle). " +
              "Boşsa board yerinden oynatılmaz. Üstte robotlar/HUD için maksimum alan açılır.")]
@@ -179,7 +196,8 @@ public sealed class BossDuelController : MonoBehaviour
     // Temizlenen taşlar TİP etiketiyle kuyruğa girer (renk zayıflığı çarpanı için).
     private readonly Queue<TileType> strikeQueue = new();
     private int strikeIndex;      // kol sırası (sol-sağ-sol...)
-    private int previousRemainingMoves = -1;
+    private int boltsInFlight;            // havadaki oyuncu boltları (hasar varışta işler)
+    private bool endEvalHoldActive;       // hamle bitti ama vuruşlar boşalmadı — fail eval beklesin
 
     // ── Counterplay state ──
     private TileType currentWeakType;
@@ -200,6 +218,20 @@ public sealed class BossDuelController : MonoBehaviour
     private Coroutine toastRunner;
     private TMP_Text weaknessMultLabel;   // rozetin "×2" etiketi
     private TMP_Text chargeBreakLabel;    // ring'in "KIR!" etiketi
+
+    // ── Faz 3: Süper lazer / special bonus / pickup spawner ──
+    private int laserCharge;              // birikmiş taş (superLaserChargeTiles'a kadar)
+    private bool laserReady;
+    private bool laserFiring;
+    private Image laserFillImage;         // radyal dolum (kalın halka)
+    private Image laserGlowImage;         // rozet arkası parıltı
+    private Image laserCoreImage;         // içte biriken enerji topu
+    private RectTransform laserIconRt;    // merkez ikon (hazırken döner)
+    private Button laserButton;
+    private RectTransform laserBadgeRoot;
+    private int bonusStrikePool;          // special aktivasyonlarından gelen düz vuruşlar
+    private float playerPickupTimer;
+    private float enemyPickupTimer;
 
     private int enemyHp, enemyMaxHp;
     private int playerHp, playerMaxHp;
@@ -274,7 +306,6 @@ public sealed class BossDuelController : MonoBehaviour
         playerMaxHp = Mathf.Max(1, level.playerMaxHp);
         playerHp = playerMaxHp;
         damagePerTile = Mathf.Max(0, level.damagePerClearedTile);
-        previousRemainingMoves = board.RemainingMoves;
 
         // Level bazlı arena arka planı: atanmışsa uygula, boşsa sahnedeki mevcut kalır.
         if (arenaBackground != null && level.battlefieldBackground != null)
@@ -300,8 +331,10 @@ public sealed class BossDuelController : MonoBehaviour
         }
 
         board.OnTilesCleared += HandleTilesCleared;
-        board.OnMovesChanged += HandleMovesChanged;
         board.ObstacleVisualChanged += HandleObstacleVisualChanged;
+        board.OnSpecialActivated += HandleSpecialActivated;
+
+        EnsureSuperLaserUI();
 
         EnsureShieldBubble(ref playerShieldBubble, playerRobot, playerShieldColor, playerShieldSprite, isEnemy: false);
         EnsureShieldBubble(ref enemyShieldBubble, enemyRobot, enemyShieldColor, enemyShieldSprite, isEnemy: true);
@@ -314,9 +347,10 @@ public sealed class BossDuelController : MonoBehaviour
     private void OnDestroy()
     {
         if (board == null) return;
+        ReleaseEndEvalHold();
         board.OnTilesCleared -= HandleTilesCleared;
-        board.OnMovesChanged -= HandleMovesChanged;
         board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
+        board.OnSpecialActivated -= HandleSpecialActivated;
     }
 
     // BossDuel'de board'un görsel alt kenarını boardBottomAnchor'ın (BottomArea) üstüne hizalar.
@@ -394,19 +428,20 @@ public sealed class BossDuelController : MonoBehaviour
         // Şarj penceresi açıksa kırılan her taş kesme sayacına işler.
         if (chargeActive)
             chargeTilesBroken += amount;
-    }
 
-    private void HandleMovesChanged(int remainingMoves)
-    {
-        if (!bossModeActive) return;
-
-        // Hamle sınırsız: tüketilen hamleyi geri ekle (refill OnMovesChanged'i artışla tetikler,
-        // o da moveConsumed=false olduğu için döngü yapmaz).
-        bool moveConsumed = previousRemainingMoves >= 0 && remainingMoves < previousRemainingMoves;
-        previousRemainingMoves = remainingMoves;
-
-        if (moveConsumed && !IsOver())
-            board.AddMoves(1);
+        // Süper lazer şarjı (hazırken birikmez — önce kullan).
+        if (!laserReady)
+        {
+            laserCharge = Mathf.Min(superLaserChargeTiles, laserCharge + amount);
+            if (laserCharge >= superLaserChargeTiles)
+            {
+                laserReady = true;
+                ShowTeachableToast("boss_tip_laser_seen",
+                    "boss_tip_laser", "Süper lazer hazır! Butona bas — kalkan delen dev atış.",
+                    "boss_toast_laser_ready", "Süper lazer hazır!");
+            }
+            RefreshSuperLaserVisual();
+        }
     }
 
     private void HandleObstacleVisualChanged(ObstacleVisualChange change)
@@ -427,8 +462,33 @@ public sealed class BossDuelController : MonoBehaviour
     private bool IsLastWave => waves == null || waves.Length == 0 || waveIndex >= waves.Length - 1;
 
     // Dalga geçişi sırasında (enemyHp=0 ama sıradaki dalga var) düello BİTMEMİŞTİR —
-    // strikes birikmeye devam eder, hamle refund'u işler, BattleLoop yaşar.
+    // strikes birikmeye devam eder, BattleLoop yaşar.
     private bool IsOver() => playerHp <= 0 || !bossModeActive || (enemyHp <= 0 && IsLastWave);
+
+    // Son hamle harcandığında kuyrukta/havada hâlâ vuruş olabilir; bunlar boss'u öldürüp
+    // WIN getirebilir. Fail değerlendirmesi (ActiveBackgroundJobs okur) vuruşlar boşalana
+    // kadar beklesin — resolve döngüsünü parketmeyen goal-orb tarzı sayaçla tutulur.
+    private void TickEndEvalHold()
+    {
+        bool draining = strikeQueue.Count > 0 || bonusStrikePool > 0 || boltsInFlight > 0 || laserFiring;
+        bool shouldHold = bossModeActive && !IsOver() && board != null
+                          && board.RemainingMoves <= 0 && draining;
+
+        if (shouldHold == endEvalHoldActive)
+            return;
+
+        endEvalHoldActive = shouldHold;
+        if (shouldHold) board.BeginBossStrikeDrain();
+        else board.EndBossStrikeDrain();
+    }
+
+    private void ReleaseEndEvalHold()
+    {
+        if (!endEvalHoldActive)
+            return;
+        endEvalHoldActive = false;
+        board?.EndBossStrikeDrain();
+    }
 
     // Kalıcı dövüş döngüsü: oyuncu stack'ten otomatik ateş eder (backlog yüksekse hızlanır),
     // düşman kendi saatinde (idle dahil) ateşler. Input asla kilitlenmez.
@@ -441,6 +501,7 @@ public sealed class BossDuelController : MonoBehaviour
         while (bossModeActive && !IsOver())
         {
             float dt = Time.deltaTime;
+            TickEndEvalHold();
 
             // Dalga geçişi: iki taraf da ateş etmez, timer'lar sıfır tutulur (geçiş bitince
             // düşman anında ateşlemesin). pendingStrikes birikmeye devam eder — kayıp yok.
@@ -455,22 +516,41 @@ public sealed class BossDuelController : MonoBehaviour
             TickShields(dt);
             TickWeakness(dt);
             TickStun(dt);
-            TickChargeScheduling(dt, enemyBusy);
+            // Popup açıkken (açık kilit) şarj penceresi/cooldown donar — oyuncu taş kıramaz,
+            // pencere haksız yere akmasın.
+            if (!board.IsExplicitlyLocked)
+                TickChargeScheduling(dt, enemyBusy);
+            TickPickupSpawner(dt);
+            if (laserReady)
+                RefreshSuperLaserVisual();   // hazırken nabız animasyonu
 
             // Oyuncu: kuyruktan boşalt. Backlog büyükse tek tick'te birden fazla ateşle (yetiş).
+            // Special bonus havuzu (bonusStrikePool) taş kuyruğundan SONRA, düz hasarla akar.
             strikeTimer += dt;
-            if (strikeQueue.Count > 0 && damagePerTile > 0 && strikeTimer >= strikeInterval)
+            if ((strikeQueue.Count > 0 || bonusStrikePool > 0) && damagePerTile > 0 && strikeTimer >= strikeInterval)
             {
                 strikeTimer = 0f;
-                int burst = Mathf.Clamp(Mathf.CeilToInt(strikeQueue.Count * 0.25f), 1, 4);
-                for (int i = 0; i < burst && strikeQueue.Count > 0 && !IsOver(); i++)
-                    FireOnePlayerStrike(strikeQueue.Dequeue());
+                int backlog = strikeQueue.Count + bonusStrikePool;
+                int burst = Mathf.Clamp(Mathf.CeilToInt(backlog * 0.25f), 1, 4);
+                for (int i = 0; i < burst && !IsOver(); i++)
+                {
+                    if (strikeQueue.Count > 0)
+                        FireOnePlayerStrike(strikeQueue.Dequeue());
+                    else if (bonusStrikePool > 0)
+                    {
+                        bonusStrikePool--;
+                        FireOnePlayerStrike(currentWeakType, forceNormal: true);
+                    }
+                    else break;
+                }
             }
 
             // Düşman: belirli aralıkla ateşler (oyuncu idle olsa da).
-            // Şarj sırasında ve sersemken normal saldırı yok.
+            // Şarj sırasında, sersemken ve board açık kilitliyken (fail/market popup'ı
+            // açık — hamle limitiyle artık mümkün) normal saldırı yok.
             enemyTimer += dt;
-            if (enemyTimer >= enemyAttackInterval && !enemyBusy && !chargeActive && stunRemaining <= 0f && !IsOver())
+            if (enemyTimer >= enemyAttackInterval && !enemyBusy && !chargeActive && stunRemaining <= 0f
+                && !board.IsExplicitlyLocked && !IsOver())
             {
                 enemyTimer = 0f;
                 enemyBusy = true;
@@ -479,6 +559,9 @@ public sealed class BossDuelController : MonoBehaviour
 
             yield return null;
         }
+
+        // Düello bitti (win/lose): fail eval tutucusu asla asılı kalmasın.
+        ReleaseEndEvalHold();
     }
 
     private IEnumerator EnemyAttackThenClear(System.Action onDone)
@@ -488,14 +571,15 @@ public sealed class BossDuelController : MonoBehaviour
     }
 
     // Tek oyuncu vuruşu: kollar sırayla ateşler. Zayıf renkten gelen vuruş çarpanlı (crit).
-    private void FireOnePlayerStrike(TileType tileType)
+    // forceNormal: bonus vuruşlar (special aktivasyonu) crit almadan düz hasar vurur.
+    private void FireOnePlayerStrike(TileType tileType, bool forceNormal = false)
     {
         bool useA = (strikeIndex++ % 2 == 0);
         var arm = Pick(playerArmA, playerArmB, useA);
         var muzzle = Pick(playerMuzzleA, playerMuzzleB, useA);
 
         var wave = waves != null && waves.Length > 0 ? waves[waveIndex] : default;
-        bool isWeakHit = wave.weaknessEnabled && tileType == currentWeakType;
+        bool isWeakHit = !forceNormal && wave.weaknessEnabled && tileType == currentWeakType;
         int dmg = isWeakHit
             ? Mathf.RoundToInt(damagePerTile * Mathf.Max(1f, wave.weaknessMultiplier))
             : damagePerTile;
@@ -504,8 +588,13 @@ public sealed class BossDuelController : MonoBehaviour
         Color boltColor = isWeakHit ? new Color(1f, 0.9f, 0.35f, 1f) : playerBoltColor;
 
         PlayRecoil(arm != null ? arm : playerRobot, +1f);
+        boltsInFlight++;
         FireBolt(GetMuzzleWorld(muzzle, playerRobot, +1f), enemyRobot, boltColor, playerBoltPrefab, playerMuzzleFlashPrefab,
-            () => ApplyEnemyDamage(dmg));
+            () =>
+            {
+                boltsInFlight = Mathf.Max(0, boltsInFlight - 1);
+                ApplyEnemyDamage(dmg);
+            });
     }
 
     private void ApplyEnemyDamage(int dmg)
@@ -603,6 +692,431 @@ public sealed class BossDuelController : MonoBehaviour
         weaknessTimer = 0f;   // ilk tick'te yeni renk atanır
         if (weaknessIcon != null)
             weaknessIcon.transform.parent.gameObject.SetActive(w.weaknessEnabled);
+    }
+
+    // ── Faz 3: Special bonus hasarı ───────────────────────────────────────────
+
+    private void HandleSpecialActivated(TileSpecial special, Vector2Int cell)
+    {
+        if (!bossModeActive || IsOver() || waveTransitionActive)
+            return;
+
+        switch (special)
+        {
+            case TileSpecial.LineH:
+            case TileSpecial.LineV:
+                bonusStrikePool += lineBonusStrikes;
+                break;
+            case TileSpecial.PulseCore:
+                bonusStrikePool += pulseBonusStrikes;
+                break;
+            case TileSpecial.SystemOverride:
+                bonusStrikePool += overrideBonusStrikes;
+                break;
+            case TileSpecial.PatchBot:
+                // PatchBot boss'a direkt uçar: tek büyük mor mermi.
+                int dmg = Mathf.RoundToInt(damagePerTile * Mathf.Max(1f, patchBotDamageMult));
+                boltsInFlight++;
+                FireBolt(GetMuzzleWorld(playerMuzzleA, playerRobot, +1f), enemyRobot,
+                    new Color(0.75f, 0.45f, 1f, 1f), playerBoltPrefab, playerMuzzleFlashPrefab,
+                    () =>
+                    {
+                        boltsInFlight = Mathf.Max(0, boltsInFlight - 1);
+                        ApplyEnemyDamage(dmg);
+                    });
+                break;
+        }
+    }
+
+    // ── Faz 3: Süper lazer ────────────────────────────────────────────────────
+
+    // Oyuncu HP barının SOL dışında dairesel şarj göstergesi (zayıflık rozetiyle simetrik).
+    // Dolunca parlar ve tıklanabilir olur; sahne kurulumu gerektirmez.
+    private void EnsureSuperLaserUI()
+    {
+        if (laserBadgeRoot != null)
+            return;
+
+        RectTransform parent = playerHpBar != null ? (RectTransform)playerHpBar.transform : playerRobot;
+        if (parent == null)
+            return;
+
+        var root = new GameObject("SuperLaserBadge", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        laserBadgeRoot = (RectTransform)root.transform;
+        laserBadgeRoot.SetParent(parent, false);
+        root.transform.SetAsLastSibling();
+
+        if (playerHpBar != null)
+        {
+            laserBadgeRoot.anchorMin = laserBadgeRoot.anchorMax = new Vector2(0f, 0.5f);   // barın sol-orta noktası
+            laserBadgeRoot.pivot = new Vector2(1f, 0.5f);
+            laserBadgeRoot.anchoredPosition = new Vector2(-2f, 0f);
+        }
+        else
+        {
+            laserBadgeRoot.anchorMin = laserBadgeRoot.anchorMax = new Vector2(0.5f, 1f);
+            laserBadgeRoot.pivot = new Vector2(0.5f, 0f);
+            laserBadgeRoot.anchoredPosition = new Vector2(0f, 46f);
+        }
+        laserBadgeRoot.sizeDelta = new Vector2(100f, 100f);
+
+        // Zemin: koyu disk (Button'un raycast hedefi de bu).
+        var bgImg = root.GetComponent<Image>();
+        bgImg.sprite = GetGeneratedSolidCircleSprite();
+        bgImg.color = new Color(0.06f, 0.06f, 0.11f, 0.94f);
+
+        // Rozet arkası parıltı: şarj arttıkça belirir, hazırken nabız atar.
+        var glowGo = new GameObject("Glow", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        glowGo.transform.SetParent(laserBadgeRoot, false);
+        laserGlowImage = glowGo.GetComponent<Image>();
+        laserGlowImage.sprite = GetGeneratedSoftGlowSprite();
+        laserGlowImage.color = new Color(1f, 0.85f, 0.35f, 0f);
+        laserGlowImage.raycastTarget = false;
+        var glowRt = (RectTransform)glowGo.transform;
+        glowRt.anchorMin = glowRt.anchorMax = new Vector2(0.5f, 0.5f);
+        glowRt.sizeDelta = new Vector2(175f, 175f);
+
+        // Soluk tam halka: dolumun rayı boşken de okunsun.
+        var trackGo = new GameObject("Track", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        trackGo.transform.SetParent(laserBadgeRoot, false);
+        var trackImg = trackGo.GetComponent<Image>();
+        trackImg.sprite = GetGeneratedProgressRingSprite();
+        trackImg.color = new Color(1f, 1f, 1f, 0.13f);
+        trackImg.raycastTarget = false;
+        var trackRt = (RectTransform)trackGo.transform;
+        trackRt.anchorMin = Vector2.zero; trackRt.anchorMax = Vector2.one;
+        trackRt.offsetMin = new Vector2(4f, 4f);
+        trackRt.offsetMax = new Vector2(-4f, -4f);
+
+        // Radyal dolum: dolu pasta değil kalın halka — ilerleme çubuğu gibi okunur.
+        var fillGo = new GameObject("Fill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        fillGo.transform.SetParent(laserBadgeRoot, false);
+        laserFillImage = fillGo.GetComponent<Image>();
+        laserFillImage.sprite = GetGeneratedProgressRingSprite();
+        laserFillImage.type = Image.Type.Filled;
+        laserFillImage.fillMethod = Image.FillMethod.Radial360;
+        laserFillImage.fillOrigin = (int)Image.Origin360.Top;
+        laserFillImage.fillClockwise = true;
+        laserFillImage.fillAmount = 0f;
+        laserFillImage.color = new Color(1f, 0.55f, 0.15f, 0.95f);
+        laserFillImage.raycastTarget = false;
+        var fillRt = (RectTransform)fillGo.transform;
+        fillRt.anchorMin = Vector2.zero; fillRt.anchorMax = Vector2.one;
+        fillRt.offsetMin = new Vector2(4f, 4f);
+        fillRt.offsetMax = new Vector2(-4f, -4f);
+
+        // İçte biriken enerji topu: şarjla büyür ve parlar — "lazer doluyor" hissi.
+        var energyGo = new GameObject("EnergyCore", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        energyGo.transform.SetParent(laserBadgeRoot, false);
+        laserCoreImage = energyGo.GetComponent<Image>();
+        laserCoreImage.sprite = GetGeneratedSoftGlowSprite();
+        laserCoreImage.color = new Color(1f, 0.9f, 0.5f, 0.12f);
+        laserCoreImage.raycastTarget = false;
+        var energyRt = (RectTransform)energyGo.transform;
+        energyRt.anchorMin = Vector2.zero; energyRt.anchorMax = Vector2.one;
+        energyRt.offsetMin = new Vector2(18f, 18f);
+        energyRt.offsetMax = new Vector2(-18f, -18f);
+
+        // Merkez enerji ikonu (font bağımsız: küçük parlak halka; hazırken döner).
+        var coreGo = new GameObject("CoreIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        coreGo.transform.SetParent(laserBadgeRoot, false);
+        var coreImg = coreGo.GetComponent<Image>();
+        coreImg.sprite = GetGeneratedShieldSprite(isEnemy: true);
+        coreImg.color = new Color(1f, 1f, 1f, 0.9f);
+        coreImg.raycastTarget = false;
+        laserIconRt = (RectTransform)coreGo.transform;
+        laserIconRt.anchorMin = Vector2.zero; laserIconRt.anchorMax = Vector2.one;
+        laserIconRt.offsetMin = new Vector2(28f, 28f);
+        laserIconRt.offsetMax = new Vector2(-28f, -28f);
+
+        laserButton = root.GetComponent<Button>();
+        laserButton.transition = Selectable.Transition.None;
+        laserButton.onClick.AddListener(HandleSuperLaserPressed);
+
+        RefreshSuperLaserVisual();
+    }
+
+    private void RefreshSuperLaserVisual()
+    {
+        if (laserFillImage == null)
+            return;
+
+        float f = laserReady ? 1f : Mathf.Clamp01((float)laserCharge / Mathf.Max(1, superLaserChargeTiles));
+        laserFillImage.fillAmount = f;
+        // Turuncudan altına ısınır; hazırken beyaza çalan parlama.
+        laserFillImage.color = laserReady
+            ? Color.Lerp(new Color(1f, 0.95f, 0.35f, 1f), Color.white, (Mathf.Sin(Time.time * 7f) + 1f) * 0.15f)
+            : Color.Lerp(new Color(1f, 0.55f, 0.15f, 0.95f), new Color(1f, 0.95f, 0.35f, 1f), f);
+
+        // İç enerji topu şarjla büyür ve parlar.
+        if (laserCoreImage != null)
+        {
+            laserCoreImage.color = new Color(1f, 0.9f, 0.5f, 0.12f + f * 0.75f);
+            laserCoreImage.rectTransform.localScale = Vector3.one * (0.55f + f * 0.45f);
+        }
+
+        // Dış parıltı: şarj oranında belirir, hazırken nabız atar.
+        if (laserGlowImage != null)
+        {
+            float glowA = laserReady
+                ? 0.45f + Mathf.Sin(Time.time * 7f) * 0.2f
+                : f * 0.22f;
+            laserGlowImage.color = new Color(1f, 0.85f, 0.35f, Mathf.Clamp01(glowA));
+        }
+
+        // Hazırken merkez ikon yavaşça döner (dolu = aktif okunur).
+        if (laserIconRt != null)
+            laserIconRt.localRotation = laserReady
+                ? Quaternion.Euler(0f, 0f, -Time.time * 60f)
+                : Quaternion.identity;
+
+        if (laserButton != null)
+            laserButton.interactable = laserReady;
+
+        // Hazırken nabız gibi atsın.
+        if (laserBadgeRoot != null)
+            laserBadgeRoot.localScale = laserReady
+                ? Vector3.one * (1f + Mathf.Sin(Time.time * 7f) * 0.06f)
+                : Vector3.one;
+    }
+
+    private void HandleSuperLaserPressed()
+    {
+        if (!laserReady || laserFiring || !bossModeActive || IsOver() || waveTransitionActive)
+            return;
+
+        laserReady = false;
+        laserFiring = true;
+        laserCharge = 0;
+        RefreshSuperLaserVisual();
+        StartCoroutine(FireSuperLaserRoutine());
+    }
+
+    private IEnumerator FireSuperLaserRoutine()
+    {
+        // Katmanlı beam: dış parıltı + gövde + beyaz-sıcak çekirdek; kalkanı DELER (söker).
+        Vector3 fromWorld = GetMuzzleWorld(playerMuzzleA, playerRobot, +1f);
+        Vector3 toWorld = enemyRobot != null ? enemyRobot.position : fromWorld;
+
+        if (vfxRoot == null || enemyRobot == null)
+        {
+            ApplySuperLaserDamage();
+            laserFiring = false;
+            RefreshSuperLaserVisual();
+            yield break;
+        }
+
+        Vector2 start = WorldToAnchoredIn(vfxRoot, fromWorld);
+        Vector2 end = WorldToAnchoredIn(vfxRoot, toWorld);
+        Vector2 dir = end - start;
+        float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+
+        // Namluda şarj topu (anticipation): parlayarak büyür, sonra beam'e dönüşür.
+        var chargeBall = CreateImage("SuperLaserChargeBall", vfxRoot, new Color(1f, 0.9f, 0.45f, 0f), new Vector2(20f, 20f));
+        chargeBall.sprite = GetGeneratedSoftGlowSprite();
+        chargeBall.rectTransform.anchoredPosition = start;
+
+        float t = 0f;
+        const float chargeDur = 0.30f;
+        while (t < chargeDur && chargeBall != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / chargeDur);
+            chargeBall.rectTransform.sizeDelta = Vector2.one * Mathf.Lerp(20f, 150f, k * k);
+            chargeBall.color = new Color(1f, 0.9f, 0.45f, k);
+            yield return null;
+        }
+
+        PlaySfx(fireSfx, fireVolume);
+        PlayRecoil(playerArmA != null ? playerArmA : playerRobot, +1f);
+        PlayRecoil(playerArmB, +1f);
+
+        Image MakeBeamLayer(string name, float height, Color color)
+        {
+            var img = CreateImage(name, vfxRoot, color, new Vector2(dir.magnitude, height));
+            img.sprite = GetGeneratedBeamSprite();
+            var r = img.rectTransform;
+            r.pivot = new Vector2(0f, 0.5f);
+            r.anchoredPosition = start;
+            r.localRotation = Quaternion.Euler(0f, 0f, angle);
+            r.localScale = new Vector3(1f, 0f, 1f);
+            return img;
+        }
+
+        var layers = new[]
+        {
+            MakeBeamLayer("SuperLaserGlow", 170f, new Color(1f, 0.75f, 0.25f, 0.5f)),
+            MakeBeamLayer("SuperLaserBody", 80f, new Color(1f, 0.9f, 0.4f, 0.95f)),
+            MakeBeamLayer("SuperLaserCore", 30f, new Color(1f, 1f, 0.9f, 1f)),
+        };
+
+        // Namlu flare + boss ucunda çarpma parıltısı.
+        var flare = CreateImage("SuperLaserFlare", vfxRoot, new Color(1f, 0.95f, 0.6f, 0.95f), new Vector2(190f, 190f));
+        flare.sprite = GetGeneratedSoftGlowSprite();
+        flare.rectTransform.anchoredPosition = start;
+
+        var impact = CreateImage("SuperLaserImpact", vfxRoot, new Color(1f, 0.9f, 0.55f, 0.9f), new Vector2(60f, 60f));
+        impact.sprite = GetGeneratedSoftGlowSprite();
+        impact.rectTransform.anchoredPosition = end;
+
+        if (chargeBall != null) Destroy(chargeBall.gameObject);
+
+        // Açılış: beam eni hızla büyür, hafif taşıp oturur.
+        t = 0f;
+        const float grow = 0.10f, hold = 0.34f, fade = 0.30f;
+        while (t < grow)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / grow);
+            float s = k * (1f + (1f - k) * 0.6f);
+            foreach (var l in layers) if (l != null) l.rectTransform.localScale = new Vector3(1f, s, 1f);
+            yield return null;
+        }
+
+        // Beam boss'a değdi: kalkan sökme + hasar tam burada.
+        ApplySuperLaserDamage();
+
+        // Tutuş: canlı titreşim; çarpma parıltısı büyüyerek yayılır.
+        t = 0f;
+        while (t < hold)
+        {
+            t += Time.deltaTime;
+            float flicker = 1f + Mathf.Sin(Time.time * 55f) * 0.07f + Mathf.Sin(Time.time * 23f) * 0.05f;
+            foreach (var l in layers) if (l != null) l.rectTransform.localScale = new Vector3(1f, flicker, 1f);
+            if (impact != null)
+                impact.rectTransform.sizeDelta = Vector2.one * Mathf.Lerp(60f, 230f, Mathf.Clamp01(t / hold)) * flicker;
+            yield return null;
+        }
+
+        // Sönüş: incelerek kaybolur.
+        t = 0f;
+        var baseCols = new Color[layers.Length];
+        for (int i = 0; i < layers.Length; i++) baseCols[i] = layers[i] != null ? layers[i].color : Color.white;
+        Color flareC = flare != null ? flare.color : Color.white;
+        Color impactC = impact != null ? impact.color : Color.white;
+        while (t < fade)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / fade);
+            for (int i = 0; i < layers.Length; i++)
+            {
+                if (layers[i] == null) continue;
+                var c = baseCols[i];
+                layers[i].color = new Color(c.r, c.g, c.b, c.a * (1f - k));
+                layers[i].rectTransform.localScale = new Vector3(1f, 1f - k * 0.9f, 1f);
+            }
+            if (flare != null) flare.color = new Color(flareC.r, flareC.g, flareC.b, flareC.a * (1f - k));
+            if (impact != null) impact.color = new Color(impactC.r, impactC.g, impactC.b, impactC.a * (1f - k));
+            yield return null;
+        }
+
+        foreach (var l in layers) if (l != null) Destroy(l.gameObject);
+        if (flare != null) Destroy(flare.gameObject);
+        if (impact != null) Destroy(impact.gameObject);
+
+        laserFiring = false;
+        RefreshSuperLaserVisual();
+    }
+
+    private void ApplySuperLaserDamage()
+    {
+        // Kalkan deler: aktif düşman kalkanını söküp hasarı yine de geçirir.
+        if (enemyShieldRemaining > 0f)
+        {
+            enemyShieldRemaining = 0f;
+            PlayShieldAbsorb(enemyShieldBubble, enemyShieldColor);
+            UpdateShieldVisual(enemyShieldBubble, 0f, enemyShieldColor, enemyRobot);
+        }
+
+        int dmg = Mathf.RoundToInt(damagePerTile * Mathf.Max(1f, superLaserDamageMult));
+        PlaySfx(hitSfx, hitVolume);
+        ApplyEnemyDamage(dmg);
+    }
+
+    // ── Faz 3: Kalkan pickup spawner ─────────────────────────────────────────
+
+    private void TickPickupSpawner(float dt)
+    {
+        var w = waves != null && waves.Length > 0 ? waves[waveIndex] : default;
+        if (IsOver())
+            return;
+
+        // Board resolve ortasında taş dönüştürme (cascade veri yarışı) — idle bekle;
+        // timer eşikte bekler, board boşalınca ilk tick'te spawn olur.
+        bool boardIdle = board != null && !board.IsBusy;
+
+        if (w.playerPickupEverySeconds > 0f)
+        {
+            playerPickupTimer += dt;
+            if (playerPickupTimer >= w.playerPickupEverySeconds && boardIdle)
+            {
+                playerPickupTimer = 0f;
+                TrySpawnPickupOnBoard(PlayerShieldPickupId);
+            }
+        }
+
+        if (w.enemyPickupEverySeconds > 0f)
+        {
+            enemyPickupTimer += dt;
+            if (enemyPickupTimer >= w.enemyPickupEverySeconds && boardIdle)
+            {
+                enemyPickupTimer = 0f;
+                TrySpawnPickupOnBoard(EnemyShieldPickupId);
+            }
+        }
+    }
+
+    // Rastgele normal bir taşı pickup'a dönüştürür (movable obstacle; kırılınca kalkan verir).
+    // Level'a elle pickup koymak gerekmez.
+    private void TrySpawnPickupOnBoard(ObstacleId pickupId)
+    {
+        if (board == null || board.ObstacleStateService == null)
+            return;
+
+        var candidates = new List<Vector2Int>();
+        for (int x = 0; x < board.Width; x++)
+            for (int y = 0; y < board.Height; y++)
+            {
+                if (board.Holes[x, y]) continue;
+                if (board.ObstacleStateService.HasObstacleAt(x, y)) continue;
+                var tile = board.Tiles[x, y];
+                if (tile == null || board.GridData[x, y] == null) continue;
+                if (tile.GetSpecial() != TileSpecial.None) continue;
+                candidates.Add(new Vector2Int(x, y));
+            }
+
+        if (candidates.Count == 0)
+            return;
+
+        var cell = candidates[Random.Range(0, candidates.Count)];
+        if (!board.ObstacleStateService.TrySpawnSingleCellObstacleAt(cell.x, cell.y, pickupId))
+            return;
+
+        var view = board.GetTileViewAt(cell.x, cell.y);
+        if (view != null)
+        {
+            board.RefreshTileObstacleVisual(view);   // taş görselini pickup'a çevirir
+            board.SyncTileData(cell.x, cell.y);
+            StartCoroutine(PickupSpawnPop(view));
+        }
+    }
+
+    private IEnumerator PickupSpawnPop(TileView tile)
+    {
+        var rt = tile != null ? tile.RectTransform : null;
+        if (rt == null) yield break;
+
+        Vector3 baseScale = rt.localScale;
+        float t = 0f;
+        const float dur = 0.24f;
+        while (t < dur && rt != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            rt.localScale = baseScale * (1f + Mathf.Sin(k * Mathf.PI) * 0.25f);
+            yield return null;
+        }
+        if (rt != null) rt.localScale = baseScale;
     }
 
     // ── Toast sistemi ─────────────────────────────────────────────────────────
@@ -902,6 +1416,89 @@ public sealed class BossDuelController : MonoBehaviour
 
         generatedSolidCircleSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
         return generatedSolidCircleSprite;
+    }
+
+    // Kalın, yumuşak kenarlı halka — süper lazer dolumu pasta yerine ilerleme halkası olarak okunsun.
+    private static Sprite generatedProgressRingSprite;
+    private static Sprite GetGeneratedProgressRingSprite()
+    {
+        if (generatedProgressRingSprite != null)
+            return generatedProgressRingSprite;
+
+        const int size = 128;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp
+        };
+
+        Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            float r = (new Vector2(x, y) - center).magnitude / (size * 0.5f);
+            float a = Mathf.Pow(RingBand(r, 0.80f, 0.16f), 0.7f);   // dolgun bant, yumuşak kenar
+            tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+        }
+        tex.Apply();
+
+        generatedProgressRingSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+        return generatedProgressRingSprite;
+    }
+
+    // Merkezden dışa yumuşak sönümlü parıltı — glow/flare/enerji topu için ortak doku.
+    private static Sprite generatedSoftGlowSprite;
+    private static Sprite GetGeneratedSoftGlowSprite()
+    {
+        if (generatedSoftGlowSprite != null)
+            return generatedSoftGlowSprite;
+
+        const int size = 128;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp
+        };
+
+        Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            float r = (new Vector2(x, y) - center).magnitude / (size * 0.5f);
+            float a = Mathf.Pow(Mathf.Clamp01(1f - r), 2.2f);
+            tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+        }
+        tex.Apply();
+
+        generatedSoftGlowSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+        return generatedSoftGlowSprite;
+    }
+
+    // Beam kesiti: eksende opak, kenara doğru yumuşak sönüm; yatayda uniform (gerdirilerek kullanılır).
+    private static Sprite generatedBeamSprite;
+    private static Sprite GetGeneratedBeamSprite()
+    {
+        if (generatedBeamSprite != null)
+            return generatedBeamSprite;
+
+        const int w = 8, h = 64;
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+        {
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp
+        };
+
+        for (int y = 0; y < h; y++)
+        {
+            float v = Mathf.Abs(y - (h - 1) * 0.5f) / ((h - 1) * 0.5f);
+            float a = Mathf.Pow(Mathf.Clamp01(1f - v), 1.8f);
+            for (int x = 0; x < w; x++)
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+        }
+        tex.Apply();
+
+        generatedBeamSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), h);
+        return generatedBeamSprite;
     }
 
     private void RefreshWeaknessIcon()

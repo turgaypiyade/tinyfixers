@@ -893,8 +893,8 @@ RectTransform:
   - {fileID: 377572861}
   m_Father: {fileID: 72406}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.06719368}
-  m_AnchorMax: {x: 2.2243347, y: 1.5750989}
+  m_AnchorMin: {x: 0, y: 0.06431273}
+  m_AnchorMax: {x: 0.6348345, y: 1.5075662}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -1089,15 +1089,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1591189925}
   - {fileID: 690641553}
   - {fileID: 1686956928}
   - {fileID: 985443335}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 101265336}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -3880, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &22346470
@@ -1112,9 +1111,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_workshop
-  nameLocalizationKey: worldmap_robot_workshop
-  fallbackName: Robot Factory
+  regionId: grand_hall
+  nameLocalizationKey: worldmap_region_grand_hall
+  fallbackName: Grand Hall
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -1128,7 +1128,7 @@ MonoBehaviour:
   pin: {fileID: 1686956929}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1591189925}
+  revealFocus: {fileID: 0}
 --- !u!222 &22346471
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1403,41 +1403,6 @@ RectTransform:
   m_AnchoredPosition: {x: -2261, y: -962}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &34252123
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 34252124}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &34252124
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 34252123}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 854253414}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 951, y: 12}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &36803637
 GameObject:
   m_ObjectHideFlags: 0
@@ -1650,76 +1615,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 37163036}
   m_CullTransparentMesh: 1
---- !u!1 &41933140
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 41933141}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &41933141
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 41933140}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 664688166}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 963, y: 22}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &42715436
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 42715437}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &42715437
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 42715436}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1805401813}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 551, y: -136}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &47372775
 GameObject:
   m_ObjectHideFlags: 0
@@ -2559,15 +2454,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1708629972}
   - {fileID: 2103392254}
   - {fileID: 571497224}
   - {fileID: 1441162143}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 666732932}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -2131, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &63699558
@@ -2582,9 +2476,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_workshop
-  nameLocalizationKey: worldmap_robot_workshop
-  fallbackName: Robot Factory
+  regionId: robo_coaster
+  nameLocalizationKey: worldmap_region_robo_coaster
+  fallbackName: Robo Coaster
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -2598,7 +2493,7 @@ MonoBehaviour:
   pin: {fileID: 571497225}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1708629972}
+  revealFocus: {fileID: 0}
 --- !u!222 &63699559
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2914,15 +2809,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 591122957}
   - {fileID: 864867660}
   - {fileID: 517892467}
   - {fileID: 1445016270}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1638356180}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -91.3884, y: 10.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &77486134
@@ -2938,8 +2832,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
   regionId: robo_factory
-  nameLocalizationKey: worldmap_robot_factory_area
+  nameLocalizationKey: worldmap_region_robo_factory
   fallbackName: Robot Factory
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -2953,7 +2848,7 @@ MonoBehaviour:
   pin: {fileID: 517892468}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 591122957}
+  revealFocus: {fileID: 0}
 --- !u!222 &77486135
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3758,6 +3653,7 @@ GameObject:
   - component: {fileID: 101265336}
   - component: {fileID: 101265338}
   - component: {fileID: 101265337}
+  - component: {fileID: 1543290284}
   m_Layer: 5
   m_Name: RoboMuseum
   m_TagString: Untagged
@@ -3776,7 +3672,19 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 22346469}
+  - {fileID: 1029572281}
+  - {fileID: 664688166}
+  - {fileID: 1266362964}
+  - {fileID: 765962494}
+  - {fileID: 193990445}
+  - {fileID: 297128768}
+  - {fileID: 854253414}
+  - {fileID: 974368322}
+  - {fileID: 1590752654}
+  - {fileID: 1400182703}
+  - {fileID: 2037427540}
   m_Father: {fileID: 286276583}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -3855,12 +3763,11 @@ RectTransform:
   - {fileID: 94167377}
   - {fileID: 1871378331}
   - {fileID: 450629368}
-  - {fileID: 579341230}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1638356180}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -91.3884, y: 10.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &107983113
@@ -3876,8 +3783,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
   regionId: robot_hall
-  nameLocalizationKey: worldmap_robot_hall_area
+  nameLocalizationKey: worldmap_region_robot_hall
   fallbackName: Robot Hall
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -3891,7 +3799,7 @@ MonoBehaviour:
   pin: {fileID: 1871378332}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 579341230}
+  revealFocus: {fileID: 0}
 --- !u!222 &107983114
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4319,15 +4227,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 467839174}
   - {fileID: 577998204}
   - {fileID: 2125942804}
   - {fileID: 658995760}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 666732932}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -2131, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &124272534
@@ -4342,9 +4249,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: snack_bar_1
+  nameLocalizationKey: worldmap_region_snack_bar_1
+  fallbackName: Snack Bar
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -4358,7 +4266,7 @@ MonoBehaviour:
   pin: {fileID: 2125942805}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 467839174}
+  revealFocus: {fileID: 0}
 --- !u!222 &124272535
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4504,41 +4412,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 129973464}
   m_CullTransparentMesh: 1
---- !u!1 &131455750
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 131455751}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &131455751
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 131455750}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1460394519}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 866, y: -320}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &137314073
 GameObject:
   m_ObjectHideFlags: 0
@@ -6121,15 +5994,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 251607195}
   - {fileID: 1358192374}
   - {fileID: 1877427230}
   - {fileID: 1523315766}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 101265336}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -3880, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &193990446
@@ -6144,9 +6016,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: hologram_archive
+  nameLocalizationKey: worldmap_region_hologram_archive
+  fallbackName: Hologram Archive
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -6160,7 +6033,7 @@ MonoBehaviour:
   pin: {fileID: 1877427231}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 251607195}
+  revealFocus: {fileID: 0}
 --- !u!222 &193990447
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7251,6 +7124,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c84bbc70925c7400387dbfd0e41c0c09, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapController
+  islands:
+  - {fileID: 1472536826}
+  - {fileID: 1447598049}
+  - {fileID: 1543290284}
+  - {fileID: 1398681985}
+  - {fileID: 2041752757}
   regions:
   - {fileID: 680847633}
   - {fileID: 107983113}
@@ -7318,41 +7197,6 @@ MonoBehaviour:
   maxZoom: 2
   wheelSpeed: 0.1
   pinchSpeed: 1
---- !u!1 &224471020
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 224471021}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &224471021
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 224471020}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 764357993}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 1061, y: -121}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &225483232
 GameObject:
   m_ObjectHideFlags: 0
@@ -7851,41 +7695,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 248858223}
   m_CullTransparentMesh: 1
---- !u!1 &251607194
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 251607195}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &251607195
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 251607194}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 193990445}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 958, y: 21}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &253690731
 GameObject:
   m_ObjectHideFlags: 0
@@ -7961,41 +7770,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 253690731}
   m_CullTransparentMesh: 1
---- !u!1 &262184767
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 262184768}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &262184768
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 262184767}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1590752654}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 954, y: 14}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &262938412
 GameObject:
   m_ObjectHideFlags: 0
@@ -8102,15 +7876,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 410315489}
   - {fileID: 64023617}
   - {fileID: 1832808887}
   - {fileID: 1237045321}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1104841137}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2548, y: -1145}
+  m_AnchoredPosition: {x: -1842.6116, y: -1062.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &265961528
@@ -8125,9 +7898,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_workshop
-  nameLocalizationKey: worldmap_robot_workshop
-  fallbackName: Robot Factory
+  regionId: sky_lounge
+  nameLocalizationKey: worldmap_region_sky_lounge
+  fallbackName: Sky Lounge
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -8141,7 +7915,7 @@ MonoBehaviour:
   pin: {fileID: 1832808888}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 410315489}
+  revealFocus: {fileID: 0}
 --- !u!222 &265961529
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8424,6 +8198,25 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 275658664}
   m_CullTransparentMesh: 1
+--- !u!224 &276306591
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 707503472}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1612795831}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -54, y: -26}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &277596418
 GameObject:
   m_ObjectHideFlags: 0
@@ -8454,15 +8247,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2056834440}
   - {fileID: 1424834309}
   - {fileID: 1603994394}
   - {fileID: 585574391}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1638356180}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -91.3884, y: 10.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &277596420
@@ -8478,8 +8270,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
   regionId: robo_academy
-  nameLocalizationKey: worldmap_robot_academy
-  fallbackName: Robot Factory
+  nameLocalizationKey: worldmap_region_robo_academy
+  fallbackName: Academy
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -8493,7 +8286,7 @@ MonoBehaviour:
   pin: {fileID: 1603994395}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 2056834440}
+  revealFocus: {fileID: 0}
 --- !u!222 &277596421
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8857,6 +8650,7 @@ RectTransform:
   - {fileID: 2102537148}
   - {fileID: 923324195}
   - {fileID: 1904246372}
+  - {fileID: 1638356180}
   - {fileID: 101265336}
   - {fileID: 1612795831}
   - {fileID: 666732932}
@@ -8874,58 +8668,6 @@ RectTransform:
   - {fileID: 1312413003}
   - {fileID: 394982502}
   - {fileID: 1852757461}
-  - {fileID: 680847629}
-  - {fileID: 107983112}
-  - {fileID: 77486133}
-  - {fileID: 810396216}
-  - {fileID: 277596419}
-  - {fileID: 1823271461}
-  - {fileID: 743548672}
-  - {fileID: 1600246594}
-  - {fileID: 807988640}
-  - {fileID: 1280585305}
-  - {fileID: 958013108}
-  - {fileID: 302516487}
-  - {fileID: 565230032}
-  - {fileID: 1237683525}
-  - {fileID: 969218469}
-  - {fileID: 124272533}
-  - {fileID: 63699557}
-  - {fileID: 1213397057}
-  - {fileID: 1448007998}
-  - {fileID: 2031842907}
-  - {fileID: 22346469}
-  - {fileID: 1029572281}
-  - {fileID: 664688166}
-  - {fileID: 1266362964}
-  - {fileID: 765962494}
-  - {fileID: 193990445}
-  - {fileID: 297128768}
-  - {fileID: 854253414}
-  - {fileID: 974368322}
-  - {fileID: 1590752654}
-  - {fileID: 1400182703}
-  - {fileID: 637837716}
-  - {fileID: 1656908478}
-  - {fileID: 402924323}
-  - {fileID: 784592657}
-  - {fileID: 795514647}
-  - {fileID: 812245982}
-  - {fileID: 451522777}
-  - {fileID: 764357993}
-  - {fileID: 1103036738}
-  - {fileID: 265961527}
-  - {fileID: 1805401813}
-  - {fileID: 1774042149}
-  - {fileID: 1460394519}
-  - {fileID: 1213542356}
-  - {fileID: 1518159653}
-  - {fileID: 954846669}
-  - {fileID: 1287468089}
-  - {fileID: 432638079}
-  - {fileID: 363805228}
-  - {fileID: 310216764}
-  - {fileID: 740059483}
   m_Father: {fileID: 48539346}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
@@ -9404,15 +9146,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1749793364}
   - {fileID: 278524621}
   - {fileID: 1961626308}
   - {fileID: 597377943}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 101265336}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -3880, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &297128769
@@ -9427,9 +9168,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: repair_history_workshop
+  nameLocalizationKey: worldmap_region_repair_history_workshop
+  fallbackName: Repair History Workshop
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -9443,7 +9185,7 @@ MonoBehaviour:
   pin: {fileID: 1961626309}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1749793364}
+  revealFocus: {fileID: 0}
 --- !u!222 &297128770
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9452,6 +9194,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 297128767}
   m_CullTransparentMesh: 1
+--- !u!1 &298450424
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1876695490}
+  m_Layer: 5
+  m_Name: IslandFocus
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
 --- !u!1 &300755054
 GameObject:
   m_ObjectHideFlags: 0
@@ -9769,15 +9527,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 606448083}
   - {fileID: 1608708216}
   - {fileID: 2067283999}
   - {fileID: 346314752}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 666732932}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -2131, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &302516488
@@ -9792,9 +9549,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: ticket_booth
+  nameLocalizationKey: worldmap_region_ticket_booth
+  fallbackName: Ticket Booth
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -9808,7 +9566,7 @@ MonoBehaviour:
   pin: {fileID: 2067284000}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 606448083}
+  revealFocus: {fileID: 0}
 --- !u!222 &302516489
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9923,15 +9681,14 @@ RectTransform:
   m_LocalScale: {x: 3.7638245, y: 3.7638245, z: 0.9409561}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 400813321}
   - {fileID: 445001426}
   - {fileID: 1428151186}
   - {fileID: 1455055924}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1612795831}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -6486, y: -1320}
+  m_AnchoredPosition: {x: -4142.612, y: -1229.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &310216765
@@ -9946,9 +9703,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: robo_market
+  nameLocalizationKey: worldmap_region_robo_market
+  fallbackName: Robo Market
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -9962,7 +9720,7 @@ MonoBehaviour:
   pin: {fileID: 1428151187}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 400813321}
+  revealFocus: {fileID: 0}
 --- !u!222 &310216766
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -11590,15 +11348,14 @@ RectTransform:
   m_LocalScale: {x: 2.97512, y: 2.97512, z: 0.74378}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1977546417}
   - {fileID: 1678704686}
   - {fileID: 449670944}
   - {fileID: 307121140}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1612795831}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -5452, y: -976}
+  m_AnchoredPosition: {x: -3108.6116, y: -885.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &363805229
@@ -11613,9 +11370,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: harvest_drone
+  nameLocalizationKey: worldmap_region_harvest_drone
+  fallbackName: Harvest Drone
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -11629,7 +11387,7 @@ MonoBehaviour:
   pin: {fileID: 449670945}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1977546417}
+  revealFocus: {fileID: 0}
 --- !u!222 &363805230
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -12505,41 +12263,6 @@ MonoBehaviour:
   dotSize: 50
   samplesPerSegment: 24
   revealFraction: 1
---- !u!1 &400813320
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 400813321}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &400813321
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 400813320}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 310216764}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 994.64886, y: 79.374565}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &402924322
 GameObject:
   m_ObjectHideFlags: 0
@@ -12570,15 +12293,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1290222657}
   - {fileID: 1332824798}
   - {fileID: 2122023278}
   - {fileID: 452581856}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1104841137}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -4279, y: -160}
+  m_AnchoredPosition: {x: -3573.6116, y: -77.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &402924324
@@ -12593,9 +12315,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: drone_pad
+  nameLocalizationKey: worldmap_region_drone_pad
+  fallbackName: Drone Pad
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -12609,7 +12332,7 @@ MonoBehaviour:
   pin: {fileID: 2122023279}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1290222657}
+  revealFocus: {fileID: 0}
 --- !u!222 &402924325
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -12755,41 +12478,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 409287685}
   m_CullTransparentMesh: 1
---- !u!1 &410315488
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 410315489}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &410315489
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 410315488}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 265961527}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 427, y: 213}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &411874884
 GameObject:
   m_ObjectHideFlags: 0
@@ -13283,15 +12971,14 @@ RectTransform:
   m_LocalScale: {x: 4.8836, y: 4.8836, z: 1.2209}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 713388657}
   - {fileID: 369254669}
   - {fileID: 2047898120}
   - {fileID: 2029613279}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1612795831}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -5300, y: -679}
+  m_AnchoredPosition: {x: -2956.6116, y: -588.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &432638080
@@ -13306,9 +12993,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_workshop
-  nameLocalizationKey: worldmap_robot_workshop
-  fallbackName: Robot Factory
+  regionId: water_bot_pond
+  nameLocalizationKey: worldmap_region_water_bot_pond
+  fallbackName: Water Bot Pond
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -13322,7 +13010,7 @@ MonoBehaviour:
   pin: {fileID: 2047898121}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 713388657}
+  revealFocus: {fileID: 0}
 --- !u!222 &432638081
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -14046,15 +13734,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1967020484}
   - {fileID: 568940359}
   - {fileID: 1968816361}
   - {fileID: 1896073060}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1104841137}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -4776, y: -154}
+  m_AnchoredPosition: {x: -4070.6116, y: -71.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &451522778
@@ -14069,9 +13756,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: airship_dock
+  nameLocalizationKey: worldmap_region_airship_dock
+  fallbackName: Airship Dock
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -14085,7 +13773,7 @@ MonoBehaviour:
   pin: {fileID: 1968816362}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1967020484}
+  revealFocus: {fileID: 0}
 --- !u!222 &451522779
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -14399,41 +14087,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 462739611}
   m_CullTransparentMesh: 1
---- !u!1 &463580907
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 463580908}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &463580908
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 463580907}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 810396216}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 73.5, y: -46.5}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &465995956
 GameObject:
   m_ObjectHideFlags: 0
@@ -14546,41 +14199,6 @@ RectTransform:
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 200}
   m_SizeDelta: {x: 200, y: 200}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &467839173
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 467839174}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &467839174
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 467839173}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 124272533}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 526, y: -20}
-  m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &471432229
 GameObject:
@@ -14982,41 +14600,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 480591603}
   m_CullTransparentMesh: 1
---- !u!1 &490564109
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 490564110}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &490564110
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 490564109}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 765962494}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 960, y: 15}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &494438402
 GameObject:
   m_ObjectHideFlags: 0
@@ -15891,41 +15474,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 515534369}
   m_CullTransparentMesh: 1
---- !u!1 &515907214
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 515907215}
-  m_Layer: 5
-  m_Name: RevealFocus
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &515907215
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 515907214}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 680847629}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 80.84741, y: -41.9115}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &516832423
 GameObject:
   m_ObjectHideFlags: 0
@@ -16594,41 +16142,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!1 &527645787
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 527645788}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &527645788
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 527645787}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 807988640}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 73.5, y: -46.5}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &530420808
 GameObject:
   m_ObjectHideFlags: 0
@@ -17527,41 +17040,6 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!1 &562609616
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 562609617}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &562609617
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 562609616}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 784592657}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 1028, y: -141}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &562855405
 GameObject:
   m_ObjectHideFlags: 0
@@ -17804,15 +17282,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1409777300}
   - {fileID: 425134963}
   - {fileID: 2090669577}
   - {fileID: 293378004}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 666732932}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -2131, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &565230033
@@ -17827,9 +17304,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: bots_arena_1
+  nameLocalizationKey: worldmap_region_bots_arena_1
+  fallbackName: Bots Arena
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -17843,7 +17321,7 @@ MonoBehaviour:
   pin: {fileID: 2090669578}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1409777300}
+  revealFocus: {fileID: 0}
 --- !u!222 &565230034
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -18229,41 +17707,6 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!1 &574123019
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 574123020}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &574123020
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 574123019}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1600246594}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 73.5, y: -46.5}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &577998203
 GameObject:
   m_ObjectHideFlags: 0
@@ -18352,41 +17795,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 577998203}
   m_CullTransparentMesh: 1
---- !u!1 &579341229
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 579341230}
-  m_Layer: 5
-  m_Name: RevealFocus
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &579341230
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 579341229}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 107983112}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 73.5, y: -46.499977}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &580050069
 GameObject:
   m_ObjectHideFlags: 0
@@ -18726,41 +18134,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 590275034}
   m_CullTransparentMesh: 1
---- !u!1 &591122956
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 591122957}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &591122957
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 591122956}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 77486133}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 73.5, y: -46.5}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &592052224
 GameObject:
   m_ObjectHideFlags: 0
@@ -19413,41 +18786,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 604390605}
   m_CullTransparentMesh: 1
---- !u!1 &606448082
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 606448083}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &606448083
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 606448082}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 302516487}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 531, y: -38}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &612165642
 GameObject:
   m_ObjectHideFlags: 0
@@ -19980,15 +19318,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2062172868}
   - {fileID: 314550891}
   - {fileID: 1666818879}
   - {fileID: 2055526084}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1104841137}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -4608, y: -227}
+  m_AnchoredPosition: {x: -3902.6116, y: -144.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &637837717
@@ -20003,9 +19340,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_workshop
-  nameLocalizationKey: worldmap_robot_workshop
-  fallbackName: Robot Factory
+  regionId: skyport_terminal
+  nameLocalizationKey: worldmap_region_skyport_terminal
+  fallbackName: Skyport Terminal
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -20019,7 +19357,7 @@ MonoBehaviour:
   pin: {fileID: 1666818880}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 2062172868}
+  revealFocus: {fileID: 0}
 --- !u!222 &637837718
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -20852,15 +20190,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 41933141}
   - {fileID: 702188260}
   - {fileID: 996218479}
   - {fileID: 1583313766}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 101265336}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -3880, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &664688167
@@ -20875,9 +20212,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: ancient_bot_hall
+  nameLocalizationKey: worldmap_region_ancient_bot_hall
+  fallbackName: Ancient Bot Hall
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -20891,7 +20229,7 @@ MonoBehaviour:
   pin: {fileID: 996218480}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 41933141}
+  revealFocus: {fileID: 0}
 --- !u!222 &664688168
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -20911,6 +20249,7 @@ GameObject:
   - component: {fileID: 666732932}
   - component: {fileID: 666732934}
   - component: {fileID: 666732933}
+  - component: {fileID: 1447598049}
   m_Layer: 5
   m_Name: RoboPark
   m_TagString: Untagged
@@ -20929,7 +20268,19 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1280585305}
+  - {fileID: 302516487}
+  - {fileID: 124272533}
+  - {fileID: 958013108}
+  - {fileID: 969218469}
+  - {fileID: 565230032}
+  - {fileID: 63699557}
+  - {fileID: 1237683525}
+  - {fileID: 1213397057}
+  - {fileID: 1448007998}
+  - {fileID: 2031842907}
+  - {fileID: 1777356376}
   m_Father: {fileID: 286276583}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -21223,41 +20574,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 673147220}
   m_CullTransparentMesh: 1
---- !u!1 &675705790
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 675705791}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &675705791
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 675705790}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 969218469}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 526, y: -20}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &676094108
 GameObject:
   m_ObjectHideFlags: 0
@@ -21654,15 +20970,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 515907215}
   - {fileID: 137314074}
   - {fileID: 838098112}
   - {fileID: 1237705738}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1638356180}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -91.3884, y: 10.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &680847632
@@ -21687,7 +21002,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
   regionId: living_area
   nameLocalizationKey: worldmap_region_living_area
-  fallbackName: "Ya\u015Fam alan\u0131"
+  fallbackName: Living Area
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -21709,7 +21025,7 @@ MonoBehaviour:
   pin: {fileID: 838098113}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 515907215}
+  revealFocus: {fileID: 0}
 --- !u!1 &682777808
 GameObject:
   m_ObjectHideFlags: 0
@@ -21798,6 +21114,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 682777808}
   m_CullTransparentMesh: 1
+--- !u!1 &683068533
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1644945297}
+  m_Layer: 5
+  m_Name: IslandFocus
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
 --- !u!1 &683082872
 GameObject:
   m_ObjectHideFlags: 0
@@ -21962,6 +21294,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 690641552}
   m_CullTransparentMesh: 1
+--- !u!1 &690808675
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1638356180}
+  - component: {fileID: 1472536826}
+  m_Layer: 5
+  m_Name: RoboCity
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
 --- !u!1 &693170264
 GameObject:
   m_ObjectHideFlags: 0
@@ -23269,7 +22618,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 707430408}
   m_CullTransparentMesh: 1
---- !u!1 &713388656
+--- !u!1 &707503472
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -23277,33 +22626,14 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 713388657}
+  - component: {fileID: 276306591}
   m_Layer: 5
-  m_Name: 'RevealFocus '
+  m_Name: IslandFocus
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!224 &713388657
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 713388656}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 432638079}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 783.4358, y: 50.512398}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &713582340
 GameObject:
   m_ObjectHideFlags: 0
@@ -24317,41 +23647,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 730436585}
   m_CullTransparentMesh: 1
---- !u!1 &731823632
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 731823633}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &731823633
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 731823632}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1029572281}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 966, y: 15}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &733132943
 GameObject:
   m_ObjectHideFlags: 0
@@ -24560,15 +23855,14 @@ RectTransform:
   m_LocalScale: {x: 3.7638245, y: 3.7638245, z: 0.9409561}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1849537399}
   - {fileID: 1602828695}
   - {fileID: 1777384750}
   - {fileID: 1745181904}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1612795831}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -6023, y: -938}
+  m_AnchoredPosition: {x: -3679.6116, y: -847.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &740059484
@@ -24583,9 +23877,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: milk_stall
+  nameLocalizationKey: worldmap_region_milk_stall
+  fallbackName: Milk Stall
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -24599,7 +23894,7 @@ MonoBehaviour:
   pin: {fileID: 1777384751}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1849537399}
+  revealFocus: {fileID: 0}
 --- !u!222 &740059485
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -24713,15 +24008,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1498164687}
   - {fileID: 682777809}
   - {fileID: 2040034170}
   - {fileID: 354748941}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1638356180}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -91.3884, y: 10.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &743548673
@@ -24737,8 +24031,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
   regionId: robo_laboratory
-  nameLocalizationKey: worldmap_robot_flaboratory
-  fallbackName: Robot Factory
+  nameLocalizationKey: worldmap_region_robo_laboratory
+  fallbackName: Laboratory
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -24752,7 +24047,7 @@ MonoBehaviour:
   pin: {fileID: 2040034171}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1498164687}
+  revealFocus: {fileID: 0}
 --- !u!222 &743548674
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -25077,6 +24372,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 748316821}
   m_CullTransparentMesh: 1
+--- !u!1 &748974116
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2037427540}
+  m_Layer: 5
+  m_Name: IslandFocus
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
 --- !u!1 &749883132
 GameObject:
   m_ObjectHideFlags: 0
@@ -25483,15 +24794,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 224471021}
   - {fileID: 122311242}
   - {fileID: 1044838858}
   - {fileID: 765570542}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1104841137}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -5123, y: 140}
+  m_AnchoredPosition: {x: -4417.612, y: 222.3538}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &764357994
@@ -25506,9 +24816,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: fuel_reactor
+  nameLocalizationKey: worldmap_region_fuel_reactor
+  fallbackName: Fuel Reactor
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -25522,7 +24833,7 @@ MonoBehaviour:
   pin: {fileID: 1044838859}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 224471021}
+  revealFocus: {fileID: 0}
 --- !u!222 &764357995
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -25637,15 +24948,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 490564110}
   - {fileID: 1348321525}
   - {fileID: 1530875345}
   - {fileID: 754158397}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 101265336}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -3880, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &765962495
@@ -25660,9 +24970,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: golden_robo_statue
+  nameLocalizationKey: worldmap_region_golden_robo_statue
+  fallbackName: Golden Robo Statue
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -25676,7 +24987,7 @@ MonoBehaviour:
   pin: {fileID: 1530875346}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 490564110}
+  revealFocus: {fileID: 0}
 --- !u!222 &765962496
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -26044,15 +25355,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 562609617}
   - {fileID: 1979495045}
   - {fileID: 248858224}
   - {fileID: 328440564}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1104841137}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -4969, y: 261}
+  m_AnchoredPosition: {x: -4263.612, y: 343.3538}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &784592658
@@ -26067,9 +25377,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: hover_taxi
+  nameLocalizationKey: worldmap_region_hover_taxi
+  fallbackName: Hover Taxi
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -26083,7 +25394,7 @@ MonoBehaviour:
   pin: {fileID: 248858225}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 562609617}
+  revealFocus: {fileID: 0}
 --- !u!222 &784592659
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -26259,15 +25570,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1001704956}
   - {fileID: 1411154495}
   - {fileID: 722795403}
   - {fileID: 670463885}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1104841137}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -4250, y: -201}
+  m_AnchoredPosition: {x: -3544.6116, y: -118.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &795514648
@@ -26282,9 +25592,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: vehicle_hangar
+  nameLocalizationKey: worldmap_region_vehicle_hangar
+  fallbackName: Vehicle Hangar
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -26298,7 +25609,7 @@ MonoBehaviour:
   pin: {fileID: 722795404}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1001704956}
+  revealFocus: {fileID: 0}
 --- !u!222 &795514649
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -26514,15 +25825,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 527645788}
   - {fileID: 1332345345}
   - {fileID: 1364647581}
   - {fileID: 748316822}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1638356180}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -91.3884, y: 10.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &807988641
@@ -26538,8 +25848,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
   regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  nameLocalizationKey: worldmap_region_robo_firestation
+  fallbackName: Fire Station
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -26553,7 +25864,7 @@ MonoBehaviour:
   pin: {fileID: 1364647582}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 527645788}
+  revealFocus: {fileID: 0}
 --- !u!222 &807988642
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -26729,15 +26040,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 463580908}
   - {fileID: 2137643693}
   - {fileID: 828687964}
   - {fileID: 214752730}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1638356180}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -91.3884, y: 10.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &810396217
@@ -26753,8 +26063,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
   regionId: robo_workshop
-  nameLocalizationKey: worldmap_robot_workshop
-  fallbackName: Robot Factory
+  nameLocalizationKey: worldmap_region_robo_workshop
+  fallbackName: Workshop
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -26768,7 +26079,7 @@ MonoBehaviour:
   pin: {fileID: 828687965}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 463580908}
+  revealFocus: {fileID: 0}
 --- !u!222 &810396218
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -26807,15 +26118,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1482331807}
   - {fileID: 452715322}
   - {fileID: 1296295226}
   - {fileID: 1244945918}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1104841137}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -4618, y: -148}
+  m_AnchoredPosition: {x: -3912.6116, y: -65.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &812245983
@@ -26830,9 +26140,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: cargo_dock
+  nameLocalizationKey: worldmap_region_cargo_dock
+  fallbackName: Cargo Dock
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -26846,7 +26157,7 @@ MonoBehaviour:
   pin: {fileID: 1296295227}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1482331807}
+  revealFocus: {fileID: 0}
 --- !u!222 &812245984
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -27889,15 +27200,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 34252124}
   - {fileID: 1044753564}
   - {fileID: 428042317}
   - {fileID: 12976854}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 101265336}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -3880, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &854253415
@@ -27912,9 +27222,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: robo_library
+  nameLocalizationKey: worldmap_region_robo_library
+  fallbackName: Robo Library
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -27928,7 +27239,7 @@ MonoBehaviour:
   pin: {fileID: 428042318}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 34252124}
+  revealFocus: {fileID: 0}
 --- !u!222 &854253416
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -30687,15 +29998,14 @@ RectTransform:
   m_LocalScale: {x: 3.46968, y: 3.46968, z: 0.86742}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 960226421}
   - {fileID: 2137570511}
   - {fileID: 1515278153}
   - {fileID: 1723661811}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1612795831}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -5690, y: -541.93}
+  m_AnchoredPosition: {x: -3346.6116, y: -451.5762}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &954846670
@@ -30710,9 +30020,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: tractor_garage
+  nameLocalizationKey: worldmap_region_tractor_garage
+  fallbackName: Tractor Garage
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -30726,7 +30037,7 @@ MonoBehaviour:
   pin: {fileID: 1515278154}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 960226421}
+  revealFocus: {fileID: 0}
 --- !u!222 &954846671
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -30765,15 +30076,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1596022648}
   - {fileID: 944801104}
   - {fileID: 1791160617}
   - {fileID: 1663090600}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 666732932}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3877, y: 1990.6462}
+  m_AnchoredPosition: {x: -2130.9993, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &958013109
@@ -30788,9 +30098,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: snack_bar_2
+  nameLocalizationKey: worldmap_region_snack_bar_2
+  fallbackName: Snack Bar
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -30804,7 +30115,7 @@ MonoBehaviour:
   pin: {fileID: 1791160618}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1596022648}
+  revealFocus: {fileID: 0}
 --- !u!222 &958013110
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -30813,41 +30124,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 958013107}
   m_CullTransparentMesh: 1
---- !u!1 &960226420
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 960226421}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &960226421
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 960226420}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 954846669}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 1072.74, y: 90.04567}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &966073014
 GameObject:
   m_ObjectHideFlags: 0
@@ -31228,15 +30504,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 675705791}
   - {fileID: 902146933}
   - {fileID: 1930935838}
   - {fileID: 2109572592}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 666732932}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -2131, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &969218470
@@ -31251,9 +30526,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: mirror_maze
+  nameLocalizationKey: worldmap_region_mirror_maze
+  fallbackName: Mirror Maze
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -31267,7 +30543,7 @@ MonoBehaviour:
   pin: {fileID: 1930935839}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 675705791}
+  revealFocus: {fileID: 0}
 --- !u!222 &969218471
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -31520,15 +30796,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1428786872}
   - {fileID: 1743238376}
   - {fileID: 1475799846}
   - {fileID: 262938413}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 101265336}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -3880, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &974368323
@@ -31543,9 +30818,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: gift_shop_1
+  nameLocalizationKey: worldmap_region_gift_shop_1
+  fallbackName: Gift Shop
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -31559,7 +30835,7 @@ MonoBehaviour:
   pin: {fileID: 1475799847}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1428786872}
+  revealFocus: {fileID: 0}
 --- !u!222 &974368324
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -32667,41 +31943,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 996218478}
   m_CullTransparentMesh: 1
---- !u!1 &1001704955
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1001704956}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1001704956
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1001704955}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 795514647}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 852, y: -25}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1006638196
 GameObject:
   m_ObjectHideFlags: 0
@@ -32928,41 +32169,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1011996539}
   m_CullTransparentMesh: 1
---- !u!1 &1014281731
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1014281732}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1014281732
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1014281731}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1656908478}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 942, y: -37}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1016661188
 GameObject:
   m_ObjectHideFlags: 0
@@ -33259,41 +32465,6 @@ RectTransform:
   m_AnchoredPosition: {x: 238, y: 814}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &1026587541
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1026587542}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1026587542
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1026587541}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1518159653}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 821.3521, y: 55.69364}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1029572280
 GameObject:
   m_ObjectHideFlags: 0
@@ -33324,15 +32495,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 731823633}
   - {fileID: 1077701072}
   - {fileID: 356919869}
   - {fileID: 1771043617}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 101265336}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -3880, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1029572282
@@ -33347,9 +32517,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: rocket_hall
+  nameLocalizationKey: worldmap_region_rocket_hall
+  fallbackName: Rocket Hall
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -33363,7 +32534,7 @@ MonoBehaviour:
   pin: {fileID: 356919870}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 731823633}
+  revealFocus: {fileID: 0}
 --- !u!222 &1029572283
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -34815,41 +33986,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1063671759}
   m_CullTransparentMesh: 1
---- !u!1 &1066996486
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1066996487}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1066996487
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1066996486}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1213397057}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 532, y: -30}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1071204813
 GameObject:
   m_ObjectHideFlags: 0
@@ -35409,15 +34545,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1595510198}
   - {fileID: 2002487832}
   - {fileID: 719172747}
   - {fileID: 356613929}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1104841137}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -3253, y: -1156}
+  m_AnchoredPosition: {x: -2547.6116, y: -1073.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1103036739
@@ -35432,9 +34567,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_workshop
-  nameLocalizationKey: worldmap_robot_workshop
-  fallbackName: Robot Factory
+  regionId: boarding_gate
+  nameLocalizationKey: worldmap_region_boarding_gate
+  fallbackName: Boarding Gate
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -35448,7 +34584,7 @@ MonoBehaviour:
   pin: {fileID: 719172748}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1595510198}
+  revealFocus: {fileID: 0}
 --- !u!222 &1103036740
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -35468,6 +34604,7 @@ GameObject:
   - component: {fileID: 1104841137}
   - component: {fileID: 1104841139}
   - component: {fileID: 1104841138}
+  - component: {fileID: 1398681985}
   m_Layer: 5
   m_Name: CloudPort
   m_TagString: Untagged
@@ -35486,7 +34623,18 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 637837716}
+  - {fileID: 1656908478}
+  - {fileID: 402924323}
+  - {fileID: 784592657}
+  - {fileID: 795514647}
+  - {fileID: 812245982}
+  - {fileID: 451522777}
+  - {fileID: 764357993}
+  - {fileID: 1103036738}
+  - {fileID: 265961527}
+  - {fileID: 1876695490}
   m_Father: {fileID: 286276583}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -38517,15 +37665,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1066996487}
   - {fileID: 507756937}
   - {fileID: 1046765641}
   - {fileID: 746289382}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 666732932}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -2131, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1213397058
@@ -38540,9 +37687,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_workshop
-  nameLocalizationKey: worldmap_robot_workshop
-  fallbackName: Robot Factory
+  regionId: carousel
+  nameLocalizationKey: worldmap_region_carousel
+  fallbackName: Carousel
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -38556,7 +37704,7 @@ MonoBehaviour:
   pin: {fileID: 1046765642}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1066996487}
+  revealFocus: {fileID: 0}
 --- !u!222 &1213397059
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -38591,19 +37739,18 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1213542355}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.00000018355}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 3.9646, y: 3.9646, z: 0.99115}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1222351676}
   - {fileID: 733132944}
   - {fileID: 465995957}
   - {fileID: 630502209}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1612795831}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -6538, y: 253}
+  m_AnchoredPosition: {x: -4194.612, y: 343.3538}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1213542357
@@ -38618,9 +37765,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: solar_greenhouse
+  nameLocalizationKey: worldmap_region_solar_greenhouse
+  fallbackName: Solar Greenhouse
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -38634,7 +37782,7 @@ MonoBehaviour:
   pin: {fileID: 465995958}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1222351676}
+  revealFocus: {fileID: 0}
 --- !u!222 &1213542358
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -38643,41 +37791,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1213542355}
   m_CullTransparentMesh: 1
---- !u!1 &1222351675
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1222351676}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1222351676
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1222351675}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1213542356}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 948, y: 73}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1230241802
 GameObject:
   m_ObjectHideFlags: 0
@@ -39298,15 +38411,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2008238060}
   - {fileID: 1706253982}
   - {fileID: 1957327254}
   - {fileID: 1869231174}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 666732932}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -2131, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1237683526
@@ -39321,9 +38433,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: bots_arena_2
+  nameLocalizationKey: worldmap_region_bots_arena_2
+  fallbackName: Bots Arena
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -39337,7 +38450,7 @@ MonoBehaviour:
   pin: {fileID: 1957327255}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 2008238060}
+  revealFocus: {fileID: 0}
 --- !u!222 &1237683527
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -39928,15 +39041,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1638960486}
   - {fileID: 1415105324}
   - {fileID: 1151886084}
   - {fileID: 842209867}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 101265336}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -3880, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1266362965
@@ -39951,9 +39063,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: celestial_gear_monument
+  nameLocalizationKey: worldmap_region_celestial_gear_monument
+  fallbackName: Celestial Gear Monument
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -39967,7 +39080,7 @@ MonoBehaviour:
   pin: {fileID: 1151886085}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1638960486}
+  revealFocus: {fileID: 0}
 --- !u!222 &1266362966
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -40234,15 +39347,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1735701781}
   - {fileID: 1147347515}
   - {fileID: 761618084}
   - {fileID: 2020240447}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 666732932}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -2131, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1280585306
@@ -40257,9 +39369,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: park_gate
+  nameLocalizationKey: worldmap_region_park_gate
+  fallbackName: Park Gate
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -40273,7 +39386,7 @@ MonoBehaviour:
   pin: {fileID: 761618085}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1735701781}
+  revealFocus: {fileID: 0}
 --- !u!222 &1280585307
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -40521,19 +39634,18 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1287468088}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -0.0000027496}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 4.53, y: 4.53, z: 1.1325}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1403912067}
   - {fileID: 829898936}
   - {fileID: 1688776229}
   - {fileID: 1707038226}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1612795831}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -6945, y: 310}
+  m_AnchoredPosition: {x: -4601.612, y: 400.3538}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1287468090
@@ -40548,9 +39660,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: hydro_crop_beds
+  nameLocalizationKey: worldmap_region_hydro_crop_beds
+  fallbackName: Hydro Crop Beds
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -40564,7 +39677,7 @@ MonoBehaviour:
   pin: {fileID: 1688776230}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1403912067}
+  revealFocus: {fileID: 0}
 --- !u!222 &1287468091
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -40710,41 +39823,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1288497220}
   m_CullTransparentMesh: 1
---- !u!1 &1290222656
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1290222657}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1290222657
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1290222656}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 402924323}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 859, y: -32}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1291914505
 GameObject:
   m_ObjectHideFlags: 0
@@ -44105,6 +43183,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1393629899}
   m_CullTransparentMesh: 1
+--- !u!114 &1398681985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1104841136}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 337ccd0977ca14c44b2c9bd76f6acdfa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  islandId: ada4
+  chestRewards: []
+  chestClosedSprite: {fileID: 0}
+  chestOpenedSprite: {fileID: 0}
+  revealFocus: {fileID: 1876695490}
 --- !u!1 &1399141725
 GameObject:
   m_ObjectHideFlags: 0
@@ -44210,15 +43305,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1795775399}
   - {fileID: 2061885621}
   - {fileID: 1399141726}
   - {fileID: 1206908285}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 101265336}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -3880, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1400182704
@@ -44233,9 +43327,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: info_desk
+  nameLocalizationKey: worldmap_region_info_desk
+  fallbackName: Info Desk
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -44249,7 +43344,7 @@ MonoBehaviour:
   pin: {fileID: 1399141727}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1795775399}
+  revealFocus: {fileID: 0}
 --- !u!222 &1400182705
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -44423,76 +43518,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1402978597}
   m_CullTransparentMesh: 1
---- !u!1 &1403912066
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1403912067}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1403912067
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1403912066}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1287468089}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 838.8515, y: 58.08493}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &1409777299
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1409777300}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1409777300
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1409777299}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 565230032}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 531, y: -38.000008}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1410908314
 GameObject:
   m_ObjectHideFlags: 0
@@ -45111,41 +44136,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1428151185}
   m_CullTransparentMesh: 1
---- !u!1 &1428786871
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1428786872}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1428786872
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428786871}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 974368322}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 953, y: 19}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1431038076
 GameObject:
   m_ObjectHideFlags: 0
@@ -45856,6 +44846,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1445016269}
   m_CullTransparentMesh: 1
+--- !u!114 &1447598049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 666732931}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 337ccd0977ca14c44b2c9bd76f6acdfa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  islandId: ada2
+  chestRewards: []
+  chestClosedSprite: {fileID: 0}
+  chestOpenedSprite: {fileID: 0}
+  revealFocus: {fileID: 1777356376}
 --- !u!1 &1448007997
 GameObject:
   m_ObjectHideFlags: 0
@@ -45886,15 +44893,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1921781795}
   - {fileID: 428528351}
   - {fileID: 989973059}
   - {fileID: 1789516272}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 666732932}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -2131, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1448007999
@@ -45909,9 +44915,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_workshop
-  nameLocalizationKey: worldmap_robot_workshop
-  fallbackName: Robot Factory
+  regionId: spinner
+  nameLocalizationKey: worldmap_region_spinner
+  fallbackName: Spinner
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -45925,7 +44932,7 @@ MonoBehaviour:
   pin: {fileID: 989973060}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1921781795}
+  revealFocus: {fileID: 0}
 --- !u!222 &1448008000
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -46591,15 +45598,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 131455751}
   - {fileID: 753789036}
   - {fileID: 1302818236}
   - {fileID: 1496393702}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1612795831}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -5984, y: 787}
+  m_AnchoredPosition: {x: -3640.6116, y: 877.3538}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1460394520
@@ -46614,9 +45620,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: battery_orchard
+  nameLocalizationKey: worldmap_region_battery_orchard
+  fallbackName: Battery Orchard
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -46630,7 +45637,7 @@ MonoBehaviour:
   pin: {fileID: 1302818237}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 131455751}
+  revealFocus: {fileID: 0}
 --- !u!222 &1460394521
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -46999,6 +46006,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1470370621}
   m_CullTransparentMesh: 1
+--- !u!114 &1472536826
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 690808675}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 337ccd0977ca14c44b2c9bd76f6acdfa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  islandId: ada1
+  chestRewards: []
+  chestClosedSprite: {fileID: 0}
+  chestOpenedSprite: {fileID: 0}
+  revealFocus: {fileID: 1644945297}
 --- !u!1 &1475799845
 GameObject:
   m_ObjectHideFlags: 0
@@ -47225,41 +46249,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1478809574}
   m_CullTransparentMesh: 1
---- !u!1 &1482331806
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1482331807}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1482331807
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1482331806}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 812245982}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 943, y: -53}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1486517156
 GameObject:
   m_ObjectHideFlags: 0
@@ -47500,41 +46489,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1496393701}
   m_CullTransparentMesh: 1
---- !u!1 &1498164686
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1498164687}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1498164687
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1498164686}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 743548672}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 73.5, y: -46.5}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1501087346
 GameObject:
   m_ObjectHideFlags: 0
@@ -48216,19 +47170,18 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1518159652}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -0.0000032975}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 4.636, y: 4.636, z: 1.159}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1026587542}
   - {fileID: 1110039321}
   - {fileID: 886630371}
   - {fileID: 1386652039}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1612795831}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -7264, y: 45}
+  m_AnchoredPosition: {x: -4920.612, y: 135.3538}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1518159654
@@ -48243,9 +47196,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: energy_silo
+  nameLocalizationKey: worldmap_region_energy_silo
+  fallbackName: Energy Silo
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -48259,7 +47213,7 @@ MonoBehaviour:
   pin: {fileID: 886630372}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1026587542}
+  revealFocus: {fileID: 0}
 --- !u!222 &1518159655
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -49255,6 +48209,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1534418970}
   m_CullTransparentMesh: 1
+--- !u!114 &1543290284
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 101265335}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 337ccd0977ca14c44b2c9bd76f6acdfa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  islandId: ada3
+  chestRewards: []
+  chestClosedSprite: {fileID: 0}
+  chestOpenedSprite: {fileID: 0}
+  revealFocus: {fileID: 2037427540}
 --- !u!1 &1544346079
 GameObject:
   m_ObjectHideFlags: 0
@@ -49754,41 +48725,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1568676575}
   m_CullTransparentMesh: 1
---- !u!1 &1568771855
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1568771856}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1568771856
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1568771855}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2031842907}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 526, y: -23}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1568817584
 GameObject:
   m_ObjectHideFlags: 0
@@ -50550,15 +49486,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 262184768}
   - {fileID: 640921255}
   - {fileID: 1568676576}
   - {fileID: 2096474765}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 101265336}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -3880, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1590752655
@@ -50573,9 +49508,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: gift_shop_2
+  nameLocalizationKey: worldmap_region_gift_shop_2
+  fallbackName: Gift Shop
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -50589,7 +49525,7 @@ MonoBehaviour:
   pin: {fileID: 1568676577}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 262184768}
+  revealFocus: {fileID: 0}
 --- !u!222 &1590752656
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -50598,41 +49534,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1590752653}
   m_CullTransparentMesh: 1
---- !u!1 &1591189924
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1591189925}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1591189925
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1591189924}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 22346469}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 963, y: 15}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1592845235
 GameObject:
   m_ObjectHideFlags: 0
@@ -50737,111 +49638,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1592845235}
   m_CullTransparentMesh: 1
---- !u!1 &1593327738
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1593327739}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1593327739
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1593327738}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1774042149}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 475, y: -164}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &1595510197
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1595510198}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1595510198
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1595510197}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1103036738}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 602, y: 201}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &1596022647
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1596022648}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1596022648
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1596022647}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 958013108}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 536, y: -37}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1598448363
 GameObject:
   m_ObjectHideFlags: 0
@@ -50960,15 +49756,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 574123020}
   - {fileID: 1598448364}
   - {fileID: 678766192}
   - {fileID: 676094109}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1638356180}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -91.3884, y: 10.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1600246595
@@ -50984,8 +49779,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
   regionId: robo_repairstation
-  nameLocalizationKey: worldmap_robot_repairstation
-  fallbackName: Robot Factory
+  nameLocalizationKey: worldmap_region_robo_repairstation
+  fallbackName: Repair Station
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -50999,7 +49795,7 @@ MonoBehaviour:
   pin: {fileID: 678766193}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 574123020}
+  revealFocus: {fileID: 0}
 --- !u!222 &1600246596
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -51408,6 +50204,7 @@ GameObject:
   - component: {fileID: 1612795831}
   - component: {fileID: 1612795833}
   - component: {fileID: 1612795832}
+  - component: {fileID: 2041752757}
   m_Layer: 5
   m_Name: RoboFarm
   m_TagString: Untagged
@@ -51426,7 +50223,19 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1805401813}
+  - {fileID: 1774042149}
+  - {fileID: 1460394519}
+  - {fileID: 1213542356}
+  - {fileID: 1518159653}
+  - {fileID: 954846669}
+  - {fileID: 1287468089}
+  - {fileID: 432638079}
+  - {fileID: 363805228}
+  - {fileID: 310216764}
+  - {fileID: 740059483}
+  - {fileID: 276306591}
   m_Father: {fileID: 286276583}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -51821,40 +50630,34 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!1 &1638960485
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1638960486}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1638960486
+--- !u!224 &1638356180
 RectTransform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1638960485}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_GameObject: {fileID: 690808675}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1266362964}
+  m_Children:
+  - {fileID: 680847629}
+  - {fileID: 107983112}
+  - {fileID: 77486133}
+  - {fileID: 810396216}
+  - {fileID: 807988640}
+  - {fileID: 1600246594}
+  - {fileID: 743548672}
+  - {fileID: 277596419}
+  - {fileID: 1823271461}
+  - {fileID: 1644945297}
+  m_Father: {fileID: 286276583}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 964, y: 19}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: -2575, y: 1980}
+  m_SizeDelta: {x: 1200, y: 2133}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1640049552
 GameObject:
@@ -51988,6 +50791,25 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1640049552}
   m_CullTransparentMesh: 1
+--- !u!224 &1644945297
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 683068533}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1638356180}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 223, y: -47}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1645489721
 GameObject:
   m_ObjectHideFlags: 0
@@ -52406,15 +51228,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1014281732}
   - {fileID: 861938257}
   - {fileID: 180620570}
   - {fileID: 2142518164}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1104841137}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -4571, y: -25}
+  m_AnchoredPosition: {x: -3865.6116, y: 57.3538}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1656908479
@@ -52429,9 +51250,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_firestation
-  nameLocalizationKey: worldmap_robot_firestation
-  fallbackName: Robot Factory
+  regionId: control_tower
+  nameLocalizationKey: worldmap_region_control_tower
+  fallbackName: Control Tower
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -52445,7 +51267,7 @@ MonoBehaviour:
   pin: {fileID: 180620571}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1014281732}
+  revealFocus: {fileID: 0}
 --- !u!222 &1656908480
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -54078,41 +52900,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1707038225}
   m_CullTransparentMesh: 1
---- !u!1 &1708629971
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1708629972}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1708629972
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1708629971}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 63699557}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 534, y: -43}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1709694222
 GameObject:
   m_ObjectHideFlags: 0
@@ -54715,41 +53502,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1726692047}
   m_CullTransparentMesh: 1
---- !u!1 &1735701780
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1735701781}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1735701781
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1735701780}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1280585305}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 521, y: -53}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1736023365
 GameObject:
   m_ObjectHideFlags: 0
@@ -55203,41 +53955,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1745181903}
   m_CullTransparentMesh: 1
---- !u!1 &1749793363
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1749793364}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1749793364
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1749793363}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 297128768}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 956, y: 17}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1754459798
 GameObject:
   m_ObjectHideFlags: 0
@@ -55653,15 +54370,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1593327739}
   - {fileID: 1118627746}
   - {fileID: 1274961827}
   - {fileID: 1650107653}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1612795831}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -4371, y: 325}
+  m_AnchoredPosition: {x: -2027.6116, y: 415.3538}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1774042150
@@ -55676,9 +54392,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_workshop
-  nameLocalizationKey: worldmap_robot_workshop
-  fallbackName: Robot Factory
+  regionId: gear_windmill
+  nameLocalizationKey: worldmap_region_gear_windmill
+  fallbackName: Gear Windmill
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -55692,7 +54409,7 @@ MonoBehaviour:
   pin: {fileID: 1274961828}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1593327739}
+  revealFocus: {fileID: 0}
 --- !u!222 &1774042151
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -55913,6 +54630,25 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1775616475}
   m_CullTransparentMesh: 1
+--- !u!224 &1777356376
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1933311833}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 666732932}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -49, y: -47}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1777384749
 GameObject:
   m_ObjectHideFlags: 0
@@ -56567,41 +55303,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1795702904}
   m_CullTransparentMesh: 1
---- !u!1 &1795775398
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1795775399}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1795775399
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1795775398}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1400182703}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 956, y: 15}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1801386347
 GameObject:
   m_ObjectHideFlags: 0
@@ -56919,15 +55620,14 @@ RectTransform:
   m_LocalScale: {x: 4.106, y: 4.106, z: 1.0265}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 42715437}
   - {fileID: 1837900143}
   - {fileID: 1767177469}
   - {fileID: 1966315953}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1612795831}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -4758, y: 233}
+  m_AnchoredPosition: {x: -2414.6116, y: 323.3538}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1805401814
@@ -56942,9 +55642,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_workshop
-  nameLocalizationKey: worldmap_robot_workshop
-  fallbackName: Robot Factory
+  regionId: robo_barn
+  nameLocalizationKey: worldmap_region_robo_barn
+  fallbackName: Robo Barn
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -56958,7 +55659,7 @@ MonoBehaviour:
   pin: {fileID: 1767177470}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 42715437}
+  revealFocus: {fileID: 0}
 --- !u!222 &1805401815
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -57408,15 +56109,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2081404858}
   - {fileID: 814326019}
   - {fileID: 290364299}
   - {fileID: 723523299}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 1638356180}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -91.3884, y: 10.6462}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1823271462
@@ -57432,8 +56132,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
   regionId: robo_statue
-  nameLocalizationKey: worldmap_robot_statue
-  fallbackName: Robot Factory
+  nameLocalizationKey: worldmap_region_robo_statue
+  fallbackName: Statue
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -57447,7 +56148,7 @@ MonoBehaviour:
   pin: {fileID: 290364300}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 2081404858}
+  revealFocus: {fileID: 0}
 --- !u!222 &1823271463
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -58427,41 +57128,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1848498848}
   m_CullTransparentMesh: 1
---- !u!1 &1849537398
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1849537399}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1849537399
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1849537398}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 740059483}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 994.64886, y: 79.374565}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1849981744
 GameObject:
   m_ObjectHideFlags: 0
@@ -59513,6 +58179,25 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1871378330}
   m_CullTransparentMesh: 1
+--- !u!224 &1876695490
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 298450424}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1104841137}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -77, y: -139}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1877427229
 GameObject:
   m_ObjectHideFlags: 0
@@ -60497,41 +59182,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &1921781794
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1921781795}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1921781795
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1921781794}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1448007998}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 529, y: -25}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1925639996
 GameObject:
   m_ObjectHideFlags: 0
@@ -60697,6 +59347,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1930935837}
   m_CullTransparentMesh: 1
+--- !u!1 &1933311833
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1777356376}
+  m_Layer: 5
+  m_Name: IslandFocus
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
 --- !u!1 &1939672298
 GameObject:
   m_ObjectHideFlags: 0
@@ -61232,41 +59898,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1966315952}
   m_CullTransparentMesh: 1
---- !u!1 &1967020483
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1967020484}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1967020484
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1967020483}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 451522777}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 983, y: -40}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1968816360
 GameObject:
   m_ObjectHideFlags: 0
@@ -61417,41 +60048,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1972187260}
   m_CullTransparentMesh: 1
---- !u!1 &1977546416
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1977546417}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1977546417
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1977546416}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 363805228}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 1238.8456, y: 112.74393}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1979495044
 GameObject:
   m_ObjectHideFlags: 0
@@ -62539,41 +61135,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2003611607}
   m_CullTransparentMesh: 1
---- !u!1 &2008238059
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2008238060}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &2008238060
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2008238059}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1237683525}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 531, y: -38.000008}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2009342043
 GameObject:
   m_ObjectHideFlags: 0
@@ -63332,15 +61893,14 @@ RectTransform:
   m_LocalScale: {x: 4, y: 4, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1568771856}
   - {fileID: 744430875}
   - {fileID: 562877252}
   - {fileID: 1478460458}
-  m_Father: {fileID: 286276583}
+  m_Father: {fileID: 666732932}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2666.3884, y: 1990.6462}
+  m_AnchoredPosition: {x: -2131, y: -44}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2031842908
@@ -63355,9 +61915,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17786f26205684c209f9681187232f47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldMapRegion
-  regionId: robo_workshop
-  nameLocalizationKey: worldmap_robot_workshop
-  fallbackName: Robot Factory
+  regionId: park_statue
+  nameLocalizationKey: worldmap_region_park_statue
+  fallbackName: Statue
+  nameText: {fileID: 0}
   starCost: 10
   taskIcon: {fileID: 0}
   startUnlocked: 0
@@ -63371,7 +61932,7 @@ MonoBehaviour:
   pin: {fileID: 562877253}
   lockedPinSprite: {fileID: 21300000, guid: 4e87fe10ce48345708428e88b75b5ca3, type: 3}
   unlockedPinSprite: {fileID: 21300000, guid: 58238c60951ea4fd4bf990b6bcbac557, type: 3}
-  revealFocus: {fileID: 1568771856}
+  revealFocus: {fileID: 0}
 --- !u!222 &2031842909
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -63416,6 +61977,25 @@ RectTransform:
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 230, y: 104}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!224 &2037427540
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 748974116}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 101265336}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -29, y: 74}
+  m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2038762152
 GameObject:
@@ -63679,6 +62259,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2041654299}
   m_CullTransparentMesh: 1
+--- !u!114 &2041752757
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612795830}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 337ccd0977ca14c44b2c9bd76f6acdfa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  islandId: ada5
+  chestRewards: []
+  chestClosedSprite: {fileID: 0}
+  chestOpenedSprite: {fileID: 0}
+  revealFocus: {fileID: 276306591}
 --- !u!1 &2047898119
 GameObject:
   m_ObjectHideFlags: 0
@@ -64079,41 +62676,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2055526083}
   m_CullTransparentMesh: 1
---- !u!1 &2056834439
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2056834440}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &2056834440
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2056834439}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 277596419}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 73.5, y: -46.5}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2059409436
 GameObject:
   m_ObjectHideFlags: 0
@@ -64339,41 +62901,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2061885620}
   m_CullTransparentMesh: 1
---- !u!1 &2062172867
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2062172868}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &2062172868
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2062172867}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 637837716}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 942, y: 37}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2067283998
 GameObject:
   m_ObjectHideFlags: 0
@@ -64661,41 +63188,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2073945332}
   m_CullTransparentMesh: 1
---- !u!1 &2081404857
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2081404858}
-  m_Layer: 5
-  m_Name: 'RevealFocus '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &2081404858
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2081404857}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1823271461}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 73.5, y: -46.5}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2082110754
 GameObject:
   m_ObjectHideFlags: 0
@@ -65597,7 +64089,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -50.000244}
+  m_AnchoredPosition: {x: 50, y: -50.00049}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2105953761

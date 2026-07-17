@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   width: 9
   height: 9
-  moves: 28
+  moves: 23
   baseCoinReward: 10
   goals:
   - targetType: 2
@@ -22,7 +22,7 @@ MonoBehaviour:
     obstacleId: 1
     collectibleId: 2
     iconOverride: {fileID: 21300000, guid: 991fec8e3ffcc47dc832d478a88e032c, type: 3}
-    amount: 1250
+    amount: 950
   levelKind: 1
   usesCustomIntro: 1
   introLeftSprite: {fileID: 21300000, guid: d6cc3409213204b239ccdaed773550fe, type: 3}
@@ -32,13 +32,16 @@ MonoBehaviour:
   bossAttackEveryMoves: 3
   bossAttackOilCount: 1
   playerMaxHp: 800
-  damagePerClearedTile: 10
-  enemyAttackBaseDamage: 21
+  damagePerClearedTile: 4
+  enemyAttackBaseDamage: 6
   enemyAttackDamageGrowth: 3
-  enemyAttackInterval: 2.8
+  enemyAttackInterval: 2.2
   battlefieldBackground: {fileID: 0}
+  bossWaves: []
+  bossWaveCount: 0
   randomPool: 
   energyPerContainer: 1
+  rocketBasketFireAllOnHit: 0
   comboTutorial: 0
   musicClip: {fileID: 8300000, guid: a75116037af37490bb9f00591892d8d6, type: 3}
   musicVolume: 0.593

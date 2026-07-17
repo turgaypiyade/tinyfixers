@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -21,6 +22,9 @@ public sealed class WorldMapRegion : MonoBehaviour
     [SerializeField] private string nameLocalizationKey;
     [Tooltip("Lokalizasyon bulunamazsa kullanılacak yedek ad.")]
     [SerializeField] private string fallbackName = "Bölge";
+    [Tooltip("Haritadaki bölge adı etiketi. Boşsa çocuklardan ilk TMP_Text bulunur (RegionTxtBG/Region1Text). " +
+             "Sahne açılışında lokalize DisplayName ile doldurulur.")]
+    [SerializeField] private TMP_Text nameText;
     [Tooltip("Bu bölgeyi açmak için harcanacak yıldız.")]
     [SerializeField, Min(0)] private int starCost = 10;
     [Tooltip("Görev listesi satırında gösterilecek ikon (opsiyonel — bölge küçük görseli).")]
@@ -80,6 +84,20 @@ public sealed class WorldMapRegion : MonoBehaviour
     public int StarCost => starCost;
     public Sprite TaskIcon => taskIcon;
 
+    /// <summary>Lokalize bölge adı (key yoksa/çevirisi yoksa fallbackName). Harita etiketi ve görev listesi bunu kullanır.</summary>
+    public string DisplayName
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(nameLocalizationKey))
+            {
+                string s = GameLocalization.Get(nameLocalizationKey);
+                if (!string.IsNullOrEmpty(s) && s != nameLocalizationKey) return s;
+            }
+            return fallbackName;
+        }
+    }
+
     public RectTransform RevealFocus =>
         revealFocus != null ? revealFocus :
         (fog != null ? (RectTransform)fog.transform : (RectTransform)transform);
@@ -104,6 +122,10 @@ public sealed class WorldMapRegion : MonoBehaviour
     public void ApplyInstant()
     {
         bool unlocked = IsUnlocked;
+
+        // Harita etiketi lokalizasyondan beslenir (sahnedeki yazı yalnızca editör önizlemesi).
+        if (nameText == null) nameText = GetComponentInChildren<TMP_Text>(true);
+        if (nameText != null) nameText.text = DisplayName;
 
         if (pin != null)
         {

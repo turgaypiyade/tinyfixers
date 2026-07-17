@@ -92,7 +92,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         var dim = NewRect("Dim", transform);
         StretchFull(dim);
         var dimImg = dim.gameObject.AddComponent<Image>();
-        dimImg.color = new Color(0f, 0f, 0f, 0.78f);
+        dimImg.color = new Color(0f, 0f, 0f, 0.93f);
         dimImg.raycastTarget = true;
         var tapBtn = dim.gameObject.AddComponent<Button>();
         tapBtn.transition = Selectable.Transition.None;

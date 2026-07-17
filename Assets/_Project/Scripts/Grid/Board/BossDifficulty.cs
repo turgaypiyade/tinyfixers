@@ -37,6 +37,10 @@ public static class BossDifficulty
         public bool weaknessEnabled;
         public float weaknessMultiplier;
         public float weaknessRotateSeconds;
+
+        // ── Faz 3: Kalkan pickup spawner (level'a elle koymak gerekmez) ──
+        public float playerPickupEverySeconds;   // 0 = kapalı (yeşil kalkan board'a düşer)
+        public float enemyPickupEverySeconds;    // 0 = kapalı (mor kalkan — boss'u korur)
     }
 
     // ── Eskalasyon sabitleri (tuning tek noktadan) ──
@@ -126,6 +130,11 @@ public static class BossDifficulty
                 weaknessEnabled = bossIndex >= 1,
                 weaknessMultiplier = 2f,
                 weaknessRotateSeconds = 10f,
+
+                // Kalkan pickup'ları: yeşil (oyuncu) ilk boss'tan itibaren periyodik düşer;
+                // mor (boss'u koruyan) 3. boss'tan itibaren gelir ve baskı unsuru olur.
+                playerPickupEverySeconds = bossIndex >= 1 ? 22f : 0f,
+                enemyPickupEverySeconds = bossIndex >= 3 ? 30f : 0f,
             };
 
             if (authored)

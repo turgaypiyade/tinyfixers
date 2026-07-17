@@ -219,6 +219,9 @@ public class SpecialBehaviorDispatcher
         int ox = specialTile.X;
         int oy = specialTile.Y;
 
+        // Tekil special aktivasyon sinyali (zincirdekiler dahil) — BossDuel bonus hasarı dinler.
+        board.RaiseSpecialActivated(special, new Vector2Int(ox, oy));
+
         switch (special)
         {
             case TileSpecial.LineV:

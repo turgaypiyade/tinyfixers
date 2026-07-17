@@ -26,5 +26,12 @@
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
 	<string>1:65499812126:ios:1aa1fe5a4e4f72c358f90f</string>
+	<!-- Google Sign-In kullanılmıyor; Firebase editor build kontrolü için placeholder.
+	     Google Sign-In eklenirse Firebase Console > Authentication > Google enable edilip
+	     plist yeniden indirilmeli (gerçek CLIENT_ID/REVERSED_CLIENT_ID gelir). -->
+	<key>CLIENT_ID</key>
+	<string>65499812126-placeholder.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.65499812126-placeholder</string>
 </dict>
 </plist>

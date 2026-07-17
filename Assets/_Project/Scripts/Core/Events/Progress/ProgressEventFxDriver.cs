@@ -120,6 +120,9 @@ public class ProgressEventFxDriver : MonoBehaviour
         tmp.fontStyle     = FontStyles.Bold;
         tmp.alignment     = TextAlignmentOptions.Center;
         tmp.raycastTarget = false;
+        // Çok haneli "+N" kutuya sığmayıp kırpılmasın: sarma kapalı, taşmaya izin.
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.overflowMode     = TextOverflowModes.Overflow;
 
         // Board'un renkli taşları üzerinde kaybolmasın: harfleri gerçekten KALINLAŞTIR
         // (FaceDilate stroke'u şişirir) + koyu kalın kontur + YATAY genişletme
