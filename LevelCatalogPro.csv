@@ -1,0 +1,67 @@
+﻿sep=;
+chapter;level;levelKey;levelData;info
+1;1;LevelCL_001;LevelP_00010;Normal | 30 hamle | chest1 x36
+1;2;LevelCL_002;LevelP_00020;Normal | 27 hamle | chest1 x36, Core x30, Plate x25
+1;3;LevelCL_003;LevelP_00030;Normal | 27 hamle | chest2 x29, Gear x30
+1;4;LevelCL_004;LevelP_00040;Normal | 30 hamle | Mud x49
+1;5;LevelCL_005;LevelP_00050;BossDuel | 25 hamle | BossDamage x800
+1;6;LevelCL_006;LevelP_00060;Normal | 30 hamle | chest1 x20, chest2 x20
+1;7;LevelCL_007;LevelP_00070;Normal | 30 hamle | chest1 x23, Oil x36
+1;8;LevelCL_008;LevelP_00080;Normal | 33 hamle | chest2 x45
+1;9;LevelCL_009;LevelP_00090;Normal | 35 hamle | plastic_orange x48, Core x20
+1;10;LevelCL_010;LevelP_00100;BossDuel | 23 hamle | BossDamage x900
+1;11;LevelCL_011;LevelP_00110;Normal | 25 hamle | Cargo x3
+1;12;LevelCL_012;LevelP_00120;Normal | 40 hamle | Cargo x6, plastic_orange x42
+1;13;LevelCL_013;LevelP_00130;Normal | 27 hamle | plastic_orange x13, plastic x12, chest1 x32
+1;14;LevelCL_014;LevelP_00140;Normal | 20 hamle | plastic_orange x18, plastic x18, chest1 x36
+1;15;LevelCL_015;LevelP_00150;BossDuel | 23 hamle | BossDamage x950
+1;16;LevelCL_016;LevelP_00160;Normal | 33 hamle | chest3 x10, Plastic_Blue x10, plastic_orange x10, chest1 x10
+1;17;LevelCL_017;LevelP_00170;Normal | 33 hamle | Plastic_Red x23, chest2 x5
+1;18;LevelCL_018;LevelP_00180;Normal | 29 hamle | chest3 x9, Mud x32, Cargo x6
+1;19;LevelCL_019;LevelP_00190;Normal | 27 hamle | Mud x8, chest1 x4
+1;20;LevelCL_020;LevelP_00200;BossDuel | 28 hamle | BossDamage x1000
+1;21;LevelCL_021;LevelP_00210;Normal | 30 hamle | ColorChest x4
+1;22;LevelCL_022;LevelP_00220;Normal | 30 hamle | chest1 x40, ColorChest x4
+1;23;LevelCL_023;LevelP_00230;Normal | 30 hamle | Oil x31, ColorChest x6, Mud x8
+1;24;LevelCL_024;LevelP_00240;Normal | 36 hamle | EnergyOrb x40, ColorChest x8
+1;25;LevelCL_025;LevelP_00250;BossDuel | 28 hamle | BossDamage x1000
+1;26;LevelCL_026;LevelP_00260;Normal | 22 hamle | EnergyOrb x750
+1;27;LevelCL_027;LevelP_00270;Normal | 34 hamle | ColorChest x16
+1;28;LevelCL_028;LevelP_00280;Normal | 29 hamle | EnergyOrb x18, Cargo x4
+1;29;LevelCL_029;LevelP_00290;Normal | 26 hamle | EnergyOrb x50, Mud x42, chest1 x27, ColorChest x4
+1;30;LevelCL_030;LevelP_00300;BossDuel | 28 hamle | BossDamage x1000
+1;31;LevelCL_031;LevelP_00310;Normal | 34 hamle | chest1 x40, ColorChest x3, Mud x12
+1;32;LevelCL_032;LevelP_00320;Normal | 36 hamle | ColorChest x4, chest3 x16, chest1 x14, Mud x24
+1;33;LevelCL_033;LevelP_00330;Normal | 31 hamle | EnergyOrb x40, Wardrobe x5
+1;34;LevelCL_034;LevelP_00340;Normal | 25 hamle | Tube x5
+1;35;LevelCL_035;LevelP_00350;BossDuel | 28 hamle | BossDamage x1000
+1;36;LevelCL_036;Levelp_00355;Normal | 25 hamle | chest1 x36, Tube x3
+1;37;LevelCL_037;LevelP_00360;Normal | 25 hamle | chest1 x10, Tube x1, chest2 x20, Cargo x1
+1;38;LevelCL_038;LevelP_00370;Normal | 25 hamle | chest3 x10, Plastic_Blue x10, plastic_orange x10, Tube x1, Cargo x1
+1;39;LevelCL_039;LevelP_00380;Normal | 29 hamle | EnergyOrb x50, chest1 x28, Tube x6
+1;40;LevelCL_040;LevelCL_040;Normal | 42 hamle | Gear x16, Core x14, ColorChest x16, EnergyContainer x2, Oil x4
+1;41;LevelCL_041;LevelP_00400;BossDuel | 28 hamle | BossDamage x1000
+1;42;LevelCL_042;LevelP_00410;Normal | 40 hamle | Wardrobe x10
+1;43;LevelCL_043;LevelP_00420;Normal | 25 hamle | Mud x27, HelmetPorcelain x27, chest1 x5, Tube x4
+1;44;LevelCL_044;LevelP_00430;Normal | 32 hamle | EnergyOrb x40, ColorChest x4, SculptingStone x20
+1;45;LevelCL_045;LevelP_00440;Normal | 25 hamle | HelmetPorcelain x28, ColorChest x7
+1;46;LevelCL_046;LevelP_00460;Normal | 35 hamle | SculptingStone x24, EnergyOrb x50
+1;47;LevelCL_047;LevelP_00470;Normal | 32 hamle | SculptingStone x12, Cargo x2, Tube x3, ColorChest x6
+1;48;LevelCL_048;LevelP_00480;Normal | 20 hamle | HelmetPorcelain x60, Cargo x6
+1;49;LevelCL_049;LevelP_00490;Normal | 21 hamle | HelmetPorcelain x72, ColorChest x1
+1;50;LevelCL_050;LevelP_00510;Normal | 21 hamle | SculptingSpecial x86
+1;51;LevelCL_051;LevelP_00520;Normal | 26 hamle | HelmetPorcelain x36, SculptingSpecial x36
+1;52;LevelCL_052;LevelP_00530;Normal | 23 hamle | PlasticTwoStage x32, ColorChest x4
+1;53;LevelCL_053;LevelP_00540;Normal | 23 hamle | PlasticTwoStage x27, chest1 x30, Mud x27
+1;54;LevelCL_054;LevelP_00560;Normal | 31 hamle | PlasticTwoStage x40, ColorChest x3
+1;55;LevelCL_055;LevelP_00570;Normal | 35 hamle | SculptingSpecial x28, EnergyOrb x30
+1;56;LevelCL_056;LevelP_00580;Normal | 35 hamle | PlasticTwoStage x24, Wardrobe x4
+1;57;LevelCL_057;LevelP_00590;Normal | 23 hamle | chest1 x46, PlasticTwoStage x34, chest3 x2
+1;58;LevelCL_058;LevelP_00610;Normal | 31 hamle | PlasticTwoStage x45, Wardrobe x2
+1;59;LevelCL_059;LevelP_00620;Normal | 21 hamle | SculptingSpecial x20, Wardrobe x3, chest1 x24
+1;60;LevelCL_060;LevelP_00630;Normal | 21 hamle | chest2 x32, Tube x3, chest1 x16, Cargo x1
+1;61;LevelCL_061;LevelP_00640;Normal | 19 hamle | PlasticTwoStage x9, ColorChest x2, chest1 x27, Mud x27
+1;62;LevelCL_062;LevelP_00660;Normal | 19 hamle | HelmetPorcelain x36, Oil x36
+1;63;LevelCL_063;LevelP_00690;Normal | 25 hamle | ColorChest x10
+1;64;LevelCL_064;LevelP_00710;Normal | 25 hamle | ColorChest x10
+1;65;LevelCL_065;LevelP_00720;Normal | 20 hamle | ColorChest x4, plastic_orange x16

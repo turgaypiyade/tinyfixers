@@ -25,33 +25,52 @@ public sealed class SimTeamService : ITeamService
 
     public SimTeamService()
     {
-        var config = ScriptableObject.CreateInstance<BotConfig>();   // default değerler (teamMemberCount=40, dil oto)
-        var lang = BotNameGenerator.DetectLanguage(config);
+        // Takımı OYUNCU KURDUYSA: tek üye (kendisi), hoş geldin mesajı — bot doldurma yok.
+        // Katıldığı (hazır) takımlar bot üyelerle simüle edilir.
+        bool created = PlayerTeamState.HasTeam && PlayerTeamState.IsCreator;
 
-        int memberCount = Mathf.Max(4, config.teamMemberCount);
-        for (int i = 0; i < memberCount; i++)
+        if (!created)
         {
-            members.Add(new BotPlayer
+            var config = ScriptableObject.CreateInstance<BotConfig>();   // default değerler (teamMemberCount=40, dil oto)
+            var lang = BotNameGenerator.DetectLanguage(config);
+
+            int memberCount = Mathf.Max(4, config.teamMemberCount);
+            for (int i = 0; i < memberCount; i++)
             {
-                botId = $"member_{i}",
-                displayName = BotNameGenerator.Generate(lang),
-                level = Random.Range(1, 30),
-            });
+                members.Add(new BotPlayer
+                {
+                    botId = $"member_{i}",
+                    displayName = BotNameGenerator.Generate(lang),
+                    level = Random.Range(1, 30),
+                });
+            }
         }
 
         info = new TeamInfo
         {
             teamName = PlayerTeamState.TeamName,   // liderlik panosuyla aynı takım adı
-            memberCount = members.Count,
+            memberCount = created ? 1 : members.Count,
             memberCapacity = 50,
-            giftCurrent = Random.Range(20, 90),
+            giftCurrent = created ? 0 : Random.Range(20, 90),
             giftTarget = 100,
             timerLabel = "2g 20s",
             missionText = "kazanmak için bir göreve BAŞLA",
         };
 
-        BuildChat();
-        BuildRequests();
+        if (created)
+        {
+            chat.Add(new TeamChatMessage
+            {
+                senderName = "TinyFixers",
+                text = "Takımın kuruldu! Arkadaşlarını davet et, birlikte yarışın.",
+                timeLabel = "şimdi",
+            });
+        }
+        else
+        {
+            BuildChat();
+            BuildRequests();
+        }
     }
 
     private void BuildChat()

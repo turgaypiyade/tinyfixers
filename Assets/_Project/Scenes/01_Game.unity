@@ -3511,8 +3511,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.07981221}
-  m_AnchorMax: {x: 0.74712646, y: 1.870892}
+  m_AnchorMin: {x: 0, y: 0.06818182}
+  m_AnchorMax: {x: 0.70995146, y: 1.5982621}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8599,16 +8599,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BoardController
   iconLibrary: {fileID: 0}
   levelData: {fileID: 0}
-  swapDuration: 0.05
+  swapDuration: 0.2
   fallDuration: 0.4
   clearDuration: 0.08
   spawnFeedGap: 1
   swapDurationMultiplier: 1
   fallColumnStep: 0
   fallDurationMultiplier: 1.1
-  fallVelocityCellsPerSecond: 26
+  fallVelocityCellsPerSecond: 20
   maxDiagonalSlidesPerCascade: 3
-  fallSpawnStaggerMultiplier: 0.15
+  fallSpawnStaggerMultiplier: 0.8
   swapMoveCurve:
     serializedVersion: 2
     m_Curve:
@@ -8662,6 +8662,8 @@ MonoBehaviour:
   fallSettleStrength: 0.116
   fallSettleStretchX: 0.101
   fallSettleOvershoot: 0.021
+  fallStretchAmount: 0.18
+  fallStretchRecover: 0.35
   preClearDelay: 0.02
   shakeDuration: 0.02
   shakeStrength: 4
@@ -8729,7 +8731,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-  specialChainDurationMultiplier: 0.25
+  specialChainDurationMultiplier: 0.5
   pulseImpactDelayStep: 0.05
   pulseImpactAnimTime: 0.1
   pulseChainCatchOverlap: 0.75
@@ -8780,6 +8782,7 @@ MonoBehaviour:
   ActiveBackgroundJobs: 0
   FlyingGoalOrbs: 0
   FlyingPatchBotDashes: 0
+  DrainingBossStrikes: 0
 --- !u!114 &1410826447
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -555,6 +555,26 @@
         {
           "key": "worldmap_region_milk_stall",
           "value": "Süt Tezgâhı"
+        },
+        {
+          "key": "worldmap_island_city",
+          "value": "Robot Şehri"
+        },
+        {
+          "key": "worldmap_island_park",
+          "value": "Robo Lunapark"
+        },
+        {
+          "key": "worldmap_island_museum",
+          "value": "Robo Müze"
+        },
+        {
+          "key": "worldmap_island_skyport",
+          "value": "Gök Limanı"
+        },
+        {
+          "key": "worldmap_island_farm",
+          "value": "Robo Çiftlik"
         }
       ]
     },
@@ -1104,6 +1124,26 @@
         {
           "key": "worldmap_region_milk_stall",
           "value": "Milk Stall"
+        },
+        {
+          "key": "worldmap_island_city",
+          "value": "Robot City"
+        },
+        {
+          "key": "worldmap_island_park",
+          "value": "Robo Park"
+        },
+        {
+          "key": "worldmap_island_museum",
+          "value": "Robo Museum"
+        },
+        {
+          "key": "worldmap_island_skyport",
+          "value": "Cloud Port"
+        },
+        {
+          "key": "worldmap_island_farm",
+          "value": "Robo Farm"
         }
       ]
     }

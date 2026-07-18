@@ -101,6 +101,10 @@ public sealed class WorldMapController : MonoBehaviour
 
     public IReadOnlyList<WorldMapRegion> Regions => Ordered;
 
+    /// <summary>Sıralı ada listesi (Journey vb. okur). Ada modu kapalıysa boş.</summary>
+    public IReadOnlyList<WorldMapIsland> Islands =>
+        islands ?? Array.Empty<WorldMapIsland>();
+
     /// <summary>İlk tamamlanmamış ada (görev paketi). Ada modu kapalıysa/hepsi bittiyse null.</summary>
     public WorldMapIsland ActiveIsland
     {

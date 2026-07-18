@@ -18,6 +18,11 @@ public sealed class LineHPatchBotComboExecutionRuntime
     public Action<ResolutionContext, TileView, TileView> ActivateSpecial;
     public Func<ResolutionContext, TileView, TileView, List<BoardAction>> ExecuteSpecialActions;
 
+    /// DiveBurst (plan §1.1): varış hücresinden sanal LineH beam'ini TEK MOTORDAN
+    /// (SpecialChainRunner, virtualLineSweeps) süpürür. Bağlıysa varış,
+    /// bespoke LineHSpecial.Execute + deferral + drain yerine bunu çalıştırır —
+    /// yoldaki Override/special arrival'da gerçek sınıfıyla tetiklenir (solo line yolu).
+    public Func<Vector2Int, BoardAction> BuildLineBurstChain;
 }
 
 public sealed class LineHPatchBotComboExecutionResult
@@ -86,9 +91,21 @@ public sealed class LineHPatchBotCombo
         {
             try
             {
-                var arrivalCtx = new ResolutionContext();
                 var targetCell = new Vector2Int(tx, ty);
-                var deferredActions = ExecuteLineHAtTarget(rt, arrivalCtx, targetCell);
+                List<BoardAction> deferredActions;
+                if (rt.BuildLineBurstChain != null)
+                {
+                    // DiveBurst: sanal LineH beam'i tek motordan — yoldaki special'lar
+                    // (Override dahil) arrival'da gerçek sınıfıyla tetiklenir, deferral yok.
+                    var chain = rt.BuildLineBurstChain(targetCell);
+                    deferredActions = chain != null ? new List<BoardAction> { chain } : new List<BoardAction>();
+                }
+                else
+                {
+                    // ESKİ yol (yalnız factory bağlanmamış fallback).
+                    var arrivalCtx = new ResolutionContext();
+                    deferredActions = ExecuteLineHAtTarget(rt, arrivalCtx, targetCell);
+                }
 
                 var sequencer = rt.Board.GetComponent<ActionSequencer>();
                 if (sequencer != null && deferredActions.Count > 0)

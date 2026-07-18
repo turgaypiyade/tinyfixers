@@ -9,18 +9,23 @@ using UnityEngine;
 /// vardığı her hücrede ne varsa (taş/obstacle/launcher/special) O AN tetiklenir →
 /// tetiklenen special kendi animasyonunu yayar. Sanal/deferred zamanlama yok.
 ///
-/// Bu sınıf o motorun mevcut çekirdeği (eski adı PulseChainSequenceAction). Şu an
-/// natively PulseCore (5x5) ve LineV/H'i işliyor; LineV/H beam'i yol üstündeki special'ı
+/// Bu sınıf o motorun mevcut çekirdeği (eski adı PulseChainSequenceAction). Natively
+/// PulseCore (5x5) ve LineV/H'i işliyor; LineV/H beam'i yol üstündeki special'ı
 /// VARDIĞI AN eşzamanlı alt-zincir olarak ateşliyor (AddArrivalTrigger →
 /// LaunchArrivalSubChain, background job = paralel). Diğer special'lar (PatchBot,
 /// Override) resolveOtherSpecial ile GERÇEK sınıflarıyla tetikleniyor.
 ///
+/// FAZ 1: 5 solo special'ın TÜM aktivasyonları (tap + swap) bu motordan geçer —
+/// SpecialResolver artık tekli aktivasyonda da runner seed'ler. protectedCells,
+/// swap'ın normal tarafında yeni oluşan special'ın emisyonlarca tüketilmemesini sağlar
+/// (eski Execute yolundaki ProtectedCells'in karşılığı; yalnız bu instance'ın kendi
+/// emisyonlarına uygulanır, alt-zincirlere taşınmaz — gravity sonrası hücre bayatlar).
+///
 /// Kuyruğa giren special anchor'lanır (pending-triggered → gravity-blocked) ki oyuncunun
 /// gördüğü yerde patlasın. Adımdan sonra CalculateCascades + catchOverlap ile düşüş.
 ///
-/// YAPILACAK (plan Faz 2-4): combolar bu motora tohumlansın (bespoke combo action'lar +
-/// DeferredLineHitOverrideCells emekliye), Line+Pulse fused 3x3 cross emisyonu eklensin,
-/// emisyonlar paralel ilerlesin.
+/// YAPILACAK (plan Faz 2-4): kalan bespoke combo action'lar + deferred-override yolları
+/// emekliye, emisyonlar paralel ilerlesin.
 /// </summary>
 public sealed class SpecialChainRunner : BoardAction
 {
@@ -41,6 +46,17 @@ public sealed class SpecialChainRunner : BoardAction
     // her merkez radyal dalga yayar, dalga bir special'a VARINCA o an tetiklenir (arrival).
     private readonly List<Vector2Int> simultaneousPulseCells;
 
+    // PatchBot+Pulse payload (DiveBurst): merkezde PulseCore TILE'I YOK — pulse havadan
+    // taşınıp geldi. Merkez hücre(ler) sanal patlama noktası; hücre mantığı
+    // ExplodePulsesSimultaneously ile AYNI, tek fark merkez doğrulaması (tile aranmaz)
+    // ve merkezdeki special de zincirlenir (tüketilmez).
+    private readonly List<Vector2Int> virtualPulseBurstCenters;
+
+    // PatchBot+LineV/H payload (DiveBurst): origin hücrede Line TILE'I YOK — beam havadan
+    // taşınıp geldi. Her strike kendi satır/sütununu süpürür; hücre mantığı
+    // SweepLinesSimultaneously ile AYNI, origin hücredeki special de zincirlenir.
+    private readonly List<LightningLineStrike> virtualLineSweeps;
+
     // Override+Line: implant edilen line hücreleri. Hepsi AYNI ANDA kendi satır/sütununu süpürür;
     // yol üstündeki special dalga varınca arrival ile tetiklenir (pulse'un line karşılığı).
     private readonly List<Vector2Int> simultaneousLineCells;
@@ -53,6 +69,11 @@ public sealed class SpecialChainRunner : BoardAction
     // Combo'nun KENDİ tile'ları (örn. Line+Pulse'ın iki origin'i): cross bunları zincir
     // değil TÜKETİLECEK (clear) sayar — yoksa kendilerini tekrar tetiklerlerdi.
     private readonly List<TileView> consumeTiles;
+
+    // Swap'ın normal tarafında AYNI hamlede oluşan yeni special hücreleri: bu instance'ın
+    // emisyonları bu hücrelere hiç dokunmaz (clear yok, zincir yok) — oyuncunun yeni
+    // kazandığı special patlamanın içinde kalsa da hayatta kalır.
+    private readonly HashSet<Vector2Int> protectedCells;
 
     // Queued specials are anchored via pending-triggered cells (gravity-blocked in
     // CalculateCascades) so they activate where the player saw them instead of
@@ -78,7 +99,10 @@ public sealed class SpecialChainRunner : BoardAction
         int crossHalf = 1,
         List<Vector2Int> simultaneousPulseCells = null,
         List<Vector2Int> simultaneousLineCells = null,
-        List<Vector2Int> simultaneousMixedCells = null)
+        List<Vector2Int> simultaneousMixedCells = null,
+        HashSet<Vector2Int> protectedCells = null,
+        List<Vector2Int> virtualPulseBurstCenters = null,
+        List<LightningLineStrike> virtualLineSweeps = null)
     {
         this.board = board;
         this.initialSpecials = initialSpecials ?? new List<TileView>();
@@ -92,15 +116,24 @@ public sealed class SpecialChainRunner : BoardAction
         this.simultaneousPulseCells = simultaneousPulseCells;
         this.simultaneousLineCells = simultaneousLineCells;
         this.simultaneousMixedCells = simultaneousMixedCells;
+        this.protectedCells = protectedCells;
+        this.virtualPulseBurstCenters = virtualPulseBurstCenters;
+        this.virtualLineSweeps = virtualLineSweeps;
     }
+
+    private bool IsProtectedCell(int x, int y) =>
+        protectedCells != null && protectedCells.Contains(new Vector2Int(x, y));
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
         bool hasSimultaneousPulses = simultaneousPulseCells != null && simultaneousPulseCells.Count > 0;
         bool hasSimultaneousLines = simultaneousLineCells != null && simultaneousLineCells.Count > 0;
         bool hasSimultaneousMixed = simultaneousMixedCells != null && simultaneousMixedCells.Count > 0;
+        bool hasVirtualBursts = virtualPulseBurstCenters != null && virtualPulseBurstCenters.Count > 0;
+        bool hasVirtualLineSweeps = virtualLineSweeps != null && virtualLineSweeps.Count > 0;
         if (board == null || (initialSpecials.Count == 0 && linePulseCrossCenter == null
-                              && !hasSimultaneousPulses && !hasSimultaneousLines && !hasSimultaneousMixed))
+                              && !hasSimultaneousPulses && !hasSimultaneousLines && !hasSimultaneousMixed
+                              && !hasVirtualBursts && !hasVirtualLineSweeps))
             yield break;
 
         var queue = new Queue<TileView>(initialSpecials);
@@ -109,11 +142,21 @@ public sealed class SpecialChainRunner : BoardAction
         // Override+Pulse: tüm implant pulse'lar AYNI ANDA patlar (yer değiştirme yok); zincirleri
         // radyal dalga hücreye varınca arrival ile tetiklenir (Line/SweepLine ile aynı model).
         if (hasSimultaneousPulses)
-            yield return ExplodePulsesSimultaneously(sequencer, processed);
+            yield return ExplodePulsesSimultaneously(sequencer, processed, simultaneousPulseCells, centersArePulseTiles: true);
+
+        // PatchBot+Pulse payload (DiveBurst): varış hücresinde sanal pulse patlaması —
+        // hedef seçimi hariç her şey pulse yolunun aynısı (alandaki special arrival'da tetiklenir).
+        if (hasVirtualBursts)
+            yield return ExplodePulsesSimultaneously(sequencer, processed, virtualPulseBurstCenters, centersArePulseTiles: false);
 
         // Override+Line: tüm implant line'lar AYNI ANDA kendi satır/sütununu süpürür.
         if (hasSimultaneousLines)
-            yield return SweepLinesSimultaneously(sequencer, processed);
+            yield return SweepLinesSimultaneously(sequencer, processed, linesAreTiles: true);
+
+        // PatchBot+Line payload (DiveBurst): varış hücresinden sanal beam süpürmesi —
+        // hedef seçimi hariç her şey line yolunun aynısı (yoldaki special arrival'da tetiklenir).
+        if (hasVirtualLineSweeps)
+            yield return SweepLinesSimultaneously(sequencer, processed, linesAreTiles: false);
 
         // Override+Override: board'daki karışık special'lar aynı anda paralel sub-chain olarak ateşlenir.
         if (hasSimultaneousMixed)
@@ -234,6 +277,7 @@ public sealed class SpecialChainRunner : BoardAction
             for (int y = cy - areaHalf; y <= cy + areaHalf; y++)
             {
                 if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
+                if (IsProtectedCell(x, y)) continue; // swap'ta yeni oluşan special'a dokunma
 
                 if (!SpecialUtils.CanAffectCell(board, x, y))
                 {
@@ -336,6 +380,8 @@ public sealed class SpecialChainRunner : BoardAction
             int x = isHorizontal ? i : cx;
             int y = isHorizontal ? cy : i;
 
+            if (IsProtectedCell(x, y)) continue; // swap'ta yeni oluşan special'a dokunma
+
             if (!SpecialUtils.CanAffectCell(board, x, y))
                 continue;
 
@@ -432,6 +478,7 @@ public sealed class SpecialChainRunner : BoardAction
 
         void CollectCell(int x, int y)
         {
+            if (IsProtectedCell(x, y)) return; // swap'ta yeni oluşan special'a dokunma
             if (!SpecialUtils.CanAffectCell(board, x, y)) return;
 
             var cell = new Vector2Int(x, y);
@@ -502,19 +549,27 @@ public sealed class SpecialChainRunner : BoardAction
         yield return RunGravityWithOverlap(hasNext: false);
     }
 
-    // Override+Pulse: implant edilen TÜM pulse'ları AYNI ANDA patlatır. Tek MatchClearAction tüm
+    // Override+Pulse / PatchBot+Pulse: TÜM merkezler AYNI ANDA patlar. Tek MatchClearAction tüm
     // merkezlerin alan birleşimini temizler; her hücrenin gecikmesi en yakın merkeze uzaklık × step
     // (radyal dalga). Yer değiştirme yok — gravity sadece en sonda bir kez. Alandaki special'lar
     // dalga hücreye varınca arrival-trigger ile tetiklenir (LaunchArrivalSubChain = aynı dispatch).
-    private IEnumerator ExplodePulsesSimultaneously(ActionSequencer sequencer, HashSet<TileView> processed)
+    // centersArePulseTiles: true → merkezde gerçek PulseCore tile'ı aranır ve tüketilir
+    // (Override+Pulse implant); false → merkez sanal patlama noktası (PatchBot payload,
+    // tile yok), merkez hücredeki special de zincirlenir.
+    private IEnumerator ExplodePulsesSimultaneously(
+        ActionSequencer sequencer, HashSet<TileView> processed,
+        List<Vector2Int> rawCenters, bool centersArePulseTiles)
     {
         var centers = new HashSet<Vector2Int>();
-        foreach (var cell in simultaneousPulseCells)
+        foreach (var cell in rawCenters)
         {
             if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height) continue;
-            var t = board.Tiles[cell.x, cell.y];
-            if (t != null && t.GetSpecial() == TileSpecial.PulseCore)
-                centers.Add(cell);
+            if (centersArePulseTiles)
+            {
+                var t = board.Tiles[cell.x, cell.y];
+                if (t == null || t.GetSpecial() != TileSpecial.PulseCore) continue;
+            }
+            centers.Add(cell);
         }
         if (centers.Count == 0)
             yield break;
@@ -564,7 +619,9 @@ public sealed class SpecialChainRunner : BoardAction
                 float delay = NearestCenterDist(x, y) * board.PulseImpactDelayStep;
 
                 // Merkez olmayan bir special → zincirlenir: dalga varınca arrival ile tetiklenir.
-                if (!centers.Contains(cell) && tile.GetSpecial() != TileSpecial.None && !processed.Contains(tile))
+                // (Sanal merkezde tile tüketilmez; merkez hücredeki special de zincirlenir.)
+                if ((!centersArePulseTiles || !centers.Contains(cell))
+                    && tile.GetSpecial() != TileSpecial.None && !processed.Contains(tile))
                 {
                     processed.Add(tile);
                     AnchorQueued(tile, x, y);
@@ -615,23 +672,38 @@ public sealed class SpecialChainRunner : BoardAction
         yield return RunGravityWithOverlap(hasNext: false);
     }
 
-    // Override+Line: implant edilen TÜM line'ları AYNI ANDA süpürür. Her LineH kendi satırını,
+    // Override+Line / PatchBot+Line: TÜM line'ları AYNI ANDA süpürür. Her LineH kendi satırını,
     // her LineV kendi sütununu temizler (tek MatchClearAction, LightningStrike). Yol üstündeki
     // special'lar dalga varınca arrival ile tetiklenir (LaunchArrivalSubChain = aynı dispatch).
-    // SweepCross ile aynı hücre mantığı; tek fark merkez yerine keyfi line hücreleri.
-    private IEnumerator SweepLinesSimultaneously(ActionSequencer sequencer, HashSet<TileView> processed)
+    // linesAreTiles: true → simultaneousLineCells'ten gerçek Line tile'ları okunur ve tüketilir
+    // (Override+Line implant); false → virtualLineSweeps'ten sanal beam'ler (PatchBot payload,
+    // origin'de tile yok), origin hücredeki special de zincirlenir.
+    private IEnumerator SweepLinesSimultaneously(ActionSequencer sequencer, HashSet<TileView> processed, bool linesAreTiles)
     {
         var lines = new List<(Vector2Int cell, bool horizontal)>();
         var lineCellSet = new HashSet<Vector2Int>();
-        foreach (var cell in simultaneousLineCells)
+        if (linesAreTiles)
         {
-            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height) continue;
-            var t = board.Tiles[cell.x, cell.y];
-            if (t == null) continue;
-            var sp = t.GetSpecial();
-            if (sp != TileSpecial.LineH && sp != TileSpecial.LineV) continue;
-            lines.Add((cell, sp == TileSpecial.LineH));
-            lineCellSet.Add(cell);
+            foreach (var cell in simultaneousLineCells)
+            {
+                if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height) continue;
+                var t = board.Tiles[cell.x, cell.y];
+                if (t == null) continue;
+                var sp = t.GetSpecial();
+                if (sp != TileSpecial.LineH && sp != TileSpecial.LineV) continue;
+                lines.Add((cell, sp == TileSpecial.LineH));
+                lineCellSet.Add(cell);
+            }
+        }
+        else
+        {
+            foreach (var strike in virtualLineSweeps)
+            {
+                var cell = strike.originCell;
+                if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height) continue;
+                lines.Add((cell, strike.isHorizontal));
+                // lineCellSet boş kalır: origin'de tile yok; orada special varsa zincirlenir.
+            }
         }
         if (lines.Count == 0)
             yield break;

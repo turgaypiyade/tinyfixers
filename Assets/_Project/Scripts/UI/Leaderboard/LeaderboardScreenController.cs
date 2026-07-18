@@ -63,8 +63,19 @@ public sealed class LeaderboardScreenController : MonoBehaviour
     [Tooltip("Avatarı olmayan girdilere isme göre deterministik dağıtılan mock avatar havuzu.")]
     [SerializeField] private Sprite[] avatarPool;
 
+    [Header("Arkadaş Ekle görünümü (Arkadaşlar sekmesi)")]
+    [Tooltip("Liste yerine gösterilen 'Arkadaş Bul + Önerilen Arkadaşlar' kökü (başta kapalı).")]
+    [SerializeField] private GameObject addFriendsRoot;
+    [SerializeField] private RectTransform suggestionContainer;
+    [SerializeField] private FriendSuggestionRow suggestionRowPrefab;
+    [SerializeField] private Button findFriendButton;
+    [SerializeField] private FindFriendPopup findFriendPopup;
+    [Tooltip("Kayan liste alanı — Ekle görünümü açıkken gizlenir.")]
+    [SerializeField] private GameObject listAreaRoot;
+
     private ILeaderboardService service;
     private readonly List<LeaderboardRow> rows = new();
+    private readonly List<FriendSuggestionRow> suggestionRows = new();
     private readonly Dictionary<LeaderboardTab, int> subFilterByTab = new();
     private LeaderboardTab current = LeaderboardTab.Weekly;
     private bool wired;
@@ -73,6 +84,7 @@ public sealed class LeaderboardScreenController : MonoBehaviour
     {
         service ??= BackendServices.Leaderboard;
         service.OnChanged += Render;
+        FriendState.OnChanged += OnFriendsChanged;
         WireTabs();
         Build(current);
     }
@@ -80,6 +92,14 @@ public sealed class LeaderboardScreenController : MonoBehaviour
     private void OnDisable()
     {
         if (service != null) service.OnChanged -= Render;
+        FriendState.OnChanged -= OnFriendsChanged;
+    }
+
+    // Arkadaş eklendi/çıktı (öneri kartı veya popup) → arkadaş listesi yeniden yüklensin.
+    private void OnFriendsChanged()
+    {
+        if (current == LeaderboardTab.Friends) service?.Fetch(current);
+        Render();
     }
 
     private void WireTabs()
@@ -99,6 +119,9 @@ public sealed class LeaderboardScreenController : MonoBehaviour
             int captured = i;
             toggleButtons[i].onClick.AddListener(() => SelectSubFilter(captured));
         }
+
+        if (findFriendButton != null && findFriendPopup != null)
+            findFriendButton.onClick.AddListener(findFriendPopup.Open);
 
         wired = true;
     }
@@ -134,6 +157,27 @@ public sealed class LeaderboardScreenController : MonoBehaviour
             Destroy(r.gameObject);
         }
         rows.Clear();
+
+        // Arkadaşlar sekmesi: "Ekle" toggle'ı — veya hiç arkadaş yokken "Liste" — öneri
+        // görünümünü açar (kullanıcı kuralı: liste boşsa öneriler gelsin, arama hep elde).
+        bool addFriendsView = current == LeaderboardTab.Friends
+            && (CurrentSubFilter == 1 || !FriendState.HasFriends);
+        if (addFriendsRoot != null) addFriendsRoot.SetActive(addFriendsView);
+        if (listAreaRoot != null) listAreaRoot.SetActive(!addFriendsView);
+        if (!addFriendsView && findFriendPopup != null && findFriendPopup.gameObject.activeSelf)
+            findFriendPopup.Close();
+
+        if (addFriendsView)
+        {
+            if (selfRow != null) selfRow.gameObject.SetActive(false);
+            RenderSuggestions();
+
+            if (timeChip != null) timeChip.gameObject.SetActive(false);
+            ApplyScreenBackground();
+            UpdateTabVisuals();
+            UpdateToggleVisuals();
+            return;
+        }
 
         var entries = service?.GetEntries(current, CurrentSubFilter);
         var self = entries?.Find(e => e.isSelf);
@@ -364,6 +408,41 @@ public sealed class LeaderboardScreenController : MonoBehaviour
                     : (theme != null ? theme.screenBackground : Color.gray);
             }
         }
+    }
+
+    // "Önerilen Arkadaşlar" listesini yeniden basar. Ekle/X, FriendState'i değiştirir;
+    // OnChanged → Render → burası tekrar koşar (eklenen/reddedilen kart düşer).
+    private void RenderSuggestions()
+    {
+        foreach (var r in suggestionRows)
+        {
+            if (r == null) continue;
+            r.gameObject.SetActive(false);
+            r.transform.SetParent(null, false);
+            Destroy(r.gameObject);
+        }
+        suggestionRows.Clear();
+
+        if (suggestionContainer == null || suggestionRowPrefab == null) return;
+
+        foreach (var p in FriendDirectory.GetSuggestions(8))
+        {
+            var captured = p;
+            var row = Instantiate(suggestionRowPrefab, suggestionContainer);
+            row.Bind(captured, PickPoolAvatar(captured.name), theme,
+                onAdd: () => FriendState.AddFriend(captured.name),
+                onDismiss: () => FriendState.DismissSuggestion(captured.name));
+            suggestionRows.Add(row);
+        }
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(suggestionContainer);
+    }
+
+    private Sprite PickPoolAvatar(string name)
+    {
+        if (avatarPool == null || avatarPool.Length == 0) return null;
+        int hash = string.IsNullOrEmpty(name) ? 0 : Mathf.Abs(name.GetHashCode());
+        return avatarPool[hash % avatarPool.Length];
     }
 
     // Avatarı olmayan girdiye havuzdan isme göre deterministik avatar ata

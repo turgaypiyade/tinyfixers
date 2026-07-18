@@ -119,6 +119,38 @@ public static class MockupUI
         return btn;
     }
 
+    /// <summary>
+    /// TMP_InputField kurar (krem kart zemin + placeholder + text). multiline=true →
+    /// çok satırlı (açıklama kutusu). (TeamMockupSetup'taki yerel kopyanın ortaklaşmışı.)
+    /// </summary>
+    public static TMP_InputField BuildInputField(string name, Transform parent, UITheme theme,
+                                                 string placeholderText, float fontSize = 26, bool multiline = false)
+    {
+        var bg = NewImage(name, parent, Color.white);
+        Card(bg, theme, theme.creamSurface);
+        var field = bg.gameObject.AddComponent<TMP_InputField>();
+
+        var area = NewRect("TextArea", bg.transform);
+        Stretch(area);
+        area.offsetMin = new Vector2(18, 6); area.offsetMax = new Vector2(-18, -6);
+        area.gameObject.AddComponent<RectMask2D>();
+
+        var placeholderAlign = multiline ? TextAlignmentOptions.TopLeft : TextAlignmentOptions.Left;
+        var placeholder = NewText("Placeholder", area, placeholderText, fontSize,
+            new Color(0.42f, 0.34f, 0.26f, 0.6f), placeholderAlign, theme.bodyFont);
+        Stretch(placeholder.rectTransform);
+        var text = NewText("Text", area, "", fontSize, theme.textOnCream, placeholderAlign, theme.bodyFont);
+        Stretch(text.rectTransform);
+
+        field.textViewport = area;
+        field.textComponent = text;
+        field.placeholder = placeholder;
+        field.lineType = multiline ? TMP_InputField.LineType.MultiLineNewline : TMP_InputField.LineType.SingleLine;
+        field.targetGraphic = bg;
+        field.pointSize = fontSize;
+        return field;
+    }
+
     public static TextMeshProUGUI NewText(string name, Transform parent, string text, float size,
                                           Color color, TextAlignmentOptions align, TMP_FontAsset font)
     {

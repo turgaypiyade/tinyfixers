@@ -85,7 +85,7 @@ public sealed class MainMenuRewardCollectFx : MonoBehaviour
 
     private RectTransform FindLevelButton()
     {
-        var ctrl = FindObjectOfType<MainMenuLevelButtonController>();
+        var ctrl = FindFirstObjectByType<MainMenuLevelButtonController>();
         if (ctrl != null) return ctrl.transform as RectTransform;
         return null;   // bulunamazsa alt-orta noktaya uçar
     }

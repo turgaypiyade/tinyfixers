@@ -143,7 +143,17 @@ public class SpecialResolver
                     visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
                 EmitBoardSignal = signal => { },
                 EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
-                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
+                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution),
+                DrainDeferredOverrides = (deferCtx, acts) => DrainDeferredPulseComboOverrides(deferCtx, acts),
+                // DiveBurst: varıştaki pulse patlaması tek motordan — alandaki special'lar
+                // (Override dahil) arrival'da gerçek sınıfıyla tetiklenir, deferral yok.
+                BuildPulseBurstChain = cells => new SpecialChainRunner(
+                    board,
+                    new List<TileView>(),
+                    PulseChainAreaHalf,
+                    board.PulseChainCatchOverlap,
+                    ResolveOtherSpecialInline,
+                    virtualPulseBurstCenters: cells)
             });
 
             actions.AddRange(result.Actions);
@@ -169,7 +179,15 @@ public class SpecialResolver
                 PatchbotService = patchbotComboService,
                 VisualService = visualService,
                 Effects = effectOrchestrator,
-                ActivateSpecial = dispatcher.ApplySpecialActivation
+                ActivateSpecial = dispatcher.ApplySpecialActivation,
+                // DiveBurst: varıştaki LineV beam'i tek motordan (sanal sweep, deferral yok).
+                BuildLineBurstChain = cell => new SpecialChainRunner(
+                    board,
+                    new List<TileView>(),
+                    PulseChainAreaHalf,
+                    board.PulseChainCatchOverlap,
+                    ResolveOtherSpecialInline,
+                    virtualLineSweeps: new List<LightningLineStrike> { new LightningLineStrike(cell, false) })
             });
 
             actions.AddRange(result.Actions);
@@ -197,7 +215,15 @@ public class SpecialResolver
                 PatchbotService = patchbotComboService,
                 VisualService = visualService,
                 Effects = effectOrchestrator,
-                ActivateSpecial = dispatcher.ApplySpecialActivation
+                ActivateSpecial = dispatcher.ApplySpecialActivation,
+                // DiveBurst: varıştaki LineH beam'i tek motordan (sanal sweep, deferral yok).
+                BuildLineBurstChain = cell => new SpecialChainRunner(
+                    board,
+                    new List<TileView>(),
+                    PulseChainAreaHalf,
+                    board.PulseChainCatchOverlap,
+                    ResolveOtherSpecialInline,
+                    virtualLineSweeps: new List<LightningLineStrike> { new LightningLineStrike(cell, true) })
             });
 
             actions.AddRange(result.Actions);
@@ -419,242 +445,36 @@ public class SpecialResolver
             var specialTile = aOriginallySpecial ? a : b;
             var originalSpecial = aOriginallySpecial ? originalSa : originalSb;
 
-            if (originalSpecial == TileSpecial.LineV || originalSpecial == TileSpecial.LineH)
+            // FAZ 1: tekli swap aktivasyonu da tek motordan (SpecialChainRunner).
+            // Swap sırasında normal taraftan oluşan yeni special hücreleri korunur:
+            // externalProtectedCells = ProcessSwap'tan gelen kesin liste (winner herhangi
+            // bir tile olabilir), normalPartner fallback = ek güvence. Motor bu hücrelere
+            // hiç dokunmaz (clear yok, zincir yok).
+            if (originalSpecial == TileSpecial.LineV || originalSpecial == TileSpecial.LineH ||
+                originalSpecial == TileSpecial.PulseCore || originalSpecial == TileSpecial.PatchBot)
             {
-                // Swap'tan korunacak yeni special yoksa ve yolunda başka special varsa:
-                // sıralı motor (satır/sütun anında kırılır + gravity + havada yakalama).
-                var normalPartnerForLineGuard = aOriginallySpecial ? b : a;
-                bool hasProtectedForLineChain =
-                    (externalProtectedCells != null && externalProtectedCells.Count > 0)
-                    || (normalPartnerForLineGuard != null && normalPartnerForLineGuard.GetSpecial() != TileSpecial.None);
-
-                if (!hasProtectedForLineChain && IsSupportedSpecialChain(specialTile, PulseChainAreaHalf))
-                {
-                    actions.Add(new SpecialChainRunner(
-                        board,
-                        new List<TileView> { specialTile },
-                        PulseChainAreaHalf,
-                        board.PulseChainCatchOverlap,
-                        ResolveOtherSpecialInline));
-                    TraceSpecialChain("ResolveSpecialSwap.LineChain", a, b);
-                    board.IsSpecialActivationPhase = false;
-                    return actions;
-                }
-            }
-
-            if (originalSpecial == TileSpecial.LineV)
-            {
-                ctx.Affected.Add(specialTile);
-                SpecialCellUtils.MarkAffectedCell(ctx, specialTile, board);
-
-                var result = lineVSpecial.Execute(new LineVExecutionRuntime
-                {
-                    Board = board,
-                    Context = ctx,
-                    Origin = specialTile,
-                    Partner = null,
-                    FinalizeAtEnd = true,
-                    ProtectedCells = externalProtectedCells,
-                    ActivateSpecial = dispatcher.ApplySpecialActivation,
-                    ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                    CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                    FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
-                    EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
-                    ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
-                });
-                actions.AddRange(result.Actions);
-                DrainDeferredLineOverrides(actions);
-                TraceSpecialChain("ResolveSpecialSwap.LineV", a, b);
-                board.IsSpecialActivationPhase = false;
-                return actions;
-            }
-
-            if (originalSpecial == TileSpecial.LineH)
-            {
-                ctx.Affected.Add(specialTile);
-                SpecialCellUtils.MarkAffectedCell(ctx, specialTile, board);
-
-                var result = lineHSpecial.Execute(new LineHExecutionRuntime
-                {
-                    Board = board,
-                    Context = ctx,
-                    Origin = specialTile,
-                    Partner = null,
-                    FinalizeAtEnd = true,
-                    ProtectedCells = externalProtectedCells,
-                    ActivateSpecial = dispatcher.ApplySpecialActivation,
-                    ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                    CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                    FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
-                    EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
-                    ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
-                });
-
-                actions.AddRange(result.Actions);
-                DrainDeferredLineOverrides(actions);
-                TraceSpecialChain("ResolveSpecialSwap.LineH", a, b);
-                board.IsSpecialActivationPhase = false;
-                return actions;
-            }
-
-            if (originalSpecial == TileSpecial.PulseCore)
-            {
-                // Pulse-only zincir (2+) ve swap'tan korunacak yeni special yoksa:
-                // sıralı patlama + gravity + havada yakalama. Aksi hâlde eski birleşik yol.
-                var normalPartnerForGuard = aOriginallySpecial ? b : a;
-                bool hasProtectedForChain =
-                    (externalProtectedCells != null && externalProtectedCells.Count > 0)
-                    || (normalPartnerForGuard != null && normalPartnerForGuard.GetSpecial() != TileSpecial.None);
-
-                if (!hasProtectedForChain && IsSupportedSpecialChain(specialTile, PulseChainAreaHalf))
-                {
-                    actions.Add(new SpecialChainRunner(
-                        board,
-                        new List<TileView> { specialTile },
-                        PulseChainAreaHalf,
-                        board.PulseChainCatchOverlap,
-                        ResolveOtherSpecialInline));
-                    TraceSpecialChain("ResolveSpecialSwap.PulseChain", a, b);
-                    board.IsSpecialActivationPhase = false;
-                    return actions;
-                }
-
-                ctx.Affected.Add(specialTile);
-                SpecialCellUtils.MarkAffectedCell(ctx, specialTile, board);
-
-                // Swap sırasında normal taraftan oluşan yeni special hücrelerini koru.
-                // externalProtectedCells: ProcessSwap'tan gelen kesin liste (winner herhangi bir tile olabilir).
-                // normalPartner fallback: externalProtectedCells yoksa veya eksikse ek güvence.
                 HashSet<Vector2Int> protectedCells = externalProtectedCells != null
                     ? new HashSet<Vector2Int>(externalProtectedCells)
                     : null;
 
                 var normalPartner = aOriginallySpecial ? b : a;
                 if (normalPartner != null && normalPartner.GetSpecial() != TileSpecial.None)
-                {
-                    var cell = new Vector2Int(normalPartner.X, normalPartner.Y);
-                    (protectedCells ??= new HashSet<Vector2Int>()).Add(cell);
-                    Debug.Log($"[PulseCore] protecting normalPartner special at ({cell.x},{cell.y})");
-                }
+                    (protectedCells ??= new HashSet<Vector2Int>()).Add(new Vector2Int(normalPartner.X, normalPartner.Y));
 
-                if (protectedCells != null && protectedCells.Count > 0)
-                    Debug.Log($"[PulseCore] total protected cells={protectedCells.Count}: [{string.Join(", ", protectedCells)}]");
-
-                var result = pulseCoreSpecial.Execute(new PulseCoreExecutionRuntime
-                {
-                    Board = board,
-                    Context = ctx,
-                    Origin = specialTile,
-                    Partner = null,
-                    FinalizeAtEnd = true,
-                    ProtectedCells = protectedCells,
-                    ActivateSpecial = dispatcher.ApplySpecialActivation,
-                    ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                    CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                    FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
-                    EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
-                    ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
-                });
-                actions.AddRange(result.Actions);
-                DrainDeferredPulseComboOverrides(actions);
-                TraceSpecialChain("ResolveSpecialSwap.PulseCore", a, b);
-                board.IsSpecialActivationPhase = false;
-                return actions;
-            }
-
-            if (originalSpecial == TileSpecial.PatchBot)
-            {
-                ctx.Affected.Add(specialTile);
-                SpecialCellUtils.MarkAffectedCell(ctx, specialTile, board);
-
-                var result = patchBotSpecial.Execute(new PatchBotExecutionRuntime
-                {
-                    Board = board,
-                    Context = ctx,
-                    Origin = specialTile,
-                    Partner = null,
-                    FinalizeAtEnd = true,
-                    PatchbotService = patchbotComboService,
-                    VisualService = visualService,
-                    Effects = effectOrchestrator,
-                    ActivateSpecial = dispatcher.ApplySpecialActivation,
-                    ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                    CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                    FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
-                });
-
-                actions.AddRange(result.Actions);
-                TraceSpecialChain("ResolveSpecialSwap.PatchBot", a, b);
+                actions.Add(new SpecialChainRunner(
+                    board,
+                    new List<TileView> { specialTile },
+                    PulseChainAreaHalf,
+                    board.PulseChainCatchOverlap,
+                    ResolveOtherSpecialInline,
+                    protectedCells: protectedCells));
+                TraceSpecialChain($"ResolveSpecialSwap.{originalSpecial}", a, b);
                 board.IsSpecialActivationPhase = false;
                 return actions;
             }
         }
 
         return actions;
-        /*         if (aOriginallySpecial)
-                {
-                    ctx.Affected.Add(a);
-                    SpecialCellUtils.MarkAffectedCell(ctx, a, board);
-                }
-
-                if (bOriginallySpecial)
-                {
-                    ctx.Affected.Add(b);
-                    SpecialCellUtils.MarkAffectedCell(ctx, b, board);
-                }
-
-                if (consumeNormalPartner)
-                {
-                    ctx.Affected.Add(a);
-                    ctx.Affected.Add(b);
-                    SpecialCellUtils.MarkAffectedCell(ctx, a, board);
-                    SpecialCellUtils.MarkAffectedCell(ctx, b, board);
-                }
-
-                bool suppressPulseImpactAnimations = (originalSaIsPulse && originalSbIsPulse) || (originalSaIsOverride && originalSbIsOverride);
-                bool suppressPerTileClearVfx = (originalSaIsPulse && originalSbIsLine) || (originalSbIsPulse && originalSaIsLine);
-
-                ctx.HasLineActivation = originalSaIsLine || originalSbIsLine;
-
-                if (bothOriginallySpecial)
-                {
-                    dispatcher.ApplyComboEffect(ctx, a, b, originalSa, originalSb);
-                    ctx.Processed.Add(new Vector2Int(a.X, a.Y));
-                    ctx.Processed.Add(new Vector2Int(b.X, b.Y));
-                }
-                else
-                {
-                    var specialTile = aOriginallySpecial ? a : b;
-                    var partnerTile = aOriginallySpecial ? b : a;
-                    var originalSpecial = aOriginallySpecial ? originalSa : originalSb;
-                    var originalPartner = aOriginallySpecial ? originalSb : originalSa;
-
-                    TileView partnerForActivation = null;
-                    if (originalSpecial == TileSpecial.SystemOverride)
-                        partnerForActivation = partnerTile;
-                    else if (originalSpecial == TileSpecial.PatchBot && originalPartner != TileSpecial.None)
-                        partnerForActivation = partnerTile;
-
-                    queueProcessor.EnqueueActivation(ctx, specialTile, partnerForActivation);
-                }
-
-                queueProcessor.EnqueueChainSpecials(ctx);
-                queueProcessor.ProcessQueue(ctx);
-
-                var fanoutActions = fanoutService.ProcessFanout(ctx);
-                actions.AddRange(fanoutActions);
-
-                if (ctx.OverrideDeferredPulseExplosions.Count == 0)
-                    implantService.CleanupImplantedTiles(ctx);
-
-                if (ctx.OverrideRadialClearDelays != null && ctx.OverrideRadialClearDelays.Count > 0)
-                    visualService.FireOverrideOverrideSpecialVisuals(ctx.Affected, ctx.OverrideRadialClearDelays);
-
-                actions.Add(BuildMatchClearAction(suppressPulseImpactAnimations, suppressPerTileClearVfx));
-
-                TraceSpecialChain("ResolveSpecialSwap", a, b);
-                board.IsSpecialActivationPhase = false;
-                return actions;  */
     }
 
     public List<BoardAction> ResolveSpecialSolo(TileView specialTile)
@@ -674,237 +494,30 @@ public class SpecialResolver
 
         TileSpecial spec = specialTile.GetSpecial();
 
-        if (spec == TileSpecial.LineV || spec == TileSpecial.LineH)
+        // FAZ 1: 5 solo special'ın tamamı tek gerçek-yayılım motorundan (SpecialChainRunner).
+        // Line/Pulse natively süpürülür/patlar; PatchBot ve Override zincir düğümü olarak
+        // GERÇEK sınıflarıyla tetiklenir (ResolveOtherSpecialInline → Execute + fanout
+        // delegeleri = Yol A töreni). Eski Execute(FinalizeAtEnd=true) + deferred-drain
+        // solo yolları emekli.
+        if (spec == TileSpecial.LineV || spec == TileSpecial.LineH ||
+            spec == TileSpecial.PulseCore || spec == TileSpecial.PatchBot ||
+            spec == TileSpecial.SystemOverride)
         {
-            // Yolunda başka special varsa: satır/sütun anında kırılır + gravity başlar
-            // + sıradaki special düşen taşları havada yakalar (pulse zinciriyle aynı motor).
-            if (IsSupportedSpecialChain(specialTile, PulseChainAreaHalf))
-            {
-                actions.Add(new SpecialChainRunner(
-                    board,
-                    new List<TileView> { specialTile },
-                    PulseChainAreaHalf,
-                    board.PulseChainCatchOverlap,
-                    ResolveOtherSpecialInline));
-                TraceSpecialChain("ResolveSpecialSolo.LineChain", specialTile, null);
-                board.IsSpecialActivationPhase = false;
-                return actions;
-            }
+            actions.Add(new SpecialChainRunner(
+                board,
+                new List<TileView> { specialTile },
+                PulseChainAreaHalf,
+                board.PulseChainCatchOverlap,
+                ResolveOtherSpecialInline));
+            TraceSpecialChain($"ResolveSpecialSolo.{spec}", specialTile, null);
         }
 
-        if (spec == TileSpecial.LineV)
-        {
-            var result = lineVSpecial.Execute(new LineVExecutionRuntime
-            {
-                Board = board,
-                Context = ctx,
-                Origin = specialTile,
-                Partner = null,
-                FinalizeAtEnd = true,
-                ActivateSpecial = dispatcher.ApplySpecialActivation,
-                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
-                EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
-                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
-            });
-
-            actions.AddRange(result.Actions);
-            DrainDeferredLineOverrides(actions);
-            TraceSpecialChain("ResolveSpecialSolo.LineV", specialTile, null);
-            board.IsSpecialActivationPhase = false;
-            return actions;
-        }
-
-        if (spec == TileSpecial.LineH)
-        {
-            var result = lineHSpecial.Execute(new LineHExecutionRuntime
-            {
-                Board = board,
-                Context = ctx,
-                Origin = specialTile,
-                Partner = null,
-                FinalizeAtEnd = true,
-                ActivateSpecial = dispatcher.ApplySpecialActivation,
-                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
-                EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
-                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
-            });
-
-            actions.AddRange(result.Actions);
-            DrainDeferredLineOverrides(actions);
-            TraceSpecialChain("ResolveSpecialSolo.LineH", specialTile, null);
-            board.IsSpecialActivationPhase = false;
-            return actions;
-        }
-
-        if (spec == TileSpecial.PulseCore)
-        {
-            // Pulse-only zincir (2+ PulseCore, alanlarında pulse-olmayan special yok):
-            // sıralı patlama + her patlamada anında clear + gravity + havada yakalama.
-            if (IsSupportedSpecialChain(specialTile, PulseChainAreaHalf))
-            {
-                actions.Add(new SpecialChainRunner(
-                    board,
-                    new List<TileView> { specialTile },
-                    PulseChainAreaHalf,
-                    board.PulseChainCatchOverlap,
-                    ResolveOtherSpecialInline));
-                TraceSpecialChain("ResolveSpecialSolo.PulseChain", specialTile, null);
-                board.IsSpecialActivationPhase = false;
-                return actions;
-            }
-
-            var result = pulseCoreSpecial.Execute(new PulseCoreExecutionRuntime
-            {
-                Board = board,
-                Context = ctx,
-                Origin = specialTile,
-                Partner = null,
-                FinalizeAtEnd = true,
-                ActivateSpecial = dispatcher.ApplySpecialActivation,
-                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
-                EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
-                ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
-            });
-
-            actions.AddRange(result.Actions);
-            DrainDeferredPulseComboOverrides(actions);
-            TraceSpecialChain("ResolveSpecialSolo.PulseCore", specialTile, null);
-            board.IsSpecialActivationPhase = false;
-            return actions;
-        }
-
-        if (spec == TileSpecial.PatchBot)
-        {
-            var result = patchBotSpecial.Execute(new PatchBotExecutionRuntime
-            {
-                Board = board,
-                Context = ctx,
-                Origin = specialTile,
-                Partner = null,
-                FinalizeAtEnd = true,
-                PatchbotService = patchbotComboService,
-                VisualService = visualService,
-                Effects = effectOrchestrator,
-                ActivateSpecial = dispatcher.ApplySpecialActivation,
-                ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                FireOverrideOverrideSpecialVisuals = (affected, delays) => visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
-            });
-
-            actions.AddRange(result.Actions);
-            TraceSpecialChain("ResolveSpecialSolo.PatchBot", specialTile, null);
-            board.IsSpecialActivationPhase = false;
-            return actions;
-        }
-
-        ctx.Affected.Add(specialTile);
-        SpecialCellUtils.MarkAffectedCell(ctx, specialTile, board);
-
-        ctx.HasLineActivation = spec == TileSpecial.LineH || spec == TileSpecial.LineV;
-
-        queueProcessor.EnqueueActivation(ctx, specialTile, null);
-        queueProcessor.EnqueueChainSpecials(ctx);
-        queueProcessor.ProcessQueue(ctx);
-
-        var fanoutActions = fanoutService.ProcessFanout(ctx, soloSpecialTile: deferHide ? specialTile : null);
-        actions.AddRange(fanoutActions);
-
-        if (ctx.OverrideDeferredPulseExplosions.Count == 0)
-            implantService.CleanupImplantedTiles(ctx);
-
-        actions.Add(BuildMatchClearAction(suppressPulseImpact: false, suppressPerTileClearVfx: false));
-
-        TraceSpecialChain("ResolveSpecialSolo", specialTile, null);
         board.IsSpecialActivationPhase = false;
         return actions;
     }
 
     // Tekli PulseCore patlama alanı yarıçapı (affectedCellCount=25 → 5x5 → half=2).
     private const int PulseChainAreaHalf = 2;
-
-    // BFS ile special zincirini keşfeder. Zincir DESTEKLENEN special'lardan oluşuyor
-    // ve 2+ special içeriyorsa true → ilerlemeli sıralı motor (SpecialChainRunner).
-    // PulseCore 5x5 alanını, LineV/LineH satır/sütununu gezer (expander); PatchBot ve
-    // Override leaf'tir (inline aktive edilir, bölgesi gezilmez). DESTEKLENMEYEN bir
-    // special bulunursa false → eski birleşik yol. Sadece guard kararı için; sıralı
-    // action zinciri playback'te canlı board üzerinden kendi keşfeder.
-    private bool IsSupportedSpecialChain(TileView first, int areaHalf)
-    {
-        if (first == null || !first)
-            return false;
-
-        var firstSp = first.GetSpecial();
-        if (firstSp != TileSpecial.PulseCore && firstSp != TileSpecial.LineV && firstSp != TileSpecial.LineH)
-            return false;
-
-        var expanders = new HashSet<TileView> { first };
-        var leaves = new HashSet<TileView>();
-        var queue = new Queue<TileView>();
-        queue.Enqueue(first);
-
-        while (queue.Count > 0)
-        {
-            var p = queue.Dequeue();
-            if (p == null || !p) continue;
-
-            foreach (var cell in EnumerateChainRegion(p, areaHalf))
-            {
-                var t = board.Tiles[cell.x, cell.y];
-                if (t == null || t == p) continue;
-
-                var sp = t.GetSpecial();
-                if (sp == TileSpecial.None) continue;
-
-                if (sp == TileSpecial.PulseCore || sp == TileSpecial.LineV || sp == TileSpecial.LineH)
-                {
-                    if (expanders.Add(t)) queue.Enqueue(t);
-                }
-                else if (sp == TileSpecial.PatchBot || sp == TileSpecial.SystemOverride)
-                {
-                    leaves.Add(t); // inline aktive edilir; bölgesi burada gezilmez
-                }
-                else
-                {
-                    // Desteklenmeyen special → eski yola düş.
-                    return false;
-                }
-            }
-        }
-
-        return (expanders.Count + leaves.Count) >= 2;
-    }
-
-    // Bir expander special'ın zincir keşfinde gezilecek bölgesi:
-    // PulseCore → 5x5 alan, LineH → satırı, LineV → sütunu.
-    private IEnumerable<Vector2Int> EnumerateChainRegion(TileView p, int areaHalf)
-    {
-        var sp = p.GetSpecial();
-        int cx = p.X, cy = p.Y;
-
-        if (sp == TileSpecial.LineH)
-        {
-            for (int x = 0; x < board.Width; x++)
-                yield return new Vector2Int(x, cy);
-        }
-        else if (sp == TileSpecial.LineV)
-        {
-            for (int y = 0; y < board.Height; y++)
-                yield return new Vector2Int(cx, y);
-        }
-        else
-        {
-            for (int x = cx - areaHalf; x <= cx + areaHalf; x++)
-                for (int y = cy - areaHalf; y <= cy + areaHalf; y++)
-                    if (x >= 0 && x < board.Width && y >= 0 && y < board.Height)
-                        yield return new Vector2Int(x, y);
-        }
-    }
 
     // SpecialChainRunner'ın playback'te pulse-olmayan bir special'ı (Line/PatchBot)
     // inline aktive etmesi için callback. Mevcut per-special mantığını scoped bir ctx ile
@@ -976,118 +589,6 @@ public class SpecialResolver
         }
     }
 
-    private List<BoardAction> ExecuteSpecialActionsNoFinalize(ResolutionContext ctx, TileView tile, TileView partner)
-    {
-        var actions = new List<BoardAction>();
-
-        if (tile == null)
-            return actions;
-
-        string partnerLabel = "null";
-        if (partner != null)
-            partnerLabel = $"({partner.X},{partner.Y})/{partner.GetSpecial()}";
-
-        Debug.Log($"[ExecuteSpecialActionsNoFinalize] tile=({tile.X},{tile.Y}) special={tile.GetSpecial()} partner={partnerLabel}");
-
-        var special = tile.GetSpecial();
-
-        switch (special)
-        {
-            case TileSpecial.LineH:
-                {
-                    lineHSpecial.Execute(new LineHExecutionRuntime
-                    {
-                        Board = board,
-                        Context = ctx,
-                        Origin = tile,
-                        Partner = partner,
-                        FinalizeAtEnd = false,
-                        SuppressVisualSideEffects = false,
-                        ActivateSpecial = dispatcher.ApplySpecialActivation,
-                        ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                        CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                        FireOverrideOverrideSpecialVisuals = (affected, delays) =>
-                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
-                        EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
-                        ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
-                    });
-
-                    break;
-                }
-
-            case TileSpecial.LineV:
-                {
-                    lineVSpecial.Execute(new LineVExecutionRuntime
-                    {
-                        Board = board,
-                        Context = ctx,
-                        Origin = tile,
-                        Partner = partner,
-                        FinalizeAtEnd = false,
-                        SuppressVisualSideEffects = false,
-                        ActivateSpecial = dispatcher.ApplySpecialActivation,
-                        ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                        CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                        FireOverrideOverrideSpecialVisuals = (affected, delays) =>
-                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
-                        EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
-                        ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
-                    });
-
-                    break;
-                }
-
-            case TileSpecial.PulseCore:
-                {
-                    pulseCoreSpecial.Execute(new PulseCoreExecutionRuntime
-                    {
-                        Board = board,
-                        Context = ctx,
-                        Origin = tile,
-                        Partner = partner,
-                        FinalizeAtEnd = false,
-                        SuppressVisualSideEffects = false,
-                        ActivateSpecial = dispatcher.ApplySpecialActivation,
-                        ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                        CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                        FireOverrideOverrideSpecialVisuals = (affected, delays) =>
-                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
-                        EnqueueChainSpecials = resolution => queueProcessor.EnqueueChainSpecials(resolution),
-                        ProcessQueue = resolution => queueProcessor.ProcessQueue(resolution)
-                    });
-                    break;
-                }
-
-            case TileSpecial.PatchBot:
-                {
-                    patchBotSpecial.Execute(new PatchBotExecutionRuntime
-                    {
-                        Board = board,
-                        Context = ctx,
-                        Origin = tile,
-                        Partner = partner,
-                        FinalizeAtEnd = false,
-                        PatchbotService = patchbotComboService,
-                        VisualService = visualService,
-                        Effects = effectOrchestrator,
-                        ActivateSpecial = dispatcher.ApplySpecialActivation,
-                        ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
-                        CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
-                        FireOverrideOverrideSpecialVisuals = (affected, delays) =>
-                            visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
-                    });
-                    break;
-                }
-
-            case TileSpecial.SystemOverride:
-                {
-                    dispatcher.ApplySpecialActivation(ctx, tile, partner);
-                    break;
-                }
-        }
-
-        return actions;
-    }
     private List<BoardAction> ExecuteSpecialActions(ResolutionContext ctx, TileView tile, TileView partner)
     {
         var actions = new List<BoardAction>();
@@ -1396,357 +897,13 @@ public class SpecialResolver
         return winner;
     }
 
-    private bool IsPureSoloPulsePresentationCandidate(HashSet<TileView> affected, bool suppressPulseImpact)
+    // Havada taşınan pulse (PatchBot+PulseCore) varışta KENDİ arrival context'iyle patlar;
+    // alandaki SystemOverride'lar o context'te ertelenir (IsPulseCoreActive). Airborne
+    // action bu overload'ı delegate ile çağırıp ertelenenleri boşaltır — yoksa Override
+    // hiç tetiklenmeden silinir.
+    internal void DrainDeferredPulseComboOverrides(ResolutionContext targetCtx, List<BoardAction> actions)
     {
-        if (suppressPulseImpact || affected == null || affected.Count == 0) return false;
-        if (ctx.HasLineActivation) return false;
-        if (ctx.LightningLineStrikes != null && ctx.LightningLineStrikes.Count > 0) return false;
-        if (ctx.LightningVisualTargets != null && ctx.LightningVisualTargets.Count > 0) return false;
-        if (ctx.OverrideForceDefaultClearAnim) return false;
-        if (ctx.OverrideSuppressPerTileClearVfx) return false;
-        if (ctx.OverrideRadialClearDelays != null && ctx.OverrideRadialClearDelays.Count > 0) return false;
-        if (ctx.OverrideDeferredPulseExplosions != null && ctx.OverrideDeferredPulseExplosions.Count > 0) return false;
-        if (ctx.OverrideDeferredPatchBotDashes != null && ctx.OverrideDeferredPatchBotDashes.Count > 0) return false;
-        if (ctx.PendingOverrideImplants != null && ctx.PendingOverrideImplants.Count > 0) return false;
-
-        int specialCount = 0;
-        bool hasNonPulseSpecial = false;
-        foreach (var tile in affected)
-        {
-            if (tile == null) continue;
-            TileSpecial special = tile.GetSpecial();
-            if (special == TileSpecial.None) continue;
-            specialCount++;
-            if (special != TileSpecial.PulseCore)
-            {
-                hasNonPulseSpecial = true;
-                break;
-            }
-        }
-
-        return !(hasNonPulseSpecial || specialCount > 1);
-    }
-
-    private bool IsPureSoloLinePresentationCandidate()
-    {
-        if (!ctx.HasLineActivation) return false;
-        if (ctx.LightningLineStrikes == null || ctx.LightningLineStrikes.Count == 0) return false;
-        if (ctx.LightningVisualTargets == null || ctx.LightningVisualTargets.Count == 0) return false;
-        if (ctx.OverrideForceDefaultClearAnim) return false;
-        if (ctx.OverrideSuppressPerTileClearVfx) return false;
-        if (ctx.OverrideRadialClearDelays != null && ctx.OverrideRadialClearDelays.Count > 0) return false;
-        if (ctx.OverrideDeferredPulseExplosions != null && ctx.OverrideDeferredPulseExplosions.Count > 0) return false;
-        if (ctx.OverrideDeferredPatchBotDashes != null && ctx.OverrideDeferredPatchBotDashes.Count > 0) return false;
-        if (ctx.PendingOverrideImplants != null && ctx.PendingOverrideImplants.Count > 0) return false;
-        // Deferred line-hit Override'lar ArrivalTrigger'larını MatchClearAction üzerinden ateşler;
-        // bunlar yalnızca ClearMatchesAnimated (lightning) yolunda okunur. PresentationPlan yoluna
-        // girersek erken yield break ile trigger'lar düşer → takılı Override. O yüzden bu durumda
-        // pure-solo-line presentation plan'ı kullanma.
-        if (ctx.DeferredLineHitOverrideCells != null && ctx.DeferredLineHitOverrideCells.Count > 0) return false;
-
-        int specialCount = 0;
-        bool hasNonLineSpecial = false;
-
-        foreach (var tile in ctx.Affected)
-        {
-            if (tile == null) continue;
-            TileSpecial special = tile.GetSpecial();
-            if (special == TileSpecial.None) continue;
-            specialCount++;
-            bool isLine = special == TileSpecial.LineH || special == TileSpecial.LineV;
-            if (!isLine)
-            {
-                hasNonLineSpecial = true;
-                break;
-            }
-        }
-
-        return !(hasNonLineSpecial || specialCount > 1);
-    }
-
-    private bool IsPureSoloOverridePresentationCandidate()
-    {
-        if (ctx == null) return false;
-        if (ctx.HasLineActivation) return false;
-        if (ctx.LightningLineStrikes != null && ctx.LightningLineStrikes.Count > 0) return false;
-        if (ctx.LightningVisualTargets != null && ctx.LightningVisualTargets.Count > 0) return false;
-        if (ctx.OverrideDeferredPulseExplosions != null && ctx.OverrideDeferredPulseExplosions.Count > 0) return false;
-        if (ctx.OverrideDeferredPatchBotDashes != null && ctx.OverrideDeferredPatchBotDashes.Count > 0) return false;
-        if (ctx.PendingOverrideImplants != null && ctx.PendingOverrideImplants.Count > 0) return false;
-
-        int specialCount = 0;
-        bool hasNonOverrideSpecial = false;
-        foreach (var tile in ctx.Affected)
-        {
-            if (tile == null) continue;
-            TileSpecial special = tile.GetSpecial();
-            if (special == TileSpecial.None) continue;
-            specialCount++;
-            if (special != TileSpecial.SystemOverride)
-            {
-                hasNonOverrideSpecial = true;
-                break;
-            }
-        }
-
-        return !(hasNonOverrideSpecial || specialCount > 1);
-    }
-
-    private bool IsPureSoloPatchBotPresentationCandidate()
-    {
-        if (ctx == null) return false;
-        if (ctx.HasLineActivation) return false;
-        if (ctx.LightningLineStrikes != null && ctx.LightningLineStrikes.Count > 0) return false;
-        if (ctx.LightningVisualTargets != null && ctx.LightningVisualTargets.Count > 0) return false;
-        if (ctx.OverrideForceDefaultClearAnim) return false;
-        if (ctx.OverrideSuppressPerTileClearVfx) return false;
-        if (ctx.OverrideRadialClearDelays != null && ctx.OverrideRadialClearDelays.Count > 0) return false;
-        if (ctx.OverrideDeferredPulseExplosions != null && ctx.OverrideDeferredPulseExplosions.Count > 0) return false;
-        if (ctx.OverrideDeferredPatchBotDashes != null && ctx.OverrideDeferredPatchBotDashes.Count > 0) return false;
-        if (ctx.PendingOverrideImplants != null && ctx.PendingOverrideImplants.Count > 0) return false;
-
-        int specialCount = 0;
-        bool hasNonPatchBotSpecial = false;
-        foreach (var tile in ctx.Affected)
-        {
-            if (tile == null) continue;
-            TileSpecial special = tile.GetSpecial();
-            if (special == TileSpecial.None) continue;
-            specialCount++;
-            if (special != TileSpecial.PatchBot)
-            {
-                hasNonPatchBotSpecial = true;
-                break;
-            }
-        }
-
-        return !(hasNonPatchBotSpecial || specialCount > 1);
-    }
-
-    private ClearPresentationPlan BuildOverridePresentationPlanIfNeeded()
-    {
-        if (!IsPureSoloOverridePresentationCandidate()) return null;
-
-        List<TileView> targetTiles = new List<TileView>();
-        List<Vector2Int> targetCells = new List<Vector2Int>();
-
-        foreach (var tile in ctx.Affected)
-        {
-            if (tile == null) continue;
-            targetTiles.Add(tile);
-            targetCells.Add(new Vector2Int(tile.X, tile.Y));
-        }
-
-        if (targetTiles.Count == 0) return null;
-
-        TileView originTile = null;
-        Vector2Int? originCell = null;
-
-        foreach (var tile in targetTiles)
-        {
-            if (tile == null) continue;
-            if (tile.GetSpecial() == TileSpecial.SystemOverride)
-            {
-                originTile = tile;
-                originCell = new Vector2Int(tile.X, tile.Y);
-                break;
-            }
-        }
-
-        var delayMap = ctx.OverrideRadialClearDelays != null
-            ? new Dictionary<TileView, float>(ctx.OverrideRadialClearDelays)
-            : new Dictionary<TileView, float>();
-
-        var plan = new ClearPresentationPlan();
-        plan.DoBoardShake = true;
-        plan.IncludeAdjacentOverTileBlockerDamage = false;
-        plan.ObstacleHitContext = ObstacleHitContext.SpecialActivation;
-
-        plan.Effects.Add(new OverrideRadialEffectDescriptor(
-            targetTiles,
-            targetCells,
-            delayMap,
-            originTile,
-            originCell));
-
-        foreach (var tile in targetTiles)
-            plan.FinalClearTiles.Add(tile);
-
-        return plan;
-    }
-
-    private ClearPresentationPlan BuildPulsePresentationPlanIfNeeded(HashSet<TileView> affected, HashSet<TileView> processedViews, bool suppressPulseImpact)
-    {
-        if (!IsPureSoloPulsePresentationCandidate(affected, suppressPulseImpact))
-            return null;
-
-        Dictionary<TileView, float> stagger = BuildPulseStagger(affected, processedViews, suppressPulseImpact);
-        if (stagger == null || stagger.Count == 0)
-            return null;
-
-        List<TileView> targetTiles = new List<TileView>();
-        List<Vector2Int> targetCells = new List<Vector2Int>();
-
-        TileView centerTile = null;
-        float bestDelay = float.MaxValue;
-
-        foreach (var tile in affected)
-        {
-            if (tile == null) continue;
-
-            targetTiles.Add(tile);
-            targetCells.Add(new Vector2Int(tile.X, tile.Y));
-
-            float delay;
-            if (stagger.TryGetValue(tile, out delay))
-            {
-                if (delay < bestDelay)
-                {
-                    bestDelay = delay;
-                    centerTile = tile;
-                }
-            }
-        }
-
-        if (targetTiles.Count == 0)
-            return null;
-
-        Vector2Int centerCell = centerTile != null
-            ? new Vector2Int(centerTile.X, centerTile.Y)
-            : new Vector2Int(targetTiles[0].X, targetTiles[0].Y);
-
-        var plan = new ClearPresentationPlan();
-        plan.DoBoardShake = true;
-        plan.IncludeAdjacentOverTileBlockerDamage = false;
-        plan.ObstacleHitContext = ObstacleHitContext.SpecialActivation;
-
-        plan.Effects.Add(new PulseWaveEffectDescriptor(
-            targetTiles,
-            targetCells,
-            stagger,
-            board.ApplySpecialChainTempo(board.PulseImpactAnimTime),
-            centerCell
-        ));
-
-        foreach (var tile in targetTiles)
-            plan.FinalClearTiles.Add(tile);
-
-        return plan;
-    }
-
-    private ClearPresentationPlan BuildLinePresentationPlanIfNeeded()
-    {
-        if (!IsPureSoloLinePresentationCandidate())
-            return null;
-
-        List<TileView> targetTiles = new List<TileView>();
-        List<Vector2Int> targetCells = new List<Vector2Int>();
-
-        foreach (var tile in ctx.Affected)
-        {
-            if (tile == null) continue;
-            targetTiles.Add(tile);
-            targetCells.Add(new Vector2Int(tile.X, tile.Y));
-        }
-
-        if (targetTiles.Count == 0)
-            return null;
-
-        IList<LightningLineStrike> strikes = new List<LightningLineStrike>();
-        for (int i = 0; i < ctx.LightningLineStrikes.Count; i++)
-            strikes.Add(ctx.LightningLineStrikes[i]);
-
-        TileView originTile = null;
-        Vector2Int? originCell = null;
-
-        foreach (var tile in targetTiles)
-        {
-            if (tile == null) continue;
-
-            TileSpecial special = tile.GetSpecial();
-            if (special == TileSpecial.LineH || special == TileSpecial.LineV)
-            {
-                originTile = tile;
-                originCell = new Vector2Int(tile.X, tile.Y);
-                break;
-            }
-        }
-
-        var plan = new ClearPresentationPlan();
-        plan.DoBoardShake = true;
-        plan.IncludeAdjacentOverTileBlockerDamage = false;
-        plan.ObstacleHitContext = ObstacleHitContext.SpecialActivation;
-
-        plan.Effects.Add(new LineSweepEffectDescriptor(
-            targetTiles,
-            targetCells,
-            strikes,
-            originTile,
-            originCell
-        ));
-
-        foreach (var tile in targetTiles)
-            plan.FinalClearTiles.Add(tile);
-
-        return plan;
-    }
-
-    private MatchClearAction BuildMatchClearAction(bool suppressPulseImpact, bool suppressPerTileClearVfx)
-    {
-        HashSet<TileView> processedViews = new HashSet<TileView>();
-        foreach (var pos in ctx.Processed)
-        {
-            if (board.Tiles[pos.x, pos.y] != null)
-                processedViews.Add(board.Tiles[pos.x, pos.y]);
-        }
-
-        ClearPresentationPlan presentationPlan =
-            BuildPulsePresentationPlanIfNeeded(ctx.Affected, processedViews, suppressPulseImpact);
-        if (presentationPlan == null)
-            presentationPlan = BuildLinePresentationPlanIfNeeded();
-        if (presentationPlan == null)
-            presentationPlan = BuildOverridePresentationPlanIfNeeded();
-        // NOTE: PatchBotSpecial manages its own dash via EnqueueDash+onArrived (no presentation-plan path).
-
-        Dictionary<TileView, float> stagger = presentationPlan != null
-            ? null
-            : BuildPulseStagger(ctx.Affected, processedViews, suppressPulseImpact);
-
-        bool linePresentationOwnsVisuals =
-            presentationPlan != null
-            && presentationPlan.Effects != null
-            && presentationPlan.Effects.Count > 0
-            && presentationPlan.Effects[0] is LineSweepEffectDescriptor;
-
-        bool overridePresentationOwnsVisuals =
-            presentationPlan != null
-            && presentationPlan.Effects != null
-            && presentationPlan.Effects.Count > 0
-            && presentationPlan.Effects[0] is OverrideRadialEffectDescriptor;
-
-        var animationMode = (ctx.HasLineActivation && !ctx.OverrideForceDefaultClearAnim && !linePresentationOwnsVisuals)
-            ? ClearAnimationMode.LightningStrike
-            : ClearAnimationMode.Default;
-
-        return new MatchClearAction(
-            ctx.Affected,
-            doShake: true,
-            staggerDelays: stagger,
-            staggerAnimTime: board.ApplySpecialChainTempo(board.PulseImpactAnimTime),
-            animationMode: animationMode,
-            affectedCells: ctx.AffectedCells,
-            includeAdjacentOverTileBlockerDamage: false,
-            lightningVisualTargets: linePresentationOwnsVisuals ? null : ctx.LightningVisualTargets,
-            lightningLineStrikes: linePresentationOwnsVisuals ? null : ctx.LightningLineStrikes,
-            suppressPerTileClearVfx: (suppressPerTileClearVfx || ctx.OverrideSuppressPerTileClearVfx),
-            perTileClearDelays: overridePresentationOwnsVisuals ? null : ctx.OverrideRadialClearDelays,
-            isSpecialPhase: true,
-            presentationPlan: presentationPlan);
-    }
-
-    private void DrainDeferredPulseComboOverrides(List<BoardAction> actions)
-    {
-        if (ctx.DeferredPulseComboOverrideCells == null || ctx.DeferredPulseComboOverrideCells.Count == 0)
+        if (targetCtx?.DeferredPulseComboOverrideCells == null || targetCtx.DeferredPulseComboOverrideCells.Count == 0)
             return;
 
         MatchClearAction sweepAction = null;
@@ -1759,8 +916,8 @@ public class SpecialResolver
             }
         }
 
-        var deferred = new List<Vector2Int>(ctx.DeferredPulseComboOverrideCells);
-        ctx.DeferredPulseComboOverrideCells.Clear();
+        var deferred = new List<Vector2Int>(targetCtx.DeferredPulseComboOverrideCells);
+        targetCtx.DeferredPulseComboOverrideCells.Clear();
 
         foreach (var cell in deferred)
         {
@@ -1771,10 +928,10 @@ public class SpecialResolver
             if (tile == null || tile.GetSpecial() != TileSpecial.SystemOverride)
                 continue;
 
-            ctx.Processed.Remove(cell);
-            ctx.Queued.Remove(cell);
+            targetCtx.Processed.Remove(cell);
+            targetCtx.Queued.Remove(cell);
 
-            var overrideActions = ExecuteSpecialActions(ctx, tile, null);
+            var overrideActions = ExecuteSpecialActions(targetCtx, tile, null);
             if (overrideActions == null || overrideActions.Count == 0)
                 continue;
 
@@ -1872,13 +1029,5 @@ public class SpecialResolver
             this.cell = cell;
             this.partnerCell = partnerCell;
         }
-    }
-
-    private Dictionary<TileView, float> BuildPulseStagger(HashSet<TileView> affected, HashSet<TileView> processedViews, bool suppressPulseImpact)
-    {
-        if (suppressPulseImpact)
-            return null;
-
-        return pulseCoreImpactService.BuildStaggerDelays(affected, processedViews);
     }
 }

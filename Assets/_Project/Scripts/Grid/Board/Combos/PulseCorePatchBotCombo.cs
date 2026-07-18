@@ -25,6 +25,17 @@ public sealed class PulseCorePatchBotComboExecutionRuntime
 
     public Action<ResolutionContext> EnqueueChainSpecials;
     public Action<ResolutionContext> ProcessQueue;
+
+    /// Varış context'inde ertelenen SystemOverride'ları boşaltır (resolver'ın
+    /// DrainDeferredPulseComboOverrides overload'ı). Yalnızca ESKİ varış yolu için
+    /// fallback; BuildPulseBurstChain bağlıysa kullanılmaz.
+    public Action<ResolutionContext, List<BoardAction>> DrainDeferredOverrides;
+
+    /// DiveBurst (plan §1.1): varış hücresinde sanal pulse patlamasını TEK MOTORDAN
+    /// (SpecialChainRunner, virtualPulseBurstCenters) üretir. Bağlıysa airborne varışı
+    /// ExecuteAtTarget+deferral+drain yerine bunu çalıştırır — alandaki Override/special
+    /// arrival'da gerçek sınıfıyla tetiklenir (solo pulse ile aynı yol).
+    public Func<List<Vector2Int>, BoardAction> BuildPulseBurstChain;
 }
 
 public sealed class PulseCorePatchBotComboExecutionResult

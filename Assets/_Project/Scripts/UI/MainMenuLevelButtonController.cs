@@ -263,7 +263,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
 
         TMP_Text placeholder = CreateDebugText(textArea.transform, "Placeholder", "örn. 37", 28f, FontStyles.Normal, TextAlignmentOptions.MidlineLeft, new Color(0.45f, 0.50f, 0.58f, 0.75f), -1f);
         TMP_Text text = CreateDebugText(textArea.transform, "Text", "", 28f, FontStyles.Bold, TextAlignmentOptions.MidlineLeft, new Color(0.07f, 0.09f, 0.12f, 1f), -1f);
-        text.enableWordWrapping = false;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
 
         input.textViewport = textAreaRt;
         input.placeholder = placeholder;

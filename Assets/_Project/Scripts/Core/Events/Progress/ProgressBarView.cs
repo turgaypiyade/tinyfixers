@@ -31,15 +31,24 @@ public class ProgressBarView : MonoBehaviour
     [Tooltip("Uçan küçük ikon prefabı (Image component'li).")]
     [SerializeField] private GameObject    particlePrefab;
     [SerializeField] private float flightDuration  = 0.35f;
-    [SerializeField] private float particleInterval = 0.06f;
     [SerializeField] private int   maxParticles    = 15;
+
+    [Header("Dolum Süresi")]
+    [Tooltip("Küçük kazanımlarda bar dolum süresi (sn).")]
+    [SerializeField, Min(0.2f)] private float minFillDuration = 1.2f;
+    [Tooltip("Bar 0'dan tama dolarken süre (sn) — kazanım büyüdükçe buna yaklaşır.")]
+    [SerializeField, Min(0.5f)] private float maxFillDuration = 2.8f;
 
     private IProgressEventService service;
     private Coroutine             activeRoutine;
 
     // ── Panel tarafından çağrılır ─────────────────────────────────
 
-    public void RefreshDisplay()
+    public void RefreshDisplay() => RefreshDisplay(applyFill: true);
+
+    /// applyFill=false: yalnızca ikon/metinleri bağlar; fill'e dokunmaz (session
+    /// animasyonu başlangıç dolumunu kendisi kuracaksa yarış çıkmasın diye).
+    public void RefreshDisplay(bool applyFill)
     {
         service = ProgressEventService.Instance;
         if (service == null || goalIndex >= service.Goals.Count) return;
@@ -64,7 +73,8 @@ public class ProgressBarView : MonoBehaviour
         if (descriptionText != null) descriptionText.text   = def.fallbackDescription;
         if (claimedOverlay  != null) claimedOverlay.SetActive(goal.IsRewardClaimed);
 
-        StartCoroutine(CoApplyFillNextFrame(goal.NormalizedProgress, goal.CurrentCount, def.targetCount));
+        if (applyFill)
+            StartCoroutine(CoApplyFillNextFrame(goal.NormalizedProgress, goal.CurrentCount, def.targetCount));
     }
 
     private IEnumerator CoApplyFillNextFrame(float normalized, int current, int target)
@@ -82,6 +92,14 @@ public class ProgressBarView : MonoBehaviour
         activeRoutine = StartCoroutine(CoAnimateGains(gain));
     }
 
+    /// Panel'in ard arda birden çok hedefi oynatabilmesi için beklenebilir sürüm.
+    public IEnumerator PlaySessionAnimation(SessionGainRecord gain)
+    {
+        service = ProgressEventService.Instance;
+        if (service == null || goalIndex >= service.Goals.Count) yield break;
+        yield return CoAnimateGains(gain);
+    }
+
     // ── Animasyonlar ─────────────────────────────────────────────
 
     private IEnumerator CoAnimateGains(SessionGainRecord gain)
@@ -93,21 +111,36 @@ public class ProgressBarView : MonoBehaviour
         float startFill  = (float)startCount / target;
         float endFill    = goal.NormalizedProgress;
 
-        int   particleCount   = Mathf.Clamp(gain.GainedCount, 1, maxParticles);
-        float fillPerParticle = (endFill - startFill) / particleCount;
-        float displayFill     = startFill;
-        int   displayCount    = startCount;
+        // Süre kazanım oranıyla ölçeklenir: küçük kazanım kısa, tam dolum (0→600) uzun —
+        // hedef tamamlandıysa doluşu gerçekten İZLETİR.
+        float dur = Mathf.Lerp(minFillDuration, maxFillDuration, Mathf.Clamp01(endFill - startFill));
 
-        ApplyFill(displayFill, displayCount, target);
+        int   particleCount = Mathf.Clamp(gain.GainedCount, 1, maxParticles);
+        float particleEvery = dur / particleCount;
+        float nextParticleAt = 0f;
+        int   spawnedParticles = 0;
 
-        for (int i = 0; i < particleCount; i++)
+        ApplyFill(startFill, startCount, target);
+
+        float t = 0f;
+        while (t < dur)
         {
-            SpawnParticle();
-            yield return new WaitForSeconds(particleInterval);
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float e = 1f - Mathf.Pow(1f - k, 2f);   // ease-out: son kısımda yavaşlayıp "oturur"
 
-            displayFill  += fillPerParticle;
-            displayCount  = startCount + Mathf.RoundToInt((displayFill - startFill) * target);
-            ApplyFill(displayFill, Mathf.Clamp(displayCount, 0, target), target);
+            float fill = Mathf.Lerp(startFill, endFill, e);
+            int   cnt  = Mathf.RoundToInt(Mathf.Lerp(startCount, goal.CurrentCount, e));
+            ApplyFill(fill, cnt, target);   // sayaç da barla birlikte tıkır tıkır artar
+
+            if (spawnedParticles < particleCount && t >= nextParticleAt)
+            {
+                SpawnParticle();
+                spawnedParticles++;
+                nextParticleAt += particleEvery;
+            }
+
+            yield return null;
         }
 
         ApplyFill(endFill, goal.CurrentCount, target);

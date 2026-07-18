@@ -1221,7 +1221,7 @@ public sealed class BossDuelController : MonoBehaviour
         txt.alignment = TextAlignmentOptions.Center;
         txt.color = strong ? new Color(1f, 0.85f, 0.3f) : Color.white;
         txt.raycastTarget = false;
-        txt.enableWordWrapping = true;
+        txt.textWrappingMode = TextWrappingModes.Normal;
 
         var txtRt = (RectTransform)txtGo.transform;
         txtRt.anchorMin = Vector2.zero; txtRt.anchorMax = Vector2.one;

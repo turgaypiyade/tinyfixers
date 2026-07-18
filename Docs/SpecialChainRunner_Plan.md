@@ -151,5 +151,126 @@ karşılığı emisyonu yayar (runner'a geri besler):
 
 ## 8. Sıradaki adım
 
-Faz 1 (çekirdek `SpecialChainRunner` + 5 solo special'ı motordan geçir). Onay sonrası
-başlanır; her faz sonunda ilgili senaryolar oynanıp doğrulanır.
+~~Faz 1 (çekirdek `SpecialChainRunner` + 5 solo special'ı motordan geçir).~~ **Faz 1
+UYGULANDI (2026-07-18, aşağıda Bölüm 10). Sıradaki: oyun içi test (5 solo + zincirde
+Override arrival), sonra Faz 2 (dispatcher'daki deferred-override dallarının kaldırılması —
+kalan kullanıcılar: eski combo yolları + ExpandSpecialChain/booster).**
+
+## 9. Faz 1 öncesi güncel bulgular (2026-07-18 oturumu)
+
+Override fanout'unun İKİ AYRI MOTORDAN aktığı sahada doğrulandı — kullanıcı gözlemi:
+takas yolunda tempo çalışıyor, zincir yolunda çalışmıyor.
+
+**Yol A (takas / top-level):** Resolver `ProcessFanout` delegesini bağlar →
+`SpecialFanoutService.ProcessFanout` → `SystemOverrideFanoutPlacementAction`
+(ışın→yerleşim→tetikleme töreni). Tempo artık board metronomuna bağlı:
+hedefler arası ¾ CellTime, yerleşim→tetikleme 1 CellTime
+(`BoardController.CellTime` = 1 hücre düşüş süresi; 2026-07-18'de eklendi).
+
+**Yol B (zincir):** `SpecialBehaviorDispatcher.ApplySpecialActivation`'ın
+SystemOverride dalı ("OverrideExecuteNow") ve `ExecuteSpecialActions`'ın override
+dalı, `FinalizeAtEnd=false` + DELEGESİZ çalışır → fanout hedefleri ctx'e yazılır
+ama tören action'ı üretilmez. Dış special'ın finalize'ı fanout'u işlerse tören
+oynar (kuyruk yolu); İŞLEMEZSE (aşağıdaki drain boşluğu) hiç oynamaz.
+
+**Drain boşluğu:** `SpecialResolver.DrainDeferredPulseComboOverrides` dış
+finalize'dan SONRA koşar; `ExecuteSpecialActions`'ın override dalı aksiyon
+üretmediği için `overrideActions.Count == 0 → continue` ile tören/renk temizliği
+kaybolabilir (fanout ctx'te işlenmeden kalır). `DrainDeferredLineOverrides`
+(dispatcher) dönen aksiyonları zaten yok sayıyor (void yol).
+
+**Çifte temizlik tuzağı:** Zincirde `FinalizeAtEnd=true` açmak YETMEZ:
+`OverrideSpecial.Finalize → BuildClearAction(ctx.Affected)` paylaşılan context'in
+TÜM taşlarını ikinci kez temizler. Zincir override'ı için taze alt-context (veya
+motorun kendi emisyon closure'ı) şart — Faz 1'in çözmesi gereken çekirdek durum.
+
+**Faz 1 ek hedefleri:**
+- Override fanout töreni (yerleşim+tetikleme) tek motordan üretilsin; Yol A/B farkı
+  kalksın. Tören pacing'i `CellTime` çarpanlarından okusun.
+- `DeferredPulseComboOverrideCells` / `DeferredLineHitOverrideCells` drain'leri
+  motora taşınınca SİLİNSİN (plan Bölüm 5.2 ile uyumlu).
+- İlgili taze düzeltme: PatchBot+Pulse arrival'da drain delegate'i
+  (`PulseCorePatchBotComboExecutionRuntime.DrainDeferredOverrides`) eklendi —
+  motor göçünde bu da sadeleşip kalkmalı.
+
+## 10. Faz 1 UYGULANDI (2026-07-18)
+
+**5 solo special'ın tüm aktivasyonları (tap + swap) artık tek motordan.**
+
+- `SpecialChainRunner`'a `protectedCells` eklendi: swap'ın normal tarafında aynı
+  hamlede oluşan yeni special hücrelerine emisyonlar hiç dokunmaz (eski Execute
+  yolundaki `ProtectedCells`'in karşılığı). Yalnız o instance'ın kendi emisyonlarına
+  uygulanır; alt-zincirlere taşınmaz (gravity sonrası hücre bayatlar).
+- `ResolveSpecialSolo`: 5 special de runner seed'i. Eski `Execute(FinalizeAtEnd=true)`
+  + `DrainDeferredLineOverrides`/`DrainDeferredPulseComboOverrides` solo dalları ve
+  alttaki generic queue/fanout yolu SİLİNDİ. Solo Override da motor üzerinden
+  `ResolveOtherSpecialInline → OverrideSpecial.Execute` (fanout delegeleri bağlı =
+  Yol A töreni; karar #1 gereği implant/fanout içi aynen).
+- `ResolveSpecialSwap` tekli dallar: Line/Pulse/PatchBot tek runner dalına indi
+  (protectedCells = externalProtectedCells ∪ special-partner hücresi). 2+ special
+  isteyen `IsSupportedSpecialChain`/`EnumerateChainRegion` guard'ları silindi
+  (tekli aktivasyon da motorda). Override+Normal swap direkt `OverrideSpecial.Execute`
+  yolunda kaldı (karar #1; `ForcedPartnerType` gerekiyor).
+- Yol A/B birleşmesi (Bölüm 9): solo/swap kaynaklı zincirlerde Override artık HER
+  ZAMAN arrival sub-chain → taze scoped context + `FinalizeAtEnd=true` + fanout
+  delegeleri → tören action'ı gerçekten üretilir ve oynar. Çifte temizlik yok
+  (paylaşılan ctx kullanılmıyor). Yol B (dispatcher defer + delegesiz FinalizeAtEnd=false)
+  yalnızca eski combo yolları + `ExpandSpecialChain`/booster'da kaldı → Faz 2.
+- Ölü kod temizliği: resolver'da `ExecuteSpecialActionsNoFinalize`, presentation-plan
+  altyapısı (`IsPureSolo*`, `Build*PresentationPlanIfNeeded`, `BuildMatchClearAction`,
+  `BuildPulseStagger`) ve eski yorum bloğu silindi (1892 → ~1011 satır).
+  `DrainDeferredPulseComboOverrides(ctx, actions)` internal overload'u KALDI
+  (PatchBot+Pulse combo delegate'i hâlâ kullanıyor); `ExecuteSpecialActions` +
+  `DrainDeferredLineOverrides` onun bağımlılığı olarak kaldı.
+
+**Test matrisi (oynanacak):** 5 solo (tap + swap); swap'ta yeni special oluşurken
+Line/Pulse aktivasyonu (protected doğrula); Line/Pulse yolunda Override (tören + renk
+temizliği); launcher üstünden geçen line (emit stack); PatchBot solo hedefleme.
+
+### 10.1 Saha bug'ı → PatchBot+Pulse varışı motora bağlandı (2026-07-18)
+
+Kullanıcı raporu: PatchBot+PulseCore uçtu, varış alanındaki Override HİÇ tetiklenmedi.
+Kök sebep: varış patlaması motora girmiyordu — `ExecutePulseCoreImpactAndFinalCascade`
+→ `pulseCoreSpecial.ExecuteAtTarget` → alandaki Override `IsPulseCoreActive` ile
+dispatcher'da deferred → drain delegate'i paylaşılan arrival ctx üzerinde kırılgan
+(Bölüm 9 "drain boşluğu" sınıfı). Kullanıcı direktifi: "PatchBot+Pulse'ta sadece hedef
+seçimi farklı; sonrası pulse yolunun aynısı olmalı" = plan §1.1 DiveBurst.
+
+Fix: `SpecialChainRunner`'a `virtualPulseBurstCenters` — merkezde PulseCore TILE'I
+OLMADAN pulse patlaması (payload havadan geldi). `ExplodePulsesSimultaneously`
+genelleşti (`centersArePulseTiles` bayrağı; sanal merkezde merkez hücredeki special de
+zincirlenir). `PulseCorePatchBotComboExecutionRuntime.BuildPulseBurstChain` factory'si
+resolver'da bağlandı; airborne varışı factory varsa runner'ı çalıştırıyor
+(ExecuteAtTarget+deferral+drain yalnız factory'siz fallback). Alandaki Override artık
+arrival'da gerçek sınıfıyla patlar (tören dahil), solo pulse ile aynı yol.
+
+NOT (Faz 2-3 adayı): solo PatchBot standard varışı (groupCtx PHASE 3-6) hâlâ motor dışı
+tek MatchClearAction — hedef hücre tek-hücre hit olduğu için special çiğneme riski düşük
+ama DiveBurst'e (sanal burst) taşınınca o yol da tekleşir.
+
+### 10.2 PatchBot+special kombolarının tam denetimi (2026-07-18)
+
+Kullanıcı direktifi: tüm PatchBot+special kombolarında YALNIZ hedef seçimi farklı olsun;
+varıştaki special tetiklemesi `<Ad>Special` ile aynı (motor) yolu kullansın.
+
+| Combo | Durum |
+|---|---|
+| PatchBot+Pulse | ✓ motora bağlı (§10.1, `virtualPulseBurstCenters`) |
+| PatchBot+LineV | ✓ motora bağlandı: `virtualLineSweeps` (dikey sanal beam) |
+| PatchBot+LineH | ✓ motora bağlandı: `virtualLineSweeps` (yatay sanal beam) |
+| PatchBot+PatchBot | payload YOK — her bot tek hücre vurur (özel tetikleme durumu yok) |
+| PatchBot+Override | Override implant yolu (karar #1, içi korunur); implant botlar tek hücre vurur |
+
+LineV/H fix ayrıntısı: eski varış, combo İÇİNDE sıfırdan kurulan dispatcher/queue/fanout/
+implant servis KOPYALARI + `Line*Special.Execute(VirtualOriginCell)` + kendi
+`DrainDeferredLineOverrides`'ı ile çalışıyordu (pulse bug'ıyla aynı kırılgan sınıf; Override
+yol üstündeyse deferral'a düşüyordu). Şimdi: `SweepLinesSimultaneously` genelleşti
+(`linesAreTiles` bayrağı; sanal modda origin'de tile aranmaz, origin hücredeki special de
+zincirlenir), `LineV/HPatchBotComboExecutionRuntime.BuildLineBurstChain` factory'si
+resolver'da bağlı; dash callback'i factory varsa runner'ı EnqueueFront ediyor. Eski
+bespoke yol yalnız factory'siz fallback (dispatcher combo dalı) — Faz 2'de silinir.
+
+PatchBot+PatchBot / +Override notu: bot varışı tek-hücre hit; hedefleme special seçmez →
+"special tetiklenmedi" sınıfı bug bu yollarda oluşamaz. Ancak bot-varış mantığı İKİ ayrı
+implementasyonda (solo `PatchBotSpecial` EnqueueDash+onArrived vs
+`OverridePatchBotAirborneGroupAction` groupCtx PHASE 3-6) — Faz 2-3'te tekleştirme adayı.

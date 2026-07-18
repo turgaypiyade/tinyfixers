@@ -113,7 +113,9 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                     downTime: 0.10f);
             }
 
-            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.05f));
+            // Hedefler arası yerleşim ritmi: board metronomuna bağlı (¾ vuruş) —
+            // eski tempo(0.05)=~0.025sn makineli tüfek gibiydi; yerleşim okunmuyordu.
+            yield return new WaitForSeconds(board.CellTime * 0.75f);
         }
 
         yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.002f));
@@ -131,7 +133,8 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
         if (deferredPulseExplosionCells != null && deferredPulseExplosionCells.Count > 0)
         {
-            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.05f));
+            // Yerleşim bitti → tetikleme başlıyor: tam 1 vuruşluk nefes (okunabilir geçiş).
+            yield return new WaitForSeconds(board.CellTime);
 
             for (int i = 0; i < deferredPulseExplosionCells.Count; i++)
             {
@@ -148,7 +151,8 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 // tarafından PulseCoreSpecial üzerinden zaten yapıldı.
                 PlayPulseCoreExplosionVfx(tile);
 
-                yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.05f));
+                // Patlamalar arası da metronom (¾ vuruş) — yerleşimle aynı ritim.
+                yield return new WaitForSeconds(board.CellTime * 0.75f);
             }
         }
 

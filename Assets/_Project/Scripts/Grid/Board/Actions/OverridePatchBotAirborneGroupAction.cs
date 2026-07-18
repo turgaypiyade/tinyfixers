@@ -643,34 +643,55 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         {
             Debug.Log($"[OverridePatchBotAirborne] pulsecore_impact target=({impactBot.targetX},{impactBot.targetY})");
 
-            var arrivalCtx = new ResolutionContext();
-            var pulseResult = pulseCoreSpecial.ExecuteAtTarget(new PulseCoreExecutionRuntime
+            if (pulseRuntime.BuildPulseBurstChain != null)
             {
-                Board = board,
-                Context = arrivalCtx,
-                Origin = pulseSourceTile,
-                Partner = patchBotSourceTile,
-                FinalizeAtEnd = true,
-                ActivateSpecial = pulseRuntime.ActivateSpecial,
-                ProcessFanout = pulseRuntime.ProcessFanout,
-                CleanupImplantedTiles = pulseRuntime.CleanupImplantedTiles,
-                FireOverrideOverrideSpecialVisuals = pulseRuntime.FireOverrideOverrideSpecialVisuals,
-                EmitBoardSignal = pulseRuntime.EmitBoardSignal,
-                EnqueueChainSpecials = pulseRuntime.EnqueueChainSpecials,
-                ProcessQueue = pulseRuntime.ProcessQueue,
-                SuppressVisualSideEffects = false,
-                SkipOriginRegistration = true,
-                ForcedOriginSpecial = TileSpecial.PulseCore,
-                SignalSourceTile = pulseSourceTile
-            }, impactBot.targetX, impactBot.targetY);
-
-            if (pulseResult != null && pulseResult.Actions != null)
+                // DiveBurst (plan §1.1): hedef seçimi hariç her şey pulse yolunun aynısı.
+                // Sanal patlama TEK MOTORDAN (SpecialChainRunner) — alandaki Override/special
+                // dalga varınca gerçek sınıfıyla tetiklenir; ExecuteAtTarget + IsPulseCoreActive
+                // deferral + drain zinciri (Override'ın hiç tetiklenmediği kırılgan yol) yok.
+                var burstChain = pulseRuntime.BuildPulseBurstChain(
+                    new List<Vector2Int> { new Vector2Int(impactBot.targetX, impactBot.targetY) });
+                if (burstChain != null)
+                    yield return burstChain.ExecuteVisuals(sequencer);
+            }
+            else
             {
-                for (int i = 0; i < pulseResult.Actions.Count; i++)
+                // ESKİ yol (yalnız factory bağlanmamış fallback): ExecuteAtTarget + drain.
+                var arrivalCtx = new ResolutionContext();
+                var pulseResult = pulseCoreSpecial.ExecuteAtTarget(new PulseCoreExecutionRuntime
                 {
-                    var action = pulseResult.Actions[i];
-                    if (action != null)
-                        yield return action.ExecuteVisuals(sequencer);
+                    Board = board,
+                    Context = arrivalCtx,
+                    Origin = pulseSourceTile,
+                    Partner = patchBotSourceTile,
+                    FinalizeAtEnd = true,
+                    ActivateSpecial = pulseRuntime.ActivateSpecial,
+                    ProcessFanout = pulseRuntime.ProcessFanout,
+                    CleanupImplantedTiles = pulseRuntime.CleanupImplantedTiles,
+                    FireOverrideOverrideSpecialVisuals = pulseRuntime.FireOverrideOverrideSpecialVisuals,
+                    EmitBoardSignal = pulseRuntime.EmitBoardSignal,
+                    EnqueueChainSpecials = pulseRuntime.EnqueueChainSpecials,
+                    ProcessQueue = pulseRuntime.ProcessQueue,
+                    SuppressVisualSideEffects = false,
+                    SkipOriginRegistration = true,
+                    ForcedOriginSpecial = TileSpecial.PulseCore,
+                    SignalSourceTile = pulseSourceTile
+                }, impactBot.targetX, impactBot.targetY);
+
+                if (pulseResult != null && pulseResult.Actions != null)
+                {
+                    // Alandaki SystemOverride'lar pulse zinciri sırasında ERTELENDİ
+                    // (IsPulseCoreActive → DeferredPulseComboOverrideCells). Resolver'ın drain'i
+                    // bu arrival context'ini görmez — burada boşalt: Override sweep'ten çıkarılır
+                    // ve clear ona ulaştığında kendi aksiyonlarıyla patlar.
+                    pulseRuntime.DrainDeferredOverrides?.Invoke(arrivalCtx, pulseResult.Actions);
+
+                    for (int i = 0; i < pulseResult.Actions.Count; i++)
+                    {
+                        var action = pulseResult.Actions[i];
+                        if (action != null)
+                            yield return action.ExecuteVisuals(sequencer);
+                    }
                 }
             }
         }

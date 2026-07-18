@@ -16,4 +16,10 @@ public static class BackendServices
     public static ITeamService Team
         => team ??= new SimTeamService();
         // Mock'a dönmek için: team ??= new MockTeamService();
+
+    /// <summary>
+    /// Takım servisini sıfırla — takıma katılınca/kurunca çağrılır; bir sonraki erişim
+    /// yeni takım adıyla (PlayerTeamState) taze servis kurar.
+    /// </summary>
+    public static void ResetTeam() => team = null;
 }

@@ -217,6 +217,9 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
     // Staging sırasında "+N" feedback'i için: commit'in yapacağı dağıtımın birebir
     // simülasyonu (sanal kalan kapasiteler üzerinden), kalıcı state'e dokunmaz.
+    // KADEMELİ sayım: yalnızca AKTİF hedef (ilk dolmamış) sayar; o dolmadan
+    // sonraki hedefe hiçbir taş yazılmaz. Aktif hedef bu level'da (sanal) dolarsa
+    // sıradaki hedef O ANDAN itibaren saymaya başlar.
     private int SimulateStagedGain(TileType type, int count)
     {
         if (stagedSpacePerGoal == null) return 0;
@@ -226,13 +229,18 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
         for (int i = 0; i < goals.Count && remaining > 0; i++)
         {
-            if (stagedSpacePerGoal[i] <= 0) continue;
-            if (!Matches(goals[i].Definition.goalType, type)) continue;
+            if (stagedSpacePerGoal[i] <= 0) continue;   // bitmiş (ya da bu level'da sanal bitti) → sıradaki
+
+            // İlk dolmamış hedef = aktif hedef. Tip uymuyorsa sayım yok — sonrakiler de bloklu.
+            if (!Matches(goals[i].Definition.goalType, type)) break;
 
             int take = Mathf.Min(stagedSpacePerGoal[i], remaining);
             stagedSpacePerGoal[i] -= take;
             remaining -= take;
             gained += take;
+
+            // Aktif hedef hâlâ dolmadıysa sonraki hedefler bloklu kalır.
+            if (stagedSpacePerGoal[i] > 0) break;
         }
 
         return gained;
@@ -269,11 +277,17 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         int totalGained = 0;
         bool dirty      = false;
 
+        // KADEMELİ sayım: yalnızca AKTİF hedef (ilk claim edilmemiş) taş sayar.
+        // Aktif hedef tamamlanınca (claim edilir) sıradaki hedef aynı batch'in
+        // artan taşlarıyla saymaya devam edebilir; tamamlanmadıysa sonrakiler bloklu.
         for (int i = 0; i < goals.Count; i++)
         {
             var goal = goals[i];
             if (goal.IsRewardClaimed) continue;
-            if (!Matches(goal.Definition.goalType, type)) continue;
+
+            // İlk claim edilmemiş hedef = aktif hedef. Tip uymuyorsa bu batch'ten
+            // hiçbir hedef sayamaz (sonrakiler bloklu) — döngüyü kes.
+            if (!Matches(goal.Definition.goalType, type)) break;
 
             int before   = goal.CurrentCount;
             int overflow = goal.AddWithOverflow(remaining);
@@ -304,6 +318,9 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
                 if (goal.Definition.reward != null)
                     pendingMenuRewardFx.Add(goal.Definition.reward);
             }
+
+            // Aktif hedef tamamlanmadıysa sonraki hedefler saymaz — batch burada biter.
+            if (!goal.IsRewardClaimed) break;
 
             remaining = overflow;
             if (remaining <= 0) break;

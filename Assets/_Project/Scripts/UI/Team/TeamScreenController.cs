@@ -37,6 +37,14 @@ public sealed class TeamScreenController : MonoBehaviour
     [SerializeField] private Sprite[] avatarPool;
     [Tooltip("Takım amblemi yoksa kullanılacak varsayılan amblem.")]
     [SerializeField] private Sprite defaultEmblem;
+    [Tooltip("Amblem havuzu — PlayerTeamState.EmblemIndex buradan sprite'a çevrilir.")]
+    [SerializeField] private Sprite[] emblemPool;
+
+    [Header("Takımsız durum (Ara/Oluştur)")]
+    [Tooltip("Takım İÇİ görünümün kökü (header + sohbet + butonlar).")]
+    [SerializeField] private GameObject inTeamRoot;
+    [Tooltip("Takımsızken gösterilen Ara/Oluştur tarayıcısı.")]
+    [SerializeField] private TeamBrowserController browser;
 
     private ITeamService service;
     private readonly List<GameObject> feed = new();
@@ -44,10 +52,38 @@ public sealed class TeamScreenController : MonoBehaviour
 
     private void OnEnable()
     {
-        service ??= BackendServices.Team;
         WireButtons();
         if (messageInputRoot != null) messageInputRoot.SetActive(false);
+        ApplyTeamState();
+    }
+
+    // Takım durumuna göre görünüm: takımsız → Ara/Oluştur tarayıcısı; takımlı → sohbet.
+    private void ApplyTeamState()
+    {
+        bool hasTeam = PlayerTeamState.HasTeam;
+
+        if (inTeamRoot != null) inTeamRoot.SetActive(hasTeam);
+        if (browser != null) browser.gameObject.SetActive(!hasTeam);
+
+        if (!hasTeam) return;
+
+        // Katılma/kurma sonrası BackendServices.ResetTeam çağrılmış olabilir —
+        // her açılışta güncel servisi al (singleton zaten cache'ler).
+        service = BackendServices.Team;
         Refresh();
+    }
+
+    // Browser'dan katılma/kurma bitti sinyali (mockup kurulumunda bağlanır).
+    private void OnTeamEntered() => ApplyTeamState();
+
+    private void Awake()
+    {
+        if (browser != null) browser.OnTeamEntered += OnTeamEntered;
+    }
+
+    private void OnDestroy()
+    {
+        if (browser != null) browser.OnTeamEntered -= OnTeamEntered;
     }
 
     private void WireButtons()
@@ -67,7 +103,11 @@ public sealed class TeamScreenController : MonoBehaviour
         {
             if (emblemImage != null)
             {
-                var emblem = info.emblem != null ? info.emblem : defaultEmblem;
+                // Öncelik: servis ambleminin kendisi → oyuncunun seçtiği havuz amblemi → varsayılan.
+                var emblem = info.emblem;
+                if (emblem == null && emblemPool != null && emblemPool.Length > 0)
+                    emblem = emblemPool[PlayerTeamState.EmblemIndex % emblemPool.Length];
+                if (emblem == null) emblem = defaultEmblem;
                 emblemImage.sprite  = emblem;
                 emblemImage.enabled = emblem != null;
                 emblemImage.preserveAspect = true;

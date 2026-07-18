@@ -33,10 +33,7 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
     [SerializeField] private float firstSlotY = 0f;
 
     [Header("Animation")]
-    [SerializeField, Min(0.05f)] private float slideDuration     = 0.35f;
-    [SerializeField, Min(0.05f)] private float completeDuration  = 0.25f;
     [SerializeField, Min(0.05f)] private float panelFadeDuration = 0.20f;
-    [SerializeField, Min(0f)]    private float newItemEnterOffset = 100f;
 
     [Header("Star Fly Effect (Cinematic)")]
     [Tooltip("Tek bir yıldız UI prefab'ı (Image + star sprite). Satırdan bölgeye uçar.")]

@@ -267,7 +267,11 @@ public class TileView : MonoBehaviour,
             yield break;
 
         RectTransform visualRt = iconImage != null ? iconImage.rectTransform : null;
-        Vector3 visualBaseScale = visualRt != null ? visualRt.localScale : Vector3.one;
+        // Ev scale CANLI OKUNMAZ (shake-drift dersinin skala hali): önceki esneme/squash
+        // yarıda kesildiyse mevcut scale esnik kalmış olabilir — onu "ev" sanmak taşı
+        // kalıcı esnik bırakıyordu. İkonun dinlenme scale'i bu kod tabanında HER ZAMAN 1.
+        Vector3 visualBaseScale = Vector3.one;
+        if (visualRt != null) visualRt.localScale = Vector3.one;   // uçuşa temiz başla
 
         Vector2 start = rt.anchoredPosition;
         Vector2 end;
@@ -344,8 +348,11 @@ public class TileView : MonoBehaviour,
         if (!enableSettle || settleDuration <= 0f)
             yield break;
 
-        Vector2 overshoot = end + new Vector2(0f, -settleStrength * tileSize);
-        Vector2 overUp = end + new Vector2(0f, settleStrength * tileSize * 0.3f);
+        // Pozisyon dalışı settleOvershoot ile (KÜÇÜK, %2 gibi) — strength SKALA squash'ı sürer.
+        // Eskiden strength (%11+) pozisyonu sürüyordu: inen taş alttakinin içine gömülüp
+        // çıkıyordu (ağır çekimde "üst üste binip ayrılma").
+        Vector2 overshoot = end + new Vector2(0f, -settleOvershoot * tileSize);
+        Vector2 overUp = end + new Vector2(0f, settleOvershoot * tileSize * 0.3f);
 
         float bounceDur = settleDuration;
 
@@ -362,10 +369,10 @@ public class TileView : MonoBehaviour,
 
             rt.anchoredPosition = Vector2.LerpUnclamped(end, overshoot, eased);
 
-            if (visualRt != null && settleStretchX > 0f)
+            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
             {
                 float sx = 1f + settleStretchX * eased;
-                float sy = 1f - settleStretchX * eased * 0.5f;
+                float sy = 1f - settleStrength * eased;   // impact ezilmesi skala ile (pozisyon değil)
 
                 visualRt.localScale = new Vector3(
                     visualBaseScale.x * sx,
@@ -389,11 +396,11 @@ public class TileView : MonoBehaviour,
 
             rt.anchoredPosition = Vector2.LerpUnclamped(overshoot, overUp, eased);
 
-            if (visualRt != null && settleStretchX > 0f)
+            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
             {
                 float revK = 1f - k;
                 float sx = 1f + settleStretchX * revK;
-                float sy = 1f - settleStretchX * revK * 0.5f;
+                float sy = 1f - settleStrength * revK;
 
                 visualRt.localScale = new Vector3(
                     visualBaseScale.x * sx,
@@ -458,6 +465,29 @@ public class TileView : MonoBehaviour,
         return new Vector2(cellX * tileSize, -cellY * tileSize);
     }
 
+    // ── Düşüş esnemesi (squash&stretch) yardımcıları ─────────────────────────
+
+    // Zarf MUTLAK zamanlı: yüksek düşüş hızında (26 hücre/sn → 1 hücre ~0.04sn)
+    // yüzde bazlı zarf hiç görünmüyordu. Gerilme ~0.03sn'de tavana çıkar; varıştan
+    // kısa süre önce (recover oranı, en çok 0.08sn) toparlar.
+    private static float FallStretchEnv(float elapsed, float duration, float recoverPortion)
+    {
+        const float rampInTime = 0.03f;
+        float recoverTime = Mathf.Min(0.08f, duration * recoverPortion);
+
+        float rampIn = Mathf.Clamp01(elapsed / rampInTime);
+        float remain = duration - elapsed;
+        float rampOut = recoverTime > 0.0001f ? Mathf.Clamp01(remain / recoverTime) : 1f;
+        return Mathf.SmoothStep(0f, 1f, Mathf.Min(rampIn, rampOut));
+    }
+
+    private static void ApplyFallStretchScale(RectTransform visualRt, Vector3 baseScale, float amount, float env)
+    {
+        float sy = 1f + amount * env;
+        float sx = 1f - amount * 0.55f * env;   // hacim korunuyormuş gibi incelt
+        visualRt.localScale = new Vector3(baseScale.x * sx, baseScale.y * sy, baseScale.z);
+    }
+
     public IEnumerator MoveToGridCell(
         int tileSize,
         int fromX,
@@ -488,7 +518,11 @@ public class TileView : MonoBehaviour,
         rt.pivot = new Vector2(0, 1);
 
         RectTransform visualRt = iconImage != null ? iconImage.rectTransform : null;
-        Vector3 visualBaseScale = visualRt != null ? visualRt.localScale : Vector3.one;
+        // Ev scale CANLI OKUNMAZ (shake-drift dersinin skala hali): önceki esneme/squash
+        // yarıda kesildiyse mevcut scale esnik kalmış olabilir — onu "ev" sanmak taşı
+        // kalıcı esnik bırakıyordu. İkonun dinlenme scale'i bu kod tabanında HER ZAMAN 1.
+        Vector3 visualBaseScale = Vector3.one;
+        if (visualRt != null) visualRt.localScale = Vector3.one;   // uçuşa temiz başla
 
         Vector2 start = GetFallCellAnchoredPosition(fromX, fromY, tileSize);
         Vector2 end = GetFallCellAnchoredPosition(toX, toY, tileSize);
@@ -507,6 +541,14 @@ public class TileView : MonoBehaviour,
         float elapsed = 0f;
         float safeDuration = Mathf.Max(0.0001f, duration);
 
+        // Düşüş esnemesi: dikey düşüşte taş dikeyde uzar ("altından sandalye çekilmiş"),
+        // varışa yakın normale döner; inişte settle squash devralır.
+        float stretchAmt = board != null ? board.FallStretchAmount : 0f;
+        float stretchRecover = board != null ? board.FallStretchRecover : 0.35f;
+        bool doStretch = stretchAmt > 0.001f && visualRt != null
+                         && end.y < start.y - 0.5f
+                         && Mathf.Abs(end.x - start.x) < 0.5f;
+
         while (elapsed < safeDuration)
         {
             if (rt == null || !rt)
@@ -520,11 +562,18 @@ public class TileView : MonoBehaviour,
 
             rt.anchoredPosition = Vector2.LerpUnclamped(start, end, t);
 
+            if (doStretch && visualRt != null)
+                ApplyFallStretchScale(visualRt, visualBaseScale, stretchAmt,
+                    FallStretchEnv(elapsed, safeDuration, stretchRecover));
+
             yield return null;
         }
 
         if (rt == null || !rt)
             yield break;
+
+        if (doStretch && visualRt != null)
+            visualRt.localScale = visualBaseScale;   // settle squash temiz tabandan başlasın
 
         rt.anchoredPosition = end;
         SnapToGrid(tileSize);
@@ -533,8 +582,9 @@ public class TileView : MonoBehaviour,
             yield break;
 
         Vector2 basePos = rt.anchoredPosition;
-        Vector2 overshoot = basePos + new Vector2(0f, -settleStrength * tileSize);
-        Vector2 overUp = basePos + new Vector2(0f, settleStrength * tileSize * 0.3f);
+        // Pozisyon dalışı settleOvershoot ile (küçük) — strength skala squash'ı sürer (gömülme fix'i).
+        Vector2 overshoot = basePos + new Vector2(0f, -settleOvershoot * tileSize);
+        Vector2 overUp = basePos + new Vector2(0f, settleOvershoot * tileSize * 0.3f);
 
         float bounceDur = settleDuration;
 
@@ -551,10 +601,10 @@ public class TileView : MonoBehaviour,
 
             rt.anchoredPosition = Vector2.LerpUnclamped(basePos, overshoot, eased);
 
-            if (visualRt != null && settleStretchX > 0f)
+            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
             {
                 float sx = 1f + settleStretchX * eased;
-                float sy = 1f - settleStretchX * eased * 0.5f;
+                float sy = 1f - settleStrength * eased;   // impact ezilmesi skala ile (pozisyon değil)
 
                 visualRt.localScale = new Vector3(
                     visualBaseScale.x * sx,
@@ -578,11 +628,11 @@ public class TileView : MonoBehaviour,
 
             rt.anchoredPosition = Vector2.LerpUnclamped(overshoot, overUp, eased);
 
-            if (visualRt != null && settleStretchX > 0f)
+            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
             {
                 float revK = 1f - k;
                 float sx = 1f + settleStretchX * revK;
-                float sy = 1f - settleStretchX * revK * 0.5f;
+                float sy = 1f - settleStrength * revK;
 
                 visualRt.localScale = new Vector3(
                     visualBaseScale.x * sx,
@@ -663,7 +713,11 @@ public class TileView : MonoBehaviour,
         rt.pivot = new Vector2(0, 1);
 
         RectTransform visualRt = iconImage != null ? iconImage.rectTransform : null;
-        Vector3 visualBaseScale = visualRt != null ? visualRt.localScale : Vector3.one;
+        // Ev scale CANLI OKUNMAZ (shake-drift dersinin skala hali): önceki esneme/squash
+        // yarıda kesildiyse mevcut scale esnik kalmış olabilir — onu "ev" sanmak taşı
+        // kalıcı esnik bırakıyordu. İkonun dinlenme scale'i bu kod tabanında HER ZAMAN 1.
+        Vector3 visualBaseScale = Vector3.one;
+        if (visualRt != null) visualRt.localScale = Vector3.one;   // uçuşa temiz başla
 
         // İlk waypoint'e konumlan
         Vector2 startPos = GetFallCellAnchoredPosition(waypoints[0].x, waypoints[0].y, tileSize);
@@ -671,6 +725,16 @@ public class TileView : MonoBehaviour,
 
         // Her segment'i sırayla lerp'le. Aralarda snap YOK.
         int segmentCount = waypoints.Length - 1;
+
+        // Düşüş esnemesi: yalnızca DİKEY inen segmentlerde gerilir; diagonal/yatay
+        // adımlarda yumuşakça toparlar (envCurrent sürekli — segment geçişinde pop yok).
+        float stretchAmt = board != null ? board.FallStretchAmount : 0f;
+        float stretchRecover = board != null ? board.FallStretchRecover : 0.35f;
+        bool stretchEnabled = stretchAmt > 0.001f && visualRt != null;
+        float totalDur = 0f;
+        for (int i = 0; i < segmentCount; i++) totalDur += Mathf.Max(0.0001f, segmentDurations[i]);
+        float globalElapsed = 0f;
+        float envCurrent = 0f;
 
         for (int seg = 0; seg < segmentCount; seg++)
         {
@@ -686,8 +750,12 @@ public class TileView : MonoBehaviour,
             if (pixelDist < 0.5f)
             {
                 rt.anchoredPosition = segEnd;
+                globalElapsed += segDur;
                 continue;
             }
+
+            bool segVerticalDown = segEnd.y < segStart.y - 0.5f
+                                   && Mathf.Abs(segEnd.x - segStart.x) < 0.5f;
 
             float elapsed = 0f;
             while (elapsed < segDur)
@@ -696,12 +764,22 @@ public class TileView : MonoBehaviour,
                     yield break;
 
                 elapsed += Time.deltaTime;
+                globalElapsed += Time.deltaTime;
 
                 float t = Mathf.Clamp01(elapsed / segDur);
                 if (easingCurve != null)
                     t = easingCurve.Evaluate(t);
 
                 rt.anchoredPosition = Vector2.LerpUnclamped(segStart, segEnd, t);
+
+                if (stretchEnabled && visualRt != null)
+                {
+                    float targetEnv = segVerticalDown
+                        ? FallStretchEnv(globalElapsed, totalDur, stretchRecover)
+                        : 0f;
+                    envCurrent = Mathf.MoveTowards(envCurrent, targetEnv, Time.deltaTime / 0.04f);
+                    ApplyFallStretchScale(visualRt, visualBaseScale, stretchAmt, envCurrent);
+                }
 
                 yield return null;
             }
@@ -713,6 +791,9 @@ public class TileView : MonoBehaviour,
             // SnapToGrid YOK — bir sonraki segment kaldığı yerden başlar
         }
 
+        if (stretchEnabled && visualRt != null)
+            visualRt.localScale = visualBaseScale;
+
         // Son waypoint sonrası snap
         SnapToGrid(tileSize);
 
@@ -720,8 +801,9 @@ public class TileView : MonoBehaviour,
             yield break;
 
         Vector2 basePos = rt.anchoredPosition;
-        Vector2 overshootPos = basePos + new Vector2(0f, -settleStrength * tileSize);
-        Vector2 overUpPos = basePos + new Vector2(0f, settleStrength * tileSize * 0.3f);
+        // Pozisyon dalışı settleOvershoot ile (küçük) — strength skala squash'ı sürer (gömülme fix'i).
+        Vector2 overshootPos = basePos + new Vector2(0f, -settleOvershoot * tileSize);
+        Vector2 overUpPos = basePos + new Vector2(0f, settleOvershoot * tileSize * 0.3f);
 
         float bounceDur = settleDuration;
 
@@ -738,10 +820,10 @@ public class TileView : MonoBehaviour,
 
             rt.anchoredPosition = Vector2.LerpUnclamped(basePos, overshootPos, eased);
 
-            if (visualRt != null && settleStretchX > 0f)
+            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
             {
                 float sx = 1f + settleStretchX * eased;
-                float sy = 1f - settleStretchX * eased * 0.5f;
+                float sy = 1f - settleStrength * eased;   // impact ezilmesi skala ile (pozisyon değil)
 
                 visualRt.localScale = new Vector3(
                     visualBaseScale.x * sx,
@@ -765,11 +847,11 @@ public class TileView : MonoBehaviour,
 
             rt.anchoredPosition = Vector2.LerpUnclamped(overshootPos, overUpPos, eased);
 
-            if (visualRt != null && settleStretchX > 0f)
+            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
             {
                 float revK = 1f - k;
                 float sx = 1f + settleStretchX * revK;
-                float sy = 1f - settleStretchX * revK * 0.5f;
+                float sy = 1f - settleStrength * revK;
 
                 visualRt.localScale = new Vector3(
                     visualBaseScale.x * sx,
@@ -936,8 +1018,11 @@ public class TileView : MonoBehaviour,
         // Faz sırası (rotasyon yok, sadece büyüme):
         // 1) grow    : imaj + halo birlikte küçükten büyüğe büyür
         // 2) settle  : halo söner + imaj normal boyutuna oturur
-        const float growDuration = 0.22f;
-        const float settleDuration = 0.14f;
+        // Süreler board metronomuna (CellTime) oranlı: doğuş ~3 hücre + ~1.75 hücre vuruşu —
+        // fall velocity değişince doğuş da aynı oranda hızlanır (senkron kayması olmaz).
+        float cellTime = board != null ? board.CellTime : 0.075f;
+        float growDuration = cellTime * 3f;
+        float settleDuration = cellTime * 1.75f;
 
         const float maxScale = 1.25f;
         const float haloMaxScale = 1.35f;
@@ -1093,7 +1178,7 @@ public class TileView : MonoBehaviour,
         RectTransform iconRt = iconImage != null ? iconImage.rectTransform : null;
 
         Vector2 basePos = rt.anchoredPosition;
-        Vector3 baseScale = iconRt != null ? iconRt.localScale : Vector3.one;
+        Vector3 baseScale = Vector3.one;   // canlı okuma tuzağı: dinlenme scale'i her zaman 1
 
         float dur = Mathf.Max(0.01f, duration);
 

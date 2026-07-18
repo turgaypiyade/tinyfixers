@@ -20,13 +20,17 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
 
     public event Action OnChanged;
 
-    private readonly Dictionary<LeaderboardTab, List<LeaderboardEntry>> cache = new();
+    // Cache anahtarı (sekme, alt-filtre): Dünya/Türkiye ve Liste/Ekle ayrı listeler.
+    private readonly Dictionary<(LeaderboardTab tab, int sub), List<LeaderboardEntry>> cache = new();
+
+    // Türkiye bot havuzları — Dünya havuzundan (0..120 / takım 0..100) ayrı index aralığı.
+    private const int TrPlayerBase = 3000;
+    private const int TrTeamBase = 300;
 
     private static FirebaseFirestore Db => FirebaseFirestore.DefaultInstance;
 
-    // subFilter (Dünya/Türkiye) v1'de yok sayılır — tek havuz. Bölgesel board sonra.
     public List<LeaderboardEntry> GetEntries(LeaderboardTab tab, int subFilter)
-        => cache.TryGetValue(tab, out var list) ? list : new List<LeaderboardEntry>();
+        => cache.TryGetValue((tab, subFilter), out var list) ? list : new List<LeaderboardEntry>();
 
     public string[] GetSubFilters(LeaderboardTab tab) => tab switch
     {
@@ -41,26 +45,31 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
 
     public void Fetch(LeaderboardTab tab)
     {
-        // Takım sekmesi = takımların liderlik tablosu (yerel sim).
+        // Takım sekmesi = takımların liderlik tablosu (yerel sim, Dünya + Türkiye ayrı).
         if (tab == LeaderboardTab.Team)
         {
-            cache[tab] = TeamBoard();
+            cache[(tab, 0)] = TeamBoard(region: 0);
+            cache[(tab, 1)] = TeamBoard(region: 1);
             OnChanged?.Invoke();
             return;
         }
-        // Arkadaşlar = küçük bot listesi + sen (arkadaş sistemi gelene kadar).
+        // Arkadaşlar = GERÇEK arkadaş listen (FriendState). "Ekle" alt-görünümü liste kullanmaz.
         if (tab == LeaderboardTab.Friends)
         {
-            cache[tab] = FriendsBoard();
+            cache[(tab, 0)] = FriendsBoard();
+            cache[(tab, 1)] = new List<LeaderboardEntry>();
             OnChanged?.Invoke();
             return;
         }
 
         // 1) Anında yerel botlar + kendi satırın → boş/geç görünmesin.
-        cache[tab] = Rank(Merge(new List<LeaderboardEntry>()));
+        //    Dünya (0) ve Türkiye (1) ayrı bot havuzlarından.
+        cache[(tab, 0)] = Rank(Merge(new List<LeaderboardEntry>(), region: 0));
+        cache[(tab, 1)] = Rank(Merge(new List<LeaderboardEntry>(), region: 1));
         OnChanged?.Invoke();
 
-        // 2) Auth hazır değilse hazır olunca gerçek veriyi çek.
+        // 2) Gerçek Firestore verisi yalnız Dünya havuzuna karışır (bölgesel board sonra).
+        //    Auth hazır değilse hazır olunca çek.
         if (!FirebaseAuthService.IsReady)
         {
             FirebaseAuthService.OnReady += () => FetchReal(tab);
@@ -87,18 +96,18 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
                     Debug.LogError($"[Leaderboard] okuma hatası ({tab}): {task.Exception}");
                     return;
                 }
-                cache[tab] = Rank(Merge(ParseOthers(task.Result)));
+                cache[(tab, 0)] = Rank(Merge(ParseOthers(task.Result), region: 0));
                 OnChanged?.Invoke();
             });
         });
     }
 
     // Gerçek(diğerleri) + botlar + kendi satırın → tek liste (henüz sırasız).
-    private List<LeaderboardEntry> Merge(List<LeaderboardEntry> realOthers)
+    private List<LeaderboardEntry> Merge(List<LeaderboardEntry> realOthers, int region)
     {
         var list = new List<LeaderboardEntry>();
         list.AddRange(realOthers);
-        list.AddRange(BuildBots());
+        list.AddRange(BuildBots(region));
         list.Add(new LeaderboardEntry
         {
             playerName = PlayerProfile.PlayerName,
@@ -138,72 +147,89 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
     }
 
     // Dolgu botları — sabit isim (index), gerçek zamanla ilerleyen skor (BotProgression).
-    private List<LeaderboardEntry> BuildBots()
+    // region: 0=Dünya (0..N), 1=Türkiye (ayrı index aralığı → farklı isimler/skorlar).
+    private List<LeaderboardEntry> BuildBots(int region)
     {
+        int baseIndex = region == 1 ? TrPlayerBase : 0;
         var list = new List<LeaderboardEntry>(BotFillCount);
         for (int i = 0; i < BotFillCount; i++)
         {
             list.Add(new LeaderboardEntry
             {
-                playerName = NamePool.PlayerAt(i),
+                playerName = NamePool.PlayerAt(baseIndex + i),
                 subtitle = "",
-                score = BotProgression.WeeklyScore(i),
+                score = BotProgression.WeeklyScore(baseIndex + i),
             });
         }
         return list;
     }
 
-    // Takım liderlik tablosu: 50 takım (sabit isim, ilerleyen skor) + senin takımın (vurgulu).
-    private List<LeaderboardEntry> TeamBoard()
+    // Takım liderlik tablosu: takımlar (sabit isim, ilerleyen skor) + senin takımın (vurgulu).
+    // region: 0=Dünya, 1=Türkiye (ayrı takım havuzu). Takımsızken self satırı basılmaz.
+    private List<LeaderboardEntry> TeamBoard(int region)
     {
+        int baseIndex = region == 1 ? TrTeamBase : 0;
         var list = new List<LeaderboardEntry>();
         for (int i = 0; i < 100; i++)
         {
-            int members = Mathf.Min(TeamCapacity, BotProgression.TeamMembers(i));
+            int members = Mathf.Min(TeamCapacity, BotProgression.TeamMembers(baseIndex + i));
             list.Add(new LeaderboardEntry
             {
-                playerName = NamePool.TeamAt(i),
+                playerName = NamePool.TeamAt(baseIndex + i),
                 subtitle = members + "/" + TeamCapacity,
-                score = BotProgression.TeamWeeklyScore(i),
+                score = BotProgression.TeamWeeklyScore(baseIndex + i),
                 capacityCurrent = members,
                 capacityMax = TeamCapacity,
             });
         }
-        list.Add(new LeaderboardEntry
-        {
-            playerName = PlayerTeamState.TeamName,
-            subtitle = "Senin takımın",
-            // Sim: takım puanı = senin toplam puanın (gerçek üye toplamı backend'le gelecek).
-            // Böylece oynadıkça takım skorun büyür ve puanın teams sekmesinde de görünür.
-            score = PlayerWallet.TotalScore,
-            isSelf = true,
-            capacityCurrent = 6,
-            capacityMax = TeamCapacity,
-        });
-        return Rank(list);
-    }
 
-    // Arkadaşlar: küçük bot listesi (ayrı index aralığı) + sen.
-    private List<LeaderboardEntry> FriendsBoard()
-    {
-        var list = new List<LeaderboardEntry>();
-        for (int i = 0; i < 15; i++)
+        if (PlayerTeamState.HasTeam)
         {
             list.Add(new LeaderboardEntry
             {
-                playerName = NamePool.PlayerAt(1000 + i),
-                subtitle = "",
-                score = BotProgression.WeeklyScore(1000 + i),
+                playerName = PlayerTeamState.TeamName,
+                subtitle = "Senin takımın",
+                // Sim: takım puanı = senin toplam puanın (gerçek üye toplamı backend'le gelecek).
+                // Böylece oynadıkça takım skorun büyür ve puanın teams sekmesinde de görünür.
+                score = PlayerWallet.TotalScore,
+                isSelf = true,
+                capacityCurrent = PlayerTeamState.IsCreator ? 1 : 6,
+                capacityMax = TeamCapacity,
+            });
+        }
+        return Rank(list);
+    }
+
+    // Arkadaşlar (Liste): GERÇEK arkadaşların (FriendState) + sen; Bölüm'e göre sıralı
+    // (referans RM ekranı — puan yerine bölüm yarışı). Arkadaş yoksa yalnız sen kalırsın;
+    // controller o durumda öneri görünümünü açar.
+    private List<LeaderboardEntry> FriendsBoard()
+    {
+        var list = new List<LeaderboardEntry>();
+        foreach (var name in FriendState.Friends)
+        {
+            int hash = Mathf.Abs(name.GetHashCode());
+            list.Add(new LeaderboardEntry
+            {
+                playerName = name,
+                subtitle = NamePool.TeamAt(hash % 500),   // arkadaşın takımı (alt-isim)
+                chapter = FriendDirectory.ChapterOf(name),
+                score = 0,
             });
         }
         list.Add(new LeaderboardEntry
         {
             playerName = PlayerProfile.PlayerName,
-            subtitle = "Sen",
-            score = PlayerWallet.TotalScore,
+            subtitle = PlayerTeamState.HasTeam ? PlayerTeamState.TeamName : "Sen",
+            chapter = Mathf.Max(1, PlayerPrefs.GetInt("current_level", 1)),
+            score = 0,
             isSelf = true,
         });
-        return Rank(list);
+
+        // Bölüm'e göre sırala (yüksek → düşük); rank buradan.
+        list.Sort((a, b) => b.chapter.CompareTo(a.chapter));
+        for (int i = 0; i < list.Count; i++) list[i].rank = i + 1;
+        return list;
     }
 
     private static Task WriteOwnScore(CollectionReference col)

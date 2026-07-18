@@ -14,11 +14,65 @@ public static class LeaderboardMockupSetup
 {
     private const string PrefabDir = "Assets/_Project/Prefabs/UI/Leaderboard";
     private const string RowPath   = PrefabDir + "/LeaderboardRow.prefab";
+    private const string SuggestionRowPath = PrefabDir + "/FriendSuggestionRow.prefab";
     private const string SkinPath  = "Assets/_Project/Settings/LeaderboardSkin.asset";
 
     private static readonly LeaderboardTab[] Tabs =
         { LeaderboardTab.Weekly, LeaderboardTab.Friends, LeaderboardTab.Players, LeaderboardTab.Team };
     private static readonly string[] TabLabels = { "Haftalık", "Arkadaşlar", "Oyuncular", "Takım" };
+
+    /// <summary>
+    /// SADECE yeni arkadaş parçalarını (Arkadaş Ekle görünümü + Arkadaş Bul popup)
+    /// SAHNEDEKİ MEVCUT panele ekler — paneli yeniden KURMAZ, elle basılmış
+    /// sprite/görsellere DOKUNMAZ. Setup Leaderboard'un aksine güvenlidir.
+    /// </summary>
+    [MenuItem("TinyFixers/Mockup/Ekle - Arkadas Gorunumu (Leaderboard'u BOZMAZ)")]
+    public static void AddFriendsViewOnly()
+    {
+        var ctrl = Object.FindFirstObjectByType<LeaderboardScreenController>(FindObjectsInactive.Include);
+        if (ctrl == null)
+        {
+            EditorUtility.DisplayDialog("Arkadaş Görünümü",
+                "Sahnede LeaderboardPanel bulunamadı. MainMenu sahnesini aç ve tekrar dene.", "Tamam");
+            return;
+        }
+
+        var theme = MockupUI.EnsureTheme();
+        var skin = EnsureSkin();
+
+        var panelRoot = ctrl.transform;
+        var body = panelRoot.Find("Body") as RectTransform;
+        var listArea = body != null ? body.Find("ListArea") as RectTransform : null;
+        if (body == null || listArea == null)
+        {
+            EditorUtility.DisplayDialog("Arkadaş Görünümü",
+                "Panelde Body/ListArea bulunamadı — panel eski kurulumdan farklı görünüyor.", "Tamam");
+            return;
+        }
+
+        // Öneri satırı prefab'ı: YOKSA üret; varsa (elle düzenlenmiş olabilir) aynen kullan.
+        var suggestionAsset = AssetDatabase.LoadAssetAtPath<FriendSuggestionRow>(SuggestionRowPath);
+        if (suggestionAsset == null)
+        {
+            MockupUI.EnsureFolder(PrefabDir);
+            BuildSuggestionRowPrefab(theme);
+            suggestionAsset = AssetDatabase.LoadAssetAtPath<FriendSuggestionRow>(SuggestionRowPath);
+        }
+
+        // Idempotent: yalnız KENDİ eklediğimiz kökleri temizle (önceki çalıştırmadan).
+        var oldView = body.Find("AddFriendsView");
+        if (oldView != null) Object.DestroyImmediate(oldView.gameObject);
+        var oldPopup = panelRoot.Find("FindFriendPopup");
+        if (oldPopup != null) Object.DestroyImmediate(oldPopup.gameObject);
+
+        float listBottom = Mathf.Max(skin.listBottomOffset, skin.rowHeight + 16f);
+        BuildAddFriendsView(body, panelRoot, theme, skin, ctrl, suggestionAsset, listArea, listBottom);
+
+        EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
+        AssetDatabase.SaveAssets();
+        EditorUtility.DisplayDialog("Arkadaş Görünümü",
+            "Arkadaş Ekle görünümü + Arkadaş Bul popup'ı MEVCUT panele eklendi.\nMevcut görsellere dokunulmadı. Sahneyi kaydet (Cmd+S).", "Tamam");
+    }
 
     [MenuItem("TinyFixers/Mockup/Setup Leaderboard")]
     public static void Setup()
@@ -30,6 +84,9 @@ public static class LeaderboardMockupSetup
         BuildRowPrefab(theme, skin);
         var rowAsset = AssetDatabase.LoadAssetAtPath<LeaderboardRow>(RowPath);
 
+        BuildSuggestionRowPrefab(theme);
+        var suggestionAsset = AssetDatabase.LoadAssetAtPath<FriendSuggestionRow>(SuggestionRowPath);
+
         var tab = MockupUI.FindTabController();
         if (tab == null)
         {
@@ -37,7 +94,7 @@ public static class LeaderboardMockupSetup
             return;
         }
 
-        var panel = BuildPanel(tab.transform, theme, skin, rowAsset);
+        var panel = BuildPanel(tab.transform, theme, skin, rowAsset, suggestionAsset);
         MockupUI.AssignTabPanel(tab, "Ranks", panel);
 
         EditorSceneManager.MarkSceneDirty(tab.gameObject.scene);
@@ -146,6 +203,51 @@ public static class LeaderboardMockupSetup
         MockupUI.SaveAndLoadPrefab<LeaderboardRow>(root.gameObject, RowPath);
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    //  Öneri satırı prefab'ı — avatar + isim + "N ortak arkadaş" + X / kişi-ekle
+    // ─────────────────────────────────────────────────────────────────
+
+    private static void BuildSuggestionRowPrefab(UITheme theme)
+    {
+        const float rowH = 150f;
+
+        var root = MockupUI.NewRect("FriendSuggestionRow", null);
+        root.sizeDelta = new Vector2(880, rowH);
+        var bg = root.gameObject.AddComponent<Image>();
+        MockupUI.Card(bg, theme, theme.creamSurface);
+        MockupUI.LayoutElem(root.gameObject, preferredHeight: rowH);
+        var row = root.gameObject.AddComponent<FriendSuggestionRow>();
+
+        var avatar = MockupUI.BuildAvatarCircle("AvatarCircle", root, 116f, out var avatarRoot);
+        Place(avatarRoot, new Vector2(0, 0.5f), new Vector2(20, 0), new Vector2(116, 116), pivotX: 0);
+
+        var name = MockupUI.NewText("Name", root, "Oyuncu", 36, Color.black, TextAlignmentOptions.Left, theme.headingFont);
+        name.fontStyle = FontStyles.Bold;
+        Place(name.rectTransform, new Vector2(0, 0.5f), new Vector2(160, 22), new Vector2(340, 44), pivotX: 0);
+        var mutual = MockupUI.NewText("Mutual", root, "1 ortak arkadaş", 24, theme.textSub, TextAlignmentOptions.Left, theme.bodyFont);
+        Place(mutual.rectTransform, new Vector2(0, 0.5f), new Vector2(160, -24), new Vector2(340, 32), pivotX: 0);
+
+        // Sağ: X (reddet, amber) + kişi-ekle (yeşil) kare butonlar.
+        var dismissBtn = MockupUI.GlossyButton(root, MockupBeautifyTool.BlueBtnPath, theme.accentAmber,
+            "✕", 40, theme.headingFont, out _);
+        var dismissRt = ((Image)dismissBtn.targetGraphic).rectTransform;
+        Place(dismissRt, new Vector2(1, 0.5f), new Vector2(-128, 0), new Vector2(96, 96), pivotX: 1);
+
+        var addBtn = MockupUI.GlossyButton(root, MockupBeautifyTool.GreenBtnPath, theme.ctaGreen,
+            "+", 48, theme.headingFont, out _);
+        var addRt = ((Image)addBtn.targetGraphic).rectTransform;
+        Place(addRt, new Vector2(1, 0.5f), new Vector2(-20, 0), new Vector2(96, 96), pivotX: 1);
+
+        MockupUI.SetRef(row, "background", bg);
+        MockupUI.SetRef(row, "avatar", avatar);
+        MockupUI.SetRef(row, "nameText", name);
+        MockupUI.SetRef(row, "mutualText", mutual);
+        MockupUI.SetRef(row, "addButton", addBtn);
+        MockupUI.SetRef(row, "dismissButton", dismissBtn);
+
+        MockupUI.SaveAndLoadPrefab<FriendSuggestionRow>(root.gameObject, SuggestionRowPath);
+    }
+
     // Kısa yerleşim yardımcısı: tek anchor noktası + pozisyon + boyut.
     private static void Place(RectTransform rt, Vector2 anchor, Vector2 pos, Vector2 size,
                               float pivotX = -1, float pivotY = -1)
@@ -161,7 +263,8 @@ public static class LeaderboardMockupSetup
     //  Panel — sekmeler + bağlı bant + toggle + liste + pinli self
     // ─────────────────────────────────────────────────────────────────
 
-    private static GameObject BuildPanel(Transform bottomBar, UITheme theme, LeaderboardSkin skin, LeaderboardRow rowPrefab)
+    private static GameObject BuildPanel(Transform bottomBar, UITheme theme, LeaderboardSkin skin,
+                                         LeaderboardRow rowPrefab, FriendSuggestionRow suggestionPrefab)
     {
         var panel = MockupUI.BuildScreenPanel(bottomBar, "LeaderboardPanel", theme, "Liderlik Panosu", out var body);
         var ctrl = panel.AddComponent<LeaderboardScreenController>();
@@ -281,7 +384,147 @@ public static class LeaderboardMockupSetup
         MockupUI.SetRefArray(ctrl, "avatarPool", MockupUI.AvatarPool());
         AssignTabButtons(ctrl, buttons, tabBgs, tabRects);
 
+        // ── Arkadaş Ekle görünümü + Arkadaş Bul popup ────────────────
+        BuildAddFriendsView(body, panel.transform, theme, skin, ctrl, suggestionPrefab, listArea, listBottom);
+
         return panel;
+    }
+
+    // "Arkadaş Ekle" alt-görünümü: Arkadaş Bul butonu + Önerilen Arkadaşlar listesi;
+    // üstüne tam-ekran Arkadaş Bul popup'ı (ID arama + kendi ID + Davet Et).
+    private static void BuildAddFriendsView(RectTransform body, Transform panelRoot, UITheme theme,
+        LeaderboardSkin skin, LeaderboardScreenController ctrl, FriendSuggestionRow suggestionPrefab,
+        RectTransform listArea, float listBottom)
+    {
+        var view = MockupUI.NewRect("AddFriendsView", body);
+        view.anchorMin = Vector2.zero; view.anchorMax = Vector2.one;
+        view.offsetMin = new Vector2(0, Mathf.Max(0f, listBottom - skin.rowHeight));   // pinli self yok → biraz daha alan
+        view.offsetMax = new Vector2(0, -skin.listTopOffset);
+
+        // Arkadaş Bul (büyük yeşil buton)
+        var findBtn = MockupUI.GlossyButton(view, MockupBeautifyTool.GreenBtnPath, theme.ctaGreen,
+            "Arkadaş Bul", 34, theme.headingFont, out _);
+        var findRt = ((Image)findBtn.targetGraphic).rectTransform;
+        findRt.anchorMin = new Vector2(0.5f, 1); findRt.anchorMax = new Vector2(0.5f, 1);
+        findRt.pivot = new Vector2(0.5f, 1);
+        findRt.anchoredPosition = new Vector2(0, -8);
+        findRt.sizeDelta = new Vector2(560, 100);
+
+        var header = MockupUI.NewText("SuggestionHeader", view, "Önerilen Arkadaşlar", 30,
+            theme.textLight, TextAlignmentOptions.Center, theme.headingFont);
+        MockupUI.AnchorTop(header.rectTransform, height: 44, y: 126);
+
+        var suggestionArea = MockupUI.NewRect("SuggestionArea", view);
+        MockupUI.AnchorFill(suggestionArea, topOffset: 182, bottomOffset: 0);
+        var suggestionContent = MockupUI.BuildVerticalScroll(suggestionArea);
+
+        view.gameObject.SetActive(false);   // controller Render'da açar
+
+        // ── Arkadaş Bul popup (panel köküne — her şeyin üstünde) ─────
+        var popupRoot = MockupUI.NewRect("FindFriendPopup", panelRoot);
+        MockupUI.Stretch(popupRoot);
+        var scrim = popupRoot.gameObject.AddComponent<Image>();
+        scrim.color = new Color(0f, 0f, 0f, 0.6f);   // arkayı karart + tıklamayı yut
+        var popup = popupRoot.gameObject.AddComponent<FindFriendPopup>();
+
+        var card = MockupUI.NewImage("Card", popupRoot, Color.white);
+        MockupUI.Card(card, theme, theme.panelSurface);
+        Place(card.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(780, 920));
+
+        var title = MockupUI.NewText("Title", card.transform, "Arkadaş Bul", 44, theme.textLight,
+            TextAlignmentOptions.Center, theme.headingFont);
+        MockupUI.AnchorTop(title.rectTransform, height: 70, y: 28);
+
+        var closeBtn = MockupUI.GlossyButton(card.transform, MockupBeautifyTool.BlueBtnPath, theme.accentAmber,
+            "✕", 40, theme.headingFont, out _);
+        var closeRt = ((Image)closeBtn.targetGraphic).rectTransform;
+        Place(closeRt, new Vector2(1, 1), new Vector2(-14, -14), new Vector2(84, 84), pivotX: 1, pivotY: 1);
+
+        // Arama satırı: input + büyüteç
+        var searchRow = MockupUI.NewRect("SearchRow", card.transform);
+        MockupUI.AnchorTop(searchRow, height: 96, y: 120);
+        searchRow.offsetMin = new Vector2(36, searchRow.offsetMin.y);
+        searchRow.offsetMax = new Vector2(-36, searchRow.offsetMax.y);
+        var searchInput = MockupUI.BuildInputField("SearchInput", searchRow, theme, "Arkadaşının ID'si", 28);
+        var sirt = ((Image)searchInput.targetGraphic).rectTransform;
+        sirt.anchorMin = new Vector2(0, 0); sirt.anchorMax = new Vector2(1, 1);
+        sirt.offsetMin = Vector2.zero; sirt.offsetMax = new Vector2(-116, 0);
+        var searchBtn = MockupUI.GlossyButton(searchRow, MockupBeautifyTool.GreenBtnPath, theme.ctaGreen,
+            "Ara", 28, theme.headingFont, out _);
+        var sbrt = ((Image)searchBtn.targetGraphic).rectTransform;
+        Place(sbrt, new Vector2(1, 0.5f), new Vector2(0, 0), new Vector2(104, 96), pivotX: 1);
+
+        // Sonuç satırı (başta kapalı) + bulunamadı
+        var resultRow = MockupUI.NewImage("ResultRow", card.transform, Color.white);
+        MockupUI.Card(resultRow, theme, theme.creamSurface);
+        MockupUI.AnchorTop(resultRow.rectTransform, height: 128, y: 236);
+        resultRow.rectTransform.offsetMin = new Vector2(36, resultRow.rectTransform.offsetMin.y);
+        resultRow.rectTransform.offsetMax = new Vector2(-36, resultRow.rectTransform.offsetMax.y);
+        var resultAvatar = MockupUI.BuildAvatarCircle("AvatarCircle", resultRow.rectTransform, 100f, out var resultAvatarRoot);
+        Place(resultAvatarRoot, new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(100, 100), pivotX: 0);
+        var resultName = MockupUI.NewText("Name", resultRow.transform, "Oyuncu", 32, Color.black, TextAlignmentOptions.Left, theme.headingFont);
+        resultName.fontStyle = FontStyles.Bold;
+        Place(resultName.rectTransform, new Vector2(0, 0.5f), new Vector2(130, 20), new Vector2(320, 40), pivotX: 0);
+        var resultSub = MockupUI.NewText("Sub", resultRow.transform, "Bölüm 1", 24, theme.textSub, TextAlignmentOptions.Left, theme.bodyFont);
+        Place(resultSub.rectTransform, new Vector2(0, 0.5f), new Vector2(130, -22), new Vector2(320, 30), pivotX: 0);
+        var resultAddBtn = MockupUI.GlossyButton(resultRow.transform, MockupBeautifyTool.GreenBtnPath, theme.ctaGreen,
+            "Ekle", 28, theme.headingFont, out var resultAddLabel);
+        var rart = ((Image)resultAddBtn.targetGraphic).rectTransform;
+        Place(rart, new Vector2(1, 0.5f), new Vector2(-14, 0), new Vector2(150, 88), pivotX: 1);
+        resultRow.gameObject.SetActive(false);
+
+        var notFound = MockupUI.NewText("NotFound", card.transform, "Oyuncu bulunamadı", 26,
+            theme.accentAmber, TextAlignmentOptions.Center, theme.bodyFont);
+        MockupUI.AnchorTop(notFound.rectTransform, height: 40, y: 240);
+        notFound.gameObject.SetActive(false);
+
+        // Kendi ID satırı: "ID'm: ..." + kopyala
+        var myIdRow = MockupUI.NewImage("MyIdRow", card.transform, Color.white);
+        MockupUI.Card(myIdRow, theme, theme.creamSurface);
+        MockupUI.AnchorTop(myIdRow.rectTransform, height: 110, y: 400);
+        myIdRow.rectTransform.offsetMin = new Vector2(36, myIdRow.rectTransform.offsetMin.y);
+        myIdRow.rectTransform.offsetMax = new Vector2(-36, myIdRow.rectTransform.offsetMax.y);
+        var myId = MockupUI.NewText("MyId", myIdRow.transform, "ID'm: YX0000000", 34, theme.textOnCream,
+            TextAlignmentOptions.Center, theme.headingFont);
+        myId.fontStyle = FontStyles.Bold;
+        MockupUI.Stretch(myId.rectTransform);
+        myId.rectTransform.offsetMax = new Vector2(-120, 0);
+        var copyBtn = MockupUI.GlossyButton(myIdRow.transform, MockupBeautifyTool.BlueBtnPath, theme.accentAmber,
+            "Kopyala", 22, theme.headingFont, out _);
+        var cbrt = ((Image)copyBtn.targetGraphic).rectTransform;
+        Place(cbrt, new Vector2(1, 0.5f), new Vector2(-10, 0), new Vector2(120, 90), pivotX: 1);
+
+        // Davet Et
+        var inviteBtn = MockupUI.GlossyButton(card.transform, MockupBeautifyTool.GreenBtnPath, theme.accentAmber,
+            "Davet Et", 34, theme.headingFont, out var inviteLabel);
+        var ibrt = ((Image)inviteBtn.targetGraphic).rectTransform;
+        Place(ibrt, new Vector2(0.5f, 0), new Vector2(0, 60), new Vector2(460, 108), pivotY: 0);
+
+        popupRoot.gameObject.SetActive(false);
+
+        // ── Wiring ───────────────────────────────────────────────────
+        MockupUI.SetRef(popup, "closeButton", closeBtn);
+        MockupUI.SetRef(popup, "searchInput", searchInput);
+        MockupUI.SetRef(popup, "searchButton", searchBtn);
+        MockupUI.SetRef(popup, "resultRoot", resultRow.gameObject);
+        MockupUI.SetRef(popup, "resultAvatar", resultAvatar);
+        MockupUI.SetRef(popup, "resultNameText", resultName);
+        MockupUI.SetRef(popup, "resultSubText", resultSub);
+        MockupUI.SetRef(popup, "resultAddButton", resultAddBtn);
+        MockupUI.SetRef(popup, "resultAddLabel", resultAddLabel);
+        MockupUI.SetRef(popup, "notFoundText", notFound);
+        MockupUI.SetRef(popup, "myIdText", myId);
+        MockupUI.SetRef(popup, "copyButton", copyBtn);
+        MockupUI.SetRef(popup, "inviteButton", inviteBtn);
+        MockupUI.SetRef(popup, "inviteLabel", inviteLabel);
+        MockupUI.SetRefArray(popup, "avatarPool", MockupUI.AvatarPool());
+
+        MockupUI.SetRef(ctrl, "addFriendsRoot", view.gameObject);
+        MockupUI.SetRef(ctrl, "suggestionContainer", suggestionContent);
+        MockupUI.SetRef(ctrl, "suggestionRowPrefab", suggestionPrefab);
+        MockupUI.SetRef(ctrl, "findFriendButton", findBtn);
+        MockupUI.SetRef(ctrl, "findFriendPopup", popup);
+        MockupUI.SetRef(ctrl, "listAreaRoot", listArea.gameObject);
     }
 
     private static void AssignTabButtons(LeaderboardScreenController ctrl, Button[] buttons, Image[] bgs, RectTransform[] rects)

@@ -40,7 +40,6 @@ public class OverrideComboController : MonoBehaviour
 
     [Header("Radial Clear")]
     [SerializeField] private Image shockwaveImage;
-    [SerializeField] private float shockwaveMaxScale = 25f;
     [SerializeField] private float shockwaveStartScale = 0.1f;
 
     // ─────────────────────────────────────────
@@ -57,13 +56,11 @@ public class OverrideComboController : MonoBehaviour
     // ─────────────────────────────────────────
     [Header("Lift / Smash")]
     [SerializeField] private float orbitRadiusStart  = 130f;
-    [SerializeField] private float orbitRadiusEnd    = 50f;
     [SerializeField] private float liftDistance      = 32f;
     [SerializeField] private float separationDistance = 72f;
     [SerializeField] private float liftSpinTurns     = 3.5f;
     [SerializeField] private float smashSpinTurns    = 3.0f;
     [SerializeField] private float impactPulseScale  = 1.42f;
-    [SerializeField] private float orbitTurns        = 3.5f;
     [SerializeField] private float orbitScaleTarget  = 1.25f;  // grow to 1.25x while lifting
     [SerializeField] private float iconGlowPulseSpeed = 8f;
     [SerializeField] private float iconSize          = 80f;

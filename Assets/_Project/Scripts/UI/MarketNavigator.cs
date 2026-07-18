@@ -19,7 +19,7 @@ public static class MarketNavigator
     /// <summary>Marketi açar. Sekme bu sahnede yoksa ana menüye yönlendirir.</summary>
     public static void OpenMarket()
     {
-        var tabs = Object.FindObjectOfType<BottomTabController>();
+        var tabs = Object.FindFirstObjectByType<BottomTabController>();
         if (tabs != null)
         {
             tabs.Select(MarketTabIndex);

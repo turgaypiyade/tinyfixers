@@ -52,6 +52,13 @@ public class BoardController : MonoBehaviour
     [SerializeField, Range(0f, 0.6f)] private float fallSettleStretchX = 0.20f;
     [Tooltip("Çarpma anında hedefin altına inme oranı (hücre boyuna göre). 0.12 = hücre yüksekliğinin %12'si kadar aşağı taşar.")]
     [SerializeField, Range(0f, 0.4f)] private float fallSettleOvershoot = 0.12f;
+
+    [Header("Fall Stretch (düşüş sırasında esneme)")]
+    [Tooltip("Düşerken taşın dikeyde uzama oranı (squash&stretch). 0 = kapalı, 0.12 = %12 uzar; " +
+             "yatay bunun ~yarısı kadar incelir. Hedefe yaklaşınca normale döner, inişte settle squash devralır.")]
+    [SerializeField, Range(0f, 0.35f)] private float fallStretchAmount = 0.18f;
+    [Tooltip("Uçuşun son bu ORANLIK kısmında esneme normale döner (0.35 = son %35'te toparlar).")]
+    [SerializeField, Range(0.1f, 0.8f)] private float fallStretchRecover = 0.35f;
     internal float FallColumnStep => Mathf.Max(0f, fallColumnStep);
     internal int MaxDiagonalSlidesPerCascade => Mathf.Max(1, maxDiagonalSlidesPerCascade);
 
@@ -434,12 +441,21 @@ public class BoardController : MonoBehaviour
     internal float SwapDurationWithMultiplier => swapDuration * Mathf.Max(0.01f, swapDurationMultiplier);
     internal float FallDurationWithMultiplier => fallDuration * Mathf.Max(0.01f, fallDurationMultiplier);
     internal float FallVelocityCellsPerSecond => Mathf.Max(0.0001f, fallVelocityCellsPerSecond) / Mathf.Max(0.01f, fallDurationMultiplier);
+
+    /// <summary>
+    /// Board'un metronomu: 1 hücrelik düşüş süresi (sn). Olaylar arası boşluklar
+    /// (special doğuşu, zincir adımları vb.) buna oranlanır — fall velocity değişince
+    /// tüm board tek vücut hızlanır/yavaşlar, "farklı oyun" hissi oluşmaz.
+    /// </summary>
+    internal float CellTime => 1f / FallVelocityCellsPerSecond;
     internal float FallSpawnStaggerMultiplier => Mathf.Clamp01(fallSpawnStaggerMultiplier);
     internal AnimationCurve SwapMoveCurve => swapMoveCurve;
     internal AnimationCurve FallMoveCurve => fallMoveCurve;
     internal bool EnableFallSettle => enableFallSettle;
     internal float FallSettleDuration => Mathf.Max(0f, fallSettleDuration);
     internal float FallSettleStrength => Mathf.Max(0f, fallSettleStrength);
+    internal float FallStretchAmount => Mathf.Max(0f, fallStretchAmount);
+    internal float FallStretchRecover => Mathf.Clamp(fallStretchRecover, 0.1f, 0.8f);
     internal float FallSettleStretchX => Mathf.Max(0f, fallSettleStretchX);
     internal float FallSettleOvershoot => Mathf.Max(0f, fallSettleOvershoot);
     internal float FallCascadeStep => 0f;

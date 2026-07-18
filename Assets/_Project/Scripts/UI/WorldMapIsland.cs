@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// Bir adacık: altındaki WorldMapRegion'ları (hiyerarşi sırasıyla) gruplar.
@@ -14,6 +15,13 @@ public sealed class WorldMapIsland : MonoBehaviour
 {
     [Tooltip("Sandık kalıcılık anahtarı — adalar arasında benzersiz olmalı (örn \"ada1\"). Boşsa obje adı kullanılır.")]
     [SerializeField] private string islandId;
+
+    [Header("Ad & Journey Görseli")]
+    [Tooltip("Ada adı için lokalizasyon anahtarı (Journey başlığı vb.).")]
+    [SerializeField] private string nameLocalizationKey;
+    [SerializeField] private string fallbackName = "Ada";
+    [Tooltip("Journey sekmesindeki kartta gösterilecek ada resmi. Boşsa bu objenin Image sprite'ı kullanılır.")]
+    [SerializeField] private Sprite journeySprite;
 
     [Header("Sandık Ödülü (ada tamamlanınca)")]
     [Tooltip("Ada tamamlanınca sandıktan çıkacak ödüller (coin/yıldız/joker/booster).")]
@@ -34,6 +42,34 @@ public sealed class WorldMapIsland : MonoBehaviour
 
     /// <summary>Ada odak noktası: atanmışsa revealFocus, yoksa karonun kendisi (merkez).</summary>
     public RectTransform RevealFocus => revealFocus != null ? revealFocus : (RectTransform)transform;
+
+    /// <summary>Lokalize ada adı (key yoksa/çevirisi yoksa fallbackName).</summary>
+    public string DisplayName
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(nameLocalizationKey))
+            {
+                string s = GameLocalization.Get(nameLocalizationKey);
+                if (!string.IsNullOrEmpty(s) && s != nameLocalizationKey) return s;
+            }
+            return fallbackName;
+        }
+    }
+
+    /// <summary>Journey kartı resmi: journeySprite, yoksa karonun kendi Image sprite'ı.</summary>
+    public Sprite JourneySprite
+    {
+        get
+        {
+            if (journeySprite != null) return journeySprite;
+            var img = GetComponent<Image>();
+            return img != null ? img.sprite : null;
+        }
+    }
+
+    /// <summary>Ada açılma oranı (0-1) = açılmış / toplam bölge.</summary>
+    public float ProgressNormalized => TotalRegions > 0 ? (float)UnlockedCount / TotalRegions : 0f;
     public IReadOnlyList<DailySlotReward> ChestRewards => chestRewards;
     public Sprite ChestClosedSprite => chestClosedSprite;
     public Sprite ChestOpenedSprite => chestOpenedSprite;

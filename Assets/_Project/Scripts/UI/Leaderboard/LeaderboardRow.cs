@@ -162,7 +162,14 @@ public sealed class LeaderboardRow : MonoBehaviour
                 capacityChip.color = Color.white;
             }
         }
-        if (scoreText != null) scoreText.text = e.score.ToString("N0");
+        // Arkadaşlar sekmesi puan yarışı değil bölüm yarışı (referans RM) → Puan bloğu gizli.
+        bool showScore = tab != LeaderboardTab.Friends;
+        if (scoreLabel != null) scoreLabel.gameObject.SetActive(showScore);
+        if (scoreText != null)
+        {
+            scoreText.gameObject.SetActive(showScore);
+            if (showScore) scoreText.text = e.score.ToString("N0");
+        }
 
         // ── Zemin: öncelik self > top-3 kartı > normal satır ──
         if (rowBackground != null && theme != null)
