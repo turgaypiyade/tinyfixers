@@ -66,20 +66,29 @@ public static class NamePool
         return loop == 0 ? name : name + joiner + (loop + 1);
     }
 
-    /// <summary>Index'e göre SABİT oyuncu ismi (bot i her zaman aynı isim). Deterministik listeler için.</summary>
+    /// <summary>
+    /// Index'e göre SABİT oyuncu ismi (bot i her zaman aynı isim). Havuz boyu aşılırsa
+    /// (15k bot / 10k isim) sarımda numara eklenir → aynı listede birebir kopya isim olmaz.
+    /// </summary>
     public static string PlayerAt(int index)
     {
         EnsureLoaded();
         if (players.Count == 0) return "Oyuncu" + index;
-        return players[((index % players.Count) + players.Count) % players.Count];
+        int normalized = ((index % players.Count) + players.Count) % players.Count;
+        int loop = index >= 0 ? index / players.Count : 0;
+        string name = players[normalized];
+        return loop == 0 ? name : name + (loop + 1);
     }
 
-    /// <summary>Index'e göre SABİT takım ismi.</summary>
+    /// <summary>Index'e göre SABİT takım ismi (sarımda numaralı — bkz. PlayerAt).</summary>
     public static string TeamAt(int index)
     {
         EnsureLoaded();
         if (teams.Count == 0) return "Takim" + index;
-        return teams[((index % teams.Count) + teams.Count) % teams.Count];
+        int normalized = ((index % teams.Count) + teams.Count) % teams.Count;
+        int loop = index >= 0 ? index / teams.Count : 0;
+        string name = teams[normalized];
+        return loop == 0 ? name : name + " " + (loop + 1);
     }
 
     /// <summary>Bot havuzu yeniden üretilirken çağrılır (baştan benzersiz dağıtım).</summary>

@@ -59,7 +59,8 @@ public class PulseCoreImpactService
     }
 
 
-    public void PlayPulseCoreExplosionVfxAtCell(int x, int y, int radiusCells = 2)
+    public void PlayPulseCoreExplosionVfxAtCell(int x, int y, int radiusCells = 2,
+                                                System.Action<float> onRadiusPx = null)
     {
         Vector3 worldCenter = board.GetCellWorldCenterPosition(x, y);
 
@@ -70,7 +71,17 @@ public class PulseCoreImpactService
                 ? board.WorldToAnchoredIn(vfxRoot, worldCenter)
                 : Vector2.zero;
 
-            board.BoardVfxPlayer.PlayPulseVfx(anchored, radiusCells: radiusCells, tileSize: board.TileSize);
+            // Oyun-senkronlu patlamalarda (callback'li) dalga, board tempo'suyla yol alır:
+            // halka hızı = hücre başına PulseImpactDelayStep → kırılmalar cepheyi birebir izler.
+            float waveTravel = onRadiusPx != null
+                ? board.ApplySpecialChainTempo(board.PulseImpactDelayStep) * Mathf.Max(1, radiusCells)
+                : -1f;
+            board.BoardVfxPlayer.PlayPulseVfx(anchored, radiusCells: radiusCells, tileSize: board.TileSize,
+                                              onRadiusPx: onRadiusPx, waveTravelTime: waveTravel);
+        }
+        else
+        {
+            onRadiusPx?.Invoke(float.MaxValue);   // VFX player yok → halkalar hemen serbest
         }
 
         if (board.Audio != null)

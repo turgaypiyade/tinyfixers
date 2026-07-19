@@ -257,14 +257,17 @@ public sealed class SpecialChainRunner : BoardAction
         ActionSequencer sequencer, TileView pulse, int cx, int cy,
         Queue<TileView> queue, HashSet<TileView> processed)
     {
-        // 1) Explosion VFX.
-        board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtCell(cx, cy, radiusCells: areaHalf);
+        // 1) Explosion VFX — dalganın GERÇEK yarıçapı callback'le gelir (tek saat):
+        //    halkalar görsel dalga o mesafeye VARINCA kırılır, zamanlayıcı tahmini yok.
+        float waveRadiusPx = 0f;
+        board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtCell(
+            cx, cy, radiusCells: areaHalf, onRadiusPx: px => waveRadiusPx = Mathf.Max(waveRadiusPx, px));
 
         // 2) Collect area: normal tiles clear, chained specials queue.
         var clearTiles = new HashSet<TileView> { pulse };
         var affectedCells = new HashSet<Vector2Int>();
         var impactCells = new List<Vector2Int>();
-        var perTileDelays = new Dictionary<TileView, float>();
+        var ringArrivals = new Dictionary<int, List<TileView>>();
 
         // Combo'nun kendi origin'leri (örn. Pulse+Pulse'ın ikinci pulse'ı): zincirlenmesin,
         // tüketilsin (clear) — yoksa ikinci pulse ayrı patlardı. (SweepCross ile aynı mantık.)
@@ -308,21 +311,16 @@ public sealed class SpecialChainRunner : BoardAction
                 if (tile != pulse && sp != TileSpecial.None && processed.Contains(tile))
                     continue;
 
-                // Another PulseCore → chains (explodes on its turn).
-                if (tile != pulse && sp == TileSpecial.PulseCore && !processed.Contains(tile))
+                // Alandaki her special (pulse dahil) KUYRUĞA DEĞİL, dalga hücresine
+                // VARDIĞI AN paralel alt-zincire gider (karar #2: emisyonlar paralel;
+                // SweepLine'ın arrival modeliyle aynı). Anchor: patlayana dek yerinde.
+                if (tile != pulse && sp != TileSpecial.None && !processed.Contains(tile))
                 {
-                    if (!queue.Contains(tile)) queue.Enqueue(tile);
+                    processed.Add(tile);
                     AnchorQueued(tile, x, y);
-                    continue;
-                }
-
-                // A non-pulse special (lines run native, the rest inline) → chains too.
-                if (tile != pulse && sp != TileSpecial.None && sp != TileSpecial.PulseCore
-                    && (sp == TileSpecial.LineV || sp == TileSpecial.LineH || resolveOtherSpecial != null)
-                    && !processed.Contains(tile))
-                {
-                    if (!queue.Contains(tile)) queue.Enqueue(tile);
-                    AnchorQueued(tile, x, y);
+                    int ring = Mathf.Max(Mathf.Abs(x - cx), Mathf.Abs(y - cy));
+                    if (!ringArrivals.TryGetValue(ring, out var listA)) ringArrivals[ring] = listA = new List<TileView>();
+                    listA.Add(tile);
                     continue;
                 }
 
@@ -330,34 +328,131 @@ public sealed class SpecialChainRunner : BoardAction
             }
         }
 
-        // Radial clear delay (wave feel).
-        foreach (var ct in clearTiles)
-        {
-            int dist = Mathf.Max(Mathf.Abs(ct.X - cx), Mathf.Abs(ct.Y - cy));
-            perTileDelays[ct] = dist * board.PulseImpactDelayStep;
-        }
-
-        // 3) Immediate clear of this explosion's tiles.
-        var stepClear = new MatchClearAction(
-            clearTiles,
-            doShake: true,
-            staggerDelays: null,
-            staggerAnimTime: board.ApplySpecialChainTempo(board.PulseImpactAnimTime),
-            animationMode: ClearAnimationMode.Default,
-            affectedCells: affectedCells,
-            impactCells: impactCells,
-            includeAdjacentOverTileBlockerDamage: false,
-            lightningVisualTargets: null,
-            lightningLineStrikes: null,
-            suppressPerTileClearVfx: false,
-            perTileClearDelays: perTileDelays,
-            isSpecialPhase: true,
-            presentationPlan: null);
-
-        yield return stepClear.ExecuteVisuals(sequencer);
+        // 3) HALKA-BAZLI ARRIVAL CLEAR (kullanıcı direktifi): dalga animasyonu halkaya
+        //    varınca o halkanın taşları O AN kırılır. VFX gelmezse timer fallback
+        //    (dist × PulseImpactDelayStep) akışı asla bekletmez.
+        yield return RunRadialArrivalClear(
+            sequencer,
+            cell => Mathf.Max(Mathf.Abs(cell.x - cx), Mathf.Abs(cell.y - cy)),
+            () => waveRadiusPx,
+            clearTiles, affectedCells, impactCells,
+            arrivalSpecials: ringArrivals);
 
         // 4) Gravity + overlap.
         yield return RunGravityWithOverlap(queue.Count > 0);
+    }
+
+    // ── Radyal varış motoru: hücreleri merkez(ler)e uzaklık halkalarına böler; gerçek
+    // dalga yarıçapı (getWaveRadiusPx) halkayı geçince o halka ANINDA temizlenir,
+    // halkadaki arrival special'lar o an alt-zincir olur. Son halka inline beklenir →
+    // adım gravity'si veri temizliği bitmeden koşmaz. Timer fallback VFX'siz kurulumda
+    // da aynı tempoyu verir. (Plan §1.1 RadialWave'in gerçek hâli.)
+    private IEnumerator RunRadialArrivalClear(
+        ActionSequencer sequencer,
+        Func<Vector2Int, int> ringOf,
+        Func<float> getWaveRadiusPx,
+        HashSet<TileView> clearTiles,
+        HashSet<Vector2Int> affectedCells,
+        List<Vector2Int> impactCells,
+        Dictionary<int, List<TileView>> arrivalSpecials)
+    {
+        int maxRing = 0;
+
+        var ringTiles = new Dictionary<int, HashSet<TileView>>();
+        foreach (var t in clearTiles)
+        {
+            if (t == null) continue;
+            int d = Mathf.Max(0, ringOf(new Vector2Int(t.X, t.Y)));
+            if (!ringTiles.TryGetValue(d, out var set)) ringTiles[d] = set = new HashSet<TileView>();
+            set.Add(t);
+            if (d > maxRing) maxRing = d;
+        }
+
+        var ringCells = new Dictionary<int, HashSet<Vector2Int>>();
+        foreach (var c in affectedCells)
+        {
+            int d = Mathf.Max(0, ringOf(c));
+            if (!ringCells.TryGetValue(d, out var set)) ringCells[d] = set = new HashSet<Vector2Int>();
+            set.Add(c);
+            if (d > maxRing) maxRing = d;
+        }
+
+        var ringImpacts = new Dictionary<int, List<Vector2Int>>();
+        foreach (var c in impactCells)
+        {
+            int d = Mathf.Max(0, ringOf(c));
+            if (!ringImpacts.TryGetValue(d, out var listI)) ringImpacts[d] = listI = new List<Vector2Int>();
+            listI.Add(c);
+            if (d > maxRing) maxRing = d;
+        }
+
+        if (arrivalSpecials != null)
+            foreach (var kv in arrivalSpecials)
+                if (kv.Key > maxRing) maxRing = kv.Key;
+
+        float tileSize = Mathf.Max(1f, board.TileSize);
+        float fallbackTimer = 0f;
+
+        MatchClearAction FireRing(int d)
+        {
+            // Önce arrival special'lar (dalga taşa değdiği an tetiklensin).
+            if (arrivalSpecials != null && arrivalSpecials.TryGetValue(d, out var specials))
+                foreach (var sp in specials)
+                    LaunchArrivalSubChain(sp);
+
+            ringTiles.TryGetValue(d, out var tiles);
+            ringCells.TryGetValue(d, out var cells);
+            ringImpacts.TryGetValue(d, out var impacts);
+            if ((tiles == null || tiles.Count == 0) && (cells == null || cells.Count == 0)
+                && (impacts == null || impacts.Count == 0))
+                return null;
+
+            var act = new MatchClearAction(
+                tiles ?? new HashSet<TileView>(),
+                doShake: d == 0,
+                animationMode: ClearAnimationMode.Default,
+                affectedCells: cells,
+                impactCells: impacts,
+                includeAdjacentOverTileBlockerDamage: false,
+                isSpecialPhase: true);
+
+            if (d < maxRing)
+                board.StartImmediateAction(act);   // ara halkalar paralel oynar
+            return act;
+        }
+
+        int next = 0;
+        bool inlineWaited = false;
+        while (next <= maxRing)
+        {
+            fallbackTimer += Time.deltaTime;
+            float waveRing = getWaveRadiusPx() / tileSize + 0.35f;   // yarım hücre tolerans
+            float timerRing = board.PulseImpactDelayStep > 0f
+                ? fallbackTimer / board.ApplySpecialChainTempo(board.PulseImpactDelayStep)
+                : maxRing + 1f;
+            // KRİTİK: float.MaxValue ("hepsi serbest" sinyali) FloorToInt'te int taşması
+            // yapar (negatif çıkar) → Clamp ŞART; yoksa halkalar asla ateşlenmez (donma).
+            int reach = Mathf.FloorToInt(Mathf.Clamp(Mathf.Max(waveRing, timerRing), 0f, maxRing + 1f));
+
+            while (next <= maxRing && next <= reach)
+            {
+                var act = FireRing(next);
+                if (next == maxRing && act != null)
+                {
+                    inlineWaited = true;
+                    yield return act.ExecuteVisuals(sequencer);   // son halka inline
+                }
+                next++;
+            }
+
+            if (next <= maxRing)
+                yield return null;
+        }
+
+        // Son halka boştu → önceki halkalar hâlâ background'da oynuyor olabilir;
+        // gravity veri temizliğinden önce koşmasın diye bir clear süresi bekle.
+        if (!inlineWaited)
+            yield return new WaitForSeconds(board.ApplySpecialChainTempo(board.PulseImpactAnimTime));
     }
 
     private IEnumerator SweepLine(
@@ -588,12 +683,25 @@ public sealed class SpecialChainRunner : BoardAction
         var clearTiles = new HashSet<TileView>();
         var affectedCells = new HashSet<Vector2Int>();
         var impactCells = new List<Vector2Int>();
-        var perTileDelays = new Dictionary<TileView, float>();
-        var arrivalSpecials = new List<TileView>();
+        var ringArrivals = new Dictionary<int, List<TileView>>();
 
+        // Tüm dalgalar aynı anda aynı hızla büyür → TEK merkezin gerçek yarıçap
+        // callback'i hepsini temsil eder (halka = en yakın merkeze uzaklık).
+        float waveRadiusPx = 0f;
+        bool callbackWired = false;
         foreach (var c in centers)
         {
-            board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtCell(c.x, c.y, radiusCells: areaHalf);
+            if (!callbackWired)
+            {
+                callbackWired = true;
+                board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtCell(
+                    c.x, c.y, radiusCells: areaHalf,
+                    onRadiusPx: px => waveRadiusPx = Mathf.Max(waveRadiusPx, px));
+            }
+            else
+            {
+                board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtCell(c.x, c.y, radiusCells: areaHalf);
+            }
 
             for (int x = c.x - areaHalf; x <= c.x + areaHalf; x++)
             for (int y = c.y - areaHalf; y <= c.y + areaHalf; y++)
@@ -616,58 +724,31 @@ public sealed class SpecialChainRunner : BoardAction
                 var tile = board.Tiles[x, y];
                 if (tile == null) continue;
 
-                float delay = NearestCenterDist(x, y) * board.PulseImpactDelayStep;
-
-                // Merkez olmayan bir special → zincirlenir: dalga varınca arrival ile tetiklenir.
+                // Merkez olmayan bir special → zincirlenir: dalga hücreye VARINCA tetiklenir.
                 // (Sanal merkezde tile tüketilmez; merkez hücredeki special de zincirlenir.)
                 if ((!centersArePulseTiles || !centers.Contains(cell))
                     && tile.GetSpecial() != TileSpecial.None && !processed.Contains(tile))
                 {
                     processed.Add(tile);
                     AnchorQueued(tile, x, y);
-                    arrivalSpecials.Add(tile);
-                    perTileDelays[tile] = delay;
+                    int ring = (int)NearestCenterDist(x, y);
+                    if (!ringArrivals.TryGetValue(ring, out var listA)) ringArrivals[ring] = listA = new List<TileView>();
+                    listA.Add(tile);
                     continue;
                 }
 
                 clearTiles.Add(tile);
-                perTileDelays[tile] = delay;
             }
         }
 
-        var stepClear = new MatchClearAction(
-            clearTiles,
-            doShake: true,
-            staggerDelays: null,
-            staggerAnimTime: board.ApplySpecialChainTempo(board.PulseImpactAnimTime),
-            animationMode: ClearAnimationMode.Default,
-            affectedCells: affectedCells,
-            impactCells: impactCells,
-            includeAdjacentOverTileBlockerDamage: false,
-            lightningVisualTargets: null,
-            lightningLineStrikes: null,
-            suppressPerTileClearVfx: false,
-            perTileClearDelays: perTileDelays,
-            isSpecialPhase: true,
-            presentationPlan: null);
-
-        var fired = new HashSet<TileView>();
-        foreach (var spTile in arrivalSpecials)
-        {
-            var captured = spTile;
-            stepClear.AddArrivalTrigger(new Vector2Int(captured.X, captured.Y), () =>
-            {
-                if (fired.Add(captured))
-                    LaunchArrivalSubChain(captured);
-            });
-        }
-
-        yield return stepClear.ExecuteVisuals(sequencer);
-
-        // Fallback: arrival callback gelmezse special yine de tetiklensin.
-        foreach (var spTile in arrivalSpecials)
-            if (fired.Add(spTile))
-                LaunchArrivalSubChain(spTile);
+        // HALKA-BAZLI ARRIVAL CLEAR: dalga halkaya varınca taşlar kırılır, o halkadaki
+        // special'lar o an alt-zincir olur (timer fallback dahil — akış asla takılmaz).
+        yield return RunRadialArrivalClear(
+            sequencer,
+            cell => (int)NearestCenterDist(cell.x, cell.y),
+            () => waveRadiusPx,
+            clearTiles, affectedCells, impactCells,
+            arrivalSpecials: ringArrivals);
 
         yield return RunGravityWithOverlap(hasNext: false);
     }

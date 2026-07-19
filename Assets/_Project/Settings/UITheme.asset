@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a626772fcd2404292c3811fe3f7358, type: 3}
   m_Name: UITheme
   m_EditorClassIdentifier: Assembly-CSharp::UITheme
-  screenBackground: {r: 0.16862746, g: 0.13725491, b: 0.3137255, a: 1}
+  screenBackground: {r: 1, g: 1, b: 1, a: 1}
   panelSurface: {r: 0.31764707, g: 0.27058825, b: 0.54901963, a: 1}
   creamSurface: {r: 0.9529412, g: 0.9137255, b: 0.84705883, a: 1}
   headerBand: {r: 0.43137255, g: 0.32941177, b: 0.70980394, a: 1}

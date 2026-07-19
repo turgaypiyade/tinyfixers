@@ -68,7 +68,18 @@ public sealed class FindFriendPopup : MonoBehaviour
     private void OnSearch()
     {
         string code = searchInput != null ? searchInput.text : "";
-        ShowResult(FriendDirectory.FindByCode(code));
+
+        // Arama artık GERÇEK (players dizini, async) — sorgu dönene dek butonu kilitle.
+        if (searchButton != null) searchButton.interactable = false;
+        if (resultRoot != null) resultRoot.SetActive(false);
+        if (notFoundText != null) notFoundText.gameObject.SetActive(false);
+
+        FriendDirectory.SearchByCode(code, profile =>
+        {
+            if (this == null) return;   // popup arama dönmeden yok edildiyse
+            if (searchButton != null) searchButton.interactable = true;
+            ShowResult(profile);
+        });
     }
 
     private void ShowResult(FriendProfile profile)
@@ -92,7 +103,9 @@ public sealed class FindFriendPopup : MonoBehaviour
             resultAvatar.preserveAspect = true;
         }
 
-        bool already = FriendState.IsFriend(profile.name);
+        bool already = !string.IsNullOrEmpty(profile.uid)
+            ? FriendState.IsRealFriend(profile.uid)
+            : FriendState.IsFriend(profile.name);
         if (resultAddButton != null) resultAddButton.interactable = !already;
         if (resultAddLabel != null) resultAddLabel.text = already ? "Eklendi" : "Ekle";
     }
@@ -100,7 +113,13 @@ public sealed class FindFriendPopup : MonoBehaviour
     private void OnAddFound()
     {
         if (found == null) return;
-        FriendState.AddFriend(found.name);
+
+        // ID aramasından gelen GERÇEK oyuncu uid'iyle, bot önerisi isimle eklenir.
+        if (!string.IsNullOrEmpty(found.uid))
+            FriendState.AddRealFriend(found.uid, found.name, found.chapter);
+        else
+            FriendState.AddFriend(found.name);
+
         if (resultAddButton != null) resultAddButton.interactable = false;
         if (resultAddLabel != null) resultAddLabel.text = "Eklendi";
     }

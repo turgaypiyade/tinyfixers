@@ -30,9 +30,18 @@ public class PulseCoreVfxPlayer : MonoBehaviour
             StartCoroutine(Play(Vector2.zero, 2, 110));
     }
 
-    public void PlayPulseVfx(Vector2 centerLocalPos, int radiusCells, int tileSize)
+    // onRadiusPx: dalga halkasının GERÇEK yarıçapını (px) her frame bildirir —
+    // SpecialChainRunner halka-bazlı kırmayı buna senkronlar. null = yalnız görsel.
+    // waveTravelTime > 0: halkanın tam yarıçapa yol alma süresi (board tempo'sundan) —
+    // prefab'daki anlık büyüme yerine görünür bir cephe.
+    public void PlayPulseVfx(Vector2 centerLocalPos, int radiusCells, int tileSize,
+                             System.Action<float> onRadiusPx = null, float waveTravelTime = -1f)
     {
-        if (vfxRoot == null || pulsePrefab == null) return;
+        if (vfxRoot == null || pulsePrefab == null)
+        {
+            onRadiusPx?.Invoke(float.MaxValue);   // VFX yok → tüm halkalar hemen serbest
+            return;
+        }
 
         // Yeni prefab sistemini kullan
         var go = Instantiate(pulsePrefab, vfxRoot);
@@ -44,7 +53,15 @@ public class PulseCoreVfxPlayer : MonoBehaviour
         // Yeni script'in boyutunu hücre sayısına göre ayarla
         var fx = go.GetComponent<PulseCoreExplosionFX>();
         if (fx != null)
+        {
             fx.SetRadiusCells(radiusCells, tileSize);
+            fx.OnRadiusPx = onRadiusPx;
+            fx.SetWaveTravelTime(waveTravelTime);
+        }
+        else
+        {
+            onRadiusPx?.Invoke(float.MaxValue);
+        }
 
         // Eski coroutine'e gerek yok, prefab kendi OnEnable'ında başlıyor
     }

@@ -12,14 +12,22 @@ public static class BackendServices
         => leaderboard ??= new FirebaseLeaderboardService();
         // Mock'a dönmek için: leaderboard ??= new MockLeaderboardService();
 
-    /// <summary>Takım servisi. Şu an yerel bot simülasyonu; gerçek Firebase takımı gelince burası değişir.</summary>
+    /// <summary>
+    /// Takım servisi: TeamId'li (Firestore) takım → GERÇEK servis (canlı sohbet);
+    /// TeamId'siz eski yerel takım → sim. Yeni katılımlar hep TeamId'li olur.
+    /// </summary>
     public static ITeamService Team
-        => team ??= new SimTeamService();
-        // Mock'a dönmek için: team ??= new MockTeamService();
+        => team ??= string.IsNullOrEmpty(PlayerTeamState.TeamId)
+            ? new SimTeamService()
+            : new FirebaseTeamService();
 
     /// <summary>
-    /// Takım servisini sıfırla — takıma katılınca/kurunca çağrılır; bir sonraki erişim
-    /// yeni takım adıyla (PlayerTeamState) taze servis kurar.
+    /// Takım servisini sıfırla — takıma katılınca/kurunca/ayrılınca çağrılır; eski
+    /// servisin dinleyicileri kapatılır, sonraki erişim taze servis kurar.
     /// </summary>
-    public static void ResetTeam() => team = null;
+    public static void ResetTeam()
+    {
+        (team as System.IDisposable)?.Dispose();
+        team = null;
+    }
 }

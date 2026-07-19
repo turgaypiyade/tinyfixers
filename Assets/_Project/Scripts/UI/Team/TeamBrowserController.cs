@@ -78,8 +78,16 @@ public sealed class TeamBrowserController : MonoBehaviour
         if (infoPopupRoot != null) infoPopupRoot.SetActive(false);
         if (createFeedbackText != null) createFeedbackText.text = "";
         UpdateCreateVisuals();
-        RenderResults(TeamDirectory.Browse(null));
+        Browse(null);
     }
+
+    // Dizin artık async (gerçek Firestore takımları + bot harmanı).
+    private void Browse(string query)
+        => TeamDirectory.Browse(query, 20, list =>
+        {
+            if (this == null || !isActiveAndEnabled) return;   // ekran kapandıysa
+            RenderResults(list);
+        });
 
     private void Wire()
     {
@@ -93,7 +101,7 @@ public sealed class TeamBrowserController : MonoBehaviour
         if (searchClearButton != null) searchClearButton.onClick.AddListener(() =>
         {
             if (searchInput != null) searchInput.text = "";
-            RenderResults(TeamDirectory.Browse(null));
+            Browse(null);
         });
 
         if (infoCloseButton != null) infoCloseButton.onClick.AddListener(() => infoPopupRoot.SetActive(false));
@@ -137,7 +145,7 @@ public sealed class TeamBrowserController : MonoBehaviour
     // ── Ara ─────────────────────────────────────────────────────────
 
     private void OnSearch()
-        => RenderResults(TeamDirectory.Browse(searchInput != null ? searchInput.text : null));
+        => Browse(searchInput != null ? searchInput.text : null);
 
     private void RenderResults(List<TeamDirectoryEntry> entries)
     {
@@ -198,13 +206,22 @@ public sealed class TeamBrowserController : MonoBehaviour
     {
         if (infoEntry == null) return;
 
+        // GERÇEK takım → doğrudan; bot takım → Firestore'da materialize olur ("bot_{seed}").
+        // Yazımlar optimistik: yerel durum hemen kurulur, senkron arkaplanda.
+        string teamId = infoEntry.IsReal
+            ? infoEntry.teamId
+            : FirebaseTeamCloud.JoinBotTeam(infoEntry, infoEntry.directorySeed);
+        if (infoEntry.IsReal)
+            FirebaseTeamCloud.JoinRealTeam(teamId);
+
         PlayerTeamState.JoinTeam(
             infoEntry.name,
             emblemIndexFromSeed(infoEntry.emblemSeed),
             infoEntry.description,
-            infoEntry.minChapter);
+            infoEntry.minChapter,
+            teamId);
 
-        BackendServices.ResetTeam();   // yeni takım adıyla taze sohbet servisi
+        BackendServices.ResetTeam();   // yeni takımla taze (gerçek) sohbet servisi
         if (infoPopupRoot != null) infoPopupRoot.SetActive(false);
         OnTeamEntered?.Invoke();
     }
@@ -241,13 +258,13 @@ public sealed class TeamBrowserController : MonoBehaviour
             return;
         }
 
-        PlayerTeamState.CreateTeam(
-            name,
-            emblemIndex,
-            createDescInput != null ? createDescInput.text.Trim() : "",
-            minChapter);
+        string desc = createDescInput != null ? createDescInput.text.Trim() : "";
 
-        BackendServices.ResetTeam();   // yeni (1 üyeli) takımla taze sohbet servisi
+        // GERÇEK takım dokümanı (auto-id, optimistik yazım) + yerel durum.
+        string teamId = FirebaseTeamCloud.CreateTeam(name, emblemIndex, desc, minChapter);
+        PlayerTeamState.CreateTeam(name, emblemIndex, desc, minChapter, teamId);
+
+        BackendServices.ResetTeam();   // yeni (1 üyeli) takımla taze gerçek sohbet servisi
         OnTeamEntered?.Invoke();
     }
 

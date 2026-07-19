@@ -10,6 +10,7 @@ using UnityEngine;
 public static class PlayerTeamState
 {
     private const string KeyJoined      = "player_team_joined";
+    private const string KeyTeamId      = "player_team_id";
     private const string KeyName        = "player_team_name";
     private const string KeyEmblem      = "player_team_emblem";
     private const string KeyDesc        = "player_team_desc";
@@ -17,6 +18,9 @@ public static class PlayerTeamState
     private const string KeyIsCreator   = "player_team_is_creator";
 
     public static bool HasTeam => PlayerPrefs.GetInt(KeyJoined, 0) == 1;
+
+    /// <summary>Firestore teams/{id} doküman kimliği ("" = eski yerel-sim takım).</summary>
+    public static string TeamId => PlayerPrefs.GetString(KeyTeamId, "");
 
     /// <summary>Oyuncu takımı KURAN kişi mi? (Kurulan takım 1 üyeyle başlar.)</summary>
     public static bool IsCreator => PlayerPrefs.GetInt(KeyIsCreator, 0) == 1;
@@ -42,12 +46,12 @@ public static class PlayerTeamState
     }
 
     /// <summary>Var olan bir takıma katıl (Ara → Takım Bilgisi → Katıl).</summary>
-    public static void JoinTeam(string name, int emblemIndex, string description = "", int minChapter = 0)
-        => Persist(name, emblemIndex, description, minChapter, isCreator: false);
+    public static void JoinTeam(string name, int emblemIndex, string description = "", int minChapter = 0, string teamId = "")
+        => Persist(name, emblemIndex, description, minChapter, isCreator: false, teamId: teamId);
 
     /// <summary>Yeni takım kur (Oluştur formu). Coin harcaması ÇAĞIRANDA yapılır.</summary>
-    public static void CreateTeam(string name, int emblemIndex, string description, int minChapter)
-        => Persist(name, emblemIndex, description, minChapter, isCreator: true);
+    public static void CreateTeam(string name, int emblemIndex, string description, int minChapter, string teamId = "")
+        => Persist(name, emblemIndex, description, minChapter, isCreator: true, teamId: teamId);
 
     /// <summary>Takımdan ayrıl → takımsız duruma dön (Ara/Oluştur ekranları).</summary>
     public static void LeaveTeam()
@@ -55,6 +59,7 @@ public static class PlayerTeamState
         PlayerPrefs.SetInt(KeyJoined, 0);
         PlayerPrefs.SetInt(KeyIsCreator, 0);
         PlayerPrefs.SetString(KeyName, "");
+        PlayerPrefs.SetString(KeyTeamId, "");
         PlayerPrefs.Save();
     }
 
@@ -66,12 +71,13 @@ public static class PlayerTeamState
         PlayerPrefs.Save();
     }
 
-    private static void Persist(string name, int emblemIndex, string description, int minChapter, bool isCreator)
+    private static void Persist(string name, int emblemIndex, string description, int minChapter, bool isCreator, string teamId)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
         PlayerPrefs.SetInt(KeyJoined, 1);
         PlayerPrefs.SetInt(KeyIsCreator, isCreator ? 1 : 0);
         PlayerPrefs.SetString(KeyName, name.Trim());
+        PlayerPrefs.SetString(KeyTeamId, teamId ?? "");
         PlayerPrefs.SetInt(KeyEmblem, Mathf.Max(0, emblemIndex));
         PlayerPrefs.SetString(KeyDesc, description ?? "");
         PlayerPrefs.SetInt(KeyMinChapter, Mathf.Max(0, minChapter));

@@ -42,6 +42,14 @@ public sealed class ProfilePageController : MonoBehaviour
     [Tooltip("Kilitliyken (10. level öncesi) gösterilecek ipucu. Opsiyonel.")]
     [SerializeField] private GameObject editLockedHint;
 
+    [Header("Müzik seçimi (opsiyonel)")]
+    [Tooltip("Müzik kataloğu. Atanırsa müzik butonu seçici popup'ı açar.")]
+    [SerializeField] private MusicLibrary musicLibrary;
+    [Tooltip("Müzik seçici popup'ını açan buton. OpenMusicSelector() da elle bağlanabilir.")]
+    [SerializeField] private Button musicButton;
+    [Tooltip("Seçili müzik parçasının adının yazılacağı metin (MusicTXT).")]
+    [SerializeField] private TMP_Text musicNameText;
+
     private int selectedAvatarId;
     private bool stripBuilt;
     private readonly List<AvatarOptionButton> options = new();
@@ -50,6 +58,7 @@ public sealed class ProfilePageController : MonoBehaviour
     {
         if (avatarCircleButton != null) avatarCircleButton.onClick.AddListener(ToggleAvatarStrip);
         if (closeButton        != null) closeButton.onClick.AddListener(Close);
+        if (musicButton        != null) musicButton.onClick.AddListener(OpenMusicSelector);
 
         if (nameInput != null)
         {
@@ -58,7 +67,10 @@ public sealed class ProfilePageController : MonoBehaviour
         }
 
         if (avatarStripRoot != null) avatarStripRoot.SetActive(false);
-        if (profileRoot     != null) profileRoot.SetActive(false);
+        // profileRoot'u BURADA kapatma! Bu controller profileRoot'un üzerindeyse Awake
+        // ilk AÇILIŞTA (ilk SetActive(true) anında) koşar ve sayfayı geri kapatır —
+        // "avatara ilk tık çalışmıyor, ikincide açılıyor" bug'ının kökü buydu.
+        // Sayfanın başlangıçta kapalı olması sahnenin kendi durumudur.
     }
 
     // Sayfayı popup gibi açıyorsan dairenin/menünün butonu bunu çağırır.
@@ -74,7 +86,36 @@ public sealed class ProfilePageController : MonoBehaviour
         if (profileRoot     != null) profileRoot.SetActive(false);
     }
 
-    private void OnEnable() => Refresh();
+    /// <summary>Müzik seçici popup'ını açar (müzik butonu veya elle bağlanır).</summary>
+    public void OpenMusicSelector() => MusicSelectorPopup.Show(transform, musicLibrary ?? MusicState.Library);
+
+    private void OnEnable()
+    {
+        MusicState.OnChanged += RefreshMusicName;   // popup'tan yeni parça seçilince güncelle
+        Refresh();
+    }
+
+    private void OnDisable() => MusicState.OnChanged -= RefreshMusicName;
+
+    // Seçili müzik parçasının adını MusicTXT'ye yazar. Kütüphane kendi ref'te yoksa
+    // global kaynaktan (MusicState.Library — MainMenuMusicStarter atar) okur; böylece
+    // hiç seçim yapılmadan da açılışta çalan varsayılan parçanın adı görünür.
+    private void RefreshMusicName()
+    {
+        if (musicNameText == null)
+        {
+            Debug.LogWarning("[Profile] Müzik adı görünmüyor: MusicTXT, ProfilePageController'daki 'Music Name Text' alanına ATANMAMIŞ.");
+            return;
+        }
+        var lib = musicLibrary != null ? musicLibrary : MusicState.Library;
+        if (lib == null || lib.Count == 0)
+        {
+            Debug.LogWarning("[Profile] Müzik adı görünmüyor: MusicLibrary yok. Bir MusicLibrary asset'i oluşturup MainMenuMusicStarter'ın (veya ProfilePageController'ın) 'library' alanına ata.");
+            return;
+        }
+        var track = lib.Get(MusicState.SelectedTrack);
+        if (track != null) musicNameText.text = track.displayName;
+    }
 
     private void Refresh()
     {
@@ -90,6 +131,8 @@ public sealed class ProfilePageController : MonoBehaviour
         bool unlocked = PlayerProfile.CustomizationUnlocked;
         if (avatarCircleButton != null) avatarCircleButton.interactable = unlocked;
         if (editLockedHint     != null) editLockedHint.SetActive(!unlocked);
+
+        RefreshMusicName();
 
         // Açılışta varsayılan görünüm: istatistikler görünür, şerit kapalı.
         ShowAvatarStrip(false);

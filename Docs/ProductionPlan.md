@@ -23,6 +23,15 @@ mock/sim ancak açıkça işaretlenip production'a geçiş adımıyla yazılır.
 3. **Backend**: Firebase (proje tinyfixers-bc1cd). Firestore ana veri; Cloud Functions
    yalnız gerekirse (v1'de kaçınıyoruz — rules ile çözülebilenler rules'ta).
 
+4. **Monetizasyon/analitik yığını (2026-07-19, KİLİTLİ — kullanıcı onayı):**
+   - Reklam: **Google AdMob** (rewarded ana format; ölçek büyüyünce AdMod mediation
+     altına Unity Ads eklenebilir).
+   - Analytics: **Firebase Analytics** (+ level_start/complete/fail, ekonomi, sosyal
+     event'leri kod tarafında eklenecek).
+   - IAP: **Unity IAP** → Apple App Store / Google Play Billing (zorunlu kanal);
+     ürün tanımları App Store Connect / Play Console'da (KULLANICI adımı).
+   - Kullanıcı import listesi: FirebaseCrashlytics + FirebaseAnalytics + AdMob SDK.
+
 ## Fazlar
 
 ### P1 — Cloud save (en kritik: veri kaybı)
@@ -72,8 +81,34 @@ mock/sim ancak açıkça işaretlenip production'a geçiş adımıyla yazılır.
 ## Sıra ve durum
 
 P1 → P2 → P3 → P4 → P5. Her faz bitiminde kullanıcı testi.
-- P1: BAŞLADI (2026-07-18)
-- P2-P5: bekliyor
+- P1: KOD TAMAM (2026-07-19) — `CloudSaveManifest` (anahtar envanteri) +
+  `FirebaseCloudSaveService` (boot restore "yüksek level kazanır", dirty-push 15sn,
+  pause/quit push, restore çözülmeden push yok). TEST: cihazda oyna → sil → yeniden kur
+  → ilerleme geri gelmeli. NOT: yeni kalıcı anahtar ekleyen CloudSaveManifest'e de eklemeli.
+- P2: RULES DOSYASI HAZIR (`firestore.rules`, repo kökü) — KULLANICI ADIMI:
+  Firebase Console → Firestore → Rules → yapıştır → Publish. App Check ayrıca ele alınacak.
+- P3a: KOD TAMAM (2026-07-19) — `players/{uid}` dizini (`PlayerDirectoryService`:
+  boot upsert + cloud-save ritminde UpsertIfChanged + friendCode sorgusu + region tespiti);
+  ID araması GERÇEK (bot fallback kaldırıldı, `FriendDirectory.SearchByCode` async,
+  popup kilitli-buton arama durumu); `FriendState.RealFriends` (uid|isim|bölüm, kalıcı +
+  cloud-save'e dahil); `BotPopulation` (15k evren, görülen gerçek oyuncu başına ~25 bot
+  emekli, taban 1500; liderlik sıraları artık evrene göre — pinli self #6543 gibi);
+  NamePool sarım son-eki (10k isim → 15k benzersiz bot); takım evreni ~ActiveCount/40.
+- P3b: KOD TAMAM (2026-07-19) — `FirebaseTeamCloud` (teams/{id}+members+chat modeli;
+  oluştur auto-id, gerçek katıl Increment, bot takım lazy-materialize "bot_{seed}" —
+  aynı bot takımı seçen iki gerçek oyuncu aynı dokümanda buluşur; görünen üye =
+  botMembers+realMembers; yazımlar optimistik, offline'da Firestore cache senkronlar);
+  `TeamDirectory.Browse` async gerçek+bot harman (gerçek önce, isim/id dedupe;
+  Firestore yoksa bot fallback → ekran boş kalmaz); `FirebaseTeamService` (ITeamService,
+  canlı chat Listen son-30, kendi mesajın local-cache'ten anında, bot takımlarda
+  deterministik bot sohbet harmanı, IDisposable → ResetTeam dinleyiciyi kapatır);
+  `PlayerTeamState.TeamId` (+cloud-save manifest); ITeamService.OnChanged eklendi,
+  TeamScreenController canlı akışa abone.
+- P4-P5: bekliyor
+
+Ek (2026-07-19): `GeneralTophud.png` yalnız Team + Market üst bandına uygulanır —
+menü: TinyFixers > Mockup > Ekle - Genel TopHud (Team + Market). Leaderboard bilerek
+dışarıda (kullanıcı elle tamamladı).
 
 Kullanıcıya düşen console/SDK adımları her fazda açıkça listelenecek (Firebase console
 provider açma, Facebook app id, App Store Connect ürünleri, rules deploy).

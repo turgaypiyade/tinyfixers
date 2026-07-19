@@ -45,12 +45,22 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
     private void OnEnable()
     {
         GameLocalization.OnLanguageChanged += UpdateVisual;
+        // Cloud save restore asenkron gelir: buton etiketi restore'dan ÖNCE bağlanmışsa
+        // eski (örn. 1) seviyeyi gösterir — restore inince güncel değeri yeniden oku.
+        FirebaseCloudSaveService.OnRestored += OnCloudRestored;
     }
 
     private void OnDisable()
     {
         GameLocalization.OnLanguageChanged -= UpdateVisual;
+        FirebaseCloudSaveService.OnRestored -= OnCloudRestored;
         StopDebugLongPressDetection();
+    }
+
+    private void OnCloudRestored()
+    {
+        currentLevel = PlayerPrefs.GetInt(prefsLevelKey, 1);
+        UpdateVisual();
     }
 
     private void UpdateVisual()

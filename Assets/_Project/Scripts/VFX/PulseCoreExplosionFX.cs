@@ -94,6 +94,15 @@ public class PulseCoreExplosionFX : MonoBehaviour
     private AnimationCurve easeIn =
         new AnimationCurve(new Keyframe(0, 0, 0, 0), new Keyframe(1, 1, 3, 3));
 
+    /// <summary>
+    /// Dalga (shockwave ring) yarıçapını PX cinsinden her frame bildirir — SpecialChainRunner
+    /// halka-bazlı taş kırma/special tetiklemeyi BU gerçek animasyona senkronlar (tek saat).
+    /// Bitişte/iptalde float.MaxValue gönderilir (kalan halkalar serbest kalsın).
+    /// </summary>
+    public System.Action<float> OnRadiusPx;
+
+    private bool ringAnimStarted;
+
     private Coroutine playRoutine;
     private bool isShuttingDown;
 
@@ -135,6 +144,21 @@ public class PulseCoreExplosionFX : MonoBehaviour
         totalDuration = Mathf.Max(0.01f, lifetime);
     }
 
+    /// <summary>
+    /// Dalganın (shockwave ring) merkezden tam yarıçapa YOL ALMA süresi. Oyun mantığı
+    /// halka-varış event'lerini bu büyümeye senkronlar; prefab'daki anlık (0.03s) değer
+    /// yerine board tempo'sundan gelen okunabilir bir cephe hızı verilir.
+    /// </summary>
+    public void SetWaveTravelTime(float seconds)
+    {
+        if (seconds > 0f)
+        {
+            ringInTime = Mathf.Max(0.05f, seconds);
+            if (totalDuration < ringInTime + ringOutTime)
+                totalDuration = ringInTime + ringOutTime;
+        }
+    }
+
     private void OnEnable()
     {
         isShuttingDown = false;
@@ -154,9 +178,28 @@ public class PulseCoreExplosionFX : MonoBehaviour
         playRoutine = StartCoroutine(DeferredStart());
     }
 
+    // Dalga yarıçapını (ring sizeDelta/2) her frame bildirir; yalnız BÜYÜYEN değer
+    // raporlanır (prefab'ın bayat başlangıç boyutu erken tetiklemesin).
+    private IEnumerator CoReportRadius()
+    {
+        float maxSeen = 0f;
+        while (!isShuttingDown)
+        {
+            if (ringAnimStarted)
+            {
+                if (shockwaveRing == null) { OnRadiusPx?.Invoke(float.MaxValue); yield break; }
+                float r = shockwaveRing.rectTransform.sizeDelta.x * 0.5f;
+                if (r > maxSeen) { maxSeen = r; OnRadiusPx?.Invoke(maxSeen); }
+            }
+            yield return null;
+        }
+    }
+
     private void OnDisable()
     {
         isShuttingDown = true;
+        OnRadiusPx?.Invoke(float.MaxValue);   // FX kapanırken kalan halkalar serbest
+        OnRadiusPx = null;
 
         if (playRoutine != null)
         {
@@ -350,8 +393,12 @@ public class PulseCoreExplosionFX : MonoBehaviour
         Coroutine glow = StartCoroutine(AnimGlow());
         Coroutine rays = StartCoroutine(AnimRays());
         Coroutine ring = StartCoroutine(AnimRing());
+        Coroutine radius = OnRadiusPx != null ? StartCoroutine(CoReportRadius()) : null;
 
         yield return new WaitForSeconds(totalDuration);
+
+        if (radius != null) StopCoroutine(radius);
+        OnRadiusPx?.Invoke(float.MaxValue);   // kalan halkalar serbest
 
         if (isShuttingDown)
             yield break;
@@ -430,9 +477,13 @@ public class PulseCoreExplosionFX : MonoBehaviour
     private IEnumerator AnimRing()
     {
         if (shockwaveRing == null)
+        {
+            ringAnimStarted = true;   // ring yoksa reporter beklemede kalmasın
             yield break;
+        }
 
         float peak = baseSize * ringPeakSizeRatio;
+        ringAnimStarted = true;
 
         yield return AnimateLayer(shockwaveRing, ringColor, peak * ringStartRatio, peak, 0f, ringColor.a, ringInTime, easeOut);
         yield return AnimateLayer(shockwaveRing, ringColor, peak, peak * ringEndRatio, ringColor.a, 0f, ringOutTime, easeOut);

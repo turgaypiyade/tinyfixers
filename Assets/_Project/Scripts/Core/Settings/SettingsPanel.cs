@@ -134,7 +134,14 @@ public class SettingsPanel : MonoBehaviour
     private void OnSaveProgressClicked()
     {
         PlayerPrefs.Save();
-        Debug.Log("[Settings] Progress saved (PlayerPrefs.Save).");
+
+        // Gerçek kayıt = bulut: manifest verisini hemen Firestore'a it (P1 cloud save).
+        FirebaseCloudSaveService.Push();
+        Debug.Log("[Settings] Progress saved (PlayerPrefs + cloud push).");
+
+        // P4 (referans RM akışı): giriş popup'ı — Facebook/Google/Apple ile hesabı bağla.
+        // Bağlıysa popup durumu gösterir; SDK'sı gelmeyen provider "Yakında" görünür.
+        SaveProgressPopup.Show(transform);
 
         if (savedConfirmationLabel != null)
             StartCoroutine(ShowSavedConfirmation());

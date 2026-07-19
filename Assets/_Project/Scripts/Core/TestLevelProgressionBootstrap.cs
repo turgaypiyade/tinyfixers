@@ -5,12 +5,11 @@ public static class TestLevelProgressionBootstrap
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void ResetOnLaunch()
     {
+        // KRİTİK: yalnız EDITOR'de çalışır. Cihaz build'inde her açılışta DeleteAll
+        // yapmak tüm oyuncu ilerlemesini siler (2026-07-19'da yakalanan launch bug'ı).
 #if UNITY_EDITOR
         var settings = Resources.Load<EditorTestSettings>("EditorTestSettings");
         int level = settings != null ? settings.testLevel : 1;
-#else
-        int level = 1;
-#endif
         // Progress event ve timed reward verilerini koru, geri kalanı sıfırla.
         string savedStartTime = PlayerPrefs.GetString("progress_event_v1_start_time", "");
         string savedGoals     = PlayerPrefs.GetString("progress_event_v1_goals", "");
@@ -35,5 +34,6 @@ public static class TestLevelProgressionBootstrap
         PlayerPrefs.Save();
 
         Debug.Log($"[TestLevelProgressionBootstrap] Starting at level {level} with 100 coins, 10 stars.");
+#endif
     }
 }

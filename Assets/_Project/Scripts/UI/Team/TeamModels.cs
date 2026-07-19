@@ -43,8 +43,8 @@ public sealed class TeamLifeRequest
 }
 
 /// <summary>
-/// Takım verisi kaynağı. v1'de MockTeamService; backend gelince aynı arayüze gerçek
-/// implementasyon (UGS/Firebase realtime) takılır — controller değişmez.
+/// Takım verisi kaynağı. Yerel sim (SimTeamService) veya gerçek Firestore
+/// (FirebaseTeamService) — controller değişmez.
 /// </summary>
 public interface ITeamService
 {
@@ -56,4 +56,7 @@ public interface ITeamService
     bool Help(TeamLifeRequest request);
     void RequestLife();
     void SendMessage(string text);
+
+    /// <summary>Veri değişince (yeni sohbet mesajı vb.) tetiklenir → ekran tazelenir.</summary>
+    event System.Action OnChanged;
 }

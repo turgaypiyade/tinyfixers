@@ -15,7 +15,6 @@ using UnityEngine;
 public sealed class FirebaseLeaderboardService : ILeaderboardService
 {
     private const int TopCount = 100;
-    private const int BotFillCount = 120;
     private const int TeamCapacity = 50;
 
     public event Action OnChanged;
@@ -23,9 +22,41 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
     // Cache anahtarı (sekme, alt-filtre): Dünya/Türkiye ve Liste/Ekle ayrı listeler.
     private readonly Dictionary<(LeaderboardTab tab, int sub), List<LeaderboardEntry>> cache = new();
 
-    // Türkiye bot havuzları — Dünya havuzundan (0..120 / takım 0..100) ayrı index aralığı.
-    private const int TrPlayerBase = 3000;
-    private const int TrTeamBase = 300;
+    // ── Ülke sekmesi: sabit "Türkiye" DEĞİL, oyuncunun KENDİ ülkesi (players.region ile
+    // aynı kaynak: PlayerDirectoryService.DetectRegion). Etiket ülkenin yerel adı
+    // (TR→"Türkiye", DE→"Deutschland"); bot havuzu ülke koduna göre deterministik ayrışır —
+    // her ülke kendi bot evrenini görür, tüm cihazlarda aynı.
+    private static string regionCode;
+    private static string regionLabel;
+
+    private static string RegionCode => regionCode ??= PlayerDirectoryService.DetectRegion();
+
+    private static string RegionLabel
+    {
+        get
+        {
+            if (regionLabel != null) return regionLabel;
+            try { regionLabel = new System.Globalization.RegionInfo(RegionCode).NativeName; }
+            catch { regionLabel = RegionCode; }
+            if (string.IsNullOrWhiteSpace(regionLabel)) regionLabel = RegionCode;
+            return regionLabel;
+        }
+    }
+
+    // Ülke koduna deterministik bot-havuzu tabanı (string.GetHashCode process'e göre
+    // değişebilir — cihazlar arası tutarlılık için basit char hash).
+    private static int RegionSeed
+    {
+        get
+        {
+            int h = 0;
+            foreach (char c in RegionCode) h = h * 31 + c;
+            return ((h % 40) + 40) % 40;
+        }
+    }
+
+    private static int RegionPlayerBase => 3000 + RegionSeed * 500;
+    private static int RegionTeamBase => 300 + RegionSeed * 120;
 
     private static FirebaseFirestore Db => FirebaseFirestore.DefaultInstance;
 
@@ -35,8 +66,8 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
     public string[] GetSubFilters(LeaderboardTab tab) => tab switch
     {
         LeaderboardTab.Friends => new[] { "Arkadaş Listesi", "Arkadaş Ekle" },
-        LeaderboardTab.Players => new[] { "Dünya", "Türkiye" },
-        LeaderboardTab.Team    => new[] { "Dünya", "Türkiye" },
+        LeaderboardTab.Players => new[] { "Dünya", RegionLabel },
+        LeaderboardTab.Team    => new[] { "Dünya", RegionLabel },
         _                      => System.Array.Empty<string>(),
     };
 
@@ -143,16 +174,22 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
             long score  = doc.ContainsField("score") ? doc.GetValue<long>("score") : 0;
             list.Add(new LeaderboardEntry { playerName = name, subtitle = "", score = (int)score });
         }
+
+        // Görülen gerçek oyuncu sayısı bot evrenini otomatik küçültür (launch kuralı).
+        BotPopulation.ReportRealUsers(list.Count);
         return list;
     }
 
     // Dolgu botları — sabit isim (index), gerçek zamanla ilerleyen skor (BotProgression).
+    // Evren boyutu BotPopulation'dan (launch ~15k, gerçek kullanıcı geldikçe azalır) —
+    // sıra numaraları bu evrene göre gerçekçi çıkar (örn. #6543). Liste top-100'e kesilir.
     // region: 0=Dünya (0..N), 1=Türkiye (ayrı index aralığı → farklı isimler/skorlar).
     private List<LeaderboardEntry> BuildBots(int region)
     {
-        int baseIndex = region == 1 ? TrPlayerBase : 0;
-        var list = new List<LeaderboardEntry>(BotFillCount);
-        for (int i = 0; i < BotFillCount; i++)
+        int baseIndex = region == 1 ? RegionPlayerBase : 0;
+        int count = BotPopulation.ActiveCount;
+        var list = new List<LeaderboardEntry>(count);
+        for (int i = 0; i < count; i++)
         {
             list.Add(new LeaderboardEntry
             {
@@ -168,9 +205,11 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
     // region: 0=Dünya, 1=Türkiye (ayrı takım havuzu). Takımsızken self satırı basılmaz.
     private List<LeaderboardEntry> TeamBoard(int region)
     {
-        int baseIndex = region == 1 ? TrTeamBase : 0;
+        int baseIndex = region == 1 ? RegionTeamBase : 0;
+        // Takım evreni bot nüfusuyla ölçeklenir (~40 üye/takım varsayımı).
+        int teamCount = Mathf.Max(150, BotPopulation.ActiveCount / 40);
         var list = new List<LeaderboardEntry>();
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < teamCount; i++)
         {
             int members = Mathf.Min(TeamCapacity, BotProgression.TeamMembers(baseIndex + i));
             list.Add(new LeaderboardEntry
@@ -206,6 +245,20 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
     private List<LeaderboardEntry> FriendsBoard()
     {
         var list = new List<LeaderboardEntry>();
+
+        // GERÇEK arkadaşlar (ID aramasıyla eklenen oyuncular) — bölümleri dizinden geldi.
+        foreach (var rf in FriendState.RealFriends)
+        {
+            list.Add(new LeaderboardEntry
+            {
+                playerName = rf.name,
+                subtitle = "",
+                chapter = Mathf.Max(1, rf.chapter),
+                score = 0,
+            });
+        }
+
+        // Bot arkadaşlar (öneri kartlarından eklenenler).
         foreach (var name in FriendState.Friends)
         {
             int hash = Mathf.Abs(name.GetHashCode());

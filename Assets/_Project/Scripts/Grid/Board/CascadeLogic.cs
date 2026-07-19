@@ -449,7 +449,8 @@ public class CascadeLogic
         {
             for (int x = 0; x < board.Width; x++)
             {
-                if (IsSlotEmpty(virtualBoard, x, y) && !verticalOnlyGaps.Contains(new Vector2Int(x, y)))
+                if (IsSlotEmpty(virtualBoard, x, y) && !verticalOnlyGaps.Contains(new Vector2Int(x, y))
+                    && !GapExpectsVerticalFill(virtualBoard, x, y))
                 {
                     // Right-top priority
                     if (TrySlide(virtualBoard, x + 1, y - 1, x, y, verticalOnlyGaps, skipSpecials))
@@ -651,6 +652,33 @@ public class CascadeLogic
         if (!TryGetCellState(x, y, out var state)) return false;
         if (!state.canContainTile || state.isObstacleBlocked) return false;
         return virtualBoard[x, y] == null;
+    }
+
+    // Boş hücreye DİKEY dolum bekleniyor mu? (Kullanıcı kuralı 2026-07-19: diagonal'ın
+    // TEK meşru sebebi kalıcı statik engeldir. Üstte düşecek BİR ŞEY — taş, special,
+    // movable, ya da anchor'lı (pending) special — varsa boşluk ONA rezervedir; alta en
+    // yakın olan önce iner, üsttekiler izler. Diagonal bu sırayı ÇALAMAZ.)
+    // Yukarı tarama: kalıcı tutucu/statik engel görülürse dikey dolum imkânsız → diagonal
+    // serbest; virtual tile veya pending hücre görülürse dikey dolum gelecek → yasak.
+    // Tepeye kadar bomboşsa: kolon spawn'a kapalı demektir (Step1 doldururdu) → serbest.
+    private bool GapExpectsVerticalFill(VirtualTile[,] virtualBoard, int x, int y)
+    {
+        for (int yy = y - 1; yy >= 0; yy--)
+        {
+            // Oil vb. holdsTile: taşı KALICI tutar — üstü asla inmez → dikey dolum yok.
+            if (board.ObstacleStateService != null && board.ObstacleStateService.HoldsTileAt(x, yy))
+                return false;
+
+            if (virtualBoard[x, yy] != null)
+                return true;   // düşecek taş/special/movable var → boşluk ona rezerve
+
+            if (board.IsPendingTriggeredSpecialCell(x, yy))
+                return true;   // anchor'lı special (geçici) → patlayınca kolon iner
+
+            if (IsGravityBlockedCell(x, yy))
+                return false;  // kalıcı statik engel → klasik kural: diagonal serbest
+        }
+        return false;
     }
 
     private bool IsGravityBlockedCell(int x, int y)

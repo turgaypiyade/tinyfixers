@@ -11,6 +11,11 @@ using UnityEngine;
 /// </summary>
 public sealed class SimTeamService : ITeamService
 {
+    // Sim veri yalnız yerel aksiyonla değişir; controller zaten aksiyondan sonra tazeler.
+#pragma warning disable 67
+    public event System.Action OnChanged;
+#pragma warning restore 67
+
     private readonly TeamInfo info;
     private readonly List<BotPlayer> members = new();
     private readonly List<TeamChatMessage> chat = new();

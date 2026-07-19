@@ -9,6 +9,7 @@ public sealed class FriendProfile
     public int chapter;       // "Bölüm N"
     public int mutualCount;   // "N ortak arkadaş"
     public string teamName;   // satır alt-ismi (takımı)
+    public string uid;        // GERÇEK oyuncuysa Firebase uid; bot önerilerde null
 }
 
 /// <summary>
@@ -37,24 +38,46 @@ public static class FriendDirectory
     }
 
     /// <summary>
-    /// Arkadaş koduyla oyuncu ara (örn "YX7115676"). Geçersiz format veya kendi kodun → null.
-    /// v1: koddan deterministik bot profili üretilir — akış uçtan uca çalışır.
+    /// Arkadaş koduyla GERÇEK oyuncu ara (players dizini, async). callback(null) =
+    /// geçersiz format / bulunamadı / kendi kodun. Bot fallback YOK — arama gerçektir
+    /// (production kuralı); öneriler bot evreninden gelmeye devam eder.
     /// </summary>
-    public static FriendProfile FindByCode(string code)
+    public static void SearchByCode(string code, Action<FriendProfile> callback)
     {
-        if (string.IsNullOrWhiteSpace(code)) return null;
-        code = code.Trim().ToUpperInvariant();
+        if (!IsValidCodeFormat(code))
+        {
+            callback?.Invoke(null);
+            return;
+        }
 
-        // Format: 2 harf + 6-8 rakam (kendi kod üretimiyle aynı kalıp).
-        if (code.Length < 8 || code.Length > 10) return null;
-        if (!char.IsLetter(code[0]) || !char.IsLetter(code[1])) return null;
+        PlayerDirectoryService.FindByFriendCode(code, player =>
+        {
+            if (player == null)
+            {
+                callback?.Invoke(null);
+                return;
+            }
+            callback?.Invoke(new FriendProfile
+            {
+                name = player.name,
+                chapter = player.chapter,
+                mutualCount = 0,
+                teamName = "",
+                uid = player.uid,
+            });
+        });
+    }
+
+    // Format: 2 harf + 6-8 rakam (kendi kod üretimiyle aynı kalıp).
+    private static bool IsValidCodeFormat(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return false;
+        code = code.Trim();
+        if (code.Length < 8 || code.Length > 10) return false;
+        if (!char.IsLetter(code[0]) || !char.IsLetter(code[1])) return false;
         for (int i = 2; i < code.Length; i++)
-            if (!char.IsDigit(code[i])) return null;
-
-        if (code == FriendState.MyCode) return null;   // kendini ekleyemezsin
-
-        int hash = Mathf.Abs(code.GetHashCode());
-        return ProfileFor(NamePool.PlayerAt(SuggestionBase + SuggestionScan + hash % 5000));
+            if (!char.IsDigit(code[i])) return false;
+        return true;
     }
 
     /// <summary>İsimden deterministik bölüm (arkadaş listesi sıralaması bunu kullanır).</summary>

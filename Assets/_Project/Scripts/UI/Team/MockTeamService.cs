@@ -6,6 +6,10 @@ using System.Collections.Generic;
 /// </summary>
 public sealed class MockTeamService : ITeamService
 {
+#pragma warning disable 67
+    public event System.Action OnChanged;
+#pragma warning restore 67
+
     private readonly TeamInfo info = new()
     {
         teamName = "curvealanoglari",

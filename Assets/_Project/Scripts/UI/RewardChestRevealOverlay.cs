@@ -107,11 +107,9 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         _rewardRow.anchorMin = _rewardRow.anchorMax = new Vector2(0.5f, 0.5f);
         _rewardRow.anchoredPosition = new Vector2(0f, 330f);
         _rewardRow.sizeDelta = new Vector2(960f, 240f);
-        var row = _rewardRow.gameObject.AddComponent<HorizontalLayoutGroup>();
-        row.spacing = 28f;
-        row.childAlignment = TextAnchor.MiddleCenter;
-        row.childControlWidth = row.childControlHeight = false;
-        row.childForceExpandWidth = row.childForceExpandHeight = false;
+        // Dizilim ELLE hesaplanır (SlotTarget) — HorizontalLayoutGroup KULLANILMAZ:
+        // layout, uçuş sırasında eklenen her yeni öğede kardeşleri yeniden dizip
+        // pozisyonları eziyordu (altın solda, hediyeler üst üste bug'ı).
 
         // Sandık.
         _chest = NewRect("Chest", transform);
@@ -183,7 +181,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         // 5) Ödüller sandıktan yay çizerek sıraya uçar.
         for (int i = 0; i < _rewards.Count; i++)
         {
-            StartCoroutine(FlyReward(_rewards[i]));
+            StartCoroutine(FlyReward(_rewards[i], i));
             float w = 0f;
             while (w < rewardStagger) { w += Time.unscaledDeltaTime; yield return null; }
         }
@@ -196,18 +194,34 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         StartCoroutine(PulseTapText());
     }
 
-    // Tek ödül: sandık ağzından çıkar, yay (arc) ile RewardRow'daki yerine uçar.
-    private IEnumerator FlyReward(DailySlotReward reward)
+    // Ödül hedef dizilimi (kullanıcı tasarımı 2026-07-19): ilk 3 ödül YAY —
+    // sol, üst(orta hafif yukarıda), sağ; 4. ve sonrası alt sırada ORTALANIR.
+    // 1-2 ödülde basit ortalama. Layout group yok → uçuş animasyonuyla kavga yok.
+    private Vector2 SlotTarget(int index, int total)
+    {
+        if (total == 1) return new Vector2(0f, 40f);
+        if (total == 2) return new Vector2(index == 0 ? -160f : 160f, 20f);
+
+        // İlk üçlü: yay (sol - tepe - sağ).
+        if (index == 0) return new Vector2(-280f, -10f);
+        if (index == 1) return new Vector2(0f, 75f);
+        if (index == 2) return new Vector2(280f, -10f);
+
+        // Fazlası: yayın altında ortalanmış sıra.
+        int extraCount = total - 3;
+        int extraIndex = index - 3;
+        float x = (extraIndex - (extraCount - 1) * 0.5f) * 180f;
+        return new Vector2(x, -215f);
+    }
+
+    // Tek ödül: sandık ağzından çıkar, yay (arc) ile hesaplanmış yerine uçar.
+    private IEnumerator FlyReward(DailySlotReward reward, int index)
     {
         var slot = BuildRewardItem(reward, _rewardRow);
-
-        // Layout yerleşsin ki hedef pozisyon doğru olsun.
-        LayoutRebuilder.ForceRebuildLayoutImmediate(_rewardRow);
-        yield return null;
         if (slot == null) yield break;
 
-        // Hedefi sakla, başlangıcı sandık ağzına taşı (RewardRow uzayında).
-        Vector2 target = slot.anchoredPosition;
+        // Hedef elle hesaplanır; başlangıç sandık ağzı (RewardRow uzayında).
+        Vector2 target = SlotTarget(index, _rewards.Count);
         Vector2 chestInRow = (Vector2)_rewardRow.InverseTransformPoint(_chest.TransformPoint(new Vector3(0f, 60f, 0f)));
         slot.anchoredPosition = chestInRow;
         slot.localScale = Vector3.zero;
