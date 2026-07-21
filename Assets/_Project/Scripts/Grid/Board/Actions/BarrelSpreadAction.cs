@@ -9,18 +9,30 @@ using UnityEngine;
 /// </summary>
 public sealed class BarrelSpreadAction : BoardAction
 {
-    private readonly BoardController _board;
-    private readonly List<Vector2Int> _barrelOrigins;
+    public readonly struct BarrelSource
+    {
+        public readonly Vector2Int Origin;
+        public readonly ObstacleId ObstacleId;
 
-    public BarrelSpreadAction(BoardController board, List<Vector2Int> barrelOrigins)
+        public BarrelSource(Vector2Int origin, ObstacleId obstacleId)
+        {
+            Origin = origin;
+            ObstacleId = obstacleId;
+        }
+    }
+
+    private readonly BoardController _board;
+    private readonly List<BarrelSource> _barrels;
+
+    public BarrelSpreadAction(BoardController board, List<BarrelSource> barrels)
     {
         _board = board;
-        _barrelOrigins = barrelOrigins;
+        _barrels = barrels;
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
-        if (_board == null || _barrelOrigins == null || _barrelOrigins.Count == 0)
+        if (_board == null || _barrels == null || _barrels.Count == 0)
             yield break;
 
         var obstacles = _board.ObstacleStateService;
@@ -30,15 +42,17 @@ public sealed class BarrelSpreadAction : BoardAction
         var spread = new BarrelMudSpreadService(_board, obstacles);
         var animator = _board.GetComponent<BarrelSplatterAnimator>();
 
-        // Barrel footprint boyutu (ör. 1x2 = 1 sütun, 2 satır) library def'inden.
-        var def = _board.LevelData?.obstacleLibrary?.Get(ObstacleId.Barrel);
-        Vector2Int size = def != null
-            ? new Vector2Int(Mathf.Max(1, def.size.x), Mathf.Max(1, def.size.y))
-            : Vector2Int.one;
-
-        for (int i = 0; i < _barrelOrigins.Count; i++)
+        for (int i = 0; i < _barrels.Count; i++)
         {
-            var origin = _barrelOrigins[i];
+            var barrel = _barrels[i];
+            var origin = barrel.Origin;
+
+            // Barrel türevlerinin footprint boyutu library def'inden gelir.
+            var def = _board.LevelData?.obstacleLibrary?.Get(barrel.ObstacleId);
+            Vector2Int size = def != null
+                ? new Vector2Int(Mathf.Max(1, def.size.x), Mathf.Max(1, def.size.y))
+                : Vector2Int.one;
+
             var targets = spread.ComputeTargets(origin, size);
 
             if (targets.Count > 0)

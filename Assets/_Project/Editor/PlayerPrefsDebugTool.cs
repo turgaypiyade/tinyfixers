@@ -80,7 +80,7 @@ public sealed class PlayerPrefsDebugTool : EditorWindow
     {
         EditorGUILayout.LabelField("Set Values", EditorStyles.boldLabel);
 
-        setCoinsTo = Mathf.Max(0, EditorGUILayout.IntField("Set Coins To", setCoinsTo));
+        setCoinsTo = EditorGUILayout.IntField("Set Coins To", setCoinsTo);
         if (GUILayout.Button("Apply Coins"))
         {
             if (Confirm("Set Coins", $"Set {KeyCoins} to {setCoinsTo}?"))
@@ -89,7 +89,7 @@ public sealed class PlayerPrefsDebugTool : EditorWindow
 
         EditorGUILayout.Space(4f);
 
-        setTotalStarsTo = Mathf.Max(0, EditorGUILayout.IntField("Set Total Stars To", setTotalStarsTo));
+        setTotalStarsTo = EditorGUILayout.IntField("Set Total Stars To", setTotalStarsTo);
         if (GUILayout.Button("Apply Total Stars"))
         {
             if (Confirm("Set Total Stars", $"Set {KeyTotalStars} to {setTotalStarsTo}?"))
@@ -238,8 +238,8 @@ public sealed class PlayerPrefsDebugTool : EditorWindow
 
     private void RefreshEditableFields()
     {
-        setCoinsTo = Mathf.Max(0, PlayerWallet.Coins);
-        setTotalStarsTo = Mathf.Max(0, PlayerWallet.TotalStars);
+        setCoinsTo = PlayerWallet.Coins;
+        setTotalStarsTo = PlayerWallet.TotalStars;
         setCurrentLevelTo = Mathf.Max(1, PlayerPrefs.GetInt(KeyCurrentLevel, 1));
 
         if (inspectLevelStarsLevel <= 0)
@@ -278,8 +278,8 @@ public sealed class PlayerPrefsDebugTool : EditorWindow
         stars = Mathf.Clamp(stars, 0, 3);
 
         int previousStars = GetLevelStars(level);
-        int totalStars = Mathf.Max(0, PlayerPrefs.GetInt(KeyTotalStars, 0));
-        int newTotalStars = Mathf.Max(0, totalStars + stars - previousStars);
+        int totalStars = PlayerPrefs.GetInt(KeyTotalStars, 0);
+        int newTotalStars = totalStars + stars - previousStars;
 
         if (stars <= 0)
             PlayerPrefs.DeleteKey(GetLevelStarsKey(level));
@@ -297,10 +297,10 @@ public sealed class PlayerPrefsDebugTool : EditorWindow
         level = Mathf.Max(1, level);
 
         int previousStars = GetLevelStars(level);
-        int totalStars = Mathf.Max(0, PlayerPrefs.GetInt(KeyTotalStars, 0));
+        int totalStars = PlayerPrefs.GetInt(KeyTotalStars, 0);
 
         PlayerPrefs.DeleteKey(GetLevelStarsKey(level));
-        PlayerPrefs.SetInt(KeyTotalStars, Mathf.Max(0, totalStars - previousStars));
+        PlayerPrefs.SetInt(KeyTotalStars, totalStars - previousStars);
         PlayerPrefs.Save();
 
         RefreshEditableFields();

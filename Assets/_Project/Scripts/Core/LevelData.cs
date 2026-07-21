@@ -152,6 +152,11 @@ public enum ObstacleId : int
     // mantığı yok — ObstacleDef'te behavior=MovableObstacle, hits=2, iki stage sprite ile
     // konfigüre edilir. (İsim serbestçe değiştirilebilir; değer 40 sabit kalmalı.)
     PlasticTwoStage = 40,
+
+    // Barrel'in 4-stage versiyonu. İlk 3 hit sadece ObstacleDef stage sprite'ını değiştirir;
+    // son hitte Barrel ile aynı şekilde Mud saçar. ObstacleDef: hits=4,
+    // stages[0..3] OverTileBlocker olarak konfigüre edilmeli.
+    Barrell_v2 = 41,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }

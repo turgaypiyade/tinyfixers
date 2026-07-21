@@ -46,6 +46,23 @@ public static class MusicState
         private set { PlayerPrefs.SetInt(KeySelected, value); PlayerPrefs.Save(); }
     }
 
+    public static bool TryGetSelectedTrack(out AudioClip clip, out float volume)
+    {
+        clip = null;
+        volume = 1f;
+
+        if (Library == null || Library.Count == 0)
+            return false;
+
+        var track = Library.Get(SelectedTrack);
+        if (track == null || track.clip == null)
+            return false;
+
+        clip = track.clip;
+        volume = track.volume;
+        return true;
+    }
+
     /// <summary>Parça sahipli mi? (id 0 her zaman sahipli.)</summary>
     public static bool IsOwned(int id)
     {

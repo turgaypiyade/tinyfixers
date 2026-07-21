@@ -6,6 +6,8 @@ using UnityEngine.UI;
 public class GridSpawner : MonoBehaviour
 {
     private static readonly Vector2 IconReferenceSize = new Vector2(100f, 100f);
+    private const float BarrellV2HitShakeDuration = 0.18f;
+    private const float BarrellV2HitShakeCycles = 3f;
 
     [Header("Level")]
     public LevelData level;
@@ -126,6 +128,8 @@ public class GridSpawner : MonoBehaviour
     private bool ownsResolvedLevelInstance;
     private readonly Dictionary<int, Image> obstacleViewsByOrigin = new();
     private readonly Dictionary<int, ObstacleDef> obstacleDefsByOrigin = new();
+    private readonly Dictionary<int, Coroutine> obstacleHitShakeRoutines = new();
+    private readonly Dictionary<int, Vector2> obstacleHitShakeBasePositions = new();
     private readonly Dictionary<int, ChestObstacleView> _chestViews = new();
     private readonly Dictionary<int, BatteryBoxView> _batteryBoxViews = new();
     private readonly Dictionary<int, WardrobeObstacleView> _wardrobeViews = new();
@@ -159,10 +163,13 @@ public class GridSpawner : MonoBehaviour
         if (board != null)
             board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
         UnbindBoardEvents();
+        StopAllObstacleHitShakes();
     }
 
     private void OnDestroy()
     {
+        StopAllObstacleHitShakes();
+
         if (ownsResolvedLevelInstance && resolvedLevel != null)
             Destroy(resolvedLevel);
 
@@ -228,17 +235,23 @@ public class GridSpawner : MonoBehaviour
 
     private void PlayLevelMusic(LevelData activeLevel)
     {
-        if (activeLevel == null)
-            return;
-
-        if (activeLevel.musicClip == null)
-            return;
-
         if (MusicManager.Instance == null)
         {
             Debug.LogWarning("GridSpawner: MusicManager sahnede yok, level müziği çalınamadı.");
             return;
         }
+
+        if (MusicState.TryGetSelectedTrack(out var selectedClip, out var selectedVolume))
+        {
+            MusicManager.Instance.Play(selectedClip, selectedVolume);
+            return;
+        }
+
+        if (activeLevel == null)
+            return;
+
+        if (activeLevel.musicClip == null)
+            return;
 
         MusicManager.Instance.Play(activeLevel.musicClip, activeLevel.musicVolume);
     }
@@ -323,6 +336,7 @@ public class GridSpawner : MonoBehaviour
 
     private void BuildInitialGrid()
     {
+        StopAllObstacleHitShakes();
         ClearChildren(cellBgRoot);
         ClearChildren(gridLinesRoot);
         ClearChildren(underTilesObstaclesRoot);
@@ -2234,6 +2248,8 @@ public class GridSpawner : MonoBehaviour
 
         if (change.cleared)
         {
+            StopObstacleHitShake(change.originIndex, image.rectTransform);
+
             if (change.obstacleId == ObstacleId.EnergyContainer)
             {
                 // Don't destroy — EnergyContainerFx takes over to show the exhausted state.
@@ -2253,6 +2269,74 @@ public class GridSpawner : MonoBehaviour
 
         if (change.sprite != null)
             image.sprite = change.sprite;
+
+        if (change.obstacleId == ObstacleId.Barrell_v2)
+            PlayObstacleHitShake(change.originIndex, image.rectTransform);
+    }
+
+    private void PlayObstacleHitShake(int originIndex, RectTransform target)
+    {
+        if (target == null)
+            return;
+
+        StopObstacleHitShake(originIndex, target);
+        obstacleHitShakeBasePositions[originIndex] = target.anchoredPosition;
+        obstacleHitShakeRoutines[originIndex] = StartCoroutine(ObstacleHitShakeRoutine(originIndex, target));
+    }
+
+    private IEnumerator ObstacleHitShakeRoutine(int originIndex, RectTransform target)
+    {
+        float elapsed = 0f;
+        float amplitude = Mathf.Clamp(tileSize * 0.095f, 7f, 14f);
+        Vector2 basePos = obstacleHitShakeBasePositions.TryGetValue(originIndex, out var storedBase)
+            ? storedBase
+            : target.anchoredPosition;
+
+        while (target != null && elapsed < BarrellV2HitShakeDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / BarrellV2HitShakeDuration);
+            float damp = 1f - t;
+            float x = Mathf.Sin(t * Mathf.PI * 2f * BarrellV2HitShakeCycles) * amplitude * damp;
+            target.anchoredPosition = basePos + new Vector2(x, 0f);
+            yield return null;
+        }
+
+        if (target != null)
+            target.anchoredPosition = basePos;
+
+        obstacleHitShakeRoutines.Remove(originIndex);
+        obstacleHitShakeBasePositions.Remove(originIndex);
+    }
+
+    private void StopObstacleHitShake(int originIndex, RectTransform target)
+    {
+        if (obstacleHitShakeRoutines.TryGetValue(originIndex, out var routine) && routine != null)
+            StopCoroutine(routine);
+
+        if (target != null && obstacleHitShakeBasePositions.TryGetValue(originIndex, out var basePos))
+            target.anchoredPosition = basePos;
+
+        obstacleHitShakeRoutines.Remove(originIndex);
+        obstacleHitShakeBasePositions.Remove(originIndex);
+    }
+
+    private void StopAllObstacleHitShakes()
+    {
+        foreach (var kvp in obstacleHitShakeBasePositions)
+        {
+            if (obstacleViewsByOrigin.TryGetValue(kvp.Key, out var image) && image != null)
+                image.rectTransform.anchoredPosition = kvp.Value;
+        }
+
+        foreach (var routine in obstacleHitShakeRoutines.Values)
+        {
+            if (routine != null)
+                StopCoroutine(routine);
+        }
+
+        obstacleHitShakeRoutines.Clear();
+        obstacleHitShakeBasePositions.Clear();
     }
 
     private bool IsTrackedObstacleViewFor(int originIndex, ObstacleId obstacleId)

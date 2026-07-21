@@ -8,7 +8,15 @@ public class SceneMusicCue : MonoBehaviour
 
     private void Start()
     {
-        if (MusicManager.Instance != null)
-            MusicManager.Instance.Play(music, volume, restartIfSame);
+        if (MusicManager.Instance == null)
+            return;
+
+        if (MusicState.TryGetSelectedTrack(out var selectedClip, out var selectedVolume))
+        {
+            MusicManager.Instance.Play(selectedClip, selectedVolume, restartIfSame);
+            return;
+        }
+
+        MusicManager.Instance.Play(music, volume, restartIfSame);
     }
 }

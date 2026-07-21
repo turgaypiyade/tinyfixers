@@ -16,6 +16,8 @@ public class LevelRuntimeSelector : MonoBehaviour
     [SerializeField, Min(1)] private int chapter = 1;
     [SerializeField, Min(1)] private int level = 1;
 
+    public LevelCatalog Catalog => levelCatalog;
+
     public LevelData ResolveLevelData()
     {
         if (levelCatalog == null)

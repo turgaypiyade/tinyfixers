@@ -46,19 +46,19 @@ public class BoardController : MonoBehaviour
     [Header("Fall Settle")]
     [SerializeField] private bool enableFallSettle = true;
     [SerializeField] private float fallSettleDuration = 0.22f;
-    [Tooltip("Min scaleY = 1 - strength. 0.46 → 0.54 (video ölçümü). Üstü 0.9 ile capped.")]
-    [SerializeField, Range(0f, 0.9f)] private float fallSettleStrength = 0.46f;
-    [Tooltip("Çarpma anında X genişleme oranı. 0 = sabit, 0.2 = %20 geniş (jelly his). Volume-preserving değil.")]
-    [SerializeField, Range(0f, 0.6f)] private float fallSettleStretchX = 0.20f;
-    [Tooltip("Çarpma anında hedefin altına inme oranı (hücre boyuna göre). 0.12 = hücre yüksekliğinin %12'si kadar aşağı taşar.")]
-    [SerializeField, Range(0f, 0.4f)] private float fallSettleOvershoot = 0.12f;
+    [Tooltip("Min scaleY = 1 - strength. 0.10 → 0.90. Daha düşük değer, inişte fazla ezilme hissini azaltır.")]
+    [SerializeField, Range(0f, 0.9f)] private float fallSettleStrength = 0.10f;
+    [Tooltip("Çarpma anında X genişleme oranı. 0 = sabit, 0.08 = %8 geniş (hafif jelly his).")]
+    [SerializeField, Range(0f, 0.6f)] private float fallSettleStretchX = 0.08f;
+    [Tooltip("Çarpma anında hedefin altına inme oranı (hücre boyuna göre). 0.02 = hücre yüksekliğinin %2'si kadar aşağı taşar.")]
+    [SerializeField, Range(0f, 0.4f)] private float fallSettleOvershoot = 0.02f;
 
     [Header("Fall Stretch (düşüş sırasında esneme)")]
-    [Tooltip("Düşerken taşın dikeyde uzama oranı (squash&stretch). 0 = kapalı, 0.12 = %12 uzar; " +
+    [Tooltip("Düşerken taşın dikeyde uzama oranı (squash&stretch). 0 = kapalı, 0.10 = %10 uzar; " +
              "yatay bunun ~yarısı kadar incelir. Hedefe yaklaşınca normale döner, inişte settle squash devralır.")]
-    [SerializeField, Range(0f, 0.35f)] private float fallStretchAmount = 0.18f;
-    [Tooltip("Uçuşun son bu ORANLIK kısmında esneme normale döner (0.35 = son %35'te toparlar).")]
-    [SerializeField, Range(0.1f, 0.8f)] private float fallStretchRecover = 0.35f;
+    [SerializeField, Range(0f, 0.35f)] private float fallStretchAmount = 0.10f;
+    [Tooltip("Uçuşun son bu ORANLIK kısmında esneme normale döner (0.45 = son %45'te toparlar).")]
+    [SerializeField, Range(0.1f, 0.8f)] private float fallStretchRecover = 0.45f;
     internal float FallColumnStep => Mathf.Max(0f, fallColumnStep);
     internal int MaxDiagonalSlidesPerCascade => Mathf.Max(1, maxDiagonalSlidesPerCascade);
 
@@ -171,6 +171,7 @@ public class BoardController : MonoBehaviour
     [Header("Debug / Tile Sync")]
     [SerializeField] private bool enableTileSyncValidation = true;
     [SerializeField] private bool enableSpecialChainTrace;
+    [SerializeField] private bool enableBoardFlowTrace;
     [SerializeField] private bool throwOnTileSyncMismatch;
     [SerializeField] private float tilePositionEpsilon = 0.25f;
 #endif
@@ -409,8 +410,8 @@ public class BoardController : MonoBehaviour
     private readonly HashSet<Vector2Int> oilSuppressionCellsThisMove = new();
     private bool oilSpreadResolvedThisMove = true;
 
-    // Bu hamlede kırılan barrel'ların hücreleri; board tam oturunca 4x4 mud saçarlar.
-    private readonly List<Vector2Int> barrelBreaksThisMove = new();
+    // Bu hamlede kırılan barrel türevleri; board tam oturunca footprint'lerine göre mud saçarlar.
+    private readonly List<BarrelSpreadAction.BarrelSource> barrelBreaksThisMove = new();
     private bool barrelSpreadResolvedThisMove = true;
 
     // Bu hamlede tetiklenen RocketBasket roketleri; board tam oturunca PatchBot gibi uçarlar.
@@ -459,6 +460,17 @@ public class BoardController : MonoBehaviour
     internal float FallSettleStretchX => Mathf.Max(0f, fallSettleStretchX);
     internal float FallSettleOvershoot => Mathf.Max(0f, fallSettleOvershoot);
     internal float FallCascadeStep => 0f;
+    internal bool BoardFlowTraceEnabled
+    {
+        get
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            return enableBoardFlowTrace;
+#else
+            return false;
+#endif
+        }
+    }
     internal float PreClearDelay => preClearDelay;
     internal float ShakeDuration => shakeDuration;
     internal float ShakeStrength => shakeStrength;
@@ -1345,9 +1357,12 @@ public class BoardController : MonoBehaviour
             return;
         }
 
-        Debug.Log(
-            $"[PulseClearDebug] ClearAndDestroyTile ENTER tile=({x},{y}) " +
-            $"type={tileType} special={special} live={wasLiveInGrid}");
+        if (BoardFlowTraceEnabled)
+        {
+            Debug.Log(
+                $"[PulseClearDebug] ClearAndDestroyTile ENTER tile=({x},{y}) " +
+                $"type={tileType} special={special} live={wasLiveInGrid}");
+        }
 
         if (wasLiveInGrid)
             ClearCell(x, y);
@@ -2183,7 +2198,8 @@ public class BoardController : MonoBehaviour
                 if (preMatchCascades.Count > 0)
                 {
                     DisableSettleIfMoreCascadesFollow(preMatchCascades);
-                    Debug.Log($"[Resolve] pass={safety} pre_match_cascade actions={preMatchCascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+                    if (BoardFlowTraceEnabled)
+                        Debug.Log($"[Resolve] pass={safety} pre_match_cascade actions={preMatchCascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
                     actionSequencer.Enqueue(preMatchCascades);
 
                     while (actionSequencer.IsPlaying)
@@ -2203,13 +2219,6 @@ public class BoardController : MonoBehaviour
                 // CascadeLogic.HasAnyEmptyPlayableCell artık sadece flow-reachable boşlukları sayar.
             }
 
-            // Hamle kalmadıysa cascade settle beklendi; yeni match aramaya gerek yok.
-            // Hamle yoksa cascade settle sonrası yeni match aramaya gerek yok.
-            // Non-blocking uçuşlar (goal orb, PatchBot dash) burada beklenmez; fail/idle
-            // değerlendirmesi ActiveBackgroundJobs üzerinden onları ayrıca bekler.
-            if (RemainingMoves <= 0 && BlockingBackgroundJobs == 0 && !actionSequencer.IsPlaying)
-                yield break;
-
             var matches = matchFinder.FindAllMatches();
 
             if (matches.Count > 0)
@@ -2228,7 +2237,8 @@ public class BoardController : MonoBehaviour
 
                 if (matchTiles.Count > 0)
                 {
-                    Debug.Log($"[Resolve] pass={safety} cascade_match={matchTiles.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+                    if (BoardFlowTraceEnabled)
+                        Debug.Log($"[Resolve] pass={safety} cascade_match={matchTiles.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
 
                     bool cleared = false;
                     yield return ExecuteClearPass(matchTiles, allowSpecialActivation, result => cleared = result);
@@ -2244,7 +2254,8 @@ public class BoardController : MonoBehaviour
             if (cascades.Count > 0)
             {
                 DisableSettleIfMoreCascadesFollow(cascades);
-                Debug.Log($"[Resolve] pass={safety} cascade_fall actions={cascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+                if (BoardFlowTraceEnabled)
+                    Debug.Log($"[Resolve] pass={safety} cascade_fall actions={cascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
                 actionSequencer.Enqueue(cascades);
 
                 while (actionSequencer.IsPlaying)
@@ -2296,7 +2307,8 @@ public class BoardController : MonoBehaviour
 
                 if (spreadTargets.Count > 0)
                 {
-                    Debug.Log($"[Oil] Spreading to {spreadTargets.Count} cells after board fully settled.");
+                    if (BoardFlowTraceEnabled)
+                        Debug.Log($"[Oil] Spreading to {spreadTargets.Count} cells after board fully settled.");
                     actionSequencer.Enqueue(new OilSpreadAction(this, spreadTargets));
 
                     while (actionSequencer.IsPlaying)
@@ -2316,10 +2328,11 @@ public class BoardController : MonoBehaviour
 
                 if (barrelBreaksThisMove.Count > 0)
                 {
-                    var barrels = new List<Vector2Int>(barrelBreaksThisMove);
+                    var barrels = new List<BarrelSpreadAction.BarrelSource>(barrelBreaksThisMove);
                     barrelBreaksThisMove.Clear();
 
-                    Debug.Log($"[Barrel] Spreading mud from {barrels.Count} broken barrel(s) after board settled.");
+                    if (BoardFlowTraceEnabled)
+                        Debug.Log($"[Barrel] Spreading mud from {barrels.Count} broken barrel(s) after board settled.");
                     actionSequencer.Enqueue(new BarrelSpreadAction(this, barrels));
 
                     while (actionSequencer.IsPlaying)
@@ -2340,7 +2353,8 @@ public class BoardController : MonoBehaviour
                     var launches = new List<RocketBasketLaunchAction.Launch>(rocketLaunchesThisMove);
                     rocketLaunchesThisMove.Clear();
 
-                    Debug.Log($"[RocketBasket] Launching {launches.Count} rocket(s) after board settled.");
+                    if (BoardFlowTraceEnabled)
+                        Debug.Log($"[RocketBasket] Launching {launches.Count} rocket(s) after board settled.");
                     actionSequencer.Enqueue(new RocketBasketLaunchAction(this, launches));
 
                     while (actionSequencer.IsPlaying)
@@ -2356,9 +2370,15 @@ public class BoardController : MonoBehaviour
             // safe reshuffle yap, sonra resolve loop'una tekrar gir.
             // Special swap mümkünse HasAnyPlayableSwap() true döndürmeli.
             // ─────────────────────────────────────────────
+            // Son hamlede de board'un kendi ürettiği match/cascade zinciri bitene kadar
+            // resolve devam etmeli. Hamle yokken sadece deadlock reshuffle yapılmaz.
+            if (RemainingMoves <= 0)
+                break;
+
             if (!matchFinder.HasAnyPlayableSwap())
             {
-                Debug.Log($"[Resolve] pass={safety} deadlock_detected -> safe_shuffle +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+                if (BoardFlowTraceEnabled)
+                    Debug.Log($"[Resolve] pass={safety} deadlock_detected -> safe_shuffle +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
 
                 yield return boosterService.SafeShuffleBoardRoutine(boardInitService);
 
@@ -2382,7 +2402,8 @@ public class BoardController : MonoBehaviour
         if (shakeTarget != null && !entranceInProgress)
             shakeTarget.anchoredPosition = shakeBasePos;
 
-        Debug.Log($"[Resolve] ═══ DONE ═══ passes={safety} total: {(Time.realtimeSinceStartup - _rbStart):0.000}s");
+        if (BoardFlowTraceEnabled)
+            Debug.Log($"[Resolve] ═══ DONE ═══ passes={safety} total: {(Time.realtimeSinceStartup - _rbStart):0.000}s");
     }
 
     // Public wrapper for services (BoosterService)
@@ -2395,7 +2416,8 @@ public class BoardController : MonoBehaviour
         void CpLog(string step)
         {
             float now = Time.realtimeSinceStartup;
-            Debug.Log($"[ClearPass] {step,-22} +{(now - _cpLast):0.000}s (total: {(now - _cpStart):0.000}s) matchCount={matchTiles.Count}");
+            if (BoardFlowTraceEnabled)
+                Debug.Log($"[ClearPass] {step,-22} +{(now - _cpLast):0.000}s (total: {(now - _cpStart):0.000}s) matchCount={matchTiles.Count}");
             _cpLast = now;
         }
         // Kazanılmış special'lar normal match clear'ına girmez.
@@ -2592,6 +2614,7 @@ public class BoardController : MonoBehaviour
             DoBoardShake = doShake,
             IncludeAdjacentOverTileBlockerDamage = true,
             CommitFinalClearsBeforeEffects = true,
+            BackgroundEffectsBlockResolve = false,
             ObstacleHitContext = IsSpecialActivationPhase
                 ? ObstacleHitContext.SpecialActivation
                 : ObstacleHitContext.NormalMatch
@@ -2848,8 +2871,8 @@ public class BoardController : MonoBehaviour
         if (ox < 0 || ox >= width || oy < 0 || oy >= height) return;
 
         // Barrel kırıldı: bu hamlenin sonunda (board oturunca) etrafına 4x4 mud saçılacak.
-        if (obstacleId == ObstacleId.Barrel)
-            barrelBreaksThisMove.Add(new Vector2Int(ox, oy));
+        if (IsMudSplatBarrel(obstacleId))
+            barrelBreaksThisMove.Add(new BarrelSpreadAction.BarrelSource(new Vector2Int(ox, oy), obstacleId));
 
         if (obstacleId == ObstacleId.Oil)
         {
@@ -2891,6 +2914,12 @@ public class BoardController : MonoBehaviour
 
         return finalStage.behavior != ObstacleBehaviorType.UnderTileLayered
             && finalStage.behavior != ObstacleBehaviorType.CellAnchoredOverlay;
+    }
+
+    private static bool IsMudSplatBarrel(ObstacleId obstacleId)
+    {
+        return obstacleId == ObstacleId.Barrel
+            || obstacleId == ObstacleId.Barrell_v2;
     }
 
     private void HandleCellUnlocked(int cellIndex)
@@ -2975,7 +3004,8 @@ public class BoardController : MonoBehaviour
 
         bool moreComing =
             (matchFinder != null && matchFinder.FindAllMatches().Count > 0)
-            || (cascadeLogic != null && cascadeLogic.HasAnyEmptyPlayableCell());
+            || (cascadeLogic != null && cascadeLogic.HasAnyEmptyPlayableCell())
+            || HasPendingPostSettleObstacleAction();
 
         if (!moreComing)
             return;
@@ -2983,6 +3013,36 @@ public class BoardController : MonoBehaviour
         foreach (var action in cascades)
             if (action is FallAction fa)
                 fa.DisableSettle();
+    }
+
+    private bool HasPendingPostSettleObstacleAction()
+    {
+        return (!oilSpreadResolvedThisMove && oilSpreadService != null)
+            || (!barrelSpreadResolvedThisMove && barrelBreaksThisMove.Count > 0)
+            || (!rocketLaunchResolvedThisMove && rocketLaunchesThisMove.Count > 0);
+    }
+
+    internal bool HasPendingAutoResolveForLevelEnd()
+    {
+        return (cascadeLogic != null && cascadeLogic.HasAnyEmptyPlayableCell())
+            || (matchFinder != null && matchFinder.FindAllMatches().Count > 0)
+            || HasPendingPostSettleObstacleAction()
+            || HasBottomExitCargoReady();
+    }
+
+    private bool HasBottomExitCargoReady()
+    {
+        if (obstacleStateService == null || height <= 0 || width <= 0)
+            return false;
+
+        int by = height - 1;
+        for (int x = 0; x < width; x++)
+        {
+            if (obstacleStateService.IsExitAtBottomAt(x, by))
+                return true;
+        }
+
+        return false;
     }
 
     // En alt satıra inen Cargo (exitAtBottom) obstacle'larını board'dan çıkarır:

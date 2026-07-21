@@ -14,6 +14,7 @@ public sealed class ClearPresentationPlan
     public bool IncludeAdjacentOverTileBlockerDamage { get; set; } = true;
     public ObstacleHitContext ObstacleHitContext { get; set; } = ObstacleHitContext.NormalMatch;
     public bool CommitFinalClearsBeforeEffects { get; set; }
+    public bool BackgroundEffectsBlockResolve { get; set; } = true;
 
     public void RegisterNormalMatchSource(TileView tile)
     {

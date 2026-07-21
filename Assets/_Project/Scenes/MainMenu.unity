@@ -1055,6 +1055,7 @@ MonoBehaviour:
   requestLifeButton: {fileID: 1572222097}
   messageButton: {fileID: 850061666}
   leaveButton: {fileID: 0}
+  leaveRedSquareButtonSprite: {fileID: 21300000, guid: e4286cd6cce0e46a68530d5e23fe4886, type: 3}
   messageInputRoot: {fileID: 865737000}
   messageInput: {fileID: 582710112}
   messagePostButton: {fileID: 1302370632}

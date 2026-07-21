@@ -8659,11 +8659,11 @@ MonoBehaviour:
     m_RotationOrder: 4
   enableFallSettle: 1
   fallSettleDuration: 0.1
-  fallSettleStrength: 0.116
-  fallSettleStretchX: 0.101
-  fallSettleOvershoot: 0.021
-  fallStretchAmount: 0.18
-  fallStretchRecover: 0.35
+  fallSettleStrength: 0.1
+  fallSettleStretchX: 0.08
+  fallSettleOvershoot: 0.02
+  fallStretchAmount: 0.1
+  fallStretchRecover: 0.45
   preClearDelay: 0.02
   shakeDuration: 0.02
   shakeStrength: 4

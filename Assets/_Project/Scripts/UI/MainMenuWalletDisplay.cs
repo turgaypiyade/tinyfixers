@@ -40,7 +40,7 @@ public sealed class MainMenuWalletDisplay : MonoBehaviour
     {
         ResolveReferences();
         if (chipMoneyText != null)
-            chipMoneyText.text = Mathf.Max(0, amount).ToString();
+            chipMoneyText.text = amount.ToString();
     }
 
     private void RefreshCoins(int amount)

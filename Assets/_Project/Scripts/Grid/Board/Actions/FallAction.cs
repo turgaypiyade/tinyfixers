@@ -519,7 +519,10 @@ public class FallAction : BoardAction
                 maxDist = dist;
         }
 
-        Debug.Log($"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} (cell-to-cell constant velocity)");
+        bool trace = sequencer.Board != null && sequencer.Board.BoardFlowTraceEnabled;
+
+        if (trace)
+            Debug.Log($"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} (cell-to-cell constant velocity)");
 
         sequencer.Board.PlayTileFallSfx(fallRecords.Count, maxDist);
 
@@ -555,7 +558,8 @@ public class FallAction : BoardAction
                 ? $" visualFromY={visualFromY} visualOffset={visualOffset} visualDuration={moveDuration:0.000}"
                 : string.Empty;
 
-            Debug.Log($"[FallExec] tile=({r.fromX},{r.fromY})->({r.toX},{r.toY}) path={isPath} delay={r.startDelay + r.phaseDelay:0.000}{visualNote}");
+            if (trace)
+                Debug.Log($"[FallExec] tile=({r.fromX},{r.fromY})->({r.toX},{r.toY}) path={isPath} delay={r.startDelay + r.phaseDelay:0.000}{visualNote}");
 
             IEnumerator move;
 
@@ -614,10 +618,12 @@ public class FallAction : BoardAction
                 maxTotalDelay = totalDelay;
         }
 
-        Debug.Log($"[Fall] stagger maxDelay={maxTotalDelay:0.000}s estimatedEnd={GetEstimatedVisualDuration(sequencer.Board):0.000}s");
+        if (trace)
+            Debug.Log($"[Fall] stagger maxDelay={maxTotalDelay:0.000}s estimatedEnd={GetEstimatedVisualDuration(sequencer.Board):0.000}s");
 
         yield return sequencer.Animator.RunManyWithDelays(moves, delays);
 
-        Debug.Log($"[Fall] DONE +{(Time.realtimeSinceStartup - faStart):0.000}s");
+        if (trace)
+            Debug.Log($"[Fall] DONE +{(Time.realtimeSinceStartup - faStart):0.000}s");
     }
 }

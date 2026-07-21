@@ -62,6 +62,32 @@ public class LevelCatalog : ScriptableObject
         return false;
     }
 
+    public bool TryGetGlobalLevel(LevelData targetLevelData, out int level)
+    {
+        level = 0;
+
+        if (targetLevelData == null)
+            return false;
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            var entry = entries[i];
+            if (entry == null || entry.levelData != targetLevelData)
+                continue;
+
+            if (TryGetGlobalLevelFromKey(entry.levelKey, out int keyLevel))
+            {
+                level = keyLevel;
+                return true;
+            }
+
+            level = Mathf.Max(1, entry.level);
+            return true;
+        }
+
+        return false;
+    }
+
     private static bool TryGetGlobalLevelFromKey(string levelKey, out int level)
     {
         level = 0;

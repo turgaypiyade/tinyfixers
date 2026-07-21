@@ -131,7 +131,8 @@ public class TopHudController : MonoBehaviour
             {
                 int computed = CountObstacleCells(levelData, ObstacleId.Mud)
                              + CountStampedBeneathCells(ObstacleId.Mud)
-                             + CountObstacleCells(levelData, ObstacleId.Barrel);
+                             + CountObstacleCells(levelData, ObstacleId.Barrel)
+                             + CountObstacleCells(levelData, ObstacleId.Barrell_v2);
                 if (computed > 0)
                     initialRemaining = computed;
             }

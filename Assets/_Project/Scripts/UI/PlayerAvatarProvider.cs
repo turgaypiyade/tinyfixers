@@ -17,4 +17,27 @@ public static class PlayerAvatarProvider
     {
         get { var l = Lib; return l != null ? l.Get(PlayerProfile.AvatarId) : null; }
     }
+
+    public static Sprite PickForSeed(string seed)
+    {
+        var l = Lib;
+        if (l == null || l.Count <= 0)
+            return null;
+
+        return l.Get(StableHash(seed) % l.Count);
+    }
+
+    private static int StableHash(string value)
+    {
+        unchecked
+        {
+            int hash = 23;
+            if (!string.IsNullOrEmpty(value))
+            {
+                for (int i = 0; i < value.Length; i++)
+                    hash = hash * 31 + value[i];
+            }
+            return hash & int.MaxValue;
+        }
+    }
 }

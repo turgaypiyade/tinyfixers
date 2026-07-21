@@ -21,11 +21,11 @@ public sealed class TileAnimator
     // Burst VFX TileClearBurstVfx sınıfı tarafından üretilir (runtime UI, prefab gerekmez).
     //
     // Hissiyat ayarları (hızlandırıldı):
-    //   BURST_DURATION = 0.08s (PlayPop coroutine bekleme, eski 0.12)
+    //   BURST_DURATION = 0.06s (PlayPop coroutine bekleme, burst arkada devam eder)
     //   Burst kendisi arka planda 0.30s yaşamaya devam eder (fire-and-forget),
     //   sadece PlayPop'un coroutine beklemesi 0.08s → clear anim blokaj azaldı.
     // ============================================================
-    private const float BURST_DURATION = 0.08f;   // Taş küçülme süresi (PlayPop coroutine bekleme)
+    private const float BURST_DURATION = 0.06f;   // Taş küçülme süresi (PlayPop coroutine bekleme)
     private const float TILE_SHRINK_END = 0.00f;  // Taş scale sonu
     private const float TILE_SHRINK_MID = 0.55f;  // Taş scale orta (shrink hissini verir)
     private const float BURST_VFX_DURATION = 0.30f; // Halka/yıldız/shard yaşam süresi (paralel)
@@ -83,7 +83,7 @@ public sealed class TileAnimator
 
         // Taş animasyonu — çağıran taraftaki duration parametresini dikkate al
         // (cascade sırasında farklı sürede oynatmak isteyebilir)
-        float shrinkDuration = Mathf.Max(0.10f, Mathf.Min(duration, BURST_DURATION));
+        float shrinkDuration = Mathf.Clamp(duration, 0.045f, BURST_DURATION);
         float t = 0f;
 
         while (t < shrinkDuration)

@@ -317,6 +317,7 @@ public class TileView : MonoBehaviour,
                 SnapToGrid(tileSize);
             }
 
+            ResetVisualScale(visualRt, visualBaseScale);
             yield break;
         }
 
@@ -326,7 +327,10 @@ public class TileView : MonoBehaviour,
         while (elapsed < safeDuration)
         {
             if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
+            }
 
             elapsed += Time.deltaTime;
 
@@ -340,13 +344,19 @@ public class TileView : MonoBehaviour,
         }
 
         if (rt == null || !rt)
+        {
+            ResetVisualScale(visualRt, visualBaseScale);
             yield break;
+        }
 
         rt.anchoredPosition = end;
         SnapToGrid(tileSize);
 
         if (!enableSettle || settleDuration <= 0f)
+        {
+            ResetVisualScale(visualRt, visualBaseScale);
             yield break;
+        }
 
         // Pozisyon dalışı settleOvershoot ile (KÜÇÜK, %2 gibi) — strength SKALA squash'ı sürer.
         // Eskiden strength (%11+) pozisyonu sürüyordu: inen taş alttakinin içine gömülüp
@@ -360,7 +370,10 @@ public class TileView : MonoBehaviour,
         while (b1 < bounceDur * 0.35f)
         {
             if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
+            }
 
             b1 += Time.deltaTime;
 
@@ -387,7 +400,10 @@ public class TileView : MonoBehaviour,
         while (b2 < bounceDur * 0.35f)
         {
             if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
+            }
 
             b2 += Time.deltaTime;
 
@@ -415,7 +431,10 @@ public class TileView : MonoBehaviour,
         while (b3 < bounceDur * 0.3f)
         {
             if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
+            }
 
             b3 += Time.deltaTime;
 
@@ -427,8 +446,7 @@ public class TileView : MonoBehaviour,
             yield return null;
         }
 
-        if (visualRt != null)
-            visualRt.localScale = visualBaseScale;
+        ResetVisualScale(visualRt, visualBaseScale);
 
         if (rt != null && rt)
             SnapToGrid(tileSize);
@@ -488,6 +506,12 @@ public class TileView : MonoBehaviour,
         visualRt.localScale = new Vector3(baseScale.x * sx, baseScale.y * sy, baseScale.z);
     }
 
+    private static void ResetVisualScale(RectTransform visualRt, Vector3 baseScale)
+    {
+        if (visualRt != null && visualRt)
+            visualRt.localScale = baseScale;
+    }
+
     public IEnumerator MoveToGridCell(
         int tileSize,
         int fromX,
@@ -535,6 +559,7 @@ public class TileView : MonoBehaviour,
         {
             rt.anchoredPosition = end;
             SnapToGrid(tileSize);
+            ResetVisualScale(visualRt, visualBaseScale);
             yield break;
         }
 
@@ -552,7 +577,10 @@ public class TileView : MonoBehaviour,
         while (elapsed < safeDuration)
         {
             if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
+            }
 
             elapsed += Time.deltaTime;
 
@@ -570,16 +598,22 @@ public class TileView : MonoBehaviour,
         }
 
         if (rt == null || !rt)
+        {
+            ResetVisualScale(visualRt, visualBaseScale);
             yield break;
+        }
 
         if (doStretch && visualRt != null)
-            visualRt.localScale = visualBaseScale;   // settle squash temiz tabandan başlasın
+            ResetVisualScale(visualRt, visualBaseScale);   // settle squash temiz tabandan başlasın
 
         rt.anchoredPosition = end;
         SnapToGrid(tileSize);
 
         if (!enableSettle || settleDuration <= 0f)
+        {
+            ResetVisualScale(visualRt, visualBaseScale);
             yield break;
+        }
 
         Vector2 basePos = rt.anchoredPosition;
         // Pozisyon dalışı settleOvershoot ile (küçük) — strength skala squash'ı sürer (gömülme fix'i).
@@ -592,7 +626,10 @@ public class TileView : MonoBehaviour,
         while (b1 < bounceDur * 0.35f)
         {
             if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
+            }
 
             b1 += Time.deltaTime;
 
@@ -619,7 +656,10 @@ public class TileView : MonoBehaviour,
         while (b2 < bounceDur * 0.35f)
         {
             if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
+            }
 
             b2 += Time.deltaTime;
 
@@ -647,7 +687,10 @@ public class TileView : MonoBehaviour,
         while (b3 < bounceDur * 0.3f)
         {
             if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
+            }
 
             b3 += Time.deltaTime;
 
@@ -659,10 +702,7 @@ public class TileView : MonoBehaviour,
             yield return null;
         }
 
-        if (visualRt != null && visualRt)
-        {
-            visualRt.localScale = visualBaseScale;
-        }
+        ResetVisualScale(visualRt, visualBaseScale);
 
         if (rt != null && rt)
             SnapToGrid(tileSize);
@@ -739,7 +779,10 @@ public class TileView : MonoBehaviour,
         for (int seg = 0; seg < segmentCount; seg++)
         {
             if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
+            }
 
             Vector2 segStart = GetFallCellAnchoredPosition(waypoints[seg].x, waypoints[seg].y, tileSize);
             Vector2 segEnd = GetFallCellAnchoredPosition(waypoints[seg + 1].x, waypoints[seg + 1].y, tileSize);
@@ -761,7 +804,10 @@ public class TileView : MonoBehaviour,
             while (elapsed < segDur)
             {
                 if (rt == null || !rt)
+                {
+                    ResetVisualScale(visualRt, visualBaseScale);
                     yield break;
+                }
 
                 elapsed += Time.deltaTime;
                 globalElapsed += Time.deltaTime;
@@ -785,20 +831,26 @@ public class TileView : MonoBehaviour,
             }
 
             if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
+            }
 
             rt.anchoredPosition = segEnd;
             // SnapToGrid YOK — bir sonraki segment kaldığı yerden başlar
         }
 
         if (stretchEnabled && visualRt != null)
-            visualRt.localScale = visualBaseScale;
+            ResetVisualScale(visualRt, visualBaseScale);
 
         // Son waypoint sonrası snap
         SnapToGrid(tileSize);
 
         if (!enableSettle || settleDuration <= 0f)
+        {
+            ResetVisualScale(visualRt, visualBaseScale);
             yield break;
+        }
 
         Vector2 basePos = rt.anchoredPosition;
         // Pozisyon dalışı settleOvershoot ile (küçük) — strength skala squash'ı sürer (gömülme fix'i).
@@ -811,7 +863,10 @@ public class TileView : MonoBehaviour,
         while (b1 < bounceDur * 0.35f)
         {
             if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
+            }
 
             b1 += Time.deltaTime;
 
@@ -838,7 +893,10 @@ public class TileView : MonoBehaviour,
         while (b2 < bounceDur * 0.35f)
         {
             if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
+            }
 
             b2 += Time.deltaTime;
 
@@ -866,7 +924,10 @@ public class TileView : MonoBehaviour,
         while (b3 < bounceDur * 0.3f)
         {
             if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
+            }
 
             b3 += Time.deltaTime;
 
@@ -878,8 +939,7 @@ public class TileView : MonoBehaviour,
             yield return null;
         }
 
-        if (visualRt != null && visualRt)
-            visualRt.localScale = visualBaseScale;
+        ResetVisualScale(visualRt, visualBaseScale);
 
         if (rt != null && rt)
             SnapToGrid(tileSize);

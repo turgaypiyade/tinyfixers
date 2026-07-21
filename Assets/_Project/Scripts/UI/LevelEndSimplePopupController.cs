@@ -145,6 +145,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [Header("Progression")]
     [SerializeField] private string mainMenuSceneName = "MainMenu";
     [SerializeField] private string prefsLevelKey = "current_level";
+    [SerializeField] private LevelCatalog levelCatalog;
 
     [Header("Fail Guard")]
     [Tooltip("Fail popup'ı göstermeden önceki doğrulama beklemesi (sn). Son hamlenin bazı " +
@@ -173,6 +174,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         if (chapterThemeApplier == null)
             chapterThemeApplier = FindFirstObjectByType<ChapterThemeApplier>(FindObjectsInactive.Include);
+
+        if (levelCatalog == null)
+        {
+            var runtimeSelector = FindFirstObjectByType<LevelRuntimeSelector>(FindObjectsInactive.Include);
+            if (runtimeSelector != null)
+                levelCatalog = runtimeSelector.Catalog;
+        }
 
         if (levelCompletionLogoAnimation == null)
             levelCompletionLogoAnimation = FindFirstObjectByType<LevelCompletionLogoAnimation>(FindObjectsInactive.Include);
@@ -632,7 +640,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         PlayerStats.RecordLevelCleared();   // ilk-deneme/seri/haftalık istatistikleri güncelle
 
-        int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
+        int level = ResolveCurrentLevelNumber();
         PlayerPrefs.SetInt(prefsLevelKey, level + 1);
         PlayerPrefs.Save();
     }
@@ -823,6 +831,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (board.RemainingMoves <= 0)
         {
+            if (ResolvePendingBoardBeforeFail())
+                return;
+
             // Hemen fail gösterme: son hamlenin geç efektleri (beam varışı, obstacle
             // kırılma kuyruğu) board idle göründükten az sonra hedefi tamamlayabilir.
             // Kısa bir doğrulama beklemesiyle bu yarışı kapat.
@@ -892,7 +903,29 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         if (board.RemainingMoves <= 0 && !IsBoardWorkingForLevelEnd())
+        {
+            if (ResolvePendingBoardBeforeFail())
+                yield break;
+
             ShowFailPopup();
+        }
+    }
+
+    private bool ResolvePendingBoardBeforeFail()
+    {
+        if (board == null || !board.HasPendingAutoResolveForLevelEnd())
+            return false;
+
+        Debug.Log("[LevelEnd] Pending auto-resolve found before fail. Resolving board first.");
+        board.RequestResolveAfterActionSequence();
+
+        if (!failSettleWaitRunning)
+        {
+            failSettleWaitRunning = true;
+            StartCoroutine(EvaluateAfterBoardSettled());
+        }
+
+        return true;
     }
 
     // Board tamamen oturana kadar (3 ardışık idle frame) bekleyip değerlendirmeyi
@@ -1101,7 +1134,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void ApplyRewardVisuals(int stars, int coins, int score)
     {
-        int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
+        int level = ResolveCurrentLevelNumber();
 
         if (successTitleText != null)
             successTitleText.text = LocalizedFormat("level_end_success_title_level", "Seviye {0}", level);
@@ -1130,30 +1163,31 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void SaveRewards(int stars, int coins, int score)
     {
-        int currentLevel = PlayerPrefs.GetInt(prefsLevelKey, 1);
+        int currentLevel = ResolveCurrentLevelNumber();
 
         // Kümülatif puan: level başına en iyi skor toplanır (leaderboard/team metriği).
         PlayerWallet.SetLevelScore(currentLevel, score);
         int previousStars = PlayerWallet.GetLevelStars(currentLevel);
         int earnedStars = Mathf.Clamp(stars, 0, 3);
-        int gainedStars = Mathf.Max(0, earnedStars - previousStars);
         int starBefore = PlayerWallet.TotalStars;
+
+        PlayerWallet.SetLevelStars(currentLevel, earnedStars);
+        int starAfter = PlayerWallet.TotalStars;
+        int gainedStars = starAfter - starBefore;
 
         if (gainedStars > 0)
         {
             PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingRewardKey, gainedStars);
             PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingBeforeKey, starBefore);
-            PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingAfterKey, starBefore + gainedStars);
+            PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingAfterKey, starAfter);
             PlayerPrefs.Save();
-            Debug.Log($"[LevelEnd] Pending star reward saved. Level={currentLevel}, Previous={previousStars}, Earned={earnedStars}, Gained={gainedStars}, Before={starBefore}, After={starBefore + gainedStars}");
+            Debug.Log($"[LevelEnd] Pending star reward saved. Level={currentLevel}, Previous={previousStars}, Earned={earnedStars}, Gained={gainedStars}, Before={starBefore}, After={starAfter}");
         }
         else
         {
             StarFlyToWalletAnimator.ClearPendingReward();
-            Debug.Log($"[LevelEnd] No pending star reward. Level={currentLevel}, Previous={previousStars}, Earned={earnedStars}");
+            Debug.Log($"[LevelEnd] No pending star reward. Level={currentLevel}, Previous={previousStars}, Earned={earnedStars}, Before={starBefore}, After={starAfter}");
         }
-
-        PlayerWallet.SetLevelStars(currentLevel, earnedStars);
 
         int coinBefore = PlayerWallet.Coins;
         PlayerWallet.AddCoins(coins);
@@ -1170,6 +1204,15 @@ public class LevelEndSimplePopupController : MonoBehaviour
         {
             CoinFlyToWalletAnimator.ClearPendingReward();
         }
+    }
+
+    private int ResolveCurrentLevelNumber()
+    {
+        LevelData activeLevel = board != null ? board.ActiveLevelData : null;
+        if (activeLevel != null && levelCatalog != null && levelCatalog.TryGetGlobalLevel(activeLevel, out int activeLevelNumber))
+            return Mathf.Max(1, activeLevelNumber);
+
+        return Mathf.Max(1, PlayerPrefs.GetInt(prefsLevelKey, 1));
     }
 
     private void HandleBuyMovesClicked()

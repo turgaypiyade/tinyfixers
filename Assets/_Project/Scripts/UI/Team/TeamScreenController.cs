@@ -28,6 +28,8 @@ public sealed class TeamScreenController : MonoBehaviour
     [SerializeField] private Button messageButton;
     [Tooltip("Takımdan ayrıl butonu (opsiyonel). Boşsa header'a runtime bir buton kurulur.")]
     [SerializeField] private Button leaveButton;
+    [Tooltip("Takımdan ayrıl aksiyonlarında kullanılan kare kırmızı buton görseli.")]
+    [SerializeField] private Sprite leaveRedSquareButtonSprite;
 
     [Header("Mesaj input (bottom bar üstü)")]
     [SerializeField] private GameObject messageInputRoot;   // başta kapalı
@@ -119,9 +121,9 @@ public sealed class TeamScreenController : MonoBehaviour
         go.layer = gameObject.layer;
         var rt = (RectTransform)go.transform;
         rt.anchorMin = rt.anchorMax = new Vector2(1, 1); rt.pivot = new Vector2(1, 1);
-        rt.anchoredPosition = new Vector2(-16, -16); rt.sizeDelta = new Vector2(150, 64);
+        rt.anchoredPosition = new Vector2(-16, -16); rt.sizeDelta = new Vector2(92, 92);
         var img = go.AddComponent<Image>();
-        img.color = new Color(0.75f, 0.25f, 0.25f);
+        ApplyButtonImage(img, leaveRedSquareButtonSprite, new Color(0.75f, 0.25f, 0.25f));
         var btn = go.AddComponent<Button>();
         btn.targetGraphic = img;
         var txtGo = new GameObject("Label", typeof(RectTransform));
@@ -130,7 +132,7 @@ public sealed class TeamScreenController : MonoBehaviour
         var trt = (RectTransform)txtGo.transform;
         trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one; trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
         var txt = txtGo.AddComponent<TextMeshProUGUI>();
-        txt.text = "Ayrıl"; txt.fontSize = 28; txt.fontStyle = FontStyles.Bold;
+        txt.text = "Ayrıl"; txt.fontSize = 24; txt.fontStyle = FontStyles.Bold;
         txt.alignment = TextAlignmentOptions.Center; txt.color = Color.white;
         return btn;
     }
@@ -160,9 +162,9 @@ public sealed class TeamScreenController : MonoBehaviour
         mrt.pivot = new Vector2(0.5f, 1); mrt.anchoredPosition = new Vector2(0, -40); mrt.sizeDelta = new Vector2(-40, 120);
         msg.textWrappingMode = TextWrappingModes.Normal;
 
-        var yes = MakeButton(card.transform, "Yes", "Evet, ayrıl", new Color(0.75f, 0.25f, 0.25f), new Vector2(280, 90));
+        var yes = MakeButton(card.transform, "Yes", "Ayrıl", new Color(0.75f, 0.25f, 0.25f), new Vector2(112, 112), leaveRedSquareButtonSprite);
         var yrt = (RectTransform)yes.transform; yrt.anchorMin = yrt.anchorMax = new Vector2(0, 0); yrt.pivot = new Vector2(0, 0);
-        yrt.anchoredPosition = new Vector2(30, 30);
+        yrt.anchoredPosition = new Vector2(52, 20);
         yes.onClick.AddListener(() => { Destroy(scrim); DoLeave(); });
 
         var no = MakeButton(card.transform, "No", "Vazgeç", new Color(0.4f, 0.45f, 0.5f), new Vector2(240, 90));
@@ -198,14 +200,25 @@ public sealed class TeamScreenController : MonoBehaviour
         return t;
     }
 
-    private Button MakeButton(Transform parent, string name, string label, Color color, Vector2 size)
+    private Button MakeButton(Transform parent, string name, string label, Color color, Vector2 size, Sprite sprite = null)
     {
         var go = MakeChild(parent, name, size, new Vector2(0.5f, 0.5f));
-        var img = go.AddComponent<Image>(); img.color = color;
+        var img = go.AddComponent<Image>();
+        ApplyButtonImage(img, sprite, color);
         var btn = go.AddComponent<Button>(); btn.targetGraphic = img;
         var t = MakeText(go.transform, "Label", label, 26);
         var trt = t.rectTransform; trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one; trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
         return btn;
+    }
+
+    private static void ApplyButtonImage(Image image, Sprite sprite, Color fallbackColor)
+    {
+        if (image == null)
+            return;
+
+        image.sprite = sprite;
+        image.color = sprite != null ? Color.white : fallbackColor;
+        image.preserveAspect = sprite != null;
     }
 
     private void Refresh()
@@ -264,9 +277,27 @@ public sealed class TeamScreenController : MonoBehaviour
     // İsme göre deterministik avatar (aynı isim her seferinde aynı robotu alır).
     private Sprite PickAvatar(string name)
     {
+        Sprite profileAvatar = PlayerAvatarProvider.PickForSeed(name);
+        if (profileAvatar != null)
+            return profileAvatar;
+
         if (avatarPool == null || avatarPool.Length == 0) return null;
-        int hash = string.IsNullOrEmpty(name) ? 0 : Mathf.Abs(name.GetHashCode());
+        int hash = StableHash(name);
         return avatarPool[hash % avatarPool.Length];
+    }
+
+    private static int StableHash(string value)
+    {
+        unchecked
+        {
+            int hash = 23;
+            if (!string.IsNullOrEmpty(value))
+            {
+                for (int i = 0; i < value.Length; i++)
+                    hash = hash * 31 + value[i];
+            }
+            return hash & int.MaxValue;
+        }
     }
 
     // ── Aksiyonlar ──────────────────────────────────────────────────

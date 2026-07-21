@@ -315,14 +315,19 @@ public class BoardAnimator
         var impactSourceTileTypes = new List<TileType?>();
         var obstacleDamageSources = new Dictionary<Vector2Int, List<TileType?>>();
 
-        Debug.Log(
-            $"[PulseClearDebug][BA] ENTER " +
-            $"list={list.Count} " +
-            $"mode={animationMode} " +
-            $"specialPhase={board.IsSpecialActivationPhase} " +
-            $"stagger={(staggerDelays != null ? staggerDelays.Count : 0)} " +
-            $"perTile={(perTileClearDelays != null ? perTileClearDelays.Count : 0)} " +
-            $"suppress={suppressPerTileClearVfx}");
+        bool trace = board != null && board.BoardFlowTraceEnabled;
+
+        if (trace)
+        {
+            Debug.Log(
+                $"[PulseClearDebug][BA] ENTER " +
+                $"list={list.Count} " +
+                $"mode={animationMode} " +
+                $"specialPhase={board.IsSpecialActivationPhase} " +
+                $"stagger={(staggerDelays != null ? staggerDelays.Count : 0)} " +
+                $"perTile={(perTileClearDelays != null ? perTileClearDelays.Count : 0)} " +
+                $"suppress={suppressPerTileClearVfx}");
+        }
 
         board.ConsumePatchbotDashRequests(_patchbotDashBuffer);
         List<BoardController.PatchbotDashRequest> lineSweepPatchbotDashes = null;
@@ -406,10 +411,13 @@ public class BoardAnimator
                 bool debugHasPerTile =
                     perTileClearDelays != null && perTileClearDelays.ContainsKey(tile);
 
-                Debug.Log(
-                    $"[PulseClearDebug][BA] LOOP tile=({tile.X},{tile.Y}) " +
-                    $"type={tile.GetTileType()} special={tile.GetSpecial()} " +
-                    $"live={debugLive} hasStagger={debugHasStagger} hasPerTile={debugHasPerTile}");
+                if (trace)
+                {
+                    Debug.Log(
+                        $"[PulseClearDebug][BA] LOOP tile=({tile.X},{tile.Y}) " +
+                        $"type={tile.GetTileType()} special={tile.GetSpecial()} " +
+                        $"live={debugLive} hasStagger={debugHasStagger} hasPerTile={debugHasPerTile}");
+                }
 
                 impactCells.Add(new Vector2Int(tile.X, tile.Y));
                 impactSourceTileTypes.Add(
@@ -480,7 +488,8 @@ public class BoardAnimator
 
             if (!shouldSuppressVfx && staggerDelays != null && staggerDelays.TryGetValue(tile, out var d))
             {
-                Debug.Log($"[PulseClearDebug][BA] STAGGER_BRANCH tile=({tile.X},{tile.Y}) delay={d:0.000}");
+                if (trace)
+                    Debug.Log($"[PulseClearDebug][BA] STAGGER_BRANCH tile=({tile.X},{tile.Y}) delay={d:0.000}");
                 pulseImpacts.Add(tileAnimator.PlayPulseImpact(tile, d, staggerAnimTime));
                 if (d > maxStaggerDelay) maxStaggerDelay = d;
             }
@@ -525,9 +534,12 @@ public class BoardAnimator
                 var tileAnimationMode =
                     isGoalTile ? ClearAnimationMode.GoalFlyToHud :
                     (useLightningEffect ? ClearAnimationMode.LightningStrike : ClearAnimationMode.Default);
-                Debug.Log(
-                    $"[PulseClearDebug][BA] POP_BRANCH tile=({tile.X},{tile.Y}) " +
-                    $"delay={delay:0.000} mode={tileAnimationMode}");
+                if (trace)
+                {
+                    Debug.Log(
+                        $"[PulseClearDebug][BA] POP_BRANCH tile=({tile.X},{tile.Y}) " +
+                        $"delay={delay:0.000} mode={tileAnimationMode}");
+                }
 
                 if (tileAnimationMode == ClearAnimationMode.Default && implodeTargetCell.HasValue && !shouldSuppressVfx)
                 {
@@ -779,10 +791,13 @@ public class BoardAnimator
             }
         }
 
-        Debug.Log(
-            $"[PulseClearDebug][BA] BEFORE_FINAL " +
-            $"list={list.Count} shouldClear={shouldClearTile.Count} " +
-            $"pulseImpacts={pulseImpacts.Count} pops={pops.Count}");
+        if (trace)
+        {
+            Debug.Log(
+                $"[PulseClearDebug][BA] BEFORE_FINAL " +
+                $"list={list.Count} shouldClear={shouldClearTile.Count} " +
+                $"pulseImpacts={pulseImpacts.Count} pops={pops.Count}");
+        }
 
         for (int i = 0; i < list.Count; i++)
         {
@@ -887,7 +902,8 @@ public class BoardAnimator
         {
             if (tile == null)
             {
-                Debug.Log("[PulseClearDebug] FinalizeTileClear skip tile=null");
+                if (trace)
+                    Debug.Log("[PulseClearDebug] FinalizeTileClear skip tile=null");
                 return;
             }
 
@@ -896,10 +912,13 @@ public class BoardAnimator
                 tile.Y >= 0 && tile.Y < board.Height &&
                 board.Tiles[tile.X, tile.Y] == tile;
 
-            Debug.Log(
-                $"[PulseClearDebug] FinalizeTileClear tile=({tile.X},{tile.Y}) " +
-                $"type={tile.GetTileType()} special={tile.GetSpecial()} " +
-                $"live={live} specialPhase={board.IsSpecialActivationPhase}");
+            if (trace)
+            {
+                Debug.Log(
+                    $"[PulseClearDebug] FinalizeTileClear tile=({tile.X},{tile.Y}) " +
+                    $"type={tile.GetTileType()} special={tile.GetSpecial()} " +
+                    $"live={live} specialPhase={board.IsSpecialActivationPhase}");
+            }
 
             if (!skipBreakFxTiles.Contains(tile))
                 board.BreakFx?.PlayTileBreak(tile);
@@ -1167,14 +1186,22 @@ public class BoardAnimator
 
             FlushPresentationResults();
 
-            board.BeginBackgroundJob();
-            board.StartCoroutine(PlayEffectsInBackground());
+            if (plan.BackgroundEffectsBlockResolve)
+            {
+                board.BeginBackgroundJob();
+                board.StartCoroutine(PlayBlockingEffectsInBackground());
+            }
+            else
+            {
+                board.StartCoroutine(PlayEffectsAndFinalize());
+            }
+
             yield break;
         }
 
         yield return PlayEffectsAndFinalize();
 
-        IEnumerator PlayEffectsInBackground()
+        IEnumerator PlayBlockingEffectsInBackground()
         {
             try
             {

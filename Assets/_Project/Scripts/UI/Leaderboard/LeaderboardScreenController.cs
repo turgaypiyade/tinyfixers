@@ -440,8 +440,12 @@ public sealed class LeaderboardScreenController : MonoBehaviour
 
     private Sprite PickPoolAvatar(string name)
     {
+        Sprite profileAvatar = PlayerAvatarProvider.PickForSeed(name);
+        if (profileAvatar != null)
+            return profileAvatar;
+
         if (avatarPool == null || avatarPool.Length == 0) return null;
-        int hash = string.IsNullOrEmpty(name) ? 0 : Mathf.Abs(name.GetHashCode());
+        int hash = StableHash(name);
         return avatarPool[hash % avatarPool.Length];
     }
 
@@ -458,8 +462,20 @@ public sealed class LeaderboardScreenController : MonoBehaviour
             if (mine != null) { entry.avatar = mine; return; }
         }
 
-        if (avatarPool == null || avatarPool.Length == 0) return;
-        int hash = string.IsNullOrEmpty(entry.playerName) ? 0 : Mathf.Abs(entry.playerName.GetHashCode());
-        entry.avatar = avatarPool[hash % avatarPool.Length];
+        entry.avatar = PickPoolAvatar(entry.playerName);
+    }
+
+    private static int StableHash(string value)
+    {
+        unchecked
+        {
+            int hash = 23;
+            if (!string.IsNullOrEmpty(value))
+            {
+                for (int i = 0; i < value.Length; i++)
+                    hash = hash * 31 + value[i];
+            }
+            return hash & int.MaxValue;
+        }
     }
 }

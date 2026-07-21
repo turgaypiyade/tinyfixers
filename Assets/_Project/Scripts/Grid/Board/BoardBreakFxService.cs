@@ -4,6 +4,14 @@ using UnityEngine;
 public class BoardBreakFxService
 {
     private const float MinSafeFxLifetime = 0.75f;
+    private const int TileBreakFxParticleCount = 2;
+    private const float TileBreakFxScale = 1f;
+    private const float TileBreakFxParticleMinSize = 28f;
+    private const float TileBreakFxParticleMaxSize = 40f;
+    private const float TileBreakFxMaxParticleScreenSize = 0.14f;
+    private const float TileBreakFxLightGravityMin = 0.35f;
+    private const float TileBreakFxLightGravityMax = 0.65f;
+    private const float TileBreakFxUpwardVelocity = 95f;
 
     private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
     private static readonly MaterialPropertyBlock ParticlePropertyBlock = new();
@@ -22,18 +30,41 @@ public class BoardBreakFxService
             return;
 
         Color color = ResolveBreakColor(tile);
+        bool isNormalTile = IsNormalTileBreak(tile);
+        float scale = isNormalTile ? TileBreakFxScale : 1f;
+        Vector3 worldCenter = board.GetTileWorldCenter(tile);
 
         SpawnAtWorld(
             board.TileBreakFxPrefab,
             board.TileBreakFxLifetime,
-            board.GetTileWorldCenter(tile),
+            worldCenter,
             color,
-            null);
+            null,
+            scale,
+            isNormalTile,
+            isNormalTile ? TileBreakFxParticleCount : 0);
+    }
+
+    private static bool IsNormalTileBreak(TileView tile)
+    {
+        if (tile == null || tile.GetSpecial() != TileSpecial.None)
+            return false;
+
+        return tile.GetTileType() switch
+        {
+            TileType.Gear => true,
+            TileType.Core => true,
+            TileType.Bolt => true,
+            TileType.Plate => true,
+            TileType.Normal => true,
+            _ => false
+        };
     }
 
     public void PlayObstacleBreak(ObstacleVisualChange change)
     {
-        Debug.Log($"[ObstacleFX] id={change.obstacleId} cleared={change.cleared} remaining={change.remainingHits} hitPrefab={(board.ObstacleHitFxPrefab != null ? board.ObstacleHitFxPrefab.name : "NULL")}");
+        if (board.BoardFlowTraceEnabled)
+            Debug.Log($"[ObstacleFX] id={change.obstacleId} cleared={change.cleared} remaining={change.remainingHits} hitPrefab={(board.ObstacleHitFxPrefab != null ? board.ObstacleHitFxPrefab.name : "NULL")}");
 
         // Sound is position-independent: play before origin validation so Tube (originIndex=-1) still gets audio.
         PlayObstacleSound(change);
@@ -81,8 +112,11 @@ public class BoardBreakFxService
         }
 
         IReadOnlyList<Sprite> particleSprites = ResolveObstacleParticleSprites(change);
-        string spriteNames = particleSprites != null ? string.Join(",", System.Linq.Enumerable.Select(particleSprites, s => s != null ? s.name : "null")) : "null";
-        Debug.Log($"[ObstacleFX] sprites={particleSprites?.Count ?? 0} id={change.obstacleId} names=[{spriteNames}]");
+        if (board.BoardFlowTraceEnabled)
+        {
+            string spriteNames = particleSprites != null ? string.Join(",", System.Linq.Enumerable.Select(particleSprites, s => s != null ? s.name : "null")) : "null";
+            Debug.Log($"[ObstacleFX] sprites={particleSprites?.Count ?? 0} id={change.obstacleId} names=[{spriteNames}]");
+        }
 
         FxLog(
             $"[ObstacleFX] Spawn request. prefab={prefab.name}, cell=({x},{y}), " +
@@ -229,13 +263,17 @@ public class BoardBreakFxService
         float lifetime,
         Vector3 worldPos,
         Color color,
-        IReadOnlyList<Sprite> particleSprites)
+        IReadOnlyList<Sprite> particleSprites,
+        float scale = 1f,
+        bool useLightTileMotion = false,
+        int overrideParticleCount = 0)
     {
         if (prefab == null)
             return;
 
         RectTransform parent = board.BreakFxParent;
         GameObject go;
+        float resolvedScale = Mathf.Max(0.01f, scale);
 
         if (parent != null)
         {
@@ -245,17 +283,19 @@ public class BoardBreakFxService
             if (rt != null)
             {
                 rt.anchoredPosition = board.WorldToAnchoredIn(parent, worldPos);
-                rt.localScale = Vector3.one;
+                rt.localScale = Vector3.one * resolvedScale;
                 rt.localRotation = Quaternion.identity;
             }
             else
             {
                 go.transform.position = worldPos;
+                go.transform.localScale = go.transform.localScale * resolvedScale;
             }
         }
         else
         {
             go = Object.Instantiate(prefab, worldPos, Quaternion.identity);
+            go.transform.localScale = go.transform.localScale * resolvedScale;
         }
 
         go.SetActive(true);
@@ -263,6 +303,10 @@ public class BoardBreakFxService
         ParticleSystem[] systems = go.GetComponentsInChildren<ParticleSystem>(true);
 
         ApplyColor(systems, color);
+        if (useLightTileMotion)
+            ApplyLightTileBreakMotion(systems);
+        if (overrideParticleCount > 0)
+            ApplyBurstParticleCount(systems, overrideParticleCount);
 
         if (particleSprites != null && particleSprites.Count > 0)
             ApplyParticleSprites(go, systems, particleSprites);
@@ -271,6 +315,71 @@ public class BoardBreakFxService
 
         float safeLifetime = CalculateSafeLifetime(lifetime, systems);
         Object.Destroy(go, safeLifetime);
+    }
+
+    private static void ApplyBurstParticleCount(ParticleSystem[] systems, int particleCount)
+    {
+        if (systems == null)
+            return;
+
+        short count = (short)Mathf.Clamp(particleCount, 1, short.MaxValue);
+        for (int i = 0; i < systems.Length; i++)
+        {
+            var ps = systems[i];
+            if (ps == null)
+                continue;
+
+            var emission = ps.emission;
+            emission.SetBursts(new[]
+            {
+                new ParticleSystem.Burst(0f, count)
+            });
+        }
+    }
+
+    private static void ApplyLightTileBreakMotion(ParticleSystem[] systems)
+    {
+        if (systems == null)
+            return;
+
+        for (int i = 0; i < systems.Length; i++)
+        {
+            var ps = systems[i];
+            if (ps == null)
+                continue;
+
+            var main = ps.main;
+            main.startSize = new ParticleSystem.MinMaxCurve(
+                TileBreakFxParticleMinSize,
+                TileBreakFxParticleMaxSize);
+            main.gravityModifier = new ParticleSystem.MinMaxCurve(
+                TileBreakFxLightGravityMin,
+                TileBreakFxLightGravityMax);
+
+            var renderer = ps.GetComponent<ParticleSystemRenderer>();
+            if (renderer != null)
+                renderer.maxParticleSize = Mathf.Max(renderer.maxParticleSize, TileBreakFxMaxParticleScreenSize);
+
+            var velocity = ps.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.Local;
+            velocity.x = new ParticleSystem.MinMaxCurve(
+                0f,
+                new AnimationCurve(
+                    new Keyframe(0f, 0f),
+                    new Keyframe(1f, 0f)));
+            velocity.y = new ParticleSystem.MinMaxCurve(
+                TileBreakFxUpwardVelocity,
+                new AnimationCurve(
+                    new Keyframe(0f, 1f),
+                    new Keyframe(0.35f, 0.55f),
+                    new Keyframe(1f, -0.25f)));
+            velocity.z = new ParticleSystem.MinMaxCurve(
+                0f,
+                new AnimationCurve(
+                    new Keyframe(0f, 0f),
+                    new Keyframe(1f, 0f)));
+        }
     }
 
     private float CalculateSafeLifetime(float requestedLifetime, ParticleSystem[] systems)
@@ -388,12 +497,14 @@ public class BoardBreakFxService
                 ApplyParticleMainTexture(ps, firstValidSprite);
             }
 
-            Debug.Log($"[ObstacleFX] PS={ps.gameObject.name} validSprites={validCount} sprite={(firstValidSprite != null ? firstValidSprite.name : "null")} tex={(firstValidSprite?.texture != null ? firstValidSprite.texture.name : "null")}");
+            if (board.BoardFlowTraceEnabled)
+                Debug.Log($"[ObstacleFX] PS={ps.gameObject.name} validSprites={validCount} sprite={(firstValidSprite != null ? firstValidSprite.name : "null")} tex={(firstValidSprite?.texture != null ? firstValidSprite.texture.name : "null")}");
 
             ps.Clear(true);
             ps.Play(true);
 
-            Debug.Log($"[ObstacleFX] PS played={ps.isPlaying} particleCount={ps.particleCount}");
+            if (board.BoardFlowTraceEnabled)
+                Debug.Log($"[ObstacleFX] PS played={ps.isPlaying} particleCount={ps.particleCount}");
         }
     }
 

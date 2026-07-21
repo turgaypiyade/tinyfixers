@@ -36,6 +36,9 @@ public sealed class EnergyContainerFx : MonoBehaviour
     [SerializeField] private float flyDuration = 0.42f;
     [SerializeField] private float orbStagger = 0.035f;
     [SerializeField] private float arcHeight = 130f;
+    [SerializeField, Min(0f)] private float orbRiseDuration = 0.16f;
+    [SerializeField, Min(0f)] private float orbHoverHold = 0.06f;
+    [SerializeField] private float orbRiseHeight = 82f;
     [Tooltip("When enabled, the flying orb is parented to the top canvas instead of the board VFX root, so it can travel outside BoardMask toward TopHUD without being clipped.")]
     [SerializeField] private bool flyOrbOnTopCanvas = true;
 
@@ -288,8 +291,36 @@ public sealed class EnergyContainerFx : MonoBehaviour
                     $"sprite={(energyOrbSprite != null ? energyOrbSprite.name : "null")}");
             }
 
-            Vector2 mid = (start + end) * 0.5f;
-            float dir = end.x >= start.x ? 1f : -1f;
+            Vector2 flightStart = start + Vector2.up * orbRiseHeight;
+            float riseDuration = Mathf.Max(0f, orbRiseDuration);
+            float riseTime = 0f;
+            while (riseTime < riseDuration)
+            {
+                if (rt == null)
+                    break;
+
+                riseTime += Time.deltaTime;
+                float k = Mathf.Clamp01(riseTime / Mathf.Max(0.0001f, riseDuration));
+                float e = 1f - (1f - k) * (1f - k);
+                rt.anchoredPosition = Vector2.LerpUnclamped(start, flightStart, e);
+                float s = Mathf.Lerp(0.45f, 1.15f, e);
+                rt.localScale = new Vector3(s, s, 1f);
+                cg.alpha = e;
+                yield return null;
+            }
+
+            if (rt != null)
+            {
+                rt.anchoredPosition = flightStart;
+                rt.localScale = new Vector3(1.15f, 1.15f, 1f);
+                cg.alpha = 1f;
+            }
+
+            if (orbHoverHold > 0f)
+                yield return new WaitForSeconds(orbHoverHold);
+
+            Vector2 mid = (flightStart + end) * 0.5f;
+            float dir = end.x >= flightStart.x ? 1f : -1f;
             Vector2 control = mid + new Vector2(80f * dir, arcHeight);
 
             float duration = Mathf.Max(0.08f, flyDuration);
@@ -302,7 +333,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
                 t += Time.deltaTime;
                 float k = Mathf.Clamp01(t / duration);
                 float e = EaseInOut(k);
-                rt.anchoredPosition = Bezier2(start, control, end, e);
+                rt.anchoredPosition = Bezier2(flightStart, control, end, e);
                 float s = Mathf.Lerp(1.15f, 0.25f, k * k);
                 rt.localScale = new Vector3(s, s, 1f);
                 cg.alpha = k < 0.82f ? 1f : 1f - Mathf.InverseLerp(0.82f, 1f, k);

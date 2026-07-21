@@ -80,17 +80,23 @@ public class MatchClearAction : BoardAction
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
         float _mcStart = UnityEngine.Time.realtimeSinceStartup;
+        bool trace = sequencer != null
+                     && sequencer.Board != null
+                     && sequencer.Board.BoardFlowTraceEnabled;
 
         if (!isBlocking)
             sequencer.Board.ActiveBackgroundJobs++;
 
-        Debug.Log(
-            $"[PulseClearDebug][MCA] ENTER " +
-            $"isSpecialPhase={isSpecialActivationPhase} " +
-            $"matches={(matches != null ? matches.Count : -1)} " +
-            $"stagger={(staggerDelays != null ? staggerDelays.Count : 0)} " +
-            $"perTile={(perTileClearDelays != null ? perTileClearDelays.Count : 0)} " +
-            $"plan={(PresentationPlan != null)}");
+        if (trace)
+        {
+            Debug.Log(
+                $"[PulseClearDebug][MCA] ENTER " +
+                $"isSpecialPhase={isSpecialActivationPhase} " +
+                $"matches={(matches != null ? matches.Count : -1)} " +
+                $"stagger={(staggerDelays != null ? staggerDelays.Count : 0)} " +
+                $"perTile={(perTileClearDelays != null ? perTileClearDelays.Count : 0)} " +
+                $"plan={(PresentationPlan != null)}");
+        }
 
         if (!isSpecialActivationPhase)
             PruneDeadReferences(sequencer != null ? sequencer.Board : null);
@@ -112,12 +118,14 @@ public class MatchClearAction : BoardAction
             sequencer.Board.IsSpecialActivationPhase = true;
 
         bool hasPlan = PresentationPlan != null;
-        UnityEngine.Debug.Log($"[MatchClear] START matches={matches.Count} plan={hasPlan} blocking={isBlocking} shake={doShake}");
+        if (trace)
+            UnityEngine.Debug.Log($"[MatchClear] START matches={matches.Count} plan={hasPlan} blocking={isBlocking} shake={doShake}");
 
         if (PresentationPlan != null)
         {
             yield return sequencer.Animator.PlayClearPresentation(PresentationPlan);
-            UnityEngine.Debug.Log($"[MatchClear] presentation_done +{(UnityEngine.Time.realtimeSinceStartup - _mcStart):0.000}s");
+            if (trace)
+                UnityEngine.Debug.Log($"[MatchClear] presentation_done +{(UnityEngine.Time.realtimeSinceStartup - _mcStart):0.000}s");
 
             if (isSpecialActivationPhase)
                 sequencer.Board.IsSpecialActivationPhase = prevSpecial;
@@ -138,14 +146,16 @@ public class MatchClearAction : BoardAction
             suppressPerTileClearVfx, perTileClearDelays, implodeTargetCell,
             arrivalTriggers, perTileClearDistances);
 
-        UnityEngine.Debug.Log($"[MatchClear] clear_anim_done +{(UnityEngine.Time.realtimeSinceStartup - _mcStart):0.000}s");
+        if (trace)
+            UnityEngine.Debug.Log($"[MatchClear] clear_anim_done +{(UnityEngine.Time.realtimeSinceStartup - _mcStart):0.000}s");
 
         if (isSpecialActivationPhase)
             sequencer.Board.IsSpecialActivationPhase = prevSpecial;
 
         float _cascStart = UnityEngine.Time.realtimeSinceStartup;
         EnqueueCascadeIfNeeded(sequencer);
-        UnityEngine.Debug.Log($"[MatchClear] cascade_enqueue +{(UnityEngine.Time.realtimeSinceStartup - _cascStart):0.000}s total={UnityEngine.Time.realtimeSinceStartup - _mcStart:0.000}s");
+        if (trace)
+            UnityEngine.Debug.Log($"[MatchClear] cascade_enqueue +{(UnityEngine.Time.realtimeSinceStartup - _cascStart):0.000}s total={UnityEngine.Time.realtimeSinceStartup - _mcStart:0.000}s");
 
         if (!isBlocking)
             sequencer.Board.ActiveBackgroundJobs--;

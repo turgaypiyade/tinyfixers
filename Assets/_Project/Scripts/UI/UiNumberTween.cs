@@ -35,7 +35,7 @@ public static class UiNumberTween
 
     public static string FormatValue(int value, bool formatN0 = false)
     {
-        return Mathf.Max(0, value).ToString(formatN0 ? "N0" : "0");
+        return value.ToString(formatN0 ? "N0" : "0");
     }
 
     public static float EaseOut(float t)

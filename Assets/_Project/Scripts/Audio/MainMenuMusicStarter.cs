@@ -41,14 +41,10 @@ public class MainMenuMusicStarter : MonoBehaviour
         if (MusicManager.Instance == null) return;
 
         // Kütüphane + geçerli parça varsa onu çal.
-        if (library != null && library.Count > 0)
+        if (MusicState.TryGetSelectedTrack(out var selectedClip, out var selectedVolume))
         {
-            var track = library.Get(MusicState.SelectedTrack);
-            if (track != null && track.clip != null)
-            {
-                MusicManager.Instance.Play(track.clip, track.volume);
-                return;
-            }
+            MusicManager.Instance.Play(selectedClip, selectedVolume);
+            return;
         }
 
         // Fallback: sabit clip.

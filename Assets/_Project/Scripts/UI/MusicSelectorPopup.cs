@@ -35,6 +35,8 @@ public sealed class MusicSelectorPopup : MonoBehaviour
             return;
         }
 
+        MusicState.Library = library;
+
         var existing = parentCanvas.GetComponentInChildren<MusicSelectorPopup>(true);
         if (existing == null)
         {

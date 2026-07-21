@@ -44,6 +44,7 @@ MonoBehaviour:
     hits: 2
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -89,6 +90,7 @@ MonoBehaviour:
     hits: 2
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -123,6 +125,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites:
     - {fileID: 6337227559531849445, guid: 8c185012295424a2187904d2bc9f87a9, type: 3}
@@ -185,6 +188,7 @@ MonoBehaviour:
     hits: 3
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -232,6 +236,7 @@ MonoBehaviour:
     hits: 2
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites:
@@ -267,6 +272,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -301,6 +307,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -335,6 +342,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -369,6 +377,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -403,6 +412,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -437,6 +447,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -471,6 +482,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -588,6 +600,7 @@ MonoBehaviour:
     hits: 5
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -633,6 +646,7 @@ MonoBehaviour:
     hits: 2
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -689,6 +703,7 @@ MonoBehaviour:
     hits: 3
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -734,6 +749,7 @@ MonoBehaviour:
     hits: 2
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -779,6 +795,7 @@ MonoBehaviour:
     hits: 2
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -824,6 +841,7 @@ MonoBehaviour:
     hits: 2
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -890,6 +908,7 @@ MonoBehaviour:
     hits: 3
     fullCellSprite: 0
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -934,6 +953,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -989,6 +1009,7 @@ MonoBehaviour:
     hits: 2
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -1033,6 +1054,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -1077,6 +1099,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -1111,6 +1134,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 1
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -1145,6 +1169,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -1179,6 +1204,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -1213,6 +1239,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -1247,6 +1274,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -1281,6 +1309,7 @@ MonoBehaviour:
     hits: 1
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -1326,6 +1355,7 @@ MonoBehaviour:
     hits: 2
     fullCellSprite: 1
     exitAtBottom: 0
+    fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
     breakParticleSprites: []
@@ -1340,3 +1370,139 @@ MonoBehaviour:
     legacyStageDamageRules: 
     legacyBlocksCells: 0
     legacyBehavior: 3
+  - id: 37
+    stages:
+    - sprite: {fileID: 21300000, guid: 08c1ed74ede9745c9b47f44f1e7b288f, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 08c1ed74ede9745c9b47f44f1e7b288f, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 08c1ed74ede9745c9b47f44f1e7b288f, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 08c1ed74ede9745c9b47f44f1e7b288f, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 0
+    size: {x: 2, y: 2}
+    hits: 4
+    fullCellSprite: 1
+    exitAtBottom: 0
+    fillsShadowBeneath: 0
+    suppressHitParticles: 0
+    hitParticleSprites: []
+    breakParticleSprites: []
+    wardrobeItemSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
+    drawUnderTiles: 0
+    legacySprite: {fileID: 21300000, guid: 08c1ed74ede9745c9b47f44f1e7b288f, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules: 
+    legacyBlocksCells: 1
+    legacyBehavior: 1
+  - id: 41
+    stages:
+    - sprite: {fileID: 21300000, guid: 8478a577d5c04490291436ab241e107f, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 4557bc3f9388545b19b7cb86f3b5e50c, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 9c7dace73e0304dedaaeb98bf582d67f, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 23de70f79b6d24ec0aa8a082fcbcae92, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 0
+    size: {x: 2, y: 2}
+    hits: 4
+    fullCellSprite: 1
+    exitAtBottom: 0
+    fillsShadowBeneath: 0
+    suppressHitParticles: 0
+    hitParticleSprites: []
+    breakParticleSprites: []
+    wardrobeItemSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
+    drawUnderTiles: 0
+    legacySprite: {fileID: 21300000, guid: 8478a577d5c04490291436ab241e107f, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules: 
+    legacyBlocksCells: 1
+    legacyBehavior: 1
