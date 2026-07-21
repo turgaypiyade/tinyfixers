@@ -18,7 +18,7 @@
         },
         {
           "key": "prelevel_special_lineh_name",
-          "value": "Line H"
+          "value": "Rocket"
         },
         {
           "key": "prelevel_special_pulsecore_name",
@@ -26,7 +26,7 @@
         },
         {
           "key": "prelevel_special_override_name",
-          "value": "Override"
+          "value": "Spark Orb"
         },
         {
           "key": "prelevel_special_count_format",
@@ -78,7 +78,7 @@
         },
         {
           "key": "loading_hint_lineh_desc",
-          "value": "Emitter oluşturur"
+          "value": "Rocket oluşturur"
         },
         {
           "key": "loading_hint_linev_title",
@@ -86,7 +86,7 @@
         },
         {
           "key": "loading_hint_linev_desc",
-          "value": "Emitter oluşturur"
+          "value": "Rocket oluşturur"
         },
         {
           "key": "loading_hint_pulse_title",
@@ -102,7 +102,7 @@
         },
         {
           "key": "loading_hint_override_desc",
-          "value": "Override oluşturur"
+          "value": "Spark Orb oluşturur"
         },
         {
           "key": "tutorial_basic_match_desc",
@@ -110,7 +110,7 @@
         },
         {
           "key": "tutorial_emitter_created_desc",
-          "value": "Emitter oluştu! Aktive etmek için sürükle."
+          "value": "Rocket oluştu! Aktive etmek için sürükle."
         },
         {
           "key": "tutorial_patchbot_created_desc",
@@ -118,7 +118,7 @@
         },
         {
           "key": "tutorial_emitter_activated_desc",
-          "value": "Emitter tüm bir satırı temizler. Herhangi bir taşla değiştir!"
+          "value": "Rocket tüm bir satırı temizler. Herhangi bir taşla değiştir!"
         },
         {
           "key": "tutorial_pulsecore_created_desc",
@@ -126,7 +126,7 @@
         },
         {
           "key": "tutorial_override_created_desc",
-          "value": "Override oluştu! Aynı renkteki tüm taşları temizler."
+          "value": "Spark Orb oluştu! Aynı renkteki tüm taşları temizler."
         },
         {
           "key": "workshop_repair_button",
@@ -287,6 +287,66 @@
         {
           "key": "hint_obstacle_tube",
           "value": "Boru açık uçtan küçülür. Açık ucuna yakın eşleştirme yap."
+        },
+        {
+          "key": "hint_obstacle_wardrobe",
+          "value": "Dolabı aç, içindeki parçaları yanında eşleştirerek tek tek çıkar."
+        },
+        {
+          "key": "hint_obstacle_sculptingstone",
+          "value": "Heykel taşı her vuruşta şekil değiştirir. Yanında eşleştirerek tamamla."
+        },
+        {
+          "key": "hint_obstacle_magnet",
+          "value": "Mıknatıs uçlarına vur. Uçlar birleşince engel kaybolur."
+        },
+        {
+          "key": "hint_obstacle_helmetporcelain",
+          "value": "Porselen kask taş gibi düşer. Yanında eşleştirme yaparak kır."
+        },
+        {
+          "key": "hint_obstacle_hatlauncher",
+          "value": "Şapkaya vurunca enerji hedefe uçar. Yakınında eşleştirerek enerjiyi topla."
+        },
+        {
+          "key": "hint_obstacle_goldmoney",
+          "value": "Altını kırınca cüzdana bonus para eklenir."
+        },
+        {
+          "key": "hint_obstacle_safe",
+          "value": "Kasayı renk sırasına göre aç. Kilitler bitince altındaki içerik ortaya çıkar."
+        },
+        {
+          "key": "hint_obstacle_cargo",
+          "value": "Kargoyu en alta indir. Dibe ulaşınca hedefe sayılır."
+        },
+        {
+          "key": "hint_obstacle_player_shield_pickup",
+          "value": "Kalkanı kırınca oyuncu robot kısa süre korunur."
+        },
+        {
+          "key": "hint_obstacle_enemy_shield_pickup",
+          "value": "Düşman kalkanını temizle; yoksa saldırıları bir süre engeller."
+        },
+        {
+          "key": "hint_obstacle_barrel",
+          "value": "Varili kırınca çevresine çamur saçar. Çamuru da temizlemelisin."
+        },
+        {
+          "key": "hint_obstacle_rocketbasket",
+          "value": "Sepetteki roketleri aynı renkte eşleştirmelerle fırlat."
+        },
+        {
+          "key": "hint_obstacle_sculptingspecial",
+          "value": "Bu heykel yalnızca özel taş etkileriyle hasar alır."
+        },
+        {
+          "key": "hint_obstacle_plastic_two_stage",
+          "value": "Güçlü plastik iki vuruş ister. Yanında eşleştirerek aşamalarını kır."
+        },
+        {
+          "key": "hint_obstacle_barrell_v2",
+          "value": "Güçlü varil birkaç vuruşta çatlar, son vuruşta çevresine çamur saçar."
         },
         {
           "key": "progress_timer_days_hours",
@@ -595,7 +655,7 @@
         },
         {
           "key": "prelevel_special_lineh_name",
-          "value": "Line H"
+          "value": "Rocket"
         },
         {
           "key": "prelevel_special_pulsecore_name",
@@ -603,7 +663,7 @@
         },
         {
           "key": "prelevel_special_override_name",
-          "value": "Override"
+          "value": "Spark Orb"
         },
         {
           "key": "prelevel_special_count_format",
@@ -655,7 +715,7 @@
         },
         {
           "key": "loading_hint_lineh_desc",
-          "value": "Creates a LineH booster"
+          "value": "Creates a Rocket"
         },
         {
           "key": "loading_hint_linev_title",
@@ -663,7 +723,7 @@
         },
         {
           "key": "loading_hint_linev_desc",
-          "value": "Creates a LineV booster"
+          "value": "Creates a Rocket"
         },
         {
           "key": "loading_hint_pulse_title",
@@ -679,7 +739,7 @@
         },
         {
           "key": "loading_hint_override_desc",
-          "value": "Creates an Override"
+          "value": "Creates a Spark Orb"
         },
         {
           "key": "tutorial_basic_match_desc",
@@ -687,7 +747,7 @@
         },
         {
           "key": "tutorial_emitter_created_desc",
-          "value": "Emitter created! Swipe it to activate."
+          "value": "Rocket created! Swipe it to activate."
         },
         {
           "key": "tutorial_patchbot_created_desc",
@@ -695,7 +755,7 @@
         },
         {
           "key": "tutorial_emitter_activated_desc",
-          "value": "The Emitter clears an entire row. Swap it with any tile!"
+          "value": "The Rocket clears an entire row. Swap it with any tile!"
         },
         {
           "key": "tutorial_pulsecore_created_desc",
@@ -703,7 +763,7 @@
         },
         {
           "key": "tutorial_override_created_desc",
-          "value": "Override created! Clears all tiles of the same color."
+          "value": "Spark Orb created! Clears all tiles of the same color."
         },
         {
           "key": "workshop_repair_button",
@@ -856,6 +916,66 @@
         {
           "key": "hint_obstacle_tube",
           "value": "The pipe shrinks from the open end. Match near the opening."
+        },
+        {
+          "key": "hint_obstacle_wardrobe",
+          "value": "Open the wardrobe, then match nearby to remove the items inside one by one."
+        },
+        {
+          "key": "hint_obstacle_sculptingstone",
+          "value": "The sculpting stone changes shape with each hit. Match nearby to finish it."
+        },
+        {
+          "key": "hint_obstacle_magnet",
+          "value": "Hit the magnet ends. The obstacle clears when the ends meet."
+        },
+        {
+          "key": "hint_obstacle_helmetporcelain",
+          "value": "Porcelain helmet falls like a tile. Match nearby to break it."
+        },
+        {
+          "key": "hint_obstacle_hatlauncher",
+          "value": "Hit the hat to launch energy toward the goal. Match nearby to collect it."
+        },
+        {
+          "key": "hint_obstacle_goldmoney",
+          "value": "Break the gold to add bonus coins to the wallet."
+        },
+        {
+          "key": "hint_obstacle_safe",
+          "value": "Open the safe in color order. When the locks are gone, the content underneath appears."
+        },
+        {
+          "key": "hint_obstacle_cargo",
+          "value": "Drop cargo to the bottom. It counts when it exits the board."
+        },
+        {
+          "key": "hint_obstacle_player_shield_pickup",
+          "value": "Break the shield pickup to protect the player robot briefly."
+        },
+        {
+          "key": "hint_obstacle_enemy_shield_pickup",
+          "value": "Clear the enemy shield pickup, or it blocks attacks for a short time."
+        },
+        {
+          "key": "hint_obstacle_barrel",
+          "value": "Break the barrel to splash mud around it. Clean the mud too."
+        },
+        {
+          "key": "hint_obstacle_rocketbasket",
+          "value": "Launch the basket rockets by matching tiles of the same colors."
+        },
+        {
+          "key": "hint_obstacle_sculptingspecial",
+          "value": "This sculpture only takes damage from special tile effects."
+        },
+        {
+          "key": "hint_obstacle_plastic_two_stage",
+          "value": "Strong plastic needs two hits. Match nearby to break its stages."
+        },
+        {
+          "key": "hint_obstacle_barrell_v2",
+          "value": "Strong barrel cracks over several hits, then splashes mud on the final hit."
         },
         {
           "key": "progress_timer_days_hours",

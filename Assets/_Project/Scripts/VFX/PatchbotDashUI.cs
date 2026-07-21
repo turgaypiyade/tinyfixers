@@ -222,7 +222,7 @@ public class PatchbotDashUI : MonoBehaviour
         StartFlightAudio(flightSource);
 
         Vector3 fromWorld = board.GetCellWorldPosition(req.from.x, req.from.y);
-        Vector3 toWorld = board.GetCellWorldPosition(req.to.x, req.to.y);
+        Vector3 toWorld = AimWorldPosition(board, req.to.x, req.to.y);
 
         Vector2 start = WorldToAnchoredIn(vfxRoot, fromWorld);
         Vector2 target = WorldToAnchoredIn(vfxRoot, toWorld);
@@ -256,7 +256,8 @@ public class PatchbotDashUI : MonoBehaviour
             side * Mathf.Min(size.x, size.y) * takeoffLateralFactor,
             Mathf.Min(size.x, size.y) * takeoffLiftFactor);
 
-        Debug.Log($"[PatchbotDashUI] DRONE_DASH from={req.from} to={req.to} takeoff={takeoffDuration:0.000} hover={hoverDuration:0.000} dive={diveDuration:0.000}");
+        if (board != null && board.BoardFlowTraceEnabled)
+            Debug.Log($"[PatchbotDashUI] DRONE_DASH from={req.from} to={req.to} takeoff={takeoffDuration:0.000} hover={hoverDuration:0.000} dive={diveDuration:0.000}");
 
         var motion = new DashMotionState();
         yield return RunTakeoffBurst(rt, carryRt, size, sprite, start, takeoff, takeoffDuration, motion);
@@ -278,6 +279,44 @@ public class PatchbotDashUI : MonoBehaviour
 
         Destroy(go);
         onComplete?.Invoke();
+    }
+
+    // Görsel varış noktası. Hedef hücre çok-hücreli bir obstacle'a aitse (Safe NxN gibi)
+    // drone footprint'in dünya-merkezine iner; hasar yine mantıksal hedef hücreye işler.
+    // Yalnızca DOLU dikdörtgen footprint merkezlenir: ayrık/delikli footprint'te (örn.
+    // uçlarından hit alan magnet) merkez boş hücreye düşebilir → o durumda hücreye inilir.
+    private static Vector3 AimWorldPosition(BoardController board, int x, int y)
+    {
+        var obstacleService = board.ObstacleStateService;
+        int origin = obstacleService != null ? obstacleService.GetObstacleOriginAt(x, y) : -1;
+        if (origin < 0)
+            return board.GetCellWorldPosition(x, y);
+
+        int minX = int.MaxValue, minY = int.MaxValue;
+        int maxX = int.MinValue, maxY = int.MinValue;
+        int count = 0;
+
+        // Yalnız origin üyeliğine bak — hasar/hit filtresi YOK. Interceptor-yönetimli
+        // obstacle'larda (Safe: kilit durumu SafeObstacleService'te) jenerik hit sorguları
+        // hücreleri elediğinden merkez hesaplanamıyor, köşeye dönülüyordu. Görsel varış
+        // noktası için footprint yeterli; hasar mantığı zaten hedef hücrede kalıyor.
+        for (int cx = 0; cx < board.Width; cx++)
+            for (int cy = 0; cy < board.Height; cy++)
+            {
+                if (obstacleService.GetObstacleOriginAt(cx, cy) != origin)
+                    continue;
+
+                minX = Mathf.Min(minX, cx); maxX = Mathf.Max(maxX, cx);
+                minY = Mathf.Min(minY, cy); maxY = Mathf.Max(maxY, cy);
+                count++;
+            }
+
+        if (count <= 1 || count != (maxX - minX + 1) * (maxY - minY + 1))
+            return board.GetCellWorldPosition(x, y);
+
+        Vector3 a = board.GetCellWorldPosition(minX, minY);
+        Vector3 b = board.GetCellWorldPosition(maxX, maxY);
+        return (a + b) * 0.5f;
     }
 
     // Dive başında bu dash'ın canlı çözücüsünü teslim alır ve ilk hedefi çözer.
@@ -302,7 +341,7 @@ public class PatchbotDashUI : MonoBehaviour
             if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
                 return null;
 
-            return WorldToAnchoredIn(vfxRoot, board.GetCellWorldPosition(cell.x, cell.y));
+            return WorldToAnchoredIn(vfxRoot, AimWorldPosition(board, cell.x, cell.y));
         };
 
         var initial = live.resolve();

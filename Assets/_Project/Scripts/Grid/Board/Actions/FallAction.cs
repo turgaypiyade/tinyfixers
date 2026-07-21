@@ -29,6 +29,7 @@ public class FallAction : BoardAction
     }
 
     private readonly List<FallRecord> fallRecords = new List<FallRecord>();
+    private bool settleDisabled = false;
 
     public bool HasMoves => fallRecords.Count > 0;
 
@@ -36,6 +37,7 @@ public class FallAction : BoardAction
     // akış için bu çağrılır → tüm record'ların settle'ı kapatılır.
     public void DisableSettle()
     {
+        settleDisabled = true;
         foreach (var r in fallRecords)
             r.useSettle = false;
     }
@@ -190,6 +192,9 @@ public class FallAction : BoardAction
 
         EnsurePhaseDelays(board);
 
+        if (board != null && board.UseReferenceFallMotion)
+            return GetReferenceEstimatedVisualDuration(board);
+
         var maxToYPerVerticalSpawnSource = BuildMaxToYPerVerticalSpawnSource();
 
         float maxEnd = 0f;
@@ -260,6 +265,12 @@ public class FallAction : BoardAction
         if (allFrozen)
             return;
 
+        if (board != null && board.UseReferenceFallMotion)
+        {
+            EnsureReferencePhaseDelays(board);
+            return;
+        }
+
         float columnStep = board != null ? board.FallColumnStep : 0f;
         var maxToYPerColumn = new Dictionary<int, int>();
 
@@ -296,6 +307,180 @@ public class FallAction : BoardAction
             r.phaseDelay = colDelay + spawnDelay;
             r.hasPhaseDelay = true;
         }
+    }
+
+    private void EnsureReferencePhaseDelays(BoardController board)
+    {
+        var maxTargetRowPerSpawnColumn = new Dictionary<int, int>();
+        var legacyMaxToYPerColumn = new Dictionary<int, int>();
+
+        foreach (var r in fallRecords)
+        {
+            if (r.hasPhaseDelay || r.tile == null || !r.tile)
+                continue;
+
+            if (IsStrictVerticalRecord(r))
+            {
+                if (!IsSpawnRecord(r))
+                    continue;
+
+                int spawnColumn = GetSpawnColumn(r);
+                if (!maxTargetRowPerSpawnColumn.ContainsKey(spawnColumn) || r.toY > maxTargetRowPerSpawnColumn[spawnColumn])
+                    maxTargetRowPerSpawnColumn[spawnColumn] = r.toY;
+            }
+            else
+            {
+                int col = r.toX;
+                if (!legacyMaxToYPerColumn.ContainsKey(col) || r.toY > legacyMaxToYPerColumn[col])
+                    legacyMaxToYPerColumn[col] = r.toY;
+            }
+        }
+
+        // Intermediate cascade (DisableSettle çağrıldı): stagger & waterfall olmadan hızlı bitir.
+        // Sadece son cascade'de (settle aktif) referans oyundaki waterfall efekti oynasın.
+        float spawnInterval = settleDisabled ? 0f : board.ReferenceFallMotion.ReferenceFramesToSeconds(board.ReferenceFallMotion.spawnIntervalFrames);
+        float columnStep = settleDisabled ? 0f : board.FallColumnStep;
+        float spawnStaggerMul = settleDisabled ? 0f : board.FallSpawnStaggerMultiplier;
+
+        foreach (var r in fallRecords)
+        {
+            if (r.hasPhaseDelay)
+                continue;
+
+            if (r.tile == null || !r.tile)
+                continue;
+
+            if (settleDisabled)
+            {
+                r.phaseDelay = 0f;
+                r.hasPhaseDelay = true;
+                continue;
+            }
+
+            int rankFromBottom = 0;
+
+            if (IsStrictVerticalRecord(r))
+            {
+                if (IsSpawnRecord(r))
+                {
+                    int spawnColumn = GetSpawnColumn(r);
+                    if (maxTargetRowPerSpawnColumn.TryGetValue(spawnColumn, out int maxToY))
+                        rankFromBottom = Mathf.Max(0, maxToY - r.toY);
+                }
+
+                r.phaseDelay = rankFromBottom * spawnInterval;
+            }
+            else
+            {
+                if (legacyMaxToYPerColumn.TryGetValue(r.toX, out int maxToY))
+                    rankFromBottom = Mathf.Max(0, maxToY - r.toY);
+
+                float spawnDelay = CumulativeSpawnDelay(rankFromBottom) * spawnStaggerMul;
+                float colDelay = columnStep > 0f ? r.toX * columnStep : 0f;
+                r.phaseDelay = colDelay + spawnDelay;
+            }
+
+            r.hasPhaseDelay = true;
+        }
+    }
+
+    private static bool IsSpawnRecord(FallRecord r)
+    {
+        return r != null && r.fromY < 0;
+    }
+
+    private static int GetSpawnColumn(FallRecord r)
+    {
+        if (r != null && r.pathWaypoints != null && r.pathWaypoints.Length > 0)
+            return r.pathWaypoints[0].x;
+
+        return r != null ? r.fromX : 0;
+    }
+
+    private static bool IsStrictVerticalRecord(FallRecord r)
+    {
+        if (r == null)
+            return false;
+
+        if (r.pathWaypoints != null && r.pathWaypoints.Length >= 2)
+        {
+            int x = r.pathWaypoints[0].x;
+
+            for (int i = 1; i < r.pathWaypoints.Length; i++)
+            {
+                if (r.pathWaypoints[i].x != x)
+                    return false;
+            }
+
+            return true;
+        }
+
+        return r.fromX == r.toX;
+    }
+
+    private static float EstimateReferenceMoveDurationSeconds(ReferenceFallMotionSettings settings, float distanceCells)
+    {
+        if (settings == null)
+            settings = new ReferenceFallMotionSettings();
+
+        float remaining = Mathf.Max(0f, distanceCells);
+        if (remaining <= 0.0001f)
+            return 0f;
+
+        float frames = 0f;
+        float velocity = Mathf.Max(0f, settings.initialSpeedCellsPerFrame);
+        float acceleration = Mathf.Max(0f, settings.accelerationCellsPerFrameSquared);
+        float maxVelocity = Mathf.Max(0.001f, settings.maxSpeedCellsPerFrame);
+
+        const int maxFrames = 1000;
+        for (int i = 0; i < maxFrames && remaining > 0f; i++)
+        {
+            velocity = Mathf.Min(velocity + acceleration, maxVelocity);
+            remaining -= Mathf.Max(0.001f, velocity);
+            frames += 1f;
+        }
+
+        return settings.ReferenceFramesToSeconds(frames);
+    }
+
+    private float GetReferenceEstimatedVisualDuration(BoardController board)
+    {
+        var settings = board.ReferenceFallMotion;
+        float landingTime = settleDisabled ? 0f :
+            settings.ReferenceFramesToSeconds(settings.landingOvershootFrames) +
+            settings.ReferenceFramesToSeconds(settings.landingReturnFrames) +
+            settings.ReferenceFramesToSeconds(settings.finalSettleFrames);
+
+        float maxEnd = 0f;
+
+        foreach (var r in fallRecords)
+        {
+            if (r.tile == null || !r.tile)
+                continue;
+
+            float distanceCells = 0f;
+
+            if (r.pathWaypoints != null && r.pathWaypoints.Length >= 2)
+            {
+                for (int i = 0; i < r.pathWaypoints.Length - 1; i++)
+                    distanceCells += Vector2.Distance(r.pathWaypoints[i], r.pathWaypoints[i + 1]);
+            }
+            else
+            {
+                distanceCells = Vector2.Distance(
+                    new Vector2(r.fromX, r.fromY),
+                    new Vector2(r.toX, r.toY));
+            }
+
+            float endTime = r.startDelay + r.phaseDelay +
+                            EstimateReferenceMoveDurationSeconds(settings, distanceCells) +
+                            landingTime;
+
+            if (endTime > maxEnd)
+                maxEnd = endTime;
+        }
+
+        return maxEnd;
     }
 
     // ============================================================
@@ -498,6 +683,9 @@ public class FallAction : BoardAction
             yield break;
 
         float faStart = Time.realtimeSinceStartup;
+        BoardController board = sequencer.Board;
+        bool useReferenceMotion = board != null && board.UseReferenceFallMotion;
+        ReferenceFallMotionSettings referenceSettings = useReferenceMotion ? board.ReferenceFallMotion : null;
 
         var maxToYPerVerticalSpawnSource = BuildMaxToYPerVerticalSpawnSource();
 
@@ -519,17 +707,36 @@ public class FallAction : BoardAction
                 maxDist = dist;
         }
 
-        bool trace = sequencer.Board != null && sequencer.Board.BoardFlowTraceEnabled;
+        bool trace = board != null && board.BoardFlowTraceEnabled;
 
         if (trace)
-            Debug.Log($"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} (cell-to-cell constant velocity)");
+            Debug.Log(useReferenceMotion
+                ? $"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} (reference-frame accelerated motion)"
+                : $"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} (cell-to-cell constant velocity)");
 
-        sequencer.Board.PlayTileFallSfx(fallRecords.Count, maxDist);
+        board.PlayTileFallSfx(fallRecords.Count, maxDist);
 
         // Phase delay'ler action merge edilmeden once dondurulur.
         // Boylece ayni tile'in sonraki diagonal/dikey segmentleri, onceki
         // segmentin rank/stagger hesabini sonradan degistirmez.
         EnsurePhaseDelays(sequencer.Board);
+
+        // Intermediate cascade (settleDisabled): time stagger yok, aynı kolondaki spawn
+        // tile'lar aynı pozisyondan başlıyorsa üst üste biner. Position stagger ile
+        // her rank 1 hücre daha yukarıdan başlar → ayrışma sağlanır, gecikme olmaz.
+        Dictionary<int, int> spawnMaxToYForPosStagger = null;
+        if (settleDisabled && useReferenceMotion)
+        {
+            spawnMaxToYForPosStagger = new Dictionary<int, int>();
+            foreach (var rr in fallRecords)
+            {
+                if (rr.tile == null || !rr.tile || !IsSpawnRecord(rr))
+                    continue;
+                int col = GetSpawnColumn(rr);
+                if (!spawnMaxToYForPosStagger.ContainsKey(col) || rr.toY > spawnMaxToYForPosStagger[col])
+                    spawnMaxToYForPosStagger[col] = rr.toY;
+            }
+        }
 
         var moves = new List<IEnumerator>(fallRecords.Count);
         var delays = new List<float>(fallRecords.Count);
@@ -563,7 +770,74 @@ public class FallAction : BoardAction
 
             IEnumerator move;
 
-            if (isPath)
+            bool useReferenceForRecord = useReferenceMotion;
+
+            if (useReferenceForRecord)
+            {
+                Vector2? explicitStart = null;
+
+                if (IsSpawnRecord(r))
+                {
+                    int spawnColumn = GetSpawnColumn(r);
+                    float spawnAnchorY = 0.95f;
+
+                    if (spawnMaxToYForPosStagger != null &&
+                        spawnMaxToYForPosStagger.TryGetValue(spawnColumn, out int maxToYForCol))
+                    {
+                        int rank = Mathf.Max(0, maxToYForCol - r.toY);
+                        spawnAnchorY = 0.95f + rank;
+                    }
+
+                    explicitStart = new Vector2(spawnColumn * board.TileSize, board.TileSize * spawnAnchorY);
+                    r.tile.SetReferenceFallStartAnchoredPosition(explicitStart.Value);
+                }
+
+                float referenceStartDelay = r.startDelay + r.phaseDelay;
+                float spawnReferenceFrame = referenceStartDelay * Mathf.Max(1f, referenceSettings.referenceFps);
+                bool debugLog = board.DebugReferenceFallMotionLogs;
+                int column = IsSpawnRecord(r) ? GetSpawnColumn(r) : r.toX;
+
+                // Diagonal kayma (L-path) için landing yok: taş "düşmüyor", yatay-dikey kayıyor.
+                // Landing (overshoot+return) yalnızca strictly-vertical tile'larda anlamlıdır.
+                bool enableLanding = r.useSettle && IsStrictVerticalRecord(r);
+
+                if (isPath)
+                {
+                    move = r.tile.MoveToGridPathReference(
+                        board.TileSize,
+                        r.pathWaypoints,
+                        explicitStart,
+                        enableLanding,
+                        referenceSettings,
+                        debugLog,
+                        column,
+                        r.fromY,
+                        r.toY,
+                        spawnReferenceFrame,
+                        referenceStartDelay,
+                        faStart);
+                }
+                else
+                {
+                    move = r.tile.MoveToGridCellReference(
+                        board.TileSize,
+                        r.fromX,
+                        r.fromY,
+                        r.toX,
+                        r.toY,
+                        explicitStart,
+                        enableLanding,
+                        referenceSettings,
+                        debugLog,
+                        column,
+                        r.fromY,
+                        r.toY,
+                        spawnReferenceFrame,
+                        referenceStartDelay,
+                        faStart);
+                }
+            }
+            else if (isPath)
             {
                 Vector2Int[] visualWaypoints = BuildVisualWaypoints(
                     r,
@@ -578,15 +852,15 @@ public class FallAction : BoardAction
                 // Eğer path tamamen dikey spawn ise sadece ilk waypoint kopyası görsel olarak yukarı alınır.
                 // Diagonal path ise original path aynen kullanılır.
                 move = r.tile.MoveToGridPath(
-                    sequencer.Board.TileSize,
+                    board.TileSize,
                     visualWaypoints,
                     visualSegmentDurations,
                     r.curve,
                     r.useSettle,
                     r.settleDuration,
                     r.settleStrength,
-                    sequencer.Board.FallSettleStretchX,
-                    sequencer.Board.FallSettleOvershoot);
+                    board.FallSettleStretchX,
+                    board.FallSettleOvershoot);
             }
             else
             {
@@ -594,7 +868,7 @@ public class FallAction : BoardAction
                 // Ayni negatif spawn kaynagindan gelen dikey taşlar sadece
                 // gorsel baslangicta ayrilir; CascadeLogic path'i degismez.
                 move = r.tile.MoveToGridCell(
-                    sequencer.Board.TileSize,
+                    board.TileSize,
                     r.fromX,
                     visualFromY,
                     r.toX,
@@ -604,13 +878,13 @@ public class FallAction : BoardAction
                     r.useSettle,
                     r.settleDuration,
                     r.settleStrength,
-                    sequencer.Board.FallSettleStretchX,
-                    sequencer.Board.FallSettleOvershoot);
+                    board.FallSettleStretchX,
+                    board.FallSettleOvershoot);
             }
 
             moves.Add(move);
 
-            float totalDelay = r.startDelay + r.phaseDelay;
+            float totalDelay = useReferenceForRecord ? 0f : r.startDelay + r.phaseDelay;
 
             delays.Add(totalDelay);
 

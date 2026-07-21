@@ -2193,12 +2193,22 @@ public class GridSpawner : MonoBehaviour
         if (beneathViewsByCell.TryGetValue(idx, out var pre) && pre != null)
         {
             beneathViewsByCell.Remove(idx);
-            pre.raycastTarget = true;
-            pre.rectTransform.SetAsLastSibling();
-            obstacleViewsByOrigin[idx] = pre;
-            var preDef = resolvedLevel.obstacleLibrary.Get(obsId);
-            if (preDef != null) obstacleDefsByOrigin[idx] = preDef;
-            return;
+
+            // RocketBasket özel view ister (RocketBasketView + service kaydı + tüp overlay'leri):
+            // ön-çizilen generic beneath image'ı promote etme; sil ve normal spawn akışına düş.
+            if (obsId == ObstacleId.RocketBasket)
+            {
+                Destroy(pre.gameObject);
+            }
+            else
+            {
+                pre.raycastTarget = true;
+                pre.rectTransform.SetAsLastSibling();
+                obstacleViewsByOrigin[idx] = pre;
+                var preDef = resolvedLevel.obstacleLibrary.Get(obsId);
+                if (preDef != null) obstacleDefsByOrigin[idx] = preDef;
+                return;
+            }
         }
 
         // Mud ayrı overlay service'iyle çizilir; aynı origin'deki cover view henüz temizlenmemiş
@@ -2227,6 +2237,19 @@ public class GridSpawner : MonoBehaviour
         {
             if (board != null && board.GetTileViewAt(x, y) == null)
                 SpawnMovableObstacleTile(x, y);
+            return;
+        }
+
+        // Cover altından reveal edilen RocketBasket, ilk spawn'la aynı özel view'ı alır
+        // (RocketBasketView + service RegisterView) — generic image ateşleme görsellerini taşıyamaz.
+        if (def.id == ObstacleId.RocketBasket)
+        {
+            var basketImage = SpawnRocketBasketView(def, x, y);
+            if (basketImage != null)
+            {
+                obstacleViewsByOrigin[idx] = basketImage;
+                obstacleDefsByOrigin[idx] = def;
+            }
             return;
         }
 

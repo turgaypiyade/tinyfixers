@@ -977,6 +977,28 @@ public class ObstacleStateService : ISimObstacleQuery
         return count;
     }
 
+    public int CountAliveOrStampedOrigins(ObstacleId obstacleId)
+    {
+        if (obstacleId == ObstacleId.None)
+            return 0;
+
+        int count = CountAliveOrigins(obstacleId);
+        HashSet<int> stampedOrigins = null;
+
+        foreach (var kv in _stampedBeneathByCell)
+        {
+            var stamped = kv.Value;
+            if (stamped.Id != obstacleId)
+                continue;
+            if (stamped.Remaining <= 0)
+                continue;
+
+            (stampedOrigins ??= new HashSet<int>()).Add(stamped.Origin);
+        }
+
+        return count + (stampedOrigins != null ? stampedOrigins.Count : 0);
+    }
+
     /// <summary>
     /// Kırılması ClearObstacleFromLevel'dan GEÇMEYEN over-tile obstacle'lar (Safe) için: verilen
     /// over-origin'e ait tüm stamped-beneath hücrelerini geri yükler. Normal damage ile kırılan

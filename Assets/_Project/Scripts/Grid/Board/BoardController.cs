@@ -5,6 +5,26 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 
+[Serializable]
+public class ReferenceFallMotionSettings
+{
+    [Min(1f)] public float referenceFps = 60f;
+    [Min(0f)] public float spawnIntervalFrames = 6f;
+    [Min(0f)] public float initialSpeedCellsPerFrame = 0.08f;
+    [Min(0f)] public float accelerationCellsPerFrameSquared = 0.014f;
+    [Min(0.001f)] public float maxSpeedCellsPerFrame = 0.33f;
+    [Min(0f)] public float landingOvershootCells = 0.025f;
+    [Min(0f)] public float landingOvershootFrames = 2f;
+    [Min(0f)] public float landingReturnFrames = 4f;
+    [Min(0f)] public float finalSettleFrames = 2f;
+    [Range(0.1f, 1.2f)] public float tileVisualFillRatio = 0.88f;
+
+    public float ReferenceFramesToSeconds(float frames)
+    {
+        return Mathf.Max(0f, frames) / Mathf.Max(1f, referenceFps);
+    }
+}
+
 public class BoardController : MonoBehaviour
 {
     // Resolve / cascade state
@@ -59,6 +79,13 @@ public class BoardController : MonoBehaviour
     [SerializeField, Range(0f, 0.35f)] private float fallStretchAmount = 0.10f;
     [Tooltip("Uçuşun son bu ORANLIK kısmında esneme normale döner (0.45 = son %45'te toparlar).")]
     [SerializeField, Range(0.1f, 0.8f)] private float fallStretchRecover = 0.45f;
+
+    [Header("Reference Fall Motion")]
+    [SerializeField] private bool useReferenceFallMotion = false;
+    [SerializeField] private bool debugReferenceFallMotionLogs;
+    [Tooltip("Kapalıyken mevcut Tiny Fixers taş görsel boyutu korunur. Açılırsa normal taş ikonları cellSize * tileVisualFillRatio olur.")]
+    [SerializeField] private bool applyReferenceTileVisualFillRatio = false;
+    [SerializeField] private ReferenceFallMotionSettings referenceFallMotion = new ReferenceFallMotionSettings();
     internal float FallColumnStep => Mathf.Max(0f, fallColumnStep);
     internal int MaxDiagonalSlidesPerCascade => Mathf.Max(1, maxDiagonalSlidesPerCascade);
 
@@ -416,7 +443,6 @@ public class BoardController : MonoBehaviour
 
     // Bu hamlede tetiklenen RocketBasket roketleri; board tam oturunca PatchBot gibi uçarlar.
     private readonly List<RocketBasketLaunchAction.Launch> rocketLaunchesThisMove = new();
-    private bool rocketLaunchResolvedThisMove = true;
 
     // ── Extracted services ──
     private BoardInitService boardInitService;
@@ -459,6 +485,20 @@ public class BoardController : MonoBehaviour
     internal float FallStretchRecover => Mathf.Clamp(fallStretchRecover, 0.1f, 0.8f);
     internal float FallSettleStretchX => Mathf.Max(0f, fallSettleStretchX);
     internal float FallSettleOvershoot => Mathf.Max(0f, fallSettleOvershoot);
+    // Reference fall motion is disabled until the whole diagonal/segmented flow is rebuilt
+    // as one coherent system. Partial/hybrid use breaks dense diagonal boards such as LevelP_00060.
+    internal bool UseReferenceFallMotion => false;
+    internal bool DebugReferenceFallMotionLogs => debugReferenceFallMotionLogs;
+    internal bool ApplyReferenceTileVisualFillRatio => applyReferenceTileVisualFillRatio;
+    internal ReferenceFallMotionSettings ReferenceFallMotion
+    {
+        get
+        {
+            if (referenceFallMotion == null)
+                referenceFallMotion = new ReferenceFallMotionSettings();
+            return referenceFallMotion;
+        }
+    }
     internal float FallCascadeStep => 0f;
     internal bool BoardFlowTraceEnabled
     {
@@ -773,6 +813,7 @@ public class BoardController : MonoBehaviour
         RemainingMoves = levelData != null ? Mathf.Max(0, levelData.moves) : 0;
         OnMovesChanged?.Invoke(RemainingMoves);
         EnsureServices();
+        cascadeLogic?.ResetCargoSpawnCredits();
 
         if (obstacleStateService != null)
         {
@@ -817,6 +858,7 @@ public class BoardController : MonoBehaviour
         tile.SetIconScale(tileIconScale);
         tile.SetIconSize(tileIconSize);
         tile.SetUseFullCellIcon(useFullCellIcons);
+        tile.SetNormalVisualFillRatioOverride(applyReferenceTileVisualFillRatio, ReferenceFallMotion.tileVisualFillRatio);
     }
 
     public TileType[,] SimulateInitialTypes(bool[,] unreachableCells = null)
@@ -1365,7 +1407,12 @@ public class BoardController : MonoBehaviour
         }
 
         if (wasLiveInGrid)
+        {
             ClearCell(x, y);
+            // Cargo üretim kredisi: yalnız gerçekten grid'de canlıyken kırılan taş sayılır
+            // (çift-temizleme idempotent kalır, kredi şişmez).
+            cascadeLogic?.AddCargoSpawnCredits(1);
+        }
 
         var fxType = special switch
         {
@@ -1571,8 +1618,6 @@ public class BoardController : MonoBehaviour
         oilSpreadResolvedThisMove = false;
         barrelBreaksThisMove.Clear();
         barrelSpreadResolvedThisMove = false;
-        rocketLaunchesThisMove.Clear();
-        rocketLaunchResolvedThisMove = false;
         obstacleStateService?.ResetPerMoveEmitGuard();
 
         BeginBusy();
@@ -1597,14 +1642,13 @@ public class BoardController : MonoBehaviour
         oilSpreadResolvedThisMove = false;
         barrelBreaksThisMove.Clear();
         barrelSpreadResolvedThisMove = false;
-        rocketLaunchesThisMove.Clear();
-        rocketLaunchResolvedThisMove = false;
         obstacleStateService?.ResetPerMoveEmitGuard();
 
         float _flowStart = Time.realtimeSinceStartup;
         float _flowLast = _flowStart;
         void FlowLog(string step)
         {
+            if (!BoardFlowTraceEnabled) return;
             float now = Time.realtimeSinceStartup;
             float delta = now - _flowLast;
             float total = now - _flowStart;
@@ -2184,6 +2228,12 @@ public class BoardController : MonoBehaviour
 
             CurrentResolvePass = safety;
 
+            // Bottom-exit cargo: alt satıra inen Cargo, board'un TAMAMEN oturmasını
+            // beklemeden her pass başında (sequencer boşken) hemen çıkar. Boşalan
+            // hücre aynı pass'in cascade barrier'ında doldurulur.
+            if (TryCollectBottomExitCargo())
+                RefreshAllSortingOrders();
+
             // ─────────────────────────────────────────────
             // STRICT ORDER BARRIER:
             // MatchFinder asla aktif boş hücre varken çalışmamalı.
@@ -2266,14 +2316,6 @@ public class BoardController : MonoBehaviour
                 continue;
             }
 
-            // Bottom-exit cargo: board oturduktan sonra alt satıra inen Cargo obstacle'ları
-            // board'dan çıkar (goal +1) ve boşalan hücreleri refill için cascade'e bırak.
-            if (TryCollectBottomExitCargo())
-            {
-                RefreshAllSortingOrders();
-                continue;
-            }
-
             // Yalnızca gerçek blocking job'ları bekle. Goal-orb/PatchBot uçuşları
             // hariç tutulur ki hedefe uçarken cascade/düşüş/zincir akışı donmasın.
             if (BlockingBackgroundJobs > 0 || actionSequencer.IsPlaying)
@@ -2342,26 +2384,20 @@ public class BoardController : MonoBehaviour
                 }
             }
 
-            // RocketBasket: board tam oturunca, bu hamlede tetiklenen roketler PatchBot gibi
-            // hedefe uçup vurur (oil/barrel ile aynı idle koşulu, hamle başına bir kez).
-            if (!rocketLaunchResolvedThisMove)
+            // RocketBasket: board tam oturunca kuyruktaki roketler PatchBot gibi hedefe uçup
+            // vurur. KUYRUK-BAZLI: hasar bazı yollarda gecikmeli (detached coroutine) uygulandığı
+            // için eski hamle-başına-tek-atış bayrağı geç kuyruklamayı bir sonraki hamleye
+            // sarkıtıyordu; artık settle'a her gelişte kuyrukta ne varsa ateşlenir.
+            if (rocketLaunchesThisMove.Count > 0)
             {
-                rocketLaunchResolvedThisMove = true;
+                var launches = new List<RocketBasketLaunchAction.Launch>(rocketLaunchesThisMove);
+                rocketLaunchesThisMove.Clear();
 
-                if (rocketLaunchesThisMove.Count > 0)
-                {
-                    var launches = new List<RocketBasketLaunchAction.Launch>(rocketLaunchesThisMove);
-                    rocketLaunchesThisMove.Clear();
-
-                    if (BoardFlowTraceEnabled)
-                        Debug.Log($"[RocketBasket] Launching {launches.Count} rocket(s) after board settled.");
-                    actionSequencer.Enqueue(new RocketBasketLaunchAction(this, launches));
-
-                    while (actionSequencer.IsPlaying)
-                        yield return null;
-
-                    continue;
-                }
+                if (BoardFlowTraceEnabled)
+                    Debug.Log($"[RocketBasket] Launching {launches.Count} rocket(s) after board settled.");
+                // Bağımsız uçuş (flush yolu ile aynı): board'u bekletmeden fırlat.
+                StartCoroutine(new RocketBasketLaunchAction(this, launches).ExecuteVisuals(null));
+                continue;
             }
 
             // ─────────────────────────────────────────────
@@ -2802,8 +2838,10 @@ public class BoardController : MonoBehaviour
         => OnBarrelResolved?.Invoke();
 
     /// <summary>
-    /// RocketBasketService, komşu renk match'i bir roketi tetikleyince çağırır. Roketler board
-    /// tam oturunca (ResolveBoard idle bloğu) PatchBot gibi hedefe uçup vurur.
+    /// RocketBasketService, komşu renk match'i bir roketi tetikleyince çağırır. Roketler
+    /// VURUŞ ANINDA ateşlenir: bir frame'lik buffer aynı vuruştan çıkan tetikleri (fireAllOnHit
+    /// üçlüsü) tek aksiyonda toplar, sequencer'a hemen girer — mevcut kırılma animasyonu biter
+    /// bitmez, cascade beklenmeden uçarlar. ResolveBoard settle bloğu güvenlik ağı olarak durur.
     /// </summary>
     public void QueueRocketLaunch(Vector2Int origin, TileType color, Sprite rocketSprite)
     {
@@ -2813,6 +2851,39 @@ public class BoardController : MonoBehaviour
             color = color,
             rocketSprite = rocketSprite
         });
+
+        if (!rocketLaunchFlushScheduled)
+        {
+            rocketLaunchFlushScheduled = true;
+            StartCoroutine(CoFlushRocketLaunches());
+        }
+    }
+
+    private bool rocketLaunchFlushScheduled;
+
+    private IEnumerator CoFlushRocketLaunches()
+    {
+        yield return null;   // aynı frame'deki tetikleri (LaunchAll) tek aksiyonda grupla
+        rocketLaunchFlushScheduled = false;
+
+        if (rocketLaunchesThisMove.Count == 0)
+            yield break;
+
+        var launches = new List<RocketBasketLaunchAction.Launch>(rocketLaunchesThisMove);
+        rocketLaunchesThisMove.Clear();
+
+        if (BoardFlowTraceEnabled)
+            Debug.Log($"[RocketBasket] Immediate launch: {launches.Count} rocket(s).");
+        // PatchBot gibi bağımsız uçuş: sequencer'a girmez, board'u kilitlemez; uçuş
+        // aksiyon içindeki FlyingPatchBotDashes sayacıyla izlenir, impact varışta
+        // sequencer'a devredilir.
+        StartCoroutine(new RocketBasketLaunchAction(this, launches).ExecuteVisuals(null));
+    }
+
+    internal void EnqueueBoardAction(BoardAction action)
+    {
+        if (action != null)
+            actionSequencer.Enqueue(action);
     }
 
     internal void SetHoleStateFromObstacle(int x, int y)
@@ -2987,6 +3058,52 @@ public class BoardController : MonoBehaviour
         return Mathf.Max(0.01f, duration * Mathf.Max(0.5f, GetCascadeFallSpeedMultiplier()));
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    [ContextMenu("Debug/Reference Fall/Log One Column 9 Cell Timing")]
+    private void DebugLogReferenceFallOneColumn9CellTiming()
+    {
+        var settings = ReferenceFallMotion;
+        int simulatedRows = Mathf.Max(1, height > 0 ? height : 9);
+        int targetCount = Mathf.Min(9, simulatedRows);
+
+        Debug.Log(
+            $"[ReferenceFallTest] oneColumnTargets={targetCount} referenceFps={settings.referenceFps:0.##} " +
+            $"spawnIntervalFrames={settings.spawnIntervalFrames:0.##} anchorAboveTopCells=0.95");
+
+        for (int order = 0; order < targetCount; order++)
+        {
+            int targetRow = simulatedRows - 1 - order;
+            float spawnFrame = order * settings.spawnIntervalFrames;
+            float distanceCells = targetRow + 0.95f;
+            float moveFrames = EstimateReferenceFallFrames(settings, distanceCells);
+            float landingFrame = spawnFrame + moveFrames;
+
+            Debug.Log(
+                $"[ReferenceFallTest] order={order} targetRow={targetRow} " +
+                $"spawnFrame={spawnFrame:0.0} landingFrame={landingFrame:0.0} travelledCells={distanceCells:0.00}");
+        }
+    }
+
+    private static float EstimateReferenceFallFrames(ReferenceFallMotionSettings settings, float distanceCells)
+    {
+        float remaining = Mathf.Max(0f, distanceCells);
+        float frames = 0f;
+        float velocity = Mathf.Max(0f, settings.initialSpeedCellsPerFrame);
+        float acceleration = Mathf.Max(0f, settings.accelerationCellsPerFrameSquared);
+        float maxVelocity = Mathf.Max(0.001f, settings.maxSpeedCellsPerFrame);
+
+        const int maxFrames = 1000;
+        for (int i = 0; i < maxFrames && remaining > 0f; i++)
+        {
+            velocity = Mathf.Min(velocity + acceleration, maxVelocity);
+            remaining -= Mathf.Max(0.001f, velocity);
+            frames += 1f;
+        }
+
+        return frames;
+    }
+#endif
+
     internal float GetClearDurationForCurrentPass() => Mathf.Max(0.03f, ApplySpecialChainTempo(ClearDuration * GetCascadeClearSpeedMultiplier()));
     internal bool ShouldEnableFallSettleThisPass() => EnableFallSettle;
 
@@ -3019,7 +3136,7 @@ public class BoardController : MonoBehaviour
     {
         return (!oilSpreadResolvedThisMove && oilSpreadService != null)
             || (!barrelSpreadResolvedThisMove && barrelBreaksThisMove.Count > 0)
-            || (!rocketLaunchResolvedThisMove && rocketLaunchesThisMove.Count > 0);
+            || rocketLaunchesThisMove.Count > 0;
     }
 
     internal bool HasPendingAutoResolveForLevelEnd()
@@ -3028,6 +3145,17 @@ public class BoardController : MonoBehaviour
             || (matchFinder != null && matchFinder.FindAllMatches().Count > 0)
             || HasPendingPostSettleObstacleAction()
             || HasBottomExitCargoReady();
+    }
+
+    // Level-end teşhisi: fail ertelemesi hangi pending koşuldan geliyor?
+    internal string DescribePendingAutoResolveForLevelEnd()
+    {
+        return $"emptyPlayable={cascadeLogic != null && cascadeLogic.HasAnyEmptyPlayableCell()}, " +
+               $"matches={(matchFinder != null ? matchFinder.FindAllMatches().Count : 0)}, " +
+               $"oilPending={!oilSpreadResolvedThisMove && oilSpreadService != null}, " +
+               $"barrelPending={!barrelSpreadResolvedThisMove && barrelBreaksThisMove.Count > 0}, " +
+               $"rocketQueue={rocketLaunchesThisMove.Count}, " +
+               $"bottomCargo={HasBottomExitCargoReady()}";
     }
 
     private bool HasBottomExitCargoReady()

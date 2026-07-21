@@ -384,9 +384,15 @@ public class OverrideComboController : MonoBehaviour
         iconImageB.sprite    = sprB;
         mergedIconImage.sprite = merged != null ? merged : sprA;
 
+        // Sprite'ı null kalan Image düz BEYAZ kare çizer (yoğun cascade'de kaynak tile
+        // sprite yakalanamadan temizlenebiliyor) — sprite yoksa image görünmez kalsın.
+        iconImageA.enabled = iconImageA.sprite != null;
+        iconImageB.enabled = iconImageB.sprite != null;
+        mergedIconImage.enabled = mergedIconImage.sprite != null;
+
         // Glow uses same sprite as its icon
-        if (glowImageA != null) glowImageA.sprite = sprA;
-        if (glowImageB != null) glowImageB.sprite = sprB;
+        if (glowImageA != null) { glowImageA.sprite = sprA; glowImageA.enabled = sprA != null; }
+        if (glowImageB != null) { glowImageB.sprite = sprB; glowImageB.enabled = sprB != null; }
 
         // Halka sprite'ını TAZE üret ve yeniden ata → blastHaloThickness değişiklikleri her oynatmada
         // uygulansın (static cache + domain-reload-off durumunda eski ince sprite'a takılıp kalmasın).

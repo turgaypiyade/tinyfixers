@@ -1112,6 +1112,8 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
 
         var image = go.GetComponent<UnityEngine.UI.Image>();
         image.sprite = sprite;
+        // Null sprite'lı Image düz beyaz kare çizer — sprite yoksa görünmez kalsın.
+        image.enabled = sprite != null;
         image.preserveAspect = true;
         image.raycastTarget = false;
         image.color = new Color(1f, 1f, 1f, 0.95f);

@@ -149,7 +149,54 @@ public class TopHudController : MonoBehaviour
             runtimeGoals.Add(runtime);
         }
 
+        TryBirthMudGoalFromBarrels(levelData);
+
         UpdateGoalsCompletionState();
+    }
+
+    // Barrel/Barrell_v2 içeren levelde Mud goal'ü AUTHOR edilmemişse otomatik doğur:
+    // barrel kırıldıkça saçılacak mud kendiliğinden hedefe dönüşür, tasarımcının ayrıca
+    // mud goal eklemesi gerekmez. Placeholder sayaç (kırılmamış barrel başına 1) mevcut
+    // dinamik akışla aynı — mud oluşmadan goal erken tamamlanamaz (erken-WIN koruması).
+    // Yalnız barrel varlığı tetikler; barrel'sız dekoratif mud, goal'e zorlanmaz.
+    private void TryBirthMudGoalFromBarrels(LevelData levelData)
+    {
+        if (levelData == null)
+            return;
+
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var g = runtimeGoals[i].definition;
+            if (g != null && g.targetType == LevelGoalTargetType.Obstacle && g.obstacleId == ObstacleId.Mud)
+                return;   // authored mud goal zaten var — mevcut dinamik akış işliyor
+        }
+
+        int barrelCells = CountObstacleCells(levelData, ObstacleId.Barrel)
+                        + CountObstacleCells(levelData, ObstacleId.Barrell_v2);
+        if (barrelCells <= 0)
+            return;
+
+        int initialRemaining = CountObstacleCells(levelData, ObstacleId.Mud)
+                             + CountStampedBeneathCells(ObstacleId.Mud)
+                             + barrelCells;
+
+        var mudGoal = new LevelGoalDefinition
+        {
+            targetType = LevelGoalTargetType.Obstacle,
+            obstacleId = ObstacleId.Mud,
+            amount = initialRemaining
+        };
+
+        var runtime = new RuntimeGoal
+        {
+            definition = mudGoal,
+            remaining = initialRemaining,
+            dynamicTotal = initialRemaining,
+            slot = CreateSlot(mudGoal, runtimeGoals.Count)
+        };
+
+        runtime.slot?.SetRemaining(runtime.remaining);
+        runtimeGoals.Add(runtime);
     }
 
     private TopHudGoalSlot CreateSlot(LevelGoalDefinition goal, int goalIndex)

@@ -83,6 +83,7 @@ public static class FirebaseCloudSaveService
                 && snap.TryGetValue<Dictionary<string, object>>("data", out var cloudData))
             {
                 CloudSaveManifest.Apply(cloudData);
+                MusicState.ReloadFromPrefs();
                 Debug.Log($"[CloudSave] RESTORE ✅ bulut level {cloudLevel} > yerel {localLevel} → bulut uygulandı ({cloudData.Count} anahtar)");
                 RestoreResolved = true;
                 OnRestored?.Invoke();

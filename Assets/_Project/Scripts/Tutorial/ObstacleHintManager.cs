@@ -68,17 +68,46 @@ public class ObstacleHintManager : MonoBehaviour
         var result = new List<ObstacleId>();
 
         var levelData = board?.ActiveLevelData;
-        if (levelData?.obstacles == null) return result;
+        if (levelData == null) return result;
 
-        foreach (int raw in levelData.obstacles)
+        if (levelData.obstacles != null)
         {
-            var id = (ObstacleId)raw;
-            if (id == ObstacleId.None) continue;
-            if (seen.Add(id))
-                result.Add(id);
+            foreach (int raw in levelData.obstacles)
+                AddId((ObstacleId)raw);
+        }
+
+        if (levelData.safes != null)
+        {
+            for (int i = 0; i < levelData.safes.Length; i++)
+                AddId(ObstacleId.Safe);
+        }
+
+        if (levelData.stackedObstacles != null)
+        {
+            for (int i = 0; i < levelData.stackedObstacles.Length; i++)
+                AddId(levelData.stackedObstacles[i].obstacleId);
+        }
+
+        if (levelData.tubes != null)
+        {
+            for (int i = 0; i < levelData.tubes.Length; i++)
+                AddId(ObstacleId.Tube);
+        }
+
+        if (levelData.magnets != null)
+        {
+            for (int i = 0; i < levelData.magnets.Length; i++)
+                AddId(ObstacleId.Magnet);
         }
 
         return result;
+
+        void AddId(ObstacleId id)
+        {
+            if (id == ObstacleId.None) return;
+            if (seen.Add(id))
+                result.Add(id);
+        }
     }
 
     public static bool IsHintSeen(ObstacleId id) =>

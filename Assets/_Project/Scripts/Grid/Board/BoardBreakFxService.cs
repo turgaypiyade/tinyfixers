@@ -106,7 +106,8 @@ public class BoardBreakFxService
             var def = board.LevelData?.obstacleLibrary?.Get(change.obstacleId);
             if (def != null && def.IsHitParticlesSuppressedForRemainingHits(change.remainingHits))
             {
-                Debug.LogWarning($"[ObstacleFX] Suppressed for id={change.obstacleId} remaining={change.remainingHits}");
+                if (board.BoardFlowTraceEnabled)
+                    Debug.Log($"[ObstacleFX] Suppressed for id={change.obstacleId} remaining={change.remainingHits}");
                 return;
             }
         }
@@ -272,12 +273,22 @@ public class BoardBreakFxService
             return;
 
         RectTransform parent = board.BreakFxParent;
-        GameObject go;
         float resolvedScale = Mathf.Max(0.01f, scale);
+
+        // Havuz anahtarı kullanım imzasını içerir: aynı prefab farklı modlarla (light motion,
+        // burst sayısı, sprite'lı/sprite'sız) kullanılıyor; instance'lar mod karıştırmadan dönsün.
+        var poolKey = (prefab, useLightTileMotion, overrideParticleCount,
+                       particleSprites != null && particleSprites.Count > 0);
+
+        GameObject go = TakeFromPool(poolKey);
+        bool fromPool = go != null;
 
         if (parent != null)
         {
-            go = Object.Instantiate(prefab, parent);
+            if (!fromPool)
+                go = Object.Instantiate(prefab, parent);
+            else if (go.transform.parent != parent)
+                go.transform.SetParent(parent, false);
 
             RectTransform rt = go.GetComponent<RectTransform>();
             if (rt != null)
@@ -289,13 +300,20 @@ public class BoardBreakFxService
             else
             {
                 go.transform.position = worldPos;
-                go.transform.localScale = go.transform.localScale * resolvedScale;
+                go.transform.localScale = prefab.transform.localScale * resolvedScale;
             }
         }
         else
         {
-            go = Object.Instantiate(prefab, worldPos, Quaternion.identity);
-            go.transform.localScale = go.transform.localScale * resolvedScale;
+            if (!fromPool)
+                go = Object.Instantiate(prefab, worldPos, Quaternion.identity);
+            else
+            {
+                go.transform.SetParent(null, false);
+                go.transform.position = worldPos;
+            }
+
+            go.transform.localScale = prefab.transform.localScale * resolvedScale;
         }
 
         go.SetActive(true);
@@ -314,7 +332,59 @@ public class BoardBreakFxService
             PlayWithFanBurst(systems);
 
         float safeLifetime = CalculateSafeLifetime(lifetime, systems);
-        Object.Destroy(go, safeLifetime);
+
+        if (board != null && board.isActiveAndEnabled)
+            board.StartCoroutine(CoReturnToPool(go, poolKey, safeLifetime));
+        else
+            Object.Destroy(go, safeLifetime);
+    }
+
+    // Kırılma FX havuzu: yoğun temizliklerde (Override dalgası vb.) aynı frame'de onlarca
+    // Instantiate/Destroy çifti hitch yaratıyordu; instance'lar anahtar başına yeniden kullanılır.
+    private const int MaxPooledPerKey = 24;
+    private readonly Dictionary<(GameObject prefab, bool lightMotion, int burstCount, bool hasSprites), Stack<GameObject>> fxPools = new();
+
+    private GameObject TakeFromPool((GameObject, bool, int, bool) key)
+    {
+        if (!fxPools.TryGetValue(key, out var stack))
+            return null;
+
+        while (stack.Count > 0)
+        {
+            var go = stack.Pop();
+            if (go != null)
+                return go;
+        }
+
+        return null;
+    }
+
+    private System.Collections.IEnumerator CoReturnToPool(GameObject go, (GameObject, bool, int, bool) key, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        if (go == null)
+            yield break;
+
+        var systems = go.GetComponentsInChildren<ParticleSystem>(true);
+        for (int i = 0; i < systems.Length; i++)
+        {
+            if (systems[i] != null)
+                systems[i].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
+
+        go.SetActive(false);
+
+        if (!fxPools.TryGetValue(key, out var stack))
+            fxPools[key] = stack = new Stack<GameObject>();
+
+        if (stack.Count >= MaxPooledPerKey)
+        {
+            Object.Destroy(go);
+            yield break;
+        }
+
+        stack.Push(go);
     }
 
     private static void ApplyBurstParticleCount(ParticleSystem[] systems, int particleCount)
@@ -517,7 +587,9 @@ public class BoardBreakFxService
         if (psr == null)
             return;
 
-        var mat = new Material(psr.sharedMaterial);
+        // psr.material ilk erişimde tek instance yaratır, sonraki erişimler aynı instance'ı
+        // döner — her kırılmada new Material yaratıp sızdırmaz (pooled FX'te de güvenli).
+        var mat = psr.material;
         mat.SetTexture(MainTexId, sprite.texture);
 
         float texW = sprite.texture.width;
@@ -528,8 +600,6 @@ public class BoardBreakFxService
             mat.SetTextureOffset(MainTexId, new Vector2(rect.x / texW, rect.y / texH));
             mat.SetTextureScale(MainTexId, new Vector2(rect.width / texW, rect.height / texH));
         }
-
-        psr.material = mat;
     }
 
     private void ApplyParticleMainTexture(ParticleSystem ps, Sprite firstSprite)

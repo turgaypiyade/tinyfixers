@@ -911,12 +911,33 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
     }
 
+    private int failResolveDeferCount;
+    private const int MaxFailResolveDefers = 3;
+
     private bool ResolvePendingBoardBeforeFail()
     {
         if (board == null || !board.HasPendingAutoResolveForLevelEnd())
+        {
+            failResolveDeferCount = 0;
             return false;
+        }
 
-        Debug.Log("[LevelEnd] Pending auto-resolve found before fail. Resolving board first.");
+        // Sonsuz erteleme guard'ı: pending koşullarından biri yalancı-pozitife takılırsa
+        // (ör. hiç doldurulamayacak boş hücre) fail hiç gösterilmiyor, oyuncu 0 hamleyle
+        // oynamaya devam edebiliyordu. Sınırlı sayıda ertele, sonra fail akışı ilerlesin.
+        if (failResolveDeferCount >= MaxFailResolveDefers)
+        {
+            Debug.LogWarning(
+                $"[LevelEnd] Pending auto-resolve {failResolveDeferCount} kez ertelendi ama hâlâ pending " +
+                $"({board.DescribePendingAutoResolveForLevelEnd()}) — fail akışına devam ediliyor.");
+            failResolveDeferCount = 0;
+            return false;
+        }
+
+        failResolveDeferCount++;
+        Debug.Log(
+            $"[LevelEnd] Pending auto-resolve before fail (defer {failResolveDeferCount}/{MaxFailResolveDefers}): " +
+            $"{board.DescribePendingAutoResolveForLevelEnd()}");
         board.RequestResolveAfterActionSequence();
 
         if (!failSettleWaitRunning)

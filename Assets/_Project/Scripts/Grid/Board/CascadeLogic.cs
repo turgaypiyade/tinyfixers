@@ -75,6 +75,7 @@ public class CascadeLogic
         int iter = 0;
         bool spawnedMovableThisPass = false;
         Dictionary<ObstacleId, int> spawnedMovableCounts = new Dictionary<ObstacleId, int>();
+        cargoSpawnColumnsThisPass.Clear();
 
         while (changed && iter < MAX_ITERATIONS)
         {
@@ -414,7 +415,9 @@ public class CascadeLogic
                         Path = new List<Vector2Int> { new Vector2Int(x, spawnFromY), new Vector2Int(x, toY) }
                     };
 
-                    if (!spawnedMovableThisPass && TryPickMovableGoalToSpawn(out var goalObstacleId))
+                    // Cargo pass-kilidine tabi değil (kendi hamle bütçesi/tavanı var);
+                    // diğer movable'lar (plastic vb.) pass başına 1 kuralında kalır.
+                    if (TryPickMovableGoalToSpawn(x, spawnedMovableThisPass, out var goalObstacleId))
                     {
                         newTile.IsMovableObstacle = true;
                         newTile.SpawnObstacleId = goalObstacleId;
@@ -711,7 +714,48 @@ public class CascadeLogic
         return true;
     }
 
-    private bool TryPickMovableGoalToSpawn(out ObstacleId obstacleId)
+    // Cargo (exitAtBottom) auto-spawn: KREDİ SİSTEMİ (kullanıcı kuralı 2026-07-21).
+    // Üretim doğrudan oyuncunun kırdırdığı taşa bağlı: her kırılan taş 2/5 cargo
+    // kredisi ekler (5 taş → 2 cargo); kredi 1'i geçince spawn yapılabilir, spawn
+    // 1 kredi harcar. Kredi hamleler arası TAŞINIR. Self-play doğal olarak imkânsız:
+    // cargo çıkışı taş kırmaz → kredi üretmez → konveyör kendini besleyemez.
+    // Ek sınırlar: sütundaki cargo oynanabilir hücrelerin yarısını aşamaz + pass
+    // başına sütun başına en fazla 1 cargo (yayılma).
+    private const float CargoPerConsumedTile = 0.4f;   // 2/5
+    private float cargoSpawnCredits;
+
+    /// <summary>Kırılan taş başına cargo üretim kredisi ekler (ClearAndDestroyTile çağırır).</summary>
+    public void AddCargoSpawnCredits(int consumedTiles)
+    {
+        if (consumedTiles > 0)
+            cargoSpawnCredits += consumedTiles * CargoPerConsumedTile;
+    }
+
+    /// <summary>Level başında kredi sıfırlanır (board yeniden kurulurken çağrılır).</summary>
+    public void ResetCargoSpawnCredits() => cargoSpawnCredits = 0f;
+
+    // Pass başına sütun başına en fazla 1 cargo: sütunlar soldan sağa işlendiği için
+    // sınırsız bırakılırsa geniş temizlikte üretimin tamamı ilk refill olan bir-iki
+    // sütuna yığılıyordu; bu set ile aynı dalgada üretim sütunlara yayılır.
+    private readonly HashSet<int> cargoSpawnColumnsThisPass = new();
+
+    private bool CanSpawnExitCargo(int x)
+    {
+        if (cargoSpawnCredits < 1f) return false;
+        if (cargoSpawnColumnsThisPass.Contains(x)) return false;
+
+        var obstacleService = board.ObstacleStateService;
+        int cargoInColumn = 0, playableInColumn = 0;
+        for (int cy = 0; cy < board.Height; cy++)
+        {
+            if (IsTileSlotCell(x, cy)) playableInColumn++;
+            if (obstacleService.IsExitAtBottomAt(x, cy)) cargoInColumn++;
+        }
+
+        return cargoInColumn * 2 < playableInColumn;
+    }
+
+    private bool TryPickMovableGoalToSpawn(int x, bool movableSpawnedThisPass, out ObstacleId obstacleId)
     {
         obstacleId = ObstacleId.None;
 
@@ -736,15 +780,21 @@ public class CascadeLogic
 
             if (!def.IsMovableObstacleForRemainingHits(Mathf.Max(1, def.hits))) continue;
 
-            // Cargo (exitAtBottom) yalnızca tasarımcı tarafından yerleştirilir — üstten auto-spawn edilmez.
-            if (def.exitAtBottom) continue;
+            // Cargo dışındaki movable'lar (plastic vb.): pass başına 1 spawn kuralı.
+            if (!def.exitAtBottom && movableSpawnedThisPass) continue;
 
-            int alive = board.ObstacleStateService.CountAliveOrigins(goal.obstacleId);
-            if (alive < goal.remaining)
+            int alive = board.ObstacleStateService.CountAliveOrStampedOrigins(goal.obstacleId);
+            if (alive >= goal.remaining) continue;
+
+            if (def.exitAtBottom)
             {
-                obstacleId = goal.obstacleId;
-                return true;
+                if (!CanSpawnExitCargo(x)) continue;
+                cargoSpawnCredits -= 1f;
+                cargoSpawnColumnsThisPass.Add(x);
             }
+
+            obstacleId = goal.obstacleId;
+            return true;
         }
 
         return false;

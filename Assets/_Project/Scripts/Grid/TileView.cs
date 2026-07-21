@@ -39,6 +39,8 @@ public class TileView : MonoBehaviour,
 
     [SerializeField] private Vector2 iconSize = new Vector2(100f, 100f);
     [SerializeField] private bool useFullCellIcon = false;
+    private bool overrideNormalVisualFillRatio;
+    private float normalVisualFillRatio = 0.88f;
 
     private Coroutine specialCreationRevealRoutine;
     private GameObject specialCreationRevealRoot;
@@ -510,6 +512,349 @@ public class TileView : MonoBehaviour,
     {
         if (visualRt != null && visualRt)
             visualRt.localScale = baseScale;
+    }
+
+    private static float ReferenceVisualDeltaTime()
+    {
+        float dt = Time.deltaTime;
+
+        if (dt <= 0f)
+            dt = Time.unscaledDeltaTime;
+
+        return Mathf.Max(0.0001f, dt);
+    }
+
+    public IEnumerator MoveToGridCellReference(
+        int tileSize,
+        int fromX,
+        int fromY,
+        int toX,
+        int toY,
+        Vector2? explicitStart,
+        bool enableLanding,
+        ReferenceFallMotionSettings settings,
+        bool debugLog,
+        int column,
+        int sourceRow,
+        int targetRow,
+        float spawnReferenceFrame,
+        float initialDelaySeconds,
+        float actionStartRealtime)
+    {
+        Vector2[] anchoredPath =
+        {
+            explicitStart ?? GetFallCellAnchoredPosition(fromX, fromY, tileSize),
+            GetFallCellAnchoredPosition(toX, toY, tileSize)
+        };
+
+        yield return MoveReferenceFallAlongAnchoredPath(
+            tileSize,
+            anchoredPath,
+            enableLanding,
+            settings,
+            debugLog,
+            column,
+            sourceRow,
+            targetRow,
+            spawnReferenceFrame,
+            initialDelaySeconds,
+            actionStartRealtime);
+    }
+
+    public void SetReferenceFallStartAnchoredPosition(Vector2 anchoredPosition)
+    {
+        if (rt == null)
+            rt = GetComponent<RectTransform>();
+
+        if (rt == null || !rt)
+            return;
+
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = anchoredPosition;
+
+        RectTransform visualRt = iconImage != null ? iconImage.rectTransform : null;
+        ResetVisualScale(visualRt, Vector3.one);
+    }
+
+    public IEnumerator MoveToGridPathReference(
+        int tileSize,
+        Vector2Int[] waypoints,
+        Vector2? explicitStart,
+        bool enableLanding,
+        ReferenceFallMotionSettings settings,
+        bool debugLog,
+        int column,
+        int sourceRow,
+        int targetRow,
+        float spawnReferenceFrame,
+        float initialDelaySeconds,
+        float actionStartRealtime)
+    {
+        if (waypoints == null || waypoints.Length < 2)
+            yield break;
+
+        var anchoredPath = new Vector2[waypoints.Length];
+
+        for (int i = 0; i < waypoints.Length; i++)
+            anchoredPath[i] = GetFallCellAnchoredPosition(waypoints[i].x, waypoints[i].y, tileSize);
+
+        if (explicitStart.HasValue)
+            anchoredPath[0] = explicitStart.Value;
+
+        yield return MoveReferenceFallAlongAnchoredPath(
+            tileSize,
+            anchoredPath,
+            enableLanding,
+            settings,
+            debugLog,
+            column,
+            sourceRow,
+            targetRow,
+            spawnReferenceFrame,
+            initialDelaySeconds,
+            actionStartRealtime);
+    }
+
+    private IEnumerator MoveReferenceFallAlongAnchoredPath(
+        int tileSize,
+        Vector2[] anchoredPath,
+        bool enableLanding,
+        ReferenceFallMotionSettings settings,
+        bool debugLog,
+        int column,
+        int sourceRow,
+        int targetRow,
+        float spawnReferenceFrame,
+        float initialDelaySeconds,
+        float actionStartRealtime)
+    {
+        lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+
+        if (this == null || !this)
+            yield break;
+
+        if (anchoredPath == null || anchoredPath.Length < 2)
+            yield break;
+
+        if (settings == null)
+            settings = new ReferenceFallMotionSettings();
+
+        if (rt == null)
+            rt = GetComponent<RectTransform>();
+
+        if (rt == null || !rt)
+            yield break;
+
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+
+        RectTransform visualRt = iconImage != null ? iconImage.rectTransform : null;
+        Vector3 visualBaseScale = Vector3.one;
+        ResetVisualScale(visualRt, visualBaseScale);
+
+        rt.anchoredPosition = anchoredPath[0];
+
+        if (initialDelaySeconds > 0f)
+        {
+            float delayElapsed = 0f;
+            while (delayElapsed < initialDelaySeconds)
+            {
+                if (rt == null || !rt)
+                {
+                    ResetVisualScale(visualRt, visualBaseScale);
+                    yield break;
+                }
+
+                delayElapsed += ReferenceVisualDeltaTime();
+                rt.anchoredPosition = anchoredPath[0];
+                yield return null;
+            }
+        }
+
+        float referenceFps = Mathf.Max(1f, settings.referenceFps);
+        float velocityCellsPerFrame = Mathf.Max(0f, settings.initialSpeedCellsPerFrame);
+        float acceleration = Mathf.Max(0f, settings.accelerationCellsPerFrameSquared);
+        float maxVelocity = Mathf.Max(0.001f, settings.maxSpeedCellsPerFrame);
+        float travelledCells = 0f;
+
+        for (int seg = 1; seg < anchoredPath.Length; seg++)
+        {
+            Vector2 target = anchoredPath[seg];
+            float segmentElapsed = 0f;
+            float segmentDistanceCells = Vector2.Distance(rt.anchoredPosition, target) / Mathf.Max(1f, tileSize);
+            float segmentTimeout = Mathf.Max(
+                1f,
+                settings.ReferenceFramesToSeconds(120f) +
+                segmentDistanceCells / Mathf.Max(0.001f, maxVelocity * referenceFps));
+
+            while (rt != null && rt && Vector2.Distance(rt.anchoredPosition, target) > 0.25f)
+            {
+                float dt = ReferenceVisualDeltaTime();
+                segmentElapsed += dt;
+
+                if (segmentElapsed > segmentTimeout)
+                {
+                    Debug.LogWarning(
+                        $"[ReferenceFall] movement timeout tileId={GetInstanceID()} column={column} " +
+                        $"sourceRow={sourceRow} targetRow={targetRow} segment={seg}. Snapping to target.");
+                    rt.anchoredPosition = target;
+                    break;
+                }
+
+                float frameDelta = Mathf.Max(0.0001f, dt * referenceFps);
+                velocityCellsPerFrame = Mathf.Min(
+                    velocityCellsPerFrame + acceleration * frameDelta,
+                    maxVelocity);
+
+                float stepPixels = velocityCellsPerFrame * frameDelta * tileSize;
+                if (stepPixels <= 0.0001f)
+                    stepPixels = tileSize * 0.01f;
+
+                Vector2 before = rt.anchoredPosition;
+                rt.anchoredPosition = Vector2.MoveTowards(before, target, stepPixels);
+                travelledCells += Vector2.Distance(before, rt.anchoredPosition) / Mathf.Max(1f, tileSize);
+
+                yield return null;
+            }
+
+            if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
+                yield break;
+            }
+
+            rt.anchoredPosition = target;
+        }
+
+        float landingReferenceFrame = (Time.realtimeSinceStartup - actionStartRealtime) * referenceFps;
+
+        if (debugLog)
+        {
+            Debug.Log(
+                $"[ReferenceFall] tileId={GetInstanceID()} column={column} sourceRow={sourceRow} targetRow={targetRow} " +
+                $"spawnFrame={spawnReferenceFrame:0.0} landingFrame={landingReferenceFrame:0.0} travelledCells={travelledCells:0.00}");
+        }
+
+        if (enableLanding)
+            yield return PlayReferenceLanding(tileSize, settings, visualRt, visualBaseScale);
+
+        ResetVisualScale(visualRt, visualBaseScale);
+
+        if (rt != null && rt)
+            SnapToGrid(tileSize);
+    }
+
+    private IEnumerator PlayReferenceLanding(
+        int tileSize,
+        ReferenceFallMotionSettings settings,
+        RectTransform visualRt,
+        Vector3 visualBaseScale)
+    {
+        if (rt == null || !rt)
+            yield break;
+
+        Vector2 basePos = rt.anchoredPosition;
+        Vector2 overshoot = basePos + Vector2.down * (Mathf.Max(0f, settings.landingOvershootCells) * tileSize);
+
+        float overshootDuration = settings.ReferenceFramesToSeconds(settings.landingOvershootFrames);
+        float returnDuration = settings.ReferenceFramesToSeconds(settings.landingReturnFrames);
+        float settleDuration = settings.ReferenceFramesToSeconds(settings.finalSettleFrames);
+
+        if (overshootDuration > 0f)
+        {
+            yield return LerpReferenceLanding(
+                basePos,
+                overshoot,
+                visualRt,
+                visualBaseScale,
+                Vector3.one,
+                new Vector3(1.025f, 0.975f, 1f),
+                overshootDuration,
+                easeOut: true);
+        }
+
+        if (returnDuration > 0f)
+        {
+            yield return LerpReferenceLanding(
+                overshoot,
+                basePos,
+                visualRt,
+                visualBaseScale,
+                new Vector3(1.025f, 0.975f, 1f),
+                Vector3.one,
+                returnDuration,
+                easeOut: false);
+        }
+
+        if (settleDuration > 0f)
+        {
+            float elapsed = 0f;
+            while (elapsed < settleDuration)
+            {
+                if (rt == null || !rt)
+                {
+                    ResetVisualScale(visualRt, visualBaseScale);
+                    yield break;
+                }
+
+                elapsed += ReferenceVisualDeltaTime();
+                rt.anchoredPosition = basePos;
+                ResetVisualScale(visualRt, visualBaseScale);
+                yield return null;
+            }
+        }
+
+        if (rt != null && rt)
+            rt.anchoredPosition = basePos;
+
+        ResetVisualScale(visualRt, visualBaseScale);
+    }
+
+    private IEnumerator LerpReferenceLanding(
+        Vector2 from,
+        Vector2 to,
+        RectTransform visualRt,
+        Vector3 visualBaseScale,
+        Vector3 startVisualScale,
+        Vector3 targetVisualScale,
+        float duration,
+        bool easeOut)
+    {
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            if (rt == null || !rt)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
+                yield break;
+            }
+
+            elapsed += ReferenceVisualDeltaTime();
+            float k = Mathf.Clamp01(elapsed / Mathf.Max(0.0001f, duration));
+            float eased = easeOut
+                ? 1f - (1f - k) * (1f - k)
+                : Mathf.SmoothStep(0f, 1f, k);
+
+            rt.anchoredPosition = Vector2.LerpUnclamped(from, to, eased);
+
+            if (visualRt != null && visualRt)
+            {
+                Vector3 scale = Vector3.LerpUnclamped(startVisualScale, targetVisualScale, eased);
+                visualRt.localScale = new Vector3(
+                    visualBaseScale.x * scale.x,
+                    visualBaseScale.y * scale.y,
+                    visualBaseScale.z * scale.z);
+            }
+
+            yield return null;
+        }
+
+        if (rt != null && rt)
+            rt.anchoredPosition = to;
     }
 
     public IEnumerator MoveToGridCell(
@@ -1611,6 +1956,15 @@ public class TileView : MonoBehaviour,
             ApplyTileSize(lastAppliedTileSize);
     }
 
+    public void SetNormalVisualFillRatioOverride(bool enabled, float ratio)
+    {
+        overrideNormalVisualFillRatio = enabled;
+        normalVisualFillRatio = Mathf.Clamp(ratio, 0.1f, 1.2f);
+
+        if (lastAppliedTileSize > 0)
+            ApplyTileSize(lastAppliedTileSize);
+    }
+
     public void ApplyTileSize(int tileSize)
     {
         lastAppliedTileSize = tileSize;
@@ -1662,6 +2016,16 @@ public class TileView : MonoBehaviour,
 
         float tileRatio = Mathf.Max(0.01f, tileSize / IconReferenceTileSize);
         Vector2 scaledIconSize = iconSize * (tileRatio * iconScale);
+
+        if (overrideNormalVisualFillRatio &&
+            !isMovable &&
+            !isSpecial &&
+            visualLayout == TileVisualLayout.Centered &&
+            !useFullCellIcon)
+        {
+            float visualSize = tileSize * normalVisualFillRatio;
+            scaledIconSize = new Vector2(visualSize, visualSize);
+        }
 
         if (isMovable)
             scaledIconSize *= 0.95f;

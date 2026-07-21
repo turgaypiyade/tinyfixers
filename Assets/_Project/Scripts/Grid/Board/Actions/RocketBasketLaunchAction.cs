@@ -6,6 +6,9 @@ using UnityEngine;
 /// Bir hamlede tetiklenen RocketBasket roketlerini fırlatır. Hedefleme + impact PatchBot ile
 /// BİREBİR aynı (PatchBotTargetCoordinator + PatchbotComboService.ResolveTargetImpact + tek
 /// MatchClearAction), yalnızca uçuş görseli roket-mermi (RocketProjectileFlight).
+/// PatchBot gibi BAĞIMSIZ uçar: detached coroutine olarak koşturulur (ExecuteVisuals(null)),
+/// uçuş FlyingPatchBotDashes sayacıyla non-blocking'dir (taşlar düşmeye devam eder, fail-eval
+/// yine bekler); varış impact'i ana sequencer'a enqueue edilir.
 /// Referans: OverridePatchBotAirborneGroupAction.SynchronizedDiveAndClear.
 /// </summary>
 public sealed class RocketBasketLaunchAction : BoardAction
@@ -144,14 +147,11 @@ public sealed class RocketBasketLaunchAction : BoardAction
                 impactCells: groupCtx.ImpactCells,
                 enqueueCascadeOnComplete: false);
 
-            yield return clearAction.ExecuteVisuals(sequencer);
+            // Detached (sequencer'sız) koşarken cascade'i burada sürmek ana resolve ile
+            // çift-sürücü çakışması yaratır: impact ana sequencer'a devredilir, cascade'i
+            // RequestResolveAfterActionSequence'in tetiklediği normal resolve alır.
+            board.EnqueueBoardAction(clearAction);
         }
-
-        // ─── Tek cascade ───
-        var cascades = board.CascadeLogic.CalculateCascades();
-        if (cascades != null)
-            for (int i = 0; i < cascades.Count; i++)
-                yield return cascades[i].ExecuteVisuals(sequencer);
 
         board.RefreshAllSortingOrders();
         board.RequestResolveAfterActionSequence();

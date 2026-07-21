@@ -13,67 +13,147 @@ MonoBehaviour:
   m_Name: ObstacleHintLibrary
   m_EditorClassIdentifier: Assembly-CSharp::ObstacleHintLibrary
   entries:
+  - id: 1
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_stone
+    fallbackText:
+  - id: 2
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_shield1
+    fallbackText:
+  - id: 3
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_shield2
+    fallbackText:
   - id: 4
     iconOverride: {fileID: 0}
     locKey: hint_obstacle_chest1
-    fallbackText: 
+    fallbackText:
   - id: 5
     iconOverride: {fileID: 0}
     locKey: hint_obstacle_chest2
-    fallbackText: 
+    fallbackText:
   - id: 6
     iconOverride: {fileID: 0}
     locKey: hint_obstacle_chest3
-    fallbackText: 
+    fallbackText:
   - id: 7
     iconOverride: {fileID: 0}
     locKey: hint_obstacle_plastic
-    fallbackText: 
+    fallbackText:
   - id: 8
     iconOverride: {fileID: 0}
     locKey: hint_obstacle_plastic_orange
-    fallbackText: 
+    fallbackText:
   - id: 9
     iconOverride: {fileID: 0}
     locKey: hint_obstacle_plastic_yellow
-    fallbackText: 
+    fallbackText:
+  - id: 10
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_pipev_1x2
+    fallbackText:
   - id: 11
     iconOverride: {fileID: 0}
     locKey: hint_obstacle_plastic_blue
-    fallbackText: 
+    fallbackText:
   - id: 12
     iconOverride: {fileID: 0}
     locKey: hint_obstacle_plastic_red
-    fallbackText: 
+    fallbackText:
   - id: 13
     iconOverride: {fileID: 0}
     locKey: hint_obstacle_plastic_green
-    fallbackText: 
+    fallbackText:
   - id: 14
     iconOverride: {fileID: 0}
     locKey: hint_obstacle_oil
-    fallbackText: 
+    fallbackText:
+  - id: 20
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_big_4x4
+    fallbackText:
   - id: 21
     iconOverride: {fileID: 0}
-    locKey: hint_obstacle_color_chest
-    fallbackText: 
+    locKey: hint_obstacle_colorchest
+    fallbackText:
   - id: 22
     iconOverride: {fileID: 0}
-    locKey: hint_obstacle_energy_container
-    fallbackText: 
+    locKey: hint_obstacle_energycontainer
+    fallbackText:
   - id: 23
     iconOverride: {fileID: 0}
-    locKey: hint_obstacle_battery_box
-    fallbackText: 
+    locKey: hint_obstacle_batterybox
+    fallbackText:
   - id: 24
     iconOverride: {fileID: 0}
-    locKey: hint_obstacle_omega_modul
-    fallbackText: 
+    locKey: hint_obstacle_omegamodul
+    fallbackText:
   - id: 25
     iconOverride: {fileID: 0}
     locKey: hint_obstacle_mud
-    fallbackText: 
+    fallbackText:
   - id: 26
     iconOverride: {fileID: 0}
     locKey: hint_obstacle_tube
-    fallbackText: 
+    fallbackText:
+  - id: 27
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_wardrobe
+    fallbackText:
+  - id: 28
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_sculptingstone
+    fallbackText:
+  - id: 29
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_magnet
+    fallbackText:
+  - id: 30
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_helmetporcelain
+    fallbackText:
+  - id: 31
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_hatlauncher
+    fallbackText:
+  - id: 32
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_goldmoney
+    fallbackText:
+  - id: 33
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_safe
+    fallbackText:
+  - id: 34
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_cargo
+    fallbackText:
+  - id: 35
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_player_shield_pickup
+    fallbackText:
+  - id: 36
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_enemy_shield_pickup
+    fallbackText:
+  - id: 37
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_barrel
+    fallbackText:
+  - id: 38
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_rocketbasket
+    fallbackText:
+  - id: 39
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_sculptingspecial
+    fallbackText:
+  - id: 40
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_plastic_two_stage
+    fallbackText:
+  - id: 41
+    iconOverride: {fileID: 0}
+    locKey: hint_obstacle_barrell_v2
+    fallbackText:

@@ -97,6 +97,17 @@ public static class MusicState
         OnChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Cloud restore PlayerPrefs'i dışarıdan yazdı — bayat owned cache'i at, aboneleri tazele.
+    /// (Cache bayat kalırsa SaveOwned buluttan gelen sahiplikleri ezer; ayrıca menü müziği
+    /// restore edilen seçime canlı geçemez.)
+    /// </summary>
+    public static void ReloadFromPrefs()
+    {
+        owned = null;
+        OnChanged?.Invoke();
+    }
+
     private static void EnsureLoaded()
     {
         if (owned != null) return;

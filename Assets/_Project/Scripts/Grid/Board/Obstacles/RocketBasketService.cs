@@ -68,6 +68,8 @@ public sealed class RocketBasketService : MonoBehaviour
     {
         if (board?.ObstacleStateService != null)
             board.ObstacleStateService.RocketBasketHitInterceptor = null;
+        if (board != null)
+            board.OnObstacleViewRestored -= HandleObstacleRevealed;
     }
 
     private void ResolveReferences()
@@ -88,9 +90,32 @@ public sealed class RocketBasketService : MonoBehaviour
 
         InitCharges();
         board.ObstacleStateService.RocketBasketHitInterceptor = HandleHit;
+        board.OnObstacleViewRestored -= HandleObstacleRevealed;
+        board.OnObstacleViewRestored += HandleObstacleRevealed;
 
         if (logHits)
             Debug.Log($"[RocketBasket] Bound. baskets={loadedByOrigin.Count}");
+    }
+
+    // Safe/Chest gibi bir cover'ın ALTINA konan basket, stamp sırasında authored obstacles[]'ta
+    // cover id'siyle ezildiği için InitCharges onu GÖREMEZ (loadedByOrigin boş kalır → basket
+    // hiç ateşlemezdi). Şarjlar reveal anında burada kurulur.
+    private void HandleObstacleRevealed(int x, int y)
+    {
+        var svc = board != null ? board.ObstacleStateService : null;
+        if (svc == null) return;
+        if (svc.GetObstacleIdAt(x, y) != ObstacleId.RocketBasket) return;
+
+        int origin = svc.GetObstacleOriginAt(x, y);
+        if (origin < 0 || loadedByOrigin.ContainsKey(origin)) return;
+
+        var set = new HashSet<TileType>();
+        for (int r = 0; r < rockets.Length; r++)
+            set.Add(rockets[r].color);
+        loadedByOrigin[origin] = set;
+
+        if (logHits)
+            Debug.Log($"[RocketBasket] revealed basket charges origin={origin}");
     }
 
     private void InitCharges()

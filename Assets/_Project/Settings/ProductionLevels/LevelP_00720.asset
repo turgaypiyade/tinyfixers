@@ -29,6 +29,12 @@ MonoBehaviour:
     collectibleId: 1
     iconOverride: {fileID: 0}
     amount: 16
+  - targetType: 1
+    tileType: 0
+    obstacleId: 5
+    collectibleId: 1
+    iconOverride: {fileID: 0}
+    amount: 16
   levelKind: 0
   usesCustomIntro: 0
   introLeftSprite: {fileID: 0}
