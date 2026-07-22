@@ -47,10 +47,26 @@ public class ProgressEventPanel : MonoBehaviour
         var service = ProgressEventService.Instance;
         if (service == null || service.State != ProgressEventState.Active)
         {
-            timerText.text = "";
+            HideVisuals();
             return;
         }
+
+        int activeIndex = FindActiveGoal(service);
+        if (activeIndex < 0)
+        {
+            HideVisuals();
+            return;
+        }
+
+        bool needsRefresh = currentBar == null
+            || !currentBar.gameObject.activeSelf
+            || currentGoalIndex != activeIndex;
+
+        SetVisualsActive(true);
         timerText.text = FormatRemaining(service.TimeRemaining);
+
+        if (!sessionPlaybackRunning && needsRefresh)
+            Show();
     }
 
     private static string FormatRemaining(System.TimeSpan t)
@@ -84,11 +100,17 @@ public class ProgressEventPanel : MonoBehaviour
     private void Show()
     {
         var service = ProgressEventService.Instance;
-        if (service == null || service.State != ProgressEventState.Active) return;
+        if (service == null || service.State != ProgressEventState.Active)
+        {
+            HideVisuals();
+            return;
+        }
+
+        SetVisualsActive(true);
         if (sessionPlaybackRunning) return;   // sıralı şov sürüyor — bar'ı ezme
 
         int activeIndex = FindActiveGoal(service);
-        if (activeIndex < 0) { gameObject.SetActive(false); return; }
+        if (activeIndex < 0) { HideVisuals(); return; }
 
         // Session'da kazanım olan hedefler (sıralı): her biri için bar dolumu ayrı oynar —
         // aynı oturumda iki hedef bittiyse önce ilkinin barı dolar/ödül kutlanır,
@@ -119,6 +141,12 @@ public class ProgressEventPanel : MonoBehaviour
 
         for (int q = 0; q < queue.Count; q++)
         {
+            if (service.State != ProgressEventState.Active)
+            {
+                HideVisuals();
+                yield break;
+            }
+
             var rec = queue[q];
             if (rec.GoalIndex >= service.Goals.Count) continue;
 
@@ -137,8 +165,14 @@ public class ProgressEventPanel : MonoBehaviour
         sessionPlaybackRunning = false;
 
         // Şov bitti: aktif (sıradaki) hedefin barına geç.
+        if (service.State != ProgressEventState.Active)
+        {
+            HideVisuals();
+            yield break;
+        }
+
         int activeIndex = FindActiveGoal(service);
-        if (activeIndex < 0) { gameObject.SetActive(false); yield break; }
+        if (activeIndex < 0) { HideVisuals(); yield break; }
         if (activeIndex != currentGoalIndex)
             SpawnBar(activeIndex, service);
         currentBar?.RefreshDisplay();
@@ -148,10 +182,14 @@ public class ProgressEventPanel : MonoBehaviour
     {
         if (sessionPlaybackRunning) return;   // sıralı şov barı yönetiyor
         var service = ProgressEventService.Instance;
-        if (service == null) return;
+        if (service == null || service.State != ProgressEventState.Active)
+        {
+            HideVisuals();
+            return;
+        }
 
         int activeIndex = FindActiveGoal(service);
-        if (activeIndex < 0) { gameObject.SetActive(false); return; }
+        if (activeIndex < 0) { HideVisuals(); return; }
 
         // Hedef değiştiyse yeni bar spawn et
         if (activeIndex != currentGoalIndex)
@@ -178,6 +216,28 @@ public class ProgressEventPanel : MonoBehaviour
         currentBar.SetGoalIndex(index);
         if (particleOrigin != null)
             currentBar.SetParticleOrigin(particleOrigin);
+    }
+
+    private void HideVisuals()
+    {
+        if (timerText != null)
+            timerText.text = "";
+
+        SetVisualsActive(false);
+        sessionPlaybackRunning = false;
+    }
+
+    private void SetVisualsActive(bool active)
+    {
+        var timerRoot = timerText != null && timerText.transform.parent != null
+            ? timerText.transform.parent.gameObject
+            : timerText != null ? timerText.gameObject : null;
+
+        if (timerRoot != null && timerRoot.activeSelf != active)
+            timerRoot.SetActive(active);
+
+        if (currentBar != null && currentBar.gameObject.activeSelf != active)
+            currentBar.gameObject.SetActive(active);
     }
 
     private static int FindActiveGoal(IProgressEventService service)
