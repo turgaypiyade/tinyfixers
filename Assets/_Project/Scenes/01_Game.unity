@@ -1794,6 +1794,9 @@ MonoBehaviour:
   flyDuration: 0.42
   orbStagger: 0.035
   arcHeight: 130
+  orbRiseDuration: 0.16
+  orbHoverHold: 0.06
+  orbRiseHeight: 82
   flyOrbOnTopCanvas: 1
   pulseScale: 1.08
   pulseDuration: 0.1
@@ -3511,8 +3514,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.2451923}
-  m_AnchorMax: {x: 0.5600766, y: 5.7475963}
+  m_AnchorMin: {x: 0, y: 0.066753924}
+  m_AnchorMax: {x: 0.74712646, y: 1.5647906}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -6563,6 +6566,9 @@ MonoBehaviour:
   flyDuration: 0.5
   orbStagger: 0.05
   arcHeight: 130
+  orbRiseDuration: 0.16
+  orbHoverHold: 0.06
+  orbRiseHeight: 82
   flyOrbOnTopCanvas: 1
   pulseScale: 1.08
   pulseDuration: 0.1
@@ -8664,6 +8670,20 @@ MonoBehaviour:
   fallSettleOvershoot: 0.02
   fallStretchAmount: 0.1
   fallStretchRecover: 0.45
+  useReferenceFallMotion: 0
+  debugReferenceFallMotionLogs: 0
+  applyReferenceTileVisualFillRatio: 0
+  referenceFallMotion:
+    referenceFps: 60
+    spawnIntervalFrames: 6
+    initialSpeedCellsPerFrame: 0.08
+    accelerationCellsPerFrameSquared: 0.014
+    maxSpeedCellsPerFrame: 0.33
+    landingOvershootCells: 0.025
+    landingOvershootFrames: 2
+    landingReturnFrames: 4
+    finalSettleFrames: 2
+    tileVisualFillRatio: 0.88
   preClearDelay: 0.02
   shakeDuration: 0.02
   shakeStrength: 4
@@ -8777,12 +8797,19 @@ MonoBehaviour:
   allowPostSwapSettleValidation: 1
   enableTileSyncValidation: 0
   enableSpecialChainTrace: 0
+  enableBoardFlowTrace: 0
   throwOnTileSyncMismatch: 0
   tilePositionEpsilon: 0.25
   ActiveBackgroundJobs: 0
   FlyingGoalOrbs: 0
   FlyingPatchBotDashes: 0
   DrainingBossStrikes: 0
+  activeFallProfile:
+    enabled: 1
+    fps: 32
+    initialSpeedCellsPerFrame: 0.24
+    accelerationCellsPerFrameSquared: 0.01
+    maxSpeedCellsPerFrame: 0.38
 --- !u!114 &1410826447
 MonoBehaviour:
   m_ObjectHideFlags: 0

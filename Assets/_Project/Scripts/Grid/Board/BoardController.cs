@@ -474,6 +474,10 @@ public class BoardController : MonoBehaviour
     /// (special doğuşu, zincir adımları vb.) buna oranlanır — fall velocity değişince
     /// tüm board tek vücut hızlanır/yavaşlar, "farklı oyun" hissi oluşmaz.
     /// </summary>
+    // Board metronomu: olay-arası boşluklar (special reveal, zincir ritmi) için sabit ritim.
+    // BİLEREK aktif düşüş profilinden BAĞIMSIZ: profile bağlanınca (fps 32'de 1 hücre 0.122s)
+    // büyük kırılma sonrası aralar %70 uzayıp "kırılma anı board boş kaldı" hissi yarattı.
+    // Düşüş formu/temposu ActiveFallProfile'dan, geçiş ritmi buradan gelir.
     internal float CellTime => 1f / FallVelocityCellsPerSecond;
     internal float FallSpawnStaggerMultiplier => Mathf.Clamp01(fallSpawnStaggerMultiplier);
     internal AnimationCurve SwapMoveCurve => swapMoveCurve;
@@ -3053,9 +3057,113 @@ public class BoardController : MonoBehaviour
     internal float GetFallDurationForDistanceCells(float distanceCells)
     {
         float d = Mathf.Max(0.0001f, distanceCells);
-        float duration = d / FallVelocityCellsPerSecond;
+        float duration = activeFallProfile != null && activeFallProfile.enabled
+            ? activeFallProfile.FallSeconds(d)
+            : d / FallVelocityCellsPerSecond;
 
         return Mathf.Max(0.01f, duration * Mathf.Max(0.5f, GetCascadeFallSpeedMultiplier()));
+    }
+
+    // ── Aktif düşüş profili (Royal referans ölçümü) ─────────────────
+    // Kaynak: RoyalKingdom Archive.zip kare analizi (60fps, hücre=126.7px, taş takibi):
+    // v0≈30px/f, a≈+1.3px/f² ile 48px/f tavana ulaşıp sabitleniyor; inişte tek karede
+    // duruş + ~3px (0.024 hücre) mikro-yerleşme. Sabit-hız modelinin "sürünerek kalkış"
+    // hissini bu profil giderir. Yalnızca GÖRSEL zamanlama katmanı: çökme/collapse
+    // semantiği (CascadeLogic path'leri) değişmez. enabled=false → eski sabit hız.
+    [Serializable]
+    public class ActiveFallProfileSettings
+    {
+        public bool enabled = true;
+        // Tempo ana düğmesi: formu (v0/a/vmax oranlarını) bozmadan tüm zamanlamayı ölçekler.
+        // Büyük değer = hızlı akış. 60 = ham ölçüm temposu; kullanıcı gözle kıyaslayıp
+        // 32'de karar kıldı (2026-07-22). 1 hücre ≈ 0.122s, 8 hücre ≈ 0.74s (ort ~10.8 hücre/s).
+        [Min(1f)] public float fps = 32f;
+        [Min(0f)] public float initialSpeedCellsPerFrame = 0.24f;
+        [Min(0f)] public float accelerationCellsPerFrameSquared = 0.010f;
+        [Min(0.001f)] public float maxSpeedCellsPerFrame = 0.38f;
+
+        public float FallSeconds(float distanceCells)
+        {
+            float d = Mathf.Max(0.0001f, distanceCells);
+            float v0 = Mathf.Max(0.0001f, initialSpeedCellsPerFrame);
+            float a = Mathf.Max(0f, accelerationCellsPerFrameSquared);
+            float vmax = Mathf.Max(v0, maxSpeedCellsPerFrame);
+
+            float frames;
+            if (a <= 0f)
+            {
+                frames = d / v0;
+            }
+            else
+            {
+                float t1 = (vmax - v0) / a;                  // tavana ulaşma anı (kare)
+                float d1 = v0 * t1 + 0.5f * a * t1 * t1;     // o ana dek alınan yol (hücre)
+                frames = d <= d1
+                    ? (-v0 + Mathf.Sqrt(v0 * v0 + 2f * a * d)) / a
+                    : t1 + (d - d1) / vmax;
+            }
+
+            return frames / Mathf.Max(1f, fps);
+        }
+
+        // t (kare) anındaki alınan yol (hücre).
+        public float DistanceAtFrames(float t)
+        {
+            float v0 = Mathf.Max(0.0001f, initialSpeedCellsPerFrame);
+            float a = Mathf.Max(0f, accelerationCellsPerFrameSquared);
+            float vmax = Mathf.Max(v0, maxSpeedCellsPerFrame);
+
+            if (a <= 0f) return v0 * t;
+
+            float t1 = (vmax - v0) / a;
+            if (t <= t1) return v0 * t + 0.5f * a * t * t;
+            float d1 = v0 * t1 + 0.5f * a * t1 * t1;
+            return d1 + vmax * (t - t1);
+        }
+    }
+
+    [Header("Active Fall Profile (Royal referans)")]
+    [SerializeField] private ActiveFallProfileSettings activeFallProfile = new();
+    internal ActiveFallProfileSettings ActiveFallProfile => activeFallProfile;
+
+    // Mesafeye göre normalize progress eğrisi (0..1 zaman → 0..1 yol). MoveToGridCell'in
+    // mevcut curve mekanizmasına takılır; böylece TileView'a dokunmadan ivmeli form elde
+    // edilir. Çeyrek-hücre çözünürlükte cache'lenir.
+    private readonly Dictionary<int, AnimationCurve> fallProfileCurveCache = new();
+
+    internal AnimationCurve GetFallProgressCurve(float distanceCells)
+    {
+        if (activeFallProfile == null || !activeFallProfile.enabled)
+            return fallMoveCurve;
+
+        int key = Mathf.Clamp(Mathf.RoundToInt(distanceCells * 4f), 1, 200);
+        if (fallProfileCurveCache.TryGetValue(key, out var cached))
+            return cached;
+
+        float d = key / 4f;
+        float totalFrames = activeFallProfile.FallSeconds(d) * Mathf.Max(1f, activeFallProfile.fps);
+
+        const int Keys = 12;
+        var keys = new Keyframe[Keys + 1];
+        for (int i = 0; i <= Keys; i++)
+        {
+            float u = i / (float)Keys;                       // normalize zaman
+            float dist = activeFallProfile.DistanceAtFrames(u * totalFrames);
+            float p = Mathf.Clamp01(dist / d);               // normalize yol
+
+            // Tanjant = anlık hız (normalize): dp/du = v(t)·T/d
+            float v0 = activeFallProfile.initialSpeedCellsPerFrame;
+            float a = activeFallProfile.accelerationCellsPerFrameSquared;
+            float vmax = Mathf.Max(v0, activeFallProfile.maxSpeedCellsPerFrame);
+            float v = Mathf.Min(v0 + a * (u * totalFrames), vmax);
+            float tangent = v * totalFrames / d;
+
+            keys[i] = new Keyframe(u, p, tangent, tangent);
+        }
+
+        var curve = new AnimationCurve(keys);
+        fallProfileCurveCache[key] = curve;
+        return curve;
     }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

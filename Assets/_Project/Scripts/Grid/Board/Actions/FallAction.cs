@@ -867,6 +867,14 @@ public class FallAction : BoardAction
                 // Klasik tek segment hareket.
                 // Ayni negatif spawn kaynagindan gelen dikey taşlar sadece
                 // gorsel baslangicta ayrilir; CascadeLogic path'i degismez.
+                // Aktif düşüş profili açıksa progress eğrisi Royal-referans ivme
+                // formundan pişirilir (mesafeye özel); kapalıysa eski r.curve.
+                float straightDistance = Vector2.Distance(
+                    new Vector2(r.fromX, visualFromY),
+                    new Vector2(r.toX, r.toY));
+                AnimationCurve moveCurve = board.GetFallProgressCurve(straightDistance);
+                if (moveCurve == null) moveCurve = r.curve;
+
                 move = r.tile.MoveToGridCell(
                     board.TileSize,
                     r.fromX,
@@ -874,7 +882,7 @@ public class FallAction : BoardAction
                     r.toX,
                     r.toY,
                     moveDuration,
-                    r.curve,
+                    moveCurve,
                     r.useSettle,
                     r.settleDuration,
                     r.settleStrength,
