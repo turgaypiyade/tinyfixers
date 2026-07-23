@@ -66,10 +66,10 @@ public class BoardController : MonoBehaviour
     [Header("Fall Settle")]
     [SerializeField] private bool enableFallSettle = true;
     [SerializeField] private float fallSettleDuration = 0.22f;
-    [Tooltip("Min scaleY = 1 - strength. 0.10 → 0.90. Daha düşük değer, inişte fazla ezilme hissini azaltır.")]
-    [SerializeField, Range(0f, 0.9f)] private float fallSettleStrength = 0.10f;
-    [Tooltip("Çarpma anında X genişleme oranı. 0 = sabit, 0.08 = %8 geniş (hafif jelly his).")]
-    [SerializeField, Range(0f, 0.6f)] private float fallSettleStretchX = 0.08f;
+    [Tooltip("Min scaleY = 1 - strength. 0.20 → 0.80 (inişte %20 kısa). Belirgin squash.")]
+    [SerializeField, Range(0f, 0.9f)] private float fallSettleStrength = 0.20f;
+    [Tooltip("Çarpma anında X genişleme oranı. 0.20 = %20 geniş (belirgin jelly his).")]
+    [SerializeField, Range(0f, 0.6f)] private float fallSettleStretchX = 0.20f;
     [Tooltip("Çarpma anında hedefin altına inme oranı (hücre boyuna göre). 0.02 = hücre yüksekliğinin %2'si kadar aşağı taşar.")]
     [SerializeField, Range(0f, 0.4f)] private float fallSettleOvershoot = 0.02f;
 
@@ -2475,6 +2475,9 @@ public class BoardController : MonoBehaviour
 
         // ── 1. Special CREATION — artık en fazla 2 creation destekli ──
         var createdSpecialTiles = new List<TileView>();
+        // Her created special'ın KENDİ match grubu (formation'da yalnız bunlar toplanır;
+        // aynı resolve'daki alakasız match'ler — ör. 3'lü kırmızı — merkeze çekilmesin).
+        var createdSpecialContributors = new Dictionary<TileView, List<TileView>>();
 
         var creations = specialCreationService.DecideUpToTwoFromMatches(
             nonSpecialMatchTiles,
@@ -2496,11 +2499,23 @@ public class BoardController : MonoBehaviour
                     && obstacleStateService.IsMovableObstacleAt(creation.winner.X, creation.winner.Y))
                     continue;
 
+                // Grup, winner special'a ÇEVRİLMEDEN önce hesaplanır (tip değişimi run tespitini bozmasın).
+                var consumedGroup = specialCreationService.GetConsumedTilesForCreation(nonSpecialMatchTiles, creation);
+
                 var created = specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
                 if (created == null)
                     continue;
 
                 createdSpecialTiles.Add(created);
+
+                var groupContributors = new List<TileView>();
+                if (consumedGroup != null)
+                {
+                    foreach (var gt in consumedGroup)
+                        if (gt != null && gt != creation.winner && gt != created)
+                            groupContributors.Add(gt);
+                }
+                createdSpecialContributors[created] = groupContributors;
 
                 // Oluşan special kazanılmış haktır; normal clear listesinde kalmamalı.
                 matchTiles.Remove(created);
@@ -2561,7 +2576,7 @@ public class BoardController : MonoBehaviour
         shakeNextClear = false;
 
         ClearPresentationPlan presentationPlan =
-            BuildCreatedSpecialPresentationPlan(createdSpecialTiles, matchTiles, doShake);
+            BuildCreatedSpecialPresentationPlan(createdSpecialTiles, matchTiles, doShake, createdSpecialContributors);
 
         CpLog($"pre_clear(tiles={matchTiles.Count} plan={presentationPlan != null})");
 
@@ -2634,7 +2649,11 @@ public class BoardController : MonoBehaviour
             audioDirector.Emit(BoardSfxRequest.SpecialCreate(kv.Key, kv.Value));
     }
 
-    private ClearPresentationPlan BuildCreatedSpecialPresentationPlan(List<TileView> createdTiles, HashSet<TileView> clearTiles, bool doShake)
+    private ClearPresentationPlan BuildCreatedSpecialPresentationPlan(
+        List<TileView> createdTiles,
+        HashSet<TileView> clearTiles,
+        bool doShake,
+        Dictionary<TileView, List<TileView>> createdContributors = null)
     {
         if (createdTiles == null || createdTiles.Count == 0 || clearTiles == null || clearTiles.Count == 0)
             return null;
@@ -2653,7 +2672,9 @@ public class BoardController : MonoBehaviour
         {
             DoBoardShake = doShake,
             IncludeAdjacentOverTileBlockerDamage = true,
-            CommitFinalClearsBeforeEffects = true,
+            // KRİTİK: true iken katkı taşları formation'dan ÖNCE yok ediliyor → gather boş
+            // kalıyordu. false: önce formation (canlı taşları topla), SONRA final clear.
+            CommitFinalClearsBeforeEffects = false,
             BackgroundEffectsBlockResolve = false,
             ObstacleHitContext = IsSpecialActivationPhase
                 ? ObstacleHitContext.SpecialActivation
@@ -2669,13 +2690,32 @@ public class BoardController : MonoBehaviour
             var contributors = new List<TileView>();
             var contributorCells = new List<Vector2Int>();
 
-            foreach (var tile in finalClearTiles)
-            {
-                if (tile == null)
-                    continue;
+            // Yalnız bu special'ın KENDİ match grubu toplanır (grup verilmişse); yoksa eski
+            // davranış (tüm finalClearTiles). Grup dışı taşlar normal break ile temizlenir.
+            List<TileView> groupList = null;
+            createdContributors?.TryGetValue(created, out groupList);
 
-                contributors.Add(tile);
-                contributorCells.Add(new Vector2Int(tile.X, tile.Y));
+            if (groupList != null)
+            {
+                foreach (var tile in groupList)
+                {
+                    if (tile == null || tile == created || !finalClearTiles.Contains(tile))
+                        continue;
+
+                    contributors.Add(tile);
+                    contributorCells.Add(new Vector2Int(tile.X, tile.Y));
+                }
+            }
+            else
+            {
+                foreach (var tile in finalClearTiles)
+                {
+                    if (tile == null)
+                        continue;
+
+                    contributors.Add(tile);
+                    contributorCells.Add(new Vector2Int(tile.X, tile.Y));
+                }
             }
 
             if (contributors.Count == 0)
@@ -3077,7 +3117,7 @@ public class BoardController : MonoBehaviour
         // Tempo ana düğmesi: formu (v0/a/vmax oranlarını) bozmadan tüm zamanlamayı ölçekler.
         // Büyük değer = hızlı akış. 60 = ham ölçüm temposu; kullanıcı gözle kıyaslayıp
         // 32'de karar kıldı (2026-07-22). 1 hücre ≈ 0.122s, 8 hücre ≈ 0.74s (ort ~10.8 hücre/s).
-        [Min(1f)] public float fps = 32f;
+        [Min(1f)] public float fps = 35.2f;
         [Min(0f)] public float initialSpeedCellsPerFrame = 0.24f;
         [Min(0f)] public float accelerationCellsPerFrameSquared = 0.010f;
         [Min(0.001f)] public float maxSpeedCellsPerFrame = 0.38f;
@@ -3219,25 +3259,14 @@ public class BoardController : MonoBehaviour
     // CalculateCascades logical board'u final pozisyona güncellediği için, bu düşüşten
     // sonra hâlâ match veya doldurulacak boşluk varsa bu bir ara cascade'dir → settle kapat.
     // Böylece taşlar her ara inişte zıplayıp durmaz, akış kesilmez.
+    // KARAR (2026-07-23): Settle HER inişte oynasın — kullanıcı squash'ı tüm taşlarda istiyor
+    // ve 120fps'te akıcı görünüyor. Eskiden takip-match/boş-hücre olunca settle kapatılıyordu;
+    // bu özellikle "special en altta oluşunca üstündekiler squeeze yapmıyor"a yol açıyordu.
+    // Artık hiç kapatılmıyor (no-op). Match-zinciri fazla "adımlı" gelirse çözüm settle'ı
+    // kapatmak DEĞİL, fallSettleDuration'ı kısmak.
     private void DisableSettleIfMoreCascadesFollow(List<BoardAction> cascades)
     {
-        if (cascades == null || cascades.Count == 0)
-            return;
-
-        if (!EnableFallSettle)
-            return;
-
-        bool moreComing =
-            (matchFinder != null && matchFinder.FindAllMatches().Count > 0)
-            || (cascadeLogic != null && cascadeLogic.HasAnyEmptyPlayableCell())
-            || HasPendingPostSettleObstacleAction();
-
-        if (!moreComing)
-            return;
-
-        foreach (var action in cascades)
-            if (action is FallAction fa)
-                fa.DisableSettle();
+        // Kasıtlı no-op — settle her zaman açık.
     }
 
     private bool HasPendingPostSettleObstacleAction()

@@ -180,7 +180,7 @@ public sealed class SpecialCreationService
 
         return new CreationResult(bestTile, bestSpecial);
     }
-    private HashSet<TileView> GetConsumedTilesForCreation(HashSet<TileView> matches, CreationResult creation)
+    internal HashSet<TileView> GetConsumedTilesForCreation(HashSet<TileView> matches, CreationResult creation)
     {
         var result = new HashSet<TileView>();
         if (!creation.hasValue || creation.winner == null || matches == null || matches.Count == 0)

@@ -154,6 +154,16 @@ public class LevelEndSimplePopupController : MonoBehaviour
              "fail yerine success gösterilir.")]
     [SerializeField, Min(0f)] private float failConfirmGraceSeconds = 0.6f;
 
+    // Hamle 0 olduktan sonra board'a settle/altın toplama için verilen ÜST SÜRE.
+    // Bu süre dolduğunda "board hâlâ çalışıyor / pending" olsa bile sonuç ZORLA verilir
+    // (hedefler tamam→success, değilse→fail). Aksi halde uçan altın orb'u ActiveBackgroundJobs'ı
+    // sürekli >0 tutup EvaluateAfterBoardSettled'ı sonsuz beklemede bırakıyordu → oyun 0 hamleyle
+    // devam ediyordu. 5sn meşru altın/cascade için fazlasıyla yeterli.
+    [SerializeField, Min(0.5f)] private float levelEndForceTimeoutSeconds = 5f;
+    private float levelEndForceDeadlineUnscaled = -1f;
+    private bool LevelEndForceDeadlinePassed =>
+        levelEndForceDeadlineUnscaled >= 0f && Time.unscaledTime >= levelEndForceDeadlineUnscaled;
+
     private bool failPopupShown;
     private bool successPopupShown;
     private bool successReturnQueued;
@@ -293,6 +303,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         failConfirmRunning = false;
         isBonusRoundRunning = false;
         hardSkipBonusRoundRequested = false;
+        levelEndForceDeadlineUnscaled = -1f;   // yeni seviye: üst-süre saati sıfırlansın
 
         ResolveSerializedReferences();
         ApplyChapterThemeVisuals();
@@ -799,13 +810,19 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (failPopupShown || successPopupShown)
             return;
 
+        // Hamle 0 ilk gözlendiğinde üst-süre saatini başlat (bir kez). Bu süre dolunca
+        // board hâlâ meşgul/pending olsa bile aşağıdaki ertelemeler devre dışı kalır → sonuç zorla verilir.
+        if (board.RemainingMoves <= 0 && levelEndForceDeadlineUnscaled < 0f)
+            levelEndForceDeadlineUnscaled = Time.unscaledTime + Mathf.Max(0.5f, levelEndForceTimeoutSeconds);
+
         // Son hamlenin board çözümü (cascade + special zinciri + arka plan job'lar)
         // tamamen bitmeden sonucu değerlendirme. RunAfterIdle 3s timeout'u board hâlâ
         // çözülürken erken tetiklenebilir; o anda "hamle kalmadı" değerlendirilirse
         // hedefler cascade sırasında tamamlanacakken fail popup'ı erken açılır.
         // Success yolu (CompleteSuccessAfterBoardSettled) zaten bu şekilde bekliyor;
         // fail yolunu da gerçek idle'a kadar erteleyerek simetriyi sağlıyoruz.
-        if (IsBoardWorkingForLevelEnd())
+        // ANCAK üst-süre dolduysa artık bekleme — zorla değerlendir (sonsuz "0 hamleyle devam" fix'i).
+        if (IsBoardWorkingForLevelEnd() && !LevelEndForceDeadlinePassed)
         {
             if (!failSettleWaitRunning)
             {
@@ -875,8 +892,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
             }
 
             // Board yeniden çalışmaya başladıysa (geç cascade/efekt) — gerçek idle'ı bekle,
-            // sonra yeniden değerlendir (oradan tekrar bu doğrulamaya girebilir).
-            if (IsBoardWorkingForLevelEnd())
+            // sonra yeniden değerlendir. ANCAK üst-süre dolduysa artık bekleme, fail'i kesinleştir.
+            if (IsBoardWorkingForLevelEnd() && !LevelEndForceDeadlinePassed)
             {
                 failConfirmRunning = false;
                 if (!failSettleWaitRunning)
@@ -902,7 +919,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             yield break;
         }
 
-        if (board.RemainingMoves <= 0 && !IsBoardWorkingForLevelEnd())
+        if (board.RemainingMoves <= 0 && (!IsBoardWorkingForLevelEnd() || LevelEndForceDeadlinePassed))
         {
             if (ResolvePendingBoardBeforeFail())
                 yield break;
@@ -916,6 +933,14 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private bool ResolvePendingBoardBeforeFail()
     {
+        // Üst-süre dolduysa artık erteleme — pending (boş hücre/match/altın) olsa bile fail'e devam.
+        // Bu, "altın varken 0 hamleyle oyun devam ediyor" sonsuz ertelemesinin kesin kapısı.
+        if (LevelEndForceDeadlinePassed)
+        {
+            failResolveDeferCount = 0;
+            return false;
+        }
+
         if (board == null || !board.HasPendingAutoResolveForLevelEnd())
         {
             failResolveDeferCount = 0;
@@ -958,7 +983,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         const int requiredStableFrames = 3;
         int stableFrames = 0;
 
-        while (board != null && stableFrames < requiredStableFrames)
+        while (board != null && stableFrames < requiredStableFrames && !LevelEndForceDeadlinePassed)
         {
             bool boardStillWorking = IsBoardWorkingForLevelEnd();
             stableFrames = boardStillWorking ? 0 : stableFrames + 1;
@@ -1271,7 +1296,19 @@ public class LevelEndSimplePopupController : MonoBehaviour
         board.AddMoves(currentOfferAmount);
         board.SetInputLocked(false);
         extraMoveOfferAttempt++;
+
+        // Devam edildi → TÜM level-end değerlendirme state'ini sıfırla ki eklenen hamleler
+        // tekrar 0'a düşünce fail/success yeniden temiz değerlendirilsin. Aksi halde takılı
+        // flag'ler (özellikle endCheckQueued) ikinci 0'da RequestEvaluate'i erken döndürüyor,
+        // deadline ise eski (geçmiş) değerinde kalıyordu → "0 hamleyle devam" tekrarlanıyordu.
         failPopupShown = false;
+        failSecondStage = false;
+        failConfirmRunning = false;
+        failSettleWaitRunning = false;
+        failResolveDeferCount = 0;
+        endCheckQueued = false;
+        levelEndForceDeadlineUnscaled = -1f;
+
         HideAllPopups();
         board.ForceFullBoardSync();
     }

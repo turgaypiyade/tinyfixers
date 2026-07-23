@@ -224,8 +224,11 @@ public class CascadeLogic
                             hasSupport = true;
                         } else {
                             var belowVTile = virtualBoard[finalX, belowY];
-                            // If there is a tile below, and it didn't move (path count == 1), then it's solid
-                            if (belowVTile != null && belowVTile.Path.Count <= 1) {
+                            // Altında oturan bir taş varsa (hareketli VEYA sabit) → squash yapsın.
+                            // Böylece squash kolonda YUKARI DOĞRU zincirlenir: alttaki önce iner+squash,
+                            // üstteki ona değince aynı squash'ı yapar. (Eskiden yalnız sabit-alt taş
+                            // squash yapıyordu → toptan düşen kolonda sadece en alt taş; zincirleme yoktu.)
+                            if (belowVTile != null) {
                                 hasSupport = true;
                             }
                         }

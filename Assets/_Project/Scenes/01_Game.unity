@@ -3514,8 +3514,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.066753924}
-  m_AnchorMax: {x: 0.74712646, y: 1.5647906}
+  m_AnchorMin: {x: 0, y: 0.05875576}
+  m_AnchorMax: {x: 0.74712646, y: 1.3773042}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8664,9 +8664,9 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   enableFallSettle: 1
-  fallSettleDuration: 0.1
-  fallSettleStrength: 0.1
-  fallSettleStretchX: 0.08
+  fallSettleDuration: 0.08
+  fallSettleStrength: 0.11
+  fallSettleStretchX: 0.07
   fallSettleOvershoot: 0.02
   fallStretchAmount: 0.1
   fallStretchRecover: 0.45
@@ -8754,7 +8754,7 @@ MonoBehaviour:
   specialChainDurationMultiplier: 0.5
   pulseImpactDelayStep: 0.05
   pulseImpactAnimTime: 0.1
-  pulseChainCatchOverlap: 0.75
+  pulseChainCatchOverlap: 0.4
   overridePulseChainStagger: 0.12
   boardVfxPlayer: {fileID: 874639811}
   lightningSpawner: {fileID: 1732843067}
@@ -8806,10 +8806,10 @@ MonoBehaviour:
   DrainingBossStrikes: 0
   activeFallProfile:
     enabled: 1
-    fps: 32
-    initialSpeedCellsPerFrame: 0.24
+    fps: 65
+    initialSpeedCellsPerFrame: 0.3
     accelerationCellsPerFrameSquared: 0.01
-    maxSpeedCellsPerFrame: 0.38
+    maxSpeedCellsPerFrame: 0.45
 --- !u!114 &1410826447
 MonoBehaviour:
   m_ObjectHideFlags: 0

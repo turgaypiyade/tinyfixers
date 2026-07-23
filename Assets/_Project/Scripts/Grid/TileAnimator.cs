@@ -376,55 +376,309 @@ public sealed class TileAnimator
             yield break;
         }
 
-        // Yeni animasyon: Taşların birleşmesi yerine merkezden "pop" ve halka efektiyle ortaya çıkması
-        if (board != null && board.Parent != null && createdIconRt != null)
+        // Board yoksa basit pop fallback.
+        if (board == null || board.Parent == null)
         {
-            Vector3[] _cornersAppear = new Vector3[4];
-            createdIconRt.GetWorldCorners(_cornersAppear);
-            Vector3 _appearCenter = (_cornersAppear[0] + _cornersAppear[2]) * 0.5f;
+            yield return PlayCreatedSpecialAppearOnly(createdTile, duration);
+            yield break;
+        }
 
-            // Burst animasyonu (halka ve yıldızlar)
-            board.StartCoroutine(TileClearBurstVfx.CoPlayBurstAtWorldPosition(
-                _appearCenter, board.Parent, board, BURST_VFX_DURATION));
+        RectTransform ghostParent = board.Parent;
+        Vector2 targetPos = GetRectCenterInParentSpace(ghostParent, createdIconRt);
+
+        // ── Katkı taşları için ghost'lar (kaynak ikonları gizlenir) ──
+        var ghosts = new List<SpecialCreationGhostState>();
+        var seen = new HashSet<TileView>();
+        if (sourceTiles != null)
+        {
+            foreach (var src in sourceTiles)
+            {
+                if (src == null || src == createdTile || !seen.Add(src))
+                    continue;
+
+                Image srcIcon = src.IconImage;
+                RectTransform srcIconRt = srcIcon != null ? srcIcon.rectTransform : null;
+                if (srcIcon == null || srcIconRt == null || srcIcon.sprite == null)
+                    continue;
+
+                GameObject ghostGo = new GameObject(
+                    "SpecialGatherGhost",
+                    typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+
+                RectTransform ghostRt = ghostGo.GetComponent<RectTransform>();
+                ghostRt.SetParent(ghostParent, false);
+                ghostRt.anchorMin = CenterPivot;
+                ghostRt.anchorMax = CenterPivot;
+                ghostRt.pivot = CenterPivot;
+                ghostRt.SetAsLastSibling();
+                ghostRt.sizeDelta = GetRectSizeInParentSpace(srcIconRt, ghostParent);
+                ghostRt.anchoredPosition = GetRectCenterInParentSpace(ghostParent, srcIconRt);
+                ghostRt.localScale = Vector3.one;
+                ghostRt.localRotation = Quaternion.identity;
+
+                Image ghostImg = ghostGo.GetComponent<Image>();
+                ghostImg.sprite = srcIcon.sprite;
+                ghostImg.type = srcIcon.type;
+                ghostImg.preserveAspect = srcIcon.preserveAspect;
+                ghostImg.material = srcIcon.material;
+                ghostImg.raycastTarget = false;
+                ghostImg.color = srcIcon.color;
+
+                CanvasGroup ghostGroup = ghostGo.GetComponent<CanvasGroup>();
+                ghostGroup.alpha = srcIcon.color.a;
+
+                ghosts.Add(new SpecialCreationGhostState
+                {
+                    tile = src,
+                    sourceImage = srcIcon,
+                    sourceColor = srcIcon.color,
+                    ghostRect = ghostRt,
+                    ghostGroup = ghostGroup,
+                    startPos = ghostRt.anchoredPosition
+                });
+
+                Color hidden = srcIcon.color; hidden.a = 0f;
+                srcIcon.color = hidden;
+            }
+        }
+
+        // Katkı taşı yoksa basit pop.
+        if (ghosts.Count == 0)
+        {
+            yield return PlayCreatedSpecialAppearOnly(createdTile, duration);
+            yield break;
         }
 
         Vector3 baseScale = createdIconRt.localScale;
-        Quaternion baseRotation = createdIconRt.localRotation;
         Color baseColor = createdIcon.color;
 
+        // ── Anchor ghost: swap taşının ORİJİNAL (special'sız) hali, hedefte bekler.
+        // Match aynı renk olduğundan bir katkı taşının sprite'ı = orijinal görsel.
+        // ÖLÇÜM createdIconRt küçültülmeden ÖNCE yapılır. Kozmetik → try/catch ile board asla kilitlenmez.
+        RectTransform anchorGhostRt = null;
+        try
+        {
+            Image rep = null; Color repColor = Color.white;
+            for (int gi = 0; gi < ghosts.Count; gi++)
+            {
+                if (ghosts[gi].sourceImage != null && ghosts[gi].sourceImage && ghosts[gi].sourceImage.sprite != null)
+                { rep = ghosts[gi].sourceImage; repColor = ghosts[gi].sourceColor; break; }
+            }
+
+            if (rep != null)
+            {
+                GameObject aGo = new GameObject(
+                    "SpecialAnchorGhost",
+                    typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+                anchorGhostRt = aGo.GetComponent<RectTransform>();
+                anchorGhostRt.SetParent(ghostParent, false);
+                anchorGhostRt.anchorMin = CenterPivot;
+                anchorGhostRt.anchorMax = CenterPivot;
+                anchorGhostRt.pivot = CenterPivot;
+                anchorGhostRt.SetAsLastSibling(); // katkılar bunun ALTINDA toplanır
+                anchorGhostRt.sizeDelta = GetRectSizeInParentSpace(createdIconRt, ghostParent);
+                anchorGhostRt.anchoredPosition = targetPos;
+                anchorGhostRt.localScale = Vector3.one;
+                anchorGhostRt.localRotation = Quaternion.identity;
+
+                Image aImg = aGo.GetComponent<Image>();
+                aImg.sprite = rep.sprite;
+                aImg.type = rep.type;
+                aImg.preserveAspect = rep.preserveAspect;
+                aImg.material = rep.material;
+                aImg.raycastTarget = false;
+                aImg.color = new Color(repColor.r, repColor.g, repColor.b, 1f);
+                aGo.GetComponent<CanvasGroup>().alpha = 1f;
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[SpecialCreationMerge] anchor ghost skipped: {e.Message}");
+            anchorGhostRt = null;
+        }
+
+        // Gerçek special gather boyunca GİZLİ (hemen çıkmasın); anchor ghost onun yerine bekler.
         createdTile.transform.localScale = Vector3.one;
         createdTile.transform.localRotation = Quaternion.identity;
         createdGroup.alpha = 0f;
-        createdIconRt.localScale = baseScale * 0.10f;
+        createdIconRt.localScale = baseScale * 0.18f;
         createdIconRt.localRotation = Quaternion.identity;
         createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
 
-        float animDuration = Mathf.Clamp(duration, 0.10f, 0.16f);
-        float t = 0f;
+        float gatherDuration = Mathf.Max(0.12f, duration); // görünür ama snappy toplanma
+        float flashDuration = 0.05f;
+        float settleDuration = 0.035f;
+        float pulseScale = 1.16f;
 
+        // PARALEL: gather+reveal+settle ARKA PLANDA (fire-and-forget). PlaySpecialCreationMerge
+        // hemen döner → formation biter, delikler açılır, board HEMEN düşüşe geçer. Ghost'lar
+        // (bağımsız kopya) taşlar düşerken merkeze toplanıp special'ı YOLDA oluşturur.
+        // Saf görsel coroutine — background-job sayacına dokunmaz (hang riski yok).
+        if (board != null)
+            board.StartCoroutine(CoAnimateSpecialGather(
+                createdTile, createdIcon, createdIconRt, createdGroup,
+                baseScale, baseColor, ghosts, anchorGhostRt, targetPos, ghostParent,
+                gatherDuration, flashDuration, settleDuration, pulseScale));
+    }
+
+    // Gather + reveal + settle — ARKA PLAN (board düşerken). Ghost'lar bağımsız kopya olduğu
+    // için kaynak taşlar (FinalClearTiles ile) temizlense de animasyon bozulmadan tamamlanır.
+    private IEnumerator CoAnimateSpecialGather(
+        TileView createdTile,
+        Image createdIcon,
+        RectTransform createdIconRt,
+        CanvasGroup createdGroup,
+        Vector3 baseScale,
+        Color baseColor,
+        List<SpecialCreationGhostState> ghosts,
+        RectTransform anchorGhostRt,
+        Vector2 targetPos,
+        RectTransform ghostParent,
+        float gatherDuration,
+        float flashDuration,
+        float settleDuration,
+        float pulseScale)
+    {
         try
         {
-            while (t < animDuration)
+            // Toplanma: TÜM katkı taşları AYNI ANDA merkeze akar, ikinci yarıda solup birleşir.
+            float t = 0f;
+            while (t < gatherDuration)
             {
-                if (createdTile == null || createdIconRt == null)
+                if (createdTile == null || !createdTile || createdIconRt == null || !createdIconRt)
                     yield break;
 
                 t += Time.deltaTime;
-                float k = Mathf.Clamp01(t / animDuration);
+                float p = Mathf.Clamp01(t / gatherDuration);
+                float e = EaseOutCubic(p);
+                float fade = Mathf.InverseLerp(0.5f, 1f, p);
 
-                float fadeEase = Mathf.Clamp01(k * 1.5f);
-                float createdScaleFactor = EvaluateCreatedSpecialScale(k);
-
-                createdIconRt.localScale = baseScale * createdScaleFactor;
-                createdIconRt.localRotation = Quaternion.identity;
-                createdGroup.alpha = fadeEase;
-                createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, fadeEase);
+                for (int i = 0; i < ghosts.Count; i++)
+                {
+                    var g = ghosts[i];
+                    if (g.ghostRect == null || !g.ghostRect) continue;
+                    g.ghostRect.anchoredPosition = Vector2.LerpUnclamped(g.startPos, targetPos, e);
+                    g.ghostRect.localScale = Vector3.LerpUnclamped(Vector3.one, Vector3.one * 0.18f, e);
+                    if (g.ghostGroup != null && g.ghostGroup)
+                        g.ghostGroup.alpha = Mathf.Lerp(g.sourceColor.a, 0f, fade);
+                }
 
                 yield return null;
+            }
+
+            // Toplanma bitti → bekleyen anchor'ı kaldır, special şimdi belirir.
+            if (anchorGhostRt != null && anchorGhostRt && anchorGhostRt.gameObject != null)
+            {
+                Object.Destroy(anchorGhostRt.gameObject);
+                anchorGhostRt = null;
+            }
+
+            if (ghostParent != null && ghostParent && board != null)
+            {
+                Vector3 worldCenter = ghostParent.TransformPoint(targetPos);
+                board.StartCoroutine(TileClearBurstVfx.CoPlayBurstAtWorldPosition(
+                    worldCenter, ghostParent, board, Mathf.Max(flashDuration, 0.12f)));
+            }
+
+            // ── REVEAL ──
+            // LineV/H/PulseCore: normalin ÜSTÜNDE (1.30×) belirip kendi ekseninde 360° dönüp
+            // yerine oturur — çok kısa (~0.06sn). Diğer special'lar: eski flash+pop+settle.
+            bool isSpinReveal =
+                createdTile != null && createdTile &&
+                (createdTile.GetSpecial() == TileSpecial.LineV
+                 || createdTile.GetSpecial() == TileSpecial.LineH
+                 || createdTile.GetSpecial() == TileSpecial.PulseCore);
+
+            if (isSpinReveal)
+            {
+                float revealDur = 0.08f;   // pop + spin + otur
+                float peakScale = 1.50f;   // normalin %50 üstü
+                float spinDegrees = 360f;  // bir tam tur, 0'da biter
+                Color colorTarget = new Color(baseColor.r, baseColor.g, baseColor.b, 1f);
+
+                t = 0f;
+                while (t < revealDur)
+                {
+                    if (createdTile == null || !createdTile || createdIconRt == null || !createdIconRt)
+                        yield break;
+
+                    t += Time.deltaTime;
+                    float k = Mathf.Clamp01(t / revealDur);
+
+                    // Scale: ilk %45 pop (0.22→1.20), sonra 1.20→1.0 otur.
+                    float scaleFactor = k < 0.45f
+                        ? Mathf.LerpUnclamped(0.22f, peakScale, EaseOutCubic(k / 0.45f))
+                        : Mathf.LerpUnclamped(peakScale, 1f, EaseOutCubic((k - 0.45f) / 0.55f));
+                    createdIconRt.localScale = baseScale * scaleFactor;
+
+                    // Spin: 360°→0 (easeOut), tam turda 0'da biter.
+                    createdIconRt.localRotation = Quaternion.Euler(0f, 0f,
+                        Mathf.LerpUnclamped(spinDegrees, 0f, EaseOutCubic(k)));
+
+                    // Hızlı fade-in + kısa beyaz parlama.
+                    float a = Mathf.Clamp01(k * 3.3f);
+                    if (createdGroup != null && createdGroup) createdGroup.alpha = a;
+                    if (createdIcon != null && createdIcon)
+                    {
+                        Color c = Color.Lerp(Color.white, colorTarget, Mathf.Clamp01(k * 1.6f));
+                        c.a = a;
+                        createdIcon.color = c;
+                    }
+                    yield return null;
+                }
+
+                // Final: tam normale otur (scale 1, rotation 0).
+                createdIconRt.localScale = baseScale;
+                createdIconRt.localRotation = Quaternion.identity;
+                if (createdGroup != null && createdGroup) createdGroup.alpha = 1f;
+                if (createdIcon != null && createdIcon) createdIcon.color = colorTarget;
+            }
+            else
+            {
+                // Flash: special fade-in + pop.
+                t = 0f;
+                while (t < flashDuration)
+                {
+                    if (createdTile == null || !createdTile || createdIconRt == null || !createdIconRt)
+                        yield break;
+
+                    t += Time.deltaTime;
+                    float k = Mathf.Clamp01(t / flashDuration);
+                    if (createdGroup != null && createdGroup) createdGroup.alpha = k;
+                    if (createdIcon != null && createdIcon)
+                        createdIcon.color = Color.Lerp(new Color(baseColor.r, baseColor.g, baseColor.b, 0f), Color.white, k);
+                    createdIconRt.localScale = Vector3.LerpUnclamped(baseScale * 0.22f, baseScale * pulseScale, EaseOutCubic(k));
+                    yield return null;
+                }
+
+                // Settle: pulseScale'den normale, white'tan renge (kısa).
+                t = 0f;
+                while (t < settleDuration)
+                {
+                    if (createdTile == null || !createdTile || createdIconRt == null || !createdIconRt)
+                        yield break;
+
+                    t += Time.deltaTime;
+                    float k = EaseOutCubic(Mathf.Clamp01(t / Mathf.Max(0.0001f, settleDuration)));
+                    createdIconRt.localScale = Vector3.LerpUnclamped(baseScale * pulseScale, baseScale, k);
+                    if (createdIcon != null && createdIcon)
+                        createdIcon.color = Color.Lerp(Color.white, new Color(baseColor.r, baseColor.g, baseColor.b, 1f), k);
+                    if (createdGroup != null && createdGroup) createdGroup.alpha = 1f;
+                    yield return null;
+                }
             }
         }
         finally
         {
+            for (int i = 0; i < ghosts.Count; i++)
+            {
+                try { if (ghosts[i].ghostRect != null && ghosts[i].ghostRect && ghosts[i].ghostRect.gameObject != null) Object.Destroy(ghosts[i].ghostRect.gameObject); }
+                catch (MissingReferenceException) { }
+            }
+
+            try { if (anchorGhostRt != null && anchorGhostRt && anchorGhostRt.gameObject != null) Object.Destroy(anchorGhostRt.gameObject); }
+            catch (MissingReferenceException) { }
+
             try
             {
                 if (createdTile != null && createdTile)
@@ -437,6 +691,7 @@ public sealed class TileAnimator
             catch (MissingReferenceException) { }
         }
     }
+
     private static float EaseOutCubic(float t)
     {
         float inv = 1f - Mathf.Clamp01(t);

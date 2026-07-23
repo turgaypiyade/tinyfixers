@@ -764,8 +764,11 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
         if (axis == LineAxis.Horizontal)
         {
-            leftRt.localEulerAngles = Vector3.zero;
-            rightRt.localEulerAngles = Vector3.zero;
+            // Yatay: 180° → başlıklar DIŞARI (--> <--  →  <-- -->). "0" başlıkları İÇERİ
+            // koyuyordu (standalone LineH'de de doğrulandı). 180° tüm sprite'ı (başlık+alev)
+            // çevirir → başlık dışarı VE roketin kendi alevi içeri döner (trail ile uyumlu).
+            leftRt.localEulerAngles = new Vector3(0f, 0f, 180f);
+            rightRt.localEulerAngles = new Vector3(0f, 0f, 180f);
         }
         else
         {
