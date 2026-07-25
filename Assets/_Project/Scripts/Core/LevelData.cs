@@ -157,6 +157,13 @@ public enum ObstacleId : int
     // son hitte Barrel ile aynı şekilde Mud saçar. ObstacleDef: hits=4,
     // stages[0..3] OverTileBlocker olarak konfigüre edilmeli.
     Barrell_v2 = 41,
+
+    // Dekoratif bitki örtüsü (grass). Gameplay'e KARIŞMAZ: hücreyi bloke etmez, swap/match
+    // kilitlemez, gravity geçer — altındaki taş tamamen normal oynanır. obstacles[]'te yalnızca
+    // işaretçi olarak durur; görselini (2 sprite geçmeli/seamless, hit'te sallanan) ve komşu-match
+    // hasarını GrassOverlayService yönetir. Grass kendi hücresindeki match'ten HASAR ALMAZ; yalnızca
+    // KOMŞU (görünür yan) hücrelerde bir taş temizlenince aşınır, N hit sonra kalkar.
+    Grass = 42,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }

@@ -1578,6 +1578,16 @@ public class ObstacleStateService : ISimObstacleQuery
         return (ObstacleId)level.obstacles[idx] == ObstacleId.Oil;
     }
 
+    // Grass: Oil gibi CellAnchoredOverlay (locksInteraction). Komşu-match hasarı için Oil ile
+    // aynı yola dahil edilir (CollectAdjacentOverTileBlockers). Match/swap kilidi genel
+    // IsInteractionLockedAt üzerinden zaten çalışır (def locksInteraction=1).
+    public bool IsGrassAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx] == ObstacleId.Grass;
+    }
+
     // Mud sadece görsel overlay; swap/interaction'ı bloklamaz.
     // BoardController IsUnderTileObstacleAt check'inde Mud'u istisna yapmak için kullanılır.
     public bool IsMudAt(int x, int y)

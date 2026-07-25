@@ -53,6 +53,11 @@ public class GridSpawner : MonoBehaviour
     [Header("Mud Overlay")]
     [SerializeField] private MudOverlayService mudOverlayService;
 
+    [Header("Grass Overlay")]
+    [Tooltip("Grass hücre görsellerinin doğacağı root — taşların ÜSTÜNDE olmalı. Boşsa otomatik kurulur.")]
+    [SerializeField] private RectTransform grassOverlayRoot;
+    [SerializeField] private GrassOverlayService grassOverlayService;
+
     [Header("Rocket Basket")]
     [SerializeField] private RocketBasketService rocketBasketService;
     [SerializeField] private Color runtimeBoardBg = new Color(0.78f, 0.88f, 0.97f, 1f);
@@ -309,6 +314,7 @@ public class GridSpawner : MonoBehaviour
 
         if (cellBgRoot != null) cellBgRoot.anchoredPosition = inner;
         if (mudOverlayRoot != null) mudOverlayRoot.anchoredPosition = inner;
+        if (grassOverlayRoot != null) grassOverlayRoot.anchoredPosition = inner;   // grass PlaceInCell top-left hizası (mud ile aynı)
         if (gridLinesRoot != null) gridLinesRoot.anchoredPosition = inner;
         if (tilesRoot != null) tilesRoot.anchoredPosition = inner;
         if (obstaclesRoot != null) obstaclesRoot.anchoredPosition = inner;
@@ -359,6 +365,7 @@ public class GridSpawner : MonoBehaviour
             DrawObstacleVisuals();
             DrawStampedBeneathVisuals();   // overlay altındaki obstacle'ı arkada baştan göster
             DrawMudOverlays();
+            DrawGrassOverlays();
             DrawTubeObstacles();
             DrawMagnetObstacles();
             DrawSafeObstacles();
@@ -530,6 +537,8 @@ public class GridSpawner : MonoBehaviour
         if (gridLinesRoot != null) gridLinesRoot.SetSiblingIndex(1);
         if (mudOverlayRoot != null) mudOverlayRoot.SetSiblingIndex(2);
         if (obstaclesRoot != null) obstaclesRoot.SetAsLastSibling();
+        // Grass örtüsü taşların ÜSTÜNDE görünmeli (görüntüyü örter) → tiles/obstacles'tan sonra son sıraya.
+        if (grassOverlayRoot != null) grassOverlayRoot.SetAsLastSibling();
 
         // Magnet path overlay'i (glow yol + uç sprite'ları) taşların ve obstacle'ların ÜSTÜNDE
         // render edilmeli; aksi halde tilesRoot.SetAsLastSibling magnet'i taşların arkasında bırakır
@@ -870,6 +879,83 @@ public class GridSpawner : MonoBehaviour
         if (remaining <= 0) remaining = mudMaxHits;
 
         mudOverlayService.RegisterCell(x, y, view, remaining, mudMaxHits);
+    }
+
+    // ── Grass overlay ────────────────────────────────────────────────────────────
+
+    /// Grass, Oil gibi gerçek bir CellAnchoredOverlay obstacle'ıdır (obstacles[]'te kalır). Bu metod
+    /// yalnızca GÖRSELİ çizer: id==Grass hücrelerine GrassCellView doğurur; hasar/temizlenme
+    /// ObstacleVisualChanged üzerinden GrassOverlayService'e akar.
+    private void DrawGrassOverlays()
+    {
+        if (resolvedLevel?.obstacles == null || resolvedLevel.obstacleOrigins == null) return;
+
+        // Root her hâlükârda EnsureRoots'ta otomatik kurulur; yine de garanti altına al.
+        if (grassOverlayRoot == null)
+        {
+            var rootParent = spawnParent != null ? spawnParent : (RectTransform)transform;
+            grassOverlayRoot = GetOrCreateChildRoot(rootParent, "GrassOverlay");
+            grassOverlayRoot.gameObject.layer = rootParent.gameObject.layer; // culling'i önle
+            grassOverlayRoot.anchoredPosition = new Vector2(boardPadding, -boardPadding);
+            grassOverlayRoot.SetAsLastSibling();
+        }
+
+        // Service atanmamışsa: sahnede bul, yoksa root'a otomatik ekle (default ayarlar + library sprite).
+        if (grassOverlayService == null)
+            grassOverlayService = FindObjectOfType<GrassOverlayService>();
+        if (grassOverlayService == null)
+            grassOverlayService = grassOverlayRoot.gameObject.AddComponent<GrassOverlayService>();
+
+        grassOverlayService.Init(board, width, height, tileSize);
+
+        // Temel görsel: ObstacleLibrary Grass def'inin stage sprite'ı. Service A/B doluysa checkerboard override.
+        var grassDef = resolvedLevel.obstacleLibrary != null
+            ? resolvedLevel.obstacleLibrary.Get(ObstacleId.Grass)
+            : null;
+        if (grassDef != null) grassOverlayService.SetBaseSprite(grassDef.GetPreviewSprite());
+
+        int grassMaxHits = grassDef != null ? Mathf.Max(1, grassDef.hits) : 1;
+        int spawned = 0;
+
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            int idx = resolvedLevel.Index(x, y);
+            if ((ObstacleId)resolvedLevel.obstacles[idx] != ObstacleId.Grass) continue;
+            // Grass 1x1 — origin kendi hücresi.
+            if (resolvedLevel.obstacleOrigins[idx] != idx) continue;
+
+            bool isEmpty = resolvedLevel.cells != null
+                && idx < resolvedLevel.cells.Length
+                && resolvedLevel.cells[idx] == (int)CellType.Empty;
+            if (isEmpty) continue;
+
+            SpawnGrassOverlayCell(x, y, grassMaxHits);
+            spawned++;
+        }
+
+        Debug.Log($"[Grass] {spawned} view doğdu. sprite={(grassOverlayService.GetSpriteForCell(0, 0) != null ? "VAR" : "YOK")}");
+    }
+
+    private void SpawnGrassOverlayCell(int x, int y, int maxHits)
+    {
+        if (grassOverlayService == null || grassOverlayRoot == null) return;
+        if (grassOverlayService.TryGetView(x, y, out var existing) && existing != null) return;
+
+        var go = new GameObject(
+            $"Grass_{x}_{y}",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(UnityEngine.UI.Image),
+            typeof(GrassCellView));
+        go.layer = grassOverlayRoot.gameObject.layer;   // Screen Space Camera culling'i önle
+        go.transform.SetParent(grassOverlayRoot, false);
+
+        int remaining = board?.ObstacleStateService?.GetRemainingHitsAt(x, y) ?? maxHits;
+        if (remaining <= 0) remaining = maxHits;
+
+        var view = go.GetComponent<GrassCellView>();
+        grassOverlayService.RegisterCell(x, y, view, remaining, maxHits);
     }
 
     private void StampTubeCellsIntoLevel(LevelData lvl)
@@ -1403,6 +1489,14 @@ public class GridSpawner : MonoBehaviour
 
         if (tilesRoot == null)
             tilesRoot = GetOrCreateChildRoot(root, "Tiles");
+
+        // Grass overlay: mud gibi board'a hizalı bir child root; sibling sırası taşların ÜSTÜNE alınır
+        // (aşağıda). Inspector'da atanmadıysa otomatik kurulur — elle kurulum gerekmez.
+        if (grassOverlayRoot == null)
+        {
+            grassOverlayRoot = GetOrCreateChildRoot(root, "GrassOverlay");
+            grassOverlayRoot.gameObject.layer = root.gameObject.layer; // Screen Space Camera culling'i önle
+        }
     }
 
     private RectTransform GetOrCreateChildRoot(RectTransform parent, string name)
@@ -2062,6 +2156,11 @@ public class GridSpawner : MonoBehaviour
         // Movable obstacle burada ASLA büyütülmez.
         // O TileView üzerinden normal ikon gibi davranacak.
         if (def.IsMovableObstacle)
+            return null;
+
+        // Grass: görselini GrassOverlayService çiziyor (2-sprite, taşırmalı, sallanan). Burada
+        // varsayılan obstacle image'ını çizme (çift-render olmasın).
+        if (def.id == ObstacleId.Grass)
             return null;
 
         if (def.id == ObstacleId.ColorChest)

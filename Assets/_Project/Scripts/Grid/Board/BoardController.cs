@@ -663,6 +663,7 @@ public class BoardController : MonoBehaviour
     }
     internal void OnLineSweepCellReachedInternal(Vector2Int cell, LightningLineStrike strike) => OnLineSweepCellReached?.Invoke(cell, strike);
     internal ObstacleResolutionService Obstacles => obstacleResolutionService;
+
     // -- gems break animations
     internal BoardBreakFxService BreakFx => boardBreakFxService;
     internal RectTransform BreakFxParent => vfxSpace != null ? vfxSpace : parent;

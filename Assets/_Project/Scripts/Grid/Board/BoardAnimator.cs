@@ -1348,7 +1348,7 @@ public class BoardAnimator
             if (neighbor.x < 0 || neighbor.x >= board.Width || neighbor.y < 0 || neighbor.y >= board.Height)
                 continue;
 
-            if (!board.Obstacles.IsOverTileBlockerAt(neighbor.x, neighbor.y) && !board.ObstacleStateService.IsOilAt(neighbor.x, neighbor.y))
+            if (!board.Obstacles.IsOverTileBlockerAt(neighbor.x, neighbor.y) && !board.ObstacleStateService.IsOilAt(neighbor.x, neighbor.y) && !board.ObstacleStateService.IsGrassAt(neighbor.x, neighbor.y))
                 continue;
 
             if (obstacleDamageCounts.TryGetValue(neighbor, out int existing))
@@ -1378,7 +1378,10 @@ public class BoardAnimator
             bool isOil =
                 board.ObstacleStateService.IsOilAt(cell.x, cell.y);
 
-            if (!isDamageableOverTile && !isOil)
+            bool isGrass =
+                board.ObstacleStateService.IsGrassAt(cell.x, cell.y);
+
+            if (!isDamageableOverTile && !isOil && !isGrass)
                 return;
 
             // Magnet: yalnızca GÜNCEL uçlar (A/B) hasar alır; orta yol hücreleri inert. Orta hücreyi
@@ -1431,7 +1434,8 @@ public class BoardAnimator
                 return;
 
             if (!board.Obstacles.IsOverTileBlockerAt(cell.x, cell.y)
-                && !board.ObstacleStateService.IsOilAt(cell.x, cell.y))
+                && !board.ObstacleStateService.IsOilAt(cell.x, cell.y)
+                && !board.ObstacleStateService.IsGrassAt(cell.x, cell.y))
                 return;
 
             // Magnet: sadece güncel uçlar hasar alır; orta yol hücreleri inert → toplama.
