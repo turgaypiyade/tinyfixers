@@ -108,7 +108,10 @@ public class BoosterService
                 {
                     lightningLineStrikes.Add(new LightningLineStrike(
                         targetCell.Value,
-                        mode == BoardController.BoosterMode.Row));
+                        mode == BoardController.BoosterMode.Row,
+                        startDelaySeconds: 0f,
+                        // Row booster (joker) drill VFX kullanır; LineH special değil.
+                        useDrillSweep: mode == BoardController.BoosterMode.Row));
                 }
 
                 if (lightningLineStrikes.Count == 0)

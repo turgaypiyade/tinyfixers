@@ -196,7 +196,8 @@ public class LineSweepService
 
             float endTime = PlayTwoWaySweep(
                 lightningSpawner, lineTravelPlayer,
-                x, y, strike.isHorizontal, delay, EmitSweepCell);
+                x, y, strike.isHorizontal, delay, EmitSweepCell,
+                useDrillSweep: strike.useDrillSweep);
 
             if (endTime > maxEndTime) maxEndTime = endTime;
         }
@@ -242,11 +243,12 @@ public class LineSweepService
         int originX, int originY, bool isHorizontal,
         float delaySeconds,
         Action<Vector2Int> onSweepCellReached,
-        Action onCompleted = null)
+        Action onCompleted = null,
+        bool useDrillSweep = false)
     {
-        // LineH: roket yerine TEK dönen drill (atanmışsa). Satırın sol ucundan sağ uca süpürür.
-        // LineV (dikey) roket kalır.
-        if (isHorizontal && board.DrillSweepPlayer != null)
+        // Yalnızca Row booster (joker) yatay süpürmesi TEK dönen drill kullanır (atanmışsa).
+        // LineH special ve diğer çizgiler eski iki-yönlü roket davranışına döner.
+        if (isHorizontal && useDrillSweep && board.DrillSweepPlayer != null)
             return PlayHorizontalDrillSweep(originY, delaySeconds, onSweepCellReached, onCompleted);
 
         if (lineTravelPlayer != null)
