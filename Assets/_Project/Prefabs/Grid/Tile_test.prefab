@@ -240,6 +240,19 @@ MonoBehaviour:
   breathAmplitude: 0.05
   breathPauseMin: 1.5
   breathPauseMax: 3.5
+  spinFrames:
+  - {fileID: 21300000, guid: 62d6c69bbab7147db80268992b5e1073, type: 3}
+  - {fileID: 21300000, guid: cd170838fbdda47359fbc71f8681d501, type: 3}
+  - {fileID: 21300000, guid: 4ce194eafabde4cce826fbac8839a17d, type: 3}
+  - {fileID: 21300000, guid: e8e19d092223b4c988d13225f976ee1a, type: 3}
+  - {fileID: 21300000, guid: 9076bc522306d430da54512f3b0177dc, type: 3}
+  - {fileID: 21300000, guid: 32ceac02e7a124cc4bc3d25547e0b3c7, type: 3}
+  spinFrameFps: 50
+  spinStartScale: 0.75
+  spinPeakScale: 2.5
+  spinGrowDuration: 0.22
+  spinShrinkDuration: 0.28
+  spinContinuous: 0
 --- !u!1 &8082158129049703175
 GameObject:
   m_ObjectHideFlags: 0
@@ -323,7 +336,6 @@ MonoBehaviour:
   propellerView: {fileID: 3906672644494819645}
   overrideSpecialView: {fileID: 3442276349837178895}
   fuseSparkleView: {fileID: 656804247279960155}
-  oilOverlaySprite: {fileID: 21300000, guid: 5003bc0f577ff42479466f962e00a616, type: 3}
   iconScale: 1
   iconSize: {x: 105, y: 105}
   useFullCellIcon: 0

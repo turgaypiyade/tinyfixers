@@ -818,6 +818,15 @@ public class BoosterService
         if (booster == null)
             yield break;
 
+        Image boosterImg = booster.GetComponent<Image>();
+        if (boosterImg == null)
+            boosterImg = booster.GetComponentInChildren<Image>();
+
+        if (boosterImg != null && board.RowBoosterWithDrillSprite != null)
+        {
+            boosterImg.sprite = board.RowBoosterWithDrillSprite;
+        }
+
         RectTransform parent = board.BoosterFxParent;
         if (parent == null)
         {
@@ -877,6 +886,12 @@ public class BoosterService
         booster.anchoredPosition = targetPos;
 
         yield return PlayVerticalBoosterFirePulse(booster, targetPos);
+
+        // Drill yola çıkınca drill'siz sprite'a geç
+        if (boosterImg != null && board.RowBoosterWithoutDrillSprite != null)
+        {
+            boosterImg.sprite = board.RowBoosterWithoutDrillSprite;
+        }
 
         // Fire anindan sonra mevcut Row clear baslasin.
         exitRoutine?.Invoke(PlayVerticalBoosterExitFx(booster, canvasGroup, targetPos));
@@ -1047,19 +1062,34 @@ public class BoosterService
             yield break;
         }
 
-        // Initial simulation gibi: randomPool'dan tek tek yerleştir, match oluşmadan.
-        var simResult = boardInitService.SimulateInitialTypes(
-            board.Width, board.Height, lockedMask, board.RandomPool);
+        // ÖNCE mevcut taşların PERMÜTASYONUNU dene (aynı taşlar → yeni yerler). Böylece
+        // BuildShuffleSourceMap eşleşir → taşlar GÖRÜNÜR şekilde hareket eder (kullanıcı değişimi
+        // izleyebilir). SimulateInitialTypes yeni tipler ürettiği için mapping tutmaz → anında/
+        // animasyonsuz else dalına düşülüyordu (auto-shuffle'da görülmezdi).
+        TileType[,] finalTypes;
+        bool ok;
 
-        // Locked hücrelerin tiplerini koru (special, obstacle vb.)
-        for (int y = 0; y < board.Height; y++)
-            for (int x = 0; x < board.Width; x++)
-                if (lockedMask[x, y])
-                    simResult[x, y] = currentTypes[x, y];
+        if (TryBuildPermutationShuffleTypes(currentTypes, lockedMask, out var permuted))
+        {
+            finalTypes = permuted;
+            ok = true;
+            Debug.Log("[Shuffle] Permutation shuffle (animasyonlu, görünür).");
+        }
+        else
+        {
+            // Yedek: no-match + oynanabilir permütasyon bulunamadı → eski yol (yeni tipler, anında).
+            var simResult = boardInitService.SimulateInitialTypes(
+                board.Width, board.Height, lockedMask, board.RandomPool);
 
-        TileType[,] finalTypes = simResult;
-        bool ok = finalTypes != null;
-        Debug.Log($"[Shuffle] SimulateInitialTypes returned ok={ok}");
+            for (int y = 0; y < board.Height; y++)
+                for (int x = 0; x < board.Width; x++)
+                    if (lockedMask[x, y])
+                        simResult[x, y] = currentTypes[x, y];
+
+            finalTypes = simResult;
+            ok = finalTypes != null;
+            Debug.Log($"[Shuffle] Permutation başarısız → SimulateInitialTypes fallback ok={ok}");
+        }
 
         if (ok)
         {
@@ -1070,8 +1100,15 @@ public class BoosterService
 
             if (hasMapping)
             {
+                // Shuffle'dan ÖNCE ekran biraz kalsın — kullanıcı "hamle yok, board değişecek"i
+                // fark etsin (yoksa ani değişimi anlamıyor).
+                yield return new WaitForSeconds(0.6f);
+
                 yield return AnimateShufflePreview(sourceForDest, lockedMask);
                 CommitShuffleFromSourceMap(sourceForDest, lockedMask);
+
+                // Yeni board'a da kısa bir hold — yerleşimi görsün.
+                yield return new WaitForSeconds(0.25f);
             }
             else
             {
@@ -1090,6 +1127,101 @@ public class BoosterService
         }
 
         board.EndBusy();
+    }
+
+    // Mevcut taşların (unlocked) tiplerini karıştırıp yeni yerlere koyar — PERMÜTASYON.
+    // no-immediate-match + en az bir oynanabilir swap garantisi (deadlock çözülsün) arar.
+    // Bulamazsa false → çağıran SimulateInitialTypes'a düşer.
+    private bool TryBuildPermutationShuffleTypes(
+        TileType[,] currentTypes, bool[,] lockedMask, out TileType[,] result)
+    {
+        int w = board.Width, h = board.Height;
+        result = null;
+
+        var cells = new List<Vector2Int>();
+        var types = new List<TileType>();
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                if (!lockedMask[x, y])
+                {
+                    cells.Add(new Vector2Int(x, y));
+                    types.Add(currentTypes[x, y]);
+                }
+
+        if (cells.Count < 2)
+            return false;
+
+        var candidate = (TileType[,])currentTypes.Clone();   // locked'lar korunur
+
+        const int MaxAttempts = 40;
+        for (int attempt = 0; attempt < MaxAttempts; attempt++)
+        {
+            for (int i = types.Count - 1; i > 0; i--)   // Fisher-Yates
+            {
+                int j = UnityEngine.Random.Range(0, i + 1);
+                (types[i], types[j]) = (types[j], types[i]);
+            }
+
+            for (int i = 0; i < cells.Count; i++)
+                candidate[cells[i].x, cells[i].y] = types[i];
+
+            if (!HasImmediateMatchInTypes(candidate, lockedMask)
+                && HasPlayableSwapInTypes(candidate, lockedMask))
+            {
+                result = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // (x,y) kendi tipiyle yatay/dikey 3+ dizi tamamlıyor mu? locked hücre diziyi kırar.
+    private bool CompletesRunAt(TileType[,] t, bool[,] locked, int x, int y)
+    {
+        int w = board.Width, h = board.Height;
+        TileType c = t[x, y];
+
+        int run = 1;
+        for (int i = x - 1; i >= 0 && !locked[i, y] && t[i, y] == c; i--) run++;
+        for (int i = x + 1; i < w && !locked[i, y] && t[i, y] == c; i++) run++;
+        if (run >= 3) return true;
+
+        run = 1;
+        for (int j = y - 1; j >= 0 && !locked[x, j] && t[x, j] == c; j--) run++;
+        for (int j = y + 1; j < h && !locked[x, j] && t[x, j] == c; j++) run++;
+        return run >= 3;
+    }
+
+    private bool HasImmediateMatchInTypes(TileType[,] t, bool[,] locked)
+    {
+        int w = board.Width, h = board.Height;
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                if (!locked[x, y] && CompletesRunAt(t, locked, x, y))
+                    return true;
+        return false;
+    }
+
+    private bool HasPlayableSwapInTypes(TileType[,] t, bool[,] locked)
+    {
+        int w = board.Width, h = board.Height;
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                if (locked[x, y]) continue;
+                if (x + 1 < w && !locked[x + 1, y] && SwapCreatesMatch(t, locked, x, y, x + 1, y)) return true;
+                if (y + 1 < h && !locked[x, y + 1] && SwapCreatesMatch(t, locked, x, y, x, y + 1)) return true;
+            }
+        return false;
+    }
+
+    private bool SwapCreatesMatch(TileType[,] t, bool[,] locked, int ax, int ay, int bx, int by)
+    {
+        (t[ax, ay], t[bx, by]) = (t[bx, by], t[ax, ay]);
+        bool match = CompletesRunAt(t, locked, ax, ay) || CompletesRunAt(t, locked, bx, by);
+        (t[ax, ay], t[bx, by]) = (t[bx, by], t[ax, ay]);
+        return match;
     }
 
     private bool BuildShuffleSourceMap(
@@ -1172,7 +1304,9 @@ public class BoosterService
         if (movingTiles.Count == 0)
             yield break;
 
-        float duration = Mathf.Max(0.08f, board.SwapDurationWithMultiplier * 0.85f);
+        // Shuffle taşları yavaş taşınsın ki kullanıcı neyin nereye gittiğini görebilsin
+        // (eski: SwapDuration*0.85 ≈ 0.17s, çok hızlıydı).
+        float duration = Mathf.Max(0.35f, board.SwapDurationWithMultiplier * 2.6f);
         var curve = board.SwapMoveCurve;
 
         float t = 0f;

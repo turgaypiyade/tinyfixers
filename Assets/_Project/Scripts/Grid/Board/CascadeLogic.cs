@@ -39,6 +39,72 @@ public class CascadeLogic
         public List<Vector2Int> Path = new List<Vector2Int>();
     }
 
+    // Refill'de spawn tipi seçimi: 4+ aynı-renk run (special eşiği) oluşturmayı önler.
+    // Aşağıdaki (toY+1..) ve soldaki (x-1..) hücreler bu noktada kesinleşmiş durumda
+    // (kolon x sırayla, taşlar altta oturmuş). Üstteki spawn'lar da bu run'ı görüp
+    // uzatmayı reddedeceği için dikey run doğal olarak MAX_REFILL_RUN'da kapanır.
+    private const int MAX_REFILL_RUN = 3; // 3'lü match serbest (cascade), 4+ (special) engelli
+
+    private TileType PickRefillType(VirtualTile[,] vb, int x, int toY)
+    {
+        var pool = board.RandomPool;
+        if (pool == null || pool.Length == 0)
+            return TileType.Gear;
+
+        for (int attempt = 0; attempt < 12; attempt++)
+        {
+            var cand = pool[UnityEngine.Random.Range(0, pool.Length)];
+            if (!WouldExtendRunTooFar(vb, x, toY, cand))
+                return cand;
+        }
+
+        return pool[UnityEngine.Random.Range(0, pool.Length)];
+    }
+
+    private bool WouldExtendRunTooFar(VirtualTile[,] vb, int x, int toY, TileType cand)
+    {
+        // Dikey: aşağıya doğru ardışık aynı renk say.
+        int down = 0;
+        for (int yy = toY + 1; yy < board.Height; yy++)
+        {
+            if (TryGetVirtualColor(vb, x, yy, out var t) && t == cand) down++;
+            else break;
+        }
+        if (down + 1 > MAX_REFILL_RUN) return true; // aday dahil >= 4 → engelle
+
+        // Yatay: sola doğru ardışık aynı renk say (sağ komşular henüz spawn olmadı).
+        int left = 0;
+        for (int xx = x - 1; xx >= 0; xx--)
+        {
+            if (TryGetVirtualColor(vb, xx, toY, out var t) && t == cand) left++;
+            else break;
+        }
+        if (left + 1 > MAX_REFILL_RUN) return true;
+
+        return false;
+    }
+
+    // Bir sanal hücrenin match'lenebilir rengini döndürür. Obstacle/movable/boş = renk yok.
+    private bool TryGetVirtualColor(VirtualTile[,] vb, int x, int y, out TileType type)
+    {
+        type = default;
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) return false;
+
+        var vt = vb[x, y];
+        if (vt == null || vt.IsMovableObstacle) return false;
+
+        if (vt.IsSpawned)
+        {
+            type = vt.SpawnType;
+            return true;
+        }
+
+        if (vt.View == null) return false;
+
+        type = vt.View.GetTileType();
+        return true;
+    }
+
     public List<BoardAction> CalculateCascades()
     {
         board.IncrementFallGeneration();
@@ -428,11 +494,10 @@ public class CascadeLogic
                     }
                     else
                     {
-                        // Refill SAF RANDOM → cascade'ler doğal oluşabilir (kullanıcının işini kolaylaştırır).
-                        // No-match garantisi yalnızca İLK YÜKLEMEDE (BoardInitService.SimulateInitialTypes).
-                        newTile.SpawnType = board.RandomPool != null && board.RandomPool.Length > 0
-                            ? board.RandomPool[UnityEngine.Random.Range(0, board.RandomPool.Length)]
-                            : TileType.Gear;
+                        // Refill: 3'lü match'lere (cascade) İZİN VER ama 4+ (special) run
+                        // oluşturmayı önle → "yukarıdan 5 aynı taş gelip special çıkması"
+                        // gibi kazara fazla special'lar azalır, normal cascade'ler korunur.
+                        newTile.SpawnType = PickRefillType(virtualBoard, x, toY);
                     }
 
                     virtualBoard[x, toY] = newTile;

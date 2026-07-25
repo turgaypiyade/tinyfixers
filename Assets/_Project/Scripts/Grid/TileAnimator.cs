@@ -505,7 +505,7 @@ public sealed class TileAnimator
         createdIconRt.localRotation = Quaternion.identity;
         createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
 
-        float gatherDuration = Mathf.Max(0.12f, duration); // görünür ama snappy toplanma
+        float gatherDuration = Mathf.Max(0.28f, duration); // görünür toplanma (arka planda, board'u durdurmaz)
         float flashDuration = 0.05f;
         float settleDuration = 0.035f;
         float pulseScale = 1.16f;
@@ -581,8 +581,8 @@ public sealed class TileAnimator
             }
 
             // ── REVEAL ──
-            // LineV/H/PulseCore: normalin ÜSTÜNDE (1.30×) belirip kendi ekseninde 360° dönüp
-            // yerine oturur — çok kısa (~0.06sn). Diğer special'lar: eski flash+pop+settle.
+            // LineV/H/PulseCore: normalin ÜSTÜNDE (1.75×) belirip kendi ekseninde 360° dönüp
+            // yerine oturur — görünür kalması için ~0.24sn. Diğer special'lar: eski flash+pop+settle.
             bool isSpinReveal =
                 createdTile != null && createdTile &&
                 (createdTile.GetSpecial() == TileSpecial.LineV
@@ -591,9 +591,17 @@ public sealed class TileAnimator
 
             if (isSpinReveal)
             {
-                float revealDur = 0.08f;   // pop + spin + otur
-                float peakScale = 1.50f;   // normalin %50 üstü
-                float spinDegrees = 360f;  // bir tam tur, 0'da biter
+                float revealDur = 0.32f;   // pop + tepe bekleme + spin + otur (görünür kalması için)
+                float peakScale = 2.0f;    // normalin 2 katı (kullanıcı isteği; LineV/H görünür, PulseCore ikonu gizli)
+
+                // Düz 2D sprite → dönüş DAİMA Z ekseninde (ekran düzleminde, para/pervane gibi).
+                // X/Y ekseni kağıdı 3B çevirir gibi yassıltıyordu, çirkindi → geri alındı.
+                TileSpecial sp = createdTile.GetSpecial();
+                bool isRocket = sp == TileSpecial.LineV || sp == TileSpecial.LineH;
+                // PulseCore artık kendi Y-ekseni flipbook'uyla (PulseFuseSparkleView.PlayCreationSpin)
+                // dönüyor → buradaki rotasyon PulseCore için KAPALI (0).
+                // Roketler (LineV/LineH): Y ekseninde 360° (kullanıcı isteği).
+                float spinDegrees = isRocket ? 360f : 0f;
                 Color colorTarget = new Color(baseColor.r, baseColor.g, baseColor.b, 1f);
 
                 t = 0f;
@@ -605,15 +613,20 @@ public sealed class TileAnimator
                     t += Time.deltaTime;
                     float k = Mathf.Clamp01(t / revealDur);
 
-                    // Scale: ilk %45 pop (0.22→1.20), sonra 1.20→1.0 otur.
-                    float scaleFactor = k < 0.45f
-                        ? Mathf.LerpUnclamped(0.22f, peakScale, EaseOutCubic(k / 0.45f))
-                        : Mathf.LerpUnclamped(peakScale, 1f, EaseOutCubic((k - 0.45f) / 0.55f));
+                    // Scale: ilk %30 pop (0.22→peak), %30-55 tepede bekle (görünür), sonra 1.0 otur.
+                    float scaleFactor;
+                    if (k < 0.30f)
+                        scaleFactor = Mathf.LerpUnclamped(0.22f, peakScale, EaseOutCubic(k / 0.30f));
+                    else if (k < 0.55f)
+                        scaleFactor = peakScale;
+                    else
+                        scaleFactor = Mathf.LerpUnclamped(peakScale, 1f, EaseOutCubic((k - 0.55f) / 0.45f));
                     createdIconRt.localScale = baseScale * scaleFactor;
 
-                    // Spin: 360°→0 (easeOut), tam turda 0'da biter.
-                    createdIconRt.localRotation = Quaternion.Euler(0f, 0f,
-                        Mathf.LerpUnclamped(spinDegrees, 0f, EaseOutCubic(k)));
+                    // Spin: spinDegrees→0 (easeOut), tam turda 0'da biter. Roketler Y ekseninde döner
+                    // (kullanıcı isteği); PulseCore=0 (flipbook kendi döndürüyor).
+                    float spinAngle = Mathf.LerpUnclamped(spinDegrees, 0f, EaseOutCubic(k));
+                    createdIconRt.localRotation = Quaternion.Euler(0f, spinAngle, 0f);
 
                     // Hızlı fade-in + kısa beyaz parlama.
                     float a = Mathf.Clamp01(k * 3.3f);

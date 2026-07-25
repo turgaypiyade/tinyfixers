@@ -312,6 +312,7 @@ public class FallAction : BoardAction
     private void EnsureReferencePhaseDelays(BoardController board)
     {
         var maxTargetRowPerSpawnColumn = new Dictionary<int, int>();
+        var maxTargetRowPerExistingColumn = new Dictionary<int, int>();
         var legacyMaxToYPerColumn = new Dictionary<int, int>();
 
         foreach (var r in fallRecords)
@@ -321,12 +322,19 @@ public class FallAction : BoardAction
 
             if (IsStrictVerticalRecord(r))
             {
-                if (!IsSpawnRecord(r))
-                    continue;
-
-                int spawnColumn = GetSpawnColumn(r);
-                if (!maxTargetRowPerSpawnColumn.ContainsKey(spawnColumn) || r.toY > maxTargetRowPerSpawnColumn[spawnColumn])
-                    maxTargetRowPerSpawnColumn[spawnColumn] = r.toY;
+                if (IsSpawnRecord(r))
+                {
+                    int spawnColumn = GetSpawnColumn(r);
+                    if (!maxTargetRowPerSpawnColumn.ContainsKey(spawnColumn) || r.toY > maxTargetRowPerSpawnColumn[spawnColumn])
+                        maxTargetRowPerSpawnColumn[spawnColumn] = r.toY;
+                }
+                else
+                {
+                    // Mevcut (board üzerindeki) dikey düşüşler: yeni taşlardan AYRI stagger.
+                    int col = r.toX;
+                    if (!maxTargetRowPerExistingColumn.ContainsKey(col) || r.toY > maxTargetRowPerExistingColumn[col])
+                        maxTargetRowPerExistingColumn[col] = r.toY;
+                }
             }
             else
             {
@@ -338,7 +346,9 @@ public class FallAction : BoardAction
 
         // Intermediate cascade (DisableSettle çağrıldı): stagger & waterfall olmadan hızlı bitir.
         // Sadece son cascade'de (settle aktif) referans oyundaki waterfall efekti oynasın.
+        // Yeni taş (spawn) ve mevcut taş gecikmeleri BİRBİRİNDEN AYRI (spec §2).
         float spawnInterval = settleDisabled ? 0f : board.ReferenceFallMotion.ReferenceFramesToSeconds(board.ReferenceFallMotion.spawnIntervalFrames);
+        float existingInterval = settleDisabled ? 0f : board.ReferenceFallMotion.ReferenceFramesToSeconds(board.ReferenceFallMotion.existingIntervalFrames);
         float columnStep = settleDisabled ? 0f : board.FallColumnStep;
         float spawnStaggerMul = settleDisabled ? 0f : board.FallSpawnStaggerMultiplier;
 
@@ -366,9 +376,16 @@ public class FallAction : BoardAction
                     int spawnColumn = GetSpawnColumn(r);
                     if (maxTargetRowPerSpawnColumn.TryGetValue(spawnColumn, out int maxToY))
                         rankFromBottom = Mathf.Max(0, maxToY - r.toY);
-                }
 
-                r.phaseDelay = rankFromBottom * spawnInterval;
+                    r.phaseDelay = rankFromBottom * spawnInterval;
+                }
+                else
+                {
+                    if (maxTargetRowPerExistingColumn.TryGetValue(r.toX, out int maxToY))
+                        rankFromBottom = Mathf.Max(0, maxToY - r.toY);
+
+                    r.phaseDelay = rankFromBottom * existingInterval;
+                }
             }
             else
             {
@@ -448,8 +465,8 @@ public class FallAction : BoardAction
         var settings = board.ReferenceFallMotion;
         float landingTime = settleDisabled ? 0f :
             settings.ReferenceFramesToSeconds(settings.landingOvershootFrames) +
-            settings.ReferenceFramesToSeconds(settings.landingReturnFrames) +
-            settings.ReferenceFramesToSeconds(settings.finalSettleFrames);
+            settings.ReferenceFramesToSeconds(settings.impactHoldFrames) +
+            settings.ReferenceFramesToSeconds(settings.landingReturnFrames);
 
         float maxEnd = 0f;
 
@@ -721,23 +738,12 @@ public class FallAction : BoardAction
         // segmentin rank/stagger hesabini sonradan degistirmez.
         EnsurePhaseDelays(sequencer.Board);
 
-        // Intermediate cascade (settleDisabled): time stagger yok, aynı kolondaki spawn
-        // tile'lar aynı pozisyondan başlıyorsa üst üste biner. Position stagger ile
-        // her rank 1 hücre daha yukarıdan başlar → ayrışma sağlanır, gecikme olmaz.
-        Dictionary<int, int> spawnMaxToYForPosStagger = null;
-        if (settleDisabled && useReferenceMotion)
-        {
-            spawnMaxToYForPosStagger = new Dictionary<int, int>();
-            foreach (var rr in fallRecords)
-            {
-                if (rr.tile == null || !rr.tile || !IsSpawnRecord(rr))
-                    continue;
-                int col = GetSpawnColumn(rr);
-                if (!spawnMaxToYForPosStagger.ContainsKey(col) || rr.toY > spawnMaxToYForPosStagger[col])
-                    spawnMaxToYForPosStagger[col] = rr.toY;
-            }
-        }
-
+        // Spawn taşlarının başlangıç dizilimi legacy ile AYNI kaynaktan gelir:
+        // GetVerticalSpawnVisualOffsetCells(maxToYPerVerticalSpawnSource) → visualFromY.
+        // Bu, mevcut (board üstündeki) taşların oluşturduğu sürekli kolonla HİZALI bir
+        // stream kurar. Reference'ın eski toY-tabanlı "1+rank" hesabı bu kolonla
+        // hizalanmıyordu → özellikle combo/pulse+pulse'ın dağınık çok-hücreli clear'larında
+        // spawn taşları yığılıp "karışıyordu". Artık tek doğruluk kaynağı: visualFromY.
         var moves = new List<IEnumerator>(fallRecords.Count);
         var delays = new List<float>(fallRecords.Count);
 
@@ -774,24 +780,6 @@ public class FallAction : BoardAction
 
             if (useReferenceForRecord)
             {
-                Vector2? explicitStart = null;
-
-                if (IsSpawnRecord(r))
-                {
-                    int spawnColumn = GetSpawnColumn(r);
-                    float spawnAnchorY = 0.95f;
-
-                    if (spawnMaxToYForPosStagger != null &&
-                        spawnMaxToYForPosStagger.TryGetValue(spawnColumn, out int maxToYForCol))
-                    {
-                        int rank = Mathf.Max(0, maxToYForCol - r.toY);
-                        spawnAnchorY = 0.95f + rank;
-                    }
-
-                    explicitStart = new Vector2(spawnColumn * board.TileSize, board.TileSize * spawnAnchorY);
-                    r.tile.SetReferenceFallStartAnchoredPosition(explicitStart.Value);
-                }
-
                 float referenceStartDelay = r.startDelay + r.phaseDelay;
                 float spawnReferenceFrame = referenceStartDelay * Mathf.Max(1f, referenceSettings.referenceFps);
                 bool debugLog = board.DebugReferenceFallMotionLogs;
@@ -803,10 +791,15 @@ public class FallAction : BoardAction
 
                 if (isPath)
                 {
+                    // Legacy ile aynı: dikey spawn path'inin İLK waypoint'i visualOffset kadar
+                    // yukarı alınır → sürekli kolon. explicitStart YOK (TileView fromY/waypoint'ten
+                    // doğru pozisyonu — special/movable offset dahil — kendi hesaplar).
+                    Vector2Int[] refWaypoints = BuildVisualWaypoints(r, maxToYPerVerticalSpawnSource);
+
                     move = r.tile.MoveToGridPathReference(
                         board.TileSize,
-                        r.pathWaypoints,
-                        explicitStart,
+                        refWaypoints,
+                        null,
                         enableLanding,
                         referenceSettings,
                         debugLog,
@@ -819,13 +812,14 @@ public class FallAction : BoardAction
                 }
                 else
                 {
+                    // Legacy ile aynı: başlangıç satırı visualFromY (= r.fromY - visualOffset).
                     move = r.tile.MoveToGridCellReference(
                         board.TileSize,
                         r.fromX,
-                        r.fromY,
+                        visualFromY,
                         r.toX,
                         r.toY,
-                        explicitStart,
+                        null,
                         enableLanding,
                         referenceSettings,
                         debugLog,

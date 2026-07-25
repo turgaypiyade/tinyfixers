@@ -23,6 +23,16 @@ public class LightningBeam : MonoBehaviour
     [Tooltip("Uç kalınlığının prefab kalınlığına göre çarpanı. Düşük değer = daha ip gibi görünüm.")]
     [SerializeField, Range(0.01f, 1f)] private float endWidthMultiplier = 0.08f;
 
+    [Header("Inner Colored Core")]
+    [Tooltip("Ana beyaz çizginin İÇİNDE, aynı hareketi yapan ince random-renkli bir çizgi çiz.")]
+    [SerializeField] private bool innerColoredLine = true;
+    [Tooltip("İç çizgi kalınlığı = ana çizginin bu oranı.")]
+    [SerializeField, Range(0.05f, 0.9f)] private float innerWidthRatio = 0.4f;
+    [Tooltip("İç çizgideki random renk sayısı (çizgi boyunca).")]
+    [SerializeField, Range(2, 8)] private int innerColorCount = 5;
+    [Tooltip("Random renklerin canlılığı (saturation).")]
+    [SerializeField, Range(0.3f, 1f)] private float innerColorSaturation = 0.9f;
+
     [Header("Timing")]
     [SerializeField] private float lifeTime = 0.20f;
     [SerializeField]
@@ -35,6 +45,8 @@ public class LightningBeam : MonoBehaviour
     [SerializeField] private float persistentPulseFrequency = 18f;
 
     private LineRenderer lr;
+    private LineRenderer innerLr;
+    private GradientColorKey[] innerColorKeys;
     private float t;
     private Color startColor;
     private Color endColor;
@@ -60,6 +72,38 @@ public class LightningBeam : MonoBehaviour
 
         seed = UnityEngine.Random.Range(0f, 1000f);
         ApplyWidthProfile();
+        CreateInnerLine();
+    }
+
+    // Ana beyaz çizginin içinde, AYNI noktaları takip eden ince random-renkli çizgi.
+    private void CreateInnerLine()
+    {
+        if (!innerColoredLine || innerLr != null || lr == null)
+            return;
+
+        var go = new GameObject("InnerColoredCore", typeof(LineRenderer));
+        go.transform.SetParent(transform, false);
+        go.transform.localPosition = Vector3.zero;
+
+        innerLr = go.GetComponent<LineRenderer>();
+        innerLr.useWorldSpace     = lr.useWorldSpace;
+        innerLr.sharedMaterial    = lr.sharedMaterial;      // aynı (additive) materyal
+        innerLr.textureMode       = lr.textureMode;
+        innerLr.numCapVertices    = lr.numCapVertices;
+        innerLr.numCornerVertices = lr.numCornerVertices;
+        innerLr.alignment         = lr.alignment;
+        innerLr.sortingLayerID    = lr.sortingLayerID;
+        innerLr.sortingOrder      = lr.sortingOrder + 1;    // ana çizginin ÜSTÜNDE (içinde görünür)
+        innerLr.positionCount     = 0;
+
+        // Çizgi boyunca N random renk (bir kez seçilir; her beam farklı).
+        int n = Mathf.Clamp(innerColorCount, 2, 8);
+        innerColorKeys = new GradientColorKey[n];
+        for (int i = 0; i < n; i++)
+        {
+            Color c = Color.HSVToRGB(UnityEngine.Random.value, innerColorSaturation, 1f);
+            innerColorKeys[i] = new GradientColorKey(c, (n == 1) ? 0f : (float)i / (n - 1));
+        }
     }
 
     public void Init(Vector3 start, Vector3 end)
@@ -175,6 +219,7 @@ public class LightningBeam : MonoBehaviour
         var ec = endColor; ec.a = alpha;
         lr.startColor = sc;
         lr.endColor = ec;
+        ApplyInnerAlpha(alpha);
     }
 
     private void ApplyAlphaScaled(float alphaMultiplier)
@@ -183,6 +228,7 @@ public class LightningBeam : MonoBehaviour
         var ec = endColor; ec.a = endColor.a * alphaMultiplier;
         lr.startColor = sc;
         lr.endColor = ec;
+        ApplyInnerAlpha(startColor.a * alphaMultiplier);
     }
 
     private void ApplyPersistentGradient(Color color)
@@ -230,6 +276,13 @@ public class LightningBeam : MonoBehaviour
 
         lr.startWidth = Mathf.Max(0.001f, baseStart * startWidthMultiplier);
         lr.endWidth = Mathf.Max(0.001f, baseEnd * endWidthMultiplier);
+
+        if (innerLr != null)
+        {
+            float r = Mathf.Clamp(innerWidthRatio, 0.05f, 0.9f);
+            innerLr.startWidth = Mathf.Max(0.0005f, lr.startWidth * r);
+            innerLr.endWidth   = Mathf.Max(0.0005f, lr.endWidth * r);
+        }
     }
 
     private void BuildLightning()
@@ -252,6 +305,9 @@ public class LightningBeam : MonoBehaviour
         float timeSeed = liveFlicker ? (Time.time * noiseScale + seed) : seed;
 
         int count = lr.positionCount;
+        if (innerLr != null && innerLr.positionCount != count)
+            innerLr.positionCount = count;
+
         for (int i = 0; i < count; i++)
         {
             float p = (count == 1) ? 0f : (float)i / (count - 1);
@@ -260,14 +316,35 @@ public class LightningBeam : MonoBehaviour
             // Uçlarda 0, ortada 1 — edge fade
             float edgeFade = Mathf.Sin(p * Mathf.PI);
 
-            // Perlin noise — [-0.5, 0.5] aralığına çek
-            float n1 = Mathf.PerlinNoise(timeSeed, p * 6f) - 0.5f;
-            float n2 = Mathf.PerlinNoise(timeSeed + 100f, p * 12f) - 0.5f; // yüksek frekanslı ikinci katman
-            float offset = (n1 * 0.7f + n2 * 0.3f) * 2f; // [-1, 1] civarı
+            // Perlin noise — [-0.5, 0.5] aralığına çek.
+            // DÜŞÜK frekans → "ip/rope" gibi geniş tek dalga (jagged değil); liveFlicker + timeSeed
+            // ile zamanla salınır (sallanan ip hissi). Yüksek freq katman çok kısık: ince titreşim.
+            float n1 = Mathf.PerlinNoise(timeSeed, p * 1.3f) - 0.5f;
+            float n2 = Mathf.PerlinNoise(timeSeed + 100f, p * 2.6f) - 0.5f;
+            float offset = (n1 * 0.88f + n2 * 0.12f) * 2f; // [-1, 1] civarı
 
             pos += side * (offset * jaggednessAmount * edgeFade);
 
             lr.SetPosition(i, pos);
+            if (innerLr != null)
+                innerLr.SetPosition(i, pos);   // AYNI şekil/hareket — ince random-renkli çekirdek
         }
+    }
+
+    // İç çizgiye random renk gradyanını verilen alpha ile uygular (ana çizgiyle beraber söner).
+    private void ApplyInnerAlpha(float alpha)
+    {
+        if (innerLr == null || innerColorKeys == null || innerColorKeys.Length == 0)
+            return;
+
+        float a01 = Mathf.Clamp01(alpha);
+        var alphaKeys = new[]
+        {
+            new GradientAlphaKey(a01, 0f),
+            new GradientAlphaKey(a01, 1f)
+        };
+        var grad = new Gradient();
+        grad.SetKeys(innerColorKeys, alphaKeys);
+        innerLr.colorGradient = grad;
     }
 }

@@ -5,18 +5,56 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 
+// Referans oyuna yaklaştırılmış ivmeli taş düşüşü + landing ayarları.
+// Tüm hız/ivme HÜCRE cinsindendir (piksele değil) → 9/10/11 satırlı board'da aynı his.
+// Değerler frame bazlı tutulur (referenceFps=60); saniye karşılığı ReferenceFramesToSeconds ile alınır.
 [Serializable]
 public class ReferenceFallMotionSettings
 {
+    [Header("Fall (ivmeli hız entegrasyonu)")]
     [Min(1f)] public float referenceFps = 60f;
-    [Min(0f)] public float spawnIntervalFrames = 6f;
-    [Min(0f)] public float initialSpeedCellsPerFrame = 0.08f;
-    [Min(0f)] public float accelerationCellsPerFrameSquared = 0.014f;
-    [Min(0.001f)] public float maxSpeedCellsPerFrame = 0.33f;
-    [Min(0f)] public float landingOvershootCells = 0.025f;
+    [Min(0f)] public float initialFallSpeedCells = 5.0f;
+    [Min(0f)] public float fallAccelerationCells = 38.0f;
+    [Min(0.001f)] public float maxFallSpeedCells = 26.0f;
+
+    public float initialSpeedCellsPerFrame => initialFallSpeedCells / referenceFps;
+    public float accelerationCellsPerFrameSquared => fallAccelerationCells / (referenceFps * referenceFps);
+    public float maxSpeedCellsPerFrame => maxFallSpeedCells / referenceFps;
+
+    [Header("Stagger (yeni vs mevcut taş, ayrı)")]
+    [Min(0f)] public float existingTileStagger = 2f / 60f;
+    [Min(0f)] public float spawnTileStagger = 4f / 60f;
+
+    public float spawnIntervalFrames => spawnTileStagger * referenceFps;
+    public float existingIntervalFrames => existingTileStagger * referenceFps;
+
+    [Header("Fall Stretch (hıza bağlı, hafif)")]
+    public Vector2 maxFallStretchScale = new Vector2(0.975f, 1.04f);
+    public float maxFallStretchX => maxFallStretchScale.x;
+    public float maxFallStretchY => maxFallStretchScale.y;
+
+    [Header("Landing (overshoot + impact squeeze)")]
+    [Min(0f)] public float landingOvershootCells = 0.08f;
+    public Vector2 impactScale = new Vector2(1.06f, 0.92f);
+    public float impactScaleX => impactScale.x;
+    public float impactScaleY => impactScale.y;
+
     [Min(0f)] public float landingOvershootFrames = 2f;
-    [Min(0f)] public float landingReturnFrames = 4f;
-    [Min(0f)] public float finalSettleFrames = 2f;
+    [Min(0f)] public float impactHoldDuration = 1f / 60f;
+    [Min(0f)] public float settleDuration = 5f / 60f;
+
+    public float impactHoldFrames => impactHoldDuration * referenceFps;
+    public float landingReturnFrames => settleDuration * referenceFps;
+
+    [Header("LineV Beam")]
+    [Range(0.35f, 0.45f)] public float beamWidthCells = 0.40f;
+    public float beamFullOpacityDuration = 7f / 60f;
+    public float beamFadeDuration = 10f / 60f;
+
+    [Header("Fragments / Debris")]
+    public float fragmentLifetimeMin = 0.22f;
+    public float fragmentLifetimeMax = 0.32f;
+
     [Range(0.1f, 1.2f)] public float tileVisualFillRatio = 0.88f;
 
     public float ReferenceFramesToSeconds(float frames)
@@ -81,13 +119,29 @@ public class BoardController : MonoBehaviour
     [SerializeField, Range(0.1f, 0.8f)] private float fallStretchRecover = 0.45f;
 
     [Header("Reference Fall Motion")]
-    [SerializeField] private bool useReferenceFallMotion = false;
+    [Tooltip("KAPALI (önerilen): ivmeli düşüşü legacy path'in ActiveFallProfile'ından alır — obstacle/diagonal/" +
+             "combo/spawn akışını doğru yönetir. AÇILINCA ayrı bir reference-motion path devreye girer; bu path " +
+             "obstacle-yolu ve combo cascade'lerinde spawn hizalama/karışma sorunları yaşıyor (eksik/deneysel). " +
+             "İvme zaten ActiveFallProfile ile geldiği için normalde açmaya gerek yok.")]
+    [SerializeField] private bool useReferenceFallMotion = true;
     [SerializeField] private bool debugReferenceFallMotionLogs;
     [Tooltip("Kapalıyken mevcut Tiny Fixers taş görsel boyutu korunur. Açılırsa normal taş ikonları cellSize * tileVisualFillRatio olur.")]
     [SerializeField] private bool applyReferenceTileVisualFillRatio = false;
     [SerializeField] private ReferenceFallMotionSettings referenceFallMotion = new ReferenceFallMotionSettings();
     internal float FallColumnStep => Mathf.Max(0f, fallColumnStep);
     internal int MaxDiagonalSlidesPerCascade => Mathf.Max(1, maxDiagonalSlidesPerCascade);
+
+    // ── Decoupled resolve (Faz 1): normal fall→clear overlap ────────────────
+    // Docs/DecoupledResolve_Plan.md §6. false → bugünkü seri yol (anında geri-alma).
+    [Header("Decoupled Resolve (Faz 1)")]
+    [SerializeField] private bool useDecoupledResolve = false;
+    // Taş hedefe kaç hücre KALA FallArrived event'ini atsın (hücreye tam oturmadan biraz üstünde
+    // clear başlasın → referans hissi). 0 = tam varışta. Timed sync DEĞİL — animasyonun içinden,
+    // pozisyon eşiğiyle bir kez atılır. Küçük tut (~0.15-0.25); büyükse taş görünür şekilde havada kırılır.
+    [SerializeField, Range(0f, 0.5f)] private float fallArrivalLeadCells = 0.2f;
+    internal bool UseDecoupledResolve => useDecoupledResolve;
+    internal float FallArrivalLeadCells => fallArrivalLeadCells;
+    private BoardVisualCoordinator visualCoordinator;
 
     [Header("Juice (Only 4+ / Power)")]
     [SerializeField] private float preClearDelay = 0.06f;
@@ -132,6 +186,9 @@ public class BoardController : MonoBehaviour
     [FormerlySerializedAs("pulseCoreVfxPlayer")][SerializeField] private PulseCoreVfxPlayer boardVfxPlayer;
     [SerializeField] private LightningSpawner lightningSpawner;
     public LineTravelSplitSwapTestUI lineTravelPlayer;
+    // LineH artık roket yerine tek dönen drill kullanır (atanmışsa). LineV roket kalır.
+    [SerializeField] private DrillSweepPlayer drillSweepPlayer;
+    internal DrillSweepPlayer DrillSweepPlayer => drillSweepPlayer;
     [SerializeField] private Transform lineTravelSpawnParent;
     [SerializeField] private BoardAudioDirector audioDirector;
 
@@ -146,6 +203,8 @@ public class BoardController : MonoBehaviour
     [SerializeField] private GameObject pulsePulseExplosionPrefab;
     [SerializeField] private float pulsePulseExplosionLifetime = 1.0f;
     [SerializeField] private float pulsePulseChargeDuration = 2.0f;
+    // Patlama halkası ölçeği — 9x9→7x7 alan değişimiyle orantılı (~7/9). Inspector'dan ince ayarla.
+    [SerializeField] private float pulsePulseExplosionScale = 0.78f;
     [Header("Obstacle Visual Tuning")]
     [SerializeField] private AudioSource sfxSource;
     [SerializeField] private AudioClip sfxPulseCoreBoom;
@@ -172,6 +231,8 @@ public class BoardController : MonoBehaviour
     [SerializeField] private RectTransform hammerBoosterFxPrefab;
     [SerializeField] private RectTransform cannonBoosterFxPrefab;
     [SerializeField] private RectTransform verticalBoosterFxPrefab;
+    [SerializeField] private Sprite rowBoosterWithDrillSprite;
+    [SerializeField] private Sprite rowBoosterWithoutDrillSprite;
     [SerializeField] private RectTransform boosterFxParent;
     [SerializeField] private Sprite hammerBoosterFallbackSprite;
     [SerializeField] private Sprite patchBotPropellerSprite;
@@ -180,6 +241,8 @@ public class BoardController : MonoBehaviour
     internal RectTransform HammerBoosterFxPrefab => hammerBoosterFxPrefab;
     internal RectTransform CannonBoosterFxPrefab => cannonBoosterFxPrefab;
     internal RectTransform VerticalBoosterFxPrefab => verticalBoosterFxPrefab;
+    internal Sprite RowBoosterWithDrillSprite => rowBoosterWithDrillSprite;
+    internal Sprite RowBoosterWithoutDrillSprite => rowBoosterWithoutDrillSprite;
     internal RectTransform BoosterFxParent => boosterFxParent != null ? boosterFxParent : parent;
     internal Sprite HammerBoosterFallbackSprite => hammerBoosterFallbackSprite;
     internal Sprite PatchBotPropellerSprite => patchBotPropellerSprite;
@@ -417,6 +480,10 @@ public class BoardController : MonoBehaviour
     private bool lastSwapUserMove;
     private bool shakeNextClear;
     private bool isSpecialActivationPhase;
+    // Decoupled overlap güvenliği: bu resolve'da herhangi bir special aktivitesi (line sweep:
+    // LineV/Override/PulseCore) olduysa true. Match-overlap yalnız bu FALSE iken çalışır → special'ların
+    // mevcut event-driven sequencer senkronu HİÇ bozulmaz. ResolveBoard başında sıfırlanır.
+    private bool hadSpecialActivityThisResolve;
     private TileType[] randomPool;
 
     private MatchFinder matchFinder;
@@ -491,7 +558,7 @@ public class BoardController : MonoBehaviour
     internal float FallSettleOvershoot => Mathf.Max(0f, fallSettleOvershoot);
     // Reference fall motion is disabled until the whole diagonal/segmented flow is rebuilt
     // as one coherent system. Partial/hybrid use breaks dense diagonal boards such as LevelP_00060.
-    internal bool UseReferenceFallMotion => false;
+    internal bool UseReferenceFallMotion => useReferenceFallMotion;
     internal bool DebugReferenceFallMotionLogs => debugReferenceFallMotionLogs;
     internal bool ApplyReferenceTileVisualFillRatio => applyReferenceTileVisualFillRatio;
     internal ReferenceFallMotionSettings ReferenceFallMotion
@@ -567,7 +634,14 @@ public class BoardController : MonoBehaviour
     internal TileView LastSwapB => lastSwapB;
     internal bool LastSwapUserMove { get => lastSwapUserMove; set => lastSwapUserMove = value; }
     internal bool ShakeNextClear { get => shakeNextClear; set => shakeNextClear = value; }
-    internal bool IsSpecialActivationPhase { get => isSpecialActivationPhase; set => isSpecialActivationPhase = value; }
+    internal bool IsSpecialActivationPhase
+    {
+        get => isSpecialActivationPhase;
+        // Sticky: bir special aktivasyon fazı açıldıysa bu resolve match-overlap YAPMAZ (special'ların
+        // event-driven sequencer senkronu korunur). false'a set etmek sticky bayrağı temizlemez;
+        // yalnız ResolveBoard başındaki reset temizler. Field'a direkt yazan reset bunu tetiklemez.
+        set { isSpecialActivationPhase = value; if (value) hadSpecialActivityThisResolve = true; }
+    }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     internal bool EnableSpecialChainTrace => enableSpecialChainTrace;
 #else
@@ -581,7 +655,12 @@ public class BoardController : MonoBehaviour
 
     // ── Event forwarders for LineSweepService ──
     internal void RaiseSpecialActivated(TileSpecial special, Vector2Int cell) => OnSpecialActivated?.Invoke(special, cell);
-    internal void OnLineSweepStartedInternal(LightningLineStrike strike, float delay) => OnLineSweepStarted?.Invoke(strike, delay);
+    internal void OnLineSweepStartedInternal(LightningLineStrike strike, float delay)
+    {
+        // Bu resolve special dokundu → match-overlap kapansın (special event-senkronu korunur).
+        hadSpecialActivityThisResolve = true;
+        OnLineSweepStarted?.Invoke(strike, delay);
+    }
     internal void OnLineSweepCellReachedInternal(Vector2Int cell, LightningLineStrike strike) => OnLineSweepCellReached?.Invoke(cell, strike);
     internal ObstacleResolutionService Obstacles => obstacleResolutionService;
     // -- gems break animations
@@ -667,6 +746,8 @@ public class BoardController : MonoBehaviour
             if (actionSequencer == null) actionSequencer = gameObject.AddComponent<ActionSequencer>();
             actionSequencer.Initialize(this);
         }
+
+        visualCoordinator ??= new BoardVisualCoordinator(this, actionSequencer);
     }
 
     public void OnActionSequenceFinished()
@@ -865,6 +946,16 @@ public class BoardController : MonoBehaviour
         tile.SetNormalVisualFillRatioOverride(applyReferenceTileVisualFillRatio, ReferenceFallMotion.tileVisualFillRatio);
     }
 
+    // Yalnız normal-taş görsel dolgu oranını uygular (icon scale/fullcell mantığına dokunmadan).
+    // GridSpawner'ın ilk board spawn'ları ConfigureTileView çağırmadığından initial taşlar oranı
+    // almıyordu; bu helper onları da kapsar.
+    public void ApplyNormalVisualFillRatio(TileView tile)
+    {
+        if (tile == null)
+            return;
+        tile.SetNormalVisualFillRatioOverride(applyReferenceTileVisualFillRatio, ReferenceFallMotion.tileVisualFillRatio);
+    }
+
     public TileType[,] SimulateInitialTypes(bool[,] unreachableCells = null)
     {
         var lockedMask = new bool[width, height];
@@ -1005,7 +1096,7 @@ public class BoardController : MonoBehaviour
     public float GetSystemOverrideComboWaveDuration() =>
         systemOverrideComboVfx != null ? systemOverrideComboVfx.GetRadialWaveDuration() : ResolutionContext.OverrideRadialClearDuration;
     public void PlayPulseEmitterComboVfxAtCell(int x, int y) => boardVfxService.PlayPulseEmitterComboVfxAtCell(pulseEmitterComboVfx, vfxSpace, x, y);
-    public void PlayPulsePulseExplosionVfxAtCell(int x, int y) => boardVfxService.PlayPulsePulseExplosionVfxAtCell(pulsePulseExplosionPrefab, vfxSpace, pulsePulseExplosionLifetime, x, y);
+    public void PlayPulsePulseExplosionVfxAtCell(int x, int y) => boardVfxService.PlayPulsePulseExplosionVfxAtCell(pulsePulseExplosionPrefab, vfxSpace, pulsePulseExplosionLifetime, x, y, pulsePulseExplosionScale);
     internal HashSet<Vector2Int> BuildPulseEmitterTargets(int cx, int cy) => boardVfxService.BuildPulseEmitterTargets(cx, cy);
 
     public Vector3 GetTileWorldCenter(TileView tile)
@@ -1461,6 +1552,18 @@ public class BoardController : MonoBehaviour
         NotifyTilesCleared(type, 1);
     }
 
+    // Mantıksal board'a bağlı OLMAYAN (hücresi başka taşa reassign olmuş / null olmuş) bir tile
+    // view'ını güvenle yok eder. Hücre DATA'sına dokunmaz. Special zincirinde tüketilen ama
+    // hücresi yarışla değişen PatchBot vb.'nin sahnede orphan/hayalet kalmasını önler.
+    internal void DestroyOrphanedTileView(TileView t)
+    {
+        if (t == null || t.gameObject == null) return;
+        // Güvenlik: gerçekten hiçbir hücre bu view'a işaret etmiyor olmalı.
+        if (t.X >= 0 && t.X < width && t.Y >= 0 && t.Y < height && tiles[t.X, t.Y] == t)
+            return;   // hâlâ board'a bağlı — orphan değil, dokunma
+        Destroy(t.gameObject);
+    }
+
     // ═══════════════════════════════════════════════════════════════
     //  Input / Click / Drag
     // ═══════════════════════════════════════════════════════════════
@@ -1820,7 +1923,7 @@ public class BoardController : MonoBehaviour
                 yield return new WaitForSeconds(pulsePulseChargeDuration);
 
                 if (pulseCoreImpactService != null)
-                    pulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(chargeX, chargeY, radiusCells: 2); // 5x5 alan — Inspector override'a bağımlı değil
+                    pulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(chargeX, chargeY, radiusCells: 3); // 7x7 alan (combo ile hizalı)
             }
 
             actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb, capturedOverridePartnerType, swapProtectedCells));
@@ -2212,10 +2315,44 @@ public class BoardController : MonoBehaviour
 
         return true;
     }
+
+    // Faz 1 overlap gate: mantıksal board'dan match'i oku ve BASİT ise (hiçbir eşleşen taş
+    // special değil ve hücresinde obstacle yok) TileView set'ini döndür. Special (aktivasyon
+    // riski) veya obstacle içeren match → false (çağıran seri yola düşer). Docs §6.4.
+    private bool TryBuildSimpleOverlapMatch(out HashSet<TileView> matchTiles)
+    {
+        matchTiles = null;
+        var matches = matchFinder.FindAllMatches();
+        if (matches.Count == 0)
+            return false;
+
+        var set = new HashSet<TileView>();
+        foreach (var t in matches)
+        {
+            var tile = tiles[t.X, t.Y];
+            if (tile == null)
+                continue;
+
+            if (tile.GetSpecial() != TileSpecial.None)
+                return false;
+            if (obstacleStateService != null && obstacleStateService.HasObstacleAt(tile.X, tile.Y))
+                return false;
+
+            set.Add(tile);
+        }
+
+        if (set.Count == 0)
+            return false;
+
+        matchTiles = set;
+        return true;
+    }
+
     IEnumerator ResolveBoard(bool allowSpecialActivation = false, bool resolveEmptyCellsFirst = false)
     {
         float _rbStart = Time.realtimeSinceStartup;
         isSpecialActivationPhase = false;
+        hadSpecialActivityThisResolve = false;
 
         // Cascade/match sırası artık while loop başındaki strict barrier tarafından yönetiliyor.
         // resolveEmptyCellsFirst parametresi backward-compatible olarak bırakıldı.
@@ -2254,6 +2391,38 @@ public class BoardController : MonoBehaviour
                     DisableSettleIfMoreCascadesFollow(preMatchCascades);
                     if (BoardFlowTraceEnabled)
                         Debug.Log($"[Resolve] pass={safety} pre_match_cascade actions={preMatchCascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+
+                    // ── Faz 1 overlap (Docs/DecoupledResolve_Plan.md §6) ──
+                    // Bu cascade board'u mantıksal olarak OTURTTUYSA (artık boş hücre yok) ve
+                    // BASİT bir match hazırsa (special/obstacle yok), fall'un TAMAMINI beklemeden
+                    // clear'ı match taşları hedefe yaklaşınca başlat → "match taş girerken başlar".
+                    // Zor durumlar aşağıdaki seri yola düşer (bugünkü davranış).
+                    //
+                    // KRİTİK GUARD: overlap yalnız board GÖRSEL OLARAK SESSİZKEN çalışır — sequencer
+                    // boş VE bloklayıcı background job yok VE special aktivasyon fazı değil. Aksi hâlde
+                    // detached fall, hâlâ uçan bir roket/line-sweep/orb'u beklemeden düşüşü başlatır
+                    // (LineV sütunu bitmeden taş düşme bug'ı). Special sweep'i bittikten sonra bu
+                    // koşullar sağlanınca refill zaten normal cascade gibi overlap edebilir.
+                    if (useDecoupledResolve
+                        && visualCoordinator != null
+                        && !hadSpecialActivityThisResolve
+                        && !IsActionSequencePlaying
+                        && BlockingBackgroundJobs == 0
+                        && !IsSpecialActivationPhase
+                        && !cascadeLogic.HasAnyEmptyPlayableCell()
+                        && TryBuildSimpleOverlapMatch(out var overlapMatchTiles))
+                    {
+                        bool overlapCleared = false;
+                        yield return visualCoordinator.PlayFallWithOverlappedClear(
+                            preMatchCascades,
+                            overlapMatchTiles,
+                            () => ExecuteClearPass(overlapMatchTiles, allowSpecialActivation, r => overlapCleared = r));
+
+                        RefreshAllSortingOrders();
+                        RefreshOilOverlays();
+                        continue;
+                    }
+
                     actionSequencer.Enqueue(preMatchCascades);
 
                     while (actionSequencer.IsPlaying)
@@ -3385,7 +3554,9 @@ public class BoardController : MonoBehaviour
     private float GetCascadeFallSpeedMultiplier()
     {
         // Eski: pass 2+ = 0.50 → taşlar 2x hızlı → "pat pat"
-        // Yeni: kademeli hızlanma, asla 2x'i geçmez
+        // Yeni: kademeli hızlanma, asla 2x'i geçmez.
+        // NOT: Düşüş HISSI buradan gelir; kullanıcı hızlı cascade düşüşünü sevmedi →
+        // orijinal (yumuşak) değerlere geri alındı. Fall hızına dokunma.
         if (CurrentResolvePass <= 1) return 1f;
         if (CurrentResolvePass <= 2) return 0.85f;
         if (CurrentResolvePass <= 4) return 0.75f;
@@ -3394,9 +3565,11 @@ public class BoardController : MonoBehaviour
 
     private float GetCascadeClearSpeedMultiplier()
     {
+        // Cascade clear'ları neredeyse-flash: ara round'larda clear-beat'i kısalt → düşüş
+        // hemen başlar, zincir sıkışır. İlk pass juicy kalır.
         if (CurrentResolvePass <= 1) return 1f;
-        if (CurrentResolvePass <= 2) return 0.80f;
-        return 0.70f;
+        if (CurrentResolvePass <= 2) return 0.55f;
+        return 0.42f;
     }
     private TileType GetRandomType() => randomPool[UnityEngine.Random.Range(0, randomPool.Length)];
     private void ConsumeMove() { RemainingMoves = Mathf.Max(0, RemainingMoves - 1); OnMovesChanged?.Invoke(RemainingMoves); }

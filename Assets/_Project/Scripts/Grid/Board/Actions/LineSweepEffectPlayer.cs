@@ -34,6 +34,14 @@ public sealed class LineSweepEffectPlayer : IClearEffectPlayer
             );
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (board.BoardFlowTraceEnabled)
+        {
+            float actTime = Time.realtimeSinceStartup;
+            Debug.Log($"[LineV Trace] Activation time={actTime:0.000}s strikes={strikes.Count}");
+        }
+#endif
+
         float duration = board.PlayLightningLineStrikes(
             strikes,
             delegate (Vector2Int cell, int strikeIndex)
@@ -56,6 +64,14 @@ public sealed class LineSweepEffectPlayer : IClearEffectPlayer
                     }
                 }
             });
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (board.BoardFlowTraceEnabled)
+        {
+            float coreClearTime = Time.realtimeSinceStartup;
+            Debug.Log($"[LineV Trace] Core clear completion time={coreClearTime:0.000}s beamFullOpacityEnd={(coreClearTime + 7f/60f):0.000}s beamFadeEnd={(coreClearTime + 17f/60f):0.000}s");
+        }
+#endif
 
         if (duration > 0f)
             yield return new WaitForSeconds(duration + line.Timing.TailHoldSeconds);

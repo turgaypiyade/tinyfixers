@@ -3514,8 +3514,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.05875576}
-  m_AnchorMax: {x: 0.74712646, y: 1.3773042}
+  m_AnchorMin: {x: 0, y: 0.12878788}
+  m_AnchorMax: {x: 0.5592734, y: 3.0189395}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -3785,6 +3785,7 @@ RectTransform:
   - {fileID: 2141973311}
   - {fileID: 2060158249}
   - {fileID: 1990982917}
+  - {fileID: 1506102257}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -8196,7 +8197,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 00c98c3df2dc649f78c93f9d7ee4f4a8, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 6383ea1b8ef964caa93201ecd940dce2, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -8664,7 +8665,7 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   enableFallSettle: 1
-  fallSettleDuration: 0.08
+  fallSettleDuration: 0.01
   fallSettleStrength: 0.11
   fallSettleStretchX: 0.07
   fallSettleOvershoot: 0.02
@@ -8672,19 +8673,29 @@ MonoBehaviour:
   fallStretchRecover: 0.45
   useReferenceFallMotion: 0
   debugReferenceFallMotionLogs: 0
-  applyReferenceTileVisualFillRatio: 0
+  applyReferenceTileVisualFillRatio: 1
   referenceFallMotion:
     referenceFps: 60
-    spawnIntervalFrames: 6
-    initialSpeedCellsPerFrame: 0.08
-    accelerationCellsPerFrameSquared: 0.014
-    maxSpeedCellsPerFrame: 0.33
-    landingOvershootCells: 0.025
+    initialFallSpeedCells: 5
+    fallAccelerationCells: 38
+    maxFallSpeedCells: 26
+    existingTileStagger: 0.033333335
+    spawnTileStagger: 0.06666667
+    maxFallStretchScale: {x: 0.975, y: 1.04}
+    landingOvershootCells: 0.04
+    impactScale: {x: 1.06, y: 0.92}
     landingOvershootFrames: 2
-    landingReturnFrames: 4
-    finalSettleFrames: 2
-    tileVisualFillRatio: 0.88
-  preClearDelay: 0.02
+    impactHoldDuration: 0.016666668
+    settleDuration: 0.083333336
+    beamWidthCells: 0.4
+    beamFullOpacityDuration: 0.11666667
+    beamFadeDuration: 0.16666667
+    fragmentLifetimeMin: 0.22
+    fragmentLifetimeMax: 0.32
+    tileVisualFillRatio: 0.9
+  useDecoupledResolve: 1
+  fallArrivalLeadCells: 0.2
+  preClearDelay: 0
   shakeDuration: 0.02
   shakeStrength: 4
   shakeTarget: {fileID: 1939332386}
@@ -8759,6 +8770,7 @@ MonoBehaviour:
   boardVfxPlayer: {fileID: 874639811}
   lightningSpawner: {fileID: 1732843067}
   lineTravelPlayer: {fileID: 1244073440}
+  drillSweepPlayer: {fileID: 1506102258}
   lineTravelSpawnParent: {fileID: 1732843066}
   audioDirector: {fileID: 0}
   topHud: {fileID: 0}
@@ -8769,6 +8781,7 @@ MonoBehaviour:
   pulsePulseExplosionPrefab: {fileID: 89739832858321300, guid: faa00e8a44ed34466b9a9aec6e73f687, type: 3}
   pulsePulseExplosionLifetime: 2.5
   pulsePulseChargeDuration: 2
+  pulsePulseExplosionScale: 0.78
   sfxSource: {fileID: 1410826449}
   sfxPulseCoreBoom: {fileID: 0}
   sfxPulseCoreWave: {fileID: 0}
@@ -8806,7 +8819,7 @@ MonoBehaviour:
   DrainingBossStrikes: 0
   activeFallProfile:
     enabled: 1
-    fps: 65
+    fps: 35
     initialSpeedCellsPerFrame: 0.3
     accelerationCellsPerFrameSquared: 0.01
     maxSpeedCellsPerFrame: 0.45
@@ -9653,6 +9666,65 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &1506102256
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1506102257}
+  - component: {fileID: 1506102258}
+  m_Layer: 5
+  m_Name: DrillSweep
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1506102257
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1506102256}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 664581181}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1506102258
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1506102256}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2db550a7262014302af14c74b01da891, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DrillSweepPlayer
+  drillSprite: {fileID: 21300000, guid: c44819f1a868948f490f9a159616b1f5, type: 3}
+  rotationFrames:
+  - {fileID: 21300000, guid: c44819f1a868948f490f9a159616b1f5, type: 3}
+  - {fileID: 21300000, guid: 554249700d8b743eeaf0dfd5f4ecbb23, type: 3}
+  - {fileID: 21300000, guid: faa7c83b6ba5f45dca28f481fae47d94, type: 3}
+  - {fileID: 21300000, guid: 85fabde9c1ba44ced85b447f177780de, type: 3}
+  - {fileID: 21300000, guid: 595fef0b78ac84b909ee2fc574a93172, type: 3}
+  rotationFps: 35.6
+  cellsPerSecond: 14
+  sizeCells: 1.2
+  entryLeadCells: 1
 --- !u!1 &1510089130
 GameObject:
   m_ObjectHideFlags: 0
@@ -11187,9 +11259,9 @@ MonoBehaviour:
   lightningPrefab: {fileID: -336078503592757907, guid: 50425a05ae288423d8a265c8073cfc00, type: 3}
   vfxRoot: {fileID: 1732843066}
   spawnJitter: 0
-  destroyDelay: 0.08
+  destroyDelay: 0.4
   useChain: 1
-  chainStepDelay: 0.02
+  chainStepDelay: 0.35
 --- !u!1 &1734065518
 GameObject:
   m_ObjectHideFlags: 0

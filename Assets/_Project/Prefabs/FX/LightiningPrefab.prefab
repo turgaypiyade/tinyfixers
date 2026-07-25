@@ -201,12 +201,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LightningBeam
   segments: 10
-  jaggednessRatio: 0.157
+  jaggednessRatio: 0.1
   noiseScale: 2
   liveFlicker: 1
-  startWidthMultiplier: 0.15
-  endWidthMultiplier: 0.06
-  lifeTime: 0.35
+  startWidthMultiplier: 0.22
+  endWidthMultiplier: 0.1
+  lifeTime: 0.9
   alphaOverLife:
     serializedVersion: 2
     m_Curve:

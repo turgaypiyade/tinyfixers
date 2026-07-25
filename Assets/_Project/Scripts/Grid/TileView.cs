@@ -73,6 +73,32 @@ public class TileView : MonoBehaviour,
 
     public RectTransform RectTransform => rt != null ? rt : (RectTransform)transform;
     public Image IconImage => iconImage;
+
+    // Event-driven düşüş: taş hücresine oturunca (fall coroutine bitiş SnapToGrid'i) atılır.
+    // Decoupled resolve (Docs/DecoupledResolve_Plan.md) — timed/polling senkron YOK; overlap
+    // clear'ı bu event tetikler. Aynı düşüşte birden çok kez atılmasın diye guard'lı.
+    public event System.Action<TileView> FallArrived;
+    private int fallArrivedGeneration = -1;
+    private void RaiseFallArrived()
+    {
+        int gen = (board != null) ? board.FallGeneration : 0;
+        if (fallArrivedGeneration == gen) return;   // bu düşüş için zaten atıldı
+        fallArrivedGeneration = gen;
+        FallArrived?.Invoke(this);
+    }
+
+    // Fall döngüsünden çağrılır: taş hedefe lead mesafesi kala arrival'ı erken ateşle.
+    // RaiseFallArrived guard'lı olduğu için snap'teki çağrıyla çakışmaz (bir kez atar).
+    private void MaybeRaiseEarlyFallArrived(Vector2 end, int tileSize)
+    {
+        if (board == null || rt == null || !rt) return;
+        float lead = board.FallArrivalLeadCells;
+        if (lead <= 0f) return;                          // 0 → tam varışta (snap) atılır
+        int gen = board.FallGeneration;
+        if (fallArrivedGeneration == gen) return;        // zaten atıldı
+        if (Vector2.Distance(rt.anchoredPosition, end) <= lead * tileSize)
+            RaiseFallArrived();
+    }
     public PatchBotPropellerView PropellerView => propellerView;
     public OverrideSpecialView OverrideSpecialView => overrideSpecialView;
 
@@ -151,6 +177,7 @@ public class TileView : MonoBehaviour,
 
     private void ResetVisualState()
     {
+        CancelActiveSettle();   // pool'a dönen/yeniden kullanılan taşın eski detached settle'ı çalışmasın
         transform.localScale = Vector3.one;
         transform.localRotation = Quaternion.identity;
 
@@ -264,6 +291,7 @@ public class TileView : MonoBehaviour,
         float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+        CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
 
         if (rt == null || !rt)
             yield break;
@@ -317,6 +345,7 @@ public class TileView : MonoBehaviour,
             {
                 rt.anchoredPosition = end;
                 SnapToGrid(tileSize);
+                RaiseFallArrived();
             }
 
             ResetVisualScale(visualRt, visualBaseScale);
@@ -342,6 +371,10 @@ public class TileView : MonoBehaviour,
 
             rt.anchoredPosition = Vector2.LerpUnclamped(start, end, t);
 
+            // Event-driven erken varış: taş hedefe lead mesafesi KALA (hücreye tam oturmadan
+            // biraz üstünde) FallArrived'ı bir kez ateşle → clear 1-2 frame erken başlar (referans).
+            MaybeRaiseEarlyFallArrived(end, tileSize);
+
             yield return null;
         }
 
@@ -353,6 +386,7 @@ public class TileView : MonoBehaviour,
 
         rt.anchoredPosition = end;
         SnapToGrid(tileSize);
+        RaiseFallArrived();
 
         if (!enableSettle || settleDuration <= 0f)
         {
@@ -514,6 +548,103 @@ public class TileView : MonoBehaviour,
             visualRt.localScale = baseScale;
     }
 
+    // ── Non-blocking landing settle ──
+    // Taş SnapToGrid ile hedefe oturduktan SONRA settle bounce artık fall coroutine'ini
+    // BLOKLAMAZ: board üstünde detached kozmetik coroutine olarak oynar. Böylece resolve
+    // loop bir sonraki cascade round'una taş oturur oturmaz geçer → "tık tık" staccato
+    // yerine akış olur, squash juice'u korunur. Mantıksal pozisyon zaten SnapToGrid ile
+    // set edildiği için MatchFinder/CascadeLogic bu kozmetik dalıştan ETKİLENMEZ.
+    private Coroutine activeSettleCo;
+
+    private void CancelActiveSettle()
+    {
+        if (activeSettleCo != null && board != null)
+            board.StopCoroutine(activeSettleCo);
+        activeSettleCo = null;
+    }
+
+    private void StartDetachedSettle(
+        int tileSize, RectTransform visualRt, Vector3 visualBaseScale,
+        float settleDuration, float settleStrength, float settleStretchX, float settleOvershoot)
+    {
+        CancelActiveSettle();
+
+        if (board == null || rt == null || !rt)
+        {
+            ResetVisualScale(visualRt, visualBaseScale);
+            return;
+        }
+
+        activeSettleCo = board.StartCoroutine(SettleBounceRoutine(
+            tileSize, visualRt, visualBaseScale,
+            settleDuration, settleStrength, settleStretchX, settleOvershoot));
+    }
+
+    private IEnumerator SettleBounceRoutine(
+        int tileSize, RectTransform visualRt, Vector3 visualBaseScale,
+        float settleDuration, float settleStrength, float settleStretchX, float settleOvershoot)
+    {
+        if (rt == null || !rt) { ResetVisualScale(visualRt, visualBaseScale); activeSettleCo = null; yield break; }
+
+        Vector2 basePos = rt.anchoredPosition;
+        Vector2 overshoot = basePos + new Vector2(0f, -settleOvershoot * tileSize);
+        Vector2 overUp = basePos + new Vector2(0f, settleOvershoot * tileSize * 0.3f);
+        float bounceDur = settleDuration;
+
+        // Phase 1: base → overshoot (dalış + squash)
+        float b1 = 0f;
+        while (b1 < bounceDur * 0.35f)
+        {
+            if (rt == null || !rt) { ResetVisualScale(visualRt, visualBaseScale); activeSettleCo = null; yield break; }
+            b1 += Time.deltaTime;
+            float k = Mathf.Clamp01(b1 / Mathf.Max(0.0001f, bounceDur * 0.35f));
+            float eased = 1f - (1f - k) * (1f - k);
+            rt.anchoredPosition = Vector2.LerpUnclamped(basePos, overshoot, eased);
+            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
+            {
+                float sx = 1f + settleStretchX * eased;
+                float sy = 1f - settleStrength * eased;
+                visualRt.localScale = new Vector3(visualBaseScale.x * sx, visualBaseScale.y * sy, visualBaseScale.z);
+            }
+            yield return null;
+        }
+
+        // Phase 2: overshoot → overUp (geri sekme)
+        float b2 = 0f;
+        while (b2 < bounceDur * 0.35f)
+        {
+            if (rt == null || !rt) { ResetVisualScale(visualRt, visualBaseScale); activeSettleCo = null; yield break; }
+            b2 += Time.deltaTime;
+            float k = Mathf.Clamp01(b2 / Mathf.Max(0.0001f, bounceDur * 0.35f));
+            float eased = 1f - (1f - k) * (1f - k);
+            rt.anchoredPosition = Vector2.LerpUnclamped(overshoot, overUp, eased);
+            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
+            {
+                float revK = 1f - k;
+                float sx = 1f + settleStretchX * revK;
+                float sy = 1f - settleStrength * revK;
+                visualRt.localScale = new Vector3(visualBaseScale.x * sx, visualBaseScale.y * sy, visualBaseScale.z);
+            }
+            yield return null;
+        }
+
+        // Phase 3: overUp → base (dinlenme)
+        float b3 = 0f;
+        while (b3 < bounceDur * 0.3f)
+        {
+            if (rt == null || !rt) { ResetVisualScale(visualRt, visualBaseScale); activeSettleCo = null; yield break; }
+            b3 += Time.deltaTime;
+            float k = Mathf.Clamp01(b3 / Mathf.Max(0.0001f, bounceDur * 0.3f));
+            float eased = k * k;
+            rt.anchoredPosition = Vector2.LerpUnclamped(overUp, basePos, eased);
+            yield return null;
+        }
+
+        ResetVisualScale(visualRt, visualBaseScale);
+        if (rt != null && rt) SnapToGrid(tileSize);
+        activeSettleCo = null;
+    }
+
     private static float ReferenceVisualDeltaTime()
     {
         float dt = Time.deltaTime;
@@ -631,6 +762,7 @@ public class TileView : MonoBehaviour,
         float actionStartRealtime)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+        CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
 
         if (this == null || !this)
             yield break;
@@ -676,8 +808,10 @@ public class TileView : MonoBehaviour,
 
         float referenceFps = Mathf.Max(1f, settings.referenceFps);
         float velocityCellsPerFrame = Mathf.Max(0f, settings.initialSpeedCellsPerFrame);
+        float velocityCellsPerFrameInitial = velocityCellsPerFrame;
         float acceleration = Mathf.Max(0f, settings.accelerationCellsPerFrameSquared);
         float maxVelocity = Mathf.Max(0.001f, settings.maxSpeedCellsPerFrame);
+        float maxVelocityReached = velocityCellsPerFrame;
         float travelledCells = 0f;
 
         for (int seg = 1; seg < anchoredPath.Length; seg++)
@@ -708,6 +842,8 @@ public class TileView : MonoBehaviour,
                 velocityCellsPerFrame = Mathf.Min(
                     velocityCellsPerFrame + acceleration * frameDelta,
                     maxVelocity);
+                if (velocityCellsPerFrame > maxVelocityReached)
+                    maxVelocityReached = velocityCellsPerFrame;
 
                 float stepPixels = velocityCellsPerFrame * frameDelta * tileSize;
                 if (stepPixels <= 0.0001f)
@@ -716,6 +852,25 @@ public class TileView : MonoBehaviour,
                 Vector2 before = rt.anchoredPosition;
                 rt.anchoredPosition = Vector2.MoveTowards(before, target, stepPixels);
                 travelledCells += Vector2.Distance(before, rt.anchoredPosition) / Mathf.Max(1f, tileSize);
+
+                // ── Hıza bağlı fall stretch (spec §4) ──
+                // Yalnızca görsel root'ta; layout/model/child VFX etkilenmez.
+                // SmoothStep ile yumuşak devreye girer, ani sıçrama yok. Impact scale
+                // her zaman saklanan base scale üzerinden (visualBaseScale) hesaplanır.
+                if (visualRt != null && visualRt)
+                {
+                    float velocity01 = Mathf.InverseLerp(
+                        velocityCellsPerFrameInitial,
+                        maxVelocity,
+                        velocityCellsPerFrame);
+                    float stretch01 = Mathf.SmoothStep(0f, 1f, velocity01);
+                    float sx = Mathf.Lerp(1f, settings.maxFallStretchX, stretch01);
+                    float sy = Mathf.Lerp(1f, settings.maxFallStretchY, stretch01);
+                    visualRt.localScale = new Vector3(
+                        visualBaseScale.x * sx,
+                        visualBaseScale.y * sy,
+                        visualBaseScale.z);
+                }
 
                 yield return null;
             }
@@ -733,10 +888,19 @@ public class TileView : MonoBehaviour,
 
         if (debugLog)
         {
+            // Editor / development build ölçümleri (spec §16). Release'de debugLog false gelir.
+            float initialVelCellsPerSec = velocityCellsPerFrameInitial * referenceFps;
+            float maxVelCellsPerSec = maxVelocityReached * referenceFps;
+            float fallSeconds = (landingReferenceFrame - spawnReferenceFrame) / referenceFps;
             Debug.Log(
-                $"[ReferenceFall] tileId={GetInstanceID()} column={column} sourceRow={sourceRow} targetRow={targetRow} " +
-                $"spawnFrame={spawnReferenceFrame:0.0} landingFrame={landingReferenceFrame:0.0} travelledCells={travelledCells:0.00}");
+                $"[ReferenceFall] tileId={GetInstanceID()} column={column} startCell=({column},{sourceRow}) " +
+                $"targetCell=({column},{targetRow}) distCells={travelledCells:0.00} spawned={(sourceRow < 0)} " +
+                $"startDelayFrame={spawnReferenceFrame:0.0} v0={initialVelCellsPerSec:0.0}c/s vMax={maxVelCellsPerSec:0.0}c/s " +
+                $"fallDur={fallSeconds:0.000}s landingFrame={landingReferenceFrame:0.0}");
         }
+
+        // Landing'e girmeden önce fall stretch'i temizle → impact scale her zaman base'den başlar.
+        ResetVisualScale(visualRt, visualBaseScale);
 
         if (enableLanding)
             yield return PlayReferenceLanding(tileSize, settings, visualRt, visualBaseScale);
@@ -747,6 +911,12 @@ public class TileView : MonoBehaviour,
             SnapToGrid(tileSize);
     }
 
+    // Referans landing (spec §5-7):
+    //  1) impact: taş hedef merkezinin landingOvershootCells kadar ALTINA girer VE aynı
+    //     anda squeeze (impactScale) tepeye ulaşır → pozisyon+scale aynı frame'de zirveler.
+    //  2) hold: tepede çok kısa bekleme.
+    //  3) settle: impact → hedef merkez + normal scale (OutCubic, hedefi AŞMAZ, rebound yok).
+    // Overshoot yalnız görseldir; mantıksal hücre logicalTargetCell'de kalır (pozisyonu değişmez).
     private IEnumerator PlayReferenceLanding(
         int tileSize,
         ReferenceFallMotionSettings settings,
@@ -756,105 +926,84 @@ public class TileView : MonoBehaviour,
         if (rt == null || !rt)
             yield break;
 
-        Vector2 basePos = rt.anchoredPosition;
-        Vector2 overshoot = basePos + Vector2.down * (Mathf.Max(0f, settings.landingOvershootCells) * tileSize);
+        Vector2 targetPos = rt.anchoredPosition;
+        Vector2 impactPos = targetPos + Vector2.down * (Mathf.Max(0f, settings.landingOvershootCells) * tileSize);
+        Vector3 impactScale = new Vector3(settings.impactScaleX, settings.impactScaleY, 1f);
 
-        float overshootDuration = settings.ReferenceFramesToSeconds(settings.landingOvershootFrames);
-        float returnDuration = settings.ReferenceFramesToSeconds(settings.landingReturnFrames);
-        float settleDuration = settings.ReferenceFramesToSeconds(settings.finalSettleFrames);
+        float impactDuration = settings.ReferenceFramesToSeconds(settings.landingOvershootFrames);
+        float holdDuration = settings.ReferenceFramesToSeconds(settings.impactHoldFrames);
+        float settleDuration = settings.ReferenceFramesToSeconds(settings.landingReturnFrames);
 
-        if (overshootDuration > 0f)
+        // 1) IMPACT — pozisyon ve squeeze birlikte tepeye (easeOut = hızlı temas).
+        if (impactDuration > 0f)
         {
-            yield return LerpReferenceLanding(
-                basePos,
-                overshoot,
-                visualRt,
-                visualBaseScale,
-                Vector3.one,
-                new Vector3(1.025f, 0.975f, 1f),
-                overshootDuration,
-                easeOut: true);
+            float elapsed = 0f;
+            while (elapsed < impactDuration)
+            {
+                if (rt == null || !rt) { ResetVisualScale(visualRt, visualBaseScale); yield break; }
+
+                elapsed += ReferenceVisualDeltaTime();
+                float k = Mathf.Clamp01(elapsed / impactDuration);
+                float eased = 1f - (1f - k) * (1f - k); // OutQuad
+                rt.anchoredPosition = Vector2.LerpUnclamped(targetPos, impactPos, eased);
+                ApplyLandingVisualScale(visualRt, visualBaseScale, Vector3.LerpUnclamped(Vector3.one, impactScale, eased));
+                yield return null;
+            }
         }
 
-        if (returnDuration > 0f)
+        if (rt != null && rt) rt.anchoredPosition = impactPos;
+        ApplyLandingVisualScale(visualRt, visualBaseScale, impactScale);
+
+        // 2) HOLD — kısa tepe beklemesi.
+        if (holdDuration > 0f)
         {
-            yield return LerpReferenceLanding(
-                overshoot,
-                basePos,
-                visualRt,
-                visualBaseScale,
-                new Vector3(1.025f, 0.975f, 1f),
-                Vector3.one,
-                returnDuration,
-                easeOut: false);
+            float elapsed = 0f;
+            while (elapsed < holdDuration)
+            {
+                if (rt == null || !rt) { ResetVisualScale(visualRt, visualBaseScale); yield break; }
+                elapsed += ReferenceVisualDeltaTime();
+                rt.anchoredPosition = impactPos;
+                ApplyLandingVisualScale(visualRt, visualBaseScale, impactScale);
+                yield return null;
+            }
         }
 
+        // 3) SETTLE — impact → hedef merkez + normal scale (OutCubic, hedefi aşmaz).
         if (settleDuration > 0f)
         {
             float elapsed = 0f;
             while (elapsed < settleDuration)
             {
-                if (rt == null || !rt)
-                {
-                    ResetVisualScale(visualRt, visualBaseScale);
-                    yield break;
-                }
+                if (rt == null || !rt) { ResetVisualScale(visualRt, visualBaseScale); yield break; }
 
                 elapsed += ReferenceVisualDeltaTime();
-                rt.anchoredPosition = basePos;
-                ResetVisualScale(visualRt, visualBaseScale);
+                float k = Mathf.Clamp01(elapsed / settleDuration);
+                float eased = 1f - Mathf.Pow(1f - k, 3f); // OutCubic (overshoot yok)
+                rt.anchoredPosition = Vector2.LerpUnclamped(impactPos, targetPos, eased);
+                ApplyLandingVisualScale(visualRt, visualBaseScale, Vector3.LerpUnclamped(impactScale, Vector3.one, eased));
                 yield return null;
             }
         }
 
+        // Kesin snap: pozisyon merkez, scale base, rotation sıfır (spec §7).
         if (rt != null && rt)
-            rt.anchoredPosition = basePos;
+            rt.anchoredPosition = targetPos;
 
         ResetVisualScale(visualRt, visualBaseScale);
+        if (visualRt != null && visualRt)
+            visualRt.localRotation = Quaternion.identity;
     }
 
-    private IEnumerator LerpReferenceLanding(
-        Vector2 from,
-        Vector2 to,
-        RectTransform visualRt,
-        Vector3 visualBaseScale,
-        Vector3 startVisualScale,
-        Vector3 targetVisualScale,
-        float duration,
-        bool easeOut)
+    // impact/settle scale'i DAİMA saklanan base scale üzerinden uygular (localScale *= yok, spec §4).
+    private static void ApplyLandingVisualScale(RectTransform visualRt, Vector3 visualBaseScale, Vector3 impactScale)
     {
-        float elapsed = 0f;
+        if (visualRt == null || !visualRt)
+            return;
 
-        while (elapsed < duration)
-        {
-            if (rt == null || !rt)
-            {
-                ResetVisualScale(visualRt, visualBaseScale);
-                yield break;
-            }
-
-            elapsed += ReferenceVisualDeltaTime();
-            float k = Mathf.Clamp01(elapsed / Mathf.Max(0.0001f, duration));
-            float eased = easeOut
-                ? 1f - (1f - k) * (1f - k)
-                : Mathf.SmoothStep(0f, 1f, k);
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(from, to, eased);
-
-            if (visualRt != null && visualRt)
-            {
-                Vector3 scale = Vector3.LerpUnclamped(startVisualScale, targetVisualScale, eased);
-                visualRt.localScale = new Vector3(
-                    visualBaseScale.x * scale.x,
-                    visualBaseScale.y * scale.y,
-                    visualBaseScale.z * scale.z);
-            }
-
-            yield return null;
-        }
-
-        if (rt != null && rt)
-            rt.anchoredPosition = to;
+        visualRt.localScale = new Vector3(
+            visualBaseScale.x * impactScale.x,
+            visualBaseScale.y * impactScale.y,
+            visualBaseScale.z * impactScale.z);
     }
 
     public IEnumerator MoveToGridCell(
@@ -872,6 +1021,7 @@ public class TileView : MonoBehaviour,
         float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+        CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
 
         if (this == null || !this)
             yield break;
@@ -954,103 +1104,13 @@ public class TileView : MonoBehaviour,
         rt.anchoredPosition = end;
         SnapToGrid(tileSize);
 
-        if (!enableSettle || settleDuration <= 0f)
-        {
+        // Landing settle artık NON-BLOCKING: taş SnapToGrid ile oturdu (yukarıda),
+        // bounce'u detached kozmetik coroutine olarak başlat → fall coroutine burada
+        // biter, resolve loop bir sonraki round'a hemen geçer (akış, staccato yok).
+        if (enableSettle && settleDuration > 0f)
+            StartDetachedSettle(tileSize, visualRt, visualBaseScale, settleDuration, settleStrength, settleStretchX, settleOvershoot);
+        else
             ResetVisualScale(visualRt, visualBaseScale);
-            yield break;
-        }
-
-        Vector2 basePos = rt.anchoredPosition;
-        // Pozisyon dalışı settleOvershoot ile (küçük) — strength skala squash'ı sürer (gömülme fix'i).
-        Vector2 overshoot = basePos + new Vector2(0f, -settleOvershoot * tileSize);
-        Vector2 overUp = basePos + new Vector2(0f, settleOvershoot * tileSize * 0.3f);
-
-        float bounceDur = settleDuration;
-
-        float b1 = 0f;
-        while (b1 < bounceDur * 0.35f)
-        {
-            if (rt == null || !rt)
-            {
-                ResetVisualScale(visualRt, visualBaseScale);
-                yield break;
-            }
-
-            b1 += Time.deltaTime;
-
-            float k = Mathf.Clamp01(b1 / Mathf.Max(0.0001f, bounceDur * 0.35f));
-            float eased = 1f - (1f - k) * (1f - k);
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(basePos, overshoot, eased);
-
-            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
-            {
-                float sx = 1f + settleStretchX * eased;
-                float sy = 1f - settleStrength * eased;   // impact ezilmesi skala ile (pozisyon değil)
-
-                visualRt.localScale = new Vector3(
-                    visualBaseScale.x * sx,
-                    visualBaseScale.y * sy,
-                    visualBaseScale.z);
-            }
-
-            yield return null;
-        }
-
-        float b2 = 0f;
-        while (b2 < bounceDur * 0.35f)
-        {
-            if (rt == null || !rt)
-            {
-                ResetVisualScale(visualRt, visualBaseScale);
-                yield break;
-            }
-
-            b2 += Time.deltaTime;
-
-            float k = Mathf.Clamp01(b2 / Mathf.Max(0.0001f, bounceDur * 0.35f));
-            float eased = 1f - (1f - k) * (1f - k);
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(overshoot, overUp, eased);
-
-            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
-            {
-                float revK = 1f - k;
-                float sx = 1f + settleStretchX * revK;
-                float sy = 1f - settleStrength * revK;
-
-                visualRt.localScale = new Vector3(
-                    visualBaseScale.x * sx,
-                    visualBaseScale.y * sy,
-                    visualBaseScale.z);
-            }
-
-            yield return null;
-        }
-
-        float b3 = 0f;
-        while (b3 < bounceDur * 0.3f)
-        {
-            if (rt == null || !rt)
-            {
-                ResetVisualScale(visualRt, visualBaseScale);
-                yield break;
-            }
-
-            b3 += Time.deltaTime;
-
-            float k = Mathf.Clamp01(b3 / Mathf.Max(0.0001f, bounceDur * 0.3f));
-            float eased = k * k;
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(overUp, basePos, eased);
-
-            yield return null;
-        }
-
-        ResetVisualScale(visualRt, visualBaseScale);
-
-        if (rt != null && rt)
-            SnapToGrid(tileSize);
     }
 
     /// <summary>
@@ -1077,6 +1137,7 @@ public class TileView : MonoBehaviour,
         float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+        CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
 
         if (this == null || !this)
             yield break;
@@ -1190,104 +1251,13 @@ public class TileView : MonoBehaviour,
 
         // Son waypoint sonrası snap
         SnapToGrid(tileSize);
+        RaiseFallArrived();
 
-        if (!enableSettle || settleDuration <= 0f)
-        {
+        // Landing settle NON-BLOCKING (MoveToGridCell ile aynı): detached kozmetik bounce.
+        if (enableSettle && settleDuration > 0f)
+            StartDetachedSettle(tileSize, visualRt, visualBaseScale, settleDuration, settleStrength, settleStretchX, settleOvershoot);
+        else
             ResetVisualScale(visualRt, visualBaseScale);
-            yield break;
-        }
-
-        Vector2 basePos = rt.anchoredPosition;
-        // Pozisyon dalışı settleOvershoot ile (küçük) — strength skala squash'ı sürer (gömülme fix'i).
-        Vector2 overshootPos = basePos + new Vector2(0f, -settleOvershoot * tileSize);
-        Vector2 overUpPos = basePos + new Vector2(0f, settleOvershoot * tileSize * 0.3f);
-
-        float bounceDur = settleDuration;
-
-        float b1 = 0f;
-        while (b1 < bounceDur * 0.35f)
-        {
-            if (rt == null || !rt)
-            {
-                ResetVisualScale(visualRt, visualBaseScale);
-                yield break;
-            }
-
-            b1 += Time.deltaTime;
-
-            float k = Mathf.Clamp01(b1 / Mathf.Max(0.0001f, bounceDur * 0.35f));
-            float eased = 1f - (1f - k) * (1f - k);
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(basePos, overshootPos, eased);
-
-            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
-            {
-                float sx = 1f + settleStretchX * eased;
-                float sy = 1f - settleStrength * eased;   // impact ezilmesi skala ile (pozisyon değil)
-
-                visualRt.localScale = new Vector3(
-                    visualBaseScale.x * sx,
-                    visualBaseScale.y * sy,
-                    visualBaseScale.z);
-            }
-
-            yield return null;
-        }
-
-        float b2 = 0f;
-        while (b2 < bounceDur * 0.35f)
-        {
-            if (rt == null || !rt)
-            {
-                ResetVisualScale(visualRt, visualBaseScale);
-                yield break;
-            }
-
-            b2 += Time.deltaTime;
-
-            float k = Mathf.Clamp01(b2 / Mathf.Max(0.0001f, bounceDur * 0.35f));
-            float eased = 1f - (1f - k) * (1f - k);
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(overshootPos, overUpPos, eased);
-
-            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
-            {
-                float revK = 1f - k;
-                float sx = 1f + settleStretchX * revK;
-                float sy = 1f - settleStrength * revK;
-
-                visualRt.localScale = new Vector3(
-                    visualBaseScale.x * sx,
-                    visualBaseScale.y * sy,
-                    visualBaseScale.z);
-            }
-
-            yield return null;
-        }
-
-        float b3 = 0f;
-        while (b3 < bounceDur * 0.3f)
-        {
-            if (rt == null || !rt)
-            {
-                ResetVisualScale(visualRt, visualBaseScale);
-                yield break;
-            }
-
-            b3 += Time.deltaTime;
-
-            float k = Mathf.Clamp01(b3 / Mathf.Max(0.0001f, bounceDur * 0.3f));
-            float eased = k * k;
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(overUpPos, basePos, eased);
-
-            yield return null;
-        }
-
-        ResetVisualScale(visualRt, visualBaseScale);
-
-        if (rt != null && rt)
-            SnapToGrid(tileSize);
     }
 
     public void PlaySpecialCreationReveal(TileSpecial special, int tileSize)
@@ -1310,6 +1280,9 @@ public class TileView : MonoBehaviour,
 
         if (special == TileSpecial.SystemOverride)
             overrideSpecialView?.PlayCreation();
+
+        if (special == TileSpecial.PulseCore)
+            fuseSparkleView?.PlayCreationSpin(tileSize);
     }
 
     private void StopSpecialCreationReveal()

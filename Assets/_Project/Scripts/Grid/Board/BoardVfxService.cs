@@ -86,7 +86,7 @@ public class BoardVfxService
         vfx.PlayAt(localMid, boardSize);
     }
 
-    public void PlayPulsePulseExplosionVfxAtCell(GameObject prefab, RectTransform vfxSpace, float lifetime, int x, int y)
+    public void PlayPulsePulseExplosionVfxAtCell(GameObject prefab, RectTransform vfxSpace, float lifetime, int x, int y, float scale = 1f)
     {
         if (prefab == null || vfxSpace == null) return;
 
@@ -102,7 +102,7 @@ public class BoardVfxService
         if (rt != null)
         {
             rt.anchoredPosition = localMid;
-            rt.localScale = Vector3.one;
+            rt.localScale = Vector3.one * Mathf.Max(0.01f, scale);
             rt.localRotation = Quaternion.identity;
         }
         else

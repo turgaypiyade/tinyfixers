@@ -38,21 +38,22 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     [Header("AfterImage Trail")]
     public GameObject rocketAfterImagePrefab;
     public RectTransform afterImageParent;
-    [Tooltip("Saniye cinsinden bir ghost'un alfası 0'a düşene kadar geçen süre. DÜŞÜK = roketin gerisinde kalan ghost'lar hızla sönüp daha koyu görünür (güçlü head-bright/tail-dim gradient). YÜKSEK = trail daha uzun süre kalır ama düz görünür.")]
-    public float afterImageLife = 0.6f;
-    [Tooltip("Ghost'un spawn anındaki alfası. Sonra FadeOnly tarafından 0'a indirilir.")]
-    public float afterImageAlpha = 0.95f;
-    [Tooltip("Fade eğrisi üssü. 1 = lineer (düz gradient). 2-4 = ghost yaşam başında hızla söner, sonunda yavaş söner → tail çok daha koyu, head canlı. Yüksek = daha keskin kontrast.")]
-    [Range(0.5f, 6f)] public float afterImageFadePower = 2.5f;
-    [Tooltip("Tek bir step'in substep ghost'ları arasındaki başlangıç-alfa gradyanı. 0 = tüm substep'ler aynı alfada doğar (düz hat). 1 = roketten en uzak substep alfası 0'dan başlar (en güçlü kontrast).")]
+    [Tooltip("Saniye cinsinden bir ghost'un alfası 0'a düşene kadar geçen süre (7f full + 10f fade = 17f @60fps = 0.283s). " +
+             "Düşen taşlar board'a girdiğinde beam %20-30 opacity seviyesine düşer, taşlar görünür kalır.")]
+    public float afterImageLife = 0.283f;
+    [Tooltip("Ghost'un spawn anındaki alfası.")]
+    public float afterImageAlpha = 0.85f;
+    [Tooltip("Fade eğrisi üssü. 1.8 = ilk 7 frame yüksek opaklık, ardından hızlı fade.")]
+    [Range(0.5f, 6f)] public float afterImageFadePower = 1.8f;
+    [Tooltip("Tek bir step'in substep ghost'ları arasındaki başlangıç-alfa gradyanı.")]
     [Range(0f, 1f)] public float afterImageSubStepDimBias = 0.55f;
-    [Tooltip("Ghost'un spawn anındaki KALINLIK çarpanı (sprite'ın Y eksenine = rokete dik yöne uygulanır). 1'den büyük = daha kalın alev izi.")]
-    public float afterImageThicknessScale = 1.2f;
-    [Tooltip("Ghost'un spawn anındaki UZUNLUK çarpanı (sprite'ın X eksenine = roket gövdesi yönüne uygulanır). Genelde 1.0 — alev izini gereksiz uzatma.")]
+    [Tooltip("Ghost'un spawn anındaki KALINLIK çarpanı. beamWidthCells = 0.40f hedefi için 0.42 * headSizeFactor(0.95) = 0.40 hücre genişliği.")]
+    public float afterImageThicknessScale = 0.42f;
+    [Tooltip("Ghost'un spawn anındaki UZUNLUK çarpanı.")]
     public float afterImageLengthScale = 1.0f;
-    [Tooltip("Ghost yaşam süresi boyunca uygulanacak büyüme çarpanı (her iki eksene de). 1'den büyük = alev yaşlandıkça dağılır/yayılır.")]
-    public float afterImageScaleUp = 1.4f;
-    [Tooltip("Her step'in başlangıç-bitiş yoluna yerleştirilecek ghost sayısı. Yüksek = yoğun alev izi.")]
+    [Tooltip("Ghost yaşam süresi boyunca uygulanacak büyüme çarpanı.")]
+    public float afterImageScaleUp = 1.15f;
+    [Tooltip("Her step'in başlangıç-bitiş yoluna yerleştirilecek ghost sayısı.")]
     [Range(1, 12)] public int afterImageSubSteps = 6;
     [Tooltip("Step'ler arası beklemede roket başında ek time-based spawn. 0 = devre dışı.")]
     public float afterImageSpawnInterval = 0f;

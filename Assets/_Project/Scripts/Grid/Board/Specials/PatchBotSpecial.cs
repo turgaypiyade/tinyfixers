@@ -232,6 +232,15 @@ public sealed class PatchBotSpecial
             board.ClearCell(cell.x, cell.y);
             board.ClearCellVisualOnly(cell, sourceType, tile);
         }
+        else
+        {
+            // Yoğun special zincirinde hücre bu patchbot'tan BAŞKA bir taşa reassign olmuş
+            // (cascade doldurmuş) → yukarıdaki disposal atlanır, view sahnede orphan kalırdı.
+            // Hücre DATA'sına dokunmadan orphan view'ı yok et (görsel hayalet fix).
+            Debug.LogWarning($"[PatchBot] ORPHAN yakalandı & yok edildi: origin=({cell.x},{cell.y}) " +
+                             $"hücre şu an başka taşa reassign olmuş (yoğun-zincir yarışı). Fix çalıştı.");
+            board.DestroyOrphanedTileView(tile);
+        }
     }
 
     private void ApplyPatchBotSoloHitDeferred(PatchBotExecutionRuntime arrivalRt, int targetX, int targetY)

@@ -310,8 +310,10 @@ public static class TileClearBurstVfx
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = Vector2.zero;
 
-        float shardSize = tileSize * Random.Range(0.10f, 0.18f);
-        rt.sizeDelta = new Vector2(shardSize, shardSize * 1.2f); // hafif dikey
+        // Spec §11: daha küçük kırık shard'lar. En büyük parça hücrenin %15'ini geçmez
+        // (0.06–0.12 → eski 0.10–0.18'e göre ~%35 küçük) → düşen taşların okunabilirliği korunur.
+        float shardSize = tileSize * Random.Range(0.06f, 0.12f);
+        rt.sizeDelta = new Vector2(shardSize, shardSize * 1.15f); // hafif dikey
         rt.localRotation = Quaternion.Euler(0, 0, Random.Range(0f, 360f));
 
         var img = go.GetComponent<Image>();
@@ -380,6 +382,9 @@ public static class TileClearBurstVfx
     private static Sprite _softCircleSprite;
     private static Sprite _starSprite;
     private static Sprite _shardSprite;
+
+    // PulseCore oluşum halesi de aynı yumuşak-daire halkayı kullanır (normal match ring'iyle tutarlı).
+    public static Sprite SoftCircleHaloSprite => GetSoftCircleSprite();
 
     private static Sprite GetSoftCircleSprite()
     {

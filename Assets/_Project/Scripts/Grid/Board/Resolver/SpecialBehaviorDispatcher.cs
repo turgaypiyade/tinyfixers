@@ -20,7 +20,7 @@ public class SpecialBehaviorDispatcher
     private readonly OverrideSpecializedCombo overrideSpecializedCombo = new();
     private readonly OverrideOverrideCombo overrideOverrideCombo = new();
     private readonly PatchBotCombo patchBotCombo = new();
-    private readonly PulsePulseCombo pulsePulseCombo = new();
+    private readonly PulsePulseCombo pulsePulseCombo = new(radius: 3);   // 7x7 (2*3+1)
     internal ActivationQueueProcessor QueueProcessor;
 
     public SpecialBehaviorDispatcher(

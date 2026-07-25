@@ -6,9 +6,9 @@ public class BoardBreakFxService
     private const float MinSafeFxLifetime = 0.75f;
     private const int TileBreakFxParticleCount = 2;
     private const float TileBreakFxScale = 1f;
-    private const float TileBreakFxParticleMinSize = 28f;
-    private const float TileBreakFxParticleMaxSize = 40f;
-    private const float TileBreakFxMaxParticleScreenSize = 0.14f;
+    private const float TileBreakFxParticleMinSize = 14f;
+    private const float TileBreakFxParticleMaxSize = 21f;
+    private const float TileBreakFxMaxParticleScreenSize = 0.08f;
     private const float TileBreakFxLightGravityMin = 0.35f;
     private const float TileBreakFxLightGravityMax = 0.65f;
     private const float TileBreakFxUpwardVelocity = 95f;

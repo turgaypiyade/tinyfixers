@@ -204,6 +204,38 @@ public class LineSweepService
         return maxEndTime;
     }
 
+    // LineH drill: satırın (originY) SOL ucundan sağ uca tek dönen drill süpürür; her hücreye
+    // varınca onSweepCellReached ile o hücre kırılır (roketle aynı event mekaniği).
+    private float PlayHorizontalDrillSweep(
+        int originY, float delaySeconds,
+        Action<Vector2Int> onSweepCellReached, Action onCompleted)
+    {
+        var drill = board.DrillSweepPlayer;
+        var space = drill != null ? drill.SweepSpace : null;
+
+        if (space == null)
+        {
+            for (int x = 0; x < board.Width; x++)
+                onSweepCellReached?.Invoke(new Vector2Int(x, originY));
+            onCompleted?.Invoke();
+            return delaySeconds;
+        }
+
+        Vector3 w0 = GetCellWorldCenterPosition(0, originY);
+        Vector3 w1 = GetCellWorldCenterPosition(Mathf.Min(1, board.Width - 1), originY);
+        Vector2 a0 = board.WorldToAnchoredIn(space, w0);
+        Vector2 a1 = board.WorldToAnchoredIn(space, w1);
+        Vector2 step = (board.Width > 1) ? (a1 - a0) : new Vector2(board.TileSize, 0f);
+
+        int cellCount = board.Width;
+        drill.PlaySweep(
+            a0, step, cellCount, board.TileSize, delaySeconds,
+            i => onSweepCellReached?.Invoke(new Vector2Int(i, originY)),
+            onCompleted);
+
+        return delaySeconds + drill.EstimateDuration(cellCount);
+    }
+
     private float PlayTwoWaySweep(
         LightningSpawner lightningSpawner,
         LineTravelSplitSwapTestUI lineTravelPlayer,
@@ -212,6 +244,11 @@ public class LineSweepService
         Action<Vector2Int> onSweepCellReached,
         Action onCompleted = null)
     {
+        // LineH: roket yerine TEK dönen drill (atanmışsa). Satırın sol ucundan sağ uca süpürür.
+        // LineV (dikey) roket kalır.
+        if (isHorizontal && board.DrillSweepPlayer != null)
+            return PlayHorizontalDrillSweep(originY, delaySeconds, onSweepCellReached, onCompleted);
+
         if (lineTravelPlayer != null)
         {
             Vector3 worldCenter = GetCellWorldCenterPosition(originX, originY);

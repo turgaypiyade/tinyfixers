@@ -247,7 +247,7 @@ public class SpecialResolver
             actions.Add(new SpecialChainRunner(
                 board,
                 new List<TileView> { a },
-                4,                              // Pulse+Pulse yarıçapı (eski PulsePulseCombo default)
+                3,                              // Pulse+Pulse yarıçapı = 7x7 (2*3+1)
                 board.PulseChainCatchOverlap,
                 ResolveOtherSpecialInline,
                 consumeTiles: new List<TileView> { a, b }));

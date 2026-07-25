@@ -1644,6 +1644,7 @@ public class GridSpawner : MonoBehaviour
         view.SetUseFullCellIcon(fullCellIcons);
         view.SetVisualLayout(TileView.TileVisualLayout.Centered);
         view.ApplyTileSize(tileSize);
+        board.ApplyNormalVisualFillRatio(view);   // ilk board taşları da fill-ratio alsın (cascade spawn zaten alıyordu)
 
         board.RegisterTile(view, x, y); // Init + coords + ilk SyncTileData (tipi henüz default olabilir)
         view.SetType(type);             // Doğru tipi ata
