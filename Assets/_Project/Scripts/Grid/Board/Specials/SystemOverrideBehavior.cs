@@ -23,7 +23,14 @@ public class SystemOverrideBehavior : ISpecialBehavior
         for (int x = 0; x < board.Width; x++)
             for (int y = 0; y < board.Height; y++)
             {
-                if (!SpecialUtils.CanTargetTileContent(board, x, y)) continue;
+                bool canTargetTile = SpecialUtils.CanTargetTileContent(board, x, y);
+                bool canDamageGrassOnly =
+                    !canTargetTile &&
+                    SpecialUtils.CanAffectCell(board, x, y) &&
+                    board.ObstacleStateService != null &&
+                    board.ObstacleStateService.IsGrassAt(x, y);
+
+                if (!canTargetTile && !canDamageGrassOnly) continue;
 
                 var tile = board.Tiles[x, y];
                 if (tile == null) continue;

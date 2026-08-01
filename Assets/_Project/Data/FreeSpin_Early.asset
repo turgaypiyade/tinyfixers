@@ -33,7 +33,7 @@ MonoBehaviour:
     weight: 15
   - type: 11
     amount: 1
-    icon: {fileID: 5240213395630594912, guid: f06b2ac3720c846f39aaed49e5856f87, type: 3}
+    icon: {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
     nameLocalizationKey: 
     fallbackName: 
     weight: 15
@@ -45,7 +45,7 @@ MonoBehaviour:
     weight: 10
   - type: 12
     amount: 1
-    icon: {fileID: 21300000, guid: 40431c64b3fc44e9fa09dc2b89901c9d, type: 3}
+    icon: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
     nameLocalizationKey: 
     fallbackName: 
     weight: 15

@@ -116,10 +116,10 @@ TextureImporter:
       name: MagnetObstacle1_0
       rect:
         serializedVersion: 2
-        x: 40
-        y: 5
-        width: 975
-        height: 1033
+        x: 6
+        y: 4
+        width: 1686
+        height: 1691
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

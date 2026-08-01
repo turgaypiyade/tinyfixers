@@ -22,7 +22,7 @@ MonoBehaviour:
     obstacleId: 1
     collectibleId: 2
     iconOverride: {fileID: 21300000, guid: 991fec8e3ffcc47dc832d478a88e032c, type: 3}
-    amount: 800
+    amount: 990
   levelKind: 1
   usesCustomIntro: 1
   introLeftSprite: {fileID: 21300000, guid: d6cc3409213204b239ccdaed773550fe, type: 3}
@@ -31,8 +31,8 @@ MonoBehaviour:
   introHoldDuration: 1.1
   bossAttackEveryMoves: 3
   bossAttackOilCount: 0
-  playerMaxHp: 700
-  damagePerClearedTile: 2
+  playerMaxHp: 990
+  damagePerClearedTile: 5
   enemyAttackBaseDamage: 5
   enemyAttackDamageGrowth: 2
   enemyAttackInterval: 2.5

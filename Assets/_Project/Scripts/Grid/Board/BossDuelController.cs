@@ -2540,6 +2540,7 @@ public sealed class BossDuelController : MonoBehaviour
     private List<Vector2Int> PickOilTargets(int count)
     {
         var candidates = new List<Vector2Int>();
+        var reserved = new HashSet<Vector2Int>();
         var obstacleService = board.ObstacleStateService;
 
         for (int x = 0; x < board.Width; x++)
@@ -2556,9 +2557,31 @@ public sealed class BossDuelController : MonoBehaviour
         var picked = new List<Vector2Int>(count);
         for (int i = 0; i < count && candidates.Count > 0; i++)
         {
-            int idx = Random.Range(0, candidates.Count);
-            picked.Add(candidates[idx]);
-            candidates.RemoveAt(idx);
+            bool pickedOne = false;
+            int start = Random.Range(0, candidates.Count);
+            for (int c = 0; c < candidates.Count; c++)
+            {
+                int idx = (start + c) % candidates.Count;
+                var candidate = candidates[idx];
+                reserved.Add(candidate);
+                bool keepsPlayableMove = board.HasAnyPlayableSwapWithAdditionalLockedCells(reserved);
+                reserved.Remove(candidate);
+
+                if (!keepsPlayableMove)
+                    continue;
+
+                picked.Add(candidate);
+                reserved.Add(candidate);
+                candidates.RemoveAt(idx);
+                pickedOne = true;
+                break;
+            }
+
+            if (!pickedOne)
+            {
+                Debug.Log("[BossDuel][Oil] Oil attack skipped; every remaining target would leave no playable move.");
+                break;
+            }
         }
         return picked;
     }

@@ -54,8 +54,8 @@ public class LevelDataEditor : Editor
     private const int cellPx = 30;
     private const int paletteIcon = 44;
 
-    private static readonly Color boardBg       = new Color(0.70f, 0.83f, 0.95f, 1f);
-    private static readonly Color normalCell    = new Color(1f, 1f, 1f, 0.08f);
+    private static readonly Color boardBg       = new Color(0.43f, 0.59f, 0.82f, 1f);
+    private static readonly Color normalCell    = new Color(0.36f, 0.50f, 0.78f, 0.62f);
     private static readonly Color holeCell      = new Color(0.03f, 0.06f, 0.10f, 0.95f);
     private static readonly Color gridLine      = new Color(1f, 1f, 1f, 0.35f);
     private static readonly Color occupiedOverlay = new Color(0f, 0f, 0f, 0.12f);

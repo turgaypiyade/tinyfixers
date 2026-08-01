@@ -99,6 +99,7 @@ public static class BossDifficulty
         int baseGrowth = level != null ? Mathf.Max(0, level.enemyAttackDamageGrowth) : 6;
         int baseOilCount = level != null ? Mathf.Max(0, level.bossAttackOilCount) : 0;
         int baseOilEvery = level != null ? Mathf.Max(1, level.bossAttackEveryMoves) : 3;
+        Sprite authoredBodyFallback = authored ? ResolveEnemyObstacleBodySprite(level) : null;
 
         int bossIndex = CurrentBossIndex();
 
@@ -147,7 +148,7 @@ public static class BossDifficulty
                     if (def.attackDamageGrowth >= 0) p.attackDamageGrowth = def.attackDamageGrowth;
                     if (def.oilCount >= 0) p.oilCount = def.oilCount;
                     if (def.oilEveryMoves > 0) p.oilEveryMoves = def.oilEveryMoves;
-                    p.bodySprite = def.bodySprite;
+                    p.bodySprite = def.bodySprite != null ? def.bodySprite : authoredBodyFallback;
                     p.defeatedSprite = def.defeatedSprite;
                     p.bodyTint = def.bodyTint;
                 }
@@ -163,6 +164,15 @@ public static class BossDifficulty
         }
 
         return waves;
+    }
+
+    private static Sprite ResolveEnemyObstacleBodySprite(LevelData level)
+    {
+        var def = level != null && level.obstacleLibrary != null
+            ? level.obstacleLibrary.Get(ObstacleId.EnemyShieldPickup)
+            : null;
+
+        return def != null ? def.GetPreviewSprite() : null;
     }
 
     private static float[] ResolveWeights(LevelData level, bool authored, int count)

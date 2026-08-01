@@ -592,7 +592,7 @@ public sealed class TileAnimator
             if (isSpinReveal)
             {
                 float revealDur = 0.32f;   // pop + tepe bekleme + spin + otur (görünür kalması için)
-                float peakScale = 2.0f;    // normalin 2 katı (kullanıcı isteği; LineV/H görünür, PulseCore ikonu gizli)
+                float peakScale = 1.5f;    // 0.75'ten başlar, 1.50'ye büyür, sonra 1.0'a oturur (kullanıcı isteği)
 
                 // Düz 2D sprite → dönüş DAİMA Z ekseninde (ekran düzleminde, para/pervane gibi).
                 // X/Y ekseni kağıdı 3B çevirir gibi yassıltıyordu, çirkindi → geri alındı.
@@ -603,6 +603,19 @@ public sealed class TileAnimator
                 // Roketler (LineV/LineH): Y ekseninde 360° (kullanıcı isteği).
                 float spinDegrees = isRocket ? 360f : 0f;
                 Color colorTarget = new Color(baseColor.r, baseColor.g, baseColor.b, 1f);
+
+                // Flipbook (silindir dönüşü): TileView'de LineH/LineV için 5 kare doluysa frame'leri
+                // sırayla oynat + düz eksen dönüşünü kapat. Kare yoksa null → mevcut düz X/Y dönüşü.
+                Sprite[] flipFrames = createdTile.GetLineSpinFrames(sp);
+                float flipZ = 0f;
+                // LineV'nin kendi kareleri yoksa LineH karelerini 90° Z döndürüp kullan (yatay silindir → dik).
+                if (flipFrames == null && sp == TileSpecial.LineV)
+                {
+                    flipFrames = createdTile.GetLineSpinFrames(TileSpecial.LineH);
+                    if (flipFrames != null) flipZ = 90f;
+                }
+                bool useFlipbook = flipFrames != null;
+                Sprite originalSpecialSprite = createdIcon != null ? createdIcon.sprite : null;
 
                 t = 0f;
                 while (t < revealDur)
@@ -616,17 +629,31 @@ public sealed class TileAnimator
                     // Scale: ilk %30 pop (0.22→peak), %30-55 tepede bekle (görünür), sonra 1.0 otur.
                     float scaleFactor;
                     if (k < 0.30f)
-                        scaleFactor = Mathf.LerpUnclamped(0.22f, peakScale, EaseOutCubic(k / 0.30f));
+                        scaleFactor = Mathf.LerpUnclamped(0.75f, peakScale, EaseOutCubic(k / 0.30f));
                     else if (k < 0.55f)
                         scaleFactor = peakScale;
                     else
                         scaleFactor = Mathf.LerpUnclamped(peakScale, 1f, EaseOutCubic((k - 0.55f) / 0.45f));
                     createdIconRt.localScale = baseScale * scaleFactor;
 
-                    // Spin: spinDegrees→0 (easeOut), tam turda 0'da biter. Roketler Y ekseninde döner
-                    // (kullanıcı isteği); PulseCore=0 (flipbook kendi döndürüyor).
-                    float spinAngle = Mathf.LerpUnclamped(spinDegrees, 0f, EaseOutCubic(k));
-                    createdIconRt.localRotation = Quaternion.Euler(0f, spinAngle, 0f);
+                    if (useFlipbook)
+                    {
+                        // 5 kareyi reveal boyunca sırayla göster (silindir dönüşü); düz eksen dönüşü yok.
+                        int fi = Mathf.Clamp(Mathf.FloorToInt(k * flipFrames.Length), 0, flipFrames.Length - 1);
+                        if (createdIcon != null && flipFrames[fi] != null) createdIcon.sprite = flipFrames[fi];
+                        createdIconRt.localRotation = Quaternion.Euler(0f, 0f, flipZ);   // LineV: LineH kareleri 90° dik
+                    }
+                    else
+                    {
+                        // Spin: spinDegrees→0 (easeOut), tam turda 0'da biter. LineH X ekseninde, LineV Y
+                        // ekseninde döner (kullanıcı isteği); PulseCore=0.
+                        float spinAngle = Mathf.LerpUnclamped(spinDegrees, 0f, EaseOutCubic(k));
+                        Quaternion spinRot =
+                            sp == TileSpecial.LineH ? Quaternion.Euler(spinAngle, 0f, 0f) :   // X ekseni
+                            sp == TileSpecial.LineV ? Quaternion.Euler(0f, spinAngle, 0f) :   // Y ekseni
+                            Quaternion.identity;
+                        createdIconRt.localRotation = spinRot;
+                    }
 
                     // Hızlı fade-in + kısa beyaz parlama.
                     float a = Mathf.Clamp01(k * 3.3f);
@@ -640,9 +667,12 @@ public sealed class TileAnimator
                     yield return null;
                 }
 
-                // Final: tam normale otur (scale 1, rotation 0).
+                // Final: tam normale otur (scale 1, rotation 0). Flipbook kullandıysak son karede değil,
+                // asıl special sprite'ında bitir.
                 createdIconRt.localScale = baseScale;
                 createdIconRt.localRotation = Quaternion.identity;
+                if (useFlipbook && createdIcon != null && originalSpecialSprite != null)
+                    createdIcon.sprite = originalSpecialSprite;
                 if (createdGroup != null && createdGroup) createdGroup.alpha = 1f;
                 if (createdIcon != null && createdIcon) createdIcon.color = colorTarget;
             }

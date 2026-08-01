@@ -466,10 +466,12 @@ public class BoardController : MonoBehaviour
     public event Action<int> OnChestOpened;
     public event Action<int, ChestColorMask> OnChestColorRemoved;
     public event Action<int, ChestColorMask, int> OnBatteryHit;
+    public event Action<int, ChestColorMask, int, int, int> OnOverrideBatteryBoxHit;
     public event Action<int> OnWardrobeOpened;
     public event Action<int, int> OnWardrobeItemRemoved;
     public event Action<int> OnMovesChanged;
     public event Action<TileType, int> OnTilesCleared;
+    public event Action<int> OnMoveClearPraise;
     // Her tekil special aktivasyonu (zincirdekiler dahil) — BossDuel bonus hasarı dinler.
     public event Action<TileSpecial, Vector2Int> OnSpecialActivated;
     public event Action<bool> OnBoosterTargetingChanged;
@@ -480,6 +482,9 @@ public class BoardController : MonoBehaviour
     private bool lastSwapUserMove;
     private bool shakeNextClear;
     private bool isSpecialActivationPhase;
+    private int moveClearPraiseCount;
+    private bool moveClearPraiseTracking;
+    private bool moveClearPraiseEmitted;
     // Decoupled overlap güvenliği: bu resolve'da herhangi bir special aktivitesi (line sweep:
     // LineV/Override/PulseCore) olduysa true. Match-overlap yalnız bu FALSE iken çalışır → special'ların
     // mevcut event-driven sequencer senkronu HİÇ bozulmaz. ResolveBoard başında sıfırlanır.
@@ -499,6 +504,7 @@ public class BoardController : MonoBehaviour
     private SpecialCreationService specialCreationService;
     private PendingCreationStore pendingCreationStore;
     private PendingCreationApplicator pendingCreationApplicator;
+    private MoveClearPraisePopupController moveClearPraisePopup;
 
     private OilSpreadService oilSpreadService;
     private readonly HashSet<Vector2Int> oilSuppressionCellsThisMove = new();
@@ -653,6 +659,12 @@ public class BoardController : MonoBehaviour
     public CascadeLogic CascadeLogic => cascadeLogic;
     internal Transform LineTravelSpawnParent => lineTravelSpawnParent;
 
+    public bool HasAnyPlayableSwapWithAdditionalLockedCells(IReadOnlyCollection<Vector2Int> additionallyLockedCells)
+    {
+        EnsureServices();
+        return matchFinder != null && matchFinder.HasAnyPlayableSwap(additionallyLockedCells);
+    }
+
     // ── Event forwarders for LineSweepService ──
     internal void RaiseSpecialActivated(TileSpecial special, Vector2Int cell) => OnSpecialActivated?.Invoke(special, cell);
     internal void OnLineSweepStartedInternal(LightningLineStrike strike, float delay)
@@ -716,6 +728,7 @@ public class BoardController : MonoBehaviour
         TryResolveLightningSpawner();
         TryResolveLineTravelPlayer();
         EnsureGoalFlyFx();
+        EnsureMoveClearPraisePopup();
 
         if (lightningSpawner == null)
             Debug.LogWarning("[Lightning][BoardController] lightningSpawner reference is not assigned and auto-resolve failed.");
@@ -808,10 +821,9 @@ public class BoardController : MonoBehaviour
     public void BeginBackgroundJob() => ActiveBackgroundJobs++;
     public void EndBackgroundJob()   => ActiveBackgroundJobs = Mathf.Max(0, ActiveBackgroundJobs - 1);
 
-    // Subsets of ActiveBackgroundJobs that must keep end-of-level evaluation waiting
-    // (RunAfterIdle / fail-confirmation read ActiveBackgroundJobs), but should not park
-    // the ResolveBoard/SpecialChain settle loop. Goal orbs are cosmetic; PatchBot dash
-    // applies its hit on arrival, but the board is allowed to keep flowing while it flies.
+    // Subsets of ActiveBackgroundJobs that should not park the ResolveBoard/SpecialChain
+    // settle loop. Level-end may still wait for them if their pending credit can change
+    // the final result.
     public int FlyingGoalOrbs = 0;
     public int FlyingPatchBotDashes = 0;
     public int DrainingBossStrikes = 0;
@@ -1040,7 +1052,7 @@ public class BoardController : MonoBehaviour
 
         while (true)
         {
-            bool busy = IsBusy || ActiveBackgroundJobs > 0 || IsActionSequencePlaying;
+            bool busy = IsBusy || BlockingBackgroundJobs > 0 || IsActionSequencePlaying;
 
             if (!busy)
             {
@@ -1057,6 +1069,8 @@ public class BoardController : MonoBehaviour
                     $"[Board] RunAfterIdle timeout. " +
                     $"IsBusy={IsBusy}, CurrentState={CurrentState}, " +
                     $"busyScopeDepth={busyScopeDepth}, ActiveBackgroundJobs={ActiveBackgroundJobs}, " +
+                    $"BlockingBackgroundJobs={BlockingBackgroundJobs}, FlyingGoalOrbs={FlyingGoalOrbs}, " +
+                    $"FlyingPatchBotDashes={FlyingPatchBotDashes}, DrainingBossStrikes={DrainingBossStrikes}, " +
                     $"ActionSequencePlaying={IsActionSequencePlaying}");
 
                 action?.Invoke();
@@ -1623,7 +1637,7 @@ public class BoardController : MonoBehaviour
         // Special'a tek tık → hareket ettirmeden solo aktive et. Swap (ve special+special
         // combo) için sürükleme kullanılır; TileView tap'i sürüklemeden ayırdığı için
         // sürüklenen special burada tetiklenmez, sadece gerçek tıklamada çalışır.
-        if (tile != null && tile.GetSpecial() != TileSpecial.None)
+        if (tile != null && tile.GetSpecial() != TileSpecial.None && CanTapActivateSpecial(tile))
         {
             selected = null;
             StartCoroutine(ProcessSpecialTap(tile));
@@ -1648,6 +1662,18 @@ public class BoardController : MonoBehaviour
     }
 
     bool AreNeighbors(TileView a, TileView b) => Mathf.Abs(a.X - b.X) + Mathf.Abs(a.Y - b.Y) == 1;
+
+    private bool CanTapActivateSpecial(TileView tile)
+    {
+        if (tile == null || tile.GetSpecial() == TileSpecial.None)
+            return false;
+
+        if (obstacleStateService == null)
+            return true;
+
+        return !obstacleStateService.IsOilAt(tile.X, tile.Y)
+            && !obstacleStateService.IsInteractionLockedAt(tile.X, tile.Y);
+    }
 
     // ═══════════════════════════════════════════════════════════════
     //  Booster Delegation
@@ -1717,7 +1743,7 @@ public class BoardController : MonoBehaviour
     // dalıyla aynı sonlandırma.
     IEnumerator ProcessSpecialTap(TileView tile)
     {
-        if (tile == null || tile.GetSpecial() == TileSpecial.None)
+        if (!CanTapActivateSpecial(tile))
             yield break;
 
         if (IsBusy) yield break;
@@ -2612,6 +2638,8 @@ public class BoardController : MonoBehaviour
         if (shakeTarget != null && !entranceInProgress)
             shakeTarget.anchoredPosition = shakeBasePos;
 
+        EmitMoveClearPraiseIfNeeded();
+
         if (BoardFlowTraceEnabled)
             Debug.Log($"[Resolve] ═══ DONE ═══ passes={safety} total: {(Time.realtimeSinceStartup - _rbStart):0.000}s");
     }
@@ -3001,9 +3029,29 @@ public class BoardController : MonoBehaviour
     // ═══════════════════════════════════════════════════════════════
     internal ObstacleStateService.ObstacleHitResult ApplyObstacleDamage(ObstacleDamageRequest request)
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // TEŞHİS: Mud çift-hit + Grass aşınma avı. Bu satır KAÇ kez basılıyor + remaining nasıl düşüyor?
+        var _traceId = obstacleStateService != null
+            ? obstacleStateService.GetObstacleIdAt(request.cell.x, request.cell.y) : ObstacleId.None;
+        bool traceOn = _traceId == ObstacleId.Mud || _traceId == ObstacleId.Grass;
+        int _remBefore = traceOn ? obstacleStateService.GetRemainingHitsAt(request.cell.x, request.cell.y) : -1;
+#endif
+
         var result = obstacleResolutionService != null
             ? obstacleResolutionService.ApplyDamage(request)
             : default;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (traceOn)
+        {
+            var _st = new System.Diagnostics.StackTrace(1, false);
+            string _callers = "";
+            for (int _fi = 1; _fi <= 6 && _fi < _st.FrameCount; _fi++)
+                _callers += (_st.GetFrame(_fi)?.GetMethod()?.Name ?? "?") + "←";
+            Debug.Log($"[ObsHit] {_traceId} cell=({request.cell.x},{request.cell.y}) ctx={request.context} " +
+                      $"remaining {_remBefore}→{result.visualChange.remainingHits} cleared={result.visualChange.cleared} | via {_callers}");
+        }
+#endif
 
         if (result.didHit && (result.visualChange.obstacleId == ObstacleId.Oil || result.stageTransition.obstacleId == ObstacleId.Oil))
         {
@@ -3100,6 +3148,20 @@ public class BoardController : MonoBehaviour
             actionSequencer.Enqueue(action);
     }
 
+    internal void TriggerSpecialTileFromBoardEffect(TileView tile)
+    {
+        if (tile == null
+            || tile.X < 0 || tile.X >= Width
+            || tile.Y < 0 || tile.Y >= Height
+            || Tiles[tile.X, tile.Y] != tile
+            || tile.GetSpecial() == TileSpecial.None)
+            return;
+
+        var actions = specialResolver != null ? specialResolver.ResolveSpecialSolo(tile) : null;
+        if (actions != null && actions.Count > 0)
+            StartImmediateActionSequence(actions);
+    }
+
     internal void SetHoleStateFromObstacle(int x, int y)
     {
         if (x < 0 || x >= width || y < 0 || y >= height)
@@ -3120,7 +3182,11 @@ public class BoardController : MonoBehaviour
         obstacleStateService.OnChestOpened += HandleChestOpened;
         obstacleStateService.OnChestColorRemoved += HandleChestColorRemoved;
         obstacleStateService.OnBatteryHit -= HandleBatteryHit;
+        obstacleStateService.OnOverrideBatteryBoxHit -= HandleOverrideBatteryBoxHit;
+        obstacleStateService.OnOverrideBatteryBoxDetonated -= HandleOverrideBatteryBoxDetonated;
         obstacleStateService.OnBatteryHit += HandleBatteryHit;
+        obstacleStateService.OnOverrideBatteryBoxHit += HandleOverrideBatteryBoxHit;
+        obstacleStateService.OnOverrideBatteryBoxDetonated += HandleOverrideBatteryBoxDetonated;
         obstacleStateService.OnWardrobeOpened -= HandleWardrobeOpened;
         obstacleStateService.OnWardrobeOpened += HandleWardrobeOpened;
         obstacleStateService.OnWardrobeItemRemoved -= HandleWardrobeItemRemoved;
@@ -3146,6 +3212,12 @@ public class BoardController : MonoBehaviour
 
     private void HandleBatteryHit(int originIndex, ChestColorMask color, int remaining)
         => OnBatteryHit?.Invoke(originIndex, color, remaining);
+
+    private void HandleOverrideBatteryBoxHit(int originIndex, ChestColorMask color, int remaining, int progress, int total)
+        => OnOverrideBatteryBoxHit?.Invoke(originIndex, color, remaining, progress, total);
+
+    private void HandleOverrideBatteryBoxDetonated(int originIndex)
+        => EnqueueBoardAction(new OverrideBatteryBoxDetonationAction(this, originIndex));
 
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
     {
@@ -3448,7 +3520,7 @@ public class BoardController : MonoBehaviour
 
     internal bool HasPendingAutoResolveForLevelEnd()
     {
-        return (cascadeLogic != null && cascadeLogic.HasAnyEmptyPlayableCell())
+        return (cascadeLogic != null && cascadeLogic.HasAnyResolvableEmptyPlayableCell())
             || (matchFinder != null && matchFinder.FindAllMatches().Count > 0)
             || HasPendingPostSettleObstacleAction()
             || HasBottomExitCargoReady();
@@ -3458,6 +3530,7 @@ public class BoardController : MonoBehaviour
     internal string DescribePendingAutoResolveForLevelEnd()
     {
         return $"emptyPlayable={cascadeLogic != null && cascadeLogic.HasAnyEmptyPlayableCell()}, " +
+               $"resolvableEmpty={cascadeLogic != null && cascadeLogic.HasAnyResolvableEmptyPlayableCell()}, " +
                $"matches={(matchFinder != null ? matchFinder.FindAllMatches().Count : 0)}, " +
                $"oilPending={!oilSpreadResolvedThisMove && oilSpreadService != null}, " +
                $"barrelPending={!barrelSpreadResolvedThisMove && barrelBreaksThisMove.Count > 0}, " +
@@ -3465,15 +3538,36 @@ public class BoardController : MonoBehaviour
                $"bottomCargo={HasBottomExitCargoReady()}";
     }
 
+    // Cargo (exitAtBottom) çıkışı: yalnızca altında sütun sonuna kadar gerçek pass-through void varsa toplanır.
+    // Aradaki mask hole'lar normal düşüş boşluğu sayılır; aşağıda yaşayan hücre varsa cargo oraya inmeli.
+    private bool IsBottomVoidBelow(int x, int y)
+    {
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            return false;
+
+        for (int by = y + 1; by < height; by++)
+        {
+            if (!TryGetCellState(x, by, out var state))
+                return false;
+
+            if (state.isPassThroughVoid)
+                continue;
+
+            return false;
+        }
+
+        return true;
+    }
+
     private bool HasBottomExitCargoReady()
     {
         if (obstacleStateService == null || height <= 0 || width <= 0)
             return false;
 
-        int by = height - 1;
         for (int x = 0; x < width; x++)
+        for (int y = 0; y < height; y++)
         {
-            if (obstacleStateService.IsExitAtBottomAt(x, by))
+            if (obstacleStateService.IsExitAtBottomAt(x, y) && IsBottomVoidBelow(x, y))
                 return true;
         }
 
@@ -3488,34 +3582,38 @@ public class BoardController : MonoBehaviour
         if (obstacleStateService == null || height <= 0 || width <= 0)
             return false;
 
-        int by = height - 1;
         bool any = false;
 
+        // Sütun başına alttan yukarı: altı void olan en alttaki cargo toplanır. Üstteki cargo bu pass'te
+        // toplanmaz (altı artık normal boş hücre); resolve loop tekrar edip onu aşağı düşürür.
         for (int x = 0; x < width; x++)
+        for (int y = height - 1; y >= 0; y--)
         {
-            if (!obstacleStateService.IsExitAtBottomAt(x, by))
+            if (!obstacleStateService.IsExitAtBottomAt(x, y))
+                continue;
+            if (!IsBottomVoidBelow(x, y))
                 continue;
 
-            var tile = tiles[x, by];
+            var tile = tiles[x, y];
 
             // Goal HUD slotunu önceden al (robot oraya zıplayacak).
             RectTransform goalSlot = null;
-            var id = obstacleStateService.GetObstacleIdAt(x, by);
+            var id = obstacleStateService.GetObstacleIdAt(x, y);
             TopHud?.TryGetGoalTargetRectForObstacle(id, out goalSlot);
 
             // Tile'ı önce ayır: CollectExitObstacleAt → OnObstacleDestroyed → HandleObstacleDestroyed
             // bu hücredeki tile'ı da yok etmeye çalışmasın (biz ayrıca animasyonla çıkarıyoruz).
-            tiles[x, by] = null;
-            gridData[x, by] = null;
+            tiles[x, y] = null;
+            gridData[x, y] = null;
 
-            var collected = obstacleStateService.CollectExitObstacleAt(x, by);
+            var collected = obstacleStateService.CollectExitObstacleAt(x, y);
             if (collected == ObstacleId.None)
             {
-                tiles[x, by] = tile;   // beklenmedik: geri koy
+                tiles[x, y] = tile;   // beklenmedik: geri koy
                 continue;
             }
 
-            SetHoleStateFromObstacle(x, by);
+            SetHoleStateFromObstacle(x, y);
 
             if (tile != null)
                 StartCoroutine(CargoExitRoutine(tile, goalSlot));
@@ -3573,7 +3671,12 @@ public class BoardController : MonoBehaviour
         return 0.42f;
     }
     private TileType GetRandomType() => randomPool[UnityEngine.Random.Range(0, randomPool.Length)];
-    private void ConsumeMove() { RemainingMoves = Mathf.Max(0, RemainingMoves - 1); OnMovesChanged?.Invoke(RemainingMoves); }
+    private void ConsumeMove()
+    {
+        BeginMoveClearPraiseTracking();
+        RemainingMoves = Mathf.Max(0, RemainingMoves - 1);
+        OnMovesChanged?.Invoke(RemainingMoves);
+    }
     public void AddMoves(int amount) { if (amount <= 0) return; RemainingMoves += amount; OnMovesChanged?.Invoke(RemainingMoves); }
     internal void ConsumeBonusMove() => ConsumeMove();
 
@@ -3693,7 +3796,42 @@ public class BoardController : MonoBehaviour
             presentationPlan: presentationPlan,
             enqueueCascadeOnComplete: true);
     }
-    internal void NotifyTilesCleared(TileType tileType, int amount) { if (amount > 0) { OnTilesCleared?.Invoke(tileType, amount); GameEventBus.EmitTileCleared(tileType, amount); } }
+    internal void NotifyTilesCleared(TileType tileType, int amount)
+    {
+        if (amount <= 0)
+            return;
+
+        if (moveClearPraiseTracking && !moveClearPraiseEmitted)
+            moveClearPraiseCount += amount;
+
+        OnTilesCleared?.Invoke(tileType, amount);
+        GameEventBus.EmitTileCleared(tileType, amount);
+    }
+
+    private void BeginMoveClearPraiseTracking()
+    {
+        moveClearPraiseCount = 0;
+        moveClearPraiseTracking = true;
+        moveClearPraiseEmitted = false;
+        EnsureMoveClearPraisePopup();
+    }
+
+    private void EmitMoveClearPraiseIfNeeded()
+    {
+        if (!moveClearPraiseTracking || moveClearPraiseEmitted)
+            return;
+
+        int cleared = moveClearPraiseCount;
+        moveClearPraiseTracking = false;
+        moveClearPraiseCount = 0;
+        moveClearPraiseEmitted = true;
+
+        if (cleared < 30)
+            return;
+
+        EnsureMoveClearPraisePopup();
+        OnMoveClearPraise?.Invoke(cleared);
+    }
 
     internal void SyncAllTilesToGridData() { for (int sy = 0; sy < height; sy++) for (int sx = 0; sx < width; sx++) if (tiles[sx, sy] != null) SyncTileData(sx, sy); }
     private IEnumerator AnimateQueuedActions() { while (actionSequencer.IsPlaying) yield return null; }
@@ -3754,6 +3892,42 @@ public class BoardController : MonoBehaviour
             if (goalFlyFx == null) { var fxGo = new GameObject("GoalFlyFx", typeof(RectTransform), typeof(GoalFlyFx)); fxGo.transform.SetParent(canvas.transform, false); goalFlyFx = fxGo.GetComponent<GoalFlyFx>(); }
         }
         if (goalFlyFx != null) goalFlyFx.gameObject.SendMessage("SetOverlayRoot", overlay, SendMessageOptions.DontRequireReceiver);
+    }
+
+    private void EnsureMoveClearPraisePopup()
+    {
+        if (moveClearPraisePopup == null)
+            moveClearPraisePopup = FindFirstObjectByType<MoveClearPraisePopupController>(FindObjectsInactive.Include);
+
+        if (moveClearPraisePopup == null)
+        {
+            var canvas = FindFirstObjectByType<Canvas>();
+            if (canvas == null)
+                return;
+
+            var existing = canvas.transform.Find("MoveClearPraisePopup");
+            if (existing != null)
+                moveClearPraisePopup = existing.GetComponent<MoveClearPraisePopupController>();
+
+            if (moveClearPraisePopup == null)
+            {
+                var go = new GameObject("MoveClearPraisePopup", typeof(RectTransform), typeof(MoveClearPraisePopupController));
+                var rt = go.GetComponent<RectTransform>();
+                rt.SetParent(canvas.transform, false);
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+                rt.localScale = Vector3.one;
+                moveClearPraisePopup = go.GetComponent<MoveClearPraisePopupController>();
+            }
+        }
+
+        if (moveClearPraisePopup != null)
+        {
+            moveClearPraisePopup.transform.SetAsLastSibling();
+            moveClearPraisePopup.Bind(this);
+        }
     }
     private IEnumerator EnsurePlayableBoardAfterSettleRoutine()
     {

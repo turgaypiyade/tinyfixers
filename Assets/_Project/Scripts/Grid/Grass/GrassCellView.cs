@@ -57,12 +57,11 @@ public class GrassCellView : MonoBehaviour
         rt.localRotation = Quaternion.identity;
     }
 
-    /// A/B dokuma katmanı: B hücreleri (top=true) en üstte, A (top=false) altta → daha büyük B'ler
-    /// A'ların üstüne biner, kareler kaybolur.
-    public void SetSortingHint(bool top)
+    /// Doğal shingle: doğum sırasında (y,x artan) en üste alınır → her karo yalnız SAĞ ve ALT
+    /// komşusuyla örtüşür, dört yandan kesilmez. Boy farkı (B daha büyük) grid hissini yine kırar.
+    public void SetSortingHint()
     {
-        if (top) transform.SetAsLastSibling();
-        else     transform.SetAsFirstSibling();
+        transform.SetAsLastSibling();
     }
 
     // ── Hit tepkisi: yaprak sallanması ─────────────────────────────────────────

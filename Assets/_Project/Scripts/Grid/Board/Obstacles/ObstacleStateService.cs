@@ -100,6 +100,10 @@ public class ObstacleStateService : ISimObstacleQuery
     // BatteryBox: origin index → int[4] kalan hit (Gear/Core/Bolt/Plate sırasıyla)
     private readonly Dictionary<int, int[]> _batteryHitsByOrigin = new();
 
+    // OverrideBatteryBox: origin index → int[4] kalan hit ve toplam ilerleme.
+    private readonly Dictionary<int, int[]> _overrideBatteryHitsByOrigin = new();
+    private readonly Dictionary<int, int> _overrideBatteryProgressByOrigin = new();
+
     // Wardrobe: origin index → kalan item sayısı (kapı açıldıktan sonra)
     private readonly Dictionary<int, int> _wardrobeItemCounts = new();
 
@@ -182,6 +186,9 @@ public class ObstacleStateService : ISimObstacleQuery
     public event Action<int, ChestColorMask> OnChestColorRemoved;
     // BatteryBox: origin, hangi renk pilin kaç hiti kaldı
     public event Action<int, ChestColorMask, int> OnBatteryHit;
+    // OverrideBatteryBox: origin, renk, renkte kalan hit, toplam progress, toplam hit
+    public event Action<int, ChestColorMask, int, int, int> OnOverrideBatteryBoxHit;
+    public event Action<int> OnOverrideBatteryBoxDetonated;
     // Wardrobe: kapı açılması ve item kırılması
     public event Action<int> OnWardrobeOpened;
     public event Action<int, int> OnWardrobeItemRemoved;  // (origin, itemsRemaining)
@@ -248,6 +255,8 @@ public class ObstacleStateService : ISimObstacleQuery
 
         _chestColorStates.Clear();
         _batteryHitsByOrigin.Clear();
+        _overrideBatteryHitsByOrigin.Clear();
+        _overrideBatteryProgressByOrigin.Clear();
         _wardrobeItemCounts.Clear();
         _underTileBeneathMovable.Clear();
         _stampedBeneathByCell.Clear();
@@ -275,6 +284,14 @@ public class ObstacleStateService : ISimObstacleQuery
                 int hitsPerBattery = Mathf.Max(1, def != null ? def.hits : 1);
                 hits = hitsPerBattery * 4;
                 _batteryHitsByOrigin[origin] = new int[] { hitsPerBattery, hitsPerBattery, hitsPerBattery, hitsPerBattery };
+            }
+            else if (id == ObstacleId.OverrideBatteryBox)
+            {
+                // def.hits = renk başına bar/hit. 4 renk x def.hits = orta progress toplamı.
+                int hitsPerBattery = Mathf.Max(1, def != null ? def.hits : 3);
+                hits = hitsPerBattery * 4;
+                _overrideBatteryHitsByOrigin[origin] = new int[] { hitsPerBattery, hitsPerBattery, hitsPerBattery, hitsPerBattery };
+                _overrideBatteryProgressByOrigin[origin] = 0;
             }
             else if (id == ObstacleId.Wardrobe)
             {
@@ -401,10 +418,24 @@ public class ObstacleStateService : ISimObstacleQuery
         // damage; the basket clears itself (ClearRocketBasket) once the last charge is spent.
         if (id == ObstacleId.RocketBasket)
         {
+            int[] rocketBasketAffectedCells = CollectCellsForOrigin(origin, id);
+
             if (RocketBasketHitInterceptor != null && RocketBasketHitInterceptor.Invoke(origin, context, sourceTileType))
             {
-                var rbChange = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
-                return new ObstacleHitResult(true, true, false, rbChange, default, Array.Empty<int>());
+                bool rocketBasketCleared = origin < 0
+                    || origin >= level.obstacles.Length
+                    || (ObstacleId)level.obstacles[origin] != ObstacleId.RocketBasket
+                    || level.obstacleOrigins[origin] != origin;
+
+                int rocketBasketRemaining = origin >= 0 && origin < remainingHitsByOrigin.Length
+                    ? remainingHitsByOrigin[origin]
+                    : -1;
+
+                var rbChange = new ObstacleVisualChange(origin, id, rocketBasketCleared, rocketBasketRemaining, null);
+                var rbTransition = rocketBasketCleared
+                    ? new ObstacleStageTransition(true, origin, id, 0, true, default, default)
+                    : default;
+                return new ObstacleHitResult(true, true, false, rbChange, rbTransition, rocketBasketAffectedCells);
             }
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
         }
@@ -498,26 +529,31 @@ public class ObstacleStateService : ISimObstacleQuery
             // isOpen=false + SpecialActivation/Booster: kapalı dolabı açma işlemi, removedColor = None
         }
 
-        // BatteryBox renk-pil validasyonu
+        // BatteryBox / OverrideBatteryBox renk-pil validasyonu
         ChestColorMask batteryHitColor = ChestColorMask.None;
         int batteryColorIndex = -1;
-        if (id == ObstacleId.BatteryBox)
+        int[] colorBatteryHits = null;
+        if (id == ObstacleId.BatteryBox || id == ObstacleId.OverrideBatteryBox)
         {
-            if (!_batteryHitsByOrigin.TryGetValue(origin, out var batteryHits))
+            bool hasBatteryState = id == ObstacleId.BatteryBox
+                ? _batteryHitsByOrigin.TryGetValue(origin, out colorBatteryHits)
+                : _overrideBatteryHitsByOrigin.TryGetValue(origin, out colorBatteryHits);
+
+            if (!hasBatteryState || colorBatteryHits == null)
                 return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
 
             if (context == ObstacleHitContext.NormalMatch)
             {
                 var colorFlag = sourceTileType.ToChestColor();
                 batteryColorIndex = BatteryColorToIndex(colorFlag);
-                if (batteryColorIndex < 0 || batteryHits[batteryColorIndex] <= 0)
+                if (batteryColorIndex < 0 || colorBatteryHits[batteryColorIndex] <= 0)
                     return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
                 batteryHitColor = colorFlag;
             }
             else
             {
                 // Special / Booster: kalan hit'i olan rastgele bir pili vur
-                batteryHitColor = PickRandomBatteryColor(batteryHits);
+                batteryHitColor = PickRandomBatteryColor(colorBatteryHits);
                 batteryColorIndex = BatteryColorToIndex(batteryHitColor);
                 if (batteryColorIndex < 0)
                     return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
@@ -566,17 +602,35 @@ public class ObstacleStateService : ISimObstacleQuery
             OnChestColorRemoved?.Invoke(origin, removedColor);
         }
 
-        // BatteryBox pil hit'ini güncelle ve bildir
+        // BatteryBox / OverrideBatteryBox renk hit'ini güncelle ve bildir
         if (batteryHitColor != ChestColorMask.None && batteryColorIndex >= 0
-            && _batteryHitsByOrigin.TryGetValue(origin, out var hits))
+            && colorBatteryHits != null)
         {
-            hits[batteryColorIndex]--;
-            OnBatteryHit?.Invoke(origin, batteryHitColor, hits[batteryColorIndex]);
+            colorBatteryHits[batteryColorIndex]--;
+            if (id == ObstacleId.BatteryBox)
+            {
+                OnBatteryHit?.Invoke(origin, batteryHitColor, colorBatteryHits[batteryColorIndex]);
+            }
+            else if (id == ObstacleId.OverrideBatteryBox)
+            {
+                int progress = _overrideBatteryProgressByOrigin.TryGetValue(origin, out int oldProgress)
+                    ? oldProgress + 1
+                    : 1;
+                _overrideBatteryProgressByOrigin[origin] = progress;
+                // total = tüm renklerin başlangıç hit'i (sabit). progress + 4 rengin kalanı toplamı
+                // her zaman bu sabite eşittir; böylece gauge 0..12 üzerinden doğru ilerler.
+                int total = progress;
+                for (int c = 0; c < colorBatteryHits.Length; c++)
+                    total += Mathf.Max(0, colorBatteryHits[c]);
+                OnOverrideBatteryBoxHit?.Invoke(origin, batteryHitColor, colorBatteryHits[batteryColorIndex], progress, total);
+            }
         }
 
         if (remaining <= 0)
         {
             ClearObstacleFromLevel(origin, id);
+            if (id == ObstacleId.OverrideBatteryBox)
+                OnOverrideBatteryBoxDetonated?.Invoke(origin);
             change = new ObstacleVisualChange(origin, id, true, 0, null);
             var transition = new ObstacleStageTransition(true, origin, id, 0, true, previousStage, default);
             return new ObstacleHitResult(true, true, false, change, transition, affectedCells);
@@ -664,6 +718,11 @@ public class ObstacleStateService : ISimObstacleQuery
         // Tüm magnet alanı işgal edilmiş sayılır → taş spawn olmaz. Uç hit alıp küçüldükçe
         // FreeMagnetCell o hücreyi None yapar → hücre açılır ve gravity ile dolar (alan "kapanır").
         if (id == ObstacleId.Magnet) return true;
+        // Emitter obstacles occupy the cell while their service-owned state is active.
+        if (id == ObstacleId.EnergyContainer) return true;
+        if (id == ObstacleId.HatLauncher) return true;
+        if (id == ObstacleId.RocketBasket) return true;
+        if (id == ObstacleId.OverrideBatteryBox) return true;
 
         var def = library != null ? library.Get(id) : null;
         int remaining = ResolveRemainingHitsForCell(idx, def);
@@ -688,9 +747,11 @@ public class ObstacleStateService : ISimObstacleQuery
         if (id == ObstacleId.None) return false;
         if (id == ObstacleId.Tube) return true;
         if (id == ObstacleId.Magnet) return true;
-        // EnergyContainer / HatLauncher always block regardless of stage — interceptor handles active vs exhausted.
+        // Emitter obstacles always block regardless of stage — interceptors handle active vs exhausted.
         if (id == ObstacleId.EnergyContainer) return true;
         if (id == ObstacleId.HatLauncher) return true;
+        if (id == ObstacleId.RocketBasket) return true;
+        if (id == ObstacleId.OverrideBatteryBox) return true;
 
         var def = library != null ? library.Get(id) : null;
         int remaining = ResolveRemainingHitsForCell(idx, def);
@@ -917,6 +978,12 @@ public class ObstacleStateService : ISimObstacleQuery
         if (originId == ObstacleId.BatteryBox)
             _batteryHitsByOrigin.Remove(origin);
 
+        if (originId == ObstacleId.OverrideBatteryBox)
+        {
+            _overrideBatteryHitsByOrigin.Remove(origin);
+            _overrideBatteryProgressByOrigin.Remove(origin);
+        }
+
         if (originId == ObstacleId.Wardrobe)
             _wardrobeItemCounts.Remove(origin);
 
@@ -957,6 +1024,20 @@ public class ObstacleStateService : ISimObstacleQuery
         }
 
         _stampedBeneathByCell[cell] = new StampedBeneath(beneathId, beneathOrigin, overOrigin, remaining);
+    }
+
+    public bool TryGetStampedBeneathObstacleIdAt(int x, int y, out ObstacleId obstacleId)
+    {
+        obstacleId = ObstacleId.None;
+        if (!IsValidCell(x, y))
+            return false;
+
+        int idx = level.Index(x, y);
+        if (!_stampedBeneathByCell.TryGetValue(idx, out var stamped))
+            return false;
+
+        obstacleId = stamped.Id;
+        return obstacleId != ObstacleId.None;
     }
 
     public int CountStampedBeneath(ObstacleId obstacleId)
@@ -1549,6 +1630,13 @@ public class ObstacleStateService : ISimObstacleQuery
             hits = hitsPerBattery * 4;
             _batteryHitsByOrigin[origin] = new int[] { hitsPerBattery, hitsPerBattery, hitsPerBattery, hitsPerBattery };
         }
+        else if (id == ObstacleId.OverrideBatteryBox)
+        {
+            int hitsPerBattery = Mathf.Max(1, def != null ? def.hits : 3);
+            hits = hitsPerBattery * 4;
+            _overrideBatteryHitsByOrigin[origin] = new int[] { hitsPerBattery, hitsPerBattery, hitsPerBattery, hitsPerBattery };
+            _overrideBatteryProgressByOrigin[origin] = 0;
+        }
         else if (id == ObstacleId.Wardrobe)
         {
             hits = 2;
@@ -1631,6 +1719,45 @@ public class ObstacleStateService : ISimObstacleQuery
         if (added)
             Debug.Log($"[Oil] Added at ({x},{y}). Total oil: {CountAliveOrigins(ObstacleId.Oil)}");
         return added;
+    }
+
+    public bool TryAddOilAtOrBeneathOverTile(int x, int y)
+    {
+        return TrySpawnSingleCellObstacleAtOrBeneathOverTile(x, y, ObstacleId.Oil);
+    }
+
+    public bool TrySpawnSingleCellObstacleAtOrBeneathOverTile(int x, int y, ObstacleId obstacleId)
+    {
+        if (obstacleId == ObstacleId.Oil && TryAddOilAt(x, y))
+            return true;
+
+        if (obstacleId != ObstacleId.Oil && TrySpawnSingleCellObstacleAt(x, y, obstacleId))
+            return true;
+
+        if (!IsValidCell(x, y))
+            return false;
+
+        var def = library != null ? library.Get(obstacleId) : null;
+        if (def == null || def.size.x != 1 || def.size.y != 1)
+            return false;
+
+        int idx = level.Index(x, y);
+        if ((ObstacleId)level.obstacles[idx] == ObstacleId.None)
+            return false;
+
+        if (!IsOverTileBlockerAt(x, y) || IsMovableObstacleAt(x, y))
+            return false;
+
+        if (_stampedBeneathByCell.TryGetValue(idx, out var existing) && existing.Id != ObstacleId.None)
+            return false;
+
+        int overOrigin = GetObstacleOriginAt(x, y);
+        if (overOrigin < 0)
+            return false;
+
+        RegisterStampedBeneath(idx, obstacleId, idx, overOrigin);
+        Debug.Log($"[{obstacleId}] Added beneath over-tile obstacle at ({x},{y}). Total alive/stamped: {CountAliveOrStampedOrigins(obstacleId)}");
+        return true;
     }
 
     /// <summary>

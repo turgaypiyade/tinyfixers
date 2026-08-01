@@ -59,7 +59,7 @@ public static class BoardCellStateQuery
             inBoundsCell &&
             !isMaskHole &&
             !isPendingTriggeredSpecial &&
-            !isObstacleBlocked;
+            (!isObstacleBlocked || (obstacleStateService != null && obstacleStateService.IsDiagonalAllowedAt(x, y)));
 
 
         state = new BoardCellStateSnapshot(

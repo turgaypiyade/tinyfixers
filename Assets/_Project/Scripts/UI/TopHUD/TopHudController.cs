@@ -33,6 +33,7 @@ public class TopHudController : MonoBehaviour
     [Header("Display")]
     [SerializeField] private string movesPrefix = "MOVES";
     [SerializeField] private Sprite fallbackGoalIcon;
+    [SerializeField] private Sprite tubeGoalFallbackIcon;
 
     public RectTransform MovesTextRect => movesText != null ? movesText.rectTransform : null;
 
@@ -243,6 +244,9 @@ public class TopHudController : MonoBehaviour
             : null;
 
         var preview = obstacleDef != null ? obstacleDef.GetPreviewSprite() : null;
+        if (preview == null && goal.obstacleId == ObstacleId.Tube)
+            preview = tubeGoalFallbackIcon;
+
         return preview != null ? preview : fallbackGoalIcon;
     }
 
@@ -373,7 +377,10 @@ public class TopHudController : MonoBehaviour
         ObstacleId createdId;
         if (svc.IsOilAt(x, y)) createdId = ObstacleId.Oil;
         else if (svc.IsMudAt(x, y)) createdId = ObstacleId.Mud;
-        else return;
+        else if (!svc.TryGetStampedBeneathObstacleIdAt(x, y, out createdId)) return;
+
+        if (createdId != ObstacleId.Oil && createdId != ObstacleId.Mud)
+            return;
 
         bool anyGoalUpdated = false;
 

@@ -383,7 +383,14 @@ public sealed class OverrideSpecializedCombo
         {
             for (int y = 0; y < rt.Board.Height; y++)
             {
-                if (!SpecialUtils.CanTargetTileContent(rt.Board, x, y))
+                bool canTargetTile = SpecialUtils.CanTargetTileContent(rt.Board, x, y);
+                bool canDamageGrassOnly =
+                    !canTargetTile &&
+                    SpecialUtils.CanAffectCell(rt.Board, x, y) &&
+                    rt.Board.ObstacleStateService != null &&
+                    rt.Board.ObstacleStateService.IsGrassAt(x, y);
+
+                if (!canTargetTile && !canDamageGrassOnly)
                     continue;
 
                 if (rt.Board.ObstacleStateService != null &&
@@ -396,6 +403,12 @@ public sealed class OverrideSpecializedCombo
 
                 if (tile == overrideTile || tile == otherTile)
                     continue;
+
+                if (canDamageGrassOnly)
+                {
+                    SpecialCellUtils.TryAddGrassImpact(rt.Board, x, y, rt.Context.ImpactCells);
+                    continue;
+                }
 
                 if (tile.GetSpecial() != TileSpecial.None)
                 {

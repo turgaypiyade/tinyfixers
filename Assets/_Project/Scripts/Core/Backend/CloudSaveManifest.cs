@@ -131,6 +131,16 @@ public static class CloudSaveManifest
             }
         }
 
+#if UNITY_EDITOR
+        const int minEditorCoins = 500;
+        int coins = PlayerPrefs.GetInt("player_coins", 0);
+        if (coins < minEditorCoins)
+        {
+            PlayerPrefs.SetInt("player_coins", minEditorCoins);
+            Debug.Log($"[CloudSaveManifest] Editor coin minimum applied after restore: {coins} -> {minEditorCoins}");
+        }
+#endif
+
         PlayerPrefs.Save();
     }
 }

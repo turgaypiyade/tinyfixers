@@ -176,6 +176,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private Coroutine starRevealRoutine;
     private Coroutine mainScreenDimRoutine;
     private readonly List<CanvasGroup> mainScreenDimTargets = new();
+    private readonly List<TopHudController.ActiveGoal> levelEndActiveGoalsBuffer = new();
 
     private bool isBonusRoundRunning;
     private bool hardSkipBonusRoundRequested;
@@ -347,14 +348,52 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (!tapped) return;
 
         Debug.Log("[LevelEnd] User tap: skipping out-of-moves animation, showing popup now.");
+        levelEndForceDeadlineUnscaled = Time.unscaledTime;
         endCheckQueued = false;
         EvaluateAndShowIfEnded();
     }
 
     private bool IsBoardWorkingForLevelEnd()
     {
-        return board != null
-            && (board.IsBusy || board.ActiveBackgroundJobs > 0 || board.IsActionSequencePlaying);
+        if (board == null)
+            return false;
+
+        if (board.IsBusy || board.BlockingBackgroundJobs > 0 || board.IsActionSequencePlaying)
+            return true;
+
+        return NonBlockingJobsCouldStillCompleteGoals();
+    }
+
+    private bool NonBlockingJobsCouldStillCompleteGoals()
+    {
+        if (board == null || topHud == null || topHud.AreAllGoalsCompleted)
+            return false;
+
+        int nonBlockingJobs = Mathf.Max(0, board.ActiveBackgroundJobs - board.BlockingBackgroundJobs);
+        if (nonBlockingJobs <= 0)
+            return false;
+
+        levelEndActiveGoalsBuffer.Clear();
+        topHud.GetActiveGoals(levelEndActiveGoalsBuffer);
+
+        int remainingGoals = 0;
+        for (int i = 0; i < levelEndActiveGoalsBuffer.Count; i++)
+            remainingGoals += Mathf.Max(0, levelEndActiveGoalsBuffer[i].remaining);
+
+        // Non-blocking flights should delay fail only when their pending credits could still
+        // turn the level into a win. Otherwise the screen can look idle while fail is delayed.
+        return remainingGoals > 0 && remainingGoals <= nonBlockingJobs;
+    }
+
+    private string DescribeBoardWorkForLevelEnd()
+    {
+        if (board == null)
+            return "board=null";
+
+        return $"IsBusy={board.IsBusy}, ActiveBackgroundJobs={board.ActiveBackgroundJobs}, " +
+               $"BlockingBackgroundJobs={board.BlockingBackgroundJobs}, FlyingGoalOrbs={board.FlyingGoalOrbs}, " +
+               $"FlyingPatchBotDashes={board.FlyingPatchBotDashes}, DrainingBossStrikes={board.DrainingBossStrikes}, " +
+               $"ActionSequencePlaying={board.IsActionSequencePlaying}";
     }
 
     private IEnumerator InitializeWhenReady()
@@ -565,8 +604,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             {
                 Debug.LogWarning(
                     $"[LevelEnd] Wait timeout. context={context}, " +
-                    $"IsBusy={board.IsBusy}, ActiveBackgroundJobs={board.ActiveBackgroundJobs}, " +
-                    $"ActionSequencePlaying={board.IsActionSequencePlaying}");
+                    DescribeBoardWorkForLevelEnd());
                 yield break;
             }
 
@@ -791,6 +829,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (endCheckQueued)
             return;
 
+        // Deadline'ı ilk 0-hamle sinyalinde başlat. Aksi halde RunAfterIdle'in 3sn timeout'u
+        // force-deadline'a eklenip safe reveal / geç efekt durumlarında fail beklemesi uzardı.
+        StartLevelEndForceDeadlineIfOutOfMoves();
+
         Debug.Log("[LevelEnd] RequestEvaluate queued. Waiting idle...");
         endCheckQueued = true;
 
@@ -812,8 +854,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         // Hamle 0 ilk gözlendiğinde üst-süre saatini başlat (bir kez). Bu süre dolunca
         // board hâlâ meşgul/pending olsa bile aşağıdaki ertelemeler devre dışı kalır → sonuç zorla verilir.
-        if (board.RemainingMoves <= 0 && levelEndForceDeadlineUnscaled < 0f)
-            levelEndForceDeadlineUnscaled = Time.unscaledTime + Mathf.Max(0.5f, levelEndForceTimeoutSeconds);
+        StartLevelEndForceDeadlineIfOutOfMoves();
 
         // Son hamlenin board çözümü (cascade + special zinciri + arka plan job'lar)
         // tamamen bitmeden sonucu değerlendirme. RunAfterIdle 3s timeout'u board hâlâ
@@ -836,9 +877,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             $"[LevelEnd] Evaluate. " +
             $"RemainingMoves={board.RemainingMoves}, " +
             $"GoalsCompleted={topHud.AreAllGoalsCompleted}, " +
-            $"IsBusy={board.IsBusy}, " +
-            $"ActiveBackgroundJobs={board.ActiveBackgroundJobs}, " +
-            $"ActionSequencePlaying={board.IsActionSequencePlaying}");
+            DescribeBoardWorkForLevelEnd());
             
         if (topHud.AreAllGoalsCompleted)
         {
@@ -859,6 +898,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         Debug.Log($"[LevelEndSimplePopupController] End check skipped. RemainingMoves={board.RemainingMoves}, GoalsCompleted={topHud.AreAllGoalsCompleted}");
+    }
+
+    private void StartLevelEndForceDeadlineIfOutOfMoves()
+    {
+        if (board != null && board.RemainingMoves <= 0 && levelEndForceDeadlineUnscaled < 0f)
+            levelEndForceDeadlineUnscaled = Time.unscaledTime + Mathf.Max(0.5f, levelEndForceTimeoutSeconds);
     }
 
     private void BeginFailConfirmation()

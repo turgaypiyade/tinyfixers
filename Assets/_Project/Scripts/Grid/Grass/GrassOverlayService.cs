@@ -110,7 +110,7 @@ public class GrassOverlayService : MonoBehaviour
 
         view.Init(GetSpriteForCell(x, y), x, y);
         view.PlaceInCell(tileSize, expand);
-        view.SetSortingHint(top: !isA);   // B üstte, A altta
+        view.SetSortingHint();   // doğal shingle (yalnız sağ+alt örtüşür, dört yandan kesilmez)
 
         cellsByIndex[idx] = new Cell
         {
@@ -124,6 +124,11 @@ public class GrassOverlayService : MonoBehaviour
     private void HandleVisualChanged(ObstacleVisualChange change)
     {
         if (change.obstacleId != ObstacleId.Grass) return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        bool _found = cellsByIndex.TryGetValue(change.originIndex, out var _c) && _c.view != null;
+        Debug.Log($"[GrassVis] origin={change.originIndex} (x={change.originIndex % gridWidth},y={change.originIndex / gridWidth}) " +
+                  $"cleared={change.cleared} found={_found} tracked={cellsByIndex.Count} gridW={gridWidth}");
+#endif
         if (!cellsByIndex.TryGetValue(change.originIndex, out var cell) || cell.view == null) return;
 
         int hx = change.originIndex % gridWidth;

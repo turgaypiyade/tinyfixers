@@ -299,6 +299,7 @@ public class BoardAnimator
         var skipBreakFxTiles = new HashSet<TileView>();
         var lineHitDamagedObstacleCells = new HashSet<Vector2Int>();
         var clearedObstacleCellsThisPass = new HashSet<Vector2Int>();
+        var tileClearOwnedObstacleCells = new HashSet<Vector2Int>();
         var hitObstacleOrigins = new HashSet<int>();
 
         // Sweep hasarı STRIKE bazında dedup'lanır: tek beam çok hücreli obstacle'ı
@@ -377,7 +378,7 @@ public class BoardAnimator
             : 0f;
         int lightningIndex = 0;
 
-        if (explicitImpactCells != null && explicitImpactCells.Count > 0)
+        if (explicitImpactCells != null)
         {
             for (int i = 0; i < explicitImpactCells.Count; i++)
             {
@@ -652,40 +653,6 @@ public class BoardAnimator
             }
         }
 
-        if (doShake)
-        {
-            if (board.PreClearDelay > 0f)
-            {
-                var __w = Wait(board.PreClearDelay);
-                if (__w != null) yield return __w;
-            }
-
-            if (board.ShakeTarget != null)
-            {
-                board.StartCoroutine(ShakeBoard(board.ShakeDuration, board.ShakeStrength));
-
-                // Override+Override radial wave: add escalating micro-shakes during the wave
-                if (perTileClearDelays != null && perTileClearDelays.Count > 0)
-                {
-                    float maxRadialDelay = 0f;
-                    foreach (var kv in perTileClearDelays)
-                        if (kv.Value > maxRadialDelay) maxRadialDelay = kv.Value;
-
-                    if (maxRadialDelay > 0.1f)
-                    {
-                        int waveShakeSteps = 3;
-                        for (int ws = 0; ws < waveShakeSteps; ws++)
-                        {
-                            float t = (ws + 1f) / waveShakeSteps;
-                            float shakeDelay = t * maxRadialDelay * 0.7f;
-                            float shakeStrength = Mathf.Lerp(board.ShakeStrength * 0.3f, board.ShakeStrength * 0.8f, t);
-                            board.StartCoroutine(DelayedMicroShake(shakeDelay, 0.10f, shakeStrength));
-                        }
-                    }
-                }
-            }
-        }
-
         if (useEventDrivenClear)
         {
             Action<float> onWaveProgress = null;
@@ -725,12 +692,48 @@ public class BoardAnimator
             
             // Dalga bitişinde veya MatchClear bittiğinde eventi temizle
             IEnumerator CleanupEventAfterDelay() {
-                float waitTime = board.GetSystemOverrideComboWaveDuration() + 0.1f;
+                float waitTime = Mathf.Max(
+                    1f,
+                    board.GetSystemOverrideComboPreClearDuration() + board.GetSystemOverrideComboWaveDuration() + 0.5f);
                 if (waitTime > 0f) yield return new WaitForSeconds(waitTime);
                 board.OnSystemOverrideWaveProgress -= onWaveProgress;
                 pendingEventTiles.Clear();
             }
             board.StartCoroutine(CleanupEventAfterDelay());
+        }
+
+        if (doShake)
+        {
+            if (board.PreClearDelay > 0f)
+            {
+                var __w = Wait(board.PreClearDelay);
+                if (__w != null) yield return __w;
+            }
+
+            if (board.ShakeTarget != null)
+            {
+                board.StartCoroutine(ShakeBoard(board.ShakeDuration, board.ShakeStrength));
+
+                // Override+Override radial wave: add escalating micro-shakes during the wave
+                if (perTileClearDelays != null && perTileClearDelays.Count > 0)
+                {
+                    float maxRadialDelay = 0f;
+                    foreach (var kv in perTileClearDelays)
+                        if (kv.Value > maxRadialDelay) maxRadialDelay = kv.Value;
+
+                    if (maxRadialDelay > 0.1f)
+                    {
+                        int waveShakeSteps = 3;
+                        for (int ws = 0; ws < waveShakeSteps; ws++)
+                        {
+                            float t = (ws + 1f) / waveShakeSteps;
+                            float shakeDelay = t * maxRadialDelay * 0.7f;
+                            float shakeStrength = Mathf.Lerp(board.ShakeStrength * 0.3f, board.ShakeStrength * 0.8f, t);
+                            board.StartCoroutine(DelayedMicroShake(shakeDelay, 0.10f, shakeStrength));
+                        }
+                    }
+                }
+            }
         }
 
         if (pulseImpacts.Count > 0)
@@ -782,7 +785,9 @@ public class BoardAnimator
         if (useEventDrivenClear)
         {
             // Olası bir takılmaya karşı, event tabanlı işlemlerin bitmesi için ekstra bekle (Orbit + Merge + Wave)
-            float maxWait = board.GetSystemOverrideComboPreClearDuration() + board.GetSystemOverrideComboWaveDuration() + 0.5f;
+            float maxWait = Mathf.Max(
+                1f,
+                board.GetSystemOverrideComboPreClearDuration() + board.GetSystemOverrideComboWaveDuration() + 0.5f);
             float waited = 0f;
             while (pendingEventTiles.Count > 0 && waited < maxWait)
             {
@@ -819,8 +824,29 @@ public class BoardAnimator
             if (waitTime > 0f) yield return new WaitForSeconds(waitTime);
             if (t != null && board.Tiles[t.X, t.Y] == t)
             {
-                board.ClearCellDataOnly(new Vector2Int(t.X, t.Y));
+                var cell = new Vector2Int(t.X, t.Y);
+                if (damageContext == ObstacleHitContext.SpecialActivation
+                    && IsSameCellObstacleDamageOwnedByTileClear(cell))
+                    tileClearOwnedObstacleCells.Add(cell);
+
+                board.ClearCellDataOnly(cell);
             }
+        }
+
+        bool IsSameCellObstacleDamageOwnedByTileClear(Vector2Int cell)
+        {
+            if (board == null || board.ObstacleStateService == null)
+                return false;
+
+            if (!board.ObstacleStateService.HasObstacleAt(cell.x, cell.y))
+                return false;
+
+            if (board.IsMaskHoleCell(cell.x, cell.y))
+                return false;
+
+            return !board.ObstacleStateService.IsCellBlocked(cell.x, cell.y)
+                && !board.ObstacleStateService.IsInteractionLockedAt(cell.x, cell.y)
+                && !board.ObstacleStateService.IsMovableObstacleAt(cell.x, cell.y);
         }
 
         IEnumerator FireArrivalTriggerAfterDelay(System.Action trigger, float delay)
@@ -964,6 +990,7 @@ public class BoardAnimator
             var cell = kv.Key;
             if (clearedObstacleCellsThisPass.Contains(cell)) continue;
             if (lineHitDamagedObstacleCells.Contains(cell)) continue;
+            if (tileClearOwnedObstacleCells.Contains(cell)) continue;
 
             var sources = kv.Value;
 

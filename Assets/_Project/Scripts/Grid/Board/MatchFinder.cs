@@ -812,24 +812,30 @@ public class MatchFinder
     }
     public bool HasAnyPlayableSwap()
     {
+        return HasAnyPlayableSwap(null);
+    }
+
+    public bool HasAnyPlayableSwap(IReadOnlyCollection<Vector2Int> additionallyLockedCells)
+    {
         for (int y = 0; y < board.Height; y++)
         {
             for (int x = 0; x < board.Width; x++)
             {
                 if (board.Holes[x, y]) continue;
+                if (IsAdditionallyLocked(x, y, additionallyLockedCells)) continue;
                 var tile = board.Tiles[x, y];
                 if (tile == null) continue;
 
-                if (HasAnySpecialSwapAt(x, y))
+                if (HasAnySpecialSwapAt(x, y, additionallyLockedCells))
                     return true;
 
-                if (!IsNormalSwapCandidate(tile))
+                if (!IsNormalSwapCandidate(tile, additionallyLockedCells))
                     continue;
 
-                if (x + 1 < board.Width && WouldSwapCreateMatch(x, y, x + 1, y))
+                if (x + 1 < board.Width && WouldSwapCreateMatch(x, y, x + 1, y, additionallyLockedCells))
                     return true;
 
-                if (y + 1 < board.Height && WouldSwapCreateMatch(x, y, x, y + 1))
+                if (y + 1 < board.Height && WouldSwapCreateMatch(x, y, x, y + 1, additionallyLockedCells))
                     return true;
             }
         }
@@ -837,24 +843,30 @@ public class MatchFinder
         return false;
     }
 
-    private bool HasAnySpecialSwapAt(int x, int y)
+    private bool HasAnySpecialSwapAt(int x, int y, IReadOnlyCollection<Vector2Int> additionallyLockedCells)
     {
         var tile = board.Tiles[x, y];
         if (tile == null || tile.GetSpecial() == TileSpecial.None)
             return false;
 
-        return IsSwappableNeighbor(x - 1, y)
-            || IsSwappableNeighbor(x + 1, y)
-            || IsSwappableNeighbor(x, y - 1)
-            || IsSwappableNeighbor(x, y + 1);
+        if (IsAdditionallyLocked(x, y, additionallyLockedCells))
+            return false;
+
+        return IsSwappableNeighbor(x - 1, y, additionallyLockedCells)
+            || IsSwappableNeighbor(x + 1, y, additionallyLockedCells)
+            || IsSwappableNeighbor(x, y - 1, additionallyLockedCells)
+            || IsSwappableNeighbor(x, y + 1, additionallyLockedCells);
     }
 
-    private bool IsSwappableNeighbor(int x, int y)
+    private bool IsSwappableNeighbor(int x, int y, IReadOnlyCollection<Vector2Int> additionallyLockedCells)
     {
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
             return false;
 
         if (board.Holes[x, y])
+            return false;
+
+        if (IsAdditionallyLocked(x, y, additionallyLockedCells))
             return false;
 
         if (board.ObstacleStateService != null &&
@@ -867,10 +879,18 @@ public class MatchFinder
 
     private bool IsNormalSwapCandidate(TileView tile)
     {
+        return IsNormalSwapCandidate(tile, null);
+    }
+
+    private bool IsNormalSwapCandidate(TileView tile, IReadOnlyCollection<Vector2Int> additionallyLockedCells)
+    {
         if (tile == null)
             return false;
 
         if (tile.GetSpecial() != TileSpecial.None)
+            return false;
+
+        if (IsAdditionallyLocked(tile.X, tile.Y, additionallyLockedCells))
             return false;
 
         if (board.ObstacleStateService != null)
@@ -890,9 +910,16 @@ public class MatchFinder
     }
     private bool WouldSwapCreateMatch(int ax, int ay, int bx, int by)
     {
+        return WouldSwapCreateMatch(ax, ay, bx, by, null);
+    }
+
+    private bool WouldSwapCreateMatch(int ax, int ay, int bx, int by, IReadOnlyCollection<Vector2Int> additionallyLockedCells)
+    {
         if (bx < 0 || bx >= board.Width || by < 0 || by >= board.Height)
             return false;
         if (board.Holes[bx, by])
+            return false;
+        if (IsAdditionallyLocked(bx, by, additionallyLockedCells))
             return false;
 
         var a = board.Tiles[ax, ay];
@@ -900,7 +927,7 @@ public class MatchFinder
         if (a == null || b == null)
             return false;
 
-        if (!IsNormalSwapCandidate(a) || !IsNormalSwapCandidate(b))
+        if (!IsNormalSwapCandidate(a, additionallyLockedCells) || !IsNormalSwapCandidate(b, additionallyLockedCells))
             return false;
 
         board.Tiles[ax, ay] = b;
@@ -914,8 +941,8 @@ public class MatchFinder
         InvalidateRunCache();
 
         bool hasMatch =
-            FindMatchesAt(ax, ay).Count > 0 ||
-            FindMatchesAt(bx, by).Count > 0;
+            HasMatchAtForPlayableSwap(ax, ay, additionallyLockedCells) ||
+            HasMatchAtForPlayableSwap(bx, by, additionallyLockedCells);
 
         board.Tiles[ax, ay] = a;
         board.Tiles[bx, by] = b;
@@ -928,6 +955,62 @@ public class MatchFinder
         InvalidateRunCache();
 
         return hasMatch;
+    }
+
+    private bool HasMatchAtForPlayableSwap(int x, int y, IReadOnlyCollection<Vector2Int> additionallyLockedCells)
+    {
+        var tile = board.Tiles[x, y];
+        if (!IsNormalSwapCandidate(tile, additionallyLockedCells))
+            return false;
+
+        TileType type = tile.GetTileType();
+        int horizontal = 1
+            + CountSameTypeForPlayableSwap(x - 1, y, -1, 0, type, additionallyLockedCells)
+            + CountSameTypeForPlayableSwap(x + 1, y,  1, 0, type, additionallyLockedCells);
+        if (horizontal >= 3)
+            return true;
+
+        int vertical = 1
+            + CountSameTypeForPlayableSwap(x, y - 1, 0, -1, type, additionallyLockedCells)
+            + CountSameTypeForPlayableSwap(x, y + 1, 0,  1, type, additionallyLockedCells);
+        return vertical >= 3;
+    }
+
+    private int CountSameTypeForPlayableSwap(
+        int x, int y, int dx, int dy, TileType type, IReadOnlyCollection<Vector2Int> additionallyLockedCells)
+    {
+        int count = 0;
+        while (x >= 0 && x < board.Width && y >= 0 && y < board.Height)
+        {
+            if (board.Holes[x, y] || IsAdditionallyLocked(x, y, additionallyLockedCells))
+                break;
+
+            var tile = board.Tiles[x, y];
+            if (!IsNormalSwapCandidate(tile, additionallyLockedCells) || tile.GetTileType() != type)
+                break;
+
+            count++;
+            x += dx;
+            y += dy;
+        }
+
+        return count;
+    }
+
+    private static bool IsAdditionallyLocked(int x, int y, IReadOnlyCollection<Vector2Int> additionallyLockedCells)
+    {
+        if (additionallyLockedCells == null || additionallyLockedCells.Count == 0)
+            return false;
+
+        var cell = new Vector2Int(x, y);
+        if (additionallyLockedCells is ISet<Vector2Int> set)
+            return set.Contains(cell);
+
+        foreach (var locked in additionallyLockedCells)
+            if (locked == cell)
+                return true;
+
+        return false;
     }
     // ─────────────────────────────────────────────────────────────
     //  Debug logging — isolated so release builds pay zero cost

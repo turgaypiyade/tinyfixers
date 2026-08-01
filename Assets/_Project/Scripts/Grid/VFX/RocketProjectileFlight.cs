@@ -17,9 +17,17 @@ public sealed class RocketProjectileFlight : MonoBehaviour
 
     [Header("Boyut")]
     [Tooltip("Roket temel (scale=1) boyutu — tile oranı.")]
-    [Range(0.3f, 1.5f)] [SerializeField] private float rocketSizeRatio = 0.7f;
+    [Range(0.3f, 1.8f)] [SerializeField] private float rocketSizeRatio = 0.95f;
     [Tooltip("Tepe anında ulaşılan ölçek (1 → peakScale → 1).")]
     [Range(1f, 3f)] [SerializeField] private float peakScale = 1.6f;
+
+    [Header("Duman izi")]
+    [SerializeField] private bool smokeTrailEnabled = true;
+    [SerializeField] private Sprite smokeSprite;
+    [SerializeField, Range(4f, 45f)] private float smokePuffsPerSecond = 20f;
+    [SerializeField, Range(0.15f, 1.2f)] private float smokeSizeRatio = 0.52f;
+    [SerializeField, Min(0.05f)] private float smokeLife = 0.42f;
+    [SerializeField] private Color smokeColor = new Color(0.92f, 0.94f, 0.98f, 0.58f);
 
     [Header("Yarım daire yayı")]
     [Tooltip("Yayın yüksekliği. 1 = tam yarım daire; >1 daha yüksek/oval yarım ay; <1 daha basık.")]
@@ -36,6 +44,7 @@ public sealed class RocketProjectileFlight : MonoBehaviour
     [SerializeField] private float noseOffsetDeg = 0f;
 
     private BoardController Board => board != null ? board : (board = GetComponent<BoardController>());
+    private static Sprite fallbackSmokeSprite;
 
     public IEnumerator Fly(Vector2Int from, Vector2Int to, Sprite rocketSprite, Action onArrived)
     {
@@ -91,6 +100,8 @@ public sealed class RocketProjectileFlight : MonoBehaviour
         img.raycastTarget = false;
 
         float dur = Mathf.Max(0.15f, baseDuration + durationPerTile * (radius * 2f / Mathf.Max(1f, ts)));
+        float smokeInterval = smokePuffsPerSecond > 0f ? 1f / smokePuffsPerSecond : float.MaxValue;
+        float smokeAcc = smokeInterval;
 
         float time = 0f;
         while (time < dur)
@@ -110,6 +121,17 @@ public sealed class RocketProjectileFlight : MonoBehaviour
             {
                 float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg - 90f + noseOffsetDeg;
                 rt.localRotation = Quaternion.Euler(0f, 0f, ang);
+            }
+
+            if (smokeTrailEnabled)
+            {
+                smokeAcc += Time.deltaTime;
+                while (smokeAcc >= smokeInterval)
+                {
+                    smokeAcc -= smokeInterval;
+                    Vector2 backDir = dir.sqrMagnitude > 0.0001f ? -dir.normalized : Vector2.down;
+                    SpawnSmokePuff(flightRoot, go.transform.GetSiblingIndex(), pos + backDir * (size * 0.32f), ts, s);
+                }
             }
 
             yield return null;
@@ -132,5 +154,82 @@ public sealed class RocketProjectileFlight : MonoBehaviour
             null,
             out var localPoint);
         return localPoint;
+    }
+
+    private void SpawnSmokePuff(RectTransform parent, int rocketSiblingIndex, Vector2 pos, float tileSize, float rocketScale)
+    {
+        if (parent == null || smokeLife <= 0f) return;
+
+        var go = new GameObject("RocketSmokePuff", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+        go.transform.SetSiblingIndex(Mathf.Max(0, rocketSiblingIndex));
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = pos;
+        float size = tileSize * smokeSizeRatio * Mathf.Lerp(0.9f, 1.25f, Mathf.Clamp01((rocketScale - 1f) / Mathf.Max(0.0001f, peakScale - 1f)));
+        rt.sizeDelta = new Vector2(size, size);
+        rt.localRotation = Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(0f, 360f));
+        rt.localScale = Vector3.one * UnityEngine.Random.Range(0.78f, 1.08f);
+
+        var img = go.GetComponent<Image>();
+        img.sprite = smokeSprite != null ? smokeSprite : GetFallbackSmokeSprite();
+        img.color = smokeColor;
+        img.raycastTarget = false;
+
+        StartCoroutine(CoFadeSmokePuff(go, rt, img));
+    }
+
+    private IEnumerator CoFadeSmokePuff(GameObject go, RectTransform rt, Image img)
+    {
+        if (go == null || rt == null || img == null)
+            yield break;
+
+        float elapsed = 0f;
+        Vector3 startScale = rt.localScale;
+        Vector3 endScale = startScale * 1.85f;
+        Color startColor = img.color;
+        while (elapsed < smokeLife)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / smokeLife);
+            float eased = 1f - Mathf.Pow(1f - t, 2f);
+            rt.localScale = Vector3.LerpUnclamped(startScale, endScale, eased);
+            var c = startColor;
+            c.a = startColor.a * (1f - eased);
+            img.color = c;
+            yield return null;
+        }
+
+        Destroy(go);
+    }
+
+    private static Sprite GetFallbackSmokeSprite()
+    {
+        if (fallbackSmokeSprite != null)
+            return fallbackSmokeSprite;
+
+        const int res = 64;
+        var tex = new Texture2D(res, res, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+
+        var center = new Vector2((res - 1) * 0.5f, (res - 1) * 0.5f);
+        float radius = res * 0.48f;
+        for (int y = 0; y < res; y++)
+        for (int x = 0; x < res; x++)
+        {
+            float d = Vector2.Distance(new Vector2(x, y), center) / radius;
+            float a = Mathf.Clamp01(1f - d);
+            a = a * a * (3f - 2f * a);
+            tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+        }
+
+        tex.Apply(false, true);
+        fallbackSmokeSprite = Sprite.Create(tex, new Rect(0, 0, res, res), new Vector2(0.5f, 0.5f), res);
+        fallbackSmokeSprite.name = "GeneratedRocketSmoke";
+        return fallbackSmokeSprite;
     }
 }

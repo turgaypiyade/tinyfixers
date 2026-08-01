@@ -164,6 +164,11 @@ public enum ObstacleId : int
     // hasarını GrassOverlayService yönetir. Grass kendi hücresindeki match'ten HASAR ALMAZ; yalnızca
     // KOMŞU (görünür yan) hücrelerde bir taş temizlenince aşınır, N hit sonra kalkar.
     Grass = 42,
+
+    // 2x2 renk şarj kutusu. BatteryBox gibi Gear/Core/Bolt/Plate hit'lerini ayrı tutar;
+    // her geçerli hit orta progress'i ilerletir. Dört renk tamamen boşalınca patlar ve
+    // board'u bir kez override tarzı temizler.
+    OverrideBatteryBox = 43,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
@@ -258,7 +263,7 @@ public class BossWaveDef
     [Min(-1)] public int oilEveryMoves = -1;
 
     [Header("Görsel Varyant")]
-    [Tooltip("Bu dalganın robot gövde sprite'ı. Boşsa sahnedeki mevcut gövde kalır.")]
+    [Tooltip("Bu dalganın robot gövde sprite'ı. Manual bossWaves içinde boşsa EnemyShieldPickup obstacle sprite'ına, o da boşsa sahnedeki mevcut gövdeye düşer.")]
     public Sprite bodySprite;
     [Tooltip("Bu dalga yenilince kullanılacak yığın sprite'ı. Boşsa controller'daki default.")]
     public Sprite defeatedSprite;

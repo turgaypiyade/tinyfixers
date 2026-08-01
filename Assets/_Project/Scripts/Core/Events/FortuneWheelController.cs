@@ -340,30 +340,73 @@ public class FortuneWheelController : MonoBehaviour
         if (isSpinning) return;
 
         isFreeSpin = HasAvailableSpin();
+        DailySlotRewardConfig config = isFreeSpin
+            ? (ResolveConfig(freeSpinConfig, freeSpinDirectConfig)
+                ?? ResolveConfig(paidSpinConfig, paidSpinDirectConfig))
+            : (ResolveConfig(paidSpinConfig, paidSpinDirectConfig)
+                ?? ResolveConfig(freeSpinConfig, freeSpinDirectConfig));
+
+        if (config == null || config.rewards == null || config.rewards.Count == 0)
+        {
+            Debug.LogWarning(
+                $"[FortuneWheel] Spin blocked: reward config missing/empty. " +
+                $"free={isFreeSpin} coins={PlayerWallet.Coins} cost={paidSpinCost} " +
+                $"freeConfig={SafeName(freeSpinConfig)} freeDirect={SafeName(freeSpinDirectConfig)} " +
+                $"paidConfig={SafeName(paidSpinConfig)} paidDirect={SafeName(paidSpinDirectConfig)}",
+                this);
+            RefreshSpinButtonState();
+            return;
+        }
 
         if (isFreeSpin)
         {
-            activeSpinConfig = ResolveConfig(freeSpinConfig, freeSpinDirectConfig)
-                            ?? ResolveConfig(paidSpinConfig, paidSpinDirectConfig);
+            activeSpinConfig = config;
             PlayerPrefs.SetString(KeyLastSpinTime, DateTime.UtcNow.Ticks.ToString());
             PlayerPrefs.Save();
+            Debug.Log(
+                $"[FortuneWheel] Spin accepted. free=True coins={PlayerWallet.Coins} " +
+                $"cost={paidSpinCost} config={SafeName(config)} rewards={config.rewards.Count}",
+                this);
         }
         else
         {
-            if (!PlayerWallet.SpendCoins(paidSpinCost))
+            int coinsBefore = PlayerWallet.Coins;
+            if (coinsBefore < paidSpinCost)
             {
+                Debug.LogWarning(
+                    $"[FortuneWheel] Paid spin blocked: not enough coins. " +
+                    $"coins={coinsBefore} cost={paidSpinCost}",
+                    this);
                 RefreshSpinButtonState();
                 return;
             }
-            activeSpinConfig = ResolveConfig(paidSpinConfig, paidSpinDirectConfig)
-                            ?? ResolveConfig(freeSpinConfig, freeSpinDirectConfig);
-        }
 
-        if (activeSpinConfig == null || activeSpinConfig.rewards.Count == 0) return;
+            if (!PlayerWallet.SpendCoins(paidSpinCost))
+            {
+                Debug.LogWarning(
+                    $"[FortuneWheel] Paid spin blocked: SpendCoins failed. " +
+                    $"coinsBefore={coinsBefore} currentCoins={PlayerWallet.Coins} cost={paidSpinCost}",
+                    this);
+                RefreshSpinButtonState();
+                return;
+            }
+            activeSpinConfig = config;
+            Debug.Log(
+                $"[FortuneWheel] Spin accepted. free=False coinsBefore={coinsBefore} " +
+                $"coinsAfter={PlayerWallet.Coins} cost={paidSpinCost} config={SafeName(config)} rewards={config.rewards.Count}",
+                this);
+        }
 
         int count = Mathf.Min(activeSpinConfig.rewards.Count, 8);
         selectedIndex = PickRandomIndex(count, activeSpinConfig);
-        if (selectedIndex < 0) return;
+        if (selectedIndex < 0)
+        {
+            Debug.LogWarning(
+                $"[FortuneWheel] Spin blocked: selectedIndex invalid. count={count} config={SafeName(activeSpinConfig)}",
+                this);
+            RefreshSpinButtonState();
+            return;
+        }
         selectedReward = activeSpinConfig.rewards[selectedIndex];
 
         StartCoroutine(SpinRoutine());

@@ -67,6 +67,21 @@ public static class SpecialCellUtils
         return true;
     }
 
+    public static bool TryAddGrassImpact(BoardController board, int x, int y, ICollection<Vector2Int> impactCells)
+    {
+        if (board == null || impactCells == null)
+            return false;
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+
+        var obstacles = board.ObstacleStateService;
+        if (obstacles == null || !obstacles.IsGrassAt(x, y))
+            return false;
+
+        impactCells.Add(new Vector2Int(x, y));
+        return true;
+    }
+
     /// <summary>
     /// HatLauncher / EnergyContainer cells are permanent OverTileBlockers, so CanAffectCell
     /// rejects them and they never enter a special's affected/impact set. But a special whose
@@ -147,7 +162,14 @@ public static class SpecialCellUtils
         {
             for (int y = 0; y < board.Height; y++)
             {
-                if (!SpecialUtils.CanTargetTileContent(board, x, y))
+                bool canTargetTile = SpecialUtils.CanTargetTileContent(board, x, y);
+                bool canDamageGrassOnly =
+                    !canTargetTile &&
+                    SpecialUtils.CanAffectCell(board, x, y) &&
+                    board.ObstacleStateService != null &&
+                    board.ObstacleStateService.IsGrassAt(x, y);
+
+                if (!canTargetTile && !canDamageGrassOnly)
                     continue;
 
                 var t = board.Tiles[x, y];
@@ -167,6 +189,12 @@ public static class SpecialCellUtils
 
                 if (excludeSpecials && t.GetSpecial() != TileSpecial.None)
                     continue;
+
+                if (canDamageGrassOnly)
+                {
+                    TryAddGrassImpact(board, x, y, ctx?.ImpactCells);
+                    continue;
+                }
 
                 MarkAffectedCell(ctx, x, y, board);
                 matches.Add(t);

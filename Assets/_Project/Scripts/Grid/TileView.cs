@@ -16,7 +16,28 @@ public class TileView : MonoBehaviour,
     [SerializeField] private PatchBotPropellerView propellerView;
     [SerializeField] private OverrideSpecialView overrideSpecialView;
     [SerializeField] private PulseFuseSparkleView fuseSparkleView;
+
+    [Header("LineH/LineV oluşum flipbook (silindir dönüşü)")]
+    [Tooltip("LineH oluşurken sırayla oynatılacak 5 kare (silindirin X ekseninde dönüşü). BOŞ bırakılırsa " +
+             "düz eksen dönüşüne (orijinal sprite) düşülür.")]
+    [SerializeField] private Sprite[] lineHSpinFrames = new Sprite[5];
+    [Tooltip("LineV oluşurken sırayla oynatılacak 5 kare (silindirin Y ekseninde dönüşü). BOŞ bırakılırsa " +
+             "düz eksen dönüşüne (orijinal sprite) düşülür.")]
+    [SerializeField] private Sprite[] lineVSpinFrames = new Sprite[5];
+
     private TileModel model;
+
+    /// LineH/LineV oluşum flipbook kareleri. Hiç dolu kare yoksa null döner (→ düz dönüş fallback).
+    public Sprite[] GetLineSpinFrames(TileSpecial special)
+    {
+        var frames = special == TileSpecial.LineH ? lineHSpinFrames
+                   : special == TileSpecial.LineV ? lineVSpinFrames
+                   : null;
+        if (frames == null) return null;
+        for (int i = 0; i < frames.Length; i++)
+            if (frames[i] != null) return frames;   // en az bir dolu kare var
+        return null;
+    }
 
     public int X { get; private set; }
     public int Y { get; private set; }

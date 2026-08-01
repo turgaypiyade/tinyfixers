@@ -77,10 +77,13 @@ public sealed class SpecialChainRunner : BoardAction
 
     // Queued specials are anchored via pending-triggered cells (gravity-blocked in
     // CalculateCascades) so they activate where the player saw them instead of
-    // falling between steps. Released when the special's own turn comes. The registry
-    // lives on the ROOT chain: arrival sub-chains share it, and only the root runs
-    // the final wait/release (a sub-chain runs as a background job itself, so waiting
-    // on ActiveBackgroundJobs from inside one would deadlock until the safety cap).
+    // falling between steps. Arrival sub-chains keep the anchor until the root chain's
+    // final settle; otherwise a parent pulse can run gravity while the arrived LineH/V
+    // is still resolving and move Cargo/tiles through its origin before the sweep lands.
+    // The registry lives on the ROOT chain: arrival sub-chains share it, and only the
+    // root runs the final wait/release (a sub-chain runs as a background job itself,
+    // so waiting on ActiveBackgroundJobs from inside one would deadlock until the
+    // safety cap).
     private readonly SpecialChainRunner root;
     private readonly Dictionary<TileView, Vector2Int> anchoredCells = new();
     private readonly Vector2Int[] anchorCellBuffer = new Vector2Int[1];
@@ -170,7 +173,6 @@ public sealed class SpecialChainRunner : BoardAction
         while (queue.Count > 0)
         {
             var t = queue.Dequeue();
-            ReleaseAnchor(t);
             if (t == null || !t) continue;
             if (processed.Contains(t)) continue;
 
@@ -900,16 +902,6 @@ public sealed class SpecialChainRunner : BoardAction
         root.anchoredCells[tile] = cell;
         root.anchorCellBuffer[0] = cell;
         board.SetPendingTriggeredSpecialCells(root.anchorCellBuffer);
-    }
-
-    // "is null" on purpose: a destroyed-but-referenced TileView must still release
-    // its cell, and Unity's overloaded == would report it as null.
-    private void ReleaseAnchor(TileView tile)
-    {
-        if (tile is null || !root.anchoredCells.TryGetValue(tile, out var cell)) return;
-        root.anchoredCells.Remove(tile);
-        root.anchorCellBuffer[0] = cell;
-        board.ClearPendingTriggeredSpecialCells(root.anchorCellBuffer);
     }
 
     private bool ReleaseAllAnchors()

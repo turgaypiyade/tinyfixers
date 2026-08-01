@@ -7,6 +7,7 @@ using UnityEngine;
 /// ortalanmış 4x4 kare. Barrel'ın tüm hücreleri de bu 4x4 içinde kalır (kırıldıktan sonra
 /// None oldukları için mud hedefidir). Yalnızca board içinde, hole olmayan, tile'lı ve üzerinde
 /// başka obstacle bulunmayan (ObstacleId.None) hücreler hedef sayılır.
+/// Over-tile obstacle hücreleri de hedef olabilir; mud beneath store'a yazılır.
 /// (OilSpreadService kalıbında saf yardımcı sınıf.)
 /// </summary>
 public sealed class BarrelMudSpreadService
@@ -24,7 +25,7 @@ public sealed class BarrelMudSpreadService
 
     /// <param name="origin">Barrel'ın sol-üst (min) hücresi.</param>
     /// <param name="size">Barrel footprint boyutu (ör. 1x2 = 1 sütun, 2 satır).</param>
-    public List<Vector2Int> ComputeTargets(Vector2Int origin, Vector2Int size)
+    public List<Vector2Int> ComputeTargets(Vector2Int origin, Vector2Int size, ObstacleId splatObstacleId = ObstacleId.Mud)
     {
         var result = new List<Vector2Int>();
         if (board == null || obstacles == null)
@@ -44,19 +45,24 @@ public sealed class BarrelMudSpreadService
         for (int dx = 0; dx < WindowSize; dx++)
         {
             var cell = new Vector2Int(startX + dx, startY + dy);
-            if (CanPlaceMudAt(cell))
+            if (CanPlaceSplatAt(cell, splatObstacleId))
                 result.Add(cell);
         }
 
         return result;
     }
 
-    private bool CanPlaceMudAt(Vector2Int cell)
+    private bool CanPlaceSplatAt(Vector2Int cell, ObstacleId splatObstacleId)
     {
         if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height) return false;
         if (board.Holes[cell.x, cell.y]) return false;
-        if (board.GetTileViewAt(cell.x, cell.y) == null) return false;
-        // Üzerinde başka bir obstacle (mud dahil) varsa dokunma.
-        return obstacles.GetObstacleIdAt(cell.x, cell.y) == ObstacleId.None;
+        var current = obstacles.GetObstacleIdAt(cell.x, cell.y);
+
+        if (current == ObstacleId.None)
+            return board.GetTileViewAt(cell.x, cell.y) != null;
+
+        return splatObstacleId == ObstacleId.Mud
+            && obstacles.IsOverTileBlockerAt(cell.x, cell.y)
+            && !obstacles.IsMovableObstacleAt(cell.x, cell.y);
     }
 }

@@ -176,6 +176,9 @@ public class BonusMovesService : MonoBehaviour
             if (_hardSkipRequested)
                 yield break;
 
+            if (!CanTriggerPlacedBonusSpecialAt(p.x, p.y))
+                continue;
+
             var tile = board.GetTileViewAt(p.x, p.y);
             if (tile == null)
                 continue;
@@ -216,6 +219,12 @@ public class BonusMovesService : MonoBehaviour
         if (_hardSkipRequested)
             return;
 
+        if (!CanPlaceBonusSpecialAt(p.x, p.y))
+        {
+            board.ConsumeBonusMove();
+            return;
+        }
+
         var tileView = board.GetTileViewAt(p.x, p.y);
         if (tileView != null && tileView.GetSpecial() == TileSpecial.None)
         {
@@ -248,6 +257,13 @@ public class BonusMovesService : MonoBehaviour
         }
 
         // Place special on landing.
+        if (!CanPlaceBonusSpecialAt(p.x, p.y))
+        {
+            board.ConsumeBonusMove();
+            onDone?.Invoke();
+            yield break;
+        }
+
         tileView = board.GetTileViewAt(p.x, p.y);
         if (tileView != null && tileView.GetSpecial() == TileSpecial.None)
         {
@@ -535,8 +551,7 @@ public class BonusMovesService : MonoBehaviour
                 if (tile.GetSpecial() != TileSpecial.None)
                     continue;
 
-                if (board.ObstacleStateService != null &&
-                    board.ObstacleStateService.IsMovableObstacleAt(x, y))
+                if (!CanPlaceBonusSpecialAt(x, y))
                     continue;
 
                 candidates.Add(new Vector2Int(x, y));
@@ -546,6 +561,54 @@ public class BonusMovesService : MonoBehaviour
         return candidates.Count == 0
             ? (Vector2Int?)null
             : candidates[Random.Range(0, candidates.Count)];
+    }
+
+    private bool CanPlaceBonusSpecialAt(int x, int y)
+    {
+        if (board == null)
+            return false;
+
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+
+        if (board.Holes[x, y])
+            return false;
+
+        var tile = board.GetTileViewAt(x, y);
+        if (tile == null || tile.GetSpecial() != TileSpecial.None)
+            return false;
+
+        var obstacles = board.ObstacleStateService;
+        if (obstacles == null)
+            return true;
+
+        return !obstacles.IsOilAt(x, y)
+            && !obstacles.IsInteractionLockedAt(x, y)
+            && !obstacles.IsMovableObstacleAt(x, y);
+    }
+
+    private bool CanTriggerPlacedBonusSpecialAt(int x, int y)
+    {
+        if (board == null)
+            return false;
+
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+
+        if (board.Holes[x, y])
+            return false;
+
+        var obstacles = board.ObstacleStateService;
+        if (obstacles != null &&
+            (obstacles.IsOilAt(x, y) || obstacles.IsInteractionLockedAt(x, y) || obstacles.IsMovableObstacleAt(x, y)))
+            return false;
+
+        var tile = board.GetTileViewAt(x, y);
+        if (tile == null)
+            return false;
+
+        var special = tile.GetSpecial();
+        return special == TileSpecial.LineH || special == TileSpecial.LineV;
     }
 
     private static Vector2 WorldToLocalIn(RectTransform root, RectTransform other)

@@ -90,14 +90,29 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
     public static bool TryGetPendingReward(out int pendingReward, out int pendingBefore, out int pendingAfter)
     {
         pendingReward = PlayerPrefs.GetInt(PendingRewardKey, 0);
-        pendingAfter = PlayerPrefs.GetInt(PendingAfterKey, PlayerWallet.Coins);
+        int walletCoins = PlayerWallet.Coins;
+        pendingAfter = PlayerPrefs.GetInt(PendingAfterKey, walletCoins);
         pendingBefore = PlayerPrefs.GetInt(PendingBeforeKey, Mathf.Max(0, pendingAfter - Mathf.Max(0, pendingReward)));
 
         if (pendingReward > 0)
-            return true;
+        {
+            if (pendingAfter != walletCoins)
+            {
+                Debug.LogWarning(
+                    $"[CoinFlyToWalletAnimator] Clearing stale pending coin reward. " +
+                    $"pendingReward={pendingReward} pendingBefore={pendingBefore} pendingAfter={pendingAfter} wallet={walletCoins}");
+                ClearPendingReward();
+                pendingReward = 0;
+                pendingBefore = walletCoins;
+                pendingAfter = walletCoins;
+                return false;
+            }
 
-        pendingBefore = PlayerWallet.Coins;
-        pendingAfter = PlayerWallet.Coins;
+            return true;
+        }
+
+        pendingBefore = walletCoins;
+        pendingAfter = walletCoins;
         return false;
     }
 

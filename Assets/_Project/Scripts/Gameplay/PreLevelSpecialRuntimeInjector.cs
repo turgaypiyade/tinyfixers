@@ -100,13 +100,10 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         Debug.Log($"[PreLevelSpecialRuntimeInjector] Board ready. candidates={candidates.Count}, selected={selected.Count}");
 
         int placedCount = 0;
-        for (int i = 0; i < selected.Count && candidates.Count > 0; i++)
+        for (int i = 0; i < selected.Count; i++)
         {
-            var tile = TakeRandomCandidate();
+            var tile = TakeAndApplyToNextEligibleCandidate(selected[i]);
             if (tile == null)
-                continue;
-
-            if (!ApplySpecial(tile, selected[i]))
                 continue;
 
             placedCount++;
@@ -180,22 +177,13 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         if (board.IsBusy || board.ActiveBackgroundJobs > 0)
             return false;
 
-        var obstacleService = board.ObstacleStateService;
         int filledCells = 0;
 
         for (int x = 0; x < board.Width; x++)
         {
             for (int y = 0; y < board.Height; y++)
             {
-                if (board.Holes[x, y])
-                    continue;
-
-                // Obstacle hücreleri tile barındırmayabilir (blocking olanlar zaten
-                // Holes=true, ama bazı obstacle'lar Holes=false + Tiles=null olur).
-                // Bunları board'un "hazır değil" sayılmasına sebep yapma — yerleştirmede
-                // zaten eligible değiller. Aksi halde obstacle-yoğun board hiç "ready"
-                // olmuyor, 8s timeout doluyor ve hiçbir special yerleşmiyordu.
-                if (obstacleService != null && obstacleService.HasObstacleAt(x, y))
+                if (IsIgnoredForBoardReady(x, y))
                     continue;
 
                 var tile = board.Tiles[x, y];
@@ -232,16 +220,43 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         if (tile == null)
             return false;
 
+        if (board == null || board.Tiles == null || board.GridData == null || board.Holes == null)
+            return false;
+
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+
+        if (board.Tiles[x, y] != tile || tile.X != x || tile.Y != y)
+            return false;
+
         if (board.Holes[x, y] || board.GridData[x, y] == null)
             return false;
 
         if (tile.GetSpecial() != TileSpecial.None)
             return false;
 
-        if (tile.TryGetCellState(out var state) && (state.hasObstacle || !state.canContainTile))
+        if (board.ObstacleStateService != null &&
+            (board.ObstacleStateService.HasObstacleAt(x, y) ||
+             board.ObstacleStateService.IsInteractionLockedAt(x, y) ||
+             board.ObstacleStateService.IsMovableObstacleAt(x, y)))
             return false;
 
         return true;
+    }
+
+    private bool IsIgnoredForBoardReady(int x, int y)
+    {
+        if (board == null)
+            return true;
+
+        if (board.IsMaskHoleCell(x, y))
+            return true;
+
+        var obstacleService = board.ObstacleStateService;
+        if (obstacleService != null && obstacleService.HasObstacleAt(x, y))
+            return true;
+
+        return false;
     }
 
     private TileView TakeRandomCandidate()
@@ -250,6 +265,21 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         var tile = candidates[index];
         candidates.RemoveAt(index);
         return tile;
+    }
+
+    private TileView TakeAndApplyToNextEligibleCandidate(TileSpecial special)
+    {
+        while (candidates.Count > 0)
+        {
+            var tile = TakeRandomCandidate();
+            if (tile == null)
+                continue;
+
+            if (ApplySpecial(tile, special))
+                return tile;
+        }
+
+        return null;
     }
 
     private bool HasEligibleCandidate()

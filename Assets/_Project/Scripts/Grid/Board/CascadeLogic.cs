@@ -352,6 +352,63 @@ public class CascadeLogic
         return false;
     }
 
+    public bool HasAnyResolvableEmptyPlayableCell()
+    {
+        for (int x = 0; x < board.Width; x++)
+        {
+            int segmentTop = board.Height - 1;
+            while (segmentTop >= 0)
+            {
+                while (segmentTop >= 0 && IsGravityBlockedCell(x, segmentTop))
+                    segmentTop--;
+
+                if (segmentTop < 0)
+                    break;
+
+                int segmentBottom = segmentTop;
+                while (segmentBottom >= 0 && !IsGravityBlockedCell(x, segmentBottom))
+                    segmentBottom--;
+
+                int topY = segmentBottom + 1;
+                bool touchesSpawn = IsSegmentConnectedToSpawnEdge(x, topY);
+                int sourceTiles = 0;
+                List<int> slotYs = null;
+
+                for (int y = segmentTop; y >= topY; y--)
+                {
+                    if (!IsTileSlotCell(x, y))
+                        continue;
+
+                    (slotYs ??= new List<int>()).Add(y);
+
+                    if (board.Tiles[x, y] != null)
+                        sourceTiles++;
+                }
+
+                if (slotYs != null)
+                {
+                    if (touchesSpawn)
+                    {
+                        for (int i = 0; i < slotYs.Count; i++)
+                            if (board.Tiles[x, slotYs[i]] == null)
+                                return true;
+                    }
+                    else
+                    {
+                        int fillableSlots = Mathf.Min(sourceTiles, slotYs.Count);
+                        for (int i = 0; i < fillableSlots; i++)
+                            if (board.Tiles[x, slotYs[i]] == null)
+                                return true;
+                    }
+                }
+
+                segmentTop = segmentBottom - 1;
+            }
+        }
+
+        return false;
+    }
+
     // Builds a full-board mask of cells a spawned tile can ever reach via gravity,
     // using the SAME rules as the cascade: holes are passable (tiles fall through
     // them), diagonal slides work, only gravity-blocking obstacles (chest etc.) stop
@@ -776,10 +833,7 @@ public class CascadeLogic
     private bool IsDiagonalPassableCell(int x, int y)
     {
         if (!TryGetCellState(x, y, out var state)) return false;
-        if (!state.inBounds) return false;
-        if (state.isPendingTriggeredSpecial) return false;
-        if (state.isObstacleBlocked) return false;
-        return true;
+        return state.allowsDiagonalPassThrough;
     }
 
     // Cargo (exitAtBottom) auto-spawn: KREDİ SİSTEMİ (kullanıcı kuralı 2026-07-21).

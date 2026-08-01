@@ -109,6 +109,44 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private ChestObstacleView chestObstacleViewPrefab;
     [Tooltip("BatteryBox icin katmanli gorsel prefabi (BatteryBoxView component'i olmali)")]
     [SerializeField] private BatteryBoxView batteryBoxViewPrefab;
+    [Tooltip("OverrideBatteryBox icin katmanli gorsel prefabi (OverrideBatteryBoxView component'i olmali)")]
+    [SerializeField] private OverrideBatteryBoxView overrideBatteryBoxViewPrefab;
+    [Header("OverrideBatteryBox sprite'lari (prefab yoksa kod fallback kullanir)")]
+    [Tooltip("Core / kirmizi bar sprite'i (yatay). Sol panele 90° donuk oturur.")]
+    [SerializeField] private Sprite overrideBarRedSprite;
+    [Tooltip("Gear / sari bar sprite'i (yatay). Sag panele 90° donuk oturur.")]
+    [SerializeField] private Sprite overrideBarYellowSprite;
+    [Tooltip("Bolt / mavi bar sprite'i (yatay). Ust panele duz oturur.")]
+    [SerializeField] private Sprite overrideBarBlueSprite;
+    [Tooltip("Plate / yesil bar sprite'i (yatay). Alt panele duz oturur.")]
+    [SerializeField] private Sprite overrideBarGreenSprite;
+    [Tooltip("Gauge ibresi (pin) sprite'i. Gobek dogru donsun diye needlePivot ayarla.")]
+    [SerializeField] private Sprite overrideNeedleSprite;
+    [Tooltip("Merkez gauge/dial sprite'i (ibresiz). Barlarin USTUNDE, ibrenin ALTINDA render edilir.")]
+    [SerializeField] private Sprite overrideGaugeSprite;
+    [Tooltip("Patlama oncesi buhar puf sprite'i (opsiyonel). Bossa duz beyaz kare kullanilir.")]
+    [SerializeField] private Sprite overrideSteamSprite;
+    [Header("OverrideBatteryBox yerlesim ayari (fallback, canli)")]
+    [Tooltip("Mavi/yesil (ust/alt) bar genislik orani.")]
+    [SerializeField, Range(0.2f, 1.2f)] private float obbHorizontalBarWidthScale = 0.85f;
+    [Tooltip("Mavi/yesil (ust/alt) bar yukseklik orani.")]
+    [SerializeField, Range(0.2f, 1.2f)] private float obbHorizontalBarHeightScale = 0.6f;
+    [Tooltip("Kirmizi/sari (sol/sag, donuk) bar genislik orani.")]
+    [SerializeField, Range(0.2f, 1.2f)] private float obbRotatedBarWidthScale = 0.62f;
+    [Tooltip("Kirmizi/sari (sol/sag, donuk) bar yukseklik orani.")]
+    [SerializeField, Range(0.2f, 1.2f)] private float obbRotatedBarHeightScale = 1.0f;
+    [Tooltip("Ibre boyutu (kutunun kisa kenarina oran).")]
+    [SerializeField, Range(0.1f, 1.2f)] private float obbNeedleSize = 0.34f;
+    [Tooltip("Merkez gauge/dial boyutu (kutunun kisa kenarina oran).")]
+    [SerializeField, Range(0.1f, 1.2f)] private float obbGaugeSize = 0.34f;
+    [Tooltip("Gauge merkezi (kutu ici fraksiyon).")]
+    [SerializeField] private Vector2 obbGaugeCenter = new Vector2(0.5f, 0.47f);
+    [Tooltip("Ibre sprite'i icindeki gobek (pivot) fraksiyonu.")]
+    [SerializeField] private Vector2 obbNeedlePivot = new Vector2(0.5f, 0.42f);
+    [Tooltip("progress=0 iken ibre acisi (sol/yesil). Hizalarken 0 yapip gobegi ortala.")]
+    [SerializeField] private float obbNeedleStartAngle = 90f;
+    [Tooltip("progress=total iken ibre acisi (sag/kirmizi).")]
+    [SerializeField] private float obbNeedleEndAngle = -90f;
     [Tooltip("Wardrobe obstacle prefabi (WardrobeObstacleView component'i olmali). Null bırakılırsa fallback ile spawn edilir.")]
     [SerializeField] private WardrobeObstacleView wardrobeObstacleViewPrefab;
 
@@ -137,6 +175,7 @@ public class GridSpawner : MonoBehaviour
     private readonly Dictionary<int, Vector2> obstacleHitShakeBasePositions = new();
     private readonly Dictionary<int, ChestObstacleView> _chestViews = new();
     private readonly Dictionary<int, BatteryBoxView> _batteryBoxViews = new();
+    private readonly Dictionary<int, OverrideBatteryBoxView> _overrideBatteryBoxViews = new();
     private readonly Dictionary<int, WardrobeObstacleView> _wardrobeViews = new();
     private readonly Dictionary<int, GameObject> cellBgByIndex = new();
     private readonly Dictionary<int, Image> cellBgImageByIndex = new();
@@ -273,6 +312,7 @@ public class GridSpawner : MonoBehaviour
         board.OnChestOpened                 += HandleChestOpened;
         board.OnChestColorRemoved           += HandleChestColorRemoved;
         board.OnBatteryHit                  += HandleBatteryHit;
+        board.OnOverrideBatteryBoxHit       += HandleOverrideBatteryBoxHit;
         board.OnWardrobeOpened              += HandleWardrobeOpened;
         board.OnWardrobeItemRemoved         += HandleWardrobeItemRemoved;
     }
@@ -289,6 +329,7 @@ public class GridSpawner : MonoBehaviour
         board.OnChestOpened                -= HandleChestOpened;
         board.OnChestColorRemoved          -= HandleChestColorRemoved;
         board.OnBatteryHit                 -= HandleBatteryHit;
+        board.OnOverrideBatteryBoxHit      -= HandleOverrideBatteryBoxHit;
         board.OnWardrobeOpened             -= HandleWardrobeOpened;
         board.OnWardrobeItemRemoved        -= HandleWardrobeItemRemoved;
     }
@@ -475,11 +516,14 @@ public class GridSpawner : MonoBehaviour
 
                     TileType tileType = initialTypes[x, y];
 
-                    // İzole hücre (holdsTile/pinned/fillShadowed) SimulateInitialTypes'ta locked
-                    // sayılıp default tip (hep aynı) bırakıldı; bir sütun dolusu oil aynı taşı
-                    // verirdi. Rastgele tip ver — sol/üst komşuya bakarak anlık 3'lü oluşturma
-                    // (pinned tile type varsa aşağıda ezilir).
-                    if (gravityIsolated[x, y] && (holdsTileCell || hasPinned || fillShadowed)
+                    // İzole hücre (holdsTile/pinned/fillShadowed) VEYA interaction-locked hücre (Grass/Oil)
+                    // SimulateInitialTypes'ta locked sayılıp default tip (hep aynı) bırakıldı; grass'la
+                    // kaplı board'da tüm taşlar aynı geliyordu. Rastgele tip ver — sol/üst komşuya bakarak
+                    // anlık 3'lü oluşturmadan (pinned tile type varsa aşağıda ezilir). Locked hücrede match
+                    // kilitli olduğu için "3'lü" görsel de sorun değil.
+                    bool interactionLocked = board.ObstacleStateService != null
+                        && board.ObstacleStateService.IsInteractionLockedAt(x, y);
+                    if (((gravityIsolated[x, y] && (holdsTileCell || hasPinned || fillShadowed)) || interactionLocked)
                         && effectiveRandomPool != null && effectiveRandomPool.Length > 0)
                         tileType = PickIsolatedRandomType(x, y, effectiveRandomPool);
 
@@ -908,6 +952,19 @@ public class GridSpawner : MonoBehaviour
 
         grassOverlayService.Init(board, width, height, tileSize);
 
+        // Rebuild temizliği + spawnParent altında hizala (hücreler doğru koordinatta doğsun; geçen
+        // build'de grass root border'ın yanına/mask dışına taşınmış olabilir → önce geri al).
+        grassOverlayService.ClearAll();
+        ClearChildren(grassOverlayRoot);
+        if (spawnParent != null && grassOverlayRoot.parent != spawnParent)
+            grassOverlayRoot.SetParent(spawnParent, worldPositionStays: false);
+        grassOverlayRoot.anchorMin = new Vector2(0f, 1f);
+        grassOverlayRoot.anchorMax = new Vector2(0f, 1f);
+        grassOverlayRoot.pivot     = new Vector2(0f, 1f);
+        grassOverlayRoot.anchoredPosition = new Vector2(boardPadding, -boardPadding);
+        grassOverlayRoot.sizeDelta = Vector2.zero;
+        grassOverlayRoot.localScale = Vector3.one;
+
         // Temel görsel: ObstacleLibrary Grass def'inin stage sprite'ı. Service A/B doluysa checkerboard override.
         var grassDef = resolvedLevel.obstacleLibrary != null
             ? resolvedLevel.obstacleLibrary.Get(ObstacleId.Grass)
@@ -932,6 +989,18 @@ public class GridSpawner : MonoBehaviour
 
             SpawnGrassOverlayCell(x, y, grassMaxHits);
             spawned++;
+        }
+
+        // Grass'ı BoardMask DIŞINA + border'ın ÜSTÜNE taşı (worldPositionStays: hücre hizası korunur):
+        // kenar yaprakları mask'a takılıp kesilmez, border çerçevesinin üstüne taşar.
+        var grassBorderRoot = borderDrawer != null ? borderDrawer.borderRoot : null;
+        if (grassBorderRoot != null && grassBorderRoot.parent != null)
+        {
+            grassOverlayRoot.SetParent(grassBorderRoot.parent, worldPositionStays: true);
+            grassOverlayRoot.SetAsLastSibling();
+            int lyr = grassBorderRoot.gameObject.layer;
+            grassOverlayRoot.gameObject.layer = lyr;
+            foreach (Transform ch in grassOverlayRoot) ch.gameObject.layer = lyr;
         }
 
         Debug.Log($"[Grass] {spawned} view doğdu. sprite={(grassOverlayService.GetSpriteForCell(0, 0) != null ? "VAR" : "YOK")}");
@@ -1425,6 +1494,18 @@ public class GridSpawner : MonoBehaviour
             return;
         }
 
+        if (obstacleId == ObstacleId.OverrideBatteryBox)
+        {
+            if (_overrideBatteryBoxViews.TryGetValue(originIndex, out var view) && view != null)
+                view.PlayDetonationAndDestroy();
+
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+            _overrideBatteryBoxViews.Remove(originIndex);
+            ApplyUnderTileCellBgTint();
+            return;
+        }
+
         if (IsTrackedObstacleViewFor(originIndex, obstacleId))
         {
             if (obstacleViewsByOrigin.TryGetValue(originIndex, out var image) && image != null)
@@ -1434,6 +1515,8 @@ public class GridSpawner : MonoBehaviour
             obstacleDefsByOrigin.Remove(originIndex);
         }
         _chestViews.Remove(originIndex);
+        _batteryBoxViews.Remove(originIndex);
+        _overrideBatteryBoxViews.Remove(originIndex);
         ApplyUnderTileCellBgTint();
     }
 
@@ -2019,6 +2102,161 @@ public class GridSpawner : MonoBehaviour
         view.Shake();
     }
 
+    private Image SpawnOverrideBatteryBoxView(ObstacleDef def, int x, int y)
+    {
+        bool drawUnder = ResolveBehaviorForOrigin(resolvedLevel.Index(x, y), def) == ObstacleBehaviorType.UnderTileLayered;
+        var parent = drawUnder ? underTilesObstaclesRoot : overTilesObstaclesRoot;
+
+        int w = Mathf.Max(1, def.size.x);
+        int h = Mathf.Max(1, def.size.y);
+        float gridOverlap = Mathf.Max(1f, Mathf.Ceil(runtimeGridLineThickness * 0.5f));
+        int originIndex = resolvedLevel.Index(x, y);
+
+        bool HasDifferentAt(int cx, int cy)
+        {
+            if (cx < 0 || cx >= width || cy < 0 || cy >= height) return false;
+            int idx = resolvedLevel.Index(cx, cy);
+            if (idx < 0 || idx >= resolvedLevel.obstacles.Length) return false;
+            if ((ObstacleId)resolvedLevel.obstacles[idx] == ObstacleId.None) return false;
+            return resolvedLevel.obstacleOrigins[idx] != originIndex;
+        }
+
+        bool dL = false, dR = false, dT = false, dB = false;
+        for (int yy = y; yy < y + h; yy++) { if (HasDifferentAt(x - 1, yy)) dL = true; if (HasDifferentAt(x + w, yy)) dR = true; }
+        for (int xx = x; xx < x + w; xx++) { if (HasDifferentAt(xx, y - 1)) dT = true; if (HasDifferentAt(xx, y + h)) dB = true; }
+
+        float lo = dL ? 0f : gridOverlap;
+        float ro = dR ? 0f : gridOverlap;
+        float to = dT ? 0f : gridOverlap;
+        float bo = dB ? 0f : gridOverlap;
+
+        OverrideBatteryBoxView view;
+        Image rootImage;
+
+        if (overrideBatteryBoxViewPrefab != null)
+        {
+            view = Instantiate(overrideBatteryBoxViewPrefab, parent);
+            rootImage = view.GetComponent<Image>();
+            if (rootImage == null) rootImage = view.gameObject.AddComponent<Image>();
+        }
+        else
+        {
+            var fallback = new GameObject($"Obs_OverrideBatteryBox_{x}_{y}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            fallback.transform.SetParent(parent, false);
+            rootImage = fallback.GetComponent<Image>();
+            view = fallback.AddComponent<OverrideBatteryBoxView>();
+            CreateOverrideBatteryChildImages(view, fallback.transform, Mathf.Max(1, def.hits));
+        }
+
+        Sprite boxSprite = def.GetPreviewSprite();
+        if (rootImage != null)
+        {
+            rootImage.sprite = boxSprite;
+            rootImage.type = Image.Type.Simple;
+            rootImage.preserveAspect = false;
+            rootImage.color = boxSprite != null ? Color.white : new Color(0.02f, 0.55f, 0.58f, 0.95f);
+        }
+
+        var rt = rootImage != null ? rootImage.GetComponent<RectTransform>() : null;
+        if (rt != null)
+        {
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot     = new Vector2(0, 1);
+            rt.anchoredPosition = new Vector2(x * tileSize - lo, -y * tileSize + to);
+            rt.sizeDelta = new Vector2(w * tileSize + lo + ro, h * tileSize + to + bo);
+        }
+
+        if (rootImage != null)
+        {
+            var clickProxy = rootImage.gameObject.AddComponent<ObstacleClickProxy>();
+            clickProxy.Init(board, x, y, w, h, tileSize);
+            rootImage.raycastTarget = true;
+        }
+
+        if (view != null)
+        {
+            int hitsPerColor = Mathf.Max(1, def.hits);
+            view.ConfigureLayout(obbHorizontalBarWidthScale, obbHorizontalBarHeightScale,
+                obbRotatedBarWidthScale, obbRotatedBarHeightScale,
+                obbNeedleSize, obbGaugeSize, obbGaugeCenter, obbNeedlePivot,
+                obbNeedleStartAngle, obbNeedleEndAngle);
+            view.ApplyLayout();
+            view.Initialize(hitsPerColor);
+            _overrideBatteryBoxViews[originIndex] = view;
+        }
+
+        return rootImage;
+    }
+
+    private void CreateOverrideBatteryChildImages(OverrideBatteryBoxView view, Transform parent, int hitsPerColor)
+    {
+        int count = Mathf.Max(1, hitsPerColor);
+        AddBars(view, parent, ChestColorMask.Core,  "Red",    count, overrideBarRedSprite,    new Color(1.0f, 0.10f, 0.08f, 1f));
+        AddBars(view, parent, ChestColorMask.Gear,  "Yellow", count, overrideBarYellowSprite, new Color(1.0f, 0.78f, 0.05f, 1f));
+        AddBars(view, parent, ChestColorMask.Bolt,  "Blue",   count, overrideBarBlueSprite,   new Color(0.02f, 0.47f, 1.0f, 1f));
+        AddBars(view, parent, ChestColorMask.Plate, "Green",  count, overrideBarGreenSprite,  new Color(0.33f, 0.86f, 0.02f, 1f));
+
+        // Radial fill isteğe bağlı: varsayılan alfa=0 (kapalı); baked arc + ibre yeterli.
+        var progress = CreateUiImage("CenterProgress", parent, new Color(1f, 0.08f, 0.04f, 0.0f));
+        progress.type = Image.Type.Filled;
+        progress.fillMethod = Image.FillMethod.Radial360;
+        view.SetProgressImage(progress);
+
+        // Merkez gauge/dial: barların ÜSTÜNDE render edilir ki barlar onu ezmesin (ibrenin altında).
+        if (overrideGaugeSprite != null)
+        {
+            var gauge = CreateUiImage("CenterGauge", parent, Color.white);
+            gauge.sprite = overrideGaugeSprite;
+            gauge.preserveAspect = true;
+            view.SetCenterImage(gauge);
+        }
+
+        var pin = CreateUiImage("CenterPin", parent, overrideNeedleSprite != null ? Color.white : new Color(0.16f, 0.17f, 0.19f, 1f));
+        if (overrideNeedleSprite != null)
+        {
+            pin.sprite = overrideNeedleSprite;
+            pin.preserveAspect = true;
+        }
+        view.SetPinImage(pin);
+
+        view.SetSteamSprite(overrideSteamSprite);
+    }
+
+    private static void AddBars(OverrideBatteryBoxView view, Transform parent, ChestColorMask color, string label, int count, Sprite sprite, Color tint)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            var img = CreateUiImage($"{label}_Bar_{i}", parent, sprite != null ? Color.white : tint);
+            if (sprite != null)
+            {
+                img.sprite = sprite;
+                img.preserveAspect = true;
+            }
+            view.SetBarImage(color, i, img);
+        }
+    }
+
+    private static Image CreateUiImage(string name, Transform parent, Color tint)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+        var img = go.GetComponent<Image>();
+        img.raycastTarget = false;
+        img.color = tint;
+        return img;
+    }
+
+    private void HandleOverrideBatteryBoxHit(int originIndex, ChestColorMask color, int remaining, int progress, int total)
+    {
+        if (!_overrideBatteryBoxViews.TryGetValue(originIndex, out var view) || view == null) return;
+        if (!obstacleDefsByOrigin.TryGetValue(originIndex, out var def) || def == null) return;
+        int maxHits = Mathf.Max(1, def.hits);
+        view.ApplyColorState(color, remaining, maxHits);
+        view.ApplyProgress(progress, Mathf.Max(1, total));
+        view.Shake();
+    }
+
     // ─── Wardrobe ───────────────────────────────────────────────────────────
 
     private Image SpawnRocketBasketView(ObstacleDef def, int x, int y)
@@ -2169,6 +2407,9 @@ public class GridSpawner : MonoBehaviour
         if (def.id == ObstacleId.BatteryBox)
             return SpawnBatteryBoxView(def, x, y);
 
+        if (def.id == ObstacleId.OverrideBatteryBox)
+            return SpawnOverrideBatteryBoxView(def, x, y);
+
         if (def.id == ObstacleId.Wardrobe)
             return SpawnWardrobeView(def, x, y);
 
@@ -2294,9 +2535,9 @@ public class GridSpawner : MonoBehaviour
         {
             beneathViewsByCell.Remove(idx);
 
-            // RocketBasket özel view ister (RocketBasketView + service kaydı + tüp overlay'leri):
+            // Özel view isteyen obstacle'larda generic beneath image promote edilmez.
             // ön-çizilen generic beneath image'ı promote etme; sil ve normal spawn akışına düş.
-            if (obsId == ObstacleId.RocketBasket)
+            if (obsId == ObstacleId.RocketBasket || obsId == ObstacleId.OverrideBatteryBox)
             {
                 Destroy(pre.gameObject);
             }

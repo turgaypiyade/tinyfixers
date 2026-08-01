@@ -53,13 +53,13 @@ public sealed class BarrelSpreadAction : BoardAction
                 ? new Vector2Int(Mathf.Max(1, def.size.x), Mathf.Max(1, def.size.y))
                 : Vector2Int.one;
 
-            var targets = spread.ComputeTargets(origin, size);
+            var targets = spread.ComputeTargets(origin, size, ObstacleId.Mud);
 
             if (targets.Count > 0)
             {
                 void OnLand(Vector2Int cell)
                 {
-                    if (obstacles.TrySpawnSingleCellObstacleAt(cell.x, cell.y, ObstacleId.Mud))
+                    if (obstacles.TrySpawnSingleCellObstacleAtOrBeneathOverTile(cell.x, cell.y, ObstacleId.Mud))
                         _board.RaiseObstacleCreatedDynamic(cell.x, cell.y);
                 }
 

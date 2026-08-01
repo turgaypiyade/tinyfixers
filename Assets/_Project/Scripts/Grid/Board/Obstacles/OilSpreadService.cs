@@ -76,6 +76,7 @@ public sealed class OilSpreadService
             var candidate = source + Dirs[(start + i) % Dirs.Length];
             if (reserved.Contains(candidate)) continue;
             if (!CanSpreadTo(candidate)) continue;
+            if (!WouldKeepPlayableMove(candidate, reserved)) continue;
             target = candidate;
             return true;
         }
@@ -89,5 +90,20 @@ public sealed class OilSpreadService
         if (board.Holes[cell.x, cell.y]) return false;
         if (board.GetTileViewAt(cell.x, cell.y) == null) return false;
         return obstacles.CanOilSpreadTo(cell.x, cell.y);
+    }
+
+    private bool WouldKeepPlayableMove(Vector2Int candidate, HashSet<Vector2Int> reserved)
+    {
+        if (board == null)
+            return false;
+
+        reserved.Add(candidate);
+        bool hasPlayableMove = board.HasAnyPlayableSwapWithAdditionalLockedCells(reserved);
+        reserved.Remove(candidate);
+
+        if (!hasPlayableMove)
+            Debug.Log($"[Oil] Spread target ({candidate.x},{candidate.y}) skipped; it would leave no playable move.");
+
+        return hasPlayableMove;
     }
 }

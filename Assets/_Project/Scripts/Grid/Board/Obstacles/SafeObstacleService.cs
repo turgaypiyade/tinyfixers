@@ -142,6 +142,9 @@ public sealed class SafeObstacleService : MonoBehaviour
     public int GetActiveLock(int origin)
         => _byOrigin.TryGetValue(origin, out var s) ? GetFirstOpenLockInOrder(s) : -1;
 
+    public SafeLockHitMode GetHitMode(int origin)
+        => _byOrigin.TryGetValue(origin, out var s) ? s.hitMode : SafeLockHitMode.Ordered;
+
     public int GetRemaining(int origin, int lockIndex)
         => _byOrigin.TryGetValue(origin, out var s) && IsValidLock(lockIndex) ? s.remaining[lockIndex] : 0;
 

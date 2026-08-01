@@ -278,7 +278,7 @@ public sealed class PulseCoreSpecial
                 ? ClearAnimationMode.LightningStrike
                 : ClearAnimationMode.Default,
             affectedCells: ctx.AffectedCells,
-            impactCells: ctx.ImpactCells,
+            impactCells: BuildDirectImpactCells(rt),
             includeAdjacentOverTileBlockerDamage: false,
             lightningVisualTargets: ctx.LightningVisualTargets,
             lightningLineStrikes: ctx.LightningLineStrikes,
@@ -287,5 +287,53 @@ public sealed class PulseCoreSpecial
             isSpecialPhase: true,
             presentationPlan: null
         );
+    }
+
+    private IReadOnlyList<Vector2Int> BuildDirectImpactCells(PulseCoreExecutionRuntime rt)
+    {
+        var directImpacts = new List<Vector2Int>();
+        var seen = new HashSet<Vector2Int>();
+
+        if (rt == null || rt.Board == null || rt.Context == null)
+            return directImpacts;
+
+        var obstacles = rt.Board.ObstacleStateService;
+        if (obstacles == null)
+            return directImpacts;
+
+        foreach (var cell in rt.Context.ImpactCells)
+        {
+            if (cell.x < 0 || cell.x >= rt.Board.Width || cell.y < 0 || cell.y >= rt.Board.Height)
+                continue;
+
+            if (!obstacles.HasObstacleAt(cell.x, cell.y))
+                continue;
+
+            if (IsSameCellObstacleDamageOwnedByTileClear(rt, cell))
+                continue;
+
+            if (seen.Add(cell))
+                directImpacts.Add(cell);
+        }
+
+        return directImpacts;
+    }
+
+    private bool IsSameCellObstacleDamageOwnedByTileClear(PulseCoreExecutionRuntime rt, Vector2Int cell)
+    {
+        var tile = rt.Board.Tiles[cell.x, cell.y];
+        if (tile == null || !rt.Context.Affected.Contains(tile))
+            return false;
+
+        var obstacles = rt.Board.ObstacleStateService;
+        if (obstacles == null)
+            return false;
+
+        if (rt.Board.IsMaskHoleCell(cell.x, cell.y))
+            return false;
+
+        return !obstacles.IsCellBlocked(cell.x, cell.y)
+            && !obstacles.IsInteractionLockedAt(cell.x, cell.y)
+            && !obstacles.IsMovableObstacleAt(cell.x, cell.y);
     }
 }

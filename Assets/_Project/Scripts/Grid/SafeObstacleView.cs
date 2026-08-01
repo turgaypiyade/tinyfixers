@@ -30,6 +30,14 @@ public sealed class SafeObstacleView : MonoBehaviour
     [Tooltip("3 sayaç (kalan hit). Renkleri prefab'da ayarla.")]
     [SerializeField] private TMP_Text[] counters = new TMP_Text[3];
 
+    [Header("Hit Mode Görseli")]
+    [Tooltip("Ordered modda aktif olmayan ama hâlâ açık kilitlerin alpha değeri.")]
+    [SerializeField, Range(0.1f, 1f)] private float inactiveOpenLockAlpha = 0.38f;
+    [Tooltip("Kapanmış kilitlerin alpha değeri.")]
+    [SerializeField, Range(0.1f, 1f)] private float closedLockAlpha = 0.58f;
+    [Tooltip("Ordered modda aktif kilide uygulanacak hafif ölçek vurgusu.")]
+    [SerializeField, Range(1f, 1.2f)] private float activeLockScale = 1.06f;
+
     [Header("Animasyon")]
     [Tooltip("Knob progress=1'de yukarıdan ne kadar AŞAĞI kayar (panel-local birim). Slot yüksekliği - knob yüksekliği.")]
     [SerializeField] private float knobTravelY = 102.797f;
@@ -42,7 +50,9 @@ public sealed class SafeObstacleView : MonoBehaviour
     private SafeObstacleService service;
     private int origin = -1;
     private Vector2[] knobTop;          // her knob'un başlangıç (top) anchoredPosition'ı
+    private Vector3[] knobBaseScale;
     private Coroutine[] knobCo;
+    private Coroutine focusRefreshCo;
 
     /// GridSpawner çağırır: service'e bağla, origin'i ata, knob başlangıçlarını yakala.
     public void Setup(SafeObstacleService svc, int safeOrigin)
@@ -51,9 +61,14 @@ public sealed class SafeObstacleView : MonoBehaviour
         origin  = safeOrigin;
 
         knobTop = new Vector2[knobs.Length];
+        knobBaseScale = new Vector3[knobs.Length];
         knobCo  = new Coroutine[knobs.Length];
         for (int i = 0; i < knobs.Length; i++)
-            if (knobs[i] != null) knobTop[i] = knobs[i].anchoredPosition;
+        {
+            if (knobs[i] == null) continue;
+            knobTop[i] = knobs[i].anchoredPosition;
+            knobBaseScale[i] = knobs[i].localScale;
+        }
 
         if (brokenVisual != null) brokenVisual.SetActive(false);
         if (lockPanel != null)    lockPanel.SetActive(true);
@@ -69,6 +84,8 @@ public sealed class SafeObstacleView : MonoBehaviour
             service.OnLockClosed += HandleLockClosed;
             service.OnSafeBroken += HandleSafeBroken;
         }
+
+        UpdateLockFocusVisuals();
     }
 
     /// Body'yi NxN boyutuna ölçekler (GridSpawner çağırır).
@@ -96,12 +113,18 @@ public sealed class SafeObstacleView : MonoBehaviour
 
         float progress = total > 0 ? (float)(total - remaining) / total : 1f;
         SlideKnob(lockIdx, progress);
+
+        if (remaining > 0)
+            UpdateLockFocusVisuals();
+        else
+            ScheduleLockFocusRefresh();
     }
 
     private void HandleLockClosed(int o, int lockIdx)
     {
         if (o != origin) return;
         SlideKnob(lockIdx, 1f);   // en altta sabit
+        ScheduleLockFocusRefresh();
     }
 
     private void HandleSafeBroken(int o)
@@ -122,6 +145,73 @@ public sealed class SafeObstacleView : MonoBehaviour
         var graphics = GetComponentsInChildren<Graphic>(true);
         for (int i = 0; i < graphics.Length; i++)
             graphics[i].raycastTarget = value;
+    }
+
+    private void ScheduleLockFocusRefresh()
+    {
+        if (focusRefreshCo == null)
+            focusRefreshCo = StartCoroutine(CoRefreshLockFocusNextFrame());
+    }
+
+    private IEnumerator CoRefreshLockFocusNextFrame()
+    {
+        yield return null;
+        focusRefreshCo = null;
+        UpdateLockFocusVisuals();
+    }
+
+    private void UpdateLockFocusVisuals()
+    {
+        if (service == null)
+            return;
+
+        SafeLockHitMode hitMode = service.GetHitMode(origin);
+        int activeLock = service.GetActiveLock(origin);
+        int count = Mathf.Max(knobs != null ? knobs.Length : 0, counters != null ? counters.Length : 0);
+
+        for (int i = 0; i < count; i++)
+        {
+            bool open = service.GetRemaining(origin, i) > 0;
+            bool active = open && hitMode == SafeLockHitMode.Ordered && i == activeLock;
+            float alpha = ResolveLockAlpha(hitMode, open, active);
+
+            SetLockAlpha(i, alpha);
+
+            if (knobs != null && i < knobs.Length && knobs[i] != null && knobBaseScale != null && i < knobBaseScale.Length)
+                knobs[i].localScale = knobBaseScale[i] * (active ? activeLockScale : 1f);
+        }
+    }
+
+    private float ResolveLockAlpha(SafeLockHitMode hitMode, bool open, bool active)
+    {
+        if (!open)
+            return closedLockAlpha;
+        if (hitMode == SafeLockHitMode.AnyColor)
+            return 1f;
+        return active ? 1f : inactiveOpenLockAlpha;
+    }
+
+    private void SetLockAlpha(int lockIndex, float alpha)
+    {
+        if (knobs != null && lockIndex >= 0 && lockIndex < knobs.Length && knobs[lockIndex] != null)
+        {
+            var graphics = knobs[lockIndex].GetComponentsInChildren<Graphic>(true);
+            for (int i = 0; i < graphics.Length; i++)
+                SetGraphicAlpha(graphics[i], alpha);
+        }
+
+        if (counters != null && lockIndex >= 0 && lockIndex < counters.Length && counters[lockIndex] != null)
+            SetGraphicAlpha(counters[lockIndex], alpha);
+    }
+
+    private static void SetGraphicAlpha(Graphic graphic, float alpha)
+    {
+        if (graphic == null)
+            return;
+
+        Color color = graphic.color;
+        color.a = alpha;
+        graphic.color = color;
     }
 
     private IEnumerator CoDestroyAfterBrokenVisual()
