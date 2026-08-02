@@ -13,6 +13,42 @@ MonoBehaviour:
   m_Name: ObstacleLibrary
   m_EditorClassIdentifier: Assembly-CSharp-Editor::ObstacleLibrary
   obstacles:
+  - id: 29
+    stages:
+    - sprite: {fileID: 21300000, guid: ad976f0d8ba7a4542b86472e73b9af00, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    auxiliarySprites: []
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 0
+    size: {x: 1, y: 1}
+    hits: 1
+    fullCellSprite: 0
+    exitAtBottom: 0
+    fillsShadowBeneath: 0
+    suppressHitParticles: 0
+    hitParticleSprites: []
+    breakParticleSprites: []
+    wardrobeItemSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
+    drawUnderTiles: 0
+    legacySprite: {fileID: 21300000, guid: ad976f0d8ba7a4542b86472e73b9af00, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules:
+    legacyBlocksCells: 1
+    legacyBehavior: 1
   - id: 2
     stages:
     - sprite: {fileID: 4563923505258141410, guid: 81daec767c3da473c9a36982987e6470, type: 3}
@@ -37,6 +73,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -55,6 +92,54 @@ MonoBehaviour:
     breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 4563923505258141410, guid: 81daec767c3da473c9a36982987e6470, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules: 
+    legacyBlocksCells: 1
+    legacyBehavior: 1
+  - id: 44
+    stages:
+    - sprite: {fileID: 21300000, guid: 0516eb9954cfe4fd6aaa55c6e86c11e9, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 8e04865b2b71464b8a5b8fd5d4f4a801, type: 3}
+      damageRule: 5
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 1
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    auxiliarySprites:
+    - {fileID: 21300000, guid: 2c4e315bdfe544c298dc51b22430acb5, type: 3}
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 0
+    size: {x: 1, y: 1}
+    hits: 2
+    fullCellSprite: 1
+    exitAtBottom: 0
+    fillsShadowBeneath: 0
+    suppressHitParticles: 0
+    hitParticleSprites: []
+    breakParticleSprites: []
+    wardrobeItemSprites: []
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
+    drawUnderTiles: 0
+    legacySprite: {fileID: 21300000, guid: 0516eb9954cfe4fd6aaa55c6e86c11e9, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1
@@ -83,6 +168,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -118,6 +204,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -181,6 +268,7 @@ MonoBehaviour:
       - {fileID: -9004337153635042660, guid: 8c185012295424a2187904d2bc9f87a9, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -229,6 +317,7 @@ MonoBehaviour:
       - {fileID: 6337227559531849445, guid: 8c185012295424a2187904d2bc9f87a9, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -265,6 +354,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -300,6 +390,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 1
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -335,6 +426,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 1
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -370,6 +462,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 0
@@ -405,6 +498,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 2
@@ -440,6 +534,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 1
@@ -475,6 +570,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 1
     requiredNormalMatchTileType: 3
@@ -510,6 +606,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 3
@@ -593,6 +690,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 3
@@ -639,6 +737,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 3
@@ -696,6 +795,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -742,6 +842,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -788,6 +889,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -835,6 +937,7 @@ MonoBehaviour:
       - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
       hitSound: {fileID: 8300000, guid: d0a82f85986f049fa8173972f2dd549f, type: 3}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -903,6 +1006,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -948,6 +1052,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -1004,6 +1109,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -1049,6 +1155,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 8300000, guid: 1c291cb59bde541d1b3a1a8fb6b63dbc, type: 3}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -1094,6 +1201,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 8300000, guid: 26007bba24f6c4e6bb79847af32f1940, type: 3}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -1129,6 +1237,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -1164,6 +1273,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -1199,6 +1309,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -1234,6 +1345,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -1269,6 +1381,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -1304,6 +1417,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -1350,6 +1464,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 1
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -1372,74 +1487,6 @@ MonoBehaviour:
     legacyStageDamageRules: 
     legacyBlocksCells: 0
     legacyBehavior: 3
-  - id: 37
-    stages:
-    - sprite: {fileID: 21300000, guid: 08c1ed74ede9745c9b47f44f1e7b288f, type: 3}
-      damageRule: 0
-      blocksCells: 1
-      behavior: 1
-      allowDiagonal: 1
-      locksInteraction: 0
-      holdsTile: 0
-      suppressHitParticles: 0
-      hitParticleSprites: []
-      hitSound: {fileID: 0}
-      hitSoundVolume: 1
-    - sprite: {fileID: 21300000, guid: 08c1ed74ede9745c9b47f44f1e7b288f, type: 3}
-      damageRule: 0
-      blocksCells: 1
-      behavior: 1
-      allowDiagonal: 1
-      locksInteraction: 0
-      holdsTile: 0
-      suppressHitParticles: 0
-      hitParticleSprites: []
-      hitSound: {fileID: 0}
-      hitSoundVolume: 1
-    - sprite: {fileID: 21300000, guid: 08c1ed74ede9745c9b47f44f1e7b288f, type: 3}
-      damageRule: 0
-      blocksCells: 1
-      behavior: 1
-      allowDiagonal: 1
-      locksInteraction: 0
-      holdsTile: 0
-      suppressHitParticles: 0
-      hitParticleSprites: []
-      hitSound: {fileID: 0}
-      hitSoundVolume: 1
-    - sprite: {fileID: 21300000, guid: 08c1ed74ede9745c9b47f44f1e7b288f, type: 3}
-      damageRule: 0
-      blocksCells: 1
-      behavior: 1
-      allowDiagonal: 1
-      locksInteraction: 0
-      holdsTile: 0
-      suppressHitParticles: 0
-      hitParticleSprites: []
-      hitSound: {fileID: 0}
-      hitSoundVolume: 1
-    allowCrossContextFallback: 0
-    restrictNormalMatchTileType: 0
-    requiredNormalMatchTileType: 0
-    size: {x: 2, y: 2}
-    hits: 4
-    fullCellSprite: 1
-    exitAtBottom: 0
-    fillsShadowBeneath: 0
-    suppressHitParticles: 0
-    hitParticleSprites: []
-    breakParticleSprites: []
-    wardrobeItemSprites: []
-    hitSound: {fileID: 0}
-    hitSoundVolume: 1
-    breakSound: {fileID: 0}
-    breakSoundVolume: 1
-    drawUnderTiles: 0
-    legacySprite: {fileID: 21300000, guid: 08c1ed74ede9745c9b47f44f1e7b288f, type: 3}
-    legacyStageSprites: []
-    legacyStageDamageRules: 
-    legacyBlocksCells: 1
-    legacyBehavior: 1
   - id: 41
     stages:
     - sprite: {fileID: 21300000, guid: 8478a577d5c04490291436ab241e107f, type: 3}
@@ -1486,6 +1533,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -1521,6 +1569,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0
@@ -1578,6 +1627,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    auxiliarySprites: []
     allowCrossContextFallback: 0
     restrictNormalMatchTileType: 0
     requiredNormalMatchTileType: 0

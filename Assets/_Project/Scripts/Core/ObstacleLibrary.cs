@@ -51,6 +51,8 @@ public class ObstacleDef
     public ObstacleId id = ObstacleId.Stone;
     [Tooltip("Her stage için tek satır kural seti: sprite + damage rule + bloklama + davranış + diagonal izni.")]
     public List<StageRule> stages = new();
+    [Tooltip("Obstacle'a özel ek görsel parçalar. Gameplay stage sayısına dahil değildir.")]
+    public List<Sprite> auxiliarySprites = new();
     [Tooltip("Açık ise kural reddinde alternatif context ile tekrar denemeye izin verir. Varsayılan kapalıdır.")]
     public bool allowCrossContextFallback = false;
     [Tooltip("Açık ise normal match hasarı sadece requiredNormalMatchTileType ile gelir. Special/Booster etkilenmez.")]

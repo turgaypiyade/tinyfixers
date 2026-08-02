@@ -169,6 +169,10 @@ public enum ObstacleId : int
     // her geçerli hit orta progress'i ilerletir. Dört renk tamamen boşalınca patlar ve
     // board'u bir kez override tarzı temizler.
     OverrideBatteryBox = 43,
+
+    // Static generator obstacle. Each valid hit produces a matchable Key tile on
+    // the board until the level's Tile/Key goal capacity is reached.
+    KeyGenerator = 44,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }

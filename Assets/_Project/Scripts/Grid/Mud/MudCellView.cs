@@ -1,75 +1,103 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-/// One UI cell showing bordered mud sprite (Sprite B, bevel baked on all 4 sides) as permanent base.
-/// Cover strips (plain mud texture) hide the bevel toward same-stage neighbours.
-/// Strip dimensions are trimmed at each call so they never cover a corner bevel
-/// that belongs to an inactive (exposed) neighbouring side.
+/// Additive-bevel mud cell.
 ///
-/// Damaged stage (stage 1+) renders as a full-cell RawImage (damageFill) whose UV is
-/// the cell's slice of the grid, so the dark mud texture flows continuously across
-/// neighbouring damaged cells with no per-cell tiling seam — the same seamless trick
-/// the cover strips use for stage 0. If no damaged texture is supplied it falls back
-/// to a per-cell sprite Image (legacy).
+/// A plain interior fill (seamless, sampled with a board-slice UV) is ALWAYS drawn to fill the
+/// whole cell. The bevel is drawn ONLY on the blob's EXPOSED edges/convex-corners, sampled from
+/// the beveled sprite's border regions. Internal edges are just fill-meets-fill, so there are no
+/// seams, no cover-subtraction and no rounded-corner gaps between neighbouring mud cells.
+///
+/// Two stages (light stage-0 / dark stage-1+) swap the interior + bevel textures; the exposure
+/// layout is stage-independent so a hit only recolours the cell.
 public class MudCellView : MonoBehaviour
 {
-    private Image         baseImage;
-    private Image         damageOverlay;
-    private RawImage      damageFill;
     private RectTransform rt;
 
-    // Stage sprites/textures. The damaged-stage bevel sprite is optional: when present the
-    // cell mirrors the stage-0 masking (bordered base + covers) for the dark stage; when
-    // absent it falls back to a seamless full-cell RawImage fill (no outline bevel).
-    private Sprite  undamagedSprite;       // bordered base, stage 0
-    private Sprite  damagedSprite;         // bordered dark base, stage 1+ (nullable)
-    private Texture coverPlainTex;         // covers for stage 0
-    private Texture coverDamagedTex;       // covers for stage 1+ (nullable)
-    private bool    useBevelDamage;        // damagedSprite != null
+    private RawImage interior;                                   // full-cell plain fill (seamless)
+    private RawImage eTop, eRight, eBottom, eLeft;               // straight bevel edges
+    private RawImage cTL, cTR, cBL, cBR;                         // convex-corner bevels
+
+    // Stage assets.
+    private Texture interiorTex0, interiorTex1;                  // plain fill (light / dark)
+    private Texture bevelTex0, bevelTex1;                        // beveled sprite textures
+    private Rect    bevelUV0, bevelUV1;                          // beveled sprite rect in its texture (UV 0..1)
 
     private int   gridX, gridY, gridWidth, gridHeight;
     private int   maxHits = 1;
+    private float ts, bp, t;                                     // tile px, bevel px, bevel fraction
+    private float uvX, uvY, uvW, uvH;                            // interior board-slice UV
 
-    // Stored cover geometry — set in InitCovers, used every SetCovers call.
-    private float coverBP, coverTS;
-    private float _uvX, _uvY, _uvW, _uvH, _bpUx, _bpUy;
+    private bool damaged;
+    private bool eT, eR, eB, eL;                                 // current exposure
 
-    private RawImage coverTop, coverRight, coverBottom, coverLeft;
-
-    public int  GridX           => gridX;
-    public int  GridY           => gridY;
-    public int  MaxHits         => maxHits;
-    public bool IsDamaged       { get; private set; }
-    public bool UsesBevelDamage => useBevelDamage;
+    public int  GridX     => gridX;
+    public int  GridY     => gridY;
+    public int  MaxHits   => maxHits;
+    public bool IsDamaged => damaged;
 
     // ── Init ─────────────────────────────────────────────────────────────────
 
-    public void Init(Sprite bordered, int x, int y, int gridW, int gridH)
+    public void Init(Sprite bevelSprite0, Texture interiorTexture0, int x, int y, int gridW, int gridH)
     {
         rt = GetComponent<RectTransform>();
         if (rt == null) rt = gameObject.AddComponent<RectTransform>();
-
-        baseImage = GetComponent<Image>();
-        if (baseImage == null) baseImage = gameObject.AddComponent<Image>();
-
-        baseImage.raycastTarget  = false;
-        baseImage.preserveAspect = false;
-        baseImage.sprite         = bordered;
-        undamagedSprite          = bordered;
 
         gridX = x; gridY = y;
         gridWidth  = Mathf.Max(1, gridW);
         gridHeight = Mathf.Max(1, gridH);
 
-        // This cell's slice of the grid in UV space. Shared by cover strips and the
-        // damaged-stage fill so both stay continuous across neighbouring cells.
-        _uvW = 1f / gridWidth;
-        _uvH = 1f / gridHeight;
-        _uvX = gridX * _uvW;
-        _uvY = 1f - (gridY + 1) * _uvH;
+        interiorTex0 = interiorTexture0;
+        bevelTex0    = bevelSprite0 != null ? bevelSprite0.texture : null;
+        bevelUV0     = SpriteUV(bevelSprite0);
+
+        // This cell's slice of the grid in UV space → interior fill stays continuous across cells.
+        uvW = 1f / gridWidth;
+        uvH = 1f / gridHeight;
+        uvX = gridX * uvW;
+        uvY = 1f - (gridY + 1) * uvH;
+    }
+
+    public void SetStageAssets(Sprite bevelSprite1, Texture interiorTexture1)
+    {
+        interiorTex1 = interiorTexture1 != null ? interiorTexture1 : interiorTex0;
+        bevelTex1    = bevelSprite1 != null ? bevelSprite1.texture : bevelTex0;
+        bevelUV1     = bevelSprite1 != null ? SpriteUV(bevelSprite1) : bevelUV0;
     }
 
     public void SetMaxHits(int max) => maxHits = Mathf.Max(1, max);
+
+    /// Creates the child RawImages and caches geometry. Call after Init/SetStageAssets.
+    public void Build(int tileSize, float thicknessRatio)
+    {
+        ts = tileSize;
+        t  = Mathf.Clamp(thicknessRatio, 0.05f, 0.45f);
+        bp = Mathf.Round(ts * t);
+
+        // The GameObject may carry a stray base Image (legacy creation); this view renders via
+        // its own RawImage children, so silence the parent Image to avoid a white quad behind.
+        var baseImg = GetComponent<Image>();
+        if (baseImg != null) baseImg.enabled = false;
+
+        interior = MakeChild("MudInterior");
+        eTop     = MakeChild("MudEdgeTop");
+        eRight   = MakeChild("MudEdgeRight");
+        eBottom  = MakeChild("MudEdgeBottom");
+        eLeft    = MakeChild("MudEdgeLeft");
+        cTL      = MakeChild("MudCornerTL");
+        cTR      = MakeChild("MudCornerTR");
+        cBL      = MakeChild("MudCornerBL");
+        cBR      = MakeChild("MudCornerBR");
+
+        // Interior fills the whole cell (anchors stretch); UV = board slice.
+        var irt = interior.rectTransform;
+        irt.anchorMin = Vector2.zero; irt.anchorMax = Vector2.one;
+        irt.offsetMin = Vector2.zero; irt.offsetMax = Vector2.zero;
+        interior.uvRect = new Rect(uvX, uvY, uvW, uvH);
+
+        ApplyStageTextures();
+        SetExposed(false, false, false, false);
+    }
 
     public void PlaceInCell(int tileSize)
     {
@@ -81,212 +109,113 @@ public class MudCellView : MonoBehaviour
         rt.sizeDelta        = new Vector2(tileSize, tileSize);
     }
 
-    // ── Cover strips ──────────────────────────────────────────────────────────
+    // ── Exposure layout ────────────────────────────────────────────────────────
 
-    public void InitCovers(Texture plainTexture, float thicknessRatio, int tileSize)
+    /// Marks which of the 4 sides are EXPOSED (no same-stage mud neighbour) and lays out the
+    /// bevel edges + convex corners accordingly. Straight edges span the full side; where a
+    /// perpendicular side is also exposed the edge is trimmed to leave room for a corner piece.
+    public void SetExposed(bool top, bool right, bool bottom, bool left)
     {
-        if (plainTexture == null) return;
+        eT = top; eR = right; eB = bottom; eL = left;
+        Rect bu = damaged ? bevelUV1 : bevelUV0;
 
-        coverPlainTex = plainTexture;
-        coverTS = tileSize;
-        coverBP = Mathf.Round(tileSize * Mathf.Clamp(thicknessRatio, 0.05f, 0.45f));
+        float trimL = eL ? bp : 0f, trimR = eR ? bp : 0f;   // px trims where perpendicular exposed
+        float trimT = eT ? bp : 0f, trimB = eB ? bp : 0f;
+        float uL = eL ? t : 0f, uR = eR ? t : 0f;           // matching UV-fraction trims
+        float uT = eT ? t : 0f, uB = eB ? t : 0f;
 
-        // Grid-slice UV (_uvX.._uvH) is computed in Init; only the bevel-thickness in
-        // UV space depends on the cover system, so compute it here.
-        _bpUx = coverBP / coverTS * _uvW;
-        _bpUy = coverBP / coverTS * _uvH;
+        // Straight edges: trim ends where the perpendicular side is also exposed (corner piece fills there).
+        LayoutRegion(eTop,    eT, trimL, 0f,          ts - trimL - trimR, bp, SubUV(bu, uL,       1f - t, 1f - uL - uR, t));
+        LayoutRegion(eBottom, eB, trimL, -(ts - bp),  ts - trimL - trimR, bp, SubUV(bu, uL,       0f,     1f - uL - uR, t));
+        LayoutRegion(eLeft,   eL, 0f,     -trimT,     bp, ts - trimT - trimB, SubUV(bu, 0f,       uB,     t, 1f - uT - uB));
+        LayoutRegion(eRight,  eR, ts - bp, -trimT,    bp, ts - trimT - trimB, SubUV(bu, 1f - t,   uB,     t, 1f - uT - uB));
 
-        Vector2 anc = new Vector2(0f, 1f);
-        coverTop    = MakeCover("MudCoverTop",    plainTexture, anc);
-        coverBottom = MakeCover("MudCoverBottom", plainTexture, anc);
-        coverLeft   = MakeCover("MudCoverLeft",   plainTexture, anc);
-        coverRight  = MakeCover("MudCoverRight",  plainTexture, anc);
-
-        SetCovers(false, false, false, false);
+        // Convex corners (both perpendicular sides exposed).
+        LayoutRegion(cTL, eT && eL, 0f,       0f,          bp, bp, SubUV(bu, 0f,     1f - t, t, t));
+        LayoutRegion(cTR, eT && eR, ts - bp,  0f,          bp, bp, SubUV(bu, 1f - t, 1f - t, t, t));
+        LayoutRegion(cBL, eB && eL, 0f,       -(ts - bp),  bp, bp, SubUV(bu, 0f,     0f,     t, t));
+        LayoutRegion(cBR, eB && eR, ts - bp,  -(ts - bp),  bp, bp, SubUV(bu, 1f - t, 0f,     t, t));
     }
 
-    /// Shows/hides each cover strip and trims its size so it never covers the
-    /// corner bevel area of an inactive (exposed) neighbouring side.
-    ///
-    /// TOP/BOTTOM strips: trimmed left by bp if left=false, trimmed right if right=false.
-    /// LEFT/RIGHT strips: trimmed top  by bp if top=false,  trimmed bottom if bottom=false.
-    public void SetCovers(bool top, bool right, bool bottom, bool left)
+    // ── Stage / damage ──────────────────────────────────────────────────────────
+
+    public void SetDamaged(bool d)
     {
-        float bp = coverBP;
-        float ts = coverTS;
-
-        // Horizontal offsets for top/bottom strips
-        float hX = left  ? 0f : bp;
-        float hW = ts - (left ? 0f : bp) - (right ? 0f : bp);
-        float hUx = left  ? _uvX       : _uvX + _bpUx;
-        float hUw = _uvW - (left ? 0f : _bpUx) - (right ? 0f : _bpUx);
-
-        // Vertical offsets for left/right strips
-        float vY = top    ? 0f  : -bp;
-        float vH = ts - (top ? 0f : bp) - (bottom ? 0f : bp);
-        float vUy = bottom ? _uvY      : _uvY + _bpUy;
-        float vUh = _uvH - (top ? 0f : _bpUy) - (bottom ? 0f : _bpUy);
-
-        ApplyCover(coverTop,    top,    hX,         0f,        hW, bp, hUx,            _uvY + _uvH - _bpUy, hUw, _bpUy);
-        ApplyCover(coverBottom, bottom, hX,         -(ts-bp),  hW, bp, hUx,            _uvY,                hUw, _bpUy);
-        ApplyCover(coverLeft,   left,   0f,         vY,        bp, vH, _uvX,           vUy,                 _bpUx, vUh);
-        ApplyCover(coverRight,  right,  ts - bp,    vY,        bp, vH, _uvX+_uvW-_bpUx, vUy,                _bpUx, vUh);
+        if (damaged == d && interior != null && interior.texture != null) { /* still refresh */ }
+        damaged = d;
+        ApplyStageTextures();
+        SetExposed(eT, eR, eB, eL);   // re-apply (bevel UV differs per stage)
     }
 
-    private void ApplyCover(RawImage cover, bool active,
-        float px, float py, float sw, float sh,
-        float uRx, float uRy, float uRw, float uRh)
+    private void ApplyStageTextures()
     {
-        if (cover == null) return;
-        cover.gameObject.SetActive(active);
-        if (!active) return;
-        var crt = cover.rectTransform;
-        crt.anchoredPosition = new Vector2(px, py);
-        crt.sizeDelta        = new Vector2(sw, sh);
-        cover.uvRect         = new Rect(uRx, uRy, uRw, uRh);
-    }
-
-    private RawImage MakeCover(string name, Texture texture, Vector2 anchor)
-    {
-        var go  = new GameObject(name, typeof(RectTransform), typeof(RawImage));
-        go.transform.SetParent(transform, false);
-
-        var ert = go.GetComponent<RectTransform>();
-        ert.anchorMin = anchor;
-        ert.anchorMax = anchor;
-        ert.pivot     = new Vector2(0f, 1f);
-
-        var ri = go.GetComponent<RawImage>();
-        ri.texture       = texture;
-        ri.raycastTarget = false;
-        ri.color         = Color.white;
-        return ri;
-    }
-
-    private void SetCoverTexture(Texture texture)
-    {
-        if (texture == null) return;
-        if (coverTop)    coverTop.texture    = texture;
-        if (coverRight)  coverRight.texture  = texture;
-        if (coverBottom) coverBottom.texture = texture;
-        if (coverLeft)   coverLeft.texture   = texture;
-    }
-
-    // ── Damaged stage ───────────────────────────────────────────────────────────
-
-    /// Supplies the dark-stage assets. When a bevel sprite is given the damaged stage
-    /// mirrors stage-0 masking exactly: the base swaps to the dark bevel sprite and the
-    /// cover strips switch to the dark texture, so the bevel shows only on the blob
-    /// outline while the interior stays seamless. Must be called BEFORE InitDamageOverlay.
-    public void SetDamagedVisuals(Sprite damagedBordered, Texture damagedTexture)
-    {
-        damagedSprite   = damagedBordered;
-        coverDamagedTex = damagedTexture;
-        useBevelDamage  = damagedBordered != null;
-    }
-
-    // ── Damage overlay ────────────────────────────────────────────────────────
-
-    /// Must be called AFTER InitCovers (and SetDamagedVisuals) so the damage layer renders
-    /// on top of covers. In bevel mode the dark stage is drawn by the base+cover system, so
-    /// no fill layer is created. Otherwise, when a damaged texture is supplied the cell uses
-    /// a full-cell RawImage whose UV is this cell's grid slice — the dark mud then flows
-    /// seamlessly across damaged neighbours. Without a texture it falls back to a per-cell
-    /// sprite Image (legacy).
-    public void InitDamageOverlay(Texture damagedTexture = null)
-    {
-        if (useBevelDamage) return;
-
-        if (damagedTexture != null)
-        {
-            var go = new GameObject("MudDamageFill", typeof(RectTransform), typeof(RawImage));
-            go.transform.SetParent(transform, false);
-
-            var ert = go.GetComponent<RectTransform>();
-            ert.anchorMin  = Vector2.zero;
-            ert.anchorMax  = Vector2.one;
-            ert.offsetMin  = Vector2.zero;
-            ert.offsetMax  = Vector2.zero;
-            ert.localScale = Vector3.one;
-
-            damageFill = go.GetComponent<RawImage>();
-            damageFill.texture       = damagedTexture;
-            damageFill.raycastTarget = false;
-            damageFill.color         = Color.white;
-            damageFill.uvRect        = new Rect(_uvX, _uvY, _uvW, _uvH);
-            damageFill.gameObject.SetActive(false);
-            return;
-        }
-
-        var lego = new GameObject("MudDamageOverlay", typeof(RectTransform), typeof(Image));
-        lego.transform.SetParent(transform, false);
-
-        var lrt = lego.GetComponent<RectTransform>();
-        lrt.anchorMin  = Vector2.zero;
-        lrt.anchorMax  = Vector2.one;
-        lrt.offsetMin  = Vector2.zero;
-        lrt.offsetMax  = Vector2.zero;
-        lrt.localScale = Vector3.one;
-
-        damageOverlay = lego.GetComponent<Image>();
-        damageOverlay.raycastTarget  = false;
-        damageOverlay.preserveAspect = false;
-        damageOverlay.gameObject.SetActive(false);
-    }
-
-    public void SetDamageState(bool damaged, Sprite librarySprite)
-    {
-        IsDamaged = damaged;
-
-        // Bevel mode: the dark stage is the base+cover system; ApplyStageVisuals handles it.
-        if (useBevelDamage) { ApplyStageVisuals(damaged); return; }
-
-        if (damageFill != null)
-        {
-            damageFill.gameObject.SetActive(damaged);
-            return;
-        }
-
-        if (damageOverlay == null) return;
-        damageOverlay.sprite = librarySprite;
-        damageOverlay.gameObject.SetActive(damaged && librarySprite != null);
-    }
-
-    /// Swaps the base sprite and cover texture to match the current stage (bevel mode only).
-    private void ApplyStageVisuals(bool damaged)
-    {
-        if (!useBevelDamage) return;
-        baseImage.sprite = damaged ? damagedSprite : undamagedSprite;
-        SetCoverTexture(damaged ? coverDamagedTex : coverPlainTex);
+        if (interior != null) interior.texture = damaged ? interiorTex1 : interiorTex0;
+        Texture bt = damaged ? bevelTex1 : bevelTex0;
+        SetTex(eTop, bt); SetTex(eRight, bt); SetTex(eBottom, bt); SetTex(eLeft, bt);
+        SetTex(cTL, bt);  SetTex(cTR, bt);   SetTex(cBL, bt);      SetTex(cBR, bt);
     }
 
     // ── Visibility ────────────────────────────────────────────────────────────
 
-    public void SetDamageLevel(int remaining, int maxHits)
+    public void SetVisible(bool visible)
     {
-        bool visible = remaining > 0;
-        SetBaseAlpha(visible ? 1f : 0f);
-        if (!visible)
-        {
-            if (damageOverlay != null) damageOverlay.gameObject.SetActive(false);
-            if (damageFill    != null) damageFill.gameObject.SetActive(false);
-        }
-    }
-
-    private void SetBaseAlpha(float alpha)
-    {
-        if (baseImage != null) { var c = baseImage.color; c.a = alpha; baseImage.color = c; }
-        void A(RawImage ri) { if (ri) { var c = ri.color; c.a = alpha; ri.color = c; } }
-        A(coverTop); A(coverRight); A(coverBottom); A(coverLeft);
+        SetAlpha(interior, visible ? 1f : 0f);
+        float a = visible ? 1f : 0f;
+        SetAlpha(eTop, a); SetAlpha(eRight, a); SetAlpha(eBottom, a); SetAlpha(eLeft, a);
+        SetAlpha(cTL, a);  SetAlpha(cTR, a);   SetAlpha(cBL, a);      SetAlpha(cBR, a);
     }
 
     public void Clear()
     {
-        SetBaseAlpha(0f);
-        SetCovers(false, false, false, false);
-        IsDamaged = false;
-        if (damageOverlay != null) damageOverlay.gameObject.SetActive(false);
-        if (damageFill    != null) damageFill.gameObject.SetActive(false);
+        SetVisible(false);
+        eT = eR = eB = eL = false;
+        damaged = false;
         gameObject.SetActive(false);
     }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private RawImage MakeChild(string name)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+        go.layer = gameObject.layer;
+        var crt = go.GetComponent<RectTransform>();
+        crt.SetParent(transform, false);
+        crt.anchorMin = new Vector2(0, 1);
+        crt.anchorMax = new Vector2(0, 1);
+        crt.pivot     = new Vector2(0, 1);
+        var ri = go.GetComponent<RawImage>();
+        ri.raycastTarget = false;
+        ri.color = Color.white;
+        return ri;
+    }
+
+    private void LayoutRegion(RawImage img, bool active, float px, float py, float sw, float sh, Rect uv)
+    {
+        if (img == null) return;
+        img.gameObject.SetActive(active);
+        if (!active) return;
+        var crt = img.rectTransform;
+        crt.anchoredPosition = new Vector2(px, py);
+        crt.sizeDelta        = new Vector2(sw, sh);
+        img.uvRect           = uv;
+    }
+
+    // Sub-region of the beveled sprite's UV rect. fx/fy/fw/fh are fractions (0..1) of the sprite.
+    private static Rect SubUV(Rect spriteUV, float fx, float fy, float fw, float fh)
+        => new Rect(spriteUV.x + fx * spriteUV.width,
+                    spriteUV.y + fy * spriteUV.height,
+                    fw * spriteUV.width,
+                    fh * spriteUV.height);
+
+    private static Rect SpriteUV(Sprite s)
+    {
+        if (s == null || s.texture == null) return new Rect(0, 0, 1, 1);
+        var tr = s.textureRect;
+        float tw = s.texture.width, th = s.texture.height;
+        return new Rect(tr.x / tw, tr.y / th, tr.width / tw, tr.height / th);
+    }
+
+    private static void SetTex(RawImage ri, Texture tex) { if (ri != null) ri.texture = tex; }
+    private static void SetAlpha(RawImage ri, float a) { if (ri != null) { var c = ri.color; c.a = a; ri.color = c; } }
 }

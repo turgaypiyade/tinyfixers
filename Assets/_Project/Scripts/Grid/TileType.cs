@@ -14,5 +14,8 @@ public enum TileType
         PatchBot,
 
         // 5 straight
-        SystemOverride
+        SystemOverride,
+
+        // Generator-produced matchable goal tile. Not part of randomPool by default.
+        Key
 }

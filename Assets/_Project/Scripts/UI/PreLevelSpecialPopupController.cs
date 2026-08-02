@@ -362,6 +362,12 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
         if (goal.targetType == LevelGoalTargetType.Obstacle)
         {
+            if (goal.obstacleId == ObstacleId.KeyGenerator)
+            {
+                Sprite keySprite = tileIconLibrary != null ? tileIconLibrary.Get(TileType.Key) : null;
+                return keySprite != null ? keySprite : fallbackGoalIcon;
+            }
+
             var obstacleDef = levelData != null && levelData.obstacleLibrary != null
                 ? levelData.obstacleLibrary.Get(goal.obstacleId)
                 : null;

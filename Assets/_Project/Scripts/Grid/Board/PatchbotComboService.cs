@@ -223,11 +223,19 @@ public class PatchbotComboService
             return;
         }
 
+        var tileView = tileAtCell ?? board.Tiles[x, y];
+        if (tileView != null
+            && (board.GridData[x, y] == null
+                || board.GridData[x, y].Type != tileView.GetTileType()
+                || board.GridData[x, y].Special != tileView.GetSpecial()))
+        {
+            board.SyncTileData(x, y);
+        }
+
         var tileData = board.GridData[x, y];
         if (tileData == null) return;
 
         matches.Add(tileData);
-        var tileView = tileAtCell ?? board.Tiles[x, y];
         if (tileView != null) markAffectedTile?.Invoke(tileView);
     }
 

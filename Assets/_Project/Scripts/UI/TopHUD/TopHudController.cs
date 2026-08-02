@@ -235,6 +235,12 @@ public class TopHudController : MonoBehaviour
             return sprite != null ? sprite : fallbackGoalIcon;
         }
 
+        if (IsKeyGeneratorGoal(goal))
+        {
+            var sprite = board != null ? board.GetIcon(TileType.Key) : null;
+            return sprite != null ? sprite : fallbackGoalIcon;
+        }
+
         if (goal.targetType == LevelGoalTargetType.Collectible)
             return fallbackGoalIcon;
 
@@ -286,13 +292,47 @@ public class TopHudController : MonoBehaviour
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
             var goal = runtimeGoals[i];
-            if (goal.definition.targetType != LevelGoalTargetType.Tile || goal.definition.tileType != tileType)
+            if (!MatchesClearedTileGoal(goal.definition, tileType))
+                continue;
+
+            // KeyGenerator hedefi event-decrement ile YÖNETİLMEZ; KeyGeneratorService onu
+            // ground-truth durumdan (üretilen − boarddaki) türetip SetKeyGeneratorGoalRemaining
+            // ile kesin değeri yazar. Event sayımı çift/fazla sayabildiği için burada atlanır.
+            if (IsKeyGeneratorGoal(goal.definition))
                 continue;
 
             int previous = goal.remaining;
             goal.remaining = Mathf.Max(0, goal.remaining - amount);
             goal.slot?.SetRemaining(goal.remaining);
             anyGoalUpdated |= goal.remaining != previous;
+        }
+
+        if (anyGoalUpdated)
+            UpdateGoalsCompletionState();
+    }
+
+    /// <summary>
+    /// KeyGeneratorService, KeyGenerator hedefinin kalanını ground-truth durumdan
+    /// (kalan = üretilecek toplam − landedKeys + boarddaki key sayısı) hesaplayıp yazar.
+    /// Board'da key varken hedef asla tamamlanamaz; çift-sayım imkânsız.
+    /// </summary>
+    public void SetKeyGeneratorGoalRemaining(int remaining)
+    {
+        bool anyGoalUpdated = false;
+
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var goal = runtimeGoals[i];
+            if (!IsKeyGeneratorGoal(goal.definition))
+                continue;
+
+            int clamped = Mathf.Max(0, remaining);
+            if (goal.remaining == clamped)
+                continue;
+
+            goal.remaining = clamped;
+            goal.slot?.SetRemaining(goal.remaining);
+            anyGoalUpdated = true;
         }
 
         if (anyGoalUpdated)
@@ -478,8 +518,7 @@ public class TopHudController : MonoBehaviour
         {
             var g = runtimeGoals[i];
             if (g.definition == null) continue;
-            if (g.definition.targetType != LevelGoalTargetType.Tile) continue;
-            if (g.definition.tileType != tileType) continue;
+            if (!MatchesClearedTileGoal(g.definition, tileType)) continue;
             if (g.remaining <= 0) continue;
             return true;
         }
@@ -507,14 +546,33 @@ public class TopHudController : MonoBehaviour
         {
             var g = runtimeGoals[i];
             if (g.definition == null) continue;
-            if (g.definition.targetType != LevelGoalTargetType.Tile) continue;
-            if (g.definition.tileType != tileType) continue;
+            if (!MatchesClearedTileGoal(g.definition, tileType)) continue;
             if (g.slot == null) continue;
 
             rect = g.slot.IconRectTransform != null ? g.slot.IconRectTransform : g.slot.transform as RectTransform;
             return rect != null;
         }
         return false;
+    }
+
+    private static bool MatchesClearedTileGoal(LevelGoalDefinition goal, TileType tileType)
+    {
+        if (goal == null)
+            return false;
+
+        if (goal.targetType == LevelGoalTargetType.Tile && goal.tileType == tileType)
+            return true;
+
+        // KeyGenerator goal advances when the produced Key tiles are CLEARED/collected.
+        // (The generator closing its lid is a separate, production-based event.)
+        return tileType == TileType.Key && IsKeyGeneratorGoal(goal);
+    }
+
+    private static bool IsKeyGeneratorGoal(LevelGoalDefinition goal)
+    {
+        return goal != null
+               && goal.targetType == LevelGoalTargetType.Obstacle
+               && goal.obstacleId == ObstacleId.KeyGenerator;
     }
 
     public bool TryGetGoalTargetRectForObstacle(ObstacleId obstacleId, out RectTransform rect)
@@ -583,12 +641,40 @@ public class TopHudController : MonoBehaviour
             if (goal == null || goal.definition == null) continue;
             if (goal.remaining <= 0) continue;
 
-            result.Add(new ActiveGoal(
-                goal.definition.targetType,
-                goal.definition.tileType,
-                goal.definition.obstacleId,
-                goal.definition.collectibleId,
-                goal.remaining));
+            if (IsKeyGeneratorGoal(goal.definition))
+            {
+                // Üretim SÜRERKEN PatchBot generator'ı hedeflesin (key üretsin) — birkaç mevcut
+                // key'e takılıp üretimi tıkamasın. Üretim BİTİNCE key tile'larını hedefleyip
+                // toplamaya geçsin. (KeyGeneratorService.KeyGeneratorProductionComplete bayrağı.)
+                bool producing = board != null && !board.KeyGeneratorProductionComplete;
+                if (producing)
+                {
+                    result.Add(new ActiveGoal(
+                        LevelGoalTargetType.Obstacle,
+                        TileType.Key,
+                        ObstacleId.KeyGenerator,
+                        goal.definition.collectibleId,
+                        goal.remaining));
+                }
+                else
+                {
+                    result.Add(new ActiveGoal(
+                        LevelGoalTargetType.Tile,
+                        TileType.Key,
+                        ObstacleId.None,
+                        goal.definition.collectibleId,
+                        goal.remaining));
+                }
+            }
+            else
+            {
+                result.Add(new ActiveGoal(
+                    goal.definition.targetType,
+                    goal.definition.tileType,
+                    goal.definition.obstacleId,
+                    goal.definition.collectibleId,
+                    goal.remaining));
+            }
         }
     }
 }

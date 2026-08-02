@@ -59,7 +59,13 @@ public sealed class BarrelMudSpreadService
         var current = obstacles.GetObstacleIdAt(cell.x, cell.y);
 
         if (current == ObstacleId.None)
-            return board.GetTileViewAt(cell.x, cell.y) != null;
+        {
+            // Mud under-tile'dır: hedef, footprint içindeki her PLAYABLE hücre — o an taş
+            // olup olmaması ÖNEMSİZ. Barrel kırılır kırılmaz (board hâlâ cascade'deyken)
+            // saçıldığı için taşlar akıyor olabilir; taş-varlığı şartı hücreleri yanlışlıkla
+            // eler ("dağınık mud" hatası). Sabit topolojiye (canContainTile) bakılır.
+            return board.TryGetCellState(cell.x, cell.y, out var state) && state.canContainTile;
+        }
 
         return splatObstacleId == ObstacleId.Mud
             && obstacles.IsOverTileBlockerAt(cell.x, cell.y)

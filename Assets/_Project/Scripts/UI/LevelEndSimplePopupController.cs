@@ -1731,6 +1731,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (goal.targetType == LevelGoalTargetType.Obstacle)
         {
+            if (goal.obstacleId == ObstacleId.KeyGenerator)
+            {
+                var keySprite = tileIconLibrary != null ? tileIconLibrary.Get(TileType.Key) : null;
+                return keySprite != null ? keySprite : board != null ? board.GetIcon(TileType.Key) : null;
+            }
+
             var levelData = board != null ? board.ActiveLevelData : null;
             var obstacleDef = levelData != null && levelData.obstacleLibrary != null
                 ? levelData.obstacleLibrary.Get(goal.obstacleId)

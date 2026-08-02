@@ -8,7 +8,8 @@ public class TileIconLibrary : ScriptableObject
     public Sprite core;
     public Sprite bolt;
     public Sprite plate;
-    
+    public Sprite key;
+
     [Header("Special Tile Icons")]
     public Sprite lineH;
     public Sprite lineV;
@@ -73,6 +74,7 @@ public class TileIconLibrary : ScriptableObject
             TileType.Core => core,
             TileType.Bolt => bolt,
             TileType.Plate => plate,
+            TileType.Key => key,
             _ => null
         };
     }

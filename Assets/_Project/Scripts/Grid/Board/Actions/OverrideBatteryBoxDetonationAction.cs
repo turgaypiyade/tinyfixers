@@ -5,15 +5,22 @@ using UnityEngine.UI;
 
 public sealed class OverrideBatteryBoxDetonationAction : BoardAction
 {
-    private const float DetonationDelay = 1.78f;
+    // Kutu görseli (OverrideBatteryBoxView.DetonationRoutine) detonasyon başlangıcından
+    // detonationDuration (varsayılan 2.0s) sonra FİNAL burst'ü oynatır — "patlama" anı budur.
+    // Bu değeri view'ın detonationDuration'ıyla eşle. Toz, action ne zaman koşarsa koşsun
+    // tam burst anında başlasın diye SABİT gecikme değil, T0'dan geçen süreye göre hesaplanır.
+    private const float BoxBurstTime = 2.0f;
 
     private readonly BoardController board;
     private readonly int originIndex;
+    // Action, detonasyon event'iyle (kutu animasyonu başlarken, T0) aynı anda oluşturulur.
+    private readonly float createdTime;
 
     public OverrideBatteryBoxDetonationAction(BoardController board, int originIndex)
     {
         this.board = board;
         this.originIndex = originIndex;
+        this.createdTime = Time.time;
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
@@ -22,8 +29,13 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
         if (activeBoard == null)
             yield break;
 
-        // Kutunun basınç/şişme animasyonuyla senkron: patlama tam burst anında başlar.
-        yield return new WaitForSeconds(DetonationDelay);
+        // Tozu kutunun GERÇEK burst anına hizala: T0'dan (action oluşturulma anı = kutu
+        // animasyon başlangıcı) BoxBurstTime kadar sonra. Sequencer bu action'a geç ulaşsa
+        // bile geçen süre düşülür → toz her zaman patlama anında merkezden başlar, geç kalmaz.
+        float elapsedSinceStart = Time.time - createdTime;
+        float waitToBurst = Mathf.Max(0f, BoxBurstTime - elapsedSinceStart);
+        if (waitToBurst > 0f)
+            yield return new WaitForSeconds(waitToBurst);
 
         var impactCells = new List<Vector2Int>();
         var specialTiles = new List<TileView>();

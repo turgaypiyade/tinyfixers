@@ -455,8 +455,8 @@ MonoBehaviour:
   borderedMudSprite: {fileID: 21300000, guid: 052fe1910fe974d14b21e0d56747f52c, type: 3}
   plainMudTexture: {fileID: 2800000, guid: de238076997bd492e84825db8d261618, type: 3}
   damagedMudTexture: {fileID: 2800000, guid: e31b56be7244e459f97b9d29bb292d84, type: 3}
-  damagedBorderedMudSprite: {fileID: 0}
-  borderThicknessRatio: 0.185
+  damagedBorderedMudSprite: {fileID: 6732937940813381478, guid: 71bc61a4c9a3342a487068e980fafaa8, type: 3}
+  borderThicknessRatio: 0.281
   defaultMaxHits: 2
 --- !u!224 &52612327 stripped
 RectTransform:
@@ -3514,8 +3514,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.08401977}
-  m_AnchorMax: {x: 0.72, y: 1.9695222}
+  m_AnchorMin: {x: 0, y: 0.24637681}
+  m_AnchorMax: {x: 0.54091537, y: 5.7753625}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8596,6 +8596,7 @@ MonoBehaviour:
   overrideBarGreenSprite: {fileID: 21300000, guid: 235020bb8f83346d99cb8f676e367780, type: 3}
   overrideNeedleSprite: {fileID: 21300000, guid: 999c5b671b81b45fe85c861f1bf76a22, type: 3}
   overrideGaugeSprite: {fileID: 21300000, guid: 1c7da72c4553944b791439e4074c4e52, type: 3}
+  overrideSteamSprite: {fileID: 0}
   obbHorizontalBarWidthScale: 1.2
   obbHorizontalBarHeightScale: 1
   obbRotatedBarWidthScale: 1
@@ -8836,6 +8837,7 @@ MonoBehaviour:
   enableBoardFlowTrace: 0
   throwOnTileSyncMismatch: 0
   tilePositionEpsilon: 0.25
+  KeyGeneratorProductionComplete: 0
   ActiveBackgroundJobs: 0
   FlyingGoalOrbs: 0
   FlyingPatchBotDashes: 0

@@ -183,6 +183,7 @@ public class GridSpawner : MonoBehaviour
     private readonly Dictionary<int, GameObject> tubeClickProxyByCell = new();
     private readonly Dictionary<int, GameObject> safeClickProxyByCell = new();
     private EnergyContainerService energyContainerService;
+    private KeyGeneratorService keyGeneratorService;
 
     private void Awake()
     {
@@ -253,6 +254,7 @@ public class GridSpawner : MonoBehaviour
 
         board.Init(width, height, iconLibrary);
         board.SetLevelData(resolvedLevel);
+        EnsureKeyGeneratorService();
 
         // ObstacleStateService artık var (SetLevelData onu init etti). Stamp aşamasında toplanan
         // beneath kayıtlarını şimdi push et — init store'ları temizledikten SONRA.
@@ -304,6 +306,7 @@ public class GridSpawner : MonoBehaviour
         UnbindBoardEvents();
         if (board == null) return;
 
+        board.ObstacleViewByOriginLookup    = GetObstacleViewImage;
         board.OnObstacleStageChanged       += HandleObstacleStageChanged;
         board.OnObstacleDestroyed           += HandleObstacleDestroyed;
         board.OnCellUnlocked                += HandleCellUnlocked;
@@ -315,6 +318,19 @@ public class GridSpawner : MonoBehaviour
         board.OnOverrideBatteryBoxHit       += HandleOverrideBatteryBoxHit;
         board.OnWardrobeOpened              += HandleWardrobeOpened;
         board.OnWardrobeItemRemoved         += HandleWardrobeItemRemoved;
+    }
+
+    private void EnsureKeyGeneratorService()
+    {
+        if (keyGeneratorService != null)
+            return;
+
+        keyGeneratorService = GetComponent<KeyGeneratorService>()
+                              ?? GetComponentInChildren<KeyGeneratorService>(true)
+                              ?? FindFirstObjectByType<KeyGeneratorService>();
+
+        if (keyGeneratorService == null)
+            keyGeneratorService = gameObject.AddComponent<KeyGeneratorService>();
     }
 
     private void UnbindBoardEvents()
@@ -854,6 +870,9 @@ public class GridSpawner : MonoBehaviour
                 if (obsId == ObstacleId.Tube) continue;
                 // Safe kendi SafeObstacleView renderer'ını kullanır.
                 if (obsId == ObstacleId.Safe) continue;
+                // Magnet kendi MagnetView renderer'ını (DrawMagnetObstacles) kullanır; buradaki
+                // def yalnızca goal ikonu içindir, board görselini üretmez (çift-çizim olmasın).
+                if (obsId == ObstacleId.Magnet) continue;
 
                 var image = DrawObstacleImage(def, x, y);
                 if (image != null)
@@ -911,6 +930,7 @@ public class GridSpawner : MonoBehaviour
         var view = go.GetComponent<MudCellView>();
         view.Init(
             mudOverlayService.BorderedMudSprite,
+            mudOverlayService.PlainMudTexture,
             x, y,
             width, height);
         view.PlaceInCell(tileSize);
@@ -946,7 +966,7 @@ public class GridSpawner : MonoBehaviour
 
         // Service atanmamışsa: sahnede bul, yoksa root'a otomatik ekle (default ayarlar + library sprite).
         if (grassOverlayService == null)
-            grassOverlayService = FindObjectOfType<GrassOverlayService>();
+            grassOverlayService = FindFirstObjectByType<GrassOverlayService>();
         if (grassOverlayService == null)
             grassOverlayService = grassOverlayRoot.gameObject.AddComponent<GrassOverlayService>();
 
@@ -1450,6 +1470,13 @@ public class GridSpawner : MonoBehaviour
             clickGo.transform.SetAsFirstSibling();
             tubeClickProxyByCell[idx] = clickGo;
         }
+    }
+
+    // O(1) obstacle-view lookup by origin (wired to board.ObstacleViewByOriginLookup).
+    // Lets services avoid full-hierarchy GetComponentsInChildren<Image> scans.
+    private Image GetObstacleViewImage(int originIndex)
+    {
+        return obstacleViewsByOrigin.TryGetValue(originIndex, out var image) ? image : null;
     }
 
     private void HandleObstacleStageChanged(int originIndex, ObstacleStageSnapshot nextStage)

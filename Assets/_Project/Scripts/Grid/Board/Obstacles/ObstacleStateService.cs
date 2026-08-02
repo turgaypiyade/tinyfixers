@@ -159,6 +159,8 @@ public class ObstacleStateService : ISimObstacleQuery
 
     /// <summary>HatLauncher: set by HatLauncherService. Null = invincible (exhausted).</summary>
     public Action<int> HatLauncherHitInterceptor;
+    /// <summary>KeyGenerator: set by KeyGeneratorService. Returns true only when a key is produced.</summary>
+    public Func<int, bool> KeyGeneratorHitInterceptor;
 
     // Per-move emit guard for HatLauncher / EnergyContainer. These obstacles never break per hit
     // (they only "exhaust" once the shared goal capacity is reached), so without a per-move cap a
@@ -408,6 +410,19 @@ public class ObstacleStateService : ISimObstacleQuery
                 var hlChange = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
                 return new ObstacleHitResult(true, true, false, hlChange, default, Array.Empty<int>());
             }
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+        }
+
+        // KeyGenerator is a permanent static producer. Hits never decrement its own HP;
+        // the service creates matchable Key tiles until the level's Key goal is satisfied.
+        if (id == ObstacleId.KeyGenerator)
+        {
+            if (KeyGeneratorHitInterceptor != null && KeyGeneratorHitInterceptor.Invoke(origin))
+            {
+                var kgChange = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+                return new ObstacleHitResult(true, true, false, kgChange, default, Array.Empty<int>());
+            }
+
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
         }
 

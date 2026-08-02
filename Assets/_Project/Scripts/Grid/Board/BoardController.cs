@@ -459,6 +459,12 @@ public class BoardController : MonoBehaviour
     // level'ın authored goal amount'ında zaten sayılı; OnObstacleCreatedDynamic olsaydı
     // TopHud onu dinamik yaratım sanıp +1 ekler, kırılınca net değişim 0 görünürdü).
     public event Action<int, int> OnObstacleViewRestored;
+    // Set by GridSpawner: O(1) obstacle-view (Image) lookup by origin index. Lets services
+    // (KeyGeneratorService) avoid full-hierarchy GetComponentsInChildren<Image> scans.
+    public Func<int, Image> ObstacleViewByOriginLookup;
+    // Set by KeyGeneratorService. While false (still producing) PatchBot targeting prefers the
+    // GENERATOR (to emit keys); once true (all keys produced) it targets the Key tiles to collect.
+    public bool KeyGeneratorProductionComplete;
     // Bir barrel'ın mud yayılımı (BarrelSpreadAction) tamamlandığında bir kez tetiklenir.
     // Mud goal'ündeki o barrel'a ait placeholder, mud stamp edildikten SONRA düşürülür ki
     // sayaç mud eklenmeden 0'a inip erken WIN tetiklemesin.
@@ -510,9 +516,9 @@ public class BoardController : MonoBehaviour
     private readonly HashSet<Vector2Int> oilSuppressionCellsThisMove = new();
     private bool oilSpreadResolvedThisMove = true;
 
-    // Bu hamlede kırılan barrel türevleri; board tam oturunca footprint'lerine göre mud saçarlar.
-    private readonly List<BarrelSpreadAction.BarrelSource> barrelBreaksThisMove = new();
-    private bool barrelSpreadResolvedThisMove = true;
+    // Barrel mud yayılımı kırılır kırılmaz (akışla eşzamanlı) arka-plan job olarak koşar.
+    // Uçuşta olan splatter sayısı; level-end (geç-hedef grace) bunları bekler.
+    private int barrelSpreadsInFlight;
 
     // Bu hamlede tetiklenen RocketBasket roketleri; board tam oturunca PatchBot gibi uçarlar.
     private readonly List<RocketBasketLaunchAction.Launch> rocketLaunchesThisMove = new();
@@ -523,6 +529,11 @@ public class BoardController : MonoBehaviour
     private LineSweepService lineSweepService;
     private BoosterService boosterService;
     private readonly HashSet<Vector2Int> pendingTriggeredSpecialCells = new();
+
+    // KeyGenerator: cells reserved by keys currently in flight. Prevents two
+    // simultaneously-produced keys from targeting the same cell (which would make
+    // the second key visually fly onto a cell that just became a Key).
+    private readonly HashSet<Vector2Int> reservedKeyLandingCells = new();
 
     private int busyScopeDepth;
     public readonly System.Collections.Generic.List<PatchbotDashRequest> TempPatchbotDashRequests =
@@ -713,6 +724,124 @@ public class BoardController : MonoBehaviour
     internal void ClearAllPendingTriggeredSpecialCells()
     {
         pendingTriggeredSpecialCells.Clear();
+    }
+
+    internal bool TryFindKeyLandingCell(out Vector2Int cell)
+    {
+        cell = default;
+
+        // Allocation-free uniform pick via reservoir sampling: single pass, no List/GC.
+        // Called per produced key (plus re-validation/reroute), so on dense boards with many
+        // generators this ran many times per move — the per-call List alloc was the hotspot.
+        int seen = 0;
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                if (!CanReplaceTileWithGeneratedKey(x, y))
+                    continue;
+
+                var candidate = new Vector2Int(x, y);
+                // Skip cells already claimed by another key mid-flight so two
+                // simultaneous keys never race for the same landing spot.
+                if (reservedKeyLandingCells.Contains(candidate))
+                    continue;
+
+                seen++;
+                // Replace the running pick with probability 1/seen → uniform over all valid cells.
+                if (UnityEngine.Random.Range(0, seen) == 0)
+                    cell = candidate;
+            }
+        }
+
+        if (seen == 0)
+            return false;
+
+        reservedKeyLandingCells.Add(cell);
+        return true;
+    }
+
+    internal void ReleaseKeyLandingReservation(Vector2Int cell)
+    {
+        reservedKeyLandingCells.Remove(cell);
+    }
+
+    // Live check used by KeyGeneratorService to re-validate a key's target cell just
+    // before the flight — the cell may have been filled by a Key/special via gravity
+    // after it was first picked.
+    internal bool CanReplaceGeneratedKeyCell(Vector2Int cell)
+        => CanReplaceTileWithGeneratedKey(cell.x, cell.y);
+
+    internal bool TryPlaceGeneratedKeyAt(Vector2Int preferredCell, out Vector2Int placedCell)
+    {
+        placedCell = preferredCell;
+
+        // Flight is over: the preferred cell's reservation is no longer needed.
+        reservedKeyLandingCells.Remove(preferredCell);
+
+        // If the preferred cell is no longer valid (e.g. it became a Key or a
+        // special while this key was flying), reroute to a fresh landing cell.
+        if (!CanReplaceTileWithGeneratedKey(preferredCell.x, preferredCell.y))
+        {
+            if (!TryFindKeyLandingCell(out placedCell))
+                return false;
+
+            // Placement below is synchronous, so release immediately.
+            reservedKeyLandingCells.Remove(placedCell);
+        }
+
+        var tile = tiles[placedCell.x, placedCell.y];
+        if (tile == null)
+            return false;
+
+        tile.SetSpecial(TileSpecial.None);
+        tile.SetType(TileType.Key);
+        SyncTileData(placedCell.x, placedCell.y);
+        matchFinder?.InvalidateRunCache();
+        RestoreTilePresentation(tile);
+        RefreshAllSortingOrders();
+        return true;
+    }
+
+    internal int CountTilesOfType(TileType type)
+    {
+        if (tiles == null)
+            return 0;
+
+        int count = 0;
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                var tile = tiles[x, y];
+                if (tile != null && tile.GetTileType() == type)
+                    count++;
+            }
+        }
+
+        return count;
+    }
+
+    private bool CanReplaceTileWithGeneratedKey(int x, int y)
+    {
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            return false;
+        if (holes == null || holes[x, y])
+            return false;
+
+        var tile = tiles != null ? tiles[x, y] : null;
+        if (tile == null || tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key)
+            return false;
+
+        if (obstacleStateService != null)
+        {
+            if (obstacleStateService.HasObstacleAt(x, y))
+                return false;
+            if (obstacleStateService.IsInteractionLockedAt(x, y))
+                return false;
+        }
+
+        return true;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1020,6 +1149,7 @@ public class BoardController : MonoBehaviour
     public void ForceFullBoardSync()
     {
         ClearAllPendingTriggeredSpecialCells();
+        reservedKeyLandingCells.Clear();
 
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
@@ -1750,8 +1880,6 @@ public class BoardController : MonoBehaviour
 
         oilSuppressionCellsThisMove.Clear();
         oilSpreadResolvedThisMove = false;
-        barrelBreaksThisMove.Clear();
-        barrelSpreadResolvedThisMove = false;
         obstacleStateService?.ResetPerMoveEmitGuard();
 
         BeginBusy();
@@ -1774,8 +1902,6 @@ public class BoardController : MonoBehaviour
 
         oilSuppressionCellsThisMove.Clear();
         oilSpreadResolvedThisMove = false;
-        barrelBreaksThisMove.Clear();
-        barrelSpreadResolvedThisMove = false;
         obstacleStateService?.ResetPerMoveEmitGuard();
 
         float _flowStart = Time.realtimeSinceStartup;
@@ -2561,28 +2687,8 @@ public class BoardController : MonoBehaviour
                 }
             }
 
-            // Barrel spread: board tam oturunca, bu hamlede kırılan barrel'lar etraflarına
-            // 4x4 mud saçar (oil spread ile aynı idle koşulu). Mud under-tile olduğu için
-            // cascade/gravity'yi etkilemez; damla animasyonu sonrası hücrelere stamp edilir.
-            if (!barrelSpreadResolvedThisMove)
-            {
-                barrelSpreadResolvedThisMove = true;
-
-                if (barrelBreaksThisMove.Count > 0)
-                {
-                    var barrels = new List<BarrelSpreadAction.BarrelSource>(barrelBreaksThisMove);
-                    barrelBreaksThisMove.Clear();
-
-                    if (BoardFlowTraceEnabled)
-                        Debug.Log($"[Barrel] Spreading mud from {barrels.Count} broken barrel(s) after board settled.");
-                    actionSequencer.Enqueue(new BarrelSpreadAction(this, barrels));
-
-                    while (actionSequencer.IsPlaying)
-                        yield return null;
-
-                    continue;
-                }
-            }
+            // Barrel mud yayılımı artık board oturmasını beklemez — barrel kırılır kırılmaz
+            // HandleObstacleDestroyed → CoSpreadBarrelMudImmediate ile akışla eşzamanlı koşar.
 
             // RocketBasket: board tam oturunca kuyruktaki roketler PatchBot gibi hedefe uçup
             // vurur. KUYRUK-BAZLI: hasar bazı yollarda gecikmeli (detached coroutine) uygulandığı
@@ -3099,6 +3205,26 @@ public class BoardController : MonoBehaviour
     internal void RaiseBarrelResolved()
         => OnBarrelResolved?.Invoke();
 
+    // Kırılan barrel'ın mud yayılımını HEMEN (board oturmadan) oynatır — taş akışıyla
+    // eşzamanlı. Arka-plan job olarak sayılır ki splatter bitmeden board tam idle sanılmasın;
+    // BarrelSpreadAction.ExecuteVisuals sequencer kullanmaz, null geçmek güvenli.
+    private IEnumerator CoSpreadBarrelMudImmediate(BarrelSpreadAction.BarrelSource barrel)
+    {
+        BeginBackgroundJob();
+        barrelSpreadsInFlight++;
+        try
+        {
+            var action = new BarrelSpreadAction(this, new List<BarrelSpreadAction.BarrelSource> { barrel });
+            yield return action.ExecuteVisuals(null);
+        }
+        finally
+        {
+            barrelSpreadsInFlight = Mathf.Max(0, barrelSpreadsInFlight - 1);
+            EndBackgroundJob();
+            RequestResolveAfterActionSequence();
+        }
+    }
+
     /// <summary>
     /// RocketBasketService, komşu renk match'i bir roketi tetikleyince çağırır. Roketler
     /// VURUŞ ANINDA ateşlenir: bir frame'lik buffer aynı vuruştan çıkan tetikleri (fireAllOnHit
@@ -3227,9 +3353,13 @@ public class BoardController : MonoBehaviour
         int oy = originIndex / width;
         if (ox < 0 || ox >= width || oy < 0 || oy >= height) return;
 
-        // Barrel kırıldı: bu hamlenin sonunda (board oturunca) etrafına 4x4 mud saçılacak.
+        // Barrel kırıldı: board'un oturmasını BEKLEMEDEN, kırılır kırılmaz mud saçılır.
+        // Hedef hücreler origin'den deterministik; mud under-tile (gravity'yi bloklamaz) ve
+        // damla animasyonu kareler boyunca land ettiği için akışla eşzamanlı çalışır. Taş
+        // akarken mud stamp'lenir ve o an hit alabilir. Placeholder (RaiseBarrelResolved)
+        // erken-WIN'i önler. Arka-plan job olarak koşar (board tam idle sayılmasın).
         if (IsMudSplatBarrel(obstacleId))
-            barrelBreaksThisMove.Add(new BarrelSpreadAction.BarrelSource(new Vector2Int(ox, oy), obstacleId));
+            StartCoroutine(CoSpreadBarrelMudImmediate(new BarrelSpreadAction.BarrelSource(new Vector2Int(ox, oy), obstacleId)));
 
         if (obstacleId == ObstacleId.Oil)
         {
@@ -3514,7 +3644,7 @@ public class BoardController : MonoBehaviour
     private bool HasPendingPostSettleObstacleAction()
     {
         return (!oilSpreadResolvedThisMove && oilSpreadService != null)
-            || (!barrelSpreadResolvedThisMove && barrelBreaksThisMove.Count > 0)
+            || barrelSpreadsInFlight > 0
             || rocketLaunchesThisMove.Count > 0;
     }
 
@@ -3533,7 +3663,7 @@ public class BoardController : MonoBehaviour
                $"resolvableEmpty={cascadeLogic != null && cascadeLogic.HasAnyResolvableEmptyPlayableCell()}, " +
                $"matches={(matchFinder != null ? matchFinder.FindAllMatches().Count : 0)}, " +
                $"oilPending={!oilSpreadResolvedThisMove && oilSpreadService != null}, " +
-               $"barrelPending={!barrelSpreadResolvedThisMove && barrelBreaksThisMove.Count > 0}, " +
+               $"barrelPending={barrelSpreadsInFlight > 0}, " +
                $"rocketQueue={rocketLaunchesThisMove.Count}, " +
                $"bottomCargo={HasBottomExitCargoReady()}";
     }

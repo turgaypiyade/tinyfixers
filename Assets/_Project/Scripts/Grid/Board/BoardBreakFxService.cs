@@ -56,6 +56,7 @@ public class BoardBreakFxService
             TileType.Core => true,
             TileType.Bolt => true,
             TileType.Plate => true,
+            TileType.Key => true,
             TileType.Normal => true,
             _ => false
         };
@@ -652,6 +653,7 @@ public class BoardBreakFxService
             TileType.Core => new Color(0.95f, 0.30f, 0.30f, 1f),
             TileType.Bolt => new Color(0.30f, 0.60f, 1.00f, 1f),
             TileType.Plate => new Color(0.35f, 0.85f, 0.45f, 1f),
+            TileType.Key => new Color(1.00f, 0.42f, 0.70f, 1f),
 
             TileType.LineEmitter_H => new Color(0.95f, 0.30f, 0.30f, 1f),
             TileType.LineEmitter_V => new Color(0.30f, 0.60f, 1.00f, 1f),

@@ -217,7 +217,7 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
         text.enableAutoSizing = true;
         text.fontSizeMin = 38f;
         text.fontSizeMax = 62f;
-        text.enableWordWrapping = false;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
         text.color = new Color(0.04f, 0.035f, 0.02f, 1f);
         text.outlineWidth = 0.12f;
         text.outlineColor = new Color(1f, 0.96f, 0.50f, 0.9f);
