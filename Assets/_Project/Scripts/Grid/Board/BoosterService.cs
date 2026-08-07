@@ -194,7 +194,7 @@ public class BoosterService
         if (cannon == null)
             yield break;
 
-        RectTransform parent = board.BoosterFxParent;
+        RectTransform parent = GetBoosterFxParent();
         if (parent == null)
         {
             UnityEngine.Object.Destroy(cannon.gameObject);
@@ -445,7 +445,7 @@ public class BoosterService
         if (hammer == null)
             yield break;
 
-        RectTransform parent = board.BoosterFxParent;
+        RectTransform parent = GetBoosterFxParent();
         if (parent == null)
         {
             UnityEngine.Object.Destroy(hammer.gameObject);
@@ -769,6 +769,12 @@ public class BoosterService
                 Vector3 worldCenter = tileRt.TransformPoint(tileRt.rect.center);
                 return WorldToAnchoredInParent(parent, worldCenter, new Vector2(0f, 1f));
             }
+
+            if (cell.x >= 0 && cell.x < board.Width && cell.y >= 0 && cell.y < board.Height)
+            {
+                Vector3 worldCenter = board.GetCellWorldCenterPosition(cell.x, cell.y);
+                return WorldToAnchoredInParent(parent, worldCenter, new Vector2(0f, 1f));
+            }
         }
 
         // Fallback: eski manuel hesap.
@@ -776,6 +782,17 @@ public class BoosterService
         return new Vector2(
             cell.x * size + size * 0.5f,
             -cell.y * size - size * 0.5f);
+    }
+
+    private RectTransform GetBoosterFxParent()
+    {
+        RectTransform parent = board.BoosterFxParent;
+        RectTransform contentRoot = board.ContentRoot;
+
+        if (parent != null && parent != board.TilesRoot && contentRoot != null && parent.parent == contentRoot)
+            parent.SetAsLastSibling();
+
+        return parent;
     }
 
     private static Vector2 WorldToAnchoredInParent(RectTransform parent, Vector3 worldPos, Vector2 childAnchor)
@@ -830,7 +847,7 @@ public class BoosterService
             boosterImg.sprite = board.RowBoosterWithDrillSprite;
         }
 
-        RectTransform parent = board.BoosterFxParent;
+        RectTransform parent = GetBoosterFxParent();
         if (parent == null)
         {
             UnityEngine.Object.Destroy(booster.gameObject);

@@ -452,11 +452,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8563b3c3b532d41918d4e064e9f7ce85, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MudOverlayService
-  borderedMudSprite: {fileID: 21300000, guid: 052fe1910fe974d14b21e0d56747f52c, type: 3}
-  plainMudTexture: {fileID: 2800000, guid: de238076997bd492e84825db8d261618, type: 3}
-  damagedMudTexture: {fileID: 2800000, guid: e31b56be7244e459f97b9d29bb292d84, type: 3}
-  damagedBorderedMudSprite: {fileID: 6732937940813381478, guid: 71bc61a4c9a3342a487068e980fafaa8, type: 3}
-  borderThicknessRatio: 0.281
+  borderedMudSprite: {fileID: 21300000, guid: 6afb2696172134567a9f1137c975528f, type: 3}
+  plainMudTexture: {fileID: 2800000, guid: 2daf598016aca498585b95eb6bb3655f, type: 3}
+  damagedMudTexture: {fileID: 2800000, guid: 745850d93268d4a359d07bd82ef9a380, type: 3}
+  damagedBorderedMudSprite: {fileID: 21300000, guid: 728b56bc3c0a946fbb8707049833ee21, type: 3}
+  useFlatStage0Interior: 1
+  flatStage0InteriorColor: {r: 0.72, g: 0.28, b: 0.07, a: 1}
+  stage0InteriorOffsetPixels: {x: -1.5, y: 0}
+  borderThicknessRatio: 0.085
+  edgeJoinOverlapPixels: 1.5
+  interiorBleedPixels: 2
+  underBevelFillRatio: 1
+  cornerJoinPixels: 4
+  edgeJoinExtendPixels: 2
+  edgeStraightCropPixels: 8
   defaultMaxHits: 2
 --- !u!224 &52612327 stripped
 RectTransform:
@@ -3514,8 +3523,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.24637681}
-  m_AnchorMax: {x: 0.54091537, y: 5.7753625}
+  m_AnchorMin: {x: 0, y: 0.062271062}
+  m_AnchorMax: {x: 0.71823204, y: 1.4597069}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -9207,13 +9216,20 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 0de7d40c9891e426788b813956928535, type: 3}
   - {fileID: 21300000, guid: 85f1a4a7b410c44e3b22b2c42ebba368, type: 3}
   - {fileID: 21300000, guid: c2e6cf55114a3424c934a85f4785ce28, type: 3}
-  dropletFlightDuration: 0.4
-  spreadWindow: 0.35
-  dropletSizeRatio: 0.701
-  arcHeightRatio: 0.5
-  arcHeightJitter: 0.39
+  dropletFlightDuration: 0.55
+  spreadWindow: 0.22
+  dropletSizeRatio: 0.95
+  arcHeightRatio: 1.25
+  arcHeightJitter: 0.42
+  dropletStartScale: 1.45
+  dropletEndScale: 0.85
+  fountainDropletCount: 8
+  fountainDropletSizeRatio: 0.85
+  fountainHeightRatio: 1.25
+  fountainRadiusRatio: 0.8
+  fountainDuration: 0.34
   splatSprite: {fileID: 21300000, guid: c2e6cf55114a3424c934a85f4785ce28, type: 3}
-  splatSizeRatio: 0.936
+  splatSizeRatio: 1.1
   splashFxPrefab: {fileID: 0}
   splashLifetime: 1
   playCenterParticle: 0

@@ -243,7 +243,7 @@ public class BoardController : MonoBehaviour
     internal RectTransform VerticalBoosterFxPrefab => verticalBoosterFxPrefab;
     internal Sprite RowBoosterWithDrillSprite => rowBoosterWithDrillSprite;
     internal Sprite RowBoosterWithoutDrillSprite => rowBoosterWithoutDrillSprite;
-    internal RectTransform BoosterFxParent => boosterFxParent != null ? boosterFxParent : parent;
+    internal RectTransform BoosterFxParent => boosterFxParent != null ? boosterFxParent : ContentRoot ?? parent;
     internal Sprite HammerBoosterFallbackSprite => hammerBoosterFallbackSprite;
     internal Sprite PatchBotPropellerSprite => patchBotPropellerSprite;
     internal Sprite PatchBotPropellerHubSprite => patchBotPropellerHubSprite;
@@ -515,10 +515,6 @@ public class BoardController : MonoBehaviour
     private OilSpreadService oilSpreadService;
     private readonly HashSet<Vector2Int> oilSuppressionCellsThisMove = new();
     private bool oilSpreadResolvedThisMove = true;
-
-    // Barrel mud yayılımı kırılır kırılmaz (akışla eşzamanlı) arka-plan job olarak koşar.
-    // Uçuşta olan splatter sayısı; level-end (geç-hedef grace) bunları bekler.
-    private int barrelSpreadsInFlight;
 
     // Bu hamlede tetiklenen RocketBasket roketleri; board tam oturunca PatchBot gibi uçarlar.
     private readonly List<RocketBasketLaunchAction.Launch> rocketLaunchesThisMove = new();
@@ -2530,12 +2526,19 @@ public class BoardController : MonoBehaviour
 
             // ─────────────────────────────────────────────
             // STRICT ORDER BARRIER:
-            // MatchFinder asla aktif boş hücre varken çalışmamalı.
+            // MatchFinder asla GERÇEKTEN doldurulabilir boş hücre varken çalışmamalı.
             // Her resolve pass başında önce cascade settle yapılır:
             // 1) vertical, 2) diagonal, 3) vertical, 4) pocket fill.
             // Ancak boşluk kapandıktan sonra match aranır.
-            // ─────────────────────────────────────────────
-            if (cascadeLogic != null && cascadeLogic.HasAnyEmptyPlayableCell())
+            //
+            // KRİTİK: AKIŞ-ERİŞİLEBİLİR (resolvable) boşluğu sor, ham "boş+bloklanmamış" değil.
+            // Obstacle'la çevrili ÖLÜ CEP'ler (spawn'a bağlı değil + üstünde inecek kaynak taş yok;
+            // ör. SculptingSpecial kanallarındaki izole boşluklar) asla dolamaz. Bunları "fillable"
+            // saymak CalculateCascades'i her pass boşuna çağırıyor (log'daki "no actions" churn'ü);
+            // her churn pass'inde cep yanındaki taşlar diagonal için yeniden değerlendirilip geri
+            // dönüyor → kullanıcının gördüğü "flip-flop" (taş gidecek gibi yapıp yerinde kalıyor).
+            // HasAnyResolvableEmptyPlayableCell ölü cepleri segment analiziyle dışlar.
+            if (cascadeLogic != null && cascadeLogic.HasAnyResolvableEmptyPlayableCell())
             {
                 var preMatchCascades = cascadeLogic.CalculateCascades();
 
@@ -3210,8 +3213,10 @@ public class BoardController : MonoBehaviour
     // BarrelSpreadAction.ExecuteVisuals sequencer kullanmaz, null geçmek güvenli.
     private IEnumerator CoSpreadBarrelMudImmediate(BarrelSpreadAction.BarrelSource barrel)
     {
+        // BeginBackgroundJob → splatter bitene kadar ActiveBackgroundJobs>0 → level-end bekler.
+        // (Eskiden ayrıca barrelSpreadsInFlight sayacı tutulup whitelist'te sorgulanıyordu;
+        //  redundant'tı, kaldırıldı — tek kaynak ActiveBackgroundJobs.)
         BeginBackgroundJob();
-        barrelSpreadsInFlight++;
         try
         {
             var action = new BarrelSpreadAction(this, new List<BarrelSpreadAction.BarrelSource> { barrel });
@@ -3219,7 +3224,6 @@ public class BoardController : MonoBehaviour
         }
         finally
         {
-            barrelSpreadsInFlight = Mathf.Max(0, barrelSpreadsInFlight - 1);
             EndBackgroundJob();
             RequestResolveAfterActionSequence();
         }
@@ -3641,18 +3645,17 @@ public class BoardController : MonoBehaviour
         // Kasıtlı no-op — settle her zaman açık.
     }
 
-    private bool HasPendingPostSettleObstacleAction()
-    {
-        return (!oilSpreadResolvedThisMove && oilSpreadService != null)
-            || barrelSpreadsInFlight > 0
-            || rocketLaunchesThisMove.Count > 0;
-    }
-
+    // Board momentarily idle görünse de resolve loop'un HÂLÂ otomatik işleyeceği DETERMİNİSTİK iş.
+    // Async/uçuşta olan iş (oil spread=IsBusy resolve-loop içi, barrel splatter/keygen=BeginBackgroundJob,
+    // fırlatılmış rocket/orb/patchbot=flight sayaçları) artık ActiveBackgroundJobs üzerinden
+    // IsBoardWorkingForLevelEnd tarafından beklenir — burada tekrar sayılmaz (eski "parça parça"
+    // whitelist kaldırıldı). Yalnız kuyruğa alınmış ama HENÜZ fırlatılmamış rocket bir frame'lik
+    // boşlukta background-job'a dönüşmeden önce burada görünür kalmalı.
     internal bool HasPendingAutoResolveForLevelEnd()
     {
         return (cascadeLogic != null && cascadeLogic.HasAnyResolvableEmptyPlayableCell())
             || (matchFinder != null && matchFinder.FindAllMatches().Count > 0)
-            || HasPendingPostSettleObstacleAction()
+            || rocketLaunchesThisMove.Count > 0
             || HasBottomExitCargoReady();
     }
 
@@ -3662,10 +3665,9 @@ public class BoardController : MonoBehaviour
         return $"emptyPlayable={cascadeLogic != null && cascadeLogic.HasAnyEmptyPlayableCell()}, " +
                $"resolvableEmpty={cascadeLogic != null && cascadeLogic.HasAnyResolvableEmptyPlayableCell()}, " +
                $"matches={(matchFinder != null ? matchFinder.FindAllMatches().Count : 0)}, " +
-               $"oilPending={!oilSpreadResolvedThisMove && oilSpreadService != null}, " +
-               $"barrelPending={barrelSpreadsInFlight > 0}, " +
                $"rocketQueue={rocketLaunchesThisMove.Count}, " +
-               $"bottomCargo={HasBottomExitCargoReady()}";
+               $"bottomCargo={HasBottomExitCargoReady()}, " +
+               $"activeBgJobs={ActiveBackgroundJobs}";
     }
 
     // Cargo (exitAtBottom) çıkışı: yalnızca altında sütun sonuna kadar gerçek pass-through void varsa toplanır.

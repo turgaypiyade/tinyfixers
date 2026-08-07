@@ -176,7 +176,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private Coroutine starRevealRoutine;
     private Coroutine mainScreenDimRoutine;
     private readonly List<CanvasGroup> mainScreenDimTargets = new();
-    private readonly List<TopHudController.ActiveGoal> levelEndActiveGoalsBuffer = new();
 
     private bool isBonusRoundRunning;
     private bool hardSkipBonusRoundRequested;
@@ -353,36 +352,24 @@ public class LevelEndSimplePopupController : MonoBehaviour
         EvaluateAndShowIfEnded();
     }
 
+    // TEK KURAL (2026-08-07): Board TAM oturmadıkça — senkron VEYA async hiçbir iş kalmadıkça —
+    // level-end kararı verme. Hem win hem fail yolu (WaitBoardQuietForLevelEnd + EvaluateAndShowIfEnded)
+    // bu tek yordamdan geçer.
+    //
+    // Kritik: ActiveBackgroundJobs'un TAMAMINI bekle — uçan orb/patchbot/rocket/boss-strike dahil.
+    // Bunlar "BlockingBackgroundJobs" hesabından çıkarılır (resolve loop'u parklamasın diye), AMA
+    // hepsi goal/win durumunu değiştirebilir. Eskiden level-end yalnız BlockingBackgroundJobs'ı +
+    // "remainingGoals <= nonBlockingJobs" gibi kırılgan bir tahmini bekliyordu → PatchBot/rocket
+    // HAVADAYKEN (henüz hedefe konmadan) fail popup'ı açılabiliyordu. Artık tek ölçüt: iş var mı yok mu.
+    // Sonsuz bekleme riski force-deadline (LevelEndForceDeadlinePassed) ile kapalı.
     private bool IsBoardWorkingForLevelEnd()
     {
         if (board == null)
             return false;
 
-        if (board.IsBusy || board.BlockingBackgroundJobs > 0 || board.IsActionSequencePlaying)
-            return true;
-
-        return NonBlockingJobsCouldStillCompleteGoals();
-    }
-
-    private bool NonBlockingJobsCouldStillCompleteGoals()
-    {
-        if (board == null || topHud == null || topHud.AreAllGoalsCompleted)
-            return false;
-
-        int nonBlockingJobs = Mathf.Max(0, board.ActiveBackgroundJobs - board.BlockingBackgroundJobs);
-        if (nonBlockingJobs <= 0)
-            return false;
-
-        levelEndActiveGoalsBuffer.Clear();
-        topHud.GetActiveGoals(levelEndActiveGoalsBuffer);
-
-        int remainingGoals = 0;
-        for (int i = 0; i < levelEndActiveGoalsBuffer.Count; i++)
-            remainingGoals += Mathf.Max(0, levelEndActiveGoalsBuffer[i].remaining);
-
-        // Non-blocking flights should delay fail only when their pending credits could still
-        // turn the level into a win. Otherwise the screen can look idle while fail is delayed.
-        return remainingGoals > 0 && remainingGoals <= nonBlockingJobs;
+        return board.IsBusy
+            || board.ActiveBackgroundJobs > 0
+            || board.IsActionSequencePlaying;
     }
 
     private string DescribeBoardWorkForLevelEnd()

@@ -872,21 +872,34 @@ public class BoardAnimator
                 if (board.ObstacleStateService.GetObstacleIdAt(c.x, c.y) == ObstacleId.Magnet
                     && !board.ObstacleStateService.IsMagnetEndpoint(c.x, c.y))
                     return;
+                // Magnet tek bir origin altında İKİ bağımsız uç (A/B) barındırır; her uç
+                // ayrı hedeftir ve ayrı hit almalıdır. Per-origin dedup bu iki ucu tek
+                // obstacle sayıp ikinci ucu yutuyordu → aynı beam iki ucu da geçse yalnız biri
+                // küçülüyordu. Magnet'i origin-dedup'tan muaf tut; strikeDamagedObstacleCells
+                // zaten HÜCRE bazında dedup yapıyor, iki uç farklı hücre olduğu için ikisi de vurulur.
+                bool isMagnetCell = board.ObstacleStateService.GetObstacleIdAt(c.x, c.y) == ObstacleId.Magnet;
+
                 // Per-origin deduplication STRIKE BAZINDA: 2x2+ obstacle (ColorChest vb.)
                 // tek beam'den kaç hücresi geçerse geçsin bir hit alır; ama zincirdeki
                 // her ayrı beam (örn. aynı kolonda iki LineV) kendi vuruşunu yapar.
                 int origin = board.ObstacleStateService.GetObstacleOriginAt(c.x, c.y);
-                if (origin >= 0 && !strikeHitObstacleOrigins.Add((strikeIndex, origin))) return;
+                if (!isMagnetCell && origin >= 0 && !strikeHitObstacleOrigins.Add((strikeIndex, origin))) return;
                 strikeDamagedObstacleCells.Add((strikeIndex, c));
 
-                // Action-geneli kayıt: pass-sonu affectedCells hasarı bu hücre/origin'in
-                // üstüne binmesin (cross-check orada action-geneli kalır).
-                lineHitDamagedObstacleCells.Add(c);
-                if (origin >= 0) hitObstacleOrigins.Add(origin);
-
                 var hit = board.ApplyObstacleDamageAt(c.x, c.y, damageContext, null);
+
+                // Action-geneli "zaten hasarlandı" kaydı YALNIZCA hit gerçekten landediyse yazılır.
+                // Beam sweep animasyon-zamanında tetiklenir; bir obstacle o an geçici olarak
+                // hit alamıyorsa (mid-transition / interaction-lock) ApplyObstacleDamageAt no-op döner.
+                // Eskiden kayıt didHit'ten ÖNCE yapılıyordu → beam dokunduğu ama vuramadığı hücre
+                // "hasarlı" işaretlenip pass-sonu impactCells güvenlik-ağından KALICI dışlanıyor,
+                // obstacle sağ kalıyordu ("LineV sütunda geçti ama biri kaldı"). Artık no-op'ta
+                // kayıt yapılmaz → güvenlik ağı o hücreyi tekrar deneyebilir.
                 if (hit.didHit)
                 {
+                    lineHitDamagedObstacleCells.Add(c);
+                    if (!isMagnetCell && origin >= 0) hitObstacleOrigins.Add(origin);
+
                     board.TriggerObstacleVisualChange(hit.visualChange);
                     if (hit.visualChange.cleared)
                         MarkClearedObstacleCells(hit);
@@ -999,7 +1012,11 @@ public class BoardAnimator
 
             // Per-origin deduplication: prevents 2x2+ obstacles from taking multiple
             // hits when several of their cells appear in the impact list.
-            if (board.ObstacleStateService != null)
+            // İSTİSNA — Magnet: tek origin altında iki bağımsız uç var, her uç ayrı hit
+            // almalı (PulseCore square iki ucu da kapsadığında ikisi de küçülsün). Magnet'i
+            // origin-dedup'tan muaf tut; impact listesi zaten hücre bazında ilerliyor.
+            if (board.ObstacleStateService != null
+                && board.ObstacleStateService.GetObstacleIdAt(cell.x, cell.y) != ObstacleId.Magnet)
             {
                 int origin = board.ObstacleStateService.GetObstacleOriginAt(cell.x, cell.y);
                 if (origin >= 0 && !hitObstacleOrigins.Add(origin)) continue;

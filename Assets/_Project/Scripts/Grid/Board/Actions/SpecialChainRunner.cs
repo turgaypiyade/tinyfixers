@@ -230,10 +230,14 @@ public sealed class SpecialChainRunner : BoardAction
                 // PatchBot dash artık BlockingBackgroundJobs dışında; burası hâlâ gerçek
                 // sub-chain/fall job'ları sırasında boş hücreleri kapatır.
                 // Runner Blocking olduğu için ResolveBoard loop'u şu an durmuş; gravity'yi onun yerine
-                // burada çalıştır. CalculateCascades board.Tiles'ı senkron günceller → HasAnyEmptyPlayableCell
-                // guard'ı kendini sınırlar (boş hücre kalmayınca durur). Patchbot HER yoldan tetiklense de
+                // burada çalıştır. CalculateCascades board.Tiles'ı senkron günceller → guard kendini
+                // sınırlar (doldurulabilir boş hücre kalmayınca durur). Patchbot HER yoldan tetiklense de
                 // (swap/chain/LineVHPulse) taş düşüşü garanti.
-                if (board.CascadeLogic != null && board.CascadeLogic.HasAnyEmptyPlayableCell())
+                // KRİTİK: AKIŞ-ERİŞİLEBİLİR boşluğu sor — obstacle'la çevrili ÖLÜ CEP'ler asla dolamaz;
+                // ham "boş" kontrolü onları hep true döndürüp bu döngüyü HER FRAME (5s cap'e kadar)
+                // boşuna koşturuyor, cep yanındaki taşları sürekli diagonal-değerlendirip geri
+                // döndürerek "flip-flop" üretiyordu.
+                if (board.CascadeLogic != null && board.CascadeLogic.HasAnyResolvableEmptyPlayableCell())
                 {
                     var fall = board.CascadeLogic.CalculateCascades();
                     if (fall != null)

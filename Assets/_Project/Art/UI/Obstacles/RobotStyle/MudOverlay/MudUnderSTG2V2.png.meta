@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 5e6dc039b539947f1ad0f4c8531a1329
+guid: 0b0ed293ffc19499c876f73079e07744
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -4780178681555801580
-    second: ChestStage1v3_0
+      213: -6405560916767840486
+    second: MudUnderSTG2V2_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: ChestStage1v3_0
+      name: MudUnderSTG2V2_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 1013
-        height: 1013
+        width: 990
+        height: 990
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 41aa8fac0d469adb0800000000000000
-      internalID: -4780178681555801580
+      spriteID: a176de8c840ea17a0800000000000000
+      internalID: -6405560916767840486
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      ChestStage1v3_0: -4780178681555801580
+      MudUnderSTG2V2_0: -6405560916767840486
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -16,7 +16,7 @@ MonoBehaviour:
   - chapter: 1
     level: 1
     levelKey: LevelCL_001
-    levelData: {fileID: 11400000, guid: 944950d634f2048bea6baf4e2f28c727, type: 2}
+    levelData: {fileID: 11400000, guid: 6fc3f264334cc42efa8090c45320ea92, type: 2}
   - chapter: 1
     level: 2
     levelKey: LevelCL_002
@@ -301,3 +301,39 @@ MonoBehaviour:
     level: 72
     levelKey: LevelCL_072
     levelData: {fileID: 11400000, guid: 8d6344088db6d4794825c38a459c907d, type: 2}
+  - chapter: 1
+    level: 73
+    levelKey: LevelCL_073
+    levelData: {fileID: 11400000, guid: 493c4e7ade5144a8ea16c38257d1988d, type: 2}
+  - chapter: 1
+    level: 74
+    levelKey: LevelCL_074
+    levelData: {fileID: 11400000, guid: 52af03f7dbf404d3fb5d417fd2429286, type: 2}
+  - chapter: 1
+    level: 75
+    levelKey: LevelCL_075
+    levelData: {fileID: 11400000, guid: e59af3bdd9e8944cd807f947a8508621, type: 2}
+  - chapter: 1
+    level: 76
+    levelKey: LevelCL_076
+    levelData: {fileID: 11400000, guid: 944950d634f2048bea6baf4e2f28c727, type: 2}
+  - chapter: 1
+    level: 77
+    levelKey: LevelCL_077
+    levelData: {fileID: 11400000, guid: f9a0be6f596ae41ecb38cc6fb0459fd8, type: 2}
+  - chapter: 1
+    level: 78
+    levelKey: LevelCL_078
+    levelData: {fileID: 11400000, guid: ba04aed00a4804bf2a6bb9e55fe8ff91, type: 2}
+  - chapter: 1
+    level: 79
+    levelKey: LevelCL_079
+    levelData: {fileID: 11400000, guid: 44e69213e75d842a4bc8f5ecc73e5507, type: 2}
+  - chapter: 1
+    level: 80
+    levelKey: LevelCL_080
+    levelData: {fileID: 11400000, guid: d27744db8657c415bafc9bae93be1f9e, type: 2}
+  - chapter: 1
+    level: 81
+    levelKey: LevelCL_081
+    levelData: {fileID: 11400000, guid: 1671b74e3c3c84b5f97be8a4df2952f3, type: 2}

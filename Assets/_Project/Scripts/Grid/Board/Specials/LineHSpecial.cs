@@ -42,7 +42,6 @@ public sealed class LineHSpecial
     public LineHExecutionResult Execute(LineHExecutionRuntime rt)
     {
         var result = new LineHExecutionResult();
-        Debug.Log($"[LineH.Execute] BEGIN origin={DescribeOrigin(rt)} finalize={(rt != null && rt.FinalizeAtEnd)}");
         if (!CanExecute(rt))
             return result;
 
@@ -77,7 +76,6 @@ public sealed class LineHSpecial
                 originCell,
                 rt.Origin));
         }
-        Debug.Log($"[LineH.Execute] PRE-FINALIZE origin={DescribeOrigin(rt)} affected={rt.Context.Affected.Count} lightningTargets={rt.Context.LightningVisualTargets.Count} strikes={rt.Context.LightningLineStrikes.Count}");
         return result;
     }
 
@@ -140,7 +138,6 @@ public sealed class LineHSpecial
     private void RegisterOrigin(LineHExecutionRuntime rt)
     {
         var originCell = GetOriginCell(rt);
-        Debug.Log($"[LineH.RegisterOrigin] origin={originCell} finalize={rt.FinalizeAtEnd} hasLineBefore={rt.Context.HasLineActivation}");
 
         if (rt.Origin != null)
         {
@@ -169,6 +166,7 @@ public sealed class LineHSpecial
 
             if (!SpecialUtils.CanAffectCell(rt.Board, x, y))
             {
+                SpecialCellUtils.TryAddMagnetEndpointImpact(rt.Board, x, y, rt.Context.ImpactCells);
                 SpecialCellUtils.TryMarkEmitterImpact(rt.Context, rt.Board, x, y);
                 continue;
             }
@@ -187,7 +185,6 @@ public sealed class LineHSpecial
             var tile = rt.Board.Tiles[x, y];
             if (tile == null)
                 continue;
-            Debug.Log($"[LineH.CollectRow] origin={originCell} addTarget=({x},{y}) tile={(tile != null ? tile.GetSpecial().ToString() : "null")}");
             rt.Context.Affected.Add(tile);
 
             if (!rt.SuppressVisualSideEffects)
@@ -200,7 +197,6 @@ public sealed class LineHSpecial
         if (rt.SuppressVisualSideEffects)
             return;
         var originCell = GetOriginCell(rt);
-        Debug.Log($"[LineH.BuildLineVisuals] origin={originCell} finalize={rt.FinalizeAtEnd}");
         rt.Context.LightningLineStrikes.Add(
             new LightningLineStrike(
                 originCell,

@@ -595,7 +595,8 @@ public class GridSpawner : MonoBehaviour
         if (mudOverlayRoot != null) mudOverlayRoot.SetSiblingIndex(1);
         if (tilesRoot != null) tilesRoot.SetAsLastSibling();
         if (gridLinesRoot != null) gridLinesRoot.SetSiblingIndex(1);
-        if (mudOverlayRoot != null) mudOverlayRoot.SetSiblingIndex(2);
+        if (underTilesObstaclesRoot != null) underTilesObstaclesRoot.SetSiblingIndex(2);
+        if (mudOverlayRoot != null) mudOverlayRoot.SetSiblingIndex(3);
         if (obstaclesRoot != null) obstaclesRoot.SetAsLastSibling();
         // Grass örtüsü taşların ÜSTÜNDE görünmeli (görüntüyü örter) → tiles/obstacles'tan sonra son sıraya.
         if (grassOverlayRoot != null) grassOverlayRoot.SetAsLastSibling();
@@ -907,6 +908,10 @@ public class GridSpawner : MonoBehaviour
 
             SpawnMudOverlayCell(x, y);
         }
+
+        // TÜM mud hücreleri kaydolduktan sonra tek yetkili exposure geçişi — artımlı komşu
+        // refresh'inin sınır hücrelerinde bıraktığı bayat bevel'i (izole "kutu") giderir.
+        mudOverlayService.RefreshAllBorders();
     }
 
     private void SpawnMudOverlayCell(int x, int y)
@@ -933,6 +938,10 @@ public class GridSpawner : MonoBehaviour
             mudOverlayService.PlainMudTexture,
             x, y,
             width, height);
+        view.SetStage0InteriorStyle(
+            mudOverlayService.UseFlatStage0Interior,
+            mudOverlayService.FlatStage0InteriorColor,
+            mudOverlayService.Stage0InteriorOffsetPixels);
         view.PlaceInCell(tileSize);
 
         int mudMaxHits = resolvedLevel.obstacleLibrary?.Get(ObstacleId.Mud)?.hits ?? 1;
@@ -1597,6 +1606,11 @@ public class GridSpawner : MonoBehaviour
         if (overTilesObstaclesRoot == null)
             overTilesObstaclesRoot = GetOrCreateChildRoot(obstaclesRoot, "OverTiles");
 
+        // Under-tile visuals (including MudUnder) must sit below the seamless MudOverlay.
+        // Keep over-tile obstacles under Obstacles so they remain above the board content.
+        if (underTilesObstaclesRoot != null && underTilesObstaclesRoot.parent != root)
+            underTilesObstaclesRoot.SetParent(root, false);
+
         if (tilesRoot == null)
             tilesRoot = GetOrCreateChildRoot(root, "Tiles");
 
@@ -1950,23 +1964,12 @@ public class GridSpawner : MonoBehaviour
         float gridOverlap = Mathf.Max(1f, Mathf.Ceil(runtimeGridLineThickness * 0.5f));
         int originIndex = resolvedLevel.Index(x, y);
 
-        bool HasDifferentAt(int cx, int cy)
-        {
-            if (cx < 0 || cx >= width || cy < 0 || cy >= height) return false;
-            int idx = resolvedLevel.Index(cx, cy);
-            if (idx < 0 || idx >= resolvedLevel.obstacles.Length) return false;
-            if ((ObstacleId)resolvedLevel.obstacles[idx] == ObstacleId.None) return false;
-            return resolvedLevel.obstacleOrigins[idx] != originIndex;
-        }
-
-        bool diffLeft = false, diffRight = false, diffTop = false, diffBottom = false;
-        for (int yy = y; yy < y + h; yy++) { if (HasDifferentAt(x - 1, yy)) diffLeft  = true; if (HasDifferentAt(x + w, yy)) diffRight  = true; }
-        for (int xx = x; xx < x + w; xx++) { if (HasDifferentAt(xx, y - 1)) diffTop   = true; if (HasDifferentAt(xx, y + h)) diffBottom = true; }
-
-        float lo = diffLeft   ? 0f : gridOverlap;
-        float ro = diffRight  ? 0f : gridOverlap;
-        float to = diffTop    ? 0f : gridOverlap;
-        float bo = diffBottom ? 0f : gridOverlap;
+        // Her kenarda gridOverlap (yarım grid-çizgisi = 4px çizgide 2px) taşma. Chest sprite art'ı
+        // hücre sınırının biraz ötesine geçip aradaki grid çizgisini/dikişi örter. Bitişik chest'ler
+        // ikisi de aynı miktar taştığından blok kesintisiz görünür; aynı opak art olduğu için
+        // örtüşme GÖRÜNMEZ. (Eskiden bitişik obstacle'a doğru taşma 0'dı → aradaki çizgi/dikiş
+        // sprite kenar-payından sızıyordu. Kullanıcı isteği: chest başına +gridOverlap her kenar.)
+        float lo = gridOverlap, ro = gridOverlap, to = gridOverlap, bo = gridOverlap;
 
         ChestObstacleView view;
         Image rootImage;

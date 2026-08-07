@@ -67,6 +67,21 @@ public static class SpecialCellUtils
         return true;
     }
 
+    public static bool TryAddMagnetEndpointImpact(BoardController board, int x, int y, ICollection<Vector2Int> impactCells)
+    {
+        if (board == null || impactCells == null)
+            return false;
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return false;
+
+        var obstacles = board.ObstacleStateService;
+        if (obstacles == null || !obstacles.IsMagnetEndpoint(x, y))
+            return false;
+
+        impactCells.Add(new Vector2Int(x, y));
+        return true;
+    }
+
     public static bool TryAddGrassImpact(BoardController board, int x, int y, ICollection<Vector2Int> impactCells)
     {
         if (board == null || impactCells == null)
@@ -120,6 +135,7 @@ public static class SpecialCellUtils
                 if (x < 0 || x >= board.Width || y < 0 || y >= board.Height) continue;
                 if (!SpecialUtils.CanAffectCell(board, x, y))
                 {
+                    TryAddMagnetEndpointImpact(board, x, y, ctx?.ImpactCells);
                     TryMarkEmitterImpact(ctx, board, x, y);
                     continue;
                 }
@@ -139,6 +155,7 @@ public static class SpecialCellUtils
             {
                 if (!SpecialUtils.CanAffectCell(board, x, y))
                 {
+                    TryAddMagnetEndpointImpact(board, x, y, ctx?.ImpactCells);
                     TryMarkEmitterImpact(ctx, board, x, y);
                     continue;
                 }

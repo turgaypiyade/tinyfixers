@@ -109,6 +109,12 @@ public class PreLevelSpecialInjector : MonoBehaviour
         if (tile.GetSpecial() != TileSpecial.None)
             return false;
 
+        if (board.ObstacleStateService != null &&
+            (board.ObstacleStateService.HasObstacleAt(x, y) ||
+             board.ObstacleStateService.IsInteractionLockedAt(x, y) ||
+             board.ObstacleStateService.IsMovableObstacleAt(x, y)))
+            return false;
+
         if (tile.TryGetCellState(out var state))
         {
             if (state.hasObstacle || !state.canContainTile)
@@ -132,6 +138,9 @@ public class PreLevelSpecialInjector : MonoBehaviour
     private void ApplySpecial(TileView tile, TileSpecial special)
     {
         if (tile == null || special == TileSpecial.None || board == null)
+            return;
+
+        if (!IsEligible(tile, tile.X, tile.Y))
             return;
 
         if (special == TileSpecial.SystemOverride)

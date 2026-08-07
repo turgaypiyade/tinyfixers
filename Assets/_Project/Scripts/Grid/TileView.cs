@@ -948,7 +948,17 @@ public class TileView : MonoBehaviour,
             yield break;
 
         Vector2 targetPos = rt.anchoredPosition;
-        Vector2 impactPos = targetPos + Vector2.down * (Mathf.Max(0f, settings.landingOvershootCells) * tileSize);
+
+        // Pozisyonel dip (taş hedefin biraz ALTINA girip döner) YALNIZ board ZEMİNİNE inişte
+        // uygulanır: orada dip board mask'ıyla kırpılır, görünmez, "toprağa çarpma" hissi verir.
+        // Taş/obstacle ÜSTÜNE inişte dip alttakinin alanına GÖRÜNÜR şekilde dalıyordu — kullanıcının
+        // gördüğü "bir taş diğerini biraz geçip sonra bekliyor" artefaktı. Orada dip'i bastır;
+        // impact yalnız YERİNDE squash (impactScale) ile oynasın → his korunur, overlap gitmez.
+        float overshootCells = Mathf.Max(0f, settings.landingOvershootCells);
+        bool landsOnBoardFloor = board == null || Y + 1 >= board.Height;
+        if (!landsOnBoardFloor) overshootCells = 0f;
+
+        Vector2 impactPos = targetPos + Vector2.down * (overshootCells * tileSize);
         Vector3 impactScale = new Vector3(settings.impactScaleX, settings.impactScaleY, 1f);
 
         float impactDuration = settings.ReferenceFramesToSeconds(settings.landingOvershootFrames);
@@ -1584,6 +1594,13 @@ public class TileView : MonoBehaviour,
         float squashY = Mathf.Clamp(strength, 0.02f, 0.28f);
         float squashX = Mathf.Clamp(stretchX, 0.00f, 0.16f);
         float overshootPx = tileSize * Mathf.Clamp(overshootRatio, 0.00f, 0.10f);
+
+        // Pozisyonel dip (aşağı taşma) yalnız board ZEMİNİNE inişte görünür değil (mask kırpar).
+        // Taş/obstacle üstüne inişte dip alttakine görünür şekilde dalıyor ("bir taş diğerini
+        // geçip bekliyor"); orada dip'i bastır, impact yerinde squash ile oynasın. (Reference
+        // landing yolundaki PlayReferenceLanding ile aynı kural.)
+        bool landsOnBoardFloor = board == null || Y + 1 >= board.Height;
+        if (!landsOnBoardFloor) overshootPx = 0f;
 
         Vector2 downPos = basePos + new Vector2(0f, -overshootPx);
         Vector2 reboundPos = basePos + new Vector2(0f, overshootPx * 0.30f);

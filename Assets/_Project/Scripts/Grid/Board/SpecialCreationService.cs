@@ -49,14 +49,22 @@ public sealed class SpecialCreationService
         if (matches == null || matches.Count == 0)
             return CreationResult.None;
 
+        // Match grubunun HERHANGİ bir hücresinde oluşabilecek en yüksek special (PulseCore/Override
+        // gibi kesişim-bazlı olanlar kolun ortasında/dibinde oluşur — swap ettiğin hücre olmayabilir).
+        var best = DecideBestFromMatchedTiles(matches);
+
+        // Swap tercihi (Line yönünü parmak hareketine, special'ı parmak-altı hücreye bağlamak için)
+        // YALNIZCA skoru en az eşit olduğunda kazanır. Aksi hâlde match'in başka hücresindeki daha
+        // değerli special öncelik alır. Eskiden swap hücresinde HERHANGİ bir special bulununca (ör.
+        // 4'lük kola denk gelen Line) erken dönülüyor, köşedeki PulseCore kaçırılıyordu.
         if (request.preferSwapTiles && request.swapA != null && request.swapB != null)
         {
             var swapPreferred = DecideFromSwapTiles(matches, request.swapA, request.swapB);
-            if (swapPreferred.hasValue)
+            if (swapPreferred.hasValue && Score(swapPreferred.special) >= Score(best.special))
                 return swapPreferred;
         }
 
-        return DecideBestFromMatchedTiles(matches);
+        return best;
     }
     public List<CreationResult> DecideUpToTwoFromMatches(
         HashSet<TileView> matches,

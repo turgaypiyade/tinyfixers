@@ -32,6 +32,22 @@ public sealed class BarrelSplatterAnimator : MonoBehaviour
     [SerializeField] private float arcHeightRatio = 1.4f;
     [Tooltip("Yay yüksekliğine eklenen rastgelelik (±oran). Damlalar farklı yükseklikte fışkırır.")]
     [Range(0f, 0.6f)] [SerializeField] private float arcHeightJitter = 0.35f;
+    [Tooltip("Uçan ana damlaların çıkış scale'i. Büyük değer ilk fışkırmayı daha görünür yapar.")]
+    [SerializeField] private float dropletStartScale = 1.45f;
+    [Tooltip("Uçan ana damlaların varış scale'i.")]
+    [SerializeField] private float dropletEndScale = 0.85f;
+
+    [Header("İlk fıskiye burst")]
+    [Tooltip("Barrel kırıldığı anda sadece görsel amaçlı ekstra yukarı saçılan damla sayısı.")]
+    [SerializeField] private int fountainDropletCount = 8;
+    [Tooltip("İlk fıskiye parçalarının boyutu (tile oranı).")]
+    [Range(0.1f, 1.5f)] [SerializeField] private float fountainDropletSizeRatio = 0.85f;
+    [Tooltip("İlk fıskiye parçalarının yukarı sıçrama yüksekliği (tile oranı).")]
+    [SerializeField] private float fountainHeightRatio = 1.25f;
+    [Tooltip("İlk fıskiye parçalarının yana saçılma mesafesi (tile oranı).")]
+    [SerializeField] private float fountainRadiusRatio = 0.8f;
+    [Tooltip("İlk fıskiye burst süresi.")]
+    [SerializeField] private float fountainDuration = 0.34f;
 
     [Header("Varış (splat)")]
     [Tooltip("Varışta oluşan splat-pop sprite'ı. Boş ise damla/mud sprite'ı.")]
@@ -103,6 +119,8 @@ public sealed class BarrelSplatterAnimator : MonoBehaviour
         if (ts < 1f) ts = Mathf.Max(1f, board.TileSize);
 
         int startOffset = UnityEngine.Random.Range(0, Mathf.Max(1, splashSprites != null ? splashSprites.Count : 1));
+        PlayFountainBurst(root, center, ts, startOffset);
+
         int remaining = targets.Count;
         for (int i = 0; i < targets.Count; i++)
         {
@@ -167,7 +185,7 @@ public sealed class BarrelSplatterAnimator : MonoBehaviour
             if (dir.sqrMagnitude > 0.0001f)
                 rt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg - 90f);
 
-            float sc = Mathf.Lerp(1.2f, 0.7f, k);
+            float sc = Mathf.Lerp(dropletStartScale, dropletEndScale, k);
             rt.localScale = new Vector3(sc, sc, 1f);
             yield return null;
         }
@@ -209,6 +227,65 @@ public sealed class BarrelSplatterAnimator : MonoBehaviour
             float sc = Mathf.SmoothStep(0.5f, 1.2f, k);
             rt.localScale = new Vector3(sc, sc, 1f);
             var c = img.color; c.a = 1f - k; img.color = c;
+            yield return null;
+        }
+
+        Destroy(go);
+    }
+
+    private void PlayFountainBurst(RectTransform root, Vector2 center, float ts, int spriteOffset)
+    {
+        if (fountainDropletCount <= 0 || root == null)
+            return;
+
+        for (int i = 0; i < fountainDropletCount; i++)
+        {
+            var sprite = PickDropletSprite(spriteOffset + i);
+            if (sprite == null) continue;
+
+            float angle = (360f / fountainDropletCount) * i + UnityEngine.Random.Range(-18f, 18f);
+            float radius = ts * fountainRadiusRatio * UnityEngine.Random.Range(0.55f, 1.05f);
+            float height = ts * fountainHeightRatio * UnityEngine.Random.Range(0.85f, 1.2f);
+            StartCoroutine(FountainDroplet(root, center, sprite, ts, angle, radius, height));
+        }
+    }
+
+    private IEnumerator FountainDroplet(RectTransform root, Vector2 center, Sprite sprite, float ts, float angleDeg, float radius, float height)
+    {
+        var go = new GameObject("MudFountainDroplet", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(root, false);
+        go.transform.SetAsLastSibling();
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        float size = ts * fountainDropletSizeRatio * UnityEngine.Random.Range(0.75f, 1.2f);
+        rt.sizeDelta = new Vector2(size, size);
+        rt.anchoredPosition = center;
+
+        var img = go.GetComponent<Image>();
+        img.sprite = sprite;
+        img.preserveAspect = true;
+        img.raycastTarget = false;
+
+        Vector2 dir = new Vector2(Mathf.Cos(angleDeg * Mathf.Deg2Rad), Mathf.Sin(angleDeg * Mathf.Deg2Rad));
+        Vector2 end = center + dir * radius;
+        float dur = Mathf.Max(0.08f, fountainDuration * UnityEngine.Random.Range(0.85f, 1.18f));
+
+        float t = 0f;
+        while (t < dur)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float ease = 1f - Mathf.Pow(1f - k, 2f);
+            rt.anchoredPosition = Vector2.Lerp(center, end, ease) + Vector2.up * (height * Mathf.Sin(Mathf.PI * k));
+            rt.localRotation = Quaternion.Euler(0f, 0f, angleDeg + k * 180f);
+
+            float sc = Mathf.Lerp(0.65f, 1.25f, Mathf.Sin(Mathf.PI * k));
+            rt.localScale = new Vector3(sc, sc, 1f);
+            var c = img.color;
+            c.a = 1f - Mathf.SmoothStep(0.55f, 1f, k);
+            img.color = c;
             yield return null;
         }
 
