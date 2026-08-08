@@ -12,6 +12,23 @@ public class ChestObstacleView : MonoBehaviour
     [SerializeField] private Image boltObject;
     [SerializeField] private Image plateObject;
 
+    [Header("Kapı Düşüşü (ilk hit)")]
+    [Tooltip("Sol/sağ kapak sprite'ları. İlk hitte iki büyük parça halinde yerçekimiyle düşer.")]
+    [SerializeField] private Sprite leftDoorSprite;
+    [SerializeField] private Sprite rightDoorSprite;
+    [Tooltip("Opsiyonel sap/kulp — ortada ayrı bir küçük parça olarak düşer.")]
+    [SerializeField] private Sprite doorHandleSprite;
+    [Tooltip("Opsiyonel: kapılar düşünce root sprite'ı buna geçer (dolabın AÇIK iç gövdesi). " +
+             "Atanmazsa root olduğu gibi kalır.")]
+    [SerializeField] private Sprite openBodySprite;
+    [SerializeField] private bool doorFallEnabled = true;
+    [SerializeField, Min(0.05f)] private float doorFallDuration = 1.4f;
+    [SerializeField] private float doorFallGravity = 2600f;
+    [SerializeField] private float doorFallSideKick = 150f;
+    [Tooltip("İlk fırlatma yukarı hızı (px/s). Parçalar önce yukarı zıplar, sonra düşer.")]
+    [SerializeField] private float doorFallLaunchUp = 600f;
+    [SerializeField] private float doorSpinDegrees = 80f;
+
     [Header("Shake")]
     [Tooltip("Sallama sucresi (saniye).")]
     [SerializeField, Range(0.1f, 0.8f)] private float shakeDuration = 0.35f;
@@ -89,6 +106,86 @@ public class ChestObstacleView : MonoBehaviour
         SetActive(coreObject,  true);
         SetActive(boltObject,  true);
         SetActive(plateObject, true);
+    }
+
+    /// <summary>İlk hit açılışı: kapaklar 2 büyük parça halinde düşer, iç (renkler) görünür.
+    /// GridSpawner.HandleChestOpened bunu çağırır (eski ShowAll yerine).</summary>
+    public void OpenCabinet()
+    {
+        // Önce iç görünsün (açık gövde + renkler)...
+        if (openBodySprite != null)
+        {
+            var root = GetComponent<Image>();
+            if (root != null) root.sprite = openBodySprite;
+        }
+
+        ShowAll();
+
+        // ...kapaklar EN SON spawn edilir → renklerin/içeriğin ÜSTÜnde düşer (arkada kalma fix'i).
+        if (doorFallEnabled && (leftDoorSprite != null || rightDoorSprite != null))
+            SpawnFallingDoors();
+    }
+
+    private void SpawnFallingDoors()
+    {
+        var rt = GetComponent<RectTransform>();
+        if (rt == null) return;
+
+        float w = rt.rect.width  > 1f ? rt.rect.width  : 100f;
+        float h = rt.rect.height > 1f ? rt.rect.height : 100f;
+
+        // Kapaklar yarım kabini DOLDURUR (Wardrobe gibi, preserveAspect=false); sap oranını korur.
+        if (leftDoorSprite  != null) SpawnDoorPiece(leftDoorSprite,  new Vector2(-w * 0.25f, 0f), w * 0.5f, h, -1, keepAspect: false);
+        if (rightDoorSprite != null) SpawnDoorPiece(rightDoorSprite, new Vector2(+w * 0.25f, 0f), w * 0.5f, h, +1, keepAspect: false);
+        if (doorHandleSprite != null) SpawnDoorPiece(doorHandleSprite, Vector2.zero, w * 0.30f, h * 0.30f, +1, keepAspect: true);
+    }
+
+    private void SpawnDoorPiece(Sprite sp, Vector2 localCenter, float w, float h, int dir, bool keepAspect)
+    {
+        if (sp == null) return;
+
+        var go = new GameObject("DoorPiece", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        var prt = go.GetComponent<RectTransform>();
+        prt.SetParent(transform, false);
+        prt.anchorMin = prt.anchorMax = prt.pivot = new Vector2(0.5f, 0.5f);
+        prt.sizeDelta = new Vector2(w, h);
+        prt.anchoredPosition = localCenter;
+        prt.SetAsLastSibling();   // renklerin/iç gövdenin ÜSTÜnde düşsün
+
+        var img = go.GetComponent<Image>();
+        img.sprite = sp;
+        img.color = Color.white;      // tam opak başla
+        img.preserveAspect = keepAspect;
+        img.raycastTarget = false;
+
+        StartCoroutine(CoDoorFall(prt, img, dir));
+    }
+
+    private IEnumerator CoDoorFall(RectTransform rt, Image img, int dir)
+    {
+        Vector2 pos = rt.anchoredPosition;
+        Vector2 vel = new Vector2(dir * doorFallSideKick, doorFallLaunchUp);   // önce yukarı fırlar, sonra düşer
+        float rot = 0f;
+        float t = 0f;
+        while (t < doorFallDuration && rt != null)
+        {
+            float dt = Time.deltaTime;
+            t += dt;
+            vel.y -= doorFallGravity * dt;
+            pos   += vel * dt;
+            rot   += dir * doorSpinDegrees * dt;
+            rt.anchoredPosition = pos;
+            rt.localRotation = Quaternion.Euler(0f, 0f, rot);
+
+            float k = Mathf.Clamp01(t / doorFallDuration);
+            // Fade yalnız SON %20'de → parçalar düşüşün büyük kısmında tam opak kalır.
+            if (img != null && k > 0.8f)
+            {
+                var c = img.color; c.a = Mathf.Lerp(1f, 0f, (k - 0.8f) / 0.2f); img.color = c;
+            }
+            yield return null;
+        }
+        if (rt != null) Destroy(rt.gameObject);
     }
 
     public void HideAll()

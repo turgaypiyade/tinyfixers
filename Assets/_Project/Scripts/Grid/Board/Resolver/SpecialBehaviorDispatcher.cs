@@ -265,7 +265,12 @@ public class SpecialBehaviorDispatcher
                     ActivateSpecial = ApplySpecialActivation,
                     EnqueueChainSpecials = resolution => QueueProcessor.EnqueueChainSpecials(resolution),
                     ProcessQueue = resolution => QueueProcessor.ProcessQueue(resolution),
-                    SuppressVisualSideEffects = ctx.IsPulsePulseComboActive
+                    // Override fanout AKTİFKEN (OverrideFanoutOrigin set) board'daki mevcut bir PulseCore
+                    // override tarafından yakalanınca ANLIK pulse VFX'ini oynatmasın — override tarama
+                    // anında (implant/patchbot'tan ÖNCE) çalıştığı için "efektten önce animasyon" oluyordu.
+                    // Mantık/affected aynen kalır; hücreler override'ın clear'ıyla temizlenir. Override+Pulse'ta
+                    // caught pulse zaten deferred zincirle (BuildPulseChainForCells) patlar → orada VFX kaybolmaz.
+                    SuppressVisualSideEffects = ctx.IsPulsePulseComboActive || ctx.OverrideFanoutOrigin != null
                 });
                 break;
 

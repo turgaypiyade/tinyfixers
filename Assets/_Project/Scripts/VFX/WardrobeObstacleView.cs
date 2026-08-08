@@ -20,6 +20,20 @@ public sealed class WardrobeObstacleView : MonoBehaviour
     private const float ShakeMagnitude = 6f;
     private const float ShakeDuration  = 0.35f;
 
+    // ── Kapı Düşüşü (ilk hit) ──────────────────────────────────────────────────
+    [Header("Kapı Düşüşü (ilk hit)")]
+    [Tooltip("İlk hitte kapalı sprite'ı 2 büyük parçaya (sol/sağ kapak) bölüp yerçekimiyle düşür.")]
+    [SerializeField] private bool doorFallEnabled = true;
+    [SerializeField, Min(0.05f)] private float doorFallDuration = 0.95f;
+    [Tooltip("Düşme ivmesi (px/s²). Büyük = daha hızlı/ağır düşer.")]
+    [SerializeField] private float doorFallGravity = 2600f;
+    [Tooltip("Kapakların yanlara savrulma hızı (px/s). Sol sola, sağ sağa.")]
+    [SerializeField] private float doorFallSideKick = 150f;
+    [Tooltip("İlk fırlatma yukarı hızı (px/s). Parçalar önce yukarı zıplar, sonra yerçekimiyle düşer.")]
+    [SerializeField] private float doorFallLaunchUp = 600f;
+    [Tooltip("Düşerken toplam dönme (derece/sn).")]
+    [SerializeField] private float doorSpinDegrees = 80f;
+
     // ── State ────────────────────────────────────────────────────────────────
     private Image _rootImage;
     private Coroutine _shakeRoutine;
@@ -42,16 +56,24 @@ public sealed class WardrobeObstacleView : MonoBehaviour
     /// <summary>Kapı açıldığında çağrılır. Arka plan değişir, item'lar yerleştirilir.</summary>
     public void OpenDoor(Sprite openBackground, List<Sprite> itemSprites, int shelfCount = 1)
     {
+        // Kapakları kapalı sprite'ın sol/sağ yarısından üretmek için ÖNCE yakala (swap'tan önce).
+        Sprite closedSprite = _rootImage != null ? _rootImage.sprite : null;
+
+        // Açık arka plan + item'lar yerleşir.
         if (_rootImage != null && openBackground != null)
             _rootImage.sprite = openBackground;
 
-        if (itemSprites == null || itemSprites.Count == 0) return;
+        if (itemSprites != null && itemSprites.Count > 0)
+        {
+            var rt = GetComponent<RectTransform>();
+            float w = rt != null ? rt.rect.width  : 100f;
+            float h = rt != null ? rt.rect.height : 100f;
+            PlaceItems(itemSprites, w, h, Mathf.Max(1, shelfCount));
+        }
 
-        var rt = GetComponent<RectTransform>();
-        float w = rt != null ? rt.rect.width  : 100f;
-        float h = rt != null ? rt.rect.height : 100f;
-
-        PlaceItems(itemSprites, w, h, Mathf.Max(1, shelfCount));
+        // Kapaklar EN SON spawn edilir → içerik/item'ların ÜSTÜnde düşer (arkada kalma fix'i).
+        if (doorFallEnabled && closedSprite != null)
+            SpawnFallingDoors(closedSprite);
     }
 
     /// <summary>En öndeki item'ı kaldırır (fade-out + destroy).</summary>
@@ -65,6 +87,82 @@ public sealed class WardrobeObstacleView : MonoBehaviour
     }
 
     public void Shake() => StartShake();
+
+    // ── Kapı Düşüşü ────────────────────────────────────────────────────────────
+
+    /// <summary>Kapalı sprite'ı sol/sağ iki büyük parçaya bölüp yerçekimiyle düşürür.</summary>
+    private void SpawnFallingDoors(Sprite closed)
+    {
+        var rt = GetComponent<RectTransform>();
+        if (rt == null) return;
+
+        float w = rt.rect.width  > 1f ? rt.rect.width  : 100f;
+        float h = rt.rect.height > 1f ? rt.rect.height : 100f;
+
+        SpawnDoorPiece(MakeHalfSprite(closed, true),  new Vector2(-w * 0.25f, 0f), w * 0.5f, h, -1);
+        SpawnDoorPiece(MakeHalfSprite(closed, false), new Vector2(+w * 0.25f, 0f), w * 0.5f, h, +1);
+    }
+
+    private void SpawnDoorPiece(Sprite sp, Vector2 localCenter, float w, float h, int dir)
+    {
+        if (sp == null) return;
+
+        var go = new GameObject("DoorPiece", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        var prt = go.GetComponent<RectTransform>();
+        prt.SetParent(transform, false);
+        prt.anchorMin = prt.anchorMax = prt.pivot = new Vector2(0.5f, 0.5f);
+        prt.sizeDelta = new Vector2(w, h);
+        prt.anchoredPosition = localCenter;
+        prt.SetAsLastSibling();   // açık arka planın ÜSTÜNde düşsün
+
+        var img = go.GetComponent<Image>();
+        img.sprite = sp;
+        img.color = Color.white;      // tam opak başla (yarı-saydam görünme fix'i)
+        img.raycastTarget = false;
+
+        StartCoroutine(CoDoorFall(prt, img, dir));
+    }
+
+    private IEnumerator CoDoorFall(RectTransform rt, Image img, int dir)
+    {
+        Vector2 pos = rt.anchoredPosition;
+        Vector2 vel = new Vector2(dir * doorFallSideKick, doorFallLaunchUp);   // önce yukarı fırlar, sonra düşer
+        float rot = 0f;
+        float t = 0f;
+        while (t < doorFallDuration && rt != null)
+        {
+            float dt = Time.deltaTime;
+            t += dt;
+            vel.y -= doorFallGravity * dt;
+            pos   += vel * dt;
+            rot   += dir * doorSpinDegrees * dt;
+            rt.anchoredPosition = pos;
+            rt.localRotation = Quaternion.Euler(0f, 0f, rot);
+
+            float k = Mathf.Clamp01(t / doorFallDuration);
+            // Fade yalnız SON %20'de → parçalar düşüşün büyük kısmında tam opak kalır.
+            if (img != null && k > 0.8f)
+                SetImageAlpha(img, Mathf.Lerp(1f, 0f, (k - 0.8f) / 0.2f));
+            yield return null;
+        }
+        if (rt != null) Destroy(rt.gameObject);
+    }
+
+    // Kapalı sprite'ın sol veya sağ YARISINI aynı texture'dan yeni bir Sprite olarak keser.
+    private static Sprite MakeHalfSprite(Sprite src, bool leftHalf)
+    {
+        if (src == null || src.texture == null) return src;
+        Rect r = src.rect;
+        Rect half = new Rect(leftHalf ? r.x : r.x + r.width * 0.5f, r.y, r.width * 0.5f, r.height);
+        float ppu = src.pixelsPerUnit > 0f ? src.pixelsPerUnit : 100f;
+        return Sprite.Create(src.texture, half, new Vector2(0.5f, 0.5f), ppu);
+    }
+
+    private static void SetImageAlpha(Image img, float a)
+    {
+        if (img == null) return;
+        var c = img.color; c.a = a; img.color = c;
+    }
 
     // ── Depth Layout ─────────────────────────────────────────────────────────
 

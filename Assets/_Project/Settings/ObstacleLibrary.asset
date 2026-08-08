@@ -46,7 +46,7 @@ MonoBehaviour:
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: ad976f0d8ba7a4542b86472e73b9af00, type: 3}
     legacyStageSprites: []
-    legacyStageDamageRules:
+    legacyStageDamageRules: 
     legacyBlocksCells: 1
     legacyBehavior: 1
   - id: 2
@@ -638,7 +638,7 @@ MonoBehaviour:
       allowDiagonal: 1
       locksInteraction: 1
       holdsTile: 0
-      suppressHitParticles: 0
+      suppressHitParticles: 1
       hitParticleSprites: []
       hitSound: {fileID: 8300000, guid: 6ef8f43a697c74693a3d128e32aaf957, type: 3}
       hitSoundVolume: 1
@@ -921,7 +921,7 @@ MonoBehaviour:
       allowDiagonal: 0
       locksInteraction: 0
       holdsTile: 0
-      suppressHitParticles: 0
+      suppressHitParticles: 1
       hitParticleSprites: []
       hitSound: {fileID: 8300000, guid: 6ef8f43a697c74693a3d128e32aaf957, type: 3}
       hitSoundVolume: 1
@@ -1489,7 +1489,7 @@ MonoBehaviour:
     legacyBehavior: 3
   - id: 41
     stages:
-    - sprite: {fileID: 21300000, guid: 8478a577d5c04490291436ab241e107f, type: 3}
+    - sprite: {fileID: 21300000, guid: d3254fec8f8404457b22550d2ae35a85, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
@@ -1500,7 +1500,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
-    - sprite: {fileID: 21300000, guid: 4557bc3f9388545b19b7cb86f3b5e50c, type: 3}
+    - sprite: {fileID: 21300000, guid: a32b1de8bf116409298dd4859633fd44, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
@@ -1511,7 +1511,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
-    - sprite: {fileID: 21300000, guid: 9c7dace73e0304dedaaeb98bf582d67f, type: 3}
+    - sprite: {fileID: 21300000, guid: 90a31a5c357da4ad7a289c4e7b0137d3, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
@@ -1522,7 +1522,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
-    - sprite: {fileID: 21300000, guid: 23de70f79b6d24ec0aa8a082fcbcae92, type: 3}
+    - sprite: {fileID: 21300000, guid: f7901e376791a46a6899f24cd99baec7, type: 3}
       damageRule: 0
       blocksCells: 1
       behavior: 1
@@ -1551,7 +1551,7 @@ MonoBehaviour:
     breakSound: {fileID: 0}
     breakSoundVolume: 1
     drawUnderTiles: 0
-    legacySprite: {fileID: 21300000, guid: 8478a577d5c04490291436ab241e107f, type: 3}
+    legacySprite: {fileID: 21300000, guid: d3254fec8f8404457b22550d2ae35a85, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1

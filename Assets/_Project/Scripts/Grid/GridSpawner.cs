@@ -1940,7 +1940,7 @@ public class GridSpawner : MonoBehaviour
     private void HandleChestOpened(int originIndex)
     {
         if (_chestViews.TryGetValue(originIndex, out var view) && view != null)
-            view.ShowAll();
+            view.OpenCabinet();   // kapaklar düşer + iç görünür (eski ShowAll yerine)
     }
 
     private void HandleChestColorRemoved(int originIndex, ChestColorMask removedColor)

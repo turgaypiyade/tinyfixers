@@ -20,6 +20,35 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
     private readonly List<TileSpecial> pendingSelection = new();
     private bool initialized;
 
+    // ── Harici teslimat hook'ları (ör. UFO streak event) ──────────────────────
+    // Board hazır olduktan SONRA, ilk yerleşimden ÖNCE beklenir (UFO uçup gelsin diye).
+    public System.Func<IEnumerator> PrePlacementGate;
+    // Her special bir hücreye uygulanınca (Reveal'den önce) çağrılır — UFO o hücreye ışın atar.
+    public System.Action<TileView, TileSpecial> OnSpecialPlaced;
+    // Tüm yerleşim bitince (Destroy'dan önce) çağrılır — UFO uçup gider.
+    public System.Action OnPlacementFinished;
+    // UFO kendi ışın-görseli kullanacaksa injector'ın kendi Reveal animasyonunu atla.
+    public bool SuppressDefaultReveal;
+    // Streak teslimatı prelevel selection state'ini TEMİZLEMESİN (o ayrı akış).
+    public bool SuppressSelectionStateClear;
+
+    /// <summary>
+    /// Prelevel ile ÇAKIŞMAYAN, kendine ait bir injector instance'ı oluşturur (find-existing yapmaz).
+    /// Streak/UFO teslimatı bunu kullanır; pendingSelection'ı ezmez.
+    /// </summary>
+    public static PreLevelSpecialRuntimeInjector CreateDedicated(IReadOnlyList<TileSpecial> selected)
+    {
+        if (selected == null || selected.Count == 0)
+            return null;
+
+        var go = new GameObject("StreakBoosterInjector_Runtime");
+        DontDestroyOnLoad(go);
+        var inj = go.AddComponent<PreLevelSpecialRuntimeInjector>();
+        inj.SuppressSelectionStateClear = true;
+        inj.Initialize(selected);
+        return inj;
+    }
+
     public static PreLevelSpecialRuntimeInjector EnsureForSelection(IReadOnlyList<TileSpecial> selected)
     {
         if (selected == null || selected.Count == 0)
@@ -99,6 +128,10 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         BuildCandidates();
         Debug.Log($"[PreLevelSpecialRuntimeInjector] Board ready. candidates={candidates.Count}, selected={selected.Count}");
 
+        // Harici teslimat kapısı: board hazır ama ilk yerleşimden ÖNCE bekle (UFO uçup gelsin).
+        if (PrePlacementGate != null)
+            yield return StartCoroutine(PrePlacementGate());
+
         int placedCount = 0;
         for (int i = 0; i < selected.Count; i++)
         {
@@ -108,7 +141,12 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
 
             placedCount++;
             PlayPlacementSfx(selected[i]);
-            yield return Reveal(tile);
+
+            // UFO ışını: bu hücreye at (Reveal'den önce). Reveal harici görselce bastırılabilir.
+            OnSpecialPlaced?.Invoke(tile, selected[i]);
+
+            if (!SuppressDefaultReveal)
+                yield return Reveal(tile);
 
             if (placementGap > 0f)
                 yield return new WaitForSeconds(placementGap);
@@ -117,7 +155,9 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         if (placedCount < selected.Count)
             Debug.LogWarning($"[PreLevelSpecialRuntimeInjector] Placed {placedCount}/{selected.Count} selected pre-level specials; not enough eligible normal tiles.");
 
-        if (placedCount > 0)
+        OnPlacementFinished?.Invoke();
+
+        if (placedCount > 0 && !SuppressSelectionStateClear)
             PreLevelSpecialSelectionState.Clear();
 
         Debug.Log($"[PreLevelSpecialRuntimeInjector] Finished placement. placed={placedCount}/{selected.Count}");

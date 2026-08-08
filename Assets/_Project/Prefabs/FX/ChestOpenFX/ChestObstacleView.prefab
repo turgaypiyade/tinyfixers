@@ -281,6 +281,16 @@ MonoBehaviour:
   coreObject: {fileID: 4907633970575135372}
   boltObject: {fileID: 6137094366863930342}
   plateObject: {fileID: 6665473014786357166}
+  leftDoorSprite: {fileID: 21300000, guid: 6cedd97d0bd1f4c5a893e8a62d035291, type: 3}
+  rightDoorSprite: {fileID: 21300000, guid: b8eb54bf099554686a62ca2b3f87dc56, type: 3}
+  doorHandleSprite: {fileID: 0}
+  openBodySprite: {fileID: 21300000, guid: fbea5f8030f704152af3b64f850f75d4, type: 3}
+  doorFallEnabled: 1
+  doorFallDuration: 0.8
+  doorFallGravity: 2600
+  doorFallSideKick: 150
+  doorFallLaunchUp: 600
+  doorSpinDegrees: 80
   shakeDuration: 0.35
   shakeMagnitude: 7
   shakeFrequency: 35
