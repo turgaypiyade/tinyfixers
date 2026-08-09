@@ -99,7 +99,8 @@ public sealed class StreakBoosterMenuBadge : MonoBehaviour
 
     private void Refresh()
     {
-        targetStage = StreakBoosterEvent.CurrentStage;
+        // UFO ile AYNI kural: mevcut level'da gerçekten teslim edilecek stage (eşik altında 0).
+        targetStage = StreakBoosterEvent.EffectiveStage(CurrentLevel.Global);
         if (stageLabel != null)
             stageLabel.text = $"{targetStage}/{StreakBoosterEvent.MaxStage}";
     }

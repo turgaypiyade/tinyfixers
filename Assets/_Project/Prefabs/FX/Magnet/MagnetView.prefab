@@ -60,3 +60,30 @@ MonoBehaviour:
   pulseMaxAlpha: 0.88
   moveDuration: 0.2
   destroyDuration: 0.35
+  style: 1
+  straightTubeSprite: {fileID: 21300000, guid: cb1532010ab1d41b7a75bd24a442ceb3, type: 3}
+  straightTubeHorizontalSprite: {fileID: 21300000, guid: 53c0ae59820bc43159c0f5378f3ba180, type: 3}
+  elbowTubeSprite: {fileID: 21300000, guid: 3fd49557dceb5442a9cbcb89ab017317, type: 3}
+  elbowUseFlip: 1
+  elbowBaseRight: 1
+  elbowBaseUp: 1
+  elbowRotationOffset: 0
+  elbowVerticalNudge: 1
+  tubeCellScale: 1
+  flowDashSprite: {fileID: 21300000, guid: 69916eb6c803343e78525ab67dd3dc8a, type: 3}
+  flowMaterial: {fileID: 0}
+  flowColor: {r: 0.4, g: 0.95, b: 1, a: 1}
+  flowSpeed: 220
+  flowDashCount: 4
+  flowDashLength: 0.7
+  flowThicknessRatio: 0.22
+  flowCornerRound: 0.4
+  hitFxEnabled: 1
+  hitSparkSprite: {fileID: 21300000, guid: e2e8847c0f5e24032a1b082d7f86d313, type: 3}
+  hitFxColor: {r: 0.8490566, g: 0.13714504, b: 0.108134575, a: 1}
+  hitFxDuration: 0.59
+  hitSparkCount: 8
+  hitSparkSize: 0.3
+  hitSparkSpeed: 3.2
+  hitSparkGravity: 9
+  hitFlashScale: 1.35

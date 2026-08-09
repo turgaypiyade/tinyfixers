@@ -5,9 +5,11 @@ using UnityEngine;
 [DefaultExecutionOrder(1000)]
 public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
 {
-    [SerializeField] private float boardReadyTimeout = 8f;
+    // Board hazır olduğu ZAMANLA değil BoardController.OnBecameIdle EVENT'iyle anlaşılır
+    // (giriş slide + ilk resolve bitince EndBusy tetikler). Güvenlik tavanı: event beklenmedik
+    // şekilde hiç gelmezse sonsuza takılmayalım — normalde devreye girmez.
+    [SerializeField] private float boardReadySafetyCap = 30f;
     [SerializeField] private int startupDelayFrames = 2;
-    [SerializeField] private int stableReadyFrames = 2;
     [SerializeField] private float revealDuration = 0.4f;
     [SerializeField] private float startScale = 2.5f;
     [SerializeField] private float placementGap = 0.08f;
@@ -111,19 +113,18 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         for (int i = 0; i < startupDelayFrames; i++)
             yield return null;
 
+        // Önce loading ekranı kapansın (görsel netlik), sonra board OnBecameIdle event'iyle
+        // gerçekten otursun. İkisi de zaman poll'u değil — biri IsVisible, biri idle event'i.
+        yield return WaitForLoadingScreenHidden();
+
         yield return WaitForReadyBoard();
 
         if (!IsBoardReady())
         {
-            Debug.LogWarning($"[PreLevelSpecialRuntimeInjector] Board was not ready before timeout; keeping pre-level selection for the next scene load. {GetBoardStatus()}");
+            Debug.LogWarning($"[PreLevelSpecialRuntimeInjector] Board idle oldu ama yerleştirilecek uygun taş yok (ya da board yok); teslimat atlandı. {GetBoardStatus()} hasEligible={(board != null && HasEligibleCandidate())}");
             Destroy(gameObject);
             yield break;
         }
-
-        // Loading ekranı board'u örterken special yerleştirme animasyonu + SFX
-        // oynamasın — oyuncu sadece sesi duyup animasyonu göremiyor. Loading ekranı
-        // tamamen kapanıp board görünür olana kadar bekle.
-        yield return WaitForLoadingScreenHidden();
 
         BuildCandidates();
         Debug.Log($"[PreLevelSpecialRuntimeInjector] Board ready. candidates={candidates.Count}, selected={selected.Count}");
@@ -164,32 +165,38 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // Board'un hazır olduğunu ZAMANLA değil EVENT'le anla: BoardController.OnBecameIdle.
+    // Giriş slide + ilk resolve tek bir BeginBusy scope'unda; depth 0'a düşünce (EndBusy)
+    // OnBecameIdle bir kez tetiklenir → board GERÇEKTEN oturmuştur. Zaten idle ise anında geçeriz.
     private IEnumerator WaitForReadyBoard()
     {
-        float elapsed = 0f;
-        float timeout = Mathf.Max(0.1f, boardReadyTimeout);
-        int stableFrames = 0;
-        int requiredStableFrames = Mathf.Max(1, stableReadyFrames);
+        if (board == null)
+            board = FindFirstObjectByType<BoardController>();
+        if (board == null)
+            yield break;
 
-        while (elapsed < timeout)
+        // Board zaten meşgul değilse beklemeye gerek yok (event'i kaçırmış olabiliriz — yarış).
+        if (!board.IsBusy)
+            yield break;
+
+        bool becameIdle = false;
+        System.Action onIdle = () => becameIdle = true;
+        board.OnBecameIdle += onIdle;
+
+        // EVENT gelene (veya state busy'den çıkana) kadar bekle. Zaman poll'u YOK; yalnızca
+        // event hiç gelmezse sistemi kilitlememek için cömert bir güvenlik tavanı var.
+        float safety = 0f;
+        while (board != null && board.IsBusy && !becameIdle && safety < boardReadySafetyCap)
         {
-            if (board == null)
-                board = FindFirstObjectByType<BoardController>();
-
-            if (IsBoardReady())
-            {
-                stableFrames++;
-                if (stableFrames >= requiredStableFrames)
-                    yield break;
-            }
-            else
-            {
-                stableFrames = 0;
-            }
-
-            elapsed += Time.unscaledDeltaTime;
+            safety += Time.unscaledDeltaTime;
             yield return null;
         }
+
+        if (board != null)
+            board.OnBecameIdle -= onIdle;
+
+        // Idle olduktan sonra veri (gridData/candidate) aynı kare stabilize olsun diye 1 kare ver.
+        yield return null;
     }
 
     private IEnumerator WaitForLoadingScreenHidden()
@@ -275,10 +282,23 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         if (tile.GetSpecial() != TileSpecial.None)
             return false;
 
-        if (board.ObstacleStateService != null &&
-            (board.ObstacleStateService.HasObstacleAt(x, y) ||
-             board.ObstacleStateService.IsInteractionLockedAt(x, y) ||
-             board.ObstacleStateService.IsMovableObstacleAt(x, y)))
+        // Obstacle'lar STACK/stage mantığında (bir hücreye üst üste birçok obstacle konabilir).
+        // ESKİ HATA: `HasObstacleAt` "altında obstacle var mı" diye bakıyordu → EN ÜSTTE normal
+        // hareketli taş olsa bile hücreyi eliyordu; obstacle'la kaplı level'larda (ör. 29) hiç aday
+        // kalmıyor, teslimat atlanıyordu.
+        //
+        // DOĞRUSU (oyunun zaten bildiği): EN ÜSTTEKİ stack'te KULLANILABİLİR normal taş var mı?
+        //  - `IsCellBlocked`: en üst stack blocker (Tube/Safe/Magnet/emitter…) → taş yok, ele.
+        //  - `IsMovableObstacleAt`: en üstteki "taş" bir obstacle (barrel/chest) → normal değil, ele.
+        //  - swap-bloklu (oyuncu kullanamaz): interaction-locked, oil, mud OLMAYAN under-tile → ele.
+        // İzinli: mud/grass ve altında obstacle olan ama üstte normal hareketli taş olan hücreler.
+        var obs = board.ObstacleStateService;
+        if (obs != null &&
+            (obs.IsCellBlocked(x, y) ||
+             obs.IsMovableObstacleAt(x, y) ||
+             obs.IsInteractionLockedAt(x, y) ||
+             obs.IsOilAt(x, y) ||
+             (obs.IsUnderTileObstacleAt(x, y) && !obs.IsMudAt(x, y))))
             return false;
 
         return true;
@@ -292,8 +312,12 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         if (board.IsMaskHoleCell(x, y))
             return true;
 
-        var obstacleService = board.ObstacleStateService;
-        if (obstacleService != null && obstacleService.HasObstacleAt(x, y))
+        // ESKİ HATA: HERHANGİ obstacle olan hücreyi yok sayıyordu → obstacle'la kaplı board'da
+        // (ör. her hücre mud) TÜM hücreler yok sayılıp filledCells=0 → board asla "hazır" görünmez
+        // → IsEligible düzelse bile teslimat atlanırdı. ARTIK yalnız taş TUTAMAYAN hücreleri yok say
+        // (blocker + movable obstacle). Mud/grass/oil ÜSTÜNDE normal taş var → sayılır.
+        var obs = board.ObstacleStateService;
+        if (obs != null && (obs.IsCellBlocked(x, y) || obs.IsMovableObstacleAt(x, y)))
             return true;
 
         return false;
@@ -370,7 +394,36 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
             }
         }
 
-        return $"size={board.Width}x{board.Height} busy={board.IsBusy} bgJobs={board.ActiveBackgroundJobs} holes={holes} tiles={tiles} gridData={gridData} candidates={candidatesCount}";
+        return $"size={board.Width}x{board.Height} busy={board.IsBusy} bgJobs={board.ActiveBackgroundJobs} holes={holes} tiles={tiles} gridData={gridData} candidates={candidatesCount} obstacles=[{DescribeObstacleHistogram()}]";
+    }
+
+    // "Yer yok" durumunda hangi obstacle'ların board'u kapladığını gösterir (teşhis).
+    private string DescribeObstacleHistogram()
+    {
+        var obs = board != null ? board.ObstacleStateService : null;
+        if (obs == null)
+            return "obstacleService=null";
+
+        var counts = new Dictionary<ObstacleId, int>();
+        for (int x = 0; x < board.Width; x++)
+        for (int y = 0; y < board.Height; y++)
+        {
+            if (board.Holes[x, y]) continue;
+            var id = obs.GetObstacleIdAt(x, y);
+            if (id == ObstacleId.None) continue;
+            counts[id] = counts.TryGetValue(id, out var c) ? c + 1 : 1;
+        }
+
+        if (counts.Count == 0)
+            return "none";
+
+        var sb = new System.Text.StringBuilder();
+        foreach (var kv in counts)
+        {
+            if (sb.Length > 0) sb.Append(',');
+            sb.Append(kv.Key).Append('x').Append(kv.Value);
+        }
+        return sb.ToString();
     }
 
     private bool ApplySpecial(TileView tile, TileSpecial special)

@@ -91,13 +91,38 @@ public class ChestObstacleView : MonoBehaviour
     }
     public void HideColor(ChestColorMask color)
     {
+        SetActive(GetColorImage(color), false);
+    }
+
+    // Renk maskesi → o rengin child Image'i (gizleme + sprite/konum erişimi tek yerden).
+    private Image GetColorImage(ChestColorMask color)
+    {
         switch (color)
         {
-            case ChestColorMask.Gear:  SetActive(gearObject,  false); break;
-            case ChestColorMask.Core:  SetActive(coreObject,  false); break;
-            case ChestColorMask.Bolt:  SetActive(boltObject,  false); break;
-            case ChestColorMask.Plate: SetActive(plateObject, false); break;
+            case ChestColorMask.Gear:  return gearObject;
+            case ChestColorMask.Core:  return coreObject;
+            case ChestColorMask.Bolt:  return boltObject;
+            case ChestColorMask.Plate: return plateObject;
+            default: return null;
         }
+    }
+
+    /// <summary>Kırılan renk objesinin sprite'ı — standart break particle'a beslemek için
+    /// (renk ObstacleLibrary'den gelmiyor; match'lenen renge göre runtime seçiliyor).</summary>
+    public Sprite GetColorSprite(ChestColorMask color)
+    {
+        var img = GetColorImage(color);
+        return img != null ? img.sprite : null;
+    }
+
+    /// <summary>Kırılan renk objesinin dünya merkezi — particle'ı 2x2 chest'in DOĞRU çeyreğine
+    /// patlatmak için (chest merkezine değil, kırılan objenin üstüne).</summary>
+    public Vector3 GetColorWorldCenter(ChestColorMask color)
+    {
+        var img = GetColorImage(color);
+        if (img != null && img.rectTransform != null)
+            return img.rectTransform.position;
+        return transform.position;
     }
 
     public void ShowAll()

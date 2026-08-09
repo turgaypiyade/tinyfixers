@@ -27,6 +27,12 @@ public static class StreakBoosterEvent
     public static bool IsActiveForLevel(int globalLevel) => globalLevel >= ThresholdLevel;
 
     /// <summary>
+    /// Badge/progress için: verilen level'da GERÇEKTE teslim edilecek stage. Event aktif değilse 0
+    /// döner — böylece badge (yeşil) ile UFO (teslimat) HER ZAMAN aynı fikirde olur.
+    /// </summary>
+    public static int EffectiveStage(int globalLevel) => IsActiveForLevel(globalLevel) ? CurrentStage : 0;
+
+    /// <summary>
     /// Bu oyuna girerken hak edilen special listesi. Level eşiğin altındaysa VEYA streak 0 ise boş.
     /// Ödüller sabit; random line her çağrıda V/H arasından seçilir.
     /// </summary>

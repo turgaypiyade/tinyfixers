@@ -39,6 +39,86 @@ public class MagnetView : MonoBehaviour
     [Header("Destroy Animation")]
     [SerializeField, Min(0.05f)] private float destroyDuration = 0.35f;
 
+    // ── Yeni Tüp stili (eski ChainLinks korunur; geri dönüş için bayrakla seçilir) ──
+    public enum MagnetStyle { ChainLinks, Tube }
+
+    [Header("Style")]
+    [Tooltip("ChainLinks = mevcut/ESKİ görünüm (geri dönüş için korunur). Tube = yeni tüp + akan akım.")]
+    [SerializeField] private MagnetStyle style = MagnetStyle.ChainLinks;
+
+    [Header("Tube — Sprites")]
+    [Tooltip("DÜZ DİKEY tüp. Kırmızı kılıf + mavi core.")]
+    [SerializeField] private Sprite straightTubeSprite;
+    [Tooltip("DÜZ YATAY tüp (opsiyonel). Boşsa dikey tüp 90° döndürülür; atarsan döndürme olmaz (highlight/hiza tam oturur).")]
+    [SerializeField] private Sprite straightTubeHorizontalSprite;
+    [Tooltip("L-elbow (köşe). TEK sprite; 4 yönelime döndürülür.")]
+    [SerializeField] private Sprite elbowTubeSprite;
+    [Tooltip("AÇIK (önerilen): elbow 90° DÖNDÜRÜLMEZ, FLIP (aynalama) ile 4 köşe üretilir → kollar hep " +
+             "yatay/dikey kalır, düz tüplere tam oturur. KAPALI: eski döndürme (elbowRotationOffset).")]
+    [SerializeField] private bool elbowUseFlip = true;
+    [Tooltip("Base L'nin YATAY kolu SAĞA mı bakıyor? Standart L (└) = SAĞ. L SOLA açılıyorsa (┘/ters-L) KAPAT.")]
+    [SerializeField] private bool elbowBaseRight = true;
+    [Tooltip("Base L'nin DİKEY kolu YUKARI mı bakıyor? Standart L yukarı açılır → AÇIK.")]
+    [SerializeField] private bool elbowBaseUp = true;
+    [Tooltip("elbowUseFlip KAPALIYKEN: L-elbow döndürme ofseti (°).")]
+    [SerializeField] private float elbowRotationOffset = 0f;
+    [Tooltip("Elbow ince dikey hizalama (px): ÜST köşeler (L/ters-L) +YUKARI, ALT köşeler (alt-sağ/alt-sol) -AŞAĞI kayar.")]
+    [SerializeField] private float elbowVerticalNudge = 1f;
+    [Tooltip("Tüp/elbow hücre kaplama oranı (1 = tam hücre; darlık sprite padding'inden gelir).")]
+    [SerializeField, Range(0.5f, 1.2f)] private float tubeCellScale = 1f;
+
+    [Header("Tube — Flow (akan akım)")]
+    [Tooltip("Kanal boyunca akan enerji sprite'ı (ince parlak çizgi, yatay). Boşsa akış çizilmez.")]
+    [SerializeField] private Sprite flowDashSprite;
+    [Tooltip("Akış için opsiyonel additive UI material (parlama). Boşsa normal alpha.")]
+    [SerializeField] private Material flowMaterial;
+    [SerializeField] private Color flowColor = new Color(0.4f, 0.95f, 1f, 1f);
+    [Tooltip("Akış hızı (px/sn). Negatif = ters yön.")]
+    [SerializeField] private float flowSpeed = 220f;
+    [Tooltip("Aynı anda kanalda görünen akış çizgisi sayısı.")]
+    [SerializeField, Range(1, 12)] private int flowDashCount = 4;
+    [Tooltip("Akış çizgisi UZUNLUĞU (flow yönünde) / hücre.")]
+    [SerializeField, Range(0.2f, 1.5f)] private float flowDashLength = 0.7f;
+    [Tooltip("Akış çizgisi KALINLIĞI / hücre (mavi kanala sığmalı).")]
+    [SerializeField, Range(0.05f, 0.6f)] private float flowThicknessRatio = 0.22f;
+    [Tooltip("Köşe yuvarlama (0..0.49 hücre): akış köşeyi bu yarıçapla döner (snap yerine kavis). 0 = keskin.")]
+    [SerializeField, Range(0f, 0.49f)] private float flowCornerRound = 0.4f;
+
+    [Header("Tube — Hit FX (elektrik boşalması)")]
+    [Tooltip("Magnet hit alınca uçta elektrik animasyonu oynasın mı.")]
+    [SerializeField] private bool hitFxEnabled = true;
+    [Tooltip("Zikzak yıldırım rengi (elektrik: cyan/beyaz iyi durur).")]
+    [SerializeField] private Color hitFxColor = new Color(0.7f, 0.95f, 1f, 1f);
+    [Tooltip("Efekt ömrü (sn) — kısa/keskin.")]
+    [SerializeField, Min(0.05f)] private float hitFxDuration = 0.22f;
+    [Tooltip("Aynı anda kaç zikzak (1-2 iyi).")]
+    [SerializeField, Range(1, 4)] private int hitBoltCount = 2;
+    [Tooltip("Zikzak kırılma sayısı (segment).")]
+    [SerializeField, Range(2, 12)] private int hitZigzagSegments = 5;
+    [Tooltip("Zikzak GENİŞLİĞİ (U ağzı boyunca) / hücre.")]
+    [SerializeField, Range(0.3f, 1.5f)] private float hitZigzagSpan = 0.9f;
+    [Tooltip("Zikzak SAPMA yüksekliği / hücre (öne-arkaya kırılma).")]
+    [SerializeField, Range(0.02f, 0.35f)] private float hitZigzagAmplitude = 0.1f;
+    [Tooltip("Çizgi KALINLIĞI / hücre.")]
+    [SerializeField, Range(0.02f, 0.2f)] private float hitBoltThickness = 0.06f;
+    [Tooltip("Magnetin ÖNÜNDE ne kadar (ağız yönünde) / hücre.")]
+    [SerializeField, Range(0f, 0.6f)] private float hitFrontOffset = 0.12f;
+    [Tooltip("Magnet punch ölçeği (hit'te uç büyüme).")]
+    [SerializeField, Range(1f, 2f)] private float hitFlashScale = 1.25f;
+    [Tooltip("Hit sesi (opsiyonel). Atanırsa hit'te çalınır.")]
+    [SerializeField] private AudioClip hitSfx;
+    [SerializeField, Range(0f, 1f)] private float hitSfxVolume = 0.7f;
+
+    // Tube runtime
+    private RectTransform[] flowDashes;
+    private Vector2[] pathPoints;
+    private float flowDistance;
+    private int activeAIdx, activeBIdx;
+    // Köşeleri yuvarlanmış akış yolu (dash bunu takip eder → köşede snap yok)
+    private Vector2[] smoothPts;
+    private float[] smoothCum;      // kümülatif arc uzunluğu
+    private float[] cellArcPos;     // her cell index'in smooth path'teki arc mesafesi (aktif aralık için)
+
     private int[] path;
     private int gridWidth;
     private float cellSize;
@@ -66,7 +146,10 @@ public class MagnetView : MonoBehaviour
 
         BuildChildren();
         RefreshGlowVisibility(0, path.Length - 1);
-        StartCoroutine(PulseRoutine());
+
+        // Eski stil alpha-pulse; yeni tüp stili Update()'te akan akım kullanır.
+        if (style == MagnetStyle.ChainLinks)
+            StartCoroutine(PulseRoutine());
     }
 
     /// Called by MagnetObstacleService after a hit moves one of the endpoints.
@@ -84,12 +167,130 @@ public class MagnetView : MonoBehaviour
         {
             OrientMagnet(magnetAImage, newAIdx, newAIdx + 1);   // köşeyi geçince yön güncellenir
             StartCoroutine(MoveImageRoutine(magnetAImage, aFrom, aTo));
+            PlayHitFx(aTo, magnetAImage, ScreenDir(path[newAIdx], path[newAIdx + 1]));   // ağız içeri (path'e) bakar
         }
         else
         {
             OrientMagnet(magnetBImage, newBIdx, newBIdx - 1);
             StartCoroutine(MoveImageRoutine(magnetBImage, bFrom, bTo));
+            PlayHitFx(bTo, magnetBImage, ScreenDir(path[newBIdx], path[newBIdx - 1]));
         }
+    }
+
+    // Board'un üst VFX overlay'i (break/goal FX ile aynı; tile'ların üstünde). Runtime'da bulunur/cache'lenir.
+    private RectTransform _fxOverlay;
+    private bool _fxOverlayResolved;
+    private RectTransform ResolveFxOverlay()
+    {
+        if (_fxOverlayResolved) return _fxOverlay;
+        _fxOverlayResolved = true;
+        var board = FindFirstObjectByType<BoardController>();
+        _fxOverlay = board != null ? board.BreakFxParent : null;
+        return _fxOverlay;
+    }
+
+    // ── Hit FX: U-mıknatısın önünde zikzak yıldırım + magnet punch + ses ──
+    private void PlayHitFx(Vector2 at, Image core, Vector2 mouthDir)
+    {
+        if (!hitFxEnabled) return;
+        if (hitSfx != null)
+            AudioSource.PlayClipAtPoint(hitSfx, Camera.main != null ? Camera.main.transform.position : Vector3.zero, hitSfxVolume);
+        StartCoroutine(CoHitFx(at, core, mouthDir));
+    }
+
+    // Sprite atanmasa bile bolt çizilebilsin diye 1x1 beyaz fallback.
+    private static Sprite _whiteSprite;
+    private static Sprite WhiteSprite()
+    {
+        if (_whiteSprite != null) return _whiteSprite;
+        var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+        var px = new Color[4]; for (int i = 0; i < 4; i++) px[i] = Color.white;
+        tex.SetPixels(px); tex.Apply();
+        _whiteSprite = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f), 100f);
+        return _whiteSprite;
+    }
+
+    // U-mıknatısın ÖNÜNDE, ağzı boyunca (kutuplar arası) prosedürel ZİKZAK yıldırım; flicker'lı, kısa.
+    private IEnumerator CoHitFx(Vector2 at, Image core, Vector2 mouthDir)
+    {
+        var sprite = WhiteSprite();   // prosedürel — sprite gerekmez
+        RectTransform parentRt = ResolveFxOverlay() ?? (RectTransform)transform;
+        int layer = parentRt.gameObject.layer;
+
+        if (mouthDir.sqrMagnitude < 0.0001f) mouthDir = Vector2.up;
+        mouthDir = mouthDir.normalized;
+        Vector2 perp = new Vector2(-mouthDir.y, mouthDir.x);          // ağız boyunca (bir uçtan diğerine)
+        Vector2 center = at + mouthDir * (cellSize * hitFrontOffset); // magnetin ÖNÜnde
+
+        int bolts = Mathf.Max(1, hitBoltCount);
+        int segs = Mathf.Max(2, hitZigzagSegments);
+        float span = cellSize * hitZigzagSpan;
+        float amp = cellSize * hitZigzagAmplitude;
+        float thick = Mathf.Max(2f, cellSize * hitBoltThickness);
+        float dur = Mathf.Max(0.05f, hitFxDuration);
+
+        int total = bolts * segs;
+        var rts  = new RectTransform[total];
+        var imgs = new Image[total];
+        for (int i = 0; i < total; i++)
+        {
+            var go = new GameObject("Zigzag", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(parentRt, false);
+            go.layer = layer;
+            var img = go.GetComponent<Image>();
+            img.sprite = sprite; img.color = hitFxColor; img.raycastTarget = false;
+            var rt = img.rectTransform;
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.SetAsLastSibling();
+            rts[i] = rt; imgs[i] = img;
+        }
+
+        float t = 0f;
+        try
+        {
+            while (t < dur)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / dur);
+                float alpha = (Random.value < 0.78f ? 1f : 0.25f) * (1f - k * 0.6f);   // hızlı flicker + sön
+
+                for (int b = 0; b < bolts; b++)
+                {
+                    Vector2 A = center - perp * (span * 0.5f);
+                    Vector2 B = center + perp * (span * 0.5f);
+                    Vector2 prev = A;
+                    for (int s = 0; s < segs; s++)
+                    {
+                        float f1 = (s + 1) / (float)segs;
+                        Vector2 pt = Vector2.Lerp(A, B, f1);
+                        if (s < segs - 1) pt += mouthDir * Random.Range(-amp, amp);   // öne-arkaya zikzak
+                        PlaceZig(rts[b * segs + s], imgs[b * segs + s], prev, pt, thick, alpha);
+                        prev = pt;
+                    }
+                }
+
+                if (core != null)
+                    core.rectTransform.localScale = Vector3.one * (1f + (hitFlashScale - 1f) * Mathf.Sin(k * Mathf.PI));
+
+                yield return null;
+            }
+        }
+        finally
+        {
+            for (int i = 0; i < total; i++) if (rts[i] != null) Destroy(rts[i].gameObject);
+            if (core != null) core.rectTransform.localScale = Vector3.one;
+        }
+    }
+
+    private void PlaceZig(RectTransform rt, Image img, Vector2 fromA, Vector2 toA, float thick, float alpha)
+    {
+        Vector2 d = toA - fromA;
+        Vector3 fromW = transform.TransformPoint(fromA.x, fromA.y, 0f);
+        Vector3 toW   = transform.TransformPoint(toA.x,   toA.y,   0f);
+        rt.position = (fromW + toW) * 0.5f;
+        rt.sizeDelta = new Vector2(Mathf.Max(1f, d.magnitude), thick);
+        rt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg);
+        var c = img.color; c.a = alpha; img.color = c;
     }
 
     /// Fade-out then destroy.
@@ -103,7 +304,11 @@ public class MagnetView : MonoBehaviour
 
     private void BuildChildren()
     {
-        BuildChainLinks();
+        // Tüp/zincir (alt katman). Tube ayrıca akış çizgilerini oluşturur.
+        if (style == MagnetStyle.Tube)
+            BuildTube();
+        else
+            BuildChainLinks();
 
         // Magnet A — yönelim path yönüne göre döndürülür (sabit flip yerine rotation).
         magnetAImage = CreateMagnetImage("MagnetA", flip: false);
@@ -114,6 +319,274 @@ public class MagnetView : MonoBehaviour
         magnetBImage = CreateMagnetImage("MagnetB", flip: false);
         magnetBImage.rectTransform.anchoredPosition = CellCenter(path[path.Length - 1]);
         OrientMagnet(magnetBImage, path.Length - 1, path.Length - 2);
+    }
+
+    // ── Yeni tüp render ────────────────────────────────────────────────────────
+    // Her İÇ path hücresine komşularına göre DÜZ tüp veya L-elbow koyar (uçlarda magnet).
+    // Akış çizgileri path polyline'ı boyunca akar. Görünürlük eski sistemle aynı (glowCircles).
+    private void BuildTube()
+    {
+        int n = path.Length;
+        var imgs = new System.Collections.Generic.List<Image>();
+        var poss = new System.Collections.Generic.List<float>();
+
+        float size = cellSize * tubeCellScale;
+
+        // ── Geçiş 1: corner'ların flip'ini hesapla ──
+        var fxArr = new bool[n];
+        var fyArr = new bool[n];
+        var isCorner = new bool[n];
+        for (int i = 1; i < n - 1; i++)
+        {
+            Vector2 inD  = ScreenDir(path[i - 1], path[i]);
+            Vector2 outD = ScreenDir(path[i], path[i + 1]);
+            if (Vector2.Dot(inD, outD) <= 0.99f)
+            {
+                isCorner[i] = true;
+                ComputeElbowFlip(inD, outD, out fxArr[i], out fyArr[i]);
+            }
+        }
+
+        // ── Geçiş 2: flip'i path boyunca YÜRÜYEREK yay — bir RUN içinde SABİT kalır (mid-run kırılma yok).
+        // Corner kendi flip'ini tutar ve sonraki straight'lara taşır; ilk corner'ın flip'i öncesine de uygulanır.
+        bool curFx = false, curFy = false;
+        for (int i = 1; i < n - 1; i++) { if (isCorner[i]) { curFx = fxArr[i]; curFy = fyArr[i]; break; } }
+        for (int i = 1; i < n - 1; i++)
+        {
+            if (isCorner[i]) { curFx = fxArr[i]; curFy = fyArr[i]; }
+            else { fxArr[i] = curFx; fyArr[i] = curFy; }
+        }
+
+        // ── Geçiş 3: yerleştir (corner + straight AYNI flip'le → gölge/çizgi birleşir) ──
+        for (int i = 1; i < n - 1; i++)   // uçlar magnet; iç hücreler tüp
+        {
+            Vector2 inD  = ScreenDir(path[i - 1], path[i]);
+            Vector2 outD = ScreenDir(path[i], path[i + 1]);
+            var scale = new Vector3(fxArr[i] ? -1f : 1f, fyArr[i] ? -1f : 1f, 1f);
+
+            Image cell;
+            if (!isCorner[i])
+            {
+                bool horizontal = Mathf.Abs(outD.x) > Mathf.Abs(outD.y);
+                if (horizontal && straightTubeHorizontalSprite != null)
+                    cell = CreateTubeCell("TubeStraightH", straightTubeHorizontalSprite, CellCenter(path[i]), 0f, size);
+                else
+                    cell = CreateTubeCell("TubeStraight", straightTubeSprite, CellCenter(path[i]),
+                        horizontal ? AngleForDirection(outD) : 0f, size);
+                cell.rectTransform.localScale = scale;
+            }
+            else if (elbowUseFlip)
+            {
+                // Üst köşe (dikey kol yukarı) +nudge, alt köşe -nudge.
+                float vy = Mathf.Abs((-inD).y) > Mathf.Abs((-inD).x) ? (-inD).y : outD.y;
+                Vector2 nudged = CellCenter(path[i]);
+                nudged.y += (vy > 0f) ? elbowVerticalNudge : -elbowVerticalNudge;
+                cell = CreateTubeCell("TubeElbow", elbowTubeSprite, nudged, 0f, size);
+                cell.rectTransform.localScale = scale;
+            }
+            else
+            {
+                cell = CreateTubeCell("TubeElbow", elbowTubeSprite, CellCenter(path[i]), ElbowAngle(inD, outD), size);
+            }
+
+            imgs.Add(cell);
+            poss.Add(i);
+        }
+
+        glowCircles = imgs.ToArray();     // görünürlük/destroy eski sistemle ortak
+        linkPathPos = poss.ToArray();
+
+        BuildFlow();
+    }
+
+    // Köşe iki komşuya açılır (dirToPrev=-inD, dirToNext=outD). Bisector'a göre 4 yönelimden biri.
+    // Base L'nin varsayılan yönü için elbowRotationOffset ile bir kez kalibre edilir.
+    // Elbow'u DÖNDÜRMEK yerine FLIP ile yerleştir: bir kol yatay bir kol dikey; aynalama kolları
+    // eksen-hizalı tutar → düz tüplere tam oturur, highlight tutarlı kalır. Base L'nin yönü
+    // elbowBaseRight/elbowBaseUp ile bir kez bildirilir; 4 köşe flipX/flipY kombinasyonuyla çıkar.
+    private void ComputeElbowFlip(Vector2 inD, Vector2 outD, out bool flipX, out bool flipY)
+    {
+        Vector2 toPrev = -inD;
+        Vector2 toNext = outD;
+
+        // Köşenin yatay kol yönü (x) ve dikey kol yönü (y).
+        float hx = Mathf.Abs(toPrev.x) > Mathf.Abs(toPrev.y) ? toPrev.x : toNext.x;
+        float vy = Mathf.Abs(toPrev.y) > Mathf.Abs(toPrev.x) ? toPrev.y : toNext.y;
+
+        flipX = (hx > 0f) != elbowBaseRight;
+        flipY = (vy > 0f) != elbowBaseUp;
+    }
+
+    private float ElbowAngle(Vector2 inD, Vector2 outD)
+    {
+        // Köşe iki komşuya açılır: bisector standart açısı (CCW, +x). 4 köşe → 45/135/225/315.
+        // -45 ile base'i "UP+RIGHT köşesi = 0°" kabul ederiz; base L farklıysa offset ile 90° adımlarla hizala.
+        Vector2 bis = (-inD + outD);
+        if (bis.sqrMagnitude < 0.0001f) return elbowRotationOffset;
+        bis.Normalize();
+        float bisAngle = Mathf.Atan2(bis.y, bis.x) * Mathf.Rad2Deg;   // standart (localRotation.z ile aynı çerçeve)
+        return bisAngle - 45f + elbowRotationOffset;
+    }
+
+    private Image CreateTubeCell(string goName, Sprite sprite, Vector2 pos, float angleZ, float size)
+    {
+        var go = new GameObject(goName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(transform, false);
+        var img = go.GetComponent<Image>();
+        img.sprite = sprite;
+        img.raycastTarget = false;
+        var rt = img.rectTransform;
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot     = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(size, size);
+        rt.anchoredPosition = pos;
+        rt.localRotation = Quaternion.Euler(0f, 0f, angleZ);
+        return img;
+    }
+
+
+    private void BuildFlow()
+    {
+        int n = path.Length;
+        pathPoints = new Vector2[n];
+        for (int i = 0; i < n; i++) pathPoints[i] = CellCenter(path[i]);
+
+        activeAIdx = 0;
+        activeBIdx = n - 1;
+
+        if (flowDashSprite == null || Mathf.Approximately(flowSpeed, 0f))
+        {
+            flowDashes = null;
+            return;
+        }
+
+        BuildSmoothPath();   // köşeleri yuvarla → dash köşede snap yapmadan döner
+
+        flowDashes = new RectTransform[Mathf.Max(1, flowDashCount)];
+        float len   = cellSize * flowDashLength;
+        float thick = cellSize * flowThicknessRatio;
+
+        for (int i = 0; i < flowDashes.Length; i++)
+        {
+            var go = new GameObject("FlowDash", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(transform, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = flowDashSprite;
+            img.color  = flowColor;
+            img.raycastTarget = false;
+            if (flowMaterial != null) img.material = flowMaterial;
+            var rt = img.rectTransform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot     = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(len, thick);   // yatay dash: uzun eksen = flow yönü
+            flowDashes[i] = rt;
+        }
+    }
+
+    // Akan akım: dash'ler YUVARLANMIŞ akış yolu boyunca, GÜNCEL uçlar (activeAIdx..activeBIdx) arasında akar.
+    private void Update()
+    {
+        if (style != MagnetStyle.Tube || flowDashes == null || cellArcPos == null) return;
+
+        float aD = cellArcPos[Mathf.Clamp(activeAIdx, 0, cellArcPos.Length - 1)];
+        float bD = cellArcPos[Mathf.Clamp(activeBIdx, 0, cellArcPos.Length - 1)];
+        float span = bD - aD;
+
+        if (span <= 1f)
+        {
+            for (int i = 0; i < flowDashes.Length; i++)
+                if (flowDashes[i] != null && flowDashes[i].gameObject.activeSelf)
+                    flowDashes[i].gameObject.SetActive(false);
+            return;
+        }
+
+        flowDistance += flowSpeed * Time.deltaTime;
+        float spacing = span / flowDashes.Length;
+
+        for (int i = 0; i < flowDashes.Length; i++)
+        {
+            var rt = flowDashes[i];
+            if (rt == null) continue;
+            if (!rt.gameObject.activeSelf) rt.gameObject.SetActive(true);
+
+            float d = aD + Mathf.Repeat(flowDistance + i * spacing, span);
+            SmoothPathAt(d, out Vector2 pos, out Vector2 dir);
+            rt.anchoredPosition = pos;
+            rt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+        }
+    }
+
+    // Hücre merkezlerinden geçen keskin polyline'ı, köşelerde quadratic-bezier ARC ile yuvarlar.
+    // Böylece akış köşede pozisyon/rotasyon zıplaması yapmaz, tüpün kıvrımını takip eder.
+    private void BuildSmoothPath()
+    {
+        int n = pathPoints.Length;
+        var pts = new System.Collections.Generic.List<Vector2>();
+        const int arcSeg = 6;
+        float w = Mathf.Clamp(flowCornerRound, 0f, 0.49f) * cellSize;
+
+        pts.Add(pathPoints[0]);
+        for (int k = 1; k < n; k++)
+        {
+            Vector2 prev = pathPoints[k - 1];
+            Vector2 cur  = pathPoints[k];
+            bool corner = (k < n - 1)
+                && Vector2.Dot((cur - prev).normalized, (pathPoints[k + 1] - cur).normalized) < 0.99f;
+
+            if (!corner || w <= 0.001f)
+            {
+                pts.Add(cur);
+            }
+            else
+            {
+                Vector2 dIn  = (cur - prev).normalized;
+                Vector2 dOut = (pathPoints[k + 1] - cur).normalized;
+                Vector2 p0 = cur - dIn * w;    // kavis başı (giren kolda)
+                Vector2 p2 = cur + dOut * w;   // kavis sonu (çıkan kolda)
+                pts.Add(p0);
+                for (int j = 1; j <= arcSeg; j++)
+                {
+                    float u = j / (float)arcSeg, omu = 1f - u;
+                    pts.Add(omu * omu * p0 + 2f * omu * u * cur + u * u * p2);
+                }
+            }
+        }
+
+        smoothPts = pts.ToArray();
+        smoothCum = new float[smoothPts.Length];
+        for (int i = 1; i < smoothPts.Length; i++)
+            smoothCum[i] = smoothCum[i - 1] + Vector2.Distance(smoothPts[i - 1], smoothPts[i]);
+
+        // Her cell index → en yakın smooth noktasının arc mesafesi (aktif aralık daralınca kullanılır).
+        cellArcPos = new float[n];
+        for (int k = 0; k < n; k++)
+        {
+            float best = float.MaxValue; int bi = 0;
+            for (int i = 0; i < smoothPts.Length; i++)
+            {
+                float dd = (smoothPts[i] - pathPoints[k]).sqrMagnitude;
+                if (dd < best) { best = dd; bi = i; }
+            }
+            cellArcPos[k] = smoothCum[bi];
+        }
+    }
+
+    private void SmoothPathAt(float d, out Vector2 pos, out Vector2 dir)
+    {
+        int m = smoothPts.Length;
+        d = Mathf.Clamp(d, 0f, smoothCum[m - 1]);
+
+        int s = m - 2;
+        for (int i = 1; i < m; i++)
+            if (smoothCum[i] >= d) { s = i - 1; break; }
+
+        float segLen = Mathf.Max(0.0001f, smoothCum[s + 1] - smoothCum[s]);
+        float t = (d - smoothCum[s]) / segLen;
+        pos = Vector2.Lerp(smoothPts[s], smoothPts[s + 1], t);
+        dir = smoothPts[s + 1] - smoothPts[s];
+        if (dir.sqrMagnitude < 0.0001f) dir = Vector2.right; else dir.Normalize();
     }
 
     // Chain links are drawn on the edges between path cells. A separate round
@@ -205,6 +678,10 @@ public class MagnetView : MonoBehaviour
 
     private void RefreshGlowVisibility(int aIdx, int bIdx)
     {
+        // Akış da aynı güncel aralıkta akar.
+        activeAIdx = aIdx;
+        activeBIdx = bIdx;
+
         // Bakla SADECE güncel uçlar (aIdx,bIdx) ARASINDA görünür; uçlarda magnet sprite var.
         // Küçüldükçe (aIdx↑ / bIdx↓) dışarıda kalan baklalar gizlenir. linkPathPos = path-index konumu.
         for (int i = 0; i < glowCircles.Length; i++)

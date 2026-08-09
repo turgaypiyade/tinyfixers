@@ -361,7 +361,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
     // hepsi goal/win durumunu değiştirebilir. Eskiden level-end yalnız BlockingBackgroundJobs'ı +
     // "remainingGoals <= nonBlockingJobs" gibi kırılgan bir tahmini bekliyordu → PatchBot/rocket
     // HAVADAYKEN (henüz hedefe konmadan) fail popup'ı açılabiliyordu. Artık tek ölçüt: iş var mı yok mu.
-    // Sonsuz bekleme riski force-deadline (LevelEndForceDeadlinePassed) ile kapalı.
+    // KURAL (2026-08-09): board bu predikata göre ÇALIŞIRKEN asla karar verilmez; zaman-tabanlı
+    // zorlama kaldırıldı. Yalnız gerçek leak'e karşı EvaluateAfterBoardSettled'da uzun teşhis tavanı var.
     private bool IsBoardWorkingForLevelEnd()
     {
         if (board == null)
@@ -417,7 +418,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
             return;
         }
 
-        // 2. cancel (veya gösterilecek kayıp yok): hamle eklemeyi reddetti → event item'ları kaybolur, ana menü.
+        // 2. cancel (veya gösterilecek kayıp yok): hamle eklemeyi reddetti → GERÇEKTEN vazgeçti.
+        // Fail'i ŞİMDİ işaretle (streak kırılır); event item'ları kaybolur, ana menü.
+        PlayerStats.MarkCurrentLevelFailed();
         ProgressEventService.Instance?.DiscardStagedGains();
         ReturnToMainMenuImmediate();
     }
@@ -849,8 +852,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         // hedefler cascade sırasında tamamlanacakken fail popup'ı erken açılır.
         // Success yolu (CompleteSuccessAfterBoardSettled) zaten bu şekilde bekliyor;
         // fail yolunu da gerçek idle'a kadar erteleyerek simetriyi sağlıyoruz.
-        // ANCAK üst-süre dolduysa artık bekleme — zorla değerlendir (sonsuz "0 hamleyle devam" fix'i).
-        if (IsBoardWorkingForLevelEnd() && !LevelEndForceDeadlinePassed)
+        // KURAL: aktif board akışı MUTLAK bitene kadar KARAR VERME — zaman-tabanlı zorlama yok.
+        if (IsBoardWorkingForLevelEnd())
         {
             if (!failSettleWaitRunning)
             {
@@ -924,8 +927,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
             }
 
             // Board yeniden çalışmaya başladıysa (geç cascade/efekt) — gerçek idle'ı bekle,
-            // sonra yeniden değerlendir. ANCAK üst-süre dolduysa artık bekleme, fail'i kesinleştir.
-            if (IsBoardWorkingForLevelEnd() && !LevelEndForceDeadlinePassed)
+            // sonra yeniden değerlendir. KURAL: board çalışırken fail kesinleştirilmez.
+            if (IsBoardWorkingForLevelEnd())
             {
                 failConfirmRunning = false;
                 if (!failSettleWaitRunning)
@@ -951,7 +954,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             yield break;
         }
 
-        if (board.RemainingMoves <= 0 && (!IsBoardWorkingForLevelEnd() || LevelEndForceDeadlinePassed))
+        if (board.RemainingMoves <= 0 && !IsBoardWorkingForLevelEnd())
         {
             if (ResolvePendingBoardBeforeFail())
                 yield break;
@@ -1012,13 +1015,33 @@ public class LevelEndSimplePopupController : MonoBehaviour
     // tüm efektleri bittikten sonra çıkar.
     private IEnumerator EvaluateAfterBoardSettled()
     {
+        // KURAL: aktif board akışı MUTLAK bitene kadar bekle. Zaman-tabanlı karar YOK.
+        // Tek istisna: board GERÇEKTEN takılıp (leak) hiç idle olmazsa oyunu sonsuza
+        // kilitlememek için uzun bir TEŞHİS tavanı — aşılırsa ERROR loglanır (bug yüzeye çıkar),
+        // sonra yine de değerlendirilir. Normal oyunda (uzun zincir/efekt bile) devreye girmez.
         const int requiredStableFrames = 3;
+        const float leakDiagnosticSeconds = 30f;
         int stableFrames = 0;
+        float workingElapsed = 0f;
 
-        while (board != null && stableFrames < requiredStableFrames && !LevelEndForceDeadlinePassed)
+        while (board != null && stableFrames < requiredStableFrames)
         {
-            bool boardStillWorking = IsBoardWorkingForLevelEnd();
-            stableFrames = boardStillWorking ? 0 : stableFrames + 1;
+            if (IsBoardWorkingForLevelEnd())
+            {
+                stableFrames = 0;
+                workingElapsed += Time.unscaledDeltaTime;
+                if (workingElapsed >= leakDiagnosticSeconds)
+                {
+                    Debug.LogError(
+                        $"[LevelEnd] Board {leakDiagnosticSeconds:0}s+ boyunca çalışıyor — olası takılma/leak. " +
+                        $"Yine de değerlendiriliyor. {DescribeBoardWorkForLevelEnd()}");
+                    break;
+                }
+            }
+            else
+            {
+                stableFrames++;
+            }
             yield return null;
         }
 
@@ -1035,7 +1058,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
         failPopupShown = true;
         successPopupShown = false;
 
-        PlayerStats.MarkCurrentLevelFailed();   // güncel ilk-deneme serisi kırıldı
+        // NOT: Fail'i BURADA işaretleME. Oyuncu reklam/altınla DEVAM edip kazanabilir → o zaman
+        // "ilk hamlede kazanıldı" sayılmalı (streak korunur). Fail ancak oyuncu gerçekten VAZGEÇİP
+        // ana menüye/market'e çıkınca işaretlenir (HandleFailCloseClicked / GoToMarketFromFail).
 
         if (board != null)
             board.SetInputLocked(true);
@@ -1367,7 +1392,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private void GoToMarketFromFail()
     {
         // 01_Game'de market yok → ana menüye dön, orada market otomatik açılsın.
+        // Devam reddedilip level'dan çıkılıyor → fail'i işaretle (streak kırılır).
         // Devam reddedildiği için staged event item'ları da temizlenir.
+        PlayerStats.MarkCurrentLevelFailed();
         ProgressEventService.Instance?.DiscardStagedGains();
         MarketNavigator.PendingOpenMarket = true;
         ReturnToMainMenuImmediate();

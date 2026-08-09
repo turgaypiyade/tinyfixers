@@ -1874,6 +1874,11 @@ public class BoardController : MonoBehaviour
 
         if (IsBusy) yield break;
 
+        // Hamle kalmadıysa yeni hamle BAŞLATMA. Aksi halde board son hamleden sonra idle
+        // olduğunda (fail değerlendirme/grace penceresi) oyuncu 0 hamleyle tap yapıp
+        // "hamle kalmadı" popup'ıyla çelişen bir hamle sokabiliyordu.
+        if (RemainingMoves <= 0) yield break;
+
         oilSuppressionCellsThisMove.Clear();
         oilSpreadResolvedThisMove = false;
         obstacleStateService?.ResetPerMoveEmitGuard();
@@ -1894,6 +1899,11 @@ public class BoardController : MonoBehaviour
     IEnumerator ProcessSwap(TileView a, TileView b)
     {
         if (a == null || b == null)
+            yield break;
+
+        // Hamle kalmadıysa swap BAŞLATMA — 0 hamlede board idle olduğunda (fail
+        // değerlendirme/grace) oyuncunun hamle sokup "hamle kalmadı" ile çelişmesini önler.
+        if (RemainingMoves <= 0)
             yield break;
 
         oilSuppressionCellsThisMove.Clear();

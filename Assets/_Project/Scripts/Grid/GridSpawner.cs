@@ -1947,8 +1947,21 @@ public class GridSpawner : MonoBehaviour
     {
         if (_chestViews.TryGetValue(originIndex, out var view) && view != null)
         {
+            // İlk hit kapakları düşürür (HandleChestOpened); sonraki hit'lerde her renk objesi
+            // KENDİ sprite'ıyla STANDART break particle'a parçalanır. Renk ObstacleLibrary'den
+            // gelmiyor (runtime match rengine bağlı), o yüzden sprite'ı view'den alıp besliyoruz.
+            var brokenSprite = view.GetColorSprite(removedColor);
+            Vector3 worldPos = view.GetColorWorldCenter(removedColor);
+
             view.HideColor(removedColor);
             view.Shake();
+
+            if (brokenSprite != null && board != null && board.BreakFx != null && board.ObstacleBreakFxPrefab != null)
+                board.BreakFx.PlaySplashFx(
+                    board.ObstacleBreakFxPrefab,
+                    board.ObstacleBreakFxLifetime,
+                    worldPos,
+                    new[] { brokenSprite });
         }
     }
 

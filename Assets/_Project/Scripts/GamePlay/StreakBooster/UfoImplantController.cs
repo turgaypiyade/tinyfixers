@@ -50,7 +50,15 @@ public sealed class UfoImplantController : MonoBehaviour
 
         // Level numarası merkezi kaynaktan (catalog gerekmez). Ödül yoksa board'u beklemeden çık.
         int globalLevel = CurrentLevel.Global;
+        int streak = PlayerStats.CurrentStreak;
+        int stage = StreakBoosterEvent.CurrentStage;
         var earned = StreakBoosterEvent.GetEarnedSpecials(globalLevel);
+
+        // Karar noktası logu: ödül BOŞ olsa bile hangi koşulun patladığını gör (level<eşik mi, streak 0 mı).
+        Debug.Log($"[UfoImplant] karar → level={globalLevel} threshold={StreakBoosterEvent.ThresholdLevel} " +
+                  $"active={StreakBoosterEvent.IsActiveForLevel(globalLevel)} streak={streak} stage={stage} " +
+                  $"earned={(earned != null ? earned.Count : 0)}");
+
         if (earned == null || earned.Count == 0)
             yield break;
 
@@ -64,9 +72,10 @@ public sealed class UfoImplantController : MonoBehaviour
             yield return null;
         }
         if (board == null)
+        {
+            Debug.LogWarning("[UfoImplant] Board hazır olmadı (timeout) — teslimat atlandı.");
             yield break;
-
-        Debug.Log($"[UfoImplant] level={globalLevel} streak={PlayerStats.CurrentStreak} earned={earned.Count}");
+        }
 
         // Dedicated injector (prelevel selection'ı ezmez). Hook'ları bağla; timing'i injector yönetir:
         // board+loading hazır → PrePlacementGate (uç gel) → her special'da OnSpecialPlaced (ışın) → bitti (uç git).
@@ -76,7 +85,12 @@ public sealed class UfoImplantController : MonoBehaviour
 
         injector.PrePlacementGate = FlyInGate;
         injector.OnSpecialPlaced = (tile, _) => FireBeam(tile);
-        injector.OnPlacementFinished = () => StartCoroutine(FlyOut());
+        injector.OnPlacementFinished = () =>
+        {
+            // Taşlar yerleşti → oyuncu artık oynayabilir. UFO uçup giderken oyun serbest.
+            if (board != null) board.SetInputLocked(false);
+            StartCoroutine(FlyOut());
+        };
     }
 
     // Injector board hazır olunca çağırır: UFO uçup gelir, hover'a oturur.
@@ -84,9 +98,13 @@ public sealed class UfoImplantController : MonoBehaviour
     {
         if (ufo == null) yield break;
 
-        // Tutorial/hint overlay'i ekrandayken UFO GELMESİN — önce onlar bitsin,
-        // UFO gelince oyun oynanabilir durumda olmalı.
+        // Tutorial/hint overlay'i ekrandayken UFO GELMESİN — önce onlar bitsin (kılavuz-swap
+        // tutorial'ı varsa oyuncu onu yaparken input SERBEST kalmalı, o yüzden kilit tutorial'lardan SONRA).
         yield return WaitForTutorialsClear();
+
+        // Teslimat boyunca oyuncu OYNAYAMASIN — UFO uçup taşları yerleştirene kadar board kilitli.
+        // Placement bitince OnPlacementFinished açar (UFO uçup giderken oyun serbest).
+        if (board != null) board.SetInputLocked(true);
 
         ufo.gameObject.SetActive(true);
         Vector2 start = hoverAnchoredPos + Vector2.up * offscreenRise;
