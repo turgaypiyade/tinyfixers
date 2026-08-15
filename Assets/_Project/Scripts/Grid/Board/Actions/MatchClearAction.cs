@@ -79,13 +79,29 @@ public class MatchClearAction : BoardAction
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
+        // Non-blocking match clear registers a Resolve job so the resolve loop waits for it.
+        // The handle's Dispose in finally guarantees no leak even if the clear anim throws/bails.
+        System.IDisposable clearJob = isBlocking
+            ? null
+            : sequencer.Board.BeginJob(BoardController.BoardJobKind.Resolve);
+        try
+        {
+            var inner = RunClear(sequencer);
+            while (inner.MoveNext())
+                yield return inner.Current;
+        }
+        finally
+        {
+            clearJob?.Dispose();
+        }
+    }
+
+    private IEnumerator RunClear(ActionSequencer sequencer)
+    {
         float _mcStart = UnityEngine.Time.realtimeSinceStartup;
         bool trace = sequencer != null
                      && sequencer.Board != null
                      && sequencer.Board.BoardFlowTraceEnabled;
-
-        if (!isBlocking)
-            sequencer.Board.ActiveBackgroundJobs++;
 
         if (trace)
         {
@@ -108,8 +124,6 @@ public class MatchClearAction : BoardAction
 
         if (!hasMatches && !hasImpacts && !hasAffected && !hasStrikes && PresentationPlan == null)
         {
-            if (!isBlocking)
-                sequencer.Board.ActiveBackgroundJobs--;
             yield break;
         }
 
@@ -131,10 +145,6 @@ public class MatchClearAction : BoardAction
                 sequencer.Board.IsSpecialActivationPhase = prevSpecial;
 
             EnqueueCascadeIfNeeded(sequencer);
-
-            if (!isBlocking)
-                sequencer.Board.ActiveBackgroundJobs--;
-
             yield break;
         }
 
@@ -156,9 +166,6 @@ public class MatchClearAction : BoardAction
         EnqueueCascadeIfNeeded(sequencer);
         if (trace)
             UnityEngine.Debug.Log($"[MatchClear] cascade_enqueue +{(UnityEngine.Time.realtimeSinceStartup - _cascStart):0.000}s total={UnityEngine.Time.realtimeSinceStartup - _mcStart:0.000}s");
-
-        if (!isBlocking)
-            sequencer.Board.ActiveBackgroundJobs--;
     }
 
     public void RemoveFromMatches(TileView tile)

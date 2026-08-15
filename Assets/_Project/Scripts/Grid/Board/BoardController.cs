@@ -134,7 +134,7 @@ public class BoardController : MonoBehaviour
     // ── Decoupled resolve (Faz 1): normal fall→clear overlap ────────────────
     // Docs/DecoupledResolve_Plan.md §6. false → bugünkü seri yol (anında geri-alma).
     [Header("Decoupled Resolve (Faz 1)")]
-    [SerializeField] private bool useDecoupledResolve = false;
+    [SerializeField] private bool useDecoupledResolve = true;
     // Taş hedefe kaç hücre KALA FallArrived event'ini atsın (hücreye tam oturmadan biraz üstünde
     // clear başlasın → referans hissi). 0 = tam varışta. Timed sync DEĞİL — animasyonun içinden,
     // pozisyon eşiğiyle bir kez atılır. Küçük tut (~0.15-0.25); büyükse taş görünür şekilde havada kırılır.
@@ -237,6 +237,10 @@ public class BoardController : MonoBehaviour
     [SerializeField] private Sprite hammerBoosterFallbackSprite;
     [SerializeField] private Sprite patchBotPropellerSprite;
     [SerializeField] private Sprite patchBotPropellerHubSprite;
+    [Tooltip("Uçan patchbot pervanesinin frame'leri (tile_test'teki 2-sprite spin ile aynı). " +
+             "Atanırsa uçuş pervanesi rotasyon yerine bu frame'leri döngüler. Boşsa eski rotasyon.")]
+    [SerializeField] private Sprite[] patchBotPropellerFrames;
+    [SerializeField, Min(1f)] private float patchBotPropellerFrameFps = 18f;
 
     internal RectTransform HammerBoosterFxPrefab => hammerBoosterFxPrefab;
     internal RectTransform CannonBoosterFxPrefab => cannonBoosterFxPrefab;
@@ -247,6 +251,8 @@ public class BoardController : MonoBehaviour
     internal Sprite HammerBoosterFallbackSprite => hammerBoosterFallbackSprite;
     internal Sprite PatchBotPropellerSprite => patchBotPropellerSprite;
     internal Sprite PatchBotPropellerHubSprite => patchBotPropellerHubSprite;
+    internal Sprite[] PatchBotPropellerFrames => patchBotPropellerFrames;
+    internal float PatchBotPropellerFrameFps => patchBotPropellerFrameFps;
 
     [Header("Special Tile Visual")]
     [SerializeField] private bool specialFillCell = false;
@@ -501,7 +507,10 @@ public class BoardController : MonoBehaviour
     private SpecialResolver specialResolver;
     private SpecialBehaviorRegistry specialBehaviorRegistry;
     private BoardAnimator boardAnimator;
-    public int ActiveBackgroundJobs = 0;
+    // Background-job accounting (typed handle/gate). One count slot per BoardJobKind; see BeginJob.
+    // Level-end waits on the total (ActiveBackgroundJobs); resolve/input wait only on the Resolve slot.
+    private readonly int[] _jobCounts = new int[7]; // sized to BoardJobKind
+    private int _jobEpoch = 0;
     private ActionSequencer actionSequencer;
     private PulseCoreImpactService pulseCoreImpactService;
     private ObstacleStateService obstacleStateService;
@@ -629,6 +638,13 @@ public class BoardController : MonoBehaviour
     internal void CaptureShakeHome()
     {
         if (shakeHomeCaptured || shakeTarget == null) return;
+        shakeBasePos = shakeTarget.anchoredPosition;
+        shakeHomeCaptured = true;
+    }
+
+    internal void RebaseShakeHomeToCurrent()
+    {
+        if (shakeTarget == null) return;
         shakeBasePos = shakeTarget.anchoredPosition;
         shakeHomeCaptured = true;
     }
@@ -929,76 +945,133 @@ public class BoardController : MonoBehaviour
     // ResolveBoard's loop polls BlockingBackgroundJobs/actionSequencer to wait for completion.
     public void StartImmediateAction(BoardAction action)
     {
-        ActiveBackgroundJobs++;
-        StartCoroutine(RunImmediateAction(action));
+        StartCoroutine(RunImmediateAction(action, BeginJob(BoardJobKind.Resolve)));
     }
 
-    private System.Collections.IEnumerator RunImmediateAction(BoardAction action)
+    private System.Collections.IEnumerator RunImmediateAction(BoardAction action, System.IDisposable job)
     {
-        yield return StartCoroutine(action.ExecuteVisuals(actionSequencer));
-        ActiveBackgroundJobs--;
+        try
+        {
+            yield return StartCoroutine(action.ExecuteVisuals(actionSequencer));
+        }
+        finally
+        {
+            job.Dispose();
+        }
     }
 
-    // Manual background-job scope. Keeps the board "busy" for end-of-level evaluation
-    // while an async visual finishes (e.g. a goal collectible flying to the HUD), so an
-    // out-of-moves FAIL isn't shown before an in-flight collectible reaches its goal.
-    // Always pair Begin/End; the ResolveBoard 5s timeout is the leak safety net.
-    public void BeginBackgroundJob() => ActiveBackgroundJobs++;
-    public void EndBackgroundJob()   => ActiveBackgroundJobs = Mathf.Max(0, ActiveBackgroundJobs - 1);
-
-    // Subsets of ActiveBackgroundJobs that should not park the ResolveBoard/SpecialChain
-    // settle loop. Level-end may still wait for them if their pending credit can change
-    // the final result.
-    public int FlyingGoalOrbs = 0;
-    public int FlyingPatchBotDashes = 0;
-    public int DrainingBossStrikes = 0;
-
-    // Background jobs the resolve loop genuinely has to wait on (cascades, clears, combos),
-    // excluding non-blocking flights above.
-    public int BlockingBackgroundJobs =>
-        Mathf.Max(0, ActiveBackgroundJobs - FlyingGoalOrbs - FlyingPatchBotDashes - DrainingBossStrikes);
-
-    public void BeginGoalOrbFlight() { ActiveBackgroundJobs++; FlyingGoalOrbs++; }
-    public void EndGoalOrbFlight()
+    // ---- Typed background-job gate ----
+    // A job holds a handle; Dispose() = exactly one decrement (double-Dispose is a no-op).
+    // ForceDrainAllJobs bumps _jobEpoch so any still-outstanding handle's Dispose becomes a no-op —
+    // this replaces the old "set counters = 0" timeout hack WITHOUT leaving stale decrements behind.
+    public enum BoardJobKind
     {
-        ActiveBackgroundJobs = Mathf.Max(0, ActiveBackgroundJobs - 1);
-        FlyingGoalOrbs       = Mathf.Max(0, FlyingGoalOrbs - 1);
+        Resolve = 0,         // resolve/settle loop MUST wait (clear, cascade, combo, safe hold)
+        GoalOrbFlight = 1,   // async: resolve flows, only level-end waits (orb + cargo flights)
+        PatchBotDash = 2,    // async: PatchBot dash, RocketBasket, LineV/H PatchBot combo
+        BossStrikeDrain = 3, // async: BossDuel strike queue
+        ObstacleSpread = 4,  // async: barrel mud splatter (data committed up-front, visual async)
+        KeyFlight = 5,       // async: KeyGenerator key flight
+        PresentationFx = 6   // async: clear-presentation visual effects
     }
 
-    public void BeginPatchBotDashFlight() { ActiveBackgroundJobs++; FlyingPatchBotDashes++; }
-    public void EndPatchBotDashFlight()
+    private sealed class BoardJobHandle : System.IDisposable
     {
-        ActiveBackgroundJobs  = Mathf.Max(0, ActiveBackgroundJobs - 1);
-        FlyingPatchBotDashes  = Mathf.Max(0, FlyingPatchBotDashes - 1);
+        private BoardController _board;
+        private readonly BoardJobKind _kind;
+        private readonly int _epoch;
+        private bool _disposed;
+
+        public BoardJobHandle(BoardController board, BoardJobKind kind)
+        {
+            _board = board;
+            _kind = kind;
+            _epoch = board._jobEpoch;
+            board._jobCounts[(int)kind]++;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            if (_board != null && _epoch == _board._jobEpoch)
+                _board._jobCounts[(int)_kind] = Mathf.Max(0, _board._jobCounts[(int)_kind] - 1);
+            _board = null;
+        }
     }
 
-    // BossDuel: son hamle harcandı ama vuruş kuyruğu/havadaki boltlar hâlâ hasar
-    // yazacak — out-of-moves fail bunlar boşalana kadar bekler (resolve parklanmaz).
-    public void BeginBossStrikeDrain() { ActiveBackgroundJobs++; DrainingBossStrikes++; }
-    public void EndBossStrikeDrain()
+    // Begin a background job. Dispose the returned handle exactly once when it finishes
+    // (prefer `using` / try-finally). Kind decides whether resolve waits (Resolve) or only level-end.
+    public System.IDisposable BeginJob(BoardJobKind kind) => new BoardJobHandle(this, kind);
+
+    // Total in-flight jobs. Level-end waits on this — any pending job can still change the result.
+    public int ActiveBackgroundJobs
     {
-        ActiveBackgroundJobs = Mathf.Max(0, ActiveBackgroundJobs - 1);
-        DrainingBossStrikes  = Mathf.Max(0, DrainingBossStrikes - 1);
+        get
+        {
+            int sum = 0;
+            for (int i = 0; i < _jobCounts.Length; i++) sum += _jobCounts[i];
+            return sum;
+        }
     }
+
+    // Only genuine Resolve work parks the resolve/settle loop and input; async flights/spreads don't.
+    public int BlockingBackgroundJobs => _jobCounts[(int)BoardJobKind.Resolve];
+
+    // Named subset accessors kept for diagnostics/log parity.
+    public int FlyingGoalOrbs       => _jobCounts[(int)BoardJobKind.GoalOrbFlight];
+    public int FlyingPatchBotDashes => _jobCounts[(int)BoardJobKind.PatchBotDash];
+    public int DrainingBossStrikes  => _jobCounts[(int)BoardJobKind.BossStrikeDrain];
+
+    // Leak safety net: invalidate every outstanding handle (their Dispose becomes a no-op via epoch)
+    // and zero counts. Called by ResolveBoard's 5s blocking timeout AND by the level-end recovery when
+    // a NON-blocking async job leaks (resolve loop already exited, so its timeout can't clear it).
+    public void ForceDrainAllJobs()
+    {
+        _jobEpoch++;
+        System.Array.Clear(_jobCounts, 0, _jobCounts.Length);
+    }
+
+    // ---- Legacy paired Begin/End shims (call sites are already try/finally-paired) ----
+    // Generic blocking scope — resolve waits (e.g. Safe break hold).
+    public void BeginBackgroundJob() => _jobCounts[(int)BoardJobKind.Resolve]++;
+    public void EndBackgroundJob()   => _jobCounts[(int)BoardJobKind.Resolve] = Mathf.Max(0, _jobCounts[(int)BoardJobKind.Resolve] - 1);
+
+    // Non-blocking flights: resolve flows, level-end waits.
+    public void BeginGoalOrbFlight() => _jobCounts[(int)BoardJobKind.GoalOrbFlight]++;
+    public void EndGoalOrbFlight()   => _jobCounts[(int)BoardJobKind.GoalOrbFlight] = Mathf.Max(0, _jobCounts[(int)BoardJobKind.GoalOrbFlight] - 1);
+
+    public void BeginPatchBotDashFlight() => _jobCounts[(int)BoardJobKind.PatchBotDash]++;
+    public void EndPatchBotDashFlight()   => _jobCounts[(int)BoardJobKind.PatchBotDash] = Mathf.Max(0, _jobCounts[(int)BoardJobKind.PatchBotDash] - 1);
+
+    // BossDuel: son hamle harcandı ama vuruş kuyruğu/havadaki boltlar hâlâ hasar yazacak —
+    // out-of-moves fail bunlar boşalana kadar bekler (resolve parklanmaz).
+    public void BeginBossStrikeDrain() => _jobCounts[(int)BoardJobKind.BossStrikeDrain]++;
+    public void EndBossStrikeDrain()   => _jobCounts[(int)BoardJobKind.BossStrikeDrain] = Mathf.Max(0, _jobCounts[(int)BoardJobKind.BossStrikeDrain] - 1);
 
     // Runs a list of actions sequentially as a single background job.
     // Use this when actions have a defined order (e.g. Override fanout → clear).
     public void StartImmediateActionSequence(System.Collections.Generic.List<BoardAction> actions)
     {
         if (actions == null || actions.Count == 0) return;
-        ActiveBackgroundJobs++;
-        StartCoroutine(RunImmediateActionSequence(actions));
+        StartCoroutine(RunImmediateActionSequence(actions, BeginJob(BoardJobKind.Resolve)));
     }
 
-    private System.Collections.IEnumerator RunImmediateActionSequence(System.Collections.Generic.List<BoardAction> actions)
+    private System.Collections.IEnumerator RunImmediateActionSequence(System.Collections.Generic.List<BoardAction> actions, System.IDisposable job)
     {
-        foreach (var action in actions)
+        try
         {
-            System.Collections.IEnumerator e = action.ExecuteVisuals(actionSequencer);
-            while (e.MoveNext())
-                yield return e.Current;
+            foreach (var action in actions)
+            {
+                System.Collections.IEnumerator e = action.ExecuteVisuals(actionSequencer);
+                while (e.MoveNext())
+                    yield return e.Current;
+            }
         }
-        ActiveBackgroundJobs--;
+        finally
+        {
+            job.Dispose();
+        }
     }
 
     public struct BonusLinePlacement
@@ -1162,6 +1235,7 @@ public class BoardController : MonoBehaviour
                 }
             }
 
+        RefreshAllTileObstacleVisuals();
         RefreshAllSortingOrders();
     }
 
@@ -1237,7 +1311,7 @@ public class BoardController : MonoBehaviour
     public float GetSystemOverrideComboWaveDuration() =>
         systemOverrideComboVfx != null ? systemOverrideComboVfx.GetRadialWaveDuration() : ResolutionContext.OverrideRadialClearDuration;
     public void PlayPulseEmitterComboVfxAtCell(int x, int y) => boardVfxService.PlayPulseEmitterComboVfxAtCell(pulseEmitterComboVfx, vfxSpace, x, y);
-    public void PlayPulsePulseExplosionVfxAtCell(int x, int y) => boardVfxService.PlayPulsePulseExplosionVfxAtCell(pulsePulseExplosionPrefab, vfxSpace, pulsePulseExplosionLifetime, x, y, pulsePulseExplosionScale);
+    public GameObject PlayPulsePulseExplosionVfxAtCell(int x, int y) => boardVfxService.PlayPulsePulseExplosionVfxAtCell(pulsePulseExplosionPrefab, vfxSpace, pulsePulseExplosionLifetime, x, y, pulsePulseExplosionScale);
     internal HashSet<Vector2Int> BuildPulseEmitterTargets(int cx, int cy) => boardVfxService.BuildPulseEmitterTargets(cx, cy);
 
     public Vector3 GetTileWorldCenter(TileView tile)
@@ -1440,6 +1514,29 @@ public class BoardController : MonoBehaviour
 
     public void ConsumePatchbotDashRequests(List<PatchbotDashRequest> outList) { outList.Clear(); outList.AddRange(_patchbotDashRequests); _patchbotDashRequests.Clear(); }
 
+    // Birikmiş TÜM patchbot dash'lerini TEK PlayDashParallel çağrısıyla başlatır (içsel 0.02s stagger →
+    // "hepsi neredeyse aynı anda"). MatchClearAction pompasına BAĞLI DEĞİL: pompaya bölünen dash'ler
+    // her pompada PlayDashParallel'in StopCoroutine'iyle birbirini iptal ediyordu (bazıları hiç
+    // kalkmıyordu). Override+PatchBot grup fırlatması bunu çağırır; tüm dash'ler önce senkron enqueue
+    // edilir, sonra bu tek çağrı hepsini güvenle başlatır.
+    public void StartPendingPatchbotDashesParallel()
+    {
+        var buffer = new List<PatchbotDashRequest>();
+        ConsumePatchbotDashRequests(buffer);
+        if (buffer.Count == 0)
+            return;
+
+        if (patchbotDashUI != null)
+        {
+            patchbotDashUI.PlayDashParallel(buffer, this);
+        }
+        else
+        {
+            for (int i = 0; i < buffer.Count; i++)
+                buffer[i].onArrived?.Invoke();
+        }
+    }
+
     public TopHudController TopHud { get { if (topHud == null) topHud = FindFirstObjectByType<TopHudController>(); return topHud; } }
     public GoalFlyFx GoalFlyFx
     {
@@ -1496,25 +1593,63 @@ public class BoardController : MonoBehaviour
         if (obstacleStateService == null) return;
 
         int tx = tile.X, ty = tile.Y;
-        if (tx < 0 || tx >= width || ty < 0 || ty >= height) return;
-        if (!obstacleStateService.IsMovableObstacleAt(tx, ty)) return;
+        if (tx < 0 || tx >= width || ty < 0 || ty >= height) { RemoveMovableIdleFx(tile); return; }
+        if (!obstacleStateService.IsMovableObstacleAt(tx, ty)) { RemoveMovableIdleFx(tile); return; }
 
         var id = obstacleStateService.GetObstacleIdAt(tx, ty);
         var lib = ActiveLevelData != null ? ActiveLevelData.obstacleLibrary : null;
         var def = lib != null ? lib.Get(id) : null;
-        if (def == null) return;
+        if (def == null) { RemoveMovableIdleFx(tile); return; }
 
         // Çok-stage movable (örn. 2-stage plastik): hasar alınca sprite güncel stage'e geçmeli.
         // GetPreviewSprite hep stage-0 döndürür → refresh, hit sonrası görseli stage-0'a geri
         // sıfırlardı. Kalan vuruşa göre doğru stage sprite'ını al (yoksa preview'a düş).
         int remainingHits = obstacleStateService.GetRemainingHitsAt(tx, ty);
         var sprite = def.GetSpriteForRemainingHits(remainingHits) ?? def.GetPreviewSprite();
-        if (sprite == null) return;
+        if (sprite == null) { RemoveMovableIdleFx(tile); return; }
 
         tile.SetMovableObstacleTile(true);
         tile.SetUseFullCellIcon(false);
         tile.SetFullCellMovableSprite(def.fullCellSprite);
         tile.SetMovableObstacleSprite(sprite);
+
+        EnsureMovableIdleFx(tile, id, def);
+    }
+
+    // Idle juice (coin dönme / cargo salınım) yaşam döngüsü: DOĞRU olanı ekle (yoksa), YANLIŞ olanı
+    // kaldır. Her refresh'te yeniden yaratma YOK — churn CoinIdleWobble'ın gecikme döngüsünü sıfırlar,
+    // coin hiç dönmezdi. Idempotent olduğu için sık çağrılması güvenli.
+    private void EnsureMovableIdleFx(TileView tile, ObstacleId id, ObstacleDef def)
+    {
+        if (tile == null || tile.IconImage == null) return;
+        var go = tile.IconImage.gameObject;
+
+        bool wantWobble = id == ObstacleId.GoldMoney;
+        bool wantSway = def != null && def.exitAtBottom;
+
+        var wobble = go.GetComponent<CoinIdleWobble>();
+        if (wantWobble && wobble == null) go.AddComponent<CoinIdleWobble>();
+        else if (!wantWobble && wobble != null) Destroy(wobble);
+
+        var sway = go.GetComponent<CargoFloatSway>();
+        if (wantSway && sway == null) go.AddComponent<CargoFloatSway>();
+        else if (!wantSway && sway != null) Destroy(sway);
+    }
+
+    private void RemoveMovableIdleFx(TileView tile)
+    {
+        if (tile == null || tile.IconImage == null) return;
+        var go = tile.IconImage.gameObject;
+        var wobble = go.GetComponent<CoinIdleWobble>();
+        if (wobble != null) Destroy(wobble);
+        var sway = go.GetComponent<CargoFloatSway>();
+        if (sway != null) Destroy(sway);
+    }
+
+    private void RefreshSwapObstacleVisuals(TileView a, TileView b)
+    {
+        RefreshTileObstacleVisual(a);
+        RefreshTileObstacleVisual(b);
     }
 
     internal void RefreshAllTileObstacleVisuals()
@@ -1549,6 +1684,7 @@ public class BoardController : MonoBehaviour
         if (tile == null)
             return;
 
+        tile.ClearMovableObstaclePresentation();
         tile.SetIconAlpha(1f);
 
         if (tile.TryGetComponent<CanvasGroup>(out var cg))
@@ -1746,15 +1882,15 @@ public class BoardController : MonoBehaviour
         {
             if (!_tutorialSwapFilterActive) return;
             // Tutorial click-to-swap: iki tıkla hedef hamlesi yapılabilir
-            if (selected == null) { selected = tile; return; }
-            if (selected == tile) { selected = null; return; }
+            if (selected == null) { SetSelectedTile(tile); return; }
+            if (selected == tile) { SetSelectedTile(null); return; }
             if (AreNeighbors(selected, tile) && IsTutorialSwapAllowed(selected.X, selected.Y, tile.X, tile.Y))
             {
-                var a = selected; selected = null;
+                var a = selected; SetSelectedTile(null);
                 ClearTutorialSwapFilter();
                 StartCoroutine(ProcessSwap(a, tile));
             }
-            else { selected = null; }
+            else { SetSelectedTile(null); }
             return;
         }
 
@@ -1765,17 +1901,17 @@ public class BoardController : MonoBehaviour
         // sürüklenen special burada tetiklenmez, sadece gerçek tıklamada çalışır.
         if (tile != null && tile.GetSpecial() != TileSpecial.None && CanTapActivateSpecial(tile))
         {
-            selected = null;
+            SetSelectedTile(null);
             StartCoroutine(ProcessSpecialTap(tile));
             return;
         }
 
-        if (selected == null) { selected = tile; return; }
-        if (selected == tile) { selected = null; return; }
+        if (selected == null) { SetSelectedTile(tile); return; }
+        if (selected == tile) { SetSelectedTile(null); return; }
         if (AreNeighbors(selected, tile))
         {
             var a = selected;
-            selected = null;
+            SetSelectedTile(null);
             bool underTileBlocked = obstacleStateService != null &&
                 ((obstacleStateService.IsUnderTileObstacleAt(a.X, a.Y) && !obstacleStateService.IsMudAt(a.X, a.Y))
                  || (obstacleStateService.IsUnderTileObstacleAt(tile.X, tile.Y) && !obstacleStateService.IsMudAt(tile.X, tile.Y))
@@ -1784,10 +1920,24 @@ public class BoardController : MonoBehaviour
                 StartCoroutine(ProcessSwap(a, tile));
             return;
         }
-        selected = tile;
+        SetSelectedTile(tile);
     }
 
     bool AreNeighbors(TileView a, TileView b) => Mathf.Abs(a.X - b.X) + Mathf.Abs(a.Y - b.Y) == 1;
+
+    private void SetSelectedTile(TileView tile)
+    {
+        if (selected == tile)
+            return;
+
+        if (selected != null)
+            BoardIdleHintAndComboGlowController.SetManualSpecialGlow(selected, false, tileSize);
+
+        selected = tile;
+
+        if (selected != null)
+            BoardIdleHintAndComboGlowController.SetManualSpecialGlow(selected, true, tileSize);
+    }
 
     private bool CanTapActivateSpecial(TileView tile)
     {
@@ -1841,7 +1991,7 @@ public class BoardController : MonoBehaviour
         if (activeBooster == BoosterMode.None) return false;
         if (IsBusy || InputLocked) { Debug.LogWarning("[Booster] Skip: busy or input locked"); return true; }
         if (x < 0 || x >= width || y < 0 || y >= height) return true;
-        var mode = activeBooster; SetBoosterMode(BoosterMode.None); selected = null;
+        var mode = activeBooster; SetBoosterMode(BoosterMode.None); SetSelectedTile(null);
         var targetCell = new Vector2Int(x, y); var targetTile = tiles[x, y];
 
         // Hak düşümü: free oyunda düşmez, normalde 1 hak harcar (tek merkez: BoosterAccessService).
@@ -1931,6 +2081,12 @@ public class BoardController : MonoBehaviour
 
         // Swap öncesi movable obstacle state snapshot
         bool movableMovedAToB, movableMovedBToA;
+        ObstacleStateService.ObstacleSwapStateSnapshot obstacleSwapStateSnapshot = null;
+        if (obstacleStateService != null
+            && (obstacleStateService.IsMovableObstacleAt(ax, ay) || obstacleStateService.IsMovableObstacleAt(bx, by)))
+        {
+            obstacleSwapStateSnapshot = obstacleStateService.CaptureObstacleSwapState();
+        }
 
         tiles[ax, ay] = b;
         tiles[bx, by] = a;
@@ -1946,6 +2102,8 @@ public class BoardController : MonoBehaviour
 
         actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
         yield return AnimateQueuedActions();
+        if (obstacleSwapStateSnapshot != null)
+            RefreshSwapObstacleVisuals(a, b);
         FlowLog("swap_anim");
 
         // SWAP ANINDAKI gerçek special state'i snapshot al.
@@ -2070,8 +2228,6 @@ public class BoardController : MonoBehaviour
 
             if (originalSa == TileSpecial.PulseCore && originalSb == TileSpecial.PulseCore)
             {
-                Debug.Log($"[PulsePulseCharge] a=({a.X},{a.Y}) b=({b.X},{b.Y}) orig_a=({ax},{ay}) orig_b=({bx},{by})");
-
                 int chargeX = bx;
                 int chargeY = by;
 
@@ -2079,6 +2235,7 @@ public class BoardController : MonoBehaviour
                 SpecialVisualService.HideTileVisualForCombo(b);
 
                 PlayPulsePulseExplosionVfxAtCell(chargeX, chargeY);
+                
                 yield return new WaitForSeconds(pulsePulseChargeDuration);
 
                 if (pulseCoreImpactService != null)
@@ -2113,8 +2270,14 @@ public class BoardController : MonoBehaviour
 
         if (matches.Count == 0 && !shouldAcceptViaSettle)
         {
-            // Obstacle state de geri alınsın
-            RestoreMovableObstacleSwapState(ax, ay, bx, by, movableMovedAToB, movableMovedBToA);
+            // Obstacle state de geri alınsın. Stacked movable senaryosunda (örn. plastik
+            // altında altın) ters MoveObstacle yetmez: alttaki movable geri açıldığı için
+            // plastik eski hücresine dönemeyebilir. Snapshot, deneme öncesi katmanları
+            // birebir geri koyar.
+            if (obstacleSwapStateSnapshot != null)
+                obstacleStateService.RestoreObstacleSwapState(obstacleSwapStateSnapshot);
+            else
+                RestoreMovableObstacleSwapState(ax, ay, bx, by, movableMovedAToB, movableMovedBToA);
 
             tiles[ax, ay] = a;
             tiles[bx, by] = b;
@@ -2123,6 +2286,8 @@ public class BoardController : MonoBehaviour
 
             SyncTileData(ax, ay);
             SyncTileData(bx, by);
+            if (obstacleSwapStateSnapshot != null)
+                RefreshSwapObstacleVisuals(a, b);
             RefreshAllSortingOrders();
 
             actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
@@ -2154,6 +2319,7 @@ public class BoardController : MonoBehaviour
         Debug.Log($"[Flow] ═══ SWAP END ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
         EndBusy();
     }
+
     // ═══════════════════════════════════════════════════════════════
     //  Resolve Board
     // ═══════════════════════════════════════════════════════════════
@@ -2494,7 +2660,12 @@ public class BoardController : MonoBehaviour
 
             if (tile.GetSpecial() != TileSpecial.None)
                 return false;
-            if (obstacleStateService != null && obstacleStateService.HasObstacleAt(tile.X, tile.Y))
+            // Overlay/beneath obstacle (Mud/Grass) match'leri overlap EDEBİLİR: clear hasarı
+            // settled hücrede uygulanır, alâkasız sütunların düşüşüyle çakışmaz. Yalnız MOVABLE
+            // obstacle (Plastic vb.) seri kalır — clear + yaşam döngüsü karmaşık.
+            // (Timed log: mud-yoğun board'da eski HasObstacleAt kontrolü HER match'i reddedip
+            //  resolve_board'u ~1.6s tam seri bırakıyordu — overlap hiç tetiklenmiyordu.)
+            if (obstacleStateService != null && obstacleStateService.IsMovableObstacleAt(tile.X, tile.Y))
                 return false;
 
             set.Add(tile);
@@ -2505,6 +2676,20 @@ public class BoardController : MonoBehaviour
 
         matchTiles = set;
         return true;
+    }
+
+    private static bool HasMovingTileInCurrentFallPass(IEnumerable<TileView> matchTiles)
+    {
+        if (matchTiles == null)
+            return false;
+
+        foreach (var tile in matchTiles)
+        {
+            if (tile != null && tile && tile.IsPlannedToMoveThisFallPass)
+                return true;
+        }
+
+        return false;
     }
 
     IEnumerator ResolveBoard(bool allowSpecialActivation = false, bool resolveEmptyCellsFirst = false)
@@ -2569,14 +2754,34 @@ public class BoardController : MonoBehaviour
                     // detached fall, hâlâ uçan bir roket/line-sweep/orb'u beklemeden düşüşü başlatır
                     // (LineV sütunu bitmeden taş düşme bug'ı). Special sweep'i bittikten sonra bu
                     // koşullar sağlanınca refill zaten normal cascade gibi overlap edebilir.
-                    if (useDecoupledResolve
+                    bool canOverlapCheap =
+                        useDecoupledResolve
                         && visualCoordinator != null
                         && !hadSpecialActivityThisResolve
                         && !IsActionSequencePlaying
                         && BlockingBackgroundJobs == 0
                         && !IsSpecialActivationPhase
-                        && !cascadeLogic.HasAnyEmptyPlayableCell()
-                        && TryBuildSimpleOverlapMatch(out var overlapMatchTiles))
+                        && !cascadeLogic.HasAnyEmptyPlayableCell();
+
+                    HashSet<TileView> overlapMatchTiles = null;
+                    bool overlapSimpleMatch = false;
+                    bool overlapMoving = false;
+                    if (canOverlapCheap)
+                    {
+                        overlapSimpleMatch = TryBuildSimpleOverlapMatch(out overlapMatchTiles);
+                        overlapMoving = overlapSimpleMatch && HasMovingTileInCurrentFallPass(overlapMatchTiles);
+                    }
+
+                    // DIAGNOSTIC (trace-only): overlap seri yola düştüyse HANGİ koşulun kapattığını yaz.
+                    if (BoardFlowTraceEnabled && !(canOverlapCheap && overlapSimpleMatch && overlapMoving))
+                        Debug.Log(
+                            $"[Resolve] pass={safety} overlap_skip cheap={canOverlapCheap} " +
+                            $"(noSpecialAct={!hadSpecialActivityThisResolve} noActionSeq={!IsActionSequencePlaying} " +
+                            $"noBlockJobs={BlockingBackgroundJobs == 0} notSpecialPhase={!IsSpecialActivationPhase} " +
+                            $"settled={!cascadeLogic.HasAnyEmptyPlayableCell()}) " +
+                            $"simpleMatch={overlapSimpleMatch} moving={overlapMoving}");
+
+                    if (canOverlapCheap && overlapSimpleMatch && overlapMoving)
                     {
                         bool overlapCleared = false;
                         yield return visualCoordinator.PlayFallWithOverlappedClear(
@@ -2664,9 +2869,7 @@ public class BoardController : MonoBehaviour
                 if (backgroundJobWaitTime > 5f)
                 {
                     Debug.LogWarning($"[ResolveBoard] Background job timeout — forcing continue. ActiveBackgroundJobs={ActiveBackgroundJobs}, IsPlaying={actionSequencer.IsPlaying}");
-                    ActiveBackgroundJobs = 0;
-                    FlyingGoalOrbs = 0;
-                    FlyingPatchBotDashes = 0;
+                    ForceDrainAllJobs();
                 }
 
                 yield return null;
@@ -2745,7 +2948,7 @@ public class BoardController : MonoBehaviour
             break;
         }
 
-        RestoreAllTilePresentation();
+        RefreshAllTileObstacleVisuals();
         RefreshAllSortingOrders();
 
         // Board tam oturduktan sonra oil overlay'lerini son kez senkronize et — resolve sırasında
@@ -2838,22 +3041,6 @@ public class BoardController : MonoBehaviour
                 matchTiles.Remove(created);
                 nonSpecialMatchTiles.Remove(created);
                 preservedSpecialTiles.Add(created);
-
-                // Special bu hücrede bir MATCH sonucu oluştu. Taş special'a dönüştüğü için
-                // clear setinden çıkarıldı; ama match mantıksal olarak burada gerçekleşti —
-                // hücrenin ALTINDAKİ obstacle (mud vb.) yine de bu match'ten hasar almalı.
-                // Aksi hâlde "swap'la special oluşan hücredeki obstacle hiç vurulmadı" olur.
-                if (obstacleStateService != null
-                    && obstacleStateService.HasObstacleAt(created.X, created.Y)
-                    && !obstacleStateService.IsMovableObstacleAt(created.X, created.Y))
-                {
-                    var createdCellContext = IsSpecialActivationPhase
-                        ? ObstacleHitContext.SpecialActivation
-                        : ObstacleHitContext.NormalMatch;
-                    var createdCellHit = ApplyObstacleDamageAt(created.X, created.Y, createdCellContext);
-                    if (createdCellHit.didHit)
-                        TriggerObstacleVisualChange(createdCellHit.visualChange);
-                }
 
                 shakeNextClear = true;
 
@@ -3004,6 +3191,11 @@ public class BoardController : MonoBehaviour
 
         foreach (var created in validCreatedTiles)
         {
+            var createdCell = new Vector2Int(created.X, created.Y);
+            plan.RegisterImpactOnlyCell(createdCell);
+            if (plan.ObstacleHitContext == ObstacleHitContext.NormalMatch)
+                plan.RegisterNormalMatchSource(created);
+
             var contributors = new List<TileView>();
             var contributorCells = new List<Vector2Int>();
 
@@ -3059,7 +3251,7 @@ public class BoardController : MonoBehaviour
                 plan.FinalClearTiles.Add(tile);
         }
 
-        return plan.Effects.Count > 0 ? plan : null;
+        return plan.Effects.Count > 0 || plan.ImpactOnlyCells.Count > 0 ? plan : null;
     }
 
     public IEnumerator ResolveInitial() { BeginBusy(); yield return ResolveBoard(false); EndBusy(); }
@@ -3223,10 +3415,10 @@ public class BoardController : MonoBehaviour
     // BarrelSpreadAction.ExecuteVisuals sequencer kullanmaz, null geçmek güvenli.
     private IEnumerator CoSpreadBarrelMudImmediate(BarrelSpreadAction.BarrelSource barrel)
     {
-        // BeginBackgroundJob → splatter bitene kadar ActiveBackgroundJobs>0 → level-end bekler.
-        // (Eskiden ayrıca barrelSpreadsInFlight sayacı tutulup whitelist'te sorgulanıyordu;
-        //  redundant'tı, kaldırıldı — tek kaynak ActiveBackgroundJobs.)
-        BeginBackgroundJob();
+        // ObstacleSpread (async): mud verisi BarrelSpreadAction'da up-front commit edildiği için
+        // resolve'u parklamaya gerek yok — splatter oynarken board akar, yalnız level-end bekler
+        // (ActiveBackgroundJobs'ta kalır). RaiseBarrelResolved placeholder'ı erken-WIN'i önler.
+        var spreadJob = BeginJob(BoardJobKind.ObstacleSpread);
         try
         {
             var action = new BarrelSpreadAction(this, new List<BarrelSpreadAction.BarrelSource> { barrel });
@@ -3234,7 +3426,7 @@ public class BoardController : MonoBehaviour
         }
         finally
         {
-            EndBackgroundJob();
+            spreadJob.Dispose();
             RequestResolveAfterActionSequence();
         }
     }
@@ -3356,8 +3548,95 @@ public class BoardController : MonoBehaviour
     private void HandleOverrideBatteryBoxHit(int originIndex, ChestColorMask color, int remaining, int progress, int total)
         => OnOverrideBatteryBoxHit?.Invoke(originIndex, color, remaining, progress, total);
 
+    // ── Çoklu OverrideBatteryBox: SERİ detonasyon kuyruğu ─────────────────────────
+    // Aynı hamlede birden fazla OBB kırılırsa AYNI ANDA patlamasınlar. Hepsinin hücresi kuyruğa
+    // girerken gravity-bloklanır (altına taş girmez), sonra tek tek işlenir: biri patla → tüm board
+    // hit → taşlar düş (settle) → sıradaki patla. View animasyonu da sırası gelince tetiklenir.
+    private readonly System.Collections.Generic.Queue<int> _obbDetonationQueue = new System.Collections.Generic.Queue<int>();
+    private bool _obbDetonationProcessing;
+
+    /// <summary>GridSpawner dinler: sırası gelen OBB'nin detonasyon VIEW animasyonunu oynatır.</summary>
+    public event System.Action<int> OnRequestObbDetonationView;
+
     private void HandleOverrideBatteryBoxDetonated(int originIndex)
-        => EnqueueBoardAction(new OverrideBatteryBoxDetonationAction(this, originIndex));
+    {
+        // Kutu hücresini HEMEN gravity'den blokla → sıradakiler beklerken altına taş girmesin.
+        // (Her kutu kendi burst'ünde ClearPendingTriggeredSpecialCells ile açar.)
+        if (width > 0)
+            SetPendingTriggeredSpecialCells(new[] { new Vector2Int(originIndex % width, originIndex / width) });
+
+        _obbDetonationQueue.Enqueue(originIndex);
+        if (!_obbDetonationProcessing)
+            StartCoroutine(ProcessOverrideBatteryBoxQueue());
+    }
+
+    // Çoklu OBB'de patlamalar ARASI kısa gecikme (aynı anda DEĞİL, arka arkaya). Kutular kademeli
+    // başlatılır → burst'ler bu kadar aralıklı olur; board hit1 → hemen ardından hit2. Ayar düğmesi.
+    private const float ObbDetonationBurstStaggerSeconds = 0.30f;
+    private int _obbDetonationsRunning;
+
+    private System.Collections.IEnumerator ProcessOverrideBatteryBoxQueue()
+    {
+        _obbDetonationProcessing = true;
+        // Level-end + akış bu kuyruk bitene kadar beklesin (ActiveBackgroundJobs). NON-Resolve kind:
+        // resolve slot'unu (BlockingBackgroundJobs) tıkamaz → aşağıdaki settle-bekleyişi deadlock olmaz.
+        var job = BeginJob(BoardJobKind.ObstacleSpread);
+        try
+        {
+            // Aynı frame'deki senkron destroy event'leri (deferred view kaydı) otursun.
+            yield return null;
+
+            // DIŞ DÖNGÜ: bir kutunun board-hit dalgası BAŞKA bir OBB'yi tamamlayınca, o kutunun
+            // detonation event'i biz settle-beklerken kuyruğa girer. Onu da işle — yoksa tamamlanmış
+            // kutu ekranda asılı kalır (bug). Kuyruk boşalana kadar döner.
+            while (_obbDetonationQueue.Count > 0)
+            {
+                // Kutuları KISA stagger'la arka arkaya başlat — aralarında TAM settle beklemeyiz.
+                // Böylece box1 patlar, hemen ardından box2 patlar (board hit'ler art arda).
+                while (_obbDetonationQueue.Count > 0)
+                {
+                    int origin = _obbDetonationQueue.Dequeue();
+
+                    OnRequestObbDetonationView?.Invoke(origin);   // view wind-up + burst
+                    var detonation = new OverrideBatteryBoxDetonationAction(this, origin, ownResolve: true);
+                    _obbDetonationsRunning++;
+                    StartCoroutine(RunObbDetonation(detonation));
+
+                    if (_obbDetonationQueue.Count > 0)
+                        yield return new WaitForSeconds(ApplySpecialChainTempo(ObbDetonationBurstStaggerSeconds));
+                }
+
+                // Bu partinin detonation'ları + tetiklediği resolve/cascade bitene kadar bekle
+                // (board tam otursun). Bu sırada yeni kutu tamamlanırsa dış döngü onu yakalar.
+                float safety = 0f;
+                while (safety < 12f)
+                {
+                    safety += Time.deltaTime;
+                    bool allDone =
+                        _obbDetonationsRunning == 0
+                        && !resolveAfterActionSequenceRequested
+                        && !resolveAfterActionSequenceRunning
+                        && !IsBusy
+                        && BlockingBackgroundJobs == 0
+                        && !IsActionSequencePlaying;
+                    if (allDone && safety > 0.1f)
+                        break;
+                    yield return null;
+                }
+            }
+        }
+        finally
+        {
+            job.Dispose();
+            _obbDetonationProcessing = false;
+        }
+    }
+
+    private System.Collections.IEnumerator RunObbDetonation(BoardAction detonation)
+    {
+        try { yield return StartCoroutine(detonation.ExecuteVisuals(actionSequencer)); }
+        finally { _obbDetonationsRunning = Mathf.Max(0, _obbDetonationsRunning - 1); }
+    }
 
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
     {
@@ -3382,7 +3661,13 @@ public class BoardController : MonoBehaviour
         }
 
         if (obstacleId == ObstacleId.Safe)
+        {
+            // Kısa kısmi bekleme: kasa patlama+reveal'inin ilk anını, board resolve'a devam etmeden
+            // oynat (taşlar açılan hücreye hemen dolup animasyonu kesmesin). Sonra bırak — kasanın
+            // uzun "nefes + sönerek çıkış" kuyruğu non-blocking sürer, board bu sırada akabilir.
+            StartCoroutine(CoHoldResolveForSafeBreak());
             return;
+        }
 
         // Mud gibi under-tile katmanlar, aynı match'te yeni oluşan special'ı silmemeli.
         if (!DestroyedObstacleShouldClearTileContent(obstacleId))
@@ -3397,6 +3682,26 @@ public class BoardController : MonoBehaviour
             var clearedType = tile.GetTileType();
             ClearAndDestroyTile(tile);
             NotifyTilesCleared(clearedType, 1);
+        }
+    }
+
+    // Safe kazan-patlamasının board tarafından beklenecek süresi (sn): basınç birikimi + patlama anı
+    // bu pencerede geçer, kalan reveal/fade non-blocking sürer.
+    private const float SafeBreakResolveHold = 0.5f;
+
+    // Safe kırılınca board resolve'u KISA süre tutar (blocking background job). Yalnız patlama+reveal
+    // başlangıcını korur; kasanın kuyruğunun kalanı (nefes/fade-out) beklenmez. 5sn resolve timeout
+    // sızıntı emniyetidir; Begin/End her yolda eşlenir.
+    private System.Collections.IEnumerator CoHoldResolveForSafeBreak()
+    {
+        BeginBackgroundJob();
+        try
+        {
+            yield return new WaitForSeconds(SafeBreakResolveHold);
+        }
+        finally
+        {
+            EndBackgroundJob();
         }
     }
 
@@ -3767,10 +4072,11 @@ public class BoardController : MonoBehaviour
     }
 
     // İşçi robot çıkışı: bir hücre aşağı düşer → diz büküp yere konar → TopHUD goal slotuna zıplar.
-    // Animasyon boyunca board "busy" tutulur ki goal/level-end değerlendirmesi bunu beklesin.
+    // Uçuş async: board akmaya devam eder (goal-orb flight gibi), yalnız level-end bunu bekler.
+    // Tile verisi anında gridden çıkıyor (SetActive(false)+Destroy) → §3a karşılanıyor.
     private IEnumerator CargoExitRoutine(TileView tile, RectTransform goalSlot)
     {
-        BeginBackgroundJob();
+        BeginGoalOrbFlight();
         try
         {
             var fly = GoalFlyFx;
@@ -3788,7 +4094,7 @@ public class BoardController : MonoBehaviour
         {
             if (tile != null && tile)
                 Destroy(tile.gameObject);
-            EndBackgroundJob();
+            EndGoalOrbFlight();
         }
     }
 

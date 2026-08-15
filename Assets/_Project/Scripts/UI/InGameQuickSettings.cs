@@ -35,11 +35,16 @@ public class InGameQuickSettings : MonoBehaviour
 
     private RectTransform[] items;
     private CanvasGroup[] itemGroups;
+    private Canvas parentCanvas;
+    private RectTransform outsideCloseRect;
     private bool isOpen;
     private Coroutine menuAnim;
 
     private void Awake()
     {
+        parentCanvas = GetComponentInParent<Canvas>();
+        EnsureOutsideCloseArea();
+
         items = new RectTransform[]
         {
             vibrationButton.GetComponent<RectTransform>(),
@@ -85,7 +90,16 @@ public class InGameQuickSettings : MonoBehaviour
 
     public void ToggleMenu()
     {
-        isOpen = !isOpen;
+        SetMenuOpen(!isOpen);
+    }
+
+    private void SetMenuOpen(bool open)
+    {
+        if (isOpen == open)
+            return;
+
+        isOpen = open;
+        SetOutsideCloseAreaVisible(open);
         if (menuAnim != null) StopCoroutine(menuAnim);
         menuAnim = StartCoroutine(AnimateMenu(isOpen));
     }
@@ -176,5 +190,49 @@ public class InGameQuickSettings : MonoBehaviour
         fp.y = toY;
         rt.anchoredPosition = fp;
         cg.alpha = toAlpha;
+    }
+
+    private void EnsureOutsideCloseArea()
+    {
+        if (outsideCloseRect != null)
+            return;
+
+        var parent = transform.parent as RectTransform;
+        if (parent == null && parentCanvas != null)
+            parent = parentCanvas.transform as RectTransform;
+        if (parent == null)
+            return;
+
+        var go = new GameObject("QuickSettingsOutsideCloseArea", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        outsideCloseRect = go.GetComponent<RectTransform>();
+        outsideCloseRect.SetParent(parent, false);
+        outsideCloseRect.anchorMin = Vector2.zero;
+        outsideCloseRect.anchorMax = Vector2.one;
+        outsideCloseRect.offsetMin = Vector2.zero;
+        outsideCloseRect.offsetMax = Vector2.zero;
+
+        var image = go.GetComponent<Image>();
+        image.color = Color.clear;
+        image.raycastTarget = true;
+
+        var button = go.GetComponent<Button>();
+        button.transition = Selectable.Transition.None;
+        button.onClick.AddListener(() => SetMenuOpen(false));
+
+        go.SetActive(false);
+    }
+
+    private void SetOutsideCloseAreaVisible(bool visible)
+    {
+        EnsureOutsideCloseArea();
+        if (outsideCloseRect == null)
+            return;
+
+        outsideCloseRect.gameObject.SetActive(visible);
+        if (!visible)
+            return;
+
+        outsideCloseRect.SetAsLastSibling();
+        transform.SetAsLastSibling();
     }
 }

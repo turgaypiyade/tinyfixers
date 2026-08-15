@@ -91,15 +91,9 @@ public sealed class OverrideRadialEffectPlayer : IClearEffectPlayer
         if (tile == null)
             yield break;
 
-        // VFX spawn
-        if (vfxRoot != null)
-        {
-            Vector2 targetPos = GetTileAnchoredPos(board, tile);
-            float tileSize = board.TileSize;
-
-            SpawnRotatingSquare(vfxRoot, targetPos, tileSize);
-            SpawnFlash(vfxRoot, targetPos, tileSize);
-        }
+        // Override tile-impact beyaz VFX'leri (dönen kare çerçeve + flash) TAMAMEN KALDIRILDI —
+        // kullanıcı yalnızca marking halo'sunu istiyor. Taş burada sadece temizlenir; parıltı
+        // marking fazındaki halo'dan gelir.
 
         // Taşı temizle
         if (context != null && context.NotifyCellImpactNow != null)

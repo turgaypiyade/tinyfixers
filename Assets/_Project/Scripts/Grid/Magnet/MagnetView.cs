@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -109,6 +110,8 @@ public class MagnetView : MonoBehaviour
     [SerializeField] private AudioClip hitSfx;
     [SerializeField, Range(0f, 1f)] private float hitSfxVolume = 0.7f;
 
+    private readonly List<GameObject> activeHitFxObjects = new List<GameObject>();
+
     // Tube runtime
     private RectTransform[] flowDashes;
     private Vector2[] pathPoints;
@@ -150,6 +153,16 @@ public class MagnetView : MonoBehaviour
         // Eski stil alpha-pulse; yeni tüp stili Update()'te akan akım kullanır.
         if (style == MagnetStyle.ChainLinks)
             StartCoroutine(PulseRoutine());
+    }
+
+    private void OnDisable()
+    {
+        CleanupActiveHitFx();
+    }
+
+    private void OnDestroy()
+    {
+        CleanupActiveHitFx();
     }
 
     /// Called by MagnetObstacleService after a hit moves one of the endpoints.
@@ -237,6 +250,7 @@ public class MagnetView : MonoBehaviour
             var go = new GameObject("Zigzag", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             go.transform.SetParent(parentRt, false);
             go.layer = layer;
+            activeHitFxObjects.Add(go);
             var img = go.GetComponent<Image>();
             img.sprite = sprite; img.color = hitFxColor; img.raycastTarget = false;
             var rt = img.rectTransform;
@@ -277,7 +291,13 @@ public class MagnetView : MonoBehaviour
         }
         finally
         {
-            for (int i = 0; i < total; i++) if (rts[i] != null) Destroy(rts[i].gameObject);
+            for (int i = 0; i < total; i++)
+            {
+                if (rts[i] == null) continue;
+                var go = rts[i].gameObject;
+                activeHitFxObjects.Remove(go);
+                Destroy(go);
+            }
             if (core != null) core.rectTransform.localScale = Vector3.one;
         }
     }
@@ -296,6 +316,7 @@ public class MagnetView : MonoBehaviour
     /// Fade-out then destroy.
     public void PlayDestroyAnimation()
     {
+        CleanupActiveHitFx();
         StopAllCoroutines();
         StartCoroutine(DestroyRoutine());
     }
@@ -784,5 +805,26 @@ public class MagnetView : MonoBehaviour
             yield return null;
         }
         Destroy(gameObject);
+    }
+
+    private void CleanupActiveHitFx()
+    {
+        for (int i = activeHitFxObjects.Count - 1; i >= 0; i--)
+        {
+            var go = activeHitFxObjects[i];
+            if (go != null)
+                Destroy(go);
+        }
+
+        activeHitFxObjects.Clear();
+        ResetMagnetPunchScales();
+    }
+
+    private void ResetMagnetPunchScales()
+    {
+        if (magnetAImage != null)
+            magnetAImage.rectTransform.localScale = Vector3.one;
+        if (magnetBImage != null)
+            magnetBImage.rectTransform.localScale = Vector3.one;
     }
 }

@@ -84,6 +84,8 @@ public class GoalFlyFx : MonoBehaviour
         float p = 0f;
         while (p < popTime)
         {
+            // Level geçişi/overlay teardown'da ghost yok edilebilir — destroyed erişim atmasın.
+            if (rt == null || cg == null) yield break;
             p += Time.deltaTime;
             float k = Mathf.Clamp01(p / popTime);
             float s = EaseOutBack(k);
@@ -95,6 +97,7 @@ public class GoalFlyFx : MonoBehaviour
         t = 0f;
         while (t < flyTime)
         {
+            if (rt == null || cg == null) yield break;
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / flyTime);
 
@@ -307,6 +310,8 @@ public class GoalFlyFx : MonoBehaviour
         float t = 0f;
         while (t < half)
         {
+            // Goal tamamlanıp HUD slotu yok edilebilir — destroyed RectTransform'a erişim atmasın.
+            if (target == null) yield break;
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / half);
             target.localScale = Vector3.Lerp(baseScale, baseScale * punchScale, EaseOut(k));
@@ -317,6 +322,7 @@ public class GoalFlyFx : MonoBehaviour
         t = 0f;
         while (t < half)
         {
+            if (target == null) yield break;
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / half);
             target.localScale = Vector3.Lerp(baseScale * punchScale, baseScale, EaseIn(k));
@@ -324,7 +330,8 @@ public class GoalFlyFx : MonoBehaviour
         }
 
         // kesin eski hal
-        target.localScale = baseScale;
+        if (target != null)
+            target.localScale = baseScale;
     }
 
     private static Vector2 WorldToLocalIn(RectTransform root, RectTransform other)

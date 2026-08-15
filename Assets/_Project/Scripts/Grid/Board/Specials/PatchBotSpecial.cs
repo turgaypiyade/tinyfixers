@@ -38,6 +38,106 @@ public sealed class PatchBotExecutionResult
 
 public sealed class PatchBotSpecial
 {
+    // ─────────────────────────────────────────────
+    // Paylaşılan grup fırlatma (Override+PatchBot fanout, PatchBot+PatchBot combo)
+    // ─────────────────────────────────────────────
+    // Board üzerinde ZATEN PatchBot special'ına çevrilmiş hücreleri, solo PatchBotSpecial
+    // akışıyla (PatchbotDashUI = blade spinner + afterimage + canlı retargeting) fırlatır.
+    // TEK paylaşılan coordinator → grup hedef koordinasyonu + uçuşta yeniden hedefleme.
+    //
+    // TÜM dash'ler önce SENKRON enqueue edilir, sonra board.StartPendingPatchbotDashesParallel()
+    // ile TEK PlayDashParallel çağrısında (içsel 0.02s stagger) başlatılır → hepsi neredeyse aynı
+    // anda kalkar. MatchClearAction pompasına bölünmez (pompa başına PlayDashParallel öncekini
+    // StopCoroutine ile iptal edip botları düşürüyordu). Override+PatchBot fanout bunu kullanır.
+    public static void LaunchGroupParallel(
+        BoardController board,
+        List<Vector2Int> cells,
+        Func<TileView, PatchBotTargetCoordinator, PatchBotExecutionRuntime> buildRuntime)
+    {
+        if (board == null || cells == null || cells.Count == 0 || buildRuntime == null)
+            return;
+
+        var patchbotService = new PatchbotComboService(board);
+        var coordinator = new PatchBotTargetCoordinator(board, patchbotService);
+        var special = new PatchBotSpecial();
+
+        Debug.Log($"[PatchBotSpecial] Group parallel launch count={cells.Count}");
+
+        for (int i = 0; i < cells.Count; i++)
+        {
+            var cell = cells[i];
+            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                continue;
+
+            var tile = board.Tiles[cell.x, cell.y];
+            if (tile == null || tile.GetSpecial() != TileSpecial.PatchBot)
+                continue;
+
+            var rt = buildRuntime(tile, coordinator);
+            if (rt == null)
+                continue;
+
+            // Grup botu: dash başında kendi hücresini temizler, arrival'ı bağımsız yönetir
+            // (FinalizeAtEnd=false → arrival'da solo hit + sequencer enqueue). Execute SENKRON:
+            // yalnız dash'i buffer'a enqueue eder; uçuş aşağıdaki tek parallel-start ile başlar.
+            rt.FinalizeAtEnd = false;
+            rt.ClearOriginOnDashStart = true;
+
+            special.Execute(rt);
+        }
+
+        // Tüm dash'ler enqueue edildi → hepsini tek batch'te başlat (pompadan bağımsız, iptal yok).
+        board.StartPendingPatchbotDashesParallel();
+    }
+
+    // Kendi-kendine yeten combo (PatchBot+PatchBot) için SENKRON grup fırlatma.
+    // LaunchGroupParallel'den farkı: bu, resolve-BUILD anında çağrılır ve dash'leri "pompalayan"
+    // clear action'larını GERİ DÖNDÜRÜR (parallel-start yerine). Her hücre bağımsız bir solo PatchBot olur
+    // (FinalizeAtEnd=true → kendi initialClearAction'ı = pompa + kendi arrival'ını sahiplenir),
+    // ama TEK paylaşılan coordinator ile grup hedef koordinasyonu + canlı retargeting korunur.
+    // Çağıran, dönen action'ları sequencer'a koymalı; MatchClearAction çalışınca BoardAnimator
+    // dash buffer'ını tüketir ve uçuşlar başlar (bkz. LineVPatchBotCombo aynı deseni kullanır).
+    public static List<BoardAction> LaunchGroupSolo(
+        BoardController board,
+        List<Vector2Int> cells,
+        Func<TileView, PatchBotTargetCoordinator, PatchBotExecutionRuntime> buildRuntime)
+    {
+        var actions = new List<BoardAction>();
+        if (board == null || cells == null || cells.Count == 0 || buildRuntime == null)
+            return actions;
+
+        var patchbotService = new PatchbotComboService(board);
+        var coordinator = new PatchBotTargetCoordinator(board, patchbotService);
+        var special = new PatchBotSpecial();
+
+        Debug.Log($"[PatchBotSpecial] Group solo launch count={cells.Count}");
+
+        for (int i = 0; i < cells.Count; i++)
+        {
+            var cell = cells[i];
+            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                continue;
+
+            var tile = board.Tiles[cell.x, cell.y];
+            if (tile == null || tile.GetSpecial() != TileSpecial.PatchBot)
+                continue;
+
+            var rt = buildRuntime(tile, coordinator);
+            if (rt == null)
+                continue;
+
+            // Solo mod: initialClearAction (pompa) + arrival'da tam finalize (solo hit + cascade).
+            rt.FinalizeAtEnd = true;
+            rt.ClearOriginOnDashStart = false;
+
+            var res = special.Execute(rt);
+            if (res != null && res.Actions != null && res.Actions.Count > 0)
+                actions.AddRange(res.Actions);
+        }
+
+        return actions;
+    }
+
     public PatchBotExecutionResult Execute(PatchBotExecutionRuntime rt)
     {
         var result = new PatchBotExecutionResult();
@@ -249,15 +349,7 @@ public sealed class PatchBotSpecial
         var dataMatches = new HashSet<TileData>();
 
         arrivalRt.PatchbotService.ResolveTargetImpact(dataMatches, targetX, targetY, hasObstacleAtTarget,
-            (x, y) =>
-            {
-                SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, x, y, arrivalRt.Board);
-                // OverTileBlocker obstacles are blocked by CanAffectCell in MarkAffectedCell.
-                // Add them directly to ImpactCells so the forced hit is consumed in ClearMatchesAnimated.
-                if (!SpecialUtils.CanAffectCell(arrivalRt.Board, x, y) &&
-                    arrivalRt.Board.ObstacleStateService?.HasObstacleAt(x, y) == true)
-                    arrivalRt.Context.ImpactCells.Add(new Vector2Int(x, y));
-            },
+            (x, y) => SpecialCellUtils.MarkPatchBotImpactCell(arrivalRt.Context, arrivalRt.Board, x, y),
             (tile) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, tile, arrivalRt.Board));
 
         foreach (var data in dataMatches)
@@ -282,13 +374,7 @@ public sealed class PatchBotSpecial
             targetX,
             targetY,
             hasObstacleAtTarget,
-            (x, y) =>
-            {
-                SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, x, y, arrivalRt.Board);
-                if (!SpecialUtils.CanAffectCell(arrivalRt.Board, x, y) &&
-                    arrivalRt.Board.ObstacleStateService?.HasObstacleAt(x, y) == true)
-                    arrivalRt.Context.ImpactCells.Add(new Vector2Int(x, y));
-            },
+            (x, y) => SpecialCellUtils.MarkPatchBotImpactCell(arrivalRt.Context, arrivalRt.Board, x, y),
             (tile) => SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, tile, arrivalRt.Board));
 
         foreach (var data in matchDatas)
@@ -314,6 +400,13 @@ public sealed class PatchBotSpecial
             for (int x = 0; x < arrivalRt.Board.Width; x++)
             {
                 if (!SpecialUtils.CanAffectCell(arrivalRt.Board, x, originY))
+                {
+                    SpecialCellUtils.TryAddMagnetEndpointImpact(arrivalRt.Board, x, originY, arrivalRt.Context.ImpactCells);
+                    SpecialCellUtils.TryMarkEmitterImpact(arrivalRt.Context, arrivalRt.Board, x, originY);
+                    continue;
+                }
+
+                if (SpecialCellUtils.TryRouteMovableToImpact(arrivalRt.Context, arrivalRt.Board, x, originY))
                     continue;
 
                 SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, x, originY, arrivalRt.Board);
@@ -340,6 +433,13 @@ public sealed class PatchBotSpecial
             for (int y = 0; y < arrivalRt.Board.Height; y++)
             {
                 if (!SpecialUtils.CanAffectCell(arrivalRt.Board, originX, y))
+                {
+                    SpecialCellUtils.TryAddMagnetEndpointImpact(arrivalRt.Board, originX, y, arrivalRt.Context.ImpactCells);
+                    SpecialCellUtils.TryMarkEmitterImpact(arrivalRt.Context, arrivalRt.Board, originX, y);
+                    continue;
+                }
+
+                if (SpecialCellUtils.TryRouteMovableToImpact(arrivalRt.Context, arrivalRt.Board, originX, y))
                     continue;
 
                 SpecialCellUtils.MarkAffectedCell(arrivalRt.Context, originX, y, arrivalRt.Board);

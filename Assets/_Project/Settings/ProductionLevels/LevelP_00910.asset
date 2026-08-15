@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   width: 9
   height: 9
-  moves: 29
+  moves: 24
   baseCoinReward: 10
   goals:
   - targetType: 1
@@ -22,7 +22,7 @@ MonoBehaviour:
     obstacleId: 44
     collectibleId: 1
     iconOverride: {fileID: 0}
-    amount: 40
+    amount: 50
   - targetType: 1
     tileType: 0
     obstacleId: 30
@@ -45,7 +45,7 @@ MonoBehaviour:
   battlefieldBackground: {fileID: 0}
   bossWaves: []
   bossWaveCount: 0
-  randomPool: 00000000010000000200000003000000
+  randomPool: 010000000200000003000000
   energyPerContainer: 5
   rocketBasketFireAllOnHit: 1
   comboTutorial: 0

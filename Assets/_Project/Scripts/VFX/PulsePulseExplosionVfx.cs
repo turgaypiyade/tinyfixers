@@ -16,10 +16,21 @@ using UnityEngine.UI;
 public class PulsePulseExplosionVfx : MonoBehaviour
 {
     [Header("Charge — Bomb")]
-    [Tooltip("PulseCore bomba sprite'ı. TileIconLibrary'deki PulseCore.")]
+    [Tooltip("PulseCore bomba sprite'ı. TileIconLibrary'deki PulseCore. crackFrames boşsa şarj boyunca bu kullanılır.")]
     [SerializeField] private Sprite bombSprite;
     [SerializeField] private float bombBaseSize = 130f;
     [SerializeField] private float chargeDuration = 2.0f;
+
+    [Tooltip("TNT çatlama kareleri: EN TEMİZDEN EN ÇATLAĞA sıralı. İlki temiz TNT, sonuncusu en çok " +
+             "çatlamış (altından sarı alev görünen). Şarj ilerledikçe eşit dilimlerle geçilir; en son " +
+             "kare patlamaya geçerken kalır. Boş bırakılırsa yalnız bombSprite kullanılır (eski davranış).")]
+    [SerializeField] private Sprite[] crackFrames;
+
+    [Tooltip("Çatlak kareleri arası ÇAPRAZ GEÇİŞ oranı (her karenin diliminin son yüzdesi). 0 = sert " +
+             "geçiş (pat). 0.35 = dilimin son %35'inde bir sonraki daha-çatlak kare üstüne yavaşça " +
+             "bindirilir. 1.0 = kare boyunca SÜREKLİ yumuşak morph (kareler hiç durmaz, en akışkan). " +
+             "Geçiş smoothstep ile yumuşatılır (lineer değil).")]
+    [SerializeField, Range(0f, 1f)] private float crackCrossfadePortion = 0.5f;
 
     [Header("Charge — Phase Ratios (toplamı 1.0 olmalı)")]
     [Tooltip("Çöküp genişleme (anticipation)")]
@@ -59,9 +70,29 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     [SerializeField] private Color glowColorStart = new Color(0.7f, 0.85f, 1f, 0f);
     [SerializeField] private Color glowColorPeak = new Color(1f, 1f, 1f, 0.25f);
 
+    [Header("Charge — Fuse Flame (Alev/Kıvılcım)")]
+    [Tooltip("Fitil kıvılcım sprite'ı (soft_circle). Atanmazsa soft circle halo kullanılır.")]
+    [SerializeField] private Sprite sparkSprite;
+    [Tooltip("Normal 100px tile'da fitil (10, 50) ofsetindedir (oran: x=0.10, y=0.50).")]
+    [SerializeField] private Vector2 fuseNormalizedOffset = new Vector2(0.10f, 0.50f);
+    [SerializeField] private float sparkSizeMin = 28f;
+    [SerializeField] private float sparkSizeMax = 54f;
+    [SerializeField] private float spreadRadius = 16f;
+    [SerializeField] private float sparkEmitInterval = 0.018f;
+    [SerializeField] private float sparkLifetime = 0.50f;
+    [SerializeField] private Color sparkColorA = new Color(1.00f, 0.65f, 0.15f, 1f);
+    [SerializeField] private Color sparkColorB = new Color(1.00f, 0.20f, 0.05f, 1f);
+
     private Animator animator;
+    private int _crackBaseIdx = -1;
+    private int _crackOverlayIdx = -1;
 
     public float ChargeDuration => chargeDuration;
+
+    public void AttachFuse(TileView tile)
+    {
+        // Geriye uyumluluk için korundu
+    }
 
     private void Awake()
     {
@@ -79,8 +110,6 @@ public class PulsePulseExplosionVfx : MonoBehaviour
 
     private void Start()
     {
-        Debug.Log("[PulsePulseExplosionVfx] Start — squash/stretch charge begin");
-
         // Inspector-kayıtlı sarı glow değerlerini eziyoruz — sadece beyaz düşük alpha glow istiyoruz.
         glowColorStart = new Color(0.7f, 0.85f, 1f, 0f);
         glowColorPeak  = new Color(1f, 1f, 1f, 0.25f);
@@ -116,12 +145,31 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         // Bomba (önde) — deformasyon bunun üstünde yaşayacak
         RectTransform bombRt = null;
         Image bombImg = null;
+        Image bombOverlayImg = null;
         if (bombSprite)
         {
             bombImg = CreateUIImage("ChargeBomb", container, bombSprite, bombBaseSize);
             bombImg.preserveAspect = true;
             bombImg.color = Color.white;
             bombRt = bombImg.rectTransform;
+
+            // Çapraz geçiş katmanı: deforme olan bombanın CHILD'ı → aynı squash/stretch/wobble/tilt'i
+            // miras alır. Bir sonraki (daha çatlak) kareyi taşır, alfası dilim sonunda 0→1 yükselir.
+            bombOverlayImg = CreateUIImage("ChargeBombCrackOverlay", bombRt, bombSprite, bombBaseSize);
+            bombOverlayImg.preserveAspect = true;
+            bombOverlayImg.color = new Color(1f, 1f, 1f, 0f);
+        }
+
+        // Çatlak sekansı başlangıcı: en temiz kare (varsa) baştan görünsün.
+        _crackBaseIdx = -1;
+        _crackOverlayIdx = -1;
+        UpdateChargeCrackBlend(bombImg, bombOverlayImg, 0f);
+
+        // Fitil Alevi: doğrudan bombRt'nin child'ı olarak çalışır.
+        // Bomba nefes aldıkça (squash/stretch/wobble/tilt), fitil ucuyla %100 senkron hareket eder.
+        if (bombRt != null)
+        {
+            StartCoroutine(CoEmitFuseSparks(bombRt, chargeDuration));
         }
 
         // Evre süreleri — ratio'lar 1'e toplanmayabilir, normalize et
@@ -144,6 +192,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             Vector3 s = Vector3.LerpUnclamped(baseScale, squashTarget, eased);
             ApplyScale(container, bombRt, s);
             UpdateGlow(glowImg, totalElapsed, bombImg);
+            UpdateChargeCrackBlend(bombImg, bombOverlayImg, totalElapsed / chargeDuration);
         });
 
         // ─── 2) STRETCH — yukarı uzayıp incelme ────────────────
@@ -155,6 +204,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             Vector3 s = Vector3.LerpUnclamped(squashTarget, stretchTarget, eased);
             ApplyScale(container, bombRt, s);
             UpdateGlow(glowImg, totalElapsed, bombImg);
+            UpdateChargeCrackBlend(bombImg, bombOverlayImg, totalElapsed / chargeDuration);
         });
 
         // ─── 3) WOBBLE — şişip inen + yamuk salınımlı büyüme ───
@@ -185,6 +235,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             if (bombRt) bombRt.localRotation = Quaternion.Euler(0f, 0f, tilt);
 
             UpdateGlow(glowImg, totalElapsed, bombImg);
+            UpdateChargeCrackBlend(bombImg, bombOverlayImg, totalElapsed / chargeDuration);
         });
 
         // ─── 4) PEAK HOLD — en büyükte hızlı nabız ─────────────
@@ -201,10 +252,11 @@ public class PulsePulseExplosionVfx : MonoBehaviour
 
             // Son evrede glow full-peak + hafif flash
             UpdateGlowPeak(glowImg, totalElapsed, bombImg, k);
+            // Peak boyunca en çatlak (son) kare kalır — patlamaya geçişe kadar.
+            UpdateChargeCrackBlend(bombImg, bombOverlayImg, totalElapsed / chargeDuration);
         });
 
         Destroy(container.gameObject);
-        Debug.Log("[PulsePulseExplosionVfx] Charge done");
     }
 
     // ────────────────────────────────────────────────
@@ -245,6 +297,56 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         }
     }
 
+    // Şarj ilerlemesine (0..1) göre çatlak karelerini ÇAPRAZ GEÇİŞLE gösterir. N kare eşit dilime
+    // bölünür; her dilimin son crackCrossfadePortion'ında bir sonraki (daha çatlak) kare overlay
+    // katmanında 0→1 alfa ile üste bindirilir → çatlaklar pat diye değişmez, büyüyerek birleşir.
+    // Base her zaman opak; overlay base ile aynı RGB tint'i (glow flash) alır, yalnız alfası değişir.
+    // Deformasyon base'te yaşadığı için overlay (child) aynı nefes/yamulmayı miras alır.
+    private void UpdateChargeCrackBlend(Image baseImg, Image overlayImg, float progress01)
+    {
+        if (baseImg == null || crackFrames == null || crackFrames.Length == 0)
+            return;
+
+        int n = crackFrames.Length;
+        float p = Mathf.Clamp01(progress01);
+
+        // Kare pozisyonu [0, n); son karede sabitlenir (n-1'i geçmez).
+        float pos = Mathf.Min(p * n, n - 0.0001f);
+        int baseIdx = Mathf.Clamp(Mathf.FloorToInt(pos), 0, n - 1);
+        float frac = pos - baseIdx;                       // 0..1 bu dilim içinde
+        int nextIdx = Mathf.Min(baseIdx + 1, n - 1);
+
+        // Blend, dilimin son crackCrossfadePortion'ında lineer artar; sonra smoothstep ile yumuşatılır
+        // (S-eğrisi → giriş/çıkış kenarları erir). cf=1 → kare boyunca sürekli morph. Son karede 0.
+        float cf = Mathf.Clamp01(crackCrossfadePortion);
+        float blend = (cf <= 0f || frac <= (1f - cf)) ? 0f : (frac - (1f - cf)) / cf;
+        blend = Smooth01(blend);
+        if (nextIdx == baseIdx)
+            blend = 0f;
+
+        // Base sprite yalnız değişince set edilir.
+        if (baseIdx != _crackBaseIdx)
+        {
+            _crackBaseIdx = baseIdx;
+            if (crackFrames[baseIdx] != null)
+                baseImg.sprite = crackFrames[baseIdx];
+        }
+
+        if (overlayImg == null)
+            return;
+
+        if (nextIdx != _crackOverlayIdx)
+        {
+            _crackOverlayIdx = nextIdx;
+            if (crackFrames[nextIdx] != null)
+                overlayImg.sprite = crackFrames[nextIdx];
+        }
+
+        // Overlay RGB = base RGB (glow flash/bleach ile tutarlı), alfa = blend.
+        var bc = baseImg.color;
+        overlayImg.color = new Color(bc.r, bc.g, bc.b, Mathf.Clamp01(blend));
+    }
+
     private void UpdateGlow(Image glowImg, float totalElapsed, Image bombImg)
     {
         if (!glowImg) return;
@@ -276,6 +378,102 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             float bleach = Mathf.Clamp01((peakK - 0.6f) / 0.4f) * 0.35f;
             bombImg.color = Color.Lerp(new Color(1f, 0.92f, 0.78f), Color.white, bleach);
         }
+    }
+
+    // ════════════════════════════════════════════════
+    //  FUSE FLAME (Fitil Alevi & Kıvılcım)
+    // ════════════════════════════════════════════════
+    private IEnumerator CoEmitFuseSparks(RectTransform parentBombRt, float duration)
+    {
+        Sprite sprite = sparkSprite != null ? sparkSprite : TileClearBurstVfx.SoftCircleHaloSprite;
+        Vector2 fusePos = new Vector2(bombBaseSize * fuseNormalizedOffset.x, bombBaseSize * fuseNormalizedOffset.y);
+        float elapsed = 0f;
+
+        while (parentBombRt != null && elapsed < duration)
+        {
+            float progress = Mathf.Clamp01(elapsed / duration);
+            // Şarj ilerledikçe alev yoğunluğu ve kıvılcım sayısı kademeli artar
+            float intensity = Mathf.Lerp(1.3f, 3.2f, progress);
+            int count = Mathf.Max(1, Mathf.RoundToInt(intensity));
+
+            for (int i = 0; i < count; i++)
+            {
+                if (parentBombRt == null) yield break;
+                SpawnChargeSpark(parentBombRt, fusePos, sprite, intensity, progress);
+            }
+
+            float wait = sparkEmitInterval / Mathf.Max(0.5f, intensity);
+            elapsed += wait;
+            yield return new WaitForSeconds(wait);
+        }
+    }
+
+    private void SpawnChargeSpark(RectTransform parentBombRt, Vector2 basePos, Sprite sprite, float intensity, float chargeProgress)
+    {
+        if (parentBombRt == null) return;
+
+        var sparkGO = new GameObject("_FuseSpark", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        var sparkRt = sparkGO.GetComponent<RectTransform>();
+        sparkRt.SetParent(parentBombRt, false);
+        sparkRt.SetAsLastSibling();
+
+        float sizeBoost = Mathf.Lerp(1f, 1.4f, chargeProgress);
+        float size = Random.Range(sparkSizeMin, sparkSizeMax) * sizeBoost;
+        sparkRt.sizeDelta = Vector2.one * size;
+        sparkRt.anchoredPosition = basePos + Random.insideUnitCircle * (spreadRadius * sizeBoost);
+        sparkRt.localScale = Vector3.one;
+
+        var img = sparkGO.GetComponent<Image>();
+        img.sprite = sprite;
+        img.raycastTarget = false;
+
+        // Erken aşamada turuncu-kırmızı, tepe noktasında parlak akkor sarı-beyaz
+        Color baseCol = Color.Lerp(sparkColorA, sparkColorB, Random.value);
+        if (chargeProgress > 0.60f && Random.value < (chargeProgress - 0.60f) * 2f)
+        {
+            baseCol = Color.Lerp(baseCol, Color.white, 0.65f);
+        }
+        img.color = baseCol;
+
+        StartCoroutine(CoAnimateChargeSpark(sparkRt, img, size));
+    }
+
+    private IEnumerator CoAnimateChargeSpark(RectTransform sparkRt, Image img, float baseSize)
+    {
+        if (sparkRt == null || img == null) yield break;
+
+        Vector2 startPos = sparkRt.anchoredPosition;
+        // Fitilden yukarı ve hafif dışarı doğru kıvılcım savrulması
+        Vector2 drift = (Vector2.up * 1.6f + Random.insideUnitCircle).normalized * Random.Range(12f, 30f);
+        float elapsed = 0f;
+
+        while (elapsed < sparkLifetime)
+        {
+            if (sparkRt == null || img == null) yield break;
+
+            elapsed += Time.deltaTime;
+            float k = elapsed / sparkLifetime;
+
+            sparkRt.anchoredPosition = startPos + drift * k;
+
+            // Hızlı parlama, sonra sönme
+            float alpha = k < 0.2f
+                ? k / 0.2f
+                : 1f - (k - 0.2f) / 0.8f;
+
+            var c = img.color;
+            c.a = Mathf.Clamp01(alpha);
+            img.color = c;
+
+            // Boyut dalgalanması
+            float scale = Mathf.Sin(k * Mathf.PI);
+            sparkRt.sizeDelta = Vector2.one * (baseSize * Mathf.Lerp(0.45f, 1.15f, scale));
+
+            yield return null;
+        }
+
+        if (sparkRt != null)
+            Destroy(sparkRt.gameObject);
     }
 
     // ────────────────────────────────────────────────
@@ -313,4 +511,10 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     private static float EaseOutQuad(float t) => 1f - (1f - t) * (1f - t);
     private static float EaseInOutQuad(float t) => t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
     private static float EaseOutCubic(float t) => 1f - Mathf.Pow(1f - t, 3f);
+    // Smoothstep: kenarları yumuşak S-eğrisi (0 ve 1 civarı yavaş). Çatlak çapraz geçişini yumuşatır.
+    private static float Smooth01(float t)
+    {
+        t = Mathf.Clamp01(t);
+        return t * t * (3f - 2f * t);
+    }
 }

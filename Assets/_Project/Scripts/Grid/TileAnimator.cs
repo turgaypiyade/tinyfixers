@@ -305,14 +305,33 @@ public sealed class TileAnimator
 
         if (tile == null) yield break;
 
-        RectTransform rt = tile.RectTransform;
-        if (rt == null) yield break;
+        RectTransform rt;
+        CanvasGroup g;
+        try
+        {
+            rt = tile.RectTransform;
+            if (rt == null)
+                yield break;
 
-        CanvasGroup g = tile.GetComponent<CanvasGroup>();
-        if (g == null)
-            g = tile.gameObject.AddComponent<CanvasGroup>();
+            g = tile.GetComponent<CanvasGroup>();
+            if (g == null)
+                g = tile.gameObject.AddComponent<CanvasGroup>();
+        }
+        catch (MissingReferenceException)
+        {
+            yield break;
+        }
 
-        Vector3 start = rt.localScale;
+        Vector3 start;
+        try
+        {
+            start = rt.localScale;
+        }
+        catch (MissingReferenceException)
+        {
+            yield break;
+        }
+
         Vector3 up = start * 1.08f;
         Vector3 down = start * 0.90f;
 
@@ -323,9 +342,17 @@ public sealed class TileAnimator
         {
             if (tile == null || rt == null) yield break;
 
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, half));
-            rt.localScale = Vector3.Lerp(start, up, k);
+            try
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, half));
+                rt.localScale = Vector3.Lerp(start, up, k);
+            }
+            catch (MissingReferenceException)
+            {
+                yield break;
+            }
+
             yield return null;
         }
 
@@ -335,10 +362,19 @@ public sealed class TileAnimator
         {
             if (tile == null || rt == null) yield break;
 
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / backDur);
-            rt.localScale = Vector3.Lerp(up, down, k);
-            g.alpha = Mathf.Lerp(1f, 0f, k);
+            try
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / backDur);
+                rt.localScale = Vector3.Lerp(up, down, k);
+                if (g != null)
+                    g.alpha = Mathf.Lerp(1f, 0f, k);
+            }
+            catch (MissingReferenceException)
+            {
+                yield break;
+            }
+
             yield return null;
         }
     }
@@ -591,17 +627,13 @@ public sealed class TileAnimator
 
             if (isSpinReveal)
             {
-                float revealDur = 0.32f;   // pop + tepe bekleme + spin + otur (görünür kalması için)
+                float revealDur = 0.36f;   // pop + tepe bekleme + spin (2 tur) + otur (görünür kalması için)
                 float peakScale = 1.5f;    // 0.75'ten başlar, 1.50'ye büyür, sonra 1.0'a oturur (kullanıcı isteği)
 
                 // Düz 2D sprite → dönüş DAİMA Z ekseninde (ekran düzleminde, para/pervane gibi).
                 // X/Y ekseni kağıdı 3B çevirir gibi yassıltıyordu, çirkindi → geri alındı.
                 TileSpecial sp = createdTile.GetSpecial();
-                bool isRocket = sp == TileSpecial.LineV || sp == TileSpecial.LineH;
-                // PulseCore artık kendi Y-ekseni flipbook'uyla (PulseFuseSparkleView.PlayCreationSpin)
-                // dönüyor → buradaki rotasyon PulseCore için KAPALI (0).
-                // Roketler (LineV/LineH): Y ekseninde 360° (kullanıcı isteği).
-                float spinDegrees = isRocket ? 360f : 0f;
+                const int spinLoops = 2;   // 2 tam tur silindir dönüşü
                 Color colorTarget = new Color(baseColor.r, baseColor.g, baseColor.b, 1f);
 
                 // Flipbook (silindir dönüşü): TileView'de LineH/LineV için 5 kare doluysa frame'leri
@@ -612,6 +644,13 @@ public sealed class TileAnimator
                 if (flipFrames == null && sp == TileSpecial.LineV)
                 {
                     flipFrames = createdTile.GetLineSpinFrames(TileSpecial.LineH);
+                    if (flipFrames != null) flipZ = 90f;
+                }
+                // Simetrik: LineH'ın kendi kareleri yoksa LineV karelerini 90° Z döndürüp kullan
+                // (dik silindir → yatay). Kullanıcı yalnız LineV sprite'ları oluşturdu → LineH bunu türetir.
+                else if (flipFrames == null && sp == TileSpecial.LineH)
+                {
+                    flipFrames = createdTile.GetLineSpinFrames(TileSpecial.LineV);
                     if (flipFrames != null) flipZ = 90f;
                 }
                 bool useFlipbook = flipFrames != null;
@@ -626,7 +665,7 @@ public sealed class TileAnimator
                     t += Time.deltaTime;
                     float k = Mathf.Clamp01(t / revealDur);
 
-                    // Scale: ilk %30 pop (0.22→peak), %30-55 tepede bekle (görünür), sonra 1.0 otur.
+                    // Scale: ilk %30 pop (0.75→peak), %30-55 tepede bekle (görünür), sonra 1.0 otur.
                     float scaleFactor;
                     if (k < 0.30f)
                         scaleFactor = Mathf.LerpUnclamped(0.75f, peakScale, EaseOutCubic(k / 0.30f));
@@ -636,23 +675,15 @@ public sealed class TileAnimator
                         scaleFactor = Mathf.LerpUnclamped(peakScale, 1f, EaseOutCubic((k - 0.55f) / 0.45f));
                     createdIconRt.localScale = baseScale * scaleFactor;
 
-                    if (useFlipbook)
+                    // 2D oryantasyon (LineV: 0° dik, LineH: LineV karelerini 90° Z çevirerek yatay yapar)
+                    createdIconRt.localRotation = Quaternion.Euler(0f, 0f, flipZ);
+
+                    // 5 Kareli Flipbook dönüşü (2 tam tur döngü)
+                    if (useFlipbook && flipFrames != null && flipFrames.Length > 0)
                     {
-                        // 5 kareyi reveal boyunca sırayla göster (silindir dönüşü); düz eksen dönüşü yok.
-                        int fi = Mathf.Clamp(Mathf.FloorToInt(k * flipFrames.Length), 0, flipFrames.Length - 1);
+                        int totalFrames = flipFrames.Length * spinLoops;
+                        int fi = Mathf.Clamp(Mathf.FloorToInt(k * totalFrames), 0, totalFrames - 1) % flipFrames.Length;
                         if (createdIcon != null && flipFrames[fi] != null) createdIcon.sprite = flipFrames[fi];
-                        createdIconRt.localRotation = Quaternion.Euler(0f, 0f, flipZ);   // LineV: LineH kareleri 90° dik
-                    }
-                    else
-                    {
-                        // Spin: spinDegrees→0 (easeOut), tam turda 0'da biter. LineH X ekseninde, LineV Y
-                        // ekseninde döner (kullanıcı isteği); PulseCore=0.
-                        float spinAngle = Mathf.LerpUnclamped(spinDegrees, 0f, EaseOutCubic(k));
-                        Quaternion spinRot =
-                            sp == TileSpecial.LineH ? Quaternion.Euler(spinAngle, 0f, 0f) :   // X ekseni
-                            sp == TileSpecial.LineV ? Quaternion.Euler(0f, spinAngle, 0f) :   // Y ekseni
-                            Quaternion.identity;
-                        createdIconRt.localRotation = spinRot;
                     }
 
                     // Hızlı fade-in + kısa beyaz parlama.

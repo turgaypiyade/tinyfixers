@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -16,6 +18,12 @@ public class SpecialFanoutService
     private readonly SpecialImplantService implantService;
     private readonly ActivationQueueProcessor queueProcessor;
     private readonly SpecialVisualService visualService;
+
+    /// <summary>
+    /// Factory that builds a ready-to-use PatchBotExecutionRuntime for a single tile.
+    /// Wired by SpecialResolver — keeps all resolver-level service refs out of this class.
+    /// </summary>
+    public Func<TileView, PatchBotTargetCoordinator, PatchBotExecutionRuntime> BuildPatchBotRuntime;
 
     public SpecialFanoutService(
         BoardController board,
@@ -59,13 +67,22 @@ public class SpecialFanoutService
             if (ctx.PendingOverrideImplants.Count > 0)
                 implantService.ApplyPendingOverrideImplants(ctx);
 
+            // Override+PatchBot: PatchBotSpecial.Execute akışını kullan →
+            // PatchbotDashUI yeni animasyonları (blade spinner, body separation, afterimage).
+            System.Action<List<Vector2Int>> patchBotLauncher = null;
+            if (ctx.OverrideDeferredPatchBotDashes.Count > 0 && BuildPatchBotRuntime != null)
+            {
+                patchBotLauncher = cells => LaunchPatchBotsViaPatchBotSpecial(cells);
+            }
+
             actions.Add(new SystemOverrideFanoutPlacementAction(
                 board,
                 originCoord,
                 targetCoords,
                 ctx.OverrideFanoutNormalSelectionPulse,
                 deferredPulseExplosionCells: null,
-                deferredPatchBotCells: new List<Vector2Int>(ctx.OverrideDeferredPatchBotDashes)));
+                deferredPatchBotCells: new List<Vector2Int>(ctx.OverrideDeferredPatchBotDashes),
+                launchPatchBots: patchBotLauncher));
         }
         else if (ctx.PendingOverrideImplants.Count > 0)
         {
@@ -83,5 +100,21 @@ public class SpecialFanoutService
         }
 
         return actions;
+    }
+
+    /// <summary>
+    /// PatchBotSpecial.Execute üzerinden her implant edilmiş PatchBot'u sıralı fırlatır.
+    /// Shared PatchBotTargetCoordinator ile grup hedef koordinasyonu sağlanır.
+    /// PatchbotDashUI arka planda uçuş animasyonlarını çalıştırır.
+    /// </summary>
+    private void LaunchPatchBotsViaPatchBotSpecial(List<Vector2Int> cells)
+    {
+        if (cells == null || cells.Count == 0 || BuildPatchBotRuntime == null)
+            return;
+
+        // Ortak grup fırlatıcı: shared coordinator + solo PatchBotSpecial akışı
+        // (PatchbotDashUI yeni animasyonları + canlı retargeting). Senkron enqueue + tek
+        // PlayDashParallel → tüm botlar neredeyse aynı anda kalkar (pompaya bölünmez).
+        PatchBotSpecial.LaunchGroupParallel(board, cells, BuildPatchBotRuntime);
     }
 }

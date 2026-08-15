@@ -39,27 +39,31 @@ public class BoardVisualCoordinator
         HashSet<TileView> matchTiles,
         Func<IEnumerator> runClear)
     {
-        // Event-driven arrival: her match taşı hücresine oturunca FallArrived atar → pending'den düşer.
+        // Event-driven arrival: yalnız bu fall pass'te hareket eden match taşlarını bekle.
+        // Match grubundaki yerleşik taşlar FallArrived atmaz; onları pending'e koymak overlap'i
+        // fallDone'a kadar kilitler ve cascade→clear arasında görünen gecikmeyi geri getirir.
         var pending = new HashSet<TileView>();
         if (matchTiles != null)
+        {
             foreach (var t in matchTiles)
-                if (t != null && t) pending.Add(t);
+                if (t != null && t && t.IsPlannedToMoveThisFallPass) pending.Add(t);
+        }
 
         Action<TileView> onArrived = null;
         onArrived = (tile) => { pending.Remove(tile); };
-        foreach (var t in pending)
+        var subscribed = new List<TileView>(pending);
+        foreach (var t in subscribed)
             t.FallArrived += onArrived;
 
         bool fallDone = false;
         board.StartCoroutine(RunActionsDetached(fallActions, () => fallDone = true));
 
-        // Match taşları event'le varana kadar bekle (poll DEĞİL — handler pending'i boşaltır).
-        // Güvenlik: bu cascade'de HAREKET ETMEYEN (event atmayan, zaten oturmuş) match taşı varsa
-        // fallDone ile geç → deadlock yok.
-        while (!fallDone && pending.Count > 0)
+        // Match'i oluşturan hareketli taşlar event'le varana kadar bekle (poll DEĞİL —
+        // handler pending'i boşaltır). Hiç hareketli match taşı yoksa seri davranışa dön.
+        while (!fallDone && (pending.Count > 0 || subscribed.Count == 0))
             yield return null;
 
-        foreach (var t in matchTiles)
+        foreach (var t in subscribed)
             if (t != null && t) t.FallArrived -= onArrived;
 
         bool clearDone = false;

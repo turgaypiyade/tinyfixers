@@ -517,12 +517,27 @@ public class LevelEndSimplePopupController : MonoBehaviour
         yield return null;
 
         const int requiredStableFrames = 3;
+        const float initialSettleTimeoutSeconds = 5f;
         int stableFrames = 0;
+        float initialSettleElapsed = 0f;
 
         while (board != null && stableFrames < requiredStableFrames)
         {
             bool boardStillWorking = IsBoardWorkingForLevelEnd();
             stableFrames = boardStillWorking ? 0 : stableFrames + 1;
+
+            if (boardStillWorking)
+            {
+                initialSettleElapsed += Time.unscaledDeltaTime;
+                if (initialSettleElapsed >= initialSettleTimeoutSeconds)
+                {
+                    Debug.LogWarning(
+                        $"[LevelEnd] Success initial settle timeout. " +
+                        DescribeBoardWorkForLevelEnd());
+                    break;
+                }
+            }
+
             yield return null;
         }
 
@@ -1020,9 +1035,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
         // kilitlememek için uzun bir TEŞHİS tavanı — aşılırsa ERROR loglanır (bug yüzeye çıkar),
         // sonra yine de değerlendirilir. Normal oyunda (uzun zincir/efekt bile) devreye girmez.
         const int requiredStableFrames = 3;
-        const float leakDiagnosticSeconds = 30f;
+        const float leakDiagnosticSeconds = 30f;   // mutlak tavan: blocking dahil her şey takılırsa
+        const float asyncLeakSeconds = 10f;         // blocking bitti ama SADECE async job takılı kaldıysa
+                                                    // (legit çoklu orb uçuşunu kesmeyecek kadar uzun)
         int stableFrames = 0;
         float workingElapsed = 0f;
+        float asyncLingerElapsed = 0f;
 
         while (board != null && stableFrames < requiredStableFrames)
         {
@@ -1030,11 +1048,38 @@ public class LevelEndSimplePopupController : MonoBehaviour
             {
                 stableFrames = 0;
                 workingElapsed += Time.unscaledDeltaTime;
+
+                // Blocking/görsel iş bitti ama yalnız async job (uçan orb/patchbot/barrel-spread/keygen)
+                // takılı: legit uçuşlar kısadır (<3s). Bu kadar sürerse LEAK'tir (Begin/End dengesizliği).
+                // resolve loop çoktan çıktığı için onun 5s timeout'u bunu temizleyemez → BURADA drain et.
+                bool onlyAsyncLingering = !board.IsBusy
+                    && board.BlockingBackgroundJobs == 0
+                    && !board.IsActionSequencePlaying
+                    && board.ActiveBackgroundJobs > 0;
+
+                if (onlyAsyncLingering)
+                {
+                    asyncLingerElapsed += Time.unscaledDeltaTime;
+                    if (asyncLingerElapsed >= asyncLeakSeconds)
+                    {
+                        Debug.LogWarning(
+                            $"[LevelEnd] Async job {asyncLeakSeconds:0}s+ takılı (leak) — force-drain edip " +
+                            $"karar veriliyor. {DescribeBoardWorkForLevelEnd()}");
+                        board.ForceDrainAllJobs();
+                        break;
+                    }
+                }
+                else
+                {
+                    asyncLingerElapsed = 0f;
+                }
+
                 if (workingElapsed >= leakDiagnosticSeconds)
                 {
                     Debug.LogError(
                         $"[LevelEnd] Board {leakDiagnosticSeconds:0}s+ boyunca çalışıyor — olası takılma/leak. " +
-                        $"Yine de değerlendiriliyor. {DescribeBoardWorkForLevelEnd()}");
+                        $"Force-drain edip değerlendiriliyor. {DescribeBoardWorkForLevelEnd()}");
+                    board.ForceDrainAllJobs();
                     break;
                 }
             }
@@ -1046,6 +1091,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         failSettleWaitRunning = false;
+        // Force-drain sonrası IsBoardWorkingForLevelEnd artık false → gate'e takılmadan karar verilir
+        // (eskiden break sonrası gate hâlâ true görüp yeniden ertelerdi = 30s'lik sonsuz döngü).
         EvaluateAndShowIfEnded();
     }
 

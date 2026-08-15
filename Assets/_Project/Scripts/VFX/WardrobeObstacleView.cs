@@ -34,6 +34,13 @@ public sealed class WardrobeObstacleView : MonoBehaviour
     [Tooltip("Düşerken toplam dönme (derece/sn).")]
     [SerializeField] private float doorSpinDegrees = 80f;
 
+    [Header("Item Düşüşü")]
+    [SerializeField, Min(0.05f)] private float itemFallDuration = 0.65f;
+    [SerializeField] private float itemFallGravity = 1800f;
+    [SerializeField] private float itemFallSideKick = 90f;
+    [SerializeField] private float itemFallLaunchUp = 260f;
+    [SerializeField] private float itemSpinDegrees = 160f;
+
     // ── State ────────────────────────────────────────────────────────────────
     private Image _rootImage;
     private Coroutine _shakeRoutine;
@@ -83,8 +90,10 @@ public sealed class WardrobeObstacleView : MonoBehaviour
         var img = _frontToBack[0];
         _frontToBack.RemoveAt(0);
         if (img != null)
-            StartCoroutine(CoFadeAndDestroy(img));
+            StartCoroutine(CoItemFallAndDestroy(img));
     }
+
+    public float RecommendedClearDestroyDelay => Mathf.Max(0.1f, itemFallDuration + 0.05f);
 
     public void Shake() => StartShake();
 
@@ -287,20 +296,41 @@ public sealed class WardrobeObstacleView : MonoBehaviour
         _shakeRoutine = null;
     }
 
-    private IEnumerator CoFadeAndDestroy(Image img)
+    private IEnumerator CoItemFallAndDestroy(Image img)
     {
-        const float duration = 0.25f;
+        float duration = Mathf.Max(0.05f, itemFallDuration);
         float elapsed = 0f;
-        Color start = img.color;
         var rt = img.GetComponent<RectTransform>();
+        if (rt == null)
+        {
+            if (img != null) Destroy(img.gameObject);
+            yield break;
+        }
+
+        rt.SetAsLastSibling();
+        Color start = img.color;
+        Vector2 pos = rt.anchoredPosition;
         Vector3 startScale = rt.localScale;
+        float side = Random.value < 0.5f ? -1f : 1f;
+        Vector2 vel = new Vector2(side * itemFallSideKick, itemFallLaunchUp);
+        float rot = rt.localEulerAngles.z;
 
         while (elapsed < duration && img != null)
         {
-            elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-            img.color = new Color(start.r, start.g, start.b, Mathf.Lerp(1f, 0f, t));
-            rt.localScale = startScale * Mathf.Lerp(1f, 1.3f, t);
+            float dt = Time.deltaTime;
+            elapsed += dt;
+            vel.y -= itemFallGravity * dt;
+            pos += vel * dt;
+            rot += side * itemSpinDegrees * dt;
+
+            rt.anchoredPosition = pos;
+            rt.localRotation = Quaternion.Euler(0f, 0f, rot);
+            rt.localScale = startScale * Mathf.Lerp(1f, 0.82f, Mathf.Clamp01(elapsed / duration));
+
+            float k = Mathf.Clamp01(elapsed / duration);
+            if (k > 0.72f)
+                img.color = new Color(start.r, start.g, start.b, Mathf.Lerp(start.a, 0f, (k - 0.72f) / 0.28f));
+
             yield return null;
         }
 

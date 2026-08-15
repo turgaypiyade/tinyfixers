@@ -614,7 +614,7 @@ public class CascadeLogic
         else
         {
             // Try stealing from below if fromY is a Mask Hole or PassThrough empty cell
-            if (TryGetCellState(fromX, fromY, out var state) && !state.isObstacleBlocked)
+            if (TryGetCellState(fromX, fromY, out var state) && state.isPassThroughVoid)
             {
                 // Find a tile below that passed through this cell
                 for (int y = fromY + 1; y < board.Height; y++)
@@ -965,12 +965,12 @@ public class CascadeLogic
             ? board.RandomPool[0]
             : TileType.Gear;
 
-        view.SetType(dummyType);
-        view.SetSpecial(TileSpecial.None);
-
         Sprite obstacleSprite = def.GetPreviewSprite();
         if (obstacleSprite != null)
             view.SetMovableObstacleSprite(obstacleSprite);
+
+        view.SetType(dummyType);
+        view.SetSpecial(TileSpecial.None);
 
         return view;
     }

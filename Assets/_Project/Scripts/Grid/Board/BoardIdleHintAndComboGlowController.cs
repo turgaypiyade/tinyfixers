@@ -342,6 +342,14 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
             instance.CancelHint(board, state);
     }
 
+    public static void SetManualSpecialGlow(TileView tile, bool active, int tileSize)
+    {
+        if (tile == null)
+            return;
+
+        SetComboGlowActive(tile, active, tileSize);
+    }
+
     private void CancelHint(BoardController board, BoardFxState state)
     {
         if (state.hintRoutine != null)

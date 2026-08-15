@@ -3,8 +3,20 @@ guid: 5e7807c33a86a4fa2887956c588822c9
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 833778479501033089
-    second: LineHLeftRocket_0
+      213: 1027493723618482156
+    second: LineHRightRocket_0
+  - first:
+      213: 8315202898410539421
+    second: LineHRightRocket_1
+  - first:
+      213: 7791971032587791451
+    second: LineHRightRocket_2
+  - first:
+      213: 5454462502558182155
+    second: LineHRightRocket_3
+  - first:
+      213: -4303711117027002413
+    second: LineHRightRocket_4
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +125,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LineHLeftRocket_0
+      name: LineHRightRocket_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 1254
-        height: 720
+        x: 10
+        y: 26
+        width: 1621
+        height: 924
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +140,96 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 18e360c0c1d229b00800000000000000
-      internalID: 833778479501033089
+      spriteID: ce719350914624e00800000000000000
+      internalID: 1027493723618482156
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LineHRightRocket_1
+      rect:
+        serializedVersion: 2
+        x: 21
+        y: 527
+        width: 11
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d990f03faf8856370800000000000000
+      internalID: 8315202898410539421
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LineHRightRocket_2
+      rect:
+        serializedVersion: 2
+        x: 19
+        y: 473
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b5c6789de54a22c60800000000000000
+      internalID: 7791971032587791451
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LineHRightRocket_3
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 469
+        width: 15
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b0b2ba14fb422bb40800000000000000
+      internalID: 5454462502558182155
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LineHRightRocket_4
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 429
+        width: 14
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3d7b4b58a852644c0800000000000000
+      internalID: -4303711117027002413
       vertices: []
       indices: 
       edges: []
@@ -148,7 +248,11 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LineHLeftRocket_0: 833778479501033089
+      LineHRightRocket_0: 1027493723618482156
+      LineHRightRocket_1: 8315202898410539421
+      LineHRightRocket_2: 7791971032587791451
+      LineHRightRocket_3: 5454462502558182155
+      LineHRightRocket_4: -4303711117027002413
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

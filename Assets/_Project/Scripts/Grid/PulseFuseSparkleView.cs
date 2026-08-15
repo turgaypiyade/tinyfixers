@@ -12,15 +12,15 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     [SerializeField] private Vector2 fuseLocalOffset = new Vector2(5f, 28f);
 
     [Header("Emit")]
-    [SerializeField] private float emitInterval = 0.10f;
-    [SerializeField] private float sparkLifetime = 0.40f;
-    [SerializeField] private float spreadRadius  = 5f;
+    [SerializeField] private float emitInterval = 0.02f; // Çok yoğun alev
+    [SerializeField] private float sparkLifetime = 0.65f; // Çok daha uzun ömürlü
+    [SerializeField] private float spreadRadius  = 12f; // Çok daha geniş yayılım
 
     [Header("Spark appearance")]
-    [SerializeField] private float sparkSizeMin  = 5f;
-    [SerializeField] private float sparkSizeMax  = 11f;
-    [SerializeField] private Color sparkColorA   = new Color(1.00f, 0.95f, 0.40f, 1f);
-    [SerializeField] private Color sparkColorB   = new Color(1.00f, 0.60f, 0.10f, 1f);
+    [SerializeField] private float sparkSizeMin  = 12f; // Devasa kıvılcımlar
+    [SerializeField] private float sparkSizeMax  = 22f;
+    [SerializeField] private Color sparkColorA   = new Color(1.00f, 0.65f, 0.15f, 1f); // Daha turuncu/kızıl
+    [SerializeField] private Color sparkColorB   = new Color(1.00f, 0.20f, 0.05f, 1f); // Koyu kırmızı
 
     [Header("Breath Idle (nefes)")]
     [Tooltip("Tile'ın Icon RectTransform'unu ata.")]
@@ -63,11 +63,20 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     private Coroutine emitRoutine;
     private Coroutine breathRoutine;
     private Coroutine spinRoutine;
+    private Coroutine idleSpinRoutine;
     private Image spinImage;
     private Image haloImage;
 
     private void Awake()
     {
+        emitInterval = 0.02f;
+        sparkLifetime = 0.65f;
+        spreadRadius = 12f;
+        sparkSizeMin = 12f;
+        sparkSizeMax = 22f;
+        sparkColorA = new Color(1.00f, 0.65f, 0.15f, 1f);
+        sparkColorB = new Color(1.00f, 0.20f, 0.05f, 1f);
+
         rt = GetComponent<RectTransform>();
         // Prefab'da aktif olsa bile başlangıçta kapat.
         // TileView.RefreshIcon yalnızca PulseCore için açar.
@@ -80,6 +89,7 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
         Play();
         if (breathTarget != null)
             breathRoutine = StartCoroutine(CoBreath());
+        idleSpinRoutine = StartCoroutine(CoIdleSpinWatch());
     }
 
     private void OnDisable() => StopAndClear();
@@ -101,6 +111,9 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
         if (emitRoutine   != null) { StopCoroutine(emitRoutine);   emitRoutine   = null; }
         if (breathRoutine != null) { StopCoroutine(breathRoutine); breathRoutine = null; }
         if (spinRoutine   != null) { StopCoroutine(spinRoutine);   spinRoutine   = null; }
+        if (idleSpinRoutine != null) { StopCoroutine(idleSpinRoutine); idleSpinRoutine = null; }
+        if (externalFuseRoutine != null) { StopCoroutine(externalFuseRoutine); externalFuseRoutine = null; }
+        emitIntensity = 1f;
         if (breathTarget  != null) breathTarget.localScale = Vector3.one;
         SetIconVisible(true);   // spin yarıda kesildiyse statik ikon gizli kalmasın
         spinImage = null;   // aşağıdaki child yıkımıyla yok olacak; referansı temizle
@@ -119,6 +132,54 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
         if (spinHaloEnabled) EnsureHalo(tileSize);   // ÖNCE hale (arkada)
         EnsureSpinImage(tileSize);                   // SONRA core (önde)
         spinRoutine = StartCoroutine(CoSpin());
+    }
+
+    /// <summary>Idle sırasında LineV/LineH ile birebir aynı ölçekte (1.12x) hafif pop ile küre dönüşü yapar.</summary>
+    public void PlayIdleSpin(int tileSize, float peakScale = 1.12f, float duration = 0.38f)
+    {
+        if (!isActiveAndEnabled || !HasSpinFrames()) return;
+        if (spinRoutine != null) { StopCoroutine(spinRoutine); spinRoutine = null; }
+        EnsureSpinImage(tileSize);
+        spinRoutine = StartCoroutine(CoIdleSpin(peakScale, duration));
+    }
+
+    private IEnumerator CoIdleSpin(float peakScale, float duration)
+    {
+        int frameCount = spinFrames.Length;
+        float frameTime = 1f / Mathf.Max(1f, spinFrameFps);
+        float frameAcc = 0f;
+        int idx = 0;
+        SetFrame(idx);
+
+        SetIconVisible(false);
+
+        if (spinImage != null)
+            StartExternalFuse(spinImage.rectTransform, 1f, emitIntensity, duration + 0.05f, this);
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            float dt = Time.deltaTime;
+            elapsed += dt;
+            float k = Mathf.Clamp01(elapsed / duration);
+
+            // LineV/H ile BİREBİR AYNI büyüme oranı (1.0 -> 1.12 -> 1.0)
+            float cs = 1f + (peakScale - 1f) * Mathf.Sin(k * Mathf.PI);
+            if (spinImage != null)
+                spinImage.rectTransform.localScale = Vector3.one * cs;
+
+            AdvanceFrame(ref frameAcc, ref idx, frameCount, frameTime, dt);
+            yield return null;
+        }
+
+        if (spinImage != null)
+        {
+            spinImage.rectTransform.localScale = Vector3.one;
+            spinImage.gameObject.SetActive(false);
+        }
+
+        SetIconVisible(true);
+        spinRoutine = null;
     }
 
     private void EnsureHalo(int tileSize)
@@ -191,6 +252,11 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
 
         // Oluşum boyunca statik PulseCore ikonu gizlenir (büyüyen dönen küreyle çakışmasın).
         SetIconVisible(false);
+        
+        // Spin sürerken dönen küre (spinImage) üzerinde alev çıkması için external fuse başlat:
+        // spinImage üstte çizildiği için alev de üstte çizilir ve görünür olur.
+        if (spinImage != null)
+            StartExternalFuse(spinImage.rectTransform, 1f, emitIntensity, spinGrowDuration + spinShrinkDuration + 0.1f, this);
 
         // ── Faz 1: Büyüme 0.75 → 2.5 (ease-out) — bu sırada sürekli hızlı dönme ──
         float t = 0f;
@@ -304,27 +370,48 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
         img.color = c;
     }
 
+    // Fitil yoğunluğu (combolarda "daha yoğun yansın" için). 1 = normal idle. Büyük = daha çok/
+    // hızlı kıvılcım + biraz daha büyük alev.
+    private float emitIntensity = 1f;
+
+    /// <summary>Fitil yanma yoğunluğunu ayarlar (1 = normal). Combolarda pulse "şarj oluyormuş"
+    /// gibi daha yoğun yakmak için kullanılır.</summary>
+    public void SetFuseIntensity(float multiplier)
+    {
+        emitIntensity = Mathf.Clamp(multiplier, 0.25f, 6f);
+    }
+
     private IEnumerator CoEmit()
     {
         while (true)
         {
-            SpawnSpark();
-            yield return new WaitForSeconds(emitInterval);
+            int count = Mathf.Max(1, Mathf.RoundToInt(emitIntensity));
+            for (int i = 0; i < count; i++)
+                SpawnSpark();
+            yield return new WaitForSeconds(emitInterval / Mathf.Max(0.5f, emitIntensity));
         }
     }
 
-    private void SpawnSpark()
+    private void SpawnSpark() => SpawnSparkAt(transform as RectTransform, fuseLocalOffset, 1f, emitIntensity);
+
+    // Fitil kıvılcımını verilen parent'a, ölçekli offset/boyutla basar. Idle örneği (fuseLocalOffset,
+    // tileSize) baz alınır; combo pulse görselinde sizeScale = comboIkonBoyu / TileSize ile aynı
+    // ORAN korunur → doğru koordinat kendiliğinden gelir.
+    private void SpawnSparkAt(RectTransform parent, Vector2 baseOffset, float sizeScale, float intensity, MonoBehaviour coroutineOwner = null)
     {
-        if (sparkleSprite == null) return;
+        if (sparkleSprite == null || parent == null) 
+            return;
 
         var sparkGO = new GameObject("_Spark");
-        sparkGO.transform.SetParent(transform, false);
+        sparkGO.transform.SetParent(parent, false);
         sparkGO.transform.SetAsLastSibling();
 
         var sparkRt = sparkGO.AddComponent<RectTransform>();
-        float size = Random.Range(sparkSizeMin, sparkSizeMax);
+        // Yoğunlukta kıvılcım biraz büyür + biraz daha yayılır → dolgun alev.
+        float intensityBoost = Mathf.Lerp(1f, 1.35f, Mathf.Clamp01(intensity - 1f));
+        float size = Random.Range(sparkSizeMin, sparkSizeMax) * intensityBoost * sizeScale;
         sparkRt.sizeDelta = Vector2.one * size;
-        sparkRt.anchoredPosition = fuseLocalOffset + Random.insideUnitCircle * spreadRadius;
+        sparkRt.anchoredPosition = baseOffset + Random.insideUnitCircle * spreadRadius * intensityBoost * sizeScale;
         sparkRt.localScale = Vector3.one;
 
         var img = sparkGO.AddComponent<Image>();
@@ -332,7 +419,41 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
         img.color = Color.Lerp(sparkColorA, sparkColorB, Random.value);
         img.raycastTarget = false;
 
-        StartCoroutine(CoAnimateSpark(sparkRt, img, size));
+        (coroutineOwner != null ? coroutineOwner : this).StartCoroutine(CoAnimateSpark(sparkRt, img, size));
+    }
+
+    private Coroutine externalFuseRoutine;
+
+    /// <summary>Combo görselleri için: verilen parent'a (combo pulse Image'ı) idle fitille AYNI
+    /// kıvılcımları basar. sizeScale = comboPulseBoyu / TileSize (doğru koordinat için ölçek).
+    /// duration &lt;= 0 → parent yok olana kadar. coroutineOwner verilirse tile silinse de combo
+    /// görseli kendi parent'ı yaşadığı sürece yanmaya devam eder.</summary>
+    public void StartExternalFuse(RectTransform target, float sizeScale, float intensity, float duration, MonoBehaviour coroutineOwner = null)
+    {
+        if (target == null) return;
+        var owner = coroutineOwner != null ? coroutineOwner : this;
+        if (owner == this && externalFuseRoutine != null) StopCoroutine(externalFuseRoutine);
+        var routine = owner.StartCoroutine(CoExternalFuse(target, Mathf.Max(0.1f, sizeScale),
+            Mathf.Clamp(intensity, 0.25f, 6f), duration, owner));
+        if (owner == this)
+            externalFuseRoutine = routine;
+    }
+
+    private IEnumerator CoExternalFuse(RectTransform target, float sizeScale, float intensity, float duration, MonoBehaviour coroutineOwner)
+    {
+        Vector2 offset = fuseLocalOffset * sizeScale;
+        float elapsed = 0f;
+        while (target != null && (duration <= 0f || elapsed < duration))
+        {
+            int count = Mathf.Max(1, Mathf.RoundToInt(intensity));
+            for (int i = 0; i < count; i++)
+                SpawnSparkAt(target, offset, sizeScale, intensity, coroutineOwner);
+            float wait = emitInterval / Mathf.Max(0.5f, intensity);
+            elapsed += wait;
+            yield return new WaitForSeconds(wait);
+        }
+        if (coroutineOwner == this)
+            externalFuseRoutine = null;
     }
 
     private IEnumerator CoAnimateSpark(RectTransform sparkRt, Image img, float baseSize)
@@ -404,6 +525,28 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
 
             breathTarget.localScale = Vector3.one;
             yield return new WaitForSeconds(Random.Range(breathPauseMin, breathPauseMax));
+        }
+    }
+
+    // ── 3sn Periyodik Idle Spin ────────────────────────────────────────────────
+    private IEnumerator CoIdleSpinWatch()
+    {
+        yield return new WaitForSeconds(3.0f);
+
+        while (true)
+        {
+            if (spinRoutine == null && isActiveAndEnabled && HasSpinFrames())
+            {
+                var tile = GetComponentInParent<TileView>();
+                bool isTileBusy = tile != null && (tile.WasDragging || (tile.Board != null && (tile.Board.IsBusy || tile.Board.InputLocked)));
+                if (!isTileBusy)
+                {
+                    int s = tile != null ? tile.LastAppliedTileSize : 96;
+                    PlayIdleSpin(s, 1.12f, 0.38f);
+                }
+            }
+
+            yield return new WaitForSeconds(3.0f);
         }
     }
 }

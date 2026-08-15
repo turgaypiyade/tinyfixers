@@ -25,9 +25,11 @@ public static class SpecialUtils
         {
             // Yalnızca sabit OverTileBlocker (Stone vb.) altındaki tile korunur.
             // MovableObstacle (Plastic vb.) kendisi hedef olduğundan engellenmez.
+            // SpecialTargetableBlocker (OverrideBatteryBox) da kendisi hedef → atlanmaz.
             if (board.ObstacleStateService != null
                 && board.ObstacleStateService.IsOverTileBlockerAt(x, y)
-                && !board.ObstacleStateService.IsMovableObstacleAt(x, y))
+                && !board.ObstacleStateService.IsMovableObstacleAt(x, y)
+                && !board.ObstacleStateService.IsSpecialTargetableBlockerAt(x, y))
                 return false;
             return true;
         }

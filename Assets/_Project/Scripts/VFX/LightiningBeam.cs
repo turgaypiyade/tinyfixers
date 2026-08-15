@@ -17,6 +17,15 @@ public class LightningBeam : MonoBehaviour
     [Tooltip("Her frame seed'ini değiştir (daha canlı flicker)")]
     [SerializeField] private bool liveFlicker = true;
 
+    [Header("Edge Shimmer (ışık gibi pürüzlü kenar)")]
+    [Tooltip("Ana rope dalgasının ÜSTÜNE binen yüksek-frekanslı ince titreşim (uzunluğun oranı). " +
+             "0 = kapalı (düz çizgi). Küçük değer = kenar 'ışık gibi' pürüzlenir, çizgi genel hattı korunur.")]
+    [SerializeField, Range(0f, 0.2f)] private float edgeShimmerAmount = 0f;
+    [Tooltip("Shimmer'ın çizgi boyunca frekansı — yüksek = daha sık/ince pürüz.")]
+    [SerializeField] private float edgeShimmerFrequency = 24f;
+    [Tooltip("Shimmer'ın zaman içindeki oynama hızı — yüksek = daha canlı kaynayan ışık.")]
+    [SerializeField] private float edgeShimmerSpeed = 10f;
+
     [Header("Thickness")]
     [Tooltip("Kaynak ucunun prefab kalınlığına göre çarpanı. Düşük değer = daha ince başlangıç.")]
     [SerializeField, Range(0.01f, 1f)] private float startWidthMultiplier = 0.25f;
@@ -47,6 +56,8 @@ public class LightningBeam : MonoBehaviour
     private LineRenderer lr;
     private LineRenderer innerLr;
     private GradientColorKey[] innerColorKeys;
+    private float baseStartWidth;
+    private float baseEndWidth;
     private float t;
     private Color startColor;
     private Color endColor;
@@ -56,6 +67,7 @@ public class LightningBeam : MonoBehaviour
     private bool initialized;
     private float seed;
     private bool persistent;
+    private bool noTaper;
     private bool fadingOut;
     private float fadeOutDuration = 0.10f;
     private float fadeOutElapsed;
@@ -69,6 +81,8 @@ public class LightningBeam : MonoBehaviour
 
         startColor = lr.startColor;
         endColor = lr.endColor;
+        baseStartWidth = lr.startWidth;
+        baseEndWidth = lr.endWidth;
 
         seed = UnityEngine.Random.Range(0f, 1000f);
         ApplyWidthProfile();
@@ -156,6 +170,38 @@ public class LightningBeam : MonoBehaviour
 
         UpdatePersistentEndpoints();
         BuildLightning();
+    }
+
+    public void ConfigureRopeStyle(float jaggedness, float startWidth, float endWidth)
+    {
+        jaggednessRatio = Mathf.Clamp(jaggedness, 0f, 0.5f);
+        startWidthMultiplier = Mathf.Clamp(startWidth, 0.01f, 1f);
+        endWidthMultiplier = Mathf.Clamp(endWidth, 0.01f, 1f);
+        ApplyWidthProfile();
+
+        if (initialized)
+            BuildLightning();
+    }
+
+    public void SetInnerColoredCoreVisible(bool visible)
+    {
+        if (innerLr != null)
+            innerLr.enabled = visible;
+    }
+
+    /// <summary>
+    /// Ana rope dalgasının üstüne yüksek-frekanslı ince bir titreşim bindirir:
+    /// çizginin genel hattı korunur ama kenar "ışık gibi" pürüzlü/kaynayan görünür.
+    /// amount=0 → kapalı (bu beam için hiçbir shimmer yok, önceki davranış).
+    /// </summary>
+    public void ConfigureEdgeShimmer(float amount, float frequency, float speed)
+    {
+        edgeShimmerAmount = Mathf.Max(0f, amount);
+        edgeShimmerFrequency = Mathf.Max(0.1f, frequency);
+        edgeShimmerSpeed = Mathf.Max(0f, speed);
+
+        if (initialized)
+            BuildLightning();
     }
 
     public void FadeOutAndDestroy(float duration)
@@ -266,16 +312,24 @@ public class LightningBeam : MonoBehaviour
         b.z = 0f;
     }
 
+    /// <summary>
+    /// true → uç (end) genişliği prefab'ın ince baseEndWidth'i yerine baseStartWidth ile çizilir;
+    /// böylece ışın uca doğru SİVRİLMEZ (taşa varan uç dolgun kalır).
+    /// </summary>
+    public void SetNoTaper(bool value)
+    {
+        noTaper = value;
+        ApplyWidthProfile();
+    }
+
     private void ApplyWidthProfile()
     {
         if (lr == null)
             return;
 
-        float baseStart = lr.startWidth;
-        float baseEnd = lr.endWidth;
-
-        lr.startWidth = Mathf.Max(0.001f, baseStart * startWidthMultiplier);
-        lr.endWidth = Mathf.Max(0.001f, baseEnd * endWidthMultiplier);
+        float endBase = noTaper ? baseStartWidth : baseEndWidth;
+        lr.startWidth = Mathf.Max(0.001f, baseStartWidth * startWidthMultiplier);
+        lr.endWidth = Mathf.Max(0.001f, endBase * endWidthMultiplier);
 
         if (innerLr != null)
         {
@@ -324,6 +378,16 @@ public class LightningBeam : MonoBehaviour
             float offset = (n1 * 0.88f + n2 * 0.12f) * 2f; // [-1, 1] civarı
 
             pos += side * (offset * jaggednessAmount * edgeFade);
+
+            // Yüksek-frekanslı "ışık" pürüzü: rope dalgasından BAĞIMSIZ ince titreşim.
+            // Genel hattı bozmaz (küçük genlik) ama kenarı kaynayan ışık gibi gösterir.
+            // edgeFade ile uçlarda 0 → beam taşa hâlâ tam noktadan değer.
+            if (edgeShimmerAmount > 0f)
+            {
+                float shimmerTime = liveFlicker ? Time.time * edgeShimmerSpeed + seed : seed;
+                float nHi = Mathf.PerlinNoise(shimmerTime + 500f, p * edgeShimmerFrequency) - 0.5f;
+                pos += side * (nHi * 2f * length * edgeShimmerAmount * edgeFade);
+            }
 
             lr.SetPosition(i, pos);
             if (innerLr != null)

@@ -5,6 +5,7 @@ public sealed class ClearPresentationPlan
 {
     public List<IClearEffectDescriptor> Effects { get; } = new();
     public HashSet<TileView> FinalClearTiles { get; } = new();
+    public HashSet<Vector2Int> ImpactOnlyCells { get; } = new();
 
     // Normal match presentation path'lerinde hangi hücrenin hangi TileType match'ten
     // geldiğini taşır. Special / booster path'lerinde boş kalabilir.
@@ -27,6 +28,11 @@ public sealed class ClearPresentationPlan
     public void RegisterNormalMatchSource(Vector2Int cell, TileType tileType)
     {
         NormalMatchTileTypeByCell[cell] = tileType;
+    }
+
+    public void RegisterImpactOnlyCell(Vector2Int cell)
+    {
+        ImpactOnlyCells.Add(cell);
     }
 
     public TileType? GetNormalMatchSourceTileType(Vector2Int cell)

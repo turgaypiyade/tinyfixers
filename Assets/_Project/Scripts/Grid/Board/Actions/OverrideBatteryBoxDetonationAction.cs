@@ -13,14 +13,21 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
 
     private readonly BoardController board;
     private readonly int originIndex;
-    // Action, detonasyon event'iyle (kutu animasyonu başlarken, T0) aynı anda oluşturulur.
-    private readonly float createdTime;
+    // Action, ExecuteVisuals başında (kutu sırası gelince, T0) createdTime'ını sıfırlar — çoklu
+    // kutuda 2.'nin waitToBurst'ü 0 olmasın, her kutu kendi 2s wind-up'ını alsın.
+    private float createdTime;
+    // Kuyruk (BoardController.ProcessOverrideBatteryBoxQueue) settle'ı kendi yönetir → false gelir.
+    private readonly bool ownResolve;
 
-    public OverrideBatteryBoxDetonationAction(BoardController board, int originIndex)
+    public OverrideBatteryBoxDetonationAction(BoardController board, int originIndex, bool ownResolve = true)
     {
         this.board = board;
         this.originIndex = originIndex;
         this.createdTime = Time.time;
+        this.ownResolve = ownResolve;
+        // NOT: kutu hücresinin gravity-bloğu artık HandleOverrideBatteryBoxDetonated'da (kuyruğa
+        // girerken) kurulur — çoklu kutuda HEPSİNİN hücresi baştan bloklanır. Burada yalnız burst'te
+        // KENDİ hücremizi açarız (aşağıda).
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
@@ -29,16 +36,24 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
         if (activeBoard == null)
             yield break;
 
-        // Tozu kutunun GERÇEK burst anına hizala: T0'dan (action oluşturulma anı = kutu
-        // animasyon başlangıcı) BoxBurstTime kadar sonra. Sequencer bu action'a geç ulaşsa
-        // bile geçen süre düşülür → toz her zaman patlama anında merkezden başlar, geç kalmaz.
+        // T0'ı ŞİMDİ (kutu sırası gelip view animasyonu başladığı an) sıfırla → her kutu tam
+        // BoxBurstTime wind-up alır; çoklu kutuda 2.'nin waitToBurst'ü 0'a düşmez.
+        createdTime = Time.time;
+
+        // Tozu kutunun GERÇEK burst anına hizala: T0'dan BoxBurstTime kadar sonra.
         float elapsedSinceStart = Time.time - createdTime;
         float waitToBurst = Mathf.Max(0f, BoxBurstTime - elapsedSinceStart);
         if (waitToBurst > 0f)
             yield return new WaitForSeconds(waitToBurst);
 
+        // BURST ANI: kutu hücresini gravity'ye aç → taş düşüşü artık başlayabilir (öncesinde değil).
+        if (activeBoard.Width > 0)
+            activeBoard.ClearPendingTriggeredSpecialCells(
+                new[] { new Vector2Int(originIndex % activeBoard.Width, originIndex / activeBoard.Width) });
+
         var impactCells = new List<Vector2Int>();
         var specialTiles = new List<TileView>();
+        var normalTiles = new List<TileView>();
         var impactedOrigins = new HashSet<int>();
 
         for (int y = 0; y < activeBoard.Height; y++)
@@ -63,13 +78,22 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
                     continue;
 
                 if (tile.GetSpecial() != TileSpecial.None)
+                {
                     specialTiles.Add(tile);
+                }
+                else if (obstacles == null || !obstacles.IsMovableObstacleAt(x, y))
+                {
+                    // Detonasyon board'daki HER şeye 1 hit verir: normal renkli taşlar da bir katman
+                    // temizlenir. Movable obstacle tile'ları hariç — onlar zaten impactCells üzerinden
+                    // obstacle olarak vuruluyor (çift-işlem/hayalet-veri olmasın).
+                    normalTiles.Add(tile);
+                }
             }
         }
 
-        if ((impactCells.Count == 0 && specialTiles.Count == 0) || sequencer == null)
+        if ((impactCells.Count == 0 && specialTiles.Count == 0 && normalTiles.Count == 0) || sequencer == null)
         {
-            activeBoard.RequestResolveAfterActionSequence();
+            if (ownResolve) activeBoard.RequestResolveAfterActionSequence();
             yield break;
         }
 
@@ -120,6 +144,23 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
             activeBoard.StartCoroutine(TriggerSpecialAfterDelay(activeBoard, tile, delay, MarkDone));
         }
 
+        for (int i = 0; i < normalTiles.Count; i++)
+        {
+            TileView tile = normalTiles[i];
+            if (tile == null)
+                continue;
+
+            float delay = WaveDelayForCell(activeBoard, originCell, new Vector2Int(tile.X, tile.Y), maxRadiusPx, duration);
+            pending++;
+            activeBoard.StartCoroutine(ClearNormalTileAfterDelay(activeBoard, tile, delay, MarkDone));
+        }
+
+        // Düşüşü BEKLETME: hit'ler dağıtılır dağıtılmaz (burst anı) resolve iste → taşlar hemen
+        // düşmeye başlar (kullanıcı: "hit verdikten sonra düşmeler başlasın"). Hit coroutine'leri
+        // dalga boyunca obstacle'ları vurmaya devam eder; toz dalgası sürerken taşlar akar, sıradaki
+        // kutu havada/karada ne yakalarsa ona vurur. Aşağıdaki sondaki resolve geç-vurulanları toplar.
+        if (ownResolve) activeBoard.RequestResolveAfterActionSequence();
+
         float waited = 0f;
         float maxWait = duration + 0.35f;
         while (pending > 0 && waited < maxWait)
@@ -128,7 +169,7 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
             yield return null;
         }
 
-        activeBoard.RequestResolveAfterActionSequence();
+        if (ownResolve) activeBoard.RequestResolveAfterActionSequence();
     }
 
     private static IEnumerator ApplyObstacleHitAfterDelay(
@@ -172,6 +213,35 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
             && tile.GetSpecial() != TileSpecial.None)
         {
             b.TriggerSpecialTileFromBoardEffect(tile);
+        }
+
+        onDone?.Invoke();
+    }
+
+    // Dalga cephesi bu hücreye ulaşınca normal renkli taşı bir katman temizler
+    // (goal/skor sayımı NotifyTilesCleared, grid datası + cargo kredisi ClearAndDestroyTile).
+    private static IEnumerator ClearNormalTileAfterDelay(
+        BoardController b,
+        TileView tile,
+        float delay,
+        System.Action onDone)
+    {
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        if (b != null
+            && tile != null && tile
+            && tile.X >= 0 && tile.X < b.Width
+            && tile.Y >= 0 && tile.Y < b.Height
+            && b.Tiles[tile.X, tile.Y] == tile
+            && tile.GetSpecial() == TileSpecial.None)
+        {
+            b.BreakFx?.PlayTileBreak(tile);
+
+            var counts = new Dictionary<TileType, int>();
+            b.ClearAndDestroyTile(tile, counts);
+            foreach (var kv in counts)
+                b.NotifyTilesCleared(kv.Key, kv.Value);
         }
 
         onDone?.Invoke();

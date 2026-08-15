@@ -20,6 +20,8 @@ public sealed class StreakBoosterMenuBadge : MonoBehaviour
     [SerializeField] private Image progressFill;
     [Tooltip("Opsiyonel — '2/3' gibi stage yazısı.")]
     [SerializeField] private TMP_Text stageLabel;
+    [Tooltip("Event level eşiğinden önce gizlenecek root. Boşsa parent panel gizlenir.")]
+    [SerializeField] private GameObject visibilityRoot;
 
     [Header("Fill")]
     [Tooltip("Dolumun tepe'den saat yönünde ilerlemesi (kapatırsan ters yön).")]
@@ -43,6 +45,9 @@ public sealed class StreakBoosterMenuBadge : MonoBehaviour
 
     private void Awake()
     {
+        if (visibilityRoot == null && transform.parent != null)
+            visibilityRoot = transform.parent.gameObject;
+
         if (progressFill != null)
         {
             // Halka sprite'ını KOD üretir (atama gerekmez); renk Image.color'dan gelir.
@@ -100,9 +105,26 @@ public sealed class StreakBoosterMenuBadge : MonoBehaviour
     private void Refresh()
     {
         // UFO ile AYNI kural: mevcut level'da gerçekten teslim edilecek stage (eşik altında 0).
-        targetStage = StreakBoosterEvent.EffectiveStage(CurrentLevel.Global);
+        int globalLevel = CurrentLevel.Global;
+        bool activeForLevel = StreakBoosterEvent.IsActiveForLevel(globalLevel);
+
+        if (!activeForLevel)
+        {
+            SetVisibility(false);
+            targetStage = 0;
+            return;
+        }
+
+        SetVisibility(true);
+        targetStage = StreakBoosterEvent.EffectiveStage(globalLevel);
         if (stageLabel != null)
             stageLabel.text = $"{targetStage}/{StreakBoosterEvent.MaxStage}";
+    }
+
+    private void SetVisibility(bool visible)
+    {
+        if (visibilityRoot != null && visibilityRoot.activeSelf != visible)
+            visibilityRoot.SetActive(visible);
     }
 
     private void RefreshImmediate()

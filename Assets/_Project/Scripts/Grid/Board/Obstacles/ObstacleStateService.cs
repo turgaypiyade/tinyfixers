@@ -91,6 +91,44 @@ public class ObstacleStateService : ISimObstacleQuery
     private LevelData level;
     private ObstacleLibrary library;
 
+    public sealed class ObstacleSwapStateSnapshot
+    {
+        internal readonly int[] Obstacles;
+        internal readonly int[] ObstacleOrigins;
+        internal readonly int[] RemainingHitsByOrigin;
+        internal readonly Dictionary<int, ChestColorMask> ChestColorStates;
+        internal readonly Dictionary<int, int[]> BatteryHitsByOrigin;
+        internal readonly Dictionary<int, int[]> OverrideBatteryHitsByOrigin;
+        internal readonly Dictionary<int, int> OverrideBatteryProgressByOrigin;
+        internal readonly Dictionary<int, int> WardrobeItemCounts;
+        internal readonly Dictionary<int, (ObstacleId Id, int Remaining)> UnderTileBeneathMovable;
+        internal readonly Dictionary<int, List<StampedBeneath>> StampedBeneathByCell;
+
+        internal ObstacleSwapStateSnapshot(
+            int[] obstacles,
+            int[] obstacleOrigins,
+            int[] remainingHitsByOrigin,
+            Dictionary<int, ChestColorMask> chestColorStates,
+            Dictionary<int, int[]> batteryHitsByOrigin,
+            Dictionary<int, int[]> overrideBatteryHitsByOrigin,
+            Dictionary<int, int> overrideBatteryProgressByOrigin,
+            Dictionary<int, int> wardrobeItemCounts,
+            Dictionary<int, (ObstacleId Id, int Remaining)> underTileBeneathMovable,
+            Dictionary<int, List<StampedBeneath>> stampedBeneathByCell)
+        {
+            Obstacles = obstacles;
+            ObstacleOrigins = obstacleOrigins;
+            RemainingHitsByOrigin = remainingHitsByOrigin;
+            ChestColorStates = chestColorStates;
+            BatteryHitsByOrigin = batteryHitsByOrigin;
+            OverrideBatteryHitsByOrigin = overrideBatteryHitsByOrigin;
+            OverrideBatteryProgressByOrigin = overrideBatteryProgressByOrigin;
+            WardrobeItemCounts = wardrobeItemCounts;
+            UnderTileBeneathMovable = underTileBeneathMovable;
+            StampedBeneathByCell = stampedBeneathByCell;
+        }
+    }
+
     // Sadece origin hücre indexi anlamlıdır. -1 => obstacle yok.
     private int[] remainingHitsByOrigin = Array.Empty<int>();
 
@@ -113,11 +151,9 @@ public class ObstacleStateService : ISimObstacleQuery
     // terk edince/kırılınca geri yüklüyoruz. Key = cell index.
     private readonly Dictionary<int, (ObstacleId Id, int Remaining)> _underTileBeneathMovable = new();
 
-    // Generic "stacked obstacle" beneath store. Bir over-tile obstacle (Safe, Chest, Wardrobe...)
-    // authored içeriğin (Mud, Stone vb.) üstüne stamp edilince, alttaki içerik burada saklanır.
-    // Üstteki obstacle KIRILINCA geri yüklenir: ClearObstacleFromLevel (normal damage akışı) veya
-    // Safe için RevealStampedBeneathByOverOrigin. Key = cell index. Safe'in eski per-service
-    // beneath store'unun generic hâli — artık tüm obstacle'lar için tek mekanizma.
+    // Generic "stacked obstacle" beneath store. Bir cell'de base + overlay + Safe gibi
+    // birden fazla katman olabilir. Liste sırası alttan üste doğru tutulur; son item,
+    // canlı üst obstacle kırılınca hemen geri yüklenecek katmandır.
     public readonly struct StampedBeneath
     {
         public readonly ObstacleId Id;     // alttaki obstacle (None = boş/normal)
@@ -134,7 +170,7 @@ public class ObstacleStateService : ISimObstacleQuery
         }
 
     }
-    private readonly Dictionary<int, StampedBeneath> _stampedBeneathByCell = new();
+    private readonly Dictionary<int, List<StampedBeneath>> _stampedBeneathByCell = new();
 
     /// Set by BoardController → RaiseObstacleCreatedDynamic. Restore edilen beneath obstacle'a
     /// (x,y) görselini oluşturmak için çağrılır.
@@ -726,22 +762,13 @@ public class ObstacleStateService : ISimObstacleQuery
 
         int idx = level.Index(x, y);
         var id = (ObstacleId)level.obstacles[idx];
-        if (id == ObstacleId.None) return false;
-        if (id == ObstacleId.Tube) return true;
-        if (id == ObstacleId.Safe) return true;
-        // Magnet path/uç hücreleri MagnetObstacleService ile yönetilir (normal hit-stage'i yok).
-        // Tüm magnet alanı işgal edilmiş sayılır → taş spawn olmaz. Uç hit alıp küçüldükçe
-        // FreeMagnetCell o hücreyi None yapar → hücre açılır ve gravity ile dolar (alan "kapanır").
-        if (id == ObstacleId.Magnet) return true;
-        // Emitter obstacles occupy the cell while their service-owned state is active.
-        if (id == ObstacleId.EnergyContainer) return true;
-        if (id == ObstacleId.HatLauncher) return true;
-        if (id == ObstacleId.RocketBasket) return true;
-        if (id == ObstacleId.OverrideBatteryBox) return true;
+        if (IsObstacleLayerBlockingCell(id, ResolveRemainingForLiveLayer(idx, id)))
+            return true;
 
-        var def = library != null ? library.Get(id) : null;
-        int remaining = ResolveRemainingHitsForCell(idx, def);
-        return def != null && def.GetBlocksCellsForRemainingHits(remaining);
+        // Generic stack: üstteki overlay (örn. Grass) canlıyken taş akışı alt katmanın
+        // bloklama kuralını da görmeli. Hit/pull yolu yine canlı üst obstacle'a gider.
+        return TryGetStampedBeneathLayer(idx, out var stamped)
+            && IsObstacleLayerBlockingCell(stamped.Id, stamped.Remaining);
     }
 
     // Hücre Magnet ise ve GÜNCEL bir uç (A/B) ise true. Orta yol hücreleri inert → false.
@@ -749,7 +776,7 @@ public class ObstacleStateService : ISimObstacleQuery
     {
         if (!IsValidCell(x, y)) return false;
         int idx = level.Index(x, y);
-        if ((ObstacleId)level.obstacles[idx] != ObstacleId.Magnet) return false;
+        if (!IsMagnetLayerPresentAt(idx)) return false;
         return MagnetEndpointQuery != null && MagnetEndpointQuery(idx);
     }
 
@@ -759,18 +786,27 @@ public class ObstacleStateService : ISimObstacleQuery
 
         int idx = level.Index(x, y);
         var id = (ObstacleId)level.obstacles[idx];
-        if (id == ObstacleId.None) return false;
-        if (id == ObstacleId.Tube) return true;
-        if (id == ObstacleId.Magnet) return true;
-        // Emitter obstacles always block regardless of stage — interceptors handle active vs exhausted.
-        if (id == ObstacleId.EnergyContainer) return true;
-        if (id == ObstacleId.HatLauncher) return true;
-        if (id == ObstacleId.RocketBasket) return true;
-        if (id == ObstacleId.OverrideBatteryBox) return true;
+        if (IsObstacleLayerOverTileBlocker(id, ResolveRemainingForLiveLayer(idx, id)))
+            return true;
 
-        var def = library != null ? library.Get(id) : null;
-        int remaining = ResolveRemainingHitsForCell(idx, def);
-        return def != null && def.IsOverTileDamageBehaviorForRemainingHits(remaining);
+        return TryGetStampedBeneathLayer(idx, out var stamped)
+            && IsObstacleLayerOverTileBlocker(stamped.Id, stamped.Remaining);
+    }
+
+    // OverrideBatteryBox hücreyi bloklar (OverTileBlocker) AMA kendisi special ile vurulması
+    // gereken bir HEDEF'tir — altındaki taşı koruyan bir taş/emitter değil. Special hedeflemesi
+    // (CanAffectCell) bu hücreyi atlamamalı; yoksa line/pulse box'ı hiç vuramaz, box yalnız
+    // komşu renk-match ile ilerler, special ile ulaşılan renkler hiç bitmez → detone olmaz.
+    public bool IsSpecialTargetableBlockerAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+
+        int idx = level.Index(x, y);
+        if ((ObstacleId)level.obstacles[idx] == ObstacleId.OverrideBatteryBox)
+            return true;
+
+        return TryGetStampedBeneathLayer(idx, out var stamped)
+            && stamped.Id == ObstacleId.OverrideBatteryBox;
     }
 
     public bool IsDiagonalAllowedAt(int x, int y)
@@ -806,6 +842,106 @@ public class ObstacleStateService : ISimObstacleQuery
             return remaining;
 
         return Mathf.Max(1, def != null ? def.hits : 1);
+    }
+
+    private int ResolveRemainingForLiveLayer(int idx, ObstacleId id)
+    {
+        if (id == ObstacleId.None)
+            return 0;
+
+        var def = library != null ? library.Get(id) : null;
+        return ResolveRemainingHitsForCell(idx, def);
+    }
+
+    private bool TryGetStampedBeneathLayer(int idx, out StampedBeneath stamped)
+    {
+        stamped = default;
+        if (idx < 0)
+            return false;
+
+        if (!_stampedBeneathByCell.TryGetValue(idx, out var layers) || layers == null || layers.Count == 0)
+            return false;
+
+        stamped = layers[layers.Count - 1];
+        return stamped.Id != ObstacleId.None;
+    }
+
+    private bool TryPeekStampedBeneathLayer(int idx, out StampedBeneath stamped)
+    {
+        stamped = default;
+        if (idx < 0)
+            return false;
+
+        if (!_stampedBeneathByCell.TryGetValue(idx, out var layers) || layers == null || layers.Count == 0)
+            return false;
+
+        stamped = layers[layers.Count - 1];
+        return true;
+    }
+
+    private bool TryPopStampedBeneathLayer(int idx, out StampedBeneath stamped)
+    {
+        stamped = default;
+        if (idx < 0)
+            return false;
+
+        if (!_stampedBeneathByCell.TryGetValue(idx, out var layers) || layers == null || layers.Count == 0)
+            return false;
+
+        int last = layers.Count - 1;
+        stamped = layers[last];
+        layers.RemoveAt(last);
+
+        if (layers.Count == 0)
+            _stampedBeneathByCell.Remove(idx);
+
+        return true;
+    }
+
+    private bool IsMagnetLayerPresentAt(int idx)
+    {
+        if (level == null || level.obstacles == null) return false;
+        if (idx < 0 || idx >= level.obstacles.Length) return false;
+
+        if ((ObstacleId)level.obstacles[idx] == ObstacleId.Magnet)
+            return true;
+
+        return TryGetStampedBeneathLayer(idx, out var stamped)
+            && stamped.Id == ObstacleId.Magnet;
+    }
+
+    private bool IsObstacleLayerBlockingCell(ObstacleId id, int remaining)
+    {
+        if (id == ObstacleId.None) return false;
+        if (id == ObstacleId.Tube) return true;
+        if (id == ObstacleId.Safe) return true;
+        // Magnet path/uç hücreleri MagnetObstacleService ile yönetilir (normal hit-stage'i yok).
+        // Tüm magnet alanı işgal edilmiş sayılır → taş spawn olmaz. Uç hit alıp küçüldükçe
+        // FreeMagnetCell o hücreyi None yapar → hücre açılır ve gravity ile dolar (alan "kapanır").
+        if (id == ObstacleId.Magnet) return true;
+        // Emitter obstacles occupy the cell while their service-owned state is active.
+        if (id == ObstacleId.EnergyContainer) return true;
+        if (id == ObstacleId.HatLauncher) return true;
+        if (id == ObstacleId.RocketBasket) return true;
+        if (id == ObstacleId.OverrideBatteryBox) return true;
+
+        var def = library != null ? library.Get(id) : null;
+        return def != null && def.GetBlocksCellsForRemainingHits(remaining);
+    }
+
+    private bool IsObstacleLayerOverTileBlocker(ObstacleId id, int remaining)
+    {
+        if (id == ObstacleId.None) return false;
+        if (id == ObstacleId.Tube) return true;
+        if (id == ObstacleId.Magnet) return true;
+        // Emitter obstacles always block regardless of stage — interceptors handle active vs exhausted.
+        if (id == ObstacleId.EnergyContainer) return true;
+        if (id == ObstacleId.HatLauncher) return true;
+        if (id == ObstacleId.RocketBasket) return true;
+        if (id == ObstacleId.OverrideBatteryBox) return true;
+
+        var def = library != null ? library.Get(id) : null;
+        return def != null && def.IsOverTileDamageBehaviorForRemainingHits(remaining);
     }
 
     private bool IsValidCell(int x, int y)
@@ -962,9 +1098,8 @@ public class ObstacleStateService : ISimObstacleQuery
 
             // Generic stacking: bu cell başka bir obstacle'ın (Chest, Wardrobe...) ÜSTÜNE
             // stamp edilmişse, altındaki authored içeriği (Mud, Stone...) geri yükle.
-            if (_stampedBeneathByCell.TryGetValue(i, out var stamped))
+            if (TryPopStampedBeneathLayer(i, out var stamped))
             {
-                _stampedBeneathByCell.Remove(i);
                 RestoreCellObstacle(i, stamped.Id, stamped.Origin);
                 if (stamped.Id != ObstacleId.None)
                 {
@@ -1038,7 +1173,25 @@ public class ObstacleStateService : ISimObstacleQuery
             remaining = Mathf.Max(1, def != null ? def.hits : 1);
         }
 
-        _stampedBeneathByCell[cell] = new StampedBeneath(beneathId, beneathOrigin, overOrigin, remaining);
+        var stamped = new StampedBeneath(beneathId, beneathOrigin, overOrigin, remaining);
+        if (!_stampedBeneathByCell.TryGetValue(cell, out var layers) || layers == null)
+        {
+            layers = new List<StampedBeneath>();
+            _stampedBeneathByCell[cell] = layers;
+        }
+
+        if (layers.Count > 0)
+        {
+            int last = layers.Count - 1;
+            var top = layers[last];
+            if (top.OverOrigin == overOrigin && top.Id == ObstacleId.None && beneathId != ObstacleId.None)
+            {
+                layers[last] = stamped;
+                return;
+            }
+        }
+
+        layers.Add(stamped);
     }
 
     public bool TryGetStampedBeneathObstacleIdAt(int x, int y, out ObstacleId obstacleId)
@@ -1048,7 +1201,7 @@ public class ObstacleStateService : ISimObstacleQuery
             return false;
 
         int idx = level.Index(x, y);
-        if (!_stampedBeneathByCell.TryGetValue(idx, out var stamped))
+        if (!TryGetStampedBeneathLayer(idx, out var stamped))
             return false;
 
         obstacleId = stamped.Id;
@@ -1063,12 +1216,19 @@ public class ObstacleStateService : ISimObstacleQuery
         int count = 0;
         foreach (var kv in _stampedBeneathByCell)
         {
-            var stamped = kv.Value;
-            if (stamped.Id != obstacleId)
+            var layers = kv.Value;
+            if (layers == null)
                 continue;
-            if (stamped.Remaining <= 0)
-                continue;
-            count++;
+
+            for (int i = 0; i < layers.Count; i++)
+            {
+                var stamped = layers[i];
+                if (stamped.Id != obstacleId)
+                    continue;
+                if (stamped.Remaining <= 0)
+                    continue;
+                count++;
+            }
         }
         return count;
     }
@@ -1083,13 +1243,20 @@ public class ObstacleStateService : ISimObstacleQuery
 
         foreach (var kv in _stampedBeneathByCell)
         {
-            var stamped = kv.Value;
-            if (stamped.Id != obstacleId)
-                continue;
-            if (stamped.Remaining <= 0)
+            var layers = kv.Value;
+            if (layers == null)
                 continue;
 
-            (stampedOrigins ??= new HashSet<int>()).Add(stamped.Origin);
+            for (int i = 0; i < layers.Count; i++)
+            {
+                var stamped = layers[i];
+                if (stamped.Id != obstacleId)
+                    continue;
+                if (stamped.Remaining <= 0)
+                    continue;
+
+                (stampedOrigins ??= new HashSet<int>()).Add(stamped.Origin);
+            }
         }
 
         return count + (stampedOrigins != null ? stampedOrigins.Count : 0);
@@ -1105,7 +1272,7 @@ public class ObstacleStateService : ISimObstacleQuery
     {
         List<int> cells = null;
         foreach (var kv in _stampedBeneathByCell)
-            if (kv.Value.OverOrigin == overOrigin)
+            if (TryPeekStampedBeneathLayer(kv.Key, out var top) && top.OverOrigin == overOrigin)
                 (cells ??= new List<int>()).Add(kv.Key);
 
         if (cells == null) return;
@@ -1114,8 +1281,7 @@ public class ObstacleStateService : ISimObstacleQuery
         Dictionary<int, int> restoredMudRemainingByOrigin = null;
         foreach (var cell in cells)
         {
-            if (!_stampedBeneathByCell.TryGetValue(cell, out var stamped)) continue;
-            _stampedBeneathByCell.Remove(cell);
+            if (!TryPopStampedBeneathLayer(cell, out var stamped)) continue;
             RestoreCellObstacle(cell, stamped.Id, stamped.Origin);
             if (stamped.Id != ObstacleId.None)
             {
@@ -1151,10 +1317,9 @@ public class ObstacleStateService : ISimObstacleQuery
         restoredOrigin = -1;
         remainingOverride = -1;
 
-        if (!_stampedBeneathByCell.TryGetValue(cell, out var stamped))
+        if (!TryPopStampedBeneathLayer(cell, out var stamped))
             return false;
 
-        _stampedBeneathByCell.Remove(cell);
         RestoreCellObstacle(cell, stamped.Id, stamped.Origin);
 
         if (stamped.Id == ObstacleId.None)
@@ -1180,6 +1345,87 @@ public class ObstacleStateService : ISimObstacleQuery
 
         int remaining = ResolveRemainingHitsForCell(idx, def);
         return def.IsMovableObstacleForRemainingHits(remaining);
+    }
+
+    public ObstacleSwapStateSnapshot CaptureObstacleSwapState()
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return null;
+
+        return new ObstacleSwapStateSnapshot(
+            (int[])level.obstacles.Clone(),
+            (int[])level.obstacleOrigins.Clone(),
+            (int[])remainingHitsByOrigin.Clone(),
+            new Dictionary<int, ChestColorMask>(_chestColorStates),
+            CloneIntArrayDictionary(_batteryHitsByOrigin),
+            CloneIntArrayDictionary(_overrideBatteryHitsByOrigin),
+            new Dictionary<int, int>(_overrideBatteryProgressByOrigin),
+            new Dictionary<int, int>(_wardrobeItemCounts),
+            new Dictionary<int, (ObstacleId Id, int Remaining)>(_underTileBeneathMovable),
+            CloneStampedBeneathDictionary(_stampedBeneathByCell));
+    }
+
+    public void RestoreObstacleSwapState(ObstacleSwapStateSnapshot snapshot)
+    {
+        if (snapshot == null || level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return;
+
+        CopyArray(snapshot.Obstacles, level.obstacles);
+        CopyArray(snapshot.ObstacleOrigins, level.obstacleOrigins);
+        CopyArray(snapshot.RemainingHitsByOrigin, remainingHitsByOrigin);
+
+        _chestColorStates.Clear();
+        foreach (var kv in snapshot.ChestColorStates)
+            _chestColorStates[kv.Key] = kv.Value;
+
+        RestoreIntArrayDictionary(_batteryHitsByOrigin, snapshot.BatteryHitsByOrigin);
+        RestoreIntArrayDictionary(_overrideBatteryHitsByOrigin, snapshot.OverrideBatteryHitsByOrigin);
+
+        _overrideBatteryProgressByOrigin.Clear();
+        foreach (var kv in snapshot.OverrideBatteryProgressByOrigin)
+            _overrideBatteryProgressByOrigin[kv.Key] = kv.Value;
+
+        _wardrobeItemCounts.Clear();
+        foreach (var kv in snapshot.WardrobeItemCounts)
+            _wardrobeItemCounts[kv.Key] = kv.Value;
+
+        _underTileBeneathMovable.Clear();
+        foreach (var kv in snapshot.UnderTileBeneathMovable)
+            _underTileBeneathMovable[kv.Key] = kv.Value;
+
+        _stampedBeneathByCell.Clear();
+        foreach (var kv in snapshot.StampedBeneathByCell)
+            _stampedBeneathByCell[kv.Key] = kv.Value != null ? new List<StampedBeneath>(kv.Value) : null;
+    }
+
+    private static void CopyArray(int[] source, int[] target)
+    {
+        if (source == null || target == null) return;
+        int count = Mathf.Min(source.Length, target.Length);
+        Array.Copy(source, target, count);
+    }
+
+    private static Dictionary<int, int[]> CloneIntArrayDictionary(Dictionary<int, int[]> source)
+    {
+        var clone = new Dictionary<int, int[]>();
+        foreach (var kv in source)
+            clone[kv.Key] = kv.Value != null ? (int[])kv.Value.Clone() : null;
+        return clone;
+    }
+
+    private static Dictionary<int, List<StampedBeneath>> CloneStampedBeneathDictionary(Dictionary<int, List<StampedBeneath>> source)
+    {
+        var clone = new Dictionary<int, List<StampedBeneath>>();
+        foreach (var kv in source)
+            clone[kv.Key] = kv.Value != null ? new List<StampedBeneath>(kv.Value) : null;
+        return clone;
+    }
+
+    private static void RestoreIntArrayDictionary(Dictionary<int, int[]> target, Dictionary<int, int[]> snapshot)
+    {
+        target.Clear();
+        foreach (var kv in snapshot)
+            target[kv.Key] = kv.Value != null ? (int[])kv.Value.Clone() : null;
     }
 
     // Cargo türü: KIRILMAZ + sadece düz düşer + en altta toplanır.
@@ -1228,6 +1474,7 @@ public class ObstacleStateService : ISimObstacleQuery
         if (fromIdx < 0 || fromIdx >= level.obstacles.Length) return;
         if (toIdx < 0 || toIdx >= level.obstacles.Length) return;
         if (fromIdx == toIdx) return;
+        if (IsMovableObstacleAt(toX, toY)) return;
 
         var id = (ObstacleId)level.obstacles[fromIdx];
         if (id == ObstacleId.None) return;
@@ -1258,10 +1505,10 @@ public class ObstacleStateService : ISimObstacleQuery
         if (moves == null || moves.Count == 0) return;
         if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
 
-        var placements = new List<(int toIdx, ObstacleId id, int remaining)>(moves.Count);
+        var candidates = new List<(int fromIdx, int toIdx, ObstacleId id, int remaining)>(moves.Count);
+        var candidateSources = new HashSet<int>();
+        var candidateTargets = new HashSet<int>();
 
-        // Faz 1: kimlikleri yakala + kaynak hücreleri boşalt. (Kaynak hücreler birbirinden
-        // farklıdır; boşaltma yalnızca kendi hücresine yazar → bu faz kendi içinde güvenli.)
         for (int i = 0; i < moves.Count; i++)
         {
             var (from, to) = moves[i];
@@ -1272,6 +1519,13 @@ public class ObstacleStateService : ISimObstacleQuery
             if (fromIdx == toIdx) continue;
             if (fromIdx < 0 || fromIdx >= level.obstacles.Length) continue;
             if (toIdx < 0 || toIdx >= level.obstacles.Length) continue;
+            if (candidateSources.Contains(fromIdx)) continue;
+
+            if (candidateTargets.Contains(toIdx))
+            {
+                Debug.LogWarning($"[Obstacle] Movable batch hedef çakışması ({to.x},{to.y}) — sonraki hareket korunup atlandı.");
+                continue;
+            }
 
             var id = (ObstacleId)level.obstacles[fromIdx];
             if (id == ObstacleId.None) continue;
@@ -1281,8 +1535,45 @@ public class ObstacleStateService : ISimObstacleQuery
                 ? remainingHitsByOrigin[origin]
                 : -1;
 
-            placements.Add((toIdx, id, remaining));
-            RestoreCellAfterMovableLeft(fromIdx);
+            candidates.Add((fromIdx, toIdx, id, remaining));
+            candidateSources.Add(fromIdx);
+            candidateTargets.Add(toIdx);
+        }
+
+        bool pruned;
+        do
+        {
+            pruned = false;
+            for (int i = candidates.Count - 1; i >= 0; i--)
+            {
+                int toIdx = candidates[i].toIdx;
+                int tx = toIdx % level.width;
+                int ty = toIdx / level.width;
+                if (!IsMovableObstacleAt(tx, ty) || candidateSources.Contains(toIdx))
+                    continue;
+
+                Debug.LogWarning($"[Obstacle] Movable batch hedefi ({tx},{ty}) canlı movable ile dolu — hareket korunup atlandı.");
+                candidateSources.Remove(candidates[i].fromIdx);
+                candidateTargets.Remove(toIdx);
+                candidates.RemoveAt(i);
+                pruned = true;
+            }
+        }
+        while (pruned);
+
+        if (candidates.Count == 0)
+            return;
+
+        // Faz 1: kimlikleri yakala + kaynak hücreleri boşalt. (Kaynak hücreler birbirinden
+        // farklıdır; boşaltma yalnızca kendi hücresine yazar → bu faz kendi içinde güvenli.)
+        for (int i = 0; i < candidates.Count; i++)
+            RestoreCellAfterMovableLeft(candidates[i].fromIdx);
+
+        var placements = new List<(int toIdx, ObstacleId id, int remaining)>(candidates.Count);
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            var candidate = candidates[i];
+            placements.Add((candidate.toIdx, candidate.id, candidate.remaining));
         }
 
         // Faz 2: hedeflere yerleştir. Artık hiçbir hedef "taşınmayı bekleyen" movable
@@ -1304,9 +1595,8 @@ public class ObstacleStateService : ISimObstacleQuery
             int ty = toIdx / level.width;
             if (IsMovableObstacleAt(tx, ty))
             {
-                // Batch sonrası hedefte canlı movable kalamaz — kalıyorsa cascade planı
-                // hatalı demektir; sessiz veri kaybı yerine yüksek sesle işaretle.
-                Debug.LogError($"[Obstacle] Movable {id} hedefi ({tx},{ty}) başka bir movable ({destId}) tarafından dolu — veri ezildi!");
+                Debug.LogWarning($"[Obstacle] Movable {id} hedefi ({tx},{ty}) başka bir movable ({destId}) tarafından dolu — yerleştirme atlandı.");
+                return;
             }
             else
             {
@@ -1534,6 +1824,16 @@ public class ObstacleStateService : ISimObstacleQuery
     {
         if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
         if (cellIndex < 0 || cellIndex >= level.obstacles.Length) return;
+
+        // YALNIZCA hücre gerçekten Magnet ise temizle. Stacked kurulumda (grass cover + magnet
+        // beneath, aynı path hücreleri) magnet aktifleşip büzülürken, path'indeki bir hücrenin
+        // grass cover'ı henüz kırılmamış olabilir → level.obstacles[cell] hâlâ Grass. Koşulsuz
+        // None yazmak o grass'ın DATA'sını siler AMA hiçbir cleared-event (ObstacleVisualChanged/
+        // OnObstacleDestroyed) atılmadığı için grass görseli obstacleViewsByOrigin'de ÖKSÜZ kalır:
+        // kalıcı hayalet, sonraki hiçbir match/special onu temizleyemez (cell None → ApplyObstacle-
+        // DamageAt no-op). Magnet olmayan hücreye dokunma — onu kendi obstacle'ı yönetsin.
+        if ((ObstacleId)level.obstacles[cellIndex] != ObstacleId.Magnet)
+            return;
 
         level.obstacles[cellIndex]       = (int)ObstacleId.None;
         level.obstacleOrigins[cellIndex] = -1;
@@ -1763,7 +2063,7 @@ public class ObstacleStateService : ISimObstacleQuery
         if (!IsOverTileBlockerAt(x, y) || IsMovableObstacleAt(x, y))
             return false;
 
-        if (_stampedBeneathByCell.TryGetValue(idx, out var existing) && existing.Id != ObstacleId.None)
+        if (TryPeekStampedBeneathLayer(idx, out var existing) && existing.Id != ObstacleId.None)
             return false;
 
         int overOrigin = GetObstacleOriginAt(x, y);

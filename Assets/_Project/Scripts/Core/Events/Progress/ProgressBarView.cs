@@ -54,6 +54,9 @@ public class ProgressBarView : MonoBehaviour
         if (service == null || goalIndex >= service.Goals.Count) return;
 
         var goal = service.Goals[goalIndex];
+        // Goal veya Definition null olabilir (örn. doğrudan Game sahnesinden başlayınca ProgressEvent
+        // ana menüde kurulmadan goal'ler sıfırlanır) → def.* erişimleri NRE atar. Sessizce atla.
+        if (goal == null || goal.Definition == null) return;
         var def  = goal.Definition;
 
         if (goalIconImage   != null) goalIconImage.sprite   = goal.DisplayIcon;
@@ -105,6 +108,7 @@ public class ProgressBarView : MonoBehaviour
     private IEnumerator CoAnimateGains(SessionGainRecord gain)
     {
         var goal   = service.Goals[goalIndex];
+        if (goal == null || goal.Definition == null) yield break;
         int target = goal.Definition.targetCount;
 
         int   startCount = Mathf.Max(0, goal.CurrentCount - gain.GainedCount);
@@ -155,12 +159,15 @@ public class ProgressBarView : MonoBehaviour
 
     private void ApplyFill(float normalized, int current, int target)
     {
-        if (progressFill != null)
+        // Bar/track RectTransform'ları yok edilmiş olabilir (panel kapandı, goal'ler sıfırlandı,
+        // CoApplyFillNextFrame 2 frame beklerken teardown oldu). Yok edilmiş nesneye erişim
+        // MissingReferenceException atar — Unity-null guard'larıyla sessizce atla.
+        if (progressFill != null && progressFill.rectTransform != null)
         {
             var fillRt   = progressFill.rectTransform;
-            var parentRt = (RectTransform)fillRt.parent;
+            var parentRt = fillRt.parent as RectTransform;
 
-            if (barTrack != null && parentRt != barTrack)
+            if (parentRt != null && barTrack != null && parentRt != barTrack)
             {
                 // progressFill, BarTrack'in dışında — oranı hesapla.
                 float parentW = parentRt.rect.width;
@@ -200,30 +207,34 @@ public class ProgressBarView : MonoBehaviour
 
     private IEnumerator CoFly(RectTransform rt, Vector2 from, Vector2 to)
     {
+        if (rt == null) yield break;
+
         rt.anchoredPosition = from;
         float elapsed = 0f;
         while (elapsed < flightDuration)
         {
+            if (rt == null) yield break; // uçan partikül (veya view) yol boyunca yok edilebilir
             elapsed += Time.unscaledDeltaTime;
             rt.anchoredPosition = Vector2.Lerp(from, to,
                 Mathf.SmoothStep(0f, 1f, elapsed / flightDuration));
             yield return null;
         }
-        Destroy(rt.gameObject);
+        if (rt != null) Destroy(rt.gameObject);
     }
 
     private IEnumerator CoCelebrate()
     {
-        if (progressFill == null) yield break;
+        if (progressFill == null || progressFill.rectTransform == null) yield break;
         var rt = progressFill.rectTransform;
         var original = rt.localScale;
         float dur = 0.3f, elapsed = 0f;
         while (elapsed < dur)
         {
+            if (rt == null) yield break; // celebrate sırasında bar/view yok edilebilir
             elapsed += Time.unscaledDeltaTime;
             rt.localScale = original * (1f + 0.18f * Mathf.Sin((elapsed / dur) * Mathf.PI));
             yield return null;
         }
-        rt.localScale = original;
+        if (rt != null) rt.localScale = original;
     }
 }

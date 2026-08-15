@@ -20,6 +20,10 @@ public sealed class PatchBotComboExecutionRuntime
     public Func<ResolutionContext, List<BoardAction>> ProcessFanout;
     public Action<ResolutionContext> CleanupImplantedTiles;
     public Action<HashSet<TileView>, Dictionary<TileView, float>> FireOverrideOverrideSpecialVisuals;
+
+    // Her PatchBot için solo runtime factory (PatchBotSpecial.Execute → PatchbotDashUI).
+    // SpecialResolver tarafından bağlanır; null ise eski OverridePatchBotAirborneGroupAction'a düşer.
+    public Func<TileView, PatchBotTargetCoordinator, PatchBotExecutionRuntime> BuildPatchBotRuntime;
 }
 
 public sealed class PatchBotComboExecutionResult
@@ -53,26 +57,105 @@ public sealed class PatchBotCombo
         if (!rt.FinalizeAtEnd)
             return result;
 
-        // OverridePatchBotAirborneGroupAction akışı:
-        //   1. Her iki source tile hemen boşaltılır (ClearCell + visual hide)
-        //   2. Cascade hover sırasında çalışır — taşlar yerleşir
-        //   3. Cascade bittikten SONRA her botun hedefi yeniden değerlendirilir
-        //   4. Her iki bot AYNI ANDA dive eder ve TEK clear action üretir
-        // Bu sıralama, ilk botun cascade'inin ikinci botun hedefini silmesi
-        // durumunda ghost hedefe gidilmesini önler.
-        result.Actions.Add(new OverridePatchBotAirborneGroupAction(
-            rt.Board,
-            new List<Vector2Int>
+        // BİRLEŞİK AKIŞ: PatchBot+PatchBot combo artık solo PatchBot ile AYNI yolu kullanır.
+        // Her iki source PatchBot + 1 bonus (toplam 3 bot) PatchBotSpecial.Execute → PatchbotDashUI
+        // ile fırlatılır: yeni uçuş animasyonları (blade spinner/afterimage), shared coordinator ile
+        // grup hedef koordinasyonu ve uçuş sırasında canlı yeniden hedefleme. Her bot bağımsız bir
+        // solo PatchBot'tur (FinalizeAtEnd=true): initialClearAction origin'i temizler + dash'i
+        // pompalar, hedefte solo hit + cascade tetikler.
+        if (rt.BuildPatchBotRuntime != null)
+        {
+            var launchCells = new List<Vector2Int>
             {
                 new Vector2Int(firstPatchBot.X, firstPatchBot.Y),
                 new Vector2Int(secondPatchBot.X, secondPatchBot.Y)
-            },
-            bonusPhantomBots: 1));
+            };
+
+            // Bonus 3. bot: kaynaklara en yakın uygun normal taşı PatchBot'a çevir (combo gücü korunur).
+            var bonusCell = ConvertBonusPatchBot(rt, firstPatchBot, secondPatchBot);
+            if (bonusCell.HasValue)
+                launchCells.Add(bonusCell.Value);
+
+            // SENKRON solo fırlatma: dash'ler hemen enqueue olur, dönen initialClearAction'lar
+            // (pompa) sequencer'a girer → İLK MatchClearAction çalışınca BoardAnimator TÜM dash
+            // buffer'ını tek PlayDashParallel ile tüketir → 3 bot neredeyse aynı anda uçar.
+            var launchActions = PatchBotSpecial.LaunchGroupSolo(rt.Board, launchCells, rt.BuildPatchBotRuntime);
+            if (launchActions != null && launchActions.Count > 0)
+                result.Actions.AddRange(launchActions);
+        }
+        else
+        {
+            // Fallback (factory bağlanmamışsa): eski toplu senkron dalış.
+            result.Actions.Add(new OverridePatchBotAirborneGroupAction(
+                rt.Board,
+                new List<Vector2Int>
+                {
+                    new Vector2Int(firstPatchBot.X, firstPatchBot.Y),
+                    new Vector2Int(secondPatchBot.X, secondPatchBot.Y)
+                },
+                bonusPhantomBots: 1));
+        }
 
         if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
             rt.CleanupImplantedTiles?.Invoke(rt.Context);
 
         return result;
+    }
+
+    // Combo'nun 3. (bonus) botu için: iki kaynağın orta noktasına en yakın UYGUN normal taşı
+    // (special yok, obstacle yok, hedeflenebilir) PatchBot'a çevirir. Override'ın taş dönüşümüyle
+    // aynı desen (SetSpecial + SyncAfterSpecialChange). Uygun taş yoksa null → bonus atlanır.
+    private Vector2Int? ConvertBonusPatchBot(
+        PatchBotComboExecutionRuntime rt,
+        TileView a,
+        TileView b)
+    {
+        var board = rt.Board;
+        var obstacleService = board.ObstacleStateService;
+        Vector2 mid = new Vector2((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f);
+
+        TileView best = null;
+        int bestX = -1, bestY = -1;
+        float bestDist = float.MaxValue;
+
+        for (int x = 0; x < board.Width; x++)
+        {
+            for (int y = 0; y < board.Height; y++)
+            {
+                if (board.Holes[x, y])
+                    continue;
+                if (obstacleService != null && obstacleService.GetObstacleIdAt(x, y) != ObstacleId.None)
+                    continue;
+                if (obstacleService != null && obstacleService.IsMovableObstacleAt(x, y))
+                    continue;
+
+                var tile = board.Tiles[x, y];
+                if (tile == null || tile == a || tile == b)
+                    continue;
+                if (tile.GetSpecial() != TileSpecial.None)
+                    continue;
+                if (board.GridData[x, y] == null)
+                    continue;
+                if (!SpecialUtils.CanTargetTileContent(board, x, y))
+                    continue;
+
+                float d = Mathf.Abs(x - mid.x) + Mathf.Abs(y - mid.y);
+                if (d < bestDist)
+                {
+                    bestDist = d;
+                    best = tile;
+                    bestX = x;
+                    bestY = y;
+                }
+            }
+        }
+
+        if (best == null)
+            return null;
+
+        best.SetSpecial(TileSpecial.PatchBot);
+        SpecialCellUtils.SyncAfterSpecialChange(board, best);
+        return new Vector2Int(bestX, bestY);
     }
 
     private bool CanExecute(PatchBotComboExecutionRuntime rt)

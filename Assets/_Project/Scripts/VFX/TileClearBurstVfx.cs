@@ -44,22 +44,60 @@ public static class TileClearBurstVfx
         // Bazı tile yapılarında iconRt tile root'undan offset'li olabilir.
         // Sprite'ın GERÇEK görünen merkezi iconRt'nin merkezidir.
         RectTransform targetRt = null;
-        if (tile.IconImage != null && tile.IconImage.rectTransform != null)
-            targetRt = tile.IconImage.rectTransform;
-        else
-            targetRt = tile.RectTransform;
+        bool missingReference = false;
+        try
+        {
+            if (tile.IconImage != null)
+                targetRt = tile.IconImage.rectTransform;
+
+            if (targetRt == null)
+                targetRt = tile.RectTransform;
+        }
+        catch (MissingReferenceException)
+        {
+            missingReference = true;
+        }
+
+        if (missingReference)
+            yield break;
 
         if (targetRt == null) yield break;
 
         // Taşın world-space merkezini al → pivot/scale/rotation'dan bağımsız
-        Vector3[] corners = new Vector3[4];
-        targetRt.GetWorldCorners(corners);
-        Vector3 tileWorldCenter = (corners[0] + corners[2]) * 0.5f;
+        Vector3 tileWorldCenter;
+        missingReference = false;
+        try
+        {
+            Vector3[] corners = new Vector3[4];
+            targetRt.GetWorldCorners(corners);
+            tileWorldCenter = (corners[0] + corners[2]) * 0.5f;
+        }
+        catch (MissingReferenceException)
+        {
+            missingReference = true;
+            tileWorldCenter = default;
+        }
+
+        if (missingReference)
+            yield break;
 
         // Parent seçimi: board.Parent STABİL ve bilinen bir konteyner
-        Transform effectParent = (board != null && board.Parent != null)
-            ? board.Parent
-            : targetRt.parent;
+        Transform effectParent;
+        missingReference = false;
+        try
+        {
+            effectParent = (board != null && board.Parent != null)
+                ? board.Parent
+                : targetRt.parent;
+        }
+        catch (MissingReferenceException)
+        {
+            missingReference = true;
+            effectParent = null;
+        }
+
+        if (missingReference)
+            yield break;
 
         yield return CoPlayBurstAtWorldPosition(tileWorldCenter, effectParent, board, duration);
     }

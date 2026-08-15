@@ -22,9 +22,14 @@ public sealed class OilOverlayRenderer
 {
     private readonly BoardController board;
     private readonly Sprite oilSprite;
+    private const float InternalJoinOverlapPixels = 8f;
 
     private RectTransform root;
     private readonly Dictionary<Vector2Int, Image> views = new();
+    private readonly Dictionary<Vector3Int, Image> joins = new();
+    private Sprite solidSprite;
+    private Color joinColor;
+    private bool joinColorResolved;
 
     public OilOverlayRenderer(BoardController board, Sprite oilSprite)
     {
@@ -45,16 +50,28 @@ public sealed class OilOverlayRenderer
         // Hide everything first; re-show only current oil cells below.
         foreach (var kv in views)
             if (kv.Value != null) kv.Value.gameObject.SetActive(false);
+        foreach (var kv in joins)
+            if (kv.Value != null) kv.Value.gameObject.SetActive(false);
 
         if (oilCells != null)
         {
+            var oilSet = new HashSet<Vector2Int>(oilCells);
             for (int i = 0; i < oilCells.Count; i++)
             {
-                var img = GetOrCreateView(oilCells[i]);
+                var cell = oilCells[i];
+                var img = GetOrCreateView(cell);
                 if (img == null) continue;
 
-                PlaceView(img.rectTransform, oilCells[i], size);
+                PlaceView(img.rectTransform, cell, size, oilSet);
                 img.gameObject.SetActive(true);
+
+                var right = cell + Vector2Int.right;
+                if (oilSet.Contains(right))
+                    ShowJoin(cell, horizontal: true, size);
+
+                var below = new Vector2Int(cell.x, cell.y + 1);
+                if (oilSet.Contains(below))
+                    ShowJoin(cell, horizontal: false, size);
             }
         }
 
@@ -119,15 +136,103 @@ public sealed class OilOverlayRenderer
         return img;
     }
 
-    private static void PlaceView(RectTransform rt, Vector2Int cell, int tileSize)
+    private void ShowJoin(Vector2Int cell, bool horizontal, int tileSize)
+    {
+        var img = GetOrCreateJoin(cell, horizontal);
+        if (img == null) return;
+
+        float overlap = Mathf.Max(1f, InternalJoinOverlapPixels);
+        var rt = img.rectTransform;
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.localScale = Vector3.one;
+
+        if (horizontal)
+        {
+            rt.anchoredPosition = new Vector2((cell.x + 1) * tileSize - overlap, -cell.y * tileSize);
+            rt.sizeDelta = new Vector2(overlap * 2f, tileSize);
+        }
+        else
+        {
+            rt.anchoredPosition = new Vector2(cell.x * tileSize, -(cell.y + 1) * tileSize + overlap);
+            rt.sizeDelta = new Vector2(tileSize, overlap * 2f);
+        }
+
+        img.gameObject.SetActive(true);
+        img.transform.SetAsFirstSibling();
+    }
+
+    private Image GetOrCreateJoin(Vector2Int cell, bool horizontal)
+    {
+        var key = new Vector3Int(cell.x, cell.y, horizontal ? 0 : 1);
+        if (joins.TryGetValue(key, out var existing) && existing != null)
+            return existing;
+
+        var go = new GameObject($"OilJoin_{cell.x}_{cell.y}_{(horizontal ? "H" : "V")}", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(root, false);
+
+        var img = go.GetComponent<Image>();
+        img.sprite = GetSolidSprite();
+        img.raycastTarget = false;
+        img.preserveAspect = false;
+        img.color = ResolveJoinColor();
+
+        joins[key] = img;
+        return img;
+    }
+
+    private static void PlaceView(RectTransform rt, Vector2Int cell, int tileSize, HashSet<Vector2Int> oilSet)
     {
         if (rt == null) return;
+
+        float bleedLeft = oilSet.Contains(cell + Vector2Int.left) ? InternalJoinOverlapPixels : 0f;
+        float bleedRight = oilSet.Contains(cell + Vector2Int.right) ? InternalJoinOverlapPixels : 0f;
+        float bleedTop = oilSet.Contains(new Vector2Int(cell.x, cell.y - 1)) ? InternalJoinOverlapPixels : 0f;
+        float bleedBottom = oilSet.Contains(new Vector2Int(cell.x, cell.y + 1)) ? InternalJoinOverlapPixels : 0f;
 
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(0f, 1f);
         rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(cell.x * tileSize, -cell.y * tileSize);
-        rt.sizeDelta = new Vector2(tileSize, tileSize);
+        rt.anchoredPosition = new Vector2(cell.x * tileSize - bleedLeft, -cell.y * tileSize + bleedTop);
+        rt.sizeDelta = new Vector2(tileSize + bleedLeft + bleedRight, tileSize + bleedTop + bleedBottom);
         rt.localScale = Vector3.one;
+    }
+
+    private Sprite GetSolidSprite()
+    {
+        if (solidSprite != null)
+            return solidSprite;
+
+        var tex = Texture2D.whiteTexture;
+        solidSprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+        return solidSprite;
+    }
+
+    private Color ResolveJoinColor()
+    {
+        if (joinColorResolved)
+            return joinColor;
+
+        joinColor = new Color(0.62f, 0.30f, 0.05f, 0.65f);
+        if (oilSprite != null && oilSprite.texture != null)
+        {
+            try
+            {
+                var rect = oilSprite.textureRect;
+                int px = Mathf.Clamp(Mathf.RoundToInt(rect.x + rect.width * 0.5f), 0, oilSprite.texture.width - 1);
+                int py = Mathf.Clamp(Mathf.RoundToInt(rect.y + rect.height * 0.5f), 0, oilSprite.texture.height - 1);
+                var sampled = oilSprite.texture.GetPixel(px, py);
+                if (sampled.a > 0.05f)
+                    joinColor = sampled;
+            }
+            catch (UnityException)
+            {
+                joinColor = new Color(0.62f, 0.30f, 0.05f, 0.65f);
+            }
+        }
+
+        joinColorResolved = true;
+        return joinColor;
     }
 }

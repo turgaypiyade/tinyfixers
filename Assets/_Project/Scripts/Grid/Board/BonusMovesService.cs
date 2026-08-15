@@ -22,6 +22,7 @@ public class BonusMovesService : MonoBehaviour
     [SerializeField] private float cometStagger = 0.10f;  // delay between comet starts
     [SerializeField] private float preTriggerPause = 0.18f; // pause before mass trigger
     [SerializeField] private float drainMoveDelay = 0.04f;  // when no cells available
+    [SerializeField, Min(0.5f)] private float boardSettleTimeout = 6f;
 
     [Header("Comet Visual")]
     [SerializeField] private int trailDots = 7;
@@ -201,16 +202,36 @@ public class BonusMovesService : MonoBehaviour
                 validPlacements,
                 () => _hardSkipRequested);
 
-            while (!_hardSkipRequested && (board.IsBusy || board.ActiveBackgroundJobs > 0))
-                yield return null;
+            yield return StartCoroutine(WaitBoardSettleOrTimeout("after_bonus_lines"));
         }
 
         if (_hardSkipRequested)
             yield break;
 
         // Wait for full cascade, but allow hard-skip to return immediately.
-        while ((board.IsBusy || board.ActiveBackgroundJobs > 0) && !_hardSkipRequested)
+        yield return StartCoroutine(WaitBoardSettleOrTimeout("bonus_round_complete"));
+    }
+
+    private IEnumerator WaitBoardSettleOrTimeout(string context)
+    {
+        if (board == null)
+            yield break;
+
+        float elapsed = 0f;
+        while (!_hardSkipRequested && (board.IsBusy || board.ActiveBackgroundJobs > 0))
+        {
+            elapsed += Time.unscaledDeltaTime;
+            if (elapsed >= boardSettleTimeout)
+            {
+                Debug.LogWarning(
+                    $"[BonusMoves] Board settle timeout. context={context}, " +
+                    $"IsBusy={board.IsBusy}, ActiveBackgroundJobs={board.ActiveBackgroundJobs}, " +
+                    $"BlockingBackgroundJobs={board.BlockingBackgroundJobs}, FlyingGoalOrbs={board.FlyingGoalOrbs}");
+                yield break;
+            }
+
             yield return null;
+        }
     }
 
     // Instant placement without comet visual. Used in soft skip mode.

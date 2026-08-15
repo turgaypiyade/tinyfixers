@@ -143,20 +143,46 @@ public class PulseCoreImpactService
 
     Vector2 GetTileAnchoredPos(TileView tile)
     {
-        if (tile == null) return Vector2.zero;
-        var tileRect = tile.GetComponent<RectTransform>();
-        if (tileRect == null) return Vector2.zero;
+        if (tile == null)
+            return Vector2.zero;
+
+        RectTransform tileRect = null;
+        try
+        {
+            tileRect = tile.GetComponent<RectTransform>();
+        }
+        catch (MissingReferenceException)
+        {
+            return Vector2.zero;
+        }
+
+        if (tileRect == null)
+            return Vector2.zero;
 
         var vfxRoot = board.BoardVfxPlayer != null ? board.BoardVfxPlayer.VfxRoot : null;
         if (vfxRoot != null)
         {
-            var worldPos = tileRect.TransformPoint(tileRect.rect.center);
-            var localPos = vfxRoot.InverseTransformPoint(worldPos);
-            return (Vector2)localPos;
+            try
+            {
+                var worldPos = tileRect.TransformPoint(tileRect.rect.center);
+                var localPos = vfxRoot.InverseTransformPoint(worldPos);
+                return (Vector2)localPos;
+            }
+            catch (MissingReferenceException)
+            {
+                return Vector2.zero;
+            }
         }
 
         var tilesRoot = board.Parent;
         var rootOffset = tilesRoot != null ? tilesRoot.anchoredPosition : Vector2.zero;
-        return rootOffset + tileRect.anchoredPosition;
+        try
+        {
+            return rootOffset + tileRect.anchoredPosition;
+        }
+        catch (MissingReferenceException)
+        {
+            return Vector2.zero;
+        }
     }
 }

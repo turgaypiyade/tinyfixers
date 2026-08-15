@@ -70,6 +70,9 @@ public class BoardBreakFxService
         // Sound is position-independent: play before origin validation so Tube (originIndex=-1) still gets audio.
         PlayObstacleSound(change);
 
+        if (ShouldSuppressGenericContentObstacleFx(change))
+            return;
+
         if (change.originIndex < 0 || board.Width <= 0 || board.Height <= 0)
         {
             FxWarn(
@@ -105,7 +108,7 @@ public class BoardBreakFxService
         if (!change.cleared)
         {
             var def = board.LevelData?.obstacleLibrary?.Get(change.obstacleId);
-            if (def != null && def.IsHitParticlesSuppressedForRemainingHits(change.remainingHits))
+            if (def != null && AreHitParticlesSuppressed(def, change))
             {
                 if (board.BoardFlowTraceEnabled)
                     Debug.Log($"[ObstacleFX] Suppressed for id={change.obstacleId} remaining={change.remainingHits}");
@@ -132,6 +135,14 @@ public class BoardBreakFxService
             board.GetCellWorldCenterPosition(x, y),
             fxColor,
             particleSprites);
+    }
+
+    private static bool ShouldSuppressGenericContentObstacleFx(ObstacleVisualChange change)
+    {
+        // KeyGenerator'ın kendi katmanlı üretim animasyonu var (kol + tarama + materialize);
+        // generic hit/break particle'ları onun üstüne binmesin.
+        return change.obstacleId == ObstacleId.ColorChest
+            || change.obstacleId == ObstacleId.KeyGenerator;
     }
 
     private static Color ResolveObstacleHitColor(ObstacleVisualChange change)
@@ -207,12 +218,12 @@ public class BoardBreakFxService
             return null;
         }
 
-        if (!change.cleared && def.IsHitParticlesSuppressedForRemainingHits(change.remainingHits))
+        if (!change.cleared && AreHitParticlesSuppressed(def, change))
             return null;
 
         List<Sprite> sprites = change.cleared
             ? def.breakParticleSprites
-            : def.GetHitParticleSpritesForRemainingHits(change.remainingHits);
+            : GetHitParticleSprites(def, change);
 
         if (sprites != null && sprites.Count > 0)
         {
@@ -247,6 +258,45 @@ public class BoardBreakFxService
         fallbackSpriteBuffer.Clear();
         fallbackSpriteBuffer.Add(fallback);
         return fallbackSpriteBuffer;
+    }
+
+    private static bool AreHitParticlesSuppressed(ObstacleDef def, ObstacleVisualChange change)
+    {
+        if (def == null)
+            return false;
+
+        if (change.obstacleId == ObstacleId.Wardrobe && change.isRepeatHit)
+        {
+            var stage = GetWardrobeItemHitStage(def);
+            if (stage != null && stage.suppressHitParticles)
+                return true;
+            return def.suppressHitParticles;
+        }
+
+        return def.IsHitParticlesSuppressedForRemainingHits(change.remainingHits);
+    }
+
+    private static List<Sprite> GetHitParticleSprites(ObstacleDef def, ObstacleVisualChange change)
+    {
+        if (def == null)
+            return null;
+
+        if (change.obstacleId == ObstacleId.Wardrobe && change.isRepeatHit)
+        {
+            var stage = GetWardrobeItemHitStage(def);
+            if (stage != null && stage.hitParticleSprites != null && stage.hitParticleSprites.Count > 0)
+                return stage.hitParticleSprites;
+            return def.hitParticleSprites;
+        }
+
+        return def.GetHitParticleSpritesForRemainingHits(change.remainingHits);
+    }
+
+    private static StageRule GetWardrobeItemHitStage(ObstacleDef def)
+    {
+        if (def?.stages == null || def.stages.Count <= 1)
+            return null;
+        return def.stages[1];
     }
 
     /// <summary>

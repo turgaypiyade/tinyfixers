@@ -3,8 +3,14 @@ guid: 46f02814f3895455ebb4d2c1088c8464
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1027493723618482156
-    second: LineHRightRocket_0
+      213: 833778479501033089
+    second: LineHLeftRocket_0
+  - first:
+      213: -7001746918699437057
+    second: LineHLeftRocket_1
+  - first:
+      213: 8887549206849613745
+    second: LineHLeftRocket_2
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +119,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LineHRightRocket_0
+      name: LineHLeftRocket_0
       rect:
         serializedVersion: 2
         x: 0
-        y: 0
-        width: 1254
-        height: 720
+        y: 32
+        width: 1633
+        height: 918
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +134,52 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: ce719350914624e00800000000000000
-      internalID: 1027493723618482156
+      spriteID: 18e360c0c1d229b00800000000000000
+      internalID: 833778479501033089
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LineHLeftRocket_1
+      rect:
+        serializedVersion: 2
+        x: 1628
+        y: 528
+        width: 15
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ff3fbb7364cc4de90800000000000000
+      internalID: -7001746918699437057
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LineHLeftRocket_2
+      rect:
+        serializedVersion: 2
+        x: 1623
+        y: 428
+        width: 13
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1bf63165aeae65b70800000000000000
+      internalID: 8887549206849613745
       vertices: []
       indices: 
       edges: []
@@ -148,7 +198,9 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LineHRightRocket_0: 1027493723618482156
+      LineHLeftRocket_0: 833778479501033089
+      LineHLeftRocket_1: -7001746918699437057
+      LineHLeftRocket_2: 8887549206849613745
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

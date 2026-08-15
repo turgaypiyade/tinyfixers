@@ -78,6 +78,11 @@ MonoBehaviour:
   bombSprite: {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
   bombBaseSize: 256
   chargeDuration: 1.9
+  crackFrames:
+  - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
+  - {fileID: 21300000, guid: 61c28ae4e393a4af3954789ba43663da, type: 3}
+  - {fileID: 21300000, guid: 39b0b271db8c544539262b523b77b1ad, type: 3}
+  - {fileID: 21300000, guid: 244d0466b79464abca06e8c8cdca5cf3, type: 3}
   phaseSquashRatio: 0.15
   phaseStretchRatio: 0.15
   phaseWobbleRatio: 0.55
@@ -96,6 +101,15 @@ MonoBehaviour:
   glowSizeMultiplier: 2
   glowColorStart: {r: 0.5, g: 0.75, b: 1, a: 0}
   glowColorPeak: {r: 1, g: 0.95, b: 0.7, a: 0.53333336}
+  sparkSprite: {fileID: 21300000, guid: 90a7205e9795442588316c5be3f4fcae, type: 3}
+  fuseNormalizedOffset: {x: 0.1, y: 0.5}
+  sparkSizeMin: 28
+  sparkSizeMax: 54
+  spreadRadius: 16
+  sparkEmitInterval: 0.018
+  sparkLifetime: 0.5
+  sparkColorA: {r: 1, g: 0.65, b: 0.15, a: 1}
+  sparkColorB: {r: 1, g: 0.2, b: 0.05, a: 1}
 --- !u!1 &2680334470229352937
 GameObject:
   m_ObjectHideFlags: 0

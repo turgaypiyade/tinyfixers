@@ -446,6 +446,39 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
 
         bool IsProtected(Vector2Int cell) => protectedOverrideCells.Contains(cell);
 
+        // Magnet: bu combo bir uca EN FAZLA 1 hit vursun. Uç vurulunca içeri kayıp yeni hücre
+        // "güncel uç" olur; snapshot olmadan combo o hücreyi de işleyip ucu tüm path boyunca
+        // yürütür (magnet tek combo'da komple biter). Çözüm: hasar fazından ÖNCE güncel uç
+        // hücrelerini dondur; yalnız bunları (her biri 1 kez) vur → kapsanan uç başına 1 hit.
+        var magnetEndpointSnapshot = new HashSet<Vector2Int>();
+        if (board.ObstacleStateService != null)
+        {
+            void SnapMagnet(Vector2Int c)
+            {
+                if (board.ObstacleStateService.GetObstacleIdAt(c.x, c.y) == ObstacleId.Magnet
+                    && board.ObstacleStateService.IsMagnetEndpoint(c.x, c.y))
+                    magnetEndpointSnapshot.Add(c);
+            }
+            foreach (var c in targets) SnapMagnet(c);
+            foreach (var c in targetVisuals.Keys) SnapMagnet(c);
+        }
+
+        // Magnet hücresi mi? Öyleyse yalnız snapshot'taki güncel uç bir kez vurulur; orta yol
+        // ya da kaymış-uç hücreleri no-op. Dönen true → çağıran tile-clear ETMEZ (magnet korunur).
+        bool TryHitMagnet(Vector2Int cell)
+        {
+            if (board.ObstacleStateService == null
+                || board.ObstacleStateService.GetObstacleIdAt(cell.x, cell.y) != ObstacleId.Magnet)
+                return false;
+
+            if (magnetEndpointSnapshot.Remove(cell))
+            {
+                var magHit = board.ApplyObstacleDamageAt(cell.x, cell.y, ObstacleHitContext.SpecialActivation);
+                if (magHit.didHit) board.TriggerObstacleVisualChange(magHit.visualChange);
+            }
+            return true;
+        }
+
         foreach (var h in hOrigins)
         {
             var view = board.GetTileViewAt(h.cell.x, h.cell.y);
@@ -490,15 +523,10 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
                 if (IsProtected(cell))
                     continue;
 
-                // Magnet (statik blocker): special etki alanı uca denk gelirse uç küçülür. Merkezi olarak
-                // orta hücre no-op (didHit=false), uç shrink. Magnet hücresi tile-clear EDİLMEZ.
-                if (board.ObstacleStateService != null
-                    && board.ObstacleStateService.GetObstacleIdAt(cell.x, cell.y) == ObstacleId.Magnet)
-                {
-                    var magHit = board.ApplyObstacleDamageAt(cell.x, cell.y, ObstacleHitContext.SpecialActivation);
-                    if (magHit.didHit) board.TriggerObstacleVisualChange(magHit.visualChange);
+                // Magnet: yalnız snapshot'taki güncel uç bir kez küçülür (uç-yürüyüşü engellendi).
+                // Magnet hücresi tile-clear EDİLMEZ.
+                if (TryHitMagnet(cell))
                     continue;
-                }
 
                 if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(cell.x, cell.y))
                 {
@@ -550,14 +578,9 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             if (!cleared.Add(cell))
                 return;
 
-            // Magnet (statik blocker): special etki alanı uca denk gelirse uç küçülür (merkezi: orta no-op).
-            if (board.ObstacleStateService != null
-                && board.ObstacleStateService.GetObstacleIdAt(cell.x, cell.y) == ObstacleId.Magnet)
-            {
-                var magHit = board.ApplyObstacleDamageAt(cell.x, cell.y, ObstacleHitContext.SpecialActivation);
-                if (magHit.didHit) board.TriggerObstacleVisualChange(magHit.visualChange);
+            // Magnet: yalnız snapshot'taki güncel uç bir kez küçülür (uç-yürüyüşü engellendi).
+            if (TryHitMagnet(cell))
                 return;
-            }
 
             // Movable obstacle (Plastic vb.): tile-clear değil obstacle hasarı —
             // yıkılırsa view'ı HandleObstacleDestroyed kaldırır; çok-hit'liyse view'la
@@ -704,14 +727,9 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             if (!cleared.Add(kvp.Key))
                 continue;
 
-            // Magnet (statik blocker): special etki alanı uca denk gelirse uç küçülür (merkezi: orta no-op).
-            if (board.ObstacleStateService != null
-                && board.ObstacleStateService.GetObstacleIdAt(kvp.Key.x, kvp.Key.y) == ObstacleId.Magnet)
-            {
-                var magHit = board.ApplyObstacleDamageAt(kvp.Key.x, kvp.Key.y, ObstacleHitContext.SpecialActivation);
-                if (magHit.didHit) board.TriggerObstacleVisualChange(magHit.visualChange);
+            // Magnet: yalnız snapshot'taki güncel uç bir kez küçülür (uç-yürüyüşü engellendi).
+            if (TryHitMagnet(kvp.Key))
                 continue;
-            }
 
             if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(kvp.Key.x, kvp.Key.y))
             {
@@ -785,6 +803,10 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
 
         pulseImage.rectTransform.anchoredPosition = Vector2.zero;
         emitterImage.rectTransform.anchoredPosition = Vector2.right * orbitRadius;
+
+        // Combo pulse ghost'una idle fitili ÖLÇEKLİ bas: doğru koordinat = fuseLocalOffset * (iconSize/TileSize).
+        // Ghost pulse döndükçe fitil onunla döner (child).
+        orbitPulseTile?.StartComboFuse(pulseImage.rectTransform, iconSize / Mathf.Max(1f, board.TileSize), 3.1f, 0f);
 
         // Gerçek tile root'larını oynatma; sadece ghost ikonları oynat.
         // Böylece beyaz tile/background karesi görünmez.

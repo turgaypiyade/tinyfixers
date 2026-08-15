@@ -248,7 +248,12 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             propImg.raycastTarget = false;
             propImg.color = Color.white;
 
-            propGo.GetComponent<PatchBotPropellerView>().StartActivationSpin(5400f);
+            var pv = propGo.GetComponent<PatchBotPropellerView>();
+            // Special taşıyan patchbot uçuşu: blade YOK, pervane kalır ama yeni 2-sprite frame spin.
+            var pf = board.PatchBotPropellerFrames;
+            if (pf != null && pf.Length >= 2)
+                pv.SetSpinFrames(pf, board.PatchBotPropellerFrameFps);
+            pv.StartActivationSpin(5400f);
         }
 
         return new AirborneBot
@@ -323,6 +328,8 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
                 carryImg.preserveAspect = true;
                 carryImg.raycastTarget = false;
                 carryImg.color = Color.white;
+
+                pulseSourceTile?.StartComboFuse(carryRt, carrySize / Mathf.Max(1f, board.TileSize), 2.75f, 0f, board);
             }
         }
 
@@ -356,7 +363,12 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             propImg.raycastTarget = false;
             propImg.color = Color.white;
 
-            propGo.GetComponent<PatchBotPropellerView>().StartActivationSpin(5400f);
+            var pv = propGo.GetComponent<PatchBotPropellerView>();
+            // Special taşıyan patchbot uçuşu: blade YOK, pervane kalır ama yeni 2-sprite frame spin.
+            var pf = board.PatchBotPropellerFrames;
+            if (pf != null && pf.Length >= 2)
+                pv.SetSpinFrames(pf, board.PatchBotPropellerFrameFps);
+            pv.StartActivationSpin(5400f);
         }
 
         return new AirborneBot
@@ -556,7 +568,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
                 bot.targetX,
                 bot.targetY,
                 hasObstacle,
-                (x, y) => SpecialCellUtils.MarkAffectedCell(groupCtx, x, y, board),
+                (x, y) => SpecialCellUtils.MarkPatchBotImpactCell(groupCtx, board, x, y),
                 t => SpecialCellUtils.MarkAffectedCell(groupCtx, t, board));
 
             foreach (var data in dataMatches)

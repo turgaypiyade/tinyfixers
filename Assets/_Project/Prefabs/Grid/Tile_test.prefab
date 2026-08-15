@@ -99,8 +99,12 @@ MonoBehaviour:
   idleDelay: 2
   idleRepeatMin: 3
   idleRepeatMax: 6
-  idleSpinTurns: 2
+  idleSpinTurns: 4
   idleSpinDuration: 0.75
+  spinFrames:
+  - {fileID: 21300000, guid: 8f96fc85558ef4d5a85280bded3e12e0, type: 3}
+  - {fileID: 21300000, guid: 006e79a0a68d14959a078a57d501ad79, type: 3}
+  spinFrameFps: 20
 --- !u!1 &4017335894988476762
 GameObject:
   m_ObjectHideFlags: 0
@@ -253,6 +257,10 @@ MonoBehaviour:
   spinGrowDuration: 0.22
   spinShrinkDuration: 0.28
   spinContinuous: 0
+  spinHaloEnabled: 1
+  haloScaleFactor: 1.25
+  haloColor: {r: 1, g: 1, b: 1, a: 0.85}
+  spinSortingOrder: 100
 --- !u!1 &8082158129049703175
 GameObject:
   m_ObjectHideFlags: 0
@@ -336,6 +344,18 @@ MonoBehaviour:
   propellerView: {fileID: 3906672644494819645}
   overrideSpecialView: {fileID: 3442276349837178895}
   fuseSparkleView: {fileID: 656804247279960155}
+  lineHSpinFrames:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  lineVSpinFrames:
+  - {fileID: 21300000, guid: eae120bdcaef543d28d73cd362cb05fb, type: 3}
+  - {fileID: 21300000, guid: 26750b2b9d2864ac59a91c61e4d592e0, type: 3}
+  - {fileID: 21300000, guid: 41f7f525728ce4e0ab270e25240f0109, type: 3}
+  - {fileID: 21300000, guid: 0e702c597493a4b2a851cdb4436aa5ba, type: 3}
+  - {fileID: 21300000, guid: 02ea9c42c55f642d4a0f3e76a2378873, type: 3}
   iconScale: 1
   iconSize: {x: 105, y: 105}
   useFullCellIcon: 0

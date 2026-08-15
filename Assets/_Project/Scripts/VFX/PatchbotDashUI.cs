@@ -59,13 +59,76 @@ public class PatchbotDashUI : MonoBehaviour
     [SerializeField, Range(0f, 0.25f)] private float flightPitchJitter = 0.05f;
     [SerializeField, Range(0f, 0.15f)] private float flightVolumeJitter = 0.03f;
 
-    [Header("AfterImage")]
-    [SerializeField] private float spawnEvery = 0.02f;
-    [SerializeField] private float afterLife = 0.28f;
-    [SerializeField] private Color afterColor = new Color(0.55f, 0.85f, 1f, 0.85f);
+    [Header("AfterImage (hayalet dönme izi)")]
+    [Tooltip("Ne sıklıkta hayalet iz doğar (sn). KÜÇÜK = daha çok hayalet (daha yoğun iz).")]
+    [SerializeField] private float spawnEvery = 0.011f;
+    [Tooltip("Her hayaletin yaşam süresi (sn). BÜYÜK = iz daha uzun/görünür kalır.")]
+    [SerializeField] private float afterLife = 0.42f;
+    [Tooltip("Hayalet rengi + alfa. Alfa BÜYÜK = daha belirgin iz.")]
+    [SerializeField] private Color afterColor = new Color(0.60f, 0.88f, 1f, 0.95f);
     [Header("Carry Orbit")]
     [SerializeField] private float carrySizeFactor = 0.72f;
     [SerializeField, Range(0.05f, 0.6f)] private float carryOrbitRadiusFactor = 0.32f;
+
+    [Header("Takeoff Propeller (dönüşümden ÖNCEKİ idle-tarzı spin)")]
+    [Tooltip("Kalkışta (blade'e dönüşmeden önce) dönen pervane sprite'ı. BOŞ: board.PatchBotPropellerSprite kullanılır.")]
+    [SerializeField] private Sprite takeoffPropellerSprite;
+    [Tooltip("Kalkış pervanesinin frame'leri — idle tile ile AYNI olmalı (2+ sprite). Öncelik sırası: " +
+             "bu alan → board.PatchBotPropellerFrames → idle tile'ın son bilinen frame'leri. Hepsi boşsa " +
+             "eski transform-rotasyon spin'i (istenmeyen).")]
+    [SerializeField] private Sprite[] takeoffPropellerFrames;
+    [SerializeField, Min(1f)] private float takeoffPropellerFps = 18f;
+
+    [Header("Blade Spinner (PatchBot Redesign)")]
+    [Tooltip("Pervanenin dönüşeceği bıçaklı spinner frame'leri. Sırayla döngüye girer (verilen sıra: 4 → 33 → 11 → 22). " +
+             "Boş bırakılırsa eski davranış (gövde+pervane hedefe uçar) korunur.")]
+    [SerializeField] private Sprite[] spinnerFrames;
+    [Tooltip("Frame değişim hızı (frame/sn). Yalnız 'Animate Frames While Spinning' açıkken veya " +
+             "Spin Speed = 0 iken kullanılır (saf frame animasyonu).")]
+    [SerializeField, Min(1f)] private float spinnerFps = 30f;
+    [Tooltip("Sürekli transform dönüşü (derece/sn). Dönme bunu kullanır — kesintisiz, tam 360°, " +
+             "frame'ler tam tur oluşturmasa bile boşluk olmaz. 0 = kapalı (o zaman frame döngüsü döner). " +
+             "2880 = sn'de 8 tur. Daha da hızlı istersen artır.")]
+    [SerializeField, Min(0f)] private float spinnerSpinSpeed = 2880f;
+    [Tooltip("Transform dönerken frame'leri de değiştir (şimşek/glow parıltısı için). KAPALI önerilir: " +
+             "frame'ler tam 360°'yi kapamıyorsa açıkken başa sarma sıçraması görünür. Kapalıyken tek frame " +
+             "sürekli döner → tam 360°, boşluksuz.")]
+    [SerializeField] private bool animateFramesWhileSpinning = false;
+    [Tooltip("Frizbi eğimi (X): diski dikey olarak cos(açı) kadar KISALTIR (sabit elips foreshorten), " +
+             "spinner bu elipsin İÇİNDE döner → uçarken de sabit kalan açılı disk. NOT: 15° yalnız ~%3 " +
+             "kısalma (fark edilmez); belirgin frizbi için 30-45° dene. 0 = düz.")]
+    [SerializeField, Range(0f, 60f)] private float spinnerTiltX = 30f;
+    [Tooltip("Yatay eğim (Y): diski yatay olarak cos(açı) kadar kısaltır. Genelde 0 bırakılır.")]
+    [SerializeField, Range(-60f, 60f)] private float spinnerTiltY = 0f;
+    [Tooltip("Gövde ayrılma + pervane→spinner cross-fade süresi (sn).")]
+    [SerializeField, Min(0.01f)] private float separationDuration = 0.16f;
+    [Tooltip("Ayrılma sırasında pervanenin yukarı çıkış miktarı (tile boyutuna oran).")]
+    [SerializeField, Range(0f, 1.5f)] private float propellerRiseFactor = 0.35f;
+
+    [Header("Body Retreat (Güvenli Bölge)")]
+    [Tooltip("Ayrışan robot GÖVDESİ sprite'ı (blade üstte dönerken TopHUD'a hayalet olup giden alt " +
+             "robot). BOŞ bırakılırsa uçuş ikonunun kendisi kullanılır (eski davranış). Kendi robot " +
+             "gövde çizimini buraya bağla → retreat onunla oynar.")]
+    [SerializeField] private Sprite bodyRetreatSprite;
+    [Tooltip("Gövdenin HAYALET olup uçacağı güvenli nokta. BOŞ bırak: runtime'da TopHUD avatarını " +
+             "(AvatarView) otomatik bulur → gövde ona doğru gider (prefab sahne objesine referans " +
+             "tutamadığı için bu yol tercih edilir). Elle override etmek istersen bir RectTransform bağla.")]
+    [SerializeField] private RectTransform bodySafeZone;
+    [SerializeField, Min(0.05f)] private float bodyRetreatDuration = 0.55f;
+    [Tooltip("bodySafeZone boşsa gövdenin yukarı offset miktarı (tile boyutuna oran). Büyük = daha net çıkış.")]
+    [SerializeField, Range(0f, 6f)] private float bodyRetreatRiseFactor = 3f;
+    [SerializeField, Range(0.1f, 1f)] private float bodyRetreatEndScale = 0.4f;
+    [Tooltip("Retreat eden gövdenin HAYALET rengi/alfası (mavimsi yarı-saydam = hayalet hissi).")]
+    [SerializeField] private Color bodyGhostTint = new Color(0.62f, 0.82f, 1f, 0.8f);
+
+    [Header("Launch Sparks (kalkışta etrafa roket/kıvılcım saçma)")]
+    [Tooltip("Kalkış anında spinner'ın etrafına saçılan kıvılcım/roket adedi. 0 = kapalı.")]
+    [SerializeField, Min(0)] private int launchSparkCount = 16;
+    [SerializeField] private Color launchSparkColor = new Color(1f, 0.80f, 0.32f, 1f);
+    [Tooltip("Kıvılcımların uçuş mesafesi (tile boyutuna oran).")]
+    [SerializeField, Range(0.3f, 3f)] private float launchSparkDistanceFactor = 1.5f;
+    [SerializeField, Min(0.05f)] private float launchSparkLife = 0.42f;
+
     private Coroutine co;
 
     void Reset()
@@ -171,10 +234,15 @@ public class PatchbotDashUI : MonoBehaviour
         }
         rt.sizeDelta = size;
 
-        var propellerSprite = board.PatchBotPropellerSprite;
+        GameObject propGo = null;
+        Image propImg = null;
+        PatchBotPropellerView propView = null;
+
+        // Kalkış pervanesi sprite'ı: PatchbotDashUI local öncelikli, yoksa board.
+        var propellerSprite = takeoffPropellerSprite != null ? takeoffPropellerSprite : board.PatchBotPropellerSprite;
         if (propellerSprite != null)
         {
-            var propGo = new GameObject("PatchBotPropeller", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(PatchBotPropellerView));
+            propGo = new GameObject("PatchBotPropeller", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(PatchBotPropellerView));
             propGo.transform.SetParent(rt, false);
 
             var propRt = propGo.GetComponent<RectTransform>();
@@ -184,13 +252,39 @@ public class PatchbotDashUI : MonoBehaviour
             propRt.sizeDelta = size;
             propRt.anchoredPosition = Vector2.zero;
 
-            var propImg = propGo.GetComponent<Image>();
+            propImg = propGo.GetComponent<Image>();
             propImg.sprite = propellerSprite;
             propImg.preserveAspect = true;
             propImg.raycastTarget = false;
             propImg.color = Color.white;
 
-            propGo.GetComponent<PatchBotPropellerView>().StartActivationSpin(5400f);
+            propView = propGo.GetComponent<PatchBotPropellerView>();
+            // Uçan pervane de tile'daki gibi frame animasyonu kullansın (rotasyon değil).
+            // Öncelik: PatchbotDashUI local → board.PatchBotPropellerFrames → idle tile'ın son bilinen
+            // frame'leri (elle eşleme gerekmez → takeoff spin'i idle ile aynı olur). Hepsi boşsa rotasyon.
+            Sprite[] propFrames;
+            float propFps;
+            if (takeoffPropellerFrames != null && takeoffPropellerFrames.Length >= 2)
+            {
+                propFrames = takeoffPropellerFrames;
+                propFps = takeoffPropellerFps;
+            }
+            else if (board.PatchBotPropellerFrames != null && board.PatchBotPropellerFrames.Length >= 2)
+            {
+                propFrames = board.PatchBotPropellerFrames;
+                propFps = board.PatchBotPropellerFrameFps;
+            }
+            else
+            {
+                propFrames = PatchBotPropellerView.LastKnownSpinFrames;
+                propFps = PatchBotPropellerView.LastKnownSpinFrameFps > 0f
+                    ? PatchBotPropellerView.LastKnownSpinFrameFps
+                    : takeoffPropellerFps;
+            }
+
+            if (propFrames != null && propFrames.Length >= 2)
+                propView.SetSpinFrames(propFrames, propFps);
+            propView.StartActivationSpin(5400f);
         }
 
         RectTransform carryRt = null;
@@ -231,8 +325,13 @@ public class PatchbotDashUI : MonoBehaviour
         float totalDistance = Vector2.Distance(start, target);
         float effectiveSpeed = Mathf.Max(1f, dashSpeed * Mathf.Max(0.01f, pikeSpeedMultiplier));
 
+        // Blade spinner YALNIZ solo patchbot'a özel. Special TAŞIYAN (combo) patchbot blade'e
+        // dönüşmez — pervane olarak kalır (kullanıcı kararı). Taşımada gövde-retreat da yok.
+        bool useSpinner = spinnerFrames != null && spinnerFrames.Length > 0 && !req.orbitCarry;
+
         float takeoffDuration;
         float hoverDuration;
+        float separationPhase;
         float diveDuration;
 
         if (syncDuration > 0f)
@@ -241,13 +340,15 @@ public class PatchbotDashUI : MonoBehaviour
             float travelDuration = Mathf.Max(0f, syncDuration * Mathf.Max(0.01f, syncedDurationMultiplier));
             takeoffDuration = Mathf.Min(Mathf.Max(0f, takeoffBurstDuration), Mathf.Max(0f, travelDuration * 0.35f));
             hoverDuration = Mathf.Min(Mathf.Max(0f, hoverHoldDuration), Mathf.Max(0f, travelDuration * 0.18f));
-            diveDuration = Mathf.Max(0.01f, travelDuration - takeoffDuration - hoverDuration);
+            separationPhase = useSpinner ? Mathf.Min(Mathf.Max(0f, separationDuration), Mathf.Max(0f, travelDuration * 0.25f)) : 0f;
+            diveDuration = Mathf.Max(0.01f, travelDuration - takeoffDuration - hoverDuration - separationPhase);
         }
         else
         {
             // Solo dash: takeoff (2.5x şarj) ve hover SABİT; dalış pike hızıyla kısa ve keskin.
             takeoffDuration = Mathf.Max(0f, takeoffBurstDuration);
             hoverDuration = Mathf.Max(0f, hoverHoldDuration);
+            separationPhase = useSpinner ? Mathf.Max(0f, separationDuration) : 0f;
             diveDuration = totalDistance > arriveEps ? Mathf.Max(0.05f, totalDistance / effectiveSpeed) : 0.01f;
         }
 
@@ -263,9 +364,19 @@ public class PatchbotDashUI : MonoBehaviour
         yield return RunTakeoffBurst(rt, carryRt, size, sprite, start, takeoff, takeoffDuration, motion);
         yield return RunHoverHold(rt, carryRt, size, sprite, takeoff, hoverDuration, motion);
 
+        // Ayrılma: gövde güvenli bölgeye süzülürken pervane bıçaklı spinner'a dönüşür.
+        Image spinnerImg = null;
+        if (useSpinner)
+            yield return RunSeparation(rt, img, sprite, size, propGo, propImg, propView, separationPhase, motion, s => spinnerImg = s);
+
         var live = AcquireLiveTarget(req, board, target);
 
-        yield return RunDive(rt, carryRt, size, sprite, takeoff, live, diveDuration, effectiveSpeed, motion);
+        // Spinner uçuş boyunca frame'lerini hızlıca döngüler (pervane gibi dönme).
+        Coroutine spinCycler = spinnerImg != null ? StartCoroutine(SpinnerFrameCycler(spinnerImg)) : null;
+
+        yield return RunDive(rt, carryRt, size, sprite, rt.anchoredPosition, live, diveDuration, effectiveSpeed, motion, spinnerImg);
+
+        if (spinCycler != null) StopCoroutine(spinCycler);
 
         rt.anchoredPosition = live.target;
         rt.localRotation = Quaternion.identity;
@@ -390,6 +501,9 @@ public class PatchbotDashUI : MonoBehaviour
         float duration,
         DashMotionState motion)
     {
+        // Kalkış anı: spinner yerinde revlerken etrafına roket/kıvılcım demeti saçar.
+        SpawnLaunchSparks(start, size);
+
         if (duration <= 0f)
         {
             rt.anchoredPosition = takeoff;
@@ -458,7 +572,8 @@ public class PatchbotDashUI : MonoBehaviour
         LiveTargetState live,
         float duration,
         float homingSpeed,
-        DashMotionState motion)
+        DashMotionState motion,
+        Image spinnerImg = null)
     {
         Vector2 initialDelta = live.target - start;
         float arc = Mathf.Clamp(initialDelta.magnitude * Mathf.Max(0f, diveArcFactor), Mathf.Min(size.x, size.y) * 0.10f, Mathf.Min(size.x, size.y) * 0.45f);
@@ -488,7 +603,7 @@ public class PatchbotDashUI : MonoBehaviour
             rt.localScale = Vector3.one * Mathf.Lerp(2.5f, 1.0f, t);
 
             UpdateCarryOrbit(carryRt, size, motion.elapsed);
-            TickAfterImage(rt, sprite, motion);
+            TickAfterImage(rt, spinnerImg != null ? spinnerImg.sprite : sprite, motion);
             yield return null;
         }
 
@@ -509,7 +624,324 @@ public class PatchbotDashUI : MonoBehaviour
             rt.localScale = Vector3.one;
 
             UpdateCarryOrbit(carryRt, size, motion.elapsed);
-            TickAfterImage(rt, sprite, motion);
+            TickAfterImage(rt, spinnerImg != null ? spinnerImg.sprite : sprite, motion);
+            yield return null;
+        }
+    }
+
+    // Ayrılma fazı: gövde pervaneden kopar (güvenli bölgeye paralel süzülür) ve pervane
+    // görseli bıçaklı spinner'a cross-fade ile dönüşür. Bittiğinde spinner Image'ı callback
+    // ile teslim edilir; dalış artık bu spinner'ı taşır.
+    private IEnumerator RunSeparation(
+        RectTransform rt,
+        Image bodyImg,
+        Sprite bodySprite,
+        Vector2 size,
+        GameObject propGo,
+        Image propImg,
+        PatchBotPropellerView propView,
+        float duration,
+        DashMotionState motion,
+        System.Action<Image> onSpinnerReady)
+    {
+        // Frizbi tilt-holder: DÖNMEYEN parent, sabit dikey/yatay squash uygular (foreshorten).
+        // Spinner bunun İÇİNDE Z'de döner → disk sabit bir elips olur, bıçaklar içinde döner
+        // (elips titremez). Uçarken de eğim görünür kalır. squash = cos(tilt).
+        var tiltGo = new GameObject("PatchbotSpinnerTilt", typeof(RectTransform));
+        tiltGo.transform.SetParent(rt, false);
+        var tiltRt = tiltGo.GetComponent<RectTransform>();
+        tiltRt.anchorMin = tiltRt.anchorMax = tiltRt.pivot = new Vector2(0.5f, 0.5f);
+        tiltRt.sizeDelta = size;
+        tiltRt.anchoredPosition = Vector2.zero;
+        tiltRt.localScale = new Vector3(
+            Mathf.Cos(spinnerTiltY * Mathf.Deg2Rad),   // Y-tilt → yatay squash
+            Mathf.Cos(spinnerTiltX * Mathf.Deg2Rad),   // X-tilt → dikey squash (frizbi)
+            1f);
+        tiltRt.SetAsLastSibling();
+
+        // Bıçaklı spinner overlay'i (pervanenin dönüşeceği yapı), alfa 0'dan başlar.
+        var spinGo = new GameObject("PatchbotBladeSpinner", typeof(RectTransform), typeof(Image));
+        spinGo.transform.SetParent(tiltGo.transform, false);
+
+        var spinRt = spinGo.GetComponent<RectTransform>();
+        spinRt.anchorMin = new Vector2(0.5f, 0.5f);
+        spinRt.anchorMax = new Vector2(0.5f, 0.5f);
+        spinRt.pivot = new Vector2(0.5f, 0.5f);
+        spinRt.sizeDelta = size;
+        spinRt.anchoredPosition = Vector2.zero;
+
+        var spinImg = spinGo.GetComponent<Image>();
+        spinImg.sprite = spinnerFrames[0];
+        spinImg.preserveAspect = true;
+        spinImg.raycastTarget = false;
+        spinImg.color = new Color(1f, 1f, 1f, 0f);
+        spinRt.SetAsLastSibling();
+
+        // Gövdeyi ayır: mevcut konumun kopyasını vfxRoot'a doğur, paralel (non-blocking)
+        // güvenli bölgeye uçur; ana görselden gövdeyi gizle.
+        if (bodyImg != null)
+        {
+            DetachBodyAndRetreat(rt, bodySprite, size);
+            bodyImg.enabled = false;
+        }
+
+        Vector2 startPos = rt.anchoredPosition;
+        Vector2 risePos = startPos + Vector2.up * (Mathf.Min(size.x, size.y) * propellerRiseFactor);
+
+        float safeDur = Mathf.Max(0.01f, duration);
+        float local = 0f;
+        while (local < safeDur)
+        {
+            float dt = Time.deltaTime;
+            local += dt;
+            motion.elapsed += dt;
+
+            float t = Mathf.Clamp01(local / safeDur);
+            if (propImg != null) propImg.color = new Color(1f, 1f, 1f, 1f - t);
+            spinImg.color = new Color(1f, 1f, 1f, t);
+
+            rt.anchoredPosition = Vector2.Lerp(startPos, risePos, t);
+            rt.localScale = Vector3.one * 2.5f;
+            yield return null;
+        }
+
+        if (propImg != null) propImg.color = new Color(1f, 1f, 1f, 0f);
+        spinImg.color = Color.white;
+
+        if (propView != null) propView.Stop();
+        if (propGo != null) propGo.SetActive(false);
+
+        onSpinnerReady?.Invoke(spinImg);
+    }
+
+    // Gövdenin kopyasını doğurup güvenli bölgeye/yukarı süzülerek fade-out yapan paralel iş.
+    private void DetachBodyAndRetreat(RectTransform rt, Sprite bodySprite, Vector2 size)
+    {
+        if (vfxRoot == null) return;
+
+        var go = new GameObject("PatchbotBodyRetreat", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(vfxRoot, false);
+
+        var brt = go.GetComponent<RectTransform>();
+        brt.anchorMin = new Vector2(0.5f, 0.5f);
+        brt.anchorMax = new Vector2(0.5f, 0.5f);
+        brt.pivot = new Vector2(0.5f, 0.5f);
+        brt.sizeDelta = size;
+        brt.anchoredPosition = rt.anchoredPosition;   // rt ile aynı parent (vfxRoot) uzayında
+        brt.localScale = rt.localScale;
+
+        var bimg = go.GetComponent<Image>();
+        // Ayrı robot-gövde sprite'ı atanmışsa onu kullan; yoksa uçuş ikonuna düş (eski davranış).
+        bimg.sprite = bodyRetreatSprite != null ? bodyRetreatSprite : bodySprite;
+        bimg.preserveAspect = true;
+        bimg.raycastTarget = false;
+        bimg.color = bodyGhostTint;   // hayalet hissi (mavimsi yarı-saydam)
+        brt.SetAsLastSibling();
+
+        StartCoroutine(BodyRetreat(go, brt, bimg, size));
+    }
+
+    // Kalkışta spinner'ın etrafına radyal kıvılcım/roket demeti saçar (aşağı yarıya hafif bias =
+    // egzoz hissi). Her kıvılcım dışarı fırlar, küçülüp söner.
+    private void SpawnLaunchSparks(Vector2 centerAnchored, Vector2 size)
+    {
+        if (vfxRoot == null || launchSparkCount <= 0)
+            return;
+
+        float baseR = Mathf.Min(size.x, size.y);
+        var sparkSprite = GetSparkSprite();
+
+        for (int i = 0; i < launchSparkCount; i++)
+        {
+            float ang = (i / (float)launchSparkCount) * Mathf.PI * 2f + Random.Range(-0.25f, 0.25f);
+            Vector2 dir = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang) - 0.35f).normalized;   // egzoz için aşağı bias
+            float dist = baseR * launchSparkDistanceFactor * Random.Range(0.55f, 1.15f);
+            float sparkSize = baseR * Random.Range(0.10f, 0.22f);
+
+            var go = new GameObject("PatchbotLaunchSpark", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(vfxRoot, false);
+
+            var srt = (RectTransform)go.transform;
+            srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0.5f, 0.5f);
+            srt.sizeDelta = new Vector2(sparkSize, sparkSize);
+            srt.anchoredPosition = centerAnchored;
+            srt.SetAsLastSibling();
+
+            var img = go.GetComponent<Image>();
+            img.sprite = sparkSprite;
+            img.raycastTarget = false;
+            img.color = launchSparkColor;
+
+            StartCoroutine(SparkRoutine(go, srt, img, centerAnchored, centerAnchored + dir * dist));
+        }
+    }
+
+    private IEnumerator SparkRoutine(GameObject go, RectTransform srt, Image img, Vector2 from, Vector2 to)
+    {
+        float life = Mathf.Max(0.05f, launchSparkLife);
+        float local = 0f;
+        Vector3 startScale = srt.localScale;
+        Color startColor = img.color;
+
+        while (local < life && go != null)
+        {
+            local += Time.deltaTime;
+            float t = Mathf.Clamp01(local / life);
+            float eased = 1f - (1f - t) * (1f - t);   // hızlı fırla, yavaşla
+
+            srt.anchoredPosition = Vector2.LerpUnclamped(from, to, eased);
+            srt.localScale = startScale * Mathf.Lerp(1f, 0.25f, t);
+            img.color = new Color(startColor.r, startColor.g, startColor.b, startColor.a * (1f - t));
+            yield return null;
+        }
+
+        if (go != null) Destroy(go);
+    }
+
+    private static Sprite _sparkSprite;
+    private static Sprite GetSparkSprite()
+    {
+        if (_sparkSprite != null)
+            return _sparkSprite;
+
+        const int res = 32;
+        var tex = new Texture2D(res, res, TextureFormat.RGBA32, false)
+        {
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear
+        };
+
+        var center = new Vector2((res - 1) * 0.5f, (res - 1) * 0.5f);
+        float radius = res * 0.5f;
+        for (int y = 0; y < res; y++)
+        for (int x = 0; x < res; x++)
+        {
+            float d = Vector2.Distance(new Vector2(x, y), center) / radius;
+            float a = Mathf.Clamp01(1f - d);
+            a = a * a;   // sıcak, keskin çekirdek
+            tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+        }
+
+        tex.Apply(false, true);
+        _sparkSprite = Sprite.Create(tex, new Rect(0, 0, res, res), new Vector2(0.5f, 0.5f), res);
+        _sparkSprite.name = "GeneratedPatchbotSpark";
+        return _sparkSprite;
+    }
+
+    // Güvenli bölge: elle atanan bodySafeZone; boşsa runtime'da TopHUD avatarını (AvatarView) bul.
+    // Prefab sahne objesine referans TUTAMAZ; bu yüzden fallback otomatik bulur — bağlama gerektirmez.
+    private RectTransform _cachedAvatarRect;
+    private RectTransform ResolveBodySafeZone()
+    {
+        if (bodySafeZone != null) return bodySafeZone;
+        if (_cachedAvatarRect != null) return _cachedAvatarRect;
+
+        // Asıl hedef: TopHUD içindeki robot maskesi
+        // (canvas/safearea/tophud/topcontent/centerpanel/robotmask). İsimle (casing-duyarsız)
+        // descendant araması → hiyerarşi yeniden düzenlense de bulur.
+        var hud = FindFirstObjectByType<TopHudController>();
+        if (hud != null)
+        {
+            var robotMask = FindDescendantByName(hud.transform, "robotmask") as RectTransform;
+            if (robotMask != null)
+            {
+                _cachedAvatarRect = robotMask;
+                return _cachedAvatarRect;
+            }
+        }
+
+        // Yedekler: AvatarView (profil), sonra HUD kökü — yine de yukarı-kayıp-sönmekten iyidir.
+        var av = FindFirstObjectByType<AvatarView>();
+        if (av != null)
+        {
+            _cachedAvatarRect = av.transform as RectTransform;
+            return _cachedAvatarRect;
+        }
+        if (hud != null)
+        {
+            _cachedAvatarRect = hud.transform as RectTransform;
+            return _cachedAvatarRect;
+        }
+
+        return _cachedAvatarRect;
+    }
+
+    // Kök altındaki (pasif dahil) ilk eşleşen isimli transform'u bulur (casing-duyarsız).
+    private static Transform FindDescendantByName(Transform root, string name)
+    {
+        if (root == null) return null;
+        var all = root.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < all.Length; i++)
+            if (string.Equals(all[i].name, name, System.StringComparison.OrdinalIgnoreCase))
+                return all[i];
+        return null;
+    }
+
+    private IEnumerator BodyRetreat(GameObject go, RectTransform brt, Image bimg, Vector2 size)
+    {
+        Vector2 startPos = brt.anchoredPosition;
+        var safeZone = ResolveBodySafeZone();
+        Vector2 target = safeZone != null
+            ? WorldToAnchoredIn(vfxRoot, safeZone.position)
+            : startPos + Vector2.up * (Mathf.Min(size.x, size.y) * bodyRetreatRiseFactor);
+
+        Vector3 startScale = brt.localScale;
+        Vector3 endScale = startScale * bodyRetreatEndScale;
+
+        float dur = Mathf.Max(0.05f, bodyRetreatDuration);
+        float local = 0f;
+        while (local < dur && go != null)
+        {
+            local += Time.deltaTime;
+            float t = Mathf.Clamp01(local / dur);
+            float eased = 1f - Mathf.Pow(1f - t, 3f);
+
+            brt.anchoredPosition = Vector2.LerpUnclamped(startPos, target, eased);
+            brt.localScale = Vector3.LerpUnclamped(startScale, endScale, eased);
+            bimg.color = new Color(bodyGhostTint.r, bodyGhostTint.g, bodyGhostTint.b, bodyGhostTint.a * (1f - t));
+            yield return null;
+        }
+
+        if (go != null) Destroy(go);
+    }
+
+    // Spinner frame'lerini spinnerFps hızında döngüler; ayrıca opsiyonel sürekli transform
+    // dönüşü uygular (frame'ler zaten dönme snapshot'ları — ikisi birlikte hızlı bulanık spin).
+    private IEnumerator SpinnerFrameCycler(Image spinImg)
+    {
+        if (spinImg == null || spinnerFrames == null || spinnerFrames.Length == 0)
+            yield break;
+
+        var srt = spinImg.rectTransform;
+
+        // Dönme, transform rotasyonu ile sağlanır → kesintisiz, tam 360°, boşluksuz.
+        // Frame değişimi yalnızca (a) spin kapalıyken saf frame animasyonu, ya da
+        // (b) spin açık + animateFramesWhileSpinning ile şimşek parıltısı içindir.
+        bool spinning = spinnerSpinSpeed > 0f;
+        bool cycleFrames = !spinning || animateFramesWhileSpinning;
+
+        // Frizbi eğimi artık DÖNMEYEN tilt-holder parent'ta (sabit squash). Burada spinner yalnız
+        // kendi düzleminde (Z) döner → holder'ın elipsi içinde bıçaklar döner, elips titremez.
+        float step = 1f / Mathf.Max(1f, spinnerFps);
+        float frameT = 0f;
+        int idx = 0;
+
+        while (true)
+        {
+            if (cycleFrames)
+            {
+                frameT += Time.deltaTime;
+                if (frameT >= step)
+                {
+                    frameT -= step;
+                    idx = (idx + 1) % spinnerFrames.Length;
+                    spinImg.sprite = spinnerFrames[idx];
+                }
+            }
+
+            if (spinning)
+                srt.Rotate(0f, 0f, -spinnerSpinSpeed * Time.deltaTime);
+
             yield return null;
         }
     }
@@ -661,7 +1093,8 @@ public class PatchbotDashUI : MonoBehaviour
         float dive = Mathf.Max(0.05f, distance / speed);
         float takeoff = Mathf.Max(0f, takeoffBurstDuration);
         float hover = Mathf.Max(0f, hoverHoldDuration);
-        return takeoff + hover + dive;
+        float sep = (spinnerFrames != null && spinnerFrames.Length > 0) ? Mathf.Max(0f, separationDuration) : 0f;
+        return takeoff + hover + sep + dive;
     }
 
     private AudioSource CreateFlightAudioSource(RectTransform attachTo)

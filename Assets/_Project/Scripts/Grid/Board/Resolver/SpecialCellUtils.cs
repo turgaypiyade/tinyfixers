@@ -97,6 +97,31 @@ public static class SpecialCellUtils
         return true;
     }
 
+    public static void MarkPatchBotImpactCell(ResolutionContext ctx, BoardController board, int x, int y)
+    {
+        if (ctx == null || board == null)
+            return;
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
+            return;
+
+        var obstacles = board.ObstacleStateService;
+        if (obstacles != null && obstacles.IsExitAtBottomAt(x, y))
+            return;
+
+        if (!SpecialUtils.CanAffectCell(board, x, y))
+        {
+            TryAddMagnetEndpointImpact(board, x, y, ctx.ImpactCells);
+            if (!TryMarkEmitterImpact(ctx, board, x, y))
+                TryAddObstacleImpact(board, x, y, ctx.ImpactCells);
+            return;
+        }
+
+        if (TryRouteMovableToImpact(ctx, board, x, y))
+            return;
+
+        MarkAffectedCell(ctx, x, y, board);
+    }
+
     /// <summary>
     /// HatLauncher / EnergyContainer cells are permanent OverTileBlockers, so CanAffectCell
     /// rejects them and they never enter a special's affected/impact set. But a special whose

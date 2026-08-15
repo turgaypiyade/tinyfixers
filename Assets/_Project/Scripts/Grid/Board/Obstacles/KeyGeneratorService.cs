@@ -34,6 +34,18 @@ public sealed class KeyGeneratorService : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool logDebug;
 
+    // Katmanlı makine görseli ayarları. Servis runtime'da GridSpawner GO'suna eklendiği için
+    // editörde inspector'ı yok → config GridSpawner'dan ApplyMachineConfig ile gelir.
+    private KeyGeneratorMachineConfig machineConfig = new KeyGeneratorMachineConfig();
+    private readonly Dictionary<int, KeyGeneratorMachineView> machineViewsByOrigin = new();
+
+    /// GridSpawner, kendi serialize'lı config'ini (crank/draft sprite + tunable) buraya pushlar.
+    public void ApplyMachineConfig(KeyGeneratorMachineConfig config)
+    {
+        if (config != null)
+            machineConfig = config;
+    }
+
     // committedKeys = keys already placed on the board + keys currently in flight. This is
     // the production cap counter: the generator commits exactly `capacity` keys total.
     private int committedKeys;
@@ -66,6 +78,8 @@ public sealed class KeyGeneratorService : MonoBehaviour
 
         if (board?.ObstacleStateService != null)
             board.ObstacleStateService.KeyGeneratorHitInterceptor = null;
+
+        machineViewsByOrigin.Clear();
     }
 
     private void ResolveReferences()
@@ -110,6 +124,8 @@ public sealed class KeyGeneratorService : MonoBehaviour
 
         if (completed)
             CloseAllGenerators();
+        else
+            StartCoroutine(CoBuildIdleMachines());
 
         if (logDebug)
             Debug.Log($"[KeyGenerator] Bound. capacity={ResolveKeyGoalAmount()} completed={completed}");
@@ -140,10 +156,12 @@ public sealed class KeyGeneratorService : MonoBehaviour
 
         float delay = hitIndex * Mathf.Max(0f, hitStagger);
 
-        board.BeginBackgroundJob();
+        // Key uçuşu async (KeyFlight): board akmaya devam eder. Landing cell reservedKeyLandingCells
+        // ile rezerve + uçuş öncesi re-validate edildiği için hareketli board'da güvenli.
+        var keyJob = board.BeginJob(BoardController.BoardJobKind.KeyFlight);
         StartCoroutine(CoProduceKey(originIndex, targetCell, delay, () =>
         {
-            board.EndBackgroundJob();
+            keyJob.Dispose();
             board.RequestResolveAfterActionSequence();
         }));
 
@@ -180,15 +198,30 @@ public sealed class KeyGeneratorService : MonoBehaviour
                     yield break; // no valid normal cell right now → skip; finally cleans up
             }
 
-            Image obstacleImage = FindObstacleImage(originIndex);
-            if (obstacleImage != null)
-                StartCoroutine(CoPulseObstacle(obstacleImage.rectTransform));
+            // Katmanlı makine varsa: kol çekilir + yeşil tarama cam alanda yukarı süpürür + draft
+            // söner (materialize). Yoksa eski basit pulse feedback'i.
+            var machine = EnsureMachineView(originIndex);
+            if (machine != null)
+            {
+                yield return machine.CoPreLaunch();
+            }
+            else
+            {
+                Image obstacleImage = FindObstacleImage(originIndex);
+                if (obstacleImage != null)
+                    StartCoroutine(CoPulseObstacle(obstacleImage.rectTransform));
+            }
 
             RectTransform root = overlayRoot != null ? overlayRoot : board?.ContentRoot;
             Sprite keySprite = board != null ? board.GetIcon(TileType.Key) : null;
 
+            // Gerçek elmas podyumda "oluşur" ve fırlar: CoFlyKey'in rise fazı = materialize.
             if (root != null && keySprite != null && board != null)
                 yield return CoFlyKey(root, originIndex, targetCell, keySprite);
+
+            // Kol geri döner + draft geri gelir + idle.
+            if (machine != null)
+                machine.PlayPostLaunch();
 
             if (board != null && board.TryPlaceGeneratedKeyAt(targetCell, out var placedCell))
             {
@@ -382,6 +415,15 @@ public sealed class KeyGeneratorService : MonoBehaviour
         Image image = FindObstacleImage(originIndex);
         if (image == null)
             yield break;
+
+        // Katmanlı makine: kapanış = gövdeyi lights-off sprite'ına (stages[1]) çevir + hologram/kol
+        // gizle. Eski kapı-kaydırma overlay'i yeni makinede uygun değil, atla.
+        if (machineViewsByOrigin.TryGetValue(originIndex, out var machineView) && machineView != null)
+        {
+            SetClosedFrame(originIndex);
+            machineView.SetClosed();
+            yield break;
+        }
 
         Sprite closed = ResolveClosedSprite();
         if (closed == null)
@@ -615,6 +657,64 @@ public sealed class KeyGeneratorService : MonoBehaviour
 
         if (rt != null)
             rt.localScale = baseScale;
+    }
+
+    // ── Layered machine view (per-origin) ────────────────────────────────────
+
+    // Builds (or reuses) the layered machine visual as a child of the generator's body image.
+    // Returns null when sprites aren't wired yet (crank+draft both empty) → caller falls back
+    // to the legacy pulse feedback, so behavior is unchanged until the art is assigned.
+    private KeyGeneratorMachineView EnsureMachineView(int originIndex)
+    {
+        if (machineConfig == null
+            || (machineConfig.crankSprite == null && machineConfig.draftSprite == null))
+            return null;
+
+        Image body = FindObstacleImage(originIndex);
+        if (body == null)
+            return null;
+
+        if (machineViewsByOrigin.TryGetValue(originIndex, out var existing)
+            && existing != null && existing.transform.parent == body.transform)
+            return existing;
+
+        // Stale (body rebuilt on reveal) or missing → (re)build.
+        if (existing != null)
+            Destroy(existing.gameObject);
+
+        var go = new GameObject("KeyGeneratorMachine", typeof(RectTransform));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(body.rectTransform, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = body.rectTransform.rect.size;
+        rt.anchoredPosition = Vector2.zero;
+        rt.localScale = Vector3.one;
+        go.layer = body.gameObject.layer;
+
+        var view = go.AddComponent<KeyGeneratorMachineView>();
+        view.Build(rt, machineConfig);
+        machineViewsByOrigin[originIndex] = view;
+        return view;
+    }
+
+    // Builds idle machines (breathing hologram) once GridSpawner has drawn the obstacle images.
+    private IEnumerator CoBuildIdleMachines()
+    {
+        for (int i = 0; i < 8; i++)
+            yield return null;
+
+        LevelData level = board != null ? board.ActiveLevelData : null;
+        if (level?.obstacles == null || level.obstacleOrigins == null)
+            yield break;
+
+        int size = Mathf.Min(level.obstacles.Length, level.obstacleOrigins.Length);
+        for (int i = 0; i < size; i++)
+        {
+            if ((ObstacleId)level.obstacles[i] != ObstacleId.KeyGenerator) continue;
+            if (level.obstacleOrigins[i] != i) continue;
+            EnsureMachineView(i);
+        }
     }
 
     private Image FindObstacleImage(int originIndex)

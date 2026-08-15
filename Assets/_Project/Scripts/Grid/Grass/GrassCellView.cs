@@ -18,9 +18,11 @@ public class GrassCellView : MonoBehaviour
     private int gridX, gridY;
     private Coroutine swayRoutine;
     private Coroutine fadeRoutine;
+    private bool isClearing;
 
     public int GridX => gridX;
     public int GridY => gridY;
+    public bool IsClearing => isClearing;
 
     public void Init(Sprite sprite, int x, int y)
     {
@@ -29,6 +31,7 @@ public class GrassCellView : MonoBehaviour
 
         gridX = x;
         gridY = y;
+        isClearing = false;
 
         image.raycastTarget = false;
         image.preserveAspect = false;   // kare hücreye tam otursun; taşırma sizeDelta ile verilir
@@ -41,18 +44,28 @@ public class GrassCellView : MonoBehaviour
     /// bindirme). Anchor top-left; grid Y aşağı artar. Merkezlenir, her kenardan expandPixels/2 taşar.
     public void PlaceInCell(int tileSize, float expandPixels)
     {
+        float e = Mathf.Max(0f, expandPixels);
+        float side = e * 0.5f;
+        PlaceInCell(tileSize, side, side, side, side);
+    }
+
+    public void PlaceInCell(int tileSize, float leftPixels, float rightPixels, float topPixels, float bottomPixels)
+    {
         if (rt == null) return;
 
-        float e = Mathf.Max(0f, expandPixels);
+        float left = Mathf.Max(0f, leftPixels);
+        float right = Mathf.Max(0f, rightPixels);
+        float top = Mathf.Max(0f, topPixels);
+        float bottom = Mathf.Max(0f, bottomPixels);
 
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(0f, 1f);
         rt.pivot     = new Vector2(0.5f, 0.5f);
 
-        float centerX = gridX * tileSize + tileSize * 0.5f;
-        float centerY = -(gridY * tileSize + tileSize * 0.5f);
+        float centerX = gridX * tileSize + tileSize * 0.5f + (right - left) * 0.5f;
+        float centerY = -(gridY * tileSize + tileSize * 0.5f) + (top - bottom) * 0.5f;
         rt.anchoredPosition = new Vector2(centerX, centerY);
-        rt.sizeDelta = new Vector2(tileSize + e, tileSize + e);
+        rt.sizeDelta = new Vector2(tileSize + left + right, tileSize + top + bottom);
         rt.localScale = Vector3.one;
         rt.localRotation = Quaternion.identity;
     }
@@ -67,6 +80,7 @@ public class GrassCellView : MonoBehaviour
     // ── Hit tepkisi: yaprak sallanması ─────────────────────────────────────────
     public void PlaySway(float amplitudeDeg, float duration, float cycles)
     {
+        if (isClearing) return;
         if (!isActiveAndEnabled) return;
         if (swayRoutine != null) StopCoroutine(swayRoutine);
         swayRoutine = StartCoroutine(SwayRoutine(amplitudeDeg, duration, cycles));
@@ -94,6 +108,16 @@ public class GrassCellView : MonoBehaviour
     // ── Temizlenme ──────────────────────────────────────────────────────────────
     public void PlayClear(float fadeDuration)
     {
+        if (isClearing) return;
+        isClearing = true;
+
+        if (swayRoutine != null) { StopCoroutine(swayRoutine); swayRoutine = null; }
+        if (rt != null) rt.localRotation = Quaternion.identity;
+        if (image != null) image.raycastTarget = false;
+
+        fadeDuration = Mathf.Max(0.01f, fadeDuration);
+        Destroy(gameObject, fadeDuration + 0.05f);
+
         if (fadeRoutine != null) StopCoroutine(fadeRoutine);
         if (!isActiveAndEnabled) { HardClear(); return; }
         fadeRoutine = StartCoroutine(ClearRoutine(fadeDuration));
@@ -120,8 +144,21 @@ public class GrassCellView : MonoBehaviour
 
     public void HardClear()
     {
+        isClearing = false;
         if (swayRoutine != null) { StopCoroutine(swayRoutine); swayRoutine = null; }
         if (fadeRoutine != null) { StopCoroutine(fadeRoutine); fadeRoutine = null; }
+        if (image != null)
+        {
+            var c = image.color;
+            c.a = 0f;
+            image.color = c;
+            image.raycastTarget = false;
+        }
+        if (rt != null)
+        {
+            rt.localRotation = Quaternion.identity;
+            rt.localScale = Vector3.one;
+        }
         gameObject.SetActive(false);
     }
 }

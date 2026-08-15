@@ -1,6 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class SpecialResolver
 {
@@ -24,6 +26,7 @@ public class SpecialResolver
     private readonly PatchBotCombo patchBotCombo = new();
     private readonly OverrideSpecializedCombo overrideSpecializedCombo = new();
     private readonly OverrideOverrideCombo overrideOverrideCombo = new();
+    private readonly Func<TileView, PatchBotTargetCoordinator, PatchBotExecutionRuntime> buildPatchBotRuntime;
     private readonly ResolutionContext ctx = new();
     public bool SuppressVisualSideEffects;
     public SpecialResolver(BoardController board, BoardAnimator boardAnimator, PulseCoreImpactService pulseCoreImpactService)
@@ -39,6 +42,26 @@ public class SpecialResolver
         queueProcessor = new ActivationQueueProcessor(board, dispatcher);
         implantService = new SpecialImplantService(board, patchbotComboService, visualService, queueProcessor);
         fanoutService = new SpecialFanoutService(board, implantService, queueProcessor, visualService);
+
+        // Override+PatchBot ve PatchBot+PatchBot combo: implant/kaynak her PatchBot için runtime factory.
+        // PatchBotSpecial.Execute → PatchbotDashUI akışını kullanır (yeni animasyonlar + canlı retargeting).
+        buildPatchBotRuntime = (tile, coordinator) => new PatchBotExecutionRuntime
+        {
+            Board = board,
+            Context = new ResolutionContext(),
+            Origin = tile,
+            Partner = null,
+            PatchbotService = patchbotComboService,
+            TargetCoordinator = coordinator,
+            VisualService = visualService,
+            Effects = effectOrchestrator,
+            ActivateSpecial = dispatcher.ApplySpecialActivation,
+            ProcessFanout = c => fanoutService.ProcessFanout(c),
+            CleanupImplantedTiles = c => implantService.CleanupImplantedTiles(c),
+            FireOverrideOverrideSpecialVisuals = (a, d) => visualService.FireOverrideOverrideSpecialVisuals(a, d),
+            EmitBoardSignal = null
+        };
+        fanoutService.BuildPatchBotRuntime = buildPatchBotRuntime;
 
         dispatcher.QueueProcessor = queueProcessor;
     }
@@ -106,7 +129,8 @@ public class SpecialResolver
                 ProcessFanout = fanoutCtx => fanoutService.ProcessFanout(fanoutCtx),
                 CleanupImplantedTiles = cleanupCtx => implantService.CleanupImplantedTiles(cleanupCtx),
                 FireOverrideOverrideSpecialVisuals = (affected, delays) =>
-                    visualService.FireOverrideOverrideSpecialVisuals(affected, delays)
+                    visualService.FireOverrideOverrideSpecialVisuals(affected, delays),
+                BuildPatchBotRuntime = buildPatchBotRuntime
             });
 
             actions.AddRange(result.Actions);

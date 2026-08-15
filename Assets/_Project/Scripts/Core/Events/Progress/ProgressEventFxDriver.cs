@@ -114,6 +114,7 @@ public class ProgressEventFxDriver : MonoBehaviour
         rt.anchoredPosition += new Vector2(Random.Range(-10f, 10f), Random.Range(-6f, 6f));
 
         var tmp = go.GetComponent<TextMeshProUGUI>();
+        if (rt == null || tmp == null) yield break;
         tmp.text          = text;
         tmp.color         = textColor;
         tmp.fontSize      = fontSize;
@@ -138,6 +139,10 @@ public class ProgressEventFxDriver : MonoBehaviour
         float elapsed = 0f;
         while (elapsed < duration)
         {
+            // Level geçişinde canvas/"+1" objesi yok edilebilir — destroyed RectTransform'a
+            // erişim MissingReferenceException atar; Unity-null guard'ıyla sessizce çık.
+            if (rt == null || tmp == null) yield break;
+
             elapsed += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
 
@@ -154,6 +159,6 @@ public class ProgressEventFxDriver : MonoBehaviour
             yield return null;
         }
 
-        Destroy(go);
+        if (go != null) Destroy(go);
     }
 }

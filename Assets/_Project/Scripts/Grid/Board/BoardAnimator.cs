@@ -1190,6 +1190,9 @@ public class BoardAnimator
             AddImpactedCell(cell);
         };
 
+        foreach (var cell in plan.ImpactOnlyCells)
+            AddImpactedCell(cell);
+
         if (plan.DoBoardShake && board.ShakeTarget != null)
             board.StartCoroutine(ShakeBoard(board.ShakeDuration, board.ShakeStrength));
 
@@ -1236,8 +1239,10 @@ public class BoardAnimator
 
             if (plan.BackgroundEffectsBlockResolve)
             {
-                board.BeginBackgroundJob();
-                board.StartCoroutine(PlayBlockingEffectsInBackground());
+                // Clear'lar zaten commit edildi (FinalizePresentationTileClear yukarıda) → efekt saf
+                // görsel. PresentationFx job'ı olarak izlenir: resolve AKAR, yalnız level-end bekler.
+                board.StartCoroutine(PlayBlockingEffectsInBackground(
+                    board.BeginJob(BoardController.BoardJobKind.PresentationFx)));
             }
             else
             {
@@ -1249,7 +1254,7 @@ public class BoardAnimator
 
         yield return PlayEffectsAndFinalize();
 
-        IEnumerator PlayBlockingEffectsInBackground()
+        IEnumerator PlayBlockingEffectsInBackground(System.IDisposable job)
         {
             try
             {
@@ -1257,7 +1262,7 @@ public class BoardAnimator
             }
             finally
             {
-                board.EndBackgroundJob();
+                job.Dispose();
             }
         }
     }

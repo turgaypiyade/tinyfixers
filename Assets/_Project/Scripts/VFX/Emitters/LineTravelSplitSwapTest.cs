@@ -668,7 +668,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         if (!img)
             img = go.AddComponent<Image>();
 
-        var rt = img ? img.rectTransform : go.GetComponent<RectTransform>();
+        var rt = img ? SafeRect(img) : go.GetComponent<RectTransform>();
         if (!img || !rt) return;
 
         img.gameObject.SetActive(true);
@@ -719,8 +719,19 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             // Power > 1 → ghost yaşam başında hızla söner, sonunda yavaş → tail koyu, head canlı.
             float k = Mathf.Pow(1f - u, power);
 
-            if (img) img.color = new Color(1f, 1f, 1f, c0.a * k);
-            if (rt) rt.localScale = Vector3.LerpUnclamped(s0, s1, u);
+            bool missingReference = false;
+            try
+            {
+                if (img) img.color = new Color(1f, 1f, 1f, c0.a * k);
+                if (rt) rt.localScale = Vector3.LerpUnclamped(s0, s1, u);
+            }
+            catch (MissingReferenceException)
+            {
+                missingReference = true;
+            }
+
+            if (missingReference)
+                yield break;
 
             yield return null;
         }
@@ -751,7 +762,10 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         image.raycastTarget = false;
         image.color = new Color(image.color.r, image.color.g, image.color.b, 1f);
 
-        var rt = image.rectTransform;
+        var rt = SafeRect(image);
+        if (!rt)
+            return;
+
         Vector3 localPos = rt.localPosition;
         if (Mathf.Abs(localPos.z) > 0.001f)
             rt.localPosition = new Vector3(localPos.x, localPos.y, 0f);

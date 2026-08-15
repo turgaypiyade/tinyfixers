@@ -3598,8 +3598,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.11915888}
-  m_AnchorMax: {x: 0.5416667, y: 2.7932243}
+  m_AnchorMin: {x: 0, y: 0.95327103}
+  m_AnchorMax: {x: 2.9177058, y: 22.345795}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -5203,6 +5203,7 @@ MonoBehaviour:
   cometStagger: 0.2
   preTriggerPause: 0.18
   drainMoveDelay: 0.08
+  boardSettleTimeout: 6
   trailDots: 20
   headSize: 0.9
   tailEndSize: 0.5
@@ -8652,6 +8653,28 @@ MonoBehaviour:
   mudOverlayService: {fileID: 49188419}
   grassOverlayRoot: {fileID: 0}
   grassOverlayService: {fileID: 0}
+  keyGeneratorMachineConfig:
+    crankSprite: {fileID: 21300000, guid: 7677435538c9b42fdb2e7e57cd53c04f, type: 3}
+    draftSprite: {fileID: 21300000, guid: 0d7c1a3094f264fc698cdef3d602246b, type: 3}
+    glassInsets: {x: 0.19, y: 0.2, z: 0.19, w: 0.15}
+    draftSize: 0.42
+    draftOffset: {x: 0, y: 0.02}
+    draftIdleAlpha: 0.85
+    draftDimAlpha: 0.12
+    draftBreathePeriod: 1.8
+    scanColor: {r: 0.35, g: 1, b: 0.55, a: 1}
+    scanBandHeight: 0.1
+    scanDuration: 0.36
+    crankPivot: {x: 0.5, y: 0.11}
+    crankHeight: 0.45
+    crankOffset: {x: 0.45, y: -0.2}
+    crankRestAngle: 0
+    crankPullAngle: -34
+    crankOvershoot: 6
+    crankPullDuration: 0.16
+    crankHold: 0.03
+    crankReturnDuration: 0.22
+    hideCrankWhenClosed: 0
   rocketBasketService: {fileID: 1410826458}
   runtimeBoardBg: {r: 0.6627451, g: 0.654902, b: 0.8509804, a: 1}
   runtimeNormalCell: {r: 1, g: 1, b: 1, a: 1}
@@ -8914,19 +8937,17 @@ MonoBehaviour:
   hammerBoosterFallbackSprite: {fileID: 21300000, guid: e200b3928e79346e2ab4da678e139c53, type: 3}
   patchBotPropellerSprite: {fileID: 21300000, guid: 8f96fc85558ef4d5a85280bded3e12e0, type: 3}
   patchBotPropellerHubSprite: {fileID: 21300000, guid: 90a7205e9795442588316c5be3f4fcae, type: 3}
+  patchBotPropellerFrames: []
+  patchBotPropellerFrameFps: 18
   specialFillCell: 1
   specialElevation: 0
   allowPostSwapSettleValidation: 1
   enableTileSyncValidation: 0
   enableSpecialChainTrace: 0
-  enableBoardFlowTrace: 0
+  enableBoardFlowTrace: 1
   throwOnTileSyncMismatch: 0
   tilePositionEpsilon: 0.25
   KeyGeneratorProductionComplete: 0
-  ActiveBackgroundJobs: 0
-  FlyingGoalOrbs: 0
-  FlyingPatchBotDashes: 0
-  DrainingBossStrikes: 0
   activeFallProfile:
     enabled: 1
     fps: 35

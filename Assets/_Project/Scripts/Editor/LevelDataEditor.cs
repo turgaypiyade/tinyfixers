@@ -9,7 +9,7 @@ public class LevelDataEditor : Editor
     private PaintMode mode = PaintMode.Obstacle;
     private ObstacleId selectedObstacle = ObstacleId.Stone;
 
-    // Safe (kasa) settings — tıklanan hücre sol-üst origin; NxN bölgeyi kaplar.
+    // Safe (kasa) settings — tıklanan hücre sol-üst origin; WxH bölgeyi kaplar.
     private int selectedSafeW = 2;
     private int selectedSafeH = 2;
     private int selectedSafeRed = 3;
@@ -1247,13 +1247,13 @@ public class LevelDataEditor : Editor
         EditorGUILayout.LabelField("Safe (Kasa) Obstacle", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
             "Önce içeriği (mud/para/taş/obstacle) NORMAL şekilde yerleştir, SONRA Safe'i üstüne koy.\n" +
-            "Grid'de bir hücreye tıkla → o hücre sol-ÜST origin olur, NxN bölgeyi kaplar.\n" +
+            "Grid'de bir hücreye tıkla → o hücre sol-ÜST origin olur, WxH bölgeyi kaplar.\n" +
             "Erase modu veya bölgeye tekrar tıklamak kasayı siler. (İçerik silinmez, sadece overlay.)",
             MessageType.Info);
 
         EditorGUI.BeginChangeCheck();
-        selectedSafeW = EditorGUILayout.IntSlider("Genişlik (hücre)", selectedSafeW, 1, 6);
-        selectedSafeH = EditorGUILayout.IntSlider("Yükseklik (hücre)", selectedSafeH, 1, 6);
+        selectedSafeW = EditorGUILayout.IntSlider("Genişlik (hücre)", selectedSafeW, 1, 9);
+        selectedSafeH = EditorGUILayout.IntSlider("Yükseklik (hücre)", selectedSafeH, 1, 11);
         EditorGUILayout.Space(2);
         EditorGUILayout.LabelField("Kilit hit sayıları (kırılma sırası)", EditorStyles.miniBoldLabel);
         selectedSafeRed    = EditorGUILayout.IntSlider("1) Kırmızı", selectedSafeRed, 1, 20);
@@ -1277,12 +1277,41 @@ public class LevelDataEditor : Editor
         EditorGUILayout.Space(4);
         EditorGUILayout.LabelField($"Mevcut kasalar: {(level.safes != null ? level.safes.Length : 0)}", EditorStyles.miniLabel);
 
+        if (level.safes != null && level.safes.Length > 0
+            && GUILayout.Button("Seçili kilit ayarlarını mevcut kasalara uygula"))
+        {
+            ApplySelectedSafeLockSettingsToExistingSafes(level);
+        }
+
         if (level.safes != null && level.safes.Length > 0 && GUILayout.Button("Tüm kasaları temizle"))
         {
             Undo.RecordObject(level, "Clear All Safes");
             level.safes = System.Array.Empty<SafeEntry>();
             EditorUtility.SetDirty(level);
         }
+    }
+
+    private void ApplySelectedSafeLockSettingsToExistingSafes(LevelData level)
+    {
+        if (level == null || level.safes == null || level.safes.Length == 0)
+            return;
+
+        Undo.RecordObject(level, "Apply Safe Lock Settings");
+
+        for (int i = 0; i < level.safes.Length; i++)
+        {
+            var entry = level.safes[i];
+            entry.redHits = Mathf.Max(1, selectedSafeRed);
+            entry.yellowHits = Mathf.Max(1, selectedSafeYellow);
+            entry.greenHits = Mathf.Max(1, selectedSafeGreen);
+            entry.lockHitMode = selectedSafeHitMode;
+            entry.firstLock = selectedSafeFirstLock;
+            entry.secondLock = selectedSafeSecondLock;
+            entry.thirdLock = selectedSafeThirdLock;
+            level.safes[i] = entry;
+        }
+
+        EditorUtility.SetDirty(level);
     }
 
     private void NormalizeSelectedSafeOrder()

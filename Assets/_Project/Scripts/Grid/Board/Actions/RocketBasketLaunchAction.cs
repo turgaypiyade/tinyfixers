@@ -114,7 +114,7 @@ public sealed class RocketBasketLaunchAction : BoardAction
                 r.targetX,
                 r.targetY,
                 hasObstacle,
-                (x, y) => SpecialCellUtils.MarkAffectedCell(groupCtx, x, y, board),
+                (x, y) => SpecialCellUtils.MarkPatchBotImpactCell(groupCtx, board, x, y),
                 t => SpecialCellUtils.MarkAffectedCell(groupCtx, t, board));
 
             foreach (var data in dataMatches)

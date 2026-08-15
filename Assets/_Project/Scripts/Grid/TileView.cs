@@ -18,11 +18,12 @@ public class TileView : MonoBehaviour,
     [SerializeField] private PulseFuseSparkleView fuseSparkleView;
 
     [Header("LineH/LineV oluşum flipbook (silindir dönüşü)")]
+    [Header("Line Spin Frames — LineV/LineH oluşum flipbook (5'er kare)")]
     [Tooltip("LineH oluşurken sırayla oynatılacak 5 kare (silindirin X ekseninde dönüşü). BOŞ bırakılırsa " +
-             "düz eksen dönüşüne (orijinal sprite) düşülür.")]
+             "LineV kareleri 90° döndürülüp kullanılır; o da boşsa düz eksen dönüşü.")]
     [SerializeField] private Sprite[] lineHSpinFrames = new Sprite[5];
     [Tooltip("LineV oluşurken sırayla oynatılacak 5 kare (silindirin Y ekseninde dönüşü). BOŞ bırakılırsa " +
-             "düz eksen dönüşüne (orijinal sprite) düşülür.")]
+             "LineH kareleri 90° döndürülüp kullanılır; o da boşsa düz eksen dönüşü.")]
     [SerializeField] private Sprite[] lineVSpinFrames = new Sprite[5];
 
     private TileModel model;
@@ -52,6 +53,9 @@ public class TileView : MonoBehaviour,
     private Vector2 dragStartScreen;
     private bool dragConsumedSwap;
     private bool wasDragging;
+    public bool WasDragging => wasDragging;
+    public BoardController Board => board;
+    public int LastAppliedTileSize => lastAppliedTileSize > 0 ? lastAppliedTileSize : (board != null ? board.TileSize : 96);
     private bool boosterFiredOnDown;
 
     [SerializeField, Range(0.5f, 1f)]
@@ -91,6 +95,15 @@ public class TileView : MonoBehaviour,
 
     // Bu taşın düştüğü CollapseAndSpawnAnimated nesil ID'si. -1 = hiç düşmedi.
     private int lastFallGeneration = -1;
+
+    // ── Tek-sahip hareket kilidi (gravity coalescing, C) ──────────────────────
+    // Her hareket coroutine'i (MoveToGrid*/Reference*) başlarken bu token'ı ARTIRIR ve
+    // kendi kopyasını yakalar. Aynı taşa DAHA YENİ bir hareket başlarsa token büyür →
+    // eski (stale) coroutine döngü guard'ıyla anında çıkar. Böylece bir TileView'ı aynı
+    // anda YALNIZCA en son hareket sürer; SpecialChainRunner'ın paralel alt-zincirleri
+    // aynı kolonu yeniden düşürünce iki coroutine'in aynı rt'yi çekiştirip taşları üst
+    // üste bindirmesi ("geriden gelen taş öndekinin üstüne çıkıyor") kökten biter.
+    private int activeMoveToken;
 
     public RectTransform RectTransform => rt != null ? rt : (RectTransform)transform;
     public Image IconImage => iconImage;
@@ -175,11 +188,14 @@ public class TileView : MonoBehaviour,
     private void OnEnable()
     {
         ResetVisualState();
+        if (model != null && (model.special == TileSpecial.LineH || model.special == TileSpecial.LineV))
+            StartLineIdleSpin();
     }
 
     private void OnDisable()
     {
         StopSpecialCreationReveal();
+        StopLineIdleSpin();
         ResetVisualState();
     }
 
@@ -193,7 +209,6 @@ public class TileView : MonoBehaviour,
         ResetVisualState();
         dragConsumedSwap = false;
         wasDragging = false;
-
     }
 
     private void ResetVisualState()
@@ -231,12 +246,9 @@ public class TileView : MonoBehaviour,
 
     public void RefreshIcon()
     {
-        if (model == null || board == null)
-            return;
+        if (board == null || model == null || iconImage == null) return;
 
-        // Movable obstacle: ikon model.type'a göre değil, saklanan obstacle sprite'ına göre.
-        // Aksi hâlde refresh, plastik/movable'ı dummy normal taşa çevirir (görsel/mantık desync).
-        if (isMovableObstacleTile && movableObstacleSprite != null)
+        if (isMovableObstacleTile)
         {
             SetIcon(movableObstacleSprite);
 
@@ -244,6 +256,7 @@ public class TileView : MonoBehaviour,
                 propellerView.gameObject.SetActive(false);
             if (fuseSparkleView != null)
                 fuseSparkleView.gameObject.SetActive(false);
+            StopLineIdleSpin();
             return;
         }
 
@@ -282,6 +295,11 @@ public class TileView : MonoBehaviour,
 
         if (fuseSparkleView != null)
             fuseSparkleView.gameObject.SetActive(model.special == TileSpecial.PulseCore);
+
+        if (model.special == TileSpecial.LineH || model.special == TileSpecial.LineV)
+            StartLineIdleSpin();
+        else
+            StopLineIdleSpin();
     }
 
     public void SnapToGrid(int tileSize)
@@ -312,6 +330,7 @@ public class TileView : MonoBehaviour,
         float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+        int myMoveToken = ++activeMoveToken;   // bu taşın tek-sahip hareket kilidi
         CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
 
         if (rt == null || !rt)
@@ -389,6 +408,8 @@ public class TileView : MonoBehaviour,
             float t = Mathf.Clamp01(elapsed / safeDuration);
             if (easingCurve != null)
                 t = easingCurve.Evaluate(t);
+
+            if (activeMoveToken != myMoveToken) yield break;   // daha yeni bir hareket bu taşı devraldı
 
             rt.anchoredPosition = Vector2.LerpUnclamped(start, end, t);
 
@@ -783,6 +804,7 @@ public class TileView : MonoBehaviour,
         float actionStartRealtime)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+        int myMoveToken = ++activeMoveToken;   // bu taşın tek-sahip hareket kilidi
         CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
 
         if (this == null || !this)
@@ -821,6 +843,7 @@ public class TileView : MonoBehaviour,
                     yield break;
                 }
 
+                if (activeMoveToken != myMoveToken) yield break;   // daha yeni bir hareket bu taşı devraldı
                 delayElapsed += ReferenceVisualDeltaTime();
                 rt.anchoredPosition = anchoredPath[0];
                 yield return null;
@@ -847,6 +870,7 @@ public class TileView : MonoBehaviour,
 
             while (rt != null && rt && Vector2.Distance(rt.anchoredPosition, target) > 0.25f)
             {
+                if (activeMoveToken != myMoveToken) yield break;   // daha yeni bir hareket bu taşı devraldı
                 float dt = ReferenceVisualDeltaTime();
                 segmentElapsed += dt;
 
@@ -1052,6 +1076,7 @@ public class TileView : MonoBehaviour,
         float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+        int myMoveToken = ++activeMoveToken;   // bu taşın tek-sahip hareket kilidi
         CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
 
         if (this == null || !this)
@@ -1114,6 +1139,8 @@ public class TileView : MonoBehaviour,
             if (easingCurve != null)
                 t = easingCurve.Evaluate(t);
 
+            if (activeMoveToken != myMoveToken) yield break;   // daha yeni bir hareket bu taşı devraldı
+
             rt.anchoredPosition = Vector2.LerpUnclamped(start, end, t);
 
             if (doStretch && visualRt != null)
@@ -1168,6 +1195,7 @@ public class TileView : MonoBehaviour,
         float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+        int myMoveToken = ++activeMoveToken;   // bu taşın tek-sahip hareket kilidi
         CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
 
         if (this == null || !this)
@@ -1246,6 +1274,8 @@ public class TileView : MonoBehaviour,
                     yield break;
                 }
 
+                if (activeMoveToken != myMoveToken) yield break;   // daha yeni bir hareket bu taşı devraldı
+
                 elapsed += Time.deltaTime;
                 globalElapsed += Time.deltaTime;
 
@@ -1314,6 +1344,239 @@ public class TileView : MonoBehaviour,
 
         if (special == TileSpecial.PulseCore)
             fuseSparkleView?.PlayCreationSpin(tileSize);
+    }
+
+    /// <summary>Yalnız PulseCore oluşum DÖNME efektini (fuse flipbook spin) tetikler — creation
+    /// reveal'in scale büyümesi OLMADAN. Override marking'inde pulse'a dönme vermek için kullanılır.</summary>
+    public void PlayPulseCreationSpin(int tileSize)
+    {
+        fuseSparkleView?.PlayCreationSpin(tileSize);
+    }
+
+    private Coroutine lineSpinRoutine;
+    public bool IsLineCreationSpinning => lineSpinRoutine != null;
+
+    /// <summary>Yalnız LineH/LineV oluşum DÖNME efektini (silindir flipbook spin 2 tur veya 720° eksen dönüşü) tetikler.
+    /// Override marking'inde line taşlarına 2 tur dönme vermek için kullanılır.</summary>
+    public void PlayLineCreationSpin(TileSpecial special, float duration = 0.36f)
+    {
+        if (special != TileSpecial.LineH && special != TileSpecial.LineV)
+            return;
+
+        if (lineSpinRoutine != null)
+        {
+            StopCoroutine(lineSpinRoutine);
+            lineSpinRoutine = null;
+        }
+
+        lineSpinRoutine = StartCoroutine(CoLineCreationSpin(special, duration));
+    }
+
+    private IEnumerator CoLineCreationSpin(TileSpecial special, float duration)
+    {
+        if (iconImage == null) yield break;
+
+        Sprite[] flipFrames = GetLineSpinFrames(special);
+        float flipZ = 0f;
+        if (flipFrames == null && special == TileSpecial.LineV)
+        {
+            flipFrames = GetLineSpinFrames(TileSpecial.LineH);
+            if (flipFrames != null) flipZ = 90f;
+        }
+        else if (flipFrames == null && special == TileSpecial.LineH)
+        {
+            flipFrames = GetLineSpinFrames(TileSpecial.LineV);
+            if (flipFrames != null) flipZ = 90f;
+        }
+
+        bool useFlipbook = flipFrames != null;
+        Sprite originalSprite = iconImage.sprite;
+        RectTransform iconRt = iconImage.rectTransform;
+        Quaternion baseRot = iconRt != null ? iconRt.localRotation : Quaternion.identity;
+        Vector3 baseScale = iconRt != null ? iconRt.localScale : Vector3.one;
+
+        const int spinLoops = 2; // 2 tam tur
+        const float peakScale = 1.5f; // Normal taş oluşumundaki gibi 1.5x tepe ölçeği
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            if (this == null || iconImage == null || iconRt == null) yield break;
+
+            elapsed += Time.deltaTime;
+            float k = Mathf.Clamp01(elapsed / duration);
+
+            // Scale: ilk %30 pop (0.75→1.5x), %30-55 tepede bekle (görünür), sonra 1.0 otur.
+            float scaleFactor;
+            if (k < 0.30f)
+                scaleFactor = Mathf.LerpUnclamped(0.75f, peakScale, EaseOut(k / 0.30f));
+            else if (k < 0.55f)
+                scaleFactor = peakScale;
+            else
+                scaleFactor = Mathf.LerpUnclamped(peakScale, 1f, EaseOut((k - 0.55f) / 0.45f));
+
+            iconRt.localScale = baseScale * scaleFactor;
+
+            // 2D oryantasyon (LineV: 0° dik, LineH: LineV karelerini 90° Z çevirerek yatay yapar)
+            iconRt.localRotation = Quaternion.Euler(0f, 0f, flipZ);
+
+            // 5 Kareli Flipbook dönüşü (2 tam tur döngü)
+            if (useFlipbook && flipFrames != null && flipFrames.Length > 0)
+            {
+                int totalFrames = flipFrames.Length * spinLoops;
+                int fi = Mathf.Clamp(Mathf.FloorToInt(k * totalFrames), 0, totalFrames - 1) % flipFrames.Length;
+                if (flipFrames[fi] != null)
+                    iconImage.sprite = flipFrames[fi];
+            }
+
+            yield return null;
+        }
+
+        if (iconImage != null)
+        {
+            if (originalSprite != null)
+                iconImage.sprite = originalSprite;
+            if (iconRt != null)
+            {
+                iconRt.localScale = baseScale;
+                iconRt.localRotation = baseRot;
+            }
+        }
+
+        lineSpinRoutine = null;
+    }
+
+    private Coroutine lineIdleRoutine;
+    private Coroutine lineIdleSpinRoutine;
+
+    private void StartLineIdleSpin()
+    {
+        if (!gameObject.activeInHierarchy) return;
+        if (lineIdleRoutine != null) return;
+        lineIdleRoutine = StartCoroutine(CoLineIdleWatch());
+    }
+
+    private void StopLineIdleSpin()
+    {
+        if (lineIdleRoutine != null)
+        {
+            StopCoroutine(lineIdleRoutine);
+            lineIdleRoutine = null;
+        }
+        if (lineIdleSpinRoutine != null)
+        {
+            StopCoroutine(lineIdleSpinRoutine);
+            lineIdleSpinRoutine = null;
+        }
+    }
+
+    private IEnumerator CoLineIdleWatch()
+    {
+        // İlk başlama için 3 saniye bekle
+        yield return new WaitForSeconds(3.0f);
+
+        while (true)
+        {
+            if (model == null || (model.special != TileSpecial.LineH && model.special != TileSpecial.LineV))
+                yield break;
+
+            bool isBoardBusy = board != null && (board.IsBusy || board.InputLocked);
+            bool isTileBusy = wasDragging || activeSettleCo != null || specialCreationRevealRoutine != null || lineSpinRoutine != null || lineIdleSpinRoutine != null;
+
+            if (!isBoardBusy && !isTileBusy && iconImage != null && gameObject.activeInHierarchy)
+            {
+                lineIdleSpinRoutine = StartCoroutine(CoLineIdleSpin());
+                yield return lineIdleSpinRoutine;
+                lineIdleSpinRoutine = null;
+            }
+
+            yield return new WaitForSeconds(3.0f);
+        }
+    }
+
+    private IEnumerator CoLineIdleSpin()
+    {
+        if (iconImage == null || model == null) yield break;
+        TileSpecial sp = model.special;
+        if (sp != TileSpecial.LineH && sp != TileSpecial.LineV) yield break;
+
+        Sprite[] flipFrames = GetLineSpinFrames(sp);
+        float flipZ = 0f;
+        if (flipFrames == null && sp == TileSpecial.LineV)
+        {
+            flipFrames = GetLineSpinFrames(TileSpecial.LineH);
+            if (flipFrames != null) flipZ = 90f;
+        }
+        else if (flipFrames == null && sp == TileSpecial.LineH)
+        {
+            flipFrames = GetLineSpinFrames(TileSpecial.LineV);
+            if (flipFrames != null) flipZ = 90f;
+        }
+
+        bool useFlipbook = flipFrames != null;
+        Sprite originalSprite = board != null ? board.GetSpecialIcon(sp) : iconImage.sprite;
+        RectTransform iconRt = iconImage.rectTransform;
+        Quaternion baseRot = iconRt != null ? iconRt.localRotation : Quaternion.identity;
+        Vector3 baseScale = iconRt != null ? iconRt.localScale : Vector3.one;
+
+        const int spinLoops = 2; // 2 tam tur
+        float duration = 0.38f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            if (this == null || !gameObject.activeInHierarchy || iconImage == null || iconRt == null) yield break;
+
+            // Eğer oynarken kullanıcı dokunduysa veya tahta meşgul olduysa güvenle çık
+            if (wasDragging || (board != null && (board.IsBusy || board.InputLocked)) || lineSpinRoutine != null)
+                break;
+
+            elapsed += Time.deltaTime;
+            float k = Mathf.Clamp01(elapsed / duration);
+
+            // Hafif tatlı bir nefes/pop (1.0 -> 1.12 -> 1.0)
+            float scalePop = 1f + 0.12f * Mathf.Sin(k * Mathf.PI);
+            iconRt.localScale = baseScale * scalePop;
+
+            // 2D oryantasyon (LineV: 0° dik, LineH: LineV karelerini 90° Z çevirerek yatay yapar)
+            iconRt.localRotation = Quaternion.Euler(0f, 0f, flipZ);
+
+            // 5 Kareli Flipbook dönüşü (2 tam tur döngü)
+            if (useFlipbook && flipFrames != null && flipFrames.Length > 0)
+            {
+                int totalFrames = flipFrames.Length * spinLoops;
+                int fi = Mathf.Clamp(Mathf.FloorToInt(k * totalFrames), 0, totalFrames - 1) % flipFrames.Length;
+                if (flipFrames[fi] != null)
+                    iconImage.sprite = flipFrames[fi];
+            }
+
+            yield return null;
+        }
+
+        if (iconImage != null)
+        {
+            if (originalSprite != null)
+                iconImage.sprite = originalSprite;
+            if (iconRt != null)
+            {
+                iconRt.localScale = baseScale;
+                iconRt.localRotation = baseRot;
+            }
+        }
+    }
+
+    /// <summary>PulseCore fitil yanma yoğunluğu (1 = normal idle). Combolarda pulse "şarj oluyor"
+    /// gibi daha yoğun yakmak için. Fitil görünür olması için tile'ın gizli OLMAMASI gerekir.</summary>
+    public void SetPulseFuseIntensity(float multiplier)
+    {
+        fuseSparkleView?.SetFuseIntensity(multiplier);
+    }
+
+    /// <summary>Combo görselinde (gizli tile'a rağmen) verilen parent'a idle fitille aynı kıvılcımları
+    /// basar. sizeScale = comboPulseBoyu / TileSize. Tile gizli olsa da fuse view coroutine sahibi kalır.</summary>
+    public void StartComboFuse(RectTransform target, float sizeScale, float intensity, float duration, MonoBehaviour coroutineOwner = null)
+    {
+        fuseSparkleView?.StartExternalFuse(target, sizeScale, intensity, duration, coroutineOwner);
     }
 
     private void StopSpecialCreationReveal()
@@ -1748,9 +2011,10 @@ public class TileView : MonoBehaviour,
         model.type = type;
 
         // Movable obstacle ikonu model.type'tan bağımsızdır; dummy tip ataması sprite'ı ezmesin.
-        if (isMovableObstacleTile && movableObstacleSprite != null)
+        if (isMovableObstacleTile)
         {
-            SetIcon(movableObstacleSprite);
+            if (movableObstacleSprite != null)
+                SetIcon(movableObstacleSprite);
             return;
         }
 
@@ -1949,6 +2213,21 @@ public class TileView : MonoBehaviour,
         movableObstacleSprite = sprite;
         if (sprite != null)
             SetIcon(sprite);
+    }
+
+    public void ClearMovableObstaclePresentation()
+    {
+        if (!isMovableObstacleTile && !isFullCellMovableSprite && movableObstacleSprite == null)
+            return;
+
+        isMovableObstacleTile = false;
+        isFullCellMovableSprite = false;
+        movableObstacleSprite = null;
+
+        // NOT: Idle FX (CoinIdleWobble/CargoFloatSway) burada YOK EDİLMEZ. Bu metod her refresh'te
+        // çağrılır; bileşeni destroy+readd etmek coin dönme döngüsünü sürekli sıfırlardı. Yaşam
+        // döngüsü BoardController.EnsureMovableIdleFx/RemoveMovableIdleFx tarafından idempotent yönetilir.
+        RefreshIcon();
     }
 
     public void SetVisualLayout(TileVisualLayout layout)

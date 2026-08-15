@@ -341,3 +341,15 @@ MonoBehaviour:
     level: 82
     levelKey: LevelCL_082
     levelData: {fileID: 11400000, guid: 2a08665a2dccf45f6ab2b15927f781e7, type: 2}
+  - chapter: 1
+    level: 83
+    levelKey: LevelCL_083
+    levelData: {fileID: 11400000, guid: ab498f1f412c94970bf26661d8321011, type: 2}
+  - chapter: 1
+    level: 84
+    levelKey: LevelCL_084
+    levelData: {fileID: 11400000, guid: 035043bbd627d4cc889b0266aa89fd38, type: 2}
+  - chapter: 1
+    level: 85
+    levelKey: LevelCL_085
+    levelData: {fileID: 11400000, guid: e63059a669fd64bf2b04b26e2b84ece1, type: 2}

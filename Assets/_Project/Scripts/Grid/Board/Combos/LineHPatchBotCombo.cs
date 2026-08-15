@@ -85,7 +85,10 @@ public sealed class LineHPatchBotCombo
             result.Actions.Add(initialClearAction);
         }
 
-        rt.Board.ActiveBackgroundJobs++;
+        // Dash artık non-blocking (PatchBotDash): uçarken board akmaya devam eder, mutasyon
+        // varışta sequencer'a devredilir. Varış sonrası resolve'u yeniden tetiklemek ŞART
+        // (blocking pencere artık resolve'u canlı tutmuyor) → aşağıda finally'de.
+        rt.Board.BeginPatchBotDashFlight();
 
         rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty, lineTile, null, () =>
         {
@@ -115,7 +118,10 @@ public sealed class LineHPatchBotCombo
             }
             finally
             {
-                rt.Board.ActiveBackgroundJobs--;
+                rt.Board.EndPatchBotDashFlight();
+                // Blocking pencere kalktığı için varıştaki line-burst zincirini (Override dahil)
+                // resolve edecek bir pass'i açıkça planla; sequencer boşalınca çalışır.
+                rt.Board.RequestResolveAfterActionSequence();
             }
         });
 

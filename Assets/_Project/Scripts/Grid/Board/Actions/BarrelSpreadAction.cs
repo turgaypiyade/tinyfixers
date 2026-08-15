@@ -4,8 +4,9 @@ using UnityEngine;
 
 /// <summary>
 /// Bir hamlede kırılan barrel'ların her biri için 4x4 mud yayılımını oynatır: damla
-/// animasyonu (BarrelSplatterAnimator) + her damla varışında o hücreye mud stamp'i.
-/// OilSpreadAction kalıbı: görsel önce, veri damla varışında (onLand) uygulanır.
+/// animasyonu (BarrelSplatterAnimator) + damla varışında o hücrenin mud VIEW'ı.
+/// Async (ObstacleSpread) çalışır → §3a gereği mud VERİSİ splatter'dan ÖNCE toplu commit edilir
+/// (akan cascade mud'ı hemen görür); yalnız view/goal bildirimi damla varışında kalır.
 /// </summary>
 public sealed class BarrelSpreadAction : BoardAction
 {
@@ -57,9 +58,22 @@ public sealed class BarrelSpreadAction : BoardAction
 
             if (targets.Count > 0)
             {
+                // §3a: mud DATA'sını UP-FRONT commit et — böylece splatter oynarken akan cascade mud'ı
+                // hemen görür (yanlış/kaymış hücreye stamp veya boş hücreye düşüş olmaz). View + goal
+                // bildirimi damla varışında kalır → progressive görsel korunur.
+                var committed = new HashSet<Vector2Int>();
+                for (int t = 0; t < targets.Count; t++)
+                {
+                    var c = targets[t];
+                    if (obstacles.TrySpawnSingleCellObstacleAtOrBeneathOverTile(c.x, c.y, ObstacleId.Mud))
+                        committed.Add(c);
+                }
+
                 void OnLand(Vector2Int cell)
                 {
-                    if (obstacles.TrySpawnSingleCellObstacleAtOrBeneathOverTile(cell.x, cell.y, ObstacleId.Mud))
+                    // Yalnız up-front commit edilen VE hâlâ mud olan hücre için view/goal bildir
+                    // (async pencerede cascade mud'ı temizlemiş olabilir → phantom view oluşturma).
+                    if (committed.Contains(cell) && obstacles.IsMudAt(cell.x, cell.y))
                         _board.RaiseObstacleCreatedDynamic(cell.x, cell.y);
                 }
 

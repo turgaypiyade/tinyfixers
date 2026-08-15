@@ -26,18 +26,54 @@ public sealed class PatchBotPropellerView : MonoBehaviour
     [SerializeField] private int   idleSpinTurns   = 2;      // tam tur → 0'da biter
     [SerializeField] private float idleSpinDuration = 0.75f;
 
+    [Header("Frame Animation (rotasyon yerine sprite değiştir)")]
+    [Tooltip("2+ sprite verilirse ROTASYON tamamen kapanır; pervane bu frame'leri sırayla değiştirerek " +
+             "'döner' (dairesel olmayan sprite robotun kafasında saçma dönmez). Boş bırakılırsa eski " +
+             "rotasyon davranışı korunur. Board'daki idle pervane için 2 kanat-fazı sprite yeterli.")]
+    [SerializeField] private Sprite[] spinFrames;
+    [SerializeField, Min(1f)] private float spinFrameFps = 10f;
+    [Tooltip("KAPALI (varsayılan): eski idle hissi — arada durur, sonra tekrar kısa bir spin yapar. " +
+             "Cadence için Idle Delay / Idle Repeat Min-Max / Idle Spin Turns alanları kullanılır " +
+             "(her burst = Idle Spin Turns tam tur). AÇIK: kesintisiz sürekli döner.")]
+    [SerializeField] private bool frameSpinContinuous = false;
+
     public float SpinSpeed => spinSpeed;
 
     private RectTransform rt;
+    private Image img;
     private Coroutine routine;
     private Coroutine idleRoutine;
+    private Coroutine frameRoutine;
+
+    private bool UseFrames => spinFrames != null && spinFrames.Length >= 2;
+
+    // Idle patchbot tile'ının kullandığı SON bilinen frame seti. Uçuş (PatchbotDashUI) board'ın
+    // PatchBotPropellerFrames alanı boşsa buradan idle spin'i alır (elle eşleme gerekmez).
+    public static Sprite[] LastKnownSpinFrames { get; private set; }
+    public static float LastKnownSpinFrameFps { get; private set; }
 
     private void Awake()
     {
         rt = GetComponent<RectTransform>();
+        img = GetComponent<Image>();
     }
 
-    private void OnEnable()  => idleRoutine = StartCoroutine(CoIdleWatch());
+    private void OnEnable()
+    {
+        // Frame modu: rotasyon YOK, sprite'ları sırayla değiştirerek dön. Varsayılan periyodik
+        // (arada durur, tekrar başlar — eski idle hissi); frameSpinContinuous ile kesintisiz.
+        if (UseFrames)
+        {
+            // Idle frame setini global cache'e al → uçuş pervanesi bunu fallback olarak kullanır.
+            LastKnownSpinFrames = spinFrames;
+            LastKnownSpinFrameFps = spinFrameFps;
+
+            if (rt != null) rt.localEulerAngles = Vector3.zero;
+            frameRoutine = StartCoroutine(frameSpinContinuous ? CoFrameSpin() : CoFrameIdleWatch());
+            return;
+        }
+        idleRoutine = StartCoroutine(CoIdleWatch());
+    }
     private void OnDisable() => StopAll();
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -45,17 +81,105 @@ public sealed class PatchBotPropellerView : MonoBehaviour
     public void PlayCreationAnimation()
     {
         if (!isActiveAndEnabled) return;
+        if (UseFrames) return;   // frame animasyonu zaten dönüyor; rotasyonlu creation yok
         Stop();
         rt.localEulerAngles = Vector3.zero;
         routine = StartCoroutine(CoCreation());
     }
 
+    // Uçan pervane runtime yaratılır; frame'leri buradan besleriz (tile prefab'ındaki 2-sprite ile aynı).
+    public void SetSpinFrames(Sprite[] frames, float fps = -1f)
+    {
+        spinFrames = frames;
+        if (fps > 0f) spinFrameFps = fps;
+    }
+
     public void StartActivationSpin(float speedOverride = -1f)
     {
         if (!isActiveAndEnabled) return;
+
+        if (idleRoutine  != null) { StopCoroutine(idleRoutine);  idleRoutine  = null; }
+        if (frameRoutine != null) { StopCoroutine(frameRoutine); frameRoutine = null; }
+        if (routine      != null) { StopCoroutine(routine);      routine      = null; }
+        if (rt != null) rt.localEulerAngles = Vector3.zero;
+
+        // Frame'ler verildiyse: rotasyon yerine SÜREKLI frame-spin (uçan pervane için).
+        if (UseFrames)
+        {
+            frameRoutine = StartCoroutine(CoFrameSpin());
+            return;
+        }
+
         if (speedOverride > 0f) spinSpeed = speedOverride;
-        Stop();
         routine = StartCoroutine(CoActivationSpin());
+    }
+
+    // Rotasyon yerine sprite frame'lerini sabit hızda döngüler (dairesel olmayan pervane için).
+    private System.Collections.IEnumerator CoFrameSpin()
+    {
+        if (img == null || spinFrames == null || spinFrames.Length == 0)
+            yield break;
+
+        float step = 1f / Mathf.Max(1f, spinFrameFps);
+        float t = 0f;
+        int idx = 0;
+        img.sprite = spinFrames[0];
+
+        while (true)
+        {
+            t += Time.deltaTime;
+            if (t >= step)
+            {
+                t -= step;
+                idx = (idx + 1) % spinFrames.Length;
+                img.sprite = spinFrames[idx];
+            }
+            yield return null;
+        }
+    }
+
+    // Periyodik frame idle: dinlenme frame'inde durur, arada bir kısa spin yapar (eski idle hissi).
+    // Cadence idleDelay / idleRepeatMin-Max; her burst idleSpinTurns tam tur (frame döngüsü) yapar.
+    private System.Collections.IEnumerator CoFrameIdleWatch()
+    {
+        if (img != null && spinFrames != null && spinFrames.Length > 0)
+            img.sprite = spinFrames[0];
+
+        yield return new WaitForSeconds(idleDelay);
+
+        while (true)
+        {
+            yield return CoFrameBurst();
+            yield return new WaitForSeconds(Random.Range(idleRepeatMin, idleRepeatMax));
+        }
+    }
+
+    private System.Collections.IEnumerator CoFrameBurst()
+    {
+        if (img == null || spinFrames == null || spinFrames.Length == 0)
+            yield break;
+
+        float step = 1f / Mathf.Max(1f, spinFrameFps);
+        int totalSwaps = Mathf.Max(1, idleSpinTurns) * spinFrames.Length;   // idleSpinTurns tam tur
+        float t = 0f;
+        int idx = 0;
+        int swaps = 0;
+
+        while (swaps < totalSwaps)
+        {
+            t += Time.deltaTime;
+            if (t >= step)
+            {
+                t -= step;
+                idx = (idx + 1) % spinFrames.Length;
+                img.sprite = spinFrames[idx];
+                swaps++;
+            }
+            yield return null;
+        }
+
+        // Dinlenme frame'ine dön (durgun hâl).
+        img.sprite = spinFrames[0];
     }
 
     // Ana animasyonu durdurur; idle watch çalışmaya devam eder.
@@ -67,8 +191,9 @@ public sealed class PatchBotPropellerView : MonoBehaviour
 
     private void StopAll()
     {
-        if (routine     != null) { StopCoroutine(routine);     routine     = null; }
-        if (idleRoutine != null) { StopCoroutine(idleRoutine); idleRoutine = null; }
+        if (routine      != null) { StopCoroutine(routine);      routine      = null; }
+        if (idleRoutine  != null) { StopCoroutine(idleRoutine);  idleRoutine  = null; }
+        if (frameRoutine != null) { StopCoroutine(frameRoutine); frameRoutine = null; }
         if (rt != null) rt.localEulerAngles = Vector3.zero;
     }
 

@@ -45,21 +45,27 @@ public sealed class SafeObstacleView : MonoBehaviour
 
     [Header("Break FX (opsiyonel)")]
     [SerializeField] private GameObject breakParticlePrefab;
+    [Tooltip("Kasa çökerken merkezden saçılan 'dökülme' partikülü (opsiyonel). Boşsa breakParticlePrefab kullanılır.")]
+    [SerializeField] private GameObject dissolveParticlePrefab;
     [SerializeField, Min(0f)] private float brokenVisualDuration = 0.45f;
 
     [Header("Break Animasyonu")]
-    [Tooltip("Kırılma öncesi kısa wind-up squash süresi.")]
-    [SerializeField, Min(0f)] private float breakAnticipation = 0.07f;
-    [Tooltip("Kırılma anında gövde titreme süresi/şiddeti (px).")]
+    [Tooltip("Patlama anında gövde titreme süresi/şiddeti (px).")]
     [SerializeField, Min(0f)] private float breakShakeDuration = 0.20f;
     [SerializeField, Min(0f)] private float breakShakeStrength = 11f;
-    [Tooltip("Kırılınca gövdenin punch ölçeği (overshoot).")]
-    [SerializeField, Range(1f, 1.4f)] private float breakBodyPunch = 1.14f;
+    [Tooltip("Patlamada gövdenin dev genişleme (overshoot) ölçeği. Kod tabanı en az 1.5 garantiler.")]
+    [SerializeField, Range(1f, 1.8f)] private float breakBodyPunch = 1.5f;
     [Tooltip("Knob'ların patlama (scale-up + sönme) süresi.")]
     [SerializeField, Min(0f)] private float knobBurstDuration = 0.16f;
     [Tooltip("brokenVisual'ın pop-in süresi ve overshoot'u.")]
     [SerializeField, Min(0f)] private float revealPopDuration = 0.28f;
     [SerializeField, Range(1f, 1.6f)] private float revealPopOvershoot = 1.18f;
+
+    [Header("Break Juice (basınç + dönme)")]
+    [Tooltip("Basınç zirvesinde gövdenin gerilme ölçeği. Kod tabanı en az 1.3 garantiler.")]
+    [SerializeField, Range(1f, 1.6f)] private float breakSwellScale = 1.3f;
+    [Tooltip("Patlama sarsıntısında gövdenin dönme titremesi (derece). 0 = kapalı.")]
+    [SerializeField, Min(0f)] private float breakShakeRotation = 8f;
 
     [Header("Reveal Glow (opsiyonel)")]
     [Tooltip("İçeriğin ARKASINA konacak yumuşak radial glow Image'i. Başta gizli; kasa açılınca " +
@@ -158,36 +164,38 @@ public sealed class SafeObstacleView : MonoBehaviour
         StartCoroutine(CoPlaySafeBreak());
     }
 
-    // Kırılma sekansı: wind-up squash → particle + knob patlaması + gövde punch & shake →
-    // brokenVisual overshoot ile pop-in → bekle → yok et. Tüm adımlar null-güvenli;
-    // referanslar boşsa eski davranışa yakın (anında swap) düşer.
+    // BUHAR KAZANI PATLAMASI: basınç birikir (kazan nabız gibi şişip titrer, ısınıp kızarır) →
+    // zirvede gerilim (donma anı) → ŞİDDETLİ PATLAMA (flash + dev genişleme + sert dönmeli sarsıntı +
+    // knob/perçin fırlar + particle); kasa aynı anda açılır → kısa nefes → küçülüp sönerek çıkar.
+    // Tüm adımlar null-güvenli. Ölçek/şiddet code-side garantili (prefab serialize değerinden bağımsız).
     private IEnumerator CoPlaySafeBreak()
     {
         var body = bodyRect != null ? bodyRect : transform as RectTransform;
         Vector3 baseScale = body != null ? body.localScale : Vector3.one;
         Vector2 basePos   = body != null ? body.anchoredPosition : Vector2.zero;
+        Quaternion baseRot = body != null ? body.localRotation : Quaternion.identity;
+        var bodyGraphic = body != null ? body.GetComponent<Graphic>() : null;
+        Color bodyBaseColor = bodyGraphic != null ? bodyGraphic.color : Color.white;
 
-        // 1) Anticipation — kısa squash (yatay genişle, dikey bas).
-        if (body != null && breakAnticipation > 0f)
-            yield return CoScaleTo(body, baseScale,
-                new Vector3(baseScale.x * 1.06f, baseScale.y * 0.90f, baseScale.z), breakAnticipation);
+        float shakeDur   = Mathf.Max(breakShakeDuration, 0.42f);
+        float revealDur  = Mathf.Max(revealPopDuration, 0.34f);
+        float breatheDur = Mathf.Max(brokenVisualDuration, 0.55f);
 
-        // 2) Burst — particle + knob patlaması + gövde punch + shake (eşzamanlı).
+        // 1) BASINÇ BİRİKİMİ — kazan gerilir: nabız halinde şişip titrer, giderek kızarır.
+        if (body != null)
+            yield return CoPressureBuildUp(body, basePos, baseScale, bodyGraphic, bodyBaseColor);
+
+        // 2) PATLAMA — particle + perçin (knob) fırlaması + şiddetli dönmeli sarsıntı; kasa aynı anda açılır.
         if (breakParticlePrefab != null)
-            Instantiate(breakParticlePrefab, transform.position, Quaternion.identity, transform.parent);
+            Instantiate(breakParticlePrefab, SafeCenterWorld(), Quaternion.identity, transform.parent);
 
         BurstKnobs();
-
-        if (body != null)
-        {
-            StartCoroutine(CoShake(body, basePos, breakShakeStrength, breakShakeDuration));
-            yield return CoScaleTo(body, body.localScale, baseScale * breakBodyPunch, 0.06f); // punch out
-            yield return CoScaleTo(body, body.localScale, baseScale, 0.10f);                  // punch back
-        }
-
         if (lockPanel != null) lockPanel.SetActive(false);
 
-        // 3) Reveal — içeriğin arkasında glow açılır + brokenVisual overshoot ile pop-in.
+        if (body != null)
+            StartCoroutine(CoShake(body, basePos, baseRot, breakShakeStrength * 1.5f, breakShakeRotation * 1.4f, shakeDur));
+
+        // Reveal, patlama ile ÖRTÜŞSÜN — arada bekleme/kopukluk olmasın.
         if (revealGlow != null)
             StartCoroutine(CoRevealGlow());
 
@@ -195,16 +203,140 @@ public sealed class SafeObstacleView : MonoBehaviour
         {
             brokenVisual.SetActive(true);
             if (brokenVisual.transform is RectTransform brt)
-                yield return CoPopIn(brt, revealPopDuration, revealPopOvershoot);
+                StartCoroutine(CoPopIn(brt, revealDur, revealPopOvershoot));
         }
 
-        // Gövde normale otur.
-        if (body != null) { body.localScale = baseScale; body.anchoredPosition = basePos; }
+        if (body != null)
+        {
+            // Flash: gövde bir an beyaza/sıcağa patlar → patlama vurgusu.
+            if (bodyGraphic != null)
+                StartCoroutine(CoFlash(bodyGraphic, bodyBaseColor));
 
-        if (brokenVisualDuration > 0f)
-            yield return new WaitForSeconds(brokenVisualDuration);
+            // Ani DEV genişleme (kazan parçalanıyor) → sonra hızla çöker. Ölçek code-side garantili.
+            float popScale = Mathf.Max(breakBodyPunch, breakSwellScale + 0.1f, 1.5f);
+            yield return CoScaleTo(body, body.localScale, baseScale * popScale, 0.045f); // patla
+            yield return CoScaleTo(body, body.localScale, baseScale, 0.17f);             // çök
+            body.localScale = baseScale; body.anchoredPosition = basePos; body.localRotation = baseRot;
+            if (bodyGraphic != null) bodyGraphic.color = bodyBaseColor;
+        }
+
+        // Kırık kasa bir nefes alsın, sonra ANİDEN yok olmasın: kısa küçül + sön ile sahneden çıksın.
+        yield return new WaitForSeconds(breatheDur);
+        yield return CoFadeShrinkOut(0.24f);
 
         Destroy(gameObject);
+    }
+
+    // Kazan basıncı birikiyor: 2 "nabız" halinde şişip hafif geri çekilir; her nabızda titreme +
+    // ısınma (kırmızıya kayma) artar. Sonra zirvede kısa gerilim (patlamadan hemen önceki donma).
+    private IEnumerator CoPressureBuildUp(RectTransform body, Vector2 basePos, Vector3 baseScale,
+        Graphic g, Color baseColor)
+    {
+        const int pulses = 2;
+        Color hotColor = new Color(1f, 0.5f, 0.32f, baseColor.a);   // ısınan metal
+
+        for (int p = 0; p < pulses; p++)
+        {
+            float pn = (p + 1f) / pulses;                            // 0..1 basınç birikimi
+            Vector3 peak   = baseScale * (1f + 0.14f * pn);          // giderek büyür
+            Vector3 valley = baseScale * (1f + 0.05f * pn);
+            float tremor   = 3.5f + 9f * pn;                          // titreme şiddeti artar
+
+            if (g != null) g.color = Color.Lerp(baseColor, hotColor, 0.45f * pn);
+
+            yield return CoStrainScale(body, body.localScale, peak,   0.11f, basePos, tremor);
+            yield return CoStrainScale(body, body.localScale, valley, 0.06f, basePos, tremor * 0.6f);
+        }
+
+        // Zirve: max gerilim + en şiddetli titreme, sonra kısa donma (patlama öncesi sessizlik).
+        float peakScale = Mathf.Max(breakSwellScale, 1.3f);
+        if (g != null) g.color = Color.Lerp(baseColor, hotColor, 0.6f);
+        yield return CoStrainScale(body, body.localScale, baseScale * peakScale, 0.08f, basePos, 14f);
+        yield return new WaitForSeconds(0.035f);
+    }
+
+    // Ölçek lerp'i + pozisyon titremesi (gerilim hissi). Bittiğinde pozisyonu base'e oturtur.
+    private IEnumerator CoStrainScale(RectTransform rt, Vector3 from, Vector3 to, float dur,
+        Vector2 basePos, float tremor)
+    {
+        float d = Mathf.Max(0.01f, dur);
+        float t = 0f;
+        while (t < d && rt != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / d);
+            float e = k * k * (3f - 2f * k);   // smoothstep
+            rt.localScale = Vector3.LerpUnclamped(from, to, e);
+            Vector2 off = new Vector2(
+                (Mathf.PerlinNoise(Time.time * 70f, 1.3f) - 0.5f),
+                (Mathf.PerlinNoise(2.7f, Time.time * 70f) - 0.5f)) * (tremor * 2f);
+            rt.anchoredPosition = basePos + off;
+            yield return null;
+        }
+        if (rt != null) { rt.localScale = to; rt.anchoredPosition = basePos; }
+    }
+
+    // Patlama flash'i: gövde bir an sıcak-beyaza parlar (hızlı yükselir, yavaş söner).
+    private IEnumerator CoFlash(Graphic g, Color baseColor)
+    {
+        Color hot = new Color(1f, 0.97f, 0.85f, baseColor.a);
+        float d = 0.16f;
+        float t = 0f;
+        while (t < d && g != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / d);
+            float a = k < 0.3f ? Mathf.Lerp(0f, 1f, k / 0.3f) : Mathf.Lerp(1f, 0f, (k - 0.3f) / 0.7f);
+            g.color = Color.Lerp(baseColor, hot, a);
+            yield return null;
+        }
+        if (g != null) g.color = baseColor;
+    }
+
+    // Kasanın görsel merkezinin dünya pozisyonu (pivot köşede olsa da). Partikülleri buraya doğur.
+    private Vector3 SafeCenterWorld()
+    {
+        var r = bodyRect != null ? bodyRect : transform as RectTransform;
+        if (r == null) return transform.position;
+        Vector2 size = r.rect.size;
+        Vector3 localCenter = new Vector3((0.5f - r.pivot.x) * size.x, (0.5f - r.pivot.y) * size.y, 0f);
+        return r.TransformPoint(localCenter);
+    }
+
+    // Sahneden çıkış: MERKEZE doğru büzülür + alpha söner + merkezden partikül dökülür.
+    private IEnumerator CoFadeShrinkOut(float dur)
+    {
+        var root = transform as RectTransform;
+        if (root == null) yield break;
+
+        // Merkeze büzülsün: ölçek pivot etrafında küçülür; pivot köşedeyse (UI'da tipik sol-üst)
+        // oraya kaçardı. Pivot'u merkeze al + pozisyonu telafi et (görsel yerinde kalır).
+        Vector2 size = root.rect.size;
+        Vector2 dPivot = new Vector2(0.5f, 0.5f) - root.pivot;
+        root.anchoredPosition += new Vector2(dPivot.x * size.x * root.localScale.x,
+                                             dPivot.y * size.y * root.localScale.y);
+        root.pivot = new Vector2(0.5f, 0.5f);
+
+        // Dökülme partikülü: kasa çökerken merkezden bir kez saç (ayrı prefab yoksa break partikülü).
+        var dissolveFx = dissolveParticlePrefab != null ? dissolveParticlePrefab : breakParticlePrefab;
+        if (dissolveFx != null)
+            Instantiate(dissolveFx, SafeCenterWorld(), Quaternion.identity, transform.parent);
+
+        var cg = GetComponent<CanvasGroup>();
+        if (cg == null) cg = gameObject.AddComponent<CanvasGroup>();
+
+        Vector3 s0 = root.localScale;
+        float d = Mathf.Max(0.01f, dur);
+        float t = 0f;
+        while (t < d)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / d);
+            float e = k * k * (3f - 2f * k);   // smoothstep
+            root.localScale = Vector3.LerpUnclamped(s0, s0 * 0.25f, e);   // merkeze belirgin çöküş
+            cg.alpha = 1f - e;
+            yield return null;
+        }
     }
 
     // Knob'ları yerinde patlat: hızlı büyü + sön (kilitler "kopuyor" hissi).
@@ -255,21 +387,26 @@ public sealed class SafeObstacleView : MonoBehaviour
         if (rt != null) rt.localScale = to;
     }
 
-    private IEnumerator CoShake(RectTransform rt, Vector2 basePos, float strength, float dur)
+    // Dönmeli sarsıntı: pozisyon + z-rotasyon titremesi, erken sert / geç yumuşak sönüm.
+    private IEnumerator CoShake(RectTransform rt, Vector2 basePos, Quaternion baseRot,
+        float strength, float rotStrength, float dur)
     {
         float d = Mathf.Max(0.01f, dur);
         float t = 0f;
         while (t < d && rt != null)
         {
             t += Time.deltaTime;
-            float damp = 1f - Mathf.Clamp01(t / d);          // sönümlü
+            float damp = 1f - Mathf.Clamp01(t / d);
+            float e = damp * damp;                            // başta şiddetli, sonra hızla sönsün
             Vector2 off = new Vector2(
-                (Mathf.PerlinNoise(Time.time * 40f, 0f) - 0.5f),
-                (Mathf.PerlinNoise(0f, Time.time * 40f) - 0.5f)) * (strength * 2f * damp);
+                (Mathf.PerlinNoise(Time.time * 55f, 0f) - 0.5f),
+                (Mathf.PerlinNoise(0f, Time.time * 55f) - 0.5f)) * (strength * 2.4f * e);
             rt.anchoredPosition = basePos + off;
+            float rot = (Mathf.PerlinNoise(Time.time * 48f, 7.3f) - 0.5f) * 2f * rotStrength * e;
+            rt.localRotation = baseRot * Quaternion.Euler(0f, 0f, rot);
             yield return null;
         }
-        if (rt != null) rt.anchoredPosition = basePos;
+        if (rt != null) { rt.anchoredPosition = basePos; rt.localRotation = baseRot; }
     }
 
     // Overshoot'lu pop-in: 0 → overshoot → 1 (back-ease hissi).

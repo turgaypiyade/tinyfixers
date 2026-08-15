@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -60,6 +61,7 @@ public class MudOverlayService : MonoBehaviour
 
     private BoardController board;
     private int gridWidth, gridHeight, tileSize;
+    private Coroutine pendingBorderRefresh;
 
     public void Init(BoardController board, int width, int height, int tileSize = 0)
     {
@@ -92,6 +94,7 @@ public class MudOverlayService : MonoBehaviour
             view.Build(tileSize, borderThicknessRatio, edgeJoinOverlapPixels, interiorBleedPixels, underBevelFillRatio, cornerJoinPixels, edgeJoinExtendPixels, edgeStraightCropPixels);
 
         ApplyToView(view, remaining);
+        QueueRefreshAllBorders();
     }
 
     private void ApplyToView(MudCellView view, int remaining)
@@ -101,19 +104,6 @@ public class MudOverlayService : MonoBehaviour
         int damageTaken = view.MaxHits - remaining;
         view.SetDamaged(damageTaken > 0);
         view.SetVisible(true);
-
-        // Refresh this cell + all 8 neighbours. Orthogonals share an edge with us; diagonals'
-        // straight-run edge extension depends on whether we (their diagonal) exist.
-        int gx = view.GridX, gy = view.GridY;
-        RefreshBordersAt(gx,     gy    );
-        RefreshBordersAt(gx - 1, gy    );
-        RefreshBordersAt(gx + 1, gy    );
-        RefreshBordersAt(gx,     gy - 1);
-        RefreshBordersAt(gx,     gy + 1);
-        RefreshBordersAt(gx - 1, gy - 1);
-        RefreshBordersAt(gx + 1, gy - 1);
-        RefreshBordersAt(gx - 1, gy + 1);
-        RefreshBordersAt(gx + 1, gy + 1);
     }
 
     public bool TryGetView(int x, int y, out MudCellView view)
@@ -132,11 +122,10 @@ public class MudOverlayService : MonoBehaviour
             view.Clear();
             viewsByCellIndex.Remove(change.originIndex);
 
-            // Topoloji değişti (bir hücre kalktı) → TÜM sınırları yetkili şekilde yeniden hesapla.
-            // Artımlı 8-komşu refresh, bir LineH gibi AYNI PASS'te çok sayıda mud temizlendiğinde
-            // (init'teki toplu kayıt gibi) sıra-bağımlı yakınsamıyor, sınır hücrelerinde bayat
-            // "izole kutu" bevel'i bırakıyordu. Full refresh bu bug sınıfını tamamen kapatır.
-            RefreshAllBorders();
+            // Topoloji değişti (bir hücre kalktı) → sınırları frame sonunda tek full pass olarak
+            // hesapla. Aynı cascade içinde birden çok mud event'i gelince ara komşuluk durumları
+            // ekrana kısa süreli iç çizgi/bevel olarak yansıyordu.
+            QueueRefreshAllBorders();
             return;
         }
 
@@ -175,8 +164,49 @@ public class MudOverlayService : MonoBehaviour
     // (izole "kutu" bevel'i). Bu geçiş sıra/edge-case bağımlılığını tamamen kaldırır.
     public void RefreshAllBorders()
     {
+        pendingBorderRefresh = null;
         foreach (var kv in viewsByCellIndex)
             RefreshBordersAt(kv.Key % gridWidth, kv.Key / gridWidth);
+    }
+
+    private void QueueRefreshAllBorders()
+    {
+        if (!isActiveAndEnabled)
+        {
+            RefreshAllBorders();
+            return;
+        }
+
+        if (pendingBorderRefresh != null)
+            return;
+
+        pendingBorderRefresh = StartCoroutine(CoRefreshAllBordersNextFrame());
+    }
+
+    private IEnumerator CoRefreshAllBordersNextFrame()
+    {
+        yield return null;
+        RefreshAllBorders();
+    }
+
+    public void ClearAll()
+    {
+        if (pendingBorderRefresh != null)
+        {
+            StopCoroutine(pendingBorderRefresh);
+            pendingBorderRefresh = null;
+        }
+
+        foreach (var kv in viewsByCellIndex)
+        {
+            var view = kv.Value;
+            if (view == null) continue;
+
+            view.Clear();
+            Destroy(view.gameObject);
+        }
+
+        viewsByCellIndex.Clear();
     }
 
     private int CellIndex(int x, int y) => y * gridWidth + x;

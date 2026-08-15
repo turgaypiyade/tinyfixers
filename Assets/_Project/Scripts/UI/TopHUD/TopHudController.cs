@@ -643,11 +643,15 @@ public class TopHudController : MonoBehaviour
 
             if (IsKeyGeneratorGoal(goal.definition))
             {
-                // Üretim SÜRERKEN PatchBot generator'ı hedeflesin (key üretsin) — birkaç mevcut
-                // key'e takılıp üretimi tıkamasın. Üretim BİTİNCE key tile'larını hedefleyip
-                // toplamaya geçsin. (KeyGeneratorService.KeyGeneratorProductionComplete bayrağı.)
+                // "Daha çok olan" kararı: generatora vurmak KAÇ key daha üretecek (remainingToProduce)
+                // vs sahada temizlenmeyi bekleyen key sayısı (keysOnBoard). Üretilecek olan fazlaysa
+                // generatoru hedefle (PatchBot birkaç key için üretimi bırakıp verimsiz davranmasın);
+                // az/eşitse mevcut key'leri topla. remainingToProduce = goal.remaining − sahadaki key
+                // (bkz. KeyGeneratorService.RecomputeGoalRemaining: remaining = capacity − landed + onBoard).
                 bool producing = board != null && !board.KeyGeneratorProductionComplete;
-                if (producing)
+                int keysOnBoard = board != null ? board.CountTilesOfType(TileType.Key) : 0;
+                int remainingToProduce = Mathf.Max(0, goal.remaining - keysOnBoard);
+                if (producing && remainingToProduce > keysOnBoard)
                 {
                     result.Add(new ActiveGoal(
                         LevelGoalTargetType.Obstacle,

@@ -86,9 +86,9 @@ public class BoardVfxService
         vfx.PlayAt(localMid, boardSize);
     }
 
-    public void PlayPulsePulseExplosionVfxAtCell(GameObject prefab, RectTransform vfxSpace, float lifetime, int x, int y, float scale = 1f)
+    public GameObject PlayPulsePulseExplosionVfxAtCell(GameObject prefab, RectTransform vfxSpace, float lifetime, int x, int y, float scale = 1f)
     {
-        if (prefab == null || vfxSpace == null) return;
+        if (prefab == null || vfxSpace == null) return null;
 
         PulseBehaviorEvents.EmitPulseExplosionPlayed(new Vector2Int(x, y));
 
@@ -119,6 +119,8 @@ public class BoardVfxService
         {
             fx.SetLifetime(lifetime);
         }
+        
+        return go;
     }
 
 
