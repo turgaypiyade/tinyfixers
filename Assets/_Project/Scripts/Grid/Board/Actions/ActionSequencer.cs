@@ -12,6 +12,20 @@ public class ActionSequencer : MonoBehaviour
     private Queue<BoardAction> actionQueue = new Queue<BoardAction>();
     public bool IsPlaying { get; private set; }
 
+    // Non-blocking actions are started with StartCoroutine and NOT awaited (see PlaySequence),
+    // so IsPlaying can flip false in the finally while their visuals are still running. That
+    // hole is exactly why the decoupled-resolve overlap gate needed a blunt whole-resolve special
+    // lock: a detached fall could start while a non-blocking special sweep tail was still animating.
+    // This counter exposes those in-flight detached action coroutines so the overlap gate can wait
+    // for them precisely. IsPlaying semantics are intentionally UNCHANGED (blast radius); this is a
+    // separate additive signal.
+    private int detachedActionsInFlight;
+    public int DetachedActionsInFlight => detachedActionsInFlight;
+
+    // True only when the sequencer queue is fully drained AND no detached (non-blocking) action
+    // coroutine is still running. Distinct from !IsPlaying, which ignores detached tails.
+    public bool AllActionsSettled => !IsPlaying && detachedActionsInFlight == 0;
+
     public void Initialize(BoardController controller)
     {
         Board = controller;
@@ -74,7 +88,7 @@ public class ActionSequencer : MonoBehaviour
                 }
                 else
                 {
-                    StartCoroutine(action.ExecuteVisuals(this));
+                    StartCoroutine(RunDetached(action));
                 }
             }
         }
@@ -82,6 +96,22 @@ public class ActionSequencer : MonoBehaviour
         {
             IsPlaying = false;
             Board.OnActionSequenceFinished();
+        }
+    }
+
+    // Wraps a non-blocking action so its still-running visual is counted in DetachedActionsInFlight.
+    // OnActionSequenceFinished timing is intentionally left on the queue-drain (IsPlaying) semantics;
+    // this only lets callers that care (overlap gate) observe detached tails.
+    private IEnumerator RunDetached(BoardAction action)
+    {
+        detachedActionsInFlight++;
+        try
+        {
+            yield return action.ExecuteVisuals(this);
+        }
+        finally
+        {
+            detachedActionsInFlight = Mathf.Max(0, detachedActionsInFlight - 1);
         }
     }
 }

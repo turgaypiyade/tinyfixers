@@ -1022,6 +1022,24 @@ public class BoardController : MonoBehaviour
     public int FlyingGoalOrbs       => _jobCounts[(int)BoardJobKind.GoalOrbFlight];
     public int FlyingPatchBotDashes => _jobCounts[(int)BoardJobKind.PatchBotDash];
     public int DrainingBossStrikes  => _jobCounts[(int)BoardJobKind.BossStrikeDrain];
+    public int PresentationFxInFlight => _jobCounts[(int)BoardJobKind.PresentationFx];
+    public int SpreadingObstacles    => _jobCounts[(int)BoardJobKind.ObstacleSpread];
+
+    // Faz 4 (decoupled-resolve): a special is VISUALLY in flight if any board-tile-affecting special
+    // visual is still running — the detached PresentationFx sweep (line/pulse/override beams committed
+    // then animated, BlockingBackgroundJobs==0 so the old gate missed it), a PatchBot dash sweep, OR a
+    // non-blocking sequencer action tail (ActionSequencer fires those with StartCoroutine and IsPlaying
+    // flips false while they run). EXCLUDED on purpose: goal-orb / key / boss-strike flights (don't clear
+    // or move the cells a fresh cascade fills) AND obstacle spread (barrel mud is designed to splatter
+    // concurrently with flow and never gated overlap before — including it would regress barrel levels).
+    // This precise predicate REPLACES the blunt whole-resolve `hadSpecialActivityThisResolve` lock in the
+    // overlap gate: overlap re-enables the instant the special's own visual drains instead of staying off
+    // for the rest of the resolve.
+    internal bool IsSpecialVisualInFlight =>
+        IsSpecialActivationPhase
+        || PresentationFxInFlight > 0
+        || FlyingPatchBotDashes > 0
+        || (actionSequencer != null && actionSequencer.DetachedActionsInFlight > 0);
 
     // Leak safety net: invalidate every outstanding handle (their Dispose becomes a no-op via epoch)
     // and zero counts. Called by ResolveBoard's 5s blocking timeout AND by the level-end recovery when
@@ -2754,13 +2772,19 @@ public class BoardController : MonoBehaviour
                     // detached fall, hâlâ uçan bir roket/line-sweep/orb'u beklemeden düşüşü başlatır
                     // (LineV sütunu bitmeden taş düşme bug'ı). Special sweep'i bittikten sonra bu
                     // koşullar sağlanınca refill zaten normal cascade gibi overlap edebilir.
+                    // Faz 4: the gate no longer keys off the sticky whole-resolve
+                    // `hadSpecialActivityThisResolve`. It now blocks overlap only while a special
+                    // is ACTUALLY visually in flight (IsSpecialVisualInFlight). Once that drains,
+                    // post-special pure cascades overlap again → closes the ~1.6s "other columns
+                    // freeze after the pulse" stall. IsSpecialActivationPhase + detached PresentationFx
+                    // sweeps are inside the predicate, so the reverted LineV "refill before the column
+                    // finished sweeping" race stays covered.
                     bool canOverlapCheap =
                         useDecoupledResolve
                         && visualCoordinator != null
-                        && !hadSpecialActivityThisResolve
+                        && !IsSpecialVisualInFlight
                         && !IsActionSequencePlaying
                         && BlockingBackgroundJobs == 0
-                        && !IsSpecialActivationPhase
                         && !cascadeLogic.HasAnyEmptyPlayableCell();
 
                     HashSet<TileView> overlapMatchTiles = null;
@@ -2776,9 +2800,11 @@ public class BoardController : MonoBehaviour
                     if (BoardFlowTraceEnabled && !(canOverlapCheap && overlapSimpleMatch && overlapMoving))
                         Debug.Log(
                             $"[Resolve] pass={safety} overlap_skip cheap={canOverlapCheap} " +
-                            $"(noSpecialAct={!hadSpecialActivityThisResolve} noActionSeq={!IsActionSequencePlaying} " +
-                            $"noBlockJobs={BlockingBackgroundJobs == 0} notSpecialPhase={!IsSpecialActivationPhase} " +
-                            $"settled={!cascadeLogic.HasAnyEmptyPlayableCell()}) " +
+                            $"(noSpecialVisual={!IsSpecialVisualInFlight} [phase={IsSpecialActivationPhase} " +
+                            $"fx={PresentationFxInFlight} dash={FlyingPatchBotDashes} spread={SpreadingObstacles} " +
+                            $"detached={(actionSequencer != null ? actionSequencer.DetachedActionsInFlight : 0)}] " +
+                            $"noActionSeq={!IsActionSequencePlaying} noBlockJobs={BlockingBackgroundJobs == 0} " +
+                            $"settled={!cascadeLogic.HasAnyEmptyPlayableCell()} stickyWas={hadSpecialActivityThisResolve}) " +
                             $"simpleMatch={overlapSimpleMatch} moving={overlapMoving}");
 
                     if (canOverlapCheap && overlapSimpleMatch && overlapMoving)
