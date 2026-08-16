@@ -136,10 +136,12 @@ public sealed class OverrideBatteryBoxView : MonoBehaviour
         if (!autoLayout)
             return;
 
-        LayoutBars(ChestColorMask.Bolt, 0.42f, 0.62f, 0.58f, 0.96f, vertical: true);
+        // Bolt (üst) ve Gear (sağ): dış uç = max koordinat → reverse:true (tükeniş içeriden dışarıya,
+        // Plate/alt ile Core/sol ile aynı his). Plate (alt) ve Core (sol): dış uç = min → düz sıra.
+        LayoutBars(ChestColorMask.Bolt, 0.42f, 0.62f, 0.58f, 0.96f, vertical: true, reverse: true);
         LayoutBars(ChestColorMask.Plate, 0.42f, 0.04f, 0.58f, 0.38f, vertical: true);
         LayoutBars(ChestColorMask.Core, 0.04f, 0.42f, 0.38f, 0.58f, vertical: false);
-        LayoutBars(ChestColorMask.Gear, 0.62f, 0.42f, 0.96f, 0.58f, vertical: false);
+        LayoutBars(ChestColorMask.Gear, 0.62f, 0.42f, 0.96f, 0.58f, vertical: false, reverse: true);
         LayoutCentered(progressImage, gaugeSizeFraction);
         LayoutCentered(centerImage, gaugeSizeFraction);
         LayoutNeedle();
@@ -417,7 +419,7 @@ public sealed class OverrideBatteryBoxView : MonoBehaviour
         return next;
     }
 
-    private void LayoutBars(ChestColorMask color, float xMin, float yMin, float xMax, float yMax, bool vertical)
+    private void LayoutBars(ChestColorMask color, float xMin, float yMin, float xMax, float yMax, bool vertical, bool reverse = false)
     {
         var bars = GetBars(color);
         if (bars == null || bars.Length == 0)
@@ -428,8 +430,13 @@ public sealed class OverrideBatteryBoxView : MonoBehaviour
             if (bars[i] == null)
                 continue;
 
-            float a0 = i / (float)bars.Length;
-            float a1 = (i + 1) / (float)bars.Length;
+            // Tükeniş (ApplyColorState) hep YÜKSEK index'i önce gizler. Tükenişin İÇERİDEN DIŞARIYA
+            // olması için yüksek-index bar İÇ (merkeze yakın) uca düşmeli. Sol/alt panelde dış uç = min
+            // koordinat olduğundan düz sıra doğru; üst/sağ panelde dış uç = max olduğundan slot'u ters
+            // çeviririz (bar[0]→dış, bar[son]→iç).
+            int slot = reverse ? bars.Length - 1 - i : i;
+            float a0 = slot / (float)bars.Length;
+            float a1 = (slot + 1) / (float)bars.Length;
             if (vertical)
             {
                 // Üst/alt panel: yuva yatay, bar sprite'ı zaten yatay → döndürme yok.

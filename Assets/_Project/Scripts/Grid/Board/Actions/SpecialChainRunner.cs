@@ -139,6 +139,15 @@ public sealed class SpecialChainRunner : BoardAction
                               && !hasVirtualBursts && !hasVirtualLineSweeps))
             yield break;
 
+        // FINAL-SETTLE SELF-COUNT FIX (2026-08-16): root, board-effect (OBB dalgası) tarafından
+        // StartImmediateActionSequence ile BACKGROUND JOB olarak çalıştırılınca KENDİ Resolve job'unu
+        // tutuyor → aşağıdaki `while (BlockingBackgroundJobs > 0)` asla 0 görmüyor, HER seferinde 5s
+        // safety cap'e kadar bekliyordu (kullanıcının "OBB patladı taşlar 3-4s havada" kökü; log'da
+        // chain runner tam ~5.0s). Girişteki job sayısını baseline al (kendi job'um + o an koşan
+        // eşzamanlı root'lar); final-settle yalnız SONRADAN ürettiğim sub-chain/fall'ları (baseline
+        // ÜSTÜ) beklesin. Tek-OBB'de baseline=1 (kendim) → sub-chain'ler bitince hemen çıkar.
+        int settleJobBaseline = board.BlockingBackgroundJobs;
+
         var queue = new Queue<TileView>(initialSpecials);
         var processed = new HashSet<TileView>();
 
@@ -224,7 +233,7 @@ public sealed class SpecialChainRunner : BoardAction
             // Non-blocking uçuşları (goal orb, PatchBot dash) bekleme; hedefe uçarken
             // special zincirinin final settle'ı donmasın. Gerçek background falls/sub-chain'leri
             // beklemeye devam et (BlockingBackgroundJobs).
-            while (board.BlockingBackgroundJobs > 0 && safety < 5f)
+            while (board.BlockingBackgroundJobs > settleJobBaseline && safety < 5f)
             {
                 // KRİTİK: background job'lar sürerken board DONMASIN.
                 // PatchBot dash artık BlockingBackgroundJobs dışında; burası hâlâ gerçek

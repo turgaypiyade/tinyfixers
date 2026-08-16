@@ -110,6 +110,11 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
             yield break;
         }
 
+        // pendingSelection = yerleştirilmeyi BEKLEYEN kalan liste (otoritatif). Her başarılı yerleşim
+        // buradan düşer; board'da yer yoksa kalanlar burada kalır ve sonraki settle'da tekrar denenir.
+        pendingSelection.Clear();
+        pendingSelection.AddRange(selected);
+
         for (int i = 0; i < startupDelayFrames; i++)
             yield return null;
 
@@ -119,49 +124,100 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
 
         yield return WaitForReadyBoard();
 
-        if (!IsBoardReady())
+        if (board == null)
+            board = FindFirstObjectByType<BoardController>();
+        if (board == null)
         {
-            Debug.LogWarning($"[PreLevelSpecialRuntimeInjector] Board idle oldu ama yerleştirilecek uygun taş yok (ya da board yok); teslimat atlandı. {GetBoardStatus()} hasEligible={(board != null && HasEligibleCandidate())}");
+            Debug.LogWarning($"[PreLevelSpecialRuntimeInjector] Board yok; teslimat atlandı. {GetBoardStatus()}");
             Destroy(gameObject);
             yield break;
         }
 
-        BuildCandidates();
-        Debug.Log($"[PreLevelSpecialRuntimeInjector] Board ready. candidates={candidates.Count}, selected={selected.Count}");
+        // Bu teslimat YALNIZ bu level'a ait. Level değişir/board yok olursa (level bitti/çıkıldı)
+        // döngü kendini kapatır — DontDestroyOnLoad injector başka level'a taşıp UFO uçurmasın.
+        int levelAtStart = CurrentLevel.Global;
+        int totalPlaced = 0;
 
-        // Harici teslimat kapısı: board hazır ama ilk yerleşimden ÖNCE bekle (UFO uçup gelsin).
-        if (PrePlacementGate != null)
-            yield return StartCoroutine(PrePlacementGate());
-
-        int placedCount = 0;
-        for (int i = 0; i < selected.Count; i++)
+        // ── Deferred (ertelenen) teslimat döngüsü ─────────────────────────────────────
+        // Kullanıcı isteği: başta board'da yer yoksa (ör. açılış tek pulse ile; patlayınca taşlar
+        // açılıyor) special sessizce DÜŞMESİN. Board her oturduğunda (ilk hamleden sonra taşlar
+        // açılınca) yer var mı diye bak; varsa kalan special'ları yerleştir. Hepsi yerleşene veya
+        // level bitene kadar sürer. Yer zaten başta varsa (sık durum) davranış AYNEN eskisi gibi:
+        // ilk iterasyonda hemen yerleşir, biter.
+        while (pendingSelection.Count > 0)
         {
-            var tile = TakeAndApplyToNextEligibleCandidate(selected[i]);
-            if (tile == null)
-                continue;
+            bool roomReady = false;
+            while (true)
+            {
+                // Board (sahne objesi) yok olduysa level bitti/çıkıldı → bırak. Bu, DontDestroyOnLoad
+                // injector'ın başka level'a taşmasını engelleyen definitif sinyal (per-frame ucuz null
+                // kontrolü; CurrentLevel.Global = PlayerPrefs okuması olduğundan döngüde ÇAĞIRMIYORUZ).
+                if (board == null)
+                    break;
 
-            placedCount++;
-            PlayPlacementSfx(selected[i]);
+                if (IsBoardFilledIdle() && HasEligibleCandidate())
+                {
+                    roomReady = true;
+                    break;
+                }
 
-            // UFO ışını: bu hücreye at (Reveal'den önce). Reveal harici görselce bastırılabilir.
-            OnSpecialPlaced?.Invoke(tile, selected[i]);
+                yield return null;
+            }
 
-            if (!SuppressDefaultReveal)
-                yield return Reveal(tile);
+            // Ekstra güvenlik (ziyaret başına bir kez): level numarası değiştiyse (board yeniden
+            // kurulduysa) bu eski teslimatı bırak — streak ödülü sonraki denemede yeniden hesaplanır.
+            if (!roomReady || CurrentLevel.Global != levelAtStart)
+                break;
 
-            if (placementGap > 0f)
-                yield return new WaitForSeconds(placementGap);
+            // Yer açıldı → bu partiyi teslim et (UFO hook'luysa uçup gelir).
+            if (PrePlacementGate != null)
+                yield return StartCoroutine(PrePlacementGate());
+
+            BuildCandidates();
+
+            // Sırayı koru: yerleşenler pending'den düşer, sığmayanlar kalır (sonraki ziyaret).
+            var batch = new List<TileSpecial>(pendingSelection);
+            pendingSelection.Clear();
+            int placedThisVisit = 0;
+
+            foreach (var special in batch)
+            {
+                var tile = TakeAndApplyToNextEligibleCandidate(special);
+                if (tile == null)
+                {
+                    // Bu ziyarette yer bitti → kalan special'ları tekrar pending'e koy.
+                    pendingSelection.Add(special);
+                    continue;
+                }
+
+                totalPlaced++;
+                placedThisVisit++;
+                PlayPlacementSfx(special);
+
+                // UFO ışını: bu hücreye at (Reveal'den önce). Reveal harici görselce bastırılabilir.
+                OnSpecialPlaced?.Invoke(tile, special);
+
+                if (!SuppressDefaultReveal)
+                    yield return Reveal(tile);
+
+                if (placementGap > 0f)
+                    yield return new WaitForSeconds(placementGap);
+            }
+
+            OnPlacementFinished?.Invoke();
+
+            Debug.Log($"[PreLevelSpecialRuntimeInjector] Visit placed {placedThisVisit}; remaining pending={pendingSelection.Count}");
+
+            // Güvenlik: bu ziyaret hiç yerleştiremediyse (beklenmez — HasEligibleCandidate true'ydu)
+            // sıkı döngüye girme, bir kare bekle.
+            if (placedThisVisit == 0)
+                yield return null;
         }
 
-        if (placedCount < selected.Count)
-            Debug.LogWarning($"[PreLevelSpecialRuntimeInjector] Placed {placedCount}/{selected.Count} selected pre-level specials; not enough eligible normal tiles.");
-
-        OnPlacementFinished?.Invoke();
-
-        if (placedCount > 0 && !SuppressSelectionStateClear)
+        if (totalPlaced > 0 && !SuppressSelectionStateClear)
             PreLevelSpecialSelectionState.Clear();
 
-        Debug.Log($"[PreLevelSpecialRuntimeInjector] Finished placement. placed={placedCount}/{selected.Count}");
+        Debug.Log($"[PreLevelSpecialRuntimeInjector] Finished. placed={totalPlaced}, leftover={pendingSelection.Count}");
         Destroy(gameObject);
     }
 
@@ -213,7 +269,12 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         }
     }
 
-    private bool IsBoardReady()
+    private bool IsBoardReady() => IsBoardFilledIdle() && HasEligibleCandidate();
+
+    // Board settled (arrays valid, not busy, no background jobs, tiles seated) — AMA "yerleştirilecek
+    // uygun taş var mı" (HasEligibleCandidate) HARİÇ. Deferred teslimat bunu kullanır: board oturmuş
+    // ama yer yoksa YOK sayıp destroy etmek yerine bekleyip sonraki settle'da tekrar dener.
+    private bool IsBoardFilledIdle()
     {
         if (board == null || board.Tiles == null || board.Holes == null || board.GridData == null)
             return false;
@@ -221,7 +282,12 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         if (board.Width <= 0 || board.Height <= 0)
             return false;
 
-        if (board.IsBusy || board.ActiveBackgroundJobs > 0)
+        // Yalnız GERÇEK resolve işi (mid-cascade) placement'ı engellesin — BlockingBackgroundJobs.
+        // ActiveBackgroundJobs (uçan goal-orb / key / patchbot dash gibi async işler) placement'ı
+        // BLOKLAMAMALI: taşı normal bir hücreye koymak onlarla çakışmaz. Eski `ActiveBackgroundJobs>0`
+        // kontrolü, aktif oyunda hep bir async uçuş olduğu için board'u neredeyse hiç "idle" saymıyor,
+        // teslimatı oyun sonuna sarkıtıyordu (kullanıcı: "bazen 1. bazen 2. hamle, bazen oyun sonu").
+        if (board.IsBusy || board.BlockingBackgroundJobs > 0)
             return false;
 
         int filledCells = 0;
@@ -244,7 +310,7 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
             }
         }
 
-        return filledCells > 0 && HasEligibleCandidate();
+        return filledCells > 0;
     }
 
     private void BuildCandidates()

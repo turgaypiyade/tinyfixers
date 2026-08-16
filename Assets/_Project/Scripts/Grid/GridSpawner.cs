@@ -1474,6 +1474,9 @@ public class GridSpawner : MonoBehaviour
     {
         if (stampedBeneathVisuals.Count == 0 || resolvedLevel?.obstacleLibrary == null) return;
 
+        bool mudTrace = board != null && board.BoardFlowTraceEnabled;
+        int mudTotal = 0, mudSpawned = 0;
+
         var topVisualIndexByCell = new Dictionary<int, int>();
         for (int i = 0; i < stampedBeneathVisuals.Count; i++)
             topVisualIndexByCell[stampedBeneathVisuals[i].cell] = i;
@@ -1481,19 +1484,37 @@ public class GridSpawner : MonoBehaviour
         for (int i = 0; i < stampedBeneathVisuals.Count; i++)
         {
             var p = stampedBeneathVisuals[i];
+            bool isMud = p.beneathId == ObstacleId.Mud;
+            if (isMud) mudTotal++;
+
             if (!topVisualIndexByCell.TryGetValue(p.cell, out int topIndex) || topIndex != i)
+            {
+                if (mudTrace && isMud) Debug.Log($"[MudBeneath] SKIP cell={p.cell} reason=dedup(topIndex={topIndex} i={i})");
                 continue;
+            }
 
             if (p.beneathId == ObstacleId.None) continue;
-            if (p.cell != p.beneathOrigin) continue;              // beneath'i yalnızca origin'inde çiz
-            if (beneathViewsByCell.ContainsKey(p.cell)) continue;
+            if (p.cell != p.beneathOrigin)
+            {
+                if (mudTrace && isMud) Debug.Log($"[MudBeneath] SKIP cell={p.cell} reason=not-origin(beneathOrigin={p.beneathOrigin})");
+                continue;              // beneath'i yalnızca origin'inde çiz
+            }
+            if (beneathViewsByCell.ContainsKey(p.cell))
+            {
+                if (mudTrace && isMud) Debug.Log($"[MudBeneath] SKIP cell={p.cell} reason=already-view");
+                continue;
+            }
 
             // Safe VE OverrideBatteryBox overlay'i: altındaki beneath'i BAŞTAN gösterme (kenardan
             // sızmasın). Overlay kırılınca beneath normal reveal yoluyla (ReinitRestoredBeneathOrigin
             // → RequestObstacleViewCreate) taze çizilir. Diğer stacked overlay'ler (Chest/Wardrobe...)
             // beneath'i eskisi gibi baştan gösterir.
             var overlayHere = (ObstacleId)resolvedLevel.obstacles[p.cell];
-            if (overlayHere == ObstacleId.Safe || overlayHere == ObstacleId.OverrideBatteryBox) continue;
+            if (overlayHere == ObstacleId.Safe || overlayHere == ObstacleId.OverrideBatteryBox)
+            {
+                if (mudTrace && isMud) Debug.Log($"[MudBeneath] SKIP cell={p.cell} reason=overlay={overlayHere}");
+                continue;
+            }
 
             int bx = p.cell % resolvedLevel.width;
             int by = p.cell / resolvedLevel.width;
@@ -1510,6 +1531,12 @@ public class GridSpawner : MonoBehaviour
                 SpawnMudOverlayCell(bx, by);
                 resolvedLevel.obstacles[p.cell] = sObs;
                 resolvedLevel.obstacleOrigins[p.cell] = sOrg;
+                mudSpawned++;
+                if (mudTrace)
+                {
+                    bool hasView = mudOverlayService != null && mudOverlayService.TryGetView(bx, by, out var mv) && mv != null;
+                    Debug.Log($"[MudBeneath] SPAWN cell={p.cell} ({bx},{by}) overlay={overlayHere} hasView={hasView}");
+                }
                 continue;   // mudOverlayService yönetir; beneathViewsByCell'e girmez
             }
 
@@ -1544,6 +1571,10 @@ public class GridSpawner : MonoBehaviour
                 beneathViewsByCell[p.cell] = beneathImage;
             }
         }
+
+        if (mudTrace)
+            Debug.Log($"[MudBeneath] SUMMARY total_mud_entries={mudTotal} spawned={mudSpawned} " +
+                      $"(spawned<total ise guard'lar eliyor; spawned==total ama görünmüyorsa render/z-order)");
     }
 
     // Her SafeEntry için bir SafeObstacleView spawn eder: NxN bölgeye konumlandır + boyutlandır,

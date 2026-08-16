@@ -13,16 +13,21 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
 
     private readonly BoardController board;
     private readonly int originIndex;
+    // Patlayan kutunun TÜM footprint hücreleri (2x2/NxN). Burst'te hepsinin gravity-bloğunu açarız;
+    // eskiden yalnız origin açılıyordu → diğer footprint hücreleri (sağ) bloklu kalıp sonra taş çekiyordu.
+    private readonly IReadOnlyList<Vector2Int> footprintCells;
     // Action, ExecuteVisuals başında (kutu sırası gelince, T0) createdTime'ını sıfırlar — çoklu
     // kutuda 2.'nin waitToBurst'ü 0 olmasın, her kutu kendi 2s wind-up'ını alsın.
     private float createdTime;
     // Kuyruk (BoardController.ProcessOverrideBatteryBoxQueue) settle'ı kendi yönetir → false gelir.
     private readonly bool ownResolve;
 
-    public OverrideBatteryBoxDetonationAction(BoardController board, int originIndex, bool ownResolve = true)
+    public OverrideBatteryBoxDetonationAction(BoardController board, int originIndex,
+        IReadOnlyList<Vector2Int> footprintCells = null, bool ownResolve = true)
     {
         this.board = board;
         this.originIndex = originIndex;
+        this.footprintCells = footprintCells;
         this.createdTime = Time.time;
         this.ownResolve = ownResolve;
         // NOT: kutu hücresinin gravity-bloğu artık HandleOverrideBatteryBoxDetonated'da (kuyruğa
@@ -46,10 +51,22 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
         if (waitToBurst > 0f)
             yield return new WaitForSeconds(waitToBurst);
 
-        // BURST ANI: kutu hücresini gravity'ye aç → taş düşüşü artık başlayabilir (öncesinde değil).
-        if (activeBoard.Width > 0)
+        // BURST ANI: kutunun TÜM footprint hücrelerini gravity'ye aç → taş düşüşü artık başlayabilir
+        // (öncesinde değil). 2x2/NxN'de origin dışındaki hücreler de burada açılır (yoksa sağ hücrede
+        // erken taş kalıyordu). Footprint yoksa origin'e düş (eski davranış).
+        if (footprintCells != null && footprintCells.Count > 0)
+            activeBoard.ClearPendingTriggeredSpecialCells(footprintCells);
+        else if (activeBoard.Width > 0)
             activeBoard.ClearPendingTriggeredSpecialCells(
                 new[] { new Vector2Int(originIndex % activeBoard.Width, originIndex / activeBoard.Width) });
+
+        // Break/patlama sesi TAM BURST anında çalar (kutu tükenirken/wind-up başında DEĞİL). Depletion
+        // anındaki `cleared` sesi BoardBreakFxService'te OBB için bastırıldı; burada, 2s wind-up'tan
+        // sonra gerçek patlamada çalıyoruz.
+        activeBoard.PlayObstacleBreakSound(ObstacleId.OverrideBatteryBox);
+
+        if (activeBoard.BoardFlowTraceEnabled)
+            Debug.Log($"[OBBTL] burst origin={originIndex} t={Time.realtimeSinceStartup:0.000}");
 
         var impactCells = new List<Vector2Int>();
         var specialTiles = new List<TileView>();
@@ -155,10 +172,10 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
             activeBoard.StartCoroutine(ClearNormalTileAfterDelay(activeBoard, tile, delay, MarkDone));
         }
 
-        // Düşüşü BEKLETME: hit'ler dağıtılır dağıtılmaz (burst anı) resolve iste → taşlar hemen
-        // düşmeye başlar (kullanıcı: "hit verdikten sonra düşmeler başlasın"). Hit coroutine'leri
-        // dalga boyunca obstacle'ları vurmaya devam eder; toz dalgası sürerken taşlar akar, sıradaki
-        // kutu havada/karada ne yakalarsa ona vurur. Aşağıdaki sondaki resolve geç-vurulanları toplar.
+        // Burst anında resolve iste → taşlar dalgayla BİRLİKTE akar (ölü bekleme yok). "Patlama bitmeden
+        // taş düşüyor" sorununun asıl sebebi footprint'in origin dışı hücrelerinin bloklu OLMAMASIYDI
+        // (artık HandleOverrideBatteryBoxDetonated tüm footprint'i bloklar + burst'te açar) — erken resolve
+        // DEĞİL. O yüzden erken resolve GERİ: kutu hücrelerine erken taş girmez ama board donmaz.
         if (ownResolve) activeBoard.RequestResolveAfterActionSequence();
 
         float waited = 0f;
@@ -168,6 +185,9 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
             waited += Time.deltaTime;
             yield return null;
         }
+
+        if (activeBoard.BoardFlowTraceEnabled)
+            Debug.Log($"[OBBTL] wave_done origin={originIndex} t={Time.realtimeSinceStartup:0.000} pendingLeft={pending}");
 
         if (ownResolve) activeBoard.RequestResolveAfterActionSequence();
     }

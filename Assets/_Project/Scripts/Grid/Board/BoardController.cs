@@ -940,6 +940,18 @@ public class BoardController : MonoBehaviour
         TryStartResolveAfterActionSequence();
     }
 
+    // ── Continuous resolve pump (FlowScheduler Faz A, 2026-08-16) ──
+    // RequestResolveAfterActionSequence EDGE-TRIGGERED'dı: resolve istendiğinde board meşgulse TryStart
+    // döner; blocker (BlockingBackgroundJobs/IsBusy/sequencer) SESSİZCE temizlenince (job Dispose event
+    // ATMAZ) kimse yeniden denemiyordu → "board boşta ama resolve asılı" donması (OBB'de yakalandı ama
+    // GENEL bir sınıf). Tek otorite: her frame, board tam idle olunca bekleyen resolve'u kick et →
+    // lost-wakeup sınıfı KÖKTEN biter. TryStart guard'lı (yalnız istek varsa + tam idle ise koşar),
+    // istek yoksa saf no-op → maliyet ihmal edilebilir.
+    private void Update()
+    {
+        TryStartResolveAfterActionSequence();
+    }
+
     // Starts a board action immediately as a background job, running concurrently
     // with any currently-playing ActionSequencer action.
     // ResolveBoard's loop polls BlockingBackgroundJobs/actionSequencer to wait for completion.
@@ -3421,6 +3433,17 @@ public class BoardController : MonoBehaviour
         ObstacleVisualChanged?.Invoke(change);
     }
 
+    // OBB break/patlama sesini GERÇEK burst anında çalmak için (depletion anındaki `cleared` sesi
+    // BoardBreakFxService'te bastırıldı; wind-up sonrası detonation action buradan çağırır).
+    internal void PlayObstacleBreakSound(ObstacleId obstacleId)
+    {
+        var def = LevelData?.obstacleLibrary?.Get(obstacleId);
+        if (def == null || def.breakSound == null || !GameSettings.SoundEnabled)
+            return;
+
+        SfxSource?.PlayOneShot(def.breakSound, def.breakSoundVolume);
+    }
+
     internal void MarkPatchBotForcedObstacleHit(int x, int y)
         => obstacleResolutionService?.MarkPatchBotForcedHit(x, y);
 
@@ -3584,12 +3607,29 @@ public class BoardController : MonoBehaviour
     /// <summary>GridSpawner dinler: sırası gelen OBB'nin detonasyon VIEW animasyonunu oynatır.</summary>
     public event System.Action<int> OnRequestObbDetonationView;
 
-    private void HandleOverrideBatteryBoxDetonated(int originIndex)
+    // Patlayan her OBB'nin footprint hücreleri (2x2/NxN). Wind-up boyunca hepsi bloklu; burst'te açılır.
+    private readonly System.Collections.Generic.Dictionary<int, IReadOnlyList<Vector2Int>> _obbFootprintByOrigin = new();
+
+    private void HandleOverrideBatteryBoxDetonated(int originIndex, IReadOnlyList<Vector2Int> footprintCells)
     {
-        // Kutu hücresini HEMEN gravity'den blokla → sıradakiler beklerken altına taş girmesin.
-        // (Her kutu kendi burst'ünde ClearPendingTriggeredSpecialCells ile açar.)
-        if (width > 0)
-            SetPendingTriggeredSpecialCells(new[] { new Vector2Int(originIndex % width, originIndex / width) });
+        // Kutunun TÜM footprint hücrelerini (yalnız origin DEĞİL) HEMEN gravity'den blokla → wind-up
+        // sırasında 2x2'nin sağ/üst hücrelerine taş DÜŞMESİN (kullanıcı: "sağdaki hücrede taş oluyor").
+        // (Kutu kendi burst'ünde ClearPendingTriggeredSpecialCells ile HEPSİNİ açar.)
+        IReadOnlyList<Vector2Int> cells =
+            (footprintCells != null && footprintCells.Count > 0)
+                ? footprintCells
+                : (width > 0
+                    ? new[] { new Vector2Int(originIndex % width, originIndex / width) }
+                    : null);
+
+        if (cells != null)
+        {
+            _obbFootprintByOrigin[originIndex] = cells;
+            SetPendingTriggeredSpecialCells(cells);
+        }
+
+        if (BoardFlowTraceEnabled)
+            Debug.Log($"[OBBTL] detonated origin={originIndex} t={Time.realtimeSinceStartup:0.000} footprint={(cells != null ? cells.Count : 0)}");
 
         _obbDetonationQueue.Enqueue(originIndex);
         if (!_obbDetonationProcessing)
@@ -3623,8 +3663,11 @@ public class BoardController : MonoBehaviour
                 {
                     int origin = _obbDetonationQueue.Dequeue();
 
+                    _obbFootprintByOrigin.TryGetValue(origin, out var footprint);
+                    _obbFootprintByOrigin.Remove(origin);
+
                     OnRequestObbDetonationView?.Invoke(origin);   // view wind-up + burst
-                    var detonation = new OverrideBatteryBoxDetonationAction(this, origin, ownResolve: true);
+                    var detonation = new OverrideBatteryBoxDetonationAction(this, origin, footprint, ownResolve: true);
                     _obbDetonationsRunning++;
                     StartCoroutine(RunObbDetonation(detonation));
 
@@ -3637,7 +3680,18 @@ public class BoardController : MonoBehaviour
                 float safety = 0f;
                 while (safety < 12f)
                 {
+                    // ZİNCİR HİSSİ: bir kutunun dalgası BAŞKA kutuyu bitirip kuyruğa eklediyse, box1'in
+                    // TAM settle'ını BEKLEME — hemen dış döngüye dön, box2 wind-up'ını başlat (overlap).
+                    // Yoksa box2 ancak box1 tamamen oturunca +2s wind-up ile patlıyor → "kopuk/geç
+                    // tetiklenmedi" hissi (kullanıcı 2026-08-16).
+                    if (_obbDetonationQueue.Count > 0)
+                        break;
+
                     safety += Time.deltaTime;
+
+                    // NOT: bekleyen resolve'un kick'i artık GLOBAL Update() pump'ında (FlowScheduler
+                    // Faz A) — buradaki OBB'ye özel kick kaldırıldı, tek otorite orada.
+
                     bool allDone =
                         _obbDetonationsRunning == 0
                         && !resolveAfterActionSequenceRequested
@@ -3645,6 +3699,7 @@ public class BoardController : MonoBehaviour
                         && !IsBusy
                         && BlockingBackgroundJobs == 0
                         && !IsActionSequencePlaying;
+
                     if (allDone && safety > 0.1f)
                         break;
                     yield return null;

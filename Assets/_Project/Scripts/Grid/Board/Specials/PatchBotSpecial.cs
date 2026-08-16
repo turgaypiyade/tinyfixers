@@ -57,11 +57,24 @@ public sealed class PatchBotSpecial
         if (board == null || cells == null || cells.Count == 0 || buildRuntime == null)
             return;
 
+        // PERF (2026-08-16): Eskiden N botun Execute'u (her biri PickIntent=board taraması + HashSet/
+        // action alloc'ları) TEK frame'de koşuyordu → Override+PatchBot toplu fanout'ta cihazda büyük
+        // tek-frame spike (kullanıcı: "toplu kalkıp vururken takılıyor"). Artık Execute'ları frame'lere
+        // yayıyoruz (1 bot/frame; GÖRÜNMEZ tarama/buffer işi). Dash'ler yine SONDA tek StartPending...
+        // ile kalktığı için görsel "toplu launch" AYNEN korunur — yalnız hazırlık işi serpilir, spike gider.
+        // launchPatchBots görsel playback anında (SystemOverrideFanoutPlacementAction) çağrıldığından ve
+        // dash'ler zaten async uçtuğundan async spread güvenli (resolution-build çoktan bitmiş).
+        board.StartCoroutine(CoLaunchGroupSpread(board, cells, buildRuntime));
+    }
+
+    private static IEnumerator CoLaunchGroupSpread(
+        BoardController board,
+        List<Vector2Int> cells,
+        Func<TileView, PatchBotTargetCoordinator, PatchBotExecutionRuntime> buildRuntime)
+    {
         var patchbotService = new PatchbotComboService(board);
         var coordinator = new PatchBotTargetCoordinator(board, patchbotService);
         var special = new PatchBotSpecial();
-
-        Debug.Log($"[PatchBotSpecial] Group parallel launch count={cells.Count}");
 
         for (int i = 0; i < cells.Count; i++)
         {
@@ -78,15 +91,19 @@ public sealed class PatchBotSpecial
                 continue;
 
             // Grup botu: dash başında kendi hücresini temizler, arrival'ı bağımsız yönetir
-            // (FinalizeAtEnd=false → arrival'da solo hit + sequencer enqueue). Execute SENKRON:
-            // yalnız dash'i buffer'a enqueue eder; uçuş aşağıdaki tek parallel-start ile başlar.
+            // (FinalizeAtEnd=false → arrival'da solo hit + sequencer enqueue). Execute yalnız dash'i
+            // buffer'a enqueue eder; uçuş aşağıdaki tek parallel-start ile başlar.
             rt.FinalizeAtEnd = false;
             rt.ClearOriginOnDashStart = true;
 
             special.Execute(rt);
+
+            // Frame'e yay: her botun taraması/alloc'u ayrı frame'e düşsün → tek-frame spike yok.
+            yield return null;
         }
 
-        // Tüm dash'ler enqueue edildi → hepsini tek batch'te başlat (pompadan bağımsız, iptal yok).
+        // Tüm dash'ler enqueue edildi → hepsini tek batch'te başlat (pompadan bağımsız, iptal yok);
+        // PlayDashParallel içsel 0.02s stagger'la görsel "toplu" launch'u verir.
         board.StartPendingPatchbotDashesParallel();
     }
 

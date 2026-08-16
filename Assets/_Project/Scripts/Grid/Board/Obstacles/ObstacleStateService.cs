@@ -226,7 +226,9 @@ public class ObstacleStateService : ISimObstacleQuery
     public event Action<int, ChestColorMask, int> OnBatteryHit;
     // OverrideBatteryBox: origin, renk, renkte kalan hit, toplam progress, toplam hit
     public event Action<int, ChestColorMask, int, int, int> OnOverrideBatteryBoxHit;
-    public event Action<int> OnOverrideBatteryBoxDetonated;
+    // origin + patlayan kutunun TÜM footprint hücreleri (2x2/NxN). Handler wind-up boyunca hepsini
+    // gravity'den bloklar (yalnız origin değil) → footprint'in sağ/üst hücrelerine erken taş düşmez.
+    public event Action<int, IReadOnlyList<Vector2Int>> OnOverrideBatteryBoxDetonated;
     // Wardrobe: kapı açılması ve item kırılması
     public event Action<int> OnWardrobeOpened;
     public event Action<int, int> OnWardrobeItemRemoved;  // (origin, itemsRemaining)
@@ -679,9 +681,15 @@ public class ObstacleStateService : ISimObstacleQuery
 
         if (remaining <= 0)
         {
+            // Footprint'i temizlemeDEN ÖNCE topla — ClearObstacleFromLevel hücre→origin eşlemesini
+            // siler, sonra footprint'i öğrenemeyiz. OBB detonation handler'ı TÜM hücreleri bloklar.
+            List<Vector2Int> obbFootprint = id == ObstacleId.OverrideBatteryBox
+                ? CollectOriginFootprintCells(origin, id)
+                : null;
+
             ClearObstacleFromLevel(origin, id);
             if (id == ObstacleId.OverrideBatteryBox)
-                OnOverrideBatteryBoxDetonated?.Invoke(origin);
+                OnOverrideBatteryBoxDetonated?.Invoke(origin, obbFootprint);
             change = new ObstacleVisualChange(origin, id, true, 0, null);
             var transition = new ObstacleStageTransition(true, origin, id, 0, true, previousStage, default);
             return new ObstacleHitResult(true, true, false, change, transition, affectedCells);
@@ -1062,6 +1070,24 @@ public class ObstacleStateService : ISimObstacleQuery
         }
 
         return cells != null ? cells.ToArray() : Array.Empty<int>();
+    }
+
+    // Verilen origin+id'ye ait TÜM hücreler (multi-cell obstacle footprint'i). ClearObstacleFromLevel
+    // ÇAĞRILMADAN ÖNCE kullanılmalı (o metod obstacleOrigins eşlemesini siler).
+    private List<Vector2Int> CollectOriginFootprintCells(int origin, ObstacleId id)
+    {
+        var cells = new List<Vector2Int>(4);
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return cells;
+
+        for (int i = 0; i < level.obstacles.Length; i++)
+        {
+            if ((ObstacleId)level.obstacles[i] != id) continue;
+            if (level.obstacleOrigins[i] != origin) continue;
+            cells.Add(new Vector2Int(i % level.width, i / level.width));
+        }
+
+        return cells;
     }
 
     private void ClearObstacleFromLevel(int origin, ObstacleId originId)

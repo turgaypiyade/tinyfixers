@@ -176,6 +176,12 @@ public class BoardBreakFxService
         }
         else if (change.cleared)
         {
+            // OverrideBatteryBox: break/patlama sesi DEPLETION anında DEĞİL, ~2s wind-up sonrası GERÇEK
+            // burst anında çalmalı (OverrideBatteryBoxDetonationAction.PlayObstacleBreakSound). Burada
+            // sustur ki ses erken çalmasın.
+            if (change.obstacleId == ObstacleId.OverrideBatteryBox)
+                return;
+
             clip = def.breakSound;
             vol  = def.breakSoundVolume;
             // breakSound tanımlı değilse son hit stage'inin sesine bak, o da yoksa genel sese düş.
