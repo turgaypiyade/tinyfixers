@@ -343,7 +343,16 @@ public partial class CascadeLogic
         board.RefreshAllTileObstacleVisuals();
 
         if (action.HasMoves)
+        {
+            if (board.UsePerColumnAsyncFalls)
+            {
+                var columnFalls = action.SplitByTargetColumn(suppressColumnDelayForSplits: true);
+                if (columnFalls.Count > 0)
+                    return new List<BoardAction> { new ParallelColumnFallAction(columnFalls) };
+            }
+
             return new List<BoardAction> { action };
+        }
 
         return new List<BoardAction>();
     }

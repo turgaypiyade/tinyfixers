@@ -18,8 +18,8 @@ Detaylar: `UnifiedSpecialFlow_Plan.md` (senkron akış), `ObstacleFlow_Inventory
 | A4 | **Chain reaction** (işaretle→kuyruk→çöz) | ✅ var | `ActivationQueueProcessor`: `Queued`+`Processed` çift guard (=isDestroying), **iteratif** while → Stack Overflow riski YOK |
 | A5 | **Object Pooling** (Instantiate/Destroy yok) | 🧪 kısmi | Taş havuzu kodlandı (flag `useTilePool`, default KAPALI). VFX multi-pool YOK |
 | A6 | **Örtüşen patlama** (efekt beklenmeden düşüş) | 🧪 kısmi | Normal cascade fall→clear overlap ✅; **special/obstacle patlamaları hâlâ akışı bekletiyor** 🔍 |
-| A7 | **Sütun-bazlı bağımsız işlem** | 🧪 7A ✅ onaylı | Faz 7A: `CalculateCascades` sim'i `ColumnFlowEngine`'e taşındı (flag `usePerColumnGravity`, default KAPALI). Davranış-birebir + settled sütun atlama + `ColumnBusy` sinyali. **Cihazda birebir doğrulandı.** **7B/7C bekliyor** (async emisyon + input hook) |
-| A8 | **Dynamic Board** (düşerken hamle) | 📋 yok | `InputLocked => Locked \|\| IsBusy` = global kilit → Faz 8 |
+| A7 | **Sütun-bazlı bağımsız işlem** | ✅ var | Faz 7A ✅: `CalculateCascades` sim'i `ColumnFlowEngine`'e taşındı (flag `usePerColumnGravity`) ve cihazda birebir doğrulandı. Faz 7B ✅: fall görseli `ParallelColumnFallAction` ile hedef sütunlara bölünüp paralel oynatılıyor (flag `usePerColumnAsyncFalls`) ve cihazda problem görülmedi. Faz 7C ✅: runtime `ColumnBusy` + `Flow.IsColumnSettling()` hook'u cihazda doğrulandı (normal log yok, underflow yok) |
+| A8 | **Dynamic Board** (düşerken hamle) | 🧪 8B canlı input kodlandı | Faz 8A ✅: `TileRuntimeState` + generic `ReservedFor` snapshot. Faz 8B: `CanStartDynamicSwap` + dynamic swap ownership guard + busy sırasında idle tile/sütun swap input'u flag arkasında bağlandı (`useDynamicBoardInputGate`) |
 
 ---
 
@@ -41,6 +41,7 @@ Detaylar: `UnifiedSpecialFlow_Plan.md` (senkron akış), `ObstacleFlow_Inventory
 | **OBB break sesi + 2x2 footprint** | OBB patlat: ses **burst anında** mı (wind-up başında değil), footprint hücrelerine erken taş giriyor mu | `f61417b` |
 | **OBB bar tükenişi** | Üst/sağ barlar da **içeriden dışarıya** eksiliyor mu (sol/alt ile aynı) | `f61417b` |
 | **Streak/UFO ertelenmiş teslimat** | Level 25+, streak>0, açılışta kapalı board → ilk hamleden sonra UFO gelip special koyuyor mu (tutarlı) | `f61417b` |
+| **Faz 8B dynamic input** | `useDynamicBoardInputGate` = **AÇIK**, `usePerColumnGravity` + `usePerColumnAsyncFalls` = **AÇIK** → bir sütun düşerken başka idle sütunda **normal tile** drag/click swap dene. Beklenti: idle sütun swap'i hemen oynar; düşen/clearing/reserved/special/obstacle-locked sütun input almaz; final board bozulmaz. Kapalıyken 8A ile aynı davranmalı | (bu seans) |
 
 ### 🔍 AÇIK SORUNLAR (teşhis var, çözüm bekliyor)
 - **Mud plastik altında görünmüyor** (LevelP_00540) — level datası SAĞLAM (27 hücrede mud authored), 27 view de spawn oluyor (`hasView=True`). Kök: init-render; `RefreshAllBorders` denemesi durumu KÖTÜLEŞTİRDİ → geri alındı. `[MudBeneath]` trace kodda. **Ev görevi.**
@@ -55,8 +56,8 @@ Detaylar: `UnifiedSpecialFlow_Plan.md` (senkron akış), `ObstacleFlow_Inventory
 | **Faz 4** | 9 bespoke combo'yu taşı | Zamanlama birleşir (davranış korunur) |
 | **Faz 5** | Perf sözleşmesi: frame-bütçesi + VFX multi-pool + hot-path alloc pool | Tek-frame spike yapısal olarak imkânsız |
 | **Faz 6** | Temizlik: eski sinyaller/settle-wait/sticky flag sil | Bir faz, eski yol silinene kadar BİTMİŞ sayılmaz |
-| **Faz 7** | **Per-column async** (global gravity → sütun bazlı). **7A kodlandı** (`ColumnFlowEngine`, flag `usePerColumnGravity`, davranış-birebir); **7B** async emisyon (sütun kendi settle'ı) + **7C** temizlik/scheduler bekliyor. Plan: `~/.claude/plans/calm-wibbling-sutherland.md` | A7; dinamik tahtanın ön koşulu |
-| **Faz 8** | **Cell-based FSM + Dynamic Board** | A8: `TileState`(Idle/Swapping/Matched/Falling) + destination-cell rezervasyonu + input global `IsBusy` yerine **dokunulan iki taşa** bakar + sütun kilidi |
+| **Faz 7** | ✅ **Per-column async** tamamlandı (global gravity → sütun bazlı): 7A `ColumnFlowEngine`, 7B `ParallelColumnFallAction`, 7C runtime `ColumnBusy` + `Flow.IsColumnSettling`. Flag'ler hâlâ geri alınabilirlik için duruyor; Faz 8 bunların üstüne `ReservedFor`/`TileState` input gating'i kuracak. Plan: `~/.claude/plans/calm-wibbling-sutherland.md` | A7; dinamik tahtanın ön koşulu |
+| **Faz 8** | **Cell-based FSM + Dynamic Board** başladı: **8A ✅ onaylı** (`TileRuntimeState` + `ReservedFor`). **8B canlı input kodlandı** (`CanStartDynamicSwap`, ownership guard, busy sırasında idle sütun swap). Cihaz testi bekliyor | A8 |
 | **Faz 9** | Obstacle'ları ortak API'ye bağla | `ObstacleFlow_Inventory.md` sırası: Barrel/Key/Rocket → EnergyContainer → Oil spread → Safe hold → **OBB en son** |
 | **Faz 10** | Level design L1-50 | Motor akıcı olsa da ilk 50 sıkarsa oyuncu kalmaz (§D) |
 

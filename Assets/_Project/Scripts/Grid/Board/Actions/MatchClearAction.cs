@@ -100,6 +100,8 @@ public class MatchClearAction : BoardAction
             ? board.Flow.Begin(BoardFlowScheduler.ActivityKind.SpecialSweep)
             : null;
 
+        MarkMatchRuntimeState(TileRuntimeState.Clearing);
+
         try
         {
             var inner = RunClear(sequencer);
@@ -108,10 +110,21 @@ public class MatchClearAction : BoardAction
         }
         finally
         {
+            MarkMatchRuntimeState(TileRuntimeState.Idle);
             sweepActivity?.Dispose();
             clearActivity?.Dispose();
             clearJob?.Dispose();
         }
+    }
+
+    private void MarkMatchRuntimeState(TileRuntimeState state)
+    {
+        if (matches == null)
+            return;
+
+        foreach (var tile in matches)
+            if (tile != null && tile)
+                tile.SetRuntimeState(state);
     }
 
     private IEnumerator RunClear(ActionSequencer sequencer)

@@ -30,8 +30,11 @@ public class FallAction : BoardAction
 
     private readonly List<FallRecord> fallRecords = new List<FallRecord>();
     private bool settleDisabled = false;
+    private bool suppressColumnPhaseDelay = false;
+    private bool suppressBatchSfx = false;
 
     public bool HasMoves => fallRecords.Count > 0;
+    public int MoveCount => fallRecords.Count;
 
     // Settle (iniş bounce'u) yalnızca SON inişte oynamalı. Ara cascade'lerde su gibi
     // akış için bu çağrılır → tüm record'ların settle'ı kapatılır.
@@ -40,6 +43,19 @@ public class FallAction : BoardAction
         settleDisabled = true;
         foreach (var r in fallRecords)
             r.useSettle = false;
+    }
+
+    // Faz 7B: FallAction sütunlara bölündüğünde her sütun kendi action'ı içinde zaten bağımsız
+    // başlar. Eski whole-board soldan-sağa column delay'i bu modda tekrar uygulanırsa yüksek x
+    // sütunları gereksiz bekler; onu yalnız split action kopyalarında kapatıyoruz.
+    public void SuppressColumnPhaseDelay()
+    {
+        suppressColumnPhaseDelay = true;
+    }
+
+    public void SuppressBatchSfx()
+    {
+        suppressBatchSfx = true;
     }
 
     // Eski imza kalsin. Baska yerler kirilmasin.
@@ -172,6 +188,60 @@ public class FallAction : BoardAction
         other.fallRecords.Clear();
     }
 
+    public List<FallAction> SplitByTargetColumn(bool suppressColumnDelayForSplits)
+    {
+        var result = new List<FallAction>();
+        if (fallRecords.Count == 0)
+            return result;
+
+        var byColumn = new Dictionary<int, FallAction>();
+
+        foreach (var r in fallRecords)
+        {
+            if (r == null || r.tile == null || !r.tile)
+                continue;
+
+            int column = r.toX;
+            if (!byColumn.TryGetValue(column, out var action))
+            {
+                action = new FallAction();
+                if (settleDisabled)
+                    action.DisableSettle();
+                if (suppressColumnDelayForSplits)
+                    action.SuppressColumnPhaseDelay();
+                action.SuppressBatchSfx();
+                byColumn[column] = action;
+                result.Add(action);
+            }
+
+            action.fallRecords.Add(CloneRecord(r));
+        }
+
+        return result;
+    }
+
+    private static FallRecord CloneRecord(FallRecord r)
+    {
+        return new FallRecord
+        {
+            tile = r.tile,
+            fromX = r.fromX,
+            fromY = r.fromY,
+            toX = r.toX,
+            toY = r.toY,
+            duration = r.duration,
+            useSettle = r.useSettle,
+            settleDuration = r.settleDuration,
+            settleStrength = r.settleStrength,
+            curve = r.curve,
+            startDelay = r.startDelay,
+            phaseDelay = r.phaseDelay,
+            hasPhaseDelay = r.hasPhaseDelay,
+            pathWaypoints = r.pathWaypoints != null ? (Vector2Int[])r.pathWaypoints.Clone() : null,
+            pathSegmentDurations = r.pathSegmentDurations != null ? (float[])r.pathSegmentDurations.Clone() : null
+        };
+    }
+
     public float GetMaxMoveDuration()
     {
         float max = 0f;
@@ -183,6 +253,61 @@ public class FallAction : BoardAction
         }
 
         return max;
+    }
+
+    public int GetMaxGridDistanceForSfx()
+    {
+        int maxDist = 0;
+
+        foreach (var r in fallRecords)
+        {
+            if (r == null || r.tile == null || !r.tile)
+                continue;
+
+            float distance = 0f;
+
+            if (r.pathWaypoints != null && r.pathWaypoints.Length >= 2)
+            {
+                for (int i = 0; i < r.pathWaypoints.Length - 1; i++)
+                    distance += Vector2.Distance(r.pathWaypoints[i], r.pathWaypoints[i + 1]);
+            }
+            else
+            {
+                distance = Vector2.Distance(
+                    new Vector2(r.fromX, r.fromY),
+                    new Vector2(r.toX, r.toY));
+            }
+
+            int dist = Mathf.CeilToInt(distance);
+            if (dist > maxDist)
+                maxDist = dist;
+        }
+
+        return maxDist;
+    }
+
+    public bool TryGetSingleTargetColumn(out int column)
+    {
+        column = -1;
+        bool hasColumn = false;
+
+        foreach (var r in fallRecords)
+        {
+            if (r == null || r.tile == null || !r.tile)
+                continue;
+
+            if (!hasColumn)
+            {
+                column = r.toX;
+                hasColumn = true;
+                continue;
+            }
+
+            if (column != r.toX)
+                return false;
+        }
+
+        return hasColumn;
     }
 
     public float GetEstimatedVisualDuration(BoardController board)
@@ -271,7 +396,7 @@ public class FallAction : BoardAction
             return;
         }
 
-        float columnStep = board != null ? board.FallColumnStep : 0f;
+        float columnStep = (board != null && !suppressColumnPhaseDelay) ? board.FallColumnStep : 0f;
         var maxToYPerColumn = new Dictionary<int, int>();
 
         foreach (var r in fallRecords)
@@ -308,7 +433,6 @@ public class FallAction : BoardAction
             r.hasPhaseDelay = true;
         }
     }
-
     private void EnsureReferencePhaseDelays(BoardController board)
     {
         var maxTargetRowPerSpawnColumn = new Dictionary<int, int>();
@@ -349,7 +473,7 @@ public class FallAction : BoardAction
         // Yeni taş (spawn) ve mevcut taş gecikmeleri BİRBİRİNDEN AYRI (spec §2).
         float spawnInterval = settleDisabled ? 0f : board.ReferenceFallMotion.ReferenceFramesToSeconds(board.ReferenceFallMotion.spawnIntervalFrames);
         float existingInterval = settleDisabled ? 0f : board.ReferenceFallMotion.ReferenceFramesToSeconds(board.ReferenceFallMotion.existingIntervalFrames);
-        float columnStep = settleDisabled ? 0f : board.FallColumnStep;
+        float columnStep = (settleDisabled || suppressColumnPhaseDelay) ? 0f : board.FallColumnStep;
         float spawnStaggerMul = settleDisabled ? 0f : board.FallSpawnStaggerMultiplier;
 
         foreach (var r in fallRecords)
@@ -731,7 +855,8 @@ public class FallAction : BoardAction
                 ? $"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} (reference-frame accelerated motion)"
                 : $"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} (cell-to-cell constant velocity)");
 
-        board.PlayTileFallSfx(fallRecords.Count, maxDist);
+        if (!suppressBatchSfx)
+            board.PlayTileFallSfx(fallRecords.Count, maxDist);
 
         // Phase delay'ler action merge edilmeden once dondurulur.
         // Boylece ayni tile'in sonraki diagonal/dikey segmentleri, onceki
@@ -884,7 +1009,11 @@ public class FallAction : BoardAction
                     board.FallSettleOvershoot);
             }
 
-            moves.Add(move);
+            moves.Add(RunFallMoveWithRuntimeState(
+                r.tile,
+                move,
+                sequencer.Board,
+                new Vector2Int(r.toX, r.toY)));
 
             float totalDelay = useReferenceForRecord ? 0f : r.startDelay + r.phaseDelay;
 
@@ -901,5 +1030,28 @@ public class FallAction : BoardAction
 
         if (trace)
             Debug.Log($"[Fall] DONE +{(Time.realtimeSinceStartup - faStart):0.000}s");
+    }
+
+    private static IEnumerator RunFallMoveWithRuntimeState(
+        TileView tile,
+        IEnumerator move,
+        BoardController board,
+        Vector2Int targetCell)
+    {
+        if (tile != null && tile)
+            tile.SetRuntimeState(TileRuntimeState.Falling);
+        board?.ReserveTileTargetCell(targetCell);
+
+        try
+        {
+            if (move != null)
+                yield return move;
+        }
+        finally
+        {
+            board?.ClearReservedTileTargetCell(targetCell);
+            if (tile != null && tile)
+                tile.SetRuntimeState(TileRuntimeState.Idle);
+        }
     }
 }

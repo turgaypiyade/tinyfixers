@@ -21,6 +21,8 @@ public readonly struct BoardCellStateSnapshot
 
     public readonly bool hasTile;
     public readonly TileView tile;
+    public readonly TileRuntimeState tileRuntimeState;
+    public readonly bool isReservedForTile;
 
     // Fiziksel olarak tile tutabilecek aktif hücre.
     // Mask hole, blocker obstacle ve pending-triggered special hücreleri false döner.
@@ -64,6 +66,8 @@ public readonly struct BoardCellStateSnapshot
         this.obstacleId = obstacleId;
         this.hasTile = hasTile;
         this.tile = tile;
+        this.tileRuntimeState = tile != null ? tile.RuntimeState : TileRuntimeState.Idle;
+        this.isReservedForTile = false;
         this.isPlayableCell = isPlayableCell;
         this.isActiveButEmpty = isActiveButEmpty;
 
@@ -87,6 +91,8 @@ public readonly struct BoardCellStateSnapshot
         ObstacleId obstacleId,
         bool hasTile,
         TileView tile,
+        TileRuntimeState tileRuntimeState,
+        bool isReservedForTile,
         bool isPendingTriggeredSpecial,
         bool canContainTile,
         bool canAcceptTile,
@@ -105,6 +111,8 @@ public readonly struct BoardCellStateSnapshot
         this.obstacleId = obstacleId;
         this.hasTile = hasTile;
         this.tile = tile;
+        this.tileRuntimeState = tileRuntimeState;
+        this.isReservedForTile = isReservedForTile;
 
         this.isPendingTriggeredSpecial = isPendingTriggeredSpecial;
         this.canContainTile = canContainTile;

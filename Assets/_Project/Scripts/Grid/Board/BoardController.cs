@@ -272,11 +272,59 @@ public class BoardController : MonoBehaviour
     [SerializeField] private bool usePerColumnGravity;
     public bool UsePerColumnGravity => usePerColumnGravity;
 
-    // Faz 7 ColumnBusy sinyali: son CalculateCascades'te hangi sütunlar hareket etti (üretildi;
-    // 7A'da tüketen yok — Faz 8 input gating'i okuyacak). Lazy-alloc, Width boyutunda.
+    // Faz 7B: CalculateCascades'in ürettiği tek FallAction, hedef sütunlara bölünür ve
+    // ParallelColumnFallAction içinde paralel oynatılır. Mantık bariyeri şimdilik global kalır
+    // (Faz 8 ReservedFor/TileState gelmeden match arama erken başlamaz).
+    [Tooltip("Faz 7B: düşüş görselini sütun action'larına bölüp paralel oynatır. usePerColumnGravity de açık olmalı.")]
+    [SerializeField] private bool usePerColumnAsyncFalls;
+    public bool UsePerColumnAsyncFalls => usePerColumnGravity && usePerColumnAsyncFalls;
+
+    // Faz 8B: global IsBusy yerine dokunulan tile/sütun state'ine dayalı input gate.
+    // Bu flag ilk dilimde yalnız karar katmanını açar; eşzamanlı ikinci ProcessSwap sonraki dilimde
+    // özel bir concurrency guard ile bağlanacak.
+    [Tooltip("Faz 8B: dynamic board input gate kararlarını etkinleştirir. Canlı eşzamanlı swap sonraki dilimde bağlanacak.")]
+    [SerializeField] private bool useDynamicBoardInputGate;
+    public bool UseDynamicBoardInputGate => useDynamicBoardInputGate;
+
+    // Faz 7 ColumnBusy sinyali:
+    // - columnBusyThisResolve: son CalculateCascades simülasyonunda hangi sütunlar mantıksal olarak değişti.
+    // - columnFallVisualCounts: şu anda hangi sütunların fall görseli hâlâ uçuyor.
+    // Faz 8 input gating'i ikisini tek IsColumnBusy sorgusundan okuyacak.
     private bool[] columnBusyThisResolve;
+    private int[] columnFallVisualCounts;
     public bool IsColumnBusy(int x) =>
-        columnBusyThisResolve != null && x >= 0 && x < columnBusyThisResolve.Length && columnBusyThisResolve[x];
+        x >= 0 && x < width &&
+        ((columnBusyThisResolve != null && x < columnBusyThisResolve.Length && columnBusyThisResolve[x]) ||
+         (columnFallVisualCounts != null && x < columnFallVisualCounts.Length && columnFallVisualCounts[x] > 0));
+
+    public bool IsColumnFallVisualInFlight(int x) =>
+        columnFallVisualCounts != null && x >= 0 && x < columnFallVisualCounts.Length && columnFallVisualCounts[x] > 0;
+
+    private void EnsureColumnFallVisualCounts()
+    {
+        if (columnFallVisualCounts == null || columnFallVisualCounts.Length != width)
+            columnFallVisualCounts = new int[Mathf.Max(0, width)];
+    }
+
+    internal void BeginColumnFallVisual(int x)
+    {
+        if (x < 0 || x >= width) return;
+        EnsureColumnFallVisualCounts();
+        columnFallVisualCounts[x]++;
+    }
+
+    internal void EndColumnFallVisual(int x)
+    {
+        if (columnFallVisualCounts == null || x < 0 || x >= columnFallVisualCounts.Length) return;
+        if (columnFallVisualCounts[x] <= 0)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning($"[ColumnFall] busy counter underflow x={x}");
+#endif
+            return;
+        }
+        columnFallVisualCounts[x] = Mathf.Max(0, columnFallVisualCounts[x] - 1);
+    }
 
     // CascadeLogic/ColumnFlowEngine çağırır: bu resolve pass'inde aktif olan sütunları kaydeder.
     internal void ReportColumnBusy(IReadOnlyCollection<int> activeColumns)
@@ -590,8 +638,10 @@ public class BoardController : MonoBehaviour
     // simultaneously-produced keys from targeting the same cell (which would make
     // the second key visually fly onto a cell that just became a Key).
     private readonly HashSet<Vector2Int> reservedKeyLandingCells = new();
+    private readonly Dictionary<Vector2Int, int> reservedTileTargetCells = new();
 
     private int busyScopeDepth;
+    private int dynamicSwapLogicDepth;
     public readonly System.Collections.Generic.List<PatchbotDashRequest> TempPatchbotDashRequests =
         new System.Collections.Generic.List<PatchbotDashRequest>();
     public event Action<ObstacleVisualChange> ObstacleVisualChanged;
@@ -787,6 +837,36 @@ public class BoardController : MonoBehaviour
     internal void ClearAllPendingTriggeredSpecialCells()
     {
         pendingTriggeredSpecialCells.Clear();
+    }
+
+    internal bool IsReservedTileTargetCell(int x, int y)
+    {
+        return reservedTileTargetCells.TryGetValue(new Vector2Int(x, y), out int count) && count > 0;
+    }
+
+    internal void ReserveTileTargetCell(Vector2Int cell)
+    {
+        if (cell.x < 0 || cell.x >= width || cell.y < 0 || cell.y >= height)
+            return;
+
+        reservedTileTargetCells.TryGetValue(cell, out int count);
+        reservedTileTargetCells[cell] = count + 1;
+    }
+
+    internal void ClearReservedTileTargetCell(Vector2Int cell)
+    {
+        if (!reservedTileTargetCells.TryGetValue(cell, out int count))
+            return;
+
+        if (count <= 1)
+            reservedTileTargetCells.Remove(cell);
+        else
+            reservedTileTargetCells[cell] = count - 1;
+    }
+
+    internal void ClearAllReservedTileTargetCells()
+    {
+        reservedTileTargetCells.Clear();
     }
 
     internal bool TryFindKeyLandingCell(out Vector2Int cell)
@@ -1373,6 +1453,9 @@ public class BoardController : MonoBehaviour
 
     internal void BeginBusy() { busyScopeDepth++; CurrentState = BoardState.Resolving; }
 
+    private void BeginDynamicSwapLogic() => dynamicSwapLogicDepth++;
+    private void EndDynamicSwapLogic() => dynamicSwapLogicDepth = Mathf.Max(0, dynamicSwapLogicDepth - 1);
+
     internal void EndBusy()
     {
         if (busyScopeDepth > 0) busyScopeDepth--;
@@ -1401,6 +1484,7 @@ public class BoardController : MonoBehaviour
     {
         ClearAllPendingTriggeredSpecialCells();
         reservedKeyLandingCells.Clear();
+        ClearAllReservedTileTargetCells();
 
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
@@ -2087,11 +2171,77 @@ public class BoardController : MonoBehaviour
     //  Input / Click / Drag
     // ═══════════════════════════════════════════════════════════════
 
+    private bool CanTileAcceptDynamicInput(TileView tile)
+    {
+        if (!useDynamicBoardInputGate)
+            return false;
+
+        if (tile == null || !tile)
+            return false;
+
+        if (tile.RuntimeState != TileRuntimeState.Idle)
+            return false;
+
+        // 8B ilk canlı dilim: düşüş sırasında yalnız normal tile swap. Special/combo dynamic input,
+        // special visual/resolve concurrency'si ayrıca doğrulanınca açılacak.
+        if (tile.GetSpecial() != TileSpecial.None)
+            return false;
+
+        if (!TryGetCellState(tile.X, tile.Y, out var state))
+            return false;
+
+        if (!state.canProvideTile || state.isReservedForTile || state.tileRuntimeState != TileRuntimeState.Idle)
+            return false;
+
+        if (Flow.IsColumnSettling(tile.X))
+            return false;
+
+        if (obstacleStateService != null)
+        {
+            if (obstacleStateService.IsOilAt(tile.X, tile.Y))
+                return false;
+            if (obstacleStateService.IsInteractionLockedAt(tile.X, tile.Y))
+                return false;
+            if (obstacleStateService.IsUnderTileObstacleAt(tile.X, tile.Y) && !obstacleStateService.IsMudAt(tile.X, tile.Y))
+                return false;
+        }
+
+        return true;
+    }
+
+    private bool CanSwapTilesWithDynamicGate(TileView a, TileView b)
+    {
+        if (!useDynamicBoardInputGate)
+            return false;
+
+        if (a == null || !a || b == null || !b)
+            return false;
+
+        if (!AreNeighbors(a, b))
+            return false;
+
+        return CanTileAcceptDynamicInput(a) && CanTileAcceptDynamicInput(b);
+    }
+
+    internal bool CanStartDynamicSwap(TileView a, TileView b) => CanSwapTilesWithDynamicGate(a, b);
+
     public void RequestSwapFromDrag(TileView from, int dirX, int dirY)
     {
-        if (IsBusy) return;
+        if (from == null || !from)
+            return;
 
         int nx = from.X + dirX, ny = from.Y + dirY;
+
+        if (IsBusy)
+        {
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height)
+                return;
+
+            var otherBusy = tiles[nx, ny];
+            if (CanStartDynamicSwap(from, otherBusy))
+                StartCoroutine(ProcessDynamicSwap(from, otherBusy));
+            return;
+        }
 
         if (InputLocked)
         {
@@ -2118,7 +2268,36 @@ public class BoardController : MonoBehaviour
 
     public void OnTileClicked(TileView tile)
     {
-        if (IsBusy) return;
+        if (IsBusy)
+        {
+            if (!useDynamicBoardInputGate)
+                return;
+
+            if (selected == null)
+            {
+                if (CanTileAcceptDynamicInput(tile))
+                    SetSelectedTile(tile);
+                return;
+            }
+
+            if (selected == tile)
+            {
+                SetSelectedTile(null);
+                return;
+            }
+
+            if (CanStartDynamicSwap(selected, tile))
+            {
+                var a = selected;
+                SetSelectedTile(null);
+                StartCoroutine(ProcessDynamicSwap(a, tile));
+            }
+            else
+            {
+                SetSelectedTile(null);
+            }
+            return;
+        }
 
         if (InputLocked)
         {
@@ -2288,7 +2467,33 @@ public class BoardController : MonoBehaviour
         EndBusy();
     }
 
-    IEnumerator ProcessSwap(TileView a, TileView b)
+    private IEnumerator ProcessDynamicSwap(TileView a, TileView b)
+    {
+        BeginDynamicSwapLogic();
+        try
+        {
+            yield return ProcessSwap(a, b, dynamicInput: true);
+        }
+        finally
+        {
+            EndDynamicSwapLogic();
+        }
+    }
+
+    private IEnumerator PlaySwapVisual(TileView a, TileView b, bool immediate)
+    {
+        var action = new SwapAction(a, b, SwapDurationWithMultiplier);
+        if (immediate)
+        {
+            yield return action.ExecuteVisuals(actionSequencer);
+            yield break;
+        }
+
+        actionSequencer.Enqueue(action);
+        yield return AnimateQueuedActions();
+    }
+
+    IEnumerator ProcessSwap(TileView a, TileView b, bool dynamicInput = false)
     {
         if (a == null || b == null)
             yield break;
@@ -2342,8 +2547,7 @@ public class BoardController : MonoBehaviour
         SyncTileData(bx, by);
         RefreshAllSortingOrders();
 
-        actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
-        yield return AnimateQueuedActions();
+        yield return PlaySwapVisual(a, b, dynamicInput);
         if (obstacleSwapStateSnapshot != null)
             RefreshSwapObstacleVisuals(a, b);
         FlowLog("swap_anim");
@@ -2488,7 +2692,7 @@ public class BoardController : MonoBehaviour
             yield return AnimateQueuedActions();
             FlowLog("special_resolve");
 
-            yield return ResolveBoard(allowSpecialActivation: false, resolveEmptyCellsFirst: true);
+            yield return ResolveBoard(allowSpecialActivation: false, resolveEmptyCellsFirst: true, ignoreDynamicSwapGuard: dynamicInput);
             FlowLog("resolve_board");
             Debug.Log($"[Flow] ═══ SWAP END (special) ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
             EndBusy();
@@ -2532,8 +2736,7 @@ public class BoardController : MonoBehaviour
                 RefreshSwapObstacleVisuals(a, b);
             RefreshAllSortingOrders();
 
-            actionSequencer.Enqueue(new SwapAction(a, b, SwapDurationWithMultiplier));
-            yield return AnimateQueuedActions();
+            yield return PlaySwapVisual(a, b, dynamicInput);
             FlowLog("swap_back");
 
             Debug.Log($"[Flow] ═══ SWAP END (no match) ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
@@ -2547,7 +2750,7 @@ public class BoardController : MonoBehaviour
         // board'un önce fall/cascade çözmesine izin ver.
         if (matches.Count == 0 && shouldAcceptViaSettle)
         {
-            yield return ResolveBoard(resolveEmptyCellsFirst: true);
+            yield return ResolveBoard(resolveEmptyCellsFirst: true, ignoreDynamicSwapGuard: dynamicInput);
             FlowLog("resolve_board_after_settle");
             Debug.Log($"[Flow] ═══ SWAP END (settle-valid) ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
             EndBusy();
@@ -2556,7 +2759,7 @@ public class BoardController : MonoBehaviour
 
         yield return ExecuteClearPass(matches, allowSpecialActivation: true, swapCell: new Vector2Int(a.X, a.Y));
         FlowLog("clear_pass");
-        yield return ResolveBoard(resolveEmptyCellsFirst: true);
+        yield return ResolveBoard(resolveEmptyCellsFirst: true, ignoreDynamicSwapGuard: dynamicInput);
         FlowLog("resolve_board");
         Debug.Log($"[Flow] ═══ SWAP END ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
         EndBusy();
@@ -2934,7 +3137,7 @@ public class BoardController : MonoBehaviour
         return false;
     }
 
-    IEnumerator ResolveBoard(bool allowSpecialActivation = false, bool resolveEmptyCellsFirst = false)
+    IEnumerator ResolveBoard(bool allowSpecialActivation = false, bool resolveEmptyCellsFirst = false, bool ignoreDynamicSwapGuard = false)
     {
         float _rbStart = Time.realtimeSinceStartup;
         isSpecialActivationPhase = false;
@@ -2949,6 +3152,12 @@ public class BoardController : MonoBehaviour
 
         while (true)
         {
+            if (!ignoreDynamicSwapGuard && dynamicSwapLogicDepth > 0)
+            {
+                yield return null;
+                continue;
+            }
+
             safety++;
             if (safety > MaxResolveLoops)
                 yield break;

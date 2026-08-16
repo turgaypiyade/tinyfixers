@@ -57,6 +57,8 @@ public class TileView : MonoBehaviour,
     public BoardController Board => board;
     public int LastAppliedTileSize => lastAppliedTileSize > 0 ? lastAppliedTileSize : (board != null ? board.TileSize : 96);
     private bool boosterFiredOnDown;
+    public TileRuntimeState RuntimeState { get; private set; } = TileRuntimeState.Idle;
+    public bool IsRuntimeIdle => RuntimeState == TileRuntimeState.Idle;
 
     [SerializeField, Range(0.5f, 1f)]
     [FormerlySerializedAs("runtimeIconScale")]
@@ -143,6 +145,11 @@ public class TileView : MonoBehaviour,
         IsPlannedToMoveThisFallPass = value;
     }
 
+    public void SetRuntimeState(TileRuntimeState state)
+    {
+        RuntimeState = state;
+    }
+
     public void SetCoords(int x, int y)
     {
         X = x;
@@ -205,6 +212,7 @@ public class TileView : MonoBehaviour,
         X = x;
         Y = y;
         IsPlannedToMoveThisFallPass = false;
+        RuntimeState = TileRuntimeState.Idle;
 
         ResetVisualState();
         dragConsumedSwap = false;

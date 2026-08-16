@@ -78,6 +78,16 @@ public sealed class BoardFlowScheduler
          || BlockingActivityCount > 0);
 
     /// <summary>
+    /// Faz 7C: sütun-bazlı gravity/fall sinyali. Bu, global IsSettling'in yerine geçmez; Faz 8
+    /// input gating'i "dokunulan hücrelerin sütunları boşta mı?" sorusunu buradan soracak.
+    /// </summary>
+    public bool IsColumnSettling(int x) =>
+        board != null && board.IsColumnBusy(x);
+
+    public bool AreColumnsSettling(int a, int b) =>
+        IsColumnSettling(a) || IsColumnSettling(b);
+
+    /// <summary>
     /// Bir special GÖRSEL olarak uçuşta mı (süpürme/dash/detached sunum)? Overlap kapısı bunu okur:
     /// açıkken detached fall başlatmak, süpürme bitmeden refill düşürme bug'ını geri getirir.
     /// </summary>

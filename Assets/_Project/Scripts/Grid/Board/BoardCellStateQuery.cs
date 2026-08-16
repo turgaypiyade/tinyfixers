@@ -34,6 +34,8 @@ public static class BoardCellStateQuery
         TileView[,] tiles = board.Tiles;
         TileView tile = tiles != null ? tiles[x, y] : null;
         bool hasTile = tile != null;
+        TileRuntimeState tileRuntimeState = tile != null ? tile.RuntimeState : TileRuntimeState.Idle;
+        bool isReservedForTile = board.IsReservedTileTargetCell(x, y);
 
         // Tile'ın kaynak olarak kullanılabilmesi için hem board hücresi hem TileView koordinatı
         // aynı hücreyi göstermeli. Bu guard stale/misplaced TileView problemini yakalar.
@@ -45,7 +47,7 @@ public static class BoardCellStateQuery
             !isObstacleBlocked &&
             !isPendingTriggeredSpecial;
 
-        bool canAcceptTile = canContainTile && !hasTile;
+        bool canAcceptTile = canContainTile && !hasTile && !isReservedForTile;
         bool canProvideTile = canContainTile && hasTile && tileCoordinatesMatch;
 
         bool isPassThroughVoid = isMaskHole && !isObstacleBlocked;
@@ -74,6 +76,8 @@ public static class BoardCellStateQuery
             obstacleId,
             hasTile,
             tile,
+            tileRuntimeState,
+            isReservedForTile,
             isPendingTriggeredSpecial,
             canContainTile,
             canAcceptTile,
