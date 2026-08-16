@@ -53,6 +53,7 @@ public class TileView : MonoBehaviour,
     private Vector2 dragStartScreen;
     private bool dragConsumedSwap;
     private bool wasDragging;
+    private bool pointerDownWhileBoardBusy;
     public bool WasDragging => wasDragging;
     public BoardController Board => board;
     public int LastAppliedTileSize => lastAppliedTileSize > 0 ? lastAppliedTileSize : (board != null ? board.TileSize : 96);
@@ -2060,7 +2061,13 @@ public class TileView : MonoBehaviour,
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        if (board == null || board.IsBusy)
+        if (board == null)
+            return;
+
+        if (board.IsBusy && !board.UseDynamicBoardInputGate)
+            return;
+
+        if (board.IsBusy && !board.CanStartDynamicDrag(this))
             return;
 
         if (board.ActiveBooster != BoardController.BoosterMode.None)
@@ -2083,7 +2090,13 @@ public class TileView : MonoBehaviour,
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (board == null || board.IsBusy)
+        if (board == null)
+            return;
+
+        if (board.IsBusy && !board.UseDynamicBoardInputGate)
+            return;
+
+        if (board.IsBusy && !board.CanStartDynamicDrag(this))
             return;
 
         if (board.ActiveBooster != BoardController.BoosterMode.None)
@@ -2145,6 +2158,7 @@ public class TileView : MonoBehaviour,
     public void OnPointerDown(PointerEventData eventData)
     {
         boosterFiredOnDown = false;
+        pointerDownWhileBoardBusy = board != null && board.IsBusy;
         if (board != null && board.ActiveBooster != BoardController.BoosterMode.None)
         {
             boosterFiredOnDown = true;
@@ -2157,6 +2171,16 @@ public class TileView : MonoBehaviour,
         if (wasDragging || boosterFiredOnDown)
             return;
 
+        // Dynamic input sadece gerçekten busy anında alınmalı. Press busy iken başlayıp release/click
+        // board idle olduktan sonra gelirse, bu eski dokunuşu normal idle swap'a çevirmek "sonradan
+        // yaptı" hissi yaratır. Busy içinde biten click ise BoardController'ın dynamic gate'ine gider.
+        if (pointerDownWhileBoardBusy && board != null && !board.IsBusy)
+        {
+            pointerDownWhileBoardBusy = false;
+            return;
+        }
+
+        pointerDownWhileBoardBusy = false;
         board?.OnTileClicked(this);
     }
 

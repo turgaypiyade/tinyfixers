@@ -286,6 +286,10 @@ public class BoardController : MonoBehaviour
     [SerializeField] private bool useDynamicBoardInputGate;
     public bool UseDynamicBoardInputGate => useDynamicBoardInputGate;
 
+    [Tooltip("Sadece test: dynamic board input penceresini gözle yakalamak için fall sürelerini geçici uzatır. Kapalı=prod davranış.")]
+    [SerializeField] private bool useDynamicBoardInputTestSlowMo;
+    [SerializeField, Range(1f, 6f)] private float dynamicBoardInputTestFallDurationMultiplier = 2.5f;
+
     // Faz 7 ColumnBusy sinyali:
     // - columnBusyThisResolve: son CalculateCascades simülasyonunda hangi sütunlar mantıksal olarak değişti.
     // - columnFallVisualCounts: şu anda hangi sütunların fall görseli hâlâ uçuyor.
@@ -2182,6 +2186,12 @@ public class BoardController : MonoBehaviour
         if (tile.RuntimeState != TileRuntimeState.Idle)
             return false;
 
+        // 8B/8C güvenli kapsamı: dynamic input yalnız gravity/fall overlap içindir. Special/PatchBot
+        // görsel zinciri akarken input almak, special resolver ile yarışıp "kendiliğinden trigger"
+        // gibi görünen durumlar yaratabilir; special dynamic input ayrı doğrulanacak.
+        if (Flow.IsSpecialVisualInFlight)
+            return false;
+
         // 8B ilk canlı dilim: düşüş sırasında yalnız normal tile swap. Special/combo dynamic input,
         // special visual/resolve concurrency'si ayrıca doğrulanınca açılacak.
         if (tile.GetSpecial() != TileSpecial.None)
@@ -2208,6 +2218,8 @@ public class BoardController : MonoBehaviour
 
         return true;
     }
+
+    internal bool CanStartDynamicDrag(TileView tile) => CanTileAcceptDynamicInput(tile);
 
     private bool CanSwapTilesWithDynamicGate(TileView a, TileView b)
     {
@@ -2469,9 +2481,15 @@ public class BoardController : MonoBehaviour
 
     private IEnumerator ProcessDynamicSwap(TileView a, TileView b)
     {
+        if (!CanStartDynamicSwap(a, b))
+            yield break;
+
         BeginDynamicSwapLogic();
         try
         {
+            if (!CanStartDynamicSwap(a, b))
+                yield break;
+
             yield return ProcessSwap(a, b, dynamicInput: true);
         }
         finally
@@ -2496,6 +2514,12 @@ public class BoardController : MonoBehaviour
     IEnumerator ProcessSwap(TileView a, TileView b, bool dynamicInput = false)
     {
         if (a == null || b == null)
+            yield break;
+
+        // Dynamic input, input anında normal/idle sütunla sınırlı. Coroutine başlayana kadar
+        // resolve/special akışı bu tile'ları değiştirmiş olabilir; ikinci kapı special path'e
+        // kazara düşmeyi ve "kendi kendine trigger" gibi görünen yarışları engeller.
+        if (dynamicInput && !CanStartDynamicSwap(a, b))
             yield break;
 
         // Hamle kalmadıysa swap BAŞLATMA — 0 hamlede board idle olduğunda (fail
@@ -4294,7 +4318,13 @@ public class BoardController : MonoBehaviour
             ? activeFallProfile.FallSeconds(d)
             : d / FallVelocityCellsPerSecond;
 
-        return Mathf.Max(0.01f, duration * Mathf.Max(0.5f, GetCascadeFallSpeedMultiplier()));
+        float testSlowMo = 1f;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (useDynamicBoardInputGate && useDynamicBoardInputTestSlowMo)
+            testSlowMo = Mathf.Max(1f, dynamicBoardInputTestFallDurationMultiplier);
+#endif
+
+        return Mathf.Max(0.01f, duration * Mathf.Max(0.5f, GetCascadeFallSpeedMultiplier()) * testSlowMo);
     }
 
     // ── Aktif düşüş profili (Royal referans ölçümü) ─────────────────

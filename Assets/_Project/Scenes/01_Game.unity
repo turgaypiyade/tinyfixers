@@ -3598,8 +3598,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.04028436}
-  m_AnchorMax: {x: 1, y: 0.9443128}
+  m_AnchorMin: {x: 0, y: 0.075555556}
+  m_AnchorMax: {x: 0.80136985, y: 1.7711111}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8944,6 +8944,9 @@ MonoBehaviour:
   allowPostSwapSettleValidation: 1
   usePerColumnGravity: 1
   usePerColumnAsyncFalls: 1
+  useDynamicBoardInputGate: 1
+  useDynamicBoardInputTestSlowMo: 0
+  dynamicBoardInputTestFallDurationMultiplier: 2.5
   enableTileSyncValidation: 0
   enableSpecialChainTrace: 0
   enableBoardFlowTrace: 1
