@@ -89,11 +89,24 @@ sözleşmesi. Her special, combo ve clear şunu üretir/uygular:
 Combolar bespoke kalabilir (davranış farkı) ama **hepsi aynı Activity sözleşmesini** kullanır → zamanlama
 birleşir. SpecialChainRunner tek yayılım motoru olarak korunur ve bu sözleşmeye oturur.
 
-### 3.3 Perf sözleşmesi — iş kontrollü serpilir
+### 3.3 Perf sözleşmesi — iş kontrollü serpilir + Object Pooling
 Scheduler bir **frame-bütçesi** bilir: tek frame'de N'den fazla ağır iş (board taraması, GameObject/VFX
 instantiate, clear+cascade) başlamaz; fazlası sıradaki frame'e kayar. Override+PatchBot spread'i bunun
-manuel/özel hali — genelleştirilir. GC: hot-path `new List/HashSet/Action` havuzlanır (pool). Böylece
-"toplu" görsel korunurken tek-frame spike yapısal olarak imkânsız olur.
+manuel/özel hali — genelleştirilir.
+
+**OBJECT POOLING (en büyük GC kazancı — DURUM: YOK).** Ölçüldü (2026-08-16): taşlar `GridSpawner.SpawnTile`
+`Instantiate(tilePrefab)` + `BoardController.ClearAndDestroyTile` `Destroy(tile.gameObject)`; toplam kod
+tabanında **70 Instantiate + 231 Destroy + 218 `new GameObject`** (taş + VFX dust/dash/mud/beam + floating).
+Match-3'te saniyede onlarca taş yarat-yok-et → bellek parçalanması + GC spike → cihaz donması. **Çözüm:**
+(1) **TileView havuzu** — oyun başında max taş (grid + yedek) yaratılıp Deactive kuyruğa alınır; spawn =
+`Dequeue`+Active+veri set, clear = anim sonra reset+Deactive+`Enqueue` (Destroy YOK). Dinamik genişleme
+(havuz boşalırsa 5-10 ekle). **Kirli-veri sıfırlama ŞART** (renk/stage/obstacle/combo kalıntısı temizlenmeli
+— yoksa havuzdan eski efektle çıkar). (2) **Multi-pool** — particle/break-fx, floating-text/skor, dash/beam
+görselleri için ayrı küçük havuzlar (`Dictionary<key, Queue<GameObject>>`). **Enabler HAZIR:** MVC ayrımı
+zaten var (`GridData`=saf veri ↔ `TileView`=kukla); mantık taş yaratmıyor → pooling yalnız SpawnTile/
+ClearAndDestroyTile + VFX create/destroy'unu "al/iade"ye çevirir, oyun mantığına DOKUNMAZ. GC: ayrıca
+hot-path `new List/HashSet/Action` da havuzlanır. Böylece "toplu" görsel korunurken tek-frame + GC spike
+yapısal olarak imkânsız olur.
 
 ---
 
@@ -128,6 +141,29 @@ Bkz. [[project_device_stutter_perf_pass.md]].
   birleşir). Bespoke kalabilirler ama tek zamanlama.
 - **Faz 5 — Perf sözleşmesi:** frame-bütçesi + hot-path pool'ları. Spike'ları ölçümle doğrula.
 - **Faz 6 — Temizlik:** eski sinyaller/kendi settle-wait'ler/sticky flag'ler kaldırılır (artık ölü).
+
+### NİHAİ HEDEF: Dynamic Board (Faz 7-8) — ayrı iş, Faz 2-6'nın ÜSTÜNE kurulur
+Kullanıcı hedefi (2026-08-16): taşlar düşerken/zincir sürerken oyuncu boş köşede hamle yapabilsin
+("asenkron girdi"). **Faz 3-4 BU DEĞİL** — onlar special/combo'yu ortak sözleşmeye taşır, yani ön koşul.
+Sıra zorunlu: special'lar hâlâ "tüm board'u durduran" modeldeyken hücre-bazlı kilit koymak kazanç
+getirmez (oyuncu hamle yapar ama zincir yine her şeyi dondurur).
+
+- **Faz 7 — Per-column async:** `CalculateCascades` bugün TÜM board'u tek batch işliyor (global).
+  Düşüş/çözüm sütun bazına ayrılır: 2-3. sütun çalkalanırken 6-7. sütun gerçekten boşta kalır.
+  (Perf faydası da var: sadece aktif sütunlara CPU.)
+- **Faz 8 — Cell-based FSM + input-while-falling:**
+  - Her taşta `TileState` (Idle / Swapping / Matched / Falling); her hücrede rezervasyon durumu.
+  - Girdi kontrolü global `IsBusy` yerine **dokunulan iki taşın** durumuna bakar; ikisi de Idle ise
+    board'un geri kalanında ne olursa olsun hamleye izin.
+  - **Destination-cell rezervasyonu:** düşen taş hedef hücreyi rezerve eder → oyuncu oraya kaydıramaz
+    (klasik dinamik-tahta race condition'ı: iki taş aynı hücreye girip çökme).
+  - Sütun kilidi: patlama/düşüş olan sütun "meşgul", diğerleri Idle.
+
+**MEVCUT ALTYAPI (sıfırdan değil):** `pendingTriggeredSpecialCells` = hücre rezervasyonunun bir formu
+(gravity-blok; OBB 2x2 footprint'i bununla çözüldü). `activeMoveToken` ([[project_move_token_ownership]])
+= taş sahipliği/çift-sürme guard'ı. `TileView.FallGeneration` + `CancelActiveSettle` = animasyon sahipliği.
+`IsPlannedToMoveThisFallPass` = taş fall bayrağı. EKSİK: gerçek TileState FSM, sütun-bazlı gravity/kilit,
+input'un tile-state'e bakması (bugün `InputLocked => Locked || IsBusy` = global kilit).
 
 Her faz: flag arkasında (eski yol yanında), regresyon setiyle cihazda doğrulanır → onaylanınca eski yol silinir.
 
