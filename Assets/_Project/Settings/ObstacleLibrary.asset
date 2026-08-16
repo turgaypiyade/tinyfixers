@@ -1406,7 +1406,7 @@ MonoBehaviour:
     legacyBehavior: 1
   - id: 39
     stages:
-    - sprite: {fileID: 21300000, guid: 24b07efb5e31a47dcb27d7126bc635f5, type: 3}
+    - sprite: {fileID: 21300000, guid: 85991665fcd4b4fd9a6927fe43cad763, type: 3}
       damageRule: 1
       blocksCells: 1
       behavior: 1
@@ -1415,7 +1415,7 @@ MonoBehaviour:
       holdsTile: 0
       suppressHitParticles: 0
       hitParticleSprites: []
-      hitSound: {fileID: 0}
+      hitSound: {fileID: 8300000, guid: d0bbc64b1d4fd4beeb519f2cb32d9c16, type: 3}
       hitSoundVolume: 1
     auxiliarySprites: []
     allowCrossContextFallback: 0
@@ -1435,7 +1435,7 @@ MonoBehaviour:
     breakSound: {fileID: 0}
     breakSoundVolume: 1
     drawUnderTiles: 0
-    legacySprite: {fileID: 21300000, guid: 24b07efb5e31a47dcb27d7126bc635f5, type: 3}
+    legacySprite: {fileID: 21300000, guid: 85991665fcd4b4fd9a6927fe43cad763, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1
@@ -1640,9 +1640,9 @@ MonoBehaviour:
     hitParticleSprites: []
     breakParticleSprites: []
     wardrobeItemSprites: []
-    hitSound: {fileID: 0}
+    hitSound: {fileID: 8300000, guid: a5b3ada7ea2d641489f0a4019ac71186, type: 3}
     hitSoundVolume: 1
-    breakSound: {fileID: 0}
+    breakSound: {fileID: 8300000, guid: 92a5049dc3d2c44e190604744d71a9a7, type: 3}
     breakSoundVolume: 1
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: 656ad9091235247e384634762535e77a, type: 3}
