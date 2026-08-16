@@ -127,7 +127,31 @@ public sealed class SpecialChainRunner : BoardAction
     private bool IsProtectedCell(int x, int y) =>
         protectedCells != null && protectedCells.Contains(new Vector2Int(x, y));
 
+    // ── Faz 4 (Docs/UnifiedSpecialFlow_Plan.md): zincir motorunu Activity sözleşmesine bağla ──
+    // SpecialChainRunner hem special'ların hem combo'ların ORTAK motoru, ama FlowScheduler onu hiç
+    // görmüyordu. Kayıt EK (eski job/blocking semantiği aynen sürüyor) → davranış DEĞİŞMEZ; kazanç:
+    // (a) zincir bitince otomatik Pump (lost-wakeup imkânsız), (b) "board akıyor mu" sorusunun tek
+    // otoritesi zinciri de sayar, (c) Faz 6'da self-count baseline hack'ini kaldırmanın ön koşulu.
+    // NOT: zincirin İÇ sıralaması (ışın yolculuğu, halka halka yayılım) KASITLI koreografidir —
+    // dokunulmadı (bkz. Faz 3 dersi: PatchBot'ta kaza eseri blocking vardı, burada yok).
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
+    {
+        System.IDisposable chainActivity = (board != null && board.UseFlowActivities)
+            ? board.Flow.Begin(BoardFlowScheduler.ActivityKind.ComboStep)
+            : null;
+        try
+        {
+            var inner = RunChainVisuals(sequencer);
+            while (inner.MoveNext())
+                yield return inner.Current;
+        }
+        finally
+        {
+            chainActivity?.Dispose();
+        }
+    }
+
+    private IEnumerator RunChainVisuals(ActionSequencer sequencer)
     {
         bool hasSimultaneousPulses = simultaneousPulseCells != null && simultaneousPulseCells.Count > 0;
         bool hasSimultaneousLines = simultaneousLineCells != null && simultaneousLineCells.Count > 0;
