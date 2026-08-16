@@ -1862,6 +1862,18 @@ public class BoardController : MonoBehaviour
     // Havuz boşsa Instantiate ile dinamik büyür. Kapalıyken tam eski davranış (Instantiate/Destroy).
     private readonly Queue<TileView> _tilePool = new Queue<TileView>();
 
+    // Level (yeniden) kurulurken havuzu sıfırla. Board teardown'ı root'ların çocuklarını Destroy
+    // ettiği için havuzda "yok edilmiş" referanslar kalabilir; taze level taze havuzla başlasın.
+    internal void ClearTilePool()
+    {
+        while (_tilePool.Count > 0)
+        {
+            var pooled = _tilePool.Dequeue();
+            if (pooled != null && pooled)
+                Destroy(pooled.gameObject);
+        }
+    }
+
     // Yeni taş GameObject'i ver: havuzda varsa oradan (aktive), yoksa Instantiate (dinamik büyüme).
     // Çağıran sonra Init/SetType ile taşı kurar (mevcut spawn kodları aynen çalışır).
     internal GameObject AcquireTileObject(Transform tileParent)

@@ -571,6 +571,9 @@ public class GridSpawner : MonoBehaviour
         ClearChildren(underTilesObstaclesRoot);
         ClearChildren(overTilesObstaclesRoot);
         ClearChildren(tilesRoot);
+        // Taş havuzu: teardown root çocuklarını Destroy ettiği için havuzda ölü referans kalabilir →
+        // taze level taze havuzla başlasın (pooling kapalıysa zaten no-op, havuz boş).
+        board?.ClearTilePool();
         obstacleViewsByOrigin.Clear();
         obstacleDefsByOrigin.Clear();
         beneathViewsByCell.Clear();

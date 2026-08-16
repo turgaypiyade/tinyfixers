@@ -2204,10 +2204,18 @@ public class TileView : MonoBehaviour,
     // tarafı Init(ResetVisualState) + SetType + SetSpecial ile taşı yeniden kurar → havuz taşı "yeni" gelir.
     public void PrepareForRelease()
     {
-        CancelActiveSettle();               // eski detached settle/uçuş coroutine'i öldür
+        // Bu taşın ÜSTÜNDE koşan her coroutine ölsün (fall/settle/reveal/idle-FX). Havuzdan yeniden
+        // alındığında eski bir animasyon pozisyon/scale/alpha sürmeye devam ederse "hayalet" glitch olur.
+        StopAllCoroutines();
+        CancelActiveSettle();               // token/generation defterini de temizle
         StopSpecialCreationReveal();         // reveal routine + halo root Destroy
         ClearMovableObstaclePresentation();  // isMovableObstacleTile/sprite sıfırla
-        SetSpecial(TileSpecial.None, deferVisualUpdate: true);
+
+        // SetSpecial model'i null-guard'sız kullanıyor; release yolu taşın bozuk/yarım durumda
+        // olabildiği bir yol (ClearAndDestroyTile MissingReferenceException yakalıyor) → burada koru.
+        if (model != null)
+            model.SetSpecial(TileSpecial.None);
+
         IsPlannedToMoveThisFallPass = false;
         lastFallGeneration = -1;
         ResetVisualState();                  // scale/rotation/alpha/icon/propeller
