@@ -154,6 +154,18 @@ public class PatchbotDashUI : MonoBehaviour
         co = StartCoroutine(DashRoutine(pathTiles));
     }
 
+    // ADDITIVE (2026-08-16): yeni parti öncekini İPTAL ETMEZ.
+    //
+    // ESKİ DAVRANIŞ HATALIYDI: `if (co != null) StopCoroutine(co)` çalışan parti rutinini öldürüyordu.
+    // Çocuk SingleDashRoutine'ler ayrı coroutine olduğu için ölmüyor, AMA parti döngüsü yarıda kesildiği
+    // için KALAN istekler hiç başlatılmıyordu → (a) "botların bir kısmı havalanmadı", (b) o istekler için
+    // `BeginPatchBotDashFlight()` kuyruğa girerken ÇAĞRILMIŞ ama karşılığı `EndPatchBotDashFlight()`
+    // yalnız onArrived'ın finally'sinde olduğundan JOB SIZDI → level-end ActiveBackgroundJobs'ı bekledi →
+    // "win/lose popup çok geç çıktı". İki semptom da tek kökten; yarış-koşulu olduğu için aralıklıydı.
+    //
+    // İptalin meşru bir amacı yok: her dash kendi "PatchbotRunnerInstance" GameObject'ini yaratır, partiler
+    // görsel olarak bağımsızdır. Bu yüzden partiler artık yan yana koşar (üst üste pompa GÜVENLİ hale gelir;
+    // Faz 3'te clear'ı non-blocking yapmanın da ön koşuluydu).
     public Coroutine PlayDashParallel(List<BoardController.PatchbotDashRequest> requests, BoardController board, float syncDuration = -1f)
     {
         EnsureHierarchyActive();
@@ -162,9 +174,7 @@ public class PatchbotDashUI : MonoBehaviour
             ? new List<BoardController.PatchbotDashRequest>(requests)
             : null;
 
-        if (co != null) StopCoroutine(co);
-        co = StartCoroutine(DashParallelRoutine(requestCopy, board, syncDuration));
-        return co;
+        return StartCoroutine(DashParallelRoutine(requestCopy, board, syncDuration));
     }
 
     private IEnumerator DashParallelRoutine(List<BoardController.PatchbotDashRequest> requests, BoardController board, float syncDuration)
@@ -197,7 +207,8 @@ public class PatchbotDashUI : MonoBehaviour
         while (remaining > 0)
             yield return null;
 
-        co = null;
+        // NOT: `co` alanına DOKUNULMAZ — o yalnız legacy PlayDash (tek-yol) API'sine ait. Parti
+        // rutinleri artık bağımsız koştuğu için paylaşılan bir "aktif rutin" göstergesi tutmuyoruz.
     }
 
     private IEnumerator SingleDashRoutine(
