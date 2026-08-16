@@ -51,7 +51,7 @@ Detaylar: `UnifiedSpecialFlow_Plan.md` (senkron akış), `ObstacleFlow_Inventory
 | Faz | İş | Neden gerekli |
 |---|---|---|
 | **Faz 2** | MatchClear'ı Activity sözleşmesine taşı | Sticky special-phase türev'e döner |
-| **Faz 3** | Special'ları taşı (LineV/H, Pulse, Override, PatchBot) | Kendi settle-wait'leri ölür; **PatchBot vuruş beklemesi burada çözülür** |
+| ~~Faz 3~~ ✅ | Special'lar | **BİTTİ.** PatchBot arrival clear'ı blocking kuyruğa giriyordu → `isBlocking:false` ile çözüldü (vuruşlar arası donma gitti). LineV/H·Pulse·Override'da yapılacak iş YOK: `SpecialChainRunner` halkaları `StartImmediateAction` ile paralel koşuyor, zincirler arrival-trigger ile eşzamanlı → oradaki sıralılık **kasıtlı koreografi**, dokunmak showpiece'i bozar |
 | **Faz 4** | 9 bespoke combo'yu taşı | Zamanlama birleşir (davranış korunur) |
 | **Faz 5** | Perf sözleşmesi: frame-bütçesi + VFX multi-pool + hot-path alloc pool | Tek-frame spike yapısal olarak imkânsız |
 | **Faz 6** | Temizlik: eski sinyaller/settle-wait/sticky flag sil | Bir faz, eski yol silinene kadar BİTMİŞ sayılmaz |
