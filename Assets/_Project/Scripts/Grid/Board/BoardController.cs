@@ -285,6 +285,13 @@ public class BoardController : MonoBehaviour
     // havuzdan alınır/iade edilir → match-3'ün yarat-yok-et GC spike'ı biter. Kapalı = eski davranış.
     [Tooltip("Taş havuzu: Instantiate/Destroy yerine havuzdan al/iade (GC spike fix). Kapalı=eski yol.")]
     [SerializeField] private bool useTilePool;
+
+    // Faz 2+ (Docs/UnifiedSpecialFlow_Plan.md): clear/special işleri FlowScheduler'a Activity olarak
+    // kaydolur. Faz 2'de EK kayıt (eski job/bayrak da sürüyor) → davranış aynı, ama (a) bitişte otomatik
+    // Pump (lost-wakeup imkânsız), (b) special-phase scope-garantili (finally) → "asılı bayrak" biter.
+    [Tooltip("FlowScheduler Activity kaydı (Faz 2+). Kapalı=eski yol.")]
+    [SerializeField] private bool useFlowActivities;
+    public bool UseFlowActivities => useFlowActivities;
     [SerializeField] private bool throwOnTileSyncMismatch;
     [SerializeField] private float tilePositionEpsilon = 0.25f;
 #endif
@@ -1161,7 +1168,14 @@ public class BoardController : MonoBehaviour
         IsSpecialActivationPhase
         || PresentationFxInFlight > 0
         || FlyingPatchBotDashes > 0
-        || (actionSequencer != null && actionSequencer.DetachedActionsInFlight > 0);
+        || (actionSequencer != null && actionSequencer.DetachedActionsInFlight > 0)
+        // Faz 2: kayıtlı SpecialSweep Activity'si de sayılır. Bu, TARİHSEL BOŞLUĞU kapatır:
+        // MatchClearAction.RunClear, IsSpecialActivationPhase'i EnqueueCascadeIfNeeded'DEN ÖNCE geri
+        // alıyor → special'ın kendi takip cascade'i bayrak false iken koşuyordu (LineV "sütun bitmeden
+        // refill düştü" bug'ının kaynağı; sticky bayrak bu yüzden vardı). Activity finally'ye kadar
+        // sürdüğü için o pencere artık kapalı. Yalnız EK sinyal (asla azaltmaz) → güvenli.
+        || (useFlowActivities && flowScheduler != null
+            && flowScheduler.Count(BoardFlowScheduler.ActivityKind.SpecialSweep) > 0);
 
     // Leak safety net: invalidate every outstanding handle (their Dispose becomes a no-op via epoch)
     // and zero counts. Called by ResolveBoard's 5s blocking timeout AND by the level-end recovery when

@@ -81,9 +81,25 @@ public class MatchClearAction : BoardAction
     {
         // Non-blocking match clear registers a Resolve job so the resolve loop waits for it.
         // The handle's Dispose in finally guarantees no leak even if the clear anim throws/bails.
+        var board = sequencer != null ? sequencer.Board : null;
+
         System.IDisposable clearJob = isBlocking
             ? null
-            : sequencer.Board.BeginJob(BoardController.BoardJobKind.Resolve);
+            : board.BeginJob(BoardController.BoardJobKind.Resolve);
+
+        // ── Faz 2 (Docs/UnifiedSpecialFlow_Plan.md): FlowScheduler Activity kaydı ──
+        // EK kayıt (eski job/bayrak da sürüyor) → davranış AYNI. Kazanç: (a) Dispose'da otomatik Pump →
+        // clear bitince akış kendiliğinden ilerler (lost-wakeup imkânsız), (b) SpecialSweep kaydı
+        // finally ile scope-garantili → RunClear'ın ÇOK ÇIKIŞLI (erken yield break + 2 ayrı restore)
+        // yapısında bayrağın asılı kalması ("stuck specialPhase") YAPISAL olarak imkânsız.
+        bool useFlow = board != null && board.UseFlowActivities;
+        System.IDisposable clearActivity = useFlow
+            ? board.Flow.Begin(BoardFlowScheduler.ActivityKind.Clear)
+            : null;
+        System.IDisposable sweepActivity = useFlow && isSpecialActivationPhase
+            ? board.Flow.Begin(BoardFlowScheduler.ActivityKind.SpecialSweep)
+            : null;
+
         try
         {
             var inner = RunClear(sequencer);
@@ -92,6 +108,8 @@ public class MatchClearAction : BoardAction
         }
         finally
         {
+            sweepActivity?.Dispose();
+            clearActivity?.Dispose();
             clearJob?.Dispose();
         }
     }
