@@ -982,6 +982,10 @@ public class BoardController : MonoBehaviour
     private float _perfWindowSumMs;
     private float _perfWindowWorstMs;
     private long _perfWindowStartGc;
+    private float _perfLastSpikeLog;
+    private int _perfSuppressedSpikes;
+    private int _perfIdleFrames;
+    private long _perfIdleGcKB;
 
     private void SamplePerf()
     {
@@ -1000,11 +1004,30 @@ public class BoardController : MonoBehaviour
         long gcDeltaKB = (gc - _perfLastGc) / 1024;   // + = bu frame alloc; - = collection oldu
         _perfLastGc = gc;
 
+        // GÖZLEMCİ ETKİSİ FIX: eşik her karede aşılırsa Debug.Log fırtınası olur; Editor'de her log
+        // stack-trace yakalar (ek alloc + yavaşlama) → ölçüm kendini şişirir. En fazla 0.5s'de bir yaz,
+        // aradaki spike'ları say. Sayaçlar (baseline) TÜM kareleri kapsamaya devam eder.
         if (ms >= perfSpikeMs || gcDeltaKB >= perfGcSpikeKB)
         {
-            Debug.Log($"[PerfSpike] t={Time.realtimeSinceStartup:0.000} frameMs={ms:0.0} gcKB={gcDeltaKB} " +
-                $"| busy={IsBusy} specialPhase={IsSpecialActivationPhase} activeJobs={ActiveBackgroundJobs} " +
-                $"blockJobs={BlockingBackgroundJobs} seq={IsActionSequencePlaying} state={CurrentState}");
+            _perfSuppressedSpikes++;
+            if (Time.realtimeSinceStartup - _perfLastSpikeLog >= 0.5f)
+            {
+                Debug.Log($"[PerfSpike] t={Time.realtimeSinceStartup:0.000} frameMs={ms:0.0} gcKB={gcDeltaKB} " +
+                    $"(son 0.5s'de {_perfSuppressedSpikes} spike) " +
+                    $"| busy={IsBusy} specialPhase={IsSpecialActivationPhase} activeJobs={ActiveBackgroundJobs} " +
+                    $"blockJobs={BlockingBackgroundJobs} seq={IsActionSequencePlaying} state={CurrentState}");
+                _perfLastSpikeLog = Time.realtimeSinceStartup;
+                _perfSuppressedSpikes = 0;
+            }
+        }
+
+        // IDLE ALLOCATION: board hiçbir iş yapmazken kare başına ne kadar çöp üretiliyor? Taş
+        // havuzu bunu ETKİLEMEZ (idle'da taş doğmaz/ölmez) → buradaki değer "board dışı" kaynağı
+        // (UI/canvas/timer/log) işaret eder. Asıl GC baskısı burada mı, resolve'da mı ayırt eder.
+        if (!IsBusy && ActiveBackgroundJobs == 0 && !IsActionSequencePlaying)
+        {
+            _perfIdleFrames++;
+            _perfIdleGcKB += gcDeltaKB;
         }
 
         _perfWindowFrames++;
@@ -1015,12 +1038,16 @@ public class BoardController : MonoBehaviour
         {
             float avg = _perfWindowFrames > 0 ? _perfWindowSumMs / _perfWindowFrames : 0f;
             long netGcKB = (gc - _perfWindowStartGc) / 1024;
-            Debug.Log($"[PerfBaseline] {_perfWindowFrames}f/3s avgMs={avg:0.0} worstMs={_perfWindowWorstMs:0.0} netGcKB={netGcKB}");
+            float idleKbPerFrame = _perfIdleFrames > 0 ? (float)_perfIdleGcKB / _perfIdleFrames : 0f;
+            Debug.Log($"[PerfBaseline] {_perfWindowFrames}f/3s avgMs={avg:0.0} worstMs={_perfWindowWorstMs:0.0} " +
+                      $"netGcKB={netGcKB} | IDLE: {_perfIdleFrames}f alloc={idleKbPerFrame:0.0}KB/frame");
             _perfWindowStart = Time.realtimeSinceStartup;
             _perfWindowFrames = 0;
             _perfWindowSumMs = 0f;
             _perfWindowWorstMs = 0f;
             _perfWindowStartGc = gc;
+            _perfIdleFrames = 0;
+            _perfIdleGcKB = 0;
         }
     }
 
