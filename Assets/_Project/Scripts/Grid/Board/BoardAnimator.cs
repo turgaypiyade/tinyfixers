@@ -1731,7 +1731,7 @@ public class BoardAnimator
                 if (board.Holes[x, y]) continue;
                 if (board.Tiles[x, y] != null) continue;
 
-                var go = UnityEngine.Object.Instantiate(board.TilePrefab, board.Parent);
+                var go = board.AcquireTileObject(board.Parent);   // havuz açıksa iadeden, yoksa Instantiate
                 var view = go.GetComponent<TileView>();
                 if (view == null)
                 {
@@ -1866,7 +1866,7 @@ public class BoardAnimator
                         if (board.Holes[x, y]) continue;
                         if (board.Tiles[x, y] != null) continue;
 
-                        var go = UnityEngine.Object.Instantiate(board.TilePrefab, board.Parent);
+                        var go = board.AcquireTileObject(board.Parent);   // havuz açıksa iadeden, yoksa Instantiate
                         var view = go.GetComponent<TileView>();
                         if (view == null)
                         {

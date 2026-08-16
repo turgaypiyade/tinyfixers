@@ -2198,6 +2198,21 @@ public class TileView : MonoBehaviour,
             ApplyTileSize(lastAppliedTileSize);
     }
 
+    // ── Object pool: havuza iade ÖNCESİ tam reset (Docs/UnifiedSpecialFlow_Plan.md §3.3) ──
+    // "Kirli veri" bug'ını (havuzdan eski renk/special/kırık-efekt/combo ile çıkma) önler. Görsel reset
+    // ResetVisualState'te; burada coroutine + special + movable + reveal + fall-state temizliği. Acquire
+    // tarafı Init(ResetVisualState) + SetType + SetSpecial ile taşı yeniden kurar → havuz taşı "yeni" gelir.
+    public void PrepareForRelease()
+    {
+        CancelActiveSettle();               // eski detached settle/uçuş coroutine'i öldür
+        StopSpecialCreationReveal();         // reveal routine + halo root Destroy
+        ClearMovableObstaclePresentation();  // isMovableObstacleTile/sprite sıfırla
+        SetSpecial(TileSpecial.None, deferVisualUpdate: true);
+        IsPlannedToMoveThisFallPass = false;
+        lastFallGeneration = -1;
+        ResetVisualState();                  // scale/rotation/alpha/icon/propeller
+    }
+
     public void SetFullCellMovableSprite(bool value)
     {
         isFullCellMovableSprite = value;

@@ -268,6 +268,23 @@ public class BoardController : MonoBehaviour
     [SerializeField] private bool enableTileSyncValidation = true;
     [SerializeField] private bool enableSpecialChainTrace;
     [SerializeField] private bool enableBoardFlowTrace;
+
+    // ── Faz 0 perf logger (ölçüm-önce; Docs/UnifiedSpecialFlow_Plan.md) ──
+    // Açıkken her frame'i örnekler: eşik üstü frame süresi VEYA GC-alloc sıçraması = [PerfSpike]
+    // (board bağlamıyla: busy/specialPhase/jobs/seq → takılma NE ZAMAN + NE koşarken). Her ~3s
+    // [PerfBaseline] (avg/worst ms + net GC). Cihazda repro → Editor.log'dan hotspot. Yeni component/
+    // sahne değişikliği yok, tek inspector bool.
+    [Header("Perf")]
+    [SerializeField] private bool enablePerfMonitor;
+    [Tooltip("Bu ms üstü frame = spike log. 60fps→16.7, 30fps→33; 28 hitch'leri yakalar.")]
+    [SerializeField] private float perfSpikeMs = 28f;
+    [Tooltip("Bir frame'de bu KB üstü managed-heap artışı = alloc spike log.")]
+    [SerializeField] private int perfGcSpikeKB = 64;
+
+    // Object pool (Docs/UnifiedSpecialFlow_Plan.md §3.3). Açıkken taşlar Instantiate/Destroy yerine
+    // havuzdan alınır/iade edilir → match-3'ün yarat-yok-et GC spike'ı biter. Kapalı = eski davranış.
+    [Tooltip("Taş havuzu: Instantiate/Destroy yerine havuzdan al/iade (GC spike fix). Kapalı=eski yol.")]
+    [SerializeField] private bool useTilePool;
     [SerializeField] private bool throwOnTileSyncMismatch;
     [SerializeField] private float tilePositionEpsilon = 0.25f;
 #endif
@@ -916,7 +933,7 @@ public class BoardController : MonoBehaviour
         TryStartResolveAfterActionSequence();
     }
 
-    private void TryStartResolveAfterActionSequence()
+    internal void TryStartResolveAfterActionSequence()
     {
         if (!resolveAfterActionSequenceRequested || resolveAfterActionSequenceRunning)
             return;
@@ -949,7 +966,62 @@ public class BoardController : MonoBehaviour
     // istek yoksa saf no-op → maliyet ihmal edilebilir.
     private void Update()
     {
-        TryStartResolveAfterActionSequence();
+        // Sürekli pompa TEK OTORİTEDEN (FlowScheduler). Edge-triggered değil → blocking iş sessizce
+        // bitse bile bekleyen resolve asılı kalmaz (lost-wakeup sınıfı yapısal olarak kapalı).
+        Flow.Pump();
+
+        if (enablePerfMonitor)
+            SamplePerf();
+    }
+
+    // ── Faz 0 perf sampler ──
+    private long _perfLastGc;
+    private bool _perfInit;
+    private float _perfWindowStart;
+    private int _perfWindowFrames;
+    private float _perfWindowSumMs;
+    private float _perfWindowWorstMs;
+    private long _perfWindowStartGc;
+
+    private void SamplePerf()
+    {
+        long gc = System.GC.GetTotalMemory(false);
+
+        if (!_perfInit)
+        {
+            _perfInit = true;
+            _perfLastGc = gc;
+            _perfWindowStart = Time.realtimeSinceStartup;
+            _perfWindowStartGc = gc;
+            return;
+        }
+
+        float ms = Time.unscaledDeltaTime * 1000f;
+        long gcDeltaKB = (gc - _perfLastGc) / 1024;   // + = bu frame alloc; - = collection oldu
+        _perfLastGc = gc;
+
+        if (ms >= perfSpikeMs || gcDeltaKB >= perfGcSpikeKB)
+        {
+            Debug.Log($"[PerfSpike] t={Time.realtimeSinceStartup:0.000} frameMs={ms:0.0} gcKB={gcDeltaKB} " +
+                $"| busy={IsBusy} specialPhase={IsSpecialActivationPhase} activeJobs={ActiveBackgroundJobs} " +
+                $"blockJobs={BlockingBackgroundJobs} seq={IsActionSequencePlaying} state={CurrentState}");
+        }
+
+        _perfWindowFrames++;
+        _perfWindowSumMs += ms;
+        if (ms > _perfWindowWorstMs) _perfWindowWorstMs = ms;
+
+        if (Time.realtimeSinceStartup - _perfWindowStart >= 3f)
+        {
+            float avg = _perfWindowFrames > 0 ? _perfWindowSumMs / _perfWindowFrames : 0f;
+            long netGcKB = (gc - _perfWindowStartGc) / 1024;
+            Debug.Log($"[PerfBaseline] {_perfWindowFrames}f/3s avgMs={avg:0.0} worstMs={_perfWindowWorstMs:0.0} netGcKB={netGcKB}");
+            _perfWindowStart = Time.realtimeSinceStartup;
+            _perfWindowFrames = 0;
+            _perfWindowSumMs = 0f;
+            _perfWindowWorstMs = 0f;
+            _perfWindowStartGc = gc;
+        }
     }
 
     // Starts a board action immediately as a background job, running concurrently
@@ -1037,6 +1109,17 @@ public class BoardController : MonoBehaviour
     public int PresentationFxInFlight => _jobCounts[(int)BoardJobKind.PresentationFx];
     public int SpreadingObstacles    => _jobCounts[(int)BoardJobKind.ObstacleSpread];
 
+    // Sequencer'ın non-blocking (detached) action kuyruğu — FlowScheduler bunu da "akış sürüyor"
+    // sinyaline katar (IsPlaying detached tail'leri görmez, bkz. ActionSequencer).
+    public int DetachedSequencerActions =>
+        actionSequencer != null ? actionSequencer.DetachedActionsInFlight : 0;
+
+    // ── Board akışının TEK OTORİTESİ (Docs/UnifiedSpecialFlow_Plan.md Faz 1) ──
+    // Yeni kod "board oturdu mu / adım koşabilir mi" için elle sinyal birleştirmemeli; buna sormalı.
+    // Faz 1'de adapter (davranış aynı); sonraki fazlarda special/combo/clear buraya taşınır.
+    private BoardFlowScheduler flowScheduler;
+    public BoardFlowScheduler Flow => flowScheduler ??= new BoardFlowScheduler(this);
+
     // Faz 4 (decoupled-resolve): a special is VISUALLY in flight if any board-tile-affecting special
     // visual is still running — the detached PresentationFx sweep (line/pulse/override beams committed
     // then animated, BlockingBackgroundJobs==0 so the old gate missed it), a PatchBot dash sweep, OR a
@@ -1060,6 +1143,7 @@ public class BoardController : MonoBehaviour
     {
         _jobEpoch++;
         System.Array.Clear(_jobCounts, 0, _jobCounts.Length);
+        flowScheduler?.DrainAll();   // yeni Activity kayıtları da geçersiz kılınsın (tek otorite tutarlı kalsın)
     }
 
     // ---- Legacy paired Begin/End shims (call sites are already try/finally-paired) ----
@@ -1773,6 +1857,54 @@ public class BoardController : MonoBehaviour
 
     internal void ClearCell(int x, int y) { if (x < 0 || x >= width || y < 0 || y >= height) return; tiles[x, y] = null; gridData[x, y] = null; }
 
+    // ── Tile object pool (Docs/UnifiedSpecialFlow_Plan.md §3.3) ──
+    // useTilePool açıkken taş GameObject'leri yaratılıp yok edilmez; havuzdan alınıp iade edilir.
+    // Havuz boşsa Instantiate ile dinamik büyür. Kapalıyken tam eski davranış (Instantiate/Destroy).
+    private readonly Queue<TileView> _tilePool = new Queue<TileView>();
+
+    // Yeni taş GameObject'i ver: havuzda varsa oradan (aktive), yoksa Instantiate (dinamik büyüme).
+    // Çağıran sonra Init/SetType ile taşı kurar (mevcut spawn kodları aynen çalışır).
+    internal GameObject AcquireTileObject(Transform tileParent)
+    {
+        if (useTilePool)
+        {
+            while (_tilePool.Count > 0)
+            {
+                var pooled = _tilePool.Dequeue();
+                if (pooled == null || !pooled) continue;   // yok edilmiş referans (safety)
+                var go = pooled.gameObject;
+                go.transform.SetParent(tileParent, false);
+                go.SetActive(true);
+                return go;
+            }
+        }
+        return Instantiate(tilePrefab, tileParent);
+    }
+
+    // Taşı havuza iade et (Destroy yerine): tam reset + deaktive + kuyruğa. Çağıran ÖNCE grid
+    // referansını temizlemeli (ClearCell) — bu metod yalnız GameObject/veri yaşam döngüsünü yönetir.
+    internal void ReleaseTile(TileView tile)
+    {
+        if (tile == null || !tile)
+            return;
+
+        if (!useTilePool)
+        {
+            Destroy(tile.gameObject);
+            return;
+        }
+
+        var go = tile.gameObject;
+        if (!go.activeSelf)
+            return;   // ÇİFT-RELEASE guard: zaten iade edilmiş (deaktif) → tekrar kuyruklama (bozulma önle)
+
+        tile.PrepareForRelease();
+        go.SetActive(false);
+        if (parent != null)
+            go.transform.SetParent(parent, false);   // deaktif, tilesRoot altında bekler
+        _tilePool.Enqueue(tile);
+    }
+
     internal void ClearAndDestroyTile(TileView tile, Dictionary<TileType, int> clearedByType = null)
     {
         if (tile == null || !tile)
@@ -1832,9 +1964,9 @@ public class BoardController : MonoBehaviour
         if (tile != null && tile)
         {
             // Progress-event "+1" FX'i taşın yanında doğsun diye dünya pozisyonunu yayınla
-            // (destroy'dan ÖNCE). Sayım NotifyTilesCleared'da; bu sadece görsel ipucu.
+            // (release'den ÖNCE). Sayım NotifyTilesCleared'da; bu sadece görsel ipucu.
             GameEventBus.EmitTileClearedAt(fxType, tile.transform.position);
-            Destroy(tile.gameObject);
+            ReleaseTile(tile);   // havuz açıksa iade, kapalıysa Destroy (eski davranış)
         }
     }
 

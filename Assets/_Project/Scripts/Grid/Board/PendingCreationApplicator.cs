@@ -100,7 +100,7 @@ public sealed class PendingCreationApplicator
         if (board.Tiles[x, y] != null)
             return board.Tiles[x, y];
 
-        var go = Object.Instantiate(board.TilePrefab, board.Parent);
+        var go = board.AcquireTileObject(board.Parent);   // havuz açıksa iadeden, yoksa Instantiate
         var tile = go.GetComponent<TileView>();
 
         if (tile == null)

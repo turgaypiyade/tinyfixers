@@ -230,7 +230,7 @@ public class CascadeLogic
                     }
                     else
                     {
-                        var go = UnityEngine.Object.Instantiate(board.TilePrefab, board.Parent);
+                        var go = board.AcquireTileObject(board.Parent);   // havuz açıksa iadeden, yoksa Instantiate
                         view = go.GetComponent<TileView>();
                         view.Init(board, finalX, finalY);
                         board.ConfigureTileView(view);
@@ -935,7 +935,7 @@ public class CascadeLogic
 
         if (def == null) return null;
 
-        var go = UnityEngine.Object.Instantiate(board.TilePrefab, board.Parent);
+        var go = board.AcquireTileObject(board.Parent);   // havuz açıksa iadeden, yoksa Instantiate
         var view = go.GetComponent<TileView>();
         if (view == null)
         {
