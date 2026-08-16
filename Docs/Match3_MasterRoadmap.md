@@ -18,7 +18,7 @@ Detaylar: `UnifiedSpecialFlow_Plan.md` (senkron akış), `ObstacleFlow_Inventory
 | A4 | **Chain reaction** (işaretle→kuyruk→çöz) | ✅ var | `ActivationQueueProcessor`: `Queued`+`Processed` çift guard (=isDestroying), **iteratif** while → Stack Overflow riski YOK |
 | A5 | **Object Pooling** (Instantiate/Destroy yok) | 🧪 kısmi | Taş havuzu kodlandı (flag `useTilePool`, default KAPALI). VFX multi-pool YOK |
 | A6 | **Örtüşen patlama** (efekt beklenmeden düşüş) | 🧪 kısmi | Normal cascade fall→clear overlap ✅; **special/obstacle patlamaları hâlâ akışı bekletiyor** 🔍 |
-| A7 | **Sütun-bazlı bağımsız işlem** | 📋 yok | `CalculateCascades` TÜM board'u tek batch işliyor (global) → Faz 7 |
+| A7 | **Sütun-bazlı bağımsız işlem** | 🧪 7A ✅ onaylı | Faz 7A: `CalculateCascades` sim'i `ColumnFlowEngine`'e taşındı (flag `usePerColumnGravity`, default KAPALI). Davranış-birebir + settled sütun atlama + `ColumnBusy` sinyali. **Cihazda birebir doğrulandı.** **7B/7C bekliyor** (async emisyon + input hook) |
 | A8 | **Dynamic Board** (düşerken hamle) | 📋 yok | `InputLocked => Locked \|\| IsBusy` = global kilit → Faz 8 |
 
 ---
@@ -55,7 +55,7 @@ Detaylar: `UnifiedSpecialFlow_Plan.md` (senkron akış), `ObstacleFlow_Inventory
 | **Faz 4** | 9 bespoke combo'yu taşı | Zamanlama birleşir (davranış korunur) |
 | **Faz 5** | Perf sözleşmesi: frame-bütçesi + VFX multi-pool + hot-path alloc pool | Tek-frame spike yapısal olarak imkânsız |
 | **Faz 6** | Temizlik: eski sinyaller/settle-wait/sticky flag sil | Bir faz, eski yol silinene kadar BİTMİŞ sayılmaz |
-| **Faz 7** | **Per-column async** (global gravity → sütun bazlı) | A7; dinamik tahtanın ön koşulu |
+| **Faz 7** | **Per-column async** (global gravity → sütun bazlı). **7A kodlandı** (`ColumnFlowEngine`, flag `usePerColumnGravity`, davranış-birebir); **7B** async emisyon (sütun kendi settle'ı) + **7C** temizlik/scheduler bekliyor. Plan: `~/.claude/plans/calm-wibbling-sutherland.md` | A7; dinamik tahtanın ön koşulu |
 | **Faz 8** | **Cell-based FSM + Dynamic Board** | A8: `TileState`(Idle/Swapping/Matched/Falling) + destination-cell rezervasyonu + input global `IsBusy` yerine **dokunulan iki taşa** bakar + sütun kilidi |
 | **Faz 9** | Obstacle'ları ortak API'ye bağla | `ObstacleFlow_Inventory.md` sırası: Barrel/Key/Rocket → EnergyContainer → Oil spread → Safe hold → **OBB en son** |
 | **Faz 10** | Level design L1-50 | Motor akıcı olsa da ilk 50 sıkarsa oyuncu kalmaz (§D) |

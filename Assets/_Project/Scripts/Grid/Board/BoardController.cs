@@ -263,6 +263,33 @@ public class BoardController : MonoBehaviour
 
     [SerializeField] private bool allowPostSwapSettleValidation = true;
 
+    // Faz 7 (Docs/Match3_MasterRoadmap.md A7): gravity/refill simülasyonu sütun-bazlı bir motora
+    // (ColumnFlowEngine) taşınır. 7A = DAVRANIŞ-BİREBİR: aynı çıktı, ama her sütunun bağımsız işlendiği
+    // ve hangi sütunların "meşgul" olduğunun (ColumnBusy) bilindiği yapı → Faz 8 (düşerken hamle) ön
+    // koşulu. Kapalı = eski whole-board yolu HİÇ değişmez. Prod'da da çalışması gerek (release'te de
+    // tanımlı olsun diye #if DIŞINDA).
+    [Tooltip("Faz 7: sütun-bazlı gravity motoru (ColumnFlowEngine). Kapalı=eski whole-board yolu.")]
+    [SerializeField] private bool usePerColumnGravity;
+    public bool UsePerColumnGravity => usePerColumnGravity;
+
+    // Faz 7 ColumnBusy sinyali: son CalculateCascades'te hangi sütunlar hareket etti (üretildi;
+    // 7A'da tüketen yok — Faz 8 input gating'i okuyacak). Lazy-alloc, Width boyutunda.
+    private bool[] columnBusyThisResolve;
+    public bool IsColumnBusy(int x) =>
+        columnBusyThisResolve != null && x >= 0 && x < columnBusyThisResolve.Length && columnBusyThisResolve[x];
+
+    // CascadeLogic/ColumnFlowEngine çağırır: bu resolve pass'inde aktif olan sütunları kaydeder.
+    internal void ReportColumnBusy(IReadOnlyCollection<int> activeColumns)
+    {
+        if (columnBusyThisResolve == null || columnBusyThisResolve.Length != width)
+            columnBusyThisResolve = new bool[Mathf.Max(0, width)];
+        System.Array.Clear(columnBusyThisResolve, 0, columnBusyThisResolve.Length);
+        if (activeColumns == null) return;
+        foreach (var x in activeColumns)
+            if (x >= 0 && x < columnBusyThisResolve.Length)
+                columnBusyThisResolve[x] = true;
+    }
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     [Header("Debug / Tile Sync")]
     [SerializeField] private bool enableTileSyncValidation = true;

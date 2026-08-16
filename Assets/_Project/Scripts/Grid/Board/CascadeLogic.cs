@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CascadeLogic
+public partial class CascadeLogic
 {
     private readonly BoardController board;
 
@@ -134,42 +134,54 @@ public class CascadeLogic
         }
 
         HashSet<Vector2Int> verticalOnlyGaps = new HashSet<Vector2Int>();
-        bool changed = true;
 
-        // SIMULATION LOOP
-        const int MAX_ITERATIONS = 32;
-        int iter = 0;
         bool spawnedMovableThisPass = false;
         Dictionary<ObstacleId, int> spawnedMovableCounts = new Dictionary<ObstacleId, int>();
         cargoSpawnColumnsThisPass.Clear();
 
-        while (changed && iter < MAX_ITERATIONS)
+        if (board.UsePerColumnGravity)
         {
-            changed = false;
-            iter++;
+            // Faz 7: sütun-bazlı sürücü (ColumnFlowEngine.cs). Whole-board while-loop ile DAVRANIŞ-BİREBİR;
+            // yan ürün olarak ColumnBusy üretir. Ayrıntı ve gerekçe RunPerColumnSimulation'da.
+            RunPerColumnSimulation(virtualBoard, verticalOnlyGaps, ref spawnedMovableThisPass, spawnedMovableCounts);
+            board.ReportColumnBusy(LastActiveColumns);
+        }
+        else
+        {
+            bool changed = true;
 
-            // Step 1: Vertical Collapse & Spawn
-            for (int x = 0; x < board.Width; x++)
+            // SIMULATION LOOP
+            const int MAX_ITERATIONS = 32;
+            int iter = 0;
+
+            while (changed && iter < MAX_ITERATIONS)
             {
-                changed |= ProcessVerticalGravityAndSpawn(virtualBoard, x, ref spawnedMovableThisPass, spawnedMovableCounts);
-            }
+                changed = false;
+                iter++;
 
-            // Step 2: Diagonal Slide
-            // SuppressDiagonalSlides açıksa hiç diagonal yapma — yalnızca düz düşüş (anchor'lı
-            // pulse zincirinde temiz görüntü için).
-            // Aksi hâlde: önce SADECE normal taşlar diagonal kaysın. Special'lar düz inmeyi
-            // tercih eder; yalnızca normal taşlarla hiç ilerleme olmazsa (son çare) special kayar.
-            bool slided = false;
-            if (!SuppressDiagonalSlides)
-            {
-                slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: true);
-                if (!slided)
-                    slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: false);
-            }
-            changed |= slided;
+                // Step 1: Vertical Collapse & Spawn
+                for (int x = 0; x < board.Width; x++)
+                {
+                    changed |= ProcessVerticalGravityAndSpawn(virtualBoard, x, ref spawnedMovableThisPass, spawnedMovableCounts);
+                }
 
-            // Prune unfillable VerticalOnly gaps
-            PruneVerticalOnlyGaps(virtualBoard, verticalOnlyGaps);
+                // Step 2: Diagonal Slide
+                // SuppressDiagonalSlides açıksa hiç diagonal yapma — yalnızca düz düşüş (anchor'lı
+                // pulse zincirinde temiz görüntü için).
+                // Aksi hâlde: önce SADECE normal taşlar diagonal kaysın. Special'lar düz inmeyi
+                // tercih eder; yalnızca normal taşlarla hiç ilerleme olmazsa (son çare) special kayar.
+                bool slided = false;
+                if (!SuppressDiagonalSlides)
+                {
+                    slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: true);
+                    if (!slided)
+                        slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: false);
+                }
+                changed |= slided;
+
+                // Prune unfillable VerticalOnly gaps
+                PruneVerticalOnlyGaps(virtualBoard, verticalOnlyGaps);
+            }
         }
 
         // COMPILE ACTION
@@ -570,7 +582,9 @@ public class CascadeLogic
 
     // Tek bir diagonal slide geçişi. skipSpecials=true ise special kaynaklar atlanır
     // (special'lar düz inmeyi tercih etsin diye). En az bir slide olduysa true döner.
-    private bool DoDiagonalSlidePass(VirtualTile[,] virtualBoard, HashSet<Vector2Int> verticalOnlyGaps, bool skipSpecials)
+    // diagAffectedColumns (Faz 7, opsiyonel): null değilse başarılı her slide'ın kaynak+hedef sütununu
+    // kaydeder. OFF yolu null geçer → davranış değişmez.
+    private bool DoDiagonalSlidePass(VirtualTile[,] virtualBoard, HashSet<Vector2Int> verticalOnlyGaps, bool skipSpecials, HashSet<int> diagAffectedColumns = null)
     {
         bool slided = false;
         for (int y = board.Height - 1; y >= 0; y--)
@@ -581,14 +595,14 @@ public class CascadeLogic
                     && !GapExpectsVerticalFill(virtualBoard, x, y))
                 {
                     // Right-top priority
-                    if (TrySlide(virtualBoard, x + 1, y - 1, x, y, verticalOnlyGaps, skipSpecials))
+                    if (TrySlide(virtualBoard, x + 1, y - 1, x, y, verticalOnlyGaps, skipSpecials, diagAffectedColumns))
                     {
                         slided = true;
                         continue;
                     }
 
                     // Left-top fallback
-                    if (TrySlide(virtualBoard, x - 1, y - 1, x, y, verticalOnlyGaps, skipSpecials))
+                    if (TrySlide(virtualBoard, x - 1, y - 1, x, y, verticalOnlyGaps, skipSpecials, diagAffectedColumns))
                     {
                         slided = true;
                         continue;
@@ -599,7 +613,7 @@ public class CascadeLogic
         return slided;
     }
 
-    private bool TrySlide(VirtualTile[,] virtualBoard, int fromX, int fromY, int toX, int toY, HashSet<Vector2Int> verticalOnlyGaps, bool skipSpecials = false)
+    private bool TrySlide(VirtualTile[,] virtualBoard, int fromX, int fromY, int toX, int toY, HashSet<Vector2Int> verticalOnlyGaps, bool skipSpecials = false, HashSet<int> diagAffectedColumns = null)
     {
         if (fromX < 0 || fromX >= board.Width || fromY < 0 || fromY >= board.Height) return false;
 
@@ -684,6 +698,14 @@ public class CascadeLogic
         sourceTile.Path.Add(new Vector2Int(toX, toY));
 
         verticalOnlyGaps.Add(new Vector2Int(fromX, sourceY));
+
+        // Faz 7: bu slide kaynak (fromX) ve hedef (toX) sütununu değiştirdi → ikisi de bir sonraki
+        // iterasyonda vertical için "dirty". OFF yolu null geçer.
+        if (diagAffectedColumns != null)
+        {
+            diagAffectedColumns.Add(fromX);
+            diagAffectedColumns.Add(toX);
+        }
         return true;
     }
 
