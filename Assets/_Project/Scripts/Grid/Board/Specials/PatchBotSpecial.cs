@@ -714,16 +714,6 @@ public sealed class PatchBotSpecial
     {
         var ctx = rt.Context;
 
-        // ── Faz 3 (Docs/UnifiedSpecialFlow_Plan.md): varış clear'ı NON-BLOCKING ──
-        // SORUN (kullanıcı): "her PatchBot bir yere vurduktan sonra bekleme başlıyor". Kök: her bot
-        // varışta clear'ını AYNI blocking sequencer kuyruğuna atıyordu → clear'lar sırayla oynuyor,
-        // resolve loop `while(IsPlaying)` ile bekliyor → her vuruş arasında TÜM board donuyor.
-        // ÇÖZÜM: clear non-blocking koşsun → kuyruk tıkanmaz, botların vuruşları örtüşür.
-        // DOĞRULUK KORUNUR: MatchClearAction non-blocking iken BeginJob(Resolve) tutar (resolve/level-end
-        // yine bekler) + Faz 2 Clear/SpecialSweep Activity'leri (auto-pump, sweep kapsaması) + sequencer
-        // DetachedActionsInFlight sayar → overlap kapısı erken refill yaptırmaz.
-        bool nonBlocking = rt.Board != null && rt.Board.UseFlowActivities;
-
         return new MatchClearAction(
             ctx.Affected,
             doShake: true,
@@ -739,8 +729,7 @@ public sealed class PatchBotSpecial
             perTileClearDelays: ctx.OverrideRadialClearDelays,
             isSpecialPhase: true,
             presentationPlan: null,
-            enqueueCascadeOnComplete: true,
-            isBlocking: !nonBlocking
+            enqueueCascadeOnComplete: true
         );
     }
 }
