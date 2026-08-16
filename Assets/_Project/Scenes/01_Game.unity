@@ -8949,6 +8949,7 @@ MonoBehaviour:
   perfSpikeMs: 28
   perfGcSpikeKB: 64
   useTilePool: 1
+  useFlowActivities: 1
   throwOnTileSyncMismatch: 1
   tilePositionEpsilon: 0.25
   KeyGeneratorProductionComplete: 0
