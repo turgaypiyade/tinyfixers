@@ -23,12 +23,34 @@ public class WonderRevealView : MonoBehaviour
     public AnimationCurve ease = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
     [Header("Kaynakçı Robot (opsiyonel)")]
-    [Tooltip("Açılma sınırında gezen robot (RectTransform)")]
+    [Tooltip("Açılma sınırında gezen robot konteyneri (RectTransform)")]
     public RectTransform welderRobot;
+    [Tooltip("Frame'lerin yazılacağı robot Image'ı (boşsa welderRobot'un kendi Image'ı)")]
+    public Image welderImage;
     [Tooltip("Robotun ucundaki kıvılcım efekti")]
     public ParticleSystem welderSparks;
     [Tooltip("Robotun sınır boyunca rastgele yatay salınım genliği (px)")]
     public float welderXJitter = 120f;
+
+    [Header("Kaynak Arkı Işığı (torç ucu)")]
+    [Tooltip("Torç ucunda titreşen radyal ışık (Image, yumuşak daire)")]
+    public Image weldLight;
+    [Tooltip("Işık taban rengi (kaynak arkı mavi-beyaz)")]
+    public Color weldLightColor = new Color(0.55f, 1.2f, 1.6f, 1f);
+    [Tooltip("Titreşim hızı")]
+    public float weldFlickerSpeed = 28f;
+    [Tooltip("Işığın taban ölçeği")]
+    public float weldLightScale = 1f;
+
+    [Header("Kaynak Frame Animasyonu")]
+    [Tooltip("Sırayla oynatılacak kaynak kareleri (MW_1..MW_4). Kaynak sürerken döngüde döner.")]
+    public Sprite[] welderFrames;
+    [Tooltip("Saniyedeki kare sayısı")]
+    public float welderFps = 10f;
+
+    [Header("Ambient Robotlar")]
+    [Tooltip("Sahne %100 açılınca yürümeye başlayacak robotlar")]
+    public WonderAmbientAgent[] ambientAgents;
 
     [Header("Editör Önizleme")]
     [Range(0, 1)] public float previewReveal = 1f;
@@ -36,8 +58,20 @@ public class WonderRevealView : MonoBehaviour
     Image _image;
     Material _mat;
     RectTransform _rt;
+    Image _welderImg;
     int _stage;
     Coroutine _anim;
+
+    Image WelderImage
+    {
+        get
+        {
+            if (welderImage != null) return welderImage;
+            if (_welderImg == null && welderRobot != null)
+                _welderImg = welderRobot.GetComponent<Image>();
+            return _welderImg;
+        }
+    }
 
     string PrefKey => $"wonder_reveal_{wonderId}";
 
@@ -136,6 +170,7 @@ public class WonderRevealView : MonoBehaviour
 
         if (welderRobot != null) welderRobot.gameObject.SetActive(true);
         if (welderSparks != null) welderSparks.Play();
+        if (weldLight != null) weldLight.gameObject.SetActive(true);
 
         while (t < animateDuration)
         {
@@ -144,15 +179,30 @@ public class WonderRevealView : MonoBehaviour
             float r = Mathf.Lerp(start, target, k);
             ApplyReveal(r);
             UpdateWelder(r);
+            UpdateWelderFrame(t);   // MW_1→2→3→4 döngü
+            UpdateWeldLight(t);     // torç ucu arkı titreşimi
             yield return null;
         }
         ApplyReveal(target);
         UpdateWelder(target);
 
         if (welderSparks != null) welderSparks.Stop();
-        // Tam açıldıysa robotu gizle
-        if (welderRobot != null && target >= 0.999f) welderRobot.gameObject.SetActive(false);
+        ResetWelderFrame();     // durunca ilk kareye dön
+        if (weldLight != null) weldLight.gameObject.SetActive(false);
+        // Tam açıldıysa robotu gizle + ambient robotları başlat
+        if (target >= 0.999f)
+        {
+            if (welderRobot != null) welderRobot.gameObject.SetActive(false);
+            StartAmbient();
+        }
         _anim = null;
+    }
+
+    void StartAmbient()
+    {
+        if (ambientAgents == null) return;
+        foreach (var a in ambientAgents)
+            if (a != null) a.BeginWalking();
     }
 
     void ApplyReveal(float r)
@@ -170,5 +220,39 @@ public class WonderRevealView : MonoBehaviour
         float y = Mathf.Lerp(rect.yMin, rect.yMax, reveal);
         float x = Mathf.Sin(Time.time * 6f) * welderXJitter;
         welderRobot.anchoredPosition = new Vector2(x, y);
+    }
+
+    /// <summary>Kaynak karelerini MW_1→2→3→4 sırasıyla döngüde oynatır.</summary>
+    void UpdateWelderFrame(float elapsed)
+    {
+        if (welderFrames == null || welderFrames.Length == 0) return;
+        var img = WelderImage;
+        if (img == null) return;
+        int idx = Mathf.FloorToInt(elapsed * welderFps) % welderFrames.Length;
+        if (welderFrames[idx] != null) img.sprite = welderFrames[idx];
+    }
+
+    void ResetWelderFrame()
+    {
+        if (welderFrames == null || welderFrames.Length == 0) return;
+        var img = WelderImage;
+        if (img != null && welderFrames[0] != null) img.sprite = welderFrames[0];
+    }
+
+    /// <summary>Torç ucu kaynak arkı: hızlı düzensiz parlaklık + ölçek titreşimi.</summary>
+    void UpdateWeldLight(float elapsed)
+    {
+        if (weldLight == null) return;
+        // İki farklı frekanslı gürültü → düzensiz "cızırdayan" ark hissi
+        float n = Mathf.PerlinNoise(elapsed * weldFlickerSpeed, 0.37f);
+        float n2 = Mathf.PerlinNoise(elapsed * weldFlickerSpeed * 2.3f, 5.1f);
+        float intensity = Mathf.Lerp(0.45f, 1f, n) * Mathf.Lerp(0.7f, 1f, n2);
+
+        var c = weldLightColor;
+        c.a = intensity;
+        weldLight.color = c;
+
+        float s = weldLightScale * Mathf.Lerp(0.82f, 1.18f, n);
+        weldLight.rectTransform.localScale = new Vector3(s, s, 1f);
     }
 }

@@ -14,17 +14,19 @@ using UnityEngine.UI;
 /// </summary>
 public static class WonderRevealSetup
 {
-    const string PisaPath = "Assets/_Project/Art/UI/Wonders/Wonder_PisaTower.png";
+    // Tam ekran (enhance edilmiş) arka plan — alttan üstten dolar.
+    const string BgPath = "Assets/_Project/Art/UI/Missions/ND_M001/1/MIS1.png";
     const string ScenePath = "Assets/_Project/Scenes/WonderRevealTest.unity";
+    const string WelderDir = "Assets/_Project/Art/UI/RoboCharacters/WDImgs/";
 
     [MenuItem("TinyFixers/Wonders/Setup Reveal Test")]
     public static void Setup()
     {
-        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(PisaPath);
+        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(BgPath);
         if (sprite == null)
         {
             EditorUtility.DisplayDialog("Wonder Reveal",
-                "Sprite bulunamadı:\n" + PisaPath + "\nUnity'nin imajı import ettiğinden emin ol.", "Tamam");
+                "Sprite bulunamadı:\n" + BgPath + "\nUnity'nin imajı import ettiğinden emin ol.", "Tamam");
             return;
         }
 
@@ -58,53 +60,72 @@ public static class WonderRevealSetup
             esGo.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
         }
 
-        // --- Harika imajı (tam ekran, aspect korunur) ------------------
-        var imgGo = new GameObject("Wonder_Pisa", typeof(Image), typeof(WonderRevealView));
+        // --- Arka plan imajı (TAM EKRAN cover: alttan üstten dolar) ----
+        // AspectRatioFitter/EnvelopeParent → her telefonda ekranı kaplar,
+        // taşan kenar kırpılır, imaj BOZULMAZ.
+        var imgGo = new GameObject("WonderBackground",
+            typeof(Image), typeof(AspectRatioFitter), typeof(WonderRevealView));
         var imgRt = (RectTransform)imgGo.transform;
         imgRt.SetParent(canvasGo.transform, false);
-        Stretch(imgRt);
+        imgRt.anchorMin = imgRt.anchorMax = new Vector2(0.5f, 0.5f);
+        imgRt.pivot = new Vector2(0.5f, 0.5f);
         var img = imgGo.GetComponent<Image>();
         img.sprite = sprite;
-        img.preserveAspect = true;
-        img.material = new Material(shader) { name = "WonderReveal_pisa" };
+        img.preserveAspect = false; // fitter zaten oranı korur
+        img.material = new Material(shader) { name = "WonderReveal_mis1" };
+
+        var fitter = imgGo.GetComponent<AspectRatioFitter>();
+        fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+        fitter.aspectRatio = (float)sprite.texture.width / sprite.texture.height;
 
         var view = imgGo.GetComponent<WonderRevealView>();
-        view.wonderId = "pisa";
+        view.wonderId = "mis1";
         view.totalStages = 5;
         view.previewReveal = 0f; // başlangıçta hologram göster
 
-        // --- Kaynakçı robot (gerçek sprite) + kaynak parıltısı ---------
-        var robotSprite = AssetDatabase.LoadAssetAtPath<Sprite>(
-            "Assets/_Project/Art/UI/RoboCharacters/LoadWrenchBot.png");
+        // --- Kaynakçı robot (MW_1..4 frame animasyonu) + kaynak arkı ---
+        var welderFrames = LoadWelderFrames();
+        var robotSprite = welderFrames.Length > 0 ? welderFrames[0] : null;
         var glowSprite = AssetDatabase.LoadAssetAtPath<Sprite>(
-            "Assets/_Project/Art/Icons/FX/beam_glow_soft_white.png");
+            "Assets/_Project/Art/Icons/PulseCoreEffectsIcon/soft_circle.png");
 
-        var welderGo = new GameObject("WelderRobot", typeof(Image));
+        // Konteyner (boş Rect) — pozisyonu view sürer.
+        var welderGo = new GameObject("WelderRobot", typeof(RectTransform));
         var welderRt = (RectTransform)welderGo.transform;
         welderRt.SetParent(imgRt, false);
         welderRt.sizeDelta = new Vector2(240, 240);
         welderRt.anchorMin = welderRt.anchorMax = new Vector2(0.5f, 0.5f);
-        var welderImg = welderGo.GetComponent<Image>();
+        view.welderRobot = welderRt;
+        view.welderFrames = welderFrames;
+        view.welderFps = 10f;
+
+        // [0] Robot — TAM OPAK, altta (kaynak ışığı önünde parlayacak)
+        var robotGo = new GameObject("RobotSprite", typeof(Image));
+        var robotRt = (RectTransform)robotGo.transform;
+        robotRt.SetParent(welderRt, false);
+        Stretch(robotRt);
+        var welderImg = robotGo.GetComponent<Image>();
         welderImg.sprite = robotSprite;
         welderImg.preserveAspect = true;
         welderImg.color = robotSprite != null ? Color.white : new Color(0.4f, 1.7f, 2.2f, 0.9f);
         welderImg.raycastTarget = false;
-        view.welderRobot = welderRt;
 
-        // Robotun ucundaki yumuşak kaynak parıltısı (additive hissi için parlak tint)
+        // [1] Kaynak arkı ışığı — torç ucunda, ÖNDE, titreşir (radyal yumuşak daire)
         if (glowSprite != null)
         {
-            var glowGo = new GameObject("WeldGlow", typeof(Image));
-            var glowRt = (RectTransform)glowGo.transform;
-            glowRt.SetParent(welderRt, false);
-            glowRt.sizeDelta = new Vector2(320, 320);
-            glowRt.anchoredPosition = new Vector2(0, -60);
-            glowRt.SetSiblingIndex(0); // robotun arkasında
-            var glowImg = glowGo.GetComponent<Image>();
-            glowImg.sprite = glowSprite;
-            glowImg.color = new Color(0.5f, 1.9f, 2.4f, 0.9f);
-            glowImg.raycastTarget = false;
+            var lightGo = new GameObject("WeldLight", typeof(Image));
+            var lightRt = (RectTransform)lightGo.transform;
+            lightRt.SetParent(welderRt, false);
+            lightRt.sizeDelta = new Vector2(150, 150);
+            lightRt.anchoredPosition = new Vector2(18, -78); // torç ucu (aşağı)
+            var lightImg = lightGo.GetComponent<Image>();
+            lightImg.sprite = glowSprite;
+            lightImg.color = view.weldLightColor;
+            lightImg.raycastTarget = false;
+            view.weldLight = lightImg;
+            lightGo.SetActive(false); // yalnız kaynak sürerken görünür
         }
+        view.welderImage = welderImg;
 
         // --- Test paneli (alt) -----------------------------------------
         var panel = BuildTestPanel(canvasGo.transform, view);
@@ -119,6 +140,120 @@ public static class WonderRevealSetup
 
         EditorUtility.DisplayDialog("Wonder Reveal",
             "Kuruldu → 'WonderRevealTest' sahnesi AÇIK.\nDoğrudan Play'e bas:\n• 'Yıldız Harca (+1)' → bir kademe kaynakla açılır\n• Slider → ham önizleme\n• 'Sıfırla' → baştan\n\nBaşlangıç: tamamı mavi hologram.", "Tamam");
+    }
+
+    enum AgentStyle { VerticalWalk, HorizontalWalk, Drone }
+
+    [MenuItem("TinyFixers/Wonders/Add Robot (Vertical Path)")]
+    public static void AddVertical() => AddAgent(AgentStyle.VerticalWalk);
+
+    [MenuItem("TinyFixers/Wonders/Add Robot (Horizontal Path)")]
+    public static void AddHorizontal() => AddAgent(AgentStyle.HorizontalWalk);
+
+    [MenuItem("TinyFixers/Wonders/Add Drone (Sky Path)")]
+    public static void AddDrone() => AddAgent(AgentStyle.Drone);
+
+    static void AddAgent(AgentStyle style)
+    {
+        var view = Object.FindFirstObjectByType<WonderRevealView>();
+        if (view == null)
+        {
+            EditorUtility.DisplayDialog("Ambient", "Sahnede WonderRevealView yok. Önce 'Setup Reveal Test' çalıştır.", "Tamam");
+            return;
+        }
+        var parentRt = (RectTransform)view.transform;
+        var placeholder = AssetDatabase.LoadAssetAtPath<Sprite>(
+            "Assets/_Project/Art/UI/RoboCharacters/LoadPatchbot.png");
+        int index = (view.ambientAgents?.Length ?? 0) + 1;
+
+        // --- Preset (karakter tipine göre yol + ayar) ------------------
+        string prefix; Vector2[] pathPts; bool mirror; float bobAmp, bobFreq, spd; int visSize; string frameHint;
+        WonderAmbientAgent.FacingMode fm;
+        switch (style)
+        {
+            case AgentStyle.HorizontalWalk:
+                prefix = "AmbientRobotH";
+                pathPts = new[] { new Vector2(-440, -650), new Vector2(-150, -650), new Vector2(150, -650), new Vector2(440, -650) };
+                mirror = false; bobAmp = 8f; bobFreq = 6f; spd = 95f; visSize = 200;
+                fm = WonderAmbientAgent.FacingMode.DirectionalFrontBack;
+                frameHint = "• Front Frames → İLERİ giderken (soldan sağa) kareler\n• Back Frames → DÖNÜŞTE (sağdan sola) kareler";
+                break;
+            case AgentStyle.Drone:
+                prefix = "AmbientDrone";
+                pathPts = new[] { new Vector2(-380, 520), new Vector2(-40, 720), new Vector2(300, 560), new Vector2(430, 780) };
+                mirror = true; bobAmp = 20f; bobFreq = 3f; spd = 135f; visSize = 150;
+                fm = WonderAmbientAgent.FacingMode.SideMirror;
+                frameHint = "• Walk Frames → dron/pervane kareleri (yoksa tek sprite)\n• Gökte süzülür (büyük yumuşak bob)";
+                break;
+            default: // VerticalWalk
+                prefix = "AmbientRobot";
+                pathPts = new[] { new Vector2(-160, -700), new Vector2(140, -520), new Vector2(-40, -300), new Vector2(180, -150) };
+                mirror = false; bobAmp = 8f; bobFreq = 6f; spd = 90f; visSize = 200;
+                fm = WonderAmbientAgent.FacingMode.DirectionalFrontBack;
+                frameHint = "• Front Frames → İLERİ giderken (A→B→…) kareler — BİZE DÖNÜK\n• Back Frames → DÖNÜŞTE (…→A) kareler — ARKASI DÖNÜK";
+                break;
+        }
+
+        char[] letters = { 'A', 'B', 'C', 'D' };
+        var wps = new RectTransform[pathPts.Length];
+        for (int i = 0; i < pathPts.Length; i++)
+            wps[i] = MockRect($"{prefix}_{index}_WP_{letters[i]}", parentRt, pathPts[i]);
+
+        var agentGo = new GameObject($"{prefix}_{index}", typeof(RectTransform), typeof(WonderAmbientAgent));
+        var agentRt = (RectTransform)agentGo.transform;
+        agentRt.SetParent(parentRt, false);
+        agentRt.anchorMin = agentRt.anchorMax = new Vector2(0.5f, 0.5f);
+        agentRt.anchoredPosition = wps[0].anchoredPosition;
+
+        var visualGo = new GameObject("Visual", typeof(Image));
+        var visualRt = (RectTransform)visualGo.transform;
+        visualRt.SetParent(agentRt, false);
+        visualRt.sizeDelta = new Vector2(visSize, visSize);
+        var visualImg = visualGo.GetComponent<Image>();
+        visualImg.sprite = placeholder;
+        visualImg.preserveAspect = true;
+        visualImg.raycastTarget = false;
+
+        var agent = agentGo.GetComponent<WonderAmbientAgent>();
+        agent.waypoints = wps;
+        agent.visual = visualRt;
+        agent.visualImage = visualImg;
+        agent.facingMode = fm;
+        agent.mirrorBySide = mirror;
+        agent.bobAmplitude = bobAmp;
+        agent.bobFrequency = bobFreq;
+        agent.speed = spd;
+        agent.walkFps = 5f;
+        agent.startWalking = true; // test için hemen; prod'da false + reveal-gate
+
+        var list = new System.Collections.Generic.List<WonderAmbientAgent>(
+            view.ambientAgents ?? new WonderAmbientAgent[0]);
+        list.Add(agent);
+        view.ambientAgents = list.ToArray();
+
+        Selection.activeObject = agentGo;
+        EditorUtility.SetDirty(view);
+        EditorSceneManager.MarkSceneDirty(view.gameObject.scene);
+        EditorUtility.DisplayDialog("Ambient",
+            $"{prefix}_{index} eklendi (placeholder Patchbot).\n\n" +
+            frameHint + "\n\n" +
+            $"• {prefix}_{index}_WP_A→D (4 magenta nokta) yolu çizer; sahnede sürükle\n" +
+            "• Play'de magenta noktalar gizlenir", "Tamam");
+    }
+
+    static RectTransform MockRect(string name, Transform parent, Vector2 pos)
+    {
+        // Görünür işaret (Image) — Scene'de kolay tutulur; Play'de agent gizler.
+        var go = new GameObject(name, typeof(Image));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(parent, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(40, 40);
+        rt.anchoredPosition = pos;
+        var img = go.GetComponent<Image>();
+        img.color = new Color(1f, 0.15f, 0.8f, 0.85f); // parlak magenta
+        img.raycastTarget = false;
+        return rt;
     }
 
     static WonderRevealTester BuildTestPanel(Transform parent, WonderRevealView view)
@@ -192,6 +327,19 @@ public static class WonderRevealSetup
         slider.maxValue = 1f;
         slider.value = 0f;
         return slider;
+    }
+
+    // MW_1, MW_2, ... sırayla yükler; ilk bulunamayanda durur.
+    static Sprite[] LoadWelderFrames()
+    {
+        var list = new System.Collections.Generic.List<Sprite>();
+        for (int i = 1; i <= 32; i++)
+        {
+            var s = AssetDatabase.LoadAssetAtPath<Sprite>($"{WelderDir}MW_{i}.png");
+            if (s == null) break;
+            list.Add(s);
+        }
+        return list.ToArray();
     }
 
     static void Stretch(RectTransform rt)
