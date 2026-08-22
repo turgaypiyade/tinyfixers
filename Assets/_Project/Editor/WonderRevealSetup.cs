@@ -256,7 +256,7 @@ public static class WonderRevealSetup
         return rt;
     }
 
-    static WonderRevealTester BuildTestPanel(Transform parent, WonderRevealView view)
+    internal static WonderRevealTester BuildTestPanel(Transform parent, WonderRevealView view)
     {
         var panelGo = new GameObject("TestPanel", typeof(RectTransform), typeof(WonderRevealTester));
         var rt = (RectTransform)panelGo.transform;

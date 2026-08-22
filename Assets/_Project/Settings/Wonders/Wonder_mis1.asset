@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e428ba4f402e4e53a57f2a501307422, type: 3}
+  m_Name: Wonder_mis1
+  m_EditorClassIdentifier: Assembly-CSharp::WonderDefinition
+  wonderId: mis1
+  displayName: mis1
+  backgroundSprite: {fileID: 21300000, guid: 9d538e63afe024ce49dc15f2cb3cd0cf, type: 3}
+  totalStages: 5
+  welderFrames:
+  - {fileID: 21300000, guid: d25032ca758ce4d7db141f69a983a2ee, type: 3}
+  - {fileID: 21300000, guid: b10915ec26fab4b08b3e8ccdbe5ba52e, type: 3}
+  - {fileID: 21300000, guid: 22cdb93fb5229421da1b2c93012a24bd, type: 3}
+  - {fileID: 21300000, guid: 224d04b39391e43a5b253670c148f624, type: 3}
+  welderFps: 10
+  welderSize: {x: 240, y: 240}
+  welderHome: {x: 0, y: 0}
+  characters:
+  - name: AmbientRobot_1
+    facingMode: 0
+    frontFrames:
+    - {fileID: 21300000, guid: 2f09765df78e54a8090cb260ff5fe04b, type: 3}
+    - {fileID: 21300000, guid: b4b840b8d129f4a5ea8508e22a0cabcd, type: 3}
+    backFrames:
+    - {fileID: 21300000, guid: 4cc5efd4ee36f4901b65d9ff2c69703f, type: 3}
+    - {fileID: 21300000, guid: c62fa8e74d0e14b17ac37e8b3ef76ac5, type: 3}
+    walkFrames: []
+    walkFps: 5
+    mirrorBySide: 0
+    speed: 85
+    bobAmplitude: 8
+    bobFrequency: 6
+    visualSize: 200
+    pingPong: 1
+    pauseAtPoint: 0.4
+    path:
+    - {x: -343, y: -524}
+    - {x: -53, y: -573}
+    - {x: 136, y: -673}
+    - {x: 134, y: -856}
+  - name: AmbientRobotH_2
+    facingMode: 0
+    frontFrames:
+    - {fileID: -8702772960875206843, guid: 0c77369bca2e04beea70576e126d6d2f, type: 3}
+    - {fileID: 9103739097279109395, guid: 65cb0818a8d3640a985368f0dadbb372, type: 3}
+    backFrames:
+    - {fileID: 6809252500202759014, guid: 3623c59545af944aab3c4328ee5e142c, type: 3}
+    - {fileID: -3954555757667715345, guid: 15a30d712971f4b64b5d574ee300e2d8, type: 3}
+    walkFrames: []
+    walkFps: 5
+    mirrorBySide: 1
+    speed: 95
+    bobAmplitude: 8
+    bobFrequency: 6
+    visualSize: 200
+    pingPong: 1
+    pauseAtPoint: 0.4
+    path:
+    - {x: -536, y: -505}
+    - {x: -281, y: -517}
+    - {x: 80, y: -562}
+    - {x: 455, y: -517}
+  - name: AmbientDrone_3
+    facingMode: 1
+    frontFrames:
+    - {fileID: 21300000, guid: 7956d116b00ce446484b289d52b65df0, type: 3}
+    - {fileID: 21300000, guid: 0e2cfab864d8a47a4b5586f508d24ca1, type: 3}
+    backFrames:
+    - {fileID: 21300000, guid: 71ddb455937e5448a882afd4a77a829c, type: 3}
+    - {fileID: 21300000, guid: f81735a89cfcf4bafbc7d0458c5b03d0, type: 3}
+    walkFrames: []
+    walkFps: 5
+    mirrorBySide: 1
+    speed: 135
+    bobAmplitude: 20
+    bobFrequency: 3
+    visualSize: 150
+    pingPong: 1
+    pauseAtPoint: 0.4
+    path:
+    - {x: 573, y: 822}
+    - {x: 398, y: 606}
+    - {x: -248, y: 468}
+    - {x: -567, y: 225}

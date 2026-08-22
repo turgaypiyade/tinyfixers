@@ -47,6 +47,10 @@ public class WonderAmbientAgent : MonoBehaviour
     [Tooltip("SideMirror: sağa/sola giderken yatay aynala")]
     public bool mirrorBySide = false;
 
+    [Header("Yol (data-driven)")]
+    [Tooltip("Anchored nokta listesi. Doluysa waypoints yerine BUNU kullanır (data-driven).")]
+    public Vector2[] pathPoints;
+
     [Header("Başlangıç")]
     [Tooltip("Açık: hemen yürür (test). Kapalı: sahne açılınca WonderRevealView başlatır.")]
     public bool startWalking = true;
@@ -59,20 +63,36 @@ public class WonderAmbientAgent : MonoBehaviour
     float _baseVisualY;
     bool _walking;
 
+    int PointCount => (pathPoints != null && pathPoints.Length >= 2)
+        ? pathPoints.Length
+        : (waypoints?.Length ?? 0);
+
+    Vector2 Point(int i) => (pathPoints != null && pathPoints.Length >= 2)
+        ? pathPoints[i]
+        : (waypoints[i] != null ? waypoints[i].anchoredPosition : _rt.anchoredPosition);
+
     void Awake()
     {
         _rt = (RectTransform)transform;
         if (visual != null) _baseVisualY = visual.anchoredPosition.y;
         _walking = startWalking;
 
-        // Başlangıç noktasına otur, bir sonrakine yönel
-        if (waypoints != null && waypoints.Length >= 2 && waypoints[0] != null)
+        // Editör waypoint'leri varsa Vector2 yola bake et (yoksa pathPoints kalır)
+        if ((pathPoints == null || pathPoints.Length < 2) && waypoints != null && waypoints.Length >= 2)
         {
-            _rt.anchoredPosition = waypoints[0].anchoredPosition;
+            pathPoints = new Vector2[waypoints.Length];
+            for (int i = 0; i < waypoints.Length; i++)
+                pathPoints[i] = waypoints[i] != null ? waypoints[i].anchoredPosition : Vector2.zero;
+        }
+
+        // Başlangıç noktasına otur, bir sonrakine yönel
+        if (PointCount >= 2)
+        {
+            _rt.anchoredPosition = Point(0);
             _idx = 1;
         }
 
-        // Waypoint işaret görsellerini oyunda gizle (editörde görünür kalır)
+        // Editör waypoint işaretlerini oyunda gizle
         if (waypoints != null)
             foreach (var w in waypoints)
             {
@@ -88,7 +108,7 @@ public class WonderAmbientAgent : MonoBehaviour
 
     void Update()
     {
-        if (!_walking || waypoints == null || waypoints.Length < 2) return;
+        if (!_walking || PointCount < 2) return;
 
         if (_pauseT > 0f)
         {
@@ -97,7 +117,7 @@ public class WonderAmbientAgent : MonoBehaviour
             return;
         }
 
-        var target = waypoints[_idx] != null ? waypoints[_idx].anchoredPosition : _rt.anchoredPosition;
+        var target = Point(_idx);
         var pos = _rt.anchoredPosition;
         var np = Vector2.MoveTowards(pos, target, speed * Time.deltaTime);
         _rt.anchoredPosition = np;
@@ -113,19 +133,20 @@ public class WonderAmbientAgent : MonoBehaviour
 
     void Advance()
     {
+        int n = PointCount;
         if (pingPong)
         {
             int next = _idx + _dir;
-            if (next < 0 || next >= waypoints.Length)
+            if (next < 0 || next >= n)
             {
                 _dir = -_dir;
                 next = _idx + _dir;
             }
-            _idx = Mathf.Clamp(next, 0, waypoints.Length - 1);
+            _idx = Mathf.Clamp(next, 0, n - 1);
         }
         else
         {
-            _idx = (_idx + 1) % waypoints.Length;
+            _idx = (_idx + 1) % n;
         }
     }
 
