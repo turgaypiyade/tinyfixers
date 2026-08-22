@@ -85,40 +85,50 @@ public sealed class KeyGeneratorMachineView : MonoBehaviour
         scanGroup.alpha = 0f;
 
         // ── Draft diamond (holographic idle hologram) ──
-        var draftGo = new GameObject("KG_Draft", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
-        draftRect = (RectTransform)draftGo.transform;
-        draftRect.SetParent(bodyRect, false);
-        draftRect.anchorMin = draftRect.anchorMax = new Vector2(0.5f, 0.5f);
-        draftRect.pivot = new Vector2(0.5f, 0.5f);
-        float draftW = size.x * Mathf.Max(0.05f, cfg.draftSize);
-        draftRect.sizeDelta = new Vector2(draftW, draftW);
-        draftRect.anchoredPosition = new Vector2(cfg.draftOffset.x * size.x, cfg.draftOffset.y * size.y);
-        draftGo.layer = bodyRect.gameObject.layer;
-        draftImage = draftGo.GetComponent<Image>();
-        draftImage.sprite = cfg.draftSprite;
-        draftImage.preserveAspect = true;
-        draftImage.raycastTarget = false;
-        draftGroup = draftGo.GetComponent<CanvasGroup>();
-        draftGroup.alpha = cfg.draftIdleAlpha;
+        // Only built when a sprite is assigned. Without this guard a null sprite renders a white
+        // Image quad; with a leftover sprite it draws an unwanted box over a self-contained machine
+        // art. Clearing draftSprite in the config now cleanly removes the whole layer.
+        if (cfg.draftSprite != null)
+        {
+            var draftGo = new GameObject("KG_Draft", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+            draftRect = (RectTransform)draftGo.transform;
+            draftRect.SetParent(bodyRect, false);
+            draftRect.anchorMin = draftRect.anchorMax = new Vector2(0.5f, 0.5f);
+            draftRect.pivot = new Vector2(0.5f, 0.5f);
+            float draftW = size.x * Mathf.Max(0.05f, cfg.draftSize);
+            draftRect.sizeDelta = new Vector2(draftW, draftW);
+            draftRect.anchoredPosition = new Vector2(cfg.draftOffset.x * size.x, cfg.draftOffset.y * size.y);
+            draftGo.layer = bodyRect.gameObject.layer;
+            draftImage = draftGo.GetComponent<Image>();
+            draftImage.sprite = cfg.draftSprite;
+            draftImage.preserveAspect = true;
+            draftImage.raycastTarget = false;
+            draftGroup = draftGo.GetComponent<CanvasGroup>();
+            draftGroup.alpha = cfg.draftIdleAlpha;
+        }
 
         // ── Crank lever (rotates around the bottom hinge disc) ──
-        var crankGo = new GameObject("KG_Crank", typeof(RectTransform), typeof(Image));
-        crankRect = (RectTransform)crankGo.transform;
-        crankRect.SetParent(bodyRect, false);
-        crankRect.anchorMin = crankRect.anchorMax = new Vector2(0.5f, 0.5f);
-        crankRect.pivot = cfg.crankPivot; // e.g. (0.5, 0.11) = hinge disc center
-        float crankH = size.y * Mathf.Max(0.1f, cfg.crankHeight);
-        float aspect = cfg.crankSprite != null && cfg.crankSprite.rect.height > 0f
-            ? cfg.crankSprite.rect.width / cfg.crankSprite.rect.height
-            : 0.28f;
-        crankRect.sizeDelta = new Vector2(crankH * aspect, crankH);
-        crankRect.anchoredPosition = new Vector2(cfg.crankOffset.x * size.x, cfg.crankOffset.y * size.y);
-        crankRect.localRotation = Quaternion.Euler(0f, 0f, cfg.crankRestAngle);
-        crankGo.layer = bodyRect.gameObject.layer;
-        crankImage = crankGo.GetComponent<Image>();
-        crankImage.sprite = cfg.crankSprite;
-        crankImage.preserveAspect = true;
-        crankImage.raycastTarget = false;
+        // Same guard: no crank sprite → no crank layer (avoids a white box).
+        if (cfg.crankSprite != null)
+        {
+            var crankGo = new GameObject("KG_Crank", typeof(RectTransform), typeof(Image));
+            crankRect = (RectTransform)crankGo.transform;
+            crankRect.SetParent(bodyRect, false);
+            crankRect.anchorMin = crankRect.anchorMax = new Vector2(0.5f, 0.5f);
+            crankRect.pivot = cfg.crankPivot; // e.g. (0.5, 0.11) = hinge disc center
+            float crankH = size.y * Mathf.Max(0.1f, cfg.crankHeight);
+            float aspect = cfg.crankSprite.rect.height > 0f
+                ? cfg.crankSprite.rect.width / cfg.crankSprite.rect.height
+                : 0.28f;
+            crankRect.sizeDelta = new Vector2(crankH * aspect, crankH);
+            crankRect.anchoredPosition = new Vector2(cfg.crankOffset.x * size.x, cfg.crankOffset.y * size.y);
+            crankRect.localRotation = Quaternion.Euler(0f, 0f, cfg.crankRestAngle);
+            crankGo.layer = bodyRect.gameObject.layer;
+            crankImage = crankGo.GetComponent<Image>();
+            crankImage.sprite = cfg.crankSprite;
+            crankImage.preserveAspect = true;
+            crankImage.raycastTarget = false;
+        }
 
         built = true;
         PlayIdle();

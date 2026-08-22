@@ -1,24 +1,28 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-/// Additive-bevel mud cell.
+/// Sprite-underlay mud cell.
 ///
-/// A plain interior fill (seamless, sampled with a board-slice UV) is drawn up to internal
-/// neighbour boundaries, but inset behind exposed bevel sides. The bevel is drawn ONLY on the
-/// blob's EXPOSED edges/convex-corners, sampled from the beveled sprite's border regions.
-/// Internal edges are just fill-meets-fill, so there are no seams, no cover-subtraction and no
-/// rounded-corner gaps between neighbouring mud cells.
+/// The ORIGINAL beveled mud sprite is drawn once, full-cell, underneath everything. That gives the
+/// exposed edges and the rounded convex corners straight from the authored art — nothing is
+/// reconstructed, so an isolated cell is literally the original sprite. A seamless interior fill
+/// (board-slice UV) is layered on top: it stays inset by the bevel width on EXPOSED sides (so the
+/// sprite's bevel shows) but extends to the cell edge on NEIGHBOUR sides (so the join is flat and
+/// seamless). Finally, where a run continues straight (one side exposed, the perpendicular side has
+/// a neighbour) a small flat strip squares off the sprite's rounded corner so two joined cells meet
+/// in a straight line instead of a scallop.
 ///
-/// Two stages (light stage-0 / dark stage-1+) swap the interior + bevel textures; the exposure
-/// layout is stage-independent so a hit only recolours the cell.
+/// Because the opaque sprite is always underneath, the board colour can never leak at a join — the
+/// whole "ince boşluk / under-bevel" class of seams is gone. Two stages (light stage-0 / dark
+/// stage-1+) swap the sprite + interior textures; the exposure layout is stage-independent so a hit
+/// only recolours the cell.
 public class MudCellView : MonoBehaviour
 {
     private RectTransform rt;
 
-    private RawImage interior;                                   // plain fill, inset only on exposed sides
-    private RawImage fTop, fRight, fBottom, fLeft;               // fill under straight exposed bevels
-    private RawImage eTop, eRight, eBottom, eLeft;               // straight bevel edges
-    private RawImage cTL, cTR, cBL, cBR;                         // convex-corner bevels
+    private RawImage baseSprite;                                 // full-cell original beveled sprite (underlay)
+    private RawImage interior;                                   // seamless fill, inset only on exposed sides
+    private RawImage cTL, cTR, cBL, cBR;                         // straight-run corner squaring strips
 
     // Stage assets.
     private Texture interiorTex0, interiorTex1;                  // plain fill (light / dark)
@@ -31,16 +35,14 @@ public class MudCellView : MonoBehaviour
 
     private int   gridX, gridY, gridWidth, gridHeight;
     private int   maxHits = 1;
-    private float ts, bp, t, sourceT, sourceCornerT, edgeOverlap, interiorBleed; // screen bevel, edge/corner UV borders, seam overlap, fill bleed
-    private float underFill; // 0..1 of bevel width: how far the opaque fill covers the band under an exposed bevel
-    private float cornerJoin; // px each edge/fill extends UNDER its convex-corner piece to close the join seam
-    private float edgeExtend;  // px a bevel edge extends into a STRAIGHT-run neighbour to close the join break
-    private float edgeAlongInset; // UV inset (0..1) cropping the edge along-axis INSIDE the rounded corner so edge ends are perfectly straight
+    private float ts, bp;                                        // tile size, bevel width in screen px
+    private float sourceT, sourceCornerT, edgeAlongInset;       // sprite border UV, corner UV, flat-edge crop
+    private float interiorBleed;                                 // px the fill bleeds into neighbour mud
+    private float cornerJoinExtend;                              // px a squaring strip overlaps into its neighbour to close the join break
     private float uvX, uvY, uvW, uvH;                            // interior board-slice UV
 
     private bool damaged;
     private bool eT, eR, eB, eL;                                 // current exposure
-    private bool dTL, dTR, dBL, dBR;                             // diagonal neighbour is mud (for straight-run edge extension)
 
     public int  GridX     => gridX;
     public int  GridY     => gridY;
@@ -89,6 +91,9 @@ public class MudCellView : MonoBehaviour
     public void SetMaxHits(int max) => maxHits = Mathf.Max(1, max);
 
     /// Creates the child RawImages and caches geometry. Call after Init/SetStageAssets.
+    /// Most of the legacy tuning params are kept only for call-site compatibility — the sprite
+    /// underlay makes them unnecessary. The bevel width now tracks the sprite's own border
+    /// (sourceBorderPixels) so the interior meets the real bevel exactly, no stretching.
     public void Build(
         int tileSize,
         float thicknessRatio,
@@ -103,41 +108,38 @@ public class MudCellView : MonoBehaviour
         float sourceCornerPixels = 101f)
     {
         ts = tileSize;
-        t  = Mathf.Clamp(thicknessRatio, 0.05f, 0.45f);
-        bp = Mathf.Round(ts * t);
-        underFill = Mathf.Clamp01(underBevelFillRatio);
-        cornerJoin = Mathf.Max(0f, cornerJoinPixels);
-        edgeExtend = Mathf.Max(0f, edgeJoinExtendPixels);
         float sourceSize = Mathf.Max(1f, sourceTextureSizePixels);
-        // The authored mud sprites are 990x990 with about 80 px of source border. Oil uses the
-        // same renderer with its own source metrics, because sampling a 1227px OilV4 sprite with
-        // mud's 990px constants makes the exposed corner/edge joins look clipped and boxy.
+        // The authored mud sprites are 990x990 with about 99 px of source border. Sample the bevel
+        // at its NATIVE width so the underlay bevel, the interior inset and the corner strips all
+        // line up 1:1 with the original art (no stretch → no distorted round).
         sourceT = Mathf.Clamp(sourceBorderPixels / sourceSize, 0.01f, 0.45f);
         sourceCornerT = Mathf.Clamp(sourceCornerPixels / sourceSize, sourceT, 0.45f);
-        // Straight edges crop a few px DEEPER than the 101 px corner radius so the sampled strip is
-        // fully flat — otherwise a residual "oval" of the rounded corner shows at each cell join.
+        // Straight edges/strips crop a few px DEEPER than the corner radius so the sampled slice is
+        // fully flat — otherwise a residual "oval" of the rounded corner shows at a cell join.
         edgeAlongInset = Mathf.Clamp(sourceCornerT + Mathf.Max(0f, edgeStraightCropPixels) / sourceSize, sourceCornerT, 0.45f);
-        edgeOverlap = Mathf.Max(0f, edgeOverlapPixels);
+        bp = Mathf.Round(ts * sourceT);
         interiorBleed = Mathf.Max(0f, interiorBleedPixels);
+        // Both-direction join overlap. Floor it to half a bevel width so the boundary gets a full
+        // bevel-width of overlap even if the inspector value is tiny — that reliably kills the join
+        // break. Raise Edge Join Extend Pixels for more.
+        cornerJoinExtend = Mathf.Max(edgeJoinExtendPixels, bp * 0.5f);
 
         // The GameObject may carry a stray base Image (legacy creation); this view renders via
         // its own RawImage children, so silence the parent Image to avoid a white quad behind.
         var baseImg = GetComponent<Image>();
         if (baseImg != null) baseImg.enabled = false;
 
-        interior = MakeChild("MudInterior");
-        fTop     = MakeChild("MudFillTop");
-        fRight   = MakeChild("MudFillRight");
-        fBottom  = MakeChild("MudFillBottom");
-        fLeft    = MakeChild("MudFillLeft");
-        eTop     = MakeChild("MudEdgeTop");
-        eRight   = MakeChild("MudEdgeRight");
-        eBottom  = MakeChild("MudEdgeBottom");
-        eLeft    = MakeChild("MudEdgeLeft");
-        cTL      = MakeChild("MudCornerTL");
-        cTR      = MakeChild("MudCornerTR");
-        cBL      = MakeChild("MudCornerBL");
-        cBR      = MakeChild("MudCornerBR");
+        baseSprite = MakeChild("MudBaseSprite");
+        interior   = MakeChild("MudInterior");
+        cTL        = MakeChild("MudCornerTL");
+        cTR        = MakeChild("MudCornerTR");
+        cBL        = MakeChild("MudCornerBL");
+        cBR        = MakeChild("MudCornerBR");
+
+        // Underlay covers the whole cell; UV set per-stage in SetExposed.
+        var brt = baseSprite.rectTransform;
+        brt.anchoredPosition = Vector2.zero;
+        brt.sizeDelta        = new Vector2(ts, ts);
 
         // Interior layout is exposure-dependent; SetExposed positions it below.
         var irt = interior.rectTransform;
@@ -162,93 +164,68 @@ public class MudCellView : MonoBehaviour
 
     // ── Exposure layout ────────────────────────────────────────────────────────
 
-    /// Marks which of the 4 sides are EXPOSED (no mud neighbour) and lays out the
-    /// bevel edges + convex corners accordingly. Straight edges span the full side; where a
-    /// perpendicular side is also exposed the edge is trimmed to leave room for a corner piece.
+    /// Marks which of the 4 sides are EXPOSED (no mud neighbour) and lays out the interior + the
+    /// straight-run corner squares. The exposed bevels and convex corners come straight from the
+    /// full-cell sprite underlay, so there is nothing to build for them. Diagonal flags are no
+    /// longer needed (kept for call-site compatibility).
     public void SetExposed(bool top, bool right, bool bottom, bool left,
         bool mudTL = false, bool mudTR = false, bool mudBL = false, bool mudBR = false)
     {
         eT = top; eR = right; eB = bottom; eL = left;
-        dTL = mudTL; dTR = mudTR; dBL = mudBL; dBR = mudBR;
         Rect bu = damaged ? bevelUV1 : bevelUV0;
 
-        float trimL = eL ? bp : 0f, trimR = eR ? bp : 0f;   // px trims where perpendicular exposed
-        float trimT = eT ? bp : 0f, trimB = eB ? bp : 0f;
-        float uL = eL ? sourceT : 0f, uR = eR ? sourceT : 0f; // source UV trims
+        // Underlay: the full original sprite. This alone gives correct exposed edges + convex
+        // rounded corners for an isolated cell — no reconstruction.
+        baseSprite.uvRect = bu;
+
+        // Interior: inset by the bevel width on EXPOSED sides (so the sprite bevel shows), and
+        // extend to the edge (+bleed) on NEIGHBOUR sides (so the join is flat and seamless).
+        float insL = eL ? bp : 0f, insR = eR ? bp : 0f;
+        float insT = eT ? bp : 0f, insB = eB ? bp : 0f;
+        float uL = eL ? sourceT : 0f, uR = eR ? sourceT : 0f;
         float uT = eT ? sourceT : 0f, uB = eB ? sourceT : 0f;
+        LayoutInterior(insL, insT, ts - insL - insR, ts - insT - insB, uL, uT, uR, uB, eL, eT, eR, eB);
 
-        LayoutInterior(trimL, trimT, ts - trimL - trimR, ts - trimT - trimB, uL, uT, uR, uB, eL, eT, eR, eB);
-
-        // FILL (opaque interior band, drawn BEHIND the bevel) overlaps the mud neighbour by
-        // edgeOverlap on every internal end → guarantees no board colour ever peeks at a join.
-        float coL = eL ? cornerJoin : edgeOverlap;
-        float coR = eR ? cornerJoin : edgeOverlap;
-        float coT = eT ? cornerJoin : edgeOverlap;
-        float coB = eB ? cornerJoin : edgeOverlap;
-
-        // BEVEL edge end extensions — per END, direction-aware. An edge extends a hair into the
-        // neighbour ONLY where the same exposed run continues straight (perpendicular side is mud
-        // AND the diagonal on the exposed side is empty). That closes the little break the user
-        // saw between stacked cells, while NOT poking a bevel sliver into an L / reverse-L concave
-        // corner (there the diagonal is mud → extension 0). A corner-trimmed end (perpendicular
-        // exposed, convex corner) tucks cornerJoin under the opaque corner piece.
-        float e = edgeExtend;
-        float tL = eL ? cornerJoin : (dTL ? 0f : e);   // eTop:   left / right ends
-        float tR = eR ? cornerJoin : (dTR ? 0f : e);
-        float bL = eL ? cornerJoin : (dBL ? 0f : e);   // eBottom
-        float bR = eR ? cornerJoin : (dBR ? 0f : e);
-        float lT = eT ? cornerJoin : (dTL ? 0f : e);   // eLeft:  top / bottom ends
-        float lB = eB ? cornerJoin : (dBL ? 0f : e);
-        float rT = eT ? cornerJoin : (dTR ? 0f : e);   // eRight
-        float rB = eB ? cornerJoin : (dBR ? 0f : e);
-
-        float topX  = trimL - tL,  topW  = ts - trimL - trimR + tL + tR;
-        float botX  = trimL - bL,  botW  = ts - trimL - trimR + bL + bR;
-        float leftY = -trimT + lT, leftH = ts - trimT - trimB + lT + lB;
-        float rightY = -trimT + rT, rightH = ts - trimT - trimB + rT + rB;
-
-        // Cover the band behind an exposed bevel with opaque interior so no board colour peeks
-        // through the bevel's soft inner edge (the "ince boşluk"). Fill spans up to the full
-        // bevel width (underFill), but the strips are trimmed at exposed corners and only drawn
-        // on exposed sides, so they never reach convex corners nor spill into empty diagonals.
-        // At least a 2px raster seam is always covered.
-        float fillH = Mathf.Max(Mathf.Min(interiorBleed, 2f), bp * underFill);
-        float hFillX = trimL - coL;
-        float hFillW = ts - trimL - trimR + coL + coR;
-        float vFillY = -trimT + coT;
-        float vFillH = ts - trimT - trimB + coT + coB;
-
-        LayoutFill(fTop,    eT, hFillX, 0f,             hFillW, fillH, uL,          1f - sourceT, 1f - uL - uR, sourceT,      horizontal: true);
-        LayoutFill(fBottom, eB, hFillX, -(ts - fillH),  hFillW, fillH, uL,          0f,           1f - uL - uR, sourceT,      horizontal: true);
-        LayoutFill(fLeft,   eL, 0f,     vFillY,         fillH, vFillH, 0f,          uB,           sourceT,      1f - uT - uB, horizontal: false);
-        LayoutFill(fRight,  eR, ts - fillH, vFillY,     fillH, vFillH, 1f - sourceT, uB,          sourceT,      1f - uT - uB, horizontal: false);
-
-        // Straight edges sample ONLY the sprite's flat middle section, cropped INSIDE the rounded
-        // corner radius on the along-edge axis (sourceCornerT, not sourceT). Sampling from sourceT
-        // would pull in the 80..101 px curved corner start, so each edge's ends bow inward and two
-        // adjacent cells meet in a slight concave scallop instead of a straight line. The bevel
-        // thickness axis stays sourceT. Rounded corners are drawn only by cTL/cTR/cBL/cBR.
+        // Straight-run corner squares: exactly ONE adjacent side exposed → the sprite would show a
+        // rounded corner where the run should continue straight into the neighbour. Cover it with a
+        // flat bevel strip sampled from the exposed side. Both sides exposed = convex (keep the
+        // sprite's round); both sides neighbour = concave (interior covers it flat).
         float sc = edgeAlongInset, along = 1f - 2f * edgeAlongInset;
-        LayoutRegion(eTop,    eT, topX,  0f,          topW,  bp,      SubUV(bu, sc,           1f - sourceT, along,   sourceT));
-        LayoutRegion(eBottom, eB, botX,  -(ts - bp),  botW,  bp,      SubUV(bu, sc,           0f,           along,   sourceT));
-        LayoutRegion(eLeft,   eL, 0f,    leftY,       bp,    leftH,   SubUV(bu, 0f,           sc,           sourceT, along));
-        LayoutRegion(eRight,  eR, ts - bp, rightY,    bp,    rightH,  SubUV(bu, 1f - sourceT, sc,           sourceT, along));
+        Rect topFlat    = SubUV(bu, sc,           1f - sourceT, along,   sourceT);
+        Rect bottomFlat = SubUV(bu, sc,           0f,           along,   sourceT);
+        Rect leftFlat   = SubUV(bu, 0f,           sc,           sourceT, along);
+        Rect rightFlat  = SubUV(bu, 1f - sourceT, sc,           sourceT, along);
 
-        // Convex corners (both perpendicular sides exposed).
-        LayoutRegion(cTL, eT && eL, 0f,       0f,          bp, bp, SubUV(bu, 0f,                1f - sourceCornerT, sourceCornerT, sourceCornerT));
-        LayoutRegion(cTR, eT && eR, ts - bp,  0f,          bp, bp, SubUV(bu, 1f - sourceCornerT, 1f - sourceCornerT, sourceCornerT, sourceCornerT));
-        LayoutRegion(cBL, eB && eL, 0f,       -(ts - bp),  bp, bp, SubUV(bu, 0f,                0f,                sourceCornerT, sourceCornerT));
-        LayoutRegion(cBR, eB && eR, ts - bp,  -(ts - bp),  bp, bp, SubUV(bu, 1f - sourceCornerT, 0f,                sourceCornerT, sourceCornerT));
+        SquareCorner(cTL, 0f,      0f,          eT, eL, topFlat,    leftFlat);
+        SquareCorner(cTR, ts - bp, 0f,          eT, eR, topFlat,    rightFlat);
+        SquareCorner(cBL, 0f,      -(ts - bp),  eB, eL, bottomFlat, leftFlat);
+        SquareCorner(cBR, ts - bp, -(ts - bp),  eB, eR, bottomFlat, rightFlat);
+    }
+
+    // A corner is squared only for a straight run: one side exposed, the perpendicular not. `hExposed`
+    // is the horizontal-edge side (top/bottom), `vExposed` the vertical-edge side (left/right). The
+    // strip is widened along the edge in BOTH directions by cornerJoinExtend — inward it covers the
+    // sprite's rounded corner start, outward it overlaps into the joined neighbour — so the bevel line
+    // runs continuous across the cell boundary with no break. Flat bevel is uniform along its length,
+    // so growing the strip just extends it (no visible stretch).
+    private void SquareCorner(RawImage img, float px, float py, bool hExposed, bool vExposed, Rect hFlat, Rect vFlat)
+    {
+        float e = cornerJoinExtend;
+        if (hExposed && !vExposed)
+            LayoutRegion(img, true, px - e, py, bp + 2f * e, bp, hFlat);      // horizontal bevel → widen left+right
+        else if (vExposed && !hExposed)
+            LayoutRegion(img, true, px, py + e, bp, bp + 2f * e, vFlat);      // vertical bevel → widen up+down
+        else
+            LayoutRegion(img, false, px, py, bp, bp, hFlat);
     }
 
     // ── Stage / damage ──────────────────────────────────────────────────────────
 
     public void SetDamaged(bool d)
     {
-        if (damaged == d && interior != null && interior.texture != null) { /* still refresh */ }
         damaged = d;
         ApplyStageTextures();
-        SetExposed(eT, eR, eB, eL, dTL, dTR, dBL, dBR);   // re-apply (bevel UV differs per stage)
+        SetExposed(eT, eR, eB, eL);   // re-apply (bevel UV differs per stage)
     }
 
     private void ApplyStageTextures()
@@ -259,26 +236,21 @@ public class MudCellView : MonoBehaviour
             Texture tex = flat ? Texture2D.whiteTexture : (damaged ? interiorTex1 : interiorTex0);
             Color color = flat ? (damaged ? flatInteriorColor1 : flatInteriorColor0) : Color.white;
             SetInteriorTexAndColor(interior, tex, color);
-            SetInteriorTexAndColor(fTop, tex, color);
-            SetInteriorTexAndColor(fRight, tex, color);
-            SetInteriorTexAndColor(fBottom, tex, color);
-            SetInteriorTexAndColor(fLeft, tex, color);
         }
 
         Texture bt = damaged ? bevelTex1 : bevelTex0;
-        SetTex(eTop, bt); SetTex(eRight, bt); SetTex(eBottom, bt); SetTex(eLeft, bt);
-        SetTex(cTL, bt);  SetTex(cTR, bt);   SetTex(cBL, bt);      SetTex(cBR, bt);
+        SetTex(baseSprite, bt);
+        SetTex(cTL, bt); SetTex(cTR, bt); SetTex(cBL, bt); SetTex(cBR, bt);
     }
 
     // ── Visibility ────────────────────────────────────────────────────────────
 
     public void SetVisible(bool visible)
     {
-        SetAlpha(interior, visible ? 1f : 0f);
         float a = visible ? 1f : 0f;
-        SetAlpha(fTop, a); SetAlpha(fRight, a); SetAlpha(fBottom, a); SetAlpha(fLeft, a);
-        SetAlpha(eTop, a); SetAlpha(eRight, a); SetAlpha(eBottom, a); SetAlpha(eLeft, a);
-        SetAlpha(cTL, a);  SetAlpha(cTR, a);   SetAlpha(cBL, a);      SetAlpha(cBR, a);
+        SetAlpha(baseSprite, a);
+        SetAlpha(interior, a);
+        SetAlpha(cTL, a); SetAlpha(cTR, a); SetAlpha(cBL, a); SetAlpha(cBR, a);
     }
 
     public void Clear()
@@ -317,44 +289,13 @@ public class MudCellView : MonoBehaviour
         img.uvRect           = uv;
     }
 
-    private void LayoutFill(RawImage img, bool active, float px, float py, float sw, float sh,
-        float fx, float fy, float fw, float fh, bool horizontal)
-    {
-        if (img == null) return;
-        img.gameObject.SetActive(active && sw > 0f && sh > 0f);
-        if (!img.gameObject.activeSelf) return;
-
-        Vector2 offset = damaged ? interiorOffset1 : interiorOffset0;
-        if (horizontal)
-        {
-            if (offset.x < 0f) sw += -offset.x;
-            else if (offset.x > 0f) { px -= offset.x; sw += offset.x; }
-            px += offset.x;
-        }
-        else
-        {
-            if (offset.y < 0f) { py += offset.y; sh += -offset.y; }
-            else if (offset.y > 0f) sh += offset.y;
-        }
-
-        var crt = img.rectTransform;
-        crt.anchoredPosition = new Vector2(px, py);
-        crt.sizeDelta        = new Vector2(sw, sh);
-
-        img.uvRect = new Rect(
-            uvX + fx * uvW,
-            uvY + fy * uvH,
-            fw * uvW,
-            fh * uvH);
-    }
-
     private void LayoutInterior(float px, float py, float sw, float sh, float uL, float uT, float uR, float uB,
         bool exposedLeft, bool exposedTop, bool exposedRight, bool exposedBottom)
     {
         if (interior == null) return;
 
-        // Bleed only into neighbouring mud sides. Bleeding into exposed sides fills the
-        // transparent part of rounded convex corners and makes L / reverse-L joins look crushed.
+        // Bleed only into neighbouring mud sides. Bleeding into exposed sides would eat the sprite's
+        // rounded convex corners and crush L / reverse-L joins.
         var crt = interior.rectTransform;
         Vector2 offset = damaged ? interiorOffset1 : interiorOffset0;
 
@@ -364,7 +305,7 @@ public class MudCellView : MonoBehaviour
         float bleedB = exposedBottom ? 0f : interiorBleed;
 
         // If the interior is nudged for art alignment, compensate the opposite side so the
-        // patch still reaches the original cell bounds and does not reveal the board color.
+        // patch still reaches the original cell bounds and does not reveal the sprite middle.
         if (offset.x < 0f) bleedR = Mathf.Max(bleedR, -offset.x);
         else if (offset.x > 0f) bleedL = Mathf.Max(bleedL, offset.x);
 

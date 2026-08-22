@@ -456,10 +456,10 @@ MonoBehaviour:
   plainMudTexture: {fileID: 2800000, guid: 2daf598016aca498585b95eb6bb3655f, type: 3}
   damagedMudTexture: {fileID: 2800000, guid: 745850d93268d4a359d07bd82ef9a380, type: 3}
   damagedBorderedMudSprite: {fileID: 21300000, guid: 728b56bc3c0a946fbb8707049833ee21, type: 3}
-  cornerTL: {fileID: 21300000, guid: 85328110a47f04f419333488db274e0d, type: 3}
-  cornerTR: {fileID: 21300000, guid: d9d6789765ef74ec9b095e8872183c4b, type: 3}
-  cornerBL: {fileID: 21300000, guid: b3f3803eb26684acb8e511cef20ca51f, type: 3}
-  cornerBR: {fileID: 21300000, guid: 548c7e3adf9f8429c97ff933d2a4725a, type: 3}
+  cornerTL: {fileID: 21300000, guid: 2eedb2ca9d08a4bb2b478b770c9e816c, type: 3}
+  cornerTR: {fileID: 21300000, guid: af7b5464f1c854c04b31e07493a932fa, type: 3}
+  cornerBL: {fileID: 21300000, guid: b9ab4785a3f4c4513a75d65cf854d362, type: 3}
+  cornerBR: {fileID: 21300000, guid: c9bdd7924ffc54ac79e958ca4ff970ec, type: 3}
   cornerOffsetTL: {x: -6, y: -6}
   cornerOffsetTR: {x: 6, y: -6}
   cornerOffsetBL: {x: -6, y: 6}
@@ -469,7 +469,7 @@ MonoBehaviour:
   flatStage0InteriorColor: {r: 0.72, g: 0.28, b: 0.07, a: 1}
   stage0InteriorOffsetPixels: {x: -1.5, y: 0}
   borderThicknessRatio: 0.085
-  edgeJoinOverlapPixels: 1.5
+  edgeJoinOverlapPixels: 10
   interiorBleedPixels: 2
   underBevelFillRatio: 1
   cornerJoinPixels: 4
@@ -3607,8 +3607,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.06423174}
-  m_AnchorMax: {x: 0.7826087, y: 1.5056674}
+  m_AnchorMin: {x: 0, y: 0.056792874}
+  m_AnchorMax: {x: 0.7878788, y: 1.3312918}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8663,19 +8663,19 @@ MonoBehaviour:
   grassOverlayRoot: {fileID: 0}
   grassOverlayService: {fileID: 0}
   keyGeneratorMachineConfig:
-    crankSprite: {fileID: 21300000, guid: 7677435538c9b42fdb2e7e57cd53c04f, type: 3}
+    crankSprite: {fileID: 21300000, guid: 0c460899348df4f3ebe11cd17b13eaa5, type: 3}
     draftSprite: {fileID: 21300000, guid: 0d7c1a3094f264fc698cdef3d602246b, type: 3}
-    glassInsets: {x: 0.19, y: 0.2, z: 0.19, w: 0.15}
+    glassInsets: {x: 0.12, y: 0, z: 0.19, w: 0.1}
     draftSize: 0.42
     draftOffset: {x: 0, y: 0.02}
     draftIdleAlpha: 0.85
     draftDimAlpha: 0.12
     draftBreathePeriod: 1.8
-    scanColor: {r: 0.35, g: 1, b: 0.55, a: 1}
-    scanBandHeight: 0.1
+    scanColor: {r: 0.21698113, g: 0.8679245, b: 0.41696984, a: 1}
+    scanBandHeight: 0.3
     scanDuration: 0.36
-    crankPivot: {x: 0.5, y: 0.11}
-    crankHeight: 0.45
+    crankPivot: {x: 2, y: 1.2}
+    crankHeight: 0.15
     crankOffset: {x: 0.45, y: -0.2}
     crankRestAngle: 0
     crankPullAngle: -34
