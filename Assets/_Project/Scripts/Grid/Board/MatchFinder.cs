@@ -1113,6 +1113,15 @@ public class MatchFinder
             foreach (var m in result)
                 sb.AppendLine($"    ({m.X},{m.Y}) {m.Type}");
         }
+
+        if (mismatchCount > 0)
+        {
+            string log = sb.ToString();
+            Debug.LogError(log);
+            Debug.Break();
+            throw new System.InvalidOperationException("[MatchFinder] GridData/TileView mismatch detected. Board state is invalid.");
+        }
+
         Debug.Log(sb.ToString());
     }
 #endif

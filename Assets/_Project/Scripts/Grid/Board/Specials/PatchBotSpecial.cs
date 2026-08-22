@@ -376,6 +376,16 @@ public sealed class PatchBotSpecial
                 && arrivalRt.Board.Tiles[data.X, data.Y] != null)
                 arrivalRt.Context.Affected.Add(arrivalRt.Board.Tiles[data.X, data.Y]);
         }
+
+        // If there's any obstacle at the target (including stone), flash white and spawn spark.
+        if (hasObstacleAtTarget)
+        {
+            var tile = arrivalRt.Board.Tiles[targetX, targetY];
+            if (tile != null)
+            {
+                tile.FlashWhiteSpark();
+            }
+        }
     }
 
     private void ApplyPatchBotTeleportToCellDeferred(PatchBotExecutionRuntime arrivalRt, int targetX, int targetY)

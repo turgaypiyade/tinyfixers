@@ -106,6 +106,11 @@ dondurmuyor.
 Bu yüzden §5b'deki her aday, "veriyi ne zaman yazıyor?" diye denetlenir. MatchClearAction bu kuralı
 karşılayamaz (fall doğrudan onun sonucuna bağlı) → BlocksResolve kalır.
 
+Ek prensip: AsyncSideEffect saf görseli, board'un canlı `TileView` referansını grid dışına taşıyarak
+oynatmamalı. Veri commit edildikten sonra görsel gerekiyorsa detached `Image`/sprite klonu kullanılır ve
+gerçek `TileView` hemen pool'a döner ya da gridde kalır. `GridData` ↔ `TileView` mismatch debug çıktısı
+çıktığı anda oyun bozuk state'tedir; bu durum logla geçiştirilemez, fail-fast edilmelidir.
+
 ## 4. Eski helper'ları koru (thin shim)
 
 Diff'i küçük tutmak için eski Begin/End imzaları kalır, içleri handle'a devreder. Handle'ı `Begin`

@@ -8,6 +8,29 @@ Detaylar: `UnifiedSpecialFlow_Plan.md` (senkron akış), `ObstacleFlow_Inventory
 
 ---
 
+## TEMEL PRENSİP — Board akışı en az durdurulacak
+
+Her yeni special, obstacle, booster ve VFX çalışmasında ana kural: **board akışı mümkün olan en erken
+anda serbest bırakılır.** Bir efektin görsel süresi, taş düşüşünü veya dynamic input'u durdurmak için
+tek başına yeterli sebep değildir.
+
+- Bir hücre/taş gameplay açısından temizlendiyse veri **hemen** commit edilir (`GridData` + `TileView`
+  senkron boşaltılır), ardından cascade/refill çalışır.
+- Sonrasında oynayan uçuş, parçalanma, ışın, tube, splash, orb veya kırılma efektleri **detached visual**
+  olmalıdır. Bu işler en fazla level-end için beklenir; resolve/input'u bloklamaz.
+- Async görsel, gerçek `TileView` objesini board dışına sürüklememelidir. Board'dan çıkan taş için
+  gerekiyorsa bağımsız sprite/image klonu kullanılır; canlı `TileView` ya gridde kalır ya pool'a döner.
+- `PresentationFx` veya blocking job yalnızca sonraki gameplay verisi o işin sonucuna gerçekten bağlıysa
+  kullanılır. Saf görsel VFX için default seçim non-blocking async'tir.
+- `GridData` ↔ `TileView` mismatch kabul edilemez. `Mismatch count > 0` board state bozulmasıdır; fail-fast
+  edilmeli, oyun bozuk state ile devam etmemelidir.
+
+Örnek: Magnet bir taşı seçtiği anda hedef hücre board verisinden temizlenir ve düşüş başlar; magnete giden
+taş yalnızca detached görsel klondur. Magnetlerin yok olma parçalanması da board düşüşünden bağımsız,
+asenkron overlay VFX olmalıdır.
+
+---
+
 ## BÖLÜM A — Profesyonel Match-3'ün 8 temel şartı (karne)
 
 | # | Şart | Durum | Not |
@@ -41,10 +64,15 @@ Detaylar: `UnifiedSpecialFlow_Plan.md` (senkron akış), `ObstacleFlow_Inventory
 | **OBB break sesi + 2x2 footprint** | OBB patlat: ses **burst anında** mı (wind-up başında değil), footprint hücrelerine erken taş giriyor mu | `f61417b` |
 | **OBB bar tükenişi** | Üst/sağ barlar da **içeriden dışarıya** eksiliyor mu (sol/alt ile aynı) | `f61417b` |
 | **Streak/UFO ertelenmiş teslimat** | Level 25+, streak>0, açılışta kapalı board → ilk hamleden sonra UFO gelip special koyuyor mu (tutarlı) | `f61417b` |
-| **Faz 8D dynamic hardening** | `useDynamicBoardInputGate` + per-column flag'ler **AÇIK** → 8C'deki normal busy swap hâlâ hemen çalışmalı. Busy sırasında uygun olmayan tile'a (falling/special/special-chain sütunu) drag başlatınca tile parmakla sürüklenmemeli. `useDynamicBoardInputTestSlowMo` release build'de etkisiz; editor/dev test knob'u olarak kalır | (bu seans) |
+| **Faz 8D dynamic hardening** | `useDynamicBoardInputGate` + per-column flag'ler **AÇIK** → 8C'deki normal busy swap hâlâ hemen çalışmalı. Busy sırasında uygun olmayan tile'a (falling/special/special-chain sütunu) drag başlatınca tile parmakla sürüklenmemeli. Busy'de başlayıp idle'a sarkan click/drag sonradan normal swap'a dönüşmemeli. `useDynamicBoardInputTestSlowMo` release build'de etkisiz; editor/dev test knob'u olarak kalır | (bu seans) |
+| **LevelP_00540 mud beneath plastic init render** | LevelP_00540 aç: sol tarafta Plastic Two Stages/movable altındaki mud'lar **ilk frame'den** görünmeli; herhangi bir plastic hareketini beklememeli. Sonra plastic hareket edince mud görünümü kaybolmamalı/çiftlenmemeli | (bu seans) |
+| **Faz 9A obstacle flow adapter** | `useFlowActivities` **AÇIK** → Barrel/Barrell_v2 mud splatter, KeyGenerator key flight, RocketBasket/PatchBot dash, goal orb ve boss strike uçuşlarında davranış değişmemeli: board gereksiz beklememeli, level-end erken bitmemeli, resolve stuck/underflow olmamalı | (bu seans) |
+| **Faz 9B EnergyContainer/HatLauncher flow** | `useFlowActivities` **AÇIK** → EnergyContainer/HatLauncher tetikle: open/close/exhausted sunumu akarken board gereksiz kilitlenmemeli, orb hedefe gidince goal düşmeli, exhausted frame kalmalı, resolve stuck/underflow olmamalı | (bu seans) |
+| **Faz 9C Safe hold flow** | `useFlowActivities` **AÇIK** → Safe kır: ilk patlama/reveal anı hâlâ 0.5s korunmalı, sonra board akmalı; safe goal düşmeli, alt içerik reveal olmalı, resolve stuck/underflow olmamalı | (bu seans) |
+| **Faz 9D OBB flow adapter** | `useFlowActivities` **AÇIK** → tek/çoklu OBB patlat: wind-up, burst sesi, 2x2 footprint açılışı, zincir OBB tetiklenmesi ve taş akışı eskiyle aynı kalmalı. Dynamic input OBB dalgası sırasında uygunsuz swap başlatmamalı | (bu seans) |
 
 ### 🔍 AÇIK SORUNLAR (teşhis var, çözüm bekliyor)
-- **Mud plastik altında görünmüyor** (LevelP_00540) — level datası SAĞLAM (27 hücrede mud authored), 27 view de spawn oluyor (`hasView=True`). Kök: init-render; `RefreshAllBorders` denemesi durumu KÖTÜLEŞTİRDİ → geri alındı. `[MudBeneath]` trace kodda. **Ev görevi.**
+- **Mud plastik altında görünmüyor** (LevelP_00540) — fix kodlandı: `DrawMudOverlays()` stamped-beneath mud'ı temizlediği için çağrı sırası değiştirildi. Cihaz testi bekliyor.
 - **PatchBot vuruş-anı beklemesi** — kalkış düzeldi ama her bot hedefe vurduğunda akış duruyor → Faz 3/5 hedefi.
 - **special_resolve showpiece ~1.5-2.5s** — kasıtlı gösteri; ayrı iş.
 
@@ -58,7 +86,7 @@ Detaylar: `UnifiedSpecialFlow_Plan.md` (senkron akış), `ObstacleFlow_Inventory
 | **Faz 6** | Temizlik: eski sinyaller/settle-wait/sticky flag sil | Bir faz, eski yol silinene kadar BİTMİŞ sayılmaz |
 | **Faz 7** | ✅ **Per-column async** tamamlandı (global gravity → sütun bazlı): 7A `ColumnFlowEngine`, 7B `ParallelColumnFallAction`, 7C runtime `ColumnBusy` + `Flow.IsColumnSettling`. Flag'ler hâlâ geri alınabilirlik için duruyor; Faz 8 bunların üstüne `ReservedFor`/`TileState` input gating'i kuracak. Plan: `~/.claude/plans/calm-wibbling-sutherland.md` | A7; dinamik tahtanın ön koşulu |
 | **Faz 8** | **Cell-based FSM + Dynamic Board** başladı: **8A ✅ onaylı** (`TileRuntimeState` + `ReservedFor`). **8B ✅ onaylı**: normal tile canlı input cihazda akıcı çalıştı. **8C ✅ onaylı**: dynamic swap entry revalidation + special visual sırasında dynamic input kapalı + late busy-click suppress. **8D hardening kodlandı**: busy-drag erken gate + release build'de slow-mo no-op. Special/PatchBot dynamic input kapsamı ve eski global gate temizliği sonra | A8 |
-| **Faz 9** | Obstacle'ları ortak API'ye bağla | `ObstacleFlow_Inventory.md` sırası: Barrel/Key/Rocket → EnergyContainer → Oil spread → Safe hold → **OBB en son** |
+| **Faz 9** | Obstacle'ları ortak API'ye bağla. **9A kodlandı**: `BoardFlowScheduler` blocking/non-blocking activity ayrımı aldı; `BeginJob` ve eski paired uçuş shim'leri non-blocking Flow activity kaydı üretir. **9B kodlandı**: EnergyContainer/HatLauncher open-close-exhausted sunumu non-blocking Presentation activity. **9C kodlandı**: Safe 0.5s reveal hold'u blocking `Clear` activity olarak görünür. **9D kodlandı**: OBB detonasyon dalgası non-blocking `SpecialSweep` activity olarak izlenir; kendi OBB settle döngüsü henüz kaldırılmadı. **Oil spread ayrı görsel/UV pass'e bırakıldı.** | `ObstacleFlow_Inventory.md` sırası: Barrel/Key/Rocket/PatchBot → EnergyContainer/HatLauncher → Safe hold → OBB cleanup |
 | **Faz 10** | Level design L1-50 | Motor akıcı olsa da ilk 50 sıkarsa oyuncu kalmaz (§D) |
 
 ---

@@ -89,7 +89,18 @@ public class MudCellView : MonoBehaviour
     public void SetMaxHits(int max) => maxHits = Mathf.Max(1, max);
 
     /// Creates the child RawImages and caches geometry. Call after Init/SetStageAssets.
-    public void Build(int tileSize, float thicknessRatio, float edgeOverlapPixels = 1.5f, float interiorBleedPixels = 2f, float underBevelFillRatio = 1f, float cornerJoinPixels = 1f, float edgeJoinExtendPixels = 2f, float edgeStraightCropPixels = 8f)
+    public void Build(
+        int tileSize,
+        float thicknessRatio,
+        float edgeOverlapPixels = 1.5f,
+        float interiorBleedPixels = 2f,
+        float underBevelFillRatio = 1f,
+        float cornerJoinPixels = 1f,
+        float edgeJoinExtendPixels = 2f,
+        float edgeStraightCropPixels = 8f,
+        float sourceTextureSizePixels = 990f,
+        float sourceBorderPixels = 80f,
+        float sourceCornerPixels = 101f)
     {
         ts = tileSize;
         t  = Mathf.Clamp(thicknessRatio, 0.05f, 0.45f);
@@ -97,13 +108,15 @@ public class MudCellView : MonoBehaviour
         underFill = Mathf.Clamp01(underBevelFillRatio);
         cornerJoin = Mathf.Max(0f, cornerJoinPixels);
         edgeExtend = Mathf.Max(0f, edgeJoinExtendPixels);
-        // The authored 990x990 mud sprites have about 80 px of source border. Keep that
-        // UV crop independent from the larger bevel width desired on the 105 px board cell.
-        sourceT = 80f / 990f;
-        sourceCornerT = 101f / 990f;
+        float sourceSize = Mathf.Max(1f, sourceTextureSizePixels);
+        // The authored mud sprites are 990x990 with about 80 px of source border. Oil uses the
+        // same renderer with its own source metrics, because sampling a 1227px OilV4 sprite with
+        // mud's 990px constants makes the exposed corner/edge joins look clipped and boxy.
+        sourceT = Mathf.Clamp(sourceBorderPixels / sourceSize, 0.01f, 0.45f);
+        sourceCornerT = Mathf.Clamp(sourceCornerPixels / sourceSize, sourceT, 0.45f);
         // Straight edges crop a few px DEEPER than the 101 px corner radius so the sampled strip is
         // fully flat — otherwise a residual "oval" of the rounded corner shows at each cell join.
-        edgeAlongInset = Mathf.Clamp(sourceCornerT + Mathf.Max(0f, edgeStraightCropPixels) / 990f, sourceCornerT, 0.45f);
+        edgeAlongInset = Mathf.Clamp(sourceCornerT + Mathf.Max(0f, edgeStraightCropPixels) / sourceSize, sourceCornerT, 0.45f);
         edgeOverlap = Mathf.Max(0f, edgeOverlapPixels);
         interiorBleed = Mathf.Max(0f, interiorBleedPixels);
 

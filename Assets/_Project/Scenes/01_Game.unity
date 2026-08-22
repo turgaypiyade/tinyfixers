@@ -456,6 +456,15 @@ MonoBehaviour:
   plainMudTexture: {fileID: 2800000, guid: 2daf598016aca498585b95eb6bb3655f, type: 3}
   damagedMudTexture: {fileID: 2800000, guid: 745850d93268d4a359d07bd82ef9a380, type: 3}
   damagedBorderedMudSprite: {fileID: 21300000, guid: 728b56bc3c0a946fbb8707049833ee21, type: 3}
+  cornerTL: {fileID: 21300000, guid: 85328110a47f04f419333488db274e0d, type: 3}
+  cornerTR: {fileID: 21300000, guid: d9d6789765ef74ec9b095e8872183c4b, type: 3}
+  cornerBL: {fileID: 21300000, guid: b3f3803eb26684acb8e511cef20ca51f, type: 3}
+  cornerBR: {fileID: 21300000, guid: 548c7e3adf9f8429c97ff933d2a4725a, type: 3}
+  cornerOffsetTL: {x: -6, y: -6}
+  cornerOffsetTR: {x: 6, y: -6}
+  cornerOffsetBL: {x: -6, y: 6}
+  cornerOffsetBR: {x: 6, y: 6}
+  cornerInsetPixels: 2
   useFlatStage0Interior: 1
   flatStage0InteriorColor: {r: 0.72, g: 0.28, b: 0.07, a: 1}
   stage0InteriorOffsetPixels: {x: -1.5, y: 0}
@@ -3598,8 +3607,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.075555556}
-  m_AnchorMax: {x: 0.80136985, y: 1.7711111}
+  m_AnchorMin: {x: 0, y: 0.06423174}
+  m_AnchorMax: {x: 0.7826087, y: 1.5056674}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8955,6 +8964,18 @@ MonoBehaviour:
   perfGcSpikeKB: 64
   useTilePool: 1
   useFlowActivities: 1
+  useOilTileSet: 1
+  oilEdgeSprite: {fileID: 0}
+  oilOuterCornerSprite: {fileID: 21300000, guid: f417d83bdc1f8415cab1c87ceb3c9ab1, type: 3}
+  oilCornerBottomRight: {fileID: 21300000, guid: 354e88252225848d781b7bc3cb6ef55d, type: 3}
+  oilCornerBottomLeft: {fileID: 21300000, guid: c7e4db34c31c74adbbcad70654d26abf, type: 3}
+  oilCornerTopRight: {fileID: 21300000, guid: b84810752e8ee4700a40190761d99080, type: 3}
+  oilCornerTopLeft: {fileID: 21300000, guid: cb6362e6aa5684b33a2c5953f65c7e54, type: 3}
+  oilJunctionSizeRatio: 1
+  oilOffsetBR: {x: 0, y: 0}
+  oilOffsetBL: {x: 0, y: 0}
+  oilOffsetTR: {x: 0, y: 0}
+  oilOffsetTL: {x: 0, y: 0}
   throwOnTileSyncMismatch: 1
   tilePositionEpsilon: 0.25
   KeyGeneratorProductionComplete: 0
@@ -9177,7 +9198,20 @@ MonoBehaviour:
   spreadFxPrefab: {fileID: 6112419243108842376, guid: 2a6fdecff9e614da491554f275fbbc7f, type: 3}
   board: {fileID: 1410826445}
   duration: 0.5
-  oilOverlaySprite: {fileID: 21300000, guid: 5003bc0f577ff42479466f962e00a616, type: 3}
+  spreadFrameSequenceDuration: 0.42
+  spreadFrameCrossFadeRatio: 0.55
+  oilOverlaySprite: {fileID: 21300000, guid: f417d83bdc1f8415cab1c87ceb3c9ab1, type: 3}
+  oilInteriorTexture: {fileID: 2800000, guid: 6686d306d670846ff92bdbfc07b50917, type: 3}
+  oilDropSprite: {fileID: 21300000, guid: fde9dcc4702804ed4970e1716f8c7fd7, type: 3}
+  oilSpreadSprite: {fileID: 21300000, guid: f417d83bdc1f8415cab1c87ceb3c9ab1, type: 3}
+  spreadUpFrames:
+  - {fileID: 21300000, guid: a8c277fc784ef47909a0f37c74061266, type: 3}
+  - {fileID: 21300000, guid: 237ff78fe8953440baaf2b29b8fc8b0e, type: 3}
+  - {fileID: 21300000, guid: a6516af4cb5474d739718874a3c7e3cc, type: 3}
+  spreadRightFrames:
+  - {fileID: 21300000, guid: 37250321aa1234a46beb2021ae3d9efc, type: 3}
+  - {fileID: 21300000, guid: 5cc94c5d985cb4f08a7460cd13b8e52b, type: 3}
+  - {fileID: 21300000, guid: 6accc5b873d564fa699ba95273a19033, type: 3}
 --- !u!114 &1410826453
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9246,6 +9280,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d74d01aa8a0b6404c9b3bbcaab0bed40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MagnetObstacleService
+  enableDrainPulse: 1
+  drainInterval: 3.5
+  firstDrainDelay: 1.2
+  drainMaxTargets: 1
+  drainRadius: 2
+  drainFlyDuration: 0.32
+  drainElectricMarkDuration: 0.58
+  drainSuctionDuration: 0.46
+  drainPullEndScale: 0.22
+  drainTubeTravelDuration: 0.68
+  drainTubeCarrierScale: 0.56
+  drainTubeTileScale: 0.3
+  drainTubeSamples: 18
+  drainSuctionCurveStrength: 0.24
+  drainElectricSegments: 7
+  drainElectricThicknessRatio: 0.065
+  drainIgnoresGoalCredit: 1
 --- !u!114 &1410826458
 MonoBehaviour:
   m_ObjectHideFlags: 0

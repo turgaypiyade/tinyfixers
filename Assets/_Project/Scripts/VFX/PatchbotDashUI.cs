@@ -5,6 +5,11 @@ using UnityEngine.UI;
 
 public class PatchbotDashUI : MonoBehaviour
 {
+    private const string LaunchSparkPoolKey = "PatchbotDash.LaunchSpark";
+    private const string ImpactSparkPoolKey = "PatchbotDash.ImpactSpark";
+    private const string ImpactFlashOuterPoolKey = "PatchbotDash.ImpactFlashOuter";
+    private const string ImpactFlashInnerPoolKey = "PatchbotDash.ImpactFlashInner";
+
     private sealed class DashMotionState
     {
         public float elapsed;
@@ -129,7 +134,32 @@ public class PatchbotDashUI : MonoBehaviour
     [SerializeField, Range(0.3f, 3f)] private float launchSparkDistanceFactor = 1.5f;
     [SerializeField, Min(0.05f)] private float launchSparkLife = 0.42f;
 
+    [Header("Impact Sparks (çarpmada etrafa kıvılcım saçma)")]
+    [Tooltip("Hedefe çarpma anında etrafa saçılan kıvılcım adedi. 0 = kapalı.")]
+    [SerializeField, Min(0)] private int impactSparkCount = 36;
+    [Tooltip("Özel çarpışma kıvılcımı sprite'ı. Boş bırakılırsa yönlü eliptik parıltı sprite'ı kullanılır.")]
+    [SerializeField] private Sprite impactSparkSprite;
+    [Tooltip("Kıvılcımların fırlama mesafesi (tile boyutuna oran).")]
+    [SerializeField, Range(0.3f, 4f)] private float impactSparkDistanceFactor = 2.1f;
+    [Tooltip("Mevcut distance değerini koruyup çarpma kıvılcımlarını daha dar bir daireye toplar. 1 = eski yayılım.")]
+    [SerializeField, Range(0.35f, 1f)] private float impactSparkSpreadScale = 0.62f;
+    [Tooltip("Çarpma kıvılcımı/parıltı parçalarının boyut çarpanı.")]
+    [SerializeField, Range(0.75f, 1.8f)] private float impactSparkSizeMultiplier = 1.38f;
+    [SerializeField, Min(0.05f)] private float impactSparkLife = 0.48f;
+    [Tooltip("Çarpma anında anlık parıldama patlaması (flash) çıksın mı?")]
+    [SerializeField] private bool impactFlashEnabled = true;
+
     private Coroutine co;
+
+    private void Awake()
+    {
+        if (impactSparkCount <= 0) impactSparkCount = 36;
+        if (impactSparkDistanceFactor <= 0.05f) impactSparkDistanceFactor = 2.1f;
+        if (impactSparkSpreadScale <= 0.05f) impactSparkSpreadScale = 0.62f;
+        if (impactSparkSizeMultiplier <= 0.05f) impactSparkSizeMultiplier = 1.38f;
+        if (impactSparkLife <= 0.05f) impactSparkLife = 0.48f;
+        impactFlashEnabled = true;
+    }
 
     void Reset()
     {
@@ -395,6 +425,8 @@ public class PatchbotDashUI : MonoBehaviour
 
         if (carryRt != null)
             carryRt.localRotation = Quaternion.identity;
+
+        SpawnImpactSparks(live.target, size, board, req.to);
 
         req.onArrived?.Invoke();
         yield return StopFlightAudioRoutine(flightSource);
@@ -769,44 +801,198 @@ public class PatchbotDashUI : MonoBehaviour
             float dist = baseR * launchSparkDistanceFactor * Random.Range(0.55f, 1.15f);
             float sparkSize = baseR * Random.Range(0.10f, 0.22f);
 
-            var go = new GameObject("PatchbotLaunchSpark", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(vfxRoot, false);
-
-            var srt = (RectTransform)go.transform;
+            var img = UiVfxPool.RentImage(LaunchSparkPoolKey, vfxRoot, "PatchbotLaunchSpark");
+            var go = img.gameObject;
+            var srt = img.rectTransform;
             srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0.5f, 0.5f);
             srt.sizeDelta = new Vector2(sparkSize, sparkSize);
             srt.anchoredPosition = centerAnchored;
             srt.SetAsLastSibling();
 
-            var img = go.GetComponent<Image>();
             img.sprite = sparkSprite;
             img.raycastTarget = false;
             img.color = launchSparkColor;
 
-            StartCoroutine(SparkRoutine(go, srt, img, centerAnchored, centerAnchored + dir * dist));
+            StartCoroutine(SparkRoutine(go, srt, img, centerAnchored, centerAnchored + dir * dist, launchSparkLife, LaunchSparkPoolKey));
         }
     }
 
-    private IEnumerator SparkRoutine(GameObject go, RectTransform srt, Image img, Vector2 from, Vector2 to)
+    // Hedefe çarpma anında 360 derece saçılan, beyaz + alev sarısı/turuncu kıvılcım demeti.
+    private void SpawnImpactSparks(Vector2 centerAnchored, Vector2 size, BoardController board, Vector2Int targetCell)
     {
-        float life = Mathf.Max(0.05f, launchSparkLife);
-        float local = 0f;
-        Vector3 startScale = srt.localScale;
-        Color startColor = img.color;
+        if (vfxRoot == null)
+            return;
 
-        while (local < life && go != null)
+        int count = impactSparkCount > 0 ? impactSparkCount : 36;
+        float distFactor = (impactSparkDistanceFactor > 0.05f ? impactSparkDistanceFactor : 2.1f)
+            * Mathf.Clamp(impactSparkSpreadScale, 0.35f, 1f);
+        float sizeMul = Mathf.Clamp(impactSparkSizeMultiplier, 0.75f, 1.8f);
+        float life = impactSparkLife > 0.05f ? impactSparkLife : 0.48f;
+
+        float baseR = size.sqrMagnitude > 1f ? Mathf.Min(size.x, size.y) : (board != null ? board.TileSize : 96f);
+        if (baseR < 50f) baseR = 96f;
+
+        var streakSprite = impactSparkSprite != null ? impactSparkSprite : GetStreakSprite();
+        var glowSprite = GetSparkSprite();
+
+        // 1. Çarpma paleti: hedef tile rengini okumadan beyaz + alev sarısı/turuncu.
+        Color flameColor = new Color(1f, 0.68f, 0.10f, 1f);
+        Color hotYellow = new Color(1f, 0.88f, 0.24f, 1f);
+        Color flashColor = new Color(1f, 0.76f, 0.16f, 1f);
+
+        if (board != null && targetCell.x >= 0 && targetCell.x < board.Width && targetCell.y >= 0 && targetCell.y < board.Height)
         {
-            local += Time.deltaTime;
-            float t = Mathf.Clamp01(local / life);
-            float eased = 1f - (1f - t) * (1f - t);   // hızlı fırla, yavaşla
+            var tile = board.Tiles[targetCell.x, targetCell.y];
+            if (tile != null)
+            {
+                // Hedef taşı anlık %100 beyaza çekip yumuşakça eski rengine döndür
+                tile.FlashWhiteSpark(1.0f, 0.30f);
+            }
+        }
 
-            srt.anchoredPosition = Vector2.LerpUnclamped(from, to, eased);
-            srt.localScale = startScale * Mathf.Lerp(1f, 0.25f, t);
-            img.color = new Color(startColor.r, startColor.g, startColor.b, startColor.a * (1f - t));
+        // 2. Anlık parıltı patlaması (merkezde beyaz + renkli çift katmanlı parlama)
+        if (impactFlashEnabled)
+        {
+            StartCoroutine(ImpactFlashRoutine(centerAnchored, baseR * 1.65f, flashColor));
+        }
+
+        // 3. 360 derece saçılan directional kıvılcımlar
+        for (int i = 0; i < count; i++)
+        {
+            float ang = (i / (float)count) * Mathf.PI * 2f + Random.Range(-0.25f, 0.25f);
+            Vector2 dir = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)).normalized;
+            float dist = baseR * distFactor * Random.Range(0.45f, 1.08f);
+
+            // Büyük ana kıvılcımlar ve küçük hızlı parçacıklar
+            bool isBigStreak = (i % 3 == 0);
+            float sparkLen = (isBigStreak ? baseR * Random.Range(0.54f, 0.92f) : baseR * Random.Range(0.34f, 0.62f)) * sizeMul;
+            float sparkWid = sparkLen * Random.Range(0.45f, 0.72f);
+
+            var img = UiVfxPool.RentImage(ImpactSparkPoolKey, vfxRoot, "PatchbotImpactSpark");
+            var go = img.gameObject;
+            var srt = img.rectTransform;
+            srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0.5f, 0.5f);
+            srt.sizeDelta = new Vector2(sparkLen, sparkWid);
+            srt.anchoredPosition = centerAnchored;
+            srt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+            srt.localScale = Vector3.one;
+            srt.SetAsLastSibling();
+
+            img.sprite = (i % 4 == 0) ? glowSprite : streakSprite;
+            img.raycastTarget = false;
+
+            // Beyaz + alev sarısı/turuncu karışımı; hedef tile rengine bağlanmaz.
+            Color baseFlame = Random.value < 0.65f ? hotYellow : flameColor;
+            float whiteBlend = (i % 2 == 0) ? Random.Range(0.58f, 0.92f) : Random.Range(0.25f, 0.55f);
+            Color sparkColor = Color.Lerp(baseFlame, Color.white, whiteBlend);
+            sparkColor.a = 1f;
+            img.color = sparkColor;
+
+            float sparkIndividualLife = life * Random.Range(0.75f, 1.25f);
+            StartCoroutine(SparkRoutine(go, srt, img, centerAnchored, centerAnchored + dir * dist, sparkIndividualLife, ImpactSparkPoolKey));
+        }
+    }
+
+    private IEnumerator ImpactFlashRoutine(Vector2 centerAnchored, float maxRadius, Color hitColor)
+    {
+        if (vfxRoot == null) yield break;
+
+        // 1. Dış renkli parlama halkası
+        var outerImg = UiVfxPool.RentImage(ImpactFlashOuterPoolKey, vfxRoot, "PatchbotImpactFlashOuter");
+        var outerGo = outerImg.gameObject;
+        var outerRt = outerImg.rectTransform;
+        outerRt.anchorMin = outerRt.anchorMax = outerRt.pivot = new Vector2(0.5f, 0.5f);
+        outerRt.sizeDelta = Vector2.one * (maxRadius * 0.4f);
+        outerRt.anchoredPosition = centerAnchored;
+        outerRt.localScale = Vector3.one;
+        outerRt.SetAsLastSibling();
+
+        outerImg.sprite = GetSparkSprite();
+        outerImg.raycastTarget = false;
+        outerImg.color = hitColor;
+
+        // 2. İç parlak beyaz çekirdek
+        var innerImg = UiVfxPool.RentImage(ImpactFlashInnerPoolKey, vfxRoot, "PatchbotImpactFlashInner");
+        var innerGo = innerImg.gameObject;
+        var innerRt = innerImg.rectTransform;
+        innerRt.anchorMin = innerRt.anchorMax = innerRt.pivot = new Vector2(0.5f, 0.5f);
+        innerRt.sizeDelta = Vector2.one * (maxRadius * 0.25f);
+        innerRt.anchoredPosition = centerAnchored;
+        innerRt.localScale = Vector3.one;
+        innerRt.SetAsLastSibling();
+
+        innerImg.sprite = GetSparkSprite();
+        innerImg.raycastTarget = false;
+        innerImg.color = Color.white;
+
+        float duration = 0.22f;
+        float elapsed = 0f;
+        while (elapsed < duration && (outerGo != null || innerGo != null))
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            if (outerGo != null && outerRt != null && outerImg != null)
+            {
+                float scale = Mathf.Lerp(0.5f, 2.8f, Mathf.Sqrt(t));
+                outerRt.sizeDelta = Vector2.one * (maxRadius * scale);
+                float alpha = (1f - t) * (1f - t);
+                outerImg.color = new Color(hitColor.r, hitColor.g, hitColor.b, alpha * 0.95f);
+            }
+
+            if (innerGo != null && innerRt != null && innerImg != null)
+            {
+                float scale = Mathf.Lerp(0.4f, 1.9f, Mathf.Sqrt(t));
+                innerRt.sizeDelta = Vector2.one * (maxRadius * scale);
+                float alpha = Mathf.Clamp01(1f - t * 1.4f);
+                innerImg.color = new Color(1f, 1f, 1f, alpha);
+            }
+
             yield return null;
         }
 
-        if (go != null) Destroy(go);
+        if (outerGo != null) UiVfxPool.Return(ImpactFlashOuterPoolKey, outerGo);
+        if (innerGo != null) UiVfxPool.Return(ImpactFlashInnerPoolKey, innerGo);
+    }
+
+    private IEnumerator SparkRoutine(
+        GameObject go,
+        RectTransform srt,
+        Image img,
+        Vector2 from,
+        Vector2 to,
+        float customLife = -1f,
+        string poolKey = null)
+    {
+        float life = customLife > 0.05f ? customLife : (impactSparkLife > 0.05f ? impactSparkLife : 0.48f);
+        float local = 0f;
+        Vector3 startScale = Vector3.one;
+        if (srt != null) srt.localScale = startScale;
+        Color startColor = img != null ? img.color : Color.white;
+
+        while (local < life && go != null && srt != null && img != null)
+        {
+            local += Time.deltaTime;
+            float t = Mathf.Clamp01(local / life);
+            float eased = 1f - (1f - t) * (1f - t);   // hızlı patlama, yavaşça durma
+
+            srt.anchoredPosition = Vector2.LerpUnclamped(from, to, eased);
+            // Başlangıçta biraz büyür (pop), sonra küçülüp kaybolur
+            float scaleMul = t < 0.2f ? Mathf.Lerp(0.85f, 1.25f, t / 0.2f) : Mathf.Lerp(1.25f, 0.10f, (t - 0.2f) / 0.8f);
+            srt.localScale = startScale * scaleMul;
+
+            float alpha = t < 0.55f ? 1f : (1f - (t - 0.55f) / 0.45f);
+            img.color = new Color(startColor.r, startColor.g, startColor.b, startColor.a * alpha);
+            yield return null;
+        }
+
+        if (go != null)
+        {
+            if (!string.IsNullOrEmpty(poolKey))
+                UiVfxPool.Return(poolKey, go);
+            else
+                Destroy(go);
+        }
     }
 
     private static Sprite _sparkSprite;
@@ -815,7 +1001,7 @@ public class PatchbotDashUI : MonoBehaviour
         if (_sparkSprite != null)
             return _sparkSprite;
 
-        const int res = 32;
+        const int res = 64;
         var tex = new Texture2D(res, res, TextureFormat.RGBA32, false)
         {
             wrapMode = TextureWrapMode.Clamp,
@@ -828,15 +1014,60 @@ public class PatchbotDashUI : MonoBehaviour
         for (int x = 0; x < res; x++)
         {
             float d = Vector2.Distance(new Vector2(x, y), center) / radius;
-            float a = Mathf.Clamp01(1f - d);
-            a = a * a;   // sıcak, keskin çekirdek
-            tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+            if (d >= 1f)
+            {
+                tex.SetPixel(x, y, Color.clear);
+            }
+            else
+            {
+                float a = Mathf.Clamp01(1f - d);
+                float core = Mathf.Clamp01(1f - d * 1.5f);
+                float alpha = Mathf.Clamp01(a * a + core * 0.6f);
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+            }
         }
 
-        tex.Apply(false, true);
-        _sparkSprite = Sprite.Create(tex, new Rect(0, 0, res, res), new Vector2(0.5f, 0.5f), res);
+        tex.Apply();
+        _sparkSprite = Sprite.Create(tex, new Rect(0, 0, res, res), new Vector2(0.5f, 0.5f), 100f);
         _sparkSprite.name = "GeneratedPatchbotSpark";
         return _sparkSprite;
+    }
+
+    private static Sprite _streakSprite;
+    private static Sprite GetStreakSprite()
+    {
+        if (_streakSprite != null)
+            return _streakSprite;
+
+        const int w = 64, h = 32;
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+        {
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear
+        };
+
+        var center = new Vector2((w - 1) * 0.5f, (h - 1) * 0.5f);
+        for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
+        {
+            float nx = (x - center.x) / (w * 0.5f);
+            float ny = (y - center.y) / (h * 0.5f);
+            float d = Mathf.Sqrt(nx * nx + ny * ny * 2.2f);
+            if (d >= 1f)
+            {
+                tex.SetPixel(x, y, Color.clear);
+            }
+            else
+            {
+                float a = Mathf.Clamp01(1f - d);
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, a * a));
+            }
+        }
+
+        tex.Apply();
+        _streakSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+        _streakSprite.name = "GeneratedPatchbotStreak";
+        return _streakSprite;
     }
 
     // Güvenli bölge: elle atanan bodySafeZone; boşsa runtime'da TopHUD avatarını (AvatarView) bul.

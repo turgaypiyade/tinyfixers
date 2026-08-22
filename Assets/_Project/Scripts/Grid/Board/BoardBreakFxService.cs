@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class BoardBreakFxService
 {
@@ -12,6 +13,19 @@ public class BoardBreakFxService
     private const float TileBreakFxLightGravityMin = 0.35f;
     private const float TileBreakFxLightGravityMax = 0.65f;
     private const float TileBreakFxUpwardVelocity = 95f;
+    private const int OilBreakFxParticleCount = 7;
+    private const float OilBreakFxParticleMinWidth = 26f;
+    private const float OilBreakFxParticleMaxWidth = 46f;
+    private const float OilBreakFxParticleMinHeight = 38f;
+    private const float OilBreakFxParticleMaxHeight = 68f;
+    private const float OilBreakFxSpeedMin = 85f;
+    private const float OilBreakFxSpeedMax = 180f;
+    private const float OilBreakFxGravityMin = 0.12f;
+    private const float OilBreakFxGravityMax = 0.32f;
+    private const float OilBreakFxMaxParticleScreenSize = 0.16f;
+    private const float OilDropletUiDuration = 0.62f;
+    private const float OilDropletUiScatterMin = 52f;
+    private const float OilDropletUiScatterMax = 108f;
 
     private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
     private static readonly MaterialPropertyBlock ParticlePropertyBlock = new();
@@ -129,12 +143,17 @@ public class BoardBreakFxService
         );
 
         Color fxColor = ResolveObstacleHitColor(change);
+        Vector3 worldPos = board.GetCellWorldCenterPosition(x, y);
+        if (change.obstacleId == ObstacleId.Oil && TryPlayOilDropletUiBurst(worldPos, particleSprites))
+            return;
+
         SpawnAtWorld(
             prefab,
             lifetime,
-            board.GetCellWorldCenterPosition(x, y),
+            worldPos,
             fxColor,
-            particleSprites);
+            particleSprites,
+            useOilDropletMotion: change.obstacleId == ObstacleId.Oil);
     }
 
     private static bool ShouldSuppressGenericContentObstacleFx(ObstacleVisualChange change)
@@ -233,16 +252,22 @@ public class BoardBreakFxService
 
         if (sprites != null && sprites.Count > 0)
         {
-#if OBSTACLE_FX_DEBUG
             int nonNullCount = 0;
             for (int i = 0; i < sprites.Count; i++)
             {
                 if (sprites[i] != null)
                     nonNullCount++;
             }
-            FxLog($"[ObstacleFX] Using custom obstacle particle sprites. id={change.obstacleId}, cleared={change.cleared}, count={sprites.Count}, nonNull={nonNullCount}");
+
+            if (nonNullCount > 0)
+            {
+#if OBSTACLE_FX_DEBUG
+                FxLog($"[ObstacleFX] Using custom obstacle particle sprites. id={change.obstacleId}, cleared={change.cleared}, count={sprites.Count}, nonNull={nonNullCount}");
 #endif
-            return sprites;
+                return sprites;
+            }
+
+            FxWarn($"[ObstacleFX] Custom particle sprite list has no valid sprites. id={change.obstacleId}, cleared={change.cleared}");
         }
 
         Sprite fallback = change.sprite;
@@ -316,6 +341,125 @@ public class BoardBreakFxService
         SpawnAtWorld(prefab, lifetime, worldPos, Color.white, sprites);
     }
 
+    private bool TryPlayOilDropletUiBurst(Vector3 worldPos, IReadOnlyList<Sprite> sprites)
+    {
+        Sprite sprite = FirstValidSprite(sprites);
+        RectTransform parent = board != null ? board.BreakFxParent : null;
+        if (sprite == null || parent == null || board == null || !board.isActiveAndEnabled)
+            return false;
+
+        Vector2 origin = board.WorldToAnchoredIn(parent, worldPos);
+        board.StartCoroutine(CoPlayOilDropletUiBurst(parent, origin, sprite));
+        return true;
+    }
+
+    private static Sprite FirstValidSprite(IReadOnlyList<Sprite> sprites)
+    {
+        if (sprites == null)
+            return null;
+
+        for (int i = 0; i < sprites.Count; i++)
+        {
+            if (sprites[i] != null)
+                return sprites[i];
+        }
+
+        return null;
+    }
+
+    private System.Collections.IEnumerator CoPlayOilDropletUiBurst(RectTransform parent, Vector2 origin, Sprite sprite)
+    {
+        int count = OilBreakFxParticleCount;
+        var rects = new RectTransform[count];
+        var images = new Image[count];
+        var starts = new Vector2[count];
+        var ends = new Vector2[count];
+        var baseScales = new float[count];
+        var spins = new float[count];
+
+        float aspect = 0.7f;
+        if (sprite != null && sprite.rect.height > 0f)
+            aspect = sprite.rect.width / sprite.rect.height;
+
+        for (int i = 0; i < count; i++)
+        {
+            var go = new GameObject("OilDropShard", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var rt = go.GetComponent<RectTransform>();
+            rt.SetParent(parent, false);
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+
+            float h = Random.Range(OilBreakFxParticleMinHeight, OilBreakFxParticleMaxHeight);
+            float w = Mathf.Clamp(h * aspect, OilBreakFxParticleMinWidth, OilBreakFxParticleMaxWidth);
+            rt.sizeDelta = new Vector2(w, h);
+
+            Vector2 jitter = Random.insideUnitCircle * 7f;
+            starts[i] = origin + jitter;
+            float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+            Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+            if (dir.sqrMagnitude < 0.001f)
+                dir = Vector2.up;
+            dir.Normalize();
+
+            float distance = Random.Range(OilDropletUiScatterMin, OilDropletUiScatterMax);
+            ends[i] = starts[i] + dir * distance + Vector2.up * Random.Range(8f, 24f);
+            spins[i] = Random.Range(-260f, 260f);
+            baseScales[i] = Random.Range(0.9f, 1.15f);
+
+            rt.anchoredPosition = starts[i];
+            rt.localScale = Vector3.one * baseScales[i];
+            rt.localRotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+
+            var img = go.GetComponent<Image>();
+            img.sprite = sprite;
+            img.type = Image.Type.Simple;
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+            img.color = Color.white;
+
+            rects[i] = rt;
+            images[i] = img;
+        }
+
+        float elapsed = 0f;
+        while (elapsed < OilDropletUiDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / OilDropletUiDuration);
+            float moveT = 1f - (1f - t) * (1f - t);
+            float fall = t * t * 34f;
+            float fade = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.58f, 1f, t));
+
+            for (int i = 0; i < count; i++)
+            {
+                RectTransform rt = rects[i];
+                if (rt == null)
+                    continue;
+
+                rt.anchoredPosition = Vector2.LerpUnclamped(starts[i], ends[i], moveT) + Vector2.down * fall;
+                rt.localRotation *= Quaternion.Euler(0f, 0f, spins[i] * Time.deltaTime);
+                float scale = Mathf.Lerp(1f, 0.62f, t);
+                rt.localScale = Vector3.one * (baseScales[i] * scale);
+
+                Image img = images[i];
+                if (img != null)
+                {
+                    Color color = img.color;
+                    color.a = fade;
+                    img.color = color;
+                }
+            }
+
+            yield return null;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            if (rects[i] != null)
+                Object.Destroy(rects[i].gameObject);
+        }
+    }
+
     private void SpawnAtWorld(
         GameObject prefab,
         float lifetime,
@@ -324,7 +468,8 @@ public class BoardBreakFxService
         IReadOnlyList<Sprite> particleSprites,
         float scale = 1f,
         bool useLightTileMotion = false,
-        int overrideParticleCount = 0)
+        int overrideParticleCount = 0,
+        bool useOilDropletMotion = false)
     {
         if (prefab == null)
             return;
@@ -334,7 +479,7 @@ public class BoardBreakFxService
 
         // Havuz anahtarı kullanım imzasını içerir: aynı prefab farklı modlarla (light motion,
         // burst sayısı, sprite'lı/sprite'sız) kullanılıyor; instance'lar mod karıştırmadan dönsün.
-        var poolKey = (prefab, useLightTileMotion, overrideParticleCount,
+        var poolKey = (prefab, useLightTileMotion, useOilDropletMotion, overrideParticleCount,
                        particleSprites != null && particleSprites.Count > 0);
 
         GameObject go = TakeFromPool(poolKey);
@@ -380,6 +525,8 @@ public class BoardBreakFxService
         ApplyColor(systems, color);
         if (useLightTileMotion)
             ApplyLightTileBreakMotion(systems);
+        if (useOilDropletMotion)
+            ApplyOilDropletMotion(systems);
         if (overrideParticleCount > 0)
             ApplyBurstParticleCount(systems, overrideParticleCount);
 
@@ -399,9 +546,9 @@ public class BoardBreakFxService
     // Kırılma FX havuzu: yoğun temizliklerde (Override dalgası vb.) aynı frame'de onlarca
     // Instantiate/Destroy çifti hitch yaratıyordu; instance'lar anahtar başına yeniden kullanılır.
     private const int MaxPooledPerKey = 24;
-    private readonly Dictionary<(GameObject prefab, bool lightMotion, int burstCount, bool hasSprites), Stack<GameObject>> fxPools = new();
+    private readonly Dictionary<(GameObject prefab, bool lightMotion, bool oilDropletMotion, int burstCount, bool hasSprites), Stack<GameObject>> fxPools = new();
 
-    private GameObject TakeFromPool((GameObject, bool, int, bool) key)
+    private GameObject TakeFromPool((GameObject, bool, bool, int, bool) key)
     {
         if (!fxPools.TryGetValue(key, out var stack))
             return null;
@@ -416,7 +563,7 @@ public class BoardBreakFxService
         return null;
     }
 
-    private System.Collections.IEnumerator CoReturnToPool(GameObject go, (GameObject, bool, int, bool) key, float delay)
+    private System.Collections.IEnumerator CoReturnToPool(GameObject go, (GameObject, bool, bool, int, bool) key, float delay)
     {
         yield return new WaitForSeconds(delay);
 
@@ -509,6 +656,46 @@ public class BoardBreakFxService
         }
     }
 
+    private static void ApplyOilDropletMotion(ParticleSystem[] systems)
+    {
+        if (systems == null)
+            return;
+
+        for (int i = 0; i < systems.Length; i++)
+        {
+            var ps = systems[i];
+            if (ps == null)
+                continue;
+
+            var main = ps.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.65f, 0.95f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(OilBreakFxSpeedMin, OilBreakFxSpeedMax);
+            main.startSize3D = true;
+            main.startSizeX = new ParticleSystem.MinMaxCurve(OilBreakFxParticleMinWidth, OilBreakFxParticleMaxWidth);
+            main.startSizeY = new ParticleSystem.MinMaxCurve(OilBreakFxParticleMinHeight, OilBreakFxParticleMaxHeight);
+            main.startSizeZ = new ParticleSystem.MinMaxCurve(1f, 1f);
+            main.gravityModifier = new ParticleSystem.MinMaxCurve(OilBreakFxGravityMin, OilBreakFxGravityMax);
+
+            var emission = ps.emission;
+            emission.SetBursts(new[]
+            {
+                new ParticleSystem.Burst(0f, (short)OilBreakFxParticleCount)
+            });
+
+            var shape = ps.shape;
+            shape.radius = 0.18f;
+            shape.arc = 360f;
+            shape.randomDirectionAmount = 0.15f;
+
+            var renderer = ps.GetComponent<ParticleSystemRenderer>();
+            if (renderer != null)
+            {
+                renderer.maxParticleSize = Mathf.Max(renderer.maxParticleSize, OilBreakFxMaxParticleScreenSize);
+                renderer.lengthScale = 1f;
+            }
+        }
+    }
+
     private float CalculateSafeLifetime(float requestedLifetime, ParticleSystem[] systems)
     {
         float safeLifetime = Mathf.Max(MinSafeFxLifetime, requestedLifetime);
@@ -587,6 +774,12 @@ public class BoardBreakFxService
             if (sprites[s] == null) continue;
             if (firstValidSprite == null) firstValidSprite = sprites[s];
             validCount++;
+        }
+
+        if (validCount == 0)
+        {
+            FxWarn("[ObstacleFX] Particle sprite list contained only null entries.");
+            return;
         }
 
         for (int i = 0; i < systems.Length; i++)

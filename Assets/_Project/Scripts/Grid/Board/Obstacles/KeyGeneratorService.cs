@@ -54,6 +54,7 @@ public sealed class KeyGeneratorService : MonoBehaviour
     private int landedKeys;
     private int inFlightKeys;
     private bool completed;
+    private bool goalRecomputeQueued;
     private readonly Dictionary<int, int> hitVisualCounters = new();
     private readonly Dictionary<int, Image> obstacleImageCache = new();
     private readonly Stack<GameObject> ghostPool = new();
@@ -339,8 +340,33 @@ public sealed class KeyGeneratorService : MonoBehaviour
     // Key temizlenince hedefi yeniden hesapla (board key sayısı değişti).
     private void HandleTilesClearedForGoal(TileType tileType, int amount)
     {
-        if (tileType == TileType.Key)
-            RecomputeGoalRemaining();
+        if (tileType != TileType.Key)
+            return;
+
+        // Bazı clear yollarında OnTilesCleared, görsel sayım doğruyken grid/tile array'i aynı frame
+        // içinde hâlâ son haline oturmadan gelebiliyor. Goal ground-truth'u boarddaki key sayısından
+        // türediği için aynı-frame recompute 1 fazla okuyabilir. Önce hemen dene, sonra frame sonu ve
+        // bir sonraki frame tekrar oku; son key temizlenince hedef 1'de asılı kalmasın.
+        RecomputeGoalRemaining();
+        QueueDeferredGoalRecompute();
+    }
+
+    private void QueueDeferredGoalRecompute()
+    {
+        if (goalRecomputeQueued || !isActiveAndEnabled)
+            return;
+
+        goalRecomputeQueued = true;
+        StartCoroutine(CoDeferredGoalRecompute());
+    }
+
+    private IEnumerator CoDeferredGoalRecompute()
+    {
+        yield return null;
+        RecomputeGoalRemaining();
+        yield return null;
+        RecomputeGoalRemaining();
+        goalRecomputeQueued = false;
     }
 
     // Hedefi GROUND-TRUTH durumdan türetir — event sayımına güvenmez, çift/eksik sayım imkânsız:

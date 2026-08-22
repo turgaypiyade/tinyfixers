@@ -52,6 +52,9 @@ public class ChestObstacleView : MonoBehaviour
     [Tooltip("Ampul sprite oranı. Sabit boyut değil, sadece oran korunur. 341 / 402.")]
     [SerializeField] private Vector2 bulbAspectSourceSize = new Vector2(341f, 402f);
 
+    [Tooltip("Ampulleri alt tabani sabit kalacak sekilde buyutur. 1 = orijinal boyut.")]
+    [SerializeField, Range(0.8f, 1.4f)] private float bulbVisualScale = 1.10f;
+
     [Tooltip("Sol ampuller sağa, sağ ampuller sola bu kadar px yaklaşır.")]
     [SerializeField, Range(0f, 8f)] private float horizontalInwardNudge = 6f;
 
@@ -302,9 +305,13 @@ public class ChestObstacleView : MonoBehaviour
         rt.anchorMin = new Vector2(0.5f, 0.5f);
         rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = localCenter - parentCenter;
+        float visualScale = Mathf.Max(0.01f, bulbVisualScale);
+        Vector2 anchoredPosition = localCenter - parentCenter;
+        anchoredPosition.y += finalH * (visualScale - 1f) * 0.5f;
+
+        rt.anchoredPosition = anchoredPosition;
         rt.sizeDelta = new Vector2(finalW, finalH);
-        rt.localScale = Vector3.one;
+        rt.localScale = Vector3.one * visualScale;
     }
 
     private static void SetActive(Image img, bool active)

@@ -994,12 +994,15 @@ public class BoardAnimator
 
             AddObstacleDamageCell(cell, sourceTileType);
 
-            // Grass/Oil bir OVER-TILE BLOCKER değil, komşu-match ile AŞINAN overlay'dir; aşınması
-            // includeAdjacentOverTileBlockerDamage bayrağından BAĞIMSIZ olmalı. Eskiden bayrak
-            // false iken (LineV/H gibi line clear'lar) grass/oil adjacency'si de atlanıyordu →
-            // "special YANINDAN geçince grass hit almıyor". Artık grass/oil adjacency HER ZAMAN
-            // toplanır; yalnız chest/blocker adjacency'si bayrağa bağlıdır.
-            CollectAdjacentOverTileBlockers(cell, obstacleDamageSources, sourceTileType, includeAdjacentOverTileBlockerDamage);
+            // Normal match komşu Oil/Grass'ı aşındırır. Line/special footprint ise sadece geçtiği
+            // hücreyi vurmalı; includeAdjacentOverTileBlockerDamage=false olduğunda komşu Oil/Grass
+            // da toplanmaz.
+            CollectAdjacentOverTileBlockers(
+                cell,
+                obstacleDamageSources,
+                sourceTileType,
+                damageContext,
+                includeAdjacentOverTileBlockerDamage);
         }
 
         foreach (var kv in obstacleDamageSources)
@@ -1304,10 +1307,13 @@ public class BoardAnimator
 
             AddDamageRequest(request);
 
-            // Grass/Oil (aşınan overlay) adjacency HER ZAMAN; over-tile blocker (chest) yalnız
-            // plan bayrağı açıkken. (Yukarıdaki impact yolu ile aynı kural — line/plan clear'lar
-            // grass'ın yanından geçince de aşındırmalı.)
-            CollectAdjacentOverTileBlockers(cell, obstacleDamageRequests, request, plan.IncludeAdjacentOverTileBlockerDamage);
+            // Normal match komşu Oil/Grass'ı aşındırır. Special/line planlarında bayrak false ise
+            // sadece footprint hücreleri hasar alır.
+            CollectAdjacentOverTileBlockers(
+                cell,
+                obstacleDamageRequests,
+                request,
+                plan.IncludeAdjacentOverTileBlockerDamage);
         }
 
         foreach (var kv in obstacleDamageRequests)
@@ -1418,6 +1424,7 @@ public class BoardAnimator
      Vector2Int centerCell,
      Dictionary<Vector2Int, List<TileType?>> result,
      TileType? sourceTileType,
+     ObstacleHitContext context,
      bool includeOverTileBlockers = true)
     {
         if (board == null || board.ObstacleStateService == null || result == null)
@@ -1437,9 +1444,11 @@ public class BoardAnimator
             bool isGrass =
                 board.ObstacleStateService.IsGrassAt(cell.x, cell.y);
 
-            // Grass/Oil (aşınan overlay) HER ZAMAN toplanır; over-tile blocker (chest) yalnız
-            // includeOverTileBlockers açıkken. Line clear'lar bunu kapatır ama grass/oil aşınmasını
-            // engellememeli.
+            bool includeOilGrass = includeOverTileBlockers || context == ObstacleHitContext.NormalMatch;
+
+            if ((isOil || isGrass) && !includeOilGrass)
+                return;
+
             if (!isOil && !isGrass && (!isDamageableOverTile || !includeOverTileBlockers))
                 return;
 
@@ -1496,7 +1505,13 @@ public class BoardAnimator
             bool isOverTile = board.Obstacles.IsOverTileBlockerAt(cell.x, cell.y);
             bool isOil = board.ObstacleStateService.IsOilAt(cell.x, cell.y);
             bool isGrass = board.ObstacleStateService.IsGrassAt(cell.x, cell.y);
-            // Grass/Oil HER ZAMAN; over-tile blocker (chest) yalnız includeOverTileBlockers açıkken.
+
+            bool includeOilGrass =
+                includeOverTileBlockers || sourceRequest.context == ObstacleHitContext.NormalMatch;
+
+            if ((isOil || isGrass) && !includeOilGrass)
+                return;
+
             if (!isOil && !isGrass && (!isOverTile || !includeOverTileBlockers))
                 return;
 

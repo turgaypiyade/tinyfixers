@@ -397,7 +397,7 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     // Fitil kıvılcımını verilen parent'a, ölçekli offset/boyutla basar. Idle örneği (fuseLocalOffset,
     // tileSize) baz alınır; combo pulse görselinde sizeScale = comboIkonBoyu / TileSize ile aynı
     // ORAN korunur → doğru koordinat kendiliğinden gelir.
-    private void SpawnSparkAt(RectTransform parent, Vector2 baseOffset, float sizeScale, float intensity, MonoBehaviour coroutineOwner = null)
+    internal void SpawnSparkAt(RectTransform parent, Vector2 baseOffset, float sizeScale, float intensity, MonoBehaviour coroutineOwner = null)
     {
         if (sparkleSprite == null || parent == null) 
             return;

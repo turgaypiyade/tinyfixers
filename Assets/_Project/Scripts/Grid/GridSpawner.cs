@@ -592,8 +592,11 @@ public class GridSpawner : MonoBehaviour
             // (magnetin üstü, mask dışı). Root'u önce hazırla ki DrawObstacleVisuals grass'ı oraya koysun.
             EnsureGrassRootSetup();
             DrawObstacleVisuals();
-            DrawStampedBeneathVisuals();   // overlay altındaki obstacle'ı arkada baştan göster
             DrawMudOverlays();
+            // DrawMudOverlays ClearAll() yapar; stamped-beneath mud'ları bundan SONRA çizilmeli.
+            // Aksi halde LevelP_00540'ta plastic/movable altındaki mud ilk açılışta silinir,
+            // movable ayrılınca restore path'i yeniden çizdiği için ancak sonradan görünür.
+            DrawStampedBeneathVisuals();   // overlay altındaki obstacle'ı arkada baştan göster
             DrawTubeObstacles();
             DrawMagnetObstacles();
             DrawSafeObstacles();
@@ -802,7 +805,10 @@ public class GridSpawner : MonoBehaviour
             BringForegroundRootsToFront();
         }
 
-
+        // Oil cell-anchored overlay'i tile'ların üstünde olmalı. Initial kurulumda yukarıda bir kez
+        // çiziliyor, fakat final sibling sıralaması tilesRoot'u sonradan öne alabiliyor; en sonda
+        // tekrar refresh etmek ilk frame'de oil'in taşların altında kalmasını engeller.
+        board.RefreshOilOverlays();
     }
 
     private void PlaceBorderRootAboveBoardContent(RectTransform borderRoot)
@@ -1096,6 +1102,9 @@ public class GridSpawner : MonoBehaviour
 
                 // Mud kendi seamless renderer'ını kullanır, default sprite Image üretme.
                 if (obsId == ObstacleId.Mud) continue;
+                // Oil kendi cell-anchored blob renderer'ını kullanır. Generic full-cell image
+                // üretirsek her hücrede iç bevel kalır ve tek sıvı alan gibi birleşmez.
+                if (obsId == ObstacleId.Oil) continue;
                 // Tube kendi TubeView renderer'ını kullanır.
                 if (obsId == ObstacleId.Tube) continue;
                 // Safe kendi SafeObstacleView renderer'ını kullanır.
@@ -1149,10 +1158,10 @@ public class GridSpawner : MonoBehaviour
         if (mudOverlayService == null || mudOverlayRoot == null || resolvedLevel == null)
             return;
 
+        mudOverlayService.Init(board, width, height, tileSize);
+
         if (mudOverlayService.TryGetView(x, y, out var existing) && existing != null)
             return;
-
-        mudOverlayService.Init(board, width, height, tileSize);
 
         var go = new GameObject(
             $"Mud_{x}_{y}",
@@ -1522,25 +1531,31 @@ public class GridSpawner : MonoBehaviour
             int bx = p.cell % resolvedLevel.width;
             int by = p.cell / resolvedLevel.width;
 
-            // Mud: ayrı seamless renderer (mudOverlayRoot, taşların/obstacle'ların ALTINDA çizilir →
-            // z-order zaten arkada). Hücreyi geçici Mud'a çevirip mud view'ı spawn et. Kapalıyken
-            // full sayılır (StampedBeneath remaining tutmaz) — SpawnMudOverlayCell mudMaxHits'e clamp'ler.
+            // MudUnder gerçek MudOverlay renderer'ına kaydolmaz. Normal tek hücrelik obstacle
+            // görseli gibi çizilir; böylece komşu MudOverlay hücresinin topology/corner hesabına
+            // hiçbir şekilde girmez.
             if (p.beneathId == ObstacleId.Mud)
             {
                 int sObs = resolvedLevel.obstacles[p.cell];
                 int sOrg = resolvedLevel.obstacleOrigins[p.cell];
                 resolvedLevel.obstacles[p.cell] = (int)ObstacleId.Mud;
                 resolvedLevel.obstacleOrigins[p.cell] = p.cell;
-                SpawnMudOverlayCell(bx, by);
+                var mudDef = resolvedLevel.obstacleLibrary.Get(ObstacleId.Mud);
+                Image mudUnderImage = DrawObstacleImage(mudDef, bx, by);
                 resolvedLevel.obstacles[p.cell] = sObs;
                 resolvedLevel.obstacleOrigins[p.cell] = sOrg;
-                mudSpawned++;
-                if (mudTrace)
+                if (mudUnderImage != null)
                 {
-                    bool hasView = mudOverlayService != null && mudOverlayService.TryGetView(bx, by, out var mv) && mv != null;
-                    Debug.Log($"[MudBeneath] SPAWN cell={p.cell} ({bx},{by}) overlay={overlayHere} hasView={hasView}");
+                    // Mud'un obstacle davranışı OverTile olsa bile MudUnder yalnızca arka plan
+                    // görselidir. OverTiles'e kalırsa MudOverlay'in bevel/corner parçalarını örter.
+                    if (underTilesObstaclesRoot != null)
+                        mudUnderImage.transform.SetParent(underTilesObstaclesRoot, false);
+                    mudUnderImage.rectTransform.SetAsFirstSibling();
+                    mudUnderImage.raycastTarget = false;
+                    beneathViewsByCell[p.cell] = mudUnderImage;
+                    mudSpawned++;
                 }
-                continue;   // mudOverlayService yönetir; beneathViewsByCell'e girmez
+                continue;
             }
 
             // Diğer ayrı renderer'lı / özel tipler v1'de kapsam dışı. Grass da pre-draw EDİLMEZ:
@@ -1710,7 +1725,7 @@ public class GridSpawner : MonoBehaviour
         if (resolvedLevel?.magnets == null || resolvedLevel.magnets.Length == 0) return;
         if (magnetRoot == null) return;
 
-        magnetObstacleService.Init(board.ObstacleStateService);
+        magnetObstacleService.Init(board, board.ObstacleStateService);
         board.ObstacleStateService.MagnetHitInterceptor = magnetObstacleService.HandleMagnetHit;
         board.ObstacleStateService.MagnetEndpointQuery = magnetObstacleService.IsMagnetEndpoint;
 
@@ -2952,6 +2967,15 @@ public class GridSpawner : MonoBehaviour
         if (beneathViewsByCell.TryGetValue(idx, out var pre) && pre != null)
         {
             beneathViewsByCell.Remove(idx);
+
+            // MudUnder generic bir preview Image'dır; gerçek Mud açıldığında onu promote etme.
+            // Preview'ı kaldırıp MudOverlay renderer'ına yeni topology hücresi ekle.
+            if (obsId == ObstacleId.Mud)
+            {
+                Destroy(pre.gameObject);
+                SpawnMudOverlayCell(x, y);
+                return;
+            }
 
             // Özel view isteyen obstacle'larda generic beneath image promote edilmez.
             // ön-çizilen generic beneath image'ı promote etme; sil ve normal spawn akışına düş.

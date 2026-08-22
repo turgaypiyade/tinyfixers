@@ -83,6 +83,25 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 61c28ae4e393a4af3954789ba43663da, type: 3}
   - {fileID: 21300000, guid: 39b0b271db8c544539262b523b77b1ad, type: 3}
   - {fileID: 21300000, guid: 244d0466b79464abca06e8c8cdca5cf3, type: 3}
+  crackCrossfadePortion: 0.5
+  crackFireOverlaySprite: {fileID: 8456809893565029502, guid: cf546dd66a83c4ad0b341a4ddf27cd0a, type: 3}
+  crackFireOverlayFrames:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: -8101790780559500674, guid: f76cc3ab1b94f4d1ab91e8c88d20ff7f, type: 3}
+  - {fileID: 8456809893565029502, guid: cf546dd66a83c4ad0b341a4ddf27cd0a, type: 3}
+  autoStartFireOnFinalCrackBlend: 1
+  crackFireLeadRatio: 0.045
+  crackFireStartProgress: 0.62
+  crackFireFullProgress: 0.74
+  crackFireStartScale: 0.78
+  crackFirePeakScale: 1.38
+  crackFirePulseAmplitude: 0.08
+  crackFirePulseFrequency: 14
+  crackFireFrameFadeOutBoost: 1.85
+  crackFireFadeOutStartProgress: 0.9
+  crackFireEndAlphaMultiplier: 0.12
+  crackFireColor: {r: 1, g: 1, b: 1, a: 0.95}
   phaseSquashRatio: 0.15
   phaseStretchRatio: 0.15
   phaseWobbleRatio: 0.55

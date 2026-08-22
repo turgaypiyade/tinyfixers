@@ -342,7 +342,6 @@ public class BoardController : MonoBehaviour
                 columnBusyThisResolve[x] = true;
     }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
     [Header("Debug / Tile Sync")]
     [SerializeField] private bool enableTileSyncValidation = true;
     [SerializeField] private bool enableSpecialChainTrace;
@@ -371,9 +370,29 @@ public class BoardController : MonoBehaviour
     [Tooltip("FlowScheduler Activity kaydı (Faz 2+). Kapalı=eski yol.")]
     [SerializeField] private bool useFlowActivities;
     public bool UseFlowActivities => useFlowActivities;
+
+    [Header("Oil Overlay — Temiz Tile-Set (autotile)")]
+    [Tooltip("Açık: hücre bazlı jelly/oil tile-set. JOverlaySon tek hücre + edge strip kaynağı; JLT/JRT/JLB/JRB köşe parçalarıdır.")]
+    [SerializeField] private bool useOilTileSet;
+    [SerializeField] private Sprite oilEdgeSprite;        // Legacy fallback: ÜST kenar olarak çiz
+    [SerializeField] private Sprite oilOuterCornerSprite; // JOverlaySon: tek hücre + edge strip kaynağı
+
+    [Header("Oil Overlay — Birleşme (junction) köşe sprite'ları")]
+    [Tooltip("JLT/JRT/JLB/JRB köşe parçaları. Sprite canvas'ı 1 hücredir; aktif jel parçası bu canvas'ın yaklaşık yarım quadrant'ıdır. Diyagonal 2'li bağlanmaz.")]
+    [SerializeField] private Sprite oilCornerBottomRight;   // JRB
+    [SerializeField] private Sprite oilCornerBottomLeft;    // JLB
+    [SerializeField] private Sprite oilCornerTopRight;      // JRT
+    [SerializeField] private Sprite oilCornerTopLeft;       // JLT
+    [Tooltip("Köşe canvas ölçeği. 1 = 17x17 hücre canvas'ını 1 hücreye bas; aktif 8.5x8.5 jel parçası PNG içinde kalır.")]
+    [SerializeField, Range(0.75f, 1.5f)] private float oilJunctionSizeRatio = 1f;
+    [Tooltip("Her köşe için BAĞIMSIZ px offset. x=sağa, y=aşağı → stroke'u tam vertex'e oturt.")]
+    [SerializeField] private Vector2 oilOffsetBR;   // OilRB
+    [SerializeField] private Vector2 oilOffsetBL;   // OilLB1
+    [SerializeField] private Vector2 oilOffsetTR;
+    [SerializeField] private Vector2 oilOffsetTL;
+
     [SerializeField] private bool throwOnTileSyncMismatch;
     [SerializeField] private float tilePositionEpsilon = 0.25f;
-#endif
 
     public PatchbotDashUI PatchbotDashUI => patchbotDashUI;
     public BoardAudioDirector Audio => audioDirector;
@@ -613,6 +632,7 @@ public class BoardController : MonoBehaviour
     // Background-job accounting (typed handle/gate). One count slot per BoardJobKind; see BeginJob.
     // Level-end waits on the total (ActiveBackgroundJobs); resolve/input wait only on the Resolve slot.
     private readonly int[] _jobCounts = new int[7]; // sized to BoardJobKind
+    private readonly Stack<System.IDisposable>[] _pairedFlowJobHandles = new Stack<System.IDisposable>[7];
     private int _jobEpoch = 0;
     private ActionSequencer actionSequencer;
     private PulseCoreImpactService pulseCoreImpactService;
@@ -1209,6 +1229,7 @@ public class BoardController : MonoBehaviour
         private BoardController _board;
         private readonly BoardJobKind _kind;
         private readonly int _epoch;
+        private readonly System.IDisposable _flowActivity;
         private bool _disposed;
 
         public BoardJobHandle(BoardController board, BoardJobKind kind)
@@ -1217,6 +1238,7 @@ public class BoardController : MonoBehaviour
             _kind = kind;
             _epoch = board._jobEpoch;
             board._jobCounts[(int)kind]++;
+            _flowActivity = board.BeginFlowActivityForJob(kind);
         }
 
         public void Dispose()
@@ -1225,6 +1247,7 @@ public class BoardController : MonoBehaviour
             _disposed = true;
             if (_board != null && _epoch == _board._jobEpoch)
                 _board._jobCounts[(int)_kind] = Mathf.Max(0, _board._jobCounts[(int)_kind] - 1);
+            _flowActivity?.Dispose();
             _board = null;
         }
     }
@@ -1232,6 +1255,57 @@ public class BoardController : MonoBehaviour
     // Begin a background job. Dispose the returned handle exactly once when it finishes
     // (prefer `using` / try-finally). Kind decides whether resolve waits (Resolve) or only level-end.
     public System.IDisposable BeginJob(BoardJobKind kind) => new BoardJobHandle(this, kind);
+
+    private System.IDisposable BeginFlowActivityForJob(BoardJobKind kind)
+    {
+        if (!useFlowActivities)
+            return null;
+
+        return kind switch
+        {
+            BoardJobKind.ObstacleSpread => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.ObstacleSpread),
+            BoardJobKind.KeyFlight => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Flight),
+            BoardJobKind.GoalOrbFlight => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Flight),
+            BoardJobKind.PatchBotDash => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Flight),
+            BoardJobKind.BossStrikeDrain => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Flight),
+            BoardJobKind.PresentationFx => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Presentation),
+            _ => null,
+        };
+    }
+
+    private void BeginPairedFlowActivityForJob(BoardJobKind kind)
+    {
+        var activity = BeginFlowActivityForJob(kind);
+        if (activity == null)
+            return;
+
+        int i = (int)kind;
+        _pairedFlowJobHandles[i] ??= new Stack<System.IDisposable>();
+        _pairedFlowJobHandles[i].Push(activity);
+    }
+
+    private void EndPairedFlowActivityForJob(BoardJobKind kind)
+    {
+        int i = (int)kind;
+        var stack = i >= 0 && i < _pairedFlowJobHandles.Length ? _pairedFlowJobHandles[i] : null;
+        if (stack == null || stack.Count == 0)
+            return;
+
+        stack.Pop()?.Dispose();
+    }
+
+    private void ClearPairedFlowActivityHandles()
+    {
+        for (int i = 0; i < _pairedFlowJobHandles.Length; i++)
+        {
+            var stack = _pairedFlowJobHandles[i];
+            if (stack == null)
+                continue;
+
+            while (stack.Count > 0)
+                stack.Pop()?.Dispose();
+        }
+    }
 
     // Total in-flight jobs. Level-end waits on this — any pending job can still change the result.
     public int ActiveBackgroundJobs
@@ -1296,24 +1370,61 @@ public class BoardController : MonoBehaviour
         _jobEpoch++;
         System.Array.Clear(_jobCounts, 0, _jobCounts.Length);
         flowScheduler?.DrainAll();   // yeni Activity kayıtları da geçersiz kılınsın (tek otorite tutarlı kalsın)
+        ClearPairedFlowActivityHandles();
     }
 
     // ---- Legacy paired Begin/End shims (call sites are already try/finally-paired) ----
     // Generic blocking scope — resolve waits (e.g. Safe break hold).
-    public void BeginBackgroundJob() => _jobCounts[(int)BoardJobKind.Resolve]++;
-    public void EndBackgroundJob()   => _jobCounts[(int)BoardJobKind.Resolve] = Mathf.Max(0, _jobCounts[(int)BoardJobKind.Resolve] - 1);
+    public void BeginBackgroundJob()
+    {
+        _jobCounts[(int)BoardJobKind.Resolve]++;
+        BeginPairedFlowActivityForJob(BoardJobKind.Resolve);
+    }
+
+    public void EndBackgroundJob()
+    {
+        _jobCounts[(int)BoardJobKind.Resolve] = Mathf.Max(0, _jobCounts[(int)BoardJobKind.Resolve] - 1);
+        EndPairedFlowActivityForJob(BoardJobKind.Resolve);
+    }
 
     // Non-blocking flights: resolve flows, level-end waits.
-    public void BeginGoalOrbFlight() => _jobCounts[(int)BoardJobKind.GoalOrbFlight]++;
-    public void EndGoalOrbFlight()   => _jobCounts[(int)BoardJobKind.GoalOrbFlight] = Mathf.Max(0, _jobCounts[(int)BoardJobKind.GoalOrbFlight] - 1);
+    public void BeginGoalOrbFlight()
+    {
+        _jobCounts[(int)BoardJobKind.GoalOrbFlight]++;
+        BeginPairedFlowActivityForJob(BoardJobKind.GoalOrbFlight);
+    }
 
-    public void BeginPatchBotDashFlight() => _jobCounts[(int)BoardJobKind.PatchBotDash]++;
-    public void EndPatchBotDashFlight()   => _jobCounts[(int)BoardJobKind.PatchBotDash] = Mathf.Max(0, _jobCounts[(int)BoardJobKind.PatchBotDash] - 1);
+    public void EndGoalOrbFlight()
+    {
+        _jobCounts[(int)BoardJobKind.GoalOrbFlight] = Mathf.Max(0, _jobCounts[(int)BoardJobKind.GoalOrbFlight] - 1);
+        EndPairedFlowActivityForJob(BoardJobKind.GoalOrbFlight);
+    }
+
+    public void BeginPatchBotDashFlight()
+    {
+        _jobCounts[(int)BoardJobKind.PatchBotDash]++;
+        BeginPairedFlowActivityForJob(BoardJobKind.PatchBotDash);
+    }
+
+    public void EndPatchBotDashFlight()
+    {
+        _jobCounts[(int)BoardJobKind.PatchBotDash] = Mathf.Max(0, _jobCounts[(int)BoardJobKind.PatchBotDash] - 1);
+        EndPairedFlowActivityForJob(BoardJobKind.PatchBotDash);
+    }
 
     // BossDuel: son hamle harcandı ama vuruş kuyruğu/havadaki boltlar hâlâ hasar yazacak —
     // out-of-moves fail bunlar boşalana kadar bekler (resolve parklanmaz).
-    public void BeginBossStrikeDrain() => _jobCounts[(int)BoardJobKind.BossStrikeDrain]++;
-    public void EndBossStrikeDrain()   => _jobCounts[(int)BoardJobKind.BossStrikeDrain] = Mathf.Max(0, _jobCounts[(int)BoardJobKind.BossStrikeDrain] - 1);
+    public void BeginBossStrikeDrain()
+    {
+        _jobCounts[(int)BoardJobKind.BossStrikeDrain]++;
+        BeginPairedFlowActivityForJob(BoardJobKind.BossStrikeDrain);
+    }
+
+    public void EndBossStrikeDrain()
+    {
+        _jobCounts[(int)BoardJobKind.BossStrikeDrain] = Mathf.Max(0, _jobCounts[(int)BoardJobKind.BossStrikeDrain] - 1);
+        EndPairedFlowActivityForJob(BoardJobKind.BossStrikeDrain);
+    }
 
     // Runs a list of actions sequentially as a single background job.
     // Use this when actions have a defined order (e.g. Override fanout → clear).
@@ -1929,11 +2040,32 @@ public class BoardController : MonoBehaviour
     }
 
     private OilOverlayRenderer oilOverlayRenderer;
+    private OilTileSetRenderer oilTileSetRenderer;
 
     internal void RefreshOilOverlays()
     {
         if (obstacleStateService == null) return;
         if (parent == null || tileSize <= 0) return;
+
+        // Temiz tile-set yolu: hücre başına fill, açık kenarlara JOverlaySon strip'i, köşelere ayrı PNG.
+        if (useOilTileSet)
+        {
+            oilOverlayRenderer?.SetActive(false); // eski MudCellView oil'ini gizle (çakışma önle)
+            var animator = GetComponent<OilSpreadAnimator>();
+            if (oilTileSetRenderer == null)
+                oilTileSetRenderer = new OilTileSetRenderer(
+                    this, animator != null ? animator.OilInteriorTexture : null);
+
+            oilTileSetRenderer.SetPieces(
+                oilEdgeSprite, oilOuterCornerSprite,
+                oilCornerBottomRight, oilCornerBottomLeft, oilCornerTopRight, oilCornerTopLeft,
+                oilJunctionSizeRatio, oilOffsetBR, oilOffsetBL, oilOffsetTR, oilOffsetTL);
+            oilTileSetRenderer.Refresh(obstacleStateService.GetAllOilCells());
+            return;
+        }
+
+        oilTileSetRenderer?.SetActive(false); // tile-set kapalı → onu gizle
+        oilOverlayRenderer?.SetActive(true);
 
         // Oil görseli artık CELL-ANCHORED (tile'dan bağımsız). Oil verisi nerede varsa orada
         // çizilir; tile null olsa bile görünür. Eski tile-bound overlay (görünmez-oil/flicker)
@@ -1941,11 +2073,21 @@ public class BoardController : MonoBehaviour
         if (oilOverlayRenderer == null)
         {
             var animator = GetComponent<OilSpreadAnimator>();
+            var oilDef = levelData != null ? levelData.obstacleLibrary?.Get(ObstacleId.Oil) : null;
+            var oilStage = oilDef != null ? oilDef.GetStageRuleForRemainingHits(Mathf.Max(1, oilDef.hits)) : null;
+            Sprite oilSprite = animator != null && animator.OilOverlaySprite != null
+                ? animator.OilOverlaySprite
+                : oilStage != null ? oilStage.sprite : null;
+
             oilOverlayRenderer = new OilOverlayRenderer(
                 this,
-                animator != null ? animator.OilOverlaySprite : null);
+                oilSprite,
+                animator != null ? animator.OilInteriorTexture : null);
         }
 
+        oilOverlayRenderer.SetCornerSprites(
+            oilCornerBottomRight, oilCornerBottomLeft, oilCornerTopRight, oilCornerTopLeft,
+            oilJunctionSizeRatio, oilOffsetBR, oilOffsetBL, oilOffsetTR, oilOffsetTL);
         oilOverlayRenderer.Refresh(obstacleStateService.GetAllOilCells());
     }
 
@@ -2180,21 +2322,28 @@ public class BoardController : MonoBehaviour
         if (!useDynamicBoardInputGate)
             return false;
 
+        if (!CanTileUseDynamicInputCell(tile))
+            return false;
+
+        // Special swap is playable without a match, but only expose it during flow when
+        // at least one neighbor is also a stable dynamic-input cell.
+        if (tile.GetSpecial() != TileSpecial.None && !HasDynamicSpecialSwapNeighbor(tile))
+            return false;
+
+        return true;
+    }
+
+    private bool CanTileUseDynamicInputCell(TileView tile)
+    {
         if (tile == null || !tile)
             return false;
 
         if (tile.RuntimeState != TileRuntimeState.Idle)
             return false;
 
-        // 8B/8C güvenli kapsamı: dynamic input yalnız gravity/fall overlap içindir. Special/PatchBot
-        // görsel zinciri akarken input almak, special resolver ile yarışıp "kendiliğinden trigger"
-        // gibi görünen durumlar yaratabilir; special dynamic input ayrı doğrulanacak.
+        // Dynamic input yalnız gravity/fall overlap içindir. Special/PatchBot görsel zinciri
+        // akarken input almak resolver ile yarışır; special swap yukarıda ayrıca komşu kapısıyla açılır.
         if (Flow.IsSpecialVisualInFlight)
-            return false;
-
-        // 8B ilk canlı dilim: düşüş sırasında yalnız normal tile swap. Special/combo dynamic input,
-        // special visual/resolve concurrency'si ayrıca doğrulanınca açılacak.
-        if (tile.GetSpecial() != TileSpecial.None)
             return false;
 
         if (!TryGetCellState(tile.X, tile.Y, out var state))
@@ -2217,6 +2366,28 @@ public class BoardController : MonoBehaviour
         }
 
         return true;
+    }
+
+    private bool HasDynamicSpecialSwapNeighbor(TileView tile)
+    {
+        if (tile == null || tile.GetSpecial() == TileSpecial.None)
+            return false;
+
+        return CanUseNeighborForDynamicSpecialSwap(tile.X - 1, tile.Y)
+            || CanUseNeighborForDynamicSpecialSwap(tile.X + 1, tile.Y)
+            || CanUseNeighborForDynamicSpecialSwap(tile.X, tile.Y - 1)
+            || CanUseNeighborForDynamicSpecialSwap(tile.X, tile.Y + 1);
+    }
+
+    private bool CanUseNeighborForDynamicSpecialSwap(int x, int y)
+    {
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            return false;
+
+        if (holes[x, y] && (obstacleStateService == null || !obstacleStateService.HasObstacleAt(x, y)))
+            return false;
+
+        return CanTileUseDynamicInputCell(tiles[x, y]);
     }
 
     internal bool CanStartDynamicDrag(TileView tile) => CanTileAcceptDynamicInput(tile);
@@ -4160,8 +4331,17 @@ public class BoardController : MonoBehaviour
 
     private System.Collections.IEnumerator RunObbDetonation(BoardAction detonation)
     {
+        // OBB dalgası board'u etkileyen özel-süpürme gibi davranır, ama resolve'u bloklamaz:
+        // burst anında gravity özellikle akabilsin diye non-blocking kayıt tutuyoruz.
+        System.IDisposable flowActivity = useFlowActivities
+            ? Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.SpecialSweep)
+            : null;
         try { yield return StartCoroutine(detonation.ExecuteVisuals(actionSequencer)); }
-        finally { _obbDetonationsRunning = Mathf.Max(0, _obbDetonationsRunning - 1); }
+        finally
+        {
+            _obbDetonationsRunning = Mathf.Max(0, _obbDetonationsRunning - 1);
+            flowActivity?.Dispose();
+        }
     }
 
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
@@ -4182,7 +4362,10 @@ public class BoardController : MonoBehaviour
 
         if (obstacleId == ObstacleId.Oil)
         {
-            oilOverlayRenderer?.Hide(new Vector2Int(ox, oy));
+            if (useOilTileSet)
+                RefreshOilOverlays();
+            else
+                oilOverlayRenderer?.Hide(new Vector2Int(ox, oy));
             return;
         }
 
@@ -4221,6 +4404,9 @@ public class BoardController : MonoBehaviour
     private System.Collections.IEnumerator CoHoldResolveForSafeBreak()
     {
         BeginBackgroundJob();
+        System.IDisposable flowActivity = useFlowActivities
+            ? Flow.Begin(BoardFlowScheduler.ActivityKind.Clear)
+            : null;
         try
         {
             yield return new WaitForSeconds(SafeBreakResolveHold);
@@ -4228,6 +4414,7 @@ public class BoardController : MonoBehaviour
         finally
         {
             EndBackgroundJob();
+            flowActivity?.Dispose();
         }
     }
 

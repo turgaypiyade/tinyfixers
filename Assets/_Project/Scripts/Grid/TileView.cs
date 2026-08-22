@@ -54,6 +54,7 @@ public class TileView : MonoBehaviour,
     private bool dragConsumedSwap;
     private bool wasDragging;
     private bool pointerDownWhileBoardBusy;
+    private bool dragStartedWhileBoardBusy;
     public bool WasDragging => wasDragging;
     public BoardController Board => board;
     public int LastAppliedTileSize => lastAppliedTileSize > 0 ? lastAppliedTileSize : (board != null ? board.TileSize : 96);
@@ -73,11 +74,59 @@ public class TileView : MonoBehaviour,
     private Coroutine specialCreationRevealRoutine;
     private GameObject specialCreationRevealRoot;
     private static Sprite specialRevealHaloSprite;
+    private Coroutine overrideMarkHaloRoutine;
+    private GameObject overrideMarkHaloRoot;
+    private static readonly System.Collections.Generic.Dictionary<Sprite, Sprite> overrideMarkHaloSilhouetteCache = new();
 
     private bool specialRevealVisualCaptured;
     private Vector3 specialRevealIconBaseScale = Vector3.one;
     private Quaternion specialRevealIconBaseRotation = Quaternion.identity;
     private Color specialRevealIconBaseColor = Color.white;
+
+    // --- Tile impact white flash animation ---
+    private Color originalFlashColor = Color.white;
+    private Coroutine flashRoutine;
+
+    /// <summary>
+    /// Mixes the tile's icon color with white and smoothly fades back to the original color.
+    /// </summary>
+    /// <param name="blend">Blend factor towards white (0 = original, 1 = white).</param>
+    /// <param name="duration">How long the flash stays before returning to normal.</param>
+    public void FlashWhiteSpark(float blend = 1.0f, float duration = 0.30f)
+    {
+        if (iconImage == null || !gameObject.activeInHierarchy) return;
+
+        if (flashRoutine != null)
+        {
+            StopCoroutine(flashRoutine);
+            if (iconImage != null)
+                iconImage.color = originalFlashColor;
+        }
+
+        originalFlashColor = iconImage.color;
+        flashRoutine = StartCoroutine(ResetIconColorAfterDelay(originalFlashColor, blend, duration));
+    }
+
+    private IEnumerator ResetIconColorAfterDelay(Color original, float blend, float duration)
+    {
+        if (iconImage == null) yield break;
+        Color flashColor = Color.Lerp(original, Color.white, blend);
+        iconImage.color = flashColor;
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            if (iconImage != null)
+                iconImage.color = Color.Lerp(flashColor, original, t);
+            yield return null;
+        }
+
+        if (iconImage != null)
+            iconImage.color = original;
+        flashRoutine = null;
+    }
 
     public enum TileVisualLayout
     {
@@ -1355,6 +1404,21 @@ public class TileView : MonoBehaviour,
             fuseSparkleView?.PlayCreationSpin(tileSize);
     }
 
+    public void PlayOverrideMarkHalo(float duration = 0.46f)
+    {
+        if (!gameObject.activeInHierarchy || iconImage == null)
+            return;
+
+        if (overrideMarkHaloRoutine != null)
+        {
+            StopCoroutine(overrideMarkHaloRoutine);
+            overrideMarkHaloRoutine = null;
+        }
+
+        CleanupOverrideMarkHalo();
+        overrideMarkHaloRoutine = StartCoroutine(CoOverrideMarkHalo(Mathf.Max(0.08f, duration)));
+    }
+
     /// <summary>Yalnız PulseCore oluşum DÖNME efektini (fuse flipbook spin) tetikler — creation
     /// reveal'in scale büyümesi OLMADAN. Override marking'inde pulse'a dönme vermek için kullanılır.</summary>
     public void PlayPulseCreationSpin(int tileSize)
@@ -1597,6 +1661,150 @@ public class TileView : MonoBehaviour,
         }
 
         CleanupSpecialCreationReveal();
+    }
+
+    private IEnumerator CoOverrideMarkHalo(float duration)
+    {
+        yield return null;
+
+        if (this == null || iconImage == null || iconImage.sprite == null)
+        {
+            CleanupOverrideMarkHalo();
+            yield break;
+        }
+
+        RectTransform iconRt = iconImage.rectTransform;
+        var parent = iconRt != null ? iconRt.parent as RectTransform : null;
+        if (iconRt == null || parent == null)
+        {
+            CleanupOverrideMarkHalo();
+            yield break;
+        }
+
+        overrideMarkHaloRoot = new GameObject("OverrideImplantHighlight", typeof(RectTransform), typeof(Image));
+        overrideMarkHaloRoot.transform.SetParent(parent, false);
+
+        var haloRt = overrideMarkHaloRoot.GetComponent<RectTransform>();
+        haloRt.anchorMin = iconRt.anchorMin;
+        haloRt.anchorMax = iconRt.anchorMax;
+        haloRt.pivot = iconRt.pivot;
+        haloRt.anchoredPosition = iconRt.anchoredPosition;
+        Vector2 iconSize = iconRt.sizeDelta;
+        if (iconSize.x <= 0f || iconSize.y <= 0f)
+        {
+            float s = LastAppliedTileSize;
+            iconSize = Vector2.one * Mathf.Max(1f, s);
+        }
+        haloRt.sizeDelta = iconSize * 1.25f;
+        haloRt.localScale = Vector3.one;
+        haloRt.localRotation = iconRt.localRotation;
+        haloRt.SetSiblingIndex(Mathf.Max(0, iconRt.GetSiblingIndex()));
+
+        var haloImage = overrideMarkHaloRoot.GetComponent<Image>();
+        haloImage.sprite = GetOrCreateOverrideMarkSilhouette(iconImage.sprite) ?? iconImage.sprite;
+        haloImage.preserveAspect = iconImage.preserveAspect;
+        haloImage.raycastTarget = false;
+        haloImage.color = new Color(1f, 1f, 1f, 0f);
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            if (this == null || iconImage == null || iconRt == null || overrideMarkHaloRoot == null)
+            {
+                CleanupOverrideMarkHalo();
+                yield break;
+            }
+
+            elapsed += Time.deltaTime;
+            float k = Mathf.Clamp01(elapsed / duration);
+            float breath = Mathf.Sin(k * Mathf.PI);
+            float scale = Mathf.Lerp(1.02f, 1.36f, breath);
+            float alpha = Mathf.Lerp(0.08f, 0.66f, breath);
+
+            haloRt.anchoredPosition = iconRt.anchoredPosition;
+            haloRt.localRotation = iconRt.localRotation;
+            haloRt.localScale = Vector3.one * scale;
+            haloImage.color = new Color(1f, 1f, 1f, alpha);
+            yield return null;
+        }
+
+        CleanupOverrideMarkHalo();
+    }
+
+    private static Sprite GetOrCreateOverrideMarkSilhouette(Sprite src)
+    {
+        if (src == null)
+            return null;
+        if (overrideMarkHaloSilhouetteCache.TryGetValue(src, out var cached))
+            return cached;
+
+        Sprite result = null;
+        var tex = src.texture;
+        if (tex != null)
+        {
+            Rect r = src.textureRect;
+            int px = Mathf.RoundToInt(r.x);
+            int py = Mathf.RoundToInt(r.y);
+            int w = Mathf.RoundToInt(r.width);
+            int h = Mathf.RoundToInt(r.height);
+            if (w > 0 && h > 0)
+            {
+                RenderTexture rt = null;
+                RenderTexture prevActive = RenderTexture.active;
+                try
+                {
+                    rt = RenderTexture.GetTemporary(tex.width, tex.height, 0, RenderTextureFormat.ARGB32);
+                    Graphics.Blit(tex, rt);
+                    RenderTexture.active = rt;
+
+                    var outTex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+                    {
+                        wrapMode = TextureWrapMode.Clamp,
+                        filterMode = FilterMode.Bilinear
+                    };
+                    outTex.ReadPixels(new Rect(px, py, w, h), 0, 0);
+
+                    var pixels = outTex.GetPixels();
+                    for (int i = 0; i < pixels.Length; i++)
+                        pixels[i] = new Color(1f, 1f, 1f, pixels[i].a);
+                    outTex.SetPixels(pixels);
+                    outTex.Apply(false, true);
+
+                    result = Sprite.Create(outTex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), src.pixelsPerUnit);
+                }
+                catch
+                {
+                    result = null;
+                }
+                finally
+                {
+                    RenderTexture.active = prevActive;
+                    if (rt != null)
+                        RenderTexture.ReleaseTemporary(rt);
+                }
+            }
+        }
+
+        overrideMarkHaloSilhouetteCache[src] = result;
+        return result;
+    }
+
+    private void CleanupOverrideMarkHalo()
+    {
+        if (overrideMarkHaloRoot != null)
+        {
+            Destroy(overrideMarkHaloRoot);
+            overrideMarkHaloRoot = null;
+        }
+
+        if (this != null)
+        {
+            Transform oldHalo = transform.Find("OverrideImplantHighlight");
+            if (oldHalo != null)
+                Destroy(oldHalo.gameObject);
+        }
+
+        overrideMarkHaloRoutine = null;
     }
 
     private void CleanupSpecialCreationReveal()
@@ -2061,6 +2269,8 @@ public class TileView : MonoBehaviour,
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        dragStartedWhileBoardBusy = false;
+
         if (board == null)
             return;
 
@@ -2069,6 +2279,8 @@ public class TileView : MonoBehaviour,
 
         if (board.IsBusy && !board.CanStartDynamicDrag(this))
             return;
+
+        dragStartedWhileBoardBusy = board.IsBusy;
 
         if (board.ActiveBooster != BoardController.BoosterMode.None)
             return;
@@ -2097,6 +2309,11 @@ public class TileView : MonoBehaviour,
             return;
 
         if (board.IsBusy && !board.CanStartDynamicDrag(this))
+            return;
+
+        // Busy'de başlayan drag, threshold'u board idle olduktan sonra geçerse bu artık dynamic
+        // input değildir; eski dokunuşun normal idle swap'a dönüşmesini engelle.
+        if (dragStartedWhileBoardBusy && !board.IsBusy)
             return;
 
         if (board.ActiveBooster != BoardController.BoosterMode.None)
@@ -2153,6 +2370,7 @@ public class TileView : MonoBehaviour,
     {
         yield return null;
         wasDragging = false;
+        dragStartedWhileBoardBusy = false;
     }
 
     public void OnPointerDown(PointerEventData eventData)
@@ -2241,6 +2459,7 @@ public class TileView : MonoBehaviour,
         StopAllCoroutines();
         CancelActiveSettle();               // token/generation defterini de temizle
         StopSpecialCreationReveal();         // reveal routine + halo root Destroy
+        CleanupOverrideMarkHalo();
         ClearMovableObstaclePresentation();  // isMovableObstacleTile/sprite sıfırla
 
         // SetSpecial model'i null-guard'sız kullanıyor; release yolu taşın bozuk/yarım durumda

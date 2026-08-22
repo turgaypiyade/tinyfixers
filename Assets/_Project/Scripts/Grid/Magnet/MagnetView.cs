@@ -39,6 +39,11 @@ public class MagnetView : MonoBehaviour
 
     [Header("Destroy Animation")]
     [SerializeField, Min(0.05f)] private float destroyDuration = 0.35f;
+    [SerializeField, Range(1, 4)] private int destroyShardCountPerMagnet = 2;
+    [SerializeField, Min(0.1f)] private float destroyShardFallDuration = 1.35f;
+    [SerializeField] private float destroyShardGravity = 720f;
+    [SerializeField] private float destroyShardSideKick = 260f;
+    [SerializeField] private float destroyShardLaunchUp = 430f;
 
     // ── Yeni Tüp stili (eski ChainLinks korunur; geri dönüş için bayrakla seçilir) ──
     public enum MagnetStyle { ChainLinks, Tube }
@@ -110,6 +115,10 @@ public class MagnetView : MonoBehaviour
     [SerializeField] private AudioClip hitSfx;
     [SerializeField, Range(0f, 1f)] private float hitSfxVolume = 0.7f;
 
+    [Header("Drain Pulse")]
+    [SerializeField, Range(0f, 1f)] private float drainTintStrength = 0.72f;
+    [SerializeField, Range(0f, 1f)] private float drainGlowAlpha = 0.92f;
+
     private readonly List<GameObject> activeHitFxObjects = new List<GameObject>();
 
     // Tube runtime
@@ -130,6 +139,7 @@ public class MagnetView : MonoBehaviour
     private Image magnetBImage;
     private Image[] glowCircles;        // zincir baklaları (isim korundu: Pulse + visibility kullanır)
     private float[] linkPathPos;        // her baklanın path-index konumu (görünürlük için)
+    private Color baseMagnetColor = Color.white;
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -190,6 +200,90 @@ public class MagnetView : MonoBehaviour
         }
     }
 
+    public void SetDrainColor(Color color)
+    {
+        Color tint = Color.Lerp(baseMagnetColor, color, Mathf.Clamp01(drainTintStrength));
+        tint.a = 1f;
+
+        if (magnetAImage != null)
+            magnetAImage.color = tint;
+        if (magnetBImage != null)
+            magnetBImage.color = tint;
+
+        Color glow = Color.Lerp(Color.white, color, 0.65f);
+        glow.a = Mathf.Clamp01(drainGlowAlpha);
+        if (glowCircles != null)
+        {
+            for (int i = 0; i < glowCircles.Length; i++)
+            {
+                if (glowCircles[i] != null)
+                    glowCircles[i].color = glow;
+            }
+        }
+    }
+
+    public Vector3 GetEndpointWorldPosition(int cellIndex)
+    {
+        if (magnetAImage != null && activeAIdx >= 0 && activeAIdx < path.Length && path[activeAIdx] == cellIndex)
+            return magnetAImage.rectTransform.position;
+        if (magnetBImage != null && activeBIdx >= 0 && activeBIdx < path.Length && path[activeBIdx] == cellIndex)
+            return magnetBImage.rectTransform.position;
+        return transform.TransformPoint(CellCenter(cellIndex));
+    }
+
+    public bool TryGetDrainRouteWorld(int entryCellIndex, int sampleCount, out Vector3 entryWorld, out Vector3 exitWorld, out Vector3[] routeWorld)
+    {
+        entryWorld = GetEndpointWorldPosition(entryCellIndex);
+        exitWorld = entryWorld;
+        routeWorld = null;
+
+        if (path == null || path.Length < 2)
+            return false;
+
+        bool fromA = activeAIdx >= 0 && activeAIdx < path.Length && path[activeAIdx] == entryCellIndex;
+        bool fromB = activeBIdx >= 0 && activeBIdx < path.Length && path[activeBIdx] == entryCellIndex;
+        if (!fromA && !fromB)
+            return false;
+
+        int exitIdx = fromA ? activeBIdx : activeAIdx;
+        if (exitIdx < 0 || exitIdx >= path.Length)
+            return false;
+
+        exitWorld = GetEndpointWorldPosition(path[exitIdx]);
+        int count = Mathf.Max(2, sampleCount);
+        routeWorld = new Vector3[count];
+
+        if (smoothPts != null && smoothCum != null && cellArcPos != null && smoothPts.Length >= 2)
+        {
+            float startD = cellArcPos[Mathf.Clamp(fromA ? activeAIdx : activeBIdx, 0, cellArcPos.Length - 1)];
+            float endD = cellArcPos[Mathf.Clamp(exitIdx, 0, cellArcPos.Length - 1)];
+
+            for (int i = 0; i < count; i++)
+            {
+                float t = count <= 1 ? 1f : i / (float)(count - 1);
+                float d = Mathf.Lerp(startD, endD, t);
+                SmoothPathAt(d, out Vector2 pos, out _);
+                routeWorld[i] = transform.TransformPoint(pos);
+            }
+
+            return true;
+        }
+
+        int startIdx = fromA ? activeAIdx : activeBIdx;
+        for (int i = 0; i < count; i++)
+        {
+            float t = count <= 1 ? 1f : i / (float)(count - 1);
+            float pathPos = Mathf.Lerp(startIdx, exitIdx, t);
+            int lo = Mathf.Clamp(Mathf.FloorToInt(pathPos), 0, path.Length - 1);
+            int hi = Mathf.Clamp(Mathf.CeilToInt(pathPos), 0, path.Length - 1);
+            float segmentT = Mathf.Clamp01(pathPos - lo);
+            Vector2 pos = Vector2.Lerp(CellCenter(path[lo]), CellCenter(path[hi]), segmentT);
+            routeWorld[i] = transform.TransformPoint(pos);
+        }
+
+        return true;
+    }
+
     // Board'un üst VFX overlay'i (break/goal FX ile aynı; tile'ların üstünde). Runtime'da bulunur/cache'lenir.
     private RectTransform _fxOverlay;
     private bool _fxOverlayResolved;
@@ -221,6 +315,33 @@ public class MagnetView : MonoBehaviour
         tex.SetPixels(px); tex.Apply();
         _whiteSprite = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f), 100f);
         return _whiteSprite;
+    }
+
+    private static Sprite _softCircleSprite;
+    private static Sprite SoftCircleSprite()
+    {
+        if (_softCircleSprite != null) return _softCircleSprite;
+
+        const int size = 64;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        var pixels = new Color[size * size];
+        Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+        float radius = size * 0.48f;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float d = Vector2.Distance(new Vector2(x, y), center) / radius;
+                float alpha = Mathf.Clamp01(1f - d);
+                alpha = alpha * alpha;
+                pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
+            }
+        }
+
+        tex.SetPixels(pixels);
+        tex.Apply();
+        _softCircleSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+        return _softCircleSprite;
     }
 
     // U-mıknatısın ÖNÜNDE, ağzı boyunca (kutuplar arası) prosedürel ZİKZAK yıldırım; flicker'lı, kısa.
@@ -318,7 +439,8 @@ public class MagnetView : MonoBehaviour
     {
         CleanupActiveHitFx();
         StopAllCoroutines();
-        StartCoroutine(DestroyRoutine());
+        PlayDetachedDestroyFx();
+        Destroy(gameObject);
     }
 
     // ── Private ───────────────────────────────────────────────────────────────
@@ -686,6 +808,7 @@ public class MagnetView : MonoBehaviour
 
         var img = go.GetComponent<Image>();
         img.sprite = magnetSprite;
+        img.color = baseMagnetColor;
         img.raycastTarget = false;
 
         var rt = img.rectTransform;
@@ -793,18 +916,177 @@ public class MagnetView : MonoBehaviour
         }
     }
 
-    private IEnumerator DestroyRoutine()
+    private void PlayDetachedDestroyFx()
     {
-        // Collect all images to fade.
-        var canvasGroup = gameObject.AddComponent<CanvasGroup>();
-        float t = 0f;
-        while (t < destroyDuration)
+        var parent = ResolveFxOverlay() ?? (transform.parent as RectTransform);
+        if (parent == null)
+            return;
+
+        var runnerGo = new GameObject("MagnetDestroyFx", typeof(RectTransform), typeof(MagnetDestroyFxRunner));
+        runnerGo.transform.SetParent(parent, false);
+        runnerGo.transform.SetAsLastSibling();
+        runnerGo.layer = parent.gameObject.layer;
+
+        var runnerRt = runnerGo.GetComponent<RectTransform>();
+        runnerRt.anchorMin = runnerRt.anchorMax = runnerRt.pivot = new Vector2(0.5f, 0.5f);
+        runnerRt.anchoredPosition = Vector2.zero;
+        runnerRt.sizeDelta = Vector2.zero;
+
+        var shards = new List<RectTransform>();
+        var shardImages = new List<Image>();
+        var shardVelocities = new List<Vector2>();
+        var shardSpins = new List<float>();
+        var flashRts = new List<RectTransform>();
+        var flashImages = new List<Image>();
+
+        SpawnDestroyShards(magnetAImage, runnerRt, shards, shardImages, shardVelocities, shardSpins);
+        SpawnDestroyShards(magnetBImage, runnerRt, shards, shardImages, shardVelocities, shardSpins);
+        SpawnDestroyFlash(magnetAImage, runnerRt, flashRts, flashImages);
+        SpawnDestroyFlash(magnetBImage, runnerRt, flashRts, flashImages);
+
+        if (shards.Count == 0 && flashRts.Count == 0)
         {
-            t += Time.deltaTime;
-            canvasGroup.alpha = 1f - Mathf.Clamp01(t / destroyDuration);
-            yield return null;
+            Destroy(runnerGo);
+            return;
         }
-        Destroy(gameObject);
+
+        runnerGo.GetComponent<MagnetDestroyFxRunner>().Play(
+            shards,
+            shardImages,
+            shardVelocities,
+            shardSpins,
+            flashRts,
+            flashImages,
+            Mathf.Max(0.1f, destroyShardFallDuration),
+            destroyShardGravity);
+    }
+
+    private void SpawnDestroyShards(
+        Image source,
+        RectTransform parent,
+        List<RectTransform> shards,
+        List<Image> shardImages,
+        List<Vector2> shardVelocities,
+        List<float> shardSpins)
+    {
+        if (source == null || source.rectTransform == null)
+            return;
+
+        if (parent == null)
+            return;
+
+        Sprite shardSprite = ResolveDestroyShardSprite(source);
+        if (shardSprite == null)
+            return;
+
+        int count = Mathf.Clamp(destroyShardCountPerMagnet, 1, 4);
+        Vector3 sourceWorld = source.rectTransform.position;
+        for (int i = 0; i < count; i++)
+        {
+            var go = new GameObject("MagnetShard", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(parent, false);
+            go.transform.SetAsLastSibling();
+            go.layer = parent.gameObject.layer;
+
+            var img = go.GetComponent<Image>();
+            img.sprite = shardSprite;
+            img.raycastTarget = false;
+            img.preserveAspect = true;
+            Color c = Color.Lerp(source.color, Color.white, Random.Range(0.25f, 0.55f));
+            c.a = 1f;
+            img.color = c;
+
+            var rt = img.rectTransform;
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            float w = cellSize * Random.Range(0.95f, 1.25f);
+            float h = cellSize * Random.Range(0.8f, 1.05f);
+            rt.sizeDelta = new Vector2(w, h);
+            rt.position = sourceWorld;
+            Vector2 offset = Random.insideUnitCircle * (cellSize * 0.52f);
+            rt.anchoredPosition += offset;
+            rt.localRotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+
+            Vector2 outward = offset.sqrMagnitude > 0.001f ? offset.normalized : Random.insideUnitCircle.normalized;
+            float side = Random.Range(-destroyShardSideKick, destroyShardSideKick) + outward.x * destroyShardSideKick;
+            float up = Random.Range(destroyShardLaunchUp * 0.55f, destroyShardLaunchUp);
+
+            shards.Add(rt);
+            shardImages.Add(img);
+            shardVelocities.Add(new Vector2(side, up + Mathf.Max(0f, outward.y) * destroyShardLaunchUp * 0.35f));
+            shardSpins.Add(Random.Range(-480f, 480f));
+        }
+    }
+
+    private Sprite ResolveDestroyShardSprite(Image source)
+    {
+        if (source != null)
+        {
+            if (source.overrideSprite != null)
+                return source.overrideSprite;
+            if (source.sprite != null)
+                return source.sprite;
+        }
+
+        if (magnetAImage != null)
+        {
+            if (magnetAImage.overrideSprite != null)
+                return magnetAImage.overrideSprite;
+            if (magnetAImage.sprite != null)
+                return magnetAImage.sprite;
+        }
+
+        if (magnetBImage != null)
+        {
+            if (magnetBImage.overrideSprite != null)
+                return magnetBImage.overrideSprite;
+            if (magnetBImage.sprite != null)
+                return magnetBImage.sprite;
+        }
+
+        return magnetSprite;
+    }
+
+    private void SpawnDestroyFlash(
+        Image source,
+        RectTransform parent,
+        List<RectTransform> flashRts,
+        List<Image> flashImages)
+    {
+        if (source == null || source.rectTransform == null)
+            return;
+
+        if (parent == null)
+            return;
+
+        var go = new GameObject("MagnetDestroyFlash", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+        go.transform.SetAsLastSibling();
+        go.layer = parent.gameObject.layer;
+
+        var img = go.GetComponent<Image>();
+        img.sprite = SoftCircleSprite();
+        img.raycastTarget = false;
+        img.preserveAspect = false;
+        img.color = new Color(0.75f, 0.95f, 1f, 0.65f);
+
+        var rt = img.rectTransform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.position = source.rectTransform.position;
+        rt.sizeDelta = Vector2.one * Mathf.Max(1f, cellSize * 2.8f);
+        rt.localScale = Vector3.one * 0.5f;
+
+        flashRts.Add(rt);
+        flashImages.Add(img);
+    }
+
+    private void SpawnDestroyShards(
+        Image source,
+        List<RectTransform> shards,
+        List<Image> shardImages,
+        List<Vector2> shardVelocities,
+        List<float> shardSpins)
+    {
+        SpawnDestroyShards(source, ResolveFxOverlay() ?? (transform.parent as RectTransform), shards, shardImages, shardVelocities, shardSpins);
     }
 
     private void CleanupActiveHitFx()

@@ -32,6 +32,25 @@ public class PulsePulseExplosionVfx : MonoBehaviour
              "Geçiş smoothstep ile yumuşatılır (lineer değil).")]
     [SerializeField, Range(0f, 1f)] private float crackCrossfadePortion = 0.5f;
 
+    [Header("Charge — Crack Fire Overlay")]
+    [Tooltip("PCF_3 gibi yalnız alev/çatlak ışığı içeren overlay sprite. Bombanın üstünde ayrı büyür.")]
+    [SerializeField] private Sprite crackFireOverlaySprite;
+    [Tooltip("crackFrames ile aynı index'e hizalı alev overlay'leri. Örn: PCF_2 index=PC_2, PCF_3 index=PC_3.")]
+    [SerializeField] private Sprite[] crackFireOverlayFrames;
+    [Tooltip("Açıkken alev, son çatlak kareye geçiş başlamadan hemen önce otomatik büyümeye başlar.")]
+    [SerializeField] private bool autoStartFireOnFinalCrackBlend = true;
+    [SerializeField, Range(0f, 0.2f)] private float crackFireLeadRatio = 0.035f;
+    [SerializeField, Range(0f, 1f)] private float crackFireStartProgress = 0.62f;
+    [SerializeField, Range(0f, 1f)] private float crackFireFullProgress = 0.86f;
+    [SerializeField] private float crackFireStartScale = 0.78f;
+    [SerializeField] private float crackFirePeakScale = 1.38f;
+    [SerializeField] private float crackFirePulseAmplitude = 0.08f;
+    [SerializeField] private float crackFirePulseFrequency = 14f;
+    [SerializeField, Range(1f, 3f)] private float crackFireFrameFadeOutBoost = 1.55f;
+    [SerializeField, Range(0f, 1f)] private float crackFireFadeOutStartProgress = 0.90f;
+    [SerializeField, Range(0f, 1f)] private float crackFireEndAlphaMultiplier = 0.18f;
+    [SerializeField] private Color crackFireColor = new Color(1f, 1f, 1f, 0.95f);
+
     [Header("Charge — Phase Ratios (toplamı 1.0 olmalı)")]
     [Tooltip("Çöküp genişleme (anticipation)")]
     [SerializeField, Range(0f, 1f)] private float phaseSquashRatio = 0.15f;
@@ -146,6 +165,8 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         RectTransform bombRt = null;
         Image bombImg = null;
         Image bombOverlayImg = null;
+        Image crackFireImg = null;
+        Image crackFireOverlayImg = null;
         if (bombSprite)
         {
             bombImg = CreateUIImage("ChargeBomb", container, bombSprite, bombBaseSize);
@@ -158,12 +179,29 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             bombOverlayImg = CreateUIImage("ChargeBombCrackOverlay", bombRt, bombSprite, bombBaseSize);
             bombOverlayImg.preserveAspect = true;
             bombOverlayImg.color = new Color(1f, 1f, 1f, 0f);
+
+            if (HasCrackFireOverlay())
+            {
+                Sprite initialFire = GetInitialFireOverlaySprite();
+                crackFireImg = CreateUIImage("ChargeBombFireOverlay", bombRt, initialFire, GetCrackFireBaseSize());
+                crackFireImg.preserveAspect = true;
+                crackFireImg.color = WithAlpha(crackFireColor, 0f);
+                crackFireImg.rectTransform.localScale = Vector3.one * crackFireStartScale;
+                crackFireImg.rectTransform.SetAsLastSibling();
+
+                crackFireOverlayImg = CreateUIImage("ChargeBombFireBlendOverlay", bombRt, initialFire, GetCrackFireBaseSize());
+                crackFireOverlayImg.preserveAspect = true;
+                crackFireOverlayImg.color = WithAlpha(crackFireColor, 0f);
+                crackFireOverlayImg.rectTransform.localScale = Vector3.one * crackFireStartScale;
+                crackFireOverlayImg.rectTransform.SetAsLastSibling();
+            }
         }
 
         // Çatlak sekansı başlangıcı: en temiz kare (varsa) baştan görünsün.
         _crackBaseIdx = -1;
         _crackOverlayIdx = -1;
         UpdateChargeCrackBlend(bombImg, bombOverlayImg, 0f);
+        UpdateCrackFireOverlay(crackFireImg, crackFireOverlayImg, 0f, 0f);
 
         // Fitil Alevi: doğrudan bombRt'nin child'ı olarak çalışır.
         // Bomba nefes aldıkça (squash/stretch/wobble/tilt), fitil ucuyla %100 senkron hareket eder.
@@ -193,6 +231,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             ApplyScale(container, bombRt, s);
             UpdateGlow(glowImg, totalElapsed, bombImg);
             UpdateChargeCrackBlend(bombImg, bombOverlayImg, totalElapsed / chargeDuration);
+            UpdateCrackFireOverlay(crackFireImg, crackFireOverlayImg, totalElapsed / chargeDuration, totalElapsed);
         });
 
         // ─── 2) STRETCH — yukarı uzayıp incelme ────────────────
@@ -205,6 +244,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             ApplyScale(container, bombRt, s);
             UpdateGlow(glowImg, totalElapsed, bombImg);
             UpdateChargeCrackBlend(bombImg, bombOverlayImg, totalElapsed / chargeDuration);
+            UpdateCrackFireOverlay(crackFireImg, crackFireOverlayImg, totalElapsed / chargeDuration, totalElapsed);
         });
 
         // ─── 3) WOBBLE — şişip inen + yamuk salınımlı büyüme ───
@@ -236,6 +276,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
 
             UpdateGlow(glowImg, totalElapsed, bombImg);
             UpdateChargeCrackBlend(bombImg, bombOverlayImg, totalElapsed / chargeDuration);
+            UpdateCrackFireOverlay(crackFireImg, crackFireOverlayImg, totalElapsed / chargeDuration, totalElapsed);
         });
 
         // ─── 4) PEAK HOLD — en büyükte hızlı nabız ─────────────
@@ -254,6 +295,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             UpdateGlowPeak(glowImg, totalElapsed, bombImg, k);
             // Peak boyunca en çatlak (son) kare kalır — patlamaya geçişe kadar.
             UpdateChargeCrackBlend(bombImg, bombOverlayImg, totalElapsed / chargeDuration);
+            UpdateCrackFireOverlay(crackFireImg, crackFireOverlayImg, totalElapsed / chargeDuration, totalElapsed);
         });
 
         Destroy(container.gameObject);
@@ -307,22 +349,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         if (baseImg == null || crackFrames == null || crackFrames.Length == 0)
             return;
 
-        int n = crackFrames.Length;
-        float p = Mathf.Clamp01(progress01);
-
-        // Kare pozisyonu [0, n); son karede sabitlenir (n-1'i geçmez).
-        float pos = Mathf.Min(p * n, n - 0.0001f);
-        int baseIdx = Mathf.Clamp(Mathf.FloorToInt(pos), 0, n - 1);
-        float frac = pos - baseIdx;                       // 0..1 bu dilim içinde
-        int nextIdx = Mathf.Min(baseIdx + 1, n - 1);
-
-        // Blend, dilimin son crackCrossfadePortion'ında lineer artar; sonra smoothstep ile yumuşatılır
-        // (S-eğrisi → giriş/çıkış kenarları erir). cf=1 → kare boyunca sürekli morph. Son karede 0.
-        float cf = Mathf.Clamp01(crackCrossfadePortion);
-        float blend = (cf <= 0f || frac <= (1f - cf)) ? 0f : (frac - (1f - cf)) / cf;
-        blend = Smooth01(blend);
-        if (nextIdx == baseIdx)
-            blend = 0f;
+        GetCrackFrameBlend(progress01, out int baseIdx, out int nextIdx, out float blend);
 
         // Base sprite yalnız değişince set edilir.
         if (baseIdx != _crackBaseIdx)
@@ -345,6 +372,193 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         // Overlay RGB = base RGB (glow flash/bleach ile tutarlı), alfa = blend.
         var bc = baseImg.color;
         overlayImg.color = new Color(bc.r, bc.g, bc.b, Mathf.Clamp01(blend));
+    }
+
+    private void GetCrackFrameBlend(float progress01, out int baseIdx, out int nextIdx, out float blend)
+    {
+        int n = crackFrames != null && crackFrames.Length > 0 ? crackFrames.Length : 1;
+        float p = Mathf.Clamp01(progress01);
+
+        // Kare pozisyonu [0, n); son karede sabitlenir (n-1'i geçmez).
+        float pos = Mathf.Min(p * n, n - 0.0001f);
+        baseIdx = Mathf.Clamp(Mathf.FloorToInt(pos), 0, n - 1);
+        float frac = pos - baseIdx;                       // 0..1 bu dilim içinde
+        nextIdx = Mathf.Min(baseIdx + 1, n - 1);
+
+        // Blend, dilimin son crackCrossfadePortion'ında lineer artar; sonra smoothstep ile yumuşatılır
+        // (S-eğrisi → giriş/çıkış kenarları erir). cf=1 → kare boyunca sürekli morph. Son karede 0.
+        float cf = Mathf.Clamp01(crackCrossfadePortion);
+        blend = (cf <= 0f || frac <= (1f - cf)) ? 0f : (frac - (1f - cf)) / cf;
+        blend = Smooth01(blend);
+        if (nextIdx == baseIdx)
+            blend = 0f;
+    }
+
+    private void UpdateCrackFireOverlay(Image fireImg, Image fireOverlayImg, float progress01, float elapsed)
+    {
+        if (fireImg == null)
+            return;
+
+        GetCrackFrameBlend(progress01, out int baseIdx, out int nextIdx, out float blend);
+        Sprite baseFire = GetFireOverlaySprite(baseIdx);
+        Sprite nextFire = GetFireOverlaySprite(nextIdx);
+
+        if (baseFire != null && fireImg.sprite != baseFire)
+            fireImg.sprite = baseFire;
+
+        if (fireOverlayImg != null && nextFire != null && fireOverlayImg.sprite != nextFire)
+            fireOverlayImg.sprite = nextFire;
+
+        float start = GetCrackFireStartProgress();
+        float full = Mathf.Max(start + 0.001f, crackFireFullProgress);
+        float k = Smooth01(Mathf.Clamp01((Mathf.Clamp01(progress01) - start) / (full - start)));
+        float frameBlend = Smooth01(Mathf.Clamp01(blend * crackFireFrameFadeOutBoost));
+
+        ApplyCrackFireTransform(fireImg, k, elapsed);
+        ApplyCrackFireTransform(fireOverlayImg, k, elapsed);
+
+        float fade = GetCrackFireEndFade(progress01);
+
+        float baseAlpha = baseFire != null ? (1f - frameBlend) : 0f;
+        float overlayAlpha = nextFire != null ? frameBlend : 0f;
+
+        fireImg.color = WithAlpha(crackFireColor, crackFireColor.a * k * fade * baseAlpha);
+        if (fireOverlayImg != null)
+            fireOverlayImg.color = WithAlpha(crackFireColor, crackFireColor.a * k * fade * overlayAlpha);
+    }
+
+    private void ApplyCrackFireTransform(Image fireImg, float intensity, float elapsed)
+    {
+        if (fireImg == null)
+            return;
+
+        RectTransform rt = fireImg.rectTransform;
+        if (rt == null)
+            return;
+
+        rt.SetAsLastSibling();
+
+        float pulse = Mathf.Sin(elapsed * crackFirePulseFrequency) * crackFirePulseAmplitude * intensity;
+        float scale = Mathf.Lerp(crackFireStartScale, crackFirePeakScale, intensity) * (1f + pulse);
+        rt.localScale = Vector3.one * scale;
+    }
+
+    private float GetCrackFireEndFade(float progress01)
+    {
+        if (progress01 <= crackFireFadeOutStartProgress)
+            return 1f;
+
+        float fadeK = Smooth01(Mathf.InverseLerp(crackFireFadeOutStartProgress, 1f, progress01));
+        return Mathf.Lerp(1f, crackFireEndAlphaMultiplier, fadeK);
+    }
+
+    private bool HasCrackFireOverlay()
+    {
+        if (crackFireOverlaySprite != null)
+            return true;
+
+        if (crackFireOverlayFrames == null)
+            return false;
+
+        for (int i = 0; i < crackFireOverlayFrames.Length; i++)
+        {
+            if (crackFireOverlayFrames[i] != null)
+                return true;
+        }
+
+        return false;
+    }
+
+    private Sprite GetInitialFireOverlaySprite()
+    {
+        if (crackFireOverlayFrames != null)
+        {
+            for (int i = 0; i < crackFireOverlayFrames.Length; i++)
+            {
+                if (crackFireOverlayFrames[i] != null)
+                    return crackFireOverlayFrames[i];
+            }
+        }
+
+        return crackFireOverlaySprite;
+    }
+
+    private Sprite GetFireOverlaySprite(int crackFrameIndex)
+    {
+        if (crackFireOverlayFrames != null &&
+            crackFrameIndex >= 0 &&
+            crackFrameIndex < crackFireOverlayFrames.Length &&
+            crackFireOverlayFrames[crackFrameIndex] != null)
+        {
+            return crackFireOverlayFrames[crackFrameIndex];
+        }
+
+        int lastFrameIndex = crackFrames != null ? crackFrames.Length - 1 : -1;
+        if (crackFrameIndex == lastFrameIndex)
+            return crackFireOverlaySprite;
+
+        return null;
+    }
+
+    private float GetCrackFireStartProgress()
+    {
+        if (!autoStartFireOnFinalCrackBlend || crackFrames == null || crackFrames.Length < 2)
+            return crackFireStartProgress;
+
+        int n = crackFrames.Length;
+        int firstFireFrameIndex = GetFirstFireOverlayFrameIndex();
+        if (firstFireFrameIndex >= 0)
+            return Mathf.Clamp01((firstFireFrameIndex / (float)n) - crackFireLeadRatio);
+
+        float cf = Mathf.Clamp01(crackCrossfadePortion);
+        float finalBlendStart = ((n - 2) + (1f - cf)) / n;
+        return Mathf.Clamp01(finalBlendStart - crackFireLeadRatio);
+    }
+
+    private float GetCrackFireBaseSize()
+    {
+        Sprite fireSprite = GetLastFireOverlaySprite();
+        if (fireSprite == null)
+            return bombBaseSize;
+
+        Sprite finalFrame = null;
+        if (crackFrames != null && crackFrames.Length > 0)
+            finalFrame = crackFrames[crackFrames.Length - 1];
+
+        if (finalFrame == null || finalFrame.rect.width <= 0f || finalFrame.rect.height <= 0f)
+            return bombBaseSize;
+
+        float widthRatio = fireSprite.rect.width / finalFrame.rect.width;
+        float heightRatio = fireSprite.rect.height / finalFrame.rect.height;
+        return bombBaseSize * Mathf.Max(widthRatio, heightRatio);
+    }
+
+    private Sprite GetLastFireOverlaySprite()
+    {
+        if (crackFireOverlayFrames != null)
+        {
+            for (int i = crackFireOverlayFrames.Length - 1; i >= 0; i--)
+            {
+                if (crackFireOverlayFrames[i] != null)
+                    return crackFireOverlayFrames[i];
+            }
+        }
+
+        return crackFireOverlaySprite;
+    }
+
+    private int GetFirstFireOverlayFrameIndex()
+    {
+        if (crackFireOverlayFrames == null)
+            return -1;
+
+        for (int i = 0; i < crackFireOverlayFrames.Length; i++)
+        {
+            if (crackFireOverlayFrames[i] != null)
+                return i;
+        }
+
+        return -1;
     }
 
     private void UpdateGlow(Image glowImg, float totalElapsed, Image bombImg)
@@ -511,6 +725,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     private static float EaseOutQuad(float t) => 1f - (1f - t) * (1f - t);
     private static float EaseInOutQuad(float t) => t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
     private static float EaseOutCubic(float t) => 1f - Mathf.Pow(1f - t, 3f);
+    private static Color WithAlpha(Color c, float a) => new Color(c.r, c.g, c.b, a);
     // Smoothstep: kenarları yumuşak S-eğrisi (0 ve 1 civarı yavaş). Çatlak çapraz geçişini yumuşatır.
     private static float Smooth01(float t)
     {

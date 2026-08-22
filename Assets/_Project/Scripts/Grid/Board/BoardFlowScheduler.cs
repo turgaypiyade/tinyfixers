@@ -45,6 +45,7 @@ public sealed class BoardFlowScheduler
 
     private const int KindCount = 7;
     private readonly int[] counts = new int[KindCount];
+    private readonly int[] blockingCounts = new int[KindCount];
     private int epoch;
 
     /// <summary>
@@ -52,17 +53,24 @@ public sealed class BoardFlowScheduler
     /// Dispose EDGE'inde otomatik `Pump()` çalışır → iş bitince akış kendiliğinden ilerler
     /// (kimsenin "uyandırma" çağırması gerekmez; lost-wakeup imkânsız).
     /// </summary>
-    public IDisposable Begin(ActivityKind kind) => new Handle(this, kind);
+    public IDisposable Begin(ActivityKind kind) => new Handle(this, kind, blocking: true);
+
+    /// <summary>
+    /// Activity kaydı tutar ama resolve/input gate'i bloklamaz. Faz 9 obstacle adaptörü için:
+    /// Barrel splatter, key/rocket uçuşu gibi işler level-end/diagnostic açısından "uçuşta"dır,
+    /// fakat board akışı tasarım gereği devam eder.
+    /// </summary>
+    public IDisposable BeginNonBlocking(ActivityKind kind) => new Handle(this, kind, blocking: false);
 
     public int Count(ActivityKind kind) => counts[(int)kind];
 
     /// <summary>Akışı bekleten (blocking) aktiviteler: uçuş ve saf sunum HARİÇ.</summary>
     public int BlockingActivityCount =>
-        counts[(int)ActivityKind.Fall] +
-        counts[(int)ActivityKind.Clear] +
-        counts[(int)ActivityKind.SpecialSweep] +
-        counts[(int)ActivityKind.ComboStep] +
-        counts[(int)ActivityKind.ObstacleSpread];
+        blockingCounts[(int)ActivityKind.Fall] +
+        blockingCounts[(int)ActivityKind.Clear] +
+        blockingCounts[(int)ActivityKind.SpecialSweep] +
+        blockingCounts[(int)ActivityKind.ComboStep] +
+        blockingCounts[(int)ActivityKind.ObstacleSpread];
 
     /// <summary>
     /// Board hâlâ akıyor mu (mantık VEYA görsel)? Faz 1: eski sinyallerin birleşimi + yeni kayıt.
@@ -119,6 +127,7 @@ public sealed class BoardFlowScheduler
     {
         epoch++;
         Array.Clear(counts, 0, counts.Length);
+        Array.Clear(blockingCounts, 0, blockingCounts.Length);
     }
 
     private sealed class Handle : IDisposable
@@ -126,14 +135,18 @@ public sealed class BoardFlowScheduler
         private BoardFlowScheduler owner;
         private readonly ActivityKind kind;
         private readonly int handleEpoch;
+        private readonly bool blocking;
         private bool disposed;
 
-        public Handle(BoardFlowScheduler owner, ActivityKind kind)
+        public Handle(BoardFlowScheduler owner, ActivityKind kind, bool blocking)
         {
             this.owner = owner;
             this.kind = kind;
+            this.blocking = blocking;
             handleEpoch = owner.epoch;
             owner.counts[(int)kind]++;
+            if (blocking)
+                owner.blockingCounts[(int)kind]++;
         }
 
         public void Dispose()
@@ -147,6 +160,7 @@ public sealed class BoardFlowScheduler
 
             int i = (int)kind;
             if (o.counts[i] > 0) o.counts[i]--;
+            if (blocking && o.blockingCounts[i] > 0) o.blockingCounts[i]--;
 
             // İş bitti → akış ilerleyebilir mi diye HEMEN bak (edge-triggered bekleme yok).
             o.Pump();

@@ -60,6 +60,11 @@ MonoBehaviour:
   pulseMaxAlpha: 0.88
   moveDuration: 0.2
   destroyDuration: 0.35
+  destroyShardCountPerMagnet: 2
+  destroyShardFallDuration: 1.35
+  destroyShardGravity: 720
+  destroyShardSideKick: 260
+  destroyShardLaunchUp: 430
   style: 1
   straightTubeSprite: {fileID: 21300000, guid: cb1532010ab1d41b7a75bd24a442ceb3, type: 3}
   straightTubeHorizontalSprite: {fileID: 21300000, guid: 53c0ae59820bc43159c0f5378f3ba180, type: 3}

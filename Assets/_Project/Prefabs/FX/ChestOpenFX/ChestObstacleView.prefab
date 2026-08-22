@@ -298,6 +298,7 @@ MonoBehaviour:
   innerSpacing: 4
   verticalShift: -0.05
   bulbAspectSourceSize: {x: 341, y: 402}
+  bulbVisualScale: 1.10
   horizontalInwardNudge: 6.81
 --- !u!1 &9026213005598174604
 GameObject:

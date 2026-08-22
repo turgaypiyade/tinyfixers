@@ -7,6 +7,11 @@ ayrı yöneten dağınık yapıdan çıkarıp **tek, senkron, tek-otoriteli** bi
 Kullanıcı yönergesi (2026-08-16): "Bütün special/combo/matchclear'ı inceleyip senkron bir yapı kurmalıyız."
 Kural: **perf = ölçüm, tahmin değil.** Bu plan önce tasarım; kod değişikliği ayrı fazlarda, flag'li, cihaz-testli.
 
+**Güncel kontrol notu (2026-08-21):** Bu doküman artık yalnız başlangıç planı değil, yaşayan teknik kayıt olarak
+tutuluyor. Repo tarafında FlowScheduler adapter'ı, per-column async fall, TileRuntimeState/ReservedFor temeli,
+normal dynamic input ve special dynamic input'un ilk güvenli kapısı kodlandı. Aşağıdaki faz listesinde eski
+"gelecek iş" ifadeleri korunuyor ama güncel durum Bölüm 8'de takip ediliyor.
+
 ---
 
 ## 1. Problem: neden dağınık, neden bug üretiyor
@@ -129,10 +134,11 @@ yapısal olarak imkânsız olur.
 trace deseni). Cihazda repro → Editor.log'dan hotspot. Bu, her fazın "spike gitti mi"sini doğrular.
 Bkz. [[project_device_stutter_perf_pass.md]].
 
-- **Faz 0 — Envanter+harita (BU DOKÜMAN)** + perf logger ekle, baseline ölç.
-- **Faz 1 — FlowScheduler çekirdeği:** Activity kaydı + tek "settling" otoritesi. Mevcut 7 sinyali
+- **Faz 0 — Envanter+harita:** Bu doküman yazıldı; perf ölçüm yaklaşımı belirlendi.
+- **Faz 1 — FlowScheduler çekirdeği / adapter:** Activity kaydı + tek "settling" otoritesi. Mevcut 7 sinyali
   (IsPlaying, BlockingBackgroundJobs, DetachedActionsInFlight, IsBusy, IsSpecialActivationPhase...) TEK
-  API'nin arkasına al; davranış aynı kalsın (adapter). RequestResolveAfterActionSequence + pump → scheduler.
+  API'nin arkasına alınmaya başladı; davranış aynı kalsın (adapter). RequestResolveAfterActionSequence + pump
+  scheduler üzerinden ilerliyor, eski sinyaller tamamen silinmedi.
 - **Faz 2 — MatchClear'ı sözleşmeye oturt:** creation/clear/arrival-activation Activity olarak. Sticky
   special-phase türev'e çevrilir.
 - **Faz 3 — Special'ları (LineV/H, PulseCore, Override, PatchBot) sözleşmeye taşı:** SpecialChainRunner tek
@@ -141,6 +147,7 @@ Bkz. [[project_device_stutter_perf_pass.md]].
   birleşir). Bespoke kalabilirler ama tek zamanlama.
 - **Faz 5 — Perf sözleşmesi:** frame-bütçesi + hot-path pool'ları. Spike'ları ölçümle doğrula.
 - **Faz 6 — Temizlik:** eski sinyaller/kendi settle-wait'ler/sticky flag'ler kaldırılır (artık ölü).
+  Bu hâlâ açık teknik borç.
 
 ### NİHAİ HEDEF: Dynamic Board (Faz 7-8) — ayrı iş, Faz 2-6'nın ÜSTÜNE kurulur
 Kullanıcı hedefi (2026-08-16): taşlar düşerken/zincir sürerken oyuncu boş köşede hamle yapabilsin
@@ -148,22 +155,26 @@ Kullanıcı hedefi (2026-08-16): taşlar düşerken/zincir sürerken oyuncu boş
 Sıra zorunlu: special'lar hâlâ "tüm board'u durduran" modeldeyken hücre-bazlı kilit koymak kazanç
 getirmez (oyuncu hamle yapar ama zincir yine her şeyi dondurur).
 
-- **Faz 7 — Per-column async:** `CalculateCascades` bugün TÜM board'u tek batch işliyor (global).
-  Düşüş/çözüm sütun bazına ayrılır: 2-3. sütun çalkalanırken 6-7. sütun gerçekten boşta kalır.
+- **Faz 7 — Per-column async:** Düşüş/çözüm sütun bazına ayrıldı: 2-3. sütun çalkalanırken 6-7. sütun
+  gerçekten boşta kalabilir.
   (Perf faydası da var: sadece aktif sütunlara CPU.)
 - **Faz 8 — Cell-based FSM + input-while-falling:**
-  - Her taşta `TileState` (Idle / Swapping / Matched / Falling); her hücrede rezervasyon durumu.
-  - Girdi kontrolü global `IsBusy` yerine **dokunulan iki taşın** durumuna bakar; ikisi de Idle ise
-    board'un geri kalanında ne olursa olsun hamleye izin.
+  - Her taşta `TileRuntimeState` (Idle / Swapping / Falling vb.); her hücrede rezervasyon durumu.
+  - Girdi kontrolü busy sırasında **dokunulan iki taşın** durumuna, hücre snapshot'ına ve sütun busy sinyaline
+    bakar. İkisi de stabil ise board'un geri kalanında akış sürerken hamleye izin.
   - **Destination-cell rezervasyonu:** düşen taş hedef hücreyi rezerve eder → oyuncu oraya kaydıramaz
     (klasik dinamik-tahta race condition'ı: iki taş aynı hücreye girip çökme).
   - Sütun kilidi: patlama/düşüş olan sütun "meşgul", diğerleri Idle.
+  - Special dynamic input ilk kapı: special taş + stabil komşu varsa gravity/fall sırasında swap açılır;
+    special visual/sweep uçuşta ise kapalı kalır.
 
 **MEVCUT ALTYAPI (sıfırdan değil):** `pendingTriggeredSpecialCells` = hücre rezervasyonunun bir formu
 (gravity-blok; OBB 2x2 footprint'i bununla çözüldü). `activeMoveToken` ([[project_move_token_ownership]])
 = taş sahipliği/çift-sürme guard'ı. `TileView.FallGeneration` + `CancelActiveSettle` = animasyon sahipliği.
-`IsPlannedToMoveThisFallPass` = taş fall bayrağı. EKSİK: gerçek TileState FSM, sütun-bazlı gravity/kilit,
-input'un tile-state'e bakması (bugün `InputLocked => Locked || IsBusy` = global kilit).
+`IsPlannedToMoveThisFallPass` = taş fall bayrağı. Güncel kodda buna ek olarak `TileRuntimeState`,
+`BoardCellStateSnapshot`, target reservation ve `Flow.IsColumnSettling` üzerinden dynamic input gate çalışıyor.
+Eksik kalan ana parça: special/combo/clear yollarındaki eski zamanlama sinyallerinin tamamen silinmesi ve tüm
+special dynamic input senaryolarının cihazda regresyon setiyle kapatılması.
 
 Her faz: flag arkasında (eski yol yanında), regresyon setiyle cihazda doğrulanır → onaylanınca eski yol silinir.
 
@@ -179,7 +190,26 @@ uçuşları, deferred streak delivery. Kırılırsa tek faz geri alınır.
 - Kullanıcı teknikte yorum yapmıyor → kararları ben veririm, sonucu (akıcı/kesilmeyen/takılmayan) cihazda test eder.
 
 ## 8. Durum
-Faz 0 (bu doküman + envanter) YAZILDI. Bugün yapılan yamalar (FlowScheduler pump=Faz1 tohumu, SpecialChainRunner
-baseline, Override+PatchBot spread) bu modelin manuel/özel önizlemeleri — tek modelde genelleşecek.
+Güncel durum (2026-08-21):
+
+- **Faz 1 adapter:** `BoardFlowScheduler` repo içinde var; `IsSettling`, `CanStartResolveStep`,
+  `IsSpecialVisualInFlight`, activity count ve continuous pump tek API arkasında çalışıyor.
+- **Faz 7:** Per-column gravity/fall yolu kodlandı (`ColumnFlowEngine`, `ParallelColumnFallAction`,
+  column busy/fall visual counters). Dynamic board'un sütun bazlı ön koşulu artık mevcut.
+- **Faz 8A-8D:** `TileRuntimeState`, `BoardCellStateSnapshot`, reservation kontrolleri, busy sırasında normal
+  idle tile swap, entry revalidation, busy-drag gate ve late busy-click suppress kodlandı.
+- **Faz 8E / special dynamic input:** Special taşlar artık düşüş akarken tamamen yasak değil. Dynamic gate,
+  special taşın kendi hücresi idle/stabil ise ve en az bir komşusu da stable dynamic-input cell ise swap'a izin
+  veriyor. `Flow.IsSpecialVisualInFlight` açıkken kapı hâlâ kapalı; special sweep/dash/chain sırasında resolver
+  race'i engelleniyor.
+- **Faz 9 tarafı:** Obstacle/OBB ve bazı non-blocking işlerin Flow activity adaptörleri başladı; eski sinyaller
+  tamamen temizlenmediği için bu hâlâ adapter dönemi.
+
+Sıradaki teknik borç:
+- Special dynamic input'u cihazda özellikle `Line`, `PulseCore`, `PatchBot`, `SystemOverride`, special+special
+  combo ve special+normal match yaratma senaryolarıyla doğrula.
+- `useDynamicBoardInputGate`, `usePerColumnGravity`, `usePerColumnAsyncFalls`, `useFlowActivities` açıkken
+  regresyon setini aynı pass içinde çalıştır.
+- Eski global busy/special-phase sinyallerini ancak bu doğrulama sonrası sadeleştir.
+
 İlgili: [[project_device_stutter_perf_pass]], [[project_special_chain_runner]], [[project_decoupled_resolve]].
-Sıradaki: kullanıcı "başla" deyince Faz 0 perf logger + Faz 1 FlowScheduler çekirdeği.

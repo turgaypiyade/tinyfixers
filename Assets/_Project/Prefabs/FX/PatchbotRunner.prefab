@@ -139,3 +139,10 @@ MonoBehaviour:
   launchSparkColor: {r: 1, g: 0.8, b: 0.32, a: 1}
   launchSparkDistanceFactor: 1.5
   launchSparkLife: 0.42
+  impactSparkCount: 36
+  impactSparkSprite: {fileID: 0}
+  impactSparkDistanceFactor: 2.1
+  impactSparkLife: 0.48
+  impactFlashEnabled: 1
+
+

@@ -107,64 +107,72 @@ public sealed class EnergyContainerFx : MonoBehaviour
         float delay,
         System.Action onOrbArrived = null)
     {
-        IncrementActiveSequence(originIndex);
-
-        if (delay > 0f)
-            yield return new WaitForSeconds(delay);
-
-        yield return null;
-
-        Image image = FindObstacleImage(originIndex);
-        RectTransform target = image != null ? image.rectTransform : null;
-
-        if (image != null)
-            FitContainerImageToCell(image, originIndex);
-
-        if (logDebug)
+        System.IDisposable presentationActivity = BeginPresentationActivity();
+        try
         {
-            Debug.Log(
-                $"[EnergyContainerFx] release origin={originIndex} " +
-                $"target={(target != null ? target.name : "null")} " +
-                $"image={(image != null ? image.name : "null")} " +
-                $"goalAccepted={goalAccepted} remainingEnergy={remainingEnergy}");
+            IncrementActiveSequence(originIndex);
+
+            if (delay > 0f)
+                yield return new WaitForSeconds(delay);
+
+            yield return null;
+
+            Image image = FindObstacleImage(originIndex);
+            RectTransform target = image != null ? image.rectTransform : null;
+
+            if (image != null)
+                FitContainerImageToCell(image, originIndex);
+
+            if (logDebug)
+            {
+                Debug.Log(
+                    $"[EnergyContainerFx] release origin={originIndex} " +
+                    $"target={(target != null ? target.name : "null")} " +
+                    $"image={(image != null ? image.name : "null")} " +
+                    $"goalAccepted={goalAccepted} remainingEnergy={remainingEnergy}");
+            }
+
+            if (target != null)
+                StartCoroutine(CoPulseObstacle(target));
+
+            if (image != null)
+            {
+                ApplyFrame(image, halfOpenSprite, originIndex);
+                if (halfOpenDelay > 0f)
+                    yield return new WaitForSeconds(halfOpenDelay);
+
+                ApplyFrame(image, fullOpenSprite, originIndex);
+                if (fullOpenDelay > 0f)
+                    yield return new WaitForSeconds(fullOpenDelay);
+            }
+            else if (halfOpenDelay + fullOpenDelay > 0f)
+            {
+                yield return new WaitForSeconds(halfOpenDelay + fullOpenDelay);
+            }
+
+            if (fullOpenHold > 0f)
+                yield return new WaitForSeconds(fullOpenHold);
+
+            // Orb her zaman görsel olarak uçar; onOrbArrived sadece goal kabul edilmişse çağrılır.
+            StartCoroutine(CoFlyOrb(originIndex, collectibleId, 0f, goalAccepted ? onOrbArrived : null));
+
+            if (closeDelay > 0f)
+                yield return new WaitForSeconds(closeDelay);
+
+            int activeAfterThis = DecrementActiveSequence(originIndex);
+            if (remainingEnergy <= 0)
+            {
+                SetExhausted(originIndex, null);
+                yield break;
+            }
+
+            if (activeAfterThis <= 0 && image != null && !exhaustedOrigins.Contains(originIndex))
+                ApplyFrame(image, closedSprite, originIndex);
         }
-
-        if (target != null)
-            StartCoroutine(CoPulseObstacle(target));
-
-        if (image != null)
+        finally
         {
-            ApplyFrame(image, halfOpenSprite, originIndex);
-            if (halfOpenDelay > 0f)
-                yield return new WaitForSeconds(halfOpenDelay);
-
-            ApplyFrame(image, fullOpenSprite, originIndex);
-            if (fullOpenDelay > 0f)
-                yield return new WaitForSeconds(fullOpenDelay);
+            presentationActivity?.Dispose();
         }
-        else if (halfOpenDelay + fullOpenDelay > 0f)
-        {
-            yield return new WaitForSeconds(halfOpenDelay + fullOpenDelay);
-        }
-
-        if (fullOpenHold > 0f)
-            yield return new WaitForSeconds(fullOpenHold);
-
-        // Orb her zaman görsel olarak uçar; onOrbArrived sadece goal kabul edilmişse çağrılır.
-        StartCoroutine(CoFlyOrb(originIndex, collectibleId, 0f, goalAccepted ? onOrbArrived : null));
-
-        if (closeDelay > 0f)
-            yield return new WaitForSeconds(closeDelay);
-
-        int activeAfterThis = DecrementActiveSequence(originIndex);
-        if (remainingEnergy <= 0)
-        {
-            SetExhausted(originIndex, null);
-            yield break;
-        }
-
-        if (activeAfterThis <= 0 && image != null && !exhaustedOrigins.Contains(originIndex))
-            ApplyFrame(image, closedSprite, originIndex);
     }
 
     private IEnumerator CoPulseObstacle(RectTransform target)
@@ -209,29 +217,44 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
     private IEnumerator CoSetExhausted(int originIndex, Sprite stageSpriteFallback)
     {
-        yield return null;
-
-        Image image = GetObstacleImage(originIndex);
-        if (image == null)
+        System.IDisposable presentationActivity = BeginPresentationActivity();
+        try
         {
-            if (logDebug)
-                Debug.LogWarning($"[EnergyContainerFx] Exhausted image not found. origin={originIndex}");
-            yield break;
+            yield return null;
+
+            Image image = GetObstacleImage(originIndex);
+            if (image == null)
+            {
+                if (logDebug)
+                    Debug.LogWarning($"[EnergyContainerFx] Exhausted image not found. origin={originIndex}");
+                yield break;
+            }
+
+            FitContainerImageToCell(image, originIndex);
+
+            // Explicit exhausted frame must win over the ObstacleLibrary final-stage sprite.
+            // The stage sprite is only a fallback for older setups with no exhausted sprite assigned.
+            Sprite finalSprite = exhaustedSprite != null
+                ? exhaustedSprite
+                : (stageSpriteFallback != null ? stageSpriteFallback : fullOpenSprite);
+
+            ApplyFrame(image, finalSprite, originIndex, allowExhaustedOverride: true);
+
+            Color c = image.color;
+            c.a = exhaustedAlpha;
+            image.color = c;
         }
+        finally
+        {
+            presentationActivity?.Dispose();
+        }
+    }
 
-        FitContainerImageToCell(image, originIndex);
-
-        // Explicit exhausted frame must win over the ObstacleLibrary final-stage sprite.
-        // The stage sprite is only a fallback for older setups with no exhausted sprite assigned.
-        Sprite finalSprite = exhaustedSprite != null
-            ? exhaustedSprite
-            : (stageSpriteFallback != null ? stageSpriteFallback : fullOpenSprite);
-
-        ApplyFrame(image, finalSprite, originIndex, allowExhaustedOverride: true);
-
-        Color c = image.color;
-        c.a = exhaustedAlpha;
-        image.color = c;
+    private System.IDisposable BeginPresentationActivity()
+    {
+        return board != null && board.UseFlowActivities
+            ? board.Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Presentation)
+            : null;
     }
 
     private IEnumerator CoFlyOrb(int originIndex, CollectibleId collectibleId, float delay, System.Action onArrived = null)

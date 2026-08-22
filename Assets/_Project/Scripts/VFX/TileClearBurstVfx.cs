@@ -15,6 +15,11 @@ using UnityEngine.UI;
 /// </summary>
 public static class TileClearBurstVfx
 {
+    private const string BURST_ROOT_POOL_KEY = "TileClearBurst.Root";
+    private const string RING_POOL_KEY = "TileClearBurst.Ring";
+    private const string STAR_POOL_KEY = "TileClearBurst.Star";
+    private const string SHARD_POOL_KEY = "TileClearBurst.Shard";
+
     // ===== AYARLANABİLİR PARAMETRELER =====
     private const float RING_SIZE_START = 0.3f;     // Halka başlangıç scale (hücre boyutunun oranı)
     private const float RING_SIZE_PEAK = 1.25f;     // Halka tepe scale
@@ -113,7 +118,7 @@ public static class TileClearBurstVfx
         int tileSize = board != null ? board.TileSize : 100;
 
         // Ana efekt root'u
-        GameObject rootGo = new GameObject("ClearBurst", typeof(RectTransform));
+        GameObject rootGo = UiVfxPool.RentRect(BURST_ROOT_POOL_KEY, parent, "ClearBurst");
         RectTransform rootRt = rootGo.GetComponent<RectTransform>();
         rootRt.SetParent(parent, false);
         rootRt.anchorMin = new Vector2(0.5f, 0.5f);
@@ -181,8 +186,7 @@ public static class TileClearBurstVfx
             yield return null;
         }
 
-        if (rootGo != null)
-            Object.Destroy(rootGo);
+        ReturnBurst(rootGo, ring, stars, shards);
     }
 
     // ========== RING ==========
@@ -195,16 +199,14 @@ public static class TileClearBurstVfx
 
     private static RingInstance CreateRing(RectTransform parent, int tileSize)
     {
-        var go = new GameObject("Ring", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        var rt = go.GetComponent<RectTransform>();
-        rt.SetParent(parent, false);
+        var img = UiVfxPool.RentImage(RING_POOL_KEY, parent, "Ring");
+        var rt = img.rectTransform;
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = Vector2.zero;
         float s = tileSize * RING_SIZE_START;
         rt.sizeDelta = new Vector2(s, s);
 
-        var img = go.GetComponent<Image>();
         img.color = new Color(RING_COLOR.r, RING_COLOR.g, RING_COLOR.b, 0f);
         img.raycastTarget = false;
         img.sprite = GetSoftCircleSprite();
@@ -259,9 +261,8 @@ public static class TileClearBurstVfx
 
     private static StarInstance CreateStar(RectTransform parent, int tileSize, float angle, float distance)
     {
-        var go = new GameObject("Star", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        var rt = go.GetComponent<RectTransform>();
-        rt.SetParent(parent, false);
+        var img = UiVfxPool.RentImage(STAR_POOL_KEY, parent, "Star");
+        var rt = img.rectTransform;
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
 
@@ -273,7 +274,6 @@ public static class TileClearBurstVfx
         rt.sizeDelta = new Vector2(starSize, starSize);
         rt.localRotation = Quaternion.Euler(0, 0, Random.Range(0f, 360f));
 
-        var img = go.GetComponent<Image>();
         img.color = new Color(STAR_COLOR.r, STAR_COLOR.g, STAR_COLOR.b, 0f);
         img.raycastTarget = false;
         img.sprite = GetStarSprite();
@@ -341,9 +341,8 @@ public static class TileClearBurstVfx
 
     private static ShardInstance CreateShard(RectTransform parent, int tileSize, float angle, float speed)
     {
-        var go = new GameObject("Shard", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        var rt = go.GetComponent<RectTransform>();
-        rt.SetParent(parent, false);
+        var img = UiVfxPool.RentImage(SHARD_POOL_KEY, parent, "Shard");
+        var rt = img.rectTransform;
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = Vector2.zero;
@@ -354,7 +353,6 @@ public static class TileClearBurstVfx
         rt.sizeDelta = new Vector2(shardSize, shardSize * 1.15f); // hafif dikey
         rt.localRotation = Quaternion.Euler(0, 0, Random.Range(0f, 360f));
 
-        var img = go.GetComponent<Image>();
         img.color = Random.value < 0.5f ? SHARD_COLOR_A : SHARD_COLOR_B;
         img.raycastTarget = false;
         img.sprite = GetShardSprite();
@@ -413,6 +411,33 @@ public static class TileClearBurstVfx
             c.a = alpha;
             s.image.color = c;
         }
+    }
+
+    private static void ReturnBurst(
+        GameObject rootGo,
+        RingInstance ring,
+        List<StarInstance> stars,
+        List<ShardInstance> shards)
+    {
+        if (ring?.rt != null)
+            UiVfxPool.Return(RING_POOL_KEY, ring.rt.gameObject);
+
+        if (stars != null)
+        {
+            for (int i = 0; i < stars.Count; i++)
+                if (stars[i]?.rt != null)
+                    UiVfxPool.Return(STAR_POOL_KEY, stars[i].rt.gameObject);
+        }
+
+        if (shards != null)
+        {
+            for (int i = 0; i < shards.Count; i++)
+                if (shards[i]?.rt != null)
+                    UiVfxPool.Return(SHARD_POOL_KEY, shards[i].rt.gameObject);
+        }
+
+        if (rootGo != null)
+            UiVfxPool.Return(BURST_ROOT_POOL_KEY, rootGo);
     }
 
     // ========== SPRITE GENERATION (procedural) ==========

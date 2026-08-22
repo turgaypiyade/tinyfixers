@@ -155,7 +155,7 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
                 if (board == null)
                     break;
 
-                if (IsBoardFilledIdle() && HasEligibleCandidate())
+                if (IsBoardStableForDeferredPlacement() && HasEligibleCandidate())
                 {
                     roomReady = true;
                     break;
@@ -270,6 +270,24 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
     }
 
     private bool IsBoardReady() => IsBoardFilledIdle() && HasEligibleCandidate();
+
+    // Deferred teslimat için "board tamamen dolu / bütün tile'lar kusursuz seated" şartı fazla sert.
+    // Yerleştirme zaten TakeAndApplyToNextEligibleCandidate → IsEligible ile tek hücre seviyesinde
+    // tekrar doğrulanır. Burada yalnız resolve'un durduğunu ararız; eligible hücre varsa teslimat
+    // başlasın. Aksi halde obstacle-heavy board'da tek bir stale/boş hücre tüm ödülü sonsuza bekletir.
+    private bool IsBoardStableForDeferredPlacement()
+    {
+        if (board == null || board.Tiles == null || board.Holes == null || board.GridData == null)
+            return false;
+
+        if (board.Width <= 0 || board.Height <= 0)
+            return false;
+
+        if (board.IsBusy || board.BlockingBackgroundJobs > 0)
+            return false;
+
+        return true;
+    }
 
     // Board settled (arrays valid, not busy, no background jobs, tiles seated) — AMA "yerleştirilecek
     // uygun taş var mı" (HasEligibleCandidate) HARİÇ. Deferred teslimat bunu kullanır: board oturmuş
