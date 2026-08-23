@@ -28,6 +28,10 @@ Shader "UI/WonderReveal"
         _StencilWriteMask ("Stencil Write Mask", Float) = 255
         _StencilReadMask ("Stencil Read Mask", Float) = 255
         _ColorMask ("Color Mask", Float) = 15
+
+        // RectMask2D / UI kırpma (scroll viewport dışına taşmasın)
+        _ClipRect ("Clip Rect", Vector) = (-32767, -32767, 32767, 32767)
+        [Toggle(UNITY_UI_ALPHACLIP)] _UseUIAlphaClip ("Use Alpha Clip", Float) = 0
     }
 
     SubShader
@@ -62,6 +66,9 @@ Shader "UI/WonderReveal"
             #pragma vertex vert
             #pragma fragment frag
             #include "UnityCG.cginc"
+            #include "UnityUI.cginc"
+            #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
+            #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
 
             struct appdata_t
             {
@@ -75,7 +82,10 @@ Shader "UI/WonderReveal"
                 float4 vertex : SV_POSITION;
                 fixed4 color : COLOR;
                 float2 texcoord : TEXCOORD0;
+                float4 worldPosition : TEXCOORD1;
             };
+
+            float4 _ClipRect;
 
             sampler2D _MainTex;
             fixed4 _Color;
@@ -105,6 +115,7 @@ Shader "UI/WonderReveal"
             v2f vert(appdata_t v)
             {
                 v2f o;
+                o.worldPosition = v.vertex;
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.texcoord = v.texcoord;
                 o.color = v.color * _Color;
@@ -146,6 +157,14 @@ Shader "UI/WonderReveal"
                 float active = smoothstep(0.0, 0.03, _Reveal) * smoothstep(1.0, 0.97, _Reveal);
                 rgb += _EdgeColor.rgb * band * active;
                 a = max(a, band * active * src.a);
+
+                // --- UI kırpma (RectMask2D / scroll viewport) -------------
+                #ifdef UNITY_UI_CLIP_RECT
+                a *= UnityGet2DClipping(i.worldPosition.xy, _ClipRect);
+                #endif
+                #ifdef UNITY_UI_ALPHACLIP
+                clip(a - 0.001);
+                #endif
 
                 return fixed4(rgb, a);
             }
