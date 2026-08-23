@@ -60,6 +60,73 @@ public sealed class RegionUnlockItem : MonoBehaviour
         RefreshActiveState(isActive);
     }
 
+    private Material _iconRevealMat;
+
+    /// <summary>Wonder görev satırı — region olmadan ham değerlerle bağlar (aynı görsel).</summary>
+    public void BindTask(string displayName, Sprite icon, int starCost, RegionUnlockListPanel panel, bool isActive)
+    {
+        this.region = null;
+        this.panel = panel;
+
+        if (iconImage != null)
+        {
+            iconImage.material = null;   // reveal-önizleme materyalini sıfırla
+            if (icon != null) { iconImage.sprite = icon; iconImage.enabled = true; }
+            else iconImage.enabled = false;
+        }
+        SetTaskLabels(displayName, starCost);
+        if (canvasGroup != null) canvasGroup.alpha = 1f;
+        RefreshActiveState(isActive);
+    }
+
+    /// <summary>İkon = harika imajının reveal shader'ıyla 'reveal' kadar açılmış mini önizlemesi.</summary>
+    public void BindTaskRevealIcon(string displayName, Sprite wonderSprite, float reveal,
+                                   int starCost, RegionUnlockListPanel panel, bool isActive)
+    {
+        this.region = null;
+        this.panel = panel;
+
+        if (iconImage != null)
+        {
+            if (wonderSprite != null)
+            {
+                iconImage.sprite = wonderSprite;
+                iconImage.enabled = true;
+                var shader = Shader.Find("UI/WonderReveal");
+                if (shader != null)
+                {
+                    if (_iconRevealMat == null) _iconRevealMat = new Material(shader) { name = "TaskRevealIcon" };
+                    _iconRevealMat.SetFloat("_Reveal", Mathf.Clamp01(reveal));
+                    iconImage.material = _iconRevealMat;
+                }
+            }
+            else iconImage.enabled = false;
+        }
+        SetTaskLabels(displayName, starCost);
+        if (canvasGroup != null) canvasGroup.alpha = 1f;
+        RefreshActiveState(isActive);
+    }
+
+    private void SetTaskLabels(string displayName, int starCost)
+    {
+        if (nameText != null) nameText.text = displayName;
+        if (starCountText != null) starCountText.text = starCost.ToString();
+        if (unlockLabelText != null)
+        {
+            if (!string.IsNullOrEmpty(unlockButtonLocalizationKey))
+            {
+                string s = GameLocalization.Get(unlockButtonLocalizationKey);
+                unlockLabelText.text = (s == unlockButtonLocalizationKey) ? string.Empty : s;
+            }
+            else unlockLabelText.text = string.Empty;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (_iconRevealMat != null) Destroy(_iconRevealMat);
+    }
+
     public void RefreshActiveState(bool isActive)
     {
         if (activeHighlight != null) activeHighlight.SetActive(isActive);

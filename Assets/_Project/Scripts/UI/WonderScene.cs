@@ -21,6 +21,8 @@ public class WonderScene : MonoBehaviour
     [Header("Davranış")]
     [Tooltip("Açık: karakterler hemen yürür (test). Kapalı: reveal %100 olunca.")]
     public bool charactersWalkImmediately = false;
+    [Tooltip("Kapalı: karakterleri HİÇ kurma (reveal overlay'inde robot/dron olmasın)")]
+    public bool includeCharacters = true;
 
     public WonderRevealView View { get; private set; }
     RectTransform _rt;
@@ -54,7 +56,7 @@ public class WonderScene : MonoBehaviour
 
         var view = bg.GetComponent<WonderRevealView>();
         view.wonderId = def.wonderId;
-        view.totalStages = def.totalStages;
+        view.totalStages = def.TaskCount;
         view.welderFrames = def.welderFrames;
         view.welderFps = def.welderFps;
         view.previewReveal = 0f;
@@ -65,7 +67,7 @@ public class WonderScene : MonoBehaviour
 
         // --- Karakterler ----------------------------------------------
         var agents = new List<WonderAmbientAgent>();
-        if (def.characters != null)
+        if (includeCharacters && def.characters != null)
             foreach (var c in def.characters)
                 agents.Add(BuildCharacter(bgRt, c));
         view.ambientAgents = agents.ToArray();
@@ -109,6 +111,7 @@ public class WonderScene : MonoBehaviour
 
         view.welderRobot = cRt;
         view.welderImage = robotImg;
+        container.SetActive(false);   // kaynak başlayınca AnimateTo açar (ortada flaş olmasın)
     }
 
     WonderAmbientAgent BuildCharacter(RectTransform parent, WonderCharacter c)

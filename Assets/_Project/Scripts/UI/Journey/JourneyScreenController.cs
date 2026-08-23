@@ -26,6 +26,10 @@ public sealed class JourneyScreenController : MonoBehaviour
              "Boşsa eski katalog mockup akışı.")]
     [SerializeField] private WorldMapController worldMap;
 
+    [Header("Wonder Modu (atanırsa harikalar liste olur)")]
+    [Tooltip("Atanırsa: açılan harikalar tam, açılmamışlar hologram (reveal shader).")]
+    [SerializeField] private WonderCatalog wonderCatalog;
+
     [Header("Ada Listesi (procedural)")]
     [Tooltip("Kartların dizileceği ScrollRect CONTENT'i. Boşsa panel içine otomatik ScrollRect kurulur.")]
     [SerializeField] private RectTransform listContent;
@@ -56,6 +60,7 @@ public sealed class JourneyScreenController : MonoBehaviour
 
     private void Build()
     {
+        if (TryBuildWonderList()) return;
         if (TryBuildIslandList())
             return;
 
@@ -82,6 +87,83 @@ public sealed class JourneyScreenController : MonoBehaviour
     }
 
     // ─── Ada listesi ─────────────────────────────────────────────────────────
+
+    // Wonder modu: catalog'daki tüm harikalar; açılan tam, açılmamış hologram.
+    private bool TryBuildWonderList()
+    {
+        if (wonderCatalog == null || wonderCatalog.Count == 0) return false;
+
+        if (currentCard != null) currentCard.gameObject.SetActive(false);
+        if (nextCard != null) nextCard.gameObject.SetActive(false);
+
+        var content = EnsureListContent();
+        if (content == null) return false;
+        for (int i = content.childCount - 1; i >= 0; i--)
+            Destroy(content.GetChild(i).gameObject);
+
+        float panelW = ((RectTransform)transform).rect.width;
+        if (panelW < 10f) panelW = 1080f;
+        float cardW = panelW * cardWidthRatio;
+
+        // Ters sıra: son harika üstte, ilk (Mahalron) altta.
+        for (int i = wonderCatalog.Count - 1; i >= 0; i--)
+        {
+            var w = wonderCatalog.Get(i);
+            if (w == null) continue;
+            BuildWonderCard(content, w, i, cardW);
+        }
+
+        if (builtScroll != null) StartCoroutine(SnapToBottomNextFrame());
+        return true;
+    }
+
+    // Harikanın açılma oranı: tamamlanan=1, aktif=stage/count, gelecek=0 (hologram).
+    private float WonderRevealFor(int index)
+    {
+        int completed = WonderProgress.CompletedCount;
+        if (index < completed) return 1f;
+        if (index > completed) return 0f;
+        var w = wonderCatalog.Get(index);
+        int count = w != null ? w.TaskCount : 0;
+        return count > 0 ? (float)WonderProgress.CurrentStage / count : 0f;
+    }
+
+    private void BuildWonderCard(RectTransform parent, WonderDefinition wonder, int index, float cardW)
+    {
+        var sprite = wonder.backgroundSprite;
+        float aspect = sprite != null && sprite.rect.width > 1f
+            ? sprite.rect.height / sprite.rect.width : 16f / 9f;
+
+        const float framePad = 18f;
+        float imgH = cardW * aspect;
+
+        var card = NewUiRect($"WonderCard_{index + 1}", parent);
+        card.sizeDelta = new Vector2(cardW + framePad * 2f, imgH + framePad * 2f);
+        var frame = card.gameObject.AddComponent<Image>();
+        if (theme != null && theme.cardBackground != null) { frame.sprite = theme.cardBackground; frame.type = Image.Type.Sliced; }
+        frame.color = frameColor;
+
+        var imgRt = NewUiRect("Image", card);
+        imgRt.anchorMin = Vector2.zero; imgRt.anchorMax = Vector2.one;
+        imgRt.offsetMin = new Vector2(framePad, framePad);
+        imgRt.offsetMax = new Vector2(-framePad, -framePad);
+        var img = imgRt.gameObject.AddComponent<Image>();
+        img.sprite = sprite;
+        img.enabled = sprite != null;
+        img.preserveAspect = true;
+
+        // Reveal shader: açılma oranına göre (açılmamış = hologram)
+        var shader = Shader.Find("UI/WonderReveal");
+        if (shader != null && sprite != null)
+        {
+            var mat = new Material(shader) { name = "JourneyWonderReveal" };
+            mat.SetFloat("_Reveal", WonderRevealFor(index));
+            img.material = mat;
+        }
+
+        string name = string.IsNullOrEmpty(wonder.displayName) ? wonder.wonderId : wonder.displayName;
+        BuildPlaque(card, name, new Vector2(0.5f, 1f), 0f, cardW * 0.72f, 92f, bold: true);
+    }
 
     private bool TryBuildIslandList()
     {

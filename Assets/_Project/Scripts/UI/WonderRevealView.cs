@@ -158,6 +158,15 @@ public class WonderRevealView : MonoBehaviour
     /// <summary>Ham _Reveal önizleme (animasyonsuz, test slider'ı için).</summary>
     public void PreviewRevealValue(float r) => ApplyReveal(r);
 
+    /// <summary>_Reveal'i anında ayarlar (kaynak animasyonu başlamadan başlangıç noktası).</summary>
+    public void SetRevealImmediate(float normalized) => ApplyReveal(Mathf.Clamp01(normalized));
+
+    /// <summary>Mevcut _Reveal'den hedefe kaynaklayarak açar (yield edilebilir). Overlay kullanır.</summary>
+    public IEnumerator PlayRevealRoutine(float targetNormalized)
+    {
+        yield return AnimateTo(Mathf.Clamp01(targetNormalized));
+    }
+
     float StageToReveal(int stage) => totalStages <= 0 ? 1f : (float)stage / totalStages;
 
     // ---- İç işleyiş ----------------------------------------------------

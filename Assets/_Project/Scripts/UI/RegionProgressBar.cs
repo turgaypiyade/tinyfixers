@@ -12,6 +12,8 @@ public sealed class RegionProgressBar : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private WorldMapController worldMap;
+    [Tooltip("Atanırsa wonder modu: aktif harikanın görev ilerlemesini gösterir.")]
+    [SerializeField] private WonderCatalog wonderCatalog;
     [Tooltip("Filled Image — Image Type = Filled, Fill Method = Horizontal, Fill Origin = Left.")]
     [SerializeField] private Image fillImage;
     [Tooltip("\"3 / 10\" metni (opsiyonel).")]
@@ -39,9 +41,21 @@ public sealed class RegionProgressBar : MonoBehaviour
         if (worldMap != null) worldMap.OnRegionUnlocked -= HandleRegionUnlocked;
     }
 
+    private bool WonderMode => wonderCatalog != null;
+
     /// <summary>Anlık state'e göre yenile (panel açılınca / sahne başında).</summary>
     public void ApplyInstant()
     {
+        if (WonderMode)
+        {
+            var w = WonderProgress.CurrentWonder(wonderCatalog);
+            int count = w != null ? w.TaskCount : 0;
+            currentFill = count > 0 ? (float)WonderProgress.CurrentStage / count : 0f;
+            if (fillImage != null) fillImage.fillAmount = currentFill;
+            UpdateText();
+            return;
+        }
+
         if (worldMap == null) return;
         currentFill = worldMap.ProgressNormalized;
         if (fillImage != null) fillImage.fillAmount = currentFill;
@@ -53,6 +67,13 @@ public sealed class RegionProgressBar : MonoBehaviour
     private void UpdateText()
     {
         if (progressText == null) return;
+        if (WonderMode)
+        {
+            var w = WonderProgress.CurrentWonder(wonderCatalog);
+            int count = w != null ? w.TaskCount : 0;
+            progressText.text = $"{WonderProgress.CurrentStage} / {count}";
+            return;
+        }
         progressText.text = $"{worldMap.UnlockedCount} / {worldMap.TotalRegions}";
     }
 

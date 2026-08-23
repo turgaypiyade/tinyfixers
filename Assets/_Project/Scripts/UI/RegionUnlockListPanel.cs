@@ -26,6 +26,12 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
     [Tooltip("Üstteki ilerleme barı (opsiyonel).")]
     [SerializeField] private RegionProgressBar progressBar;
 
+    [Header("Wonder Mode (atanırsa region yerine harika görevleri)")]
+    [SerializeField] private WonderCatalog wonderCatalog;
+    [SerializeField] private WonderRevealOverlay wonderOverlay;
+
+    private bool WonderMode => wonderCatalog != null;
+
     [Header("Layout")]
     [SerializeField, Min(1)] private int visibleSlotCount = 3;
     [SerializeField, Min(20f)] private float itemHeight = 160f;
@@ -70,7 +76,7 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
 
     public void Open()
     {
-        if (worldMap == null) { Debug.LogWarning("[RegionPanel] worldMap atanmamış."); return; }
+        if (!WonderMode && worldMap == null) { Debug.LogWarning("[RegionPanel] worldMap atanmamış."); return; }
 
         if (!inViewMode)
         {
@@ -83,7 +89,7 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
         if (panelGroup != null) panelGroup.alpha = 0f;
 
         RebuildItemsInstant();
-        worldMap.FocusNextLocked(instant: true);   // boş ekranda açma — sıradaki pine konumlan
+        if (!WonderMode) worldMap.FocusNextLocked(instant: true);   // boş ekranda açma — sıradaki pine
         StartCoroutine(FadePanel(0f, 1f, panelFadeDuration));
     }
 
@@ -112,6 +118,7 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
     public void OnActiveItemClicked()
     {
         if (isAnimating) return;
+        if (WonderMode) { StartCoroutine(WonderTaskFlow()); return; }
         if (worldMap == null || items.Count == 0 || items[0] == null) return;
 
         var region = items[0].Region;
@@ -216,6 +223,8 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
         foreach (var it in items) if (it != null) Destroy(it.gameObject);
         items.Clear();
 
+        if (WonderMode) { RebuildWonderItems(); return; }
+
         var locked = worldMap.GetLockedRegions(visibleSlotCount);
 
         if (allCompletedMessage != null)
@@ -230,6 +239,74 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
         }
 
         if (progressBar != null) progressBar.ApplyInstant();
+    }
+
+    // ─── Wonder Mode ────────────────────────────────────────────────────────────
+
+    private void RebuildWonderItems()
+    {
+        var w = WonderProgress.CurrentWonder(wonderCatalog);
+        int remaining = w != null ? (w.TaskCount - WonderProgress.CurrentStage) : 0;
+
+        if (allCompletedMessage != null)
+            allCompletedMessage.SetActive(w == null || remaining <= 0);
+        if (w == null) return;
+
+        int shown = 0;
+        for (int s = WonderProgress.CurrentStage; s < w.TaskCount && shown < visibleSlotCount; s++, shown++)
+        {
+            var item = Instantiate(itemPrefab, itemsContainer);
+            item.SetInstantY(SlotY(shown));
+
+            if (w.HasExplicitTaskIcon(s))
+                item.BindTask(w.GetTaskName(s), w.GetTaskIcon(s), w.GetStarCost(s), this, isActive: shown == 0);
+            else
+            {
+                // İkon yok → harika imajının (s+1)/toplam kadar kaynaklanmış mini önizlemesi
+                float reveal = w.TaskCount > 0 ? (s + 1f) / w.TaskCount : 1f;
+                item.BindTaskRevealIcon(w.GetTaskName(s), w.backgroundSprite, reveal,
+                                        w.GetStarCost(s), this, isActive: shown == 0);
+            }
+            items.Add(item);
+        }
+
+        if (progressBar != null) progressBar.ApplyInstant();
+    }
+
+    private IEnumerator WonderTaskFlow()
+    {
+        if (items.Count == 0 || items[0] == null) yield break;
+        if (!WonderProgress.CanAffordNextTask(wonderCatalog))
+        {
+            Debug.LogWarning($"[WonderPanel] Yetersiz yıldız. cost={WonderProgress.NextTaskCost(wonderCatalog)}, " +
+                             $"stars={PlayerWallet.TotalStars}");
+            // TODO: shop/reklam yönlendirmesi
+            yield break;
+        }
+
+        isAnimating = true;
+        Vector3 starSource = items[0].transform.position;
+        int fromStage = WonderProgress.CurrentStage;
+
+        if (!WonderProgress.TrySpendForNextTask(wonderCatalog)) { isAnimating = false; yield break; }
+
+        if (wonderOverlay != null)
+            StartCoroutine(FlyStarsFromTo(starSource, (RectTransform)wonderOverlay.transform));
+        yield return new WaitForSeconds(0.1f);
+
+        yield return FadePanel(panelGroup != null ? panelGroup.alpha : 1f, 0f, panelFadeDuration);
+
+        if (wonderOverlay != null)
+            yield return wonderOverlay.PlayReveal(wonderCatalog, fromStage);
+
+        if (postRevealPause > 0f) yield return new WaitForSeconds(postRevealPause);
+
+        if (reopenPanelAfterUnlock && inViewMode)
+        {
+            RebuildItemsInstant();
+            yield return FadePanel(0f, 1f, panelFadeDuration);
+        }
+        isAnimating = false;
     }
 
     private IEnumerator FadePanel(float from, float to, float dur)

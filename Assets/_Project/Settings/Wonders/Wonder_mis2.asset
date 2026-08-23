@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0e428ba4f402e4e53a57f2a501307422, type: 3}
-  m_Name: Wonder_mis1
+  m_Name: Wonder_mis2
   m_EditorClassIdentifier: Assembly-CSharp::WonderDefinition
-  wonderId: mis1
-  displayName: Pisaron
+  wonderId: mis2
+  displayName: Gateron
   taskIcon: {fileID: 0}
-  backgroundSprite: {fileID: 21300000, guid: 9d538e63afe024ce49dc15f2cb3cd0cf, type: 3}
+  backgroundSprite: {fileID: 21300000, guid: a8815e9055e804173949e03fbaec65d1, type: 3}
   totalStages: 10
   tasks:
   - name: Temel Tarama

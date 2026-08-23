@@ -3607,8 +3607,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.056792874}
-  m_AnchorMax: {x: 0.7878788, y: 1.3312918}
+  m_AnchorMin: {x: 0, y: 0.26153848}
+  m_AnchorMax: {x: 0.50583655, y: 6.1307693}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -8804,12 +8804,12 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   enableFallSettle: 1
-  fallSettleDuration: 0.01
-  fallSettleStrength: 0.11
-  fallSettleStretchX: 0.07
+  fallSettleDuration: 0.1
+  fallSettleStrength: 0.093
+  fallSettleStretchX: 0.088
   fallSettleOvershoot: 0.02
   fallStretchAmount: 0.1
-  fallStretchRecover: 0.45
+  fallStretchRecover: 0.413
   useReferenceFallMotion: 0
   debugReferenceFallMotionLogs: 0
   applyReferenceTileVisualFillRatio: 1

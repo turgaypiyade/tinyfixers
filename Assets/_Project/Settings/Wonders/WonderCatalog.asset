@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 406ccfed272f74ba3b500617ff634ac3, type: 3}
+  m_Name: WonderCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::WonderCatalog
+  defaultBackground: {fileID: 21300000, guid: 13a34a89e4c9541d399c9dcf5e89ba5f, type: 3}
+  wonders:
+  - {fileID: 11400000, guid: 7ff1a68e5900443989eec0d4fd4175b8, type: 2}
+  - {fileID: 11400000, guid: c1d9cec3030b642d19cc484df36f45a3, type: 2}
