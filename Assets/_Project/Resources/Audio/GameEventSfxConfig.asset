@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 747278e112eed40a592c3f6ba66a82c0, type: 3}
+  m_Name: GameEventSfxConfig
+  m_EditorClassIdentifier: Assembly-CSharp::GameEventSfxConfig
+  chestOpen: {fileID: 8300000, guid: 9fe01c84336a147d98efd35d3b338c05, type: 3}
+  chestOpenVolume: 1
+  levelWin: {fileID: 8300000, guid: 9fe01c84336a147d98efd35d3b338c05, type: 3}
+  levelWinVolume: 1
+  weldingLoop: {fileID: 8300000, guid: 5d01745a2c96b4d3599a8447692b096a, type: 3}
+  weldingVolume: 1
+  sfxGroup: {fileID: 8490430569276119596, guid: 5d1ee33bd118f4aa383e0b24cd2f631f, type: 2}

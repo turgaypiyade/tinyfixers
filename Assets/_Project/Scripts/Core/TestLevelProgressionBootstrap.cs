@@ -25,6 +25,11 @@ public static class TestLevelProgressionBootstrap
         string savedStartTime = PlayerPrefs.GetString("progress_event_v1_start_time", "");
         string savedGoals     = PlayerPrefs.GetString("progress_event_v1_goals", "");
 
+        // Yıldız + wonder ilerlemesini KORU (yazdığın değerle başla; yoksa 100 başlangıç).
+        int savedStars      = PlayerPrefs.HasKey("player_total_stars") ? PlayerPrefs.GetInt("player_total_stars") : 100;
+        int savedWonderDone = PlayerPrefs.GetInt("wonder_completed_count", 0);
+        int savedWonderStg  = PlayerPrefs.GetInt("wonder_current_stage", 0);
+
         var timedRewardTypes = new[] { 1, 10, 11, 12, 13 }; // Lives, Joker_LineH, PulseCore, Override, Joker_Line
         var savedTimedRewards = new string[timedRewardTypes.Length];
         for (int t = 0; t < timedRewardTypes.Length; t++)
@@ -41,12 +46,14 @@ public static class TestLevelProgressionBootstrap
             PlayerPrefs.SetInt("editor_test_coins", editorCoinOverride);
         PlayerPrefs.SetInt("current_level", level);
         PlayerPrefs.SetInt("player_coins", coins);
-        PlayerPrefs.SetInt("player_total_stars", 10);
+        PlayerPrefs.SetInt("player_total_stars", savedStars);          // korunan/girilen değer
+        PlayerPrefs.SetInt("wonder_completed_count", savedWonderDone); // wonder ilerlemesi korunur
+        PlayerPrefs.SetInt("wonder_current_stage", savedWonderStg);
         PlayerPrefs.SetInt("initial_stars_granted", 1);
         PlayerPrefs.SetInt("first_launch_done", 1);
         PlayerPrefs.Save();
 
-        Debug.Log($"[TestLevelProgressionBootstrap] Starting at level {level} with {coins} coins, 10 stars.");
+        Debug.Log($"[TestLevelProgressionBootstrap] Starting at level {level} with {coins} coins, {savedStars} stars, wonder {savedWonderDone}/{savedWonderStg}.");
 #endif
     }
 }

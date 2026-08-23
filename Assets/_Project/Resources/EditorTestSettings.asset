@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1809b867e8fe64fb29e64e0c6675a85b, type: 3}
   m_Name: EditorTestSettings
   m_EditorClassIdentifier: Assembly-CSharp::EditorTestSettings
-  testLevel: 83
+  testLevel: 1

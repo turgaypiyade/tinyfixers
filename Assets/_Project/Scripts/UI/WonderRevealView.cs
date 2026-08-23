@@ -35,8 +35,8 @@ public class WonderRevealView : MonoBehaviour
     [Header("Kaynak Arkı Işığı (torç ucu)")]
     [Tooltip("Torç ucunda titreşen radyal ışık (Image, yumuşak daire)")]
     public Image weldLight;
-    [Tooltip("Işık taban rengi (kaynak arkı mavi-beyaz)")]
-    public Color weldLightColor = new Color(0.55f, 1.2f, 1.6f, 1f);
+    [Tooltip("Işık taban rengi (kaynak arkı — sıcak sarı-beyaz, maviyle blend)")]
+    public Color weldLightColor = new Color(1.5f, 1.2f, 0.55f, 1f);
     [Tooltip("Titreşim hızı")]
     public float weldFlickerSpeed = 28f;
     [Tooltip("Işığın taban ölçeği")]
@@ -180,6 +180,7 @@ public class WonderRevealView : MonoBehaviour
         if (welderRobot != null) welderRobot.gameObject.SetActive(true);
         if (welderSparks != null) welderSparks.Play();
         if (weldLight != null) weldLight.gameObject.SetActive(true);
+        GameEventSfx.StartWelding();
 
         while (t < animateDuration)
         {
@@ -196,6 +197,7 @@ public class WonderRevealView : MonoBehaviour
         UpdateWelder(target);
 
         if (welderSparks != null) welderSparks.Stop();
+        GameEventSfx.StopWelding();
         ResetWelderFrame();     // durunca ilk kareye dön
         if (weldLight != null) weldLight.gameObject.SetActive(false);
         // Tam açıldıysa robotu gizle + ambient robotları başlat

@@ -51,6 +51,14 @@ public class WonderAmbientAgent : MonoBehaviour
     [Tooltip("Anchored nokta listesi. Doluysa waypoints yerine BUNU kullanır (data-driven).")]
     public Vector2[] pathPoints;
 
+    [Header("Derinlik (perspektif)")]
+    [Tooltip("Açık: aşağıda (yakın) büyük, yukarıda (uzak) küçük. Ölçek yolun kendi Y aralığından otomatik.")]
+    public bool enableDepthScale = true;
+    [Tooltip("Yolun EN ALTINDA (yakın) ölçek")]
+    public float nearScale = 1f;
+    [Tooltip("Yolun EN ÜSTÜNDE (uzak) ölçek")]
+    public float farScale = 0.6f;
+
     [Header("Başlangıç")]
     [Tooltip("Açık: hemen yürür (test). Kapalı: sahne açılınca WonderRevealView başlatır.")]
     public bool startWalking = true;
@@ -62,6 +70,8 @@ public class WonderAmbientAgent : MonoBehaviour
     float _walkT;
     float _baseVisualY;
     bool _walking;
+    float _faceSign = 1f;
+    float _pathMinY, _pathMaxY;
 
     int PointCount => (pathPoints != null && pathPoints.Length >= 2)
         ? pathPoints.Length
@@ -90,6 +100,15 @@ public class WonderAmbientAgent : MonoBehaviour
         {
             _rt.anchoredPosition = Point(0);
             _idx = 1;
+        }
+
+        // Derinlik için yolun Y aralığı (min=alt/yakın, max=üst/uzak)
+        _pathMinY = float.MaxValue; _pathMaxY = float.MinValue;
+        for (int i = 0; i < PointCount; i++)
+        {
+            float y = Point(i).y;
+            if (y < _pathMinY) _pathMinY = y;
+            if (y > _pathMaxY) _pathMaxY = y;
         }
 
         // Editör waypoint işaretlerini oyunda gizle
@@ -160,13 +179,13 @@ public class WonderAmbientAgent : MonoBehaviour
         p.y = _baseVisualY + bob;
         visual.anchoredPosition = p;
 
-        // Yatay aynalama — yalnız SideMirror modunda
+        // Yön işareti (SideMirror'da sağa/sola göre aynalanır)
         if (facingMode == FacingMode.SideMirror && mirrorBySide && Mathf.Abs(delta.x) > 0.0001f)
-        {
-            var s = visual.localScale;
-            s.x = Mathf.Abs(s.x) * (delta.x > 0f ? 1f : -1f);
-            visual.localScale = s;
-        }
+            _faceSign = delta.x > 0f ? 1f : -1f;
+
+        // Derinlik ölçeği (aşağı=büyük, yukarı=küçük) + yön işareti birlikte uygulanır
+        float ds = DepthScale();
+        visual.localScale = new Vector3(ds * _faceSign, ds, 1f);
 
         // Frame animasyonu
         if (!walking || visualImage == null) return;
@@ -175,6 +194,16 @@ public class WonderAmbientAgent : MonoBehaviour
         _walkT += Time.deltaTime;
         int fi = Mathf.FloorToInt(_walkT * walkFps) % set.Length;
         if (set[fi] != null) visualImage.sprite = set[fi];
+    }
+
+    // Y'ye göre perspektif ölçeği: alt (yakın) = nearScale, üst (uzak) = farScale.
+    float DepthScale()
+    {
+        if (!enableDepthScale) return 1f;
+        float span = _pathMaxY - _pathMinY;
+        if (span < 1f) return nearScale;                // düz yol → sabit
+        float t = Mathf.Clamp01((_rt.anchoredPosition.y - _pathMinY) / span); // 0 alt, 1 üst
+        return Mathf.Lerp(nearScale, farScale, t);
     }
 
     Sprite[] ChooseFrameSet()

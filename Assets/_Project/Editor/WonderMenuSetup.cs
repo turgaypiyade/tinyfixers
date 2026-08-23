@@ -93,16 +93,37 @@ public static class WonderMenuSetup
         }
 
         var existing = Object.FindFirstObjectByType<WonderBackgroundView>(FindObjectsInactive.Include);
-        if (existing != null) { Selection.activeObject = existing;
-            EditorUtility.DisplayDialog("Wonder Background", "Zaten var (seçildi). Konumunu elle ayarlayabilirsin.", "Tamam"); return; }
+        GameObject rootGo;
+        if (existing != null)
+        {
+            rootGo = existing.gameObject;
+            ((RectTransform)rootGo.transform).SetAsFirstSibling(); // arkada kalsın
+        }
+        else
+        {
+            // Arka plan kökü — canvas'ın EN ALTINDA (UI'ın arkasında çizilir)
+            rootGo = new GameObject("WonderBackground",
+                typeof(RectTransform), typeof(WonderBackgroundView)) { layer = canvas.gameObject.layer };
+            var newRt = (RectTransform)rootGo.transform;
+            newRt.SetParent(canvas.transform, false);
+            Stretch(newRt);
+            newRt.SetAsFirstSibling();
+        }
 
-        // Arka plan kökü — canvas'ın EN ALTINDA (UI'ın arkasında çizilir)
-        var rootGo = new GameObject("WonderBackground",
-            typeof(RectTransform), typeof(WonderBackgroundView)) { layer = canvas.gameObject.layer };
+        // HOME dışı sekmelerde (Journey/Profile...) gizlensin → tab controller homeOnlyElements'e ekle.
+        RegisterHomeOnly(rootGo);
+
+        if (existing != null)
+        {
+            EditorSceneManager.MarkSceneDirty(rootGo.scene);
+            Selection.activeObject = rootGo;
+            EditorUtility.DisplayDialog("Wonder Background",
+                "Mevcut WonderBackground güncellendi: arkaya alındı + HOME-only yapıldı " +
+                "(artık Journey/Profile'ı ezmez). Cmd+S.", "Tamam");
+            return;
+        }
+
         var rootRt = (RectTransform)rootGo.transform;
-        rootRt.SetParent(canvas.transform, false);
-        Stretch(rootRt);
-        rootRt.SetAsFirstSibling(); // menü UI'ının arkasında
 
         // İçerik kabı (slide bunu oynatır)
         var content = new GameObject("Content", typeof(RectTransform)) { layer = canvas.gameObject.layer };
@@ -146,8 +167,10 @@ public static class WonderMenuSetup
         foreach (var w in Object.FindObjectsByType<WorkshopController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             if (w != null) Disable(w.gameObject, $"Workshop({w.gameObject.name})");
 
-        // 2) İsimle eşleşen eski arka plan objelerini gizle (WorldMap dahil)
-        string[] names = { "WorldMap", "CurrentImage", "NextImage", "BGImage", "MapImage", "SkyEmptyV3", "WorldMapBG" };
+        // 2) İsimle eşleşen eski arka plan objelerini gizle (WorldMap dahil).
+        // NOT: "BGImage" gibi GENEL isimler listede YOK — başka ekranların (Profile vb.)
+        // arka planını yanlışlıkla kapatmasın.
+        string[] names = { "WorldMap", "CurrentImage", "NextImage", "MapImage", "SkyEmptyV3", "WorldMapBG" };
         foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             if (t != null && System.Array.IndexOf(names, t.gameObject.name) >= 0)
                 Disable(t.gameObject, t.gameObject.name);
@@ -199,6 +222,28 @@ public static class WonderMenuSetup
             removed > 0
                 ? $"{removed} leftover test canvas silindi. Sahneyi kaydet (Cmd+S)."
                 : "Silinecek leftover test canvas bulunamadı.", "Tamam");
+    }
+
+    // WonderBackground'ı tab controller'ın homeOnlyElements'ine ekler → HOME dışı sekmelerde gizlenir.
+    static void RegisterHomeOnly(GameObject go)
+    {
+        foreach (var tab in Object.FindObjectsByType<BottomTabController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (tab == null) continue;
+            var so = new SerializedObject(tab);
+            var arr = so.FindProperty("homeOnlyElements");
+            if (arr == null || !arr.isArray) continue;
+
+            bool present = false;
+            for (int i = 0; i < arr.arraySize; i++)
+                if (arr.GetArrayElementAtIndex(i).objectReferenceValue == go) { present = true; break; }
+            if (!present)
+            {
+                arr.arraySize++;
+                arr.GetArrayElementAtIndex(arr.arraySize - 1).objectReferenceValue = go;
+            }
+            so.ApplyModifiedProperties();
+        }
     }
 
     static WonderCatalog EnsureCatalog()

@@ -37,6 +37,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
     private Image _flash;
     private TMP_Text _tapText;
     private RectTransform _rewardRow;
+    private TMP_FontAsset _font;
 
     private Sprite _closedSprite;
     private Sprite _openedSprite;
@@ -88,6 +89,8 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
 
     private void Build()
     {
+        _font = ResolveInterBold();
+
         // Karartma + tıklama yakalayıcı.
         var dim = NewRect("Dim", transform);
         StretchFull(dim);
@@ -111,10 +114,10 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         // layout, uçuş sırasında eklenen her yeni öğede kardeşleri yeniden dizip
         // pozisyonları eziyordu (altın solda, hediyeler üst üste bug'ı).
 
-        // Sandık.
+        // Sandık (ekranda biraz daha aşağıda).
         _chest = NewRect("Chest", transform);
         _chest.anchorMin = _chest.anchorMax = new Vector2(0.5f, 0.5f);
-        _chest.anchoredPosition = new Vector2(0f, -140f);
+        _chest.anchoredPosition = new Vector2(0f, -320f);
         _chest.sizeDelta = new Vector2(520f, 460f);
         _chestImage = _chest.gameObject.AddComponent<Image>();
         _chestImage.sprite = _closedSprite;
@@ -136,10 +139,35 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         tap.sizeDelta = new Vector2(800f, 70f);
         _tapText = tap.gameObject.AddComponent<TextMeshProUGUI>();
         _tapText.text = "Devam etmek için dokun";
+        if (_font != null) _tapText.font = _font;
         _tapText.fontSize = 34;
+        _tapText.fontStyle = FontStyles.Bold;
         _tapText.alignment = TextAlignmentOptions.Center;
         _tapText.color = new Color(1f, 1f, 1f, 0f);
         _tapText.raycastTarget = false;
+
+        // Katman sırası (alttan üste): Dim → Chest → Flash → RewardRow → TapText.
+        // KRİTİK: ödüller (RewardRow) sandığın (Chest) ÜSTünde kalmalı.
+        dim.SetAsFirstSibling();
+        _chest.SetAsLastSibling();
+        flashRt.SetAsLastSibling();
+        _rewardRow.SetAsLastSibling();
+        tap.SetAsLastSibling();
+    }
+
+    // Inter 28 bold font'u runtime bulur (kod'dan overlay, serialized ref yok).
+    private static TMP_FontAsset ResolveInterBold()
+    {
+        var fonts = Resources.FindObjectsOfTypeAll<TMP_FontAsset>();
+        TMP_FontAsset bold = null, extraBold = null, anyInter = null;
+        foreach (var f in fonts)
+        {
+            if (f == null || string.IsNullOrEmpty(f.name)) continue;
+            if (f.name == "Inter_28pt-Bold SDF") bold = f;
+            else if (f.name == "Inter_28pt-ExtraBold SDF") extraBold = f;
+            if (anyInter == null && f.name.StartsWith("Inter_")) anyInter = f;
+        }
+        return bold != null ? bold : (extraBold != null ? extraBold : anyInter);
     }
 
     private IEnumerator Run()
@@ -151,7 +179,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         yield return Animate(chestPopIn, t => _chest.localScale = Vector3.one * EaseOutBack(t));
         _chest.localScale = Vector3.one;
 
-        // 3) Sarsılma — şiddet artarak (kapanışa doğru kriz anı hissi).
+        // 3) Sarsılma + ŞİŞME — şiddet ve boyut artarak (patlama öncesi kriz hissi).
         Vector2 home = _chest.anchoredPosition;
         float st = 0f;
         while (st < shakeDuration)
@@ -163,17 +191,23 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
                 (Mathf.PerlinNoise(st * 34f, 0.3f) - 0.5f) * 2f * amp,
                 (Mathf.PerlinNoise(0.7f, st * 34f) - 0.5f) * 2f * amp * 0.6f);
             _chest.localEulerAngles = new Vector3(0f, 0f, (Mathf.PerlinNoise(st * 28f, 5f) - 0.5f) * 2f * amp * 0.45f);
+
+            // Şişme: sallanırken hafif nefes alıp giderek büyür (1 → ~1.16), tepesinde patlar.
+            float swell = Mathf.Lerp(1f, 1.16f, k * k) + Mathf.Sin(st * 22f) * 0.02f * k;
+            _chest.localScale = Vector3.one * swell;
             yield return null;
         }
         _chest.anchoredPosition = home;
         _chest.localEulerAngles = Vector3.zero;
 
-        // 4) Açılış: flash + sprite swap + scale punch.
+        // 4) Açılış: flash + sprite swap + şişmeden PATLAMA (swell → 1, üstüne pop).
         if (_openedSprite != null) _chestImage.sprite = _openedSprite;
+        GameEventSfx.PlayChestOpen();
         StartCoroutine(FlashOnce(0.35f));
+        float startS = _chest.localScale.x;   // ~1.16 (şişmiş hal)
         yield return Animate(openPunch, t =>
         {
-            float s = 1f + 0.22f * Mathf.Sin(t * Mathf.PI);
+            float s = Mathf.Lerp(startS, 1f, t) + 0.22f * Mathf.Sin(t * Mathf.PI);
             _chest.localScale = new Vector3(s, s, 1f);
         });
         _chest.localScale = Vector3.one;
@@ -276,6 +310,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         int amount = reward != null ? Mathf.Max(1, reward.amount) : 1;
         string name = reward != null && !string.IsNullOrEmpty(reward.fallbackName) ? reward.fallbackName : "";
         label.text = reward != null && reward.icon != null ? $"x{amount}" : $"{name} x{amount}";
+        if (_font != null) label.font = _font;
         label.fontSize = 34;
         label.fontStyle = FontStyles.Bold;
         label.alignment = TextAlignmentOptions.Center;

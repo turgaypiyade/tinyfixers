@@ -547,7 +547,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
             board.SetInputLocked(true);
 
         if (levelCompletionLogoAnimation != null)
+        {
+            GameEventSfx.PlayLevelWin();
             yield return StartCoroutine(levelCompletionLogoAnimation.Play());
+        }
 
         _movesAtWin = board != null ? board.RemainingMoves : 0;
 

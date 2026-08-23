@@ -27,6 +27,13 @@ public static class FirebaseCloudSaveService
     private const float DirtyCheckInterval = 15f;   // sn — dirty ise push
     private const float FetchRetryDelay = 10f;      // sn — restore fetch backoff
 
+    /// <summary>
+    /// Editör testi: açıkken bulut restore YEREL'i ezmez — local PlayerPrefs kazanır ve buluta itilir.
+    /// Böylece PlayerPrefs Tool'da ne girdiysen (ör. 100 yıldız) onunla başlarsın.
+    /// Cloud-restore'u editörde test etmek istersen false yap. Canlıda (device) etkisiz.
+    /// </summary>
+    public static bool SkipCloudRestoreInEditor = true;
+
     /// <summary>Buluttan yerel üzerine veri yazıldığında tetiklenir (ekranlar tazelensin).</summary>
     public static event Action OnRestored;
 
@@ -78,14 +85,36 @@ public static class FirebaseCloudSaveService
             var snap = task.Result;
             int localLevel = PlayerPrefs.GetInt("current_level", 1);
 
-            if (snap.Exists && snap.TryGetValue<long>("level", out long cloudLevel)
-                && cloudLevel > localLevel
-                && snap.TryGetValue<Dictionary<string, object>>("data", out var cloudData))
+            // Editörde test: local PlayerPrefs her zaman kazansın (bulut ezmesin),
+            // yereli buluta it. Canlıda (device) normal çakışma politikası çalışır.
+            bool forceLocalWins = false;
+#if UNITY_EDITOR
+            forceLocalWins = SkipCloudRestoreInEditor;
+#endif
+
+            long cloudLevel = 0;
+            bool force = false;
+            bool hasData = false;
+            Dictionary<string, object> cloudData = null;
+            if (snap.Exists)
+            {
+                snap.TryGetValue<long>("level", out cloudLevel);
+                snap.TryGetValue<bool>("force", out force);            // admin override
+                hasData = snap.TryGetValue<Dictionary<string, object>>("data", out cloudData);
+            }
+
+            // force → level/editör-guard'a bakmadan bulut kazanır (admin canlı düzenleme).
+            bool levelWins = !forceLocalWins && cloudLevel > localLevel;
+
+            if (hasData && (force || levelWins))
             {
                 CloudSaveManifest.Apply(cloudData);
                 MusicState.ReloadFromPrefs();
-                Debug.Log($"[CloudSave] RESTORE ✅ bulut level {cloudLevel} > yerel {localLevel} → bulut uygulandı ({cloudData.Count} anahtar)");
+                Debug.Log(force
+                    ? $"[CloudSave] RESTORE (force) ✅ admin bulut düzenlemesi uygulandı ({cloudData.Count} anahtar)"
+                    : $"[CloudSave] RESTORE ✅ bulut level {cloudLevel} > yerel {localLevel} → uygulandı ({cloudData.Count} anahtar)");
                 RestoreResolved = true;
+                if (force) ClearForceFlag();   // tek sefer uygulansın
                 OnRestored?.Invoke();
             }
             else
@@ -132,6 +161,13 @@ public static class FirebaseCloudSaveService
                 Debug.LogWarning($"[CloudSave] push hatası: {task.Exception?.GetBaseException().Message}");
             }
         });
+    }
+
+    /// <summary>Admin override uygulandıktan sonra bulutta force=false yapar (tekrar uygulanmasın).</summary>
+    private static void ClearForceFlag()
+    {
+        if (SaveDoc == null) return;
+        SaveDoc.SetAsync(new Dictionary<string, object> { { "force", false } }, SetOptions.MergeAll);
     }
 
     // ── Host MonoBehaviour: periyodik dirty-check + pause/quit push ──

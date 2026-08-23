@@ -36,19 +36,13 @@ MonoBehaviour:
   - name: "Enerji Hatt\u0131"
     icon: {fileID: 0}
     starCost: 0
-  - name: "Neon Ayd\u0131nlatma"
-    icon: {fileID: 0}
-    starCost: 0
-  - name: "\xC7evre D\xFCzeni"
-    icon: {fileID: 0}
-    starCost: 0
-  - name: "Son R\xF6tu\u015F"
+  - name: "Son Rot\xFC\u015F"
     icon: {fileID: 0}
     starCost: 0
   - name: Aktivasyon
     icon: {fileID: 0}
     starCost: 0
-  starCosts: 03000000030000000300000002000000030000000300000002000000030000000500000001000000
+  starCosts: 0300000003000000030000000200000003000000030000000200000005000000
   starCostBase: 5
   starCostStep: 5
   chestRewards:
@@ -87,7 +81,7 @@ MonoBehaviour:
   welderSize: {x: 240, y: 240}
   welderHome: {x: 0, y: 0}
   characters:
-  - name: AmbientRobot_1
+  - name: AmbientRobot_1_0_0_0
     facingMode: 0
     frontFrames:
     - {fileID: 21300000, guid: 2f09765df78e54a8090cb260ff5fe04b, type: 3}
@@ -96,27 +90,31 @@ MonoBehaviour:
     - {fileID: 21300000, guid: 4cc5efd4ee36f4901b65d9ff2c69703f, type: 3}
     - {fileID: 21300000, guid: c62fa8e74d0e14b17ac37e8b3ef76ac5, type: 3}
     walkFrames: []
-    walkFps: 5
+    walkFps: 8
     mirrorBySide: 0
-    speed: 85
+    speed: 30
     bobAmplitude: 8
     bobFrequency: 6
-    visualSize: 200
+    visualSize: 80
     pingPong: 1
-    pauseAtPoint: 0.4
+    pauseAtPoint: 0.2
     path:
-    - {x: -343, y: -524}
-    - {x: -53, y: -573}
-    - {x: 136, y: -673}
-    - {x: 134, y: -856}
-  - name: AmbientRobotH_2
+    - {x: -164, y: -247}
+    - {x: 30, y: -336}
+    - {x: 370, y: -527}
+    - {x: 455, y: -558}
+  - name: AmbientRobotH_2_1_1_1
     facingMode: 0
     frontFrames:
-    - {fileID: -8702772960875206843, guid: 0c77369bca2e04beea70576e126d6d2f, type: 3}
-    - {fileID: 9103739097279109395, guid: 65cb0818a8d3640a985368f0dadbb372, type: 3}
+    - {fileID: 21300000, guid: 40155137779364cddb7efb523e556ded, type: 3}
+    - {fileID: 21300000, guid: f2e81fd7c11fb458b9a0a05ecc5cbea6, type: 3}
+    - {fileID: 21300000, guid: 49ef2b59bcf594282907e4b32e3ef04e, type: 3}
+    - {fileID: 21300000, guid: f106c53e3cd174e3eb0cc62d7e75b5a3, type: 3}
     backFrames:
-    - {fileID: 6809252500202759014, guid: 3623c59545af944aab3c4328ee5e142c, type: 3}
-    - {fileID: -3954555757667715345, guid: 15a30d712971f4b64b5d574ee300e2d8, type: 3}
+    - {fileID: 21300000, guid: 195d1d03a81a742acbd55b84c06c45f4, type: 3}
+    - {fileID: 21300000, guid: 61d955c58fcb0498a8f8dcd744ac640f, type: 3}
+    - {fileID: 21300000, guid: 1bf247072e085445e9ce5e5dedde681a, type: 3}
+    - {fileID: 21300000, guid: 9e87c3ac19d5f434ebf652433cb8fa05, type: 3}
     walkFrames: []
     walkFps: 5
     mirrorBySide: 1
@@ -127,11 +125,11 @@ MonoBehaviour:
     pingPong: 1
     pauseAtPoint: 0.4
     path:
-    - {x: -536, y: -505}
-    - {x: -281, y: -517}
-    - {x: 80, y: -562}
-    - {x: 455, y: -517}
-  - name: AmbientDrone_3
+    - {x: 97, y: -858}
+    - {x: 225, y: -829}
+    - {x: 442, y: -725}
+    - {x: 636, y: -646}
+  - name: AmbientDrone_3_2_2_2
     facingMode: 1
     frontFrames:
     - {fileID: 21300000, guid: 7956d116b00ce446484b289d52b65df0, type: 3}

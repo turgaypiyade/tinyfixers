@@ -11,7 +11,7 @@ Shader "UI/WonderReveal"
         _Reveal        ("Reveal (0..1)", Range(0,1)) = 1
 
         _EdgeWidth     ("Weld Edge Width", Range(0.001, 0.2)) = 0.05
-        [HDR] _EdgeColor ("Weld Edge Color", Color) = (0.3, 1.6, 2.2, 1)
+        [HDR] _EdgeColor ("Weld Edge Color", Color) = (1.9, 1.45, 0.7, 1)
         _EdgeNoise     ("Edge Wobble", Range(0, 0.15)) = 0.04
         _NoiseScale    ("Edge Wobble Scale", Range(1, 80)) = 26
 
