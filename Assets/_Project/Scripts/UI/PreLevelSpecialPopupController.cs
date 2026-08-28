@@ -9,6 +9,8 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 {
     [Header("Scene Flow")]
     [SerializeField] private string gameSceneName = "01_Game";
+    [Tooltip("In-game retry açıldığında Cancel'ın döneceği sahne.")]
+    [SerializeField] private string mainMenuSceneName = "MainMenu";
     [SerializeField] private string prefsLevelKey = "current_level";
     [SerializeField] private ChapterThemeApplier chapterThemeApplier;
     [SerializeField] private ChapterThemeLibrary fallbackThemeLibrary;
@@ -29,6 +31,8 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     [SerializeField] private TMP_Text cancelText;
     [SerializeField] private string titleLocalizationKey = "prelevel_popup_title_level";
     [SerializeField] private string continueLocalizationKey = "prelevel_popup_continue";
+    [Tooltip("Retry modunda (fail sonrası vazgeçip tekrar dene) Continue butonunda gösterilen metin.")]
+    [SerializeField] private string continueRetryLocalizationKey = "prelevel_popup_retry";
     [SerializeField] private string cancelLocalizationKey = "prelevel_popup_cancel";
 
     [Header("Buttons")]
@@ -74,6 +78,12 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     private Coroutine transitionRoutine;
     private ChapterTheme currentTheme;
     private bool isFreeSession;   // açıldıktan sonraki İLK oyun: seçimler ücretsiz, hak düşmez
+    private bool retryMode;       // fail sonrası "Tekrar Dene": Continue metni değişir
+    private bool cancelLoadsMainMenu;  // in-game retry: Cancel kapatmak yerine ana menüye döner
+
+    // Fail popup'ında vazgeçilince set edilir: ana menü yüklendiğinde bu popup retry modunda
+    // otomatik açılır (ana ekrana düşmek yerine aynı level'ı tekrar denemek için).
+    public static bool RetryRequested;
 
     private void Awake()
     {
@@ -96,6 +106,17 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         SetPopupVisible(false, true);
     }
 
+    private void Start()
+    {
+        // Fail popup'ında vazgeçilip bu sahne yüklendiyse, ana ekranda beklemek yerine
+        // aynı level'ı tekrar denemek için popup'ı retry modunda otomatik aç.
+        if (RetryRequested)
+        {
+            RetryRequested = false;
+            Open(retry: true);
+        }
+    }
+
     private void OnEnable()
     {
         GameLocalization.OnLanguageChanged += RefreshLocalizedTexts;
@@ -109,6 +130,25 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
     public void Open()
     {
+        cancelLoadsMainMenu = false;
+        Open(retry: false);
+    }
+
+    // Fail sonrası, game sahnesinde ANINDA (sahne yüklemeden) açmak için. Continue "Tekrar Dene",
+    // Cancel ise ana menüye döner (game board'una geri açılmaz).
+    public void OpenForInGameRetry()
+    {
+        cancelLoadsMainMenu = true;
+
+        // Popup game sahnesinde levelend'in üstünde durabilsin diye en öne al.
+        transform.SetAsLastSibling();
+        Open(retry: true);
+    }
+
+    public void Open(bool retry)
+    {
+        retryMode = retry;
+
         int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
         bool isUnlocked = level >= specialsUnlockLevel;
 
@@ -340,10 +380,21 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
     private ChapterThemeLibrary ResolveThemeLibrary()
     {
-        if (chapterThemeApplier != null && chapterThemeApplier.ThemeLibrary != null)
-            return chapterThemeApplier.ThemeLibrary;
+        var applier = ResolveApplier();
+        if (applier != null && applier.ThemeLibrary != null)
+            return applier.ThemeLibrary;
 
         return fallbackThemeLibrary;
+    }
+
+    // Prefab farklı bir sahnede açılabildiği için (in-game retry), scene-ref boşsa applier'ı
+    // runtime'da bul. Böylece game sahnesindeki instance elle wire edilmeden temayı çözer.
+    private ChapterThemeApplier ResolveApplier()
+    {
+        if (chapterThemeApplier == null)
+            chapterThemeApplier = FindFirstObjectByType<ChapterThemeApplier>(FindObjectsInactive.Include);
+
+        return chapterThemeApplier;
     }
 
     private Sprite ResolvePreviewGoalIcon(LevelData levelData, LevelGoalDefinition goal)
@@ -388,8 +439,9 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
     private ChapterTheme ResolveTheme()
     {
-        if (chapterThemeApplier != null && chapterThemeApplier.CurrentTheme != null)
-            return chapterThemeApplier.CurrentTheme;
+        var applier = ResolveApplier();
+        if (applier != null && applier.CurrentTheme != null)
+            return applier.CurrentTheme;
 
         if (fallbackThemeLibrary != null)
             return fallbackThemeLibrary.GetCurrentTheme();
@@ -501,6 +553,14 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         PreLevelSpecialSelectionState.Clear();
         PlayOneShot(cancelSfx);
 
+        // In-game retry: kapanıp kaybedilen board'u göstermek yerine ana menüye dön.
+        if (cancelLoadsMainMenu)
+        {
+            ShowLoadingScreen();
+            SceneManager.LoadScene(mainMenuSceneName);
+            return;
+        }
+
         if (transitionRoutine != null)
             StopCoroutine(transitionRoutine);
 
@@ -516,7 +576,8 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         }
 
         if (continueText != null)
-            continueText.text = GameLocalization.Get(continueLocalizationKey);
+            continueText.text = GameLocalization.Get(
+                retryMode ? continueRetryLocalizationKey : continueLocalizationKey);
 
         if (cancelText != null)
             cancelText.text = GameLocalization.Get(cancelLocalizationKey);

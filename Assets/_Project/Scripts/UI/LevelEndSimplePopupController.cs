@@ -460,9 +460,26 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         // 2. cancel (veya gösterilecek kayıp yok): hamle eklemeyi reddetti → GERÇEKTEN vazgeçti.
-        // Fail'i ŞİMDİ işaretle (streak kırılır); event item'ları kaybolur, ana menü.
+        // Fail'i ŞİMDİ işaretle (streak kırılır); event item'ları kaybolur.
         PlayerStats.MarkCurrentLevelFailed();
         ProgressEventService.Instance?.DiscardStagedGains();
+
+        // Game sahnesinde bir pre-level popup instance'ı varsa (prefab yerleştirilmiş) → sahne
+        // yüklemeden ANINDA "Tekrar Dene" modunda aç (aradaki beyaz MainMenu yükleme gap'i olmaz).
+        var inScenePreLevel = FindFirstObjectByType<PreLevelSpecialPopupController>(FindObjectsInactive.Include);
+        if (inScenePreLevel != null)
+        {
+            if (failPopupRoot != null)
+                failPopupRoot.SetActive(false);
+            // Kayıp board'un dimmed kalması için blocker açık bırakılır; popup üstüne açılır.
+            inScenePreLevel.gameObject.SetActive(true);
+            inScenePreLevel.OpenForInGameRetry();
+            return;
+        }
+
+        // Fallback (instance yok): ana menü yüklenince pre-level popup'ı "Tekrar Dene" modunda
+        // otomatik aç. Oradan da vazgeçerse (cancel) popup kapanır ve zaten ana menüde kalınır.
+        PreLevelSpecialPopupController.RetryRequested = true;
         ReturnToMainMenuImmediate();
     }
 

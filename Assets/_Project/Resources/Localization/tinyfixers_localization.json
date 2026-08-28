@@ -17,6 +17,10 @@
           "value": "İptal"
         },
         {
+          "key": "prelevel_popup_retry",
+          "value": "Tekrar Dene"
+        },
+        {
           "key": "prelevel_special_lineh_name",
           "value": "Rocket"
         },
@@ -668,6 +672,10 @@
         {
           "key": "prelevel_popup_cancel",
           "value": "Cancel"
+        },
+        {
+          "key": "prelevel_popup_retry",
+          "value": "Try Again"
         },
         {
           "key": "prelevel_special_lineh_name",

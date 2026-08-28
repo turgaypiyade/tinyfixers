@@ -110,22 +110,54 @@ public static class FirebaseCloudSaveService
             {
                 CloudSaveManifest.Apply(cloudData);
                 MusicState.ReloadFromPrefs();
+                // Altın/yıldız: level kararından BAĞIMSIZ olarak bulut-otoriter (base) + offline delta.
+                ReconcileCurrencyFromCloud(hasData, cloudData, forceLocalWins);
                 Debug.Log(force
                     ? $"[CloudSave] RESTORE (force) ✅ admin bulut düzenlemesi uygulandı ({cloudData.Count} anahtar)"
                     : $"[CloudSave] RESTORE ✅ bulut level {cloudLevel} > yerel {localLevel} → uygulandı ({cloudData.Count} anahtar)");
                 RestoreResolved = true;
+                CurrencyLedger.OpenSyncGate();
                 if (force) ClearForceFlag();   // tek sefer uygulansın
                 OnRestored?.Invoke();
+                Push();   // offline delta / reconcile edilmiş güvenilir değeri buluta yaz
             }
             else
             {
-                // Yerel ileride (veya bulut boş) → yereli buluta it.
+                // Yerel ileride (veya bulut boş) → yereli buluta it. Coins/stars yine bulut-otoriter:
+                // bulutta değer varsa base=bulut+delta, yoksa yerel taban benimsenir.
                 Debug.Log($"[CloudSave] restore kararı: yerel kazandı (yerel {localLevel}, bulut {(snap.Exists ? "var" : "yok")}) → push");
+                ReconcileCurrencyFromCloud(hasData, cloudData, forceLocalWins);
                 RestoreResolved = true;
+                CurrencyLedger.OpenSyncGate();
+                OnRestored?.Invoke();   // reconcile coins/stars'ı değiştirmiş olabilir → UI tazelensin
                 Push();
             }
         });
     }
+
+    // Altın/yıldız çakışma çözümü: bulut değeri güvenilir TABAN olur, cihazda biriken offline
+    // delta üstüne eklenir (player_coins = base + delta). Bulutta yoksa yerel taban benimsenir.
+    private static void ReconcileCurrencyFromCloud(bool hasData, Dictionary<string, object> cloudData, bool forceLocalWins)
+    {
+        // Editör testi: yereli koru (PlayerPrefs Tool değerleri bulutla ezilmesin).
+        if (forceLocalWins)
+        {
+            CurrencyLedger.AdoptLocalAsBase();
+            return;
+        }
+
+        if (hasData && cloudData != null && cloudData.TryGetValue("player_coins", out var cc))
+            CurrencyLedger.ApplyCloudCoins(ToInt(cc));
+        else
+            CurrencyLedger.AdoptLocalCoins();
+
+        if (hasData && cloudData != null && cloudData.TryGetValue("player_total_stars", out var cs))
+            CurrencyLedger.ApplyCloudStars(ToInt(cs));
+        else
+            CurrencyLedger.AdoptLocalStars();
+    }
+
+    private static int ToInt(object v) => v is long l ? (int)l : v is int i ? i : 0;
 
     // ── Push ────────────────────────────────────────────────────────
 
@@ -133,6 +165,12 @@ public static class FirebaseCloudSaveService
     public static void Push()
     {
         if (!RestoreResolved || !FirebaseAuthService.IsReady || pushInFlight) return;
+
+        // Anti-hack: buluta GÜVENİLİR coins/stars (base+delta) gitsin — Collect ham (belki
+        // mid-session hilelenmiş) player_coins'i okumadan önce güvenilir değere hizala.
+        CurrencyLedger.ReconcileForPush();
+        int coinsDeltaSnap = CurrencyLedger.CoinsDelta;
+        int starsDeltaSnap = CurrencyLedger.StarsDelta;
 
         var data = CloudSaveManifest.Collect();
         int level = PlayerPrefs.GetInt("current_level", 1);
@@ -159,6 +197,11 @@ public static class FirebaseCloudSaveService
             {
                 dirty = true;   // sıradaki döngüde tekrar dene (offline'da SDK zaten kuyruklar)
                 Debug.LogWarning($"[CloudSave] push hatası: {task.Exception?.GetBaseException().Message}");
+            }
+            else
+            {
+                // Buluta yazılan delta'yı tabana katla (delta'dan düş) — tekrar sayılmasın.
+                CurrencyLedger.FoldAfterPush(coinsDeltaSnap, starsDeltaSnap);
             }
         });
     }

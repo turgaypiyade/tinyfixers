@@ -28,6 +28,7 @@ public static class PlayerWallet
         int newVal = Coins + amount;
         PlayerPrefs.SetInt(KeyCoins, newVal);
         PlayerPrefs.Save();
+        CurrencyLedger.RecordCoins(+amount);   // anti-hack: meşru kazanç delta'ya
         OnCoinsChanged?.Invoke(newVal);
     }
 
@@ -43,6 +44,7 @@ public static class PlayerWallet
         int newVal = current - amount;
         PlayerPrefs.SetInt(KeyCoins, newVal);
         PlayerPrefs.Save();
+        CurrencyLedger.RecordCoins(-amount);   // harcama da delta'ya (net değişim)
         OnCoinsChanged?.Invoke(newVal);
         return true;
     }
@@ -73,6 +75,7 @@ public static class PlayerWallet
         PlayerPrefs.SetInt(KeyTotalStars, newTotal);
         PlayerPrefs.Save();
 
+        CurrencyLedger.RecordStars(+gained);
         OnTotalStarsChanged?.Invoke(newTotal);
     }
 
@@ -89,6 +92,7 @@ public static class PlayerWallet
         int newTotal = TotalStars + amount;
         PlayerPrefs.SetInt(KeyTotalStars, newTotal);
         PlayerPrefs.Save();
+        CurrencyLedger.RecordStars(+amount);
         OnTotalStarsChanged?.Invoke(newTotal);
     }
 
@@ -105,6 +109,7 @@ public static class PlayerWallet
         int newVal = current - amount;
         PlayerPrefs.SetInt(KeyTotalStars, newVal);
         PlayerPrefs.Save();
+        CurrencyLedger.RecordStars(-amount);
         OnTotalStarsChanged?.Invoke(newVal);
         return true;
     }
