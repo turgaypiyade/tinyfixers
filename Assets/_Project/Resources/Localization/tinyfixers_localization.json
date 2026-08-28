@@ -42,7 +42,7 @@
         },
         {
           "key": "level_end_fail_extra_moves_text",
-          "value": "{0} hamle ekleyerek devam et"
+          "value": "{0} hamle ile devam et."
         },
         {
           "key": "level_end_fail_continue_cost",
@@ -695,7 +695,7 @@
         },
         {
           "key": "level_end_fail_extra_moves_text",
-          "value": "Continue with {0} extra moves"
+          "value": "Continue with {0} moves."
         },
         {
           "key": "level_end_fail_continue_cost",

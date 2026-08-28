@@ -359,7 +359,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 8b6f99175cd114adb84c5b6bb3fb7ac8, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 9e9430850dd72469991b75f22443fd24, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1701,10 +1701,29 @@ MonoBehaviour:
   baseExtraMovesCost: 900
   extraMoveCostMultiplier: 1.5
   extraMoveOfferSprites:
-  - {fileID: 21300000, guid: 8b6f99175cd114adb84c5b6bb3fb7ac8, type: 3}
-  - {fileID: 21300000, guid: 503c3dcbfa4994d0abde98d4bdd8971b, type: 3}
-  - {fileID: 21300000, guid: 37fe23c25280c4442aa897061bb4863d, type: 3}
+  - {fileID: 21300000, guid: 9e9430850dd72469991b75f22443fd24, type: 3}
+  - {fileID: 21300000, guid: 9e9430850dd72469991b75f22443fd24, type: 3}
+  - {fileID: 21300000, guid: 9e9430850dd72469991b75f22443fd24, type: 3}
   extraMoveOfferAttempt: 0
+  extraMovesAmountText: {fileID: 0}
+  extraMovesFlyAmountText: {fileID: 0}
+  extraMovesAmountFont: {fileID: 11400000, guid: 7fc0a3576e2194b19822a1f8eaec994a, type: 2}
+  extraMovesAmountMaterial: {fileID: 2100000, guid: 7b3a1d5bc4a0746a6aad464d821392e8, type: 2}
+  extraMovesAmountFontSize: 112
+  extraMovesFlyDuration: 0.55
+  extraMovesFlyStartOffset: {x: 0, y: 760}
+  failWalletBalanceRoot: {fileID: 0}
+  failWalletBalanceBackground: {fileID: 0}
+  failWalletBalanceIcon: {fileID: 0}
+  failWalletBalanceText: {fileID: 0}
+  failWalletBalanceBackgroundSprite: {fileID: 21300000, guid: f80ba7874665f413881bc2953990bb13, type: 3}
+  failWalletBalanceIconSprite: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
+  failWalletBalanceFont: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
+  failWalletBalanceMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
+  failWalletBalancePosition: {x: 120, y: 585}
+  failWalletBalanceBackgroundHeight: 76
+  failWalletBalanceIconSize: 84
+  failWalletBalanceIconOverlap: 18
   failTitleText: {fileID: 9002036399577225999}
   extraMovesIcon: {fileID: 6757249895655450075}
   failMessageText: {fileID: 294887131791545242}

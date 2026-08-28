@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: e124f76cf16604869ae9416fe5932f6d
+guid: 9e9430850dd72469991b75f22443fd24
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -5432300655642986196
-    second: LoadWrenchBot_0
+      213: 1007725869873505771
+    second: ExtraMBG_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LoadWrenchBot_0
+      name: ExtraMBG_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 833
-        height: 1810
+        x: 24
+        y: 22
+        width: 951
+        height: 966
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: c293743d5579c94b0800000000000000
-      internalID: -5432300655642986196
+      spriteID: be528c8e6592cfd00800000000000000
+      internalID: 1007725869873505771
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LoadWrenchBot_0: -5432300655642986196
+      ExtraMBG_0: 1007725869873505771
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

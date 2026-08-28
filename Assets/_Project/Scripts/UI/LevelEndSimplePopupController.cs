@@ -9,6 +9,7 @@ using UnityEngine.Video;
 
 public class LevelEndSimplePopupController : MonoBehaviour
 {
+    private const float ExtraMovesDigitSlant = 0.02f;
     [Header("References")]
     [SerializeField] private BoardController board;
     [SerializeField] private TopHudController topHud;
@@ -68,6 +69,29 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private float extraMoveCostMultiplier = 1.5f;
     [SerializeField] private Sprite[] extraMoveOfferSprites;
     [SerializeField] private int extraMoveOfferAttempt;
+
+    [Header("Fail Offer Badge")]
+    [SerializeField] private TMP_Text extraMovesAmountText;
+    [SerializeField] private TMP_Text extraMovesFlyAmountText;
+    [SerializeField] private TMP_FontAsset extraMovesAmountFont;
+    [SerializeField] private Material extraMovesAmountMaterial;
+    [SerializeField, Min(1f)] private float extraMovesAmountFontSize = 112f;
+    [SerializeField, Min(0.05f)] private float extraMovesFlyDuration = 0.55f;
+    [SerializeField] private Vector2 extraMovesFlyStartOffset = new Vector2(0f, 760f);
+
+    [Header("Fail Wallet Balance")]
+    [SerializeField] private GameObject failWalletBalanceRoot;
+    [SerializeField] private Image failWalletBalanceBackground;
+    [SerializeField] private Image failWalletBalanceIcon;
+    [SerializeField] private TMP_Text failWalletBalanceText;
+    [SerializeField] private Sprite failWalletBalanceBackgroundSprite;
+    [SerializeField] private Sprite failWalletBalanceIconSprite;
+    [SerializeField] private TMP_FontAsset failWalletBalanceFont;
+    [SerializeField] private Material failWalletBalanceMaterial;
+    [SerializeField] private Vector2 failWalletBalancePosition = new Vector2(120f, 585f);
+    [SerializeField, Min(1f)] private float failWalletBalanceBackgroundHeight = 76f;
+    [SerializeField, Min(1f)] private float failWalletBalanceIconSize = 84f;
+    [SerializeField] private float failWalletBalanceIconOverlap = 18f;
 
     [Header("Fail Content")]
     [SerializeField] private TMP_Text failTitleText;
@@ -181,6 +205,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private bool failConfirmRunning;
     private Coroutine starRevealRoutine;
     private Coroutine mainScreenDimRoutine;
+    private Coroutine extraMovesAmountRoutine;
+    private int lastDisplayedOfferAmount = -1;
     private readonly List<CanvasGroup> mainScreenDimTargets = new();
 
     private bool isBonusRoundRunning;
@@ -237,6 +263,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
             failCloseButtonImage = FindComponent<Image>(failPopupRoot.transform, "UI/BtnClose") ?? failCloseButtonImage;
             failTitleText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/FailTitleText") ?? failTitleText;
             extraMovesIcon = FindComponent<Image>(failPopupRoot.transform, "UI/ExtraMovesIcon") ?? extraMovesIcon;
+            extraMovesAmountText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/ExtraMovesIcon/ExtraMovesAmountText") ?? extraMovesAmountText;
+            extraMovesFlyAmountText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/ExtraMovesIcon/ExtraMovesFlyAmountText") ?? extraMovesFlyAmountText;
             failMessageText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/FailMessageText") ?? failMessageText;
             failContinueText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/BtnContinue/BtnContinueText") ?? failContinueText;
             failEventLossWarningText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/EventLossWarningText") ?? failEventLossWarningText;
@@ -310,11 +338,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
         isBonusRoundRunning = false;
         hardSkipBonusRoundRequested = false;
         levelEndForceDeadlineUnscaled = -1f;   // yeni seviye: üst-süre saati sıfırlansın
+        lastDisplayedOfferAmount = -1;
 
         ResolveSerializedReferences();
         ApplyChapterThemeVisuals();
         HideAllPopups();
         RegisterButtonListeners();
+        PlayerWallet.OnCoinsChanged += HandleWalletCoinsChanged;
 
         if (skipBonusRoundButton != null)
             skipBonusRoundButton.gameObject.SetActive(false);
@@ -326,6 +356,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         Unsubscribe();
         UnregisterButtonListeners();
+        PlayerWallet.OnCoinsChanged -= HandleWalletCoinsChanged;
         StopMainScreenDimRoutine();
         SetMainScreenAlpha(1f);
         isBonusRoundRunning = false;
@@ -422,6 +453,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             // Kayıp ekranı gelince "hamle ekle" teklifi ikonu artık geçersiz → gizle.
             if (extraMovesIcon != null)
                 extraMovesIcon.enabled = false;
+            SetExtraMovesBadgeTextVisible(false);
             lossSlidePanel.gameObject.SetActive(true);
             StartCoroutine(SlideInFromRight(lossSlidePanel, lossSlideDuration));
             return;
@@ -1139,7 +1171,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         LivesManager.SpendLife();
         ApplyChapterThemeVisuals();
-        RefreshFailOfferVisuals();
+        RefreshFailOfferVisuals(animateIncrease: true);
         RefreshEventLossWarning();
 
         // Aşama 1: kayıp paneli gizli; ilk cancel'da sağdan kaydırılır.
@@ -1163,6 +1195,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         SetMainScreenDimmed(true);
         SetBlockerVisible(true);
+        ShowFailWalletBalance(true);
     }
 
     // Vazgeçersen (hamle eklemezsen) neleri kaybedeceğinin özeti: kazanılacak altın ödülü +
@@ -1271,6 +1304,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (failPopupRoot != null)
             failPopupRoot.SetActive(false);
 
+        ShowFailWalletBalance(false);
         SetMainScreenDimmed(true);
         SetBlockerVisible(true);
         ApplyRewardVisuals(stars, coins, score);
@@ -1519,23 +1553,36 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (extraMoveOfferAmounts != null && extraMoveOfferAmounts.Length > 0)
             offerIndex = Mathf.Min(safeAttempt, extraMoveOfferAmounts.Length - 1);
 
-        currentOfferAmount = extraMoveOfferAmounts != null && extraMoveOfferAmounts.Length > 0
-            ? Mathf.Max(1, extraMoveOfferAmounts[offerIndex])
-            : 5;
+        if (extraMoveOfferAmounts != null && extraMoveOfferAmounts.Length > 0)
+        {
+            currentOfferAmount = Mathf.Max(1, extraMoveOfferAmounts[offerIndex]);
+
+            if (safeAttempt >= extraMoveOfferAmounts.Length)
+            {
+                int lastIndex = extraMoveOfferAmounts.Length - 1;
+                int previous = lastIndex > 0 ? extraMoveOfferAmounts[lastIndex - 1] : 0;
+                int step = Mathf.Max(1, extraMoveOfferAmounts[lastIndex] - previous);
+                currentOfferAmount = Mathf.Max(1, extraMoveOfferAmounts[lastIndex] + step * (safeAttempt - lastIndex));
+            }
+        }
+        else
+        {
+            currentOfferAmount = 5 + safeAttempt * 5;
+        }
 
         float multiplier = Mathf.Max(0f, extraMoveCostMultiplier);
         currentCost = Mathf.RoundToInt(baseExtraMovesCost * Mathf.Pow(multiplier, safeAttempt));
         currentCost = Mathf.Max(0, currentCost);
     }
 
-    private void RefreshFailOfferVisuals()
+    private void RefreshFailOfferVisuals(bool animateIncrease = false)
     {
         ResolveCurrentFailOffer();
 
         if (failTitleText != null)
             failTitleText.text = LocalizedText("level_end_fail_title", "Hamle Kalmadi!");
 
-        string message = LocalizedFormat("level_end_fail_extra_moves_text", "{0} hamle ekleyerek devam et", currentOfferAmount);
+        string message = LocalizedFormat("level_end_fail_extra_moves_text", "{0} hamle ile devam et.", currentOfferAmount);
         if (failMessageText != null)
             failMessageText.text = message;
 
@@ -1552,7 +1599,407 @@ public class LevelEndSimplePopupController : MonoBehaviour
                 extraMovesIcon.sprite = sprite;
 
             extraMovesIcon.enabled = sprite != null;
+            if (sprite == null)
+            {
+                SetExtraMovesBadgeTextVisible(false);
+                return;
+            }
         }
+
+        RefreshExtraMovesAmountVisual(animateIncrease);
+    }
+
+    private void RefreshExtraMovesAmountVisual(bool animateIncrease)
+    {
+        if (extraMovesIcon == null)
+            return;
+
+        EnsureExtraMovesAmountText();
+
+        if (extraMovesAmountText == null)
+            return;
+
+        SetExtraMovesBadgeTextVisible(true);
+
+        bool shouldAnimate = animateIncrease
+            && failPopupShown
+            && lastDisplayedOfferAmount > 0
+            && currentOfferAmount > lastDisplayedOfferAmount;
+
+        if (extraMovesAmountRoutine != null)
+        {
+            StopCoroutine(extraMovesAmountRoutine);
+            extraMovesAmountRoutine = null;
+        }
+
+        if (shouldAnimate)
+        {
+            int previousAmount = lastDisplayedOfferAmount;
+            int delta = currentOfferAmount - previousAmount;
+            SetExtraMovesAmountText(extraMovesAmountText, previousAmount);
+            extraMovesAmountRoutine = StartCoroutine(CoAnimateExtraMovesIncrease(previousAmount, delta, currentOfferAmount));
+        }
+        else
+        {
+            SetExtraMovesAmountText(extraMovesAmountText, currentOfferAmount);
+            if (extraMovesFlyAmountText != null)
+                extraMovesFlyAmountText.gameObject.SetActive(false);
+        }
+
+        lastDisplayedOfferAmount = currentOfferAmount;
+    }
+
+    private IEnumerator CoAnimateExtraMovesIncrease(int previousAmount, int delta, int finalAmount)
+    {
+        EnsureExtraMovesAmountText();
+
+        if (extraMovesAmountText == null || extraMovesFlyAmountText == null)
+            yield break;
+
+        SetExtraMovesAmountText(extraMovesAmountText, previousAmount);
+        SetExtraMovesAmountText(extraMovesFlyAmountText, delta);
+
+        var mainRect = extraMovesAmountText.rectTransform;
+        var flyRect = extraMovesFlyAmountText.rectTransform;
+        Vector2 target = mainRect.anchoredPosition;
+        Vector2 start = target + extraMovesFlyStartOffset;
+        float duration = Mathf.Max(0.05f, extraMovesFlyDuration);
+
+        extraMovesFlyAmountText.gameObject.SetActive(true);
+        extraMovesFlyAmountText.alpha = 0f;
+        flyRect.anchoredPosition = start;
+        flyRect.localScale = Vector3.one * 0.75f;
+
+        float elapsed = 0f;
+        while (elapsed < duration && extraMovesAmountText != null && extraMovesFlyAmountText != null)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float eased = EaseOutBack(t);
+
+            flyRect.anchoredPosition = Vector2.LerpUnclamped(start, target, eased);
+            flyRect.localScale = Vector3.one * Mathf.Lerp(0.75f, 1.08f, Mathf.Sin(t * Mathf.PI));
+            extraMovesFlyAmountText.alpha = Mathf.Clamp01(t * 3f);
+
+            if (t > 0.82f)
+                extraMovesFlyAmountText.alpha = Mathf.InverseLerp(1f, 0.82f, t);
+
+            yield return null;
+        }
+
+        if (extraMovesFlyAmountText != null)
+            extraMovesFlyAmountText.gameObject.SetActive(false);
+
+        if (extraMovesAmountText != null)
+        {
+            SetExtraMovesAmountText(extraMovesAmountText, finalAmount);
+            yield return StartCoroutine(CoPunchExtraMovesAmount(mainRect));
+        }
+
+        extraMovesAmountRoutine = null;
+    }
+
+    private IEnumerator CoPunchExtraMovesAmount(RectTransform rect)
+    {
+        if (rect == null)
+            yield break;
+
+        const float duration = 0.18f;
+        float elapsed = 0f;
+
+        while (elapsed < duration && rect != null)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float scale = 1f + Mathf.Sin(t * Mathf.PI) * 0.18f;
+            rect.localScale = Vector3.one * scale;
+            yield return null;
+        }
+
+        if (rect != null)
+            rect.localScale = Vector3.one;
+    }
+
+    private void EnsureExtraMovesAmountText()
+    {
+        if (extraMovesIcon == null)
+            return;
+
+        if (extraMovesAmountText == null)
+            extraMovesAmountText = CreateExtraMovesAmountText("ExtraMovesAmountText");
+
+        if (extraMovesFlyAmountText == null)
+        {
+            extraMovesFlyAmountText = CreateExtraMovesAmountText("ExtraMovesFlyAmountText");
+            if (extraMovesFlyAmountText != null)
+                extraMovesFlyAmountText.gameObject.SetActive(false);
+        }
+    }
+
+    private TMP_Text CreateExtraMovesAmountText(string name)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer));
+        go.transform.SetParent(extraMovesIcon.transform, false);
+
+        var rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = new Vector2(22f, 30f);
+        rect.offsetMax = new Vector2(-22f, -28f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+
+        var text = go.AddComponent<TextMeshProUGUI>();
+        ConfigureExtraMovesAmountText(text);
+        return text;
+    }
+
+    private void ConfigureExtraMovesAmountText(TMP_Text text)
+    {
+        if (text == null)
+            return;
+
+        text.raycastTarget = false;
+        text.text = string.Empty;
+        text.alignment = TextAlignmentOptions.Center;
+        text.enableAutoSizing = true;
+        text.fontSize = extraMovesAmountFontSize;
+        text.fontSizeMax = extraMovesAmountFontSize;
+        text.fontSizeMin = Mathf.Max(36f, extraMovesAmountFontSize * 0.58f);
+        text.fontStyle = FontStyles.Bold;
+        text.enableWordWrapping = false;
+        text.overflowMode = TextOverflowModes.Overflow;
+        text.richText = true;
+        text.characterSpacing = 0f;
+        text.OnPreRenderText -= ApplyExtraMovesDigitSlant;
+        text.OnPreRenderText += ApplyExtraMovesDigitSlant;
+        text.color = new Color(1f, 0.86f, 0.24f, 1f);
+        text.enableVertexGradient = true;
+        text.colorGradient = new VertexGradient(
+            new Color(1f, 0.98f, 0.72f, 1f),
+            new Color(1f, 0.92f, 0.46f, 1f),
+            new Color(0.98f, 0.66f, 0.12f, 1f),
+            new Color(1f, 0.72f, 0.18f, 1f));
+
+        if (extraMovesAmountFont != null)
+            text.font = extraMovesAmountFont;
+        else if (failTitleText != null && failTitleText.font != null)
+            text.font = failTitleText.font;
+
+        if (extraMovesAmountMaterial != null)
+            text.fontSharedMaterial = extraMovesAmountMaterial;
+    }
+
+    private void SetExtraMovesAmountText(TMP_Text text, int amount)
+    {
+        if (text == null)
+            return;
+
+        ConfigureExtraMovesAmountText(text);
+        text.text = $"<size=88%>+</size><size=128%>{Mathf.Max(0, amount)}</size>";
+    }
+
+    private void ApplyExtraMovesDigitSlant(TMP_TextInfo textInfo)
+    {
+        if (textInfo == null || textInfo.characterCount == 0)
+            return;
+
+        for (int i = 0; i < textInfo.characterCount; i++)
+        {
+            TMP_CharacterInfo characterInfo = textInfo.characterInfo[i];
+            if (!characterInfo.isVisible || characterInfo.character == '+')
+                continue;
+
+            int materialIndex = characterInfo.materialReferenceIndex;
+            if (materialIndex < 0 || materialIndex >= textInfo.meshInfo.Length)
+                continue;
+
+            Vector3[] vertices = textInfo.meshInfo[materialIndex].vertices;
+            int vertexIndex = characterInfo.vertexIndex;
+            if (vertexIndex + 3 >= vertices.Length)
+                continue;
+
+            float pivotY = (vertices[vertexIndex].y
+                + vertices[vertexIndex + 1].y
+                + vertices[vertexIndex + 2].y
+                + vertices[vertexIndex + 3].y) * 0.25f;
+
+            for (int vertex = 0; vertex < 4; vertex++)
+            {
+                int currentVertex = vertexIndex + vertex;
+                vertices[currentVertex].x += (vertices[currentVertex].y - pivotY) * ExtraMovesDigitSlant;
+            }
+        }
+    }
+
+    private void SetExtraMovesBadgeTextVisible(bool visible)
+    {
+        if (extraMovesAmountText != null)
+            extraMovesAmountText.gameObject.SetActive(visible);
+
+        if (extraMovesFlyAmountText != null)
+            extraMovesFlyAmountText.gameObject.SetActive(false);
+    }
+
+    private void ShowFailWalletBalance(bool visible)
+    {
+        if (!visible)
+        {
+            if (failWalletBalanceRoot != null)
+                failWalletBalanceRoot.SetActive(false);
+            return;
+        }
+
+        EnsureFailWalletBalance();
+
+        if (failWalletBalanceRoot == null)
+            return;
+
+        failWalletBalanceRoot.SetActive(true);
+        failWalletBalanceRoot.transform.SetAsLastSibling();
+        RefreshFailWalletBalance(PlayerWallet.Coins);
+    }
+
+    private void HandleWalletCoinsChanged(int amount)
+    {
+        RefreshFailWalletBalance(amount);
+    }
+
+    private void RefreshFailWalletBalance(int amount)
+    {
+        if (failWalletBalanceText != null && failWalletBalanceRoot != null && failWalletBalanceRoot.activeInHierarchy)
+            failWalletBalanceText.text = amount.ToString();
+    }
+
+    private void EnsureFailWalletBalance()
+    {
+        if (failWalletBalanceRoot != null)
+        {
+            LayoutFailWalletBalance();
+            ConfigureFailWalletBalanceVisuals();
+            return;
+        }
+
+        if (failPopupRoot == null)
+            return;
+
+        var root = new GameObject("FailWalletBalance", typeof(RectTransform));
+        root.transform.SetParent(failPopupRoot.transform, false);
+        failWalletBalanceRoot = root;
+
+        var iconGo = new GameObject("GoldMoney", typeof(RectTransform), typeof(CanvasRenderer));
+        iconGo.transform.SetParent(root.transform, false);
+        failWalletBalanceIcon = iconGo.AddComponent<Image>();
+        failWalletBalanceIcon.raycastTarget = false;
+        failWalletBalanceIcon.preserveAspect = true;
+
+        var backgroundGo = new GameObject("WalletAmountBackground", typeof(RectTransform), typeof(CanvasRenderer));
+        backgroundGo.transform.SetParent(root.transform, false);
+        failWalletBalanceBackground = backgroundGo.AddComponent<Image>();
+        failWalletBalanceBackground.raycastTarget = false;
+
+        var textGo = new GameObject("WalletAmountText", typeof(RectTransform), typeof(CanvasRenderer));
+        textGo.transform.SetParent(backgroundGo.transform, false);
+        failWalletBalanceText = textGo.AddComponent<TextMeshProUGUI>();
+        failWalletBalanceText.raycastTarget = false;
+
+        LayoutFailWalletBalance();
+        ConfigureFailWalletBalanceVisuals();
+    }
+
+    private void LayoutFailWalletBalance()
+    {
+        if (failWalletBalanceRoot == null)
+            return;
+
+        float backgroundHeight = Mathf.Max(1f, failWalletBalanceBackgroundHeight);
+        float backgroundWidth = CalculateSpriteWidth(failWalletBalanceBackgroundSprite, backgroundHeight);
+        float iconSize = Mathf.Max(1f, failWalletBalanceIconSize);
+        float overlap = Mathf.Max(0f, failWalletBalanceIconOverlap);
+
+        var rootRect = failWalletBalanceRoot.GetComponent<RectTransform>();
+        rootRect.anchorMin = new Vector2(0f, 1f);
+        rootRect.anchorMax = new Vector2(0f, 1f);
+        rootRect.pivot = new Vector2(0f, 0.5f);
+        rootRect.anchoredPosition = failWalletBalancePosition;
+        rootRect.sizeDelta = new Vector2(iconSize + backgroundWidth - overlap, Mathf.Max(iconSize, backgroundHeight));
+
+        if (failWalletBalanceIcon != null)
+        {
+            var iconRect = failWalletBalanceIcon.rectTransform;
+            iconRect.anchorMin = new Vector2(0f, 0.5f);
+            iconRect.anchorMax = new Vector2(0f, 0.5f);
+            iconRect.pivot = new Vector2(0.5f, 0.5f);
+            iconRect.anchoredPosition = new Vector2(iconSize * 0.5f, 0f);
+            iconRect.sizeDelta = new Vector2(iconSize, iconSize);
+            failWalletBalanceIcon.transform.SetAsLastSibling();
+        }
+
+        if (failWalletBalanceBackground != null)
+        {
+            var bgRect = failWalletBalanceBackground.rectTransform;
+            bgRect.anchorMin = new Vector2(0f, 0.5f);
+            bgRect.anchorMax = new Vector2(0f, 0.5f);
+            bgRect.pivot = new Vector2(0f, 0.5f);
+            bgRect.anchoredPosition = new Vector2(iconSize - overlap, 0f);
+            bgRect.sizeDelta = new Vector2(backgroundWidth, backgroundHeight);
+        }
+
+        if (failWalletBalanceText != null)
+        {
+            var textRect = failWalletBalanceText.rectTransform;
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(14f, 8f);
+            textRect.offsetMax = new Vector2(-22f, -8f);
+            textRect.pivot = new Vector2(0.5f, 0.5f);
+        }
+    }
+
+    private void ConfigureFailWalletBalanceVisuals()
+    {
+        Sprite iconSprite = failWalletBalanceIconSprite != null ? failWalletBalanceIconSprite : coinIcon;
+
+        if (failWalletBalanceIcon != null)
+        {
+            failWalletBalanceIcon.sprite = iconSprite;
+            failWalletBalanceIcon.enabled = iconSprite != null;
+        }
+
+        if (failWalletBalanceBackground != null)
+        {
+            failWalletBalanceBackground.sprite = failWalletBalanceBackgroundSprite;
+            failWalletBalanceBackground.enabled = failWalletBalanceBackgroundSprite != null;
+            failWalletBalanceBackground.preserveAspect = false;
+        }
+
+        if (failWalletBalanceText != null)
+        {
+            failWalletBalanceText.alignment = TextAlignmentOptions.Center;
+            failWalletBalanceText.enableAutoSizing = true;
+            failWalletBalanceText.fontSize = 42f;
+            failWalletBalanceText.fontSizeMax = 46f;
+            failWalletBalanceText.fontSizeMin = 22f;
+            failWalletBalanceText.fontStyle = FontStyles.Bold;
+            failWalletBalanceText.enableWordWrapping = false;
+            failWalletBalanceText.overflowMode = TextOverflowModes.Ellipsis;
+            failWalletBalanceText.color = Color.white;
+
+            if (failWalletBalanceFont != null)
+                failWalletBalanceText.font = failWalletBalanceFont;
+            else if (failContinueText != null && failContinueText.font != null)
+                failWalletBalanceText.font = failContinueText.font;
+
+            if (failWalletBalanceMaterial != null)
+                failWalletBalanceText.fontSharedMaterial = failWalletBalanceMaterial;
+        }
+    }
+
+    private static float CalculateSpriteWidth(Sprite sprite, float height)
+    {
+        if (sprite == null || sprite.rect.height <= 0f)
+            return height * 3.2f;
+
+        return height * (sprite.rect.width / sprite.rect.height);
     }
 
     private Sprite ResolveExtraMoveOfferSprite()
@@ -1749,6 +2196,14 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         t = Mathf.Clamp01(t);
         return 1f - (1f - t) * (1f - t);
+    }
+
+    private static float EaseOutBack(float t)
+    {
+        t = Mathf.Clamp01(t);
+        const float c1 = 1.70158f;
+        const float c3 = c1 + 1f;
+        return 1f + c3 * Mathf.Pow(t - 1f, 3f) + c1 * Mathf.Pow(t - 1f, 2f);
     }
 
     private void EnsureExtraMoveOfferSpriteArray()
@@ -2019,6 +2474,15 @@ public class LevelEndSimplePopupController : MonoBehaviour
             starRevealRoutine = null;
         }
 
+        if (extraMovesAmountRoutine != null)
+        {
+            StopCoroutine(extraMovesAmountRoutine);
+            extraMovesAmountRoutine = null;
+        }
+
+        if (extraMovesFlyAmountText != null)
+            extraMovesFlyAmountText.gameObject.SetActive(false);
+
         if (failPopupRoot != null)
             failPopupRoot.SetActive(false);
 
@@ -2028,6 +2492,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (successVideoRoot != null)
             successVideoRoot.SetActive(false);
 
+        ShowFailWalletBalance(false);
         SetMainScreenDimmed(false);
         SetBlockerVisible(false);
     }
