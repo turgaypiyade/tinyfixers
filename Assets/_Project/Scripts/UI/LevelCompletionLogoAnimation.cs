@@ -1,8 +1,10 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
+using Random = UnityEngine.Random;
 
 /// <summary>
 /// Level completion logo animation.
@@ -46,12 +48,16 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
 
     // -------------------------------------------------------------------------
     public bool WasSkipped { get; private set; }
+    public event Action FireworksStarted;
+    public event Action FireworksFinished;
 
     private bool _playing;
     private bool _skipRequested;
     private float _lastTapTime = -99f;
     private Canvas _canvas;
     private readonly List<GameObject> spawnedFireworkVfx = new();
+
+    private const float FireworkBurstDuration = 0.70f;
 
     private float TargetOverlayAlpha => keepOverlayTransparent ? 0f : Mathf.Clamp01(overlayTargetAlpha);
 
@@ -141,7 +147,7 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
             pieces[i].anchoredPosition = centers[i] + startOffsets[i];
         }
 
-        StartCoroutine(PlayFireworks());
+        Coroutine fireworksRoutine = StartCoroutine(PlayFireworks());
 
         float elapsed = 0f;
         while (elapsed < flyInDuration && !_skipRequested)
@@ -173,6 +179,9 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
             holdElapsed += Time.unscaledDeltaTime;
             yield return null;
         }
+
+        if (!_skipRequested && fireworksRoutine != null)
+            yield return fireworksRoutine;
 
         _playing = false;
         WasSkipped = _skipRequested;
@@ -288,6 +297,7 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
 
         yield return new WaitForSecondsRealtime(fireworkDelay);
 
+        int fired = 0;
         for (int i = 0; i < fireworkBurstCount && !_skipRequested; i++)
         {
             Vector2 pos = new Vector2(Random.Range(-200f, 200f), Random.Range(-60f, 280f));
@@ -295,14 +305,23 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
                 ? new Color(1f, 0.18f, 0.08f)
                 : new Color(1f, 0.85f, 0.10f);
 
+            if (fired == 0)
+                FireworksStarted?.Invoke();
+
             StartCoroutine(BurstAt(pos, col));
+            fired++;
             yield return new WaitForSecondsRealtime(fireworkInterval);
+        }
+
+        if (fired > 0 && !_skipRequested)
+        {
+            yield return new WaitForSecondsRealtime(FireworkBurstDuration);
+            FireworksFinished?.Invoke();
         }
     }
 
     private IEnumerator BurstAt(Vector2 center, Color baseColor)
     {
-        const float duration = 0.70f;
         const float gravity = 300f;
         int count = Random.Range(12, 20);
 
@@ -324,10 +343,10 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
         }
 
         float elapsed = 0f;
-        while (elapsed < duration && !_skipRequested)
+        while (elapsed < FireworkBurstDuration && !_skipRequested)
         {
             elapsed += Time.unscaledDeltaTime;
-            float t = elapsed / duration;
+            float t = elapsed / FireworkBurstDuration;
 
             for (int i = 0; i < count; i++)
             {

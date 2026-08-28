@@ -1531,30 +1531,16 @@ public class GridSpawner : MonoBehaviour
             int bx = p.cell % resolvedLevel.width;
             int by = p.cell / resolvedLevel.width;
 
-            // MudUnder gerçek MudOverlay renderer'ına kaydolmaz. Normal tek hücrelik obstacle
-            // görseli gibi çizilir; böylece komşu MudOverlay hücresinin topology/corner hesabına
-            // hiçbir şekilde girmez.
+            // Örtülü mud'ı DÜZ kare (MudUnder) yerine GERÇEK bir seamless MudOverlay hücresi olarak
+            // kaydet — sanki üstünde cover yokmuş gibi. Böylece bevel + köşe + komşu-birleşim + mask
+            // (grid çizgisi kapatma) hepsi normal mud gibi çalışır; üstteki cover (EnergyContainer,
+            // Chest...) zaten üzerine çizilir. Alt-resmi GİZLEYEN cover'lar (Safe/OverrideBatteryBox)
+            // bu döngüye girmeden yukarıda elendiği için buraya yalnız "beneath'i gösteren" cover'lar
+            // altındaki mud düşer. RefreshAllBorders döngü sonunda bir kez çağrılır.
             if (p.beneathId == ObstacleId.Mud)
             {
-                int sObs = resolvedLevel.obstacles[p.cell];
-                int sOrg = resolvedLevel.obstacleOrigins[p.cell];
-                resolvedLevel.obstacles[p.cell] = (int)ObstacleId.Mud;
-                resolvedLevel.obstacleOrigins[p.cell] = p.cell;
-                var mudDef = resolvedLevel.obstacleLibrary.Get(ObstacleId.Mud);
-                Image mudUnderImage = DrawObstacleImage(mudDef, bx, by);
-                resolvedLevel.obstacles[p.cell] = sObs;
-                resolvedLevel.obstacleOrigins[p.cell] = sOrg;
-                if (mudUnderImage != null)
-                {
-                    // Mud'un obstacle davranışı OverTile olsa bile MudUnder yalnızca arka plan
-                    // görselidir. OverTiles'e kalırsa MudOverlay'in bevel/corner parçalarını örter.
-                    if (underTilesObstaclesRoot != null)
-                        mudUnderImage.transform.SetParent(underTilesObstaclesRoot, false);
-                    mudUnderImage.rectTransform.SetAsFirstSibling();
-                    mudUnderImage.raycastTarget = false;
-                    beneathViewsByCell[p.cell] = mudUnderImage;
-                    mudSpawned++;
-                }
+                SpawnMudOverlayCell(bx, by);
+                mudSpawned++;
                 continue;
             }
 
@@ -1593,6 +1579,11 @@ public class GridSpawner : MonoBehaviour
         if (mudTrace)
             Debug.Log($"[MudBeneath] SUMMARY total_mud_entries={mudTotal} spawned={mudSpawned} " +
                       $"(spawned<total ise guard'lar eliyor; spawned==total ama görünmüyorsa render/z-order)");
+
+        // Örtülü mud hücreleri DrawMudOverlays'in RefreshAllBorders'ından SONRA eklendi → görünür
+        // mud komşuları onları görsün + yeni hücreler bevel/köşe alsın diye tek yetkili geçiş.
+        if (mudSpawned > 0 && mudOverlayService != null)
+            mudOverlayService.RefreshAllBorders();
     }
 
     // Her SafeEntry için bir SafeObstacleView spawn eder: NxN bölgeye konumlandır + boyutlandır,

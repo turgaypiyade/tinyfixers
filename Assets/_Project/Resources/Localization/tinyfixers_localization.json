@@ -46,7 +46,23 @@
         },
         {
           "key": "level_end_fail_continue_cost",
-          "value": "Devam Et {0}"
+          "value": "Devam Et <space=0.5em><sprite name=\"goldmoney\">{0}"
+        },
+        {
+          "key": "level_end_loss_title",
+          "value": "Şunları kaybedeceksin"
+        },
+        {
+          "key": "level_end_loss_coin",
+          "value": "Altın"
+        },
+        {
+          "key": "level_end_loss_safari",
+          "value": "Safari"
+        },
+        {
+          "key": "level_end_loss_alliance",
+          "value": "İttifak güçleri"
         },
         {
           "key": "level_end_success_title_level",
@@ -70,7 +86,7 @@
         },
         {
           "key": "loading_hint_3match_desc",
-          "value": "Aynı renk taşları kırar"
+          "value": ""
         },
         {
           "key": "loading_hint_lineh_title",
@@ -78,7 +94,7 @@
         },
         {
           "key": "loading_hint_lineh_desc",
-          "value": "Rocket oluşturur"
+          "value": "Rocket"
         },
         {
           "key": "loading_hint_linev_title",
@@ -86,7 +102,7 @@
         },
         {
           "key": "loading_hint_linev_desc",
-          "value": "Rocket oluşturur"
+          "value": "Rocket"
         },
         {
           "key": "loading_hint_pulse_title",
@@ -94,7 +110,7 @@
         },
         {
           "key": "loading_hint_pulse_desc",
-          "value": "PulseCore Oluşturur"
+          "value": "PulseCore"
         },
         {
           "key": "loading_hint_override_title",
@@ -102,7 +118,7 @@
         },
         {
           "key": "loading_hint_override_desc",
-          "value": "Spark Orb oluşturur"
+          "value": "Spark Orb"
         },
         {
           "key": "tutorial_basic_match_desc",
@@ -683,7 +699,23 @@
         },
         {
           "key": "level_end_fail_continue_cost",
-          "value": "Continue {0}"
+          "value": "Continue <space=0.5em><sprite name=\"goldmoney\">{0}"
+        },
+        {
+          "key": "level_end_loss_title",
+          "value": "You'll lose these"
+        },
+        {
+          "key": "level_end_loss_coin",
+          "value": "Gold"
+        },
+        {
+          "key": "level_end_loss_safari",
+          "value": "Safari"
+        },
+        {
+          "key": "level_end_loss_alliance",
+          "value": "Alliance boosts"
         },
         {
           "key": "level_end_success_title_level",
@@ -707,7 +739,7 @@
         },
         {
           "key": "loading_hint_3match_desc",
-          "value": "Clears same-colored tiles"
+          "value": ""
         },
         {
           "key": "loading_hint_lineh_title",
@@ -715,7 +747,7 @@
         },
         {
           "key": "loading_hint_lineh_desc",
-          "value": "Creates a Rocket"
+          "value": "Rocket"
         },
         {
           "key": "loading_hint_linev_title",
@@ -723,7 +755,7 @@
         },
         {
           "key": "loading_hint_linev_desc",
-          "value": "Creates a Rocket"
+          "value": "Rocket"
         },
         {
           "key": "loading_hint_pulse_title",
@@ -731,7 +763,7 @@
         },
         {
           "key": "loading_hint_pulse_desc",
-          "value": "Creates a PulseCore"
+          "value": "PulseCore"
         },
         {
           "key": "loading_hint_override_title",
@@ -739,7 +771,7 @@
         },
         {
           "key": "loading_hint_override_desc",
-          "value": "Creates a Spark Orb"
+          "value": "Spark Orb"
         },
         {
           "key": "tutorial_basic_match_desc",

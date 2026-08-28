@@ -903,7 +903,8 @@ MonoBehaviour:
     fillsShadowBeneath: 0
     suppressHitParticles: 0
     hitParticleSprites: []
-    breakParticleSprites: []
+    breakParticleSprites:
+    - {fileID: 21300000, guid: 0de7d40c9891e426788b813956928535, type: 3}
     wardrobeItemSprites: []
     hitSound: {fileID: 8300000, guid: 64030a4a186db4cbb94d4f7ad1e0caeb, type: 3}
     hitSoundVolume: 1

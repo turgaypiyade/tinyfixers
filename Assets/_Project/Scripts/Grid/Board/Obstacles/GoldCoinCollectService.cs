@@ -38,6 +38,11 @@ public sealed class GoldCoinCollectService : MonoBehaviour
     private void HandleVisualChanged(ObstacleVisualChange change)
     {
         if (change.cleared && change.obstacleId == ObstacleId.GoldMoney)
+        {
+            int before = PlayerWallet.Coins;
             PlayerWallet.AddCoins(coinsPerPiece);
+            int after = PlayerWallet.Coins;
+            CoinFlyToWalletAnimator.QueuePendingReward(coinsPerPiece, before, after);
+        }
     }
 }

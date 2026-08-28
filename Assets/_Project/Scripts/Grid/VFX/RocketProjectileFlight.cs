@@ -29,6 +29,17 @@ public sealed class RocketProjectileFlight : MonoBehaviour
     [SerializeField, Min(0.05f)] private float smokeLife = 0.42f;
     [SerializeField] private Color smokeColor = new Color(0.92f, 0.94f, 0.98f, 0.58f);
 
+    [Header("Çarpma patlaması (impact explosion)")]
+    [Tooltip("Roket hedefe varınca oynatılan patlama sprite'ı (sarı yıldız + glow). Boşsa patlama " +
+             "çizilmez (yalnız tile-clear burst'ü kalır). Proje: Art/Icons/FX/vfx_pulsecore_coreburst.")]
+    [SerializeField] private Sprite impactExplosionSprite;
+    [Tooltip("Patlamanın tile'a göre TEPE boyutu (1 = tam hücre). Roket hafif fazla taşsın diye >1.")]
+    [Range(0.6f, 3f)] [SerializeField] private float impactExplosionSizeRatio = 1.7f;
+    [Tooltip("Patlama süresi (sn).")]
+    [Min(0.05f)] [SerializeField] private float impactExplosionDuration = 0.34f;
+    [Tooltip("Patlama başlangıç ölçeği (tepe boyutun oranı). Küçükten hızla açılır.")]
+    [Range(0.05f, 1f)] [SerializeField] private float impactExplosionStartScale = 0.45f;
+
     [Header("Yarım daire yayı")]
     [Tooltip("Yayın yüksekliği. 1 = tam yarım daire; >1 daha yüksek/oval yarım ay; <1 daha basık.")]
     [Range(0.4f, 2.5f)] [SerializeField] private float bulgeScale = 1.4f;
@@ -140,7 +151,73 @@ public sealed class RocketProjectileFlight : MonoBehaviour
         rt.anchoredPosition = tgt;
         rt.localScale = Vector3.one;
         Destroy(go);
+
+        // Çarpma anında hedefte tek, tatmin edici bir patlama (sprite tabanlı — procedural
+        // yıldız yerine). Uçuş root'unun en üstünde, kendi ömrünce oynayıp yok olur.
+        SpawnImpactExplosion(flightRoot, tgt, ts);
+
         onArrived?.Invoke();
+    }
+
+    // Hedefte sprite tabanlı patlama: küçükten hızla açılır, hafif döner ve solarak kaybolur.
+    private void SpawnImpactExplosion(RectTransform parent, Vector2 pos, float tileSize)
+    {
+        if (parent == null || impactExplosionSprite == null || impactExplosionDuration <= 0f)
+            return;
+
+        var go = new GameObject("RocketImpactExplosion", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+        go.transform.SetAsLastSibling();
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = pos;
+        float peak = tileSize * Mathf.Max(0.1f, impactExplosionSizeRatio);
+        rt.sizeDelta = new Vector2(peak, peak);
+        rt.localRotation = Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(0f, 360f));
+
+        var img = go.GetComponent<Image>();
+        img.sprite = impactExplosionSprite;
+        img.preserveAspect = true;
+        img.raycastTarget = false;
+
+        StartCoroutine(CoImpactExplosion(go, rt, img));
+    }
+
+    private IEnumerator CoImpactExplosion(GameObject go, RectTransform rt, Image img)
+    {
+        if (go == null || rt == null || img == null)
+            yield break;
+
+        float startScale = Mathf.Clamp(impactExplosionStartScale, 0.05f, 1f);
+        float spin = UnityEngine.Random.Range(-40f, 40f);
+        float baseRot = rt.localEulerAngles.z;
+
+        float elapsed = 0f;
+        while (elapsed < impactExplosionDuration)
+        {
+            if (go == null) yield break;
+            elapsed += Time.deltaTime;
+            float k = Mathf.Clamp01(elapsed / impactExplosionDuration);
+
+            // Ölçek: küçükten hızla açıl (easeOut), sonuna doğru hafif taşmayı sürdür.
+            float grow = 1f - (1f - k) * (1f - k);            // easeOutQuad
+            float scale = Mathf.Lerp(startScale, 1.08f, grow);
+            rt.localScale = new Vector3(scale, scale, 1f);
+            rt.localRotation = Quaternion.Euler(0f, 0f, baseRot + spin * k);
+
+            // Alpha: ilk %20'de parla, sonra solarak kaybol.
+            float a = k < 0.2f ? (k / 0.2f) : (1f - (k - 0.2f) / 0.8f);
+            var c = img.color;
+            c.a = Mathf.Clamp01(a);
+            img.color = c;
+
+            yield return null;
+        }
+
+        Destroy(go);
     }
 
     // Hücre merkezini, verilen flight root'un local anchored uzayına çevirir (PatchBot dash ile

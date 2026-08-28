@@ -13,6 +13,7 @@ public static class GameEventSfx
     private static bool _loaded;
     private static AudioSource _src;
     private static AudioSource _loopSrc;
+    private static AudioSource _levelWinLoopSrc;
 
     private static GameEventSfxConfig Cfg
     {
@@ -35,6 +36,29 @@ public static class GameEventSfx
         if (c == null) return;
         bool hasWin = c.levelWin != null;
         Play(hasWin ? c.levelWin : c.chestOpen, hasWin ? c.levelWinVolume : c.chestOpenVolume);
+    }
+
+    public static void StartLevelWinLoop()
+    {
+        var c = Cfg;
+        if (c == null) return;
+
+        bool hasWin = c.levelWin != null;
+        AudioClip clip = hasWin ? c.levelWin : c.chestOpen;
+        if (clip == null) return;
+
+        EnsureLevelWinLoopSource();
+        _levelWinLoopSrc.clip = clip;
+        _levelWinLoopSrc.volume = Mathf.Clamp01(hasWin ? c.levelWinVolume : c.chestOpenVolume);
+        _levelWinLoopSrc.loop = true;
+        if (!_levelWinLoopSrc.isPlaying)
+            _levelWinLoopSrc.Play();
+    }
+
+    public static void StopLevelWinLoop()
+    {
+        if (_levelWinLoopSrc != null && _levelWinLoopSrc.isPlaying)
+            _levelWinLoopSrc.Stop();
     }
 
     /// <summary>Kaynakçı robot kaynak yaparken (loop) çağrılır.</summary>
@@ -71,6 +95,17 @@ public static class GameEventSfx
         _loopSrc.playOnAwake = false;
         var c = Cfg;
         if (c != null && c.sfxGroup != null) _loopSrc.outputAudioMixerGroup = c.sfxGroup; // mute'a bağlan
+    }
+
+    private static void EnsureLevelWinLoopSource()
+    {
+        if (_levelWinLoopSrc != null) return;
+        var go = new GameObject("[GameEventSfx_LevelWinLoop]");
+        Object.DontDestroyOnLoad(go);
+        _levelWinLoopSrc = go.AddComponent<AudioSource>();
+        _levelWinLoopSrc.playOnAwake = false;
+        var c = Cfg;
+        if (c != null && c.sfxGroup != null) _levelWinLoopSrc.outputAudioMixerGroup = c.sfxGroup;
     }
 
     private static void EnsureSource()

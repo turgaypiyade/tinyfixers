@@ -604,6 +604,12 @@ public class BoardController : MonoBehaviour
     public event Action<int> OnWardrobeOpened;
     public event Action<int, int> OnWardrobeItemRemoved;
     public event Action<int> OnMovesChanged;
+    // Raised when a real player move is counted (ConsumeMove), BEFORE the swap resolves. Cage/lock
+    // owners snapshot their idle candidates here. Not raised by AddMoves.
+    public event Action OnPlayerMoveConsumed;
+    // Raised once the board fully settles after a player move (EndBusy → idle), AFTER the coordinator
+    // has processed existing locks. Cage/lock owners create new locks for this move's idle candidates here.
+    public event Action OnPlayerMoveResolved;
     public event Action<TileType, int> OnTilesCleared;
     public event Action<int> OnMoveClearPraise;
     // Her tekil special aktivasyonu (zincirdekiler dahil) — BossDuel bonus hasarı dinler.
@@ -637,6 +643,8 @@ public class BoardController : MonoBehaviour
     private ActionSequencer actionSequencer;
     private PulseCoreImpactService pulseCoreImpactService;
     private ObstacleStateService obstacleStateService;
+    private SpecialLockCoordinator specialLockCoordinator;
+    private bool moveConsumedSinceIdle;
     private CascadeLogic cascadeLogic;
     private ObstacleResolutionService obstacleResolutionService;
     private SpecialCreationService specialCreationService;
@@ -802,6 +810,18 @@ public class BoardController : MonoBehaviour
     internal bool EnableSpecialChainTrace => false;
 #endif
     internal ObstacleStateService ObstacleStateService => obstacleStateService;
+    internal SpecialLockCoordinator SpecialLocks => specialLockCoordinator;
+
+    // Cell-indexed view of the per-tile cage flag; used by ObstacleStateService's interaction-lock hook.
+    private bool IsSpecialLockedAtCell(int x, int y)
+    {
+        if (specialLockCoordinator == null || !specialLockCoordinator.HasAnyLock)
+            return false;
+        if (Tiles == null || x < 0 || x >= Width || y < 0 || y >= Height)
+            return false;
+        var tile = Tiles[x, y];
+        return tile != null && tile.IsSpecialLocked;
+    }
     internal PulseCoreImpactService PulseCoreImpactService => pulseCoreImpactService;
     internal SpecialBehaviorRegistry SpecialBehaviors => specialBehaviorRegistry;
     public CascadeLogic CascadeLogic => cascadeLogic;
@@ -1041,6 +1061,9 @@ public class BoardController : MonoBehaviour
         pendingCreationStore ??= new PendingCreationStore();
         pendingCreationApplicator ??= new PendingCreationApplicator(this);
         obstacleStateService ??= new ObstacleStateService();
+        specialLockCoordinator ??= new SpecialLockCoordinator();
+        // Caged specials report as interaction-locked (unbreakable + non-swappable) through one hook.
+        obstacleStateService.SetSpecialLockQuery(IsSpecialLockedAtCell);
         obstacleResolutionService ??= new ObstacleResolutionService(this);
         oilSpreadService ??= new OilSpreadService(this, obstacleStateService);
         cascadeLogic ??= new CascadeLogic(this);
@@ -1578,6 +1601,18 @@ public class BoardController : MonoBehaviour
         {
             if (CurrentState == BoardState.Resolving)
                 CurrentState = BoardState.Idle;
+
+            // Per-move end pass for cage/lock owners. Runs once the board fully settles after a real
+            // player move. Order matters: resolve EXISTING locks first (decrement windows → fire
+            // timeouts for anything that survived its rescue window), THEN let owners create NEW locks
+            // for this move's idle candidates — so a freshly caged special isn't decremented the same move.
+            if (moveConsumedSinceIdle)
+            {
+                moveConsumedSinceIdle = false;
+                specialLockCoordinator?.OnMoveResolved();
+                OnPlayerMoveResolved?.Invoke();
+            }
+
             // Fire regardless of whether state was Locked — ensures RunAfterIdleRoutine
             // callbacks always complete even if SetInputLocked was called mid-resolve.
             OnBecameIdle?.Invoke();
@@ -2346,6 +2381,9 @@ public class BoardController : MonoBehaviour
         if (Flow.IsSpecialVisualInFlight)
             return false;
 
+        if (IsDynamicInputBlockedByBoardFlow())
+            return false;
+
         if (!TryGetCellState(tile.X, tile.Y, out var state))
             return false;
 
@@ -2366,6 +2404,17 @@ public class BoardController : MonoBehaviour
         }
 
         return true;
+    }
+
+    private bool IsDynamicInputBlockedByBoardFlow()
+    {
+        if (!useFlowActivities || flowScheduler == null)
+            return false;
+
+        return flowScheduler.Count(BoardFlowScheduler.ActivityKind.Clear) > 0
+               || flowScheduler.Count(BoardFlowScheduler.ActivityKind.SpecialSweep) > 0
+               || flowScheduler.Count(BoardFlowScheduler.ActivityKind.ComboStep) > 0
+               || flowScheduler.Count(BoardFlowScheduler.ActivityKind.ObstacleSpread) > 0;
     }
 
     private bool HasDynamicSpecialSwapNeighbor(TileView tile)
@@ -4843,6 +4892,12 @@ public class BoardController : MonoBehaviour
         BeginMoveClearPraiseTracking();
         RemainingMoves = Mathf.Max(0, RemainingMoves - 1);
         OnMovesChanged?.Invoke(RemainingMoves);
+
+        // Move lifecycle for cage/lock owners: mark that a real player move started so EndBusy knows
+        // to run the per-move end pass, and let owners snapshot their idle candidates NOW (before the
+        // swap resolves), so freshly created specials get their free move.
+        moveConsumedSinceIdle = true;
+        OnPlayerMoveConsumed?.Invoke();
     }
     public void AddMoves(int amount) { if (amount <= 0) return; RemainingMoves += amount; OnMovesChanged?.Invoke(RemainingMoves); }
     internal void ConsumeBonusMove() => ConsumeMove();

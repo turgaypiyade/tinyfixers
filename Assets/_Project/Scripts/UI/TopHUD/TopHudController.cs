@@ -124,16 +124,13 @@ public class TopHudController : MonoBehaviour
 
             int initialRemaining = goal.amount;
 
-            // Mud goal'ü dinamiktir: barrel'lar kırıldıkça mud saçılıp sayaç artar. Başlangıçta
-            // authored mud + board'daki barrel sayısı kadar placeholder ile başlar ("kaç tane
-            // varsa" otomatiği). Her kırılmamış barrel = 1 placeholder → mud oluşmadan goal
-            // erken tamamlanmaz. Barrel çözülünce (mud stamp'inden SONRA) placeholder düşürülür.
+            // Mud goal'u dinamiktir: authored mud varsa onu say, barrel kaynaklı mud ise
+            // barrel kırıldığı anda child goal olarak doğar. Başlangıçta barrel sayısı kadar
+            // default placeholder ekleme; parent hedef bitmeden child hedefin doğması gerekir.
             if (goal.targetType == LevelGoalTargetType.Obstacle && goal.obstacleId == ObstacleId.Mud)
             {
                 int computed = CountObstacleCells(levelData, ObstacleId.Mud)
-                             + CountStampedBeneathCells(ObstacleId.Mud)
-                             + CountObstacleCells(levelData, ObstacleId.Barrel)
-                             + CountObstacleCells(levelData, ObstacleId.Barrell_v2);
+                             + CountStampedBeneathCells(ObstacleId.Mud);
                 if (computed > 0)
                     initialRemaining = computed;
             }
@@ -150,54 +147,55 @@ public class TopHudController : MonoBehaviour
             runtimeGoals.Add(runtime);
         }
 
-        TryBirthMudGoalFromBarrels(levelData);
-
         UpdateGoalsCompletionState();
     }
 
-    // Barrel/Barrell_v2 içeren levelde Mud goal'ü AUTHOR edilmemişse otomatik doğur:
-    // barrel kırıldıkça saçılacak mud kendiliğinden hedefe dönüşür, tasarımcının ayrıca
-    // mud goal eklemesi gerekmez. Placeholder sayaç (kırılmamış barrel başına 1) mevcut
-    // dinamik akışla aynı — mud oluşmadan goal erken tamamlanamaz (erken-WIN koruması).
-    // Yalnız barrel varlığı tetikler; barrel'sız dekoratif mud, goal'e zorlanmaz.
-    private void TryBirthMudGoalFromBarrels(LevelData levelData)
+    private RuntimeGoal FindRuntimeObstacleGoal(ObstacleId obstacleId)
     {
-        if (levelData == null)
-            return;
-
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
-            var g = runtimeGoals[i].definition;
-            if (g != null && g.targetType == LevelGoalTargetType.Obstacle && g.obstacleId == ObstacleId.Mud)
-                return;   // authored mud goal zaten var — mevcut dinamik akış işliyor
+            var goal = runtimeGoals[i];
+            var definition = goal.definition;
+            if (definition == null)
+                continue;
+            if (definition.targetType == LevelGoalTargetType.Obstacle && definition.obstacleId == obstacleId)
+                return goal;
         }
+        return null;
+    }
 
-        int barrelCells = CountObstacleCells(levelData, ObstacleId.Barrel)
-                        + CountObstacleCells(levelData, ObstacleId.Barrell_v2);
-        if (barrelCells <= 0)
-            return;
+    private RuntimeGoal EnsureDynamicObstacleGoal(ObstacleId obstacleId)
+    {
+        var existing = FindRuntimeObstacleGoal(obstacleId);
+        if (existing != null)
+            return existing;
 
-        int initialRemaining = CountObstacleCells(levelData, ObstacleId.Mud)
-                             + CountStampedBeneathCells(ObstacleId.Mud)
-                             + barrelCells;
-
-        var mudGoal = new LevelGoalDefinition
+        var dynamicGoal = new LevelGoalDefinition
         {
             targetType = LevelGoalTargetType.Obstacle,
-            obstacleId = ObstacleId.Mud,
-            amount = initialRemaining
+            obstacleId = obstacleId,
+            amount = 0
         };
 
         var runtime = new RuntimeGoal
         {
-            definition = mudGoal,
-            remaining = initialRemaining,
-            dynamicTotal = initialRemaining,
-            slot = CreateSlot(mudGoal, runtimeGoals.Count)
+            definition = dynamicGoal,
+            remaining = 0,
+            dynamicTotal = 0,
+            slot = CreateSlot(dynamicGoal, runtimeGoals.Count)
         };
 
         runtime.slot?.SetRemaining(runtime.remaining);
         runtimeGoals.Add(runtime);
+        return runtime;
+    }
+
+    private void AddMudGoalPlaceholderForBarrel()
+    {
+        var goal = EnsureDynamicObstacleGoal(ObstacleId.Mud);
+        goal.remaining++;
+        goal.dynamicTotal++;
+        goal.slot?.SetRemaining(goal.remaining);
     }
 
     private TopHudGoalSlot CreateSlot(LevelGoalDefinition goal, int goalIndex)
@@ -347,6 +345,12 @@ public class TopHudController : MonoBehaviour
 
         bool anyGoalUpdated = false;
 
+        if (IsMudSplatBarrel(obstacleId))
+        {
+            AddMudGoalPlaceholderForBarrel();
+            anyGoalUpdated = true;
+        }
+
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
             var goal = runtimeGoals[i];
@@ -424,6 +428,12 @@ public class TopHudController : MonoBehaviour
 
         bool anyGoalUpdated = false;
 
+        if (createdId == ObstacleId.Mud && FindRuntimeObstacleGoal(ObstacleId.Mud) == null)
+        {
+            EnsureDynamicObstacleGoal(ObstacleId.Mud);
+            anyGoalUpdated = true;
+        }
+
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
             var goal = runtimeGoals[i];
@@ -438,6 +448,12 @@ public class TopHudController : MonoBehaviour
 
         if (anyGoalUpdated)
             UpdateGoalsCompletionState();
+    }
+
+    private static bool IsMudSplatBarrel(ObstacleId obstacleId)
+    {
+        return obstacleId == ObstacleId.Barrel
+            || obstacleId == ObstacleId.Barrell_v2;
     }
 
     // Bir barrel'ın mud yayılımı bittiğinde: o barrel'a ait placeholder'ı Mud goal'ünden düş.

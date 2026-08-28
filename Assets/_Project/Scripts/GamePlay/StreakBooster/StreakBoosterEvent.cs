@@ -20,6 +20,29 @@ public static class StreakBoosterEvent
 
     public const int MaxStage = 3;
 
+    // Loss paneline "vazgeçersen streak sıfırlanır → hak edilen ittifak güçleri gider" öğesini kaydeder.
+    // Provider CANLI state okur; kayıt uygulama başında bir kez.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void RegisterLossProvider()
+    {
+        LevelLossRegistry.Register("streak_booster", () =>
+        {
+            int globalLevel = CurrentLevel.Global;
+            if (!IsActiveForLevel(globalLevel) || CurrentStage <= 0)
+                return null;
+
+            int lostSpecials = GetEarnedSpecials(globalLevel).Count;
+            if (lostSpecials <= 0)
+                return null;
+
+            string label = GameLocalization.Get("level_end_loss_alliance");
+            if (string.IsNullOrEmpty(label) || label == "level_end_loss_alliance")
+                label = "İttifak güçleri";
+
+            return new[] { new LevelLossItem(LevelLossRegistry.GetIcon("streak_booster"), label, lostSpecials, true) };
+        });
+    }
+
     /// <summary>Progress bar için: 0..3 arası mevcut stage (streak clamp).</summary>
     public static int CurrentStage => Mathf.Clamp(PlayerStats.CurrentStreak, 0, MaxStage);
 

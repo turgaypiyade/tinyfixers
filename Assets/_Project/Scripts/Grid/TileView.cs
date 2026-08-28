@@ -139,6 +139,15 @@ public class TileView : MonoBehaviour,
 
     private bool isMovableObstacleTile = false;
     private bool isFullCellMovableSprite = false;
+
+    // ── Generic special "cage" lock ──────────────────────────────────────────
+    // A locked special is UNBREAKABLE (skipped by every clear/match/special path via
+    // SpecialUtils.CanTargetTileContent) but STILL FALLS (gravity is a separate path and
+    // moves this TileView object, so the flag rides along automatically). Any obstacle can
+    // request a lock through SpecialLockCoordinator; the flag itself lives here so it follows
+    // the tile as it drops. Reset on pool release (PrepareForRelease).
+    public bool IsSpecialLocked { get; private set; }
+    public void SetSpecialLocked(bool value) => IsSpecialLocked = value;
     // Movable obstacle (plastik vb.) sprite'ı model.type DIŞINDA tutulur. Saklanmazsa
     // RefreshIcon/SetType ikonu model.type'a (dummy normal tip) döndürüp obstacle'ı
     // ekranda normal taş gibi gösterir (görsel/mantık desync).
@@ -2469,6 +2478,7 @@ public class TileView : MonoBehaviour,
 
         IsPlannedToMoveThisFallPass = false;
         lastFallGeneration = -1;
+        IsSpecialLocked = false;             // cage lock is per-tile; never leak across pool reuse
         ResetVisualState();                  // scale/rotation/alpha/icon/propeller
     }
 

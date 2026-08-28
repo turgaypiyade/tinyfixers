@@ -14,9 +14,6 @@ TextureImporter:
   - first:
       213: -2076213133542798554
     second: Sculptall_3
-  - first:
-      213: -1169900123081448185
-    second: Sculptall_4
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -60,7 +57,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 2
   spriteExtrude: 1
-  spriteMeshType: 1
+  spriteMeshType: 0
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -128,13 +125,13 @@ TextureImporter:
       name: Sculptall_0
       rect:
         serializedVersion: 2
-        x: 38
-        y: 1038
-        width: 965
-        height: 970
+        x: 27
+        y: 633
+        width: 588
+        height: 594
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 11, y: 7, z: 11, w: 26}
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
@@ -150,13 +147,13 @@ TextureImporter:
       name: Sculptall_1
       rect:
         serializedVersion: 2
-        x: 1034
-        y: 1038
-        width: 973
-        height: 976
+        x: 638
+        y: 633
+        width: 590
+        height: 596
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 19, y: 15, z: 6, w: 24}
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
@@ -172,13 +169,13 @@ TextureImporter:
       name: Sculptall_2
       rect:
         serializedVersion: 2
-        x: 38
-        y: 48
-        width: 951
-        height: 956
+        x: 27
+        y: 29
+        width: 588
+        height: 581
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 20, y: 12, z: 0, w: 20}
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
@@ -194,12 +191,12 @@ TextureImporter:
       name: Sculptall_3
       rect:
         serializedVersion: 2
-        x: 1040
-        y: 899
-        width: 6
-        height: 11
+        x: 639
+        y: 29
+        width: 588
+        height: 582
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -212,33 +209,11 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
-    - serializedVersion: 2
-      name: Sculptall_4
-      rect:
-        serializedVersion: 2
-        x: 1059
-        y: 49
-        width: 945
-        height: 955
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 14, z: 16, w: 20}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 7056b05590ea3cfe0800000000000000
-      internalID: -1169900123081448185
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
     outline: []
     customData: 
     physicsShape: []
     bones: []
-    spriteID: b70c7d2afbfe843eda6a98587b0d2d93
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -252,7 +227,6 @@ TextureImporter:
       Sculptall_1: 8673582621098912736
       Sculptall_2: 1422399218521640864
       Sculptall_3: -2076213133542798554
-      Sculptall_4: -1169900123081448185
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

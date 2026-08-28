@@ -32,6 +32,30 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         go.AddComponent<ProgressEventService>();
     }
 
+    // Loss paneline "vazgeçersen staged etkinlik puanını kaybedersin" öğesini kaydeder.
+    // Provider CANLI Instance'ı okur (kayıt uygulama başında bir kez yapılır → çift kayıt yok).
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void RegisterLossProvider()
+    {
+        LevelLossRegistry.Register("progress_event", () =>
+        {
+            var inst = Instance;
+            if (inst == null)
+                return null;
+
+            // Yalnızca bu level'da FİİLEN TAMAMLANAN hedefler kayıp sayılır (yarım ilerleme değil —
+            // "henüz kazanmadığın şeyi gösterme"). Her tamamlanan hedefin İKONU tek başına gösterilir.
+            List<LevelLossItem> result = null;
+            foreach (var goal in inst.GetStagedNewlyCompletedGoals())
+            {
+                if (goal == null) continue;
+                (result ??= new List<LevelLossItem>())
+                    .Add(new LevelLossItem(goal.DisplayIcon, null, 0, achieved: true));
+            }
+            return result;
+        });
+    }
+
     // ── Persistence keys ────────────────────────────────────────
 
     private const string KeyStartTime = "progress_event_v1_start_time";
@@ -134,6 +158,28 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
     /// Fail popup'ının "X event puanı kaybolacak" uyarısı için.
     public int StagedGainTotal => stagingActive ? stagedGainTotal : 0;
+
+    /// <summary>
+    /// Bu level'da (staged) YENİ tamamlanan hedefler. Vazgeçilirse bu tamamlamalar kaybolur.
+    /// Önceki level'larda zaten tamamlanmış (committed → <see cref="ProgressGoalRuntime.IsCompleted"/>)
+    /// veya yalnızca kısmen ilerlenen hedefler HARİÇ. Staging'de bir hedefin başlangıç boşluğu
+    /// (stagedSpacePerGoal) 0'a indiyse ama commit'li state hâlâ tamamlanmamışsa → bu level tamamladı.
+    /// </summary>
+    public IEnumerable<ProgressGoalRuntime> GetStagedNewlyCompletedGoals()
+    {
+        if (!stagingActive || stagedSpacePerGoal == null)
+            yield break;
+
+        int n = Mathf.Min(goals.Count, stagedSpacePerGoal.Length);
+        for (int i = 0; i < n; i++)
+        {
+            var g = goals[i];
+            if (g == null || g.IsRewardClaimed) continue;
+            if (g.IsCompleted) continue;            // committed olarak zaten tamam → kayıp değil
+            if (stagedSpacePerGoal[i] == 0)         // bu level'da staged olarak dolduruldu → risk
+                yield return g;
+        }
+    }
 
     // Verilen ama henüz törenle (sandık açılışı) gösterilmemiş ödüller.
     private readonly List<DailySlotReward> pendingRewardReveals = new();

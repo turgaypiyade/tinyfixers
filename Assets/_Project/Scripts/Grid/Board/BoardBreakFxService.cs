@@ -144,7 +144,9 @@ public class BoardBreakFxService
 
         Color fxColor = ResolveObstacleHitColor(change);
         Vector3 worldPos = board.GetCellWorldCenterPosition(x, y);
-        if (change.obstacleId == ObstacleId.Oil && TryPlayOilDropletUiBurst(worldPos, particleSprites))
+        // Oil VE Mud: kare quad-particle yerine damlacık (droplet) saçılımı. Aynı UI burst hattı;
+        // sprite ObstacleDef'in particle listelerinden gelir (Mud → DropMud).
+        if (UsesDropletBreakFx(change.obstacleId) && TryPlayOilDropletUiBurst(worldPos, particleSprites))
             return;
 
         SpawnAtWorld(
@@ -153,7 +155,7 @@ public class BoardBreakFxService
             worldPos,
             fxColor,
             particleSprites,
-            useOilDropletMotion: change.obstacleId == ObstacleId.Oil);
+            useOilDropletMotion: UsesDropletBreakFx(change.obstacleId));
     }
 
     private static bool ShouldSuppressGenericContentObstacleFx(ObstacleVisualChange change)
@@ -340,6 +342,11 @@ public class BoardBreakFxService
             return;
         SpawnAtWorld(prefab, lifetime, worldPos, Color.white, sprites);
     }
+
+    // Damlacık (droplet) saçılımlı kırılma kullanan obstacle'lar: sıvı/çamur hissi için kare
+    // quad-particle yerine UI-tabanlı damla burst'ü oynatılır.
+    private static bool UsesDropletBreakFx(ObstacleId id)
+        => id == ObstacleId.Oil || id == ObstacleId.Mud;
 
     private bool TryPlayOilDropletUiBurst(Vector3 worldPos, IReadOnlyList<Sprite> sprites)
     {

@@ -42,6 +42,9 @@ public static class SpecialUtils
         if (!CanAffectCell(board, x, y))
             return false;
 
+        // NOTE: a caged special (SpecialLockCoordinator) reports as interaction-locked via the
+        // ObstacleStateService special-lock hook, so the check below also makes it "unbreakable"
+        // while CanAffectCell stays true (so a covering special still detects it for release).
         if (board.ObstacleStateService != null &&
             board.ObstacleStateService.IsInteractionLockedAt(x, y))
             return false;

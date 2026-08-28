@@ -91,6 +91,13 @@ public class ObstacleStateService : ISimObstacleQuery
     private LevelData level;
     private ObstacleLibrary library;
 
+    // Optional hook: a caged special (SpecialLockCoordinator) reports as interaction-locked so every
+    // existing consumer (swap gates, hints, deadlock detection, drain-target exclusion, and
+    // SpecialUtils.CanTargetTileContent → "unbreakable") respects it through ONE check. The flag lives
+    // on TileView so it rides gravity; this delegate lets the data-oriented service query it by cell.
+    private Func<int, int, bool> specialLockQuery;
+    public void SetSpecialLockQuery(Func<int, int, bool> query) => specialLockQuery = query;
+
     public sealed class ObstacleSwapStateSnapshot
     {
         internal readonly int[] Obstacles;
@@ -539,6 +546,15 @@ public class ObstacleStateService : ISimObstacleQuery
             return new ObstacleHitResult(true, true, false, safeChange, safeTransition, safeAffectedCells);
         }
 
+        // STACK KURALI: bir CellAnchoredOverlay (Grass/Oil) bir movable'ın (Helmet) düştüğü hücrede
+        // GÖRSEL olarak taşın ÜSTÜNDE durur (overlay en üstte çizilir), ama veri modelinde movable
+        // primary olur ve overlay beneath store'a (_underTileBeneathMovable) iner. Bu ters dizilim
+        // yüzünden LineV/special hasarı movable'a gidip onu kırıyor, üstteki overlay sağ kalıyordu.
+        // "Stack'te üstteki önce kırılır" → hit önce overlay'e gitmeli, overlay temizlenene kadar
+        // movable KORUNMALI (bir sonraki hit onu kırar).
+        if (IsMovableObstacleAt(x, y) && TryConsumeCoveringOverlayHit(idx, context, out change))
+            return new ObstacleHitResult(true, true, false, change, default, Array.Empty<int>());
+
         var def = library != null ? library.Get(id) : null;
 
         int remaining = remainingHitsByOrigin[origin];
@@ -964,6 +980,10 @@ public class ObstacleStateService : ISimObstacleQuery
     {
         if (!IsValidCell(x, y))
             return false;
+
+        // Generic special cage: a locked special is interaction-locked (unbreakable + non-swappable).
+        if (specialLockQuery != null && specialLockQuery(x, y))
+            return true;
 
         // Yalnızca sabit OverTileBlocker (Stone vb.) altındaki tile'ı kilitler.
         // MovableObstacle (Plastic vb.) swap edilebilir — interaction kilitlenmez.
@@ -1664,6 +1684,51 @@ public class ObstacleStateService : ISimObstacleQuery
             if (fromIdx < remainingHitsByOrigin.Length)
                 remainingHitsByOrigin[fromIdx] = -1;
         }
+    }
+
+    // Movable'ın (Helmet vb.) altındaki beneath store'da GÖRSEL olarak ÜSTTE duran bir overlay
+    // (Grass/Oil) varsa, gelen hit'i o overlay'e uygular ve movable'ı korur. Overlay tükenince
+    // (remaining<=0) beneath store'dan silinir ve normal overlay-clear sinyalleri (goal + view
+    // temizliği) üretilir; movable primary olarak yerinde kalır. true dönerse hit tüketildi.
+    private bool TryConsumeCoveringOverlayHit(int idx, ObstacleHitContext context, out ObstacleVisualChange change)
+    {
+        change = default;
+
+        if (!_underTileBeneathMovable.TryGetValue(idx, out var beneath))
+            return false;
+
+        // Yalnızca görsel olarak taşın ÜSTÜNDE çizilen CellAnchoredOverlay'ler (Grass, Oil) shield
+        // yapar. Mud gibi gerçekten altta kalan under-tile içerik movable kırılınca açığa çıkmalı →
+        // ona dokunma. (Oil clear'ı OnObstacleDestroyed(Oil) ile RefreshOilOverlays'e akar.)
+        if (beneath.Id != ObstacleId.Grass && beneath.Id != ObstacleId.Oil)
+            return false;
+
+        var overlayDef = library != null ? library.Get(beneath.Id) : null;
+        int remaining = beneath.Remaining;
+        if (remaining < 0)
+            remaining = Mathf.Max(1, overlayDef != null ? overlayDef.hits : 1);
+
+        // Overlay'in damage-source kuralına uymayan bir hit ise (grass=Any olduğu için pratikte
+        // gelmez) movable'a GEÇİRME — üst katman canlıyken alt korunur; hit sessizce yutulur.
+        if (!CanConsumeHit(overlayDef, remaining, context, null))
+            return false;
+
+        remaining--;
+
+        if (remaining <= 0)
+        {
+            _underTileBeneathMovable.Remove(idx);
+            // Normal grass-clear ile aynı olay: goal sayımı + GrassOverlayService/obstacle view temizliği.
+            OnObstacleDestroyed?.Invoke(idx, beneath.Id);
+            change = new ObstacleVisualChange(idx, beneath.Id, cleared: true, remainingHits: 0, sprite: null);
+        }
+        else
+        {
+            _underTileBeneathMovable[idx] = (beneath.Id, remaining);
+            change = new ObstacleVisualChange(idx, beneath.Id, cleared: false, remainingHits: remaining, sprite: null);
+        }
+
+        return true;
     }
 
     public int CountAliveOrigins(ObstacleId obstacleId)

@@ -15,6 +15,7 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
     [Header("References")]
     [SerializeField] private RectTransform canvasRoot;
     [SerializeField] private RectTransform target;
+    [SerializeField] private RectTransform startAnchor;
     [SerializeField] private Image coinPrefab;
     [SerializeField] private Sprite coinSprite;
     [SerializeField] private TMP_Text chipMoneyText;
@@ -23,6 +24,8 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
     [SerializeField, Min(1)] private int maxFlyingCoins = 12;
     [SerializeField, Min(0.05f)] private float duration = 0.65f;
     [SerializeField, Min(0f)] private float stagger = 0.05f;
+    [SerializeField] private bool preferLevelButtonStart = true;
+    [SerializeField] private Vector2 startAnchorOffset = new Vector2(0f, 80f);
     [SerializeField] private Vector2 startViewportPosition = new Vector2(0.78f, 0.5f);
     [SerializeField] private Vector2 randomStartOffset = new Vector2(44f, 80f);
     [SerializeField] private Vector2 randomControlOffset = new Vector2(34f, 24f);
@@ -116,9 +119,42 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
         return false;
     }
 
+    public static void QueuePendingReward(int reward, int before, int after)
+    {
+        reward = Mathf.Max(0, reward);
+        before = Mathf.Max(0, before);
+        after = Mathf.Max(0, after);
+
+        if (reward <= 0 || after <= before)
+            return;
+
+        int existingReward = PlayerPrefs.GetInt(PendingRewardKey, 0);
+        if (existingReward > 0)
+        {
+            int existingBefore = PlayerPrefs.GetInt(PendingBeforeKey, before);
+            int existingAfter = PlayerPrefs.GetInt(PendingAfterKey, before);
+
+            // Sequential grants from the same level session should appear as one wallet fly.
+            // If the player spent coins between grants, the old pending range is stale; start fresh.
+            if (existingAfter == before)
+            {
+                before = Mathf.Max(0, existingBefore);
+                reward = Mathf.Max(0, after - before);
+            }
+        }
+
+        PlayerPrefs.SetInt(PendingRewardKey, reward);
+        PlayerPrefs.SetInt(PendingBeforeKey, before);
+        PlayerPrefs.SetInt(PendingAfterKey, after);
+        PlayerPrefs.Save();
+    }
+
     private IEnumerator CoPlayPendingRewardAfterLayout()
     {
         hasAttemptedPendingReward = true;
+
+        while (LoadingScreenManager.IsVisible)
+            yield return null;
 
         yield return null;
         Canvas.ForceUpdateCanvases();
@@ -318,6 +354,11 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
         if (canvasRoot == null)
             return Vector2.zero;
 
+        ResolveReferences();
+
+        if (startAnchor != null && startAnchor)
+            return GetCanvasLocalPosition(startAnchor) + startAnchorOffset;
+
         Rect rect = canvasRoot.rect;
         return new Vector2(
             Mathf.Lerp(rect.xMin, rect.xMax, Mathf.Clamp01(startViewportPosition.x)),
@@ -340,12 +381,20 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
         if (canvasRoot == null || target == null)
             return Vector2.zero;
 
+        return GetCanvasLocalPosition(target);
+    }
+
+    private Vector2 GetCanvasLocalPosition(RectTransform source)
+    {
+        if (canvasRoot == null || source == null)
+            return Vector2.zero;
+
         Canvas canvas = canvasRoot.GetComponentInParent<Canvas>();
         Camera camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
             ? canvas.worldCamera
             : null;
 
-        Vector3 worldCenter = target.TransformPoint(target.rect.center);
+        Vector3 worldCenter = source.TransformPoint(source.rect.center);
         Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(camera, worldCenter);
         RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRoot, screenPoint, camera, out Vector2 localPoint);
         return localPoint;
@@ -358,6 +407,9 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
 
         if (target == null && chipMoneyText != null)
             target = chipMoneyText.rectTransform;
+
+        if (preferLevelButtonStart && (startAnchor == null || !startAnchor))
+            startAnchor = ResolveLevelButtonRect();
 
         if (target != null && !hasTargetBaseScale)
         {
@@ -380,6 +432,12 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
             hasWarnedMissingText = true;
             Debug.LogWarning("[CoinFlyToWalletAnimator] ChipMoney text not found. Coin reward animation will be skipped.");
         }
+    }
+
+    private static RectTransform ResolveLevelButtonRect()
+    {
+        var levelButton = FindFirstObjectByType<MainMenuLevelButtonController>(FindObjectsInactive.Include);
+        return levelButton != null ? levelButton.transform as RectTransform : null;
     }
 
     private void RefreshWalletText(int amount)

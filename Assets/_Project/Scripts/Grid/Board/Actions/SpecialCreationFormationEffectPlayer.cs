@@ -30,42 +30,55 @@ public sealed class SpecialCreationFormationEffectPlayer : IClearEffectPlayer
         {
             contributors.RemoveAll(tile => tile == creation.CreatedTile);
 
-            yield return animator.PlayCreatedSpecialFormation(
-                creation.CreatedTile,
-                contributors,
-                creation.Duration);
+            if (creation.CreatedTile != null)
+                creation.CreatedTile.SetRuntimeState(TileRuntimeState.Special);
 
-            // Yaratım reveal: imaj + halo birlikte büyür, sonra 360° döner ve oturur.
-            // Animasyondan sonra tile destroy edilmiş olabilir (örn. PatchBot uçuşu)
-            // bu yüzden Unity null kontrolü (== null) ile destroyed kontrolü yapıyoruz.
-            if (creation.CreatedTile != null
-                && creation.CreatedTile.gameObject != null
-                && creation.CreatedTile.gameObject.activeInHierarchy
-                && creation.CreatedTile.GetSpecial() != TileSpecial.None)
+            try
             {
-                // Re-enforce correct layout right before reveal — the merge animation may
-                // have left the tile's icon in fill-cell state if it was previously a normal tile.
-                creation.CreatedTile.ApplyTileSize(board.TileSize);
+                yield return animator.PlayCreatedSpecialFormation(
+                    creation.CreatedTile,
+                    contributors,
+                    creation.Duration);
 
-                creation.CreatedTile.PlaySpecialCreationReveal(
-                    creation.CreatedTile.GetSpecial(),
-                    board.TileSize);
-            }
-
-            if (context != null && context.NotifyCellImpactNow != null)
-            {
-                for (int i = 0; i < contributors.Count; i++)
+                // Yaratım reveal: imaj + halo birlikte büyür, sonra 360° döner ve oturur.
+                // Animasyondan sonra tile destroy edilmiş olabilir (örn. PatchBot uçuşu)
+                // bu yüzden Unity null kontrolü (== null) ile destroyed kontrolü yapıyoruz.
+                if (creation.CreatedTile != null
+                    && creation.CreatedTile.gameObject != null
+                    && creation.CreatedTile.gameObject.activeInHierarchy
+                    && creation.CreatedTile.GetSpecial() != TileSpecial.None)
                 {
-                    var tile = contributors[i];
-                    if (tile == null)
-                        continue;
+                    // Re-enforce correct layout right before reveal — the merge animation may
+                    // have left the tile's icon in fill-cell state if it was previously a normal tile.
+                    creation.CreatedTile.ApplyTileSize(board.TileSize);
 
-                    context.NotifyCellImpactNow(new Vector2Int(tile.X, tile.Y));
+                    creation.CreatedTile.PlaySpecialCreationReveal(
+                        creation.CreatedTile.GetSpecial(),
+                        board.TileSize);
                 }
-            }
 
-            if (creation.TailHoldSeconds > 0f)
-                yield return new WaitForSeconds(creation.TailHoldSeconds);
+                if (context != null && context.NotifyCellImpactNow != null)
+                {
+                    for (int i = 0; i < contributors.Count; i++)
+                    {
+                        var tile = contributors[i];
+                        if (tile == null)
+                            continue;
+
+                        context.NotifyCellImpactNow(new Vector2Int(tile.X, tile.Y));
+                    }
+                }
+
+                if (creation.TailHoldSeconds > 0f)
+                    yield return new WaitForSeconds(creation.TailHoldSeconds);
+            }
+            finally
+            {
+                if (creation.CreatedTile != null
+                    && creation.CreatedTile
+                    && creation.CreatedTile.RuntimeState == TileRuntimeState.Special)
+                    creation.CreatedTile.SetRuntimeState(TileRuntimeState.Idle);
+            }
 
             yield break;
         }

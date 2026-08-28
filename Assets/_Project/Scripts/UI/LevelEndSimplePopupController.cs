@@ -84,10 +84,16 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private LossRowView lossRowPrefab;
     [Tooltip("Satırların ekleneceği container (VerticalLayoutGroup önerilir).")]
     [SerializeField] private Transform lossRowContainer;
-    [Tooltip("Altın ikonu sprite'ı.")]
+    [Tooltip("Altın ikonu sprite'ı (base reward; event değil, UI'ın kendi config'i).")]
     [SerializeField] private Sprite coinIcon;
-    [Tooltip("Event ikonu yedeği (config.goalIcon boşsa kullanılır).")]
-    [SerializeField] private Sprite eventIconFallback;
+    // NOT: Event kaybı ikonları artık her event'in KENDİ config'inde (Safari→SafariConfig,
+    // Streak→StreakBoosterConfig). UI onları tanımaz; provider'lar kendi config'inden okur.
+    [Tooltip("Kayıp satırı sağ-alt rozeti: gerçekleşmiş (kazanılmış) öğe için checkmark.")]
+    [SerializeField] private Sprite achievedIcon;
+    [Tooltip("Kayıp satırı sağ-alt rozeti: gerçekleşmemiş öğe için cancel ikonu.")]
+    [SerializeField] private Sprite notAchievedIcon;
+    [Tooltip("Kayıp panelinin başlığı ('Şunları kaybedeceksin').")]
+    [SerializeField] private TMP_Text lossTitleText;
     [Tooltip("İlk cancel'da sağdan kayıp gelen kayıp paneli (RectTransform). Aşama 1'de gizli.")]
     [SerializeField] private RectTransform lossSlidePanel;
     [SerializeField, Min(0.05f)] private float lossSlideDuration = 0.35f;
@@ -413,6 +419,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (!failSecondStage && _hasLosses && lossSlidePanel != null)
         {
             failSecondStage = true;
+            // Kayıp ekranı gelince "hamle ekle" teklifi ikonu artık geçersiz → gizle.
+            if (extraMovesIcon != null)
+                extraMovesIcon.enabled = false;
             lossSlidePanel.gameObject.SetActive(true);
             StartCoroutine(SlideInFromRight(lossSlidePanel, lossSlideDuration));
             return;
@@ -548,8 +557,21 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (levelCompletionLogoAnimation != null)
         {
-            GameEventSfx.PlayLevelWin();
+            bool winSfxPlayed = false;
+            void StartWinSfx()
+            {
+                if (winSfxPlayed) return;
+                winSfxPlayed = true;
+                GameEventSfx.StartLevelWinLoop();
+            }
+            void StopWinSfx() => GameEventSfx.StopLevelWinLoop();
+
+            levelCompletionLogoAnimation.FireworksStarted += StartWinSfx;
+            levelCompletionLogoAnimation.FireworksFinished += StopWinSfx;
             yield return StartCoroutine(levelCompletionLogoAnimation.Play());
+            levelCompletionLogoAnimation.FireworksStarted -= StartWinSfx;
+            levelCompletionLogoAnimation.FireworksFinished -= StopWinSfx;
+            StopWinSfx();
         }
 
         _movesAtWin = board != null ? board.RemainingMoves : 0;
@@ -1163,12 +1185,20 @@ public class LevelEndSimplePopupController : MonoBehaviour
         bool any = items.Count > 0;
         _hasLosses = any;
 
+        // Başlık ("Şunları kaybedeceksin") — kayıp varken göster.
+        if (lossTitleText != null)
+        {
+            lossTitleText.gameObject.SetActive(any);
+            if (any)
+                lossTitleText.text = LocalizedText("level_end_loss_title", "Şunları kaybedeceksin");
+        }
+
         if (lossRowPrefab != null && lossRowContainer != null)
         {
             foreach (var it in items)
             {
                 var row = Instantiate(lossRowPrefab, lossRowContainer);
-                row.Set(it.icon, it.amount);
+                row.Set(it.icon, it.label, it.amount, it.achieved ? achievedIcon : notAchievedIcon);
                 _lossRows.Add(row.gameObject);
             }
 
@@ -1181,7 +1211,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (failEventLossWarningText != null)
         {
             var sb = new System.Text.StringBuilder();
-            foreach (var it in items) sb.AppendLine($"•  {it.amount}");
+            foreach (var it in items)
+                sb.AppendLine(string.IsNullOrEmpty(it.label) ? $"•  {it.amount}" : $"•  {it.label}: {it.amount}");
             failEventLossWarningText.gameObject.SetActive(any);
             if (any)
                 failEventLossWarningText.text = $"Vazgeçersen kaybedeceklerin:\n{sb.ToString().TrimEnd()}";
@@ -1190,27 +1221,25 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (lossSummaryRoot != null) lossSummaryRoot.SetActive(any);
     }
 
-    // Kayıp öğeleri (ikon + miktar). Yeni kayıp türü (yıldız, çoklu event vb.) buraya eklenir.
-    private System.Collections.Generic.List<(Sprite icon, int amount)> BuildLossItems()
+    // Kayıp öğeleri (ikon + miktar + gerçekleşme durumu). "achieved" = bu level'da fiilen kazanıldı/elde
+    // edildi mi (checkmark); false ise henüz gerçekleşmemiş potansiyel ödül (cancel). Yeni tür buraya eklenir.
+    private System.Collections.Generic.List<(Sprite icon, string label, int amount, bool achieved)> BuildLossItems()
     {
-        var items = new System.Collections.Generic.List<(Sprite icon, int amount)>();
+        var items = new System.Collections.Generic.List<(Sprite icon, string label, int amount, bool achieved)>();
 
-        // Altın (kazanılacak ödül) — gerçek level-sonu ödülüyle tutarlı (flat mod dahil).
+        // Altın (kazanılacak ödül) — base reward, UI'ın kendi config'i; bir "event" değil → burada kalır.
+        // Level KAZANILINCA verilir; fail ekranında henüz gerçekleşmedi → cancel.
         var level = board != null ? board.ActiveLevelData : null;
         int coinReward = useFlatCoinReward
             ? Mathf.Max(0, flatCoinReward)
             : (level != null ? Mathf.Max(0, level.baseCoinReward) : 0);
-        if (coinReward > 0) items.Add((coinIcon, coinReward));
+        if (coinReward > 0)
+            items.Add((coinIcon, LocalizedText("level_end_loss_coin", "Ödül"), coinReward, false));
 
-        // Event(ler) — şu an tek aktif event; çoklu event eklenince burası döngüye döner.
-        var pe = ProgressEventService.Instance;
-        if (pe != null && pe.StagedGainTotal > 0)
-        {
-            Sprite evIcon = pe.EventIcon != null ? pe.EventIcon : eventIconFallback;
-            items.Add((evIcon, pe.StagedGainTotal));
-        }
-
-        // İleride: yıldız vb. → items.Add((starIcon, lostStars));
+        // Event'ler DİNAMİK: her sistem kendi riskini LevelLossRegistry'ye kaydeder. UI hiçbir event'i
+        // tanımaz — yeni event eklemek için buraya DOKUNULMAZ (bkz. LevelLossRegistry).
+        foreach (var it in LevelLossRegistry.Collect())
+            items.Add((it.Icon, it.Label, it.Amount, it.Achieved));
 
         return items;
     }
@@ -1348,14 +1377,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (coins > 0)
         {
-            PlayerPrefs.SetInt(CoinFlyToWalletAnimator.PendingRewardKey, coins);
-            PlayerPrefs.SetInt(CoinFlyToWalletAnimator.PendingBeforeKey, coinBefore);
-            PlayerPrefs.SetInt(CoinFlyToWalletAnimator.PendingAfterKey, coinAfter);
-            PlayerPrefs.Save();
-        }
-        else
-        {
-            CoinFlyToWalletAnimator.ClearPendingReward();
+            CoinFlyToWalletAnimator.QueuePendingReward(coins, coinBefore, coinAfter);
         }
     }
 
@@ -1555,7 +1577,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (theme == null)
             return;
 
-        SetImageSpriteIfPresent(failPopupImage, theme.levelEndPopupBackground);
+        // Fail popup keeps its authored (prefab) sprite — theme override intentionally NOT applied here so a
+        // dedicated fail artwork (e.g. LevelEndFailPopupV1) isn't clobbered by levelEndPopupBackground.
         SetImageSpriteIfPresent(successPopupImage, theme.levelEndPopupBackground);
         SetImageSpriteIfPresent(failContinueButtonImage, theme.levelEndContinueButton);
         SetImageSpriteIfPresent(successContinueButtonImage, theme.levelEndContinueButton);

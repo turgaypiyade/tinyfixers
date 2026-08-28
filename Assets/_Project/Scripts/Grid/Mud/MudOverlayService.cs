@@ -188,6 +188,9 @@ public class MudOverlayService : MonoBehaviour
 
     // Overlay hücre için komşu yalnız overlay sayılır; damaged (stage2) hücre için eski davranış
     // (her mud komşu). Hit/damage mantığı DEĞİŞMEZ — bu yalnız görsel kenar/köşe hesabıdır.
+    // NOT: Örtülü mud (EnergyContainer vb. altında) artık düz MudUnder değil, GERÇEK bir MudOverlay
+    // hücresi olarak kaydediliyor (GridSpawner) → IsMudAt/IsOverlayAt onu zaten görür; ayrı veri
+    // kontrolüne gerek yok. Gizleyen cover'lar (Safe/OBB) altındaki mud hiç kaydedilmez → dikiş doğru.
     private bool SameMaterial(bool overlayCell, int x, int y)
         => overlayCell ? IsOverlayAt(x, y) : IsMudAt(x, y);
 

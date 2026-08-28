@@ -1050,7 +1050,7 @@ public class FallAction : BoardAction
         finally
         {
             board?.ClearReservedTileTargetCell(targetCell);
-            if (tile != null && tile)
+            if (tile != null && tile && tile.RuntimeState == TileRuntimeState.Falling)
                 tile.SetRuntimeState(TileRuntimeState.Idle);
         }
     }

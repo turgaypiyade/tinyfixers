@@ -24,12 +24,12 @@ MonoBehaviour:
   borderColorId: 0
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
   successAnimationBackground: {fileID: 0}
-  preLevelPopupBackground: {fileID: 21300000, guid: 352fad001981d4e229487a0b185e42bc, type: 3}
-  preLevelContinueButton: {fileID: 0}
+  preLevelPopupBackground: {fileID: 21300000, guid: 0add8b432cfa148cab294f8d7be2fc24, type: 3}
+  preLevelContinueButton: {fileID: 21300000, guid: ba378aa579f6947379c2a27dc1a5b718, type: 3}
   preLevelCancelButton: {fileID: 0}
   preLevelCheckMark: {fileID: 21300000, guid: 4d7e3c1a8d2a049e7862849181984ab4, type: 3}
-  preLevelDimColor: {r: 0, g: 0, b: 0, a: 0.55}
-  preLevelSlotNormalTint: {r: 1, g: 0.62352943, b: 0.10980392, a: 0.6862745}
+  preLevelDimColor: {r: 0, g: 0, b: 0, a: 0.89411765}
+  preLevelSlotNormalTint: {r: 1, g: 1, b: 1, a: 1}
   preLevelSlotSelectedTint: {r: 0.42745098, g: 1, b: 0.23921569, a: 0.6666667}
   preLevelCountTextColor: {r: 1, g: 1, b: 1, a: 1}
   preLevelButtonTextColor: {r: 1, g: 1, b: 1, a: 1}
@@ -42,23 +42,23 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 8498b48c28ced4e79904859e2a7cb13e, type: 3}
   - {fileID: 21300000, guid: 8498b48c28ced4e79904859e2a7cb13e, type: 3}
   loadingHints:
-  - image: {fileID: 21300000, guid: 227f7f906fe094eb68e53870408ec840, type: 3}
+  - image: {fileID: 21300000, guid: 36fdba37bc1404ef4b078a00204c67e6, type: 3}
     titleLocalizationKey: loading_hint_3match_title
     descriptionLocalizationKey: loading_hint_3match_desc
     loadingLocalizationKey: loading_hint_loading
-  - image: {fileID: 21300000, guid: e1a6c7cf92370451b95bba33bb5c73bb, type: 3}
+  - image: {fileID: 21300000, guid: 25f2c7b5d9b5e4226867623aad291882, type: 3}
     titleLocalizationKey: loading_hint_lineh_title
     descriptionLocalizationKey: loading_hint_lineh_desc
     loadingLocalizationKey: loading_hint_loading
-  - image: {fileID: 21300000, guid: cd89e89cd855449ac94eb2cd8885f355, type: 3}
+  - image: {fileID: 21300000, guid: 36fdba37bc1404ef4b078a00204c67e6, type: 3}
     titleLocalizationKey: loading_hint_linev_title
     descriptionLocalizationKey: loading_hint_linev_desc
     loadingLocalizationKey: loading_hint_loading
-  - image: {fileID: 21300000, guid: 4a20593d56623495a8213363bcbf3e8f, type: 3}
+  - image: {fileID: 21300000, guid: 42099cda2b9534be39dab5d576c965b5, type: 3}
     titleLocalizationKey: loading_hint_pulse_title
     descriptionLocalizationKey: loading_hint_pulse_desc
     loadingLocalizationKey: loading_hint_loading
-  - image: {fileID: 21300000, guid: 9693ddf5b0a474f4499f2c1051f5692b, type: 3}
+  - image: {fileID: 21300000, guid: 07b622adb22c449ca836ab6a419f1102, type: 3}
     titleLocalizationKey: loading_hint_override_title
     descriptionLocalizationKey: loading_hint_override_desc
     loadingLocalizationKey: loading_hint_loading
