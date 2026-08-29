@@ -26,3 +26,7 @@ MonoBehaviour:
   overrideYellow: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
   overrideBlue: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
   overrideGreen: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+  boosterHammer: {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
+  boosterRow: {fileID: 21300000, guid: 6383ea1b8ef964caa93201ecd940dce2, type: 3}
+  boosterColumn: {fileID: 21300000, guid: 6a7898939c3c747d784adee98d1f7bbb, type: 3}
+  boosterShuffle: {fileID: 21300000, guid: d7f358535eeaf4bcf91584c858f8ce88, type: 3}

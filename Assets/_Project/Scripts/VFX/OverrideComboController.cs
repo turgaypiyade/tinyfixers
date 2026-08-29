@@ -131,6 +131,20 @@ public class OverrideComboController : MonoBehaviour
     private static Sprite circleSprite;
     private static Sprite softRingSprite;
 
+    // ── Alev tabanlı radyal dalga (sprite'lı: sunburst + ring) ──
+    private Image sunburstImage;
+    private Image sunburstGlowImage;   // ana ışının arkasında daha büyük+soluk kopya = yumuşak/blur his
+    private Image flameRingImage;      // girintili-çıkıntılı beyaz glow halka
+    private Image smoothRingImage;     // onunla beraber hareket eden TEMİZ daire halka (aynı kalınlık)
+    private static Sprite sunburstSprite;
+    private static Sprite flameRingSprite;
+    private static Sprite spikyGlowSprite;
+    private static Sprite jaggedRingSprite;
+    private static Sprite smoothRingSprite;
+    // Sıcak alev paleti: ışınlar sarı, halka turuncu-kırmızı.
+    private static readonly Color SunburstColor  = new Color(1f, 0.82f, 0.28f, 1f);
+    private static readonly Color FlameRingColor = new Color(1f, 0.42f, 0.12f, 1f);
+
     private RectTransform IconRectA  => iconImageA.rectTransform;
     private RectTransform IconRectB  => iconImageB.rectTransform;
 
@@ -146,6 +160,10 @@ public class OverrideComboController : MonoBehaviour
         mergeDuration = 0.15f;
         radialClearDuration = 1.50f;
         fadeOutDuration = 0.15f;
+
+        // Eski prosedürel düz çizgi/segment görselini KAPAT (artık sunburst+ring sprite kullanılıyor).
+        blastRayCount = 0;
+        blastHaloSegmentCount = 0;
     }
     
     private void Reset() { canvasGroup = GetComponent<CanvasGroup>(); }
@@ -222,9 +240,220 @@ public class OverrideComboController : MonoBehaviour
         if (blastHaloImage == null)
             blastHaloImage = CreateBlastImage("BlastHalo_Auto", GetSoftRingSprite());
 
+        // Alev sprite'ları: sunburst glow (en arkada, yumuşatıcı) + ışınlar + shockwave halkası (önde).
+        // OBurstImg kendi alev renklerini taşıdığı için BEYAZ tint (renkleri koru, sarıya boğma).
+        if (sunburstGlowImage == null)
+        {
+            sunburstGlowImage = CreateCenteredSprite("SunburstGlow_Auto", LoadSunburst(), Color.white);
+            sunburstGlowImage.transform.SetAsLastSibling();
+        }
+        if (sunburstImage == null)
+        {
+            sunburstImage = CreateCenteredSprite("Sunburst_Auto", LoadSunburst(), Color.white);
+            sunburstImage.transform.SetAsLastSibling();
+        }
+        // Cephede iki beyaz glow halka (beraber hareket eder, aynı kalınlık):
+        // temiz daire (altta) + girintili-çıkıntılı (üstte).
+        if (smoothRingImage == null)
+        {
+            smoothRingImage = CreateCenteredSprite("SmoothRing_Auto", GetSmoothGlowRingSprite(), Color.white);
+            smoothRingImage.transform.SetAsLastSibling();
+        }
+        if (flameRingImage == null)
+        {
+            flameRingImage = CreateCenteredSprite("JaggedRing_Auto", GetJaggedGlowRingSprite(), Color.white);
+            flameRingImage.transform.SetAsLastSibling();
+        }
+
         EnsureBlastRays();
         EnsureBlastHaloSegments();
         BringBlastHaloToFront();
+    }
+
+    private Image CreateCenteredSprite(string objectName, Sprite sprite, Color color)
+    {
+        var go = new GameObject(objectName, typeof(RectTransform));
+        go.layer = gameObject.layer;
+        go.transform.SetParent(pivot, false);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = Vector2.one * iconSize;
+        rt.localScale = Vector3.one;
+        var img = go.AddComponent<Image>();
+        img.sprite = sprite;
+        img.raycastTarget = false;
+        img.color = WithAlpha(color, 0f);
+        return img;
+    }
+
+    private static Sprite LoadSunburst()
+    {
+        // Sprite yerine PROSEDÜREL beyaz "spiky glow": parlak merkez → dışa yumuşayan,
+        // kenarları girintili/çıkıntılı beyaz glow. Sprite kumarına gerek yok.
+        return GetSpikyGlowSprite();
+    }
+
+    // Merkezi parlak, dışa yumuşak sönen, çevresi DÜZENSİZ (girintili-çıkıntılı) beyaz glow dokusu.
+    private static Sprite GetSpikyGlowSprite()
+    {
+        if (spikyGlowSprite != null)
+            return spikyGlowSprite;
+
+        const int size = 256;
+        var tex = new Texture2D(size, size, TextureFormat.ARGB32, false);
+        tex.name = "OverrideSpikyGlow";
+        tex.filterMode = FilterMode.Bilinear;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        float c = (size - 1) * 0.5f;
+        var clear = new Color(1f, 1f, 1f, 0f);
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - c, dy = y - c;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy) / c;   // 0 merkez .. ~1 kenar
+                float ang = Mathf.Atan2(dy, dx);
+
+                // Girintili/çıkıntılı çevre: daha çok/derin harmonik → belirgin düzensiz loblar.
+                float wobble =
+                    0.16f  * Mathf.Sin(ang * 7f  + 0.6f) +
+                    0.11f  * Mathf.Sin(ang * 13f + 2.1f) +
+                    0.075f * Mathf.Sin(ang * 23f + 4.3f) +
+                    0.05f  * Mathf.Sin(ang * 37f + 1.2f);
+                float rim = 0.74f + wobble;                        // daha derin girinti/çıkıntı
+
+                float d = dist / Mathf.Max(0.05f, rim);           // 0 merkez, 1 düzensiz kenar
+                float a;
+                if (d >= 1f)
+                {
+                    a = 0f;
+                }
+                else
+                {
+                    float core   = Mathf.Pow(1f - d, 1.5f);       // merkez parlak → dışa sönüm
+                    float feather = Smooth01((1f - d) / 0.16f);   // kenarda yumuşak kesim
+                    a = Mathf.Clamp01(core) * feather;
+                }
+
+                tex.SetPixel(x, y, a > 0.003f ? new Color(1f, 1f, 1f, a) : clear);
+            }
+        }
+
+        tex.Apply(false, true);
+        spikyGlowSprite = Sprite.Create(tex, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f));
+        return spikyGlowSprite;
+    }
+
+    private static Sprite GetJaggedGlowRingSprite()
+    {
+        // wobbleScale ile hafifçe girintili, ince band.
+        if (jaggedRingSprite == null) jaggedRingSprite = BuildGlowRing("OverrideJaggedRing", 0.65f, 0.075f);
+        return jaggedRingSprite;
+    }
+
+    private static Sprite GetSmoothGlowRingSprite()
+    {
+        // Girinti YOK (temiz daire), AYNI band kalınlığı.
+        if (smoothRingSprite == null) smoothRingSprite = BuildGlowRing("OverrideSmoothRing", 0f, 0.075f);
+        return smoothRingSprite;
+    }
+
+    // Beyaz glow halka dokusu. wobbleScale: kenar düzensizliği (0 = temiz daire). sigma: band kalınlığı.
+    private static Sprite BuildGlowRing(string name, float wobbleScale, float sigma)
+    {
+        const int size = 256;
+        var tex = new Texture2D(size, size, TextureFormat.ARGB32, false);
+        tex.name = name;
+        tex.filterMode = FilterMode.Bilinear;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        float c = (size - 1) * 0.5f;
+        var clear = new Color(1f, 1f, 1f, 0f);
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - c, dy = y - c;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy) / c;   // 0..~1
+                float ang = Mathf.Atan2(dy, dx);
+
+                float wobble = wobbleScale * (
+                    0.075f * Mathf.Sin(ang * 7f  + 0.6f) +
+                    0.05f  * Mathf.Sin(ang * 13f + 2.1f) +
+                    0.035f * Mathf.Sin(ang * 23f + 4.3f));
+                float ringR = 0.70f + wobble;
+
+                float dd = (dist - ringR) / sigma;
+                float a = Mathf.Exp(-dd * dd);
+
+                tex.SetPixel(x, y, a > 0.004f ? new Color(1f, 1f, 1f, Mathf.Clamp01(a)) : clear);
+            }
+        }
+
+        tex.Apply(false, true);
+        return Sprite.Create(tex, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f));
+    }
+
+    private static Sprite LoadFlameRing()
+    {
+        if (flameRingSprite == null) flameRingSprite = Resources.Load<Sprite>("VFX/shockwave_ring");
+        return flameRingSprite;
+    }
+
+    // Alev radyal dalgası: sunburst ışınları + halka cepheyle senkron büyür, döner, alev tint + fade.
+    private void UpdateFlameWave(float waveRadius, float phaseT)
+    {
+        float diameter = Mathf.Max(2f, waveRadius * 2f);
+
+        // Hızlı belir (ilk %8), %70'e kadar tam parlak, sonra yumuşak sön.
+        float aIn  = Smooth01(phaseT / 0.08f);
+        float aOut = 1f - Smooth01((phaseT - 0.70f) / 0.30f);
+        float alpha = aIn * aOut;
+
+        // Arka glow kopyası: daha büyük, çok soluk, ters yönde döner → keskin ışın kenarlarını
+        // yumuşatan blur/hale hissi verir.
+        // Rim texture'da ~%80 yarıçapta → cepheye ulaşsın diye ~1.25 çarpan.
+        if (sunburstGlowImage != null)
+        {
+            var rt = sunburstGlowImage.rectTransform;
+            rt.sizeDelta = Vector2.one * diameter * 1.55f;   // daha büyük, soluk dış hale
+            rt.localRotation = Quaternion.Euler(0f, 0f, -phaseT * 22f);
+            sunburstGlowImage.color = WithAlpha(Color.white, alpha * 0.4f);
+        }
+
+        if (sunburstImage != null)
+        {
+            var rt = sunburstImage.rectTransform;
+            rt.sizeDelta = Vector2.one * diameter * 1.25f;   // merkez beyaz glow cepheye otursun
+            rt.localRotation = Quaternion.Euler(0f, 0f, phaseT * 30f);
+            sunburstImage.color = WithAlpha(Color.white, alpha);
+        }
+
+        // Cephedeki İKİ halka beraber hareket eder (aynı boyut/konum): temiz daire + girintili.
+        // Band ~%70 yarıçapta → cepheye oturması için /0.70 ≈ 1.43 çarpan.
+        float ringDiameter = diameter * 1.43f;
+
+        if (smoothRingImage != null)
+        {
+            var rt = smoothRingImage.rectTransform;
+            rt.sizeDelta = Vector2.one * ringDiameter;
+            rt.localRotation = Quaternion.identity;                     // temiz daire dönmez
+            smoothRingImage.color = WithAlpha(Color.white, alpha * 0.8f);
+        }
+
+        if (flameRingImage != null)
+        {
+            var rt = flameRingImage.rectTransform;
+            rt.sizeDelta = Vector2.one * ringDiameter;                  // aynı konum → beraber hareket
+            rt.localRotation = Quaternion.Euler(0f, 0f, -phaseT * 18f); // girintili halka hafif döner
+            flameRingImage.color = WithAlpha(Color.white, alpha * 0.9f);
+        }
+
     }
 
     private Image CreateGlowBehind(Image anchor, string name)
@@ -626,7 +855,7 @@ public class OverrideComboController : MonoBehaviour
             blastEmit.rateOverTimeMultiplier = 250f;
             stormParticles.Play();
 
-            UpdateBlastRays(0f, 0f);
+            UpdateFlameWave(0f, 0f);
 
             float clearTime = 0f;
             float lastReportedRadius = -1f;
@@ -680,7 +909,7 @@ public class OverrideComboController : MonoBehaviour
                     float glowAlpha = waveGlowColor.a * 0.55f * Mathf.Clamp01(t * 3f) * (1f - t);
                     SetAlpha(waveGlowImage, Mathf.Clamp01(glowAlpha));
                 }
-                UpdateBlastRays(waveRadius, t);
+                UpdateFlameWave(waveRadius, t);
 
                 // Particle blast expands with wave
                 float blastRadius = Mathf.Lerp(0.1f, orbitRadiusStart * 2.5f, expandT);
@@ -710,6 +939,10 @@ public class OverrideComboController : MonoBehaviour
             if (shockwaveImage != null) SetAlpha(shockwaveImage, 0f);
             if (waveGlowImage  != null) SetAlpha(waveGlowImage, 0f);
             if (blastHaloImage != null) SetAlpha(blastHaloImage, 0f);
+            if (sunburstImage     != null) SetAlpha(sunburstImage, 0f);
+            if (sunburstGlowImage != null) SetAlpha(sunburstGlowImage, 0f);
+            if (flameRingImage    != null) SetAlpha(flameRingImage, 0f);
+            if (smoothRingImage   != null) SetAlpha(smoothRingImage, 0f);
             HideBlastRays();
             OnRadialClearProgress?.Invoke(1f);
             OnWaveRadiusChanged?.Invoke(WaveMaxRadius);

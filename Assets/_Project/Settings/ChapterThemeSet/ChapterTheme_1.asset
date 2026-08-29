@@ -37,10 +37,9 @@ MonoBehaviour:
   loadingScreenImages:
   - {fileID: 21300000, guid: 195efa70a7541414a9d5f30ca5630078, type: 3}
   - {fileID: 21300000, guid: e33a13330145a40e9b9c1307d4abe674, type: 3}
-  - {fileID: 21300000, guid: 8498b48c28ced4e79904859e2a7cb13e, type: 3}
+  - {fileID: 21300000, guid: 1b84d161e03ef41329ba93986ee4f316, type: 3}
   - {fileID: 21300000, guid: 2ffe2b14db1084a7182210ce7ae161d6, type: 3}
-  - {fileID: 21300000, guid: 8498b48c28ced4e79904859e2a7cb13e, type: 3}
-  - {fileID: 21300000, guid: 8498b48c28ced4e79904859e2a7cb13e, type: 3}
+  - {fileID: 21300000, guid: e124f76cf16604869ae9416fe5932f6d, type: 3}
   loadingHints:
   - image: {fileID: 21300000, guid: 36fdba37bc1404ef4b078a00204c67e6, type: 3}
     titleLocalizationKey: loading_hint_3match_title

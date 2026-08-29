@@ -87,12 +87,42 @@ public class BoosterService
                 lightningVisualTargets: initialLightningTargets,
                 lightningLineStrikes: chainLineStrikes);
 
-            var animationMode = (mode == BoardController.BoosterMode.Row || mode == BoardController.BoosterMode.Column)
-                ? ClearAnimationMode.LightningStrike
-                : ClearAnimationMode.Default;
+            // Mini Elevator booster: sadece DÜZ sütun temizliğinde (özel/zincir yokken) devreye girer.
+            // Sütunda special varsa (chain) mevcut lightning davranışı korunur → özel aktivasyonu bozulmaz.
+            bool useElevatorClear = mode == BoardController.BoosterMode.Column
+                && !hasLineActivation
+                && chainLineStrikes.Count == 0
+                && matches.Count > 0;
 
-            if (hasLineActivation)
-                animationMode = ClearAnimationMode.LightningStrike;
+            ClearAnimationMode animationMode;
+            if (useElevatorClear)
+            {
+                animationMode = ClearAnimationMode.ElevatorLift;
+            }
+            else
+            {
+                animationMode = (mode == BoardController.BoosterMode.Row || mode == BoardController.BoosterMode.Column)
+                    ? ClearAnimationMode.LightningStrike
+                    : ClearAnimationMode.Default;
+
+                if (hasLineActivation)
+                    animationMode = ClearAnimationMode.LightningStrike;
+            }
+
+            // Asansör alttan yukarı tararken taşları sıra ile temizler: her taşın gecikmesi
+            // ((Height-1) - y) * step. Aynı step, asansör görselinin yükseliş hızını da sürer (senkron).
+            Dictionary<TileView, float> elevatorClearDelays = null;
+            if (useElevatorClear)
+            {
+                elevatorClearDelays = new Dictionary<TileView, float>(matches.Count);
+                int gridHeight = board.Height;
+                foreach (var tv in matches)
+                {
+                    if (tv == null) continue;
+                    int order = gridHeight > 0 ? (gridHeight - 1 - tv.Y) : tv.Y;
+                    elevatorClearDelays[tv] = Mathf.Max(0, order) * ElevatorStepDelay;
+                }
+            }
 
             ObstacleHitContext obstacleHitContext = ObstacleHitContext.Booster;
 
@@ -133,11 +163,22 @@ public class BoosterService
 
             if (mode == BoardController.BoosterMode.Column && targetCell.HasValue)
             {
-                IEnumerator cannonExit = null;
-                yield return PlayCannonBoosterEnterAndFireFx(targetCell.Value.x, exitRoutine: r => cannonExit = r);
+                if (useElevatorClear)
+                {
+                    IEnumerator elevatorLift = null;
+                    yield return PlayElevatorBoosterEnterFx(targetCell.Value.x, liftRoutine: r => elevatorLift = r);
 
-                if (cannonExit != null)
-                    cannonExitRoutine = board.StartCoroutine(cannonExit);
+                    if (elevatorLift != null)
+                        cannonExitRoutine = board.StartCoroutine(elevatorLift);
+                }
+                else
+                {
+                    IEnumerator cannonExit = null;
+                    yield return PlayCannonBoosterEnterAndFireFx(targetCell.Value.x, exitRoutine: r => cannonExit = r);
+
+                    if (cannonExit != null)
+                        cannonExitRoutine = board.StartCoroutine(cannonExit);
+                }
             }
 
             if (mode == BoardController.BoosterMode.Row && targetCell.HasValue)
@@ -160,6 +201,7 @@ public class BoosterService
                 lightningOriginCell: targetCell,
                 lightningVisualTargets: initialLightningTargets,
                 lightningLineStrikes: lightningLineStrikes,
+                perTileClearDelays: elevatorClearDelays,
                 enqueueCascadeOnComplete: true));
 
             while (actionSequencer.IsPlaying)
@@ -357,6 +399,149 @@ public class BoosterService
             UnityEngine.Object.Destroy(cannon.gameObject);
     }
 
+    // ============================================================
+    // MINI ELEVATOR / SERVİS ASANSÖRÜ BOOSTER FX
+    //
+    // Column booster'ın yeni görseli: platform sütunun altına kayar, sonra yukarı
+    // "araba kaldıracı" gibi yükselir. Taşları bu görsel silmez — asıl temizlik
+    // MatchClearAction (ElevatorLift) tarafında, aynı step ile senkron savurma ile olur.
+    // Görsel şimdilik cannon prefabını (placeholder) kullanır; asıl asansör sprite'ı
+    // board.CannonBoosterFxPrefab değiştirilerek takılır.
+    // ============================================================
+
+    private const float ElevatorStepDelay = 0.05f;
+
+    // ── Joker/booster tek-atış SFX (Resources/Audio/Jokers/*) ─────────────────
+    private static readonly Dictionary<string, AudioClip> _jokerSfxCache = new Dictionary<string, AudioClip>();
+
+    private void PlayJokerSfx(string fileName, float volume = 1f)
+    {
+        if (board == null || board.Audio == null || string.IsNullOrEmpty(fileName))
+            return;
+
+        if (!_jokerSfxCache.TryGetValue(fileName, out AudioClip clip) || clip == null)
+        {
+            clip = Resources.Load<AudioClip>("Audio/Jokers/" + fileName);
+            _jokerSfxCache[fileName] = clip;
+        }
+
+        if (clip != null)
+            board.Audio.PlayOneShotClip(clip, volume);
+    }
+
+    private IEnumerator PlayElevatorBoosterEnterFx(int columnX, Action<IEnumerator> liftRoutine)
+    {
+        // BoosterFxParent = BoardMask ve grid'e MASKELİYOR (çizginin ~12px altı kırpılır) → makasın
+        // tabanı/altı kesiliyordu. Makası maskenin DIŞINA (BoardMask.parent) koyuyoruz → kırpılmaz,
+        // çizginin altına serbestçe iner. Mask'in hemen ÖNÜNE koyup board üstünde görünür yaparız.
+        RectTransform maskParent = GetBoosterFxParent();
+        RectTransform parent = maskParent != null ? maskParent.parent as RectTransform : null;
+        int inFrontIndex = -1;
+        if (parent != null && maskParent != null)
+            inFrontIndex = maskParent.GetSiblingIndex() + 1;
+        else
+            parent = maskParent;   // fallback
+        if (parent == null)
+            yield break;
+
+        // Makaslı asansör (scissor lift) — Resources/MiniLift parçalarından prosedürel inşa.
+        var go = new GameObject("__ScissorLiftFx", typeof(RectTransform), typeof(CanvasGroup));
+        go.layer = parent.gameObject.layer;   // Screen Space Camera culling'e karşı
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        if (inFrontIndex >= 0)
+            rt.SetSiblingIndex(Mathf.Min(inFrontIndex, parent.childCount - 1));   // mask'in hemen önü
+        else
+            rt.SetAsLastSibling();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.localScale = Vector3.one;
+
+        Canvas.ForceUpdateCanvases();
+
+        Vector2 bottomRowCenter;
+        if (!TryGetColumnAnchoredCenter(columnX, parent, out bottomRowCenter))
+            bottomRowCenter = GetColumnBottomAnchoredCenter(columnX, parent);
+
+        // Taban ~cannon referansına (alt satır merkezinin ~1 tile altı) otursun. Ön katman KIRPMADIĞI
+        // için serbestçe çizginin altına inebilir; collapsed kademe-bağımsız olduğu için tüm grid
+        // yüksekliklerinde tutarlı. (restPos = bottomRowCenter - 0.5 - lowerOffset ≈ cannon noktası.)
+        float lowerOffset = board.TileSize * 0.7f;
+        Vector2 restPos  = new Vector2(bottomRowCenter.x, bottomRowCenter.y - board.TileSize * 0.5f - lowerOffset);
+        Vector2 startPos = restPos + new Vector2(0f, -board.TileSize * 2.2f);   // ekranın altından gelir
+
+        rt.anchoredPosition = startPos;
+
+        var view = go.AddComponent<ScissorLiftView>();
+        // Tabla en tepede ~üst satıra ulaşsın diye lowerOffset yükseklik bütçesine geri eklenir.
+        float maxHeightUI = Mathf.Max(1f, (board.Height - 1) * board.TileSize + lowerOffset);
+        view.Build(maxHeightUI, board.TileSize);
+
+        PlayJokerSfx("Mini1");   // slide-in
+
+        // Kapalı makas ekranın altından dinlenme konumuna KAYARAK gelir (slide-in).
+        const float enterDuration = 0.30f;
+        float t = 0f;
+        while (t < enterDuration)
+        {
+            if (go == null) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / enterDuration);
+            rt.anchoredPosition = Vector2.LerpUnclamped(startPos, restPos, EaseOutBackLight(k));
+            yield return null;
+        }
+        if (go == null) yield break;
+        rt.anchoredPosition = restPos;
+
+        // Kaldırma + çıkış, clear ile paralel çalışsın diye lift routine olarak devredilir.
+        liftRoutine?.Invoke(PlayScissorLiftAndExitFx(go, view));
+    }
+
+    private IEnumerator PlayScissorLiftAndExitFx(GameObject go, ScissorLiftView view)
+    {
+        if (go == null || view == null)
+            yield break;
+
+        PlayJokerSfx("Mini2");   // yükseliş
+
+        // Lineer açılım = taş gecikmeleriyle (ElevatorStepDelay) senkron.
+        float riseDuration = Mathf.Max(0.12f, (board.Height - 1) * ElevatorStepDelay);
+        float t = 0f;
+
+        while (t < riseDuration)
+        {
+            if (go == null) yield break;
+            t += Time.deltaTime;
+            view.SetExtension01(Mathf.Clamp01(t / riseDuration));
+            yield return null;
+        }
+
+        if (go == null) yield break;
+        view.SetExtension01(1f);
+
+        PlayJokerSfx("mini3");   // tepe / bırakma
+
+        // Tepede kısa bekleme.
+        yield return new WaitForSeconds(0.06f);
+
+        // Çıkış: hafif geri toplanarak sönme.
+        const float exitDuration = 0.18f;
+        t = 0f;
+        while (t < exitDuration)
+        {
+            if (go == null) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / exitDuration);
+            view.SetExtension01(Mathf.Lerp(1f, 0.82f, k));
+            view.Alpha = 1f - k;
+            yield return null;
+        }
+
+        if (go != null)
+            UnityEngine.Object.Destroy(go);
+    }
+
     private RectTransform CreateCannonFxInstance()
     {
         RectTransform prefab = board.CannonBoosterFxPrefab;
@@ -440,164 +625,259 @@ public class BoosterService
 
     private IEnumerator PlayHammerBoosterImpactFx(Vector2Int cell, Action<IEnumerator> exitRoutine)
     {
-        RectTransform hammer = CreateHammerFxInstance();
-
-        if (hammer == null)
-            yield break;
-
         RectTransform parent = GetBoosterFxParent();
         if (parent == null)
-        {
-            UnityEngine.Object.Destroy(hammer.gameObject);
             yield break;
-        }
 
-        hammer.SetParent(parent, false);
-        hammer.SetAsLastSibling();
-
-        hammer.anchorMin = new Vector2(0f, 1f);
-        hammer.anchorMax = new Vector2(0f, 1f);
-        hammer.pivot = new Vector2(0.5f, 0.5f);
+        RectTransform hammer = CreateHm2HammerFx(parent);
+        if (hammer == null)
+            yield break;
 
         CanvasGroup canvasGroup = hammer.GetComponent<CanvasGroup>();
         if (canvasGroup == null)
             canvasGroup = hammer.gameObject.AddComponent<CanvasGroup>();
-
         canvasGroup.alpha = 1f;
 
-        Vector2 cellCenter = GetCellAnchoredCenter(cell, parent);
+        Canvas.ForceUpdateCanvases();
 
-        // Hammer prefab/sprite görsel ağırlığı pivot'a göre yukarıda kaldığı için
-        // root hedefini tile merkezinden biraz aşağı alıyoruz.
-        // Eğer hâlâ yukarıda kalırsa 0.30f değerini 0.40f / 0.50f yapabilirsin.
-        Vector2 targetPos = cellCenter + new Vector2(-board.TileSize * 0.60f, -board.TileSize * 0.01f);
+        // Başlangıç: Hammer joker slotunun ÜZERİNDEN, joker boyutunda.
+        Vector2 startPos;
+        Vector2 jokerSize;
+        if (!TryGetHammerSlotStart(parent, out startPos, out jokerSize))
+        {
+            // Fallback: sol-alt köşe, ~tile boyutu.
+            jokerSize = new Vector2(board.TileSize, board.TileSize);
+            startPos = GetCellAnchoredCenter(new Vector2Int(0, board.Height - 1), parent)
+                       + new Vector2(-board.TileSize, -board.TileSize);
+        }
 
-        // Hareket iki fazlı:
-        // 1) Çekiç önce yukarı kalkar ve Y eksenine/vertical poza yaklaşır.
-        // 2) Sonra X eksenine/horizontal poza doğru hedefe vurur.
-        Vector2 readyPos = targetPos + new Vector2(-board.TileSize * 0.08f, board.TileSize * 0.22f);
-        Vector2 liftPos = targetPos + new Vector2(-board.TileSize * 0.18f, board.TileSize * 0.45f);
-        Vector2 hitPos = targetPos + new Vector2(board.TileSize * 0.02f, -board.TileSize * 0.05f);
+        // Boyutu makul aralığa sıkıştır (cross-canvas ölçek hatası dev/minik yapmasın).
+        float baseSize = board.TileSize;
+        jokerSize = new Vector2(
+            Mathf.Clamp(jokerSize.x, baseSize * 0.6f, baseSize * 1.6f),
+            Mathf.Clamp(jokerSize.y, baseSize * 0.6f, baseSize * 1.6f));
 
-        hammer.anchoredPosition = readyPos;
-        hammer.localScale = Vector3.one * 1.12f;
+        hammer.sizeDelta = jokerSize;
+        Vector2 targetPos = GetCellAnchoredCenter(cell, parent);
 
-        // Sprite'ın 0 derecesini X ekseni/horizontal kabul ediyoruz.
-        // Önce Y eksenine yaklaşır, sonra tekrar X eksenine vurur.
-        const float readyAngle = 12f;
-        const float liftAngle = 78f;
-        const float hitAngle = 0f;
+        hammer.anchoredPosition = startPos;
+        hammer.localScale = Vector3.one;                        // joker boyutu (1x)
+        hammer.localRotation = Quaternion.Euler(0f, 0f, 18f);   // hafif ön açı (saat yönü tersi)
 
-        hammer.localRotation = Quaternion.Euler(0f, 0f, readyAngle);
+        PlayJokerSfx("Hammerswing");
 
-        const float liftDuration = 0.070f;
-        const float strikeDuration = 0.085f;
+        // Açı ayarları (2D, Z ekseni): cock = geri çekilmeden ÖNCE saat YÖNÜ TERSİNE (sola/dikeye) dönüş.
+        const float cockAngle = 25f;    // saat yönü tersi, dikeye yakın.
+        const float hitAngle  = 6f;     // vuruş anı açısı.
 
+        // FAZ A: slottan taşın biraz ÜST-GERİSİNE yaklaş + büyü (1 → 2.1). Düz yaklaşır.
+        const float travelDuration = 0.30f;
+        Vector2 readyPos = targetPos + new Vector2(-board.TileSize * 0.12f, board.TileSize * 0.45f);
+        Vector2 arcPeak = (startPos + readyPos) * 0.5f + new Vector2(0f, board.TileSize * 0.8f);
         float t = 0f;
-
-        // Lift: x ekseninden y eksenine doğru kalkış.
-        while (t < liftDuration)
+        while (t < travelDuration)
         {
-            if (hammer == null || !hammer)
-                yield break;
-
+            if (hammer == null || !hammer) yield break;
             t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / travelDuration);
+            float e = EaseOut(k);
 
-            float k = Mathf.Clamp01(t / liftDuration);
-            float eased = EaseOut(k);
-
-            hammer.anchoredPosition = Vector2.LerpUnclamped(readyPos, liftPos, eased);
-            hammer.localRotation = Quaternion.LerpUnclamped(
-                Quaternion.Euler(0f, 0f, readyAngle),
-                Quaternion.Euler(0f, 0f, liftAngle),
-                eased);
-            hammer.localScale = Vector3.LerpUnclamped(Vector3.one * 1.12f, Vector3.one * 1.18f, eased);
-
+            Vector2 a = Vector2.LerpUnclamped(startPos, arcPeak, e);
+            Vector2 b = Vector2.LerpUnclamped(arcPeak, readyPos, e);
+            hammer.anchoredPosition = Vector2.LerpUnclamped(a, b, e);
+            hammer.localScale = Vector3.one * Mathf.LerpUnclamped(1f, 2.1f, e);
+            hammer.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpUnclamped(18f, 0f, e));
             yield return null;
         }
+        if (hammer == null || !hammer) yield break;
 
-        if (hammer == null || !hammer)
-            yield break;
-
+        // FAZ COCK: GERİ ÇEKİLMEDEN ÖNCE sola/dikeye döndür (kaldır). Konum readyPos'ta sabit.
+        const float cockDuration = 0.13f;
         t = 0f;
-
-        // Strike: y ekseninden x eksenine doğru vuruş.
-        while (t < strikeDuration)
+        while (t < cockDuration)
         {
-            if (hammer == null || !hammer)
-                yield break;
-
+            if (hammer == null || !hammer) yield break;
             t += Time.deltaTime;
-
-            float k = Mathf.Clamp01(t / strikeDuration);
-            float eased = k * k;
-
-            hammer.anchoredPosition = Vector2.LerpUnclamped(liftPos, hitPos, eased);
-            hammer.localRotation = Quaternion.LerpUnclamped(
-                Quaternion.Euler(0f, 0f, liftAngle),
-                Quaternion.Euler(0f, 0f, hitAngle),
-                eased);
-            hammer.localScale = Vector3.LerpUnclamped(Vector3.one * 1.18f, Vector3.one * 1.20f, eased);
-
+            float k = Mathf.Clamp01(t / cockDuration);
+            float e = EaseOut(k);
+            hammer.anchoredPosition = readyPos;
+            hammer.localScale = Vector3.one * Mathf.LerpUnclamped(2.1f, 2.3f, e);
+            hammer.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpUnclamped(0f, cockAngle, e));
             yield return null;
         }
+        if (hammer == null || !hammer) yield break;
 
-        if (hammer == null || !hammer)
-            yield break;
+        // FAZ WIND-UP: SONRA geri çekil (readyPos → pullbackPos) + BÜYÜ (2.3 → 2.8), cock açısını KORU.
+        Vector2 pullbackPos = targetPos + new Vector2(-board.TileSize * 0.30f, board.TileSize * 1.05f);
+        const float windupDuration = 0.16f;
+        t = 0f;
+        while (t < windupDuration)
+        {
+            if (hammer == null || !hammer) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / windupDuration);
+            float e = EaseOut(k);   // yavaşlayarak geri çekilir (yaylanma öncesi)
+            hammer.anchoredPosition = Vector2.LerpUnclamped(readyPos, pullbackPos, e);
+            hammer.localScale = Vector3.one * Mathf.LerpUnclamped(2.3f, 2.8f, e);
+            hammer.localRotation = Quaternion.Euler(0f, 0f, cockAngle);   // cocked açı sabit
+            yield return null;
+        }
+        if (hammer == null || !hammer) yield break;
 
-        // Impact frame.
-        hammer.anchoredPosition = hitPos;
+        // FAZ SLAM: cocked açıdan aşağı SERT SAVUR (cockAngle → hitAngle); hızlanarak; 2.8 → 2.1.
+        const float slamDuration = 0.09f;
+        t = 0f;
+        while (t < slamDuration)
+        {
+            if (hammer == null || !hammer) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / slamDuration);
+            float e = k * k;   // easeIn → hızlanan sert vuruş
+            hammer.anchoredPosition = Vector2.LerpUnclamped(pullbackPos, targetPos, e);
+            hammer.localScale = Vector3.one * Mathf.LerpUnclamped(2.8f, 2.1f, e);
+            hammer.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpUnclamped(cockAngle, hitAngle, e));
+            yield return null;
+        }
+        if (hammer == null || !hammer) yield break;
+
+        // VURUŞ ANI: alev + ses + squash.
+        hammer.anchoredPosition = targetPos;
+        hammer.localScale = Vector3.one * 2.1f;
         hammer.localRotation = Quaternion.Euler(0f, 0f, hitAngle);
-        hammer.localScale = Vector3.one * 1.20f;
+        board.PatchbotDashUI?.PlayImpactBurstAtCell(board, cell, 1.35f);
+        PlayJokerSfx("HammerHit");
 
-        // Taşa küçük squash/pulse ver.
         yield return HammerImpactPulse(cell);
 
-        // Impact anından sonra taş kırma başlasın.
-        exitRoutine?.Invoke(PlayHammerBoosterExitFx(hammer, canvasGroup, targetPos));
+        // Impact anından sonra taş kırma başlasın; hammer paralel olarak düşerek kaybolur.
+        exitRoutine?.Invoke(PlayHammerFallFx(hammer, targetPos));
     }
-    private IEnumerator PlayHammerBoosterExitFx(RectTransform hammer, CanvasGroup canvasGroup, Vector2 targetPos)
+
+    // Vuruştan sonra: orijinal (joker) boyuta dön, sonra yerçekimiyle serbest düşüş → ekran altında yok ol.
+    private IEnumerator PlayHammerFallFx(RectTransform hammer, Vector2 hitPos)
     {
         if (hammer == null || !hammer)
             yield break;
 
-        const float holdDuration = 0.035f;
-        const float fadeDuration = 0.12f;
+        PlayJokerSfx("HammerFalling");
 
-        yield return new WaitForSeconds(holdDuration);
-
+        // Orijinal boyuta (1x) dön, hafif düşmeye başla.
+        const float settleDuration = 0.10f;
+        Vector3 fromScale = hammer.localScale;   // ~2.0x
+        Vector2 p = hitPos;
         float t = 0f;
-
-        Vector2 startPos = hammer.anchoredPosition;
-        Vector2 exitPos = startPos + new Vector2(0f, board.TileSize * 0.20f);
-
-        Vector3 startScale = hammer.localScale;
-        Vector3 endScale = startScale * 0.92f;
-
-        while (t < fadeDuration)
+        while (t < settleDuration)
         {
-            if (hammer == null || !hammer)
-                yield break;
-
+            if (hammer == null || !hammer) yield break;
             t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / settleDuration);
+            hammer.localScale = Vector3.LerpUnclamped(fromScale, Vector3.one, EaseOut(k));
+            p.y -= board.TileSize * 0.15f * (Time.deltaTime / settleDuration);
+            hammer.anchoredPosition = p;
+            yield return null;
+        }
+        if (hammer == null || !hammer) yield break;
+        hammer.localScale = Vector3.one;
 
-            float k = Mathf.Clamp01(t / fadeDuration);
-            float eased = EaseOut(k);
+        // Serbest düşüş: yerçekimi ivmesi + hafif tumble. Ekran altına inince yok ol.
+        float vy = board.TileSize * 1.5f;
+        float gravity = board.TileSize * 45f;
+        float rot = hammer.localRotation.eulerAngles.z;
+        float rotSpeed = UnityEngine.Random.Range(-160f, 160f);
+        float limitY = hitPos.y - board.TileSize * (board.Height + 4);
 
-            hammer.anchoredPosition = Vector2.LerpUnclamped(startPos, exitPos, eased);
-            hammer.localScale = Vector3.LerpUnclamped(startScale, endScale, eased);
-
-            // Artık çıkarken rotate etmiyoruz.
-            hammer.localRotation = Quaternion.Euler(0f, 0f, 0f);
-
-            if (canvasGroup != null)
-                canvasGroup.alpha = 1f - k;
-
+        while (hammer != null && hammer)
+        {
+            float dt = Time.deltaTime;
+            vy += gravity * dt;
+            p.y -= vy * dt;
+            hammer.anchoredPosition = p;
+            rot += rotSpeed * dt;
+            hammer.localRotation = Quaternion.Euler(0f, 0f, rot);
+            if (p.y <= limitY) break;
             yield return null;
         }
 
         if (hammer != null && hammer)
             UnityEngine.Object.Destroy(hammer.gameObject);
+    }
+
+    // HM2 sprite'lı hammer görseli üretir (Resources/Boosters/HM2).
+    private RectTransform CreateHm2HammerFx(RectTransform parent)
+    {
+        var go = new GameObject("__HammerBoosterFx", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+        go.layer = parent.gameObject.layer;   // Screen Space Camera culling guard
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.SetAsLastSibling();
+        // KRİTİK: GetCellAnchoredCenter / ScreenToParentAnchored (0,1) top-left uzayında pozisyon
+        // veriyor → hammer da (0,1) anchor olmalı, yoksa yarım-parent kadar kayıp ekran dışına gider.
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.localScale = Vector3.one;
+
+        var img = go.GetComponent<Image>();
+        img.sprite = Resources.Load<Sprite>("Boosters/HM2");
+        img.color = Color.white;
+        img.raycastTarget = false;
+        img.preserveAspect = true;
+        return rt;
+    }
+
+    // Hammer joker slotunun (index 0) ikon konumu + boyutunu FX parent uzayına çevirir.
+    // Slot farklı bir canvas'ta olabileceği için dönüşüm SCREEN SPACE üzerinden yapılır (cross-canvas güvenli).
+    private bool TryGetHammerSlotStart(RectTransform parent, out Vector2 startPos, out Vector2 sizeLocal)
+    {
+        startPos = default;
+        sizeLocal = default;
+
+        var slots = UnityEngine.Object.FindObjectsByType<BoosterSlotView>(
+            FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        BoosterSlotView hammerSlot = null;
+        for (int i = 0; i < slots.Length; i++)
+            if (slots[i] != null && slots[i].ResolvedIndex == 0) { hammerSlot = slots[i]; break; }
+
+        RectTransform iconRt = hammerSlot != null ? hammerSlot.IconRect : null;
+        if (iconRt == null || !iconRt)
+            return false;
+
+        var corners = new Vector3[4];
+        iconRt.GetWorldCorners(corners);           // 0=BL, 2=TR (world)
+        Camera iconCam = CanvasCameraFor(iconRt);
+        Vector2 sBL = RectTransformUtility.WorldToScreenPoint(iconCam, corners[0]);
+        Vector2 sTR = RectTransformUtility.WorldToScreenPoint(iconCam, corners[2]);
+
+        Vector2 aBL = ScreenToParentAnchored(parent, sBL);
+        Vector2 aTR = ScreenToParentAnchored(parent, sTR);
+
+        startPos = (aBL + aTR) * 0.5f;
+        sizeLocal = new Vector2(Mathf.Abs(aTR.x - aBL.x), Mathf.Abs(aTR.y - aBL.y));
+
+        if (sizeLocal.x < 1f || sizeLocal.y < 1f)
+            sizeLocal = new Vector2(board.TileSize, board.TileSize);
+
+        return true;
+    }
+
+    // Ekran noktasını, FX parent'ın (0.5,0.5) anchor'lı çocuk uzayına (anchoredPosition) çevirir.
+    private static Vector2 ScreenToParentAnchored(RectTransform parent, Vector2 screenPoint)
+    {
+        Camera cam = CanvasCameraFor(parent);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, cam, out Vector2 local);
+        Rect rect = parent.rect;
+        // (0,1) top-left anchor referansı — GetCellAnchoredCenter ile aynı uzay.
+        Vector2 anchorRef = new Vector2(rect.xMin, rect.yMax);
+        return local - anchorRef;
+    }
+
+    private static Camera CanvasCameraFor(RectTransform rt)
+    {
+        var canvas = rt != null ? rt.GetComponentInParent<Canvas>() : null;
+        if (canvas == null) return null;
+        canvas = canvas.rootCanvas;
+        return canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
     }
     private IEnumerator HammerImpactPulse(Vector2Int cell)
     {
@@ -838,6 +1118,8 @@ public class BoosterService
         if (booster == null)
             yield break;
 
+        PlayJokerSfx("DrillSound");
+
         Image boosterImg = booster.GetComponent<Image>();
         if (boosterImg == null)
             boosterImg = booster.GetComponentInChildren<Image>();
@@ -1054,6 +1336,7 @@ public class BoosterService
 
     public IEnumerator ShuffleBoardRoutine(ActionSequencer actionSequencer)
     {
+        PlayJokerSfx("shuffle1");
         yield return SafeShuffleBoardRoutine(board.BoardInitService);
     }
 

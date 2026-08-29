@@ -52,6 +52,7 @@ public class BoardAnimator
         clearEffectOrchestrator = new TileClearEffectOrchestrator(
             new GoalFlyTileClearEffect(board, tileAnimator),
             new LightningStrikeTileClearEffect(board.BoardVfxPlayer, lightningColor, tileAnimator),
+            new ElevatorFlingTileClearEffect(board, tileAnimator),
             new DefaultPopTileClearEffect(tileAnimator)
         );
 
@@ -532,9 +533,13 @@ public class BoardAnimator
                     skipBreakFxTiles.Add(tile);
                 }
 
+                // ElevatorLift'te goal taşları da SAVRULUR (HUD'a uçmaz) — sayım veri temizliğinde
+                // yapıldığı için fling sayımı bozmaz; kullanıcı hepsi sağa-sola dağılsın istiyor.
                 var tileAnimationMode =
-                    isGoalTile ? ClearAnimationMode.GoalFlyToHud :
-                    (useLightningEffect ? ClearAnimationMode.LightningStrike : ClearAnimationMode.Default);
+                    animationMode == ClearAnimationMode.ElevatorLift ? ClearAnimationMode.ElevatorLift :
+                    (isGoalTile ? ClearAnimationMode.GoalFlyToHud :
+                    (useLightningEffect ? ClearAnimationMode.LightningStrike :
+                    ClearAnimationMode.Default));
                 if (trace)
                 {
                     Debug.Log(

@@ -15,6 +15,24 @@ public class BoardVfxService
         this.board = board;
     }
 
+    // Override combo tek-atış SFX (Resources/Audio/OverrideCombo/*), board.Audio üzerinden.
+    private static readonly Dictionary<string, AudioClip> _overrideSfxCache = new Dictionary<string, AudioClip>();
+
+    private void PlayOverrideSfx(string fileName)
+    {
+        if (board == null || board.Audio == null || string.IsNullOrEmpty(fileName))
+            return;
+
+        if (!_overrideSfxCache.TryGetValue(fileName, out AudioClip clip) || clip == null)
+        {
+            clip = Resources.Load<AudioClip>("Audio/OverrideCombo/" + fileName);
+            _overrideSfxCache[fileName] = clip;
+        }
+
+        if (clip != null)
+            board.Audio.PlayOneShotClip(clip);
+    }
+
     public float PlaySystemOverrideComboVfxAndGetDuration(
         OverrideComboController vfx,
         RectTransform vfxSpace,
@@ -54,13 +72,33 @@ public class BoardVfxService
             vfx.Play(overrideSpriteA, overrideSpriteB, mergedSprite);
         }
         
+        // ── Üç-fazlı Override+Override sesi ──
+        // 1) SPIN-UP: combo başında (küreler dönmeye başlarken).
+        PlayOverrideSfx("Override1");
+
+        // 2) IMPACT: küreler çarpıştığında (OnImpact, ~0.70s).
+        System.Action onImpactSfx = () => PlayOverrideSfx("Override2");
+        vfx.OnImpact += onImpactSfx;
+
+        // 3) WAVE: radyal dalga board'u temizlerken (ilk wave callback'inde bir kez).
+        bool waveSfxPlayed = false;
+
         System.Action<float> onProgress = null;
-        onProgress = (r) => board.InvokeSystemOverrideWaveProgress(r);
+        onProgress = (r) =>
+        {
+            board.InvokeSystemOverrideWaveProgress(r);
+            if (!waveSfxPlayed)
+            {
+                waveSfxPlayed = true;
+                PlayOverrideSfx("Override3");
+            }
+        };
         vfx.OnWaveRadiusChanged += onProgress;
-        
+
         System.Action onFinished = null;
         onFinished = () => {
             vfx.OnWaveRadiusChanged -= onProgress;
+            vfx.OnImpact -= onImpactSfx;
             vfx.OnComboFinished -= onFinished;
         };
         vfx.OnComboFinished += onFinished;

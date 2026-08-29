@@ -292,9 +292,10 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         var icon = iconRt.gameObject.AddComponent<Image>();
         icon.raycastTarget = false;
         icon.preserveAspect = true;
-        if (reward != null && reward.icon != null)
+        Sprite resolvedIcon = reward != null ? reward.ResolveIcon() : null;
+        if (resolvedIcon != null)
         {
-            icon.sprite = reward.icon;
+            icon.sprite = resolvedIcon;
         }
         else
         {
@@ -309,7 +310,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         var label = labelRt.gameObject.AddComponent<TextMeshProUGUI>();
         int amount = reward != null ? Mathf.Max(1, reward.amount) : 1;
         string name = reward != null && !string.IsNullOrEmpty(reward.fallbackName) ? reward.fallbackName : "";
-        label.text = reward != null && reward.icon != null ? $"x{amount}" : $"{name} x{amount}";
+        label.text = resolvedIcon != null ? $"x{amount}" : $"{name} x{amount}";
         if (_font != null) label.font = _font;
         label.fontSize = 34;
         label.fontStyle = FontStyles.Bold;

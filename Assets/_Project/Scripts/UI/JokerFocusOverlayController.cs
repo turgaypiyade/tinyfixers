@@ -23,10 +23,17 @@ public class JokerFocusOverlayController : MonoBehaviour
     [SerializeField] private bool verboseDebugLogs = true;
 
     [Header("Texts")]
-    [SerializeField] private string singleTargetText = "Tek taşı yok etmek istediğin objeyi seç!";
-    [SerializeField] private string rowTargetText    = "Satırı yok etmek istediğin objeyi seç!";
-    [SerializeField] private string columnTargetText = "Sütunu yok etmek istediğin objeyi seç!";
-    [SerializeField] private string shuffleText      = "Karıştırmak için board üzerinde bir taşı seç!";
+    [SerializeField] private string singleTargetText = "Kırmak istediğin objeye tıkla";
+    [SerializeField] private string rowTargetText    = "Yok etmek istediğin satıra tıkla";
+    [SerializeField] private string columnTargetText = "Yok etmek istediğin sütuna tıkla";
+    [SerializeField] private string shuffleText      = "Herhangi bir yere tıkla";
+
+    [Header("Titles (üstteki büyük başlık)")]
+    [SerializeField] private string singleTitle  = "Wonder Çekici!";
+    [SerializeField] private string rowTitle     = "Wonder Roketi!";
+    [SerializeField] private string columnTitle  = "Wonder Asansör!";
+    [SerializeField] private string shuffleTitle = "Wonder Karıştırıcı!";
+    [SerializeField] private Color  titleColor   = new Color(1f, 0.85f, 0.2f, 1f);   // referanstaki sarı
 
     [Header("Selection Highlight")]
     [SerializeField] private bool   useProceduralSelectionFrame   = false;
@@ -39,7 +46,7 @@ public class JokerFocusOverlayController : MonoBehaviour
     [SerializeField] private float  selectedGlowAlpha             = 0.9f;
     [SerializeField] private float  selectedGlowScale             = 1.3f;
     [SerializeField] private Color  selectionOutlineColor         = new Color(0.45f, 0.9f, 1f, 1f);
-    [SerializeField] private float  selectedOverlayAlpha          = 0.88f;
+    [SerializeField] private float  selectedOverlayAlpha          = 0.95f;
 
     // ─────────────────────────────────────────────────────────────────────────
     private const int MaxJokerSlots = 8;
@@ -63,7 +70,12 @@ public class JokerFocusOverlayController : MonoBehaviour
     private GameObject      overlayRoot;
     private Image           overlayTop;
     private Image           overlayBottom;
+    private Image           overlayLeft;
+    private Image           overlayRight;
+    private readonly System.Collections.Generic.List<Image> holePanels = new System.Collections.Generic.List<Image>();
     private TextMeshProUGUI descriptionText;
+    private Image           titleIcon;        // üstteki booster ikonu
+    private TextMeshProUGUI titleText;        // üstteki büyük başlık
 
     private int    selectedJokerIndex  = -1;
     private Sprite selectionFrameSprite;
@@ -213,25 +225,75 @@ public class JokerFocusOverlayController : MonoBehaviour
 
         overlayTop    = MakeBlockPanel(overlayRoot.transform, "OverlayTop");
         overlayBottom = MakeBlockPanel(overlayRoot.transform, "OverlayBottom");
+        overlayLeft   = MakeBlockPanel(overlayRoot.transform, "OverlayLeft");
+        overlayRight  = MakeBlockPanel(overlayRoot.transform, "OverlayRight");
 
+        // Üstteki booster ikonu (sol üst).
+        var iconGo = new GameObject("JokerFocusIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        iconGo.transform.SetParent(overlayRoot.transform, false);
+        titleIcon = iconGo.GetComponent<Image>();
+        titleIcon.raycastTarget = false;
+        titleIcon.preserveAspect = true;
+        var ir = iconGo.GetComponent<RectTransform>();
+        ir.anchorMin = new Vector2(0.03f, 0.785f);
+        ir.anchorMax = new Vector2(0.245f, 0.895f);   // daha büyük + daha aşağı
+        ir.offsetMin = ir.offsetMax = Vector2.zero;
+
+        // Büyük başlık (ikonun sağı).
+        var titleGo = new GameObject("JokerFocusTitle",
+            typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        titleGo.transform.SetParent(overlayRoot.transform, false);
+        titleText = titleGo.GetComponent<TextMeshProUGUI>();
+        titleText.fontSize         = 72;
+        titleText.enableAutoSizing = true;
+        titleText.fontSizeMin      = 22;
+        titleText.fontSizeMax      = 80;
+        titleText.alignment        = TextAlignmentOptions.Left;
+        titleText.color            = titleColor;
+        titleText.fontStyle        = FontStyles.Bold;
+        titleText.raycastTarget    = false;
+        titleText.textWrappingMode = TextWrappingModes.NoWrap;   // tek satır (autosize küçültür)
+        titleText.overflowMode     = TextOverflowModes.Overflow;
+        var titr = titleGo.GetComponent<RectTransform>();
+        titr.anchorMin = new Vector2(0.26f, 0.832f);
+        titr.anchorMax = new Vector2(0.98f, 0.898f);
+        titr.offsetMin = titr.offsetMax = Vector2.zero;
+
+        // Açıklama (başlığın altı).
         var textGo = new GameObject("JokerFocusDescription",
             typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
         textGo.transform.SetParent(overlayRoot.transform, false);
 
         descriptionText = textGo.GetComponent<TextMeshProUGUI>();
-        descriptionText.fontSize         = 56;
+        descriptionText.fontSize         = 44;
         descriptionText.enableAutoSizing = true;
-        descriptionText.fontSizeMin      = 28;
-        descriptionText.fontSizeMax      = 56;
-        descriptionText.alignment        = TextAlignmentOptions.Center;
+        descriptionText.fontSizeMin      = 14;
+        descriptionText.fontSizeMax      = 46;
+        descriptionText.alignment        = TextAlignmentOptions.Left;
         descriptionText.color            = Color.white;
         descriptionText.fontStyle        = FontStyles.Bold;
         descriptionText.raycastTarget    = false;
+        descriptionText.textWrappingMode = TextWrappingModes.NoWrap;   // tek satır
+        descriptionText.overflowMode     = TextOverflowModes.Overflow;
 
         var tr = textGo.GetComponent<RectTransform>();
-        tr.anchorMin = new Vector2(0.08f, 0.82f);
-        tr.anchorMax = new Vector2(0.92f, 0.96f);
+        tr.anchorMin = new Vector2(0.26f, 0.768f);
+        tr.anchorMax = new Vector2(0.98f, 0.828f);
         tr.offsetMin = tr.offsetMax = Vector2.zero;
+
+        // KRİTİK: new GameObject UI'ı layer 0'da doğuyor; Screen Space Camera sadece kendi layer'ını
+        // render ettiği için overlay cull'lanıp görünmez oluyordu (overlayScale=0 red herring).
+        // Tüm overlay alt-ağacını canvas/controller layer'ına al.
+        int uiLayer = rootCanvas != null ? rootCanvas.gameObject.layer : gameObject.layer;
+        SetLayerRecursive(overlayRoot.transform, uiLayer);
+    }
+
+    private static void SetLayerRecursive(Transform root, int layer)
+    {
+        if (root == null) return;
+        root.gameObject.layer = layer;
+        for (int i = 0; i < root.childCount; i++)
+            SetLayerRecursive(root.GetChild(i), layer);
     }
 
     private Image MakeBlockPanel(Transform parent, string goName)
@@ -266,11 +328,71 @@ public class JokerFocusOverlayController : MonoBehaviour
         Rect cr        = overlayRect.rect;
         float normBotY = Mathf.Clamp01((bl.y - cr.yMin) / cr.height);
         float normTopY = Mathf.Clamp01((tr.y - cr.yMin) / cr.height);
+        float normLeftX  = Mathf.Clamp01((bl.x - cr.xMin) / cr.width);
+        float normRightX = Mathf.Clamp01((tr.x - cr.xMin) / cr.width);
 
         SetAnchors(overlayTop.rectTransform,    0, normTopY, 1, 1);
         SetAnchors(overlayBottom.rectTransform, 0, 0,        1, normBotY);
+        // Board bbox'ın YANLARI (band içinde) da karartılır.
+        if (overlayLeft  != null) SetAnchors(overlayLeft.rectTransform,  0,          normBotY, normLeftX, normTopY);
+        if (overlayRight != null) SetAnchors(overlayRight.rectTransform, normRightX, normBotY, 1,         normTopY);
 
-        DebugLog($"[JokerFocus] Panels normBot={normBotY:F3} normTop={normTopY:F3}");
+        // Board İÇİNDEKİ hole hücreleri (staircase/boşluklar) tek tek karartılır.
+        RefreshHolePanels(overlayRect);
+
+        DebugLog($"[JokerFocus] Panels normBot={normBotY:F3} normTop={normTopY:F3} L={normLeftX:F3} R={normRightX:F3}");
+    }
+
+    // Board içindeki HOLE hücrelerini karartan panelleri (pool) yerleştirir.
+    private void RefreshHolePanels(RectTransform overlayRect)
+    {
+        if (board == null || overlayRect == null) return;
+
+        int w = board.Width, h = board.Height;
+        if (w <= 1 || h <= 0) return;
+
+        // Bir hücrenin overlay-local boyutu: iki komşu hücre merkezinin local farkı.
+        Vector2 l00 = overlayRect.InverseTransformPoint(board.GetCellWorldCenterPosition(0, 0));
+        Vector2 l10 = overlayRect.InverseTransformPoint(board.GetCellWorldCenterPosition(1, 0));
+        float cellLocal = Mathf.Abs(l10.x - l00.x);
+        if (cellLocal < 1f) cellLocal = board.TileSize;
+
+        // Tüm pool panellerini gizle.
+        for (int i = 0; i < holePanels.Count; i++)
+            if (holePanels[i] != null) holePanels[i].gameObject.SetActive(false);
+
+        int used = 0;
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                if (!board.IsMaskHoleCell(x, y)) continue;
+
+                Image panel = used < holePanels.Count ? holePanels[used] : CreateHolePanel();
+                if (used >= holePanels.Count) holePanels.Add(panel);
+                used++;
+
+                var rt = panel.rectTransform;
+                Vector2 local = overlayRect.InverseTransformPoint(board.GetCellWorldCenterPosition(x, y));
+                rt.anchoredPosition = local;
+                rt.sizeDelta = new Vector2(cellLocal * 1.03f, cellLocal * 1.03f);   // hafif bindirme (boşluk kalmasın)
+                panel.gameObject.SetActive(true);
+            }
+        }
+    }
+
+    private Image CreateHolePanel()
+    {
+        var go = new GameObject("OverlayHole", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.layer = rootCanvas != null ? rootCanvas.gameObject.layer : gameObject.layer;
+        go.transform.SetParent(overlayRoot.transform, false);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        var img = go.GetComponent<Image>();
+        img.color = new Color(0f, 0f, 0f, selectedOverlayAlpha);
+        img.raycastTarget = true;
+        return img;
     }
 
     private static void SetAnchors(RectTransform rt, float x0, float y0, float x1, float y1)
@@ -290,12 +412,21 @@ public class JokerFocusOverlayController : MonoBehaviour
     // ── Visibility ────────────────────────────────────────────────────────────
     private void SetOverlayVisible(bool visible)
     {
+        // Awake'te rootCanvas bulunamadıysa overlay hiç oluşmamış olabilir → tembel oluştur.
+        if (overlayRoot == null && visible)
+        {
+            if (rootCanvas == null)
+                rootCanvas = GetComponentInParent<Canvas>() ?? FindFirstObjectByType<Canvas>();
+            CreateOverlayUi();
+        }
+
         if (overlayRoot != null)
         {
             overlayRoot.SetActive(visible);
             if (visible)
                 overlayRoot.transform.SetAsLastSibling();
         }
+
         SetJokerGridAboveOverlay(visible);
     }
 
@@ -386,6 +517,27 @@ public class JokerFocusOverlayController : MonoBehaviour
                 _ => string.Empty
             };
         }
+
+        if (titleText != null)
+        {
+            titleText.text = index switch
+            {
+                0 => singleTitle,
+                1 => rowTitle,
+                2 => columnTitle,
+                3 => shuffleTitle,
+                _ => string.Empty
+            };
+        }
+
+        var lib = TileIconLibrary.Shared;
+        Sprite iconSprite = lib != null ? lib.GetBoosterIcon(BoosterAccessService.ToMode(index)) : null;
+        if (titleIcon != null)
+        {
+            titleIcon.sprite  = iconSprite;
+            titleIcon.enabled = iconSprite != null;
+        }
+
         SetOverlayVisible(true);
         RefreshOverlayPanels();
     }
@@ -396,6 +548,8 @@ public class JokerFocusOverlayController : MonoBehaviour
     {
         SetOverlayVisible(false);
         if (descriptionText != null) descriptionText.text = string.Empty;
+        if (titleText != null) titleText.text = string.Empty;
+        if (titleIcon != null) titleIcon.enabled = false;
         SetSelectedJoker(-1);
     }
 

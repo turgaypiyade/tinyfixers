@@ -11,6 +11,8 @@ public class GameEventSfxConfig : ScriptableObject
 {
     [Header("Sandık açılışı")]
     public AudioClip chestOpen;
+    [Tooltip("Sandık açılış varyantları — doluysa her açılışta rastgele biri çalınır (yoksa chestOpen).")]
+    public AudioClip[] chestOpenVariants;
     [Range(0f, 1f)] public float chestOpenVolume = 1f;
 
     [Header("Oyun-sonu (win) — boşsa chestOpen kullanılır")]

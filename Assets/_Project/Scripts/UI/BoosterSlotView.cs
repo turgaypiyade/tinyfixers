@@ -32,6 +32,12 @@ public class BoosterSlotView : MonoBehaviour
     private TMP_Text freeBadgeLabel;   // freeBadge altındaki text — lazily bulunur
     private int resolvedIndex = -1;
 
+    /// <summary>Bu slotun booster index'i (0=Hammer, 1=Row, 2=Column, 3=Shuffle). -1 = çözülemedi.</summary>
+    public int ResolvedIndex => resolvedIndex;
+
+    /// <summary>Slotun ikon Image'inin RectTransform'u (uçuş efektleri başlangıç noktası için).</summary>
+    public RectTransform IconRect => iconImage != null ? iconImage.rectTransform : null;
+
     private void Awake()
     {
         resolvedIndex = ResolveIndex();
@@ -40,6 +46,23 @@ public class BoosterSlotView : MonoBehaviour
                            "boosterIndex (0-3) ya da JokerBoosterSlotMapping.BoosterIndex ayarla.", this);
 
         AutoFindMissingRefs();
+        ApplyBoosterIcon();
+    }
+
+    // Booster ikonu tek kaynaktan: TileIconLibrary.Shared. Library'de sprite yoksa
+    // sahnedeki elle atanmış ikon korunur (regresyon yok).
+    private void ApplyBoosterIcon()
+    {
+        if (iconImage == null || resolvedIndex < 0)
+            return;
+
+        var lib = TileIconLibrary.Shared;
+        if (lib == null)
+            return;
+
+        var sprite = lib.GetBoosterIcon(BoosterAccessService.ToMode(resolvedIndex));
+        if (sprite != null)
+            iconImage.sprite = sprite;
     }
 
     // Index çözüm sırası: serialized alan → mapping (self/parent) → obje adındaki sayı (Slot1→0).
@@ -77,7 +100,29 @@ public class BoosterSlotView : MonoBehaviour
         if (countText == null) countText = FindChild<TMP_Text>("counttxt", "counttext", "count");
         if (lockOverlay == null) lockOverlay = FindChildObject("lockimage", "lockoverlay", "lock");
         if (freeBadge == null) freeBadge = FindChildObject("freebadge", "freebage", "free");
-        if (iconImage == null) iconImage = FindChild<Image>("icon");
+        // İkon child'ı sahnede "Joker_1"/"Slot..." gibi adlanabiliyor → sadece "icon" adına güvenme.
+        if (iconImage == null) iconImage = FindChild<Image>("icon", "joker", "special", "booster");
+        if (iconImage == null) iconImage = FindIconFallback();
+    }
+
+    // Bilinen alt-parçalar (numberbg/lock/free/count/frame/glow) DIŞINDAKİ ilk child Image = ikon.
+    // İkon objesinin adı ne olursa olsun (ör. "Joker_1") bulur.
+    private Image FindIconFallback()
+    {
+        foreach (var c in GetComponentsInChildren<Image>(true))
+        {
+            if (c == null || c.transform == transform) continue;
+            if (numberBG != null && c == numberBG) continue;
+
+            string cn = c.gameObject.name.ToLowerInvariant();
+            if (cn.Contains("number") || cn.Contains("count") || cn.Contains("lock") ||
+                cn.Contains("free") || cn.Contains("badge") || cn.Contains("frame") ||
+                cn.Contains("glow") || cn.Contains("bg"))
+                continue;
+
+            return c;
+        }
+        return null;
     }
 
     private T FindChild<T>(params string[] nameKeys) where T : Component
@@ -145,6 +190,8 @@ public class BoosterSlotView : MonoBehaviour
             if (countText != null) countText.gameObject.SetActive(false);
             return;
         }
+
+        ApplyBoosterIcon();
 
         bool unlocked = BoosterAccessService.IsUnlocked(resolvedIndex);
         bool free = unlocked && BoosterAccessService.IsFreeThisGame(resolvedIndex);

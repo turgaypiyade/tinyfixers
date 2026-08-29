@@ -16,113 +16,214 @@ MonoBehaviour:
   - title: "\xD6zel Teklifler"
     bandStyle: 1
     offers:
-    - id: special_2000
-      displayName: "\xD6zel Teklif"
-      heroIcon: {fileID: 0}
-      heroAmount: 2000
-      contents:
-      - icon: {fileID: 0}
-        kind: 3
-        amount: 1
-        booster: 1
-        durationHours: 1
-        showInfinite: 0
-      - icon: {fileID: 0}
-        kind: 3
-        amount: 1
-        booster: 2
-        durationHours: 1
-        showInfinite: 0
-      - icon: {fileID: 0}
-        kind: 3
-        amount: 1
-        booster: 3
-        durationHours: 1
-        showInfinite: 0
-      - icon: {fileID: 0}
-        kind: 4
-        amount: 1
-        booster: 1
-        durationHours: 1
-        showInfinite: 0
+    - id: bundle_start
+      displayName: "Gezginci \xC7antas\u0131"
+      cardStyle: 0
+      showBestBadge: 1
+      groups:
+      - background: {fileID: 0}
+        icons:
+        - {fileID: 21300000, guid: cb83c91823f0748d2bf17638fc623185, type: 3}
+        labelMode: 0
+        labelValue: 5000
+        showTimerIcon: 0
+        grants:
+        - kind: 0
+          amount: 65000
+          booster: 1
+          durationHours: 1
+      - background: {fileID: 21300000, guid: f2bf98f6f3d5249e79afdf902d704121, type: 3}
+        icons:
+        - {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
+        - {fileID: 21300000, guid: 6383ea1b8ef964caa93201ecd940dce2, type: 3}
+        - {fileID: 21300000, guid: 6a7898939c3c747d784adee98d1f7bbb, type: 3}
+        - {fileID: 21300000, guid: d7f358535eeaf4bcf91584c858f8ce88, type: 3}
+        labelMode: 1
+        labelValue: 1
+        showTimerIcon: 0
+        grants:
+        - kind: 3
+          amount: 13
+          booster: 1
+          durationHours: 1
+      - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
+        icons:
+        - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
+        - {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
+        - {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+        labelMode: 2
+        labelValue: 1
+        showTimerIcon: 1
+        grants:
+        - kind: 3
+          amount: 2
+          booster: 4
+          durationHours: 1
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 99,99 TL
+      priceLabel: 4999.99 TL
       priceAmount: 0
-  - title: "Mega F\u0131rsatlar"
-    bandStyle: 0
-    offers:
-    - id: mega_5000
-      displayName: "Prestij Kupas\u0131"
-      heroIcon: {fileID: 0}
-      heroAmount: 5000
-      contents:
-      - icon: {fileID: 0}
-        kind: 3
-        amount: 5
-        booster: 1
-        durationHours: 1
-        showInfinite: 0
-      - icon: {fileID: 0}
-        kind: 3
-        amount: 5
-        booster: 4
-        durationHours: 1
-        showInfinite: 0
+    - id: bundle_grand_safe
+      displayName: "Muhte\u015Fem Kasa"
+      cardStyle: 0
+      showBestBadge: 0
+      groups:
+      - background: {fileID: 0}
+        icons:
+        - {fileID: -853685778971822253, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
+        labelMode: 0
+        labelValue: 50000
+        showTimerIcon: 0
+        grants:
+        - kind: 0
+          amount: 50000
+          booster: 1
+          durationHours: 1
+      - background: {fileID: 21300000, guid: f2bf98f6f3d5249e79afdf902d704121, type: 3}
+        icons:
+        - {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
+        - {fileID: 21300000, guid: 6a7898939c3c747d784adee98d1f7bbb, type: 3}
+        - {fileID: 21300000, guid: 6383ea1b8ef964caa93201ecd940dce2, type: 3}
+        - {fileID: 21300000, guid: d7f358535eeaf4bcf91584c858f8ce88, type: 3}
+        labelMode: 1
+        labelValue: 10
+        showTimerIcon: 0
+        grants:
+        - kind: 3
+          amount: 10
+          booster: 1
+          durationHours: 1
+      - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
+        icons:
+        - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
+        - {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
+        - {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+        labelMode: 2
+        labelValue: 72
+        showTimerIcon: 1
+        grants:
+        - kind: 3
+          amount: 2
+          booster: 4
+          durationHours: 1
+      - background: {fileID: 21300000, guid: 9f1b99fa54f36443d8a108bfd3f5dc7b, type: 3}
+        icons:
+        - {fileID: 21300000, guid: 62c8a31be03e44a65adcd1407edae4be, type: 3}
+        labelMode: 2
+        labelValue: 12
+        showTimerIcon: 0
+        grants:
+        - kind: 4
+          amount: 1
+          booster: 1
+          durationHours: 12
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 449,99 TL
+      priceLabel: 3999.99 TL
       priceAmount: 0
-  - title: Coin Paketleri
+    - id: bundle_legendary
+      displayName: Efsanevi Hazine
+      cardStyle: 0
+      showBestBadge: 1
+      groups:
+      - background: {fileID: 0}
+        icons:
+        - {fileID: -3069832316943442191, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
+        labelMode: 0
+        labelValue: 65000
+        showTimerIcon: 0
+        grants:
+        - kind: 0
+          amount: 65000
+          booster: 1
+          durationHours: 1
+      - background: {fileID: 21300000, guid: f2bf98f6f3d5249e79afdf902d704121, type: 3}
+        icons:
+        - {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
+        - {fileID: 21300000, guid: 6383ea1b8ef964caa93201ecd940dce2, type: 3}
+        - {fileID: 21300000, guid: 6a7898939c3c747d784adee98d1f7bbb, type: 3}
+        - {fileID: 21300000, guid: d7f358535eeaf4bcf91584c858f8ce88, type: 3}
+        labelMode: 1
+        labelValue: 13
+        showTimerIcon: 0
+        grants:
+        - kind: 3
+          amount: 13
+          booster: 1
+          durationHours: 1
+      - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
+        icons:
+        - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
+        - {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
+        - {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+        labelMode: 2
+        labelValue: 100
+        showTimerIcon: 1
+        grants:
+        - kind: 3
+          amount: 2
+          booster: 4
+          durationHours: 1
+      - background: {fileID: 21300000, guid: 9f1b99fa54f36443d8a108bfd3f5dc7b, type: 3}
+        icons:
+        - {fileID: 21300000, guid: 62c8a31be03e44a65adcd1407edae4be, type: 3}
+        labelMode: 2
+        labelValue: 18
+        showTimerIcon: 0
+        grants:
+        - kind: 4
+          amount: 1
+          booster: 1
+          durationHours: 18
+      availability: 0
+      cooldownHours: 24
+      priceType: 0
+      priceLabel: 4999.99 TL
+      priceAmount: 0
+  - title: "Alt\u0131nlar"
     bandStyle: 0
     offers:
-    - id: boost_pack_coins
-      displayName: Booster Paketi
-      heroIcon: {fileID: 0}
-      heroAmount: 0
-      contents:
-      - icon: {fileID: 0}
-        kind: 3
-        amount: 3
-        booster: 1
-        durationHours: 1
-        showInfinite: 0
+    - id: coins_1000
+      displayName: 1,000
+      cardStyle: 1
+      showBestBadge: 0
+      groups:
+      - background: {fileID: 0}
+        icons:
+        - {fileID: 3101298619733925228, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
+        labelMode: 0
+        labelValue: 1000
+        showTimerIcon: 0
+        grants:
+        - kind: 0
+          amount: 1000
+          booster: 1
+          durationHours: 1
       availability: 0
       cooldownHours: 24
-      priceType: 1
-      priceLabel: 99,99 TL
-      priceAmount: 300
-    - id: coins_for_stars
-      displayName: "Y\u0131ld\u0131zla Coin"
-      heroIcon: {fileID: 0}
-      heroAmount: 500
-      contents: []
+      priceType: 0
+      priceLabel: 99.99 TL
+      priceAmount: 0
+    - id: coins_5000
+      displayName: 5,000
+      cardStyle: 1
+      showBestBadge: 0
+      groups:
+      - background: {fileID: 0}
+        icons:
+        - {fileID: -5867612881708084865, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
+        labelMode: 0
+        labelValue: 5000
+        showTimerIcon: 0
+        grants:
+        - kind: 0
+          amount: 5000
+          booster: 1
+          durationHours: 1
       availability: 0
       cooldownHours: 24
-      priceType: 2
-      priceLabel: 99,99 TL
-      priceAmount: 50
-    - id: free_gift
-      displayName: "G\xFCnl\xFCk Hediye"
-      heroIcon: {fileID: 0}
-      heroAmount: 0
-      contents:
-      - icon: {fileID: 0}
-        kind: 0
-        amount: 100
-        booster: 1
-        durationHours: 1
-        showInfinite: 0
-      - icon: {fileID: 0}
-        kind: 2
-        amount: 1
-        booster: 1
-        durationHours: 1
-        showInfinite: 0
-      availability: 1
-      cooldownHours: 24
-      priceType: 3
-      priceLabel: 99,99 TL
+      priceType: 0
+      priceLabel: 399.99 TL
       priceAmount: 0

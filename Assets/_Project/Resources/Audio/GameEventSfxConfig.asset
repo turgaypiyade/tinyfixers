@@ -12,9 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 747278e112eed40a592c3f6ba66a82c0, type: 3}
   m_Name: GameEventSfxConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameEventSfxConfig
-  chestOpen: {fileID: 8300000, guid: 9fe01c84336a147d98efd35d3b338c05, type: 3}
+  chestOpen: {fileID: 8300000, guid: 00a17f3ec3dc0436ebd4e991cb6b391c, type: 3}
+  chestOpenVariants:
+  - {fileID: 8300000, guid: 00a17f3ec3dc0436ebd4e991cb6b391c, type: 3}
+  - {fileID: 8300000, guid: eb5f26d5616804a0bbeb9ba8be5a6cc4, type: 3}
   chestOpenVolume: 1
-  levelWin: {fileID: 8300000, guid: 9fe01c84336a147d98efd35d3b338c05, type: 3}
+  levelWin: {fileID: 8300000, guid: c84cf95adc9324bd1b6867d65c2feec3, type: 3}
   levelWinVolume: 1
   weldingLoop: {fileID: 8300000, guid: 5d01745a2c96b4d3599a8447692b096a, type: 3}
   weldingVolume: 1

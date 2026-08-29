@@ -109,7 +109,8 @@ public sealed class MainMenuRewardCollectFx : MonoBehaviour
         var icon = iconGo.GetComponent<Image>();
         icon.preserveAspect = true;
         icon.raycastTarget = false;
-        if (reward != null && reward.icon != null) icon.sprite = reward.icon;
+        Sprite resolvedIcon = reward != null ? reward.ResolveIcon() : null;
+        if (resolvedIcon != null) icon.sprite = resolvedIcon;
         else icon.color = new Color(1f, 0.7f, 0.24f, 1f);
 
         var labelGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));

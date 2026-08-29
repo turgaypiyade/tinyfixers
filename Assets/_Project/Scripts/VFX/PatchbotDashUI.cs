@@ -817,6 +817,28 @@ public class PatchbotDashUI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Roket/PatchBot çarpma alevini (kıvılcım demeti + flash) verilen hücrede oynatır.
+    /// Hammer booster gibi dışarıdan tetiklenen efektler için public giriş noktası.
+    /// sizeScale: patlama büyüklüğü çarpanı (1 = tile boyu; biraz büyük için ~1.3).
+    /// </summary>
+    public void PlayImpactBurstAtCell(BoardController board, Vector2Int cell, float sizeScale = 1f)
+    {
+        if (vfxRoot == null || board == null) return;
+
+        // Bu efekt StartCoroutine (this) kullanıyor; PatchbotRunner idle'da PASİF olabilir
+        // (hammer gibi dash dışı çağrılarda). Coroutine host'unu aktifleştir, template runner'ı gizle.
+        if (!gameObject.activeSelf)
+        {
+            gameObject.SetActive(true);
+            if (runnerImage != null) runnerImage.enabled = false;   // stray runner görünmesin
+        }
+
+        Vector2 center = WorldToAnchoredIn(vfxRoot, AimWorldPosition(board, cell.x, cell.y));
+        float s = board.TileSize * Mathf.Max(0.5f, sizeScale);
+        SpawnImpactSparks(center, new Vector2(s, s), board, cell);
+    }
+
     // Hedefe çarpma anında 360 derece saçılan, beyaz + alev sarısı/turuncu kıvılcım demeti.
     private void SpawnImpactSparks(Vector2 centerAnchored, Vector2 size, BoardController board, Vector2Int targetCell)
     {

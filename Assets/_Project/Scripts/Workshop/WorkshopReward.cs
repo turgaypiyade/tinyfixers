@@ -26,8 +26,20 @@ public class WorkshopReward
     [Tooltip("Adet — coin için altın miktarı, joker/booster için adet.")]
     [Min(1)] public int amount = 1;
 
-    [Tooltip("Ödül uçtuğunda / popup'ta gösterilecek ödül görseli (coin, joker, booster sprite).")]
+    [Tooltip("Ödül uçtuğunda / popup'ta gösterilecek ödül görseli (coin, joker, booster sprite). " +
+             "Boş bırakılırsa joker/booster ikonu TileIconLibrary.Shared'dan otomatik çözülür.")]
     public Sprite rewardIcon;
+
+    /// <summary>
+    /// Gösterilecek ikon: elle atanmış <see cref="rewardIcon"/> varsa o, yoksa joker/booster için
+    /// TileIconLibrary.Shared'dan çözülür (booster imajları tek kaynaktan).
+    /// </summary>
+    public Sprite ResolveIcon()
+    {
+        if (rewardIcon != null) return rewardIcon;
+        var lib = TileIconLibrary.Shared;
+        return lib != null ? lib.GetRewardIcon(type) : null;
+    }
 
     [Tooltip("Ödül adının lokalizasyon anahtarı. Örn: \"reward_coins\" → \"{0} Altın\". " +
              "Boş ise sadece adet + ikon gösterilir.")]

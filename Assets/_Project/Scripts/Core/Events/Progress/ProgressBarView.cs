@@ -61,7 +61,7 @@ public class ProgressBarView : MonoBehaviour
 
         if (goalIconImage   != null) goalIconImage.sprite   = goal.DisplayIcon;
         if (rewardIconImage != null && def.reward != null)
-            rewardIconImage.sprite = def.reward.icon;
+            rewardIconImage.sprite = def.reward.ResolveIcon();
         if (rewardWaveImage != null)
         {
             rewardWaveImage.sprite  = def.rewardWaveSprite;

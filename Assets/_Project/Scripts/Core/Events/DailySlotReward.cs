@@ -28,8 +28,20 @@ public class DailySlotReward
     [Tooltip("Miktar — coin için altın sayısı, joker/booster için adet, life için kalp sayısı.")]
     [Min(1)] public int amount = 1;
 
-    [Tooltip("Slot reel'de ve kazanma popup'ında gösterilecek ikon.")]
+    [Tooltip("Slot reel'de ve kazanma popup'ında gösterilecek ikon. Boş bırakılırsa " +
+             "joker/booster ikonu TileIconLibrary'den (Shared) otomatik çözülür.")]
     public Sprite icon;
+
+    /// <summary>
+    /// Gösterilecek ikon: elle atanmış <see cref="icon"/> varsa o, yoksa joker/booster için
+    /// TileIconLibrary.Shared'dan çözülür (booster imajları tek kaynaktan gelir).
+    /// </summary>
+    public Sprite ResolveIcon()
+    {
+        if (icon != null) return icon;
+        var lib = TileIconLibrary.Shared;
+        return lib != null ? lib.GetRewardIcon(type) : null;
+    }
 
     [Tooltip("Ödül adı için localization key (örn \"reward_coins\", \"reward_hammer\"). " +
              "Boş olursa fallback name kullanılır.")]

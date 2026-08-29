@@ -81,7 +81,8 @@ public class BoardAudioDirector : MonoBehaviour
 
         if (a == TileSpecial.SystemOverride && b == TileSpecial.SystemOverride)
         {
-            Emit(BoardSfxRequest.ComboOverrideOverride());
+            // Override+Override sesi artık üç-fazlı (spin/impact/wave) BoardVfxService'te
+            // Resources/Audio/OverrideCombo/Override1-3 ile çalınır. Tek-cue emit KALDIRILDI.
             return;
         }
     }
@@ -107,6 +108,21 @@ public class BoardAudioDirector : MonoBehaviour
     {
         // Şimdilik batch; sonra landing bucket’a kolayca genişletilir
         Emit(BoardSfxRequest.Fall(tileCount, maxDist));
+    }
+
+    /// <summary>
+    /// Cue/profil sistemine girmeyen tek-atış klip (booster/joker SFX gibi). SoundEnabled'a saygılı.
+    /// </summary>
+    public void PlayOneShotClip(AudioClip clip, float volume = 1f)
+    {
+        if (clip == null || !GameSettings.SoundEnabled)
+            return;
+
+        AudioSource src = transientSource != null ? transientSource : accentSource;
+        if (src == null)
+            return;
+
+        src.PlayOneShot(clip, Mathf.Clamp(volume, 0f, 1.5f));
     }
 
     public void Emit(BoardSfxRequest request)

@@ -26,7 +26,10 @@ public sealed class ShopScreenController : MonoBehaviour
     [Tooltip("Bölüm başlıkları + kartların basılacağı dikey container (VerticalLayoutGroup + ScrollRect content).")]
     [SerializeField] private RectTransform contentContainer;
     [SerializeField] private ShopSectionHeader sectionHeaderPrefab;
-    [SerializeField] private ShopOfferCard offerCardPrefab;
+    [Tooltip("Kutulu büyük paket kartı (cardStyle=Bundle).")]
+    [SerializeField] private ShopOfferCard bundleCardPrefab;
+    [Tooltip("Basit altın satırı kartı (cardStyle=CoinRow).")]
+    [SerializeField] private ShopCoinRowCard coinRowPrefab;
 
     [Header("Üst bakiye")]
     [SerializeField] private TMP_Text coinBalanceText;
@@ -80,11 +83,17 @@ public sealed class ShopScreenController : MonoBehaviour
                 spawned.Add(header.gameObject);
             }
 
-            if (offerCardPrefab == null || section.offers == null) continue;
+            if (section.offers == null) continue;
             foreach (var offer in section.offers)
             {
                 if (offer == null) continue;
-                var card = Instantiate(offerCardPrefab, contentContainer);
+
+                ShopOfferCardBase prefab = offer.cardStyle == ShopOffer.CardStyle.CoinRow
+                    ? coinRowPrefab
+                    : bundleCardPrefab;
+                if (prefab == null) continue;
+
+                var card = Instantiate(prefab, contentContainer);
                 card.Configure(offer, theme, HandlePurchase);
                 spawned.Add(card.gameObject);
             }

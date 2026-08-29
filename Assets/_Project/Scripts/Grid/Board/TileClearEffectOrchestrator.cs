@@ -62,6 +62,37 @@ public sealed class DefaultPopTileClearEffect : ITileClearEffect
     }
 }
 
+public sealed class ElevatorFlingTileClearEffect : ITileClearEffect
+{
+    private readonly BoardController board;
+    private readonly TileAnimator tileAnimator;
+
+    public ElevatorFlingTileClearEffect(BoardController board, TileAnimator tileAnimator)
+    {
+        this.board = board;
+        this.tileAnimator = tileAnimator;
+    }
+
+    public bool CanHandle(ClearAnimationMode mode) => mode == ClearAnimationMode.ElevatorLift;
+
+    public IEnumerator Play(TileView tile, float delay, float duration, bool suppressBurst = false)
+    {
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        if (tile == null) yield break;
+
+        // Asansör alttan yukarı tarar: temizlenme sırası ((Height-1) - y). Bu sıraya göre
+        // biri sağa, sonraki sola savrulsun (alternasyon ascent yönünde tutarlı).
+        int height = board != null ? board.Height : 0;
+        int order = height > 0 ? (height - 1 - tile.Y) : tile.Y;
+        int dir = (order % 2 == 0) ? 1 : -1;
+
+        if (tileAnimator != null)
+            yield return tileAnimator.PlayElevatorFling(tile, duration, dir, suppressBurst);
+    }
+}
+
 public sealed class LightningStrikeTileClearEffect : ITileClearEffect
 {
     private readonly PulseCoreVfxPlayer boardVfxPlayer;

@@ -27,7 +27,35 @@ public static class GameEventSfx
     public static void PlayChestOpen()
     {
         var c = Cfg;
-        if (c != null) Play(c.chestOpen, c.chestOpenVolume);
+        if (c == null) return;
+
+        AudioClip clip = c.chestOpen;
+        if (c.chestOpenVariants != null && c.chestOpenVariants.Length > 0)
+        {
+            var pick = c.chestOpenVariants[Random.Range(0, c.chestOpenVariants.Length)];
+            if (pick != null) clip = pick;
+        }
+
+        Play(clip, c.chestOpenVolume);
+    }
+
+    /// <summary>
+    /// Kazanma logosundaki HER görsel havai fişek patlamasında çağrılır — tek-atış,
+    /// hafif rastgele pitch (kesintili, üst üste binmeyen his). Klip: levelWin (yoksa chestOpen).
+    /// </summary>
+    public static void PlayFireworkBurst(float volumeScale = 1f)
+    {
+        var c = Cfg;
+        if (c == null) return;
+
+        bool hasWin = c.levelWin != null;
+        AudioClip clip = hasWin ? c.levelWin : c.chestOpen;
+        if (clip == null) return;
+
+        EnsureSource();
+        _src.pitch = Random.Range(0.92f, 1.08f);
+        float vol = (hasWin ? c.levelWinVolume : c.chestOpenVolume) * Mathf.Clamp01(volumeScale);
+        _src.PlayOneShot(clip, Mathf.Clamp01(vol));
     }
 
     public static void PlayLevelWin()
@@ -83,6 +111,7 @@ public static class GameEventSfx
     {
         if (clip == null) return;
         EnsureSource();
+        _src.pitch = 1f;
         _src.PlayOneShot(clip, Mathf.Clamp01(volume));
     }
 

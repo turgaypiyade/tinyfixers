@@ -3867,8 +3867,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.07634731}
-  m_AnchorMax: {x: 0.83511776, y: 1.7896707}
+  m_AnchorMin: {x: 0, y: 0.06827309}
+  m_AnchorMax: {x: 0.83511776, y: 1.6004016}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -11568,11 +11568,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   verboseDebugLogs: 1
-  singleTargetText: "Tek ta\u015F\u0131 yok etmek istedi\u011Fin objeyi se\xE7!"
-  rowTargetText: "Sat\u0131r\u0131 yok etmek istedi\u011Fin objeyi se\xE7!"
-  columnTargetText: "S\xFCtunu yok etmek istedi\u011Fin objeyi se\xE7!"
-  shuffleText: "Kar\u0131\u015Ft\u0131rmak i\xE7in board \xFCzerinde bir ta\u015F\u0131
-    se\xE7!"
+  singleTargetText: "K\u0131rmak istedi\u011Fin objeye t\u0131kla!"
+  rowTargetText: "Yok etmek istedi\u011Fin sat\u0131ra t\u0131kla!"
+  columnTargetText: "Yok etmek istedi\u011Fin s\xFCtuna t\u0131kla!"
+  shuffleText: "Kar\u0131\u015Ft\u0131rmak i\xE7in herhangi bir yere t\u0131kla!"
+  singleTitle: "Wonder \xC7ekici!"
+  rowTitle: Wonder Roketi!
+  columnTitle: "Wonder Asans\xF6r!"
+  shuffleTitle: "Wonder Kar\u0131\u015Ft\u0131r\u0131c\u0131!"
+  titleColor: {r: 1, g: 0.85, b: 0.2, a: 1}
   useProceduralSelectionFrame: 0
   selectedFrameSpriteName: Top_border_img_v2
   selectedFramePadding: 10
@@ -11583,7 +11587,7 @@ MonoBehaviour:
   selectedGlowAlpha: 0.9
   selectedGlowScale: 1.3
   selectionOutlineColor: {r: 0.45, g: 0.9, b: 1, a: 1}
-  selectedOverlayAlpha: 0.88
+  selectedOverlayAlpha: 0.95
 --- !u!1 &1688856295
 GameObject:
   m_ObjectHideFlags: 0

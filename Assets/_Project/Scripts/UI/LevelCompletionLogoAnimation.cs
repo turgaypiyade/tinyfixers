@@ -50,6 +50,8 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
     public bool WasSkipped { get; private set; }
     public event Action FireworksStarted;
     public event Action FireworksFinished;
+    /// <summary>Her tek görsel havai fişek patlamasında tetiklenir (kesintili ses için).</summary>
+    public event Action FireworkBurst;
 
     private bool _playing;
     private bool _skipRequested;
@@ -308,6 +310,7 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
             if (fired == 0)
                 FireworksStarted?.Invoke();
 
+            FireworkBurst?.Invoke();   // her görsel patlama → tek-atış ses (kesintili)
             StartCoroutine(BurstAt(pos, col));
             fired++;
             yield return new WaitForSecondsRealtime(fireworkInterval);

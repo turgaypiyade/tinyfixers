@@ -273,7 +273,8 @@ public class FortuneWheelController : MonoBehaviour
             crt.anchoredPosition = new Vector2(iconRadius * Mathf.Sin(rad), iconRadius * Mathf.Cos(rad));
             crt.localEulerAngles = new Vector3(0f, 0f, -angleCW);
 
-            if (reward.icon != null)
+            Sprite wheelIcon = reward.ResolveIcon();
+            if (wheelIcon != null)
             {
                 var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image));
                 iconGo.transform.SetParent(container.transform, false);
@@ -286,7 +287,7 @@ public class FortuneWheelController : MonoBehaviour
                 irt.anchoredPosition = new Vector2(0f, iconOffsetY);
 
                 var img = iconGo.GetComponent<Image>();
-                img.sprite = reward.icon;
+                img.sprite = wheelIcon;
                 img.preserveAspect = true;
             }
 

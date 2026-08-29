@@ -151,6 +151,150 @@ public sealed class TileAnimator
         }
     }
 
+    /// <summary>
+    /// Mini Elevator booster clear: taş, asansör o hücreye vardığında sağa (dirSign +1)
+    /// veya sola (dirSign -1) doğru savrulur — hafif yukarı yay + dönüş + solma.
+    /// PlayPop ile aynı bitiş sözleşmesi: sonda scale 0 / alpha 0, rotasyon ve pivot resetlenir,
+    /// pozisyon eski yerine geri konur (görünmez), böylece taş view yeniden kullanıma temiz kalır.
+    /// </summary>
+    public IEnumerator PlayElevatorFling(TileView tile, float duration, int dirSign, bool suppressBurst = false)
+    {
+        if (tile == null || !tile)
+            yield break;
+
+        Transform root;
+        RectTransform rt;
+
+        try
+        {
+            root = tile.transform;
+            rt = tile.RectTransform;
+        }
+        catch (MissingReferenceException)
+        {
+            yield break;
+        }
+
+        if (root == null || rt == null)
+            yield break;
+
+        CanvasGroup canvasGroup = null;
+        Vector2 originalPivot = CenterPivot;
+
+        // Savrulan taş, makasla aynı katmana (BoardMask'ın DIŞI = makasın önü) alınmalı:
+        // (1) makas onu örtmesin, (2) grid maskesi alt kenarda kırpmasın (aşağı düşerken görünsün).
+        Transform originalParent = rt.parent;
+        int originalSibling = rt.GetSiblingIndex();
+        bool reparented = false;
+        RectTransform frontLayer = null;
+        if (board != null && board.BoosterFxParent != null)
+            frontLayer = board.BoosterFxParent.parent as RectTransform ?? board.BoosterFxParent;
+        if (frontLayer != null && rt.parent != frontLayer)
+        {
+            rt.SetParent(frontLayer, true);   // worldPositionStays → aynı yerde görünür
+            rt.SetAsLastSibling();             // makasın önünde
+            reparented = true;
+        }
+
+        Vector2 originalPos = rt.anchoredPosition;   // (yeni) parent uzayında
+
+        try
+        {
+            canvasGroup = tile.GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+                canvasGroup = tile.gameObject.AddComponent<CanvasGroup>();
+
+            originalPivot = rt.pivot;
+            if (rt.pivot != CenterPivot)
+                SetPivotWithoutVisualJump(rt, CenterPivot);
+
+            canvasGroup.alpha = 1f;
+        }
+        catch (MissingReferenceException)
+        {
+            yield break;
+        }
+
+        if (board != null && !suppressBurst)
+            board.StartCoroutine(TileClearBurstVfx.CoPlayBurst(tile, board, BURST_VFX_DURATION));
+
+        if (dirSign == 0) dirSign = 1;
+        float size = board != null ? board.TileSize : 100f;
+
+        // Yana FIRLA + yerçekimiyle DÜŞ. Küçülüp yok olmaz — boyutunu koruyarak (hafif küçülerek)
+        // aşağı düşer, ekran altına inince (ya da güvenlik süresi) biter → debris hissi.
+        Vector2 pos = originalPos;
+        float vx = dirSign * size * UnityEngine.Random.Range(4.5f, 7f);   // yatay fırlatma hızı
+        float vy = size * UnityEngine.Random.Range(2.5f, 4.5f);           // başta hafif yukarı
+        float gravity = size * 42f;
+        float rotSpeed = dirSign * UnityEngine.Random.Range(180f, 380f);
+        float rot = 0f;
+        int height = board != null ? board.Height : 10;
+        float floorY = originalPos.y - size * (height + 2);
+        float t = 0f;
+
+        while (rt != null && rt)
+        {
+            if (tile == null || !tile || root == null) yield break;
+
+            float dt = Time.deltaTime;
+            try
+            {
+                vy -= gravity * dt;
+                vx *= (1f - 1.2f * dt);        // hafif hava sürtünmesi
+                pos.x += vx * dt;
+                pos.y += vy * dt;
+                rt.anchoredPosition = pos;
+
+                rot += rotSpeed * dt;
+                root.localRotation = Quaternion.Euler(0f, 0f, rot);
+
+                // Hafif küçülme (0.82'ye kadar) — yok olmaz, düşerken görünür kalır.
+                float s = Mathf.Lerp(1f, 0.82f, Mathf.Clamp01(t / 0.5f));
+                root.localScale = new Vector3(s, s, 1f);
+                t += dt;
+            }
+            catch (MissingReferenceException)
+            {
+                yield break;
+            }
+
+            if (pos.y <= floorY || t > 1.0f) break;   // ekran altı ya da güvenlik süresi
+            yield return null;
+        }
+
+        try
+        {
+            if (root != null)
+            {
+                root.localScale = Vector3.zero;
+                root.localRotation = Quaternion.identity;
+            }
+
+            if (canvasGroup != null)
+                canvasGroup.alpha = 0f;
+
+            // Öne alınmışsa orijinal parent'a (TilesRoot) geri koy → board reuse'ı bozulmasın.
+            // Pozisyon board tarafından yeniden kullanımda (cascade/refill) resetlenir.
+            if (reparented && rt != null && rt && originalParent != null)
+            {
+                rt.SetParent(originalParent, false);
+                if (originalSibling >= 0 && originalSibling < originalParent.childCount)
+                    rt.SetSiblingIndex(originalSibling);
+            }
+
+            if (rt != null && rt)
+            {
+                if (rt.pivot != originalPivot)
+                    SetPivotWithoutVisualJump(rt, originalPivot);
+            }
+        }
+        catch (MissingReferenceException)
+        {
+            yield break;
+        }
+    }
+
     public IEnumerator PlayLightningStrikeAndShrink(TileView tile, float duration, Color lightningColor)
     {
         if (tile == null) yield break;

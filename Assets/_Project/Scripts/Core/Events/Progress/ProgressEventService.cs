@@ -89,7 +89,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
             if (config == null || config.goals == null || config.goals.Count == 0) return null;
             var g = config.goals[0];
             if (g == null) return null;
-            return g.goalIcon != null ? g.goalIcon : (g.reward != null ? g.reward.icon : null);
+            return g.goalIcon != null ? g.goalIcon : (g.reward != null ? g.reward.ResolveIcon() : null);
         }
     }
 

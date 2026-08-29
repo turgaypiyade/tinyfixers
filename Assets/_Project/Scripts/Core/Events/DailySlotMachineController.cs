@@ -95,7 +95,7 @@ public class DailySlotMachineController : MonoBehaviour
 
         // Reel'i defaulta al
         if (reelIconImage != null && rewardConfig != null && rewardConfig.rewards.Count > 0)
-            reelIconImage.sprite = rewardConfig.rewards[0].icon;
+            reelIconImage.sprite = rewardConfig.rewards[0].ResolveIcon();
         if (rewardNameText != null) rewardNameText.text = "";
 
         selectedReward = null;
@@ -168,7 +168,7 @@ public class DailySlotMachineController : MonoBehaviour
             {
                 timer = 0f;
                 idx = (idx + 1) % iconCount;
-                var sprite = rewardConfig.rewards[idx].icon;
+                var sprite = rewardConfig.rewards[idx].ResolveIcon();
                 if (reelIconImage != null && sprite != null)
                     reelIconImage.sprite = sprite;
             }
@@ -178,8 +178,9 @@ public class DailySlotMachineController : MonoBehaviour
         }
 
         // Reel'i kazanan ödülün ikonuyla sonlandır
-        if (reelIconImage != null && selectedReward.icon != null)
-            reelIconImage.sprite = selectedReward.icon;
+        var winIcon = selectedReward != null ? selectedReward.ResolveIcon() : null;
+        if (reelIconImage != null && winIcon != null)
+            reelIconImage.sprite = winIcon;
 
         // Win SFX
         if (GameSettings.SoundEnabled && sfxSource != null && winSfx != null) sfxSource.PlayOneShot(winSfx);
