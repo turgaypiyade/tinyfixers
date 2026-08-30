@@ -39,11 +39,12 @@ public sealed class SafariConfig : ScriptableObject
     [Tooltip("Event bir kez çıkınca kaç saat açık kalır.")]
     [Min(1)] public int windowHours = 24;
 
-    [Tooltip("Açıksa event ilk aktifte / saatte bir otomatik 'katıl' popup'ı çıkar. " +
-             "Kapalıysa popup YALNIZ ikona tıklayınca açılır.")]
+    [Tooltip("Açıksa event ilk aktif olunca (bu cycle'da bir kez, uygun an bulununca) otomatik " +
+             "'katıl' popup'ı çıkar; sonra tekrar sorulmaz. Kapalıysa popup YALNIZ ikona tıklayınca açılır.")]
     public bool autoShowJoinPopup = false;
 
-    [Tooltip("Hiç katılmayan oyuncuya kaç saatte bir 'katıl' popup'ı gösterilsin (autoShowJoinPopup açıksa).")]
+    [Obsolete("Artık kullanılmıyor: auto popup yalnız ilk aktivasyonda bir kez çıkar (nag yok).")]
+    [Tooltip("KULLANILMIYOR — auto popup tek seferlik (ilk aktivasyon).")]
     [Min(1)] public int reAskIntervalHours = 1;
 
     [Tooltip("İlk-hakta geçemeyip (düşünce) tekrar devam için beklenecek süre (dk).")]

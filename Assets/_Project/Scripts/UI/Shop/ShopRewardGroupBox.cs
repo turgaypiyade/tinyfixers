@@ -34,21 +34,31 @@ public sealed class ShopRewardGroupBox : MonoBehaviour
     [SerializeField] private Sprite timerSprite;
     [Tooltip("Saat ikonu kenar boyutu (px). Büyütmek için artır.")]
     [SerializeField] private float timerSize = 56f;
+    [Tooltip("Etiket TMP'si — font/material/renk/boyutu Label'ın KENDİ özelliklerinden gelir; kod yalnız metni yazar.")]
     [SerializeField] private TMP_Text labelText;
+
+    [Header("Sonsuz rozeti")]
+    [Tooltip("Süreli (Duration) kutu ikonlarının sağ-alt köşesine eklenen sonsuz logo (kalp-infinite hariç).")]
+    [SerializeField] private Sprite infiniteLogo;
+    [Tooltip("Rozet boyutu = ikonun bu oranı kadar (0.34 ≈ 1/3). Büyütmek için artır.")]
+    [SerializeField] private float infiniteLogoScale = 0.34f;
 
     private readonly List<GameObject> spawnedIcons = new();
 
-    public void Setup(ShopRewardGroup group, UITheme theme)
+    /// <param name="bgOverride">Kart'ın ikon sayısına göre seçtiği MATGrup (varsa group.background'ı ezer).</param>
+    /// <param name="timerOverride">Kart'ın verdiği saat sprite'ı (varsa yerel timerSprite'ı ezer).</param>
+    public void Setup(ShopRewardGroup group, UITheme theme, Sprite bgOverride = null, Sprite timerOverride = null)
     {
         ClearIcons();
         if (group == null) return;
 
-        // Kutu arka planı: önce grup'a atanan (MATGrup1/3/5), yoksa tema.
+        // Kutu arka planı: kart'ın seçtiği (bgOverride) > grup'a atanan > tema.
         if (panelBackground != null)
         {
-            if (group.background != null)
+            Sprite bg = bgOverride != null ? bgOverride : group.background;
+            if (bg != null)
             {
-                panelBackground.sprite = group.background;
+                panelBackground.sprite = bg;
                 panelBackground.color = Color.white;
                 panelBackground.enabled = true;
             }
@@ -64,6 +74,7 @@ public sealed class ShopRewardGroupBox : MonoBehaviour
             var glg = iconContainer.GetComponent<GridLayoutGroup>();
             if (glg != null) glg.enabled = false;
 
+            bool duration = group.labelMode == ShopRewardGroup.LabelMode.Duration;
             if (iconPrefab != null && group.icons != null)
             {
                 foreach (var sprite in group.icons)
@@ -75,6 +86,10 @@ public sealed class ShopRewardGroupBox : MonoBehaviour
                     icon.preserveAspect = true;
                     icon.gameObject.SetActive(true);
                     spawnedIcons.Add(icon.gameObject);
+
+                    // Süreli ikonların sağ-alt köşesine sonsuz rozeti (kalp-infinite hariç, hardcoded).
+                    if (duration && infiniteLogo != null && !IsHeartSprite(sprite))
+                        AddInfiniteBadge(icon.transform);
                 }
             }
             ArrangeIcons();
@@ -94,18 +109,38 @@ public sealed class ShopRewardGroupBox : MonoBehaviour
                 var img = timerIcon.GetComponent<Image>();
                 if (img != null)
                 {
-                    if (timerSprite != null) img.sprite = timerSprite;
+                    Sprite ts = timerOverride != null ? timerOverride : timerSprite;
+                    if (ts != null) img.sprite = ts;
                     img.color = Color.white; img.preserveAspect = true;
                 }
             }
         }
 
+        // Yalnız metni yaz — font/material/renk/boyut Label'ın kendi TMP ayarlarında kalır (outline korunur).
         if (labelText != null)
-        {
             labelText.text = group.GroupLabel();
-            if (theme != null) theme.ApplyText(labelText, theme.textOnCream, heading: true);
-        }
     }
+
+    /// <summary>İkonun sağ-alt köşesine, ikonun 1/3'ü boyutunda sonsuz rozeti ekler.</summary>
+    private void AddInfiniteBadge(Transform iconTf)
+    {
+        var go = new GameObject("InfiniteBadge", typeof(RectTransform), typeof(Image));
+        go.layer = gameObject.layer;   // layer-culling guard (Screen Space Camera)
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(iconTf, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(1f, 0f);   // sağ-alt köşe
+        rt.pivot = new Vector2(1f, 0f);
+        rt.anchoredPosition = Vector2.zero;
+        float badge = iconSize * Mathf.Max(0.05f, infiniteLogoScale);
+        rt.sizeDelta = new Vector2(badge, badge);
+        var img = go.GetComponent<Image>();
+        img.sprite = infiniteLogo;
+        img.preserveAspect = true;
+        img.raycastTarget = false;
+    }
+
+    private static bool IsHeartSprite(Sprite s)
+        => s != null && s.name.IndexOf("Heart", System.StringComparison.OrdinalIgnoreCase) >= 0;
 
     /// <summary>İkonları ortalanmış 2 satıra diz: 1-2 tek satır, 3→2+1, 4→2+2, 5→3+2 (kalan alt satır ortalı).</summary>
     private void ArrangeIcons()

@@ -128,15 +128,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: x1
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
-  m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: a750bedbf6b4843238a3727ec1dd6849, type: 2}
+  m_sharedMaterial: {fileID: 1971432022410156626, guid: a750bedbf6b4843238a3727ec1dd6849, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4281024090
-  m_fontColor: {r: 0.3529412, g: 0.24313726, b: 0.16862746, a: 1}
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -153,8 +153,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 26
-  m_fontSizeBase: 26
+  m_fontSize: 45
+  m_fontSizeBase: 45
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -453,7 +453,10 @@ MonoBehaviour:
   maxColumns: 3
   timerIcon: {fileID: 8455870572384375644}
   timerSprite: {fileID: 0}
+  timerSize: 56
   labelText: {fileID: 4831301787051968764}
+  infiniteLogo: {fileID: 21300000, guid: 4667556aff1a24cfdaa5066358e5416b, type: 3}
+  infiniteLogoScale: 0.6
 --- !u!1 &1010398325373823559
 GameObject:
   m_ObjectHideFlags: 0
@@ -616,7 +619,10 @@ MonoBehaviour:
   maxColumns: 3
   timerIcon: {fileID: 5640447134388936628}
   timerSprite: {fileID: 0}
+  timerSize: 56
   labelText: {fileID: 6366431359485166289}
+  infiniteLogo: {fileID: 21300000, guid: 4667556aff1a24cfdaa5066358e5416b, type: 3}
+  infiniteLogoScale: 0.6
 --- !u!1 &2100729558857176983
 GameObject:
   m_ObjectHideFlags: 0
@@ -1165,15 +1171,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: x1
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
-  m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: a750bedbf6b4843238a3727ec1dd6849, type: 2}
+  m_sharedMaterial: {fileID: 1971432022410156626, guid: a750bedbf6b4843238a3727ec1dd6849, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4281024090
-  m_fontColor: {r: 0.3529412, g: 0.24313726, b: 0.16862746, a: 1}
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -1190,8 +1196,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 26
-  m_fontSizeBase: 26
+  m_fontSize: 45
+  m_fontSizeBase: 45
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -1586,7 +1592,10 @@ MonoBehaviour:
   maxColumns: 3
   timerIcon: {fileID: 2404278317857272956}
   timerSprite: {fileID: 0}
+  timerSize: 56
   labelText: {fileID: 1090284585130137892}
+  infiniteLogo: {fileID: 21300000, guid: 4667556aff1a24cfdaa5066358e5416b, type: 3}
+  infiniteLogoScale: 0.6
 --- !u!1 &7581578423138512537
 GameObject:
   m_ObjectHideFlags: 0
@@ -1852,15 +1861,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: x1
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
-  m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: a750bedbf6b4843238a3727ec1dd6849, type: 2}
+  m_sharedMaterial: {fileID: 1971432022410156626, guid: a750bedbf6b4843238a3727ec1dd6849, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4281024090
-  m_fontColor: {r: 0.3529412, g: 0.24313726, b: 0.16862746, a: 1}
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -1877,8 +1886,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 26
-  m_fontSizeBase: 26
+  m_fontSize: 45
+  m_fontSizeBase: 45
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -2069,6 +2078,15 @@ MonoBehaviour:
   - {fileID: 2694744732450234154}
   - {fileID: 1071711804525425039}
   - {fileID: 8207189942536189901}
+  matGrup1: {fileID: 21300000, guid: 9f1b99fa54f36443d8a108bfd3f5dc7b, type: 3}
+  matGrup3: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
+  matGrup5: {fileID: 21300000, guid: f2bf98f6f3d5249e79afdf902d704121, type: 3}
+  timerSprite: {fileID: 21300000, guid: 9cf15a19b1dc648ff935fab52a388884, type: 3}
+  boxAreaLeft: 0.24
+  boxAreaRight: 0.965
+  boxAreaBottom: 0.4
+  boxAreaTop: 0.9
+  boxGap: 0.012
   bestBadge: {fileID: 9034511911322377630}
   nameText: {fileID: 8589808902530514168}
 --- !u!1 &8455870572384375644

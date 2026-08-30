@@ -78,6 +78,148 @@ public static class ShopMockupSetup
             "ShopCatalog.asset'ten düzenlenir.\n\nSahneyi kaydet (Cmd+S).", "Tamam");
     }
 
+    /// <summary>
+    /// Sahneyi/prefab yapısını YENİDEN KURMADAN, yalnızca yeni referans alanlarını doldurur:
+    /// kart → matGrup1/3/5 + timerSprite; kutular → labelFont (Inter 28 ExtraBold) + infiniteLogo.
+    /// Elle yapılan tüm düzen değişiklikleri korunur.
+    /// </summary>
+    [MenuItem("TinyFixers/Mockup/Wire Shop Card Sprites (non-destructive)")]
+    public static void WireCardSprites()
+    {
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(BundleCardPath) == null)
+        {
+            EditorUtility.DisplayDialog("Wire Shop Card",
+                $"Prefab bulunamadı:\n{BundleCardPath}\n\nFarklı bir yere taşıdıysan söyle.", "Tamam");
+            return;
+        }
+
+        var root = PrefabUtility.LoadPrefabContents(BundleCardPath);
+        try
+        {
+            var card = root.GetComponent<ShopOfferCard>();
+            if (card != null)
+            {
+                SetRef(card, "matGrup1", Art("MATGrup1"));
+                SetRef(card, "matGrup3", Art("MATGrup3"));
+                SetRef(card, "matGrup5", Art("MATGrup5"));
+                SetRef(card, "timerSprite", Art("Timerimage"));
+            }
+
+            var inf = Art("infinitelogo");
+            foreach (var box in root.GetComponentsInChildren<ShopRewardGroupBox>(true))
+                SetRef(box, "infiniteLogo", inf);
+
+            PrefabUtility.SaveAsPrefabAsset(root, BundleCardPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+
+        AssetDatabase.SaveAssets();
+        EditorUtility.DisplayDialog("Wire Shop Card",
+            "Referanslar bağlandı (font + infinite logo + MATGrup + timer). Düzenin korundu.", "Tamam");
+    }
+
+    /// <summary>
+    /// Shop top bar'ındaki düz coin sayısını, fail popup'takiyle AYNI "wallet pill" ile değiştirir
+    /// (coin ikonu + pill arka plan + outline'lı sayı). Sahne yapısını yeniden kurmaz; sadece
+    /// TopBar'a pill ekler, eski CoinBalance metnini gizler. Sprite/font/material fail popup'tan alınır.
+    /// </summary>
+    [MenuItem("TinyFixers/Mockup/Add Fail-Style Wallet Pill to Shop")]
+    public static void AddWalletPillToShop()
+    {
+        var ctrl = Object.FindFirstObjectByType<ShopScreenController>(FindObjectsInactive.Include);
+        if (ctrl == null)
+        {
+            EditorUtility.DisplayDialog("Wallet Pill", "Sahnede ShopPanel bulunamadı. MainMenu'yü aç ve tekrar dene.", "Tamam");
+            return;
+        }
+        var top = ctrl.transform.Find("TopBar");
+        if (top == null)
+        {
+            EditorUtility.DisplayDialog("Wallet Pill", "ShopPanel altında 'TopBar' bulunamadı.", "Tamam");
+            return;
+        }
+
+        // Eski CoinBalance metnini gizle, konumunu al.
+        Vector2 pos = new Vector2(40f, 55f);
+        var oldCoin = top.Find("CoinBalance");
+        if (oldCoin != null)
+        {
+            pos = ((RectTransform)oldCoin).anchoredPosition;
+            oldCoin.gameObject.SetActive(false);
+        }
+
+        // Önceki pill varsa temizle (idempotent).
+        var prev = top.Find("WalletPill");
+        if (prev != null) Object.DestroyImmediate(prev.gameObject);
+
+        var bgSprite   = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/UI/AreaScreenImgs/AreaKremSpriteV2.png");
+        var iconSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/UI/GoldMoney.png");
+        var font       = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/_Project/Fonts/Inter/Static/Inter_28pt-ExtraBold SDF.asset");
+        var mat        = FindFontMaterial("Assets/_Project/Fonts/Inter/Static/Inter_28pt-ExtraBold SDF.asset", 3959975710503819313L);
+
+        BuildWalletPill(top, pos, bgSprite, iconSprite, font, mat);
+
+        EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
+        EditorUtility.DisplayDialog("Wallet Pill",
+            "Fail tarzı coin pill shop top bar'ına eklendi. Konumu WalletPill RectTransform'undan kaydırabilirsin.\n\nSahneyi kaydet (Cmd+S).", "Tamam");
+    }
+
+    /// <summary>Fail widget'ının layout matematiğiyle birebir aynı coin pill'i kurar.</summary>
+    private static void BuildWalletPill(Transform parent, Vector2 anchoredPos,
+                                        Sprite bgSprite, Sprite iconSprite, TMP_FontAsset font, Material mat)
+    {
+        const float bgHeight = 76f, iconSize = 84f, overlap = 18f;
+        float bgWidth = CalculateSpriteWidth(bgSprite, bgHeight);
+
+        var root = NewRect("WalletPill", parent);
+        root.anchorMin = root.anchorMax = new Vector2(0f, 0f);
+        root.pivot = new Vector2(0f, 0.5f);
+        root.anchoredPosition = anchoredPos;
+        root.sizeDelta = new Vector2(iconSize + bgWidth - overlap, Mathf.Max(iconSize, bgHeight));
+        var pill = root.gameObject.AddComponent<WalletBalancePill>();
+
+        // Arka plan (pill)
+        var bg = NewImage("WalletAmountBackground", root, Color.white);
+        bg.sprite = bgSprite; bg.enabled = bgSprite != null; bg.raycastTarget = false; bg.preserveAspect = false;
+        var bgRt = bg.rectTransform;
+        bgRt.anchorMin = bgRt.anchorMax = new Vector2(0f, 0.5f); bgRt.pivot = new Vector2(0f, 0.5f);
+        bgRt.anchoredPosition = new Vector2(iconSize - overlap, 0f); bgRt.sizeDelta = new Vector2(bgWidth, bgHeight);
+
+        // Sayı (bg'nin çocuğu)
+        var text = NewText("WalletAmountText", bgRt, "0", 42, Color.white, TextAlignmentOptions.Center, font);
+        var tRt = text.rectTransform;
+        tRt.anchorMin = Vector2.zero; tRt.anchorMax = Vector2.one;
+        tRt.offsetMin = new Vector2(14f, 8f); tRt.offsetMax = new Vector2(-22f, -8f);
+        text.enableAutoSizing = true; text.fontSizeMin = 22f; text.fontSizeMax = 46f;
+        text.fontStyle = FontStyles.Bold; text.enableWordWrapping = false;
+        text.overflowMode = TextOverflowModes.Ellipsis; text.raycastTarget = false;
+        if (mat != null) text.fontSharedMaterial = mat;
+
+        // İkon (en üstte, sola binmiş)
+        var icon = NewImage("GoldMoney", root, Color.white);
+        icon.sprite = iconSprite; icon.enabled = iconSprite != null; icon.raycastTarget = false; icon.preserveAspect = true;
+        var iRt = icon.rectTransform;
+        iRt.anchorMin = iRt.anchorMax = new Vector2(0f, 0.5f); iRt.pivot = new Vector2(0.5f, 0.5f);
+        iRt.anchoredPosition = new Vector2(iconSize * 0.5f, 0f); iRt.sizeDelta = new Vector2(iconSize, iconSize);
+        icon.transform.SetAsLastSibling();
+
+        SetRef(pill, "amountText", text);
+    }
+
+    private static float CalculateSpriteWidth(Sprite sprite, float height)
+        => (sprite == null || sprite.rect.height <= 0f) ? height * 3.2f : height * (sprite.rect.width / sprite.rect.height);
+
+    private static Material FindFontMaterial(string fontPath, long fileId)
+    {
+        foreach (var o in AssetDatabase.LoadAllAssetsAtPath(fontPath))
+            if (o is Material m && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(m, out _, out long id) && id == fileId)
+                return m;
+        return null;
+    }
+
     // ===================================================================
     //  Sprite yükleyiciler
     // ===================================================================
@@ -290,6 +432,10 @@ public static class ShopMockupSetup
         SetRef(card, "heroIcon", heroIcon);
         SetRef(card, "heroAmountText", heroAmount);
         SetArrayRef(card, "boxes", boxes);
+        SetRef(card, "matGrup1", Art("MATGrup1"));
+        SetRef(card, "matGrup3", Art("MATGrup3"));
+        SetRef(card, "matGrup5", Art("MATGrup5"));
+        SetRef(card, "timerSprite", Art("Timerimage"));
         SetRef(card, "bestBadge", badge.gameObject);
         SetRef(card, "nameText", nameText);
         SetRef(card, "priceButton", priceBtn);
@@ -422,10 +568,10 @@ public static class ShopMockupSetup
         coin.rectTransform.pivot = new Vector2(0, 0.5f);
         coin.rectTransform.anchoredPosition = new Vector2(40, 45); coin.rectTransform.sizeDelta = new Vector2(220, 60);
 
-        // ScrollView (215'ten başlar)
+        // ScrollView: üstte HUD (215), altta BottomBar (250) hariç → içerik ikisinin arkasına taşmaz.
         var scroll = NewRect("ScrollView", panel);
         scroll.anchorMin = Vector2.zero; scroll.anchorMax = Vector2.one;
-        scroll.offsetMin = new Vector2(0, 40); scroll.offsetMax = new Vector2(0, -215);
+        scroll.offsetMin = new Vector2(0, 250); scroll.offsetMax = new Vector2(0, -215);
         var sr = scroll.gameObject.AddComponent<ScrollRect>();
         sr.horizontal = false; sr.vertical = true; sr.movementType = ScrollRect.MovementType.Clamped;
 

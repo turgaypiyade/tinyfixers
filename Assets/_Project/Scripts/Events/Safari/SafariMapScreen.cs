@@ -19,7 +19,7 @@ using UnityEngine.UI;
 /// Kurulum: root, avatarStack (roster), counterText, pitstopAnchors (1..7), cliffPoint,
 /// continueButton/Label, statusText, closeButton bağlanır. Pitstop kalabalığı runtime'da üretilir.
 /// </summary>
-public sealed class SafariMapScreen : MonoBehaviour
+public sealed class SafariMapScreen : SafariMapScreenBase
 {
     [Header("Kök")]
     [SerializeField] private GameObject root;
@@ -94,7 +94,7 @@ public sealed class SafariMapScreen : MonoBehaviour
         if (root != null && root != gameObject) root.SetActive(false);
     }
 
-    public void Open(SafariEventController owner, SafariRoundOutcome outcome)
+    public override void Open(SafariEventController owner, SafariRoundOutcome outcome)
     {
         controller = owner;
         gameObject.SetActive(true);
@@ -108,7 +108,7 @@ public sealed class SafariMapScreen : MonoBehaviour
         active = StartCoroutine(Present(outcome));
     }
 
-    public void Hide()
+    public override void Hide()
     {
         if (active != null) { StopCoroutine(active); active = null; }
         if (root != null) root.SetActive(false);

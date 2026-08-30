@@ -43,17 +43,9 @@ public sealed class SafariEventButton : MonoBehaviour
 
     private void Update()
     {
-        var remaining = SafariState.FallCooldownRemaining(DateTime.UtcNow);
-        if (remaining <= TimeSpan.Zero)
-        {
-            if (lastShownSeconds != int.MinValue)
-                RefreshLabel();
-            return;
-        }
-
-        int seconds = Mathf.Max(0, Mathf.CeilToInt((float)remaining.TotalSeconds));
+        // Etiket sürekli geri-sayım (event kalan süresi veya düşüş cooldown'ı) → her saniye tazele.
+        int seconds = CurrentCountdownSeconds();
         if (seconds == lastShownSeconds) return;
-
         RefreshLabel();
     }
 
@@ -77,25 +69,65 @@ public sealed class SafariEventButton : MonoBehaviour
 
     private void RefreshLabel()
     {
-        TimeSpan remaining = SafariState.FallCooldownRemaining(DateTime.UtcNow);
-        bool canContinue = remaining <= TimeSpan.Zero;
-        lastShownSeconds = canContinue ? int.MinValue : Mathf.Max(0, Mathf.CeilToInt((float)remaining.TotalSeconds));
+        TimeSpan cooldown = SafariState.FallCooldownRemaining(DateTime.UtcNow);
+        bool inCooldown = cooldown > TimeSpan.Zero;
 
+        // Cooldown süresince buton pasif (tekrar oynanamaz); event sayarken aktif.
         if (button != null)
-            button.interactable = canContinue;
+            button.interactable = !inCooldown;
 
-        if (labelText == null) return;
-        if (!canContinue)
-            labelText.text = FormatRemaining(remaining);
-        else
-            labelText.text = defaultLabel;
+        if (labelText != null)
+        {
+            if (inCooldown)
+            {
+                // Evente girip kaybedince: kalan bekleme (cooldown) süresi.
+                labelText.text = FormatCountdown(cooldown);
+            }
+            else
+            {
+                // Normal: eventin bitişine kalan toplam süre. (Aktif pencere yoksa etikete geri dön.)
+                TimeSpan eventRemaining = EventRemaining();
+                labelText.text = eventRemaining > TimeSpan.Zero ? FormatCountdown(eventRemaining) : defaultLabel;
+            }
+        }
+
+        lastShownSeconds = CurrentCountdownSeconds();
     }
 
-    private static string FormatRemaining(TimeSpan remaining)
+    // Etikette gösterilecek geri-sayım saniyesi: düşüş cooldown'ı öncelikli, yoksa event penceresi kalanı.
+    // Aktif geri-sayım yoksa int.MinValue (etiket defaultLabel'a döner, her frame tazelemeye gerek kalmaz).
+    private int CurrentCountdownSeconds()
     {
-        int seconds = Mathf.Max(0, Mathf.CeilToInt((float)remaining.TotalSeconds));
-        int minutes = seconds / 60;
-        int secs = seconds % 60;
-        return $"{minutes:00}:{secs:00}";
+        TimeSpan cooldown = SafariState.FallCooldownRemaining(DateTime.UtcNow);
+        if (cooldown > TimeSpan.Zero)
+            return Mathf.Max(0, Mathf.CeilToInt((float)cooldown.TotalSeconds));
+
+        TimeSpan eventRemaining = EventRemaining();
+        return eventRemaining > TimeSpan.Zero
+            ? Mathf.Max(0, Mathf.CeilToInt((float)eventRemaining.TotalSeconds))
+            : int.MinValue;
+    }
+
+    // Aktif event penceresinin bitişine kalan süre (SafariSchedule). Aktif pencere yoksa Zero.
+    private TimeSpan EventRemaining()
+    {
+        var cfg = controller != null ? controller.Config : null;
+        if (cfg == null) return TimeSpan.Zero;
+
+        DateTime end = SafariSchedule.GetWindowEnd(cfg, DateTime.UtcNow);
+        if (end == DateTime.MinValue) return TimeSpan.Zero;
+
+        TimeSpan remaining = end - DateTime.UtcNow;
+        return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+    }
+
+    // >= 1 saat kalınca SS:DD:ss, aksi halde DD:ss.
+    private static string FormatCountdown(TimeSpan remaining)
+    {
+        int totalSeconds = Mathf.Max(0, Mathf.CeilToInt((float)remaining.TotalSeconds));
+        int h = totalSeconds / 3600;
+        int m = (totalSeconds % 3600) / 60;
+        int s = totalSeconds % 60;
+        return h > 0 ? $"{h:00}:{m:00}:{s:00}" : $"{m:00}:{s:00}";
     }
 }

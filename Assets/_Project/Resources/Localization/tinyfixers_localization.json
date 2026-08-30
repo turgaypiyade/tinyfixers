@@ -5,6 +5,22 @@
       "code": "tr",
       "entries": [
         {
+          "key": "rising_title",
+          "value": "Yükseliş"
+        },
+        {
+          "key": "rising_level",
+          "value": "Seviye"
+        },
+        {
+          "key": "rising_players",
+          "value": "Oyuncu"
+        },
+        {
+          "key": "rising_intro_tap",
+          "value": "Devam Etmek İçin Dokun"
+        },
+        {
           "key": "prelevel_popup_title_level",
           "value": "SEVİYE {0}"
         },
@@ -661,6 +677,22 @@
     {
       "code": "en",
       "entries": [
+        {
+          "key": "rising_title",
+          "value": "Rising"
+        },
+        {
+          "key": "rising_level",
+          "value": "Level"
+        },
+        {
+          "key": "rising_players",
+          "value": "Players"
+        },
+        {
+          "key": "rising_intro_tap",
+          "value": "Tap To Continue"
+        },
         {
           "key": "prelevel_popup_title_level",
           "value": "Level {0}"

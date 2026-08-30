@@ -19,7 +19,7 @@ MonoBehaviour:
   minLevelGate: 50
   activeDays: 01000000030000000600000000000000
   windowHours: 24
-  autoShowJoinPopup: 0
+  autoShowJoinPopup: 1
   reAskIntervalHours: 1
   fallCooldownMinutes: 30
   participantVisualCount: 100

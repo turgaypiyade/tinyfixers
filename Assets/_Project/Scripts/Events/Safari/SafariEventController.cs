@@ -23,7 +23,8 @@ public sealed class SafariEventController : MonoBehaviour
     [Header("UI Refs")]
     [SerializeField] private SafariEventButton         eventButton;
     [SerializeField] private SafariJoinPopupController joinPopup;
-    [SerializeField] private SafariMapScreen           mapScreen;
+    [SerializeField] private SafariMapScreenBase       mapScreen;
+    [SerializeField] private RisingIntroOverlay        risingIntroOverlay;
 
     public SafariConfig Config => config;
 
@@ -118,8 +119,22 @@ public sealed class SafariEventController : MonoBehaviour
         if (!IsEventAvailable) return;
         if (IsTutorialBlocking()) return;   // tutorial açıkken açma
 
-        if (SafariState.HasJoined) OpenMap(SafariRoundOutcome.None);
-        else                       ShowJoinPopup();
+        // Düşüş sonrası yeniden katılım: kaybedince pitstop sıfırlanır + 30dk cooldown başlar,
+        // ama HasJoined true kalır. Cooldown bitince ikona basmak taze bir yarışa "yeniden katılım"dır
+        // → katıl-popup + intro matchmaking overlay tekrar oynasın (kullanıcı kararı).
+        // (Cooldown boyunca SafariEventButton butonu pasif; bu noktaya normalde gelinmez.)
+        bool needsRejoin = SafariState.RunStatus == SafariRunStatus.Fell;
+
+        // Güvenlik önlemi: event devam ediyorsa (katıldı & düşmedi) tekrar ikona basmak her şeyi
+        // baştan başlatmasın → doğrudan kaldığı kata (CurrentPitstop) git. Progress korunur.
+        // Yeni pencere (cycle) açıldığında SyncCycle HasJoined'i sıfırlar → o zaman popup çıkar.
+        if (SafariState.HasJoined && !needsRejoin)
+        {
+            OpenMap(SafariRoundOutcome.None);
+            return;
+        }
+
+        ShowJoinPopup();
     }
 
     // ── Popup akışı ──────────────────────────────────────────────
@@ -128,9 +143,10 @@ public sealed class SafariEventController : MonoBehaviour
     {
         if (SafariState.HasJoined) return false;
 
-        var last = SafariState.LastAskUtc;
-        if (last == DateTime.MinValue) return true;            // ilk aktivasyon
-        return (UtcNow - last).TotalHours >= config.reAskIntervalHours;
+        // YALNIZ ilk aktivasyonda bir kez sor: event bu cycle'da yaratılıp uygun an bulununca
+        // popup çıkar; sonra (katılsa da katılmasa da) tekrar nag YOK — ikon manuel tıklama için kalır.
+        // Yeni pencere (cycle) → SyncCycle LastAskUtc'yi sıfırlar → yeni event'te tekrar bir kez sorulur.
+        return SafariState.LastAskUtc == DateTime.MinValue;
     }
 
     private void ShowJoinPopup()
@@ -143,6 +159,20 @@ public sealed class SafariEventController : MonoBehaviour
     public void OnJoinAccepted()
     {
         SafariState.MarkJoined(UtcNow);
+        // Düşüş sonrası yeniden katılımda RunStatus=Fell idi; kabul edilince taze tura geç —
+        // aksi halde her ikon tıklaması intro'yu tekrar oynatırdı. İlk katılımda zaten Idle.
+        if (SafariState.RunStatus == SafariRunStatus.Fell)
+            SafariState.SetRunStatus(SafariRunStatus.Idle);
+        if (risingIntroOverlay != null)
+        {
+            risingIntroOverlay.Show(this);
+            return;
+        }
+        OpenMap(SafariRoundOutcome.None);
+    }
+
+    public void OpenMapFromIntro()
+    {
         OpenMap(SafariRoundOutcome.None);
     }
 

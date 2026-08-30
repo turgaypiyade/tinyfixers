@@ -34,6 +34,8 @@ public sealed class SafariAvatarStackView : MonoBehaviour
     [SerializeField, Range(0.45f, 0.9f)] private float helmetAvatarScale = 0.66f;
     [SerializeField, Range(-0.25f, 0.25f)] private float helmetAvatarOffsetY = -0.08f;
     [SerializeField, Range(0.85f, 1.25f)] private float helmetFrameScale = 1.05f;
+    [SerializeField] private Sprite playerHelmetSprite;
+    [SerializeField] private Sprite[] botHelmetSprites;
 
     private readonly List<GameObject> spawned = new();
     private readonly List<RectTransform> botAvatars = new(); // ön→arka sıralı
@@ -52,6 +54,8 @@ public sealed class SafariAvatarStackView : MonoBehaviour
         helmetAvatarScale = source.helmetAvatarScale;
         helmetAvatarOffsetY = source.helmetAvatarOffsetY;
         helmetFrameScale = source.helmetFrameScale;
+        playerHelmetSprite = source.playerHelmetSprite;
+        botHelmetSprites = source.botHelmetSprites;
     }
 
     /// <summary>Sol-üst köşe gibi yerler için: SADECE oyuncunun tek avatarı.</summary>
@@ -323,14 +327,32 @@ public sealed class SafariAvatarStackView : MonoBehaviour
 
     private Sprite PickHelmetSprite(SafariParticipant p)
     {
-        if (helmetSprites == null || helmetSprites.Length == 0)
+        if (p.isPlayer && playerHelmetSprite != null)
+            return playerHelmetSprite;
+
+        if (!p.isPlayer)
+        {
+            var botHelmet = PickFrom(botHelmetSprites, HashParticipant(p));
+            if (botHelmet != null)
+                return botHelmet;
+        }
+
+        var fallback = PickFrom(helmetSprites, HashParticipant(p));
+        if (fallback != null)
+            return fallback;
+
+        return null;
+    }
+
+    private static Sprite PickFrom(Sprite[] sprites, uint hash)
+    {
+        if (sprites == null || sprites.Length == 0)
             return null;
 
-        uint hash = HashParticipant(p);
-        int start = (int)(hash % (uint)helmetSprites.Length);
-        for (int i = 0; i < helmetSprites.Length; i++)
+        int start = (int)(hash % (uint)sprites.Length);
+        for (int i = 0; i < sprites.Length; i++)
         {
-            var sprite = helmetSprites[(start + i) % helmetSprites.Length];
+            var sprite = sprites[(start + i) % sprites.Length];
             if (sprite != null)
                 return sprite;
         }
