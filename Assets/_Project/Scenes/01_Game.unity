@@ -3867,8 +3867,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.06827309}
-  m_AnchorMax: {x: 0.83511776, y: 1.6004016}
+  m_AnchorMin: {x: 0, y: 0.06546855}
+  m_AnchorMax: {x: 0.8345221, y: 1.5346599}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -16052,6 +16052,9 @@ MonoBehaviour:
   levelCatalog: {fileID: 0}
   failConfirmGraceSeconds: 0.6
   levelEndForceTimeoutSeconds: 5
+  abandonHeartSprite: {fileID: 21300000, guid: 8c56b5e83511c4217920f6e6e9e164a8, type: 3}
+  abandonExitTextColor: {r: 1, g: 1, b: 1, a: 1}
+  abandonHeartScale: 1.25
 --- !u!114 &4377817237982106393
 MonoBehaviour:
   m_ObjectHideFlags: 0

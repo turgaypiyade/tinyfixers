@@ -25,6 +25,8 @@ public sealed class SafariEventController : MonoBehaviour
     [SerializeField] private SafariJoinPopupController joinPopup;
     [SerializeField] private SafariMapScreenBase       mapScreen;
     [SerializeField] private RisingIntroOverlay        risingIntroOverlay;
+    [Tooltip("İlk aktivasyon otomatik popup'ı için, ana menü yüklendikten sonra beklenecek ek süre (sn).")]
+    [SerializeField] private float autoPopupDelaySeconds = 2f;
 
     public SafariConfig Config => config;
 
@@ -67,19 +69,32 @@ public sealed class SafariEventController : MonoBehaviour
             return;
         }
 
-        // Otomatik popup YALNIZ config'te açıksa (şimdilik kapalı → yalnız ikona tıklayınca).
+        // Otomatik popup YALNIZ config'te açıksa. Ana menü tam yüklensin diye loading ekranı bitene
+        // kadar + ek gecikme beklenir (uygulama açılışında hemen fırlamasın).
         if (config.autoShowJoinPopup && ShouldAutoAsk())
             StartCoroutine(RunWhenClear(() =>
             {
                 if (IsEventAvailable && !SafariState.HasJoined) ShowJoinPopup();
-            }));
+            }, initialDelay: autoPopupDelaySeconds, waitForLoadingScreen: true));
     }
 
-    // Tutorial/overlay ekrandayken Safari UI'ı açılmasın (deadlock önlemi). Temizlenince action çalışır.
-    private IEnumerator RunWhenClear(Action action)
+    // Tutorial/overlay/loading ekrandayken Safari UI'ı açılmasın (deadlock + erken açılış önlemi).
+    // Temizlenince (opsiyonel ek gecikmeden sonra) action çalışır.
+    private IEnumerator RunWhenClear(Action action, float initialDelay = 0f, bool waitForLoadingScreen = false)
     {
         const float maxWait = 60f;
         float t = 0f;
+
+        // Ana menü yükleme ekranı kapanana kadar bekle (varsa).
+        while (waitForLoadingScreen && t < maxWait && LoadingScreenManager.IsVisible)
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (initialDelay > 0f)
+            yield return new WaitForSecondsRealtime(initialDelay);
+
         while (t < maxWait && IsTutorialBlocking())
         {
             t += Time.unscaledDeltaTime;
@@ -204,7 +219,8 @@ public sealed class SafariEventController : MonoBehaviour
 
         if (!SafariState.HasJoined) SafariState.MarkJoined(UtcNow);
 
-        SafariState.SnapshotFirstTryClears(PlayerStats.FirstTryClears);
+        // Tur snapshot: dönüşte "ilk-hakta kazandı mı" = (CurrentLevel arttı) VE (fail sayacı artmadı).
+        SafariState.SnapshotAttempt(CurrentLevel.Global, PlayerStats.LevelFailCount);
         SafariState.SetRunStatus(SafariRunStatus.AwaitingResult);
 
         // Safari UI'ını kapat: yoksa level başlatmanın açtığı pre-level popup / loading ekranı
@@ -235,7 +251,12 @@ public sealed class SafariEventController : MonoBehaviour
 
     private SafariRoundOutcome EvaluateReturn()
     {
-        bool firstTryWin = PlayerStats.FirstTryClears > SafariState.FirstTryClearsSnapshot;
+        // İlk-hakta kazanma = level ilerledi (kazandı) VE bu tur boyunca hiç fail olmadı.
+        // NOT: eski "FirstTryClears deltası" ölçütü global LevelFailedKey'e bağlıydı; oyuncu bu leveli
+        // event'ten ÖNCE fail edip vazgeçtiyse bayrak stale=1 kalıp temiz kazanımı bile "düştü" sayıyordu.
+        bool won = CurrentLevel.Global > SafariState.LevelSnapshot;
+        bool failedDuringAttempt = PlayerStats.LevelFailCount > SafariState.FailSnapshot;
+        bool firstTryWin = won && !failedDuringAttempt;
 
         if (!firstTryWin)
         {

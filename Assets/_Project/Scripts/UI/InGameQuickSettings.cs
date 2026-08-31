@@ -124,6 +124,16 @@ public class InGameQuickSettings : MonoBehaviour
 
     private void OnExitClicked()
     {
+        // Direkt çıkma: önce "Oyundan Çık" uyarısı (level fail popup). Kırmızı "Çık" → bir can harcar +
+        // Tekrar Dene popup'ı; X → oyuna geri döner. Popup bulunamazsa eski davranışa düş.
+        var levelEnd = FindFirstObjectByType<LevelEndSimplePopupController>(FindObjectsInactive.Include);
+        if (levelEnd != null)
+        {
+            SetMenuOpen(false);
+            levelEnd.ShowAbandonWarning();
+            return;
+        }
+
         SceneManager.LoadScene(mainMenuScene);
     }
 

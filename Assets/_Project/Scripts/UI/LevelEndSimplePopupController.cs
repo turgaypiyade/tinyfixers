@@ -197,6 +197,15 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private bool failPopupShown;
     private bool successPopupShown;
     private bool successReturnQueued;
+    private bool _abandonWarning;   // oyun içi "exit" uyarısı: gerçek fail değil
+    [Header("Oyundan Çık uyarısı")]
+    [SerializeField] private Sprite abandonHeartSprite;   // kırık kalp (Inspector'dan atanır)
+    [SerializeField] private Color abandonExitTextColor = new Color(0.86f, 0.17f, 0.17f, 1f);  // kırmızı "Çık"
+    [SerializeField, Min(1f)] private float abandonHeartScale = 1.8f;   // kalbi büyüt (extraMovesIcon üstünden)
+    private Color _failContinueOriginalColor;
+    private bool _failContinueColorCaptured;
+    private Vector3 _extraMovesIconOriginalScale = Vector3.one;
+    private bool _extraMovesIconScaleCaptured;
     private int _movesAtWin;
     private int currentOfferAmount;
     private int currentCost;
@@ -446,6 +455,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void HandleFailCloseClicked()
     {
+        // Terk uyarısındaysak X (BtnClose) = "vazgeçtim, oyuna dön" → leveli olduğu gibi sürdür.
+        if (_abandonWarning)
+        {
+            ResumeFromAbandonWarning();
+            return;
+        }
+
         // 1. cancel: kaybedecekleri sağdan kaydırıp göster (ana menüye gitme). BtnContinue aynı kalır.
         if (!failSecondStage && _hasLosses && lossSlidePanel != null)
         {
@@ -1166,6 +1182,131 @@ public class LevelEndSimplePopupController : MonoBehaviour
         EvaluateAndShowIfEnded();
     }
 
+    // Oyun içi "exit" → gerçek fail DEĞİL. Oyuncu mevcut hakkıyla oynamaya devam edebilir; bu yüzden
+    // fail popup'ı UYARI olarak gösterilir ("terk edersen şunları kaybedersin"). Devam (BtnContinue) →
+    // SATINALMA YOK, leveli olduğu gibi sürdürür. X (BtnClose) → gerçekten çık (fail işaretlenir).
+    public void ShowAbandonWarning()
+    {
+        if (failPopupShown || successPopupShown)
+            return;   // zaten bir level-end ekranı akışta → dokunma
+
+        _abandonWarning = true;
+        failPopupShown = true;     // gerçek fail değerlendirmesi araya girmesin
+        successPopupShown = false;
+
+        if (board != null)
+            board.SetInputLocked(true);
+
+        // Henüz can HARCAMA (yalnız uyarı). Kayıp LİSTESİ YOK (diğer oyunlar da vermiyor).
+        ApplyChapterThemeVisuals();
+        if (lossSummaryRoot != null) lossSummaryRoot.SetActive(false);
+        if (lossTitleText != null) lossTitleText.gameObject.SetActive(false);
+        if (failEventLossWarningText != null) failEventLossWarningText.gameObject.SetActive(false);
+        if (lossSlidePanel != null) lossSlidePanel.gameObject.SetActive(false);
+
+        // Mevcut "hamle teklifi" düzenini yeniden kullan: ikon = BÜYÜK kırık kalp (badge gizli),
+        // mesaj (eski "5 hamle ile devam et" yeri) = "Bir can kaybedeceksin" (aynı font).
+        if (extraMovesIcon != null)
+        {
+            if (!_extraMovesIconScaleCaptured)
+            {
+                _extraMovesIconOriginalScale = extraMovesIcon.transform.localScale;
+                _extraMovesIconScaleCaptured = true;
+            }
+            if (abandonHeartSprite != null) extraMovesIcon.sprite = abandonHeartSprite;
+            extraMovesIcon.preserveAspect = true;
+            extraMovesIcon.enabled = abandonHeartSprite != null;
+            extraMovesIcon.transform.localScale = _extraMovesIconOriginalScale * abandonHeartScale;
+        }
+        SetExtraMovesBadgeTextVisible(false);
+
+        string lifeLoss = LocalizedText("level_end_exit_life_loss", "Bir can kaybedeceksin");
+        if (failMessageText != null)
+        {
+            failMessageText.gameObject.SetActive(true);
+            failMessageText.text = lifeLoss;
+        }
+        if (failDescriptionText != null && failDescriptionText != failMessageText)
+            failDescriptionText.text = lifeLoss;
+
+        // Başlık kısa "Oyundan Çık"; birincil buton (BtnContinue, yeşil) kırmızı "Çık".
+        if (failTitleText != null)
+            failTitleText.text = LocalizedText("level_end_exit_title", "Oyundan Çık");
+        if (failContinueText != null)
+        {
+            if (!_failContinueColorCaptured)
+            {
+                _failContinueOriginalColor = failContinueText.color;
+                _failContinueColorCaptured = true;
+            }
+            failContinueText.text = LocalizedText("level_end_exit", "Çık");
+            failContinueText.color = abandonExitTextColor;
+        }
+
+        failSecondStage = true;   // buton dalları _abandonWarning ile zaten intercept ediyor
+        transform.SetAsLastSibling();
+        if (failPopupRoot != null) failPopupRoot.SetActive(true);
+        if (successPopupRoot != null) successPopupRoot.SetActive(false);
+
+        SetMainScreenDimmed(true);
+        SetBlockerVisible(true);
+        ShowFailWalletBalance(true);
+    }
+
+    // BtnClose (X) → oyuna geri dön: can/satınalma yok, leveli olduğu gibi sürdür.
+    private void ResumeFromAbandonWarning()
+    {
+        _abandonWarning = false;
+        RestoreFailContinueTextColor();
+        RestoreExtraMovesIconScale();
+
+        if (board != null)
+            board.SetInputLocked(false);
+
+        // Gerçek fail değerlendirme state'ini temiz bırak (ShowFailPopup guard'ı tekrar çalışabilsin).
+        failPopupShown = false;
+        failSecondStage = false;
+
+        HideAllPopups();
+        if (board != null) board.ForceFullBoardSync();
+    }
+
+    // BtnContinue ("Çık", kırmızı) → gerçekten çık: bir can harca + fail işaretle + staged gains iptal,
+    // sonra "Tekrar Dene" pre-level popup'ını aç (sahnedeyse); yoksa ana menüye dön.
+    private void QuitFromAbandonWarning()
+    {
+        _abandonWarning = false;
+        RestoreFailContinueTextColor();
+        RestoreExtraMovesIconScale();
+
+        LivesManager.SpendLife();   // "Bir can kaybedeceksin"
+        PlayerStats.MarkCurrentLevelFailed();
+        ProgressEventService.Instance?.DiscardStagedGains();
+
+        var inScenePreLevel = FindFirstObjectByType<PreLevelSpecialPopupController>(FindObjectsInactive.Include);
+        if (inScenePreLevel != null)
+        {
+            if (failPopupRoot != null) failPopupRoot.SetActive(false);
+            inScenePreLevel.gameObject.SetActive(true);
+            inScenePreLevel.OpenForInGameRetry();
+            return;
+        }
+        ReturnToMainMenuImmediate();
+    }
+
+    private void RestoreFailContinueTextColor()
+    {
+        if (_failContinueColorCaptured && failContinueText != null)
+            failContinueText.color = _failContinueOriginalColor;
+    }
+
+    // Abandon uyarısında büyütülen hamle-ikonunu (kırık kalp) orijinal ölçeğine döndür.
+    private void RestoreExtraMovesIconScale()
+    {
+        if (_extraMovesIconScaleCaptured && extraMovesIcon != null)
+            extraMovesIcon.transform.localScale = _extraMovesIconOriginalScale;
+    }
+
     private void ShowFailPopup()
     {
         Debug.Log("[LevelEnd] ShowFailPopup CALLED");
@@ -1174,6 +1315,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         failPopupShown = true;
         successPopupShown = false;
+
+        // Abandon (Oyundan Çık) modundan çık — gerçek fail için ikon ölçeği + buton rengi sıfırla
+        // (sprite/mesaj zaten RefreshFailOfferVisuals ile geri yazılır).
+        _abandonWarning = false;
+        RestoreFailContinueTextColor();
+        RestoreExtraMovesIconScale();
 
         // NOT: Fail'i BURADA işaretleME. Oyuncu reklam/altınla DEVAM edip kazanabilir → o zaman
         // "ilk hamlede kazanıldı" sayılmalı (streak korunur). Fail ancak oyuncu gerçekten VAZGEÇİP
@@ -1439,6 +1586,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void HandleBuyMovesClicked()
     {
+        // Terk uyarısındaysak birincil buton = kırmızı "Çık" → gerçekten çık (bir can + retry popup).
+        if (_abandonWarning)
+        {
+            QuitFromAbandonWarning();
+            return;
+        }
+
         if (board == null)
             return;
 

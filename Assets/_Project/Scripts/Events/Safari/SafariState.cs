@@ -13,8 +13,9 @@ public enum SafariRunStatus
 /// Tiny Safari kalıcı durumu — PlayerPrefs tabanlı (ileride cloud-save'e taşınabilir).
 ///
 /// Pencere (cycle) değişince tüm run state sıfırlanır: her yeni Safari penceresi temiz başlar.
-/// Level dönüş tespiti için <see cref="FirstTryClearsSnapshot"/> kullanılır (PlayerStats.FirstTryClears
-/// ile karşılaştırma → arttıysa ilerle, aynıysa düş). Bu, Safari'yi global streak'e bağlamadan izole tutar.
+/// Level dönüş tespiti için <see cref="SnapshotAttempt"/> (tur başında CurrentLevel + PlayerStats.LevelFailCount)
+/// kullanılır: dönüşte level ilerlediyse VE tur boyunca fail olmadıysa "ilk-hakta kazandı" → ilerle; aksi düş.
+/// Global first-try bayrağına bağlı DEĞİL (stale olabilir) → Safari izole ve doğru kalır.
 /// </summary>
 public static class SafariState
 {
@@ -23,9 +24,10 @@ public static class SafariState
     private const string KeyPitstop     = "safari_pitstop";
     private const string KeyJoinTime    = "safari_join_ticks";
     private const string KeyLastAsk     = "safari_lastask_ticks";
-    private const string KeyRunStatus   = "safari_runstatus";
-    private const string KeyFtcSnapshot = "safari_ftc_snapshot";
-    private const string KeyFallUntil   = "safari_fall_until_ticks";
+    private const string KeyRunStatus    = "safari_runstatus";
+    private const string KeyLevelSnapshot = "safari_level_snapshot";  // tur başında CurrentLevel (won tespiti)
+    private const string KeyFailSnapshot  = "safari_fail_snapshot";   // tur başında PlayerStats.LevelFailCount
+    private const string KeyFallUntil    = "safari_fall_until_ticks";
 
     public static event Action OnChanged;
 
@@ -74,7 +76,8 @@ public static class SafariState
         PlayerPrefs.SetString(KeyJoinTime, "0");
         PlayerPrefs.SetString(KeyLastAsk, "0");
         PlayerPrefs.SetInt(KeyRunStatus, (int)SafariRunStatus.Idle);
-        PlayerPrefs.SetInt(KeyFtcSnapshot, 0);
+        PlayerPrefs.SetInt(KeyLevelSnapshot, 0);
+        PlayerPrefs.SetInt(KeyFailSnapshot, 0);
         PlayerPrefs.SetString(KeyFallUntil, "0");
         PlayerPrefs.Save();
         OnChanged?.Invoke();
@@ -127,13 +130,17 @@ public static class SafariState
         OnChanged?.Invoke();
     }
 
-    // ── İlk-hak snapshot (level dönüş tespiti) ───────────────────
+    // ── Tur snapshot (level dönüş tespiti) ───────────────────────
+    // Dönüşte "ilk-hakta kazandı mı" = (CurrentLevel arttı) VE (fail sayacı artmadı).
+    // Global FirstTryClears/LevelFailedKey'e (stale olabilir) bağlı DEĞİL → event izole ve doğru.
 
-    public static int FirstTryClearsSnapshot => PlayerPrefs.GetInt(KeyFtcSnapshot, 0);
+    public static int LevelSnapshot => PlayerPrefs.GetInt(KeyLevelSnapshot, 0);
+    public static int FailSnapshot  => PlayerPrefs.GetInt(KeyFailSnapshot, 0);
 
-    public static void SnapshotFirstTryClears(int value)
+    public static void SnapshotAttempt(int currentLevel, int failCount)
     {
-        PlayerPrefs.SetInt(KeyFtcSnapshot, value);
+        PlayerPrefs.SetInt(KeyLevelSnapshot, currentLevel);
+        PlayerPrefs.SetInt(KeyFailSnapshot, failCount);
         PlayerPrefs.Save();
     }
 
@@ -169,7 +176,7 @@ public static class SafariState
     public static void DebugClearAll()
     {
         foreach (var k in new[] { KeyCycle, KeyJoined, KeyPitstop, KeyJoinTime,
-                                  KeyLastAsk, KeyRunStatus, KeyFtcSnapshot, KeyFallUntil })
+                                  KeyLastAsk, KeyRunStatus, KeyLevelSnapshot, KeyFailSnapshot, KeyFallUntil })
             PlayerPrefs.DeleteKey(k);
         PlayerPrefs.Save();
         OnChanged?.Invoke();

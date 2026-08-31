@@ -18,6 +18,7 @@ public static class PlayerStats
     private const string CurrentStreakKey  = "stats_current_streak";
     private const string LongestStreakKey  = "stats_longest_streak";
     private const string LevelFailedKey    = "stats_current_level_failed";
+    private const string LevelFailCountKey = "stats_level_fail_count";      // kümülatif (event ilk-hak tespiti)
     private const string WeeklyTicksKey    = "stats_weekly_clear_ticks";   // CSV of UTC ticks
     private const string FirstLaunchKey    = "stats_first_launch_ticks";
 
@@ -30,6 +31,10 @@ public static class PlayerStats
     public static int FirstTryClears => PlayerPrefs.GetInt(FirstTryClearsKey, 0);
     public static int CurrentStreak  => PlayerPrefs.GetInt(CurrentStreakKey, 0);
     public static int LongestStreak  => PlayerPrefs.GetInt(LongestStreakKey, 0);
+
+    /// Kümülatif "level fail (vazgeçme)" sayısı. Global first-try bayrağından bağımsız; event bir turda
+    /// oyuncunun fail edip etmediğini bu sayacın snapshot'ıyla anlar (stale LevelFailedKey'e bağlı kalmaz).
+    public static int LevelFailCount => PlayerPrefs.GetInt(LevelFailCountKey, 0);
 
     /// Son 7 gün (kayan) içinde geçilen level sayısı. Eski kayıtları okurken budar.
     public static int WeeklyClears
@@ -97,6 +102,7 @@ public static class PlayerStats
     {
         PlayerPrefs.SetInt(CurrentStreakKey, 0);
         PlayerPrefs.SetInt(LevelFailedKey, 1);
+        PlayerPrefs.SetInt(LevelFailCountKey, LevelFailCount + 1);   // kümülatif fail sayacı (event tespiti)
         PlayerPrefs.Save();
         OnChanged?.Invoke();
     }

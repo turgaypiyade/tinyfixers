@@ -93,6 +93,18 @@
           "value": "Devam Et"
         },
         {
+          "key": "level_end_exit_title",
+          "value": "Oyundan Çık"
+        },
+        {
+          "key": "level_end_exit",
+          "value": "Çık"
+        },
+        {
+          "key": "level_end_exit_life_loss",
+          "value": "Bir can kaybedeceksin"
+        },
+        {
           "key": "level_end_score_label",
           "value": "Puan:"
         },
@@ -764,6 +776,18 @@
         {
           "key": "level_end_continue",
           "value": "Continue"
+        },
+        {
+          "key": "level_end_exit_title",
+          "value": "Quit Level"
+        },
+        {
+          "key": "level_end_exit",
+          "value": "Quit"
+        },
+        {
+          "key": "level_end_exit_life_loss",
+          "value": "You'll lose a life"
         },
         {
           "key": "level_end_score_label",
