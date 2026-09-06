@@ -254,11 +254,17 @@ public sealed class SpecialChainRunner : BoardAction
             // outlive the sub-chains: a released cell could let a not-yet-blasted
             // special fall away from its sub-chain mid-VFX.
             float safety = 0f;
+            int peakJobs = 0;            // TEŞHİS: bekleme boyunca görülen en yüksek job sayısı
+            float timeAtSingleJob = 0f;  // TEŞHİS: yalnız 1 job (baseline+1) kalıp beklenen süre
             // Non-blocking uçuşları (goal orb, PatchBot dash) bekleme; hedefe uçarken
             // special zincirinin final settle'ı donmasın. Gerçek background falls/sub-chain'leri
             // beklemeye devam et (BlockingBackgroundJobs).
             while (board.BlockingBackgroundJobs > settleJobBaseline && safety < 5f)
             {
+                int curJobs = board.BlockingBackgroundJobs;
+                if (curJobs > peakJobs) peakJobs = curJobs;
+                if (curJobs == settleJobBaseline + 1) timeAtSingleJob += Time.deltaTime;
+
                 // KRİTİK: background job'lar sürerken board DONMASIN.
                 // PatchBot dash artık BlockingBackgroundJobs dışında; burası hâlâ gerçek
                 // sub-chain/fall job'ları sırasında boş hücreleri kapatır.
@@ -281,6 +287,17 @@ public sealed class SpecialChainRunner : BoardAction
 
                 safety += Time.deltaTime;
                 yield return null;
+            }
+
+            // TEŞHİS (mantığı değiştirmez): settle döngüsü niye bekledi? Yalnız uzun/anormal
+            // beklemeleri logla. reason=CAP → job baseline'a hiç dönmedi (leak/anomali, 5s cap).
+            // reason=drained ama süre uzunsa → bir sub-chain/fall kuyruğu uzun (ölü-bekleme adayı).
+            if (safety >= 5f || safety > 0.6f)
+            {
+                string exitReason = safety >= 5f ? "CAP-5s-ANOMALY" : "drained";
+                Debug.Log($"[ChainSettle] exit={exitReason} " +
+                          $"waited={safety:F2}s peakJobs={peakJobs} timeAtSingleJob={timeAtSingleJob:F2}s baseline={settleJobBaseline} " +
+                          $"resolvableEmpty={board.CascadeLogic?.HasAnyResolvableEmptyPlayableCell()}");
             }
 
             // No anchor may outlive the chain (a leftover pending cell would block

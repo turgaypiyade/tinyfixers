@@ -717,9 +717,35 @@ MonoBehaviour:
   - {fileID: 3252753888189913686}
   - {fileID: 1567689449980013861}
   - {fileID: 7667914038867179784}
+  inactiveOpenLockAlpha: 0.38
+  closedLockAlpha: 0.58
+  activeLockScale: 1.06
   knobTravelY: 102.797
   knobSlideDuration: 0.35
   breakParticlePrefab: {fileID: 0}
+  dissolveParticlePrefab: {fileID: 0}
+  brokenVisualDuration: 0.45
+  knobBurstDuration: 0.16
+  revealPopDuration: 0.28
+  revealPopOvershoot: 1.18
+  breakSquashDuration: 0.42
+  breakSquashAmount: 0.18
+  breakSquashOscillations: 2.5
+  breakBendAngle: 14
+  caseFragmentSprites:
+  - {fileID: 4227111238778164537, guid: ea7481bfecea644839f2fa8f261491bb, type: 3}
+  - {fileID: 2613949598753296432, guid: ea7481bfecea644839f2fa8f261491bb, type: 3}
+  - {fileID: -3955361317313490294, guid: ea7481bfecea644839f2fa8f261491bb, type: 3}
+  - {fileID: 1660417484291837493, guid: ea7481bfecea644839f2fa8f261491bb, type: 3}
+  fragmentCount: 10
+  fragmentScale: 0.54
+  fragmentSpread: 1.047
+  fragmentGravity: 1.3
+  fragmentLifetime: 0.6
+  revealGlow: {fileID: 0}
+  revealGlowScale: 1.6
+  revealGlowDuration: 0.5
+  revealGlowPeakAlpha: 0.85
 --- !u!1 &8462990779675711319
 GameObject:
   m_ObjectHideFlags: 0

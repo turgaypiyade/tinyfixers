@@ -21,15 +21,14 @@ public static class TileClearBurstVfx
     private const string SHARD_POOL_KEY = "TileClearBurst.Shard";
 
     // ===== AYARLANABİLİR PARAMETRELER =====
-    private const float RING_SIZE_START = 0.3f;     // Halka başlangıç scale (hücre boyutunun oranı)
-    private const float RING_SIZE_PEAK = 1.25f;     // Halka tepe scale
-    private const float RING_SIZE_END = 1.55f;      // Halka bitiş scale (yayılıp solar)
+    private const float RING_SIZE_APPEAR = 1.25f;   // Halka beliriş scale (büyük başlar)
+    private const float RING_SIZE_END = 0.35f;      // Halka bitiş scale (küçülerek yok olur)
     private const int RING_STAR_COUNT = 5;          // Halka içinde kaç yıldız
     private const int SHARD_COUNT = 7;              // Radyal saçılan altın shard sayısı
     private const float SHARD_DISTANCE = 1.2f;      // Shard uçuş mesafesi (hücre boyutunun oranı)
     private const float SHARD_GRAVITY = 1.8f;       // Shard yerçekimi (hücre/s² oranı)
 
-    private static readonly Color RING_COLOR = new Color(1f, 1f, 1f, 0.85f);
+    private static readonly Color RING_COLOR = new Color(1f, 1f, 1f, 0.6f);
     private static readonly Color STAR_COLOR = new Color(1f, 1f, 0.9f, 1f);
     private static readonly Color SHARD_COLOR_A = new Color(1f, 0.82f, 0.18f, 1f); // altın
     private static readonly Color SHARD_COLOR_B = new Color(1f, 0.65f, 0.05f, 1f); // koyu altın
@@ -204,7 +203,7 @@ public static class TileClearBurstVfx
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = Vector2.zero;
-        float s = tileSize * RING_SIZE_START;
+        float s = tileSize * RING_SIZE_APPEAR;
         rt.sizeDelta = new Vector2(s, s);
 
         img.color = new Color(RING_COLOR.r, RING_COLOR.g, RING_COLOR.b, 0f);
@@ -219,29 +218,21 @@ public static class TileClearBurstVfx
     {
         if (ring == null || ring.rt == null || ring.image == null) return;
 
-        // Scale: hızlı büyü (0→peak @ k=0.4), sonra yavaş yayıl (peak→end @ k=0.4→1.0)
-        float scale;
-        if (k < 0.4f)
-        {
-            float kk = k / 0.4f;
-            float eased = 1f - (1f - kk) * (1f - kk); // easeOutQuad
-            scale = Mathf.Lerp(RING_SIZE_START, RING_SIZE_PEAK, eased);
-        }
-        else
-        {
-            float kk = (k - 0.4f) / 0.6f;
-            scale = Mathf.Lerp(RING_SIZE_PEAK, RING_SIZE_END, kk);
-        }
+        // Scale: BÜYÜK belir, sonra küçülerek yok ol (parçalarla beraber).
+        // Hafif easeIn ile sona doğru daha hızlı küçülür.
+        float shrink = k * k;
+        float scale = Mathf.Lerp(RING_SIZE_APPEAR, RING_SIZE_END, shrink);
 
         float pixelSize = tileSize * scale;
         ring.rt.sizeDelta = new Vector2(pixelSize, pixelSize);
 
-        // Alpha: hızlı yüksel, sonra solarak kaybol
+        // Alpha: çok hızlı belir (düşük tavan), sonra sonuna kadar solarak kaybol
         float alpha;
-        if (k < 0.25f)
-            alpha = (k / 0.25f) * RING_COLOR.a;
+        if (k < 0.12f)
+            alpha = (k / 0.12f) * RING_COLOR.a;
         else
-            alpha = RING_COLOR.a * (1f - (k - 0.25f) / 0.75f);
+            alpha = RING_COLOR.a * (1f - (k - 0.12f) / 0.88f);
+        alpha = Mathf.Clamp01(alpha);
 
         Color c = ring.image.color;
         c.a = alpha;

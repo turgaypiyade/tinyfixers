@@ -829,6 +829,7 @@ public class BoardAnimator
             if (waitTime > 0f) yield return new WaitForSeconds(waitTime);
             if (t != null && board.Tiles[t.X, t.Y] == t)
             {
+                board.TryPaintGelForClearedTile(t);   // jel: taşın GÖRSEL kırılma anında (per-tile senkron)
                 var cell = new Vector2Int(t.X, t.Y);
                 if (damageContext == ObstacleHitContext.SpecialActivation
                     && IsSameCellObstacleDamageOwnedByTileClear(cell))

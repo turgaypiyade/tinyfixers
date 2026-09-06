@@ -3867,8 +3867,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.06546855}
-  m_AnchorMax: {x: 0.8345221, y: 1.5346599}
+  m_AnchorMin: {x: 0, y: 0.0653009}
+  m_AnchorMax: {x: 0.84476537, y: 1.5307299}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -4142,6 +4142,7 @@ RectTransform:
   - {fileID: 269404761}
   - {fileID: 354732138}
   - {fileID: 1263533853}
+  - {fileID: 1302483900}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -8426,6 +8427,77 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1299973474}
   m_CullTransparentMesh: 1
+--- !u!1 &1302483899
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1302483900}
+  - component: {fileID: 1302483901}
+  m_Layer: 5
+  m_Name: SpreadingGelOverlayService
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1302483900
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1302483899}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 664581181}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1302483901
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1302483899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70b0d276d254a47cd941c87f0b578cfc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpreadingGelOverlayService
+  overlaySprite: {fileID: 21300000, guid: e10ee29e492894b939067d9b6071bb86, type: 3}
+  plainTexture: {fileID: 2800000, guid: d75ea28d5b1304bbeb0d980beed2c36b, type: 3}
+  cornerTL: {fileID: 21300000, guid: c8f88470e0c87467b8757182d2440fb6, type: 3}
+  cornerTR: {fileID: 21300000, guid: 4af10e21260e648d7b68b47968a2f58a, type: 3}
+  cornerBL: {fileID: 21300000, guid: 0829b5b2c8eb74fee91a6a7964e03f14, type: 3}
+  cornerBR: {fileID: 21300000, guid: a6448726f08ce4e4fadf68b4c18e1c98, type: 3}
+  cornerOffsetTL: {x: -6, y: -6}
+  cornerOffsetTR: {x: 6, y: -6}
+  cornerOffsetBL: {x: -6, y: 6}
+  cornerOffsetBR: {x: 6, y: 6}
+  cornerInsetPixels: 2
+  useFlatInterior: 0
+  flatInteriorColor: {r: 0.35, g: 0.75, b: 0.45, a: 1}
+  interiorOffsetPixels: {x: 0, y: 0}
+  borderThicknessRatio: 0.085
+  edgeJoinOverlapPixels: 10
+  interiorBleedPixels: 2
+  underBevelFillRatio: 1
+  cornerJoinPixels: 4
+  edgeJoinExtendPixels: 2
+  edgeStraightCropPixels: 8
+  sourceBorderPixels: 99
+  spawnFadeDuration: 0.1
 --- !u!1 &1308996098
 GameObject:
   m_ObjectHideFlags: 0
@@ -9009,6 +9081,8 @@ MonoBehaviour:
   overTilesObstaclesRoot: {fileID: 0}
   tilesRoot: {fileID: 0}
   mudOverlayService: {fileID: 49188419}
+  spreadingGelOverlayRoot: {fileID: 0}
+  spreadingGelOverlayService: {fileID: 1302483901}
   grassOverlayRoot: {fileID: 0}
   grassOverlayService: {fileID: 0}
   keyGeneratorMachineConfig:
@@ -12946,7 +13020,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelCompletionLogoAnimation
   overlayImage: {fileID: 2108730550}
   keepOverlayTransparent: 0
-  overlayTargetAlpha: 0.592
+  overlayTargetAlpha: 0.964
   dimFadeDuration: 0.25
   canvasSortOrder: 200
   tinysImage: {fileID: 1104930031}

@@ -2287,6 +2287,13 @@ public class BoardController : MonoBehaviour
 
         if (wasLiveInGrid)
         {
+            // jel yayılması: kırılan hücre mevcut jele KOMŞUYSA jel olur (o anki jel durumuna göre).
+            // Kırılan taşlar kaynak jelden dışa sıralı geldiği için jel zincirle yayılır (line/pulse/
+            // patchbot/match hepsi); contiguous → kopuk/izole "saçma yer" olmaz. (BoardAnimator ile
+            // temizlenenler live=False → oraya TryPaintGelForClearedTile bakar.)
+            if (spreadingGelService != null && HasGelNeighbor(x, y))
+                SpreadGelToCell(x, y);
+
             ClearCell(x, y);
             // Cargo üretim kredisi: yalnız gerçekten grid'de canlıyken kırılan taş sayılır
             // (çift-temizleme idempotent kalır, kredi şişmez).
@@ -2399,7 +2406,7 @@ public class BoardController : MonoBehaviour
                 return false;
             if (obstacleStateService.IsInteractionLockedAt(tile.X, tile.Y))
                 return false;
-            if (obstacleStateService.IsUnderTileObstacleAt(tile.X, tile.Y) && !obstacleStateService.IsMudAt(tile.X, tile.Y))
+            if (obstacleStateService.IsUnderTileObstacleAt(tile.X, tile.Y) && !obstacleStateService.IsInteractiveUnderTileOverlayAt(tile.X, tile.Y))
                 return false;
         }
 
@@ -2488,8 +2495,8 @@ public class BoardController : MonoBehaviour
             (obstacleStateService.IsOilAt(from.X, from.Y) || obstacleStateService.IsOilAt(nx, ny)))
             return;
         if (obstacleStateService != null &&
-            ((obstacleStateService.IsUnderTileObstacleAt(from.X, from.Y) && !obstacleStateService.IsMudAt(from.X, from.Y))
-             || (obstacleStateService.IsUnderTileObstacleAt(nx, ny) && !obstacleStateService.IsMudAt(nx, ny))))
+            ((obstacleStateService.IsUnderTileObstacleAt(from.X, from.Y) && !obstacleStateService.IsInteractiveUnderTileOverlayAt(from.X, from.Y))
+             || (obstacleStateService.IsUnderTileObstacleAt(nx, ny) && !obstacleStateService.IsInteractiveUnderTileOverlayAt(nx, ny))))
             return;
         if (obstacleStateService != null &&
             (obstacleStateService.IsInteractionLockedAt(from.X, from.Y) || obstacleStateService.IsInteractionLockedAt(nx, ny)))
@@ -2566,8 +2573,8 @@ public class BoardController : MonoBehaviour
             var a = selected;
             SetSelectedTile(null);
             bool underTileBlocked = obstacleStateService != null &&
-                ((obstacleStateService.IsUnderTileObstacleAt(a.X, a.Y) && !obstacleStateService.IsMudAt(a.X, a.Y))
-                 || (obstacleStateService.IsUnderTileObstacleAt(tile.X, tile.Y) && !obstacleStateService.IsMudAt(tile.X, tile.Y))
+                ((obstacleStateService.IsUnderTileObstacleAt(a.X, a.Y) && !obstacleStateService.IsInteractiveUnderTileOverlayAt(a.X, a.Y))
+                 || (obstacleStateService.IsUnderTileObstacleAt(tile.X, tile.Y) && !obstacleStateService.IsInteractiveUnderTileOverlayAt(tile.X, tile.Y))
                  || obstacleStateService.IsInteractionLockedAt(a.X, a.Y) || obstacleStateService.IsInteractionLockedAt(tile.X, tile.Y));
             if (!underTileBlocked)
                 StartCoroutine(ProcessSwap(a, tile));
@@ -2729,6 +2736,35 @@ public class BoardController : MonoBehaviour
 
         actionSequencer.Enqueue(action);
         yield return AnimateQueuedActions();
+    }
+
+    // ── SpreadingGel yayılması ──────────────────────────────────
+    private SpreadingGelOverlayService spreadingGelService;
+    public void SetSpreadingGelService(SpreadingGelOverlayService s) => spreadingGelService = s;
+
+    private void SpreadGelToCell(int x, int y)
+    {
+        if (spreadingGelService == null) return;
+        if (IsMaskHole(x, y)) return;   // kalıcı hole'a jel yayma
+        spreadingGelService.AddGel(x, y);
+    }
+
+    // BoardAnimator.ClearCellDataAfterDelay'den (per-tile, taşın görsel kırılma anında) çağrılır →
+    // line/pulse/patchbot'un travel gecikmeli clear'ları için (o clear'lar ClearAndDestroyTile'a live=False
+    // gelir). Kural ClearAndDestroyTile ile aynı: kırılan hücre mevcut jele komşuysa jel olur.
+    public void TryPaintGelForClearedTile(TileView tile)
+    {
+        if (spreadingGelService == null || tile == null) return;
+        int x = tile.X, y = tile.Y;
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+        if (HasGelNeighbor(x, y)) SpreadGelToCell(x, y);
+    }
+
+    private bool HasGelNeighbor(int x, int y)
+    {
+        return spreadingGelService != null &&
+            (spreadingGelService.IsGelAt(x - 1, y) || spreadingGelService.IsGelAt(x + 1, y)
+             || spreadingGelService.IsGelAt(x, y - 1) || spreadingGelService.IsGelAt(x, y + 1));
     }
 
     IEnumerator ProcessSwap(TileView a, TileView b, bool dynamicInput = false)
@@ -3683,6 +3719,8 @@ public class BoardController : MonoBehaviour
                 Debug.Log($"[ClearPass] {step,-22} +{(now - _cpLast):0.000}s (total: {(now - _cpStart):0.000}s) matchCount={matchTiles.Count}");
             _cpLast = now;
         }
+
+
         // Kazanılmış special'lar normal match clear'ına girmez.
         // Sadece explicit activation veya effect-hit ile temizlenebilirler.
         var preservedSpecialTiles = new HashSet<TileView>();

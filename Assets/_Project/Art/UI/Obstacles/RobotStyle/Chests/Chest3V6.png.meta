@@ -1,0 +1,676 @@
+fileFormatVersion: 2
+guid: cc90656c4918f48d3ad5ef43cd36897a
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -1914865712758502246
+    second: Chest3V6_0
+  - first:
+      213: -7711955467471603426
+    second: Chest3V6_1
+  - first:
+      213: -8399552202202050239
+    second: Chest3V6_2
+  - first:
+      213: -1971291422691816941
+    second: Chest3V6_3
+  - first:
+      213: -7206318733996835470
+    second: Chest3V6_4
+  - first:
+      213: -5396311586093156730
+    second: Chest3V6_5
+  - first:
+      213: -3176809220295559104
+    second: Chest3V6_6
+  - first:
+      213: 6771111406849510650
+    second: Chest3V6_7
+  - first:
+      213: 7580417885132205309
+    second: Chest3V6_8
+  - first:
+      213: 2968481069092435622
+    second: Chest3V6_9
+  - first:
+      213: 4061631922615381713
+    second: Chest3V6_10
+  - first:
+      213: -2633566771990053414
+    second: Chest3V6_11
+  - first:
+      213: 4858557866224363581
+    second: Chest3V6_12
+  - first:
+      213: -5433435011357933127
+    second: Chest3V6_13
+  - first:
+      213: 5812958952325184688
+    second: Chest3V6_14
+  - first:
+      213: -4910246980479723385
+    second: Chest3V6_15
+  - first:
+      213: 5445370792782743741
+    second: Chest3V6_16
+  - first:
+      213: 6523056853873470223
+    second: Chest3V6_17
+  - first:
+      213: 6787183327226162897
+    second: Chest3V6_18
+  - first:
+      213: -5512479443754923955
+    second: Chest3V6_19
+  - first:
+      213: 1115107962433811414
+    second: Chest3V6_20
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 0
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Chest3V6_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 1062
+        width: 98
+        height: 170
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a9c447697c70d65e0800000000000000
+      internalID: -1914865712758502246
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_1
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1163
+        height: 1204
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e1939bdac51a9f490800000000000000
+      internalID: -7711955467471603426
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_2
+      rect:
+        serializedVersion: 2
+        x: 514
+        y: 1189
+        width: 30
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 141956b56cbce6b80800000000000000
+      internalID: -8399552202202050239
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_3
+      rect:
+        serializedVersion: 2
+        x: 583
+        y: 1183
+        width: 69
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 31a0ea935e094a4e0800000000000000
+      internalID: -1971291422691816941
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_4
+      rect:
+        serializedVersion: 2
+        x: 656
+        y: 1167
+        width: 26
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 27d30e9ca430efb90800000000000000
+      internalID: -7206318733996835470
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_5
+      rect:
+        serializedVersion: 2
+        x: 681
+        y: 1169
+        width: 46
+        height: 46
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 686b79d04337c15b0800000000000000
+      internalID: -5396311586093156730
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_6
+      rect:
+        serializedVersion: 2
+        x: 713
+        y: 1203
+        width: 17
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 048f81978d4b9e3d0800000000000000
+      internalID: -3176809220295559104
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_7
+      rect:
+        serializedVersion: 2
+        x: 729
+        y: 1201
+        width: 76
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: afc4cdb13f1d7fd50800000000000000
+      internalID: 6771111406849510650
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_8
+      rect:
+        serializedVersion: 2
+        x: 866
+        y: 1201
+        width: 70
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dfca25c57ed033960800000000000000
+      internalID: 7580417885132205309
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_9
+      rect:
+        serializedVersion: 2
+        x: 522
+        y: 1173
+        width: 10
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6a6f9bdfdc9223920800000000000000
+      internalID: 2968481069092435622
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_10
+      rect:
+        serializedVersion: 2
+        x: 562
+        y: 1158
+        width: 18
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1de60e3d6b0dd5830800000000000000
+      internalID: 4061631922615381713
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_11
+      rect:
+        serializedVersion: 2
+        x: 587
+        y: 1181
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: addb24f59f0b37bd0800000000000000
+      internalID: -2633566771990053414
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_12
+      rect:
+        serializedVersion: 2
+        x: 603
+        y: 1180
+        width: 23
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d38abf833a01d6340800000000000000
+      internalID: 4858557866224363581
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_13
+      rect:
+        serializedVersion: 2
+        x: 731
+        y: 1173
+        width: 10
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9b107dd05af8894b0800000000000000
+      internalID: -5433435011357933127
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_14
+      rect:
+        serializedVersion: 2
+        x: 731
+        y: 1156
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0bcf4476e57cba050800000000000000
+      internalID: 5812958952325184688
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_15
+      rect:
+        serializedVersion: 2
+        x: 1153
+        y: 1072
+        width: 22
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7885219036c4bdbb0800000000000000
+      internalID: -4910246980479723385
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_16
+      rect:
+        serializedVersion: 2
+        x: 32
+        y: 538
+        width: 13
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: db84a1e92e7d19b40800000000000000
+      internalID: 5445370792782743741
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_17
+      rect:
+        serializedVersion: 2
+        x: 54
+        y: 527
+        width: 9
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f0b2ec0e5ad868a50800000000000000
+      internalID: 6523056853873470223
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_18
+      rect:
+        serializedVersion: 2
+        x: 62
+        y: 527
+        width: 6
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1dee4cca64be03e50800000000000000
+      internalID: 6787183327226162897
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_19
+      rect:
+        serializedVersion: 2
+        x: 1157
+        y: 192
+        width: 20
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d48485bf62dbf73b0800000000000000
+      internalID: -5512479443754923955
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Chest3V6_20
+      rect:
+        serializedVersion: 2
+        x: 948
+        y: 89
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6d3b313a8c8a97f00800000000000000
+      internalID: 1115107962433811414
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Chest3V6_0: -1914865712758502246
+      Chest3V6_1: -7711955467471603426
+      Chest3V6_10: 4061631922615381713
+      Chest3V6_11: -2633566771990053414
+      Chest3V6_12: 4858557866224363581
+      Chest3V6_13: -5433435011357933127
+      Chest3V6_14: 5812958952325184688
+      Chest3V6_15: -4910246980479723385
+      Chest3V6_16: 5445370792782743741
+      Chest3V6_17: 6523056853873470223
+      Chest3V6_18: 6787183327226162897
+      Chest3V6_19: -5512479443754923955
+      Chest3V6_2: -8399552202202050239
+      Chest3V6_20: 1115107962433811414
+      Chest3V6_3: -1971291422691816941
+      Chest3V6_4: -7206318733996835470
+      Chest3V6_5: -5396311586093156730
+      Chest3V6_6: -3176809220295559104
+      Chest3V6_7: 6771111406849510650
+      Chest3V6_8: 7580417885132205309
+      Chest3V6_9: 2968481069092435622
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

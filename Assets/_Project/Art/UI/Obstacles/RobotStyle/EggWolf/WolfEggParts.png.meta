@@ -1,0 +1,676 @@
+fileFormatVersion: 2
+guid: 11487a978a03f4f25b606edb2e659a24
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -493062103786961368
+    second: WolfEggParts_0
+  - first:
+      213: -4035770927178121
+    second: WolfEggParts_1
+  - first:
+      213: -1424670306444729856
+    second: WolfEggParts_2
+  - first:
+      213: -2800554647113236072
+    second: WolfEggParts_3
+  - first:
+      213: -2773180524915135147
+    second: WolfEggParts_4
+  - first:
+      213: -9048330209867934111
+    second: WolfEggParts_5
+  - first:
+      213: -2683595616064835533
+    second: WolfEggParts_6
+  - first:
+      213: -8538624377329879949
+    second: WolfEggParts_7
+  - first:
+      213: 4956724847093763008
+    second: WolfEggParts_8
+  - first:
+      213: 4852982188283039330
+    second: WolfEggParts_9
+  - first:
+      213: -5147212269730081730
+    second: WolfEggParts_10
+  - first:
+      213: -6859714404027589980
+    second: WolfEggParts_11
+  - first:
+      213: 8210553651051153260
+    second: WolfEggParts_12
+  - first:
+      213: -717927222778195495
+    second: WolfEggParts_13
+  - first:
+      213: -7622548931193728931
+    second: WolfEggParts_14
+  - first:
+      213: -2811397582693158552
+    second: WolfEggParts_15
+  - first:
+      213: -2085027516869677710
+    second: WolfEggParts_16
+  - first:
+      213: 8490985122343021416
+    second: WolfEggParts_17
+  - first:
+      213: 7001900653168884151
+    second: WolfEggParts_18
+  - first:
+      213: 6130780387961078037
+    second: WolfEggParts_19
+  - first:
+      213: 3319173025465019483
+    second: WolfEggParts_20
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 0
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 2
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: WolfEggParts_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 650
+        width: 616
+        height: 604
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 826429301aa4829f0800000000000000
+      internalID: -493062103786961368
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_1
+      rect:
+        serializedVersion: 2
+        x: 647
+        y: 443
+        width: 588
+        height: 793
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 77e9d7bdc79a1fff0800000000000000
+      internalID: -4035770927178121
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_2
+      rect:
+        serializedVersion: 2
+        x: 731
+        y: 1205
+        width: 10
+        height: 42
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 002a05e87ed8a3ce0800000000000000
+      internalID: -1424670306444729856
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_3
+      rect:
+        serializedVersion: 2
+        x: 928
+        y: 1211
+        width: 8
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8910fbce26e6229d0800000000000000
+      internalID: -2800554647113236072
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_4
+      rect:
+        serializedVersion: 2
+        x: 603
+        y: 803
+        width: 51
+        height: 51
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 55de66a610fa389d0800000000000000
+      internalID: -2773180524915135147
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_5
+      rect:
+        serializedVersion: 2
+        x: 217
+        y: 656
+        width: 27
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 166d26e3d9fdd6280800000000000000
+      internalID: -9048330209867934111
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_6
+      rect:
+        serializedVersion: 2
+        x: 615
+        y: 676
+        width: 27
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 330f8a76104f1cad0800000000000000
+      internalID: -2683595616064835533
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_7
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 648
+        width: 5
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 374f2ce4e56b08980800000000000000
+      internalID: -8538624377329879949
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_8
+      rect:
+        serializedVersion: 2
+        x: 223
+        y: 608
+        width: 57
+        height: 51
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0cb40609cf2d9c440800000000000000
+      internalID: 4956724847093763008
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_9
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 612
+        height: 645
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 26e88e98691495340800000000000000
+      internalID: 4852982188283039330
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_10
+      rect:
+        serializedVersion: 2
+        x: 1214
+        y: 626
+        width: 19
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e34d43736bd6198b0800000000000000
+      internalID: -5147212269730081730
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_11
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 533
+        width: 13
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4aa1e4708166dc0a0800000000000000
+      internalID: -6859714404027589980
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_12
+      rect:
+        serializedVersion: 2
+        x: 922
+        y: 537
+        width: 12
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c67c0345b0fb1f170800000000000000
+      internalID: 8210553651051153260
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_13
+      rect:
+        serializedVersion: 2
+        x: 922
+        y: 529
+        width: 12
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9d119bf9ef86906f0800000000000000
+      internalID: -717927222778195495
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_14
+      rect:
+        serializedVersion: 2
+        x: 1011
+        y: 168
+        width: 208
+        height: 413
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d501a211224473690800000000000000
+      internalID: -7622548931193728931
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_15
+      rect:
+        serializedVersion: 2
+        x: 747
+        y: 270
+        width: 237
+        height: 198
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 861be214bc8ebf8d0800000000000000
+      internalID: -2811397582693158552
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_16
+      rect:
+        serializedVersion: 2
+        x: 619
+        y: 47
+        width: 300
+        height: 212
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 27d6116358e7013e0800000000000000
+      internalID: -2085027516869677710
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_17
+      rect:
+        serializedVersion: 2
+        x: 938
+        y: 102
+        width: 10
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 86be16a4bf906d570800000000000000
+      internalID: 8490985122343021416
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_18
+      rect:
+        serializedVersion: 2
+        x: 942
+        y: 97
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7b9f4b0eb8fbb2160800000000000000
+      internalID: 7001900653168884151
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_19
+      rect:
+        serializedVersion: 2
+        x: 956
+        y: 63
+        width: 197
+        height: 184
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5110a54d748e41550800000000000000
+      internalID: 6130780387961078037
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WolfEggParts_20
+      rect:
+        serializedVersion: 2
+        x: 94
+        y: 71
+        width: 14
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b5ca6eae742101e20800000000000000
+      internalID: 3319173025465019483
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      WolfEggParts_0: -493062103786961368
+      WolfEggParts_1: -4035770927178121
+      WolfEggParts_10: -5147212269730081730
+      WolfEggParts_11: -6859714404027589980
+      WolfEggParts_12: 8210553651051153260
+      WolfEggParts_13: -717927222778195495
+      WolfEggParts_14: -7622548931193728931
+      WolfEggParts_15: -2811397582693158552
+      WolfEggParts_16: -2085027516869677710
+      WolfEggParts_17: 8490985122343021416
+      WolfEggParts_18: 7001900653168884151
+      WolfEggParts_19: 6130780387961078037
+      WolfEggParts_2: -1424670306444729856
+      WolfEggParts_20: 3319173025465019483
+      WolfEggParts_3: -2800554647113236072
+      WolfEggParts_4: -2773180524915135147
+      WolfEggParts_5: -9048330209867934111
+      WolfEggParts_6: -2683595616064835533
+      WolfEggParts_7: -8538624377329879949
+      WolfEggParts_8: 4956724847093763008
+      WolfEggParts_9: 4852982188283039330
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

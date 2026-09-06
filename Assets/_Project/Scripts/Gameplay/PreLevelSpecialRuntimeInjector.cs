@@ -382,7 +382,7 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
              obs.IsMovableObstacleAt(x, y) ||
              obs.IsInteractionLockedAt(x, y) ||
              obs.IsOilAt(x, y) ||
-             (obs.IsUnderTileObstacleAt(x, y) && !obs.IsMudAt(x, y))))
+             (obs.IsUnderTileObstacleAt(x, y) && !obs.IsInteractiveUnderTileOverlayAt(x, y))))
             return false;
 
         return true;

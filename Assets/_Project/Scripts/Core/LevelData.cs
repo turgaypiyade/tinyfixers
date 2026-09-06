@@ -153,6 +153,10 @@ public enum ObstacleId : int
     // konfigüre edilir. (İsim serbestçe değiştirilebilir; değer 40 sabit kalmalı.)
     PlasticTwoStage = 40,
 
+    // Plastic purple gibi tek vuruşlu movable davranışı. WolfEgg sprite'ı ObstacleLibrary'deki
+    // ayrı kayıttan değiştirilebilir; ID değeri level verileri için sabittir.
+    WolfEgg = 45,
+
     // Barrel'in 4-stage versiyonu. İlk 3 hit sadece ObstacleDef stage sprite'ını değiştirir;
     // son hitte Barrel ile aynı şekilde Mud saçar. ObstacleDef: hits=4,
     // stages[0..3] OverTileBlocker olarak konfigüre edilmeli.
@@ -173,6 +177,18 @@ public enum ObstacleId : int
     // Static generator obstacle. Each valid hit produces a matchable Key tile on
     // the board until the level's Tile/Key goal capacity is reached.
     KeyGenerator = 44,
+
+    // Yayılan jel (SpreadingGel). MUD gibi UNDER-TILE (behavior=UnderTileLayered, drawUnderTiles=1;
+    // grass DEĞİL — o taşın üstünde), TEK-STAGE (mud'un hits=2 çift katmanı YOK, hits=1), gameplay'e
+    // karışmaz (blocksCells=0, locksInteraction=0, holdsTile=0): taş üstünde normal oynanır VE hareket
+    // eder. HASAR ALMAZ / temizlenmez (damageRule=FullyDisabled) — HEDEF = tüm board'u jele
+    // kaplamak (artan coverage goal). YAYILMA yalnız (a) jel hücresindeki taş SWAP'la yeni
+    // hücreye geçince hedef hücreye, (b) jel hücresindeki bir special/combo (LineV/H, PulseCore,
+    // Override, PatchBot) etkilediği HER hücreye jeli taşır. Gravity düşüşü YAYMAZ. Bulaşma
+    // konumsaldır (taş yalnız jel hücresindeyken bulaşık; traveling special tetiklenirken kaynağın
+    // jelde olup olmadığı yakalanır). Görsel + köşe birleştirme mud'dan (SpreadingGelOverlayService),
+    // yayılma mantığı SpreadingGelService'te. ID sabit (level verisi).
+    SpreadingGel = 46,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }

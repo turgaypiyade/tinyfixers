@@ -372,6 +372,7 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
     private readonly ResolutionContext context;
     private readonly Func<ResolutionContext, TileView, TileView, List<BoardAction>> executeSpecialActions;
     private readonly Queue<BoardAction> pendingInlineActions = new();
+    private int runningNested;   // aynı anda çalışan nested (pulse vb.) special sayısı — paralel yürütme
     private readonly TileView orbitLineTile;
     private readonly TileView orbitPulseTile;
 
@@ -381,7 +382,7 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
     // Orbit intro animasyon ayarları
     private const float OrbitRiseHeight = 36f;          // ghost ikonların yukarı kalkma yüksekliği (pixel)
     private const float OrbitRiseDuration = 0.12f;      // kısa sahneye alma süresi
-    private readonly float orbitSpinDuration = 1.00f;   // PulseCore/emitter ana dönüş süresi (intro-only: 0.75)
+    private readonly float orbitSpinDuration = 0.55f;   // PulseCore/emitter ana dönüş süresi (kısaltıldı: eski 1.00 → takılma azaltma; intro-only: 0.75)
     private const float EmitterOrbitTurns = 2f;         // emitter PulseCore etrafında Y eksenli orbit yapar
     private const float EmitterSelfSpinTurns = 2f;      // emitter orbit sırasında kendi etrafında döner
     private const float PulseCoreSelfSpinTurns = 2f;    // PulseCore kendi merkezinde döner
@@ -702,11 +703,13 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         {
             waited += Time.unscaledDeltaTime;
 
+            // Nested special'ları (yakalanan PulseCore vb.) SIRAYLA beklemek yerine PARALEL başlat:
+            // hepsi aynı anda patlar, toplam süre = EN UZUN pulse (art arda toplama değil).
             while (pendingInlineActions.Count > 0)
             {
                 var action = pendingInlineActions.Dequeue();
                 if (action != null)
-                    yield return action.ExecuteVisuals(sequencer);
+                    board.StartCoroutine(RunNestedParallel(action, sequencer));
             }
 
             yield return null;
@@ -716,7 +719,17 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         {
             var action = pendingInlineActions.Dequeue();
             if (action != null)
-                yield return action.ExecuteVisuals(sequencer);
+                board.StartCoroutine(RunNestedParallel(action, sequencer));
+        }
+
+        // Cascade'den (taş düşüşü) ÖNCE paralel nested pulse'ların bitmesini bekle — hücreler
+        // temizlenmeden gravity başlarsa senkron bozulur. Süre = en uzun pulse (güvenlik timeout'lu).
+        float nestedWait = 0f;
+        const float nestedTimeout = 2.5f;
+        while (runningNested > 0 && nestedWait < nestedTimeout)
+        {
+            nestedWait += Time.unscaledDeltaTime;
+            yield return null;
         }
 
         foreach (var kvp in targetVisuals)
@@ -759,6 +772,15 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         }
         board.RefreshAllSortingOrders();
     }
+    // Nested special'ı ayrı bir coroutine olarak çalıştırır; çalışan sayacını tutar ki
+    // ana akış cascade'den önce hepsinin bitmesini (paralel) bekleyebilsin.
+    private IEnumerator RunNestedParallel(BoardAction action, ActionSequencer sequencer)
+    {
+        runningNested++;
+        yield return action.ExecuteVisuals(sequencer);
+        runningNested = Mathf.Max(0, runningNested - 1);
+    }
+
     private IEnumerator PlayOrbitIntroGhost()
     {
         if (board == null || orbitLineTile == null || orbitPulseTile == null)

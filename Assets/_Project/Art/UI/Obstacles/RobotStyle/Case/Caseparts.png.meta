@@ -1,0 +1,2236 @@
+fileFormatVersion: 2
+guid: ea7481bfecea644839f2fa8f261491bb
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 4227111238778164537
+    second: Caseparts_0
+  - first:
+      213: -6510095916525446779
+    second: Caseparts_1
+  - first:
+      213: 1545263096727721547
+    second: Caseparts_2
+  - first:
+      213: -2987814782709342161
+    second: Caseparts_3
+  - first:
+      213: -8347084251253988758
+    second: Caseparts_4
+  - first:
+      213: -6451079398467443637
+    second: Caseparts_5
+  - first:
+      213: -6173099338785421108
+    second: Caseparts_6
+  - first:
+      213: -9188664046962922057
+    second: Caseparts_7
+  - first:
+      213: 3014464409531124373
+    second: Caseparts_8
+  - first:
+      213: -371558552484149177
+    second: Caseparts_9
+  - first:
+      213: -3955361317313490294
+    second: Caseparts_10
+  - first:
+      213: 3755481890587338464
+    second: Caseparts_11
+  - first:
+      213: -2865730568148864116
+    second: Caseparts_12
+  - first:
+      213: 5671136918831004710
+    second: Caseparts_13
+  - first:
+      213: -8069165044795599128
+    second: Caseparts_14
+  - first:
+      213: -1789589577454115705
+    second: Caseparts_15
+  - first:
+      213: 4392650703549814335
+    second: Caseparts_16
+  - first:
+      213: -6536762645389683429
+    second: Caseparts_17
+  - first:
+      213: -6181155183316712470
+    second: Caseparts_18
+  - first:
+      213: -8025026518978638775
+    second: Caseparts_19
+  - first:
+      213: -1563389508365742936
+    second: Caseparts_20
+  - first:
+      213: 262380371448901110
+    second: Caseparts_21
+  - first:
+      213: -4863809196405038973
+    second: Caseparts_22
+  - first:
+      213: -5695735141760167516
+    second: Caseparts_23
+  - first:
+      213: -9176499748896179404
+    second: Caseparts_24
+  - first:
+      213: 1660417484291837493
+    second: Caseparts_25
+  - first:
+      213: 3549687179227622495
+    second: Caseparts_26
+  - first:
+      213: 4800003080757241240
+    second: Caseparts_27
+  - first:
+      213: 8054264554958841942
+    second: Caseparts_28
+  - first:
+      213: -7192749308015073752
+    second: Caseparts_29
+  - first:
+      213: -4504017741206867584
+    second: Caseparts_30
+  - first:
+      213: -3246673641572079239
+    second: Caseparts_31
+  - first:
+      213: 2259913212907582578
+    second: Caseparts_32
+  - first:
+      213: -4600201653228398111
+    second: Caseparts_33
+  - first:
+      213: -1451505144160710828
+    second: Caseparts_34
+  - first:
+      213: -5286216232519853613
+    second: Caseparts_35
+  - first:
+      213: 6520539096012837178
+    second: Caseparts_36
+  - first:
+      213: 5576936901224554894
+    second: Caseparts_37
+  - first:
+      213: -1479965300006181446
+    second: Caseparts_38
+  - first:
+      213: -90725035688443103
+    second: Caseparts_39
+  - first:
+      213: 8908467159547727205
+    second: Caseparts_40
+  - first:
+      213: 5472340562096901829
+    second: Caseparts_41
+  - first:
+      213: -4347821635798433431
+    second: Caseparts_42
+  - first:
+      213: 2089109649984752924
+    second: Caseparts_43
+  - first:
+      213: 6338983494917029155
+    second: Caseparts_44
+  - first:
+      213: 1271773596931736795
+    second: Caseparts_45
+  - first:
+      213: 6799523471572682356
+    second: Caseparts_46
+  - first:
+      213: -70627253784450009
+    second: Caseparts_47
+  - first:
+      213: -7380262286119692845
+    second: Caseparts_48
+  - first:
+      213: 3475831273826666354
+    second: Caseparts_49
+  - first:
+      213: -8998530213212459892
+    second: Caseparts_50
+  - first:
+      213: 7601043572094155674
+    second: Caseparts_51
+  - first:
+      213: 6700428415044343388
+    second: Caseparts_52
+  - first:
+      213: 3281764200829287390
+    second: Caseparts_53
+  - first:
+      213: -1379349908283301611
+    second: Caseparts_54
+  - first:
+      213: 3465520076811546289
+    second: Caseparts_55
+  - first:
+      213: -8007798895159606206
+    second: Caseparts_56
+  - first:
+      213: -8392692589208136321
+    second: Caseparts_57
+  - first:
+      213: -6197794489413529206
+    second: Caseparts_58
+  - first:
+      213: 6549510318450437889
+    second: Caseparts_59
+  - first:
+      213: 2613949598753296432
+    second: Caseparts_60
+  - first:
+      213: -1781242201981655210
+    second: Caseparts_61
+  - first:
+      213: 6935206261206562836
+    second: Caseparts_62
+  - first:
+      213: 8499309572368751870
+    second: Caseparts_63
+  - first:
+      213: 5590411493947842793
+    second: Caseparts_64
+  - first:
+      213: 321231531524932586
+    second: Caseparts_65
+  - first:
+      213: 6131647020791920548
+    second: Caseparts_66
+  - first:
+      213: 2472570940959631208
+    second: Caseparts_67
+  - first:
+      213: 3520020268792576508
+    second: Caseparts_68
+  - first:
+      213: 282791803714727408
+    second: Caseparts_69
+  - first:
+      213: -2516263646695890131
+    second: Caseparts_70
+  - first:
+      213: 3863456476166162753
+    second: Caseparts_71
+  - first:
+      213: 6435613416563761702
+    second: Caseparts_72
+  - first:
+      213: 961956528069972572
+    second: Caseparts_73
+  - first:
+      213: -5474322077428998290
+    second: Caseparts_74
+  - first:
+      213: -123716553771833576
+    second: Caseparts_75
+  - first:
+      213: -7534771359872496759
+    second: Caseparts_76
+  - first:
+      213: -3517346564421851021
+    second: Caseparts_77
+  - first:
+      213: -331756390783943103
+    second: Caseparts_78
+  - first:
+      213: -8327151465543734618
+    second: Caseparts_79
+  - first:
+      213: 6925225967484623518
+    second: Caseparts_80
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 0
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 2
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Caseparts_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 867
+        width: 325
+        height: 386
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9351f658647b9aa30800000000000000
+      internalID: 4227111238778164537
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_1
+      rect:
+        serializedVersion: 2
+        x: 327
+        y: 1028
+        width: 8
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 58997c1814e77a5a0800000000000000
+      internalID: -6510095916525446779
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_2
+      rect:
+        serializedVersion: 2
+        x: 348
+        y: 913
+        width: 330
+        height: 336
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b46d9fc6990e17510800000000000000
+      internalID: 1545263096727721547
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_3
+      rect:
+        serializedVersion: 2
+        x: 593
+        y: 899
+        width: 326
+        height: 343
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f20e2f509462986d0800000000000000
+      internalID: -2987814782709342161
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_4
+      rect:
+        serializedVersion: 2
+        x: 928
+        y: 889
+        width: 311
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a62afb52913392c80800000000000000
+      internalID: -8347084251253988758
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_5
+      rect:
+        serializedVersion: 2
+        x: 1109
+        y: 881
+        width: 130
+        height: 180
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b44e18467792976a0800000000000000
+      internalID: -6451079398467443637
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_6
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 658
+        width: 281
+        height: 214
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cc80f7c9bdeb45aa0800000000000000
+      internalID: -6173099338785421108
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_7
+      rect:
+        serializedVersion: 2
+        x: 144
+        y: 499
+        width: 167
+        height: 226
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7bd2f50abbe4b7080800000000000000
+      internalID: -9188664046962922057
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_8
+      rect:
+        serializedVersion: 2
+        x: 321
+        y: 640
+        width: 241
+        height: 232
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 59a092eb86785d920800000000000000
+      internalID: 3014464409531124373
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_9
+      rect:
+        serializedVersion: 2
+        x: 584
+        y: 652
+        width: 195
+        height: 219
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7488ce11775f7daf0800000000000000
+      internalID: -371558552484149177
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_10
+      rect:
+        serializedVersion: 2
+        x: 802
+        y: 724
+        width: 181
+        height: 146
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a82553b96dbbb19c0800000000000000
+      internalID: -3955361317313490294
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_11
+      rect:
+        serializedVersion: 2
+        x: 993
+        y: 721
+        width: 222
+        height: 149
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0e6eed0d1e62e1430800000000000000
+      internalID: 3755481890587338464
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_12
+      rect:
+        serializedVersion: 2
+        x: 1107
+        y: 604
+        width: 122
+        height: 140
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c8332874b31ea38d0800000000000000
+      internalID: -2865730568148864116
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_13
+      rect:
+        serializedVersion: 2
+        x: 16
+        y: 513
+        width: 116
+        height: 130
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 62c768f0bfce3be40800000000000000
+      internalID: 5671136918831004710
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_14
+      rect:
+        serializedVersion: 2
+        x: 305
+        y: 479
+        width: 124
+        height: 134
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8e695fed421940090800000000000000
+      internalID: -8069165044795599128
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_15
+      rect:
+        serializedVersion: 2
+        x: 447
+        y: 602
+        width: 131
+        height: 108
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7842b1ec2c91a27e0800000000000000
+      internalID: -1789589577454115705
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_16
+      rect:
+        serializedVersion: 2
+        x: 530
+        y: 507
+        width: 98
+        height: 116
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f36d477aa84d5fc30800000000000000
+      internalID: 4392650703549814335
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_17
+      rect:
+        serializedVersion: 2
+        x: 656
+        y: 546
+        width: 119
+        height: 127
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b15518cd101c845a0800000000000000
+      internalID: -6536762645389683429
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_18
+      rect:
+        serializedVersion: 2
+        x: 808
+        y: 578
+        width: 130
+        height: 141
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ae3c7d42c10283aa0800000000000000
+      internalID: -6181155183316712470
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_19
+      rect:
+        serializedVersion: 2
+        x: 982
+        y: 594
+        width: 103
+        height: 108
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 94c403f36e061a090800000000000000
+      internalID: -8025026518978638775
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_20
+      rect:
+        serializedVersion: 2
+        x: 434
+        y: 467
+        width: 114
+        height: 95
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8ac894c7689bd4ae0800000000000000
+      internalID: -1563389508365742936
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_21
+      rect:
+        serializedVersion: 2
+        x: 635
+        y: 479
+        width: 75
+        height: 59
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6fd2f34ce8924a300800000000000000
+      internalID: 262380371448901110
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_22
+      rect:
+        serializedVersion: 2
+        x: 756
+        y: 479
+        width: 101
+        height: 85
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 380eff03e47408cb0800000000000000
+      internalID: -4863809196405038973
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_23
+      rect:
+        serializedVersion: 2
+        x: 888
+        y: 457
+        width: 111
+        height: 124
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4a11dacd01fa4f0b0800000000000000
+      internalID: -5695735141760167516
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_24
+      rect:
+        serializedVersion: 2
+        x: 1021
+        y: 477
+        width: 91
+        height: 102
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 43bf499f81686a080800000000000000
+      internalID: -9176499748896179404
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_25
+      rect:
+        serializedVersion: 2
+        x: 1143
+        y: 494
+        width: 86
+        height: 100
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 53e001a97ecfa0710800000000000000
+      internalID: 1660417484291837493
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_26
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 335
+        width: 164
+        height: 149
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f5cee95bea5034130800000000000000
+      internalID: 3549687179227622495
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_27
+      rect:
+        serializedVersion: 2
+        x: 191
+        y: 351
+        width: 116
+        height: 116
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 895e055de590d9240800000000000000
+      internalID: 4800003080757241240
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_28
+      rect:
+        serializedVersion: 2
+        x: 334
+        y: 364
+        width: 103
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 658675d70fe76cf60800000000000000
+      internalID: 8054264554958841942
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_29
+      rect:
+        serializedVersion: 2
+        x: 470
+        y: 367
+        width: 80
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8262359fc983e2c90800000000000000
+      internalID: -7192749308015073752
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_30
+      rect:
+        serializedVersion: 2
+        x: 579
+        y: 380
+        width: 84
+        height: 72
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 081be494ab38e71c0800000000000000
+      internalID: -4504017741206867584
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_31
+      rect:
+        serializedVersion: 2
+        x: 703
+        y: 382
+        width: 72
+        height: 69
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 979e87c468f71f2d0800000000000000
+      internalID: -3246673641572079239
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_32
+      rect:
+        serializedVersion: 2
+        x: 808
+        y: 385
+        width: 73
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2747196f713dc5f10800000000000000
+      internalID: 2259913212907582578
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_33
+      rect:
+        serializedVersion: 2
+        x: 916
+        y: 385
+        width: 68
+        height: 67
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1e9182428fcc820c0800000000000000
+      internalID: -4600201653228398111
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_34
+      rect:
+        serializedVersion: 2
+        x: 1005
+        y: 378
+        width: 83
+        height: 72
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 45f06a403c73bdbe0800000000000000
+      internalID: -1451505144160710828
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_35
+      rect:
+        serializedVersion: 2
+        x: 1123
+        y: 381
+        width: 68
+        height: 71
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3d910c6185693a6b0800000000000000
+      internalID: -5286216232519853613
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_36
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 205
+        width: 100
+        height: 118
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a3154e1b2cb9d7a50800000000000000
+      internalID: 6520539096012837178
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_37
+      rect:
+        serializedVersion: 2
+        x: 125
+        y: 206
+        width: 71
+        height: 120
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e81e1445092456d40800000000000000
+      internalID: 5576936901224554894
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_38
+      rect:
+        serializedVersion: 2
+        x: 209
+        y: 224
+        width: 162
+        height: 118
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ab52a3d966b167be0800000000000000
+      internalID: -1479965300006181446
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_39
+      rect:
+        serializedVersion: 2
+        x: 381
+        y: 282
+        width: 86
+        height: 61
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1234e8b8f0eadbef0800000000000000
+      internalID: -90725035688443103
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_40
+      rect:
+        serializedVersion: 2
+        x: 509
+        y: 286
+        width: 71
+        height: 68
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 56d431abeab31ab70800000000000000
+      internalID: 8908467159547727205
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_41
+      rect:
+        serializedVersion: 2
+        x: 625
+        y: 296
+        width: 52
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5ce4fbd5fb8a1fb40800000000000000
+      internalID: 5472340562096901829
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_42
+      rect:
+        serializedVersion: 2
+        x: 722
+        y: 304
+        width: 56
+        height: 54
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9610a7b024f69a3c0800000000000000
+      internalID: -4347821635798433431
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_43
+      rect:
+        serializedVersion: 2
+        x: 820
+        y: 262
+        width: 75
+        height: 94
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c1d8e2878220efc10800000000000000
+      internalID: 2089109649984752924
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_44
+      rect:
+        serializedVersion: 2
+        x: 908
+        y: 316
+        width: 60
+        height: 54
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 32df79b37e798f750800000000000000
+      internalID: 6338983494917029155
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_45
+      rect:
+        serializedVersion: 2
+        x: 995
+        y: 320
+        width: 55
+        height: 40
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bd446d7295f36a110800000000000000
+      internalID: 1271773596931736795
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_46
+      rect:
+        serializedVersion: 2
+        x: 1082
+        y: 320
+        width: 46
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 476450d6292cc5e50800000000000000
+      internalID: 6799523471572682356
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_47
+      rect:
+        serializedVersion: 2
+        x: 1155
+        y: 292
+        width: 84
+        height: 88
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 72c67ba03e4150ff0800000000000000
+      internalID: -70627253784450009
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_48
+      rect:
+        serializedVersion: 2
+        x: 334
+        y: 168
+        width: 83
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3d59f969d8a049990800000000000000
+      internalID: -7380262286119692845
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_49
+      rect:
+        serializedVersion: 2
+        x: 442
+        y: 180
+        width: 91
+        height: 77
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 277c1a7b022ac3030800000000000000
+      internalID: 3475831273826666354
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_50
+      rect:
+        serializedVersion: 2
+        x: 578
+        y: 156
+        width: 80
+        height: 103
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c8ce9d4827cce1380800000000000000
+      internalID: -8998530213212459892
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_51
+      rect:
+        serializedVersion: 2
+        x: 673
+        y: 204
+        width: 70
+        height: 55
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a9b30f45bd45c7960800000000000000
+      internalID: 7601043572094155674
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_52
+      rect:
+        serializedVersion: 2
+        x: 780
+        y: 206
+        width: 68
+        height: 56
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c56d6a1a424bcfc50800000000000000
+      internalID: 6700428415044343388
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_53
+      rect:
+        serializedVersion: 2
+        x: 884
+        y: 208
+        width: 64
+        height: 58
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: edbf503372b2b8d20800000000000000
+      internalID: 3281764200829287390
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_54
+      rect:
+        serializedVersion: 2
+        x: 956
+        y: 220
+        width: 76
+        height: 71
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5116ec701909bdce0800000000000000
+      internalID: -1379349908283301611
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_55
+      rect:
+        serializedVersion: 2
+        x: 1053
+        y: 222
+        width: 74
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1be26541620081030800000000000000
+      internalID: 3465520076811546289
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_56
+      rect:
+        serializedVersion: 2
+        x: 1143
+        y: 220
+        width: 68
+        height: 53
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2440f3df4559ed090800000000000000
+      internalID: -8007798895159606206
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_57
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 140
+        height: 185
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f7512377e8a278b80800000000000000
+      internalID: -8392692589208136321
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_58
+      rect:
+        serializedVersion: 2
+        x: 153
+        y: 31
+        width: 127
+        height: 158
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a8112abcfb20df9a0800000000000000
+      internalID: -6197794489413529206
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_59
+      rect:
+        serializedVersion: 2
+        x: 723
+        y: 180
+        width: 22
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 10f6eff0fe884ea50800000000000000
+      internalID: 6549510318450437889
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_60
+      rect:
+        serializedVersion: 2
+        x: 963
+        y: 126
+        width: 61
+        height: 58
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 030177e8f4d964420800000000000000
+      internalID: 2613949598753296432
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_61
+      rect:
+        serializedVersion: 2
+        x: 1063
+        y: 141
+        width: 49
+        height: 47
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 657e2fb97a1c747e0800000000000000
+      internalID: -1781242201981655210
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_62
+      rect:
+        serializedVersion: 2
+        x: 1139
+        y: 132
+        width: 60
+        height: 53
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 418384ba95dce3060800000000000000
+      internalID: 6935206261206562836
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_63
+      rect:
+        serializedVersion: 2
+        x: 303
+        y: 31
+        width: 104
+        height: 130
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: efcdd19560d93f570800000000000000
+      internalID: 8499309572368751870
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_64
+      rect:
+        serializedVersion: 2
+        x: 433
+        y: 23
+        width: 107
+        height: 125
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9e0a50d62a1259d40800000000000000
+      internalID: 5590411493947842793
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_65
+      rect:
+        serializedVersion: 2
+        x: 522
+        y: 117
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ae3c23f306e357400800000000000000
+      internalID: 321231531524932586
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_66
+      rect:
+        serializedVersion: 2
+        x: 553
+        y: 33
+        width: 99
+        height: 118
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4a772628a7cf71550800000000000000
+      internalID: 6131647020791920548
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_67
+      rect:
+        serializedVersion: 2
+        x: 673
+        y: 93
+        width: 70
+        height: 71
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8672ad9ab26505220800000000000000
+      internalID: 2472570940959631208
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_68
+      rect:
+        serializedVersion: 2
+        x: 770
+        y: 108
+        width: 61
+        height: 59
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cf97e8bd8cf99d030800000000000000
+      internalID: 3520020268792576508
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_69
+      rect:
+        serializedVersion: 2
+        x: 866
+        y: 123
+        width: 58
+        height: 54
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0fdeecda5adace300800000000000000
+      internalID: 282791803714727408
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_70
+      rect:
+        serializedVersion: 2
+        x: 948
+        y: 113
+        width: 12
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d2366798b8f641dd0800000000000000
+      internalID: -2516263646695890131
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_71
+      rect:
+        serializedVersion: 2
+        x: 138
+        y: 101
+        width: 19
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 14901131231cd9530800000000000000
+      internalID: 3863456476166162753
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_72
+      rect:
+        serializedVersion: 2
+        x: 940
+        y: 45
+        width: 60
+        height: 64
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 62265061e44ef4950800000000000000
+      internalID: 6435613416563761702
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_73
+      rect:
+        serializedVersion: 2
+        x: 1051
+        y: 50
+        width: 59
+        height: 71
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c529af89d5e895d00800000000000000
+      internalID: 961956528069972572
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_74
+      rect:
+        serializedVersion: 2
+        x: 1099
+        y: 23
+        width: 130
+        height: 84
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e6f14c4231d4704b0800000000000000
+      internalID: -5474322077428998290
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_75
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 29
+        width: 6
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 81728972378784ef0800000000000000
+      internalID: -123716553771833576
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_76
+      rect:
+        serializedVersion: 2
+        x: 498
+        y: 47
+        width: 10
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 98b430f7e5d1f6790800000000000000
+      internalID: -7534771359872496759
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_77
+      rect:
+        serializedVersion: 2
+        x: 683
+        y: 39
+        width: 70
+        height: 43
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 378e1b37fefdf2fc0800000000000000
+      internalID: -3517346564421851021
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_78
+      rect:
+        serializedVersion: 2
+        x: 831
+        y: 45
+        width: 58
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 14e7b5ff15d556bf0800000000000000
+      internalID: -331756390783943103
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_79
+      rect:
+        serializedVersion: 2
+        x: 1172
+        y: 29
+        width: 9
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6aa64697cd3007c80800000000000000
+      internalID: -8327151465543734618
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Caseparts_80
+      rect:
+        serializedVersion: 2
+        x: 1153
+        y: 15
+        width: 14
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e9a5b3573585b1060800000000000000
+      internalID: 6925225967484623518
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Caseparts_0: 4227111238778164537
+      Caseparts_1: -6510095916525446779
+      Caseparts_10: -3955361317313490294
+      Caseparts_11: 3755481890587338464
+      Caseparts_12: -2865730568148864116
+      Caseparts_13: 5671136918831004710
+      Caseparts_14: -8069165044795599128
+      Caseparts_15: -1789589577454115705
+      Caseparts_16: 4392650703549814335
+      Caseparts_17: -6536762645389683429
+      Caseparts_18: -6181155183316712470
+      Caseparts_19: -8025026518978638775
+      Caseparts_2: 1545263096727721547
+      Caseparts_20: -1563389508365742936
+      Caseparts_21: 262380371448901110
+      Caseparts_22: -4863809196405038973
+      Caseparts_23: -5695735141760167516
+      Caseparts_24: -9176499748896179404
+      Caseparts_25: 1660417484291837493
+      Caseparts_26: 3549687179227622495
+      Caseparts_27: 4800003080757241240
+      Caseparts_28: 8054264554958841942
+      Caseparts_29: -7192749308015073752
+      Caseparts_3: -2987814782709342161
+      Caseparts_30: -4504017741206867584
+      Caseparts_31: -3246673641572079239
+      Caseparts_32: 2259913212907582578
+      Caseparts_33: -4600201653228398111
+      Caseparts_34: -1451505144160710828
+      Caseparts_35: -5286216232519853613
+      Caseparts_36: 6520539096012837178
+      Caseparts_37: 5576936901224554894
+      Caseparts_38: -1479965300006181446
+      Caseparts_39: -90725035688443103
+      Caseparts_4: -8347084251253988758
+      Caseparts_40: 8908467159547727205
+      Caseparts_41: 5472340562096901829
+      Caseparts_42: -4347821635798433431
+      Caseparts_43: 2089109649984752924
+      Caseparts_44: 6338983494917029155
+      Caseparts_45: 1271773596931736795
+      Caseparts_46: 6799523471572682356
+      Caseparts_47: -70627253784450009
+      Caseparts_48: -7380262286119692845
+      Caseparts_49: 3475831273826666354
+      Caseparts_5: -6451079398467443637
+      Caseparts_50: -8998530213212459892
+      Caseparts_51: 7601043572094155674
+      Caseparts_52: 6700428415044343388
+      Caseparts_53: 3281764200829287390
+      Caseparts_54: -1379349908283301611
+      Caseparts_55: 3465520076811546289
+      Caseparts_56: -8007798895159606206
+      Caseparts_57: -8392692589208136321
+      Caseparts_58: -6197794489413529206
+      Caseparts_59: 6549510318450437889
+      Caseparts_6: -6173099338785421108
+      Caseparts_60: 2613949598753296432
+      Caseparts_61: -1781242201981655210
+      Caseparts_62: 6935206261206562836
+      Caseparts_63: 8499309572368751870
+      Caseparts_64: 5590411493947842793
+      Caseparts_65: 321231531524932586
+      Caseparts_66: 6131647020791920548
+      Caseparts_67: 2472570940959631208
+      Caseparts_68: 3520020268792576508
+      Caseparts_69: 282791803714727408
+      Caseparts_7: -9188664046962922057
+      Caseparts_70: -2516263646695890131
+      Caseparts_71: 3863456476166162753
+      Caseparts_72: 6435613416563761702
+      Caseparts_73: 961956528069972572
+      Caseparts_74: -5474322077428998290
+      Caseparts_75: -123716553771833576
+      Caseparts_76: -7534771359872496759
+      Caseparts_77: -3517346564421851021
+      Caseparts_78: -331756390783943103
+      Caseparts_79: -8327151465543734618
+      Caseparts_8: 3014464409531124373
+      Caseparts_80: 6925225967484623518
+      Caseparts_9: -371558552484149177
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

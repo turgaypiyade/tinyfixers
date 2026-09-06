@@ -215,6 +215,11 @@ public class TileView : MonoBehaviour,
         Y = y;
     }
 
+    // SpreadingGel bulaşma flag'i: taş bir jel hücresine değince (BoardController settle taraması) set
+    // edilir ve taşla birlikte taşınır. Bulaşık taş düşer/kayarsa vardığı hücre de jel olur; match olursa
+    // tüm match hücreleri jel olur. Bir kez bulaşınca kalır (viral); taş temizlenince flag de gider.
+    public bool GelContaminated;
+
     public void ApplySortingOrder() => UpdateSiblingOrder();
 
     private void UpdateSiblingOrder()

@@ -253,6 +253,14 @@ public class MudCellView : MonoBehaviour
         SetAlpha(cTL, a); SetAlpha(cTR, a); SetAlpha(cBL, a); SetAlpha(cBR, a);
     }
 
+    // Grup alfası (spawn fade-in animasyonu için — SpreadingGel).
+    public void SetGroupAlpha(float a)
+    {
+        SetAlpha(baseSprite, a);
+        SetAlpha(interior, a);
+        SetAlpha(cTL, a); SetAlpha(cTR, a); SetAlpha(cBL, a); SetAlpha(cBR, a);
+    }
+
     public void Clear()
     {
         SetVisible(false);

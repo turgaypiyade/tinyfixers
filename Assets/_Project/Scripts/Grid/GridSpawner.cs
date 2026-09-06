@@ -55,6 +55,11 @@ public class GridSpawner : MonoBehaviour
     [Header("Mud Overlay")]
     [SerializeField] private MudOverlayService mudOverlayService;
 
+    [Header("Spreading Gel Overlay")]
+    [Tooltip("Yayılan jel hücrelerinin doğacağı root — mud gibi taşların ALTINDA. Boşsa otomatik kurulur.")]
+    [SerializeField] private RectTransform spreadingGelOverlayRoot;
+    [SerializeField] private SpreadingGelOverlayService spreadingGelOverlayService;
+
     [Header("Grass Overlay")]
     [Tooltip("Grass hücre görsellerinin doğacağı root — taşların ÜSTÜNDE olmalı. Boşsa otomatik kurulur.")]
     [SerializeField] private RectTransform grassOverlayRoot;
@@ -396,6 +401,7 @@ public class GridSpawner : MonoBehaviour
 
         ApplyCellAnchoredRootPosition(cellBgRoot, inner);
         ApplyCellAnchoredRootPosition(mudOverlayRoot, inner);
+        ApplyCellAnchoredRootPosition(spreadingGelOverlayRoot, inner);   // jel de mud gibi top-left hizalı
         ApplyCellAnchoredRootPosition(grassOverlayRoot, inner);   // grass PlaceInCell top-left hizası (mud ile aynı)
         ApplyCellAnchoredRootPosition(gridLinesRoot, inner);
         ApplyCellAnchoredRootPosition(tilesRoot, inner);
@@ -593,6 +599,7 @@ public class GridSpawner : MonoBehaviour
             EnsureGrassRootSetup();
             DrawObstacleVisuals();
             DrawMudOverlays();
+            DrawSpreadingGelOverlays();
             // DrawMudOverlays ClearAll() yapar; stamped-beneath mud'ları bundan SONRA çizilmeli.
             // Aksi halde LevelP_00540'ta plastic/movable altındaki mud ilk açılışta silinir,
             // movable ayrılınca restore path'i yeniden çizdiği için ancak sonradan görünür.
@@ -774,6 +781,7 @@ public class GridSpawner : MonoBehaviour
         if (gridLinesRoot != null) gridLinesRoot.SetSiblingIndex(1);
         if (underTilesObstaclesRoot != null) underTilesObstaclesRoot.SetSiblingIndex(2);
         if (mudOverlayRoot != null) mudOverlayRoot.SetSiblingIndex(3);
+        if (spreadingGelOverlayRoot != null) spreadingGelOverlayRoot.SetSiblingIndex(3);   // jel de taşların altında (mud bandı)
         if (obstaclesRoot != null) obstaclesRoot.SetAsLastSibling();
         // Grass örtüsü taşların ÜSTÜNDE görünmeli (görüntüyü örter) → tiles/obstacles'tan sonra son sıraya.
         if (grassOverlayRoot != null) grassOverlayRoot.SetAsLastSibling();
@@ -1102,6 +1110,8 @@ public class GridSpawner : MonoBehaviour
 
                 // Mud kendi seamless renderer'ını kullanır, default sprite Image üretme.
                 if (obsId == ObstacleId.Mud) continue;
+                // SpreadingGel kendi overlay renderer'ını kullanır (mud gibi, tek-stage).
+                if (obsId == ObstacleId.SpreadingGel) continue;
                 // Oil kendi cell-anchored blob renderer'ını kullanır. Generic full-cell image
                 // üretirsek her hücrede iç bevel kalır ve tek sıvı alan gibi birleşmez.
                 if (obsId == ObstacleId.Oil) continue;
@@ -1151,6 +1161,44 @@ public class GridSpawner : MonoBehaviour
         // TÜM mud hücreleri kaydolduktan sonra tek yetkili exposure geçişi — artımlı komşu
         // refresh'inin sınır hücrelerinde bıraktığı bayat bevel'i (izole "kutu") giderir.
         mudOverlayService.RefreshAllBorders();
+    }
+
+    // Author'lanmış SpreadingGel seed hücrelerini çizer (runtime yayılma Faz 3'te SpreadingGelService).
+    private void DrawSpreadingGelOverlays()
+    {
+        if (spreadingGelOverlayService == null) return;
+        if (resolvedLevel?.obstacles == null || resolvedLevel.obstacleOrigins == null) return;
+        if (spreadingGelOverlayRoot == null) return;
+
+        // GEÇİCİ TEŞHİS: NRE'nin jel çiziminde olup olmadığını kesinleştirmek için try/catch.
+        try
+        {
+            spreadingGelOverlayService.Init(width, height, tileSize, spreadingGelOverlayRoot);
+            spreadingGelOverlayService.ClearAll();
+            board?.SetSpreadingGelService(spreadingGelOverlayService);   // swap/özel yayılma hook'ları için
+
+            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                int idx = resolvedLevel.Index(x, y);
+                if ((ObstacleId)resolvedLevel.obstacles[idx] != ObstacleId.SpreadingGel) continue;
+                if (resolvedLevel.obstacleOrigins[idx] != idx) continue;   // 1x1, origin kendi cell'i
+
+                // Empty cell (hole) üzerine jel çizme.
+                bool isEmpty = resolvedLevel.cells != null
+                    && idx < resolvedLevel.cells.Length
+                    && resolvedLevel.cells[idx] == (int)CellType.Empty;
+                if (isEmpty) continue;
+
+                spreadingGelOverlayService.AddGelImmediate(x, y);   // seed: dalga yok, hemen çiz
+            }
+
+            spreadingGelOverlayService.RefreshAllBorders();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[GelDraw] EXCEPTION jel çiziminde: {e}");
+        }
     }
 
     private void SpawnMudOverlayCell(int x, int y)
@@ -1914,6 +1962,12 @@ public class GridSpawner : MonoBehaviour
 
         if (mudOverlayRoot == null)
             mudOverlayRoot = GetOrCreateChildRoot(root, "MudOverlay");
+
+        if (spreadingGelOverlayRoot == null)
+        {
+            spreadingGelOverlayRoot = GetOrCreateChildRoot(root, "SpreadingGelOverlay");
+            spreadingGelOverlayRoot.gameObject.layer = root.gameObject.layer; // Screen Space Camera culling'i önle
+        }
 
         if (tubeRoot == null || tubeRoot == root)
             tubeRoot = GetOrCreateChildRoot(root, "TubeObstacles");

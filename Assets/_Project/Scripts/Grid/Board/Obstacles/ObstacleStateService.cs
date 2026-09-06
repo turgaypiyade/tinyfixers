@@ -2091,6 +2091,18 @@ public class ObstacleStateService : ISimObstacleQuery
         return (ObstacleId)level.obstacles[idx] == ObstacleId.Mud;
     }
 
+    // SpreadingGel de mud gibi under-tile ama taş üstünde normal oynanır (swap/match serbest).
+    public bool IsSpreadingGelAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx] == ObstacleId.SpreadingGel;
+    }
+
+    // Mud + SpreadingGel: interaction'ı KİLİTLEMEYEN pasif under-tile overlay'ler. Diğer under-tile
+    // obstacle'lar swap/select'i bloklar; bu ikisi istisna (taş üstünde normal oynanır + hareket eder).
+    public bool IsInteractiveUnderTileOverlayAt(int x, int y) => IsMudAt(x, y) || IsSpreadingGelAt(x, y);
+
     // Oil (veya herhangi bir holdsTile=true obstacle) bu hücredeki taşı tutuyorsa true.
     // allowDiagonal=true ise çapraz akış yine izinli — bu method sadece dikey blok için.
     public bool HoldsTileAt(int x, int y)
