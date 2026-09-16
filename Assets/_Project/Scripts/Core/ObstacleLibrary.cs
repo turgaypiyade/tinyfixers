@@ -96,6 +96,14 @@ public class ObstacleDef
     [Tooltip("Obstacle tamamen kırıldığında çalınacak ses.")]
     public AudioClip breakSound;
     [Range(0f, 1f)] public float breakSoundVolume = 1f;
+
+    [Header("Flight Audio")]
+    [Tooltip("Uçan obstacle'ın kalkıştan çarpışmaya kadar döngüde çalacağı ses (EggBird).")]
+    public AudioClip flightLoopSound;
+    [Range(0f, 1f)] public float flightLoopSoundVolume = 0.75f;
+    [Tooltip("Uçan obstacle hedefe çarptığında çalacak ses; yumurta kırılma sesinden ayrıdır.")]
+    public AudioClip impactSound;
+    [Range(0f, 1f)] public float impactSoundVolume = 1f;
     [HideInInspector] public bool drawUnderTiles = false;        // legacy serialized flag
 
     [SerializeField, HideInInspector, FormerlySerializedAs("sprite")]

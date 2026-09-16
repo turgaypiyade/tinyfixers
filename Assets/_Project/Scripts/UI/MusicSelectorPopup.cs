@@ -108,7 +108,7 @@ public sealed class MusicSelectorPopup : MonoBehaviour
         var title = NewText("Title", card, "Müzik Seç", 46, FontStyles.Bold, new Vector2(680, 70));
         Top(title.rectTransform, 70, 24);
 
-        var closeBtn = NewButton("Close", card, "✕", new Color(0.75f, 0.2f, 0.2f), new Vector2(84, 84), out _);
+        var closeBtn = NewButton("Close", card, "×", new Color(0.75f, 0.2f, 0.2f), new Vector2(84, 84), out _);
         var crt = (RectTransform)closeBtn.transform;
         crt.anchorMin = crt.anchorMax = new Vector2(1, 1); crt.pivot = new Vector2(1, 1);
         crt.anchoredPosition = new Vector2(-10, -10);

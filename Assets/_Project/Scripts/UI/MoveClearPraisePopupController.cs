@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,13 +12,25 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
     [SerializeField] private float holdDuration = 0.58f;
     [SerializeField] private TMP_FontAsset preferredFont;
 
+    [Header("Praise Lettering")]
+    [SerializeField, Range(0f, 32f)] private float textArcHeight = 13f;
+    [SerializeField, Range(48f, 120f)] private float maxPraiseFontSize = 92f;
+    [SerializeField, Range(0f, 12f)] private float textDepth = 5f;
+    [SerializeField] private Vector2 letteringOffset = new Vector2(8f, 0f);
+
     private BoardController board;
     private Coroutine activeRoutine;
     private RectTransform activePopup;
     private TMP_FontAsset resolvedFont;
+    private readonly List<Material> popupMaterials = new List<Material>(3);
 
     public void Bind(BoardController target)
     {
+        // The controller is a persistent host; only its generated popup is temporary.
+        // Authored hosts may be saved inactive in the scene.
+        if (target != null && !gameObject.activeSelf)
+            gameObject.SetActive(true);
+
         if (board == target)
             return;
 
@@ -35,20 +48,29 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
         if (board != null)
             board.OnMoveClearPraise -= HandleMoveClearPraise;
 
-        if (activeRoutine != null)
-        {
-            StopCoroutine(activeRoutine);
-            activeRoutine = null;
-        }
+        StopActivePopup();
+    }
 
-        activePopup = null;
+    private void OnDisable()
+    {
+        // Unity stops host coroutines on deactivation. Also remove the unfinished
+        // popup so it cannot reappear frozen when the Canvas is enabled again.
+        StopActivePopup();
     }
 
     private void HandleMoveClearPraise(int clearedTiles)
     {
-        if (clearedTiles < minimumClearedTiles)
+        // C# events can still reach us while a parent Canvas or this component is
+        // disabled. Do not start a coroutine or reopen a hidden screen in that case.
+        if (!isActiveAndEnabled || clearedTiles < minimumClearedTiles)
             return;
 
+        StopActivePopup();
+        activeRoutine = StartCoroutine(PlayPopup(clearedTiles));
+    }
+
+    private void StopActivePopup()
+    {
         if (activeRoutine != null)
         {
             StopCoroutine(activeRoutine);
@@ -56,8 +78,6 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
         }
 
         DestroyActivePopup();
-
-        activeRoutine = StartCoroutine(PlayPopup(clearedTiles));
     }
 
     private IEnumerator PlayPopup(int clearedTiles)
@@ -78,7 +98,7 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
             yield break;
         }
 
-        float tilt = Random.Range(-5.5f, 5.5f);
+        float tilt = Random.Range(-2.5f, 2.5f);
         Vector2 start = anchoredPosition + new Vector2(0f, -24f);
         Vector2 peak = anchoredPosition + new Vector2(0f, 10f);
         Vector2 end = anchoredPosition + new Vector2(0f, 42f);
@@ -101,7 +121,7 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
             float e = 1f - Mathf.Pow(1f - k, 3f);
             group.alpha = e;
             popup.anchoredPosition = Vector2.LerpUnclamped(start, peak, e);
-            popup.localScale = Vector3.one * Mathf.LerpUnclamped(0.36f, 1.18f, e);
+            popup.localScale = Vector3.one * Mathf.LerpUnclamped(0.48f, 1.08f, e);
             popup.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpUnclamped(tilt * 1.8f, tilt, e));
             yield return null;
         }
@@ -119,7 +139,7 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
             float k = Mathf.Clamp01(t / settleDuration);
             float e = 1f - Mathf.Pow(1f - k, 2f);
             popup.anchoredPosition = Vector2.LerpUnclamped(peak, anchoredPosition, e);
-            popup.localScale = Vector3.one * Mathf.LerpUnclamped(1.18f, 1f, e);
+            popup.localScale = Vector3.one * Mathf.LerpUnclamped(1.08f, 1f, e);
             yield return null;
         }
 
@@ -153,11 +173,16 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
         DestroyPopup(popup);
     }
 
-    private static void DestroyPopup(RectTransform popup)
+    private void DestroyPopup(RectTransform popup)
     {
+        foreach (var material in popupMaterials)
+            if (material != null) Destroy(material);
+        popupMaterials.Clear();
+
         if (!IsAlive(popup))
             return;
 
+        popup.gameObject.SetActive(false);
         Destroy(popup.gameObject);
     }
 
@@ -192,38 +217,125 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
         group.blocksRaycasts = false;
         group.interactable = false;
 
-        CreateJagged("Shadow", rootRt, badgeSize + new Vector2(34f, 28f), new Vector2(7f, -9f), new Color(0.05f, 0.04f, 0.04f, 0.34f), 13, 0.47f);
-        CreateJagged("Rim", rootRt, badgeSize + new Vector2(34f, 30f), Vector2.zero, rim, 13, 0.45f);
-        CreateJagged("Badge", rootRt, badgeSize, Vector2.zero, fill, 13, 0.50f);
-        CreateJagged("SparkA", rootRt, new Vector2(38f, 38f), new Vector2(-badgeSize.x * 0.45f, badgeSize.y * 0.34f), accent, 6, 0.42f);
-        CreateJagged("SparkB", rootRt, new Vector2(30f, 30f), new Vector2(badgeSize.x * 0.45f, -badgeSize.y * 0.34f), accent, 6, 0.42f);
+        Vector2 burstSize = new Vector2(badgeSize.x * 1.18f, badgeSize.y * 1.45f);
+        CreateJagged("Shadow", rootRt, burstSize + new Vector2(54f, 48f), new Vector2(3f, -8f), new Color(0.25f, 0.08f, 0.015f, 0.24f), 9, 0.51f);
+        CreateJagged("RedRim", rootRt, burstSize + new Vector2(48f, 44f), Vector2.zero, new Color(0.92f, 0.13f, 0.015f, 1f), 9, 0.51f);
+        CreateJagged("OrangeRim", rootRt, burstSize + new Vector2(24f, 22f), Vector2.zero, rim, 9, 0.51f);
+        CreateJagged("Badge", rootRt, burstSize, Vector2.zero, fill, 9, 0.51f);
+        CreateJagged("SparkA", rootRt, new Vector2(34f, 34f), new Vector2(-burstSize.x * 0.44f, burstSize.y * 0.55f), accent, 5, 0.48f);
+        CreateJagged("SparkB", rootRt, new Vector2(26f, 26f), new Vector2(burstSize.x * 0.46f, burstSize.y * 0.44f), accent, 5, 0.48f);
+        CreateJagged("SparkC", rootRt, new Vector2(22f, 22f), new Vector2(burstSize.x * 0.31f, -burstSize.y * 0.55f), accent, 5, 0.48f);
 
-        var textGo = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-        textGo.transform.SetParent(rootRt, false);
-        var textRt = (RectTransform)textGo.transform;
-        textRt.anchorMin = Vector2.zero;
-        textRt.anchorMax = Vector2.one;
-        textRt.offsetMin = new Vector2(34f, 30f);
-        textRt.offsetMax = new Vector2(-34f, -30f);
-
-        var text = textGo.GetComponent<TextMeshProUGUI>();
-        text.text = label;
         var font = ResolveFont();
-        if (font != null)
-            text.font = font;
-        text.alignment = TextAlignmentOptions.Center;
-        text.fontStyle = FontStyles.Bold;
-        text.fontSize = 58f;
-        text.enableAutoSizing = true;
-        text.fontSizeMin = 38f;
-        text.fontSizeMax = 62f;
-        text.textWrappingMode = TextWrappingModes.NoWrap;
-        text.color = new Color(0.04f, 0.035f, 0.02f, 1f);
-        text.outlineWidth = 0.12f;
-        text.outlineColor = new Color(1f, 0.96f, 0.50f, 0.9f);
-        text.raycastTarget = false;
+        Color darkBrown = new Color(0.22f, 0.085f, 0.025f, 1f);
+        Color orange = new Color(1f, 0.27f, 0.005f, 1f);
+        float extrusion = textDepth * 1.4f;
+
+        // All three layers use the exact same font size and glyph layout. Their
+        // independent SDF materials keep this styling off the shared font asset.
+        var outline = CreatePraiseText("LetterOutline", rootRt, label, font,
+            letteringOffset + new Vector2(0f, -extrusion - 2f), darkBrown, darkBrown, darkBrown, 0.36f);
+        var depth = CreatePraiseText("LetterDepth", rootRt, label, font,
+            letteringOffset + new Vector2(0f, -extrusion), new Color(1f, 0.49f, 0.015f), orange, orange, 0.22f);
+        var face = CreatePraiseText("Label", rootRt, label, font, letteringOffset,
+            new Color(1f, 0.99f, 0.84f), new Color(1f, 0.66f, 0.06f),
+            new Color(1f, 0.42f, 0.01f), 0.11f);
+
+        face.enableAutoSizing = true;
+        face.fontSizeMin = 38f;
+        face.fontSizeMax = maxPraiseFontSize;
+        face.ForceMeshUpdate();
+        outline.fontSize = depth.fontSize = face.fontSize;
+        outline.ForceMeshUpdate();
+        depth.ForceMeshUpdate();
 
         return rootRt;
+    }
+
+    private TextMeshProUGUI CreatePraiseText(
+        string name, RectTransform parent, string label, TMP_FontAsset font,
+        Vector2 offset, Color top, Color bottom, Color outlineColor, float outlineWidth)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(parent, false);
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = new Vector2(22f, 12f) + offset;
+        rt.offsetMax = new Vector2(-22f, -12f) + offset;
+
+        var text = go.GetComponent<TextMeshProUGUI>();
+        if (font != null) text.font = font;
+        text.text = label;
+        text.fontStyle = FontStyles.Normal;
+        text.fontSize = maxPraiseFontSize;
+        text.alignment = TextAlignmentOptions.Center;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
+        text.overflowMode = TextOverflowModes.Overflow;
+        text.color = Color.white;
+        text.enableVertexGradient = true;
+        text.colorGradient = new VertexGradient(top, top, bottom, bottom);
+        text.raycastTarget = false;
+        text.extraPadding = true;
+
+        // Own these three materials explicitly; the installed TMP version does
+        // not dispose font-material instances when a popup text is destroyed.
+        ShaderUtilities.GetShaderPropertyIDs();
+        var material = new Material(text.fontSharedMaterial);
+        popupMaterials.Add(material);
+        text.fontSharedMaterial = material;
+        material.SetColor(ShaderUtilities.ID_FaceColor, Color.white);
+        material.SetColor(ShaderUtilities.ID_OutlineColor, outlineColor);
+        material.SetFloat(ShaderUtilities.ID_OutlineWidth, outlineWidth);
+        material.SetFloat(ShaderUtilities.ID_OutlineSoftness, 0f);
+        material.DisableKeyword("UNDERLAY_ON");
+        material.DisableKeyword("UNDERLAY_INNER");
+        text.UpdateMeshPadding();
+        float arc = textArcHeight;
+        text.OnPreRenderText += info => ApplyTextArc(info, arc);
+        return text;
+    }
+
+    private static void ApplyTextArc(TMP_TextInfo info, float height)
+    {
+        if (info.characterCount == 0 || height <= 0f) return;
+
+        float left = float.PositiveInfinity;
+        float right = float.NegativeInfinity;
+        for (int i = 0; i < info.characterCount; i++)
+        {
+            var c = info.characterInfo[i];
+            if (!c.isVisible) continue;
+            left = Mathf.Min(left, c.origin);
+            right = Mathf.Max(right, c.xAdvance);
+        }
+        if (float.IsInfinity(left) || right - left < 1f) return;
+
+        float center = (left + right) * 0.5f;
+        float halfWidth = (right - left) * 0.5f;
+        for (int i = 0; i < info.characterCount; i++)
+        {
+            var c = info.characterInfo[i];
+            if (!c.isVisible) continue;
+            var vertices = info.meshInfo[c.materialReferenceIndex].vertices;
+            int first = c.vertexIndex;
+            float x = (c.origin + c.xAdvance) * 0.5f;
+            float normalized = (x - center) / halfWidth;
+            float lift = height * (1f - normalized * normalized) - height * 0.5f;
+            float angle = Mathf.Atan(-2f * height * normalized / halfWidth) * Mathf.Rad2Deg;
+            Vector3 pivot = new Vector3(x, c.baseLine, 0f);
+            Quaternion rotation = Quaternion.Euler(0f, 0f, angle);
+            for (int v = 0; v < 4; v++)
+                vertices[first + v] = rotation * (vertices[first + v] - pivot)
+                    + pivot + Vector3.up * lift;
+        }
+    }
+
+    [ContextMenu("Preview GREAT (Play Mode)")]
+    private void PreviewGreat()
+    {
+        if (Application.isPlaying)
+            HandleMoveClearPraise(Mathf.Max(50, minimumClearedTiles));
     }
 
     private TMP_FontAsset ResolveFont()
@@ -287,7 +399,7 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
         {
             label = "GREAT!";
             fill = new Color(1f, 0.84f, 0.12f, 1f);
-            rim = new Color(0.94f, 0.10f, 0.08f, 1f);
+            rim = new Color(1f, 0.27f, 0.015f, 1f);
             accent = new Color(1f, 0.98f, 0.58f, 1f);
             return;
         }
@@ -296,14 +408,14 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
         {
             label = "WOW!";
             fill = new Color(1f, 0.84f, 0.12f, 1f);
-            rim = new Color(0.94f, 0.10f, 0.08f, 1f);
+            rim = new Color(1f, 0.27f, 0.015f, 1f);
             accent = new Color(1f, 0.98f, 0.58f, 1f);
             return;
         }
 
         label = "GOOD!";
         fill = new Color(1f, 0.84f, 0.12f, 1f);
-        rim = new Color(0.94f, 0.10f, 0.08f, 1f);
+        rim = new Color(1f, 0.27f, 0.015f, 1f);
         accent = new Color(1f, 0.98f, 0.58f, 1f);
     }
 }

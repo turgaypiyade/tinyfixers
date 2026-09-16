@@ -14,6 +14,12 @@ public partial class CascadeLogic
     // Buffer for active goals
     private readonly List<TopHudController.ActiveGoal> _activeGoalsBuffer = new List<TopHudController.ActiveGoal>(4);
 
+    // A player move may run many cascade passes. Keep this budget across those
+    // passes so a long chain cannot repeatedly refill and collect PlasticTwoStage.
+    private bool plasticTwoStageSpawnedThisMove;
+
+    public void ResetPlasticTwoStageSpawnBudget() => plasticTwoStageSpawnedThisMove = false;
+
     public CascadeLogic(BoardController board)
     {
         this.board = board;
@@ -564,7 +570,7 @@ public partial class CascadeLogic
 
                     // Cargo pass-kilidine tabi değil (kendi hamle bütçesi/tavanı var);
                     // diğer movable'lar (plastic vb.) pass başına 1 kuralında kalır.
-                    if (TryPickMovableGoalToSpawn(x, spawnedMovableThisPass, out var goalObstacleId))
+                    if (TryPickMovableGoalToSpawn(x, spawnedMovableThisPass, spawnedMovableCounts, out var goalObstacleId))
                     {
                         newTile.IsMovableObstacle = true;
                         newTile.SpawnObstacleId = goalObstacleId;
@@ -908,7 +914,11 @@ public partial class CascadeLogic
         return cargoInColumn * 2 < playableInColumn;
     }
 
-    private bool TryPickMovableGoalToSpawn(int x, bool movableSpawnedThisPass, out ObstacleId obstacleId)
+    private bool TryPickMovableGoalToSpawn(
+        int x,
+        bool movableSpawnedThisPass,
+        Dictionary<ObstacleId, int> plannedSpawnCounts,
+        out ObstacleId obstacleId)
     {
         obstacleId = ObstacleId.None;
 
@@ -936,8 +946,14 @@ public partial class CascadeLogic
             // Cargo dışındaki movable'lar (plastic vb.): pass başına 1 spawn kuralı.
             if (!def.exitAtBottom && movableSpawnedThisPass) continue;
 
+            if (goal.obstacleId == ObstacleId.PlasticTwoStage && plasticTwoStageSpawnedThisMove)
+                continue;
+
             int alive = board.ObstacleStateService.CountAliveOrStampedOrigins(goal.obstacleId);
-            if (alive >= goal.remaining) continue;
+            // Virtual spawns are registered only after the entire simulation.
+            // Include reservations from earlier columns/iterations in this pass.
+            plannedSpawnCounts.TryGetValue(goal.obstacleId, out int planned);
+            if (alive + planned >= goal.remaining) continue;
 
             if (def.exitAtBottom)
             {
@@ -945,6 +961,10 @@ public partial class CascadeLogic
                 cargoSpawnCredits -= 1f;
                 cargoSpawnColumnsThisPass.Add(x);
             }
+
+            plannedSpawnCounts[goal.obstacleId] = planned + 1;
+            if (goal.obstacleId == ObstacleId.PlasticTwoStage)
+                plasticTwoStageSpawnedThisMove = true;
 
             obstacleId = goal.obstacleId;
             return true;

@@ -761,6 +761,40 @@ public class ObstacleStateService : ISimObstacleQuery
         return Mathf.Max(1, def != null ? def.hits : 1);
     }
 
+    // Mud can be rendered beneath another obstacle. Reading the primary cell's
+    // HP in that case returns the cover's HP, not the visible Mud layer's stage.
+    public bool TryGetMudRemainingHitsAt(int x, int y, out int remaining)
+    {
+        remaining = 0;
+        if (!IsValidCell(x, y)) return false;
+
+        int idx = level.Index(x, y);
+        if ((ObstacleId)level.obstacles[idx] == ObstacleId.Mud)
+        {
+            remaining = GetRemainingHitsAt(x, y);
+            return remaining > 0;
+        }
+
+        if (_underTileBeneathMovable.TryGetValue(idx, out var beneath)
+            && beneath.Id == ObstacleId.Mud)
+        {
+            remaining = beneath.Remaining;
+            return remaining > 0;
+        }
+
+        if (_stampedBeneathByCell.TryGetValue(idx, out var layers) && layers != null)
+        {
+            for (int i = layers.Count - 1; i >= 0; i--)
+            {
+                if (layers[i].Id != ObstacleId.Mud) continue;
+                remaining = layers[i].Remaining;
+                return remaining > 0;
+            }
+        }
+
+        return false;
+    }
+
     public ObstacleId GetObstacleIdAt(int x, int y)
     {
         if (!IsValidCell(x, y)) return ObstacleId.None;
@@ -1916,20 +1950,58 @@ public class ObstacleStateService : ISimObstacleQuery
         if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
         if (cellIndex < 0 || cellIndex >= level.obstacles.Length) return;
 
-        // YALNIZCA hücre gerçekten Magnet ise temizle. Stacked kurulumda (grass cover + magnet
-        // beneath, aynı path hücreleri) magnet aktifleşip büzülürken, path'indeki bir hücrenin
-        // grass cover'ı henüz kırılmamış olabilir → level.obstacles[cell] hâlâ Grass. Koşulsuz
-        // None yazmak o grass'ın DATA'sını siler AMA hiçbir cleared-event (ObstacleVisualChanged/
-        // OnObstacleDestroyed) atılmadığı için grass görseli obstacleViewsByOrigin'de ÖKSÜZ kalır:
-        // kalıcı hayalet, sonraki hiçbir match/special onu temizleyemez (cell None → ApplyObstacle-
-        // DamageAt no-op). Magnet olmayan hücreye dokunma — onu kendi obstacle'ı yönetsin.
+        // The meeting cell may still be covered by Grass. Preserve the live cover,
+        // but remove the retired Magnet from its beneath stack: otherwise breaking
+        // the cover later restores an invisible, permanently blocked Magnet cell.
         if ((ObstacleId)level.obstacles[cellIndex] != ObstacleId.Magnet)
+        {
+            if (RemoveRetiredMagnetBeneath(cellIndex))
+                OnCellUnlocked?.Invoke(cellIndex);
             return;
+        }
+
+        // An exposed Magnet can itself cover authored content. Reveal that content
+        // instead of erasing it when the endpoint leaves this cell.
+        if (TryRestoreStampedBeneathCell(cellIndex, out int restoredOrigin, out int remainingOverride))
+        {
+            if (restoredOrigin >= 0)
+                ReinitRestoredBeneathOrigin(restoredOrigin, remainingOverride);
+            OnCellUnlocked?.Invoke(cellIndex);
+            return;
+        }
 
         level.obstacles[cellIndex]       = (int)ObstacleId.None;
         level.obstacleOrigins[cellIndex] = -1;
 
         OnCellUnlocked?.Invoke(cellIndex);
+    }
+
+    private bool RemoveRetiredMagnetBeneath(int cellIndex)
+    {
+        if (!_stampedBeneathByCell.TryGetValue(cellIndex, out var layers) || layers == null)
+            return false;
+
+        bool removed = false;
+        for (int i = layers.Count - 1; i >= 0; i--)
+        {
+            var retired = layers[i];
+            if (retired.Id != ObstacleId.Magnet) continue;
+
+            // Reconnect anything below Magnet to its surviving cover. This keeps
+            // Mud -> Magnet -> Grass (and deeper stacks) revealable in order.
+            if (i > 0)
+            {
+                var beneath = layers[i - 1];
+                layers[i - 1] = new StampedBeneath(
+                    beneath.Id, beneath.Origin, retired.OverOrigin, beneath.Remaining);
+            }
+            layers.RemoveAt(i);
+            removed = true;
+        }
+
+        if (layers.Count == 0)
+            _stampedBeneathByCell.Remove(cellIndex);
+        return removed;
     }
 
     /// Removes all EnergyContainer cells from the obstacle layer and fires OnCellUnlocked

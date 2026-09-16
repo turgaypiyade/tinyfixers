@@ -94,7 +94,7 @@ MonoBehaviour:
     locKey: hint_obstacle_mud
     fallbackText:
   - id: 26
-    iconOverride: {fileID: 0}
+    iconOverride: {fileID: 21300000, guid: c4b70ff79b3b2489d88ab164e452b730, type: 3}
     locKey: hint_obstacle_tube
     fallbackText:
   - id: 27

@@ -38,7 +38,6 @@ public class MagnetView : MonoBehaviour
     [SerializeField, Min(0.05f)] private float moveDuration = 0.2f;
 
     [Header("Destroy Animation")]
-    [SerializeField, Min(0.05f)] private float destroyDuration = 0.35f;
     [SerializeField, Range(1, 4)] private int destroyShardCountPerMagnet = 2;
     [SerializeField, Min(0.1f)] private float destroyShardFallDuration = 1.35f;
     [SerializeField] private float destroyShardGravity = 720f;

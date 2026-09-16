@@ -260,7 +260,7 @@ public static class RisingMockupSetup
         continueBtn.image.rectTransform.anchoredPosition = Vector2.zero;
         if (continueLabel != null)
         {
-            continueLabel.enableWordWrapping = false;               // tek satıra sığsın
+            continueLabel.textWrappingMode = TextWrappingModes.NoWrap;               // tek satıra sığsın
             continueLabel.overflowMode = TextOverflowModes.Overflow;
             continueLabel.fontSize = 34;
         }
@@ -340,7 +340,7 @@ public static class RisingMockupSetup
         title.rectTransform.pivot = new Vector2(0.5f, 1f);
         title.rectTransform.anchoredPosition = new Vector2(0f, -700f);
         title.rectTransform.sizeDelta = new Vector2(760f, 110f);
-        title.enableWordWrapping = false;
+        title.textWrappingMode = TextWrappingModes.NoWrap;
 
         var lift = MockupUI.NewImage("RisingLiftT2", rootRt, Color.white);
         lift.rectTransform.anchorMin = lift.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
@@ -375,12 +375,12 @@ public static class RisingMockupSetup
         counter.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         counter.rectTransform.anchoredPosition = new Vector2(0f, -600f);
         counter.rectTransform.sizeDelta = new Vector2(520f, 100f);
-        counter.enableWordWrapping = false;
+        counter.textWrappingMode = TextWrappingModes.NoWrap;
 
         var tap = MockupUI.NewText("TapText", rootRt, "Devam Etmek İçin Dokun", 46f,
             new Color(1f, 0.93f, 0.62f, 1f), TextAlignmentOptions.Center, theme.headingFont);
         MockupUI.AnchorBottom(tap.rectTransform, 90f, 70f);
-        tap.enableWordWrapping = false;
+        tap.textWrappingMode = TextWrappingModes.NoWrap;
 
         MockupUI.SetRef(intro, "root", introRoot);
         MockupUI.SetRef(intro, "backgroundImage", bg);

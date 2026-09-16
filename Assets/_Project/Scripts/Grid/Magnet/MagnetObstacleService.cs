@@ -16,10 +16,7 @@ public class MagnetObstacleService : MonoBehaviour
     [Header("Drain Pulse")]
     [SerializeField] private bool enableDrainPulse = true;
     [SerializeField, Min(0.5f)] private float drainInterval = 3.5f;
-    [SerializeField, Min(0f)] private float firstDrainDelay = 1.2f;
     [SerializeField, Range(1, 4)] private int drainMaxTargets = 1;
-    [SerializeField, Range(1, 4)] private int drainRadius = 2; // 2 => 5x5
-    [SerializeField, Min(0.05f)] private float drainFlyDuration = 0.32f;
     [SerializeField, Min(0.05f)] private float drainElectricMarkDuration = 0.58f;
     [SerializeField, Min(0.05f)] private float drainSuctionDuration = 0.46f;
     [SerializeField, Range(0.05f, 0.6f)] private float drainPullEndScale = 0.22f;
@@ -1067,7 +1064,8 @@ public class MagnetObstacleService : MonoBehaviour
         return true;
     }
 
-    /// Squash → stretched arc → landing bounce. The blob flies from its current spot onto targetWorld.
+    /// Small anticipation, one clean arc, then a soft landing. Keep the icon's
+    /// proportions readable throughout instead of shaking it sideways in flight.
     private IEnumerator GelEject(RectTransform rt, Vector3 targetWorld)
     {
         if (rt == null || board == null)
@@ -1075,41 +1073,70 @@ public class MagnetObstacleService : MonoBehaviour
 
         Vector2 start = rt.anchoredPosition;
         Vector2 end = board.WorldToAnchoredIn(board.BreakFxParent, targetWorld);
-        Vector2 dir = end - start;
-        float dist = dir.magnitude;
-        Vector2 perp = dist > 0.001f ? new Vector2(-dir.y, dir.x).normalized : Vector2.up;
+        Vector2 delta = end - start;
+        float tileSize = Mathf.Max(1f, board.TileSize);
+        float distanceInCells = delta.magnitude / tileSize;
+        Vector2 direction = delta.sqrMagnitude > 0.001f ? delta.normalized : Vector2.up;
+        float tilt = -Mathf.Sign(delta.x) * 12f;
 
-        // Squeeze (x/y ezme) YOK — ölçek her zaman UNIFORM. Küçük imajdan başlar, uçuş boyunca
-        // büyüyüp hedefe varınca NORMAL boyuta gelir. Hareket hızlı ve "sıçrama" gibi: güçlü
-        // ease-out (baştan fışkırır) + sönen yanal seğirme (yağ sıçraması hissi).
-        const float startScale = 0.32f;
-        rt.localScale = Vector3.one * startScale;
-        rt.localRotation = Quaternion.identity;
-
-        float travelDur = Mathf.Clamp(dist / Mathf.Max(1f, board.TileSize * 16f), 0.14f, 0.34f);
-        float arc = Mathf.Min(dist * 0.18f, board.TileSize * 0.6f);
-        float wobbleAmp = Mathf.Min(board.TileSize * 0.15f, dist * 0.12f);
-
-        float t = 0f;
-        while (t < travelDur)
+        // A brief gather at the mouth makes the launch legible. Uniform scaling
+        // avoids distorting the Line/Pulse/PatchBot artwork.
+        const float anticipationDuration = 0.09f;
+        float elapsed = 0f;
+        while (elapsed < anticipationDuration)
         {
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / travelDur);
-            float e = 1f - Mathf.Pow(1f - k, 3f);               // güçlü ease-out → fışkırma
-
-            // Ana yol + kavis + sönen yüksek-frekans yanal seğirme (sıçrama titremesi).
-            Vector2 pos = Vector2.LerpUnclamped(start, end, e)
-                        + perp * (Mathf.Sin(k * Mathf.PI) * arc)
-                        + perp * (Mathf.Sin(k * Mathf.PI * 5f) * wobbleAmp * (1f - k));
-            rt.anchoredPosition = pos;
-
-            float s = Mathf.Lerp(startScale, 1f, e);            // küçük → normal (uniform)
-            rt.localScale = new Vector3(s, s, 1f);
+            if (rt == null) yield break;
+            elapsed += Time.deltaTime;
+            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / anticipationDuration));
+            rt.anchoredPosition = start - direction * (tileSize * 0.10f * k);
+            rt.localScale = Vector3.one * Mathf.Lerp(0.62f, 0.48f, k);
+            rt.localRotation = Quaternion.Euler(0f, 0f, -tilt * k);
             yield return null;
         }
 
+        Vector2 launch = start - direction * (tileSize * 0.10f);
+        float arcHeight = tileSize * Mathf.Clamp(distanceInCells * 0.24f, 0.35f, 1.35f);
+        Vector2 controlA = Vector2.Lerp(launch, end, 0.25f) + Vector2.up * arcHeight;
+        Vector2 controlB = Vector2.Lerp(launch, end, 0.75f) + Vector2.up * arcHeight;
+        float travelDuration = Mathf.Clamp(0.28f + distanceInCells * 0.045f, 0.32f, 0.62f);
+
+        elapsed = 0f;
+        while (elapsed < travelDuration)
+        {
+            if (rt == null) yield break;
+            elapsed += Time.deltaTime;
+            float k = Mathf.Clamp01(elapsed / travelDuration);
+            float u = Mathf.SmoothStep(0f, 1f, k);
+            float v = 1f - u;
+            rt.anchoredPosition = v * v * v * launch
+                + 3f * v * v * u * controlA
+                + 3f * v * u * u * controlB
+                + u * u * u * end;
+
+            float grow = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(k / 0.65f));
+            rt.localScale = Vector3.one * (Mathf.Lerp(0.48f, 1f, grow) + 0.10f * Mathf.Sin(k * Mathf.PI));
+            float angle = Mathf.Lerp(-tilt, 0f, u) + tilt * Mathf.Sin(k * Mathf.PI);
+            rt.localRotation = Quaternion.Euler(0f, 0f, angle);
+            yield return null;
+        }
+
+        // A single restrained pulse settles onto the cell without a second jump.
+        const float landingDuration = 0.12f;
+        elapsed = 0f;
+        while (elapsed < landingDuration)
+        {
+            if (rt == null) yield break;
+            elapsed += Time.deltaTime;
+            float k = Mathf.Clamp01(elapsed / landingDuration);
+            rt.anchoredPosition = end;
+            rt.localRotation = Quaternion.identity;
+            rt.localScale = Vector3.one * (1f + 0.08f * Mathf.Sin(k * Mathf.PI) * (1f - k));
+            yield return null;
+        }
+
+        if (rt == null) yield break;
         rt.anchoredPosition = end;
-        rt.localScale = Vector3.one;                             // hedefte tam normal boyut
+        rt.localScale = Vector3.one;
         rt.localRotation = Quaternion.identity;
     }
 

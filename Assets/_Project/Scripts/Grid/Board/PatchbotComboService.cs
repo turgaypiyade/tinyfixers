@@ -239,6 +239,37 @@ public class PatchbotComboService
         if (tileView != null) markAffectedTile?.Invoke(tileView);
     }
 
+    // ── SpreadingGel hedeflemesi ─────────────────────────────────────────────
+    // Jel hiç kırılmaz: jelli bir hücreye vurmak kaplama hedefini İLERLETMEZ. O yüzden (a) jel
+    // hücreleri "obstacle goal" sayılmaz, (b) bot bulaş taşıyorsa (payload'ı jel bırakacaksa) ve
+    // kırılacak obstacle kalmadıysa HENÜZ JEL OLMAYAN hücrelere gider → hedefi ilerletir.
+    public bool ShouldPreferNonGelCells(TileView patchBotTile, bool gelGoalActive)
+    {
+        if (!gelGoalActive) return false;
+
+        var gel = board.SpreadingGelService;
+        if (gel == null) return false;
+
+        if (board.IsGelSpreadActiveThisMove) return true;
+        if (patchBotTile == null || !patchBotTile) return false;
+
+        return patchBotTile.GelContaminated || gel.IsSpreadSourceAt(patchBotTile.X, patchBotTile.Y);
+    }
+
+    /// Jelli hücreleri listeden eler. Hepsi jelse liste aynen döner (hedefsiz kalmasın).
+    public List<(int x, int y, TileView tile)> FilterNonGelCells(List<(int x, int y, TileView tile)> cells)
+    {
+        var gel = board.SpreadingGelService;
+        if (gel == null || cells == null || cells.Count == 0) return cells;
+
+        var filtered = new List<(int x, int y, TileView tile)>(cells.Count);
+        for (int i = 0; i < cells.Count; i++)
+            if (!gel.IsGelAt(cells[i].x, cells[i].y))
+                filtered.Add(cells[i]);
+
+        return filtered.Count > 0 ? filtered : cells;
+    }
+
     public (TileView tile, int x, int y, bool hasCell) FindTarget(TileView patchBotTile, TileView partnerTile, HashSet<TileView> excluded, params TileView[] additionalExcluded)
     {
         var cargoDropPathCells = new List<(int x, int y, TileView tile)>();
@@ -267,6 +298,10 @@ public class PatchbotComboService
             else if (goal.targetType == LevelGoalTargetType.Tile)
                 activeTileGoals.Add(goal.tileType);
         }
+
+        // Jel kırılmaz → jelli hücre "goal obstacle" değildir (vurmak hedefi ilerletmez).
+        bool gelGoalActive = activeObstacleGoals.Remove(ObstacleId.SpreadingGel);
+        bool preferNonGel = ShouldPreferNonGelCells(patchBotTile, gelGoalActive);
 
         bool IsExcludedTile(TileView tile)
         {
@@ -338,6 +373,11 @@ public class PatchbotComboService
                         else
                             normalCells.Add((x, y, tile));
                     }
+                    else if (obstacleId == ObstacleId.SpreadingGel)
+                    {
+                        // Jel kırılmaz ve zaten kaplı: üstünde taş yoksa hedef değeri sıfır.
+                        continue;
+                    }
                     else if (isObstacleGoalCell)
                     {
                         obstacleGoalCells.Add((x, y, tile));
@@ -378,7 +418,7 @@ public class PatchbotComboService
             return PickHighestImpact(otherObstacleCells);
 
         if (normalCells.Count > 0)
-            return PickHighestImpact(normalCells);
+            return PickHighestImpact(preferNonGel ? FilterNonGelCells(normalCells) : normalCells);
 
         return (null, -1, -1, false);
     }

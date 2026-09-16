@@ -229,7 +229,7 @@ public static class LeaderboardMockupSetup
 
         // Sağ: X (reddet, amber) + kişi-ekle (yeşil) kare butonlar.
         var dismissBtn = MockupUI.GlossyButton(root, MockupBeautifyTool.BlueBtnPath, theme.accentAmber,
-            "✕", 40, theme.headingFont, out _);
+            "×", 40, theme.headingFont, out _);
         var dismissRt = ((Image)dismissBtn.targetGraphic).rectTransform;
         Place(dismissRt, new Vector2(1, 0.5f), new Vector2(-128, 0), new Vector2(96, 96), pivotX: 1);
 
@@ -436,7 +436,7 @@ public static class LeaderboardMockupSetup
         MockupUI.AnchorTop(title.rectTransform, height: 70, y: 28);
 
         var closeBtn = MockupUI.GlossyButton(card.transform, MockupBeautifyTool.BlueBtnPath, theme.accentAmber,
-            "✕", 40, theme.headingFont, out _);
+            "×", 40, theme.headingFont, out _);
         var closeRt = ((Image)closeBtn.targetGraphic).rectTransform;
         Place(closeRt, new Vector2(1, 1), new Vector2(-14, -14), new Vector2(84, 84), pivotX: 1, pivotY: 1);
 

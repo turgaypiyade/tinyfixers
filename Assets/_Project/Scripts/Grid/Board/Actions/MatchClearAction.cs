@@ -23,6 +23,7 @@ public class MatchClearAction : BoardAction
     private IReadOnlyList<Vector2Int> impactCells;
     private bool isBlocking;
     private bool enqueueCascadeOnComplete;
+    private readonly bool allowLocalizedDynamicInput;
     private Vector2Int? implodeTargetCell;
     private Dictionary<Vector2Int, System.Action> arrivalTriggers;
     public override bool Blocking => isBlocking;
@@ -51,7 +52,8 @@ public class MatchClearAction : BoardAction
         bool enqueueCascadeOnComplete = false,
         Vector2Int? implodeTargetCell = null,
         Dictionary<Vector2Int, System.Action> arrivalTriggers = null,
-        Dictionary<TileView, float> perTileClearDistances = null)
+        Dictionary<TileView, float> perTileClearDistances = null,
+        bool allowLocalizedDynamicInput = false)
     {
         this.matches = matches != null ? new HashSet<TileView>(matches) : new HashSet<TileView>();
         this.doShake = doShake;
@@ -75,6 +77,7 @@ public class MatchClearAction : BoardAction
         this.implodeTargetCell = implodeTargetCell;
         this.arrivalTriggers = arrivalTriggers;
         this.perTileClearDistances = perTileClearDistances;
+        this.allowLocalizedDynamicInput = allowLocalizedDynamicInput;
     }
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
@@ -94,7 +97,9 @@ public class MatchClearAction : BoardAction
         // yapısında bayrağın asılı kalması ("stuck specialPhase") YAPISAL olarak imkânsız.
         bool useFlow = board != null && board.UseFlowActivities;
         System.IDisposable clearActivity = useFlow
-            ? board.Flow.Begin(BoardFlowScheduler.ActivityKind.Clear)
+            ? (allowLocalizedDynamicInput && isBlocking && !isSpecialActivationPhase && PresentationPlan == null
+                ? board.Flow.BeginLocalizedClear(matches)
+                : board.Flow.Begin(BoardFlowScheduler.ActivityKind.Clear))
             : null;
         System.IDisposable sweepActivity = useFlow && isSpecialActivationPhase
             ? board.Flow.Begin(BoardFlowScheduler.ActivityKind.SpecialSweep)

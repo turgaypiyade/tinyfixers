@@ -33,7 +33,19 @@ public class TubeView : MonoBehaviour
     [SerializeField, Min(0f)] private float shakeDuration  = 0.25f;
 
     private RectTransform maskContainer;
-    private Image energyBody;
+    [Header("Cutting")]
+    [SerializeField] private Sprite sawSprite;
+    [SerializeField] private Vector2 sawCenterInCell = new Vector2(0.5f, 0.36f);
+    [SerializeField, Min(0.01f)] private float sawSizeInCells = 0.60f;
+    [SerializeField, Min(0.05f)] private float sawSpinDuration = 0.4f;
+    [SerializeField] private float sawDegreesPerSecond = 1800f;
+    [SerializeField, Range(1, 80)] private int chipCount = 26;
+    [Tooltip("Talas parcasinin hucre boyutuna orani (uzunluk). Kalinlik bunun yarisi kadar.")]
+    [SerializeField, Min(0.01f)] private float chipSizeInCells = 0.10f;
+    private RectTransform sawRt;
+    private Coroutine shrinkRoutine, shakeRoutine, sawRoutine;
+    private Vector2 restingPosition;
+    private bool destroying;
     private Image baseImage;
     private RectTransform capRt;
     private float capOffsetY = 0f;
@@ -42,7 +54,6 @@ public class TubeView : MonoBehaviour
     private int totalLength;
     private float cellSize;
     private bool isVertical;
-    private bool isBaseAtLowEnd; // low = bottom (Up) or left (Right)
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -52,10 +63,10 @@ public class TubeView : MonoBehaviour
         totalLength = length;
         cellSize    = cs;
         isVertical  = dir == TubeDirection.Up || dir == TubeDirection.Down;
-        isBaseAtLowEnd = dir == TubeDirection.Up || dir == TubeDirection.Left;
 
         BuildChildren();
         SetMaskSize(totalLength);
+        if (capRt != null) capRt.gameObject.SetActive(totalLength > 1);
     }
 
     /// Positions this view's root RectTransform within a canvas parent.
@@ -84,16 +95,102 @@ public class TubeView : MonoBehaviour
             rt.sizeDelta = new Vector2(cellSize, totalLength * cellSize);
             rt.localEulerAngles = new Vector3(0f, 0f, direction == TubeDirection.Right ? -90f : 90f);
         }
+        if (direction == TubeDirection.Down)
+        {
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2((topLeftX + 0.5f) * cellSize,
+                -(topLeftY + totalLength * 0.5f) * cellSize);
+            rt.localEulerAngles = new Vector3(0f, 0f, 180f);
+        }
+        restingPosition = rt.anchoredPosition;
     }
 
     public void AnimateShrink(int remainingCells)
     {
-        StopAllCoroutines();
-        StartCoroutine(ShrinkCoroutine(remainingCells));
-        StartCoroutine(ShakeCoroutine());
+        if (destroying) return;
+        if (shrinkRoutine != null) StopCoroutine(shrinkRoutine);
+        if (shakeRoutine != null) StopCoroutine(shakeRoutine);
+        if (sawRoutine != null) StopCoroutine(sawRoutine);
+        shrinkRoutine = StartCoroutine(ShrinkCoroutine(remainingCells));
+        shakeRoutine = StartCoroutine(ShakeCoroutine());
+        sawRoutine = StartCoroutine(SpinSaw());
+        StartCoroutine(EmitChips());
     }
 
-    public void DestroyView() => Destroy(gameObject);
+    public void DestroyView()
+    {
+        if (destroying) return;
+        AnimateShrink(0);
+        destroying = true;
+        StartCoroutine(FinishDestruction());
+    }
+
+    private IEnumerator FinishDestruction()
+    {
+        yield return new WaitForSeconds(Mathf.Max(shrinkDuration, sawSpinDuration));
+        baseImage.enabled = false;
+        if (sawRt != null) sawRt.gameObject.SetActive(false);
+        yield return new WaitForSeconds(0.65f);
+        Destroy(gameObject);
+    }
+
+    private IEnumerator SpinSaw()
+    {
+        float elapsed = 0f;
+        while (sawRt != null && elapsed < sawSpinDuration)
+        {
+            elapsed += Time.deltaTime;
+            float speed = sawDegreesPerSecond * (1f - Mathf.Clamp01(elapsed / sawSpinDuration));
+            sawRt.Rotate(0f, 0f, -speed * Time.deltaTime);
+            yield return null;
+        }
+    }
+
+    private IEnumerator EmitChips()
+    {
+        const float life = 0.6f;
+        var pieces = new RectTransform[chipCount];
+        var images = new Image[chipCount];
+        var velocities = new Vector2[chipCount];
+        var spins = new float[chipCount];
+        Vector2 source = new Vector2((sawCenterInCell.x - 0.5f) * cellSize,
+            (sawCenterInCell.y + sawSizeInCells * 0.4f) * cellSize);
+        // Gravity stays screen-down even on rotated horizontal/down-facing tubes.
+        Vector3 gravity = transform.InverseTransformVector(
+            transform.parent.TransformVector(Vector3.down * cellSize * 5f));
+        for (int i = 0; i < pieces.Length; i++)
+        {
+            var go = new GameObject("BlueCuttingChip", typeof(RectTransform), typeof(Image));
+            go.layer = gameObject.layer;
+            go.transform.SetParent(transform, false);
+            images[i] = go.GetComponent<Image>();
+            images[i].raycastTarget = false;
+            images[i].color = Color.Lerp(new Color(0.02f, 0.25f, 1f), new Color(0.1f, 0.95f, 1f), Random.value);
+            pieces[i] = images[i].rectTransform;
+            pieces[i].anchorMin = pieces[i].anchorMax = new Vector2(0.5f, 0f);
+            pieces[i].anchoredPosition = source + Random.insideUnitCircle * cellSize * 0.07f;
+            float chipLength = chipSizeInCells * Random.Range(0.7f, 1.3f);
+            pieces[i].sizeDelta = new Vector2(chipLength, chipLength * Random.Range(0.4f, 0.65f)) * cellSize;
+            velocities[i] = new Vector2(Random.Range(-1.9f, 1.9f), Random.Range(0.3f, 1.7f)) * cellSize;
+            spins[i] = Random.Range(-700f, 700f);
+        }
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            for (int i = 0; i < pieces.Length; i++)
+            {
+                velocities[i] += (Vector2)gravity * Time.deltaTime;
+                pieces[i].anchoredPosition += velocities[i] * Time.deltaTime;
+                pieces[i].Rotate(0f, 0f, spins[i] * Time.deltaTime);
+                var color = images[i].color;
+                color.a = 1f - Mathf.InverseLerp(life * 0.4f, life, elapsed);
+                images[i].color = color;
+            }
+            yield return null;
+        }
+        foreach (var piece in pieces) Destroy(piece.gameObject);
+    }
 
     // ── Private ───────────────────────────────────────────────────────────────
 
@@ -104,6 +201,7 @@ public class TubeView : MonoBehaviour
             typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         baseGo.transform.SetParent(transform, false);
         baseImage = baseGo.GetComponent<Image>();
+        baseGo.layer = gameObject.layer;
         baseImage.sprite = baseSprite;
         baseImage.raycastTarget = false;
         var baseRt = baseImage.rectTransform;
@@ -111,10 +209,10 @@ public class TubeView : MonoBehaviour
         SetMainAxisSize(baseRt, cellSize);
 
         // ── EnergyMaskContainer (stencil Mask) ────────────────────────────
-        // Starts 65% into the first cell so the body overlaps the top 35% of
-        // the base sprite and renders on top of it.
+        // Body begins after the base cell; the mask crops it as the cap approaches.
         var maskGo = new GameObject("EnergyMask",
             typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Mask));
+        maskGo.layer = gameObject.layer;
         maskGo.transform.SetParent(transform, false);
         maskContainer = maskGo.GetComponent<RectTransform>();
         var maskImage = maskGo.GetComponent<Image>();
@@ -125,23 +223,40 @@ public class TubeView : MonoBehaviour
         SetAnchorForBaseEnd(maskContainer, stretchCross: true);
         ApplyOpenEndOffset(maskContainer, cellSize - baseBodyOverlap);
 
-        // ── EnergyBody (mask içinde sabit yükseklik — mask clips from top) ──
-        var bodyGo = new GameObject("EnergyBody",
-            typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        bodyGo.transform.SetParent(maskContainer, false);
-        energyBody = bodyGo.GetComponent<Image>();
-        energyBody.sprite = bodySprite;
-        energyBody.type   = Image.Type.Sliced;
-        energyBody.raycastTarget = false;
-        var bodyRt = energyBody.rectTransform;
-        float fullBodyHeight = Mathf.Max(0f, (totalLength - 2) * cellSize + baseBodyOverlap);
-        SetBodyAnchor(bodyRt, fullBodyHeight);
+        // Repeat whole cell images instead of stretching one texture along the tube.
+        for (int i = 0; i < Mathf.Max(0, totalLength - 2); i++)
+        {
+            var bodyGo = new GameObject($"BodyCell_{i}", typeof(RectTransform), typeof(Image));
+            bodyGo.layer = gameObject.layer;
+            bodyGo.transform.SetParent(maskContainer, false);
+            var image = bodyGo.GetComponent<Image>();
+            image.sprite = bodySprite;
+            image.raycastTarget = false;
+            SetBodyAnchor(image.rectTransform, cellSize);
+            image.rectTransform.anchoredPosition = new Vector2(0f, i * cellSize);
+        }
+
+        if (sawSprite != null)
+        {
+            var sawGo = new GameObject("Saw", typeof(RectTransform), typeof(Image));
+            sawGo.layer = gameObject.layer;
+            sawGo.transform.SetParent(baseImage.transform, false);
+            var image = sawGo.GetComponent<Image>();
+            image.sprite = sawSprite;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            sawRt = image.rectTransform;
+            sawRt.anchorMin = sawRt.anchorMax = sawCenterInCell;
+            sawRt.pivot = new Vector2(0.5f, 0.5f);
+            sawRt.sizeDelta = Vector2.one * cellSize * sawSizeInCells;
+        }
 
         // ── OpenEndCap (root'a bağlı, mask dışında — kendi animasyonuyla kayar) ──
         if (openEndCapSprite != null)
         {
             var capGo = new GameObject("OpenEndCap",
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            capGo.layer = gameObject.layer;
             capGo.transform.SetParent(transform, false);
             var capImg = capGo.GetComponent<Image>();
             capImg.sprite = openEndCapSprite;
@@ -207,7 +322,7 @@ public class TubeView : MonoBehaviour
     private IEnumerator ShakeCoroutine()
     {
         var rt      = GetComponent<RectTransform>();
-        var origin  = rt.anchoredPosition;
+        var origin  = restingPosition;
         float elapsed = 0f;
 
         while (elapsed < shakeDuration)

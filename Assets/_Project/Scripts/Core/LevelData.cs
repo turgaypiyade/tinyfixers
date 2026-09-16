@@ -153,9 +153,9 @@ public enum ObstacleId : int
     // konfigüre edilir. (İsim serbestçe değiştirilebilir; değer 40 sabit kalmalı.)
     PlasticTwoStage = 40,
 
-    // Plastic purple gibi tek vuruşlu movable davranışı. WolfEgg sprite'ı ObstacleLibrary'deki
-    // ayrı kayıttan değiştirilebilir; ID değeri level verileri için sabittir.
-    WolfEgg = 45,
+    // Two-hit movable egg: cracks, then hatches into a bird that splits into three dives.
+    // Keep the former WolfEgg numeric ID so authored levels and goals migrate in place.
+    EggBird = 45,
 
     // Barrel'in 4-stage versiyonu. İlk 3 hit sadece ObstacleDef stage sprite'ını değiştirir;
     // son hitte Barrel ile aynı şekilde Mud saçar. ObstacleDef: hits=4,

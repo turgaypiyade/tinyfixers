@@ -334,7 +334,7 @@ public static class TeamMockupSetup
         sirt.anchorMin = new Vector2(0, 0); sirt.anchorMax = new Vector2(1, 1);
         sirt.offsetMin = Vector2.zero; sirt.offsetMax = new Vector2(-330, 0);
         var clearBtn = MockupUI.GlossyButton(searchRow, MockupBeautifyTool.BlueBtnPath, theme.screenBackground,
-            "✕", 30, theme.headingFont, out _);
+            "×", 30, theme.headingFont, out _);
         var clrt = ((Image)clearBtn.targetGraphic).rectTransform;
         PlaceAt(clrt, new Vector2(1, 0.5f), new Vector2(-236, 0), new Vector2(84, 84), pivotX: 1);
         var searchBtn = MockupUI.GlossyButton(searchRow, MockupBeautifyTool.GreenBtnPath, theme.ctaGreen,
@@ -442,7 +442,7 @@ public static class TeamMockupSetup
         var jrt = ((Image)joinBtn.targetGraphic).rectTransform;
         PlaceAt(jrt, new Vector2(0.5f, 0), new Vector2(0, 40), new Vector2(380, 108), pivotY: 0);
         var infoCloseBtn = MockupUI.GlossyButton(card.transform, MockupBeautifyTool.BlueBtnPath, theme.accentAmber,
-            "✕", 40, theme.headingFont, out _);
+            "×", 40, theme.headingFont, out _);
         var icrt = ((Image)infoCloseBtn.targetGraphic).rectTransform;
         PlaceAt(icrt, new Vector2(1, 1), new Vector2(-14, -14), new Vector2(84, 84), pivotX: 1, pivotY: 1);
 

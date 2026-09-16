@@ -439,7 +439,7 @@ public class PatchbotDashUI : MonoBehaviour
     // drone footprint'in dünya-merkezine iner; hasar yine mantıksal hedef hücreye işler.
     // Yalnızca DOLU dikdörtgen footprint merkezlenir: ayrık/delikli footprint'te (örn.
     // uçlarından hit alan magnet) merkez boş hücreye düşebilir → o durumda hücreye inilir.
-    private static Vector3 AimWorldPosition(BoardController board, int x, int y)
+    internal static Vector3 AimWorldPosition(BoardController board, int x, int y)
     {
         var obstacleService = board.ObstacleStateService;
         int origin = obstacleService != null ? obstacleService.GetObstacleOriginAt(x, y) : -1;

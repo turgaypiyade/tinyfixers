@@ -30,6 +30,7 @@ public class BoosterService
     {
         board.BeginBusy();
         board.IsSpecialActivationPhase = true;
+        board.ResetGelSpreadForNewMove();
 
         bool hasValidTargetCell = targetCell.HasValue
                                   && targetCell.Value.x >= 0 && targetCell.Value.x < board.Width
@@ -41,6 +42,13 @@ public class BoosterService
             board.EndBusy();
             yield break;
         }
+
+        // Jel bulaşması: booster'ın KAYNAĞI oyuncunun dokunduğu hücredir. Orası jel/bulaşıksa
+        // booster'ın temizlediği her hücre jel olur; değilse jelin üstünden geçmesi bulaştırmaz.
+        if (targetCell.HasValue)
+            board.NoteGelSpreadOrigin(targetCell.Value.x, targetCell.Value.y);
+        else if (target != null)
+            board.NoteGelSpreadOrigin(target);
 
         var matches = new HashSet<TileView>();
         HashSet<TileView> initialLightningTargets = null;
@@ -467,7 +475,9 @@ public class BoosterService
         // Taban ~cannon referansına (alt satır merkezinin ~1 tile altı) otursun. Ön katman KIRPMADIĞI
         // için serbestçe çizginin altına inebilir; collapsed kademe-bağımsız olduğu için tüm grid
         // yüksekliklerinde tutarlı. (restPos = bottomRowCenter - 0.5 - lowerOffset ≈ cannon noktası.)
-        float lowerOffset = board.TileSize * 0.7f;
+        // Ekstra düşüş Inspector'dan ayarlanır: BoardController ▸ Booster FX ▸ Scissor Lift Extra
+        // Drop Tiles. Tepe noktası değişmez; offset aşağıdaki yükseklik bütçesine geri eklenir.
+        float lowerOffset = board.TileSize * (0.7f + Mathf.Max(0f, board.ScissorLiftExtraDropTiles));
         Vector2 restPos  = new Vector2(bottomRowCenter.x, bottomRowCenter.y - board.TileSize * 0.5f - lowerOffset);
         Vector2 startPos = restPos + new Vector2(0f, -board.TileSize * 2.2f);   // ekranın altından gelir
 

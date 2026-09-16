@@ -541,7 +541,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             if (bot == null || !bot.hasTarget) continue;
 
             if (bot.rect != null)
-                bot.rect.anchoredPosition = CellAnchored(bot.targetX, bot.targetY, bot.flightRoot);
+                bot.rect.anchoredPosition = CellAnchored(bot.targetX, bot.targetY, bot.flightRoot, aimAtObstacleCenter: true);
 
             if (bot.ghost != null)
                 bot.ghost.SetActive(false);
@@ -744,7 +744,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         bot.rect.SetAsLastSibling();
 
         Vector2 start = bot.rect.anchoredPosition;
-        Vector2 end = CellAnchored(bot.targetX, bot.targetY, bot.flightRoot);
+        Vector2 end = CellAnchored(bot.targetX, bot.targetY, bot.flightRoot, aimAtObstacleCenter: true);
         Vector2 delta = end - start;
         Vector2 normal = delta.sqrMagnitude > 0.001f
             ? new Vector2(-delta.y, delta.x).normalized
@@ -817,12 +817,16 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         return board.Parent;
     }
 
-    private Vector2 CellAnchored(int x, int y, RectTransform targetSpace)
+    private Vector2 CellAnchored(int x, int y, RectTransform targetSpace, bool aimAtObstacleCenter = false)
     {
         if (targetSpace == null)
             return Vector2.zero;
 
-        Vector3 worldPos = board.GetCellWorldPosition(x, y);
+        // Solo PatchBot ile aynı görsel hedef: çok hücreli obstacle'ın merkezi.
+        // Kalkış ve mantıksal hasar hücresi değişmez.
+        Vector3 worldPos = aimAtObstacleCenter
+            ? PatchbotDashUI.AimWorldPosition(board, x, y)
+            : board.GetCellWorldPosition(x, y);
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             targetSpace,
             RectTransformUtility.WorldToScreenPoint(null, worldPos),

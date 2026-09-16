@@ -56,6 +56,8 @@ public class SpreadingGelOverlayService : MonoBehaviour
     public event Action OnGelChanged;
 
     private readonly Dictionary<int, MudCellView> viewsByCellIndex = new();
+    // Overlay (stacked cover) altında bekleyen, henüz açılmamış jel hücreleri.
+    private readonly HashSet<int> sealedCellIndices = new();
     private readonly Dictionary<Vector3Int, RawImage> cornerPatches = new();
 
     private int gridWidth, gridHeight, tileSize;
@@ -63,6 +65,10 @@ public class SpreadingGelOverlayService : MonoBehaviour
     private Coroutine pendingBorderRefresh;
 
     public int Count => viewsByCellIndex.Count;
+
+    /// Oyuncunun GÖRDÜĞÜ jel hücresi sayısı: mühürlüler (kapak altında bekleyenler) hariç.
+    /// Kaplama hedefi bunu sayar — kapak açılmadan sayaç düşmez.
+    public int RevealedCount => viewsByCellIndex.Count - sealedCellIndices.Count;
 
     // Jel hiç temizlenmediği (yalnız eklendiği) için ObstacleVisualChanged'a abone olmaz → board gerekmez.
     public void Init(int width, int height, int tileSize, RectTransform overlayRoot)
@@ -77,6 +83,33 @@ public class SpreadingGelOverlayService : MonoBehaviour
     {
         if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return false;
         return viewsByCellIndex.ContainsKey(CellIndex(x, y));
+    }
+
+    /// MÜHÜRLÜ jel: bir overlay obstacle'ın (stacked cover — SculptingStone, chest...) ALTINDA
+    /// author'lanmış, henüz açılmamış hücre. Görseli kapağın ARKASINDA hazır durur ama ne YAYILMAYA
+    /// KAYNAK olur ne de kaplama hedefinde SAYILIR — ikisi de kapak kırılınca (UnsealCell) başlar.
+    public bool IsSealedAt(int x, int y)
+    {
+        if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return false;
+        return sealedCellIndices.Contains(CellIndex(x, y));
+    }
+
+    /// Yayılma kaynağı olabilecek jel: var VE mühürlü değil.
+    public bool IsSpreadSourceAt(int x, int y) => IsGelAt(x, y) && !IsSealedAt(x, y);
+
+    /// Kapak altındaki seed'i mühürler (GridSpawner stacked-beneath çizimi).
+    public void SealCell(int x, int y)
+    {
+        if (!IsGelAt(x, y)) return;
+        sealedCellIndices.Add(CellIndex(x, y));
+    }
+
+    /// Kapak kırılıp jel açığa çıkınca mührü kaldırır → artık yayılma kaynağı.
+    public void UnsealCell(int x, int y)
+    {
+        if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return;
+        if (!sealedCellIndices.Remove(CellIndex(x, y))) return;
+        OnGelChanged?.Invoke();   // hedef sayacı açığa çıkan hücreyi şimdi görsün
     }
 
     public bool TryGetView(int x, int y, out MudCellView view)
@@ -213,6 +246,7 @@ public class SpreadingGelOverlayService : MonoBehaviour
             Destroy(kv.Value.gameObject);
         }
         viewsByCellIndex.Clear();
+        sealedCellIndices.Clear();
 
         foreach (var kv in cornerPatches)
             if (kv.Value != null) Destroy(kv.Value.gameObject);

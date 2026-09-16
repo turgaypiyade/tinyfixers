@@ -116,7 +116,7 @@ public sealed class SaveProgressPopup : MonoBehaviour
         var title = NewText("Title", card, "İlerlemeyi Kaydet", 44, FontStyles.Bold);
         Top(title.rectTransform, 84, 24);
 
-        var closeBtn = NewButton("Close", card, "✕", new Color(0.75f, 0.2f, 0.2f), new Vector2(84, 84));
+        var closeBtn = NewButton("Close", card, "×", new Color(0.75f, 0.2f, 0.2f), new Vector2(84, 84));
         var crt = ((RectTransform)closeBtn.transform);
         crt.anchorMin = crt.anchorMax = new Vector2(1, 1); crt.pivot = new Vector2(1, 1);
         crt.anchoredPosition = new Vector2(-10, -10);

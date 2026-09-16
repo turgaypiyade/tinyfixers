@@ -719,6 +719,7 @@ public sealed class TileAnimator
         float settleDuration,
         float pulseScale)
     {
+        createdTile.BeginSpecialCreationSorting();
         try
         {
             // Toplanma: TÜM katkı taşları AYNI ANDA merkeze akar, ikinci yarıda solup birleşir.
@@ -888,6 +889,8 @@ public sealed class TileAnimator
         }
         finally
         {
+            if (createdTile != null)
+                createdTile.EndSpecialCreationSorting();
             for (int i = 0; i < ghosts.Count; i++)
             {
                 try { if (ghosts[i].ghostRect != null && ghosts[i].ghostRect && ghosts[i].ghostRect.gameObject != null) Object.Destroy(ghosts[i].ghostRect.gameObject); }
@@ -974,6 +977,7 @@ public sealed class TileAnimator
         float animDuration = Mathf.Clamp(duration, 0.06f, 0.08f);
         float t = 0f;
 
+        createdTile.BeginSpecialCreationSorting();
         try
         {
             while (t < animDuration)
@@ -1000,6 +1004,7 @@ public sealed class TileAnimator
             {
                 if (createdTile != null && createdTile)
                 {
+                    createdTile.EndSpecialCreationSorting();
                     RestoreTileVisualState(createdTile);
                     if (board != null)
                         createdTile.ApplyTileSize(board.TileSize);

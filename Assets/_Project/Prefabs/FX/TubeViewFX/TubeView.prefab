@@ -48,10 +48,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f27cfb555c7e44d448f4d27e286170bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TubeView
-  bodySprite: {fileID: 21300000, guid: 78ecc13ca8c5842aabafbcb9b1ef16e7, type: 3}
-  baseSprite: {fileID: 21300000, guid: 421c2abf9ab394a7b908b90349d0ae03, type: 3}
-  openEndCapSprite: {fileID: 21300000, guid: f4a3900a0ad2b4aceaf52975ef03b510, type: 3}
-  baseBodyOverlap: 4
+  bodySprite: {fileID: 21300000, guid: 2609e7e9250cf4be68c0a42eba0612dc, type: 3}
+  baseSprite: {fileID: 21300000, guid: c4b70ff79b3b2489d88ab164e452b730, type: 3}
+  openEndCapSprite: {fileID: 21300000, guid: e0c24bdd69a374055a0e25d0fd29787f, type: 3}
+  baseBodyOverlap: 0
+  capCellOverlap: 0
   shrinkDuration: 0.3
   shakeAmplitude: 6
   shakeDuration: 0.25
+  sawSprite: {fileID: 21300000, guid: d409f870b08c84f0c83cf5f9774cfa6d, type: 3}
+  sawCenterInCell: {x: 0.5, y: 0.36}
+  sawSizeInCells: 0.60
+  sawSpinDuration: 0.4
+  sawDegreesPerSecond: 1800
+  chipCount: 26
+  chipSizeInCells: 0.1

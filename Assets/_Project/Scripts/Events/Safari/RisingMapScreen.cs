@@ -952,7 +952,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         text.raycastTarget = false;
         text.alignment = TextAlignmentOptions.Center;
         text.fontStyle = FontStyles.Bold;
-        text.enableWordWrapping = true;
+        text.textWrappingMode = TextWrappingModes.Normal;
         text.color = promptTextColor;
         text.fontSize = fontSize;
         return text;

@@ -56,21 +56,18 @@ public class PulseCoreExplosionFX : MonoBehaviour
     [SerializeField, Range(0.1f, 2f)] private float flashPeakSizeRatio = 0.75f;
     [SerializeField] private float flashInTime = 0.05f;
     [SerializeField] private float flashOutTime = 0.22f;
-    [SerializeField] private float flashStartRatio = 0.3f;
     [SerializeField] private float flashEndRatio = 0.95f;
     [SerializeField] private Color flashColor = new Color(1f, 1f, 1f, 1f);
 
     [SerializeField, Range(0.1f, 2f)] private float glowPeakSizeRatio = 0.90f;
     [SerializeField] private float glowInTime = 0.08f;
     [SerializeField] private float glowOutTime = 0.50f;
-    [SerializeField] private float glowStartRatio = 0.3f;
     [SerializeField] private float glowEndRatio = 0.95f;
     [SerializeField] private Color glowColor = new Color(1f, 0.55f, 0.1f, 0.75f);
 
     [SerializeField, Range(0.1f, 2f)] private float raysPeakSizeRatio = 0.95f;
     [SerializeField] private float raysInTime = 0.10f;
     [SerializeField] private float raysOutTime = 0.60f;
-    [SerializeField] private float raysStartRatio = 0.2f;
     [SerializeField] private float raysEndRatio = 0.98f;
     [SerializeField] private float raysRotateSpeed = 90f;
     [SerializeField] private Color raysColor = new Color(1f, 0.82f, 0.25f, 0.95f);
@@ -78,7 +75,6 @@ public class PulseCoreExplosionFX : MonoBehaviour
     [SerializeField, Range(0.1f, 2f)] private float ringPeakSizeRatio = 1.0f;
     [SerializeField] private float ringInTime = 0.03f;
     [SerializeField] private float ringOutTime = 0.50f;
-    [SerializeField] private float ringStartRatio = 0.2f;
     [SerializeField] private float ringEndRatio = 1.0f;
     [SerializeField] private Color ringColor = new Color(1f, 0.75f, 0.2f, 1f);
 

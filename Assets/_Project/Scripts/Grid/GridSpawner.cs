@@ -1208,8 +1208,17 @@ public class GridSpawner : MonoBehaviour
 
         mudOverlayService.Init(board, width, height, tileSize);
 
-        if (mudOverlayService.TryGetView(x, y, out var existing) && existing != null)
+        int mudMaxHits = Mathf.Max(1, resolvedLevel.obstacleLibrary?.Get(ObstacleId.Mud)?.hits ?? 1);
+        int remaining = mudMaxHits;
+        var obstacleState = board != null ? board.ObstacleStateService : null;
+        if (obstacleState != null && !obstacleState.TryGetMudRemainingHitsAt(x, y, out remaining))
             return;
+
+        if (mudOverlayService.TryGetView(x, y, out var existing) && existing != null)
+        {
+            mudOverlayService.UpdateCellHits(x, y, remaining, mudMaxHits);
+            return;
+        }
 
         var go = new GameObject(
             $"Mud_{x}_{y}",
@@ -1230,13 +1239,6 @@ public class GridSpawner : MonoBehaviour
             mudOverlayService.FlatStage0InteriorColor,
             mudOverlayService.Stage0InteriorOffsetPixels);
         view.PlaceInCell(tileSize);
-
-        int mudMaxHits = resolvedLevel.obstacleLibrary?.Get(ObstacleId.Mud)?.hits ?? 1;
-        int remaining  = board?.ObstacleStateService?.GetRemainingHitsAt(x, y) ?? mudMaxHits;
-        // Overlay altında baştan çizilen mud kapalıyken üstteki obstacle'ın hit'ini okuyabilir;
-        // mud reveal'da full sayıldığından mudMaxHits'e clamp'le.
-        remaining = Mathf.Min(remaining, mudMaxHits);
-        if (remaining <= 0) remaining = mudMaxHits;
 
         mudOverlayService.RegisterCell(x, y, view, remaining, mudMaxHits);
     }
@@ -1468,6 +1470,15 @@ public class GridSpawner : MonoBehaviour
         }
     }
 
+    // Kapak kırılıp altındaki jel açığa çıktı: hücre zaten serviste olabilir (seed) ya da yeni
+    // eklenir; her iki durumda da MÜHÜR kalkar → artık yayılmaya kaynak olur.
+    private void RevealGelCell(int x, int y)
+    {
+        if (spreadingGelOverlayService == null) return;
+        spreadingGelOverlayService.AddGel(x, y);
+        spreadingGelOverlayService.UnsealCell(x, y);
+    }
+
     // Generic stacking: stackedObstacles[] entry'lerini obstacles[]'a stamp eder; altındaki authored
     // içeriği (Mud, Stone...) beneath store için işaretler. Safe ile aynı 'beneath' akışı, her obstacle
     // için. SetLevelData ÖNCESİ çağrılır; beneath kaydı RegisterPendingStampedBeneath ile SONRA yapılır.
@@ -1536,6 +1547,7 @@ public class GridSpawner : MonoBehaviour
 
         bool mudTrace = board != null && board.BoardFlowTraceEnabled;
         int mudTotal = 0, mudSpawned = 0;
+        int gelSpawned = 0;
 
         var topVisualIndexByCell = new Dictionary<int, int>();
         for (int i = 0; i < stampedBeneathVisuals.Count; i++)
@@ -1592,6 +1604,22 @@ public class GridSpawner : MonoBehaviour
                 continue;
             }
 
+            // SpreadingGel de mud gibi KENDİ overlay renderer'ını kullanır: generic beneath image
+            // (düz tek kare, bevel/komşu birleşimi yok) yerine jel servisine kaydet. Stamp aşaması
+            // obstacles[]'ı üstteki overlay ile ezdiği için DrawSpreadingGelOverlays bu seed'leri
+            // göremiyordu → jel ne birleşiyor ne de yayılıyordu (IsGelAt her yerde false).
+            if (p.beneathId == ObstacleId.SpreadingGel)
+            {
+                if (spreadingGelOverlayService != null)
+                {
+                    if (spreadingGelOverlayService.AddGelImmediate(bx, by))
+                        gelSpawned++;
+                    // Kapak altındaki jel MÜHÜRLÜ: kapak kırılana kadar komşusuna yayılmaz.
+                    spreadingGelOverlayService.SealCell(bx, by);
+                }
+                continue;
+            }
+
             // Diğer ayrı renderer'lı / özel tipler v1'de kapsam dışı. Grass da pre-draw EDİLMEZ:
             // grassOverlayRoot üstte çizdiğinden beneath grass cover'ın üstüne sızardı. Cover
             // kırılınca grass reveal dinamik yolla (HandleObstacleCreatedDynamic) taze çizilir.
@@ -1632,6 +1660,10 @@ public class GridSpawner : MonoBehaviour
         // mud komşuları onları görsün + yeni hücreler bevel/köşe alsın diye tek yetkili geçiş.
         if (mudSpawned > 0 && mudOverlayService != null)
             mudOverlayService.RefreshAllBorders();
+
+        // Örtülü jel hücreleri de DrawSpreadingGelOverlays'in RefreshAllBorders'ından SONRA eklendi.
+        if (gelSpawned > 0 && spreadingGelOverlayService != null)
+            spreadingGelOverlayService.RefreshAllBorders();
     }
 
     // Her SafeEntry için bir SafeObstacleView spawn eder: NxN bölgeye konumlandır + boyutlandır,
@@ -3022,6 +3054,14 @@ public class GridSpawner : MonoBehaviour
                 return;
             }
 
+            // Jel de mud gibi: generic preview promote edilmez, jel servisine hücre eklenir.
+            if (obsId == ObstacleId.SpreadingGel)
+            {
+                Destroy(pre.gameObject);
+                RevealGelCell(x, y);
+                return;
+            }
+
             // Özel view isteyen obstacle'larda generic beneath image promote edilmez.
             // ön-çizilen generic beneath image'ı promote etme; sil ve normal spawn akışına düş.
             if (obsId == ObstacleId.RocketBasket || obsId == ObstacleId.OverrideBatteryBox)
@@ -3044,6 +3084,14 @@ public class GridSpawner : MonoBehaviour
         if (obsId == ObstacleId.Mud)
         {
             SpawnMudOverlayCell(x, y);
+            return;
+        }
+
+        // SpreadingGel ayrı overlay service'iyle çizilir (mud gibi); cover altından reveal edilince
+        // generic 1x1 image DEĞİL, jel hücresi eklenir — yoksa bevel/birleşim ve yayılma çalışmaz.
+        if (obsId == ObstacleId.SpreadingGel)
+        {
+            RevealGelCell(x, y);
             return;
         }
 

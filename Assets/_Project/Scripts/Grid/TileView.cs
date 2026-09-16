@@ -73,6 +73,70 @@ public class TileView : MonoBehaviour,
 
     private Coroutine specialCreationRevealRoutine;
     private GameObject specialCreationRevealRoot;
+    private Canvas creationSortingCanvas;
+    private int creationSortingUsers;
+    private bool revealUsesCreationSorting;
+    private bool creationCanvasWasEnabled;
+    private bool creationCanvasOverrideSorting;
+    private int creationCanvasOrder;
+    private int creationCanvasLayer;
+
+    internal void BeginSpecialCreationSorting()
+    {
+        if (iconImage == null) return;
+        if (creationSortingUsers++ > 0) return;
+
+        var parentCanvas = iconImage.transform.parent.GetComponentInParent<Canvas>();
+        creationSortingCanvas = iconImage.GetComponent<Canvas>();
+        if (creationSortingCanvas == null)
+        {
+            creationSortingCanvas = iconImage.gameObject.AddComponent<Canvas>();
+            // Keep the nested Canvas enabled at rest. Disabling it after the
+            // reveal also hides its Image, while sibling propeller visuals remain.
+            // Only overrideSorting is temporary; at rest we inherit board sorting.
+            creationSortingCanvas.overrideSorting = false;
+        }
+        // An Image registers with its nearest Canvas. Once the icon has its own
+        // Canvas, the board raycaster no longer sees it (including after pooling).
+        // Keep a raycaster on that Canvas so clicks/drags still reach TileView.
+        if (!creationSortingCanvas.TryGetComponent<GraphicRaycaster>(out var creationRaycaster))
+        {
+            creationRaycaster = creationSortingCanvas.gameObject.AddComponent<GraphicRaycaster>();
+            var boardRaycaster = parentCanvas != null
+                ? parentCanvas.GetComponentInParent<GraphicRaycaster>() : null;
+            if (boardRaycaster != null)
+            {
+                creationRaycaster.ignoreReversedGraphics = boardRaycaster.ignoreReversedGraphics;
+                creationRaycaster.blockingObjects = boardRaycaster.blockingObjects;
+                creationRaycaster.blockingMask = boardRaycaster.blockingMask;
+            }
+        }
+        creationCanvasWasEnabled = creationSortingCanvas.enabled;
+        creationCanvasOverrideSorting = creationSortingCanvas.overrideSorting;
+        creationCanvasOrder = creationSortingCanvas.sortingOrder;
+        creationCanvasLayer = creationSortingCanvas.sortingLayerID;
+        creationSortingCanvas.enabled = true;
+        creationSortingCanvas.overrideSorting = true;
+        creationSortingCanvas.sortingLayerID = parentCanvas != null ? parentCanvas.sortingLayerID : 0;
+        creationSortingCanvas.sortingOrder = (parentCanvas != null ? parentCanvas.sortingOrder : 0) + 100;
+        iconImage.RecalculateMasking();
+        iconImage.SetMaterialDirty();
+    }
+
+    internal void EndSpecialCreationSorting()
+    {
+        if (creationSortingUsers <= 0 || --creationSortingUsers > 0) return;
+        if (creationSortingCanvas == null) return;
+        creationSortingCanvas.overrideSorting = creationCanvasOverrideSorting;
+        creationSortingCanvas.sortingOrder = creationCanvasOrder;
+        creationSortingCanvas.sortingLayerID = creationCanvasLayer;
+        creationSortingCanvas.enabled = creationCanvasWasEnabled;
+        if (iconImage != null)
+        {
+            iconImage.RecalculateMasking();
+            iconImage.SetMaterialDirty();
+        }
+    }
     private static Sprite specialRevealHaloSprite;
     private Coroutine overrideMarkHaloRoutine;
     private GameObject overrideMarkHaloRoot;
@@ -266,6 +330,11 @@ public class TileView : MonoBehaviour,
     private void OnDisable()
     {
         StopSpecialCreationReveal();
+        if (creationSortingUsers > 0)
+        {
+            creationSortingUsers = 1;
+            EndSpecialCreationSorting();
+        }
         StopLineIdleSpin();
         ResetVisualState();
     }
@@ -1823,6 +1892,11 @@ public class TileView : MonoBehaviour,
 
     private void CleanupSpecialCreationReveal()
     {
+        if (revealUsesCreationSorting)
+        {
+            revealUsesCreationSorting = false;
+            EndSpecialCreationSorting();
+        }
         if (iconImage != null)
         {
             RectTransform iconRt = iconImage.rectTransform;
@@ -1896,6 +1970,8 @@ public class TileView : MonoBehaviour,
 
         iconImage.color = specialRevealIconBaseColor;
 
+        BeginSpecialCreationSorting();
+        revealUsesCreationSorting = true;
         specialCreationRevealRoot = new GameObject(
             "__SpecialCreationHalo",
             typeof(RectTransform),
@@ -1903,6 +1979,11 @@ public class TileView : MonoBehaviour,
 
         specialCreationRevealRoot.transform.SetParent(transform, false);
         specialCreationRevealRoot.transform.SetAsLastSibling();
+        specialCreationRevealRoot.layer = gameObject.layer;
+        var haloCanvas = specialCreationRevealRoot.AddComponent<Canvas>();
+        haloCanvas.overrideSorting = true;
+        haloCanvas.sortingLayerID = creationSortingCanvas.sortingLayerID;
+        haloCanvas.sortingOrder = creationSortingCanvas.sortingOrder - 1;
 
         RectTransform haloRt = specialCreationRevealRoot.GetComponent<RectTransform>();
         haloRt.anchorMin = new Vector2(0.5f, 0.5f);
@@ -2484,6 +2565,7 @@ public class TileView : MonoBehaviour,
         IsPlannedToMoveThisFallPass = false;
         lastFallGeneration = -1;
         IsSpecialLocked = false;             // cage lock is per-tile; never leak across pool reuse
+        GelContaminated = false;             // jel bulaşması da per-tile; havuz üzerinden sızmasın
         ResetVisualState();                  // scale/rotation/alpha/icon/propeller
     }
 

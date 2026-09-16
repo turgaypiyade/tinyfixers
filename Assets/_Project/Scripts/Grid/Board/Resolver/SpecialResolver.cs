@@ -82,6 +82,12 @@ public class SpecialResolver
         board.LastSwapUserMove = false;
         board.IsSpecialActivationPhase = true;
 
+        // Jel bulaşması: special swap/combo'nun KAYNAĞI bu iki taştır (swap sonrası konumlarıyla).
+        // Biri bile jel üstünde/bulaşıksa bu hamlede kırılan her hücre jel olur; ikisi de temizse
+        // etki jelin üzerinden geçse bile bulaştırmaz. (Tüm combolar bu metottan geçiyor.)
+        board.NoteGelSpreadOrigin(a);
+        board.NoteGelSpreadOrigin(b);
+
         bool aOriginallySpecial = originalSa != TileSpecial.None;
         bool bOriginallySpecial = originalSb != TileSpecial.None;
         bool bothOriginallySpecial = aOriginallySpecial && bOriginallySpecial;
@@ -509,6 +515,9 @@ public class SpecialResolver
         board.ShakeNextClear = true;
         board.LastSwapUserMove = false;
         board.IsSpecialActivationPhase = true;
+
+        // Jel bulaşması: tek-tık aktivasyonda kaynak special'ın kendi hücresidir.
+        board.NoteGelSpreadOrigin(specialTile);
 
         bool deferHide = specialTile.GetSpecial() == TileSpecial.SystemOverride;
         if (!deferHide)

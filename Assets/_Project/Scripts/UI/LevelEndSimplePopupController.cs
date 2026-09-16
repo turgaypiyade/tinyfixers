@@ -1933,7 +1933,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         text.fontSizeMax = extraMovesAmountFontSize;
         text.fontSizeMin = Mathf.Max(36f, extraMovesAmountFontSize * 0.58f);
         text.fontStyle = FontStyles.Bold;
-        text.enableWordWrapping = false;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
         text.overflowMode = TextOverflowModes.Overflow;
         text.richText = true;
         text.characterSpacing = 0f;
@@ -2147,7 +2147,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             failWalletBalanceText.fontSizeMax = 46f;
             failWalletBalanceText.fontSizeMin = 22f;
             failWalletBalanceText.fontStyle = FontStyles.Bold;
-            failWalletBalanceText.enableWordWrapping = false;
+            failWalletBalanceText.textWrappingMode = TextWrappingModes.NoWrap;
             failWalletBalanceText.overflowMode = TextOverflowModes.Ellipsis;
             failWalletBalanceText.color = Color.white;
 

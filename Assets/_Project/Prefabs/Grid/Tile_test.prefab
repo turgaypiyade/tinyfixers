@@ -105,6 +105,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 8f96fc85558ef4d5a85280bded3e12e0, type: 3}
   - {fileID: 21300000, guid: 006e79a0a68d14959a078a57d501ad79, type: 3}
   spinFrameFps: 20
+  frameSpinContinuous: 0
 --- !u!1 &4017335894988476762
 GameObject:
   m_ObjectHideFlags: 0
@@ -245,12 +246,17 @@ MonoBehaviour:
   breathPauseMin: 1.5
   breathPauseMax: 3.5
   spinFrames:
-  - {fileID: 21300000, guid: 62d6c69bbab7147db80268992b5e1073, type: 3}
-  - {fileID: 21300000, guid: cd170838fbdda47359fbc71f8681d501, type: 3}
-  - {fileID: 21300000, guid: 4ce194eafabde4cce826fbac8839a17d, type: 3}
-  - {fileID: 21300000, guid: e8e19d092223b4c988d13225f976ee1a, type: 3}
-  - {fileID: 21300000, guid: 9076bc522306d430da54512f3b0177dc, type: 3}
-  - {fileID: 21300000, guid: 32ceac02e7a124cc4bc3d25547e0b3c7, type: 3}
+  - {fileID: 21300000, guid: 7cc20196928fb40aaa2bef28661a9bc3, type: 3}
+  - {fileID: 21300000, guid: eff7e2f5529b54ee292b58b7cf4b8b4f, type: 3}
+  - {fileID: 21300000, guid: b9938786d1a134ceb9f9b753fc43b156, type: 3}
+  - {fileID: 21300000, guid: 664db0cb7962a42768eac3cdb760a339, type: 3}
+  - {fileID: 21300000, guid: 2d5f78e55c92048868486b275836f090, type: 3}
+  - {fileID: 21300000, guid: 7ea05bc2102eb4757a70b81c92b043a2, type: 3}
+  - {fileID: 21300000, guid: 3af09beedaf7b4b0981d4d6acff440d0, type: 3}
+  - {fileID: 21300000, guid: 3be3ad82536754014811597780957e24, type: 3}
+  - {fileID: 21300000, guid: 1dc6efc52e9264d7192c165d16dd88bf, type: 3}
+  - {fileID: 21300000, guid: 299469a67c5044542a7d25b77be7a74f, type: 3}
+  - {fileID: 21300000, guid: 2d943a0b8ac8449cdb4f7ff8dba6197b, type: 3}
   spinFrameFps: 50
   spinStartScale: 0.75
   spinPeakScale: 2.5
@@ -360,6 +366,7 @@ MonoBehaviour:
   iconSize: {x: 105, y: 105}
   useFullCellIcon: 0
   visualLayout: 1
+  GelContaminated: 0
 --- !u!114 &7756393738161300215
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class ObstacleClickProxy : MonoBehaviour, IPointerClickHandler
+public class ObstacleClickProxy : MonoBehaviour, IPointerDownHandler, IPointerClickHandler
 {
     private BoardController board;
     private int originX;
@@ -10,6 +10,7 @@ public class ObstacleClickProxy : MonoBehaviour, IPointerClickHandler
     private int height = 1;
     private float tileSize;
     private RectTransform rect;
+    private bool boosterHandledOnDown;
 
     // 1x1 obstacle / per-cell proxy: sadece origin hücresi.
     public void Init(BoardController board, int x, int y)
@@ -30,7 +31,20 @@ public class ObstacleClickProxy : MonoBehaviour, IPointerClickHandler
         rect = transform as RectTransform;
     }
 
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        boosterHandledOnDown = board != null && board.IsBoosterModeActive;
+        if (boosterHandledOnDown)
+            TryUseBooster(eventData);
+    }
+
     public void OnPointerClick(PointerEventData eventData)
+    {
+        if (boosterHandledOnDown) return;
+        TryUseBooster(eventData);
+    }
+
+    private void TryUseBooster(PointerEventData eventData)
     {
         if (board == null) return;
 

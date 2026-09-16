@@ -5,8 +5,9 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// BottomContent altindaki JokerGrid booster ikonlarini sabit kare boyutta tutar.
-/// Slot/hit-area boyutuna dokunmadan, ikon RectTransform'unu merkezde 120x120 yapar.
+/// BottomContent altindaki JokerGrid booster ikonlarini SADECE merkezde tutar (anchor/pivot).
+/// Ikon BOYUTUNA dokunmaz → boyut sahneden per-icon serbestce verilir (or. bir-iki ikona 110x110).
+/// Eski tekduze kare davranisi istenirse enforceIconSize=true yapilir (varsayilan KAPALI).
 /// </summary>
 [DefaultExecutionOrder(100)]
 public sealed class JokerIconSquareSizeEnforcer : MonoBehaviour
@@ -18,6 +19,9 @@ public sealed class JokerIconSquareSizeEnforcer : MonoBehaviour
     [SerializeField] private string jokerGridName = DefaultJokerGridName;
 
     [Header("Icon Size")]
+    [Tooltip("KAPALI (varsayilan): ikon boyutuna dokunulmaz, sahneden per-icon serbest verilir. " +
+             "ACIK: tum ikonlar iconSize kareye zorlanir (eski davranis).")]
+    [SerializeField] private bool enforceIconSize = false;
     [SerializeField] private Vector2 iconSize = new Vector2(120f, 120f);
     [SerializeField] private bool centerIcons = true;
     [SerializeField] private bool preserveAspect = true;
@@ -192,11 +196,15 @@ public sealed class JokerIconSquareSizeEnforcer : MonoBehaviour
             rt.anchoredPosition = Vector2.zero;
         }
 
+        icon.preserveAspect = preserveAspect;
+
+        // Boyut ARTIK ZORLANMAZ → sahnedeki per-icon boyut (or. 110x110) korunur. Yalnizca
+        // enforceIconSize acikken eski tekduze kare davranisina donulur.
+        if (!enforceIconSize) return;
+
         rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, targetSize.x);
         rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, targetSize.y);
         rt.sizeDelta = targetSize;
-
-        icon.preserveAspect = preserveAspect;
 
         // Ikon slot'un kendi Image'i degilse, layout gruplari da ayni kare olcuyu tercih etsin.
         if (icon.transform != slot)

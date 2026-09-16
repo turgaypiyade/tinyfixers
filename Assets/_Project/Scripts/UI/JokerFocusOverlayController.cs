@@ -343,17 +343,19 @@ public class JokerFocusOverlayController : MonoBehaviour
         DebugLog($"[JokerFocus] Panels normBot={normBotY:F3} normTop={normTopY:F3} L={normLeftX:F3} R={normRightX:F3}");
     }
 
-    // Board içindeki HOLE hücrelerini karartan panelleri (pool) yerleştirir.
+    // Boşlukları karartır; obstacle hücrelerine joker hedefleme yüzeyi ekler.
+    // Bazı obstacle view'ları raycast almaz veya hücrede TileView bulunmaz.
     private void RefreshHolePanels(RectTransform overlayRect)
     {
         if (board == null || overlayRect == null) return;
 
         int w = board.Width, h = board.Height;
-        if (w <= 1 || h <= 0) return;
+        if (w <= 0 || h <= 0) return;
 
         // Bir hücrenin overlay-local boyutu: iki komşu hücre merkezinin local farkı.
         Vector2 l00 = overlayRect.InverseTransformPoint(board.GetCellWorldCenterPosition(0, 0));
-        Vector2 l10 = overlayRect.InverseTransformPoint(board.GetCellWorldCenterPosition(1, 0));
+        Vector2 l10 = overlayRect.InverseTransformPoint(
+            board.GetCellWorldCenterPosition(0, 0) + board.TilesRoot.TransformVector(Vector3.right * board.TileSize));
         float cellLocal = Mathf.Abs(l10.x - l00.x);
         if (cellLocal < 1f) cellLocal = board.TileSize;
 
@@ -366,16 +368,27 @@ public class JokerFocusOverlayController : MonoBehaviour
         {
             for (int x = 0; x < w; x++)
             {
-                if (!board.IsMaskHoleCell(x, y)) continue;
+                bool hasObstacle = board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
+                if (!hasObstacle && !board.IsMaskHoleCell(x, y)) continue;
 
                 Image panel = used < holePanels.Count ? holePanels[used] : CreateHolePanel();
                 if (used >= holePanels.Count) holePanels.Add(panel);
                 used++;
 
+                var proxy = panel.GetComponent<ObstacleClickProxy>();
+                if (hasObstacle)
+                {
+                    if (proxy == null) proxy = panel.gameObject.AddComponent<ObstacleClickProxy>();
+                    proxy.Init(board, x, y);
+                }
+                if (proxy != null) proxy.enabled = hasObstacle;
+                panel.color = hasObstacle ? Color.clear : new Color(0f, 0f, 0f, selectedOverlayAlpha);
+
                 var rt = panel.rectTransform;
                 Vector2 local = overlayRect.InverseTransformPoint(board.GetCellWorldCenterPosition(x, y));
                 rt.anchoredPosition = local;
-                rt.sizeDelta = new Vector2(cellLocal * 1.03f, cellLocal * 1.03f);   // hafif bindirme (boşluk kalmasın)
+                float panelSize = cellLocal * (hasObstacle ? 1f : 1.03f);
+                rt.sizeDelta = new Vector2(panelSize, panelSize);
                 panel.gameObject.SetActive(true);
             }
         }

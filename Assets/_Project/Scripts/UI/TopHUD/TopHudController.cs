@@ -67,6 +67,8 @@ public class TopHudController : MonoBehaviour
         board.OnBatteryHit -= HandleBatteryHit;
         board.OnObstacleCreatedDynamic -= HandleObstacleCreatedDynamic;
         board.OnBarrelResolved -= HandleBarrelResolved;
+        board.OnSpreadingGelServiceChanged -= HandleSpreadingGelServiceChanged;
+        UnhookGelService();
         initialized = false;
     }
 
@@ -95,7 +97,13 @@ public class TopHudController : MonoBehaviour
         board.OnObstacleCreatedDynamic += HandleObstacleCreatedDynamic;
         board.OnBarrelResolved += HandleBarrelResolved;
 
+        // Jel servisi SetLevelData'dan SONRA bağlandığı için burada henüz null olabilir;
+        // event ile geldiğinde bağlanır. Zaten bağlıysa hemen hook'lanır.
+        board.OnSpreadingGelServiceChanged -= HandleSpreadingGelServiceChanged;
+        board.OnSpreadingGelServiceChanged += HandleSpreadingGelServiceChanged;
+
         BuildGoals(board.ActiveLevelData);
+        HookGelService(board.SpreadingGelService);
         RefreshMoves(board.RemainingMoves);
         initialized = true;
     }
@@ -135,11 +143,20 @@ public class TopHudController : MonoBehaviour
                     initialRemaining = computed;
             }
 
+            // SpreadingGel goal'ü KAPLAMA hedefidir: author'ın verdiği amount = kaplanacak toplam
+            // hücre. Açıkta duran jel hücreleri baştan düşülür (kapak altındaki mühürlü seed'ler
+            // SAYILMAZ — kapak kırılınca düşer), sonra her yeni jel hücresi sayacı 1 azaltır.
+            if (goal.targetType == LevelGoalTargetType.Obstacle && goal.obstacleId == ObstacleId.SpreadingGel)
+                initialRemaining = Mathf.Max(0, goal.amount - CurrentGelCount);
+
             var runtime = new RuntimeGoal
             {
                 definition = goal,
                 remaining = initialRemaining,
-                dynamicTotal = initialRemaining,
+                dynamicTotal = goal.targetType == LevelGoalTargetType.Obstacle
+                               && goal.obstacleId == ObstacleId.SpreadingGel
+                    ? goal.amount
+                    : initialRemaining,
                 slot = CreateSlot(goal, i)
             };
 
@@ -500,6 +517,68 @@ public class TopHudController : MonoBehaviour
             count++;
         }
         return count;
+    }
+
+    // ── SpreadingGel kaplama hedefi ───────────────────────────────────────────
+    private SpreadingGelOverlayService hookedGelService;
+
+    // Mühürlü (kapak altında henüz açılmamış) jel sayılmaz: oyuncu görmeden sayaç düşmesin.
+    private int CurrentGelCount => hookedGelService != null
+        ? hookedGelService.RevealedCount
+        : (board != null && board.SpreadingGelService != null ? board.SpreadingGelService.RevealedCount : 0);
+
+    private void HandleSpreadingGelServiceChanged(SpreadingGelOverlayService service)
+        => HookGelService(service);
+
+    private void HookGelService(SpreadingGelOverlayService service)
+    {
+        if (hookedGelService == service)
+        {
+            RefreshGelGoals();
+            return;
+        }
+
+        UnhookGelService();
+
+        hookedGelService = service;
+        if (hookedGelService != null)
+            hookedGelService.OnGelChanged += RefreshGelGoals;
+
+        RefreshGelGoals();
+    }
+
+    private void UnhookGelService()
+    {
+        if (hookedGelService != null)
+            hookedGelService.OnGelChanged -= RefreshGelGoals;
+        hookedGelService = null;
+    }
+
+    // Jel hedefi tek kaynaktan türetilir: remaining = amount - kaplı hücre sayısı. Jel hiç
+    // temizlenmediği için sayaç monoton azalır; yeniden hesap yarış/çift-sayım riskini de kaldırır.
+    private void RefreshGelGoals()
+    {
+        int covered = CurrentGelCount;
+        bool anyGoalUpdated = false;
+
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var goal = runtimeGoals[i];
+            if (goal.definition == null) continue;
+            if (goal.definition.targetType != LevelGoalTargetType.Obstacle
+                || goal.definition.obstacleId != ObstacleId.SpreadingGel)
+                continue;
+
+            int remaining = Mathf.Max(0, goal.definition.amount - covered);
+            if (remaining == goal.remaining) continue;
+
+            goal.remaining = remaining;
+            goal.slot?.SetRemaining(goal.remaining);
+            anyGoalUpdated = true;
+        }
+
+        if (anyGoalUpdated)
+            UpdateGoalsCompletionState();
     }
 
     private int CountStampedBeneathCells(ObstacleId id)

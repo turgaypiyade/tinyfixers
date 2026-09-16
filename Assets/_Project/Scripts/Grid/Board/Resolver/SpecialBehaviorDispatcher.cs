@@ -37,6 +37,11 @@ public class SpecialBehaviorDispatcher
 
     public void ApplyComboEffect(ResolutionContext ctx, TileView a, TileView b, TileSpecial sa, TileSpecial sb)
     {
+        // Jel bulaşması: combo'nun KAYNAĞI iki taştır. Biri bile jel üstünde/bulaşıksa combo'nun
+        // vurduğu her hücre jel olur; ikisi de temizse combo jelin üstünden geçse bile bulaştırmaz.
+        board.NoteGelSpreadOrigin(a);
+        board.NoteGelSpreadOrigin(b);
+
         if (IsLineCombo(sa, sb))
         {
             lineVLineHCombo.Execute(new LineVLineHComboExecutionRuntime
@@ -221,6 +226,12 @@ public class SpecialBehaviorDispatcher
 
         // Tekil special aktivasyon sinyali (zincirdekiler dahil) — BossDuel bonus hasarı dinler.
         board.RaiseSpecialActivated(special, new Vector2Int(ox, oy));
+
+        // Jel bulaşması KAYNAK bazlı: special'ın KENDİ hücresi (ya da combo'da partner'ın hücresi)
+        // jel/bulaşıksa bu hamledeki kırılmalar jel bırakır. Footprint'in jelin ÜZERİNDEN geçmesi
+        // bulaştırmaz — jelsiz hücrede patlayan LineV+PulseCore temiz kalır.
+        board.NoteGelSpreadOrigin(specialTile);
+        board.NoteGelSpreadOrigin(partnerTile);
 
         switch (special)
         {

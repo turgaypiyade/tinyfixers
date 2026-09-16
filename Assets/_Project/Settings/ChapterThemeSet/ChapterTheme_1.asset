@@ -24,7 +24,7 @@ MonoBehaviour:
   borderColorId: 0
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
   successAnimationBackground: {fileID: 0}
-  preLevelPopupBackground: {fileID: 21300000, guid: 0add8b432cfa148cab294f8d7be2fc24, type: 3}
+  preLevelPopupBackground: {fileID: 21300000, guid: c2cee371b18654473a7cf9bc0848606c, type: 3}
   preLevelContinueButton: {fileID: 21300000, guid: ba378aa579f6947379c2a27dc1a5b718, type: 3}
   preLevelCancelButton: {fileID: 0}
   preLevelCheckMark: {fileID: 21300000, guid: 4d7e3c1a8d2a049e7862849181984ab4, type: 3}
@@ -61,7 +61,7 @@ MonoBehaviour:
     titleLocalizationKey: loading_hint_override_title
     descriptionLocalizationKey: loading_hint_override_desc
     loadingLocalizationKey: loading_hint_loading
-  levelEndPopupBackground: {fileID: 21300000, guid: 0c4a595e7b4104c2494f465433b2e507, type: 3}
+  levelEndPopupBackground: {fileID: 21300000, guid: 1a990070d5b464ddaba99d098f0f0673, type: 3}
   levelEndContinueButton: {fileID: 0}
   levelEndCloseButton: {fileID: 0}
   levelEndStarFilled: {fileID: 0}

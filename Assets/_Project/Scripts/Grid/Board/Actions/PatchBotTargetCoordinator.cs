@@ -437,6 +437,11 @@ public class PatchBotTargetCoordinator
                 activeTileGoals.Add(goal.tileType);
         }
 
+        // Jel kırılmaz → jelli hücre "goal obstacle" değildir; bot bulaş taşıyorsa jelsiz alana gider.
+        bool gelGoalActive = activeObstacleGoals.Remove(ObstacleId.SpreadingGel);
+        bool preferNonGel = patchbotService != null
+                            && patchbotService.ShouldPreferNonGelCells(patchBotTile, gelGoalActive);
+
         bool IsExcludedTile(TileView tile)
         {
             if (tile == null) return true;
@@ -493,6 +498,24 @@ public class PatchBotTargetCoordinator
                         int origin = board.ObstacleStateService.GetObstacleOriginAt(x, y);
                         if (origin < 0 || origin % board.Width != x || origin / board.Width != y)
                             continue;
+                    }
+
+                    // Jel kırılmaz → obstacle olarak hedef değil. Üstünde taş varsa taş olarak
+                    // değerlendirilsin (bulaş taşıyan bot zaten jelsiz hücreleri tercih eder).
+                    if (obstacleId == ObstacleId.SpreadingGel)
+                    {
+                        if (tile != null
+                            && board.GridData[x, y] != null
+                            && SpecialUtils.CanTargetTileContent(board, x, y)
+                            && !IsExcludedTile(tile)
+                            && !IsTileReserved(tile))
+                        {
+                            if (IsGoalTile(tile))
+                                tileGoalCells.Add((x, y, tile));
+                            else
+                                normalCells.Add((x, y, tile));
+                        }
+                        continue;
                     }
 
                     int effectiveHits = GetEffectiveObstacleHitsRemaining(x, y);
@@ -562,7 +585,8 @@ public class PatchBotTargetCoordinator
 
         if (normalCells.Count > 0)
         {
-            var pick = normalCells[PickIdx(normalCells)];
+            var pool = preferNonGel ? patchbotService.FilterNonGelCells(normalCells) : normalCells;
+            var pick = pool[PickIdx(pool)];
             return (pick.tile, pick.x, pick.y, true);
         }
 

@@ -85,6 +85,11 @@ public class MudOverlayService : MonoBehaviour
 
     public void Init(BoardController board, int width, int height, int tileSize = 0)
     {
+        if (this.board != null)
+        {
+            this.board.ObstacleVisualChanged -= HandleVisualChanged;
+            this.board.OnObstacleDestroyed -= HandleObstacleDestroyed;
+        }
         this.board  = board;
         gridWidth   = width;
         gridHeight  = height;
@@ -92,14 +97,18 @@ public class MudOverlayService : MonoBehaviour
 
         if (board != null)
         {
-            board.ObstacleVisualChanged -= HandleVisualChanged;
             board.ObstacleVisualChanged += HandleVisualChanged;
+            board.OnObstacleDestroyed += HandleObstacleDestroyed;
         }
     }
 
     private void OnDestroy()
     {
-        if (board != null) board.ObstacleVisualChanged -= HandleVisualChanged;
+        if (board != null)
+        {
+            board.ObstacleVisualChanged -= HandleVisualChanged;
+            board.OnObstacleDestroyed -= HandleObstacleDestroyed;
+        }
     }
 
     public void RegisterCell(int x, int y, MudCellView view, int remaining, int max)
@@ -138,20 +147,60 @@ public class MudOverlayService : MonoBehaviour
     public bool HasMudAt(int x, int y)
         => viewsByCellIndex.ContainsKey(CellIndex(x, y));
 
+    public void UpdateCellHits(int x, int y, int remaining, int max)
+    {
+        int idx = CellIndex(x, y);
+        if (remaining <= 0)
+        {
+            ClearCellView(idx);
+            return;
+        }
+        if (!viewsByCellIndex.TryGetValue(idx, out var view) || view == null) return;
+        view.SetMaxHits(max);
+        ApplyToView(view, remaining);
+        QueueRefreshAllBorders();
+    }
+
+    private void ClearCellView(int idx)
+    {
+        if (!viewsByCellIndex.TryGetValue(idx, out var view)) return;
+        if (view != null) view.Clear();
+        viewsByCellIndex.Remove(idx);
+        // Recompute neighboring borders after the topology change, once per frame.
+        QueueRefreshAllBorders();
+    }
+
+    private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
+    {
+        if (obstacleId != ObstacleId.Mud) return;
+        // Tie overlay removal to the committed destruction as well as the visual
+        // event. A later presentation event must not leave a dead Mud view behind.
+        HandleVisualChanged(new ObstacleVisualChange(originIndex, obstacleId, true, 0, null));
+    }
+
     private void HandleVisualChanged(ObstacleVisualChange change)
     {
         if (change.obstacleId != ObstacleId.Mud) return;
         if (!viewsByCellIndex.TryGetValue(change.originIndex, out var view) || view == null) return;
 
-        if (change.cleared)
+        var state = board != null ? board.ObstacleStateService : null;
+        if (state != null && gridWidth > 0)
         {
-            view.Clear();
-            viewsByCellIndex.Remove(change.originIndex);
-
-            // Topoloji değişti (bir hücre kalktı) → sınırları frame sonunda tek full pass olarak
-            // hesapla. Aynı cascade içinde birden çok mud event'i gelince ara komşuluk durumları
-            // ekrana kısa süreli iç çizgi/bevel olarak yansıyordu.
-            QueueRefreshAllBorders();
+            // Use committed state, even when a delayed visual event describes an
+            // older hit. This also preserves a newly revealed Mud layer at this cell.
+            if (state.TryGetMudRemainingHitsAt(
+                change.originIndex % gridWidth, change.originIndex / gridWidth, out int remaining))
+            {
+                ApplyToView(view, remaining);
+                QueueRefreshAllBorders();
+            }
+            else
+                ClearCellView(change.originIndex);
+            return;
+        }
+        if (change.cleared || change.remainingHits <= 0)
+        {
+            ClearCellView(change.originIndex);
             return;
         }
 

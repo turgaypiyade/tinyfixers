@@ -47,14 +47,10 @@ public sealed class SafeObstacleView : MonoBehaviour
     [SerializeField] private GameObject breakParticlePrefab;
     [Tooltip("Kasa çökerken merkezden saçılan 'dökülme' partikülü (opsiyonel). Boşsa breakParticlePrefab kullanılır.")]
     [SerializeField] private GameObject dissolveParticlePrefab;
-    [SerializeField, Min(0f)] private float brokenVisualDuration = 0.45f;
 
     [Header("Break Animasyonu")]
     [Tooltip("Knob'ların patlama (scale-up + sönme) süresi.")]
     [SerializeField, Min(0f)] private float knobBurstDuration = 0.16f;
-    [Tooltip("brokenVisual'ın pop-in süresi ve overshoot'u.")]
-    [SerializeField, Min(0f)] private float revealPopDuration = 0.28f;
-    [SerializeField, Range(1f, 1.6f)] private float revealPopOvershoot = 1.18f;
 
     [Header("Ezilip Büzülme (Squash & Stretch)")]
     [Tooltip("Kırılma öncesi yumuşak squash-stretch salınımının süresi.")]

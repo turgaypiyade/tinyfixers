@@ -82,6 +82,19 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     [SerializeField] private float peakPulseAmplitude = 0.03f;
     [SerializeField] private float peakPulseFrequency = 18f;
 
+    [Header("Charge — Shake (Sarsıntı)")]
+    [Tooltip("Şarj ilerledikçe artan KONUMSAL titreme — TNT patlamaya yaklaşırken sarsılır. 0 = kapalı. " +
+             "Fazla düz duran charge'a gerilim ekler; sona doğru sertleşerek patlamaya 'atlatır'.")]
+    [SerializeField] private float chargeShakeMaxAmplitude = 16f;
+    [Tooltip("Titremenin başladığı şarj oranı (0..1). Bu orandan önce sabit durur, sonra sarsılmaya başlar.")]
+    [SerializeField, Range(0f, 1f)] private float chargeShakeStartProgress = 0.22f;
+    [Tooltip("Saniyedeki titreme frekansı. Yüksek = daha sinirli/hızlı sarsılma.")]
+    [SerializeField] private float chargeShakeFrequency = 32f;
+    [Tooltip("Titreme zarfının kuvvet eğrisi. 1 = lineer artış, 2+ = yalnız son anlarda sertçe patlar.")]
+    [SerializeField] private float chargeShakeRamp = 2.2f;
+    [Tooltip("Titremeye eşlik eden mikro Z rotasyonu (derece).")]
+    [SerializeField] private float chargeShakeRotation = 3.5f;
+
     [Header("Charge — Glow")]
     [Tooltip("Glow sprite (Knob). Bombanın arkasında yumuşak parlama.")]
     [SerializeField] private Sprite glowSprite;
@@ -229,6 +242,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             float eased = EaseOutQuad(k);
             Vector3 s = Vector3.LerpUnclamped(baseScale, squashTarget, eased);
             ApplyScale(container, bombRt, s);
+            ApplyChargeShake(container, totalElapsed / chargeDuration, totalElapsed);
             UpdateGlow(glowImg, totalElapsed, bombImg);
             UpdateChargeCrackBlend(bombImg, bombOverlayImg, totalElapsed / chargeDuration);
             UpdateCrackFireOverlay(crackFireImg, crackFireOverlayImg, totalElapsed / chargeDuration, totalElapsed);
@@ -242,6 +256,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             float eased = EaseInOutQuad(k);
             Vector3 s = Vector3.LerpUnclamped(squashTarget, stretchTarget, eased);
             ApplyScale(container, bombRt, s);
+            ApplyChargeShake(container, totalElapsed / chargeDuration, totalElapsed);
             UpdateGlow(glowImg, totalElapsed, bombImg);
             UpdateChargeCrackBlend(bombImg, bombOverlayImg, totalElapsed / chargeDuration);
             UpdateCrackFireOverlay(crackFireImg, crackFireOverlayImg, totalElapsed / chargeDuration, totalElapsed);
@@ -269,6 +284,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
 
             Vector3 deformed = new Vector3(mid.x * sx, mid.y * sy, 1f);
             ApplyScale(container, bombRt, deformed);
+            ApplyChargeShake(container, totalElapsed / chargeDuration, totalElapsed);
 
             // Yamuk his — Z rotasyonu damped sine
             float tilt = Mathf.Sin(phase * 0.8f) * tiltDegrees * damp;
@@ -290,6 +306,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             float pulse = Mathf.Sin(peakElapsed * peakPulseFrequency) * peakPulseAmplitude;
             Vector3 s = wobbleEnd * (1f + pulse);
             ApplyScale(container, bombRt, s);
+            ApplyChargeShake(container, totalElapsed / chargeDuration, totalElapsed);
 
             // Son evrede glow full-peak + hafif flash
             UpdateGlowPeak(glowImg, totalElapsed, bombImg, k);
@@ -337,6 +354,41 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             float by = uniform > 0.0001f ? nonUniform.y / uniform : 1f;
             bombRt.localScale = new Vector3(bx, by, 1f);
         }
+    }
+
+    // Şarj ilerledikçe artan konumsal titreme (sarsıntı). Container'a uygulanır → glow+bomba+alev birlikte
+    // sarsılır; bomba kendi wobble/tilt rotasyonunu (bombRt) ayrıca korur, ikisi üst üste biner.
+    // Zarf: chargeShakeStartProgress'ten sonra 0→1, chargeShakeRamp ile son anlarda sertçe patlar.
+    private void ApplyChargeShake(RectTransform container, float progress01, float elapsed)
+    {
+        if (container == null) return;
+
+        if (chargeShakeMaxAmplitude <= 0f)
+        {
+            container.anchoredPosition = Vector2.zero;
+            container.localRotation = Quaternion.identity;
+            return;
+        }
+
+        float p = Mathf.InverseLerp(chargeShakeStartProgress, 1f, Mathf.Clamp01(progress01));
+        if (p <= 0f)
+        {
+            container.anchoredPosition = Vector2.zero;
+            container.localRotation = Quaternion.identity;
+            return;
+        }
+
+        float env = Mathf.Pow(p, Mathf.Max(0.01f, chargeShakeRamp));   // sona doğru sertleşen zarf
+        float amp = chargeShakeMaxAmplitude * env;
+        float w = elapsed * chargeShakeFrequency * Mathf.PI * 2f;
+
+        // Çok-sinüslü → tekdüze olmayan, sinirli titreme (tek sinüs "salınım" gibi düz durur)
+        float ox = (Mathf.Sin(w) + 0.5f * Mathf.Sin(w * 2.3f + 1.1f)) * amp;
+        float oy = (Mathf.Sin(w * 1.37f + 0.7f) + 0.5f * Mathf.Sin(w * 2.9f)) * amp * 0.85f;
+        container.anchoredPosition = new Vector2(ox, oy);
+
+        float rot = Mathf.Sin(w * 0.9f + 0.3f) * chargeShakeRotation * env;
+        container.localRotation = Quaternion.Euler(0f, 0f, rot);
     }
 
     // Şarj ilerlemesine (0..1) göre çatlak karelerini ÇAPRAZ GEÇİŞLE gösterir. N kare eşit dilime

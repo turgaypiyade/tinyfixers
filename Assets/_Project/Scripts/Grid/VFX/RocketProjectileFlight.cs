@@ -159,48 +159,62 @@ public sealed class RocketProjectileFlight : MonoBehaviour
         onArrived?.Invoke();
     }
 
+    // Reuse the RocketBasket flame and its authored size/timing for other cell impacts.
+    public bool TryPlayImpactExplosionAtCell(int x, int y)
+    {
+        var b = Board;
+        if (b == null || !isActiveAndEnabled || impactExplosionSprite == null || impactExplosionDuration <= 0f)
+            return false;
+        var root = b.BoardVfxPlayer != null && b.BoardVfxPlayer.VfxRoot != null
+            ? b.BoardVfxPlayer.VfxRoot : b.TilesRoot;
+        if (root == null) return false;
+        Vector2 point = root.InverseTransformPoint(b.GetCellWorldCenterPosition(x, y));
+        Vector2 right = root.InverseTransformPoint(b.GetCellWorldCenterPosition(x + 1, y));
+        SpawnImpactExplosion(root, point, Vector2.Distance(point, right));
+        return true;
+    }
+
     // Hedefte sprite tabanlı patlama: küçükten hızla açılır, hafif döner ve solarak kaybolur.
     private void SpawnImpactExplosion(RectTransform parent, Vector2 pos, float tileSize)
     {
-        if (parent == null || impactExplosionSprite == null || impactExplosionDuration <= 0f)
-            return;
+        StartCoroutine(PlayImpactExplosion(parent, pos, tileSize, impactExplosionSprite,
+            impactExplosionSizeRatio, impactExplosionDuration, impactExplosionStartScale));
+    }
+
+    // Also usable by EggBird in scenes without the RocketBasket component.
+    public static IEnumerator PlayImpactExplosion(RectTransform parent, Vector2 pos, float tileSize,
+        Sprite sprite, float sizeRatio = 2.55f, float duration = 0.34f, float startScale = 0.45f)
+    {
+        if (parent == null || sprite == null || duration <= 0f)
+            yield break;
 
         var go = new GameObject("RocketImpactExplosion", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         go.transform.SetParent(parent, false);
         go.transform.SetAsLastSibling();
 
         var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 0.5f);
-        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.anchorMin = rt.anchorMax = parent.pivot;
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = pos;
-        float peak = tileSize * Mathf.Max(0.1f, impactExplosionSizeRatio);
+        float peak = tileSize * Mathf.Max(0.1f, sizeRatio);
         rt.sizeDelta = new Vector2(peak, peak);
         rt.localRotation = Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(0f, 360f));
 
         var img = go.GetComponent<Image>();
-        img.sprite = impactExplosionSprite;
+        img.sprite = sprite;
         img.preserveAspect = true;
         img.raycastTarget = false;
 
-        StartCoroutine(CoImpactExplosion(go, rt, img));
-    }
-
-    private IEnumerator CoImpactExplosion(GameObject go, RectTransform rt, Image img)
-    {
-        if (go == null || rt == null || img == null)
-            yield break;
-
-        float startScale = Mathf.Clamp(impactExplosionStartScale, 0.05f, 1f);
+        startScale = Mathf.Clamp(startScale, 0.05f, 1f);
         float spin = UnityEngine.Random.Range(-40f, 40f);
         float baseRot = rt.localEulerAngles.z;
 
         float elapsed = 0f;
-        while (elapsed < impactExplosionDuration)
+        while (elapsed < duration)
         {
             if (go == null) yield break;
             elapsed += Time.deltaTime;
-            float k = Mathf.Clamp01(elapsed / impactExplosionDuration);
+            float k = Mathf.Clamp01(elapsed / duration);
 
             // Ölçek: küçükten hızla açıl (easeOut), sonuna doğru hafif taşmayı sürdür.
             float grow = 1f - (1f - k) * (1f - k);            // easeOutQuad

@@ -75,14 +75,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd7a156413a7b4ecc923d41dc03f710b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  bombSprite: {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
+  bombSprite: {fileID: 21300000, guid: 7cc20196928fb40aaa2bef28661a9bc3, type: 3}
   bombBaseSize: 256
   chargeDuration: 1.9
   crackFrames:
-  - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
-  - {fileID: 21300000, guid: 61c28ae4e393a4af3954789ba43663da, type: 3}
-  - {fileID: 21300000, guid: 39b0b271db8c544539262b523b77b1ad, type: 3}
-  - {fileID: 21300000, guid: 244d0466b79464abca06e8c8cdca5cf3, type: 3}
+  - {fileID: 21300000, guid: d8386b81e9c104e2a95f285eac2c3346, type: 3}
+  - {fileID: 21300000, guid: 140e4c3793cd84fd49f542f445a895dd, type: 3}
+  - {fileID: 21300000, guid: 93a9bd342547c42508bd5d94595110c0, type: 3}
+  - {fileID: 21300000, guid: 99aa3d22d9b9a46f58bd3b2d6e60e041, type: 3}
+  - {fileID: 21300000, guid: d8a9770f4682e49ce8d19292b78ae415, type: 3}
+  - {fileID: 21300000, guid: 1287148ca96b045dab6d8c5773b711a2, type: 3}
+  - {fileID: 21300000, guid: 62f95b11c955f457bbd8b524ac769314, type: 3}
+  - {fileID: 21300000, guid: dcda640bcec9d44c5ba58cb793d6757e, type: 3}
+  - {fileID: 21300000, guid: f79c3ba17e15b458bb98825af93dd168, type: 3}
+  - {fileID: 21300000, guid: 71ef2072db86a47daa4800dd251eb1c3, type: 3}
+  - {fileID: 21300000, guid: d393ff669c80042239af061792ac02f1, type: 3}
   crackCrossfadePortion: 0.5
   crackFireOverlaySprite: {fileID: 8456809893565029502, guid: cf546dd66a83c4ad0b341a4ddf27cd0a, type: 3}
   crackFireOverlayFrames:
@@ -116,6 +123,11 @@ MonoBehaviour:
   peakScale: 1.45
   peakPulseAmplitude: 0.03
   peakPulseFrequency: 18
+  chargeShakeMaxAmplitude: 16
+  chargeShakeStartProgress: 0.22
+  chargeShakeFrequency: 32
+  chargeShakeRamp: 2.2
+  chargeShakeRotation: 3.5
   glowSprite: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
   glowSizeMultiplier: 2
   glowColorStart: {r: 0.5, g: 0.75, b: 1, a: 0}

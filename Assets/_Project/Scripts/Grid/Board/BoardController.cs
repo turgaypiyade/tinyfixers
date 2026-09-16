@@ -233,6 +233,9 @@ public class BoardController : MonoBehaviour
     [SerializeField] private RectTransform verticalBoosterFxPrefab;
     [SerializeField] private Sprite rowBoosterWithDrillSprite;
     [SerializeField] private Sprite rowBoosterWithoutDrillSprite;
+    [Tooltip("Makaslı asansör (joker3 / cannonball) board'un alt çizgisinden kaç TILE daha aşağıdan " +
+             "başlasın. Tepe noktası değişmez (offset yükseklik bütçesine geri eklenir). Cannon FX'i etkilemez.")]
+    [SerializeField, Range(0f, 3f)] private float scissorLiftExtraDropTiles = 0.5f;
     [SerializeField] private RectTransform boosterFxParent;
     [SerializeField] private Sprite hammerBoosterFallbackSprite;
     [SerializeField] private Sprite patchBotPropellerSprite;
@@ -247,6 +250,7 @@ public class BoardController : MonoBehaviour
     internal RectTransform VerticalBoosterFxPrefab => verticalBoosterFxPrefab;
     internal Sprite RowBoosterWithDrillSprite => rowBoosterWithDrillSprite;
     internal Sprite RowBoosterWithoutDrillSprite => rowBoosterWithoutDrillSprite;
+    internal float ScissorLiftExtraDropTiles => scissorLiftExtraDropTiles;
     internal RectTransform BoosterFxParent => boosterFxParent != null ? boosterFxParent : ContentRoot ?? parent;
     internal Sprite HammerBoosterFallbackSprite => hammerBoosterFallbackSprite;
     internal Sprite PatchBotPropellerSprite => patchBotPropellerSprite;
@@ -260,8 +264,6 @@ public class BoardController : MonoBehaviour
 
     internal bool SpecialFillCell => specialFillCell;
     internal float SpecialElevation => specialElevation;
-
-    [SerializeField] private bool allowPostSwapSettleValidation = true;
 
     // Faz 7 (Docs/Match3_MasterRoadmap.md A7): gravity/refill simülasyonu sütun-bazlı bir motora
     // (ColumnFlowEngine) taşınır. 7A = DAVRANIŞ-BİREBİR: aynı çıktı, ama her sütunun bağımsız işlendiği
@@ -637,8 +639,9 @@ public class BoardController : MonoBehaviour
     private BoardAnimator boardAnimator;
     // Background-job accounting (typed handle/gate). One count slot per BoardJobKind; see BeginJob.
     // Level-end waits on the total (ActiveBackgroundJobs); resolve/input wait only on the Resolve slot.
-    private readonly int[] _jobCounts = new int[7]; // sized to BoardJobKind
-    private readonly Stack<System.IDisposable>[] _pairedFlowJobHandles = new Stack<System.IDisposable>[7];
+    private const int BoardJobKindCount = 8;
+    private readonly int[] _jobCounts = new int[BoardJobKindCount];
+    private readonly Stack<System.IDisposable>[] _pairedFlowJobHandles = new Stack<System.IDisposable>[BoardJobKindCount];
     private int _jobEpoch = 0;
     private ActionSequencer actionSequencer;
     private PulseCoreImpactService pulseCoreImpactService;
@@ -1244,7 +1247,8 @@ public class BoardController : MonoBehaviour
         BossStrikeDrain = 3, // async: BossDuel strike queue
         ObstacleSpread = 4,  // async: barrel mud splatter (data committed up-front, visual async)
         KeyFlight = 5,       // async: KeyGenerator key flight
-        PresentationFx = 6   // async: clear-presentation visual effects
+        PresentationFx = 6,  // async: clear-presentation visual effects
+        EggBirdFlight = 7    // async: hatch/split/dive; gravity and match/fall overlap continue
     }
 
     private sealed class BoardJobHandle : System.IDisposable
@@ -1290,6 +1294,7 @@ public class BoardController : MonoBehaviour
             BoardJobKind.KeyFlight => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Flight),
             BoardJobKind.GoalOrbFlight => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Flight),
             BoardJobKind.PatchBotDash => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Flight),
+            BoardJobKind.EggBirdFlight => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Flight),
             BoardJobKind.BossStrikeDrain => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Flight),
             BoardJobKind.PresentationFx => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Presentation),
             _ => null,
@@ -1369,6 +1374,7 @@ public class BoardController : MonoBehaviour
     // flips false while they run). EXCLUDED on purpose: goal-orb / key / boss-strike flights (don't clear
     // or move the cells a fresh cascade fills) AND obstacle spread (barrel mud is designed to splatter
     // concurrently with flow and never gated overlap before — including it would regress barrel levels).
+    // EggBirdFlight is also excluded: it targets cells, with current contents resolved only on impact.
     // This precise predicate REPLACES the blunt whole-resolve `hadSpecialActivityThisResolve` lock in the
     // overlap gate: overlap re-enables the instant the special's own visual drains instead of staying off
     // for the rest of the resolve.
@@ -1510,6 +1516,7 @@ public class BoardController : MonoBehaviour
         OnMovesChanged?.Invoke(RemainingMoves);
         EnsureServices();
         cascadeLogic?.ResetCargoSpawnCredits();
+        cascadeLogic?.ResetPlasticTwoStageSpawnBudget();
 
         if (obstacleStateService != null)
         {
@@ -2287,11 +2294,11 @@ public class BoardController : MonoBehaviour
 
         if (wasLiveInGrid)
         {
-            // jel yayılması: kırılan hücre mevcut jele KOMŞUYSA jel olur (o anki jel durumuna göre).
-            // Kırılan taşlar kaynak jelden dışa sıralı geldiği için jel zincirle yayılır (line/pulse/
-            // patchbot/match hepsi); contiguous → kopuk/izole "saçma yer" olmaz. (BoardAnimator ile
-            // temizlenenler live=False → oraya TryPaintGelForClearedTile bakar.)
-            if (spreadingGelService != null && HasGelNeighbor(x, y))
+            // Jel yayılması YALNIZ bulaşmayla olur: bu hamlede jelden doğan bir olay (override/
+            // implant/zincir) varsa ya da taşın kendisi bulaşıksa. KOMŞULUK kuralı KALDIRILDI —
+            // jelin üstünden geçen bir line/pulse, komşu hücreleri domino gibi jel yapıyordu.
+            // (BoardAnimator ile temizlenenler live=False → oraya TryPaintGelForClearedTile bakar.)
+            if (spreadingGelService != null && (gelSpreadActiveThisMove || tile.GelContaminated))
                 SpreadGelToCell(x, y);
 
             ClearCell(x, y);
@@ -2383,8 +2390,8 @@ public class BoardController : MonoBehaviour
         if (tile.RuntimeState != TileRuntimeState.Idle)
             return false;
 
-        // Dynamic input yalnız gravity/fall overlap içindir. Special/PatchBot görsel zinciri
-        // akarken input almak resolver ile yarışır; special swap yukarıda ayrıca komşu kapısıyla açılır.
+        // Special chains with deferred targets retain the global gate. Ordinary
+        // clears register a bounded footprint below instead of locking every cell.
         if (Flow.IsSpecialVisualInFlight)
             return false;
 
@@ -2394,10 +2401,10 @@ public class BoardController : MonoBehaviour
         if (!TryGetCellState(tile.X, tile.Y, out var state))
             return false;
 
-        if (!state.canProvideTile || state.isReservedForTile || state.tileRuntimeState != TileRuntimeState.Idle)
+        if (!state.canProvideTile || state.tile != tile || state.isReservedForTile || state.tileRuntimeState != TileRuntimeState.Idle)
             return false;
 
-        if (Flow.IsColumnSettling(tile.X))
+        if (Flow.IsColumnSettling(tile.X) || Flow.IsInputColumnBlocked(tile.X))
             return false;
 
         if (obstacleStateService != null)
@@ -2415,10 +2422,13 @@ public class BoardController : MonoBehaviour
 
     private bool IsDynamicInputBlockedByBoardFlow()
     {
+        if (SpreadingObstacles > 0)
+            return true;
+
         if (!useFlowActivities || flowScheduler == null)
             return false;
 
-        return flowScheduler.Count(BoardFlowScheduler.ActivityKind.Clear) > 0
+        return flowScheduler.HasUnlocalizedClear
                || flowScheduler.Count(BoardFlowScheduler.ActivityKind.SpecialSweep) > 0
                || flowScheduler.Count(BoardFlowScheduler.ActivityKind.ComboStep) > 0
                || flowScheduler.Count(BoardFlowScheduler.ActivityKind.ObstacleSpread) > 0;
@@ -2446,7 +2456,8 @@ public class BoardController : MonoBehaviour
         return CanTileUseDynamicInputCell(tiles[x, y]);
     }
 
-    internal bool CanStartDynamicDrag(TileView tile) => CanTileAcceptDynamicInput(tile);
+    internal bool CanStartDynamicDrag(TileView tile) => dynamicSwapLogicDepth == 0
+        && RemainingMoves > 0 && CanTileAcceptDynamicInput(tile);
 
     private bool CanSwapTilesWithDynamicGate(TileView a, TileView b)
     {
@@ -2462,7 +2473,13 @@ public class BoardController : MonoBehaviour
         return CanTileAcceptDynamicInput(a) && CanTileAcceptDynamicInput(b);
     }
 
-    internal bool CanStartDynamicSwap(TileView a, TileView b) => CanSwapTilesWithDynamicGate(a, b);
+    internal bool CanStartDynamicSwap(TileView a, TileView b) => dynamicSwapLogicDepth == 0
+        && RemainingMoves > 0 && CanSwapTilesWithDynamicGate(a, b);
+
+    private bool CanStartDynamicSpecialTap(TileView tile) => useDynamicBoardInputGate
+        && dynamicSwapLogicDepth == 0 && RemainingMoves > 0
+        && activeBooster == BoosterMode.None
+        && CanTapActivateSpecial(tile) && CanTileUseDynamicInputCell(tile);
 
     public void RequestSwapFromDrag(TileView from, int dirX, int dirY)
     {
@@ -2509,8 +2526,15 @@ public class BoardController : MonoBehaviour
     {
         if (IsBusy)
         {
-            if (!useDynamicBoardInputGate)
+            if (!useDynamicBoardInputGate || dynamicSwapLogicDepth > 0 || RemainingMoves <= 0)
                 return;
+
+            if (CanStartDynamicSpecialTap(tile))
+            {
+                SetSelectedTile(null);
+                StartCoroutine(ProcessDynamicSpecialTap(tile));
+                return;
+            }
 
             if (selected == null)
             {
@@ -2677,12 +2701,17 @@ public class BoardController : MonoBehaviour
     // Special'ı yerinde (swap olmadan) tek tıkla aktive eder. Bir hamle tüketir,
     // ResolveSpecialSolo'yu oynatır, sonra board'u (cascade) çözer — swap'ın special
     // dalıyla aynı sonlandırma.
-    IEnumerator ProcessSpecialTap(TileView tile)
+    IEnumerator ProcessSpecialTap(TileView tile, bool dynamicInput = false)
     {
         if (!CanTapActivateSpecial(tile))
             yield break;
 
-        if (IsBusy) yield break;
+        if (dynamicInput)
+        {
+            if (CurrentState == BoardState.Locked || !CanTileUseDynamicInputCell(tile))
+                yield break;
+        }
+        else if (IsBusy) yield break;
 
         // Hamle kalmadıysa yeni hamle BAŞLATMA. Aksi halde board son hamleden sonra idle
         // olduğunda (fail değerlendirme/grace penceresi) oyuncu 0 hamleyle tap yapıp
@@ -2692,6 +2721,7 @@ public class BoardController : MonoBehaviour
         oilSuppressionCellsThisMove.Clear();
         oilSpreadResolvedThisMove = false;
         obstacleStateService?.ResetPerMoveEmitGuard();
+        ResetGelSpreadForNewMove();
 
         BeginBusy();
         lastSwapA = tile; lastSwapB = null; lastSwapUserMove = true;
@@ -2702,8 +2732,62 @@ public class BoardController : MonoBehaviour
         actionSequencer.Enqueue(specialResolver.ResolveSpecialSolo(tile));
         yield return AnimateQueuedActions();
 
-        yield return ResolveBoard(allowSpecialActivation: false, resolveEmptyCellsFirst: true);
+        yield return ResolveBoard(allowSpecialActivation: false, resolveEmptyCellsFirst: true,
+            ignoreDynamicSwapGuard: dynamicInput);
         EndBusy();
+    }
+
+    // Accept input in an unaffected region, but let the current clear finish before
+    // changing per-move state or submitting another resolver operation. The dynamic
+    // guard parks the old resolve loop; active animations are free to finish.
+    private IEnumerator WaitForDynamicInputCommit()
+    {
+        while ((actionSequencer != null && !actionSequencer.AllActionsSettled)
+               || BlockingBackgroundJobs > 0 || Flow.IsSpecialVisualInFlight
+               || Flow.Count(BoardFlowScheduler.ActivityKind.Clear) > 0
+               || Flow.Count(BoardFlowScheduler.ActivityKind.ComboStep) > 0
+               || SpreadingObstacles > 0)
+        {
+            if (CurrentState == BoardState.Locked || RemainingMoves <= 0)
+                yield break;
+            yield return null;
+        }
+    }
+
+    private bool AreDynamicMatchTilesStable(IEnumerable<TileView> matches)
+    {
+        foreach (var tile in matches)
+            if (!CanTileUseDynamicInputCell(tile))
+                return false;
+        return true;
+    }
+
+    private bool IsDynamicInputTileStillAt(TileView tile, int x, int y)
+    {
+        return CurrentState != BoardState.Locked && tile != null && tile
+            && tile.X == x && tile.Y == y && x >= 0 && x < width && y >= 0 && y < height
+            && tiles[x, y] == tile && CanTileUseDynamicInputCell(tile);
+    }
+
+    private IEnumerator ProcessDynamicSpecialTap(TileView tile)
+    {
+        if (!CanStartDynamicSpecialTap(tile)) yield break;
+        int x = tile.X, y = tile.Y;
+        TileSpecial special = tile.GetSpecial();
+        bool waitForClear = Flow.Count(BoardFlowScheduler.ActivityKind.Clear) > 0;
+        BeginDynamicSwapLogic();
+        try
+        {
+            if (waitForClear)
+                yield return WaitForDynamicInputCommit();
+            if (!IsDynamicInputTileStillAt(tile, x, y) || tile.GetSpecial() != special)
+                yield break;
+            yield return ProcessSpecialTap(tile, dynamicInput: true);
+        }
+        finally
+        {
+            EndDynamicSwapLogic();
+        }
     }
 
     private IEnumerator ProcessDynamicSwap(TileView a, TileView b)
@@ -2711,10 +2795,15 @@ public class BoardController : MonoBehaviour
         if (!CanStartDynamicSwap(a, b))
             yield break;
 
+        int ax = a.X, ay = a.Y, bx = b.X, by = b.Y;
+        bool waitForClear = Flow.Count(BoardFlowScheduler.ActivityKind.Clear) > 0;
         BeginDynamicSwapLogic();
         try
         {
-            if (!CanStartDynamicSwap(a, b))
+            if (waitForClear)
+                yield return WaitForDynamicInputCommit();
+            if (!IsDynamicInputTileStillAt(a, ax, ay) || !IsDynamicInputTileStillAt(b, bx, by)
+                || !CanSwapTilesWithDynamicGate(a, b))
                 yield break;
 
             yield return ProcessSwap(a, b, dynamicInput: true);
@@ -2740,7 +2829,17 @@ public class BoardController : MonoBehaviour
 
     // ── SpreadingGel yayılması ──────────────────────────────────
     private SpreadingGelOverlayService spreadingGelService;
-    public void SetSpreadingGelService(SpreadingGelOverlayService s) => spreadingGelService = s;
+    public SpreadingGelOverlayService SpreadingGelService => spreadingGelService;
+
+    /// Jel servisi GridSpawner tarafından level kurulurken (SetLevelData'dan SONRA) bağlanır.
+    /// HUD goal'ü servise abone olabilsin diye bağlanma anı event ile duyurulur.
+    public event Action<SpreadingGelOverlayService> OnSpreadingGelServiceChanged;
+
+    public void SetSpreadingGelService(SpreadingGelOverlayService s)
+    {
+        spreadingGelService = s;
+        OnSpreadingGelServiceChanged?.Invoke(s);
+    }
 
     private void SpreadGelToCell(int x, int y)
     {
@@ -2751,21 +2850,97 @@ public class BoardController : MonoBehaviour
 
     // BoardAnimator.ClearCellDataAfterDelay'den (per-tile, taşın görsel kırılma anında) çağrılır →
     // line/pulse/patchbot'un travel gecikmeli clear'ları için (o clear'lar ClearAndDestroyTile'a live=False
-    // gelir). Kural ClearAndDestroyTile ile aynı: kırılan hücre mevcut jele komşuysa jel olur.
+    // gelir). Kural ClearAndDestroyTile ile aynı: bulaşık taş veya hamle kapsamı (komşuluk YOK).
     public void TryPaintGelForClearedTile(TileView tile)
     {
         if (spreadingGelService == null || tile == null) return;
         int x = tile.X, y = tile.Y;
         if (x < 0 || x >= width || y < 0 || y >= height) return;
-        if (HasGelNeighbor(x, y)) SpreadGelToCell(x, y);
+        if (gelSpreadActiveThisMove || tile.GelContaminated)
+            SpreadGelToCell(x, y);
     }
 
-    private bool HasGelNeighbor(int x, int y)
+    // ── Jel BULAŞMA ──────────────────────────────────────────────────────────
+    // TEK KURAL (kullanıcı): bir olayın KAYNAĞINDA bulaş varsa, o olayın VURDUĞU her hücre jel olur.
+    // Kaynak = olayı başlatan taşlar; FOOTPRINT/YOL değil.
+    //   • Match  → eşleşen grubun kendisi (ExecuteClearPass ▸ NoteGelSpreadParticipants).
+    //              Gruptaki bir taş jel üstündeyse tüm grup bulaşır; gruptan doğan special de
+    //              bulaşı taşır (aynı TileView).
+    //   • Combo  → combo'yu oluşturan İKİ taş (SpecialBehaviorDispatcher.ApplyComboEffect).
+    //   • Special→ aktive edilen special + swap partner'ı; zincirde tetiklenen special için kendi
+    //              hücresi (ApplySpecialActivation). Booster'da kaynak = dokunulan hücre.
+    // Kaynak bulaşlıysa hamle kapsamı (gelSpreadActiveThisMove) açılır: o hamlede kırılan her taş
+    // jel bırakır — implant edilen special'lar, zincirler ve travel gecikmeli clear'lar dahil.
+    // Kaynak temizse olay jelin ÜZERİNDEN geçse bile bulaştırmaz; ama etki alanındaki bir special
+    // jel üstünde duruyorsa o special KENDİ kaynağıyla bulaşır (zincir doğal olarak devam eder).
+    // KOMŞULUK (contiguity) kuralı YOK: jele komşu olmak tek başına bulaş sebebi değildir.
+    private bool gelSpreadActiveThisMove;
+
+    /// Bu hamlede kırılan taşlar jel bırakıyor mu? (PatchBot hedeflemesi buna göre jelsiz alan seçer.)
+    internal bool IsGelSpreadActiveThisMove => gelSpreadActiveThisMove;
+
+    /// Yeni hamle/booster başlangıcı: bulaşma kapsamını kapat (önceki hamleden sızmasın).
+    internal void ResetGelSpreadForNewMove() => gelSpreadActiveThisMove = false;
+
+    /// Bir MATCH olayının KAYNAK taşları (eşleşen grup). Gruptaki herhangi bir taş jel üstündeyse
+    /// ya da bulaşıksa grubun TAMAMI bulaşık işaretlenir → o match'in temizlediği her hücre jel olur
+    /// ve gruptan doğan special de bulaşı taşır. Footprint (special'ın geçtiği yol) kaynak DEĞİLDİR.
+    internal void NoteGelSpreadParticipants(IEnumerable<TileView> participants)
     {
-        return spreadingGelService != null &&
-            (spreadingGelService.IsGelAt(x - 1, y) || spreadingGelService.IsGelAt(x + 1, y)
-             || spreadingGelService.IsGelAt(x, y - 1) || spreadingGelService.IsGelAt(x, y + 1));
+        if (spreadingGelService == null || participants == null) return;
+
+        bool touchesGel = false;
+        foreach (var tile in participants)
+        {
+            if (tile == null || !tile) continue;
+            if (tile.GelContaminated || spreadingGelService.IsSpreadSourceAt(tile.X, tile.Y))
+            {
+                touchesGel = true;
+                break;
+            }
+        }
+
+        if (!touchesGel) return;
+
+        foreach (var tile in participants)
+            if (tile != null && tile)
+                tile.GelContaminated = true;
     }
+
+    /// Bir special/combo JEL ÜSTÜNDE tetiklendiyse hamle kapsamını açar: bu hamlede kırılan her taş
+    /// jel bırakır (implant edilen special'lar, zincirler ve travel gecikmeli clear'lar dahil).
+    public void NoteGelSpreadOrigin(int x, int y)
+    {
+        if (spreadingGelService == null || gelSpreadActiveThisMove) return;
+
+        if (spreadingGelService.IsSpreadSourceAt(x, y))
+        {
+            gelSpreadActiveThisMove = true;
+            return;
+        }
+
+        // Jel üstünde OLMAYAN ama bulaşık bir taş (jele değen bir match'ten doğan / override'ın
+        // implant ettiği special) tetiklendiyse de kapsam açılır — bulaşma zincirle taşınır.
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+        var originTile = tiles[x, y];
+        if (originTile != null && originTile && originTile.GelContaminated)
+            gelSpreadActiveThisMove = true;
+    }
+
+    /// Kaynak taş üzerinden: special/combo'yu OLUŞTURAN taşlar (swap'lanan iki taş, combo'nun iki
+    /// ucu, zincirde tetiklenen special'ın kendisi). Taşın kendi hücresi jel ya da taş bulaşıksa
+    /// hamle kapsamı açılır; taş da bulaşık işaretlenir (hareket etse bile bulaşı taşısın).
+    public void NoteGelSpreadOrigin(TileView tile)
+    {
+        if (spreadingGelService == null || tile == null || !tile) return;
+
+        if (!tile.GelContaminated && spreadingGelService.IsSpreadSourceAt(tile.X, tile.Y))
+            tile.GelContaminated = true;
+
+        if (tile.GelContaminated)
+            gelSpreadActiveThisMove = true;
+    }
+
 
     IEnumerator ProcessSwap(TileView a, TileView b, bool dynamicInput = false)
     {
@@ -2775,7 +2950,7 @@ public class BoardController : MonoBehaviour
         // Dynamic input, input anında normal/idle sütunla sınırlı. Coroutine başlayana kadar
         // resolve/special akışı bu tile'ları değiştirmiş olabilir; ikinci kapı special path'e
         // kazara düşmeyi ve "kendi kendine trigger" gibi görünen yarışları engeller.
-        if (dynamicInput && !CanStartDynamicSwap(a, b))
+        if (dynamicInput && !CanSwapTilesWithDynamicGate(a, b))
             yield break;
 
         // Hamle kalmadıysa swap BAŞLATMA — 0 hamlede board idle olduğunda (fail
@@ -2786,6 +2961,7 @@ public class BoardController : MonoBehaviour
         oilSuppressionCellsThisMove.Clear();
         oilSpreadResolvedThisMove = false;
         obstacleStateService?.ResetPerMoveEmitGuard();
+        ResetGelSpreadForNewMove();
 
         float _flowStart = Time.realtimeSinceStartup;
         float _flowLast = _flowStart;
@@ -2883,6 +3059,11 @@ public class BoardController : MonoBehaviour
 
                 tiles[sx, sy] = savedTile;
                 gridData[sx, sy] = savedData;
+
+                // A stable swap endpoint does not guarantee stable contributors:
+                // a horizontal run can reach a neighboring column still falling.
+                if (dynamicInput && !AreDynamicMatchTilesStable(normalMatches))
+                    normalMatches.Clear();
 
                 if (normalMatches.Count >= 3)
                 {
@@ -2987,14 +3168,9 @@ public class BoardController : MonoBehaviour
         foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y)) matches.Add(t);
         FlowLog($"match_find({matches.Count})");
 
-        bool shouldAcceptViaSettle = false;
-        if (matches.Count == 0 && allowPostSwapSettleValidation)
-        {
-            shouldAcceptViaSettle = WouldCreatePostSwapSettleMatch();
-            FlowLog($"post_settle_check({shouldAcceptViaSettle})");
-        }
-
-        if (matches.Count == 0 && !shouldAcceptViaSettle)
+        // Only a match involving a swapped tile validates a normal move. A pending
+        // match elsewhere (or a predicted gravity match) must not spend this move.
+        if (matches.Count == 0 || (dynamicInput && !AreDynamicMatchTilesStable(matches)))
         {
             // Obstacle state de geri alınsın. Stacked movable senaryosunda (örn. plastik
             // altında altın) ters MoveObstacle yetmez: alttaki movable geri açıldığı için
@@ -3025,17 +3201,6 @@ public class BoardController : MonoBehaviour
         }
 
         ConsumeMove();
-
-        // Instant match yok ama settle sonrası match olacaksa, clear pass'e girmeden
-        // board'un önce fall/cascade çözmesine izin ver.
-        if (matches.Count == 0 && shouldAcceptViaSettle)
-        {
-            yield return ResolveBoard(resolveEmptyCellsFirst: true, ignoreDynamicSwapGuard: dynamicInput);
-            FlowLog("resolve_board_after_settle");
-            Debug.Log($"[Flow] ═══ SWAP END (settle-valid) ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
-            EndBusy();
-            yield break;
-        }
 
         yield return ExecuteClearPass(matches, allowSpecialActivation: true, swapCell: new Vector2Int(a.X, a.Y));
         FlowLog("clear_pass");
@@ -3093,277 +3258,6 @@ public class BoardController : MonoBehaviour
             obstacleStateService.MoveObstacle(bx, by, ax, ay);
         else if (movedBToA)
             obstacleStateService.MoveObstacle(ax, ay, bx, by);
-    }
-
-    private bool WouldCreatePostSwapSettleMatch()
-    {
-        if (!allowPostSwapSettleValidation)
-            return false;
-
-        bool[,] simHasTile = new bool[width, height];
-        TileType[,] simTypes = new TileType[width, height];
-        TileSpecial[,] simSpecials = new TileSpecial[width, height];
-        bool[,] simMovableObstacle = new bool[width, height];
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                var tile = tiles[x, y];
-                if (tile != null)
-                {
-                    simHasTile[x, y] = true;
-                    simTypes[x, y] = tile.GetTileType();
-                    simSpecials[x, y] = tile.GetSpecial();
-                }
-
-                simMovableObstacle[x, y] =
-                    obstacleStateService != null &&
-                    obstacleStateService.IsMovableObstacleAt(x, y);
-            }
-        }
-
-        if (HasAnySimMatch(simHasTile, simTypes, simSpecials, simMovableObstacle))
-            return true;
-
-        const int maxPass = 32;
-        for (int pass = 0; pass < maxPass; pass++)
-        {
-            bool moved = SimulateCollapseExistingTiles(
-                simHasTile,
-                simTypes,
-                simSpecials,
-                simMovableObstacle);
-
-            if (!moved)
-                return false;
-
-            if (HasAnySimMatch(simHasTile, simTypes, simSpecials, simMovableObstacle))
-                return true;
-        }
-
-        return false;
-    }
-
-    private bool SimulateCollapseExistingTiles(
-        bool[,] simHasTile,
-        TileType[,] simTypes,
-        TileSpecial[,] simSpecials,
-        bool[,] simMovableObstacle)
-    {
-        bool movedAny = false;
-
-        var landingYs = new List<int>(height);
-        var sourceYs = new List<int>(height);
-        var sourceTypes = new List<TileType>(height);
-        var sourceSpecials = new List<TileSpecial>(height);
-        var sourceMovableFlags = new List<bool>(height);
-
-        for (int x = 0; x < width; x++)
-        {
-            int segmentBottom = height - 1;
-
-            while (segmentBottom >= 0)
-            {
-                while (segmentBottom >= 0 && IsObstacleBlockedCell(x, segmentBottom))
-                    segmentBottom--;
-
-                if (segmentBottom < 0)
-                    break;
-
-                int segmentTop = segmentBottom;
-                while (segmentTop > 0 && !IsObstacleBlockedCell(x, segmentTop - 1))
-                    segmentTop--;
-
-                landingYs.Clear();
-                sourceYs.Clear();
-                sourceTypes.Clear();
-                sourceSpecials.Clear();
-                sourceMovableFlags.Clear();
-
-                // Bu segmentte taşların yerleşebileceği gerçek slotlar
-                for (int y = segmentBottom; y >= segmentTop; y--)
-                {
-                    if (IsMaskHoleCell(x, y))
-                        continue;
-
-                    if (IsObstacleBlockedCell(x, y))
-                        continue;
-
-                    landingYs.Add(y);
-                }
-
-                // Segmentteki mevcut taşları topla
-                for (int y = segmentBottom; y >= segmentTop; y--)
-                {
-                    if (!simHasTile[x, y])
-                        continue;
-
-                    if (IsMaskHoleCell(x, y))
-                        continue;
-
-                    if (IsObstacleBlockedCell(x, y))
-                        continue;
-
-                    sourceYs.Add(y);
-                    sourceTypes.Add(simTypes[x, y]);
-                    sourceSpecials.Add(simSpecials[x, y]);
-                    sourceMovableFlags.Add(simMovableObstacle[x, y]);
-
-                    simHasTile[x, y] = false;
-                    simTypes[x, y] = default;
-                    simSpecials[x, y] = TileSpecial.None;
-                    simMovableObstacle[x, y] = false;
-                }
-
-                // Taşları aşağı sıkıştır
-                int count = Mathf.Min(sourceYs.Count, landingYs.Count);
-                for (int i = 0; i < count; i++)
-                {
-                    int toY = landingYs[i];
-
-                    simHasTile[x, toY] = true;
-                    simTypes[x, toY] = sourceTypes[i];
-                    simSpecials[x, toY] = sourceSpecials[i];
-                    simMovableObstacle[x, toY] = sourceMovableFlags[i];
-
-                    if (sourceYs[i] != toY)
-                        movedAny = true;
-                }
-
-                segmentBottom = segmentTop - 1;
-            }
-        }
-
-        return movedAny;
-    }
-
-    private bool HasAnySimMatch(
-        bool[,] simHasTile,
-        TileType[,] simTypes,
-        TileSpecial[,] simSpecials,
-        bool[,] simMovableObstacle)
-    {
-        // Horizontal
-        for (int y = 0; y < height; y++)
-        {
-            int run = 0;
-            TileType runType = default;
-
-            for (int x = 0; x < width; x++)
-            {
-                if (!IsSimNormalMatchable(simHasTile, simSpecials, simMovableObstacle, x, y))
-                {
-                    if (run >= 3) return true;
-                    run = 0;
-                    continue;
-                }
-
-                var t = simTypes[x, y];
-                if (run == 0)
-                {
-                    run = 1;
-                    runType = t;
-                }
-                else if (t.Equals(runType))
-                {
-                    run++;
-                }
-                else
-                {
-                    if (run >= 3) return true;
-                    run = 1;
-                    runType = t;
-                }
-            }
-
-            if (run >= 3) return true;
-        }
-
-        // Vertical
-        for (int x = 0; x < width; x++)
-        {
-            int run = 0;
-            TileType runType = default;
-
-            for (int y = 0; y < height; y++)
-            {
-                if (!IsSimNormalMatchable(simHasTile, simSpecials, simMovableObstacle, x, y))
-                {
-                    if (run >= 3) return true;
-                    run = 0;
-                    continue;
-                }
-
-                var t = simTypes[x, y];
-                if (run == 0)
-                {
-                    run = 1;
-                    runType = t;
-                }
-                else if (t.Equals(runType))
-                {
-                    run++;
-                }
-                else
-                {
-                    if (run >= 3) return true;
-                    run = 1;
-                    runType = t;
-                }
-            }
-
-            if (run >= 3) return true;
-        }
-
-        // 2x2
-        for (int y = 0; y < height - 1; y++)
-        {
-            for (int x = 0; x < width - 1; x++)
-            {
-                if (!IsSimNormalMatchable(simHasTile, simSpecials, simMovableObstacle, x, y)) continue;
-                if (!IsSimNormalMatchable(simHasTile, simSpecials, simMovableObstacle, x + 1, y)) continue;
-                if (!IsSimNormalMatchable(simHasTile, simSpecials, simMovableObstacle, x, y + 1)) continue;
-                if (!IsSimNormalMatchable(simHasTile, simSpecials, simMovableObstacle, x + 1, y + 1)) continue;
-
-                var t = simTypes[x, y];
-                if (!simTypes[x + 1, y].Equals(t)) continue;
-                if (!simTypes[x, y + 1].Equals(t)) continue;
-                if (!simTypes[x + 1, y + 1].Equals(t)) continue;
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private bool IsSimNormalMatchable(
-        bool[,] simHasTile,
-        TileSpecial[,] simSpecials,
-        bool[,] simMovableObstacle,
-        int x,
-        int y)
-    {
-        if (x < 0 || x >= width || y < 0 || y >= height)
-            return false;
-
-        if (!simHasTile[x, y])
-            return false;
-
-        if (IsMaskHoleCell(x, y))
-            return false;
-
-        if (IsObstacleBlockedCell(x, y))
-            return false;
-
-        if (simSpecials[x, y] != TileSpecial.None)
-            return false;
-
-        if (simMovableObstacle[x, y])
-            return false;
-
-        return true;
     }
 
     // Faz 1 overlap gate: mantıksal board'dan match'i oku ve BASİT ise (hiçbir eşleşen taş
@@ -3721,6 +3615,10 @@ public class BoardController : MonoBehaviour
         }
 
 
+        // Jel bulaşması — KAYNAK = eşleşen grup. Gruptaki bir taş jel üstündeyse tüm grup bulaşık
+        // olur (special creation'dan ÖNCE: gruptan doğan special de bulaşı taşısın).
+        NoteGelSpreadParticipants(matchTiles);
+
         // Kazanılmış special'lar normal match clear'ına girmez.
         // Sadece explicit activation veya effect-hit ile temizlenebilirler.
         var preservedSpecialTiles = new HashSet<TileView>();
@@ -3858,7 +3756,8 @@ public class BoardController : MonoBehaviour
             isSpecialPhase: allowSpecialActivation && hasAnySpecialActivation,
             presentationPlan: presentationPlan,
             enqueueCascadeOnComplete: false,
-            implodeTargetCell: implodeCenter));
+            implodeTargetCell: implodeCenter,
+            allowLocalizedDynamicInput: createdSpecialTiles.Count == 0));
 
         while (actionSequencer.IsPlaying)
             yield return null;
@@ -4433,6 +4332,15 @@ public class BoardController : MonoBehaviour
 
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
     {
+        // Register the flight before goal listeners see the final egg disappear, so a
+        // completed goal cannot end the level before the three impacts have resolved.
+        if (obstacleId == ObstacleId.EggBird && width > 0
+            && originIndex >= 0 && originIndex < width * height)
+        {
+            StartCoroutine(new EggBirdHatchAction(this,
+                new Vector2Int(originIndex % width, originIndex / width)).ExecuteVisuals(null));
+        }
+
         OnObstacleDestroyed?.Invoke(originIndex, obstacleId);
 
         int ox = originIndex % width;
@@ -4927,6 +4835,7 @@ public class BoardController : MonoBehaviour
     private TileType GetRandomType() => randomPool[UnityEngine.Random.Range(0, randomPool.Length)];
     private void ConsumeMove()
     {
+        cascadeLogic?.ResetPlasticTwoStageSpawnBudget();
         BeginMoveClearPraiseTracking();
         RemainingMoves = Mathf.Max(0, RemainingMoves - 1);
         OnMovesChanged?.Invoke(RemainingMoves);

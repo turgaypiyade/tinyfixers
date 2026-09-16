@@ -5,9 +5,6 @@ TextureImporter:
   - first:
       213: -7004648071924594076
     second: TopHudLevel_0
-  - first:
-      213: 8520819624503065270
-    second: TopHudLevel_1
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -119,10 +116,10 @@ TextureImporter:
       name: TopHudLevel_0
       rect:
         serializedVersion: 2
-        x: 0
+        x: 18
         y: 0
-        width: 2155
-        height: 760
+        width: 2678
+        height: 745
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -133,28 +130,6 @@ TextureImporter:
       bones: []
       spriteID: 46a4f48d0bd7ace90800000000000000
       internalID: -7004648071924594076
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: TopHudLevel_1
-      rect:
-        serializedVersion: 2
-        x: 2160
-        y: 118
-        width: 547
-        height: 613
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 6babea1ad48004670800000000000000
-      internalID: 8520819624503065270
       vertices: []
       indices: 
       edges: []
@@ -174,7 +149,6 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       TopHudLevel_0: -7004648071924594076
-      TopHudLevel_1: 8520819624503065270
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

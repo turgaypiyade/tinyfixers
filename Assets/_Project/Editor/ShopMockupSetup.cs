@@ -194,7 +194,7 @@ public static class ShopMockupSetup
         tRt.anchorMin = Vector2.zero; tRt.anchorMax = Vector2.one;
         tRt.offsetMin = new Vector2(14f, 8f); tRt.offsetMax = new Vector2(-22f, -8f);
         text.enableAutoSizing = true; text.fontSizeMin = 22f; text.fontSizeMax = 46f;
-        text.fontStyle = FontStyles.Bold; text.enableWordWrapping = false;
+        text.fontStyle = FontStyles.Bold; text.textWrappingMode = TextWrappingModes.NoWrap;
         text.overflowMode = TextOverflowModes.Ellipsis; text.raycastTarget = false;
         if (mat != null) text.fontSharedMaterial = mat;
 
