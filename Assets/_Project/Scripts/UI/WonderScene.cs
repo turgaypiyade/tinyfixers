@@ -118,8 +118,9 @@ public class WonderScene : MonoBehaviour
     {
         // Konteyner inaktif kur → alanları set et → aktifleştir (Awake veriyle çalışsın)
         var containerGo = new GameObject(string.IsNullOrEmpty(c.name) ? "Character" : c.name,
-            typeof(RectTransform), typeof(WonderAmbientAgent));
+            typeof(RectTransform));
         containerGo.SetActive(false);
+        containerGo.AddComponent<WonderAmbientAgent>();
         var cRt = (RectTransform)containerGo.transform;
         cRt.SetParent(parent, false);
         cRt.anchorMin = cRt.anchorMax = new Vector2(0.5f, 0.5f);
@@ -135,6 +136,8 @@ public class WonderScene : MonoBehaviour
         var agent = containerGo.GetComponent<WonderAmbientAgent>();
         agent.visual = vRt;
         agent.visualImage = vImg;
+        agent.birdProfile = c.birdProfile;
+        agent.RefreshBirdVisual();
         agent.facingMode = c.facingMode;
         agent.frontFrames = c.frontFrames;
         agent.backFrames = c.backFrames;

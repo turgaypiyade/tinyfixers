@@ -15,7 +15,7 @@ MonoBehaviour:
   wonderId: mis2
   displayName: Gateron
   taskIcon: {fileID: 0}
-  backgroundSprite: {fileID: 21300000, guid: a8815e9055e804173949e03fbaec65d1, type: 3}
+  backgroundSprite: {fileID: 21300000, guid: 09250cfce5e754351a5403a2dc671f99, type: 3}
   totalStages: 10
   tasks:
   - name: Temel Tarama
@@ -129,14 +129,11 @@ MonoBehaviour:
     - {x: 225, y: -829}
     - {x: 442, y: -725}
     - {x: 636, y: -646}
-  - name: AmbientDrone_3_2_2_2_2_2
+  - name: AmbientBird_3_2_2_2_2_2
     facingMode: 1
-    frontFrames:
-    - {fileID: 21300000, guid: 7956d116b00ce446484b289d52b65df0, type: 3}
-    - {fileID: 21300000, guid: 0e2cfab864d8a47a4b5586f508d24ca1, type: 3}
-    backFrames:
-    - {fileID: 21300000, guid: 71ddb455937e5448a882afd4a77a829c, type: 3}
-    - {fileID: 21300000, guid: f81735a89cfcf4bafbc7d0458c5b03d0, type: 3}
+    birdProfile: {fileID: 11400000, guid: d485cd392d5c4583ac65214fc4eb90f8, type: 2}
+    frontFrames: []
+    backFrames: []
     walkFrames: []
     walkFps: 5
     mirrorBySide: 1

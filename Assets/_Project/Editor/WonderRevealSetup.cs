@@ -142,7 +142,8 @@ public static class WonderRevealSetup
             "Kuruldu → 'WonderRevealTest' sahnesi AÇIK.\nDoğrudan Play'e bas:\n• 'Yıldız Harca (+1)' → bir kademe kaynakla açılır\n• Slider → ham önizleme\n• 'Sıfırla' → baştan\n\nBaşlangıç: tamamı mavi hologram.", "Tamam");
     }
 
-    enum AgentStyle { VerticalWalk, HorizontalWalk, Drone }
+    const string BirdProfilePath = "Assets/_Project/Settings/Wonders/WonderBirdProfile.asset";
+    enum AgentStyle { VerticalWalk, HorizontalWalk, Bird }
 
     [MenuItem("TinyFixers/Wonders/Add Robot (Vertical Path)")]
     public static void AddVertical() => AddAgent(AgentStyle.VerticalWalk);
@@ -150,21 +151,40 @@ public static class WonderRevealSetup
     [MenuItem("TinyFixers/Wonders/Add Robot (Horizontal Path)")]
     public static void AddHorizontal() => AddAgent(AgentStyle.HorizontalWalk);
 
-    [MenuItem("TinyFixers/Wonders/Add Drone (Sky Path)")]
-    public static void AddDrone() => AddAgent(AgentStyle.Drone);
+    [MenuItem("TinyFixers/Wonders/Add Bird (Sky Path)")]
+    public static void AddBird() => AddAgent(AgentStyle.Bird);
 
     static void AddAgent(AgentStyle style)
     {
         var view = Object.FindFirstObjectByType<WonderRevealView>();
-        if (view == null)
+        RectTransform parentRt = view != null ? (RectTransform)view.transform : null;
+        if (style == AgentStyle.Bird && parentRt == null)
         {
-            EditorUtility.DisplayDialog("Ambient", "Sahnede WonderRevealView yok. Önce 'Setup Reveal Test' çalıştır.", "Tamam");
+            // Standalone UI scenes can use the same route system without a wonder/reveal.
+            var selected = Selection.activeTransform as RectTransform;
+            if (selected != null && selected.GetComponentInParent<Canvas>() != null)
+                parentRt = selected;
+            else
+            {
+                var canvas = Object.FindFirstObjectByType<Canvas>();
+                if (canvas != null) parentRt = (RectTransform)canvas.transform;
+            }
+        }
+        if (parentRt == null)
+        {
+            EditorUtility.DisplayDialog("Ambient", "Kuş için Canvas altında bir UI nesnesi seç; robot için sahnede WonderRevealView olmalı.", "Tamam");
             return;
         }
-        var parentRt = (RectTransform)view.transform;
+        var birdProfile = style == AgentStyle.Bird
+            ? AssetDatabase.LoadAssetAtPath<WonderBirdProfile>(BirdProfilePath) : null;
+        if (style == AgentStyle.Bird && (birdProfile == null || birdProfile.body == null))
+        {
+            Debug.LogError("Bird profile or body sprite missing: " + BirdProfilePath);
+            return;
+        }
         var placeholder = AssetDatabase.LoadAssetAtPath<Sprite>(
             "Assets/_Project/Art/UI/RoboCharacters/LoadPatchbot.png");
-        int index = (view.ambientAgents?.Length ?? 0) + 1;
+        int index = view != null ? (view.ambientAgents?.Length ?? 0) + 1 : parentRt.childCount + 1;
 
         // --- Preset (karakter tipine göre yol + ayar) ------------------
         string prefix; Vector2[] pathPts; bool mirror; float bobAmp, bobFreq, spd; int visSize; string frameHint;
@@ -178,12 +198,12 @@ public static class WonderRevealSetup
                 fm = WonderAmbientAgent.FacingMode.DirectionalFrontBack;
                 frameHint = "• Front Frames → İLERİ giderken (soldan sağa) kareler\n• Back Frames → DÖNÜŞTE (sağdan sola) kareler";
                 break;
-            case AgentStyle.Drone:
-                prefix = "AmbientDrone";
+            case AgentStyle.Bird:
+                prefix = "AmbientBird";
                 pathPts = new[] { new Vector2(-380, 520), new Vector2(-40, 720), new Vector2(300, 560), new Vector2(430, 780) };
-                mirror = true; bobAmp = 20f; bobFreq = 3f; spd = 135f; visSize = 150;
+                mirror = true; bobAmp = 8f; bobFreq = 3f; spd = 135f; visSize = 150;
                 fm = WonderAmbientAgent.FacingMode.SideMirror;
-                frameHint = "• Walk Frames → dron/pervane kareleri (yoksa tek sprite)\n• Gökte süzülür (büyük yumuşak bob)";
+                frameHint = "• Bird Profile → hazır gövde + kanat çırpma animasyonu\n• Path grubunu kopyalayarak kuşu rotasıyla başka sahneye taşıyabilirsin";
                 break;
             default: // VerticalWalk
                 prefix = "AmbientRobot";
@@ -192,6 +212,16 @@ public static class WonderRevealSetup
                 fm = WonderAmbientAgent.FacingMode.DirectionalFrontBack;
                 frameHint = "• Front Frames → İLERİ giderken (A→B→…) kareler — BİZE DÖNÜK\n• Back Frames → DÖNÜŞTE (…→A) kareler — ARKASI DÖNÜK";
                 break;
+        }
+
+        if (style == AgentStyle.Bird)
+        {
+            var group = new GameObject($"{prefix}_{index}_Path", typeof(RectTransform));
+            var groupRt = (RectTransform)group.transform;
+            groupRt.SetParent(parentRt, false);
+            Stretch(groupRt);
+            Undo.RegisterCreatedObjectUndo(group, "Add Bird Path");
+            parentRt = groupRt;
         }
 
         char[] letters = { 'A', 'B', 'C', 'D' };
@@ -218,24 +248,31 @@ public static class WonderRevealSetup
         agent.waypoints = wps;
         agent.visual = visualRt;
         agent.visualImage = visualImg;
+        agent.birdProfile = birdProfile;
+        agent.RefreshBirdVisual();
         agent.facingMode = fm;
         agent.mirrorBySide = mirror;
         agent.bobAmplitude = bobAmp;
         agent.bobFrequency = bobFreq;
         agent.speed = spd;
         agent.walkFps = 5f;
+        if (style == AgentStyle.Bird) agent.pauseAtPoint = 0f;
         agent.startWalking = true; // test için hemen; prod'da false + reveal-gate
 
-        var list = new System.Collections.Generic.List<WonderAmbientAgent>(
-            view.ambientAgents ?? new WonderAmbientAgent[0]);
-        list.Add(agent);
-        view.ambientAgents = list.ToArray();
+        if (view != null)
+        {
+            Undo.RecordObject(view, "Add Ambient Agent");
+            var list = new System.Collections.Generic.List<WonderAmbientAgent>(
+                view.ambientAgents ?? new WonderAmbientAgent[0]);
+            list.Add(agent);
+            view.ambientAgents = list.ToArray();
+            EditorUtility.SetDirty(view);
+        }
 
         Selection.activeObject = agentGo;
-        EditorUtility.SetDirty(view);
-        EditorSceneManager.MarkSceneDirty(view.gameObject.scene);
+        EditorSceneManager.MarkSceneDirty(agentGo.scene);
         EditorUtility.DisplayDialog("Ambient",
-            $"{prefix}_{index} eklendi (placeholder Patchbot).\n\n" +
+            $"{prefix}_{index} eklendi.\n\n" +
             frameHint + "\n\n" +
             $"• {prefix}_{index}_WP_A→D (4 magenta nokta) yolu çizer; sahnede sürükle\n" +
             "• Play'de magenta noktalar gizlenir", "Tamam");

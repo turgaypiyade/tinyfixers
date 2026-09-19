@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31207c51aeab4a5dbe1eb48ff54e2298, type: 3}
+  m_Name: RamDuelCharacter
+  m_EditorClassIdentifier: Assembly-CSharp::BossDuelCharacterProfile
+  idle:
+    sprite: {fileID: 21300000, guid: 48bccbcad6d44634807b3be17bc2320a, type: 3}
+    height: 1
+    groundPivot: {x: 0.42, y: 0.017}
+    offset: {x: 0, y: 0}
+  blink:
+    sprite: {fileID: 21300000, guid: 403864075a524395a0ce01a6675a1aed, type: 3}
+    height: 1.02
+    groundPivot: {x: 0.445, y: 0.014}
+    offset: {x: 0, y: 0}
+  focused:
+    sprite: {fileID: 21300000, guid: a30f29588e564dccae7c5be488268556, type: 3}
+    height: 1.03
+    groundPivot: {x: 0.445, y: 0.02}
+    offset: {x: 0, y: 0}
+  windup:
+    sprite: {fileID: 21300000, guid: 9b8df9e092cb474d8db68ef65d8659db, type: 3}
+    height: 1.43
+    groundPivot: {x: 0.482, y: 0.06}
+    offset: {x: 0, y: 0}
+  strike:
+    sprite: {fileID: 21300000, guid: 8705f69ad3994ae0a69d4bb9402d0854, type: 3}
+    height: 1.38
+    groundPivot: {x: 0.388, y: 0.177}
+    offset: {x: 0, y: 0}
+  victory:
+    sprite: {fileID: 21300000, guid: 48bccbcad6d44634807b3be17bc2320a, type: 3}
+    height: 1
+    groundPivot: {x: 0.42, y: 0.017}
+    offset: {x: 0, y: 0}
+  defeated:
+    sprite: {fileID: 21300000, guid: a30f29588e564dccae7c5be488268556, type: 3}
+    height: 1.03
+    groundPivot: {x: 0.445, y: 0.02}
+    offset: {x: 0, y: 0}
+  mirrorHorizontally: 0
+  blinkInterval: 3.2
+  blinkDuration: 0.13
+  windupDuration: 0.24
+  swingDuration: 0.12
+  impactDuration: 0.09
+  recoveryDuration: 0.22
+  breathingAmount: 0.008

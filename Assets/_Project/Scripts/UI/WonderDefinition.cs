@@ -95,6 +95,8 @@ public class WonderCharacter
 {
     public string name = "robot";
     public WonderAmbientAgent.FacingMode facingMode = WonderAmbientAgent.FacingMode.DirectionalFrontBack;
+    [Tooltip("Kuş gövde/kanat profili. Boşsa mevcut karakter kareleri kullanılır.")]
+    public WonderBirdProfile birdProfile;
 
     [Header("Kareler")]
     public Sprite[] frontFrames;   // ileri giderken (bize dönük)

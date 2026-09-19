@@ -4,21 +4,22 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Audio;
 using UnityEngine.UI;
 
 /// <summary>
 /// Yükseliş (Rising) tam-ekran overlay'i — Safari'nin dikey asansör yeniden tasarımı.
 ///
-/// Kule: 7 cam kat (fon), her katın merkezi <see cref="floorAnchors"/> ile işaretli (index 0 = 1.kat, alttan).
+/// Kule: arka plan görselindeki 7 platform, her katın merkezi <see cref="floorAnchors"/> ile işaretli (index 0 = 1.kat, alttan).
 /// Kalabalık iki yeri kullanır: yükselmek için scissor <see cref="lift"/> platformuna biner, sonra sol
 /// kat kabinine geçip orada dinlenir. Kaldıraç bulunulan kat hizasında park eder.
 ///
 /// Dönüş koreografisi:
 ///  - İlerleme (oldP→newP): elenenler kabinden düşer → kalanlar kaldıraca biner → kaldıraç bir kat
 ///    yükselir → kalanlar yeni kabine atlar → kaldıraç orada park eder.
-///  - 1.kat özel: kalabalık zaten kaldıraçta (1.kat hizası); yükselme yok, yalnız eleme + kabine geçiş.
-///  - Düşme: kabinde toplan → oyuncu + elenenler düşer → yarış 1.kata (kaldıraç) döner.
-///  - Tamamlandı: kutlama + paylaşılan ödül.
+///  - İlk kazanım: dinlenme konumundaki (kat 0) kaldıraçtan 1. kata yükselme.
+///  - Düşme: kabinde toplan → oyuncu + elenenler düşer → yarış dinlenme konumuna döner.
+///  - Tamamlandı: son kata yükselme + atlayış, ardından kutlama + paylaşılan ödül.
 ///
 /// Kalabalık boyutu (survivors) burada hesaplanır ve <see cref="RisingTopHud"/>'a beslenir (tek kaynak).
 /// </summary>
@@ -30,10 +31,17 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     [Header("Kule katları (alttan üste: index0 = 1.kat)")]
     [SerializeField] private RectTransform[] floorAnchors;
+    [Tooltip("Kat 0 (zemin) platformunun yüzeyi. Kalabalık burada başlar ve düşünce buraya döner. " +
+             "Boşsa eski davranışa düşer (lift tablası).")]
+    [SerializeField] private RectTransform groundAnchor;
     [Tooltip("Kalabalığın kat kabinine geçince yatay ince ayarı.")]
     [SerializeField] private float cabinStandOffsetX = 25f;
-    [Tooltip("Kalabalığın kat kabininde durduğu dikey ofset (avatar zeminde dursun diye).")]
+    [Tooltip("YAPISAL ofset: kat yüzeyi ile LİFT TABLASININ o kattaki durak yüksekliği. " +
+             "Lift bu değere göre durur — avatarı kaydırmak için bunu DEĞİL cabinAvatarOffsetY'yi kullan.")]
     [SerializeField] private float cabinStandOffsetY = 0f;
+    [Tooltip("SADECE avatar ofseti: kalabalık kat platformunda ne kadar aşağıda dursun. " +
+             "Lift'in durak yüksekliğini etkilemez.")]
+    [SerializeField] private float cabinAvatarOffsetY = -70f;
 
     [Header("Kat numaraları (kule kenarı)")]
     [Tooltip("1..N kat numarası etiketleri (index0 = 1.kat). Geçilen katlar sarı, kalanlar beyaz.")]
@@ -45,8 +53,15 @@ public sealed class RisingMapScreen : SafariMapScreenBase
     [SerializeField] private ScissorLiftView lift;
     [Tooltip("Rest (ilk duruş) için statik lift görseli (RisingLiftT2). Rise sırasında gizlenir; prosedürel scissor açılır.")]
     [SerializeField] private GameObject restLift;
-    [Tooltip("Kalabalığın 1.kat hizasında (başlangıç) kaldıraç platformunda durduğu nokta.")]
+    [Tooltip("Dinlenme konumundaki lift tablasının yüzeyi (kat 0). RestLift görseline bağlı.")]
     [SerializeField] private RectTransform liftAnchor;
+    [Tooltip("Avatarları lift tablasının içine doğru indirir; kat platformlarını etkilemez (UI birimi).")]
+    [SerializeField] private float liftAvatarOffsetY = -22f;
+    [Tooltip("Prosedürel asansörde BASILAN yüzeyin, platform sprite'ının ÜST KENARINA göre farkı " +
+             "(UI birimi, negatif = aşağı). 0 = üst kenar (eski davranış). Avatarlar tablada havada " +
+             "duruyorsa negatif yönde artır: asansörün duruş yüksekliği ve avatarlar BİRLİKTE kayar, " +
+             "aradaki ilişki ve kat-0 geçişi bozulmaz.")]
+    [SerializeField] private float liftDeckOffsetY = -45f;
     [SerializeField, Min(16f)] private float liftMaxHeightUI = 900f;
     [SerializeField, Min(16f)] private float liftTileSize = 120f;
 
@@ -77,16 +92,32 @@ public sealed class RisingMapScreen : SafariMapScreenBase
     [SerializeField, Min(0.1f)] private float initialRevealDuration = 0.42f;
     [SerializeField, Min(0f)]   private float initialRevealStagger = 0.018f;
 
+    [Header("Hareket Sesleri")]
+    [SerializeField] private AudioMixerGroup motionSfxGroup;
+    [SerializeField] private AudioClip jumpSfx;
+    [SerializeField] private AudioClip landSfx;
+    [SerializeField, Range(0f, 1f)] private float liftSfxVolume = 0.65f;
+    [SerializeField, Range(0f, 1f)] private float jumpSfxVolume = 0.4f;
+    [SerializeField, Range(0f, 1f)] private float landSfxVolume = 0.3f;
+
     [Header("Final Ödül")]
     [SerializeField] private Sprite finalGoldMoneySprite;
+    [SerializeField] private Sprite rewardRibbonSprite;
+    [SerializeField] private Sprite rewardButtonSprite;
+    [SerializeField] private AudioClip rewardCollectSfx;
+    private SafariRewardView rewardView;
     [SerializeField, Min(0.1f)] private float rewardCountDuration = 0.85f;
 
     private SafariEventController controller;
     private Coroutine active;
     private bool liftBuilt;
+    private float collapsedPlatformY;
+    private AudioSource liftAudio, jumpAudio, landAudio;
+    private readonly List<RectTransform> detachedAvatars = new();
     private bool countedThisSession;
     private bool continuePromptVisible;
     private bool continuePromptArmed;
+    private bool showRequested;   // Open/PrepareIntroTarget ile mi uyandık, yoksa editörde aktif mi bırakıldık?
     private bool crowdParkedOnLift;
     private bool hasIntroCrowd;
 
@@ -99,42 +130,50 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         PrepareContinuePrompt();
         ApplyPromptTextColor();
         if (root != null && root != gameObject) root.SetActive(false);
+        // root == bu obje: editörde aktif bırakılmışsa ana menüyü kapatmasın (Show/Open yolu showRequested ile muaf).
+        else if (!showRequested) gameObject.SetActive(false);
     }
 
     public override void Open(SafariEventController owner, SafariRoundOutcome outcome)
     {
         controller = owner;
+        showRequested = true;
+        if (topHud != null) topHud.Bind(owner);
         gameObject.SetActive(true);
         if (root != null) root.SetActive(true);
 
         ApplyPromptTextColor();
         EnsureLift();
 
-        if (active != null) StopCoroutine(active);
+        StopPresentation();
         active = StartCoroutine(Present(outcome));
     }
 
     public Vector3 PrepareIntroTarget(SafariEventController owner)
     {
         controller = owner;
+        showRequested = true;
+        if (topHud != null) topHud.Bind(owner);
         gameObject.SetActive(true);
         if (root != null) root.SetActive(true);
 
         ApplyPromptTextColor();
         EnsureLift();
-        if (active != null) { StopCoroutine(active); active = null; }
+        StopPresentation();
         SetContinueVisible(false);
         RefreshStatus();
 
         int pit = SafariState.CurrentPitstop;
-        int posPit = pit <= 0 ? 1 : pit;
+        int posPit = Mathf.Max(0, pit);
         ParkLiftAtFloor(posPit);
         RefreshHud(pit);
-        crowdParkedOnLift = pit <= 0;
+        // Kalabalık HER zaman kat platformunda durur (kat 0 = zemin platformu); lift yalnız
+        // yükselme koreografisi sırasında kullanılır.
+        crowdParkedOnLift = false;
         if (crowdStack != null)
             crowdStack.Clear();
 
-        return pit <= 0 ? LiftPos(posPit) : CabinPos(posPit);
+        return CabinPos(posPit);
     }
 
     public void AdoptIntroCrowd(IReadOnlyList<RectTransform> avatars)
@@ -143,10 +182,10 @@ public sealed class RisingMapScreen : SafariMapScreenBase
             return;
 
         int pit = SafariState.CurrentPitstop;
-        int posPit = pit <= 0 ? 1 : pit;
-        crowdStack.Container.position = pit <= 0 ? LiftPos(posPit) : CabinPos(posPit);
+        int posPit = Mathf.Max(0, pit);
+        crowdStack.Container.position = CabinPos(posPit);
         crowdStack.AdoptDetached(avatars);
-        crowdParkedOnLift = pit <= 0;
+        crowdParkedOnLift = false;
         countedThisSession = true;
         hasIntroCrowd = true;
         RefreshHud(pit);
@@ -156,8 +195,32 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     public override void Hide()
     {
-        if (active != null) { StopCoroutine(active); active = null; }
+        StopPresentation();
         if (root != null) root.SetActive(false);
+        else gameObject.SetActive(false);
+    }
+
+    private void OnDisable()
+    {
+        StopPresentation();
+        if (crowdStack != null) crowdStack.Clear();
+        hasIntroCrowd = false;
+    }
+
+    private void StopPresentation()
+    {
+        if (rewardView != null)
+        {
+            Destroy(rewardView.gameObject);
+            rewardView = null;
+        }
+        if (active != null) { StopCoroutine(active); active = null; }
+        foreach (var avatar in detachedAvatars)
+            if (avatar != null) Destroy(avatar.gameObject);
+        detachedAvatars.Clear();
+        if (liftAudio != null) liftAudio.Stop();
+        if (jumpAudio != null) jumpAudio.Stop();
+        if (landAudio != null) landAudio.Stop();
     }
 
     // ── Kurulum ──────────────────────────────────────────────────
@@ -167,19 +230,15 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         if (lift == null || liftBuilt) return;
 
         Canvas.ForceUpdateCanvases();
-        if (FloorCount > 1 && liftAnchor != null && lift.transform.parent != null)
-        {
-            var parent = lift.transform.parent;
-            float startY = parent.InverseTransformPoint(liftAnchor.position).y;
-            float endY = parent.InverseTransformPoint(floorAnchors[FloorCount - 1].position).y + cabinStandOffsetY;
-            liftMaxHeightUI = Mathf.Max(16f, endY - startY);
-        }
-
+        // Measure travel in the lift's own space; the canvas may be scaled or cropped.
+        Vector3 highest = FloorCount > 0 && floorAnchors[FloorCount - 1] != null
+            ? floorAnchors[FloorCount - 1].position : transform.position;
+        liftMaxHeightUI = Mathf.Max(16f, lift.transform.InverseTransformPoint(highest).y);
         lift.Build(liftMaxHeightUI, liftTileSize);
+        collapsedPlatformY = lift.transform.InverseTransformPoint(lift.PlatformTopWorldPosition).y;
         liftBuilt = true;
     }
 
-    // Rest = statik RisingLiftT2 görünür, prosedürel scissor gizli. Rise sırasında tersi.
     private void SetLiftMode(bool resting)
     {
         if (restLift != null) restLift.SetActive(resting);
@@ -188,46 +247,73 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     private void ParkLiftAtFloor(int floor)
     {
-        int clamped = Mathf.Max(1, floor);
-        SetLiftFloor(clamped);
-        SetLiftMode(clamped <= 1);
+        SetLiftFloor(floor);
+        SetLiftMode(floor <= 0);
     }
 
     // ── Konum yardımcıları ───────────────────────────────────────
 
     private int FloorCount => floorAnchors != null ? floorAnchors.Length : 0;
+    private Transform MotionSpace => root != null ? root.transform : transform;
 
-    // Kat kabini merkezi (floor: 1..N). Kalabalık burada dinlenir.
+    // The front player's helmet bottom rests on the surface, not its centre.
+    private Vector3 CrowdStandOffset => MotionSpace.TransformVector(Vector3.up * CrowdAvatarPixels() * 0.74f);
+
+    private Vector3 FloorSurface(int floor)
+    {
+        if (floor <= 0 || FloorCount == 0)
+        {
+            if (groundAnchor != null) return groundAnchor.position;
+            return liftAnchor != null ? liftAnchor.position : transform.position;
+        }
+        var anchor = floorAnchors[Mathf.Clamp(floor - 1, 0, FloorCount - 1)];
+        return anchor != null ? anchor.position : transform.position;
+    }
+
     private Vector3 CabinPos(int floor)
     {
-        if (FloorCount == 0) return liftAnchor != null ? liftAnchor.position : transform.position;
-        int idx = Mathf.Clamp(floor - 1, 0, FloorCount - 1);
-        var p = floorAnchors[idx].position;
-        p.x += cabinStandOffsetX;
+        return FloorSurface(floor) + CrowdStandOffset
+            + MotionSpace.TransformVector(new Vector3(cabinStandOffsetX, cabinStandOffsetY + cabinAvatarOffsetY, 0f));
+    }
+
+    private Vector3 LiftSurface(int floor)
+    {
+        Vector3 rest = liftAnchor != null ? liftAnchor.position : transform.position;
+        if (floor <= 0) return rest;
+        // Align with the actual platform height, including alternating left/right floors.
+        Vector3 p = MotionSpace.InverseTransformPoint(FloorSurface(floor));
+        p.x = MotionSpace.InverseTransformPoint(rest).x;
         p.y += cabinStandOffsetY;
-        return p;
+        return MotionSpace.TransformPoint(p);
     }
 
-    // Kaldıraç platformunun ilgili kat hizasındaki (kalabalığın bindiği) konumu — X kaldıraçta, Y kat hizası.
-    private Vector3 LiftPos(int floor)
+    private Vector3 LiftCrowdOffset => CrowdStandOffset + MotionSpace.TransformVector(Vector3.up * liftAvatarOffsetY);
+    private Vector3 LiftPos(int floor) => LiftSurface(floor) + LiftCrowdOffset;
+
+    // Prosedürel tablanın sprite ÜST KENARI (PlatformTopWorldPosition) ile BASILAN yüzey aynı
+    // değildir (RLU1 perspektifli bir plaka: üst yüz sprite'ın üst kısmında). Fark SANAT sabiti →
+    // liftAnchor'dan TÜRETİLEMEZ (o zaten rest lift'in referansı; türetmek offseti iptal edip
+    // asansörü aşağı çeker). Tek knob: liftDeckOffsetY. Hem duruş yüksekliği hem kalabalık aynı
+    // yüzeyi kullandığı için kat-0 geçişi her değerde dikişsizdir.
+    private Vector3 LiftDeckWorld()
     {
-        float x = liftAnchor != null ? liftAnchor.position.x : CabinPos(floor).x;
-        float y = floor <= 1 && liftAnchor != null ? liftAnchor.position.y : CabinPos(floor).y;
-        return new Vector3(x, y, 0f);
+        EnsureLift();
+        if (lift == null) return liftAnchor != null ? liftAnchor.position : transform.position;
+        return lift.PlatformTopWorldPosition + lift.transform.TransformVector(Vector3.up * liftDeckOffsetY);
     }
 
-    // Kat 1 → 0, kat N → 1 (kaldıraç uzama oranı).
-    private float FloorFrac(int floor)
+    private float LiftHeight(int floor)
     {
-        int n = Pitstops;
-        if (n <= 1) return 0f;
-        return Mathf.Clamp01((floor - 1) / (float)(n - 1));
+        if (lift == null) return 0f;
+        // Hedef: BASILAN yüzey LiftSurface(floor) hizasına gelsin (sprite üst kenarı değil).
+        return Mathf.Max(0f, lift.transform.InverseTransformPoint(LiftSurface(floor)).y
+                             - collapsedPlatformY - liftDeckOffsetY);
     }
 
     private void SetLiftFloor(int floor)
     {
         EnsureLift();
-        if (lift != null) lift.SetExtension01(FloorFrac(floor));
+        if (lift != null) lift.SetPlatformHeight(LiftHeight(floor));
     }
 
     // ── Kalabalık boyutu (Safari ile aynı deterministik simülasyon) ──
@@ -345,30 +431,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         {
             case SafariRoundOutcome.Advanced:
             {
-                int newP = SafariState.CurrentPitstop;
-                int oldP = Mathf.Max(0, newP - 1);
-                bool startOnLift = oldP <= 0;
-                int posOld = oldP <= 0 ? 1 : oldP;
-
-                BuildCrowd(oldP, posOld, startOnLift);   // eski boyut + eski konumda topla
-                ParkLiftAtFloor(posOld);
-                yield return new WaitForSecondsRealtime(gatherPause);
-
-                int elim = VisibleEliminationCount(oldP, newP, includePlayer: false);
-                yield return EliminateFall(elim, includePlayer: false);
-                RefreshHud(newP);
-
-                if (!startOnLift)
-                {
-                    yield return JumpCrowdToLift(oldP);                      // kabinden scissor'a atla
-                    crowdParkedOnLift = true;
-                }
-
-                yield return RiseLift(posOld, newP);                        // bir kat yüksel
-                yield return JumpCrowdToCabin(posOld, newP);                 // kazananlar tekli/ikili kabine atlar
-                crowdParkedOnLift = false;
-                ParkLiftAtFloor(newP);                                      // 2+ katlarda açık scissor park eder
-                BuildCrowd(newP, newP, onLift: false);                      // yerleşince 8'li temsil tekrar dolsun
+                yield return AdvanceToFloor(SafariState.CurrentPitstop);
                 break;
             }
 
@@ -376,7 +439,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
             {
                 int oldP = controller != null && controller.FallFromPitstop >= 0
                     ? controller.FallFromPitstop : 1;
-                oldP = Mathf.Max(1, oldP);
+                oldP = Mathf.Max(0, oldP);
                 BuildCrowd(oldP, oldP, onLift: false);
                 ParkLiftAtFloor(oldP);
                 yield return new WaitForSecondsRealtime(gatherPause);
@@ -385,16 +448,15 @@ public sealed class RisingMapScreen : SafariMapScreenBase
                 yield return EliminateFall(elim, includePlayer: true);
                 yield return new WaitForSecondsRealtime(0.3f);
 
-                BuildCrowd(0, 1, onLift: true);     // yarış 1.kata (kaldıraç) döner — taze tam kalabalık
-                ParkLiftAtFloor(1);
+                BuildCrowd(0, 0, onLift: false);   // düşenler zemin platformuna toplanır
+                ParkLiftAtFloor(0);
                 break;
             }
 
             case SafariRoundOutcome.Completed:
             {
                 int pit = SafariState.CurrentPitstop;
-                BuildCrowd(pit, pit, onLift: false);
-                ParkLiftAtFloor(pit);
+                yield return AdvanceToFloor(pit);
                 if (continueRoot != null) continueRoot.SetActive(false);
                 yield return CelebrateFinalCrowd();
                 yield return ShowFinalRewardOverlay();
@@ -410,8 +472,8 @@ public sealed class RisingMapScreen : SafariMapScreenBase
                 }
 
                 int pit = SafariState.CurrentPitstop;
-                bool onLift = pit <= 0;
-                int posPit = pit <= 0 ? 1 : pit;
+                const bool onLift = false;   // açılışta da kat platformunda durulur
+                int posPit = Mathf.Max(0, pit);
                 if (!countedThisSession)
                 {
                     yield return RunInitialReveal(pit, posPit, onLift);
@@ -432,6 +494,22 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     // ── Koreografi ───────────────────────────────────────────────
 
+    private IEnumerator AdvanceToFloor(int newFloor)
+    {
+        int oldFloor = Mathf.Max(0, newFloor - 1);
+        BuildCrowd(oldFloor, oldFloor, onLift: false);
+        ParkLiftAtFloor(oldFloor);
+        yield return new WaitForSecondsRealtime(gatherPause);
+        yield return EliminateFall(VisibleEliminationCount(oldFloor, newFloor, false), false);
+        // Kat platformundan (0 dahil) lift tablasına geç, sonra yüksel ve üst kata hop.
+        yield return JumpCrowd(LiftPos(oldFloor), boardDuration, true);
+        yield return RiseLift(oldFloor, newFloor);
+        yield return JumpCrowd(CabinPos(newFloor), hopDuration, false);
+        ParkLiftAtFloor(newFloor);
+        RefreshHud(newFloor);
+        // Keep the landed avatars; rebuilding here caused a visible size/position snap.
+    }
+
     // Elenenleri kalabalıktan çıkar ve aşağı dök.
     private IEnumerator EliminateFall(int botCount, bool includePlayer)
     {
@@ -445,6 +523,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
             if (pl != null) fallers.Add(pl);
         }
         if (fallers.Count == 0) yield break;
+        detachedAvatars.AddRange(fallers);
 
         var starts = new Vector2[fallers.Count];
         var targets = new Vector2[fallers.Count];
@@ -482,173 +561,181 @@ public sealed class RisingMapScreen : SafariMapScreenBase
             yield return null;
         }
         for (int i = 0; i < fallers.Count; i++)
+        {
             if (fallers[i] != null) Destroy(fallers[i].gameObject);
+            detachedAvatars.Remove(fallers[i]);
+        }
     }
 
-    // Tüm kalabalığı (container) hedefe taşır (üzerindeki avatarlar birlikte gelir).
-    private IEnumerator MoveCrowd(Vector3 to, float duration, float hop = 0f)
+    private IEnumerator JumpCrowd(Vector3 targetCenter, float duration, bool ontoLift)
     {
         if (crowdStack == null) yield break;
-        var c = crowdStack.Container;
-        Vector3 from = c.position;
+        Transform host = MotionSpace;
+        Vector3 delta = host.InverseTransformPoint(targetCenter)
+            - host.InverseTransformPoint(crowdStack.Container.position);
+        var movers = crowdStack.DetachAll(host);
+        if (movers.Count == 0) yield break;
+        detachedAvatars.AddRange(movers);
+
+        var starts = new Vector3[movers.Count];
+        var rotations = new Quaternion[movers.Count];
+        var scales = new Vector3[movers.Count];
+        for (int i = 0; i < movers.Count; i++)
+        {
+            starts[i] = movers[i].localPosition;
+            rotations[i] = movers[i].localRotation;
+            scales[i] = movers[i].localScale;
+        }
+        // Preserve draw order: the player stays in front throughout the jump.
+        for (int i = movers.Count - 1; i >= 0; i--) movers[i].SetAsLastSibling();
+
+        float itemDuration = Mathf.Max(0.55f, duration);
+        int batchSize = Mathf.Max(1, jumpBatchSize);
+        float stagger = Mathf.Max(0.105f, (batchSize - 1) * 0.025f + 0.04f);
+        float Delay(int index) => index / batchSize * stagger + index % batchSize * 0.025f;
+        float totalDuration = itemDuration + Delay(movers.Count - 1);
+        float hop = Mathf.Clamp(Mathf.Abs(delta.x) * 0.20f, CrowdAvatarPixels() * 0.7f, CrowdAvatarPixels() * 1.8f);
+        var tookOff = new bool[movers.Count];
+        var landed = new bool[movers.Count];
+        float t = 0f;
+        while (t < totalDuration)
+        {
+            t += Time.unscaledDeltaTime;
+            for (int i = 0; i < movers.Count; i++)
+            {
+                if (movers[i] == null) continue;
+                float k = Mathf.Clamp01((t - Delay(i)) / itemDuration);
+                ApplyJumpPose(movers[i], starts[i], starts[i] + delta, rotations[i], scales[i], k,
+                    hop * (1f + (i % 3 - 1) * 0.045f));
+                if (k >= 0.12f && !tookOff[i])
+                {
+                    tookOff[i] = true;
+                    if (i % batchSize == 0) PlayJumpSound(false, i / batchSize);
+                }
+                if (k >= 0.82f && !landed[i])
+                {
+                    landed[i] = true;
+                    if (i % batchSize == 0) PlayJumpSound(true, i / batchSize);
+                }
+            }
+            yield return null;
+        }
+
+        crowdStack.Container.position = targetCenter;
+        for (int i = 0; i < movers.Count; i++)
+        {
+            if (movers[i] == null) continue;
+            movers[i].localPosition = starts[i] + delta;
+            movers[i].localRotation = rotations[i];
+            movers[i].localScale = scales[i];
+            detachedAvatars.Remove(movers[i]);
+        }
+        crowdStack.AdoptDetached(movers);
+        crowdParkedOnLift = ontoLift;
+    }
+
+    // Anticipation -> ballistic arc -> damped landing. All distances use local UI units.
+    public static void ApplyJumpPose(RectTransform avatar, Vector3 from, Vector3 to,
+        Quaternion rotation, Vector3 scale, float progress, float height)
+    {
+        float k = Mathf.Clamp01(progress);
+        float flight = Mathf.Clamp01((k - 0.12f) / 0.70f);
+        Vector3 p = Vector3.LerpUnclamped(from, to, flight);
+        float squash;
+        if (k < 0.12f)
+            squash = -0.12f * Mathf.SmoothStep(0f, 1f, k / 0.12f);
+        else if (k < 0.82f)
+        {
+            p.y += 4f * flight * (1f - flight) * height;
+            squash = Mathf.Lerp(-0.12f, 0.10f, Mathf.Clamp01(flight / 0.12f))
+                * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.12f, 0.8f, flight)));
+        }
+        else
+        {
+            float settle = (k - 0.82f) / 0.18f;
+            squash = -0.14f * Mathf.Sin(settle * Mathf.PI * 2f) * (1f - settle);
+        }
+        avatar.localScale = Vector3.Scale(scale, new Vector3(1f - squash * 0.5f, 1f + squash, 1f));
+        // Squash around the feet rather than sinking the avatar through the platform.
+        p.y += avatar.rect.height * scale.y * squash * 0.5f;
+        avatar.localPosition = p;
+        avatar.localRotation = rotation * Quaternion.Euler(0f, 0f,
+            -Mathf.Sign(to.x - from.x) * Mathf.Sin(flight * Mathf.PI) * 5f);
+    }
+
+    private IEnumerator RiseLift(int fromFloor, int toFloor)
+    {
+        if (toFloor <= fromFloor) { SetLiftFloor(toFloor); yield break; }
+        SetLiftFloor(fromFloor);
+        SetLiftMode(false);
+        crowdParkedOnLift = true;
+        EnsureMotionAudio();
+        if (liftAudio.clip != null)
+        {
+            liftAudio.mute = !GameSettings.SoundEnabled;
+            liftAudio.volume = 0f;
+            liftAudio.Play();
+        }
+
+        float fromHeight = LiftHeight(fromFloor);
+        float toHeight = LiftHeight(toFloor);
+
+        // Rest lift ile prosedürel lift ARTIK aynı kalibre yüzeyi kullanıyor (LiftDeckWorld);
+        // bu yüzden geçişte fark yok — eski "seam'i yükseliş boyunca erit" yaması kaldırıldı
+        // (görünen etkisi: kalabalık yükselirken tablada bir miktar yukarı kayıyordu).
+        float duration = Mathf.Max(0.3f, riseDuration);
         float t = 0f;
         while (t < duration)
         {
             t += Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(t / duration);
-            float e = Mathf.SmoothStep(0f, 1f, k);
-            Vector3 p = Vector3.Lerp(from, to, e);
-            if (hop > 0f) p.y += Mathf.Sin(e * Mathf.PI) * hop;
-            c.position = p;
+            float e = k * k * k * (k * (k * 6f - 15f) + 10f);
+            if (lift != null) lift.SetPlatformHeight(Mathf.Lerp(fromHeight, toHeight, e));
+            if (crowdStack != null)
+                crowdStack.Container.position = lift != null
+                    ? LiftDeckWorld() + LiftCrowdOffset
+                    : Vector3.Lerp(LiftPos(fromFloor), LiftPos(toFloor), e);
+            liftAudio.volume = liftSfxVolume * Mathf.Min(Mathf.Clamp01(k / 0.12f), Mathf.Clamp01((1f - k) / 0.15f));
             yield return null;
         }
-        c.position = to;
+        liftAudio.Stop();
+        SetLiftFloor(toFloor);
+        if (crowdStack != null)
+            crowdStack.Container.position = lift != null
+                ? LiftDeckWorld() + LiftCrowdOffset
+                : LiftPos(toFloor);
     }
 
-    private IEnumerator JumpCrowdToLift(int floor)
+    private void EnsureMotionAudio()
     {
-        if (crowdStack == null) yield break;
-
-        Transform host = root != null ? root.transform : transform;
-        Vector3 sourceCenter = crowdStack.Container.position;
-        Vector3 targetCenter = LiftPos(floor);
-        var movers = crowdStack.DetachAll(host);
-        if (movers.Count == 0) yield break;
-
-        var starts = new Vector3[movers.Count];
-        var targets = new Vector3[movers.Count];
-        var rotations = new Quaternion[movers.Count];
-        for (int i = 0; i < movers.Count; i++)
+        if (liftAudio != null) return;
+        AudioSource NewSource(string name)
         {
-            if (movers[i] == null) continue;
-            starts[i] = movers[i].position;
-            targets[i] = targetCenter + (starts[i] - sourceCenter) * 0.9f;
-            rotations[i] = movers[i].localRotation;
+            var go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            var source = go.AddComponent<AudioSource>();
+            source.playOnAwake = false;
+            source.spatialBlend = 0f;
+            source.outputAudioMixerGroup = motionSfxGroup;
+            return source;
         }
-
-        float itemDuration = Mathf.Max(0.2f, boardDuration);
-        float stagger = Mathf.Min(0.16f, itemDuration * 0.2f);
-        int batchSize = Mathf.Max(1, jumpBatchSize);
-        int lastBatch = Mathf.Max(0, (movers.Count - 1) / batchSize);
-        float totalDuration = itemDuration + lastBatch * stagger;
-        float hop = Mathf.Max(CrowdAvatarPixels() * 0.35f, Vector3.Distance(sourceCenter, targetCenter) * 0.14f);
-
-        float t = 0f;
-        while (t < totalDuration)
-        {
-            t += Time.unscaledDeltaTime;
-            float elapsed = Mathf.Min(t, totalDuration);
-            for (int i = 0; i < movers.Count; i++)
-            {
-                if (movers[i] == null) continue;
-                int batch = i / batchSize;
-                float k = Mathf.Clamp01((elapsed - batch * stagger) / itemDuration);
-                if (k <= 0f) continue;
-                float e = Mathf.SmoothStep(0f, 1f, k);
-                Vector3 p = Vector3.Lerp(starts[i], targets[i], e);
-                p.y += Mathf.Sin(e * Mathf.PI) * hop;
-                movers[i].position = p;
-                movers[i].localRotation = rotations[i] * Quaternion.Euler(0f, 0f, Mathf.Sin(e * Mathf.PI) * ((i % 2 == 0) ? 5f : -5f));
-            }
-            yield return null;
-        }
-
-        crowdStack.Container.position = targetCenter;
-        for (int i = 0; i < movers.Count; i++)
-        {
-            if (movers[i] == null) continue;
-            movers[i].position = targets[i];
-            movers[i].localRotation = rotations[i];
-        }
-        crowdStack.AdoptDetached(movers);
-        crowdParkedOnLift = true;
+        liftAudio = NewSource("LiftAudio");
+        liftAudio.clip = Resources.Load<AudioClip>("Audio/Jokers/Mini2");
+        liftAudio.loop = true;
+        jumpAudio = NewSource("JumpAudio");
+        landAudio = NewSource("LandingAudio");
     }
 
-    private IEnumerator JumpCrowdToCabin(int fromFloor, int toFloor)
+    public void PlayJumpSound(bool landing, int batch = 0)
     {
-        if (crowdStack == null) yield break;
-
-        Transform host = root != null ? root.transform : transform;
-        Vector3 sourceCenter = crowdStack.Container.position;
-        Vector3 targetCenter = CabinPos(toFloor);
-        var movers = crowdStack.DetachAll(host);
-        if (movers.Count == 0) yield break;
-
-        var starts = new Vector3[movers.Count];
-        var targets = new Vector3[movers.Count];
-        var rotations = new Quaternion[movers.Count];
-        for (int i = 0; i < movers.Count; i++)
-        {
-            if (movers[i] == null) continue;
-            starts[i] = movers[i].position;
-            targets[i] = targetCenter + (starts[i] - sourceCenter) * 0.82f;
-            rotations[i] = movers[i].localRotation;
-        }
-
-        float itemDuration = Mathf.Max(0.2f, hopDuration);
-        float stagger = Mathf.Min(0.18f, itemDuration * 0.22f);
-        int batchSize = Mathf.Max(1, jumpBatchSize);
-        int lastBatch = Mathf.Max(0, (movers.Count - 1) / batchSize);
-        float totalDuration = itemDuration + lastBatch * stagger;
-        float hop = Mathf.Max(CrowdAvatarPixels() * 0.45f, Vector3.Distance(sourceCenter, targetCenter) * 0.18f);
-
-        float t = 0f;
-        while (t < totalDuration)
-        {
-            t += Time.unscaledDeltaTime;
-            float elapsed = Mathf.Min(t, totalDuration);
-            for (int i = 0; i < movers.Count; i++)
-            {
-                if (movers[i] == null) continue;
-                int batch = i / batchSize;
-                float k = Mathf.Clamp01((elapsed - batch * stagger) / itemDuration);
-                if (k <= 0f) continue;
-                float e = Mathf.SmoothStep(0f, 1f, k);
-                Vector3 p = Vector3.Lerp(starts[i], targets[i], e);
-                p.y += Mathf.Sin(e * Mathf.PI) * hop;
-                movers[i].position = p;
-                movers[i].localRotation = rotations[i] * Quaternion.Euler(0f, 0f, Mathf.Sin(e * Mathf.PI) * ((i % 2 == 0) ? -6f : 6f));
-            }
-            yield return null;
-        }
-
-        crowdStack.Container.position = targetCenter;
-        for (int i = 0; i < movers.Count; i++)
-        {
-            if (movers[i] == null) continue;
-            movers[i].position = targets[i];
-            movers[i].localRotation = rotations[i];
-        }
-        crowdStack.AdoptDetached(movers);
-        crowdParkedOnLift = false;
-    }
-
-    // Kaldıraç bir kat yükselir; kalabalık platformla birlikte çıkar.
-    private IEnumerator RiseLift(int fromFloor, int toFloor)
-    {
-        if (toFloor <= fromFloor) { SetLiftFloor(toFloor); yield break; }
-
-        SetLiftMode(resting: false);   // rise başladı: prosedürel scissor açılır (RisingLiftT2 gizlenir)
-        crowdParkedOnLift = true;
-
-        var c = crowdStack != null ? crowdStack.Container : null;
-        Vector3 crowdFrom = c != null ? c.position : Vector3.zero;
-        Vector3 crowdTo = LiftPos(toFloor);
-        float fFrom = FloorFrac(fromFloor);
-        float fTo = FloorFrac(toFloor);
-
-        float t = 0f;
-        while (t < riseDuration)
-        {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / riseDuration);
-            float e = Mathf.SmoothStep(0f, 1f, k);
-            if (lift != null) lift.SetExtension01(Mathf.Lerp(fFrom, fTo, e));
-            if (c != null) c.position = Vector3.Lerp(crowdFrom, crowdTo, e);
-            yield return null;
-        }
-        if (lift != null) lift.SetExtension01(fTo);
-        if (c != null) c.position = crowdTo;
+        if (!GameSettings.SoundEnabled) return;
+        var clip = landing ? landSfx : jumpSfx;
+        if (clip == null) return;
+        EnsureMotionAudio();
+        var source = landing ? landAudio : jumpAudio;
+        source.mute = false;
+        source.pitch = 1f + (batch % 3 - 1) * 0.035f;
+        source.PlayOneShot(clip, landing ? landSfxVolume : jumpSfxVolume);
     }
 
     private IEnumerator RunInitialReveal(int sizeFloor, int posFloor, bool onLift)
@@ -747,52 +834,13 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         int prizePool = cfg != null ? cfg.prizePoolGold : 0;
         int share = Mathf.Max(1, prizePool / winners);
 
-        var overlay = NewStretchRect("RisingRewardOverlay", parent);
-        overlay.SetAsLastSibling();
-        var dim = overlay.gameObject.AddComponent<Image>();
-        dim.color = new Color(0f, 0f, 0f, 0.88f);
-        dim.raycastTarget = true;
-
-        var coin = NewRect("GoldMoney", overlay, new Vector2(220f, 220f), new Vector2(0f, 180f));
-        var coinImg = coin.gameObject.AddComponent<Image>();
-        coinImg.sprite = finalGoldMoneySprite;
-        coinImg.preserveAspect = true;
-        coinImg.raycastTarget = false;
-        coinImg.enabled = finalGoldMoneySprite != null;
-
-        var shareText = NewText("ShareText", overlay, 44, new Vector2(0f, 24f), new Vector2(820f, 120f));
-        shareText.text = $"{prizePool:N0} altını {winners} kişi ile paylaşıyorsun";
-
-        var amountText = NewText("RewardAmount", overlay, 72, new Vector2(0f, -100f), new Vector2(720f, 120f));
-        amountText.text = "+0";
-
-        var tapText = NewText("TapText", overlay, 30, new Vector2(0f, -240f), new Vector2(720f, 80f));
-        tapText.text = "Cüzdana eklemek için dokun";
-
-        float duration = Mathf.Max(0.1f, rewardCountDuration);
-        float t = 0f;
-        while (t < duration)
-        {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / duration);
-            float e = Mathf.SmoothStep(0f, 1f, k);
-            if (coin != null)
-            {
-                float pulse = 1f + Mathf.Sin(k * Mathf.PI * 5f) * 0.06f;
-                coin.localScale = Vector3.one * pulse;
-            }
-            if (amountText != null)
-                amountText.text = $"+{Mathf.RoundToInt(Mathf.Lerp(0, share, e)):N0}";
-            yield return null;
-        }
-        if (coin != null) coin.localScale = Vector3.one;
-        if (amountText != null) amountText.text = $"+{share:N0}";
-
-        yield return null;
-        while (!WasContinueTap()) yield return null;
-
+        rewardView = SafariRewardView.Create(parent);
+        yield return rewardView.Present(share, prizePool, winners, finalGoldMoneySprite,
+            rewardRibbonSprite, rewardButtonSprite, continueLabel != null ? continueLabel.font : null,
+            rewardCollectSfx, motionSfxGroup, rewardCountDuration);
         controller?.ClaimFinalReward(share, winners);
-        Destroy(overlay.gameObject);
+        Destroy(rewardView.gameObject);
+        rewardView = null;
         Hide();
     }
 
@@ -892,9 +940,10 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     private void Update()
     {
+        if (liftAudio != null) liftAudio.mute = !GameSettings.SoundEnabled;
+        if (jumpAudio != null) jumpAudio.mute = !GameSettings.SoundEnabled;
+        if (landAudio != null) landAudio.mute = !GameSettings.SoundEnabled;
         if (!IsOpen() || controller == null) return;
-        if (continuePromptVisible && crowdParkedOnLift && crowdStack != null)
-            crowdStack.Container.position = LiftPos(1);
         if (continueButton != null && !continueButton.interactable)
             RefreshContinueInteractable();
         if (!continuePromptVisible || !continuePromptArmed) return;
@@ -918,44 +967,6 @@ public sealed class RisingMapScreen : SafariMapScreenBase
     {
         if (continueLabel != null) continueLabel.color = promptTextColor;
         if (statusText != null) statusText.color = promptTextColor;
-    }
-
-    // ── Runtime UI kurucular (reward overlay) ────────────────────
-
-    private RectTransform NewStretchRect(string name, Transform parent)
-    {
-        var go = new GameObject(name, typeof(RectTransform)) { layer = parent.gameObject.layer };
-        var rt = (RectTransform)go.transform;
-        rt.SetParent(parent, false);
-        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
-        return rt;
-    }
-
-    private RectTransform NewRect(string name, Transform parent, Vector2 size, Vector2 pos)
-    {
-        var go = new GameObject(name, typeof(RectTransform)) { layer = parent.gameObject.layer };
-        var rt = (RectTransform)go.transform;
-        rt.SetParent(parent, false);
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.sizeDelta = size;
-        rt.anchoredPosition = pos;
-        return rt;
-    }
-
-    private TMP_Text NewText(string name, Transform parent, int fontSize, Vector2 pos, Vector2 size)
-    {
-        var rt = NewRect(name, parent, size, pos);
-        var text = rt.gameObject.AddComponent<TextMeshProUGUI>();
-        text.raycastTarget = false;
-        text.alignment = TextAlignmentOptions.Center;
-        text.fontStyle = FontStyles.Bold;
-        text.textWrappingMode = TextWrappingModes.Normal;
-        text.color = promptTextColor;
-        text.fontSize = fontSize;
-        return text;
     }
 
     private static string FormatRemaining(TimeSpan remaining)

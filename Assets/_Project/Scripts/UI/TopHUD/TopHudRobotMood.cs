@@ -15,6 +15,9 @@ public class TopHudRobotMood : MonoBehaviour
     [Header("References")]
     [SerializeField] private Image robotImage;
 
+    [Header("Character (optional; legacy sprites remain the fallback)")]
+    [SerializeField] private TopHudPortraitProfile portraitProfile;
+
     [Header("Sprites")]
     [SerializeField] private Sprite idleSprite;
     [SerializeField] private Sprite happySprite;
@@ -30,6 +33,8 @@ public class TopHudRobotMood : MonoBehaviour
     private Coroutine temporaryMoodRoutine;
     private Coroutine punchRoutine;
     private Vector3 originalScale = Vector3.one;
+    private readonly int[] variationIndices = new int[4];
+    private Mood? currentMood;
 
     private void Awake()
     {
@@ -50,6 +55,16 @@ public class TopHudRobotMood : MonoBehaviour
     private void Start()
     {
         SetMood(Mood.Idle, animate: false);
+    }
+
+    private void OnDisable()
+    {
+        StopAllCoroutines();
+        temporaryMoodRoutine = null;
+        punchRoutine = null;
+        currentMood = null;
+        if (robotImage != null)
+            robotImage.rectTransform.localScale = originalScale;
     }
 
     public void SetIdle()
@@ -106,13 +121,41 @@ public class TopHudRobotMood : MonoBehaviour
         if (robotImage == null)
             return;
 
-        Sprite sprite = GetSprite(mood);
-        if (sprite != null)
-            robotImage.sprite = sprite;
+        // A cascade can send the same mood many times. Keep its expression stable
+        // until the mood changes, while allowing the temporary duration to restart.
+        bool changed = currentMood != mood;
+        if (changed)
+        {
+            int moodIndex = (int)mood;
+            TopHudPortraitProfile.Portrait portrait = portraitProfile != null
+                ? portraitProfile.GetPortrait(mood, variationIndices[moodIndex])
+                : null;
+
+            if (portrait != null)
+            {
+                robotImage.sprite = portrait.sprite;
+                robotImage.maskable = !portraitProfile.allowOverflow;
+                RectTransform rect = robotImage.rectTransform;
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.sizeDelta = portrait.sprite.rect.size
+                    * (portraitProfile.pixelScale * portrait.scale);
+                rect.anchoredPosition = portraitProfile.offset + portrait.offset;
+                variationIndices[moodIndex] = (variationIndices[moodIndex] + 1) % int.MaxValue;
+            }
+            else
+            {
+                Sprite sprite = GetSprite(mood);
+                if (sprite != null)
+                    robotImage.sprite = sprite;
+            }
+
+            currentMood = mood;
+        }
 
         robotImage.enabled = robotImage.sprite != null;
 
-        if (animate && animateMoodChange)
+        if (changed && animate && animateMoodChange)
             PlayPunch();
     }
 

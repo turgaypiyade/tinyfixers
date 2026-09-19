@@ -41,23 +41,30 @@ public sealed class RisingIntroOverlay : MonoBehaviour
 
     private SafariEventController controller;
     private Coroutine active;
+    private bool showRequested;   // Show() ile mi uyandık, yoksa editörde aktif mi bırakıldık?
+    private readonly List<RectTransform> transferringAvatars = new();
 
     private void Awake()
     {
         if (root != null && root != gameObject)
             root.SetActive(false);
+        // root == bu obje: editörde aktif bırakılmışsa ana menüyü kapatmasın (Show yolu showRequested ile muaf).
+        else if (!showRequested)
+            gameObject.SetActive(false);
         ApplyStaticText();
     }
 
     public void Show(SafariEventController owner)
     {
         controller = owner;
+        showRequested = true;
         gameObject.SetActive(true);
         if (root != null) root.SetActive(true);
         transform.SetAsLastSibling();
 
         if (active != null)
             StopCoroutine(active);
+        ClearTransferringAvatars();
         active = StartCoroutine(Run());
     }
 
@@ -68,7 +75,21 @@ public sealed class RisingIntroOverlay : MonoBehaviour
             StopCoroutine(active);
             active = null;
         }
+        ClearTransferringAvatars();
         if (root != null) root.SetActive(false);
+    }
+
+    private void OnDisable()
+    {
+        if (active != null) { StopCoroutine(active); active = null; }
+        ClearTransferringAvatars();
+    }
+
+    private void ClearTransferringAvatars()
+    {
+        foreach (var avatar in transferringAvatars)
+            if (avatar != null) Destroy(avatar.gameObject);
+        transferringAvatars.Clear();
     }
 
     private IEnumerator Run()
@@ -100,7 +121,7 @@ public sealed class RisingIntroOverlay : MonoBehaviour
     private IEnumerator CountParticipants(int total)
     {
         if (counterText != null)
-            counterText.text = $"0/{total}";
+            counterText.text = $"0 / {total}\n<size=36>OYUNCULAR HAZIRLANIYOR</size>";
 
         var avatars = crowdStack != null ? crowdStack.SnapshotAvatars() : new List<RectTransform>();
         var scales = new Vector3[avatars.Count];
@@ -119,7 +140,7 @@ public sealed class RisingIntroOverlay : MonoBehaviour
             int value = Mathf.Clamp(Mathf.RoundToInt(Mathf.Lerp(1, total, e)), 1, total);
 
             if (counterText != null)
-                counterText.text = $"{value}/{total}";
+                counterText.text = $"{value} / {total}\n<size=36>OYUNCULAR HAZIRLANIYOR</size>";
 
             int visibleTarget = Mathf.Clamp(Mathf.CeilToInt(value / (float)total * avatars.Count), 0, avatars.Count);
             for (int i = shown; i < visibleTarget; i++)
@@ -133,7 +154,7 @@ public sealed class RisingIntroOverlay : MonoBehaviour
         }
 
         if (counterText != null)
-            counterText.text = $"{total}/{total}";
+            counterText.text = $"{total} / {total}\n<size=36>YARIŞ BAŞLIYOR!</size>";
         for (int i = 0; i < avatars.Count; i++)
         {
             if (avatars[i] == null) continue;
@@ -180,6 +201,7 @@ public sealed class RisingIntroOverlay : MonoBehaviour
             yield break;
         }
 
+        transferringAvatars.AddRange(movers);
         SetDecorationsVisible(false);
 
         var starts = new Vector3[movers.Count];
@@ -191,41 +213,52 @@ public sealed class RisingIntroOverlay : MonoBehaviour
         for (int i = 0; i < movers.Count; i++)
         {
             if (movers[i] == null) continue;
-            starts[i] = movers[i].position;
-            targets[i] = targetCenter + (starts[i] - sourceCenter) * 0.78f;
+            starts[i] = movers[i].localPosition;
+            targets[i] = host.InverseTransformPoint(targetCenter)
+                + (starts[i] - host.InverseTransformPoint(sourceCenter)) * transferScale;
             rotations[i] = movers[i].localRotation;
             startScales[i] = movers[i].localScale;
             targetScales[i] = startScales[i] * transferScale;
         }
 
-        float duration = Mathf.Max(0.1f, transferDuration);
+        for (int i = movers.Count - 1; i >= 0; i--) movers[i].SetAsLastSibling();
+        float duration = Mathf.Max(0.55f, transferDuration);
+        const float stagger = 0.045f;
+        float totalDuration = duration + (movers.Count - 1) * stagger;
+        var tookOff = new bool[movers.Count];
+        var landed = new bool[movers.Count];
         float t = 0f;
-        while (t < duration)
+        while (t < totalDuration)
         {
             t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / duration);
-            float e = Mathf.SmoothStep(0f, 1f, k);
-            SetBackgroundAlpha(1f - e);
-
+            SetBackgroundAlpha(1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / duration)));
             for (int i = 0; i < movers.Count; i++)
             {
                 if (movers[i] == null) continue;
-                Vector3 p = Vector3.Lerp(starts[i], targets[i], e);
-                p.y += Mathf.Sin(e * Mathf.PI) * transferHop;
-                movers[i].position = p;
-                movers[i].localRotation = rotations[i] * Quaternion.Euler(0f, 0f, Mathf.Sin(e * Mathf.PI) * ((i % 2 == 0) ? -5f : 5f));
-                movers[i].localScale = Vector3.Lerp(startScales[i], targetScales[i], e);
+                float k = Mathf.Clamp01((t - i * stagger) / duration);
+                Vector3 scale = Vector3.Lerp(startScales[i], targetScales[i], Mathf.SmoothStep(0f, 1f, k));
+                RisingMapScreen.ApplyJumpPose(movers[i], starts[i], targets[i], rotations[i], scale, k, transferHop);
+                if (k >= 0.12f && !tookOff[i])
+                {
+                    tookOff[i] = true;
+                    if (i % 2 == 0) mapScreen.PlayJumpSound(false, i / 2);
+                }
+                if (k >= 0.82f && !landed[i])
+                {
+                    landed[i] = true;
+                    if (i % 2 == 0) mapScreen.PlayJumpSound(true, i / 2);
+                }
             }
             yield return null;
         }
-
         for (int i = 0; i < movers.Count; i++)
         {
             if (movers[i] == null) continue;
-            movers[i].position = targets[i];
+            movers[i].localPosition = targets[i];
             movers[i].localRotation = rotations[i];
             movers[i].localScale = targetScales[i];
         }
+        transferringAvatars.Clear();
 
         mapScreen.AdoptIntroCrowd(movers);
         active = null;
@@ -241,9 +274,9 @@ public sealed class RisingIntroOverlay : MonoBehaviour
     private void ApplyStaticText()
     {
         if (titleText != null)
-            titleText.text = LocalizedText("rising_title", "Yükseliş");
+            titleText.text = LocalizedText("rising_intro_title", "SAFARİ BAŞLIYOR!");
         if (tapText != null)
-            tapText.text = LocalizedText("rising_intro_tap", "Devam Etmek İçin Dokun");
+            tapText.text = LocalizedText("rising_intro_ready", "ZİRVEYE HAZIR MISIN?\n<size=38>Devam etmek için dokun</size>");
     }
 
     private static string LocalizedText(string key, string fallback)

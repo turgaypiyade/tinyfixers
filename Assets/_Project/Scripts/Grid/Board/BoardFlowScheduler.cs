@@ -127,6 +127,12 @@ public sealed class BoardFlowScheduler
         board != null &&
         (board.IsSpecialVisualInFlight || counts[(int)ActivityKind.SpecialSweep] > 0);
 
+    // A duel's accumulated hit waits for cascades and delayed board effects, but
+    // must not wait on its own level-end hold (BossStrikeDrain).
+    public bool IsDuelMoveSettling => board != null &&
+        (IsSettling || IsSpecialVisualInFlight ||
+         board.ActiveBackgroundJobs > board.DrainingBossStrikes);
+
     /// <summary>
     /// Bekleyen resolve şu an başlayabilir mi? (Girdi/kilit durumu çağıranda kalır.)
     /// </summary>

@@ -176,9 +176,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: acc20bba33ed04f888a06e1153ead2c4, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 48bccbcad6d44634807b3be17bc2320a, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -1791,10 +1791,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnergyContainerFx
   board: {fileID: 1410826445}
   overlayRoot: {fileID: 1732843066}
-  closedSprite: {fileID: 21300000, guid: 04099b6dbb1d844c1a3692b170e6f343, type: 3}
-  halfOpenSprite: {fileID: 21300000, guid: 69fd7a561e0184d50a1cc919e98de44d, type: 3}
-  fullOpenSprite: {fileID: 21300000, guid: 04099b6dbb1d844c1a3692b170e6f343, type: 3}
-  exhaustedSprite: {fileID: 21300000, guid: 04099b6dbb1d844c1a3692b170e6f343, type: 3}
+  closedSprite: {fileID: 6254762350746623236, guid: 3767602825f9446c0b26afbe4d9fb476, type: 3}
+  halfOpenSprite: {fileID: -4636114995939134412, guid: 3767602825f9446c0b26afbe4d9fb476, type: 3}
+  fullOpenSprite: {fileID: 6254762350746623236, guid: 3767602825f9446c0b26afbe4d9fb476, type: 3}
+  exhaustedSprite: {fileID: 6254762350746623236, guid: 3767602825f9446c0b26afbe4d9fb476, type: 3}
   halfOpenDelay: 0.07
   fullOpenDelay: 0.08
   fullOpenHold: 0.04
@@ -1803,14 +1803,14 @@ MonoBehaviour:
   containerCellScale: 1
   containerCellOffset: {x: 0, y: 0}
   preserveContainerAspect: 1
-  energyOrbSprite: {fileID: 21300000, guid: dfa9b2aaa37754e848c4fe948ecf5ff4, type: 3}
-  orbSize: {x: 42, y: 42}
+  energyOrbSprite: {fileID: 21300000, guid: d5c45b75a85134c80890a84f8f2852b4, type: 3}
+  orbSize: {x: 100, y: 100}
   flyDuration: 0.42
   orbStagger: 0.035
   arcHeight: 130
   orbRiseDuration: 0.16
   orbHoverHold: 0.06
-  orbRiseHeight: 82
+  orbRiseHeight: 150
   flyOrbOnTopCanvas: 1
   pulseScale: 1.08
   pulseDuration: 0.1
@@ -1987,6 +1987,9 @@ MonoBehaviour:
   topHud: {fileID: 1264084363}
   intro: {fileID: 0}
   arenaBackground: {fileID: 0}
+  animalDuel: 1
+  playerCharacter: {fileID: 11400000, guid: b79c4f2f3a794a3f82ea0aaf2efe8ed1, type: 2}
+  enemyCharacter: {fileID: 0}
   playerRobot: {fileID: 1762269234}
   enemyRobot: {fileID: 1454565966}
   playerArmA: {fileID: 1097569548}
@@ -3868,8 +3871,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.07132867}
-  m_AnchorMax: {x: 0.88905776, y: 1.672028}
+  m_AnchorMin: {x: 0, y: 0.32903227}
+  m_AnchorMax: {x: 0.5089169, y: 7.712903}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -6086,7 +6089,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1097569548
 RectTransform:
   m_ObjectHideFlags: 0
@@ -7709,7 +7712,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 685523291402823249, guid: f91aa304a007f41f9bf748d3d1809f05, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -230
+      value: -190
       objectReference: {fileID: 0}
     - target: {fileID: 714962202390010314, guid: f91aa304a007f41f9bf748d3d1809f05, type: 3}
       propertyPath: m_Sprite
@@ -7825,7 +7828,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6160535352321700445, guid: f91aa304a007f41f9bf748d3d1809f05, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -230
+      value: -190
       objectReference: {fileID: 0}
     - target: {fileID: 7529009753671958299, guid: f91aa304a007f41f9bf748d3d1809f05, type: 3}
       propertyPath: m_Name
@@ -7837,7 +7840,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8369061793478912311, guid: f91aa304a007f41f9bf748d3d1809f05, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -230
+      value: -190
       objectReference: {fileID: 0}
     - target: {fileID: 8773257457280976794, guid: f91aa304a007f41f9bf748d3d1809f05, type: 3}
       propertyPath: m_AnchoredPosition.y
@@ -8507,7 +8510,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1299536779
 RectTransform:
   m_ObjectHideFlags: 0
@@ -13959,8 +13962,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 210, y: 210}
+  m_AnchoredPosition: {x: 5, y: 40}
+  m_SizeDelta: {x: 216.3, y: 319.2}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2043733045
 MonoBehaviour:
@@ -13978,13 +13981,13 @@ MonoBehaviour:
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
+  m_Maskable: 0
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 4e6ba90499689482592a141a4698fd5f, type: 3}
+  m_Sprite: {fileID: 21300000, guid: f4e2397397ab34a39a15b5ed34916a95, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -14013,12 +14016,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TopHudRobotMood
   robotImage: {fileID: 2043733045}
-  idleSprite: {fileID: 21300000, guid: 4e6ba90499689482592a141a4698fd5f, type: 3}
-  happySprite: {fileID: 21300000, guid: 577eeab0d2e17461f90ca24036063f9a, type: 3}
-  sadSprite: {fileID: 21300000, guid: 2fab2c402e0eb41119f190a74577b374, type: 3}
-  excitedSprite: {fileID: 21300000, guid: 2da8818d9600244169478ff335a7d7f0, type: 3}
+  portraitProfile: {fileID: 11400000, guid: 51af2fb998ca43d085105f46e9251922, type: 2}
+  idleSprite: {fileID: 21300000, guid: f4e2397397ab34a39a15b5ed34916a95, type: 3}
+  happySprite: {fileID: 21300000, guid: 833a4ec390e7f4f0d952ae129986e64e, type: 3}
+  sadSprite: {fileID: 21300000, guid: 98477d53c98da4982821ad2c5f809ba2, type: 3}
+  excitedSprite: {fileID: 21300000, guid: 6b9bb9442b2df4c90b0087bab4bafb80, type: 3}
   animateMoodChange: 1
-  punchScale: 1.08
+  punchScale: 1.04
   punchUpTime: 0.08
   punchDownTime: 0.12
 --- !u!1 &2044596532

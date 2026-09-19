@@ -909,7 +909,7 @@ GameObject:
   - component: {fileID: 730912670}
   - component: {fileID: 730912669}
   m_Layer: 0
-  m_Name: AmbientDrone_3_WP_A
+  m_Name: AmbientBird_3_WP_A
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1313,7 +1313,7 @@ GameObject:
   - component: {fileID: 917764885}
   - component: {fileID: 917764884}
   m_Layer: 0
-  m_Name: AmbientDrone_3_WP_B
+  m_Name: AmbientBird_3_WP_B
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1388,7 +1388,7 @@ GameObject:
   - component: {fileID: 926815104}
   - component: {fileID: 926815103}
   m_Layer: 0
-  m_Name: AmbientDrone_3_WP_C
+  m_Name: AmbientBird_3_WP_C
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1463,7 +1463,7 @@ GameObject:
   - component: {fileID: 1018019876}
   - component: {fileID: 1018019875}
   m_Layer: 0
-  m_Name: AmbientDrone_3_WP_D
+  m_Name: AmbientBird_3_WP_D
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2770,7 +2770,7 @@ GameObject:
   - component: {fileID: 2037294594}
   - component: {fileID: 2037294593}
   m_Layer: 0
-  m_Name: AmbientDrone_3
+  m_Name: AmbientBird_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2801,12 +2801,9 @@ MonoBehaviour:
   bobAmplitude: 20
   bobFrequency: 3
   facingMode: 1
-  frontFrames:
-  - {fileID: 21300000, guid: 7956d116b00ce446484b289d52b65df0, type: 3}
-  - {fileID: 21300000, guid: 0e2cfab864d8a47a4b5586f508d24ca1, type: 3}
-  backFrames:
-  - {fileID: 21300000, guid: 71ddb455937e5448a882afd4a77a829c, type: 3}
-  - {fileID: 21300000, guid: f81735a89cfcf4bafbc7d0458c5b03d0, type: 3}
+  birdProfile: {fileID: 11400000, guid: d485cd392d5c4583ac65214fc4eb90f8, type: 2}
+  frontFrames: []
+  backFrames: []
   walkFrames: []
   walkFps: 5
   mirrorBySide: 1
@@ -2869,7 +2866,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 1b84d161e03ef41329ba93986ee4f316, type: 3}
+  m_Sprite: {fileID: -2031446014797772272, guid: a579dd51a1fad49e5a7010b20f9e5fad, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1

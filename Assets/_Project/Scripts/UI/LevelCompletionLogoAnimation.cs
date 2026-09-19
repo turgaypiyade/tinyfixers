@@ -106,7 +106,7 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
         transform.SetAsLastSibling();
 
         if (_canvas == null)
-            _canvas = GetComponent<Canvas>() ?? GetComponentInParent<Canvas>(true);
+            if (!TryGetComponent(out _canvas)) _canvas = GetComponentInParent<Canvas>(true);
 
         if (_canvas != null)
         {

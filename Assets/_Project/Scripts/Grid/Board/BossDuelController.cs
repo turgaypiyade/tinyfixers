@@ -5,21 +5,18 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Battlefield / Robot Düellosu (LevelKind.BossDuel).
+/// Battlefield / Boss Düellosu (LevelKind.BossDuel).
+/// Animal mode: a move's cleared tiles accumulate power, then one melee hit applies it.
+/// Legacy rapid-fire rules remain available when animalDuel is disabled.
 ///
-/// İki robot karşılıklı durur: sol = oyuncu (yeşil HP), sağ = düşman (mor HP).
-/// - Her hamlede temizlenen TAŞ SAYISI kadar oyuncu robotu rapid-fire lazer atar;
-///   her atış düşman HP'sinden hasar düşürür (büyük combo = çok atış = çok hasar).
-/// - Her hamleden SONRA düşman, kısa bir telgraf (yüklenme) sonrası oyuncuya lazer
-///   atar; hasar her saldırıda artar (escalating). Opsiyonel oil baskısı da yapar.
+/// Sol = oyuncu (yeşil HP), sağ = düşman (mor HP).
+/// - Düşman zaman aralığıyla saldırır; hasar her saldırıda artar. Opsiyonel oil baskısı yapar.
 /// - Düşman HP = Collectible/BossDamage goal (0 olunca mevcut WIN akışı tetiklenir).
 /// - Oyuncu HP 0 olunca board.RequestLevelFail() ile LOSE.
 /// - Hamle SINIRLI: level'ın moves değeri normal levellerdeki gibi tükenir; hamle
 ///   bitince (kuyruktaki vuruşlar boşaldıktan sonra) standart fail akışı çalışır.
 ///
-/// Sahne kurulumu: BoardContent yanına ekle; board + topHud + iki robot RectTransform +
-/// iki HpBar + vfxRoot + bolt/impact prefab referanslarını bağla. Görseller placeholder
-/// olabilir; mantık sprite'sız da çalışır.
+/// Character profiles animate full-body sprites; no physics bodies or separated limbs are required.
 /// </summary>
 public sealed class BossDuelController : MonoBehaviour
 {
@@ -33,6 +30,20 @@ public sealed class BossDuelController : MonoBehaviour
     [SerializeField] private BossDuelIntroController intro;
     [Tooltip("Arena arka plan Image'ı. LevelData.battlefieldBackground atanırsa sprite buna uygulanır; boşsa mevcut kalır.")]
     [SerializeField] private Image arenaBackground;
+
+    [Header("Animal Duel")]
+    [Tooltip("Taşlar hamle boyunca güç biriktirir, board durunca tek yakın dövüş darbesi vurulur.")]
+    [SerializeField] private bool animalDuel = true;
+    [SerializeField] private BossDuelCharacterProfile playerCharacter;
+    [Tooltip("Porsuk pozları hazır olduğunda atanır. Boşsa mevcut düşman görseli kullanılır.")]
+    [SerializeField] private BossDuelCharacterProfile enemyCharacter;
+    private BossDuelCharacterView playerCharacterView, enemyCharacterView;
+    private int accumulatedPower;
+    private int attackingPower;
+    private bool playerAttackActive;
+    private bool playerMoveOpen;
+    private float moveSettledTime;
+    private TMP_Text powerLabel;
 
     [Header("Robots")]
     [SerializeField] private RectTransform playerRobot;     // sol
@@ -307,6 +318,9 @@ public sealed class BossDuelController : MonoBehaviour
         playerHp = playerMaxHp;
         damagePerTile = Mathf.Max(0, level.damagePerClearedTile);
 
+        if (animalDuel)
+            InitializeAnimalCharacters();
+
         // Level bazlı arena arka planı: atanmışsa uygula, boşsa sahnedeki mevcut kalır.
         if (arenaBackground != null && level.battlefieldBackground != null)
             arenaBackground.sprite = level.battlefieldBackground;
@@ -333,8 +347,9 @@ public sealed class BossDuelController : MonoBehaviour
         board.OnTilesCleared += HandleTilesCleared;
         board.ObstacleVisualChanged += HandleObstacleVisualChanged;
         board.OnSpecialActivated += HandleSpecialActivated;
+        board.OnPlayerMoveConsumed += HandlePlayerMoveConsumed;
 
-        EnsureSuperLaserUI();
+        if (!animalDuel) EnsureSuperLaserUI();
 
         EnsureShieldBubble(ref playerShieldBubble, playerRobot, playerShieldColor, playerShieldSprite, isEnemy: false);
         EnsureShieldBubble(ref enemyShieldBubble, enemyRobot, enemyShieldColor, enemyShieldSprite, isEnemy: true);
@@ -344,13 +359,20 @@ public sealed class BossDuelController : MonoBehaviour
         StartCoroutine(BattleLoop());
     }
 
-    private void OnDestroy()
+    private void OnDisable()
     {
-        if (board == null) return;
+        bossModeActive = false;
+        StopAllCoroutines();
         ReleaseEndEvalHold();
+        if (powerLabel != null) powerLabel.gameObject.SetActive(false);
+        playerCharacterView?.Finish(!playerDefeated);
+        enemyCharacterView?.Finish(playerDefeated);
+        if (board == null) return;
         board.OnTilesCleared -= HandleTilesCleared;
         board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
         board.OnSpecialActivated -= HandleSpecialActivated;
+        board.OnPlayerMoveConsumed -= HandlePlayerMoveConsumed;
+        if (animalDuel) board.BossDuelTurnPending = false;
     }
 
     // BossDuel'de board'un görsel alt kenarını boardBottomAnchor'ın (BottomArea) üstüne hizalar.
@@ -414,23 +436,184 @@ public sealed class BossDuelController : MonoBehaviour
         if (enemyHpBar != null) enemyHpBar.gameObject.SetActive(visible);
     }
 
-    // ── Sürekli akış: temizlenen taşlar stack'e birikir, BattleLoop boşaltır ──
+    // ── Full-body animal presentation and one hit per resolved move ──
+
+    private void InitializeAnimalCharacters()
+    {
+        playerCharacterView = CreateCharacterView(playerBodyImage, playerCharacter, playerArmA, playerArmB);
+        enemyCharacterView = CreateCharacterView(enemyBodyImage, enemyCharacter, enemyArmA, enemyArmB);
+
+        RectTransform parent = playerHpBar != null ? (RectTransform)playerHpBar.transform : playerRobot;
+        if (parent == null) return;
+        var go = new GameObject("MovePower", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        go.transform.SetParent(parent, false);
+        powerLabel = go.GetComponent<TextMeshProUGUI>();
+        var existingText = parent.GetComponentInChildren<TMP_Text>();
+        if (existingText != null && existingText.font != null) powerLabel.font = existingText.font;
+        powerLabel.fontSize = 24f;
+        powerLabel.fontStyle = FontStyles.Bold;
+        powerLabel.alignment = TextAlignmentOptions.Center;
+        powerLabel.color = new Color(1f, 0.82f, 0.25f, 1f);
+        powerLabel.raycastTarget = false;
+        powerLabel.rectTransform.anchorMin = powerLabel.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+        powerLabel.rectTransform.pivot = new Vector2(0.5f, 1f);
+        powerLabel.rectTransform.anchoredPosition = new Vector2(0f, -8f);
+        powerLabel.rectTransform.sizeDelta = new Vector2(220f, 36f);
+        RefreshPowerLabel();
+    }
+
+    private static BossDuelCharacterView CreateCharacterView(Image body, BossDuelCharacterProfile profile,
+        RectTransform armA, RectTransform armB)
+    {
+        if (body == null || profile == null || !profile.IsUsable) return null;
+        if (armA != null) armA.gameObject.SetActive(false);
+        if (armB != null) armB.gameObject.SetActive(false);
+        var view = body.gameObject.AddComponent<BossDuelCharacterView>();
+        view.Initialize(body, profile);
+        return view;
+    }
+
+    private void HandlePlayerMoveConsumed()
+    {
+        if (!animalDuel || !bossModeActive || IsOver()) return;
+        playerMoveOpen = true;
+        moveSettledTime = 0f;
+        board.BossDuelTurnPending = true;
+        TickEndEvalHold();
+    }
+
+    private void RefreshPowerLabel()
+    {
+        if (powerLabel == null) return;
+        powerLabel.text = LocFormat("boss_move_power", "GÜÇ {0}",
+            playerAttackActive ? attackingPower : accumulatedPower);
+    }
+
+    private void TickAnimalTurn(float dt)
+    {
+        if (playerAttackActive || !playerMoveOpen || board.IsExplicitlyLocked) return;
+        if (board.Flow.IsDuelMoveSettling)
+        {
+            moveSettledTime = 0f;
+            return;
+        }
+
+        // Let end-of-frame work enqueue its final cascade before taking the snapshot.
+        moveSettledTime += dt;
+        if (moveSettledTime < 0.08f) return;
+        playerMoveOpen = false;
+        if (accumulatedPower <= 0)
+        {
+            board.BossDuelTurnPending = false;
+            TickEndEvalHold();
+            return;
+        }
+        StartCoroutine(AnimalPlayerStrike());
+    }
+
+    private IEnumerator AnimalPlayerStrike()
+    {
+        int damage = accumulatedPower;
+        accumulatedPower = 0;
+        attackingPower = damage;
+        playerAttackActive = true;
+        RefreshPowerLabel();
+        try
+        {
+            if (playerCharacterView != null)
+                yield return playerCharacterView.Attack(enemyRobot, () => LandAnimalPlayerStrike(damage),
+                    () => IsOver() || waveTransitionActive);
+            else
+            {
+                yield return new WaitForSeconds(0.3f);
+                if (!IsOver() && !waveTransitionActive) LandAnimalPlayerStrike(damage);
+            }
+        }
+        finally
+        {
+            playerAttackActive = false;
+            attackingPower = 0;
+            playerCharacterView?.SetFocused(accumulatedPower > 0);
+            if (board != null) board.BossDuelTurnPending = playerMoveOpen && !IsOver();
+            RefreshPowerLabel();
+            TickEndEvalHold();
+        }
+    }
+
+    private void LandAnimalPlayerStrike(int damage)
+    {
+        if (IsOver() || waveTransitionActive) return;
+        SpawnMeleeImpact(enemyRobot);
+        ApplyEnemyDamage(damage);
+    }
+
+    private void SpawnMeleeImpact(RectTransform target)
+    {
+        if (target != null && vfxRoot != null)
+            SpawnImpact(WorldToAnchoredIn(vfxRoot, target.position), new Color(1f, 0.85f, 0.45f, 1f));
+        PlaySfx(hitSfx, hitVolume);
+    }
+
+    private IEnumerator AnimalEnemyStrike(int damage)
+    {
+        int attackWave = waveIndex;
+        bool Cancelled() => IsOver() || waveTransitionActive || attackWave != waveIndex;
+        void Impact()
+        {
+            if (Cancelled()) return;
+            SpawnMeleeImpact(playerRobot);
+            ApplyPlayerDamage(damage);
+        }
+
+        if (enemyCharacterView != null)
+            yield return enemyCharacterView.Attack(playerRobot, Impact, Cancelled);
+        else
+        {
+            // Placeholder until the badger profile is supplied: no cannon bolts.
+            if (enemyRobot != null) yield return ChargeTelegraph(enemyRobot, Mathf.Max(0.02f, enemyTelegraphDuration));
+            else yield return new WaitForSeconds(Mathf.Max(0.02f, enemyTelegraphDuration));
+            Impact();
+        }
+    }
+
+    private void ApplyEnemyOilPressure()
+    {
+        if (waveOilCount <= 0 || waveTransitionActive || IsOver()) return;
+        movesSinceOil++;
+        if (movesSinceOil < Mathf.Max(1, waveOilEveryMoves)) return;
+        movesSinceOil = 0;
+        ThrowOil(waveOilCount);
+    }
+
+    // ── Tile clears ──
 
     private void HandleTilesCleared(TileType type, int amount)
     {
         if (!bossModeActive || amount <= 0 || IsOver())
             return;
 
-        // Oyuncu matlemeye devam ettikçe vuruşlar (tip etiketli) kuyruğa birikir; input kilidi yok.
-        for (int i = 0; i < amount; i++)
-            strikeQueue.Enqueue(type);
+        if (animalDuel)
+        {
+            // Boosters also open a turn. Zero damage must never leave a drain hold behind.
+            HandlePlayerMoveConsumed();
+            accumulatedPower = (int)System.Math.Min(int.MaxValue,
+                (long)accumulatedPower + (long)amount * damagePerTile);
+            RefreshPowerLabel();
+            playerCharacterView?.SetFocused(accumulatedPower > 0);
+            TickEndEvalHold(); // Register synchronously, before the final move can be evaluated.
+        }
+        else
+        {
+            for (int i = 0; i < amount; i++)
+                strikeQueue.Enqueue(type);
+        }
 
         // Şarj penceresi açıksa kırılan her taş kesme sayacına işler.
         if (chargeActive)
             chargeTilesBroken += amount;
 
         // Süper lazer şarjı (hazırken birikmez — önce kullan).
-        if (!laserReady)
+        if (!animalDuel && !laserReady)
         {
             laserCharge = Mathf.Min(superLaserChargeTiles, laserCharge + amount);
             if (laserCharge >= superLaserChargeTiles)
@@ -470,9 +653,10 @@ public sealed class BossDuelController : MonoBehaviour
     // kadar beklesin — resolve döngüsünü parketmeyen goal-orb tarzı sayaçla tutulur.
     private void TickEndEvalHold()
     {
-        bool draining = strikeQueue.Count > 0 || bonusStrikePool > 0 || boltsInFlight > 0 || laserFiring;
+        bool draining = strikeQueue.Count > 0 || bonusStrikePool > 0 || boltsInFlight > 0 || laserFiring
+                        || accumulatedPower > 0 || playerAttackActive || playerMoveOpen;
         bool shouldHold = bossModeActive && !IsOver() && board != null
-                          && board.RemainingMoves <= 0 && draining;
+                          && (animalDuel || board.RemainingMoves <= 0) && draining;
 
         if (shouldHold == endEvalHoldActive)
             return;
@@ -490,8 +674,8 @@ public sealed class BossDuelController : MonoBehaviour
         board?.EndBossStrikeDrain();
     }
 
-    // Kalıcı dövüş döngüsü: oyuncu stack'ten otomatik ateş eder (backlog yüksekse hızlanır),
-    // düşman kendi saatinde (idle dahil) ateşler. Input asla kilitlenmez.
+    // Animal mode resolves one move at a time; legacy mode drains its strike queue continuously.
+    // Enemy attacks retain their timed cadence, including while the player is idle.
     private IEnumerator BattleLoop()
     {
         float strikeTimer = 0f;
@@ -514,7 +698,7 @@ public sealed class BossDuelController : MonoBehaviour
             }
 
             TickShields(dt);
-            TickWeakness(dt);
+            if (!animalDuel) TickWeakness(dt);
             TickStun(dt);
             // Popup açıkken (açık kilit) şarj penceresi/cooldown donar — oyuncu taş kıramaz,
             // pencere haksız yere akmasın.
@@ -526,8 +710,9 @@ public sealed class BossDuelController : MonoBehaviour
 
             // Oyuncu: kuyruktan boşalt. Backlog büyükse tek tick'te birden fazla ateşle (yetiş).
             // Special bonus havuzu (bonusStrikePool) taş kuyruğundan SONRA, düz hasarla akar.
+            if (animalDuel) TickAnimalTurn(dt);
             strikeTimer += dt;
-            if ((strikeQueue.Count > 0 || bonusStrikePool > 0) && damagePerTile > 0 && strikeTimer >= strikeInterval)
+            if (!animalDuel && (strikeQueue.Count > 0 || bonusStrikePool > 0) && damagePerTile > 0 && strikeTimer >= strikeInterval)
             {
                 strikeTimer = 0f;
                 int backlog = strikeQueue.Count + bonusStrikePool;
@@ -550,7 +735,7 @@ public sealed class BossDuelController : MonoBehaviour
             // açık — hamle limitiyle artık mümkün) normal saldırı yok.
             enemyTimer += dt;
             if (enemyTimer >= enemyAttackInterval && !enemyBusy && !chargeActive && stunRemaining <= 0f
-                && !board.IsExplicitlyLocked && !IsOver())
+                && !playerAttackActive && !board.IsExplicitlyLocked && !IsOver())
             {
                 enemyTimer = 0f;
                 enemyBusy = true;
@@ -561,6 +746,14 @@ public sealed class BossDuelController : MonoBehaviour
         }
 
         // Düello bitti (win/lose): fail eval tutucusu asla asılı kalmasın.
+        if (animalDuel)
+        {
+            accumulatedPower = 0;
+            attackingPower = 0;
+            playerMoveOpen = false;
+            board.BossDuelTurnPending = false;
+            RefreshPowerLabel();
+        }
         ReleaseEndEvalHold();
     }
 
@@ -608,7 +801,7 @@ public sealed class BossDuelController : MonoBehaviour
         }
 
         // Sersemlemiş boss 1.5× hasar alır (şarj saldırısını kesmenin ödülü).
-        if (stunRemaining > 0f)
+        if (!animalDuel && stunRemaining > 0f)
             dmg = Mathf.RoundToInt(dmg * 1.5f);
 
         // Overkill dalga sınırında kırpılır: dalga HP'leri toplamı goal amount'a eşit
@@ -698,6 +891,8 @@ public sealed class BossDuelController : MonoBehaviour
 
     private void HandleSpecialActivated(TileSpecial special, Vector2Int cell)
     {
+        // All special-cleared tiles already contribute through OnTilesCleared.
+        if (animalDuel) return;
         if (!bossModeActive || IsOver() || waveTransitionActive)
             return;
 
@@ -882,6 +1077,7 @@ public sealed class BossDuelController : MonoBehaviour
 
     private void HandleSuperLaserPressed()
     {
+        if (animalDuel) return;
         if (!laserReady || laserFiring || !bossModeActive || IsOver() || waveTransitionActive)
             return;
 
@@ -1642,7 +1838,9 @@ public sealed class BossDuelController : MonoBehaviour
             stunRemaining = Mathf.Max(0.5f, w.chargeStunSeconds);
             SetEnemyStunVisual(true);
             PlayRobotHitFeedback(enemyRobot, +1f);
-            ShowToast(Loc("boss_toast_interrupted", "KESTİN! Boss sersemledi — ×1.5 hasar!"), 1.8f, strong: true);
+            ShowToast(animalDuel
+                ? Loc("boss_animal_interrupted", "KESTİN! Rakip sersemledi!")
+                : Loc("boss_toast_interrupted", "KESTİN! Boss sersemledi — ×1.5 hasar!"), 1.8f, strong: true);
         }
         else
         {
@@ -1650,6 +1848,13 @@ public sealed class BossDuelController : MonoBehaviour
             // Kesilemedi → çarpanlı büyük atış (iki namlu birden).
             int dmg = Mathf.RoundToInt((enemyBaseDamage + enemyDamageGrowth * enemyAttackCount) * Mathf.Max(1f, w.chargeDamageMult));
             enemyAttackCount++;
+
+            if (animalDuel)
+            {
+                yield return AnimalEnemyStrike(dmg);
+                chargeActive = false;
+                yield break;
+            }
 
             if (enemyArmA != null) PlayRecoil(enemyArmA, -1f);
             if (enemyArmB != null) PlayRecoil(enemyArmB, -1f);
@@ -1753,6 +1958,13 @@ public sealed class BossDuelController : MonoBehaviour
         if (enemyBodyImage == null)
             return;
 
+        if (animalDuel && enemyCharacterView != null)
+        {
+            enemyCharacterView.ResetForWave();
+            enemyBodyImage.color = w.bodyTint;
+            return;
+        }
+
         // Dalga sprite'ı yoksa ORİJİNAL gövde geri gelir (önceki dalganın defeat sprite'ı kalmasın).
         enemyBodyImage.sprite = w.bodySprite != null ? w.bodySprite : enemyOriginalBodySprite;
         enemyBodyImage.color = w.bodyTint;
@@ -1797,8 +2009,8 @@ public sealed class BossDuelController : MonoBehaviour
 
         enemyRobot.localScale = enemyHomeScale;
         enemyRobot.anchoredPosition = enemyHomePos + new Vector2(enemyEntranceOffset, 0f);
-        if (enemyArmA != null) enemyArmA.gameObject.SetActive(true);
-        if (enemyArmB != null) enemyArmB.gameObject.SetActive(true);
+        if (enemyArmA != null) enemyArmA.gameObject.SetActive(enemyCharacterView == null);
+        if (enemyArmB != null) enemyArmB.gameObject.SetActive(enemyCharacterView == null);
     }
 
     private IEnumerator EnemyEntranceSlide()
@@ -1877,6 +2089,15 @@ public sealed class BossDuelController : MonoBehaviour
         if (waveTransitionActive || IsOver())
             yield break;
 
+        if (animalDuel)
+        {
+            int meleeDamage = enemyBaseDamage + enemyDamageGrowth * enemyAttackCount;
+            enemyAttackCount++;
+            yield return AnimalEnemyStrike(meleeDamage);
+            ApplyEnemyOilPressure();
+            yield break;
+        }
+
         // Telgraf: iki top da geri çekilip "yükleniyor" hissi.
         var aimA = enemyArmA != null ? enemyArmA : enemyRobot;
         var aimB = enemyArmB; // ikinci kol opsiyonel
@@ -1927,7 +2148,7 @@ public sealed class BossDuelController : MonoBehaviour
 
     private void ApplyPlayerDamage(int dmg)
     {
-        if (dmg <= 0) return;
+        if (dmg <= 0 || IsOver()) return;
 
         if (playerShieldHits > 0)
         {
@@ -2353,6 +2574,14 @@ public sealed class BossDuelController : MonoBehaviour
         _hitCo[robot] = StartCoroutine(HitKnockRoutine(robot, knockDir));
     }
 
+    private void StopHitFeedback(RectTransform robot)
+    {
+        if (robot == null || !_hitCo.TryGetValue(robot, out var routine) || routine == null) return;
+        StopCoroutine(routine);
+        if (_hitBase.TryGetValue(robot, out var home)) robot.anchoredPosition = home;
+        _hitCo[robot] = null;
+    }
+
     private IEnumerator HitKnockRoutine(RectTransform robot, float knockDir)
     {
         Vector2 basePos = _hitBase[robot];
@@ -2391,8 +2620,12 @@ public sealed class BossDuelController : MonoBehaviour
     {
         if (robot == null) yield break;
 
+        var character = robot == playerRobot ? playerCharacterView : enemyCharacterView;
+        if (animalDuel) StopHitFeedback(robot);
+        character?.Finish(true);
+
         // Zafer sprite'ı varsa gövdeyi ona çevir + ayrı kolları gizle (poz kendi kollarını içerir).
-        if (winSprite != null && bodyImage != null)
+        if (character == null && winSprite != null && bodyImage != null)
         {
             bodyImage.sprite = winSprite;
             if (arm1 != null) arm1.gameObject.SetActive(false);
@@ -2498,10 +2731,14 @@ public sealed class BossDuelController : MonoBehaviour
     {
         if (robot == null) yield break;
 
+        var character = robot == playerRobot ? playerCharacterView : enemyCharacterView;
+        if (animalDuel) StopHitFeedback(robot);
+        character?.Finish(false);
+
         if (arm1 != null) arm1.gameObject.SetActive(false);
         if (arm2 != null) arm2.gameObject.SetActive(false);
 
-        if (bodyImage != null && defeatedSprite != null)
+        if (character == null && bodyImage != null && defeatedSprite != null)
             bodyImage.sprite = defeatedSprite;   // rect aynı kalır; yığın sprite'ını gövde footprint'ine göre çiz
 
         Vector2 basePos = robot.anchoredPosition;

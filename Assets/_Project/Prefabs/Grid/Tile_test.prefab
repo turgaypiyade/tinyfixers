@@ -265,7 +265,7 @@ MonoBehaviour:
   spinContinuous: 0
   spinHaloEnabled: 1
   haloScaleFactor: 1.25
-  haloColor: {r: 1, g: 1, b: 1, a: 0.85}
+  haloColor: {r: 0.9056604, g: 0.7797415, b: 0.49982202, a: 0.75686276}
   spinSortingOrder: 100
 --- !u!1 &8082158129049703175
 GameObject:

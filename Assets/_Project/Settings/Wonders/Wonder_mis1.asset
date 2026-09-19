@@ -15,7 +15,7 @@ MonoBehaviour:
   wonderId: mis1
   displayName: Pisaron
   taskIcon: {fileID: 0}
-  backgroundSprite: {fileID: 21300000, guid: 9d538e63afe024ce49dc15f2cb3cd0cf, type: 3}
+  backgroundSprite: {fileID: 21300000, guid: f69762ed99b49469199809df14925220, type: 3}
   totalStages: 10
   tasks:
   - name: Temel Tarama
@@ -129,14 +129,11 @@ MonoBehaviour:
     - {x: -281, y: -517}
     - {x: 80, y: -562}
     - {x: 455, y: -517}
-  - name: AmbientDrone_3
+  - name: AmbientBird_3
     facingMode: 1
-    frontFrames:
-    - {fileID: 21300000, guid: 7956d116b00ce446484b289d52b65df0, type: 3}
-    - {fileID: 21300000, guid: 0e2cfab864d8a47a4b5586f508d24ca1, type: 3}
-    backFrames:
-    - {fileID: 21300000, guid: 71ddb455937e5448a882afd4a77a829c, type: 3}
-    - {fileID: 21300000, guid: f81735a89cfcf4bafbc7d0458c5b03d0, type: 3}
+    birdProfile: {fileID: 11400000, guid: d485cd392d5c4583ac65214fc4eb90f8, type: 2}
+    frontFrames: []
+    backFrames: []
     walkFrames: []
     walkFps: 5
     mirrorBySide: 1

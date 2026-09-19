@@ -249,7 +249,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
             blockerRoot = blockerByName.gameObject;
 
         if (blockerRoot != null && dimImage == null)
-            dimImage = blockerRoot.GetComponent<Image>() ?? blockerRoot.GetComponentInChildren<Image>(true);
+        {
+            if (!blockerRoot.TryGetComponent(out dimImage))
+                dimImage = blockerRoot.GetComponentInChildren<Image>(true);
+        }
 
         if (skipBonusRoundButton == null)
             skipBonusRoundButton = ResolveSkipBonusButton();

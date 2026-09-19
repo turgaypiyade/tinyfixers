@@ -23,6 +23,8 @@ public class WonderAmbientAgent : MonoBehaviour
     [Header("Görsel (çocuk)")]
     public RectTransform visual;
     public Image visualImage;
+    [Tooltip("Atanırsa kare animasyonu yerine gövde + kanat katmanlarıyla kuş uçar.")]
+    public WonderBirdProfile birdProfile;
     public float bobAmplitude = 8f;
     public float bobFrequency = 6f;
 
@@ -72,6 +74,8 @@ public class WonderAmbientAgent : MonoBehaviour
     bool _walking;
     float _faceSign = 1f;
     float _pathMinY, _pathMaxY;
+    WonderBirdVisual _birdVisual;
+    float _flightBobPhase;
 
     int PointCount => (pathPoints != null && pathPoints.Length >= 2)
         ? pathPoints.Length
@@ -85,6 +89,7 @@ public class WonderAmbientAgent : MonoBehaviour
     {
         _rt = (RectTransform)transform;
         if (visual != null) _baseVisualY = visual.anchoredPosition.y;
+        RefreshBirdVisual();
         _walking = startWalking;
 
         // Editör waypoint'leri varsa Vector2 yola bake et (yoksa pathPoints kalır)
@@ -124,6 +129,13 @@ public class WonderAmbientAgent : MonoBehaviour
     /// <summary>Sahne açılınca dışarıdan çağrılır (reveal %100).</summary>
     public void BeginWalking() => _walking = true;
     public void StopWalking() => _walking = false;
+
+    // Called by scene/editor builders as well, so the assembled bird is visible while editing paths.
+    public void RefreshBirdVisual()
+    {
+        if (birdProfile != null && birdProfile.body != null && visual != null)
+            _birdVisual = WonderBirdVisual.Create(visual, visualImage, birdProfile);
+    }
 
     void Update()
     {
@@ -174,7 +186,22 @@ public class WonderAmbientAgent : MonoBehaviour
         if (visual == null) return;
 
         // Zıplama (bob)
-        float bob = walking ? Mathf.Abs(Mathf.Sin(Time.time * bobFrequency)) * bobAmplitude : 0f;
+        bool flying = _birdVisual != null;
+        float bob;
+        if (flying)
+        {
+            _birdVisual.Animate(delta, Time.deltaTime);
+            float glide = _birdVisual.GlideAmount;
+            // Glide has a slower, subtler bob; blend amplitude and advance phase continuously.
+            _flightBobPhase = Mathf.Repeat(_flightBobPhase + Time.deltaTime * bobFrequency
+                * Mathf.Lerp(1f, 0.45f, glide), Mathf.PI * 2f);
+            float amplitude = Mathf.Lerp(1f, birdProfile.glideBobMultiplier, glide);
+            bob = Mathf.Sin(_flightBobPhase) * bobAmplitude * amplitude;
+        }
+        else
+        {
+            bob = walking ? Mathf.Abs(Mathf.Sin(Time.time * bobFrequency)) * bobAmplitude : 0f;
+        }
         var p = visual.anchoredPosition;
         p.y = _baseVisualY + bob;
         visual.anchoredPosition = p;
@@ -186,6 +213,8 @@ public class WonderAmbientAgent : MonoBehaviour
         // Derinlik ölçeği (aşağı=büyük, yukarı=küçük) + yön işareti birlikte uygulanır
         float ds = DepthScale();
         visual.localScale = new Vector3(ds * _faceSign, ds, 1f);
+
+        if (flying) return;
 
         // Frame animasyonu
         if (!walking || visualImage == null) return;
@@ -223,4 +252,3 @@ public class WonderAmbientAgent : MonoBehaviour
         return set;
     }
 }
-

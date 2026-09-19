@@ -49,7 +49,7 @@ public class TutorialOverlayController : MonoBehaviour
             dimImage.color = c;
             dimImage.raycastTarget = false;
 
-            var dimBtn = dimImage.GetComponent<Button>() ?? dimImage.gameObject.AddComponent<Button>();
+            if (!dimImage.TryGetComponent(out Button dimBtn)) dimBtn = dimImage.gameObject.AddComponent<Button>();
             dimBtn.transition = Selectable.Transition.None;
             dimBtn.onClick.AddListener(OnHintDismissClicked);
         }

@@ -429,7 +429,8 @@ public class JokerFocusOverlayController : MonoBehaviour
         if (overlayRoot == null && visible)
         {
             if (rootCanvas == null)
-                rootCanvas = GetComponentInParent<Canvas>() ?? FindFirstObjectByType<Canvas>();
+                rootCanvas = GetComponentInParent<Canvas>();
+                if (rootCanvas == null) rootCanvas = FindFirstObjectByType<Canvas>();
             CreateOverlayUi();
         }
 
@@ -669,7 +670,7 @@ public class JokerFocusOverlayController : MonoBehaviour
         {
             var child   = entries[i].slot;
             var mapping = entries[i].mapping;
-            var icon    = child.GetComponent<Image>() ?? child.GetComponentInChildren<Image>(true);
+            if (!child.TryGetComponent(out Image icon)) icon = child.GetComponentInChildren<Image>(true);
 
             jokerSlotTransforms[i]  = child;
             jokerBoosterIndices[i]  = mapping.BoosterIndex;
@@ -684,7 +685,7 @@ public class JokerFocusOverlayController : MonoBehaviour
                 jokerSelectionGlows[i]    = EnsureSelectionGlow(icon);
             }
 
-            var button = child.GetComponent<Button>() ?? child.gameObject.AddComponent<Button>();
+            if (!child.TryGetComponent(out Button button)) button = child.gameObject.AddComponent<Button>();
             jokerButtons[i] = button;
 
             var raycastGraphic = EnsureRaycastSurface(child, icon);
@@ -708,7 +709,7 @@ public class JokerFocusOverlayController : MonoBehaviour
         var existing = icon.transform.Find("SelectionGlow");
         Image glow;
         if (existing != null)
-            glow = existing.GetComponent<Image>() ?? existing.gameObject.AddComponent<Image>();
+            glow = existing.TryGetComponent(out Image existingGlow) ? existingGlow : existing.gameObject.AddComponent<Image>();
         else
         {
             var go = new GameObject("SelectionGlow", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -746,7 +747,7 @@ public class JokerFocusOverlayController : MonoBehaviour
         {
             if (existing.parent != parent) existing.SetParent(parent, false);
             existing.name = frameName;
-            frame = existing.GetComponent<Image>() ?? existing.gameObject.AddComponent<Image>();
+            frame = existing.TryGetComponent(out Image existingFrame) ? existingFrame : existing.gameObject.AddComponent<Image>();
         }
         else
         {
@@ -785,7 +786,7 @@ public class JokerFocusOverlayController : MonoBehaviour
     private void EnsurePointerProxy(GameObject target, int index)
     {
         if (target == null) return;
-        var p = target.GetComponent<JokerPointerProxy>() ?? target.AddComponent<JokerPointerProxy>();
+        if (!target.TryGetComponent(out JokerPointerProxy p)) p = target.AddComponent<JokerPointerProxy>();
         p.Init(this, index);
     }
 
@@ -799,7 +800,7 @@ public class JokerFocusOverlayController : MonoBehaviour
         var hitT = slot.Find("JokerHitArea");
         Image hit;
         if (hitT != null)
-            hit = hitT.GetComponent<Image>() ?? hitT.gameObject.AddComponent<Image>();
+            hit = hitT.TryGetComponent(out Image existingHit) ? existingHit : hitT.gameObject.AddComponent<Image>();
         else
         {
             var go = new GameObject("JokerHitArea", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));

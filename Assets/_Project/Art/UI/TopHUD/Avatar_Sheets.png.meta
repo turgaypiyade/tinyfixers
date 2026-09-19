@@ -11,15 +11,6 @@ TextureImporter:
   - first:
       213: -2498590001265220764
     second: Avatar_Sheets_2
-  - first:
-      213: -2976867071450158629
-    second: Avatar_Sheets_3
-  - first:
-      213: -8772022105202075940
-    second: Avatar_Sheets_4
-  - first:
-      213: -8969794487971986730
-    second: Avatar_Sheets_5
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -63,7 +54,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 2
   spriteExtrude: 1
-  spriteMeshType: 1
+  spriteMeshType: 0
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -131,12 +122,12 @@ TextureImporter:
       name: Avatar_Sheets_0
       rect:
         serializedVersion: 2
-        x: 3
-        y: 474
-        width: 390
-        height: 445
+        x: 15
+        y: 500
+        width: 351
+        height: 354
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -153,12 +144,12 @@ TextureImporter:
       name: Avatar_Sheets_1
       rect:
         serializedVersion: 2
-        x: 405
-        y: 471
-        width: 388
-        height: 448
+        x: 365
+        y: 497
+        width: 351
+        height: 358
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -175,12 +166,12 @@ TextureImporter:
       name: Avatar_Sheets_2
       rect:
         serializedVersion: 2
-        x: 801
-        y: 471
-        width: 394
-        height: 448
+        x: 912
+        y: 496
+        width: 23
+        height: 4
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -197,20 +188,20 @@ TextureImporter:
       name: Avatar_Sheets_3
       rect:
         serializedVersion: 2
-        x: 0
-        y: 1
-        width: 388
-        height: 454
+        x: 1056
+        y: 500
+        width: 345
+        height: 355
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: bd9e7aeab2b00b6d0800000000000000
-      internalID: -2976867071450158629
+      spriteID: 24cde4bb654a8488da9cd838d4ff2d46
+      internalID: 1986064304
       vertices: []
       indices: 
       edges: []
@@ -219,20 +210,20 @@ TextureImporter:
       name: Avatar_Sheets_4
       rect:
         serializedVersion: 2
-        x: 402
-        y: 0
-        width: 389
-        height: 455
+        x: 1560
+        y: 496
+        width: 13
+        height: 4
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: cd65e891f54834680800000000000000
-      internalID: -8772022105202075940
+      spriteID: 434bcb9ded3714b8cb9fc3621b9da374
+      internalID: 38178951
       vertices: []
       indices: 
       edges: []
@@ -241,20 +232,174 @@ TextureImporter:
       name: Avatar_Sheets_5
       rect:
         serializedVersion: 2
-        x: 799
-        y: 0
-        width: 393
-        height: 454
+        x: 11
+        y: 111
+        width: 354
+        height: 361
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 2, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ab342584d59f248e28cf99d6d16ed4d1
+      internalID: -551442832
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Avatar_Sheets_6
+      rect:
+        serializedVersion: 2
+        x: 365
+        y: 108
+        width: 350
+        height: 367
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 6d24c2cef63e48380800000000000000
-      internalID: -8969794487971986730
+      spriteID: 21ae8e13960874d368c2dfe8b964ff6d
+      internalID: -1984518346
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Avatar_Sheets_7
+      rect:
+        serializedVersion: 2
+        x: 719
+        y: 104
+        width: 334
+        height: 371
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 775bb90eee31e48548af284ec25f4b60
+      internalID: -842979251
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Avatar_Sheets_8
+      rect:
+        serializedVersion: 2
+        x: 1053
+        y: 104
+        width: 349
+        height: 370
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2b271be82b61c46c28200c5f33d53d55
+      internalID: -553701343
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Avatar_Sheets_9
+      rect:
+        serializedVersion: 2
+        x: 1550
+        y: 72
+        width: 14
+        height: 8
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4f767c423bd9141baa113484dbe7b8ca
+      internalID: -1306435088
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Avatar_Sheets_10
+      rect:
+        serializedVersion: 2
+        x: 1404
+        y: 104
+        width: 348
+        height: 369
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: be7515cb55d2e4d408dc143d3279089f
+      internalID: -1602835991
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Avatar_Sheets_11
+      rect:
+        serializedVersion: 2
+        x: 718
+        y: 500
+        width: 334
+        height: 350
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ab6dfe1c5464341dcb58805948456cf4
+      internalID: -761605233
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Avatar_Sheets_12
+      rect:
+        serializedVersion: 2
+        x: 1403
+        y: 498
+        width: 352
+        height: 357
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a7e671b63f6434569890b89bc05f75c5
+      internalID: 136910328
       vertices: []
       indices: 
       edges: []
@@ -263,7 +408,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: c0551b321243f4577901b8fa4a5e04d4
     internalID: 0
     vertices: []
     indices: 
@@ -271,14 +416,23 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     spriteCustomMetadata:
-      entries: []
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":5.0,"y":2.0},"gridSpriteSize":{"x":354.0,"y":443.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":1,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
       Avatar_Sheets_0: 7579475653578040229
       Avatar_Sheets_1: -6664296859188597269
+      Avatar_Sheets_10: -1602835991
+      Avatar_Sheets_11: -761605233
+      Avatar_Sheets_12: 136910328
       Avatar_Sheets_2: -2498590001265220764
-      Avatar_Sheets_3: -2976867071450158629
-      Avatar_Sheets_4: -8772022105202075940
-      Avatar_Sheets_5: -8969794487971986730
+      Avatar_Sheets_3: 1986064304
+      Avatar_Sheets_4: 38178951
+      Avatar_Sheets_5: -551442832
+      Avatar_Sheets_6: -1984518346
+      Avatar_Sheets_7: -842979251
+      Avatar_Sheets_8: -553701343
+      Avatar_Sheets_9: -1306435088
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

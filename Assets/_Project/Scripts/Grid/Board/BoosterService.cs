@@ -29,212 +29,152 @@ public class BoosterService
         LineTravelSplitSwapTestUI lineTravelPlayer)
     {
         board.BeginBusy();
+        bool previousSpecialPhase = board.IsSpecialActivationPhase;
         board.IsSpecialActivationPhase = true;
         board.ResetGelSpreadForNewMove();
 
-        bool hasValidTargetCell = targetCell.HasValue
-                                  && targetCell.Value.x >= 0 && targetCell.Value.x < board.Width
-                                  && targetCell.Value.y >= 0 && targetCell.Value.y < board.Height;
-
-        if (target == null && !hasValidTargetCell)
+        try
         {
-            board.IsSpecialActivationPhase = false;
-            board.EndBusy();
-            yield break;
-        }
+            Vector2Int cell = targetCell ?? (target != null
+                ? new Vector2Int(target.X, target.Y)
+                : new Vector2Int(-1, -1));
+            if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                yield break;
 
-        // Jel bulaşması: booster'ın KAYNAĞI oyuncunun dokunduğu hücredir. Orası jel/bulaşıksa
-        // booster'ın temizlediği her hücre jel olur; değilse jelin üstünden geçmesi bulaştırmaz.
-        if (targetCell.HasValue)
-            board.NoteGelSpreadOrigin(targetCell.Value.x, targetCell.Value.y);
-        else if (target != null)
-            board.NoteGelSpreadOrigin(target);
-
-        var matches = new HashSet<TileView>();
-        HashSet<TileView> initialLightningTargets = null;
-        var affectedCells = new HashSet<Vector2Int>();
-
-        switch (mode)
-        {
-            case BoardController.BoosterMode.Single:
-                // Cargo (exitAtBottom) KIRILMAZ — hammer/joker ile vurulsa da etkilenmez.
-                if (target != null && !IsUnbreakableCargo(target.X, target.Y))
-                    matches.Add(target);
-
-                if (hasValidTargetCell && !IsUnbreakableCargo(targetCell.Value.x, targetCell.Value.y)
-                    && IsCellBoosterAffectable(targetCell.Value.x, targetCell.Value.y))
-                    affectedCells.Add(targetCell.Value);
-                break;
-
-            case BoardController.BoosterMode.Row:
-                int rowY = target != null ? target.Y : targetCell.GetValueOrDefault().y;
-                AddRow(matches, rowY);
-                AddRowCells(affectedCells, rowY);
-                break;
-
-            case BoardController.BoosterMode.Column:
-                int columnX = target != null ? target.X : targetCell.GetValueOrDefault().x;
-                AddColumn(matches, columnX);
-                AddColumnCells(affectedCells, columnX);
-                break;
-        }
-
-        if ((mode == BoardController.BoosterMode.Row || mode == BoardController.BoosterMode.Column) && matches.Count > 0)
-            initialLightningTargets = new HashSet<TileView>(matches);
-
-        if (matches.Count > 0 || affectedCells.Count > 0)
-        {
-            bool hasLineActivation = false;
-
-            var chainLineStrikes = new List<LightningLineStrike>();
-            specialResolver.ExpandSpecialChain(
-                matches,
-                affectedCells,
-                out hasLineActivation,
-                out _,
-                lightningVisualTargets: initialLightningTargets,
-                lightningLineStrikes: chainLineStrikes);
-
-            // Mini Elevator booster: sadece DÜZ sütun temizliğinde (özel/zincir yokken) devreye girer.
-            // Sütunda special varsa (chain) mevcut lightning davranışı korunur → özel aktivasyonu bozulmaz.
-            bool useElevatorClear = mode == BoardController.BoosterMode.Column
-                && !hasLineActivation
-                && chainLineStrikes.Count == 0
-                && matches.Count > 0;
-
-            ClearAnimationMode animationMode;
-            if (useElevatorClear)
-            {
-                animationMode = ClearAnimationMode.ElevatorLift;
-            }
-            else
-            {
-                animationMode = (mode == BoardController.BoosterMode.Row || mode == BoardController.BoosterMode.Column)
-                    ? ClearAnimationMode.LightningStrike
-                    : ClearAnimationMode.Default;
-
-                if (hasLineActivation)
-                    animationMode = ClearAnimationMode.LightningStrike;
-            }
-
-            // Asansör alttan yukarı tararken taşları sıra ile temizler: her taşın gecikmesi
-            // ((Height-1) - y) * step. Aynı step, asansör görselinin yükseliş hızını da sürer (senkron).
-            Dictionary<TileView, float> elevatorClearDelays = null;
-            if (useElevatorClear)
-            {
-                elevatorClearDelays = new Dictionary<TileView, float>(matches.Count);
-                int gridHeight = board.Height;
-                foreach (var tv in matches)
-                {
-                    if (tv == null) continue;
-                    int order = gridHeight > 0 ? (gridHeight - 1 - tv.Y) : tv.Y;
-                    elevatorClearDelays[tv] = Mathf.Max(0, order) * ElevatorStepDelay;
-                }
-            }
-
-            ObstacleHitContext obstacleHitContext = ObstacleHitContext.Booster;
-
-            List<LightningLineStrike> lightningLineStrikes = null;
-            if (animationMode == ClearAnimationMode.LightningStrike)
-            {
-                lightningLineStrikes = chainLineStrikes.Count > 0
-                    ? chainLineStrikes
-                    : new List<LightningLineStrike>();
-
-                if (targetCell.HasValue &&
-                    (mode == BoardController.BoosterMode.Row || mode == BoardController.BoosterMode.Column))
-                {
-                    lightningLineStrikes.Add(new LightningLineStrike(
-                        targetCell.Value,
-                        mode == BoardController.BoosterMode.Row,
-                        startDelaySeconds: 0f,
-                        // Row booster (joker) drill VFX kullanır; LineH special değil.
-                        useDrillSweep: mode == BoardController.BoosterMode.Row));
-                }
-
-                if (lightningLineStrikes.Count == 0)
-                    lightningLineStrikes = null;
-            }
-
-            Coroutine hammerExitRoutine = null;
-            Coroutine cannonExitRoutine = null;
-            Coroutine verticalExitRoutine = null;
-
-            if (mode == BoardController.BoosterMode.Single && targetCell.HasValue)
-            {
-                IEnumerator hammerExit = null;
-                yield return PlayHammerBoosterImpactFx(targetCell.Value, exitRoutine: r => hammerExit = r);
-
-                if (hammerExit != null)
-                    hammerExitRoutine = board.StartCoroutine(hammerExit);
-            }
-
-            if (mode == BoardController.BoosterMode.Column && targetCell.HasValue)
-            {
-                if (useElevatorClear)
-                {
-                    IEnumerator elevatorLift = null;
-                    yield return PlayElevatorBoosterEnterFx(targetCell.Value.x, liftRoutine: r => elevatorLift = r);
-
-                    if (elevatorLift != null)
-                        cannonExitRoutine = board.StartCoroutine(elevatorLift);
-                }
-                else
-                {
-                    IEnumerator cannonExit = null;
-                    yield return PlayCannonBoosterEnterAndFireFx(targetCell.Value.x, exitRoutine: r => cannonExit = r);
-
-                    if (cannonExit != null)
-                        cannonExitRoutine = board.StartCoroutine(cannonExit);
-                }
-            }
-
-            if (mode == BoardController.BoosterMode.Row && targetCell.HasValue)
-            {
-                IEnumerator verticalExit = null;
-                yield return PlayVerticalBoosterEnterAndFireFx(targetCell.Value.y, exitRoutine: r => verticalExit = r);
-
-                if (verticalExit != null)
-                    verticalExitRoutine = board.StartCoroutine(verticalExit);
-            }
-
-            actionSequencer.Enqueue(new MatchClearAction(
-                matches,
-                doShake: true,
-                animationMode: animationMode,
-                affectedCells: affectedCells,
-                obstacleHitContext: obstacleHitContext,
-                includeAdjacentOverTileBlockerDamage: false,
-                lightningOriginTile: target,
-                lightningOriginCell: targetCell,
-                lightningVisualTargets: initialLightningTargets,
-                lightningLineStrikes: lightningLineStrikes,
-                perTileClearDelays: elevatorClearDelays,
-                enqueueCascadeOnComplete: true));
+            board.NoteGelSpreadOrigin(cell.x, cell.y);
+            actionSequencer.Enqueue(specialResolver.CreateBoosterChain(
+                onCellReached => PlayBoosterImpactFx(mode, cell, lineSweepService,
+                    lightningSpawner, lineTravelPlayer, onCellReached)));
 
             while (actionSequencer.IsPlaying)
                 yield return null;
 
-            if (hammerExitRoutine != null)
-                yield return hammerExitRoutine;
-
-            if (cannonExitRoutine != null)
-                yield return cannonExitRoutine;
-
-            if (verticalExitRoutine != null)
-                yield return verticalExitRoutine;
-
             yield return board.ResolveBoardPublic();
         }
-
-        board.IsSpecialActivationPhase = false;
-        board.EndBusy();
+        finally
+        {
+            board.IsSpecialActivationPhase = previousSpecialPhase;
+            board.EndBusy();
+        }
     }
+
+    // The visual owns impact timing. The chain reads the live cell only when this
+    // callback fires, including specials and cells containing only an obstacle.
+    private IEnumerator PlayBoosterImpactFx(
+        BoardController.BoosterMode mode, Vector2Int cell,
+        LineSweepService lineSweepService, LightningSpawner lightningSpawner,
+        LineTravelSplitSwapTestUI lineTravelPlayer, Action<Vector2Int> onCellReached)
+    {
+        IEnumerator exit = null;
+        if (mode == BoardController.BoosterMode.Single)
+        {
+            yield return PlayHammerBoosterImpactFx(cell, r => exit = r);
+            onCellReached(cell);
+        }
+        else if (mode == BoardController.BoosterMode.Column)
+        {
+            var reached = new HashSet<int>();
+            void ReachRow(int y)
+            {
+                if (reached.Add(y)) onCellReached(new Vector2Int(cell.x, y));
+            }
+
+            // Retain the cannon presentation for a column containing a line special.
+            // Detection selects visuals only; activation still happens on arrival.
+            bool useCannon = false;
+            for (int y = 0; y < board.Height; y++)
+            {
+                var tile = board.Tiles[cell.x, y];
+                if (tile != null && (tile.GetSpecial() == TileSpecial.LineH
+                    || tile.GetSpecial() == TileSpecial.LineV))
+                {
+                    useCannon = true;
+                    break;
+                }
+            }
+
+            if (useCannon)
+            {
+                yield return PlayCannonBoosterEnterAndFireFx(cell.x, r => exit = r);
+                Coroutine exitHandle = exit != null ? board.StartCoroutine(exit) : null;
+                yield return PlayBoosterLineSweep(
+                    new Vector2Int(cell.x, board.Height - 1), false,
+                    lineSweepService, lightningSpawner, lineTravelPlayer,
+                    hitCell => ReachRow(hitCell.y));
+                if (exitHandle != null) yield return exitHandle;
+            }
+            else
+            {
+                yield return PlayElevatorBoosterEnterFx(cell.x, r => exit = r, ReachRow);
+                if (exit != null) yield return exit;
+            }
+
+            // Missing/interrupted visual: still finish the authorized sweep.
+            for (int y = board.Height - 1; y >= 0; y--) ReachRow(y);
+            yield break;
+        }
+        else if (mode == BoardController.BoosterMode.Row)
+        {
+            yield return PlayVerticalBoosterEnterAndFireFx(cell.y, r => exit = r);
+            Coroutine exitHandle = exit != null ? board.StartCoroutine(exit) : null;
+            var reached = new HashSet<Vector2Int>();
+            void ReachCell(Vector2Int hitCell)
+            {
+                if (reached.Add(hitCell)) onCellReached(hitCell);
+            }
+
+            var drill = board.DrillSweepPlayer;
+            if (drill != null && drill.isActiveAndEnabled && drill.SweepSpace != null)
+            {
+                bool completed = false;
+                var strike = new LightningLineStrike(cell, true, useDrillSweep: true);
+                board.OnLineSweepStartedInternal(strike, 0f);
+                lineSweepService.PlayHorizontalDrillSweep(cell.y, 0f,
+                    hitCell =>
+                    {
+                        ReachCell(hitCell);
+                        board.OnLineSweepCellReachedInternal(hitCell, strike);
+                    }, () => completed = true);
+                while (!completed && drill != null && drill.isActiveAndEnabled)
+                    yield return null;
+            }
+            else
+            {
+                yield return PlayBoosterLineSweep(cell, true,
+                    lineSweepService, lightningSpawner, lineTravelPlayer, ReachCell);
+            }
+
+            for (int x = 0; x < board.Width; x++) ReachCell(new Vector2Int(x, cell.y));
+            if (exitHandle != null) yield return exitHandle;
+            yield break;
+        }
+
+        if (exit != null) yield return exit;
+    }
+    private IEnumerator PlayBoosterLineSweep(
+        Vector2Int origin, bool horizontal, LineSweepService lineSweepService,
+        LightningSpawner lightningSpawner, LineTravelSplitSwapTestUI lineTravelPlayer,
+        Action<Vector2Int> onCellReached)
+    {
+        bool completed = false;
+        float duration = lineSweepService.PlayLightningLineStrikes(
+            lightningSpawner, lineTravelPlayer,
+            new List<LightningLineStrike> { new LightningLineStrike(origin, horizontal) },
+            (cell, _) => onCellReached(cell), () => completed = true);
+        // Completion is the normal path. Keep a timeout for a destroyed VFX instance.
+        float elapsed = 0f;
+        while (!completed && duration > 0f && elapsed < duration + 2f)
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+    }
+
     // ============================================================
     // CANNON BOOSTER FX
     //
     // Column booster icin gorsel top/cannon animasyonu.
-    // Sütunu bu animasyon silmez; asil kirma MatchClearAction tarafinda kalir.
+    // Firing is followed by a bottom-to-top sweep; its arrival callback owns impacts.
     // ============================================================
 
     private IEnumerator PlayCannonBoosterEnterAndFireFx(int columnX, Action<IEnumerator> exitRoutine)
@@ -410,9 +350,8 @@ public class BoosterService
     // ============================================================
     // MINI ELEVATOR / SERVİS ASANSÖRÜ BOOSTER FX
     //
-    // Column booster'ın yeni görseli: platform sütunun altına kayar, sonra yukarı
-    // "araba kaldıracı" gibi yükselir. Taşları bu görsel silmez — asıl temizlik
-    // MatchClearAction (ElevatorLift) tarafında, aynı step ile senkron savurma ile olur.
+    // Column booster: the platform reports each row as its top reaches the cell.
+    // Gameplay impacts are handled by the shared special chain at that instant.
     // Görsel şimdilik cannon prefabını (placeholder) kullanır; asıl asansör sprite'ı
     // board.CannonBoosterFxPrefab değiştirilerek takılır.
     // ============================================================
@@ -437,7 +376,7 @@ public class BoosterService
             board.Audio.PlayOneShotClip(clip, volume);
     }
 
-    private IEnumerator PlayElevatorBoosterEnterFx(int columnX, Action<IEnumerator> liftRoutine)
+    private IEnumerator PlayElevatorBoosterEnterFx(int columnX, Action<IEnumerator> liftRoutine, Action<int> onRowReached)
     {
         // BoosterFxParent = BoardMask ve grid'e MASKELİYOR (çizginin ~12px altı kırpılır) → makasın
         // tabanı/altı kesiliyordu. Makası maskenin DIŞINA (BoardMask.parent) koyuyoruz → kırpılmaz,
@@ -505,17 +444,32 @@ public class BoosterService
         rt.anchoredPosition = restPos;
 
         // Kaldırma + çıkış, clear ile paralel çalışsın diye lift routine olarak devredilir.
-        liftRoutine?.Invoke(PlayScissorLiftAndExitFx(go, view));
+        liftRoutine?.Invoke(PlayScissorLiftAndExitFx(go, view, onRowReached));
     }
 
-    private IEnumerator PlayScissorLiftAndExitFx(GameObject go, ScissorLiftView view)
+    private IEnumerator PlayScissorLiftAndExitFx(GameObject go, ScissorLiftView view, Action<int> onRowReached)
     {
         if (go == null || view == null)
             yield break;
 
         PlayJokerSfx("Mini2");   // yükseliş
 
-        // Lineer açılım = taş gecikmeleriyle (ElevatorStepDelay) senkron.
+        // Compare in grid space so canvas scaling and the extra drop offset cannot
+        // separate the platform's visible position from its gameplay impacts.
+        int nextRow = board.Height - 1;
+        void EmitReachedRows()
+        {
+            Vector3 top = view.PlatformTopWorldPosition;
+            Vector3 gridTop = board.Parent != null
+                ? board.Parent.InverseTransformPoint(top)
+                : board.transform.InverseTransformPoint(top);
+            while (nextRow >= 0 && gridTop.y >= -(nextRow + 0.5f) * board.TileSize)
+            {
+                onRowReached?.Invoke(nextRow);
+                nextRow--;
+            }
+        }
+
         float riseDuration = Mathf.Max(0.12f, (board.Height - 1) * ElevatorStepDelay);
         float t = 0f;
 
@@ -524,11 +478,13 @@ public class BoosterService
             if (go == null) yield break;
             t += Time.deltaTime;
             view.SetExtension01(Mathf.Clamp01(t / riseDuration));
+            EmitReachedRows();
             yield return null;
         }
 
         if (go == null) yield break;
         view.SetExtension01(1f);
+        EmitReachedRows();
 
         PlayJokerSfx("mini3");   // tepe / bırakma
 
@@ -757,9 +713,7 @@ public class BoosterService
         board.PatchbotDashUI?.PlayImpactBurstAtCell(board, cell, 1.35f);
         PlayJokerSfx("HammerHit");
 
-        yield return HammerImpactPulse(cell);
-
-        // Impact anından sonra taş kırma başlasın; hammer paralel olarak düşerek kaybolur.
+        // Return at contact so gameplay hits in this frame, before the hammer exits.
         exitRoutine?.Invoke(PlayHammerFallFx(hammer, targetPos));
     }
 

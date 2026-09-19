@@ -31,6 +31,7 @@ public sealed class SpecialChainRunner : BoardAction
 {
     private readonly BoardController board;
     private readonly List<TileView> initialSpecials;
+    private readonly Func<Action<Vector2Int>, IEnumerator> boosterImpactPlayback;
     private readonly int areaHalf;
     private readonly float catchOverlap;
     private readonly Func<TileView, List<BoardAction>> resolveOtherSpecial;
@@ -105,9 +106,11 @@ public sealed class SpecialChainRunner : BoardAction
         List<Vector2Int> simultaneousMixedCells = null,
         HashSet<Vector2Int> protectedCells = null,
         List<Vector2Int> virtualPulseBurstCenters = null,
-        List<LightningLineStrike> virtualLineSweeps = null)
+        List<LightningLineStrike> virtualLineSweeps = null,
+        Func<Action<Vector2Int>, IEnumerator> boosterImpactPlayback = null)
     {
         this.board = board;
+        this.boosterImpactPlayback = boosterImpactPlayback;
         this.initialSpecials = initialSpecials ?? new List<TileView>();
         this.areaHalf = Mathf.Max(1, areaHalf);
         this.catchOverlap = Mathf.Clamp01(catchOverlapFraction);
@@ -160,7 +163,7 @@ public sealed class SpecialChainRunner : BoardAction
         bool hasVirtualLineSweeps = virtualLineSweeps != null && virtualLineSweeps.Count > 0;
         if (board == null || (initialSpecials.Count == 0 && linePulseCrossCenter == null
                               && !hasSimultaneousPulses && !hasSimultaneousLines && !hasSimultaneousMixed
-                              && !hasVirtualBursts && !hasVirtualLineSweeps))
+                              && !hasVirtualBursts && !hasVirtualLineSweeps && boosterImpactPlayback == null))
             yield break;
 
         // FINAL-SETTLE SELF-COUNT FIX (2026-08-16): root, board-effect (OBB dalgası) tarafından
@@ -174,6 +177,9 @@ public sealed class SpecialChainRunner : BoardAction
 
         var queue = new Queue<TileView>(initialSpecials);
         var processed = new HashSet<TileView>();
+
+        if (boosterImpactPlayback != null)
+            yield return RunBoosterImpacts();
 
         // Override+Pulse: tüm implant pulse'lar AYNI ANDA patlar (yer değiştirme yok); zincirleri
         // radyal dalga hücreye varınca arrival ile tetiklenir (Line/SweepLine ile aynı model).
@@ -307,6 +313,76 @@ public sealed class SpecialChainRunner : BoardAction
         }
 
         board.RefreshAllSortingOrders();
+    }
+
+    private IEnumerator RunBoosterImpacts()
+    {
+        var reachedCells = new HashSet<Vector2Int>();
+        var hitObstacleOrigins = new HashSet<int>();
+        var clearedByType = new Dictionary<TileType, int>();
+
+        void HitCell(Vector2Int cell)
+        {
+            int x = cell.x, y = cell.y;
+            if (x < 0 || x >= board.Width || y < 0 || y >= board.Height
+                || !reachedCells.Add(cell)) return;
+
+            var obstacles = board.ObstacleStateService;
+            if (obstacles != null && obstacles.IsExitAtBottomAt(x, y)) return;
+            if (board.Holes[x, y] && (obstacles == null || !obstacles.HasObstacleAt(x, y))) return;
+
+            // Capture eligibility before damage: breaking a covering obstacle must
+            // not also consume the newly revealed content with the same hit.
+            var tile = board.Tiles[x, y];
+            bool canClear = tile != null && (obstacles == null
+                || (!obstacles.IsCellBlocked(x, y)
+                    && !obstacles.IsInteractionLockedAt(x, y)
+                    && !obstacles.IsMovableObstacleAt(x, y)));
+            TileView chainedSpecial = null;
+            if (canClear)
+            {
+                if (tile.GetSpecial() != TileSpecial.None)
+                {
+                    if (!root.anchoredCells.ContainsKey(tile)
+                        && !board.IsPendingTriggeredSpecialCell(x, y))
+                    {
+                        AnchorQueued(tile, x, y);
+                        chainedSpecial = tile;
+                    }
+                }
+                else
+                {
+                    board.BreakFx?.PlayTileBreak(tile);
+                    board.ClearAndDestroyTile(tile, clearedByType);
+                    foreach (var pair in clearedByType)
+                        board.NotifyTilesCleared(pair.Key, pair.Value);
+                    clearedByType.Clear();
+                }
+            }
+
+            if (obstacles != null && obstacles.HasObstacleAt(x, y))
+            {
+                bool magnet = obstacles.GetObstacleIdAt(x, y) == ObstacleId.Magnet;
+                int origin = obstacles.GetObstacleOriginAt(x, y);
+                if ((!magnet || obstacles.IsMagnetEndpoint(x, y))
+                    && (magnet || origin < 0 || !hitObstacleOrigins.Contains(origin)))
+                {
+                    var hit = board.ApplyObstacleDamageAt(x, y, ObstacleHitContext.Booster);
+                    if (hit.didHit)
+                    {
+                        if (!magnet && origin >= 0) hitObstacleOrigins.Add(origin);
+                        board.TriggerObstacleVisualChange(hit.visualChange);
+                    }
+                }
+            }
+
+            // Launch after this impact is applied; the special owns its own clear
+            // and runs concurrently with the remainder of the booster animation.
+            if (chainedSpecial != null) LaunchArrivalSubChain(chainedSpecial);
+        }
+
+        yield return boosterImpactPlayback(HitCell);
+        yield return RunGravityWithOverlap(hasNext: false);
     }
 
     private IEnumerator ExplodePulse(

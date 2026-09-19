@@ -34,7 +34,8 @@ public sealed class ScissorLiftView : MonoBehaviour
     [SerializeField] private Sprite boltSpriteOverride;
     [SerializeField] private bool preserveRootTransform;
     [SerializeField, Range(0.5f, 1f)] private float backArmAlpha = 1f;
-    [SerializeField, Range(0.5f, 1f)] private float boltScale = 1f;
+    [Tooltip("Pim/vida görsellerinin boyu (kol genişliğine göre). Küçük değer daha kibar durur.")]
+    [SerializeField, Range(0.15f, 1f)] private float boltScale = 0.42f;
     [SerializeField, Min(0f)] private float armLayerOffsetY = 0f;
     [SerializeField, Min(0f)] private float baseMountYReferencePx = 0f;
     [SerializeField] private bool armsInFrontOfBase;
@@ -59,12 +60,17 @@ public sealed class ScissorLiftView : MonoBehaviour
 
     public int Stages => _stages;
 
+    public Vector3 PlatformTopWorldPosition => _platform != null
+        ? _platform.rectTransform.TransformPoint(new Vector3(0f, _platform.rectTransform.rect.yMax, 0f))
+        : transform.position;
+
     public float Alpha
     {
         set
         {
             if (_canvasGroup == null)
-                _canvasGroup = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+                if (!TryGetComponent(out _canvasGroup))
+                    _canvasGroup = gameObject.AddComponent<CanvasGroup>();
             _canvasGroup.alpha = value;
         }
     }
@@ -104,13 +110,15 @@ public sealed class ScissorLiftView : MonoBehaviour
             ? stageCountOverride
             : Mathf.Max(2, Mathf.CeilToInt(_maxHeightUI / Mathf.Max(0.0001f, maxStageH)));
 
-        _root = GetComponent<RectTransform>() ?? gameObject.AddComponent<RectTransform>();
+        if (!TryGetComponent(out _root))
+            _root = gameObject.AddComponent<RectTransform>();
         if (!preserveRootTransform)
         {
             _root.anchorMin = _root.anchorMax = new Vector2(0.5f, 0.5f);
             _root.pivot = new Vector2(0.5f, 0.5f);
         }
-        _canvasGroup = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+        if (!TryGetComponent(out _canvasGroup))
+            _canvasGroup = gameObject.AddComponent<CanvasGroup>();
         _canvasGroup.alpha = 1f;
 
         if (armsInFrontOfBase)
