@@ -543,8 +543,7 @@ public class BoardController : MonoBehaviour
     private readonly List<PatchbotDashRequest> _patchbotDashRequests = new();
 
     // A duel turn blocks new input, never the resolve loop or popup lock state.
-    public bool BossDuelTurnPending { get; set; }
-    public bool InputLocked => CurrentState == BoardState.Locked || IsBusy || BossDuelTurnPending;
+    public bool InputLocked => CurrentState == BoardState.Locked || IsBusy;
     // Açık kilit (popup/intro SetInputLocked) — resolve kaynaklı IsBusy'den ayrışır;
     // BossDuel düşman saldırısını popup açıkken durdurmak için okur.
     public bool IsExplicitlyLocked => CurrentState == BoardState.Locked;
@@ -2386,9 +2385,6 @@ public class BoardController : MonoBehaviour
 
     private bool CanTileUseDynamicInputCell(TileView tile)
     {
-        if (BossDuelTurnPending)
-            return false;
-
         if (tile == null || !tile)
             return false;
 
@@ -2488,7 +2484,6 @@ public class BoardController : MonoBehaviour
 
     public void RequestSwapFromDrag(TileView from, int dirX, int dirY)
     {
-        if (BossDuelTurnPending) return;
         if (from == null || !from)
             return;
 
@@ -2530,7 +2525,6 @@ public class BoardController : MonoBehaviour
 
     public void OnTileClicked(TileView tile)
     {
-        if (BossDuelTurnPending) return;
         if (IsBusy)
         {
             if (!useDynamicBoardInputGate || dynamicSwapLogicDepth > 0 || RemainingMoves <= 0)

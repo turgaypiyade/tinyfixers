@@ -8,6 +8,7 @@ public class LevelDataEditor : Editor
 
     private PaintMode mode = PaintMode.Obstacle;
     private ObstacleId selectedObstacle = ObstacleId.Stone;
+    private bool showBossOilSettings;
 
     // Safe (kasa) settings — tıklanan hücre sol-üst origin; WxH bölgeyi kaplar.
     private int selectedSafeW = 2;
@@ -180,36 +181,28 @@ public class LevelDataEditor : Editor
         if (level.levelKind != LevelKind.BossDuel)
             return;
 
-        EditorGUILayout.LabelField("Battlefield", EditorStyles.miniBoldLabel);
-        level.playerMaxHp = Mathf.Max(1, EditorGUILayout.IntField("Player Max HP (yeşil bar)", Mathf.Max(1, level.playerMaxHp)));
-        level.damagePerClearedTile = Mathf.Max(0, EditorGUILayout.IntField("Damage Per Cleared Tile", Mathf.Max(0, level.damagePerClearedTile)));
-        level.enemyAttackBaseDamage = Mathf.Max(0, EditorGUILayout.IntField("Enemy Base Damage", Mathf.Max(0, level.enemyAttackBaseDamage)));
-        level.enemyAttackDamageGrowth = Mathf.Max(0, EditorGUILayout.IntField("Enemy Damage Growth / Attack", Mathf.Max(0, level.enemyAttackDamageGrowth)));
-        level.enemyAttackInterval = Mathf.Max(0f, EditorGUILayout.FloatField("Enemy Attack Interval (sn, 0=default)", level.enemyAttackInterval));
+        EditorGUILayout.LabelField("Boss Duel", EditorStyles.miniBoldLabel);
+        EditorGUILayout.HelpBox("Yukarıdaki Moves tüm karşılaşmanın hamle sınırıdır. Yaşayan rakip hamle sonunda " +
+            "bir kez karşılık verir. Oyuncu canı ve kalan koruması sonraki rakibe taşınır; otomatik iyileşme yoktur.", MessageType.Info);
+        level.playerMaxHp = Mathf.Max(1, EditorGUILayout.IntField("Player HP", level.playerMaxHp));
+        level.damagePerClearedTile = Mathf.Max(0, EditorGUILayout.IntField("Power Per Tile", level.damagePerClearedTile));
+        level.shieldProtectionPerPickup = Mathf.Max(1, EditorGUILayout.IntField(
+            new GUIContent("Protection Per Shield", "Bir kalkanın eklediği koruma; oyuncu ve düşman için aynı. Varsayılan: 2."),
+            level.shieldProtectionPerPickup));
+        level.enemyAttackBaseDamage = Mathf.Max(0, EditorGUILayout.IntField(
+            new GUIContent("Default Counter Damage", "Manuel rakipte Counter Damage 0 ise bu değer kullanılır."), level.enemyAttackBaseDamage));
         level.battlefieldBackground = (Sprite)EditorGUILayout.ObjectField("Arena Background (boş=mevcut)", level.battlefieldBackground, typeof(Sprite), false);
 
         EditorGUILayout.Space(2);
-        EditorGUILayout.LabelField("Oil (opsiyonel baskı)", EditorStyles.miniBoldLabel);
-        level.bossAttackEveryMoves = Mathf.Max(1, EditorGUILayout.IntField("Oil Every N Turns", Mathf.Max(1, level.bossAttackEveryMoves)));
-        level.bossAttackOilCount = Mathf.Max(0, EditorGUILayout.IntField("Oil Per Attack (0 = kapalı)", Mathf.Max(0, level.bossAttackOilCount)));
+        showBossOilSettings = EditorGUILayout.Foldout(showBossOilSettings, "Oil Pressure (optional)", true);
+        if (showBossOilSettings)
+        {
+            level.bossAttackOilCount = Mathf.Max(0, EditorGUILayout.IntField("Oil Per Counter (0 = off)", level.bossAttackOilCount));
+            if (level.bossAttackOilCount > 0)
+                level.bossAttackEveryMoves = Mathf.Max(1, EditorGUILayout.IntField("Oil Every N Counters", level.bossAttackEveryMoves));
+        }
 
-        EditorGUILayout.Space(2);
-        EditorGUILayout.LabelField("Waves (çok-dalga)", EditorStyles.miniBoldLabel);
-        level.bossWaveCount = Mathf.Max(0, EditorGUILayout.IntField(
-            new GUIContent("Wave Count (0 = otomatik)",
-                "bossWaves listesi BOŞKEN dalga sayısı. 0 = boss index'inden (current_level/5) " +
-                "BossDifficulty formülü: erken bosslar 1, orta 2, geç 3 dalga. Dalga parametreleri " +
-                "yukarıdaki Battlefield alanlarından eskalasyonla türetilir."),
-            level.bossWaveCount));
-
-        serializedObject.Update();
-        EditorGUILayout.PropertyField(
-            serializedObject.FindProperty("bossWaves"),
-            new GUIContent("Boss Waves (manuel)",
-                "DOLUYSA formül devre dışı: her eleman bir dalga. 0/-1 bırakılan sayısal alanlar " +
-                "Battlefield alanlarından devralınır; hpWeight'ler normalize edilir."),
-            includeChildren: true);
-        serializedObject.ApplyModifiedProperties();
+        DrawBossOpponents(level);
 
         bool hasBossGoal = false;
         if (level.goals != null)
@@ -227,8 +220,8 @@ public class LevelDataEditor : Editor
         if (hasBossGoal)
         {
             EditorGUILayout.HelpBox(
-                "Boss Duel hazır: BossDamage goal'ü boss HP'sini tanımlıyor. " +
-                "Sahnede BossDuelController bağlı olmalı.",
+                "BossDamage goal'ü tüm rakiplerin toplam canıdır. Örn. toplam 270 ve HP Weight 60/90/120 → " +
+                "rakip canları 60/90/120. Her rakibin görsellerini Character Profile belirler.",
                 MessageType.Info);
         }
         else
@@ -238,6 +231,62 @@ public class LevelDataEditor : Editor
                 "Collectible = BossDamage, Amount = boss HP (örn. 150), Icon Override = boss ikonu.",
                 MessageType.Warning);
         }
+    }
+
+    private void DrawBossOpponents(LevelData level)
+    {
+        EditorGUILayout.Space(2);
+        EditorGUILayout.LabelField("Opponents", EditorStyles.miniBoldLabel);
+        serializedObject.Update();
+        var waves = serializedObject.FindProperty("bossWaves");
+        EditorGUI.BeginChangeCheck();
+        int count = EditorGUILayout.IntSlider(new GUIContent("Manual Opponents", "0 = otomatik rakipler; 1–3 = her rakibi ayrı düzenle."),
+            waves.arraySize, 0, 3);
+        if (EditorGUI.EndChangeCheck())
+        {
+            int previousCount = waves.arraySize;
+            waves.arraySize = count;
+            for (int i = previousCount; i < count; i++)
+            {
+                // Unity duplicates the last array element when growing; give new opponents defaults.
+                var wave = waves.GetArrayElementAtIndex(i);
+                wave.FindPropertyRelative("hpWeight").floatValue = 1f;
+                wave.FindPropertyRelative("attackDamageBase").intValue = 0;
+                wave.FindPropertyRelative("oilCount").intValue = -1;
+                wave.FindPropertyRelative("oilEveryMoves").intValue = -1;
+                wave.FindPropertyRelative("characterProfile").objectReferenceValue = null;
+                wave.FindPropertyRelative("bodyTint").colorValue = Color.white;
+            }
+        }
+
+        if (waves.arraySize == 0)
+        {
+            var waveCount = serializedObject.FindProperty("bossWaveCount");
+            waveCount.intValue = EditorGUILayout.IntSlider(new GUIContent("Opponent Count", "0 = ilerlemeye göre otomatik; 1–3 = sabit rakip sayısı."),
+                waveCount.intValue, 0, 3);
+        }
+        else
+        {
+            if (waves.arraySize > 3)
+                EditorGUILayout.HelpBox("Yalnız ilk 3 rakip kullanılır. Listeyi azaltmak için Manual Opponents değerini değiştir.", MessageType.Warning);
+            for (int i = 0; i < Mathf.Min(3, waves.arraySize); i++)
+            {
+                var wave = waves.GetArrayElementAtIndex(i);
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.LabelField($"Opponent {i + 1}", EditorStyles.miniBoldLabel);
+                EditorGUILayout.PropertyField(wave.FindPropertyRelative("hpWeight"), new GUIContent("HP Weight", "Toplam BossDamage canından aldığı pay."));
+                EditorGUILayout.PropertyField(wave.FindPropertyRelative("attackDamageBase"), new GUIContent("Counter Damage (0 = default)"));
+                EditorGUILayout.PropertyField(wave.FindPropertyRelative("characterProfile"), new GUIContent("Character Profile (empty = scene)"));
+                EditorGUILayout.PropertyField(wave.FindPropertyRelative("bodyTint"), new GUIContent("Character Tint"));
+                if (showBossOilSettings)
+                {
+                    EditorGUILayout.PropertyField(wave.FindPropertyRelative("oilCount"), new GUIContent("Oil Count (−1 = default, 0 = off)"));
+                    EditorGUILayout.PropertyField(wave.FindPropertyRelative("oilEveryMoves"), new GUIContent("Oil Every N Counters (−1 = default)"));
+                }
+                EditorGUILayout.EndVertical();
+            }
+        }
+        serializedObject.ApplyModifiedProperties();
     }
 
     // Level havuzuna seçilebilecek temel taş tipleri. Yeni renk eklenirse buraya da ekle.

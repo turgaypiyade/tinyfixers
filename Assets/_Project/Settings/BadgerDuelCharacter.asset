@@ -1,0 +1,80 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31207c51aeab4a5dbe1eb48ff54e2298, type: 3}
+  m_Name: BadgerDuelCharacter
+  m_EditorClassIdentifier: Assembly-CSharp::BossDuelCharacterProfile
+  idle:
+    sprite: {fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}
+    height: 1.1
+    groundPivot: {x: 0.556, y: 0.057}
+    offset: {x: 0, y: 0}
+  idleAlternate:
+    sprite: {fileID: 21300000, guid: 3471d1e7d0ed43c49bb289a9f7957826, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.55, y: 0.104}
+    offset: {x: 0, y: 0}
+  focused:
+    sprite: {fileID: 21300000, guid: e5e8ba26196749afab96c5da78e6c1df, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.626, y: 0.104}
+    offset: {x: 0, y: 0}
+  windup:
+    sprite: {fileID: 21300000, guid: 53707206ffe34f19bc407711533f7649, type: 3}
+    height: 1.2
+    groundPivot: {x: 0.431, y: 0.083}
+    offset: {x: 0, y: 0}
+  swing:
+    sprite: {fileID: 21300000, guid: 3471d1e7d0ed43c49bb289a9f7957826, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.55, y: 0.104}
+    offset: {x: 0, y: 0}
+  strike:
+    sprite: {fileID: 21300000, guid: 3a089600eae94840ba330326c3f65a9b, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.665, y: 0.068}
+    offset: {x: 0, y: 0}
+  shield:
+    sprite: {fileID: 21300000, guid: 224262ed50bc43d9a55bf559f68038b3, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.583, y: 0.073}
+    offset: {x: 0, y: 0}
+  victory:
+    sprite: {fileID: 21300000, guid: 3471d1e7d0ed43c49bb289a9f7957826, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.55, y: 0.104}
+    offset: {x: 0, y: 0}
+  defeated:
+    sprite: {fileID: 21300000, guid: e5e8ba26196749afab96c5da78e6c1df, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.626, y: 0.104}
+    offset: {x: 0, y: 0}
+  mirrorHorizontally: 0
+  idleAlternateInterval: 3.8
+  idleAlternateDuration: 0.8
+  blinkInterval: 3.2
+  blinkDuration: 0.13
+  windupDuration: 0.26
+  swingDuration: 0.18
+  impactDuration: 0.12
+  recoveryDuration: 0.2
+  contactDistance: 0.55
+  breathingAmount: 0.008
+  shieldBlockDuration: 0.2
+  shieldBlockRecoil: 0.035
+  afterimageMaterial: {fileID: 2100000, guid: ac1624f2d00f42ac9c23be9ab99a16d1, type: 2}
+  trailColor: {r: 1, g: 0.4, b: 0.08, a: 0.5}
+  trailAccentColor: {r: 1, g: 0.12, b: 0.1, a: 0.36}
+  trailInterval: 0.025
+  trailLifetime: 0.2
+  weaponImpactPoint: {x: 0.14, y: 0.13}
+  powerForFullImpact: 40
+  impactFxDuration: 0.24

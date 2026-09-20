@@ -37,6 +37,11 @@ MonoBehaviour:
     height: 1.38
     groundPivot: {x: 0.388, y: 0.177}
     offset: {x: 0, y: 0}
+  shield:
+    sprite: {fileID: 21300000, guid: c335073b294d4ccea9977596c1f711e3, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.4, y: 0.055}
+    offset: {x: 0, y: 0}
   victory:
     sprite: {fileID: 21300000, guid: 48bccbcad6d44634807b3be17bc2320a, type: 3}
     height: 1
@@ -51,7 +56,18 @@ MonoBehaviour:
   blinkInterval: 3.2
   blinkDuration: 0.13
   windupDuration: 0.24
-  swingDuration: 0.12
+  swingDuration: 0.18
   impactDuration: 0.09
-  recoveryDuration: 0.22
+  recoveryDuration: 0.2
+  contactDistance: 0.60
   breathingAmount: 0.008
+  shieldBlockDuration: 0.2
+  shieldBlockRecoil: 0.035
+  afterimageMaterial: {fileID: 2100000, guid: ac1624f2d00f42ac9c23be9ab99a16d1, type: 2}
+  trailColor: {r: 0.15, g: 0.75, b: 1, a: 0.5}
+  trailAccentColor: {r: 1, g: 0.75, b: 0.12, a: 0.36}
+  trailInterval: 0.025
+  trailLifetime: 0.2
+  weaponImpactPoint: {x: 0.78, y: 0.06}
+  powerForFullImpact: 40
+  impactFxDuration: 0.24

@@ -1884,7 +1884,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.36, g: 0.28, b: 0.3, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1987,46 +1987,24 @@ MonoBehaviour:
   topHud: {fileID: 1264084363}
   intro: {fileID: 0}
   arenaBackground: {fileID: 0}
-  animalDuel: 1
   playerCharacter: {fileID: 11400000, guid: b79c4f2f3a794a3f82ea0aaf2efe8ed1, type: 2}
-  enemyCharacter: {fileID: 0}
+  enemyCharacter: {fileID: 11400000, guid: d98b40428a674a01aeb48647cf88ca05, type: 2}
+  opponentRotation:
+  - {fileID: 11400000, guid: d98b40428a674a01aeb48647cf88ca05, type: 2}
+  - {fileID: 11400000, guid: 4117b8cb94a749688fec3d992b07adee, type: 2}
   playerRobot: {fileID: 1762269234}
   enemyRobot: {fileID: 1454565966}
-  playerArmA: {fileID: 1097569548}
-  playerArmB: {fileID: 1299536779}
-  enemyArmA: {fileID: 1231200282}
-  enemyArmB: {fileID: 1688856296}
-  playerMuzzleA: {fileID: 848791474}
-  playerMuzzleB: {fileID: 280298603}
-  enemyMuzzleA: {fileID: 1861405483}
-  enemyMuzzleB: {fileID: 378739215}
   playerHpBar: {fileID: 1417226828}
   enemyHpBar: {fileID: 188545195}
   vfxRoot: {fileID: 1732843066}
-  playerBoltPrefab: {fileID: 983765441450105335, guid: a0132e93422494809a9921119170625f, type: 3}
-  enemyBoltPrefab: {fileID: 6876723583368189597, guid: 99014ff1beda34fdea9fa7054cd0e1b5, type: 3}
-  playerMuzzleFlashPrefab: {fileID: 7626331618518761136, guid: 833a7fa06f77c489b8391651cc690a78, type: 3}
-  enemyMuzzleFlashPrefab: {fileID: 6123279661437034464, guid: 5603fa44298f0404b94aad05869e4024, type: 3}
   impactPrefab: {fileID: 9181094485960324102, guid: c07c8316e15304097ba3107eff4acdc2, type: 3}
-  boltSize: {x: 64, y: 40}
-  playerBoltColor: {r: 0.4, g: 1, b: 0.6, a: 1}
-  enemyBoltColor: {r: 0.8, g: 0.3, b: 1, a: 1}
-  fireSfx: {fileID: 8300000, guid: 04b41037d3f1f45638fb7643f6c5fe7f, type: 3}
   hitSfx: {fileID: 8300000, guid: 4b4ac12c28a604f10adcd3e8e59ed938, type: 3}
-  fireVolume: 0.442
   hitVolume: 0.6
   pitchJitter: 0.08
   sfxSource: {fileID: 0}
-  strikeInterval: 0.07
-  boltTravelDuration: 0.12
-  recoilDistance: 16
-  recoilDuration: 0.08
   enemyTelegraphDuration: 0.4
-  enemyAttackInterval: 2
   robotHitKnockDuration: 0.18
   robotHitKnockback: 22
-  playerShieldHitsPerPickup: 2
-  enemyShieldSecondsPerPickup: 2.5
   shieldBubbleScale: 1.25
   shieldBubbleMinSize: 180
   playerShieldBubble: {fileID: 0}
@@ -2037,7 +2015,6 @@ MonoBehaviour:
   playerShieldColor: {r: 0.25, g: 1, b: 0.45, a: 0.42}
   enemyShieldColor: {r: 0.78, g: 0.32, b: 1, a: 0.42}
   shieldAbsorbPulseDuration: 0.16
-  playerHealPerWavePct: 0.15
   enemyEntranceOffset: 420
   waveEntranceDuration: 0.45
   winHopHeight: 40
@@ -2049,22 +2026,30 @@ MonoBehaviour:
   winFireworksDuration: 3.5
   playerBodyImage: {fileID: 21433072}
   enemyBodyImage: {fileID: 1139719842}
-  playerDefeatedSprite: {fileID: 21300000, guid: 058831ca7dae1455ea5401e506af6d84, type: 3}
-  enemyDefeatedSprite: {fileID: 21300000, guid: 39dc476db9be54751a06465f17fa33ef, type: 3}
   defeatCollapseDuration: 0.35
-  playerWinSprite: {fileID: 21300000, guid: fa711fd8a0eb54371a74f6b862935c7f, type: 3}
-  enemyWinSprite: {fileID: 21300000, guid: 991fec8e3ffcc47dc832d478a88e032c, type: 3}
-  tileIconLibrary: {fileID: 11400000, guid: 44f21392c67a14dfbb8782561221acf8, type: 2}
   toastAutoPosition: 1
   toastAutoGap: 70
   toastAnchoredPos: {x: 0, y: 0}
   toastDefaultDuration: 1.4
-  superLaserChargeTiles: 40
-  superLaserDamageMult: 12
-  lineBonusStrikes: 5
-  pulseBonusStrikes: 8
-  overrideBonusStrikes: 12
-  patchBotDamageMult: 6
+  powerMeterSize: {x: 52, y: 270}
+  powerMeterOffset: {x: -40, y: 165}
+  powerFillInset: {x: 7, y: 6}
+  powerTrackSprite: {fileID: 21300000, guid: 643cb81dd84643c6be9104753f061d05, type: 3}
+  powerFillSprite: {fileID: 21300000, guid: 0d1644b416ff479c9e7f6464f16feae8, type: 3}
+  powerTrackColor: {r: 0.3, g: 0.26, b: 0.18, a: 1}
+  powerFillColor: {r: 1, g: 1, b: 1, a: 1}
+  powerTextColor: {r: 1, g: 0.93, b: 0.55, a: 1}
+  orbTuning:
+    gatherDuration: 0.3
+    holdBeforeLaunch: 0.12
+    launchDuration: 0.34
+    launchStagger: 0.022
+    rallyRadius: 46
+    headSize: 58
+    trailDots: 9
+    trailStride: 2
+    maxConcurrent: 18
+  orbRallyOffset: {x: 0, y: 60}
   boardBottomAnchor: {fileID: 1734065519}
   boardBottomGap: 20
 --- !u!1 &244466294
@@ -6646,17 +6631,17 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1139719840}
-  m_LocalRotation: {x: -0.008726465, y: 0, z: 0, w: 0.999962}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1454565966}
-  m_LocalEulerAnglesHint: {x: -1, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 192, y: 300}
+  m_SizeDelta: {x: 250, y: 300}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1139719842
 MonoBehaviour:
@@ -6678,9 +6663,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: ea991ca7deefa4bfc841deba1813b049, type: 3}
+  m_Sprite: {fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -7453,7 +7438,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1231200282
 RectTransform:
   m_ObjectHideFlags: 0
@@ -11863,7 +11848,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.34, g: 0.42, b: 0.32, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -12090,7 +12075,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1688856296
 RectTransform:
   m_ObjectHideFlags: 0

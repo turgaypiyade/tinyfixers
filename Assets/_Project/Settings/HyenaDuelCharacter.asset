@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31207c51aeab4a5dbe1eb48ff54e2298, type: 3}
+  m_Name: HyenaDuelCharacter
+  m_EditorClassIdentifier: Assembly-CSharp::BossDuelCharacterProfile
+  idle:
+    sprite: {fileID: 21300000, guid: 3da3e3320d7494b9d99aa71605298f7b, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.51, y: 0.07}
+    offset: {x: 0, y: 0}
+  idleAlternate:
+    sprite: {fileID: 21300000, guid: 5065f380fc5284bd6818c62d526a9f7d, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.52, y: 0.08}
+    offset: {x: 0, y: 0}
+  focused:
+    sprite: {fileID: 21300000, guid: e180e9ba343f746f48359f5355c47636, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.56, y: 0.09}
+    offset: {x: 0, y: 0}
+  windup:
+    sprite: {fileID: 21300000, guid: b53a439ab21fa4a999f7d926fcc5f307, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.51, y: 0.07}
+    offset: {x: 0, y: 0}
+  swing:
+    sprite: {fileID: 21300000, guid: e180e9ba343f746f48359f5355c47636, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.56, y: 0.09}
+    offset: {x: 0, y: 0}
+  strike:
+    sprite: {fileID: 21300000, guid: 75c2a07f325b84f7792fa7af5519eb52, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.63, y: 0.12}
+    offset: {x: 0, y: 0}
+  victory:
+    sprite: {fileID: 21300000, guid: 5065f380fc5284bd6818c62d526a9f7d, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.52, y: 0.08}
+    offset: {x: 0, y: 0}
+  defeated:
+    sprite: {fileID: 21300000, guid: e180e9ba343f746f48359f5355c47636, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.56, y: 0.09}
+    offset: {x: 0, y: 0}
+  mirrorHorizontally: 0
+  idleAlternateInterval: 4.4
+  idleAlternateDuration: 0.9
+  blinkInterval: 3.2
+  blinkDuration: 0.13
+  windupDuration: 0.22
+  swingDuration: 0.15
+  impactDuration: 0.1
+  recoveryDuration: 0.2
+  contactDistance: 0.55
+  breathingAmount: 0.008
+  shieldBlockDuration: 0.2
+  shieldBlockRecoil: 0.035
+  afterimageMaterial: {fileID: 2100000, guid: ac1624f2d00f42ac9c23be9ab99a16d1, type: 2}
+  trailColor: {r: 1, g: 0.82, b: 0.2, a: 0.5}
+  trailAccentColor: {r: 0.95, g: 0.2, b: 0.12, a: 0.36}
+  trailInterval: 0.025
+  trailLifetime: 0.2
+  weaponImpactPoint: {x: 0.13, y: 0.35}
+  powerForFullImpact: 40
+  impactFxDuration: 0.24

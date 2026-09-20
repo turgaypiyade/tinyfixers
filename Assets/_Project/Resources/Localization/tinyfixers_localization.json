@@ -421,44 +421,20 @@
           "value": "Bitti"
         },
         {
-          "key": "boss_toast_charge",
-          "value": "Büyük saldırı geliyor — {0} taş kır!"
+          "key": "boss_move_power",
+          "value": "GÜÇ {0}"
         },
         {
-          "key": "boss_tip_charge",
-          "value": "Boss şarj oluyor! Halka dolmadan {0} taş kırarsan saldırıyı kesersin."
-        },
-        {
-          "key": "boss_toast_interrupted",
-          "value": "KESTİN! Boss sersemledi — ×1.5 hasar!"
-        },
-        {
-          "key": "boss_toast_bigattack",
-          "value": "BÜYÜK SALDIRI!"
-        },
-        {
-          "key": "boss_tip_weakness",
-          "value": "Zayıf renk! Rozetteki renkten taş kır: ×2 hasar."
+          "key": "boss_protection_absorbed",
+          "value": "Kalkan −{0}   Can −{1}"
         },
         {
           "key": "boss_toast_shield_player",
-          "value": "Kalkan aktif!"
+          "value": "Koruma +{0}"
         },
         {
           "key": "boss_toast_shield_enemy",
-          "value": "Boss kalkanlandı!"
-        },
-        {
-          "key": "boss_charge_break_label",
-          "value": "KIR!"
-        },
-        {
-          "key": "boss_toast_laser_ready",
-          "value": "Süper lazer hazır!"
-        },
-        {
-          "key": "boss_tip_laser",
-          "value": "Süper lazer hazır! Butona bas — kalkan delen dev atış."
+          "value": "Rakip koruma +{0}"
         },
         {
           "key": "worldmap_region_robot_hall",
@@ -1098,44 +1074,20 @@
           "value": "Ended"
         },
         {
-          "key": "boss_toast_charge",
-          "value": "Big attack incoming — break {0} tiles!"
+          "key": "boss_move_power",
+          "value": "POWER {0}"
         },
         {
-          "key": "boss_tip_charge",
-          "value": "Boss is charging! Break {0} tiles before the ring fills to interrupt it."
-        },
-        {
-          "key": "boss_toast_interrupted",
-          "value": "INTERRUPTED! Boss stunned — ×1.5 damage!"
-        },
-        {
-          "key": "boss_toast_bigattack",
-          "value": "BIG ATTACK!"
-        },
-        {
-          "key": "boss_tip_weakness",
-          "value": "Weak color! Break tiles of the badge color for ×2 damage."
+          "key": "boss_protection_absorbed",
+          "value": "Shield −{0}   HP −{1}"
         },
         {
           "key": "boss_toast_shield_player",
-          "value": "Shield up!"
+          "value": "Protection +{0}"
         },
         {
           "key": "boss_toast_shield_enemy",
-          "value": "Boss shielded!"
-        },
-        {
-          "key": "boss_charge_break_label",
-          "value": "BREAK!"
-        },
-        {
-          "key": "boss_toast_laser_ready",
-          "value": "Super laser ready!"
-        },
-        {
-          "key": "boss_tip_laser",
-          "value": "Super laser ready! Tap the button — a shield-piercing mega shot."
+          "value": "Opponent protection +{0}"
         },
         {
           "key": "worldmap_region_robot_hall",
