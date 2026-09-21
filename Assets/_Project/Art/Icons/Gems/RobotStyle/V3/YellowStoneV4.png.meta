@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: decf7a603acd346a588b079d8529a30f
+guid: 7b6c2180b1256424788005a9aeee5496
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 6238366470241578850
-    second: LV4_0
+      213: 1928472830938989372
+    second: YellowStoneV4_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -34,7 +34,7 @@ TextureImporter:
   cubemapConvolution: 0
   seamlessCubemap: 0
   textureFormat: 1
-  maxTextureSize: 512
+  maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
     filterMode: 1
@@ -48,7 +48,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 1
   spriteExtrude: 1
-  spriteMeshType: 0
+  spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 2
@@ -85,7 +85,7 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
     buildTarget: Standalone
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -98,7 +98,7 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
     buildTarget: iOS
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LV4_0
+      name: YellowStoneV4_0
       rect:
         serializedVersion: 2
-        x: 85
-        y: 19
-        width: 1103
-        height: 1227
+        x: 0
+        y: 3
+        width: 1156
+        height: 1154
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 26fe47d9041239650800000000000000
-      internalID: 6238366470241578850
+      spriteID: c334c1f72df43ca10800000000000000
+      internalID: 1928472830938989372
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LV4_0: 6238366470241578850
+      YellowStoneV4_0: 1928472830938989372
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

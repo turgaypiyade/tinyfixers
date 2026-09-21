@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: f426dfa0bf1a64a63aafec45756b25cc
+guid: 5bbbb78ab43624a1fb571b6e0912b5a7
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8947162618790142765
-    second: LV1_0
+      213: -6704775539977441355
+    second: wonderlogo_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -34,7 +34,7 @@ TextureImporter:
   cubemapConvolution: 0
   seamlessCubemap: 0
   textureFormat: 1
-  maxTextureSize: 512
+  maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
     filterMode: 1
@@ -48,7 +48,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 1
   spriteExtrude: 1
-  spriteMeshType: 0
+  spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -72,10 +72,10 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 2
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -85,7 +85,7 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
     buildTarget: Standalone
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -98,7 +98,7 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
     buildTarget: iOS
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LV1_0
+      name: wonderlogo_0
       rect:
         serializedVersion: 2
-        x: 18
-        y: 0
-        width: 502
-        height: 540
+        x: 0
+        y: 108
+        width: 607
+        height: 264
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d23e3a86ff4ba2c70800000000000000
-      internalID: 8947162618790142765
+      spriteID: 5bfaae87b2ad3f2a0800000000000000
+      internalID: -6704775539977441355
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LV1_0: 8947162618790142765
+      wonderlogo_0: -6704775539977441355
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

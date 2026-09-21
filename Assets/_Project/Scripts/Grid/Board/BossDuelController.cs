@@ -25,8 +25,9 @@ public sealed class BossDuelController : MonoBehaviour
     [Header("Core Refs")]
     [SerializeField] private BoardController board;
     [SerializeField] private TopHudController topHud;
-    [Tooltip("Açılış animasyonu: iki parça soldan/sağdan gelip ortada birleşir, sonra oyun açılır. Boş bırakılırsa intro atlanır.")]
+    [Tooltip("Eski sahne intro referansı. BossDuel artık yeni VS görsellerini kullanır; yükleme sırasında oynadıysa sahnede tekrarlanmaz.")]
     [SerializeField] private BossDuelIntroController intro;
+    private bool ownsIntro;
     [Tooltip("Arena arka plan Image'ı. LevelData.battlefieldBackground atanırsa sprite buna uygulanır; boşsa mevcut kalır.")]
     [SerializeField] private Image arenaBackground;
 
@@ -182,6 +183,8 @@ public sealed class BossDuelController : MonoBehaviour
     // ── State ──
     private bool bossModeActive;
     private bool endEvalHoldActive;       // hamle bitti ama vuruşlar boşalmadı — fail eval beklesin
+    private float endEvalHoldStartTime;   // gözcü: hold ne zaman başladı (unscaled)
+    private bool endEvalHoldWarned;
 
     // ── Toast kuyruğu (olay bildirimleri — üst üste binmez, sırayla oynar) ──
     private readonly Queue<(string text, float duration, bool strong)> toastQueue = new();
@@ -191,6 +194,9 @@ public sealed class BossDuelController : MonoBehaviour
     private int enemyHp, enemyMaxHp;
     private int playerHp, playerMaxHp;
     private int movesSinceOil;
+    private int pressureVolleyIndex;
+    private bool pressureOwnsInputLock;
+    private RectTransform pressureEffectsRoot;
 
     private int damagePerTile;
     private int enemyBaseDamage;
@@ -198,7 +204,6 @@ public sealed class BossDuelController : MonoBehaviour
     // ── Dalga durumu ──
     private BossDifficulty.WaveParams[] waves;
     private int waveIndex;
-    private bool enemyEffectActive;      // rakip efekti (oil) oynuyor — o temizlikler oyuncuya yazılmaz
     private bool waveTransitionActive;   // geçiş boyunca iki taraf da ateş etmez; strikes birikir
     private int waveOilCount;
     private int waveOilEveryMoves;
@@ -243,6 +248,18 @@ public sealed class BossDuelController : MonoBehaviour
 
         bossModeActive = true;
 
+        bool introPlayedDuringLoading = CustomIntroLoadingManager.HasShownBossIntroFor(gameObject.scene);
+        if (introPlayedDuringLoading)
+        {
+            intro?.HideImmediate();
+        }
+        else if (!ownsIntro)
+        {
+            intro?.HideImmediate();
+            intro = BossDuelIntroArtwork.Create(transform);
+            ownsIntro = intro != null;
+        }
+
         // Dalga listesi: authored bossWaves varsa o, yoksa BossDifficulty formülü.
         // Dalga 1 parametreleri level'ın Battlefield alanlarından gelir (eski davranış birebir).
         waves = BossDifficulty.BuildWaves(level, totalEnemyHp);
@@ -269,7 +286,14 @@ public sealed class BossDuelController : MonoBehaviour
         StartWave(0);
 
         // Açılış: iki parça soldan/sağdan gelip ortada birleşir; bu sırada board kilitli.
-        if (intro != null && intro.HasIntro)
+        if (introPlayedDuringLoading)
+        {
+            board.SetInputLocked(true);
+            while (CustomIntroLoadingManager.IsBossIntroFor(gameObject.scene))
+                yield return null;
+            board.SetInputLocked(false);
+        }
+        else if (intro != null && intro.HasIntro)
         {
             board.SetInputLocked(true);
             yield return intro.Play();
@@ -288,15 +312,23 @@ public sealed class BossDuelController : MonoBehaviour
         StartCoroutine(BattleLoop());
     }
 
+    private void OnDestroy()
+    {
+        if (ownsIntro && intro != null) Destroy(intro.gameObject);
+    }
+
     private void OnDisable()
     {
         bossModeActive = false;
         StopAllCoroutines();
+        ReleasePressureInputLock();
+        intro?.HideImmediate();
         // Hayalet çıkış yarıda kesilirse rakip saydam kalmasın.
         if (enemyFadeGroup != null) enemyFadeGroup.alpha = 1f;
         playerAttackActive = false;
         enemyMeleeActive = false;
         animalTurnActive = false;
+        waveTransitionActive = false;   // StopAllCoroutines dalga geçişini yarıda kesmiş olabilir
         defeatAnimationsActive = 0;
         ReleaseEndEvalHold();
         if (powerMeterRoot != null) powerMeterRoot.gameObject.SetActive(false);
@@ -385,7 +417,7 @@ public sealed class BossDuelController : MonoBehaviour
         powerOrbs = gameObject.AddComponent<BossDuelPowerOrbs>();
         powerOrbs.Initialize(vfxRoot, powerOrbTarget != null ? powerOrbTarget : playerRobot,
             ResolveOrbRallyWorld, HandlePowerOrbArrived,
-            () => bossModeActive && !IsOver() && !enemyEffectActive,
+            () => bossModeActive && !IsOver(),
             orbTuning);
     }
 
@@ -476,11 +508,11 @@ public sealed class BossDuelController : MonoBehaviour
         return img;
     }
 
-    private static BossDuelCharacterView CreateCharacterView(Image body, BossDuelCharacterProfile profile)
+    private BossDuelCharacterView CreateCharacterView(Image body, BossDuelCharacterProfile profile)
     {
         if (body == null || profile == null || !profile.IsUsable) return null;
         var view = body.gameObject.AddComponent<BossDuelCharacterView>();
-        view.Initialize(body, profile);
+        view.Initialize(body, profile, vfxRoot);
         return view;
     }
 
@@ -489,6 +521,7 @@ public sealed class BossDuelController : MonoBehaviour
         if (!bossModeActive || IsOver()) return;
         playerMoveOpen = true;
         moveSettledTime = 0f;
+        NoteEndEvalProgress();
         TickEndEvalHold();
     }
 
@@ -675,26 +708,55 @@ public sealed class BossDuelController : MonoBehaviour
         }
     }
 
-    private void ApplyEnemyOilPressure()
+    private IEnumerator ApplyEnemyObstaclePressure()
     {
-        if (waveOilCount <= 0 || waveTransitionActive || IsOver()) return;
+        if (waveOilCount <= 0 || waveTransitionActive || IsOver()) yield break;
         movesSinceOil++;
-        if (movesSinceOil < Mathf.Max(1, waveOilEveryMoves)) return;
+        if (movesSinceOil < Mathf.Max(1, waveOilEveryMoves)) yield break;
         movesSinceOil = 0;
-        ThrowOil(waveOilCount);
+
+        // A player can already be making their next move during the melee animation.
+        // Finish that move before selecting cells; only the short projectile flight locks input.
+        while (!IsOver() && (board.IsExplicitlyLocked || board.Flow.IsDuelMoveSettling))
+            yield return null;
+        if (IsOver() || waveTransitionActive) yield break;
+        var pool = BossDuelObstaclePressure.GetPool(board.ActiveLevelData);
+        var targets = BossDuelObstaclePressure.PickTargets(board, pool, waveOilCount);
+        if (targets.Count == 0) yield break;
+        var id = pool[pressureVolleyIndex % pool.Count];
+        pressureVolleyIndex++;
+        pressureOwnsInputLock = true;
+        board.SetInputLocked(true);
+        try
+        {
+            var go = new GameObject("BossPressureVolley", typeof(RectTransform));
+            pressureEffectsRoot = (RectTransform)go.transform;
+            pressureEffectsRoot.SetParent(vfxRoot != null ? vfxRoot : board.TilesRoot, false);
+            MatchParentLayer(pressureEffectsRoot);
+            yield return BossDuelObstaclePressure.Throw(board, enemyRobot, pressureEffectsRoot, targets, id);
+        }
+        finally
+        {
+            ReleasePressureInputLock();
+        }
     }
 
-    // ── Tile clears ──
+    private void ReleasePressureInputLock()
+    {
+        if (pressureEffectsRoot != null) Destroy(pressureEffectsRoot.gameObject);
+        pressureEffectsRoot = null;
+        if (!pressureOwnsInputLock) return;
+        pressureOwnsInputLock = false;
+        if (board != null) board.SetInputLocked(false);
+    }
 
     private void HandleTilesCleared(TileType type, int amount)
     {
         if (!bossModeActive || amount <= 0 || IsOver())
             return;
 
-        // Rakip efektinin (oil) kırdığı taş oyuncunun gücü değildir. Bunun dışında her
-        // temizlik sayılır: darbe oynarken oynamaya devam eden oyuncunun gücü KAYBOLMAZ,
-        // sıradaki darbeye devreder.
-        if (enemyEffectActive) return;
+        // Thrown obstacles convert tiles without clear events; every actual player clear counts.
+        // Clears during a melee animation accumulate for the next strike.
         // Boosters also open a turn. Zero damage must never leave a drain hold behind.
         HandlePlayerMoveConsumed();
         accumulatedPower = (int)System.Math.Min(int.MaxValue,
@@ -728,6 +790,24 @@ public sealed class BossDuelController : MonoBehaviour
     // Son hamle harcandığında kuyrukta/havada hâlâ vuruş olabilir; bunlar boss'u öldürüp
     // WIN getirebilir. Fail değerlendirmesi (ActiveBackgroundJobs okur) vuruşlar boşalana
     // kadar beklesin — resolve döngüsünü parketmeyen goal-orb tarzı sayaçla tutulur.
+    // SÜREKLİ POMPA: hold'u her frame yeniden türet. BattleLoop düello biter bitmez durur
+    // (IsOver / bossModeActive=false), oysa level-end değerlendirmesi tam o anda başlar —
+    // hold'un sahibi o andan sonra yalnız dağınık finally'lerdi. Tek bir coroutine takılır
+    // ya da yarıda kesilirse hold kalıcı sızıyor, LevelEnd 30 sn bekleyip force-drain ediyordu.
+    // Tick geçiş-bazlı (durum değişmediyse saf no-op) → maliyeti birkaç bool karşılaştırması.
+    private void Update()
+    {
+        TickEndEvalHold();
+    }
+
+    private void NoteEndEvalProgress()
+    {
+        // This hold may stay open across several legitimate moves/strikes.
+        // Diagnose time without progress, not the total duration of a busy encounter.
+        endEvalHoldStartTime = Time.unscaledTime;
+        endEvalHoldWarned = false;
+    }
+
     private void TickEndEvalHold()
     {
         bool draining = accumulatedPower > 0 || playerAttackActive || playerMoveOpen;
@@ -738,9 +818,24 @@ public sealed class BossDuelController : MonoBehaviour
                           (turnInProgress || (bossModeActive && !IsOver() && draining));
 
         if (shouldHold == endEvalHoldActive)
+        {
+            // Gözcü: hold uzun süre asılı kalırsa HANGİ bayrağın tuttuğunu söyle. Böylece
+            // "30 sn force-drain" bir daha olursa sebebi aramak gerekmez, log'da yazar.
+            if (shouldHold && Time.unscaledTime - endEvalHoldStartTime > 10f && !endEvalHoldWarned)
+            {
+                endEvalHoldWarned = true;
+                Debug.LogWarning(
+                    $"[BossDuel] End-eval hold 10sn+ ilerlemedi. animalTurn={animalTurnActive} " +
+                    $"playerAttack={playerAttackActive} enemyMelee={enemyMeleeActive} " +
+                    $"waveTransition={waveTransitionActive} defeatAnims={defeatAnimationsActive} " +
+                    $"bossMode={bossModeActive} isOver={IsOver()} power={accumulatedPower} moveOpen={playerMoveOpen}");
+            }
             return;
+        }
 
         endEvalHoldActive = shouldHold;
+        endEvalHoldStartTime = Time.unscaledTime;
+        endEvalHoldWarned = false;
         if (shouldHold) board.BeginBossStrikeDrain();
         else board.EndBossStrikeDrain();
     }
@@ -786,6 +881,7 @@ public sealed class BossDuelController : MonoBehaviour
         // olduğundan clamp'li bildirimle goal defteri hiç şaşmaz.
         int applied = Mathf.Min(dmg, enemyHp);
         enemyHp -= applied;
+        NoteEndEvalProgress();
         enemyHpBar?.Set(enemyHp);
         PlayRobotHitFeedback(enemyRobot, +1f);   // düşman sağa itilir
 
@@ -830,6 +926,7 @@ public sealed class BossDuelController : MonoBehaviour
     private void StartWave(int index)
     {
         waveIndex = index;
+        NoteEndEvalProgress();
         var w = waves[index];
 
         enemyMaxHp = Mathf.Max(1, w.hp);
@@ -845,6 +942,7 @@ public sealed class BossDuelController : MonoBehaviour
         if (index == 0)
             enemyHpBar?.InitWavePips(waves.Length);
         enemyHpBar?.SetWaveIndex(index);
+        RefreshProtectionLabels();
     }
 
     // ── Toast sistemi ─────────────────────────────────────────────────────────
@@ -1010,8 +1108,8 @@ public sealed class BossDuelController : MonoBehaviour
             enemyCharacterView.SetProfile(profile);
 
         enemyBodyImage.color = w.bodyTint;
-        // Kalkan pozu OLMAYAN rakip (ör. sırtlan) için balon gerekir: profil değiştiği
-        // için bu karar her dalgada yeniden verilir.
+        // Profile-based animals never fall back to the old robot shield ring.
+        // Without shield artwork, protection is still shown by the HP-bar badge.
         EnsureShieldBubble(ref enemyShieldBubble, enemyRobot, enemyShieldColor, enemyShieldSprite, isEnemy: true);
     }
 
@@ -1020,26 +1118,34 @@ public sealed class BossDuelController : MonoBehaviour
         waveTransitionActive = true;
         TickEndEvalHold();
 
-        // Ölen rakibin koruması onunla gider; oyuncununki kalır.
-        enemyProtection = 0;
-        HideShieldBubbles();
+        // try/finally ŞART: bu rutin yarıda kesilirse (düello biter, coroutine durdurulur,
+        // alt adım takılır) waveTransitionActive true kalır → end-eval hold'u kalıcı sızar
+        // ve level-end 30 sn force-drain'e düşer. Bayrak her çıkışta sıfırlanmalı.
+        try
+        {
+            // Ölen rakibin koruması onunla gider; oyuncununki kalır.
+            enemyProtection = 0;
+            HideShieldBubbles();
 
-        yield return PlayDefeat(enemyRobot);
+            yield return PlayDefeat(enemyRobot);
 
-        yield return new WaitForSeconds(0.25f);
-        // Yenilen rakip yukarı süzülüp hayalet gibi silinir; yenisi ancak o gittikten sonra kayar.
-        yield return PlayGhostExit();
-        while (playerAttackActive) yield return null;
+            yield return new WaitForSeconds(0.25f);
+            // Yenilen rakip yukarı süzülüp hayalet gibi silinir; yenisi ancak o gittikten sonra kayar.
+            yield return PlayGhostExit();
+            while (playerAttackActive) yield return null;
 
-        // Yeni dalga: robotu ekran dışına taşı, gövde/kolları tazele, parametreleri kur.
-        RestoreEnemyRobotForNextWave();
-        StartWave(waveIndex + 1);
-        // Otomatik iyileşme YOK: oyuncu canı ve kalan koruması sonraki rakibe olduğu gibi taşınır.
-        StartCoroutine(ShowWaveBanner(waveIndex + 1));
-        yield return EnemyEntranceSlide();
-
-        waveTransitionActive = false;
-        TickEndEvalHold();
+            // Yeni dalga: robotu ekran dışına taşı, gövde/kolları tazele, parametreleri kur.
+            RestoreEnemyRobotForNextWave();
+            StartWave(waveIndex + 1);
+            // Otomatik iyileşme YOK: oyuncu canı ve kalan koruması sonraki rakibe olduğu gibi taşınır.
+            StartCoroutine(ShowWaveBanner(waveIndex + 1));
+            yield return EnemyEntranceSlide();
+        }
+        finally
+        {
+            waveTransitionActive = false;
+            TickEndEvalHold();
+        }
     }
 
     /// Yenilen rakip yukarı süzülür, küçülür ve saydamlaşır — "hayalet olup gitme" çıkışı.
@@ -1169,7 +1275,7 @@ public sealed class BossDuelController : MonoBehaviour
             yield break;
 
         yield return AnimalEnemyStrike(Mathf.Max(0, enemyBaseDamage));
-        ApplyEnemyOilPressure();
+        yield return ApplyEnemyObstaclePressure();
     }
 
     private void ApplyPlayerDamage(int dmg)
@@ -1180,6 +1286,7 @@ public sealed class BossDuelController : MonoBehaviour
         if (dmg <= 0) return;
 
         playerHp = Mathf.Max(0, playerHp - dmg);
+        NoteEndEvalProgress();
         playerHpBar?.Set(playerHp);
         PlayRobotHitFeedback(playerRobot, -1f);   // oyuncu sola itilir
 
@@ -1207,23 +1314,42 @@ public sealed class BossDuelController : MonoBehaviour
         int absorbed = Mathf.Min(damage, protection);
         if (toPlayer) playerProtection -= absorbed;
         else enemyProtection -= absorbed;
+        // Update persistent guard first, then play the final block even when it used the last point.
+        RefreshProtectionLabels();
         if (absorbed > 0)
         {
+            NoteEndEvalProgress();
             PlayShieldAbsorb(toPlayer ? playerShieldBubble : enemyShieldBubble,
                 toPlayer ? playerShieldColor : enemyShieldColor, toPlayer ? playerRobot : enemyRobot);
             ShowToast(LocFormat("boss_protection_absorbed", "Kalkan: −{0}   Can: −{1}", absorbed,
                 Mathf.Min(damage - absorbed, toPlayer ? playerHp : enemyHp)), 0.8f);
         }
-        RefreshProtectionLabels();
         return damage - absorbed;
     }
 
     private void RefreshProtectionLabels()
     {
+        RefreshShieldVisual(playerRobot, playerShieldBubble, playerProtection);
+        RefreshShieldVisual(enemyRobot, enemyShieldBubble, enemyProtection);
         RefreshProtectionLabel(ref playerProtectionLabel, ref playerProtectionShown,
             playerHpBar, playerProtection, playerShieldColor);
         RefreshProtectionLabel(ref enemyProtectionLabel, ref enemyProtectionShown,
             enemyHpBar, enemyProtection, enemyShieldColor);
+    }
+
+    private void RefreshShieldVisual(RectTransform robot, Image bubble, int protection)
+    {
+        var character = GetShieldCharacter(robot);
+        character?.SetShieldActive(protection > 0);
+        if (bubble == null) return;
+        bool visible = protection > 0 && character == null;
+        if (visible)
+        {
+            float size = Mathf.Max(shieldBubbleMinSize,
+                (robot != null ? Mathf.Max(robot.rect.width, robot.rect.height) : 0f) * shieldBubbleScale);
+            bubble.rectTransform.sizeDelta = Vector2.one * size;
+        }
+        bubble.gameObject.SetActive(visible);
     }
 
     private void RefreshProtectionLabel(ref TMP_Text label, ref int shown, HpBar hpBar, int protection, Color tint)
@@ -1310,8 +1436,7 @@ public sealed class BossDuelController : MonoBehaviour
         go.SetActive(false);
     }
 
-    // Balonlar yalnız korumalı vuruşta bir an çakar (ShieldFlash); geri kalan zaman kapalıdır.
-    // Kalıcı gösterge HP barının altındaki koruma rozetidir.
+    // Reconcile after initialization/wave changes; player protection carries to the next wave.
     private void HideShieldBubbles()
     {
         if (playerShieldBubble != null) playerShieldBubble.gameObject.SetActive(false);
@@ -1325,7 +1450,7 @@ public sealed class BossDuelController : MonoBehaviour
     {
         if (robot == null) return null;
         var character = robot == playerRobot ? playerCharacterView : robot == enemyRobot ? enemyCharacterView : null;
-        return character != null && character.HasShieldPose ? character : null;
+        return character;
     }
 
     private void PlayShieldAbsorb(Image bubble, Color color, RectTransform robot)
@@ -1336,7 +1461,7 @@ public sealed class BossDuelController : MonoBehaviour
             character.PlayShieldBlock(robot == playerRobot ? -1f : 1f);
             return;
         }
-        // Balon sürekli kapalıdır; kalkan pozu olmayan karakterde tek seferlik çakar.
+        // Only legacy actors without a character view use the bubble fallback.
         if (bubble != null && shieldAbsorbPulseDuration > 0f)
             StartCoroutine(ShieldFlash(bubble, color, robot));
     }
@@ -1352,7 +1477,7 @@ public sealed class BossDuelController : MonoBehaviour
         bubble.color = color;
         bubble.gameObject.SetActive(true);
         yield return ShieldAbsorbPulse(bubble, color);
-        if (bubble != null) bubble.gameObject.SetActive(false);
+        RefreshShieldVisual(robot, bubble, robot == playerRobot ? playerProtection : enemyProtection);
     }
 
     private IEnumerator ShieldAbsorbPulse(Image bubble, Color color)
@@ -1734,81 +1859,6 @@ public sealed class BossDuelController : MonoBehaviour
             defeatAnimationsActive = Mathf.Max(0, defeatAnimationsActive - 1);
             TickEndEvalHold();
         }
-    }
-
-    // ── Oil (opsiyonel baskı) ──
-
-    private void ThrowOil(int oilCount)
-    {
-        var targets = PickOilTargets(oilCount);
-        if (targets.Count == 0) return;
-
-        StartCoroutine(EnemyEffectWindow());
-
-        // Yeni oil kendi hücresinde belirir (uzaktan köprü değil); kaynak = hedef.
-        var pairs = new List<OilSpreadPair>(targets.Count);
-        foreach (var t in targets)
-            pairs.Add(new OilSpreadPair(t, t));
-
-        board.StartImmediateActionSequence(new List<BoardAction> { new OilSpreadAction(board, pairs) });
-    }
-
-    // Oil yerleşimi sırasında kırılan taşlar oyuncunun gücüne yazılmaz.
-    private IEnumerator EnemyEffectWindow()
-    {
-        enemyEffectActive = true;
-        yield return null;
-        while (board != null && board.IsActionSequencePlaying) yield return null;
-        enemyEffectActive = false;
-    }
-
-    private List<Vector2Int> PickOilTargets(int count)
-    {
-        var candidates = new List<Vector2Int>();
-        var reserved = new HashSet<Vector2Int>();
-        var obstacleService = board.ObstacleStateService;
-
-        for (int x = 0; x < board.Width; x++)
-            for (int y = 0; y < board.Height; y++)
-            {
-                if (board.Holes[x, y]) continue;
-                if (obstacleService != null && obstacleService.HasObstacleAt(x, y)) continue;
-                var tile = board.Tiles[x, y];
-                if (tile == null || board.GridData[x, y] == null) continue;
-                if (tile.GetSpecial() != TileSpecial.None) continue;
-                candidates.Add(new Vector2Int(x, y));
-            }
-
-        var picked = new List<Vector2Int>(count);
-        for (int i = 0; i < count && candidates.Count > 0; i++)
-        {
-            bool pickedOne = false;
-            int start = Random.Range(0, candidates.Count);
-            for (int c = 0; c < candidates.Count; c++)
-            {
-                int idx = (start + c) % candidates.Count;
-                var candidate = candidates[idx];
-                reserved.Add(candidate);
-                bool keepsPlayableMove = board.HasAnyPlayableSwapWithAdditionalLockedCells(reserved);
-                reserved.Remove(candidate);
-
-                if (!keepsPlayableMove)
-                    continue;
-
-                picked.Add(candidate);
-                reserved.Add(candidate);
-                candidates.RemoveAt(idx);
-                pickedOne = true;
-                break;
-            }
-
-            if (!pickedOne)
-            {
-                Debug.Log("[BossDuel][Oil] Oil attack skipped; every remaining target would leave no playable move.");
-                break;
-            }
-        }
-        return picked;
     }
 
     // ── Helpers ──

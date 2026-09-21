@@ -27,7 +27,7 @@ public sealed class BossDuelCharacterView : MonoBehaviour
     public bool IsAttacking => attacking;
     public bool HasShieldPose => profile != null && profile.shield != null && profile.shield.sprite != null;
 
-    public void Initialize(Image image, BossDuelCharacterProfile character)
+    public void Initialize(Image image, BossDuelCharacterProfile character, RectTransform effectsRoot = null)
     {
         body = image;
         profile = character;
@@ -41,7 +41,7 @@ public sealed class BossDuelCharacterView : MonoBehaviour
         body.preserveAspect = true;
         body.raycastTarget = false;
         attackVfx = gameObject.AddComponent<BossDuelAttackVfx>();
-        attackVfx.Initialize(body, profile, standingHeight);
+        attackVfx.Initialize(body, profile, standingHeight, effectsRoot);
         Show(profile.idle);
     }
 
@@ -136,6 +136,7 @@ public sealed class BossDuelCharacterView : MonoBehaviour
     {
         if (attacking || finished || body == null || profile == null) yield break;
         int version = poseVersion;
+        bool landed = false;
         attacking = true;
         try
         {
@@ -155,16 +156,20 @@ public sealed class BossDuelCharacterView : MonoBehaviour
             var swingPose = profile.swing != null && profile.swing.sprite != null ? profile.swing : profile.windup;
             float duration = Mathf.Max(0.02f, profile.swingDuration);
             attackVfx.BeginTrail();
+            attackVfx.BeginSwing(power, GetStrikeContact(reach), target);
             for (float t = 0f; t < duration; t += Time.deltaTime)
             {
                 if (finished || version != poseVersion || cancelled()) yield break;
                 Show(swingPose, Vector2.Lerp(Vector2.zero, reach, Mathf.Clamp01(t / duration)));
                 attackVfx.TickTrail(Time.deltaTime);
+                attackVfx.TickSwing(Mathf.Clamp01(t / duration));
                 yield return null;
             }
             if (finished || version != poseVersion || cancelled()) yield break;
             Show(profile.strike, reach);
+            attackVfx.ReleaseSwing();
             attackVfx.PlayImpact(power);
+            landed = true;
             impact?.Invoke();
             if (finished) yield break;
             yield return new WaitForSeconds(Mathf.Max(0.02f, profile.impactDuration));
@@ -183,6 +188,7 @@ public sealed class BossDuelCharacterView : MonoBehaviour
         }
         finally
         {
+            if (!landed) attackVfx.CancelSwing();
             if (version == poseVersion)
             {
                 attacking = false;
@@ -195,6 +201,18 @@ public sealed class BossDuelCharacterView : MonoBehaviour
                 else if (!finished) ShowRestPose();
             }
         }
+    }
+
+    private Vector3 GetStrikeContact(Vector2 reach)
+    {
+        var pose = profile.strike != null && profile.strike.sprite != null ? profile.strike : profile.idle;
+        float height = standingHeight * Mathf.Max(0.01f, pose.height);
+        float width = height * pose.sprite.rect.width / pose.sprite.rect.height;
+        Vector2 point = profile.weaponImpactPoint - pose.groundPivot;
+        Vector3 local = restRotation * Vector3.Scale(new Vector3(point.x * width, point.y * height, 0f), baseScale);
+        var rt = body.rectTransform;
+        Vector3 anchorOffset = rt.localPosition - (Vector3)rt.anchoredPosition;
+        return rt.parent.TransformPoint(anchorOffset + (Vector3)(ground + pose.offset + reach) + local);
     }
 
     public void Finish(bool won, bool immediate = false)

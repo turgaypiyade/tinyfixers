@@ -42,6 +42,21 @@ public sealed class BossDuelIntroController : MonoBehaviour
 
     private Vector2 _leftMeet, _rightMeet;
     private bool    _captured;
+    private CanvasGroup _versus;
+    private BossDuelIntroArtwork _artwork;
+
+    public void ConfigureArtwork(CanvasGroup root, RectTransform left, RectTransform right,
+        CanvasGroup versus, BossDuelIntroArtwork artwork)
+    {
+        introRoot = root;
+        leftPiece = left;
+        rightPiece = right;
+        _versus = versus;
+        _artwork = artwork;
+        coverFromStart = true;
+        holdDuration = 1f;
+        _versus.alpha = 0f;
+    }
 
     private void Awake()
     {
@@ -95,6 +110,21 @@ public sealed class BossDuelIntroController : MonoBehaviour
     {
         if (!HasIntro) yield break;
 
+        // In-scene fallback waits until the ordinary loading screen has gone away.
+        while (LoadingScreenManager.IsVisible) yield return null;
+        yield return PlayEntrance();
+        yield return FadeOut();
+    }
+
+    /// The scene-loading manager keeps this pose visible until scene activation is complete.
+    public IEnumerator PlayEntrance()
+    {
+        if (!HasIntro) yield break;
+
+        _artwork?.RandomizeCharacters();
+        if (_versus != null) _versus.alpha = 0f;
+        introRoot.gameObject.SetActive(true);
+        Canvas.ForceUpdateCanvases();
         ParkPiecesOffscreen();
         Vector2 leftStart  = leftPiece.anchoredPosition;
         Vector2 rightStart = rightPiece.anchoredPosition;
@@ -107,7 +137,7 @@ public sealed class BossDuelIntroController : MonoBehaviour
         float t = 0f;
         while (t < slideInDuration)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(t / slideInDuration);
             float e = 1f - (1f - k) * (1f - k);
             leftPiece.anchoredPosition  = Vector2.LerpUnclamped(leftStart,  _leftMeet,  e);
@@ -117,17 +147,23 @@ public sealed class BossDuelIntroController : MonoBehaviour
         leftPiece.anchoredPosition  = _leftMeet;
         rightPiece.anchoredPosition = _rightMeet;
 
+        if (_versus != null)
+            yield return ShowVersus();
+
         if (meetPunchScale > 1f && meetPunchDuration > 0f)
             yield return MeetPunch();
 
         if (holdDuration > 0f)
-            yield return new WaitForSeconds(holdDuration);
+            yield return new WaitForSecondsRealtime(holdDuration);
+    }
 
+    private IEnumerator FadeOut()
+    {
         // Çık (fade-out) → oyun açılır.
-        t = 0f;
+        float t = 0f;
         while (t < exitDuration)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             introRoot.alpha = 1f - Mathf.Clamp01(t / exitDuration);
             yield return null;
         }
@@ -135,6 +171,31 @@ public sealed class BossDuelIntroController : MonoBehaviour
         introRoot.alpha = 0f;
         introRoot.blocksRaycasts = false;
         introRoot.gameObject.SetActive(false);
+    }
+
+    public void SetEntranceTiming(float slide, float hold)
+    {
+        slideInDuration = Mathf.Max(0.05f, slide);
+        holdDuration = Mathf.Max(0f, hold);
+    }
+
+    private IEnumerator ShowVersus()
+    {
+        const float duration = 0.24f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(elapsed / duration);
+            _versus.alpha = Mathf.Clamp01(k * 5f);
+            float scale = k < 0.65f
+                ? Mathf.Lerp(1.65f, 0.94f, 1f - Mathf.Pow(1f - k / 0.65f, 3f))
+                : Mathf.Lerp(0.94f, 1f, (k - 0.65f) / 0.35f);
+            _versus.transform.localScale = Vector3.one * scale;
+            yield return null;
+        }
+        _versus.alpha = 1f;
+        _versus.transform.localScale = Vector3.one;
     }
 
     private IEnumerator MeetPunch()
@@ -146,7 +207,7 @@ public sealed class BossDuelIntroController : MonoBehaviour
         float t = 0f;
         while (t < half)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(t / half);
             leftPiece.localScale  = Vector3.LerpUnclamped(baseL, peakL, k);
             rightPiece.localScale = Vector3.LerpUnclamped(baseR, peakR, k);
@@ -155,7 +216,7 @@ public sealed class BossDuelIntroController : MonoBehaviour
         t = 0f;
         while (t < half)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(t / half);
             leftPiece.localScale  = Vector3.LerpUnclamped(peakL, baseL, k);
             rightPiece.localScale = Vector3.LerpUnclamped(peakR, baseR, k);

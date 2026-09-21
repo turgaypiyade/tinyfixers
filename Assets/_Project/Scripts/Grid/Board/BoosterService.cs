@@ -361,6 +361,21 @@ public class BoosterService
     // ── Joker/booster tek-atış SFX (Resources/Audio/Jokers/*) ─────────────────
     private static readonly Dictionary<string, AudioClip> _jokerSfxCache = new Dictionary<string, AudioClip>();
 
+    // Resources.Load SENKRONDUR: ilk joker sesi oyunun ortasında kare düşürüyordu.
+    // Level açılışında bir kez ısıt (cache static → sonraki seviyelerde bedava).
+    private static readonly string[] JokerSfxNames =
+    {
+        "shuffle1", "DrillSound", "HammerFalling", "HammerHit", "Hammerswing",
+        "Mini1", "Mini2", "mini3"
+    };
+
+    internal static void WarmupJokerSfxCache()
+    {
+        foreach (var name in JokerSfxNames)
+            if (!_jokerSfxCache.TryGetValue(name, out var cached) || cached == null)
+                _jokerSfxCache[name] = Resources.Load<AudioClip>("Audio/Jokers/" + name);
+    }
+
     private void PlayJokerSfx(string fileName, float volume = 1f)
     {
         if (board == null || board.Audio == null || string.IsNullOrEmpty(fileName))
@@ -1311,6 +1326,16 @@ public class BoosterService
         Debug.Log("[Shuffle] SafeShuffleBoardRoutine START");
         board.BeginBusy();
 
+        // Shuffle board.Tiles'ın TAMAMINI yeniden eşler → EXCLUSIVE çalışmalı. ResolveBoard'un
+        // settle kontrolü bilerek yalnız blocking job'ları bekliyor: uçuştaki PatchBot dash'i,
+        // goal-orb, detached action, spread hâlâ hücre temizleyip taş taşıyabilir. Bu iş ~1 sn
+        // sürdüğü için o pencerede board değişirse harita bayatlar ve commit bozuk referans yazar.
+        yield return board.WaitForExclusiveBoardAccess();
+
+        // "Hamle yok, board değişecek" hissi için kısa bekleme — artık harita kurulmadan ÖNCE.
+        // (Eskiden harita kurulduktan SONRA bekleniyordu; o 0.6 sn haritayı bayatlatan pencereydi.)
+        yield return new WaitForSeconds(0.6f);
+
         var currentTypes = new TileType[board.Width, board.Height];
         var lockedMask = new bool[board.Width, board.Height];
 
@@ -1367,12 +1392,32 @@ public class BoosterService
 
             if (hasMapping)
             {
-                // Shuffle'dan ÖNCE ekran biraz kalsın — kullanıcı "hamle yok, board değişecek"i
-                // fark etsin (yoksa ani değişimi anlamıyor).
-                yield return new WaitForSeconds(0.6f);
+                // Harita KİMİ view'lara dayandığını da saklar: animasyon sürerken board
+                // değişirse (async clear/fall) bayat haritayı commit etmek yasak.
+                var mappedTiles = new TileView[board.Width, board.Height];
+                for (int y = 0; y < board.Height; y++)
+                    for (int x = 0; x < board.Width; x++)
+                        mappedTiles[x, y] = board.Tiles[x, y];
 
                 yield return AnimateShufflePreview(sourceForDest, lockedMask);
-                CommitShuffleFromSourceMap(sourceForDest, lockedMask);
+
+                if (IsShuffleMapStale(mappedTiles))
+                {
+                    // Bayat harita commit edilirse hücreler null/çift referans alır → ekranda
+                    // boş hücre. Onun yerine: görsel-veri bütünlüğünü onar, sonra CANLI board
+                    // üzerinden yerinde (referans taşımadan) yeniden karıştır.
+                    Debug.LogWarning("[Shuffle] Board shuffle sırasında değişti → harita iptal, yerinde karıştırılıyor.");
+
+                    board.RepairTileGridIntegrity("shuffle-stale-map", snapPositions: true);
+
+                    BuildSafeShuffleState(currentTypes, lockedMask);
+                    if (TryBuildPermutationShuffleTypes(currentTypes, lockedMask, out var freshTypes))
+                        ApplyShuffledTypes(freshTypes, lockedMask);
+                }
+                else
+                {
+                    CommitShuffleFromSourceMap(sourceForDest, lockedMask);
+                }
 
                 // Yeni board'a da kısa bir hold — yerleşimi görsün.
                 yield return new WaitForSeconds(0.25f);
@@ -1384,6 +1429,9 @@ public class BoosterService
             }
 
             board.SyncAllTilesToGridData();
+            // SyncAllTilesToGridData yalnız DOLU hücreleri yazar; boşalan hücrenin bayat
+            // gridData'sını temizlemek ve çift/deaktif referansları yakalamak buranın işi.
+            board.RepairTileGridIntegrity("shuffle-commit");
             board.RefreshAllTileObstacleVisuals();
             board.RefreshAllSortingOrders();
             Debug.Log("[Shuffle] COMPLETE");
@@ -1536,6 +1584,19 @@ public class BoosterService
         }
 
         return true;
+    }
+
+    // Harita kurulduktan sonra board'un tek bir hücresi bile el değiştirdiyse (async clear,
+    // uçuştan gelen hasar, spawn) harita bayattır: commit ederse hücrelere null ya da başka
+    // hücrenin view'ı yazılır. Referans karşılaştırması yeterli — tip yeterli değil.
+    private bool IsShuffleMapStale(TileView[,] mappedTiles)
+    {
+        for (int y = 0; y < board.Height; y++)
+            for (int x = 0; x < board.Width; x++)
+                if (!ReferenceEquals(board.Tiles[x, y], mappedTiles[x, y]))
+                    return true;
+
+        return false;
     }
 
     private IEnumerator AnimateShufflePreview(Vector2Int[,] sourceForDest, bool[,] lockedMask)

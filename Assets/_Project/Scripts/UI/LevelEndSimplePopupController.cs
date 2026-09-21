@@ -917,7 +917,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void RequestEvaluateLevelEndState()
     {
-        if (board == null || topHud == null)
+        if (!HasLevelEndCondition())
             return;
 
         if (endCheckQueued)
@@ -938,9 +938,15 @@ public class LevelEndSimplePopupController : MonoBehaviour
         });
     }
 
+    // A busy boss fight can span many consecutive player moves. Only wait for its
+    // jobs when a result is actually pending; normal play must never start a leak timer.
+    private bool HasLevelEndCondition()
+        => board != null && topHud != null
+           && (board.RemainingMoves <= 0 || topHud.AreAllGoalsCompleted);
+
     private void EvaluateAndShowIfEnded()
     {
-        if (board == null || topHud == null)
+        if (!HasLevelEndCondition())
             return;
 
         if (failPopupShown || successPopupShown)
@@ -1133,6 +1139,14 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         while (board != null && stableFrames < requiredStableFrames)
         {
+            // Extra moves or a reset can resume gameplay while this wait is alive.
+            // Cancel that old evaluation rather than force-draining the resumed duel.
+            if (!HasLevelEndCondition() || failPopupShown || successPopupShown)
+            {
+                failSettleWaitRunning = false;
+                yield break;
+            }
+
             if (IsBoardWorkingForLevelEnd())
             {
                 stableFrames = 0;

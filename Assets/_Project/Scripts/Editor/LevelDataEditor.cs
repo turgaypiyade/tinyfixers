@@ -194,12 +194,21 @@ public class LevelDataEditor : Editor
         level.battlefieldBackground = (Sprite)EditorGUILayout.ObjectField("Arena Background (boş=mevcut)", level.battlefieldBackground, typeof(Sprite), false);
 
         EditorGUILayout.Space(2);
-        showBossOilSettings = EditorGUILayout.Foldout(showBossOilSettings, "Oil Pressure (optional)", true);
+        showBossOilSettings = EditorGUILayout.Foldout(showBossOilSettings, "Thrown Obstacle Pressure", true);
         if (showBossOilSettings)
         {
-            level.bossAttackOilCount = Mathf.Max(0, EditorGUILayout.IntField("Oil Per Counter (0 = off)", level.bossAttackOilCount));
+            level.bossAttackOilCount = Mathf.Max(0, EditorGUILayout.IntField("Obstacles Per Volley (0 = off)", level.bossAttackOilCount));
             if (level.bossAttackOilCount > 0)
-                level.bossAttackEveryMoves = Mathf.Max(1, EditorGUILayout.IntField("Oil Every N Counters", level.bossAttackEveryMoves));
+                level.bossAttackEveryMoves = Mathf.Max(1, EditorGUILayout.IntField("Volley Every N Counters", level.bossAttackEveryMoves));
+            level.bossMaxPressureObstacles = Mathf.Max(1, EditorGUILayout.IntField("Max Pressure Obstacles On Board", level.bossMaxPressureObstacles));
+            serializedObject.Update();
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("bossThrownObstacles"), new GUIContent("Previously Introduced Obstacles"), true);
+            serializedObject.ApplyModifiedProperties();
+            EditorGUILayout.HelpBox("Havuzu önceki levellarda kullanılan engellerden seçin. Boş havuz = Oil. Sandık/üretici/ödül atılamaz. Jel desteklenir ancak taşları kilitlemez; zorluğu artırmaz.", MessageType.Info);
+            if (level.bossThrownObstacles != null)
+                foreach (var id in level.bossThrownObstacles)
+                    if (!BossDuelObstaclePressure.IsThrowable(level, id))
+                        EditorGUILayout.HelpBox($"{id}: fırlatmaya uygun değil; oyun bu girdiyi atlayacak.", MessageType.Warning);
         }
 
         DrawBossOpponents(level);
@@ -280,8 +289,8 @@ public class LevelDataEditor : Editor
                 EditorGUILayout.PropertyField(wave.FindPropertyRelative("bodyTint"), new GUIContent("Character Tint"));
                 if (showBossOilSettings)
                 {
-                    EditorGUILayout.PropertyField(wave.FindPropertyRelative("oilCount"), new GUIContent("Oil Count (−1 = default, 0 = off)"));
-                    EditorGUILayout.PropertyField(wave.FindPropertyRelative("oilEveryMoves"), new GUIContent("Oil Every N Counters (−1 = default)"));
+                    EditorGUILayout.PropertyField(wave.FindPropertyRelative("oilCount"), new GUIContent("Volley Count (−1 = default, 0 = off)"));
+                    EditorGUILayout.PropertyField(wave.FindPropertyRelative("oilEveryMoves"), new GUIContent("Volley Every N Counters (−1 = default)"));
                 }
                 EditorGUILayout.EndVertical();
             }

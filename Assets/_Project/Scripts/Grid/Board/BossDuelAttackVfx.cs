@@ -11,15 +11,50 @@ public sealed class BossDuelAttackVfx : MonoBehaviour
     private Image body;
     private BossDuelCharacterProfile profile;
     private BossDuelImpactGraphic impact;
+    private BossDuelSwingGraphic swing;
+    private RectTransform effectsRoot;
     private float standingHeight, trailTimer;
     private int nextGhost;
 
-    public void Initialize(Image source, BossDuelCharacterProfile character, float height)
+    public void Initialize(Image source, BossDuelCharacterProfile character, float height, RectTransform root = null)
     {
         body = source;
         profile = character;
         standingHeight = height;
+        if (root != null) effectsRoot = root;
     }
+
+    public void BeginSwing(int power, Vector3 worldContact, RectTransform target)
+    {
+        if (body == null || profile == null || power <= 0) return;
+        var parent = effectsRoot != null ? effectsRoot
+            : body.canvas != null ? body.canvas.transform as RectTransform : body.rectTransform.parent as RectTransform;
+        if (parent == null) return;
+        if (swing == null)
+        {
+            var go = new GameObject("DuelWeaponSwing", typeof(RectTransform), typeof(CanvasRenderer), typeof(BossDuelSwingGraphic));
+            go.transform.SetParent(parent, false);
+            BossDuelController.MatchParentLayer(go.transform);
+            swing = go.GetComponent<BossDuelSwingGraphic>();
+            swing.raycastTarget = false;
+            swing.maskable = false;
+        }
+        var rt = swing.rectTransform;
+        rt.anchorMin = rt.anchorMax = parent.pivot;
+        rt.pivot = Vector2.one * 0.5f;
+        rt.anchoredPosition = parent.InverseTransformPoint(worldContact);
+        rt.SetAsLastSibling();
+        float direction = target != null
+            ? parent.InverseTransformPoint(target.position).x - parent.InverseTransformPoint(body.transform.position).x
+            : worldContact.x - body.transform.position.x;
+        float strength = Mathf.Clamp01((float)power / Mathf.Max(1, profile.powerForFullImpact));
+        float height = parent.InverseTransformVector(body.rectTransform.TransformVector(Vector3.up * standingHeight)).magnitude;
+        swing.Begin(height * Mathf.Lerp(0.5f, 1.05f, strength), strength, direction);
+    }
+
+    public void TickSwing(float progress) { if (swing != null) swing.SetProgress(progress); }
+    public void ReleaseSwing() { if (swing != null) swing.Release(); }
+    public void CancelSwing() { if (swing != null) swing.gameObject.SetActive(false); }
 
     public void BeginTrail() => trailTimer = Mathf.Max(0.01f, profile.trailInterval);
 
@@ -116,6 +151,7 @@ public sealed class BossDuelAttackVfx : MonoBehaviour
         foreach (var ghost in ghosts)
             if (ghost != null) ghost.gameObject.SetActive(false);
         if (impact != null) impact.gameObject.SetActive(false);
+        CancelSwing();
     }
 
     private void OnDisable() => Clear();
@@ -125,5 +161,6 @@ public sealed class BossDuelAttackVfx : MonoBehaviour
         foreach (var ghost in ghosts)
             if (ghost != null) Destroy(ghost.gameObject);
         if (impact != null) Destroy(impact.gameObject);
+        if (swing != null) Destroy(swing.gameObject);
     }
 }

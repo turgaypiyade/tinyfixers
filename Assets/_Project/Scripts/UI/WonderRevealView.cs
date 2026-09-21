@@ -43,10 +43,14 @@ public class WonderRevealView : MonoBehaviour
     public float weldLightScale = 1f;
 
     [Header("Kaynak Frame Animasyonu")]
-    [Tooltip("Sırayla oynatılacak kaynak kareleri (MW_1..MW_4). Kaynak sürerken döngüde döner.")]
+    [Tooltip("MW_1..MW_5 bir kez oynar; kaynak boyunca son kare sabit kalır. Her yeni kaynak ilk kareden başlar.")]
     public Sprite[] welderFrames;
     [Tooltip("Saniyedeki kare sayısı")]
     public float welderFps = 10f;
+    [Tooltip("Kaynak yapılırken son karede geçirilecek en kısa süre (sn).")]
+    [Min(0f)] public float minimumWeldHold = 0.6f;
+    [Tooltip("Son karedeki torç ucu; görselin sol altından ölçülen normalize konum.")]
+    public Vector2 weldTipNormalized = new Vector2(0.9f, 0.14f);
 
     [Header("Ambient Robotlar")]
     [Tooltip("Sahne %100 açılınca yürümeye başlayacak robotlar")]
@@ -61,6 +65,8 @@ public class WonderRevealView : MonoBehaviour
     Image _welderImg;
     int _stage;
     Coroutine _anim;
+    WonderWeldSparkGraphic _uiSparks;
+    bool _welding;
 
     Image WelderImage
     {
@@ -175,39 +181,124 @@ public class WonderRevealView : MonoBehaviour
     {
         EnsureMaterial();
         float start = _mat != null ? _mat.GetFloat("_Reveal") : 0f;
-        float t = 0f;
-
+        ResetWelderFrame();
+        UpdateWelder(start);
+        StopWeldingEffects(true);
         if (welderRobot != null) welderRobot.gameObject.SetActive(true);
-        if (welderSparks != null) welderSparks.Play();
-        if (weldLight != null) weldLight.gameObject.SetActive(true);
-        GameEventSfx.StartWelding();
-
-        while (t < animateDuration)
+        try
         {
-            t += Time.deltaTime;
-            float k = ease.Evaluate(Mathf.Clamp01(t / animateDuration));
-            float r = Mathf.Lerp(start, target, k);
-            ApplyReveal(r);
-            UpdateWelder(r);
-            UpdateWelderFrame(t);   // MW_1→2→3→4 döngü
-            UpdateWeldLight(t);     // torç ucu arkı titreşimi
-            yield return null;
-        }
-        ApplyReveal(target);
-        UpdateWelder(target);
+            // Preparation plays once. Keep MW_1 visible before advancing any time.
+            float fps = Mathf.Max(0.01f, welderFps);
+            float preparation = welderFrames != null ? Mathf.Max(0, welderFrames.Length - 1) / fps : 0f;
+            for (float t = 0f; t < preparation; t += Time.deltaTime)
+            {
+                UpdateWelderFrame(t);
+                yield return null;
+            }
+            // Step past the boundary to avoid float rounding holding the penultimate frame.
+            UpdateWelderFrame(preparation + 1f / fps);
 
-        if (welderSparks != null) welderSparks.Stop();
-        GameEventSfx.StopWelding();
-        ResetWelderFrame();     // durunca ilk kareye dön
-        if (weldLight != null) weldLight.gameObject.SetActive(false);
+            // The closed-mask MW_5 pose is held for the actual welding/reveal.
+            EnsureWeldSparks();
+            UpdateWeldEmitter();
+            if (_uiSparks != null) _uiSparks.Begin(GetWeldTipLocal(), GetWelderSize());
+            if (welderSparks != null) welderSparks.Play();
+            if (weldLight != null) weldLight.gameObject.SetActive(true);
+            _welding = true;
+            GameEventSfx.StartWelding();
+            float duration = Mathf.Max(0.02f, Mathf.Max(animateDuration, minimumWeldHold));
+            for (float t = 0f; t < duration;)
+            {
+                t += Time.deltaTime;
+                float k = ease.Evaluate(Mathf.Clamp01(t / duration));
+                float r = Mathf.Lerp(start, target, k);
+                ApplyReveal(r);
+                UpdateWelder(r);
+                UpdateWeldEmitter();
+                UpdateWeldLight(t);
+                yield return null;
+            }
+            ApplyReveal(target);
+            UpdateWelder(target);
+        }
+        finally
+        {
+            StopWeldingEffects(false);
+            _anim = null;
+        }
+        // Leave the final pose in place; reset only when the next operation starts.
         // Tam açıldıysa robotu gizle + ambient robotları başlat
         if (target >= 0.999f)
         {
             if (welderRobot != null) welderRobot.gameObject.SetActive(false);
             StartAmbient();
         }
-        _anim = null;
     }
+
+    void EnsureWeldSparks()
+    {
+        if (_uiSparks != null || WelderImage == null) return;
+        var go = new GameObject("WeldFlyingSparks", typeof(RectTransform), typeof(CanvasRenderer), typeof(WonderWeldSparkGraphic));
+        go.layer = gameObject.layer;
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(transform, false);
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+        rt.pivot = _rt.pivot;
+        _uiSparks = go.GetComponent<WonderWeldSparkGraphic>();
+        _uiSparks.raycastTarget = false;
+        _uiSparks.maskable = false;
+    }
+
+    Vector3 GetWeldTipWorld()
+    {
+        var img = WelderImage;
+        if (img == null) return transform.position;
+        Rect rect = img.rectTransform.rect;
+        if (img.preserveAspect && img.sprite != null)
+        {
+            Vector2 source = img.sprite.rect.size;
+            float scale = Mathf.Min(rect.width / source.x, rect.height / source.y);
+            Vector2 size = source * scale;
+            rect = new Rect(rect.center - size * 0.5f, size);
+        }
+        return img.rectTransform.TransformPoint(new Vector3(
+            rect.xMin + rect.width * weldTipNormalized.x,
+            rect.yMin + rect.height * weldTipNormalized.y, 0f));
+    }
+
+    Vector2 GetWeldTipLocal() => _uiSparks.rectTransform.InverseTransformPoint(GetWeldTipWorld());
+
+    float GetWelderSize()
+    {
+        var img = WelderImage;
+        if (img == null) return 240f;
+        return _rt.InverseTransformVector(img.rectTransform.TransformVector(Vector3.up * img.rectTransform.rect.height)).magnitude;
+    }
+
+    void UpdateWeldEmitter()
+    {
+        if (_uiSparks != null) _uiSparks.SetEmitter(GetWeldTipLocal(), GetWelderSize());
+        if (weldLight != null) weldLight.rectTransform.position = GetWeldTipWorld();
+        if (welderSparks != null) welderSparks.transform.position = GetWeldTipWorld();
+    }
+
+    void StopWeldingEffects(bool clear)
+    {
+        if (_uiSparks != null)
+        {
+            if (clear) _uiSparks.Clear();
+            else _uiSparks.StopEmitting();
+        }
+        if (welderSparks != null) welderSparks.Stop(true,
+            clear ? ParticleSystemStopBehavior.StopEmittingAndClear : ParticleSystemStopBehavior.StopEmitting);
+        if (weldLight != null) weldLight.gameObject.SetActive(false);
+        if (_welding) GameEventSfx.StopWelding();
+        _welding = false;
+    }
+
+    void OnDisable() => StopWeldingEffects(true);
 
     void StartAmbient()
     {
@@ -233,13 +324,13 @@ public class WonderRevealView : MonoBehaviour
         welderRobot.anchoredPosition = new Vector2(x, y);
     }
 
-    /// <summary>Kaynak karelerini MW_1→2→3→4 sırasıyla döngüde oynatır.</summary>
+    /// <summary>İlk kareden son kareye bir kez ilerler; son karede kalır.</summary>
     void UpdateWelderFrame(float elapsed)
     {
         if (welderFrames == null || welderFrames.Length == 0) return;
         var img = WelderImage;
         if (img == null) return;
-        int idx = Mathf.FloorToInt(elapsed * welderFps) % welderFrames.Length;
+        int idx = Mathf.Clamp(Mathf.FloorToInt(elapsed * Mathf.Max(0.01f, welderFps)), 0, welderFrames.Length - 1);
         if (welderFrames[idx] != null) img.sprite = welderFrames[idx];
     }
 

@@ -7,7 +7,8 @@ duel runs; see the last section for what the robot duel left behind and what rep
 ## Approved design — implemented 2026-09-20 (Play-mode verification pending)
 
 These decisions supersede `BossDuel_Plan.md`, which now describes only the removed robot duel.
-Existing level HP, damage-per-tile, and move counts have not been retuned.
+Production boss HP, power and counter damage were retuned on 2026-09-21; see
+[Boss progression tuning](BossDuel_Progression_Tuning.md). Move limits are unchanged.
 
 ### Move damage and encounter flow
 
@@ -23,7 +24,8 @@ Existing level HP, damage-per-tile, and move counts have not been retuned.
 - Player HP and unused protection carry between opponents. There is no automatic wave heal.
   Excess damage never transfers to the next opponent, which starts at its own full HP.
 - Opponents use fixed per-wave attack damage. Shields come from the level board; optional
-  per-move oil pressure still runs after a surviving enemy's counterattack.
+  obstacle volleys run after a surviving enemy's counterattack. The first two production bosses
+  have no volleys. Later bosses use authored pools of previously introduced debris/overlays.
 - Balance the entire encounter around the number of counterattacks, considering obstacles,
   special creation, and observed move powers. Strong moves earn fewer counterattacks.
 - Initial example only: player HP 100, power per tile 1; opponents have HP/attack pairs
@@ -47,7 +49,8 @@ Existing level HP, damage-per-tile, and move counts have not been retuned.
 - If the enemy dies before counterattacking, player protection is not consumed and carries
   to the next opponent. The new opponent does not inherit the defeated opponent's protection.
 - Show available protection as a small shield icon with the remaining protection value.
-  Show the full shield pose when a protected hit arrives, then return to the normal pose.
+  Show the full shield pose as soon as protection is collected and keep it while protection remains.
+  Attacks temporarily use attack poses; a protected hit adds the brief block recoil.
   Make absorbed damage and HP damage readable: a 40-power hit against 4 protection
   consumes 4 protection and deals 36 HP damage, subject to remaining HP.
 
@@ -86,15 +89,31 @@ Existing level HP, damage-per-tile, and move counts have not been retuned.
 - Cleared tiles are the only source of player damage. The former special-activation bonus,
   PatchBot projectile, colour weakness multiplier, stun multiplier and super laser are gone.
 - Shield pickups add persistent protection, displayed as a shield badge and remaining points
-  below each HP bar. The supplied full-body shield pose appears only on a protected impact,
-  briefly recoils, then returns to normal even if protection remains. A toast separates
+  below each HP bar. The supplied full-body shield pose stays visible while protection remains, except during an
+  attack. Protected impacts briefly recoil; spending the last point still shows the final block. A toast separates
   absorbed damage from HP damage. An optional `shieldHit` pose can replace the block pose.
-- Input is never blocked by a turn. A strike, counterattack, daze or wave entrance plays while
+- Melee turns do not block input. An obstacle volley waits for board activity to finish, then
+  locks input for its 0.38-second flight so targets cannot move underneath it. A strike, counterattack, daze or wave entrance plays while
   the player keeps swapping; those clears are not dropped, they accumulate into the next strike,
-  which starts as soon as the running turn finishes. Only an enemy oil effect's own clears are
-  excluded from player power. Result evaluation still waits for the whole turn.
+  which starts as soon as the running turn finishes. Thrown debris converts a normal tile in place without awarding clear credit or power. Result evaluation still waits for the whole turn.
 - The level-end hold starts synchronously when the move starts. Settling explicitly excludes
   this hold, avoiding a wait on itself. Disabling the controller releases the gate and hold.
+
+## Level-end watchdog during continuous play (2026-09-21)
+
+Editor.log showed the 30-second force-drain firing with 17/18 moves remaining and goals
+incomplete, while swaps and opponent transitions were still progressing. A settle wait
+started by an ordinary move was timing the whole busy encounter, then clearing its live
+BossStrikeDrain counter. Level-end evaluation now starts only when moves are exhausted
+or goals are complete. An existing wait cancels if extra moves resume unfinished play.
+The real terminal-result leak recovery and final-strike wait remain intact. The boss
+hold diagnostic resets on actual progress (moves/clears, damage, shield absorption and
+opponent changes) instead of treating consecutive turns as one stalled strike.
+
+`csi Tools/check_level_end_wait.csx` exercises the production evaluation methods with
+board doubles: continuing play, final strikes, late goal completion, extra moves and real
+terminal leaks. These checks and `Tools/check_boss_duel.csx` pass without a project build;
+Play-mode reproduction remains to be verified.
 
 ## Remaining art
 
@@ -112,8 +131,8 @@ Use the same profile format for a bear; a weapon sprite and Rigidbody are not re
 - `HyenaDuelCharacter.asset` maps the five supplied images: S3 rests, S1 stands alert
   (idle alternate and victory), S2 crouches low (focused, dash pose and defeat), SA1 raises
   the crowbar (windup) and SA2 swings it (strike, weapon impact at 0.13/0.35). The hyena has
-  no shield pose, so its protected hits flash the shield bubble instead; the bubble is now
-  created per wave, because whether a profile needs one depends on that profile.
+  no shield pose yet. Protection remains visible through the HP-bar badge; animal profiles
+  no longer fall back to the old circular robot shield when shield artwork is missing.
 - A defeated opponent no longer disappears between frames. After its daze it drifts upward,
   shrinks to `ghostExitScale`, and fades out, and only then does the next opponent slide in
   from the right. The rise and shrink run on the robot root, so they never fight the pose

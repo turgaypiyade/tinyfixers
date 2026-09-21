@@ -21,7 +21,7 @@ MonoBehaviour:
     tileType: 0
     obstacleId: 44
     collectibleId: 1
-    iconOverride: {fileID: 21300000, guid: 04099b6dbb1d844c1a3692b170e6f343, type: 3}
+    iconOverride: {fileID: 21300000, guid: d5c45b75a85134c80890a84f8f2852b4, type: 3}
     amount: 38
   - targetType: 1
     tileType: 0

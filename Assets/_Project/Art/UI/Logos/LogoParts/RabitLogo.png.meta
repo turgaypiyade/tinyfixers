@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 5e3871000c56b480fbe403108d655c69
+guid: 4c766574dbb8a4b71acfa495f3243bbe
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -5991877556391042419
-    second: LV5_0
+      213: -3716054615183754792
+    second: RabitLogo_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -34,7 +34,7 @@ TextureImporter:
   cubemapConvolution: 0
   seamlessCubemap: 0
   textureFormat: 1
-  maxTextureSize: 512
+  maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
     filterMode: 1
@@ -48,7 +48,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 1
   spriteExtrude: 1
-  spriteMeshType: 0
+  spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -72,10 +72,10 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 2
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -85,7 +85,7 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
     buildTarget: Standalone
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -98,7 +98,7 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
     buildTarget: iOS
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LV5_0
+      name: RabitLogo_0
       rect:
         serializedVersion: 2
-        x: 69
-        y: 32
-        width: 1119
-        height: 1221
+        x: 115
+        y: 220
+        width: 398
+        height: 407
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d822da9db1398dca0800000000000000
-      internalID: -5991877556391042419
+      spriteID: 8d97508140ced6cc0800000000000000
+      internalID: -3716054615183754792
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LV5_0: -5991877556391042419
+      RabitLogo_0: -3716054615183754792
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

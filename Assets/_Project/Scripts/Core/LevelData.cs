@@ -272,10 +272,10 @@ public class BossWaveDef
     [Tooltip("Bu rakibin karşılık hasarı. 0 = level'daki enemyAttackBaseDamage.")]
     [Min(0)] public int attackDamageBase = 0;
 
-    [Header("Oil Baskısı")]
-    [Tooltip("Oil saldırısı başına fırlatılan oil. 0 = bu dalgada oil yok, -1 = level'daki bossAttackOilCount.")]
+    [Header("Engel Baskısı")]
+    [Tooltip("Saldırı başına fırlatılan engel. 0 = bu dalgada kapalı, -1 = level'daki bossAttackOilCount. Türler level havuzundan gelir.")]
     [Min(-1)] public int oilCount = -1;
-    [Tooltip("Kaç hamlede bir oil. -1/0 = level'daki bossAttackEveryMoves.")]
+    [Tooltip("Kaç karşı saldırıda bir engel. -1/0 = level'daki bossAttackEveryMoves.")]
     [Min(-1)] public int oilEveryMoves = -1;
 
     [Header("Görsel Varyant")]
@@ -318,11 +318,15 @@ public class LevelData : ScriptableObject
     [Tooltip("Birleştikten sonra bekleme süresi (sn). Sahne bu süre içinde yüklenmezse intro hazır olana kadar bekler.")]
     [Min(0f)] public float introHoldDuration = 0.8f;
 
-    [Header("Boss Duel")]
-    [Tooltip("Boss kaç oyuncu hamlesinde bir EKSTRA oil saldırısı yapar (lazer her tur vurur, bu sadece oil sıklığı).")]
+    [Header("Boss Duel — Obstacle Pressure")]
+    [Tooltip("Kaç karşı saldırıda bir engel fırlatılır.")]
     [Min(1)] public int bossAttackEveryMoves = 3;
-    [Tooltip("Her oil saldırısında board'a fırlatılan oil sayısı. 0 = oil yok, sadece lazer.")]
+    [Tooltip("Her baskı saldırısında fırlatılan engel sayısı. 0 = kapalı. Havuz boşsa eski Oil davranışı.")]
     [Min(0)] public int bossAttackOilCount = 2;
+    [Tooltip("Yalnız önceki levellarda tanıtılan taşınabilir engeller/overlay'ler. Sandık, üretici, kargo ve ödül objeleri atılmaz. Boş = Oil.")]
+    public ObstacleId[] bossThrownObstacles = System.Array.Empty<ObstacleId>();
+    [Tooltip("Havuzdaki engellerin board üzerindeki toplam üst sınırı; başlangıç engelleri de sayılır. Yoğun board'da baskı bekler.")]
+    [Min(1)] public int bossMaxPressureObstacles = 8;
 
     [Header("Battlefield (BossDuel)")]
     [Tooltip("Oyuncu (sol robot) başlangıç/maks canı. 0 olunca level kaybedilir. Düşman HP'si BossDamage goal amount'tan gelir.")]

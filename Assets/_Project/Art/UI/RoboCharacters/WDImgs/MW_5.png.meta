@@ -1,13 +1,16 @@
 fileFormatVersion: 2
-guid: 7dd8c218d21864c0aa53fab37db842a4
+guid: 2690d233ec3c24c00a4cf044e8201e7a
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2540698322571617433
-    second: LV9_0
+      213: 3240712606603469704
+    second: MW_5_0
   - first:
-      213: 5738658680683241308
-    second: LV9_1
+      213: 6149539699127138174
+    second: MW_5_1
+  - first:
+      213: -5692171734697674373
+    second: MW_5_2
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -37,7 +40,7 @@ TextureImporter:
   cubemapConvolution: 0
   seamlessCubemap: 0
   textureFormat: 1
-  maxTextureSize: 512
+  maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
     filterMode: 1
@@ -51,7 +54,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 1
   spriteExtrude: 1
-  spriteMeshType: 0
+  spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -75,7 +78,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 2
@@ -88,7 +91,7 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
     buildTarget: Standalone
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -101,7 +104,7 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
     buildTarget: iOS
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -116,13 +119,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LV9_0
+      name: MW_5_0
       rect:
         serializedVersion: 2
-        x: 22
-        y: 19
-        width: 1212
-        height: 1235
+        x: 40
+        y: 0
+        width: 1214
+        height: 1234
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -131,20 +134,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 76b10b93650adbcd0800000000000000
-      internalID: -2540698322571617433
+      spriteID: 883eab712f259fc20800000000000000
+      internalID: 3240712606603469704
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: LV9_1
+      name: MW_5_1
       rect:
         serializedVersion: 2
-        x: 1203
-        y: 983
-        width: 22
-        height: 25
+        x: 731
+        y: 1156
+        width: 6
+        height: 6
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -153,8 +156,30 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: c5f16555aafc3af40800000000000000
-      internalID: 5738658680683241308
+      spriteID: e77b2a256cd875550800000000000000
+      internalID: 6149539699127138174
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MW_5_2
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 746
+        width: 5
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b7973d837f75101b0800000000000000
+      internalID: -5692171734697674373
       vertices: []
       indices: 
       edges: []
@@ -173,8 +198,9 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LV9_0: -2540698322571617433
-      LV9_1: 5738658680683241308
+      MW_5_0: 3240712606603469704
+      MW_5_1: 6149539699127138174
+      MW_5_2: -5692171734697674373
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

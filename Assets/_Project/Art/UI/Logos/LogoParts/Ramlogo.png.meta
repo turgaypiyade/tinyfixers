@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: ff9ea3bc8725c4f61b38d140478c1395
+guid: 39c4f241b8e494020aaff2d331b0c4b3
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -5456700348607472531
-    second: LV3_0
+      213: -5302472993477962249
+    second: Ramlogo_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -34,7 +34,7 @@ TextureImporter:
   cubemapConvolution: 0
   seamlessCubemap: 0
   textureFormat: 1
-  maxTextureSize: 512
+  maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
     filterMode: 1
@@ -48,7 +48,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 1
   spriteExtrude: 1
-  spriteMeshType: 0
+  spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -72,10 +72,10 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 2
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -85,7 +85,7 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
     buildTarget: Standalone
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -98,7 +98,7 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
     buildTarget: iOS
-    maxTextureSize: 512
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LV3_0
+      name: Ramlogo_0
       rect:
         serializedVersion: 2
-        x: 80
-        y: 40
-        width: 1088
-        height: 1199
+        x: 113
+        y: 107
+        width: 395
+        height: 516
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d6c508b91f7e544b0800000000000000
-      internalID: -5456700348607472531
+      spriteID: 7f5d4a8f7e4d966b0800000000000000
+      internalID: -5302472993477962249
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LV3_0: -5456700348607472531
+      Ramlogo_0: -5302472993477962249
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

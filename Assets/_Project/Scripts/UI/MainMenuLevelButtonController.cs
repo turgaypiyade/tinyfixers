@@ -430,13 +430,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
     {
         if (levelCatalog == null || !levelCatalog.TryGetGlobalLevel(currentLevel, out LevelData data) || data == null)
             return false;
-        if (!data.usesCustomIntro || data.introLeftSprite == null || data.introRightSprite == null)
-            return false;
-
-        CustomIntroLoadingManager.Show(
-            data.introLeftSprite, data.introRightSprite, gameSceneName,
-            data.introSlideInDuration, data.introHoldDuration);
-        return true;
+        return CustomIntroLoadingManager.TryShow(data, gameSceneName);
     }
 
     private void ShowLoadingScreen()

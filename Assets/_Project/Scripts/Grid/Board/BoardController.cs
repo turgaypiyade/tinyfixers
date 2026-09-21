@@ -1085,6 +1085,12 @@ public class BoardController : MonoBehaviour
         }
 
         visualCoordinator ??= new BoardVisualCoordinator(this, actionSequencer);
+
+        // Resources'tan gelen tek-atış SFX'ler (joker/override combo) ilk çalışta SENKRON
+        // Resources.Load yapıyordu → oyunun ortasında kare takılması. Maliyeti level
+        // yüklemesine çekiyoruz (cache static, seviye başına bir kez ısınır).
+        BoosterService.WarmupJokerSfxCache();
+        BoardVfxService.WarmupOverrideSfxCache();
     }
 
     public void OnActionSequenceFinished()
@@ -1644,6 +1650,12 @@ public class BoardController : MonoBehaviour
         reservedKeyLandingCells.Clear();
         ClearAllReservedTileTargetCells();
 
+        // "Devam" board'u oyuncuya GEÇERLİ hâlde teslim etmeli. Aşağıdaki döngü yalnızca
+        // dolu hücreleri tazeler: hücre havuza iade edilmiş bir hayalet view'a işaret ediyorsa
+        // (tv != null olduğu için) onu "dolu" sayıp gridData'yı ondan yazar — hücre ekranda boş
+        // kalır, üstelik veri de bu bozuk hâli onaylar. Önce bütünlüğü onar.
+        int repaired = RepairTileGridIntegrity("force-full-sync");
+
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
             {
@@ -1661,6 +1673,142 @@ public class BoardController : MonoBehaviour
 
         RefreshAllTileObstacleVisuals();
         RefreshAllSortingOrders();
+
+        // Onarım hücre boşalttıysa (ya da zaten boş hücre vardı) kimse doldurmuyordu:
+        // ForceFullBoardSync resolve tetiklemez, devam akışı da etmez → hücre kalıcı boş kalır
+        // ("taş koyamadı"). Boşluk varsa yerçekimi/refill'i iste; pompa board boşta olunca koşar.
+        if (repaired > 0)
+            RequestResolveAfterActionSequence();
+    }
+
+    // ── Board'u TOPTAN yeniden yazan işler (shuffle) için EXCLUSIVE erişim ──
+    // ResolveBoard'un settle kontrolü BİLEREK yalnız blocking job'ları bekler: uçuştaki
+    // PatchBot dash'i / goal-orb / spread akışı dondurmasın diye. Bu, adım adım çalışan
+    // cascade için doğru; ama shuffle board.Tiles'ın TAMAMINI yeniden eşler ve ~1 sn sürer.
+    // O sırada uçuştaki bir dash hücre temizlerse shuffle'ın haritası bayatlar → commit'te
+    // hücre boş / çift referanslı kalır (ekranda boş hücre, veride dolu board).
+    // Bu yüzden toptan yeniden yazan iş, NON-BLOCKING işlerin de bitmesini bekler.
+    internal IEnumerator WaitForExclusiveBoardAccess(float timeoutSeconds = 2f)
+    {
+        float elapsed = 0f;
+
+        while (ActiveBackgroundJobs > 0
+               || IsActionSequencePlaying
+               || DetachedSequencerActions > 0
+               || IsSpecialVisualInFlight)
+        {
+            if (elapsed >= timeoutSeconds)
+            {
+                Debug.LogWarning(
+                    $"[Board] WaitForExclusiveBoardAccess timeout. " +
+                    $"ActiveBackgroundJobs={ActiveBackgroundJobs}, FlyingPatchBotDashes={FlyingPatchBotDashes}, " +
+                    $"FlyingGoalOrbs={FlyingGoalOrbs}, Spread={SpreadingObstacles}, " +
+                    $"ActionSequencePlaying={IsActionSequencePlaying}, Detached={DetachedSequencerActions}");
+                yield break;
+            }
+
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+    }
+
+    /// <summary>
+    /// tiles[] ↔ gridData[] ↔ sahne bütünlüğünü onarır ve KAÇ hücre onarıldığını döner.
+    /// Yakaladığı üç bozulma da normal mismatch taramasına GÖRÜNMEZ (hücre "dolu" görünür,
+    /// tip/special eşleşir) ama ekranda boş hücre olarak çıkar:
+    ///   (a) hücre havuza iade edilmiş (deaktif) bir view'a işaret ediyor,
+    ///   (b) aynı TileView iki hücrede kayıtlı (biri zorunlu olarak boş görünür),
+    ///   (c) view'ın kendi koordinatı hücresiyle uyuşmuyor / pozisyonu kaymış.
+    /// (a) ve (b)'de hücre boşaltılır — refill iyileştirir; veri uydurulmaz.
+    /// </summary>
+    internal int RepairTileGridIntegrity(string context, bool snapPositions = false)
+    {
+        if (tiles == null || gridData == null)
+            return 0;
+
+        int repaired = 0;
+        var owners = new Dictionary<TileView, Vector2Int>();
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                var tile = tiles[x, y];
+
+                if (tile == null)
+                {
+                    // Yok edilmiş view'a işaret eden hücre de buraya düşer (Unity fake-null).
+                    if (gridData[x, y] != null)
+                    {
+                        gridData[x, y] = null;
+                        repaired++;
+                    }
+                    continue;
+                }
+
+                if (!tile.gameObject.activeSelf)
+                {
+                    ClearCell(x, y);
+                    repaired++;
+                    continue;
+                }
+
+                if (owners.TryGetValue(tile, out var owner))
+                {
+                    // Sahip = view'ın kendi koordinatını taşıyan hücre; diğeri boşaltılır.
+                    if (tile.X == x && tile.Y == y)
+                    {
+                        ClearCell(owner.x, owner.y);
+                        owners[tile] = new Vector2Int(x, y);
+                    }
+                    else
+                    {
+                        ClearCell(x, y);
+                    }
+
+                    repaired++;
+                    continue;
+                }
+
+                owners[tile] = new Vector2Int(x, y);
+
+                if (tile.X != x || tile.Y != y)
+                {
+                    tile.SetCoords(x, y);
+                    tile.SnapToGrid(tileSize);
+                    repaired++;
+                }
+                else if (snapPositions)
+                {
+                    tile.SnapToGrid(tileSize);
+                }
+
+                SyncTileData(x, y);
+            }
+        }
+
+        if (repaired > 0)
+            Debug.LogWarning($"[BoardIntegrity] {context}: {repaired} bozuk hücre referansı onarıldı.");
+
+        return repaired;
+    }
+
+    // Havuza iade edilecek taş BAŞKA bir hücrede hâlâ kayıtlıysa o hücre ekranda boş kalır
+    // (deaktif GameObject; tip/special okunabildiği için hiçbir mismatch taraması yakalamaz).
+    // İade etmeden önce o hücreleri boşalt → refill gerçek taşla doldurur.
+    private void ClearCellsReferencing(TileView tile)
+    {
+        if (tile == null || tiles == null)
+            return;
+
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+                if (ReferenceEquals(tiles[x, y], tile))
+                {
+                    Debug.LogWarning(
+                        $"[BoardIntegrity] Havuza iade edilen taş hâlâ ({x},{y}) hücresinde kayıtlıydı — hücre boşaltıldı.");
+                    ClearCell(x, y);
+                }
     }
 
     public void RunAfterIdle(Action action)
@@ -2241,6 +2389,13 @@ public class BoardController : MonoBehaviour
         if (tile == null || !tile)
             return;
 
+        // TEK ÇIKIŞ NOKTASI GUARD'I: bir hücre hâlâ bu taşa işaret ederken havuza iade edersek
+        // o hücre ekranda BOŞ kalır ama veride dolu görünür — deaktif GameObject için
+        // `tv != null` doğru, tipi okunur, gridData ondan senkronlanır, mismatch taraması 0 der.
+        // Hiçbir doğrulama yakalamaz; hücreye dokunan her şey (movable hareketi dahil) hayalet
+        // taşla çalışır. Bu yüzden iade/yok etme kararı verilmeden ÖNCE hücreler boşaltılır.
+        ClearCellsReferencing(tile);
+
         if (!useTilePool)
         {
             Destroy(tile.gameObject);
@@ -2326,7 +2481,7 @@ public class BoardController : MonoBehaviour
             // Progress-event "+1" FX'i taşın yanında doğsun diye dünya pozisyonunu yayınla
             // (release'den ÖNCE). Sayım NotifyTilesCleared'da; bu sadece görsel ipucu.
             GameEventBus.EmitTileClearedAt(fxType, tile.transform.position);
-            ReleaseTile(tile);   // havuz açıksa iade, kapalıysa Destroy (eski davranış)
+            ReleaseTile(tile);   // havuz açıksa iade, kapalıysa Destroy; hücre guard'ı ReleaseTile'da
         }
     }
 
@@ -3571,6 +3726,13 @@ public class BoardController : MonoBehaviour
             {
                 if (BoardFlowTraceEnabled)
                     Debug.Log($"[Resolve] pass={safety} deadlock_detected -> safe_shuffle +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+
+                // Uçuştaki (non-blocking) işler bitmeden karar verme: dash/spread hâlâ taş
+                // kırabilir, yani hem "hamle yok" teşhisi hem de shuffle'ın haritası bayat olur.
+                yield return WaitForExclusiveBoardAccess();
+
+                if (matchFinder.HasAnyPlayableSwap())
+                    continue;   // bekleme sırasında board oynanabilir hâle geldi
 
                 yield return boosterService.SafeShuffleBoardRoutine(boardInitService);
 

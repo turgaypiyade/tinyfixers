@@ -22,7 +22,9 @@ var files = new[] {
     "Assets/_Project/Scripts/Core/LevelData.cs",
     "Assets/_Project/Scripts/Editor/LevelDataEditor.cs",
     "Assets/_Project/Scripts/Grid/Board/BossDuelAttackVfx.cs",
-    "Assets/_Project/Scripts/Grid/Board/BossDuelPowerOrbs.cs"
+    "Assets/_Project/Scripts/Grid/Board/BossDuelPowerOrbs.cs",
+    "Assets/_Project/Scripts/Grid/Board/BossDuelObstaclePressure.cs",
+    "Assets/_Project/Scripts/UI/LevelEndSimplePopupController.cs"
 };
 foreach (var file in files)
 {
@@ -33,7 +35,7 @@ foreach (var file in files)
 Console.WriteLine("PASS: C# syntax, " + files.Length + " changed source files");
 
 var controller = CSharpSyntaxTree.ParseText(File.ReadAllText(files[0])).GetRoot();
-var methodNames = new[] { "ResolveAnimalTurn", "TickAnimalTurn", "TickEndEvalHold", "AbsorbAnimalDamage", "HandleAnimalMovesChanged" };
+var methodNames = new[] { "ResolveAnimalTurn", "TickAnimalTurn", "TickEndEvalHold", "AbsorbAnimalDamage", "HandleAnimalMovesChanged", "NoteEndEvalProgress" };
 var methods = string.Join("\n", controller.DescendantNodes().OfType<MethodDeclarationSyntax>()
     .Where(m => methodNames.Contains(m.Identifier.ValueText)).Select(m => m.ToFullString()));
 
@@ -41,6 +43,8 @@ var harness = @"
 using System;
 using System.Collections;
 using System.Collections.Generic;
+ public static class Time { public static float unscaledTime; }
+ public static class Debug { public static void LogWarning(string message) {} }
  public class Sprite {}
  public struct Color { public Color(float r,float g,float b,float a=1f) {} public static Color white => new Color(); }
  public static class PlayerPrefs { public static int GetInt(string key,int fallback) => fallback; }
@@ -78,7 +82,7 @@ public class Duel {
    playerMoveOpen,waveTransitionActive,playerDefeated,outOfMovesDazed,endEvalHoldActive,laserFiring,over;
  public int accumulatedPower=30,waveIndex,enemyHp=90,playerHp=100,playerProtection,enemyProtection,
    defeatAnimationsActive,bonusStrikePool,boltsInFlight,counters,attacks,killMode;
- public float moveSettledTime;
+ public float moveSettledTime,endEvalHoldStartTime; public bool endEvalHoldWarned;
  public Queue<int> strikeQueue=new Queue<int>();
  public object playerShieldBubble,enemyShieldBubble,playerShieldColor,enemyShieldColor,playerRobot,
    enemyRobot,playerBodyImage,playerDefeatedSprite,playerArmA,playerArmB;
@@ -107,6 +111,7 @@ public class Duel {
  public IEnumerator Turn()=>ResolveAnimalTurn();
  public void Tick(float dt)=>TickAnimalTurn(dt);
  public void Hold()=>TickEndEvalHold();
+ public void Progress()=>NoteEndEvalProgress();
  public int Hit(int damage,bool toPlayer)=>AbsorbAnimalDamage(damage,toPlayer);
  public void AddMoves(int n){board.RemainingMoves+=n;HandleAnimalMovesChanged(board.RemainingMoves);}
 " + methods + @"
@@ -135,6 +140,9 @@ public static class Checks {
      Check(hpLoss+shield-remaining==dmg,""Damage conserved"");
      Check((side?d.enemyProtection:d.playerProtection)==shield,""Other side unchanged"");
    }
+   var progressing=new Duel{endEvalHoldStartTime=0,endEvalHoldWarned=true};
+   Time.unscaledTime=25;progressing.Progress();
+   Check(progressing.endEvalHoldStartTime==25 && !progressing.endEvalHoldWarned,""Real duel progress resets the stall diagnostic"");
    var survive=new Duel();Run(survive);
    Check(string.Join("","",survive.log)==""player-impact,player-return,counter-impact,counter-return"",""One ordered counter"");
    Check(survive.board.RemainingMoves==3,""No move refund or second consumption"");
