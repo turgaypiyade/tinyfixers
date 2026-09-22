@@ -48,7 +48,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 1
   spriteExtrude: 1
-  spriteMeshType: 0
+  spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -116,10 +116,10 @@ TextureImporter:
       name: MW_1_0
       rect:
         serializedVersion: 2
-        x: 66
-        y: 34
-        width: 1045
-        height: 1198
+        x: 0
+        y: 15
+        width: 1235
+        height: 1225
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

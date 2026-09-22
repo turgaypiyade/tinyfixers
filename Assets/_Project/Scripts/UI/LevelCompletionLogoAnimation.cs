@@ -8,7 +8,9 @@ using Random = UnityEngine.Random;
 
 /// <summary>
 /// Level completion logo animation.
-/// Three logo parts fly to the center and fireworks play.
+/// Frame belirir, Wonder sol ustten ve Fixers sagdan ucar, hayvan maskot
+/// (Pig / Bear / Ram / Rabit arasindan random) pop yapar, havai fisek patlar.
+/// Tum parcalar ayni 607x627 tuvalde cizili: ayni merkezde ust uste oturur.
 /// Double click during this animation skips only the logo animation.
 ///
 /// Important: this component does not disable its root object at the end.
@@ -24,9 +26,17 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
     [SerializeField] private int canvasSortOrder = 200;
 
     [Header("Logo Parcalari (atanmayanlar atlanir)")]
-    [SerializeField] private RectTransform tinysImage;
-    [SerializeField] private RectTransform fixersLeftImage;
-    [SerializeField] private RectTransform fixersRightImage;
+    [Tooltip("Altin cerceve + manzara. Yerinde durur, sadece fade-in yapar. En altta.")]
+    [SerializeField] private RectTransform frameImage;
+    [Tooltip("Hayvan maskot. Yerinde pop yapar; sprite'i animalSprites icinden secilir.")]
+    [SerializeField] private RectTransform animalImage;
+    [Tooltip("Wonder tabelasi. Sol ust kosden ucar. Hayvanin govdesinin onunde.")]
+    [SerializeField] private RectTransform wonderImage;
+    [Tooltip("Fixers yazisi. Sagdan ucar. En ustte.")]
+    [SerializeField] private RectTransform fixersImage;
+
+    [Tooltip("Her oynatimda birisi random secilir (Pig / Bear / Ram / Rabit).")]
+    [SerializeField] private Sprite[] animalSprites = new Sprite[0];
 
     [Header("Fisek VFX")]
     [SerializeField] private RectTransform vfxRoot;
@@ -40,9 +50,20 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
     [SerializeField, Min(0f)] private float fireworkDelay = 0.18f;
 
     [Header("Giris Mesafeleri (piksel)")]
-    [SerializeField] private float tinysTopOffset = 1100f;
-    [SerializeField] private float fixersBottomOffset = 1200f;
-    [SerializeField] private float fixersSideOffset = 600f;
+    [Tooltip("Wonder sol ust kosden gelir (x negatif = sol, y pozitif = yukari).")]
+    [SerializeField] private Vector2 wonderEnterOffset = new Vector2(-900f, 900f);
+    [Tooltip("Fixers sagdan gelir.")]
+    [SerializeField] private Vector2 fixersEnterOffset = new Vector2(1100f, 0f);
+
+    [Header("Cerceve ve Hayvan Zamanlamasi")]
+    [Tooltip("Cerceve yerinde belirir; ucmaz.")]
+    [SerializeField, Min(0f)] private float frameFadeDuration = 0.18f;
+    [SerializeField, Min(0f)] private float wonderEnterDelay = 0.10f;
+    [SerializeField, Min(0f)] private float fixersEnterDelay = 0.20f;
+    [Tooltip("Yazilar oturduktan sonra hayvan pop yapar.")]
+    [SerializeField, Min(0f)] private float animalPopDelay = 0.50f;
+    [SerializeField, Min(0.05f)] private float animalPopDuration = 0.34f;
+    [SerializeField, Range(0.1f, 1f)] private float animalPopStartScale = 0.6f;
 
     [Header("Cift Tiklama Skip")]
     [SerializeField, Min(0.05f)] private float doubleTapWindow = 0.40f;
@@ -57,6 +78,10 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
     private bool _playing;
     private bool _skipRequested;
     private float _lastTapTime = -99f;
+    private RectTransform[] _flyPieces;
+    private Vector2[] _flyHomePositions;
+    private Vector3 _animalHomeScale = Vector3.one;
+    private bool _homeStateCaptured;
     private Canvas _canvas;
     private readonly List<GameObject> spawnedFireworkVfx = new();
 
@@ -66,6 +91,14 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
     private static Sprite fireworkSolidDotSprite;
 
     private float TargetOverlayAlpha => keepOverlayTransparent ? 0f : Mathf.Clamp01(overlayTargetAlpha);
+
+    private void Awake()
+    {
+        // Parcalar sahnede gorunur kaydedilir (editorde konumlandirilabilsinler
+        // diye). Play() cagrilana kadar hicbiri ekranda olmamali.
+        SetLogoPiecesVisible(false);
+        SetVfxRootVisible(false);
+    }
 
     private void Update()
     {
@@ -106,7 +139,7 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
         transform.SetAsLastSibling();
 
         if (_canvas == null)
-            _canvas = GetComponent<Canvas>() ?? GetComponentInParent<Canvas>(true);
+            if (!TryGetComponent(out _canvas)) _canvas = GetComponentInParent<Canvas>(true);
 
         if (_canvas != null)
         {
@@ -116,6 +149,15 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
 
         ClearSpawnedFireworks();
         SetLogoPiecesVisible(true);
+
+        // Parcalar gorunur olur olmaz giris pozuna kurulur: arada hicbir yield
+        // olmamali. Once sadece gorunur yapilip overlay fade'i beklenince,
+        // tamamlanmis logo bir an oldugu gibi ekranda kaliyordu.
+        PickRandomAnimal();
+        ApplyLayerOrder();
+        CaptureLogoHomeState();
+        ArmLogoEntrance();
+
         SetVfxRootVisible(true);
         PrepareOverlayForAnimation();
         SetOverlayAlpha(0f);
@@ -129,55 +171,58 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
         {
             _playing = false;
             WasSkipped = true;
+            SettleLogoToHome();
             yield return StartCoroutine(FadeOverlay(targetAlpha, 0f, dimFadeDuration));
             HideVisualsAfterPlay();
             yield break;
         }
 
-        var startOffsets = new Vector2[]
-        {
-            new Vector2(0f, tinysTopOffset),
-            new Vector2(-fixersSideOffset, -fixersBottomOffset),
-            new Vector2(fixersSideOffset, -fixersBottomOffset),
-        };
-
-        var pieces = new RectTransform[] { tinysImage, fixersLeftImage, fixersRightImage };
-        var centers = new Vector2[pieces.Length];
-
-        for (int i = 0; i < pieces.Length; i++)
-        {
-            if (pieces[i] == null)
-                continue;
-
-            centers[i] = pieces[i].anchoredPosition;
-            pieces[i].anchoredPosition = centers[i] + startOffsets[i];
-        }
+        // Tum parcalar ayni 607x627 tuvalde cizildi: ayni merkezde ust uste
+        // gelince kompozisyon oturuyor. Bu yuzden hedef konum her parcanin
+        // kendi anchoredPosition'i; sadece giris yollari farkli.
+        // Giris pozu Play()'in basinda kuruldu; burada sadece surulur.
+        var flyPieces = _flyPieces;
+        var flyOffsets = new Vector2[] { wonderEnterOffset, fixersEnterOffset };
+        var flyDelays = new float[] { wonderEnterDelay, fixersEnterDelay };
+        var flyCenters = _flyHomePositions;
+        Vector3 animalHomeScale = _animalHomeScale;
 
         Coroutine fireworksRoutine = StartCoroutine(PlayFireworks());
 
+        float totalIn = Mathf.Max(
+            Mathf.Max(frameFadeDuration, animalPopDelay + animalPopDuration),
+            Mathf.Max(wonderEnterDelay, fixersEnterDelay) + flyInDuration);
+
         float elapsed = 0f;
-        while (elapsed < flyInDuration && !_skipRequested)
+        while (elapsed < totalIn && !_skipRequested)
         {
             elapsed += Time.unscaledDeltaTime;
-            float e = EaseOutBack(Mathf.Clamp01(elapsed / flyInDuration));
 
-            for (int i = 0; i < pieces.Length; i++)
+            SetPieceAlpha(frameImage,
+                frameFadeDuration <= 0f ? 1f : Mathf.Clamp01(elapsed / frameFadeDuration));
+
+            for (int i = 0; i < flyPieces.Length; i++)
             {
-                if (pieces[i] == null)
+                if (flyPieces[i] == null)
                     continue;
 
-                pieces[i].anchoredPosition = Vector2.LerpUnclamped(
-                    centers[i] + startOffsets[i], centers[i], e);
+                float t = Mathf.Clamp01((elapsed - flyDelays[i]) / flyInDuration);
+                flyPieces[i].anchoredPosition = Vector2.LerpUnclamped(
+                    flyCenters[i] + flyOffsets[i], flyCenters[i], EaseOutBack(t));
+            }
+
+            if (animalImage != null)
+            {
+                float at = Mathf.Clamp01((elapsed - animalPopDelay) / animalPopDuration);
+                SetPieceAlpha(animalImage, at > 0f ? 1f : 0f);
+                animalImage.localScale = Vector3.LerpUnclamped(
+                    animalHomeScale * animalPopStartScale, animalHomeScale, EaseOutBack(at));
             }
 
             yield return null;
         }
 
-        for (int i = 0; i < pieces.Length; i++)
-        {
-            if (pieces[i] != null)
-                pieces[i].anchoredPosition = centers[i];
-        }
+        SettleLogoToHome();
 
         float holdElapsed = 0f;
         while (holdElapsed < holdDuration && !_skipRequested)
@@ -194,6 +239,61 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
 
         yield return StartCoroutine(FadeOverlay(targetAlpha, 0f, dimFadeDuration));
         HideVisualsAfterPlay();
+    }
+
+    /// <summary>
+    /// Ev konumlari yalnizca BIR kez yakalanir: yarida kesilen bir giris
+    /// (skip) sonraki oynatimda "ev" sanilip parcalarin kaymasina yol acmasin.
+    /// </summary>
+    private void CaptureLogoHomeState()
+    {
+        if (_homeStateCaptured)
+            return;
+
+        _flyPieces = new RectTransform[] { wonderImage, fixersImage };
+        _flyHomePositions = new Vector2[_flyPieces.Length];
+
+        for (int i = 0; i < _flyPieces.Length; i++)
+            if (_flyPieces[i] != null)
+                _flyHomePositions[i] = _flyPieces[i].anchoredPosition;
+
+        _animalHomeScale = animalImage != null ? animalImage.localScale : Vector3.one;
+        _homeStateCaptured = true;
+    }
+
+    /// <summary>Giris pozu: ucan yazilar offsette, cerceve ve hayvan gorunmez.</summary>
+    private void ArmLogoEntrance()
+    {
+        var flyOffsets = new Vector2[] { wonderEnterOffset, fixersEnterOffset };
+
+        for (int i = 0; i < _flyPieces.Length; i++)
+            if (_flyPieces[i] != null)
+                _flyPieces[i].anchoredPosition = _flyHomePositions[i] + flyOffsets[i];
+
+        if (animalImage != null)
+            animalImage.localScale = _animalHomeScale * animalPopStartScale;
+
+        SetPieceAlpha(frameImage, 0f);
+        SetPieceAlpha(animalImage, 0f);
+    }
+
+    /// <summary>Skip edilse de son kare tam oturmus olmali.</summary>
+    private void SettleLogoToHome()
+    {
+        SetPieceAlpha(frameImage, 1f);
+
+        if (_flyPieces != null)
+        {
+            for (int i = 0; i < _flyPieces.Length; i++)
+                if (_flyPieces[i] != null)
+                    _flyPieces[i].anchoredPosition = _flyHomePositions[i];
+        }
+
+        if (animalImage != null)
+        {
+            SetPieceAlpha(animalImage, 1f);
+            animalImage.localScale = _animalHomeScale;
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -263,9 +363,92 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
 
     private void SetLogoPiecesVisible(bool visible)
     {
-        SetGraphicVisible(tinysImage, visible);
-        SetGraphicVisible(fixersLeftImage, visible);
-        SetGraphicVisible(fixersRightImage, visible);
+        SetGraphicVisible(frameImage, visible);
+        SetGraphicVisible(animalImage, visible);
+        SetGraphicVisible(wonderImage, visible);
+        SetGraphicVisible(fixersImage, visible);
+    }
+
+    /// <summary>Her oynatimda hayvan sprite'ini havuzdan yeniden secer.</summary>
+    private void PickRandomAnimal()
+    {
+        if (animalImage == null || animalSprites == null || animalSprites.Length == 0)
+            return;
+
+        // Inspector'da bos slot birakilmis olabilir; yalnizca dolu olanlardan sec.
+        int filled = 0;
+        for (int i = 0; i < animalSprites.Length; i++)
+            if (animalSprites[i] != null)
+                filled++;
+
+        if (filled == 0)
+            return;
+
+        if (!animalImage.TryGetComponent<Image>(out var image))
+            return;
+
+        int pick = Random.Range(0, filled);
+        for (int i = 0; i < animalSprites.Length; i++)
+        {
+            if (animalSprites[i] == null)
+                continue;
+
+            if (pick > 0)
+            {
+                pick--;
+                continue;
+            }
+
+            image.sprite = animalSprites[i];
+            return;
+        }
+    }
+
+    /// <summary>Altta -> ustte: Frame, Hayvan, Wonder, Fixers.</summary>
+    private void ApplyLayerOrder()
+    {
+        var ordered = new RectTransform[] { frameImage, animalImage, wonderImage, fixersImage };
+
+        // Yalnizca bu dordunu kendi aralarinda sirala. vfxRoot / overlay gibi
+        // kardeslerin sirasini bozmamak icin en dusuk mevcut indexten baslanir.
+        int index = int.MaxValue;
+        for (int i = 0; i < ordered.Length; i++)
+            if (ordered[i] != null)
+                index = Mathf.Min(index, ordered[i].GetSiblingIndex());
+
+        if (index == int.MaxValue)
+            return;
+
+        for (int i = 0; i < ordered.Length; i++)
+        {
+            if (ordered[i] == null)
+                continue;
+
+            ordered[i].SetSiblingIndex(index);
+            index++;
+        }
+    }
+
+    /// <summary>Cerceve ve hayvan yerinde belirdigi icin konum yerine alpha ile surulur.</summary>
+    private static void SetPieceAlpha(RectTransform target, float alpha)
+    {
+        if (target == null)
+            return;
+
+        alpha = Mathf.Clamp01(alpha);
+
+        if (target.TryGetComponent<CanvasGroup>(out var group))
+        {
+            group.alpha = alpha;
+            return;
+        }
+
+        if (target.TryGetComponent<Image>(out var image))
+        {
+            var color = image.color;
+            color.a = alpha;
+            image.color = color;
+        }
     }
 
     private static void SetGraphicVisible(RectTransform target, bool visible)

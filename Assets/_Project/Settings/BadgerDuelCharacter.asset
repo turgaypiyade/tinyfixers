@@ -1,0 +1,157 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31207c51aeab4a5dbe1eb48ff54e2298, type: 3}
+  m_Name: BadgerDuelCharacter
+  m_EditorClassIdentifier: Assembly-CSharp::BossDuelCharacterProfile
+  idle:
+    sprite: {fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}
+    height: 1.1
+    groundPivot: {x: 0.556, y: 0.057}
+    offset: {x: 0, y: 0}
+  idleAlternate:
+    sprite: {fileID: 21300000, guid: 3471d1e7d0ed43c49bb289a9f7957826, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.55, y: 0.104}
+    offset: {x: 0, y: 0}
+  focused:
+    sprite: {fileID: 21300000, guid: e5e8ba26196749afab96c5da78e6c1df, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.626, y: 0.104}
+    offset: {x: 0, y: 0}
+  windup:
+    sprite: {fileID: 21300000, guid: 53707206ffe34f19bc407711533f7649, type: 3}
+    height: 1.2
+    groundPivot: {x: 0.431, y: 0.083}
+    offset: {x: 0, y: 0}
+  swing:
+    sprite: {fileID: 21300000, guid: 3471d1e7d0ed43c49bb289a9f7957826, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.55, y: 0.104}
+    offset: {x: 0, y: 0}
+  strike:
+    sprite: {fileID: 21300000, guid: 3a089600eae94840ba330326c3f65a9b, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.665, y: 0.068}
+    offset: {x: 0, y: 0}
+  shield:
+    sprite: {fileID: 21300000, guid: 224262ed50bc43d9a55bf559f68038b3, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.583, y: 0.073}
+    offset: {x: 0, y: 0}
+  victory:
+    sprite: {fileID: 21300000, guid: 3471d1e7d0ed43c49bb289a9f7957826, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.55, y: 0.104}
+    offset: {x: 0, y: 0}
+  defeated:
+    sprite: {fileID: 21300000, guid: e5e8ba26196749afab96c5da78e6c1df, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.626, y: 0.104}
+    offset: {x: 0, y: 0}
+  mirrorHorizontally: 0
+  idleAlternateInterval: 3.8
+  idleAlternateDuration: 0.8
+  blinkInterval: 3.2
+  blinkDuration: 0.13
+  windupDuration: 0.26
+  swingDuration: 0.18
+  impactDuration: 0.12
+  recoveryDuration: 0.2
+  contactDistance: 0.55
+  breathingAmount: 0.008
+  shieldBlockDuration: 0.2
+  shieldBlockRecoil: 0.035
+  afterimageMaterial: {fileID: 2100000, guid: ac1624f2d00f42ac9c23be9ab99a16d1, type: 2}
+  trailColor: {r: 1, g: 0.4, b: 0.08, a: 0.5}
+  trailAccentColor: {r: 1, g: 0.12, b: 0.1, a: 0.36}
+  trailInterval: 0.025
+  trailLifetime: 0.2
+  weaponImpactPoint: {x: 0.14, y: 0.13}
+  powerForFullImpact: 40
+  impactFxDuration: 0.24
+  throwFrames:
+  - pose:
+      sprite: {fileID: 1408286733996295715, guid: 5d644ff4e51284dceaf39b9b93bfd2df, type: 3}
+      height: 1.040000
+      groundPivot: {x: 0.498024, y: 0.025}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.897233, y: 0.448087}
+  - pose:
+      sprite: {fileID: -8818845073103933946, guid: 5d644ff4e51284dceaf39b9b93bfd2df, type: 3}
+      height: 1.008743
+      groundPivot: {x: 0.500000, y: 0.025}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.904000, y: 0.445070}
+  - pose:
+      sprite: {fileID: 848046937899996399, guid: 5d644ff4e51284dceaf39b9b93bfd2df, type: 3}
+      height: 0.917814
+      groundPivot: {x: 0.495935, y: 0.025}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.926829, y: 0.390093}
+  - pose:
+      sprite: {fileID: 6919915710033080553, guid: 5d644ff4e51284dceaf39b9b93bfd2df, type: 3}
+      height: 0.949071
+      groundPivot: {x: 0.485597, y: 0.025}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.827160, y: 0.410180}
+  - pose:
+      sprite: {fileID: 4265784976073603426, guid: 5d644ff4e51284dceaf39b9b93bfd2df, type: 3}
+      height: 1.025792
+      groundPivot: {x: 0.552448, y: 0.025}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.832168, y: 0.457064}
+  - pose:
+      sprite: {fileID: 1900500347086560775, guid: 5d644ff4e51284dceaf39b9b93bfd2df, type: 3}
+      height: 0.968962
+      groundPivot: {x: 0.535461, y: 0.025}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.829787, y: 0.240469}
+  - pose:
+      sprite: {fileID: -6026770368163771319, guid: 5d644ff4e51284dceaf39b9b93bfd2df, type: 3}
+      height: 0.920656
+      groundPivot: {x: 0.387755, y: 0.025}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.496599, y: 0.472222}
+  - pose:
+      sprite: {fileID: 3278360138410511080, guid: 5d644ff4e51284dceaf39b9b93bfd2df, type: 3}
+      height: 0.974645
+      groundPivot: {x: 0.507812, y: 0.025}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.894531, y: 0.349854}
+  - pose:
+      sprite: {fileID: -8175836116479752635, guid: 5d644ff4e51284dceaf39b9b93bfd2df, type: 3}
+      height: 0.940546
+      groundPivot: {x: 0.494585, y: 0.025}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.458484, y: 0.268882}
+  - pose:
+      sprite: {fileID: 5208251758745225584, guid: 5d644ff4e51284dceaf39b9b93bfd2df, type: 3}
+      height: 0.960437
+      groundPivot: {x: 0.520295, y: 0.025}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.538745, y: 0.284024}
+  - pose:
+      sprite: {fileID: 4489859503596386948, guid: 5d644ff4e51284dceaf39b9b93bfd2df, type: 3}
+      height: 0.946230
+      groundPivot: {x: 0.573770, y: 0.025}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.462295, y: 0.291291}
+  - pose:
+      sprite: {fileID: 4681195412572637991, guid: 5d644ff4e51284dceaf39b9b93bfd2df, type: 3}
+      height: 0.974645
+      groundPivot: {x: 0.513619, y: 0.025}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.677043, y: 0.399417}
+  throwFramesPerSecond: 16
+  throwReleaseFrame: 6
+  throwIdleLeadIn: 0.08
+  heldObstacleSize: 0.23

@@ -5,6 +5,14 @@ using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+/// <summary>Level başlatma denemesinin sonucu (dış çağıranlar sessiz erken-return'leri ayırt etsin diye).</summary>
+public enum LevelStartResult
+{
+    Started,      // level akışı başladı (pre-level popup / intro / sahne yükleme)
+    NoLives,      // can yok — can/reklam akışı açıldı
+    Suppressed    // debug paneli vb. nedeniyle tıklama yutuldu
+}
+
 public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
 {
     [SerializeField] private TMP_Text levelText;
@@ -71,10 +79,20 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
 
     public void OnLevelButtonClicked()
     {
+        StartLevel();
+    }
+
+    /// <summary>
+    /// Level akışını başlatır ve SONUCU döndürür. Dışarıdan çağıranlar (Safari/Rising "Devam")
+    /// sessiz erken-return'leri ayırt edebilsin diye: Started dışında level BAŞLAMAMIŞTIR.
+    /// Buton tıklaması sonucu yok sayar (eski davranış).
+    /// </summary>
+    public LevelStartResult StartLevel()
+    {
         if (suppressNextLevelClick)
         {
             suppressNextLevelClick = false;
-            return;
+            return LevelStartResult.Suppressed;
         }
 
         if (!LivesManager.HasLives)
@@ -83,7 +101,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
             if (livesDisplay == null)
                 livesDisplay = FindFirstObjectByType<MainMenuLivesDisplay>();
             livesDisplay?.OnAreaClicked();
-            return;
+            return LevelStartResult.NoLives;
         }
 
         if (preLevelSpecialPopup == null)
@@ -93,15 +111,16 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         {
             // Pre-level popup kendi içinde scene yüklediğinde LoadingScreen'i kendisi gösterir.
             preLevelSpecialPopup.Open();
-            return;
+            return LevelStartResult.Started;
         }
 
         // Custom intro varsa onu kullan (sahne yüklemesi manager'a ait); aksi halde default.
         if (TryShowCustomIntro())
-            return;
+            return LevelStartResult.Started;
 
         ShowLoadingScreen();
         SceneManager.LoadScene(gameSceneName);
+        return LevelStartResult.Started;
     }
 
     public void OnPointerDown(PointerEventData eventData)
@@ -411,13 +430,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
     {
         if (levelCatalog == null || !levelCatalog.TryGetGlobalLevel(currentLevel, out LevelData data) || data == null)
             return false;
-        if (!data.usesCustomIntro || data.introLeftSprite == null || data.introRightSprite == null)
-            return false;
-
-        CustomIntroLoadingManager.Show(
-            data.introLeftSprite, data.introRightSprite, gameSceneName,
-            data.introSlideInDuration, data.introHoldDuration);
-        return true;
+        return CustomIntroLoadingManager.TryShow(data, gameSceneName);
     }
 
     private void ShowLoadingScreen()

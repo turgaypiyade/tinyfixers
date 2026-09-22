@@ -18,6 +18,18 @@ public class BoardVfxService
     // Override combo tek-atış SFX (Resources/Audio/OverrideCombo/*), board.Audio üzerinden.
     private static readonly Dictionary<string, AudioClip> _overrideSfxCache = new Dictionary<string, AudioClip>();
 
+    // Resources.Load SENKRONDUR: ilk override combo sesi oyunun ortasında kare düşürüyordu.
+    // Level açılışında bir kez ısıt (cache static → sonraki seviyelerde bedava).
+    internal static void WarmupOverrideSfxCache()
+    {
+        for (int i = 1; i <= 3; i++)
+        {
+            string name = "Override" + i;
+            if (!_overrideSfxCache.TryGetValue(name, out var cached) || cached == null)
+                _overrideSfxCache[name] = Resources.Load<AudioClip>("Audio/OverrideCombo/" + name);
+        }
+    }
+
     private void PlayOverrideSfx(string fileName)
     {
         if (board == null || board.Audio == null || string.IsNullOrEmpty(fileName))

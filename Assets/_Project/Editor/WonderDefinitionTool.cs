@@ -67,6 +67,7 @@ public static class WonderDefinitionTool
                 {
                     name = a.gameObject.name,
                     facingMode = a.facingMode,
+                    birdProfile = a.birdProfile,
                     frontFrames = a.frontFrames,
                     backFrames = a.backFrames,
                     walkFrames = a.walkFrames,
@@ -161,7 +162,7 @@ public static class WonderDefinitionTool
         EditorUtility.DisplayDialog("Edit Paths",
             $"'{def.wonderId}' düzenleme sahnesi açıldı ({agents.Count} karakter).\n\n" +
             "• Magenta noktaları imaj üzerinde sürükle → yolları çiz\n" +
-            "• Yeni karakter: Add Robot / Add Drone menüleri\n" +
+            "• Yeni karakter: Add Robot / Add Bird menüleri\n" +
             "• Bitince: 'Bake Paths → Selected Wonder' → bu wonder'a yazılır", "Tamam");
     }
 
@@ -224,6 +225,8 @@ public static class WonderDefinitionTool
         agent.pathPoints = null;            // düzenlerken magenta waypoint'ler otorite
         agent.visual = vRt;
         agent.visualImage = vImg;
+        agent.birdProfile = c.birdProfile;
+        agent.RefreshBirdVisual();
         agent.facingMode = c.facingMode;
         agent.frontFrames = c.frontFrames;
         agent.backFrames = c.backFrames;

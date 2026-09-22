@@ -43,15 +43,9 @@ public static class RisingMockupSetup
     private const string TowerPath       = LiftDir + "RisingMainLift.png"; // Katman 2: kule (7 kat + ray)
     private const string TopHudFramePath = LiftDir + "RLTophud.png";       // Katman 3: tophud çerçevesi
     private const string RestLiftPath    = LiftDir + "RisingLiftT2.png";   // Kaldıraç rest (ilk duruş) görseli
-    private static readonly string[] HelmetPaths =
-    {
-        "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/HB1.png",
-        "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/HG1.png",
-        "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/HR1.png",
-        "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/HY1.png"
-    };
-    private const string BotHelmetPath = "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/HB1.png";
-    private const string PlayerHelmetPath = "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/HR1.png";
+    private const string HelmetSheetPath = "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/SafariH.png";
+    private const int    PlayerHelmetIndex = 1;   // sheet'te soldan 2. dilim (kırmızı) = oyuncu
+    private const string LogTag = "RisingMockupSetup";
     private const string SystemName = "RisingEventSystem";
     private const string LegacySystemName = "SafariEventSystem";
 
@@ -167,6 +161,10 @@ public static class RisingMockupSetup
         var anchors = new Object[n];
         var floorNumbers = new Object[n];
         float yBottom = 0.10f, yTop = 0.88f;
+        // Kat 0 (zemin) platformu: kalabalık burada başlar, düşünce buraya döner. Kazanınca
+        // buradan lift tablasına atlar. Konum sanat eserine göre Inspector'dan ince ayarlanır.
+        var groundAnchor = MakeAnchor("Floor0", board, new Vector2(0.256f, 0.155f));
+        groundAnchor.anchoredPosition = new Vector2(0f, -10f);   // cabinStandOffsetY(-70) ile birlikte net -80
         float numberEdgeX = 0.30f;   // kule kenarındaki numara sütunu (x) — Inspector'dan tunelanır
         for (int i = 0; i < n; i++)
         {
@@ -203,7 +201,8 @@ public static class RisingMockupSetup
         MockupUI.SetRef(liftView, "boltSpriteOverride",     MockupUI.LoadSprite(BoltPath));
         SetBool(liftView, "preserveRootTransform", true);
         SetBool(liftView, "armsInFrontOfBase", true);
-        SetBool(liftView, "simpleCrossMode", true);
+        SetBool(liftView, "simpleCrossMode", false);   // false = pim/bolt görselleri de üretilir
+        SetFloat(liftView, "boltScale", 0.42f);        // vidalar kibar kalsın
         SetBool(liftView, "progressiveStageReveal", true);
         SetInt(liftView, "stageCountOverride", Mathf.Max(1, config.pitstopCount - 1));
         SetFloat(liftView, "backArmAlpha", 0.82f);
@@ -238,8 +237,9 @@ public static class RisingMockupSetup
         var stack = crowdRt.gameObject.AddComponent<SafariAvatarStackView>();
         MockupUI.SetRef(stack, "container", crowdRt);
         MockupUI.SetRefArray(stack, "helmetSprites", LoadHelmetSprites());
-        MockupUI.SetRef(stack, "playerHelmetSprite", MockupUI.LoadSprite(PlayerHelmetPath));
-        MockupUI.SetRefArray(stack, "botHelmetSprites", new Object[] { MockupUI.LoadSprite(BotHelmetPath) });
+        MockupUI.SetRef(stack, "playerHelmetSprite", LoadPlayerHelmet());
+        // Bot havuzu boş → helmetSprites (tüm sheet dilimleri) kullanılır, her bot hash'ine göre random.
+        MockupUI.SetRefArray(stack, "botHelmetSprites", new Object[0]);
 
         // KATMAN 3 — TopHUD: üst şerit (ayrı katman, top-anchored). RLTophud çerçevesi + dinamik metin/ikon/değer.
         var topHud = BuildTopHud(rootRt, theme, MockupUI.LoadSprite(TopHudFramePath),
@@ -276,8 +276,10 @@ public static class RisingMockupSetup
         MockupUI.SetRef(map, "root", mapRoot);
         MockupUI.SetRef(map, "topHud", topHud);
         SetFloat(map, "liftTileSize", 287f);
-        SetInt(map, "maxVisibleCrowdAvatars", 8);
+        SetFloat(map, "cabinAvatarOffsetY", -70f);  // SADECE avatar ofseti; lift durak yüksekliği kat seviyesinde kalır
+        SetInt(map, "maxVisibleCrowdAvatars", 15);    // 1+2+3+4+5 = tam üçgen
         MockupUI.SetRefArray(map, "floorAnchors", anchors);
+        MockupUI.SetRef(map, "groundAnchor", groundAnchor);
         MockupUI.SetRefArray(map, "floorNumberLabels", floorNumbers);
         MockupUI.SetRef(map, "lift", liftView);
         MockupUI.SetRef(map, "restLift", restLiftImg.gameObject);
@@ -366,8 +368,9 @@ public static class RisingMockupSetup
         var stack = crowdRt.gameObject.AddComponent<SafariAvatarStackView>();
         MockupUI.SetRef(stack, "container", crowdRt);
         MockupUI.SetRefArray(stack, "helmetSprites", LoadHelmetSprites());
-        MockupUI.SetRef(stack, "playerHelmetSprite", MockupUI.LoadSprite(PlayerHelmetPath));
-        MockupUI.SetRefArray(stack, "botHelmetSprites", new Object[] { MockupUI.LoadSprite(BotHelmetPath) });
+        MockupUI.SetRef(stack, "playerHelmetSprite", LoadPlayerHelmet());
+        // Bot havuzu boş → helmetSprites (tüm sheet dilimleri) kullanılır, her bot hash'ine göre random.
+        MockupUI.SetRefArray(stack, "botHelmetSprites", new Object[0]);
 
         var counter = MockupUI.NewText("Counter", rootRt, $"0/{Mathf.Max(1, config.participantVisualCount)}", 78f,
             new Color(1f, 0.9f, 0.28f, 1f), TextAlignmentOptions.Center, theme.headingFont);
@@ -393,7 +396,7 @@ public static class RisingMockupSetup
         MockupUI.SetRef(intro, "tapText", tap);
         MockupUI.SetRef(intro, "crowdStack", stack);
         MockupUI.SetRef(intro, "crowdAnchor", crowdAnchor);
-        SetInt(intro, "maxVisibleCrowdAvatars", 8);
+        SetInt(intro, "maxVisibleCrowdAvatars", 15);  // 1+2+3+4+5 = tam üçgen
         SetFloat(intro, "crowdAvatarSize", 132f);
         SetFloat(intro, "crowdSpread", 68f);
         SetFloat(intro, "transferTargetAvatarSize", 112f);
@@ -697,16 +700,33 @@ public static class RisingMockupSetup
 
     private static void EnsureHelmetImports()
     {
-        for (int i = 0; i < HelmetPaths.Length; i++)
-            EnsureSpriteImport(HelmetPaths[i]);
+        EnsureSpriteImport(HelmetSheetPath);
     }
 
+    // Helmet çerçeveleri TEK SHEET'ten gelir: SafariH.png (Sprite Mode: Multiple, SafariH_0..N).
+    // Dilimler soldan-sağa sıralanır; bot/kalabalık havuzu dilimlerin TAMAMIDIR (her katılımcı kendi
+    // hash'ine göre random bir dilim alır), oyuncu PlayerHelmetIndex dilimini alır.
+    // Sheet yeniden dilimlenirse burada değişiklik gerekmez — dilimler otomatik okunur.
     private static Sprite[] LoadHelmetSprites()
     {
-        var sprites = new Sprite[HelmetPaths.Length];
-        for (int i = 0; i < HelmetPaths.Length; i++)
-            sprites[i] = MockupUI.LoadSprite(HelmetPaths[i]);
-        return sprites;
+        var reps = AssetDatabase.LoadAllAssetRepresentationsAtPath(HelmetSheetPath);
+        var list = new System.Collections.Generic.List<Sprite>();
+        foreach (var o in reps)
+            if (o is Sprite sp) list.Add(sp);
+        list.Sort((a, b) => a.rect.x.CompareTo(b.rect.x));
+
+        if (list.Count == 0)
+            Debug.LogError($"[{LogTag}] Helmet sheet dilimlenmemiş: {HelmetSheetPath} " +
+                           "(Inspector > Sprite Mode: Multiple + Sprite Editor > Slice).");
+        return list.ToArray();
+    }
+
+    /// <summary>Oyuncunun sabit helmet'i (sheet'teki PlayerHelmetIndex dilimi).</summary>
+    private static Sprite LoadPlayerHelmet()
+    {
+        var all = LoadHelmetSprites();
+        if (all.Length == 0) return null;
+        return all[Mathf.Clamp(PlayerHelmetIndex, 0, all.Length - 1)];
     }
 
     private static void SetBool(Object target, string field, bool value)

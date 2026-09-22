@@ -15,6 +15,57 @@ using UnityEngine.UI;
 public sealed class CustomIntroLoadingManager : MonoBehaviour
 {
     private static CustomIntroLoadingManager _instance;
+    private static int _lastBossIntroSceneHandle = -1;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetSession()
+    {
+        _instance = null;
+        _lastBossIntroSceneHandle = -1;
+    }
+
+    private BossDuelIntroController _bossIntro;
+
+    public static bool IsBossIntroFor(Scene scene)
+        => _instance != null && _instance._bossIntro != null &&
+           (_instance._sceneName == scene.name || _instance._sceneName == scene.path);
+
+    public static bool HasShownBossIntroFor(Scene scene)
+        => IsBossIntroFor(scene) || scene.handle == _lastBossIntroSceneHandle;
+
+    private void HandleBossSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (IsBossIntroFor(scene)) _lastBossIntroSceneHandle = scene.handle;
+    }
+
+    /// Both menu entry points use this routing; BossDuel never uses legacy robot sprites.
+    public static bool TryShow(LevelData level, string sceneName)
+    {
+        if (level == null || string.IsNullOrEmpty(sceneName)) return false;
+        if (level.levelKind == LevelKind.BossDuel)
+        {
+            var intro = BossDuelIntroArtwork.Create(sortingOrder: 1000);
+            if (intro == null) return false;
+            if (_instance != null) Destroy(_instance.gameObject);
+            var mgr = intro.gameObject.AddComponent<CustomIntroLoadingManager>();
+            mgr._bossIntro = intro;
+            mgr._canvasGroup = intro.GetComponent<CanvasGroup>();
+            mgr._sceneName = sceneName;
+            mgr._fadeOutDuration = 0.35f;
+            intro.SetEntranceTiming(level.introSlideInDuration, level.introHoldDuration);
+            _instance = mgr;
+            SceneManager.sceneLoaded += mgr.HandleBossSceneLoaded;
+            DontDestroyOnLoad(intro.gameObject);
+            mgr.StartCoroutine(mgr.PlayAndLoad());
+            return true;
+        }
+
+        if (!level.usesCustomIntro || level.introLeftSprite == null || level.introRightSprite == null)
+            return false;
+        Show(level.introLeftSprite, level.introRightSprite, sceneName,
+            level.introSlideInDuration, level.introHoldDuration);
+        return true;
+    }
 
     public static bool IsVisible => _instance != null;
 
@@ -74,8 +125,11 @@ public sealed class CustomIntroLoadingManager : MonoBehaviour
     {
         // İlk kare render olmadan parçaları ekran dışına al (layout daha hesaplanmamış olabilir,
         // bu yüzden geçici büyük sabit offset — birleşmiş görüntünün bir kare flaş etmesini önler).
-        _leftPiece.anchoredPosition  = new Vector2(-10000f, 0f);
-        _rightPiece.anchoredPosition = new Vector2( 10000f, 0f);
+        if (_bossIntro == null)
+        {
+            _leftPiece.anchoredPosition  = new Vector2(-10000f, 0f);
+            _rightPiece.anchoredPosition = new Vector2( 10000f, 0f);
+        }
 
         // Sahneyi arkada yüklemeye başla ama biz hazır deyene kadar aktive etme.
         AsyncOperation op = SceneManager.LoadSceneAsync(_sceneName);
@@ -84,6 +138,38 @@ public sealed class CustomIntroLoadingManager : MonoBehaviour
         // Bir kare bekle ki canvas/parça boyutları otursun, sonra hassas başlangıcı hesapla.
         yield return null;
 
+        if (_bossIntro != null)
+            yield return _bossIntro.PlayEntrance();
+        else
+            yield return PlayLegacyEntrance();
+
+        // Sahne yüklenene kadar bekle (allowSceneActivation=false iken progress 0.9'da takılır).
+        while (op.progress < 0.9f)
+            yield return null;
+
+        // Aktive et ve gerçekten geçene kadar bekle.
+        op.allowSceneActivation = true;
+        while (!op.isDone)
+            yield return null;
+
+        // Yeni sahnenin ilk karesi otursun, sonra fade-out → oyun.
+        yield return null;
+
+        float f = 0f;
+        while (f < _fadeOutDuration)
+        {
+            f += Time.unscaledDeltaTime;
+            if (_canvasGroup != null)
+                _canvasGroup.alpha = 1f - Mathf.Clamp01(f / _fadeOutDuration);
+            yield return null;
+        }
+
+        _instance = null;
+        Destroy(gameObject);
+    }
+
+    private IEnumerator PlayLegacyEntrance()
+    {
         float canvasW = _canvasRect.rect.width;  if (canvasW <= 1f) canvasW = Screen.width;
         float leftW   = _leftPiece.rect.width;    if (leftW   <= 1f) leftW   = canvasW;
         float rightW  = _rightPiece.rect.width;   if (rightW  <= 1f) rightW  = canvasW;
@@ -116,33 +202,11 @@ public sealed class CustomIntroLoadingManager : MonoBehaviour
         if (_holdDuration > 0f)
             yield return new WaitForSecondsRealtime(_holdDuration);
 
-        // Sahne yüklenene kadar bekle (allowSceneActivation=false iken progress 0.9'da takılır).
-        while (op.progress < 0.9f)
-            yield return null;
-
-        // Aktive et ve gerçekten geçene kadar bekle.
-        op.allowSceneActivation = true;
-        while (!op.isDone)
-            yield return null;
-
-        // Yeni sahnenin ilk karesi otursun, sonra fade-out → oyun.
-        yield return null;
-
-        float f = 0f;
-        while (f < _fadeOutDuration)
-        {
-            f += Time.unscaledDeltaTime;
-            if (_canvasGroup != null)
-                _canvasGroup.alpha = 1f - Mathf.Clamp01(f / _fadeOutDuration);
-            yield return null;
-        }
-
-        _instance = null;
-        Destroy(gameObject);
     }
 
     private void OnDestroy()
     {
+        SceneManager.sceneLoaded -= HandleBossSceneLoaded;
         if (_instance == this) _instance = null;
     }
 

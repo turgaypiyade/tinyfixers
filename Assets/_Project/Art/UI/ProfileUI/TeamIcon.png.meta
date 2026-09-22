@@ -5,9 +5,6 @@ TextureImporter:
   - first:
       213: -6575793561813674367
     second: TeamIcon_0
-  - first:
-      213: 4509614106676153190
-    second: TeamIcon_1
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -78,7 +75,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 2
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -119,10 +116,10 @@ TextureImporter:
       name: TeamIcon_0
       rect:
         serializedVersion: 2
-        x: 14
-        y: 36
-        width: 777
-        height: 650
+        x: 0
+        y: 16
+        width: 509
+        height: 496
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -133,28 +130,6 @@ TextureImporter:
       bones: []
       spriteID: 1869bc778961eb4a0800000000000000
       internalID: -6575793561813674367
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: TeamIcon_1
-      rect:
-        serializedVersion: 2
-        x: 113
-        y: 611
-        width: 624
-        height: 187
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 66bc586132e559e30800000000000000
-      internalID: 4509614106676153190
       vertices: []
       indices: 
       edges: []
@@ -174,7 +149,6 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       TeamIcon_0: -6575793561813674367
-      TeamIcon_1: 4509614106676153190
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

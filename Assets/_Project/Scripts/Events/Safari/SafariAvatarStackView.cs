@@ -17,7 +17,8 @@ public sealed class SafariAvatarStackView : MonoBehaviour
     [SerializeField] private RectTransform container;
     [SerializeField, Min(16f)] private float baseSize = 100f;
     [SerializeField, Min(1f)]  private float playerSizeMultiplier = 1.25f;
-    [Tooltip("Ön sıradaki avatar sayısı (oyuncu dahil, ortada).")]
+    [Tooltip("Üçgen dizilimde EN GENİŞ sıradaki avatar sayısı. Ön sıra 1 kişidir (oyuncu), " +
+             "her arka sıra bir kişi daha geniş; bu değere ulaşınca genişlik sabit kalır.")]
     [SerializeField, Min(3)]   private int   frontRowWidth = 5;
     [SerializeField] private Color placeholderColor = new Color(0.55f, 0.6f, 0.65f, 1f);
     [SerializeField] private Color frameColor       = new Color(0.9f, 0.92f, 0.96f, 1f);
@@ -89,36 +90,31 @@ public sealed class SafariAvatarStackView : MonoBehaviour
         int slotsNeeded = bots.Count + (hasPlayer ? 1 : 0);
         if (slotsNeeded == 0) return;
 
-        // Slot pozisyonları: ön beşli sabit kalır; kalanlar yalnız arkadan hafif görünür.
+        // Slot pozisyonları — ÜÇGEN (piramit) dizilim: en önde tek kişi (oyuncu), arkaya doğru her
+        // sıra bir kişi daha geniş, biraz daha yukarıda, küçük ve koyu. Sıra genişliği maxRowWidth'e
+        // ulaşınca sabitlenir (doymuş sıralar yarım adım kaydırılarak sütunlaşma kırılır).
         float spacing = spreadOverride > 0f ? spreadOverride : size * 0.54f;
-        int adaptiveFront = Mathf.CeilToInt(Mathf.Sqrt(slotsNeeded) * 1.1f);
-        int front = Mathf.Max(Mathf.Max(5, frontRowWidth), adaptiveFront);
+        int maxRowWidth = Mathf.Max(3, frontRowWidth);
 
         var slots = new List<Slot>(slotsNeeded);
-        var frontSlots = new[]
-        {
-            new Slot { pos = new Vector2(0f, -size * 0.08f),              scale = 1f,    dim = 1f    },
-            new Slot { pos = new Vector2(-spacing * 0.55f, size * 0.06f), scale = 0.94f, dim = 0.96f },
-            new Slot { pos = new Vector2( spacing * 0.55f, size * 0.06f), scale = 0.94f, dim = 0.96f },
-            new Slot { pos = new Vector2(-spacing * 1.10f, -size * 0.02f), scale = 0.9f, dim = 0.92f },
-            new Slot { pos = new Vector2( spacing * 1.10f, -size * 0.02f), scale = 0.9f, dim = 0.92f },
-        };
-
-        for (int i = 0; i < frontSlots.Length && slots.Count < slotsNeeded; i++)
-            slots.Add(frontSlots[i]);
-
-        int back = 0;
+        int row = 0;
         while (slots.Count < slotsNeeded)
         {
-            int row = back / front;
-            int col = back % front;
-            float rowOffset = (row % 2 == 1) ? spacing * 0.32f : 0f;
-            float x = (col - (front - 1) / 2f) * spacing + rowOffset;
-            float y = size * 0.18f + row * size * 0.16f;
-            float scale = Mathf.Max(0.68f, 0.86f - row * 0.06f);
-            float dim   = Mathf.Max(0.66f, 0.86f - row * 0.08f);
-            slots.Add(new Slot { pos = new Vector2(x, y), scale = scale, dim = dim });
-            back++;
+            int inRow = Mathf.Min(row + 1, maxRowWidth);
+            // Dikey adım KÜÇÜK: sıralar birbirine yığılsın, üçgeni derinlik (boy + koyuluk +
+            // yatay açılım) versin; yüksek adım kalabalığı havada/dağınık gösteriyordu.
+            float y     = size * row * 0.07f;                      // daha yapışık sıralar
+            float scale = Mathf.Max(0.82f, 1f - row * 0.035f);     // arkadakiler çok küçülmesin
+            float dim   = Mathf.Max(0.68f, 1f - row * 0.07f);      // derinlik ağırlıkla koyuluktan
+            float rowSpacing = spacing * (1f + row * 0.10f);
+            float rowOffset  = (inRow == maxRowWidth && (row % 2 == 1)) ? rowSpacing * 0.5f : 0f;
+
+            for (int c = 0; c < inRow && slots.Count < slotsNeeded; c++)
+            {
+                float x = (c - (inRow - 1) * 0.5f) * rowSpacing + rowOffset;
+                slots.Add(new Slot { pos = new Vector2(x, y), scale = scale, dim = dim });
+            }
+            row++;
         }
 
         // Atama: slot[0]=oyuncu, kalanları botlar (ön→arka).

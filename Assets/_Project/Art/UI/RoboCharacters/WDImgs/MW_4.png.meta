@@ -5,6 +5,12 @@ TextureImporter:
   - first:
       213: -1929160324444051555
     second: MW_4_0
+  - first:
+      213: 3633979914184333374
+    second: MW_4_1
+  - first:
+      213: 6030420100883633468
+    second: MW_4_2
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -48,7 +54,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 1
   spriteExtrude: 1
-  spriteMeshType: 0
+  spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -116,10 +122,10 @@ TextureImporter:
       name: MW_4_0
       rect:
         serializedVersion: 2
-        x: 28
-        y: 34
-        width: 1223
-        height: 1163
+        x: 34
+        y: 9
+        width: 1212
+        height: 1197
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -130,6 +136,50 @@ TextureImporter:
       bones: []
       spriteID: d972cb2f7ee3a35e0800000000000000
       internalID: -1929160324444051555
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MW_4_1
+      rect:
+        serializedVersion: 2
+        x: 665
+        y: 1196
+        width: 33
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e389cd17a7d7e6230800000000000000
+      internalID: 3633979914184333374
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MW_4_2
+      rect:
+        serializedVersion: 2
+        x: 930
+        y: 1203
+        width: 34
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c355b87912b50b350800000000000000
+      internalID: 6030420100883633468
       vertices: []
       indices: 
       edges: []
@@ -149,6 +199,8 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       MW_4_0: -1929160324444051555
+      MW_4_1: 3633979914184333374
+      MW_4_2: 6030420100883633468
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

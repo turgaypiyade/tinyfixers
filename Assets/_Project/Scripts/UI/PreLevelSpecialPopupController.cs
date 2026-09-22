@@ -506,14 +506,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     private bool TryShowCustomIntro()
     {
         var data = ResolvePreviewLevelData();
-        if (data == null || !data.usesCustomIntro ||
-            data.introLeftSprite == null || data.introRightSprite == null)
-            return false;
-
-        CustomIntroLoadingManager.Show(
-            data.introLeftSprite, data.introRightSprite, gameSceneName,
-            data.introSlideInDuration, data.introHoldDuration);
-        return true;
+        return CustomIntroLoadingManager.TryShow(data, gameSceneName);
     }
 
     private static List<TileSpecial> CollectTimedSpecials()

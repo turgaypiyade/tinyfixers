@@ -53,23 +53,25 @@ public class DrillSweepPlayer : MonoBehaviour
     /// onCellReached(i): i. hücreye varınca (kırılma tetiklenir). onCompleted: süpürme bitince.
     /// </summary>
     public void PlaySweep(Vector2 startAnchored, Vector2 stepAnchored, int cellCount, float tileSize,
-                          float delay, Action<int> onCellReached, Action onCompleted)
+                          float delay, Action<int> onCellReached, Action onCompleted,
+                          RectTransform sweepSpaceOverride = null)
     {
         if (cellCount <= 0)
         {
             onCompleted?.Invoke();
             return;
         }
-        StartCoroutine(CoSweep(startAnchored, stepAnchored, cellCount, tileSize, delay, onCellReached, onCompleted));
+        StartCoroutine(CoSweep(startAnchored, stepAnchored, cellCount, tileSize, delay,
+            onCellReached, onCompleted, sweepSpaceOverride != null ? sweepSpaceOverride : SweepSpace));
     }
 
     private IEnumerator CoSweep(Vector2 startAnchored, Vector2 stepAnchored, int cellCount, float tileSize,
-                               float delay, Action<int> onCellReached, Action onCompleted)
+                               float delay, Action<int> onCellReached, Action onCompleted,
+                               RectTransform space)
     {
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
 
-        var space = SweepSpace;
         if (space == null)
         {
             // Fallback: sadece kırılmaları tetikle (görsel olmadan).
@@ -80,7 +82,7 @@ public class DrillSweepPlayer : MonoBehaviour
 
         // Drill image'ını runtime oluştur.
         var go = new GameObject("DrillSweep", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        go.layer = gameObject.layer;
+        go.layer = space.gameObject.layer;
         var rt = go.GetComponent<RectTransform>();
         rt.SetParent(space, false);
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
@@ -163,6 +165,7 @@ public class DrillSweepPlayer : MonoBehaviour
         if (space == null) return;
 
         var go = new GameObject("DrillSmokePuff", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.layer = space.gameObject.layer;
         var rt = go.GetComponent<RectTransform>();
         rt.SetParent(space, false);
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);

@@ -21,8 +21,8 @@ MonoBehaviour:
     tileType: 0
     obstacleId: 1
     collectibleId: 2
-    iconOverride: {fileID: 21300000, guid: 991fec8e3ffcc47dc832d478a88e032c, type: 3}
-    amount: 800
+    iconOverride: {fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}
+    amount: 220
   levelKind: 1
   usesCustomIntro: 1
   introLeftSprite: {fileID: 21300000, guid: d6cc3409213204b239ccdaed773550fe, type: 3}
@@ -31,14 +31,17 @@ MonoBehaviour:
   introHoldDuration: 1.1
   bossAttackEveryMoves: 3
   bossAttackOilCount: 0
-  playerMaxHp: 800
-  damagePerClearedTile: 4
+  playerMaxHp: 120
+  damagePerClearedTile: 1
   enemyAttackBaseDamage: 5
   enemyAttackDamageGrowth: 3
   enemyAttackInterval: 2.2
+  bossMaxPressureObstacles: 6
+  shieldProtectionPerPickup: 2
+  bossThrownObstacles:
   battlefieldBackground: {fileID: 0}
   bossWaves: []
-  bossWaveCount: 0
+  bossWaveCount: 1
   randomPool: 
   energyPerContainer: 1
   rocketBasketFireAllOnHit: 0

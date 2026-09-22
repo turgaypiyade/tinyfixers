@@ -58,38 +58,44 @@ public class LightningSpawner : MonoBehaviour
         return beam;
     }
 
-    public void PlayLineSweepSteps(List<Vector3> stepWorldPositions)
+    public void PlayLineSweepSteps(List<Vector3> stepWorldPositions, Action<int> onStepReached = null, Action onCompleted = null)
     {
         if (stepWorldPositions == null || stepWorldPositions.Count == 0)
-            return;
-
-        Debug.Log($"[LightningSpawn.PlayLineSweepSteps] steps={stepWorldPositions.Count} root={(vfxRoot ? vfxRoot.name : "NULL")}");
-        StartCoroutine(CoPlayLineSweepSteps(stepWorldPositions));
-    }
-
-    private IEnumerator CoPlayLineSweepSteps(List<Vector3> steps)
-    {
-        Vector3 prev = steps[0];
-
-        for (int i = 1; i < steps.Count; i++)
         {
-            Vector3 cur = steps[i];
-
-            Debug.Log($"[LightningSpawn.Step] prev={V3(prev)} cur={V3(cur)}");
-
-            var beam = CreateBeamInstance();
-            if (beam == null)
-                yield break;
-            beam.Init(prev, cur);
-
-            prev = cur;
-
-            float delay = GetStepDelay();
-            if (delay > 0f) yield return new WaitForSeconds(delay);
-            else yield return null;
+            onCompleted?.Invoke();
+            return;
         }
 
-        yield return new WaitForSeconds(destroyDelay);
+        Debug.Log($"[LightningSpawn.PlayLineSweepSteps] steps={stepWorldPositions.Count} root={(vfxRoot ? vfxRoot.name : "NULL")}");
+        StartCoroutine(CoPlayLineSweepSteps(stepWorldPositions, onStepReached, onCompleted));
+    }
+
+    private IEnumerator CoPlayLineSweepSteps(List<Vector3> steps, Action<int> onStepReached, Action onCompleted)
+    {
+        try
+        {
+            Vector3 prev = steps[0];
+            onStepReached?.Invoke(0);
+            for (int i = 1; i < steps.Count; i++)
+            {
+                Vector3 cur = steps[i];
+                var beam = CreateBeamInstance();
+                if (beam == null) yield break;
+                beam.Init(prev, cur);
+                onStepReached?.Invoke(i);
+                prev = cur;
+
+                float delay = GetStepDelay();
+                if (delay > 0f) yield return new WaitForSeconds(delay);
+                else yield return null;
+            }
+
+            yield return new WaitForSeconds(destroyDelay);
+        }
+        finally
+        {
+            onCompleted?.Invoke();
+        }
     }
 
     public void PlayLineSweep(Vector3 lineStartWorldPos, Vector3 lineEndWorldPos)

@@ -1237,7 +1237,8 @@ public class GridSpawner : MonoBehaviour
         view.SetStage0InteriorStyle(
             mudOverlayService.UseFlatStage0Interior,
             mudOverlayService.FlatStage0InteriorColor,
-            mudOverlayService.Stage0InteriorOffsetPixels);
+            mudOverlayService.Stage0InteriorOffsetPixels,
+            mudOverlayService.Stage0InteriorPerCell);
         view.PlaceInCell(tileSize);
 
         mudOverlayService.RegisterCell(x, y, view, remaining, mudMaxHits);

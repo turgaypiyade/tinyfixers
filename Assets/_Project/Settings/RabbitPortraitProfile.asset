@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f43a6e45b044d9ca8074cbfcfcc1c8b, type: 3}
+  m_Name: RabbitPortraitProfile
+  m_EditorClassIdentifier: Assembly-CSharp::TopHudPortraitProfile
+  pixelScale: 0.42
+  offset: {x: 5, y: 40}
+  allowOverflow: 1
+  idle:
+  - sprite: {fileID: 21300000, guid: f4e2397397ab34a39a15b5ed34916a95, type: 3}
+    scale: 1
+    offset: {x: 0, y: 0}
+  - sprite: {fileID: 21300000, guid: 305c9b51bd9c147328a3bb0437e30c1b, type: 3}
+    scale: 0.94
+    offset: {x: 1, y: -4}
+  - sprite: {fileID: 21300000, guid: 17b632de2874349e98863ed756174477, type: 3}
+    scale: 0.95
+    offset: {x: 0, y: -6}
+  happy:
+  - sprite: {fileID: 21300000, guid: 833a4ec390e7f4f0d952ae129986e64e, type: 3}
+    scale: 0.94
+    offset: {x: 1, y: -3}
+  - sprite: {fileID: 21300000, guid: d5109b5f3af6b4076a3916c73b944ce9, type: 3}
+    scale: 0.94
+    offset: {x: 0, y: -3}
+  - sprite: {fileID: 21300000, guid: 5021135cc0bca4501b29332bfb893100, type: 3}
+    scale: 0.96
+    offset: {x: -1, y: 2}
+  sad:
+  - sprite: {fileID: 21300000, guid: 98477d53c98da4982821ad2c5f809ba2, type: 3}
+    scale: 0.92
+    offset: {x: -3, y: -13}
+  excited:
+  - sprite: {fileID: 21300000, guid: 6b9bb9442b2df4c90b0087bab4bafb80, type: 3}
+    scale: 0.94
+    offset: {x: 0, y: -4}
+  - sprite: {fileID: 21300000, guid: d6bbc5b5c86ae453b93c6f43c74aa615, type: 3}
+    scale: 0.95
+    offset: {x: 1, y: -4}
+  - sprite: {fileID: 21300000, guid: f12dea67f97d443aeaaa7f9407f26589, type: 3}
+    scale: 0.97
+    offset: {x: -3, y: 0}

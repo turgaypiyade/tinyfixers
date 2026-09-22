@@ -507,6 +507,13 @@ public class SpecialResolver
         return actions;
     }
 
+    internal BoardAction CreateBoosterChain(Func<Action<Vector2Int>, IEnumerator> playImpacts)
+    {
+        return new SpecialChainRunner(
+            board, null, PulseChainAreaHalf, board.PulseChainCatchOverlap,
+            ResolveOtherSpecialInline, boosterImpactPlayback: playImpacts);
+    }
+
     public List<BoardAction> ResolveSpecialSolo(TileView specialTile)
     {
         var actions = new List<BoardAction>();

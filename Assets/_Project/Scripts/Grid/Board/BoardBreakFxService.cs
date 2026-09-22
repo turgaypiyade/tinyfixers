@@ -903,22 +903,25 @@ public class BoardBreakFxService
             type = baseType;
         }
 
-        return type switch
-        {
-            TileType.Gear => new Color(1.00f, 0.78f, 0.25f, 1f),
-            TileType.Core => new Color(0.95f, 0.30f, 0.30f, 1f),
-            TileType.Bolt => new Color(0.30f, 0.60f, 1.00f, 1f),
-            TileType.Plate => new Color(0.35f, 0.85f, 0.45f, 1f),
-            TileType.Key => new Color(1.00f, 0.42f, 0.70f, 1f),
-
-            TileType.LineEmitter_H => new Color(0.95f, 0.30f, 0.30f, 1f),
-            TileType.LineEmitter_V => new Color(0.30f, 0.60f, 1.00f, 1f),
-            TileType.PatchBot => new Color(1.00f, 0.78f, 0.25f, 1f),
-            TileType.SystemOverride => Color.white,
-            TileType.Normal => Color.white,
-            _ => Color.white
-        };
+        return ColorForTileType(type);
     }
+
+    /// Taş tipinin kanonik rengi — kırılma FX'i ve düello enerji orbları aynı kaynaktan okur.
+    public static Color ColorForTileType(TileType type) => type switch
+    {
+        TileType.Gear => new Color(1.00f, 0.78f, 0.25f, 1f),
+        TileType.Core => new Color(0.95f, 0.30f, 0.30f, 1f),
+        TileType.Bolt => new Color(0.30f, 0.60f, 1.00f, 1f),
+        TileType.Plate => new Color(0.35f, 0.85f, 0.45f, 1f),
+        TileType.Key => new Color(1.00f, 0.42f, 0.70f, 1f),
+
+        TileType.LineEmitter_H => new Color(0.95f, 0.30f, 0.30f, 1f),
+        TileType.LineEmitter_V => new Color(0.30f, 0.60f, 1.00f, 1f),
+        TileType.PatchBot => new Color(1.00f, 0.78f, 0.25f, 1f),
+        TileType.SystemOverride => Color.white,
+        TileType.Normal => Color.white,
+        _ => Color.white
+    };
 
     private static void FxLog(string message)
     {

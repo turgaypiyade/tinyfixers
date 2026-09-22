@@ -197,6 +197,7 @@ public class LineSweepService
             float endTime = PlayTwoWaySweep(
                 lightningSpawner, lineTravelPlayer,
                 x, y, strike.isHorizontal, delay, EmitSweepCell,
+                onCompleted: onStrikeCompleted,
                 useDrillSweep: strike.useDrillSweep);
 
             if (endTime > maxEndTime) maxEndTime = endTime;
@@ -207,14 +208,18 @@ public class LineSweepService
 
     // LineH drill: satırın (originY) SOL ucundan sağ uca tek dönen drill süpürür; her hücreye
     // varınca onSweepCellReached ile o hücre kırılır (roketle aynı event mekaniği).
-    private float PlayHorizontalDrillSweep(
+    internal float PlayHorizontalDrillSweep(
         int originY, float delaySeconds,
         Action<Vector2Int> onSweepCellReached, Action onCompleted)
     {
         var drill = board.DrillSweepPlayer;
-        var space = drill != null ? drill.SweepSpace : null;
+        // Share the line-effects layer: specials spawned at drill arrival must
+        // render above the drill/smoke, not underneath a later root-Canvas sibling.
+        var space = board.LineTravelSpawnParent as RectTransform;
+        if (space == null || !space.gameObject.activeInHierarchy)
+            space = drill != null ? drill.SweepSpace : null;
 
-        if (space == null)
+        if (drill == null || space == null)
         {
             for (int x = 0; x < board.Width; x++)
                 onSweepCellReached?.Invoke(new Vector2Int(x, originY));
@@ -232,7 +237,7 @@ public class LineSweepService
         drill.PlaySweep(
             a0, step, cellCount, board.TileSize, delaySeconds,
             i => onSweepCellReached?.Invoke(new Vector2Int(i, originY)),
-            onCompleted);
+            onCompleted, sweepSpaceOverride: space);
 
         return delaySeconds + drill.EstimateDuration(cellCount);
     }
@@ -298,14 +303,15 @@ public class LineSweepService
             var right = new List<Vector3>(board.Width - originX);
             for (int x = originX; x < board.Width; x++) right.Add(GetCellWorldCenterPosition(x, originY));
 
-            lightningSpawner.PlayLineSweepSteps(left);
-            lightningSpawner.PlayLineSweepSteps(right);
+            PlayFallbackSweepPair(lightningSpawner, left, right, delaySeconds,
+                i => onSweepCellReached?.Invoke(new Vector2Int(originX - i, originY)),
+                i => onSweepCellReached?.Invoke(new Vector2Int(originX + i, originY)),
+                onCompleted);
 
             float sweepDur = Mathf.Max(
                 lightningSpawner.GetPlaybackDuration(left.Count),
                 lightningSpawner.GetPlaybackDuration(right.Count));
 
-            EmitSweepCallbacks(originX, originY, true, delaySeconds, sweepDur, onSweepCellReached);
             return delaySeconds + sweepDur;
         }
         else
@@ -315,14 +321,15 @@ public class LineSweepService
             var up = new List<Vector3>(board.Height - originY);
             for (int y = originY; y < board.Height; y++) up.Add(GetCellWorldCenterPosition(originX, y));
 
-            lightningSpawner.PlayLineSweepSteps(down);
-            lightningSpawner.PlayLineSweepSteps(up);
+            PlayFallbackSweepPair(lightningSpawner, down, up, delaySeconds,
+                i => onSweepCellReached?.Invoke(new Vector2Int(originX, originY - i)),
+                i => onSweepCellReached?.Invoke(new Vector2Int(originX, originY + i)),
+                onCompleted);
 
             float sweepDur = Mathf.Max(
                 lightningSpawner.GetPlaybackDuration(down.Count),
                 lightningSpawner.GetPlaybackDuration(up.Count));
 
-            EmitSweepCallbacks(originX, originY, false, delaySeconds, sweepDur, onSweepCellReached);
             return delaySeconds + sweepDur;
         }
     }
@@ -354,42 +361,34 @@ public class LineSweepService
         return board.transform as RectTransform;
     }
 
-    private void EmitSweepCallbacks(int originX, int originY, bool horizontal,
-        float delaySeconds, float sweepDuration, Action<Vector2Int> onSweepCellReached)
+    private void PlayFallbackSweepPair(
+        LightningSpawner spawner, List<Vector3> negative, List<Vector3> positive,
+        float delaySeconds, Action<int> onNegativeStep, Action<int> onPositiveStep,
+        Action onCompleted)
     {
-        if (onSweepCellReached == null) return;
-
-        int maxDistance = horizontal
-            ? Mathf.Max(originX, board.Width - 1 - originX)
-            : Mathf.Max(originY, board.Height - 1 - originY);
-        float stepInterval = maxDistance > 0 ? sweepDuration / maxDistance : 0f;
-
-        board.StartCoroutine(CoEmitLineSweepCellCallbacks(delaySeconds, stepInterval, maxDistance, step =>
+        int remaining = 2;
+        void CompleteSide()
         {
-            if (horizontal)
-            {
-                int leftX = originX - step;
-                if (leftX >= 0 && leftX < board.Width) onSweepCellReached(new Vector2Int(leftX, originY));
-                if (step > 0) { int rightX = originX + step; if (rightX < board.Width) onSweepCellReached(new Vector2Int(rightX, originY)); }
-            }
-            else
-            {
-                int downY = originY - step;
-                if (downY >= 0 && downY < board.Height) onSweepCellReached(new Vector2Int(originX, downY));
-                if (step > 0) { int upY = originY + step; if (upY < board.Height) onSweepCellReached(new Vector2Int(originX, upY)); }
-            }
-        }));
-    }
-
-    private IEnumerator CoEmitLineSweepCellCallbacks(float delaySeconds, float stepInterval, int maxDistance, Action<int> emitStep)
-    {
-        if (delaySeconds > 0f) yield return new WaitForSecondsRealtime(delaySeconds);
-        for (int step = 0; step <= maxDistance; step++)
-        {
-            emitStep?.Invoke(step);
-            if (stepInterval > 0f) yield return new WaitForSeconds(stepInterval);
-            else yield return null;
+            if (--remaining == 0) onCompleted?.Invoke();
         }
+
+        IEnumerator Play()
+        {
+            if (delaySeconds > 0f) yield return new WaitForSeconds(delaySeconds);
+            if (spawner == null || !spawner.isActiveAndEnabled)
+            {
+                onCompleted?.Invoke();
+                yield break;
+            }
+            spawner.PlayLineSweepSteps(negative, onNegativeStep, CompleteSide);
+            spawner.PlayLineSweepSteps(positive, i =>
+            {
+                // The origin is shared by both halves; emit its impact once.
+                if (i > 0) onPositiveStep?.Invoke(i);
+            }, CompleteSide);
+        }
+
+        board.StartCoroutine(Play());
     }
 
     public float PlayLineTravelInstanceWithStep(

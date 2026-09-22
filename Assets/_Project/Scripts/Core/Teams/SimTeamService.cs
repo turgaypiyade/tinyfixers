@@ -66,7 +66,7 @@ public sealed class SimTeamService : ITeamService
         {
             chat.Add(new TeamChatMessage
             {
-                senderName = "TinyFixers",
+                senderName = "Wonder Fixers",
                 text = "Takımın kuruldu! Arkadaşlarını davet et, birlikte yarışın.",
                 timeLabel = "şimdi",
             });

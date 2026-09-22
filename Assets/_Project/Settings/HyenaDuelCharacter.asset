@@ -1,0 +1,152 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31207c51aeab4a5dbe1eb48ff54e2298, type: 3}
+  m_Name: HyenaDuelCharacter
+  m_EditorClassIdentifier: Assembly-CSharp::BossDuelCharacterProfile
+  idle:
+    sprite: {fileID: 21300000, guid: 3da3e3320d7494b9d99aa71605298f7b, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.51, y: 0.07}
+    offset: {x: 0, y: 0}
+  idleAlternate:
+    sprite: {fileID: 21300000, guid: 5065f380fc5284bd6818c62d526a9f7d, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.52, y: 0.08}
+    offset: {x: 0, y: 0}
+  focused:
+    sprite: {fileID: 21300000, guid: e180e9ba343f746f48359f5355c47636, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.56, y: 0.09}
+    offset: {x: 0, y: 0}
+  windup:
+    sprite: {fileID: 21300000, guid: b53a439ab21fa4a999f7d926fcc5f307, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.51, y: 0.07}
+    offset: {x: 0, y: 0}
+  swing:
+    sprite: {fileID: 21300000, guid: e180e9ba343f746f48359f5355c47636, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.56, y: 0.09}
+    offset: {x: 0, y: 0}
+  strike:
+    sprite: {fileID: 21300000, guid: 75c2a07f325b84f7792fa7af5519eb52, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.63, y: 0.12}
+    offset: {x: 0, y: 0}
+  victory:
+    sprite: {fileID: 21300000, guid: 5065f380fc5284bd6818c62d526a9f7d, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.52, y: 0.08}
+    offset: {x: 0, y: 0}
+  defeated:
+    sprite: {fileID: 21300000, guid: e180e9ba343f746f48359f5355c47636, type: 3}
+    height: 1.18
+    groundPivot: {x: 0.56, y: 0.09}
+    offset: {x: 0, y: 0}
+  mirrorHorizontally: 0
+  idleAlternateInterval: 4.4
+  idleAlternateDuration: 0.9
+  blinkInterval: 3.2
+  blinkDuration: 0.13
+  windupDuration: 0.22
+  swingDuration: 0.15
+  impactDuration: 0.1
+  recoveryDuration: 0.2
+  contactDistance: 0.55
+  breathingAmount: 0.008
+  shieldBlockDuration: 0.2
+  shieldBlockRecoil: 0.035
+  afterimageMaterial: {fileID: 2100000, guid: ac1624f2d00f42ac9c23be9ab99a16d1, type: 2}
+  trailColor: {r: 1, g: 0.82, b: 0.2, a: 0.5}
+  trailAccentColor: {r: 0.95, g: 0.2, b: 0.12, a: 0.36}
+  trailInterval: 0.025
+  trailLifetime: 0.2
+  weaponImpactPoint: {x: 0.13, y: 0.35}
+  powerForFullImpact: 40
+  impactFxDuration: 0.24
+  throwFrames:
+  - pose:
+      sprite: {fileID: -2095086620269461797, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.045000
+      groundPivot: {x: 0.514085, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.830986, y: 0.418079}
+  - pose:
+      sprite: {fileID: -1281435732982247374, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.062712
+      groundPivot: {x: 0.489286, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.871429, y: 0.422222}
+  - pose:
+      sprite: {fileID: -4934331787821266953, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.059760
+      groundPivot: {x: 0.487365, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.851986, y: 0.406685}
+  - pose:
+      sprite: {fileID: 3974875060865022477, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.012528
+      groundPivot: {x: 0.498069, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.861004, y: 0.405248}
+  - pose:
+      sprite: {fileID: -7005538483895167077, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.009576
+      groundPivot: {x: 0.498182, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.632727, y: 0.359649}
+  - pose:
+      sprite: {fileID: 3201797355654404644, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 0.994816
+      groundPivot: {x: 0.518152, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.653465, y: 0.353116}
+  - pose:
+      sprite: {fileID: -3107244042714028430, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.021384
+      groundPivot: {x: 0.482639, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.493056, y: 0.364162}
+  - pose:
+      sprite: {fileID: 2173781931222586244, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.036144
+      groundPivot: {x: 0.515385, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.476923, y: 0.276353}
+  - pose:
+      sprite: {fileID: 3204552490424355585, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.039096
+      groundPivot: {x: 0.428105, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.813725, y: 0.244318}
+  - pose:
+      sprite: {fileID: -78484239391232477, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.080424
+      groundPivot: {x: 0.508772, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.614035, y: 0.341530}
+  - pose:
+      sprite: {fileID: -4771765198916922253, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.086328
+      groundPivot: {x: 0.579125, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.154882, y: 0.282609}
+  - pose:
+      sprite: {fileID: -7989640748006317521, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.042048
+      groundPivot: {x: 0.523810, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.622711, y: 0.334278}
+  throwFramesPerSecond: 16
+  throwReleaseFrame: 6
+  throwIdleLeadIn: 0.08
+  heldObstacleSize: 0.23

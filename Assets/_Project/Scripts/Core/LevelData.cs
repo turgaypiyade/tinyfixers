@@ -119,9 +119,9 @@ public enum ObstacleId : int
     Cargo = 34,
 
     // Single-hit movable shield pickups (fall with gravity like HelmetPorcelain). In a
-    // BossDuel level, breaking one grants timed damage-immunity to the matching robot:
-    //   PlayerShieldPickup → shields the PLAYER robot (absorbs enemy bolts for a few seconds)
-    //   EnemyShieldPickup  → shields the ENEMY robot (player's bolts are absorbed)
+    // Animal BossDuel: each pickup adds 2 persistent protection points to its character.
+    // Legacy BossDuel retains player hit-count shields and enemy timed immunity.
+    //   PlayerShieldPickup → protects the PLAYER; EnemyShieldPickup → protects the ENEMY.
     // Outside BossDuel they behave as plain breakable movable blocks (BossDuelController gates
     // the shield effect on bossModeActive). See BossDuelController.HandleObstacleVisualChanged.
     PlayerShieldPickup = 35,
@@ -269,25 +269,19 @@ public class BossWaveDef
     [Min(0f)] public float hpWeight = 1f;
 
     [Header("Saldırı")]
-    [Tooltip("Düşman kaç saniyede bir ateş eder. 0 = level'daki enemyAttackInterval.")]
-    [Min(0f)] public float attackInterval = 0f;
-    [Tooltip("İlk saldırı hasarı. 0 = level'daki enemyAttackBaseDamage.")]
+    [Tooltip("Bu rakibin karşılık hasarı. 0 = level'daki enemyAttackBaseDamage.")]
     [Min(0)] public int attackDamageBase = 0;
-    [Tooltip("Saldırı başına hasar artışı. -1 = level'daki enemyAttackDamageGrowth.")]
-    [Min(-1)] public int attackDamageGrowth = -1;
 
-    [Header("Oil Baskısı")]
-    [Tooltip("Oil saldırısı başına fırlatılan oil. 0 = bu dalgada oil yok, -1 = level'daki bossAttackOilCount.")]
+    [Header("Engel Baskısı")]
+    [Tooltip("Saldırı başına fırlatılan engel. 0 = bu dalgada kapalı, -1 = level'daki bossAttackOilCount. Türler level havuzundan gelir.")]
     [Min(-1)] public int oilCount = -1;
-    [Tooltip("Kaç hamlede bir oil. -1/0 = level'daki bossAttackEveryMoves.")]
+    [Tooltip("Kaç karşı saldırıda bir engel. -1/0 = level'daki bossAttackEveryMoves.")]
     [Min(-1)] public int oilEveryMoves = -1;
 
     [Header("Görsel Varyant")]
-    [Tooltip("Bu dalganın robot gövde sprite'ı. Manual bossWaves içinde boşsa EnemyShieldPickup obstacle sprite'ına, o da boşsa sahnedeki mevcut gövdeye düşer.")]
-    public Sprite bodySprite;
-    [Tooltip("Bu dalga yenilince kullanılacak yığın sprite'ı. Boşsa controller'daki default.")]
-    public Sprite defeatedSprite;
-    [Tooltip("Gövdeye uygulanacak tint (beyaz = değişiklik yok). Sprite çizmeden dalga varyantı sağlar.")]
+    [Tooltip("Bu rakibin tüm pozlarını belirleyen profil. Boşsa BossDuelController'daki rakip sırası kullanılır.")]
+    public BossDuelCharacterProfile characterProfile;
+    [Tooltip("Gövdeye uygulanacak tint (beyaz = değişiklik yok). Aynı profilden varyant üretir.")]
     public Color bodyTint = Color.white;
 }
 
@@ -324,23 +318,25 @@ public class LevelData : ScriptableObject
     [Tooltip("Birleştikten sonra bekleme süresi (sn). Sahne bu süre içinde yüklenmezse intro hazır olana kadar bekler.")]
     [Min(0f)] public float introHoldDuration = 0.8f;
 
-    [Header("Boss Duel")]
-    [Tooltip("Boss kaç oyuncu hamlesinde bir EKSTRA oil saldırısı yapar (lazer her tur vurur, bu sadece oil sıklığı).")]
+    [Header("Boss Duel — Obstacle Pressure")]
+    [Tooltip("Kaç karşı saldırıda bir engel fırlatılır.")]
     [Min(1)] public int bossAttackEveryMoves = 3;
-    [Tooltip("Her oil saldırısında board'a fırlatılan oil sayısı. 0 = oil yok, sadece lazer.")]
+    [Tooltip("Her baskı saldırısında fırlatılan engel sayısı. 0 = kapalı. Havuz boşsa eski Oil davranışı.")]
     [Min(0)] public int bossAttackOilCount = 2;
+    [Tooltip("Yalnız önceki levellarda tanıtılan taşınabilir engeller/overlay'ler. Sandık, üretici, kargo ve ödül objeleri atılmaz. Boş = Oil.")]
+    public ObstacleId[] bossThrownObstacles = System.Array.Empty<ObstacleId>();
+    [Tooltip("Havuzdaki engellerin board üzerindeki toplam üst sınırı; başlangıç engelleri de sayılır. Yoğun board'da baskı bekler.")]
+    [Min(1)] public int bossMaxPressureObstacles = 8;
 
     [Header("Battlefield (BossDuel)")]
     [Tooltip("Oyuncu (sol robot) başlangıç/maks canı. 0 olunca level kaybedilir. Düşman HP'si BossDamage goal amount'tan gelir.")]
     [Min(1)] public int playerMaxHp = 560;
-    [Tooltip("Temizlenen taş başına düşmana verilen hasar (her taş = 1 vuruş).")]
+    [Tooltip("Taş başına biriken güç. Animal Duel: hamlede kırılan toplam taş × bu değer, tek darbede uygulanır. Örn. 1 güç × 20 taş = 20 hasar.")]
     [Min(0)] public int damagePerClearedTile = 10;
-    [Tooltip("Düşmanın ilk saldırısındaki temel hasar.")]
+    [Tooltip("Her kalkanın oyuncu veya düşmana eklediği koruma puanı. Kullanılmayan koruma saklanır.")]
+    [Min(1)] public int shieldProtectionPerPickup = 2;
+    [Tooltip("Rakibin hamle sonu karşılık hasarı (Opponent'ta 0 bırakılırsa bu kullanılır).")]
     [Min(0)] public int enemyAttackBaseDamage = 20;
-    [Tooltip("Düşman saldırı hasarının her saldırıda artış miktarı (telgraflı yükseliş).")]
-    [Min(0)] public int enemyAttackDamageGrowth = 6;
-    [Tooltip("Düşman kaç saniyede bir ateş eder (idle dahil). 0 = controller'daki default kullanılır.")]
-    [Min(0f)] public float enemyAttackInterval = 2f;
     [Tooltip("Battlefield arena arka planı. ATANIRSA bu kullanılır; BOŞSA sahnedeki mevcut arka plan kalır.")]
     public Sprite battlefieldBackground;
 

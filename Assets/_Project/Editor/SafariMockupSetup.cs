@@ -18,13 +18,9 @@ public static class SafariMockupSetup
     private const string ConfigPath = ResDir + "/SafariConfig.asset";
     private const string BGPath     = "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/SafariBGV1.png";
     private const string PopupPath  = "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/SafriPopupBG.png";
-    private static readonly string[] HelmetPaths =
-    {
-        "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/HB1.png",
-        "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/HG1.png",
-        "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/HR1.png",
-        "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/HY1.png"
-    };
+    private const string HelmetSheetPath = "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/SafariH.png";
+    private const int    PlayerHelmetIndex = 1;   // sheet'te soldan 2. dilim (kırmızı) = oyuncu
+    private const string LogTag = "SafariMockupSetup";
     private const string SystemName = "SafariEventSystem";
 
     [MenuItem("TinyFixers/Mockup/Safari Event")]
@@ -365,15 +361,32 @@ public static class SafariMockupSetup
 
     private static void EnsureHelmetImports()
     {
-        for (int i = 0; i < HelmetPaths.Length; i++)
-            EnsureSpriteImport(HelmetPaths[i]);
+        EnsureSpriteImport(HelmetSheetPath);
     }
 
+    // Helmet çerçeveleri TEK SHEET'ten gelir: SafariH.png (Sprite Mode: Multiple, SafariH_0..N).
+    // Dilimler soldan-sağa sıralanır; bot/kalabalık havuzu dilimlerin TAMAMIDIR (her katılımcı kendi
+    // hash'ine göre random bir dilim alır), oyuncu PlayerHelmetIndex dilimini alır.
+    // Sheet yeniden dilimlenirse burada değişiklik gerekmez — dilimler otomatik okunur.
     private static Sprite[] LoadHelmetSprites()
     {
-        var sprites = new Sprite[HelmetPaths.Length];
-        for (int i = 0; i < HelmetPaths.Length; i++)
-            sprites[i] = MockupUI.LoadSprite(HelmetPaths[i]);
-        return sprites;
+        var reps = AssetDatabase.LoadAllAssetRepresentationsAtPath(HelmetSheetPath);
+        var list = new System.Collections.Generic.List<Sprite>();
+        foreach (var o in reps)
+            if (o is Sprite sp) list.Add(sp);
+        list.Sort((a, b) => a.rect.x.CompareTo(b.rect.x));
+
+        if (list.Count == 0)
+            Debug.LogError($"[{LogTag}] Helmet sheet dilimlenmemiş: {HelmetSheetPath} " +
+                           "(Inspector > Sprite Mode: Multiple + Sprite Editor > Slice).");
+        return list.ToArray();
+    }
+
+    /// <summary>Oyuncunun sabit helmet'i (sheet'teki PlayerHelmetIndex dilimi).</summary>
+    private static Sprite LoadPlayerHelmet()
+    {
+        var all = LoadHelmetSprites();
+        if (all.Length == 0) return null;
+        return all[Mathf.Clamp(PlayerHelmetIndex, 0, all.Length - 1)];
     }
 }

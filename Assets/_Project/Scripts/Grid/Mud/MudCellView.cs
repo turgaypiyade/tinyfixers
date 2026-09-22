@@ -29,6 +29,7 @@ public class MudCellView : MonoBehaviour
     private Texture bevelTex0, bevelTex1;                        // beveled sprite textures
     private Rect    bevelUV0, bevelUV1;                          // beveled sprite rect in its texture (UV 0..1)
     private bool    flatInterior0, flatInterior1;
+    private bool    perCell0, perCell1;                          // interior tex is a single-cell crop, not a board-wide fill
     private Color   flatInteriorColor0 = Color.white;
     private Color   flatInteriorColor1 = Color.white;
     private Vector2 interiorOffset0, interiorOffset1;
@@ -71,19 +72,21 @@ public class MudCellView : MonoBehaviour
         uvY = 1f - (gridY + 1) * uvH;
     }
 
-    public void SetStage0InteriorStyle(bool useFlatInterior, Color flatColor, Vector2 offsetPixels)
+    public void SetStage0InteriorStyle(bool useFlatInterior, Color flatColor, Vector2 offsetPixels, bool perCellInterior = false)
     {
         flatInterior0 = useFlatInterior;
+        perCell0      = perCellInterior;
         flatInteriorColor0 = flatColor;
         interiorOffset0 = offsetPixels;
     }
 
-    public void SetStageAssets(Sprite bevelSprite1, Texture interiorTexture1, bool useFlatInterior1, Color flatColor1, Vector2 offsetPixels1)
+    public void SetStageAssets(Sprite bevelSprite1, Texture interiorTexture1, bool useFlatInterior1, Color flatColor1, Vector2 offsetPixels1, bool perCellInterior1 = false)
     {
         interiorTex1 = interiorTexture1 != null ? interiorTexture1 : interiorTex0;
         bevelTex1    = bevelSprite1 != null ? bevelSprite1.texture : bevelTex0;
         bevelUV1     = bevelSprite1 != null ? SpriteUV(bevelSprite1) : bevelUV0;
         flatInterior1 = useFlatInterior1;
+        perCell1      = perCellInterior1;
         flatInteriorColor1 = flatColor1;
         interiorOffset1 = offsetPixels1;
     }
@@ -323,13 +326,26 @@ public class MudCellView : MonoBehaviour
         crt.anchoredPosition = new Vector2(px + offset.x - bleedL, -py + offset.y + bleedT);
         crt.sizeDelta        = new Vector2(sw + bleedL + bleedR, sh + bleedT + bleedB);
 
+        // Two interior sampling modes:
+        //  · board slice (default) — one continuous texture spread over the whole grid, so the fill
+        //    never repeats and joins are seamless by construction. Trimmed by the sprite border on
+        //    exposed sides, because the texture still carries the full cell.
+        //  · per cell — the texture is a BEVEL-FREE crop of one cell (the mud sprite with its border
+        //    cut off). It already excludes the bevel, so there is nothing to trim: stretch the whole
+        //    crop across the inset quad. Exposed sides then show the sprite's real bevel, neighbour
+        //    sides get flat crop content right up to the cell edge.
+        bool perCell = damaged ? perCell1 : perCell0;
+        if (perCell) { uL = uR = uT = uB = 0f; }
+        float baseX = perCell ? 0f : uvX, baseY = perCell ? 0f : uvY;
+        float baseW = perCell ? 1f : uvW, baseH = perCell ? 1f : uvH;
+
         // RawImage UV origin is bottom-left. Visual top/bottom trims must therefore adjust
-        // the sampled board slice from opposite vertical sides.
+        // the sampled slice from opposite vertical sides.
         interior.uvRect = new Rect(
-            uvX + uL * uvW,
-            uvY + uB * uvH,
-            (1f - uL - uR) * uvW,
-            (1f - uT - uB) * uvH);
+            baseX + uL * baseW,
+            baseY + uB * baseH,
+            (1f - uL - uR) * baseW,
+            (1f - uT - uB) * baseH);
     }
 
     // Sub-region of the beveled sprite's UV rect. fx/fy/fw/fh are fractions (0..1) of the sprite.

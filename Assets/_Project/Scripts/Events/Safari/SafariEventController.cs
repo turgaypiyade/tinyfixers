@@ -47,6 +47,11 @@ public sealed class SafariEventController : MonoBehaviour
 
     private void Start()
     {
+        // TEK KURAL: Rising UI (katıl popup / harita / intro) her açılışta KAPALI başlar.
+        // Yalnızca gerçekten çalıştıkları anda (ShowJoinPopup / OpenMap / intro) açılır.
+        // Editörde yanlışlıkla aktif bırakılmış olsalar bile burada kapanır, ana menüyü kapatmazlar.
+        HideAllEventUi();
+
         if (config == null)
         {
             Debug.LogWarning("[Safari] SafariConfig yok (Resources/Events/SafariConfig). Event devre dışı.");
@@ -76,6 +81,14 @@ public sealed class SafariEventController : MonoBehaviour
             {
                 if (IsEventAvailable && !SafariState.HasJoined) ShowJoinPopup();
             }, initialDelay: autoPopupDelaySeconds, waitForLoadingScreen: true));
+    }
+
+    /// <summary>Tüm Rising/Safari ekranlarını kapatır (açılışta ve event kapalıyken çağrılır).</summary>
+    private void HideAllEventUi()
+    {
+        if (joinPopup != null)          joinPopup.gameObject.SetActive(false);
+        if (risingIntroOverlay != null) risingIntroOverlay.gameObject.SetActive(false);
+        if (mapScreen != null)          mapScreen.gameObject.SetActive(false);
     }
 
     // Tutorial/overlay/loading ekrandayken Safari UI'ı açılmasın (deadlock + erken açılış önlemi).
@@ -217,6 +230,15 @@ public sealed class SafariEventController : MonoBehaviour
     {
         if (!CanContinueNow(out _)) return;
 
+        // Level GERÇEKTEN başlamazsa turu yakmayalım (eskiden sessizce menüde kalınıyor ve
+        // RunStatus Idle'a düştüğü için dönüşte harita animasyonu da hiç açılmıyordu).
+        var launcher = FindFirstObjectByType<MainMenuLevelButtonController>(FindObjectsInactive.Include);
+        if (launcher == null)
+        {
+            Debug.LogWarning("[Safari] MainMenuLevelButtonController bulunamadı — Devam iptal, harita açık kalıyor.");
+            return;
+        }
+
         if (!SafariState.HasJoined) SafariState.MarkJoined(UtcNow);
 
         // Tur snapshot: dönüşte "ilk-hakta kazandı mı" = (CurrentLevel arttı) VE (fail sayacı artmadı).
@@ -228,23 +250,20 @@ public sealed class SafariEventController : MonoBehaviour
         mapScreen?.Hide();
         joinPopup?.Hide();
 
-        LaunchCurrentLevel();
-    }
+        var result = launcher.StartLevel();
+        if (result == LevelStartResult.Started)
+        {
+            Debug.Log("[Safari] Devam → level başlatıldı (AwaitingResult).");
+            return;
+        }
 
-    private void LaunchCurrentLevel()
-    {
-        var launcher = FindFirstObjectByType<MainMenuLevelButtonController>();
-        if (launcher != null)
-        {
-            Debug.Log("[Safari] Devam → level başlatılıyor (OnLevelButtonClicked).");
-            launcher.OnLevelButtonClicked();
-        }
-        else
-        {
-            Debug.LogWarning("[Safari] MainMenuLevelButtonController bulunamadı — level başlatılamadı.");
-            // Sonuç değerlendirmesi asılı kalmasın.
-            SafariState.SetRunStatus(SafariRunStatus.Idle);
-        }
+        // Başlamadı → turu GERİ AL, aksi halde oyuncu menüde kalır ve sonraki kazanç bu tura yazılır.
+        Debug.LogWarning($"[Safari] Devam → level başlamadı ({result}); tur geri alındı.");
+        SafariState.SetRunStatus(SafariRunStatus.Idle);
+
+        // Can yoksa can/reklam akışı ekranda: üstüne harita açma. Diğer hallerde haritaya dön.
+        if (result != LevelStartResult.NoLives)
+            OpenMap(SafariRoundOutcome.None);
     }
 
     // ── Level dönüş değerlendirmesi ──────────────────────────────

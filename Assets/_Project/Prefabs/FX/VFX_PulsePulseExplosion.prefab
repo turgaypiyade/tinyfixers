@@ -120,7 +120,7 @@ MonoBehaviour:
   wobbleAmplitude: 0.14
   wobbleFrequency: 5.5
   tiltDegrees: 8
-  peakScale: 1.45
+  peakScale: 2.2
   peakPulseAmplitude: 0.03
   peakPulseFrequency: 18
   chargeShakeMaxAmplitude: 16

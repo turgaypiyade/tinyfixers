@@ -75,7 +75,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 2
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -116,9 +116,9 @@ TextureImporter:
       name: PreLevelPopupV2_0
       rect:
         serializedVersion: 2
-        x: 0
+        x: 5
         y: 0
-        width: 551
+        width: 601
         height: 864
       alignment: 0
       pivot: {x: 0, y: 0}
