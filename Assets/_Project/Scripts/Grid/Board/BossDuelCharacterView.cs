@@ -26,6 +26,19 @@ public sealed class BossDuelCharacterView : MonoBehaviour
     private RectTransform[] dazeStars;
     public bool IsAttacking => attacking;
     public bool HasShieldPose => profile != null && profile.shield != null && profile.shield.sprite != null;
+    public bool HasThrowAnimation
+    {
+        get
+        {
+            if (profile == null || profile.throwFrames == null || profile.throwFrames.Length == 0) return false;
+            foreach (var frame in profile.throwFrames)
+                if (frame == null || frame.pose == null || frame.pose.sprite == null) return false;
+            return true;
+        }
+    }
+
+    public float HeldObstacleWorldSize => body.rectTransform.TransformVector(
+        Vector3.up * standingHeight * profile.heldObstacleSize).magnitude;
 
     public void Initialize(Image image, BossDuelCharacterProfile character, RectTransform effectsRoot = null)
     {
@@ -132,16 +145,75 @@ public sealed class BossDuelCharacterView : MonoBehaviour
         rt.localRotation = restRotation;
     }
 
-    public IEnumerator Attack(RectTransform target, Action impact, Func<bool> cancelled, int power)
+    // Only yields individual frames so the volley can advance flight and follow-through together.
+    // Shares attack ownership with melee: idle, blink and shield updates cannot replace a throw pose.
+    public IEnumerator ThrowObstacle(Action<Vector3> trackHand, Action release, Func<bool> cancelled)
+    {
+        if (attacking || finished || body == null || !HasThrowAnimation) yield break;
+        int version = poseVersion;
+        attacking = true;
+        try
+        {
+            Show(profile.idle);
+            for (float time = 0f; time < profile.throwIdleLeadIn; time += Time.deltaTime)
+            {
+                if (!isActiveAndEnabled || finished || version != poseVersion || cancelled()) yield break;
+                yield return null;
+            }
+            float fps = Mathf.Clamp(profile.throwFramesPerSecond, 1f, 30f);
+            int releaseFrame = Mathf.Clamp(profile.throwReleaseFrame, 0, profile.throwFrames.Length - 1);
+            bool released = false;
+            for (float time = 0f; ; time += Time.deltaTime)
+            {
+                if (!isActiveAndEnabled || finished || version != poseVersion || cancelled()) yield break;
+                int index = Mathf.Min((int)(time * fps), profile.throwFrames.Length - 1);
+                var frame = profile.throwFrames[index];
+                Show(frame.pose);
+                if (!released)
+                {
+                    var rt = body.rectTransform;
+                    Vector2 hand = frame.handPoint - rt.pivot;
+                    trackHand?.Invoke(rt.TransformPoint(new Vector3(hand.x * rt.rect.width, hand.y * rt.rect.height, 0f)));
+                    if (index >= releaseFrame)
+                    {
+                        released = true;
+                        release?.Invoke();
+                    }
+                }
+                if (time >= profile.throwFrames.Length / fps) break;
+                yield return null;
+            }
+        }
+        finally
+        {
+            if (version == poseVersion)
+            {
+                attacking = false;
+                if (victoryPending)
+                {
+                    victoryPending = false;
+                    finished = true;
+                    Show(profile.victory);
+                }
+                else if (!finished) ShowRestPose();
+            }
+        }
+    }
+
+    public IEnumerator Attack(RectTransform target, Action impact, Func<bool> cancelled, int power,
+        Func<bool> finishingStrike = null, Action onSwing = null)
     {
         if (attacking || finished || body == null || profile == null) yield break;
         int version = poseVersion;
         bool landed = false;
+        bool finisher = profile.enableFinishingStrike && finishingStrike != null && finishingStrike();
         attacking = true;
         try
         {
             Show(profile.windup);
-            yield return new WaitForSeconds(Mathf.Max(0.02f, profile.windupDuration));
+            float windup = Mathf.Max(0.02f, profile.windupDuration);
+            if (finisher) windup *= Mathf.Clamp(profile.finisherWindupMultiplier, 1f, 3f);
+            yield return new WaitForSeconds(windup);
             if (finished || version != poseVersion || cancelled()) yield break;
 
             // Bring the hammer/fists close to the opponent without moving HP bars or hit roots.
@@ -155,12 +227,36 @@ public sealed class BossDuelCharacterView : MonoBehaviour
             Vector2 reach = new Vector2(dx, 0f);
             var swingPose = profile.swing != null && profile.swing.sprite != null ? profile.swing : profile.windup;
             float duration = Mathf.Max(0.02f, profile.swingDuration);
+            float jumpHeight = standingHeight * Mathf.Clamp(profile.finisherJumpHeight, 0.05f, 0.35f);
+            const float slowArcEnd = 0.6f;
+            // Local slow hop: cascades, input, counters and global Time.timeScale are untouched.
+            // Keep the weapon sweep for the fast contact phase so it does not hang over the target.
+            if (finisher)
+            {
+                float approach = Mathf.Clamp(profile.finisherApproachDuration, 0.05f, 1f);
+                attackVfx.BeginTrail();
+                for (float t = 0f; t < approach; t += Time.deltaTime)
+                {
+                    if (finished || version != poseVersion || cancelled()) yield break;
+                    Show(swingPose, FinisherArcOffset(reach, slowArcEnd * Mathf.Clamp01(t / approach), jumpHeight));
+                    attackVfx.TickTrail(Time.deltaTime);
+                    yield return null;
+                }
+                duration = Mathf.Clamp(profile.finisherBurstDuration, 0.03f, 0.15f);
+            }
+            if (finished || version != poseVersion || cancelled()) yield break;
+            // Finisher audio starts with the fast strike, after the slow airborne approach.
+            onSwing?.Invoke();
             attackVfx.BeginTrail();
             attackVfx.BeginSwing(power, GetStrikeContact(reach), target);
             for (float t = 0f; t < duration; t += Time.deltaTime)
             {
                 if (finished || version != poseVersion || cancelled()) yield break;
-                Show(swingPose, Vector2.Lerp(Vector2.zero, reach, Mathf.Clamp01(t / duration)));
+                float progress = Mathf.Clamp01(t / duration);
+                Vector2 motion = finisher
+                    ? FinisherArcOffset(reach, slowArcEnd + (1f - slowArcEnd) * progress, jumpHeight)
+                    : Vector2.Lerp(Vector2.zero, reach, progress);
+                Show(swingPose, motion);
                 attackVfx.TickTrail(Time.deltaTime);
                 attackVfx.TickSwing(Mathf.Clamp01(t / duration));
                 yield return null;
@@ -168,11 +264,16 @@ public sealed class BossDuelCharacterView : MonoBehaviour
             if (finished || version != poseVersion || cancelled()) yield break;
             Show(profile.strike, reach);
             attackVfx.ReleaseSwing();
-            attackVfx.PlayImpact(power);
+            // Shield pickups can arrive while the player continues swapping during anticipation.
+            // Recheck before contact: do not celebrate a hit that is no longer lethal.
+            bool finishingImpact = finisher && finishingStrike();
+            attackVfx.PlayImpact(power, finishingImpact);
             landed = true;
             impact?.Invoke();
             if (finished) yield break;
-            yield return new WaitForSeconds(Mathf.Max(0.02f, profile.impactDuration));
+            yield return new WaitForSeconds(finishingImpact
+                ? Mathf.Clamp(profile.finisherImpactHold, 0.02f, 0.3f)
+                : Mathf.Max(0.02f, profile.impactDuration));
 
             // Once the hit has landed, dash back even if it ended the wave or won the duel.
             // Defeat/reset can still interrupt; victory is displayed only after landing at home.
@@ -201,6 +302,13 @@ public sealed class BossDuelCharacterView : MonoBehaviour
                 else if (!finished) ShowRestPose();
             }
         }
+    }
+
+    private static Vector2 FinisherArcOffset(Vector2 reach, float progress, float height)
+    {
+        float t = Mathf.Clamp01(progress);
+        // Continuous parabola: lift off at home, crest halfway, land exactly at the strike.
+        return new Vector2(reach.x * t, reach.y * t + 4f * height * t * (1f - t));
     }
 
     private Vector3 GetStrikeContact(Vector2 reach)

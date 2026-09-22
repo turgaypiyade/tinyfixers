@@ -16,6 +16,14 @@ public sealed class BossDuelCharacterProfile : ScriptableObject
         public Vector2 offset;
     }
 
+    [Serializable]
+    public sealed class ThrowFrame
+    {
+        public Pose pose = new Pose();
+        [Tooltip("Center of the held obstacle, measured from bottom-left of this sprite (0..1).")]
+        public Vector2 handPoint = new Vector2(0.75f, 0.4f);
+    }
+
     public Pose idle = new Pose();
     public Pose idleAlternate = new Pose();
     public Pose blink = new Pose();
@@ -29,6 +37,14 @@ public sealed class BossDuelCharacterProfile : ScriptableObject
     public Pose shieldHit = new Pose();
     public Pose victory = new Pose();
     public Pose defeated = new Pose();
+    [Header("Obstacle throw — from the idle ground position")]
+    public ThrowFrame[] throwFrames = Array.Empty<ThrowFrame>();
+    [Range(1f, 30f)] public float throwFramesPerSecond = 16f;
+    [Tooltip("Zero-based frame at which the obstacle leaves the hand.")]
+    [Min(0)] public int throwReleaseFrame = 6;
+    [Min(0f)] public float throwIdleLeadIn = 0.08f;
+    [Tooltip("Held obstacle height relative to standing character height.")]
+    [Range(0.05f, 0.5f)] public float heldObstacleSize = 0.23f;
     public bool mirrorHorizontally;
     [Min(0.1f)] public float idleAlternateInterval = 4f;
     [Min(0.02f)] public float idleAlternateDuration = 0.7f;
@@ -38,6 +54,17 @@ public sealed class BossDuelCharacterProfile : ScriptableObject
     [Min(0.02f)] public float swingDuration = 0.12f;
     [Min(0.02f)] public float impactDuration = 0.09f;
     [Min(0.02f)] public float recoveryDuration = 0.22f;
+    [Header("Final opponent — finishing strike")]
+    public bool enableFinishingStrike = true;
+    [Tooltip("Slower anticipation before a lethal final hit; only the character animation changes speed.")]
+    [Range(1f, 3f)] public float finisherWindupMultiplier = 1.4f;
+    [Tooltip("Slow airborne arc to 60% of the approach, followed by a fast descending strike.")]
+    [Range(0.05f, 1f)] public float finisherApproachDuration = 0.6f;
+    [Tooltip("Height of the finishing hop relative to standing character height. The arc lands at contact.")]
+    [Range(0.05f, 0.35f)] public float finisherJumpHeight = 0.18f;
+    [Range(0.03f, 0.15f)] public float finisherBurstDuration = 0.035f;
+    [Tooltip("Brief strike-pose hold after contact. Board time and damage are unchanged.")]
+    [Range(0.02f, 0.3f)] public float finisherImpactHold = 0.065f;
     [Header("Dash and colored afterimages")]
     [Min(0f)] public float contactDistance = 0.6f;
     public Material afterimageMaterial;

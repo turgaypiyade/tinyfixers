@@ -109,7 +109,18 @@ public sealed class BossDuelController : MonoBehaviour
     [SerializeField, Min(0f)] private float enemyTelegraphDuration = 0.4f;
     [Tooltip("Sersemleme pozunun ekranda kalma süresi (sn).")]
     [SerializeField, Min(0f)] private float defeatCollapseDuration = 0.35f;
-    [Tooltip("İsabet sesi.")]
+    [Header("Boss Duel Sounds")]
+    [Tooltip("Boş alanlar Resources/Audio/BossDuelsSound altındaki aynı adlı kliplerden yüklenir.")]
+    [SerializeField] private AudioClip playerAttackSfx;
+    [SerializeField] private AudioClip enemyAttackSfx;
+    [Tooltip("Oyuncunun düşmana isabet eden darbesi (PlayerHit).")]
+    [SerializeField] private AudioClip playerHitSfx;
+    [Tooltip("Düşmanın oyuncuya isabet eden darbesi (EnemyHit).")]
+    [SerializeField] private AudioClip enemyHitSfx;
+    [SerializeField] private AudioClip enemyObstacleThrowSfx;
+    [SerializeField, Range(0f, 1f)] private float attackVolume = 0.6f;
+    [SerializeField, Range(0f, 1f)] private float obstacleThrowVolume = 0.6f;
+    [Tooltip("Tarafa özel isabet klibi bulunamazsa kullanılan eski isabet sesi.")]
     [SerializeField] private AudioClip hitSfx;
     [SerializeField, Range(0f, 1f)] private float hitVolume = 0.6f;
     [Tooltip("Her seste rastgele perde sapması (monotonluğu kırar).")]
@@ -247,6 +258,7 @@ public sealed class BossDuelController : MonoBehaviour
         }
 
         bossModeActive = true;
+        InitializeDuelSounds();
 
         bool introPlayedDuringLoading = CustomIntroLoadingManager.HasShownBossIntroFor(gameObject.scene);
         if (introPlayedDuringLoading)
@@ -643,9 +655,12 @@ public sealed class BossDuelController : MonoBehaviour
         {
             if (playerCharacterView != null)
                 yield return playerCharacterView.Attack(enemyRobot, () => LandAnimalPlayerStrike(damage),
-                    () => IsOver() || waveTransitionActive, damage);
+                    () => IsOver() || waveTransitionActive, damage, () => ShouldPlayFinishingStrike(damage),
+                    () => PlaySfx(playerAttackSfx, attackVolume));
             else
             {
+                if (IsOver() || waveTransitionActive) yield break;
+                PlaySfx(playerAttackSfx, attackVolume);
                 yield return new WaitForSeconds(0.3f);
                 if (!IsOver() && !waveTransitionActive) LandAnimalPlayerStrike(damage);
             }
@@ -660,18 +675,22 @@ public sealed class BossDuelController : MonoBehaviour
         }
     }
 
+    private bool ShouldPlayFinishingStrike(int damage)
+        => IsLastWave && !IsOver() && !waveTransitionActive && enemyHp > 0
+           && (long)damage >= (long)enemyHp + enemyProtection;
+
     private void LandAnimalPlayerStrike(int damage)
     {
         if (IsOver() || waveTransitionActive) return;
-        SpawnMeleeImpact(enemyRobot);
+        SpawnMeleeImpact(enemyRobot, playerHitSfx);
         ApplyEnemyDamage(damage);
     }
 
-    private void SpawnMeleeImpact(RectTransform target)
+    private void SpawnMeleeImpact(RectTransform target, AudioClip impactSfx)
     {
         if (target != null && vfxRoot != null)
             SpawnImpact(WorldToAnchoredIn(vfxRoot, target.position), new Color(1f, 0.85f, 0.45f, 1f));
-        PlaySfx(hitSfx, hitVolume);
+        PlaySfx(impactSfx != null ? impactSfx : hitSfx, hitVolume);
     }
 
     private IEnumerator AnimalEnemyStrike(int damage)
@@ -681,7 +700,7 @@ public sealed class BossDuelController : MonoBehaviour
         void Impact()
         {
             if (Cancelled()) return;
-            SpawnMeleeImpact(playerRobot);
+            SpawnMeleeImpact(playerRobot, enemyHitSfx);
             ApplyPlayerDamage(damage);
         }
 
@@ -693,12 +712,17 @@ public sealed class BossDuelController : MonoBehaviour
         try
         {
             if (enemyCharacterView != null)
-                yield return enemyCharacterView.Attack(playerRobot, Impact, Cancelled, damage);
+                yield return enemyCharacterView.Attack(playerRobot, Impact, Cancelled, damage,
+                    onSwing: () => PlaySfx(enemyAttackSfx, attackVolume));
             else
             {
                 if (enemyRobot != null) yield return ChargeTelegraph(enemyRobot, Mathf.Max(0.02f, enemyTelegraphDuration));
                 else yield return new WaitForSeconds(Mathf.Max(0.02f, enemyTelegraphDuration));
-                Impact();
+                if (!Cancelled())
+                {
+                    PlaySfx(enemyAttackSfx, attackVolume);
+                    Impact();
+                }
             }
         }
         finally
@@ -716,7 +740,7 @@ public sealed class BossDuelController : MonoBehaviour
         movesSinceOil = 0;
 
         // A player can already be making their next move during the melee animation.
-        // Finish that move before selecting cells; only the short projectile flight locks input.
+        // Finish that move before selecting cells; hold input through preparation and flight.
         while (!IsOver() && (board.IsExplicitlyLocked || board.Flow.IsDuelMoveSettling))
             yield return null;
         if (IsOver() || waveTransitionActive) yield break;
@@ -733,7 +757,9 @@ public sealed class BossDuelController : MonoBehaviour
             pressureEffectsRoot = (RectTransform)go.transform;
             pressureEffectsRoot.SetParent(vfxRoot != null ? vfxRoot : board.TilesRoot, false);
             MatchParentLayer(pressureEffectsRoot);
-            yield return BossDuelObstaclePressure.Throw(board, enemyRobot, pressureEffectsRoot, targets, id);
+            yield return BossDuelObstaclePressure.Throw(board, enemyRobot, pressureEffectsRoot, targets, id,
+                enemyCharacterView, () => !isActiveAndEnabled || waveTransitionActive || IsOver(),
+                () => PlaySfx(enemyObstacleThrowSfx, obstacleThrowVolume));
         }
         finally
         {
@@ -1862,6 +1888,23 @@ public sealed class BossDuelController : MonoBehaviour
     }
 
     // ── Helpers ──
+
+    private void InitializeDuelSounds()
+    {
+        playerAttackSfx = ResolveDuelSound(playerAttackSfx, "PlayerAttack");
+        enemyAttackSfx = ResolveDuelSound(enemyAttackSfx, "EnemyAttack");
+        playerHitSfx = ResolveDuelSound(playerHitSfx, "PlayerHit");
+        enemyHitSfx = ResolveDuelSound(enemyHitSfx, "EnemyHit");
+        enemyObstacleThrowSfx = ResolveDuelSound(enemyObstacleThrowSfx, "EnemyObstacleThrow");
+    }
+
+    private static AudioClip ResolveDuelSound(AudioClip assigned, string name)
+    {
+        var clip = assigned != null ? assigned : Resources.Load<AudioClip>("Audio/BossDuelsSound/" + name);
+        // The supplied clips disable importer preloading; prepare them before the first strike.
+        if (clip != null && clip.loadState == AudioDataLoadState.Unloaded) clip.LoadAudioData();
+        return clip;
+    }
 
     // Atış/isabet sesi. AudioSource yoksa kendi oluşturur. Hafif perde sapmasıyla monotonluk kırılır.
     private void PlaySfx(AudioClip clip, float volume)

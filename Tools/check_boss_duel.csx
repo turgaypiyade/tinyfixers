@@ -24,7 +24,8 @@ var files = new[] {
     "Assets/_Project/Scripts/Grid/Board/BossDuelAttackVfx.cs",
     "Assets/_Project/Scripts/Grid/Board/BossDuelPowerOrbs.cs",
     "Assets/_Project/Scripts/Grid/Board/BossDuelObstaclePressure.cs",
-    "Assets/_Project/Scripts/UI/LevelEndSimplePopupController.cs"
+    "Assets/_Project/Scripts/UI/LevelEndSimplePopupController.cs",
+    "Assets/_Project/Scripts/Grid/Board/BossDuelCharacterProfile.cs"
 };
 foreach (var file in files)
 {
@@ -35,7 +36,7 @@ foreach (var file in files)
 Console.WriteLine("PASS: C# syntax, " + files.Length + " changed source files");
 
 var controller = CSharpSyntaxTree.ParseText(File.ReadAllText(files[0])).GetRoot();
-var methodNames = new[] { "ResolveAnimalTurn", "TickAnimalTurn", "TickEndEvalHold", "AbsorbAnimalDamage", "HandleAnimalMovesChanged", "NoteEndEvalProgress" };
+var methodNames = new[] { "ResolveAnimalTurn", "TickAnimalTurn", "TickEndEvalHold", "AbsorbAnimalDamage", "HandleAnimalMovesChanged", "NoteEndEvalProgress", "ShouldPlayFinishingStrike" };
 var methods = string.Join("\n", controller.DescendantNodes().OfType<MethodDeclarationSyntax>()
     .Where(m => methodNames.Contains(m.Identifier.ValueText)).Select(m => m.ToFullString()));
 
@@ -82,6 +83,7 @@ public class Duel {
    playerMoveOpen,waveTransitionActive,playerDefeated,outOfMovesDazed,endEvalHoldActive,laserFiring,over;
  public int accumulatedPower=30,waveIndex,enemyHp=90,playerHp=100,playerProtection,enemyProtection,
    defeatAnimationsActive,bonusStrikePool,boltsInFlight,counters,attacks,killMode;
+ public bool IsLastWave=true;
  public float moveSettledTime,endEvalHoldStartTime; public bool endEvalHoldWarned;
  public Queue<int> strikeQueue=new Queue<int>();
  public object playerShieldBubble,enemyShieldBubble,playerShieldColor,enemyShieldColor,playerRobot,
@@ -112,6 +114,7 @@ public class Duel {
  public void Tick(float dt)=>TickAnimalTurn(dt);
  public void Hold()=>TickEndEvalHold();
  public void Progress()=>NoteEndEvalProgress();
+ public bool Finisher(int damage)=>ShouldPlayFinishingStrike(damage);
  public int Hit(int damage,bool toPlayer)=>AbsorbAnimalDamage(damage,toPlayer);
  public void AddMoves(int n){board.RemainingMoves+=n;HandleAnimalMovesChanged(board.RemainingMoves);}
 " + methods + @"
@@ -140,6 +143,13 @@ public static class Checks {
      Check(hpLoss+shield-remaining==dmg,""Damage conserved"");
      Check((side?d.enemyProtection:d.playerProtection)==shield,""Other side unchanged"");
    }
+   var finish=new Duel{enemyHp=10,enemyProtection=2};
+   Check(!finish.Finisher(11)&&finish.Finisher(12),""Finisher includes shield protection"");
+   finish.IsLastWave=false;Check(!finish.Finisher(100),""No finisher on intermediate opponent"");
+   finish.IsLastWave=true;finish.waveTransitionActive=true;Check(!finish.Finisher(100),""No finisher during transition"");
+   finish.waveTransitionActive=false;finish.enemyHp=int.MaxValue;finish.enemyProtection=1;
+   Check(!finish.Finisher(int.MaxValue),""Finisher threshold does not overflow"");
+   finish.enemyHp=0;Check(!finish.Finisher(100),""No finisher against defeated opponent"");
    var progressing=new Duel{endEvalHoldStartTime=0,endEvalHoldWarned=true};
    Time.unscaledTime=25;progressing.Progress();
    Check(progressing.endEvalHoldStartTime==25 && !progressing.endEvalHoldWarned,""Real duel progress resets the stall diagnostic"");

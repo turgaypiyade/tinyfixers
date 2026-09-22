@@ -115,6 +115,31 @@ board doubles: continuing play, final strikes, late goal completion, extra moves
 terminal leaks. These checks and `Tools/check_boss_duel.csx` pass without a project build;
 Play-mode reproduction remains to be verified.
 
+## Finishing strike — 2026-09-22
+
+Only the player's predicted lethal hit against the final opponent gets a finishing
+animation. The threshold includes current enemy protection, uses a wide integer sum,
+and is checked again immediately before contact. An enemy shield collected during the
+preparation can remove the finishing impact emphasis; it does not cancel the actual hit.
+
+The character profile's **Final opponent — finishing strike** controls enable/disable,
+windup multiplier (default 1.4), slow airborne approach (0.6s to 60% of the path), hop
+height (18% of standing height), fast descending contact (0.035s), and brief strike-pose
+hold (0.065s). These values are explicitly serialized on `RamDuelCharacter`. The motion
+follows one continuous parabola, with its apex halfway and zero height at impact.
+The normal return and existing victory
+sequence follow. Finishing impact streaks use full visual strength and a 1.15 size/duration
+multiplier, regardless of how little HP the enemy had left. Gameplay damage is unchanged.
+The slow motion affects the actor's choreography only: no global `Time.timeScale` change,
+new board lock, or additional end-evaluation hold is introduced. Intermediate opponents
+and enemy counterattacks retain normal timing.
+
+`csi Tools/check_boss_finisher.csx` executes the production Attack coroutine with doubles
+and covers ordinary timing, actual vertical lift, arc endpoints/crest in both directions,
+ground-level impact, slower preparation, faster contact, single impact, victory
+return, profile disable, late protection, cancellation and disposal. Finisher eligibility
+is covered by `Tools/check_boss_duel.csx`. Rendering still needs Play-mode review.
+
 ## Remaining art
 
 The badger profile is assigned to `enemyCharacter` in `01_Game`, and both legacy enemy
@@ -245,3 +270,45 @@ With free input that wait could be held open indefinitely by a player who keeps 
 the next strike, so it now runs only when the move counter has actually reached zero, and the
 daze waits until no queued power or open move remains. The level-end hold is unchanged and still
 covers the whole turn, so no result popup can appear mid-strike.
+
+## Obstacle throw sheets (2026-09-22)
+
+Automatic waves now use an opaque white body tint. The old second-wave orange and third-wave
+red multipliers discolored Hyena's artwork; these have been removed. An explicitly authored
+`BossWaveDef.bodyTint` remains available for intentional visual variants.
+
+Badger and Hyena now use the twelve sliced sprites from `BadgerThrow/BadgerThrow.png` and
+`HyenaThrows/HyenaThrows.png`. Their character profiles own `throwFrames`, each containing a
+ground-aligned pose and a normalized `handPoint`. Heights compensate for the different trimmed
+frame sizes; hand points are authored per frame. The existing melee recovery finishes first,
+then the enemy stands at its idle ground position for 0.08 seconds before throwing in place.
+
+Default playback is 16 frames/second, with release at zero-based frame 6 (the seventh frame).
+The actual obstacle preview sprite follows the hands until release. A volley initially shows
+one held prop; all requested projectiles leave the same hand point together and grow from
+character-relative size to board-cell size in flight. Flight overlaps the remaining character
+frames. The character returns to its rest/shield pose afterward. These timings, frame poses,
+hand points and held size are editable in `BadgerDuelCharacter` / `HyenaDuelCharacter`.
+
+The short pressure input lock now covers preparation and flight, so selected target cells
+remain stable. Cancellation disposes the nested animation and projectiles; aborted throws
+do not place obstacles. Profiles without a complete throw sheet retain the previous flight.
+Throw count, frequency, eligible obstacle pools, pressure caps and the first two bosses'
+disabled pressure settings are unchanged.
+
+`csi Tools/check_boss_throw.csx` checks sprite references and executes the production throw
+and volley iterators with test doubles: release timing, hand transforms, simultaneous flight
+and recovery, cancellation, disposal, fallback and placement. No Unity build or Play-mode
+visual review was performed; final hand alignment should be checked in the running scene.
+
+## Boss duel sounds (2026-09-22)
+
+The controller loads unassigned clips from `Resources/Audio/BossDuelsSound` when a boss duel
+initializes and preloads their audio data before combat. Inspector clip overrides are supported.
+`PlayerAttack` / `EnemyAttack` play when that actor's fast swing begins; for the finishing strike
+this occurs after the slow airborne approach. `PlayerHit` is the player's hit on the enemy;
+`EnemyHit` is the enemy's hit on the player. Both hit sounds fire at contact, including shield
+contact. `EnemyObstacleThrow` plays once per volley, exactly when the obstacle leaves the hand,
+while cancelled preparations stay silent. The existing sound-enabled setting gates playback.
+Attack, impact and obstacle-throw volumes are adjustable on the controller. Missing side-specific
+hit clips fall back to the old `hitSfx`. No in-game listening pass has been performed.

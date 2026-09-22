@@ -32,14 +32,6 @@ public static class BossDifficulty
         new[] { 0.30f, 0.33f, 0.37f },
     };
 
-    // Sprite çizmeden görsel varyant: sıradaki rakibin gövde tint'i sertleşir.
-    private static readonly Color[] WaveTints =
-    {
-        Color.white,                          // 1. rakip: değişiklik yok
-        new Color(1f, 0.78f, 0.62f),          // 2. rakip: ısınmış/turuncu
-        new Color(1f, 0.55f, 0.62f),          // 3. rakip: kızıl
-    };
-
     /// <summary>Boss sırası: her 5 level'da bir boss → level 5 = 1, level 10 = 2...</summary>
     public static int CurrentBossIndex()
         => Mathf.Max(1, PlayerPrefs.GetInt("current_level", 1) / 5);
@@ -85,7 +77,9 @@ public static class BossDifficulty
                 attackDamageBase = Mathf.RoundToInt(baseDamage * (1f + DamageGainPerOpponent * w)),
                 oilCount = baseOilCount,
                 oilEveryMoves = baseOilEvery,
-                bodyTint = WaveTints[Mathf.Min(w, WaveTints.Length - 1)],
+                // Animal artwork keeps its original colors in every wave.
+                // Only an explicitly authored wave may request a different tint below.
+                bodyTint = Color.white,
             };
 
             if (authored)

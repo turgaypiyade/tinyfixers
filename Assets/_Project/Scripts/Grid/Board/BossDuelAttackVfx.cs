@@ -101,7 +101,7 @@ public sealed class BossDuelAttackVfx : MonoBehaviour
         ghost.gameObject.SetActive(true);
     }
 
-    public void PlayImpact(int power)
+    public void PlayImpact(int power, bool finishingStrike = false)
     {
         if (body == null || power <= 0) return;
         if (impact == null)
@@ -125,8 +125,10 @@ public sealed class BossDuelAttackVfx : MonoBehaviour
         rt.localScale = Vector3.one;
         rt.SetAsLastSibling();
         // A bounded visual intensity; the damage itself is never normalized or clamped here.
-        float strength = Mathf.Clamp01((float)power / Mathf.Max(1, profile.powerForFullImpact));
-        impact.Play(standingHeight * Mathf.Lerp(0.32f, 0.85f, strength), strength, profile.impactFxDuration);
+        float strength = finishingStrike ? 1f : Mathf.Clamp01((float)power / Mathf.Max(1, profile.powerForFullImpact));
+        float emphasis = finishingStrike ? 1.15f : 1f;
+        impact.Play(standingHeight * Mathf.Lerp(0.32f, 0.85f, strength) * emphasis,
+            strength, profile.impactFxDuration * emphasis);
     }
 
     private void Update()

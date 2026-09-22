@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChapterTheme_1
   m_EditorClassIdentifier: Assembly-CSharp::ChapterTheme
   chapterIndex: 1
-  gameBackground: {fileID: 21300000, guid: 7d2715711bfad49e5a438bf071056d78, type: 3}
+  gameBackground: {fileID: 21300000, guid: bb7f6e6989e334e268ff2aa168a5897b, type: 3}
   gameTopHud: {fileID: 21300000, guid: a613c7faccef449fc85b7943d52d4deb, type: 3}
   gameBottomArea: {fileID: 21300000, guid: 43e44e3d560a74958bf1278d0c4e96a1, type: 3}
   menuBackground: {fileID: 21300000, guid: 4521c033365614105b1d105bdfdbc8e7, type: 3}

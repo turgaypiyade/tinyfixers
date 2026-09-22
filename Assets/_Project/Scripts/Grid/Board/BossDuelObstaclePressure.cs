@@ -82,17 +82,27 @@ public static class BossDuelObstaclePressure
         return picked;
     }
 
-    /// Caller owns a brief input lock and waits for current board jobs before choosing targets.
+    /// Caller owns the input lock and waits for current board jobs before choosing targets.
     public static IEnumerator Throw(BoardController board, RectTransform source, RectTransform effectsRoot,
-        List<Vector2Int> targets, ObstacleId id)
+        List<Vector2Int> targets, ObstacleId id, BossDuelCharacterView character = null,
+        System.Func<bool> cancelled = null, System.Action onRelease = null)
     {
         var def = board.ActiveLevelData.obstacleLibrary.Get(id);
         var root = effectsRoot != null ? effectsRoot : board.TilesRoot;
         var projectiles = new List<RectTransform>();
         var ends = new List<Vector3>();
         Vector3 start = root.InverseTransformPoint(source != null ? source.position : board.transform.position);
+        bool animated = character != null && character.HasThrowAnimation;
+        bool released = !animated;
+        IEnumerator animation = null;
+        bool Cancelled() => board == null || root == null || (cancelled != null && cancelled());
         try
         {
+            if (Cancelled() || targets.Count == 0) yield break;
+            float worldCellSize = board.TilesRoot.TransformVector(Vector3.right * board.TileSize).magnitude;
+            float size = root.InverseTransformVector(Vector3.right * worldCellSize).magnitude * 0.8f;
+            float heldSize = animated
+                ? root.InverseTransformVector(Vector3.up * character.HeldObstacleWorldSize).magnitude : size;
             foreach (var cell in targets)
             {
                 var go = new GameObject("BossThrownObstacle", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -103,22 +113,56 @@ public static class BossDuelObstaclePressure
                 image.sprite = def.GetPreviewSprite();
                 image.preserveAspect = true;
                 image.raycastTarget = false;
-                float worldCellSize = board.TilesRoot.TransformVector(Vector3.right * board.TileSize).magnitude;
-                float size = root.InverseTransformVector(Vector3.right * worldCellSize).magnitude * 0.8f;
-                rt.sizeDelta = Vector2.one * size;
+                rt.sizeDelta = Vector2.one * heldSize;
                 rt.localPosition = start;
+                go.SetActive(!animated);
                 projectiles.Add(rt);
                 ends.Add(root.InverseTransformPoint(board.GetCellWorldCenterPosition(cell.x, cell.y)));
             }
-            const float duration = 0.38f;
-            for (float time = 0f; time < duration; time += Time.deltaTime)
+            if (animated)
             {
-                float t = Mathf.Clamp01(time / duration);
-                for (int i = 0; i < projectiles.Count; i++)
+                animation = character.ThrowObstacle(hand =>
                 {
-                    projectiles[i].localPosition = Vector3.Lerp(start, ends[i], t)
-                        + Vector3.up * (Mathf.Sin(t * Mathf.PI) * 90f);
-                    projectiles[i].localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * Mathf.PI) * 25f);
+                    start = root.InverseTransformPoint(hand);
+                    // One visible prop in the hands; the volley fans out from that same point.
+                    projectiles[0].gameObject.SetActive(true);
+                    projectiles[0].localPosition = start;
+                }, () =>
+                {
+                    released = true;
+                    foreach (var projectile in projectiles)
+                    {
+                        projectile.localPosition = start;
+                        projectile.gameObject.SetActive(true);
+                    }
+                }, Cancelled);
+            }
+            const float duration = 0.38f;
+            float flightTime = 0f;
+            bool animationPlaying = animation != null;
+            bool releaseNotified = false;
+            while (true)
+            {
+                if (Cancelled()) yield break;
+                if (animationPlaying) animationPlaying = animation.MoveNext();
+                if (!released && !animationPlaying) yield break;
+                if (released)
+                {
+                    if (!releaseNotified)
+                    {
+                        releaseNotified = true;
+                        onRelease?.Invoke();
+                    }
+                    float t = Mathf.Clamp01(flightTime / duration);
+                    for (int i = 0; i < projectiles.Count; i++)
+                    {
+                        projectiles[i].localPosition = Vector3.Lerp(start, ends[i], t)
+                            + Vector3.up * (Mathf.Sin(t * Mathf.PI) * 90f);
+                        projectiles[i].localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * Mathf.PI) * 25f);
+                        projectiles[i].sizeDelta = Vector2.one * Mathf.Lerp(heldSize, size, t);
+                    }
+                    if (flightTime >= duration && !animationPlaying) break;
+                    flightTime += Time.deltaTime;
                 }
                 yield return null;
             }
@@ -143,6 +187,7 @@ public static class BossDuelObstaclePressure
         }
         finally
         {
+            (animation as System.IDisposable)?.Dispose();
             foreach (var projectile in projectiles)
                 if (projectile != null) Object.Destroy(projectile.gameObject);
         }

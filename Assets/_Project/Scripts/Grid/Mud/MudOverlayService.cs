@@ -35,6 +35,10 @@ public class MudOverlayService : MonoBehaviour
     [Header("Stage 0 Interior")]
     [Tooltip("Açıkken üst mud katmanında MudOverlayStage1_Sp 1 dokusu yerine tek, pürüzsüz renk kullanılır. Bevel yine MudWithBevel'dan sadece dış sınıra çizilir.")]
     [SerializeField] private bool useFlatStage0Interior = true;
+    [Tooltip("plainMudTexture TEK hücrenin bevelsiz kırpığı ise (mud sprite'ın kenarları kesilmiş hali) " +
+             "AÇIK bırak: her hücre kırpığın tamamını gösterir. KAPALI iken texture board-geneli tek " +
+             "parça olarak yayılır (uvW = 1/gridWidth) — o mod board boyu seamless bir doku içindir.")]
+    [SerializeField] private bool stage0InteriorPerCell = true;
     [SerializeField] private Color flatStage0InteriorColor = new Color(0.72f, 0.28f, 0.07f, 1f);
     [Tooltip("Üst mud iç patch hizası. X negatifse sola, Y pozitifse yukarı kayar.")]
     [SerializeField] private Vector2 stage0InteriorOffsetPixels = new Vector2(-1.5f, 0f);
@@ -71,6 +75,7 @@ public class MudOverlayService : MonoBehaviour
     public Sprite  BorderedMudSprite => borderedMudSprite;   // stage-0 bevel (Sprite B)
     public Texture PlainMudTexture   => plainMudTexture;     // stage-0 interior fill
     public bool    UseFlatStage0Interior => useFlatStage0Interior;
+    public bool    Stage0InteriorPerCell  => stage0InteriorPerCell;
     public Color   FlatStage0InteriorColor => flatStage0InteriorColor;
     public Vector2 Stage0InteriorOffsetPixels => stage0InteriorOffsetPixels;
     public int     DefaultMaxHits    => defaultMaxHits;

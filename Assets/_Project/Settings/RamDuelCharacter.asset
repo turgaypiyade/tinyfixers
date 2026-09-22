@@ -57,6 +57,12 @@ MonoBehaviour:
   blinkDuration: 0.13
   windupDuration: 0.24
   swingDuration: 0.18
+  enableFinishingStrike: 1
+  finisherWindupMultiplier: 1.4
+  finisherApproachDuration: 0.6
+  finisherJumpHeight: 0.18
+  finisherBurstDuration: 0.035
+  finisherImpactHold: 0.065
   impactDuration: 0.09
   recoveryDuration: 0.2
   contactDistance: 0.60

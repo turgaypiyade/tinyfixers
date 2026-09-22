@@ -73,3 +73,80 @@ MonoBehaviour:
   weaponImpactPoint: {x: 0.13, y: 0.35}
   powerForFullImpact: 40
   impactFxDuration: 0.24
+  throwFrames:
+  - pose:
+      sprite: {fileID: -2095086620269461797, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.045000
+      groundPivot: {x: 0.514085, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.830986, y: 0.418079}
+  - pose:
+      sprite: {fileID: -1281435732982247374, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.062712
+      groundPivot: {x: 0.489286, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.871429, y: 0.422222}
+  - pose:
+      sprite: {fileID: -4934331787821266953, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.059760
+      groundPivot: {x: 0.487365, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.851986, y: 0.406685}
+  - pose:
+      sprite: {fileID: 3974875060865022477, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.012528
+      groundPivot: {x: 0.498069, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.861004, y: 0.405248}
+  - pose:
+      sprite: {fileID: -7005538483895167077, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.009576
+      groundPivot: {x: 0.498182, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.632727, y: 0.359649}
+  - pose:
+      sprite: {fileID: 3201797355654404644, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 0.994816
+      groundPivot: {x: 0.518152, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.653465, y: 0.353116}
+  - pose:
+      sprite: {fileID: -3107244042714028430, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.021384
+      groundPivot: {x: 0.482639, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.493056, y: 0.364162}
+  - pose:
+      sprite: {fileID: 2173781931222586244, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.036144
+      groundPivot: {x: 0.515385, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.476923, y: 0.276353}
+  - pose:
+      sprite: {fileID: 3204552490424355585, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.039096
+      groundPivot: {x: 0.428105, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.813725, y: 0.244318}
+  - pose:
+      sprite: {fileID: -78484239391232477, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.080424
+      groundPivot: {x: 0.508772, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.614035, y: 0.341530}
+  - pose:
+      sprite: {fileID: -4771765198916922253, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.086328
+      groundPivot: {x: 0.579125, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.154882, y: 0.282609}
+  - pose:
+      sprite: {fileID: -7989640748006317521, guid: c095734bb8e534047bf4fddcd7a18ca2, type: 3}
+      height: 1.042048
+      groundPivot: {x: 0.523810, y: 0.012}
+      offset: {x: 0, y: 0}
+    handPoint: {x: 0.622711, y: 0.334278}
+  throwFramesPerSecond: 16
+  throwReleaseFrame: 6
+  throwIdleLeadIn: 0.08
+  heldObstacleSize: 0.23

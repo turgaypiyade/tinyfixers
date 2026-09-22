@@ -22,6 +22,34 @@ def array(text, key):
     return list(struct.unpack("<" + "i" * (len(raw) // 4), raw))
 
 
+def audit_first_boss():
+    text = (SETTINGS / "ProductionLevels/LevelP_00050.asset").read_text()
+    total = int(re.search(r"    amount: (\d+)", text)[1])
+    power = int(field(text, "damagePerClearedTile"))
+    hp = int(field(text, "playerMaxHp"))
+    counter = int(field(text, "enemyAttackBaseDamage"))
+    # Illustrative move trace anchored to the user's ~5-move result at 200 HP / 5 power.
+    # Actual board swaps/cascades are not simulated here.
+    trace = [6, 9, 3, 12, 10, 6, 9, 3, 12, 10, 6, 9, 6]
+    def turns(enemy_hp, per_tile):
+        for i, clears in enumerate(trace, 1):
+            enemy_hp -= clears * per_tile
+            if enemy_hp <= 0:
+                return i
+        return None
+    old_turns, new_turns = turns(200, 5), turns(total, power)
+    assert old_turns == 5 and new_turns is not None and 10 <= new_turns <= 14
+    assert total > 200 and power == 5
+    assert new_turns > turns(80, 1), "Revised boss must also outlast the previous 80 HP / 1 power setting"
+    remaining_hp = hp - (new_turns - 1) * counter
+    assert remaining_hp >= 40 and new_turns <= int(field(text, "moves"))
+    assert set(array(text, "obstacles")) == {0} and int(field(text, "bossAttackOilCount")) == 0
+    print(f"First-boss illustrative trace {trace}: before {old_turns} moves; now {new_turns}, player HP {remaining_hp}.")
+    for clears in (6, 8, 10, 12, 20):
+        moves = math.ceil(total / (power * clears))
+        print(f"  {clears} clears/move => {moves} moves, {hp - (moves - 1) * counter} HP remaining")
+
+
 def audit():
     paths = {}
     for meta in SETTINGS.rglob("*.asset.meta"):
@@ -88,6 +116,7 @@ def audit():
     assert bosses == [5, 10, 15, 20, 25, 30, 35, 40, 45], bosses
     print("PASS: 50 catalog entries audited; 9 bosses; all thrown obstacles introduced earlier.")
     print("Level 50 is LevelP_00510 (normal); no new boss has been inserted.")
+    audit_first_boss()
 
 
 if __name__ == "__main__":
