@@ -1,0 +1,115 @@
+diff --git a/Assets/_Project/Scripts/Grid/Board/BoardAnimator.cs b/Assets/_Project/Scripts/Grid/Board/BoardAnimator.cs
+--- a/Assets/_Project/Scripts/Grid/Board/BoardAnimator.cs
++++ b/Assets/_Project/Scripts/Grid/Board/BoardAnimator.cs
+@@ -246,6 +246,7 @@ public class BoardAnimator
+         var skipBreakFxTiles = new HashSet<TileView>();
+         var lineHitDamagedObstacleCells = new HashSet<Vector2Int>();
+         var implodeTiles = new List<TileView>();
++        var finalizedClearCells = new HashSet<Vector2Int>();
+         bool lineHitWindowOpen = false;
+ 
+         float maxStaggerDelay = 0f;
+@@ -597,11 +598,36 @@ public class BoardAnimator
+ 
+         IEnumerator ClearCellDataAfterDelay(TileView t, float waitTime)
+         {
+-            if (waitTime > 0f) yield return new WaitForSeconds(waitTime);
+-            if (t != null && board.Tiles[t.X, t.Y] == t)
++            if (t == null || !t)
++                yield break;
++
++            int x;
++            int y;
++
++            try
++            {
++                x = t.X;
++                y = t.Y;
++            }
++            catch (MissingReferenceException)
++            {
++                yield break;
++            }
++
++            if (waitTime > 0f)
++                yield return new WaitForSeconds(waitTime);
++
++            if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
++                yield break;
++
++            if (t != null && t && board.Tiles[x, y] == t)
+             {
+-                board.ClearCellDataOnly(new Vector2Int(t.X, t.Y));
++                board.ClearCellDataOnly(new Vector2Int(x, y));
+             }
+         }
+ 
+@@ -672,29 +698,65 @@ public class BoardAnimator
+ 
+         void FinalizeTileClear(TileView tile)
+         {
+-            if (tile == null)
++            if (tile == null || !tile)
+             {
+-                Debug.Log("[PulseClearDebug] FinalizeTileClear skip tile=null");
++                Debug.Log("[PulseClearDebug] FinalizeTileClear skip tile=null/dead");
+                 return;
+             }
+ 
+-            bool live =
+-                tile.X >= 0 && tile.X < board.Width &&
+-                tile.Y >= 0 && tile.Y < board.Height &&
+-                board.Tiles[tile.X, tile.Y] == tile;
++            int x;
++            int y;
++            TileType tileType;
++            TileSpecial special;
++
++            try
++            {
++                x = tile.X;
++                y = tile.Y;
++                tileType = tile.GetTileType();
++                special = tile.GetSpecial();
++            }
++            catch (MissingReferenceException)
++            {
++                Debug.Log("[PulseClearDebug] FinalizeTileClear skip destroyed tile before read");
++                return;
++            }
++
++            if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
++            {
++                Debug.Log($"[PulseClearDebug] FinalizeTileClear skip out-of-board tile=({x},{y})");
++                return;
++            }
++
++            var cell = new Vector2Int(x, y);
++
++            if (!finalizedClearCells.Add(cell))
++            {
++                Debug.Log($"[PulseClearDebug] FinalizeTileClear skip duplicate cell=({x},{y})");
++                return;
++            }
++
++            if (board.Tiles[x, y] != tile)
++            {
++                Debug.Log(
++                    $"[PulseClearDebug] FinalizeTileClear skip stale tile=({x},{y}) " +
++                    $"type={tileType} special={special}");
++                return;
++            }
+ 
+             Debug.Log(
+-                $"[PulseClearDebug] FinalizeTileClear tile=({tile.X},{tile.Y}) " +
+-                $"type={tile.GetTileType()} special={tile.GetSpecial()} " +
+-                $"live={live} specialPhase={board.IsSpecialActivationPhase}");
++                $"[PulseClearDebug] FinalizeTileClear tile=({x},{y}) " +
++                $"type={tileType} special={special} " +
++                $"live=True specialPhase={board.IsSpecialActivationPhase}");
+ 
+             if (!skipBreakFxTiles.Contains(tile))
+                 board.BreakFx?.PlayTileBreak(tile);
+ 
+             board.ClearAndDestroyTile(tile, clearedByType);
+         }
