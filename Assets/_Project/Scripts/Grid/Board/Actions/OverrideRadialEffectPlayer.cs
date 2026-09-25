@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -43,7 +44,7 @@ public sealed class OverrideRadialEffectPlayer : IClearEffectPlayer
 
         RectTransform vfxRoot = board.BoardVfxPlayer != null ? board.BoardVfxPlayer.VfxRoot : null;
 
-        float maxDelay = 0f;
+        var impacts = new List<IEnumerator>(radial.TargetTiles.Count);
 
         for (int i = 0; i < radial.TargetTiles.Count; i++)
         {
@@ -52,16 +53,18 @@ public sealed class OverrideRadialEffectPlayer : IClearEffectPlayer
                 continue;
 
             float delay = 0f;
-            if (radial.DelayMap != null && radial.DelayMap.TryGetValue(tile, out delay))
-            {
-                if (delay > maxDelay)
-                    maxDelay = delay;
-            }
+            if (radial.DelayMap != null)
+                radial.DelayMap.TryGetValue(tile, out delay);
 
-            board.StartCoroutine(PlayTileImpactWithVfx(board, vfxRoot, tile, delay, context));
+            impacts.Add(tile.RunForCurrentLifetime(
+                PlayTileImpactWithVfx(board, vfxRoot, tile, delay, context)));
         }
 
-        yield return new WaitForSeconds(maxDelay + SQUARE_DURATION + radial.Timing.TailHoldSeconds);
+        // The square/flash visuals were removed. Join the actual impact callbacks
+        // so final clear and gravity do not wait for their obsolete 0.35s tail.
+        // A timer estimate can also finish before the last delayed callback on a
+        // slow frame; RunMany completes only after every impact has returned.
+        yield return board.boardAnimatorRef.RunMany(impacts);
     }
 
     // ═════════════════════════════════════════════════════════════════════════

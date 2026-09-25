@@ -24,6 +24,12 @@ public static class CloudSaveManifest
         "booster_column_count",
         "booster_shuffle_count",
         "lives_current",
+        "safari_joined",
+        "safari_pitstop",
+        "safari_runstatus",
+        "safari_level_snapshot",
+        "safari_fail_snapshot",
+        "safari_reward_claimed",
         "player_team_joined",
         "player_team_emblem",
         "player_team_min_chapter",
@@ -32,9 +38,17 @@ public static class CloudSaveManifest
         "prelevel_specials_rewarded",
         "first_launch_done",
         "boss_tip_weakness_seen",
+        "boss_tip_goals_left_seen",   // boss yenildi ama hedef kaldı ipucu (bir kez)
         "tutorial_seen_workshop_repair",
         "real_users_seen_max",   // bot evreni azalma eğrisi cihazlar arası tutarlı kalsın
         "music_selected",        // seçili müzik parçası
+        // Harika (wonder/event) ilerlemesi: en son tamamlanan event + model sürümü.
+        // Event başına görev sırası "wonder_stage_" aile öneki ile taranır (aşağıda).
+        // Eski tek-harika anahtarları migration kaynağı olarak taşınmaya devam eder.
+        "wonder_last_completed",
+        "wonder_model_v2",
+        "wonder_completed_count",
+        "wonder_current_stage",
     };
 
     // PlayerPrefs'te STRING yazılan anahtarlar (SetString/GetString).
@@ -50,6 +64,11 @@ public static class CloudSaveManifest
         "player_team_id",
         "player_team_desc",
         "lives_next_ticks",
+        "team_life_inbox_v1",
+        "safari_cycle",
+        "safari_join_ticks",
+        "safari_lastask_ticks",
+        "safari_fall_until_ticks",
         "progress_event_v1_goals",
         "progress_event_v1_cycle_key",
         "progress_event_v1_start_time",
@@ -66,6 +85,7 @@ public static class CloudSaveManifest
         "tutorial_seen_",
         "combo_tutorial_seen_",
         "obstacle_hint_seen_",
+        "wonder_stage_",         // event başına yapılan görev sayısı
     };
     private const int MaxEnumScan = 64;
 

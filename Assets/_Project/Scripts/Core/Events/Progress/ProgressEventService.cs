@@ -14,6 +14,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void AutoBootstrap()
     {
+        if (RuntimeSimulationSession.IsActive) return;
         if (Instance != null) return;
 
         // Önce scheduler'ı dene; yoksa direkt config'e bak.
@@ -97,6 +98,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
     private void Awake()
     {
+        if (RuntimeSimulationSession.IsActive) { enabled = false; return; }
         // Scheduler veya direkt config al.
         scheduler = s_pendingScheduler;
         s_pendingScheduler = null;

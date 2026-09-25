@@ -39,10 +39,12 @@ public sealed class FindFriendPopup : MonoBehaviour
 
     private FriendProfile found;
     private bool wired;
+    private CommonPopupView popupView;
 
     public void Open()
     {
         gameObject.SetActive(true);
+        ApplySharedPopup();
         Wire();
 
         if (searchInput != null) searchInput.text = "";
@@ -52,6 +54,49 @@ public sealed class FindFriendPopup : MonoBehaviour
     }
 
     public void Close() => gameObject.SetActive(false);
+
+    private void ApplySharedPopup()
+    {
+        if (popupView != null) return;
+        var oldCard = transform.Find("Card");
+        popupView = CommonPopupView.Create(transform, "Arkadaş Bul", Close);
+        var color = CommonPopupSkin.Shared.bodyTextColor;
+
+        if (searchInput != null)
+            CommonPopupView.Place(searchInput.transform.parent, popupView.Body, new Rect(0, 0.78f, 1, 0.18f));
+        CommonPopupView.StyleButton(searchButton);
+        if (resultRoot != null)
+        {
+            CommonPopupView.Place(resultRoot.transform, popupView.Body, new Rect(0, 0.40f, 1, 0.32f));
+            var background = resultRoot.GetComponent<Image>();
+            if (background != null) background.color = new Color(0.35f, 0.14f, 0.08f, 0.08f);
+            if (resultNameText != null)
+                CommonPopupView.Region(resultNameText.rectTransform, new Rect(0.22f, 0.49f, 0.46f, 0.35f));
+            if (resultSubText != null)
+                CommonPopupView.Region(resultSubText.rectTransform, new Rect(0.22f, 0.20f, 0.46f, 0.25f));
+            if (resultAddButton != null)
+                CommonPopupView.Region((RectTransform)resultAddButton.transform, new Rect(0.71f, 0.24f, 0.27f, 0.52f));
+        }
+        CommonPopupView.StyleText(resultNameText, 32, color);
+        if (resultNameText != null) resultNameText.richText = false;
+        CommonPopupView.StyleText(resultSubText, 26, color);
+        CommonPopupView.StyleButton(resultAddButton);
+        CommonPopupView.Place(notFoundText, popupView.Body, new Rect(0, 0.45f, 1, 0.20f));
+        CommonPopupView.StyleText(notFoundText, 30, color);
+        if (myIdText != null)
+        {
+            var row = myIdText.transform.parent;
+            CommonPopupView.Place(row, popupView.Body, new Rect(0, 0.06f, 1, 0.24f));
+            var background = row.GetComponent<Image>();
+            if (background != null) background.color = new Color(0.35f, 0.14f, 0.08f, 0.08f);
+            CommonPopupView.StyleText(myIdText, 30, color);
+        }
+        CommonPopupView.StyleButton(copyButton);
+        CommonPopupView.Place(inviteButton, popupView.Actions, CommonPopupView.ActionRegion(0, 1));
+        CommonPopupView.StyleButton(inviteButton);
+        if (inviteButton != null) inviteButton.name = "BtnContinue";
+        if (oldCard != null) oldCard.gameObject.SetActive(false);
+    }
 
     private void Wire()
     {
@@ -94,6 +139,7 @@ public sealed class FindFriendPopup : MonoBehaviour
         if (!has) return;
 
         if (resultNameText != null) resultNameText.text = profile.name;
+        SingleLineText.Fit(resultNameText);
         if (resultSubText != null) resultSubText.text = $"Bölüm {profile.chapter}";
         if (resultAvatar != null)
         {

@@ -35,6 +35,7 @@ public class SpecialVisualService
         cg.alpha = 0f;
         cg.blocksRaycasts = false;
         cg.interactable = false;
+        t.NoteHidden("comboHide");
     }
 
     public void ConsumeSwapSourceVisuals(TileView a, TileView b)
@@ -576,9 +577,8 @@ public class SpecialVisualService
         {
             if (tile == null) continue;
             float distCells = Vector2.Distance(new Vector2(tile.X, tile.Y), center);
-            // Biraz erken kırmak isterseniz - offset ekleyebilirsiniz. 
-            // Şimdilik çeyrek hücre kadar erken tetiklenmesi hissiyatı güçlendirir.
-            distances[tile] = Mathf.Max(0f, distCells * board.TileSize - board.TileSize * 0.25f);
+            // Match the visible wave's arrival at the cell center exactly.
+            distances[tile] = Mathf.Max(0f, distCells * board.TileSize);
         }
 
         return distances;

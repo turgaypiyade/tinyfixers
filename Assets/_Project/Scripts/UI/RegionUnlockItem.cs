@@ -22,18 +22,31 @@ public sealed class RegionUnlockItem : MonoBehaviour
     [SerializeField] private GameObject lockedOverlay;   // diğerlerinde (preview)
     [SerializeField] private CanvasGroup canvasGroup;
 
+    [Header("Bölüm Kilidi (opsiyonel — atanmazsa isim alanı kullanılır)")]
+    [Tooltip("Yıldız maliyeti grubu (ikon + sayı). Kilitliyken gizlenir.")]
+    [SerializeField] private GameObject costRoot;
+    [Tooltip("'Bölüm X bitince açılır' satırı. Atanmazsa metin isim alanına yazılır.")]
+    [SerializeField] private TMP_Text lockedInfoText;
+
     [Header("Localization")]
     [SerializeField] private string unlockButtonLocalizationKey = "worldmap_unlock_button";
+    [Tooltip("Bölüm kilidi varken buton üzerindeki kısa metin.")]
+    [SerializeField] private string lockedButtonLocalizationKey = "wonder_task_locked_button";
 
     private WorldMapRegion region;
     private RegionUnlockListPanel panel;
+    private int wonderEventIndex = -1;
 
     public WorldMapRegion Region => region;
+
+    /// <summary>Wonder modunda bu satırın ait olduğu event indeksi. -1 = bölge satırı.</summary>
+    public int WonderEventIndex => wonderEventIndex;
 
     public void Bind(WorldMapRegion region, RegionUnlockListPanel panel, bool isActive)
     {
         this.region = region;
         this.panel  = panel;
+        this.wonderEventIndex = -1;
 
         if (iconImage != null)
         {
@@ -57,16 +70,22 @@ public sealed class RegionUnlockItem : MonoBehaviour
         }
 
         if (canvasGroup != null) canvasGroup.alpha = 1f;
+        if (lockedInfoText != null) lockedInfoText.gameObject.SetActive(false);
         RefreshActiveState(isActive);
     }
 
     private Material _iconRevealMat;
 
-    /// <summary>Wonder görev satırı — region olmadan ham değerlerle bağlar (aynı görsel).</summary>
-    public void BindTask(string displayName, Sprite icon, int starCost, RegionUnlockListPanel panel, bool isActive)
+    /// <summary>
+    /// Wonder görev satırı — region olmadan ham değerlerle bağlar (aynı görsel).
+    /// wonderEventIndex: satırın ait olduğu event; tıklanınca o event'in görevi yapılır.
+    /// </summary>
+    public void BindTask(string displayName, Sprite icon, int starCost, RegionUnlockListPanel panel,
+                         bool isActive, int wonderEventIndex = -1)
     {
         this.region = null;
         this.panel = panel;
+        this.wonderEventIndex = wonderEventIndex;
 
         if (iconImage != null)
         {
@@ -81,10 +100,12 @@ public sealed class RegionUnlockItem : MonoBehaviour
 
     /// <summary>İkon = harika imajının reveal shader'ıyla 'reveal' kadar açılmış mini önizlemesi.</summary>
     public void BindTaskRevealIcon(string displayName, Sprite wonderSprite, float reveal,
-                                   int starCost, RegionUnlockListPanel panel, bool isActive)
+                                   int starCost, RegionUnlockListPanel panel, bool isActive,
+                                   int wonderEventIndex = -1)
     {
         this.region = null;
         this.panel = panel;
+        this.wonderEventIndex = wonderEventIndex;
 
         if (iconImage != null)
         {
@@ -109,6 +130,8 @@ public sealed class RegionUnlockItem : MonoBehaviour
 
     private void SetTaskLabels(string displayName, int starCost)
     {
+        if (costRoot != null && !costRoot.activeSelf) costRoot.SetActive(true);
+        if (lockedInfoText != null) lockedInfoText.gameObject.SetActive(false);
         if (nameText != null) nameText.text = displayName;
         if (starCountText != null) starCountText.text = starCost.ToString();
         if (unlockLabelText != null)
@@ -120,6 +143,35 @@ public sealed class RegionUnlockItem : MonoBehaviour
             }
             else unlockLabelText.text = string.Empty;
         }
+    }
+
+    /// <summary>
+    /// Bölüm kapısı kapalı: satır kilitli çizilir — maliyet gizlenir, "Bölüm X bitince açılır"
+    /// yazısı görünür, buton tıklanamaz. Bind*'tan SONRA çağrılır (ikon mantığı aynen korunur).
+    /// </summary>
+    public void ApplyChapterLock(string lockText)
+    {
+        if (costRoot != null) costRoot.SetActive(false);
+        else if (starCountText != null) starCountText.text = string.Empty;
+
+        if (unlockLabelText != null)
+        {
+            string s = GameLocalization.Get(lockedButtonLocalizationKey);
+            unlockLabelText.text = (s == lockedButtonLocalizationKey) ? string.Empty : s;
+        }
+
+        if (lockedInfoText != null)
+        {
+            lockedInfoText.gameObject.SetActive(true);
+            lockedInfoText.text = lockText;
+        }
+        else if (nameText != null)
+        {
+            // Kilitli satırda "ne zaman açılır" bilgisi görev adından daha değerli.
+            nameText.text = lockText;
+        }
+
+        RefreshActiveState(false);
     }
 
     private void OnDestroy()
@@ -137,7 +189,15 @@ public sealed class RegionUnlockItem : MonoBehaviour
             button.interactable = isActive;
             button.onClick.RemoveAllListeners();
             if (isActive && panel != null)
-                button.onClick.AddListener(panel.OnActiveItemClicked);
+            {
+                if (wonderEventIndex >= 0)
+                {
+                    int e = wonderEventIndex;           // closure için kopya
+                    var p = panel;
+                    button.onClick.AddListener(() => p.OnWonderTaskClicked(e));
+                }
+                else button.onClick.AddListener(panel.OnActiveItemClicked);
+            }
         }
     }
 

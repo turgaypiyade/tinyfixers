@@ -173,12 +173,13 @@ public static class SimMatchFinderValidation
     static string TestHoleBlocksRun()
     {
         // G G [hole] G G  — hole splits the run; each side only has 2
-        var s = new SimState(5, 1,
+        var s = SimState.FromSnapshot(5, 1,
             new TileData[5, 1]
             {
                 { MakeData(0,0,G) }, { MakeData(1,0,G) }, { null }, { MakeData(3,0,G) }, { MakeData(4,0,G) },
             },
-            new bool[5, 1] { {false},{false},{true},{false},{false} });
+            new bool[5, 1] { {false},{false},{true},{false},{false} },
+            null);
         var matches = new SimMatchFinder(s).FindAllMatches();
         if (matches.Count != 0)
             return $"Expected 0 matches (run split by hole), got {matches.Count}";
@@ -272,7 +273,7 @@ public static class SimMatchFinderValidation
             for (int x = 0; x < w; x++)
                 grid[x, y] = new TileData(x, y, layout[y, x]);
 
-        return new SimState(w, h, grid, holes);
+        return SimState.FromSnapshot(w, h, grid, holes, null);
     }
 
     static TileData MakeData(int x, int y, TileType t) => new TileData(x, y, t);

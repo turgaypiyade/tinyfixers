@@ -148,6 +148,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     public void Open(bool retry)
     {
         retryMode = retry;
+        levelStartRequested = false;
 
         int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
         bool isUnlocked = level >= specialsUnlockLevel;
@@ -349,8 +350,15 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         if (goalsPreviewRoot == null)
             return;
 
+        // Destroy kare sonuna ertelenir: eski slotlar bu kare boyunca layout'ta kalırsa yeni slotlar
+        // onlarla birlikte ölçülüp bir sonraki karede yer/boyut değiştirerek "zıplıyordu". Önce ayır.
         for (int i = goalsPreviewRoot.childCount - 1; i >= 0; i--)
-            Destroy(goalsPreviewRoot.GetChild(i).gameObject);
+        {
+            var child = goalsPreviewRoot.GetChild(i);
+            child.gameObject.SetActive(false);
+            child.SetParent(null, false);
+            Destroy(child.gameObject);
+        }
     }
 
     private LevelData ResolvePreviewLevelData()
@@ -458,8 +466,19 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         PlayOneShot(selectSfx);
     }
 
+    private bool levelStartRequested;
+
     private void HandleContinueClicked()
     {
+        if (levelStartRequested) return;
+        if (!LivesManager.HasLives)
+        {
+            var lives = FindFirstObjectByType<MainMenuLivesDisplay>(FindObjectsInactive.Include);
+            if (lives != null) lives.OnAreaClicked();
+            else HandleCancelClicked();
+            return;
+        }
+        levelStartRequested = true;
         var userSelected = new List<TileSpecial>();
 
         for (int i = 0; i < slots.Count; i++)

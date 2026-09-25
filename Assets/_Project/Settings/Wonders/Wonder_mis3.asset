@@ -1,0 +1,176 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e428ba4f402e4e53a57f2a501307422, type: 3}
+  m_Name: Wonder_mis3
+  m_EditorClassIdentifier: Assembly-CSharp::WonderDefinition
+  wonderId: mis2
+  displayName: Gateron
+  taskIcon: {fileID: 0}
+  backgroundSprite: {fileID: 21300000, guid: cd5727f500381464e8bc956b991932e6, type: 3}
+  totalStages: 10
+  tasks:
+  - name: Temel Tarama
+    icon: {fileID: 0}
+    starCost: 0
+  - name: "\u0130skelet Montaj"
+    icon: {fileID: 0}
+    starCost: 0
+  - name: "Ana G\xF6vde"
+    icon: {fileID: 0}
+    starCost: 0
+  - name: Kaplama
+    icon: {fileID: 0}
+    starCost: 0
+  - name: "Detay \u0130\u015F\xE7ilik"
+    icon: {fileID: 0}
+    starCost: 0
+  - name: "Enerji Hatt\u0131"
+    icon: {fileID: 0}
+    starCost: 0
+  - name: "Son Rot\xFC\u015F"
+    icon: {fileID: 0}
+    starCost: 0
+  - name: Aktivasyon
+    icon: {fileID: 0}
+    starCost: 0
+  starCosts: 0300000003000000030000000200000003000000030000000200000005000000
+  starCostBase: 5
+  starCostStep: 5
+  chestRewards:
+  - type: 0
+    amount: 200
+    icon: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
+    nameLocalizationKey: 
+    fallbackName: 
+    weight: 0
+  - type: 11
+    amount: 1
+    icon: {fileID: 21300000, guid: 7cc20196928fb40aaa2bef28661a9bc3, type: 3}
+    nameLocalizationKey: 
+    fallbackName: 
+    weight: 0
+  - type: 13
+    amount: 1
+    icon: {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
+    nameLocalizationKey: 
+    fallbackName: 
+    weight: 0
+  - type: 12
+    amount: 1
+    icon: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+    nameLocalizationKey: 
+    fallbackName: 
+    weight: 0
+  chestClosedSprite: {fileID: 21300000, guid: 4158f6743c7c545678bc1ad5daed3817, type: 3}
+  chestOpenedSprite: {fileID: 21300000, guid: e2ca9e0f34b7f401e949f0682cb1c32d, type: 3}
+  welderFrames:
+  - {fileID: 21300000, guid: d25032ca758ce4d7db141f69a983a2ee, type: 3}
+  - {fileID: 21300000, guid: b10915ec26fab4b08b3e8ccdbe5ba52e, type: 3}
+  - {fileID: 21300000, guid: 22cdb93fb5229421da1b2c93012a24bd, type: 3}
+  - {fileID: 21300000, guid: 224d04b39391e43a5b253670c148f624, type: 3}
+  - {fileID: 21300000, guid: 2690d233ec3c24c00a4cf044e8201e7a, type: 3}
+  welderFps: 10
+  welderSize: {x: 240, y: 240}
+  welderHome: {x: 0, y: 0}
+  characters:
+  - name: AmbientRobot_1_0_0_0_0_0
+    facingMode: 0
+    birdProfile: {fileID: 0}
+    frontFrames:
+    - {fileID: 21300000, guid: 2f09765df78e54a8090cb260ff5fe04b, type: 3}
+    - {fileID: 21300000, guid: b4b840b8d129f4a5ea8508e22a0cabcd, type: 3}
+    backFrames:
+    - {fileID: 21300000, guid: 4cc5efd4ee36f4901b65d9ff2c69703f, type: 3}
+    - {fileID: 21300000, guid: c62fa8e74d0e14b17ac37e8b3ef76ac5, type: 3}
+    walkFrames: []
+    walkFps: 8
+    mirrorBySide: 0
+    speed: 30
+    bobAmplitude: 8
+    bobFrequency: 6
+    visualSize: 80
+    pingPong: 1
+    pauseAtPoint: 0.2
+    path:
+    - {x: -144, y: -228}
+    - {x: 134, y: -347}
+    - {x: 435, y: -529}
+    - {x: 527, y: -555}
+  - name: AmbientRobotH_2_1_1_1_1_1
+    facingMode: 0
+    birdProfile: {fileID: 0}
+    frontFrames:
+    - {fileID: 21300000, guid: 40155137779364cddb7efb523e556ded, type: 3}
+    - {fileID: 21300000, guid: f2e81fd7c11fb458b9a0a05ecc5cbea6, type: 3}
+    - {fileID: 21300000, guid: 49ef2b59bcf594282907e4b32e3ef04e, type: 3}
+    - {fileID: 21300000, guid: f106c53e3cd174e3eb0cc62d7e75b5a3, type: 3}
+    backFrames:
+    - {fileID: 21300000, guid: 195d1d03a81a742acbd55b84c06c45f4, type: 3}
+    - {fileID: 21300000, guid: 61d955c58fcb0498a8f8dcd744ac640f, type: 3}
+    - {fileID: 21300000, guid: 1bf247072e085445e9ce5e5dedde681a, type: 3}
+    - {fileID: 21300000, guid: 9e87c3ac19d5f434ebf652433cb8fa05, type: 3}
+    walkFrames: []
+    walkFps: 4
+    mirrorBySide: 1
+    speed: 25
+    bobAmplitude: 8
+    bobFrequency: 3
+    visualSize: 200
+    pingPong: 0
+    pauseAtPoint: 0.1
+    path:
+    - {x: 97, y: -858}
+    - {x: 225, y: -829}
+    - {x: 442, y: -725}
+    - {x: 636, y: -646}
+  - name: AmbientBird_3_2_2_2_2_2
+    facingMode: 1
+    birdProfile: {fileID: 11400000, guid: d485cd392d5c4583ac65214fc4eb90f8, type: 2}
+    frontFrames: []
+    backFrames: []
+    walkFrames: []
+    walkFps: 5
+    mirrorBySide: 1
+    speed: 135
+    bobAmplitude: 20
+    bobFrequency: 3
+    visualSize: 150
+    pingPong: 1
+    pauseAtPoint: 0.4
+    path:
+    - {x: 573, y: 822}
+    - {x: 398, y: 606}
+    - {x: -248, y: 468}
+    - {x: -567, y: 225}
+  - name: AmbientRabit_3_3
+    facingMode: 0
+    birdProfile: {fileID: 0}
+    frontFrames:
+    - {fileID: 21300000, guid: b0fcf7de0f6cf9a40a4b559164e6fe20, type: 3}
+    - {fileID: 21300000, guid: 0041f8ba0ae01054d96ec240bd502a67, type: 3}
+    backFrames:
+    - {fileID: 21300000, guid: 2dbb3df402b703c4499fdec5baa9116b, type: 3}
+    - {fileID: 21300000, guid: 5f00a00ab70df7e4a853d48fad93cf2e, type: 3}
+    walkFrames: []
+    walkFps: 6
+    mirrorBySide: 1
+    speed: 30
+    bobAmplitude: 5
+    bobFrequency: 3
+    visualSize: 90
+    pingPong: 0
+    pauseAtPoint: 0.2
+    path:
+    - {x: 582, y: -539}
+    - {x: 395, y: -441}
+    - {x: 107, y: -327}
+    - {x: -25, y: -292}

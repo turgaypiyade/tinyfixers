@@ -28,6 +28,7 @@ public sealed class TeamLifeRequestRow : MonoBehaviour
         if (r == null) return;
 
         if (nameText != null) nameText.text = r.requesterName;
+        SingleLineText.Fit(nameText);
         if (tagText != null)  tagText.text  = "Can İsteği!";
         if (progressText != null) progressText.text = r.current + "/" + r.needed;
         if (progressFill != null) progressFill.fillAmount = r.Progress01;

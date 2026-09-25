@@ -12,6 +12,7 @@ public static class PreLevelSpecialInjectorBootstrapper
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void OnAfterSceneLoad()
     {
+        if (RuntimeSimulationSession.IsActive) return;
         if (!PreLevelSpecialSelectionState.HasSelection)
             return;
 

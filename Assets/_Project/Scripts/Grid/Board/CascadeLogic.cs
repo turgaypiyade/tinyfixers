@@ -42,8 +42,13 @@ public partial class CascadeLogic
         // still allowing tiles to reach their rest position in fewer cascade rounds.
         public int DiagonalSlideCount;
 
+        // Doğuş sırası (plan içinde): spawn sütunundaki akış sırası. Kayan taş sırasını korur.
+        public int SpawnOrder;
+
         public List<Vector2Int> Path = new List<Vector2Int>();
     }
+
+    private int spawnSequence;
 
     // Refill'de spawn tipi seçimi: 4+ aynı-renk run (special eşiği) oluşturmayı önler.
     // Aşağıdaki (toY+1..) ve soldaki (x-1..) hücreler bu noktada kesinleşmiş durumda
@@ -111,8 +116,9 @@ public partial class CascadeLogic
         return true;
     }
 
-    public List<BoardAction> CalculateCascades()
+    private List<BoardAction> CalculateCascadesNow()
     {
+        BoardMotionDiagnostics.CascadePlan(board);
         board.IncrementFallGeneration();
 
         VirtualTile[,] virtualBoard = new VirtualTile[board.Width, board.Height];
@@ -157,7 +163,7 @@ public partial class CascadeLogic
             bool changed = true;
 
             // SIMULATION LOOP
-            const int MAX_ITERATIONS = 32;
+            const int MAX_ITERATIONS = 96;   // kenardan dökülme: gölge hücresi başına bir tur
             int iter = 0;
 
             while (changed && iter < MAX_ITERATIONS)
@@ -335,7 +341,8 @@ public partial class CascadeLogic
                         useSettle,
                         settleDur,
                         settleStr,
-                        board.FallMoveCurve
+                        board.FallMoveCurve,
+                        spawnOrder: vTile.IsSpawned ? vTile.SpawnOrder : 0
                     );
                 }
                 else
@@ -350,6 +357,7 @@ public partial class CascadeLogic
 
         if (action.HasMoves)
         {
+            action.PrepareContinuousRoutes(board);
             if (board.UsePerColumnAsyncFalls)
             {
                 var columnFalls = action.SplitByTargetColumn(suppressColumnDelayForSplits: true);
@@ -565,6 +573,7 @@ public partial class CascadeLogic
                     var newTile = new VirtualTile
                     {
                         IsSpawned = true,
+                        SpawnOrder = ++spawnSequence,
                         Path = new List<Vector2Int> { new Vector2Int(x, spawnFromY), new Vector2Int(x, toY) }
                     };
 
@@ -609,31 +618,70 @@ public partial class CascadeLogic
                 if (IsSlotEmpty(virtualBoard, x, y) && !verticalOnlyGaps.Contains(new Vector2Int(x, y))
                     && !GapExpectsVerticalFill(virtualBoard, x, y))
                 {
-                    // Right-top priority
-                    if (TrySlide(virtualBoard, x + 1, y - 1, x, y, verticalOnlyGaps, skipSpecials, diagAffectedColumns))
-                    {
+                    // Kenardan dökülme: dikey dolumu olmayan boşluk (engel gölgesi) EN ÜST uygun girişten
+                    // beslenir; kayan taş sonraki dikey adımda gölge sütununda dibe iner. Komşu sütun önce
+                    // kendi altını doldurur, kenar hizasına gelen taş gölgeye dökülür, gölge dolunca kenar
+                    // hizası ve üstü dolar. Aynı kural gölgeden gölgeye de geçer.
+                    if (TrySlideIntoTopEntry(virtualBoard, x, y, skipSpecials, verticalOnlyGaps, diagAffectedColumns))
                         slided = true;
-                        continue;
-                    }
-
-                    // Left-top fallback
-                    if (TrySlide(virtualBoard, x - 1, y - 1, x, y, verticalOnlyGaps, skipSpecials, diagAffectedColumns))
-                    {
-                        slided = true;
-                        continue;
-                    }
                 }
             }
         }
         return slided;
     }
 
-    private bool TrySlide(VirtualTile[,] virtualBoard, int fromX, int fromY, int toX, int toY, HashSet<Vector2Int> verticalOnlyGaps, bool skipSpecials = false, HashSet<int> diagAffectedColumns = null)
+    // Boş (x, y)'nin segmentinde, en üstten aşağı doğru ilk kayma yapılabilen boş hücreye taş kaydırır.
+    // Segmentin y'nin üstündeki hücreleri de boştur (yoksa GapExpectsVerticalFill dikey dolum beklerdi).
+    private bool TrySlideIntoTopEntry(VirtualTile[,] virtualBoard, int x, int y, bool skipSpecials,
+        HashSet<Vector2Int> verticalOnlyGaps, HashSet<int> diagAffectedColumns)
     {
+        for (int entryY = FindSegmentTopY(x, y); entryY <= y; entryY++)
+        {
+            if (!IsSlotEmpty(virtualBoard, x, entryY) || verticalOnlyGaps.Contains(new Vector2Int(x, entryY)))
+                continue;
+            if (TrySlideInto(virtualBoard, x, entryY, skipSpecials, verticalOnlyGaps, diagAffectedColumns))
+                return true;
+        }
+        return false;
+    }
+
+    // Boşluğa İLK VARACAK taş kayar (oturmuş taş, havadakinden önce; ikisi de havadaysa
+    // yolu kısa olan). Eşitlikte eski kural: sağ üst. Böylece havadaki taş önceden
+    // planlanıp L-yoluyla akışın içinden kayar, ama yanda hazır duran taşın önüne geçmez.
+    private bool TrySlideInto(VirtualTile[,] virtualBoard, int x, int y, bool skipSpecials,
+        HashSet<Vector2Int> verticalOnlyGaps, HashSet<int> diagAffectedColumns)
+    {
+        bool right = FindSlideSource(virtualBoard, x + 1, y - 1, x, y, skipSpecials, out var rightTile, out int rightY);
+        bool left = FindSlideSource(virtualBoard, x - 1, y - 1, x, y, skipSpecials, out var leftTile, out int leftY);
+        if (right && left && ArrivalCost(leftTile, x - 1, leftY) < ArrivalCost(rightTile, x + 1, rightY))
+            right = false;
+
+        if (right)
+            ApplySlide(virtualBoard, rightTile, x + 1, y - 1, rightY, x, y, verticalOnlyGaps, diagAffectedColumns);
+        else if (left)
+            ApplySlide(virtualBoard, leftTile, x - 1, y - 1, leftY, x, y, verticalOnlyGaps, diagAffectedColumns);
+        return right || left;
+    }
+
+    // Kaynak taşın kayacağı hücreye (fromX, sourceY) görsel olarak ne kadar yolu kaldı (px).
+    // Oturmuş taş 0; havadaki taş kalan mesafe; yeni doğan taş tahtanın üstünden gelir.
+    private float ArrivalCost(VirtualTile tile, int x, int y)
+    {
+        if (tile.View == null)
+            return (y - tile.Path[0].y + 1) * (float)board.TileSize;
+        Vector2 cell = tile.View.GetFallCellPosition(x, y, board.TileSize);
+        return (tile.View.RectTransform.anchoredPosition - cell).magnitude;
+    }
+
+    // Çapraz kayma kaynağını bulur ve kuralları denetler; tahtayı DEĞİŞTİRMEZ (ApplySlide uygular).
+    private bool FindSlideSource(VirtualTile[,] virtualBoard, int fromX, int fromY, int toX, int toY, bool skipSpecials,
+        out VirtualTile sourceTile, out int sourceY)
+    {
+        sourceTile = null;
+        sourceY = fromY;
         if (fromX < 0 || fromX >= board.Width || fromY < 0 || fromY >= board.Height) return false;
 
-        VirtualTile sourceTile = virtualBoard[fromX, fromY];
-        int sourceY = fromY;
+        sourceTile = virtualBoard[fromX, fromY];
 
         if (sourceTile != null)
         {
@@ -665,6 +713,9 @@ public partial class CascadeLogic
 
         if (sourceTile == null) return false;
 
+        // Tutulan / anchor'lı hücredeki taş yerinde kalır (dikey geçişte de hareket etmez).
+        if (board.IsPendingTriggeredSpecialCell(fromX, sourceY)) return false;
+
         // Cargo (exitAtBottom): asla diagonal kaymaz, yalnızca düz aşağı düşer.
         if (sourceTile.IsStraightFallOnly) return false;
 
@@ -673,7 +724,10 @@ public partial class CascadeLogic
         // patlayınca boşalan hücreye düz düşer. Bu, "çok aksiyonlu" zincirlerde taşların
         // altındaki special daha patlamadan yana kayması glitch'ini önler. Kalıcı
         // obstacle'lar pending değildir → onların etrafından diagonal normal davranışını korur.
-        if (board.IsPendingTriggeredSpecialCell(fromX, sourceY + 1))
+        // Genelleştirme: tutulan hücre hemen altta değil, sütunun daha aşağısında da olabilir (temizlenen
+        // taş, line/pulse alanı). Kaynak taş kalıcı zemine değil geçici desteğe dayanıyorsa durur; destek
+        // kalkınca dikey düşer. Aksi hâlde "öndekiler durdu, arkadaki çapraza kaçtı" olur.
+        if (RestsOnTemporarySupport(virtualBoard, fromX, sourceY))
             return false;
 
         // Special'lar diagonal'e savrulmasın: düz inmeyi tercih ederler. skipSpecials=true
@@ -688,9 +742,12 @@ public partial class CascadeLogic
         bool cornerA = IsDiagonalPassableCell(fromX, toY);
         bool cornerB = IsDiagonalPassableCell(toX, fromY);
 
-        if (!cornerA && !cornerB) return false;
+        return cornerA || cornerB;
+    }
 
-        // Move it
+    private void ApplySlide(VirtualTile[,] virtualBoard, VirtualTile sourceTile, int fromX, int fromY, int sourceY,
+        int toX, int toY, HashSet<Vector2Int> verticalOnlyGaps, HashSet<int> diagAffectedColumns)
+    {
         sourceTile.DiagonalSlideCount++;
         virtualBoard[fromX, sourceY] = null;
         virtualBoard[toX, toY] = sourceTile;
@@ -721,7 +778,25 @@ public partial class CascadeLogic
             diagAffectedColumns.Add(fromX);
             diagAffectedColumns.Add(toX);
         }
-        return true;
+    }
+
+    // Taşın altındaki sütun, kalıcı zemine (tahta sonu / blocker / oil) ulaşmadan tutulan (anchor'lı,
+    // temizlenen) ya da boş bir hücreye değiyorsa taş geçici olarak duruyordur. Hole'lar geçilir.
+    private bool RestsOnTemporarySupport(VirtualTile[,] virtualBoard, int x, int y)
+    {
+        for (int below = y + 1; below < board.Height; below++)
+        {
+            if (board.IsPendingTriggeredSpecialCell(x, below))
+                return true;
+            if (board.IsObstacleBlockedCell(x, below)
+                || (board.ObstacleStateService != null && board.ObstacleStateService.HoldsTileAt(x, below)))
+                return false;
+            if (board.IsMaskHoleCell(x, below))
+                continue;
+            if (virtualBoard[x, below] == null)
+                return true;
+        }
+        return false;
     }
 
     private void PruneVerticalOnlyGaps(VirtualTile[,] virtualBoard, HashSet<Vector2Int> verticalOnlyGaps)

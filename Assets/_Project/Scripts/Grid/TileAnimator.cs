@@ -6,6 +6,8 @@ using UnityEngine.UI;
 using Object = UnityEngine.Object;
 public sealed class TileAnimator
 {
+    private static IEnumerator EmptyAnimation() { yield break; }
+
     private static readonly Vector2 CenterPivot = new Vector2(0.5f, 0.5f);
 
     private readonly BoardController board;
@@ -31,6 +33,13 @@ public sealed class TileAnimator
     private const float BURST_VFX_DURATION = 0.30f; // Halka/yıldız/shard yaşam süresi (paralel)
 
     public IEnumerator PlayPop(TileView tile, float duration, bool suppressBurst = false)
+    {
+        return tile != null
+            ? tile.RunForCurrentLifetime(PlayPopCore(tile, duration, suppressBurst))
+            : EmptyAnimation();
+    }
+
+    private IEnumerator PlayPopCore(TileView tile, float duration, bool suppressBurst = false)
     {
         if (tile == null || !tile)
             yield break;
@@ -158,6 +167,13 @@ public sealed class TileAnimator
     /// pozisyon eski yerine geri konur (görünmez), böylece taş view yeniden kullanıma temiz kalır.
     /// </summary>
     public IEnumerator PlayElevatorFling(TileView tile, float duration, int dirSign, bool suppressBurst = false)
+    {
+        return tile != null
+            ? tile.RunForCurrentLifetime(PlayElevatorFlingCore(tile, duration, dirSign, suppressBurst))
+            : EmptyAnimation();
+    }
+
+    private IEnumerator PlayElevatorFlingCore(TileView tile, float duration, int dirSign, bool suppressBurst = false)
     {
         if (tile == null || !tile)
             yield break;
@@ -297,6 +313,13 @@ public sealed class TileAnimator
 
     public IEnumerator PlayLightningStrikeAndShrink(TileView tile, float duration, Color lightningColor)
     {
+        return tile != null
+            ? tile.RunForCurrentLifetime(PlayLightningStrikeAndShrinkCore(tile, duration, lightningColor))
+            : EmptyAnimation();
+    }
+
+    private IEnumerator PlayLightningStrikeAndShrinkCore(TileView tile, float duration, Color lightningColor)
+    {
         if (tile == null) yield break;
 
         Image iconImage = tile.IconImage;
@@ -386,7 +409,7 @@ public sealed class TileAnimator
         float downTime = 0.08f)
     {
         if (tile == null || board == null) return;
-        board.StartCoroutine(CoSelectionPulse(tile, delay, peakScale, upTime, downTime));
+        board.StartCoroutine(tile.RunForCurrentLifetime(CoSelectionPulse(tile, delay, peakScale, upTime, downTime)));
     }
 
     private IEnumerator CoSelectionPulse(
@@ -441,6 +464,13 @@ public sealed class TileAnimator
     }
 
     public IEnumerator PlayPulseImpact(TileView tile, float delay, float totalTime)
+    {
+        return tile != null
+            ? tile.RunForCurrentLifetime(PlayPulseImpactCore(tile, delay, totalTime))
+            : EmptyAnimation();
+    }
+
+    private IEnumerator PlayPulseImpactCore(TileView tile, float delay, float totalTime)
     {
         if (tile == null) yield break;
 
@@ -525,6 +555,13 @@ public sealed class TileAnimator
 
 
     public IEnumerator PlaySpecialCreationMerge(TileView createdTile, IEnumerable<TileView> sourceTiles, float duration)
+    {
+        return createdTile != null
+            ? createdTile.RunForCurrentLifetime(PlaySpecialCreationMergeCore(createdTile, sourceTiles, duration))
+            : EmptyAnimation();
+    }
+
+    private IEnumerator PlaySpecialCreationMergeCore(TileView createdTile, IEnumerable<TileView> sourceTiles, float duration)
     {
         if (createdTile == null)
             yield break;
@@ -619,6 +656,7 @@ public sealed class TileAnimator
 
                 Color hidden = srcIcon.color; hidden.a = 0f;
                 srcIcon.color = hidden;
+                src.NoteHidden("specialGather");
             }
         }
 
@@ -684,6 +722,7 @@ public sealed class TileAnimator
         createdIconRt.localScale = baseScale * 0.18f;
         createdIconRt.localRotation = Quaternion.identity;
         createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
+        createdTile.NoteHidden("createdReveal");
 
         float gatherDuration = Mathf.Max(0.28f, duration); // görünür toplanma (arka planda, board'u durdurmaz)
         float flashDuration = 0.05f;
@@ -695,10 +734,10 @@ public sealed class TileAnimator
         // (bağımsız kopya) taşlar düşerken merkeze toplanıp special'ı YOLDA oluşturur.
         // Saf görsel coroutine — background-job sayacına dokunmaz (hang riski yok).
         if (board != null)
-            board.StartCoroutine(CoAnimateSpecialGather(
+            board.StartCoroutine(createdTile.RunForCurrentLifetime(CoAnimateSpecialGather(
                 createdTile, createdIcon, createdIconRt, createdGroup,
                 baseScale, baseColor, ghosts, anchorGhostRt, targetPos, ghostParent,
-                gatherDuration, flashDuration, settleDuration, pulseScale));
+                gatherDuration, flashDuration, settleDuration, pulseScale)));
     }
 
     // Gather + reveal + settle — ARKA PLAN (board düşerken). Ghost'lar bağımsız kopya olduğu
@@ -719,6 +758,7 @@ public sealed class TileAnimator
         float settleDuration,
         float pulseScale)
     {
+        int lifetime = createdTile.LifetimeVersion;
         createdTile.BeginSpecialCreationSorting();
         try
         {
@@ -889,7 +929,7 @@ public sealed class TileAnimator
         }
         finally
         {
-            if (createdTile != null)
+            if (createdTile != null && createdTile.IsCurrentLifetime(lifetime))
                 createdTile.EndSpecialCreationSorting();
             for (int i = 0; i < ghosts.Count; i++)
             {
@@ -902,7 +942,7 @@ public sealed class TileAnimator
 
             try
             {
-                if (createdTile != null && createdTile)
+                if (createdTile != null && createdTile.IsCurrentLifetime(lifetime))
                 {
                     RestoreTileVisualState(createdTile);
                     if (board != null)
@@ -973,10 +1013,12 @@ public sealed class TileAnimator
         createdIconRt.localScale = baseScale * 0.18f;
         createdIconRt.localRotation = Quaternion.identity;
         createdIcon.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
+        createdTile.NoteHidden("createdReveal");
 
         float animDuration = Mathf.Clamp(duration, 0.06f, 0.08f);
         float t = 0f;
 
+        int lifetime = createdTile.LifetimeVersion;
         createdTile.BeginSpecialCreationSorting();
         try
         {
@@ -1002,7 +1044,7 @@ public sealed class TileAnimator
         {
             try
             {
-                if (createdTile != null && createdTile)
+                if (createdTile != null && createdTile.IsCurrentLifetime(lifetime))
                 {
                     createdTile.EndSpecialCreationSorting();
                     RestoreTileVisualState(createdTile);
@@ -1070,6 +1112,7 @@ public sealed class TileAnimator
     private struct SpecialCreationGhostState
     {
         public TileView tile;
+        public int lifetimeVersion;
         public Image sourceImage;
         public Color sourceColor;
         public RectTransform ghostRect;
@@ -1206,6 +1249,7 @@ public sealed class TileAnimator
             ghosts.Add(new SpecialCreationGhostState
             {
                 tile = tile,
+                lifetimeVersion = tile.LifetimeVersion,
                 sourceImage = sourceIcon,
                 sourceColor = sourceIcon.color,
                 ghostRect = ghostRt,
@@ -1218,6 +1262,7 @@ public sealed class TileAnimator
                 sourceIcon.color.g,
                 sourceIcon.color.b,
                 0f);
+            tile.NoteHidden("implode");
         }
 
         float t = 0f;
@@ -1248,7 +1293,7 @@ public sealed class TileAnimator
                 for (int i = 0; i < ghosts.Count; i++)
                 {
                     var tile = ghosts[i].tile;
-                    if (tile == null || cleared.Contains(tile))
+                    if (tile == null || !tile.IsCurrentLifetime(ghosts[i].lifetimeVersion) || cleared.Contains(tile))
                         continue;
 
                     cleared.Add(tile);

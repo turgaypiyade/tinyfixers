@@ -48,9 +48,10 @@ public sealed class RegionProgressBar : MonoBehaviour
     {
         if (WonderMode)
         {
-            var w = WonderProgress.CurrentWonder(wonderCatalog);
+            int active = WonderProgress.ActiveEventIndex(wonderCatalog);
+            var w = wonderCatalog.Get(active);
             int count = w != null ? w.TaskCount : 0;
-            currentFill = count > 0 ? (float)WonderProgress.CurrentStage / count : 0f;
+            currentFill = count > 0 ? WonderProgress.RevealNormalized(wonderCatalog, active) : 0f;
             if (fillImage != null) fillImage.fillAmount = currentFill;
             UpdateText();
             return;
@@ -69,9 +70,11 @@ public sealed class RegionProgressBar : MonoBehaviour
         if (progressText == null) return;
         if (WonderMode)
         {
-            var w = WonderProgress.CurrentWonder(wonderCatalog);
+            int active = WonderProgress.ActiveEventIndex(wonderCatalog);
+            var w = wonderCatalog.Get(active);
             int count = w != null ? w.TaskCount : 0;
-            progressText.text = $"{WonderProgress.CurrentStage} / {count}";
+            int stage = w != null ? Mathf.Min(WonderProgress.StageOf(active), count) : 0;
+            progressText.text = $"{stage} / {count}";
             return;
         }
         progressText.text = $"{worldMap.UnlockedCount} / {worldMap.TotalRegions}";

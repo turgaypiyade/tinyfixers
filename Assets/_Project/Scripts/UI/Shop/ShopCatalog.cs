@@ -116,7 +116,8 @@ public sealed class ShopRewardGroup
 [Serializable]
 public sealed class ShopReward
 {
-    public enum Kind { Coins, Stars, Life, Booster, InfiniteLifeTimed }
+    // Timed: süreli ücretsiz kullanım (TimedRewardService) — ör. level başı special'ları (Joker_*) ya da can.
+    public enum Kind { Coins, Stars, Life, Booster, InfiniteLifeTimed, Timed }
     public Kind kind = Kind.Coins;
 
     [Tooltip("Coins/Stars/Life miktarı, ya da Booster adedi.")]
@@ -125,6 +126,9 @@ public sealed class ShopReward
     [Tooltip("Kind=Booster ise hangi booster.")]
     public BoardController.BoosterMode booster = BoardController.BoosterMode.Single;
 
-    [Tooltip("Kind=InfiniteLifeTimed ise süre (saat).")]
+    [Tooltip("Kind=InfiniteLifeTimed / Timed ise süre (saat).")]
     public int durationHours = 1;
+
+    [Tooltip("Kind=Timed ise hangi ödül süreli bedava olur (Joker_PulseCore / Joker_Line / Joker_SystemOverride / Lives...).")]
+    public DailySlotRewardType timedType = DailySlotRewardType.Joker_Line;
 }

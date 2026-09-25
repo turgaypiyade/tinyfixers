@@ -12,6 +12,9 @@ public sealed class MainMenuRegionUnlockButton : MonoBehaviour
     [SerializeField] private RegionUnlockListPanel panel;
     [SerializeField] private WorldMapController worldMap;
 
+    [Tooltip("Atanırsa buton WONDER modunda çalışır: nokta, bölüm kapısı AÇIK ve yıldız yeterliyken yanar.")]
+    [SerializeField] private WonderCatalog wonderCatalog;
+
     [Tooltip("\"Açılabilir bölge var\" işareti (kırmızı nokta vb). Opsiyonel.")]
     [SerializeField] private GameObject notificationDot;
 
@@ -28,6 +31,8 @@ public sealed class MainMenuRegionUnlockButton : MonoBehaviour
     {
         PlayerWallet.OnTotalStarsChanged += HandleStarsChanged;
         if (worldMap != null) worldMap.OnRegionUnlocked += HandleRegionUnlocked;
+        WonderProgress.OnTaskCompleted += HandleWonderChanged;
+        WonderProgress.OnWonderCompleted += HandleWonderChanged;
         Refresh();
     }
 
@@ -35,10 +40,13 @@ public sealed class MainMenuRegionUnlockButton : MonoBehaviour
     {
         PlayerWallet.OnTotalStarsChanged -= HandleStarsChanged;
         if (worldMap != null) worldMap.OnRegionUnlocked -= HandleRegionUnlocked;
+        WonderProgress.OnTaskCompleted -= HandleWonderChanged;
+        WonderProgress.OnWonderCompleted -= HandleWonderChanged;
     }
 
     private void HandleStarsChanged(int _) => Refresh();
     private void HandleRegionUnlocked(WorldMapRegion _) => Refresh();
+    private void HandleWonderChanged(int _) => Refresh();
 
     private void OpenPanel()
     {
@@ -47,6 +55,18 @@ public sealed class MainMenuRegionUnlockButton : MonoBehaviour
 
     private void Refresh()
     {
+        // Wonder modu: nokta yalnız görev GERÇEKTEN başlatılabiliyorsa yanar
+        // (bölüm kapısı açık + yıldız yeterli) — kilitli göreve "hazır" işareti koyma.
+        if (wonderCatalog != null)
+        {
+            bool anyTaskLeft = WonderProgress.ActiveEventIndex(wonderCatalog) >= 0
+                               || WonderProgress.HasLockedEvent(wonderCatalog);
+            if (hideWhenCompleted) gameObject.SetActive(anyTaskLeft);
+            if (notificationDot != null)
+                notificationDot.SetActive(WonderProgress.HasStartableTask(wonderCatalog));
+            return;
+        }
+
         if (worldMap == null) return;
 
         bool allDone = worldMap.AllUnlocked;

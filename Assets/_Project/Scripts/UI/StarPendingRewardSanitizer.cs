@@ -5,6 +5,7 @@ public static class StarPendingRewardSanitizer
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void ClearStalePendingStarReward()
     {
+        if (RuntimeSimulationSession.IsActive) return;
         int pendingReward = PlayerPrefs.GetInt(StarFlyToWalletAnimator.PendingRewardKey, 0);
         if (pendingReward <= 0)
             return;

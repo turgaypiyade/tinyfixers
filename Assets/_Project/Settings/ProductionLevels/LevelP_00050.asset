@@ -36,7 +36,7 @@ MonoBehaviour:
   playerMaxHp: 100
   damagePerClearedTile: 5
   shieldProtectionPerPickup: 2
-  enemyAttackBaseDamage: 4
+  enemyAttackBaseDamage: 5
   battlefieldBackground: {fileID: 0}
   bossWaves: []
   bossWaveCount: 1

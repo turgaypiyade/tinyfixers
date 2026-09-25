@@ -12,7 +12,9 @@ public static class TimedRewardService
     public static void Grant(DailySlotRewardType type, int minutes)
     {
         if (minutes <= 0) return;
-        long expiry = DateTime.UtcNow.AddMinutes(minutes).Ticks;
+        // Aktif süre varsa ÜSTÜNE eklenir (ikinci paket/ödül süreyi ezmesin, uzatsın).
+        DateTime start = DateTime.UtcNow + GetRemaining(type);
+        long expiry = start.AddMinutes(minutes).Ticks;
         PlayerPrefs.SetString(Key(type), expiry.ToString());
         PlayerPrefs.Save();
         Debug.Log($"[TimedReward] {type} → {minutes} dk ücretsiz.");

@@ -270,7 +270,10 @@ public class MatchFinder
     //  FindAllMatches — MAIN HOT PATH
     // ─────────────────────────────────────────────────────────────
 
-    public HashSet<TileData> FindAllMatches()
+    public HashSet<TileData> FindAllMatches() => FindAllMatches(logDiagnostics: true);
+
+    // Hypothetical bot boards and polling queries should not produce gameplay snapshots.
+    public HashSet<TileData> FindAllMatches(bool logDiagnostics)
     {
         _findAllResult.Clear();
 
@@ -371,7 +374,7 @@ public class MatchFinder
         Add2x2Matches(_findAllResult);
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        LogFindAllMatchesDebug(_findAllResult);
+        if (logDiagnostics) LogFindAllMatchesDebug(_findAllResult);
 #endif
 
         return _findAllResult;
@@ -815,6 +818,17 @@ public class MatchFinder
         return HasAnyPlayableSwap(null);
     }
 
+    /// <summary>Read-only move query for automated players; uses the live swap rules.</summary>
+    public bool IsPlayableSwap(int ax, int ay, int bx, int by)
+    {
+        if (Mathf.Abs(ax - bx) + Mathf.Abs(ay - by) != 1
+            || !IsSwappableNeighbor(ax, ay, null) || !IsSwappableNeighbor(bx, by, null)) return false;
+        var a = board.Tiles[ax, ay];
+        var b = board.Tiles[bx, by];
+        if (a.GetSpecial() != TileSpecial.None || b.GetSpecial() != TileSpecial.None) return true;
+        return WouldSwapCreateMatch(ax, ay, bx, by);
+    }
+
     public bool HasAnyPlayableSwap(IReadOnlyCollection<Vector2Int> additionallyLockedCells)
     {
         for (int y = 0; y < board.Height; y++)
@@ -849,7 +863,9 @@ public class MatchFinder
         if (tile == null || tile.GetSpecial() == TileSpecial.None)
             return false;
 
-        if (IsAdditionallyLocked(x, y, additionallyLockedCells))
+        // Special'ın KENDİSİ de oynanabilir olmalı: kafesli (magnet kilidi → interaction-locked) ya da
+        // oil altındaki special hamle sayılmaz; yoksa tek hamle o olduğunda deadlock shuffle hiç tetiklenmez.
+        if (!IsSwappableNeighbor(x, y, additionallyLockedCells))
             return false;
 
         return IsSwappableNeighbor(x - 1, y, additionallyLockedCells)

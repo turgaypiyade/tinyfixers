@@ -21,6 +21,9 @@ public static class BackendServices
             ? new SimTeamService()
             : new FirebaseTeamService();
 
+    /// <summary>Tick an existing team's inbox without opening a backend connection.</summary>
+    public static void TickTeamLives() => team?.LifeInbox.Tick(System.DateTime.UtcNow);
+
     /// <summary>
     /// Takım servisini sıfırla — takıma katılınca/kurunca/ayrılınca çağrılır; eski
     /// servisin dinleyicileri kapatılır, sonraki erişim taze servis kurar.

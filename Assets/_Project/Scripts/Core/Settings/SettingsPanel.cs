@@ -166,6 +166,16 @@ public class SettingsPanel : MonoBehaviour
 
     private void OnFollowInstagramClicked()
     {
+        RuntimeChoicePopup.Show("Instagram", "Tiny Fixers'ı Instagram'da takip et!",
+            new RuntimeChoicePopup.Choice("Instagram'ı Aç", () =>
+            {
+                if (this != null) OpenInstagram();
+            }, primary: true),
+            new RuntimeChoicePopup.Choice("Vazgeç", null));
+    }
+
+    private void OpenInstagram()
+    {
         // Instagram URL'i aç
         if (!string.IsNullOrEmpty(instagramUrl))
             Application.OpenURL(instagramUrl);

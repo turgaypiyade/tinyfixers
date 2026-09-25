@@ -32,7 +32,7 @@ public class BoardVisualCoordinator
     /// <summary>
     /// Cascade fall action'larını ana sequencer'ın DIŞINDA koşturur; match taşları hücrelerine
     /// vardıklarında (TileView.FallArrived event'i — timed/polling senkron YOK) runClear'ı paralel
-    /// başlatır. Hem fall hem clear bitince döner (resolve loop state'i tutarlı kalsın).
+    /// başlatır. Kesintisiz motorda clear bitince refill devam eder; eski yolda fall da beklenir.
     /// </summary>
     public IEnumerator PlayFallWithOverlappedClear(
         List<BoardAction> fallActions,
@@ -43,10 +43,35 @@ public class BoardVisualCoordinator
         // Match grubundaki yerleşik taşlar FallArrived atmaz; onları pending'e koymak overlap'i
         // fallDone'a kadar kilitler ve cascade→clear arasında görünen gecikmeyi geri getirir.
         var pending = new HashSet<TileView>();
+        var participants = new Dictionary<TileView, (int lifetime, int x, int y)>();
         if (matchTiles != null)
         {
             foreach (var t in matchTiles)
-                if (t != null && t && t.IsPlannedToMoveThisFallPass) pending.Add(t);
+            {
+                if (t == null) continue;
+                participants[t] = (t.LifetimeVersion, t.X, t.Y);
+                if (t.IsPlannedToMoveThisFallPass
+                    || (board.UseContinuousFallMotion && t.RuntimeState == TileRuntimeState.Falling))
+                {
+                    if (board.UseContinuousFallMotion && (t.HasArrivedForPlannedFall
+                        || board.IsTileReadyForContinuousMatch(t))) continue;
+                    pending.Add(t);
+                }
+            }
+        }
+
+        bool IsOriginalMatch()
+        {
+            foreach (var pair in participants)
+            {
+                var t = pair.Key;
+                var original = pair.Value;
+                if (t == null || !t.IsCurrentLifetime(original.lifetime)
+                    || t.X != original.x || t.Y != original.y
+                    || board.GetTileViewAt(original.x, original.y) != t)
+                    return false;
+            }
+            return true;
         }
 
         Action<TileView> onArrived = null;
@@ -56,20 +81,44 @@ public class BoardVisualCoordinator
             t.FallArrived += onArrived;
 
         bool fallDone = false;
-        board.StartCoroutine(RunActionsDetached(fallActions, () => fallDone = true));
+        try
+        {
+            board.StartCoroutine(RunActionsDetached(fallActions, () => fallDone = true));
 
-        // Match'i oluşturan hareketli taşlar event'le varana kadar bekle (poll DEĞİL —
-        // handler pending'i boşaltır). Hiç hareketli match taşı yoksa seri davranışa dön.
-        while (!fallDone && (pending.Count > 0 || subscribed.Count == 0))
-            yield return null;
+            while (board.UseContinuousFallMotion
+                ? pending.Count > 0
+                : !fallDone && (pending.Count > 0 || subscribed.Count == 0))
+            {
+                // An earlier pass may still own a pending match tile after THIS fall action
+                // finishes. Wait for its arrival too. Events are a fast path, not the only
+                // completion signal: a replacement movement can settle without emitting one.
+                // Queued/active/parked motions and off-grid tiles cannot pass the fallback.
+                if (board.UseContinuousFallMotion)
+                {
+                    // A pooled/replaced participant invalidates this match. Return to the
+                    // resolver to find current groups, rather than clearing its replacement.
+                    if (!IsOriginalMatch()) yield break;
+                    pending.RemoveWhere(t => t.HasArrivedForPlannedFall
+                        || board.IsTileReadyForContinuousMatch(t));
+                }
+                if (board.UseContinuousFallMotion && pending.Count == 0) break;
+                yield return null;
+            }
+        }
+        finally
+        {
+            foreach (var t in subscribed)
+                if (t != null && t) t.FallArrived -= onArrived;
+        }
 
-        foreach (var t in subscribed)
-            if (t != null && t) t.FallArrived -= onArrived;
+        if (board.UseContinuousFallMotion && !IsOriginalMatch()) yield break;
 
         bool clearDone = false;
         board.StartCoroutine(Wrap(runClear != null ? runClear() : null, () => clearDone = true));
 
-        while (!fallDone || !clearDone)
+        // Once the clear opens space, let ResolveBoard plan the next fall immediately.
+        // The detached tail retains a job handle so level-end cannot overtake it.
+        while (!clearDone || (!board.UseContinuousFallMotion && !fallDone))
             yield return null;
     }
 
@@ -77,18 +126,23 @@ public class BoardVisualCoordinator
     // bağımsız (detached) koşar → resolve loop bunu beklerken sequencer clear için serbest kalır.
     private IEnumerator RunActionsDetached(List<BoardAction> actions, Action onDone)
     {
-        if (actions != null)
+        using var fallJob = board.UseContinuousFallMotion
+            ? board.BeginJob(BoardController.BoardJobKind.DetachedFall) : null;
+        try
         {
-            foreach (var a in actions)
+            if (actions != null)
             {
-                if (a == null) continue;
-                if (a.Blocking)
-                    yield return board.StartCoroutine(a.ExecuteVisuals(sequencer));
-                else
-                    board.StartCoroutine(a.ExecuteVisuals(sequencer));
+                foreach (var a in actions)
+                {
+                    if (a == null) continue;
+                    if (a.Blocking)
+                        yield return board.StartCoroutine(a.ExecuteVisuals(sequencer));
+                    else
+                        board.StartCoroutine(a.ExecuteVisuals(sequencer));
+                }
             }
         }
-        onDone?.Invoke();
+        finally { onDone?.Invoke(); }
     }
 
     // Coroutine'i istisna-güvenli adımlar; bitince onDone çağırır (RunTogether deseni).

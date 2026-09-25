@@ -37,6 +37,9 @@ public sealed class ParallelColumnFallAction : BoardAction
         if (board != null && tileCount > 0)
             board.PlayTileFallSfx(tileCount, maxDist);
 
+        // Kesintisiz düşüşte sütun aksiyonları tek akış sırasıyla başlar (çapraz taş doğru sıraya girer).
+        FallAction.PrimeContinuous(columnFalls, board);
+
         int inFlight = 0;
 
         foreach (var fall in columnFalls)

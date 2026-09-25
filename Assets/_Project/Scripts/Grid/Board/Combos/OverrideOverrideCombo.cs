@@ -53,28 +53,24 @@ public sealed class OverrideOverrideCombo
             if (rt.Context.OverrideDeferredPulseExplosions.Count == 0)
                 rt.CleanupImplantedTiles?.Invoke(rt.Context);
 
-            if (rt.Context.OverrideRadialClearDelays != null && rt.Context.OverrideRadialClearDelays.Count > 0)
-                rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
-            
-            // Eğer Event-driven clear açıksa ve özel görsel metodu (henüz event-driven desteklemiyorsa)
-            // FireOverrideOverrideSpecialVisuals eski delayleri kullanmaya devam edebilir (veya ileride güncellenebilir).
-            // Şimdilik sadece MatchClearAction için ayarları yapıyoruz.
-
             bool useRunner = specialCells != null && specialCells.Count > 0;
 
-            // Sıra: special'ları anchor'la (clear sırasında düşmesinler) → tüm-board clear (special'lar
-            // hariç) → runner special'ları paralel ateşler (boş board'a, obstacle hit'leri uygulanır) →
-            // anchor release. Çift-temizleme güvenli (ClearAndDestroyTile idempotent).
+            // Hold specials at their cells until the radial front arrives. Each arrival
+            // launches that cell's chain while the rest of the wave continues.
             if (useRunner)
                 result.Actions.Add(new PendingTriggeredSpecialScopeAction(specialCells, true));
 
-            result.Actions.Add(BuildClearAction(rt.Context));
-
+            var clear = BuildClearAction(rt.Context);
             if (useRunner)
-            {
-                result.Actions.Add(rt.BuildMixedChainForCells(specialCells));
+                foreach (var cell in specialCells)
+                {
+                    var target = cell;
+                    clear.AddArrivalTrigger(target, () =>
+                        rt.Board.StartImmediateAction(rt.BuildMixedChainForCells(new List<Vector2Int> { target })));
+                }
+            result.Actions.Add(clear);
+            if (useRunner)
                 result.Actions.Add(new PendingTriggeredSpecialScopeAction(specialCells, false));
-            }
         }
 
         return result;

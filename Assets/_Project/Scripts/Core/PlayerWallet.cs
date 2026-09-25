@@ -24,6 +24,7 @@ public static class PlayerWallet
 
     public static void AddCoins(int amount)
     {
+        if (RuntimeSimulationSession.IsActive) return;
         if (amount <= 0) return;
         int newVal = Coins + amount;
         PlayerPrefs.SetInt(KeyCoins, newVal);
@@ -37,6 +38,7 @@ public static class PlayerWallet
     /// </summary>
     public static bool SpendCoins(int amount)
     {
+        if (RuntimeSimulationSession.IsActive) return false;
         if (amount <= 0) return true;
         int current = Coins;
         if (current < amount) return false;
@@ -62,6 +64,7 @@ public static class PlayerWallet
     /// </summary>
     public static void SetLevelStars(int level, int stars)
     {
+        if (RuntimeSimulationSession.IsActive) return;
         stars = Mathf.Clamp(stars, 0, 3);
         string key = KeyLevelStars + level;
 
@@ -88,6 +91,7 @@ public static class PlayerWallet
     /// </summary>
     public static void AddStars(int amount)
     {
+        if (RuntimeSimulationSession.IsActive) return;
         if (amount <= 0) return;
         int newTotal = TotalStars + amount;
         PlayerPrefs.SetInt(KeyTotalStars, newTotal);
@@ -102,6 +106,7 @@ public static class PlayerWallet
     /// </summary>
     public static bool SpendStars(int amount)
     {
+        if (RuntimeSimulationSession.IsActive) return false;
         if (amount <= 0) return true;
         int current = TotalStars;
         if (current < amount) return false;
@@ -138,6 +143,7 @@ public static class PlayerWallet
     /// </summary>
     public static void SetLevelScore(int level, int score)
     {
+        if (RuntimeSimulationSession.IsActive) return;
         if (score < 0) score = 0;
         string key = KeyLevelScore + level;
 

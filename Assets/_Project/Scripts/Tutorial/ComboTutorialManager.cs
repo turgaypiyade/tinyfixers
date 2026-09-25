@@ -11,6 +11,7 @@ public class ComboTutorialManager : MonoBehaviour
 
     private void Start()
     {
+        if (RuntimeSimulationSession.IsActive) return;
         StartCoroutine(Init());
     }
 

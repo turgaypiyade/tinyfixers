@@ -59,10 +59,13 @@ public class PulseCoreImpactService
     }
 
 
+    // worldCenterOverride: patlamanın GÖRSEL merkezi hücre ortası değilse (ör. PatchBot'un taşıdığı pulse
+    // çok hücreli bir obstacle'ın ortasına iner) — alan/halka mantığı yine (x,y) hücresinden.
     public void PlayPulseCoreExplosionVfxAtCell(int x, int y, int radiusCells = 2,
-                                                System.Action<float> onRadiusPx = null)
+                                                System.Action<float> onRadiusPx = null,
+                                                Vector3? worldCenterOverride = null)
     {
-        Vector3 worldCenter = board.GetCellWorldCenterPosition(x, y);
+        Vector3 worldCenter = worldCenterOverride ?? board.GetCellWorldCenterPosition(x, y);
 
         if (board.BoardVfxPlayer != null)
         {

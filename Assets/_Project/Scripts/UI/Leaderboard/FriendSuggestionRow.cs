@@ -28,6 +28,7 @@ public sealed class FriendSuggestionRow : MonoBehaviour
         Wire();
 
         if (nameText != null) nameText.text = profile != null ? profile.name : "";
+        SingleLineText.Fit(nameText);
         if (mutualText != null) mutualText.text = profile != null ? $"{profile.mutualCount} ortak arkadaş" : "";
         if (avatar != null)
         {

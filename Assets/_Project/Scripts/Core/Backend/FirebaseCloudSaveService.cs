@@ -53,6 +53,7 @@ public static class FirebaseCloudSaveService
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
     {
+        if (RuntimeSimulationSession.IsActive) return;
         var go = new GameObject("CloudSave");
         UnityEngine.Object.DontDestroyOnLoad(go);
         go.AddComponent<CloudSaveBehaviour>();
@@ -164,6 +165,7 @@ public static class FirebaseCloudSaveService
     /// <summary>Yerel manifest verisini buluta yazar (merge). Restore çözülmeden çalışmaz.</summary>
     public static void Push()
     {
+        if (RuntimeSimulationSession.IsActive) return;
         if (!RestoreResolved || !FirebaseAuthService.IsReady || pushInFlight) return;
 
         // Anti-hack: buluta GÜVENİLİR coins/stars (base+delta) gitsin — Collect ham (belki

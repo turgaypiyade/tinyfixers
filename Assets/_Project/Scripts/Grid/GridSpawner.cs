@@ -1009,9 +1009,9 @@ public class GridSpawner : MonoBehaviour
 
     private LevelData ResolveLevelData()
     {
-        var sourceLevel = levelRuntimeSelector != null
-            ? levelRuntimeSelector.ResolveLevelData()
-            : null;
+        var sourceLevel = RuntimeSimulationSession.IsActive
+            ? RuntimeSimulationSession.CurrentLevel
+            : levelRuntimeSelector != null ? levelRuntimeSelector.ResolveLevelData() : null;
 
         sourceLevel ??= level;
         var runtimeClone = CloneLevelDataForRuntime(sourceLevel);

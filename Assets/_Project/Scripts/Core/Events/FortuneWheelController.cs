@@ -551,7 +551,7 @@ public class FortuneWheelController : MonoBehaviour
                 yield break;
             }
             if (countdownText != null)
-                countdownText.text = $"{(int)remaining.TotalHours:D2}:{remaining.Minutes:D2}:{remaining.Seconds:D2}";
+                countdownText.text = TimeFormat.Countdown(remaining);
             yield return new WaitForSecondsRealtime(1f);
         }
     }

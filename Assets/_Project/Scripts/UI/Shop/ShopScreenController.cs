@@ -70,6 +70,15 @@ public sealed class ShopScreenController : MonoBehaviour
     private void Build()
     {
         ClearSpawned();
+        PopulateOffers(catalog, theme, contentContainer, sectionHeaderPrefab, bundleCardPrefab, coinRowPrefab,
+            HandlePurchase, spawned);
+    }
+
+    /// <summary>Katalog bölümlerini + kartlarını container'a basar (ana menü market'i ve oyun içi market ortak).</summary>
+    public static void PopulateOffers(ShopCatalog catalog, UITheme theme, RectTransform contentContainer,
+        ShopSectionHeader sectionHeaderPrefab, ShopOfferCard bundleCardPrefab, ShopCoinRowCard coinRowPrefab,
+        System.Action<ShopOffer> onPurchase, List<GameObject> spawned)
+    {
         if (catalog == null || contentContainer == null) return;
 
         foreach (var section in catalog.sections)
@@ -94,7 +103,7 @@ public sealed class ShopScreenController : MonoBehaviour
                 if (prefab == null) continue;
 
                 var card = Instantiate(prefab, contentContainer);
-                card.Configure(offer, theme, HandlePurchase);
+                card.Configure(offer, theme, onPurchase);
                 spawned.Add(card.gameObject);
             }
         }
@@ -112,37 +121,20 @@ public sealed class ShopScreenController : MonoBehaviour
     {
         if (offer == null) return;
 
-        switch (offer.priceType)
+        if (offer.priceType == ShopOffer.PriceType.RealMoney)
+            onRealMoneyPurchaseRequested?.Invoke(offer.id);   // IAP kancası
+
+        if (ShopPurchaseService.TryPurchase(offer))
         {
-            case ShopOffer.PriceType.Coins:
-                if (PlayerWallet.SpendCoins(offer.priceAmount))
-                    Fulfil(offer);
-                break;
-
-            case ShopOffer.PriceType.Stars:
-                if (PlayerWallet.SpendStars(offer.priceAmount))
-                    Fulfil(offer);
-                break;
-
-            case ShopOffer.PriceType.Free:
-                Fulfil(offer);
-                break;
-
-            case ShopOffer.PriceType.RealMoney:
-                if (comingSoonHint != null) comingSoonHint.SetActive(true);
-                onRealMoneyPurchaseRequested?.Invoke(offer.id);
-                break;
+            ShowToast(offer.displayName + " alındı!");
+            // Bakiye + uygunluk değişti → kartları tazele.
+            Build();
+            RefreshBalances();
         }
-    }
-
-    private void Fulfil(ShopOffer offer)
-    {
-        ShopState.RecordPurchase(offer);   // günlük/tek-seferlik tekliflerin durumunu kaydet
-        ShopRewardGranter.Grant(offer);
-        ShowToast(offer.displayName + " alındı!");
-        // Bakiye + uygunluk değişti → kartları tazele.
-        Build();
-        RefreshBalances();
+        else if (offer.priceType == ShopOffer.PriceType.RealMoney && comingSoonHint != null)
+        {
+            comingSoonHint.SetActive(true);
+        }
     }
 
     private void ShowToast(string message)

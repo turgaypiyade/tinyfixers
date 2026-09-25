@@ -39,17 +39,17 @@ MonoBehaviour:
   - {fileID: 21300000, guid: e33a13330145a40e9b9c1307d4abe674, type: 3}
   - {fileID: 21300000, guid: 1b84d161e03ef41329ba93986ee4f316, type: 3}
   - {fileID: 21300000, guid: 2ffe2b14db1084a7182210ce7ae161d6, type: 3}
-  - {fileID: 21300000, guid: e124f76cf16604869ae9416fe5932f6d, type: 3}
+  - {fileID: 21300000, guid: c0da2777d4a5e4677bd10bd2d6980102, type: 3}
   loadingHints:
-  - image: {fileID: 21300000, guid: 36fdba37bc1404ef4b078a00204c67e6, type: 3}
+  - image: {fileID: 21300000, guid: 227f7f906fe094eb68e53870408ec840, type: 3}
     titleLocalizationKey: loading_hint_3match_title
     descriptionLocalizationKey: loading_hint_3match_desc
     loadingLocalizationKey: loading_hint_loading
-  - image: {fileID: 21300000, guid: 25f2c7b5d9b5e4226867623aad291882, type: 3}
+  - image: {fileID: 21300000, guid: 36fdba37bc1404ef4b078a00204c67e6, type: 3}
     titleLocalizationKey: loading_hint_lineh_title
     descriptionLocalizationKey: loading_hint_lineh_desc
     loadingLocalizationKey: loading_hint_loading
-  - image: {fileID: 21300000, guid: 36fdba37bc1404ef4b078a00204c67e6, type: 3}
+  - image: {fileID: 21300000, guid: 25f2c7b5d9b5e4226867623aad291882, type: 3}
     titleLocalizationKey: loading_hint_linev_title
     descriptionLocalizationKey: loading_hint_linev_desc
     loadingLocalizationKey: loading_hint_loading

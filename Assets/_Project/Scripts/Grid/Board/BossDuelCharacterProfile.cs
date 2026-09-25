@@ -24,6 +24,14 @@ public sealed class BossDuelCharacterProfile : ScriptableObject
         public Vector2 handPoint = new Vector2(0.75f, 0.4f);
     }
 
+    [Serializable]
+    public sealed class AttackPoseFrame
+    {
+        public Pose pose = new Pose();
+        [Tooltip("Share of the phase duration spent on this pose; does not add damage events.")]
+        [Min(0.01f)] public float weight = 1f;
+    }
+
     public Pose idle = new Pose();
     public Pose idleAlternate = new Pose();
     public Pose blink = new Pose();
@@ -37,6 +45,11 @@ public sealed class BossDuelCharacterProfile : ScriptableObject
     public Pose shieldHit = new Pose();
     public Pose victory = new Pose();
     public Pose defeated = new Pose();
+    [Header("Optional melee pose sequences")]
+    [Tooltip("Plays within windupDuration. Empty profiles retain the single windup pose.")]
+    public AttackPoseFrame[] windupFrames = Array.Empty<AttackPoseFrame>();
+    [Tooltip("Plays during the return dash within recoveryDuration. Empty profiles use focused.")]
+    public AttackPoseFrame[] recoveryFrames = Array.Empty<AttackPoseFrame>();
     [Header("Obstacle throw — from the idle ground position")]
     public ThrowFrame[] throwFrames = Array.Empty<ThrowFrame>();
     [Range(1f, 30f)] public float throwFramesPerSecond = 16f;

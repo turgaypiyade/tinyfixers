@@ -201,6 +201,7 @@ MonoBehaviour:
   senderText: {fileID: 8305582890316222501}
   messageText: {fileID: 7599611729003637590}
   timeText: {fileID: 7532563318028314894}
+  acceptLifeGreenSprite: {fileID: 21300000, guid: 70e3150ad309548e198152791f35f7dc, type: 3}
 --- !u!1 &3246676865081692366
 GameObject:
   m_ObjectHideFlags: 0

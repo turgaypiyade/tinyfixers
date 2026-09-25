@@ -65,5 +65,6 @@ public class LivesTimerService : MonoBehaviour
         if (_elapsed < 1f) return;
         _elapsed = 0f;
         LivesManager.TickRegen();
+        BackendServices.TickTeamLives();
     }
 }

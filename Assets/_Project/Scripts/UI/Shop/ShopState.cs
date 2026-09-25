@@ -50,10 +50,9 @@ public static class ShopState
         PlayerPrefs.Save();
     }
 
-    /// <summary>Geri sayım etiketi: ">1s" ise "23:59", altındaysa "12:30:05".</summary>
+    /// <summary>Geri sayım etiketi — tek biçim TimeFormat.Countdown.</summary>
     public static string FormatRemaining(TimeSpan t)
     {
-        if (t.TotalHours >= 1) return $"{(int)t.TotalHours:00}:{t.Minutes:00}:{t.Seconds:00}";
-        return $"{t.Minutes:00}:{t.Seconds:00}";
+        return TimeFormat.Countdown(t);
     }
 }

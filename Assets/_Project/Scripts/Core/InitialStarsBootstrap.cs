@@ -20,6 +20,7 @@ public static class InitialStarsBootstrap
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void GrantInitialStarsIfFirstLaunch()
     {
+        if (RuntimeSimulationSession.IsActive) return;
         if (PlayerPrefs.GetInt(KeyInitialStarsGranted, 0) == 1)
             return;
 

@@ -210,10 +210,22 @@ public sealed class BossDuelCharacterView : MonoBehaviour
         attacking = true;
         try
         {
-            Show(profile.windup);
             float windup = Mathf.Max(0.02f, profile.windupDuration);
             if (finisher) windup *= Mathf.Clamp(profile.finisherWindupMultiplier, 1f, 3f);
-            yield return new WaitForSeconds(windup);
+            if (profile.windupFrames != null && profile.windupFrames.Length > 0)
+            {
+                for (float t = 0f; t < windup; t += Time.deltaTime)
+                {
+                    if (finished || version != poseVersion || cancelled()) yield break;
+                    Show(SelectAttackPose(profile.windupFrames, t / windup, profile.windup));
+                    yield return null;
+                }
+            }
+            else
+            {
+                Show(profile.windup);
+                yield return new WaitForSeconds(windup);
+            }
             if (finished || version != poseVersion || cancelled()) yield break;
 
             // Bring the hammer/fists close to the opponent without moving HP bars or hit roots.
@@ -238,7 +250,8 @@ public sealed class BossDuelCharacterView : MonoBehaviour
                 for (float t = 0f; t < approach; t += Time.deltaTime)
                 {
                     if (finished || version != poseVersion || cancelled()) yield break;
-                    Show(swingPose, FinisherArcOffset(reach, slowArcEnd * Mathf.Clamp01(t / approach), jumpHeight));
+                    // Keep the raised weapon through the slow hop; swing only on the fast descent.
+                    Show(profile.windup, FinisherArcOffset(reach, slowArcEnd * Mathf.Clamp01(t / approach), jumpHeight));
                     attackVfx.TickTrail(Time.deltaTime);
                     yield return null;
                 }
@@ -282,7 +295,9 @@ public sealed class BossDuelCharacterView : MonoBehaviour
             for (float t = 0f; t < duration; t += Time.deltaTime)
             {
                 if (finished || version != poseVersion) yield break;
-                Show(profile.focused, Vector2.Lerp(reach, Vector2.zero, Mathf.Clamp01(t / duration)));
+                float progress = Mathf.Clamp01(t / duration);
+                Show(SelectAttackPose(profile.recoveryFrames, progress, profile.focused),
+                    Vector2.Lerp(reach, Vector2.zero, progress));
                 attackVfx.TickTrail(Time.deltaTime);
                 yield return null;
             }
@@ -302,6 +317,27 @@ public sealed class BossDuelCharacterView : MonoBehaviour
                 else if (!finished) ShowRestPose();
             }
         }
+    }
+
+    private static BossDuelCharacterProfile.Pose SelectAttackPose(
+        BossDuelCharacterProfile.AttackPoseFrame[] frames, float progress, BossDuelCharacterProfile.Pose fallback)
+    {
+        if (frames == null || frames.Length == 0) return fallback;
+        float total = 0f;
+        foreach (var frame in frames)
+            if (frame != null && frame.pose != null && frame.pose.sprite != null)
+                total += Mathf.Max(0.01f, frame.weight);
+        if (total <= 0f) return fallback;
+        float remaining = Mathf.Clamp01(progress) * total;
+        var last = fallback;
+        foreach (var frame in frames)
+        {
+            if (frame == null || frame.pose == null || frame.pose.sprite == null) continue;
+            last = frame.pose;
+            remaining -= Mathf.Max(0.01f, frame.weight);
+            if (remaining < 0f) return last;
+        }
+        return last;
     }
 
     private static Vector2 FinisherArcOffset(Vector2 reach, float progress, float height)

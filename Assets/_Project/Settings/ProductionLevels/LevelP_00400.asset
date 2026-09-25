@@ -31,14 +31,12 @@ MonoBehaviour:
   introHoldDuration: 1.1
   bossAttackEveryMoves: 4
   bossAttackOilCount: 2
+  bossThrownObstacles: 0e000000080000000b0000000c000000
+  bossMaxPressureObstacles: 8
   playerMaxHp: 155
   damagePerClearedTile: 1
-  enemyAttackBaseDamage: 7
-  enemyAttackDamageGrowth: 4
-  enemyAttackInterval: 1.2
-  bossMaxPressureObstacles: 8
   shieldProtectionPerPickup: 2
-  bossThrownObstacles: 0e000000080000000b0000000c000000
+  enemyAttackBaseDamage: 7
   battlefieldBackground: {fileID: 0}
   bossWaves: []
   bossWaveCount: 3
@@ -56,13 +54,7 @@ MonoBehaviour:
   - originCellIndex: 53
     direction: 2
     length: 4
-  - originCellIndex: 39
-    direction: 2
-    length: 4
   - originCellIndex: 45
-    direction: 3
-    length: 4
-  - originCellIndex: 41
     direction: 3
     length: 4
   - originCellIndex: 35
@@ -70,6 +62,12 @@ MonoBehaviour:
     length: 4
   - originCellIndex: 27
     direction: 3
+    length: 4
+  - originCellIndex: 36
+    direction: 3
+    length: 4
+  - originCellIndex: 44
+    direction: 2
     length: 4
   magnets: []
   safes: []

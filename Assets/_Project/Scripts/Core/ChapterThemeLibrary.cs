@@ -89,6 +89,12 @@ public class ChapterThemeLibrary : ScriptableObject
             return null;
 
         var list = theme.loadingScreenImages;
-        return list[Random.Range(0, list.Count)];
+        int start = Random.Range(0, list.Count);
+        for (int i = 0; i < list.Count; i++)
+        {
+            var sprite = list[(start + i) % list.Count];
+            if (sprite != null) return sprite;
+        }
+        return null;
     }
 }

@@ -63,7 +63,7 @@ public sealed class RisingTopHud : MonoBehaviour
 
         DateTime end = SafariSchedule.GetWindowEnd(controller != null ? controller.Config : null, now);
         long seconds = end > now ? (long)Math.Ceiling((end - now).TotalSeconds) : 0;
-        timerValueText.text = $"{seconds / 3600:00}:{seconds / 60 % 60:00}:{seconds % 60:00}";
+        timerValueText.text = TimeFormat.Countdown(TimeSpan.FromSeconds(seconds));
     }
 
     /// <summary>Statik başlıkları (mor bant + kutu etiketleri) mevcut dile göre günceller.</summary>

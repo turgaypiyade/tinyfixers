@@ -121,13 +121,9 @@ public sealed class SafariEventButton : MonoBehaviour
         return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
     }
 
-    // >= 1 saat kalınca SS:DD:ss, aksi halde DD:ss.
+    // Tek biçim: TimeFormat.Countdown (gün / SS:DD:ss / DD:ss).
     private static string FormatCountdown(TimeSpan remaining)
     {
-        int totalSeconds = Mathf.Max(0, Mathf.CeilToInt((float)remaining.TotalSeconds));
-        int h = totalSeconds / 3600;
-        int m = (totalSeconds % 3600) / 60;
-        int s = totalSeconds % 60;
-        return h > 0 ? $"{h:00}:{m:00}:{s:00}" : $"{m:00}:{s:00}";
+        return TimeFormat.Countdown(remaining);
     }
 }

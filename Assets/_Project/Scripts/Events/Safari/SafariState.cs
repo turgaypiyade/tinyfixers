@@ -29,6 +29,27 @@ public static class SafariState
     private const string KeyFailSnapshot  = "safari_fail_snapshot";   // tur başında PlayerStats.LevelFailCount
     private const string KeyFallUntil    = "safari_fall_until_ticks";
 
+    private const string KeyRewardClaimed = "safari_reward_claimed";
+
+    public static bool RewardClaimed => PlayerPrefs.GetInt(KeyRewardClaimed, 0) == 1;
+
+    public static void MarkRewardClaimed()
+    {
+        PlayerPrefs.SetInt(KeyRewardClaimed, 1);
+        PlayerPrefs.Save();
+    }
+
+    public static void BeginRun(DateTime utcNow)
+    {
+        PlayerPrefs.SetInt(KeyPitstop, 0);
+        PlayerPrefs.SetInt(KeyRunStatus, (int)SafariRunStatus.Idle);
+        PlayerPrefs.SetInt(KeyRewardClaimed, 0);
+        PlayerPrefs.SetString(KeyFallUntil, "0");
+        PlayerPrefs.SetInt(KeyLevelSnapshot, 0);
+        PlayerPrefs.SetInt(KeyFailSnapshot, 0);
+        MarkJoined(utcNow);
+    }
+
     public static event Action OnChanged;
 
     // İkon event'in KENDİ config'inde (SafariConfig, Resources) — provider oradan okur.
@@ -72,13 +93,15 @@ public static class SafariState
         PlayerPrefs.SetString(KeyCycle, current);
         // Yeni pencere → temiz başla.
         PlayerPrefs.SetInt(KeyJoined, 0);
+        PlayerPrefs.SetInt(KeyRewardClaimed, 0);
         PlayerPrefs.SetInt(KeyPitstop, 0);
         PlayerPrefs.SetString(KeyJoinTime, "0");
         PlayerPrefs.SetString(KeyLastAsk, "0");
         PlayerPrefs.SetInt(KeyRunStatus, (int)SafariRunStatus.Idle);
         PlayerPrefs.SetInt(KeyLevelSnapshot, 0);
         PlayerPrefs.SetInt(KeyFailSnapshot, 0);
-        PlayerPrefs.SetString(KeyFallUntil, "0");
+        if (FallCooldownRemaining(utcNow) <= TimeSpan.Zero)
+            PlayerPrefs.SetString(KeyFallUntil, "0");
         PlayerPrefs.Save();
         OnChanged?.Invoke();
     }
@@ -176,7 +199,7 @@ public static class SafariState
     public static void DebugClearAll()
     {
         foreach (var k in new[] { KeyCycle, KeyJoined, KeyPitstop, KeyJoinTime,
-                                  KeyLastAsk, KeyRunStatus, KeyLevelSnapshot, KeyFailSnapshot, KeyFallUntil })
+                                  KeyLastAsk, KeyRunStatus, KeyLevelSnapshot, KeyFailSnapshot, KeyFallUntil, KeyRewardClaimed })
             PlayerPrefs.DeleteKey(k);
         PlayerPrefs.Save();
         OnChanged?.Invoke();

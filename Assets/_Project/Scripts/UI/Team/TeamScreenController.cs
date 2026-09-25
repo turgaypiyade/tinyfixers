@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,7 +7,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Takım ekranı (sade sohbet). Üst bilgi (amblem, isim, üye sayısı), altında sohbet akışı
 /// (gelen mesaj solda, benimki sağda), en altta "Can İste" / "Mesaj". Mesaj'a basınca
-/// bottom bar üstünde tek satırlık input açılır. v1'de MockTeamService. (Event/hediye YOK.)
+/// bottom bar üstünde tek satırlık input açılır. Bot can yardımları akışta kabul edilir.
 /// </summary>
 public sealed class TeamScreenController : MonoBehaviour
 {
@@ -53,10 +54,15 @@ public sealed class TeamScreenController : MonoBehaviour
     private ITeamService service;
     private readonly List<GameObject> feed = new();
     private bool wired;
+    private TMP_Text requestLifeLabel;
+    private string defaultRequestLifeLabel;
+    private readonly List<TeamChatRow> lifeReplyRows = new();
 
     private void OnEnable()
     {
         WireButtons();
+        LivesTimerService.EnsureExists();
+        LivesManager.OnLivesChanged += RefreshLifeControls;
         if (messageInputRoot != null) messageInputRoot.SetActive(false);
         ApplyTeamState();
     }
@@ -83,6 +89,7 @@ public sealed class TeamScreenController : MonoBehaviour
 
     private void OnDisable()
     {
+        LivesManager.OnLivesChanged -= RefreshLifeControls;
         if (service != null) service.OnChanged -= OnServiceChanged;
     }
 
@@ -102,7 +109,12 @@ public sealed class TeamScreenController : MonoBehaviour
     private void WireButtons()
     {
         if (wired) return;
-        if (requestLifeButton != null) requestLifeButton.onClick.AddListener(OnRequestLife);
+        if (requestLifeButton != null)
+        {
+            requestLifeButton.onClick.AddListener(OnRequestLife);
+            requestLifeLabel = requestLifeButton.GetComponentInChildren<TMP_Text>(true);
+            defaultRequestLifeLabel = requestLifeLabel != null ? requestLifeLabel.text : "Can İste";
+        }
         if (messageButton != null)     messageButton.onClick.AddListener(ToggleMessageInput);
         if (messagePostButton != null) messagePostButton.onClick.AddListener(OnPostMessage);
         if (messageInput != null)      messageInput.onSubmit.AddListener(_ => OnPostMessage());
@@ -143,34 +155,9 @@ public sealed class TeamScreenController : MonoBehaviour
 
     private void ShowLeaveConfirm()
     {
-        var scrim = new GameObject("LeaveConfirm", typeof(RectTransform));
-        scrim.transform.SetParent(transform, false);
-        scrim.layer = gameObject.layer;
-        scrim.transform.SetAsLastSibling();
-        var srt = (RectTransform)scrim.transform;
-        srt.anchorMin = Vector2.zero; srt.anchorMax = Vector2.one; srt.offsetMin = Vector2.zero; srt.offsetMax = Vector2.zero;
-        var sImg = scrim.AddComponent<Image>();
-        sImg.color = new Color(0f, 0f, 0f, 0.72f);
-        scrim.AddComponent<Button>().transition = Selectable.Transition.None;
-
-        var card = MakeChild(scrim.transform, "Card", new Vector2(640, 360), new Vector2(0.5f, 0.5f));
-        card.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
-        card.AddComponent<Image>().color = new Color(0.16f, 0.22f, 0.42f, 0.98f);
-
-        var msg = MakeText(card.transform, "Msg", "Takımdan ayrılmak istiyor musun?", 32);
-        var mrt = msg.rectTransform; mrt.anchorMin = new Vector2(0, 1); mrt.anchorMax = new Vector2(1, 1);
-        mrt.pivot = new Vector2(0.5f, 1); mrt.anchoredPosition = new Vector2(0, -40); mrt.sizeDelta = new Vector2(-40, 120);
-        msg.textWrappingMode = TextWrappingModes.Normal;
-
-        var yes = MakeButton(card.transform, "Yes", "Ayrıl", new Color(0.75f, 0.25f, 0.25f), new Vector2(112, 112), leaveRedSquareButtonSprite);
-        var yrt = (RectTransform)yes.transform; yrt.anchorMin = yrt.anchorMax = new Vector2(0, 0); yrt.pivot = new Vector2(0, 0);
-        yrt.anchoredPosition = new Vector2(52, 20);
-        yes.onClick.AddListener(() => { Destroy(scrim); DoLeave(); });
-
-        var no = MakeButton(card.transform, "No", "Vazgeç", new Color(0.4f, 0.45f, 0.5f), new Vector2(240, 90));
-        var nrt = (RectTransform)no.transform; nrt.anchorMin = nrt.anchorMax = new Vector2(1, 0); nrt.pivot = new Vector2(1, 0);
-        nrt.anchoredPosition = new Vector2(-30, 30);
-        no.onClick.AddListener(() => Destroy(scrim));
+        RuntimeChoicePopup.Show("Takımdan Ayrıl", "Takımdan ayrılmak istiyor musun?",
+            new RuntimeChoicePopup.Choice("Ayrıl", () => { if (this != null) DoLeave(); }, primary: true),
+            new RuntimeChoicePopup.Choice("Vazgeç", null));
     }
 
     private void DoLeave()
@@ -180,35 +167,6 @@ public sealed class TeamScreenController : MonoBehaviour
         PlayerTeamState.LeaveTeam();
         BackendServices.ResetTeam();
         ApplyTeamState();   // takımsız görünüme (Ara/Oluştur) döner
-    }
-
-    private GameObject MakeChild(Transform parent, string name, Vector2 size, Vector2 anchor)
-    {
-        var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false); go.layer = gameObject.layer;
-        var rt = (RectTransform)go.transform;
-        rt.anchorMin = rt.anchorMax = anchor; rt.pivot = new Vector2(0.5f, 0.5f); rt.sizeDelta = size;
-        return go;
-    }
-
-    private TMP_Text MakeText(Transform parent, string name, string text, float size)
-    {
-        var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false); go.layer = gameObject.layer;
-        var t = go.AddComponent<TextMeshProUGUI>();
-        t.text = text; t.fontSize = size; t.alignment = TextAlignmentOptions.Center; t.color = Color.white;
-        return t;
-    }
-
-    private Button MakeButton(Transform parent, string name, string label, Color color, Vector2 size, Sprite sprite = null)
-    {
-        var go = MakeChild(parent, name, size, new Vector2(0.5f, 0.5f));
-        var img = go.AddComponent<Image>();
-        ApplyButtonImage(img, sprite, color);
-        var btn = go.AddComponent<Button>(); btn.targetGraphic = img;
-        var t = MakeText(go.transform, "Label", label, 26);
-        var trt = t.rectTransform; trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one; trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
-        return btn;
     }
 
     private static void ApplyButtonImage(Image image, Sprite sprite, Color fallbackColor)
@@ -223,6 +181,7 @@ public sealed class TeamScreenController : MonoBehaviour
 
     private void Refresh()
     {
+        if (service == null) return;
         var info = service.GetTeamInfo();
         if (info != null)
         {
@@ -238,33 +197,96 @@ public sealed class TeamScreenController : MonoBehaviour
                 emblemImage.preserveAspect = true;
             }
             if (teamNameText != null)    teamNameText.text = info.teamName;
+            SingleLineText.Fit(teamNameText);
             if (memberCountText != null) memberCountText.text = info.MemberLabel;
         }
 
         BuildFeed();
+        RefreshLifeControls();
     }
 
     private void BuildFeed()
     {
         foreach (var go in feed) if (go != null) Destroy(go);
         feed.Clear();
-        if (contentContainer == null || chatRowPrefab == null) return;
+        lifeReplyRows.Clear();
+        if (contentContainer == null) return;
 
-        foreach (var m in service.GetChat())
+        if (chatRowPrefab != null)
         {
-            if (m.avatar == null)
+            foreach (var m in GetFeedMessages().OrderBy(message => message.sentTicks))
             {
-                // Benim mesajım → ProfileScreen'de SEÇTİĞİM avatar; gelen → havuzdan.
-                m.avatar = m.isMine
-                    ? (PlayerAvatarProvider.Current ?? PickAvatar(m.senderName))
-                    : PickAvatar(m.senderName);
+                if (m.avatar == null)
+                {
+                    // Benim mesajım → ProfileScreen'de SEÇTİĞİM avatar; gelen → havuzdan.
+                    m.avatar = m.isMine
+                        ? (PlayerAvatarProvider.Current ?? PickAvatar(m.senderName))
+                        : PickAvatar(m.senderName);
+                }
+                var row = Instantiate(chatRowPrefab, contentContainer);
+                row.Bind(m, theme);
+                if (m.lifeReply != null)
+                {
+                    var inbox = service.LifeInbox;
+                    row.BindLifeReply(m.lifeReply, () => inbox.Accept(m.lifeReply.id));
+                    lifeReplyRows.Add(row);
+                }
+                else if (m.botLifeRequest != null)
+                {
+                    var inbox = service.LifeInbox;
+                    row.BindBotLifeRequest(m.botLifeRequest, () => inbox.HelpBot(m.botLifeRequest.id));
+                    lifeReplyRows.Add(row);
+                }
+                feed.Add(row.gameObject);
             }
-            var row = Instantiate(chatRowPrefab, contentContainer);
-            row.Bind(m, theme);
-            feed.Add(row.gameObject);
         }
 
         SnapToBottom();
+    }
+
+    private IEnumerable<TeamChatMessage> GetFeedMessages()
+    {
+        foreach (var message in service.GetChat()) yield return message;
+        foreach (var reply in service.LifeInbox.Replies)
+        {
+            yield return new TeamChatMessage
+            {
+                senderName = reply.sender,
+                avatar = PickAvatar(reply.sender),
+                text = "Sana 1 can gönderdim!",
+                timeLabel = new System.DateTime(reply.sentTicks, System.DateTimeKind.Utc).ToLocalTime().ToString("HH:mm"),
+                sentTicks = reply.sentTicks,
+                lifeReply = reply,
+                isMine = false
+            };
+        }
+        foreach (var request in service.LifeInbox.BotRequests)
+        {
+            yield return new TeamChatMessage
+            {
+                senderName = request.sender,
+                avatar = PickAvatar(request.sender),
+                text = request.helped ? "Can için teşekkürler!" : "Can gönderebilir misin?",
+                timeLabel = new System.DateTime(request.sentTicks, System.DateTimeKind.Utc).ToLocalTime().ToString("HH:mm"),
+                sentTicks = request.sentTicks,
+                botLifeRequest = request,
+                isMine = false
+            };
+        }
+    }
+
+    private void RefreshLifeControls()
+    {
+        var inbox = service?.LifeInbox;
+        bool full = LivesManager.Current >= LivesManager.MaxLives;
+        if (requestLifeButton != null) requestLifeButton.interactable = inbox != null && inbox.CanRequest;
+        if (requestLifeLabel != null)
+            requestLifeLabel.text = full ? "Can Dolu (10/10)"
+                : inbox != null && inbox.Pending > 0 ? "Canların Hazır"
+                : inbox != null && inbox.IsWaiting ? "Can Bekleniyor"
+                : defaultRequestLifeLabel;
+        foreach (var row in lifeReplyRows)
+            if (row != null) row.RefreshLifeReply();
     }
 
     private void SnapToBottom()
@@ -304,8 +326,9 @@ public sealed class TeamScreenController : MonoBehaviour
 
     private void OnRequestLife()
     {
+        if (service == null || !service.LifeInbox.CanRequest) return;
         service.RequestLife();
-        BuildFeed();
+        RefreshLifeControls();
     }
 
     // Mesaj butonu: tek satırlık input alanını aç/kapat.

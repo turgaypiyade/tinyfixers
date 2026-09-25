@@ -48,6 +48,10 @@ public static class ShopRewardGranter
                 TimedRewardService.Grant(DailySlotRewardType.Lives,
                                          Mathf.Max(1, reward.durationHours) * 60);
                 break;
+
+            case ShopReward.Kind.Timed:
+                TimedRewardService.Grant(reward.timedType, Mathf.Max(1, reward.durationHours) * 60);
+                break;
         }
     }
 }

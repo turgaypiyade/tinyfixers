@@ -8,8 +8,8 @@ using UnityEngine;
 ///   - Başlangıç: 5 can.
 ///   - RegenCap (5) altına düşünce timer başlar; 30 dk'da 1 can.
 ///   - RegenCap'e ulaşınca timer durur.
-///   - Etkinlik/reklam ile RegenCap ve MaxLives üzeri can alınabilir;
-///     regen yine ancak RegenCap altına düşünce devreye girer.
+///   - Takım, etkinlik ve reklam dahil toplam can en fazla 10 olabilir.
+///     Regen yalnız RegenCap altına düşünce devreye girer.
 ///   - Can = 0 iken oynamak engellenir; reklam ile 1 can kazanılabilir.
 /// </summary>
 public static class LivesManager
@@ -17,10 +17,15 @@ public static class LivesManager
     // ── Ayarlar ──────────────────────────────────────────────────────────────
 
     /// <summary>Regen'in doldurduğu tavan (5). Bu sayıda veya üzerinde timer durar.</summary>
-    public static int RegenCapLives { get; set; } = 5;
+    private static int regenCapLives = 5;
+    public static int RegenCapLives
+    {
+        get => regenCapLives;
+        set => regenCapLives = Mathf.Clamp(value, 1, MaxLives);
+    }
 
     /// <summary>Etkinlik/hediye/reklam ile ulaşılabilecek mutlak maksimum.</summary>
-    public static int MaxLives { get; set; } = 10;
+    public const int MaxLives = 10;
 
     /// <summary>Her canın gelmesi için gereken dakika.</summary>
     public static int RegenIntervalMinutes { get; set; } = 30;
@@ -43,7 +48,7 @@ public static class LivesManager
     // ── Özellikler ───────────────────────────────────────────────────────────
 
     public static int  Current  { get { EnsureInit(); return _lives; } }
-    public static bool HasLives { get { EnsureInit(); return _lives > 0; } }
+    public static bool HasLives { get { EnsureInit(); return _lives > 0 || TimedRewardService.IsLivesFree(); } }
 
     /// <summary>RegenCap'e ulaşıldıysa timer gösterilmez.</summary>
     public static bool IsRegenFull { get { EnsureInit(); return _lives >= RegenCapLives; } }
@@ -79,10 +84,11 @@ public static class LivesManager
         return true;
     }
 
-    /// <summary>Can ekler. MaxLives üzerine çıkabilir (etkinlik, reklam ödülü).</summary>
+    /// <summary>Her kaynaktan gelen canı ortak 10 can sınırına uygular.</summary>
     public static void AddLives(int amount)
     {
         EnsureInit();
+        amount = Mathf.Min(amount, MaxLives - _lives);
         if (amount <= 0) return;
         _lives += amount;
         Save();
@@ -111,7 +117,8 @@ public static class LivesManager
         if (_initialized) return;
         _initialized = true;
 
-        _lives = PlayerPrefs.GetInt(KeyLives, 5);
+        int savedLives = PlayerPrefs.GetInt(KeyLives, 5);
+        _lives = Mathf.Clamp(savedLives, 0, MaxLives);
 
         long ticks = long.TryParse(PlayerPrefs.GetString(KeyNextTicks, "0"), out long t) ? t : 0;
         _nextLifeTime = ticks > 0
@@ -119,6 +126,7 @@ public static class LivesManager
             : DateTime.UtcNow.AddMinutes(RegenIntervalMinutes);
 
         ProcessOfflineRegen();
+        if (_lives != savedLives) Save();
     }
 
     // ── Dahili ───────────────────────────────────────────────────────────────

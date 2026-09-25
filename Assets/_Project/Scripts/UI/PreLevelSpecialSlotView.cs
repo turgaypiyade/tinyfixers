@@ -55,6 +55,7 @@ public class PreLevelSpecialSlotView : MonoBehaviour
     private bool isFreeSession;   // ilk açılan oyun: count yerine "ÜCRETSİZ", seçim hak istemez
     private TMP_Text freeBadgeLabel;   // freeBadge altındaki text (ör. freeBadgeTXT) — lazily bulunur
     private Coroutine selectionRoutine;
+    private Sprite defaultTimedWaveSprite;   // prefab'taki ribbon — süreyi event dışı (market) verdiyse bu görünür
 
     public TileSpecial Special => special;
     public bool IsSelected => isSelected;
@@ -225,7 +226,11 @@ public class PreLevelSpecialSlotView : MonoBehaviour
 
         if (timedWaveImage != null)
         {
-            Sprite waveSprite = isFree ? FindTimedWaveSprite() : null;
+            // Prefab'taki ribbon'u üzerine yazmadan önce bir kez yakala (Configure Awake'ten önce gelebilir).
+            if (defaultTimedWaveSprite == null)
+                defaultTimedWaveSprite = timedWaveImage.sprite;
+
+            Sprite waveSprite = isFree ? (FindTimedWaveSprite() ?? defaultTimedWaveSprite) : null;
             timedWaveImage.sprite = waveSprite;
             timedWaveImage.enabled = waveSprite != null;
         }
@@ -282,15 +287,7 @@ public class PreLevelSpecialSlotView : MonoBehaviour
 
     private static string FormatTimeSpan(System.TimeSpan span)
     {
-        if (span.TotalSeconds <= 0) return "00:00";
-
-        int totalMinutes = (int)span.TotalMinutes;
-        int seconds      = span.Seconds;
-
-        if (totalMinutes >= 60)
-            return $"{(int)span.TotalHours:D2}:{span.Minutes:D2}:{seconds:D2}";
-
-        return $"{totalMinutes:D2}:{seconds:D2}";
+        return TimeFormat.Countdown(span);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

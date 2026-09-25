@@ -35,7 +35,8 @@ public sealed class PulseWaveEffectPlayer : IClearEffectPlayer
                     maxDelay = delay;
             }
 
-            board.StartCoroutine(PlayTileImpact(tile, delay, pulse.ImpactAnimTime, pulse.ClearOnImpact, context, animator));
+            board.StartCoroutine(tile.RunForCurrentLifetime(
+                PlayTileImpact(tile, delay, pulse.ImpactAnimTime, pulse.ClearOnImpact, context, animator)));
         }
 
         float tailHold = pulse.TailHoldSecondsOverride > 0f

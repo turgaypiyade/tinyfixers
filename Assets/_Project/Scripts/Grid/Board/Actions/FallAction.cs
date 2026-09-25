@@ -7,6 +7,7 @@ public class FallAction : BoardAction
     private class FallRecord
     {
         public TileView tile;
+        public int lifetimeVersion;
 
         public int fromX;
         public int fromY;
@@ -26,6 +27,14 @@ public class FallAction : BoardAction
         // (fromX,fromY -> toX,toY) kullanılır.
         public Vector2Int[] pathWaypoints;
         public float[] pathSegmentDurations;
+
+        // Kesintisiz düşüş: bu kayıt taşın hangi cascade planından geldi (bayat kaydı ayırt eder).
+        public int planGeneration;
+
+        // Doğan taşın plan içindeki doğuş sırası = spawn sütunundaki akış sırası (0: tahtadaki taş).
+        public int spawnOrder;
+        // Bölünmüş sütun aksiyonları global sırayla önceden başlatıldıysa biletleri (PrimeContinuous).
+        public TileFallMotionSystem.Ticket primedTicket;
     }
 
     private readonly List<FallRecord> fallRecords = new List<FallRecord>();
@@ -35,6 +44,16 @@ public class FallAction : BoardAction
 
     public bool HasMoves => fallRecords.Count > 0;
     public int MoveCount => fallRecords.Count;
+
+    internal void PrepareContinuousRoutes(BoardController board)
+    {
+        if (!board.UseContinuousFallMotion) return;
+        var spacing = BuildMaxToYPerVerticalSpawnSource();
+        foreach (var r in fallRecords)
+            board.FallMotion.Prepare(r.tile, r.lifetimeVersion, r.planGeneration,
+                BuildPixelPath(r, spacing, board.TileSize), IsSpawnRecord(r),
+                r.useSettle, r.settleDuration, r.settleStrength);
+    }
 
     // Settle (iniş bounce'u) yalnızca SON inişte oynamalı. Ara cascade'lerde su gibi
     // akış için bu çağrılır → tüm record'ların settle'ı kapatılır.
@@ -107,6 +126,7 @@ public class FallAction : BoardAction
         fallRecords.Add(new FallRecord
         {
             tile = tile,
+            lifetimeVersion = tile.LifetimeVersion,
             fromX = fromX,
             fromY = fromY,
             toX = toX,
@@ -116,7 +136,8 @@ public class FallAction : BoardAction
             settleDuration = Mathf.Max(0f, settleDur),
             settleStrength = settleStr,
             curve = curve,
-            startDelay = Mathf.Max(0f, startDelay)
+            startDelay = Mathf.Max(0f, startDelay),
+            planGeneration = tile.NotePlannedFall()
         });
     }
 
@@ -137,7 +158,8 @@ public class FallAction : BoardAction
         float settleDur,
         float settleStr,
         AnimationCurve curve,
-        float startDelay = 0f)
+        float startDelay = 0f,
+        int spawnOrder = 0)
     {
         if (tile == null || !tile)
             return;
@@ -159,6 +181,7 @@ public class FallAction : BoardAction
         fallRecords.Add(new FallRecord
         {
             tile = tile,
+            lifetimeVersion = tile.LifetimeVersion,
             fromX = firstWp.x,
             fromY = firstWp.y,
             toX = lastWp.x,
@@ -171,6 +194,8 @@ public class FallAction : BoardAction
             startDelay = Mathf.Max(0f, startDelay),
             pathWaypoints = waypoints,
             pathSegmentDurations = segmentDurations,
+            planGeneration = tile.NotePlannedFall(),
+            spawnOrder = spawnOrder,
         });
     }
 
@@ -225,6 +250,7 @@ public class FallAction : BoardAction
         return new FallRecord
         {
             tile = r.tile,
+            lifetimeVersion = r.lifetimeVersion,
             fromX = r.fromX,
             fromY = r.fromY,
             toX = r.toX,
@@ -238,7 +264,9 @@ public class FallAction : BoardAction
             phaseDelay = r.phaseDelay,
             hasPhaseDelay = r.hasPhaseDelay,
             pathWaypoints = r.pathWaypoints != null ? (Vector2Int[])r.pathWaypoints.Clone() : null,
-            pathSegmentDurations = r.pathSegmentDurations != null ? (float[])r.pathSegmentDurations.Clone() : null
+            pathSegmentDurations = r.pathSegmentDurations != null ? (float[])r.pathSegmentDurations.Clone() : null,
+            planGeneration = r.planGeneration,
+            spawnOrder = r.spawnOrder
         };
     }
 
@@ -389,6 +417,18 @@ public class FallAction : BoardAction
 
         if (allFrozen)
             return;
+
+        if (board != null && board.UseContinuousFallMotion)
+        {
+            // Spatial spacing and the column follower rule supply the waterfall rhythm.
+            // Per-pass stagger would repeatedly pause tiles joining an existing stream.
+            foreach (var r in fallRecords)
+            {
+                r.phaseDelay = 0f;
+                r.hasPhaseDelay = true;
+            }
+            return;
+        }
 
         if (board != null && board.UseReferenceFallMotion)
         {
@@ -711,7 +751,7 @@ public class FallAction : BoardAction
         return Mathf.Max(0, maxToY - r.toY);
     }
 
-    private Vector2Int[] BuildVisualWaypoints(
+    private static Vector2Int[] BuildVisualWaypoints(
         FallRecord r,
         Dictionary<long, int> maxToYPerVerticalSpawnSource)
     {
@@ -825,6 +865,7 @@ public class FallAction : BoardAction
 
         float faStart = Time.realtimeSinceStartup;
         BoardController board = sequencer.Board;
+        using var fallVisualScope = board.CascadeLogic.BeginFallVisual();
         bool useReferenceMotion = board != null && board.UseReferenceFallMotion;
         ReferenceFallMotionSettings referenceSettings = useReferenceMotion ? board.ReferenceFallMotion : null;
 
@@ -863,6 +904,14 @@ public class FallAction : BoardAction
         // segmentin rank/stagger hesabini sonradan degistirmez.
         EnsurePhaseDelays(sequencer.Board);
 
+        if (board.UseContinuousFallMotion)
+        {
+            var continuous = RunContinuous(board, maxToYPerVerticalSpawnSource, faStart);
+            while (continuous.MoveNext())
+                yield return continuous.Current;
+            yield break;
+        }
+
         // Spawn taşlarının başlangıç dizilimi legacy ile AYNI kaynaktan gelir:
         // GetVerticalSpawnVisualOffsetCells(maxToYPerVerticalSpawnSource) → visualFromY.
         // Bu, mevcut (board üstündeki) taşların oluşturduğu sürekli kolonla HİZALI bir
@@ -876,7 +925,7 @@ public class FallAction : BoardAction
 
         foreach (var r in fallRecords)
         {
-            if (r.tile == null || !r.tile)
+            if (r.tile == null || !r.tile.IsCurrentLifetime(r.lifetimeVersion))
                 continue;
 
             bool isPath = r.pathWaypoints != null && r.pathWaypoints.Length >= 2;
@@ -1011,6 +1060,7 @@ public class FallAction : BoardAction
 
             moves.Add(RunFallMoveWithRuntimeState(
                 r.tile,
+                r.lifetimeVersion,
                 move,
                 sequencer.Board,
                 new Vector2Int(r.toX, r.toY)));
@@ -1026,31 +1076,192 @@ public class FallAction : BoardAction
         if (trace)
             Debug.Log($"[Fall] stagger maxDelay={maxTotalDelay:0.000}s estimatedEnd={GetEstimatedVisualDuration(sequencer.Board):0.000}s");
 
-        yield return sequencer.Animator.RunManyWithDelays(moves, delays);
+        BoardMotionDiagnostics.FallBegin(board, GetHashCode(), moves.Count, GetEstimatedVisualDuration(board));
+        bool diagnosticCompleted = false;
+        try
+        {
+            yield return sequencer.Animator.RunManyWithDelays(moves, delays);
+            diagnosticCompleted = true;
+        }
+        finally
+        {
+            BoardMotionDiagnostics.FallEnd(board, GetHashCode(), Time.realtimeSinceStartup - faStart, diagnosticCompleted);
+        }
 
         if (trace)
             Debug.Log($"[Fall] DONE +{(Time.realtimeSinceStartup - faStart):0.000}s");
     }
 
+    private static TileFallMotionSystem.Ticket StartContinuous(FallRecord r, TileFallMotionSystem motion,
+        Dictionary<long, int> maxToYPerVerticalSpawnSource, int tileSize) =>
+        motion.Start(
+            r.tile,
+            r.lifetimeVersion,
+            r.planGeneration,
+            BuildPixelPath(r, maxToYPerVerticalSpawnSource, tileSize),
+            new Vector2Int(r.toX, r.toY),
+            IsSpawnRecord(r),
+            r.startDelay + r.phaseDelay,
+            r.useSettle,
+            r.settleDuration,
+            r.settleStrength);
+
+    // Kesintisiz düşüşte başlatma sırası = akış sırası (spawn, sütundaki son taşın ARKASINA dizilir):
+    //   1. havadakiler (akış kesilmeden uzasın),
+    //   2. tahtadaki taşlar alttan üste,
+    //   3. doğan taşlar doğuş sırasıyla — kenardan gölgeye dökülen taş, sütunun alt hücrelerine
+    //      giden taşların arkasından, kenar hizasına kalan taşların önünden gelir.
+    private static List<FallRecord> OrderForContinuousStart(IEnumerable<FallRecord> records, TileFallMotionSystem motion)
+    {
+        var keyed = new List<(FallRecord r, int moving, int spawn, int order)>();
+        foreach (var r in records)
+        {
+            bool spawn = IsSpawnRecord(r);
+            keyed.Add((r, motion.IsMoving(r.tile) ? 0 : 1, spawn ? 1 : 0, spawn ? r.spawnOrder : -r.toY));
+        }
+        keyed.Sort((p, q) =>
+        {
+            int c = p.moving.CompareTo(q.moving);
+            if (c == 0) c = p.spawn.CompareTo(q.spawn);
+            if (c == 0) c = p.order.CompareTo(q.order);
+            return c;
+        });
+        var ordered = new List<FallRecord>(keyed.Count);
+        foreach (var k in keyed) ordered.Add(k.r);
+        return ordered;
+    }
+
+    /// <summary>
+    /// Sütunlara bölünmüş düşüşler (ParallelColumnFallAction) tek akış sırasıyla başlatılır. Aksi hâlde
+    /// sütun aksiyonları sütun sırasıyla başlar: çapraz giden taş, geçtiği sütunun TÜM taşlarının
+    /// arkasına dizilip oturmuş taşların içinden dönüş noktasına iner (engelin sağında/solunda farklı).
+    /// Biletler kayıtta saklanır; her aksiyon yine kendi biletlerini bekler.
+    /// </summary>
+    internal static void PrimeContinuous(IEnumerable<FallAction> actions, BoardController board)
+    {
+        if (board == null || !board.UseContinuousFallMotion) return;
+
+        var motion = board.FallMotion;
+        var spacing = new Dictionary<FallRecord, Dictionary<long, int>>();
+        var all = new List<FallRecord>();
+        foreach (var action in actions)
+        {
+            if (action == null || !action.HasMoves) continue;
+            action.EnsurePhaseDelays(board);
+            var actionSpacing = action.BuildMaxToYPerVerticalSpawnSource();
+            foreach (var r in action.fallRecords)
+            {
+                spacing[r] = actionSpacing;
+                all.Add(r);
+            }
+        }
+
+        foreach (var r in OrderForContinuousStart(all, motion))
+        {
+            if (r.tile == null || !r.tile.IsCurrentLifetime(r.lifetimeVersion))
+                continue;
+            r.primedTicket = StartContinuous(r, motion, spacing[r], board.TileSize);
+        }
+    }
+
+    // Kesintisiz düşüş: kayıtları TileFallMotionSystem'e verir, biletlerin bitmesini bekler.
+    // Havadaki taş olduğu yerden hızıyla devam eder; bu action'ın biletleri, taş daha yeni bir
+    // planla devralındığında da biter (eski coroutine'in token'la çıkması ile aynı semantik).
+    private IEnumerator RunContinuous(BoardController board, Dictionary<long, int> maxToYPerVerticalSpawnSource, float faStart)
+    {
+        var motion = board.FallMotion;
+        int tileSize = board.TileSize;
+
+        var tickets = new List<TileFallMotionSystem.Ticket>(fallRecords.Count);
+        foreach (var r in OrderForContinuousStart(fallRecords, motion))
+        {
+            if (r.primedTicket != null)
+            {
+                tickets.Add(r.primedTicket);
+                continue;
+            }
+            if (r.tile == null || !r.tile.IsCurrentLifetime(r.lifetimeVersion))
+                continue;
+
+            tickets.Add(StartContinuous(r, motion, maxToYPerVerticalSpawnSource, tileSize));
+        }
+
+        BoardMotionDiagnostics.FallBegin(board, GetHashCode(), tickets.Count, GetEstimatedVisualDuration(board));
+        bool completed = false;
+        float waited = 0f;
+        try
+        {
+            while (true)
+            {
+                bool allDone = true;
+                for (int i = 0; i < tickets.Count; i++)
+                {
+                    if (!tickets[i].Done) { allDone = false; break; }
+                }
+
+                if (allDone) { completed = true; break; }
+
+                waited += Time.deltaTime;
+                if (waited > 10f)
+                {
+                    Debug.LogError($"[FallMotion] FallAction 10 sn'de bitmedi (tiles={tickets.Count}); bekleme bırakıldı.");
+                    break;
+                }
+
+                yield return null;
+            }
+        }
+        finally
+        {
+            BoardMotionDiagnostics.FallEnd(board, GetHashCode(), Time.realtimeSinceStartup - faStart, completed);
+        }
+    }
+
+    // Kaydın yolunu anchored px'e çevirir. Spawn görsel dizilimi (visualFromY) eski yolla aynı kaynaktan.
+    private static Vector2[] BuildPixelPath(FallRecord r, Dictionary<long, int> maxToYPerVerticalSpawnSource, int tileSize)
+    {
+        if (r.pathWaypoints != null && r.pathWaypoints.Length >= 2)
+        {
+            Vector2Int[] waypoints = BuildVisualWaypoints(r, maxToYPerVerticalSpawnSource);
+            var path = new Vector2[waypoints.Length];
+            for (int i = 0; i < waypoints.Length; i++)
+                path[i] = r.tile.GetFallCellPosition(waypoints[i].x, waypoints[i].y, tileSize);
+            return path;
+        }
+
+        int visualFromY = r.fromY - GetVerticalSpawnVisualOffsetCells(r, maxToYPerVerticalSpawnSource);
+        return new[]
+        {
+            r.tile.GetFallCellPosition(r.fromX, visualFromY, tileSize),
+            r.tile.GetFallCellPosition(r.toX, r.toY, tileSize),
+        };
+    }
+
     private static IEnumerator RunFallMoveWithRuntimeState(
         TileView tile,
+        int lifetimeVersion,
         IEnumerator move,
         BoardController board,
         Vector2Int targetCell)
     {
-        if (tile != null && tile)
-            tile.SetRuntimeState(TileRuntimeState.Falling);
+        if (tile == null || !tile.IsCurrentLifetime(lifetimeVersion))
+            yield break;
+
+        if (tile.RuntimeState == TileRuntimeState.Falling)
+            BoardMotionDiagnostics.Event(board, "MOVE_OVERLAP",
+                $"tile={tile.GetInstanceID()}/{lifetimeVersion} target={targetCell} pos={tile.RectTransform.anchoredPosition}");
+        tile.SetRuntimeState(TileRuntimeState.Falling);
         board?.ReserveTileTargetCell(targetCell);
 
         try
         {
             if (move != null)
-                yield return move;
+                yield return tile.RunForLifetime(move, lifetimeVersion);
         }
         finally
         {
             board?.ClearReservedTileTargetCell(targetCell);
-            if (tile != null && tile && tile.RuntimeState == TileRuntimeState.Falling)
+            if (tile != null && tile.IsCurrentLifetime(lifetimeVersion) && tile.RuntimeState == TileRuntimeState.Falling)
                 tile.SetRuntimeState(TileRuntimeState.Idle);
         }
     }

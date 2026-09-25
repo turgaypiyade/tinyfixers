@@ -134,6 +134,7 @@ public sealed class LeaderboardRow : MonoBehaviour
             if (showChapter) chapterText.text = $"Bölüm {e.chapter}";
         }
         if (nameText != null) nameText.text = e.playerName;
+        SingleLineText.Fit(nameText);
         if (subtitleText != null)
         {
             subtitleText.gameObject.SetActive(!string.IsNullOrEmpty(e.subtitle));

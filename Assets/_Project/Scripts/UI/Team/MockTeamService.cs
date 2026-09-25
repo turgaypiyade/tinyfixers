@@ -6,9 +6,14 @@ using System.Collections.Generic;
 /// </summary>
 public sealed class MockTeamService : ITeamService
 {
-#pragma warning disable 67
     public event System.Action OnChanged;
-#pragma warning restore 67
+    public TeamLifeInbox LifeInbox { get; }
+
+    public MockTeamService()
+    {
+        LifeInbox = new TeamLifeInbox("mock:" + info.teamName, () => OnChanged?.Invoke());
+        LifeInbox.SetBots(3, () => "Alex");
+    }
 
     private readonly TeamInfo info = new()
     {
@@ -50,9 +55,7 @@ public sealed class MockTeamService : ITeamService
 
     public void RequestLife()
     {
-        // Mock: kendi can isteğini listeye ekle (zaten varsa atla).
-        if (!requests.Exists(r => r.requesterName == PlayerProfile.PlayerName))
-            requests.Add(new TeamLifeRequest { requesterName = PlayerProfile.PlayerName, current = 0, needed = 5 });
+        if (!LifeInbox.Request(System.DateTime.UtcNow)) return;
 
         // Sohbette de görünsün (kendi tarafımda, sağda).
         chat.Add(new TeamChatMessage
@@ -60,8 +63,10 @@ public sealed class MockTeamService : ITeamService
             senderName = PlayerProfile.PlayerName,
             text = "❤️ Can istedi!",
             timeLabel = "şimdi",
+            sentTicks = System.DateTime.UtcNow.Ticks,
             isMine = true,
         });
+        OnChanged?.Invoke();
     }
 
     public void SendMessage(string text)
@@ -72,6 +77,7 @@ public sealed class MockTeamService : ITeamService
             senderName = PlayerProfile.PlayerName,
             text = text.Trim(),
             timeLabel = "şimdi",
+            sentTicks = System.DateTime.UtcNow.Ticks,
             isMine = true,
         });
     }

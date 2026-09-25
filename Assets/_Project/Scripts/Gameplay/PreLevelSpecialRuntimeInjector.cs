@@ -564,6 +564,7 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
 
         rt.localScale = baseScale * startScale;
         tile.IconImage.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
+        tile.NoteHidden("preLevelInject");
 
         float elapsed = 0f;
         float duration = Mathf.Max(0.01f, revealDuration);

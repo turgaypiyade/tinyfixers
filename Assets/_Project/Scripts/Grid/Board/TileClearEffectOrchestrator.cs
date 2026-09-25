@@ -25,6 +25,13 @@ public sealed class TileClearEffectOrchestrator
 
     public IEnumerator Play(TileView tile, ClearAnimationMode mode, float delay, float duration, bool suppressBurst = false)
     {
+        return tile != null
+            ? tile.RunForCurrentLifetime(PlayCore(tile, mode, delay, duration, suppressBurst))
+            : PlayCore(null, mode, delay, duration, suppressBurst);
+    }
+
+    private IEnumerator PlayCore(TileView tile, ClearAnimationMode mode, float delay, float duration, bool suppressBurst)
+    {
         if (tile == null) yield break;
 
         for (int i = 0; i < effects.Count; i++)

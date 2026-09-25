@@ -30,6 +30,7 @@ public static class FirebaseAuthService
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     public static void Initialize()
     {
+        if (RuntimeSimulationSession.IsActive) return;
         if (initStarted) return;
         initStarted = true;
 

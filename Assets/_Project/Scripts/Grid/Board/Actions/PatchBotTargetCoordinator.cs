@@ -415,6 +415,7 @@ public class PatchBotTargetCoordinator
         var tileGoalCells = new List<(int x, int y, TileView tile)>();
         var otherObstacleCells = new List<(int x, int y, TileView tile)>();
         var normalCells = new List<(int x, int y, TileView tile)>();
+        var gelSpreadCells = new List<(int x, int y, TileView tile)>();
 
         activeGoalsBuffer.Clear();
         var activeGoals = board.TopHud;
@@ -476,6 +477,10 @@ public class PatchBotTargetCoordinator
 
                 var tile = board.Tiles[x, y];
 
+                if (preferNonGel && patchbotService.IsGelSpreadTarget(x, y, tile)
+                    && !IsExcludedTile(tile) && !IsTileReserved(tile))
+                    gelSpreadCells.Add((x, y, tile));
+
                 bool hasObstacle = board.ObstacleStateService != null
                                    && board.ObstacleStateService.GetObstacleIdAt(x, y) != ObstacleId.None;
 
@@ -488,7 +493,8 @@ public class PatchBotTargetCoordinator
                     // düşüp tabandan çıkar (hedef ilerler).
                     if (board.ObstacleStateService.IsExitAtBottomAt(x, y))
                     {
-                        TryAddCargoDropPathTarget(x, y, cargoDropPathCells, IsExcludedTile);
+                        patchbotService.AddCargoDropPathTarget(x, y, partnerTile, cargoDropPathCells,
+                            t => IsExcludedTile(t) || IsTileReserved(t));
                         continue;
                     }
 
@@ -577,6 +583,14 @@ public class PatchBotTargetCoordinator
             return (pick.tile, pick.x, pick.y, true);
         }
 
+        // Jel taşıyan bot (jel kaplama hedefi aktif): jelsiz bölgenin EN YOĞUN yerine — hedef değeri
+        // olmayan diğer obstacle'lardan önce. Rezervasyon cezası botları farklı jelsiz bölgelere yayar.
+        if (gelSpreadCells.Count > 0)
+        {
+            var pick = gelSpreadCells[PickIdx(gelSpreadCells)];
+            return (pick.tile, pick.x, pick.y, true);
+        }
+
         if (otherObstacleCells.Count > 0)
         {
             var pick = otherObstacleCells[PickIdx(otherObstacleCells)];
@@ -585,43 +599,11 @@ public class PatchBotTargetCoordinator
 
         if (normalCells.Count > 0)
         {
-            var pool = preferNonGel ? patchbotService.FilterNonGelCells(normalCells) : normalCells;
-            var pick = pool[PickIdx(pool)];
+            var pick = normalCells[PickIdx(normalCells)];
             return (pick.tile, pick.x, pick.y, true);
         }
 
         return (null, -1, -1, false);
-    }
-
-    // Cargo (exitAtBottom) kendisi kırılmaz. Onu ilerletmek için, (varsa cargo yığınının)
-    // hemen ALTINDAKI ilk normal taşı hedef listesine ekler — o taş temizlenince cargo bir
-    // sıra aşağı düşer, tabana ulaşınca board'dan çıkar. Alt hücre hole/başka obstacle ise,
-    // zaten rezerve edilmişse ya da cargo tabandaysa yardım edecek taş yoktur (eklemez).
-    private void TryAddCargoDropPathTarget(int cargoX, int cargoY,
-        List<(int x, int y, TileView tile)> outCells, System.Func<TileView, bool> isExcluded)
-    {
-        var obs = board.ObstacleStateService;
-        if (obs == null) return;
-
-        int by = cargoY + 1;
-        while (by < board.Height && obs.IsExitAtBottomAt(cargoX, by))
-            by++;                                  // üst üste cargo → yığının altına in
-
-        if (by >= board.Height) return;            // cargo zaten tabanda; sıradaki resolve toplar
-        if (obs.GetObstacleIdAt(cargoX, by) != ObstacleId.None) return; // altı başka obstacle
-        if (board.Holes[cargoX, by]) return;
-
-        var belowTile = board.Tiles[cargoX, by];
-        if (belowTile == null) return;
-        if (board.GridData[cargoX, by] == null) return;
-        if (!SpecialUtils.CanTargetTileContent(board, cargoX, by)) return;
-        if (isExcluded(belowTile)) return;
-        if (IsTileReserved(belowTile)) return;     // başka bot bu taşı zaten hedeflemiş
-
-        for (int i = 0; i < outCells.Count; i++)
-            if (outCells[i].x == cargoX && outCells[i].y == by) return; // aynı hücreyi iki kez ekleme
-
-        outCells.Add((cargoX, by, belowTile));
     }
 
     // Payload etki yarıçapı (PulseCore 5x5 ≈ 2; line/bomb için de yoğunluk iyi bir proxy).

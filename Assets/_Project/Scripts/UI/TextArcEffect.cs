@@ -14,6 +14,10 @@ public sealed class TextArcEffect : MonoBehaviour
     [Header("Yay")]
     [Tooltip("Yayın tepe yüksekliği. UI'da piksel gibi düşün: 10-40 arası 'hafif yay' verir. Negatif = ters (gülümseme yerine kaş).")]
     [SerializeField] private float arcHeight = 20f;
+    [Tooltip("Yay yüksekliğini satır genişliğine ve dereceye göre hesapla. Mevcut yükseklik tabanlı kullanımlar değişmez.")]
+    [SerializeField] private bool useArcAngle;
+    [Tooltip("Yayın iki ucundaki teğetler arasındaki toplam açı. 15 = uçlarda +7.5 / -7.5 derece.")]
+    [Range(-90f, 90f)][SerializeField] private float arcAngleDegrees = 15f;
     [Tooltip("Harfler de eğime göre dönsün mü? Kapalıysa harfler dik kalır, sadece yukarı/aşağı kayar.")]
     [SerializeField] private bool rotateLetters = true;
     [Tooltip("Harf dönüşünün şiddeti (1 = yayın gerçek eğimi).")]
@@ -55,7 +59,16 @@ public sealed class TextArcEffect : MonoBehaviour
     /// <summary>Yay yüksekliğini koddan değiştirmek için (örn. animasyon).</summary>
     public void SetArcHeight(float value)
     {
+        useArcAngle = false;
         arcHeight = value;
+        Apply();
+    }
+
+    /// <summary>Kısa/uzun başlıklarda aynı toplam yay açısını korur.</summary>
+    public void SetArcAngle(float degrees)
+    {
+        useArcAngle = true;
+        arcAngleDegrees = Mathf.Clamp(degrees, -90f, 90f);
         Apply();
     }
 
@@ -67,7 +80,8 @@ public sealed class TextArcEffect : MonoBehaviour
         text.ForceMeshUpdate();               // orijinal (düz) vertex'leri geri getir
         TMP_TextInfo info = text.textInfo;
 
-        if (info == null || info.characterCount == 0 || Mathf.Approximately(arcHeight, 0f))
+        if (info == null || info.characterCount == 0
+            || Mathf.Approximately(useArcAngle ? arcAngleDegrees : arcHeight, 0f))
         {
             applying = false;
             return;
@@ -79,6 +93,11 @@ public sealed class TextArcEffect : MonoBehaviour
             float lineLeft = lineInfo.lineExtents.min.x;
             float lineWidth = lineInfo.lineExtents.max.x - lineLeft;
             if (lineWidth <= 0.0001f) continue;
+            // For this parabola the endpoint slope is +/-4h / width.
+            // Derive h from half the requested total angle, independent of font/line width.
+            float lineArcHeight = useArcAngle
+                ? lineWidth * 0.25f * Mathf.Tan(arcAngleDegrees * 0.5f * Mathf.Deg2Rad)
+                : arcHeight;
 
             for (int i = lineInfo.firstCharacterIndex; i <= lineInfo.lastCharacterIndex; i++)
             {
@@ -94,13 +113,13 @@ public sealed class TextArcEffect : MonoBehaviour
 
                 // Parabol: uçlarda 0, ortada arcHeight
                 float d = t - 0.5f;
-                float offsetY = arcHeight * (1f - 4f * d * d);
+                float offsetY = lineArcHeight * (1f - 4f * d * d);
 
                 // Eğim (türev) -> harf dönüş açısı
                 float angle = 0f;
                 if (rotateLetters)
                 {
-                    float slope = (-8f * d * arcHeight) / lineWidth;
+                    float slope = (-8f * d * lineArcHeight) / lineWidth;
                     angle = Mathf.Atan(slope) * Mathf.Rad2Deg * rotationStrength;
                 }
 

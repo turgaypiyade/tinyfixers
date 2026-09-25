@@ -329,6 +329,7 @@ public class MagnetObstacleService : MonoBehaviour
         var sourceImage = tile.IconImage;
         var go = new GameObject("MagnetDrainTileVisual", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         go.transform.SetParent(board.BreakFxParent, false);
+        go.layer = go.transform.parent.gameObject.layer;   // UI kamerası layer 0'ı çizmez
         go.transform.SetAsLastSibling();
 
         var rt = go.GetComponent<RectTransform>();
@@ -388,6 +389,7 @@ public class MagnetObstacleService : MonoBehaviour
         {
             var go = new GameObject("MagnetDrainBolt", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             go.transform.SetParent(parent, false);
+            go.layer = go.transform.parent.gameObject.layer;   // UI kamerası layer 0'ı çizmez
             go.transform.SetAsLastSibling();
 
             var img = go.GetComponent<Image>();
@@ -444,6 +446,7 @@ public class MagnetObstacleService : MonoBehaviour
 
         var go = new GameObject("MagnetDrainImpact", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         go.transform.SetParent(parent, false);
+        go.layer = go.transform.parent.gameObject.layer;   // UI kamerası layer 0'ı çizmez
         go.transform.SetAsLastSibling();
 
         var img = go.GetComponent<Image>();
@@ -578,6 +581,7 @@ public class MagnetObstacleService : MonoBehaviour
 
         var go = new GameObject("MagnetTubeCarrier", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         go.transform.SetParent(visualParent, false);
+        go.layer = go.transform.parent.gameObject.layer;   // UI kamerası layer 0'ı çizmez
         go.transform.SetSiblingIndex(Mathf.Max(0, visualRt.GetSiblingIndex()));
 
         var rt = go.GetComponent<RectTransform>();
@@ -834,9 +838,12 @@ public class MagnetObstacleService : MonoBehaviour
             onReleased: RemoveCageVisual,
             owner: "Magnet");
 
-        ShowCageVisual(tile);
+        // Kafes, elektrik hücreye ÇARPTIĞI an oluşur (çarpma → kilit okunur). View yoksa hemen.
         if (magnet.View != null)
-            StartCoroutine(CastCageLightning(magnet.View.GetEndpointWorldPosition(nearEndpoint), tile));
+            StartCoroutine(CastCageLightning(magnet.View.GetEndpointWorldPosition(nearEndpoint), tile,
+                onImpact: () => { if (board.SpecialLocks != null && board.SpecialLocks.IsLocked(tile)) ShowCageVisual(tile); }));
+        else
+            ShowCageVisual(tile);
     }
 
     private int GetNearestEndpointCell(MagnetInstance magnet, int x, int y)
@@ -983,7 +990,7 @@ public class MagnetObstacleService : MonoBehaviour
         var blob = CreateSpecialCarrierVisual(originWorld, kind, sizeScale: 0.9f);
         Vector3 targetWorld = board.Tiles[tx, ty] != null ? board.Tiles[tx, ty].transform.position : originWorld;
 
-        yield return GelEject(blob, targetWorld);
+        yield return GelEject(blob, targetWorld, SpecialFlightColor(kind));
 
         if (blob != null)
             Object.Destroy(blob.gameObject);
@@ -1064,80 +1071,233 @@ public class MagnetObstacleService : MonoBehaviour
         return true;
     }
 
-    /// Small anticipation, one clean arc, then a soft landing. Keep the icon's
-    /// proportions readable throughout instead of shaking it sideways in flight.
-    private IEnumerator GelEject(RectTransform rt, Vector3 targetWorld)
+    // Special türüne göre uçuş rengi (hale + ışık izi + varış halkası).
+    private static Color SpecialFlightColor(TileSpecial kind)
+    {
+        switch (kind)
+        {
+            case TileSpecial.LineH:
+            case TileSpecial.LineV: return new Color(0.35f, 0.85f, 1f);
+            case TileSpecial.PulseCore: return new Color(1f, 0.55f, 0.15f);
+            case TileSpecial.PatchBot: return new Color(0.55f, 1f, 0.35f);
+            case TileSpecial.SystemOverride: return new Color(0.9f, 0.45f, 1f);
+            default: return new Color(1f, 0.9f, 0.4f);
+        }
+    }
+
+    private const float FlightTrailSpacingCells = 0.12f;
+    private const float FlightTrailLifetime = 0.32f;
+
+    /// Fırlatma: ağızda kısa toplanma → belirgin bir yay → yumuşak iniş. Special ikonu uçuş boyunca tam
+    /// görünür; arkasında renkli hale ve sönerek kalan ışık izi, varışta renkli halka patlaması.
+    private IEnumerator GelEject(RectTransform rt, Vector3 targetWorld, Color tint)
     {
         if (rt == null || board == null)
             yield break;
 
+        var parent = rt.parent as RectTransform;
+        float tileSize = Mathf.Max(1f, board.TileSize);
+
+        // Efektler ikonun ALTINDA kalsın: ikonun hemen önüne bir kap, hale ve iz onun içinde.
+        var fxRoot = CreateFxImage(parent, "MagnetFlightFx", null, Color.clear, 0f);
+        if (fxRoot != null)
+        {
+            fxRoot.GetComponent<Image>().enabled = false;
+            fxRoot.SetSiblingIndex(rt.GetSiblingIndex());
+        }
+        var halo = CreateFxImage(fxRoot, "MagnetFlightHalo", GlowSprite(), WithAlpha(tint, 0.85f), tileSize * 1.7f);
+
         Vector2 start = rt.anchoredPosition;
         Vector2 end = board.WorldToAnchoredIn(board.BreakFxParent, targetWorld);
         Vector2 delta = end - start;
-        float tileSize = Mathf.Max(1f, board.TileSize);
         float distanceInCells = delta.magnitude / tileSize;
         Vector2 direction = delta.sqrMagnitude > 0.001f ? delta.normalized : Vector2.up;
-        float tilt = -Mathf.Sign(delta.x) * 12f;
+        float tilt = -Mathf.Sign(delta.x) * 14f;
 
-        // A brief gather at the mouth makes the launch legible. Uniform scaling
-        // avoids distorting the Line/Pulse/PatchBot artwork.
-        const float anticipationDuration = 0.09f;
+        // 1) Ağızda toplanma: ikon hafif geri çekilip büzülür, hale parlar.
+        const float anticipationDuration = 0.12f;
         float elapsed = 0f;
         while (elapsed < anticipationDuration)
         {
-            if (rt == null) yield break;
+            if (rt == null) break;
             elapsed += Time.deltaTime;
             float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / anticipationDuration));
-            rt.anchoredPosition = start - direction * (tileSize * 0.10f * k);
-            rt.localScale = Vector3.one * Mathf.Lerp(0.62f, 0.48f, k);
+            rt.anchoredPosition = start - direction * (tileSize * 0.12f * k);
+            rt.localScale = Vector3.one * Mathf.Lerp(0.7f, 0.82f, k);
             rt.localRotation = Quaternion.Euler(0f, 0f, -tilt * k);
+            if (halo != null)
+            {
+                halo.anchoredPosition = rt.anchoredPosition;
+                halo.localScale = Vector3.one * Mathf.Lerp(0.4f, 1.1f, k);
+            }
             yield return null;
         }
 
-        Vector2 launch = start - direction * (tileSize * 0.10f);
-        float arcHeight = tileSize * Mathf.Clamp(distanceInCells * 0.24f, 0.35f, 1.35f);
-        Vector2 controlA = Vector2.Lerp(launch, end, 0.25f) + Vector2.up * arcHeight;
-        Vector2 controlB = Vector2.Lerp(launch, end, 0.75f) + Vector2.up * arcHeight;
-        float travelDuration = Mathf.Clamp(0.28f + distanceInCells * 0.045f, 0.32f, 0.62f);
+        // 2) Yay: yukarı doğru belirgin kavis (mesafeyle büyür).
+        Vector2 launch = start - direction * (tileSize * 0.12f);
+        float arcHeight = tileSize * Mathf.Clamp(distanceInCells * 0.38f, 0.9f, 2.6f);
+        Vector2 controlA = Vector2.Lerp(launch, end, 0.2f) + Vector2.up * arcHeight;
+        Vector2 controlB = Vector2.Lerp(launch, end, 0.8f) + Vector2.up * arcHeight;
+        float travelDuration = Mathf.Clamp(0.45f + distanceInCells * 0.05f, 0.5f, 0.9f);
 
+        Vector2 lastTrail = launch;
         elapsed = 0f;
         while (elapsed < travelDuration)
         {
-            if (rt == null) yield break;
+            if (rt == null) break;
             elapsed += Time.deltaTime;
             float k = Mathf.Clamp01(elapsed / travelDuration);
             float u = Mathf.SmoothStep(0f, 1f, k);
             float v = 1f - u;
-            rt.anchoredPosition = v * v * v * launch
-                + 3f * v * v * u * controlA
-                + 3f * v * u * u * controlB
-                + u * u * u * end;
+            Vector2 pos = v * v * v * launch + 3f * v * v * u * controlA + 3f * v * u * u * controlB + u * u * u * end;
+            rt.anchoredPosition = pos;
+            rt.localScale = Vector3.one * (Mathf.Lerp(0.82f, 1f, u) + 0.12f * Mathf.Sin(k * Mathf.PI));
+            rt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(-tilt, 0f, u) + tilt * Mathf.Sin(k * Mathf.PI));
 
-            float grow = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(k / 0.65f));
-            rt.localScale = Vector3.one * (Mathf.Lerp(0.48f, 1f, grow) + 0.10f * Mathf.Sin(k * Mathf.PI));
-            float angle = Mathf.Lerp(-tilt, 0f, u) + tilt * Mathf.Sin(k * Mathf.PI);
-            rt.localRotation = Quaternion.Euler(0f, 0f, angle);
+            if (halo != null)
+            {
+                halo.anchoredPosition = pos;
+                halo.localScale = Vector3.one * (1.1f + 0.12f * Mathf.Sin(elapsed * 22f));
+            }
+
+            // Işık izi: yol boyunca aralıklı, sönerek küçülen renkli parıltılar.
+            if ((pos - lastTrail).magnitude >= tileSize * FlightTrailSpacingCells)
+            {
+                SpawnTrailDot(fxRoot, pos, tint, tileSize);
+                lastTrail = pos;
+            }
             yield return null;
         }
 
-        // A single restrained pulse settles onto the cell without a second jump.
-        const float landingDuration = 0.12f;
+        // 3) İniş: renkli halka patlaması + tek yumuşak nabız.
+        if (rt != null)
+        {
+            rt.anchoredPosition = end;
+            rt.localRotation = Quaternion.identity;
+        }
+        StartCoroutine(LandingRing(parent, end, tint, tileSize));
+
+        const float landingDuration = 0.14f;
         elapsed = 0f;
         while (elapsed < landingDuration)
         {
-            if (rt == null) yield break;
+            if (rt == null) break;
             elapsed += Time.deltaTime;
             float k = Mathf.Clamp01(elapsed / landingDuration);
-            rt.anchoredPosition = end;
-            rt.localRotation = Quaternion.identity;
-            rt.localScale = Vector3.one * (1f + 0.08f * Mathf.Sin(k * Mathf.PI) * (1f - k));
+            rt.localScale = Vector3.one * (1f + 0.14f * Mathf.Sin(k * Mathf.PI) * (1f - k));
+            if (halo != null)
+                halo.GetComponent<Image>().color = WithAlpha(tint, Mathf.Lerp(0.85f, 0f, k));
             yield return null;
         }
 
-        if (rt == null) yield break;
-        rt.anchoredPosition = end;
-        rt.localScale = Vector3.one;
-        rt.localRotation = Quaternion.identity;
+        if (rt != null)
+        {
+            rt.localScale = Vector3.one;
+            rt.localRotation = Quaternion.identity;
+        }
+        if (halo != null)
+            Object.Destroy(halo.gameObject);
+        if (fxRoot != null)
+            Object.Destroy(fxRoot.gameObject, FlightTrailLifetime + 0.05f);   // iz parıltıları sönsün
+    }
+
+    private void SpawnTrailDot(RectTransform fxRoot, Vector2 pos, Color tint, float tileSize)
+    {
+        var dot = CreateFxImage(fxRoot, "MagnetFlightTrail", GlowSprite(), WithAlpha(tint, 0.8f), tileSize * 0.6f);
+        if (dot == null) return;
+        dot.anchoredPosition = pos;
+        StartCoroutine(FadeTrailDot(dot, tint));
+    }
+
+    private IEnumerator FadeTrailDot(RectTransform dot, Color tint)
+    {
+        var img = dot.GetComponent<Image>();
+        float elapsed = 0f;
+        while (elapsed < FlightTrailLifetime && dot != null)
+        {
+            elapsed += Time.deltaTime;
+            float k = Mathf.Clamp01(elapsed / FlightTrailLifetime);
+            dot.localScale = Vector3.one * Mathf.Lerp(1f, 0.15f, k);
+            img.color = WithAlpha(Color.Lerp(tint, Color.white, k * 0.6f), Mathf.Lerp(0.8f, 0f, k));
+            yield return null;
+        }
+        if (dot != null)
+            Object.Destroy(dot.gameObject);
+    }
+
+    private IEnumerator LandingRing(RectTransform parent, Vector2 pos, Color tint, float tileSize)
+    {
+        var ring = CreateFxImage(parent, "MagnetLandingRing", CageRingSprite(), WithAlpha(tint, 0.9f), tileSize * 1.2f);
+        var flash = CreateFxImage(parent, "MagnetLandingFlash", GlowSprite(), WithAlpha(Color.Lerp(tint, Color.white, 0.5f), 0.9f), tileSize * 1.4f);
+        const float duration = 0.34f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float k = Mathf.Clamp01(elapsed / duration);
+            float e = 1f - Mathf.Pow(1f - k, 3f);
+            if (ring != null)
+            {
+                ring.anchoredPosition = pos;
+                ring.localScale = Vector3.one * Mathf.Lerp(0.35f, 1.6f, e);
+                ring.GetComponent<Image>().color = WithAlpha(tint, Mathf.Lerp(0.9f, 0f, k));
+            }
+            if (flash != null)
+            {
+                flash.anchoredPosition = pos;
+                flash.localScale = Vector3.one * Mathf.Lerp(0.6f, 1.1f, e);
+                flash.GetComponent<Image>().color = WithAlpha(Color.Lerp(tint, Color.white, 0.5f), Mathf.Lerp(0.9f, 0f, k));
+            }
+            yield return null;
+        }
+        if (ring != null) Object.Destroy(ring.gameObject);
+        if (flash != null) Object.Destroy(flash.gameObject);
+    }
+
+    // Çalışma anında oluşan efekt görseli: parent'ın layer'ını alır (UI kamerası layer 0'ı çizmez).
+    private static RectTransform CreateFxImage(RectTransform parent, string name, Sprite sprite, Color color, float size)
+    {
+        if (parent == null) return null;
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+        go.layer = parent.gameObject.layer;
+        go.transform.SetAsLastSibling();
+        var img = go.GetComponent<Image>();
+        img.sprite = sprite;
+        img.color = color;
+        img.raycastTarget = false;
+        var rt = img.rectTransform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = Vector2.one * size;
+        return rt;
+    }
+
+    private static Color WithAlpha(Color c, float a) { c.a = a; return c; }
+
+    private static Sprite flightGlowSprite;
+
+    // Yumuşak radyal parıltı (merkez dolu, kenara doğru sönen) — hale ve iz için.
+    private static Sprite GlowSprite()
+    {
+        if (flightGlowSprite != null)
+            return flightGlowSprite;
+
+        const int size = 64;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        var pixels = new Color[size * size];
+        Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+        float radius = size * 0.5f;
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            float d = Mathf.Clamp01(Vector2.Distance(new Vector2(x, y), center) / radius);
+            float a = Mathf.Pow(1f - d, 2.2f);
+            pixels[y * size + x] = new Color(1f, 1f, 1f, a);
+        }
+        tex.SetPixels(pixels);
+        tex.Apply();
+        flightGlowSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+        return flightGlowSprite;
     }
 
     // ── Collector flush (both endpoints open again) ──────────────────────────────
@@ -1223,6 +1383,7 @@ public class MagnetObstacleService : MonoBehaviour
 
         var go = new GameObject("MagnetCollectedCarrier", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         go.transform.SetParent(board.BreakFxParent, false);
+        go.layer = go.transform.parent.gameObject.layer;   // UI kamerası layer 0'ı çizmez
         go.transform.SetAsLastSibling();
 
         var img = go.GetComponent<Image>();
@@ -1251,6 +1412,7 @@ public class MagnetObstacleService : MonoBehaviour
 
         var go = new GameObject("MagnetSpecialCarrier", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         go.transform.SetParent(board.BreakFxParent, false);
+        go.layer = go.transform.parent.gameObject.layer;   // UI kamerası layer 0'ı çizmez
         go.transform.SetAsLastSibling();
 
         var img = go.GetComponent<Image>();
@@ -1279,6 +1441,7 @@ public class MagnetObstacleService : MonoBehaviour
         // tile through gravity automatically — no per-frame repositioning, so no drift / left-right wobble.
         var go = new GameObject("MagnetCage", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         go.transform.SetParent(tile.transform, false);
+        go.layer = go.transform.parent.gameObject.layer;   // UI kamerası layer 0'ı çizmez
         go.transform.SetAsLastSibling();
 
         Sprite authoredSprite = ResolveCageSprite();
@@ -1359,76 +1522,215 @@ public class MagnetObstacleService : MonoBehaviour
         cageVisuals.Clear();
     }
 
-    private IEnumerator CastCageLightning(Vector3 fromWorld, TileView tile)
+    // ── Kafes elektrik çarpması ────────────────────────────────────────────────
+    // 1) Şimşek magnet ucundan hücreye UZANIR, 2) hücreye çarpar: beyaz flaş + genişleyen halka +
+    // dışa sıçrayan kıvılcım arkları + taş titrer, kafes o an oluşur, 3) şimşek bir süre CIZIRDAR
+    // (kırık çizgi her ~40 ms yeniden çizilir, uçta çatallanır) ve söner. Parlak beyaz çekirdek +
+    // geniş mavi parıltı iki katman.
+    private static readonly Color ShockGlowColor = new Color(0.35f, 0.8f, 1f, 1f);
+    private static readonly Color ShockCoreColor = new Color(0.92f, 0.98f, 1f, 1f);
+
+    private sealed class ShockBolt
+    {
+        public RectTransform[] glow;
+        public RectTransform[] core;
+        public Vector2[] points;
+    }
+
+    private IEnumerator CastCageLightning(Vector3 fromWorld, TileView tile, System.Action onImpact = null)
     {
         RectTransform parent = board != null ? board.BreakFxParent : null;
         if (parent == null || tile == null)
+        {
+            onImpact?.Invoke();
             yield break;
+        }
 
+        float tileSize = Mathf.Max(1f, board.TileSize);
+        int tileLifetime = tile.LifetimeVersion;
         Vector2 start = board.WorldToAnchoredIn(parent, fromWorld);
-        Vector2 end = board.WorldToAnchoredIn(parent, tile.transform.position);
-        Vector2 delta = end - start;
+        Vector2 End() => tile != null && tile && tile.IsCurrentLifetime(tileLifetime)
+            ? board.WorldToAnchoredIn(parent, tile.transform.position) : (Vector2)board.WorldToAnchoredIn(parent, fromWorld);
+
+        int segments = Mathf.Max(5, drainElectricSegments + 2);
+        float thickness = Mathf.Max(2f, tileSize * drainElectricThicknessRatio);
+        var main = CreateShockBolt(parent, segments, thickness);
+        var fork = CreateShockBolt(parent, 3, thickness * 0.7f);
+
+        // 1) Uzanma
+        const float reachDuration = 0.09f;
+        float elapsed = 0f;
+        while (elapsed < reachDuration)
+        {
+            elapsed += Time.deltaTime;
+            float k = Mathf.Clamp01(elapsed / reachDuration);
+            JitterBolt(main, start, End(), tileSize * 0.18f);
+            ShowBolt(main, k * segments, 1f);
+            yield return null;
+        }
+
+        // 2) Çarpma
+        Vector2 hit = End();
+        onImpact?.Invoke();
+        StartCoroutine(ShockImpact(parent, hit, tileSize));
+        StartCoroutine(ShakeTileIcon(tile, tileLifetime, tileSize));
+
+        // 3) Cızırdama + sönme
+        const float crackleDuration = 0.36f;
+        const float reshapeInterval = 0.04f;
+        float nextReshape = 0f;
+        elapsed = 0f;
+        while (elapsed < crackleDuration)
+        {
+            elapsed += Time.deltaTime;
+            float k = Mathf.Clamp01(elapsed / crackleDuration);
+            float fade = 1f - Mathf.Clamp01((k - 0.55f) / 0.45f);
+            if (elapsed >= nextReshape)
+            {
+                nextReshape = elapsed + reshapeInterval;
+                Vector2 end = End();
+                JitterBolt(main, start, end, tileSize * 0.2f);
+                // Uca yakın bir noktadan yana çatal.
+                Vector2 forkFrom = main.points[Mathf.Max(1, main.points.Length - 3)];
+                Vector2 side = Random.insideUnitCircle.normalized * tileSize * Random.Range(0.35f, 0.6f);
+                JitterBolt(fork, forkFrom, forkFrom + side, tileSize * 0.1f);
+            }
+            float flicker = Random.value < 0.25f ? 0.45f : 1f;
+            ShowBolt(main, segments, fade * flicker);
+            ShowBolt(fork, fork.core.Length, fade * flicker * (Random.value < 0.5f ? 0.9f : 0f));
+            yield return null;
+        }
+
+        DestroyShockBolt(main);
+        DestroyShockBolt(fork);
+    }
+
+    private ShockBolt CreateShockBolt(RectTransform parent, int segments, float thickness)
+    {
+        var bolt = new ShockBolt
+        {
+            glow = new RectTransform[segments],
+            core = new RectTransform[segments],
+            points = new Vector2[segments + 1],
+        };
+        for (int i = 0; i < segments; i++)
+        {
+            bolt.glow[i] = CreateFxImage(parent, "MagnetShockGlow", GlowSprite(), WithAlpha(ShockGlowColor, 0f), 1f);
+            bolt.core[i] = CreateFxImage(parent, "MagnetShockCore", WhiteSprite(), WithAlpha(ShockCoreColor, 0f), 1f);
+            if (bolt.glow[i] != null) bolt.glow[i].sizeDelta = new Vector2(1f, thickness * 4f);
+            if (bolt.core[i] != null) bolt.core[i].sizeDelta = new Vector2(1f, thickness);
+        }
+        return bolt;
+    }
+
+    // Kırık çizgi: uçlar sabit, ara noktalar dik yönde rastgele sapar (ortada en çok).
+    private static void JitterBolt(ShockBolt bolt, Vector2 from, Vector2 to, float amplitude)
+    {
+        int n = bolt.points.Length - 1;
+        Vector2 delta = to - from;
         Vector2 perp = delta.sqrMagnitude > 0.001f ? new Vector2(-delta.y, delta.x).normalized : Vector2.up;
-
-        int segmentCount = Mathf.Max(3, drainElectricSegments);
-        var points = new Vector2[segmentCount + 1];
-        points[0] = start;
-        points[segmentCount] = end;
-        float wiggle = Mathf.Max(4f, board.TileSize * 0.14f);
-        for (int i = 1; i < segmentCount; i++)
+        for (int i = 0; i <= n; i++)
         {
-            float k = i / (float)segmentCount;
-            float offset = Mathf.Sin(k * Mathf.PI * 3f) * wiggle + Random.Range(-wiggle * 0.35f, wiggle * 0.35f);
-            points[i] = Vector2.Lerp(start, end, k) + perp * offset;
+            float k = i / (float)n;
+            float envelope = Mathf.Sin(k * Mathf.PI);
+            bolt.points[i] = Vector2.Lerp(from, to, k)
+                + (i == 0 || i == n ? Vector2.zero : perp * Random.Range(-amplitude, amplitude) * envelope);
+        }
+        for (int i = 0; i < n; i++)
+        {
+            float coreThickness = bolt.core[i] != null ? bolt.core[i].sizeDelta.y : 2f;
+            float glowThickness = bolt.glow[i] != null ? bolt.glow[i].sizeDelta.y : 8f;
+            if (bolt.core[i] != null) PlaceBoltSegment(bolt.core[i], bolt.points[i], bolt.points[i + 1], coreThickness);
+            if (bolt.glow[i] != null) PlaceBoltSegment(bolt.glow[i], bolt.points[i], bolt.points[i + 1], glowThickness);
+        }
+    }
+
+    // revealSegments: kaç segment görünür (uzanma), alpha: genel parlaklık.
+    private static void ShowBolt(ShockBolt bolt, float revealSegments, float alpha)
+    {
+        for (int i = 0; i < bolt.core.Length; i++)
+        {
+            float a = Mathf.Clamp01(revealSegments - i) * alpha;
+            if (bolt.core[i] != null) bolt.core[i].GetComponent<Image>().color = WithAlpha(ShockCoreColor, a);
+            if (bolt.glow[i] != null) bolt.glow[i].GetComponent<Image>().color = WithAlpha(ShockGlowColor, a * 0.7f);
+        }
+    }
+
+    private static void DestroyShockBolt(ShockBolt bolt)
+    {
+        foreach (var rt in bolt.core) if (rt != null) Object.Destroy(rt.gameObject);
+        foreach (var rt in bolt.glow) if (rt != null) Object.Destroy(rt.gameObject);
+    }
+
+    // Çarpma noktası: beyaz-mavi flaş + genişleyen halka + dışa sıçrayan kısa kıvılcım arkları.
+    private IEnumerator ShockImpact(RectTransform parent, Vector2 pos, float tileSize)
+    {
+        var flash = CreateFxImage(parent, "MagnetShockFlash", GlowSprite(), WithAlpha(ShockCoreColor, 1f), tileSize * 1.6f);
+        var ring = CreateFxImage(parent, "MagnetShockRing", CageRingSprite(), WithAlpha(ShockGlowColor, 0.9f), tileSize * 1.1f);
+        if (flash != null) flash.anchoredPosition = pos;
+        if (ring != null) ring.anchoredPosition = pos;
+
+        const int sparkCount = 7;
+        var sparks = new ShockBolt[sparkCount];
+        var sparkDirs = new Vector2[sparkCount];
+        for (int i = 0; i < sparkCount; i++)
+        {
+            sparks[i] = CreateShockBolt(parent, 2, Mathf.Max(1.5f, tileSize * 0.03f));
+            float angle = (i / (float)sparkCount) * Mathf.PI * 2f + Random.Range(-0.3f, 0.3f);
+            sparkDirs[i] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
         }
 
-        var segments = new RectTransform[segmentCount];
-        var images = new Image[segmentCount];
-        float thickness = Mathf.Max(2f, board.TileSize * drainElectricThicknessRatio);
-        Sprite sprite = WhiteSprite();
-        Color boltColor = new Color(0.55f, 0.85f, 1f, 1f);
-        for (int i = 0; i < segmentCount; i++)
-        {
-            var go = new GameObject("MagnetCageBolt", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            go.transform.SetParent(parent, false);
-            go.transform.SetAsLastSibling();
-
-            var img = go.GetComponent<Image>();
-            img.sprite = sprite;
-            img.raycastTarget = false;
-            img.color = new Color(boltColor.r, boltColor.g, boltColor.b, 0f);
-
-            var rt = img.rectTransform;
-            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
-            PlaceBoltSegment(rt, points[i], points[i + 1], thickness);
-            segments[i] = rt;
-            images[i] = img;
-        }
-
-        float duration = Mathf.Max(0.12f, drainElectricMarkDuration * 0.6f);
+        const float duration = 0.3f;
         float elapsed = 0f;
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
             float k = Mathf.Clamp01(elapsed / duration);
-            float head = k * segmentCount;
-            float fade = 1f - Mathf.Clamp01((k - 0.7f) / 0.3f);
-            for (int i = 0; i < images.Length; i++)
+            float e = 1f - Mathf.Pow(1f - k, 3f);
+            if (flash != null)
             {
-                if (images[i] == null)
-                    continue;
-                float reveal = Mathf.Clamp01(head - i);
-                float flicker = Random.value < 0.2f ? 0.5f : 1f;
-                Color c = boltColor;
-                c.a = reveal * fade * flicker;
-                images[i].color = c;
+                flash.localScale = Vector3.one * Mathf.Lerp(0.5f, 1.15f, e);
+                flash.GetComponent<Image>().color = WithAlpha(Color.Lerp(ShockCoreColor, ShockGlowColor, k), 1f - k);
+            }
+            if (ring != null)
+            {
+                ring.localScale = Vector3.one * Mathf.Lerp(0.4f, 1.7f, e);
+                ring.GetComponent<Image>().color = WithAlpha(ShockGlowColor, 0.9f * (1f - k));
+            }
+            for (int i = 0; i < sparkCount; i++)
+            {
+                Vector2 from = pos + sparkDirs[i] * tileSize * Mathf.Lerp(0.3f, 0.7f, e);
+                Vector2 to = pos + sparkDirs[i] * tileSize * Mathf.Lerp(0.45f, 1.05f, e);
+                JitterBolt(sparks[i], from, to, tileSize * 0.08f);
+                ShowBolt(sparks[i], 2f, (1f - k) * (Random.value < 0.3f ? 0.4f : 1f));
             }
             yield return null;
         }
 
-        for (int i = 0; i < segments.Length; i++)
-            if (segments[i] != null)
-                Object.Destroy(segments[i].gameObject);
+        if (flash != null) Object.Destroy(flash.gameObject);
+        if (ring != null) Object.Destroy(ring.gameObject);
+        foreach (var spark in sparks) DestroyShockBolt(spark);
+    }
+
+    // Elektrik çarpan taş titrer: YALNIZ ikon kayar (taşın konumu düşüş sistemine aittir).
+    private IEnumerator ShakeTileIcon(TileView tile, int lifetime, float tileSize)
+    {
+        var icon = tile != null ? tile.IconImage : null;
+        if (icon == null) yield break;
+        var rt = icon.rectTransform;
+        Vector2 home = rt.anchoredPosition;
+        const float duration = 0.28f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            if (tile == null || !tile || !tile.IsCurrentLifetime(lifetime) || rt == null) yield break;
+            elapsed += Time.deltaTime;
+            float amp = tileSize * 0.05f * (1f - elapsed / duration);
+            rt.anchoredPosition = home + Random.insideUnitCircle * amp;
+            yield return null;
+        }
+        if (rt != null && tile != null && tile && tile.IsCurrentLifetime(lifetime))
+            rt.anchoredPosition = home;
     }
 
     private static Sprite CageRingSprite()

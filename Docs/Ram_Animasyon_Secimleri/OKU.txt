@@ -1,0 +1,5 @@
+Ram saldiri onizlemesi icin secilen 5 kaynak kare.
+Dosyalar orijinallerin yeniden adlandirilmis kopyalaridir; gorseller degistirilmedi.
+Sira: 01 Ready -> 02 Anticipation -> 03 Windup -> 04 Swing -> 05 Contact.
+Bunlar onizleme kaynaklaridir. Olcek/ayak hizasi ve seffaflik kontrolu henuz yapilmadi. 03 karesinin cekic ust kenari kirpik.
+Son FollowThrough denemesi bu secime dahil degil.

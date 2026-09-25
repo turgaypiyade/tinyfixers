@@ -196,6 +196,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private bool failPopupShown;
     private bool successPopupShown;
+    private bool lifeDebitedForFailure;
     private bool successReturnQueued;
     private bool _abandonWarning;   // oyun içi "exit" uyarısı: gerçek fail değil
     [Header("Oyundan Çık uyarısı")]
@@ -341,6 +342,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void OnEnable()
     {
+        if (RuntimeSimulationSession.IsActive) { enabled = false; return; }
         failPopupShown = false;
         successPopupShown = false;
         successReturnQueued = false;
@@ -479,7 +481,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         // 2. cancel (veya gösterilecek kayıp yok): hamle eklemeyi reddetti → GERÇEKTEN vazgeçti.
-        // Fail'i ŞİMDİ işaretle (streak kırılır); event item'ları kaybolur.
+        GiveUpLevel();
+    }
+
+    // Devam reddedildi → level kaybedilmiş sayılır (hak zaten fail popup açılırken düştü).
+    // Fail'i ŞİMDİ işaretle (streak kırılır); event item'ları kaybolur; "Tekrar Dene"ye geç.
+    private void GiveUpLevel()
+    {
         PlayerStats.MarkCurrentLevelFailed();
         ProgressEventService.Instance?.DiscardStagedGains();
 
@@ -567,6 +575,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         var library = chapterThemeApplier != null ? chapterThemeApplier.ThemeLibrary : null;
+        if (library == null) library = Resources.Load<ChapterThemeLibrary>("ChapterThemeLibrary");
         LoadingScreenManager.Show(library != null ? library.GetRandomLoadingImage() : null, minimumDisplayTime: 0f);
         SceneManager.LoadScene(mainMenuSceneName, LoadSceneMode.Single);
     }
@@ -791,6 +800,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private void ReturnToMainMenu()
     {
         var library = chapterThemeApplier != null ? chapterThemeApplier.ThemeLibrary : null;
+        if (library == null) library = Resources.Load<ChapterThemeLibrary>("ChapterThemeLibrary");
         LoadingScreenManager.Show(library != null ? library.GetRandomLoadingImage() : null, minimumDisplayTime: 0f);
         SceneManager.LoadScene(mainMenuSceneName);
     }
@@ -1346,7 +1356,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (board != null)
             board.SetInputLocked(true);
 
+        int livesBeforeFailure = LivesManager.Current;
         LivesManager.SpendLife();
+        lifeDebitedForFailure = LivesManager.Current < livesBeforeFailure;
         ApplyChapterThemeVisuals();
         RefreshFailOfferVisuals(animateIncrease: true);
         RefreshEventLossWarning();
@@ -1623,13 +1635,20 @@ public class LevelEndSimplePopupController : MonoBehaviour
             return;
         }
 
-        // Yeterli coin yok → reklam izle (bedava devam) ya da satın al (market) seçimi.
-        RuntimeChoicePopup.Show(
+        // Yeterli coin yok → reklam izle (bedava devam, level başına TEK hak) ya da satın al (market).
+        // Alttaki "Kapat": hiçbir şey yapmadan vazgeçer — hak biter, level kaybedilmiş sayılır.
+        RuntimeChoicePopup.ShowOffer(
             "Yetersiz Altın",
-            $"Devam için {currentCost} coin gerekli, {PlayerWallet.Coins} coinin var.\nReklam izleyerek bedava devam edebilir veya market'ten altın alabilirsin.",
-            new RuntimeChoicePopup.Choice("Reklam İzle", WatchAdThenContinue, primary: true),
-            new RuntimeChoicePopup.Choice("Satın Al", GoToMarketFromFail),
-            new RuntimeChoicePopup.Choice("Kapat", null));
+            $"Devam için {currentCost} altın gerekli.\nŞu an {PlayerWallet.Coins} altının var.",
+            new[]
+            {
+                new RuntimeChoicePopup.OfferButton("Reklam İzle",
+                    adContinueUsedThisLevel ? "Bu oyunda kullanıldı" : "Bedava devam et",
+                    WatchAdThenContinue, interactable: !adContinueUsedThisLevel),
+                new RuntimeChoicePopup.OfferButton("Satın Al", "Market'ten altın al", GoToMarketFromFail),
+            },
+            "Kapat",
+            GiveUpLevel);
     }
 
     // Coin harcandıktan (veya reklam ödülünden) sonra ortak "devam" akışı.
@@ -1638,7 +1657,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (board == null) return;
 
         // Fail popup açılırken harcanan hakkı geri ver; oyuncu devam ediyor.
-        LivesManager.AddLives(1);
+        if (lifeDebitedForFailure) LivesManager.AddLives(1);
+        lifeDebitedForFailure = false;
 
         board.AddMoves(currentOfferAmount);
         board.SetInputLocked(false);
@@ -1660,8 +1680,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
         board.ForceFullBoardSync();
     }
 
+    // Reklamla bedava devam, aynı level oturumunda yalnız BİR kez (sahne yüklenince sıfırlanır).
+    private bool adContinueUsedThisLevel;
+
     private void WatchAdThenContinue()
     {
+        if (adContinueUsedThisLevel) return;
+        adContinueUsedThisLevel = true;
         StartCoroutine(CoWatchAdThenContinue());
     }
 
@@ -1679,8 +1704,20 @@ public class LevelEndSimplePopupController : MonoBehaviour
 #endif
     }
 
+    [Header("Oyun içi market (fail'de altın alıp kaldığı yerden devam)")]
+    [Tooltip("Ana menü market'iyle aynı katalog + kart prefab'ları. Boşsa eski davranış: ana menüye gidip market açılır (level kaybedilir).")]
+    [SerializeField] private InGameShopOverlay.Refs inGameShop;
+
     private void GoToMarketFromFail()
     {
+        // Level'dan ÇIKMADAN market: oyuncu satın aldığı her şeyi hemen alır, kapatınca
+        // altın yetiyorsa oyun kaldığı yerden sürer (level kaybolmaz).
+        if (inGameShop.IsValid)
+        {
+            InGameShopOverlay.Open(inGameShop, HandleInGameShopClosed);
+            return;
+        }
+
         // 01_Game'de market yok → ana menüye dön, orada market otomatik açılsın.
         // Devam reddedilip level'dan çıkılıyor → fail'i işaretle (streak kırılır).
         // Devam reddedildiği için staged event item'ları da temizlenir.
@@ -1688,6 +1725,23 @@ public class LevelEndSimplePopupController : MonoBehaviour
         ProgressEventService.Instance?.DiscardStagedGains();
         MarketNavigator.PendingOpenMarket = true;
         ReturnToMainMenuImmediate();
+    }
+
+    // Market kapandı: altın artık yetiyorsa devam bedelini ödeyip oyunu sürdür; yetmiyorsa
+    // "Yetersiz Altın" seçimine geri dön (reklam / tekrar market / kapat).
+    private void HandleInGameShopClosed()
+    {
+        if (board == null) return;
+
+        ResolveCurrentFailOffer();
+        if (PlayerWallet.HasEnoughCoins(currentCost))
+        {
+            PlayerWallet.SpendCoins(currentCost);
+            PerformContinue();
+            return;
+        }
+
+        HandleBuyMovesClicked();
     }
 
     private void RefreshPopupCopy()

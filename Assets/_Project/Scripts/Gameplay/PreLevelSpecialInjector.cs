@@ -23,6 +23,7 @@ public class PreLevelSpecialInjector : MonoBehaviour
 
     private IEnumerator Start()
     {
+        if (RuntimeSimulationSession.IsActive) yield break;
         if (!PreLevelSpecialSelectionState.HasSelection)
             yield break;
 

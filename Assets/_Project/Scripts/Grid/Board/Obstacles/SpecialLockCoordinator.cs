@@ -11,8 +11,10 @@ using UnityEngine;
 ///    so every clear / match / special-targeting path skips it. (Enforced via TileView.IsSpecialLocked.)
 ///  • A locked special STILL FALLS: gravity moves the TileView object and the lock flag rides along,
 ///    so nothing extra is needed for falling.
-///  • RELEASE: when any special activates, its AoE footprint is passed to ReleaseCoveredBy; any locked
-///    special inside is freed (owner onReleased fires — e.g. cage visual off).
+///  • IMMUNE TO AoE: a special effect covering a locked special neither fires it nor clears it
+///    (SpecialChainRunner skips caged tiles; dispatcher paths skip via IsInteractionLocked).
+///    ReleaseCoveredBy exists for an "AoE frees the cage" rule but is NOT wired (user rule 2026-09-25:
+///    locked → no explosion, no break).
 ///  • TIMEOUT: each lock carries an unlock window in MOVES. If the window elapses without release,
 ///    the owner onTimeout fires (e.g. magnet pulls it through the tube). The owner is responsible for
 ///    disposing the tile/lock inside that callback.
@@ -38,9 +40,8 @@ public class SpecialLockCoordinator
 
     public bool HasAnyLock => locks.Count > 0;
 
-    // The TileView flag is the single source of truth. A caged special can be consumed OUTSIDE the
-    // coordinator (it explodes when a special's AoE covers it — SpecialChainRunner/ExpandSpecialChain
-    // fire any GetSpecial()!=None tile on the path, ignoring the lock). When that happens the tile is
+    // The TileView flag is the single source of truth. A caged special can still leave the board
+    // OUTSIDE the coordinator (e.g. level teardown, shuffle repair). When that happens the tile is
     // pooled and its flag reset in PrepareForRelease, but our dict entry lingers. So every read/pass
     // treats "flag is false" as authoritative and prunes the stale entry — this prevents a reused pool
     // tile from inheriting a bogus lock or firing a phantom timeout.

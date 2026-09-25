@@ -58,8 +58,9 @@ public static class BossDuelObstaclePressure
                 if (pool.Contains(service.GetObstacleIdAt(x, y))) alive++;
                 var tile = board.Tiles[x, y];
                 if (service.HasObstacleAt(x, y) || service.IsInteractionLockedAt(x, y)
-                    || tile == null || !tile.IsRuntimeIdle || board.GridData[x, y] == null
-                    || tile.GetSpecial() != TileSpecial.None || board.IsReservedTileTargetCell(x, y)) continue;
+                    || tile == null || !tile.IsRuntimeIdle || tile.WasDragging || board.GridData[x, y] == null
+                    || tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key
+                    || board.IsPendingTriggeredSpecialCell(x, y) || board.IsReservedTileTargetCell(x, y)) continue;
                 candidates.Add(new Vector2Int(x, y));
             }
         // Pressure cannot occupy more than a quarter of the board, even with an oversized editor value.
@@ -82,7 +83,21 @@ public static class BossDuelObstaclePressure
         return picked;
     }
 
-    /// Caller owns the input lock and waits for current board jobs before choosing targets.
+    private static bool CanLandWithoutBlockingBoard(BoardController board, Vector2Int cell, List<ObstacleId> pool)
+    {
+        int alive = 0, usable = 0;
+        for (int y = 0; y < board.Height; y++)
+            for (int x = 0; x < board.Width; x++)
+            {
+                if (board.Holes[x, y]) continue;
+                usable++;
+                if (pool.Contains(board.ObstacleStateService.GetObstacleIdAt(x, y))) alive++;
+            }
+        int cap = Mathf.Min(Mathf.Max(1, board.ActiveLevelData.bossMaxPressureObstacles), Mathf.Max(1, usable / 4));
+        return alive < cap && board.HasAnyPlayableSwapWithAdditionalLockedCells(new HashSet<Vector2Int> { cell });
+    }
+
+    /// Flight is visual-only; each destination is validated again at impact without locking input.
     public static IEnumerator Throw(BoardController board, RectTransform source, RectTransform effectsRoot,
         List<Vector2Int> targets, ObstacleId id, BossDuelCharacterView character = null,
         System.Func<bool> cancelled = null, System.Action onRelease = null)
@@ -137,6 +152,40 @@ public static class BossDuelObstaclePressure
                     }
                 }, Cancelled);
             }
+            bool landed = false;
+            void Land()
+            {
+                if (landed) return;
+                landed = true;
+                foreach (var cell in targets)
+                {
+                    var tile = board.Tiles[cell.x, cell.y];
+                    if (tile == null || !tile.IsRuntimeIdle || tile.WasDragging
+                        || tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key
+                        || board.GridData[cell.x, cell.y] == null
+                        || board.IsPendingTriggeredSpecialCell(cell.x, cell.y)
+                        || board.IsReservedTileTargetCell(cell.x, cell.y)
+                        || board.ObstacleStateService.IsInteractionLockedAt(cell.x, cell.y)
+                        || board.ObstacleStateService.HasObstacleAt(cell.x, cell.y)) continue;
+                    var landingPool = GetPool(board.ActiveLevelData);
+                    if (!CanLandWithoutBlockingBoard(board, cell, landingPool)) continue;
+                    if (!board.ObstacleStateService.TrySpawnSingleCellObstacleAt(cell.x, cell.y, id)) continue;
+                    if (def.IsMovableObstacle)
+                    {
+                        // Convert in place: no tile-clear event, player power, goal credit or refill.
+                        tile.SetUseFullCellIcon(false);
+                        tile.SetMovableObstacleTile(true);
+                        tile.SetFullCellMovableSprite(def.fullCellSprite);
+                        tile.SetVisualLayout(TileView.TileVisualLayout.Centered);
+                        tile.SetMovableObstacleSprite(def.GetPreviewSprite());
+                        tile.ApplyTileSize(board.TileSize);
+                    }
+                    board.RaiseObstacleCreatedDynamic(cell.x, cell.y);
+                }
+                foreach (var projectile in projectiles)
+                    if (projectile != null) projectile.gameObject.SetActive(false);
+                board.RequestResolveAfterActionSequence();
+            }
             const float duration = 0.38f;
             float flightTime = 0f;
             bool animationPlaying = animation != null;
@@ -161,29 +210,13 @@ public static class BossDuelObstaclePressure
                         projectiles[i].localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * Mathf.PI) * 25f);
                         projectiles[i].sizeDelta = Vector2.one * Mathf.Lerp(heldSize, size, t);
                     }
-                    if (flightTime >= duration && !animationPlaying) break;
+                    if (flightTime >= duration) Land();
+                    if (landed && !animationPlaying) break;
                     flightTime += Time.deltaTime;
                 }
                 yield return null;
             }
-            foreach (var cell in targets)
-            {
-                var tile = board.Tiles[cell.x, cell.y];
-                if (tile == null || tile.GetSpecial() != TileSpecial.None
-                    || board.ObstacleStateService.HasObstacleAt(cell.x, cell.y)) continue;
-                if (!board.ObstacleStateService.TrySpawnSingleCellObstacleAt(cell.x, cell.y, id)) continue;
-                if (def.IsMovableObstacle)
-                {
-                    // Convert in place: no tile-clear event, player power, goal credit or refill.
-                    tile.SetUseFullCellIcon(false);
-                    tile.SetMovableObstacleTile(true);
-                    tile.SetFullCellMovableSprite(def.fullCellSprite);
-                    tile.SetVisualLayout(TileView.TileVisualLayout.Centered);
-                    tile.SetMovableObstacleSprite(def.GetPreviewSprite());
-                    tile.ApplyTileSize(board.TileSize);
-                }
-                board.RaiseObstacleCreatedDynamic(cell.x, cell.y);
-            }
+
         }
         finally
         {

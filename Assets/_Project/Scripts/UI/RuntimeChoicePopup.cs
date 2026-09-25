@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -32,12 +31,41 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
         }
     }
 
+    /// SaveProgressPopup'taki gibi gövdede büyük buton: başlık + alt yazı, kapalıysa soluk görünür.
+    public readonly struct OfferButton
+    {
+        public readonly string Label;
+        public readonly string Subtitle;
+        public readonly Action OnClick;
+        public readonly bool Interactable;
+
+        public OfferButton(string label, string subtitle, Action onClick, bool interactable = true)
+        {
+            Label = label;
+            Subtitle = subtitle;
+            OnClick = onClick;
+            Interactable = interactable;
+        }
+    }
+
     private static RuntimeChoicePopup _instance;
+
+    /// SaveProgressPopup düzeni: üstte durum yazısı, gövdede alt alta büyük seçenek butonları,
+    /// altta tek aksiyon butonu. Başlıktaki X yalnız popup'ı kapatır (onClose çağrılmaz).
+    public static void ShowOffer(string title, string status, OfferButton[] options, string actionLabel, Action onAction)
+    {
+        Dismiss();
+
+        var root = BuildCanvas();
+        var popup = root.AddComponent<RuntimeChoicePopup>();
+        popup.BuildOffer(root.transform, title, status, options, actionLabel, onAction);
+        _instance = popup;
+        DontDestroyOnLoad(root);
+    }
 
     public static void Show(string title, string message, params Choice[] choices)
     {
-        if (_instance != null)
-            Destroy(_instance.gameObject);
+        Dismiss();
 
         var root = BuildCanvas();
         var popup = root.AddComponent<RuntimeChoicePopup>();
@@ -49,7 +77,10 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
     public static void Dismiss()
     {
         if (_instance != null)
+        {
+            _instance.gameObject.SetActive(false);
             Destroy(_instance.gameObject);
+        }
         _instance = null;
     }
 
@@ -60,7 +91,9 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
 
     private void Close()
     {
+        if (!gameObject.activeSelf) return;
         if (_instance == this) _instance = null;
+        gameObject.SetActive(false);
         Destroy(gameObject);
     }
 
@@ -91,112 +124,98 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
         dimImg.color = new Color(0f, 0f, 0f, 0.72f);
         dimImg.raycastTarget = true;
 
-        // Panel.
-        var panelGo = new GameObject("Panel", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
-        var panel = (RectTransform)panelGo.transform;
-        panel.SetParent(parent, false);
-        panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
-        panel.pivot = new Vector2(0.5f, 0.5f);
-        panel.anchoredPosition = Vector2.zero;
-        panel.sizeDelta = new Vector2(820f, 0f);
+        var view = CommonPopupView.Create(parent, title, Close);
+        var body = CommonPopupView.Text(view.Body, "Message", message, 38,
+            CommonPopupSkin.Shared.bodyTextColor);
+        CommonPopupView.Region(body.rectTransform, new Rect(0, 0, 1, 1));
 
-        var panelImg = panelGo.GetComponent<Image>();
-        panelImg.color = new Color(0.11f, 0.15f, 0.26f, 1f);
-
-        var vlg = panelGo.GetComponent<VerticalLayoutGroup>();
-        vlg.padding = new RectOffset(48, 48, 48, 48);
-        vlg.spacing = 28f;
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = true;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
-
-        var fitter = panelGo.GetComponent<ContentSizeFitter>();
-        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        if (!string.IsNullOrEmpty(title))
-            BuildText(panel, "Title", title, 58, FontStyles.Bold, new Color(1f, 0.96f, 0.78f, 1f), 120f);
-
-        if (!string.IsNullOrEmpty(message))
-            BuildText(panel, "Message", message, 38, FontStyles.Normal, Color.white, 200f);
-
-        if (choices != null)
+        int count = choices != null ? choices.Count : 0;
+        if (count == 0)
         {
-            for (int i = 0; i < choices.Count; i++)
-                BuildButton(panel, choices[i]);
+            var done = CommonPopupView.Button(view.Actions, "BtnContinue", "Tamam", Close);
+            CommonPopupView.Region((RectTransform)done.transform, CommonPopupView.ActionRegion(0, 1));
         }
+        for (int i = 0; i < count; i++)
+        {
+            Choice choice = choices[i];
+            var button = CommonPopupView.Button(view.Actions,
+                choice.Primary || i == 0 ? "BtnContinue" : "BtnChoice_" + i,
+                choice.Label, () =>
+                {
+                    if (!gameObject.activeSelf) return;
+                    Close();
+                    choice.OnClick?.Invoke();
+                });
+            CommonPopupView.Region((RectTransform)button.transform, CommonPopupView.ActionRegion(i, count));
+        }
+    }
+
+    private void BuildOffer(Transform parent, string title, string status, IReadOnlyList<OfferButton> options,
+        string actionLabel, Action onAction)
+    {
+        var dim = BuildStretch(parent, "Dim");
+        var dimImg = dim.gameObject.AddComponent<Image>();
+        dimImg.color = new Color(0f, 0f, 0f, 0.72f);
+        dimImg.raycastTarget = true;
+
+        var view = CommonPopupView.Create(parent, title, Close,
+            CommonPopupSkin.Shared.saveProgressBackgroundMaterial);
+
+        var statusText = CommonPopupView.Text(view.Body, "Status", status, 34, CommonPopupSkin.Shared.bodyTextColor);
+        CommonPopupView.Region(statusText.rectTransform, new Rect(0, 0.80f, 1, 0.20f));
+
+        int count = options != null ? options.Count : 0;
+        var list = CommonPopupView.NewRect(view.Body, "Options", Vector2.zero);
+        CommonPopupView.Region(list, new Rect(0, 0, 1, 0.76f));
+        for (int i = 0; i < count; i++)
+        {
+            // Buton yüksekliği %30 (SaveProgressPopup ölçüsü); alan içinde EŞİT aralıkla dikey ortalanır.
+            const float height = 0.30f;
+            float gap = Mathf.Max(0f, (1f - count * height) / (count + 1));
+            float y = 1f - (i + 1) * (gap + height);
+            MakeOfferButton(list, options[i], y);
+        }
+
+        var action = CommonPopupView.Button(view.Actions, "BtnContinue", actionLabel, () =>
+        {
+            if (!gameObject.activeSelf) return;
+            Close();
+            onAction?.Invoke();
+        }, CommonPopupSkin.Shared.saveProgressContinueButton);
+        CommonPopupView.Region((RectTransform)action.transform, CommonPopupView.ActionRegion(0, 1));
+    }
+
+    private void MakeOfferButton(Transform parent, OfferButton option, float y)
+    {
+        var button = CommonPopupView.Button(parent, "Btn_" + option.Label, option.Label, () =>
+        {
+            if (!gameObject.activeSelf) return;
+            Close();
+            option.OnClick?.Invoke();
+        }, CommonPopupSkin.Shared.accountButton);
+        CommonPopupView.Region((RectTransform)button.transform, new Rect(0, y, 1, 0.30f));
+
+        var label = button.GetComponentInChildren<TMPro.TMP_Text>();
+        CommonPopupView.StyleText(label, 48, Color.white);
+        label.fontSizeMin = 32;
+        label.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+        CommonPopupView.Region(label.rectTransform, new Rect(0.08f, 0.39f, 0.84f, 0.46f));
+
+        var subtitle = CommonPopupView.Text(label.transform.parent, "OfferSubtitle", option.Subtitle ?? "", 26,
+            new Color(0.88f, 0.95f, 1f));
+        subtitle.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+        CommonPopupView.Region(subtitle.rectTransform, new Rect(0.08f, 0.14f, 0.84f, 0.25f));
+
+        var colors = button.colors;
+        colors.disabledColor = new Color(0.70f, 0.74f, 0.80f, 0.85f);
+        button.colors = colors;
+        button.interactable = option.Interactable;
     }
 
     private static RectTransform BuildStretch(Transform parent, string name)
     {
-        var go = new GameObject(name, typeof(RectTransform));
-        var rt = (RectTransform)go.transform;
-        rt.SetParent(parent, false);
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
+        var rt = CommonPopupView.NewRect(parent, name, Vector2.zero);
+        CommonPopupView.Region(rt, new Rect(0, 0, 1, 1));
         return rt;
-    }
-
-    private static void BuildText(Transform parent, string name, string value, float size,
-        FontStyles style, Color color, float minHeight)
-    {
-        var go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI), typeof(LayoutElement));
-        go.transform.SetParent(parent, false);
-
-        var text = go.GetComponent<TextMeshProUGUI>();
-        text.text = value ?? string.Empty;
-        text.fontSize = size;
-        text.fontStyle = style;
-        text.alignment = TextAlignmentOptions.Center;
-        text.color = color;
-        text.raycastTarget = false;
-        text.textWrappingMode = TextWrappingModes.Normal;
-
-        var le = go.GetComponent<LayoutElement>();
-        le.minHeight = minHeight;
-        le.flexibleWidth = 1f;
-    }
-
-    private void BuildButton(Transform parent, Choice choice)
-    {
-        var go = new GameObject("Btn_" + (choice.Label ?? "?"),
-            typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
-        go.transform.SetParent(parent, false);
-
-        var img = go.GetComponent<Image>();
-        img.color = choice.Primary ? new Color(0.20f, 0.60f, 0.34f, 1f)
-                                   : new Color(0.24f, 0.30f, 0.44f, 1f);
-
-        var le = go.GetComponent<LayoutElement>();
-        le.minHeight = 118f;
-        le.flexibleWidth = 1f;
-
-        // Label.
-        var labelGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-        var lrt = (RectTransform)labelGo.transform;
-        lrt.SetParent(go.transform, false);
-        lrt.anchorMin = Vector2.zero;
-        lrt.anchorMax = Vector2.one;
-        lrt.offsetMin = Vector2.zero;
-        lrt.offsetMax = Vector2.zero;
-
-        var label = labelGo.GetComponent<TextMeshProUGUI>();
-        label.text = choice.Label ?? string.Empty;
-        label.fontSize = 42;
-        label.fontStyle = FontStyles.Bold;
-        label.alignment = TextAlignmentOptions.Center;
-        label.color = Color.white;
-        label.raycastTarget = false;
-
-        var btn = go.GetComponent<Button>();
-        Action cb = choice.OnClick;
-        btn.onClick.AddListener(() =>
-        {
-            Close();          // callback sahne yükleyebilir → önce kapat
-            cb?.Invoke();
-        });
     }
 }

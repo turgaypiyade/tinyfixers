@@ -117,6 +117,10 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             validTargets.Add(pos);
         }
 
+        // Tören boyunca origin ve hedefler yerinde kalır (ışın hedefin gördüğü hücreye iner).
+        var heldCells = new List<Vector2Int>(validTargets) { origin };
+        using var ceremonyHold = board.HoldForFlow(heldCells);
+
         var beamTiming = BuildBeamTiming(validTargets.Count);
         var pending = new int[1];
 

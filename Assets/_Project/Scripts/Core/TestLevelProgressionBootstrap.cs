@@ -7,6 +7,7 @@ public static class TestLevelProgressionBootstrap
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void ResetOnLaunch()
     {
+        if (RuntimeSimulationSession.IsActive) return;
         // KRİTİK: yalnız EDITOR'de çalışır. Cihaz build'inde her açılışta DeleteAll
         // yapmak tüm oyuncu ilerlemesini siler (2026-07-19'da yakalanan launch bug'ı).
 #if UNITY_EDITOR

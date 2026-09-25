@@ -77,7 +77,7 @@ public sealed class SimFidelityTest : MonoBehaviour
         }
 
         // Pass the live ObstacleStateService — read-only for match queries
-        var simState = new SimState(w, h, grid, holes, board.ObstacleStateService);
+        var simState = SimState.FromSnapshot(w, h, grid, holes, board.ObstacleStateService);
 
         // ── SimMatchFinder run ─────────────────────────────────────────────
         var simFinder = new SimMatchFinder(simState);

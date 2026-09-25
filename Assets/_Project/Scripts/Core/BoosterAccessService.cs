@@ -49,6 +49,7 @@ public static class BoosterAccessService
     /// </summary>
     public static void EnsureGameSession()
     {
+        if (RuntimeSimulationSession.IsActive) return;
         if (sessionInitialized) return;
         sessionInitialized = true;
         sessionInitFrame = Time.frameCount;

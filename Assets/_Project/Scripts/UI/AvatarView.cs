@@ -38,6 +38,9 @@ public sealed class AvatarView : MonoBehaviour
         }
 
         if (nameText != null)
+        {
             nameText.text = PlayerProfile.PlayerName;
+            SingleLineText.Fit(nameText);
+        }
     }
 }

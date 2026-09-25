@@ -256,18 +256,16 @@ public class PatchbotComboService
         return patchBotTile.GelContaminated || gel.IsSpreadSourceAt(patchBotTile.X, patchBotTile.Y);
     }
 
-    /// Jelli hücreleri listeden eler. Hepsi jelse liste aynen döner (hedefsiz kalmasın).
-    public List<(int x, int y, TileView tile)> FilterNonGelCells(List<(int x, int y, TileView tile)> cells)
+    /// Jel YAYILABİLECEK hücre: henüz jel yok ve bot'un kıracağı bir taş var (jel, kırılan taşın
+    /// hücresine düşer). Engelle kapalı / içeriği hedeflenemeyen (oil, kafes, cargo) ve movable
+    /// obstacle hücreleri jel almaz → hedef değil. Obstacle'ın cinsine bakılmaz (mud vb. altına da yayılır).
+    public bool IsGelSpreadTarget(int x, int y, TileView tile)
     {
         var gel = board.SpreadingGelService;
-        if (gel == null || cells == null || cells.Count == 0) return cells;
-
-        var filtered = new List<(int x, int y, TileView tile)>(cells.Count);
-        for (int i = 0; i < cells.Count; i++)
-            if (!gel.IsGelAt(cells[i].x, cells[i].y))
-                filtered.Add(cells[i]);
-
-        return filtered.Count > 0 ? filtered : cells;
+        if (gel == null || tile == null || !tile) return false;
+        if (board.IsMaskHoleCell(x, y) || gel.IsGelAt(x, y)) return false;
+        if (board.GridData[x, y] == null || !SpecialUtils.CanTargetTileContent(board, x, y)) return false;
+        return board.ObstacleStateService == null || !board.ObstacleStateService.IsMovableObstacleAt(x, y);
     }
 
     public (TileView tile, int x, int y, bool hasCell) FindTarget(TileView patchBotTile, TileView partnerTile, HashSet<TileView> excluded, params TileView[] additionalExcluded)
@@ -277,6 +275,7 @@ public class PatchbotComboService
         var tileGoalCells = new List<(int x, int y, TileView tile)>();
         var otherObstacleCells = new List<(int x, int y, TileView tile)>();
         var normalCells = new List<(int x, int y, TileView tile)>();
+        var gelSpreadCells = new List<(int x, int y, TileView tile)>();
 
         var activeGoals = board.TopHud;
         activeGoalsBuffer.Clear();
@@ -338,6 +337,9 @@ public class PatchbotComboService
 
                 var tile = board.Tiles[x, y];
 
+                if (preferNonGel && IsGelSpreadTarget(x, y, tile) && !IsExcludedTile(tile))
+                    gelSpreadCells.Add((x, y, tile));
+
                 bool hasObstacle = board.ObstacleStateService != null &&
                                    board.ObstacleStateService.GetObstacleIdAt(x, y) != ObstacleId.None;
 
@@ -350,7 +352,7 @@ public class PatchbotComboService
                     // düşüp tabandan çıkar (hedef ilerler).
                     if (board.ObstacleStateService.IsExitAtBottomAt(x, y))
                     {
-                        TryAddCargoDropPathTarget(x, y, cargoDropPathCells, IsExcludedTile);
+                        AddCargoDropPathTarget(x, y, partnerTile, cargoDropPathCells, IsExcludedTile);
                         continue;
                     }
 
@@ -414,47 +416,84 @@ public class PatchbotComboService
         if (tileGoalCells.Count > 0)
             return PickHighestImpact(tileGoalCells);
 
+        // Jel taşıyan bot (jel kaplama hedefi aktif): jelsiz bölgenin EN YOĞUN yerine — hedef değeri
+        // olmayan diğer obstacle'lardan önce.
+        if (gelSpreadCells.Count > 0)
+            return PickHighestImpact(gelSpreadCells);
+
         if (otherObstacleCells.Count > 0)
             return PickHighestImpact(otherObstacleCells);
 
         if (normalCells.Count > 0)
-            return PickHighestImpact(preferNonGel ? FilterNonGelCells(normalCells) : normalCells);
+            return PickHighestImpact(normalCells);
 
         return (null, -1, -1, false);
     }
 
-    // Cargo (exitAtBottom) kendisi kırılmaz. Onu ilerletmek için, (varsa cargo yığınının)
-    // hemen ALTINDAKI ilk normal taşı hedef listesine ekler — o taş temizlenince cargo bir
-    // sıra aşağı düşer, tabana ulaşınca board'dan çıkar. Alt hücre hole/başka obstacle ise
-    // ya da cargo zaten tabandaysa yardım edecek bir taş yoktur (eklemez).
-    private void TryAddCargoDropPathTarget(int cargoX, int cargoY,
+    // Payload'ın etki yarıçapı (PulseCore 5x5 ≈ 2; line/bomb için de yoğunluk iyi bir proxy).
+    private const int PatchbotImpactRadius = 2;
+
+    // ── Cargo düşüş yolu ────────────────────────────────────────────────────
+    // Cargo kırılmaz; altındaki sütundan taş kırıldıkça iner. Bot, sütun boyunca payload'ının o
+    // sütunda EN ÇOK taşı temizleyeceği hücreye vurur (ör. PulseCore 5x5: cargo'nun 2 altı → 5 taş;
+    // hemen altı → 3). Tek vuruş / LineV'de temizlenen miktar değişmez → en yakın (hemen alt) hücre.
+    public static (int up, int down) PayloadColumnReach(TileView payload, int boardHeight)
+    {
+        if (payload == null || !payload) return (0, 0);
+        switch (payload.GetSpecial())
+        {
+            case TileSpecial.PulseCore: return (PatchbotImpactRadius, PatchbotImpactRadius);
+            case TileSpecial.LineV: return (boardHeight, boardHeight);
+            default: return (0, 0);
+        }
+    }
+
+    public void AddCargoDropPathTarget(int cargoX, int cargoY, TileView payload,
         List<(int x, int y, TileView tile)> outCells, System.Func<TileView, bool> isExcluded)
     {
         var obs = board.ObstacleStateService;
         if (obs == null) return;
 
-        int by = cargoY + 1;
-        while (by < board.Height && obs.IsExitAtBottomAt(cargoX, by))
-            by++;                                  // üst üste cargo → yığının altına in
+        int top = cargoY + 1;
+        while (top < board.Height && obs.IsExitAtBottomAt(cargoX, top))
+            top++;                                  // üst üste cargo → yığının altından başla
+        if (top >= board.Height) return;            // cargo zaten tabanda; sıradaki resolve toplar
 
-        if (by >= board.Height) return;            // cargo zaten tabanda; sıradaki resolve toplar
-        if (obs.GetObstacleIdAt(cargoX, by) != ObstacleId.None) return; // altı başka obstacle
-        if (board.Holes[cargoX, by]) return;
+        // Cargo'nun altındaki kesintisiz kırılabilir taş dizisi (obstacle/hole/boşlukta biter).
+        int bottom = top - 1;
+        while (bottom + 1 < board.Height && IsCargoPathTile(cargoX, bottom + 1))
+            bottom++;
+        if (bottom < top) return;                   // hemen altı kırılamaz → yardım edecek taş yok
 
-        var belowTile = board.Tiles[cargoX, by];
-        if (belowTile == null) return;
-        if (board.GridData[cargoX, by] == null) return;
-        if (!SpecialUtils.CanTargetTileContent(board, cargoX, by)) return;
-        if (isExcluded(belowTile)) return;
+        var (up, down) = PayloadColumnReach(payload, board.Height);
+        int bestY = -1, bestCleared = 0;
+        for (int y = top; y <= bottom; y++)
+        {
+            var tile = board.Tiles[cargoX, y];
+            if (isExcluded(tile)) continue;
+            int cleared = Mathf.Min(bottom, y + down) - Mathf.Max(top, y - up) + 1;
+            if (cleared > bestCleared)                 // eşitlikte cargo'ya en yakın kalır
+            {
+                bestCleared = cleared;
+                bestY = y;
+            }
+        }
+        if (bestY < 0) return;
 
         for (int i = 0; i < outCells.Count; i++)
-            if (outCells[i].x == cargoX && outCells[i].y == by) return; // aynı hücreyi iki kez ekleme
+            if (outCells[i].x == cargoX && outCells[i].y == bestY) return; // aynı hücreyi iki kez ekleme
 
-        outCells.Add((cargoX, by, belowTile));
+        outCells.Add((cargoX, bestY, board.Tiles[cargoX, bestY]));
     }
 
-    // Payload'ın etki yarıçapı (PulseCore 5x5 ≈ 2; line/bomb için de yoğunluk iyi bir proxy).
-    private const int PatchbotImpactRadius = 2;
+    private bool IsCargoPathTile(int x, int y)
+    {
+        var obs = board.ObstacleStateService;
+        if (obs != null && obs.GetObstacleIdAt(x, y) != ObstacleId.None) return false;
+        if (board.Holes[x, y]) return false;
+        return board.Tiles[x, y] != null && board.GridData[x, y] != null
+            && SpecialUtils.CanTargetTileContent(board, x, y);
+    }
 
     // Adayı, AYNI kovadaki kaç hücrenin payload yarıçapına girdiğine göre puanlar; en yüksek
     // puanlıyı seçer, eşitlikte rastgele kırar (hep aynı hücreyi seçip tekdüze olmasın).

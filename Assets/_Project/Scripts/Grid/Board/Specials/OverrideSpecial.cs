@@ -152,6 +152,18 @@ public sealed class OverrideSpecial
         result.Actions.Add(BuildClearAction(rt.Context));
     }
 
+    /// <summary>
+    /// Override fan-out'unda temizlenen taşlar NORMAL taştır (renk seçimi). Bu yüzden
+    /// obstacle hasarı da NORMAL MATCH bağlamında verilir: yalnızca special ile kırılan
+    /// obstacle'lar (damageRule = SpecialOnly) override+normal'dan hasar ALMAZ, renk
+    /// kısıtlı olanlar (restrictNormalMatchTileType) yalnız kendi renginden hasar alır.
+    /// Override+special (implant) akışlarında seçim normal DEĞİLDİR → SpecialActivation kalır.
+    /// </summary>
+    private static ObstacleHitContext ResolveObstacleHitContext(ResolutionContext ctx)
+        => ctx != null && ctx.OverrideFanoutNormalSelectionPulse
+            ? ObstacleHitContext.NormalMatch
+            : ObstacleHitContext.SpecialActivation;
+
     private MatchClearAction BuildClearAction(ResolutionContext ctx)
     {
         var presentationPlan = BuildOverridePresentationPlanIfNeeded(ctx);
@@ -170,6 +182,7 @@ public sealed class OverrideSpecial
                 : ClearAnimationMode.Default,
             affectedCells: ctx.AffectedCells,
             impactCells: ctx.ImpactCells,
+            obstacleHitContext: ResolveObstacleHitContext(ctx),
             includeAdjacentOverTileBlockerDamage: true,
             lightningVisualTargets: ctx.LightningVisualTargets,
             lightningLineStrikes: ctx.LightningLineStrikes,
@@ -219,7 +232,7 @@ public sealed class OverrideSpecial
         var plan = new ClearPresentationPlan();
         plan.DoBoardShake = true;
         plan.IncludeAdjacentOverTileBlockerDamage = true;
-        plan.ObstacleHitContext = ObstacleHitContext.SpecialActivation;
+        plan.ObstacleHitContext = ResolveObstacleHitContext(ctx);
 
         plan.Effects.Add(new OverrideRadialEffectDescriptor(targetTiles,targetCells,delayMap,originTile,originCell));
 

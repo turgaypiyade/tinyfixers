@@ -11,10 +11,8 @@ using UnityEngine;
 /// </summary>
 public sealed class SimTeamService : ITeamService
 {
-    // Sim veri yalnız yerel aksiyonla değişir; controller zaten aksiyondan sonra tazeler.
-#pragma warning disable 67
     public event System.Action OnChanged;
-#pragma warning restore 67
+    public TeamLifeInbox LifeInbox { get; }
 
     private readonly TeamInfo info;
     private readonly List<BotPlayer> members = new();
@@ -62,6 +60,9 @@ public sealed class SimTeamService : ITeamService
             missionText = "kazanmak için bir göreve BAŞLA",
         };
 
+        LifeInbox = new TeamLifeInbox("local:" + PlayerTeamState.TeamName, () => OnChanged?.Invoke());
+        LifeInbox.SetBots(members.Count, () => members[Random.Range(0, members.Count)].displayName);
+
         if (created)
         {
             chat.Add(new TeamChatMessage
@@ -69,6 +70,7 @@ public sealed class SimTeamService : ITeamService
                 senderName = "Wonder Fixers",
                 text = "Takımın kuruldu! Arkadaşlarını davet et, birlikte yarışın.",
                 timeLabel = "şimdi",
+            sentTicks = System.DateTime.UtcNow.Ticks,
             });
         }
         else
@@ -126,8 +128,7 @@ public sealed class SimTeamService : ITeamService
 
     public void RequestLife()
     {
-        if (!requests.Exists(r => r.requesterName == PlayerProfile.PlayerName))
-            requests.Add(new TeamLifeRequest { requesterName = PlayerProfile.PlayerName, current = 0, needed = 5 });
+        if (!LifeInbox.Request(System.DateTime.UtcNow)) return;
 
         // Sohbette görünür geri bildirim (kendi tarafımda, sağda).
         chat.Add(new TeamChatMessage
@@ -135,8 +136,10 @@ public sealed class SimTeamService : ITeamService
             senderName = PlayerProfile.PlayerName,
             text = "❤️ Can istedi!",
             timeLabel = "şimdi",
+            sentTicks = System.DateTime.UtcNow.Ticks,
             isMine = true,
         });
+        OnChanged?.Invoke();
     }
 
     public void SendMessage(string text)
@@ -147,6 +150,7 @@ public sealed class SimTeamService : ITeamService
             senderName = PlayerProfile.PlayerName,
             text = text.Trim(),
             timeLabel = "şimdi",
+            sentTicks = System.DateTime.UtcNow.Ticks,
             isMine = true,      // benim mesajım → sağda + avatarım sağda
         });
     }

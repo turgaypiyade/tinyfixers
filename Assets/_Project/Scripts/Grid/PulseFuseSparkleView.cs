@@ -57,7 +57,6 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     [Tooltip("Hale rengi/opaklığı.")]
     [SerializeField] private Color haloColor = new Color(1f, 1f, 1f, 0.85f);
     [Tooltip("Spin/hale render sırası — tüm taş & obstacle'ların ÜSTÜNde çizilmesi için yüksek tut.")]
-    [SerializeField] private int spinSortingOrder = 100;
 
     private RectTransform rt;
     private Coroutine emitRoutine;
@@ -116,7 +115,10 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
         emitIntensity = 1f;
         if (breathTarget  != null) breathTarget.localScale = Vector3.one;
         SetIconVisible(true);   // spin yarıda kesildiyse statik ikon gizli kalmasın
-        spinImage = null;   // aşağıdaki child yıkımıyla yok olacak; referansı temizle
+        // Dönme görselleri tahtanın TilesTopOverlay katmanında (bu objenin çocuğu değil) → ayrıca yık.
+        if (spinImage != null) Destroy(spinImage.gameObject);
+        if (haloImage != null) Destroy(haloImage.gameObject);
+        spinImage = null;
         haloImage = null;
         for (int i = transform.childCount - 1; i >= 0; i--)
             Destroy(transform.GetChild(i).gameObject);
@@ -188,7 +190,8 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
         {
             var go = new GameObject("_CoreHalo",
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            go.transform.SetParent(transform, false);
+            go.transform.SetParent(ResolveOverlayParent(), false);
+            go.layer = gameObject.layer;
 
             var irt = go.GetComponent<RectTransform>();
             irt.anchorMin = irt.anchorMax = irt.pivot = new Vector2(0.5f, 0.5f);
@@ -199,8 +202,8 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
             haloImage.raycastTarget  = false;
             haloImage.preserveAspect = true;
             haloImage.sprite = TileClearBurstVfx.SoftCircleHaloSprite;   // match ring'iyle aynı
-            ConfigureTopOverlay(go, spinSortingOrder);                   // tüm taşların üstünde
         }
+        FollowTile(haloImage);
 
         haloImage.rectTransform.sizeDelta = Vector2.one * tileSize;
         haloImage.transform.SetAsLastSibling();   // core'dan önce çağrıldığı için arkada kalır
@@ -222,7 +225,8 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
         {
             var go = new GameObject("_CoreSpin",
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            go.transform.SetParent(transform, false);
+            go.transform.SetParent(ResolveOverlayParent(), false);
+            go.layer = gameObject.layer;
 
             var irt = go.GetComponent<RectTransform>();
             irt.anchorMin = irt.anchorMax = irt.pivot = new Vector2(0.5f, 0.5f);
@@ -232,8 +236,8 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
             spinImage = go.GetComponent<Image>();
             spinImage.raycastTarget  = false;
             spinImage.preserveAspect = true;
-            ConfigureTopOverlay(go, spinSortingOrder + 1);   // hale'nin de üstünde (core en önde)
         }
+        FollowTile(spinImage);
 
         spinImage.rectTransform.sizeDelta = Vector2.one * tileSize;
         spinImage.rectTransform.localScale = Vector3.one * spinStartScale;
@@ -346,17 +350,28 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
             haloImage.gameObject.SetActive(false);
     }
 
-    // Overlay'i tüm taş/obstacle'ların ÜSTÜNDE çizdir: kendi Canvas'ı (overrideSorting) + yüksek
-    // sortingOrder. Taşlar sibling-index ile sıralandığı için tile'ın çocuğu olan overlay normalde
-    // sonraki tile'ların ALTINDA kalıyordu. Ayrıca layer'ı bu obje ile aynı yap (dinamik UI layer
-    // 0'da doğar → Screen Space Camera culling'i; project_board_vfx_rectmask_clip).
-    private void ConfigureTopOverlay(GameObject go, int order)
+    // Dönme görseli taşın sınırından taşar (2.5x'e büyür): komşu taşların ÜSTÜNDE, ama grass/obstacle/
+    // kenarlık ve popup'ların ALTINDA çizilmeli. Bu yüzden tahtanın TilesTopOverlay katmanına konur
+    // (ayrı Canvas + overrideSorting grass'ın ve aynı Canvas'taki level-end popup'ının da üstüne çıkıyordu).
+    private Transform ResolveOverlayParent()
     {
-        go.layer = gameObject.layer;
-        var canvas = go.GetComponent<Canvas>();
-        if (canvas == null) canvas = go.AddComponent<Canvas>();
-        canvas.overrideSorting = true;
-        canvas.sortingOrder = order;
+        var tile = GetComponentInParent<TileView>();
+        var overlay = tile != null && tile.Board != null ? tile.Board.TilesTopOverlayRoot : null;
+        return overlay != null ? overlay : transform;
+    }
+
+    private void FollowTile(Image img)
+    {
+        if (img == null || img.transform.parent == transform) return;
+        img.rectTransform.position = transform.position;
+        img.transform.SetAsLastSibling();
+    }
+
+    // Overlay katmanındaki görseller taşın çocuğu değil → taş düşerse/sallanırsa peşinden gelsin.
+    private void LateUpdate()
+    {
+        if (spinImage != null) FollowTile(spinImage);
+        if (haloImage != null && haloImage.transform.parent != transform) haloImage.rectTransform.position = transform.position;
     }
 
     // Statik PulseCore ikonunu (breathTarget üstündeki Image) gizle/göster.

@@ -834,9 +834,6 @@ public sealed class SafariMapScreen : SafariMapScreenBase
 
     private static string FormatRemaining(TimeSpan remaining)
     {
-        int seconds = Mathf.Max(0, Mathf.CeilToInt((float)remaining.TotalSeconds));
-        int minutes = seconds / 60;
-        int secs = seconds % 60;
-        return $"{minutes:00}:{secs:00}";
+        return TimeFormat.Countdown(remaining);
     }
 }

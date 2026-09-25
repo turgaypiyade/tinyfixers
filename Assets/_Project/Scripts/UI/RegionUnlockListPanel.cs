@@ -29,10 +29,13 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
     [Header("Wonder Mode (atanırsa region yerine harika görevleri)")]
     [SerializeField] private WonderCatalog wonderCatalog;
     [SerializeField] private WonderRevealOverlay wonderOverlay;
+    [Tooltip("Bölüm kapısı kapalıyken satırda görünecek metnin lokalizasyon anahtarı ({0} = bölüm no).")]
+    [SerializeField] private string chapterLockLocalizationKey = "wonder_task_locked_chapter";
 
     private bool WonderMode => wonderCatalog != null;
 
     [Header("Layout")]
+    [Tooltip("Bölge modunda aynı anda gösterilen satır sayısı. Wonder modunda HER ZAMAN 1 satır gösterilir.")]
     [SerializeField, Min(1)] private int visibleSlotCount = 3;
     [SerializeField, Min(20f)] private float itemHeight = 160f;
     [SerializeField, Min(0f)]  private float itemSpacing = 12f;
@@ -118,7 +121,11 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
     public void OnActiveItemClicked()
     {
         if (isAnimating) return;
-        if (WonderMode) { StartCoroutine(WonderTaskFlow()); return; }
+        if (WonderMode)
+        {
+            StartCoroutine(WonderTaskFlow(WonderProgress.ActiveEventIndex(wonderCatalog)));
+            return;
+        }
         if (worldMap == null || items.Count == 0 || items[0] == null) return;
 
         var region = items[0].Region;
@@ -243,52 +250,146 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
 
     // ─── Wonder Mode ────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Wonder modu satırları: AÇIK event'lerin kalan görevleri, event sırasıyla, slot dolana
+    /// kadar listelenir. Her event'in SIRADAKİ görevi aktif (tıklanabilir); aynı event'in
+    /// ondan sonraki görevleri önizlemedir. Event kilidi BÖLÜM ile açılır — ilk event bitmese
+    /// bile bölüm bitince sıradaki event'in görevleri listeye girer. Slot artarsa ve hâlâ
+    /// kilitli event varsa en alta "Bölüm X bitince açılır" satırı konur.
+    /// [[project_wonder_reveal_background]]
+    /// </summary>
     private void RebuildWonderItems()
     {
-        var w = WonderProgress.CurrentWonder(wonderCatalog);
-        int remaining = w != null ? (w.TaskCount - WonderProgress.CurrentStage) : 0;
+        int unlocked = WonderProgress.UnlockedEventCount(wonderCatalog);
+
+        var rows = new List<(int eventIndex, int stage, bool isEventNext)>();
+
+        // 1) ÖNCE her açık & bitmemiş event'in SIRADAKİ görevi — hepsi tıklanabilir.
+        //    Böylece yeni açılan event, öncekinin görevleri bitmemiş olsa da listeye girer.
+        for (int e = 0; e < unlocked && rows.Count < visibleSlotCount; e++)
+        {
+            var we = wonderCatalog.Get(e);
+            if (we == null) continue;
+            if (WonderProgress.RemainingTasks(wonderCatalog, e) <= 0) continue;
+
+            rows.Add((e, WonderProgress.StageOf(e), true));
+        }
+
+        // 2) Boş slot kaldıysa aynı event'lerin SONRAKİ görevleriyle doldur (önizleme).
+        for (int e = 0; e < unlocked && rows.Count < visibleSlotCount; e++)
+        {
+            var we = wonderCatalog.Get(e);
+            if (we == null) continue;
+
+            for (int s = WonderProgress.StageOf(e) + 1; s < we.TaskCount && rows.Count < visibleSlotCount; s++)
+                rows.Add((e, s, false));
+        }
+
+        // Görsel düzen: event'ler blok blok, her blokta görev sırası.
+        rows.Sort((a, b) => a.eventIndex != b.eventIndex
+            ? a.eventIndex.CompareTo(b.eventIndex)
+            : a.stage.CompareTo(b.stage));
+
+        bool showLockedTeaser = rows.Count < visibleSlotCount
+                                && WonderProgress.HasLockedEvent(wonderCatalog);
 
         if (allCompletedMessage != null)
-            allCompletedMessage.SetActive(w == null || remaining <= 0);
-        if (w == null) return;
+            allCompletedMessage.SetActive(rows.Count == 0 && !showLockedTeaser);
 
-        int shown = 0;
-        for (int s = WonderProgress.CurrentStage; s < w.TaskCount && shown < visibleSlotCount; s++, shown++)
+        // Birden fazla event listedeyse görev adının önüne event adını yaz (aynı görev
+        // isimleri event'ler arasında tekrar ediyor → hangi event olduğu belli olsun).
+        bool multiEvent = showLockedTeaser;
+        for (int i = 1; i < rows.Count && !multiEvent; i++)
+            multiEvent = rows[i].eventIndex != rows[0].eventIndex;
+
+        int slot = 0;
+        foreach (var row in rows)
         {
+            var w = wonderCatalog.Get(row.eventIndex);
             var item = Instantiate(itemPrefab, itemsContainer);
-            item.SetInstantY(SlotY(shown));
+            item.SetInstantY(SlotY(slot++));
 
-            if (w.HasExplicitTaskIcon(s))
-                item.BindTask(w.GetTaskName(s), w.GetTaskIcon(s), w.GetStarCost(s), this, isActive: shown == 0);
+            string title = RowTitle(w, w.GetTaskName(row.stage), multiEvent);
+
+            if (w.HasExplicitTaskIcon(row.stage))
+                item.BindTask(title, w.GetTaskIcon(row.stage), w.GetStarCost(row.stage),
+                              this, isActive: row.isEventNext, wonderEventIndex: row.eventIndex);
             else
             {
-                // İkon yok → harika imajının (s+1)/toplam kadar kaynaklanmış mini önizlemesi
-                float reveal = w.TaskCount > 0 ? (s + 1f) / w.TaskCount : 1f;
-                item.BindTaskRevealIcon(w.GetTaskName(s), w.backgroundSprite, reveal,
-                                        w.GetStarCost(s), this, isActive: shown == 0);
+                // İkon yok → harika imajının (stage+1)/toplam kadar kaynaklanmış mini önizlemesi
+                float reveal = w.TaskCount > 0 ? (row.stage + 1f) / w.TaskCount : 1f;
+                item.BindTaskRevealIcon(title, w.backgroundSprite, reveal, w.GetStarCost(row.stage),
+                                        this, isActive: row.isEventNext, wonderEventIndex: row.eventIndex);
             }
+
             items.Add(item);
+        }
+
+        if (showLockedTeaser)
+        {
+            var locked = wonderCatalog.Get(unlocked);
+            if (locked != null)
+            {
+                var item = Instantiate(itemPrefab, itemsContainer);
+                item.SetInstantY(SlotY(slot));
+                item.BindTaskRevealIcon(RowTitle(locked, locked.GetTaskName(0), multiEvent),
+                                        locked.backgroundSprite, 0f, locked.GetStarCost(0),
+                                        this, isActive: false, wonderEventIndex: unlocked);
+                item.ApplyChapterLock(ChapterLockText());
+                items.Add(item);
+            }
         }
 
         if (progressBar != null) progressBar.ApplyInstant();
     }
 
-    private IEnumerator WonderTaskFlow()
+    private static string RowTitle(WonderDefinition w, string taskName, bool prefixEventName)
     {
-        if (items.Count == 0 || items[0] == null) yield break;
-        if (!WonderProgress.CanAffordNextTask(wonderCatalog))
+        if (!prefixEventName || w == null) return taskName;
+        string eventName = !string.IsNullOrEmpty(w.displayName) ? w.displayName : w.wonderId;
+        return string.IsNullOrEmpty(eventName) ? taskName : $"{eventName} · {taskName}";
+    }
+
+    /// <summary>"Bölüm X bitince açılır" — sıradaki event'in açılması için bitirilecek bölüm.</summary>
+    private string ChapterLockText()
+    {
+        int chapter = WonderProgress.ChapterToFinishForNextEvent;
+        string s = GameLocalization.GetFormat(chapterLockLocalizationKey, chapter);
+        return (s == chapterLockLocalizationKey) ? $"Bölüm {chapter} bitince açılır" : s;
+    }
+
+    /// <summary>Bir satıra tıklandı: o satırın ait olduğu EVENT'in sıradaki görevi yapılır.</summary>
+    public void OnWonderTaskClicked(int eventIndex)
+    {
+        if (isAnimating) return;
+        StartCoroutine(WonderTaskFlow(eventIndex));
+    }
+
+    private IEnumerator WonderTaskFlow(int eventIndex)
+    {
+        if (eventIndex < 0) yield break;
+
+        if (!WonderProgress.IsEventUnlocked(wonderCatalog, eventIndex))
         {
-            Debug.LogWarning($"[WonderPanel] Yetersiz yıldız. cost={WonderProgress.NextTaskCost(wonderCatalog)}, " +
+            Debug.Log($"[WonderPanel] Event {eventIndex} kilitli — bölüm " +
+                      $"{WonderProgress.ChapterToFinishForNextEvent} bitmeli.");
+            yield break;
+        }
+
+        if (!WonderProgress.CanAffordNextTask(wonderCatalog, eventIndex))
+        {
+            Debug.LogWarning($"[WonderPanel] Yetersiz yıldız. " +
+                             $"cost={WonderProgress.NextTaskCost(wonderCatalog, eventIndex)}, " +
                              $"stars={PlayerWallet.TotalStars}");
             // TODO: shop/reklam yönlendirmesi
             yield break;
         }
 
         isAnimating = true;
-        Vector3 starSource = items[0].transform.position;
-        int fromStage = WonderProgress.CurrentStage;
+        Vector3 starSource = ResolveStarSource(eventIndex);
+        int fromStage = WonderProgress.StageOf(eventIndex);
 
-        if (!WonderProgress.TrySpendForNextTask(wonderCatalog)) { isAnimating = false; yield break; }
+        if (!WonderProgress.TrySpendForNextTask(wonderCatalog, eventIndex)) { isAnimating = false; yield break; }
 
         if (wonderOverlay != null)
             StartCoroutine(FlyStarsFromTo(starSource, (RectTransform)wonderOverlay.transform));
@@ -297,7 +398,7 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
         yield return FadePanel(panelGroup != null ? panelGroup.alpha : 1f, 0f, panelFadeDuration);
 
         if (wonderOverlay != null)
-            yield return wonderOverlay.PlayReveal(wonderCatalog, fromStage);
+            yield return wonderOverlay.PlayReveal(wonderCatalog, eventIndex, fromStage);
 
         if (postRevealPause > 0f) yield return new WaitForSeconds(postRevealPause);
 
@@ -307,6 +408,15 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
             yield return FadePanel(0f, 1f, panelFadeDuration);
         }
         isAnimating = false;
+    }
+
+    /// <summary>Yıldızların uçacağı başlangıç noktası: tıklanan event'in satırı (yoksa panel).</summary>
+    private Vector3 ResolveStarSource(int eventIndex)
+    {
+        foreach (var it in items)
+            if (it != null && it.WonderEventIndex == eventIndex)
+                return it.transform.position;
+        return transform.position;
     }
 
     private IEnumerator FadePanel(float from, float to, float dur)

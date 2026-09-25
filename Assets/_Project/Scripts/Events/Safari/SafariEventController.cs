@@ -35,7 +35,7 @@ public sealed class SafariEventController : MonoBehaviour
 
     /// <summary>Son tamamlamada oyuncuya düşen ödül payı (UI göstermek için). 0 = henüz yok.</summary>
     public int LastRewardShare { get; private set; }
-    public bool FinalRewardClaimed { get; private set; }
+    public bool FinalRewardClaimed => SafariState.RewardClaimed;
 
     private static DateTime UtcNow => DateTime.UtcNow;
 
@@ -61,6 +61,14 @@ public sealed class SafariEventController : MonoBehaviour
 
         SafariState.SyncCycle(config, UtcNow);
 
+        // Migrate completed runs saved before the persistent reward/cooldown guard.
+        if (SafariState.RunStatus == SafariRunStatus.Completed
+            && SafariState.FallCooldownUntilUtc == DateTime.MinValue)
+        {
+            SafariState.MarkRewardClaimed();
+            SafariState.StartFallCooldown(UtcNow, 30);
+        }
+
         bool available = IsEventAvailable;
         eventButton?.SetVisible(available);
         if (!available) return;
@@ -71,6 +79,13 @@ public sealed class SafariEventController : MonoBehaviour
         {
             var outcome = EvaluateReturn();
             StartCoroutine(RunWhenClear(() => OpenMap(outcome)));
+            return;
+        }
+
+        if (SafariState.RunStatus == SafariRunStatus.Completed && !FinalRewardClaimed)
+        {
+            PrepareFinalReward(config.simulatedWinnerCount);
+            StartCoroutine(RunWhenClear(() => OpenMap(SafariRoundOutcome.Completed)));
             return;
         }
 
@@ -145,13 +160,15 @@ public sealed class SafariEventController : MonoBehaviour
     public void OnIconClicked()
     {
         if (!IsEventAvailable) return;
+        if (SafariState.FallCooldownRemaining(UtcNow) > TimeSpan.Zero) return;
         if (IsTutorialBlocking()) return;   // tutorial açıkken açma
 
         // Düşüş sonrası yeniden katılım: kaybedince pitstop sıfırlanır + 30dk cooldown başlar,
         // ama HasJoined true kalır. Cooldown bitince ikona basmak taze bir yarışa "yeniden katılım"dır
         // → katıl-popup + intro matchmaking overlay tekrar oynasın (kullanıcı kararı).
         // (Cooldown boyunca SafariEventButton butonu pasif; bu noktaya normalde gelinmez.)
-        bool needsRejoin = SafariState.RunStatus == SafariRunStatus.Fell;
+        bool needsRejoin = SafariState.RunStatus == SafariRunStatus.Fell
+            || SafariState.RunStatus == SafariRunStatus.Completed;
 
         // Güvenlik önlemi: event devam ediyorsa (katıldı & düşmedi) tekrar ikona basmak her şeyi
         // baştan başlatmasın → doğrudan kaldığı kata (CurrentPitstop) git. Progress korunur.
@@ -186,11 +203,8 @@ public sealed class SafariEventController : MonoBehaviour
     /// <summary>Popup "Katıl" — katılımı işaretle ve haritayı aç.</summary>
     public void OnJoinAccepted()
     {
-        SafariState.MarkJoined(UtcNow);
-        // Düşüş sonrası yeniden katılımda RunStatus=Fell idi; kabul edilince taze tura geç —
-        // aksi halde her ikon tıklaması intro'yu tekrar oynatırdı. İlk katılımda zaten Idle.
-        if (SafariState.RunStatus == SafariRunStatus.Fell)
-            SafariState.SetRunStatus(SafariRunStatus.Idle);
+        if (!IsEventAvailable || SafariState.FallCooldownRemaining(UtcNow) > TimeSpan.Zero) return;
+        SafariState.BeginRun(UtcNow);
         if (risingIntroOverlay != null)
         {
             risingIntroOverlay.Show(this);
@@ -222,7 +236,8 @@ public sealed class SafariEventController : MonoBehaviour
     public bool CanContinueNow(out TimeSpan remaining)
     {
         remaining = SafariState.FallCooldownRemaining(UtcNow);
-        return remaining <= TimeSpan.Zero;
+        return IsEventAvailable && SafariState.HasJoined
+            && SafariState.RunStatus == SafariRunStatus.Idle && remaining <= TimeSpan.Zero;
     }
 
     /// <summary>Harita "Devam" — kaldığı leveli başlat (sonucu dönüşte değerlendireceğiz).</summary>
@@ -296,6 +311,7 @@ public sealed class SafariEventController : MonoBehaviour
         if (pit >= config.pitstopCount)
         {
             PrepareFinalReward(config.simulatedWinnerCount);
+            SafariState.StartFallCooldown(UtcNow, 30);
             SafariState.SetRunStatus(SafariRunStatus.Completed);
             Debug.Log("[Safari] Tur sonucu: TAMAMLANDI (7. pitstop).");
             return SafariRoundOutcome.Completed;
@@ -316,12 +332,12 @@ public sealed class SafariEventController : MonoBehaviour
 
     public void ClaimFinalReward(int share, int winners)
     {
-        if (FinalRewardClaimed) return;
+        if (FinalRewardClaimed || SafariState.RunStatus != SafariRunStatus.Completed) return;
 
         winners = Mathf.Max(1, winners);
         LastRewardShare = Mathf.Max(1, share);
+        SafariState.MarkRewardClaimed();
         PlayerWallet.AddCoins(LastRewardShare);
-        FinalRewardClaimed = true;
         int pool = config != null ? config.prizePoolGold : 0;
         Debug.Log($"[Safari] Ödül claim: {pool} altın / {winners} kazanan → oyuncu payı {LastRewardShare}.");
     }

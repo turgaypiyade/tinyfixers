@@ -19,6 +19,8 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
     private const int ChatLimit = 30;
 
     public event Action OnChanged;
+    public TeamLifeInbox LifeInbox { get; }
+    private bool disposed;
 
     private readonly string teamId;
     private readonly TeamInfo info;
@@ -36,6 +38,7 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
     public FirebaseTeamService()
     {
         teamId = PlayerTeamState.TeamId;
+        LifeInbox = new TeamLifeInbox(teamId, () => OnChanged?.Invoke());
 
         info = new TeamInfo
         {
@@ -54,12 +57,12 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
 
     private void Connect()
     {
-        if (string.IsNullOrEmpty(teamId)) return;
+        if (disposed || string.IsNullOrEmpty(teamId)) return;
 
         // Takım dokümanı: üye sayısı + bot harman tohumu.
         FirebaseTeamCloud.TeamDoc(teamId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
-            if (task.IsFaulted || task.IsCanceled || !task.Result.Exists) return;
+            if (disposed || task.IsFaulted || task.IsCanceled || !task.Result.Exists) return;
 
             var snap = task.Result;
             long botMembers = snap.ContainsField("botMembers") ? snap.GetValue<long>("botMembers") : 0;
@@ -70,6 +73,8 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
             if (botSeed >= 0 && botChat.Count == 0)
                 BuildBotChat((int)botSeed, (int)botMembers);
 
+            LifeInbox.SetBots((int)botMembers, () => botChat.Count > 0
+                ? botChat[UnityEngine.Random.Range(0, botChat.Count)].senderName : "Takım arkadaşların");
             OnChanged?.Invoke();
         });
 
@@ -78,6 +83,7 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
             .OrderByDescending("sentAt").Limit(ChatLimit)
             .Listen(snapshot =>
             {
+                if (disposed) return;
                 realChat.Clear();
                 foreach (var doc in snapshot.Documents)
                 {
@@ -87,6 +93,7 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
                         senderName = doc.ContainsField("senderName") ? doc.GetValue<string>("senderName") : "Oyuncu",
                         text = doc.ContainsField("text") ? doc.GetValue<string>("text") : "",
                         timeLabel = TimeLabel(doc),
+                        sentTicks = SentTicks(doc),
                         isMine = senderId == FirebaseAuthService.UserId,
                     };
                     realChat.Insert(0, msg);   // desc sorgu → ekranda eskiden yeniye
@@ -109,6 +116,16 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
                 timeLabel = rng.Next(1, 9) + "s",
             });
         }
+    }
+
+    private static long SentTicks(DocumentSnapshot doc)
+    {
+        try
+        {
+            if (doc.ContainsField("sentAt")) return doc.GetValue<Timestamp>("sentAt").ToDateTime().Ticks;
+        }
+        catch { } // A local message may still be waiting for its server timestamp.
+        return DateTime.UtcNow.Ticks;
     }
 
     private static string TimeLabel(DocumentSnapshot doc)
@@ -142,7 +159,10 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
     public List<TeamLifeRequest> GetLifeRequests() => new();
     public bool Help(TeamLifeRequest request) => false;
 
-    public void RequestLife() => SendMessage("❤️ Can istedi!");
+    public void RequestLife()
+    {
+        if (!disposed && LifeInbox.Request(DateTime.UtcNow)) SendMessage("❤️ Can istedi!");
+    }
 
     public void SendMessage(string text)
     {
@@ -153,6 +173,7 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
 
     public void Dispose()
     {
+        disposed = true;
         chatListener?.Stop();
         chatListener = null;
         FirebaseAuthService.OnReady -= Connect;

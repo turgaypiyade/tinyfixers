@@ -22,7 +22,7 @@ MonoBehaviour:
     obstacleId: 1
     collectibleId: 2
     iconOverride: {fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}
-    amount: 220
+    amount: 250
   levelKind: 1
   usesCustomIntro: 1
   introLeftSprite: {fileID: 21300000, guid: d6cc3409213204b239ccdaed773550fe, type: 3}
@@ -31,14 +31,12 @@ MonoBehaviour:
   introHoldDuration: 1.1
   bossAttackEveryMoves: 3
   bossAttackOilCount: 0
-  playerMaxHp: 120
-  damagePerClearedTile: 1
-  enemyAttackBaseDamage: 5
-  enemyAttackDamageGrowth: 3
-  enemyAttackInterval: 2.2
+  bossThrownObstacles: 
   bossMaxPressureObstacles: 6
+  playerMaxHp: 120
+  damagePerClearedTile: 2
   shieldProtectionPerPickup: 2
-  bossThrownObstacles:
+  enemyAttackBaseDamage: 5
   battlefieldBackground: {fileID: 0}
   bossWaves: []
   bossWaveCount: 1

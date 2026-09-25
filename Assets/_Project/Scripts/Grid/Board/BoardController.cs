@@ -288,6 +288,37 @@ public class BoardController : MonoBehaviour
     [SerializeField] private bool useDynamicBoardInputGate;
     public bool UseDynamicBoardInputGate => useDynamicBoardInputGate;
 
+    // Kesintisiz düşüş (TileFallMotionSystem): taş başına coroutine yerine TEK hareket döngüsü;
+    // her taş kendi hızını taşır, havadayken yeniden hedeflenince ışınlanmadan/sıfırlanmadan devam
+    // eder, aynı sütunda arkadaki taş öndekini geçemez. CalculateCascades artık "tüm düşüşler
+    // bitsin" diye beklemez (yeniden hedefleme güvenli). Kapalı = eski coroutine yolu aynen.
+    [Tooltip("Kesintisiz düşüş: tek hareket döngüsü + hız korumalı yeniden hedefleme. Kapalı=eski yol.")]
+    [SerializeField] private bool useContinuousFallMotion;
+    public bool UseContinuousFallMotion => useContinuousFallMotion && !UseReferenceFallMotion;
+
+    // Akış pompası (BoardFlowPump): boşalan hücre bir sonraki karede dolar, eşleşmeler grup grup çözülür,
+    // efektler yalnız tuttukları hücreleri meşgul eder. Kesintisiz düşüş şart. Kapalı = eski resolve döngüsü.
+    [Tooltip("Akış pompası: hücre bazlı yerçekimi + grup grup eşleşme (kesintisiz düşüş şart). Kapalı=eski resolve döngüsü.")]
+    [SerializeField] private bool useFlowPump = true;
+    internal bool UseFlowPump => useFlowPump && UseContinuousFallMotion;
+
+    private TileFallMotionSystem fallMotion;
+    internal TileFallMotionSystem FallMotion => fallMotion ??= new TileFallMotionSystem(this);
+    internal bool HasContinuousFallWork => fallMotion != null && fallMotion.HasWork;
+
+    internal bool IsTileReadyForContinuousMatch(TileView tile)
+    {
+        if (tile == null || !tile.IsCurrentLifetime(tile.LifetimeVersion) || !tile.IsRuntimeIdle
+            || GetTileViewAt(tile.X, tile.Y) != tile
+            || (fallMotion != null && fallMotion.HasPendingMotion(tile)))
+            return false;
+
+        // A cancelled/replaced movement may finish without FallArrived. Accept an actual
+        // settled board tile, never a stale planning flag or an airborne logical target.
+        Vector2 target = tile.GetFallCellPosition(tile.X, tile.Y, TileSize);
+        return (tile.RectTransform.anchoredPosition - target).sqrMagnitude <= 1f;
+    }
+
     [Tooltip("Sadece test: dynamic board input penceresini gözle yakalamak için fall sürelerini geçici uzatır. Kapalı=prod davranış.")]
     [SerializeField] private bool useDynamicBoardInputTestSlowMo;
     [SerializeField, Range(1f, 6f)] private float dynamicBoardInputTestFallDurationMultiplier = 2.5f;
@@ -348,6 +379,13 @@ public class BoardController : MonoBehaviour
     [SerializeField] private bool enableTileSyncValidation = true;
     [SerializeField] private bool enableSpecialChainTrace;
     [SerializeField] private bool enableBoardFlowTrace;
+
+    // Teşhis: ekranda boş görünen hücreyi dök (Play'de duraklat → hücreyi yaz → ⋮ menü "Debug/Dump Cell").
+    // Hücredeki taşın tüm görsel hiyerarşisi + hücrenin üstünü kaplayan her görsel Console'a yazılır.
+    [SerializeField] private Vector2Int debugDumpCell;
+
+    [ContextMenu("Debug/Dump Cell")]
+    private void DebugDumpCell() => BoardMotionDiagnostics.DumpCell(this, debugDumpCell);
 
     // ── Faz 0 perf logger (ölçüm-önce; Docs/UnifiedSpecialFlow_Plan.md) ──
     // Açıkken her frame'i örnekler: eşik üstü frame süresi VEYA GC-alloc sıçraması = [PerfSpike]
@@ -429,6 +467,39 @@ public class BoardController : MonoBehaviour
 
     public int TileSize => tileSize;
     public RectTransform TilesRoot => parent;
+
+    // Taşların HEMEN üstü, obstacle/grass/kenarlığın altı: taşın kendi sınırından taşan geçici görseller
+    // (PulseCore dönmesi vb.) burada çizilir. Ayrı Canvas sıralaması (overrideSorting) KULLANILMAZ —
+    // o, grass'ın ve aynı Canvas'taki popup'ların da üstüne çıkıyordu. Tahta maskesiyle kırpılır.
+    private RectTransform tilesTopOverlayRoot;
+    internal RectTransform TilesTopOverlayRoot
+    {
+        get
+        {
+            if (parent == null || parent.parent == null) return null;
+            if (tilesTopOverlayRoot == null)
+            {
+                var go = new GameObject("TilesTopOverlay", typeof(RectTransform));
+                go.layer = parent.gameObject.layer;
+                tilesTopOverlayRoot = go.GetComponent<RectTransform>();
+                tilesTopOverlayRoot.SetParent(parent.parent, false);
+                tilesTopOverlayRoot.anchorMin = parent.anchorMin;
+                tilesTopOverlayRoot.anchorMax = parent.anchorMax;
+                tilesTopOverlayRoot.pivot = parent.pivot;
+                tilesTopOverlayRoot.anchoredPosition = parent.anchoredPosition;
+                tilesTopOverlayRoot.sizeDelta = parent.sizeDelta;
+                tilesTopOverlayRoot.localScale = parent.localScale;
+            }
+            // Sahne kurulumu kökleri yeniden sıralayabilir: her kullanımda taşların hemen arkasında tut.
+            int tilesIndex = parent.GetSiblingIndex();
+            int overlayIndex = tilesTopOverlayRoot.GetSiblingIndex();
+            if (overlayIndex < tilesIndex)
+                tilesTopOverlayRoot.SetSiblingIndex(tilesIndex);        // öne alınınca taşlar bir geri kayar
+            else if (overlayIndex > tilesIndex + 1)
+                tilesTopOverlayRoot.SetSiblingIndex(tilesIndex + 1);
+            return tilesTopOverlayRoot;
+        }
+    }
     public bool IsBusy => CurrentState == BoardState.Resolving;
     public bool IsActionSequencePlaying => actionSequencer != null && actionSequencer.IsPlaying;
     public event Action OnBecameIdle;
@@ -640,7 +711,7 @@ public class BoardController : MonoBehaviour
     private BoardAnimator boardAnimator;
     // Background-job accounting (typed handle/gate). One count slot per BoardJobKind; see BeginJob.
     // Level-end waits on the total (ActiveBackgroundJobs); resolve/input wait only on the Resolve slot.
-    private const int BoardJobKindCount = 8;
+    private const int BoardJobKindCount = 10;
     private readonly int[] _jobCounts = new int[BoardJobKindCount];
     private readonly Stack<System.IDisposable>[] _pairedFlowJobHandles = new Stack<System.IDisposable>[BoardJobKindCount];
     private int _jobEpoch = 0;
@@ -685,6 +756,7 @@ public class BoardController : MonoBehaviour
     // ── Internal accessors ──
     internal TileView[,] Tiles => tiles;
     internal TileData[,] GridData => gridData;
+    internal MatchFinder MatchFinder => matchFinder;
     internal BoardAnimator boardAnimatorRef => boardAnimator;
     internal bool[,] Holes => holes;
     internal int Width => width;
@@ -859,9 +931,67 @@ public class BoardController : MonoBehaviour
     internal float ObstacleBreakFxLifetime => Mathf.Max(0f, obstacleBreakFxLifetime);
     internal BoardInitService BoardInitService => boardInitService;
 
+    // ── Tutulan hücreler (BoardFlowPump.cs, CellHold) ──
+    // Gravity-blocked sayılır (CascadeLogic): taş gelmez, taş gitmez; pompa eşleşmeye dokunmaz.
+    private readonly Dictionary<Vector2Int, int> cellHolds = new();
+    private readonly List<CellHold> clearReleasedHolds = new();
+    private int cellHoldEpoch;
+
     internal bool IsPendingTriggeredSpecialCell(int x, int y)
     {
-        return pendingTriggeredSpecialCells.Contains(new Vector2Int(x, y));
+        var cell = new Vector2Int(x, y);
+        return pendingTriggeredSpecialCells.Contains(cell) || cellHolds.ContainsKey(cell);
+    }
+
+    internal bool IsCellHeld(int x, int y) => IsPendingTriggeredSpecialCell(x, y);
+
+    internal CellHold HoldCells(IEnumerable<Vector2Int> cells, bool releaseWhenCleared = false)
+    {
+        var set = new HashSet<Vector2Int>();
+        if (cells != null)
+        {
+            foreach (var cell in cells)
+            {
+                if (cell.x < 0 || cell.x >= width || cell.y < 0 || cell.y >= height || !set.Add(cell))
+                    continue;
+                cellHolds.TryGetValue(cell, out int count);
+                cellHolds[cell] = count + 1;
+            }
+        }
+
+        var hold = new CellHold(this, set, cellHoldEpoch);
+        if (releaseWhenCleared && set.Count > 0)
+            clearReleasedHolds.Add(hold);
+        return hold;
+    }
+
+    // Yalnız akış pompası açıkken tutar (kapalıyken eski akış birebir kalsın). null → `using` no-op.
+    internal CellHold HoldForFlow(IEnumerable<Vector2Int> cells, bool releaseWhenCleared = false) =>
+        UseFlowPump ? HoldCells(cells, releaseWhenCleared) : null;
+
+    internal void ReleaseHeldCell(Vector2Int cell, int epoch)
+    {
+        if (epoch != cellHoldEpoch || !cellHolds.TryGetValue(cell, out int count)) return;
+        if (count <= 1) cellHolds.Remove(cell);
+        else cellHolds[cell] = count - 1;
+    }
+
+    internal void ForgetClearReleasedHold(CellHold hold) => clearReleasedHolds.Remove(hold);
+
+    private void ReleaseHoldsVacatedAt(int x, int y)
+    {
+        if (clearReleasedHolds.Count == 0 || x < 0 || x >= width || y < 0 || y >= height) return;
+        ClearedCellCount++;   // pompa: yalnız-çapraz boşluklar bu değişiklikte yeniden denensin
+        var cell = new Vector2Int(x, y);
+        for (int i = clearReleasedHolds.Count - 1; i >= 0; i--)
+            clearReleasedHolds[i].Release(cell);
+    }
+
+    private void ClearAllCellHolds()
+    {
+        cellHolds.Clear();
+        clearReleasedHolds.Clear();
+        cellHoldEpoch++;
     }
 
     internal void SetPendingTriggeredSpecialCells(IEnumerable<Vector2Int> cells)
@@ -885,6 +1015,7 @@ public class BoardController : MonoBehaviour
     internal void ClearAllPendingTriggeredSpecialCells()
     {
         pendingTriggeredSpecialCells.Clear();
+        ClearAllCellHolds();
     }
 
     internal bool IsReservedTileTargetCell(int x, int y)
@@ -1021,7 +1152,11 @@ public class BoardController : MonoBehaviour
             return false;
 
         var tile = tiles != null ? tiles[x, y] : null;
-        if (tile == null || tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key)
+        if (tile == null || !tile.IsRuntimeIdle || !tile.gameObject.activeInHierarchy
+            || tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key
+            || gridData == null || gridData[x, y] == null
+            || tile.X != x || tile.Y != y
+            || IsPendingTriggeredSpecialCell(x, y) || IsReservedTileTargetCell(x, y))
             return false;
 
         if (obstacleStateService != null)
@@ -1137,6 +1272,13 @@ public class BoardController : MonoBehaviour
     // istek yoksa saf no-op → maliyet ihmal edilebilir.
     private void Update()
     {
+        // Hareket önce ilerler: aynı karede devam eden FallAction coroutine'leri güncel bileti görür.
+        fallMotion?.Tick(Time.deltaTime);
+
+        // Akış pompası: bu karede inen taşlar hemen eşleşebilir, açılan hücreler hemen dolar.
+        if (IsFlowPumpActive)
+            FlowPump.Tick();
+
         // Sürekli pompa TEK OTORİTEDEN (FlowScheduler). Edge-triggered değil → blocking iş sessizce
         // bitse bile bekleyen resolve asılı kalmaz (lost-wakeup sınıfı yapısal olarak kapalı).
         Flow.Pump();
@@ -1230,6 +1372,61 @@ public class BoardController : MonoBehaviour
         StartCoroutine(RunImmediateAction(action, BeginJob(BoardJobKind.Resolve)));
     }
 
+    // ── Akış pompası (BoardFlowPump.cs) ──
+    private BoardFlowPump flowPump;
+    private BoardFlowPump FlowPump => flowPump ??= new BoardFlowPump(this);
+    private bool flowLive;                  // board kuruldu (PlayBoardEntrance) → pompa çalışabilir
+    private int flowPauseDepth;             // shuffle gibi tahtayı toptan yeniden yazan işler
+    private int lastResolveLoopFrame = -1;
+    private int lastFlowPumpWorkFrame = -1;
+
+    internal bool IsFlowPumpActive => UseFlowPump && flowLive && flowPauseDepth == 0;
+
+    // Tahtayı toptan yeniden yazan iş (shuffle) sürerken pompa yeni iş başlatmaz.
+    internal System.IDisposable PauseFlowPump()
+    {
+        flowPauseDepth++;
+        return new FlowPumpPause(this);
+    }
+
+    private sealed class FlowPumpPause : System.IDisposable
+    {
+        private BoardController board;
+        public FlowPumpPause(BoardController board) => this.board = board;
+        public void Dispose()
+        {
+            if (board == null) return;
+            board.flowPauseDepth = Mathf.Max(0, board.flowPauseDepth - 1);
+            board = null;
+        }
+    }
+
+    internal void StartFlowAction(BoardAction action, BoardJobKind kind)
+    {
+        StartCoroutine(RunImmediateAction(action, BeginJob(kind)));
+    }
+
+    // Pompanın bulduğu oturmuş grup: special oluşumu dahil temizliğini diğer işleri beklemeden koşar.
+    internal bool StartFlowClear(List<TileView> group)
+    {
+        var action = BuildClearPassAction(new HashSet<TileView>(group), allowSpecialActivation: false,
+            swapCell: null, fromFlowPump: true);
+        if (action == null)
+            return false;
+
+        action.IsFlowPumpClear = true;
+        StartFlowAction(action, BoardJobKind.FlowClear);
+        return true;
+    }
+
+    // Pompa iş başlattı. Çalışan resolve döngüsü yoksa sakin-tahta işleri (oil, roket, deadlock) için iste.
+    internal void NoteFlowPumpWork()
+    {
+        lastFlowPumpWorkFrame = Time.frameCount;
+        if (lastResolveLoopFrame < Time.frameCount - 1)
+            RequestResolveAfterActionSequence();
+    }
+
     private System.Collections.IEnumerator RunImmediateAction(BoardAction action, System.IDisposable job)
     {
         try
@@ -1255,7 +1452,9 @@ public class BoardController : MonoBehaviour
         ObstacleSpread = 4,  // async: barrel mud splatter (data committed up-front, visual async)
         KeyFlight = 5,       // async: KeyGenerator key flight
         PresentationFx = 6,  // async: clear-presentation visual effects
-        EggBirdFlight = 7    // async: hatch/split/dive; gravity and match/fall overlap continue
+        EggBirdFlight = 7,   // async: hatch/split/dive; gravity and match/fall overlap continue
+        DetachedFall = 8,    // overlap tail: refill continues, level-end still waits
+        FlowClear = 9        // BoardFlowPump group clear: runs beside other work, level-end waits
     }
 
     private sealed class BoardJobHandle : System.IDisposable
@@ -1304,6 +1503,7 @@ public class BoardController : MonoBehaviour
             BoardJobKind.EggBirdFlight => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Flight),
             BoardJobKind.BossStrikeDrain => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Flight),
             BoardJobKind.PresentationFx => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Presentation),
+            BoardJobKind.DetachedFall => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Fall),
             _ => null,
         };
     }
@@ -1355,6 +1555,12 @@ public class BoardController : MonoBehaviour
 
     // Only genuine Resolve work parks the resolve/settle loop and input; async flights/spreads don't.
     public int BlockingBackgroundJobs => _jobCounts[(int)BoardJobKind.Resolve];
+
+    // Akışı süren işler (BoardFlowPump.IsQuiet): resolve adımları + pompanın düşüş ve grup temizlikleri.
+    internal int FlowJobsInFlight =>
+        _jobCounts[(int)BoardJobKind.Resolve]
+        + _jobCounts[(int)BoardJobKind.DetachedFall]
+        + _jobCounts[(int)BoardJobKind.FlowClear];
 
     // Named subset accessors kept for diagnostics/log parity.
     public int FlyingGoalOrbs       => _jobCounts[(int)BoardJobKind.GoalOrbFlight];
@@ -1496,6 +1702,7 @@ public class BoardController : MonoBehaviour
 
     private void OnDestroy()
     {
+        fallMotion?.Reset();
         if (obstacleStateService == null) return;
         obstacleStateService.OnObstacleDestroyed -= HandleObstacleDestroyed;
         obstacleStateService.OnCellUnlocked -= HandleCellUnlocked;
@@ -1507,6 +1714,9 @@ public class BoardController : MonoBehaviour
 
     public void Init(int width, int height, TileIconLibrary iconLibrary)
     {
+        fallMotion?.Reset();
+        flowLive = false;
+        ClearAllPendingTriggeredSpecialCells();
         this.width = width; this.height = height; this.iconLibrary = iconLibrary;
         tiles = new TileView[width, height];
         gridData = new TileData[width, height];
@@ -1625,6 +1835,12 @@ public class BoardController : MonoBehaviour
                 moveConsumedSinceIdle = false;
                 specialLockCoordinator?.OnMoveResolved();
                 OnPlayerMoveResolved?.Invoke();
+
+                // Kafes (special lock) hamle BİTTİKTEN sonra kuruluyor; resolve'un deadlock kontrolü o an
+                // çoktan geçti. Kilitli special artık hamle sayılmadığından tahtayı yeniden değerlendir →
+                // oynanabilir hamle kalmadıysa otomatik shuffle. (Tek seferlik: bu resolve hamle tüketmez.)
+                if (specialLockCoordinator != null && specialLockCoordinator.HasAnyLock)
+                    RequestResolveAfterActionSequence();
             }
 
             // Fire regardless of whether state was Locked — ensures RunAfterIdleRoutine
@@ -1646,6 +1862,7 @@ public class BoardController : MonoBehaviour
 
     public void ForceFullBoardSync()
     {
+        fallMotion?.Reset();
         ClearAllPendingTriggeredSpecialCells();
         reservedKeyLandingCells.Clear();
         ClearAllReservedTileTargetCells();
@@ -1858,7 +2075,18 @@ public class BoardController : MonoBehaviour
     // ═══════════════════════════════════════════════════════════════
 
     public event System.Action<float> OnSystemOverrideWaveProgress;
-    public void InvokeSystemOverrideWaveProgress(float radiusPx) => OnSystemOverrideWaveProgress?.Invoke(radiusPx);
+    internal float LastSystemOverrideWaveRadius { get; private set; } = -1f;
+    internal Vector2Int SystemOverrideWaveOrigin { get; private set; }
+    internal void BeginSystemOverrideWave(Vector2Int origin)
+    {
+        SystemOverrideWaveOrigin = origin;
+        LastSystemOverrideWaveRadius = -1f;
+    }
+    public void InvokeSystemOverrideWaveProgress(float radiusPx)
+    {
+        LastSystemOverrideWaveRadius = radiusPx;
+        OnSystemOverrideWaveProgress?.Invoke(radiusPx);
+    }
 
     public float PlaySystemOverrideComboVfxAndGetDuration()
     {
@@ -2339,12 +2567,44 @@ public class BoardController : MonoBehaviour
                     tiles[x, y].transform.SetAsLastSibling();
             }
         }
+
+        // Takas sürerken oyuncunun tuttuğu taş, konum sırası ne derse desin en önde kalır.
+        foreach (var tile in swapFrontTiles)
+            if (tile != null && tile)
+                tile.transform.SetAsLastSibling();
+    }
+
+    // Takas animasyonundaki "tutulan" taşlar (dinamik girdide aynı anda birden fazla takas olabilir).
+    private readonly HashSet<TileView> swapFrontTiles = new();
+
+    internal void BeginSwapFront(TileView tile)
+    {
+        if (tile == null) return;
+        swapFrontTiles.Add(tile);
+        tile.transform.SetAsLastSibling();
+    }
+
+    internal void EndSwapFront(TileView tile)
+    {
+        if (tile != null) swapFrontTiles.Remove(tile);
     }
     // ═══════════════════════════════════════════════════════════════
     //  Cell Clear
     // ═══════════════════════════════════════════════════════════════
 
-    internal void ClearCell(int x, int y) { if (x < 0 || x >= width || y < 0 || y >= height) return; tiles[x, y] = null; gridData[x, y] = null; }
+    internal int ClearedCellCount { get; private set; }
+
+    internal void ClearCell(int x, int y)
+    {
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+        tiles[x, y] = null;
+        gridData[x, y] = null;
+        ClearedCellCount++;
+        // Anchor, special'ı patlayana dek yerinde tutmak içindir. Special tahtadan kalktıysa (kendi
+        // emisyonu ayak izini zaten tuttu) hücreyi tüm zincir ailesinin bitmesine dek kilitli tutmak
+        // yalnız boşluk bırakır. Eski akışta anchor zincir sonunda bırakılır (davranış aynı).
+        if (UseFlowPump) pendingTriggeredSpecialCells.Remove(new Vector2Int(x, y));
+    }
 
     // ── Tile object pool (Docs/UnifiedSpecialFlow_Plan.md §3.3) ──
     // useTilePool açıkken taş GameObject'leri yaratılıp yok edilmez; havuzdan alınıp iade edilir.
@@ -2389,12 +2649,18 @@ public class BoardController : MonoBehaviour
         if (tile == null || !tile)
             return;
 
+        // Hücre, eski taş EKRANDAN kalkınca akışa açılır (BoardFlowPump). Veri silinmesi yetmez: pop /
+        // implode / hedefe uçuş animasyonları veriden sonra sürer; o anda dolan hücreye düşen yeni taş
+        // kaybolmakta olan eski taşın üstüne biniyordu (düşüş mesafesi kısa olan üst satırlarda görünür).
+        int releasedX = tile.X, releasedY = tile.Y;
+
         // TEK ÇIKIŞ NOKTASI GUARD'I: bir hücre hâlâ bu taşa işaret ederken havuza iade edersek
         // o hücre ekranda BOŞ kalır ama veride dolu görünür — deaktif GameObject için
         // `tv != null` doğru, tipi okunur, gridData ondan senkronlanır, mismatch taraması 0 der.
         // Hiçbir doğrulama yakalamaz; hücreye dokunan her şey (movable hareketi dahil) hayalet
         // taşla çalışır. Bu yüzden iade/yok etme kararı verilmeden ÖNCE hücreler boşaltılır.
         ClearCellsReferencing(tile);
+        ReleaseHoldsVacatedAt(releasedX, releasedY);
 
         if (!useTilePool)
         {
@@ -2502,6 +2768,7 @@ public class BoardController : MonoBehaviour
     {
         if (t == null || t.gameObject == null) return;
         GameEventBus.EmitTileClearedAt(type, t.transform.position);   // "+1" FX pozisyonu
+        ReleaseHoldsVacatedAt(c.x, c.y);
         Destroy(t.gameObject);
         NotifyTilesCleared(type, 1);
     }
@@ -2544,6 +2811,9 @@ public class BoardController : MonoBehaviour
             return false;
 
         if (tile.RuntimeState != TileRuntimeState.Idle)
+            return false;
+
+        if (fallMotion != null && fallMotion.HasPendingMotion(tile))
             return false;
 
         // Special chains with deferred targets retain the global gate. Ordinary
@@ -2779,7 +3049,7 @@ public class BoardController : MonoBehaviour
             BoardIdleHintAndComboGlowController.SetManualSpecialGlow(selected, true, tileSize);
     }
 
-    private bool CanTapActivateSpecial(TileView tile)
+    internal bool CanTapActivateSpecial(TileView tile)
     {
         if (tile == null || tile.GetSpecial() == TileSpecial.None)
             return false;
@@ -2910,11 +3180,25 @@ public class BoardController : MonoBehaviour
         }
     }
 
-    private bool AreDynamicMatchTilesStable(IEnumerable<TileView> matches)
+    private bool AreDynamicMatchTilesStable(IEnumerable<TileView> matches, CellHold swapHold)
     {
         foreach (var tile in matches)
-            if (!CanTileUseDynamicInputCell(tile))
+        {
+            // This validates an already animated swap, not admission of a new input.
+            // Its own hold must remain in place until clear starts, but cannot veto
+            // the match. Unrelated column activity/FX cannot invalidate settled tiles.
+            if (tile == null || !tile || !tile.IsRuntimeIdle
+                || GetTileViewAt(tile.X, tile.Y) != tile
+                || (fallMotion != null && fallMotion.HasPendingMotion(tile))
+                || IsReservedTileTargetCell(tile.X, tile.Y))
                 return false;
+            var cell = new Vector2Int(tile.X, tile.Y);
+            if (pendingTriggeredSpecialCells.Contains(cell))
+                return false;
+            int ownHold = swapHold != null && swapHold.Contains(cell, cellHoldEpoch) ? 1 : 0;
+            if (cellHolds.TryGetValue(cell, out int holds) && holds > ownHold)
+                return false;
+        }
         return true;
     }
 
@@ -3056,11 +3340,31 @@ public class BoardController : MonoBehaviour
             }
         }
 
+
         if (!touchesGel) return;
 
         foreach (var tile in participants)
             if (tile != null && tile)
                 tile.GelContaminated = true;
+    }
+
+    /// Swap ÖNCESİ çağrılır: taş jel (yayılma kaynağı) hücresindeyse bulaşık işaretlenir. Hamle kapsamını
+    /// AÇMAZ — yalnız taşın kendisi; eşleşirse grubu NoteGelSpreadParticipants bulaştırır.
+    private void NoteGelCarriedBySwap(TileView tile)
+    {
+        if (spreadingGelService == null || tile == null || !tile) return;
+        if (spreadingGelService.IsSpreadSourceAt(tile.X, tile.Y))
+            tile.GelContaminated = true;
+    }
+
+    /// Eşleşmeden doğan special'ın hücresi de o eşleşmenin VURDUĞU hücredir: grup bulaşıksa jel olur.
+    /// (Jel normalde kırılan taşın hücresine düşer; kazanan taş kırılmayıp special'a dönüştüğü için
+    /// kendi hücresi atlanıyordu.)
+    private void PaintGelUnderCreatedSpecial(TileView created)
+    {
+        if (spreadingGelService == null || created == null || !created) return;
+        if (gelSpreadActiveThisMove || created.GelContaminated)
+            SpreadGelToCell(created.X, created.Y);
     }
 
     /// Bir special/combo JEL ÜSTÜNDE tetiklendiyse hamle kapsamını açar: bu hamlede kırılan her taş
@@ -3138,6 +3442,11 @@ public class BoardController : MonoBehaviour
 
         int ax = a.X, ay = a.Y, bx = b.X, by = b.Y;
 
+        // Jel bulaşması taşla taşınır: jelli hücreden swap'la ayrılan taş bulaşığı yanında götürür
+        // (yoksa jelsiz hücrede kurduğu eşleşme "jele değmiyor" sayılıp jel yaymıyordu).
+        NoteGelCarriedBySwap(a);
+        NoteGelCarriedBySwap(b);
+
         // Swap öncesi movable obstacle state snapshot
         bool movableMovedAToB, movableMovedBToA;
         ObstacleStateService.ObstacleSwapStateSnapshot obstacleSwapStateSnapshot = null;
@@ -3158,6 +3467,10 @@ public class BoardController : MonoBehaviour
         SyncTileData(ax, ay);
         SyncTileData(bx, by);
         RefreshAllSortingOrders();
+
+        // Swap'ın iki hücresi, hamlenin kendi temizliği / special çözümü bitene dek akışa kapalı: pompa bu
+        // eşleşmeyi hamle bağlamı olmadan kırmaz, yerçekimi taşları swap/combo intro'su ortasında almaz.
+        var swapHold = HoldForFlow(new[] { new Vector2Int(ax, ay), new Vector2Int(bx, by) }, releaseWhenCleared: true);
 
         yield return PlaySwapVisual(a, b, dynamicInput);
         if (obstacleSwapStateSnapshot != null)
@@ -3218,11 +3531,13 @@ public class BoardController : MonoBehaviour
 
                 // A stable swap endpoint does not guarantee stable contributors:
                 // a horizontal run can reach a neighboring column still falling.
-                if (dynamicInput && !AreDynamicMatchTilesStable(normalMatches))
+                if (dynamicInput && !AreDynamicMatchTilesStable(normalMatches, swapHold))
                     normalMatches.Clear();
 
                 if (normalMatches.Count >= 3)
                 {
+                    // Jel bulaşması: kaynak = eşleşen grup (ExecuteClearPass ile aynı kural).
+                    NoteGelSpreadParticipants(normalMatches);
                     var candidates = new HashSet<TileView>(normalMatches);
                     candidates.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
 
@@ -3251,6 +3566,7 @@ public class BoardController : MonoBehaviour
                                 continue;
 
                             createdTiles.Add(created);
+                            PaintGelUnderCreatedSpecial(created);
 
                             // Bu hücreyi PulseCore'dan koru — winner normalPartner olmayabilir.
                             (swapProtectedCells ??= new HashSet<Vector2Int>())
@@ -3305,8 +3621,12 @@ public class BoardController : MonoBehaviour
                     pulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(chargeX, chargeY, radiusCells: 3); // 7x7 alan (combo ile hizalı)
             }
 
+            bool specialStartsNow = !actionSequencer.IsPlaying;
             actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb, capturedOverridePartnerType, swapProtectedCells));
+            if (specialStartsNow)
+                swapHold?.Dispose();   // special başladı ve kendi ayak izini tuttu
             yield return AnimateQueuedActions();
+            swapHold?.Dispose();
             FlowLog("special_resolve");
 
             yield return ResolveBoard(allowSpecialActivation: false, resolveEmptyCellsFirst: true, ignoreDynamicSwapGuard: dynamicInput);
@@ -3326,7 +3646,7 @@ public class BoardController : MonoBehaviour
 
         // Only a match involving a swapped tile validates a normal move. A pending
         // match elsewhere (or a predicted gravity match) must not spend this move.
-        if (matches.Count == 0 || (dynamicInput && !AreDynamicMatchTilesStable(matches)))
+        if (matches.Count == 0 || (dynamicInput && !AreDynamicMatchTilesStable(matches, swapHold)))
         {
             // Obstacle state de geri alınsın. Stacked movable senaryosunda (örn. plastik
             // altında altın) ters MoveObstacle yetmez: alttaki movable geri açıldığı için
@@ -3350,6 +3670,7 @@ public class BoardController : MonoBehaviour
 
             yield return PlaySwapVisual(a, b, dynamicInput);
             FlowLog("swap_back");
+            swapHold?.Dispose();
 
             Debug.Log($"[Flow] ═══ SWAP END (no match) ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
             EndBusy();
@@ -3358,7 +3679,8 @@ public class BoardController : MonoBehaviour
 
         ConsumeMove();
 
-        yield return ExecuteClearPass(matches, allowSpecialActivation: true, swapCell: new Vector2Int(a.X, a.Y));
+        yield return ExecuteClearPass(matches, allowSpecialActivation: true, swapCell: new Vector2Int(a.X, a.Y),
+            releaseOnStart: swapHold);
         FlowLog("clear_pass");
         yield return ResolveBoard(resolveEmptyCellsFirst: true, ignoreDynamicSwapGuard: dynamicInput);
         FlowLog("resolve_board");
@@ -3460,7 +3782,8 @@ public class BoardController : MonoBehaviour
 
         foreach (var tile in matchTiles)
         {
-            if (tile != null && tile && tile.IsPlannedToMoveThisFallPass)
+            if (tile != null && tile && (tile.IsPlannedToMoveThisFallPass
+                || tile.RuntimeState == TileRuntimeState.Falling))
                 return true;
         }
 
@@ -3479,26 +3802,69 @@ public class BoardController : MonoBehaviour
         int safety = 0;
         const int MaxResolveLoops = 250;
         float backgroundJobWaitTime = 0f;
+        bool backgroundJobWarningLogged = false;
+        // safety GERÇEK pass sayar. Job bekleme turu (aşağıda) her KARE bir iterasyon; onu da saymak
+        // 120 fps'te ~2 sn'de 250'yi doldurup resolve'u sessizce bitiriyordu → geç biten clear'ın
+        // boşluğu bir sonraki hamleye kadar dolmuyordu, 5 sn'lik drain dalına da hiç ulaşılamıyordu.
+        bool previousIterationWasJobWait = false;
+        float flowStallTime = 0f;
 
         while (true)
         {
+            lastResolveLoopFrame = Time.frameCount;
+
             if (!ignoreDynamicSwapGuard && dynamicSwapLogicDepth > 0)
             {
                 yield return null;
                 continue;
             }
 
-            safety++;
+            if (!previousIterationWasJobWait)
+                safety++;
+            previousIterationWasJobWait = false;
             if (safety > MaxResolveLoops)
+            {
+                Debug.LogError($"[ResolveBoard] {MaxResolveLoops} pass limiti aşıldı — resolve durduruldu. " +
+                               $"resolvableEmpty={cascadeLogic?.HasAnyResolvableEmptyPlayableCell()} blockJobs={BlockingBackgroundJobs}");
                 yield break;
+            }
 
             CurrentResolvePass = safety;
 
             // Bottom-exit cargo: alt satıra inen Cargo, board'un TAMAMEN oturmasını
             // beklemeden her pass başında (sequencer boşken) hemen çıkar. Boşalan
             // hücre aynı pass'in cascade barrier'ında doldurulur.
-            if (TryCollectBottomExitCargo())
+            if (TryCollectBottomExitCargo(onlySettled: IsFlowPumpActive))
                 RefreshAllSortingOrders();
+
+            // Akış pompası açıkken yerçekimi ve eşleşme her karede hücre bazında ilerler (BoardFlowPump).
+            // Bu döngü yalnız akışın durmasını bekler; aşağıdaki eski adımlar o zaman no-op'tur, yalnız
+            // diagonal-dolum (tam CalculateCascades) ve sakin-tahta işleri (oil, roket, deadlock) koşar.
+            if (IsFlowPumpActive)
+            {
+                if (!FlowPump.IsQuiet)
+                {
+                    // Akış ilerliyorsa bekleme meşrudur; yalnız ilerlemeden takılı kalırsa kurtar.
+                    flowStallTime = lastFlowPumpWorkFrame >= Time.frameCount - 1
+                        ? 0f : flowStallTime + Time.unscaledDeltaTime;
+                    if (flowStallTime > 15f)
+                    {
+                        Debug.LogError($"[ResolveBoard] Akış 15 sn ilerlemedi — işler ve tutulan hücreler boşaltılıyor. " +
+                                       $"flowJobs={FlowJobsInFlight} gravityBusy={cascadeLogic.IsGravityBusy} " +
+                                       $"seq={IsActionSequencePlaying} holds={cellHolds.Count}");
+                        ForceDrainAllJobs();
+                        ClearAllPendingTriggeredSpecialCells();
+                        fallMotion?.Reset();
+                        RepairTileGridIntegrity("flow-stall", snapPositions: true);
+                        flowStallTime = 0f;
+                    }
+
+                    previousIterationWasJobWait = true;
+                    yield return null;
+                    continue;
+                }
+                flowStallTime = 0f;
+            }
 
             // ─────────────────────────────────────────────
             // STRICT ORDER BARRIER:
@@ -3602,6 +3968,15 @@ public class BoardController : MonoBehaviour
                 // CascadeLogic.HasAnyEmptyPlayableCell artık sadece flow-reachable boşlukları sayar.
             }
 
+            // Continuous overlap may leave unrelated columns falling. Refill above is
+            // allowed immediately; ordinary match resolution must still wait for arrival.
+            if (UseContinuousFallMotion && cascadeLogic != null && cascadeLogic.IsGravityBusy)
+            {
+                previousIterationWasJobWait = true;
+                yield return null;
+                continue;
+            }
+
             var matches = matchFinder.FindAllMatches();
 
             if (matches.Count > 0)
@@ -3653,19 +4028,31 @@ public class BoardController : MonoBehaviour
             // hariç tutulur ki hedefe uçarken cascade/düşüş/zincir akışı donmasın.
             if (BlockingBackgroundJobs > 0 || actionSequencer.IsPlaying)
             {
-                backgroundJobWaitTime += Time.deltaTime;
+                backgroundJobWaitTime += Time.unscaledDeltaTime;
 
-                if (backgroundJobWaitTime > 5f)
+                // Uzun mega-combo zincirleri meşru olarak 5 sn'yi geçebilir: orada drain etmek resolve'u
+                // hâlâ koşan zincirle yarıştırırdı. 5 sn'de yalnız uyar; drain yalnız gerçek sızıntı
+                // güvenlik ağı (15 sn).
+                if (backgroundJobWaitTime > 5f && !backgroundJobWarningLogged)
                 {
-                    Debug.LogWarning($"[ResolveBoard] Background job timeout — forcing continue. ActiveBackgroundJobs={ActiveBackgroundJobs}, IsPlaying={actionSequencer.IsPlaying}");
-                    ForceDrainAllJobs();
+                    backgroundJobWarningLogged = true;
+                    Debug.LogWarning($"[ResolveBoard] Background jobs still running after 5s. ActiveBackgroundJobs={ActiveBackgroundJobs}, IsPlaying={actionSequencer.IsPlaying}");
                 }
 
+                if (backgroundJobWaitTime > 15f)
+                {
+                    Debug.LogError($"[ResolveBoard] Background job leak — forcing drain. ActiveBackgroundJobs={ActiveBackgroundJobs}, IsPlaying={actionSequencer.IsPlaying}");
+                    ForceDrainAllJobs();
+                    backgroundJobWaitTime = 0f;
+                }
+
+                previousIterationWasJobWait = true;
                 yield return null;
                 continue;
             }
 
             backgroundJobWaitTime = 0f;
+            backgroundJobWarningLogged = false;
 
             // Oil spread: board TAMAMEN oturduktan sonra (ekrandaki cascade + tüm background
             // job'lar bitince) ve bu hamlede HİÇ oil kırılmamışsa (oilSuppressionCellsThisMove
@@ -3765,7 +4152,37 @@ public class BoardController : MonoBehaviour
     // Public wrapper for services (BoosterService)
     internal IEnumerator ResolveBoardPublic(bool allowSpecial = true) => ResolveBoard(allowSpecial, resolveEmptyCellsFirst: true);
 
-    IEnumerator ExecuteClearPass(HashSet<TileView> matchTiles, bool allowSpecialActivation, Action<bool> onResult = null, Vector2Int? swapCell = null)
+    // releaseOnStart: temizlik başlayıp kendi hücrelerini tuttuğu an bırakılır (ör. swap tutması).
+    IEnumerator ExecuteClearPass(HashSet<TileView> matchTiles, bool allowSpecialActivation, Action<bool> onResult = null,
+        Vector2Int? swapCell = null, IDisposable releaseOnStart = null)
+    {
+        var clearAction = BuildClearPassAction(matchTiles, allowSpecialActivation, swapCell, fromFlowPump: false);
+        if (clearAction == null)
+        {
+            releaseOnStart?.Dispose();
+            onResult?.Invoke(false);
+            yield break;
+        }
+
+        bool startsNow = !actionSequencer.IsPlaying;
+        actionSequencer.Enqueue(clearAction);
+        if (startsNow)
+            releaseOnStart?.Dispose();   // temizlik başladı ve kendi hücrelerini tuttu
+
+        while (actionSequencer.IsPlaying)
+            yield return null;
+        releaseOnStart?.Dispose();
+
+        if (BoardFlowTraceEnabled)
+            Debug.Log($"[ClearPass] clear+cascade_done matchCount={matchTiles.Count}");
+        onResult?.Invoke(true);
+    }
+
+    // Eşleşme temizliğini kurar (senkron): special oluşumu + sunum planı + MatchClearAction.
+    // null = temizlenecek normal taş kalmadı. fromFlowPump: pompanın kaskad grubu — oyuncu hamlesinin
+    // swap bağlamını (lastSwap*) ne kullanır ne tüketir; hamlenin kendi clear pass'i onu bekliyor olabilir.
+    private MatchClearAction BuildClearPassAction(HashSet<TileView> matchTiles, bool allowSpecialActivation,
+        Vector2Int? swapCell, bool fromFlowPump)
     {
         float _cpStart = Time.realtimeSinceStartup;
         float _cpLast = _cpStart;
@@ -3803,7 +4220,9 @@ public class BoardController : MonoBehaviour
 
         var creations = specialCreationService.DecideUpToTwoFromMatches(
             nonSpecialMatchTiles,
-            new SpecialCreationService.CreationRequest(lastSwapA, lastSwapB, lastSwapUserMove));
+            fromFlowPump
+                ? new SpecialCreationService.CreationRequest(null, null, false)
+                : new SpecialCreationService.CreationRequest(lastSwapA, lastSwapB, lastSwapUserMove));
 
         if (creations != null && creations.Count > 0)
         {
@@ -3829,6 +4248,7 @@ public class BoardController : MonoBehaviour
                     continue;
 
                 createdSpecialTiles.Add(created);
+                PaintGelUnderCreatedSpecial(created);
 
                 var groupContributors = new List<TileView>();
                 if (consumedGroup != null)
@@ -3861,7 +4281,8 @@ public class BoardController : MonoBehaviour
             }
         }
 
-        lastSwapUserMove = false;
+        if (!fromFlowPump)
+            lastSwapUserMove = false;
         CpLog($"special_creation({createdSpecialTiles.Count})");
         EmitCreatedSpecialSfx(createdSpecialTiles);
 
@@ -3873,10 +4294,7 @@ public class BoardController : MonoBehaviour
         bool hasAnySpecialActivation = false;
 
         if (matchTiles.Count == 0)
-        {
-            onResult?.Invoke(false);
-            yield break;
-        }
+            return null;
 
         bool doShake = shakeNextClear || hasLineActivation;
         shakeNextClear = false;
@@ -3913,20 +4331,18 @@ public class BoardController : MonoBehaviour
             implodeCenter = centerCell;
         }
 
-        actionSequencer.Enqueue(new MatchClearAction(
+        var clearAction = new MatchClearAction(
             matchTiles,
             doShake,
             isSpecialPhase: allowSpecialActivation && hasAnySpecialActivation,
             presentationPlan: presentationPlan,
             enqueueCascadeOnComplete: false,
             implodeTargetCell: implodeCenter,
-            allowLocalizedDynamicInput: createdSpecialTiles.Count == 0));
+            allowLocalizedDynamicInput: createdSpecialTiles.Count == 0);
 
-        while (actionSequencer.IsPlaying)
-            yield return null;
-
-        CpLog("clear+cascade_done");
-        onResult?.Invoke(true);
+        // Oluşan special formation boyunca yerinde kalsın (altı açılsa bile düşmesin).
+        clearAction.HoldAlso(createdSpecialTiles);
+        return clearAction;
     }
 
 
@@ -3983,9 +4399,9 @@ public class BoardController : MonoBehaviour
             // kalıyordu. false: önce formation (canlı taşları topla), SONRA final clear.
             CommitFinalClearsBeforeEffects = false,
             BackgroundEffectsBlockResolve = false,
-            ObstacleHitContext = IsSpecialActivationPhase
-                ? ObstacleHitContext.SpecialActivation
-                : ObstacleHitContext.NormalMatch
+            // Eşleşmeden doğan special: kaynak normal match. (Global special-faz bayrağı okunmaz —
+            // akış pompası bu temizliği bir special zinciri sürerken de koşturabilir.)
+            ObstacleHitContext = ObstacleHitContext.NormalMatch
         };
 
         var finalClearTiles = new HashSet<TileView>(clearTiles);
@@ -4039,6 +4455,7 @@ public class BoardController : MonoBehaviour
 
             createdGroup.alpha = 0f;
             created.SetIconAlpha(0f);
+            created.NoteHidden("createdPlan");
             created.transform.localScale = Vector3.one * 0.18f;
 
             plan.Effects.Add(new SpecialCreationFormationEffectDescriptor(
@@ -4068,6 +4485,7 @@ public class BoardController : MonoBehaviour
         bool slide = enableEntranceSlide && shakeTarget != null;
         Vector2 home = shakeBasePos;
 
+        flowLive = true;   // board kuruldu: akış pompası (varsa) initial settle'dan itibaren çalışır
         BeginBusy();
 
         if (slide)
@@ -4663,13 +5081,37 @@ public class BoardController : MonoBehaviour
             ? activeFallProfile.FallSeconds(d)
             : d / FallVelocityCellsPerSecond;
 
+        return Mathf.Max(0.01f, duration * GetFallTimeMultiplier());
+    }
+
+    // Süre çarpanı (büyük = yavaş): cascade pass hızlanması + editör slow-mo testi.
+    // Süre-tabanlı yol ve hız-tabanlı kesintisiz düşüş AYNI çarpanı kullanır.
+    private float GetFallTimeMultiplier()
+    {
         float testSlowMo = 1f;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (useDynamicBoardInputGate && useDynamicBoardInputTestSlowMo)
             testSlowMo = Mathf.Max(1f, dynamicBoardInputTestFallDurationMultiplier);
 #endif
+        return Mathf.Max(0.5f, GetCascadeFallSpeedMultiplier()) * testSlowMo;
+    }
 
-        return Mathf.Max(0.01f, duration * Mathf.Max(0.5f, GetCascadeFallSpeedMultiplier()) * testSlowMo);
+    // Kesintisiz düşüşün kinematiği (hücre/sn): aktif profilin kare-başı değerleri saniyeye çevrilir,
+    // süre çarpanı m ile ölçeklenir (hız /m, ivme /m²) → sıfırdan başlayan düşüş eski eğriyle birebir.
+    internal void GetFallKinematics(out float v0, out float accel, out float vmax)
+    {
+        float m = Mathf.Max(0.01f, GetFallTimeMultiplier());
+        if (activeFallProfile != null && activeFallProfile.enabled)
+        {
+            float fps = Mathf.Max(1f, activeFallProfile.fps);
+            v0 = Mathf.Max(0.0001f, activeFallProfile.initialSpeedCellsPerFrame) * fps / m;
+            accel = Mathf.Max(0f, activeFallProfile.accelerationCellsPerFrameSquared) * fps * fps / (m * m);
+            vmax = Mathf.Max(v0, activeFallProfile.maxSpeedCellsPerFrame * fps / m);
+            return;
+        }
+
+        v0 = vmax = FallVelocityCellsPerSecond / m;
+        accel = 0f;
     }
 
     // ── Aktif düşüş profili (Royal referans ölçümü) ─────────────────
@@ -4846,7 +5288,7 @@ public class BoardController : MonoBehaviour
     internal bool HasPendingAutoResolveForLevelEnd()
     {
         return (cascadeLogic != null && cascadeLogic.HasAnyResolvableEmptyPlayableCell())
-            || (matchFinder != null && matchFinder.FindAllMatches().Count > 0)
+            || (matchFinder != null && matchFinder.FindAllMatches(logDiagnostics: false).Count > 0)
             || rocketLaunchesThisMove.Count > 0
             || HasBottomExitCargoReady();
     }
@@ -4856,7 +5298,7 @@ public class BoardController : MonoBehaviour
     {
         return $"emptyPlayable={cascadeLogic != null && cascadeLogic.HasAnyEmptyPlayableCell()}, " +
                $"resolvableEmpty={cascadeLogic != null && cascadeLogic.HasAnyResolvableEmptyPlayableCell()}, " +
-               $"matches={(matchFinder != null ? matchFinder.FindAllMatches().Count : 0)}, " +
+               $"matches={(matchFinder != null ? matchFinder.FindAllMatches(logDiagnostics: false).Count : 0)}, " +
                $"rocketQueue={rocketLaunchesThisMove.Count}, " +
                $"bottomCargo={HasBottomExitCargoReady()}, " +
                $"activeBgJobs={ActiveBackgroundJobs}";
@@ -4901,7 +5343,9 @@ public class BoardController : MonoBehaviour
     // En alt satıra inen Cargo (exitAtBottom) obstacle'larını board'dan çıkarır:
     // hücre verisini temizler (OnObstacleDestroyed → goal +1), tile'ı tabandan aşağı
     // animasyonla süzer. En az biri toplandıysa true döner (resolve loop refill etsin).
-    internal bool TryCollectBottomExitCargo()
+    // onlySettled: akış pompası açıkken döngü her karede döner; cargo ancak tabana OTURUNCA çıkar
+    // (havadayken toplanırsa çıkış animasyonu düşüşün ortasından başlardı).
+    internal bool TryCollectBottomExitCargo(bool onlySettled = false)
     {
         if (obstacleStateService == null || height <= 0 || width <= 0)
             return false;
@@ -4919,6 +5363,8 @@ public class BoardController : MonoBehaviour
                 continue;
 
             var tile = tiles[x, y];
+            if (onlySettled && (IsCellHeld(x, y) || (tile != null && !IsTileReadyForContinuousMatch(tile))))
+                continue;
 
             // Goal HUD slotunu önceden al (robot oraya zıplayacak).
             RectTransform goalSlot = null;

@@ -20,6 +20,7 @@ public class LevelRuntimeSelector : MonoBehaviour
 
     public LevelData ResolveLevelData()
     {
+        if (RuntimeSimulationSession.IsActive) return RuntimeSimulationSession.CurrentLevel;
         if (levelCatalog == null)
         {
             Debug.LogError("[LevelRuntimeSelector] LevelCatalog is null.");

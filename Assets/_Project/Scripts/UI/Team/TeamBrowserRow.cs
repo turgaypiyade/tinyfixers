@@ -28,6 +28,7 @@ public sealed class TeamBrowserRow : MonoBehaviour
         }
 
         if (nameText != null) nameText.text = entry != null ? entry.name : "";
+        SingleLineText.Fit(nameText);
         if (capacityText != null) capacityText.text = entry != null ? $"{entry.members}/{entry.capacity}" : "";
         if (emblem != null)
         {

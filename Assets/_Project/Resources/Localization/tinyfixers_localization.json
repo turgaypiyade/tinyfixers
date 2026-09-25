@@ -429,6 +429,14 @@
           "value": "Kalkan −{0}   Can −{1}"
         },
         {
+          "key": "boss_defeated_goals_left_hint",
+          "value": "Rakibi yendin! Ama level'ı kazanmak için kalan hedefleri de tamamlamalısın."
+        },
+        {
+          "key": "boss_defeated_goals_left_toast",
+          "value": "Rakip yenildi! Şimdi hedefleri tamamla."
+        },
+        {
           "key": "boss_toast_shield_player",
           "value": "Koruma +{0}"
         },
@@ -659,6 +667,14 @@
         {
           "key": "worldmap_island_farm",
           "value": "Robo Çiftlik"
+        },
+        {
+          "key": "wonder_task_locked_chapter",
+          "value": "Bölüm {0} bitince açılır"
+        },
+        {
+          "key": "wonder_task_locked_button",
+          "value": "KİLİTLİ"
         }
       ]
     },
@@ -1082,6 +1098,14 @@
           "value": "Shield −{0}   HP −{1}"
         },
         {
+          "key": "boss_defeated_goals_left_hint",
+          "value": "You beat your rival! But you still need to complete the remaining goals to win the level."
+        },
+        {
+          "key": "boss_defeated_goals_left_toast",
+          "value": "Rival defeated! Now complete the goals."
+        },
+        {
           "key": "boss_toast_shield_player",
           "value": "Protection +{0}"
         },
@@ -1312,6 +1336,14 @@
         {
           "key": "worldmap_island_farm",
           "value": "Robo Farm"
+        },
+        {
+          "key": "wonder_task_locked_chapter",
+          "value": "Unlocks when Chapter {0} is complete"
+        },
+        {
+          "key": "wonder_task_locked_button",
+          "value": "LOCKED"
         }
       ]
     }

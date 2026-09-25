@@ -206,7 +206,6 @@ public sealed class BossDuelController : MonoBehaviour
     private int playerHp, playerMaxHp;
     private int movesSinceOil;
     private int pressureVolleyIndex;
-    private bool pressureOwnsInputLock;
     private RectTransform pressureEffectsRoot;
 
     private int damagePerTile;
@@ -229,6 +228,8 @@ public sealed class BossDuelController : MonoBehaviour
     private readonly Dictionary<RectTransform, Vector2> _hitBase = new();
     private bool winCelebrationPlayed;
     private bool enemyDefeated;
+    private bool waitingGoalsForVictory;   // boss yenildi, zafer kutlaması kalan hedefleri bekliyor
+    private const string GoalsLeftTipSeenKey = "boss_tip_goals_left_seen";
     private bool playerDefeated;
 
     private void Start() => StartCoroutine(InitWhenLevelReady());
@@ -326,12 +327,14 @@ public sealed class BossDuelController : MonoBehaviour
 
     private void OnDestroy()
     {
+        StopWaitingGoalsForVictory();
         if (ownsIntro && intro != null) Destroy(intro.gameObject);
     }
 
     private void OnDisable()
     {
         bossModeActive = false;
+        StopWaitingGoalsForVictory();
         StopAllCoroutines();
         ReleasePressureInputLock();
         intro?.HideImmediate();
@@ -739,18 +742,14 @@ public sealed class BossDuelController : MonoBehaviour
         if (movesSinceOil < Mathf.Max(1, waveOilEveryMoves)) yield break;
         movesSinceOil = 0;
 
-        // A player can already be making their next move during the melee animation.
-        // Finish that move before selecting cells; hold input through preparation and flight.
-        while (!IsOver() && (board.IsExplicitlyLocked || board.Flow.IsDuelMoveSettling))
-            yield return null;
-        if (IsOver() || waveTransitionActive) yield break;
+        // Only pick idle cells. The volley revalidates each landing while the board
+        // continues resolving; it never owns a board-wide input lock.
+        if (IsOver() || waveTransitionActive || board.IsExplicitlyLocked) yield break;
         var pool = BossDuelObstaclePressure.GetPool(board.ActiveLevelData);
         var targets = BossDuelObstaclePressure.PickTargets(board, pool, waveOilCount);
         if (targets.Count == 0) yield break;
         var id = pool[pressureVolleyIndex % pool.Count];
         pressureVolleyIndex++;
-        pressureOwnsInputLock = true;
-        board.SetInputLocked(true);
         try
         {
             var go = new GameObject("BossPressureVolley", typeof(RectTransform));
@@ -771,9 +770,6 @@ public sealed class BossDuelController : MonoBehaviour
     {
         if (pressureEffectsRoot != null) Destroy(pressureEffectsRoot.gameObject);
         pressureEffectsRoot = null;
-        if (!pressureOwnsInputLock) return;
-        pressureOwnsInputLock = false;
-        if (board != null) board.SetInputLocked(false);
     }
 
     private void HandleTilesCleared(TileType type, int amount)
@@ -930,14 +926,68 @@ public sealed class BossDuelController : MonoBehaviour
             bossModeActive = false;   // BattleLoop dursun (WIN goal tamamlanınca LevelEnd success açar)
             StartCoroutine(PlayDefeat(enemyRobot));
 
-            if (!winCelebrationPlayed)
+            // Level'da boss'tan başka hedef de varsa zafer, hepsi bitince kutlanır; o zamana
+            // kadar oyuncuya neden devam ettiği söylenir.
+            if (topHud == null || topHud.AreAllGoalsCompleted)
+                PlayPlayerVictory();
+            else
             {
-                winCelebrationPlayed = true;
-                if (playerRobot != null)
-                    StartCoroutine(WinCelebration(playerRobot));
-                PlayWinFireworks(playerRobot);   // 🎆 kazanan (oyuncu) robotun konumunda
+                waitingGoalsForVictory = true;
+                topHud.OnGoalsCompletionChanged += HandleGoalsCompletionForVictory;
+                StartCoroutine(ShowGoalsLeftTip());
             }
         }
+    }
+
+    private void PlayPlayerVictory()
+    {
+        if (winCelebrationPlayed) return;
+        winCelebrationPlayed = true;
+        if (playerRobot != null)
+            StartCoroutine(WinCelebration(playerRobot));
+        PlayWinFireworks(playerRobot);   // 🎆 kazanan (oyuncu) robotun konumunda
+    }
+
+    private void HandleGoalsCompletionForVictory(bool allCompleted)
+    {
+        if (!allCompleted) return;
+        StopWaitingGoalsForVictory();
+        if (isActiveAndEnabled && !playerDefeated)
+            PlayPlayerVictory();
+    }
+
+    private void StopWaitingGoalsForVictory()
+    {
+        if (!waitingGoalsForVictory) return;
+        waitingGoalsForVictory = false;
+        if (topHud != null)
+            topHud.OnGoalsCompletionChanged -= HandleGoalsCompletionForVictory;
+    }
+
+    // İlk seferde hint kutusu (dokununca kapanır), öğrenildikten sonra yalnız kısa bildirim.
+    private IEnumerator ShowGoalsLeftTip()
+    {
+        // Düşmanın yıkılışı görünsün; bu arada hedefler bittiyse söylenecek bir şey kalmaz.
+        yield return new WaitForSeconds(1.1f);
+        if (!waitingGoalsForVictory) yield break;
+
+        var overlay = PlayerPrefs.GetInt(GoalsLeftTipSeenKey, 0) == 0
+            ? FindFirstObjectByType<TutorialOverlayController>(FindObjectsInactive.Include)
+            : null;
+        if (overlay == null)
+        {
+            ShowToast(Loc("boss_defeated_goals_left_toast", "Rakip yenildi! Şimdi hedefleri tamamla."), strong: true);
+            yield break;
+        }
+
+        bool dismissed = false;
+        overlay.ShowHint(null, Loc("boss_defeated_goals_left_hint",
+            "Rakibi yendin! Ama level'ı kazanmak için kalan hedefleri de tamamlamalısın."),
+            () => dismissed = true);
+        PlayerPrefs.SetInt(GoalsLeftTipSeenKey, 1);
+        PlayerPrefs.Save();
+        while (!dismissed && overlay != null && overlay.isActiveAndEnabled)
+            yield return null;
     }
 
     // ── Dalga makinesi ──

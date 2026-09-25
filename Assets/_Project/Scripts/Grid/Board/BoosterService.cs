@@ -42,12 +42,18 @@ public class BoosterService
                 yield break;
 
             board.NoteGelSpreadOrigin(cell.x, cell.y);
-            actionSequencer.Enqueue(specialResolver.CreateBoosterChain(
-                onCellReached => PlayBoosterImpactFx(mode, cell, lineSweepService,
-                    lightningSpawner, lineTravelPlayer, onCellReached)));
 
-            while (actionSequencer.IsPlaying)
-                yield return null;
+            // Booster görseli hücrelere konumla varır: vuruş bitene dek hattı/hücreyi akışa kapat
+            // (ör. alttan kalkan asansörün üstündeki taşlar vurulmadan aşağı akmasın).
+            using (board.HoldForFlow(BoosterFootprint(mode, cell)))
+            {
+                actionSequencer.Enqueue(specialResolver.CreateBoosterChain(
+                    onCellReached => PlayBoosterImpactFx(mode, cell, lineSweepService,
+                        lightningSpawner, lineTravelPlayer, onCellReached)));
+
+                while (actionSequencer.IsPlaying)
+                    yield return null;
+            }
 
             yield return board.ResolveBoardPublic();
         }
@@ -55,6 +61,22 @@ public class BoosterService
         {
             board.IsSpecialActivationPhase = previousSpecialPhase;
             board.EndBusy();
+        }
+    }
+
+    private IEnumerable<Vector2Int> BoosterFootprint(BoardController.BoosterMode mode, Vector2Int cell)
+    {
+        if (mode == BoardController.BoosterMode.Column)
+        {
+            for (int y = 0; y < board.Height; y++) yield return new Vector2Int(cell.x, y);
+        }
+        else if (mode == BoardController.BoosterMode.Row)
+        {
+            for (int x = 0; x < board.Width; x++) yield return new Vector2Int(x, cell.y);
+        }
+        else
+        {
+            yield return cell;
         }
     }
 
@@ -1325,6 +1347,8 @@ public class BoosterService
     {
         Debug.Log("[Shuffle] SafeShuffleBoardRoutine START");
         board.BeginBusy();
+        // Shuffle tahtayı toptan yeniden yazar: bitene dek akış pompası yeni iş başlatmasın.
+        using var flowPause = board.PauseFlowPump();
 
         // Shuffle board.Tiles'ın TAMAMINI yeniden eşler → EXCLUSIVE çalışmalı. ResolveBoard'un
         // settle kontrolü bilerek yalnız blocking job'ları bekliyor: uçuştaki PatchBot dash'i,

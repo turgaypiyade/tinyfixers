@@ -971,7 +971,6 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     private static string FormatRemaining(TimeSpan remaining)
     {
-        int seconds = Mathf.Max(0, Mathf.CeilToInt((float)remaining.TotalSeconds));
-        return $"{seconds / 60:00}:{seconds % 60:00}";
+        return TimeFormat.Countdown(remaining);
     }
 }

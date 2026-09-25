@@ -87,7 +87,17 @@ public sealed class SpecialChainRunner : BoardAction
     // safety cap).
     private readonly SpecialChainRunner root;
     private readonly Dictionary<TileView, Vector2Int> anchoredCells = new();
+    private readonly HashSet<(TileView tile, int lifetime)> launchedSpecials = new();
+    private readonly HashSet<(TileView tile, int lifetime)> activatedSpecials = new();
     private readonly Vector2Int[] anchorCellBuffer = new Vector2Int[1];
+
+    // ROOT'ta tutulur. Anchor'ların sahibi zincir AİLESİDİR (kök + tüm alt zincirler): kök, final
+    // settle'ı global job sayacına değil KENDİ canlı alt zincir sayısına göre bekler; kök bittiğinde
+    // hâlâ koşan alt zincir varsa (5 sn cap / exception) anchor'ları SON biten alt zincir bırakır.
+    // Aksi hâlde kökten uzun yaşayan alt zincirin açtığı anchor'ı kimse bırakmıyor, hücre kalıcı
+    // gravity-blocked kalıyordu (resolve onu boşluk olarak bile görmüyordu).
+    private int liveSubChains;
+    private bool rootFinished;
 
     public override bool Blocking => true;
 
@@ -130,6 +140,42 @@ public sealed class SpecialChainRunner : BoardAction
     private bool IsProtectedCell(int x, int y) =>
         protectedCells != null && protectedCells.Contains(new Vector2Int(x, y));
 
+    // Kafesli (kilitli) special hiçbir etki alanında patlamaz ve kırılmaz: zincire alınmaz, temizlenmez.
+    // (Dispatcher yolları aynı kuralı IsInteractionLocked ile uyguluyor; motor da artık uyar.)
+    private static bool IsCaged(TileView tile) => tile != null && tile && tile.IsSpecialLocked;
+
+    // Hücre çok hücreli (dikdörtgen) bir obstacle'a aitse, footprint'in ortasına en yakın hücreyi verir.
+    // Yalnız origin üyeliğine bakılır (Safe gibi interceptor'lı obstacle'larda hit sorguları köşeyi döndürür).
+    private bool TryGetObstacleFootprintCenter(Vector2Int cell, out Vector2Int center)
+    {
+        center = cell;
+        var obstacles = board.ObstacleStateService;
+        int origin = obstacles != null ? obstacles.GetObstacleOriginAt(cell.x, cell.y) : -1;
+        if (origin < 0) return false;
+
+        int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue, count = 0;
+        for (int x = 0; x < board.Width; x++)
+            for (int y = 0; y < board.Height; y++)
+            {
+                if (obstacles.GetObstacleOriginAt(x, y) != origin) continue;
+                minX = Mathf.Min(minX, x); maxX = Mathf.Max(maxX, x);
+                minY = Mathf.Min(minY, y); maxY = Mathf.Max(maxY, y);
+                count++;
+            }
+        if (count <= 1 || count != (maxX - minX + 1) * (maxY - minY + 1)) return false;
+
+        center = new Vector2Int((minX + maxX + 1) / 2, (minY + maxY + 1) / 2);
+        return true;
+    }
+
+    // Pulse patlama karesi (akış pompası bu alanı dalga bitene dek tutar; HoldCells sınır dışını atar).
+    private IEnumerable<Vector2Int> SquareCells(int cx, int cy)
+    {
+        for (int x = cx - areaHalf; x <= cx + areaHalf; x++)
+            for (int y = cy - areaHalf; y <= cy + areaHalf; y++)
+                yield return new Vector2Int(x, y);
+    }
+
     // ── Faz 4 (Docs/UnifiedSpecialFlow_Plan.md): zincir motorunu Activity sözleşmesine bağla ──
     // SpecialChainRunner hem special'ların hem combo'ların ORTAK motoru, ama FlowScheduler onu hiç
     // görmüyordu. Kayıt EK (eski job/blocking semantiği aynen sürüyor) → davranış DEĞİŞMEZ; kazanç:
@@ -139,6 +185,9 @@ public sealed class SpecialChainRunner : BoardAction
     // dokunulmadı (bkz. Faz 3 dersi: PatchBot'ta kaza eseri blocking vardı, burada yok).
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
+        BoardMotionDiagnostics.ChainBegin(board,
+            $"chain={GetHashCode()} root={root.GetHashCode()} seeds={initialSpecials.Count} lines={simultaneousLineCells?.Count ?? 0}");
+        bool diagnosticCompleted = false;
         System.IDisposable chainActivity = (board != null && board.UseFlowActivities)
             ? board.Flow.Begin(BoardFlowScheduler.ActivityKind.ComboStep)
             : null;
@@ -147,10 +196,33 @@ public sealed class SpecialChainRunner : BoardAction
             var inner = RunChainVisuals(sequencer);
             while (inner.MoveNext())
                 yield return inner.Current;
+            diagnosticCompleted = true;
         }
         finally
         {
             chainActivity?.Dispose();
+            OnChainFinished();
+            BoardMotionDiagnostics.ChainEnd(board, $"chain={GetHashCode()} completed={diagnosticCompleted}");
+        }
+    }
+
+    // Zincir ailesinin anchor sahipliği: aile tamamen bitince (kök bitti + canlı alt zincir yok)
+    // kalan her anchor bırakılır ve boşalan hücreler için resolve istenir. Normal akışta kök zaten
+    // final settle'da bırakmıştır (no-op); bu yol cap/exception/geç-anchor artıklarını toplar.
+    private void OnChainFinished()
+    {
+        if (root == this)
+            rootFinished = true;
+        else
+            root.liveSubChains = Mathf.Max(0, root.liveSubChains - 1);
+
+        if (!root.rootFinished || root.liveSubChains > 0 || board == null)
+            return;
+
+        if (ReleaseAllAnchors())
+        {
+            Debug.LogWarning($"[ChainSettle] Zincir ailesi bitti, artık anchor'lar bırakıldı (root={root.GetHashCode()}).");
+            board.RequestResolveAfterActionSequence();
         }
     }
 
@@ -222,7 +294,10 @@ public sealed class SpecialChainRunner : BoardAction
             if (board.Tiles[cx, cy] != t) continue;
 
             var special = t.GetSpecial();
-            if (special == TileSpecial.None) continue;
+            if (special == TileSpecial.None || IsCaged(t)) continue;
+            var activation = (t, t.LifetimeVersion);
+            if (!root.activatedSpecials.Add(activation)) continue;
+            root.launchedSpecials.Add(activation);
 
             processed.Add(t);
 
@@ -242,7 +317,14 @@ public sealed class SpecialChainRunner : BoardAction
                 {
                     for (int i = 0; i < acts.Count; i++)
                         if (acts[i] != null)
+                        {
+                            float actionStarted = Time.realtimeSinceStartup;
+                            BoardMotionDiagnostics.Event(board, "SPECIAL_ACTION_BEGIN",
+                                $"chain={GetHashCode()} special={special} action={acts[i].GetType().Name} origin=({cx},{cy})");
                             yield return acts[i].ExecuteVisuals(sequencer);
+                            BoardMotionDiagnostics.Event(board, "SPECIAL_ACTION_END",
+                                $"chain={GetHashCode()} special={special} action={acts[i].GetType().Name} elapsed={Time.realtimeSinceStartup - actionStarted:F3}s");
+                        }
                 }
                 yield return RunGravityWithOverlap(queue.Count > 0);
             }
@@ -265,7 +347,9 @@ public sealed class SpecialChainRunner : BoardAction
             // Non-blocking uçuşları (goal orb, PatchBot dash) bekleme; hedefe uçarken
             // special zincirinin final settle'ı donmasın. Gerçek background falls/sub-chain'leri
             // beklemeye devam et (BlockingBackgroundJobs).
-            while (board.BlockingBackgroundJobs > settleJobBaseline && safety < 5f)
+            // liveSubChains: global sayaç baseline'a İNSE bile (baseline'daki eşzamanlı başka kök bitti)
+            // kendi alt zincirlerim koşarken çıkma — erken çıkış anchor sızıntısının ana yoluydu.
+            while ((root.liveSubChains > 0 || board.BlockingBackgroundJobs > settleJobBaseline) && safety < 5f)
             {
                 int curJobs = board.BlockingBackgroundJobs;
                 if (curJobs > peakJobs) peakJobs = curJobs;
@@ -282,7 +366,8 @@ public sealed class SpecialChainRunner : BoardAction
                 // ham "boş" kontrolü onları hep true döndürüp bu döngüyü HER FRAME (5s cap'e kadar)
                 // boşuna koşturuyor, cep yanındaki taşları sürekli diagonal-değerlendirip geri
                 // döndürerek "flip-flop" üretiyordu.
-                if (board.CascadeLogic != null && board.CascadeLogic.HasAnyResolvableEmptyPlayableCell())
+                if (board.CascadeLogic != null && board.CascadeLogic.CanPlanGravityNow
+                    && board.CascadeLogic.HasAnyResolvableEmptyPlayableCell())
                 {
                     var fall = board.CascadeLogic.CalculateCascades();
                     if (fall != null)
@@ -308,8 +393,15 @@ public sealed class SpecialChainRunner : BoardAction
 
             // No anchor may outlive the chain (a leftover pending cell would block
             // gravity in that column forever). Released cells may leave holes → settle.
+            BoardMotionDiagnostics.Event(board, "CHAIN_SETTLE",
+                $"chain={GetHashCode()} waited={safety:F3}s baseline={settleJobBaseline} peakJobs={peakJobs} anchorsToRelease={root.anchoredCells.Count} capped={safety >= 5f}");
             if (ReleaseAllAnchors())
-                yield return RunGravityWithOverlap(hasNext: false);
+            {
+                // This refill is created AFTER the background-job drain above.
+                // Await its visuals before handing the board back to ResolveBoard;
+                // a detached refill lets the next cascade replan the same falling tiles.
+                yield return RunGravityWithOverlap(hasNext: false, waitForCompletionOn: sequencer);
+            }
         }
 
         board.RefreshAllSortingOrders();
@@ -434,7 +526,7 @@ public sealed class SpecialChainRunner : BoardAction
                 impactCells.Add(cell);
 
                 var tile = board.Tiles[x, y];
-                if (tile == null) continue;
+                if (tile == null || IsCaged(tile)) continue;
 
                 var sp = tile.GetSpecial();
 
@@ -463,12 +555,16 @@ public sealed class SpecialChainRunner : BoardAction
         // 3) HALKA-BAZLI ARRIVAL CLEAR (kullanıcı direktifi): dalga animasyonu halkaya
         //    varınca o halkanın taşları O AN kırılır. VFX gelmezse timer fallback
         //    (dist × PulseImpactDelayStep) akışı asla bekletmez.
-        yield return RunRadialArrivalClear(
-            sequencer,
-            cell => Mathf.Max(Mathf.Abs(cell.x - cx), Mathf.Abs(cell.y - cy)),
-            () => waveRadiusPx,
-            clearTiles, affectedCells, impactCells,
-            arrivalSpecials: ringArrivals);
+        //    Dalga bitene dek alan tutulur: dış halkalar vurulmadan taşlar içeri akmasın.
+        using (board.HoldForFlow(SquareCells(cx, cy)))
+        {
+            yield return RunRadialArrivalClear(
+                sequencer,
+                cell => Mathf.Max(Mathf.Abs(cell.x - cx), Mathf.Abs(cell.y - cy)),
+                () => waveRadiusPx,
+                clearTiles, affectedCells, impactCells,
+                arrivalSpecials: ringArrivals);
+        }
 
         // 4) Gravity + overlap.
         yield return RunGravityWithOverlap(queue.Count > 0);
@@ -525,13 +621,8 @@ public sealed class SpecialChainRunner : BoardAction
         float tileSize = Mathf.Max(1f, board.TileSize);
         float fallbackTimer = 0f;
 
-        MatchClearAction FireRing(int d)
+        MatchClearAction BuildRing(int d)
         {
-            // Önce arrival special'lar (dalga taşa değdiği an tetiklensin).
-            if (arrivalSpecials != null && arrivalSpecials.TryGetValue(d, out var specials))
-                foreach (var sp in specials)
-                    LaunchArrivalSubChain(sp);
-
             ringTiles.TryGetValue(d, out var tiles);
             ringCells.TryGetValue(d, out var cells);
             ringImpacts.TryGetValue(d, out var impacts);
@@ -548,8 +639,27 @@ public sealed class SpecialChainRunner : BoardAction
                 includeAdjacentOverTileBlockerDamage: false,
                 isSpecialPhase: true);
 
-            if (d < maxRing)
-                board.StartImmediateAction(act);   // ara halkalar paralel oynar
+            return act;
+        }
+
+        var ringActions = new MatchClearAction[maxRing + 1];
+        for (int d = 0; d <= maxRing; d++)
+            ringActions[d] = BuildRing(d);
+        var arrivalLifetimes = new Dictionary<TileView, int>();
+        if (arrivalSpecials != null)
+            foreach (var specials in arrivalSpecials.Values)
+                foreach (var sp in specials)
+                    if (sp != null) arrivalLifetimes[sp] = sp.LifetimeVersion;
+
+        MatchClearAction FireRing(int d)
+        {
+            if (arrivalSpecials != null && arrivalSpecials.TryGetValue(d, out var specials))
+                foreach (var sp in specials)
+                    if (sp != null && arrivalLifetimes.TryGetValue(sp, out int version)
+                        && sp.IsCurrentLifetime(version))
+                        LaunchArrivalSubChain(sp);
+            var act = ringActions[d];
+            if (act != null && d < maxRing) board.StartImmediateAction(act);
             return act;
         }
 
@@ -615,7 +725,7 @@ public sealed class SpecialChainRunner : BoardAction
             affectedCells.Add(new Vector2Int(x, y));
 
             var tile = board.Tiles[x, y];
-            if (tile == null) continue;
+            if (tile == null || IsCaged(tile)) continue;
 
             // Movable obstacle (Plastic vb.) tile-clear yoluna girmez — beam'in
             // obstacle hasarı (TryHit) vurur, yıkılırsa view'ı handler kaldırır.
@@ -712,7 +822,7 @@ public sealed class SpecialChainRunner : BoardAction
             if (!affectedCells.Add(cell)) return; // satır+sütun kesişimi: hücre bir kez
 
             var tile = board.Tiles[x, y];
-            if (tile == null) return;
+            if (tile == null || IsCaged(tile)) return;
 
             // Movable obstacle tile-clear yoluna girmez (SweepLine'daki orphan koruması).
             if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(x, y))
@@ -788,13 +898,23 @@ public sealed class SpecialChainRunner : BoardAction
         List<Vector2Int> rawCenters, bool centersArePulseTiles)
     {
         var centers = new HashSet<Vector2Int>();
-        foreach (var cell in rawCenters)
+        var visualCenters = new Dictionary<Vector2Int, Vector3>();
+        foreach (var raw in rawCenters)
         {
+            var cell = raw;
             if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height) continue;
             if (centersArePulseTiles)
             {
                 var t = board.Tiles[cell.x, cell.y];
                 if (t == null || t.GetSpecial() != TileSpecial.PulseCore) continue;
+            }
+            else if (TryGetObstacleFootprintCenter(cell, out var centerCell))
+            {
+                // Sanal patlama (PatchBot'un taşıdığı pulse) çok hücreli bir obstacle'a (Safe, chest...)
+                // indiyse ORTASINDAN patlar: alan merkezi ortaya en yakın hücre, görsel tam orta —
+                // PatchBot'un uçuşunun hedeflediği nokta (PatchbotDashUI.AimWorldPosition).
+                visualCenters[centerCell] = PatchbotDashUI.AimWorldPosition(board, cell.x, cell.y);
+                cell = centerCell;
             }
             centers.Add(cell);
         }
@@ -828,11 +948,13 @@ public sealed class SpecialChainRunner : BoardAction
                 callbackWired = true;
                 board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtCell(
                     c.x, c.y, radiusCells: areaHalf,
-                    onRadiusPx: px => waveRadiusPx = Mathf.Max(waveRadiusPx, px));
+                    onRadiusPx: px => waveRadiusPx = Mathf.Max(waveRadiusPx, px),
+                    worldCenterOverride: visualCenters.TryGetValue(c, out var vc) ? vc : (Vector3?)null);
             }
             else
             {
-                board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtCell(c.x, c.y, radiusCells: areaHalf);
+                board.PulseCoreImpactService?.PlayPulseCoreExplosionVfxAtCell(c.x, c.y, radiusCells: areaHalf,
+                    worldCenterOverride: visualCenters.TryGetValue(c, out var vc2) ? vc2 : (Vector3?)null);
             }
 
             for (int x = c.x - areaHalf; x <= c.x + areaHalf; x++)
@@ -854,7 +976,7 @@ public sealed class SpecialChainRunner : BoardAction
                 impactCells.Add(cell);
 
                 var tile = board.Tiles[x, y];
-                if (tile == null) continue;
+                if (tile == null || IsCaged(tile)) continue;
 
                 // Merkez olmayan bir special → zincirlenir: dalga hücreye VARINCA tetiklenir.
                 // (Sanal merkezde tile tüketilmez; merkez hücredeki special de zincirlenir.)
@@ -875,12 +997,18 @@ public sealed class SpecialChainRunner : BoardAction
 
         // HALKA-BAZLI ARRIVAL CLEAR: dalga halkaya varınca taşlar kırılır, o halkadaki
         // special'lar o an alt-zincir olur (timer fallback dahil — akış asla takılmaz).
-        yield return RunRadialArrivalClear(
-            sequencer,
-            cell => (int)NearestCenterDist(cell.x, cell.y),
-            () => waveRadiusPx,
-            clearTiles, affectedCells, impactCells,
-            arrivalSpecials: ringArrivals);
+        var area = new List<Vector2Int>();
+        foreach (var c in centers)
+            area.AddRange(SquareCells(c.x, c.y));
+        using (board.HoldForFlow(area))
+        {
+            yield return RunRadialArrivalClear(
+                sequencer,
+                cell => (int)NearestCenterDist(cell.x, cell.y),
+                () => waveRadiusPx,
+                clearTiles, affectedCells, impactCells,
+                arrivalSpecials: ringArrivals);
+        }
 
         yield return RunGravityWithOverlap(hasNext: false);
     }
@@ -934,7 +1062,7 @@ public sealed class SpecialChainRunner : BoardAction
             if (!affectedCells.Add(cell)) return; // satır/sütun kesişimi: hücre bir kez
 
             var tile = board.Tiles[x, y];
-            if (tile == null) return;
+            if (tile == null || IsCaged(tile)) return;
             if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(x, y)) return;
 
             // Implant line'ın KENDİSİ → temizlenir (tüketilir). Başka special → arrival ile zincir.
@@ -1018,7 +1146,11 @@ public sealed class SpecialChainRunner : BoardAction
     // root's anchor registry, released once the whole chain settles.
     private void LaunchArrivalSubChain(TileView tile)
     {
-        if (tile == null || !tile) return;
+        if (tile == null || !tile || tile.GetSpecial() == TileSpecial.None || IsCaged(tile)
+            || !root.launchedSpecials.Add((tile, tile.LifetimeVersion))) return;
+        // Launch anında say (coroutine bir sonraki karede başlasa bile kök onu görsün);
+        // alt zincirin ExecuteVisuals finally'si (OnChainFinished) düşürür.
+        root.liveSubChains++;
         board.StartImmediateActionSequence(new List<BoardAction>
         {
             new SpecialChainRunner(board, new List<TileView> { tile }, areaHalf, catchOverlap, resolveOtherSpecial, root)
@@ -1045,7 +1177,7 @@ public sealed class SpecialChainRunner : BoardAction
     // Runs CalculateCascades (board.Tiles updated synchronously) as background fall
     // job(s), then waits catchOverlap × fallDuration so the next step can catch the
     // still-falling tiles.
-    private IEnumerator RunGravityWithOverlap(bool hasNext)
+    private IEnumerator RunGravityWithOverlap(bool hasNext, ActionSequencer waitForCompletionOn = null)
     {
         float fallDuration = 0f;
         var cascades = board.CascadeLogic.CalculateCascades();
@@ -1055,7 +1187,10 @@ public sealed class SpecialChainRunner : BoardAction
             {
                 if (cascades[i] is FallAction fa)
                     fallDuration = Mathf.Max(fallDuration, fa.GetEstimatedVisualDuration(board));
-                board.StartImmediateAction(cascades[i]);
+                if (waitForCompletionOn != null)
+                    yield return cascades[i].ExecuteVisuals(waitForCompletionOn);
+                else
+                    board.StartImmediateAction(cascades[i]);
             }
         }
         board.RefreshAllSortingOrders();

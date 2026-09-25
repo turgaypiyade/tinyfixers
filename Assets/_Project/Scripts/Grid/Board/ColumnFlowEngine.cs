@@ -46,7 +46,7 @@ public partial class CascadeLogic
         for (int x = 0; x < w; x++) _pcDirty[x] = true;
         _pcActiveColumns.Clear();
 
-        const int MAX_ITERATIONS = 32;
+        const int MAX_ITERATIONS = 96;   // kenardan dökülme: gölge hücresi başına bir tur
         int iter = 0;
         bool changed = true;
 

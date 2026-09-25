@@ -61,7 +61,10 @@ public sealed class ProfileStatsView : MonoBehaviour
         }
 
         if (teamNameText != null)
+        {
             teamNameText.text = teamPlaceholder;
+            SingleLineText.Fit(teamNameText);
+        }
     }
 
     private static void Set(TMP_Text text, string format, int value)

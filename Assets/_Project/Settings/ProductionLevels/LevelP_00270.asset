@@ -31,14 +31,18 @@ MonoBehaviour:
   introHoldDuration: 0.8
   bossAttackEveryMoves: 3
   bossAttackOilCount: 2
+  bossThrownObstacles: 
+  bossMaxPressureObstacles: 8
   playerMaxHp: 560
   damagePerClearedTile: 10
+  shieldProtectionPerPickup: 2
   enemyAttackBaseDamage: 20
-  enemyAttackDamageGrowth: 6
-  enemyAttackInterval: 2
   battlefieldBackground: {fileID: 0}
+  bossWaves: []
+  bossWaveCount: 0
   randomPool: 
   energyPerContainer: 10
+  rocketBasketFireAllOnHit: 0
   comboTutorial: 0
   musicClip: {fileID: 0}
   musicVolume: 1

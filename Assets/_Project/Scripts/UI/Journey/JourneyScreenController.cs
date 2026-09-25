@@ -120,12 +120,9 @@ public sealed class JourneyScreenController : MonoBehaviour
     // Harikanın açılma oranı: tamamlanan=1, aktif=stage/count, gelecek=0 (hologram).
     private float WonderRevealFor(int index)
     {
-        int completed = WonderProgress.CompletedCount;
-        if (index < completed) return 1f;
-        if (index > completed) return 0f;
-        var w = wonderCatalog.Get(index);
-        int count = w != null ? w.TaskCount : 0;
-        return count > 0 ? (float)WonderProgress.CurrentStage / count : 0f;
+        // Her event'in ilerlemesi BAĞIMSIZ: doğrudan o event'in stage oranı.
+        // (Kilitli event'ler stage 0 → hologram.)
+        return WonderProgress.RevealNormalized(wonderCatalog, index);
     }
 
     private void BuildWonderCard(RectTransform parent, WonderDefinition wonder, int index, float cardW)

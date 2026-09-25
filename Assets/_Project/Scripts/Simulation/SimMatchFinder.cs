@@ -336,6 +336,10 @@ public sealed class SimMatchFinder
         if (data == null || data.Special != TileSpecial.None)
             return false;
 
+        // Arama (lookahead) dalında spawn edilen taş: oyuncu onu göremez → eşleşmez.
+        if (_s.Phantom != null && _s.Phantom[data.X, data.Y])
+            return false;
+
         if (_s.Obstacles != null)
         {
             if (_s.Obstacles.IsMovableObstacleAt(data.X, data.Y))

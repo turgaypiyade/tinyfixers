@@ -31,14 +31,12 @@ MonoBehaviour:
   introHoldDuration: 1.1
   bossAttackEveryMoves: 4
   bossAttackOilCount: 2
+  bossThrownObstacles: 0e000000070000000b0000000c000000
+  bossMaxPressureObstacles: 7
   playerMaxHp: 140
   damagePerClearedTile: 1
-  enemyAttackBaseDamage: 7
-  enemyAttackDamageGrowth: 4
-  enemyAttackInterval: 1.2
-  bossMaxPressureObstacles: 7
   shieldProtectionPerPickup: 2
-  bossThrownObstacles: 0e000000070000000b0000000c000000
+  enemyAttackBaseDamage: 7
   battlefieldBackground: {fileID: 0}
   bossWaves: []
   bossWaveCount: 3

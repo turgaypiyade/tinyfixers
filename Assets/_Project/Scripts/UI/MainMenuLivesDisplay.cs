@@ -95,6 +95,7 @@ public class MainMenuLivesDisplay : MonoBehaviour
 
     private void TryBuyLivesPack()
     {
+        if (LivesManager.Current >= LivesManager.MaxLives) return;
         if (PlayerWallet.SpendCoins(buyLivesPackCost))
         {
             LivesManager.AddLives(buyLivesPackAmount);
@@ -232,15 +233,7 @@ public class MainMenuLivesDisplay : MonoBehaviour
 
     private static string FormatTimeSpan(System.TimeSpan span)
     {
-        if (span.TotalSeconds <= 0) return "00:00";
-
-        int totalMinutes = (int)span.TotalMinutes;
-        int seconds      = span.Seconds;
-
-        if (totalMinutes >= 60)
-            return $"{(int)span.TotalHours:D2}:{span.Minutes:D2}:{seconds:D2}";
-
-        return $"{totalMinutes:D2}:{seconds:D2}";
+        return TimeFormat.Countdown(span);
     }
 
 #if UNITY_EDITOR

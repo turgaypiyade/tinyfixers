@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70e2ea9d5de941a8b7b330a8403c293c, type: 3}
+  m_Name: CommonPopupSkin
+  m_EditorClassIdentifier: Assembly-CSharp::CommonPopupSkin
+  background: {fileID: 21300000, guid: 1a990070d5b464ddaba99d098f0f0673, type: 3}
+  continueButton: {fileID: 21300000, guid: 31a3eec15ec7e4edebed2e4bd6c22218, type: 3}
+  accountButton: {fileID: 21300000, guid: a2c51820150f54881a72847cf98cce95, type: 3}
+  saveProgressBackgroundMaterial: {fileID: 2100000, guid: bb380a88a72e40ce877e774ad5ae4068, type: 2}
+  saveProgressContinueButton: {fileID: 21300000, guid: 31a3eec15ec7e4edebed2e4bd6c22218, type: 3}
+  closeButton: {fileID: 21300000, guid: 8fb720f1c5fe84fceaa7533ae6712d06, type: 3}
+  font: {fileID: 11400000, guid: 7fc0a3576e2194b19822a1f8eaec994a, type: 2}
+  coinSpriteAsset: {fileID: 11400000, guid: 52ea56e82c03f4d7f8b64705acf67600, type: 2}
+  titleFontSize: 80
+  titleArcDegrees: 15
+  actionFontSize: 72
+  bodyTextColor: {r: 0.24, g: 0.12, b: 0.1, a: 1}
+  panelSize: {x: 900, y: 1245}
+  titleRegion:
+    serializedVersion: 2
+    x: 0.2
+    y: 0.85
+    width: 0.6
+    height: 0.11
+  bodyRegion:
+    serializedVersion: 2
+    x: 0.18
+    y: 0.27
+    width: 0.64
+    height: 0.46
+  actionsRegion:
+    serializedVersion: 2
+    x: 0.12
+    y: 0.035
+    width: 0.76
+    height: 0.21
+  closeRegion:
+    serializedVersion: 2
+    x: 0.85
+    y: 0.87
+    width: 0.1
+    height: 0.072

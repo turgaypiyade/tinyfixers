@@ -15,27 +15,32 @@ MonoBehaviour:
   idle:
     sprite: {fileID: 21300000, guid: 48bccbcad6d44634807b3be17bc2320a, type: 3}
     height: 1
-    groundPivot: {x: 0.42, y: 0.017}
+    groundPivot: {x: 0.42, y: 0.072}
     offset: {x: 0, y: 0}
   blink:
     sprite: {fileID: 21300000, guid: 403864075a524395a0ce01a6675a1aed, type: 3}
     height: 1.02
-    groundPivot: {x: 0.445, y: 0.014}
+    groundPivot: {x: 0.445, y: 0.06}
     offset: {x: 0, y: 0}
   focused:
     sprite: {fileID: 21300000, guid: a30f29588e564dccae7c5be488268556, type: 3}
     height: 1.03
-    groundPivot: {x: 0.445, y: 0.02}
+    groundPivot: {x: 0.445, y: 0.066}
     offset: {x: 0, y: 0}
   windup:
-    sprite: {fileID: 21300000, guid: 9b8df9e092cb474d8db68ef65d8659db, type: 3}
-    height: 1.43
-    groundPivot: {x: 0.482, y: 0.06}
+    sprite: {fileID: 21300000, guid: a34b15d7c89846fab3dfff0783faea88, type: 3}
+    height: 1.08
+    groundPivot: {x: 0.48, y: 0.05}
+    offset: {x: 0, y: 0}
+  swing:
+    sprite: {fileID: 21300000, guid: 19b397cd8b344c95b46568d1f03b6cca, type: 3}
+    height: 0.85
+    groundPivot: {x: 0.4, y: 0.017}
     offset: {x: 0, y: 0}
   strike:
-    sprite: {fileID: 21300000, guid: 8705f69ad3994ae0a69d4bb9402d0854, type: 3}
-    height: 1.38
-    groundPivot: {x: 0.388, y: 0.177}
+    sprite: {fileID: 21300000, guid: a62f67ab209d473985edbed0bf26bf7c, type: 3}
+    height: 0.81
+    groundPivot: {x: 0.371, y: 0.034}
     offset: {x: 0, y: 0}
   shield:
     sprite: {fileID: 21300000, guid: c335073b294d4ccea9977596c1f711e3, type: 3}
@@ -45,27 +50,65 @@ MonoBehaviour:
   victory:
     sprite: {fileID: 21300000, guid: 48bccbcad6d44634807b3be17bc2320a, type: 3}
     height: 1
-    groundPivot: {x: 0.42, y: 0.017}
+    groundPivot: {x: 0.42, y: 0.072}
     offset: {x: 0, y: 0}
   defeated:
     sprite: {fileID: 21300000, guid: a30f29588e564dccae7c5be488268556, type: 3}
     height: 1.03
-    groundPivot: {x: 0.445, y: 0.02}
+    groundPivot: {x: 0.445, y: 0.066}
     offset: {x: 0, y: 0}
+  windupFrames:
+  - pose:
+      sprite: {fileID: 21300000, guid: 4391a5c834f34aaca1343c34090f42dd, type: 3}
+      height: 0.96
+      groundPivot: {x: 0.455, y: 0.082}
+      offset: {x: 0, y: 0}
+    weight: 0.7
+  - pose:
+      sprite: {fileID: 21300000, guid: 94f8a422cf1344588786b0c5c5de65b8, type: 3}
+      height: 0.94
+      groundPivot: {x: 0.437, y: 0.081}
+      offset: {x: 0, y: 0}
+    weight: 1.2
+  - pose:
+      sprite: {fileID: 21300000, guid: 9b8df9e092cb474d8db68ef65d8659db, type: 3}
+      height: 1.16
+      groundPivot: {x: 0.482, y: 0.07}
+      offset: {x: 0, y: 0}
+    weight: 0.7
+  - pose:
+      sprite: {fileID: 21300000, guid: a34b15d7c89846fab3dfff0783faea88, type: 3}
+      height: 1.08
+      groundPivot: {x: 0.48, y: 0.05}
+      offset: {x: 0, y: 0}
+    weight: 1.4
+  recoveryFrames:
+  - pose:
+      sprite: {fileID: 21300000, guid: a30f29588e564dccae7c5be488268556, type: 3}
+      height: 1.03
+      groundPivot: {x: 0.445, y: 0.066}
+      offset: {x: 0, y: 0}
+    weight: 1.5
+  - pose:
+      sprite: {fileID: 21300000, guid: 4391a5c834f34aaca1343c34090f42dd, type: 3}
+      height: 0.96
+      groundPivot: {x: 0.455, y: 0.082}
+      offset: {x: 0, y: 0}
+    weight: 1
   mirrorHorizontally: 0
   blinkInterval: 3.2
   blinkDuration: 0.13
-  windupDuration: 0.24
-  swingDuration: 0.18
+  windupDuration: .32
+  swingDuration: .10
   enableFinishingStrike: 1
   finisherWindupMultiplier: 1.4
   finisherApproachDuration: 0.6
   finisherJumpHeight: 0.18
   finisherBurstDuration: 0.035
   finisherImpactHold: 0.065
-  impactDuration: 0.09
-  recoveryDuration: 0.2
-  contactDistance: 0.60
+  impactDuration: .075
+  recoveryDuration: .22
+  contactDistance: .59
   breathingAmount: 0.008
   shieldBlockDuration: 0.2
   shieldBlockRecoil: 0.035
@@ -74,6 +117,6 @@ MonoBehaviour:
   trailAccentColor: {r: 1, g: 0.75, b: 0.12, a: 0.36}
   trailInterval: 0.025
   trailLifetime: 0.2
-  weaponImpactPoint: {x: 0.78, y: 0.06}
+  weaponImpactPoint: {x: 0.94, y: 0.22}
   powerForFullImpact: 40
   impactFxDuration: 0.24

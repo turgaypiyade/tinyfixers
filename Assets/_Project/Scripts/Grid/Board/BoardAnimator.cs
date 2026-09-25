@@ -162,12 +162,21 @@ public class BoardAnimator
         yield return tileAnimator.PlaySpecialCreationMerge(createdTile, sourceTiles, animDuration);
     }
 
+    // a = oyuncunun tutup sürüklediği (ya da ilk seçtiği) taş: takas boyunca (geri dönüş dahil) ÜSTTEN geçer.
     public IEnumerator SwapTilesAnimated(TileView a, TileView b, float duration)
     {
-        yield return RunTogether(
-            a.MoveToGrid(board.TileSize, duration, board.SwapMoveCurve),
-            b.MoveToGrid(board.TileSize, duration, board.SwapMoveCurve)
-        );
+        board.BeginSwapFront(a);
+        try
+        {
+            yield return RunTogether(
+                a.MoveToGrid(board.TileSize, duration, board.SwapMoveCurve),
+                b.MoveToGrid(board.TileSize, duration, board.SwapMoveCurve)
+            );
+        }
+        finally
+        {
+            board.EndSwapFront(a);
+        }
     }
 
     private IEnumerator RunTogether(IEnumerator c1, IEnumerator c2)
@@ -281,9 +290,23 @@ public class BoardAnimator
         Dictionary<TileView, float> perTileClearDelays = null,
         Vector2Int? implodeTargetCell = null,
         Dictionary<Vector2Int, System.Action> arrivalTriggers = null,
-        Dictionary<TileView, float> perTileClearDistances = null)
+        Dictionary<TileView, float> perTileClearDistances = null,
+        bool? specialActivationPhase = null,
+        bool consumePatchbotDashRequests = true)
     {
+        // This pass owns its phase. Another parallel Line/Pulse clear may finish
+        // while we yield; it must not change which tiles this pass finalizes.
+        bool isSpecialPhase = specialActivationPhase ?? board.IsSpecialActivationPhase;
         var list = new List<TileView>(matches);
+        var tileLifetimes = new Dictionary<TileView, int>();
+        foreach (var tile in list)
+            if (tile != null)
+                tileLifetimes[tile] = tile.LifetimeVersion;
+        var finalizedTiles = new HashSet<TileView>();
+
+        bool IsOriginalTile(TileView tile) => tile != null
+            && tileLifetimes.TryGetValue(tile, out int version)
+            && tile.IsCurrentLifetime(version);
 
         // Cargo (exitAtBottom) KIRILMAZ: hiçbir clear (special/combo/booster/match) onu yok edemez.
         // Tek choke point'te evrensel filtre — combo yolları CanAffectCell'i atlasa bile cargo korunur.
@@ -325,13 +348,16 @@ public class BoardAnimator
                 $"[PulseClearDebug][BA] ENTER " +
                 $"list={list.Count} " +
                 $"mode={animationMode} " +
-                $"specialPhase={board.IsSpecialActivationPhase} " +
+                $"specialPhase={isSpecialPhase} " +
                 $"stagger={(staggerDelays != null ? staggerDelays.Count : 0)} " +
                 $"perTile={(perTileClearDelays != null ? perTileClearDelays.Count : 0)} " +
                 $"suppress={suppressPerTileClearVfx}");
         }
 
-        board.ConsumePatchbotDashRequests(_patchbotDashBuffer);
+        if (consumePatchbotDashRequests)
+            board.ConsumePatchbotDashRequests(_patchbotDashBuffer);
+        else
+            _patchbotDashBuffer.Clear();
         List<BoardController.PatchbotDashRequest> lineSweepPatchbotDashes = null;
 
         // Line sweep modunda PatchBot taşına sıra gelene kadar beklenmeli,
@@ -351,7 +377,7 @@ public class BoardAnimator
             }
         }
 
-        ObstacleHitContext damageContext = obstacleHitContext ?? (board.IsSpecialActivationPhase
+        ObstacleHitContext damageContext = obstacleHitContext ?? (isSpecialPhase
             ? ObstacleHitContext.SpecialActivation
             : ObstacleHitContext.NormalMatch);
 
@@ -440,6 +466,10 @@ public class BoardAnimator
             && lightningLineStrikes != null
             && lightningLineStrikes.Count > 0;
 
+        using var lineGravity = useLineHitDrivenClear
+            ? new LineSweepGravityScope(board, lightningLineStrikes)
+            : null;
+
         if (useLineHitDrivenClear)
         {
             lineHitWindowOpen = true; // Sadece o spesifik hatlar için takip açılır.
@@ -447,10 +477,17 @@ public class BoardAnimator
         
         bool useEventDrivenClear = perTileClearDistances != null && perTileClearDistances.Count > 0;
         var pendingEventTiles = new HashSet<TileView>();
+        var pendingWaveCells = new HashSet<Vector2Int>();
+        Action<float> onWaveProgress = null;
+        using var waveSubscription = new WaveProgressSubscription(board);
+        int waveAnimations = 0;
         if (useEventDrivenClear)
         {
             foreach (var kv in perTileClearDistances)
-                pendingEventTiles.Add(kv.Key);
+                if (IsOriginalTile(kv.Key) && list.Contains(kv.Key)) pendingEventTiles.Add(kv.Key);
+            foreach (var cell in impactCells) pendingWaveCells.Add(cell);
+            if (arrivalTriggers != null)
+                foreach (var cell in arrivalTriggers.Keys) pendingWaveCells.Add(cell);
         }
 
         for (int i = 0; i < list.Count; i++)
@@ -459,7 +496,7 @@ public class BoardAnimator
             if (tile == null) continue;
             if (lineHitClearedTiles.Contains(tile)) continue;
 
-            if (!board.IsSpecialActivationPhase && tile.GetSpecial() != TileSpecial.None)
+            if (!isSpecialPhase && tile.GetSpecial() != TileSpecial.None)
                 continue;
 
             bool clearTile = true;
@@ -563,19 +600,7 @@ public class BoardAnimator
                     }
                     else
                     {
-                        pops.Add(clearEffectOrchestrator.Play(tile, tileAnimationMode, delay, board.GetClearDurationForCurrentPass(), suppressBurst));
-                    }
-                }
-
-                if (!isSweptOff && !implodeTiles.Contains(tile))
-                {
-                    if (useEventDrivenClear && isRadialWaveTile)
-                    {
-                        // ClearCellDataAfterDelay işlemini event handler yapacak.
-                    }
-                    else
-                    {
-                        board.StartCoroutine(ClearCellDataAfterDelay(tile, delay));
+                        pops.Add(PlayTileClear(tile, tileAnimationMode, delay, suppressBurst));
                     }
                 }
 
@@ -585,7 +610,7 @@ public class BoardAnimator
         }
 
         // Fire arrival triggers timed to pulse wave (e.g. Override tiles removed from matches)
-        if (arrivalTriggers != null && !useLineHitDrivenClear)
+        if (arrivalTriggers != null && !useLineHitDrivenClear && !useEventDrivenClear)
         {
             foreach (var kv in arrivalTriggers)
             {
@@ -608,6 +633,8 @@ public class BoardAnimator
         }
 
         float lightningDuration = 0f;
+        float lightningStartedAt = Time.time;
+        float lightningDiagnosticStartedAt = Time.realtimeSinceStartup;
         if (animationMode == ClearAnimationMode.LightningStrike)
         {
             if (lightningLineStrikes != null && lightningLineStrikes.Count > 0)
@@ -631,6 +658,7 @@ public class BoardAnimator
                     lightningLineStrikes,
                     (cell, strikeIndex) =>
                     {
+                        if (!lineHitWindowOpen) return;
                         if (arrivalTriggers != null &&
                             arrivalTriggers.TryGetValue(cell, out var trigger))
                             trigger?.Invoke();
@@ -638,6 +666,7 @@ public class BoardAnimator
                         StartPatchbotDashRequestsForLineCell(lineSweepPatchbotDashes, cell);
                         TryClearTileOnLineSweepHit(cell);
                         ApplyObstacleDamageOnLineSweepHit(strikeIndex, cell);
+                        lineGravity?.Reach(strikeIndex, cell);
                     }
                 );
 
@@ -645,6 +674,8 @@ public class BoardAnimator
                 {
                     suppressPerTileClearVfx = false; // tile bazlı animasyonlara izin ver
                 }
+                BoardMotionDiagnostics.Event(board, "LINE_BEGIN",
+                    $"clear={lineGravity?.GetHashCode() ?? 0} strikes={lightningLineStrikes.Count} estimate={lightningDuration:F3}s pendingCells={lineGravity?.PendingCellCount ?? 0}");
             }
             else
             {
@@ -660,51 +691,75 @@ public class BoardAnimator
 
         if (useEventDrivenClear)
         {
-            Action<float> onWaveProgress = null;
-            onWaveProgress = (radiusPx) => {
-                var toRemove = new List<TileView>();
-                foreach (var t in pendingEventTiles)
+            onWaveProgress = radiusPx =>
+            {
+                var reachedCells = new List<Vector2Int>();
+                foreach (var cell in pendingWaveCells)
                 {
-                    if (t == null) { toRemove.Add(t); continue; }
-                    if (perTileClearDistances.TryGetValue(t, out float reqDist) && radiusPx >= reqDist)
-                    {
-                        toRemove.Add(t);
-                        bool isGoalTile = skipBreakFxTiles.Contains(t);
-                        var tileAnimationMode = isGoalTile ? ClearAnimationMode.GoalFlyToHud : ClearAnimationMode.Default;
-                        bool suppressBurst = !isGoalTile; // Radial wave olduğu için burst kapalı.
-                        
-                        TileView capturedTile = t;
-                        ClearAnimationMode capturedMode = tileAnimationMode;
-                        bool capturedSuppress = suppressBurst;
-                        
-                        IEnumerator ProcessTileEvent() {
-                            yield return clearEffectOrchestrator.Play(capturedTile, capturedMode, 0f, board.GetClearDurationForCurrentPass(), capturedSuppress);
-                            FinalizeTileClear(capturedTile);
-                        }
-                        
-                        board.StartCoroutine(ProcessTileEvent());
-                        board.StartCoroutine(ClearCellDataAfterDelay(capturedTile, 0f));
-                    }
+                    float distance = Vector2.Distance(cell, board.SystemOverrideWaveOrigin) * board.TileSize;
+                    if (radiusPx < distance) continue;
+                    reachedCells.Add(cell);
                 }
-                for (int j = 0; j < toRemove.Count; j++)
+                foreach (var cell in reachedCells)
                 {
-                    pendingEventTiles.Remove(toRemove[j]);
-                    list.Remove(toRemove[j]); // Sonda tekrar Finalize olmasın diye ana listeden de çıkar
+                    pendingWaveCells.Remove(cell);
+                    if (arrivalTriggers != null && arrivalTriggers.TryGetValue(cell, out var trigger)) trigger?.Invoke();
                 }
-            };
 
-            board.OnSystemOverrideWaveProgress += onWaveProgress;
-            
-            // Dalga bitişinde veya MatchClear bittiğinde eventi temizle
-            IEnumerator CleanupEventAfterDelay() {
-                float waitTime = Mathf.Max(
-                    1f,
-                    board.GetSystemOverrideComboPreClearDuration() + board.GetSystemOverrideComboWaveDuration() + 0.5f);
-                if (waitTime > 0f) yield return new WaitForSeconds(waitTime);
-                board.OnSystemOverrideWaveProgress -= onWaveProgress;
-                pendingEventTiles.Clear();
+                var reachedTiles = new List<TileView>();
+                foreach (var tile in pendingEventTiles)
+                {
+                    if (!IsOriginalTile(tile)) { reachedTiles.Add(tile); continue; }
+                    if (radiusPx < perTileClearDistances[tile]) continue;
+                    reachedTiles.Add(tile);
+                    if (!shouldClearTile.TryGetValue(tile, out bool canClear) || !canClear) continue;
+                    bool isGoal = board.TopHud != null && board.GoalFlyFx != null
+                        && board.TopHud.TryGetGoalTargetRectForTile(tile.GetTileType(), out _);
+                    var mode = isGoal ? ClearAnimationMode.GoalFlyToHud : ClearAnimationMode.Default;
+                    waveAnimations++;
+                    board.StartCoroutine(AnimateWaveTile(tile, mode, !isGoal));
+                }
+                foreach (var tile in reachedTiles)
+                {
+                    pendingEventTiles.Remove(tile);
+                    list.Remove(tile);
+                }
+                foreach (var cell in reachedCells)
+                    ApplyObstacleDamageOnLineSweepHit(0, cell);
+            };
+            waveSubscription.Subscribe(onWaveProgress);
+            // The VFX starts when the combo is planned. Catch up if another action
+            // ran before this listener was installed.
+            if (board.LastSystemOverrideWaveRadius >= 0f)
+                onWaveProgress(board.LastSystemOverrideWaveRadius);
+        }
+
+        IEnumerator PlayTileClear(TileView tile, ClearAnimationMode mode, float delay, bool suppressBurst)
+        {
+            if (!IsOriginalTile(tile)) yield break;
+
+            // The continuous pump can refill on the very next frame. A normal pop still
+            // has a solid body for up to 60 ms: releasing its cell before the pop even
+            // starts lets the following stone pass through that body. Release per tile
+            // when the shrink finishes; detached burst particles keep playing freely.
+            bool releaseAfterBody = board.UseContinuousFallMotion && mode == ClearAnimationMode.Default;
+            if (!releaseAfterBody)
+                board.StartCoroutine(ClearCellDataAfterDelay(tile, delay));
+
+            yield return clearEffectOrchestrator.Play(tile, mode, delay, board.GetClearDurationForCurrentPass(), suppressBurst);
+
+            if (releaseAfterBody)
+                yield return ClearCellDataAfterDelay(tile, 0f);
+        }
+
+        IEnumerator AnimateWaveTile(TileView tile, ClearAnimationMode mode, bool suppressBurst)
+        {
+            try
+            {
+                yield return PlayTileClear(tile, mode, 0f, suppressBurst);
+                FinalizeTileClear(tile);
             }
-            board.StartCoroutine(CleanupEventAfterDelay());
+            finally { waveAnimations--; }
         }
 
         if (doShake)
@@ -774,8 +829,18 @@ public class BoardAnimator
 
         if (lightningDuration > 0f)
         {
-            var __w = Wait(lightningDuration);
-            if (__w != null) yield return __w;
+            BoardMotionDiagnostics.Event(board, "LINE_WAIT_BEGIN",
+                $"clear={lineGravity?.GetHashCode() ?? 0} strikes={lightningLineStrikes?.Count ?? 0} estimate={lightningDuration:F3}s alreadyElapsed={Time.time - lightningStartedAt:F3}s pendingCells={lineGravity?.PendingCellCount ?? 0}");
+            // The sweep already runs during pre-clear/pop animations. Wait only
+            // for its remaining impacts, not another full playback or its FX tail.
+            // The estimate is not a completion signal: low FPS stretches the
+            // emitter's per-cell move/rest loops. Only stalled callbacks time out.
+            yield return WaitForLightningSweep(lineGravity, lightningStartedAt, lightningDuration);
+            if (lineGravity != null && lineGravity.HasPendingHits)
+                BoardMotionDiagnostics.Event(board, "LINE_IMPACT_TIMEOUT",
+                    $"clear={lineGravity.GetHashCode()} pendingCells={lineGravity.PendingCellCount} noProgressFor={Time.time - lineGravity.LastProgressAt:F3}s");
+            BoardMotionDiagnostics.Event(board, "LINE_WAIT_END",
+                $"clear={lineGravity?.GetHashCode() ?? 0} elapsed={Time.realtimeSinceStartup - lightningDiagnosticStartedAt:F3}s pendingCells={lineGravity?.PendingCellCount ?? 0} reason={(lineGravity == null ? "timed_playback" : lineGravity.HasPendingHits ? "impact_timeout" : "all_impacts")}");
         }
 
         FlushPendingPatchbotDashRequests(lineSweepPatchbotDashes);
@@ -789,16 +854,23 @@ public class BoardAnimator
 
         if (useEventDrivenClear)
         {
-            // Olası bir takılmaya karşı, event tabanlı işlemlerin bitmesi için ekstra bekle (Orbit + Merge + Wave)
-            float maxWait = Mathf.Max(
-                1f,
-                board.GetSystemOverrideComboPreClearDuration() + board.GetSystemOverrideComboWaveDuration() + 0.5f);
-            float waited = 0f;
-            while (pendingEventTiles.Count > 0 && waited < maxWait)
+            try
             {
-                yield return null;
-                waited += Time.deltaTime;
+                float timeout = Mathf.Max(1f, board.GetSystemOverrideComboPreClearDuration()
+                    + board.GetSystemOverrideComboWaveDuration() + 0.5f);
+                float waited = 0f;
+                while ((pendingEventTiles.Count > 0 || pendingWaveCells.Count > 0) && waited < timeout)
+                {
+                    yield return null;
+                    waited += Time.unscaledDeltaTime;
+                }
+                // Missing/disabled VFX still commits each impact exactly once.
+                if (pendingEventTiles.Count > 0 || pendingWaveCells.Count > 0)
+                    onWaveProgress(float.MaxValue);
+                // Goal notifications must include the final wave animations too.
+                while (waveAnimations > 0) yield return null;
             }
+            finally { board.OnSystemOverrideWaveProgress -= onWaveProgress; }
         }
 
         if (trace)
@@ -815,7 +887,7 @@ public class BoardAnimator
             if (tile == null) continue;
             if (lineHitClearedTiles.Contains(tile)) continue;
 
-            if (!board.IsSpecialActivationPhase && tile.GetSpecial() != TileSpecial.None)
+            if (!isSpecialPhase && tile.GetSpecial() != TileSpecial.None)
                 continue;
 
             if (shouldClearTile.TryGetValue(tile, out var clearTile) && !clearTile)
@@ -827,7 +899,7 @@ public class BoardAnimator
         IEnumerator ClearCellDataAfterDelay(TileView t, float waitTime)
         {
             if (waitTime > 0f) yield return new WaitForSeconds(waitTime);
-            if (t != null && board.Tiles[t.X, t.Y] == t)
+            if (IsOriginalTile(t) && board.Tiles[t.X, t.Y] == t)
             {
                 board.TryPaintGelForClearedTile(t);   // jel: taşın GÖRSEL kırılma anında (per-tile senkron)
                 var cell = new Vector2Int(t.X, t.Y);
@@ -863,7 +935,7 @@ public class BoardAnimator
 
         void ApplyObstacleDamageOnLineSweepHit(int strikeIndex, Vector2Int tileCell)
         {
-            if (!useLineHitDrivenClear || !lineHitWindowOpen) return;
+            if ((!useLineHitDrivenClear || !lineHitWindowOpen) && !useEventDrivenClear) return;
             if (tileCell.x < 0 || tileCell.x >= board.Width || tileCell.y < 0 || tileCell.y >= board.Height) return;
             if (board.ObstacleStateService == null) return;
 
@@ -871,6 +943,7 @@ public class BoardAnimator
             {
                 if (c.x < 0 || c.x >= board.Width || c.y < 0 || c.y >= board.Height) return;
                 if (clearedObstacleCellsThisPass.Contains(c)) return;
+                if (useEventDrivenClear && tileClearOwnedObstacleCells.Contains(c)) return;
                 if (strikeDamagedObstacleCells.Contains((strikeIndex, c))) return;
                 if (!board.ObstacleStateService.HasObstacleAt(c.x, c.y)) return;
                 // Magnet: sadece güncel uçlar hasar alır; orta yol hücreleri inert. Orta hücreyi
@@ -930,7 +1003,7 @@ public class BoardAnimator
             if (tileAtCell == null || lineHitClearedTiles.Contains(tileAtCell))
                 return;
 
-            if (!board.IsSpecialActivationPhase && tileAtCell.GetSpecial() != TileSpecial.None)
+            if (!isSpecialPhase && tileAtCell.GetSpecial() != TileSpecial.None)
                 return;
 
             if (!lineSweepCandidates.Contains(tileAtCell))
@@ -945,10 +1018,12 @@ public class BoardAnimator
 
         void FinalizeTileClear(TileView tile)
         {
-            if (tile == null)
+            // Implode callbacks and the end-of-pass sweep may both reach this
+            // tile. Never clear/count it twice or touch its next pooled lifetime.
+            if (!IsOriginalTile(tile) || !finalizedTiles.Add(tile))
             {
                 if (trace)
-                    Debug.Log("[PulseClearDebug] FinalizeTileClear skip tile=null");
+                    Debug.Log("[PulseClearDebug] FinalizeTileClear skip stale/already cleared tile");
                 return;
             }
 
@@ -962,7 +1037,7 @@ public class BoardAnimator
                 Debug.Log(
                     $"[PulseClearDebug] FinalizeTileClear tile=({tile.X},{tile.Y}) " +
                     $"type={tile.GetTileType()} special={tile.GetSpecial()} " +
-                    $"live={live} specialPhase={board.IsSpecialActivationPhase}");
+                    $"live={live} specialPhase={isSpecialPhase}");
             }
 
             if (!skipBreakFxTiles.Contains(tile))
@@ -1082,6 +1157,98 @@ public class BoardAnimator
     }
 
 
+    private sealed class WaveProgressSubscription : IDisposable
+    {
+        private readonly BoardController board;
+        private Action<float> listener;
+        public WaveProgressSubscription(BoardController board) { this.board = board; }
+        public void Subscribe(Action<float> callback)
+        {
+            listener = callback;
+            board.OnSystemOverrideWaveProgress += listener;
+        }
+        public void Dispose()
+        {
+            if (board != null && listener != null) board.OnSystemOverrideWaveProgress -= listener;
+            listener = null;
+        }
+    }
+
+    private static IEnumerator WaitForLightningSweep(
+        LineSweepGravityScope gravity, float startedAt, float duration)
+    {
+        if (gravity == null)
+        {
+            while (Time.time < startedAt + duration)
+                yield return null;
+            yield break;
+        }
+
+        // Each real, new impact renews this watchdog. Slow-but-progressing sweeps
+        // retain their anchors; missing/destroyed VFX still cannot deadlock clear.
+        float stallTimeout = Mathf.Max(1f, duration + 0.5f);
+        while (gravity.HasPendingHits && Time.time - gravity.LastProgressAt < stallTimeout)
+            yield return null;
+    }
+
+    private sealed class LineSweepGravityScope : IDisposable
+    {
+        private readonly BoardController board;
+        private readonly Dictionary<Vector2Int, int> pending = new();
+        private readonly HashSet<(int strike, Vector2Int cell)> reached = new();
+        private readonly CellHold hold;
+        private readonly bool releaseOnReach;
+        private bool disposed;
+
+        public bool HasPendingHits => pending.Count > 0;
+        public int PendingCellCount => pending.Count;
+        public float LastProgressAt { get; private set; }
+
+        public LineSweepGravityScope(BoardController board, IReadOnlyList<LightningLineStrike> strikes)
+        {
+            this.board = board;
+            LastProgressAt = Time.time;
+            foreach (var strike in strikes)
+            {
+                int length = strike.isHorizontal ? board.Width : board.Height;
+                for (int i = 0; i < length; i++)
+                {
+                    var cell = strike.isHorizontal
+                        ? new Vector2Int(i, strike.originCell.y)
+                        : new Vector2Int(strike.originCell.x, i);
+                    if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height) continue;
+                    pending.TryGetValue(cell, out int count);
+                    pending[cell] = count + 1;
+                }
+            }
+            // Eski akış: tüm hat süpürme bitene dek tutulur (vuruşta bırakıp yeniden planlamak eski
+            // coroutine hareketinde LineV'de dur-kalk üretiyordu). Akış pompası + kesintisiz düşüşte
+            // yeniden hedefleme hızı koruduğu için her hücre, TÜM beam'ler ona vardığı an bırakılır:
+            // roket ilerlerken arkasından taşlar akar.
+            hold = board.HoldCells(pending.Keys);
+            releaseOnReach = board.UseFlowPump;
+        }
+
+        public void Reach(int strike, Vector2Int cell)
+        {
+            if (disposed || !reached.Add((strike, cell)) || !pending.TryGetValue(cell, out int count)) return;
+            LastProgressAt = Time.time;
+            if (count > 1) { pending[cell] = count - 1; return; }
+            pending.Remove(cell);
+            if (releaseOnReach) hold.Release(cell);
+        }
+
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            hold.Dispose();
+            pending.Clear();
+            // The normal resolve/sequencer owns the next complete fall plan.
+            board.RequestResolveAfterActionSequence();
+        }
+    }
+
     private IClearEffectPlayer ResolveEffectPlayer(IClearEffectDescriptor effect)
     {
         if (effect == null)
@@ -1129,6 +1296,15 @@ public class BoardAnimator
         var ctx = new ClearEffectPlaybackContext();
         var cleared = new System.Collections.Generic.HashSet<TileView>();
         var committedImpactCells = new System.Collections.Generic.HashSet<Vector2Int>();
+        var tileLifetimes = new Dictionary<TileView, int>();
+        foreach (var tile in plan.FinalClearTiles)
+            if (tile != null)
+                tileLifetimes[tile] = tile.LifetimeVersion;
+        foreach (var effect in plan.Effects)
+            if (effect?.TargetTiles != null)
+                foreach (var tile in effect.TargetTiles)
+                    if (tile != null)
+                        tileLifetimes[tile] = tile.LifetimeVersion;
 
         // Presentation path normal match ise, final clear tile'ların type bilgisini
         // merkezi plana yaz. Böylece effect impact'i sonradan geldiğinde obstacle damage
@@ -1167,7 +1343,9 @@ public class BoardAnimator
 
         void FinalizePresentationTileClear(TileView tile)
         {
-            if (tile == null || cleared.Contains(tile))
+            if (tile == null || cleared.Contains(tile)
+                || (tileLifetimes.TryGetValue(tile, out int lifetime)
+                    && !tile.IsCurrentLifetime(lifetime)))
                 return;
 
             var cell = new Vector2Int(tile.X, tile.Y);

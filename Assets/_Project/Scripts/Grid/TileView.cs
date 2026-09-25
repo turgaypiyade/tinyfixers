@@ -52,6 +52,10 @@ public class TileView : MonoBehaviour,
     private Vector2 dragStartLocalPointer;
     private Vector2 dragStartScreen;
     private bool dragConsumedSwap;
+    private bool dragAccepted;
+    private int dragLifetime;
+    private int dragMoveToken;
+    private int dragX, dragY;
     private bool wasDragging;
     private bool pointerDownWhileBoardBusy;
     private bool dragStartedWhileBoardBusy;
@@ -76,10 +80,6 @@ public class TileView : MonoBehaviour,
     private Canvas creationSortingCanvas;
     private int creationSortingUsers;
     private bool revealUsesCreationSorting;
-    private bool creationCanvasWasEnabled;
-    private bool creationCanvasOverrideSorting;
-    private int creationCanvasOrder;
-    private int creationCanvasLayer;
 
     internal void BeginSpecialCreationSorting()
     {
@@ -111,10 +111,6 @@ public class TileView : MonoBehaviour,
                 creationRaycaster.blockingMask = boardRaycaster.blockingMask;
             }
         }
-        creationCanvasWasEnabled = creationSortingCanvas.enabled;
-        creationCanvasOverrideSorting = creationSortingCanvas.overrideSorting;
-        creationCanvasOrder = creationSortingCanvas.sortingOrder;
-        creationCanvasLayer = creationSortingCanvas.sortingLayerID;
         creationSortingCanvas.enabled = true;
         creationSortingCanvas.overrideSorting = true;
         creationSortingCanvas.sortingLayerID = parentCanvas != null ? parentCanvas.sortingLayerID : 0;
@@ -126,11 +122,20 @@ public class TileView : MonoBehaviour,
     internal void EndSpecialCreationSorting()
     {
         if (creationSortingUsers <= 0 || --creationSortingUsers > 0) return;
+        RestIconCanvas();
+    }
+
+    // İkonun iç Canvas'ının TEK dinlenme hâli: açık, override KAPALI (tahta sıralamasını miras alır).
+    // Eskiden Begin anındaki durum "geri yükleniyordu"; havuzdan dönen taşta bu durum bir kez bozulunca
+    // (override=true, order=0) bozukluk kendini kopyalıyordu → ikon CellBG/GameBG'nin ALTINDA çiziliyor,
+    // taş veride dolu ama ekranda boş görünüyordu (CellDump: Icon canvas ovr=True order=0).
+    private void RestIconCanvas()
+    {
+        if (creationSortingCanvas == null && iconImage != null)
+            creationSortingCanvas = iconImage.GetComponent<Canvas>();
         if (creationSortingCanvas == null) return;
-        creationSortingCanvas.overrideSorting = creationCanvasOverrideSorting;
-        creationSortingCanvas.sortingOrder = creationCanvasOrder;
-        creationSortingCanvas.sortingLayerID = creationCanvasLayer;
-        creationSortingCanvas.enabled = creationCanvasWasEnabled;
+        creationSortingCanvas.overrideSorting = false;
+        creationSortingCanvas.enabled = true;
         if (iconImage != null)
         {
             iconImage.RecalculateMasking();
@@ -230,6 +235,51 @@ public class TileView : MonoBehaviour,
     // üste bindirmesi ("geriden gelen taş öndekinin üstüne çıkıyor") kökten biter.
     private int activeMoveToken;
 
+    // Board-hosted coroutines survive StopAllCoroutines on this component. A pooled
+    // view keeps its object identity, so deferred work must also check its lifetime.
+    internal int LifetimeVersion { get; private set; }
+
+    internal bool IsCurrentLifetime(int version) =>
+        this != null && LifetimeVersion == version && gameObject.activeInHierarchy;
+
+    internal IEnumerator RunForCurrentLifetime(IEnumerator routine)
+    {
+        // Capture now, before the caller queues or delays the coroutine.
+        return RunForLifetime(routine, LifetimeVersion);
+    }
+
+    internal IEnumerator RunForLifetime(IEnumerator routine, int version)
+    {
+        if (routine == null) yield break;
+        var stack = new System.Collections.Generic.Stack<IEnumerator>();
+        stack.Push(routine);
+        try
+        {
+            while (stack.Count > 0 && IsCurrentLifetime(version))
+            {
+                var current = stack.Peek();
+                if (!current.MoveNext())
+                {
+                    stack.Pop();
+                    (current as System.IDisposable)?.Dispose();
+                    continue;
+                }
+
+                // Step nested routines too: yielding them directly to Unity would
+                // let a delayed child resume on a reused tile without this guard.
+                if (current.Current is IEnumerator nested)
+                    stack.Push(nested);
+                else
+                    yield return current.Current;
+            }
+        }
+        finally
+        {
+            while (stack.Count > 0)
+                (stack.Pop() as System.IDisposable)?.Dispose();
+        }
+    }
+
     public RectTransform RectTransform => rt != null ? rt : (RectTransform)transform;
     public Image IconImage => iconImage;
 
@@ -238,9 +288,12 @@ public class TileView : MonoBehaviour,
     // clear'ı bu event tetikler. Aynı düşüşte birden çok kez atılmasın diye guard'lı.
     public event System.Action<TileView> FallArrived;
     private int fallArrivedGeneration = -1;
+    internal bool HasArrivedForPlannedFall => PlannedFallGeneration >= 0
+        && fallArrivedGeneration == PlannedFallGeneration;
     private void RaiseFallArrived()
     {
-        int gen = (board != null) ? board.FallGeneration : 0;
+        int gen = board != null && board.UseContinuousFallMotion
+            ? PlannedFallGeneration : (board != null ? board.FallGeneration : 0);
         if (fallArrivedGeneration == gen) return;   // bu düşüş için zaten atıldı
         fallArrivedGeneration = gen;
         FallArrived?.Invoke(this);
@@ -257,6 +310,61 @@ public class TileView : MonoBehaviour,
         if (fallArrivedGeneration == gen) return;        // zaten atıldı
         if (Vector2.Distance(rt.anchoredPosition, end) <= lead * tileSize)
             RaiseFallArrived();
+    }
+
+    // ── Kesintisiz düşüş (TileFallMotionSystem) kancaları ──────────────────────
+    // Hareketi taş değil board'daki tek döngü sürer; taş yalnız görsel yardımcıları sağlar.
+    // Token aynı tek-sahip kuralını paylaşır: eski coroutine hareketleri token değişince durur,
+    // başka bir hareket token'ı alırsa döngü de bu taşı bırakır.
+
+    /// Bu taşın en son hangi cascade planında hareket ettirildiği (bayat FallAction kaydını ayırt eder).
+    internal int PlannedFallGeneration { get; private set; } = -1;
+
+    internal int NotePlannedFall() =>
+        PlannedFallGeneration = board != null ? board.FallGeneration : 0;
+
+    internal int ClaimMoveToken()
+    {
+        CancelActiveSettle();
+        if (rt == null) rt = GetComponent<RectTransform>();
+        if (rt != null)
+        {
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot = new Vector2(0, 1);
+        }
+        if (iconImage != null) iconImage.rectTransform.localScale = Vector3.one;
+        return ++activeMoveToken;
+    }
+
+    internal bool IsMoveTokenCurrent(int token) => activeMoveToken == token;
+
+    internal Vector2 GetFallCellPosition(int cellX, int cellY, int tileSize) =>
+        GetFallCellAnchoredPosition(cellX, cellY, tileSize);
+
+    internal void RaiseFallArrivedFromMotion() => RaiseFallArrived();
+
+    internal void ApplyFallStretch(float env)
+    {
+        if (iconImage == null || board == null) return;
+        float amount = board.FallStretchAmount;
+        if (amount <= 0.001f) return;
+        ApplyFallStretchScale(iconImage.rectTransform, Vector3.one, amount, env);
+    }
+
+    internal void ResetFallStretch()
+    {
+        if (iconImage != null) ResetVisualScale(iconImage.rectTransform, Vector3.one);
+    }
+
+    internal void PlayLandingSettle(int tileSize, float settleDuration, float settleStrength)
+    {
+        var visualRt = iconImage != null ? iconImage.rectTransform : null;
+        if (settleDuration > 0f && board != null)
+            StartDetachedSettle(tileSize, visualRt, Vector3.one, settleDuration, settleStrength,
+                board.FallSettleStretchX, board.FallSettleOvershoot);
+        else
+            ResetVisualScale(visualRt, Vector3.one);
     }
     public PatchBotPropellerView PropellerView => propellerView;
     public OverrideSpecialView OverrideSpecialView => overrideSpecialView;
@@ -329,6 +437,8 @@ public class TileView : MonoBehaviour,
 
     private void OnDisable()
     {
+        LifetimeVersion++;
+        activeMoveToken++;
         StopSpecialCreationReveal();
         if (creationSortingUsers > 0)
         {
@@ -341,25 +451,47 @@ public class TileView : MonoBehaviour,
 
     public void Init(BoardController board, int x, int y)
     {
+        LifetimeVersion++;
+        activeMoveToken++;
         this.board = board;
         X = x;
         Y = y;
         IsPlannedToMoveThisFallPass = false;
         RuntimeState = TileRuntimeState.Idle;
 
+        PlannedFallGeneration = -1;
+        fallArrivedGeneration = -1;
+
         ResetVisualState();
         dragConsumedSwap = false;
+        dragAccepted = false;
         wasDragging = false;
+    }
+
+    // Teşhis: ikonu/taşı en son kim gizledi (MotionDiag "hidden" örneğine yazılır). Havuz reset'inde silinir.
+    internal string HiddenBy { get; private set; }
+    internal int HiddenFrame { get; private set; }
+    internal void NoteHidden(string by)
+    {
+        HiddenBy = by;
+        HiddenFrame = Time.frameCount;
     }
 
     private void ResetVisualState()
     {
+        HiddenBy = null;
         CancelActiveSettle();   // pool'a dönen/yeniden kullanılan taşın eski detached settle'ı çalışmasın
         transform.localScale = Vector3.one;
         transform.localRotation = Quaternion.identity;
 
+        // HideTileVisualForCombo alpha ile birlikte raycast/interactable'ı da kapatır; yalnız alpha
+        // geri gelirse havuzdan dönen taş görünür ama DOKUNULAMAZ olur. Üçü birlikte sıfırlanmalı.
         if (TryGetComponent<CanvasGroup>(out var canvasGroup))
+        {
             canvasGroup.alpha = 1f;
+            canvasGroup.blocksRaycasts = true;
+            canvasGroup.interactable = true;
+        }
 
         if (iconImage != null)
         {
@@ -2364,9 +2496,11 @@ public class TileView : MonoBehaviour,
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        dragAccepted = false;
         dragStartedWhileBoardBusy = false;
 
-        if (board == null)
+        if (board == null || !IsRuntimeIdle || board.GetTileViewAt(X, Y) != this
+            || board.IsCellHeld(X, Y) || board.IsReservedTileTargetCell(X, Y))
             return;
 
         if (board.IsBusy && !board.UseDynamicBoardInputGate)
@@ -2379,6 +2513,17 @@ public class TileView : MonoBehaviour,
 
         if (board.ActiveBooster != BoardController.BoosterMode.None)
             return;
+
+        var obstacles = board.ObstacleStateService;
+        if (obstacles != null && (obstacles.IsOilAt(X, Y) || obstacles.IsInteractionLockedAt(X, Y)
+            || (obstacles.IsUnderTileObstacleAt(X, Y) && !obstacles.IsInteractiveUnderTileOverlayAt(X, Y))))
+            return;
+
+        dragMoveToken = ClaimMoveToken(); // stop cosmetic landing bounce before following the finger
+        dragLifetime = LifetimeVersion;
+        dragX = X;
+        dragY = Y;
+        dragAccepted = true;
 
         transform.localScale = Vector3.one;
 
@@ -2397,7 +2542,7 @@ public class TileView : MonoBehaviour,
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (board == null)
+        if (!OwnsDragPosition())
             return;
 
         if (board.IsBusy && !board.UseDynamicBoardInputGate)
@@ -2455,11 +2600,18 @@ public class TileView : MonoBehaviour,
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        if (!dragConsumedSwap && board != null)
+        // Unity sends EndDrag even when BeginDrag was rejected. Never snap a falling
+        // tile, a reused view, or a tile already claimed by another animation.
+        if (!dragConsumedSwap && OwnsDragPosition())
             SnapToGrid(board.TileSize);
 
+        dragAccepted = false;
         StartCoroutine(ResetWasDragging());
     }
+
+    private bool OwnsDragPosition() => dragAccepted && board != null
+        && IsCurrentLifetime(dragLifetime) && IsMoveTokenCurrent(dragMoveToken)
+        && IsRuntimeIdle && X == dragX && Y == dragY && board.GetTileViewAt(X, Y) == this;
 
     private IEnumerator ResetWasDragging()
     {
@@ -2549,6 +2701,8 @@ public class TileView : MonoBehaviour,
     // tarafı Init(ResetVisualState) + SetType + SetSpecial ile taşı yeniden kurar → havuz taşı "yeni" gelir.
     public void PrepareForRelease()
     {
+        LifetimeVersion++;
+        activeMoveToken++;
         // Bu taşın ÜSTÜNDE koşan her coroutine ölsün (fall/settle/reveal/idle-FX). Havuzdan yeniden
         // alındığında eski bir animasyon pozisyon/scale/alpha sürmeye devam ederse "hayalet" glitch olur.
         StopAllCoroutines();
@@ -2564,6 +2718,9 @@ public class TileView : MonoBehaviour,
 
         IsPlannedToMoveThisFallPass = false;
         lastFallGeneration = -1;
+        creationSortingUsers = 0;            // iç Canvas sayacı ömürler arası taşınmaz
+        revealUsesCreationSorting = false;
+        RestIconCanvas();
         IsSpecialLocked = false;             // cage lock is per-tile; never leak across pool reuse
         GelContaminated = false;             // jel bulaşması da per-tile; havuz üzerinden sızmasın
         ResetVisualState();                  // scale/rotation/alpha/icon/propeller

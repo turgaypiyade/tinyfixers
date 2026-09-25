@@ -29,7 +29,7 @@ MonoBehaviour:
         showTimerIcon: 0
         grants:
         - kind: 0
-          amount: 65000
+          amount: 5000
           booster: 1
           durationHours: 1
       - background: {fileID: 21300000, guid: f2bf98f6f3d5249e79afdf902d704121, type: 3}
@@ -43,8 +43,20 @@ MonoBehaviour:
         showTimerIcon: 0
         grants:
         - kind: 3
-          amount: 13
+          amount: 1
           booster: 1
+          durationHours: 1
+        - kind: 3
+          amount: 1
+          booster: 2
+          durationHours: 1
+        - kind: 3
+          amount: 1
+          booster: 3
+          durationHours: 1
+        - kind: 3
+          amount: 1
+          booster: 4
           durationHours: 1
       - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
         icons:
@@ -55,10 +67,21 @@ MonoBehaviour:
         labelValue: 1
         showTimerIcon: 1
         grants:
-        - kind: 3
-          amount: 2
-          booster: 4
+        - kind: 5
+          amount: 1
+          booster: 1
           durationHours: 1
+          timedType: 11
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 1
+          timedType: 13
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 1
+          timedType: 12
       availability: 0
       cooldownHours: 24
       priceType: 0
@@ -94,6 +117,18 @@ MonoBehaviour:
           amount: 10
           booster: 1
           durationHours: 1
+        - kind: 3
+          amount: 10
+          booster: 3
+          durationHours: 1
+        - kind: 3
+          amount: 10
+          booster: 2
+          durationHours: 1
+        - kind: 3
+          amount: 10
+          booster: 4
+          durationHours: 1
       - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
         icons:
         - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
@@ -103,10 +138,21 @@ MonoBehaviour:
         labelValue: 72
         showTimerIcon: 1
         grants:
-        - kind: 3
-          amount: 2
-          booster: 4
-          durationHours: 1
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 72
+          timedType: 11
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 72
+          timedType: 13
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 72
+          timedType: 12
       - background: {fileID: 21300000, guid: 9f1b99fa54f36443d8a108bfd3f5dc7b, type: 3}
         icons:
         - {fileID: 21300000, guid: 62c8a31be03e44a65adcd1407edae4be, type: 3}
@@ -153,6 +199,18 @@ MonoBehaviour:
           amount: 13
           booster: 1
           durationHours: 1
+        - kind: 3
+          amount: 13
+          booster: 2
+          durationHours: 1
+        - kind: 3
+          amount: 13
+          booster: 3
+          durationHours: 1
+        - kind: 3
+          amount: 13
+          booster: 4
+          durationHours: 1
       - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
         icons:
         - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
@@ -162,10 +220,21 @@ MonoBehaviour:
         labelValue: 100
         showTimerIcon: 1
         grants:
-        - kind: 3
-          amount: 2
-          booster: 4
-          durationHours: 1
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 100
+          timedType: 11
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 100
+          timedType: 13
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 100
+          timedType: 12
       - background: {fileID: 21300000, guid: 9f1b99fa54f36443d8a108bfd3f5dc7b, type: 3}
         icons:
         - {fileID: 21300000, guid: 62c8a31be03e44a65adcd1407edae4be, type: 3}

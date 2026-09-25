@@ -30,6 +30,7 @@ public class TutorialManager : MonoBehaviour
 
     private void Start()
     {
+        if (RuntimeSimulationSession.IsActive) return;
         StartCoroutine(InitBoard());
     }
 

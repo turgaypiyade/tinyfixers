@@ -39,6 +39,7 @@ public class TopHudController : MonoBehaviour
 
     private readonly List<RuntimeGoal> runtimeGoals = new();
     private bool initialized;
+    public bool IsInitialized => initialized;
 
     public bool AreAllGoalsCompleted { get; private set; }
     public event Action<bool> OnGoalsCompletionChanged;
@@ -331,7 +332,7 @@ public class TopHudController : MonoBehaviour
     /// (kalan = üretilecek toplam − landedKeys + boarddaki key sayısı) hesaplayıp yazar.
     /// Board'da key varken hedef asla tamamlanamaz; çift-sayım imkânsız.
     /// </summary>
-    public void SetKeyGeneratorGoalRemaining(int remaining)
+    public void SetKeyGeneratorGoalRemaining(int remaining, int productionCapacity = 0)
     {
         bool anyGoalUpdated = false;
 
@@ -341,7 +342,10 @@ public class TopHudController : MonoBehaviour
             if (!IsKeyGeneratorGoal(goal.definition))
                 continue;
 
-            int clamped = Mathf.Max(0, remaining);
+            int collected = Mathf.Max(0, productionCapacity - remaining);
+            int clamped = productionCapacity > 0
+                ? Mathf.Max(0, goal.definition.amount - collected)
+                : Mathf.Max(0, remaining);
             if (goal.remaining == clamped)
                 continue;
 

@@ -26,6 +26,9 @@ public sealed class TeamChatMessage
     public Sprite avatar;
     public string text;
     public string timeLabel;
+    public long sentTicks;
+    public TeamLifeInbox.Reply lifeReply;
+    public TeamLifeInbox.BotRequest botLifeRequest;
 
     /// <summary>Bu mesajı BEN mi gönderdim? true → sağda + kendi avatarım; false → solda.</summary>
     public bool isMine;
@@ -48,6 +51,7 @@ public sealed class TeamLifeRequest
 /// </summary>
 public interface ITeamService
 {
+    TeamLifeInbox LifeInbox { get; }
     TeamInfo GetTeamInfo();
     List<TeamChatMessage> GetChat();
     List<TeamLifeRequest> GetLifeRequests();

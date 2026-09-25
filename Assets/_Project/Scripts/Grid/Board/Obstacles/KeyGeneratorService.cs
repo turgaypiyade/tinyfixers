@@ -229,7 +229,7 @@ public sealed class KeyGeneratorService : MonoBehaviour
                 placed = true;
                 var tile = board.GetTileViewAt(placedCell.x, placedCell.y);
                 if (tile != null)
-                    StartCoroutine(CoPopLandingTile(tile.RectTransform));
+                    StartCoroutine(tile.RunForCurrentLifetime(CoPopLandingTile(tile.RectTransform)));
             }
         }
         finally
@@ -384,7 +384,7 @@ public sealed class KeyGeneratorService : MonoBehaviour
 
         int onBoard = board.CountTilesOfType(TileType.Key);
         int remaining = Mathf.Clamp(capacity - landedKeys + onBoard, 0, capacity);
-        board.TopHud.SetKeyGeneratorGoalRemaining(remaining);
+        board.TopHud.SetKeyGeneratorGoalRemaining(remaining, capacity);
     }
 
     // A beneath KeyGenerator (e.g. under Grass/Safe) gets its view created when the cover
@@ -393,9 +393,6 @@ public sealed class KeyGeneratorService : MonoBehaviour
     // shared interceptor — no action needed here.
     private void HandleObstacleRevealed(int x, int y)
     {
-        if (!completed)
-            return;
-
         var svc = board != null ? board.ObstacleStateService : null;
         if (svc == null || svc.GetObstacleIdAt(x, y) != ObstacleId.KeyGenerator)
             return;
@@ -406,16 +403,29 @@ public sealed class KeyGeneratorService : MonoBehaviour
 
         // Drop any stale cached Image; the revealed generator has a brand-new view.
         obstacleImageCache.Remove(origin);
-        StartCoroutine(CoCloseRevealedGenerator(origin));
+        StartCoroutine(CoRefreshRevealedGenerator(origin));
     }
 
-    private IEnumerator CoCloseRevealedGenerator(int origin)
+    private IEnumerator CoRefreshRevealedGenerator(int origin)
     {
         // The restored view may be created a frame after the reveal event; wait for it.
         for (int i = 0; i < 5 && FindObstacleImage(origin) == null; i++)
             yield return null;
 
-        SetClosedFrame(origin);
+        var machine = EnsureMachineView(origin);
+        if (completed)
+        {
+            SetClosedFrame(origin);
+            machine?.SetClosed();
+        }
+        else
+        {
+            var image = FindObstacleImage(origin);
+            var definition = board.ActiveLevelData.obstacleLibrary?.Get(ObstacleId.KeyGenerator);
+            if (image != null && definition?.GetPreviewSprite() != null)
+                image.sprite = definition.GetPreviewSprite();
+            machine?.SetOpen();
+        }
     }
 
     private void CloseAllGenerators()
@@ -606,6 +616,7 @@ public sealed class KeyGeneratorService : MonoBehaviour
         if (level?.goals == null)
             return 0;
 
+        int capacity = 0;
         for (int i = 0; i < level.goals.Length; i++)
         {
             var goal = level.goals[i];
@@ -613,13 +624,13 @@ public sealed class KeyGeneratorService : MonoBehaviour
                 continue;
 
             if (goal.targetType == LevelGoalTargetType.Tile && goal.tileType == TileType.Key)
-                return Mathf.Max(1, goal.amount);
+                capacity = Mathf.Max(capacity, Mathf.Max(1, goal.amount));
 
             if (goal.targetType == LevelGoalTargetType.Obstacle && goal.obstacleId == ObstacleId.KeyGenerator)
-                return Mathf.Max(1, goal.amount);
+                capacity = Mathf.Max(capacity, Mathf.Max(1, goal.amount));
         }
 
-        return 0;
+        return capacity;
     }
 
     private IEnumerator CoPulseObstacle(RectTransform target)
@@ -745,7 +756,15 @@ public sealed class KeyGeneratorService : MonoBehaviour
 
     private Image FindObstacleImage(int originIndex)
     {
-        if (obstacleImageCache.TryGetValue(originIndex, out var cached) && cached != null)
+        // The origin registry can still point at Grass/Safe while the generator is
+        // covered. Never cache or close that cover as though it were the machine body.
+        if (board == null || board.Width <= 0 || board.ObstacleStateService == null
+            || board.ObstacleStateService.GetObstacleIdAt(originIndex % board.Width, originIndex / board.Width)
+                != ObstacleId.KeyGenerator)
+            return null;
+
+        string expectedName = $"Obs_{ObstacleId.KeyGenerator}_{originIndex % board.Width}_{originIndex / board.Width}";
+        if (obstacleImageCache.TryGetValue(originIndex, out var cached) && cached != null && cached.name == expectedName)
             return cached;
 
         // Fast path: O(1) registry from GridSpawner. Avoids the full-hierarchy
@@ -754,7 +773,10 @@ public sealed class KeyGeneratorService : MonoBehaviour
             ? board.ObstacleViewByOriginLookup(originIndex)
             : null;
 
-        // Fallback: legacy scan (covers views not yet in the registry, e.g. mid-reveal).
+        // A reveal can update data before the view registry switches away from the cover.
+        if (found != null && found.name != expectedName) found = null;
+
+        // Fallback: exact-name scan while a revealed body is joining the registry.
         if (found == null)
             found = FindObstacleImageScan(originIndex);
 
@@ -775,46 +797,13 @@ public sealed class KeyGeneratorService : MonoBehaviour
         string expectedName = $"Obs_{ObstacleId.KeyGenerator}_{x}_{y}";
 
         var images = root.GetComponentsInChildren<Image>(true);
-        Image closest = null;
-        float closestDistance = float.MaxValue;
-        Vector2 expected = board.WorldToAnchoredIn(root, board.GetCellWorldCenterPosition(x, y));
-
         for (int i = 0; i < images.Length; i++)
         {
             var image = images[i];
-            if (image == null)
-                continue;
-
-            if (image.name == expectedName)
+            if (image != null && image.name == expectedName)
                 return image;
-
-            if (!IsLikelyKeyGeneratorImage(image))
-                continue;
-
-            Vector2 pos = root.InverseTransformPoint(image.rectTransform.TransformPoint(image.rectTransform.rect.center));
-            float distance = Vector2.SqrMagnitude(pos - expected);
-            if (distance < closestDistance)
-            {
-                closest = image;
-                closestDistance = distance;
-            }
         }
-
-        return closest;
-    }
-
-    private static bool IsLikelyKeyGeneratorImage(Image image)
-    {
-        Transform t = image != null ? image.transform : null;
-        while (t != null)
-        {
-            string n = t.name;
-            if (n.Contains("KeyGenerator") || n.Contains("Obstacles") || n.Contains("OverTiles") || n.Contains("UnderTiles"))
-                return true;
-            t = t.parent;
-        }
-
-        return false;
+        return null;
     }
 
     private Vector2 GetOriginCenterIn(RectTransform root, int originIndex)

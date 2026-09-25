@@ -54,6 +54,7 @@ public class BoardVfxService
         Sprite overrideSpriteB,
         Sprite mergedSprite = null)
     {
+        board.BeginSystemOverrideWave(new Vector2Int(originX, originY));
         if (vfx == null) return 0f;
 
         vfx.gameObject.SetActive(true);

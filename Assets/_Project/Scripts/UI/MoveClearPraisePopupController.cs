@@ -8,6 +8,8 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
 {
     [SerializeField] private int minimumClearedTiles = 30;
     [SerializeField] private Vector2 anchoredPosition = new Vector2(0f, 72f);
+    [Tooltip("Açık: yazı tahtanın sağ/sol/üst bölgelerinden birinde rastgele çıkar (art arda aynı yer değil). Kapalı: sabit anchoredPosition.")]
+    [SerializeField] private bool randomizePosition = true;
     [SerializeField] private Vector2 badgeSize = new Vector2(390f, 174f);
     [SerializeField] private float holdDuration = 0.58f;
     [SerializeField] private TMP_FontAsset preferredFont;
@@ -98,10 +100,13 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
             yield break;
         }
 
-        float tilt = Random.Range(-2.5f, 2.5f);
-        Vector2 start = anchoredPosition + new Vector2(0f, -24f);
-        Vector2 peak = anchoredPosition + new Vector2(0f, 10f);
-        Vector2 end = anchoredPosition + new Vector2(0f, 42f);
+        Vector2 home = PickPraisePosition(out float side);
+        popup.anchoredPosition = home;
+        // Yana çıkan yazı dışa doğru hafif eğilir ve dışa-yukarı süzülerek kaybolur.
+        float tilt = Random.Range(-2.5f, 2.5f) - side * 4f;
+        Vector2 start = home + new Vector2(side * -18f, -24f);
+        Vector2 peak = home + new Vector2(0f, 10f);
+        Vector2 end = home + new Vector2(side * 22f, 42f);
 
         const float inDuration = 0.20f;
         const float settleDuration = 0.16f;
@@ -138,7 +143,7 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / settleDuration);
             float e = 1f - Mathf.Pow(1f - k, 2f);
-            popup.anchoredPosition = Vector2.LerpUnclamped(peak, anchoredPosition, e);
+            popup.anchoredPosition = Vector2.LerpUnclamped(peak, home, e);
             popup.localScale = Vector3.one * Mathf.LerpUnclamped(1.08f, 1f, e);
             yield return null;
         }
@@ -157,13 +162,58 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / outDuration);
             group.alpha = 1f - k;
-            popup.anchoredPosition = Vector2.LerpUnclamped(anchoredPosition, end, k);
+            popup.anchoredPosition = Vector2.LerpUnclamped(home, end, k);
             popup.localScale = Vector3.one * Mathf.LerpUnclamped(1f, 0.88f, k);
             yield return null;
         }
 
         DestroyPopup(popup);
         ClearRoutineReferences(popup);
+    }
+
+    // Tahta çevresindeki çıkış noktaları (tahta dikdörtgeninin -1..1 kesirleri; y yukarı pozitif).
+    private static readonly Vector2[] PraiseSlots =
+    {
+        new Vector2(-0.62f, 0.62f), new Vector2(0.62f, 0.62f),   // sol üst / sağ üst
+        new Vector2(-0.70f, 0.18f), new Vector2(0.70f, 0.18f),   // sol / sağ
+        new Vector2(0f, 0.72f),                                  // üst orta
+        new Vector2(-0.55f, -0.30f), new Vector2(0.55f, -0.30f), // sol alt / sağ alt
+    };
+    private int lastSlot = -1;
+
+    // side: -1 sol, 0 orta, +1 sağ (giriş/çıkış yönü için).
+    private Vector2 PickPraisePosition(out float side)
+    {
+        side = 0f;
+        var host = transform as RectTransform;
+        if (!randomizePosition || host == null || board == null || board.Width <= 0 || board.Height <= 0)
+            return anchoredPosition;
+
+        // Tahtanın host içindeki dikdörtgeni (köşe hücre merkezlerinden).
+        Vector2 a = ToAnchored(host, board.GetCellWorldCenterPosition(0, 0));
+        Vector2 b = ToAnchored(host, board.GetCellWorldCenterPosition(board.Width - 1, board.Height - 1));
+        Vector2 center = (a + b) * 0.5f;
+        Vector2 half = new Vector2(Mathf.Abs(b.x - a.x), Mathf.Abs(b.y - a.y)) * 0.5f;
+        // Hücre boyu host biriminde (host tahtadan farklı ölçekte olabilir); yazı tahta sınırından taşmasın.
+        float cell = board.Width > 1 ? Mathf.Abs(b.x - a.x) / (board.Width - 1) : badgeSize.y;
+        half.x = Mathf.Max(0f, half.x + cell * 0.5f - badgeSize.x * 0.5f);
+        half.y = Mathf.Max(0f, half.y + cell * 0.5f - badgeSize.y * 0.5f);
+
+        int slot = Random.Range(0, PraiseSlots.Length);
+        if (slot == lastSlot) slot = (slot + 1 + Random.Range(0, PraiseSlots.Length - 1)) % PraiseSlots.Length;
+        lastSlot = slot;
+
+        Vector2 f = PraiseSlots[slot];
+        side = Mathf.Abs(f.x) < 0.1f ? 0f : Mathf.Sign(f.x);
+        Vector2 jitter = new Vector2(Random.Range(-18f, 18f), Random.Range(-14f, 14f));
+        return center + new Vector2(f.x * half.x, f.y * half.y) + jitter;
+    }
+
+    private static Vector2 ToAnchored(RectTransform host, Vector3 world)
+    {
+        // Popup'ın anchor'ı host'un ortası → anchoredPosition = local - rect.center.
+        Vector2 local = host.InverseTransformPoint(world);
+        return local - host.rect.center;
     }
 
     private void DestroyActivePopup()

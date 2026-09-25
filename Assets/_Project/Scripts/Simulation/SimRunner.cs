@@ -1,729 +1,539 @@
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
-// Drives N headless smart-bot games on a LevelData and reports aggregate stats.
-// Smart bot = average player model: scores valid swaps with human-like heuristics.
+/// <summary>
+/// N adet headless oyunu (isteğe bağlı paralel) koşturur ve zengin istatistik üretir.
+/// Eski sürüm tek thread'de, tek "mistakeChance" ile, yalnız win% + birkaç ortalama veriyordu.
+/// </summary>
 public static class SimRunner
 {
-    // ── Result types ─────────────────────────────────────────────────────────
+    // ── Sonuç tipleri ────────────────────────────────────────────────────────
 
     public struct GameResult
     {
-        public int MovesUsed;
         public bool Won;
+        public int MovesUsed;
+        public int MovesLeft;
+        public float GoalCompletion;
         public int TilesCleared;
-        public int SpecialsFormed;
+        public int SpecialsCreated;
+        public int SpecialsActivated;
+        public int CombosActivated;
         public int CascadeSteps;
-        public int MaxCascadeChain;
-        public int DeadlockMoves;
-        // Tile clears by type — for goal tracking
-        public int GearsCleared, CoresCleared, BoltsCleared, PlatesCleared;
-        // Diagnostic: how many obstacle origins were cleared this game
-        public int ObstacleClears;
-        // Diagnostic: how many obstacle origins existed at game start
-        public int ObstacleCount;
+        public int MaxChain;
+        public int Shuffles;
+        public int SpecialsCaged;
+        public bool Deadlocked;
+        public float[] GoalRatios;
     }
 
-    public struct RunStats
+    public sealed class RunStats
     {
+        public string LevelName;
+        public string ProfileName;
         public int GameCount;
+        public int RequestedGameCount;
+        public int Seed;
+        public int MovesBudget;
+        public long ElapsedMs;
+
         public int GamesWon;
         public float WinRate;
-        public float AvgMovesPerGame;
-        public float AvgMovesOnWin;       // avg moves used in won games
-        public float AvgMovesOnLoss;      // avg moves used in lost games
-        public float AvgTilesClearedPerGame;
-        public float AvgSpecialsPerGame;
-        public float AvgCascadeStepsPerGame;
-        public int MaxCascadeChainSeen;
-        public int TotalDeadlockMoves;
-        // Diagnostic counters
-        public float AvgObstacleClearsPerGame;
-        public int ObstacleCountInLevel;
+        public float WinRateLow, WinRateHigh;   // %95 Wilson güven aralığı
+
+        public float AvgMovesUsed;
+        public float AvgMovesOnWin;
+        public float AvgMovesLeftOnWin;         // kazanınca ne kadar hamle artıyor → "çok kolay" sinyali
+        public float AvgGoalCompletionOnLoss;   // kaybederken hedefin ne kadarına gelebildi
+
+        public float AvgTilesCleared;
+        public float AvgSpecialsCreated;
+        public float AvgSpecialsActivated;
+        public float AvgCombos;
+        public float AvgCascadeSteps;
+        public int MaxChainSeen;
+
+        public int DeadlockGames;
+        public float AvgShuffles;
+        public float AvgSpecialsCaged;
+
+        public string[] GoalLabels;
+        public float[] GoalAvgRatio;            // TÜM oyunlarda hedef başına ortalama tamamlanma
+        public float[] GoalAvgRatioOnLoss;      // yalnız kaybedilen oyunlar (0 kayıp varsa anlamsız)
+        public int BottleneckGoalIndex = -1;    // en çok tıkayan hedef (kayıp varsa)
+
+        public SimGoalFidelity Fidelity;
+        public List<string> Warnings = new();
+
+        public float DifficultyScore;           // 0..1 — 1 = çok zor
+        public string DifficultyLabel;
     }
 
-    // ── Main entry ────────────────────────────────────────────────────────────
+    // ── Giriş noktaları ──────────────────────────────────────────────────────
 
-    // mistakeChance: bot'un "insan kusuru" — 0 = kusursuz greedy, 0.2 = %20 rastgele hamle.
-    public static RunStats Run(LevelData level, int gameCount, int seed = 42, float mistakeChance = 0.2f)
+    /// <summary>Geriye dönük uyumlu kısa yol — ortalama oyuncu profili.</summary>
+    public static RunStats Run(LevelData level, int gameCount, int seed = 42)
+        => Run(level, gameCount, SimPlayerProfile.Average, seed);
+
+    public static RunStats Run(LevelData level, int gameCount, SimPlayerProfile profile,
+        int seed = 42, bool parallel = true)
     {
-        var stats = new RunStats { GameCount = gameCount };
-        var rng = new System.Random(seed);
-        var goals = new SimGoalContext(level);
+        var input = Prepare(level, gameCount, profile, seed);
+        if (input.assessment.Fidelity == SimGoalFidelity.NotSimulated) return input.assessment;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var results = RunGames(input.level, input.rules, input.profile, gameCount, seed, parallel, default);
+        return Finish(input.level, input.rules, input.profile, results, seed, sw.ElapsedMilliseconds);
+    }
 
-        int totalMovesWin = 0, totalMovesLoss = 0;
+    /// <summary>Call on the editor main thread; only detached data enters the worker.</summary>
+    public static async Task<RunStats> RunAsync(LevelData level, int gameCount, SimPlayerProfile profile,
+        int seed = 42, bool parallel = true, System.Threading.CancellationToken cancellationToken = default)
+    {
+        var input = Prepare(level, gameCount, profile, seed);
+        if (input.assessment.Fidelity == SimGoalFidelity.NotSimulated) return input.assessment;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var results = await Task.Run(() => RunGames(input.level, input.rules, input.profile,
+            gameCount, seed, parallel, cancellationToken), cancellationToken);
+        return Finish(input.level, input.rules, input.profile, results, seed, sw.ElapsedMilliseconds);
+    }
 
-        for (int g = 0; g < gameCount; g++)
-        {
-            var r = PlayOneGame(level, rng, goals, mistakeChance);
+    private static (SimLevel level, SimRules rules, SimPlayerProfile profile, RunStats assessment)
+        Prepare(LevelData level, int gameCount, SimPlayerProfile profile, int seed)
+    {
+        if (gameCount < 1) throw new System.ArgumentOutOfRangeException(nameof(gameCount));
+        var snapshot = new SimLevel(level);
+        profile = (profile ?? SimPlayerProfile.Average).Snapshot();
+        if (profile.Depth < 1 || profile.Depth > 2 || profile.BeamWidth < 1)
+            throw new System.ArgumentException("Bot depth must be 1 or 2 and beam width positive.");
+        var rules = SimRules.From(level.obstacleLibrary);
+        var assessment = Aggregate(snapshot, System.Array.Empty<GameResult>(), profile, seed);
+        assessment.RequestedGameCount = gameCount;
+        CollectWarnings(snapshot, rules, assessment);
+        assessment.DifficultyLabel = "MODELLENMİYOR";
+        return (snapshot, rules, profile, assessment);
+    }
 
-            if (r.Won)
-            {
-                stats.GamesWon++;
-                totalMovesWin += r.MovesUsed;
-            }
-            else
-            {
-                totalMovesLoss += r.MovesUsed;
-            }
+    private static GameResult[] RunGames(SimLevel level, SimRules rules, SimPlayerProfile profile,
+        int count, int seed, bool parallel, System.Threading.CancellationToken cancellationToken)
+    {
+        var results = new GameResult[count];
+        if (parallel && count > 1)
+            Parallel.For(0, count, new ParallelOptions { CancellationToken = cancellationToken,
+                MaxDegreeOfParallelism = System.Math.Max(1, System.Environment.ProcessorCount - 1) },
+                g => results[g] = PlayOneGame(level, rules, profile, unchecked(seed + g * 7919), cancellationToken));
+        else
+            for (int g = 0; g < count; g++)
+                results[g] = PlayOneGame(level, rules, profile, unchecked(seed + g * 7919), cancellationToken);
+        return results;
+    }
 
-            stats.AvgTilesClearedPerGame    += r.TilesCleared;
-            stats.AvgSpecialsPerGame        += r.SpecialsFormed;
-            stats.AvgCascadeStepsPerGame    += r.CascadeSteps;
-            stats.TotalDeadlockMoves        += r.DeadlockMoves;
-            stats.AvgObstacleClearsPerGame  += r.ObstacleClears;
-            if (g == 0) stats.ObstacleCountInLevel = r.ObstacleCount;
-
-            if (r.MaxCascadeChain > stats.MaxCascadeChainSeen)
-                stats.MaxCascadeChainSeen = r.MaxCascadeChain;
-        }
-
-        if (gameCount > 0)
-        {
-            stats.WinRate                   = (float)stats.GamesWon / gameCount;
-            stats.AvgMovesPerGame           = (float)(totalMovesWin + totalMovesLoss) / gameCount;
-            stats.AvgTilesClearedPerGame    /= gameCount;
-            stats.AvgSpecialsPerGame        /= gameCount;
-            stats.AvgCascadeStepsPerGame    /= gameCount;
-            stats.AvgObstacleClearsPerGame  /= gameCount;
-        }
-
-        int lostGames = gameCount - stats.GamesWon;
-        stats.AvgMovesOnWin  = stats.GamesWon > 0 ? (float)totalMovesWin  / stats.GamesWon  : 0;
-        stats.AvgMovesOnLoss = lostGames      > 0 ? (float)totalMovesLoss / lostGames       : 0;
-
+    private static RunStats Finish(SimLevel level, SimRules rules, SimPlayerProfile profile,
+        GameResult[] results, int seed, long elapsedMs)
+    {
+        var stats = Aggregate(level, results, profile, seed);
+        stats.RequestedGameCount = results.Length;
+        stats.ElapsedMs = elapsedMs;
+        CollectWarnings(level, rules, stats);
         return stats;
     }
 
-    // ── Single game ───────────────────────────────────────────────────────────
+    // ── Tek oyun ─────────────────────────────────────────────────────────────
 
-    private static GameResult PlayOneGame(LevelData level, System.Random rng, SimGoalContext goals, float mistakeChance)
+    private static GameResult PlayOneGame(SimLevel level, SimRules rules, SimPlayerProfile profile, int seed,
+        System.Threading.CancellationToken cancellationToken)
     {
-        var obs    = new SimObstacleLayer(level);
-        var state  = SimState.RandomFill(level, rng, obs);
-        var result = new GameResult { ObstacleCount = obs.GetTotalObstacleCount() };
-        var finder = new SimMatchFinder(state);
-        var goalTracker = new GoalTracker(level, obs);
+        cancellationToken.ThrowIfCancellationRequested();
+        var rng  = new System.Random(seed);
+        // Thinking longer or changing profile must not advance the board's refill stream.
+        var decisionRng = new System.Random(unchecked(seed ^ (int)0x9E3779B9));
+        var game = new SimGame(level, rules, rng);
+        var bot  = new SimBot(profile);
 
-        // Initial cascade
-        RunCascade(state, rng, finder, ref result, goalTracker);
+        game.Start();
 
-        int movesLeft = level.moves;
+        var result = new GameResult();
 
-        while (movesLeft > 0)
+        while (game.MovesLeft > 0)
         {
-            if (goalTracker.AllMet) { result.Won = true; break; }
+            cancellationToken.ThrowIfCancellationRequested();
+            if (game.Goals.AllMet) break;
 
-            var swap = SimBot.PickMove(state, rng, goals, mistakeChance);
-            if (swap == null) { result.DeadlockMoves++; break; }
+            var swap = bot.PickMove(game, decisionRng);
+            if (swap == null)
+            {
+                // Canlı oyun gibi: hamle kalmadıysa karıştır, olmazsa oyun biter.
+                if (!game.TryShuffle()) { result.Deadlocked = true; break; }
+                swap = bot.PickMove(game, decisionRng);
+                if (swap == null) { result.Deadlocked = true; break; }
+            }
 
-            SimMoves.Apply(state, swap.Value);
-            result.MovesUsed++;
-            movesLeft--;
-
-            // Takas bir special içeriyorsa aktive et (footprint temizler), sonra cascade.
-            ActivateSwapSpecials(state, rng, finder, goalTracker, ref result, swap.Value);
-            RunCascade(state, rng, finder, ref result, goalTracker, swap.Value);
+            game.PlayMove(swap.Value);
         }
 
-        if (!result.Won && goalTracker.AllMet)
-            result.Won = true;
+        result.Won               = game.Goals.AllMet;
+        result.MovesUsed         = game.MovesUsed;
+        result.MovesLeft         = game.MovesLeft < 0 ? 0 : game.MovesLeft;
+        result.GoalCompletion    = game.Goals.Completion;
+        result.TilesCleared      = game.Totals.TilesCleared;
+        result.SpecialsCreated   = game.Totals.SpecialsCreated;
+        result.SpecialsActivated = game.Totals.SpecialsActivated;
+        result.CombosActivated   = game.Totals.CombosActivated;
+        result.CascadeSteps      = game.Totals.CascadeSteps;
+        result.MaxChain          = game.Totals.MaxChain;
+        result.Shuffles          = game.Shuffles;
+        result.SpecialsCaged     = game.SpecialsCaged;
 
-        result.ObstacleClears = obs.GetTotalClearedCount();
+        int goalCount = game.Goals.GoalCount;
+        result.GoalRatios = new float[goalCount];
+        for (int i = 0; i < goalCount; i++) result.GoalRatios[i] = game.Goals.GetEntry(i).Ratio;
 
         return result;
     }
 
-    // ── Cascade loop ─────────────────────────────────────────────────────────
+    // ── Toplama ──────────────────────────────────────────────────────────────
 
-    private static void RunCascade(
-        SimState state, System.Random rng, SimMatchFinder finder,
-        ref GameResult result, GoalTracker goals,
-        SimSwap? playerSwap = null)
+    private static RunStats Aggregate(SimLevel level, GameResult[] results,
+        SimPlayerProfile profile, int seed)
     {
-        int chainLen = 0;
-        var obs = state.Obstacles as SimObstacleLayer;
-        bool preferSwapTiles = playerSwap.HasValue;
+        var goals = new SimGoalSet(level);
+        int n = results.Length;
 
-        while (true)
+        var s = new RunStats
         {
-            var matches = finder.FindAllMatches();
-            if (matches.Count == 0) break;
+            LevelName   = level.name,
+            ProfileName = profile.Name,
+            GameCount   = n,
+            Seed        = seed,
+            MovesBudget = level.moves,
+            Fidelity    = goals.Fidelity,
+            GoalLabels  = new string[goals.GoalCount],
+            GoalAvgRatio = new float[goals.GoalCount],
+            GoalAvgRatioOnLoss = new float[goals.GoalCount],
+        };
 
-            chainLen++;
-            result.CascadeSteps++;
+        for (int i = 0; i < goals.GoalCount; i++)
+        {
+            var e = goals.GetEntry(i);
+            s.GoalLabels[i] = $"{e.Label} x{e.Needed}";
+        }
 
-            // Bir special oluşacaksa pivot hücreyi TEMİZLEME — oraya special'ı YERLEŞTİR
-            // (adım başına en fazla 1). Special tahtada kalır, sonra takasla aktive edilir.
-            int spx, spy; TileSpecial spType;
-            PickSpecialCreation(finder, matches, preferSwapTiles ? playerSwap : null, out spx, out spy, out spType);
-            preferSwapTiles = false;
+        if (n == 0) return s;
 
-            if (spType != TileSpecial.None) result.SpecialsFormed++;
+        int wins = 0, losses = 0;
+        float movesOnWin = 0, movesLeftOnWin = 0, completionOnLoss = 0;
 
-            foreach (var td in matches)
+        foreach (var r in results)
+        {
+            if (r.Won)
             {
-                if (td.X == spx && td.Y == spy)
-                {
-                    state.Grid[td.X, td.Y]?.SetSpecial(spType);
-                    continue;
-                }
-
-                goals.RecordTile(td.Type);
-                CountTile(ref result, td.Type);
-                obs?.ProcessMatchClear(td.X, td.Y, td.Type);
-                state.Grid[td.X, td.Y] = null;
-                result.TilesCleared++;
+                wins++;
+                movesOnWin     += r.MovesUsed;
+                movesLeftOnWin += r.MovesLeft;
+            }
+            else
+            {
+                losses++;
+                completionOnLoss += r.GoalCompletion;
+                for (int i = 0; i < s.GoalAvgRatioOnLoss.Length && i < r.GoalRatios.Length; i++)
+                    s.GoalAvgRatioOnLoss[i] += r.GoalRatios[i];
             }
 
-            goals.SyncObstacleCounts();
+            for (int i = 0; i < s.GoalAvgRatio.Length && i < r.GoalRatios.Length; i++)
+                s.GoalAvgRatio[i] += r.GoalRatios[i];
 
-            // Rebuild holes from current obstacle state so cleared cells stop being holes.
-            // This allows MovableObstacle gravity to fall through recently-cleared cells
-            // and allows chest1-cleared cells to receive tiles.
-            obs?.SyncHoles(state);
-
-            // MovableObstacle gravity before tile gravity so vacated cells get refilled.
-            obs?.ApplyGravity(state);
-
-            SimCascade.ApplyGravityAndRefill(state, rng);
-            finder.InvalidateRunCache();
+            s.AvgMovesUsed         += r.MovesUsed;
+            s.AvgTilesCleared      += r.TilesCleared;
+            s.AvgSpecialsCreated   += r.SpecialsCreated;
+            s.AvgSpecialsActivated += r.SpecialsActivated;
+            s.AvgCombos            += r.CombosActivated;
+            s.AvgCascadeSteps      += r.CascadeSteps;
+            s.AvgShuffles          += r.Shuffles;
+            s.AvgSpecialsCaged     += r.SpecialsCaged;
+            if (r.Deadlocked) s.DeadlockGames++;
+            if (r.MaxChain > s.MaxChainSeen) s.MaxChainSeen = r.MaxChain;
         }
 
-        if (chainLen > result.MaxCascadeChain)
-            result.MaxCascadeChain = chainLen;
-    }
+        s.GamesWon = wins;
+        s.WinRate  = (float)wins / n;
+        (s.WinRateLow, s.WinRateHigh) = WilsonInterval(wins, n);
 
-    private static void PickSpecialCreation(
-        SimMatchFinder finder,
-        HashSet<TileData> matches,
-        SimSwap? playerSwap,
-        out int spx,
-        out int spy,
-        out TileSpecial spType)
-    {
-        spx = -1;
-        spy = -1;
-        spType = TileSpecial.None;
+        for (int i = 0; i < s.GoalAvgRatio.Length; i++) s.GoalAvgRatio[i] /= n;
 
-        if (matches == null || matches.Count == 0)
-            return;
+        s.AvgMovesUsed         /= n;
+        s.AvgTilesCleared      /= n;
+        s.AvgSpecialsCreated   /= n;
+        s.AvgSpecialsActivated /= n;
+        s.AvgCombos            /= n;
+        s.AvgCascadeSteps      /= n;
+        s.AvgShuffles          /= n;
+        s.AvgSpecialsCaged     /= n;
 
-        bool? swapHorizontal = null;
-        if (playerSwap.HasValue)
+        s.AvgMovesOnWin          = wins > 0 ? movesOnWin / wins : 0f;
+        s.AvgMovesLeftOnWin      = wins > 0 ? movesLeftOnWin / wins : 0f;
+        s.AvgGoalCompletionOnLoss = losses > 0 ? completionOnLoss / losses : 0f;
+
+        if (losses > 0)
         {
-            var sw = playerSwap.Value;
-            if (sw.AY == sw.BY && sw.AX != sw.BX) swapHorizontal = true;
-            else if (sw.AX == sw.BX && sw.AY != sw.BY) swapHorizontal = false;
-
-            foreach (var td in matches)
+            float worst = float.MaxValue;
+            for (int i = 0; i < s.GoalAvgRatioOnLoss.Length; i++)
             {
-                if (td == null || td.Special != TileSpecial.None) continue;
-                bool isSwapEnd = (td.X == sw.AX && td.Y == sw.AY) || (td.X == sw.BX && td.Y == sw.BY);
-                if (!isSwapEnd) continue;
-
-                var candidate = finder.DecideSpecialAt(td.X, td.Y, swapHorizontal);
-                if (SpecialCreationScore(candidate) <= SpecialCreationScore(spType)) continue;
-
-                spx = td.X;
-                spy = td.Y;
-                spType = candidate;
-            }
-
-            if (spType != TileSpecial.None)
-                return;
-        }
-
-        foreach (var td in matches)
-        {
-            if (td == null || td.Special != TileSpecial.None) continue;
-            var candidate = finder.DecideSpecialAt(td.X, td.Y);
-            if (SpecialCreationScore(candidate) <= SpecialCreationScore(spType)) continue;
-
-            spx = td.X;
-            spy = td.Y;
-            spType = candidate;
-        }
-    }
-
-    private static int SpecialCreationScore(TileSpecial special)
-    {
-        switch (special)
-        {
-            case TileSpecial.SystemOverride: return 5;
-            case TileSpecial.PulseCore:      return 4;
-            case TileSpecial.PatchBot:       return 3;
-            case TileSpecial.LineH:
-            case TileSpecial.LineV:          return 2;
-            default:                         return 0;
-        }
-    }
-
-    // ── Goal tracker ─────────────────────────────────────────────────────────
-
-    private sealed class GoalTracker
-    {
-        private readonly int[] _tileNeeded  = new int[4]; // Gear/Core/Bolt/Plate
-        private readonly int[] _tileCleared = new int[4];
-        private bool _hasTileGoals;
-
-        // Obstacle goals: obstacleId(int) → needed count
-        private readonly Dictionary<int, int> _obsNeeded  = new();
-        private readonly Dictionary<int, int> _obsCleared = new();
-        private bool _hasObstacleGoals;
-
-        private readonly SimObstacleLayer _obs;
-
-        public GoalTracker(LevelData level, SimObstacleLayer obs)
-        {
-            _obs = obs;
-            if (level.goals == null) return;
-
-            foreach (var g in level.goals)
-            {
-                if (g.targetType == LevelGoalTargetType.Tile)
+                s.GoalAvgRatioOnLoss[i] /= losses;
+                if (s.GoalAvgRatioOnLoss[i] < worst)
                 {
-                    int idx = TileTypeIndex(g.tileType);
-                    if (idx < 0) continue;
-                    _tileNeeded[idx] += g.amount;
-                    _hasTileGoals = true;
-                }
-                else if (g.targetType == LevelGoalTargetType.Obstacle && obs != null)
-                {
-                    int id = (int)g.obstacleId;
-                    _obsNeeded.TryGetValue(id, out int prev);
-                    _obsNeeded[id] = prev + g.amount;
-                    _obsCleared[id] = 0;
-                    _hasObstacleGoals = true;
+                    worst = s.GoalAvgRatioOnLoss[i];
+                    s.BottleneckGoalIndex = i;
                 }
             }
         }
 
-        public void RecordTile(TileType t)
+        s.DifficultyScore = 1f - s.WinRate;
+        s.DifficultyLabel = LabelFor(s.WinRate);
+        return s;
+    }
+
+    private static string LabelFor(float winRate)
+    {
+        if (winRate >= 0.90f) return "ÇOK KOLAY";
+        if (winRate >= 0.70f) return "kolay";
+        if (winRate >= 0.45f) return "dengeli";
+        if (winRate >= 0.25f) return "zor";
+        if (winRate >= 0.10f) return "ÇOK ZOR";
+        return "GEÇİLEMEZ?";
+    }
+
+    /// <summary>
+    /// %95 Wilson güven aralığı. 150 oyunda %40 gördüysen gerçek değer %32-%48 arasıdır —
+    /// bu aralığı bilmeden level dengesi "ayarlamak" gürültüyü kovalamaktır.
+    /// </summary>
+    private static (float low, float high) WilsonInterval(int successes, int total)
+    {
+        if (total == 0) return (0f, 0f);
+
+        const double z = 1.96;
+        double p = (double)successes / total;
+        double denom = 1 + z * z / total;
+        double center = p + z * z / (2.0 * total);
+        double margin = z * System.Math.Sqrt(p * (1 - p) / total + z * z / (4.0 * total * total));
+
+        return ((float)((center - margin) / denom), (float)((center + margin) / denom));
+    }
+
+    private static void CollectWarnings(SimLevel level, SimRules rules, RunStats s)
+    {
+        s.Fidelity = InspectModel(level, rules, s.Warnings);
+        if (s.Fidelity == SimGoalFidelity.NotSimulated)
+            s.Warnings.Add("Bu levelda simüle EDİLMEYEN hedef var (EnergyOrb / KeyGenerator / RocketBasket gibi) — win% GÜVENİLMEZ.");
+        else if (s.Fidelity == SimGoalFidelity.Approximate)
+            s.Warnings.Add("Bellek motorunun refill, hedef seçimi ve servis zamanlamaları yaklaşık; oran yalnız bu bot/model için ölçümdür.");
+
+        if (level.levelKind == LevelKind.BossDuel)
+            s.Warnings.Add("BossDuel levelı: boss saldırıları/dalgaları simüle edilmiyor, yalnız hasar birikimi.");
+
+        var missing = rules?.MissingDefs;
+        if (missing != null && missing.Length > 0)
         {
-            int idx = TileTypeIndex(t);
-            if (idx >= 0) _tileCleared[idx]++;
+            var names = new List<string>();
+            foreach (var id in missing) names.Add(id.ToString());
+            s.Warnings.Add($"ObstacleLibrary'de tanımı olmayan obstacle: {string.Join(", ", names)} (1 vuruşluk blocker varsayıldı).");
         }
 
-        // Pull latest cleared counts from SimObstacleLayer after each cascade step.
-        public void SyncObstacleCounts()
-        {
-            if (_obs == null || !_hasObstacleGoals) return;
-            foreach (var id in _obsNeeded.Keys)
-                _obsCleared[id] = _obs.GetClearedCount((ObstacleId)id);
-        }
+        CheckGoalReachability(level, rules, s);
 
-        public bool AllMet
+        if (level.goals == null || level.goals.Length == 0)
+            s.Warnings.Add("Levelda hedef tanımlı değil — kazanmak imkânsız, win% 0 çıkar.");
+
+        if (s.GameCount > 0 && s.DeadlockGames > s.GameCount / 10)
+            s.Warnings.Add($"Oyunların %{100f * s.DeadlockGames / s.GameCount:F0}'ı hamlesiz kaldı (shuffle da kurtaramadı) — tahta çok kilitli.");
+    }
+
+    /// <summary>Whole-level coverage, including mechanics that are NOT level goals.</summary>
+    public static SimGoalFidelity InspectModel(LevelData level, SimRules rules, List<string> warnings)
+        => InspectModel(new SimLevel(level), rules, warnings);
+
+    private static SimGoalFidelity InspectModel(SimLevel level, SimRules rules, List<string> warnings)
+    {
+        // Refill/target timing remains a headless model; no empirical claim of exact human difficulty.
+        var fidelity = SimGoalFidelity.Approximate;
+        var goalFidelity = new SimGoalSet(level).Fidelity;
+        if (goalFidelity == SimGoalFidelity.NotSimulated) fidelity = goalFidelity;
+        var ids = new HashSet<ObstacleId>();
+        if (level.obstacles != null)
+            foreach (int id in level.obstacles) if (id != 0) ids.Add((ObstacleId)id);
+        if (level.stackedObstacles != null)
+            foreach (var item in level.stackedObstacles) ids.Add(item.obstacleId);
+        if (level.tubes != null && level.tubes.Length > 0) ids.Add(ObstacleId.Tube);
+        if (level.magnets != null && level.magnets.Length > 0) ids.Add(ObstacleId.Magnet);
+        if (level.safes != null && level.safes.Length > 0) ids.Add(ObstacleId.Safe);
+        if (level.goals != null)
+            foreach (var goal in level.goals)
+                if (goal.targetType == LevelGoalTargetType.Obstacle) ids.Add(goal.obstacleId);
+
+        foreach (var id in ids)
         {
-            get
+            if (id == ObstacleId.None) continue;
+            if (!rules.HasDef(id))
             {
-                if (!_hasTileGoals && !_hasObstacleGoals) return false;
-
-                if (_hasTileGoals)
-                    for (int i = 0; i < 4; i++)
-                        if (_tileCleared[i] < _tileNeeded[i]) return false;
-
-                if (_hasObstacleGoals)
-                    foreach (var kv in _obsNeeded)
-                        if (_obsCleared.GetValueOrDefault(kv.Key, 0) < kv.Value)
-                            return false;
-
-                return true;
+                fidelity = SimGoalFidelity.NotSimulated;
+                warnings.Add($"{id}: obstacle tanımı eksik; bu level için zorluk hesaplanmadı.");
+            }
+            switch (id)
+            {
+                case ObstacleId.EnergyContainer:
+                case ObstacleId.HatLauncher:
+                case ObstacleId.KeyGenerator:
+                case ObstacleId.RocketBasket:
+                case ObstacleId.Barrel:
+                case ObstacleId.Barrell_v2:
+                case ObstacleId.EggBird:
+                case ObstacleId.BatteryBox:
+                case ObstacleId.OverrideBatteryBox:
+                case ObstacleId.SpreadingGel:
+                case ObstacleId.Oil:
+                    fidelity = SimGoalFidelity.NotSimulated;
+                    warnings.Add($"{id}: üretim/yayılma/özel servis davranışı eksik; hedef olmasa da sonucu etkiler.");
+                    break;
+                case ObstacleId.Magnet:
+                case ObstacleId.Safe:
+                case ObstacleId.Tube:
+                case ObstacleId.Wardrobe:
+                case ObstacleId.Cargo:
+                    warnings.Add($"{id}: servis zamanlaması/özel durumları yaklaşık modelleniyor.");
+                    break;
             }
         }
-
-        private static int TileTypeIndex(TileType t) => t switch
+        if (level.levelKind == LevelKind.BossDuel)
         {
-            TileType.Gear  => 0,
-            TileType.Core  => 1,
-            TileType.Bolt  => 2,
-            TileType.Plate => 3,
-            _              => -1
+            fidelity = SimGoalFidelity.NotSimulated;
+            warnings.Add("Boss saldırıları ve savunması modellenmediği için düello zorluğu hesaplanmadı.");
+        }
+        return fidelity;
+    }
+
+    /// <summary>
+    /// Yazım hatası avcısı: hedef X adet obstacle istiyor ama tahtada o kadarı YOK —
+    /// level matematiksel olarak kazanılamaz. Win%'e bakmadan önce bunu bilmek gerekir.
+    /// (Üreyen obstacle'lar — Barrel'ın saçtığı Mud gibi — hariç tutulur.)
+    /// </summary>
+    private static void CheckGoalReachability(SimLevel level, SimRules rules, RunStats s)
+    {
+        if (level.goals == null) return;
+
+        var layer = new SimObstacleLayer(level, rules);
+
+        foreach (var g in level.goals)
+        {
+            if (g.targetType != LevelGoalTargetType.Obstacle) continue;
+            if (CanAppearDuringPlay(g.obstacleId, rules)) continue;
+
+            int available = layer.GetInitialCount(g.obstacleId);
+            if (available >= g.amount) continue;
+
+            s.Warnings.Add(available == 0
+                ? $"HEDEF TAHTADA YOK: {g.obstacleId} x{g.amount} isteniyor ama levelda hiç yok → kazanmak İMKÂNSIZ."
+                : $"HEDEF YETERSİZ: {g.obstacleId} x{g.amount} isteniyor ama levelda {available} tane var → kazanmak İMKÂNSIZ.");
+        }
+    }
+
+    /// <summary>
+    /// Oyun sırasında YENİSİ doğabilen obstacle mı? Böyleyse başlangıç sayısının hedefi
+    /// karşılaması gerekmez. MOVABLE hedefler (plastic_red vb.) refill sırasında tepeden
+    /// yeniden üretilir — bu kural def'ten okunur, elle liste tutulmaz.
+    /// </summary>
+    public static bool CanAppearDuringPlay(ObstacleId id, SimRules rules)
+    {
+        var rule = rules?.Get(id);
+        if (rule != null && !rule.IsFallback && rule.IsMovable(rule.Hits)) return true;
+
+        return id switch
+        {
+            ObstacleId.Mud          => true,   // Barrel kırılınca saçılır
+            ObstacleId.Oil          => true,   // yayılır
+            ObstacleId.SpreadingGel => true,   // yayılır
+            ObstacleId.KeyGenerator => true,   // Key üretir
+            _                       => false
         };
     }
 
-    private static void CountTile(ref GameResult r, TileType t)
-    {
-        switch (t)
-        {
-            case TileType.Gear:  r.GearsCleared++;  break;
-            case TileType.Core:  r.CoresCleared++;  break;
-            case TileType.Bolt:  r.BoltsCleared++;  break;
-            case TileType.Plate: r.PlatesCleared++; break;
-        }
-    }
+    // ── Rapor ────────────────────────────────────────────────────────────────
 
-    // ── Special aktivasyonu (yaklaşık footprint) ─────────────────────────────
-
-    // Takas bir/iki special içeriyorsa aktive eder; hücreleri temizler + yerçekimi/doldurma yapar.
-    private static void ActivateSwapSpecials(
-        SimState s, System.Random rng, SimMatchFinder finder,
-        GoalTracker goals, ref GameResult result, SimSwap swap)
-    {
-        var ta = s.Grid[swap.AX, swap.AY];
-        var tb = s.Grid[swap.BX, swap.BY];
-        bool sa = ta != null && ta.Special != TileSpecial.None;
-        bool sb = tb != null && tb.Special != TileSpecial.None;
-        if (!sa && !sb) return;
-
-        var obs = s.Obstacles as SimObstacleLayer;
-        var visited = new HashSet<(int, int)>();
-
-        if (sa && sb)
-        {
-            TriggerSpecialCombo(
-                s, obs, goals, ref result,
-                swap.AX, swap.AY, ta.Special, ColorOf(tb),
-                swap.BX, swap.BY, tb.Special, ColorOf(ta),
-                visited);
-        }
-        else
-        {
-            if (sa) TriggerSpecial(s, obs, goals, ref result, swap.AX, swap.AY, ta.Special, ColorOf(tb ?? ta), visited);
-            if (sb) TriggerSpecial(s, obs, goals, ref result, swap.BX, swap.BY, tb.Special, ColorOf(ta ?? tb), visited);
-        }
-
-        goals.SyncObstacleCounts();
-
-        // Aktivasyon boşluk açtı → yerçekimi + doldur (yoksa RunCascade tetiklenmez).
-        obs?.SyncHoles(s);
-        obs?.ApplyGravity(s);
-        SimCascade.ApplyGravityAndRefill(s, rng);
-        finder.InvalidateRunCache();
-    }
-
-    private static void TriggerSpecial(
-        SimState s, SimObstacleLayer obs, GoalTracker goals, ref GameResult result,
-        int x, int y, TileSpecial sp, TileType targetColor, HashSet<(int, int)> visited)
-    {
-        if (!visited.Add((x, y))) return;
-        if (s.Grid[x, y] != null) { s.Grid[x, y] = null; result.TilesCleared++; }   // special'ı tüket
-
-        switch (sp)
-        {
-            case TileSpecial.LineH:
-                for (int i = 0; i < s.Width; i++) ClearForSpecial(s, obs, goals, ref result, i, y, visited);
-                break;
-            case TileSpecial.LineV:
-                for (int i = 0; i < s.Height; i++) ClearForSpecial(s, obs, goals, ref result, x, i, visited);
-                break;
-            case TileSpecial.PatchBot:   // PatchBot gerçek oyunda obstacle hedefleyip 5x5 patlar.
-            {
-                var target = BestPatchBotTarget(s, obs, x, y);
-                ClearSquareForSpecial(s, obs, goals, ref result, target.x, target.y, 2, visited);
-                break;
-            }
-            case TileSpecial.PulseCore:  // L/T/5-küme ≈ geniş patlama 5x5
-                ClearSquareForSpecial(s, obs, goals, ref result, x, y, 2, visited);
-                break;
-            case TileSpecial.SystemOverride:  // 5 düz ≈ renk bombası (hedef rengin hepsi)
-                for (int yy = 0; yy < s.Height; yy++)
-                    for (int xx = 0; xx < s.Width; xx++)
-                    {
-                        var t = s.Grid[xx, yy];
-                        if (t != null && t.Special == TileSpecial.None && t.Type == targetColor)
-                            ClearForSpecial(s, obs, goals, ref result, xx, yy, visited);
-                    }
-                break;
-        }
-    }
-
-    private static void TriggerSpecialCombo(
-        SimState s, SimObstacleLayer obs, GoalTracker goals, ref GameResult result,
-        int ax, int ay, TileSpecial a, TileType aTargetColor,
-        int bx, int by, TileSpecial b, TileType bTargetColor,
-        HashSet<(int, int)> visited)
-    {
-        ConsumeSpecial(s, ref result, ax, ay, visited);
-        ConsumeSpecial(s, ref result, bx, by, visited);
-
-        if (a == TileSpecial.SystemOverride && b == TileSpecial.SystemOverride)
-        {
-            ClearBoardForSpecial(s, obs, goals, ref result, visited);
-            return;
-        }
-
-        if (a == TileSpecial.SystemOverride || b == TileSpecial.SystemOverride)
-        {
-            var converted = a == TileSpecial.SystemOverride ? b : a;
-            var color = a == TileSpecial.SystemOverride ? aTargetColor : bTargetColor;
-            TriggerOverrideCombo(s, obs, goals, ref result, converted, color, visited);
-            return;
-        }
-
-        if (a == TileSpecial.PulseCore && b == TileSpecial.PulseCore)
-        {
-            ClearSquareForSpecial(s, obs, goals, ref result, ax, ay, 4, visited);
-            return;
-        }
-
-        if ((IsLine(a) && b == TileSpecial.PulseCore) || (IsLine(b) && a == TileSpecial.PulseCore))
-        {
-            int cx = IsLine(a) ? ax : bx;
-            int cy = IsLine(a) ? ay : by;
-            ClearRowsForSpecial(s, obs, goals, ref result, cy, 1, visited);
-            ClearColumnsForSpecial(s, obs, goals, ref result, cx, 1, visited);
-            return;
-        }
-
-        if ((a == TileSpecial.PatchBot && b == TileSpecial.PatchBot) ||
-            (a == TileSpecial.PatchBot && b == TileSpecial.PulseCore) ||
-            (b == TileSpecial.PatchBot && a == TileSpecial.PulseCore))
-        {
-            var target = BestPatchBotTarget(s, obs, ax, ay);
-            ClearSquareForSpecial(s, obs, goals, ref result, target.x, target.y, a == TileSpecial.PatchBot && b == TileSpecial.PatchBot ? 3 : 2, visited);
-            return;
-        }
-
-        if ((a == TileSpecial.PatchBot && IsLine(b)) || (b == TileSpecial.PatchBot && IsLine(a)))
-        {
-            var line = IsLine(a) ? a : b;
-            var target = BestPatchBotTarget(s, obs, ax, ay);
-            ClearSquareForSpecial(s, obs, goals, ref result, target.x, target.y, 2, visited);
-            if (line == TileSpecial.LineH) ClearRowForSpecial(s, obs, goals, ref result, target.y, visited);
-            else ClearColumnForSpecial(s, obs, goals, ref result, target.x, visited);
-            return;
-        }
-
-        if (IsLine(a) && IsLine(b))
-        {
-            ClearRowForSpecial(s, obs, goals, ref result, ay, visited);
-            ClearColumnForSpecial(s, obs, goals, ref result, ax, visited);
-            return;
-        }
-
-        TriggerSpecial(s, obs, goals, ref result, ax, ay, a, aTargetColor, visited);
-        TriggerSpecial(s, obs, goals, ref result, bx, by, b, bTargetColor, visited);
-    }
-
-    private static void TriggerOverrideCombo(
-        SimState s, SimObstacleLayer obs, GoalTracker goals, ref GameResult result,
-        TileSpecial converted, TileType color, HashSet<(int, int)> visited)
-    {
-        if (converted == TileSpecial.PulseCore)
-        {
-            var cells = CollectColorCells(s, color);
-            foreach (var (x, y) in cells)
-                ClearSquareForSpecial(s, obs, goals, ref result, x, y, 2, visited);
-            return;
-        }
-
-        if (converted == TileSpecial.PatchBot)
-        {
-            ClearColorForSpecial(s, obs, goals, ref result, color, visited);
-            var target = BestPatchBotTarget(s, obs, 0, s.Height - 1);
-            ClearSquareForSpecial(s, obs, goals, ref result, target.x, target.y, 3, visited);
-            return;
-        }
-
-        if (converted == TileSpecial.LineH || converted == TileSpecial.LineV)
-        {
-            var cells = CollectColorCells(s, color);
-            foreach (var (x, y) in cells)
-            {
-                if (converted == TileSpecial.LineH) ClearRowForSpecial(s, obs, goals, ref result, y, visited);
-                else ClearColumnForSpecial(s, obs, goals, ref result, x, visited);
-            }
-            return;
-        }
-
-        ClearColorForSpecial(s, obs, goals, ref result, color, visited);
-    }
-
-    private static void ClearForSpecial(
-        SimState s, SimObstacleLayer obs, GoalTracker goals, ref GameResult result,
-        int x, int y, HashSet<(int, int)> visited)
-    {
-        if (x < 0 || y < 0 || x >= s.Width || y >= s.Height) return;
-        if (s.Holes[x, y]) return;
-        var t = s.Grid[x, y];
-        if (t == null) return;
-
-        if (t.Special != TileSpecial.None)   // footprint başka special'a değdi → zincirle
-        {
-            TriggerSpecial(s, obs, goals, ref result, x, y, t.Special, ColorOf(t), visited);
-            return;
-        }
-
-        goals.RecordTile(t.Type);
-        CountTile(ref result, t.Type);
-        obs?.ProcessMatchClear(x, y, t.Type);
-        s.Grid[x, y] = null;
-        result.TilesCleared++;
-    }
-
-    private static void ConsumeSpecial(SimState s, ref GameResult result, int x, int y, HashSet<(int, int)> visited)
-    {
-        if (x < 0 || y < 0 || x >= s.Width || y >= s.Height) return;
-        visited.Add((x, y));
-        if (s.Grid[x, y] == null) return;
-        s.Grid[x, y] = null;
-        result.TilesCleared++;
-    }
-
-    private static void ClearBoardForSpecial(
-        SimState s, SimObstacleLayer obs, GoalTracker goals, ref GameResult result,
-        HashSet<(int, int)> visited)
-    {
-        for (int y = 0; y < s.Height; y++)
-            for (int x = 0; x < s.Width; x++)
-                ClearForSpecial(s, obs, goals, ref result, x, y, visited);
-    }
-
-    private static void ClearColorForSpecial(
-        SimState s, SimObstacleLayer obs, GoalTracker goals, ref GameResult result,
-        TileType color, HashSet<(int, int)> visited)
-    {
-        for (int y = 0; y < s.Height; y++)
-            for (int x = 0; x < s.Width; x++)
-                if (IsNormalColor(s, x, y, color))
-                    ClearForSpecial(s, obs, goals, ref result, x, y, visited);
-    }
-
-    private static void ClearSquareForSpecial(
-        SimState s, SimObstacleLayer obs, GoalTracker goals, ref GameResult result,
-        int cx, int cy, int radius, HashSet<(int, int)> visited)
-    {
-        for (int dy = -radius; dy <= radius; dy++)
-            for (int dx = -radius; dx <= radius; dx++)
-                ClearForSpecial(s, obs, goals, ref result, cx + dx, cy + dy, visited);
-    }
-
-    private static void ClearRowsForSpecial(
-        SimState s, SimObstacleLayer obs, GoalTracker goals, ref GameResult result,
-        int centerY, int radius, HashSet<(int, int)> visited)
-    {
-        for (int y = centerY - radius; y <= centerY + radius; y++)
-            ClearRowForSpecial(s, obs, goals, ref result, y, visited);
-    }
-
-    private static void ClearColumnsForSpecial(
-        SimState s, SimObstacleLayer obs, GoalTracker goals, ref GameResult result,
-        int centerX, int radius, HashSet<(int, int)> visited)
-    {
-        for (int x = centerX - radius; x <= centerX + radius; x++)
-            ClearColumnForSpecial(s, obs, goals, ref result, x, visited);
-    }
-
-    private static void ClearRowForSpecial(
-        SimState s, SimObstacleLayer obs, GoalTracker goals, ref GameResult result,
-        int y, HashSet<(int, int)> visited)
-    {
-        if (y < 0 || y >= s.Height) return;
-        for (int x = 0; x < s.Width; x++)
-            ClearForSpecial(s, obs, goals, ref result, x, y, visited);
-    }
-
-    private static void ClearColumnForSpecial(
-        SimState s, SimObstacleLayer obs, GoalTracker goals, ref GameResult result,
-        int x, HashSet<(int, int)> visited)
-    {
-        if (x < 0 || x >= s.Width) return;
-        for (int y = 0; y < s.Height; y++)
-            ClearForSpecial(s, obs, goals, ref result, x, y, visited);
-    }
-
-    private static (int x, int y) BestPatchBotTarget(SimState s, SimObstacleLayer obs, int fallbackX, int fallbackY)
-    {
-        if (obs == null) return (fallbackX, fallbackY);
-
-        float bestScore = 0f;
-        int bestX = fallbackX;
-        int bestY = fallbackY;
-
-        for (int y = 0; y < s.Height; y++)
-        {
-            for (int x = 0; x < s.Width; x++)
-            {
-                float score = 0f;
-                for (int dy = -2; dy <= 2; dy++)
-                    for (int dx = -2; dx <= 2; dx++)
-                        if (obs.ObstacleIdAt(x + dx, y + dy) != ObstacleId.None)
-                            score += 1f;
-
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    bestX = x;
-                    bestY = y;
-                }
-            }
-        }
-
-        return (bestX, bestY);
-    }
-
-    private static bool IsNormalColor(SimState s, int x, int y, TileType color)
-    {
-        if (x < 0 || y < 0 || x >= s.Width || y >= s.Height) return false;
-        if (s.Holes[x, y]) return false;
-        var tile = s.Grid[x, y];
-        return tile != null && tile.Special == TileSpecial.None && tile.Type == color;
-    }
-
-    private static List<(int x, int y)> CollectColorCells(SimState s, TileType color)
-    {
-        var cells = new List<(int x, int y)>();
-        for (int y = 0; y < s.Height; y++)
-            for (int x = 0; x < s.Width; x++)
-                if (IsNormalColor(s, x, y, color))
-                    cells.Add((x, y));
-        return cells;
-    }
-
-    private static TileType ColorOf(TileData t)
-        => t != null && t.HasOverrideBaseType ? t.OverrideBaseType : (t != null ? t.Type : TileType.Gear);
-
-    private static bool IsLine(TileSpecial special)
-        => special == TileSpecial.LineH || special == TileSpecial.LineV;
-
-    // ── Report ────────────────────────────────────────────────────────────────
-
-    public static string FormatStats(RunStats s, LevelData level)
+    public static string FormatStats(RunStats s)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"[SimRunner] Level: {level.name}  Games: {s.GameCount}  Moves/game: {level.moves}");
-        sb.AppendLine($"  Win rate             : {s.WinRate:P1}  ({s.GamesWon}/{s.GameCount})");
-        sb.AppendLine($"  Avg moves / game     : {s.AvgMovesPerGame:F1}");
+        if (s.Fidelity == SimGoalFidelity.NotSimulated)
+        {
+            sb.AppendLine($"[Sim] {s.LevelName} — MODELLENMİYOR (koşu yapılmadı)");
+            foreach (var warning in s.Warnings) sb.AppendLine("  ⚠ " + warning);
+            return sb.ToString().TrimEnd();
+        }
+        sb.AppendLine($"[Sim] {s.LevelName} — {s.ProfileName} profili, {s.GameCount} oyun, {s.MovesBudget} hamle ({s.ElapsedMs} ms)");
+        sb.AppendLine("  Sonuç bot modeline aittir; insan kazanma oranı veya çözülebilirlik kanıtı değildir.");
+        sb.AppendLine($"  Win rate            : {s.WinRate:P1}  [{s.WinRateLow:P0}–{s.WinRateHigh:P0}] → {s.DifficultyLabel}   ({s.GamesWon}/{s.GameCount})");
 
         if (s.GamesWon > 0)
-            sb.AppendLine($"  Avg moves on WIN     : {s.AvgMovesOnWin:F1}");
-        if (s.GameCount - s.GamesWon > 0)
-            sb.AppendLine($"  Avg moves on LOSS    : {s.AvgMovesOnLoss:F1}");
+            sb.AppendLine($"  Kazanınca           : {s.AvgMovesOnWin:F1} hamlede, {s.AvgMovesLeftOnWin:F1} hamle artarak");
+        if (s.GamesWon < s.GameCount)
+            sb.AppendLine($"  Kaybedince          : hedefin %{s.AvgGoalCompletionOnLoss * 100f:F0}'ına ulaşabildi");
 
-        sb.AppendLine($"  Avg tiles cleared    : {s.AvgTilesClearedPerGame:F1}");
-        sb.AppendLine($"  Avg specials formed  : {s.AvgSpecialsPerGame:F2}");
-        sb.AppendLine($"  Avg cascade steps    : {s.AvgCascadeStepsPerGame:F2}");
-        sb.AppendLine($"  Max cascade chain    : {s.MaxCascadeChainSeen}");
+        if (s.GoalLabels.Length > 0)
+        {
+            bool hasLosses = s.GamesWon < s.GameCount;
+            sb.AppendLine(hasLosses
+                ? "  Hedefler (ortalama tamamlanma — tüm oyunlar / kaybedilenler):"
+                : "  Hedefler (ortalama tamamlanma):");
 
-        if (s.TotalDeadlockMoves > 0)
-            sb.AppendLine($"  Total deadlock moves : {s.TotalDeadlockMoves}");
+            for (int i = 0; i < s.GoalLabels.Length; i++)
+            {
+                string mark = hasLosses && i == s.BottleneckGoalIndex && s.GoalLabels.Length > 1 ? "  ← TIKAYAN" : "";
+                string loss = hasLosses ? $"  /  %{s.GoalAvgRatioOnLoss[i] * 100f:F0}" : "";
+                sb.AppendLine($"    {s.GoalLabels[i],-28} %{s.GoalAvgRatio[i] * 100f:F0}{loss}{mark}");
+            }
+        }
 
-        sb.AppendLine($"  Obstacle origins in level   : {s.ObstacleCountInLevel}");
-        sb.AppendLine($"  Avg obstacle clears / game  : {s.AvgObstacleClearsPerGame:F1}");
+        sb.AppendLine($"  Taş / oyun          : {s.AvgTilesCleared:F1}");
+        sb.AppendLine($"  Special üretildi    : {s.AvgSpecialsCreated:F2}   kullanıldı: {s.AvgSpecialsActivated:F2}   combo: {s.AvgCombos:F2}");
+        sb.AppendLine($"  Cascade adımı       : {s.AvgCascadeSteps:F2}   en uzun zincir: {s.MaxChainSeen}");
 
-        AppendGoalInfo(sb, level);
+        if (s.AvgSpecialsCaged > 0.01f)
+            sb.AppendLine($"  Magnet kafesledi    : {s.AvgSpecialsCaged:F2} special / oyun (oyuncunun elinden gitti)");
+
+        if (s.AvgShuffles > 0.01f || s.DeadlockGames > 0)
+            sb.AppendLine($"  Shuffle / oyun      : {s.AvgShuffles:F2}   hamlesiz biten: {s.DeadlockGames}");
+
+        foreach (var w in s.Warnings)
+            sb.AppendLine($"  ⚠ {w}");
 
         return sb.ToString().TrimEnd();
     }
 
-    private static void AppendGoalInfo(StringBuilder sb, LevelData level)
-    {
-        if (level.goals == null || level.goals.Length == 0) return;
+    public static string CsvHeader()
+        => "Level,Profile,Games,Win%,WinLow%,WinHigh%,Difficulty,Moves,AvgMovesOnWin,AvgMovesLeftOnWin," +
+           "GoalCompletionOnLoss%,BottleneckGoal,AvgTiles,AvgSpecials,AvgCombos,Deadlocks,AvgShuffles,Fidelity,Seed,Warnings";
 
-        sb.AppendLine("  Goals:");
-        foreach (var g in level.goals)
+    private static string CsvCell(string value) => "\"" + (value ?? "").Replace("\"", "\"\"") + "\"";
+    private static string Number(float value, string format)
+        => value.ToString(format, System.Globalization.CultureInfo.InvariantCulture);
+
+    public static string CsvRow(RunStats s)
+    {
+        bool measured = s.GameCount > 0 && s.Fidelity != SimGoalFidelity.NotSimulated;
+        string bottleneck = s.BottleneckGoalIndex >= 0 && s.BottleneckGoalIndex < s.GoalLabels.Length
+            ? s.GoalLabels[s.BottleneckGoalIndex] : "-";
+        return string.Join(",", new[]
         {
-            string target = g.targetType switch
-            {
-                LevelGoalTargetType.Tile        => g.tileType.ToString(),
-                LevelGoalTargetType.Obstacle    => g.obstacleId == ObstacleId.EnergyContainer
-                                                    ? $"{g.obstacleId} (not simulated)"
-                                                    : g.obstacleId.ToString(),
-                LevelGoalTargetType.Collectible => $"{g.collectibleId} (not simulated)",
-                _                               => "?"
-            };
-            sb.AppendLine($"    {target} x{g.amount}");
-        }
+            CsvCell(s.LevelName), CsvCell(s.ProfileName), s.GameCount.ToString(),
+            measured ? Number(s.WinRate * 100, "F1") : "",
+            measured ? Number(s.WinRateLow * 100, "F1") : "",
+            measured ? Number(s.WinRateHigh * 100, "F1") : "",
+            CsvCell(s.DifficultyLabel), s.MovesBudget.ToString(),
+            measured ? Number(s.AvgMovesOnWin, "F1") : "",
+            measured ? Number(s.AvgMovesLeftOnWin, "F1") : "",
+            measured ? Number(s.AvgGoalCompletionOnLoss * 100, "F1") : "",
+            CsvCell(bottleneck), measured ? Number(s.AvgTilesCleared, "F1") : "",
+            measured ? Number(s.AvgSpecialsCreated, "F2") : "",
+            measured ? Number(s.AvgCombos, "F2") : "", measured ? s.DeadlockGames.ToString() : "",
+            measured ? Number(s.AvgShuffles, "F2") : "", s.Fidelity.ToString(), s.Seed.ToString(),
+            CsvCell(string.Join(" | ", s.Warnings))
+        });
     }
 }

@@ -22,14 +22,17 @@ public class WonderRevealOverlay : MonoBehaviour
     WonderScene _scene;
     public bool IsPlaying { get; private set; }
 
-    /// <summary>fromStage = harcamadan ÖNCEki kademe. CurrentStage zaten artmış olmalı.</summary>
-    public IEnumerator PlayReveal(WonderCatalog cat, int fromStage)
+    /// <summary>
+    /// wonderIndex = görevi yapılan EVENT indeksi; fromStage = harcamadan ÖNCEki kademe
+    /// (o event'in stage'i zaten artmış olmalı).
+    /// </summary>
+    public IEnumerator PlayReveal(WonderCatalog cat, int wonderIndex, int fromStage)
     {
         IsPlaying = true;
-        var w = WonderProgress.CurrentWonder(cat);
+        var w = cat != null ? cat.Get(wonderIndex) : null;
         if (w == null) { IsPlaying = false; yield break; }
 
-        int toStage = WonderProgress.CurrentStage;
+        int toStage = WonderProgress.StageOf(wonderIndex);
         float fromN = w.TaskCount > 0 ? (float)fromStage / w.TaskCount : 0f;
         float toN = w.TaskCount > 0 ? (float)toStage / w.TaskCount : 1f;
 
@@ -43,11 +46,12 @@ public class WonderRevealOverlay : MonoBehaviour
         yield return Fade(0f, 1f);
         yield return view.PlayRevealRoutine(toN);   // kaynak animasyonu
 
-        // Son görev tamamlandıysa: sandık + sıradaki harikaya geç
-        if (WonderProgress.IsCurrentWonderComplete(cat))
+        // Bu event'in son görevi tamamlandıysa: sandık + event'i tamamlandı işaretle.
+        // (Diğer event'ler bundan etkilenmez; yeni event kilidi BÖLÜM ile açılır.)
+        if (WonderProgress.IsEventComplete(cat, wonderIndex))
         {
             yield return PlayChest(w);
-            WonderProgress.AdvanceToNextWonder();
+            WonderProgress.MarkEventCompleted(cat, wonderIndex);
         }
 
         if (holdAfterReveal > 0f) yield return new WaitForSeconds(holdAfterReveal);

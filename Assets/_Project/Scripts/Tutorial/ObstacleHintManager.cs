@@ -16,6 +16,7 @@ public class ObstacleHintManager : MonoBehaviour
 
     private void Start()
     {
+        if (RuntimeSimulationSession.IsActive) return;
         if (!enableHints) return;
         StartCoroutine(InitAndCheck());
     }

@@ -70,6 +70,7 @@ public sealed class TeamBrowserController : MonoBehaviour
     private int emblemIndex;
     private int minChapter;
     private bool wired;
+    private CommonPopupView infoPopupView;
 
     private void OnEnable()
     {
@@ -177,7 +178,9 @@ public sealed class TeamBrowserController : MonoBehaviour
         if (infoPopupRoot == null || entry == null) return;
 
         infoPopupRoot.SetActive(true);
+        ApplySharedInfoPopup();
         if (infoNameText != null) infoNameText.text = entry.name;
+        SingleLineText.Fit(infoNameText);
         if (infoCapacityText != null) infoCapacityText.text = $"{entry.members}/{entry.capacity}";
         if (infoDescText != null) infoDescText.text = entry.description;
         if (infoEmblem != null)
@@ -224,6 +227,34 @@ public sealed class TeamBrowserController : MonoBehaviour
         BackendServices.ResetTeam();   // yeni takımla taze (gerçek) sohbet servisi
         if (infoPopupRoot != null) infoPopupRoot.SetActive(false);
         OnTeamEntered?.Invoke();
+    }
+
+    private void ApplySharedInfoPopup()
+    {
+        if (infoPopupView != null || infoPopupRoot == null) return;
+        var oldCard = infoPopupRoot.transform.Find("Card");
+        infoPopupView = CommonPopupView.Create(infoPopupRoot.transform, "Takım Bilgisi",
+            () => infoPopupRoot.SetActive(false));
+        var color = CommonPopupSkin.Shared.bodyTextColor;
+        if (infoNameText != null)
+        {
+            CommonPopupView.Place(infoNameText, infoPopupView.transform, CommonPopupSkin.Shared.titleRegion);
+            CommonPopupView.StyleTitle(infoNameText);
+            infoNameText.richText = false;
+            infoPopupView.Title.gameObject.SetActive(false);
+        }
+        CommonPopupView.Place(infoEmblem, infoPopupView.Body, new Rect(0.35f, 0.67f, 0.30f, 0.30f));
+        CommonPopupView.Place(infoCapacityText, infoPopupView.Body, new Rect(0, 0.53f, 1, 0.12f));
+        CommonPopupView.Place(infoMinChapterText, infoPopupView.Body, new Rect(0, 0.41f, 1, 0.10f));
+        CommonPopupView.Place(infoDescText, infoPopupView.Body, new Rect(0, 0.02f, 1, 0.36f));
+        CommonPopupView.StyleText(infoCapacityText, 34, color);
+        CommonPopupView.StyleText(infoMinChapterText, 28, color);
+        CommonPopupView.StyleText(infoDescText, 32, color);
+        if (infoDescText != null) infoDescText.richText = false;
+        CommonPopupView.Place(infoJoinButton, infoPopupView.Actions, CommonPopupView.ActionRegion(0, 1));
+        CommonPopupView.StyleButton(infoJoinButton);
+        if (infoJoinButton != null) infoJoinButton.name = "BtnContinue";
+        if (oldCard != null) oldCard.gameObject.SetActive(false);
     }
 
     // ── Oluştur ─────────────────────────────────────────────────────
