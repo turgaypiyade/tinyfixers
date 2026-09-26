@@ -92,20 +92,9 @@ public sealed class SafariJoinPopupController : MonoBehaviour
             if (w > viewport.rect.width || h > viewport.rect.height)
                 fit = Mathf.Min(viewport.rect.width / Mathf.Max(1f, w), viewport.rect.height / Mathf.Max(1f, h));
         }
-        // NOT: `??` Unity'nin sahte-null kontrolünü atlar; TryGetComponent şart.
-        if (!popupRoot.TryGetComponent(out CanvasGroup group))
-            group = popupRoot.gameObject.AddComponent<CanvasGroup>();
-        float elapsed = 0f;
-        while (elapsed < 0.4f)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(elapsed / 0.4f);
-            group.alpha = Mathf.SmoothStep(0f, 1f, k);
-            popupRoot.localScale = popupBaseScale * fit * (1f - 0.14f * Mathf.Pow(1f - k, 3f) + Mathf.Sin(k * Mathf.PI) * 0.025f);
-            yield return null;
-        }
-        group.alpha = 1f;
+        // Ortak popup girişi (yukarıdan kayarak + fade). Ölçek yalnız sığdırma için.
         popupRoot.localScale = popupBaseScale * fit;
+        PopupEntranceAnimator.Enter(popupRoot);
         entrance = null;
     }
 

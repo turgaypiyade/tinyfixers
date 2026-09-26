@@ -764,13 +764,16 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         // Beam'ler bitti, hücreler boşaldı: taş düşüşü HEMEN başlasın (SweepLine ile
         // aynı ilerlemeli his). Arkadan gelen sessiz MatchClearAction origin tile'larını
         // ve obstacle hasarını işler; kalan boşlukları board resolve cascade'leri doldurur.
-        var cascades = board.CascadeLogic.CalculateCascades();
-        if (cascades != null)
+        if (!board.TryStartFlowGravity())
         {
-            for (int i = 0; i < cascades.Count; i++)
-                board.StartImmediateAction(cascades[i]);
+            var cascades = board.CascadeLogic.CalculateCascades();
+            if (cascades != null)
+            {
+                for (int i = 0; i < cascades.Count; i++)
+                    board.StartImmediateAction(cascades[i]);
+            }
+            board.RefreshAllSortingOrders();
         }
-        board.RefreshAllSortingOrders();
     }
     // Nested special'ı ayrı bir coroutine olarak çalıştırır; çalışan sayacını tutar ki
     // ana akış cascade'den önce hepsinin bitmesini (paralel) bekleyebilsin.

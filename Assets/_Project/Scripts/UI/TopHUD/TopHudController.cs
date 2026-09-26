@@ -39,6 +39,9 @@ public class TopHudController : MonoBehaviour
 
     private readonly List<RuntimeGoal> runtimeGoals = new();
     private bool initialized;
+
+    // Kırılmış ama mud saçılımı henüz bitmemiş barrel sayısı (Mud hedefinin placeholder'ı).
+    private int pendingBarrelSpreads;
     public bool IsInitialized => initialized;
 
     public bool AreAllGoalsCompleted { get; private set; }
@@ -71,6 +74,14 @@ public class TopHudController : MonoBehaviour
         board.OnSpreadingGelServiceChanged -= HandleSpreadingGelServiceChanged;
         UnhookGelService();
         initialized = false;
+    }
+
+    // Güvenlik ağı: mud'ı olay üretmeden değiştiren bir yol kalırsa bile sayaç bir kare içinde
+    // gerçeğe döner (board ~100 hücre; ucuz). Mud hedefi yoksa hiçbir şey yapmaz.
+    private void LateUpdate()
+    {
+        if (initialized)
+            RecomputeMudGoal();
     }
 
     private IEnumerator InitializeWhenReady()
@@ -112,6 +123,7 @@ public class TopHudController : MonoBehaviour
     private void BuildGoals(LevelData levelData)
     {
         runtimeGoals.Clear();
+        pendingBarrelSpreads = 0;
 
         if (goalsRoot != null)
         {
@@ -211,9 +223,32 @@ public class TopHudController : MonoBehaviour
     private void AddMudGoalPlaceholderForBarrel()
     {
         var goal = EnsureDynamicObstacleGoal(ObstacleId.Mud);
-        goal.remaining++;
+        pendingBarrelSpreads++;
         goal.dynamicTotal++;
+        RecomputeMudGoal();
+    }
+
+    // Mud hedefi GROUND-TRUTH'tan türetilir (KeyGenerator/jel kalıbı): kalan = board'da yaşayan
+    // mud (açık + over-tile altı + movable altı) + saçılımı bitmemiş barrel placeholder'ı.
+    // Eski event sayımı (+1 damla inişinde, -1 kırılışta) mud verisi damladan ÖNCE commit
+    // edildiği için kayıyordu: inmeden kırılan mud hiç eklenmeden düşülüyor, beneath'e yazılan
+    // mud hiç eklenmiyordu → sayaç ekranda mud varken 0'a iniyordu (LevelP_00810).
+    private void RecomputeMudGoal()
+    {
+        var goal = FindRuntimeObstacleGoal(ObstacleId.Mud);
+        var svc = board != null ? board.ObstacleStateService : null;
+        if (goal == null || svc == null)
+            return;
+
+        int remaining = svc.CountAllLiveOrigins(ObstacleId.Mud) + pendingBarrelSpreads;
+        if (goal.dynamicTotal < remaining)
+            goal.dynamicTotal = remaining;
+        if (goal.remaining == remaining)
+            return;
+
+        goal.remaining = remaining;
         goal.slot?.SetRemaining(goal.remaining);
+        UpdateGoalsCompletionState();
     }
 
     private TopHudGoalSlot CreateSlot(LevelGoalDefinition goal, int goalIndex)
@@ -372,6 +407,12 @@ public class TopHudController : MonoBehaviour
             anyGoalUpdated = true;
         }
 
+        if (obstacleId == ObstacleId.Mud)
+        {
+            RecomputeMudGoal();
+            return;
+        }
+
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
             var goal = runtimeGoals[i];
@@ -447,13 +488,14 @@ public class TopHudController : MonoBehaviour
         if (createdId != ObstacleId.Oil && createdId != ObstacleId.Mud)
             return;
 
-        bool anyGoalUpdated = false;
-
-        if (createdId == ObstacleId.Mud && FindRuntimeObstacleGoal(ObstacleId.Mud) == null)
+        if (createdId == ObstacleId.Mud)
         {
-            EnsureDynamicObstacleGoal(ObstacleId.Mud);
-            anyGoalUpdated = true;
+            EnsureDynamicObstacleGoal(ObstacleId.Mud).dynamicTotal++;
+            RecomputeMudGoal();
+            return;
         }
+
+        bool anyGoalUpdated = false;
 
         for (int i = 0; i < runtimeGoals.Count; i++)
         {
@@ -482,25 +524,11 @@ public class TopHudController : MonoBehaviour
     // kalır; decrement mud stamp'inden SONRA geldiğinden sayaç asla erken 0'a inmez.
     private void HandleBarrelResolved()
     {
-        bool anyGoalUpdated = false;
-
-        for (int i = 0; i < runtimeGoals.Count; i++)
-        {
-            var goal = runtimeGoals[i];
-            if (goal.definition.targetType != LevelGoalTargetType.Obstacle || goal.definition.obstacleId != ObstacleId.Mud)
-                continue;
-            if (goal.remaining <= 0)
-                continue;
-
-            goal.remaining--;
-            if (goal.dynamicTotal > 0)
-                goal.dynamicTotal--;
-            goal.slot?.SetRemaining(goal.remaining);
-            anyGoalUpdated = true;
-        }
-
-        if (anyGoalUpdated)
-            UpdateGoalsCompletionState();
+        pendingBarrelSpreads = Mathf.Max(0, pendingBarrelSpreads - 1);
+        var goal = FindRuntimeObstacleGoal(ObstacleId.Mud);
+        if (goal != null && goal.dynamicTotal > 0)
+            goal.dynamicTotal--;
+        RecomputeMudGoal();
     }
 
     private static int CountObstacleCells(LevelData levelData, ObstacleId id)

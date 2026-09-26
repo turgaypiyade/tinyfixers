@@ -57,8 +57,6 @@ public class TileView : MonoBehaviour,
     private int dragMoveToken;
     private int dragX, dragY;
     private bool wasDragging;
-    private bool pointerDownWhileBoardBusy;
-    private bool dragStartedWhileBoardBusy;
     public bool WasDragging => wasDragging;
     public BoardController Board => board;
     public int LastAppliedTileSize => lastAppliedTileSize > 0 ? lastAppliedTileSize : (board != null ? board.TileSize : 96);
@@ -223,7 +221,7 @@ public class TileView : MonoBehaviour,
     private Sprite movableObstacleSprite;
     private int lastAppliedTileSize;
 
-    // Bu taşın düştüğü CollapseAndSpawnAnimated nesil ID'si. -1 = hiç düşmedi.
+    // Bu taşın son düştüğü gravity nesli (board.FallGeneration). -1 = hiç düşmedi.
     private int lastFallGeneration = -1;
 
     // ── Tek-sahip hareket kilidi (gravity coalescing, C) ──────────────────────
@@ -2497,7 +2495,6 @@ public class TileView : MonoBehaviour,
     public void OnBeginDrag(PointerEventData eventData)
     {
         dragAccepted = false;
-        dragStartedWhileBoardBusy = false;
 
         if (board == null || !IsRuntimeIdle || board.GetTileViewAt(X, Y) != this
             || board.IsCellHeld(X, Y) || board.IsReservedTileTargetCell(X, Y))
@@ -2508,8 +2505,6 @@ public class TileView : MonoBehaviour,
 
         if (board.IsBusy && !board.CanStartDynamicDrag(this))
             return;
-
-        dragStartedWhileBoardBusy = board.IsBusy;
 
         if (board.ActiveBooster != BoardController.BoosterMode.None)
             return;
@@ -2551,10 +2546,9 @@ public class TileView : MonoBehaviour,
         if (board.IsBusy && !board.CanStartDynamicDrag(this))
             return;
 
-        // Busy'de başlayan drag, threshold'u board idle olduktan sonra geçerse bu artık dynamic
-        // input değildir; eski dokunuşun normal idle swap'a dönüşmesini engelle.
-        if (dragStartedWhileBoardBusy && !board.IsBusy)
-            return;
+        // Busy'de başlayıp board idle olduktan sonra threshold'u geçen drag, oyuncunun ŞU ANKİ hamlesidir:
+        // RequestSwapFromDrag idle yolunda kendi kontrolleriyle işler. (Eskiden burada düşürülüyordu →
+        // kaskadın sonunda yapılan swipe hiç işlenmiyordu. Dynamic input asla kaybolmamalı.)
 
         if (board.ActiveBooster != BoardController.BoosterMode.None)
             return;
@@ -2617,13 +2611,11 @@ public class TileView : MonoBehaviour,
     {
         yield return null;
         wasDragging = false;
-        dragStartedWhileBoardBusy = false;
     }
 
     public void OnPointerDown(PointerEventData eventData)
     {
         boosterFiredOnDown = false;
-        pointerDownWhileBoardBusy = board != null && board.IsBusy;
         if (board != null && board.ActiveBooster != BoardController.BoosterMode.None)
         {
             boosterFiredOnDown = true;
@@ -2636,16 +2628,8 @@ public class TileView : MonoBehaviour,
         if (wasDragging || boosterFiredOnDown)
             return;
 
-        // Dynamic input sadece gerçekten busy anında alınmalı. Press busy iken başlayıp release/click
-        // board idle olduktan sonra gelirse, bu eski dokunuşu normal idle swap'a çevirmek "sonradan
-        // yaptı" hissi yaratır. Busy içinde biten click ise BoardController'ın dynamic gate'ine gider.
-        if (pointerDownWhileBoardBusy && board != null && !board.IsBusy)
-        {
-            pointerDownWhileBoardBusy = false;
-            return;
-        }
-
-        pointerDownWhileBoardBusy = false;
+        // Click, bırakma anındaki board durumuyla işlenir (busy → dynamic gate, idle → normal yol).
+        // Press busy iken başlayıp idle'da biten tık artık düşürülmez: dynamic input asla kaybolmamalı.
         board?.OnTileClicked(this);
     }
 

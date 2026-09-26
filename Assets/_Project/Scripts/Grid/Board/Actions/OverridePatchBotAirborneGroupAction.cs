@@ -612,12 +612,16 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         }
 
         // ─── PHASE 6: Tek cascade ───
-        var cascades = board.CascadeLogic.CalculateCascades();
-        Debug.Log($"[OverridePatchBotAirborne] final_cascade actions={(cascades != null ? cascades.Count : 0)}");
-        if (cascades != null)
+        // Pompa açıkken son dolum pompanın işi (bot grubu onu beklemez); kapalıyken eski inline dolum.
+        if (!board.TryStartFlowGravity())
         {
-            for (int i = 0; i < cascades.Count; i++)
-                yield return cascades[i].ExecuteVisuals(sequencer);
+            var cascades = board.CascadeLogic.CalculateCascades();
+            Debug.Log($"[OverridePatchBotAirborne] final_cascade actions={(cascades != null ? cascades.Count : 0)}");
+            if (cascades != null)
+            {
+                for (int i = 0; i < cascades.Count; i++)
+                    yield return cascades[i].ExecuteVisuals(sequencer);
+            }
         }
 
         board.RefreshAllSortingOrders();
@@ -718,12 +722,16 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             }
         }
 
-        var cascades = board.CascadeLogic.CalculateCascades();
-        Debug.Log($"[OverridePatchBotAirborne] final_cascade actions={(cascades != null ? cascades.Count : 0)}");
-        if (cascades != null)
+        // Pompa açıkken son dolum pompanın işi (bot grubu onu beklemez); kapalıyken eski inline dolum.
+        if (!board.TryStartFlowGravity())
         {
-            for (int i = 0; i < cascades.Count; i++)
-                yield return cascades[i].ExecuteVisuals(sequencer);
+            var cascades = board.CascadeLogic.CalculateCascades();
+            Debug.Log($"[OverridePatchBotAirborne] final_cascade actions={(cascades != null ? cascades.Count : 0)}");
+            if (cascades != null)
+            {
+                for (int i = 0; i < cascades.Count; i++)
+                    yield return cascades[i].ExecuteVisuals(sequencer);
+            }
         }
 
         board.RefreshAllSortingOrders();

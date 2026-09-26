@@ -45,9 +45,10 @@ public class SpecialEffectOrchestrator
         board.StartCoroutine(CoPlayPulseExplosionDelayed(x, y, delay));
     }
 
-    public float PlayOverrideComboVfxAndQueue(TileSpecial a, TileSpecial b, Vector2Int originCell)
+    public float PlayOverrideComboVfxAndQueue(TileSpecial a, TileSpecial b, Vector2Int originCell,
+        TileView tileA = null, TileView tileB = null)
     {
-        float duration = board.PlaySystemOverrideComboVfxAndGetDuration(originCell);
+        float duration = board.PlaySystemOverrideComboVfxAndGetDuration(originCell, tileA, tileB);
         EmitComboVisualQueued(a, b, originCell, duration);
         return duration;
     }

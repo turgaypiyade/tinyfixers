@@ -71,21 +71,17 @@ public partial class CascadeLogic
 
             // Step 2: Diagonal Slide — whole-board, ungated (orijinalle birebir; önce normal taşlar,
             // sonra son çare special). Etkilenen sütunlar bir sonraki iterasyon için dirty.
-            bool slided = false;
-            if (!SuppressDiagonalSlides)
-            {
-                _pcDiagAffected.Clear();
-                slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: true, _pcDiagAffected);
-                if (!slided)
-                    slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: false, _pcDiagAffected);
+            _pcDiagAffected.Clear();
+            bool slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: true, _pcDiagAffected);
+            if (!slided)
+                slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: false, _pcDiagAffected);
 
-                if (slided)
+            if (slided)
+            {
+                foreach (var c in _pcDiagAffected)
                 {
-                    foreach (var c in _pcDiagAffected)
-                    {
-                        _pcNextDirty.Add(c);
-                        _pcActiveColumns.Add(c);
-                    }
+                    _pcNextDirty.Add(c);
+                    _pcActiveColumns.Add(c);
                 }
             }
             changed |= slided;

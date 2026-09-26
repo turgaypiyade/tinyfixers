@@ -16,9 +16,9 @@ public sealed class KeyGeneratorService : MonoBehaviour
 
     [Header("Flight")]
     [SerializeField] private Vector2 keyFlySize = new Vector2(72f, 72f);
-    [SerializeField, Min(0.05f)] private float flyDuration = 0.42f;
-    [SerializeField, Min(0f)] private float riseDuration = 0.12f;
-    [SerializeField, Min(0f)] private float hoverHold = 0.04f;
+    [SerializeField, Min(0.05f)] private float flyDuration = 0.5f;
+    [SerializeField, Min(0f)] private float riseDuration = 0.22f;
+    [SerializeField, Min(0f)] private float hoverHold = 0.08f;
     [SerializeField] private float riseHeight = 70f;
     [SerializeField] private float arcHeight = 95f;
     [SerializeField, Min(0f)] private float hitStagger = 0.035f;
@@ -55,6 +55,7 @@ public sealed class KeyGeneratorService : MonoBehaviour
     private int inFlightKeys;
     private bool completed;
     private bool goalRecomputeQueued;
+    private bool bound;
     private readonly Dictionary<int, int> hitVisualCounters = new();
     private readonly Dictionary<int, Image> obstacleImageCache = new();
     private readonly Stack<GameObject> ghostPool = new();
@@ -69,8 +70,19 @@ public sealed class KeyGeneratorService : MonoBehaviour
         StartCoroutine(BindWhenReady());
     }
 
+    // Hedef her kare ground-truth'tan yeniden türetilir. Olay-anı recompute yetmiyordu: son key
+    // temizlenince OnTilesCleared, taş pop/implode animasyonu bitip tiles[]'tan kalkmadan gelir
+    // (flow pump'ta ReleaseTile daha geç) → okunan sayı 1 fazla kalır, sonra kimse tekrar
+    // hesaplamaz → hedef ekranda key yokken 1'de asılı kalıyordu. Board ~100 hücre; ucuz.
+    private void LateUpdate()
+    {
+        if (bound)
+            RecomputeGoalRemaining();
+    }
+
     private void OnDisable()
     {
+        bound = false;
         if (board != null)
         {
             board.OnObstacleViewRestored -= HandleObstacleRevealed;
@@ -122,6 +134,7 @@ public sealed class KeyGeneratorService : MonoBehaviour
         board.OnTilesCleared -= HandleTilesClearedForGoal;
         board.OnTilesCleared += HandleTilesClearedForGoal;
         RecomputeGoalRemaining();
+        bound = true;
 
         if (completed)
             CloseAllGenerators();
@@ -216,9 +229,22 @@ public sealed class KeyGeneratorService : MonoBehaviour
             RectTransform root = overlayRoot != null ? overlayRoot : board?.ContentRoot;
             Sprite keySprite = board != null ? board.GetIcon(TileType.Key) : null;
 
+            // Hedef hücre uçuş boyunca canlı: cascade/special onu doldurursa rezervasyon bırakılır,
+            // geçerli hücreler arasından yeni hücre seçilir ve yay havada ona döner (varışta ışınlanma yok).
+            Vector2Int LiveTarget()
+            {
+                if (board != null && !board.CanReplaceGeneratedKeyCell(targetCell))
+                {
+                    board.ReleaseKeyLandingReservation(targetCell);
+                    if (board.TryFindKeyLandingCell(out var fresh))
+                        targetCell = fresh;
+                }
+                return targetCell;
+            }
+
             // Gerçek elmas podyumda "oluşur" ve fırlar: CoFlyKey'in rise fazı = materialize.
             if (root != null && keySprite != null && board != null)
-                yield return CoFlyKey(root, originIndex, targetCell, keySprite);
+                yield return CoFlyKey(root, originIndex, LiveTarget, keySprite);
 
             // Kol geri döner + draft geri gelir + idle.
             if (machine != null)
@@ -258,17 +284,30 @@ public sealed class KeyGeneratorService : MonoBehaviour
         }
     }
 
-    private IEnumerator CoFlyKey(RectTransform root, int originIndex, Vector2Int targetCell, Sprite keySprite)
+    // Key uçuşu (magnet fırlatmasının kardeşi): podyumda BÜYÜYEREK belli bir yüksekliğe çıkar
+    // (aynı anda üretilenler orada toplanır), sonra kayan yıldız iziyle kendi hücresine kavisle
+    // dağılır ve hücreye ORİJİNAL taş boyutunda oturur.
+    private IEnumerator CoFlyKey(RectTransform root, int originIndex, System.Func<Vector2Int> target, Sprite keySprite)
     {
         Vector2 start = GetOriginCenterIn(root, originIndex);
-        Vector2 end = board.WorldToAnchoredIn(root, board.GetCellWorldCenterPosition(targetCell.x, targetCell.y));
+        Vector2 End()
+        {
+            var cell = target();
+            return board.WorldToAnchoredIn(root, board.GetCellWorldCenterPosition(cell.x, cell.y));
+        }
+
+        float tileSize = Mathf.Max(1f, board.TileSize);
+        // İniş boyutu = board'daki taş ikonu (hücrenin ~%89'u); uçuş ölçeği buna göre.
+        Vector2 landSize = Vector2.one * (tileSize * 0.89f);
+        const float peakScale = 1.5f;
 
         GameObject go = RentGhost(root);
+        go.layer = root.gameObject.layer;   // UI kamerası layer 0'ı çizmez
         var rt = (RectTransform)go.transform;
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.sizeDelta = keyFlySize;
-        rt.localScale = Vector3.one * 0.35f;
+        rt.sizeDelta = landSize;
+        rt.localScale = Vector3.one * 0.3f;
         rt.localRotation = Quaternion.Euler(0f, 0f, -12f);
         rt.anchoredPosition = start;
         rt.SetAsLastSibling();
@@ -282,28 +321,29 @@ public sealed class KeyGeneratorService : MonoBehaviour
         var cg = go.GetComponent<CanvasGroup>();
         cg.alpha = 0f;
 
-        Vector2 flightStart = start + Vector2.up * riseHeight;
+        // 1) Yükseliş + büyüme (ease-out): toplanma noktasına çıkar.
+        Vector2 flightStart = start + Vector2.up * Mathf.Max(riseHeight, tileSize * 1.2f);
+        float rise = Mathf.Max(0.18f, riseDuration);
         float riseTime = 0f;
-        float rise = Mathf.Max(0.0001f, riseDuration);
         while (riseTime < rise)
         {
             riseTime += Time.deltaTime;
             float k = Mathf.Clamp01(riseTime / rise);
             float e = 1f - (1f - k) * (1f - k);
             rt.anchoredPosition = Vector2.LerpUnclamped(start, flightStart, e);
-            rt.localScale = Vector3.one * Mathf.Lerp(0.35f, 1.08f, e);
+            rt.localScale = Vector3.one * Mathf.Lerp(0.3f, peakScale, e);
             rt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(-18f, 8f, e));
-            cg.alpha = e;
+            cg.alpha = Mathf.Clamp01(k * 2f);
             yield return null;
         }
 
         if (hoverHold > 0f)
             yield return new WaitForSeconds(hoverHold);
 
-        Vector2 mid = (flightStart + end) * 0.5f;
+        // 2) Hücreye dağılış: canlı hedefe kavis + kayan yıldız izi; ölçek tepe → orijinal (iniş anında 1).
+        var trail = FlightTrailFx.Create(this, rt, KeyTrailTint, tileSize);
+        Vector2 end = End();
         float dir = end.x >= flightStart.x ? 1f : -1f;
-        Vector2 control = mid + new Vector2(70f * dir, arcHeight);
-
         float duration = Mathf.Max(0.05f, flyDuration);
         float t = 0f;
         while (t < duration)
@@ -311,15 +351,25 @@ public sealed class KeyGeneratorService : MonoBehaviour
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / duration);
             float e = EaseInOut(k);
-            rt.anchoredPosition = Bezier2(flightStart, control, end, e);
-            rt.localScale = Vector3.one * Mathf.Lerp(1.08f, 0.82f, k);
+            end = End();
+            Vector2 control = (flightStart + end) * 0.5f + new Vector2(70f * dir, arcHeight);
+            Vector2 pos = Bezier2(flightStart, control, end, e);
+            rt.anchoredPosition = pos;
+            rt.localScale = Vector3.one * Mathf.Lerp(peakScale, 1f, e * e);
             rt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(8f, 0f, e));
-            cg.alpha = k < 0.9f ? 1f : 1f - Mathf.InverseLerp(0.9f, 1f, k);
+            trail?.Step(pos, e);
             yield return null;
         }
 
+        rt.anchoredPosition = end;
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
+        trail?.Finish();
         ReturnGhost(go);
     }
+
+    // Key izi rengi (pembe elmas): sıcak pembe-mor.
+    private static readonly Color KeyTrailTint = new Color(1f, 0.45f, 0.85f);
 
     private void CompleteGenerators()
     {

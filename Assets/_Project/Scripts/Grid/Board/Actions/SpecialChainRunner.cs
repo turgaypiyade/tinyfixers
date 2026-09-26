@@ -366,7 +366,9 @@ public sealed class SpecialChainRunner : BoardAction
                 // ham "boş" kontrolü onları hep true döndürüp bu döngüyü HER FRAME (5s cap'e kadar)
                 // boşuna koşturuyor, cep yanındaki taşları sürekli diagonal-değerlendirip geri
                 // döndürerek "flip-flop" üretiyordu.
-                if (board.CascadeLogic != null && board.CascadeLogic.CanPlanGravityNow
+                // Pompa açıkken yerçekimi zaten her kare pompada; burada ikinci plan üretme.
+                if (!board.IsFlowPumpActive
+                    && board.CascadeLogic != null && board.CascadeLogic.CanPlanGravityNow
                     && board.CascadeLogic.HasAnyResolvableEmptyPlayableCell())
                 {
                     var fall = board.CascadeLogic.CalculateCascades();
@@ -1163,13 +1165,13 @@ public sealed class SpecialChainRunner : BoardAction
         var cell = new Vector2Int(x, y);
         root.anchoredCells[tile] = cell;
         root.anchorCellBuffer[0] = cell;
-        board.SetPendingTriggeredSpecialCells(root.anchorCellBuffer);
+        board.SetPendingTriggeredSpecialCells(root.anchorCellBuffer, root);
     }
 
     private bool ReleaseAllAnchors()
     {
         if (root.anchoredCells.Count == 0) return false;
-        board.ClearPendingTriggeredSpecialCells(root.anchoredCells.Values);
+        board.ClearPendingTriggeredSpecialCells(root.anchoredCells.Values, root);
         root.anchoredCells.Clear();
         return true;
     }
@@ -1179,6 +1181,10 @@ public sealed class SpecialChainRunner : BoardAction
     // still-falling tiles.
     private IEnumerator RunGravityWithOverlap(bool hasNext, ActionSequencer waitForCompletionOn = null)
     {
+        // Pompa açık: düşüş pompanın işi olarak başlar, zincir onu beklemez (yalnız kendi alt zincirlerini).
+        if (board.TryStartFlowGravity())
+            yield break;
+
         float fallDuration = 0f;
         var cascades = board.CascadeLogic.CalculateCascades();
         if (cascades != null && cascades.Count > 0)

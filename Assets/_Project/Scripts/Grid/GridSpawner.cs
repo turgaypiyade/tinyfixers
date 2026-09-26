@@ -557,6 +557,7 @@ public class GridSpawner : MonoBehaviour
             return;
 
         RectTransform br = borderDrawer.borderRoot;
+        EnsureBorderRootInBoardContent(br);
 
         br.anchorMin = new Vector2(0.5f, 0.5f);
         br.anchorMax = new Vector2(0.5f, 0.5f);
@@ -806,7 +807,7 @@ public class GridSpawner : MonoBehaviour
                     holes[resolvedLevel.Index(hx, hy)] = board.Holes[hx, hy];
 
             drawer.Draw(blocked, holes);
-            PlaceBorderRootAboveBoardContent(drawer.borderRoot);
+            PlaceBorderRootBelowTiles(drawer.borderRoot);
 
             if (grassOverlayRoot != null)
                 grassOverlayRoot.SetAsLastSibling();
@@ -819,25 +820,38 @@ public class GridSpawner : MonoBehaviour
         board.RefreshOilOverlays();
     }
 
-    private void PlaceBorderRootAboveBoardContent(RectTransform borderRoot)
+    // Çizim sırası (alttan üste): CellBG < GridLines < BORDER < under-tile/mud < Taşlar < Obstacle'lar
+    // < special animasyonları (TilesTopOverlay). Border eskiden BoardContent'in KARDEŞİ olarak tüm
+    // içeriğin üstündeydi → spawn olan taş, kenardaki PulseCore dönmesi ve küçülen obstacle'lar
+    // çerçeve çizgisinin altında kalıyordu. Artık BoardContent'in çocuğu, hücre zemininin hemen üstü.
+    private void EnsureBorderRootInBoardContent(RectTransform borderRoot)
+    {
+        if (borderRoot == null || spawnParent == null || borderRoot.parent == spawnParent)
+            return;
+        // spawnParent maske köküne merkezli (anchoredPosition=0) → merkez hizası değişmez.
+        borderRoot.SetParent(spawnParent, worldPositionStays: false);
+        borderRoot.gameObject.layer = spawnParent.gameObject.layer;
+    }
+
+    private void PlaceBorderRootBelowTiles(RectTransform borderRoot)
     {
         if (borderRoot == null)
             return;
 
-        if (tilesRoot != null && borderRoot.parent == tilesRoot.parent)
-        {
-            int tileIndex = tilesRoot.GetSiblingIndex();
-            if (borderRoot.GetSiblingIndex() <= tileIndex)
-                borderRoot.SetSiblingIndex(tileIndex + 1);
+        EnsureBorderRootInBoardContent(borderRoot);
+        if (borderRoot.parent != spawnParent)
             return;
-        }
 
-        if (spawnParent != null && borderRoot.parent == spawnParent.parent)
-        {
-            int spawnIndex = spawnParent.GetSiblingIndex();
-            if (borderRoot.GetSiblingIndex() <= spawnIndex)
-                borderRoot.SetSiblingIndex(spawnIndex + 1);
-        }
+        // Zemin katmanlarının (CellBG + GridLines) hemen üstüne yerleştir.
+        int floorTop = -1;
+        if (cellBgRoot != null && cellBgRoot.parent == spawnParent)
+            floorTop = Mathf.Max(floorTop, cellBgRoot.GetSiblingIndex());
+        if (gridLinesRoot != null && gridLinesRoot.parent == spawnParent)
+            floorTop = Mathf.Max(floorTop, gridLinesRoot.GetSiblingIndex());
+
+        int current = borderRoot.GetSiblingIndex();
+        // Kendisi zeminin altındaysa SetSiblingIndex çıkarıldıktan sonraki indeksi kullanır.
+        borderRoot.SetSiblingIndex(current < floorTop ? floorTop : floorTop + 1);
     }
 
     private Vector2 GetBoardFrameSize(Vector2 contentSize)
@@ -874,6 +888,19 @@ public class GridSpawner : MonoBehaviour
         var magnetBoardRoot = spawnParent != null ? spawnParent : (RectTransform)transform;
         if (magnetRoot != null && magnetRoot != magnetBoardRoot)
             magnetRoot.SetAsLastSibling();
+
+        // Level editöründeki kat sırası: grass (örtü) magnet'in ÜSTÜNDE. Grass kökü border'ın
+        // parent'ına taşındığı için (border artık BoardContent içinde) magnet ile aynı parent'ta —
+        // magnet'i öne alınca grass'ı da hemen arkasından öne al, yoksa grass magnet'in altında kalır.
+        if (grassOverlayRoot != null && magnetRoot != null && grassOverlayRoot.parent == magnetRoot.parent)
+            grassOverlayRoot.SetAsLastSibling();
+
+        if (board != null)
+        {
+            // Special animasyonları (PulseCore dönmesi…) TÜM obstacle'ların, grass dahil, üstünde.
+            board.TilesTopOverlayAbove = grassOverlayRoot != null ? grassOverlayRoot : obstaclesRoot;
+            _ = board.TilesTopOverlayRoot;   // getter kendini anchor'ın hemen arkasına yerleştirir
+        }
 
         if (board != null && spawnParent != null)
         {
@@ -2035,6 +2062,11 @@ public class GridSpawner : MonoBehaviour
             grassOverlayRoot = GetOrCreateChildRoot(root, "GrassOverlay");
             grassOverlayRoot.gameObject.layer = root.gameObject.layer; // Screen Space Camera culling'i önle
         }
+
+        // Border BoardContent içine erken alınır: grass root'u border'ın parent'ına taşındığı için
+        // grass çiziminden önce border yerinde olmalı (grass yine en üstte kalır).
+        if (borderDrawer != null)
+            EnsureBorderRootInBoardContent(borderDrawer.borderRoot);
     }
 
     private RectTransform GetOrCreateChildRoot(RectTransform parent, string name)

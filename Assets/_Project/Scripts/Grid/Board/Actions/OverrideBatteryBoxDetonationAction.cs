@@ -55,10 +55,11 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
         // (öncesinde değil). 2x2/NxN'de origin dışındaki hücreler de burada açılır (yoksa sağ hücrede
         // erken taş kalıyordu). Footprint yoksa origin'e düş (eski davranış).
         if (footprintCells != null && footprintCells.Count > 0)
-            activeBoard.ClearPendingTriggeredSpecialCells(footprintCells);
+            activeBoard.ClearPendingTriggeredSpecialCells(footprintCells, BoardController.OverrideBatteryBoxPendingOwner);
         else if (activeBoard.Width > 0)
             activeBoard.ClearPendingTriggeredSpecialCells(
-                new[] { new Vector2Int(originIndex % activeBoard.Width, originIndex / activeBoard.Width) });
+                new[] { new Vector2Int(originIndex % activeBoard.Width, originIndex / activeBoard.Width) },
+                BoardController.OverrideBatteryBoxPendingOwner);
 
         // Break/patlama sesi TAM BURST anında çalar (kutu tükenirken/wind-up başında DEĞİL). Depletion
         // anındaki `cleared` sesi BoardBreakFxService'te OBB için bastırıldı; burada, 2s wind-up'tan

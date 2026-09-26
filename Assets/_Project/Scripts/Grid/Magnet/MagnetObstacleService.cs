@@ -976,43 +976,68 @@ public class MagnetObstacleService : MonoBehaviour
     private IEnumerator EjectSpecialToRandomTile(Vector3 originWorld, TileSpecial kind)
     {
         int tx = -1, ty = -1;
+        RectTransform blob = null;
 
-        // Wait for a valid normal cell before launching (board may be mid-resolve / momentarily full).
-        float waited = 0f;
-        while (!TryFindRandomNormalTile(out tx, out ty))
+        // Eşzamanlı eject'ler aynı hücreyi seçmesin: seçilen hücre uçuş boyunca rezerve.
+        void Reserve(int x, int y) => _ejectReservedCells.Add(new Vector2Int(x, y));
+        void Unreserve() { if (tx >= 0) _ejectReservedCells.Remove(new Vector2Int(tx, ty)); }
+
+        try
         {
-            waited += Time.deltaTime;
-            if (waited > EjectPlacementTimeoutSeconds || board == null)
-                yield break;                                    // board stayed saturated → nothing to place onto
-            yield return null;
-        }
-
-        var blob = CreateSpecialCarrierVisual(originWorld, kind, sizeScale: 0.9f);
-        Vector3 targetWorld = board.Tiles[tx, ty] != null ? board.Tiles[tx, ty].transform.position : originWorld;
-
-        yield return GelEject(blob, targetWorld, SpecialFlightColor(kind));
-
-        if (blob != null)
-            Object.Destroy(blob.gameObject);
-
-        // The pre-chosen cell may have been consumed mid-flight (another eject / cascade). Re-pick so the
-        // special is never silently lost; only give up if no normal cell frees within the timeout.
-        if (!IsNormalTileCell(tx, ty))
-        {
-            waited = 0f;
+            // Wait for a valid normal cell before launching (board may be mid-resolve / momentarily full).
+            float waited = 0f;
             while (!TryFindRandomNormalTile(out tx, out ty))
             {
                 waited += Time.deltaTime;
                 if (waited > EjectPlacementTimeoutSeconds || board == null)
-                    yield break;
+                    yield break;                                    // board stayed saturated → nothing to place onto
                 yield return null;
             }
-        }
+            Reserve(tx, ty);
 
-        var t = board.Tiles[tx, ty];
-        t.SetSpecial(kind);
-        board.SyncTileData(tx, ty);
-        board.RequestResolveAfterActionSequence();
+            blob = CreateSpecialCarrierVisual(originWorld, kind, sizeScale: 0.9f);
+
+            // Hedef hücre uçuş boyunca canlı doğrulanır: başka eject/cascade onu tüketirse geçerli hücreler
+            // arasından YENİ random hücre seçilir ve yay havada ona döner (varışta ışınlanma yok).
+            Vector3 TargetWorld()
+            {
+                if (!IsNormalTileCell(tx, ty) && TryFindRandomNormalTile(out int nx, out int ny))
+                {
+                    Unreserve();
+                    tx = nx;
+                    ty = ny;
+                    Reserve(tx, ty);
+                }
+                return board.GetCellWorldCenterPosition(tx, ty);
+            }
+
+            yield return GelEject(blob, TargetWorld, SpecialFlightColor(kind));
+
+            // Son güvenlik: varış anında hücre hâlâ geçersizse (board tamamen dolu) serbest hücre bekle.
+            if (!IsNormalTileCell(tx, ty))
+            {
+                Unreserve();
+                waited = 0f;
+                while (!TryFindRandomNormalTile(out tx, out ty))
+                {
+                    waited += Time.deltaTime;
+                    if (waited > EjectPlacementTimeoutSeconds || board == null)
+                        yield break;
+                    yield return null;
+                }
+            }
+
+            var t = board.Tiles[tx, ty];
+            t.SetSpecial(kind);
+            board.SyncTileData(tx, ty);
+            board.RequestResolveAfterActionSequence();
+        }
+        finally
+        {
+            Unreserve();
+            if (blob != null)
+                Object.Destroy(blob.gameObject);
+        }
     }
 
     /// Release collected specials onto RANDOM board tiles — used when the magnet is destroyed outright
@@ -1040,6 +1065,13 @@ public class MagnetObstacleService : MonoBehaviour
         var t = board.Tiles[x, y];
         if (t == null || !t || t.GetSpecial() != TileSpecial.None)
             return false;
+        // Aktif bir efektin (patlama dalgası, match temizliği, düşüş) içindeki taş hedef OLAMAZ:
+        // special o taşa konur konmaz taşla birlikte temizlenip KENDİ davranışını çalıştırmadan
+        // kayboluyordu (pulse patlarken fırlatılanlar). Yalnız duran, tutulmayan, rezervsiz taş.
+        if (!t.IsRuntimeIdle || !t.gameObject.activeInHierarchy || t.X != x || t.Y != y)
+            return false;
+        if (board.IsPendingTriggeredSpecialCell(x, y) || board.IsReservedTileTargetCell(x, y))
+            return false;
         if (obstacleStateService != null &&
             (obstacleStateService.HasObstacleAt(x, y)
              || obstacleStateService.IsInteractionLockedAt(x, y)
@@ -1050,6 +1082,7 @@ public class MagnetObstacleService : MonoBehaviour
 
     /// A RANDOM normal-tile cell anywhere on the board (user wants random placement, not nearest).
     private readonly List<Vector2Int> _normalTileScratch = new();
+    private readonly HashSet<Vector2Int> _ejectReservedCells = new();
     private bool TryFindRandomNormalTile(out int tx, out int ty)
     {
         tx = ty = -1;
@@ -1059,7 +1092,7 @@ public class MagnetObstacleService : MonoBehaviour
         _normalTileScratch.Clear();
         for (int y = 0; y < board.Height; y++)
         for (int x = 0; x < board.Width; x++)
-            if (IsNormalTileCell(x, y))
+            if (IsNormalTileCell(x, y) && !_ejectReservedCells.Contains(new Vector2Int(x, y)))
                 _normalTileScratch.Add(new Vector2Int(x, y));
 
         if (_normalTileScratch.Count == 0)
@@ -1085,12 +1118,13 @@ public class MagnetObstacleService : MonoBehaviour
         }
     }
 
-    private const float FlightTrailSpacingCells = 0.12f;
-    private const float FlightTrailLifetime = 0.32f;
+    private const float FlightPeakScale = 1.55f;     // ağızda büyüme tepe ölçeği
+    private const float FlightLandScale = 1f;        // taşın orijinal boyutu
 
-    /// Fırlatma: ağızda kısa toplanma → belirgin bir yay → yumuşak iniş. Special ikonu uçuş boyunca tam
-    /// görünür; arkasında renkli hale ve sönerek kalan ışık izi, varışta renkli halka patlaması.
-    private IEnumerator GelEject(RectTransform rt, Vector3 targetWorld, Color tint)
+    /// Fırlatma: ağızda BÜYÜME → hedefe belirgin yay (hedef canlı; hücre bozulursa havada yeni random
+    /// hücreye döner) + arkasında kayan yıldız izi (hız yönünde uzayan kuyruk + sönen kıvılcımlar)
+    /// → orijinal boyutuna KÜÇÜLEREK iniş + halka patlaması.
+    private IEnumerator GelEject(RectTransform rt, System.Func<Vector3> targetWorld, Color tint)
     {
         if (rt == null || board == null)
             yield break;
@@ -1098,7 +1132,7 @@ public class MagnetObstacleService : MonoBehaviour
         var parent = rt.parent as RectTransform;
         float tileSize = Mathf.Max(1f, board.TileSize);
 
-        // Efektler ikonun ALTINDA kalsın: ikonun hemen önüne bir kap, hale ve iz onun içinde.
+        // Efektler ikonun ALTINDA kalsın: ikonun hemen önüne bir kap, hale/kuyruk/iz onun içinde.
         var fxRoot = CreateFxImage(parent, "MagnetFlightFx", null, Color.clear, 0f);
         if (fxRoot != null)
         {
@@ -1107,40 +1141,43 @@ public class MagnetObstacleService : MonoBehaviour
         }
         var halo = CreateFxImage(fxRoot, "MagnetFlightHalo", GlowSprite(), WithAlpha(tint, 0.85f), tileSize * 1.7f);
 
+        // Kayan yıldız izi (kuyruk + kıvılcımlar) — KeyGenerator key uçuşu ile ortak görsel.
+        var trail = FlightTrailFx.Create(this, rt, tint, tileSize);
+
         Vector2 start = rt.anchoredPosition;
-        Vector2 end = board.WorldToAnchoredIn(board.BreakFxParent, targetWorld);
+        Vector2 End() => board.WorldToAnchoredIn(board.BreakFxParent, targetWorld());
+        Vector2 end = End();
         Vector2 delta = end - start;
         float distanceInCells = delta.magnitude / tileSize;
         Vector2 direction = delta.sqrMagnitude > 0.001f ? delta.normalized : Vector2.up;
         float tilt = -Mathf.Sign(delta.x) * 14f;
 
-        // 1) Ağızda toplanma: ikon hafif geri çekilip büzülür, hale parlar.
-        const float anticipationDuration = 0.12f;
+        // 1) Ağızda büyüme: ikon hafif geri çekilip BÜYÜR (ease-out), hale parlar.
+        const float growDuration = 0.2f;
         float elapsed = 0f;
-        while (elapsed < anticipationDuration)
+        while (elapsed < growDuration)
         {
             if (rt == null) break;
             elapsed += Time.deltaTime;
-            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / anticipationDuration));
-            rt.anchoredPosition = start - direction * (tileSize * 0.12f * k);
-            rt.localScale = Vector3.one * Mathf.Lerp(0.7f, 0.82f, k);
-            rt.localRotation = Quaternion.Euler(0f, 0f, -tilt * k);
+            float k = Mathf.Clamp01(elapsed / growDuration);
+            float e = 1f - (1f - k) * (1f - k);
+            rt.anchoredPosition = start - direction * (tileSize * 0.15f * e);
+            rt.localScale = Vector3.one * Mathf.Lerp(0.7f, FlightPeakScale, e);
+            rt.localRotation = Quaternion.Euler(0f, 0f, -tilt * e);
             if (halo != null)
             {
                 halo.anchoredPosition = rt.anchoredPosition;
-                halo.localScale = Vector3.one * Mathf.Lerp(0.4f, 1.1f, k);
+                halo.localScale = Vector3.one * Mathf.Lerp(0.4f, 1.35f, e);
             }
             yield return null;
         }
 
-        // 2) Yay: yukarı doğru belirgin kavis (mesafeyle büyür).
-        Vector2 launch = start - direction * (tileSize * 0.12f);
+        // 2) Yay: kontrol noktaları CANLI hedeften her kare yeniden kurulur → hedef değişirse yol
+        //    yumuşakça bükülür. Ölçek tepe → orijinal boyut (iniş anında tam 1).
+        Vector2 launch = start - direction * (tileSize * 0.15f);
         float arcHeight = tileSize * Mathf.Clamp(distanceInCells * 0.38f, 0.9f, 2.6f);
-        Vector2 controlA = Vector2.Lerp(launch, end, 0.2f) + Vector2.up * arcHeight;
-        Vector2 controlB = Vector2.Lerp(launch, end, 0.8f) + Vector2.up * arcHeight;
-        float travelDuration = Mathf.Clamp(0.45f + distanceInCells * 0.05f, 0.5f, 0.9f);
+        float travelDuration = Mathf.Clamp(0.5f + distanceInCells * 0.05f, 0.55f, 0.95f);
 
-        Vector2 lastTrail = launch;
         elapsed = 0f;
         while (elapsed < travelDuration)
         {
@@ -1149,27 +1186,29 @@ public class MagnetObstacleService : MonoBehaviour
             float k = Mathf.Clamp01(elapsed / travelDuration);
             float u = Mathf.SmoothStep(0f, 1f, k);
             float v = 1f - u;
+
+            end = End();
+            Vector2 controlA = Vector2.Lerp(launch, end, 0.2f) + Vector2.up * arcHeight;
+            Vector2 controlB = Vector2.Lerp(launch, end, 0.8f) + Vector2.up * arcHeight;
             Vector2 pos = v * v * v * launch + 3f * v * v * u * controlA + 3f * v * u * u * controlB + u * u * u * end;
+
             rt.anchoredPosition = pos;
-            rt.localScale = Vector3.one * (Mathf.Lerp(0.82f, 1f, u) + 0.12f * Mathf.Sin(k * Mathf.PI));
+            rt.localScale = Vector3.one * Mathf.Lerp(FlightPeakScale, FlightLandScale, u * u);
             rt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(-tilt, 0f, u) + tilt * Mathf.Sin(k * Mathf.PI));
 
             if (halo != null)
             {
                 halo.anchoredPosition = pos;
-                halo.localScale = Vector3.one * (1.1f + 0.12f * Mathf.Sin(elapsed * 22f));
+                halo.localScale = Vector3.one * (Mathf.Lerp(1.35f, 1f, u) + 0.1f * Mathf.Sin(elapsed * 22f));
             }
 
-            // Işık izi: yol boyunca aralıklı, sönerek küçülen renkli parıltılar.
-            if ((pos - lastTrail).magnitude >= tileSize * FlightTrailSpacingCells)
-            {
-                SpawnTrailDot(fxRoot, pos, tint, tileSize);
-                lastTrail = pos;
-            }
+            trail?.Step(pos, u);
             yield return null;
         }
 
-        // 3) İniş: renkli halka patlaması + tek yumuşak nabız.
+        trail?.Finish();
+
+        // 3) İniş: orijinal boyutta oturur, renkli halka patlaması + tek küçük nabız.
         if (rt != null)
         {
             rt.anchoredPosition = end;
@@ -1184,7 +1223,7 @@ public class MagnetObstacleService : MonoBehaviour
             if (rt == null) break;
             elapsed += Time.deltaTime;
             float k = Mathf.Clamp01(elapsed / landingDuration);
-            rt.localScale = Vector3.one * (1f + 0.14f * Mathf.Sin(k * Mathf.PI) * (1f - k));
+            rt.localScale = Vector3.one * FlightLandScale * (1f + 0.08f * Mathf.Sin(k * Mathf.PI) * (1f - k));
             if (halo != null)
                 halo.GetComponent<Image>().color = WithAlpha(tint, Mathf.Lerp(0.85f, 0f, k));
             yield return null;
@@ -1192,37 +1231,13 @@ public class MagnetObstacleService : MonoBehaviour
 
         if (rt != null)
         {
-            rt.localScale = Vector3.one;
+            rt.localScale = Vector3.one * FlightLandScale;
             rt.localRotation = Quaternion.identity;
         }
         if (halo != null)
             Object.Destroy(halo.gameObject);
         if (fxRoot != null)
-            Object.Destroy(fxRoot.gameObject, FlightTrailLifetime + 0.05f);   // iz parıltıları sönsün
-    }
-
-    private void SpawnTrailDot(RectTransform fxRoot, Vector2 pos, Color tint, float tileSize)
-    {
-        var dot = CreateFxImage(fxRoot, "MagnetFlightTrail", GlowSprite(), WithAlpha(tint, 0.8f), tileSize * 0.6f);
-        if (dot == null) return;
-        dot.anchoredPosition = pos;
-        StartCoroutine(FadeTrailDot(dot, tint));
-    }
-
-    private IEnumerator FadeTrailDot(RectTransform dot, Color tint)
-    {
-        var img = dot.GetComponent<Image>();
-        float elapsed = 0f;
-        while (elapsed < FlightTrailLifetime && dot != null)
-        {
-            elapsed += Time.deltaTime;
-            float k = Mathf.Clamp01(elapsed / FlightTrailLifetime);
-            dot.localScale = Vector3.one * Mathf.Lerp(1f, 0.15f, k);
-            img.color = WithAlpha(Color.Lerp(tint, Color.white, k * 0.6f), Mathf.Lerp(0.8f, 0f, k));
-            yield return null;
-        }
-        if (dot != null)
-            Object.Destroy(dot.gameObject);
+            Object.Destroy(fxRoot.gameObject);
     }
 
     private IEnumerator LandingRing(RectTransform parent, Vector2 pos, Color tint, float tileSize)

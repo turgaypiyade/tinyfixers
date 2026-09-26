@@ -52,13 +52,15 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
 
     /// SaveProgressPopup düzeni: üstte durum yazısı, gövdede alt alta büyük seçenek butonları,
     /// altta tek aksiyon butonu. Başlıktaki X yalnız popup'ı kapatır (onClose çağrılmaz).
-    public static void ShowOffer(string title, string status, OfferButton[] options, string actionLabel, Action onAction)
+    /// defaultFrame=true: çerçeve ortak popup'ın orijinal renginde kalır (buton stilleri aynı).
+    public static void ShowOffer(string title, string status, OfferButton[] options, string actionLabel, Action onAction,
+        bool defaultFrame = false)
     {
         Dismiss();
 
         var root = BuildCanvas();
         var popup = root.AddComponent<RuntimeChoicePopup>();
-        popup.BuildOffer(root.transform, title, status, options, actionLabel, onAction);
+        popup.BuildOffer(root.transform, title, status, options, actionLabel, onAction, defaultFrame);
         _instance = popup;
         DontDestroyOnLoad(root);
     }
@@ -89,12 +91,25 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
         if (_instance == this) _instance = null;
     }
 
+    private bool closing;
+    private CommonPopupView view;
+
+    // Çıkış animasyonu oynarken popup artık "kapalı" sayılır (yeni Show engellenmez, çift tık yok);
+    // callback'ler Close'dan hemen sonra çağrılmaya devam eder.
     private void Close()
     {
-        if (!gameObject.activeSelf) return;
+        if (closing || !gameObject.activeSelf) return;
+        closing = true;
         if (_instance == this) _instance = null;
-        gameObject.SetActive(false);
-        Destroy(gameObject);
+
+        var anim = view != null ? view.Entrance : null;
+        if (anim != null)
+            anim.PlayExit(() => { if (this != null) Destroy(gameObject); });
+        else
+        {
+            gameObject.SetActive(false);
+            Destroy(gameObject);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -124,7 +139,7 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
         dimImg.color = new Color(0f, 0f, 0f, 0.72f);
         dimImg.raycastTarget = true;
 
-        var view = CommonPopupView.Create(parent, title, Close);
+        view = CommonPopupView.Create(parent, title, Close);
         var body = CommonPopupView.Text(view.Body, "Message", message, 38,
             CommonPopupSkin.Shared.bodyTextColor);
         CommonPopupView.Region(body.rectTransform, new Rect(0, 0, 1, 1));
@@ -142,7 +157,7 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
                 choice.Primary || i == 0 ? "BtnContinue" : "BtnChoice_" + i,
                 choice.Label, () =>
                 {
-                    if (!gameObject.activeSelf) return;
+                    if (closing || !gameObject.activeSelf) return;
                     Close();
                     choice.OnClick?.Invoke();
                 });
@@ -151,15 +166,16 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
     }
 
     private void BuildOffer(Transform parent, string title, string status, IReadOnlyList<OfferButton> options,
-        string actionLabel, Action onAction)
+        string actionLabel, Action onAction, bool defaultFrame)
     {
         var dim = BuildStretch(parent, "Dim");
         var dimImg = dim.gameObject.AddComponent<Image>();
         dimImg.color = new Color(0f, 0f, 0f, 0.72f);
         dimImg.raycastTarget = true;
 
-        var view = CommonPopupView.Create(parent, title, Close,
-            CommonPopupSkin.Shared.saveProgressBackgroundMaterial);
+        view = defaultFrame
+            ? CommonPopupView.Create(parent, title, Close)
+            : CommonPopupView.Create(parent, title, Close, CommonPopupSkin.Shared.saveProgressBackgroundMaterial);
 
         var statusText = CommonPopupView.Text(view.Body, "Status", status, 34, CommonPopupSkin.Shared.bodyTextColor);
         CommonPopupView.Region(statusText.rectTransform, new Rect(0, 0.80f, 1, 0.20f));
@@ -178,7 +194,7 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
 
         var action = CommonPopupView.Button(view.Actions, "BtnContinue", actionLabel, () =>
         {
-            if (!gameObject.activeSelf) return;
+            if (closing || !gameObject.activeSelf) return;
             Close();
             onAction?.Invoke();
         }, CommonPopupSkin.Shared.saveProgressContinueButton);
@@ -189,7 +205,7 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
     {
         var button = CommonPopupView.Button(parent, "Btn_" + option.Label, option.Label, () =>
         {
-            if (!gameObject.activeSelf) return;
+            if (closing || !gameObject.activeSelf) return;
             Close();
             option.OnClick?.Invoke();
         }, CommonPopupSkin.Shared.accountButton);

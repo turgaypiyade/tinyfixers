@@ -71,7 +71,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
     [SerializeField, Min(0)]  private float crowdSpread = 58f;
     [SerializeField, Min(1)]  private int   maxVisibleCrowdAvatars = 20;
     [SerializeField, Min(1)]  private int   minCrowd = 2;
-    [SerializeField, Range(0.5f, 0.98f)] private float botRoundWinChance = 0.88f;
+    [SerializeField, Range(0.5f, 0.98f)] private float botRoundWinChance = 0.75f;
 
     [Header("Kontroller")]
     [SerializeField] private GameObject continueRoot;
@@ -327,37 +327,9 @@ public sealed class RisingMapScreen : SafariMapScreenBase
     private int VisibleCrowdAt(int floor) =>
         Mathf.Clamp(CrowdSizeAt(floor), 1, Mathf.Min(maxVisibleCrowdAvatars, TotalParticipants()));
 
-    private int CrowdSizeAt(int floor)
-    {
-        int total = TotalParticipants();
-        if (floor <= 0) return total;
-
-        int survivors = 1; // oyuncu
-        int rounds = Mathf.Clamp(floor, 0, Pitstops);
-        float winChance = Mathf.Clamp(botRoundWinChance, 0.5f, 0.98f);
-
-        for (int bot = 1; bot < total; bot++)
-        {
-            bool alive = true;
-            for (int round = 1; round <= rounds; round++)
-            {
-                if (Hash01(bot, round) > winChance) { alive = false; break; }
-            }
-            if (alive) survivors++;
-        }
-        return Mathf.Clamp(survivors, Mathf.Min(minCrowd, total), total);
-    }
-
-    private static float Hash01(int botIndex, int round)
-    {
-        unchecked
-        {
-            uint h = 2166136261u;
-            h = (h ^ (uint)(botIndex * 73856093)) * 16777619u;
-            h = (h ^ (uint)(round * 19349663)) * 16777619u;
-            return (h & 0x00FFFFFFu) / 16777215f;
-        }
-    }
+    private int CrowdSizeAt(int floor) =>
+        SafariCrowdSimulation.SurvivorsAt(TotalParticipants(), Mathf.Clamp(floor, 0, Pitstops),
+            botRoundWinChance, minCrowd);
 
     private float CrowdAvatarPixels() => Mathf.Max(crowdAvatarSize, 112f);
     private float CrowdSpreadPixels()
@@ -422,8 +394,13 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     // ── Sunum akışı ──────────────────────────────────────────────
 
+    // Düşüş (kaybetme) sunumundan sonra dokunuş yeni level BAŞLATMAZ: kapatma butonu gibi haritayı
+    // kapatıp ana menüye döner. Oyuncu tekrar denemeyi kendisi seçer.
+    private bool presentedFall;
+
     private IEnumerator Present(SafariRoundOutcome outcome)
     {
+        presentedFall = outcome == SafariRoundOutcome.Fell;
         SetContinueVisible(false);
         RefreshStatus();
 
@@ -893,6 +870,12 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     private void OnContinueClicked()
     {
+        if (presentedFall)
+        {
+            presentedFall = false;
+            Hide();
+            return;
+        }
         if (controller == null) return;
         if (!controller.CanContinueNow(out _)) { RefreshStatus(); return; }
         controller.RequestContinue();
@@ -916,12 +899,13 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     private void RefreshContinueInteractable()
     {
-        bool canContinue = controller != null && controller.CanContinueNow(out _);
+        bool canContinue = presentedFall || (controller != null && controller.CanContinueNow(out _));
         if (continueButton != null) continueButton.interactable = canContinue;
         if (continueLabel != null)
         {
             continueLabel.color = promptTextColor;
-            continueLabel.text = canContinue ? "Devam etmek için dokunun" : "Tekrar denemek için bekleyin";
+            continueLabel.text = presentedFall ? "Ana menüye dönmek için dokunun"
+                : canContinue ? "Devam etmek için dokunun" : "Tekrar denemek için bekleyin";
         }
         RefreshStatus();
     }
@@ -947,7 +931,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         if (continueButton != null && !continueButton.interactable)
             RefreshContinueInteractable();
         if (!continuePromptVisible || !continuePromptArmed) return;
-        if (!controller.CanContinueNow(out _)) return;
+        if (!presentedFall && !controller.CanContinueNow(out _)) return;
         if (WasContinueTap()) OnContinueClicked();
     }
 

@@ -58,7 +58,7 @@ public sealed class OverrideOverrideCombo
             // Hold specials at their cells until the radial front arrives. Each arrival
             // launches that cell's chain while the rest of the wave continues.
             if (useRunner)
-                result.Actions.Add(new PendingTriggeredSpecialScopeAction(specialCells, true));
+                result.Actions.Add(new PendingTriggeredSpecialScopeAction(specialCells, true, rt));
 
             var clear = BuildClearAction(rt.Context);
             if (useRunner)
@@ -70,7 +70,7 @@ public sealed class OverrideOverrideCombo
                 }
             result.Actions.Add(clear);
             if (useRunner)
-                result.Actions.Add(new PendingTriggeredSpecialScopeAction(specialCells, false));
+                result.Actions.Add(new PendingTriggeredSpecialScopeAction(specialCells, false, rt));
         }
 
         return result;
@@ -138,7 +138,8 @@ public sealed class OverrideOverrideCombo
 
         Vector2Int originCell = new Vector2Int(rt.Origin.X, rt.Origin.Y);
         float comboVfxDuration = rt.Effects != null
-            ? rt.Effects.PlayOverrideComboVfxAndQueue(TileSpecial.SystemOverride, TileSpecial.SystemOverride, originCell)
+            ? rt.Effects.PlayOverrideComboVfxAndQueue(TileSpecial.SystemOverride, TileSpecial.SystemOverride, originCell,
+                rt.Origin, rt.Partner)
             : 0f;
 
         rt.Context.OverrideVfxDuration = comboVfxDuration;

@@ -5,12 +5,6 @@ public partial class CascadeLogic
 {
     private readonly BoardController board;
 
-    // True iken diagonal slide tamamen kapalı; taşlar yalnızca düz düşer.
-    // Override+PulseCore gibi anchor'lı (pending-triggered) special zincirlerinde kullanılır:
-    // anchor'lı special'lar geçici blocker gibi davrandığı için etraflarındaki taşlar diagonal
-    // kayıp "engel yokken kayıyor" gibi kötü bir görüntü oluşturuyordu. Zincir boyunca düz düşüş.
-    public bool SuppressDiagonalSlides { get; set; }
-
     // Buffer for active goals
     private readonly List<TopHudController.ActiveGoal> _activeGoalsBuffer = new List<TopHudController.ActiveGoal>(4);
 
@@ -178,17 +172,11 @@ public partial class CascadeLogic
                 }
 
                 // Step 2: Diagonal Slide
-                // SuppressDiagonalSlides açıksa hiç diagonal yapma — yalnızca düz düşüş (anchor'lı
-                // pulse zincirinde temiz görüntü için).
-                // Aksi hâlde: önce SADECE normal taşlar diagonal kaysın. Special'lar düz inmeyi
-                // tercih eder; yalnızca normal taşlarla hiç ilerleme olmazsa (son çare) special kayar.
-                bool slided = false;
-                if (!SuppressDiagonalSlides)
-                {
-                    slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: true);
-                    if (!slided)
-                        slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: false);
-                }
+                // Önce SADECE normal taşlar diagonal kaysın. Special'lar düz inmeyi tercih eder;
+                // yalnızca normal taşlarla hiç ilerleme olmazsa (son çare) special kayar.
+                bool slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: true);
+                if (!slided)
+                    slided = DoDiagonalSlidePass(virtualBoard, verticalOnlyGaps, skipSpecials: false);
                 changed |= slided;
 
                 // Prune unfillable VerticalOnly gaps

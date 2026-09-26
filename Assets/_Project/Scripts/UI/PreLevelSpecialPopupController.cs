@@ -608,6 +608,13 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     {
         SetPopupVisible(true, false);
         PlayOneShot(openSfx);
+        // Ortak popup girişi: panel yukarıdan kayar (stretch panelde ölçek animasyonu doğru görünmüyordu).
+        // Alfa'yı bu controller popupCanvasGroup ile yönetir.
+        if (popupRoot != null)
+        {
+            popupRoot.localScale = Vector3.one;
+            PopupEntranceAnimator.Enter(popupRoot, animateAlpha: false);
+        }
 
         float elapsed = 0f;
         float duration = Mathf.Max(0.01f, openDuration);
@@ -623,9 +630,6 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
             if (popupCanvasGroup != null)
                 popupCanvasGroup.alpha = eased;
-
-            if (popupRoot != null)
-                popupRoot.localScale = Vector3.LerpUnclamped(openStartScale, Vector3.one, EaseOutBackLight(t));
 
             yield return null;
         }
@@ -648,6 +652,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
     private IEnumerator CoClose()
     {
+        PopupEntranceAnimator.Exit(popupRoot, null);
         float elapsed = 0f;
         float duration = Mathf.Max(0.01f, closeDuration);
 
@@ -662,9 +667,6 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
             if (popupCanvasGroup != null)
                 popupCanvasGroup.alpha = 1f - eased;
-
-            if (popupRoot != null)
-                popupRoot.localScale = Vector3.LerpUnclamped(Vector3.one, openStartScale, eased);
 
             yield return null;
         }

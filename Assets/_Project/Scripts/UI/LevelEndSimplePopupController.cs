@@ -511,6 +511,14 @@ public class LevelEndSimplePopupController : MonoBehaviour
     }
 
     // Kayıp panelini ekran-dışı-sağdan, sahnede yazdığın hedef konuma kaydırır.
+    // Ortak popup girişi. Karartma Blocker'da ayrı yönetildiği için yalnız panel. Ekranı yatayda
+    // kaplayan fail popup'ı sağdan, success yukarıdan girer.
+    private static void PlayPopupEntrance(GameObject popupRoot, PopupSlideFrom from = PopupSlideFrom.Top)
+    {
+        if (popupRoot != null && popupRoot.transform is RectTransform rt)
+            PopupEntranceAnimator.Enter(rt, from: from);
+    }
+
     private System.Collections.IEnumerator SlideInFromRight(RectTransform panel, float dur)
     {
         Vector2 target = panel.anchoredPosition;   // sahnedeki yazılı (hedef) konum
@@ -1274,6 +1282,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         transform.SetAsLastSibling();
         if (failPopupRoot != null) failPopupRoot.SetActive(true);
         if (successPopupRoot != null) successPopupRoot.SetActive(false);
+        PlayPopupEntrance(failPopupRoot, PopupSlideFrom.Right);
 
         SetMainScreenDimmed(true);
         SetBlockerVisible(true);
@@ -1372,6 +1381,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (failPopupRoot != null)
         {
             failPopupRoot.SetActive(true);
+            PlayPopupEntrance(failPopupRoot, PopupSlideFrom.Right);
             Debug.Log("[LevelEnd] fail popup set active true");
         }
         else
@@ -1488,6 +1498,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         {
             successPopupRoot.SetActive(true);
             successPopupRoot.transform.SetAsLastSibling();
+            PlayPopupEntrance(successPopupRoot);
         }
 
         if (failPopupRoot != null)

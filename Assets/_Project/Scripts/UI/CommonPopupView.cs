@@ -44,8 +44,20 @@ public sealed class CommonPopupView : MonoBehaviour
                 button.GetComponentInChildren<TMP_Text>().text = "";
         }
         view.Fit();
+
+        // Ortak giriş/çıkış animasyonu (yukarıdan kayarak). Karartma (varsa) çağıranın panelden önce
+        // kurduğu "Dim" kardeşidir.
+        view.entrance = rect.gameObject.AddComponent<PopupEntranceAnimator>();
+        view.entrance.ScaleDrivenExternally = true;
+        view.entrance.PlayOnEnable = true;
+        var dim = parent != null ? parent.Find("Dim") : null;
+        view.entrance.Configure(rect, dim != null ? dim.GetComponent<Graphic>() : null);
+        view.entrance.PlayEnter();
         return view;
     }
+
+    private PopupEntranceAnimator entrance;
+    public PopupEntranceAnimator Entrance => entrance;
 
     private void LateUpdate() => Fit();
 
@@ -54,7 +66,8 @@ public sealed class CommonPopupView : MonoBehaviour
         if (host == null || panel == null || host.rect.width <= 0 || host.rect.height <= 0) return;
         float scale = Mathf.Min(1, (host.rect.width - 32) / panel.sizeDelta.x,
             (host.rect.height - 48) / panel.sizeDelta.y);
-        panel.localScale = Vector3.one * Mathf.Max(0.01f, scale);
+        float anim = entrance != null ? entrance.ScaleFactor : 1f;
+        panel.localScale = Vector3.one * Mathf.Max(0.01f, scale) * anim;
     }
 
     public static RectTransform NewRect(Transform parent, string name, Vector2 size)

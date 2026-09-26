@@ -129,7 +129,7 @@ public static class BonusLineOverrideStyleRunner
             yield break;
 
         var currentBatchCells = ExtractCells(activations);
-        board.ClearPendingTriggeredSpecialCells(currentBatchCells);
+        board.ReleasePendingTriggeredSpecialCellsAllOwners(currentBatchCells);
 
         var beforeBatch = CaptureSnapshot(ctx);
 

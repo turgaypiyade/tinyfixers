@@ -30,6 +30,7 @@ public static class SafariState
     private const string KeyFallUntil    = "safari_fall_until_ticks";
 
     private const string KeyRewardClaimed = "safari_reward_claimed";
+    private const string KeyRunSeed      = "safari_run_seed";        // bot elemelerinin koşuya özgü seed'i
 
     public static bool RewardClaimed => PlayerPrefs.GetInt(KeyRewardClaimed, 0) == 1;
 
@@ -47,7 +48,29 @@ public static class SafariState
         PlayerPrefs.SetString(KeyFallUntil, "0");
         PlayerPrefs.SetInt(KeyLevelSnapshot, 0);
         PlayerPrefs.SetInt(KeyFailSnapshot, 0);
+        PlayerPrefs.SetInt(KeyRunSeed, NewRunSeed());
         MarkJoined(utcNow);
+    }
+
+    /// Koşu boyunca SABİT (ekran yeniden açılınca kalabalık sayısı zıplamasın), her yeni koşuda
+    /// FARKLI seed. Bu seed'ten önceki sürümlerde başlamış koşu için ilk okumada üretilir.
+    public static int RunSeed
+    {
+        get
+        {
+            int seed = PlayerPrefs.GetInt(KeyRunSeed, 0);
+            if (seed != 0) return seed;
+            seed = NewRunSeed();
+            PlayerPrefs.SetInt(KeyRunSeed, seed);
+            PlayerPrefs.Save();
+            return seed;
+        }
+    }
+
+    private static int NewRunSeed()
+    {
+        int seed = UnityEngine.Random.Range(1, int.MaxValue);
+        return seed == 0 ? 1 : seed;
     }
 
     public static event Action OnChanged;
@@ -199,7 +222,7 @@ public static class SafariState
     public static void DebugClearAll()
     {
         foreach (var k in new[] { KeyCycle, KeyJoined, KeyPitstop, KeyJoinTime,
-                                  KeyLastAsk, KeyRunStatus, KeyLevelSnapshot, KeyFailSnapshot, KeyFallUntil, KeyRewardClaimed })
+                                  KeyLastAsk, KeyRunStatus, KeyLevelSnapshot, KeyFailSnapshot, KeyFallUntil, KeyRewardClaimed, KeyRunSeed })
             PlayerPrefs.DeleteKey(k);
         PlayerPrefs.Save();
         OnChanged?.Invoke();

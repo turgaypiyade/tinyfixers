@@ -117,7 +117,7 @@ public sealed class OverrideSpecializedCombo
             foreach (var activation in batchActivations)
                 allPendingCells.Add(activation.cell);
 
-            result.Actions.Add(new PendingTriggeredSpecialScopeAction(allPendingCells, true));
+            result.Actions.Add(new PendingTriggeredSpecialScopeAction(allPendingCells, true, rt));
         }
 
         var fanoutPayload = BuildDeltaClearPayload(
@@ -148,7 +148,7 @@ public sealed class OverrideSpecializedCombo
             else
                 QueueDeferredLineActivationBatches(rt, batchActivations, result.Actions, emittedTiles, emittedCells);
 
-            result.Actions.Add(new PendingTriggeredSpecialScopeAction(allPendingCells, false));
+            result.Actions.Add(new PendingTriggeredSpecialScopeAction(allPendingCells, false, rt));
         }
 
         rt.Context.OverrideDeferredLineVActivations.Clear();
@@ -772,6 +772,10 @@ public sealed class OverrideSpecializedCombo
         if (!runCascadeInline)
             yield break;
 
+        // Pompa açık: dolum pompanın işi, batch'ler arası inline beklenmez.
+        if (sequencer.Board.TryStartFlowGravity())
+            yield break;
+
         var cascades = sequencer.Board.CascadeLogic.CalculateCascades();
         if (cascades == null || cascades.Count == 0)
             yield break;
@@ -900,7 +904,7 @@ public sealed class OverrideSpecializedCombo
 
             // Bu batch artık patlayacağı için pending'den çıkar.
             // Pending'de sadece henüz sıra gelmemiş diğer batchler kalsın.
-            rt.Board.ClearPendingTriggeredSpecialCells(currentBatchCells);
+            rt.Board.ClearPendingTriggeredSpecialCells(currentBatchCells, rt);
 
             var beforeBatch = owner.CaptureSnapshot(rt.Context);
 

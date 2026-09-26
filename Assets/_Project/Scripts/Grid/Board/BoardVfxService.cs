@@ -50,6 +50,8 @@ public class BoardVfxService
         RectTransform vfxSpace,
         int originX,
         int originY,
+        TileView ta,
+        TileView tb,
         Sprite overrideSpriteA,
         Sprite overrideSpriteB,
         Sprite mergedSprite = null)
@@ -60,8 +62,6 @@ public class BoardVfxService
         vfx.gameObject.SetActive(true);
         if (vfxSpace != null)
         {
-            TileView ta = board.LastSwapA;
-            TileView tb = board.LastSwapB;
             vfx.SetWaveMaxRadius(WaveMaxRadiusPx(originX, originY));
 
             if (ta != null && tb != null)

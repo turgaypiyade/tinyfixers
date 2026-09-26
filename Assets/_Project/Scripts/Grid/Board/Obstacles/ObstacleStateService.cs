@@ -1343,6 +1343,19 @@ public class ObstacleStateService : ISimObstacleQuery
     }
 
     /// <summary>
+    /// Board'da GERÇEKTEN yaşayan tüm örnekler: açıkta (origin), over-tile altında stamped ve
+    /// movable altında saklı. Dinamik hedeflerin (Mud) ground-truth sayımı buradan türetilir.
+    /// </summary>
+    public int CountAllLiveOrigins(ObstacleId obstacleId)
+    {
+        int count = CountAliveOrStampedOrigins(obstacleId);
+        foreach (var kv in _underTileBeneathMovable)
+            if (kv.Value.Id == obstacleId && kv.Value.Remaining > 0)
+                count++;
+        return count;
+    }
+
+    /// <summary>
     /// Kırılması ClearObstacleFromLevel'dan GEÇMEYEN over-tile obstacle'lar (Safe) için: verilen
     /// over-origin'e ait tüm stamped-beneath hücrelerini geri yükler. Normal damage ile kırılan
     /// obstacle'lar bunu otomatik olarak ClearObstacleFromLevel içinde yapar; bu metod ekstra
