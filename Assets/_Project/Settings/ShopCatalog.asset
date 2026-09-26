@@ -15,6 +15,7 @@ MonoBehaviour:
   sections:
   - title: "\xD6zel Teklifler"
     bandStyle: 1
+    bandSprite: {fileID: 21300000, guid: 83afb5006eba84bdea92bf2aa60329cc, type: 3}
     offers:
     - id: bundle_start
       displayName: "Gezginci \xC7antas\u0131"
@@ -85,7 +86,149 @@ MonoBehaviour:
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 4999.99 TL
+      priceLabel: 499.99 TL
+      priceAmount: 0
+    - id: bundle_hunter_loot
+      displayName: "Avc\u0131 Ganimeti"
+      cardStyle: 0
+      showBestBadge: 0
+      groups:
+      - background: {fileID: 0}
+        icons:
+        - {fileID: -3159637889253506446, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
+        labelMode: 0
+        labelValue: 10000
+        showTimerIcon: 0
+        grants:
+        - kind: 0
+          amount: 10000
+          booster: 1
+          durationHours: 1
+      - background: {fileID: 21300000, guid: f2bf98f6f3d5249e79afdf902d704121, type: 3}
+        icons:
+        - {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
+        - {fileID: 21300000, guid: 6383ea1b8ef964caa93201ecd940dce2, type: 3}
+        - {fileID: 21300000, guid: 6a7898939c3c747d784adee98d1f7bbb, type: 3}
+        - {fileID: 21300000, guid: d7f358535eeaf4bcf91584c858f8ce88, type: 3}
+        labelMode: 1
+        labelValue: 2
+        showTimerIcon: 0
+        grants:
+        - kind: 3
+          amount: 2
+          booster: 1
+          durationHours: 1
+        - kind: 3
+          amount: 2
+          booster: 2
+          durationHours: 1
+        - kind: 3
+          amount: 2
+          booster: 3
+          durationHours: 1
+        - kind: 3
+          amount: 2
+          booster: 4
+          durationHours: 1
+      - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
+        icons:
+        - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
+        - {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
+        - {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+        labelMode: 2
+        labelValue: 12
+        showTimerIcon: 1
+        grants:
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 12
+          timedType: 11
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 12
+          timedType: 13
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 12
+          timedType: 12
+      availability: 0
+      cooldownHours: 24
+      priceType: 0
+      priceLabel: 999.99 TL
+      priceAmount: 0
+    - id: bundle_explorer_chest
+      displayName: "Ka\u015Fif Sand\u0131\u011F\u0131"
+      cardStyle: 0
+      showBestBadge: 0
+      groups:
+      - background: {fileID: 0}
+        icons:
+        - {fileID: -5867612881708084865, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
+        labelMode: 0
+        labelValue: 25000
+        showTimerIcon: 0
+        grants:
+        - kind: 0
+          amount: 25000
+          booster: 1
+          durationHours: 1
+      - background: {fileID: 21300000, guid: f2bf98f6f3d5249e79afdf902d704121, type: 3}
+        icons:
+        - {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
+        - {fileID: 21300000, guid: 6383ea1b8ef964caa93201ecd940dce2, type: 3}
+        - {fileID: 21300000, guid: 6a7898939c3c747d784adee98d1f7bbb, type: 3}
+        - {fileID: 21300000, guid: d7f358535eeaf4bcf91584c858f8ce88, type: 3}
+        labelMode: 1
+        labelValue: 4
+        showTimerIcon: 0
+        grants:
+        - kind: 3
+          amount: 4
+          booster: 1
+          durationHours: 1
+        - kind: 3
+          amount: 4
+          booster: 2
+          durationHours: 1
+        - kind: 3
+          amount: 4
+          booster: 3
+          durationHours: 1
+        - kind: 3
+          amount: 4
+          booster: 4
+          durationHours: 1
+      - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
+        icons:
+        - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
+        - {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
+        - {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+        labelMode: 2
+        labelValue: 24
+        showTimerIcon: 1
+        grants:
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 24
+          timedType: 11
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 24
+          timedType: 13
+        - kind: 5
+          amount: 1
+          booster: 1
+          durationHours: 24
+          timedType: 12
+      availability: 0
+      cooldownHours: 24
+      priceType: 0
+      priceLabel: 1999.99 TL
       priceAmount: 0
     - id: bundle_grand_safe
       displayName: "Muhte\u015Fem Kasa"
@@ -253,6 +396,7 @@ MonoBehaviour:
       priceAmount: 0
   - title: "Alt\u0131nlar"
     bandStyle: 0
+    bandSprite: {fileID: 21300000, guid: dacecceb180224b269a6e3f3b0ec21b8, type: 3}
     offers:
     - id: coins_1000
       displayName: 1,000
@@ -261,7 +405,7 @@ MonoBehaviour:
       groups:
       - background: {fileID: 0}
         icons:
-        - {fileID: 3101298619733925228, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
+        - {fileID: 9122450257741795010, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
         labelMode: 0
         labelValue: 1000
         showTimerIcon: 0
@@ -282,7 +426,7 @@ MonoBehaviour:
       groups:
       - background: {fileID: 0}
         icons:
-        - {fileID: -5867612881708084865, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
+        - {fileID: 3101298619733925228, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
         labelMode: 0
         labelValue: 5000
         showTimerIcon: 0
@@ -295,4 +439,88 @@ MonoBehaviour:
       cooldownHours: 24
       priceType: 0
       priceLabel: 399.99 TL
+      priceAmount: 0
+    - id: coins_10000
+      displayName: 10,000
+      cardStyle: 1
+      showBestBadge: 0
+      groups:
+      - background: {fileID: 0}
+        icons:
+        - {fileID: -3159637889253506446, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
+        labelMode: 0
+        labelValue: 10000
+        showTimerIcon: 0
+        grants:
+        - kind: 0
+          amount: 10000
+          booster: 1
+          durationHours: 1
+      availability: 0
+      cooldownHours: 24
+      priceType: 0
+      priceLabel: 799.99 TL
+      priceAmount: 0
+    - id: coins_25000
+      displayName: 25,000
+      cardStyle: 1
+      showBestBadge: 0
+      groups:
+      - background: {fileID: 0}
+        icons:
+        - {fileID: -5867612881708084865, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
+        labelMode: 0
+        labelValue: 25000
+        showTimerIcon: 0
+        grants:
+        - kind: 0
+          amount: 25000
+          booster: 1
+          durationHours: 1
+      availability: 0
+      cooldownHours: 24
+      priceType: 0
+      priceLabel: 1499.99 TL
+      priceAmount: 0
+    - id: coins_50000
+      displayName: 50,000
+      cardStyle: 1
+      showBestBadge: 0
+      groups:
+      - background: {fileID: 0}
+        icons:
+        - {fileID: -3069832316943442191, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
+        labelMode: 0
+        labelValue: 50000
+        showTimerIcon: 0
+        grants:
+        - kind: 0
+          amount: 50000
+          booster: 1
+          durationHours: 1
+      availability: 0
+      cooldownHours: 24
+      priceType: 0
+      priceLabel: 2999.99 TL
+      priceAmount: 0
+    - id: coins_100000
+      displayName: 100,000
+      cardStyle: 1
+      showBestBadge: 0
+      groups:
+      - background: {fileID: 0}
+        icons:
+        - {fileID: -853685778971822253, guid: 7b02608c9c1df4a98bdc3bd91d6014f1, type: 3}
+        labelMode: 0
+        labelValue: 100000
+        showTimerIcon: 0
+        grants:
+        - kind: 0
+          amount: 100000
+          booster: 1
+          durationHours: 1
+      availability: 0
+      cooldownHours: 24
+      priceType: 0
+      priceLabel: 4999.99 TL
       priceAmount: 0

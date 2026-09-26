@@ -21,7 +21,7 @@ public sealed class FindFriendPopup : MonoBehaviour
     [SerializeField] private GameObject resultRoot;          // başta kapalı
     [SerializeField] private Image resultAvatar;
     [SerializeField] private TMP_Text resultNameText;
-    [SerializeField] private TMP_Text resultSubText;         // "Bölüm N"
+    [SerializeField] private TMP_Text resultSubText;         // "Seviye N"
     [SerializeField] private Button resultAddButton;
     [SerializeField] private TMP_Text resultAddLabel;        // "Ekle" → "Eklendi"
     [SerializeField] private TMP_Text notFoundText;          // "Oyuncu bulunamadı"
@@ -140,7 +140,7 @@ public sealed class FindFriendPopup : MonoBehaviour
 
         if (resultNameText != null) resultNameText.text = profile.name;
         SingleLineText.Fit(resultNameText);
-        if (resultSubText != null) resultSubText.text = $"Bölüm {profile.chapter}";
+        if (resultSubText != null) resultSubText.text = string.Format(GameLocalization.Get("leaderboard_level"), profile.chapter);
         if (resultAvatar != null)
         {
             var sprite = PickAvatar(profile.name);

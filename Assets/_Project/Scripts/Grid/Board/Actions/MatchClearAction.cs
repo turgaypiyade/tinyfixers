@@ -107,7 +107,7 @@ public class MatchClearAction : BoardAction
         bool useFlow = board != null && board.UseFlowActivities;
         System.IDisposable clearActivity = useFlow
             ? (allowLocalizedDynamicInput && isBlocking && !isSpecialActivationPhase && PresentationPlan == null
-                ? board.Flow.BeginLocalizedClear(matches)
+                ? board.Flow.BeginLocalizedClear(matches, IsFlowPumpClear)
                 : board.Flow.Begin(BoardFlowScheduler.ActivityKind.Clear))
             : null;
         System.IDisposable sweepActivity = useFlow && isSpecialActivationPhase

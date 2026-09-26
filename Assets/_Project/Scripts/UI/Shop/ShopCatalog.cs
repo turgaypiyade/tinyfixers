@@ -25,6 +25,10 @@ public sealed class ShopSection
     [Tooltip("Header = mor band; Special = magenta 'Özel Teklifler' band.")]
     public BandStyle bandStyle = BandStyle.Header;
 
+    [Tooltip("Doluysa band bu görselle çizilir (ör. Altınlar = RanksTeamUI/ToggleSelected altın bant); " +
+             "temanın renkli bandını ezer. Boşsa bandStyle rengi kullanılır.")]
+    public Sprite bandSprite;
+
     public List<ShopOffer> offers = new();
 }
 

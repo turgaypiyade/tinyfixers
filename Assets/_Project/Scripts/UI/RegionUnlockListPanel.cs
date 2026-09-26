@@ -29,7 +29,7 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
     [Header("Wonder Mode (atanırsa region yerine harika görevleri)")]
     [SerializeField] private WonderCatalog wonderCatalog;
     [SerializeField] private WonderRevealOverlay wonderOverlay;
-    [Tooltip("Bölüm kapısı kapalıyken satırda görünecek metnin lokalizasyon anahtarı ({0} = bölüm no).")]
+    [Tooltip("Bölüm kapısı kapalıyken satırda görünecek metnin lokalizasyon anahtarı ({0} = bitirilecek SEVİYE no).")]
     [SerializeField] private string chapterLockLocalizationKey = "wonder_task_locked_chapter";
 
     private bool WonderMode => wonderCatalog != null;
@@ -350,12 +350,13 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
         return string.IsNullOrEmpty(eventName) ? taskName : $"{eventName} · {taskName}";
     }
 
-    /// <summary>"Bölüm X bitince açılır" — sıradaki event'in açılması için bitirilecek bölüm.</summary>
+    /// <summary>"30. seviye bitince açılır" — kilit kuralı bölüm bazlı, ama oyuncu bölüm numarasını hiçbir
+    /// yerde görmediği için metin, o bölümün SON seviyesini söyler (bitince sonraki bölüme geçilir).</summary>
     private string ChapterLockText()
     {
-        int chapter = WonderProgress.ChapterToFinishForNextEvent;
-        string s = GameLocalization.GetFormat(chapterLockLocalizationKey, chapter);
-        return (s == chapterLockLocalizationKey) ? $"Bölüm {chapter} bitince açılır" : s;
+        int level = ChapterProgress.LastLevelOfChapter(WonderProgress.ChapterToFinishForNextEvent);
+        string s = GameLocalization.GetFormat(chapterLockLocalizationKey, level);
+        return (s == chapterLockLocalizationKey) ? $"{level}. seviye bitince açılır" : s;
     }
 
     /// <summary>Bir satıra tıklandı: o satırın ait olduğu EVENT'in sıradaki görevi yapılır.</summary>

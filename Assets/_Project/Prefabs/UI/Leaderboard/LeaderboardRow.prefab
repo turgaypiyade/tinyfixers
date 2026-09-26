@@ -171,7 +171,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 206, y: -10}
+  m_AnchoredPosition: {x: 262, y: -10}
   m_SizeDelta: {x: 240, y: 30}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &5140107786445225206
@@ -202,7 +202,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "B\xF6l\xFCm 4401"
+  m_text: "Seviye 4401"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
   m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
@@ -398,8 +398,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 206, y: 8}
-  m_SizeDelta: {x: 300, y: 26}
+  m_AnchoredPosition: {x: 262, y: 8}
+  m_SizeDelta: {x: 260, y: 26}
   m_Pivot: {x: 0, y: 0}
 --- !u!222 &4450444895225633484
 CanvasRenderer:
@@ -1011,8 +1011,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 250, y: -4}
-  m_SizeDelta: {x: 300, y: 46}
+  m_AnchoredPosition: {x: 262, y: -4}
+  m_SizeDelta: {x: 290, y: 46}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &1489115484766395462
 CanvasRenderer:

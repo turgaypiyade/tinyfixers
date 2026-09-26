@@ -1926,6 +1926,9 @@ MonoBehaviour:
   lockedImageTint: {r: 0.42, g: 0.42, b: 0.46, a: 1}
   frameColor: {r: 0.64, g: 0.66, b: 0.71, a: 1}
   currentCard: {fileID: 863694758}
+  useButtonSprite: {fileID: 21300000, guid: 31a3eec15ec7e4edebed2e4bd6c22218, type: 3}
+  useButtonWidth: 300
+  useButtonMaterial: {fileID: 2100000, guid: 4dd4d5178055413eae35dd279b1de097, type: 2}
   nextCard: {fileID: 119554936}
   onWatch:
     m_PersistentCalls:
@@ -28861,7 +28864,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "7 KAT \xB7 B\xDCY\xDCK \xD6D\xDCL\nB\xF6l\xFCmleri ilk denemede ge\xE7,\nzirvedeki
+  m_text: "7 KAT \xB7 B\xDCY\xDCK \xD6D\xDCL\nSeviyeleri ilk denemede ge\xE7,\nzirvedeki
     \xF6d\xFCl\xFC payla\u015F!"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5744a8aefd63d471b8967c121098f41d, type: 2}
@@ -42144,7 +42147,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Gereken B\xF6l\xFCm:"
+  m_text: "Gereken Seviye:"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
   m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
@@ -57583,7 +57586,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Gereken B\xF6l\xFCm: 0"
+  m_text: "Gereken Seviye: 0"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5744a8aefd63d471b8967c121098f41d, type: 2}
   m_sharedMaterial: {fileID: 9118687485867404735, guid: 5744a8aefd63d471b8967c121098f41d, type: 2}

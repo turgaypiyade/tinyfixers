@@ -101,6 +101,34 @@
           "value": "Çık"
         },
         {
+          "key": "journey_use_background",
+          "value": "Kullan"
+        },
+        {
+          "key": "leaderboard_level",
+          "value": "Seviye {0}"
+        },
+        {
+          "key": "team_required_level",
+          "value": "Gereken Seviye: {0}"
+        },
+        {
+          "key": "team_level_needed",
+          "value": "Seviye {0} gerek"
+        },
+        {
+          "key": "team_full",
+          "value": "Dolu"
+        },
+        {
+          "key": "team_join",
+          "value": "Katıl"
+        },
+        {
+          "key": "journey_background_in_use",
+          "value": "Kullanılıyor"
+        },
+        {
           "key": "level_end_exit_life_loss",
           "value": "Bir can kaybedeceksin"
         },
@@ -670,7 +698,7 @@
         },
         {
           "key": "wonder_task_locked_chapter",
-          "value": "Bölüm {0} bitince açılır"
+          "value": "{0}. seviye bitince açılır"
         },
         {
           "key": "wonder_task_locked_button",
@@ -776,6 +804,34 @@
         {
           "key": "level_end_exit",
           "value": "Quit"
+        },
+        {
+          "key": "journey_use_background",
+          "value": "Use"
+        },
+        {
+          "key": "leaderboard_level",
+          "value": "Level {0}"
+        },
+        {
+          "key": "team_required_level",
+          "value": "Required Level: {0}"
+        },
+        {
+          "key": "team_level_needed",
+          "value": "Level {0} needed"
+        },
+        {
+          "key": "team_full",
+          "value": "Full"
+        },
+        {
+          "key": "team_join",
+          "value": "Join"
+        },
+        {
+          "key": "journey_background_in_use",
+          "value": "In Use"
         },
         {
           "key": "level_end_exit_life_loss",
@@ -1339,7 +1395,7 @@
         },
         {
           "key": "wonder_task_locked_chapter",
-          "value": "Unlocks when Chapter {0} is complete"
+          "value": "Unlocks after Level {0}"
         },
         {
           "key": "wonder_task_locked_button",

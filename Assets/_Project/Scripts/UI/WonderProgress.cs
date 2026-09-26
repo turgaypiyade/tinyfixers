@@ -21,6 +21,8 @@ public static class WonderProgress
     // Event başına görev sırası. CloudSaveManifest'te "wonder_stage_" aile öneki olarak taranır.
     const string KeyStagePrefix = "wonder_stage_";
     const string KeyLastCompleted = "wonder_last_completed";
+    // Oyuncunun Journey'den seçtiği ana menü arka planı (tamamlanmış event indeksi). -1 = varsayılan.
+    const string KeySelectedBackground = "wonder_selected_background";
     const string KeyModelVersion = "wonder_model_v2";
 
     // v1 (tek aktif harika) anahtarları — yalnız migration kaynağı olarak okunur.
@@ -35,6 +37,8 @@ public static class WonderProgress
     public static event Action<int> OnTaskCompleted;
     /// <summary>Bir event (harika) tamamlandı (parametre = tamamlanan event indeksi).</summary>
     public static event Action<int> OnWonderCompleted;
+    /// <summary>Ana menü arka planı seçimi değişti (Journey "Kullan").</summary>
+    public static event Action OnBackgroundChanged;
 
     // ─── Migration (v1 tek-harika modeli → v2 event başına ilerleme) ──────────
 
@@ -175,6 +179,10 @@ public static class WonderProgress
             PlayerPrefs.SetInt(KeyLastCompleted, index);
             PlayerPrefs.Save();
         }
+        // Yeni bir harika kazanıldı: oyuncunun seçtiği eski arka plan bırakılır, ana menü yine
+        // varsayılana (en yeni harika) döner — yeni harika sağdan kayarak gelir.
+        PlayerPrefs.DeleteKey(KeySelectedBackground);
+        PlayerPrefs.Save();
         OnWonderCompleted?.Invoke(index);
     }
 
@@ -186,9 +194,30 @@ public static class WonderProgress
         get { EnsureMigrated(); return PlayerPrefs.GetInt(KeyLastCompleted, -1); }
     }
 
-    /// <summary>Ana menüde görünen harika (en son tamamlanan). null = default arka plan.</summary>
+    /// <summary>Ana menüde görünen harika: oyuncunun Journey'den seçtiği (tamamlanmışsa), yoksa en son
+    /// tamamlanan. null = default arka plan.</summary>
     public static WonderDefinition BackgroundWonder(WonderCatalog cat)
-        => cat != null ? cat.Get(LastCompletedIndex) : null;
+        => cat != null ? cat.Get(BackgroundIndex(cat)) : null;
+
+    /// <summary>Ana menü arka planındaki harikanın indeksi (-1 = default arka plan).</summary>
+    public static int BackgroundIndex(WonderCatalog cat)
+    {
+        int selected = PlayerPrefs.GetInt(KeySelectedBackground, -1);
+        if (selected >= 0 && cat != null && IsEventComplete(cat, selected))
+            return selected;
+        return LastCompletedIndex;
+    }
+
+    /// <summary>Journey "Kullan": tamamlanmış bir harikayı ana menü arka planı yapar.</summary>
+    public static bool SelectBackground(WonderCatalog cat, int index)
+    {
+        if (cat == null || !IsEventComplete(cat, index)) return false;
+        if (BackgroundIndex(cat) == index) return false;
+        PlayerPrefs.SetInt(KeySelectedBackground, index);
+        PlayerPrefs.Save();
+        OnBackgroundChanged?.Invoke();
+        return true;
+    }
 
     /// <summary>Tamamlanmış event sayısı (katalog üzerinden sayılır).</summary>
     public static int CompletedCount(WonderCatalog cat)
@@ -229,6 +258,7 @@ public static class WonderProgress
             PlayerPrefs.DeleteKey(KeyStagePrefix + i);
 
         PlayerPrefs.DeleteKey(KeyLastCompleted);
+        PlayerPrefs.DeleteKey(KeySelectedBackground);
         PlayerPrefs.DeleteKey(KeyModelVersion);
         PlayerPrefs.DeleteKey(KeyLegacyCompleted);
         PlayerPrefs.DeleteKey(KeyLegacyStage);

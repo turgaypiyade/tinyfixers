@@ -21,12 +21,39 @@ public sealed class ShopSectionHeader : MonoBehaviour
             if (theme != null) theme.ApplyText(title, theme.textLight, heading: true);
         }
 
-        if (theme != null)
+        if (section.bandSprite != null)
+        {
+            // Hazır görselli band (ör. altın bant): renk boyaması yok, köşeler 9-slice.
+            UITheme.ApplySurface(band, section.bandSprite, Color.white);
+            if (band != null) band.pixelsPerUnitMultiplier = 1f;   // görseller 900x92 birebir çizildi
+            SetHeight(GraphicBandHeight);
+            if (title != null)
+            {
+                title.fontSize = 44f;
+                title.outlineColor = new Color32(92, 40, 12, 255);
+                title.outlineWidth = 0.22f;
+            }
+        }
+        else if (theme != null)
         {
             Color c = section.bandStyle == ShopSection.BandStyle.Special
                 ? theme.specialBand
                 : theme.headerBand;
             UITheme.ApplySurface(band, theme.sectionHeaderBackground, c);
+        }
+    }
+
+    // Başlık görselleri (MarketUI/PkgTitle, CoinsTitle) 900x92 çizildi; 64px'lik varsayılan başlıkta ezilir.
+    private const float GraphicBandHeight = 92f;
+
+    private void SetHeight(float height)
+    {
+        var rt = (RectTransform)transform;
+        rt.sizeDelta = new Vector2(rt.sizeDelta.x, height);
+        if (TryGetComponent(out LayoutElement layout))
+        {
+            layout.preferredHeight = height;
+            layout.minHeight = height;
         }
     }
 }

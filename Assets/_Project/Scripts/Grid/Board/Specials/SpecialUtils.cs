@@ -49,6 +49,11 @@ public static class SpecialUtils
             board.ObstacleStateService.IsInteractionLockedAt(x, y))
             return false;
 
+        // Oyuncunun o an kaydırdığı taş special hedefi olamaz (dynamic input; bkz. ClearMatchesAnimated).
+        var tile = board.Tiles[x, y];
+        if (tile != null && tile && tile.RuntimeState == TileRuntimeState.Swapping)
+            return false;
+
         return true;
     }
 }

@@ -40,9 +40,14 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
 
     [Header("Fisek VFX")]
     [SerializeField] private RectTransform vfxRoot;
-    [SerializeField] private int fireworkBurstCount = 12;
-    [Tooltip("Havai fisek gosterisinin toplam suresi (saniye). Son patlamanin sonme suresi bu sureye dahildir.")]
-    [SerializeField, Min(0.5f)] private float fireworkShowDuration = 2.4f;
+    [Tooltip("Kac fisek atilir. Fisekler SIRAYLA cikar: biri yukselir-patlar, sonra digeri.")]
+    [SerializeField] private int fireworkBurstCount = 4;
+    [Tooltip("Iki patlama arasi sure (sn). Patlama sesinin duyulan kismi (~0.8 sn) kadar olmali ki sesler ust uste binmesin.")]
+    [SerializeField, Min(0.2f)] private float fireworkInterval = 0.8f;
+    [Tooltip("Roketin asagidan patlama noktasina yukselme suresi (sn).")]
+    [SerializeField, Min(0.05f)] private float fireworkRiseDuration = 0.4f;
+    [Tooltip("Ses klibinde patlama aninin klip basindan gecikmesi (Fireworks.wav ~0.2 sn). Ses bu kadar ERKEN baslar ki patlamayla eslessin.")]
+    [SerializeField, Min(0f)] private float fireworkSoundLead = 0.2f;
 
     [Header("Zamanlama")]
     [SerializeField, Min(0.1f)] private float flyInDuration = 0.55f;
@@ -73,10 +78,14 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
     public event Action FireworksStarted;
     public event Action FireworksFinished;
     /// <summary>Her tek görsel havai fişek patlamasında tetiklenir (kesintili ses için).</summary>
+    /// Patlama sesi icin: her fisekte bir kez, patlamadan fireworkSoundLead once (klibin tepe ani patlamaya denk gelsin).
     public event Action FireworkBurst;
 
     private bool _playing;
     private bool _skipRequested;
+    // Logo yerine oturdu mu: sonrasinda (bekleme + havai fisek gosterisi) TEK dokunus gosteriyi bitirir.
+    // Giris sirasinda yanlislikla atlanmasin diye orada cift dokunus gerekir.
+    private bool _entranceSettled;
     private float _lastTapTime = -99f;
     private RectTransform[] _flyPieces;
     private Vector2[] _flyHomePositions;
@@ -121,7 +130,7 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
         float now = Time.unscaledTime;
         float gap = now - _lastTapTime;
 
-        if (gap <= doubleTapWindow)
+        if (_entranceSettled || gap <= doubleTapWindow)
             _skipRequested = true;
 
         _lastTapTime = now;
@@ -132,6 +141,7 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
     {
         WasSkipped = false;
         _skipRequested = false;
+        _entranceSettled = false;
         _playing = false;
         _lastTapTime = -99f;
 
@@ -223,6 +233,7 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
         }
 
         SettleLogoToHome();
+        _entranceSettled = true;
 
         float holdElapsed = 0f;
         while (holdElapsed < holdDuration && !_skipRequested)
@@ -486,56 +497,93 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
 
         yield return new WaitForSecondsRealtime(fireworkDelay);
 
-        int salvoCount = Mathf.Max(1, fireworkBurstCount);
-        // Son salvonun sonmesi de toplam sureye dahil → salvolar kalan pencereye yayilir.
-        float salvoWindow = Mathf.Max(0f, fireworkShowDuration - FireworkBurstDuration);
-        float gap = salvoCount > 1 ? salvoWindow / (salvoCount - 1) : 0f;
+        int count = Mathf.Max(1, fireworkBurstCount);
 
-        // Salvo siralamasi karistirilir: arka arkaya gelen patlamalar
-        // ekranin farkli bolgelerinden cikar, ayni yere yigilmaz.
-        var lanes = new int[salvoCount];
-        for (int i = 0; i < salvoCount; i++)
+        // Yatay seritler karistirilir: arka arkaya gelen fisekler ekranin farkli bolgelerinden cikar.
+        var lanes = new int[count];
+        for (int i = 0; i < count; i++)
             lanes[i] = i;
-        for (int i = salvoCount - 1; i > 0; i--)
+        for (int i = count - 1; i > 0; i--)
         {
             int j = Random.Range(0, i + 1);
             (lanes[i], lanes[j]) = (lanes[j], lanes[i]);
         }
 
         int fired = 0;
-        for (int i = 0; i < salvoCount && !_skipRequested; i++)
+        for (int i = 0; i < count && !_skipRequested; i++)
         {
-            float lane = salvoCount > 1 ? lanes[i] / (float)(salvoCount - 1) : 0.5f;
+            float lane = count > 1 ? lanes[i] / (float)(count - 1) : 0.5f;
             Vector2 pos = new Vector2(
-                Mathf.Lerp(-340f, 340f, lane) + Random.Range(-40f, 41f),
-                Random.Range(120f, 540f));
-            // Salvo rengi = merkez parlamasinin tonu; isinlarin her biri kendi rastgele rengini alir.
+                Mathf.Lerp(-320f, 320f, lane) + Random.Range(-40f, 41f),
+                Random.Range(160f, 520f));
             Color col = Color.HSVToRGB(Random.value, Random.Range(0.45f, 0.75f), 1f);
 
             if (fired == 0)
                 FireworksStarted?.Invoke();
 
-            FireworkBurst?.Invoke();
-
-            // Her salvo 1-2 yakin ama ayri merkezden patlar.
-            int centerCount = Random.Range(1, 3);
-            for (int center = 0; center < centerCount; center++)
-            {
-                Vector2 clusterOffset = center == 0
-                    ? Vector2.zero
-                    : new Vector2(Random.Range(-72f, 73f), Random.Range(-38f, 39f));
-                StartCoroutine(BurstAt(pos + clusterOffset, col));
-            }
+            StartCoroutine(LaunchAndBurst(pos, col));
             fired++;
 
-            if (i < salvoCount - 1 && gap > 0f)
-                yield return new WaitForSecondsRealtime(gap * Random.Range(0.65f, 1.35f));
+            // Sıradaki fisek, bunun patlama sesi bitince patlasin (yukselme suresi ikisinde de ayni).
+            if (i < count - 1)
+                yield return new WaitForSecondsRealtime(fireworkInterval);
         }
 
         if (fired > 0 && !_skipRequested)
         {
-            yield return new WaitForSecondsRealtime(FireworkBurstDuration);
+            yield return new WaitForSecondsRealtime(fireworkRiseDuration + FireworkBurstDuration);
             FireworksFinished?.Invoke();
+        }
+    }
+
+    // Tek fisek: asagidan isikli izle yukselir (yavaslayarak), tepede patlar. Ses patlamadan
+    // fireworkSoundLead once tetiklenir → klibin tepe ani gorsel patlamaya denk gelir.
+    private IEnumerator LaunchAndBurst(Vector2 burstPos, Color color)
+    {
+        float rise = Mathf.Max(0.05f, fireworkRiseDuration);
+        float soundAt = Mathf.Max(0f, rise - fireworkSoundLead);
+        bool soundPlayed = false;
+
+        Vector2 start = new Vector2(burstPos.x + Random.Range(-60f, 61f), burstPos.y - 620f);
+        Color trailColor = Color.Lerp(color, Color.white, 0.55f);
+        var trail = CreateDot(start, 5f, trailColor);
+        trail.GetComponent<Image>().sprite = GetFireworkLineSprite();
+        var rocket = CreateDot(start, 22f, Color.Lerp(color, Color.white, 0.8f));
+
+        float elapsed = 0f;
+        while (elapsed < rise && !_skipRequested)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            if (!soundPlayed && elapsed >= soundAt)
+            {
+                soundPlayed = true;
+                FireworkBurst?.Invoke();
+            }
+
+            float k = Mathf.Clamp01(elapsed / rise);
+            float e = 1f - (1f - k) * (1f - k);   // yukarida yavaslar
+            Vector2 head = Vector2.LerpUnclamped(start, burstPos, e);
+            Vector2 tail = Vector2.Lerp(start, head, Mathf.Max(0f, e - 0.28f) / Mathf.Max(0.0001f, e));
+            if (rocket != null) rocket.anchoredPosition = head;
+            if (trail != null) SetFireworkLine(trail, tail, head, Mathf.Lerp(5f, 3f, k));
+            yield return null;
+        }
+
+        RemoveFirework(trail);
+        RemoveFirework(rocket);
+        if (_skipRequested)
+            yield break;
+        if (!soundPlayed)
+            FireworkBurst?.Invoke();
+
+        // Patlama 1-2 yakin ama ayri merkezden.
+        int centerCount = Random.Range(1, 3);
+        for (int center = 0; center < centerCount; center++)
+        {
+            Vector2 clusterOffset = center == 0
+                ? Vector2.zero
+                : new Vector2(Random.Range(-72f, 73f), Random.Range(-38f, 39f));
+            StartCoroutine(BurstAt(burstPos + clusterOffset, color));
         }
     }
 

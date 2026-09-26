@@ -39,7 +39,7 @@ MonoBehaviour:
     weight: 15
   - type: 20
     amount: 2
-    icon: {fileID: 21300000, guid: e80512acde4c9498bb2774285e6930da, type: 3}
+    icon: {fileID: 0}
     nameLocalizationKey: 
     fallbackName: 
     weight: 10

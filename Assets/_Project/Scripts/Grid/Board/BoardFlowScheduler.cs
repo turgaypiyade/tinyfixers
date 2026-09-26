@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 /// <summary>
 /// Board akışının TEK OTORİTESİ (Docs/UnifiedSpecialFlow_Plan.md Faz 1).
@@ -49,15 +50,21 @@ public sealed class BoardFlowScheduler
     private readonly int[] blockingCounts = new int[KindCount];
     private int epoch;
     private int localizedClearCount;
+    private int pumpClearCount;
     private readonly Dictionary<int, int> inputBlockedColumns = new Dictionary<int, int>();
 
     public bool HasUnlocalizedClear => Count(ActivityKind.Clear) > localizedClearCount;
+
+    // Oyuncu hamlesine ait temizlikler (pompanın kaskat temizlikleri HARİÇ). Yeni hamle yalnız bunları
+    // bekler: pompa temizliği hamle bağlamı (lastSwap, special doğum yeri) kullanmaz, yeri bellidir ve
+    // hücreleri tutulur — kaskat sürerken tahtanın başka yerinde oynamak güvenlidir.
+    public int MoveClearCount => Mathf.Max(0, Count(ActivityKind.Clear) - pumpClearCount);
     public bool IsInputColumnBlocked(int x) => inputBlockedColumns.ContainsKey(x);
 
     // Ordinary match clears have a fixed footprint. Keep their columns and the
     // adjacent obstacle/diagonal-fall columns unavailable until the clear finishes.
     // Unknown clear presentations still use Begin(Clear), retaining the global gate.
-    public IDisposable BeginLocalizedClear(IEnumerable<TileView> tiles)
+    public IDisposable BeginLocalizedClear(IEnumerable<TileView> tiles, bool fromFlowPump = false)
     {
         var columns = new HashSet<int>();
         foreach (var tile in tiles)
@@ -69,7 +76,7 @@ public sealed class BoardFlowScheduler
         }
         var footprint = new int[columns.Count];
         columns.CopyTo(footprint);
-        return new Handle(this, ActivityKind.Clear, blocking: true, inputColumns: footprint);
+        return new Handle(this, ActivityKind.Clear, blocking: true, inputColumns: footprint, pumpClear: fromFlowPump);
     }
 
     /// <summary>
@@ -159,6 +166,7 @@ public sealed class BoardFlowScheduler
         Array.Clear(counts, 0, counts.Length);
         Array.Clear(blockingCounts, 0, blockingCounts.Length);
         localizedClearCount = 0;
+        pumpClearCount = 0;
         inputBlockedColumns.Clear();
     }
 
@@ -170,13 +178,17 @@ public sealed class BoardFlowScheduler
         private readonly bool blocking;
         private bool disposed;
         private readonly int[] inputColumns;
+        private readonly bool pumpClear;
 
-        public Handle(BoardFlowScheduler owner, ActivityKind kind, bool blocking, int[] inputColumns = null)
+        public Handle(BoardFlowScheduler owner, ActivityKind kind, bool blocking, int[] inputColumns = null,
+            bool pumpClear = false)
         {
             this.owner = owner;
             this.kind = kind;
             this.blocking = blocking;
             this.inputColumns = inputColumns;
+            this.pumpClear = pumpClear;
+            if (pumpClear) owner.pumpClearCount++;
             handleEpoch = owner.epoch;
             owner.counts[(int)kind]++;
             if (blocking)
@@ -204,6 +216,7 @@ public sealed class BoardFlowScheduler
             int i = (int)kind;
             if (o.counts[i] > 0) o.counts[i]--;
             if (blocking && o.blockingCounts[i] > 0) o.blockingCounts[i]--;
+            if (pumpClear && o.pumpClearCount > 0) o.pumpClearCount--;
             if (inputColumns != null)
             {
                 o.localizedClearCount--;

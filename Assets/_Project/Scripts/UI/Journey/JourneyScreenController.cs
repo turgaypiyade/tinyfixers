@@ -46,6 +46,14 @@ public sealed class JourneyScreenController : MonoBehaviour
     [Tooltip("Kart çerçevesinin rengi (metalik gri).")]
     [SerializeField] private Color frameColor = new Color(0.64f, 0.66f, 0.71f, 1f);
 
+    [Header("Arka Plan Seçimi (wonder modu)")]
+    [Tooltip("Tamamlanmış harika kartındaki 'Kullan' butonu görseli (GreenButonwoStroke, 289x116).")]
+    [SerializeField] private Sprite useButtonSprite;
+    [SerializeField] private float useButtonWidth = 300f;
+    [Tooltip("Buton rengi: tonları koruyarak yeşili mora çeviren materyal (UI_PopupColorRemap; " +
+             "Materials/MAT_JourneyUseButtonPurple). Boşsa sprite'ın kendi rengi.")]
+    [SerializeField] private Material useButtonMaterial;
+
     [Header("Kartlar (eski mockup — ada modunda gizlenir)")]
     [SerializeField] private JourneyChapterCard currentCard;
     [SerializeField] private JourneyChapterCard nextCard;
@@ -56,7 +64,17 @@ public sealed class JourneyScreenController : MonoBehaviour
 
     private ScrollRect builtScroll;
 
-    private void OnEnable() => Build();
+    // Tamamlanmış harika kartlarının "Kullan" butonları — seçim değişince yerinde güncellenir
+    // (liste yeniden kurulmaz, kaydırma konumu korunur).
+    private readonly List<(int index, Button button, TMP_Text label, Image image)> useButtons = new();
+
+    private void OnEnable()
+    {
+        WonderProgress.OnBackgroundChanged += RefreshUseButtons;
+        Build();
+    }
+
+    private void OnDisable() => WonderProgress.OnBackgroundChanged -= RefreshUseButtons;
 
     private void Build()
     {
@@ -100,6 +118,15 @@ public sealed class JourneyScreenController : MonoBehaviour
         if (content == null) return false;
         for (int i = content.childCount - 1; i >= 0; i--)
             Destroy(content.GetChild(i).gameObject);
+        useButtons.Clear();
+
+        // Kartın alt kenarından yarı taşan "Kullan" butonu + alttaki kartın üstten yarı taşan plaketi
+        // araya sığsın (yoksa çakışır).
+        if (content.TryGetComponent(out VerticalLayoutGroup layout))
+        {
+            float buttonHalf = useButtonWidth * 116f / 289f * 0.5f;
+            layout.spacing = Mathf.Max(cardSpacing, buttonHalf + 92f * 0.5f + 20f);
+        }
 
         float panelW = ((RectTransform)transform).rect.width;
         if (panelW < 10f) panelW = 1080f;
@@ -160,7 +187,73 @@ public sealed class JourneyScreenController : MonoBehaviour
 
         string name = string.IsNullOrEmpty(wonder.displayName) ? wonder.wonderId : wonder.displayName;
         BuildPlaque(card, name, new Vector2(0.5f, 1f), 0f, cardW * 0.72f, 92f, bold: true);
+
+        // Tamamlanmış harika: kartın alt kenarına oturan "Kullan" butonu → ana menü arka planı olur.
+        if (WonderProgress.IsEventComplete(wonderCatalog, index))
+            BuildUseButton(card, index);
     }
+
+    private void BuildUseButton(RectTransform card, int index)
+    {
+        float w = useButtonWidth;
+        float h = useButtonSprite != null && useButtonSprite.rect.width > 1f
+            ? w * useButtonSprite.rect.height / useButtonSprite.rect.width
+            : w * 116f / 289f;
+
+        var rt = NewUiRect("UseBackgroundButton", card);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;   // alt kenara oturur, yarısı taşar (üst plaket gibi)
+        rt.sizeDelta = new Vector2(w, h);
+
+        var img = rt.gameObject.AddComponent<Image>();
+        img.sprite = useButtonSprite;
+        img.preserveAspect = true;
+        if (useButtonMaterial != null) img.material = useButtonMaterial;
+        if (useButtonSprite == null) img.color = FallbackButtonColor;
+
+        var button = rt.gameObject.AddComponent<Button>();
+        button.targetGraphic = img;
+        var colors = button.colors;
+        colors.disabledColor = Color.white;   // "Kullanılıyor" tonu RefreshUseButton'da verilir
+        button.colors = colors;
+        button.onClick.AddListener(() => WonderProgress.SelectBackground(wonderCatalog, index));
+
+        var txtRt = NewUiRect("Label", rt);
+        txtRt.anchorMin = Vector2.zero; txtRt.anchorMax = Vector2.one;
+        txtRt.offsetMin = new Vector2(18f, 10f); txtRt.offsetMax = new Vector2(-18f, -6f);
+        var label = txtRt.gameObject.AddComponent<TextMeshProUGUI>();
+        label.alignment = TextAlignmentOptions.Center;
+        label.enableAutoSizing = true;
+        label.fontSizeMin = 20f; label.fontSizeMax = 46f;
+        label.raycastTarget = false;
+        if (theme != null) theme.ApplyText(label, theme.textLight, heading: true);
+        label.outlineColor = new Color32(48, 20, 92, 255);   // morun koyu tonu
+        label.outlineWidth = 0.2f;
+
+        useButtons.Add((index, button, label, img));
+        RefreshUseButton(index, button, label, img);
+    }
+
+    private void RefreshUseButtons()
+    {
+        foreach (var b in useButtons)
+            if (b.button != null) RefreshUseButton(b.index, b.button, b.label, b.image);
+    }
+
+    // Seçili (ana menüde görünen) harika: "Kullanılıyor", soluk ve tıklanamaz; diğerleri "Kullan".
+    private void RefreshUseButton(int index, Button button, TMP_Text label, Image img)
+    {
+        bool inUse = WonderProgress.BackgroundIndex(wonderCatalog) == index;
+        button.interactable = !inUse;
+        label.text = inUse
+            ? GameLocalization.Get("journey_background_in_use")
+            : GameLocalization.Get("journey_use_background");
+        img.color = inUse ? new Color(0.72f, 0.72f, 0.72f, 1f)
+                          : (useButtonSprite != null ? Color.white : FallbackButtonColor);
+    }
+
+    private static readonly Color FallbackButtonColor = new Color(0.56f, 0.33f, 0.87f, 1f);   // mor
 
     private bool TryBuildIslandList()
     {

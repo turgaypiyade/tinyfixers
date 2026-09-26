@@ -18,6 +18,8 @@ public class GameEventSfxConfig : ScriptableObject
     [Header("Oyun-sonu (win) — boşsa chestOpen kullanılır")]
     public AudioClip levelWin;
     [Range(0f, 1f)] public float levelWinVolume = 1f;
+    [Tooltip("Her havai fişek patlamasında çalan levelWin sesinin ölçeği (fişekler sırayla patlar, sesler binmez).")]
+    [Range(0f, 1f)] public float levelWinBurstVolume = 1f;
 
     [Header("Kaynakçı robot (reveal sırasında loop)")]
     public AudioClip weldingLoop;

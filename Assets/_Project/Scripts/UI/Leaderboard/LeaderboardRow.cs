@@ -22,7 +22,7 @@ public sealed class LeaderboardRow : MonoBehaviour
     [SerializeField] private Image avatar;
 
     [Header("Bilgi")]
-    [SerializeField] private TMP_Text chapterText;  // "Bölüm 4401" (0 = gizli)
+    [SerializeField] private TMP_Text chapterText;  // "Seviye 4401" (0 = gizli)
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private TMP_Text subtitleText;
 
@@ -131,7 +131,7 @@ public sealed class LeaderboardRow : MonoBehaviour
         {
             bool showChapter = e.chapter > 0 && tab != LeaderboardTab.Team;
             chapterText.gameObject.SetActive(showChapter);
-            if (showChapter) chapterText.text = $"Bölüm {e.chapter}";
+            if (showChapter) chapterText.text = string.Format(GameLocalization.Get("leaderboard_level"), e.chapter);   // "Seviye N" / "Level N"
         }
         if (nameText != null) nameText.text = e.playerName;
         SingleLineText.Fit(nameText);

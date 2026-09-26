@@ -228,24 +228,29 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         StartCoroutine(PulseTapText());
     }
 
+    // Ödül öğesi: ikon (140) + altında büyük "xN" etiketi; yazı büyüdükçe öğe ve sıra aralıkları da büyür.
+    private const float RewardLabelSize = 54f;
+    private const float RewardItemWidth = 180f;
+    private const float RewardItemHeight = 140f + 12f + RewardLabelSize * 1.3f;   // ikon + boşluk + etiket
+
     // Ödül hedef dizilimi (kullanıcı tasarımı 2026-07-19): ilk 3 ödül YAY —
     // sol, üst(orta hafif yukarıda), sağ; 4. ve sonrası alt sırada ORTALANIR.
     // 1-2 ödülde basit ortalama. Layout group yok → uçuş animasyonuyla kavga yok.
     private Vector2 SlotTarget(int index, int total)
     {
         if (total == 1) return new Vector2(0f, 40f);
-        if (total == 2) return new Vector2(index == 0 ? -160f : 160f, 20f);
+        if (total == 2) return new Vector2(index == 0 ? -180f : 180f, 20f);
 
         // İlk üçlü: yay (sol - tepe - sağ).
-        if (index == 0) return new Vector2(-280f, -10f);
-        if (index == 1) return new Vector2(0f, 75f);
-        if (index == 2) return new Vector2(280f, -10f);
+        if (index == 0) return new Vector2(-300f, -10f);
+        if (index == 1) return new Vector2(0f, 85f);
+        if (index == 2) return new Vector2(300f, -10f);
 
-        // Fazlası: yayın altında ortalanmış sıra.
+        // Fazlası: yayın altında ortalanmış sıra (öğe yüksekliği + satır boşluğu kadar aşağıda).
         int extraCount = total - 3;
         int extraIndex = index - 3;
-        float x = (extraIndex - (extraCount - 1) * 0.5f) * 180f;
-        return new Vector2(x, -215f);
+        float x = (extraIndex - (extraCount - 1) * 0.5f) * (RewardItemWidth + 40f);
+        return new Vector2(x, -10f - RewardItemHeight - 40f);
     }
 
     // Tek ödül: sandık ağzından çıkar, yay (arc) ile hesaplanmış yerine uçar.
@@ -282,7 +287,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
     private RectTransform BuildRewardItem(DailySlotReward reward, Transform parent)
     {
         var item = NewRect("Reward", parent);
-        item.sizeDelta = new Vector2(150f, 190f);
+        item.sizeDelta = new Vector2(RewardItemWidth, RewardItemHeight);
 
         var iconRt = NewRect("Icon", item);
         iconRt.anchorMin = new Vector2(0.5f, 1f); iconRt.anchorMax = new Vector2(0.5f, 1f);
@@ -306,7 +311,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         labelRt.anchorMin = new Vector2(0.5f, 0f); labelRt.anchorMax = new Vector2(0.5f, 0f);
         labelRt.pivot = new Vector2(0.5f, 0f);
         labelRt.anchoredPosition = Vector2.zero;
-        labelRt.sizeDelta = new Vector2(170f, 46f);
+        labelRt.sizeDelta = new Vector2(RewardItemWidth + 60f, RewardLabelSize * 1.3f);
         var label = labelRt.gameObject.AddComponent<TextMeshProUGUI>();
         int amount = reward != null ? Mathf.Max(1, reward.amount) : 1;
         string name = reward != null && !string.IsNullOrEmpty(reward.fallbackName) ? reward.fallbackName : "";
@@ -316,6 +321,8 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         label.fontStyle = FontStyles.Bold;
         label.alignment = TextAlignmentOptions.Center;
         label.color = new Color(1f, 0.9f, 0.55f, 1f);
+        // Ortak ödül yazısı stili: büyük, altın outline + gölge (Safari kazanma yazısı).
+        RewardTextStyle.Apply(label, RewardLabelSize);
         label.raycastTarget = false;
 
         return item;

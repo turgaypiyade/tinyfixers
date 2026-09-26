@@ -46,6 +46,7 @@ public static class CloudSaveManifest
         // Event başına görev sırası "wonder_stage_" aile öneki ile taranır (aşağıda).
         // Eski tek-harika anahtarları migration kaynağı olarak taşınmaya devam eder.
         "wonder_last_completed",
+        "wonder_selected_background",   // Journey'den seçilen ana menü arka planı (-1 = varsayılan)
         "wonder_model_v2",
         "wonder_completed_count",
         "wonder_current_stage",

@@ -3257,7 +3257,7 @@ public class BoardController : MonoBehaviour
     {
         while ((actionSequencer != null && !actionSequencer.AllActionsSettled)
                || BlockingBackgroundJobs > 0 || Flow.IsSpecialVisualInFlight
-               || Flow.Count(BoardFlowScheduler.ActivityKind.Clear) > 0
+               || Flow.MoveClearCount > 0
                || Flow.Count(BoardFlowScheduler.ActivityKind.ComboStep) > 0
                || SpreadingObstacles > 0)
         {
@@ -3301,7 +3301,7 @@ public class BoardController : MonoBehaviour
         if (!CanStartDynamicSpecialTap(tile)) yield break;
         int x = tile.X, y = tile.Y;
         TileSpecial special = tile.GetSpecial();
-        bool waitForClear = Flow.Count(BoardFlowScheduler.ActivityKind.Clear) > 0;
+        bool waitForClear = Flow.MoveClearCount > 0;   // pompanın kaskat temizlikleri beklenmez
         BeginDynamicSwapLogic();
         try
         {
@@ -3323,7 +3323,7 @@ public class BoardController : MonoBehaviour
             yield break;
 
         int ax = a.X, ay = a.Y, bx = b.X, by = b.Y;
-        bool waitForClear = Flow.Count(BoardFlowScheduler.ActivityKind.Clear) > 0;
+        bool waitForClear = Flow.MoveClearCount > 0;   // pompanın kaskat temizlikleri beklenmez
         BeginDynamicSwapLogic();
         try
         {
@@ -4450,7 +4450,10 @@ public class BoardController : MonoBehaviour
             presentationPlan: presentationPlan,
             enqueueCascadeOnComplete: false,
             implodeTargetCell: implodeCenter,
-            allowLocalizedDynamicInput: createdSpecialTiles.Count == 0);
+            // Special DOĞURAN eşleşme de yeri bilinen temizliktir (ayak izi + doğan special tutulur):
+            // roket oluşurken tahtanın geri kalanı oynanabilir kalır. Special PATLAMASI (isSpecialPhase)
+            // bilinçli olarak genel kilitte kalır — kullanıcı: patlamayı izlemek keyifli.
+            allowLocalizedDynamicInput: true);
 
         // Oluşan special formation boyunca yerinde kalsın (altı açılsa bile düşmesin).
         clearAction.HoldAlso(createdSpecialTiles);

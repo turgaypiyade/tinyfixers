@@ -642,17 +642,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (levelCompletionLogoAnimation != null)
         {
-            // Havai fişek sesi, görsel gösteri PENCERESİ boyunca loop'lar: ilk patlamada başlar,
-            // fişekler bitince (FireworksFinished) tam olarak durur → erken bitmez, animasyonla senkron biter.
-            void StartWinSfx() => GameEventSfx.StartLevelWinLoop();
-            void StopWinSfx()  => GameEventSfx.StopLevelWinLoop();
+            // Havai fişek sesi yalnız fişek PATLARKEN: her görsel salvoda tek seferlik (hafif rastgele pitch).
+            void PlayBurstSfx() => GameEventSfx.PlayFireworkBurst();
 
-            levelCompletionLogoAnimation.FireworksStarted += StartWinSfx;
-            levelCompletionLogoAnimation.FireworksFinished += StopWinSfx;
+            levelCompletionLogoAnimation.FireworkBurst += PlayBurstSfx;
             yield return StartCoroutine(levelCompletionLogoAnimation.Play());
-            levelCompletionLogoAnimation.FireworksStarted -= StartWinSfx;
-            levelCompletionLogoAnimation.FireworksFinished -= StopWinSfx;
-            StopWinSfx();
+            levelCompletionLogoAnimation.FireworkBurst -= PlayBurstSfx;
         }
 
         _movesAtWin = board != null ? board.RemainingMoves : 0;

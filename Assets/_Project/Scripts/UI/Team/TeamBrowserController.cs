@@ -198,11 +198,13 @@ public sealed class TeamBrowserController : MonoBehaviour
         if (infoMinChapterText != null)
         {
             infoMinChapterText.gameObject.SetActive(entry.minChapter > 0);
-            infoMinChapterText.text = $"Gereken Bölüm: {entry.minChapter}";
+            infoMinChapterText.text = string.Format(GameLocalization.Get("team_required_level"), entry.minChapter);   // minChapter = gereken SEVİYE (current_level ile kıyaslanır)
         }
         if (infoJoinButton != null) infoJoinButton.interactable = chapterOk && hasRoom;
         if (infoJoinLabel != null)
-            infoJoinLabel.text = !hasRoom ? "Dolu" : (!chapterOk ? $"Bölüm {entry.minChapter} gerek" : "Katıl");
+            infoJoinLabel.text = !hasRoom ? GameLocalization.Get("team_full")
+                : (!chapterOk ? string.Format(GameLocalization.Get("team_level_needed"), entry.minChapter)
+                              : GameLocalization.Get("team_join"));
     }
 
     private void OnJoin()

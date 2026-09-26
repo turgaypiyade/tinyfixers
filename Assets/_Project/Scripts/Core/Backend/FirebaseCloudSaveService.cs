@@ -65,6 +65,7 @@ public static class FirebaseCloudSaveService
         PlayerWallet.OnTotalStarsChanged += _ => MarkDirty();
         PlayerWallet.OnTotalScoreChanged += _ => MarkDirty();
         FriendState.OnChanged += MarkDirty;
+        WonderProgress.OnBackgroundChanged += MarkDirty;   // Journey'den seçilen arka plan
     }
 
     /// <summary>Kalıcı oyuncu verisi değişti — bir sonraki döngüde buluta yazılır.</summary>

@@ -68,7 +68,7 @@ public sealed class SafariJoinPopupController : MonoBehaviour
         if (titleText != null) titleText.text = "SAFARİ";
         if (prizeText != null) prizeText.text = $"{(config != null ? config.prizePoolGold : 2000):N0} ALTIN";
         if (bodyText != null)
-            bodyText.text = $"<b>{(config != null ? config.pitstopCount : 7)} KAT · BÜYÜK ÖDÜL</b>\nBölümleri ilk denemede geç,\nzirvedeki ödülü paylaş!";
+            bodyText.text = $"<b>{(config != null ? config.pitstopCount : 7)} KAT · BÜYÜK ÖDÜL</b>\nSeviyeleri ilk denemede geç,\nzirvedeki ödülü paylaş!";
     }
 
     private IEnumerator Reveal()

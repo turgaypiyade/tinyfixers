@@ -89,6 +89,11 @@ public class FortuneWheelController : MonoBehaviour
     [SerializeField] private TMP_Text winnerText;
     [SerializeField] private Graphic dimOverlay;
     [SerializeField, Range(0f, 1f)] private float dimAlpha = 0.6f;
+    [Tooltip("Kazanılan ödül yazısı boyutu (RewardTextStyle: altın outline + gölge).")]
+    [SerializeField] private float winnerTextSize = 60f;
+    [SerializeField] private float winnerTextWidth = 680f;
+    [Tooltip("Yazının winnerDisplay merkezine göre Y konumu (ikon 200px → alt kenarı -100).")]
+    [SerializeField] private float winnerTextOffsetY = -165f;
 
     [Header("Effects")]
     [SerializeField] private AudioClip tickSfx;
@@ -327,6 +332,10 @@ public class FortuneWheelController : MonoBehaviour
 
             tmp.text = "+" + reward.amount.ToString();
             if (amountFont != null) tmp.font = amountFont;
+            // Ödül yazısı ortak stili (altın outline + gölge); stil yoksa eski görünüm.
+            TextAlignmentOptions segmentAlign = tmp.alignment;
+            RewardTextStyle.Apply(tmp, Mathf.Max(amountFontSize, tmp.fontSize) * 1.3f);
+            tmp.alignment = segmentAlign;
             tmp.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
             tmp.overflowMode = TextOverflowModes.Overflow;
         }
@@ -584,8 +593,15 @@ public class FortuneWheelController : MonoBehaviour
     {
         if (winnerDisplay == null) yield break;
 
-        if (winnerIcon != null && selectedReward?.icon != null)
-            winnerIcon.sprite = selectedReward.icon;
+        // Çark dilimiyle AYNI kaynak (ResolveIcon: elle atanmış ikon → yoksa TileIconLibrary). Ham .icon
+        // kırık/boş referansta null kalıyor, sprite'sız Image beyaz kutu çiziyordu.
+        if (winnerIcon != null)
+        {
+            Sprite icon = selectedReward != null ? selectedReward.ResolveIcon() : null;
+            winnerIcon.sprite = icon;
+            winnerIcon.preserveAspect = true;
+            winnerIcon.enabled = icon != null;
+        }
 
         if (winnerText != null)
         {
@@ -594,6 +610,12 @@ public class FortuneWheelController : MonoBehaviour
             if (string.IsNullOrEmpty(name) || name == selectedReward.nameLocalizationKey)
                 name = selectedReward.fallbackName ?? selectedReward.type.ToString();
             winnerText.text = $"+{selectedReward.amount} {name}";
+
+            // Büyük, altın outline'lı ödül yazısı; ikonun (200px) altında nefes payıyla, geniş kutuda.
+            RewardTextStyle.Apply(winnerText, winnerTextSize);
+            var textRt = winnerText.rectTransform;
+            textRt.sizeDelta = new Vector2(winnerTextWidth, winnerTextSize * 1.5f);
+            textRt.anchoredPosition = new Vector2(textRt.anchoredPosition.x, winnerTextOffsetY);
         }
 
         if (rewardNameText != null) rewardNameText.text = "";

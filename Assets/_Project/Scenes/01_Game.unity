@@ -14075,8 +14075,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 39c4f241b8e494020aaff2d331b0c4b3, type: 3}
   - {fileID: 21300000, guid: 4c766574dbb8a4b71acfa495f3243bbe, type: 3}
   vfxRoot: {fileID: 1883751289}
-  fireworkBurstCount: 12
-  fireworkShowDuration: 2.4
+  fireworkBurstCount: 4
   flyInDuration: 1
   holdDuration: 1.5
   fireworkDelay: 0.18

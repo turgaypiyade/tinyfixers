@@ -6,6 +6,8 @@ using UnityEngine.UI;
 /// Ana menü arka planı: her zaman TAMAMLANMIŞ harikayı (BackgroundWonder) tam açık +
 /// ambient robotlarla gösterir. Hiç tamamlanmamışsa (completedCount=0) catalog.defaultBackground.
 /// Bir harika bitince (WonderProgress.OnWonderCompleted) yeni arka plan SAĞDAN slide-in gelir.
+/// Oyuncu Journey'den tamamlanmış başka bir harikayı seçebilir ("Kullan"); yeni harika kazanılınca
+/// seçim sıfırlanır ve varsayılana (en yeni harika) dönülür.
 /// Reveal (kaynak) burada OLMAZ — o overlay/mission tarafında. [[project_wonder_reveal_background]]
 /// </summary>
 [RequireComponent(typeof(RectTransform))]
@@ -28,10 +30,18 @@ public class WonderBackgroundView : MonoBehaviour
     void OnEnable()
     {
         WonderProgress.OnWonderCompleted += HandleWonderCompleted;
+        WonderProgress.OnBackgroundChanged += HandleBackgroundChanged;
         RefreshInstant();
     }
 
-    void OnDisable() => WonderProgress.OnWonderCompleted -= HandleWonderCompleted;
+    void OnDisable()
+    {
+        WonderProgress.OnWonderCompleted -= HandleWonderCompleted;
+        WonderProgress.OnBackgroundChanged -= HandleBackgroundChanged;
+    }
+
+    // Journey'den seçilen harika: yeni arka plan sağdan kayarak gelir (menüye dönünce hazır olur).
+    void HandleBackgroundChanged() => HandleWonderCompleted(-1);
 
     /// <summary>Mevcut duruma göre arka planı anında kurar (slide yok).</summary>
     public void RefreshInstant()

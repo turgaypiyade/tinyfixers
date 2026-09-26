@@ -90,6 +90,8 @@ internal sealed class TileFallMotionSystem
         public float settleDuration;
         public float settleStrength;
         public readonly List<Vector2> points = new();
+        // Sahipsiz plan bekçisi: sequencer BOŞKEN ne kadar süredir başlatılmadan duruyor (-1 = saymıyor).
+        public float idleSince = -1f;
     }
 
     private struct KickedPlan
@@ -136,6 +138,11 @@ internal sealed class TileFallMotionSystem
     private const float ColumnGapCells = 0.92f;
     // Diagnose a stalled route without letting a follower pass through its leader.
     private const float StuckWarningSeconds = 2f;
+    // Planlı rota, sequencer boşken bu kadar süre başlatılmazsa sahibi (FallAction) hiç çalışmayacak demektir
+    // (kuyruk temizlendi / zincir iptal). Taşın mantıksal yeri planlamada hedefe taşındığı için rota şimdi
+    // başlatılır. Yoksa kayıt HasWork'ü (gravityBusy) sonsuza dek true tutuyor, taş Falling'de oynanamaz
+    // kalıyor, akış 15 sn sonra zorla boşaltılıyordu (L35 boss + PulseCore/Override/PatchBot zinciri donması).
+    private const float OrphanPlanSeconds = 1.5f;
     private const float StretchRampIn = 0.03f;
     private const float StretchRecover = 0.06f;
 
@@ -383,6 +390,9 @@ internal sealed class TileFallMotionSystem
         if (parked.Count > 0)
             ProcessParked();
 
+        if (planned.Count > 0)
+            StartOrphanedPlans();
+
         if (active.Count == 0)
             return;
 
@@ -479,6 +489,48 @@ internal sealed class TileFallMotionSystem
                 m.tile.RaiseFallArrivedFromMotion();
             }
         }
+    }
+
+    private readonly List<TileView> orphanScratch = new();
+
+    private void StartOrphanedPlans()
+    {
+        // Sequencer çalışıyorsa plan meşru olarak sırasını bekliyor olabilir (ör. özel animasyon arkası).
+        bool sequencerBusy = board.IsActionSequencePlaying || board.DetachedSequencerActions > 0;
+        float now = Time.unscaledTime;
+        orphanScratch.Clear();
+        foreach (var pair in planned)
+        {
+            var route = pair.Value;
+            if (sequencerBusy || active.ContainsKey(pair.Key) || parked.ContainsKey(pair.Key))
+            {
+                route.idleSince = -1f;
+                continue;
+            }
+            if (route.idleSince < 0f) { route.idleSince = now; continue; }
+            if (now - route.idleSince >= OrphanPlanSeconds)
+                orphanScratch.Add(pair.Key);
+        }
+
+        foreach (var tile in orphanScratch)
+        {
+            if (Kick(tile))
+            {
+                Debug.LogWarning($"[FallMotion] Taş ({tile.X},{tile.Y}) planlı düşüşü {OrphanPlanSeconds:0.#} sn başlamadı " +
+                                 "(sahibi çalışmadı); rota kendiliğinden başlatıldı.");
+                continue;
+            }
+            // Başlatılamayan plan (daha yeni nesil not edilmiş vb.): kaydı bırak, taşı yerine oturt.
+            planned.Remove(tile);
+            if (tile != null && tile && !active.ContainsKey(tile))
+            {
+                if (tile.RuntimeState == TileRuntimeState.Falling)
+                    tile.SetRuntimeState(TileRuntimeState.Idle);
+                tile.SnapToGrid(board.TileSize);
+                Debug.LogWarning($"[FallMotion] Taş ({tile.X},{tile.Y}) sahipsiz planı başlatılamadı; yerine oturtuldu.");
+            }
+        }
+        orphanScratch.Clear();
     }
 
     private void WatchStuck(Motion m, Vector2 before, float moveDt)

@@ -75,7 +75,10 @@ public static class SpecialCellUtils
             return false;
 
         var obstacles = board.ObstacleStateService;
-        if (obstacles == null || !obstacles.IsMagnetEndpoint(x, y))
+        // Etkilenemeyen hücrede yine de VURULMASI gereken tek katmanlar: magnet ucu ve kırılmaz
+        // kargonun üstündeki örtü (Grass/Oil). Kargo kırılmaz; vuruş örtüye gider (ObstacleStateService).
+        if (obstacles == null
+            || (!obstacles.IsMagnetEndpoint(x, y) && !obstacles.HasCoveringOverlayOnCargoAt(x, y)))
             return false;
 
         impactCells.Add(new Vector2Int(x, y));

@@ -409,8 +409,16 @@ public class ObstacleStateService : ISimObstacleQuery
 
         // Cargo (exitAtBottom): KIRILMAZ — hiçbir kaynak (match/special/booster) hasar veremez.
         // Yalnızca en alta inip board'dan çıkınca toplanır (BoardController bottom-exit akışı).
+        // AMA üstündeki örtü (Grass/Oil — kargo hücreye girince beneath store'a iner, görsel olarak
+        // üstte durur) vuruşu alır: aşağıdaki STACK KURALI bu erken dönüşün arkasında kaldığı için
+        // kargo'nun geçtiği grass hiç kırılmıyordu (L61 Override+Override: dalga 1. satıra varmadan
+        // tepedeki kargolar grass hücrelerine indi, 3 grass sağ kaldı).
         if (IsExitAtBottomObstacle(id))
+        {
+            if (TryConsumeCoveringOverlayHit(idx, context, out var coverChange))
+                return new ObstacleHitResult(true, true, false, coverChange, default, Array.Empty<int>());
             return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+        }
 
         // Tube cells are handled entirely by TubeObstacleService.
         // originIndex=-1 so BoardBreakFxService skips the particle FX (TubeView owns its visuals).
@@ -1527,6 +1535,16 @@ public class ObstacleStateService : ISimObstacleQuery
         if (id == ObstacleId.None) return false;
         var def = library != null ? library.Get(id) : null;
         return def != null && def.exitAtBottom;
+    }
+
+    /// Kırılmaz kargo (exitAtBottom) bir Grass/Oil hücresine girmiş ve örtü onun altında saklanıyor mu?
+    /// Special'lar kargo hücresini etkileyemez sayar (CanAffectCell), ama örtü vuruş almalı.
+    public bool HasCoveringOverlayOnCargoAt(int x, int y)
+    {
+        if (!IsValidCell(x, y) || !IsExitAtBottomAt(x, y)) return false;
+        return _underTileBeneathMovable.TryGetValue(level.Index(x, y), out var beneath)
+            && (beneath.Id == ObstacleId.Grass || beneath.Id == ObstacleId.Oil)
+            && beneath.Remaining != 0;
     }
 
     public bool IsExitAtBottomAt(int x, int y)

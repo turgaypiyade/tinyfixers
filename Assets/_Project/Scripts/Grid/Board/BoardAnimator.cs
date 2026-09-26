@@ -298,6 +298,10 @@ public class BoardAnimator
         // while we yield; it must not change which tiles this pass finalizes.
         bool isSpecialPhase = specialActivationPhase ?? board.IsSpecialActivationPhase;
         var list = new List<TileView>(matches);
+        // Oyuncunun o an kaydırdığı taş (dynamic input) hiçbir temizliğe giremez: swap veriyi animasyondan
+        // ÖNCE değiştirir; taş burada silinirse swap mantığı ölü/havuza dönmüş taşla devam ederdi.
+        // Kayma bitince taş Idle'a döner ve sonraki etkiler onu normal hedefler.
+        list.RemoveAll(t => t != null && t && t.RuntimeState == TileRuntimeState.Swapping);
         var tileLifetimes = new Dictionary<TileView, int>();
         foreach (var tile in list)
             if (tile != null)
