@@ -104,6 +104,8 @@ public sealed class RisingMapScreen : SafariMapScreenBase
     [SerializeField] private Sprite finalGoldMoneySprite;
     [SerializeField] private Sprite rewardRibbonSprite;
     [SerializeField] private Sprite rewardButtonSprite;
+    [Tooltip("Kazanma ekranındaki 'SAFARİ TAMAMLANDI' yazısının materyali (sarı kalın outline + gölge).")]
+    [SerializeField] private Material rewardEventLabelMaterial;
     [SerializeField] private AudioClip rewardCollectSfx;
     private SafariRewardView rewardView;
     [SerializeField, Min(0.1f)] private float rewardCountDuration = 0.85f;
@@ -803,10 +805,10 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     // ── Final ödül overlay (Safari ile aynı yapı) ────────────────
 
-    private IEnumerator ShowFinalRewardOverlay()
+    private IEnumerator ShowFinalRewardOverlay(bool claim = true)
     {
         Transform parent = root != null ? root.transform : transform;
-        int winners = Mathf.Max(1, CrowdSizeAt(SafariState.CurrentPitstop));
+        int winners = Mathf.Max(1, CrowdSizeAt(claim ? SafariState.CurrentPitstop : Pitstops));
         var cfg = controller != null ? controller.Config : null;
         int prizePool = cfg != null ? cfg.prizePoolGold : 0;
         int share = Mathf.Max(1, prizePool / winners);
@@ -814,11 +816,29 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         rewardView = SafariRewardView.Create(parent);
         yield return rewardView.Present(share, prizePool, winners, finalGoldMoneySprite,
             rewardRibbonSprite, rewardButtonSprite, continueLabel != null ? continueLabel.font : null,
-            rewardCollectSfx, motionSfxGroup, rewardCountDuration);
-        controller?.ClaimFinalReward(share, winners);
+            rewardCollectSfx, motionSfxGroup, rewardCountDuration, rewardEventLabelMaterial);
+        if (claim)
+            controller?.ClaimFinalReward(share, winners);
         Destroy(rewardView.gameObject);
         rewardView = null;
         Hide();
+    }
+
+    /// Editör önizlemesi (TinyFixers ▸ Debug): kazanma ekranını ÖDÜL VERMEDEN ve Safari durumuna
+    /// dokunmadan gösterir. Kazanan sayısı son kattaki simülasyondan gelir.
+    public void PreviewFinalReward()
+    {
+        if (controller == null)
+            controller = FindFirstObjectByType<SafariEventController>(FindObjectsInactive.Include);
+        if (topHud != null && controller != null) topHud.Bind(controller);
+        gameObject.SetActive(true);
+        if (root != null) root.SetActive(true);
+
+        ApplyPromptTextColor();
+        EnsureLift();
+        StopPresentation();
+        SetContinueVisible(false);
+        active = StartCoroutine(ShowFinalRewardOverlay(claim: false));
     }
 
     // ── Ortak yardımcılar ────────────────────────────────────────

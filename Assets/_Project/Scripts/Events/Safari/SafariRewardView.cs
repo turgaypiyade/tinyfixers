@@ -14,6 +14,7 @@ public sealed class SafariRewardView : MonoBehaviour
     private static Sprite glowSprite;
     private static readonly Color Gold = new Color(1f, 0.83f, 0.25f);
     private static readonly Color Cream = new Color(1f, 0.97f, 0.84f);
+    private const float AmountY = -240f;   // "+N" satırı; düşen altınlar buraya iner
 
     public static SafariRewardView Create(Transform parent)
     {
@@ -32,43 +33,50 @@ public sealed class SafariRewardView : MonoBehaviour
 
     public IEnumerator Present(int share, int prizePool, int winners, Sprite coinSprite,
         Sprite ribbonSprite, Sprite buttonSprite, TMP_FontAsset displayFont,
-        AudioClip collectSfx, AudioMixerGroup mixer, float countDuration)
+        AudioClip collectSfx, AudioMixerGroup mixer, float countDuration, Material eventLabelMaterial = null)
     {
         font = displayFont;
         claimed = false;
         design = CreateRect("Celebration", transform, new Vector2(900f, 1240f), Vector2.zero);
         Canvas.ForceUpdateCanvases();
         Rect viewport = ((RectTransform)transform).rect;
-        float fit = Mathf.Min(1f, Mathf.Min(viewport.width / 960f, viewport.height / 1360f));
+        float fit = Mathf.Min(1f, Mathf.Min(viewport.width / 980f, viewport.height / 1640f));
         design.localScale = Vector3.one * fit;
         var group = design.gameObject.AddComponent<CanvasGroup>();
         group.alpha = 0f;
 
-        var halo = Picture("GoldenGlow", design, Glow(), new Vector2(900f, 900f), new Vector2(0f, 160f));
+        var halo = Picture("GoldenGlow", design, Glow(), new Vector2(900f, 900f), new Vector2(0f, 45f));
         halo.color = new Color(1f, 0.64f, 0.1f, 0.6f);
         var rainLayer = CreateRect("CoinRain", design, new Vector2(900f, 1240f), Vector2.zero);
-        Picture("VictoryRibbon", design, ribbonSprite, new Vector2(860f, 220f), new Vector2(0f, 430f));
-        Label("Event", "SAFARİ TAMAMLANDI", 36, new Vector2(800f, 60f), new Vector2(0f, 584f), Cream);
-        Label("Title", "ZİRVE SENİN!", 84, new Vector2(770f, 130f), new Vector2(0f, 425f), Cream, true);
-        var hero = Picture("GoldReward", design, coinSprite, new Vector2(290f, 290f), new Vector2(0f, 165f));
-        Label("RewardCaption", "KAZANDIĞIN ALTIN", 36, new Vector2(780f, 60f), new Vector2(0f, -25f), Cream);
-        var amount = Label("Amount", "+0", 150, new Vector2(850f, 190f), new Vector2(0f, -137f), Gold, true);
+        // Kurdele görseli 1187x493 (≈2.41): kutu bu orana göre → preserveAspect yüksekliğe takılıp
+        // küçültmez. Başlık kurdelenin sarkmasını izlesin diye -15° yayla bükülür.
+        Picture("VictoryRibbon", design, ribbonSprite, new Vector2(960f, 398f), new Vector2(0f, 420f));
+        var eventLabel = Label("Event", "SAFARİ TAMAMLANDI", 40, new Vector2(820f, 80f), new Vector2(0f, 715f), Cream);
+        // Kalın sarı outline + etrafında yumuşak gölge (Fonts/Materials/Inter_ExtraBold_GoldOutlineGlow).
+        if (eventLabelMaterial != null)
+            eventLabel.fontSharedMaterial = eventLabelMaterial;
+        var title = Label("Title", "ZİRVE SENİN!", 92, new Vector2(700f, 150f), new Vector2(0f, 405f), Cream, true);
+        title.gameObject.AddComponent<TMPArcText>().arcDegrees = -15f;
+        var hero = Picture("GoldReward", design, coinSprite, new Vector2(270f, 270f), new Vector2(0f, 45f));
+        Label("RewardCaption", "KAZANDIĞIN ALTIN", 36, new Vector2(780f, 60f), new Vector2(0f, -132f), Cream);
+        var amount = Label("Amount", "+0", 150, new Vector2(850f, 190f), new Vector2(0f, AmountY), Gold, true);
         Label("Pool", $"{prizePool:N0} ALTINLIK BÜYÜK ÖDÜL", 42,
-            new Vector2(820f, 65f), new Vector2(0f, -284f), Gold);
+            new Vector2(820f, 65f), new Vector2(0f, -378f), Gold);
         Label("Winners", $"{winners} kazanan arasında paylaşıldı", 36,
-            new Vector2(820f, 70f), new Vector2(0f, -353f), Cream);
+            new Vector2(820f, 70f), new Vector2(0f, -442f), Cream);
 
+        // GreenButonwoStroke 289x116 oranında (≈2.49) büyütülür.
         var buttonImage = Picture("ClaimButton", design, buttonSprite,
-            new Vector2(580f, 140f), new Vector2(0f, -492f));
+            new Vector2(520f, 520f * 116f / 289f), new Vector2(0f, -650f));
         buttonImage.raycastTarget = true;
         var button = buttonImage.gameObject.AddComponent<Button>();
         button.targetGraphic = buttonImage;
         button.interactable = false;
         button.onClick.AddListener(() => claimed = true);
-        var buttonLabel = Label("ClaimLabel", "ALTINLAR TOPLANIYOR", 40,
-            new Vector2(500f, 100f), Vector2.zero, Cream, false, buttonImage.transform);
+        var buttonLabel = Label("ClaimLabel", "ALTINLAR TOPLANIYOR", 44,
+            new Vector2(440f, 130f), new Vector2(0f, 6f), Cream, false, buttonImage.transform);
         var hint = Label("Hint", "Ödülün birazdan hazır!", 30,
-            new Vector2(820f, 55f), new Vector2(0f, -598f), Cream);
+            new Vector2(820f, 55f), new Vector2(0f, -785f), Cream);
 
         audioSource = gameObject.AddComponent<AudioSource>();
         audioSource.playOnAwake = false;
@@ -118,7 +126,7 @@ public sealed class SafariRewardView : MonoBehaviour
                 float k = Mathf.Clamp01((elapsed - i * spacing) / flight);
                 float gravity = k * k;
                 float converge = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.2f, 1f, k));
-                rt.anchoredPosition = new Vector2(Mathf.Lerp(starts[i].x, 0f, converge), Mathf.Lerp(starts[i].y, -137f, gravity));
+                rt.anchoredPosition = new Vector2(Mathf.Lerp(starts[i].x, 0f, converge), Mathf.Lerp(starts[i].y, AmountY, gravity));
                 float shrink = Mathf.Lerp(1f, 0.38f, k * k);
                 rt.localScale = new Vector3(Mathf.Max(0.16f, Mathf.Abs(Mathf.Cos(k * Mathf.PI * 3f + i))) * shrink, shrink, 1f);
                 rt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(k * Mathf.PI * 2f + i) * 18f);
@@ -145,7 +153,7 @@ public sealed class SafariRewardView : MonoBehaviour
         amount.text = $"+{share:N0}";
         amount.rectTransform.localScale = Vector3.one;
         buttonLabel.text = "ÖDÜLÜ AL";
-        buttonLabel.fontSize = buttonLabel.fontSizeMax = 60f;
+        buttonLabel.fontSize = buttonLabel.fontSizeMax = 72f;
         hint.text = "Altınlarını cüzdanına ekle";
         // A release from the counting animation must not claim the reward accidentally.
         yield return null;

@@ -74383,7 +74383,8 @@ MonoBehaviour:
   landSfxVolume: 0.3
   finalGoldMoneySprite: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
   rewardRibbonSprite: {fileID: 21300000, guid: b79cae8d55bdc485db315a11f3feb725, type: 3}
-  rewardButtonSprite: {fileID: 21300000, guid: ba378aa579f6947379c2a27dc1a5b718, type: 3}
+  rewardButtonSprite: {fileID: 21300000, guid: 31a3eec15ec7e4edebed2e4bd6c22218, type: 3}
+  rewardEventLabelMaterial: {fileID: 2100000, guid: b9df451b4e454578a4673c89e72c4774, type: 2}
   rewardCollectSfx: {fileID: 8300000, guid: 1c291cb59bde541d1b3a1a8fb6b63dbc, type: 3}
   rewardCountDuration: 2.8
 --- !u!224 &2073089481
