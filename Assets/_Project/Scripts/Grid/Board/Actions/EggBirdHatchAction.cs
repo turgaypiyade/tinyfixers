@@ -75,18 +75,24 @@ public sealed class EggBirdHatchAction : BoardAction
 
     private static List<Vector2Int> PickTargets(BoardController board)
     {
+        // Uygunluk ORTAK havuzdan (BoardTargetPool): kargo, örtülü/pasif engel, kırılmaz jel, tüpün taban
+        // dışı hücreleri elenir. Çok-hücreli engel TEK aday (aynı kasaya iki kuş inip tek vuruşa düşmesin).
+        // Seçim politikası kuşa ait: hedef önceliği YOK, düzgün rastgele.
         var candidates = new List<Vector2Int>();
+        var seenOrigins = new HashSet<int>();
         var obstacles = board.ObstacleStateService;
+        var pool = board.TargetPool;
         for (int y = 0; y < board.Height; y++)
         for (int x = 0; x < board.Width; x++)
         {
-            bool hasObstacle = obstacles != null && obstacles.HasObstacleAt(x, y);
-            if (board.IsMaskHoleCell(x, y) && !hasObstacle)
+            if (!pool.IsAnyHitTarget(x, y))
                 continue;
-            if (obstacles != null && obstacles.IsExitAtBottomAt(x, y))
-                continue;
-            if (!hasObstacle && board.Tiles[x, y] == null)
-                continue;
+            if (pool.IsHittableObstacleCell(x, y))
+            {
+                int origin = obstacles.GetObstacleOriginAt(x, y);
+                if (origin >= 0 && !seenOrigins.Add(origin))
+                    continue;
+            }
             candidates.Add(new Vector2Int(x, y));
         }
 

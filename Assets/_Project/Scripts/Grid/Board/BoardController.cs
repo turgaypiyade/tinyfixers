@@ -139,6 +139,10 @@ public class BoardController : MonoBehaviour
     // clear başlasın → referans hissi). 0 = tam varışta. Timed sync DEĞİL — animasyonun içinden,
     // pozisyon eşiğiyle bir kez atılır. Küçük tut (~0.15-0.25); büyükse taş görünür şekilde havada kırılır.
     [SerializeField, Range(0f, 0.5f)] private float fallArrivalLeadCells = 0.2f;
+    // Kaskatta düşen taş, hücresine GERÇEKTEN oturup bu kadar görünmeden eşleşmesi temizlenmez (flow pump).
+    // 0 → eski davranış (lead anında temizlik). Kullanıcı: düşüş+patlama o kadar hızlı ki taş "blink" oluyor.
+    [SerializeField, Range(0f, 0.25f)] private float cascadeMatchRestSeconds = 0.08f;
+    internal float CascadeMatchRestSeconds => cascadeMatchRestSeconds;
     internal bool UseDecoupledResolve => useDecoupledResolve;
     internal float FallArrivalLeadCells => fallArrivalLeadCells;
     private BoardVisualCoordinator visualCoordinator;
@@ -380,13 +384,6 @@ public class BoardController : MonoBehaviour
     [SerializeField] private bool enableSpecialChainTrace;
     [SerializeField] private bool enableBoardFlowTrace;
 
-    // Teşhis: ekranda boş görünen hücreyi dök (Play'de duraklat → hücreyi yaz → ⋮ menü "Debug/Dump Cell").
-    // Hücredeki taşın tüm görsel hiyerarşisi + hücrenin üstünü kaplayan her görsel Console'a yazılır.
-    [SerializeField] private Vector2Int debugDumpCell;
-
-    [ContextMenu("Debug/Dump Cell")]
-    private void DebugDumpCell() => BoardMotionDiagnostics.DumpCell(this, debugDumpCell);
-
     // ── Faz 0 perf logger (ölçüm-önce; Docs/UnifiedSpecialFlow_Plan.md) ──
     // Açıkken her frame'i örnekler: eşik üstü frame süresi VEYA GC-alloc sıçraması = [PerfSpike]
     // (board bağlamıyla: busy/specialPhase/jobs/seq → takılma NE ZAMAN + NE koşarken). Her ~3s
@@ -506,6 +503,10 @@ public class BoardController : MonoBehaviour
             return tilesTopOverlayRoot;
         }
     }
+    // Tahta başına TEK hedef havuzu (uygunluk + ortak rezervasyonlar). Tüm hedefleyiciler buradan seçer.
+    private BoardTargetPool targetPool;
+    internal BoardTargetPool TargetPool => targetPool ??= new BoardTargetPool(this);
+
     public bool IsBusy => CurrentState == BoardState.Resolving;
     public bool IsActionSequencePlaying => actionSequencer != null && actionSequencer.IsPlaying;
     public event Action OnBecameIdle;

@@ -307,6 +307,7 @@ public class ObstacleStateService : ISimObstacleQuery
         _wardrobeItemCounts.Clear();
         _underTileBeneathMovable.Clear();
         _stampedBeneathByCell.Clear();
+        _revealGraceUntil.Clear();
 
         for (int idx = 0; idx < size; idx++)
         {
@@ -405,6 +406,16 @@ public class ObstacleStateService : ISimObstacleQuery
 
         int origin = level.obstacleOrigins[idx];
         if (origin < 0 || origin >= remainingHitsByOrigin.Length)
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        // YIĞIN KURALI (Docs/ObstacleStack_Plan.md): çok-hücreli bir engelin HERHANGİ bir hücresi hâlâ başka
+        // bir katmanın altındaysa (ör. 4x4 kasanın 4 hücresinde grass), engel yok hükmündedir — açıkta kalan
+        // hücrelerinden de vuruş ALMAZ. Üstündekiler bitince normal vurulur.
+        if (IsBuriedAnywhere(id, origin))
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        // Az önce açığa çıkan katman: kırıcı etkinin kalan vuruşlarını almaz (bkz. RevealGraceSeconds).
+        if (IsInRevealGrace(idx))
             return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
 
         // Cargo (exitAtBottom): KIRILMAZ — hiçbir kaynak (match/special/booster) hasar veremez.
@@ -961,7 +972,26 @@ public class ObstacleStateService : ISimObstacleQuery
         if (layers.Count == 0)
             _stampedBeneathByCell.Remove(idx);
 
+        if (stamped.Id != ObstacleId.None)
+            _revealGraceUntil[idx] = Time.unscaledTime + RevealGraceSeconds;
         return true;
+    }
+
+    // AÇILIŞ KORUMASI: üstteki katman kırılınca açığa çıkan katman kısa bir süre vuruş almaz.
+    // Kök sebep: kırıcı etki (roket süpürmesi, patlama dalgası, taş taş temizlenme) hasarını kareler boyunca
+    // dağıtır; ilk vuruş üstü kırar, AYNI etkinin sonraki karelerdeki vuruşları taze açılan katmana iniyordu
+    // (4x4 kasa kırılınca altındaki grass'ların 1. satır/1. sütunu silindi). Aynı-döngü koruması
+    // (visualChange.cleared → break / MarkClearedObstacleCells) kare-arası yayılımı kapsamıyordu.
+    // Süre kırıcı etkinin yayılımını kapsar; sonraki eşleşmeler normal kurallarla vurur.
+    private const float RevealGraceSeconds = 0.6f;
+    private readonly Dictionary<int, float> _revealGraceUntil = new();
+
+    private bool IsInRevealGrace(int idx)
+    {
+        if (!_revealGraceUntil.TryGetValue(idx, out float until)) return false;
+        if (Time.unscaledTime < until) return true;
+        _revealGraceUntil.Remove(idx);
+        return false;
     }
 
     private bool IsMagnetLayerPresentAt(int idx)
@@ -1280,6 +1310,48 @@ public class ObstacleStateService : ISimObstacleQuery
         }
 
         layers.Add(stamped);
+    }
+
+    /// Bu engelin (id+origin) en az bir hücresi yığında başka bir katmanın ALTINDA mı?
+    public bool IsBuriedAnywhere(ObstacleId id, int origin)
+    {
+        if (id == ObstacleId.None || origin < 0) return false;
+        foreach (var kv in _stampedBeneathByCell)
+        {
+            var layers = kv.Value;
+            if (layers == null) continue;
+            for (int i = 0; i < layers.Count; i++)
+                if (layers[i].Id == id && layers[i].Origin == origin)
+                    return true;
+        }
+        return false;
+    }
+
+    /// Hücrenin EN ÜST engeli, başka bir hücresi hâlâ örtülü olduğu için vuruşa kapalı mı (Kural 4c)?
+    /// Hedef seçiciler (PatchBot, roket, EggBird) bu hücreleri aday listesine ALMAMALI — vuruş boşa gider.
+    public bool IsHitLockedAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        return id != ObstacleId.None && IsBuriedAnywhere(id, level.obstacleOrigins[idx]);
+    }
+
+    /// Saydam örtü: altındaki katman görünür kalır (Grass, Oil). Opak katmanın altı gizlidir.
+    public static bool IsSeeThroughLayer(ObstacleId id) => id == ObstacleId.Grass || id == ObstacleId.Oil;
+
+    /// Hücrenin katmanları, en üstten alta doğru (id, origin). Görsel görünürlük kararı için.
+    public void GetLayersTopDown(int cell, List<(ObstacleId id, int origin)> result)
+    {
+        result.Clear();
+        if (level == null || level.obstacles == null || cell < 0 || cell >= level.obstacles.Length) return;
+        var top = (ObstacleId)level.obstacles[cell];
+        if (top != ObstacleId.None)
+            result.Add((top, level.obstacleOrigins[cell]));
+        if (_stampedBeneathByCell.TryGetValue(cell, out var layers) && layers != null)
+            for (int i = layers.Count - 1; i >= 0; i--)
+                if (layers[i].Id != ObstacleId.None)
+                    result.Add((layers[i].Id, layers[i].Origin));
     }
 
     public bool TryGetStampedBeneathObstacleIdAt(int x, int y, out ObstacleId obstacleId)
@@ -1920,6 +1992,11 @@ public class ObstacleStateService : ISimObstacleQuery
     /// Kaç kez daha anlamlı hit alabilir? FullyDisabled stage'ler sayılmaz.
     /// PatchBot koordinatörü bu değeri kullanarak birden fazla botu boşa yollamaz.
     /// </summary>
+    /// Kasanın gerçek kalan vuruşu (açık kilitlerin toplamı) — SafeObstacleService bağlar. Kasa hit-state'i
+    /// remainingHitsByOrigin'de değil kilitlerde tutulur; bu olmadan hedefleme kasayı "1 vuruşluk" sanıp
+    /// ilk PatchBot'tan sonra kasayı hedef listesinden düşürüyordu.
+    public Func<int, int> SafeRemainingHitsQuery;
+
     public int GetActiveMeaningfulHitsAt(int x, int y)
     {
         if (!IsValidCell(x, y)) return 0;
@@ -1929,6 +2006,12 @@ public class ObstacleStateService : ISimObstacleQuery
         if (id == ObstacleId.None) return 0;
 
         if (id == ObstacleId.Tube) return 1;
+
+        if (id == ObstacleId.Safe)
+        {
+            int safeOrigin = level.obstacleOrigins[idx];
+            return SafeRemainingHitsQuery != null ? Mathf.Max(0, SafeRemainingHitsQuery(safeOrigin)) : 1;
+        }
 
         var def = library?.Get(id);
         if (def == null) return 0;
@@ -2074,6 +2157,24 @@ public class ObstacleStateService : ISimObstacleQuery
             if (remainingHitsByOrigin[i] > 1)
                 remainingHitsByOrigin[i] = 1; // FullyDisabled stage — cell stays blocked
         }
+    }
+
+    /// Tüp küçülünce hücreyi bırakır: altında saklanan authored içerik (Grass, Mud...) varsa onu açar,
+    /// yoksa hücreyi boşaltır. TubeObstacleService bunu çağırır.
+    public void ReleaseTubeCell(int cellIndex)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
+        if (cellIndex < 0 || cellIndex >= level.obstacles.Length) return;
+
+        // RestoreCellObstacle hücre açılma olayını (OnCellUnlocked) kendisi gönderir.
+        if (TryRestoreStampedBeneathCell(cellIndex, out int restoredOrigin, out int remainingOverride))
+        {
+            if (restoredOrigin >= 0)
+                ReinitRestoredBeneathOrigin(restoredOrigin, remainingOverride);
+            return;
+        }
+
+        FreeTubeCell(cellIndex);
     }
 
     /// Frees a single tube cell from the obstacle layer and fires OnCellUnlocked.

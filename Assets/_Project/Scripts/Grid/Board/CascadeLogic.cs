@@ -43,6 +43,7 @@ public partial class CascadeLogic
     }
 
     private int spawnSequence;
+    private bool[,] diagonalFeedReachable;
 
     // Refill'de spawn tipi seçimi: 4+ aynı-renk run (special eşiği) oluşturmayı önler.
     // Aşağıdaki (toY+1..) ve soldaki (x-1..) hücreler bu noktada kesinleşmiş durumda
@@ -112,8 +113,10 @@ public partial class CascadeLogic
 
     private List<BoardAction> CalculateCascadesNow()
     {
-        BoardMotionDiagnostics.CascadePlan(board);
         board.IncrementFallGeneration();
+#if UNITY_EDITOR
+        DiagonalFlowTrace.BeginPlan(board);
+#endif
 
         VirtualTile[,] virtualBoard = new VirtualTile[board.Width, board.Height];
 
@@ -144,6 +147,9 @@ public partial class CascadeLogic
         bool spawnedMovableThisPass = false;
         Dictionary<ObstacleId, int> spawnedMovableCounts = new Dictionary<ObstacleId, int>();
         cargoSpawnColumnsThisPass.Clear();
+        // Keep an upstream inlet while its donor cell is temporarily empty between
+        // simulation passes. Logical compaction must not open a lower shortcut.
+        diagonalFeedReachable = ComputeGravityReachableMask();
 
         if (board.UsePerColumnGravity)
         {
@@ -275,6 +281,9 @@ public partial class CascadeLogic
 
                 if (view == null) continue;
 
+#if UNITY_EDITOR
+                DiagonalFlowTrace.Route(board, view, vTile.IsSpawned ? vTile.SpawnOrder : 0, compressedPath);
+#endif
                 if (compressedPath.Count > 1)
                 {
                     // Movable obstacle veri hareketi Step 3a'da batch olarak uygulandı.
@@ -342,6 +351,9 @@ public partial class CascadeLogic
         }
 
         board.RefreshAllTileObstacleVisuals();
+#if UNITY_EDITOR
+        DiagonalFlowTrace.EndPlan(board);
+#endif
 
         if (action.HasMoves)
         {
@@ -629,6 +641,32 @@ public partial class CascadeLogic
                 continue;
             if (TrySlideInto(virtualBoard, x, entryY, skipSpecials, verticalOnlyGaps, diagAffectedColumns))
                 return true;
+            if (HasReachableSlideEntry(virtualBoard, x, entryY))
+                return false;
+        }
+        return false;
+    }
+
+    // The top inlet can be empty because another shadow column is still filling.
+    // Wait for that supply instead of pulling a lower donor into an upper target:
+    // the lower donor could arrive before the stones already assigned beneath it.
+    // In the live pump, an incoming donor also keeps its inlet until it physically
+    // arrives. A lower shortcut must not bypass that pending decision.
+    private bool HasReachableSlideEntry(VirtualTile[,] virtualBoard, int x, int y)
+    {
+        if (y <= 0 || diagonalFeedReachable == null) return false;
+        for (int dx = -1; dx <= 1; dx += 2)
+        {
+            int fromX = x + dx;
+            if (fromX < 0 || fromX >= board.Width) continue;
+            var donor = virtualBoard[fromX, y - 1];
+            if (donor != null)
+            {
+                if (!board.UseFlowPump || IsSlideSourceAtCorner(donor, fromX, y - 1)) continue;
+            }
+            else if (!diagonalFeedReachable[fromX, y - 1]) continue;
+            if (IsDiagonalPassableCell(fromX, y) || IsDiagonalPassableCell(x, y - 1))
+                return true;
         }
         return false;
     }
@@ -701,6 +739,14 @@ public partial class CascadeLogic
 
         if (sourceTile == null) return false;
 
+        // The live pump revisits pockets on each landing. Do not commit an airborne
+        // stone to its NEXT column: a new hole can open below that corner before it
+        // gets there. First reach the corner; the next pass chooses down or diagonal
+        // against the then-current board. Pass-through voids keep their route-based
+        // source handling since a stone cannot rest inside a mask hole.
+        if (board.UseFlowPump && sourceY == fromY && !IsSlideSourceAtCorner(sourceTile, fromX, fromY))
+            return false;
+
         // Tutulan / anchor'lı hücredeki taş yerinde kalır (dikey geçişte de hareket etmez).
         if (board.IsPendingTriggeredSpecialCell(fromX, sourceY)) return false;
 
@@ -733,6 +779,13 @@ public partial class CascadeLogic
         return cornerA || cornerB;
     }
 
+    private bool IsSlideSourceAtCorner(VirtualTile tile, int x, int y)
+    {
+        var view = tile.View;
+        return view != null && tile.Path.Count == 1 && view.X == x && view.Y == y
+            && view.IsRuntimeIdle && !board.FallMotion.HasPendingMotion(view);
+    }
+
     private void ApplySlide(VirtualTile[,] virtualBoard, VirtualTile sourceTile, int fromX, int fromY, int sourceY,
         int toX, int toY, HashSet<Vector2Int> verticalOnlyGaps, HashSet<int> diagAffectedColumns)
     {
@@ -756,6 +809,10 @@ public partial class CascadeLogic
         }
 
         sourceTile.Path.Add(new Vector2Int(toX, toY));
+#if UNITY_EDITOR
+        DiagonalFlowTrace.Slide(board, sourceTile.View, sourceTile.SpawnOrder,
+            fromX, fromY, sourceY, toX, toY, sourceTile.Path);
+#endif
 
         verticalOnlyGaps.Add(new Vector2Int(fromX, sourceY));
 

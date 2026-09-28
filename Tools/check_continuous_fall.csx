@@ -31,12 +31,13 @@ using System.Collections.Generic;
   public static float SmoothStep(float a,float b,float v){v=Clamp01(v);return a+(b-a)*v*v*(3-2*v);}
   public static float MoveTowards(float a,float b,float d)=>a+Math.Sign(b-a)*Min(Abs(b-a),d);
  }
- public static class Time {public static float time;}
+ public static class Time {public static float time;public static float unscaledTime=>time;}
  public static class Debug {public static void LogWarning(string s){} public static void LogException(Exception e){throw e;} }
 public enum TileRuntimeState {Idle,Falling,Clearing,Swapping}
 public class RectTransform {public Vector2 anchoredPosition;}
 public class GameObject {public bool activeInHierarchy=true;}
 public class TileView {
+ public float LastLandedTime=-1;
  public GameObject gameObject=new GameObject();
  public int X,Y,LifetimeVersion=1,token,PlannedFallGeneration=1,resets,arrivals,settles;
  public bool IsPlannedToMoveThisFallPass;
@@ -57,6 +58,7 @@ public class TileView {
  public void PlayLandingSettle(int s,float d,float a){settles++;}
 }
 public class BoardController {
+ public bool IsActionSequencePlaying;public int DetachedSequencerActions;
  public bool UseContinuousFallMotion=true;public int jobs,FallGeneration=1;
  internal TileFallMotionSystem fallMotion;
  public TileView[,] Tiles=new TileView[9,9];
@@ -274,7 +276,31 @@ public static class Checks {
     ""A long diagonal wait cannot disable turn ordering"");
   }
  }
+ static void CheckCornerContinuation(){
+  foreach(int fps in new[]{30,60,120}){
+   var b=new BoardController{v0=4,accel=20,vmax=14};var m=new TileFallMotionSystem(b);
+   var t=Tile(2,0,3);var first=Start(m,t,new[]{P(2,0),P(2,3)});
+   for(int i=0;i<fps*2&&!first.Done;i++)Tick(m,1f/fps);
+   Check(first.Done&&m.LandedCount==1&&!m.HasWork&&!m.HasPendingMotion(t),""Corner arrival wakes the pump without leaving phantom pending work"");
+   Vector2 before=t.RectTransform.anchoredPosition;t.X=1;t.Y=4;t.PlannedFallGeneration++;
+   Start(m,t,new[]{P(2,3),P(1,4)},false,.2f);Tick(m,.01f);
+   Check((t.RectTransform.anchoredPosition-before).magnitude>8,""Immediate corner continuation retains speed and has no fresh stagger"");
+  }
+  foreach(string invalidate in new[]{""expired"",""token"",""lifetime"",""reset""}){
+   var b=new BoardController{v0=4,accel=20,vmax=14};var m=new TileFallMotionSystem(b);
+   var t=Tile(2,0,3);var first=Start(m,t,new[]{P(2,0),P(2,3)});
+   for(int i=0;i<200&&!first.Done;i++)Tick(m,.01f);
+   if(invalidate==""expired"")Tick(m,.2f);
+   if(invalidate==""token"")t.ClaimMoveToken();
+   if(invalidate==""lifetime"")t.LifetimeVersion++;
+   if(invalidate==""reset"")m.Reset();
+   Vector2 before=t.RectTransform.anchoredPosition;t.X=1;t.Y=4;t.PlannedFallGeneration++;
+   Start(m,t,new[]{P(2,3),P(1,4)});Tick(m,.01f);
+   Check(Math.Abs((t.RectTransform.anchoredPosition-before).magnitude-4.1f)<.02f,""Old landing speed is rejected after ""+invalidate);
+  }
+ }
  public static int Run(){
+  CheckCornerContinuation();
   CheckLongLeaderDelay();
   CheckShortColumnRefill();
   CheckDiagonalFlow();

@@ -100,7 +100,9 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private SafeObstacleView safeViewPrefab;
     [Tooltip("Boşsa obstaclesRoot kullanılır.")]
     [SerializeField] private RectTransform safeRoot;
-    private SafeObstacleService safeObstacleService;   // StampSafeCellsIntoLevel'de bulunur
+    // Kasa görselleri (origin → view): üstü kapalı kasa gizli başlar, açığa çıkınca etkinleşir.
+    private readonly Dictionary<int, SafeObstacleView> safeViewsByOrigin = new();
+    private SafeObstacleService safeObstacleService;   // StampLayeredEntriesIntoLevel'de bulunur
 
     // Generic stacked-obstacle + Safe beneath kayıtları. Stamp aşaması (SetLevelData ÖNCESİ)
     // burada toplar; ObstacleStateService SetLevelData'da oluştuğu için kayıt SONRASINDA yapılır.
@@ -250,8 +252,9 @@ public class GridSpawner : MonoBehaviour
         pendingStampedBeneath.Clear();
         StampTubeCellsIntoLevel(resolvedLevel);    // must happen before SetLevelData
         StampMagnetCellsIntoLevel(resolvedLevel);  // must happen before SetLevelData
-        StampStackedObstaclesIntoLevel(resolvedLevel); // must happen before SetLevelData (saves beneath content)
-        StampSafeCellsIntoLevel(resolvedLevel);    // must happen after generic stacks so Safe is the top cover
+        // Üst üste konan engeller (stackedObstacles + safes) TEK yığın sırasıyla (stackOrder) kurulur:
+        // Safe artık zorunlu en üst değil — sandık Safe'in üstüne de konabilir (Docs/ObstacleStack_Plan.md).
+        StampLayeredEntriesIntoLevel(resolvedLevel);   // must happen before SetLevelData (saves beneath content)
 
         if (board == null || resolvedLevel == null || tilePrefab == null || iconLibrary == null || cellBgPrefab == null)
         {
@@ -585,6 +588,7 @@ public class GridSpawner : MonoBehaviour
         obstacleDefsByOrigin.Clear();
         beneathViewsByCell.Clear();
         _chestViews.Clear();
+        safeViewsByOrigin.Clear();
         cellBgByIndex.Clear();
         cellBgImageByIndex.Clear();
         baseCellBgColorByIndex.Clear();
@@ -1426,6 +1430,8 @@ public class GridSpawner : MonoBehaviour
             foreach (int cellIdx in cells)
             {
                 if (cellIdx < 0 || cellIdx >= lvl.obstacles.Length) continue;
+                // Altındaki authored içerik silinmez: yığında saklanır, tüp o hücreyi bırakınca açılır.
+                RememberAuthoredBeneath(lvl, cellIdx, entry.originCellIndex);
                 lvl.obstacles[cellIdx]       = (int)ObstacleId.Tube;
                 lvl.obstacleOrigins[cellIdx] = entry.originCellIndex;
             }
@@ -1445,6 +1451,8 @@ public class GridSpawner : MonoBehaviour
             foreach (int cellIdx in entry.pathCellIndices)
             {
                 if (cellIdx < 0 || cellIdx >= lvl.obstacles.Length) continue;
+                // Altındaki authored içerik silinmez: mıknatıs hücreyi bırakınca açılır.
+                RememberAuthoredBeneath(lvl, cellIdx, origin);
                 lvl.obstacles[cellIdx]       = (int)ObstacleId.Magnet;
                 lvl.obstacleOrigins[cellIdx] = origin;
             }
@@ -1453,48 +1461,84 @@ public class GridSpawner : MonoBehaviour
 
     // Safe (kasa): NxN bölgeyi kaplar. Model (a): altındaki MEVCUT içeriği per-cell kaydeder
     // (beneath store), sonra hücreleri Safe ile stamp eder. Kasa kırılınca içerik geri yüklenir.
-    private void StampSafeCellsIntoLevel(LevelData lvl)
+    private void StampSafeEntry(LevelData lvl, SafeEntry entry, SafeObstacleService safeService)
     {
-        if (lvl?.safes == null || lvl.safes.Length == 0) return;
-        if (lvl.obstacles == null || lvl.obstacleOrigins == null) return;
-
-        safeObstacleService = FindFirstObjectByType<SafeObstacleService>();
-        var safeService = safeObstacleService;
-        safeService?.Clear();
-
         int W = lvl.width, H = lvl.height;
-        foreach (var entry in lvl.safes)
+        int origin = entry.originCellIndex;
+        if (origin < 0 || origin >= lvl.obstacles.Length) return;
+
+        int ox = origin % W, oy = origin / W;
+        int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
+
+        for (int r = 0; r < h; r++)
+            for (int c = 0; c < w; c++)
+            {
+                int cx = ox + c, cy = oy + r;
+                if (cx >= W || cy >= H) continue;
+                int cell = cy * W + cx;
+                if (cell < 0 || cell >= lvl.obstacles.Length) continue;
+
+                // 1) Altındaki mevcut içeriği generic beneath store için işaretle (kayıt SetLevelData sonrası).
+                pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], origin));
+                // 2) Safe ile stamp et.
+                lvl.obstacles[cell]       = (int)ObstacleId.Safe;
+                lvl.obstacleOrigins[cell] = origin;
+            }
+
+        safeService?.RegisterSafe(
+            origin,
+            entry.redHits,
+            entry.yellowHits,
+            entry.greenHits,
+            entry.lockHitMode,
+            entry.firstLock,
+            entry.secondLock,
+            entry.thirdLock);
+    }
+
+    // Tüp/mıknatıs gibi yol engellerinin altındaki authored içerik (Grass, Mud...) yığında saklanır.
+    // Boş hücre kaydedilmez (eski davranış korunur: yol bırakılınca hücre boşalır).
+    private void RememberAuthoredBeneath(LevelData lvl, int cell, int overOrigin)
+    {
+        var beneath = (ObstacleId)lvl.obstacles[cell];
+        if (beneath == ObstacleId.None || beneath == ObstacleId.Tube || beneath == ObstacleId.Magnet) return;
+        pendingStampedBeneath.Add((cell, beneath, lvl.obstacleOrigins[cell], overOrigin));
+    }
+
+    // Üst üste konan engellerin TEK kurulum yolu: stackedObstacles + safes, stackOrder'a göre alttan üste.
+    // Eşit stackOrder'da eski davranış korunur (önce stackedObstacles dizi sırasıyla, sonra kasalar) →
+    // stackOrder alanı olmayan eski level'lar aynen kurulur.
+    private void StampLayeredEntriesIntoLevel(LevelData lvl)
+    {
+        if (lvl == null || lvl.obstacles == null || lvl.obstacleOrigins == null) return;
+
+        bool hasSafes = lvl.safes != null && lvl.safes.Length > 0;
+        bool hasStacks = lvl.stackedObstacles != null && lvl.stackedObstacles.Length > 0;
+        if (!hasSafes && !hasStacks) return;
+
+        SafeObstacleService safeService = null;
+        if (hasSafes)
         {
-            int origin = entry.originCellIndex;
-            if (origin < 0 || origin >= lvl.obstacles.Length) continue;
+            safeObstacleService = FindFirstObjectByType<SafeObstacleService>();
+            safeService = safeObstacleService;
+            safeService?.Clear();
+        }
 
-            int ox = origin % W, oy = origin / W;
-            int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
+        var order = new List<(int stackOrder, int kind, int index)>();
+        if (hasStacks)
+            for (int i = 0; i < lvl.stackedObstacles.Length; i++)
+                order.Add((lvl.stackedObstacles[i].stackOrder, 0, i));
+        if (hasSafes)
+            for (int i = 0; i < lvl.safes.Length; i++)
+                order.Add((lvl.safes[i].stackOrder, 1, i));
+        order.Sort((a, b) => a.stackOrder != b.stackOrder ? a.stackOrder.CompareTo(b.stackOrder)
+                           : a.kind != b.kind ? a.kind.CompareTo(b.kind)
+                           : a.index.CompareTo(b.index));
 
-            for (int r = 0; r < h; r++)
-                for (int c = 0; c < w; c++)
-                {
-                    int cx = ox + c, cy = oy + r;
-                    if (cx >= W || cy >= H) continue;
-                    int cell = cy * W + cx;
-                    if (cell < 0 || cell >= lvl.obstacles.Length) continue;
-
-                    // 1) Altındaki mevcut içeriği generic beneath store için işaretle (kayıt SetLevelData sonrası).
-                    pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], origin));
-                    // 2) Safe ile stamp et.
-                    lvl.obstacles[cell]       = (int)ObstacleId.Safe;
-                    lvl.obstacleOrigins[cell] = origin;
-                }
-
-            safeService?.RegisterSafe(
-                origin,
-                entry.redHits,
-                entry.yellowHits,
-                entry.greenHits,
-                entry.lockHitMode,
-                entry.firstLock,
-                entry.secondLock,
-                entry.thirdLock);
+        foreach (var o in order)
+        {
+            if (o.kind == 0) StampStackedEntry(lvl, lvl.stackedObstacles[o.index]);
+            else StampSafeEntry(lvl, lvl.safes[o.index], safeService);
         }
     }
 
@@ -1507,45 +1551,38 @@ public class GridSpawner : MonoBehaviour
         spreadingGelOverlayService.UnsealCell(x, y);
     }
 
-    // Generic stacking: stackedObstacles[] entry'lerini obstacles[]'a stamp eder; altındaki authored
+    // Generic stacking: bir stackedObstacles[] entry'sini obstacles[]'a stamp eder; altındaki authored
     // içeriği (Mud, Stone...) beneath store için işaretler. Safe ile aynı 'beneath' akışı, her obstacle
     // için. SetLevelData ÖNCESİ çağrılır; beneath kaydı RegisterPendingStampedBeneath ile SONRA yapılır.
-    private void StampStackedObstaclesIntoLevel(LevelData lvl)
+    private void StampStackedEntry(LevelData lvl, StackedObstacleEntry entry)
     {
-        if (lvl?.stackedObstacles == null || lvl.stackedObstacles.Length == 0) return;
-        if (lvl.obstacles == null || lvl.obstacleOrigins == null) return;
+        var overId = entry.obstacleId;
+        if (overId == ObstacleId.None) return;
 
         int W = lvl.width, H = lvl.height;
+        int origin = entry.originCellIndex;
+        if (origin < 0 || origin >= lvl.obstacles.Length) return;
+
         var lib = lvl.obstacleLibrary;
+        var def = lib != null ? lib.Get(overId) : null;
+        int w = def != null ? Mathf.Max(1, def.size.x) : 1;
+        int h = def != null ? Mathf.Max(1, def.size.y) : 1;
+        int ox = origin % W, oy = origin / W;
 
-        foreach (var entry in lvl.stackedObstacles)
-        {
-            var overId = entry.obstacleId;
-            if (overId == ObstacleId.None) continue;
+        for (int r = 0; r < h; r++)
+            for (int c = 0; c < w; c++)
+            {
+                int cx = ox + c, cy = oy + r;
+                if (cx >= W || cy >= H) continue;
+                int cell = cy * W + cx;
+                if (cell < 0 || cell >= lvl.obstacles.Length) continue;
 
-            int origin = entry.originCellIndex;
-            if (origin < 0 || origin >= lvl.obstacles.Length) continue;
-
-            var def = lib != null ? lib.Get(overId) : null;
-            int w = def != null ? Mathf.Max(1, def.size.x) : 1;
-            int h = def != null ? Mathf.Max(1, def.size.y) : 1;
-            int ox = origin % W, oy = origin / W;
-
-            for (int r = 0; r < h; r++)
-                for (int c = 0; c < w; c++)
-                {
-                    int cx = ox + c, cy = oy + r;
-                    if (cx >= W || cy >= H) continue;
-                    int cell = cy * W + cx;
-                    if (cell < 0 || cell >= lvl.obstacles.Length) continue;
-
-                    // 1) Altındaki authored içeriği beneath store için işaretle.
-                    pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], origin));
-                    // 2) Üstteki obstacle ile stamp et.
-                    lvl.obstacles[cell]       = (int)overId;
-                    lvl.obstacleOrigins[cell] = origin;
-                }
-        }
+                // 1) Altındaki authored içeriği beneath store için işaretle.
+                pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], origin));
+                // 2) Üstteki obstacle ile stamp et.
+                lvl.obstacles[cell]       = (int)overId;
+                lvl.obstacleOrigins[cell] = origin;
+            }
     }
 
     // Stamp aşamasında toplanan beneath kayıtlarını ObstacleStateService'e push eder.
@@ -1724,9 +1761,51 @@ public class GridSpawner : MonoBehaviour
 
             view.SetBodySize(w * tileSize, h * tileSize);
             view.Setup(safeObstacleService, origin);
+            safeViewsByOrigin[origin] = view;
+
+            // Yığın kuralı: OPAK bir engelin altındaki kasa gizli başlar, tıklanmaz; üstündeki kırılıp kasa
+            // açığa çıkınca (HandleObstacleCreatedDynamic) görünür olur. Saydam örtü (Grass/Oil) altındaki
+            // kasa görünür kalır (vuruş kuralı ayrı: örtü tamamen gidene dek kasa hasar almaz).
+            if (IsHiddenUnderOpaqueLayer(origin, ObstacleId.Safe))
+            {
+                view.gameObject.SetActive(false);
+                continue;
+            }
 
             AddSafeCellClickProxies(entry, root);
         }
+    }
+
+    private readonly List<(ObstacleId id, int origin)> layerScratch = new();
+
+    // Hücrede en üstten aşağı inilir: hedef engele ulaşmadan opak bir katmana çarpılırsa hedef gizlidir.
+    private bool IsHiddenUnderOpaqueLayer(int cell, ObstacleId targetId)
+    {
+        var svc = board != null ? board.ObstacleStateService : null;
+        if (svc == null) return (ObstacleId)resolvedLevel.obstacles[cell] != targetId;
+        svc.GetLayersTopDown(cell, layerScratch);
+        foreach (var layer in layerScratch)
+        {
+            if (layer.id == targetId) return false;
+            if (!ObstacleStateService.IsSeeThroughLayer(layer.id)) return true;
+        }
+        return false;
+    }
+
+    // Üstündeki engel kırılınca açığa çıkan kasa: gizli başlatılan görseli ve tıklama vekillerini aç.
+    private void RevealCoveredSafeView(int origin)
+    {
+        if (!safeViewsByOrigin.TryGetValue(origin, out var view) || view == null || view.gameObject.activeSelf)
+            return;
+        view.gameObject.SetActive(true);
+        view.transform.SetAsLastSibling();
+        if (resolvedLevel?.safes == null) return;
+        foreach (var entry in resolvedLevel.safes)
+            if (entry.originCellIndex == origin)
+            {
+                AddSafeCellClickProxies(entry, safeRoot != null ? safeRoot : obstaclesRoot);
+                break;
+            }
     }
 
     private void AddSafeCellClickProxies(SafeEntry entry, RectTransform root)
@@ -3130,8 +3209,14 @@ public class GridSpawner : MonoBehaviour
 
         if (obstacleViewsByOrigin.ContainsKey(idx)) return;
 
+        if (obsId == ObstacleId.Safe)
+        {
+            RevealCoveredSafeView(idx);
+            return;
+        }
+
         var def = resolvedLevel.obstacleLibrary.Get(obsId);
-        if (def == null || obsId == ObstacleId.Safe) return;
+        if (def == null) return;
 
         // Magnet/Tube already have path-level renderers created from LevelData entries.
         // When a cover such as Grass reveals one cell, do not spawn a generic 1x1

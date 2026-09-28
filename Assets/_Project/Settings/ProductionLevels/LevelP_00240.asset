@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   width: 8
   height: 10
-  moves: 36
+  moves: 35
   baseCoinReward: 10
   goals:
   - targetType: 2
@@ -22,7 +22,7 @@ MonoBehaviour:
     obstacleId: 14
     collectibleId: 1
     iconOverride: {fileID: 21300000, guid: d5c45b75a85134c80890a84f8f2852b4, type: 3}
-    amount: 40
+    amount: 50
   - targetType: 1
     tileType: 0
     obstacleId: 21
@@ -37,11 +37,12 @@ MonoBehaviour:
   introHoldDuration: 0.8
   bossAttackEveryMoves: 3
   bossAttackOilCount: 2
+  bossThrownObstacles: 
+  bossMaxPressureObstacles: 8
   playerMaxHp: 560
   damagePerClearedTile: 10
+  shieldProtectionPerPickup: 2
   enemyAttackBaseDamage: 20
-  enemyAttackDamageGrowth: 6
-  enemyAttackInterval: 2
   battlefieldBackground: {fileID: 0}
   bossWaves: []
   bossWaveCount: 0

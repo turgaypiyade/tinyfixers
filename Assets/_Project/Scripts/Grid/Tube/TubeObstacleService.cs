@@ -54,7 +54,7 @@ public class TubeObstacleService : MonoBehaviour
         int freedCell = tube.PopOpenEnd();
         cellIndexToOrigin.Remove(freedCell);
 
-        obstacleStateService?.FreeTubeCell(freedCell);
+        obstacleStateService?.ReleaseTubeCell(freedCell);   // altında saklanan içerik varsa açılır
 
         if (tube.IsEmpty)
         {

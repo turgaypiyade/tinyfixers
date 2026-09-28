@@ -5,8 +5,136 @@
       "code": "tr",
       "entries": [
         {
+          "key": "bridge_tap_continue",
+          "value": "Devam etmek için dokun"
+        },
+        {
+          "key": "bridge_victory_event",
+          "value": "KÖPRÜ TAMAMLANDI"
+        },
+        {
+          "key": "bridge_victory_rank1",
+          "value": "BİRİNCİSİN!"
+        },
+        {
+          "key": "bridge_victory_rank2",
+          "value": "İKİNCİSİN!"
+        },
+        {
+          "key": "bridge_victory_rank3",
+          "value": "ÜÇÜNCÜSÜN!"
+        },
+        {
+          "key": "bridge_victory_standing",
+          "value": "{1} yarışmacı arasında {0}. sırada bitirdin!"
+        },
+        {
+          "key": "bridge_victory_caption",
+          "value": "ÖDÜLLERİN"
+        },
+        {
+          "key": "bridge_victory_claim",
+          "value": "ÖDÜLÜ AL"
+        },
+        {
+          "key": "bridge_title",
+          "value": "BRIDGE REPAIR"
+        },
+        {
+          "key": "bridge_subtitle",
+          "value": "{0} seviye kazan, ödülleri kap!"
+        },
+        {
+          "key": "bridge_icon_label",
+          "value": "KÖPRÜ"
+        },
+        {
+          "key": "bridge_play",
+          "value": "OYNA"
+        },
+        {
+          "key": "bridge_you",
+          "value": "SEN"
+        },
+        {
+          "key": "bridge_time_left",
+          "value": "Kalan süre: {0}"
+        },
+        {
+          "key": "bridge_join_body",
+          "value": "{0} seviye kazan, köprünü herkesten önce tamamla!\nİlk {1}'e ödül var."
+        },
+        {
+          "key": "bridge_join_continue",
+          "value": "KATIL"
+        },
+        {
+          "key": "bridge_join_later",
+          "value": "Şimdi değil"
+        },
+        {
+          "key": "bridge_howto_title",
+          "value": "Nasıl oynanır?"
+        },
+        {
+          "key": "bridge_howto_step1",
+          "value": "Diğer oyunculara karşı yarış!"
+        },
+        {
+          "key": "bridge_howto_step2",
+          "value": "{0} seviyeyi herkesten önce geç"
+        },
+        {
+          "key": "bridge_howto_step3",
+          "value": "İlk {0}'e girene büyük ödül!"
+        },
+        {
+          "key": "bridge_howto_tap",
+          "value": "Devam etmek için dokun"
+        },
+        {
+          "key": "bridge_status_racing",
+          "value": "Sıran: {0}   |   {1}/{2}"
+        },
+        {
+          "key": "bridge_status_finished",
+          "value": "{0}. oldun!"
+        },
+        {
+          "key": "bridge_status_eliminated",
+          "value": "İlk 3 doldu — yarış bitti"
+        },
+        {
+          "key": "bridge_status_over",
+          "value": "Yarış sona erdi"
+        },
+        {
+          "key": "bridge_eliminated_title",
+          "value": "YARIŞ BİTTİ"
+        },
+        {
+          "key": "bridge_eliminated_body",
+          "value": "İlk {0} sıra doldu. Bir sonraki yarışta görüşürüz!"
+        },
+        {
+          "key": "bridge_tap_close",
+          "value": "Kapatmak için dokun"
+        },
+        {
           "key": "rising_title",
           "value": "Yükseliş"
+        },
+        {
+          "key": "safari_lost_title",
+          "value": "KAYBETTİNİZ"
+        },
+        {
+          "key": "safari_lost_body",
+          "value": "Bir süre sonra tekrar deneyiniz."
+        },
+        {
+          "key": "safari_lost_tap",
+          "value": "Ana menüye dönmek için dokunun"
         },
         {
           "key": "rising_level",
@@ -709,6 +837,134 @@
     {
       "code": "en",
       "entries": [
+        {
+          "key": "bridge_tap_continue",
+          "value": "Tap to continue"
+        },
+        {
+          "key": "bridge_victory_event",
+          "value": "BRIDGE COMPLETE"
+        },
+        {
+          "key": "bridge_victory_rank1",
+          "value": "1ST PLACE!"
+        },
+        {
+          "key": "bridge_victory_rank2",
+          "value": "2ND PLACE!"
+        },
+        {
+          "key": "bridge_victory_rank3",
+          "value": "3RD PLACE!"
+        },
+        {
+          "key": "bridge_victory_standing",
+          "value": "You finished {0} of {1}!"
+        },
+        {
+          "key": "bridge_victory_caption",
+          "value": "YOUR REWARDS"
+        },
+        {
+          "key": "bridge_victory_claim",
+          "value": "CLAIM"
+        },
+        {
+          "key": "bridge_title",
+          "value": "BRIDGE REPAIR"
+        },
+        {
+          "key": "bridge_subtitle",
+          "value": "Win {0} levels, get prizes!"
+        },
+        {
+          "key": "bridge_icon_label",
+          "value": "BRIDGE"
+        },
+        {
+          "key": "bridge_play",
+          "value": "PLAY"
+        },
+        {
+          "key": "bridge_you",
+          "value": "YOU"
+        },
+        {
+          "key": "bridge_time_left",
+          "value": "Time left: {0}"
+        },
+        {
+          "key": "bridge_join_body",
+          "value": "Win {0} levels and finish your bridge before everyone else!\nTop {1} win prizes."
+        },
+        {
+          "key": "bridge_join_continue",
+          "value": "JOIN"
+        },
+        {
+          "key": "bridge_join_later",
+          "value": "Not now"
+        },
+        {
+          "key": "bridge_howto_title",
+          "value": "How to play?"
+        },
+        {
+          "key": "bridge_howto_step1",
+          "value": "Compete against other players!"
+        },
+        {
+          "key": "bridge_howto_step2",
+          "value": "Beat {0} levels faster than others"
+        },
+        {
+          "key": "bridge_howto_step3",
+          "value": "Top {0} win great rewards!"
+        },
+        {
+          "key": "bridge_howto_tap",
+          "value": "Tap to continue"
+        },
+        {
+          "key": "bridge_status_racing",
+          "value": "Position: {0}   |   {1}/{2}"
+        },
+        {
+          "key": "bridge_status_finished",
+          "value": "You placed {0}!"
+        },
+        {
+          "key": "bridge_status_eliminated",
+          "value": "Top 3 are taken — race over"
+        },
+        {
+          "key": "bridge_status_over",
+          "value": "The race has ended"
+        },
+        {
+          "key": "bridge_eliminated_title",
+          "value": "RACE OVER"
+        },
+        {
+          "key": "bridge_eliminated_body",
+          "value": "The top {0} places are taken. See you next race!"
+        },
+        {
+          "key": "bridge_tap_close",
+          "value": "Tap to close"
+        },
+        {
+          "key": "safari_lost_title",
+          "value": "YOU LOST"
+        },
+        {
+          "key": "safari_lost_body",
+          "value": "Please try again later."
+        },
+        {
+          "key": "safari_lost_tap",
+          "value": "Tap to return to the main menu"
+        },
         {
           "key": "rising_title",
           "value": "Rising"

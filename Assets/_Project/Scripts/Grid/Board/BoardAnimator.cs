@@ -638,7 +638,6 @@ public class BoardAnimator
 
         float lightningDuration = 0f;
         float lightningStartedAt = Time.time;
-        float lightningDiagnosticStartedAt = Time.realtimeSinceStartup;
         if (animationMode == ClearAnimationMode.LightningStrike)
         {
             if (lightningLineStrikes != null && lightningLineStrikes.Count > 0)
@@ -678,8 +677,6 @@ public class BoardAnimator
                 {
                     suppressPerTileClearVfx = false; // tile bazlı animasyonlara izin ver
                 }
-                BoardMotionDiagnostics.Event(board, "LINE_BEGIN",
-                    $"clear={lineGravity?.GetHashCode() ?? 0} strikes={lightningLineStrikes.Count} estimate={lightningDuration:F3}s pendingCells={lineGravity?.PendingCellCount ?? 0}");
             }
             else
             {
@@ -833,18 +830,11 @@ public class BoardAnimator
 
         if (lightningDuration > 0f)
         {
-            BoardMotionDiagnostics.Event(board, "LINE_WAIT_BEGIN",
-                $"clear={lineGravity?.GetHashCode() ?? 0} strikes={lightningLineStrikes?.Count ?? 0} estimate={lightningDuration:F3}s alreadyElapsed={Time.time - lightningStartedAt:F3}s pendingCells={lineGravity?.PendingCellCount ?? 0}");
             // The sweep already runs during pre-clear/pop animations. Wait only
             // for its remaining impacts, not another full playback or its FX tail.
             // The estimate is not a completion signal: low FPS stretches the
             // emitter's per-cell move/rest loops. Only stalled callbacks time out.
             yield return WaitForLightningSweep(lineGravity, lightningStartedAt, lightningDuration);
-            if (lineGravity != null && lineGravity.HasPendingHits)
-                BoardMotionDiagnostics.Event(board, "LINE_IMPACT_TIMEOUT",
-                    $"clear={lineGravity.GetHashCode()} pendingCells={lineGravity.PendingCellCount} noProgressFor={Time.time - lineGravity.LastProgressAt:F3}s");
-            BoardMotionDiagnostics.Event(board, "LINE_WAIT_END",
-                $"clear={lineGravity?.GetHashCode() ?? 0} elapsed={Time.realtimeSinceStartup - lightningDiagnosticStartedAt:F3}s pendingCells={lineGravity?.PendingCellCount ?? 0} reason={(lineGravity == null ? "timed_playback" : lineGravity.HasPendingHits ? "impact_timeout" : "all_impacts")}");
         }
 
         FlushPendingPatchbotDashRequests(lineSweepPatchbotDashes);
@@ -1300,6 +1290,10 @@ public class BoardAnimator
         var ctx = new ClearEffectPlaybackContext();
         var cleared = new System.Collections.Generic.HashSet<TileView>();
         var committedImpactCells = new System.Collections.Generic.HashSet<Vector2Int>();
+        // Çok-hücreli engel (4x4 kasa, 2x2 sandık…) bir sunumdan TEK vuruş alır: hasar parti parti
+        // (FlushPresentationResults, dalga ilerledikçe) uygulanıyor; her partide engelin başka hücreleri
+        // girince PulseCore/Line tek başına 2-3 vuruş veriyordu. origin → ilk vurulan hücre.
+        var presentationHitOrigins = new System.Collections.Generic.Dictionary<int, Vector2Int>();
         var tileLifetimes = new Dictionary<TileView, int>();
         foreach (var tile in plan.FinalClearTiles)
             if (tile != null)
@@ -1393,7 +1387,7 @@ public class BoardAnimator
                 board.NotifyTilesCleared(pair.Key, pair.Value);
             clearedByType.Clear();
 
-            ApplyPresentationObstacleDamage(impactedCells, plan);
+            ApplyPresentationObstacleDamage(impactedCells, plan, presentationHitOrigins);
 
             for (int i = 0; i < impactedCells.Count; i++)
                 committedImpactCells.Add(impactedCells[i]);
@@ -1460,7 +1454,8 @@ public class BoardAnimator
 
     private void ApplyPresentationObstacleDamage(
         System.Collections.Generic.List<Vector2Int> impactedCells,
-        ClearPresentationPlan plan)
+        ClearPresentationPlan plan,
+        System.Collections.Generic.Dictionary<int, Vector2Int> hitOrigins = null)
     {
         if (board.ObstacleStateService == null || impactedCells == null || impactedCells.Count == 0)
             return;
@@ -1512,6 +1507,24 @@ public class BoardAnimator
             var requests = kv.Value;
             if (requests == null)
                 continue;
+
+            // Origin-dedup (pass-sonu döngüsüyle aynı kural): engelin BAŞKA bir hücresi bu sunumda zaten
+            // vurulduysa atla. Aynı hücrenin kendi kaynak listesi eskisi gibi uygulanır. Magnet muaf:
+            // tek origin altında iki bağımsız uç, her uç ayrı vuruş alır.
+            if (hitOrigins != null)
+            {
+                var svc = board.ObstacleStateService;
+                if (svc.GetObstacleIdAt(kv.Key.x, kv.Key.y) != ObstacleId.Magnet)
+                {
+                    int origin = svc.GetObstacleOriginAt(kv.Key.x, kv.Key.y);
+                    if (origin >= 0)
+                    {
+                        if (hitOrigins.TryGetValue(origin, out var firstCell) && firstCell != kv.Key)
+                            continue;
+                        hitOrigins[origin] = kv.Key;
+                    }
+                }
+            }
 
             for (int i = 0; i < requests.Count; i++)
             {

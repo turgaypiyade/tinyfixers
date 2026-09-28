@@ -177,6 +177,7 @@ public sealed class RisingIntroOverlay : MonoBehaviour
             }
             yield return null;
         }
+        EventSfx.Play(x => x.uiTap);
     }
 
     private IEnumerator TransferToMap()

@@ -22,7 +22,7 @@ MonoBehaviour:
     obstacleId: 1
     collectibleId: 2
     iconOverride: {fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}
-    amount: 360
+    amount: 320
   levelKind: 1
   usesCustomIntro: 0
   introLeftSprite: {fileID: 0}

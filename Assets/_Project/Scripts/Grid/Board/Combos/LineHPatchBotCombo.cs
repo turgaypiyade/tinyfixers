@@ -44,12 +44,26 @@ public sealed class LineHPatchBotCombo
 
         RegisterComboTiles(rt, patchBotTile, lineTile);
 
-        var target = rt.PatchbotService.FindTarget(patchBotTile, lineTile, null);
-        if (!target.hasCell)
+        // Tek başına PatchBot ile AYNI canlı hedefleme: hedef niyet (intent) olarak seçilir, uçuş boyunca
+        // doğrulanır; hedef kırılırsa bot havada yeni hedefe döner (PatchbotLiveDashTargetRegistry).
+        // Eskiden hedef kalkışta bir kez sabitlenip bot boş hücreye dalabiliyordu.
+        var coordinator = new PatchBotTargetCoordinator(rt.Board, rt.PatchbotService);
+        var picked = coordinator.PickIntent(patchBotTile, lineTile, null);
+        if (!picked.hasIntent || picked.intent == null)
             return result;
 
-        int tx = target.x;
-        int ty = target.y;
+        var initialTarget = picked.intent.CurrentCell(rt.Board);
+        if (initialTarget.x < 0 || initialTarget.y < 0)
+            initialTarget = picked.intent.InitialCell;
+        if (initialTarget.x < 0 || initialTarget.x >= rt.Board.Width
+            || initialTarget.y < 0 || initialTarget.y >= rt.Board.Height)
+        {
+            coordinator.ReleaseIntent(picked.intent);
+            return result;
+        }
+
+        int tx = initialTarget.x;
+        int ty = initialTarget.y;
 
         float travelDuration = rt.Board.PatchbotDashUI != null
             ? rt.Board.PatchbotDashUI.EstimateDashDuration(
@@ -90,11 +104,13 @@ public sealed class LineHPatchBotCombo
         // (blocking pencere artık resolve'u canlı tutmuyor) → aşağıda finally'de.
         rt.Board.BeginPatchBotDashFlight();
 
-        rt.PatchbotService.EnqueueDash(patchBotTile, tx, ty, lineTile, null, () =>
+        rt.PatchbotService.EnqueueDashFromIntent(patchBotTile, picked.intent, coordinator,
+            lineTile, null, lineTile, null, (hitX, hitY, liveIntent) =>
         {
             try
             {
-                var targetCell = new Vector2Int(tx, ty);
+                // Varış hücresi = uçuş boyunca doğrulanan CANLI hedef (kırıldıysa yeni seçilen).
+                var targetCell = new Vector2Int(hitX, hitY);
                 List<BoardAction> deferredActions;
                 if (rt.BuildLineBurstChain != null)
                 {
@@ -118,6 +134,7 @@ public sealed class LineHPatchBotCombo
             }
             finally
             {
+                coordinator.ReleaseIntent(liveIntent ?? picked.intent);
                 rt.Board.EndPatchBotDashFlight();
                 // Blocking pencere kalktığı için varıştaki line-burst zincirini (Override dahil)
                 // resolve edecek bir pass'i açıkça planla; sequencer boşalınca çalışır.

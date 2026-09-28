@@ -45,6 +45,60 @@ sütunun ritmini fiziksel spawn aralığı ve takip kuralı belirler. Görsel te
 
 ## Diyagonal akış sırası (2026-09-25)
 
+### Sınırlı diyagonal kayıt (2026-09-27)
+
+Unity menüsünden `TinyFixers > Debug > Diagonal Flow > Rolling Capture` açılır.
+Play sırasında normal oynanır; sorun görülünce Pause, ardından aynı menüden `Save Now` seçilir.
+Kayıt, `Library/DiagonalFlowTrace.log` dosyasına yazılır ve durur. Play'i durdurmak da kaydeder.
+Tekrar kayıt için `Rolling Capture` yeniden açılır. Kayıt yalnız Editor'da çalışır.
+
+Bellekte yalnız son 240 olay / en fazla yaklaşık 48 KB tutulur; eski olaylar silinir.
+Console'a olay başına satır yazılmaz. Dosyada plan öncesi/sonrası hücre haritası, simülasyonun
+çapraz seçimleri, taş kimliği ve ömrüyle tam rotalar, gerçek köşe girişleri, inişler ve
+0.15 oyun saniyesini aşan beklemelerde engelleyen taş bulunur. Koordinatlar sıfır tabanlıdır;
+x sağa, y aşağı artar. `pos` görsel konum, `target` önceden atanmış mantıksal hücredir.
+Hareketsiz cascade denemeleri dosyaya yazılmaz; kayıt bütçesi gerçek hareketlere ayrılır.
+
+### Üst giriş boşken alt girişten erken taş çekme (2026-09-27)
+
+LevelP_00310 kaydında, g=131 / t=36.523 planında `(5,5)` ve `(5,4)` hedeflerine ayrılan
+taşlar hâlâ yukarıdayken `(6,2)` taşı alt girişten `(5,3)` hedefine yöneliyordu. Bu taş
+36.658'de yerleşiyor; altında olması gereken iki taş ancak 37.125 ve 37.241'de varıyordu.
+Simülasyonda üst kaynak `(6,1)` geçici olarak boşaldığında giriş araması bir alt satıra
+geçtiği için, görsel varış sırası mantıksal dolum sırasını bozuyordu.
+
+Plan başında hesaplanan spawn erişimi artık geçici boş üst girişi korur. Bu giriş beslenene
+kadar alt girişe atlanmaz. Gerçekten erişilemeyen cepler ve uygun olmayan mevcut kaynaklar
+(cargo, special, kayma sınırı) için mevcut alt giriş davranışı korunur.
+
+`csi Tools/check_diagonal_cascade.csx`: üretim planlayıcı metotlarıyla 313 kontrol; kayıttaki
+tahta ve havadaki kaynak konumları, aynalanmış tahta, iki gravity sürücüsü, iki komşu gölge
+sütunu, erişilemeyen cep ve cargo/special kaynak kuralları. Eski giriş seçimi kayıttan
+üretilen regresyon kontrolünde başarısız olur. Ayrıca 79 bağımsız düşüş kontrolü geçti
+(mevcut test doubles'ına yeni runtime alanları geçici test kopyasında eklendi).
+Unity Play Mode'da bu düzeltmenin görsel doğrulaması henüz yapılmadı.
+
+### Yeni boşluğu eski rotayla atlama (2026-09-27, ikinci kayıt)
+
+İlk düzeltme alt girişten erken taş çekmeyi engelliyordu; havadayken atanmış uzun çapraz
+rotaları değiştirmiyordu. İkinci kayıtta g=200/201'de spawn kuyruğuna kadar atanan rotalar,
+g=216 / t=202.107'de `(3,4)` boşalınca da sola devam etti. Bu boşluğu dolduracak taş o anda
+`(4,-2.68)` civarındaydı; yakın taşların eski rotaları boşluğun üzerinden geçiyordu.
+
+Canlı akış pompasında normal hücreden çapraz kaynak artık gerçekten o köşeye varmış,
+hareketi tamamlanmış bir taş olmalı. Sanal planda daha aşağıya taşınmış, yeni spawn edilmiş
+veya havada bekleyen taşın sonraki çapraz yönü bağlanmaz. LandedCount pompayı aynı karede
+yeniden uyandırır; yeni boşluk varsa dikey kompaktlama öncelik alır. Mask hole içinden
+geçişin mevcut rota tabanlı kaynak kuralı korunur; eski pompasız simülasyon etkilenmez.
+
+Köşeden hemen devam eden taşın hızı kısa süreli varış kaydından alınır; bu kayıt bekleyen iş
+sayılmaz. Başka hareket sahipliği, havuzda yeniden kullanım, reset veya süre aşımı eski
+hızın aktarılmasını engeller. `check_continuous_fall.csx` artık güncel test doubles'ıyla
+doğrudan çalışır: köşe devamı, 30/60/120 FPS ve sahiplik kontrolleri dahil 89 kontrol geçti.
+`check_diagonal_cascade.csx` yeni boşluk açıldığında dikey önceliği, köşeye varmadan sonraki
+rotanın bağlanmamasını ve ikinci kayıt topolojisinin iki sürücü/ayna halinde sonunda dolmasını
+kontrol eder. Bu değişikliğin Unity Play Mode'daki temposu ayrıca gözle doğrulanmalıdır.
+
 Çapraz/horizontal yol segmenti, geçtiği yerel hücre bölgesini yalnız geçiş süresince tutar.
 Ortak kaynak, ortak çıkış veya kesişen komşu geçişte arkadaki taş öndekinin dönüşünü bekler.
 Öndeki taşın bütün düşüşünü bitirmesi gerekmez; köşeyi geçtikten sonra sıra açılır.

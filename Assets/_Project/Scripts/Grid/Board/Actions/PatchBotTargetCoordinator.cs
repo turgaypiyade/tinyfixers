@@ -36,8 +36,7 @@ public sealed class PatchBotIntent
                 for (int y = 0; y < board.Height; y++)
                 {
                     if (obstacleService.GetObstacleOriginAt(x, y) == ObstacleOriginIndex
-                        && obstacleService.GetRemainingHitsAt(x, y) > 0
-                        && !obstacleService.IsFullyDisabledAt(x, y))
+                        && board.TargetPool.IsHittableObstacleCell(x, y))
                         return true;
                 }
             return false;
@@ -72,8 +71,7 @@ public sealed class PatchBotIntent
                 for (int y = 0; y < board.Height; y++)
                 {
                     if (obstacleService.GetObstacleOriginAt(x, y) == ObstacleOriginIndex
-                        && obstacleService.GetRemainingHitsAt(x, y) > 0
-                        && !obstacleService.IsFullyDisabledAt(x, y))
+                        && board.TargetPool.IsHittableObstacleCell(x, y))
                         return new Vector2Int(x, y);
                 }
             return new Vector2Int(-1, -1);
@@ -84,11 +82,10 @@ public sealed class PatchBotIntent
 }
 
 /// <summary>
-/// PatchBot'ların hedef çakışmasını önleyen koordinatör.
-///
-/// İki tür rezervasyon tutar:
-///   1) Obstacle: origin index bazlı — multi-cell obstacle'lar aynı origin'i paylaştığı için
-///      kalan vuruş sayısı origin üzerinden doğru hesaplanır.
+/// PatchBot ailesinin hedef SEÇİM POLİTİKASI (öncelik + yoğunluk). Uygunluk ve rezervasyonlar bu sınıfta
+/// DEĞİL, tahta başına tek <see cref="BoardTargetPool"/>'dadır (board.TargetPool) → kaç örnek oluşturulursa
+/// oluşturulsun (combo/roket sepeti/Override grubu/iniş anı yeniden hedefleme) herkes aynı rezervasyonları görür.
+///   1) Obstacle: origin bazlı kapasite (kalan anlamlı vuruş − ortak rezervasyon); çok-hücreli engel TEK aday.
 ///   2) Normal tile: TileView referansı bazlı — taş düşse de aynı view aynı bot tarafından takip edilir.
 ///
 /// Yeni Intent API'si:
@@ -103,13 +100,9 @@ public class PatchBotTargetCoordinator
     private readonly BoardController board;
     private readonly PatchbotComboService patchbotService;
 
-    // obstacle origin index → bu origin'e atanmış PatchBot sayısı
-    private readonly Dictionary<int, int> obstacleReservationsByOrigin = new();
+    private BoardTargetPool Pool => board.TargetPool;
 
-    // Normal tile rezervasyonları — TileView referansı bazlı (taş düşse de takip edilir).
-    private readonly HashSet<TileView> tileReservations = new();
-
-    private int activeBotCount;
+    private int activeBotCount;   // bu örneğin (tek kombo/grup) bot sayısı
     public int ActiveBotCount => activeBotCount;
 
     public PatchBotTargetCoordinator(BoardController board, PatchbotComboService patchbotService)
@@ -176,20 +169,14 @@ public class PatchBotTargetCoordinator
             intent.ObstacleOriginIndex = origin;
             intent.TargetTile = null;
 
-            if (origin >= 0)
-            {
-                if (!obstacleReservationsByOrigin.ContainsKey(origin))
-                    obstacleReservationsByOrigin[origin] = 0;
-                obstacleReservationsByOrigin[origin]++;
-            }
+            Pool.ReserveObstacle(origin);
         }
         else
         {
             intent.ObstacleOriginIndex = -1;
             intent.TargetTile = pick.tile;
 
-            if (pick.tile != null)
-                tileReservations.Add(pick.tile);
+            Pool.ReserveTile(pick.tile);
         }
 
         activeBotCount++;
@@ -277,19 +264,9 @@ public class PatchBotTargetCoordinator
         if (intent == null) return;
 
         if (intent.IsObstacle)
-        {
-            int origin = intent.ObstacleOriginIndex;
-            if (origin >= 0 && obstacleReservationsByOrigin.ContainsKey(origin))
-            {
-                obstacleReservationsByOrigin[origin]--;
-                if (obstacleReservationsByOrigin[origin] <= 0)
-                    obstacleReservationsByOrigin.Remove(origin);
-            }
-        }
+            Pool.ReleaseObstacle(intent.ObstacleOriginIndex);
         else if (intent.TargetTile != null)
-        {
-            tileReservations.Remove(intent.TargetTile);
-        }
+            Pool.ReleaseTile(intent.TargetTile);
 
         activeBotCount = Mathf.Max(0, activeBotCount - 1);
     }
@@ -318,11 +295,9 @@ public class PatchBotTargetCoordinator
         if (obstacleService != null)
         {
             int origin = obstacleService.GetObstacleOriginAt(x, y);
-            if (origin >= 0 && obstacleReservationsByOrigin.ContainsKey(origin))
+            if (origin >= 0 && Pool.ReservedObstacleHits(origin) > 0)
             {
-                obstacleReservationsByOrigin[origin]--;
-                if (obstacleReservationsByOrigin[origin] <= 0)
-                    obstacleReservationsByOrigin.Remove(origin);
+                Pool.ReleaseObstacle(origin);
                 activeBotCount = Mathf.Max(0, activeBotCount - 1);
                 return;
             }
@@ -331,77 +306,21 @@ public class PatchBotTargetCoordinator
         // Normal tile: cell üzerinden tile'ı bulup release et
         if (x >= 0 && x < board.Width && y >= 0 && y < board.Height)
         {
-            var tile = board.Tiles[x, y];
-            if (tile != null)
-                tileReservations.Remove(tile);
+            Pool.ReleaseTile(board.Tiles[x, y]);
         }
         activeBotCount = Mathf.Max(0, activeBotCount - 1);
     }
 
-    public int GetEffectiveObstacleHitsRemaining(int x, int y)
-    {
-        var obstacleService = board.ObstacleStateService;
-        if (obstacleService == null) return 0;
+    /// Engelin kalan kapasitesi (ortak havuz): anlamlı vuruş − tüm kaynakların rezervasyonları.
+    public int GetEffectiveObstacleHitsRemaining(int x, int y) => Pool.ObstacleCapacityAt(x, y);
 
-        // FullyDisabled stage hiçbir context'ten hit almaz — efektif hedef değil.
-        if (obstacleService.IsFullyDisabledAt(x, y))
-            return 0;
-
-        // FullyDisabled olan final stage'ler (EnergyContainer exhausted stage gibi)
-        // gerçek hit sayımından dışlanır; aksi halde birden fazla PatchBot aynı
-        // kapsiteye sahip olmayan hedefe yönlendirilebilir.
-        int actual = obstacleService.GetActiveMeaningfulHitsAt(x, y);
-        int origin = obstacleService.GetObstacleOriginAt(x, y);
-        if (origin < 0) return actual;
-
-        int reserved = obstacleReservationsByOrigin.ContainsKey(origin)
-            ? obstacleReservationsByOrigin[origin]
-            : 0;
-
-        return actual - reserved;
-    }
-
-    public bool IsTileReserved(TileView tile)
-    {
-        return tile != null && tileReservations.Contains(tile);
-    }
+    public bool IsTileReserved(TileView tile) => Pool.IsTileReserved(tile);
 
     // ─────────────────────────────────────────────
     // INTERNAL: Reservation-aware target finder
     // ─────────────────────────────────────────────
 
     private readonly List<TopHudController.ActiveGoal> activeGoalsBuffer = new();
-
-    // Şu an rezerve edilmiş hedeflerin board üzerindeki hücrelerini döner.
-    private List<Vector2Int> GetReservedTargetCells()
-    {
-        var cells = new List<Vector2Int>(tileReservations.Count + obstacleReservationsByOrigin.Count);
-
-        foreach (var tile in tileReservations)
-        {
-            if (tile != null)
-                cells.Add(new Vector2Int(tile.X, tile.Y));
-        }
-
-        if (obstacleReservationsByOrigin.Count > 0)
-        {
-            var obstacleService = board.ObstacleStateService;
-            if (obstacleService != null)
-            {
-                foreach (var kvp in obstacleReservationsByOrigin)
-                {
-                    if (kvp.Value <= 0) continue;
-                    bool found = false;
-                    for (int x = 0; x < board.Width && !found; x++)
-                        for (int y = 0; y < board.Height && !found; y++)
-                            if (obstacleService.GetObstacleOriginAt(x, y) == kvp.Key)
-                            { cells.Add(new Vector2Int(x, y)); found = true; }
-                }
-            }
-        }
-
-        return cells;
-    }
 
     private (TileView tile, int x, int y, bool hasCell) FindTargetWithReservations(
         TileView patchBotTile,
@@ -416,6 +335,8 @@ public class PatchBotTargetCoordinator
         var otherObstacleCells = new List<(int x, int y, TileView tile)>();
         var normalCells = new List<(int x, int y, TileView tile)>();
         var gelSpreadCells = new List<(int x, int y, TileView tile)>();
+        var obstacleUnitCells = new Dictionary<int, List<(int x, int y, TileView tile)>>();
+        var obstacleUnitIsGoal = new Dictionary<int, bool>();
 
         activeGoalsBuffer.Clear();
         var activeGoals = board.TopHud;
@@ -498,14 +419,6 @@ public class PatchBotTargetCoordinator
                         continue;
                     }
 
-                    // Tube: only the base (origin) cell is a valid target.
-                    if (obstacleId == ObstacleId.Tube)
-                    {
-                        int origin = board.ObstacleStateService.GetObstacleOriginAt(x, y);
-                        if (origin < 0 || origin % board.Width != x || origin / board.Width != y)
-                            continue;
-                    }
-
                     // Jel kırılmaz → obstacle olarak hedef değil. Üstünde taş varsa taş olarak
                     // değerlendirilsin (bulaş taşıyan bot zaten jelsiz hücreleri tercih eder).
                     if (obstacleId == ObstacleId.SpreadingGel)
@@ -524,16 +437,20 @@ public class PatchBotTargetCoordinator
                         continue;
                     }
 
-                    int effectiveHits = GetEffectiveObstacleHitsRemaining(x, y);
-                    if (effectiveHits <= 0)
+                    // Uygunluk + kapasite ORTAK havuzdan (tüp tabanı, örtülü/pasif engel, kasanın gerçek
+                    // kalan vuruşu, tüm kaynakların rezervasyonları). Çok-hücreli engel TEK aday: origin'in
+                    // hücreleri toplanır, tarama sonunda merkeze en yakın hücre temsilci olur.
+                    if (Pool.ObstacleCapacityAt(x, y) <= 0)
                         continue;
 
-                    bool isObstacleGoalCell = activeObstacleGoals.Contains(obstacleId);
-
-                    if (isObstacleGoalCell)
-                        obstacleGoalCells.Add((x, y, tile));
-                    else
-                        otherObstacleCells.Add((x, y, tile));
+                    int unitOrigin = board.ObstacleStateService.GetObstacleOriginAt(x, y);
+                    if (unitOrigin < 0) unitOrigin = x + y * board.Width;
+                    if (!obstacleUnitCells.TryGetValue(unitOrigin, out var unitCells))
+                    {
+                        obstacleUnitCells[unitOrigin] = unitCells = new List<(int x, int y, TileView tile)>();
+                        obstacleUnitIsGoal[unitOrigin] = activeObstacleGoals.Contains(obstacleId);
+                    }
+                    unitCells.Add((x, y, tile));
                 }
                 else if (tile != null
                          && board.GridData[x, y] != null
@@ -551,11 +468,29 @@ public class PatchBotTargetCoordinator
             }
         }
 
+        // Çok-hücreli engel = tek aday (4x4 kasa 16 aday değil): temsilci = footprint merkezine en yakın hücre.
+        foreach (var kv in obstacleUnitCells)
+        {
+            var cells = kv.Value;
+            float cx = 0f, cy = 0f;
+            foreach (var c in cells) { cx += c.x; cy += c.y; }
+            cx /= cells.Count; cy /= cells.Count;
+            var rep = cells[0];
+            float best = float.MaxValue;
+            foreach (var c in cells)
+            {
+                float d = (c.x - cx) * (c.x - cx) + (c.y - cy) * (c.y - cy);
+                if (d < best) { best = d; rep = c; }
+            }
+            if (obstacleUnitIsGoal[kv.Key]) obstacleGoalCells.Add(rep);
+            else otherObstacleCells.Add(rep);
+        }
+
         // Hedef, "kaynaktan en uzak" veya rastgele DEĞİL; payload'ın en çok hücreye değeceği
         // (en yoğun küme) hücre seçilir. Önceki davranış (FarthestIndex) bot'u en tepedeki/
         // köşedeki tek hücreye gönderiyordu → en az hasar. Çoklu bot için, zaten rezerve edilmiş
         // hedeflere yakın adaylar cezalandırılır → botlar farklı yoğun kümelere yayılır.
-        var reservedCells = GetReservedTargetCells();
+        var reservedCells = Pool.ReservedCells();
 
         int PickIdx(List<(int x, int y, TileView tile)> list)
         {

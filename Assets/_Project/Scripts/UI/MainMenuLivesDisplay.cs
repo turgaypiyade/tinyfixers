@@ -16,6 +16,9 @@ public class MainMenuLivesDisplay : MonoBehaviour
     [Tooltip("TopHUD'daki kalp Image bileşeni.")]
     [SerializeField] private Image heartImage;
 
+    /// Can ödüllerinin (normal / süreli sonsuz can) menüde uçacağı hedef: TopHUD kalp ikonu.
+    public RectTransform HeartTarget => heartImage != null ? heartImage.rectTransform : transform as RectTransform;
+
     [Tooltip("Sonsuz can aktifken gösterilecek ikon.")]
     [SerializeField] private Sprite infiniteHeartSprite;
 

@@ -1076,17 +1076,7 @@ public class FallAction : BoardAction
         if (trace)
             Debug.Log($"[Fall] stagger maxDelay={maxTotalDelay:0.000}s estimatedEnd={GetEstimatedVisualDuration(sequencer.Board):0.000}s");
 
-        BoardMotionDiagnostics.FallBegin(board, GetHashCode(), moves.Count, GetEstimatedVisualDuration(board));
-        bool diagnosticCompleted = false;
-        try
-        {
-            yield return sequencer.Animator.RunManyWithDelays(moves, delays);
-            diagnosticCompleted = true;
-        }
-        finally
-        {
-            BoardMotionDiagnostics.FallEnd(board, GetHashCode(), Time.realtimeSinceStartup - faStart, diagnosticCompleted);
-        }
+        yield return sequencer.Animator.RunManyWithDelays(moves, delays);
 
         if (trace)
             Debug.Log($"[Fall] DONE +{(Time.realtimeSinceStartup - faStart):0.000}s");
@@ -1186,34 +1176,25 @@ public class FallAction : BoardAction
             tickets.Add(StartContinuous(r, motion, maxToYPerVerticalSpawnSource, tileSize));
         }
 
-        BoardMotionDiagnostics.FallBegin(board, GetHashCode(), tickets.Count, GetEstimatedVisualDuration(board));
-        bool completed = false;
         float waited = 0f;
-        try
+        while (true)
         {
-            while (true)
+            bool allDone = true;
+            for (int i = 0; i < tickets.Count; i++)
             {
-                bool allDone = true;
-                for (int i = 0; i < tickets.Count; i++)
-                {
-                    if (!tickets[i].Done) { allDone = false; break; }
-                }
-
-                if (allDone) { completed = true; break; }
-
-                waited += Time.deltaTime;
-                if (waited > 10f)
-                {
-                    Debug.LogError($"[FallMotion] FallAction 10 sn'de bitmedi (tiles={tickets.Count}); bekleme bırakıldı.");
-                    break;
-                }
-
-                yield return null;
+                if (!tickets[i].Done) { allDone = false; break; }
             }
-        }
-        finally
-        {
-            BoardMotionDiagnostics.FallEnd(board, GetHashCode(), Time.realtimeSinceStartup - faStart, completed);
+
+            if (allDone) break;
+
+            waited += Time.deltaTime;
+            if (waited > 10f)
+            {
+                Debug.LogError($"[FallMotion] FallAction 10 sn'de bitmedi (tiles={tickets.Count}); bekleme bırakıldı.");
+                break;
+            }
+
+            yield return null;
         }
     }
 
@@ -1247,9 +1228,6 @@ public class FallAction : BoardAction
         if (tile == null || !tile.IsCurrentLifetime(lifetimeVersion))
             yield break;
 
-        if (tile.RuntimeState == TileRuntimeState.Falling)
-            BoardMotionDiagnostics.Event(board, "MOVE_OVERLAP",
-                $"tile={tile.GetInstanceID()}/{lifetimeVersion} target={targetCell} pos={tile.RectTransform.anchoredPosition}");
         tile.SetRuntimeState(TileRuntimeState.Falling);
         board?.ReserveTileTargetCell(targetCell);
 

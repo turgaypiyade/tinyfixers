@@ -1,0 +1,89 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7795eb246644741739ab7ed398b7a082, type: 3}
+  m_Name: EventSfxLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::EventSfxLibrary
+  popupOpen:
+    clips:
+    - {fileID: 8300000, guid: fb8f2752dcbb7419e9ffb8bea824168a, type: 3}
+    volume: 0.8
+    pitchJitter: 0.05
+    maxDuration: 0.6
+  uiTap:
+    clips:
+    - {fileID: 8300000, guid: 05d2b4697ec99462b88427869cbdc87c, type: 3}
+    volume: 0.8
+    pitchJitter: 0.05
+    maxDuration: 0.2
+  stepPop:
+    clips:
+    - {fileID: 8300000, guid: 77018cb81b48541688b39c871c36f17d, type: 3}
+    volume: 1
+    pitchJitter: 0.05
+    maxDuration: 0.4
+  arrowWhoosh:
+    clips:
+    - {fileID: 8300000, guid: 97d9d81d2875f4cf797779456eabd63b, type: 3}
+    volume: 0.8
+    pitchJitter: 0.05
+    maxDuration: 0.4
+  ambientLoop: {fileID: 8300000, guid: 5bb938ec87b2748be9df3eb18daf4d0b, type: 3}
+  ambientVolume: 0.35
+  plankPlace:
+    clips:
+    - {fileID: 8300000, guid: 3c1c31743ff5f46fe8d2a1aa9f8f59b9, type: 3}
+    volume: 1
+    pitchJitter: 0.05
+    maxDuration: 0.5
+  hammerTap:
+    clips:
+    - {fileID: 8300000, guid: e57ac2676011045a1a4495249093f06e, type: 3}
+    volume: 0.8
+    pitchJitter: 0.05
+    maxDuration: 0.35
+  footstep:
+    clips:
+    - {fileID: 8300000, guid: 2d63221f3924847f38d9beaa0c425d8c, type: 3}
+    volume: 1
+    pitchJitter: 0.05
+    maxDuration: 1.4
+  rankBadge:
+    clips:
+    - {fileID: 8300000, guid: cfcda3bd7f6734c9ba1fe565d03a67c0, type: 3}
+    volume: 0.8
+    pitchJitter: 0.05
+    maxDuration: 0.7
+  podiumArrive:
+    clips:
+    - {fileID: 8300000, guid: 7a5c4240532ed46efb3664f163f52282, type: 3}
+    volume: 0.8
+    pitchJitter: 0.05
+    maxDuration: 0.5
+  eliminated:
+    clips:
+    - {fileID: 8300000, guid: e689f9d9389574cffa9a851231488a64, type: 3}
+    volume: 0.8
+    pitchJitter: 0.05
+    maxDuration: 1.5
+  botVolumeScale: 0.35
+  victoryFanfare:
+    clips:
+    - {fileID: 8300000, guid: 21eaae33463e64f419e7a96b92ef60c5, type: 3}
+    volume: 0.9
+    pitchJitter: 0.05
+    maxDuration: 3
+  confetti:
+    clips:
+    - {fileID: 8300000, guid: 407452887d6694cbfa43365ac43105c6, type: 3}
+    volume: 0.8
+    pitchJitter: 0.05
+    maxDuration: 1.5

@@ -4,6 +4,10 @@ public static class TestLevelProgressionBootstrap
 {
     private const int MinEditorStartingCoins = 500;
 
+    /// "Yeni Kullanıcı Olarak Başla" menüsü bunu kurar: bir SONRAKİ Play test değerleri basılmadan, cihazda
+    /// ilk kez açan oyuncu gibi başlar (level 1, production başlangıç ekonomisi, ilk açılış akışı). Tek seferlik.
+    public const string FreshUserNextLaunchKey = "tinyfixers_fresh_user_next_launch";
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void ResetOnLaunch()
     {
@@ -11,6 +15,15 @@ public static class TestLevelProgressionBootstrap
         // KRİTİK: yalnız EDITOR'de çalışır. Cihaz build'inde her açılışta DeleteAll
         // yapmak tüm oyuncu ilerlemesini siler (2026-07-19'da yakalanan launch bug'ı).
 #if UNITY_EDITOR
+        if (UnityEditor.EditorPrefs.GetBool(FreshUserNextLaunchKey, false))
+        {
+            UnityEditor.EditorPrefs.DeleteKey(FreshUserNextLaunchKey);
+            PlayerPrefs.DeleteAll();
+            PlayerPrefs.Save();
+            Debug.Log("[TestLevelProgressionBootstrap] YENİ KULLANICI: test değerleri basılmadı, ilk açılış gibi başlanıyor.");
+            return;
+        }
+
         var settings = Resources.Load<EditorTestSettings>("EditorTestSettings");
         int level = settings != null ? settings.testLevel : 1;
         bool hasEditorCoinOverride = PlayerPrefs.HasKey("editor_test_coins");

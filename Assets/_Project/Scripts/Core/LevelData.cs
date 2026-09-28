@@ -244,6 +244,9 @@ public struct SafeEntry
     public SafeLockColor firstLock;
     public SafeLockColor secondLock;
     public SafeLockColor thirdLock;
+    [Tooltip("Yığın sırası (Docs/ObstacleStack_Plan.md): üst üste konan engeller (stackedObstacles + safes) " +
+             "bu sayıya göre alttan üste kurulur. Eşitse eski davranış: önce stackedObstacles, sonra kasalar.")]
+    public int stackOrder;
 }
 
 [System.Serializable]
@@ -254,6 +257,8 @@ public struct StackedObstacleEntry
     [Tooltip("Altındaki AUTHORED içeriğin (Mud, Stone...) üstüne konacak obstacle. " +
              "Kapladığı NxN boyut obstacle'ın kendi def.size'ından gelir.")]
     public ObstacleId obstacleId;
+    [Tooltip("Yığın sırası: kasalarla (safes) birlikte alttan üste bu sayıya göre kurulur (SafeEntry.stackOrder).")]
+    public int stackOrder;
 }
 
 /// <summary>

@@ -16,6 +16,7 @@ public static class PlayerTeamState
     private const string KeyDesc        = "player_team_desc";
     private const string KeyMinChapter  = "player_team_min_chapter";
     private const string KeyIsCreator   = "player_team_is_creator";
+    private const string KeyJoinedTicks = "player_team_joined_ticks";
 
     public static bool HasTeam => PlayerPrefs.GetInt(KeyJoined, 0) == 1;
 
@@ -30,6 +31,10 @@ public static class PlayerTeamState
 
     public static string Description => PlayerPrefs.GetString(KeyDesc, "");
     public static int MinChapter => PlayerPrefs.GetInt(KeyMinChapter, 0);
+
+    /// <summary>Var olan takıma katılma anı (UTC ticks). 0 = kurucu ya da eski kayıt (kısıt yok).</summary>
+    public static long JoinedTicks =>
+        long.TryParse(PlayerPrefs.GetString(KeyJoinedTicks, ""), out long ticks) ? ticks : 0;
 
     /// <summary>
     /// Takım adı. Takımsızken (eski davranışla uyum için) havuzdan geçici bir ad döner —
@@ -60,6 +65,7 @@ public static class PlayerTeamState
         PlayerPrefs.SetInt(KeyIsCreator, 0);
         PlayerPrefs.SetString(KeyName, "");
         PlayerPrefs.SetString(KeyTeamId, "");
+        PlayerPrefs.DeleteKey(KeyJoinedTicks);
         PlayerPrefs.Save();
     }
 
@@ -81,6 +87,9 @@ public static class PlayerTeamState
         PlayerPrefs.SetInt(KeyEmblem, Mathf.Max(0, emblemIndex));
         PlayerPrefs.SetString(KeyDesc, description ?? "");
         PlayerPrefs.SetInt(KeyMinChapter, Mathf.Max(0, minChapter));
+        // Yeni katılan 24 saat can isteyemez (TeamLifeInbox); kurucu kendi takımında muaf.
+        if (isCreator) PlayerPrefs.DeleteKey(KeyJoinedTicks);
+        else PlayerPrefs.SetString(KeyJoinedTicks, System.DateTime.UtcNow.Ticks.ToString());
         PlayerPrefs.Save();
     }
 }

@@ -57,7 +57,8 @@ internal sealed class BoardFlowPump
 
     // Dikey dolum gereken boşluk varsa her zaman planla. Yalnız çapraz dolabilecek boşluk varsa
     // (üstü kapalı cep) ancak bir taş oturduğunda / hücre temizlendiğinde dene: ölü cepte her kare plan
-    // üretmesin. (Havadaki taşların çapraz kayması zaten dikey planla birlikte önceden planlanır.)
+    // üretmesin. Çapraz yön, kaynak taş köşeye gerçekten vardığında seçilir; varış sayacı bu
+    // yerel kararı yeniden uyandırır. Tahtanın diğer sütunlarının bitmesi beklenmez.
     private bool ShouldPlanGravity()
     {
         if (board.CascadeLogic.HasAnyResolvableEmptyPlayableCell())
@@ -160,8 +161,15 @@ internal sealed class BoardFlowPump
             return false;
         if (tile.RuntimeState == TileRuntimeState.Clearing || tile.RuntimeState == TileRuntimeState.Swapping)
             return false;
+        float rest = board.CascadeMatchRestSeconds;
+        if (rest > 0f)
+        {
+            // Taş hücresine oturmuş VE oyuncu onu kısa bir an görmüş olmalı; havada (lead) patlama "blink" gibi.
+            if (!board.IsTileReadyForContinuousMatch(tile)) return false;
+            if (tile.LastLandedTime >= 0f && Time.time - tile.LastLandedTime < rest) return false;
+        }
         // Varış (lead) ateşlendiyse taş hücresine giriyor → temizlik ona yetişir.
-        if (!tile.HasArrivedForPlannedFall && !board.IsTileReadyForContinuousMatch(tile))
+        else if (!tile.HasArrivedForPlannedFall && !board.IsTileReadyForContinuousMatch(tile))
             return false;
         return !WillFall(tile.X, tile.Y);
     }

@@ -48,6 +48,7 @@ public sealed class SafariJoinPopupController : MonoBehaviour
         RefreshImages();
         if (root != null) root.SetActive(true);
         RefreshCopy();
+        EventSfx.Play(x => x.popupOpen);
         if (entrance != null) StopCoroutine(entrance);
         entrance = StartCoroutine(Reveal());
     }
@@ -100,6 +101,7 @@ public sealed class SafariJoinPopupController : MonoBehaviour
 
     private void OnContinue()
     {
+        EventSfx.Play(x => x.uiTap);
         Hide();
         if (controller != null) controller.OnJoinAccepted();
     }

@@ -30,6 +30,7 @@ public sealed class SafeObstacleService : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private BoardController board;
+    internal BoardController Board => board;
 
     // Kasa altında saklanan içerik artık generic ObstacleStateService beneath store'unda tutulur
     // (GridSpawner stamp aşamasında RegisterStampedBeneath ile kaydeder). Kasa kırılınca
@@ -68,6 +69,7 @@ public sealed class SafeObstacleService : MonoBehaviour
         }
         _hitHandler ??= HandleSafeHit;
         board.ObstacleStateService.SafeHitInterceptor = _hitHandler;
+        board.ObstacleStateService.SafeRemainingHitsQuery = GetRemainingTotal;
     }
 
     // Bir safe hücresine vurulunca ObstacleStateService bunu origin + hit kaynağı ile çağırır.
@@ -145,6 +147,25 @@ public sealed class SafeObstacleService : MonoBehaviour
     public SafeLockHitMode GetHitMode(int origin)
         => _byOrigin.TryGetValue(origin, out var s) ? s.hitMode : SafeLockHitMode.Ordered;
 
+    /// Açık kilitlerdeki kalan vuruşların toplamı (special/PatchBot vuruşu aktif kilide joker sayılır →
+    /// kasanın kırılmasına kalan gerçek vuruş). Kasa yok/kırıksa 0.
+    public int GetRemainingTotal(int origin)
+    {
+        if (!_byOrigin.TryGetValue(origin, out var s) || AreAllLocksClosed(s)) return 0;
+        int sum = 0;
+        for (int i = 0; i < s.remaining.Length; i++) sum += Mathf.Max(0, s.remaining[i]);
+        return sum;
+    }
+
+    // "Aynı karede tek vuruş" kuralı, bir etkinin kasanın birden çok hücresine aynı karede değmesini tek
+    // vuruşa indirir. AMA aynı karede inen AYRI PatchBot'lar ayrı vuruştur → yalnız bu kapsamda kural aşılır.
+    private static int s_independentHitScope;
+    public readonly struct IndependentHitScope : System.IDisposable
+    {
+        public static IndependentHitScope Begin() { s_independentHitScope++; return default; }
+        public void Dispose() { if (s_independentHitScope > 0) s_independentHitScope--; }
+    }
+
     public int GetRemaining(int origin, int lockIndex)
         => _byOrigin.TryGetValue(origin, out var s) && IsValidLock(lockIndex) ? s.remaining[lockIndex] : 0;
 
@@ -180,7 +201,8 @@ public sealed class SafeObstacleService : MonoBehaviour
         if (!IsValidLock(li))
             return false;
 
-        if (_lastHitFrameByOrigin.TryGetValue(origin, out int lastFrame) && lastFrame == Time.frameCount)
+        if (s_independentHitScope == 0
+            && _lastHitFrameByOrigin.TryGetValue(origin, out int lastFrame) && lastFrame == Time.frameCount)
             return false;
 
         _lastHitFrameByOrigin[origin] = Time.frameCount;

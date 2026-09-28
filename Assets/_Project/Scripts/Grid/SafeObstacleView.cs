@@ -171,7 +171,23 @@ public sealed class SafeObstacleView : MonoBehaviour
     {
         if (o != origin) return;
         SetRaycastTargets(false);
+        LiftAboveRevealedLayers();
         StartCoroutine(CoPlaySafeBreak());
+    }
+
+    // Kasa kırılınca altındaki katmanlar (ör. grass) HEMEN açılır ve grass kökü kasa kökünün üstünde çizilir →
+    // kırılma animasyonu grass'ın ARKASINDA kalıyordu. Kırılma boyunca kasayı grass'ın hemen üstündeki efekt
+    // katmanına (TilesTopOverlay — PulseCore dönmesi de orada) taşı; parçalar/glow da parent'ı izler.
+    // Kasa zaten bu animasyonun sonunda yok ediliyor, geri taşımaya gerek yok.
+    private void LiftAboveRevealedLayers()
+    {
+        var board = service != null ? service.Board : null;
+        var overlay = board != null ? board.TilesTopOverlayRoot : null;
+        if (overlay == null || transform.parent == overlay) return;
+        transform.SetParent(overlay, worldPositionStays: true);
+        transform.SetAsLastSibling();
+        foreach (var t in GetComponentsInChildren<Transform>(true))
+            t.gameObject.layer = overlay.gameObject.layer;   // layer culling'e takılmasın
     }
 
     // ÇİZGİ FİLM AKIŞI (sırayla): 1) ŞİŞ (nefes alır gibi büyür) → 2) EĞİL-BÜK (jöle gibi

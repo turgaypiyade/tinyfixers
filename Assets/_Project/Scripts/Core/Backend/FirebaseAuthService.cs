@@ -46,6 +46,20 @@ public static class FirebaseAuthService
         });
     }
 
+#if UNITY_EDITOR
+    /// EDİTÖR TESTİ: anonim kullanıcıdan çıkış → bir sonraki Play'de Firebase YENİ bir anonim UID üretir.
+    /// IsReady kapatılır: bulut kayıt itmesi (Push, IsReady şartlı) silinmiş yerel veriyi eski UID'ye yazmasın.
+    public static string DebugSignOutForFreshUser()
+    {
+        string oldUid = UserId;
+        (auth ?? FirebaseAuth.DefaultInstance)?.SignOut();
+        IsReady = false;
+        UserId = null;
+        initStarted = false;   // domain reload kapalı olsa bile sonraki Play'de yeniden başlasın
+        return oldUid;
+    }
+#endif
+
     private static void SignInAnonymously()
     {
         if (auth.CurrentUser != null)      // zaten girişli (önceki oturumdan) → tekrar giriş yapma

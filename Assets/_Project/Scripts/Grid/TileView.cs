@@ -286,6 +286,9 @@ public class TileView : MonoBehaviour,
     // clear'ı bu event tetikler. Aynı düşüşte birden çok kez atılmasın diye guard'lı.
     public event System.Action<TileView> FallArrived;
     private int fallArrivedGeneration = -1;
+    // Kesintisiz düşüşte taşın hücresine son OTURDUĞU an (Time.time). Kaskat eşleşmesi taş oturduktan
+    // kısa bir süre sonra temizlensin diye (BoardFlowPump) — yoksa taş görünmeden patlar ("blink").
+    internal float LastLandedTime { get; set; } = -1f;
     internal bool HasArrivedForPlannedFall => PlannedFallGeneration >= 0
         && fallArrivedGeneration == PlannedFallGeneration;
     private void RaiseFallArrived()

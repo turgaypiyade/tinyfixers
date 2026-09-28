@@ -1,0 +1,108 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbe4cf4c609ca460eb8fee008ac211a8, type: 3}
+  m_Name: BridgeRepairConfig
+  m_EditorClassIdentifier: Assembly-CSharp::BridgeRepairConfig
+  eventId: bridge_repair
+  minLevelGate: 31
+  eventsPerWeek: 2
+  windowHours: 24
+  excludedDays: 
+  scheduleSalt: 7129
+  rejoinCooldownMinutes: 20
+  autoShowJoinPopup: 1
+  contestantCount: 5
+  levelsToFinish: 15
+  prizeRanks: 3
+  botMinFinishHours: 3
+  botMaxFinishHours: 30
+  rank1Rewards:
+  - type: 0
+    amount: 1000
+    icon: {fileID: 0}
+    nameLocalizationKey: 
+    fallbackName: "1000 Alt\u0131n"
+    weight: 10
+  - type: 20
+    amount: 1
+    icon: {fileID: 0}
+    nameLocalizationKey: 
+    fallbackName: "\xC7eki\xE7"
+    weight: 10
+  - type: 23
+    amount: 1
+    icon: {fileID: 0}
+    nameLocalizationKey: 
+    fallbackName: "Kar\u0131\u015Ft\u0131r"
+    weight: 10
+  rank2Rewards:
+  - type: 0
+    amount: 500
+    icon: {fileID: 0}
+    nameLocalizationKey: 
+    fallbackName: "500 Alt\u0131n"
+    weight: 10
+  - type: 20
+    amount: 1
+    icon: {fileID: 0}
+    nameLocalizationKey: 
+    fallbackName: "\xC7eki\xE7"
+    weight: 10
+  rank3Rewards:
+  - type: 0
+    amount: 250
+    icon: {fileID: 0}
+    nameLocalizationKey: 
+    fallbackName: "250 Alt\u0131n"
+    weight: 10
+  characters:
+  - id: bear
+    walk:
+    - {fileID: 21300000, guid: 5d88b0a8f15394918998d84fba7fe7b5, type: 3}
+    - {fileID: 21300000, guid: b7fc256f413a1446b9be9576c0759398, type: 3}
+    bend:
+    - {fileID: 21300000, guid: 0194fd22481b349c1a3afcbaa6d5a098, type: 3}
+    - {fileID: 21300000, guid: 2f4369da98b8549d9b8a946f64cc65d5, type: 3}
+    - {fileID: 21300000, guid: d1548782e8b464ddeaaf1b775cfc5ae4, type: 3}
+  - id: pig
+    walk:
+    - {fileID: 21300000, guid: dcdcbb505b5894f55a2872bf58ffc4b2, type: 3}
+    - {fileID: 21300000, guid: 7d242528b81c145ed9142f2536ad0a9c, type: 3}
+    bend:
+    - {fileID: 21300000, guid: 62bfa916b0240498a8a4cfedc5cec304, type: 3}
+    - {fileID: 21300000, guid: 7f6f1330e953b432092eef965728c2dd, type: 3}
+    - {fileID: 21300000, guid: bb33e4e26464541f180800f9d2202b6a, type: 3}
+  - id: rabbit
+    walk:
+    - {fileID: 21300000, guid: 32eda7b342b8f4e6d99ea6acaf9cfbb6, type: 3}
+    - {fileID: 21300000, guid: 8b9ba0be8b7ca49d685f564cc3443c76, type: 3}
+    bend:
+    - {fileID: 21300000, guid: 08a3e444342d5495b99e0b3692419d49, type: 3}
+    - {fileID: 21300000, guid: 2b4e55debd93b4e28943149464117e40, type: 3}
+    - {fileID: 21300000, guid: 14712c1f75a13403d9f0095db5790827, type: 3}
+  - id: ram
+    walk:
+    - {fileID: 21300000, guid: 8e2bd84f1d0af4a5b827d553a5f4e765, type: 3}
+    - {fileID: 21300000, guid: b39a8c506464749b78360a41883b54ed, type: 3}
+    bend:
+    - {fileID: 21300000, guid: 79eac456617414447b130a914fcb0f1e, type: 3}
+    - {fileID: 21300000, guid: f79a3d6b447f24a9fbc251e609704bac, type: 3}
+    - {fileID: 21300000, guid: a49c83ac9e2ed48808e0418374d3a1da, type: 3}
+  - id: monkey
+    walk:
+    - {fileID: 21300000, guid: 984126fecbfba4a308ad43b4ab1f619d, type: 3}
+    - {fileID: 21300000, guid: 2bbbcca26096d4b97a6754d30b659511, type: 3}
+    bend:
+    - {fileID: 21300000, guid: 8b5a5dca4613a4b13814e8bb70a19fca, type: 3}
+    - {fileID: 21300000, guid: 12bf5e8d5d5304d5c9aa7d92fb41fe9b, type: 3}
+    - {fileID: 21300000, guid: b894ddd2e25f24c51b161384ca5efc0c, type: 3}
+  debugForceAvailable: 1

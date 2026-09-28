@@ -874,7 +874,7 @@ public class LevelDataEditor : Editor
 
     // Model (a): içerik AYRI yerleştirilir (Obstacle/Tiles/Mask modu); Safe sadece bir overlay
     // bölgesi (origin + boyut + kilit hit'leri) safes[]'e eklenir. Altındaki içerik EZİLMEZ —
-    // runtime'da GridSpawner.StampSafeCellsIntoLevel kaydedip kaplar, kırılınca geri yükler.
+    // runtime'da GridSpawner.StampLayeredEntriesIntoLevel yığın sırasıyla kurar, kırılınca geri yükler.
     private void PlaceSafe(LevelData level, int bx, int by)
     {
         if (!level.InBounds(bx, by)) return;
@@ -888,8 +888,19 @@ public class LevelDataEditor : Editor
             return;
         }
 
-        // Aynı origin'de varsa değiştir.
-        RemoveSafeAtCell(level, originIdx);
+        // Yığın (Docs/ObstacleStack_Plan.md): aynı köşedeki kasa yerinde güncellenir (sırası korunur);
+        // başka engellerin üstüne/altına konan kasalar SİLİNMEZ — yeni kasa yığının en üstüne eklenir.
+        int existing = System.Array.FindIndex(level.safes ?? System.Array.Empty<SafeEntry>(),
+            e => e.originCellIndex == originIdx);
+        if (!ValidateFullCover(level, RectCells(level, originIdx, w, h), ObstacleId.Safe, existing))
+            return;
+        int stackOrder = existing >= 0 ? level.safes[existing].stackOrder : NextStackOrder(level);
+        if (existing >= 0)
+        {
+            var kept = new System.Collections.Generic.List<SafeEntry>(level.safes);
+            kept.RemoveAt(existing);
+            level.safes = kept.ToArray();
+        }
 
         var entry = new SafeEntry
         {
@@ -902,11 +913,123 @@ public class LevelDataEditor : Editor
             lockHitMode     = selectedSafeHitMode,
             firstLock       = selectedSafeFirstLock,
             secondLock      = selectedSafeSecondLock,
-            thirdLock       = selectedSafeThirdLock
+            thirdLock       = selectedSafeThirdLock,
+            stackOrder      = stackOrder
         };
 
         var list = new System.Collections.Generic.List<SafeEntry>(level.safes ?? System.Array.Empty<SafeEntry>()) { entry };
         level.safes = list.ToArray();
+    }
+
+    // ── Yığın kuralı: üstteki katman alttaki engeli TAMAMEN örtmeli (aynı ya da daha çok hücre) ──
+    // Yarım örtme (ör. 1x1 sandık 2x2 kasanın tek köşesinde) kurulmaz: görsel sıra ve açılma bozulur.
+    // Muaf: mıknatıs/tüp (yol engeli) ve saydam örtüler (Grass/Oil — kısmi örtebilir, altı görünür).
+
+    private static System.Collections.Generic.HashSet<int> RectCells(LevelData level, int origin, int w, int h)
+    {
+        var cells = new System.Collections.Generic.HashSet<int>();
+        int ox = origin % level.width, oy = origin / level.width;
+        for (int y = oy; y < oy + h && y < level.height; y++)
+            for (int x = ox; x < ox + w && x < level.width; x++)
+                cells.Add(y * level.width + x);
+        return cells;
+    }
+
+    // Runtime kurulumuyla (GridSpawner.StampLayeredEntriesIntoLevel) aynı sırayla her hücrenin EN ÜST
+    // katmanını ve o katmanın kapladığı hücreleri simüle eder. isPath = mıknatıs/tüp (kural dışı).
+    private static System.Collections.Generic.Dictionary<int, (ObstacleId id, System.Collections.Generic.HashSet<int> cells, bool isPath)>
+        SimulateTopLayers(LevelData level, int excludeSafeIndex)
+    {
+        var top = new System.Collections.Generic.Dictionary<int, (ObstacleId, System.Collections.Generic.HashSet<int>, bool)>();
+        int n = level.width * level.height;
+
+        // Taban katman: aynı origin'li hücreler tek engel.
+        if (level.obstacles != null && level.obstacleOrigins != null)
+        {
+            var byOrigin = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.HashSet<int>>();
+            for (int i = 0; i < n && i < level.obstacles.Length; i++)
+            {
+                if ((ObstacleId)level.obstacles[i] == ObstacleId.None) continue;
+                int o = i < level.obstacleOrigins.Length && level.obstacleOrigins[i] >= 0 ? level.obstacleOrigins[i] : i;
+                if (!byOrigin.TryGetValue(o, out var set)) byOrigin[o] = set = new System.Collections.Generic.HashSet<int>();
+                set.Add(i);
+            }
+            foreach (var kv in byOrigin)
+                foreach (var c in kv.Value)
+                    top[c] = ((ObstacleId)level.obstacles[c], kv.Value, false);
+        }
+
+        void MarkPath(int[] cells, ObstacleId id)
+        {
+            if (cells == null) return;
+            var set = new System.Collections.Generic.HashSet<int>(cells);
+            foreach (var c in cells) if (c >= 0 && c < n) top[c] = (id, set, true);
+        }
+        if (level.tubes != null)
+            foreach (var t in level.tubes) MarkPath(TubeObstacleService.GetCellIndices(t, level.width, level.height), ObstacleId.Tube);
+        if (level.magnets != null)
+            foreach (var m in level.magnets) MarkPath(m.pathCellIndices, ObstacleId.Magnet);
+
+        var order = new System.Collections.Generic.List<(int stackOrder, int kind, int index)>();
+        if (level.stackedObstacles != null)
+            for (int i = 0; i < level.stackedObstacles.Length; i++) order.Add((level.stackedObstacles[i].stackOrder, 0, i));
+        if (level.safes != null)
+            for (int i = 0; i < level.safes.Length; i++)
+                if (i != excludeSafeIndex) order.Add((level.safes[i].stackOrder, 1, i));
+        order.Sort((a, b) => a.stackOrder != b.stackOrder ? a.stackOrder.CompareTo(b.stackOrder)
+                           : a.kind != b.kind ? a.kind.CompareTo(b.kind) : a.index.CompareTo(b.index));
+
+        foreach (var o in order)
+        {
+            ObstacleId id; System.Collections.Generic.HashSet<int> cells;
+            if (o.kind == 0)
+            {
+                var e = level.stackedObstacles[o.index];
+                var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(e.obstacleId) : null;
+                id = e.obstacleId;
+                cells = RectCells(level, e.originCellIndex,
+                    def != null ? Mathf.Max(1, def.size.x) : 1, def != null ? Mathf.Max(1, def.size.y) : 1);
+            }
+            else
+            {
+                var e = level.safes[o.index];
+                id = ObstacleId.Safe;
+                cells = RectCells(level, e.originCellIndex, Mathf.Max(1, e.width), Mathf.Max(1, e.height));
+            }
+            foreach (var c in cells) top[c] = (id, cells, false);
+        }
+        return top;
+    }
+
+    private static bool ValidateFullCover(LevelData level, System.Collections.Generic.HashSet<int> newCells,
+        ObstacleId newId, int excludeSafeIndex)
+    {
+        // Saydam örtüler (Grass/Oil) kısmen örtebilir: altı görünür kalır; çok-hücreli engel, üstündeki
+        // tüm örtüler gidene dek vuruş almaz (ObstacleStateService.IsBuriedAnywhere). Örn. 4x4 kasa + 4 grass.
+        if (ObstacleStateService.IsSeeThroughLayer(newId)) return true;
+
+        var top = SimulateTopLayers(level, excludeSafeIndex);
+        foreach (var c in newCells)
+        {
+            if (!top.TryGetValue(c, out var under) || under.isPath || under.id == ObstacleId.None) continue;
+            if (under.cells.IsSubsetOf(newCells)) continue;
+            Debug.LogWarning($"[OverlayEditor] {newId} konamaz: ({c % level.width},{c / level.width}) hücresindeki " +
+                             $"{under.id} ({under.cells.Count} hücre) tamamen örtülmüyor. Üstteki katman alttaki engeli " +
+                             "aynı ya da daha çok hücreyle TAMAMEN kaplamalı.");
+            return false;
+        }
+        return true;
+    }
+
+    // Yeni üst katman yığının en üstüne: kasalar + stacked girişler arasındaki en büyük sıra + 1.
+    private static int NextStackOrder(LevelData level)
+    {
+        int max = 0;
+        if (level.safes != null)
+            foreach (var e in level.safes) max = Mathf.Max(max, e.stackOrder);
+        if (level.stackedObstacles != null)
+            foreach (var e in level.stackedObstacles) max = Mathf.Max(max, e.stackOrder);
+        return max + 1;
     }
 
     private void RemoveSafeAtCell(LevelData level, int cellIndex)
@@ -930,22 +1053,30 @@ public class LevelDataEditor : Editor
     private void DrawOverlayPalette(LevelData level)
     {
         EditorGUILayout.HelpBox(
-            "Overlay (stacked obstacle): seçili obstacle, altındaki AUTHORED içeriğin (Obstacle modunda " +
-            "boyadığın Mud/Stone vb.) ÜSTÜNE konur. Üstteki kırılınca alttaki geri açılır. Safe ile aynı " +
-            "beneath mekanizması — örn. Chest'i bir Mud'ın üstüne koymak için: önce Obstacle modunda Mud " +
-            "boya, sonra burada Chest seçip aynı hücreye tıkla. Boyut obstacle'ın kendi def.size'ından gelir.",
+            "Overlay (yığın): seçili engel, hücrede ne varsa onun ÜSTÜNE eklenir; aynı hücreye istediğin kadar " +
+            "katman koyabilirsin (Safe modu da aynı yığına ekler). Oyunda önce en üstteki kırılır, sonra " +
+            "alttaki açılır; alttakiler o zamana dek yok hükmündedir. Mud/Jel yalnız en altta olur (Obstacle " +
+            "modunda boya). Boyut engelin kendi def.size'ından gelir. Silgi hücredeki tüm katmanları siler.",
             MessageType.Info);
         // Üste konacak obstacle, normal obstacle paleti ile seçilir (selectedObstacle paylaşılır).
         DrawPalette(level);
     }
 
     // Overlay modu: stackedObstacles[]'a bir entry ekler (origin + obstacleId). Altındaki içerik
-    // EZİLMEZ — runtime'da GridSpawner.StampStackedObstaclesIntoLevel kaydedip kaplar, kırılınca
+    // EZİLMEZ — runtime'da GridSpawner.StampLayeredEntriesIntoLevel yığın sırasıyla kurar, kırılınca
     // ObstacleStateService geri yükler. Safe'in generic karşılığı.
     private void PlaceStackedObstacle(LevelData level, int bx, int by)
     {
         if (!level.InBounds(bx, by)) return;
         if (selectedObstacle == ObstacleId.None) return;
+
+        // Zemin altı engeller (Mud, Jel) yığının daima EN ALTINDA — başka bir şeyin üstüne konamaz.
+        if (selectedObstacle == ObstacleId.Mud || selectedObstacle == ObstacleId.SpreadingGel)
+        {
+            Debug.LogWarning($"[OverlayEditor] {selectedObstacle} üst katman olamaz (daima en altta). " +
+                             "Obstacle modunda taban katmana boya.");
+            return;
+        }
 
         int originIdx = level.Index(bx, by);
         var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(selectedObstacle) : null;
@@ -957,13 +1088,19 @@ public class LevelDataEditor : Editor
             return;
         }
 
-        // Aynı origin'de varsa değiştir.
-        RemoveStackedAtCell(level, originIdx);
+        // Yığın: aynı köşeye AYNI engel tekrar konursa yinelenmez; farklı engel mevcutların ÜSTÜNE eklenir
+        // (eskiden hücreyi kaplayan tüm üst katmanlar silinip tek katmana düşülüyordu).
+        var current = level.stackedObstacles ?? System.Array.Empty<StackedObstacleEntry>();
+        if (System.Array.Exists(current, e => e.originCellIndex == originIdx && e.obstacleId == selectedObstacle))
+            return;
+        if (!ValidateFullCover(level, RectCells(level, originIdx, w, h), selectedObstacle, -1))
+            return;
 
         var entry = new StackedObstacleEntry
         {
             originCellIndex = originIdx,
-            obstacleId      = selectedObstacle
+            obstacleId      = selectedObstacle,
+            stackOrder      = NextStackOrder(level)
         };
 
         var list = new System.Collections.Generic.List<StackedObstacleEntry>(

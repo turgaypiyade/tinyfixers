@@ -57,6 +57,7 @@ public sealed class TeamScreenController : MonoBehaviour
     private TMP_Text requestLifeLabel;
     private string defaultRequestLifeLabel;
     private readonly List<TeamChatRow> lifeReplyRows = new();
+    private float lockLabelTimer;
 
     private void OnEnable()
     {
@@ -275,15 +276,31 @@ public sealed class TeamScreenController : MonoBehaviour
         }
     }
 
+    // Zaman kilidi (yeni üye 24sa / istek sonrası 4sa) sürerken buton üstündeki
+    // geri sayım saniyede bir tazelenir; kilit bitince buton kendiliğinden açılır.
+    private void Update()
+    {
+        if (service?.LifeInbox == null) return;
+        lockLabelTimer -= Time.unscaledDeltaTime;
+        if (lockLabelTimer > 0f) return;
+        lockLabelTimer = 1f;
+        if (service.LifeInbox.RequestLockRemaining(System.DateTime.UtcNow) > System.TimeSpan.Zero
+            || (requestLifeButton != null && requestLifeButton.interactable != service.LifeInbox.CanRequest))
+            RefreshLifeControls();
+    }
+
     private void RefreshLifeControls()
     {
         var inbox = service?.LifeInbox;
         bool full = LivesManager.Current >= LivesManager.MaxLives;
+        var lockLeft = inbox != null ? inbox.RequestLockRemaining(System.DateTime.UtcNow) : System.TimeSpan.Zero;
         if (requestLifeButton != null) requestLifeButton.interactable = inbox != null && inbox.CanRequest;
         if (requestLifeLabel != null)
             requestLifeLabel.text = full ? "Can Dolu (10/10)"
                 : inbox != null && inbox.Pending > 0 ? "Canların Hazır"
                 : inbox != null && inbox.IsWaiting ? "Can Bekleniyor"
+                : lockLeft > System.TimeSpan.Zero
+                    ? $"{defaultRequestLifeLabel} {(int)lockLeft.TotalHours:00}:{lockLeft.Minutes:00}:{lockLeft.Seconds:00}"
                 : defaultRequestLifeLabel;
         foreach (var row in lifeReplyRows)
             if (row != null) row.RefreshLifeReply();

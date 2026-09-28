@@ -48,6 +48,9 @@ internal sealed class TileFallMotionSystem
         public bool stationary;         // yalnız bu karelik engel: planlı/park etmiş, kıpırdamayan taş
         public float stuckTime;         // ilerlemeden geçen süre (gecikme hariç)
         public bool stuckWarningRaised;
+#if UNITY_EDITOR
+        public bool traceWaitLogged;
+#endif
         public int waitKind;            // son bekleme: 0 yok, 1 çapraz dönüş, 2 sütun aralığı (teşhis)
         public Motion waitBlocker;      // sütun aralığında beklenen taş
         public Vector2Int target;
@@ -149,6 +152,9 @@ internal sealed class TileFallMotionSystem
     private readonly BoardController board;
     private readonly Dictionary<TileView, Motion> active = new();
     private readonly Dictionary<TileView, Parked> parked = new();
+    // A corner decision can start a new route immediately after Land. Keep its
+    // speed briefly without treating a settled tile as pending work or owning it.
+    private readonly Dictionary<TileView, Parked> recentLandings = new();
     private readonly List<Motion> order = new();
     private readonly List<TileView> parkedScratch = new();
     private readonly Dictionary<int, Motion> belowInColumn = new();
@@ -199,6 +205,7 @@ internal sealed class TileFallMotionSystem
                 pair.Key.SetRuntimeState(TileRuntimeState.Idle);
         active.Clear();
         parked.Clear();
+        recentLandings.Clear();
         planned.Clear();
         kicked.Clear();
         diagonalTransits.Clear();
@@ -293,14 +300,22 @@ internal sealed class TileFallMotionSystem
 
             bool ownsParked = parked.TryGetValue(tile, out var previous)
                 && previous.lifetime == lifetime && tile.IsMoveTokenCurrent(previous.token);
+            bool continuesLanding = !isSpawn && recentLandings.TryGetValue(tile, out var landing)
+                && landing.lifetime == lifetime && tile.IsMoveTokenCurrent(landing.token)
+                && Time.time - landing.time <= ParkMomentumWindow
+                && (tile.RectTransform.anchoredPosition - landing.pos).sqrMagnitude <= 1f;
+            // Lookup before claiming a new token; another owner/recycled lifetime
+            // must never inherit this tile's old fall speed.
+            float landingVelocity = continuesLanding ? recentLandings[tile].velocity : v0;
+            recentLandings.Remove(tile);
             m = new Motion
             {
                 tile = tile,
                 lifetime = lifetime,
                 token = tile.ClaimMoveToken(),
                 sequence = nextSequence++,
-                velocity = v0,
-                delay = Mathf.Max(0f, delay),
+                velocity = Mathf.Max(v0, landingVelocity),
+                delay = continuesLanding ? 0f : Mathf.Max(0f, delay),
             };
 
             // Board üzerindeki taş görsel konumundan başlar (sıralama dışı gelen eski planlar
@@ -367,6 +382,14 @@ internal sealed class TileFallMotionSystem
     public void Tick(float dt)
     {
         if (dt <= 0f) return;
+        parkedScratch.Clear();
+        foreach (var pair in recentLandings)
+            if (pair.Key == null || !pair.Key.IsCurrentLifetime(pair.Value.lifetime)
+                || !pair.Key.IsMoveTokenCurrent(pair.Value.token)
+                || Time.time - pair.Value.time > ParkMomentumWindow)
+                parkedScratch.Add(pair.Key);
+        foreach (var tile in parkedScratch)
+            recentLandings.Remove(tile);
         // Keep completed turns through the end of their frame, so even a large dt cannot
         // launch a leader and its follower together. Revoked lifetimes never retain a turn.
         for (int i = diagonalTransits.Count - 1; i >= 0; i--)
@@ -538,10 +561,22 @@ internal sealed class TileFallMotionSystem
         if ((m.pos - before).sqrMagnitude > 0.01f || m.waitKind == 0)
         {
             m.stuckTime = 0f;
+#if UNITY_EDITOR
+            m.traceWaitLogged = false;
+#endif
             return;
         }
 
         m.stuckTime += moveDt;
+#if UNITY_EDITOR
+        if (!m.traceWaitLogged && m.stuckTime >= 0.15f && DiagonalFlowTrace.Enabled(board))
+        {
+            m.traceWaitLogged = true;
+            DiagonalFlowTrace.Motion(board, m.waitKind == 1 ? "WAIT-TURN" : "WAIT-COLUMN",
+                m.tile, m.generation, m.pos, m.points.Count > 0 ? m.points[0] : m.pos,
+                m.target, m.velocity, m.waitBlocker?.tile);
+        }
+#endif
         if (m.stuckWarningRaised || m.stuckTime < StuckWarningSeconds) return;
 
         m.stuckWarningRaised = true;
@@ -645,7 +680,10 @@ internal sealed class TileFallMotionSystem
         foreach (var transit in diagonalTransits)
             if (transit.owner != m && transit.owner.tile.IsCurrentLifetime(transit.owner.lifetime)
                 && transit.owner.tile.IsMoveTokenCurrent(transit.owner.token) && SharesTurn(next, transit.region))
+            {
+                m.waitBlocker = transit.owner;
                 return false;
+            }
 
         // A lower stone can be waiting for its explicit start delay or for another turn.
         // It retains priority at this entrance, independent of FallAction registration order.
@@ -659,16 +697,49 @@ internal sealed class TileFallMotionSystem
                 && leader.pos.y > end.y - board.TileSize * ColumnGapCells)
             {
                 if (leader.stationary)
+                {
                     Kick(leader.tile);
+                    m.waitBlocker = leader;
+                    return false;
+                }
+                // Önündeki taş aşağı akıyorsa çıkışın boşalmasını durarak bekleme: bu taş dönüşü bitirdiğinde
+                // o zaten güvenli aralığa inmiş olacak → arkasından akar (dur-kalk hissinin kökü buydu).
+                if (WillClearBeforeArrival(m, leader, end)) continue;
+                m.waitBlocker = leader;
                 return false;
             }
             if (leader.points.Count == 0 || Mathf.Abs(leader.points[0].x - leader.pos.x) < 0.5f) continue;
-            if (SharesTurn(next, DescribeDiagonal(leader, leader.points[0]))) return false;
+            if (SharesTurn(next, DescribeDiagonal(leader, leader.points[0])))
+            {
+                m.waitBlocker = leader;
+                return false;
+            }
         }
 
         m.diagonal = new DiagonalTransit { owner = m, region = next };
         diagonalTransits.Add(m.diagonal);
+#if UNITY_EDITOR
+        DiagonalFlowTrace.Motion(board, "TURN", m.tile, m.generation, m.pos, end, m.target, m.velocity);
+#endif
         return true;
+    }
+
+    // Tahmin: kayan taş dönüşü (m.pos → end) şimdiki hızıyla bitirene kadar, çıkış sütununda aşağı akan
+    // önceki taş end'in en az ColumnGapCells altına inmiş olur mu? Muhafazakâr: kayan taşın ivmesi yok
+    // sayılır, öndekinin hızı %80 alınır; öndeki end'e çok yakın duracaksa, dönüyorsa ya da gecikmedeyse hayır.
+    private bool WillClearBeforeArrival(Motion m, Motion leader, Vector2 end)
+    {
+        if (leader.delay > 0f || leader.points.Count == 0 || leader.velocity <= 0f) return false;
+        if (Mathf.Abs(leader.points[0].x - leader.pos.x) >= 0.5f) return false;
+
+        float size = board.TileSize;
+        float clearY = end.y - size * ColumnGapCells;
+        Vector2 leaderFinal = leader.tile.GetFallCellPosition(leader.target.x, leader.target.y, board.TileSize);
+        if (Mathf.Abs(leaderFinal.x - end.x) >= 0.5f || leaderFinal.y > clearY) return false;
+
+        float followerSpeed = Mathf.Max(m.velocity, 0.01f) * size;
+        float travel = Vector2.Distance(m.pos, end) / followerSpeed;
+        return leader.pos.y - leader.velocity * 0.8f * size * travel <= clearY;
     }
 
     private static void ReleaseDiagonal(Motion m)
@@ -689,7 +760,17 @@ internal sealed class TileFallMotionSystem
         if (IsAtLogicalTarget(m))
         {
             LandedCount++;
+            tile.LastLandedTime = Time.time;
             tile.SnapToGrid(board.TileSize);
+            recentLandings[tile] = new Parked
+            {
+                lifetime = m.lifetime, token = m.token,
+                pos = tile.RectTransform.anchoredPosition,
+                velocity = m.velocity, time = Time.time,
+            };
+#if UNITY_EDITOR
+            DiagonalFlowTrace.Motion(board, "LAND", tile, m.generation, m.pos, m.pos, m.target, m.velocity);
+#endif
             if (m.settle && tile.RuntimeState == TileRuntimeState.Falling)
                 tile.PlayLandingSettle(board.TileSize, m.settleDuration, m.settleStrength);
             if (tile.RuntimeState == TileRuntimeState.Falling)

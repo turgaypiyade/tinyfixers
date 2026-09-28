@@ -185,9 +185,6 @@ public sealed class SpecialChainRunner : BoardAction
     // dokunulmadı (bkz. Faz 3 dersi: PatchBot'ta kaza eseri blocking vardı, burada yok).
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
-        BoardMotionDiagnostics.ChainBegin(board,
-            $"chain={GetHashCode()} root={root.GetHashCode()} seeds={initialSpecials.Count} lines={simultaneousLineCells?.Count ?? 0}");
-        bool diagnosticCompleted = false;
         System.IDisposable chainActivity = (board != null && board.UseFlowActivities)
             ? board.Flow.Begin(BoardFlowScheduler.ActivityKind.ComboStep)
             : null;
@@ -196,13 +193,11 @@ public sealed class SpecialChainRunner : BoardAction
             var inner = RunChainVisuals(sequencer);
             while (inner.MoveNext())
                 yield return inner.Current;
-            diagnosticCompleted = true;
         }
         finally
         {
             chainActivity?.Dispose();
             OnChainFinished();
-            BoardMotionDiagnostics.ChainEnd(board, $"chain={GetHashCode()} completed={diagnosticCompleted}");
         }
     }
 
@@ -318,12 +313,7 @@ public sealed class SpecialChainRunner : BoardAction
                     for (int i = 0; i < acts.Count; i++)
                         if (acts[i] != null)
                         {
-                            float actionStarted = Time.realtimeSinceStartup;
-                            BoardMotionDiagnostics.Event(board, "SPECIAL_ACTION_BEGIN",
-                                $"chain={GetHashCode()} special={special} action={acts[i].GetType().Name} origin=({cx},{cy})");
                             yield return acts[i].ExecuteVisuals(sequencer);
-                            BoardMotionDiagnostics.Event(board, "SPECIAL_ACTION_END",
-                                $"chain={GetHashCode()} special={special} action={acts[i].GetType().Name} elapsed={Time.realtimeSinceStartup - actionStarted:F3}s");
                         }
                 }
                 yield return RunGravityWithOverlap(queue.Count > 0);
@@ -342,8 +332,6 @@ public sealed class SpecialChainRunner : BoardAction
             // outlive the sub-chains: a released cell could let a not-yet-blasted
             // special fall away from its sub-chain mid-VFX.
             float safety = 0f;
-            int peakJobs = 0;            // TEŞHİS: bekleme boyunca görülen en yüksek job sayısı
-            float timeAtSingleJob = 0f;  // TEŞHİS: yalnız 1 job (baseline+1) kalıp beklenen süre
             // Non-blocking uçuşları (goal orb, PatchBot dash) bekleme; hedefe uçarken
             // special zincirinin final settle'ı donmasın. Gerçek background falls/sub-chain'leri
             // beklemeye devam et (BlockingBackgroundJobs).
@@ -351,10 +339,6 @@ public sealed class SpecialChainRunner : BoardAction
             // kendi alt zincirlerim koşarken çıkma — erken çıkış anchor sızıntısının ana yoluydu.
             while ((root.liveSubChains > 0 || board.BlockingBackgroundJobs > settleJobBaseline) && safety < 5f)
             {
-                int curJobs = board.BlockingBackgroundJobs;
-                if (curJobs > peakJobs) peakJobs = curJobs;
-                if (curJobs == settleJobBaseline + 1) timeAtSingleJob += Time.deltaTime;
-
                 // KRİTİK: background job'lar sürerken board DONMASIN.
                 // PatchBot dash artık BlockingBackgroundJobs dışında; burası hâlâ gerçek
                 // sub-chain/fall job'ları sırasında boş hücreleri kapatır.
@@ -382,21 +366,8 @@ public sealed class SpecialChainRunner : BoardAction
                 yield return null;
             }
 
-            // TEŞHİS (mantığı değiştirmez): settle döngüsü niye bekledi? Yalnız uzun/anormal
-            // beklemeleri logla. reason=CAP → job baseline'a hiç dönmedi (leak/anomali, 5s cap).
-            // reason=drained ama süre uzunsa → bir sub-chain/fall kuyruğu uzun (ölü-bekleme adayı).
-            if (safety >= 5f || safety > 0.6f)
-            {
-                string exitReason = safety >= 5f ? "CAP-5s-ANOMALY" : "drained";
-                Debug.Log($"[ChainSettle] exit={exitReason} " +
-                          $"waited={safety:F2}s peakJobs={peakJobs} timeAtSingleJob={timeAtSingleJob:F2}s baseline={settleJobBaseline} " +
-                          $"resolvableEmpty={board.CascadeLogic?.HasAnyResolvableEmptyPlayableCell()}");
-            }
-
             // No anchor may outlive the chain (a leftover pending cell would block
             // gravity in that column forever). Released cells may leave holes → settle.
-            BoardMotionDiagnostics.Event(board, "CHAIN_SETTLE",
-                $"chain={GetHashCode()} waited={safety:F3}s baseline={settleJobBaseline} peakJobs={peakJobs} anchorsToRelease={root.anchoredCells.Count} capped={safety >= 5f}");
             if (ReleaseAllAnchors())
             {
                 // This refill is created AFTER the background-job drain above.
@@ -607,9 +578,33 @@ public sealed class SpecialChainRunner : BoardAction
             if (d > maxRing) maxRing = d;
         }
 
+        // Çok hücreli obstacle (Wardrobe, ColorChest, Safe...) TEK parçadır: hücreleri farklı
+        // halkalara düşünce her halka ayrı MatchClearAction olduğundan BoardAnimator'ın
+        // action-içi origin dedup'ı aşılıyor ve obstacle iki hit alıyordu. Origin başına
+        // yalnız dalganın İLK vardığı hücre tutulur. Magnet muaf (iki ucu bağımsız vurulur).
+        var obstacles = board.ObstacleStateService;
+        var originRing = new Dictionary<int, (int ring, Vector2Int cell)>();
+        if (obstacles != null)
+            foreach (var c in impactCells)
+            {
+                if (obstacles.GetObstacleIdAt(c.x, c.y) == ObstacleId.Magnet) continue;
+                int origin = obstacles.GetObstacleOriginAt(c.x, c.y);
+                if (origin < 0) continue;
+                int d = Mathf.Max(0, ringOf(c));
+                if (!originRing.TryGetValue(origin, out var best) || d < best.ring)
+                    originRing[origin] = (d, c);
+            }
+
         var ringImpacts = new Dictionary<int, List<Vector2Int>>();
         foreach (var c in impactCells)
         {
+            if (obstacles != null && obstacles.GetObstacleIdAt(c.x, c.y) != ObstacleId.Magnet)
+            {
+                int origin = obstacles.GetObstacleOriginAt(c.x, c.y);
+                if (origin >= 0 && originRing.TryGetValue(origin, out var owner) && owner.cell != c)
+                    continue;
+            }
+
             int d = Mathf.Max(0, ringOf(c));
             if (!ringImpacts.TryGetValue(d, out var listI)) ringImpacts[d] = listI = new List<Vector2Int>();
             listI.Add(c);

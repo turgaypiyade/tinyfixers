@@ -75,12 +75,24 @@ public sealed class MainMenuRewardCollectFx : MonoBehaviour
             yield return null;
         yield return null;
 
-        RectTransform target = FindLevelButton();
+        RectTransform levelButton = FindLevelButton();
+        RectTransform heart = FindHeartIcon();
 
+        // Hedef ödül tipine göre: can (normal ya da süreli sonsuz can) → TopHUD kalp ikonu; diğerleri → level butonu.
         for (int i = 0; i < _rewards.Count; i++)
-            yield return CoCollectOne(_rewards[i], target);
+        {
+            var reward = _rewards[i];
+            var target = reward != null && reward.type == DailySlotRewardType.Lives && heart != null ? heart : levelButton;
+            yield return CoCollectOne(reward, target);
+        }
 
         Destroy(gameObject);
+    }
+
+    private RectTransform FindHeartIcon()
+    {
+        var lives = FindFirstObjectByType<MainMenuLivesDisplay>();
+        return lives != null ? lives.HeartTarget : null;
     }
 
     private RectTransform FindLevelButton()

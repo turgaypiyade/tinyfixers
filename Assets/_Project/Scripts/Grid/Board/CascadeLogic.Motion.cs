@@ -26,8 +26,6 @@ public partial class CascadeLogic
         // All callers (Line, PatchBot arrivals, combos and ResolveBoard) share this
         // gate. Do not calculate destinations now and merely delay their visuals:
         // by execution time new impacts may have changed the board again.
-        BoardMotionDiagnostics.Event(board, "GRAVITY_DEFERRED",
-            $"activeFalls={activeFallVisuals} deferredRunning={deferredCascadeRunning}");
         return new List<BoardAction> { new DeferredCascadeAction(this) };
     }
 

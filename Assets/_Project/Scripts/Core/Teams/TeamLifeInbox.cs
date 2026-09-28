@@ -7,6 +7,8 @@ public sealed class TeamLifeInbox
 {
     private const string SaveKey = "team_life_inbox_v1";
     private const int DonationLimit = 5;
+    private static readonly TimeSpan RequestCooldown = TimeSpan.FromHours(4);
+    private static readonly TimeSpan NewMemberLock = TimeSpan.FromHours(24);
 
     [Serializable]
     public sealed class Reply
@@ -37,6 +39,7 @@ public sealed class TeamLifeInbox
         public List<Reply> replies;
         public long nextBotRequestTicks;
         public List<BotRequest> botRequests;
+        public long lastRequestTicks;
     }
 
     private readonly State state;
@@ -49,7 +52,23 @@ public sealed class TeamLifeInbox
     public IReadOnlyList<BotRequest> BotRequests => state.botRequests;
     public int Pending => state.replies.FindAll(reply => !reply.accepted).Count;
     public bool IsWaiting => state.requested > 0;
-    public bool CanRequest => LivesManager.Current < LivesManager.MaxLives && Pending == 0 && !IsWaiting;
+    public bool CanRequest => LivesManager.Current < LivesManager.MaxLives && Pending == 0 && !IsWaiting
+                              && RequestLockRemaining(DateTime.UtcNow) <= TimeSpan.Zero;
+
+    /// <summary>
+    /// Zaman kilidinin kalanı: takıma yeni katılan 24 saat, istek yapan (bu takımda) 4 saat
+    /// bekler. Zero = kilit yok. Takım değişince state sıfırlandığı için 4 saat takım başınadır.
+    /// </summary>
+    public TimeSpan RequestLockRemaining(DateTime now)
+    {
+        long unlock = 0;
+        long joined = PlayerTeamState.JoinedTicks;
+        if (joined > 0) unlock = Math.Max(unlock, joined + NewMemberLock.Ticks);
+        if (state.lastRequestTicks > 0) unlock = Math.Max(unlock, state.lastRequestTicks + RequestCooldown.Ticks);
+        // Saat geri alınmış/bozuk kayıt: kilit en fazla kendi süresi kadar sürebilir.
+        long remaining = Math.Min(unlock - now.Ticks, NewMemberLock.Ticks);
+        return remaining > 0 ? TimeSpan.FromTicks(remaining) : TimeSpan.Zero;
+    }
 
     public TeamLifeInbox(string teamId, Action changed, Func<int, int, int> randomRange = null)
     {
@@ -87,6 +106,7 @@ public sealed class TeamLifeInbox
     {
         if (!CanRequest) return false;
         state.requested = Mathf.Min(DonationLimit, LivesManager.MaxLives - LivesManager.Current);
+        state.lastRequestTicks = now.Ticks;
         Schedule(now);
         Save();
         changed?.Invoke();

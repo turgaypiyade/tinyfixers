@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   width: 8
   height: 8
-  moves: 21
+  moves: 23
   baseCoinReward: 10
   goals:
   - targetType: 1
@@ -43,11 +43,12 @@ MonoBehaviour:
   introHoldDuration: 0.8
   bossAttackEveryMoves: 3
   bossAttackOilCount: 2
+  bossThrownObstacles: 
+  bossMaxPressureObstacles: 8
   playerMaxHp: 560
   damagePerClearedTile: 10
+  shieldProtectionPerPickup: 2
   enemyAttackBaseDamage: 20
-  enemyAttackDamageGrowth: 6
-  enemyAttackInterval: 2
   battlefieldBackground: {fileID: 0}
   bossWaves: []
   bossWaveCount: 0

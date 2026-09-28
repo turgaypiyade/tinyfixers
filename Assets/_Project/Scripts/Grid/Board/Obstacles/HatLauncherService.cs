@@ -153,7 +153,7 @@ public sealed class HatLauncherService : MonoBehaviour
             {
                 var goal = level.goals[i];
                 if (goal == null) continue;
-                if (goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId != CollectibleId.None)
+                if (goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId == CollectibleId.EnergyOrb)
                     return Mathf.Max(1, goal.amount);
             }
         }
@@ -169,7 +169,7 @@ public sealed class HatLauncherService : MonoBehaviour
             {
                 var goal = level.goals[i];
                 if (goal == null) continue;
-                if (goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId != CollectibleId.None)
+                if (goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId == CollectibleId.EnergyOrb)
                     return goal.collectibleId;
             }
         }

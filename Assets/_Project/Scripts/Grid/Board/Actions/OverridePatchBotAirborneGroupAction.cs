@@ -555,12 +555,33 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
 
         // ─── PHASE 3: Topla — tüm hedef cell'lerin TileData/TileView'ları ───
         var groupCtx = new ResolutionContext();
+        // Her bot = bir vuruş. Grup vuruşları tek MatchClear'da birleşir ve orada engel başına TEK vuruş
+        // sayılır → aynı engele (ör. 4 vuruş isteyen kasa) inen 2., 3. bot boşa gidiyordu. Aynı origin'e
+        // inen fazladan botlar ayrıca, doğrudan vurur (aşağıda, clear'dan sonra).
+        var groupHitOrigins = new HashSet<int>();
+        var extraObstacleHits = new List<(int x, int y, int origin, ObstacleId id)>();
         for (int i = 0; i < bots.Count; i++)
         {
             var bot = bots[i];
             if (bot == null || !bot.hasTarget) continue;
 
             bool hasObstacle = patchbotService.HasObstacleAt(bot.targetX, bot.targetY);
+            if (hasObstacle && board.ObstacleStateService != null)
+            {
+                var obs = board.ObstacleStateService;
+                var obsId = obs.GetObstacleIdAt(bot.targetX, bot.targetY);
+                int obsOrigin = obs.GetObstacleOriginAt(bot.targetX, bot.targetY);
+                if (obsId != ObstacleId.Magnet && obsOrigin >= 0 && !groupHitOrigins.Add(obsOrigin))
+                {
+                    extraObstacleHits.Add((bot.targetX, bot.targetY, obsOrigin, obsId));
+                    if (bot.intent != null)
+                    {
+                        coordinator.ReleaseIntent(bot.intent);
+                        bot.intent = null;
+                    }
+                    continue;
+                }
+            }
             var dataMatches = new HashSet<TileData>();
 
             patchbotService.ResolveTargetImpact(
@@ -609,6 +630,24 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             // Bu şu an Blocking action'ın koroutine'i içinde çalışıyor,
             // sequencer queue'ya yeni action girmiyor → ANINDA başlar.
             yield return clearAction.ExecuteVisuals(sequencer);
+        }
+
+        // Aynı engele inen fazladan botlar: her biri ayrı vuruş. Engel bu arada kırıldıysa (origin/id değişti)
+        // vuruş taze açılan katmana İNMEZ (ayrıca ObstacleStateService açılış koruması).
+        if (extraObstacleHits.Count > 0 && board.ObstacleStateService != null)
+        {
+            using (SafeObstacleService.IndependentHitScope.Begin())
+            {
+                foreach (var extra in extraObstacleHits)
+                {
+                    var obs = board.ObstacleStateService;
+                    if (obs.GetObstacleOriginAt(extra.x, extra.y) != extra.origin
+                        || obs.GetObstacleIdAt(extra.x, extra.y) != extra.id)
+                        continue;
+                    var hit = board.ApplyObstacleDamageAt(extra.x, extra.y, ObstacleHitContext.SpecialActivation);
+                    if (hit.didHit) board.TriggerObstacleVisualChange(hit.visualChange);
+                }
+            }
         }
 
         // ─── PHASE 6: Tek cascade ───

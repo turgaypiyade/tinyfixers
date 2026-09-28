@@ -178,10 +178,11 @@ public class DynamicBoardBorder : MonoBehaviour
         return Mathf.Max(0f, trim);
     }
 
+    // Çapraz temas (5, 10) artık dış köşe DEĞİL: iki iç köşe olarak çizilir (PlaceCorner) → düz kenarlar
+    // iç köşe gibi kırpılır.
     private bool IsOuterCornerMask(int nodeMask)
     {
-        return nodeMask == 1 || nodeMask == 2 || nodeMask == 4 || nodeMask == 8 ||
-               nodeMask == 5 || nodeMask == 10;
+        return nodeMask == 1 || nodeMask == 2 || nodeMask == 4 || nodeMask == 8;
     }
 
     private bool HasCornerAtNode(int nodeMask)
@@ -323,14 +324,17 @@ public class DynamicBoardBorder : MonoBehaviour
             case 11: PlaceOffset(PickInnerRB(), Vector2.right + Vector2.down); break; // BR boş
             case 7:  PlaceOffset(PickInnerLB(), Vector2.left + Vector2.down); break;  // BL boş
 
-            // Diagonal temas: iki ayrı dış corner var; aynı node'da değil, kendi dış yönlerine offsetlenmeli.
-            case 5:
-                PlaceOffset(PickOuterLT(), Vector2.right + Vector2.down); // TL solid
-                PlaceOffset(PickOuterRB(), Vector2.left + Vector2.up);     // BR solid
+            // Çapraz temas (iki bölge yalnız köşeden değiyor): eskiden iki DIŞ köşe dışarı itiliyordu → dışarısı
+            // karşı bölgenin hücresi olduğundan köşeler hücrelerin üstüne biniyor, düz kenarlar X şeklinde
+            // kesişiyordu. Doğrusu: birleşimin dış hattı bu node'da iki kez İÇE döner → iki BOŞ çeyreğe birer iç
+            // köşe (mask 7/13 ve 14/11 ile birebir aynı parçalar) — hiçbiri hücrenin üstüne binmez, "8" beli gibi.
+            case 5: // TL + BR dolu; TR ve BL boş
+                PlaceOffset(PickInnerRT(), Vector2.right + Vector2.up);   // TR boş (mask 13 gibi)
+                PlaceOffset(PickInnerLB(), Vector2.left + Vector2.down);  // BL boş (mask 7 gibi)
                 break;
-            case 10:
-                PlaceOffset(PickOuterRT(), Vector2.left + Vector2.down);   // TR solid
-                PlaceOffset(PickOuterLB(), Vector2.right + Vector2.up);    // BL solid
+            case 10: // TR + BL dolu; TL ve BR boş
+                PlaceOffset(PickInnerLT(), Vector2.left + Vector2.up);    // TL boş (mask 14 gibi)
+                PlaceOffset(PickInnerRB(), Vector2.right + Vector2.down); // BR boş (mask 11 gibi)
                 break;
         }
 
@@ -477,8 +481,8 @@ public class DynamicBoardBorder : MonoBehaviour
             case 13: return "inner_rt";
             case 11: return "inner_rb";
             case 7:  return "inner_lb";
-            case 5:  return "oLT+oRB";
-            case 10: return "oRT+oLB";
+            case 5:  return "iRT+iLB";
+            case 10: return "iLT+iRB";
             default: return "?" + mask;
         }
     }

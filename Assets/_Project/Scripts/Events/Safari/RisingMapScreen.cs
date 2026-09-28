@@ -211,6 +211,11 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     private void StopPresentation()
     {
+        if (lostOverlay != null)
+        {
+            Destroy(lostOverlay);
+            lostOverlay = null;
+        }
         if (rewardView != null)
         {
             Destroy(rewardView.gameObject);
@@ -429,7 +434,9 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
                 BuildCrowd(0, 0, onLift: false);   // düşenler zemin platformuna toplanır
                 ParkLiftAtFloor(0);
-                break;
+                // Kaybedince devam yok: siyah perde + "Kaybettiniz" → dokununca ana menü.
+                yield return ShowLostOverlay();
+                yield break;
             }
 
             case SafariRoundOutcome.Completed:
@@ -469,6 +476,88 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
         SetContinueVisible(true);
         RefreshContinueInteractable();
+    }
+
+    // ── Kaybetme perdesi ─────────────────────────────────────────
+
+    private GameObject lostOverlay;
+
+    // Oyuncu kendi düşüşünü gördükten sonra: siyah perde üstünde "Kaybettiniz / Bir süre sonra tekrar
+    // deneyiniz". Kaybedince yapılacak bir şey yok → dokunuş haritayı kapatıp ana menüye döner.
+    private IEnumerator ShowLostOverlay()
+    {
+        EventSfx.Play(x => x.eliminated);
+        Transform parent = root != null ? root.transform : transform;
+        var go = new GameObject("SafariLostOverlay", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+        go.layer = parent.gameObject.layer;
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(parent, false);
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+        rt.SetAsLastSibling();
+        lostOverlay = go;
+
+        var bg = go.GetComponent<Image>();
+        bg.color = new Color(0f, 0f, 0f, 0.86f);
+        bg.raycastTarget = true;
+        var group = go.GetComponent<CanvasGroup>();
+        group.alpha = 0f;
+
+        TMP_Text Line(string key, float size, float y, float height, bool styled)
+        {
+            var t = new GameObject(key, typeof(RectTransform), typeof(TextMeshProUGUI));
+            t.layer = go.layer;
+            var trt = (RectTransform)t.transform;
+            trt.SetParent(rt, false);
+            trt.anchorMin = new Vector2(0.05f, 0.5f);
+            trt.anchorMax = new Vector2(0.95f, 0.5f);
+            trt.pivot = new Vector2(0.5f, 0.5f);
+            trt.anchoredPosition = new Vector2(0f, y);
+            trt.sizeDelta = new Vector2(0f, height);
+            var text = t.GetComponent<TextMeshProUGUI>();
+            text.text = GameLocalization.Get(key);
+            text.raycastTarget = false;
+            if (styled) RewardTextStyle.Apply(text, size);
+            else
+            {
+                if (continueLabel != null) text.font = continueLabel.font;
+                text.fontSize = size;
+                text.enableAutoSizing = false;
+                text.alignment = TextAlignmentOptions.Center;
+                text.color = new Color(1f, 1f, 1f, 0.9f);
+            }
+            return text;
+        }
+
+        Line("safari_lost_title", 96f, 90f, 150f, styled: true);
+        Line("safari_lost_body", 48f, -30f, 80f, styled: true);
+        var tapHint = Line("safari_lost_tap", 34f, -260f, 60f, styled: false);
+
+        for (float t = 0f; t < 0.3f; t += Time.unscaledDeltaTime)
+        {
+            group.alpha = Mathf.Clamp01(t / 0.3f);
+            yield return null;
+        }
+        group.alpha = 1f;
+
+        // Kısa bekleme: düşüş animasyonunun son dokunuşu perdeyi hemen kapatmasın.
+        yield return new WaitForSecondsRealtime(0.5f);
+        bool tapped = false;
+        var button = go.AddComponent<Button>();
+        button.transition = Selectable.Transition.None;
+        button.onClick.AddListener(() => tapped = true);
+
+        while (!tapped)
+        {
+            if (tapHint != null)
+                tapHint.alpha = 0.55f + 0.35f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 3f));
+            yield return null;
+        }
+
+        Destroy(go);
+        lostOverlay = null;
+        Hide();
     }
 
     // ── Koreografi ───────────────────────────────────────────────
@@ -814,6 +903,8 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         int share = Mathf.Max(1, prizePool / winners);
 
         rewardView = SafariRewardView.Create(parent);
+        EventSfx.Play(x => x.victoryFanfare);
+        EventSfx.Play(x => x.confetti);
         yield return rewardView.Present(share, prizePool, winners, finalGoldMoneySprite,
             rewardRibbonSprite, rewardButtonSprite, continueLabel != null ? continueLabel.font : null,
             rewardCollectSfx, motionSfxGroup, rewardCountDuration, rewardEventLabelMaterial);
@@ -890,6 +981,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     private void OnContinueClicked()
     {
+        EventSfx.Play(x => x.uiTap);
         if (presentedFall)
         {
             presentedFall = false;

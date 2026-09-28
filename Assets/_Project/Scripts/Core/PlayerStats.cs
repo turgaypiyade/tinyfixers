@@ -26,6 +26,10 @@ public static class PlayerStats
 
     public static event Action OnChanged;
 
+    /// Level kazanıldığı AN (RecordLevelCleared sonunda) bir kez. Event'ler kazanç sayımını ve
+    /// bitiş zamanını buradan alır (ana menüye dönüşü beklemeden, uygulama kapansa da doğru zaman).
+    public static event Action OnLevelCleared;
+
     // ── Okunan istatistikler ─────────────────────────────────────────────────
 
     public static int FirstTryClears => PlayerPrefs.GetInt(FirstTryClearsKey, 0);
@@ -94,6 +98,7 @@ public static class PlayerStats
         PlayerPrefs.SetInt(LevelFailedKey, 0);   // sonraki level temiz başlasın
         PlayerPrefs.Save();
         OnChanged?.Invoke();
+        OnLevelCleared?.Invoke();
     }
 
     /// Mevcut level fail olunca çağrılır. Güncel seriyi sıfırlar ve "bu level fail oldu" bayrağını

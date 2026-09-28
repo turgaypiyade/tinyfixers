@@ -36,6 +36,16 @@ vuruş BOŞA gider, alta SIZMAZ. Kırılmaz katman (Cargo) vuruşu yutar; üstü
 **Kural 4 — Hücre özellikleri tüm yığından türetilir.** "Taşı düşürür mü, taşı tutar mı, dokunulabilir mi, special
 etkiler mi" gibi sorular yalnız birincile değil, katman sınıflarının birleşimine bakar (tek fonksiyon).
 
+**Kural 4b — TAM ÖRTME (kullanıcı kararı 2026-09-26).** Üstteki katman, altındaki engeli tamamen örtmeli: aynı ya da
+daha çok hücre kaplamalı (1x1 sandık 2x2 kasanın tek köşesinde OLAMAZ). Editör (`LevelDataEditor.ValidateFullCover`,
+runtime kurulum sırasını simüle eder) yarım örtmeyi reddeder. Mıknatıs/tüp (yol engeli) muaf. Sandık mıknatısın
+altına konmaz (kullanıcı: zaten yapmıyor).
+
+**Kural 4c — Kısmen örtülü çok-hücreli engel kilitli (kullanıcı 2026-09-26).** Çok-hücreli bir engelin HERHANGİ bir
+hücresinin üstünde katman varsa engel hiçbir hücresinden vuruş almaz (ör. 4x4 kasa + köşelerinde 4 grass → 4 grass
+gidene dek kasa kilitli). `ObstacleStateService.IsBuriedAnywhere` hasar girişinde. Saydam örtüler (Grass/Oil)
+kısmen örtebilir (Kural 4b muafiyeti), altları görünür kalır; opak katman altı gizli (`IsHiddenUnderOpaqueLayer`).
+
 **Kural 5 — Çok-hücreli engel** her hücresinde aynı origin'li bir katmandır; bir vuruş kaynağı origin başına bir kez
 vurur (bugünkü kural korunur).
 
@@ -66,3 +76,19 @@ Tube · Magnet uçları · Jel yayılımı · Yağ yayılımı · Hedef sayımla
 1. Sabit sınıf sırası YOK — editördeki dizilim geçerli; yalnız Mud/Jel en altta.
 2. Alttaki, üstteki gidene kadar yok hükmünde (hasar almaz, özelliği işlemez).
 3. Editör serbest (Mud/Jel kısıtı hariç).
+
+## 6. İlerleme
+
+**Adım 1 (2026-09-26, kod yazıldı, Unity testi bekliyor):**
+- Kurulum sırası birleşti: `StackedObstacleEntry.stackOrder` + `SafeEntry.stackOrder`; `GridSpawner.StampLayeredEntriesIntoLevel`
+  ikisini tek listede alttan üste kurar (eşitte eski davranış: önce stacked dizi sırasıyla, sonra kasalar → eski
+  level'lar aynen). Safe artık zorunlu en üst değil.
+- Tüp/mıknatıs kurulumu altındaki authored içeriği silmiyor (`RememberAuthoredBeneath`); tüp hücresi bırakılınca
+  `ObstacleStateService.ReleaseTubeCell` saklananı açar (mıknatıs yolu zaten açıyordu).
+- Kapalı kasa gizli başlar, tıklanmaz; açığa çıkınca `RevealCoveredSafeView` görünür yapar (tıklama vekilleriyle).
+- Editör: Overlay/Safe ekleme artık mevcut katmanları SİLMİYOR, üstüne ekliyor (en üst sıra = max+1); aynı köşeye
+  aynı engel yinelenmez; Mud/Jel üst katman olamaz (uyarı). Silgi hücredeki tüm katmanları siler.
+- Tam örtme kuralı editörde (Kural 4b) → kısmi örtme ve onun görsel sıra sorunu kaynağında yok.
+- Bilinen sınırlar (sonraki adımlar): mıknatıs/tüp her zaman üst üste konanların ALTINDA kurulur (kullanıcı: sorun
+  değil); editör önizlemesi yığını
+  göstermiyor; opak katmanın altındakileri gizleme kuralı genel olarak uygulanmadı (şimdilik yalnız Safe).
