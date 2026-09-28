@@ -127,6 +127,8 @@ public sealed class CommonPopupView : MonoBehaviour
         if (text == null) return;
         var skin = CommonPopupSkin.Shared;
         StyleText(text, skin.titleFontSize, Color.white);
+        // Materyal skin.font'un atlasından türetildi → yalnız o font'ta uygula (başka font = bozuk harf).
+        if (skin.titleMaterial != null && text.font == skin.font) text.fontSharedMaterial = skin.titleMaterial;
         text.textWrappingMode = TextWrappingModes.NoWrap;
         var arc = text.GetComponent<TextArcEffect>();
         if (arc == null) arc = text.gameObject.AddComponent<TextArcEffect>();
@@ -179,15 +181,29 @@ public sealed class CommonPopupView : MonoBehaviour
             aspect.aspectMode = AspectRatioFitter.AspectMode.None;
             Region(labelBounds, new Rect(0, 0, 1, 1));
         }
+        Material labelMaterial = ButtonLabelMaterial(image != null ? image.sprite : null);
         foreach (var text in button.GetComponentsInChildren<TMP_Text>(true))
         {
             text.transform.SetParent(labelBounds, false);
             StyleText(text, fontSize, Color.white);
+            // StyleText font'u atar (materyal font varsayılanına döner) → zemin stili SONRA.
+            if (labelMaterial != null && text.font == CommonPopupSkin.Shared.font) text.fontSharedMaterial = labelMaterial;
             // Alt aksiyon butonları küçük; yazıya görselin daha büyük kısmını ver.
             Region(text.rectTransform, isFooterAction
                 ? new Rect(0.05f, 0.10f, 0.90f, 0.80f)
                 : new Rect(0.08f, 0.15f, 0.84f, 0.70f));
         }
+    }
+
+    // Buton yazısının stili buton görselinin rengine göre: yeşil → koyu yeşil kontur, mavi → koyu mavi.
+    // Tanınmayan görselde (kapat vb.) font varsayılanı kalır.
+    private static Material ButtonLabelMaterial(Sprite sprite)
+    {
+        var skin = CommonPopupSkin.Shared;
+        if (sprite == null) return null;
+        if (sprite == skin.accountButton) return skin.blueButtonMaterial;
+        if (sprite == skin.continueButton || sprite == skin.saveProgressContinueButton) return skin.greenButtonMaterial;
+        return null;
     }
 
     // One action is centered; multiple choices keep the same usable touch size.

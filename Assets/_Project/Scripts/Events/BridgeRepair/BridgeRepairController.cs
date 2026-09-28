@@ -41,6 +41,10 @@ public sealed class BridgeRepairController : MonoBehaviour
     [Tooltip("İlk aktivasyon otomatik popup'ı için ana menü yüklendikten sonra beklenecek ek süre (sn).")]
     [SerializeField] private float autoPopupDelaySeconds = 2f;
 
+    [Header("Level öncesi event şeridi")]
+    [Tooltip("Şerit kartındaki ikon. Boşsa ana menü event ikonunun görseli.")]
+    [SerializeField] private Sprite promoIcon;
+
     private float nextVisibilityCheck;
     private BridgeRepairHowToPlay howToPlay;
     private Coroutine pendingMapOpen;
@@ -214,10 +218,57 @@ public sealed class BridgeRepairController : MonoBehaviour
         if (mapScreen != null) mapScreen.Open(this, animate);
     }
 
+    private void OnEnable() => PreLevelEventPromoRegistry.Register(PromoKey, BuildPromo);
+
     private void OnDisable()
     {
+        PreLevelEventPromoRegistry.Unregister(PromoKey);
         StopAllCoroutines();
         pendingMapOpen = null;
+    }
+
+    // ── Level öncesi event şeridi ────────────────────────────────
+
+    private const string PromoKey = "bridge_repair";
+
+    /// Şu an katılınabilir mi: ikona basınca katılım popup'ı açılacak durumla aynı (OnIconClicked) —
+    /// hiç katılmadı ya da yarışı bitti, sonucu gördü ve yeni giriş beklemesi doldu. Yalnız GERÇEK takvimde
+    /// aktifken: editör debugForceAvailable şeridi açmaz (kullanıcı kuralı: aktif olmayan event hiçbir şey göstermez).
+    private bool CanJoinNow
+    {
+        get
+        {
+            if (config == null || CurrentLevel.Global < config.minLevelGate
+                || !BridgeRepairSchedule.IsActiveNow(config, UtcNow)) return false;
+            if (!BridgeRepairState.HasJoined) return true;
+            return BridgeRepairRace.RunEnded(config, UtcNow) && BridgeRepairState.EndPresented
+                && RejoinCooldown <= TimeSpan.Zero;
+        }
+    }
+
+    // Şerit kartı yalnız katılınabilirken (yarış sürerken kart yok).
+    private PreLevelEventPromo? BuildPromo()
+    {
+        if (!CanJoinNow) return null;
+        string title = BridgeRepairUI.L("bridge_title", "BRIDGE REPAIR");
+        string tagline = BridgeRepairUI.LFormat("bridge_subtitle", "{0} seviye kazan, ödülleri kap!", config.levelsToFinish);
+        return new PreLevelEventPromo(title, tagline, ResolvePromoIcon(), WindowEnd, JoinFromPromo);
+    }
+
+    private Sprite ResolvePromoIcon()
+    {
+        if (promoIcon != null) return promoIcon;
+        var buttonImage = eventButton != null && eventButton.TryGetComponent(out UnityEngine.UI.Button b)
+            ? b.image : null;
+        return buttonImage != null ? buttonImage.sprite : null;
+    }
+
+    /// <summary>Şeritteki "Katıl": katılım popup'ı atlanır (oyuncu zaten karar verdi) → doğrudan katıl.</summary>
+    public void JoinFromPromo()
+    {
+        if (!CanJoinNow) return;
+        BridgeRepairState.MarkAsked(UtcNow);
+        OnJoinAccepted();
     }
 
     /// Yarış ekranı "Oyna" — sıradaki normal leveli başlatır (ayrı level yok; kazanç kancadan sayılır).

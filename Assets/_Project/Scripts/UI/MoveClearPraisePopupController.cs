@@ -19,6 +19,17 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
     [SerializeField, Range(48f, 120f)] private float maxPraiseFontSize = 92f;
     [SerializeField, Range(0f, 12f)] private float textDepth = 5f;
     [SerializeField] private Vector2 letteringOffset = new Vector2(8f, 0f);
+    [Tooltip("Yazı yüzü rengi, üst → alt geçiş. Zemin sarı → zıt ton: kırmızı (kullanıcı seçimi). " +
+             "Mavi: üst (0.78, 0.93, 1), alt (0.36, 0.66, 1). Krem: üst (1, 0.97, 0.85), alt (1, 0.88, 0.62).")]
+    [SerializeField] private Color faceTop    = new Color(1f, 0.42f, 0.36f, 1f);   // kırmızı (kullanıcı seçimi)
+    [SerializeField] private Color faceBottom = new Color(0.86f, 0.08f, 0.1f, 1f);
+    [Tooltip("Yüzün ince konturu. Mavi/krem için lacivert: (0.12, 0.12, 0.40).")]
+    [SerializeField] private Color faceOutline = new Color(0.35f, 0.03f, 0.06f, 1f);   // bordo
+    [Tooltip("3D derinlik katmanı üst → alt. Mavi/krem için mor: (0.42, 0.18, 0.72) → (0.27, 0.09, 0.52).")]
+    [SerializeField] private Color depthTop    = new Color(0.62f, 0.05f, 0.08f, 1f);   // koyu kırmızı
+    [SerializeField] private Color depthBottom = new Color(0.42f, 0.02f, 0.05f, 1f);
+    [Tooltip("En dış kalın kontur. Mavi/krem için koyu lacivert: (0.07, 0.06, 0.22).")]
+    [SerializeField] private Color outerOutline = new Color(0.22f, 0.02f, 0.04f, 1f);  // koyu bordo
 
     private BoardController board;
     private Coroutine activeRoutine;
@@ -277,19 +288,21 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
         CreateJagged("SparkC", rootRt, new Vector2(22f, 22f), new Vector2(burstSize.x * 0.31f, -burstSize.y * 0.55f), accent, 5, 0.48f);
 
         var font = ResolveFont();
-        Color darkBrown = new Color(0.22f, 0.085f, 0.025f, 1f);
-        Color orange = new Color(1f, 0.27f, 0.005f, 1f);
+        // Zemin (patlama) SARI → yazı ZIT renkte: kırmızı yüz + bordo kontur/derinlik (kullanıcı seçimi).
+        // Eskiden krem→turuncu yüz + turuncu derinlik sarı zeminde seçilmiyordu; beyaz da fazla parladı
+        // (kullanıcı, 2026-09-28).
+        // Renkler Inspector'dan (faceTop/Bottom, faceOutline, depthTop/Bottom, outerOutline).
         float extrusion = textDepth * 1.4f;
 
         // All three layers use the exact same font size and glyph layout. Their
         // independent SDF materials keep this styling off the shared font asset.
         var outline = CreatePraiseText("LetterOutline", rootRt, label, font,
-            letteringOffset + new Vector2(0f, -extrusion - 2f), darkBrown, darkBrown, darkBrown, 0.36f);
+            letteringOffset + new Vector2(0f, -extrusion - 2f), outerOutline, outerOutline, outerOutline, 0.36f);
         var depth = CreatePraiseText("LetterDepth", rootRt, label, font,
-            letteringOffset + new Vector2(0f, -extrusion), new Color(1f, 0.49f, 0.015f), orange, orange, 0.22f);
+            letteringOffset + new Vector2(0f, -extrusion), depthTop, depthBottom, outerOutline, 0.22f);
         var face = CreatePraiseText("Label", rootRt, label, font, letteringOffset,
-            new Color(1f, 0.99f, 0.84f), new Color(1f, 0.66f, 0.06f),
-            new Color(1f, 0.42f, 0.01f), 0.11f);
+            faceTop, faceBottom,
+            faceOutline, 0.11f);
 
         face.enableAutoSizing = true;
         face.fontSizeMin = 38f;

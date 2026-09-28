@@ -581,6 +581,10 @@
           "value": "GÜÇ {0}"
         },
         {
+          "key": "boss_wave_banner",
+          "value": "DALGA {0}"
+        },
+        {
           "key": "boss_protection_absorbed",
           "value": "Kalkan −{0}   Can −{1}"
         },
@@ -1404,6 +1408,10 @@
         {
           "key": "boss_move_power",
           "value": "POWER {0}"
+        },
+        {
+          "key": "boss_wave_banner",
+          "value": "WAVE {0}"
         },
         {
           "key": "boss_protection_absorbed",

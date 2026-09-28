@@ -12,6 +12,13 @@ public sealed class CommonPopupSkin : ScriptableObject
     public Sprite saveProgressContinueButton;
     public Sprite closeButton;
     public TMP_FontAsset font;
+    [Header("Zemine göre yazı stili (kontur/gölge = zeminin koyu tonu; font materyalinden türetilir)")]
+    [Tooltip("Başlık (bordo zemin). Boşsa font'un varsayılan materyali.")]
+    public Material titleMaterial;
+    [Tooltip("Yeşil buton yazısı (continueButton / saveProgressContinueButton).")]
+    public Material greenButtonMaterial;
+    [Tooltip("Mavi buton yazısı (accountButton).")]
+    public Material blueButtonMaterial;
     // Fiyat yazılarında <sprite name="goldmoney"> için altın ikonu.
     public TMP_SpriteAsset coinSpriteAsset;
     [Min(1)] public float titleFontSize = 80f;

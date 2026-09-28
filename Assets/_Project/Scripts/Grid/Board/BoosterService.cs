@@ -388,7 +388,7 @@ public class BoosterService
     private static readonly string[] JokerSfxNames =
     {
         "shuffle1", "DrillSound", "HammerFalling", "HammerHit", "Hammerswing",
-        "Mini1", "Mini2", "mini3"
+        "Mini1", "Mini2", "mini3", "GlassCrack"
     };
 
     internal static void WarmupJokerSfxCache()
@@ -398,10 +398,10 @@ public class BoosterService
                 _jokerSfxCache[name] = Resources.Load<AudioClip>("Audio/Jokers/" + name);
     }
 
-    private void PlayJokerSfx(string fileName, float volume = 1f)
+    private bool PlayJokerSfx(string fileName, float volume = 1f)
     {
         if (board == null || board.Audio == null || string.IsNullOrEmpty(fileName))
-            return;
+            return false;
 
         if (!_jokerSfxCache.TryGetValue(fileName, out AudioClip clip) || clip == null)
         {
@@ -409,8 +409,10 @@ public class BoosterService
             _jokerSfxCache[fileName] = clip;
         }
 
-        if (clip != null)
-            board.Audio.PlayOneShotClip(clip, volume);
+        if (clip == null)
+            return false;
+        board.Audio.PlayOneShotClip(clip, volume);
+        return true;
     }
 
     private IEnumerator PlayElevatorBoosterEnterFx(int columnX, Action<IEnumerator> liftRoutine, Action<int> onRowReached)
@@ -712,20 +714,30 @@ public class BoosterService
 
         // FAZ WIND-UP: SONRA geri çekil (readyPos → pullbackPos) + BÜYÜ (2.3 → 2.8), cock açısını KORU.
         Vector2 pullbackPos = targetPos + new Vector2(-board.TileSize * 0.30f, board.TileSize * 1.05f);
-        const float windupDuration = 0.16f;
-        t = 0f;
-        while (t < windupDuration)
+        float slamFromScale = 2.8f;
+        if (ShouldOverpullHammer())
         {
+            // Şaka: fazla geri çekti → kameraya (telefon camına) çarptı, cam çatladı; maymun tamir eder.
+            yield return PlayHammerOverpullFx(hammer, readyPos, cockAngle, p => pullbackPos = p, s => slamFromScale = s);
             if (hammer == null || !hammer) yield break;
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / windupDuration);
-            float e = EaseOut(k);   // yavaşlayarak geri çekilir (yaylanma öncesi)
-            hammer.anchoredPosition = Vector2.LerpUnclamped(readyPos, pullbackPos, e);
-            hammer.localScale = Vector3.one * Mathf.LerpUnclamped(2.3f, 2.8f, e);
-            hammer.localRotation = Quaternion.Euler(0f, 0f, cockAngle);   // cocked açı sabit
-            yield return null;
         }
-        if (hammer == null || !hammer) yield break;
+        else
+        {
+            const float windupDuration = 0.16f;
+            t = 0f;
+            while (t < windupDuration)
+            {
+                if (hammer == null || !hammer) yield break;
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / windupDuration);
+                float e = EaseOut(k);   // yavaşlayarak geri çekilir (yaylanma öncesi)
+                hammer.anchoredPosition = Vector2.LerpUnclamped(readyPos, pullbackPos, e);
+                hammer.localScale = Vector3.one * Mathf.LerpUnclamped(2.3f, 2.8f, e);
+                hammer.localRotation = Quaternion.Euler(0f, 0f, cockAngle);   // cocked açı sabit
+                yield return null;
+            }
+            if (hammer == null || !hammer) yield break;
+        }
 
         // FAZ SLAM: cocked açıdan aşağı SERT SAVUR (cockAngle → hitAngle); hızlanarak; 2.8 → 2.1.
         const float slamDuration = 0.09f;
@@ -737,7 +749,7 @@ public class BoosterService
             float k = Mathf.Clamp01(t / slamDuration);
             float e = k * k;   // easeIn → hızlanan sert vuruş
             hammer.anchoredPosition = Vector2.LerpUnclamped(pullbackPos, targetPos, e);
-            hammer.localScale = Vector3.one * Mathf.LerpUnclamped(2.8f, 2.1f, e);
+            hammer.localScale = Vector3.one * Mathf.LerpUnclamped(slamFromScale, 2.1f, e);
             hammer.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpUnclamped(cockAngle, hitAngle, e));
             yield return null;
         }
@@ -752,6 +764,85 @@ public class BoosterService
 
         // Return at contact so gameplay hits in this frame, before the hammer exits.
         exitRoutine?.Invoke(PlayHammerFallFx(hammer, targetPos));
+    }
+
+    // ── Hammer "fazla geri çekti, camı kırdı" şakası ─────────────────────────
+    // Nadir olsun diye: vuruş başına şans + board başına en fazla bir kez (ayarlar BoardController Inspector'da).
+    private bool hammerOverpullUsed;
+    private const float HammerCrackDownOffset = 25f;   // referans (1080x1920) piksel
+
+    private bool ShouldOverpullHammer()
+    {
+        if (hammerOverpullUsed && board.HammerScreenCrackOncePerBoard)
+            return false;
+        float chance = board.HammerScreenCrackChance;
+        if (chance <= 0f || UnityEngine.Random.value > chance)   // Random.value 1'i de döndürebilir
+            return false;
+        hammerOverpullUsed = true;
+        return true;
+    }
+
+    // Wind-up'ın yerine geçer: hammer geri çekilirken kameraya doğru fazla büyür (2.3 → 4.4), telefon
+    // camına çarpar (ScreenCrackFx), geri seker ve şaşkınca titrer. Slam buradan (pullback/scale) devam eder.
+    private IEnumerator PlayHammerOverpullFx(RectTransform hammer, Vector2 readyPos, float cockAngle,
+        Action<Vector2> setPullbackPos, Action<float> setSlamFromScale)
+    {
+        Vector2 overPos = readyPos + new Vector2(-board.TileSize * 0.25f, board.TileSize * 1.3f);
+        const float overScale = 4.4f;
+        float overAngle = cockAngle + 12f;
+
+        // Hızlanarak "fazla" çekiliş: kameraya yaklaşıyor.
+        const float pullDuration = 0.2f;
+        float t = 0f;
+        while (t < pullDuration)
+        {
+            if (hammer == null || !hammer) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / pullDuration);
+            float e = k * k;
+            hammer.anchoredPosition = Vector2.LerpUnclamped(readyPos, overPos, e);
+            hammer.localScale = Vector3.one * Mathf.LerpUnclamped(2.3f, overScale, e);
+            hammer.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpUnclamped(cockAngle, overAngle, e));
+            yield return null;
+        }
+        if (hammer == null || !hammer) yield break;
+        hammer.anchoredPosition = overPos;
+        hammer.localScale = Vector3.one * overScale;
+        hammer.localRotation = Quaternion.Euler(0f, 0f, overAngle);
+
+        // Cama çarpma: çatlak hammer'ın vuran yüzünde (HM2'de başın sağ-üst yüzeyi) açılır.
+        Canvas.ForceUpdateCanvases();
+        Rect hr = hammer.rect;
+        Vector3 faceWorld = hammer.TransformPoint(new Vector3(hr.width * 0.22f, hr.height * 0.18f, 0f));
+        Vector2 faceScreen = RectTransformUtility.WorldToScreenPoint(CanvasCameraFor(hammer), faceWorld);
+        // Görselin üst yüzeyi yerine çekiç kafasının ortasına denk gelsin diye biraz aşağı (kullanıcı ayarı).
+        ScreenCrackFx.Play(faceScreen, new Vector2(0f, -HammerCrackDownOffset));
+        if (!PlayJokerSfx("GlassCrack"))
+            PlayJokerSfx("HammerHit", 0.6f);   // cam sesi eklenene dek
+
+        // Geri sekme + şaşkın titreme.
+        Vector2 recoilPos = overPos + new Vector2(board.TileSize * 0.08f, -board.TileSize * 0.25f);
+        const float recoilScale = 3.4f;
+        const float recoilDuration = 0.1f;
+        const float wobbleDuration = 0.2f;
+        t = 0f;
+        while (t < recoilDuration + wobbleDuration)
+        {
+            if (hammer == null || !hammer) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / recoilDuration);
+            float e = EaseOut(k);
+            hammer.anchoredPosition = Vector2.LerpUnclamped(overPos, recoilPos, e);
+            hammer.localScale = Vector3.one * Mathf.LerpUnclamped(overScale, recoilScale, e);
+            float w = Mathf.Clamp01((t - recoilDuration) / wobbleDuration);
+            float wobble = t > recoilDuration ? Mathf.Sin(w * Mathf.PI * 5f) * 7f * (1f - w) : 0f;
+            hammer.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpUnclamped(overAngle, cockAngle, e) + wobble);
+            yield return null;
+        }
+        if (hammer == null || !hammer) yield break;
+
+        setPullbackPos(recoilPos);
+        setSlamFromScale(recoilScale);
     }
 
     // Vuruştan sonra: orijinal (joker) boyuta dön, sonra yerçekimiyle serbest düşüş → ekran altında yok ol.

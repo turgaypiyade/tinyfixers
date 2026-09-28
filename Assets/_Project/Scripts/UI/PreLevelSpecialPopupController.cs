@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -19,6 +20,22 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     [SerializeField] private CanvasGroup mainScreenCanvasGroup;
     [SerializeField] private Image dimImage;
     [SerializeField, Range(0f, 1f)] private float dimmedMainAlpha = 0.45f;
+    [Tooltip("Arkadaki karartmanın opaklığı (renk temadan gelir, opaklık buradan).")]
+    [SerializeField, Range(0f, 1f)] private float dimAlpha = 0.95f;
+
+    [Header("Event şeridi (katılmadığın etkin event'ler, popup altında)")]
+    [SerializeField] private bool showEventStrip = true;
+    [Tooltip("Alt alan görseli (BottomareaBGV3).")]
+    [SerializeField] private Sprite eventStripBackground;
+    [Tooltip("Başlık kulpçuğu (9-slice, ActiveTab).")]
+    [SerializeField] private Sprite eventStripTab;
+    [Tooltip("Sayfa noktası görseli (opsiyonel; boşsa küçük baklava).")]
+    [SerializeField] private Sprite eventStripDot;
+    [SerializeField, Min(150f)] private float eventStripHeight = 300f;
+    [Tooltip("Birden fazla event varsa sonraki karta geçme süresi (sn). 0 = kapalı.")]
+    [SerializeField, Min(0f)] private float eventStripAutoAdvance = 4f;
+
+    private PreLevelEventPromoStrip eventStrip;
 
     [Header("Popup Root")]
     [SerializeField] private CanvasGroup popupCanvasGroup;
@@ -175,6 +192,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         RefreshLocalizedTexts();
         RefreshCounts();
         RefreshGoalsPreview();
+        RefreshEventStrip();
         PreLevelSpecialSelectionState.Clear();
 
         if (transitionRoutine != null)
@@ -205,8 +223,56 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         for (int i = 0; i < slots.Count; i++)
             slots[i].ApplyTheme(theme);
 
-        if (dimImage != null && theme != null)
-            dimImage.color = theme.preLevelDimColor;
+        if (dimImage != null)
+        {
+            Color dim = theme != null ? theme.preLevelDimColor : Color.black;
+            dim.a = dimAlpha;
+            dimImage.color = dim;
+        }
+    }
+
+    // Katılmadığın etkin event'ler (sağlayıcılar event controller'larında; oyun sahnesinde yok → şerit çıkmaz).
+    private void RefreshEventStrip()
+    {
+        var promos = showEventStrip ? PreLevelEventPromoRegistry.Collect() : null;
+        if (promos == null || promos.Count == 0)
+        {
+            if (eventStrip != null) eventStrip.gameObject.SetActive(false);
+            return;
+        }
+
+        if (eventStrip == null)
+        {
+            eventStrip = PreLevelEventPromoStrip.Create((RectTransform)transform, new PreLevelEventPromoStrip.Visuals
+            {
+                background = eventStripBackground,
+                tab = eventStripTab,
+                joinButton = continueButtonImage != null ? continueButtonImage.sprite : null,
+                joinTextStyle = continueText,
+                dot = eventStripDot,
+                height = eventStripHeight,
+                autoAdvanceSeconds = eventStripAutoAdvance,
+            }, HandleEventPromoJoin);
+        }
+
+        eventStrip.transform.SetAsLastSibling();
+        eventStrip.Show(promos);
+    }
+
+    // "Katıl": popup kapanır, sonra event'in kendi katılım akışı (intro / nasıl oynanır / harita) açılır.
+    private void HandleEventPromoJoin(PreLevelEventPromo promo)
+    {
+        PreLevelSpecialSelectionState.Clear();
+        PlayOneShot(selectSfx);
+        if (transitionRoutine != null)
+            StopCoroutine(transitionRoutine);
+        transitionRoutine = StartCoroutine(CoCloseThen(promo.Join));
+    }
+
+    private IEnumerator CoCloseThen(Action then)
+    {
+        yield return CoClose();
+        then?.Invoke();
     }
 
     private void RegisterSlot(PreLevelSpecialSlotView slot)
@@ -473,9 +539,13 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         if (levelStartRequested) return;
         if (!LivesManager.HasLives)
         {
-            var lives = FindFirstObjectByType<MainMenuLivesDisplay>(FindObjectsInactive.Include);
-            if (lives != null) lives.OnAreaClicked();
-            else HandleCancelClicked();
+            // Can yok → "Canın Bitti" teklifi (paket / reklam / market); can gelince oyun başlar.
+            // Eskiden ana menünün can göstergesine yaslanıyordu: oyun sahnesinde (Tekrar Dene) o yok →
+            // iptal dalına düşüp ana menüye atıyordu.
+            LivesRefillOffer.Show(this, () =>
+            {
+                if (LivesManager.HasLives) HandleContinueClicked();
+            });
             return;
         }
         levelStartRequested = true;

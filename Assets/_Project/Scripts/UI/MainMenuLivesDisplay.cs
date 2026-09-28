@@ -86,39 +86,11 @@ public class MainMenuLivesDisplay : MonoBehaviour
         StartAd();
     }
 
-    // Can 0: level sonundaki "Yetersiz Altın" teklif ekranı düzeni (çerçeve orijinal renk).
-    // Coin yetmiyorsa can paketi butonu pasif görünür; "Satın Al" markete, alttaki "Devam" kapatır.
+    // Can 0: ortak "Canın Bitti" teklifi (paket / reklam / market) — level öncesi popup'la aynı yol.
+    // Coin yetmiyorsa can paketi butonu pasif görünür; alttaki "Devam" kapatır.
     private void ShowBuyLivesConfirm()
     {
-        bool canAfford = PlayerWallet.Coins >= buyLivesPackCost;
-
-        RuntimeChoicePopup.ShowOffer(
-            "Canın Bitti",
-            $"Oynamaya devam etmek için can gerekli.\nŞu an {PlayerWallet.Coins} altının var.",
-            new[]
-            {
-                new RuntimeChoicePopup.OfferButton($"{buyLivesPackAmount} Can Yükle",
-                    $"{buyLivesPackCost} altın", TryBuyLivesPack, interactable: canAfford),
-                new RuntimeChoicePopup.OfferButton("Satın Al", "Market'ten altın al", MarketNavigator.OpenMarket),
-            },
-            "Devam",
-            null,
-            defaultFrame: true);
-    }
-
-    private void TryBuyLivesPack()
-    {
-        if (LivesManager.Current >= LivesManager.MaxLives) return;
-        if (PlayerWallet.SpendCoins(buyLivesPackCost))
-        {
-            LivesManager.AddLives(buyLivesPackAmount);
-            RefreshDisplay();
-        }
-        else
-        {
-            // Popup açıkken coin değiştiyse → markete yönlendir.
-            MarketNavigator.OpenMarket();
-        }
+        LivesRefillOffer.Show(this, RefreshDisplay, buyLivesPackAmount, buyLivesPackCost, "Devam");
     }
 
     // ─────────────────────────────────────────────────────────────────────────

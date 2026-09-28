@@ -167,6 +167,10 @@ public static class FontPresetAndLoadingSetup
         preset.SetFloat(ShaderUtilities.ID_UnderlayDilate, shadowDilate);
         preset.EnableKeyword("UNDERLAY_ON");
 
+        // Net yazı kuralı (CrispTextSetup): gölge opak, keskin, sağa-aşağı, kontur kalınlığında.
+        // Yumuşak/yarı saydam gölge yazıyı bulanık gösteriyordu — tekrar çalıştırmak onu geri getirmesin.
+        CrispTextSetup.ApplyHardShadow(preset);
+
         EditorUtility.SetDirty(preset);
         return preset;
     }

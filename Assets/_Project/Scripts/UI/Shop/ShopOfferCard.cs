@@ -97,7 +97,7 @@ public sealed class ShopOfferCard : ShopOfferCardBase
             }
         }
 
-        LayoutVisibleBoxes();
+        LayoutVisibleBoxes(boxAreaLeft, boxAreaRight, boxGap);
 
         for (int i = 0; i < visibleBoxes.Count; i++)
             visibleBoxes[i].Setup(visibleGroups[i], theme, visibleBg[i], timerSprite);
@@ -120,8 +120,8 @@ public sealed class ShopOfferCard : ShopOfferCardBase
     private static float Aspect(Sprite s)
         => (s != null && s.rect.height > 0f) ? s.rect.width / s.rect.height : 1f;
 
-    /// <summary>Görünen kutuları [boxAreaLeft, boxAreaRight] içine en-boy oranlarına göre yayar (aynı yükseklik).</summary>
-    private void LayoutVisibleBoxes()
+    /// <summary>Görünen kutuları [left, right] içine en-boy oranlarına göre yayar (aynı yükseklik).</summary>
+    private void LayoutVisibleBoxes(float left, float right, float gap)
     {
         int n = visibleBoxes.Count;
         if (n == 0) return;
@@ -130,11 +130,11 @@ public sealed class ShopOfferCard : ShopOfferCardBase
         for (int i = 0; i < n; i++) sum += visibleAspects[i];
         if (sum <= 0f) sum = n;
 
-        float totalGap = boxGap * (n - 1);
-        float usable = (boxAreaRight - boxAreaLeft) - totalGap;
-        if (usable <= 0f) { usable = boxAreaRight - boxAreaLeft; totalGap = 0f; }
+        float totalGap = gap * (n - 1);
+        float usable = (right - left) - totalGap;
+        if (usable <= 0f) { usable = right - left; totalGap = 0f; }
 
-        float x = boxAreaLeft;
+        float x = left;
         for (int i = 0; i < n; i++)
         {
             float w = usable * (visibleAspects[i] / sum);
@@ -143,7 +143,115 @@ public sealed class ShopOfferCard : ShopOfferCardBase
             rt.anchorMax = new Vector2(x + w, boxAreaTop);
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
-            x += w + boxGap;
+            x += w + gap;
+        }
+    }
+
+    // ── Altın üçlüsü (fail carousel'i) ────────────────────────────────────────
+    // Aynı çerçeve (MegaAwards1): krem alanda 3 kutu (MATGrup1, altın görseli + miktar), mor bantta her
+    // kutunun altında kendi fiyat butonu (prefab'taki PriceButton'ın kopyası). Hero/isim/kurdele gizli.
+    private const float TrioAreaLeft = 0.04f;
+    private const float TrioAreaRight = 0.96f;
+    private const float TrioGap = 0.03f;
+    private const float TrioIconFill = 0.5f;          // ikon = kutu yüksekliğinin oranı
+    private const float TrioButtonWidthFill = 0.95f;  // buton = sütun genişliğinin en fazla oranı
+
+    private readonly List<GameObject> trioButtons = new();
+
+    /// <summary>Kartı 1-3 altın paketinin yan yana satıldığı üçlü görünüme çevirir (Configure yerine).</summary>
+    public void ConfigureCoinTrio(IReadOnlyList<ShopOffer> coinOffers, UITheme uiTheme,
+        System.Action<ShopOffer> purchaseHandler)
+    {
+        theme = uiTheme;
+        if (bestBadge != null) bestBadge.SetActive(false);
+        if (heroIcon != null) heroIcon.enabled = false;
+        if (heroAmountText != null) heroAmountText.gameObject.SetActive(false);
+        if (nameText != null) nameText.gameObject.SetActive(false);
+
+        foreach (var go in trioButtons) if (go != null) Destroy(go);
+        trioButtons.Clear();
+
+        int n = Mathf.Min(coinOffers?.Count ?? 0, boxes?.Length ?? 0, 3);
+        visibleBoxes.Clear();
+        visibleGroups.Clear();
+        visibleBg.Clear();
+        visibleAspects.Clear();
+        for (int i = 0; i < (boxes?.Length ?? 0); i++)
+        {
+            if (boxes[i] == null) continue;
+            var coin = i < n ? coinOffers[i] : null;
+            var grp = coin?.groups != null && coin.groups.Count > 0 ? coin.groups[0] : null;
+            boxes[i].gameObject.SetActive(grp != null);
+            if (grp == null) continue;
+            visibleBoxes.Add(boxes[i]);
+            visibleGroups.Add(grp);
+            visibleBg.Add(matGrup1);
+        }
+
+        var cardRt = (RectTransform)transform;
+        float cardW = cardRt.rect.width;
+        float cardH = cardRt.rect.height;
+
+        // Kutular MATGrup1'in KENDİ en-boy oranında (esnetilmez → köşeler bozulmaz). Eşit sütunlara
+        // ortalanır; sığmazsa oran korunarak küçülür.
+        int count = visibleBoxes.Count;
+        float columnWidth = count > 0 ? (TrioAreaRight - TrioAreaLeft) * cardW / count : 0f;
+        float boxHeight = (boxAreaTop - boxAreaBottom) * cardH;
+        float boxWidth = boxHeight * Aspect(matGrup1);
+        float maxWidth = columnWidth - TrioGap * cardW;
+        if (boxWidth > maxWidth && boxWidth > 0f)
+        {
+            boxHeight *= maxWidth / boxWidth;
+            boxWidth = maxWidth;
+        }
+        float centerY = (boxAreaBottom + boxAreaTop) * 0.5f;
+        for (int i = 0; i < count; i++)
+        {
+            var rt = (RectTransform)visibleBoxes[i].transform;
+            float xNorm = TrioAreaLeft + (i + 0.5f) * columnWidth / Mathf.Max(1f, cardW);
+            rt.anchorMin = rt.anchorMax = new Vector2(xNorm, centerY);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(boxWidth, boxHeight);
+            visibleBoxes[i].Setup(visibleGroups[i], theme, visibleBg[i], timerSprite, boxHeight * TrioIconFill);
+        }
+
+        if (priceButton == null) return;
+
+        // Orijinal buton mor bantta; yüksekliğini koru, her kopyayı kendi kutusunun altına ortala.
+        var btnRt = (RectTransform)priceButton.transform;
+        Vector2 btnCenter = cardRt.InverseTransformPoint(btnRt.TransformPoint(btnRt.rect.center));
+        float yNorm = (btnCenter.y - cardRt.rect.yMin) / cardRt.rect.height;
+        priceButton.gameObject.SetActive(false);
+
+        for (int i = 0; i < visibleBoxes.Count; i++)
+        {
+            var coin = coinOffers[i];
+            var boxRt = (RectTransform)visibleBoxes[i].transform;
+            float xNorm = boxRt.anchorMin.x;   // kutu merkezine sabitlendi (min == max)
+            float colWidth = columnWidth;
+
+            var clone = Instantiate(priceButton.gameObject, cardRt, false);
+            clone.name = "TrioPriceButton" + i;
+            clone.SetActive(true);
+            var rt = (RectTransform)clone.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(xNorm, yNorm);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = btnRt.rect.size;
+            rt.localScale = Vector3.one * Mathf.Min(1f, colWidth * TrioButtonWidthFill / Mathf.Max(1f, btnRt.rect.width));
+
+            var label = clone.GetComponentInChildren<TMP_Text>(true);
+            if (label != null) label.text = PriceLabel(coin);
+
+            var button = clone.GetComponent<Button>();
+            if (button != null)
+            {
+                button.onClick.RemoveAllListeners();
+                button.onClick.AddListener(() => purchaseHandler?.Invoke(coin));
+                button.interactable = true;
+            }
+            trioButtons.Add(clone);
         }
     }
 }

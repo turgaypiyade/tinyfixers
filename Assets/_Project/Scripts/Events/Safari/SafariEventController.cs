@@ -39,10 +39,71 @@ public sealed class SafariEventController : MonoBehaviour
 
     private static DateTime UtcNow => DateTime.UtcNow;
 
+    [Header("Level öncesi event şeridi")]
+    [Tooltip("Şerit kartındaki ikon. Boşsa ana menü event ikonunun görseli, o da yoksa lossIcon.")]
+    [SerializeField] private Sprite promoIcon;
+
+    private const string PromoKey = "safari";
+
     private void Awake()
     {
         if (config == null)
             config = Resources.Load<SafariConfig>("Events/SafariConfig");
+    }
+
+    private void OnEnable() => PreLevelEventPromoRegistry.Register(PromoKey, BuildPromo);
+    private void OnDisable() => PreLevelEventPromoRegistry.Unregister(PromoKey);
+
+    /// Şu an katılınabilir mi: ikona basınca katılım popup'ı açılacak durumla aynı (OnIconClicked) —
+    /// hiç katılmadı ya da düştü/bitirdi ve bekleme süresi doldu. Yalnız GERÇEK takvimde aktifken:
+    /// editör debugForceAvailable şeridi açmaz (kullanıcı kuralı: aktif olmayan event hiçbir şey göstermez).
+    private bool CanJoinNow
+    {
+        get
+        {
+            if (config == null || CurrentLevel.Global < config.minLevelGate
+                || !SafariSchedule.IsActiveNow(config, UtcNow)) return false;
+            if (SafariState.FallCooldownRemaining(UtcNow) > TimeSpan.Zero) return false;
+            bool needsRejoin = SafariState.RunStatus == SafariRunStatus.Fell
+                || SafariState.RunStatus == SafariRunStatus.Completed;
+            return !SafariState.HasJoined || needsRejoin;
+        }
+    }
+
+    // Şerit kartı yalnız katılınabilirken (yarış sürerken kart yok).
+    private PreLevelEventPromo? BuildPromo()
+    {
+        if (!CanJoinNow) return null;
+
+        bool rising = mapScreen is RisingMapScreen;
+        string title = rising ? Loc("rising_title", "Yükseliş") : config.eventName;
+        string tagline = string.Format(Loc("promo_safari_tagline", "Zirveye çık, {0:N0} altını paylaş!"),
+            config.prizePoolGold);
+        return new PreLevelEventPromo(title, tagline, ResolvePromoIcon(),
+            SafariSchedule.GetWindowEnd(config, UtcNow), JoinFromPromo);
+    }
+
+    private Sprite ResolvePromoIcon()
+    {
+        if (promoIcon != null) return promoIcon;
+        var buttonImage = eventButton != null && eventButton.TryGetComponent(out UnityEngine.UI.Button b)
+            ? b.image : null;
+        if (buttonImage != null && buttonImage.sprite != null) return buttonImage.sprite;
+        return config != null ? config.lossIcon : null;
+    }
+
+    private static string Loc(string key, string fallback)
+    {
+        string value = GameLocalization.Get(key);
+        return string.IsNullOrEmpty(value) || value == key ? fallback : value;
+    }
+
+    /// <summary>Şeritteki "Katıl": katılım popup'ı atlanır (oyuncu zaten karar verdi) → doğrudan katıl + intro/harita.</summary>
+    public void JoinFromPromo()
+    {
+        if (!CanJoinNow) return;
+        SafariState.MarkAsked(UtcNow);
+        OnJoinAccepted();
     }
 
     private void Start()

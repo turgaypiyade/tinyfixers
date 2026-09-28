@@ -31,6 +31,13 @@ public sealed class BossDuelController : MonoBehaviour
     [Tooltip("Arena arka plan Image'ı. LevelData.battlefieldBackground atanırsa sprite buna uygulanır; boşsa mevcut kalır.")]
     [SerializeField] private Image arenaBackground;
 
+    [Header("Dalga afişi yazı stili (oyun anı başlığı)")]
+    [Tooltip("Boşsa TMP varsayılanı + faux-bold. Menü: TinyFixers ▸ Fonts ▸ 3) Oyun Anı Başlık Stili.")]
+    [SerializeField] private TMP_FontAsset bannerFont;
+    [SerializeField] private Material bannerMaterial;
+    [SerializeField] private Color bannerGradientTop    = new Color(1f, 0.98f, 0.86f, 1f);
+    [SerializeField] private Color bannerGradientBottom = new Color(1f, 0.86f, 0.38f, 1f);
+
     [Header("Karakterler")]
     [SerializeField] private BossDuelCharacterProfile playerCharacter;
     [Tooltip("Porsuk pozları hazır olduğunda atanır. Boşsa mevcut düşman görseli kullanılır.")]
@@ -1301,11 +1308,25 @@ public sealed class BossDuelController : MonoBehaviour
         go.transform.SetAsLastSibling();
 
         var text = go.GetComponent<TextMeshProUGUI>();
-        text.text = $"WAVE {waveNumber}";
+        text.text = LocFormat("boss_wave_banner", "DALGA {0}", waveNumber);
         text.fontSize = 84f;
         text.fontStyle = FontStyles.Bold;
         text.alignment = TextAlignmentOptions.Center;
         text.raycastTarget = false;
+
+        var baseColor = new Color(1f, 0.85f, 0.25f);
+        if (bannerFont != null)
+        {
+            // Oyun anı başlığı (joker başlığıyla aynı): krem→sarı yüz, lacivert kontur, altın dış kontur.
+            // Font zaten kalın → faux-bold yok. Alfa text.color'dan (gradient ile çarpılır) → baz beyaz.
+            text.font = bannerFont;
+            if (bannerMaterial != null) text.fontSharedMaterial = bannerMaterial;
+            text.fontStyle = FontStyles.Normal;
+            text.enableVertexGradient = true;
+            text.colorGradient = new VertexGradient(bannerGradientTop, bannerGradientTop,
+                bannerGradientBottom, bannerGradientBottom);
+            baseColor = Color.white;
+        }
 
         var rt = (RectTransform)go.transform;
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
@@ -1313,7 +1334,6 @@ public sealed class BossDuelController : MonoBehaviour
         rt.anchoredPosition = Vector2.zero;
         rt.sizeDelta = new Vector2(800f, 160f);
 
-        var baseColor = new Color(1f, 0.85f, 0.25f);
         float inDur = 0.25f, hold = 0.8f, outDur = 0.3f;
 
         float t = 0f;

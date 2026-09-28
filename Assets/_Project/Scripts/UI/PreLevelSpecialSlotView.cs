@@ -62,6 +62,11 @@ public class PreLevelSpecialSlotView : MonoBehaviour
     public bool IsUnlocked => isUnlocked;
     public bool IsTimedActive => TimedRewardService.IsSpecialFree(special);
 
+    // Görsel "seçili" (yeşil zemin + tik): oyuncu seçtiyse YA DA süreli ücretsiz aktifse (o special
+    // zaten otomatik gelecek). IsSelected yalnız oyuncu seçimidir — hak harcama/yerleştirme ona bakar,
+    // süreli slot bu yüzden hak düşürmez ve iki kez yerleşmez.
+    private bool ShowsSelected => isSelected || (isUnlocked && IsTimedActive);
+
     public event Action<PreLevelSpecialSlotView> Clicked;
 
     private void Reset()
@@ -237,6 +242,10 @@ public class PreLevelSpecialSlotView : MonoBehaviour
 
         if (isFree && timedCountdownText != null)
             timedCountdownText.text = FormatTimeSpan(GetTimedRemaining());
+
+        // Süreli durum değişince seçili görünümü (zemin + tik) de tazele.
+        ApplyBackgroundVisual();
+        ApplyCheckVisual(false);
     }
 
     private Sprite FindTimedWaveSprite()
@@ -346,7 +355,7 @@ public class PreLevelSpecialSlotView : MonoBehaviour
         if (selectionTintImage == null)
             return;
 
-        Sprite targetSprite = isSelected ? selectedBackgroundSprite : normalBackgroundSprite;
+        Sprite targetSprite = ShowsSelected ? selectedBackgroundSprite : normalBackgroundSprite;
         if (targetSprite != null)
         {
             selectionTintImage.sprite = targetSprite;
@@ -357,7 +366,7 @@ public class PreLevelSpecialSlotView : MonoBehaviour
 
         Color color = Color.white;
         if (theme != null)
-            color = isSelected ? theme.preLevelSlotSelectedTint : theme.preLevelSlotNormalTint;
+            color = ShowsSelected ? theme.preLevelSlotSelectedTint : theme.preLevelSlotNormalTint;
 
         selectionTintImage.color = color;
         selectionTintImage.enabled = color.a > 0f;
@@ -373,8 +382,8 @@ public class PreLevelSpecialSlotView : MonoBehaviour
         if (checkMarkImage == null)
             return;
 
-        checkMarkImage.gameObject.SetActive(isSelected);
-        if (!animate || !isSelected)
+        checkMarkImage.gameObject.SetActive(ShowsSelected);
+        if (!animate || !ShowsSelected)
             checkMarkImage.rectTransform.localScale = Vector3.one;
     }
 

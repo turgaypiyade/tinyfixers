@@ -240,6 +240,11 @@ public class BoardController : MonoBehaviour
     [Tooltip("Makaslı asansör (joker3 / cannonball) board'un alt çizgisinden kaç TILE daha aşağıdan " +
              "başlasın. Tepe noktası değişmez (offset yükseklik bütçesine geri eklenir). Cannon FX'i etkilemez.")]
     [SerializeField, Range(0f, 3f)] private float scissorLiftExtraDropTiles = 0.5f;
+    [Tooltip("Hammer geri çekerken fazla çekip telefon camını çatlatma şansı (maymun gelip tamir eder). " +
+             "Test için 1 yap.")]
+    [SerializeField, Range(0f, 1f)] private float hammerScreenCrackChance = 0.3f;
+    [Tooltip("Açıkken cam çatlama şakası board başına en fazla bir kez olur. Test için kapat.")]
+    [SerializeField] private bool hammerScreenCrackOncePerBoard = true;
     [SerializeField] private RectTransform boosterFxParent;
     [SerializeField] private Sprite hammerBoosterFallbackSprite;
     [SerializeField] private Sprite patchBotPropellerSprite;
@@ -255,6 +260,8 @@ public class BoardController : MonoBehaviour
     internal Sprite RowBoosterWithDrillSprite => rowBoosterWithDrillSprite;
     internal Sprite RowBoosterWithoutDrillSprite => rowBoosterWithoutDrillSprite;
     internal float ScissorLiftExtraDropTiles => scissorLiftExtraDropTiles;
+    internal float HammerScreenCrackChance => hammerScreenCrackChance;
+    internal bool HammerScreenCrackOncePerBoard => hammerScreenCrackOncePerBoard;
     internal RectTransform BoosterFxParent => boosterFxParent != null ? boosterFxParent : ContentRoot ?? parent;
     internal Sprite HammerBoosterFallbackSprite => hammerBoosterFallbackSprite;
     internal Sprite PatchBotPropellerSprite => patchBotPropellerSprite;

@@ -34,6 +34,13 @@ public class JokerFocusOverlayController : MonoBehaviour
     [SerializeField] private string columnTitle  = "Wonder Asansör!";
     [SerializeField] private string shuffleTitle = "Wonder Karıştırıcı!";
     [SerializeField] private Color  titleColor   = new Color(1f, 0.85f, 0.2f, 1f);   // referanstaki sarı
+    [Tooltip("Başlık fontu (boşsa TMP varsayılanı + faux-bold). Menü: TinyFixers ▸ Fonts ▸ 3) Joker Başlık Stili.")]
+    [SerializeField] private TMP_FontAsset titleFont;
+    [Tooltip("Başlık materyali (lacivert kontur + altın dış kontur).")]
+    [SerializeField] private Material titleMaterial;
+    [Tooltip("Yüz rengi üstten alta geçiş (üst krem, alt sarı). titleFont atanmışsa kullanılır.")]
+    [SerializeField] private Color titleGradientTop    = new Color(1f, 0.98f, 0.86f, 1f);
+    [SerializeField] private Color titleGradientBottom = new Color(1f, 0.86f, 0.38f, 1f);
 
     [Header("Selection Highlight")]
     [SerializeField] private bool   useProceduralSelectionFrame   = false;
@@ -251,6 +258,18 @@ public class JokerFocusOverlayController : MonoBehaviour
         titleText.alignment        = TextAlignmentOptions.Left;
         titleText.color            = titleColor;
         titleText.fontStyle        = FontStyles.Bold;
+        if (titleFont != null)
+        {
+            // Oyun başlık stili: kalın font kendi başına kalın (faux-bold harf aralığını açar),
+            // yüz krem→sarı geçiş, kontur/altın dış kontur materyalden.
+            titleText.font = titleFont;
+            if (titleMaterial != null) titleText.fontSharedMaterial = titleMaterial;
+            titleText.fontStyle = FontStyles.Normal;
+            titleText.color = Color.white;
+            titleText.enableVertexGradient = true;
+            titleText.colorGradient = new VertexGradient(titleGradientTop, titleGradientTop,
+                titleGradientBottom, titleGradientBottom);
+        }
         titleText.raycastTarget    = false;
         titleText.textWrappingMode = TextWrappingModes.NoWrap;   // tek satır (autosize küçültür)
         titleText.overflowMode     = TextOverflowModes.Overflow;

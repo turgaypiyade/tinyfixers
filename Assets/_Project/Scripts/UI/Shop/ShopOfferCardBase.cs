@@ -71,17 +71,20 @@ public abstract class ShopOfferCardBase : MonoBehaviour
             return;
         }
 
-        priceText.text = offer.priceType switch
-        {
-            ShopOffer.PriceType.RealMoney => offer.priceLabel,
-            ShopOffer.PriceType.Coins     => offer.priceAmount.ToString("N0"),
-            ShopOffer.PriceType.Stars     => offer.priceAmount.ToString("N0"),
-            ShopOffer.PriceType.Free      => "BEDAVA",
-            _ => offer.priceLabel
-        };
+        priceText.text = PriceLabel(offer);
 
         ApplyButtonState(available: true, affordable: CanAfford());
     }
+
+    /// <summary>Fiyat butonunda yazan metin (uygun bir teklif için).</summary>
+    public static string PriceLabel(ShopOffer o) => o.priceType switch
+    {
+        ShopOffer.PriceType.RealMoney => o.priceLabel,
+        ShopOffer.PriceType.Coins     => o.priceAmount.ToString("N0"),
+        ShopOffer.PriceType.Stars     => o.priceAmount.ToString("N0"),
+        ShopOffer.PriceType.Free      => "BEDAVA",
+        _ => o.priceLabel
+    };
 
     /// <summary>
     /// Butonun görünürlüğü: özel bir buton sprite'ı (örn BuyButton) varsa rengini BOZMAZ, yalnız

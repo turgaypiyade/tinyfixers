@@ -20,7 +20,8 @@ MonoBehaviour:
     - id: bundle_start
       displayName: "Gezginci \xC7antas\u0131"
       cardStyle: 0
-      showBestBadge: 1
+      showBestBadge: 0
+      showOnFailPopup: 1
       groups:
       - background: {fileID: 0}
         icons:
@@ -33,6 +34,7 @@ MonoBehaviour:
           amount: 5000
           booster: 1
           durationHours: 1
+          timedType: 13
       - background: {fileID: 21300000, guid: f2bf98f6f3d5249e79afdf902d704121, type: 3}
         icons:
         - {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
@@ -47,18 +49,22 @@ MonoBehaviour:
           amount: 1
           booster: 1
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 1
           booster: 2
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 1
           booster: 3
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 1
           booster: 4
           durationHours: 1
+          timedType: 13
       - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
         icons:
         - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
@@ -92,6 +98,7 @@ MonoBehaviour:
       displayName: "Avc\u0131 Ganimeti"
       cardStyle: 0
       showBestBadge: 0
+      showOnFailPopup: 0
       groups:
       - background: {fileID: 0}
         icons:
@@ -104,6 +111,7 @@ MonoBehaviour:
           amount: 10000
           booster: 1
           durationHours: 1
+          timedType: 13
       - background: {fileID: 21300000, guid: f2bf98f6f3d5249e79afdf902d704121, type: 3}
         icons:
         - {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
@@ -118,18 +126,22 @@ MonoBehaviour:
           amount: 2
           booster: 1
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 2
           booster: 2
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 2
           booster: 3
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 2
           booster: 4
           durationHours: 1
+          timedType: 13
       - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
         icons:
         - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
@@ -163,6 +175,7 @@ MonoBehaviour:
       displayName: "Ka\u015Fif Sand\u0131\u011F\u0131"
       cardStyle: 0
       showBestBadge: 0
+      showOnFailPopup: 0
       groups:
       - background: {fileID: 0}
         icons:
@@ -175,6 +188,7 @@ MonoBehaviour:
           amount: 25000
           booster: 1
           durationHours: 1
+          timedType: 13
       - background: {fileID: 21300000, guid: f2bf98f6f3d5249e79afdf902d704121, type: 3}
         icons:
         - {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
@@ -189,18 +203,22 @@ MonoBehaviour:
           amount: 4
           booster: 1
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 4
           booster: 2
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 4
           booster: 3
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 4
           booster: 4
           durationHours: 1
+          timedType: 13
       - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
         icons:
         - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
@@ -234,6 +252,7 @@ MonoBehaviour:
       displayName: "Muhte\u015Fem Kasa"
       cardStyle: 0
       showBestBadge: 0
+      showOnFailPopup: 0
       groups:
       - background: {fileID: 0}
         icons:
@@ -246,6 +265,7 @@ MonoBehaviour:
           amount: 50000
           booster: 1
           durationHours: 1
+          timedType: 13
       - background: {fileID: 21300000, guid: f2bf98f6f3d5249e79afdf902d704121, type: 3}
         icons:
         - {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
@@ -260,18 +280,22 @@ MonoBehaviour:
           amount: 10
           booster: 1
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 10
           booster: 3
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 10
           booster: 2
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 10
           booster: 4
           durationHours: 1
+          timedType: 13
       - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
         icons:
         - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
@@ -307,6 +331,7 @@ MonoBehaviour:
           amount: 1
           booster: 1
           durationHours: 12
+          timedType: 13
       availability: 0
       cooldownHours: 24
       priceType: 0
@@ -316,6 +341,7 @@ MonoBehaviour:
       displayName: Efsanevi Hazine
       cardStyle: 0
       showBestBadge: 1
+      showOnFailPopup: 1
       groups:
       - background: {fileID: 0}
         icons:
@@ -328,6 +354,7 @@ MonoBehaviour:
           amount: 65000
           booster: 1
           durationHours: 1
+          timedType: 13
       - background: {fileID: 21300000, guid: f2bf98f6f3d5249e79afdf902d704121, type: 3}
         icons:
         - {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
@@ -342,18 +369,22 @@ MonoBehaviour:
           amount: 13
           booster: 1
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 13
           booster: 2
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 13
           booster: 3
           durationHours: 1
+          timedType: 13
         - kind: 3
           amount: 13
           booster: 4
           durationHours: 1
+          timedType: 13
       - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
         icons:
         - {fileID: 21300000, guid: 1717971af8cda4942a1fb77f3ddce2ff, type: 3}
@@ -389,6 +420,7 @@ MonoBehaviour:
           amount: 1
           booster: 1
           durationHours: 18
+          timedType: 13
       availability: 0
       cooldownHours: 24
       priceType: 0
@@ -402,6 +434,7 @@ MonoBehaviour:
       displayName: 1,000
       cardStyle: 1
       showBestBadge: 0
+      showOnFailPopup: 1
       groups:
       - background: {fileID: 0}
         icons:
@@ -414,6 +447,7 @@ MonoBehaviour:
           amount: 1000
           booster: 1
           durationHours: 1
+          timedType: 13
       availability: 0
       cooldownHours: 24
       priceType: 0
@@ -423,6 +457,7 @@ MonoBehaviour:
       displayName: 5,000
       cardStyle: 1
       showBestBadge: 0
+      showOnFailPopup: 1
       groups:
       - background: {fileID: 0}
         icons:
@@ -435,6 +470,7 @@ MonoBehaviour:
           amount: 5000
           booster: 1
           durationHours: 1
+          timedType: 13
       availability: 0
       cooldownHours: 24
       priceType: 0
@@ -444,6 +480,7 @@ MonoBehaviour:
       displayName: 10,000
       cardStyle: 1
       showBestBadge: 0
+      showOnFailPopup: 0
       groups:
       - background: {fileID: 0}
         icons:
@@ -456,6 +493,7 @@ MonoBehaviour:
           amount: 10000
           booster: 1
           durationHours: 1
+          timedType: 13
       availability: 0
       cooldownHours: 24
       priceType: 0
@@ -465,6 +503,7 @@ MonoBehaviour:
       displayName: 25,000
       cardStyle: 1
       showBestBadge: 0
+      showOnFailPopup: 0
       groups:
       - background: {fileID: 0}
         icons:
@@ -477,6 +516,7 @@ MonoBehaviour:
           amount: 25000
           booster: 1
           durationHours: 1
+          timedType: 13
       availability: 0
       cooldownHours: 24
       priceType: 0
@@ -486,6 +526,7 @@ MonoBehaviour:
       displayName: 50,000
       cardStyle: 1
       showBestBadge: 0
+      showOnFailPopup: 0
       groups:
       - background: {fileID: 0}
         icons:
@@ -498,6 +539,7 @@ MonoBehaviour:
           amount: 50000
           booster: 1
           durationHours: 1
+          timedType: 13
       availability: 0
       cooldownHours: 24
       priceType: 0
@@ -507,6 +549,7 @@ MonoBehaviour:
       displayName: 100,000
       cardStyle: 1
       showBestBadge: 0
+      showOnFailPopup: 0
       groups:
       - background: {fileID: 0}
         icons:
@@ -519,6 +562,7 @@ MonoBehaviour:
           amount: 100000
           booster: 1
           durationHours: 1
+          timedType: 13
       availability: 0
       cooldownHours: 24
       priceType: 0

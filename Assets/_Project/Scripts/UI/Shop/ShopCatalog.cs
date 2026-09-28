@@ -53,6 +53,11 @@ public sealed class ShopOffer
     [Tooltip("Sol üst köşede 'En İyi Fırsat' kurdelesi göster.")]
     public bool showBestBadge = false;
 
+    [Tooltip("Fail popup'ının altındaki carousel'de göster. Bundle = kendi sayfası. Altın (CoinRow) = " +
+             "'altın üçlüsü' sayfasına girer (en fazla 3); hiçbir altın işaretli değilse üçlü devam için " +
+             "eksik altına göre otomatik seçilir.")]
+    public bool showOnFailPopup = false;
+
     [Tooltip("Kartın ödül kutuları. Her grup = bir kutu (ikonlar + tek etiket). " +
              "CoinRow'da yalnız ilk grup kullanılır (coin ikonu + miktar).")]
     public List<ShopRewardGroup> groups = new();

@@ -1282,6 +1282,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         SetMainScreenDimmed(true);
         SetBlockerVisible(true);
         ShowFailWalletBalance(true);
+        ShowFailOfferCarousel(false);   // "Oyundan Çık" uyarısı satış anı değil
     }
 
     // BtnClose (X) → oyuna geri dön: can/satınalma yok, leveli olduğu gibi sürdür.
@@ -1390,6 +1391,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         SetMainScreenDimmed(true);
         SetBlockerVisible(true);
         ShowFailWalletBalance(true);
+        ShowFailOfferCarousel(true);
     }
 
     // Vazgeçersen (hamle eklemezsen) neleri kaybedeceğinin özeti: kazanılacak altın ödülü +
@@ -1649,7 +1651,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             new[]
             {
                 new RuntimeChoicePopup.OfferButton("Reklam İzle",
-                    adContinueUsedThisLevel ? "Bu oyunda kullanıldı" : "Bedava devam et",
+                    adContinueUsedThisLevel ? "Bu seviyede kullanıldı" : "Bedava devam et",
                     WatchAdThenContinue, interactable: !adContinueUsedThisLevel),
                 new RuntimeChoicePopup.OfferButton("Satın Al", "Market'ten altın al", GoToMarketFromFail),
             },
@@ -1686,13 +1688,19 @@ public class LevelEndSimplePopupController : MonoBehaviour
         board.ForceFullBoardSync();
     }
 
-    // Reklamla bedava devam, aynı level oturumunda yalnız BİR kez (sahne yüklenince sıfırlanır).
-    private bool adContinueUsedThisLevel;
+    // Reklamla bedava devam, level başına yalnız BİR kez — oyundan çıkıp aynı level'a yeniden girince de
+    // (kullanıcı kuralı). Kullanılan level numarası kalıcı tutulur; level geçilince numara değişir →
+    // yeni level'da hak yeniden açılır.
+    private const string AdContinueUsedLevelKey = "ad_continue_used_level";
+
+    private static bool adContinueUsedThisLevel =>
+        PlayerPrefs.GetInt(AdContinueUsedLevelKey, 0) == CurrentLevel.Global;
 
     private void WatchAdThenContinue()
     {
         if (adContinueUsedThisLevel) return;
-        adContinueUsedThisLevel = true;
+        PlayerPrefs.SetInt(AdContinueUsedLevelKey, CurrentLevel.Global);
+        PlayerPrefs.Save();
         StartCoroutine(CoWatchAdThenContinue());
     }
 
@@ -1713,6 +1721,46 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [Header("Oyun içi market (fail'de altın alıp kaldığı yerden devam)")]
     [Tooltip("Ana menü market'iyle aynı katalog + kart prefab'ları. Boşsa eski davranış: ana menüye gidip market açılır (level kaybedilir).")]
     [SerializeField] private InGameShopOverlay.Refs inGameShop;
+
+    [Header("Fail teklif carousel'i (popup altında, mağaza kartlarıyla)")]
+    [Tooltip("Katalogda 'Fail popup'ında göster' işaretli Bundle'lar (her biri bir sayfa) + altın üçlüsü sayfası. Kartlar/katalog inGameShop'tan.")]
+    [SerializeField] private bool showFailOfferCarousel = true;
+    [Tooltip("FailPopupRoot merkezine göre konum (BtnContinue'nun altı).")]
+    [SerializeField] private Vector2 failOfferCarouselPosition = new Vector2(0f, -560f);
+    [SerializeField, Range(0.5f, 1.2f)] private float failOfferCarouselScale = 0.9f;
+    [SerializeField, Min(200f)] private float failOfferCarouselHeight = 540f;
+    [Tooltip("Kendiliğinden sonraki karta geçme süresi (sn). 0 = kapalı.")]
+    [SerializeField, Min(0f)] private float failOfferCarouselAutoAdvance = 3.5f;
+    [Tooltip("Sayfa noktası görseli (opsiyonel; boşsa küçük baklava).")]
+    [SerializeField] private Sprite failOfferCarouselDotSprite;
+
+    private FailOfferCarousel failOfferCarousel;
+
+    private void ShowFailOfferCarousel(bool visible)
+    {
+        if (!visible || !showFailOfferCarousel || inGameShop.catalog == null || failPopupRoot == null)
+        {
+            if (failOfferCarousel != null) failOfferCarousel.gameObject.SetActive(false);
+            return;
+        }
+
+        if (failOfferCarousel == null)
+            failOfferCarousel = FailOfferCarousel.Create((RectTransform)failPopupRoot.transform,
+                failOfferCarouselPosition, failOfferCarouselScale, failOfferCarouselHeight, inGameShop,
+                failOfferCarouselAutoAdvance, failOfferCarouselDotSprite, HandleFailOfferPurchase);
+
+        failOfferCarousel.transform.SetAsLastSibling();
+        // Uygunluk + altın üçlüsü her fail'de yeniden (eksik altına göre; currentCost fail teklifinden).
+        failOfferCarousel.Refresh(Mathf.Max(0, currentCost - PlayerWallet.Coins));
+    }
+
+    // Carousel'deki fiyat butonu: mağazayla aynı tek satın alma yolu. Altın gelirse fail popup'ındaki
+    // "devam" butonu tıklandığı anda bakiyeyi zaten yeniden okur.
+    private void HandleFailOfferPurchase(ShopOffer offer)
+    {
+        if (!ShopPurchaseService.TryPurchase(offer)) return;
+        if (failOfferCarousel != null) failOfferCarousel.RefreshPrices();
+    }
 
     private void GoToMarketFromFail()
     {

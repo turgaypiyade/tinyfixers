@@ -255,14 +255,18 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         yield return null;
     }
 
+    // HER iki yükleme katmanını bekle: default loading ekranı VE özel intro (boss düellosu; sahneyi
+    // kendisi async yükler). Özel introyu beklemeyince injector yeni sahne aktive olmadan çalışıp
+    // ESKİ sahnenin board'una yerleştiriyordu (retry: ses duyulur, special kaybolur) ya da board'u
+    // hiç bulamayıp kapanıyordu (ana menüden giriş).
     private IEnumerator WaitForLoadingScreenHidden()
     {
         // Güvenlik tavanı: loading ekranı beklenmedik şekilde kapanmazsa sonsuza
-        // kadar takılmayalım.
-        const float maxWait = 10f;
+        // kadar takılmayalım (boss introsu async yükleme + giriş animasyonu içerir → cömert).
+        const float maxWait = 25f;
         float elapsed = 0f;
 
-        while (LoadingScreenManager.IsVisible && elapsed < maxWait)
+        while ((LoadingScreenManager.IsVisible || CustomIntroLoadingManager.IsVisible) && elapsed < maxWait)
         {
             elapsed += Time.unscaledDeltaTime;
             yield return null;

@@ -47,10 +47,13 @@ public sealed class ShopRewardGroupBox : MonoBehaviour
 
     /// <param name="bgOverride">Kart'ın ikon sayısına göre seçtiği MATGrup (varsa group.background'ı ezer).</param>
     /// <param name="timerOverride">Kart'ın verdiği saat sprite'ı (varsa yerel timerSprite'ı ezer).</param>
-    public void Setup(ShopRewardGroup group, UITheme theme, Sprite bgOverride = null, Sprite timerOverride = null)
+    /// <param name="iconSizeOverride">&gt;0 ise ikon boyutu (tek büyük ikon gereken kartlar için, örn altın üçlüsü).</param>
+    public void Setup(ShopRewardGroup group, UITheme theme, Sprite bgOverride = null, Sprite timerOverride = null,
+        float iconSizeOverride = 0f)
     {
         ClearIcons();
         if (group == null) return;
+        if (iconSizeOverride > 0f) iconSize = iconSizeOverride;
 
         // Kutu arka planı: kart'ın seçtiği (bgOverride) > grup'a atanan > tema.
         if (panelBackground != null)
