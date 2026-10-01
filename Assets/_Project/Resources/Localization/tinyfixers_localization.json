@@ -66,7 +66,11 @@
         },
         {
           "key": "bridge_join_continue",
-          "value": "KATIL"
+          "value": "Katıl"
+        },
+        {
+          "key": "event_join_button",
+          "value": "Katıl"
         },
         {
           "key": "bridge_join_later",
@@ -903,7 +907,11 @@
         },
         {
           "key": "bridge_join_continue",
-          "value": "JOIN"
+          "value": "Join"
+        },
+        {
+          "key": "event_join_button",
+          "value": "Join"
         },
         {
           "key": "bridge_join_later",

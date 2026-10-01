@@ -5,6 +5,24 @@ TextureImporter:
   - first:
       213: 4511148929247858833
     second: RibbonV2_0
+  - first:
+      213: -6458002253693272529
+    second: RibbonV2_1
+  - first:
+      213: -6559055998662693858
+    second: RibbonV2_2
+  - first:
+      213: -5455678678271616294
+    second: RibbonV2_3
+  - first:
+      213: -1083110050943253151
+    second: RibbonV2_4
+  - first:
+      213: -4941919743936524139
+    second: RibbonV2_5
+  - first:
+      213: -4452498822975236705
+    second: RibbonV2_6
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -48,7 +66,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 1
   spriteExtrude: 1
-  spriteMeshType: 0
+  spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -75,7 +93,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 2
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -134,6 +152,138 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: RibbonV2_1
+      rect:
+        serializedVersion: 2
+        x: 408
+        y: 478
+        width: 15
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f2eb0fd8a219066a0800000000000000
+      internalID: -6458002253693272529
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RibbonV2_2
+      rect:
+        serializedVersion: 2
+        x: 451
+        y: 485
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e1ca0d1125d89f4a0800000000000000
+      internalID: -6559055998662693858
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RibbonV2_3
+      rect:
+        serializedVersion: 2
+        x: 489
+        y: 486
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ada92f4c5298944b0800000000000000
+      internalID: -5455678678271616294
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RibbonV2_4
+      rect:
+        serializedVersion: 2
+        x: 507
+        y: 486
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1654fd0b52508f0f0800000000000000
+      internalID: -1083110050943253151
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RibbonV2_5
+      rect:
+        serializedVersion: 2
+        x: 537
+        y: 488
+        width: 7
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5909c222d26ca6bb0800000000000000
+      internalID: -4941919743936524139
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RibbonV2_6
+      rect:
+        serializedVersion: 2
+        x: 670
+        y: 486
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f9557bd29eb8532c0800000000000000
+      internalID: -4452498822975236705
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
@@ -149,6 +299,12 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       RibbonV2_0: 4511148929247858833
+      RibbonV2_1: -6458002253693272529
+      RibbonV2_2: -6559055998662693858
+      RibbonV2_3: -5455678678271616294
+      RibbonV2_4: -1083110050943253151
+      RibbonV2_5: -4941919743936524139
+      RibbonV2_6: -4452498822975236705
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -1668,7 +1668,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (lifeDebitedForFailure) LivesManager.AddLives(1);
         lifeDebitedForFailure = false;
 
-        board.AddMoves(currentOfferAmount);
+        board.ContinueWithExtraMoves(currentOfferAmount);
         board.SetInputLocked(false);
         extraMoveOfferAttempt++;
 

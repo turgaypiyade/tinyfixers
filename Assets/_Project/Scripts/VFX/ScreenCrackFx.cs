@@ -27,8 +27,9 @@ public class ScreenCrackFx : MonoBehaviour
     private const float RopeRiseDuration = 0.4f;
     private const float MonkeyHeight = 340f;              // referans çözünürlükte
 
-    private static readonly Color CrackColor = new Color(1f, 1f, 1f, 0.92f);
-    private static readonly Color CrackShadowColor = new Color(0.08f, 0.12f, 0.2f, 0.45f);
+    private static readonly Color CrackColor = new Color(0.66f, 0.84f, 0.9f, 0.65f);
+    private static readonly Color CrackHighlightColor = new Color(0.94f, 0.98f, 1f, 0.86f);
+    private static readonly Color CrackShadowColor = new Color(0.07f, 0.15f, 0.22f, 0.32f);
     private static readonly Color RopeColor = new Color(0.55f, 0.4f, 0.25f, 1f);
 
     private RectTransform root;
@@ -51,7 +52,7 @@ public class ScreenCrackFx : MonoBehaviour
 
     /// <summary>screenPoint: çatlağın merkezi (piksel, ekran uzayı). offset: referans çözünürlükte
     /// (1080x1920) ek kaydırma — cihazdan bağımsız aynı görsel mesafe.</summary>
-    public static ScreenCrackFx Play(Vector2 screenPoint, Vector2 offset = default)
+    public static ScreenCrackFx Play(Vector2 screenPoint, Vector2 offset = default, float crackScale = 1f)
     {
         var go = new GameObject("__ScreenCrackFx", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
         go.layer = LayerMask.NameToLayer("UI");
@@ -67,11 +68,11 @@ public class ScreenCrackFx : MonoBehaviour
         scaler.matchWidthOrHeight = 0.5f;
 
         var fx = go.AddComponent<ScreenCrackFx>();
-        fx.Begin(screenPoint, offset);
+        fx.Begin(screenPoint, offset, crackScale);
         return fx;
     }
 
-    private void Begin(Vector2 screenPoint, Vector2 offset)
+    private void Begin(Vector2 screenPoint, Vector2 offset, float crackScale)
     {
         root = (RectTransform)transform;
         config = Resources.Load<ScreenCrackConfig>("ScreenCrack/ScreenCrackConfig");
@@ -82,6 +83,7 @@ public class ScreenCrackFx : MonoBehaviour
 
         crackRoot = CreateRect("Crack", root);
         crackRoot.anchoredPosition = crackPos;
+        crackRoot.localScale = Vector3.one * Mathf.Max(0.1f, crackScale);   // boss aleti: daha büyük çatlak
         crackGroup = crackRoot.gameObject.AddComponent<CanvasGroup>();
         crackGroup.blocksRaycasts = false;
         crackGroup.interactable = false;
@@ -143,12 +145,14 @@ public class ScreenCrackFx : MonoBehaviour
 
             for (int s = 0; s < steps && travelled < maxLen; s++)
             {
-                float segLen = maxLen / steps * Random.Range(0.75f, 1.25f);
+                float segLen = s == steps - 1 ? maxLen - travelled
+                    : Mathf.Min(maxLen - travelled, maxLen / steps * Random.Range(0.75f, 1.25f));
                 angle += Random.Range(-18f, 18f);
                 Vector2 dir = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
                 Vector2 q = p + dir * segLen;
-                float width = Mathf.Lerp(5f, 2f, travelled / maxLen);
-                AddSegment(p, q, width, travelled);
+                float width = Mathf.Lerp(8f, 0.6f, travelled / maxLen);
+                float endWidth = Mathf.Lerp(8f, 0.6f, (travelled + segLen) / maxLen);
+                AddSegment(p, q, width, travelled, endWidth);
 
                 for (int k = 0; k < 2; k++)
                     if (!ringAdded[k] && travelled + segLen >= ringRadii[k])
@@ -162,7 +166,8 @@ public class ScreenCrackFx : MonoBehaviour
                 {
                     float bAngle = angle + (Random.value < 0.5f ? -1f : 1f) * Random.Range(30f, 55f);
                     Vector2 bDir = new Vector2(Mathf.Cos(bAngle * Mathf.Deg2Rad), Mathf.Sin(bAngle * Mathf.Deg2Rad));
-                    AddSegment(q, q + bDir * Random.Range(35f, 80f), 1.6f, travelled + segLen);
+                    AddSegment(q, q + bDir * Random.Range(35f, 80f),
+                        Mathf.Min(2.8f, endWidth), travelled + segLen, 0.5f);
                 }
 
                 travelled += segLen;
@@ -176,11 +181,11 @@ public class ScreenCrackFx : MonoBehaviour
             var pts = ringPoints[k];
             for (int i = 0; i < pts.Count; i++)
                 if (Random.value < (k == 0 ? 0.85f : 0.55f))
-                    AddSegment(pts[i], pts[(i + 1) % pts.Count], k == 0 ? 2.4f : 1.8f, ringRadii[k]);
+                    AddSegment(pts[i], pts[(i + 1) % pts.Count], k == 0 ? 3.2f : 2.2f, ringRadii[k]);
         }
 
-        // Darbe noktası: küçük beyaz ezik.
-        var dot = CreateImage("Impact", crackRoot, null, new Color(1f, 1f, 1f, 0.8f));
+        // Darbe noktası: cam kenarlarıyla aynı soğuk sedef tonu.
+        var dot = CreateImage("Impact", crackRoot, null, CrackHighlightColor);
         dot.rectTransform.sizeDelta = new Vector2(22f, 22f);
         dot.rectTransform.localEulerAngles = new Vector3(0f, 0f, 45f);
         AddStatic(dot, 0f);
@@ -195,30 +200,34 @@ public class ScreenCrackFx : MonoBehaviour
         });
     }
 
-    private void AddSegment(Vector2 from, Vector2 to, float width, float distance)
+    private void AddSegment(Vector2 from, Vector2 to, float width, float distance, float endWidth = -1f)
     {
         Vector2 d = to - from;
         float len = d.magnitude;
         if (len < 1f) return;
         float ang = Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg;
-
-        // Önce koyu gölge (cam derinliği), üstüne parlak kırık çizgisi.
-        var shadow = CreateImage("CrackShadow", crackRoot, null, CrackShadowColor);
-        SetupLine(shadow.rectTransform, from + new Vector2(1.5f, -1.5f), ang, width + 1.5f);
-        var line = CreateImage("CrackLine", crackRoot, null, CrackColor);
-        SetupLine(line.rectTransform, from, ang, width);
+        if (endWidth < 0f) endWidth = width;
 
         float delay = distance / 400f * CrackGrowDuration;
-        segments.Add(new CrackSegment
+        // Uçlara doğru hafifleyen cam: koyu derinlik, buz mavisi gövde, ince sedef kenar.
+        float opacity = Mathf.Lerp(1f, 0.45f, Mathf.Clamp01(distance / 400f));
+        AddLayer("CrackShadow", CrackShadowColor, new Vector2(1f, -1f), width + 1f, endWidth + 1f);
+        AddLayer("CrackLine", CrackColor, Vector2.zero, width, endWidth);
+        AddLayer("CrackHighlight", CrackHighlightColor, new Vector2(-0.45f, 0.45f), width * 0.35f, endWidth * 0.35f);
+
+        void AddLayer(string name, Color color, Vector2 offset, float layerWidth, float layerEndWidth)
         {
-            rt = shadow.rectTransform, graphic = shadow, baseAlpha = shadow.color.a,
-            length = len, startDelay = delay, distance = distance
-        });
-        segments.Add(new CrackSegment
-        {
-            rt = line.rectTransform, graphic = line, baseAlpha = line.color.a,
-            length = len, startDelay = delay, distance = distance
-        });
+            color.a *= opacity;
+            var layer = CreateImage(name, crackRoot, null, color);
+            var taper = layer.gameObject.AddComponent<ScreenCrackLineGraphic>();
+            taper.SetWidths(layerWidth, layerEndWidth, len);
+            SetupLine(layer.rectTransform, from + offset, ang, layerWidth);
+            segments.Add(new CrackSegment
+            {
+                rt = layer.rectTransform, graphic = layer, baseAlpha = color.a,
+                length = len, startDelay = delay, distance = distance
+            });
+        }
     }
 
     private static void SetupLine(RectTransform rt, Vector2 from, float angle, float width)
@@ -259,7 +268,8 @@ public class ScreenCrackFx : MonoBehaviour
         int count = Random.Range(8, 13);
         for (int i = 0; i < count; i++)
         {
-            var chip = CreateImage("GlassChip", root, null, new Color(0.9f, 0.97f, 1f, 0.9f));
+            Color chipColor = Color.Lerp(CrackColor, CrackHighlightColor, (float)i / (count - 1));
+            var chip = CreateImage("GlassChip", root, null, chipColor);
             float size = Random.Range(6f, 14f);
             chip.rectTransform.sizeDelta = new Vector2(size, size * Random.Range(0.4f, 1f));
             chip.rectTransform.anchoredPosition = crackPos;
@@ -420,7 +430,9 @@ public class ScreenCrackFx : MonoBehaviour
 
     private IEnumerator RepairShine()
     {
-        var shine = CreateImage("RepairShine", root, null, new Color(1f, 1f, 1f, 0.7f));
+        Color shineColor = CrackHighlightColor;
+        shineColor.a = 0.7f;
+        var shine = CreateImage("RepairShine", root, null, shineColor);
         shine.rectTransform.anchoredPosition = crackPos;
         shine.rectTransform.localEulerAngles = new Vector3(0f, 0f, 45f);
         float t = 0f;
@@ -431,7 +443,8 @@ public class ScreenCrackFx : MonoBehaviour
             float k = Mathf.Clamp01(t / d);
             float s = Mathf.Lerp(20f, 140f, k);
             shine.rectTransform.sizeDelta = new Vector2(s, s);
-            shine.color = new Color(1f, 1f, 1f, 0.7f * (1f - k));
+            shineColor.a = 0.7f * (1f - k);
+            shine.color = shineColor;
             yield return null;
         }
         if (shine != null) Destroy(shine.gameObject);

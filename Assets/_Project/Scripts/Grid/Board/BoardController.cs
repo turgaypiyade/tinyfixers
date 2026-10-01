@@ -525,6 +525,15 @@ public class BoardController : MonoBehaviour
     public event Action OnLevelFailRequested;
     public void RequestLevelFail() => OnLevelFailRequested?.Invoke();
 
+    // Paid/rewarded continuation, distinct from ordinary bonus moves.
+    public event Action OnLevelContinued;
+    public void ContinueWithExtraMoves(int amount)
+    {
+        if (amount <= 0) return;
+        AddMoves(amount);
+        OnLevelContinued?.Invoke();
+    }
+
     internal void PlayTileFallSfx(int tileCount, int maxDist)
     {
         if (audioDirector != null)

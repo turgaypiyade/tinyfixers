@@ -12,13 +12,25 @@ public sealed class CommonPopupSkin : ScriptableObject
     public Sprite saveProgressContinueButton;
     public Sprite closeButton;
     public TMP_FontAsset font;
+    [Tooltip("Başlık fontu (gösterim: Baloo 2 ExtraBold). Boşsa 'font'.")]
+    public TMP_FontAsset titleFont;
+    [Tooltip("Buton fontu (Nunito Black). Boşsa 'font'.")]
+    public TMP_FontAsset buttonFont;
     [Header("Zemine göre yazı stili (kontur/gölge = zeminin koyu tonu; font materyalinden türetilir)")]
     [Tooltip("Başlık (bordo zemin). Boşsa font'un varsayılan materyali.")]
     public Material titleMaterial;
+    [Tooltip("Başlık yüzü üst → alt geçiş (joker başlığı gibi krem → açık altın). titleMaterial atanmışsa kullanılır.")]
+    public Color titleGradientTop = Color.white;
+    public Color titleGradientBottom = new Color(1f, 0.97f, 0.78f, 1f);
     [Tooltip("Yeşil buton yazısı (continueButton / saveProgressContinueButton).")]
     public Material greenButtonMaterial;
     [Tooltip("Mavi buton yazısı (accountButton).")]
     public Material blueButtonMaterial;
+    [Tooltip("Buton yazısı yüzü üst → alt geçiş (beyaz → krem-sarı). Buton materyali atanmışsa kullanılır.")]
+    public Color buttonGradientTop = Color.white;
+    public Color buttonGradientBottom = new Color(1f, 0.99f, 0.9f, 1f);
+    [Tooltip("Alttaki ana buton yazısı punto (buttonFont cinsinden; tüm popup'larda aynı). 0 = actionFontSize'tan türet.")]
+    [Min(0)] public float buttonFontSize = 74f;
     // Fiyat yazılarında <sprite name="goldmoney"> için altın ikonu.
     public TMP_SpriteAsset coinSpriteAsset;
     [Min(1)] public float titleFontSize = 80f;

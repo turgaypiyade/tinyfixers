@@ -58,6 +58,14 @@ public sealed class BossDuelCharacterProfile : ScriptableObject
     [Min(0f)] public float throwIdleLeadIn = 0.08f;
     [Tooltip("Held obstacle height relative to standing character height.")]
     [Range(0.05f, 0.5f)] public float heldObstacleSize = 0.23f;
+
+    [Tooltip("Alet tehdidi: ekrana (cama) dönerek fırlatılan alet görseli (porsuk kazma, sırtlan levye...). " +
+             "Boşsa ToolThreat engelinin görseli kullanılır.")]
+    public Sprite thrownTool;
+    [Tooltip("Alet tehdidi: dönme animasyonu kareleri (varsa thrownTool yerine bunlar döngüyle oynar; " +
+             "dönüşü kareler verir, ek döndürme yapılmaz).")]
+    public Sprite[] thrownToolFrames = Array.Empty<Sprite>();
+    [Range(4f, 40f)] public float thrownToolFramesPerSecond = 18f;
     public bool mirrorHorizontally;
     [Min(0.1f)] public float idleAlternateInterval = 4f;
     [Min(0.02f)] public float idleAlternateDuration = 0.7f;

@@ -3,23 +3,30 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 /// <summary>
 /// Splash/boot: ekranda "loading..." gösterir ve GERÇEKTEN bekler — Firebase auth + cloud restore
 /// çözülene kadar (FirebaseCloudSaveService.RestoreResolved). Böylece MainMenu açıldığında altın/
 /// yıldız/level bulutla senkronlanmış olur.
 ///
-/// OFFLINE GARANTİSİ: internet yoksa ya da restore zamanında çözülmezse, maxWaitSeconds (veya
-/// internetsizken minDisplaySeconds) dolunca YEREL veriyle devam edilir — oyun asla takılmaz.
+/// Marka sonrası loading sırasında MainMenu arkada hazırlanır. Restore maxWaitSeconds içinde
+/// çözülmezse ağ bekleyişi biter ve YEREL veriyle devam edilir.
 /// Restore geç gelirse arka planda tamamlanır ve ekranlar OnRestored ile kendini tazeler.
 /// </summary>
 public class BootLoader : MonoBehaviour
 {
+    [Header("Splash Sequence")]
+    [SerializeField] Image splashImage;
+    [SerializeField] Sprite brandSprite;
+    [SerializeField] Sprite loadingSprite;
+    [SerializeField, Min(0f)] float brandDisplaySeconds = 2f;
+
     [Header("Timing")]
-    [Tooltip("Splash en az bu kadar görünür (ani geçiş/flash olmasın).")]
-    [SerializeField] float minDisplaySeconds = 1.5f;
-    [Tooltip("Online iken cloud restore için üst bekleme. Dolunca yerelle devam (offline-safe).")]
-    [SerializeField] float maxWaitSeconds = 8f;
+    [Tooltip("Markadan sonra loading ekranı en az bu kadar görünür.")]
+    [SerializeField, Min(0f)] float minDisplaySeconds = 3f;
+    [Tooltip("Loading ekranı başladıktan sonra Firebase için en fazla beklenecek süre. Marka süresi dahil değil.")]
+    [SerializeField, Min(0f)] float maxWaitSeconds = 5f;
     [SerializeField] string nextSceneName = "MainMenu";
 
     [Header("Loading Text")]
@@ -27,6 +34,22 @@ public class BootLoader : MonoBehaviour
     [SerializeField] TMP_Text loadingText;
     [SerializeField] Canvas canvas;
     [SerializeField] string loadingLabel = "Loading";
+
+    private bool HasBrandSplash => splashImage != null && brandSprite != null && brandDisplaySeconds > 0f;
+
+    void Awake()
+    {
+        ShowSplash(HasBrandSplash ? brandSprite : loadingSprite);
+        if (loadingText != null) loadingText.gameObject.SetActive(!HasBrandSplash);
+    }
+
+    private void ShowSplash(Sprite sprite)
+    {
+        if (splashImage == null || sprite == null) return;
+        splashImage.enabled = true;
+        splashImage.sprite = sprite;
+        LoadingScreenManager.ApplyFitAspect(splashImage, sprite);
+    }
 
     void Start()
     {
@@ -39,26 +62,46 @@ public class BootLoader : MonoBehaviour
             loadingLabel = char.ToUpper(loadingLabel[0]) + loadingLabel.Substring(1);
 
         EnsureLoadingText();
+        if (loadingText != null) loadingText.gameObject.SetActive(!HasBrandSplash);
         StartCoroutine(LoadNext());
     }
 
     IEnumerator LoadNext()
     {
-        // İnternet yoksa cloud restore hiç çözülmeyecek — boşuna bekleme, kısa tut.
-        bool offline = Application.internetReachability == NetworkReachability.NotReachable;
-        float timeout = offline ? minDisplaySeconds : maxWaitSeconds;
+        float brandDuration = HasBrandSplash ? brandDisplaySeconds : 0f;
+        float timeout = Mathf.Max(0f, maxWaitSeconds);
+        float loadingMinimum = Mathf.Clamp(minDisplaySeconds, 0f, timeout);
 
         float elapsed = 0f;
+        float loadingStartedAt = 0f;
+        bool loadingShown = !HasBrandSplash;
         float dotTimer = 0f;
         int dots = 0;
-        bool loggedTimeout = false;
+        AsyncOperation sceneLoad = null;
 
         while (true)
         {
             elapsed += Time.unscaledDeltaTime;
 
+            if (!loadingShown && elapsed >= brandDuration)
+            {
+                ShowSplash(loadingSprite);
+                loadingShown = true;
+                loadingStartedAt = elapsed;
+                if (loadingText != null) loadingText.gameObject.SetActive(true);
+                SetLoadingDots(0);
+            }
+
+            // Assetleri loading sırasında yükle; MainMenu Awake/Start ancak restore kararı
+            // verilip sync gate açıldıktan sonra çalışsın.
+            if (loadingShown && sceneLoad == null)
+            {
+                sceneLoad = SceneManager.LoadSceneAsync(nextSceneName);
+                if (sceneLoad != null) sceneLoad.allowSceneActivation = false;
+            }
+
             // "loading" → "loading." → "loading.." → "loading..."
-            dotTimer += Time.unscaledDeltaTime;
+            if (loadingShown) dotTimer += Time.unscaledDeltaTime;
             if (dotTimer >= 0.35f)
             {
                 dotTimer = 0f;
@@ -67,17 +110,18 @@ public class BootLoader : MonoBehaviour
             }
 
             bool restoreDone = FirebaseCloudSaveService.RestoreResolved;
-            bool minDone = elapsed >= minDisplaySeconds;
-            bool timedOut = elapsed >= timeout;
+            float loadingElapsed = elapsed - loadingStartedAt;
+            bool minDone = loadingShown && loadingElapsed >= loadingMinimum;
+            bool timedOut = loadingShown && loadingElapsed >= timeout;
 
             if (restoreDone && minDone)
                 break;
 
-            if (timedOut)
+            if (timedOut && minDone)
             {
-                if (!restoreDone && !loggedTimeout)
+                if (!restoreDone)
                 {
-                    loggedTimeout = true;
+                    bool offline = Application.internetReachability == NetworkReachability.NotReachable;
                     Debug.Log($"[Boot] Cloud restore {(offline ? "offline" : "timeout")} — yerel veriyle devam.");
                 }
                 break;
@@ -93,13 +137,30 @@ public class BootLoader : MonoBehaviour
             CurrencyLedger.AdoptLocalAsBase();
         CurrencyLedger.OpenSyncGate();
 
+        // Ağ bekleyişi bitti. Yavaş cihazda kalan yerel sahne yüklemesi sırasında görsel
+        // ve Loading noktaları yaşamaya devam etsin.
+        while (sceneLoad != null && sceneLoad.progress < 0.9f)
+        {
+            dotTimer += Time.unscaledDeltaTime;
+            if (dotTimer >= 0.35f)
+            {
+                dotTimer = 0f;
+                dots = (dots + 1) % 4;
+                SetLoadingDots(dots);
+            }
+            yield return null;
+        }
+
         // Splash sahnesindeki post-FX Volume'ları sahne yüklemeden ÖNCE devre dışı bırak:
         // LoadScene(single) Volume'u yok ederken VolumeManager hâlâ ona erişip
         // "Volume has been destroyed but you are still trying to access it" hatası veriyordu.
         foreach (var v in FindObjectsByType<Volume>(FindObjectsSortMode.None))
             if (v != null) v.enabled = false;
 
-        SceneManager.LoadScene(nextSceneName);
+        if (sceneLoad != null)
+            sceneLoad.allowSceneActivation = true;
+        else
+            SceneManager.LoadScene(nextSceneName);
     }
 
     private void SetLoadingDots(int dots)

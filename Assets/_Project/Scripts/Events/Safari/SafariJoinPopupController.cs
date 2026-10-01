@@ -70,6 +70,14 @@ public sealed class SafariJoinPopupController : MonoBehaviour
         if (prizeText != null) prizeText.text = $"{(config != null ? config.prizePoolGold : 2000):N0} ALTIN";
         if (bodyText != null)
             bodyText.text = $"<b>{(config != null ? config.pitstopCount : 7)} KAT · BÜYÜK ÖDÜL</b>\nSeviyeleri ilk denemede geç,\nzirvedeki ödülü paylaş!";
+
+        // Buton: ortak event "Katıl" (lokalize, büyük harf değil — Köprü popup'ıyla aynı anahtar).
+        var joinLabel = continueButton != null ? continueButton.GetComponentInChildren<TMP_Text>(true) : null;
+        if (joinLabel != null)
+        {
+            string value = GameLocalization.Get("event_join_button");
+            joinLabel.text = string.IsNullOrEmpty(value) || value == "event_join_button" ? "Katıl" : value;
+        }
     }
 
     private IEnumerator Reveal()

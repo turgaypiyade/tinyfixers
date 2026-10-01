@@ -226,6 +226,28 @@ public class LevelDataEditor : Editor
                         EditorGUILayout.HelpBox($"{id}: fırlatmaya uygun değil; oyun bu girdiyi atlayacak.", MessageType.Warning);
         }
 
+        EditorGUILayout.Space(2);
+        level.bossToolThreatEnabled = EditorGUILayout.ToggleLeft(
+            new GUIContent("Alet Tehdidi (geri sayımlı engel)",
+                "Düşman board'a geri sayımlı ToolThreat engeli koyar. Süresinde kırılmazsa aletini ekrana fırlatır: " +
+                "ekran çatlar, tahta kilitlenir, düşman ek saldırı yapar."),
+            level.bossToolThreatEnabled);
+        if (level.bossToolThreatEnabled)
+        {
+            EditorGUI.indentLevel++;
+            serializedObject.Update();
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("bossToolThreatTypes"),
+                new GUIContent("Tehdit Türleri (boş = gri)", "Gri ToolThreat YALNIZ special ile kırılır; renkliler " +
+                    "(Yellow/Red/Blue/Green) kendi rengindeki eşleşme veya special ile. Her seferinde listeden biri."), true);
+            serializedObject.ApplyModifiedProperties();
+            level.bossToolThreatEveryCounters = Mathf.Max(1, EditorGUILayout.IntField("Yeni Tehdit: Her N Karşı Saldırıda", level.bossToolThreatEveryCounters));
+            level.bossToolThreatCountdown = Mathf.Max(1, EditorGUILayout.IntField("Geri Sayım (oyuncu turu)", level.bossToolThreatCountdown));
+            level.bossToolThreatExtraAttacks = Mathf.Max(0, EditorGUILayout.IntField("Çatlakta Ek Saldırı", level.bossToolThreatExtraAttacks));
+            level.bossToolThreatLockSeconds = Mathf.Max(0.5f, EditorGUILayout.FloatField("Kilit Süresi (sn)", level.bossToolThreatLockSeconds));
+            EditorGUI.indentLevel--;
+        }
+        EditorGUILayout.HelpBox("ToolThreat engelini başlangıçta board'a da koyabilirsin; düelloda o da aynı geri sayımla sayar.", MessageType.None);
+
         DrawBossOpponents(level);
 
         bool hasBossGoal = false;

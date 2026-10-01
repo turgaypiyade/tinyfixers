@@ -127,8 +127,15 @@ public sealed class CommonPopupView : MonoBehaviour
         if (text == null) return;
         var skin = CommonPopupSkin.Shared;
         StyleText(text, skin.titleFontSize, Color.white);
-        // Materyal skin.font'un atlasından türetildi → yalnız o font'ta uygula (başka font = bozuk harf).
-        if (skin.titleMaterial != null && text.font == skin.font) text.fontSharedMaterial = skin.titleMaterial;
+        ApplyDisplayFont(text, skin.titleFont, skin.titleMaterial);
+        if (text.fontSharedMaterial == skin.titleMaterial && skin.titleMaterial != null)
+        {
+            // Joker başlığı stili: krem → altın yüz (materyal yüzü beyaz; renk buradan), arkada altın halka.
+            text.color = Color.white;
+            text.enableVertexGradient = true;
+            text.colorGradient = new VertexGradient(skin.titleGradientTop, skin.titleGradientTop,
+                skin.titleGradientBottom, skin.titleGradientBottom);
+        }
         text.textWrappingMode = TextWrappingModes.NoWrap;
         var arc = text.GetComponent<TextArcEffect>();
         if (arc == null) arc = text.gameObject.AddComponent<TextArcEffect>();
@@ -186,14 +193,71 @@ public sealed class CommonPopupView : MonoBehaviour
         {
             text.transform.SetParent(labelBounds, false);
             StyleText(text, fontSize, Color.white);
-            // StyleText font'u atar (materyal font varsayılanına döner) → zemin stili SONRA.
-            if (labelMaterial != null && text.font == CommonPopupSkin.Shared.font) text.fontSharedMaterial = labelMaterial;
+            // StyleText font'u atar (materyal font varsayılanına döner) → buton fontu + zemin stili SONRA.
+            if (labelMaterial != null)
+            {
+                ApplyDisplayFont(text, CommonPopupSkin.Shared.buttonFont, labelMaterial);
+                if (text.fontSharedMaterial == labelMaterial)
+                {
+                    // Alt ana buton: tüm popup'larda aynı punto (sığmazsa autosize küçültür).
+                    if (isFooterAction && CommonPopupSkin.Shared.buttonFontSize > 0f)
+                    {
+                        text.fontSizeMax = CommonPopupSkin.Shared.buttonFontSize;
+                        text.fontSize = CommonPopupSkin.Shared.buttonFontSize;
+                        text.fontSizeMin = Mathf.Min(text.fontSizeMin, 36f);
+                    }
+                    // Buton yazısı tek satır: sığmazsa autosize küçültür (kaydırma satırı bölüyordu).
+                    text.textWrappingMode = TextWrappingModes.NoWrap;
+                    // Şeker kabartmalı buton yazısı: beyaz → krem-sarı yüz (kabartma materyalde).
+                    var skin = CommonPopupSkin.Shared;
+                    text.color = Color.white;
+                    text.enableVertexGradient = true;
+                    text.colorGradient = new VertexGradient(skin.buttonGradientTop, skin.buttonGradientTop,
+                        skin.buttonGradientBottom, skin.buttonGradientBottom);
+                }
+            }
             // Alt aksiyon butonları küçük; yazıya görselin daha büyük kısmını ver.
             Region(text.rectTransform, isFooterAction
                 ? new Rect(0.05f, 0.10f, 0.90f, 0.80f)
                 : new Rect(0.08f, 0.15f, 0.84f, 0.70f));
         }
+
+        // Yeşil (ana) buton: üstünden geçen parlama; nefes alma yalnız alttaki birincil aksiyonda.
+        if (labelMaterial != null && labelMaterial == CommonPopupSkin.Shared.greenButtonMaterial)
+        {
+            if (!button.TryGetComponent(out ButtonShine shine))
+                shine = button.gameObject.AddComponent<ButtonShine>();
+            shine.Configure(isFooterAction);
+        }
     }
+
+    /// Başlık/buton gösterim fontu: font değişirse punto büyük harf yüksekliği oranında telafi edilir
+    /// (boyutlar skin.font'a göre ayarlı) ve dikey hizalama Geometry'ye alınır — gerçek harf şekline göre ortalar (Baloo 2'nin dev alt boşluğu
+    /// "Middle"da yazıyı yukarı kaydırır). Materyal yalnız atlası o font'unkiyle aynıysa uygulanır
+    /// (başka font'un materyali = bozuk harf).
+    private static void ApplyDisplayFont(TMP_Text text, TMP_FontAsset displayFont, Material material)
+    {
+        if (text == null) return;
+        if (displayFont != null && text.font != displayFont)
+        {
+            float ratio = CapHeight(text.font) > 0f && CapHeight(displayFont) > 0f
+                ? CapHeight(text.font) / CapHeight(displayFont)
+                : 1f;
+            text.font = displayFont;
+            text.fontSize *= ratio;
+            text.fontSizeMax *= ratio;
+            text.fontSizeMin *= ratio;
+            text.verticalAlignment = VerticalAlignmentOptions.Geometry;
+        }
+
+        if (material != null && text.font != null && text.font.atlasTexture != null
+            && material.HasProperty(ShaderUtilities.ID_MainTex)
+            && material.GetTexture(ShaderUtilities.ID_MainTex) == text.font.atlasTexture)
+            text.fontSharedMaterial = material;
+    }
+
+    private static float CapHeight(TMP_FontAsset font)
+        => font != null && font.faceInfo.pointSize > 0 ? font.faceInfo.capLine / font.faceInfo.pointSize : 0f;
 
     // Buton yazısının stili buton görselinin rengine göre: yeşil → koyu yeşil kontur, mavi → koyu mavi.
     // Tanınmayan görselde (kapat vb.) font varsayılanı kalır.

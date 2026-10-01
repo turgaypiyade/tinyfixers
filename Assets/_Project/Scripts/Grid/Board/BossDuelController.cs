@@ -38,6 +38,26 @@ public sealed class BossDuelController : MonoBehaviour
     [SerializeField] private Color bannerGradientTop    = new Color(1f, 0.98f, 0.86f, 1f);
     [SerializeField] private Color bannerGradientBottom = new Color(1f, 0.86f, 0.38f, 1f);
 
+    [Header("Alet tehdidi (geri sayımlı ToolThreat engeli → ekrana fırlatma)")]
+    [Tooltip("Geri sayım rozeti zemini (joker sayılarının kırmızı dairesi).")]
+    [SerializeField] private Sprite toolThreatBadgeSprite;
+    [SerializeField] private TMP_FontAsset toolThreatBadgeFont;
+    [Tooltip("Rozet sayısının materyali (font'un atlasından türetilmiş olmalı, ör. Inter_28pt-ExtraBold_OnRed).")]
+    [SerializeField] private Material toolThreatBadgeMaterial;
+    [Tooltip("Açık: sayı engel görselindeki plakanın içine yazılır (ayrı rozet yok). Kapalı: taşın köşesinde rozet.")]
+    [SerializeField] private bool toolThreatNumberOnPlate = true;
+    [Tooltip("Plakanın taş içindeki merkezi (0..1, sol-alt kökenli). Kazma görseli: alt orta.")]
+    [SerializeField] private Vector2 toolThreatPlateCenter = new Vector2(0.5f, 0.26f);
+    [Tooltip("Plakanın boyu (taş boyuna oran). Sayı bu kutuya sığacak kadar büyür.")]
+    [SerializeField] private Vector2 toolThreatPlateSize = new Vector2(0.4f, 0.2f);
+    [Tooltip("Ekrandaki çatlağın boyutu (hammer şakası = 1).")]
+    [SerializeField, Min(0.5f)] private float toolThreatCrackScale = 1.6f;
+    [Tooltip("Alet cama çarpınca çalan ses (boşsa isabet sesi).")]
+    [SerializeField] private AudioClip toolThreatGlassSfx;
+
+    private BossDuelToolThreat toolThreat;
+    private int countersSinceToolThreat;
+
     [Header("Karakterler")]
     [SerializeField] private BossDuelCharacterProfile playerCharacter;
     [Tooltip("Porsuk pozları hazır olduğunda atanır. Boşsa mevcut düşman görseli kullanılır.")]
@@ -305,6 +325,11 @@ public sealed class BossDuelController : MonoBehaviour
         CaptureEnemyHomeState();
         StartWave(0);
 
+        // Alet tehdidi: başlangıçta editörle konmuş ToolThreat'ler de (özellik kapalı olsa bile) sayar.
+        toolThreat = new BossDuelToolThreat(board, toolThreatBadgeSprite, toolThreatBadgeFont, toolThreatBadgeMaterial,
+            toolThreatNumberOnPlate, toolThreatPlateCenter, toolThreatPlateSize);
+        toolThreat.Sync(level.bossToolThreatCountdown);
+
         // Açılış: iki parça soldan/sağdan gelip ortada birleşir; bu sırada board kilitli.
         if (introPlayedDuringLoading)
         {
@@ -324,6 +349,7 @@ public sealed class BossDuelController : MonoBehaviour
         board.ObstacleVisualChanged += HandleObstacleVisualChanged;
         board.OnPlayerMoveConsumed += HandlePlayerMoveConsumed;
         board.OnMovesChanged += HandleAnimalMovesChanged;
+        board.OnLevelContinued += HandleLevelContinued;
 
         EnsureShieldBubble(ref playerShieldBubble, playerRobot, playerShieldColor, playerShieldSprite, isEnemy: false);
         EnsureShieldBubble(ref enemyShieldBubble, enemyRobot, enemyShieldColor, enemyShieldSprite, isEnemy: true);
@@ -334,6 +360,7 @@ public sealed class BossDuelController : MonoBehaviour
 
     private void OnDestroy()
     {
+        toolThreat?.Clear();
         StopWaitingGoalsForVictory();
         if (ownsIntro && intro != null) Destroy(intro.gameObject);
     }
@@ -363,6 +390,7 @@ public sealed class BossDuelController : MonoBehaviour
         board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
         board.OnPlayerMoveConsumed -= HandlePlayerMoveConsumed;
         board.OnMovesChanged -= HandleAnimalMovesChanged;
+        board.OnLevelContinued -= HandleLevelContinued;
     }
 
     // BossDuel'de board'un görsel alt kenarını boardBottomAnchor'ın (BottomArea) üstüne hizalar.
@@ -549,10 +577,34 @@ public sealed class BossDuelController : MonoBehaviour
 
     private void HandleAnimalMovesChanged(int moves)
     {
-        // The existing extra-moves offer may resume an out-of-moves duel, but never revive HP=0.
+        // Bonus moves can clear exhaustion; only an explicit continue restores health.
         if (!outOfMovesDazed || moves <= 0 || IsOver()) return;
         outOfMovesDazed = false;
         playerCharacterView?.ResetForWave();
+    }
+
+    private void HandleLevelContinued()
+    {
+        if (!isActiveAndEnabled || playerMaxHp <= 0) return;
+
+        playerHp = playerMaxHp;
+        playerHpBar?.Init(playerMaxHp);
+
+        // A defeated final boss stays defeated while the player finishes other goals.
+        if (enemyDefeated) return;
+
+        bool restartBattle = playerDefeated;
+        playerDefeated = false;
+        outOfMovesDazed = false;
+        playerCharacterView?.ResetForWave();
+        if (restartBattle)
+        {
+            winCelebrationPlayed = false;
+            enemyCharacterView?.ResetForWave();
+            bossModeActive = true;
+            StartCoroutine(BattleLoop());
+        }
+        RefreshProtectionLabels();
     }
 
     // Vuruş anında gerçek değere kilitlenir; bekleme sırasında orb'larla tırmanan değeri gösterir.
@@ -624,6 +676,7 @@ public sealed class BossDuelController : MonoBehaviour
             {
                 while (board.IsExplicitlyLocked && !IsOver()) yield return null;
                 if (!IsOver()) yield return EnemyAttack();
+                if (!IsOver() && !waveTransitionActive) yield return ResolveToolThreatTurn();
             }
 
             // Giriş ve son sersemleme boyunca level-end değerlendirmesi beklesin.
@@ -773,6 +826,176 @@ public sealed class BossDuelController : MonoBehaviour
         }
     }
 
+    // ── Alet tehdidi ─────────────────────────────────────────────────────────
+    // Tur sonu: aktif sayaçlar azalır; sıfıra inen tehdit fırlatılır (ekran çatlar, tahta kilitlenir,
+    // düşman ek saldırı yapar). Sonra cadence dolduysa ve board'da aktif tehdit yoksa yenisi konur.
+    // Tetik rastgele DEĞİL: oyuncu tehdidi süresinde kırmadıysa (kullanıcı kuralı).
+    private IEnumerator ResolveToolThreatTurn()
+    {
+        var level = board != null ? board.ActiveLevelData : null;
+        if (toolThreat == null || level == null) yield break;
+
+        if (toolThreat.Tick() && !IsOver() && !waveTransitionActive)
+            yield return PlayToolThrowAtScreen(level);
+
+        if (level.bossToolThreatEnabled && !IsOver() && !waveTransitionActive)
+        {
+            countersSinceToolThreat++;
+            if (countersSinceToolThreat >= Mathf.Max(1, level.bossToolThreatEveryCounters) && toolThreat.ActiveCount == 0)
+            {
+                countersSinceToolThreat = 0;
+                yield return PlaceToolThreat(level);
+            }
+        }
+        toolThreat.Sync(level.bossToolThreatCountdown);
+    }
+
+    // Düşman board'a bir ToolThreat engeli fırlatır (engel atma animasyonu + iniş doğrulaması aynen).
+    private IEnumerator PlaceToolThreat(LevelData level)
+    {
+        ObstacleId id = PickToolThreatType(level);
+        if (level.obstacleLibrary == null || level.obstacleLibrary.Get(id) == null)
+        {
+            Debug.LogWarning($"[BossDuel] ObstacleLibrary'de {id} tanımı yok; alet tehdidi konamadı.");
+            yield break;
+        }
+        if (board.IsExplicitlyLocked) yield break;
+        var pool = new List<ObstacleId> { id };
+        var targets = BossDuelObstaclePressure.PickTargets(board, pool, 1);
+        if (targets.Count == 0) yield break;
+
+        var go = new GameObject("BossToolThreatThrow", typeof(RectTransform));
+        var root = (RectTransform)go.transform;
+        root.SetParent(vfxRoot != null ? vfxRoot : board.TilesRoot, false);
+        MatchParentLayer(root);
+        try
+        {
+            yield return BossDuelObstaclePressure.Throw(board, enemyRobot, root, targets, id,
+                enemyCharacterView, () => !isActiveAndEnabled || waveTransitionActive || IsOver(),
+                () => PlaySfx(enemyObstacleThrowSfx, obstacleThrowVolume));
+        }
+        finally
+        {
+            if (root != null) Destroy(root.gameObject);
+        }
+    }
+
+    // Editörde seçilen türlerden biri (kütüphanede tanımlı olanlar); liste boşsa gri ToolThreat.
+    private static ObstacleId PickToolThreatType(LevelData level)
+    {
+        var valid = new List<ObstacleId>();
+        if (level.bossToolThreatTypes != null)
+            foreach (var t in level.bossToolThreatTypes)
+                if (BossDuelToolThreat.IsToolThreat(t) && level.obstacleLibrary != null && level.obstacleLibrary.Get(t) != null)
+                    valid.Add(t);
+        return valid.Count > 0 ? valid[Random.Range(0, valid.Count)] : ObstacleId.ToolThreat;
+    }
+
+    // Tehdit fırlatıldı: alet dönerek cama gelir → büyük çatlak + tamirci maymun; tahta kilitli kalırken
+    // düşman ek saldırılarını yapar. Kilit süresi dolmadan ve saldırılar bitmeden tahta açılmaz.
+    private IEnumerator PlayToolThrowAtScreen(LevelData level)
+    {
+        board.SetInputLocked(true);
+        try
+        {
+            yield return ThrowToolAtCamera(level);
+            float unlockAt = Time.unscaledTime + Mathf.Max(0.5f, level.bossToolThreatLockSeconds);
+
+            int extra = Mathf.Max(0, level.bossToolThreatExtraAttacks);
+            for (int i = 0; i < extra && !IsOver() && !waveTransitionActive; i++)
+                yield return AnimalEnemyStrike(Mathf.Max(0, enemyBaseDamage));
+
+            while (Time.unscaledTime < unlockAt && !IsOver())
+                yield return null;
+        }
+        finally
+        {
+            if (board != null) board.SetInputLocked(false);
+        }
+    }
+
+    private IEnumerator ThrowToolAtCamera(LevelData level)
+    {
+        var parent = vfxRoot != null ? vfxRoot : (RectTransform)transform;
+        var profile = waves != null && waveIndex >= 0 && waveIndex < waves.Length ? ResolveOpponentProfile(waves[waveIndex]) : null;
+        Sprite[] frames = profile != null && profile.thrownToolFrames != null && profile.thrownToolFrames.Length > 0
+            ? profile.thrownToolFrames : null;
+        float framesFps = profile != null ? Mathf.Max(1f, profile.thrownToolFramesPerSecond) : 18f;
+        Sprite tool = frames != null ? frames[0]
+            : profile != null && profile.thrownTool != null ? profile.thrownTool
+            : level.obstacleLibrary?.Get(ObstacleId.ToolThreat)?.GetPreviewSprite();
+
+        var go = new GameObject("BossThrownTool", typeof(RectTransform), typeof(Image));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(parent, false);
+        MatchParentLayer(rt);
+        rt.SetAsLastSibling();
+        var image = go.GetComponent<Image>();
+        image.sprite = tool;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        float baseSize = board.TileSize * 1.1f;
+        rt.sizeDelta = Vector2.one * baseSize;
+
+        Vector3 start = enemyRobot != null ? enemyRobot.position : parent.position;
+        go.SetActive(false);
+
+        // Elinde tutup fırlatma animasyonu varsa bırakma anını bekle.
+        bool released = enemyCharacterView == null || !enemyCharacterView.HasThrowAnimation;
+        if (!released)
+        {
+            var anim = enemyCharacterView.ThrowObstacle(hand =>
+            {
+                start = hand;
+                go.SetActive(true);
+                rt.position = hand;
+            }, () => released = true, () => IsOver() || waveTransitionActive);
+            StartCoroutine(anim);
+            float guard = 0f;
+            while (!released && guard < 3f && !IsOver()) { guard += Time.deltaTime; yield return null; }
+        }
+        PlaySfx(enemyObstacleThrowSfx, obstacleThrowVolume);
+        go.SetActive(true);
+
+        // Ekran merkezine (kameraya) dönerek + büyüyerek gel.
+        var canvas = parent.GetComponentInParent<Canvas>();
+        Camera cam = canvas != null && canvas.rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? canvas.rootCanvas.worldCamera : null;
+        Vector2 screenCenter = new Vector2(Screen.width * 0.5f, Screen.height * 0.55f);
+        RectTransformUtility.ScreenPointToWorldPointInRectangle(parent, screenCenter, cam, out Vector3 end);
+
+        const float duration = 0.5f;
+        float t = 0f;
+        while (t < duration && rt != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / duration);
+            float e = k * k;                                   // hızlanarak kameraya yaklaşır
+            rt.position = Vector3.LerpUnclamped(start, end, e);
+            rt.sizeDelta = Vector2.one * Mathf.Lerp(baseSize, baseSize * 4.5f, e);
+            if (frames != null)
+                image.sprite = frames[(int)(t * framesFps) % frames.Length];   // dönüşü kareler verir
+            else
+                rt.localRotation = Quaternion.Euler(0f, 0f, -900f * k);   // tek görsel: kendisi döner
+            yield return null;
+        }
+
+        if (rt != null) Destroy(rt.gameObject);
+        ScreenCrackFx.Play(screenCenter, default, toolThreatCrackScale);
+        PlaySfx(toolThreatGlassSfx != null ? toolThreatGlassSfx : hitSfx, hitVolume);
+        var animator = board.boardAnimatorRef;
+        if (animator != null && board.ShakeTarget != null)
+            board.StartCoroutine(animator.ShakeBoard(board.ShakeDuration * 1.5f, board.ShakeStrength * 1.5f));
+
+        // Fırlatma pozu bitmeden ek saldırı başlamasın (karakter "saldırıyor" iken Attack atlanırdı).
+        float settle = 0f;
+        while (enemyCharacterView != null && enemyCharacterView.IsAttacking && settle < 2f && !IsOver())
+        {
+            settle += Time.deltaTime;
+            yield return null;
+        }
+    }
+
     private void ReleasePressureInputLock()
     {
         if (pressureEffectsRoot != null) Destroy(pressureEffectsRoot.gameObject);
@@ -827,6 +1050,12 @@ public sealed class BossDuelController : MonoBehaviour
     private void Update()
     {
         TickEndEvalHold();
+    }
+
+    private void LateUpdate()
+    {
+        // Rozetler taşların üstünde: taş düşse/karışsa da izler; kırılan tehdidin rozeti kalkar.
+        toolThreat?.UpdateVisuals();
     }
 
     private void NoteEndEvalProgress()

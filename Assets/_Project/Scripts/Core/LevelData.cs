@@ -189,6 +189,20 @@ public enum ObstacleId : int
     // jelde olup olmadığı yakalanır). Görsel + köşe birleştirme mud'dan (SpreadingGelOverlayService),
     // yayılma mantığı SpreadingGelService'te. ID sabit (level verisi).
     SpreadingGel = 46,
+
+    // Boss düellosu "alet tehdidi" (gri): tek-vuruş, düşen (movable) engel; YALNIZ special kırar (damageRule=SpecialOnly). BossDuel'de
+    // üstünde geri sayım rozeti durur (BossDuelToolThreat); oyuncu turunda azalır, 0 olunca düşman
+    // aletini ekrana fırlatır (çatlak + kilit + ek saldırı) ve engel "harcanır" (sayaçsız kalır).
+    // BossDuel dışında sıradan tek-vuruş engeldir. Başlangıçta editörle de yerleştirilebilir.
+    ToolThreat = 47,
+
+    // ToolThreat'in renkli versiyonları: YALNIZ kendi rengindeki komşu eşleşme (+ special) kırar
+    // (ObstacleDef.restrictNormalMatchTileType). Renk eşlemesi renkli plastiklerle aynı:
+    // Sarı=Gear, Kırmızı=Core, Mavi=Bolt, Yeşil=Plate. Gri ToolThreat (47) YALNIZ special ile kırılır (en zor).
+    ToolThreatYellow = 48,
+    ToolThreatRed = 49,
+    ToolThreatBlue = 50,
+    ToolThreatGreen = 51,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
@@ -332,6 +346,22 @@ public class LevelData : ScriptableObject
     public ObstacleId[] bossThrownObstacles = System.Array.Empty<ObstacleId>();
     [Tooltip("Havuzdaki engellerin board üzerindeki toplam üst sınırı; başlangıç engelleri de sayılır. Yoğun board'da baskı bekler.")]
     [Min(1)] public int bossMaxPressureObstacles = 8;
+
+    [Header("Boss Duel — Alet Tehdidi (geri sayımlı engel)")]
+    [Tooltip("Açık: düşman belirli aralıkla board'a geri sayımlı ToolThreat engeli koyar. Başlangıçta editörle " +
+             "konan ToolThreat'ler bu kapalıyken de sayar.")]
+    public bool bossToolThreatEnabled = false;
+    [Tooltip("Düşmanın koyacağı tehdit türleri (her seferinde aralarından biri). Boş = gri ToolThreat " +
+             "(yalnız special kırar). Renkliler kendi rengindeki eşleşme veya special ile kırılır.")]
+    public ObstacleId[] bossToolThreatTypes = System.Array.Empty<ObstacleId>();
+    [Tooltip("Kaç düşman karşı saldırısında bir yeni tehdit konur (board'da aktif tehdit yoksa).")]
+    [Min(1)] public int bossToolThreatEveryCounters = 4;
+    [Tooltip("Geri sayım: tehdit kaç oyuncu turu sonra fırlatılır.")]
+    [Min(1)] public int bossToolThreatCountdown = 3;
+    [Tooltip("Ekran çatlakken (tahta kilitli) düşmanın yaptığı ek saldırı sayısı.")]
+    [Min(0)] public int bossToolThreatExtraAttacks = 2;
+    [Tooltip("Çatlak/tamir süresince tahta kilidi (sn).")]
+    [Min(0.5f)] public float bossToolThreatLockSeconds = 3f;
 
     [Header("Battlefield (BossDuel)")]
     [Tooltip("Oyuncu (sol robot) başlangıç/maks canı. 0 olunca level kaybedilir. Düşman HP'si BossDamage goal amount'tan gelir.")]

@@ -13,7 +13,8 @@ using UnityEngine.TextCore.LowLevel;
 ///   1) Joker Denemesi — YALNIZ joker sayılarına "OnRed" stili (01_Game joker çubuğu + level öncesi slotlar).
 ///   2) Tüm Yazılara Sert Gölge — ortak preset'lerin gölgesini keskinleştirir (joker beğenilince).
 ///   3) Oyun Anı Başlık Stili — DynaPuff Bold SDF (yeni) + DynaPuff_RoyalTitle; joker başlığı, övgü, boss dalga.
-///   4) Başlıklar + Devam Butonları — BakbakOne + bordo başlık / yeşil buton preset'leri (PreLevel + fail/success).
+///   4) Başlıklar + Butonlar — Baloo 2 başlık / Nunito buton + bordo/yeşil/mavi zemin preset'leri (PreLevel,
+///      fail/success, CommonPopupSkin).
 ///
 /// DİKKAT: Font asset padding'ine (→ materyal _GradientScale) DOKUNMA. TMP'de kontur/gölge kalınlığı
 /// padding'e oranlıdır; padding'i 9→18 yapmak o fontu kullanan TÜM yazıların konturunu ~2 katına çıkardı
@@ -45,28 +46,33 @@ public static class CrispTextSetup
     private const float OnRedOutlineWidth = 0.12f;
 
     private const string GameScenePath = "Assets/_Project/Scenes/01_Game.unity";
+    private const string MainMenuScenePath = "Assets/_Project/Scenes/MainMenu.unity";
     private const string PreLevelPrefabPath = "Assets/_Project/Prefabs/UI/PreLevelSpecialPopup.prefab";
 
     // Zemin stilleri: yazının konturu/gölgesi DURDUĞU ZEMİNİN koyu tonu (referans kuralı).
-    private static readonly Color CreamFace = new Color(1f, 0.97f, 0.86f, 1f);
     private static readonly Color MaroonOutline = new Color(0.30f, 0.04f, 0.08f, 1f);   // bordo şerit
     private const float TitleOnMaroonWidth = 0.16f;
-    private static readonly Color ButtonFace = new Color(1f, 1f, 0.94f, 1f);
+    private static readonly Color ButtonFace = Color.white;
     private static readonly Color GreenOutline = new Color(0.07f, 0.30f, 0.06f, 1f);    // yeşil buton
     private const float OnGreenButtonWidth = 0.14f;
     private static readonly Color BlueOutline = new Color(0.05f, 0.16f, 0.42f, 1f);     // mavi buton
 
-    // Başlık + devam butonu = GÖSTERİM fontu (BakbakOne); Inter yalnız metin/etiket/sayı için (düz, teknik,
-    // büyük boyutta karaktersiz). Zeminler: başlıklar bordo şeritte, devam butonları yeşil (GreenButonEfso).
-    // Eskiden bu yazılar font'un VARSAYILAN materyalindeydi (siyah kalın kontur + yumuşak gölge, Inter'de
-    // YUKARI kayık). Varsayılan materyale dokunulmaz (onu kullanan diğer yazılar etkilenmesin) — ayrı preset.
-    private const string DisplayFontPath = "Assets/_Project/Fonts/BakBakOne/BakbakOne-Regular SDF.asset";
+    // Başlık = Baloo 2 ExtraBold, buton = Nunito Black (kullanıcı seçimi 2026-09-29; BakbakOne/Inter "aynı,
+    // karaktersiz" bulundu). Inter yalnız metin/etiket/sayı. Zeminler: başlıklar bordo şeritte, devam butonları
+    // yeşil (GreenButonEfso). Font'ların varsayılan materyaline dokunulmaz — zemin stili ayrı preset.
+    // Kaynaklar: Google Fonts OFL (lisans Fonts/<ad>/OFL.txt), değişken font'tan sabit kalınlık üretildi.
+    private const string TitleTtfPath = "Assets/_Project/Fonts/Baloo2/Baloo2-ExtraBold.ttf";
+    private const string TitleAssetPath = "Assets/_Project/Fonts/Baloo2/Baloo2-ExtraBold SDF.asset";
+    private const string ButtonTtfPath = "Assets/_Project/Fonts/Nunito/Nunito-Black.ttf";
+    private const string ButtonAssetPath = "Assets/_Project/Fonts/Nunito/Nunito-Black SDF.asset";
+    private const int UiFontPadding = 9;   // mevcut font'larla aynı (kontur/gölge değerleri buna göre ayarlı)
 
-    [MenuItem("TinyFixers/Fonts/4) Başlıklar + Devam Butonları (BakbakOne, level öncesi + fail/success)")]
+    [MenuItem("TinyFixers/Fonts/4) Başlıklar + Butonlar (Baloo 2 başlık, Nunito buton)")]
     public static void RunTitlesAndButtons()
     {
-        var display = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DisplayFontPath);
-        if (display == null) { Debug.LogWarning($"[CrispText] Font yok: {DisplayFontPath}"); return; }
+        var titleFont = GetOrCreateFontAsset(TitleTtfPath, TitleAssetPath, UiFontPadding);
+        var buttonFont = GetOrCreateFontAsset(ButtonTtfPath, ButtonAssetPath, UiFontPadding);
+        if (titleFont == null || buttonFont == null) return;
 
         // Level öncesi popup (prefab; ana menü + oyun içi "Tekrar Dene" aynı prefab).
         int count = 0;
@@ -75,8 +81,8 @@ public static class CrispTextSetup
         {
             foreach (var popup in root.GetComponentsInChildren<PreLevelSpecialPopupController>(true))
             {
-                count += AssignContextStyle(popup, "titleText", "TitleOnMaroon", CreamFace, MaroonOutline, TitleOnMaroonWidth, display);
-                count += AssignContextStyle(popup, "continueText", "OnGreenButton", ButtonFace, GreenOutline, OnGreenButtonWidth, display);
+                count += AssignPopupTitle(popup, "titleText", titleFont);
+                count += AssignContextStyle(popup, "continueText", "OnGreenButton", ButtonFace, GreenOutline, OnGreenButtonWidth, buttonFont);
             }
             PrefabUtility.SaveAsPrefabAsset(root, PreLevelPrefabPath);
             PrefabUtility.UnloadPrefabContents(root);
@@ -89,21 +95,61 @@ public static class CrispTextSetup
             var scene = EditorSceneManager.OpenScene(GameScenePath, OpenSceneMode.Single);
             foreach (var levelEnd in Object.FindObjectsByType<LevelEndSimplePopupController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
-                count += AssignContextStyle(levelEnd, "failTitleText", "TitleOnMaroon", CreamFace, MaroonOutline, TitleOnMaroonWidth, display);
-                count += AssignContextStyle(levelEnd, "successTitleText", "TitleOnMaroon", CreamFace, MaroonOutline, TitleOnMaroonWidth, display);
-                count += AssignContextStyle(levelEnd, "failContinueText", "OnGreenButton", ButtonFace, GreenOutline, OnGreenButtonWidth, display);
-                count += AssignContextStyle(levelEnd, "successContinueText", "OnGreenButton", ButtonFace, GreenOutline, OnGreenButtonWidth, display);
+                count += AssignPopupTitle(levelEnd, "failTitleText", titleFont);
+                count += AssignPopupTitle(levelEnd, "successTitleText", titleFont);
+                count += AssignContextStyle(levelEnd, "failContinueText", "OnGreenButton", ButtonFace, GreenOutline, OnGreenButtonWidth, buttonFont);
+                // Fiyatlı buton ("Devam Et 🪙 900") uzun → daha küçük üst sınır (kullanıcı).
+                var failCont = new SerializedObject(levelEnd).FindProperty("failContinueText")?.objectReferenceValue as TMP_Text;
+                if (failCont != null)
+                {
+                    failCont.fontSizeMax = PriceButtonLabelSize;
+                    failCont.fontSize = PriceButtonLabelSize;
+                    EditorUtility.SetDirty(failCont);
+                }
+                count += AssignContextStyle(levelEnd, "successContinueText", "OnGreenButton", ButtonFace, GreenOutline, OnGreenButtonWidth, buttonFont);
             }
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
-            if (!string.IsNullOrEmpty(previous) && previous != GameScenePath)
+
+            // Event katılım popup'ları (MainMenu): aynı bordo zemin (EvenSelectorPopup) + yeşil buton.
+            var menu = EditorSceneManager.OpenScene(MainMenuScenePath, OpenSceneMode.Single);
+            foreach (var safari in Object.FindObjectsByType<SafariJoinPopupController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                count += AssignPopupTitle(safari, "titleText", titleFont);
+                var button = new SerializedObject(safari).FindProperty("continueButton")?.objectReferenceValue as Component;
+                if (button != null)
+                    count += StyleContextText(button.GetComponentInChildren<TMP_Text>(true), "OnGreenButton",
+                        ButtonFace, GreenOutline, OnGreenButtonWidth, buttonFont);
+            }
+            foreach (var bridge in Object.FindObjectsByType<BridgeRepairJoinPopup>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                count += AssignPopupTitle(bridge, "titleText", titleFont);
+                count += AssignContextStyle(bridge, "continueLabel", "OnGreenButton", ButtonFace, GreenOutline, OnGreenButtonWidth, buttonFont);
+            }
+            // Görevler paneli: başlık ("GÖREVLER") + yeşil "Devam" — sahnede panelRoot altında (alan değil).
+            foreach (var missions in Object.FindObjectsByType<RegionUnlockListPanel>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                var panelRoot = new SerializedObject(missions).FindProperty("panelRoot")?.objectReferenceValue as GameObject;
+                if (panelRoot == null) continue;
+                foreach (var t in panelRoot.GetComponentsInChildren<TMP_Text>(true))
+                {
+                    if (t.name == "TitleText")
+                        count += StylePopupTitle(t, titleFont);
+                    else if (t.GetComponentInParent<UnityEngine.UI.Button>(true) is { name: "ContinueButton" })
+                        count += StyleContextText(t, "OnGreenButton", ButtonFace, GreenOutline, OnGreenButtonWidth, buttonFont);
+                }
+            }
+            EditorSceneManager.MarkSceneDirty(menu);
+            EditorSceneManager.SaveScene(menu);
+
+            if (!string.IsNullOrEmpty(previous) && previous != EditorSceneManager.GetActiveScene().path)
                 EditorSceneManager.OpenScene(previous, OpenSceneMode.Single);
         }
 
-        AssignCommonPopupSkin(display);
+        AssignCommonPopupSkin(titleFont, buttonFont);
 
         AssetDatabase.SaveAssets();
-        Debug.Log($"[CrispText] Başlık + devam butonu: {count} yazı BakbakOne + zemin stili (başlık bordo, buton yeşil); " +
+        Debug.Log($"[CrispText] Başlık + buton: {count} yazı (Baloo 2 başlık / Nunito buton) + zemin stili; " +
                   "ortak popup skin'i bağlandı (başlık/yeşil/mavi buton).");
     }
 
@@ -112,8 +158,13 @@ public static class CrispTextSetup
     private static int AssignContextStyle(Object owner, string field, string suffix, Color face, Color outline, float width,
         TMP_FontAsset fontOverride = null)
     {
-        var so = new SerializedObject(owner);
-        var text = so.FindProperty(field)?.objectReferenceValue as TMP_Text;
+        var text = new SerializedObject(owner).FindProperty(field)?.objectReferenceValue as TMP_Text;
+        return StyleContextText(text, suffix, face, outline, width, fontOverride);
+    }
+
+    private static int StyleContextText(TMP_Text text, string suffix, Color face, Color outline, float width,
+        TMP_FontAsset fontOverride = null)
+    {
         if (text == null) return 0;
         if (fontOverride != null && text.font != fontOverride)
         {
@@ -124,13 +175,117 @@ public static class CrispTextSetup
             text.fontSize *= ratio;
             text.fontSizeMax *= ratio;
             text.fontSizeMin *= ratio;
+            // Gerçek harf şekline göre dikey ortala (Baloo 2'nin dev alt boşluğu Middle'da yazıyı yukarı iter).
+            text.verticalAlignment = VerticalAlignmentOptions.Geometry;
         }
         if (text.font == null) return 0;
 
         text.fontSharedMaterial = GetOrCreateContextPreset(text.font, suffix, face, outline, width);
         text.fontStyle &= ~FontStyles.Bold;   // font zaten kalın: faux-bold harf aralığını açar
         EditorUtility.SetDirty(text);
+
+        // Yeşil ana butonlar: şeker kabartmalı yazı (beyaz → krem-sarı yüz) + parlama şeridi + nefes alma
+        // (ButtonShine; görsel çalışma anında kurulur).
+        if (suffix == "OnGreenButton")
+        {
+            // Tüm popup'ların alt butonu AYNI boyut (kullanıcı): hedef ButtonLabelSize, sığmazsa otomatik küçülür
+            // (uzun "Tekrar Dene" / "Devam Et 900" gibi).
+            text.enableAutoSizing = true;
+            text.fontSizeMax = ButtonLabelSize;
+            text.fontSize = ButtonLabelSize;
+            text.fontSizeMin = ButtonLabelMinSize;
+            // Buton yazısı TEK satır: kaydırma açıkken autosize küçültmek yerine satırı bölüyordu
+            // ("Devam Et" / "🪙 900" iki satır). Kapalıyken sığmayan yazı tek satırda küçülür.
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            // Yazı kutusu çoğu butonda görselin TAMAMI → kenarlara dayanıyordu. Yatayda iç boşluk bırak.
+            float side = Mathf.Max(0f, text.rectTransform.rect.width) * ButtonLabelSideMargin;
+            text.margin = new Vector4(side, 0f, side, 0f);
+            ApplyCandyBevel(text.fontSharedMaterial);
+            text.enableVertexGradient = true;
+            text.colorGradient = new VertexGradient(ButtonGradientTop, ButtonGradientTop,
+                ButtonGradientBottom, ButtonGradientBottom);
+
+            var button = text.GetComponentInParent<UnityEngine.UI.Button>(true);
+            if (button != null && !button.TryGetComponent(out ButtonShine _))
+            {
+                button.gameObject.AddComponent<ButtonShine>();
+                EditorUtility.SetDirty(button.gameObject);
+            }
+        }
         return 1;
+    }
+
+    // ── Popup başlığı (joker başlığı stili) ──────────────────────────────────
+    // Krem → açık altın yüz (vertex gradient; materyal yüzü beyaz) + ince bordo kontur + arkada ALTIN halka
+    // (underlay, aşağı kayık → altta kalın). TMP'de tek underlay var: koyu gölge yerine altın halka.
+    private static readonly Color PopupTitleGradientTop = Color.white;
+    private static readonly Color PopupTitleGradientBottom = new Color(1f, 0.97f, 0.78f, 1f);    // çok açık altın (parlak)
+    private static readonly Color PopupTitleGold = new Color(1f, 0.74f, 0.12f, 1f);
+    private const float PopupTitleGoldDilate = 0.5f;                                     // padding 9 font'lar için
+    private static readonly Vector2 PopupTitleGoldOffset = new Vector2(0f, -0.3f);
+
+    private static int AssignPopupTitle(Object owner, string field, TMP_FontAsset font)
+        => StylePopupTitle(new SerializedObject(owner).FindProperty(field)?.objectReferenceValue as TMP_Text, font);
+
+    private static int StylePopupTitle(TMP_Text text, TMP_FontAsset font)
+    {
+        if (StyleContextText(text, "TitleOnMaroon", Color.white, MaroonOutline, TitleOnMaroonWidth, font) == 0)
+            return 0;
+        text.fontSharedMaterial = GetOrCreatePopupTitlePreset(text.font);
+        text.color = Color.white;
+        text.enableVertexGradient = true;
+        text.colorGradient = new VertexGradient(PopupTitleGradientTop, PopupTitleGradientTop,
+            PopupTitleGradientBottom, PopupTitleGradientBottom);
+        EditorUtility.SetDirty(text);
+        return 1;
+    }
+
+    private static Material GetOrCreatePopupTitlePreset(TMP_FontAsset font)
+    {
+        var mat = GetOrCreateContextPreset(font, "TitleOnMaroon", Color.white, MaroonOutline, TitleOnMaroonWidth);
+        mat.EnableKeyword("UNDERLAY_ON");
+        mat.SetColor(ShaderUtilities.ID_UnderlayColor, PopupTitleGold);
+        mat.SetFloat(ShaderUtilities.ID_UnderlayDilate, PopupTitleGoldDilate);
+        mat.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, PopupTitleGoldOffset.x);
+        mat.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, PopupTitleGoldOffset.y);
+        mat.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0f);
+        ShaderUtilities.UpdateShaderRatios(mat);
+        ApplyCandyBevel(mat);   // parlaklık: başlığa da hafif kabartma + beyaz ışık vurgusu (tam SDF shader)
+        EditorUtility.SetDirty(mat);
+        return mat;
+    }
+
+    // ── Buton yazısı: "şeker" kabartma ───────────────────────────────────────
+    // Mobil SDF shader kabartma yapamaz → tam "TextMeshPro/Distance Field" (aynı ada sahip özellikler korunur).
+    // Hafif yuvarlak kabartma + sol-üstten ışık + beyaz parlama; yüz beyaz → krem-sarı (vertex gradient).
+    private static readonly Color ButtonGradientTop = Color.white;
+    public const float ButtonLabelSize = 74f;      // Nunito Black punto (alt/ana butonlar, hepsi aynı)
+    private const float ButtonLabelMinSize = 36f;
+    private const float ButtonLabelSideMargin = 0.08f;   // buton genişliğinin sağ/sol iç boşluğu
+    private const float PriceButtonLabelSize = 60f;      // "Devam Et 🪙 900" gibi fiyatlı uzun buton
+    private static readonly Color ButtonGradientBottom = new Color(1f, 0.99f, 0.9f, 1f);        // çok açık krem (parlak)
+
+    private static void ApplyCandyBevel(Material mat)
+    {
+        if (mat == null) return;
+        var full = Shader.Find("TextMeshPro/Distance Field");
+        if (full == null) { Debug.LogWarning("[CrispText] TMP 'Distance Field' shader bulunamadı; kabartma atlandı."); return; }
+        if (mat.shader != full) mat.shader = full;
+
+        mat.EnableKeyword("BEVEL_ON");
+        mat.SetFloat("_Bevel", 0.3f);
+        mat.SetFloat("_BevelOffset", 0f);
+        mat.SetFloat("_BevelWidth", 0f);
+        mat.SetFloat("_BevelClamp", 0f);
+        mat.SetFloat("_BevelRoundness", 0.6f);
+        mat.SetFloat("_LightAngle", 2.3f);            // sol-üstten ışık
+        mat.SetColor("_SpecularColor", Color.white);
+        mat.SetFloat("_SpecularPower", 4f);
+        mat.SetFloat("_Reflectivity", 20f);
+        mat.SetFloat("_Diffuse", 0f);                 // ışık almayan yüz KARARMAZ (yazı parlak kalsın)
+        mat.SetFloat("_Ambient", 1f);
+        ShaderUtilities.UpdateShaderRatios(mat);
+        EditorUtility.SetDirty(mat);
     }
 
     private static float CapHeightRatio(TMP_FontAsset from, TMP_FontAsset to)
@@ -142,18 +297,27 @@ public static class CrispTextSetup
     }
 
     /// Kodla kurulan ortak popup'lar (RuntimeChoicePopup, kayıt, müzik, takım, market…) CommonPopupSkin'den
-    /// geçer: font zaten BakbakOne; zemin stillerini skin'e bağla (başlık bordo, yeşil/mavi buton).
-    private static void AssignCommonPopupSkin(TMP_FontAsset display)
+    /// geçer: başlık/buton fontu + zemin stillerini skin'e bağla (başlık bordo, yeşil/mavi buton). Gövde
+    /// metni skin.font'ta kalır.
+    private static void AssignCommonPopupSkin(TMP_FontAsset titleFont, TMP_FontAsset buttonFont)
     {
         var skin = AssetDatabase.LoadAssetAtPath<CommonPopupSkin>("Assets/_Project/Resources/CommonPopupSkin.asset");
-        if (skin == null || skin.font == null) return;
+        if (skin == null) return;
         var so = new SerializedObject(skin);
-        so.FindProperty("titleMaterial").objectReferenceValue =
-            GetOrCreateContextPreset(skin.font, "TitleOnMaroon", CreamFace, MaroonOutline, TitleOnMaroonWidth);
+        so.FindProperty("titleFont").objectReferenceValue = titleFont;
+        so.FindProperty("buttonFont").objectReferenceValue = buttonFont;
+        so.FindProperty("titleMaterial").objectReferenceValue = GetOrCreatePopupTitlePreset(titleFont);
         so.FindProperty("greenButtonMaterial").objectReferenceValue =
-            GetOrCreateContextPreset(skin.font, "OnGreenButton", ButtonFace, GreenOutline, OnGreenButtonWidth);
+            GetOrCreateContextPreset(buttonFont, "OnGreenButton", ButtonFace, GreenOutline, OnGreenButtonWidth);
         so.FindProperty("blueButtonMaterial").objectReferenceValue =
-            GetOrCreateContextPreset(skin.font, "OnBlueButton", ButtonFace, BlueOutline, OnGreenButtonWidth);
+            GetOrCreateContextPreset(buttonFont, "OnBlueButton", ButtonFace, BlueOutline, OnGreenButtonWidth);
+        so.FindProperty("buttonFontSize").floatValue = ButtonLabelSize;
+        so.FindProperty("titleGradientTop").colorValue = PopupTitleGradientTop;
+        so.FindProperty("titleGradientBottom").colorValue = PopupTitleGradientBottom;
+        so.FindProperty("buttonGradientTop").colorValue = ButtonGradientTop;
+        so.FindProperty("buttonGradientBottom").colorValue = ButtonGradientBottom;
+        ApplyCandyBevel((Material)so.FindProperty("greenButtonMaterial").objectReferenceValue);
+        ApplyCandyBevel((Material)so.FindProperty("blueButtonMaterial").objectReferenceValue);
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(skin);
     }
@@ -283,26 +447,31 @@ public static class CrispTextSetup
     }
 
     private static TMP_FontAsset GetOrCreateDynaPuffBold()
+        => GetOrCreateFontAsset(DynaPuffTtfPath, DynaPuffAssetPath, TitlePadding);
+
+    /// TTF'ten dinamik TMP font asset'i (90pt, çoklu atlas); varsa olanı döner. Atlas + materyal alt-varlık
+    /// (TMP Font Asset Creator ile aynı düzen). Türkçe dahil sık karakterler hemen üretilir.
+    private static TMP_FontAsset GetOrCreateFontAsset(string ttfPath, string assetPath, int padding)
     {
-        var existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DynaPuffAssetPath);
+        var existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(assetPath);
         if (existing != null) return existing;
 
-        var source = AssetDatabase.LoadAssetAtPath<Font>(DynaPuffTtfPath);
+        var source = AssetDatabase.LoadAssetAtPath<Font>(ttfPath);
         if (source == null)
         {
-            Debug.LogWarning($"[CrispText] Font dosyası yok: {DynaPuffTtfPath}");
+            Debug.LogWarning($"[CrispText] Font dosyası yok: {ttfPath}");
             return null;
         }
 
-        if (!AssetDatabase.IsValidFolder(DynaPuffDir))
-            AssetDatabase.CreateFolder(Path.GetDirectoryName(DynaPuffDir).Replace('\\', '/'), Path.GetFileName(DynaPuffDir));
+        string dir = Path.GetDirectoryName(assetPath).Replace('\\', '/');
+        if (!AssetDatabase.IsValidFolder(dir))
+            AssetDatabase.CreateFolder(Path.GetDirectoryName(dir).Replace('\\', '/'), Path.GetFileName(dir));
 
-        var font = TMP_FontAsset.CreateFontAsset(source, TitleSamplingSize, TitlePadding, GlyphRenderMode.SDFAA,
+        var font = TMP_FontAsset.CreateFontAsset(source, TitleSamplingSize, padding, GlyphRenderMode.SDFAA,
             1024, 1024, AtlasPopulationMode.Dynamic, true);
-        font.name = "DynaPuff-Bold SDF";
-        AssetDatabase.CreateAsset(font, DynaPuffAssetPath);
+        font.name = Path.GetFileNameWithoutExtension(assetPath);
+        AssetDatabase.CreateAsset(font, assetPath);
 
-        // Atlas + materyal font asset'inin alt-varlıkları (TMP Font Asset Creator ile aynı düzen).
         font.atlasTexture.name = font.name + " Atlas";
         AssetDatabase.AddObjectToAsset(font.atlasTexture, font);
         font.material.name = font.name + " Material";

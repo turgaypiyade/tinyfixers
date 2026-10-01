@@ -155,3 +155,14 @@ MonoBehaviour:
   throwReleaseFrame: 6
   throwIdleLeadIn: 0.08
   heldObstacleSize: 0.23
+  thrownTool: {fileID: 8372821956414266499, guid: b05e5a059de714c929946d928886ae50, type: 3}
+  thrownToolFrames:
+  - {fileID: 8372821956414266499, guid: b05e5a059de714c929946d928886ae50, type: 3}
+  - {fileID: 1565292088254830421, guid: b05e5a059de714c929946d928886ae50, type: 3}
+  - {fileID: 7055820350171389825, guid: b05e5a059de714c929946d928886ae50, type: 3}
+  - {fileID: -8189193217425577303, guid: b05e5a059de714c929946d928886ae50, type: 3}
+  - {fileID: -7669124969873392205, guid: b05e5a059de714c929946d928886ae50, type: 3}
+  - {fileID: -7750668052584874111, guid: b05e5a059de714c929946d928886ae50, type: 3}
+  - {fileID: 2557105650412287736, guid: b05e5a059de714c929946d928886ae50, type: 3}
+  - {fileID: -1983227478884604991, guid: b05e5a059de714c929946d928886ae50, type: 3}
+  thrownToolFramesPerSecond: 18

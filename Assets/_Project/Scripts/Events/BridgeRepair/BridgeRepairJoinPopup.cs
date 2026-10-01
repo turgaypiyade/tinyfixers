@@ -53,7 +53,7 @@ public sealed class BridgeRepairJoinPopup : MonoBehaviour
         Wire();
 
         if (titleText != null) titleText.text = BridgeRepairUI.L("bridge_title", "BRIDGE REPAIR");
-        if (continueLabel != null) continueLabel.text = BridgeRepairUI.L("bridge_join_continue", "KATIL");
+        if (continueLabel != null) continueLabel.text = BridgeRepairUI.L("event_join_button", "Katıl");   // ortak event "Katıl" (büyük harf değil)
         if (overlayImage != null) overlayImage.gameObject.SetActive(overlayImage.sprite != null);
         RefreshTimer();
         EventSfx.Play(x => x.popupOpen);
