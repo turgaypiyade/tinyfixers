@@ -50,6 +50,32 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
 
     private static RuntimeChoicePopup _instance;
 
+    public readonly struct RewardItem
+    {
+        public readonly Sprite Icon;
+        public readonly string Amount;
+        public readonly string Name;
+
+        public RewardItem(Sprite icon, string amount, string name)
+        {
+            Icon = icon;
+            Amount = amount;
+            Name = name;
+        }
+    }
+
+    /// <summary>Uses the existing common popup frame to acknowledge rewards already granted.</summary>
+    public static void ShowRewards(string title, string message, IReadOnlyList<RewardItem> rewards, string buttonLabel)
+    {
+        Dismiss();
+        var root = BuildCanvas();
+        var popup = root.AddComponent<RuntimeChoicePopup>();
+        popup.Build(root.transform, title, message, new[] { new Choice(buttonLabel, null, true) });
+        popup.BuildRewards(rewards);
+        _instance = popup;
+        DontDestroyOnLoad(root);
+    }
+
     /// SaveProgressPopup düzeni: üstte durum yazısı, gövdede alt alta büyük seçenek butonları,
     /// altta tek aksiyon butonu. Başlıktaki X yalnız popup'ı kapatır (onClose çağrılmaz).
     /// defaultFrame=true: çerçeve ortak popup'ın orijinal renginde kalır (buton stilleri aynı).
@@ -199,6 +225,68 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
             onAction?.Invoke();
         }, CommonPopupSkin.Shared.saveProgressContinueButton);
         CommonPopupView.Region((RectTransform)action.transform, CommonPopupView.ActionRegion(0, 1));
+    }
+
+    private void BuildRewards(IReadOnlyList<RewardItem> rewards)
+    {
+        int count = rewards?.Count ?? 0;
+        if (count == 0) return;
+
+        var message = view.Body.Find("Message") as RectTransform;
+        CommonPopupView.Region(message, new Rect(0, 0.83f, 1, 0.17f));
+
+        var viewport = BuildStretch(view.Body, "Rewards");
+        CommonPopupView.Region(viewport, new Rect(0, 0, 1, 0.80f));
+        viewport.gameObject.AddComponent<RectMask2D>();
+        var surface = viewport.gameObject.AddComponent<Image>();
+        surface.color = Color.clear;
+
+        int columns = count == 1 ? 1 : (count <= 4 ? 2 : 3);
+        int rows = Mathf.CeilToInt(count / (float)columns);
+        int visibleRows = Mathf.Min(3, rows);
+        // Relative sizing fits short lists; larger future bundles scroll instead of
+        // silently dropping rewards or shrinking their labels to unreadable sizes.
+        var content = CommonPopupView.NewRect(viewport, "Content", Vector2.zero);
+        content.pivot = new Vector2(0.5f, 1f);
+        content.anchorMin = new Vector2(0, 1f - rows / (float)visibleRows);
+        content.anchorMax = Vector2.one;
+        content.offsetMin = content.offsetMax = Vector2.zero;
+        var scroll = viewport.gameObject.AddComponent<ScrollRect>();
+        scroll.viewport = viewport;
+        scroll.content = content;
+        scroll.horizontal = false;
+        scroll.vertical = rows > visibleRows;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+
+        for (int i = 0; i < count; i++)
+        {
+            var item = rewards[i];
+            int row = i / columns;
+            int itemsInRow = Mathf.Min(columns, count - row * columns);
+            float x = (columns - itemsInRow) * 0.5f + i % columns;
+            var tile = CommonPopupView.NewRect(content, "Reward_" + i, Vector2.zero);
+            CommonPopupView.Region(tile, new Rect(x / columns, 1f - (row + 1f) / rows,
+                1f / columns, 1f / rows));
+
+            if (item.Icon != null)
+            {
+                var icon = CommonPopupView.NewRect(tile, "Icon", Vector2.zero).gameObject.AddComponent<Image>();
+                CommonPopupView.Region(icon.rectTransform, new Rect(0.12f, 0.54f, 0.76f, 0.44f));
+                icon.sprite = item.Icon;
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+            }
+
+            var amount = CommonPopupView.Text(tile, "Amount", item.Amount, count == 1 ? 80 : 42,
+                CommonPopupSkin.Shared.bodyTextColor);
+            amount.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+            CommonPopupView.Region(amount.rectTransform, new Rect(0.04f, 0.28f, 0.92f,
+                item.Icon != null ? 0.23f : 0.70f));
+            var label = CommonPopupView.Text(tile, "Name", item.Name, count == 1 ? 40 : 26,
+                CommonPopupSkin.Shared.bodyTextColor);
+            // Three-row bundles still need room for two-line reward names.
+            CommonPopupView.Region(label.rectTransform, new Rect(0.04f, 0, 0.92f, 0.28f));
+        }
     }
 
     private void MakeOfferButton(Transform parent, OfferButton option, float y)

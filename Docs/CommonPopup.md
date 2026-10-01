@@ -29,6 +29,14 @@ Ortak görünümü kullanan akışlar:
 - Ayarlar → Instagram bağlantısını açma onayı (Instagram hesap bağlama sağlayıcısı değildir).
 - Profil → müzik seçimi.
 - Can satın alma ve bölüm sonundaki reklam izle/satın al seçimleri.
+- Market, oyun içi market ve bölüm sonu tekliflerinden başarılı satın alma sonrası ödül özeti.
+
+Satın alma özeti `ShopPurchaseFeedback` tarafından `ShopPurchaseService.OnPurchased`
+olayına bağlanır; yalnız ödüller verildikten sonra açılır. `RuntimeChoicePopup.ShowRewards`
+ortak çerçevede ikon, verilen miktar/süre ve ödül adını gösterir. Dokuzdan fazla ödül
+kaydırılabilir; HARİKA veya X yalnız pencereyi kapatır, tekrar ödül vermez.
+Metinler Türkçe/İngilizce `shop_purchase_*` ve `shop_reward_*` anahtarlarından gelir.
+Gerçek para teklifleri mevcut IAP geliştirme simülasyonu kuralını kullanmaya devam eder.
 
 `RuntimeChoicePopup.Show(title, message, choices)` mevcut kullanımını korur.
 İlk/ana aksiyon `BtnContinue`, metni `Choice.Label` üzerinden gelir. Formların alt
@@ -46,6 +54,8 @@ Play Mode kontrolü:
 - Müzik listesini kaydırma, seçme, kilitli parça ve yetersiz altın geri bildirimi.
 - Reklam, satın al, kapat ve can satın alma callback'leri; popup açıkken arkaya tıklamanın engellenmesi.
 - Dar telefon/tablet oranlarında başlık, krem içerik alanı ve alt butonların yerleşimi.
+- Marketten tek altın paketi ve çok ödüllü paket: doğru ikon/miktar/süre, Türkçe/İngilizce
+  metinler, HARİKA/X ile kapanma; aynı kontrolü oyun içi market ve fail tekliflerinde yap.
 
 Bu değişiklikte build çalıştırılmadı. Asset GUID'leri, sprite import modları,
 1/2/3 aksiyonun yerleşim sınırları ve değiştirilen dosyaların diff kontrolü doğrulandı.

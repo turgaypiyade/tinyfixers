@@ -66,7 +66,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 3e6f5f85094c34b92a1a16c49a783c8f, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 98cc830716f274b7796cfce1eeeca02a, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -117,6 +117,9 @@ MonoBehaviour:
   afterColor: {r: 0.65, g: 0.9, b: 1, a: 0.8509804}
   carrySizeFactor: 0.72
   carryOrbitRadiusFactor: 0.32
+  takeoffPropellerSprite: {fileID: 0}
+  takeoffPropellerFrames: []
+  takeoffPropellerFps: 18
   spinnerFrames:
   - {fileID: 21300000, guid: b2f6ebd737ef44264be0e91981cf1db2, type: 3}
   - {fileID: 21300000, guid: 1eb3ad322087f4e4298aa3ee754f23fc, type: 3}
@@ -129,7 +132,7 @@ MonoBehaviour:
   spinnerTiltY: 0
   separationDuration: 0.16
   propellerRiseFactor: 0.35
-  bodyRetreatSprite: {fileID: 21300000, guid: 3e6f5f85094c34b92a1a16c49a783c8f, type: 3}
+  bodyRetreatSprite: {fileID: 21300000, guid: 98cc830716f274b7796cfce1eeeca02a, type: 3}
   bodySafeZone: {fileID: 0}
   bodyRetreatDuration: 0.5
   bodyRetreatRiseFactor: 1.2
@@ -142,7 +145,7 @@ MonoBehaviour:
   impactSparkCount: 36
   impactSparkSprite: {fileID: 0}
   impactSparkDistanceFactor: 2.1
+  impactSparkSpreadScale: 0.62
+  impactSparkSizeMultiplier: 1.38
   impactSparkLife: 0.48
   impactFlashEnabled: 1
-
-

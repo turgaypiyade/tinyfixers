@@ -69,7 +69,7 @@ public class SpecialFanoutService
 
             // Override+PatchBot: PatchBotSpecial.Execute akışını kullan →
             // PatchbotDashUI yeni animasyonları (blade spinner, body separation, afterimage).
-            System.Action<List<Vector2Int>> patchBotLauncher = null;
+            Func<List<Vector2Int>, IEnumerator> patchBotLauncher = null;
             if (ctx.OverrideDeferredPatchBotDashes.Count > 0 && BuildPatchBotRuntime != null)
             {
                 patchBotLauncher = cells => LaunchPatchBotsViaPatchBotSpecial(cells);
@@ -107,14 +107,14 @@ public class SpecialFanoutService
     /// Shared PatchBotTargetCoordinator ile grup hedef koordinasyonu sağlanır.
     /// PatchbotDashUI arka planda uçuş animasyonlarını çalıştırır.
     /// </summary>
-    private void LaunchPatchBotsViaPatchBotSpecial(List<Vector2Int> cells)
+    private IEnumerator LaunchPatchBotsViaPatchBotSpecial(List<Vector2Int> cells)
     {
         if (cells == null || cells.Count == 0 || BuildPatchBotRuntime == null)
-            return;
+            yield break;
 
         // Ortak grup fırlatıcı: shared coordinator + solo PatchBotSpecial akışı
-        // (PatchbotDashUI yeni animasyonları + canlı retargeting). Senkron enqueue + tek
-        // PlayDashParallel → tüm botlar neredeyse aynı anda kalkar (pompaya bölünmez).
-        PatchBotSpecial.LaunchGroupParallel(board, cells, BuildPatchBotRuntime);
+        // (PatchbotDashUI yeni animasyonları + canlı retargeting). Hazırlık bitene kadar
+        // yerleşim aksiyonu hücreleri tutar; uçuş/varışlar yine arka planda devam eder.
+        yield return PatchBotSpecial.LaunchGroupParallel(board, cells, BuildPatchBotRuntime);
     }
 }

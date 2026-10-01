@@ -45,33 +45,16 @@ public sealed class PatchBotSpecial
     // akışıyla (PatchbotDashUI = blade spinner + afterimage + canlı retargeting) fırlatır.
     // TEK paylaşılan coordinator → grup hedef koordinasyonu + uçuşta yeniden hedefleme.
     //
-    // TÜM dash'ler önce SENKRON enqueue edilir, sonra board.StartPendingPatchbotDashesParallel()
-    // ile TEK PlayDashParallel çağrısında (içsel 0.02s stagger) başlatılır → hepsi neredeyse aynı
-    // anda kalkar. MatchClearAction pompasına bölünmez (pompa başına PlayDashParallel öncekini
-    // StopCoroutine ile iptal edip botları düşürüyordu). Override+PatchBot fanout bunu kullanır.
-    public static void LaunchGroupParallel(
+    // Hazırlık karelere yayılır; çağıran bu coroutine'i bekleyip yerleşim hold'unu korur.
+    // Uçuşlar başlatıldıktan sonra geri döner, varışları beklemez.
+    public static IEnumerator LaunchGroupParallel(
         BoardController board,
         List<Vector2Int> cells,
         Func<TileView, PatchBotTargetCoordinator, PatchBotExecutionRuntime> buildRuntime)
     {
         if (board == null || cells == null || cells.Count == 0 || buildRuntime == null)
-            return;
+            yield break;
 
-        // PERF (2026-08-16): Eskiden N botun Execute'u (her biri PickIntent=board taraması + HashSet/
-        // action alloc'ları) TEK frame'de koşuyordu → Override+PatchBot toplu fanout'ta cihazda büyük
-        // tek-frame spike (kullanıcı: "toplu kalkıp vururken takılıyor"). Artık Execute'ları frame'lere
-        // yayıyoruz (1 bot/frame; GÖRÜNMEZ tarama/buffer işi). Dash'ler yine SONDA tek StartPending...
-        // ile kalktığı için görsel "toplu launch" AYNEN korunur — yalnız hazırlık işi serpilir, spike gider.
-        // launchPatchBots görsel playback anında (SystemOverrideFanoutPlacementAction) çağrıldığından ve
-        // dash'ler zaten async uçtuğundan async spread güvenli (resolution-build çoktan bitmiş).
-        board.StartCoroutine(CoLaunchGroupSpread(board, cells, buildRuntime));
-    }
-
-    private static IEnumerator CoLaunchGroupSpread(
-        BoardController board,
-        List<Vector2Int> cells,
-        Func<TileView, PatchBotTargetCoordinator, PatchBotExecutionRuntime> buildRuntime)
-    {
         var patchbotService = new PatchbotComboService(board);
         var coordinator = new PatchBotTargetCoordinator(board, patchbotService);
         var special = new PatchBotSpecial();
@@ -220,11 +203,27 @@ public sealed class PatchBotSpecial
                 : null;
 
         Action dashStart = null;
+        CellHold originHold = null;
         if (rt.ClearOriginOnDashStart)
         {
+            // Parallel playback staggers takeoffs. Protect each source even after
+            // the placement/group preparation returns, until this bot actually starts.
+            originHold = rt.Board.HoldCells(new[] { originCell }, releaseWhenCleared: true);
+            int originLifetime = originTile.LifetimeVersion;
+            bool originConsumed = false;
             dashStart = () =>
             {
-                ClearPatchBotOriginVisualAndData(rt.Board, originTile, originCell, originSourceType);
+                if (originConsumed) return;
+                originConsumed = true;
+                try
+                {
+                    if (originTile != null && originTile.IsCurrentLifetime(originLifetime))
+                        ClearPatchBotOriginVisualAndData(rt.Board, originTile, originCell, originSourceType);
+                }
+                finally
+                {
+                    originHold.Dispose();
+                }
             };
         }
 
@@ -240,6 +239,8 @@ public sealed class PatchBotSpecial
             {
                 try
                 {
+                    // Headless/no-VFX playback may invoke arrival without onStart.
+                    dashStart?.Invoke();
                     var arrivalCtx = new ResolutionContext();
                     var arrivalRt = new PatchBotExecutionRuntime
                     {
@@ -308,6 +309,7 @@ public sealed class PatchBotSpecial
                 }
                 finally
                 {
+                    originHold?.Dispose();
                     coordinator.ReleaseIntent(liveIntent ?? picked.intent);
                 }
             });

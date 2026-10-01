@@ -1999,6 +1999,61 @@ public class GridSpawner : MonoBehaviour
         return obstacleViewsByOrigin.TryGetValue(originIndex, out var image) ? image : null;
     }
 
+    // Hint effects use the live visuals, including multi-cell and tile-backed obstacles.
+    // A set avoids highlighting a shared origin or layered graphic more than once.
+    public void CollectObstacleHintGraphics(ObstacleId id, HashSet<Graphic> result)
+    {
+        if (board == null || board.ObstacleStateService == null) return;
+        var state = board.ObstacleStateService;
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                if (state.GetObstacleIdAt(x, y) != id) continue;
+                if (state.IsMovableObstacleAt(x, y))
+                {
+                    var tile = board.GetTileViewAt(x, y);
+                    if (tile != null && tile.IconImage != null) result.Add(tile.IconImage);
+                }
+                else
+                {
+                    var image = GetObstacleViewImage(state.GetObstacleOriginAt(x, y));
+                    if (image != null) AddRoot(image.transform);
+                }
+            }
+
+        foreach (var beneath in stampedBeneathVisuals)
+            if (beneath.beneathId == id && beneathViewsByCell.TryGetValue(beneath.cell, out var beneathImage)
+                && beneathImage != null) AddRoot(beneathImage.transform);
+
+        switch (id)
+        {
+            case ObstacleId.Safe:
+                foreach (var view in safeViewsByOrigin.Values)
+                    if (view != null) AddRoot(view.transform);
+                break;
+            case ObstacleId.Tube: AddRoot(tubeRoot); break;
+            case ObstacleId.Magnet: AddRoot(magnetRoot); break;
+            case ObstacleId.Mud: AddRoot(mudOverlayRoot); break;
+            case ObstacleId.Grass: AddRoot(grassOverlayRoot); break;
+            case ObstacleId.SpreadingGel: AddRoot(spreadingGelOverlayRoot); break;
+            case ObstacleId.Oil:
+                var parent = board.TilesRoot != null ? board.TilesRoot.parent : null;
+                if (parent != null)
+                {
+                    AddRoot(parent.Find("OilOverlay"));
+                    AddRoot(parent.Find("OilTileSet"));
+                }
+                break;
+        }
+
+        void AddRoot(Transform root)
+        {
+            if (root == null || !root.gameObject.activeInHierarchy) return;
+            foreach (var graphic in root.GetComponentsInChildren<Graphic>())
+                if (!(graphic is TMPro.TMP_Text)) result.Add(graphic);
+        }
+    }
+
     private void HandleObstacleStageChanged(int originIndex, ObstacleStageSnapshot nextStage)
     {
         if (nextStage.behavior == ObstacleBehaviorType.MovableObstacle)

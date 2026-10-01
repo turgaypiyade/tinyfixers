@@ -148,12 +148,12 @@ public sealed class ShopOfferCard : ShopOfferCardBase
     }
 
     // ── Altın üçlüsü (fail carousel'i) ────────────────────────────────────────
-    // Aynı çerçeve (MegaAwards1): krem alanda 3 kutu (MATGrup1, altın görseli + miktar), mor bantta her
+    // Aynı çerçeve (MegaAwards1): krem alanda 3 geniş kutu (MATGrup5, altın görseli + miktar), mor bantta her
     // kutunun altında kendi fiyat butonu (prefab'taki PriceButton'ın kopyası). Hero/isim/kurdele gizli.
     private const float TrioAreaLeft = 0.04f;
     private const float TrioAreaRight = 0.96f;
     private const float TrioGap = 0.03f;
-    private const float TrioIconFill = 0.5f;          // ikon = kutu yüksekliğinin oranı
+    private const float TrioIconFill = 0.5f * 1.15f; // önceki altın ikonundan %15 büyük
     private const float TrioButtonWidthFill = 0.95f;  // buton = sütun genişliğinin en fazla oranı
 
     private readonly List<GameObject> trioButtons = new();
@@ -176,6 +176,7 @@ public sealed class ShopOfferCard : ShopOfferCardBase
         visibleGroups.Clear();
         visibleBg.Clear();
         visibleAspects.Clear();
+        Sprite trioBackground = matGrup5 != null ? matGrup5 : (matGrup3 != null ? matGrup3 : matGrup1);
         for (int i = 0; i < (boxes?.Length ?? 0); i++)
         {
             if (boxes[i] == null) continue;
@@ -185,19 +186,21 @@ public sealed class ShopOfferCard : ShopOfferCardBase
             if (grp == null) continue;
             visibleBoxes.Add(boxes[i]);
             visibleGroups.Add(grp);
-            visibleBg.Add(matGrup1);
+            visibleBg.Add(trioBackground);
         }
 
         var cardRt = (RectTransform)transform;
         float cardW = cardRt.rect.width;
         float cardH = cardRt.rect.height;
 
-        // Kutular MATGrup1'in KENDİ en-boy oranında (esnetilmez → köşeler bozulmaz). Eşit sütunlara
+        // Kutular geniş sprite'ın KENDİ en-boy oranında (esnetilmez → köşeler bozulmaz). Eşit sütunlara
         // ortalanır; sığmazsa oran korunarak küçülür.
         int count = visibleBoxes.Count;
         float columnWidth = count > 0 ? (TrioAreaRight - TrioAreaLeft) * cardW / count : 0f;
         float boxHeight = (boxAreaTop - boxAreaBottom) * cardH;
-        float boxWidth = boxHeight * Aspect(matGrup1);
+        // Geniş arka plan sütuna sığarken kısalsa da %15 artış eski ikon boyutuna göre kalır.
+        float coinIconSize = boxHeight * TrioIconFill;
+        float boxWidth = boxHeight * Aspect(trioBackground);
         float maxWidth = columnWidth - TrioGap * cardW;
         if (boxWidth > maxWidth && boxWidth > 0f)
         {
@@ -213,7 +216,7 @@ public sealed class ShopOfferCard : ShopOfferCardBase
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = Vector2.zero;
             rt.sizeDelta = new Vector2(boxWidth, boxHeight);
-            visibleBoxes[i].Setup(visibleGroups[i], theme, visibleBg[i], timerSprite, boxHeight * TrioIconFill);
+            visibleBoxes[i].Setup(visibleGroups[i], theme, visibleBg[i], timerSprite, coinIconSize);
         }
 
         if (priceButton == null) return;

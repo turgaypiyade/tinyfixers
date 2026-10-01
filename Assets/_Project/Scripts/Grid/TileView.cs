@@ -76,13 +76,18 @@ public class TileView : MonoBehaviour,
     private Coroutine specialCreationRevealRoutine;
     private GameObject specialCreationRevealRoot;
     private Canvas creationSortingCanvas;
+    private Canvas creationPropellerCanvas;
     private int creationSortingUsers;
     private bool revealUsesCreationSorting;
 
     internal void BeginSpecialCreationSorting()
     {
         if (iconImage == null) return;
-        if (creationSortingUsers++ > 0) return;
+        if (creationSortingUsers++ > 0)
+        {
+            UpdateCreationPropellerSorting();
+            return;
+        }
 
         var parentCanvas = iconImage.transform.parent.GetComponentInParent<Canvas>();
         creationSortingCanvas = iconImage.GetComponent<Canvas>();
@@ -115,6 +120,34 @@ public class TileView : MonoBehaviour,
         creationSortingCanvas.sortingOrder = (parentCanvas != null ? parentCanvas.sortingOrder : 0) + 100;
         iconImage.RecalculateMasking();
         iconImage.SetMaterialDirty();
+        UpdateCreationPropellerSorting();
+    }
+
+    private void UpdateCreationPropellerSorting()
+    {
+        if (creationSortingCanvas == null || propellerView == null ||
+            model == null || model.special != TileSpecial.PatchBot) return;
+
+        // Propeller is a sibling of Icon, so it does not inherit the body's
+        // temporary creation sorting. Keep it above the body from the first frame.
+        if (creationPropellerCanvas == null)
+        {
+            creationPropellerCanvas = propellerView.GetComponent<Canvas>();
+            if (creationPropellerCanvas == null)
+                creationPropellerCanvas = propellerView.gameObject.AddComponent<Canvas>();
+        }
+        creationPropellerCanvas.enabled = true;
+        creationPropellerCanvas.overrideSorting = true;
+        creationPropellerCanvas.sortingLayerID = creationSortingCanvas.sortingLayerID;
+        creationPropellerCanvas.sortingOrder = creationSortingCanvas.sortingOrder + 1;
+        RefreshPropellerMasking();
+    }
+
+    private void RefreshPropellerMasking()
+    {
+        if (propellerView == null || !propellerView.TryGetComponent<Image>(out var image)) return;
+        image.RecalculateMasking();
+        image.SetMaterialDirty();
     }
 
     internal void EndSpecialCreationSorting()
@@ -129,6 +162,14 @@ public class TileView : MonoBehaviour,
     // taş veride dolu ama ekranda boş görünüyordu (CellDump: Icon canvas ovr=True order=0).
     private void RestIconCanvas()
     {
+        if (creationPropellerCanvas != null)
+        {
+            // As with Icon, leave the Canvas enabled so its Image remains visible.
+            // Clearing the override also restores normal sorting on pool release.
+            creationPropellerCanvas.overrideSorting = false;
+            creationPropellerCanvas.enabled = true;
+            RefreshPropellerMasking();
+        }
         if (creationSortingCanvas == null && iconImage != null)
             creationSortingCanvas = iconImage.GetComponent<Canvas>();
         if (creationSortingCanvas == null) return;
@@ -565,7 +606,11 @@ public class TileView : MonoBehaviour,
         }
 
         if (propellerView != null)
+        {
             propellerView.gameObject.SetActive(model.special == TileSpecial.PatchBot);
+            // The special can be assigned after a merge has already raised Icon.
+            if (creationSortingUsers > 0) UpdateCreationPropellerSorting();
+        }
 
         if (fuseSparkleView != null)
             fuseSparkleView.gameObject.SetActive(model.special == TileSpecial.PulseCore);

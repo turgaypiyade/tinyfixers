@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class ObstacleHintManager : MonoBehaviour
 {
@@ -11,13 +12,22 @@ public class ObstacleHintManager : MonoBehaviour
     [SerializeField] private ObstacleHintLibrary hintLibrary;
     [SerializeField] private ObstacleLibrary obstacleLibrary;
     [SerializeField] private TutorialOverlayController overlay;
+    [SerializeField, Min(0.1f)] private float highlightDuration = 0.55f;
 
     private BoardController board;
+    private static ObstacleHintManager activeManager;
+    private bool ownsPause;
+    private float previousTimeScale;
+    private System.IDisposable flowPause;
+    private readonly List<Outline> highlights = new();
+
+    public static bool HasPendingHints => activeManager != null;
 
     private void Start()
     {
         if (RuntimeSimulationSession.IsActive) return;
-        if (!enableHints) return;
+        if (!enableHints || hintLibrary == null || overlay == null || activeManager != null) return;
+        activeManager = this;
         StartCoroutine(InitAndCheck());
     }
 
@@ -29,12 +39,25 @@ public class ObstacleHintManager : MonoBehaviour
             yield return null;
         }
 
-        yield return new WaitUntil(() =>
-            board.Tiles != null && board.Width > 0 && !board.IsBusy && !board.InputLocked);
-
-        yield return new WaitForSeconds(0.3f);
-        yield return ShowPendingHints();
+        try
+        {
+            yield return new WaitUntil(CanIntroduceObstacle);
+            yield return new WaitForSeconds(0.3f);
+            // Recheck after the delay: an intro, resolve or another modal may have started.
+            yield return new WaitUntil(CanIntroduceObstacle);
+            yield return ShowPendingHints();
+        }
+        finally
+        {
+            if (overlay != null) overlay.CancelHint();
+            ReleasePause();
+            if (activeManager == this) activeManager = null;
+        }
     }
+
+    private bool CanIntroduceObstacle() => board != null && board.Tiles != null && board.Width > 0
+        && !board.InputLocked && board.ActiveBackgroundJobs == 0 && !board.IsActionSequencePlaying
+        && overlay != null && !overlay.IsVisible && Time.timeScale > 0f;
 
     private IEnumerator ShowPendingHints()
     {
@@ -51,16 +74,87 @@ public class ObstacleHintManager : MonoBehaviour
                 ? entry.iconOverride
                 : obstacleLibrary?.Get(id)?.GetPreviewSprite();
 
-            string text = !string.IsNullOrEmpty(entry.locKey)
-                ? GameLocalization.Get(entry.locKey)
-                : entry.fallbackText;
+            if (!ownsPause)
+            {
+                previousTimeScale = Time.timeScale;
+                ownsPause = true;
+                board.SetInputLocked(true);
+                flowPause = board.PauseFlowPump();
+                Time.timeScale = 0f;
+            }
 
             bool dismissed = false;
-            overlay.ShowHint(icon, text, () => dismissed = true);
-            yield return new WaitUntil(() => dismissed);
+            overlay.ShowHint(icon, entry.GetTitle(), entry.GetDescription(), () => dismissed = true);
+            yield return new WaitUntil(() => dismissed || overlay == null || !overlay.IsVisible);
+            if (!dismissed) yield break;
 
             MarkHintSeen(id);
+            yield return HighlightObstacles(id);
         }
+    }
+
+    private IEnumerator HighlightObstacles(ObstacleId id)
+    {
+        GridSpawner spawner = null;
+        foreach (var candidate in FindObjectsByType<GridSpawner>(FindObjectsSortMode.None))
+            if (candidate.board == board) { spawner = candidate; break; }
+        if (spawner == null) yield break;
+
+        var graphics = new HashSet<Graphic>();
+        spawner.CollectObstacleHintGraphics(id, graphics);
+        foreach (var graphic in graphics)
+        {
+            if (graphic == null || !graphic.isActiveAndEnabled || graphic.color.a <= 0f) continue;
+            var outline = graphic.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(1f, 0.94f, 0.7f, 0f);
+            outline.effectDistance = new Vector2(4f, -4f);
+            outline.useGraphicAlpha = true;
+            highlights.Add(outline);
+        }
+
+        if (highlights.Count == 0) yield break;
+        float duration = Mathf.Max(0.1f, highlightDuration);
+        for (float elapsed = 0f; elapsed < duration; elapsed += Time.unscaledDeltaTime)
+        {
+            float alpha = Mathf.Sin(Mathf.PI * elapsed / duration) * 0.9f;
+            foreach (var outline in highlights)
+                if (outline != null) outline.effectColor = new Color(1f, 0.94f, 0.7f, alpha);
+            yield return null;
+        }
+        ClearHighlights();
+    }
+
+    private void ClearHighlights()
+    {
+        foreach (var outline in highlights)
+        {
+            if (outline == null) continue;
+            outline.enabled = false;
+            Destroy(outline);
+        }
+        highlights.Clear();
+    }
+
+    private void ReleasePause()
+    {
+        ClearHighlights();
+        if (!ownsPause) return;
+        ownsPause = false;
+        Time.timeScale = previousTimeScale;
+        flowPause?.Dispose();
+        flowPause = null;
+        if (board != null) board.SetInputLocked(false);
+    }
+
+    private void OnDisable()
+    {
+        if (activeManager == this)
+        {
+            if (overlay != null) overlay.CancelHint();
+            ReleasePause();
+            activeManager = null;
+        }
+        StopAllCoroutines();
     }
 
     private List<ObstacleId> CollectObstacleIds()
@@ -119,6 +213,9 @@ public class ObstacleHintManager : MonoBehaviour
         PlayerPrefs.SetInt(PrefKeyPrefix + (int)id, 1);
         PlayerPrefs.Save();
     }
+
+    [ContextMenu("Reset Obstacle Hints (Show Again Next Level)")]
+    private void ResetHintsForPreview() => ResetAll();
 
     public static void ResetAll()
     {

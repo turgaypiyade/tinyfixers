@@ -66,7 +66,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 895fe6275a0364dfdb05072df5415d47, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 83660a31b399d4dd1950db87a17fafcb, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -102,8 +102,10 @@ MonoBehaviour:
   idleSpinTurns: 4
   idleSpinDuration: 0.75
   spinFrames:
-  - {fileID: 21300000, guid: 8f96fc85558ef4d5a85280bded3e12e0, type: 3}
-  - {fileID: 21300000, guid: 006e79a0a68d14959a078a57d501ad79, type: 3}
+  - {fileID: 21300000, guid: 83660a31b399d4dd1950db87a17fafcb, type: 3}
+  - {fileID: 21300000, guid: b6c6dbc354da34d92996e624f9205bca, type: 3}
+  - {fileID: 21300000, guid: 4556b8484d7fe4743914e1ba412647af, type: 3}
+  - {fileID: 21300000, guid: 13147410e23bf4913ae5238d83cf0bd2, type: 3}
   spinFrameFps: 20
   frameSpinContinuous: 0
 --- !u!1 &4017335894988476762
@@ -266,7 +268,6 @@ MonoBehaviour:
   spinHaloEnabled: 1
   haloScaleFactor: 1.25
   haloColor: {r: 0.9056604, g: 0.7797415, b: 0.49982202, a: 0.75686276}
-  spinSortingOrder: 100
 --- !u!1 &8082158129049703175
 GameObject:
   m_ObjectHideFlags: 0

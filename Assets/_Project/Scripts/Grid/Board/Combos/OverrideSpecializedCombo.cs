@@ -62,15 +62,57 @@ public sealed class OverrideSpecializedCombo
         if (!rt.FinalizeAtEnd)
             return result;
 
+        // Activation lists below store cells, not moving tile references. Keep the
+        // selected specials at those cells across placement AND source-pair clear.
+        var activationCells = new HashSet<Vector2Int>();
+        foreach (var pending in rt.Context.PendingOverrideImplants)
+            activationCells.Add(pending.targetCell);
+        if (deferredSpecials != null)
+            activationCells.UnionWith(deferredSpecials);
+
         bool useLineBatch =
             rt.UseBatchClearSpike &&
             (targetSpecial == TileSpecial.LineH || targetSpecial == TileSpecial.LineV);
 
         if (useLineBatch)
-            return ExecuteOverrideLineInBatches(rt, result, deferredSpecials, overrideTile, otherTile);
+            ExecuteOverrideLineInBatches(rt, result, deferredSpecials, overrideTile, otherTile);
+        else
+            ExecuteNonLineOverride(rt, result, deferredSpecials, targetSpecial, overrideTile, otherTile);
 
-        ExecuteNonLineOverride(rt, result, deferredSpecials, targetSpecial, overrideTile, otherTile);
+        if (activationCells.Count > 0 && result.Actions.Count > 0)
+        {
+            var sequence = new HeldActivationSequenceAction(rt.Board, activationCells, result.Actions);
+            result.Actions.Clear();
+            result.Actions.Add(sequence);
+        }
         return result;
+    }
+
+    private sealed class HeldActivationSequenceAction : BoardAction
+    {
+        private readonly BoardController board;
+        private readonly HashSet<Vector2Int> cells;
+        private readonly List<BoardAction> actions;
+
+        public override bool Blocking => true;
+
+        public HeldActivationSequenceAction(BoardController board, HashSet<Vector2Int> cells,
+            List<BoardAction> actions)
+        {
+            this.board = board;
+            this.cells = cells;
+            this.actions = new List<BoardAction>(actions);
+        }
+
+        public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
+        {
+            // Release each cell as its special is consumed so refill can overlap
+            // the effects. Dispose also releases unconsumed cells on interruption.
+            using var hold = board.HoldCells(cells, releaseWhenCleared: true);
+            foreach (var action in actions)
+                if (action != null)
+                    yield return action.ExecuteVisuals(sequencer);
+        }
     }
 
     private OverrideSpecializedComboExecutionResult ExecuteOverrideLineInBatches(

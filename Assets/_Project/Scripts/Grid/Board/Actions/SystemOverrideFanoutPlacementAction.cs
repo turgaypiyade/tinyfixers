@@ -73,7 +73,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
     private readonly List<Vector2Int> targets;
     private readonly List<Vector2Int> deferredPulseExplosionCells;
     private readonly List<Vector2Int> deferredPatchBotCells;
-    private readonly System.Action<List<Vector2Int>> launchPatchBots;
+    private readonly System.Func<List<Vector2Int>, IEnumerator> launchPatchBots;
 
     public SystemOverrideFanoutPlacementAction(
         BoardController board,
@@ -82,7 +82,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         bool doPulse,
         List<Vector2Int> deferredPulseExplosionCells = null,
         List<Vector2Int> deferredPatchBotCells = null,
-        System.Action<List<Vector2Int>> launchPatchBots = null)
+        System.Func<List<Vector2Int>, IEnumerator> launchPatchBots = null)
     {
         this.board = board;
         this.origin = origin;
@@ -188,7 +188,9 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             {
                 // PatchBotSpecial.Execute akışını kullan — yeni animasyonlar (blade spinner,
                 // body separation, afterimage) PatchbotDashUI üzerinden otomatik çalışır.
-                launchPatchBots(deferredPatchBotCells);
+                // Preparation spans frames. Do not release ceremonyHold or advance
+                // to source clear/gravity while some bots are still read by old cells.
+                yield return launchPatchBots(deferredPatchBotCells);
                 // Uçuşlar arka planda (PatchbotDashUI background dash) çalışır;
                 // board resolve sonrası cascade'i PatchBotSpecial arrival callback'i tetikler.
             }

@@ -1907,6 +1907,7 @@ public class BoardController : MonoBehaviour
             // Board tamamen boşaldı → uçuşta hamle yok. İstisnayla yarıda kalan bir hamle
             // coroutine'i sayacı sızdırırsa kapsam sıfırlaması kalıcı olarak kapanmasın.
             playerMovesInFlight = 0;
+            gelCarriedBySwap.Clear();   // yarıda kalan swap coroutine'i taşıma kaydı sızdırmasın
 
             // Per-move end pass for cage/lock owners. Runs once the board fully settles after a real
             // player move. Order matters: resolve EXISTING locks first (decrement windows → fire
@@ -3453,7 +3454,8 @@ public class BoardController : MonoBehaviour
         foreach (var tile in participants)
         {
             if (tile == null || !tile) continue;
-            if (tile.GelContaminated || spreadingGelService.IsSpreadSourceAt(tile.X, tile.Y))
+            if (tile.GelContaminated || gelCarriedBySwap.Contains(tile)
+                || spreadingGelService.IsSpreadSourceAt(tile.X, tile.Y))
             {
                 touchesGel = true;
                 break;
@@ -3468,13 +3470,24 @@ public class BoardController : MonoBehaviour
                 tile.GelContaminated = true;
     }
 
-    /// Swap ÖNCESİ çağrılır: taş jel (yayılma kaynağı) hücresindeyse bulaşık işaretlenir. Hamle kapsamını
-    /// AÇMAZ — yalnız taşın kendisi; eşleşirse grubu NoteGelSpreadParticipants bulaştırır.
+    /// Swap ÖNCESİ çağrılır: jel (yayılma kaynağı) hücresinden ayrılan taş, YALNIZ bu swap'ın kendi
+    /// eşleşme kararı için "jele değiyor" sayılır. Kalıcı GelContaminated KOYMAZ: swap geçersizse ya da
+    /// taş eşleşmeye girmezse bayrak taşta kalıp sonraki hamlelerde düşerek girdiği her match'i
+    /// bulaştırıyordu (special yokken uzak bir cascade'de jel çıkması). Eşleşirse grubu
+    /// NoteGelSpreadParticipants bulaştırır; karar anında ForgetGelCarriedBySwap ile silinir.
+    private readonly HashSet<TileView> gelCarriedBySwap = new HashSet<TileView>();
+
     private void NoteGelCarriedBySwap(TileView tile)
     {
         if (spreadingGelService == null || tile == null || !tile) return;
         if (spreadingGelService.IsSpreadSourceAt(tile.X, tile.Y))
-            tile.GelContaminated = true;
+            gelCarriedBySwap.Add(tile);
+    }
+
+    private void ForgetGelCarriedBySwap(TileView a, TileView b)
+    {
+        gelCarriedBySwap.Remove(a);
+        gelCarriedBySwap.Remove(b);
     }
 
     /// Eşleşmeden doğan special'ın hücresi de o eşleşmenin VURDUĞU hücredir: grup bulaşıksa jel olur.
@@ -3514,10 +3527,15 @@ public class BoardController : MonoBehaviour
     {
         if (spreadingGelService == null || tile == null || !tile) return;
 
-        if (!tile.GelContaminated && spreadingGelService.IsSpreadSourceAt(tile.X, tile.Y))
+        bool onGel = spreadingGelService.IsSpreadSourceAt(tile.X, tile.Y);
+
+        // Kalıcı bayrak YALNIZ special'a: o taş patlayacak (bulaşı zincire taşır). Normal partner
+        // (combo/special swap ortağı) bu hamlede kırılmayıp hayatta kalabilir; bayrak onda kalırsa
+        // sonraki hamlelerde girdiği her match jel yayardı. Bu hamle için kapsam zaten yeterli.
+        if (onGel && !tile.GelContaminated && tile.GetSpecial() != TileSpecial.None)
             tile.GelContaminated = true;
 
-        if (tile.GelContaminated)
+        if (onGel || tile.GelContaminated)
             gelSpreadActiveThisMove = true;
     }
 
@@ -3526,7 +3544,7 @@ public class BoardController : MonoBehaviour
     {
         playerMovesInFlight++;
         try { yield return ProcessSwapCore(a, b, dynamicInput); }
-        finally { ClosePlayerMoveScope(); }
+        finally { ForgetGelCarriedBySwap(a, b); ClosePlayerMoveScope(); }
     }
 
     IEnumerator ProcessSwapCore(TileView a, TileView b, bool dynamicInput)
@@ -3747,6 +3765,8 @@ public class BoardController : MonoBehaviour
                     pulseCoreImpactService.PlayPulseCoreExplosionVfxAtCell(chargeX, chargeY, radiusCells: 3); // 7x7 alan (combo ile hizalı)
             }
 
+            ForgetGelCarriedBySwap(a, b);
+
             bool specialStartsNow = !actionSequencer.IsPlaying;
             actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb, capturedOverridePartnerType, swapProtectedCells));
             if (specialStartsNow)
@@ -3774,6 +3794,7 @@ public class BoardController : MonoBehaviour
         // match elsewhere (or a predicted gravity match) must not spend this move.
         if (matches.Count == 0 || (dynamicInput && !AreDynamicMatchTilesStable(matches, swapHold)))
         {
+            ForgetGelCarriedBySwap(a, b);   // geçersiz swap: taş jele geri döner, bulaş taşımaz
             // Obstacle state de geri alınsın. Stacked movable senaryosunda (örn. plastik
             // altında altın) ters MoveObstacle yetmez: alttaki movable geri açıldığı için
             // plastik eski hücresine dönemeyebilir. Snapshot, deneme öncesi katmanları
@@ -3804,6 +3825,11 @@ public class BoardController : MonoBehaviour
         }
 
         ConsumeMove();
+
+        // Swap'ın taşıdığı jel bu eşleşmenin kararıdır: grubu ŞİMDİ bulaştır, taşımayı unut (eşleşmeye
+        // girmeyen swap taşı bulaşsız kalır). ExecuteClearPass'teki tekrar çağrı idempotent.
+        NoteGelSpreadParticipants(matches);
+        ForgetGelCarriedBySwap(a, b);
 
         yield return ExecuteClearPass(matches, allowSpecialActivation: true, swapCell: new Vector2Int(a.X, a.Y),
             releaseOnStart: swapHold, moveCreation: moveCreation);

@@ -15,145 +15,217 @@ MonoBehaviour:
   entries:
   - id: 1
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_stone_name
+    fallbackTitle: Stone
     locKey: hint_obstacle_stone
     fallbackText:
   - id: 2
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_shield1_name
+    fallbackTitle: Shield
     locKey: hint_obstacle_shield1
     fallbackText:
   - id: 3
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_shield2_name
+    fallbackTitle: Double Shield
     locKey: hint_obstacle_shield2
     fallbackText:
   - id: 4
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_chest1_name
+    fallbackTitle: Chest
     locKey: hint_obstacle_chest1
     fallbackText:
   - id: 5
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_chest2_name
+    fallbackTitle: Reinforced Chest
     locKey: hint_obstacle_chest2
     fallbackText:
   - id: 6
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_chest3_name
+    fallbackTitle: Armored Chest
     locKey: hint_obstacle_chest3
     fallbackText:
   - id: 7
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_plastic_name
+    fallbackTitle: Plastic
     locKey: hint_obstacle_plastic
     fallbackText:
   - id: 8
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_plastic_orange_name
+    fallbackTitle: Orange Plastic
     locKey: hint_obstacle_plastic_orange
     fallbackText:
   - id: 9
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_plastic_yellow_name
+    fallbackTitle: Yellow Plastic
     locKey: hint_obstacle_plastic_yellow
     fallbackText:
   - id: 10
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_pipev_1x2_name
+    fallbackTitle: Vertical Pipe
     locKey: hint_obstacle_pipev_1x2
     fallbackText:
   - id: 11
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_plastic_blue_name
+    fallbackTitle: Blue Plastic
     locKey: hint_obstacle_plastic_blue
     fallbackText:
   - id: 12
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_plastic_red_name
+    fallbackTitle: Red Plastic
     locKey: hint_obstacle_plastic_red
     fallbackText:
   - id: 13
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_plastic_green_name
+    fallbackTitle: Green Plastic
     locKey: hint_obstacle_plastic_green
     fallbackText:
   - id: 14
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_oil_name
+    fallbackTitle: Oil
     locKey: hint_obstacle_oil
     fallbackText:
   - id: 20
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_big_4x4_name
+    fallbackTitle: Big Block
     locKey: hint_obstacle_big_4x4
     fallbackText:
   - id: 21
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_colorchest_name
+    fallbackTitle: Color Chest
     locKey: hint_obstacle_colorchest
     fallbackText:
   - id: 22
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_energycontainer_name
+    fallbackTitle: Energy Container
     locKey: hint_obstacle_energycontainer
     fallbackText:
   - id: 23
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_batterybox_name
+    fallbackTitle: Battery Box
     locKey: hint_obstacle_batterybox
     fallbackText:
   - id: 24
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_omegamodul_name
+    fallbackTitle: Omega Module
     locKey: hint_obstacle_omegamodul
     fallbackText:
   - id: 25
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_mud_name
+    fallbackTitle: Mud
     locKey: hint_obstacle_mud
     fallbackText:
   - id: 26
     iconOverride: {fileID: 21300000, guid: c4b70ff79b3b2489d88ab164e452b730, type: 3}
+    titleLocKey: hint_obstacle_tube_name
+    fallbackTitle: Tube
     locKey: hint_obstacle_tube
     fallbackText:
   - id: 27
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_wardrobe_name
+    fallbackTitle: Wardrobe
     locKey: hint_obstacle_wardrobe
     fallbackText:
   - id: 28
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_sculptingstone_name
+    fallbackTitle: Sculpting Stone
     locKey: hint_obstacle_sculptingstone
     fallbackText:
   - id: 29
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_magnet_name
+    fallbackTitle: Magnet
     locKey: hint_obstacle_magnet
     fallbackText:
   - id: 30
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_helmetporcelain_name
+    fallbackTitle: Porcelain Helmet
     locKey: hint_obstacle_helmetporcelain
     fallbackText:
   - id: 31
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_hatlauncher_name
+    fallbackTitle: Energy Hat
     locKey: hint_obstacle_hatlauncher
     fallbackText:
   - id: 32
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_goldmoney_name
+    fallbackTitle: Gold Coin
     locKey: hint_obstacle_goldmoney
     fallbackText:
   - id: 33
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_safe_name
+    fallbackTitle: Safe
     locKey: hint_obstacle_safe
     fallbackText:
   - id: 34
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_cargo_name
+    fallbackTitle: Cargo
     locKey: hint_obstacle_cargo
     fallbackText:
   - id: 35
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_player_shield_pickup_name
+    fallbackTitle: Player Shield
     locKey: hint_obstacle_player_shield_pickup
     fallbackText:
   - id: 36
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_enemy_shield_pickup_name
+    fallbackTitle: Opponent Shield
     locKey: hint_obstacle_enemy_shield_pickup
     fallbackText:
   - id: 37
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_barrel_name
+    fallbackTitle: Barrel
     locKey: hint_obstacle_barrel
     fallbackText:
   - id: 38
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_rocketbasket_name
+    fallbackTitle: Rocket Basket
     locKey: hint_obstacle_rocketbasket
     fallbackText:
   - id: 39
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_sculptingspecial_name
+    fallbackTitle: Special Sculpture
     locKey: hint_obstacle_sculptingspecial
     fallbackText:
   - id: 40
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_plastic_two_stage_name
+    fallbackTitle: Layered Plastic
     locKey: hint_obstacle_plastic_two_stage
     fallbackText:
   - id: 41
     iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_barrell_v2_name
+    fallbackTitle: Reinforced Barrel
     locKey: hint_obstacle_barrell_v2
     fallbackText:

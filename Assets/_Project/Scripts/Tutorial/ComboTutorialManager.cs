@@ -24,7 +24,8 @@ public class ComboTutorialManager : MonoBehaviour
         }
 
         yield return new WaitUntil(() =>
-            board.Tiles != null && board.Width > 0 && !board.IsBusy && !board.InputLocked);
+            board.Tiles != null && board.Width > 0 && !board.IsBusy && !board.InputLocked
+            && !ObstacleHintManager.HasPendingHints);
 
         yield return new WaitForSeconds(0.3f);
 

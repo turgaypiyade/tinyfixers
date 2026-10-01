@@ -19,6 +19,9 @@ public class TutorialOverlayController : MonoBehaviour
     [SerializeField] private float descriptionYOffset = 10f;
 
     [Header("Obstacle Hint")]
+    [SerializeField, Range(0f, 1f)] private float hintDimAlpha = 0.93f;
+    [SerializeField] private TMP_FontAsset hintFont;
+    [SerializeField] private Material hintTitleMaterial;
     [SerializeField] private Image obstacleIconImage;
     [SerializeField] private Button hintDismissButton;
 
@@ -37,6 +40,18 @@ public class TutorialOverlayController : MonoBehaviour
     private Coroutine swapRoutine;
     private Coroutine fadeRoutine;
     private Action pendingHintDismiss;
+    private CanvasGroup hintGroup;
+    private Image hintBackdrop;
+    private Image hintIcon;
+    private TMP_Text hintTitle;
+    private TMP_Text hintEyebrow;
+    private TMP_Text hintDescription;
+    private TMP_Text hintContinue;
+    private float hintOpenedAt;
+    private bool hintClosing;
+    private bool keepHintBlocker;
+
+    public bool IsVisible => gameObject.activeInHierarchy;
 
     private void Awake()
     {
@@ -74,6 +89,9 @@ public class TutorialOverlayController : MonoBehaviour
         tutorialFrom = from;
         tutorialTo   = to;
 
+        if (hintGroup != null) hintGroup.gameObject.SetActive(false);
+        if (dimImage != null) dimImage.gameObject.SetActive(true);
+
         if (dimImage != null) dimImage.raycastTarget = false;
 
         gameObject.SetActive(true);
@@ -99,33 +117,47 @@ public class TutorialOverlayController : MonoBehaviour
             swapRoutine = StartCoroutine(LoopSwapWithHand(from, to));
     }
 
+    // Generic notices (e.g. the boss goals reminder) have no obstacle heading or
+    // subsequent board highlight and can close fully as soon as they are dismissed.
     public void ShowHint(Sprite icon, string description, Action onDismiss)
     {
-        if (board == null) board = FindFirstObjectByType<BoardController>();
+        ShowHint(icon, null, description, onDismiss);
+        keepHintBlocker = false;
+    }
 
+    public void ShowHint(Sprite icon, string title, string description, Action onDismiss)
+    {
+        StopSwap();
+        StopFade();
+        EnsureHintLayout();
         pendingHintDismiss = onDismiss;
-
-        if (dimImage != null) dimImage.raycastTarget = true;
+        keepHintBlocker = true;
+        hintClosing = false;
+        hintOpenedAt = Time.unscaledTime;
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
+        if (dimImage != null) dimImage.gameObject.SetActive(false);
+        if (descriptionRoot != null) descriptionRoot.SetActive(false);
+        if (illustrationImage != null) illustrationImage.gameObject.SetActive(false);
+        if (obstacleIconImage != null) obstacleIconImage.gameObject.SetActive(false);
+        if (hintDismissButton != null) hintDismissButton.gameObject.SetActive(false);
 
-        bool hasText = !string.IsNullOrEmpty(description);
-        if (descriptionRoot != null)  descriptionRoot.SetActive(hasText || icon != null);
-        if (descriptionText != null)  descriptionText.text = description;
-        if (obstacleIconImage != null)
-        {
-            obstacleIconImage.sprite = icon;
-            obstacleIconImage.gameObject.SetActive(icon != null);
-        }
-
-        if (hintDismissButton != null)
-            hintDismissButton.gameObject.SetActive(true);
-
-        if (hasText || icon != null)
-            RepositionDescriptionAboveGrid();
-
-        StopFade();
-        fadeRoutine = StartCoroutine(FadeDim(dimAlpha));
+        hintIcon.sprite = icon;
+        hintIcon.gameObject.SetActive(icon != null);
+        hintTitle.text = title;
+        bool hasTitle = !string.IsNullOrEmpty(title);
+        hintTitle.gameObject.SetActive(hasTitle);
+        hintEyebrow.gameObject.SetActive(hasTitle);
+        hintEyebrow.text = GameLocalization.Get("hint_obstacle_introduction");
+        hintDescription.text = description;
+        bool textOnly = !hasTitle && icon == null;
+        hintDescription.rectTransform.anchorMin = new Vector2(0.16f, textOnly ? 0.32f : 0.20f);
+        hintDescription.rectTransform.anchorMax = new Vector2(0.84f, textOnly ? 0.68f : 0.40f);
+        hintContinue.text = GameLocalization.Get("bridge_tap_continue");
+        hintBackdrop.color = new Color(0f, 0f, 0f, hintDimAlpha);
+        hintGroup.alpha = 0f;
+        hintGroup.gameObject.SetActive(true);
+        fadeRoutine = StartCoroutine(FadeHint(1f));
     }
 
     public void Hide()
@@ -138,15 +170,129 @@ public class TutorialOverlayController : MonoBehaviour
 
     private void OnHintDismissClicked()
     {
-        if (dimImage != null) dimImage.raycastTarget = false;
-        if (hintDismissButton != null)
-            hintDismissButton.gameObject.SetActive(false);
+        // Ignore the tap that opened the screen and repeated taps during fade-out.
+        if (pendingHintDismiss == null || hintClosing || Time.unscaledTime - hintOpenedAt < 0.25f) return;
+        hintClosing = true;
+        StopFade();
+        fadeRoutine = StartCoroutine(DismissHint());
+    }
 
+    private IEnumerator DismissHint()
+    {
+        yield return FadeHint(0f);
         var callback = pendingHintDismiss;
         pendingHintDismiss = null;
-
-        Hide();
+        // Keep the transparent raycast blocker through the board highlight so taps
+        // cannot reach boosters or other HUD buttons before the manager resumes play.
+        if (!keepHintBlocker)
+        {
+            hintGroup.gameObject.SetActive(false);
+            gameObject.SetActive(false);
+        }
         callback?.Invoke();
+    }
+
+    public void CancelHint()
+    {
+        if (hintGroup == null || !hintGroup.gameObject.activeSelf) return;
+        pendingHintDismiss = null;
+        StopFade();
+        if (hintGroup != null) hintGroup.gameObject.SetActive(false);
+        gameObject.SetActive(false);
+    }
+
+    private IEnumerator FadeHint(float target)
+    {
+        while (!Mathf.Approximately(hintGroup.alpha, target))
+        {
+            hintGroup.alpha = Mathf.MoveTowards(hintGroup.alpha, target,
+                Mathf.Max(1f, fadeSpeed) * Time.unscaledDeltaTime);
+            yield return null;
+        }
+    }
+
+    private void EnsureHintLayout()
+    {
+        if (hintGroup != null) return;
+
+        var root = CreateHintRect("ObstacleIntroduction", transform, Vector2.zero, Vector2.one);
+        hintGroup = root.gameObject.AddComponent<CanvasGroup>();
+        var canvas = root.gameObject.AddComponent<Canvas>();
+        var parentCanvas = GetComponentInParent<Canvas>();
+        canvas.overrideSorting = true;
+        canvas.sortingLayerID = parentCanvas != null ? parentCanvas.sortingLayerID : 0;
+        canvas.sortingOrder = (parentCanvas != null ? parentCanvas.sortingOrder : 0) + 100;
+        root.gameObject.AddComponent<GraphicRaycaster>();
+
+        hintBackdrop = root.gameObject.AddComponent<Image>();
+        var dismiss = root.gameObject.AddComponent<Button>();
+        dismiss.targetGraphic = hintBackdrop;
+        dismiss.transition = Selectable.Transition.None;
+        dismiss.navigation = new Navigation { mode = Navigation.Mode.None };
+        dismiss.onClick.AddListener(OnHintDismissClicked);
+
+        // An open, borderless layout with a narrower reading column that wraps
+        // naturally in either language. Explicit line breaks in localized copy also work.
+        hintEyebrow = CreateHintText("Introduction", root,
+            new Vector2(0.10f, 0.85f), new Vector2(0.90f, 0.92f), 68.4f);
+        hintEyebrow.color = new Color(0.38f, 0.90f, 0.88f, 1f);
+        hintEyebrow.characterSpacing = 5f;
+        hintTitle = CreateHintText("ObstacleName", root,
+            new Vector2(0.06f, 0.67f), new Vector2(0.94f, 0.84f), 152f);
+        var skin = CommonPopupSkin.Shared;
+        if (hintFont != null)
+        {
+            if (hintTitleMaterial != null) hintTitle.fontSharedMaterial = hintTitleMaterial;
+        }
+        else if (skin.titleFont != null)
+        {
+            hintTitle.font = skin.titleFont;
+            if (skin.titleMaterial != null) hintTitle.fontSharedMaterial = skin.titleMaterial;
+        }
+        hintTitle.enableVertexGradient = true;
+        var titleTop = new Color(1f, 0.92f, 0.62f, 1f);
+        var titleBottom = new Color(1f, 0.65f, 0.22f, 1f);
+        hintTitle.colorGradient = new VertexGradient(titleTop, titleTop, titleBottom, titleBottom);
+
+        var iconRect = CreateHintRect("Obstacle", root, new Vector2(0.32f, 0.43f), new Vector2(0.68f, 0.64f));
+        hintIcon = iconRect.gameObject.AddComponent<Image>();
+        hintIcon.preserveAspect = true;
+        hintIcon.raycastTarget = false;
+        hintDescription = CreateHintText("Description", root,
+            new Vector2(0.16f, 0.20f), new Vector2(0.84f, 0.40f), 68.4f);
+        hintDescription.lineSpacing = 12f;
+        hintDescription.color = new Color(1f, 0.95f, 0.85f, 1f);
+        hintContinue = CreateHintText("Continue", root,
+            new Vector2(0.10f, 0.09f), new Vector2(0.90f, 0.16f), 45.6f);
+        hintContinue.color = new Color(0.65f, 0.88f, 0.90f, 1f);
+    }
+
+    private RectTransform CreateHintRect(string objectName, Transform parent, Vector2 min, Vector2 max)
+    {
+        var rect = new GameObject(objectName, typeof(RectTransform)).GetComponent<RectTransform>();
+        rect.gameObject.layer = gameObject.layer;
+        rect.SetParent(parent, false);
+        rect.anchorMin = min;
+        rect.anchorMax = max;
+        rect.offsetMin = rect.offsetMax = Vector2.zero;
+        return rect;
+    }
+
+    private TMP_Text CreateHintText(string objectName, Transform parent, Vector2 min, Vector2 max, float size)
+    {
+        var label = CreateHintRect(objectName, parent, min, max).gameObject.AddComponent<TextMeshProUGUI>();
+        var bodyFont = hintFont != null ? hintFont : CommonPopupSkin.Shared.font;
+        if (bodyFont != null) label.font = bodyFont;
+        else if (descriptionText != null) label.font = descriptionText.font;
+        label.color = Color.white;
+        label.alignment = TextAlignmentOptions.Center;
+        label.fontSize = size;
+        label.enableAutoSizing = true;
+        label.fontSizeMin = size * 0.6f;
+        label.fontSizeMax = size;
+        label.textWrappingMode = TextWrappingModes.Normal;
+        label.raycastTarget = false;
+        return label;
     }
 
     // ── Synchronized swap + hand loop ──

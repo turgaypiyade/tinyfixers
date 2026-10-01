@@ -47,7 +47,8 @@ public class TutorialManager : MonoBehaviour
 
         // Tile spawn + fall animasyonları tamamlansın
         yield return new WaitUntil(() =>
-            board.Tiles != null && board.Width > 0 && !board.IsBusy && !board.InputLocked);
+            board.Tiles != null && board.Width > 0 && !board.IsBusy && !board.InputLocked
+            && !ObstacleHintManager.HasPendingHints);
 
         // Bir frame daha bekle — OnBecameIdle zaten ateşlenmişse biz onu kaçırdık
         yield return new WaitForSeconds(0.3f);
@@ -72,7 +73,8 @@ public class TutorialManager : MonoBehaviour
         yield return null;
         yield return null;
 
-        if (tutorialActive || board == null || board.IsBusy || board.InputLocked) yield break;
+        if (tutorialActive || board == null || board.IsBusy || board.InputLocked
+            || ObstacleHintManager.HasPendingHints) yield break;
         if (shownThisLevel >= maxPerLevel) yield break;
 
         for (int i = 0; i <= (int)TutorialId.OverrideCreated; i++)
