@@ -1,0 +1,546 @@
+fileFormatVersion: 2
+guid: cc2ac6dfbc0ac40aab462977455aafc7
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -2869814967767877078
+    second: Bidonorjinal_0
+  - first:
+      213: -1065865221430756406
+    second: Bidonorjinal_1
+  - first:
+      213: 2817206673647507450
+    second: Bidonorjinal_2
+  - first:
+      213: -5028856737113259470
+    second: Bidonorjinal_3
+  - first:
+      213: -7579104746378508543
+    second: Bidonorjinal_4
+  - first:
+      213: -3600863035907052638
+    second: Bidonorjinal_5
+  - first:
+      213: 1237524288659698938
+    second: Bidonorjinal_6
+  - first:
+      213: -3708287314053000527
+    second: Bidonorjinal_7
+  - first:
+      213: -4908306714331366304
+    second: Bidonorjinal_8
+  - first:
+      213: -8370563616034169305
+    second: Bidonorjinal_9
+  - first:
+      213: 2714124570247850312
+    second: Bidonorjinal_10
+  - first:
+      213: 3163450093791129345
+    second: Bidonorjinal_11
+  - first:
+      213: 3446977945105544326
+    second: Bidonorjinal_12
+  - first:
+      213: -5913631157859816123
+    second: Bidonorjinal_13
+  - first:
+      213: 3964213907686261425
+    second: Bidonorjinal_14
+  - first:
+      213: -1688833775377444993
+    second: Bidonorjinal_15
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Bidonorjinal_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1210
+        height: 1254
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a2ab813ed7e5c28d0800000000000000
+      internalID: -2869814967767877078
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_1
+      rect:
+        serializedVersion: 2
+        x: 345
+        y: 1246
+        width: 10
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: acb3d227a394531f0800000000000000
+      internalID: -1065865221430756406
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_2
+      rect:
+        serializedVersion: 2
+        x: 605
+        y: 1221
+        width: 23
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: af79e912b8ab81720800000000000000
+      internalID: 2817206673647507450
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_3
+      rect:
+        serializedVersion: 2
+        x: 297
+        y: 1229
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 232c80e0179e53ab0800000000000000
+      internalID: -5028856737113259470
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_4
+      rect:
+        serializedVersion: 2
+        x: 299
+        y: 1231
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 107c1a4936c91d690800000000000000
+      internalID: -7579104746378508543
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_5
+      rect:
+        serializedVersion: 2
+        x: 329
+        y: 1223
+        width: 14
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2abece3a52a270ec0800000000000000
+      internalID: -3600863035907052638
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_6
+      rect:
+        serializedVersion: 2
+        x: 402
+        y: 17
+        width: 17
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: af4ba7aa8c19c2110800000000000000
+      internalID: 1237524288659698938
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_7
+      rect:
+        serializedVersion: 2
+        x: 466
+        y: 15
+        width: 21
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1b298c0d554898cc0800000000000000
+      internalID: -3708287314053000527
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_8
+      rect:
+        serializedVersion: 2
+        x: 554
+        y: 15
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 06c3d937c0132ebb0800000000000000
+      internalID: -4908306714331366304
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_9
+      rect:
+        serializedVersion: 2
+        x: 641
+        y: 17
+        width: 19
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 72e59788db8c5db80800000000000000
+      internalID: -8370563616034169305
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_10
+      rect:
+        serializedVersion: 2
+        x: 689
+        y: 21
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 84968c5aae18aa520800000000000000
+      internalID: 2714124570247850312
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_11
+      rect:
+        serializedVersion: 2
+        x: 788
+        y: 22
+        width: 19
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 10fa8118915d6eb20800000000000000
+      internalID: 3163450093791129345
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_12
+      rect:
+        serializedVersion: 2
+        x: 800
+        y: 7
+        width: 29
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6843f9e9d2026df20800000000000000
+      internalID: 3446977945105544326
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_13
+      rect:
+        serializedVersion: 2
+        x: 936
+        y: 13
+        width: 34
+        height: 21
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 54d651f2bcf8eeda0800000000000000
+      internalID: -5913631157859816123
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_14
+      rect:
+        serializedVersion: 2
+        x: 748
+        y: 0
+        width: 52
+        height: 21
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1b28d45bb87b30730800000000000000
+      internalID: 3964213907686261425
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bidonorjinal_15
+      rect:
+        serializedVersion: 2
+        x: 890
+        y: 9
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f7f02fd01ae0098e0800000000000000
+      internalID: -1688833775377444993
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Bidonorjinal_0: -2869814967767877078
+      Bidonorjinal_1: -1065865221430756406
+      Bidonorjinal_10: 2714124570247850312
+      Bidonorjinal_11: 3163450093791129345
+      Bidonorjinal_12: 3446977945105544326
+      Bidonorjinal_13: -5913631157859816123
+      Bidonorjinal_14: 3964213907686261425
+      Bidonorjinal_15: -1688833775377444993
+      Bidonorjinal_2: 2817206673647507450
+      Bidonorjinal_3: -5028856737113259470
+      Bidonorjinal_4: -7579104746378508543
+      Bidonorjinal_5: -3600863035907052638
+      Bidonorjinal_6: 1237524288659698938
+      Bidonorjinal_7: -3708287314053000527
+      Bidonorjinal_8: -4908306714331366304
+      Bidonorjinal_9: -8370563616034169305
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

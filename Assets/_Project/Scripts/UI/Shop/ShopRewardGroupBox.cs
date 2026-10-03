@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 /// <summary>
@@ -22,8 +23,11 @@ public sealed class ShopRewardGroupBox : MonoBehaviour
     [Header("İkon düzeni")]
     [Tooltip("Her ikonun kenar boyutu (px). Büyütmek için artır.")]
     [SerializeField] private float iconSize = 60f;
-    [Tooltip("İkonlar arası boşluk (px).")]
-    [SerializeField] private float iconSpacing = 6f;
+    [Tooltip("İkonlar arası yatay boşluk (px).")]
+    [SerializeField] private float iconHorizontalSpacing = 18f;
+    [Tooltip("İkon satırları arası dikey boşluk (px).")]
+    [FormerlySerializedAs("iconSpacing")]
+    [SerializeField] private float iconVerticalSpacing = 6f;
     [Tooltip("Bir satırdaki maksimum ikon (üst sınır). 5 ikon → 3 üst + 2 alt.")]
     [SerializeField] private int maxColumns = 3;
 
@@ -155,18 +159,19 @@ public sealed class ShopRewardGroupBox : MonoBehaviour
         int cols = n <= 2 ? n : Mathf.Min(maxColumns, Mathf.CeilToInt(n / 2f));
 
         int rows = Mathf.CeilToInt(n / (float)cols);
-        float step = iconSize + iconSpacing;
-        float totalH = rows * iconSize + (rows - 1) * iconSpacing;
+        float stepX = iconSize + iconHorizontalSpacing;
+        float stepY = iconSize + iconVerticalSpacing;
+        float totalH = rows * iconSize + (rows - 1) * iconVerticalSpacing;
 
         for (int i = 0; i < n; i++)
         {
             int r = i / cols;
             int c = i % cols;
             int itemsInRow = Mathf.Min(cols, n - r * cols);          // son satır daha az olabilir
-            float rowW = itemsInRow * iconSize + (itemsInRow - 1) * iconSpacing;
+            float rowW = itemsInRow * iconSize + (itemsInRow - 1) * iconHorizontalSpacing;
 
-            float x = -rowW / 2f + iconSize / 2f + c * step;         // satırı yatayda ortala
-            float y =  totalH / 2f - iconSize / 2f - r * step;       // satırları dikeyde ortala
+            float x = -rowW / 2f + iconSize / 2f + c * stepX;        // satırı yatayda ortala
+            float y =  totalH / 2f - iconSize / 2f - r * stepY;      // satırları dikeyde ortala
 
             var rt = (RectTransform)spawnedIcons[i].transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);

@@ -91,7 +91,7 @@ public sealed class BarrelSpreadAction : BoardAction
 
             // Mud stamp edildikten SONRA barrel'ın Mud-goal placeholder'ını serbest bırak
             // (0 hedef olsa bile). Böylece sayaç mud eklenmeden 0'a inip erken WIN vermez.
-            _board.RaiseBarrelResolved();
+            _board.RaiseSplatSpreadResolved(ObstacleId.Mud);
         }
     }
 }

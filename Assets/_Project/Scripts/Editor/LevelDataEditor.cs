@@ -28,6 +28,9 @@ public class LevelDataEditor : Editor
     // Tube settings
     private TubeDirection selectedTubeDir = TubeDirection.Up;
     private int selectedTubeLength = 3;
+    // Son tüp yerleştirme denemesi neden başarısız oldu (palette görünür; yalnız console'a yazmak
+    // "tıklıyorum, hiçbir şey olmuyor" hissi veriyordu).
+    private string tubeStatus;
 
     // Magnet settings
     private readonly System.Collections.Generic.List<int> magnetPathBuilding = new();
@@ -1092,8 +1095,9 @@ public class LevelDataEditor : Editor
         if (!level.InBounds(bx, by)) return;
         if (selectedObstacle == ObstacleId.None) return;
 
-        // Zemin altı engeller (Mud, Jel) yığının daima EN ALTINDA — başka bir şeyin üstüne konamaz.
-        if (selectedObstacle == ObstacleId.Mud || selectedObstacle == ObstacleId.SpreadingGel)
+        // Zemin altı engeller (Mud, Jel, Su birikintisi) yığının daima EN ALTINDA — başka bir şeyin üstüne konamaz.
+        if (selectedObstacle == ObstacleId.Mud || selectedObstacle == ObstacleId.SpreadingGel
+            || selectedObstacle == ObstacleId.WaterPuddle)
         {
             Debug.LogWarning($"[OverlayEditor] {selectedObstacle} üst katman olamaz (daima en altta). " +
                              "Obstacle modunda taban katmana boya.");
@@ -1153,12 +1157,19 @@ public class LevelDataEditor : Editor
 
     private void PlaceTube(LevelData level, int bx, int by)
     {
-        int originIdx = level.Index(bx, by);
         if (!level.InBounds(bx, by)) return;
-        if (level.cells[originIdx] != (int)CellType.Normal) return;
+        int originIdx = level.Index(bx, by);
+        tubeStatus = null;
 
-        // Remove existing tube at this cell if any
-        RemoveTubeAtCell(level, originIdx);
+        // Mevcut bir tüpün hücresine tıklamak o tüpü siler (palet yardım metnindeki davranış).
+        if (RemoveTubeAtCell(level, originIdx))
+            return;
+
+        if (level.cells[originIdx] != (int)CellType.Normal)
+        {
+            tubeStatus = $"({bx},{by}) boş (mask) hücre — tüp normal hücreden başlamalı.";
+            return;
+        }
 
         var entry = new TubeEntry
         {
@@ -1171,21 +1182,31 @@ public class LevelDataEditor : Editor
         int[] cells = TubeObstacleService.GetCellIndices(entry, level.width, level.height);
         if (cells == null)
         {
-            Debug.LogWarning($"[TubeEditor] Tube at ({bx},{by}) dir={selectedTubeDir} len={selectedTubeLength} goes out of bounds.");
+            tubeStatus = $"({bx},{by}) → {selectedTubeDir} yönünde {entry.length} hücre board dışına taşıyor. " +
+                         "Yönü veya uzunluğu değiştir (Up = tıklanan hücreden YUKARI uzanır).";
+            Debug.LogWarning($"[TubeEditor] {tubeStatus}");
             return;
         }
         foreach (int ci in cells)
         {
+            int cx = ci % level.width, cy = ci / level.width;
             if (level.cells[ci] != (int)CellType.Normal)
             {
-                Debug.LogWarning($"[TubeEditor] Tube cell {ci} is not a normal cell.");
+                tubeStatus = $"Tüp ({cx},{cy}) hücresinden geçiyor ama orası boş (mask) hücre.";
+                Debug.LogWarning($"[TubeEditor] {tubeStatus}");
                 return;
             }
-            // Check for conflicting obstacles (not tubes – those were already removed)
             var existingObs = (ObstacleId)level.obstacles[ci];
             if (existingObs != ObstacleId.None && existingObs != ObstacleId.Tube)
             {
-                Debug.LogWarning($"[TubeEditor] Tube cell {ci} already has obstacle {existingObs}.");
+                tubeStatus = $"Tüp ({cx},{cy}) hücresinden geçiyor ama orada {existingObs} var. Önce Erase ile temizle.";
+                Debug.LogWarning($"[TubeEditor] {tubeStatus}");
+                return;
+            }
+            if (TubeIndexAtCell(level, ci) >= 0)
+            {
+                tubeStatus = $"Tüp ({cx},{cy}) hücresinde başka bir tüple çakışıyor.";
+                Debug.LogWarning($"[TubeEditor] {tubeStatus}");
                 return;
             }
         }
@@ -1194,20 +1215,37 @@ public class LevelDataEditor : Editor
         level.tubes = list.ToArray();
     }
 
-    private void RemoveTubeAtCell(LevelData level, int cellIndex)
+    // Hücreyi kaplayan tüp(ler)i siler; en az biri silindiyse true.
+    private bool RemoveTubeAtCell(LevelData level, int cellIndex)
     {
-        if (level.tubes == null || level.tubes.Length == 0) return;
+        if (level.tubes == null || level.tubes.Length == 0) return false;
 
         var list = new System.Collections.Generic.List<TubeEntry>(level.tubes);
+        bool removed = false;
         for (int t = list.Count - 1; t >= 0; t--)
         {
-            int[] cells = TubeObstacleService.GetCellIndices(list[t], level.width, level.height);
-            if (cells == null) continue;
-            bool found = false;
-            foreach (int ci in cells) if (ci == cellIndex) { found = true; break; }
-            if (found) list.RemoveAt(t);
+            if (!TubeCovers(level, list[t], cellIndex)) continue;
+            list.RemoveAt(t);
+            removed = true;
         }
-        level.tubes = list.ToArray();
+        if (removed) level.tubes = list.ToArray();
+        return removed;
+    }
+
+    private static int TubeIndexAtCell(LevelData level, int cellIndex)
+    {
+        if (level.tubes == null) return -1;
+        for (int t = 0; t < level.tubes.Length; t++)
+            if (TubeCovers(level, level.tubes[t], cellIndex)) return t;
+        return -1;
+    }
+
+    private static bool TubeCovers(LevelData level, TubeEntry entry, int cellIndex)
+    {
+        int[] cells = TubeObstacleService.GetCellIndices(entry, level.width, level.height);
+        if (cells == null) return false;
+        foreach (int ci in cells) if (ci == cellIndex) return true;
+        return false;
     }
 
     private void ClearCell(LevelData level, int idx)
@@ -1218,6 +1256,14 @@ public class LevelDataEditor : Editor
 
     private void StampObstacle(LevelData level, int ax, int ay, ObstacleId id)
     {
+        // Tube/Magnet/Safe ham obstacle olarak basılamaz: runtime yalnız LevelData.tubes/magnets/safes
+        // girişlerinden kurar (GridSpawner generic görsel de çizmez) → görünmez, bozuk hücre olur.
+        if (id == ObstacleId.Tube || id == ObstacleId.Magnet || id == ObstacleId.Safe)
+        {
+            Debug.LogWarning($"[LevelEditor] {id} Obstacle modunda yerleştirilemez — kendi sekmesini ({id}) kullan.");
+            return;
+        }
+
         var library = level.obstacleLibrary;
         var def = library != null ? library.Get(id) : null;
         Vector2Int size = def != null ? def.size : Vector2Int.one;
@@ -1462,6 +1508,9 @@ public class LevelDataEditor : Editor
         selectedTubeLength = EditorGUILayout.IntSlider("Uzunluk (hücre)", selectedTubeLength, 2, LevelData.MaxHeight);
         if (EditorGUI.EndChangeCheck())
             EditorUtility.SetDirty(level);
+
+        if (!string.IsNullOrEmpty(tubeStatus))
+            EditorGUILayout.HelpBox(tubeStatus, MessageType.Warning);
 
         EditorGUILayout.Space(4);
         EditorGUILayout.LabelField($"Mevcut tüpler: {(level.tubes != null ? level.tubes.Length : 0)}", EditorStyles.miniLabel);

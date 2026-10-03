@@ -385,6 +385,8 @@ public static class SimRunner
                 case ObstacleId.RocketBasket:
                 case ObstacleId.Barrel:
                 case ObstacleId.Barrell_v2:
+                case ObstacleId.WaterTank:
+                case ObstacleId.WaterTankSmall:
                 case ObstacleId.EggBird:
                 case ObstacleId.BatteryBox:
                 case ObstacleId.OverrideBatteryBox:
@@ -448,6 +450,7 @@ public static class SimRunner
         return id switch
         {
             ObstacleId.Mud          => true,   // Barrel kırılınca saçılır
+            ObstacleId.WaterPuddle  => true,   // WaterTank/WaterTankSmall kırılınca saçılır
             ObstacleId.Oil          => true,   // yayılır
             ObstacleId.SpreadingGel => true,   // yayılır
             ObstacleId.KeyGenerator => true,   // Key üretir

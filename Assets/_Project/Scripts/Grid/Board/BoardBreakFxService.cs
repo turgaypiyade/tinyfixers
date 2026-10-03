@@ -346,7 +346,7 @@ public class BoardBreakFxService
     // Damlacık (droplet) saçılımlı kırılma kullanan obstacle'lar: sıvı/çamur hissi için kare
     // quad-particle yerine UI-tabanlı damla burst'ü oynatılır.
     private static bool UsesDropletBreakFx(ObstacleId id)
-        => id == ObstacleId.Oil || id == ObstacleId.Mud;
+        => id == ObstacleId.Oil || id == ObstacleId.Mud || id == ObstacleId.WaterPuddle;
 
     private bool TryPlayOilDropletUiBurst(Vector3 worldPos, IReadOnlyList<Sprite> sprites)
     {

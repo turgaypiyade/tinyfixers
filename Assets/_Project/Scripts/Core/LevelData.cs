@@ -203,6 +203,22 @@ public enum ObstacleId : int
     ToolThreatRed = 49,
     ToolThreatBlue = 50,
     ToolThreatGreen = 51,
+
+    // 2x2 su deposu. Standart OverTileBlocker, 2 stage (hits=2: sağlam → çatlak bidon, ikinci
+    // vuruşta dağılır; stage sprite'ları ObstacleDef'ten). Kırılınca board'un RASTGELE
+    // oynanabilir hücrelerine su fışkırır (göktaşı yayı: yükselir, hedefe düşer) → her varışta
+    // WaterPuddle; aynı anda telefon ekranına yağmur damlaları (ScreenRainDropsFx). Saçılım
+    // BoardController → WaterTankSpreadAction; sayı/görseller Resources/WaterTank/WaterTankConfig.
+    WaterTank = 52,
+
+    // Su birikintisi. Mud gibi UNDER-TILE (behavior=UnderTileLayered, blocksCells=0): taş üstünde
+    // normal oynanır, o hücredeki taş temizlenince 1 vuruşta kurur. WaterTank'ın dinamik goal'ü
+    // (Barrel→Mud kalıbı); editörle de doğrudan yerleştirilebilir.
+    WaterPuddle = 53,
+
+    // WaterTank'ın 1x1 versiyonu: davranış birebir aynı (2 stage, kırılınca rastgele su +
+    // ekran damlası); boyut ObstacleDef.size'tan okunur.
+    WaterTankSmall = 54,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }

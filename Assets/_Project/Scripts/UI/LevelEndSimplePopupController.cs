@@ -264,7 +264,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         {
             failPopupImage = FindComponent<Image>(failPopupRoot.transform, "FailPopupImage") ?? failPopupImage;
 
-            var failContinue = failPopupRoot.transform.Find("UI/BtnContinue");
+            var failContinue = failPopupRoot.transform.Find("UI/ButtonFrame/BtnContinue")
+                ?? failPopupRoot.transform.Find("UI/BtnContinue");
             if (failContinue != null)
                 buyMovesButton = failContinue.GetComponent<Button>();
 
@@ -272,14 +273,15 @@ public class LevelEndSimplePopupController : MonoBehaviour
             if (failClose != null)
                 failCloseButton = failClose.GetComponent<Button>();
 
-            failContinueButtonImage = FindComponent<Image>(failPopupRoot.transform, "UI/BtnContinue") ?? failContinueButtonImage;
+            failContinueButtonImage = failContinue != null
+                ? failContinue.GetComponent<Image>() : failContinueButtonImage;
             failCloseButtonImage = FindComponent<Image>(failPopupRoot.transform, "UI/BtnClose") ?? failCloseButtonImage;
             failTitleText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/FailTitleText") ?? failTitleText;
             extraMovesIcon = FindComponent<Image>(failPopupRoot.transform, "UI/ExtraMovesIcon") ?? extraMovesIcon;
             extraMovesAmountText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/ExtraMovesIcon/ExtraMovesAmountText") ?? extraMovesAmountText;
             extraMovesFlyAmountText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/ExtraMovesIcon/ExtraMovesFlyAmountText") ?? extraMovesFlyAmountText;
             failMessageText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/FailMessageText") ?? failMessageText;
-            failContinueText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/BtnContinue/BtnContinueText") ?? failContinueText;
+            failContinueText = FindComponent<TMP_Text>(failContinue, "BtnContinueText") ?? failContinueText;
             failEventLossWarningText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/EventLossWarningText") ?? failEventLossWarningText;
 
             if (failDescriptionText == null)
@@ -294,14 +296,16 @@ public class LevelEndSimplePopupController : MonoBehaviour
             if (successClose != null)
                 successCloseButton = successClose.GetComponent<Button>();
 
-            var successContinue = successPopupRoot.transform.Find("UIS/BtnsContinue");
+            var successContinue = successPopupRoot.transform.Find("UIS/ButtonFrame/BtnsContinue")
+                ?? successPopupRoot.transform.Find("UIS/BtnsContinue");
             if (successContinue != null)
                 successContinueButton = successContinue.GetComponent<Button>();
 
-            successContinueButtonImage = FindComponent<Image>(successPopupRoot.transform, "UIS/BtnsContinue") ?? successContinueButtonImage;
+            successContinueButtonImage = successContinue != null
+                ? successContinue.GetComponent<Image>() : successContinueButtonImage;
             successCloseButtonImage = FindComponent<Image>(successPopupRoot.transform, "UIS/BtnSClose") ?? successCloseButtonImage;
             successTitleText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/SuccessTitleText") ?? successTitleText;
-            successContinueText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/BtnsContinue/BtnContinueText") ?? successContinueText;
+            successContinueText = FindComponent<TMP_Text>(successContinue, "BtnContinueText") ?? successContinueText;
             scoreLabelText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/ScoreRow/ScoreLabelText") ?? scoreLabelText;
             scoreValueText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/ScoreRow/ScoreValueText") ?? scoreValueText;
 

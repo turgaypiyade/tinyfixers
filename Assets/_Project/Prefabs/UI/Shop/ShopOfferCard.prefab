@@ -449,7 +449,8 @@ MonoBehaviour:
   iconContainer: {fileID: 4864349911691388311}
   iconPrefab: {fileID: 7406441118286081724, guid: 62fc0e0ea49e443a8af949cc6f32899d, type: 3}
   iconSize: 60
-  iconSpacing: 6
+  iconHorizontalSpacing: 18
+  iconVerticalSpacing: 6
   maxColumns: 3
   timerIcon: {fileID: 8455870572384375644}
   timerSprite: {fileID: 0}
@@ -615,7 +616,8 @@ MonoBehaviour:
   iconContainer: {fileID: 8456431664118961207}
   iconPrefab: {fileID: 7406441118286081724, guid: 62fc0e0ea49e443a8af949cc6f32899d, type: 3}
   iconSize: 60
-  iconSpacing: 6
+  iconHorizontalSpacing: 18
+  iconVerticalSpacing: 6
   maxColumns: 3
   timerIcon: {fileID: 5640447134388936628}
   timerSprite: {fileID: 0}
@@ -1588,7 +1590,8 @@ MonoBehaviour:
   iconContainer: {fileID: 476926832525494747}
   iconPrefab: {fileID: 7406441118286081724, guid: 62fc0e0ea49e443a8af949cc6f32899d, type: 3}
   iconSize: 60
-  iconSpacing: 6
+  iconHorizontalSpacing: 18
+  iconVerticalSpacing: 6
   maxColumns: 3
   timerIcon: {fileID: 2404278317857272956}
   timerSprite: {fileID: 0}

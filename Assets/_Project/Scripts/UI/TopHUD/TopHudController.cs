@@ -40,8 +40,12 @@ public class TopHudController : MonoBehaviour
     private readonly List<RuntimeGoal> runtimeGoals = new();
     private bool initialized;
 
-    // Kırılmış ama mud saçılımı henüz bitmemiş barrel sayısı (Mud hedefinin placeholder'ı).
-    private int pendingBarrelSpreads;
+    // Kırılmış ama saçılımı henüz bitmemiş kaynak sayısı, saçılan obstacle başına
+    // (Mud ← Barrel, WaterPuddle ← WaterTank/WaterTankSmall). Saçılan-obstacle hedefinin placeholder'ı.
+    private readonly Dictionary<ObstacleId, int> pendingSplatSpreads = new();
+
+    // Ground-truth'tan sayılan saçılan obstacle'lar (bkz. RecomputeSplatGoal).
+    private static readonly ObstacleId[] SplatGoalIds = { ObstacleId.Mud, ObstacleId.WaterPuddle };
     public bool IsInitialized => initialized;
 
     public bool AreAllGoalsCompleted { get; private set; }
@@ -70,18 +74,20 @@ public class TopHudController : MonoBehaviour
         board.OnObstacleDestroyed -= HandleObstacleDestroyed;
         board.OnBatteryHit -= HandleBatteryHit;
         board.OnObstacleCreatedDynamic -= HandleObstacleCreatedDynamic;
-        board.OnBarrelResolved -= HandleBarrelResolved;
+        board.OnSplatSpreadResolved -= HandleSplatSpreadResolved;
         board.OnSpreadingGelServiceChanged -= HandleSpreadingGelServiceChanged;
         UnhookGelService();
         initialized = false;
     }
 
-    // Güvenlik ağı: mud'ı olay üretmeden değiştiren bir yol kalırsa bile sayaç bir kare içinde
-    // gerçeğe döner (board ~100 hücre; ucuz). Mud hedefi yoksa hiçbir şey yapmaz.
+    // Güvenlik ağı: mud/birikintiyi olay üretmeden değiştiren bir yol kalırsa bile sayaç bir kare
+    // içinde gerçeğe döner (board ~100 hücre; ucuz). İlgili hedef yoksa hiçbir şey yapmaz.
     private void LateUpdate()
     {
-        if (initialized)
-            RecomputeMudGoal();
+        if (!initialized)
+            return;
+        for (int i = 0; i < SplatGoalIds.Length; i++)
+            RecomputeSplatGoal(SplatGoalIds[i]);
     }
 
     private IEnumerator InitializeWhenReady()
@@ -100,14 +106,14 @@ public class TopHudController : MonoBehaviour
         board.OnObstacleDestroyed -= HandleObstacleDestroyed;
         board.OnBatteryHit -= HandleBatteryHit;
         board.OnObstacleCreatedDynamic -= HandleObstacleCreatedDynamic;
-        board.OnBarrelResolved -= HandleBarrelResolved;
+        board.OnSplatSpreadResolved -= HandleSplatSpreadResolved;
 
         board.OnMovesChanged += HandleMovesChanged;
         board.OnTilesCleared += HandleTilesCleared;
         board.OnObstacleDestroyed += HandleObstacleDestroyed;
         board.OnBatteryHit += HandleBatteryHit;
         board.OnObstacleCreatedDynamic += HandleObstacleCreatedDynamic;
-        board.OnBarrelResolved += HandleBarrelResolved;
+        board.OnSplatSpreadResolved += HandleSplatSpreadResolved;
 
         // Jel servisi SetLevelData'dan SONRA bağlandığı için burada henüz null olabilir;
         // event ile geldiğinde bağlanır. Zaten bağlıysa hemen hook'lanır.
@@ -123,7 +129,7 @@ public class TopHudController : MonoBehaviour
     private void BuildGoals(LevelData levelData)
     {
         runtimeGoals.Clear();
-        pendingBarrelSpreads = 0;
+        pendingSplatSpreads.Clear();
 
         if (goalsRoot != null)
         {
@@ -148,10 +154,11 @@ public class TopHudController : MonoBehaviour
             // Mud goal'u dinamiktir: authored mud varsa onu say, barrel kaynaklı mud ise
             // barrel kırıldığı anda child goal olarak doğar. Başlangıçta barrel sayısı kadar
             // default placeholder ekleme; parent hedef bitmeden child hedefin doğması gerekir.
-            if (goal.targetType == LevelGoalTargetType.Obstacle && goal.obstacleId == ObstacleId.Mud)
+            // (WaterPuddle ← WaterTank aynı kural.)
+            if (goal.targetType == LevelGoalTargetType.Obstacle && IsSplatGoalId(goal.obstacleId))
             {
-                int computed = CountObstacleCells(levelData, ObstacleId.Mud)
-                             + CountStampedBeneathCells(ObstacleId.Mud);
+                int computed = CountObstacleCells(levelData, goal.obstacleId)
+                             + CountStampedBeneathCells(goal.obstacleId);
                 if (computed > 0)
                     initialRemaining = computed;
             }
@@ -220,27 +227,31 @@ public class TopHudController : MonoBehaviour
         return runtime;
     }
 
-    private void AddMudGoalPlaceholderForBarrel()
+    private void AddSplatGoalPlaceholder(ObstacleId splatId)
     {
-        var goal = EnsureDynamicObstacleGoal(ObstacleId.Mud);
-        pendingBarrelSpreads++;
+        var goal = EnsureDynamicObstacleGoal(splatId);
+        pendingSplatSpreads[splatId] = PendingSplatSpreads(splatId) + 1;
         goal.dynamicTotal++;
-        RecomputeMudGoal();
+        RecomputeSplatGoal(splatId);
     }
 
-    // Mud hedefi GROUND-TRUTH'tan türetilir (KeyGenerator/jel kalıbı): kalan = board'da yaşayan
-    // mud (açık + over-tile altı + movable altı) + saçılımı bitmemiş barrel placeholder'ı.
+    private int PendingSplatSpreads(ObstacleId splatId)
+        => pendingSplatSpreads.TryGetValue(splatId, out int n) ? n : 0;
+
+    // Mud (ve WaterPuddle) hedefi GROUND-TRUTH'tan türetilir (KeyGenerator/jel kalıbı): kalan =
+    // board'da yaşayan hücre (açık + over-tile altı + movable altı) + saçılımı bitmemiş kaynak
+    // (barrel / su deposu) placeholder'ı.
     // Eski event sayımı (+1 damla inişinde, -1 kırılışta) mud verisi damladan ÖNCE commit
     // edildiği için kayıyordu: inmeden kırılan mud hiç eklenmeden düşülüyor, beneath'e yazılan
     // mud hiç eklenmiyordu → sayaç ekranda mud varken 0'a iniyordu (LevelP_00810).
-    private void RecomputeMudGoal()
+    private void RecomputeSplatGoal(ObstacleId splatId)
     {
-        var goal = FindRuntimeObstacleGoal(ObstacleId.Mud);
+        var goal = FindRuntimeObstacleGoal(splatId);
         var svc = board != null ? board.ObstacleStateService : null;
         if (goal == null || svc == null)
             return;
 
-        int remaining = svc.CountAllLiveOrigins(ObstacleId.Mud) + pendingBarrelSpreads;
+        int remaining = svc.CountAllLiveOrigins(splatId) + PendingSplatSpreads(splatId);
         if (goal.dynamicTotal < remaining)
             goal.dynamicTotal = remaining;
         if (goal.remaining == remaining)
@@ -401,15 +412,15 @@ public class TopHudController : MonoBehaviour
 
         bool anyGoalUpdated = false;
 
-        if (IsMudSplatBarrel(obstacleId))
+        if (TryGetSplatOf(obstacleId, out var splatId))
         {
-            AddMudGoalPlaceholderForBarrel();
+            AddSplatGoalPlaceholder(splatId);
             anyGoalUpdated = true;
         }
 
-        if (obstacleId == ObstacleId.Mud)
+        if (IsSplatGoalId(obstacleId))
         {
-            RecomputeMudGoal();
+            RecomputeSplatGoal(obstacleId);
             return;
         }
 
@@ -479,19 +490,21 @@ public class TopHudController : MonoBehaviour
         var svc = board?.ObstacleStateService;
         if (svc == null) return;
 
-        // Yayılan (Oil) ya da barrel'dan saçılan (Mud) yeni hücre → eşleşen dinamik goal'ü büyüt.
+        // Yayılan (Oil) ya da kaynaktan saçılan (Mud ← barrel, WaterPuddle ← su deposu) yeni hücre
+        // → eşleşen dinamik goal'ü büyüt.
         ObstacleId createdId;
         if (svc.IsOilAt(x, y)) createdId = ObstacleId.Oil;
         else if (svc.IsMudAt(x, y)) createdId = ObstacleId.Mud;
+        else if (svc.IsWaterPuddleAt(x, y)) createdId = ObstacleId.WaterPuddle;
         else if (!svc.TryGetStampedBeneathObstacleIdAt(x, y, out createdId)) return;
 
-        if (createdId != ObstacleId.Oil && createdId != ObstacleId.Mud)
+        if (createdId != ObstacleId.Oil && !IsSplatGoalId(createdId))
             return;
 
-        if (createdId == ObstacleId.Mud)
+        if (IsSplatGoalId(createdId))
         {
-            EnsureDynamicObstacleGoal(ObstacleId.Mud).dynamicTotal++;
-            RecomputeMudGoal();
+            EnsureDynamicObstacleGoal(createdId).dynamicTotal++;
+            RecomputeSplatGoal(createdId);
             return;
         }
 
@@ -513,22 +526,38 @@ public class TopHudController : MonoBehaviour
             UpdateGoalsCompletionState();
     }
 
-    private static bool IsMudSplatBarrel(ObstacleId obstacleId)
+    // Kırılınca başka bir obstacle saçan kaynaklar → saçtıkları obstacle.
+    private static bool TryGetSplatOf(ObstacleId source, out ObstacleId splatId)
     {
-        return obstacleId == ObstacleId.Barrel
-            || obstacleId == ObstacleId.Barrell_v2;
+        switch (source)
+        {
+            case ObstacleId.Barrel:
+            case ObstacleId.Barrell_v2:
+                splatId = ObstacleId.Mud;
+                return true;
+            case ObstacleId.WaterTank:
+            case ObstacleId.WaterTankSmall:
+                splatId = ObstacleId.WaterPuddle;
+                return true;
+            default:
+                splatId = ObstacleId.None;
+                return false;
+        }
     }
 
-    // Bir barrel'ın mud yayılımı bittiğinde: o barrel'a ait placeholder'ı Mud goal'ünden düş.
-    // Gerçek mud hücreleri HandleObstacleCreatedDynamic ile zaten eklendiği için net etki doğru
-    // kalır; decrement mud stamp'inden SONRA geldiğinden sayaç asla erken 0'a inmez.
-    private void HandleBarrelResolved()
+    private static bool IsSplatGoalId(ObstacleId id)
+        => id == ObstacleId.Mud || id == ObstacleId.WaterPuddle;
+
+    // Bir kaynağın yayılımı bittiğinde: ona ait placeholder'ı saçılan obstacle goal'ünden düş.
+    // Gerçek hücreler HandleObstacleCreatedDynamic ile zaten eklendiği için net etki doğru
+    // kalır; decrement stamp'ten SONRA geldiğinden sayaç asla erken 0'a inmez.
+    private void HandleSplatSpreadResolved(ObstacleId splatId)
     {
-        pendingBarrelSpreads = Mathf.Max(0, pendingBarrelSpreads - 1);
-        var goal = FindRuntimeObstacleGoal(ObstacleId.Mud);
+        pendingSplatSpreads[splatId] = Mathf.Max(0, PendingSplatSpreads(splatId) - 1);
+        var goal = FindRuntimeObstacleGoal(splatId);
         if (goal != null && goal.dynamicTotal > 0)
             goal.dynamicTotal--;
-        RecomputeMudGoal();
+        RecomputeSplatGoal(splatId);
     }
 
     private static int CountObstacleCells(LevelData levelData, ObstacleId id)

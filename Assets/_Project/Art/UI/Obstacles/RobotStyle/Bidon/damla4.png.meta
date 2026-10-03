@@ -1,0 +1,2184 @@
+fileFormatVersion: 2
+guid: f0062b09c8c1840ccbdda6bfb48e1fd7
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -1534654563322134949
+    second: damla4_0
+  - first:
+      213: -4715995458483682446
+    second: damla4_1
+  - first:
+      213: -443623253426831392
+    second: damla4_2
+  - first:
+      213: -4171341090103463276
+    second: damla4_3
+  - first:
+      213: 293873793921211825
+    second: damla4_4
+  - first:
+      213: -4702511758109681074
+    second: damla4_5
+  - first:
+      213: 2822331633027122210
+    second: damla4_6
+  - first:
+      213: 831279655999478010
+    second: damla4_7
+  - first:
+      213: 6393798406879212979
+    second: damla4_8
+  - first:
+      213: 8015061169355260871
+    second: damla4_9
+  - first:
+      213: -1934432391089985123
+    second: damla4_10
+  - first:
+      213: -8753863046995107045
+    second: damla4_11
+  - first:
+      213: -5262779640250644001
+    second: damla4_12
+  - first:
+      213: -6188762787688737664
+    second: damla4_13
+  - first:
+      213: -5793898571208810730
+    second: damla4_14
+  - first:
+      213: -3958548006984189329
+    second: damla4_15
+  - first:
+      213: 1797110372752943305
+    second: damla4_16
+  - first:
+      213: -5041318682459613447
+    second: damla4_17
+  - first:
+      213: 5918674345684356664
+    second: damla4_18
+  - first:
+      213: 8378468164137875984
+    second: damla4_19
+  - first:
+      213: -7277043232484752676
+    second: damla4_20
+  - first:
+      213: -8551742474453967773
+    second: damla4_21
+  - first:
+      213: 4077434604346694940
+    second: damla4_22
+  - first:
+      213: -1524978095563468841
+    second: damla4_23
+  - first:
+      213: -6008029164183699930
+    second: damla4_24
+  - first:
+      213: 5359501567996943363
+    second: damla4_25
+  - first:
+      213: 3298275473496072846
+    second: damla4_26
+  - first:
+      213: 4106505292658848285
+    second: damla4_27
+  - first:
+      213: -8526628453609131109
+    second: damla4_28
+  - first:
+      213: 8181911011265067304
+    second: damla4_29
+  - first:
+      213: 3277527999478697957
+    second: damla4_30
+  - first:
+      213: 4343179859405779065
+    second: damla4_31
+  - first:
+      213: 6397936154911571512
+    second: damla4_32
+  - first:
+      213: 5411502733929623929
+    second: damla4_33
+  - first:
+      213: -751264516597723701
+    second: damla4_34
+  - first:
+      213: 7758074345140817936
+    second: damla4_35
+  - first:
+      213: 6676973512973857343
+    second: damla4_36
+  - first:
+      213: 3501184856574671239
+    second: damla4_37
+  - first:
+      213: 7593212139908839426
+    second: damla4_38
+  - first:
+      213: -2942509841337611402
+    second: damla4_39
+  - first:
+      213: 2780231930313883510
+    second: damla4_40
+  - first:
+      213: 7905744389575745873
+    second: damla4_41
+  - first:
+      213: -1503332771318048932
+    second: damla4_42
+  - first:
+      213: -4756336453031013012
+    second: damla4_43
+  - first:
+      213: -237971551005094867
+    second: damla4_44
+  - first:
+      213: 6378385476617781086
+    second: damla4_45
+  - first:
+      213: -7943634665183389905
+    second: damla4_46
+  - first:
+      213: -806954413432552185
+    second: damla4_47
+  - first:
+      213: -7064578539745754416
+    second: damla4_48
+  - first:
+      213: 8656414947460306666
+    second: damla4_49
+  - first:
+      213: 5558426967473105569
+    second: damla4_50
+  - first:
+      213: -4081756680077727450
+    second: damla4_51
+  - first:
+      213: -7583110404481354980
+    second: damla4_52
+  - first:
+      213: -6655581971506028684
+    second: damla4_53
+  - first:
+      213: -5182026477341695935
+    second: damla4_54
+  - first:
+      213: 700756741602518349
+    second: damla4_55
+  - first:
+      213: 5868557448259746130
+    second: damla4_56
+  - first:
+      213: -1882735799308972100
+    second: damla4_57
+  - first:
+      213: -419289103995877765
+    second: damla4_58
+  - first:
+      213: -7803342713608674130
+    second: damla4_59
+  - first:
+      213: 4282985742739713195
+    second: damla4_60
+  - first:
+      213: 4596713138404751550
+    second: damla4_61
+  - first:
+      213: 5294981765151797049
+    second: damla4_62
+  - first:
+      213: 1881101041962570930
+    second: damla4_63
+  - first:
+      213: 293296497645289213
+    second: damla4_64
+  - first:
+      213: 6705015227291837546
+    second: damla4_65
+  - first:
+      213: -4790338443058501929
+    second: damla4_66
+  - first:
+      213: 51202282765701550
+    second: damla4_67
+  - first:
+      213: 5063148215370847381
+    second: damla4_68
+  - first:
+      213: 8355545360101961609
+    second: damla4_69
+  - first:
+      213: 2606801294023028990
+    second: damla4_70
+  - first:
+      213: 8128831539720159564
+    second: damla4_71
+  - first:
+      213: -8811011711991455899
+    second: damla4_72
+  - first:
+      213: 4618856660204294954
+    second: damla4_73
+  - first:
+      213: 1844415550684144246
+    second: damla4_74
+  - first:
+      213: -6663018613457660578
+    second: damla4_75
+  - first:
+      213: -4248617412840453420
+    second: damla4_76
+  - first:
+      213: -239244824387431480
+    second: damla4_77
+  - first:
+      213: 6705029259565382937
+    second: damla4_78
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: damla4_0
+      rect:
+        serializedVersion: 2
+        x: 368
+        y: 706
+        width: 568
+        height: 462
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b5e704c3ecfc3bae0800000000000000
+      internalID: -1534654563322134949
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_1
+      rect:
+        serializedVersion: 2
+        x: 420
+        y: 1043
+        width: 13
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 27389beed1b6d8eb0800000000000000
+      internalID: -4715995458483682446
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_2
+      rect:
+        serializedVersion: 2
+        x: 1053
+        y: 905
+        width: 92
+        height: 329
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0eff36d500fe7d9f0800000000000000
+      internalID: -443623253426831392
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_3
+      rect:
+        serializedVersion: 2
+        x: 416
+        y: 1014
+        width: 9
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4927467116b6c16c0800000000000000
+      internalID: -4171341090103463276
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_4
+      rect:
+        serializedVersion: 2
+        x: 392
+        y: 966
+        width: 17
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1bd587798ac041400800000000000000
+      internalID: 293873793921211825
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_5
+      rect:
+        serializedVersion: 2
+        x: 410
+        y: 968
+        width: 9
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e4a56c198725dbeb0800000000000000
+      internalID: -4702511758109681074
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_6
+      rect:
+        serializedVersion: 2
+        x: 867
+        y: 952
+        width: 14
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2240ee8baafea2720800000000000000
+      internalID: 2822331633027122210
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_7
+      rect:
+        serializedVersion: 2
+        x: 991
+        y: 885
+        width: 55
+        height: 106
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: af89bdc517c498b00800000000000000
+      internalID: 831279655999478010
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_8
+      rect:
+        serializedVersion: 2
+        x: 876
+        y: 950
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3b57e7776c55bb850800000000000000
+      internalID: 6393798406879212979
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_9
+      rect:
+        serializedVersion: 2
+        x: 884
+        y: 919
+        width: 7
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7c3827cfaa73b3f60800000000000000
+      internalID: 8015061169355260871
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_10
+      rect:
+        serializedVersion: 2
+        x: 890
+        y: 901
+        width: 9
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d9962174df38725e0800000000000000
+      internalID: -1934432391089985123
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_11
+      rect:
+        serializedVersion: 2
+        x: 354
+        y: 843
+        width: 49
+        height: 59
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b13207f40f7048680800000000000000
+      internalID: -8753863046995107045
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_12
+      rect:
+        serializedVersion: 2
+        x: 842
+        y: 893
+        width: 17
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fd9c3b3fcc9d6f6b0800000000000000
+      internalID: -5262779640250644001
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_13
+      rect:
+        serializedVersion: 2
+        x: 810
+        y: 850
+        width: 13
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 08418a8b8091d1aa0800000000000000
+      internalID: -6188762787688737664
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_14
+      rect:
+        serializedVersion: 2
+        x: 868
+        y: 670
+        width: 234
+        height: 212
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 61f947662ffe79fa0800000000000000
+      internalID: -5793898571208810730
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_15
+      rect:
+        serializedVersion: 2
+        x: 1101
+        y: 819
+        width: 58
+        height: 41
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f6a70699f896019c0800000000000000
+      internalID: -3958548006984189329
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_16
+      rect:
+        serializedVersion: 2
+        x: 1132
+        y: 859
+        width: 19
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9c8eb1ecc5e90f810800000000000000
+      internalID: 1797110372752943305
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_17
+      rect:
+        serializedVersion: 2
+        x: 112
+        y: 729
+        width: 116
+        height: 126
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9f6547c4e53a90ab0800000000000000
+      internalID: -5041318682459613447
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_18
+      rect:
+        serializedVersion: 2
+        x: 342
+        y: 807
+        width: 29
+        height: 49
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 83ecbbb75fa532250800000000000000
+      internalID: 5918674345684356664
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_19
+      rect:
+        serializedVersion: 2
+        x: 820
+        y: 813
+        width: 7
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 01a7b5d776c464470800000000000000
+      internalID: 8378468164137875984
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_20
+      rect:
+        serializedVersion: 2
+        x: 1154
+        y: 835
+        width: 7
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cd206984cbfb20b90800000000000000
+      internalID: -7277043232484752676
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_21
+      rect:
+        serializedVersion: 2
+        x: 1155
+        y: 815
+        width: 20
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 36c1d8f478b125980800000000000000
+      internalID: -8551742474453967773
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_22
+      rect:
+        serializedVersion: 2
+        x: 362
+        y: 821
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c1d58f26b25f59830800000000000000
+      internalID: 4077434604346694940
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_23
+      rect:
+        serializedVersion: 2
+        x: 826
+        y: 802
+        width: 9
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7df00b3708036dae0800000000000000
+      internalID: -1524978095563468841
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_24
+      rect:
+        serializedVersion: 2
+        x: 311
+        y: 803
+        width: 14
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 62eb4ac9e413f9ca0800000000000000
+      internalID: -6008029164183699930
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_25
+      rect:
+        serializedVersion: 2
+        x: 834
+        y: 802
+        width: 9
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 30c5b9db746c06a40800000000000000
+      internalID: 5359501567996943363
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_26
+      rect:
+        serializedVersion: 2
+        x: 1157
+        y: 801
+        width: 18
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e82ed117114d5cd20800000000000000
+      internalID: 3298275473496072846
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_27
+      rect:
+        serializedVersion: 2
+        x: 251
+        y: 763
+        width: 53
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d1231357ecc3df830800000000000000
+      internalID: 4106505292658848285
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_28
+      rect:
+        serializedVersion: 2
+        x: 293
+        y: 755
+        width: 16
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b93b3e2f8945ba980800000000000000
+      internalID: -8526628453609131109
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_29
+      rect:
+        serializedVersion: 2
+        x: 329
+        y: 755
+        width: 14
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 829bf4217bcfb8170800000000000000
+      internalID: 8181911011265067304
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_30
+      rect:
+        serializedVersion: 2
+        x: 366
+        y: 650
+        width: 192
+        height: 144
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5ef0356b95e1c7d20800000000000000
+      internalID: 3277527999478697957
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_31
+      rect:
+        serializedVersion: 2
+        x: 257
+        y: 738
+        width: 15
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 970338b2213164c30800000000000000
+      internalID: 4343179859405779065
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_32
+      rect:
+        serializedVersion: 2
+        x: 293
+        y: 674
+        width: 54
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 83ef12109090ac850800000000000000
+      internalID: 6397936154911571512
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_33
+      rect:
+        serializedVersion: 2
+        x: 820
+        y: 729
+        width: 13
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9713eeca015891b40800000000000000
+      internalID: 5411502733929623929
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_34
+      rect:
+        serializedVersion: 2
+        x: 161
+        y: 668
+        width: 65
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bcd46db07e8f295f0800000000000000
+      internalID: -751264516597723701
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_35
+      rect:
+        serializedVersion: 2
+        x: 177
+        y: 722
+        width: 19
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 010903b43873aab60800000000000000
+      internalID: 7758074345140817936
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_36
+      rect:
+        serializedVersion: 2
+        x: 257
+        y: 708
+        width: 33
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f32bf7fa80069ac50800000000000000
+      internalID: 6676973512973857343
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_37
+      rect:
+        serializedVersion: 2
+        x: 289
+        y: 714
+        width: 8
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7893c15b315b69030800000000000000
+      internalID: 3501184856574671239
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_38
+      rect:
+        serializedVersion: 2
+        x: 293
+        y: 720
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 208337fe532806960800000000000000
+      internalID: 7593212139908839426
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_39
+      rect:
+        serializedVersion: 2
+        x: 557
+        y: 0
+        width: 582
+        height: 709
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 67b0bfea3ea1a27d0800000000000000
+      internalID: -2942509841337611402
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_40
+      rect:
+        serializedVersion: 2
+        x: 558
+        y: 661
+        width: 17
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 67fbe87d53e559620800000000000000
+      internalID: 2780231930313883510
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_41
+      rect:
+        serializedVersion: 2
+        x: 1117
+        y: 616
+        width: 66
+        height: 61
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 15123b9c2a8d6bd60800000000000000
+      internalID: 7905744389575745873
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_42
+      rect:
+        serializedVersion: 2
+        x: 1139
+        y: 664
+        width: 10
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c57526a3fc6132be0800000000000000
+      internalID: -1503332771318048932
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_43
+      rect:
+        serializedVersion: 2
+        x: 1182
+        y: 642
+        width: 21
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c6558d432391efdb0800000000000000
+      internalID: -4756336453031013012
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_44
+      rect:
+        serializedVersion: 2
+        x: 92
+        y: 23
+        width: 478
+        height: 630
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d2c41bb922e82bcf0800000000000000
+      internalID: -237971551005094867
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_45
+      rect:
+        serializedVersion: 2
+        x: 153
+        y: 602
+        width: 27
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e5f305efbc3948850800000000000000
+      internalID: 6378385476617781086
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_46
+      rect:
+        serializedVersion: 2
+        x: 159
+        y: 554
+        width: 53
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f27d344fb5a82c190800000000000000
+      internalID: -7943634665183389905
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_47
+      rect:
+        serializedVersion: 2
+        x: 175
+        y: 613
+        width: 21
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7054b658c3f1dc4f0800000000000000
+      internalID: -806954413432552185
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_48
+      rect:
+        serializedVersion: 2
+        x: 175
+        y: 616
+        width: 9
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0d24b927f3395fd90800000000000000
+      internalID: -7064578539745754416
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_49
+      rect:
+        serializedVersion: 2
+        x: 989
+        y: 387
+        width: 148
+        height: 249
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ae6d0c3f783c12870800000000000000
+      internalID: 8656414947460306666
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_50
+      rect:
+        serializedVersion: 2
+        x: 1129
+        y: 610
+        width: 10
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1aaaf2a80ef732d40800000000000000
+      internalID: 5558426967473105569
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_51
+      rect:
+        serializedVersion: 2
+        x: 1153
+        y: 586
+        width: 34
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 629a360fcefaa57c0800000000000000
+      internalID: -4081756680077727450
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_52
+      rect:
+        serializedVersion: 2
+        x: 1141
+        y: 499
+        width: 12
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c13f150a34163c690800000000000000
+      internalID: -7583110404481354980
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_53
+      rect:
+        serializedVersion: 2
+        x: 1147
+        y: 497
+        width: 7
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 47f93eea57f92a3a0800000000000000
+      internalID: -6655581971506028684
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_54
+      rect:
+        serializedVersion: 2
+        x: 1152
+        y: 499
+        width: 11
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1402169df5eb518b0800000000000000
+      internalID: -5182026477341695935
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_55
+      rect:
+        serializedVersion: 2
+        x: 1053
+        y: 473
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d45ad213b8699b900800000000000000
+      internalID: 700756741602518349
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_56
+      rect:
+        serializedVersion: 2
+        x: 1155
+        y: 473
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 259be7ff7ed417150800000000000000
+      internalID: 5868557448259746130
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_57
+      rect:
+        serializedVersion: 2
+        x: 1160
+        y: 451
+        width: 59
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cbf074404cd2fd5e0800000000000000
+      internalID: -1882735799308972100
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_58
+      rect:
+        serializedVersion: 2
+        x: 1155
+        y: 463
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b76422a08c26e2af0800000000000000
+      internalID: -419289103995877765
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_59
+      rect:
+        serializedVersion: 2
+        x: 1068
+        y: 433
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ea4e8b65525f4b390800000000000000
+      internalID: -7803342713608674130
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_60
+      rect:
+        serializedVersion: 2
+        x: 1153
+        y: 377
+        width: 52
+        height: 67
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bac201e37d8307b30800000000000000
+      internalID: 4282985742739713195
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_61
+      rect:
+        serializedVersion: 2
+        x: 1155
+        y: 438
+        width: 16
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eb87cf4be3ecacf30800000000000000
+      internalID: 4596713138404751550
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_62
+      rect:
+        serializedVersion: 2
+        x: 1131
+        y: 377
+        width: 22
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 93f2b048cdd8b7940800000000000000
+      internalID: 5294981765151797049
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_63
+      rect:
+        serializedVersion: 2
+        x: 1149
+        y: 389
+        width: 16
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2b4dbc06e630b1a10800000000000000
+      internalID: 1881101041962570930
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_64
+      rect:
+        serializedVersion: 2
+        x: 1162
+        y: 399
+        width: 13
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dfe73045c9ff11400800000000000000
+      internalID: 293296497645289213
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_65
+      rect:
+        serializedVersion: 2
+        x: 544
+        y: 237
+        width: 136
+        height: 120
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a64a05413dffc0d50800000000000000
+      internalID: 6705015227291837546
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_66
+      rect:
+        serializedVersion: 2
+        x: 1141
+        y: 339
+        width: 34
+        height: 47
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7d6a99bf09c458db0800000000000000
+      internalID: -4790338443058501929
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_67
+      rect:
+        serializedVersion: 2
+        x: 313
+        y: 294
+        width: 12
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ea150f37438e5b000800000000000000
+      internalID: 51202282765701550
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_68
+      rect:
+        serializedVersion: 2
+        x: 462
+        y: 300
+        width: 11
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5941556e97ae34640800000000000000
+      internalID: 5063148215370847381
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_69
+      rect:
+        serializedVersion: 2
+        x: 319
+        y: 278
+        width: 28
+        height: 21
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 98f6a854c3cd4f370800000000000000
+      internalID: 8355545360101961609
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_70
+      rect:
+        serializedVersion: 2
+        x: 348
+        y: 276
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ef0754a27f73d2420800000000000000
+      internalID: 2606801294023028990
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_71
+      rect:
+        serializedVersion: 2
+        x: 354
+        y: 276
+        width: 7
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c41030c87396fc070800000000000000
+      internalID: 8128831539720159564
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_72
+      rect:
+        serializedVersion: 2
+        x: 360
+        y: 270
+        width: 11
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 56f51fad78ff8b580800000000000000
+      internalID: -8811011711991455899
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_73
+      rect:
+        serializedVersion: 2
+        x: 440
+        y: 215
+        width: 9
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a239ce329a9791040800000000000000
+      internalID: 4618856660204294954
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_74
+      rect:
+        serializedVersion: 2
+        x: 494
+        y: 180
+        width: 20
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6722cb4db2ea89910800000000000000
+      internalID: 1844415550684144246
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_75
+      rect:
+        serializedVersion: 2
+        x: 504
+        y: 199
+        width: 9
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e555a0d8fd33883a0800000000000000
+      internalID: -6663018613457660578
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_76
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 182
+        width: 6
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4da0b1129f0e905c0800000000000000
+      internalID: -4248617412840453420
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_77
+      rect:
+        serializedVersion: 2
+        x: 68
+        y: 71
+        width: 38
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8c3590c89180eacf0800000000000000
+      internalID: -239244824387431480
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: damla4_78
+      rect:
+        serializedVersion: 2
+        x: 102
+        y: 69
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 91dbef8369c0d0d50800000000000000
+      internalID: 6705029259565382937
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      damla4_0: -1534654563322134949
+      damla4_1: -4715995458483682446
+      damla4_10: -1934432391089985123
+      damla4_11: -8753863046995107045
+      damla4_12: -5262779640250644001
+      damla4_13: -6188762787688737664
+      damla4_14: -5793898571208810730
+      damla4_15: -3958548006984189329
+      damla4_16: 1797110372752943305
+      damla4_17: -5041318682459613447
+      damla4_18: 5918674345684356664
+      damla4_19: 8378468164137875984
+      damla4_2: -443623253426831392
+      damla4_20: -7277043232484752676
+      damla4_21: -8551742474453967773
+      damla4_22: 4077434604346694940
+      damla4_23: -1524978095563468841
+      damla4_24: -6008029164183699930
+      damla4_25: 5359501567996943363
+      damla4_26: 3298275473496072846
+      damla4_27: 4106505292658848285
+      damla4_28: -8526628453609131109
+      damla4_29: 8181911011265067304
+      damla4_3: -4171341090103463276
+      damla4_30: 3277527999478697957
+      damla4_31: 4343179859405779065
+      damla4_32: 6397936154911571512
+      damla4_33: 5411502733929623929
+      damla4_34: -751264516597723701
+      damla4_35: 7758074345140817936
+      damla4_36: 6676973512973857343
+      damla4_37: 3501184856574671239
+      damla4_38: 7593212139908839426
+      damla4_39: -2942509841337611402
+      damla4_4: 293873793921211825
+      damla4_40: 2780231930313883510
+      damla4_41: 7905744389575745873
+      damla4_42: -1503332771318048932
+      damla4_43: -4756336453031013012
+      damla4_44: -237971551005094867
+      damla4_45: 6378385476617781086
+      damla4_46: -7943634665183389905
+      damla4_47: -806954413432552185
+      damla4_48: -7064578539745754416
+      damla4_49: 8656414947460306666
+      damla4_5: -4702511758109681074
+      damla4_50: 5558426967473105569
+      damla4_51: -4081756680077727450
+      damla4_52: -7583110404481354980
+      damla4_53: -6655581971506028684
+      damla4_54: -5182026477341695935
+      damla4_55: 700756741602518349
+      damla4_56: 5868557448259746130
+      damla4_57: -1882735799308972100
+      damla4_58: -419289103995877765
+      damla4_59: -7803342713608674130
+      damla4_6: 2822331633027122210
+      damla4_60: 4282985742739713195
+      damla4_61: 4596713138404751550
+      damla4_62: 5294981765151797049
+      damla4_63: 1881101041962570930
+      damla4_64: 293296497645289213
+      damla4_65: 6705015227291837546
+      damla4_66: -4790338443058501929
+      damla4_67: 51202282765701550
+      damla4_68: 5063148215370847381
+      damla4_69: 8355545360101961609
+      damla4_7: 831279655999478010
+      damla4_70: 2606801294023028990
+      damla4_71: 8128831539720159564
+      damla4_72: -8811011711991455899
+      damla4_73: 4618856660204294954
+      damla4_74: 1844415550684144246
+      damla4_75: -6663018613457660578
+      damla4_76: -4248617412840453420
+      damla4_77: -239244824387431480
+      damla4_78: 6705029259565382937
+      damla4_8: 6393798406879212979
+      damla4_9: 8015061169355260871
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

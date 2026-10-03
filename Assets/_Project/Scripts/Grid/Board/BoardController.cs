@@ -161,6 +161,8 @@ public class BoardController : MonoBehaviour
     [SerializeField, Min(0f)] private float entranceSlideOffsetX = 0f;
     [Tooltip("Loading ekranı kalkıp arka plan göründükten sonra, board slide'ı başlamadan önceki bekleme (sn). Örn. 1 = arka planı 1 sn gör, sonra board kaysın.")]
     [SerializeField, Min(0f)] private float entranceStartDelay = 1.0f;
+    [Tooltip("Board ile birlikte üst ve alt HUD görsellerini ekrana getirir.")]
+    [SerializeField] private GameHudEntranceAnimator hudEntrance;
 
     [Header("Special Combos")]
     [SerializeField] private int patchBotPulseComboSize = 4;
@@ -690,10 +692,10 @@ public class BoardController : MonoBehaviour
     // Set by KeyGeneratorService. While false (still producing) PatchBot targeting prefers the
     // GENERATOR (to emit keys); once true (all keys produced) it targets the Key tiles to collect.
     public bool KeyGeneratorProductionComplete;
-    // Bir barrel'ın mud yayılımı (BarrelSpreadAction) tamamlandığında bir kez tetiklenir.
-    // Mud goal'ündeki o barrel'a ait placeholder, mud stamp edildikten SONRA düşürülür ki
-    // sayaç mud eklenmeden 0'a inip erken WIN tetiklemesin.
-    public event Action OnBarrelResolved;
+    // Saçılan-obstacle kaynağının (Barrel→Mud, WaterTank→WaterPuddle) yayılımı tamamlandığında
+    // kaynak başına bir kez tetiklenir; argüman saçılan obstacle'dır. O goal'deki kaynağa ait
+    // placeholder, saçılım stamp edildikten SONRA düşürülür ki sayaç erken 0'a inip WIN vermesin.
+    public event Action<ObstacleId> OnSplatSpreadResolved;
     public event Action<int> OnChestOpened;
     public event Action<int, ChestColorMask> OnChestColorRemoved;
     public event Action<int, ChestColorMask, int> OnBatteryHit;
@@ -1867,6 +1869,45 @@ public class BoardController : MonoBehaviour
         if (tile == null)
             return;
         tile.SetNormalVisualFillRatioOverride(applyReferenceTileVisualFillRatio, ReferenceFallMotion.tileVisualFillRatio);
+    }
+
+    /// <summary>
+    /// İlk yerleşimden SONRA, oyuncu görmeden çağrılır: board runtime gravity ile animasyonsuz
+    /// oturtulur (CascadeLogic.SettleInstantly). Taş yer değiştirdiyse renkler son yerleşime göre
+    /// yeniden dağıtılır → anlık 3'lü yok + en az bir hamle garantisi korunur.
+    /// </summary>
+    public void SettleInitialBoard()
+    {
+        if (cascadeLogic == null || !cascadeLogic.SettleInstantly())
+            return;
+
+        // Yeniden boyanmayacak hücreler simülasyonda kilitli: boş, special'lı ve tasarımcının
+        // sabitlediği (pinned) taşlar. Hole/movable/interaction-locked zaten kilitli sayılır.
+        var keep = new bool[width, height];
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            var view = tiles[x, y];
+            int idx = y * width + x;
+            bool pinned = levelData != null
+                && ((levelData.pinnedTileTypes != null && idx < levelData.pinnedTileTypes.Length && levelData.pinnedTileTypes[idx] > 0)
+                    || (levelData.pinnedSpecialTypes != null && idx < levelData.pinnedSpecialTypes.Length && levelData.pinnedSpecialTypes[idx] != 0));
+            keep[x, y] = view == null || pinned || view.GetSpecial() != TileSpecial.None;
+        }
+
+        var types = SimulateInitialTypes(keep);
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            if (keep[x, y] || holes[x, y]) continue;
+            if (obstacleStateService != null
+                && (obstacleStateService.IsMovableObstacleAt(x, y) || obstacleStateService.IsInteractionLockedAt(x, y)))
+                continue;
+            tiles[x, y].SetType(types[x, y]);
+            SyncTileData(x, y);
+        }
+
+        RefreshAllSortingOrders();
     }
 
     public TileType[,] SimulateInitialTypes(bool[,] unreachableCells = null)
@@ -4668,6 +4709,7 @@ public class BoardController : MonoBehaviour
                 yield return new WaitForSeconds(entranceStartDelay);
 
             Vector2 start = shakeTarget.anchoredPosition;
+            if (hudEntrance != null) hudEntrance.BeginSlide();
             float dur = Mathf.Max(0.05f, entranceSlideDuration);
             float t = 0f;
             while (t < dur)
@@ -4679,6 +4721,7 @@ public class BoardController : MonoBehaviour
                 // (BossDuel ShiftBoardHome — board BottomArea üstüne yaslanır). Local
                 // 'home' kopyasına lerp'lemek board'u eski merkeze geri oturtuyordu.
                 shakeTarget.anchoredPosition = Vector2.LerpUnclamped(start, shakeBasePos, e);
+                if (hudEntrance != null) hudEntrance.SetProgress(e);
                 yield return null;
             }
 
@@ -4686,6 +4729,7 @@ public class BoardController : MonoBehaviour
             entranceInProgress = false;
         }
 
+        if (hudEntrance != null) hudEntrance.Complete();
         EndBusy();
     }
 
@@ -4788,8 +4832,8 @@ public class BoardController : MonoBehaviour
     internal void RaiseObstacleViewRestored(int x, int y)
         => OnObstacleViewRestored?.Invoke(x, y);
 
-    internal void RaiseBarrelResolved()
-        => OnBarrelResolved?.Invoke();
+    internal void RaiseSplatSpreadResolved(ObstacleId splatId)
+        => OnSplatSpreadResolved?.Invoke(splatId);
 
     // Kırılan barrel'ın mud yayılımını HEMEN (board oturmadan) oynatır — taş akışıyla
     // eşzamanlı. Arka-plan job olarak sayılır ki splatter bitmeden board tam idle sanılmasın;
@@ -4798,7 +4842,7 @@ public class BoardController : MonoBehaviour
     {
         // ObstacleSpread (async): mud verisi BarrelSpreadAction'da up-front commit edildiği için
         // resolve'u parklamaya gerek yok — splatter oynarken board akar, yalnız level-end bekler
-        // (ActiveBackgroundJobs'ta kalır). RaiseBarrelResolved placeholder'ı erken-WIN'i önler.
+        // (ActiveBackgroundJobs'ta kalır). RaiseSplatSpreadResolved placeholder'ı erken-WIN'i önler.
         var spreadJob = BeginJob(BoardJobKind.ObstacleSpread);
         try
         {
@@ -4807,6 +4851,24 @@ public class BoardController : MonoBehaviour
         }
         finally
         {
+            spreadJob.Dispose();
+            RequestResolveAfterActionSequence();
+        }
+    }
+
+    // Kırılan su deposunun saçılımı: barrel ile aynı model (board oturmasını beklemez, async
+    // ObstacleSpread job → level-end bekler). Placeholder finally'de bırakılır: animasyon yarıda
+    // kalsa bile WaterPuddle goal'ü sonsuza dek açık kalmaz.
+    private IEnumerator CoSpreadWaterTankImmediate(Vector2Int origin, ObstacleId tankId)
+    {
+        var spreadJob = BeginJob(BoardJobKind.ObstacleSpread);
+        try
+        {
+            yield return new WaterTankSpreadAction(this, origin, tankId).ExecuteVisuals(null);
+        }
+        finally
+        {
+            RaiseSplatSpreadResolved(ObstacleId.WaterPuddle);
             spreadJob.Dispose();
             RequestResolveAfterActionSequence();
         }
@@ -5080,10 +5142,14 @@ public class BoardController : MonoBehaviour
         // Barrel kırıldı: board'un oturmasını BEKLEMEDEN, kırılır kırılmaz mud saçılır.
         // Hedef hücreler origin'den deterministik; mud under-tile (gravity'yi bloklamaz) ve
         // damla animasyonu kareler boyunca land ettiği için akışla eşzamanlı çalışır. Taş
-        // akarken mud stamp'lenir ve o an hit alabilir. Placeholder (RaiseBarrelResolved)
+        // akarken mud stamp'lenir ve o an hit alabilir. Placeholder (RaiseSplatSpreadResolved)
         // erken-WIN'i önler. Arka-plan job olarak koşar (board tam idle sayılmasın).
         if (IsMudSplatBarrel(obstacleId))
             StartCoroutine(CoSpreadBarrelMudImmediate(new BarrelSpreadAction.BarrelSource(new Vector2Int(ox, oy), obstacleId)));
+
+        // Su deposu (2x2 / 1x1): aynı model — kırılır kırılmaz rastgele hücrelere su + ekrana damla.
+        if (IsWaterTank(obstacleId))
+            StartCoroutine(CoSpreadWaterTankImmediate(new Vector2Int(ox, oy), obstacleId));
 
         if (obstacleId == ObstacleId.Oil)
         {
@@ -5164,6 +5230,12 @@ public class BoardController : MonoBehaviour
     {
         return obstacleId == ObstacleId.Barrel
             || obstacleId == ObstacleId.Barrell_v2;
+    }
+
+    internal static bool IsWaterTank(ObstacleId obstacleId)
+    {
+        return obstacleId == ObstacleId.WaterTank
+            || obstacleId == ObstacleId.WaterTankSmall;
     }
 
     private void HandleCellUnlocked(int cellIndex)

@@ -1057,6 +1057,9 @@ public class ObstacleStateService : ISimObstacleQuery
         if (specialLockQuery != null && specialLockQuery(x, y))
             return true;
 
+        if (IsCoveredByLockingOverlay(level.Index(x, y)))
+            return true;
+
         // Yalnızca sabit OverTileBlocker (Stone vb.) altındaki tile'ı kilitler.
         // MovableObstacle (Plastic vb.) swap edilebilir — interaction kilitlenmez.
         if (IsOverTileBlockerAt(x, y) && !IsMovableObstacleAt(x, y))
@@ -1366,6 +1369,26 @@ public class ObstacleStateService : ISimObstacleQuery
 
         obstacleId = stamped.Id;
         return obstacleId != ObstacleId.None;
+    }
+
+    /// <summary>
+    /// Üst katmanın altında saklı duran TÜM obstacle id'lerini toplar (yığın katmanları + movable
+    /// altındaki under-tile). obstacles[] yalnız en üst katmanı tutar; 3+ katlı yığınlarda alttakiler
+    /// yalnız burada görünür (ör. obstacle hint taraması).
+    /// </summary>
+    public void CollectStampedBeneathIds(ICollection<ObstacleId> into)
+    {
+        if (into == null) return;
+        foreach (var kv in _stampedBeneathByCell)
+        {
+            if (kv.Value == null) continue;
+            for (int i = 0; i < kv.Value.Count; i++)
+                if (kv.Value[i].Id != ObstacleId.None)
+                    into.Add(kv.Value[i].Id);
+        }
+        foreach (var kv in _underTileBeneathMovable)
+            if (kv.Value.Id != ObstacleId.None)
+                into.Add(kv.Value.Id);
     }
 
     public int CountStampedBeneath(ObstacleId obstacleId)
@@ -1821,6 +1844,39 @@ public class ObstacleStateService : ISimObstacleQuery
             if (fromIdx < remainingHitsByOrigin.Length)
                 remainingHitsByOrigin[fromIdx] = -1;
         }
+    }
+
+    /// <summary>
+    /// Level kurulumu: editörde movable'ın ÜSTÜNE yığılan örtüyü (Grass) oyun içi modelle aynı yere
+    /// koyar — movable birincil, örtü _underTileBeneathMovable'da (vuruşu önce o alır). Hücrede
+    /// birincil movable yoksa false.
+    /// </summary>
+    public bool RegisterCoveringOverlayOnMovable(int cell, ObstacleId overlayId)
+    {
+        if (level == null || level.obstacles == null || cell < 0 || cell >= level.obstacles.Length)
+            return false;
+        if (overlayId != ObstacleId.Grass && overlayId != ObstacleId.Oil)
+            return false;
+        if (!IsMovableObstacleAt(cell % level.width, cell / level.width))
+            return false;
+
+        var def = library != null ? library.Get(overlayId) : null;
+        _underTileBeneathMovable[cell] = (overlayId, Mathf.Max(1, def != null ? def.hits : 1));
+        return true;
+    }
+
+    // Movable üstünde etkileşimi kilitleyen örtü (Grass) var mı? Örtü kendi hücresinde birincilken
+    // taşı kilitler; movable altına girince de kilitlemeye devam etmeli (yoksa çimle örtülü plastik
+    // swap edilebiliyordu).
+    private bool IsCoveredByLockingOverlay(int idx)
+    {
+        if (!_underTileBeneathMovable.TryGetValue(idx, out var cover)) return false;
+        if (cover.Id != ObstacleId.Grass && cover.Id != ObstacleId.Oil) return false;
+        var def = library != null ? library.Get(cover.Id) : null;
+        if (def == null) return false;
+        int remaining = cover.Remaining > 0 ? cover.Remaining : Mathf.Max(1, def.hits);
+        var stage = def.GetStageRuleForRemainingHits(remaining);
+        return stage != null && stage.locksInteraction;
     }
 
     // Movable'ın (Helmet vb.) altındaki beneath store'da GÖRSEL olarak ÜSTTE duran bir overlay
@@ -2303,9 +2359,19 @@ public class ObstacleStateService : ISimObstacleQuery
         return (ObstacleId)level.obstacles[idx] == ObstacleId.SpreadingGel;
     }
 
-    // Mud + SpreadingGel: interaction'ı KİLİTLEMEYEN pasif under-tile overlay'ler. Diğer under-tile
-    // obstacle'lar swap/select'i bloklar; bu ikisi istisna (taş üstünde normal oynanır + hareket eder).
-    public bool IsInteractiveUnderTileOverlayAt(int x, int y) => IsMudAt(x, y) || IsSpreadingGelAt(x, y);
+    // Su birikintisi (WaterTank'tan saçılır): mud gibi pasif under-tile, taş üstünde oynanır.
+    public bool IsWaterPuddleAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx] == ObstacleId.WaterPuddle;
+    }
+
+    // Mud + SpreadingGel + WaterPuddle: interaction'ı KİLİTLEMEYEN pasif under-tile overlay'ler.
+    // Diğer under-tile obstacle'lar swap/select'i bloklar; bunlar istisna (taş üstünde normal
+    // oynanır + hareket eder).
+    public bool IsInteractiveUnderTileOverlayAt(int x, int y)
+        => IsMudAt(x, y) || IsSpreadingGelAt(x, y) || IsWaterPuddleAt(x, y);
 
     // Oil (veya herhangi bir holdsTile=true obstacle) bu hücredeki taşı tutuyorsa true.
     // allowDiagonal=true ise çapraz akış yine izinli — bu method sadece dikey blok için.

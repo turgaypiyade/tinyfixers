@@ -114,6 +114,15 @@ public class GridSpawner : MonoBehaviour
     // view'ları overlay'in ARKASINA çizilir; overlay kırılınca reveal bu view'ı promote eder.
     private readonly System.Collections.Generic.List<(int cell, ObstacleId beneathId, int beneathOrigin, int overOrigin)>
         stampedBeneathVisuals = new();
+
+    // Movable (Plastic/Helmet…) ÜSTÜNE yığılan Grass: movable birincil kalır (gerçek movable taşı
+    // spawn olur), grass motorun "movable üstü örtü" yuvasına (_underTileBeneathMovable) kaydedilir —
+    // oyun içinde movable çim hücresine düşünce kurulan modelin AYNISI (vuruş önce çime:
+    // TryConsumeCoveringOverlayHit). Eskiden grass birincil, movable stamped-beneath'te gizli kalıyordu:
+    // hücreye normal taş konuyor, çim kırılınca movable dolu hücreye VERİ olarak açılıyordu (aynı
+    // hücrede taş/PatchBot + plastik) ve sonraki düşüşlerde yığında 2 movable oluşuyordu.
+    private readonly System.Collections.Generic.List<(int cell, ObstacleId overlayId)> pendingCoveringOverlays = new();
+    private readonly System.Collections.Generic.List<(int cell, ObstacleId overlayId)> coveringOverlayVisuals = new();
     private readonly Dictionary<int, Image> beneathViewsByCell = new();
 
     [Header("Obstacle Visual (UI)")]
@@ -250,6 +259,7 @@ public class GridSpawner : MonoBehaviour
         resolvedLevel = ResolveLevelData();
         ApplyResolvedLevelToConsumers(resolvedLevel);
         pendingStampedBeneath.Clear();
+        pendingCoveringOverlays.Clear();
         StampTubeCellsIntoLevel(resolvedLevel);    // must happen before SetLevelData
         StampMagnetCellsIntoLevel(resolvedLevel);  // must happen before SetLevelData
         // Üst üste konan engeller (stackedObstacles + safes) TEK yığın sırasıyla (stackOrder) kurulur:
@@ -284,6 +294,7 @@ public class GridSpawner : MonoBehaviour
         // ObstacleStateService artık var (SetLevelData onu init etti). Stamp aşamasında toplanan
         // beneath kayıtlarını şimdi push et — init store'ları temizledikten SONRA.
         RegisterPendingStampedBeneath();
+        RegisterPendingCoveringOverlays();
 
         effectiveRandomPool = resolvedLevel.randomPool != null && resolvedLevel.randomPool.Length > 0
             ? resolvedLevel.randomPool
@@ -298,6 +309,10 @@ public class GridSpawner : MonoBehaviour
         board.ObstacleVisualChanged += HandleObstacleVisualChanged;
 
         BuildInitialGrid();
+
+        // Board şekli ne olursa olsun açılışta düşüş olmasın: ilk yerleşimi runtime gravity'yle
+        // animasyonsuz oturt (ekran dışında, oyuncu görmeden).
+        board.SettleInitialBoard();
 
         // Board taşlar dizili halde sağdan sola kayarak otursun (giriş animasyonu).
         // Initial settle (varsa) ekran dışında çalışır; sonra board kayarak gelir.
@@ -609,6 +624,7 @@ public class GridSpawner : MonoBehaviour
             // Aksi halde LevelP_00540'ta plastic/movable altındaki mud ilk açılışta silinir,
             // movable ayrılınca restore path'i yeniden çizdiği için ancak sonradan görünür.
             DrawStampedBeneathVisuals();   // overlay altındaki obstacle'ı arkada baştan göster
+            DrawCoveringOverlayVisuals();  // movable üstündeki grass örtüsü
             DrawTubeObstacles();
             DrawMagnetObstacles();
             DrawSafeObstacles();
@@ -1577,12 +1593,94 @@ public class GridSpawner : MonoBehaviour
                 int cell = cy * W + cx;
                 if (cell < 0 || cell >= lvl.obstacles.Length) continue;
 
+                // Grass → movable'ın üstü: movable birincil kalır, grass örtü yuvasına (bkz. pendingCoveringOverlays).
+                if (w == 1 && h == 1 && overId == ObstacleId.Grass && IsMovableContent(lvl, cell))
+                {
+                    if (!HasPendingCoveringOverlay(cell))
+                        pendingCoveringOverlays.Add((cell, overId));
+                    continue;
+                }
+
+                // Örtülü movable'ın üstüne başka bir katman geliyor: örtüyü normal yığın katmanına
+                // çevir (eski kurulum), sonra yeni katmanı onun üstüne stamp et.
+                MaterializePendingCoveringOverlay(lvl, cell);
+
                 // 1) Altındaki authored içeriği beneath store için işaretle.
                 pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], origin));
                 // 2) Üstteki obstacle ile stamp et.
                 lvl.obstacles[cell]       = (int)overId;
                 lvl.obstacleOrigins[cell] = origin;
             }
+    }
+
+    private static bool IsMovableContent(LevelData lvl, int cell)
+    {
+        var id = (ObstacleId)lvl.obstacles[cell];
+        if (id == ObstacleId.None || lvl.obstacleOrigins[cell] != cell) return false;   // movable'lar 1x1
+        var def = lvl.obstacleLibrary != null ? lvl.obstacleLibrary.Get(id) : null;
+        return def != null && def.IsMovableObstacle;
+    }
+
+    private bool HasPendingCoveringOverlay(int cell)
+    {
+        for (int i = 0; i < pendingCoveringOverlays.Count; i++)
+            if (pendingCoveringOverlays[i].cell == cell) return true;
+        return false;
+    }
+
+    private void MaterializePendingCoveringOverlay(LevelData lvl, int cell)
+    {
+        for (int i = pendingCoveringOverlays.Count - 1; i >= 0; i--)
+        {
+            if (pendingCoveringOverlays[i].cell != cell) continue;
+            pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], cell));
+            lvl.obstacles[cell] = (int)pendingCoveringOverlays[i].overlayId;
+            lvl.obstacleOrigins[cell] = cell;
+            pendingCoveringOverlays.RemoveAt(i);
+        }
+    }
+
+    // SetLevelData SONRASI (state store'ları temizlendikten sonra): örtüleri movable üstü yuvaya yaz.
+    private void RegisterPendingCoveringOverlays()
+    {
+        coveringOverlayVisuals.Clear();
+        var state = board != null ? board.ObstacleStateService : null;
+        if (state == null) { pendingCoveringOverlays.Clear(); return; }
+
+        foreach (var p in pendingCoveringOverlays)
+            if (state.RegisterCoveringOverlayOnMovable(p.cell, p.overlayId))
+                coveringOverlayVisuals.Add(p);
+        pendingCoveringOverlays.Clear();
+    }
+
+    // Örtü görselini hücrenin standart obstacle view'ı olarak çizer (grass kökü, taşın üstünde).
+    // Movable'ın kendi view'ı TileView olduğu için obstacleViewsByOrigin[cell] boştur → çakışma yok;
+    // örtü tükenince TryConsumeCoveringOverlayHit'in cleared değişikliği bu view'ı siler.
+    private void DrawCoveringOverlayVisuals()
+    {
+        if (coveringOverlayVisuals.Count == 0 || resolvedLevel?.obstacleLibrary == null) return;
+
+        foreach (var p in coveringOverlayVisuals)
+        {
+            var def = resolvedLevel.obstacleLibrary.Get(p.overlayId);
+            if (def == null || obstacleViewsByOrigin.ContainsKey(p.cell)) continue;
+
+            int savedObs = resolvedLevel.obstacles[p.cell];
+            int savedOrg = resolvedLevel.obstacleOrigins[p.cell];
+            resolvedLevel.obstacles[p.cell] = (int)p.overlayId;
+            resolvedLevel.obstacleOrigins[p.cell] = p.cell;
+
+            var image = DrawObstacleImage(def, p.cell % resolvedLevel.width, p.cell / resolvedLevel.width);
+
+            resolvedLevel.obstacles[p.cell] = savedObs;
+            resolvedLevel.obstacleOrigins[p.cell] = savedOrg;
+
+            if (image != null)
+            {
+                obstacleViewsByOrigin[p.cell] = image;
+                obstacleDefsByOrigin[p.cell] = def;
+            }
+        }
     }
 
     // Stamp aşamasında toplanan beneath kayıtlarını ObstacleStateService'e push eder.
@@ -2145,6 +2243,46 @@ public class GridSpawner : MonoBehaviour
             if (safeClickGo != null) Destroy(safeClickGo);
             safeClickProxyByCell.Remove(cellIndex);
         }
+
+        TrySpawnPinnedTileRevealedAt(x, y, cellIndex);
+    }
+
+    // Kapak (Wardrobe, Chest… stack katmanı) altına sabitlenmiş (pinned) taş/special: açılışta hücre
+    // blocked → hole sayıldığı için hiç oluşmamıştı. Kapak kalkıp hücre oynanabilir olunca TAM YERİNDE
+    // çıkar (cascade oraya rastgele taş getirmesin). Runtime klonunda tüketilir → tek seferlik.
+    // Altında başka bir over-tile engel varsa hücre hâlâ hole'dur; o da kırılınca tekrar denenir.
+    private void TrySpawnPinnedTileRevealedAt(int x, int y, int idx)
+    {
+        if (resolvedLevel == null || board == null) return;
+        if (board.Holes[x, y] || board.GetTileViewAt(x, y) != null) return;
+
+        var specials = resolvedLevel.pinnedSpecialTypes;
+        var tileTypes = resolvedLevel.pinnedTileTypes;
+        TileSpecial pinnedSpecial = specials != null && idx < specials.Length ? (TileSpecial)specials[idx] : TileSpecial.None;
+        int pinnedTileVal = tileTypes != null && idx < tileTypes.Length ? tileTypes[idx] : 0;
+        if (pinnedSpecial == TileSpecial.None && pinnedTileVal <= 0) return;
+
+        if (specials != null && idx < specials.Length) specials[idx] = 0;
+        if (tileTypes != null && idx < tileTypes.Length) tileTypes[idx] = 0;
+
+        TileType tileType = pinnedTileVal > 0
+            ? (TileType)(pinnedTileVal - 1)
+            : (effectiveRandomPool != null && effectiveRandomPool.Length > 0
+                ? PickIsolatedRandomType(x, y, effectiveRandomPool)
+                : default);
+
+        SpawnTile(x, y, tileType);
+
+        var view = board.GetTileViewAt(x, y);
+        if (view != null && pinnedSpecial != TileSpecial.None)
+        {
+            if (pinnedSpecial == TileSpecial.SystemOverride)
+                view.SetOverrideBaseType(tileType, deferVisualUpdate: true);
+            view.SetSpecial(pinnedSpecial);
+            board.SyncTileData(x, y);
+        }
+
+        board.RefreshAllSortingOrders();
     }
 
     private void EnsureRoots()
@@ -3362,8 +3500,29 @@ public class GridSpawner : MonoBehaviour
         if (change.sprite != null && change.obstacleId != ObstacleId.Grass)
             image.sprite = change.sprite;
 
-        if (change.obstacleId == ObstacleId.Barrell_v2)
+        // Barrell_v2 + su deposu: ara vuruşta (sprite değişimi) kısa sarsıntı — "çatladı" hissi.
+        if (change.obstacleId == ObstacleId.Barrell_v2 || BoardController.IsWaterTank(change.obstacleId))
             PlayObstacleHitShake(change.originIndex, image.rectTransform);
+
+        // Su deposu: çatlak kareleri (Bidon → Bidon2 → Bidon3) oynar + gövdeden parça sıçrar.
+        if (BoardController.IsWaterTank(change.obstacleId))
+            PlayWaterTankCrack(image, change.sprite);
+    }
+
+    private void PlayWaterTankCrack(Image image, Sprite stageSprite)
+    {
+        var config = WaterTankConfig.Load();
+        StartCoroutine(WaterTankFx.PlayCrackFrames(image, config, stageSprite != null ? stageSprite : image.sprite));
+
+        int shardCount = config != null ? config.crackShardCount : 4;
+        var root = board != null && board.BoardVfxPlayer != null ? board.BoardVfxPlayer.VfxRoot : null;
+        if (shardCount > 0 && root != null
+            && WaterTankFx.TryGetLocalCenterAndWidth(image.rectTransform, root, out var center, out float width))
+        {
+            // Çatlarken yalnız birkaç küçük parça: menzil/boy deponun yarısı kadar.
+            WaterTankFx.SpawnShards(this, root, center, width * 0.6f,
+                stageSprite != null ? stageSprite : image.sprite, shardCount);
+        }
     }
 
     private void PlayObstacleHitShake(int originIndex, RectTransform target)

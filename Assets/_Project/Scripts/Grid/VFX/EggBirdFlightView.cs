@@ -11,12 +11,13 @@ using UnityEngine.UI;
 /// </summary>
 public sealed class EggBirdFlightView : MonoBehaviour
 {
-    private const float HatchWindupDuration = 0.12f;
-    private const float RiseDuration = 0.98f;
-    private const float SplitChargeDuration = 0.18f;
-    private const float SplitDuration = 0.52f;
-    private const float SplitHoldDuration = 0.26f;
-    private const float DiveDuration = 0.62f;
+    // Yumurta kırılınca çarpmaya kadar toplam ≈ 1.97 sn (0.10+0.70+0.14+0.40+0.18+0.45).
+    private const float HatchWindupDuration = 0.10f;
+    private const float RiseDuration = 0.70f;
+    private const float SplitChargeDuration = 0.14f;
+    private const float SplitDuration = 0.40f;
+    private const float SplitHoldDuration = 0.18f;
+    private const float DiveDuration = 0.45f;
     private const float FlapsPerSecond = 12f;
 
     private sealed class Bird

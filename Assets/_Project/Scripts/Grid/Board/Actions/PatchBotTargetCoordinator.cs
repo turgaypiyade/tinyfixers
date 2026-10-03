@@ -331,8 +331,10 @@ public class PatchBotTargetCoordinator
     {
         var cargoDropPathCells = new List<(int x, int y, TileView tile)>();
         var obstacleGoalCells = new List<(int x, int y, TileView tile)>();
+        var obstacleGoalUnderCells = new List<(int x, int y, TileView tile)>();
         var tileGoalCells = new List<(int x, int y, TileView tile)>();
         var otherObstacleCells = new List<(int x, int y, TileView tile)>();
+        var otherObstacleUnderCells = new List<(int x, int y, TileView tile)>();
         var normalCells = new List<(int x, int y, TileView tile)>();
         var gelSpreadCells = new List<(int x, int y, TileView tile)>();
         var obstacleUnitCells = new Dictionary<int, List<(int x, int y, TileView tile)>>();
@@ -482,8 +484,13 @@ public class PatchBotTargetCoordinator
                 float d = (c.x - cx) * (c.x - cx) + (c.y - cy) * (c.y - cy);
                 if (d < best) { best = d; rep = c; }
             }
-            if (obstacleUnitIsGoal[kv.Key]) obstacleGoalCells.Add(rep);
-            else otherObstacleCells.Add(rep);
+            // Taş altı katman (su birikintisi, mud…) normal oyunda da üstündeki eşleşmeyle temizlenir;
+            // bloklayan engel (bidon, sandık…) yalnız vuruşla gider ve çoğu zaman saçılımın KAYNAĞIDIR.
+            // Aynı kovada yarışırlarsa yoğunluk puanı kalabalık birikinti kümelerini seçip tek adaylı
+            // bloklayanı (2x2 bidon) hiç seçtirmiyordu → bloklayan önce.
+            bool under = board.ObstacleStateService.IsUnderTileObstacleAt(rep.x, rep.y);
+            if (obstacleUnitIsGoal[kv.Key]) (under ? obstacleGoalUnderCells : obstacleGoalCells).Add(rep);
+            else (under ? otherObstacleUnderCells : otherObstacleCells).Add(rep);
         }
 
         // Hedef, "kaynaktan en uzak" veya rastgele DEĞİL; payload'ın en çok hücreye değeceği
@@ -506,9 +513,29 @@ public class PatchBotTargetCoordinator
             return (pick.tile, pick.x, pick.y, true);
         }
 
+        // Öncelik (kullanıcı kuralı 2026-10-03): ObstacleLibrary'de tanımlı her engel — hedefte olsun
+        // olmasın — taşlardan (hedef taşlar dahil) ÖNCE. Kova içinde bloklayan, taş altından önce.
         if (obstacleGoalCells.Count > 0)
         {
             var pick = obstacleGoalCells[PickIdx(obstacleGoalCells)];
+            return (pick.tile, pick.x, pick.y, true);
+        }
+
+        if (obstacleGoalUnderCells.Count > 0)
+        {
+            var pick = obstacleGoalUnderCells[PickIdx(obstacleGoalUnderCells)];
+            return (pick.tile, pick.x, pick.y, true);
+        }
+
+        if (otherObstacleCells.Count > 0)
+        {
+            var pick = otherObstacleCells[PickIdx(otherObstacleCells)];
+            return (pick.tile, pick.x, pick.y, true);
+        }
+
+        if (otherObstacleUnderCells.Count > 0)
+        {
+            var pick = otherObstacleUnderCells[PickIdx(otherObstacleUnderCells)];
             return (pick.tile, pick.x, pick.y, true);
         }
 
@@ -518,17 +545,11 @@ public class PatchBotTargetCoordinator
             return (pick.tile, pick.x, pick.y, true);
         }
 
-        // Jel taşıyan bot (jel kaplama hedefi aktif): jelsiz bölgenin EN YOĞUN yerine — hedef değeri
-        // olmayan diğer obstacle'lardan önce. Rezervasyon cezası botları farklı jelsiz bölgelere yayar.
+        // Jel taşıyan bot (jel kaplama hedefi aktif): jelsiz bölgenin EN YOĞUN yerine. Rezervasyon
+        // cezası botları farklı jelsiz bölgelere yayar.
         if (gelSpreadCells.Count > 0)
         {
             var pick = gelSpreadCells[PickIdx(gelSpreadCells)];
-            return (pick.tile, pick.x, pick.y, true);
-        }
-
-        if (otherObstacleCells.Count > 0)
-        {
-            var pick = otherObstacleCells[PickIdx(otherObstacleCells)];
             return (pick.tile, pick.x, pick.y, true);
         }
 

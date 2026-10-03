@@ -29,6 +29,43 @@ public partial class CascadeLogic
         return new List<BoardAction> { new DeferredCascadeAction(this) };
     }
 
+    /// <summary>
+    /// İlk açılış: board'u RUNTIME cascade motoruyla (aynı gravity/diagonal/spawn kuralları)
+    /// ANİMASYONSUZ oturtur. Planlar oynatılmaz; her view son hücresine snap'lenir. Board hiç hareket
+    /// üretmeyene kadar tekrarlanır → açılışta flow pump'ın yapacağı düşüş kalmaz. Board şekli ne
+    /// olursa olsun ilk yerleşim ile runtime gravity aynı sonucu verir. Taş hareket ettiyse true.
+    /// </summary>
+    internal bool SettleInstantly()
+    {
+        const int MaxPasses = 8;
+        bool movedAny = false;
+        for (int pass = 0; pass < MaxPasses; pass++)
+        {
+            bool moved = false;
+            foreach (var action in CalculateCascadesNow())
+                if (action is FallAction fall && fall.HasMoves)
+                    moved = true;
+            if (!moved)
+                break;   // son "hareketsiz" plan ColumnBusy'yi de temizledi
+            movedAny = true;
+        }
+
+        if (!movedAny)
+            return false;
+
+        for (int x = 0; x < board.Width; x++)
+        for (int y = 0; y < board.Height; y++)
+        {
+            var view = board.Tiles[x, y];
+            if (view == null) continue;
+            view.MarkPlannedToMoveThisFallPass(false);
+            view.SetCoords(x, y);
+            view.SnapToGrid(board.TileSize);
+            board.RefreshTileObstacleVisual(view);
+        }
+        return true;
+    }
+
     private sealed class FallVisualScope : IDisposable
     {
         private CascadeLogic owner;

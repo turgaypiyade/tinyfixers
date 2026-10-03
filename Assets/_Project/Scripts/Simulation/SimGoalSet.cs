@@ -102,6 +102,9 @@ public sealed class SimGoalSet
             ObstacleId.HatLauncher     => SimGoalFidelity.NotSimulated,
             ObstacleId.Oil             => SimGoalFidelity.Approximate,  // yayılma modellenmiyor
             ObstacleId.Barrel          => SimGoalFidelity.Approximate,  // mud saçılması yok
+            ObstacleId.WaterTank       => SimGoalFidelity.Approximate,  // su saçılması yok
+            ObstacleId.WaterTankSmall  => SimGoalFidelity.Approximate,  // su saçılması yok
+            ObstacleId.WaterPuddle     => SimGoalFidelity.NotSimulated, // rastgele saçılım modellenmiyor
             ObstacleId.Wardrobe        => SimGoalFidelity.Approximate,
             ObstacleId.Magnet          => SimGoalFidelity.Approximate,  // uçlara yaklaşma yok
             ObstacleId.Safe            => SimGoalFidelity.Approximate,  // 3 kilit tek sayaç

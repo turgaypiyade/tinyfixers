@@ -709,6 +709,38 @@
           "value": "Güçlendirilmiş Varil"
         },
         {
+          "key": "hint_obstacle_spreadinggel",
+          "value": "Jelin üstündeki taşı kaydırınca veya orada özel taş patlatınca jel yayılır. Hedef: alanı jelle kapla."
+        },
+        {
+          "key": "hint_obstacle_spreadinggel_name",
+          "value": "Yayılan Jel"
+        },
+        {
+          "key": "hint_obstacle_watertank",
+          "value": "Bidon iki vuruşta kırılır ve suyunu taşların altına saçar. Su birikintilerini de temizlemelisin."
+        },
+        {
+          "key": "hint_obstacle_watertank_name",
+          "value": "Su Bidonu"
+        },
+        {
+          "key": "hint_obstacle_waterpuddle",
+          "value": "Üstündeki taşı eşleştirerek su birikintisini kurut."
+        },
+        {
+          "key": "hint_obstacle_waterpuddle_name",
+          "value": "Su Birikintisi"
+        },
+        {
+          "key": "hint_obstacle_watertank_small",
+          "value": "Küçük bidon iki vuruşta kırılır ve suyunu taşların altına saçar. Su birikintilerini de temizlemelisin."
+        },
+        {
+          "key": "hint_obstacle_watertank_small_name",
+          "value": "Küçük Su Bidonu"
+        },
+        {
           "key": "progress_timer_days_hours",
           "value": "{0}g {1}s"
         },
@@ -1764,6 +1796,38 @@
         {
           "key": "hint_obstacle_barrell_v2_name",
           "value": "Reinforced Barrel"
+        },
+        {
+          "key": "hint_obstacle_spreadinggel",
+          "value": "Moving a piece off the gel or blasting a special on it spreads the gel. Goal: cover the area with gel."
+        },
+        {
+          "key": "hint_obstacle_spreadinggel_name",
+          "value": "Spreading Gel"
+        },
+        {
+          "key": "hint_obstacle_watertank",
+          "value": "The tank breaks in two hits and splashes water under the pieces. Clear the puddles too."
+        },
+        {
+          "key": "hint_obstacle_watertank_name",
+          "value": "Water Tank"
+        },
+        {
+          "key": "hint_obstacle_waterpuddle",
+          "value": "Match the piece on top to dry the puddle."
+        },
+        {
+          "key": "hint_obstacle_waterpuddle_name",
+          "value": "Water Puddle"
+        },
+        {
+          "key": "hint_obstacle_watertank_small",
+          "value": "The small tank breaks in two hits and splashes water under the pieces. Clear the puddles too."
+        },
+        {
+          "key": "hint_obstacle_watertank_small_name",
+          "value": "Small Water Tank"
         },
         {
           "key": "progress_timer_days_hours",

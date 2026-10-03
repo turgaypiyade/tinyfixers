@@ -171,6 +171,13 @@ public class ObstacleHintManager : MonoBehaviour
                 AddId((ObstacleId)raw);
         }
 
+        // obstacles[] runtime'da yalnız EN ÜST katmanı tutar (StampLayeredEntriesIntoLevel); 3+ katlı
+        // yığında en alttaki authored katman yalnız beneath store'da kalır → oradan da topla.
+        var beneath = new List<ObstacleId>();
+        board.ObstacleStateService?.CollectStampedBeneathIds(beneath);
+        foreach (var id in beneath)
+            AddId(id);
+
         if (levelData.safes != null)
         {
             for (int i = 0; i < levelData.safes.Length; i++)

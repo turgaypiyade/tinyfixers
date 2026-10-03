@@ -229,3 +229,27 @@ MonoBehaviour:
     fallbackTitle: Reinforced Barrel
     locKey: hint_obstacle_barrell_v2
     fallbackText:
+  - id: 46
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_spreadinggel_name
+    fallbackTitle: Spreading Gel
+    locKey: hint_obstacle_spreadinggel
+    fallbackText:
+  - id: 52
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_watertank_name
+    fallbackTitle: Water Tank
+    locKey: hint_obstacle_watertank
+    fallbackText:
+  - id: 53
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_waterpuddle_name
+    fallbackTitle: Water Puddle
+    locKey: hint_obstacle_waterpuddle
+    fallbackText:
+  - id: 54
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_watertank_small_name
+    fallbackTitle: Small Water Tank
+    locKey: hint_obstacle_watertank_small
+    fallbackText:

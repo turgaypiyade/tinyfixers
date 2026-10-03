@@ -536,7 +536,8 @@ MonoBehaviour:
   iconContainer: {fileID: 3934468181264525706}
   iconPrefab: {fileID: 7406441118286081724, guid: 62fc0e0ea49e443a8af949cc6f32899d, type: 3}
   iconSize: 60
-  iconSpacing: 6
+  iconHorizontalSpacing: 18
+  iconVerticalSpacing: 6
   maxColumns: 3
   timerIcon: {fileID: 1163718533821649716}
   timerSprite: {fileID: 0}
