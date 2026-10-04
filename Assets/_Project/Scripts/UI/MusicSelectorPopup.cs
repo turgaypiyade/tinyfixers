@@ -65,7 +65,7 @@ public sealed class MusicSelectorPopup : MonoBehaviour
         {
             bool isSel = row.id == selected;
             bool owned = MusicState.IsOwned(row.id);
-            row.actionLabel.text = isSel ? "Seçili" : owned ? "Seç" : $"{MusicState.TrackCostCoins}<space=0.3em><sprite name=\"goldmoney\">";
+            row.actionLabel.text = isSel ? GameLocalization.Get("music_selected") : owned ? GameLocalization.Get("music_select") : $"{MusicState.TrackCostCoins}<space=0.3em><sprite name=\"goldmoney\">";
             row.actionButton.interactable = !isSel;
         }
     }
@@ -81,7 +81,7 @@ public sealed class MusicSelectorPopup : MonoBehaviour
     private void FlashInsufficient(int id)
     {
         var row = rows.Find(r => r.id == id);
-        if (row != null) row.actionLabel.text = "Yetersiz altın";
+        if (row != null) row.actionLabel.text = GameLocalization.Get("music_not_enough_gold");
     }
 
     // ── Runtime UI ──────────────────────────────────────────────────
@@ -90,8 +90,8 @@ public sealed class MusicSelectorPopup : MonoBehaviour
     {
         CommonPopupView.Region((RectTransform)transform, new Rect(0, 0, 1, 1));
         gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.72f);
-        var view = CommonPopupView.Create(transform, "Müzik Seç", Close);
-        var done = CommonPopupView.Button(view.Actions, "BtnContinue", "Tamam", Close);
+        var view = CommonPopupView.Create(transform, GameLocalization.Get("music_popup_title"), Close);
+        var done = CommonPopupView.Button(view.Actions, "BtnContinue", GameLocalization.Get("common_ok"), Close);
         CommonPopupView.Region((RectTransform)done.transform, CommonPopupView.ActionRegion(0, 1));
 
         var scroll = CommonPopupView.NewRect(view.Body, "Scroll", Vector2.zero);
@@ -128,7 +128,7 @@ public sealed class MusicSelectorPopup : MonoBehaviour
         var row = CommonPopupView.NewRect(listRoot, "Track_" + id, new Vector2(0, 116));
         row.gameObject.AddComponent<LayoutElement>().preferredHeight = 116;
         row.gameObject.AddComponent<Image>().color = new Color(0.35f, 0.14f, 0.08f, 0.08f);
-        var name = CommonPopupView.Text(row, "Name", track != null ? track.displayName : "Parça " + id,
+        var name = CommonPopupView.Text(row, "Name", track != null ? track.displayName : GameLocalization.GetFormat("music_track_fallback", id),
             30, CommonPopupSkin.Shared.bodyTextColor);
         CommonPopupView.Region(name.rectTransform, new Rect(0.025f, 0.08f, 0.55f, 0.84f));
         name.alignment = TextAlignmentOptions.Left;

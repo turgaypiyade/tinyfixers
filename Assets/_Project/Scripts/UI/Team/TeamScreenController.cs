@@ -114,7 +114,7 @@ public sealed class TeamScreenController : MonoBehaviour
         {
             requestLifeButton.onClick.AddListener(OnRequestLife);
             requestLifeLabel = requestLifeButton.GetComponentInChildren<TMP_Text>(true);
-            defaultRequestLifeLabel = requestLifeLabel != null ? requestLifeLabel.text : "Can İste";
+            defaultRequestLifeLabel = GameLocalization.Get("team_request_life");
         }
         if (messageButton != null)     messageButton.onClick.AddListener(ToggleMessageInput);
         if (messagePostButton != null) messagePostButton.onClick.AddListener(OnPostMessage);
@@ -145,7 +145,7 @@ public sealed class TeamScreenController : MonoBehaviour
         var trt = (RectTransform)txtGo.transform;
         trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one; trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
         var txt = txtGo.AddComponent<TextMeshProUGUI>();
-        txt.text = "Ayrıl"; txt.fontSize = 24; txt.fontStyle = FontStyles.Bold;
+        txt.text = GameLocalization.Get("team_leave"); txt.fontSize = 24; txt.fontStyle = FontStyles.Bold;
         txt.alignment = TextAlignmentOptions.Center; txt.color = Color.white;
         return btn;
     }
@@ -156,9 +156,9 @@ public sealed class TeamScreenController : MonoBehaviour
 
     private void ShowLeaveConfirm()
     {
-        RuntimeChoicePopup.Show("Takımdan Ayrıl", "Takımdan ayrılmak istiyor musun?",
-            new RuntimeChoicePopup.Choice("Ayrıl", () => { if (this != null) DoLeave(); }, primary: true),
-            new RuntimeChoicePopup.Choice("Vazgeç", null));
+        RuntimeChoicePopup.Show(GameLocalization.Get("team_leave_title"), GameLocalization.Get("team_leave_confirm"),
+            new RuntimeChoicePopup.Choice(GameLocalization.Get("team_leave"), () => { if (this != null) DoLeave(); }, primary: true),
+            new RuntimeChoicePopup.Choice(GameLocalization.Get("common_cancel"), null));
     }
 
     private void DoLeave()
@@ -254,7 +254,7 @@ public sealed class TeamScreenController : MonoBehaviour
             {
                 senderName = reply.sender,
                 avatar = PickAvatar(reply.sender),
-                text = "Sana 1 can gönderdim!",
+                text = GameLocalization.Get("team_chat_life_sent"),
                 timeLabel = new System.DateTime(reply.sentTicks, System.DateTimeKind.Utc).ToLocalTime().ToString("HH:mm"),
                 sentTicks = reply.sentTicks,
                 lifeReply = reply,
@@ -267,7 +267,7 @@ public sealed class TeamScreenController : MonoBehaviour
             {
                 senderName = request.sender,
                 avatar = PickAvatar(request.sender),
-                text = request.helped ? "Can için teşekkürler!" : "Can gönderebilir misin?",
+                text = GameLocalization.Get(request.helped ? "team_chat_life_thanks" : "team_chat_life_ask"),
                 timeLabel = new System.DateTime(request.sentTicks, System.DateTimeKind.Utc).ToLocalTime().ToString("HH:mm"),
                 sentTicks = request.sentTicks,
                 botLifeRequest = request,
@@ -296,9 +296,9 @@ public sealed class TeamScreenController : MonoBehaviour
         var lockLeft = inbox != null ? inbox.RequestLockRemaining(System.DateTime.UtcNow) : System.TimeSpan.Zero;
         if (requestLifeButton != null) requestLifeButton.interactable = inbox != null && inbox.CanRequest;
         if (requestLifeLabel != null)
-            requestLifeLabel.text = full ? "Can Dolu (10/10)"
-                : inbox != null && inbox.Pending > 0 ? "Canların Hazır"
-                : inbox != null && inbox.IsWaiting ? "Can Bekleniyor"
+            requestLifeLabel.text = full ? GameLocalization.GetFormat("team_lives_full", LivesManager.MaxLives)
+                : inbox != null && inbox.Pending > 0 ? GameLocalization.Get("team_lives_ready")
+                : inbox != null && inbox.IsWaiting ? GameLocalization.Get("team_lives_waiting")
                 : lockLeft > System.TimeSpan.Zero
                     ? $"{defaultRequestLifeLabel} {(int)lockLeft.TotalHours:00}:{lockLeft.Minutes:00}:{lockLeft.Seconds:00}"
                 : defaultRequestLifeLabel;

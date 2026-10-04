@@ -126,7 +126,7 @@ public sealed class ShopScreenController : MonoBehaviour
 
         if (ShopPurchaseService.TryPurchase(offer))
         {
-            ShowToast(offer.displayName + " alındı!");
+            ShowToast(GameLocalization.GetFormat("shop_purchased_toast", offer.LocalizedName));
             // Bakiye + uygunluk değişti → kartları tazele.
             Build();
             RefreshBalances();

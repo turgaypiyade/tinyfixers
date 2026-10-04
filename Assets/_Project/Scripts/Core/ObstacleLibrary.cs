@@ -97,6 +97,11 @@ public class ObstacleDef
     public AudioClip breakSound;
     [Range(0f, 1f)] public float breakSoundVolume = 1f;
 
+    [Tooltip("Kırılmadan bir süre SONRA çalan ikinci ses (Wall: patlamanın ardından duvarın yığılması). " +
+             "Ne zaman çalacağını engelin kendi görünümü belirler.")]
+    public AudioClip followUpBreakSound;
+    [Range(0f, 1f)] public float followUpBreakSoundVolume = 1f;
+
     [Header("Flight Audio")]
     [Tooltip("Uçan obstacle'ın kalkıştan çarpışmaya kadar döngüde çalacağı ses (EggBird).")]
     public AudioClip flightLoopSound;

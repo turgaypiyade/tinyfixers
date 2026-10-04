@@ -47,10 +47,10 @@ public class FortuneWheelController : MonoBehaviour
     [SerializeField] private Button spinButton;
     [Tooltip("Spin butonundaki yazı.")]
     [SerializeField] private TMP_Text spinButtonText;
-    [Tooltip("Free spin butonu yazısı.")]
-    [SerializeField] private string freeSpinLabel = "SPIN";
-    [Tooltip("Ücretli spin butonu sol yazısı (ikon ve miktar ayrıca gösterilir).")]
-    [SerializeField] private string paidSpinLabel = "Spin";
+    [Tooltip("Free spin butonu yazısının lokalizasyon anahtarı.")]
+    [SerializeField] private string freeSpinLabelKey = "wheel_free_spin";
+    [Tooltip("Ücretli spin butonu sol yazısının lokalizasyon anahtarı (ikon ve miktar ayrıca gösterilir).")]
+    [SerializeField] private string paidSpinLabelKey = "wheel_paid_spin";
     [Tooltip("Ücretli spin butonunda gösterilecek ikon (altın vb.).")]
     [SerializeField] private Sprite paidSpinButtonIcon;
     [Tooltip("Spin butonu üzerindeki ikon Image bileşeni.")]
@@ -212,7 +212,7 @@ public class FortuneWheelController : MonoBehaviour
         }
 
         if (spinButtonText != null)
-            spinButtonText.text = canFree ? freeSpinLabel : paidSpinLabel;
+            spinButtonText.text = GameLocalization.Get(canFree ? freeSpinLabelKey : paidSpinLabelKey);
 
         bool showPaidExtras = !canFree;
 
@@ -605,11 +605,7 @@ public class FortuneWheelController : MonoBehaviour
 
         if (winnerText != null)
         {
-            string name = !string.IsNullOrEmpty(selectedReward.nameLocalizationKey)
-                ? GameLocalization.Get(selectedReward.nameLocalizationKey) : null;
-            if (string.IsNullOrEmpty(name) || name == selectedReward.nameLocalizationKey)
-                name = selectedReward.fallbackName ?? selectedReward.type.ToString();
-            winnerText.text = $"+{selectedReward.amount} {name}";
+            winnerText.text = $"+{selectedReward.amount} {selectedReward.DisplayName}";
 
             // Büyük, altın outline'lı ödül yazısı; ikonun (200px) altında nefes payıyla, geniş kutuda.
             RewardTextStyle.Apply(winnerText, winnerTextSize);

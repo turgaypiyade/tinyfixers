@@ -143,8 +143,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     [Header("Success - Coin Text")]
     [SerializeField] private TMP_Text coinsEarnedText;
-    [SerializeField] private string coinsPrefix = "+";
-    [SerializeField] private string coinsSuffix = " coin";
+    [Tooltip("Kazanılan altın metninin lokalizasyon anahtarı ({0} = miktar).")]
+    [SerializeField] private string coinsEarnedKey = "level_end_coins_earned";
 
     [Header("Star Thresholds (remaining moves / starting moves)")]
     [Range(0f, 1f)][SerializeField] private float star3Ratio = 0.5f;
@@ -494,6 +494,19 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         PlayerStats.MarkCurrentLevelFailed();
         ProgressEventService.Instance?.DiscardStagedGains();
+        OpenRetryAfterGiveUp(retryOnMainMenuFallback: true);
+    }
+
+    // Vazgeçilen level'dan çıkış: normalde "Tekrar Dene" pre-level popup'ı. Ama kaybı ana menüdeki
+    // kendi ekranında animasyonla gösteren bir event (Safari/Rising düşüşü) sonuç bekliyorsa, Tekrar
+    // Dene ATLANIR → ana menüye dönülür, event ekranı kaybı oynatır, oyuncu oradan menüye geçer.
+    private void OpenRetryAfterGiveUp(bool retryOnMainMenuFallback)
+    {
+        if (LevelLossRegistry.HasPendingEventResultScreen())
+        {
+            ReturnToMainMenuImmediate();
+            return;
+        }
 
         // Game sahnesinde bir pre-level popup instance'ı varsa (prefab yerleştirilmiş) → sahne
         // yüklemeden ANINDA "Tekrar Dene" modunda aç (aradaki beyaz MainMenu yükleme gap'i olmaz).
@@ -510,7 +523,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         // Fallback (instance yok): ana menü yüklenince pre-level popup'ı "Tekrar Dene" modunda
         // otomatik aç. Oradan da vazgeçerse (cancel) popup kapanır ve zaten ana menüde kalınır.
-        PreLevelSpecialPopupController.RetryRequested = true;
+        if (retryOnMainMenuFallback)
+            PreLevelSpecialPopupController.RetryRequested = true;
         ReturnToMainMenuImmediate();
     }
 
@@ -1318,16 +1332,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         LivesManager.SpendLife();   // "Bir can kaybedeceksin"
         PlayerStats.MarkCurrentLevelFailed();
         ProgressEventService.Instance?.DiscardStagedGains();
-
-        var inScenePreLevel = FindFirstObjectByType<PreLevelSpecialPopupController>(FindObjectsInactive.Include);
-        if (inScenePreLevel != null)
-        {
-            if (failPopupRoot != null) failPopupRoot.SetActive(false);
-            inScenePreLevel.gameObject.SetActive(true);
-            inScenePreLevel.OpenForInGameRetry();
-            return;
-        }
-        ReturnToMainMenuImmediate();
+        OpenRetryAfterGiveUp(retryOnMainMenuFallback: false);
     }
 
     private void RestoreFailContinueTextColor()
@@ -1448,7 +1453,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
                 sb.AppendLine(string.IsNullOrEmpty(it.label) ? $"•  {it.amount}" : $"•  {it.label}: {it.amount}");
             failEventLossWarningText.gameObject.SetActive(any);
             if (any)
-                failEventLossWarningText.text = $"Vazgeçersen kaybedeceklerin:\n{sb.ToString().TrimEnd()}";
+                failEventLossWarningText.text = LocalizedFormat("level_end_loss_fallback", "Vazgeçersen kaybedeceklerin:\n{0}", sb.ToString().TrimEnd());
         }
 
         if (lossSummaryRoot != null) lossSummaryRoot.SetActive(any);
@@ -1554,7 +1559,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
         int level = ResolveCurrentLevelNumber();
 
         if (successTitleText != null)
+        {
             successTitleText.text = LocalizedFormat("level_end_success_title_level", "Seviye {0}", level);
+            SingleLineText.FitWidth(successTitleText);   // "Seviye 101" iki satıra kaymasın
+        }
 
         if (successContinueText != null)
             successContinueText.text = LocalizedText("level_end_continue", "Devam Et");
@@ -1570,7 +1578,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         PlayStarReveal(stars);
 
         if (coinsEarnedText != null)
-            coinsEarnedText.text = coinsPrefix + coins + coinsSuffix;
+            coinsEarnedText.text = LocalizedFormat(coinsEarnedKey, "+{0} coin", coins);
 
         if (successDescriptionText != null && scoreValueText == null)
             successDescriptionText.text = $"{LocalizedText("level_end_score_label", "Puan:")} {score:N0}";
@@ -1650,16 +1658,16 @@ public class LevelEndSimplePopupController : MonoBehaviour
         // Yeterli coin yok → reklam izle (bedava devam, level başına TEK hak) ya da satın al (market).
         // Alttaki "Kapat": hiçbir şey yapmadan vazgeçer — hak biter, level kaybedilmiş sayılır.
         RuntimeChoicePopup.ShowOffer(
-            "Yetersiz Altın",
-            $"Devam için {currentCost} altın gerekli.\nŞu an {PlayerWallet.Coins} altının var.",
+            GameLocalization.Get("level_end_no_gold_title"),
+            GameLocalization.GetFormat("level_end_no_gold_body", currentCost, PlayerWallet.Coins),
             new[]
             {
-                new RuntimeChoicePopup.OfferButton("Reklam İzle",
-                    adContinueUsedThisLevel ? "Bu seviyede kullanıldı" : "Bedava devam et",
+                new RuntimeChoicePopup.OfferButton(GameLocalization.Get("common_watch_ad"),
+                    GameLocalization.Get(adContinueUsedThisLevel ? "level_end_ad_used" : "level_end_ad_free_continue"),
                     WatchAdThenContinue, interactable: !adContinueUsedThisLevel),
-                new RuntimeChoicePopup.OfferButton("Satın Al", "Market'ten altın al", GoToMarketFromFail),
+                new RuntimeChoicePopup.OfferButton(GameLocalization.Get("common_buy"), GameLocalization.Get("common_buy_gold_sub"), GoToMarketFromFail),
             },
-            "Kapat",
+            GameLocalization.Get("common_close"),
             GiveUpLevel);
     }
 
@@ -1692,19 +1700,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
         board.ForceFullBoardSync();
     }
 
-    // Reklamla bedava devam, level başına yalnız BİR kez — oyundan çıkıp aynı level'a yeniden girince de
-    // (kullanıcı kuralı). Kullanılan level numarası kalıcı tutulur; level geçilince numara değişir →
-    // yeni level'da hak yeniden açılır.
-    private const string AdContinueUsedLevelKey = "ad_continue_used_level";
-
-    private static bool adContinueUsedThisLevel =>
-        PlayerPrefs.GetInt(AdContinueUsedLevelKey, 0) == CurrentLevel.Global;
+    // Reklamla bedava devam: level'ın TEK reklam hakkını harcar (LevelAdRight — can reklamıyla ortak).
+    private static bool adContinueUsedThisLevel => LevelAdRight.IsUsed;
 
     private void WatchAdThenContinue()
     {
-        if (adContinueUsedThisLevel) return;
-        PlayerPrefs.SetInt(AdContinueUsedLevelKey, CurrentLevel.Global);
-        PlayerPrefs.Save();
+        if (!LevelAdRight.TryConsume()) return;
         StartCoroutine(CoWatchAdThenContinue());
     }
 

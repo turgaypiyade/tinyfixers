@@ -28,11 +28,12 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
     private readonly List<TeamChatMessage> realChat = new();
     private ListenerRegistration chatListener;
 
+    // Lokalizasyon anahtarları (bot mesajı oyuncunun dilinde).
     private static readonly string[] BotChatPool =
     {
-        "selam gençler", "günaydın", "bugün etkinlik var mı?", "yardım lazım arkadaşlar",
-        "teşekkürler!", "harika oynadınız", "kim aktif?", "bu level çok zor ya",
-        "can atabilecek var mı?", "iyi oyunlar herkese", "az kaldı, devam!", "süpersiniz 💪"
+        "team_bot_chat_1", "team_bot_chat_2", "team_bot_chat_3", "team_bot_chat_4",
+        "team_bot_chat_5", "team_bot_chat_6", "team_bot_chat_7", "team_bot_chat_8",
+        "team_bot_chat_9", "team_bot_chat_10", "team_bot_chat_11", "team_bot_chat_12"
     };
 
     public FirebaseTeamService()
@@ -74,7 +75,7 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
                 BuildBotChat((int)botSeed, (int)botMembers);
 
             LifeInbox.SetBots((int)botMembers, () => botChat.Count > 0
-                ? botChat[UnityEngine.Random.Range(0, botChat.Count)].senderName : "Takım arkadaşların");
+                ? botChat[UnityEngine.Random.Range(0, botChat.Count)].senderName : GameLocalization.Get("team_teammates"));
             OnChanged?.Invoke();
         });
 
@@ -90,7 +91,7 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
                     string senderId = doc.ContainsField("senderId") ? doc.GetValue<string>("senderId") : "";
                     var msg = new TeamChatMessage
                     {
-                        senderName = doc.ContainsField("senderName") ? doc.GetValue<string>("senderName") : "Oyuncu",
+                        senderName = doc.ContainsField("senderName") ? doc.GetValue<string>("senderName") : GameLocalization.Get("team_player"),
                         text = doc.ContainsField("text") ? doc.GetValue<string>("text") : "",
                         timeLabel = TimeLabel(doc),
                         sentTicks = SentTicks(doc),
@@ -112,7 +113,7 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
             botChat.Add(new TeamChatMessage
             {
                 senderName = NamePool.PlayerAt(seed * 40 + rng.Next(0, 40)),
-                text = BotChatPool[rng.Next(BotChatPool.Length)],
+                text = GameLocalization.Get(BotChatPool[rng.Next(BotChatPool.Length)]),
                 timeLabel = rng.Next(1, 9) + "s",
             });
         }
@@ -130,17 +131,17 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
 
     private static string TimeLabel(DocumentSnapshot doc)
     {
-        if (!doc.ContainsField("sentAt")) return "şimdi";
+        if (!doc.ContainsField("sentAt")) return GameLocalization.Get("team_time_now");
         try
         {
             var ts = doc.GetValue<Timestamp>("sentAt");
             var span = DateTime.UtcNow - ts.ToDateTime();
-            if (span.TotalMinutes < 1) return "şimdi";
-            if (span.TotalHours < 1) return (int)span.TotalMinutes + "d";
-            if (span.TotalDays < 1) return (int)span.TotalHours + "s";
-            return (int)span.TotalDays + "g";
+            if (span.TotalMinutes < 1) return GameLocalization.Get("team_time_now");
+            if (span.TotalHours < 1) return GameLocalization.GetFormat("progress_timer_mins", (int)span.TotalMinutes);
+            if (span.TotalDays < 1) return GameLocalization.GetFormat("progress_timer_hours", (int)span.TotalHours);
+            return GameLocalization.GetFormat("progress_timer_days", (int)span.TotalDays);
         }
-        catch { return "şimdi"; }   // pending server timestamp (henüz senkronlanmadı)
+        catch { return GameLocalization.Get("team_time_now"); }   // pending server timestamp (henüz senkronlanmadı)
     }
 
     // ── ITeamService ────────────────────────────────────────────────
@@ -161,7 +162,7 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
 
     public void RequestLife()
     {
-        if (!disposed && LifeInbox.Request(DateTime.UtcNow)) SendMessage("❤️ Can istedi!");
+        if (!disposed && LifeInbox.Request(DateTime.UtcNow)) SendMessage(GameLocalization.Get("team_chat_life_requested"));
     }
 
     public void SendMessage(string text)

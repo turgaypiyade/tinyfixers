@@ -74,7 +74,7 @@ public sealed class InGameShopOverlay : MonoBehaviour
         panelRt.offsetMin = panelRt.offsetMax = Vector2.zero;
         panel.SetActive(true);
 
-        var close = CommonPopupView.Button(transform, "BtnClose", "Kapat", Close);
+        var close = CommonPopupView.Button(transform, "BtnClose", GameLocalization.Get("common_close"), Close);
         CommonPopupView.Region((RectTransform)close.transform, new Rect(0.30f, 0.03f, 0.40f, 0.075f));
     }
 
@@ -91,7 +91,7 @@ public sealed class InGameShopOverlay : MonoBehaviour
         bgImg.raycastTarget = true;
 
         // Üst: başlık + bakiye.
-        var title = CommonPopupView.Text(transform, "Title", "Market", 72, Color.white);
+        var title = CommonPopupView.Text(transform, "Title", GameLocalization.Get("shop_title"), 72, Color.white);
         CommonPopupView.Region(title.rectTransform, new Rect(0.05f, 0.90f, 0.90f, 0.08f));
         balanceText = CommonPopupView.Text(transform, "Balance", "", 44, new Color(1f, 0.86f, 0.35f));
         CommonPopupView.Region(balanceText.rectTransform, new Rect(0.05f, 0.855f, 0.90f, 0.045f));
@@ -126,7 +126,7 @@ public sealed class InGameShopOverlay : MonoBehaviour
         scroll.movementType = ScrollRect.MovementType.Elastic;
 
         // Alt: kapat.
-        var close = CommonPopupView.Button(transform, "BtnClose", "Kapat", Close);
+        var close = CommonPopupView.Button(transform, "BtnClose", GameLocalization.Get("common_close"), Close);
         CommonPopupView.Region((RectTransform)close.transform, new Rect(0.30f, 0.025f, 0.40f, 0.075f));
 
         // Satın alma bildirimi.
@@ -149,7 +149,7 @@ public sealed class InGameShopOverlay : MonoBehaviour
     {
         if (!ShopPurchaseService.TryPurchase(offer)) return;
 
-        ShowToast($"{offer.displayName} alındı!");
+        ShowToast(GameLocalization.GetFormat("shop_purchased_toast", offer.LocalizedName));
         Populate();   // bakiye + tek seferlik teklif durumu değişti
     }
 
@@ -171,7 +171,7 @@ public sealed class InGameShopOverlay : MonoBehaviour
 
     private void RefreshBalance(int coins)
     {
-        if (balanceText != null) balanceText.text = $"Altın: {coins:N0}";
+        if (balanceText != null) balanceText.text = GameLocalization.GetFormat("shop_balance_gold", coins);
     }
 
     private void Close()

@@ -22,6 +22,8 @@ MonoBehaviour:
   titleFont: {fileID: 11400000, guid: 5e6309197a20b48f38af13be4a943e86, type: 2}
   buttonFont: {fileID: 11400000, guid: e46875cde48404fd285b820569c5c432, type: 2}
   titleMaterial: {fileID: 2100000, guid: 6dddb1d7ba9444ca3b3cc4e6b100483d, type: 2}
+  celebrationFont: {fileID: 11400000, guid: ac4355f13452b44afb3bcab168126b78, type: 2}
+  celebrationMaterial: {fileID: 2100000, guid: 8d3588b6256b54c48b06f9364fdcac49, type: 2}
   titleGradientTop: {r: 1, g: 1, b: 1, a: 1}
   titleGradientBottom: {r: 1, g: 0.97, b: 0.78, a: 1}
   greenButtonMaterial: {fileID: 2100000, guid: db085586f5f2f46bf82427a04fc80c20, type: 2}

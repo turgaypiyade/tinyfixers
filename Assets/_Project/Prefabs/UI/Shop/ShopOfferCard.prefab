@@ -229,6 +229,7 @@ GameObject:
   - component: {fileID: 6834461991456391465}
   - component: {fileID: 6329776014612911024}
   - component: {fileID: 3719035628270553056}
+  - component: {fileID: 7695979900056743114}
   m_Layer: 5
   m_Name: Text
   m_TagString: Untagged
@@ -2401,3 +2402,17 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &7695979900056743114
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 415934364608966829}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 548bf4a7910af4aff9ee0bc016915643, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  target: {fileID: 3719035628270553056}
+  key: shop_best_deal

@@ -76,6 +76,12 @@ public sealed class WaterTankSpreadAction : BoardAction
     {
         Vector3 c0 = _board.GetCellWorldCenterPosition(_origin.x, _origin.y);
         Vector3 c1 = _board.GetCellWorldCenterPosition(_origin.x + size.x - 1, _origin.y + size.y - 1);
-        return RectTransformUtility.WorldToScreenPoint(null, (c0 + c1) * 0.5f);
+        // Board Screen Space Camera canvas'ında: kamerasız (null) çeviri dünya koordinatını piksel sanıp
+        // noktayı ekranın sol-alt köşesine düşürüyordu → damla kümesi hep oraya gidiyordu.
+        var canvas = _board.GetComponentInParent<Canvas>();
+        Camera cam = canvas != null && canvas.rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? canvas.rootCanvas.worldCamera
+            : null;
+        return RectTransformUtility.WorldToScreenPoint(cam, (c0 + c1) * 0.5f);
     }
 }

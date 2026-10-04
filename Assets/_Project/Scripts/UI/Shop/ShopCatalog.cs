@@ -21,6 +21,11 @@ public sealed class ShopSection
 {
     public string title = "Bölüm";
 
+    [Tooltip("Başlığın lokalizasyon anahtarı (tinyfixers_localization.json). Boşsa / çevirisi yoksa 'title' gösterilir.")]
+    public string titleKey;
+
+    public string LocalizedTitle => GameLocalization.GetOr(titleKey, title);
+
     public enum BandStyle { Header, Special }
     [Tooltip("Header = mor band; Special = magenta 'Özel Teklifler' band.")]
     public BandStyle bandStyle = BandStyle.Header;
@@ -45,6 +50,9 @@ public sealed class ShopOffer
 
     [Tooltip("Mor banttaki paket adı (örn 'Muhteşem Kasa'). CoinRow'da gösterilmez.")]
     public string displayName = "Teklif";
+
+    /// Paket adı çevirisi id'den türetilir: "shop_offer_{id}". Çevirisi yoksa displayName (ör. "1,000").
+    public string LocalizedName => GameLocalization.GetOr("shop_offer_" + id, displayName);
 
     public enum CardStyle { Bundle, CoinRow }
     [Tooltip("Bundle = kutulu büyük paket; CoinRow = basit altın satırı.")]

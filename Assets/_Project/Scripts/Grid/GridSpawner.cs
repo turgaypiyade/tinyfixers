@@ -620,6 +620,7 @@ public class GridSpawner : MonoBehaviour
             DrawObstacleVisuals();
             DrawMudOverlays();
             DrawSpreadingGelOverlays();
+            DrawWallObstacles();
             // DrawMudOverlays ClearAll() yapar; stamped-beneath mud'ları bundan SONRA çizilmeli.
             // Aksi halde LevelP_00540'ta plastic/movable altındaki mud ilk açılışta silinir,
             // movable ayrılınca restore path'i yeniden çizdiği için ancak sonradan görünür.
@@ -1159,6 +1160,8 @@ public class GridSpawner : MonoBehaviour
                 if (obsId == ObstacleId.Mud) continue;
                 // SpreadingGel kendi overlay renderer'ını kullanır (mud gibi, tek-stage).
                 if (obsId == ObstacleId.SpreadingGel) continue;
+                // Wall kendi parça renderer'ını kullanır (WallObstacleService / WallPieceView).
+                if (obsId == ObstacleId.Wall || obsId == ObstacleId.MetalWall) continue;
                 // Oil kendi cell-anchored blob renderer'ını kullanır. Generic full-cell image
                 // üretirsek her hücrede iç bevel kalır ve tek sıvı alan gibi birleşmez.
                 if (obsId == ObstacleId.Oil) continue;
@@ -1208,6 +1211,26 @@ public class GridSpawner : MonoBehaviour
         // TÜM mud hücreleri kaydolduktan sonra tek yetkili exposure geçişi — artımlı komşu
         // refresh'inin sınır hücrelerinde bıraktığı bayat bevel'i (izole "kutu") giderir.
         mudOverlayService.RefreshAllBorders();
+    }
+
+    // Duvar parçaları: hücre aşamaları + kenar/köşe autotile görseli WallObstacleService'te (board'a
+    // runtime eklenir, sahne kurulumu yok). Level'da duvar yoksa servis varsa temizlenir.
+    private void DrawWallObstacles()
+    {
+        if (board == null || resolvedLevel?.obstacles == null || overTilesObstaclesRoot == null) return;
+
+        bool hasWall = false;
+        for (int i = 0; i < resolvedLevel.obstacles.Length && !hasWall; i++)
+            hasWall = WallKind.For((ObstacleId)resolvedLevel.obstacles[i]) != null;
+
+        if (!hasWall)
+        {
+            if (board.TryGetComponent<WallObstacleService>(out var existing))
+                existing.Clear();
+            return;
+        }
+
+        WallObstacleService.Ensure(board).Build(resolvedLevel, overTilesObstaclesRoot, tileSize);
     }
 
     // Author'lanmış SpreadingGel seed hücrelerini çizer (runtime yayılma Faz 3'te SpreadingGelService).
@@ -2134,6 +2157,15 @@ public class GridSpawner : MonoBehaviour
             case ObstacleId.Mud: AddRoot(mudOverlayRoot); break;
             case ObstacleId.Grass: AddRoot(grassOverlayRoot); break;
             case ObstacleId.SpreadingGel: AddRoot(spreadingGelOverlayRoot); break;
+            case ObstacleId.Wall:
+            case ObstacleId.MetalWall:
+                if (board.TryGetComponent<WallObstacleService>(out var walls))
+                {
+                    var wallRoots = new List<Transform>();
+                    walls.CollectViewRoots(id, wallRoots);
+                    foreach (var r in wallRoots) AddRoot(r);
+                }
+                break;
             case ObstacleId.Oil:
                 var parent = board.TilesRoot != null ? board.TilesRoot.parent : null;
                 if (parent != null)

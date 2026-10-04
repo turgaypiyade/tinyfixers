@@ -33,8 +33,8 @@ public sealed class ProfileStatsView : MonoBehaviour
 
     [Header("Takım (şimdilik placeholder)")]
     [SerializeField] private TMP_Text teamNameText;
-    [Tooltip("Takım sistemi yokken gösterilecek metin.")]
-    [SerializeField] private string   teamPlaceholder = "Takım yok";
+    [Tooltip("Takım sistemi yokken gösterilecek metnin lokalizasyon anahtarı.")]
+    [SerializeField] private string   teamPlaceholderKey = "profile_no_team";
 
     private void OnEnable()
     {
@@ -62,7 +62,7 @@ public sealed class ProfileStatsView : MonoBehaviour
 
         if (teamNameText != null)
         {
-            teamNameText.text = teamPlaceholder;
+            teamNameText.text = GameLocalization.Get(teamPlaceholderKey);
             SingleLineText.Fit(teamNameText);
         }
     }

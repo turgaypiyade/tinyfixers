@@ -19,11 +19,12 @@ public sealed class SimTeamService : ITeamService
     private readonly List<TeamChatMessage> chat = new();
     private readonly List<TeamLifeRequest> requests = new();
 
+    // Lokalizasyon anahtarları (bot mesajı oyuncunun dilinde).
     private static readonly string[] ChatPool =
     {
-        "selam gençler", "günaydın", "bugün etkinlik var mı?", "yardım lazım arkadaşlar",
-        "teşekkürler!", "harika oynadınız", "kim aktif?", "bu level çok zor ya",
-        "can atabilecek var mı?", "iyi oyunlar herkese", "az kaldı, devam!", "süpersiniz 💪"
+        "team_bot_chat_1", "team_bot_chat_2", "team_bot_chat_3", "team_bot_chat_4",
+        "team_bot_chat_5", "team_bot_chat_6", "team_bot_chat_7", "team_bot_chat_8",
+        "team_bot_chat_9", "team_bot_chat_10", "team_bot_chat_11", "team_bot_chat_12"
     };
 
     public SimTeamService()
@@ -57,7 +58,7 @@ public sealed class SimTeamService : ITeamService
             giftCurrent = created ? 0 : Random.Range(20, 90),
             giftTarget = 100,
             timerLabel = "2g 20s",
-            missionText = "kazanmak için bir göreve BAŞLA",
+            missionText = GameLocalization.Get("team_mission_start"),
         };
 
         LifeInbox = new TeamLifeInbox("local:" + PlayerTeamState.TeamName, () => OnChanged?.Invoke());
@@ -68,8 +69,8 @@ public sealed class SimTeamService : ITeamService
             chat.Add(new TeamChatMessage
             {
                 senderName = "Wonder Fixers",
-                text = "Takımın kuruldu! Arkadaşlarını davet et, birlikte yarışın.",
-                timeLabel = "şimdi",
+                text = GameLocalization.Get("team_created_welcome"),
+                timeLabel = GameLocalization.Get("team_time_now"),
             sentTicks = System.DateTime.UtcNow.Ticks,
             });
         }
@@ -89,8 +90,8 @@ public sealed class SimTeamService : ITeamService
             chat.Add(new TeamChatMessage
             {
                 senderName = m.displayName,
-                text = ChatPool[Random.Range(0, ChatPool.Length)],
-                timeLabel = Random.Range(1, 9) + "g",
+                text = GameLocalization.Get(ChatPool[Random.Range(0, ChatPool.Length)]),
+                timeLabel = GameLocalization.GetFormat("progress_timer_days", Random.Range(1, 9)),
             });
         }
     }
@@ -135,7 +136,7 @@ public sealed class SimTeamService : ITeamService
         {
             senderName = PlayerProfile.PlayerName,
             text = "❤️ Can istedi!",
-            timeLabel = "şimdi",
+            timeLabel = GameLocalization.Get("team_time_now"),
             sentTicks = System.DateTime.UtcNow.Ticks,
             isMine = true,
         });
@@ -149,7 +150,7 @@ public sealed class SimTeamService : ITeamService
         {
             senderName = PlayerProfile.PlayerName,
             text = text.Trim(),
-            timeLabel = "şimdi",
+            timeLabel = GameLocalization.Get("team_time_now"),
             sentTicks = System.DateTime.UtcNow.Ticks,
             isMine = true,      // benim mesajım → sağda + avatarım sağda
         });

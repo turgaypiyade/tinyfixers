@@ -15,22 +15,26 @@ public static class LivesRefillOffer
 
     /// <param name="host">Reklam beklemesi için coroutine sahibi (popup kapansa da yaşayan bir obje).</param>
     public static void Show(MonoBehaviour host, Action onLivesAdded,
-        int packAmount = DefaultPackAmount, int packCost = DefaultPackCost, string closeLabel = "Kapat")
+        int packAmount = DefaultPackAmount, int packCost = DefaultPackCost, string closeLabel = null)
     {
         bool canAfford = PlayerWallet.Coins >= packCost;
+        bool adUsed = LevelAdRight.IsUsed;
 
         RuntimeChoicePopup.ShowOffer(
-            "Canın Bitti",
-            $"Oynamaya devam etmek için can gerekli.\nŞu an {PlayerWallet.Coins} altının var.",
+            GameLocalization.Get("lives_offer_title"),
+            GameLocalization.GetFormat("lives_offer_body", PlayerWallet.Coins),
             new[]
             {
-                new RuntimeChoicePopup.OfferButton($"{packAmount} Can Yükle", $"{packCost} altın",
+                new RuntimeChoicePopup.OfferButton(GameLocalization.GetFormat("lives_offer_buy_pack", packAmount), GameLocalization.GetFormat("common_gold_amount", packCost),
                     () => BuyPack(packAmount, packCost, onLivesAdded), interactable: canAfford),
-                new RuntimeChoicePopup.OfferButton("Reklam İzle", "1 can kazan",
-                    () => WatchAd(host, onLivesAdded), interactable: host != null),
-                new RuntimeChoicePopup.OfferButton("Satın Al", "Market'ten altın al", MarketNavigator.OpenMarket),
+                // Reklam hakkı level başına TEK (fail devam reklamıyla ortak): kaybedilen level'ı
+                // reklamla sonsuz tekrar oynamak olmasın.
+                new RuntimeChoicePopup.OfferButton(GameLocalization.Get("common_watch_ad"),
+                    GameLocalization.Get(adUsed ? "level_end_ad_used" : "lives_offer_ad_sub"),
+                    () => WatchAd(host, onLivesAdded), interactable: host != null && !adUsed),
+                new RuntimeChoicePopup.OfferButton(GameLocalization.Get("common_buy"), GameLocalization.Get("common_buy_gold_sub"), MarketNavigator.OpenMarket),
             },
-            closeLabel,
+            closeLabel ?? GameLocalization.Get("common_close"),
             null,
             defaultFrame: true);
     }
@@ -49,7 +53,7 @@ public static class LivesRefillOffer
 
     private static void WatchAd(MonoBehaviour host, Action onLivesAdded)
     {
-        if (host == null) return;
+        if (host == null || !LevelAdRight.TryConsume()) return;
         host.StartCoroutine(CoWatchAd(onLivesAdded));
     }
 

@@ -50,6 +50,36 @@ public class DailySlotReward
     [Tooltip("Localization yoksa kullanılacak isim (örn \"100 Altın\").")]
     public string fallbackName;
 
+    /// <summary>
+    /// Ekranda gösterilecek ad — tüm ödül ekranlarının (çark, slot, sandık, toplama efekti) tek kaynağı:
+    /// 1) elle verilmiş nameLocalizationKey, 2) ödül tipinin ortak anahtarı (shop_reward_*), 3) fallbackName.
+    /// </summary>
+    public string DisplayName
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(nameLocalizationKey))
+                return GameLocalization.GetOr(nameLocalizationKey, fallbackName ?? string.Empty);
+            return GameLocalization.GetOr(TypeNameKey(type), fallbackName ?? string.Empty);
+        }
+    }
+
+    private static string TypeNameKey(DailySlotRewardType t) => t switch
+    {
+        DailySlotRewardType.Coins                => "shop_reward_coins",
+        DailySlotRewardType.Lives                => "shop_reward_lives",
+        DailySlotRewardType.Stars                => "shop_reward_stars",
+        DailySlotRewardType.Joker_LineH          => "shop_reward_line",
+        DailySlotRewardType.Joker_Line           => "shop_reward_line",
+        DailySlotRewardType.Joker_PulseCore      => "shop_reward_pulsecore",
+        DailySlotRewardType.Joker_SystemOverride => "shop_reward_override",
+        DailySlotRewardType.Booster_Hammer       => "shop_reward_hammer",
+        DailySlotRewardType.Booster_Row          => "shop_reward_row",
+        DailySlotRewardType.Booster_Column       => "shop_reward_column",
+        DailySlotRewardType.Booster_Shuffle      => "shop_reward_shuffle",
+        _                                        => null,
+    };
+
     [Tooltip("Spin'de çıkma olasılığı ağırlığı. Yüksek = daha sık çıkar. " +
              "Normalize edilir, mutlak değer önemli değil sadece oran.")]
     [Min(0)] public int weight = 10;

@@ -104,7 +104,7 @@ public sealed class ShopOfferCard : ShopOfferCardBase
 
         if (nameText != null)
         {
-            nameText.text = offer.displayName;
+            nameText.text = offer.LocalizedName;
             if (theme != null) theme.ApplyText(nameText, theme.textLight, heading: true);
         }
     }

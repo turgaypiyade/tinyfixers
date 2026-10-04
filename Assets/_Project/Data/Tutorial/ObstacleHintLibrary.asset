@@ -253,3 +253,15 @@ MonoBehaviour:
     fallbackTitle: Small Water Tank
     locKey: hint_obstacle_watertank_small
     fallbackText:
+  - id: 55
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_wall_name
+    fallbackTitle: Stone Wall
+    locKey: hint_obstacle_wall
+    fallbackText:
+  - id: 56
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_metalwall_name
+    fallbackTitle: Metal Wall
+    locKey: hint_obstacle_metalwall
+    fallbackText:

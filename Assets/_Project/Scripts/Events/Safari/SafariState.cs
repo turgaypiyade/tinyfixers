@@ -98,6 +98,10 @@ public static class SafariState
 
             return new[] { new LevelLossItem(Config != null ? Config.lossIcon : null, label, CurrentPitstop, true) };
         });
+
+        // Safari turu olan level'dan vazgeçilirse düşüş ana menüdeki haritada oynatılır
+        // (SafariEventController AwaitingResult'u orada değerlendirir) → "Tekrar Dene" yerine ana menü.
+        LevelLossRegistry.RegisterResultScreen("safari", () => RunStatus == SafariRunStatus.AwaitingResult);
     }
 
     // ── Cycle ────────────────────────────────────────────────────

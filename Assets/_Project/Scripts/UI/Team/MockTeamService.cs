@@ -21,7 +21,7 @@ public sealed class MockTeamService : ITeamService
         giftCurrent = 35,
         giftTarget = 100,
         timerLabel = "2g 20s",
-        missionText = "kazanmak için bir göreve BAŞLA",
+        missionText = GameLocalization.Get("team_mission_start"),
     };
 
     private readonly List<TeamChatMessage> chat = new()

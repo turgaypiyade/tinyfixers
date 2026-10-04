@@ -51,18 +51,18 @@ public sealed class SafariRewardView : MonoBehaviour
         // Kurdele görseli 1187x493 (≈2.41): kutu bu orana göre → preserveAspect yüksekliğe takılıp
         // küçültmez. Başlık kurdelenin sarkmasını izlesin diye -15° yayla bükülür.
         Picture("VictoryRibbon", design, ribbonSprite, new Vector2(960f, 398f), new Vector2(0f, 420f));
-        var eventLabel = Label("Event", "SAFARİ TAMAMLANDI", 40, new Vector2(820f, 80f), new Vector2(0f, 715f), Cream);
+        var eventLabel = Label("Event", GameLocalization.Get("safari_reward_event"), 40, new Vector2(820f, 80f), new Vector2(0f, 715f), Cream);
         // Kalın sarı outline + etrafında yumuşak gölge (Fonts/Materials/Inter_ExtraBold_GoldOutlineGlow).
         if (eventLabelMaterial != null)
             eventLabel.fontSharedMaterial = eventLabelMaterial;
-        var title = Label("Title", "ZİRVE SENİN!", 92, new Vector2(700f, 150f), new Vector2(0f, 405f), Cream, true);
+        var title = Label("Title", GameLocalization.Get("safari_reward_title"), 92, new Vector2(700f, 150f), new Vector2(0f, 405f), Cream, true);
         title.gameObject.AddComponent<TMPArcText>().arcDegrees = -15f;
         var hero = Picture("GoldReward", design, coinSprite, new Vector2(270f, 270f), new Vector2(0f, 45f));
-        Label("RewardCaption", "KAZANDIĞIN ALTIN", 36, new Vector2(780f, 60f), new Vector2(0f, -132f), Cream);
+        Label("RewardCaption", GameLocalization.Get("safari_reward_caption"), 36, new Vector2(780f, 60f), new Vector2(0f, -132f), Cream);
         var amount = Label("Amount", "+0", 150, new Vector2(850f, 190f), new Vector2(0f, AmountY), Gold, true);
-        Label("Pool", $"{prizePool:N0} ALTINLIK BÜYÜK ÖDÜL", 42,
+        Label("Pool", GameLocalization.GetFormat("safari_reward_pool", prizePool), 42,
             new Vector2(820f, 65f), new Vector2(0f, -378f), Gold);
-        Label("Winners", $"{winners} kazanan arasında paylaşıldı", 36,
+        Label("Winners", GameLocalization.GetFormat("safari_reward_winners", winners), 36,
             new Vector2(820f, 70f), new Vector2(0f, -442f), Cream);
 
         // GreenButonwoStroke 289x116 oranında (≈2.49) büyütülür.
@@ -73,9 +73,9 @@ public sealed class SafariRewardView : MonoBehaviour
         button.targetGraphic = buttonImage;
         button.interactable = false;
         button.onClick.AddListener(() => claimed = true);
-        var buttonLabel = Label("ClaimLabel", "ALTINLAR TOPLANIYOR", 44,
+        var buttonLabel = Label("ClaimLabel", GameLocalization.Get("safari_reward_collecting"), 44,
             new Vector2(440f, 130f), new Vector2(0f, 6f), Cream, false, buttonImage.transform);
-        var hint = Label("Hint", "Ödülün birazdan hazır!", 30,
+        var hint = Label("Hint", GameLocalization.Get("safari_reward_hint_wait"), 30,
             new Vector2(820f, 55f), new Vector2(0f, -785f), Cream);
 
         audioSource = gameObject.AddComponent<AudioSource>();
@@ -152,9 +152,9 @@ public sealed class SafariRewardView : MonoBehaviour
         Destroy(rainLayer.gameObject);
         amount.text = $"+{share:N0}";
         amount.rectTransform.localScale = Vector3.one;
-        buttonLabel.text = "ÖDÜLÜ AL";
+        buttonLabel.text = GameLocalization.Get("bridge_victory_claim");
         buttonLabel.fontSize = buttonLabel.fontSizeMax = 72f;
-        hint.text = "Altınlarını cüzdanına ekle";
+        hint.text = GameLocalization.Get("safari_reward_hint_claim");
         // A release from the counting animation must not claim the reward accidentally.
         yield return null;
         button.interactable = true;

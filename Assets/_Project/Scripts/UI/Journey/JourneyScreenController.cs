@@ -38,6 +38,9 @@ public sealed class JourneyScreenController : MonoBehaviour
     [Tooltip("Üst kenar boşluğu (başlık bandının altından başlasın).")]
     [SerializeField, Min(0f)] private float topMargin = 150f;
     [SerializeField, Min(0f)] private float bottomMargin = 40f;
+    [Tooltip("Paneli alttan örten alt menü. Atanırsa liste onun ÜST kenarından (+bottomMargin) başlar; " +
+             "yoksa en alttaki kart ve 'Kullan' butonu menünün arkasında kalır.")]
+    [SerializeField] private RectTransform bottomBar;
     [SerializeField, Min(0f)] private float cardSpacing = 70f;
     [Tooltip("Kart genişliği / panel genişliği oranı.")]
     [SerializeField, Range(0.4f, 1f)] private float cardWidthRatio = 0.82f;
@@ -122,11 +125,18 @@ public sealed class JourneyScreenController : MonoBehaviour
 
         // Kartın alt kenarından yarı taşan "Kullan" butonu + alttaki kartın üstten yarı taşan plaketi
         // araya sığsın (yoksa çakışır).
+        // En üst kartın plaketi üstten, en alt kartın butonu alttan yarı taşar → kenar boşlukları da
+        // taşmayı kapsamalı (yoksa viewport maskesi keser).
         if (content.TryGetComponent(out VerticalLayoutGroup layout))
         {
             float buttonHalf = useButtonWidth * 116f / 289f * 0.5f;
-            layout.spacing = Mathf.Max(cardSpacing, buttonHalf + 92f * 0.5f + 20f);
+            float plaqueHalf = 92f * 0.5f;
+            layout.spacing = Mathf.Max(cardSpacing, buttonHalf + plaqueHalf + 20f);
+            layout.padding = new RectOffset(0, 0,
+                Mathf.RoundToInt(Mathf.Max(cardSpacing * 0.5f, plaqueHalf + 20f)),
+                Mathf.RoundToInt(Mathf.Max(cardSpacing * 0.5f, buttonHalf + 20f)));
         }
+        ApplyScrollInsets();
 
         float panelW = ((RectTransform)transform).rect.width;
         if (panelW < 10f) panelW = 1080f;
@@ -185,7 +195,7 @@ public sealed class JourneyScreenController : MonoBehaviour
             img.material = mat;
         }
 
-        string name = string.IsNullOrEmpty(wonder.displayName) ? wonder.wonderId : wonder.displayName;
+        string name = wonder.LocalizedName;
         BuildPlaque(card, name, new Vector2(0.5f, 1f), 0f, cardW * 0.72f, 92f, bold: true);
 
         // Tamamlanmış harika: kartın alt kenarına oturan "Kullan" butonu → ana menü arka planı olur.
@@ -301,6 +311,25 @@ public sealed class JourneyScreenController : MonoBehaviour
         }
     }
 
+    // Alt menünün panel içindeki üst kenarı (+bottomMargin). Menü atanmamışsa yalnız bottomMargin.
+    private float BottomInset()
+    {
+        if (bottomBar == null || !bottomBar.gameObject.activeInHierarchy) return bottomMargin;
+        var panel = (RectTransform)transform;
+        var corners = new Vector3[4];
+        bottomBar.GetWorldCorners(corners);
+        float barTop = panel.InverseTransformPoint(corners[1]).y - panel.rect.yMin;
+        return Mathf.Max(0f, barTop) + bottomMargin;
+    }
+
+    // Kurulmuş scroll'un alt kenarını her açılışta menüye göre yeniden hizala (ekran oranı değişebilir).
+    private void ApplyScrollInsets()
+    {
+        if (builtScroll == null) return;
+        var rt = (RectTransform)builtScroll.transform;
+        rt.offsetMin = new Vector2(0f, BottomInset());
+    }
+
     // listContent atanmadıysa: paneli kaplayan ScrollRect + dikey layout'lu content kur.
     private RectTransform EnsureListContent()
     {
@@ -312,7 +341,7 @@ public sealed class JourneyScreenController : MonoBehaviour
         var scrollRt = (RectTransform)scrollGo.transform;
         scrollRt.SetParent(transform, false);
         scrollRt.anchorMin = Vector2.zero; scrollRt.anchorMax = Vector2.one;
-        scrollRt.offsetMin = new Vector2(0f, bottomMargin);
+        scrollRt.offsetMin = new Vector2(0f, BottomInset());
         scrollRt.offsetMax = new Vector2(0f, -topMargin);
 
         var viewportGo = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));

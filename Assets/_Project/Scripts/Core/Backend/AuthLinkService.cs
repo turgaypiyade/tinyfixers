@@ -73,7 +73,7 @@ public static class AuthLinkService
 
         if (fetch == null)
         {
-            OnLinkFailed?.Invoke(provider, "Bu giriş yöntemi henüz aktif değil.");
+            OnLinkFailed?.Invoke(provider, GameLocalization.Get("auth_provider_inactive"));
             return;
         }
 
@@ -94,7 +94,7 @@ public static class AuthLinkService
         var user = FirebaseAuth.DefaultInstance?.CurrentUser;
         if (user == null)
         {
-            OnLinkFailed?.Invoke(provider, "Oturum hazır değil, tekrar dene.");
+            OnLinkFailed?.Invoke(provider, GameLocalization.Get("auth_session_not_ready"));
             return;
         }
 
@@ -117,7 +117,7 @@ public static class AuthLinkService
                 return;
             }
 
-            OnLinkFailed?.Invoke(provider, baseEx?.Message ?? "Bağlantı hatası.");
+            OnLinkFailed?.Invoke(provider, baseEx?.Message ?? GameLocalization.Get("auth_link_error"));
         });
     }
 

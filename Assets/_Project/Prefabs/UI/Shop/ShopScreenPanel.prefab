@@ -942,6 +942,7 @@ GameObject:
   - component: {fileID: 1791255429}
   - component: {fileID: 1791255431}
   - component: {fileID: 1791255430}
+  - component: {fileID: 3376942121558232988}
   m_Layer: 5
   m_Name: Title
   m_TagString: Untagged
@@ -1205,3 +1206,17 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1994026827}
   m_CullTransparentMesh: 1
+--- !u!114 &3376942121558232988
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1791255428}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 548bf4a7910af4aff9ee0bc016915643, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  target: {fileID: 1791255430}
+  key: shop_screen_title

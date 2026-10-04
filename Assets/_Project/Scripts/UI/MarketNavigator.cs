@@ -30,6 +30,21 @@ public static class MarketNavigator
         SceneManager.LoadScene(MainMenuSceneName);
     }
 
+    /// <summary>Ana menü marketi şu an açık mı (alt menü bu sahnede var ve market sekmesi seçili)?
+    /// Oyun sahnesinde alt menü yoktur → false (oyun içi satın alma akışı değişmez).</summary>
+    public static bool IsMenuMarketOpen()
+    {
+        var tabs = Object.FindFirstObjectByType<BottomTabController>();
+        return tabs != null && tabs.CurrentIndex == MarketTabIndex;
+    }
+
+    /// <summary>Ana menüde HOME sekmesine döner (alt menü yoksa no-op).</summary>
+    public static void ReturnHome()
+    {
+        var tabs = Object.FindFirstObjectByType<BottomTabController>();
+        if (tabs != null) tabs.SelectHome();
+    }
+
     /// <summary>
     /// BottomTabController hazır olunca çağrılır: başka sahneden market istendiyse
     /// (PendingOpenMarket) market sekmesine geçer ve bayrağı temizler.

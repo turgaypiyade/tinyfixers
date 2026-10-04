@@ -19,6 +19,9 @@ public class ScreenRainDropsFx : MonoBehaviour
     private const float PopDuration = 0.14f;
     private const float SpawnWindow = 0.28f;              // damlalar bu pencereye serpiştirilir
     private const float FadeDuration = 0.45f;
+    private const float FocusCenterPull = 0.4f;           // küme merkezi depodan ortaya bu oranda kayar
+    private const float ScatterWidth = 0.75f;             // dağınık damlalar ekranın orta bandına
+    private const float ScatterHeight = 0.6f;
 
     private RectTransform root;
     private int alive;
@@ -57,6 +60,8 @@ public class ScreenRainDropsFx : MonoBehaviour
         RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screenPoint, null, out var focus);
 
         Vector2 half = root.rect.size * 0.5f;
+        // Oyuncu görsün: küme merkezi depodan ekran ortasına doğru çekilir (kenar/köşede kalmasın).
+        focus = Vector2.Lerp(focus, Vector2.zero, FocusCenterPull);
         Vector2 sizeRange = config != null ? config.screenDropSize : new Vector2(70f, 190f);
         Vector2 lifeRange = config != null ? config.screenDropLifetime : new Vector2(1.6f, 2.6f);
         List<Sprite> sprites = config != null ? config.screenDropSprites : null;
@@ -67,7 +72,8 @@ public class ScreenRainDropsFx : MonoBehaviour
             // Yarısı sıçrama noktası çevresinde kümelenir (su oradan geldi), yarısı ekrana dağılır.
             Vector2 pos = i % 2 == 0
                 ? focus + Random.insideUnitCircle * 360f
-                : new Vector2(Random.Range(-half.x, half.x), Random.Range(-half.y * 0.85f, half.y * 0.85f));
+                : new Vector2(Random.Range(-half.x * ScatterWidth, half.x * ScatterWidth),
+                              Random.Range(-half.y * ScatterHeight, half.y * ScatterHeight));
             pos.x = Mathf.Clamp(pos.x, -half.x + 40f, half.x - 40f);
             pos.y = Mathf.Clamp(pos.y, -half.y + 80f, half.y - 80f);
 

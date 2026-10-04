@@ -93,7 +93,7 @@ public static class FriendDirectory
 
     /// <summary>Davet paylaşım metni (Davet Et → panoya kopyalanır).</summary>
     public static string InviteMessage()
-        => $"Wonder Fixers'ta bana katıl! Arkadaş kodum: {FriendState.MyCode}";
+        => GameLocalization.GetFormat("friend_invite_message", FriendState.MyCode);
 
     private static FriendProfile ProfileFor(string name)
     {

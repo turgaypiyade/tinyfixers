@@ -65,9 +65,9 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
 
     public string[] GetSubFilters(LeaderboardTab tab) => tab switch
     {
-        LeaderboardTab.Friends => new[] { "Arkadaş Listesi", "Arkadaş Ekle" },
-        LeaderboardTab.Players => new[] { "Dünya", RegionLabel },
-        LeaderboardTab.Team    => new[] { "Dünya", RegionLabel },
+        LeaderboardTab.Friends => new[] { GameLocalization.Get("leaderboard_friend_list"), GameLocalization.Get("leaderboard_add_friend") },
+        LeaderboardTab.Players => new[] { GameLocalization.Get("leaderboard_world"), RegionLabel },
+        LeaderboardTab.Team    => new[] { GameLocalization.Get("leaderboard_world"), RegionLabel },
         _                      => System.Array.Empty<string>(),
     };
 
@@ -142,7 +142,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
         list.Add(new LeaderboardEntry
         {
             playerName = PlayerProfile.PlayerName,
-            subtitle = "Sen",
+            subtitle = GameLocalization.Get("leaderboard_you"),
             score = PlayerWallet.TotalScore,
             isSelf = true,
             chapter = PlayerPrefs.GetInt("current_level", 1),
@@ -227,7 +227,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
             list.Add(new LeaderboardEntry
             {
                 playerName = PlayerTeamState.TeamName,
-                subtitle = "Senin takımın",
+                subtitle = GameLocalization.Get("leaderboard_your_team"),
                 // Sim: takım puanı = senin toplam puanın (gerçek üye toplamı backend'le gelecek).
                 // Böylece oynadıkça takım skorun büyür ve puanın teams sekmesinde de görünür.
                 score = PlayerWallet.TotalScore,
@@ -273,7 +273,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
         list.Add(new LeaderboardEntry
         {
             playerName = PlayerProfile.PlayerName,
-            subtitle = PlayerTeamState.HasTeam ? PlayerTeamState.TeamName : "Sen",
+            subtitle = PlayerTeamState.HasTeam ? PlayerTeamState.TeamName : GameLocalization.Get("leaderboard_you"),
             chapter = Mathf.Max(1, PlayerPrefs.GetInt("current_level", 1)),
             score = 0,
             isSelf = true,

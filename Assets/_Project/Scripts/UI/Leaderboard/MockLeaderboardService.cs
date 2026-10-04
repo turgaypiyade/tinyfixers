@@ -27,9 +27,9 @@ public sealed class MockLeaderboardService : ILeaderboardService
 
     public string[] GetSubFilters(LeaderboardTab tab) => tab switch
     {
-        LeaderboardTab.Friends => new[] { "Arkadaş Listesi", "Arkadaş Ekle" },
-        LeaderboardTab.Players => new[] { "Dünya", "Türkiye" },
-        LeaderboardTab.Team    => new[] { "Dünya", "Türkiye" },
+        LeaderboardTab.Friends => new[] { GameLocalization.Get("leaderboard_friend_list"), GameLocalization.Get("leaderboard_add_friend") },
+        LeaderboardTab.Players => new[] { GameLocalization.Get("leaderboard_world"), "Türkiye" },
+        LeaderboardTab.Team    => new[] { GameLocalization.Get("leaderboard_world"), "Türkiye" },
         _                      => Array.Empty<string>(),
     };
 
@@ -52,7 +52,7 @@ public sealed class MockLeaderboardService : ILeaderboardService
             {
                 rank = i + 1,
                 playerName = Names[(i + seed) % Names.Length],
-                subtitle = subFilter == 1 ? "Türkiye" : "Dünya",
+                subtitle = subFilter == 1 ? "Türkiye" : GameLocalization.Get("leaderboard_world"),
                 score = Mathf.Max(500, score),
                 chapter = 4400 - (i * 37 + seed) % 900,
             });
@@ -62,7 +62,7 @@ public sealed class MockLeaderboardService : ILeaderboardService
         list.Add(new LeaderboardEntry
         {
             playerName = PlayerProfile.PlayerName,
-            subtitle = "Sen",
+            subtitle = GameLocalization.Get("leaderboard_you"),
             score = Mathf.Max(1, PlayerWallet.TotalScore),
             isSelf = true,
             chapter = PlayerPrefs.GetInt("current_level", 1),
@@ -100,7 +100,7 @@ public sealed class MockLeaderboardService : ILeaderboardService
         {
             rank = 667,
             playerName = PlayerTeamState.TeamName,
-            subtitle = "Senin takımın",
+            subtitle = GameLocalization.Get("leaderboard_your_team"),
             score = 2458,
             isSelf = true,
             capacityCurrent = 6,

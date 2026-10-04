@@ -65,6 +65,29 @@ public static class LevelLossRegistry
             providers.Remove(key);
     }
 
+    // Kaybı KENDİ ekranında (ana menüdeki event haritası) animasyonla gösteren event'ler. Vazgeçince
+    // bunlardan biri sonuç bekliyorsa "Tekrar Dene" açılmaz, ana menüye dönülür ki oyuncu kaybı izlesin.
+    private static readonly Dictionary<string, Func<bool>> resultScreens = new();
+
+    /// <summary>Event'in kayıp sonucunu ana menüdeki kendi ekranında gösterdiğini kaydeder (idempotent).</summary>
+    public static void RegisterResultScreen(string key, Func<bool> hasPendingResult)
+    {
+        if (string.IsNullOrEmpty(key) || hasPendingResult == null)
+            return;
+        resultScreens[key] = hasPendingResult;
+    }
+
+    /// <summary>Vazgeçilen level'ın sonucunu ana menüde gösterecek bir event var mı?</summary>
+    public static bool HasPendingEventResultScreen()
+    {
+        foreach (var pending in resultScreens.Values)
+        {
+            try { if (pending()) return true; }
+            catch (Exception e) { Debug.LogWarning($"[LevelLossRegistry] result screen hata: {e.Message}"); }
+        }
+        return false;
+    }
+
     /// <summary>Tüm provider'ların O ANKİ risklerini toplar. Boş/anlamsız (0 miktar + ikonsuz) öğeleri eler.</summary>
     public static IEnumerable<LevelLossItem> Collect()
     {

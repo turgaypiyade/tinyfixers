@@ -166,12 +166,12 @@ public class SettingsPanel : MonoBehaviour
 
     private void OnFollowInstagramClicked()
     {
-        RuntimeChoicePopup.Show("Instagram", "Tiny Fixers'ı Instagram'da takip et!",
-            new RuntimeChoicePopup.Choice("Instagram'ı Aç", () =>
+        RuntimeChoicePopup.Show("Instagram", GameLocalization.Get("settings_instagram_body"),
+            new RuntimeChoicePopup.Choice(GameLocalization.Get("settings_instagram_open"), () =>
             {
                 if (this != null) OpenInstagram();
             }, primary: true),
-            new RuntimeChoicePopup.Choice("Vazgeç", null));
+            new RuntimeChoicePopup.Choice(GameLocalization.Get("common_cancel"), null));
     }
 
     private void OpenInstagram()

@@ -397,6 +397,8 @@ public static class SimRunner
                     break;
                 case ObstacleId.Magnet:
                 case ObstacleId.Safe:
+                case ObstacleId.Wall:
+                case ObstacleId.MetalWall:
                 case ObstacleId.Tube:
                 case ObstacleId.Wardrobe:
                 case ObstacleId.Cargo:

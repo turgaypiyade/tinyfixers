@@ -8,6 +8,8 @@ public class LevelDataEditor : Editor
 
     private PaintMode mode = PaintMode.Obstacle;
     private ObstacleId selectedObstacle = ObstacleId.Stone;
+    // Duvar (Wall) numaralı fırça: aynı numaralı BİTİŞİK duvar hücreleri tek parça (tek origin).
+    private int selectedWallPiece = 1;
     private bool showBossOilSettings;
 
     // Safe (kasa) settings — tıklanan hücre sol-üst origin; WxH bölgeyi kaplar.
@@ -465,6 +467,12 @@ public class LevelDataEditor : Editor
             level.obstacleOrigins = new int[size];
             for (int i = 0; i < size; i++) level.obstacleOrigins[i] = -1;
         }
+        if (level.wallPieceIds == null || level.wallPieceIds.Length != size)
+        {
+            var old = level.wallPieceIds;
+            level.wallPieceIds = new int[size];
+            if (old != null) System.Array.Copy(old, level.wallPieceIds, Mathf.Min(size, old.Length));
+        }
         if (level.tubes == null)
             level.tubes = System.Array.Empty<TubeEntry>();
 
@@ -556,8 +564,44 @@ public class LevelDataEditor : Editor
             var stage0 = selDef.GetStageRuleForRemainingHits(selDef.hits);
             string stageInfo = stage0 == null ? "-" : $"BlocksCells: {stage0.blocksCells}  |  Behavior: {stage0.behavior}  |  AllowDiagonal: {stage0.allowDiagonal}";
             EditorGUILayout.HelpBox($"Selected: {selectedObstacle}  |  Size: {selDef.size.x}x{selDef.size.y}  |  Hits: {Mathf.Max(1, selDef.hits)}  |  {stageInfo}", MessageType.None);
+            if (IsWallId(selectedObstacle))
+                DrawWallPieceBrush(level);
             DrawSelectedObstacleStageEditor(library, selDef);
         }
+    }
+
+    private void DrawWallPieceBrush(LevelData level)
+    {
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField("Duvar Parçası (numaralı fırça)", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox(
+            "Aynı numarayla boyanan BİTİŞİK duvar hücreleri tek parça olur (parça birlikte yıkılır, hedef parça " +
+            "başına sayılır). Yan yana ayrı parça için numarayı değiştir. Çapraz değen hücreler ve farklı " +
+            "duvar türleri (Wall / MetalWall) bağlanmaz.",
+            MessageType.Info);
+        EditorGUILayout.BeginHorizontal();
+        selectedWallPiece = Mathf.Max(1, EditorGUILayout.IntField("Parça No", selectedWallPiece));
+        GUI.backgroundColor = WallPieceColor(selectedWallPiece);
+        GUILayout.Box(GUIContent.none, GUILayout.Width(18), GUILayout.Height(18));
+        GUI.backgroundColor = Color.white;
+        if (GUILayout.Button("Yeni Parça", GUILayout.Width(90)))
+        {
+            int max = 0;
+            if (level.wallPieceIds != null)
+                foreach (int p in level.wallPieceIds) max = Mathf.Max(max, p);
+            selectedWallPiece = max + 1;
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
+    // Numaralı fırçayla parçalanan duvar türleri (aynı numara + aynı tür + bitişik = tek parça).
+    private static bool IsWallId(ObstacleId id) => id == ObstacleId.Wall || id == ObstacleId.MetalWall;
+
+    private static Color WallPieceColor(int piece)
+    {
+        if (piece <= 0) return Color.white;
+        float hue = Mathf.Repeat(piece * 0.618034f, 1f);
+        return Color.HSVToRGB(hue, 0.55f, 1f);
     }
 
     private void DrawSelectedObstacleStageEditor(ObstacleLibrary library, ObstacleDef selDef)
@@ -634,6 +678,7 @@ public class LevelDataEditor : Editor
         }
 
         var library = level.obstacleLibrary;
+        DrawWallPieces(level, ox, oy);
         for (int y = 0; y < level.height; y++)
         for (int x = 0; x < level.width; x++)
         {
@@ -641,6 +686,7 @@ public class LevelDataEditor : Editor
             if (level.cells[idx] != (int)CellType.Normal) continue;
             var obs = (ObstacleId)level.obstacles[idx];
             if (obs == ObstacleId.None || level.obstacleOrigins[idx] != idx) continue;
+            if (IsWallId(obs)) continue;   // DrawWallPieces hücre hücre çizer
             var def = library != null ? library.Get(obs) : null;
             if (def == null || def.GetPreviewSprite() == null) continue;
             int w = Mathf.Max(1, def.size.x);
@@ -855,6 +901,99 @@ public class LevelDataEditor : Editor
             if (!IsNormal(x, y + 1)) Handles.DrawLine(new Vector3(x0, y1), new Vector3(x1, y1));
         }
         Handles.EndGUI();
+    }
+
+    // Duvar hücreleri: kiremit + parça rengi + numara; farklı parçaya/boşluğa bakan kenarlar kalın çizgi.
+    private void DrawWallPieces(LevelData level, float ox, float oy)
+    {
+        var label = new GUIStyle(EditorStyles.boldLabel)
+            { alignment = TextAnchor.MiddleCenter, fontSize = 10, normal = { textColor = Color.black } };
+
+        bool SameOrigin(int idx, int nx, int ny)
+        {
+            if (!level.InBounds(nx, ny)) return false;
+            int n = level.Index(nx, ny);
+            return level.obstacles[n] == level.obstacles[idx] && level.obstacleOrigins[n] == level.obstacleOrigins[idx];
+        }
+
+        for (int y = 0; y < level.height; y++)
+        for (int x = 0; x < level.width; x++)
+        {
+            int idx = level.Index(x, y);
+            var wallId = (ObstacleId)level.obstacles[idx];
+            if (!IsWallId(wallId)) continue;
+            Rect r = new Rect(ox + x * cellPx, oy + y * cellPx, cellPx - 1, cellPx - 1);
+            var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(wallId) : null;
+            var sprite = def != null ? def.GetPreviewSprite() : null;
+            if (sprite != null) DrawSpriteInRect(sprite, r, 1);
+            int piece = level.wallPieceIds != null && idx < level.wallPieceIds.Length ? level.wallPieceIds[idx] : 0;
+            var c = WallPieceColor(piece);
+            EditorGUI.DrawRect(r, new Color(c.r, c.g, c.b, 0.45f));
+            GUI.Label(r, piece.ToString(), label);
+
+            const float t = 2f;
+            var edge = new Color(0.1f, 0.05f, 0.02f, 1f);
+            if (!SameOrigin(idx, x, y - 1)) EditorGUI.DrawRect(new Rect(r.x, r.y, r.width, t), edge);
+            if (!SameOrigin(idx, x, y + 1)) EditorGUI.DrawRect(new Rect(r.x, r.yMax - t, r.width, t), edge);
+            if (!SameOrigin(idx, x - 1, y)) EditorGUI.DrawRect(new Rect(r.x, r.y, t, r.height), edge);
+            if (!SameOrigin(idx, x + 1, y)) EditorGUI.DrawRect(new Rect(r.xMax - t, r.y, t, r.height), edge);
+        }
+    }
+
+    // Duvar parçalarını yeniden kur: aynı parça numaralı ve 4-komşulukla bağlı hücreler tek origin
+    // (bileşenin en küçük indeksi). Numara aynı ama ayrık kalan gruplar ayrı parça olur.
+    private static void RecomputeWallOrigins(LevelData level)
+    {
+        int n = level.width * level.height;
+        if (level.wallPieceIds == null || level.wallPieceIds.Length != n)
+        {
+            var old = level.wallPieceIds;
+            level.wallPieceIds = new int[n];
+            if (old != null) System.Array.Copy(old, level.wallPieceIds, Mathf.Min(n, old.Length));
+        }
+
+        var visited = new bool[n];
+        var queue = new System.Collections.Generic.Queue<int>();
+        var comp = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < n; i++)
+        {
+            if (!IsWallId((ObstacleId)level.obstacles[i]))
+            {
+                level.wallPieceIds[i] = 0;
+                continue;
+            }
+            if (level.wallPieceIds[i] <= 0) level.wallPieceIds[i] = 1;
+        }
+
+        for (int i = 0; i < n; i++)
+        {
+            if (visited[i] || !IsWallId((ObstacleId)level.obstacles[i])) continue;
+            int piece = level.wallPieceIds[i];
+            int wallType = level.obstacles[i];
+            comp.Clear();
+            queue.Enqueue(i);
+            visited[i] = true;
+            while (queue.Count > 0)
+            {
+                int c = queue.Dequeue();
+                comp.Add(c);
+                int cx = c % level.width, cy = c / level.width;
+                for (int d = 0; d < 4; d++)
+                {
+                    int nx = cx + (d == 0 ? -1 : d == 1 ? 1 : 0);
+                    int ny = cy + (d == 2 ? -1 : d == 3 ? 1 : 0);
+                    if (!level.InBounds(nx, ny)) continue;
+                    int nIdx = level.Index(nx, ny);
+                    if (visited[nIdx] || level.obstacles[nIdx] != wallType) continue;
+                    if (level.wallPieceIds[nIdx] != piece) continue;
+                    visited[nIdx] = true;
+                    queue.Enqueue(nIdx);
+                }
+            }
+            int origin = int.MaxValue;
+            foreach (int c in comp) origin = Mathf.Min(origin, c);
+            foreach (int c in comp) level.obstacleOrigins[c] = origin;
+        }
     }
 
     private void ApplyPaint(LevelData level, int x, int y)
@@ -1250,8 +1389,10 @@ public class LevelDataEditor : Editor
 
     private void ClearCell(LevelData level, int idx)
     {
+        bool wasWall = IsWallId((ObstacleId)level.obstacles[idx]);
         level.obstacles[idx] = (int)ObstacleId.None;
         level.obstacleOrigins[idx] = -1;
+        if (wasWall) RecomputeWallOrigins(level);   // silinen hücre parçayı ikiye bölmüş olabilir
     }
 
     private void StampObstacle(LevelData level, int ax, int ay, ObstacleId id)
@@ -1261,6 +1402,19 @@ public class LevelDataEditor : Editor
         if (id == ObstacleId.Tube || id == ObstacleId.Magnet || id == ObstacleId.Safe)
         {
             Debug.LogWarning($"[LevelEditor] {id} Obstacle modunda yerleştirilemez — kendi sekmesini ({id}) kullan.");
+            return;
+        }
+
+        if (IsWallId(id))
+        {
+            if (!level.InBounds(ax, ay)) return;
+            int wIdx = level.Index(ax, ay);
+            if (level.cells[wIdx] != (int)CellType.Normal) return;
+            level.obstacles[wIdx] = (int)id;
+            if (level.wallPieceIds == null || level.wallPieceIds.Length != level.width * level.height)
+                RecomputeWallOrigins(level);   // diziyi boyutlandırır
+            level.wallPieceIds[wIdx] = Mathf.Max(1, selectedWallPiece);
+            RecomputeWallOrigins(level);
             return;
         }
 
@@ -1285,6 +1439,9 @@ public class LevelDataEditor : Editor
             level.obstacleOrigins[idx] = originIdx;
         }
         level.obstacleOrigins[originIdx] = originIdx;
+        // Başka engel duvar hücrelerinin üstüne basıldıysa kalan duvar parçalarını yeniden kur.
+        if (level.wallPieceIds != null && System.Array.Exists(level.wallPieceIds, p => p > 0))
+            RecomputeWallOrigins(level);
     }
 
     private void DrawTilePinPalette(LevelData level)

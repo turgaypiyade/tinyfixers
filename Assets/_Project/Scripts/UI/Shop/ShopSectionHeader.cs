@@ -17,7 +17,7 @@ public sealed class ShopSectionHeader : MonoBehaviour
 
         if (title != null)
         {
-            title.text = section.title;
+            title.text = section.LocalizedTitle;
             if (theme != null) theme.ApplyText(title, theme.textLight, heading: true);
         }
 

@@ -832,7 +832,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         if (statusText != null)
         {
             statusText.color = promptTextColor;
-            statusText.text = "Kullanıcılar seçiliyor...";
+            statusText.text = GameLocalization.Get("safari_selecting_players");
         }
 
         float itemDuration = Mathf.Max(0.1f, initialRevealDuration);
@@ -961,7 +961,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         if (continueLabel != null)
         {
             continueLabel.color = promptTextColor;
-            continueLabel.text = "Devam etmek için dokunun";
+            continueLabel.text = GameLocalization.Get("safari_tap_continue");
         }
         if (continueRoot != null)
         {
@@ -1016,8 +1016,8 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         if (continueLabel != null)
         {
             continueLabel.color = promptTextColor;
-            continueLabel.text = presentedFall ? "Ana menüye dönmek için dokunun"
-                : canContinue ? "Devam etmek için dokunun" : "Tekrar denemek için bekleyin";
+            continueLabel.text = GameLocalization.Get(presentedFall ? "safari_lost_tap"
+                : canContinue ? "safari_tap_continue" : "safari_wait_retry");
         }
         RefreshStatus();
     }
@@ -1030,7 +1030,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
         // Kat bilgisi TopHUD'da (Seviye N/7); alt statü yalnız cooldown gösterir, aksi halde boş.
         statusText.text = !controller.CanContinueNow(out var remaining)
-            ? $"Tekrar denemek için: {FormatRemaining(remaining)}"
+            ? GameLocalization.GetFormat("safari_retry_in", FormatRemaining(remaining))
             : "";
     }
 

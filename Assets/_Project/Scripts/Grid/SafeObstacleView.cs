@@ -7,7 +7,8 @@ using UnityEngine.UI;
 /// Bir Safe (kasa) instance'ının görseli. GridSpawner her SafeEntry için bir tane spawn eder ve
 /// Setup ile SafeObstacleService'e + origin'e bağlar. Görsel mantık:
 ///   - Body (mor gövde) GridSpawner tarafından NxN boyutuna ölçeklenir.
-///   - LockPanel (ön yüz + 3 knob + 3 sayaç) sabit boyutta, gövdeyle büyümez (prefab'da kurulur).
+///   - LockPanel (ön yüz + 3 knob + 3 sayaç) ve kırık görsel, prefab'daki gövdeye göre tasarlanır; gövde
+///     NxN'e ölçeklenince ORANI korunarak birlikte ölçeklenir (2x2'de taşmaz, büyük kasada küçük kalmaz).
 ///   - Her vuruşta: aktif kilidin sayacı güncellenir + knob'u yukarıdan aşağı kademeli kayar
 ///     (progress = (total-remaining)/total). Kilit kapanınca knob en altta sabit kalır.
 ///   - Kasa kırılınca: kırık sprite gösterilir, panel gizlenir, opsiyonel break particle.
@@ -19,7 +20,7 @@ public sealed class SafeObstacleView : MonoBehaviour
     [Header("Body / Panel")]
     [Tooltip("Mor gövde — GridSpawner NxN boyutuna ölçekler.")]
     [SerializeField] private RectTransform bodyRect;
-    [Tooltip("Ön yüz + knob + sayaçları içeren sabit panel (gövdeyle büyümez).")]
+    [Tooltip("Ön yüz + knob + sayaçları içeren panel (gövdenin prefab boyutuna göre tasarlanır, gövdeyle oranlı ölçeklenir).")]
     [SerializeField] private GameObject lockPanel;
     [Tooltip("Kırık/açık kasa görseli — başta gizli, kırılınca gösterilir.")]
     [SerializeField] private GameObject brokenVisual;
@@ -128,10 +129,22 @@ public sealed class SafeObstacleView : MonoBehaviour
         UpdateLockFocusVisuals();
     }
 
-    /// Body'yi NxN boyutuna ölçekler (GridSpawner çağırır).
+    private Vector2 designBodySize;   // prefab'daki gövde boyutu (panel bu boyuta göre tasarlandı)
+
+    /// Body'yi NxN boyutuna ölçekler (GridSpawner çağırır). Kilit paneli ve kırık görsel, prefab
+    /// tasarımındaki gövde oranını koruyarak kısa kenara göre ölçeklenir — knob kayma mesafesi panel-local
+    /// olduğundan ölçekle birlikte doğru kalır.
     public void SetBodySize(float width, float height)
     {
-        if (bodyRect != null) bodyRect.sizeDelta = new Vector2(width, height);
+        if (bodyRect == null) return;
+        if (designBodySize == Vector2.zero) designBodySize = bodyRect.rect.size;
+        bodyRect.sizeDelta = new Vector2(width, height);
+
+        float designSide = Mathf.Min(designBodySize.x, designBodySize.y);
+        if (designSide <= 0f) return;
+        float k = Mathf.Min(width, height) / designSide;
+        if (lockPanel != null) lockPanel.transform.localScale = Vector3.one * k;
+        if (brokenVisual != null) brokenVisual.transform.localScale = Vector3.one * k;
     }
 
     private void OnDestroy()

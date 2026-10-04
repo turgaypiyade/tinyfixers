@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WorkshopStageData
   mode: 0
   stages:
-  - nameLocalizationKey: 
+  - nameLocalizationKey: workshop_c1_stage_1
     stageName: "Tamirata ba\u015Fla..."
     starCost: 2
     stageImage: {fileID: 21300000, guid: 364b9a6684f404522ac4f94dbfabd945, type: 3}
@@ -23,7 +23,7 @@ MonoBehaviour:
     sfxOnComplete: {fileID: 0}
     layerSprite: {fileID: 0}
     flyInFrom: 0
-  - nameLocalizationKey: 
+  - nameLocalizationKey: workshop_c1_stage_2
     stageName: "\u0130skele kur..."
     starCost: 3
     stageImage: {fileID: 21300000, guid: 8ec6afff600294794b6167670ae8c29e, type: 3}
@@ -32,7 +32,7 @@ MonoBehaviour:
     sfxOnComplete: {fileID: 0}
     layerSprite: {fileID: 0}
     flyInFrom: 0
-  - nameLocalizationKey: 
+  - nameLocalizationKey: workshop_c1_stage_3
     stageName: Boya...
     starCost: 3
     stageImage: {fileID: 21300000, guid: 4026ee8fe2d904620a6d875711c43169, type: 3}
@@ -41,7 +41,7 @@ MonoBehaviour:
     sfxOnComplete: {fileID: 0}
     layerSprite: {fileID: 0}
     flyInFrom: 0
-  - nameLocalizationKey: 
+  - nameLocalizationKey: workshop_c1_stage_4
     stageName: Meydan...
     starCost: 2
     stageImage: {fileID: 21300000, guid: 22639497dd15a49f6b0c06df6ec7fabd, type: 3}
@@ -50,7 +50,7 @@ MonoBehaviour:
     sfxOnComplete: {fileID: 0}
     layerSprite: {fileID: 0}
     flyInFrom: 0
-  - nameLocalizationKey: 
+  - nameLocalizationKey: workshop_c1_stage_5
     stageName: Tabelalar...
     starCost: 2
     stageImage: {fileID: 21300000, guid: ae58ccaaed68a432c8672f6cc3fe71c9, type: 3}
@@ -59,7 +59,7 @@ MonoBehaviour:
     sfxOnComplete: {fileID: 0}
     layerSprite: {fileID: 0}
     flyInFrom: 0
-  - nameLocalizationKey: 
+  - nameLocalizationKey: workshop_c1_stage_6
     stageName: Havuz ve banklar.
     starCost: 3
     stageImage: {fileID: 21300000, guid: 75b58c0e469f6447fb1c668f3fbca714, type: 3}
@@ -68,7 +68,7 @@ MonoBehaviour:
     sfxOnComplete: {fileID: 0}
     layerSprite: {fileID: 0}
     flyInFrom: 0
-  - nameLocalizationKey: 
+  - nameLocalizationKey: workshop_c1_stage_7
     stageName: "F\u0131skiye..."
     starCost: 4
     stageImage: {fileID: 21300000, guid: 8cb93f39ef21d4cedb1063a27c1d6c9a, type: 3}
@@ -77,7 +77,7 @@ MonoBehaviour:
     sfxOnComplete: {fileID: 0}
     layerSprite: {fileID: 0}
     flyInFrom: 0
-  - nameLocalizationKey: 
+  - nameLocalizationKey: workshop_c1_stage_8
     stageName: "Ho\u015Fgeldin..."
     starCost: 2
     stageImage: {fileID: 21300000, guid: d3044aea2106f4628b081c0145da688f, type: 3}

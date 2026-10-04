@@ -49,7 +49,7 @@ public sealed class AppleSignInBridge : MonoBehaviour
     {
         if (manager == null)
         {
-            callback(null, "Apple girişi bu cihazda desteklenmiyor.");
+            callback(null, GameLocalization.Get("auth_apple_unsupported"));
             return;
         }
 
@@ -66,7 +66,7 @@ public sealed class AppleSignInBridge : MonoBehaviour
                 var apple = credential as IAppleIDCredential;
                 if (apple?.IdentityToken == null)
                 {
-                    callback(null, "Apple kimliği alınamadı, tekrar dene.");
+                    callback(null, GameLocalization.Get("auth_apple_failed"));
                     return;
                 }
 

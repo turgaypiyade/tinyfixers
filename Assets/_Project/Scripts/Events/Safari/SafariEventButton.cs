@@ -16,6 +16,8 @@ public sealed class SafariEventButton : MonoBehaviour
     [SerializeField] private TMP_Text labelText;
     [Tooltip("Görünürlük için açılıp kapanacak kök. Boşsa bu GameObject kullanılır.")]
     [SerializeField] private GameObject visibilityRoot;
+    [Tooltip("Geri sayım yokken ikonda gösterilecek etiketin lokalizasyon anahtarı.")]
+    [SerializeField] private string labelKey = "rising_icon_label";
 
     private string defaultLabel = "SAFARI";
     private int lastShownSeconds = int.MinValue;
@@ -25,8 +27,8 @@ public sealed class SafariEventButton : MonoBehaviour
         if (button == null) button = GetComponent<Button>();
         if (button != null) button.onClick.AddListener(OnClicked);
         if (visibilityRoot == null) visibilityRoot = gameObject;
-        if (labelText != null && !string.IsNullOrEmpty(labelText.text))
-            defaultLabel = labelText.text;
+        defaultLabel = GameLocalization.GetOr(labelKey,
+            labelText != null && !string.IsNullOrEmpty(labelText.text) ? labelText.text : defaultLabel);
         RefreshLabel();
     }
 

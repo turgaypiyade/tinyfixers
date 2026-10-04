@@ -61,7 +61,7 @@ public sealed class SaveProgressPopup : MonoBehaviour
 
     private void HandleLinked(AuthLinkService.Provider p)
     {
-        SetStatus($"Hesabın bağlandı ✓ ({p})", positive: true);
+        SetStatus(GameLocalization.GetFormat("save_progress_linked_provider", p), positive: true);
         ShowConfirmation(false);
         FirebaseCloudSaveService.Push();   // kalıcı kimlikle hemen yedekle
     }
@@ -73,7 +73,7 @@ public sealed class SaveProgressPopup : MonoBehaviour
     {
         pendingProvider = p;
         pendingCredential = credential;
-        SetStatus("Bu hesap başka bir kayda bağlı. O kayda geçilsin mi?", positive: false);
+        SetStatus(GameLocalization.Get("save_progress_conflict"), positive: false);
         ShowConfirmation(true);
     }
 
@@ -93,9 +93,9 @@ public sealed class SaveProgressPopup : MonoBehaviour
     private void RefreshStatus()
     {
         if (AuthLinkService.IsLinked)
-            SetStatus("Hesabın bağlı ✓\nİlerlemen güvende.", positive: true);
+            SetStatus(GameLocalization.Get("save_progress_linked"), positive: true);
         else
-            SetStatus("İlerlemeni korumak için\nhesabını bağla.", positive: true);
+            SetStatus(GameLocalization.Get("save_progress_not_linked"), positive: true);
     }
 
     // ── Runtime UI kurulumu ─────────────────────────────────────────
@@ -104,7 +104,7 @@ public sealed class SaveProgressPopup : MonoBehaviour
     {
         CommonPopupView.Region((RectTransform)transform, new Rect(0, 0, 1, 1));
         gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.72f);
-        var view = CommonPopupView.Create(transform, "İlerlemeyi Kaydet", Close,
+        var view = CommonPopupView.Create(transform, GameLocalization.Get("save_progress_title"), Close,
             CommonPopupSkin.Shared.saveProgressBackgroundMaterial);
         statusText = CommonPopupView.Text(view.Body, "Status", "", 34, CommonPopupSkin.Shared.bodyTextColor);
         CommonPopupView.Region(statusText.rectTransform, new Rect(0, 0.80f, 1, 0.20f));
@@ -117,16 +117,16 @@ public sealed class SaveProgressPopup : MonoBehaviour
 
         confirmRow = CommonPopupView.NewRect(view.Body, "ConfirmRow", Vector2.zero).gameObject;
         CommonPopupView.Region((RectTransform)confirmRow.transform, new Rect(0, 0, 1, 0.76f));
-        var yes = CommonPopupView.Button(confirmRow.transform, "ConfirmSwitch", "Bu hesaba geç",
+        var yes = CommonPopupView.Button(confirmRow.transform, "ConfirmSwitch", GameLocalization.Get("save_progress_switch"),
             () => AuthLinkService.SwitchToExisting(pendingProvider, pendingCredential), CommonPopupSkin.Shared.accountButton);
         CommonPopupView.Region((RectTransform)yes.transform, new Rect(0, 0.52f, 1, 0.30f));
-        var no = CommonPopupView.Button(confirmRow.transform, "CancelSwitch", "Vazgeç",
+        var no = CommonPopupView.Button(confirmRow.transform, "CancelSwitch", GameLocalization.Get("common_cancel"),
             () => { ShowConfirmation(false); RefreshStatus(); }, CommonPopupSkin.Shared.accountButton);
         CommonPopupView.Region((RectTransform)no.transform, new Rect(0, 0.14f, 1, 0.30f));
         CommonPopupView.StyleText(yes.GetComponentInChildren<TMP_Text>(), 42, Color.white);
         CommonPopupView.StyleText(no.GetComponentInChildren<TMP_Text>(), 42, Color.white);
         confirmRow.SetActive(false);
-        var done = CommonPopupView.Button(view.Actions, "BtnContinue", "Tamam", Close,
+        var done = CommonPopupView.Button(view.Actions, "BtnContinue", GameLocalization.Get("common_ok"), Close,
             CommonPopupSkin.Shared.saveProgressContinueButton);
         CommonPopupView.Region((RectTransform)done.transform, CommonPopupView.ActionRegion(0, 1));
     }
@@ -136,7 +136,7 @@ public sealed class SaveProgressPopup : MonoBehaviour
         bool available = AuthLinkService.IsAvailable(provider);
         var button = CommonPopupView.Button(parent, "Btn_" + provider, label, () =>
             {
-                SetStatus("Bağlanıyor...", positive: true);
+                SetStatus(GameLocalization.Get("save_progress_connecting"), positive: true);
                 AuthLinkService.Link(provider);
             }, CommonPopupSkin.Shared.accountButton);
         CommonPopupView.Region((RectTransform)button.transform, new Rect(0, y, 1, 0.30f));
@@ -146,7 +146,7 @@ public sealed class SaveProgressPopup : MonoBehaviour
         title.textWrappingMode = TextWrappingModes.NoWrap;
         CommonPopupView.Region(title.rectTransform, new Rect(0.08f, 0.39f, 0.84f, 0.46f));
         var subtitle = CommonPopupView.Text(title.transform.parent, "ProviderStatus",
-            available ? "ile devam et" : "Yakında", 26, new Color(0.88f, 0.95f, 1f));
+            GameLocalization.Get(available ? "save_progress_provider_continue" : "common_coming_soon"), 26, new Color(0.88f, 0.95f, 1f));
         subtitle.textWrappingMode = TextWrappingModes.NoWrap;
         CommonPopupView.Region(subtitle.rectTransform, new Rect(0.08f, 0.14f, 0.84f, 0.25f));
         var colors = button.colors;

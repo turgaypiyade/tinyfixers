@@ -121,7 +121,7 @@ public sealed class RisingIntroOverlay : MonoBehaviour
     private IEnumerator CountParticipants(int total)
     {
         if (counterText != null)
-            counterText.text = $"0 / {total}\n<size=36>OYUNCULAR HAZIRLANIYOR</size>";
+            counterText.text = $"0 / {total}\n<size=36>{GameLocalization.Get("rising_intro_preparing")}</size>";
 
         var avatars = crowdStack != null ? crowdStack.SnapshotAvatars() : new List<RectTransform>();
         var scales = new Vector3[avatars.Count];
@@ -140,7 +140,7 @@ public sealed class RisingIntroOverlay : MonoBehaviour
             int value = Mathf.Clamp(Mathf.RoundToInt(Mathf.Lerp(1, total, e)), 1, total);
 
             if (counterText != null)
-                counterText.text = $"{value} / {total}\n<size=36>OYUNCULAR HAZIRLANIYOR</size>";
+                counterText.text = $"{value} / {total}\n<size=36>{GameLocalization.Get("rising_intro_preparing")}</size>";
 
             int visibleTarget = Mathf.Clamp(Mathf.CeilToInt(value / (float)total * avatars.Count), 0, avatars.Count);
             for (int i = shown; i < visibleTarget; i++)
@@ -154,7 +154,7 @@ public sealed class RisingIntroOverlay : MonoBehaviour
         }
 
         if (counterText != null)
-            counterText.text = $"{total} / {total}\n<size=36>YARIŞ BAŞLIYOR!</size>";
+            counterText.text = $"{total} / {total}\n<size=36>{GameLocalization.Get("rising_intro_race_starting")}</size>";
         for (int i = 0; i < avatars.Count; i++)
         {
             if (avatars[i] == null) continue;

@@ -22,17 +22,17 @@ public class JokerFocusOverlayController : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool verboseDebugLogs = true;
 
-    [Header("Texts")]
-    [SerializeField] private string singleTargetText = "Kırmak istediğin objeye tıkla";
-    [SerializeField] private string rowTargetText    = "Yok etmek istediğin satıra tıkla";
-    [SerializeField] private string columnTargetText = "Yok etmek istediğin sütuna tıkla";
-    [SerializeField] private string shuffleText      = "Herhangi bir yere tıkla";
+    [Header("Text keys (tinyfixers_localization.json)")]
+    [SerializeField] private string singleTargetKey = "joker_hint_single";
+    [SerializeField] private string rowTargetKey    = "joker_hint_row";
+    [SerializeField] private string columnTargetKey = "joker_hint_column";
+    [SerializeField] private string shuffleKey      = "joker_hint_shuffle";
 
-    [Header("Titles (üstteki büyük başlık)")]
-    [SerializeField] private string singleTitle  = "Wonder Çekici!";
-    [SerializeField] private string rowTitle     = "Wonder Roketi!";
-    [SerializeField] private string columnTitle  = "Wonder Asansör!";
-    [SerializeField] private string shuffleTitle = "Wonder Karıştırıcı!";
+    [Header("Title keys (üstteki büyük başlık)")]
+    [SerializeField] private string singleTitleKey  = "joker_title_single";
+    [SerializeField] private string rowTitleKey     = "joker_title_row";
+    [SerializeField] private string columnTitleKey  = "joker_title_column";
+    [SerializeField] private string shuffleTitleKey = "joker_title_shuffle";
     [SerializeField] private Color  titleColor   = new Color(1f, 0.85f, 0.2f, 1f);   // referanstaki sarı
     [Tooltip("Başlık fontu (boşsa TMP varsayılanı + faux-bold). Menü: TinyFixers ▸ Fonts ▸ 3) Joker Başlık Stili.")]
     [SerializeField] private TMP_FontAsset titleFont;
@@ -543,10 +543,10 @@ public class JokerFocusOverlayController : MonoBehaviour
         {
             descriptionText.text = index switch
             {
-                0 => singleTargetText,
-                1 => rowTargetText,
-                2 => columnTargetText,
-                3 => shuffleText,
+                0 => GameLocalization.Get(singleTargetKey),
+                1 => GameLocalization.Get(rowTargetKey),
+                2 => GameLocalization.Get(columnTargetKey),
+                3 => GameLocalization.Get(shuffleKey),
                 _ => string.Empty
             };
         }
@@ -555,10 +555,10 @@ public class JokerFocusOverlayController : MonoBehaviour
         {
             titleText.text = index switch
             {
-                0 => singleTitle,
-                1 => rowTitle,
-                2 => columnTitle,
-                3 => shuffleTitle,
+                0 => GameLocalization.Get(singleTitleKey),
+                1 => GameLocalization.Get(rowTitleKey),
+                2 => GameLocalization.Get(columnTitleKey),
+                3 => GameLocalization.Get(shuffleTitleKey),
                 _ => string.Empty
             };
         }

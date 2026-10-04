@@ -48,8 +48,8 @@ public sealed class FindFriendPopup : MonoBehaviour
         Wire();
 
         if (searchInput != null) searchInput.text = "";
-        if (myIdText != null) myIdText.text = $"ID'm: {FriendState.MyCode}";
-        if (inviteLabel != null) inviteLabel.text = "Davet Et";
+        if (myIdText != null) myIdText.text = GameLocalization.GetFormat("friend_my_id", FriendState.MyCode);
+        if (inviteLabel != null) inviteLabel.text = GameLocalization.Get("friend_invite");
         ShowResult(null);
     }
 
@@ -59,7 +59,7 @@ public sealed class FindFriendPopup : MonoBehaviour
     {
         if (popupView != null) return;
         var oldCard = transform.Find("Card");
-        popupView = CommonPopupView.Create(transform, "Arkadaş Bul", Close);
+        popupView = CommonPopupView.Create(transform, GameLocalization.Get("friend_find_title"), Close);
         var color = CommonPopupSkin.Shared.bodyTextColor;
 
         if (searchInput != null)
@@ -153,7 +153,7 @@ public sealed class FindFriendPopup : MonoBehaviour
             ? FriendState.IsRealFriend(profile.uid)
             : FriendState.IsFriend(profile.name);
         if (resultAddButton != null) resultAddButton.interactable = !already;
-        if (resultAddLabel != null) resultAddLabel.text = already ? "Eklendi" : "Ekle";
+        if (resultAddLabel != null) resultAddLabel.text = GameLocalization.Get(already ? "friend_added" : "friend_add");
     }
 
     private void OnAddFound()
@@ -167,7 +167,7 @@ public sealed class FindFriendPopup : MonoBehaviour
             FriendState.AddFriend(found.name);
 
         if (resultAddButton != null) resultAddButton.interactable = false;
-        if (resultAddLabel != null) resultAddLabel.text = "Eklendi";
+        if (resultAddLabel != null) resultAddLabel.text = GameLocalization.Get("friend_added");
     }
 
     // Native paylaşım (mobil share sheet) ayrı plugin ister; v1'de davet metni panoya
@@ -175,7 +175,7 @@ public sealed class FindFriendPopup : MonoBehaviour
     private void OnInvite()
     {
         GUIUtility.systemCopyBuffer = FriendDirectory.InviteMessage();
-        if (inviteLabel != null) inviteLabel.text = "Kopyalandı!";
+        if (inviteLabel != null) inviteLabel.text = GameLocalization.Get("friend_copied");
     }
 
     private Sprite PickAvatar(string name)

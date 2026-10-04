@@ -29,7 +29,7 @@ public sealed class TeamLifeRequestRow : MonoBehaviour
 
         if (nameText != null) nameText.text = r.requesterName;
         SingleLineText.Fit(nameText);
-        if (tagText != null)  tagText.text  = "Can İsteği!";
+        if (tagText != null)  tagText.text  = GameLocalization.Get("team_life_request_tag");
         if (progressText != null) progressText.text = r.current + "/" + r.needed;
         if (progressFill != null) progressFill.fillAmount = r.Progress01;
         if (avatar != null)
@@ -37,7 +37,7 @@ public sealed class TeamLifeRequestRow : MonoBehaviour
             avatar.sprite  = r.avatar;
             avatar.enabled = r.avatar != null;
         }
-        if (helpButtonText != null) helpButtonText.text = "Yardım";
+        if (helpButtonText != null) helpButtonText.text = GameLocalization.Get("team_help");
 
         if (helpButton != null)
         {

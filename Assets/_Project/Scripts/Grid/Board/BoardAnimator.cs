@@ -950,7 +950,7 @@ public class BoardAnimator
                 // obstacle sayıp ikinci ucu yutuyordu → aynı beam iki ucu da geçse yalnız biri
                 // küçülüyordu. Magnet'i origin-dedup'tan muaf tut; strikeDamagedObstacleCells
                 // zaten HÜCRE bazında dedup yapıyor, iki uç farklı hücre olduğu için ikisi de vurulur.
-                bool isMagnetCell = board.ObstacleStateService.GetObstacleIdAt(c.x, c.y) == ObstacleId.Magnet;
+                bool isMagnetCell = board.ObstacleStateService.TakesPerCellHits(c.x, c.y);   // magnet/duvar: hücre başına
 
                 // Per-origin deduplication STRIKE BAZINDA: 2x2+ obstacle (ColorChest vb.)
                 // tek beam'den kaç hücresi geçerse geçsin bir hit alır; ama zincirdeki
@@ -1098,7 +1098,7 @@ public class BoardAnimator
             // almalı (PulseCore square iki ucu da kapsadığında ikisi de küçülsün). Magnet'i
             // origin-dedup'tan muaf tut; impact listesi zaten hücre bazında ilerliyor.
             if (board.ObstacleStateService != null
-                && board.ObstacleStateService.GetObstacleIdAt(cell.x, cell.y) != ObstacleId.Magnet)
+                && !board.ObstacleStateService.TakesPerCellHits(cell.x, cell.y))
             {
                 int origin = board.ObstacleStateService.GetObstacleOriginAt(cell.x, cell.y);
                 if (origin >= 0 && !hitObstacleOrigins.Add(origin)) continue;
@@ -1514,7 +1514,7 @@ public class BoardAnimator
             if (hitOrigins != null)
             {
                 var svc = board.ObstacleStateService;
-                if (svc.GetObstacleIdAt(kv.Key.x, kv.Key.y) != ObstacleId.Magnet)
+                if (!svc.TakesPerCellHits(kv.Key.x, kv.Key.y))
                 {
                     int origin = svc.GetObstacleOriginAt(kv.Key.x, kv.Key.y);
                     if (origin >= 0)

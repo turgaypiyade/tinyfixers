@@ -12,34 +12,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e428ba4f402e4e53a57f2a501307422, type: 3}
   m_Name: Wonder_mis4
   m_EditorClassIdentifier: Assembly-CSharp::WonderDefinition
-  wonderId: mis2
-  displayName: Gateron
+  wonderId: mis4
+  displayName: "Miyav Piramidi"
   taskIcon: {fileID: 0}
   backgroundSprite: {fileID: 21300000, guid: 1ae149420bdbb442ea753a52bcb2fe61, type: 3}
   totalStages: 10
   tasks:
-  - name: Temel Tarama
+  - name: "Kumu Temizle"
     icon: {fileID: 0}
     starCost: 0
-  - name: "\u0130skelet Montaj"
+  - name: "Temeli D\xFCzle"
     icon: {fileID: 0}
     starCost: 0
-  - name: "Ana G\xF6vde"
+  - name: "Rampay\u0131 Kur"
     icon: {fileID: 0}
     starCost: 0
-  - name: Kaplama
+  - name: "Ta\u015F Bloklar\u0131 Ta\u015F\u0131"
     icon: {fileID: 0}
     starCost: 0
-  - name: "Detay \u0130\u015F\xE7ilik"
+  - name: "Katlar\u0131 Diz"
     icon: {fileID: 0}
     starCost: 0
-  - name: "Enerji Hatt\u0131"
+  - name: "Ge\xE7itleri A\xE7"
     icon: {fileID: 0}
     starCost: 0
-  - name: "Son Rot\xFC\u015F"
+  - name: "Kire\xE7 Ta\u015F\u0131n\u0131 Parlat"
     icon: {fileID: 0}
     starCost: 0
-  - name: Aktivasyon
+  - name: "Alt\u0131n Tepeyi Yerle\u015Ftir"
     icon: {fileID: 0}
     starCost: 0
   starCosts: 0300000003000000030000000200000003000000030000000200000005000000

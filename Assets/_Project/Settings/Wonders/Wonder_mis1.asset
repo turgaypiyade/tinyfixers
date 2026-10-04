@@ -13,33 +13,33 @@ MonoBehaviour:
   m_Name: Wonder_mis1
   m_EditorClassIdentifier: Assembly-CSharp::WonderDefinition
   wonderId: mis1
-  displayName: Pisaron
+  displayName: "E\u011Fik Pati Kulesi"
   taskIcon: {fileID: 0}
   backgroundSprite: {fileID: 21300000, guid: f69762ed99b49469199809df14925220, type: 3}
   totalStages: 10
   tasks:
-  - name: Temel Tarama
+  - name: "Zemini Sa\u011Flamla\u015Ft\u0131r"
     icon: {fileID: 0}
     starCost: 0
-  - name: "\u0130skelet Montaj"
+  - name: "\u0130skeleyi Kur"
     icon: {fileID: 0}
     starCost: 0
-  - name: "Ana G\xF6vde"
+  - name: "Temel Ta\u015Flar\u0131n\u0131 Onar"
     icon: {fileID: 0}
     starCost: 0
-  - name: Kaplama
+  - name: "S\xFCtunlar\u0131 Kaynakla"
     icon: {fileID: 0}
     starCost: 0
-  - name: "Detay \u0130\u015F\xE7ilik"
+  - name: "Kemerleri Yenile"
     icon: {fileID: 0}
     starCost: 0
-  - name: "Enerji Hatt\u0131"
+  - name: "Mermeri Parlat"
     icon: {fileID: 0}
     starCost: 0
-  - name: "Son R\xF6tu\u015F"
+  - name: "\xC7an Kat\u0131n\u0131 Onar"
     icon: {fileID: 0}
     starCost: 0
-  - name: Aktivasyon
+  - name: "Bayra\u011F\u0131 Dik"
     icon: {fileID: 0}
     starCost: 0
   starCosts: 0300000003000000030000000200000003000000020000000300000005000000

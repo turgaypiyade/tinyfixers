@@ -83,6 +83,8 @@ public class MainMenuLivesDisplay : MonoBehaviour
         }
 
         if (LivesManager.Current >= LivesManager.MaxLives) return;
+        // Level başına tek reklam hakkı (LevelAdRight) burada da geçerli.
+        if (LevelAdRight.IsUsed) return;
         StartAd();
     }
 
@@ -90,7 +92,7 @@ public class MainMenuLivesDisplay : MonoBehaviour
     // Coin yetmiyorsa can paketi butonu pasif görünür; alttaki "Devam" kapatır.
     private void ShowBuyLivesConfirm()
     {
-        LivesRefillOffer.Show(this, RefreshDisplay, buyLivesPackAmount, buyLivesPackCost, "Devam");
+        LivesRefillOffer.Show(this, RefreshDisplay, buyLivesPackAmount, buyLivesPackCost, GameLocalization.Get("prelevel_popup_continue"));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -100,6 +102,7 @@ public class MainMenuLivesDisplay : MonoBehaviour
 #if UNITY_EDITOR
         if (simulateAdInEditor)
         {
+            if (!LevelAdRight.TryConsume()) return;
             StartCoroutine(SimulateAd());
             return;
         }

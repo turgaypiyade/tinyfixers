@@ -108,6 +108,8 @@ public sealed class SimGoalSet
             ObstacleId.Wardrobe        => SimGoalFidelity.Approximate,
             ObstacleId.Magnet          => SimGoalFidelity.Approximate,  // uçlara yaklaşma yok
             ObstacleId.Safe            => SimGoalFidelity.Approximate,  // 3 kilit tek sayaç
+            ObstacleId.Wall            => SimGoalFidelity.Approximate,  // hücre aşamaları + parça yıkımı yok
+            ObstacleId.MetalWall       => SimGoalFidelity.Approximate,  // ardışık vuruş sıfırlaması yok
             ObstacleId.KeyGenerator    => SimGoalFidelity.NotSimulated,
             ObstacleId.RocketBasket    => SimGoalFidelity.NotSimulated,
             ObstacleId.SpreadingGel    => SimGoalFidelity.Approximate,  // yayılma modellenmiyor

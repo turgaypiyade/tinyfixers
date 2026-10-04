@@ -34,13 +34,17 @@ public class WonderDefinition : ScriptableObject
     /// <summary>Görev sayısı — tasks doluysa ondan, değilse totalStages.</summary>
     public int TaskCount => (tasks != null && tasks.Length > 0) ? tasks.Length : totalStages;
 
-    /// <summary>Görev adı — tasks'ta varsa, yoksa harika adı.</summary>
+    /// <summary>Görev adı — çevirisi "wonder_{wonderId}_task_{n}" (n 1'den), yoksa tasks'taki ad, yoksa harika adı.</summary>
     public string GetTaskName(int stage)
     {
         if (tasks != null && stage >= 0 && stage < tasks.Length && !string.IsNullOrEmpty(tasks[stage].name))
-            return tasks[stage].name;
-        return string.IsNullOrEmpty(displayName) ? wonderId : displayName;
+            return GameLocalization.GetOr($"wonder_{wonderId}_task_{stage + 1}", tasks[stage].name);
+        return LocalizedName;
     }
+
+    /// <summary>Harika adı — çevirisi "wonder_{wonderId}_name", yoksa displayName, yoksa wonderId.</summary>
+    public string LocalizedName =>
+        GameLocalization.GetOr($"wonder_{wonderId}_name", string.IsNullOrEmpty(displayName) ? wonderId : displayName);
 
     /// <summary>Görev ikonu — tasks'ta varsa, yoksa taskIcon, yoksa backgroundSprite.</summary>
     public Sprite GetTaskIcon(int stage)

@@ -27,7 +27,7 @@ public sealed class JourneyChapterCard : MonoBehaviour
         if (c == null) return;
 
         if (titleText != null)   titleText.text   = c.title;
-        if (chapterText != null) chapterText.text = "Bölüm " + c.chapterNumber;
+        if (chapterText != null) chapterText.text = GameLocalization.GetFormat("journey_chapter", c.chapterNumber);
         if (image != null)
         {
             image.sprite  = c.image;
@@ -41,7 +41,7 @@ public sealed class JourneyChapterCard : MonoBehaviour
             watchButton.onClick.RemoveAllListeners();
             watchButton.onClick.AddListener(() => onWatch?.Invoke(chapter));
         }
-        if (watchButtonText != null) watchButtonText.text = "İzle";
+        if (watchButtonText != null) watchButtonText.text = GameLocalization.Get("journey_watch");
 
         if (dimOverlay != null)
         {

@@ -57,7 +57,7 @@ public sealed class OverrideSpecializedCombo
         AddOrigin(rt, otherTile);
 
         PrepareFanout(rt, overrideTile, targetSpecial);
-        var deferredSpecials = CollectTargets(rt, overrideTile, otherTile, targetSpecial);
+        CollectTargets(rt, overrideTile, otherTile, targetSpecial);
 
         if (!rt.FinalizeAtEnd)
             return result;
@@ -67,17 +67,15 @@ public sealed class OverrideSpecializedCombo
         var activationCells = new HashSet<Vector2Int>();
         foreach (var pending in rt.Context.PendingOverrideImplants)
             activationCells.Add(pending.targetCell);
-        if (deferredSpecials != null)
-            activationCells.UnionWith(deferredSpecials);
 
         bool useLineBatch =
             rt.UseBatchClearSpike &&
             (targetSpecial == TileSpecial.LineH || targetSpecial == TileSpecial.LineV);
 
         if (useLineBatch)
-            ExecuteOverrideLineInBatches(rt, result, deferredSpecials, overrideTile, otherTile);
+            ExecuteOverrideLineInBatches(rt, result, overrideTile, otherTile);
         else
-            ExecuteNonLineOverride(rt, result, deferredSpecials, targetSpecial, overrideTile, otherTile);
+            ExecuteNonLineOverride(rt, result, targetSpecial, overrideTile, otherTile);
 
         if (activationCells.Count > 0 && result.Actions.Count > 0)
         {
@@ -118,7 +116,6 @@ public sealed class OverrideSpecializedCombo
     private OverrideSpecializedComboExecutionResult ExecuteOverrideLineInBatches(
        OverrideSpecializedComboExecutionRuntime rt,
        OverrideSpecializedComboExecutionResult result,
-       List<Vector2Int> deferredSpecials,
        TileView overrideTile,
        TileView otherTile)
     {
@@ -149,7 +146,7 @@ public sealed class OverrideSpecializedCombo
             emittedTiles,
             emittedCells);
 
-        var batchActivations = BuildBatchActivations(rt, deferredSpecials);
+        var batchActivations = BuildBatchActivations(rt);
 
         // Pending'e AKTIF batch'i degil, henuz patlatilmamis GELECEK batch seed'lerini koy.
         // Boylece batch clear sonrasi fall sirasinda sirasi gelmemis special'lar yerinde kilitli kalir.
@@ -214,7 +211,6 @@ public sealed class OverrideSpecializedCombo
     private void ExecuteNonLineOverride(
         OverrideSpecializedComboExecutionRuntime rt,
         OverrideSpecializedComboExecutionResult result,
-        List<Vector2Int> deferredSpecials,
         TileSpecial targetSpecial,
         TileView overrideTile,
         TileView otherTile)
@@ -259,28 +255,6 @@ public sealed class OverrideSpecializedCombo
             }
         }
 
-        if (deferredSpecials != null && deferredSpecials.Count > 0)
-        {
-            foreach (var cell in deferredSpecials)
-            {
-                // Existing PulseCore tiles on the board: defer into the stagger sequence.
-                if (targetSpecial == TileSpecial.PulseCore)
-                {
-                    var dTile = (cell.x >= 0 && cell.x < rt.Board.Width && cell.y >= 0 && cell.y < rt.Board.Height)
-                        ? rt.Board.Tiles[cell.x, cell.y]
-                        : null;
-                    if (dTile != null && dTile.GetSpecial() == TileSpecial.PulseCore)
-                    {
-                        if (!rt.Context.OverrideDeferredPulseExplosions.Contains(cell))
-                            rt.Context.OverrideDeferredPulseExplosions.Add(cell);
-                        continue;
-                    }
-                }
-
-                rt.Context.Processed.Remove(cell);
-            }
-        }
-
         // Process any non-PulseCore chain specials that may have been queued.
         rt.EnqueueChainSpecials?.Invoke(rt.Context);
         rt.ProcessQueue?.Invoke(rt.Context);
@@ -312,8 +286,7 @@ public sealed class OverrideSpecializedCombo
     }
 
     private List<ResolutionContext.SpecialActivation> BuildBatchActivations(
-       OverrideSpecializedComboExecutionRuntime rt,
-       List<Vector2Int> deferredSpecials)
+       OverrideSpecializedComboExecutionRuntime rt)
     {
         var activations = new List<ResolutionContext.SpecialActivation>();
         var seen = new HashSet<Vector2Int>();
@@ -324,15 +297,6 @@ public sealed class OverrideSpecializedCombo
             {
                 if (seen.Add(activation.cell))
                     activations.Add(activation);
-            }
-        }
-
-        if (deferredSpecials != null)
-        {
-            foreach (var cell in deferredSpecials)
-            {
-                if (seen.Add(cell))
-                    activations.Add(new ResolutionContext.SpecialActivation(cell, null));
             }
         }
 
@@ -412,14 +376,16 @@ public sealed class OverrideSpecializedCombo
             targetSpecial);
     }
 
-    private List<Vector2Int> CollectTargets(
+    // Override'ın partner special'ı (Line/Pulse/PatchBot) yalnız rengini verir. Board'daki DİĞER special'ların
+    // rengi yoktur (ikonları renksiz, renkle eşleşmezler) → "aynı renk" diye seçilip patlatılmaz/implant
+    // edilmez; Override+normal taş yolu (OverrideSpecial, excludeSpecials) ile aynı kural.
+    private void CollectTargets(
         OverrideSpecializedComboExecutionRuntime rt,
         TileView overrideTile,
         TileView otherTile,
         TileSpecial targetSpecial)
     {
         TileType baseType = otherTile.GetTileType();
-        List<Vector2Int> deferredSpecialCells = null;
 
         for (int x = 0; x < rt.Board.Width; x++)
         {
@@ -453,16 +419,7 @@ public sealed class OverrideSpecializedCombo
                 }
 
                 if (tile.GetSpecial() != TileSpecial.None)
-                {
-                    var cell = new Vector2Int(tile.X, tile.Y);
-                    rt.Context.Affected.Add(tile);
-                    SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board);
-                    rt.Context.Processed.Add(cell);
-
-                    deferredSpecialCells ??= new List<Vector2Int>();
-                    deferredSpecialCells.Add(cell);
                     continue;
-                }
 
                 rt.Context.OverrideFanoutTargets.Add(tile);
                 var implantSpecial = (targetSpecial == TileSpecial.LineH || targetSpecial == TileSpecial.LineV)
@@ -476,8 +433,6 @@ public sealed class OverrideSpecializedCombo
                     new Vector2Int(overrideTile.X, overrideTile.Y)));
             }
         }
-
-        return deferredSpecialCells;
     }
 
     private void AddOrigin(OverrideSpecializedComboExecutionRuntime rt, TileView tile)

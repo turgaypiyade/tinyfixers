@@ -173,7 +173,7 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
         int count = choices != null ? choices.Count : 0;
         if (count == 0)
         {
-            var done = CommonPopupView.Button(view.Actions, "BtnContinue", "Tamam", Close);
+            var done = CommonPopupView.Button(view.Actions, "BtnContinue", GameLocalization.Get("common_ok"), Close);
             CommonPopupView.Region((RectTransform)done.transform, CommonPopupView.ActionRegion(0, 1));
         }
         for (int i = 0; i < count; i++)

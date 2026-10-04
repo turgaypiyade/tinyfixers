@@ -4,6 +4,10 @@ using UnityEngine;
 /// <summary>Shared purchase receipt UI. Only the post-grant event may show success.</summary>
 public static class ShopPurchaseFeedback
 {
+    /// Açık: siyah overlay üzerinde sırayla pop eden kutlama (ShopPurchaseCelebration).
+    /// Kapalı: eski makbuz popup'ı (RuntimeChoicePopup.ShowRewards).
+    public static bool UseCelebration = true;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Register()
     {
@@ -16,6 +20,8 @@ public static class ShopPurchaseFeedback
     {
         if (offer == null || RuntimeSimulationSession.IsActive) return;
         var items = new List<RuntimeChoicePopup.RewardItem>();
+        var targets = new List<CollectTarget>();   // items ile aynı sıra: öğe nereye uçacak
+        int coinGain = 0;
         if (offer.groups != null)
         {
             foreach (var group in offer.groups)
@@ -43,13 +49,78 @@ public static class ShopPurchaseFeedback
                     }
                     items.Add(new RuntimeChoicePopup.RewardItem(icon, amount,
                         GameLocalization.Get(NameKey(reward))));
+                    targets.Add(TargetOf(reward));
+                    if (reward.kind == ShopReward.Kind.Coins) coinGain += Mathf.Max(1, reward.amount);
                 }
             }
+        }
+
+        if (UseCelebration)
+        {
+            // Yalnız ana menü marketi: devamda ana ekrana dön, öğeler hedeflerine uçsun. Oyun içinde
+            // (alt menü yok) akış DEĞİŞMEZ — kutlama kapanır, oyun kaldığı yerden sürer.
+            var collect = MarketNavigator.IsMenuMarketOpen() ? BuildMenuCollect(targets, coinGain) : null;
+            ShopPurchaseCelebration.Show(items, null, collect);
+            return;
         }
 
         RuntimeChoicePopup.ShowRewards(GameLocalization.Get("shop_purchase_success_title"),
             GameLocalization.Get("shop_purchase_success_message"), items,
             GameLocalization.Get("shop_purchase_success_button"));
+    }
+
+    private enum CollectTarget { Coins, Lives, LevelButton }
+
+    private static CollectTarget TargetOf(ShopReward reward)
+    {
+        if (reward.kind == ShopReward.Kind.Coins) return CollectTarget.Coins;
+        if (reward.kind == ShopReward.Kind.Life || reward.kind == ShopReward.Kind.InfiniteLifeTimed) return CollectTarget.Lives;
+        if (reward.kind == ShopReward.Kind.Timed && reward.timedType == DailySlotRewardType.Lives) return CollectTarget.Lives;
+        return CollectTarget.LevelButton;
+    }
+
+    // Altın → üst bardaki altın ikonu (sayaç satın alma öncesinden yeni değere sayar), can → kalp,
+    // diğer her şey → level butonu.
+    private static ShopPurchaseCelebration.CollectRoute BuildMenuCollect(List<CollectTarget> targets, int coinGain)
+    {
+        MainMenuWalletDisplay wallet = null;
+        int coinsAfter = PlayerWallet.Coins;
+        int coinsBefore = Mathf.Max(0, coinsAfter - coinGain);
+        int coinItemsLeft = targets.FindAll(t => t == CollectTarget.Coins).Count;
+
+        return new ShopPurchaseCelebration.CollectRoute
+        {
+            SwitchToHome = () =>
+            {
+                MarketNavigator.ReturnHome();
+                wallet = Object.FindFirstObjectByType<MainMenuWalletDisplay>();
+                if (wallet != null && coinGain > 0) wallet.SetCoinsInstant(coinsBefore);
+            },
+            TargetFor = i =>
+            {
+                var kind = i >= 0 && i < targets.Count ? targets[i] : CollectTarget.LevelButton;
+                switch (kind)
+                {
+                    case CollectTarget.Coins:
+                        var text = wallet != null ? wallet.ChipMoneyText : null;
+                        if (text == null) break;
+                        var icon = text.transform.parent != null ? text.transform.parent.Find("GoldMoney") : null;
+                        return icon != null ? (RectTransform)icon : text.rectTransform;
+                    case CollectTarget.Lives:
+                        var lives = Object.FindFirstObjectByType<MainMenuLivesDisplay>();
+                        if (lives != null) return lives.HeartTarget;
+                        break;
+                }
+                var level = Object.FindFirstObjectByType<MainMenuLevelButtonController>();
+                return level != null ? (RectTransform)level.transform : null;
+            },
+            OnLanded = i =>
+            {
+                if (i < 0 || i >= targets.Count || targets[i] != CollectTarget.Coins) return;
+                if (--coinItemsLeft > 0 || wallet == null || wallet.ChipMoneyText == null) return;
+                wallet.StartCoroutine(UiNumberTween.Tween(wallet.ChipMoneyText, coinsBefore, coinsAfter, 0.5f));
+            },
+        };
     }
 
     private static string NameKey(ShopReward reward)

@@ -460,7 +460,7 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
     {
         if (clearedTiles >= 50)
         {
-            label = "GREAT!";
+            label = GameLocalization.Get("praise_great");
             fill = new Color(1f, 0.84f, 0.12f, 1f);
             rim = new Color(1f, 0.27f, 0.015f, 1f);
             accent = new Color(1f, 0.98f, 0.58f, 1f);
@@ -469,14 +469,14 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
 
         if (clearedTiles >= 40)
         {
-            label = "WOW!";
+            label = GameLocalization.Get("praise_wow");
             fill = new Color(1f, 0.84f, 0.12f, 1f);
             rim = new Color(1f, 0.27f, 0.015f, 1f);
             accent = new Color(1f, 0.98f, 0.58f, 1f);
             return;
         }
 
-        label = "GOOD!";
+        label = GameLocalization.Get("praise_good");
         fill = new Color(1f, 0.84f, 0.12f, 1f);
         rim = new Color(1f, 0.27f, 0.015f, 1f);
         accent = new Color(1f, 0.98f, 0.58f, 1f);

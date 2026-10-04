@@ -64,7 +64,7 @@ public abstract class ShopOfferCardBase : MonoBehaviour
         {
             bool owned = offer.availability == ShopOffer.Availability.OnceEver;
             priceText.text = owned
-                ? "Alındı"
+                ? GameLocalization.Get("shop_owned")
                 : ShopState.FormatRemaining(ShopState.CooldownRemaining(offer));
             countdownMode = !owned;   // cooldown ise her saniye tazele
             ApplyButtonState(available: false, affordable: false);

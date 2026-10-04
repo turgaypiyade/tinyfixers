@@ -12,34 +12,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e428ba4f402e4e53a57f2a501307422, type: 3}
   m_Name: Wonder_mis3
   m_EditorClassIdentifier: Assembly-CSharp::WonderDefinition
-  wonderId: mis2
-  displayName: Gateron
+  wonderId: mis3
+  displayName: "Eyfil Kulesi"
   taskIcon: {fileID: 0}
   backgroundSprite: {fileID: 21300000, guid: cd5727f500381464e8bc956b991932e6, type: 3}
   totalStages: 10
   tasks:
-  - name: Temel Tarama
+  - name: "D\xF6rt Aya\u011F\u0131 Sabitle"
     icon: {fileID: 0}
     starCost: 0
-  - name: "\u0130skelet Montaj"
+  - name: "\u0130lk Kat\u0131 Kaynakla"
     icon: {fileID: 0}
     starCost: 0
-  - name: "Ana G\xF6vde"
+  - name: "Demir Kafesi \xD6r"
     icon: {fileID: 0}
     starCost: 0
-  - name: Kaplama
+  - name: "\u0130kinci Kat\u0131 Y\xFCkselt"
     icon: {fileID: 0}
     starCost: 0
-  - name: "Detay \u0130\u015F\xE7ilik"
+  - name: "Asans\xF6rleri Onar"
     icon: {fileID: 0}
     starCost: 0
-  - name: "Enerji Hatt\u0131"
+  - name: "Zirveyi Tamamla"
     icon: {fileID: 0}
     starCost: 0
-  - name: "Son Rot\xFC\u015F"
+  - name: "Boyay\u0131 Yenile"
     icon: {fileID: 0}
     starCost: 0
-  - name: Aktivasyon
+  - name: "I\u015F\u0131k \u015Eovunu Ba\u015Flat"
     icon: {fileID: 0}
     starCost: 0
   starCosts: 0300000003000000030000000200000003000000030000000200000005000000

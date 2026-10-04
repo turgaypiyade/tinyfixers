@@ -19,6 +19,9 @@ public sealed class CommonPopupSkin : ScriptableObject
     [Header("Zemine göre yazı stili (kontur/gölge = zeminin koyu tonu; font materyalinden türetilir)")]
     [Tooltip("Başlık (bordo zemin). Boşsa font'un varsayılan materyali.")]
     public Material titleMaterial;
+    [Tooltip("Kutlama anı başlığı (satın alma \"HARİKA!\") — DynaPuff: yalnız oyun anı yazıları.")]
+    public TMP_FontAsset celebrationFont;
+    public Material celebrationMaterial;
     [Tooltip("Başlık yüzü üst → alt geçiş (joker başlığı gibi krem → açık altın). titleMaterial atanmışsa kullanılır.")]
     public Color titleGradientTop = Color.white;
     public Color titleGradientBottom = new Color(1f, 0.97f, 0.78f, 1f);

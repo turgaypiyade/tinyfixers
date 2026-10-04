@@ -29,7 +29,7 @@ public sealed class FriendSuggestionRow : MonoBehaviour
 
         if (nameText != null) nameText.text = profile != null ? profile.name : "";
         SingleLineText.Fit(nameText);
-        if (mutualText != null) mutualText.text = profile != null ? $"{profile.mutualCount} ortak arkadaş" : "";
+        if (mutualText != null) mutualText.text = profile != null ? GameLocalization.GetFormat("friend_mutual_count", profile.mutualCount) : "";
         if (avatar != null)
         {
             avatar.sprite = avatarSprite;

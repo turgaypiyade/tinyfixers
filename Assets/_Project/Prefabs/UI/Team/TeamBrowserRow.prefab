@@ -224,6 +224,7 @@ GameObject:
   - component: {fileID: 6166143870830170195}
   - component: {fileID: 421455935102474121}
   - component: {fileID: 7298492027330329958}
+  - component: {fileID: 7655326038214778892}
   m_Layer: 5
   m_Name: CapacityLabel
   m_TagString: Untagged
@@ -813,6 +814,7 @@ GameObject:
   - component: {fileID: 6116497406549984170}
   - component: {fileID: 3604071570183143658}
   - component: {fileID: 3508772934253113355}
+  - component: {fileID: 4270040623976529006}
   m_Layer: 5
   m_Name: Label
   m_TagString: Untagged
@@ -939,3 +941,31 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4270040623976529006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8631955350911973170}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 548bf4a7910af4aff9ee0bc016915643, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  target: {fileID: 3508772934253113355}
+  key: team_info_title
+--- !u!114 &7655326038214778892
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3512663357652216801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 548bf4a7910af4aff9ee0bc016915643, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  target: {fileID: 7298492027330329958}
+  key: team_capacity

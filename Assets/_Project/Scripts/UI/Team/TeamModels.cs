@@ -11,7 +11,7 @@ public sealed class TeamInfo
     public int giftCurrent;
     public int giftTarget = 100;
     public string timerLabel = "2g 20s";
-    public string missionText = "kazanmak için bir göreve BAŞLA";
+    public string missionText = GameLocalization.Get("team_mission_start");
 
     /// <summary>Üye doluluk etiketi, örn "40/50".</summary>
     public string MemberLabel => memberCount + "/" + memberCapacity;

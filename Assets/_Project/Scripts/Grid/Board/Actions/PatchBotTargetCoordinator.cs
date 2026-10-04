@@ -337,6 +337,9 @@ public class PatchBotTargetCoordinator
         var otherObstacleUnderCells = new List<(int x, int y, TileView tile)>();
         var normalCells = new List<(int x, int y, TileView tile)>();
         var gelSpreadCells = new List<(int x, int y, TileView tile)>();
+        // Board'daki special'lar (Line/Pulse/PatchBot/Override) hedef DEĞİL (kullanıcı kuralı): bot onları
+        // tetikleyip oyuncunun elinden almasın. Yalnız tahtada başka hiçbir şey kalmadıysa son çare.
+        var specialFallbackCells = new List<(int x, int y, TileView tile)>();
         var obstacleUnitCells = new Dictionary<int, List<(int x, int y, TileView tile)>>();
         var obstacleUnitIsGoal = new Dictionary<int, bool>();
 
@@ -381,6 +384,16 @@ public class PatchBotTargetCoordinator
             return false;
         }
 
+        bool IsSpecialTile(TileView tile) => tile != null && tile.GetSpecial() != TileSpecial.None;
+
+        // Hedeflenebilir taşı kovasına koyar: special → son çare, hedef taş → goal, diğer → normal.
+        void AddTileCandidate(int x, int y, TileView tile)
+        {
+            if (IsSpecialTile(tile)) specialFallbackCells.Add((x, y, tile));
+            else if (IsGoalTile(tile)) tileGoalCells.Add((x, y, tile));
+            else normalCells.Add((x, y, tile));
+        }
+
         bool IsGoalTile(TileView tile)
         {
             if (tile == null) return false;
@@ -400,7 +413,7 @@ public class PatchBotTargetCoordinator
 
                 var tile = board.Tiles[x, y];
 
-                if (preferNonGel && patchbotService.IsGelSpreadTarget(x, y, tile)
+                if (preferNonGel && !IsSpecialTile(tile) && patchbotService.IsGelSpreadTarget(x, y, tile)
                     && !IsExcludedTile(tile) && !IsTileReserved(tile))
                     gelSpreadCells.Add((x, y, tile));
 
@@ -430,12 +443,7 @@ public class PatchBotTargetCoordinator
                             && SpecialUtils.CanTargetTileContent(board, x, y)
                             && !IsExcludedTile(tile)
                             && !IsTileReserved(tile))
-                        {
-                            if (IsGoalTile(tile))
-                                tileGoalCells.Add((x, y, tile));
-                            else
-                                normalCells.Add((x, y, tile));
-                        }
+                            AddTileCandidate(x, y, tile);
                         continue;
                     }
 
@@ -462,10 +470,7 @@ public class PatchBotTargetCoordinator
                     if (IsTileReserved(tile))
                         continue;
 
-                    if (IsGoalTile(tile))
-                        tileGoalCells.Add((x, y, tile));
-                    else
-                        normalCells.Add((x, y, tile));
+                    AddTileCandidate(x, y, tile);
                 }
             }
         }
@@ -505,6 +510,11 @@ public class PatchBotTargetCoordinator
             return HighestImpactIndex(list, reservedCells);
         }
 
+        // Engeller: kapasitesi (kalan vuruş − ortak rezervasyon) olan engellerden RASTGELE. Kapasite her
+        // seçimde düştüğü için çok vuruşluk tek engele vuruşu kadar bot gider, birden çok engel varsa botlar
+        // hepsine rastgele dağılır; kapasite bitince sıradaki kovaya (sonunda normal taşa) geçilir.
+        static int RandomIdx(List<(int x, int y, TileView tile)> list) => Random.Range(0, list.Count);
+
         // Cargo düşüş yolu en yüksek öncelik: cargo başka türlü kırılamadığı için,
         // altındaki taşı açmak hedefi ilerletmenin tek yolu.
         if (cargoDropPathCells.Count > 0)
@@ -517,25 +527,25 @@ public class PatchBotTargetCoordinator
         // olmasın — taşlardan (hedef taşlar dahil) ÖNCE. Kova içinde bloklayan, taş altından önce.
         if (obstacleGoalCells.Count > 0)
         {
-            var pick = obstacleGoalCells[PickIdx(obstacleGoalCells)];
+            var pick = obstacleGoalCells[RandomIdx(obstacleGoalCells)];
             return (pick.tile, pick.x, pick.y, true);
         }
 
         if (obstacleGoalUnderCells.Count > 0)
         {
-            var pick = obstacleGoalUnderCells[PickIdx(obstacleGoalUnderCells)];
+            var pick = obstacleGoalUnderCells[RandomIdx(obstacleGoalUnderCells)];
             return (pick.tile, pick.x, pick.y, true);
         }
 
         if (otherObstacleCells.Count > 0)
         {
-            var pick = otherObstacleCells[PickIdx(otherObstacleCells)];
+            var pick = otherObstacleCells[RandomIdx(otherObstacleCells)];
             return (pick.tile, pick.x, pick.y, true);
         }
 
         if (otherObstacleUnderCells.Count > 0)
         {
-            var pick = otherObstacleUnderCells[PickIdx(otherObstacleUnderCells)];
+            var pick = otherObstacleUnderCells[RandomIdx(otherObstacleUnderCells)];
             return (pick.tile, pick.x, pick.y, true);
         }
 
@@ -556,6 +566,12 @@ public class PatchBotTargetCoordinator
         if (normalCells.Count > 0)
         {
             var pick = normalCells[PickIdx(normalCells)];
+            return (pick.tile, pick.x, pick.y, true);
+        }
+
+        if (specialFallbackCells.Count > 0)
+        {
+            var pick = specialFallbackCells[PickIdx(specialFallbackCells)];
             return (pick.tile, pick.x, pick.y, true);
         }
 

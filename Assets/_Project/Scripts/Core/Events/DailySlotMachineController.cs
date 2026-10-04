@@ -188,12 +188,7 @@ public class DailySlotMachineController : MonoBehaviour
         // Ödül adı
         if (rewardNameText != null)
         {
-            string name = !string.IsNullOrEmpty(selectedReward.nameLocalizationKey)
-                ? GameLocalization.Get(selectedReward.nameLocalizationKey)
-                : null;
-            if (string.IsNullOrEmpty(name) || name == selectedReward.nameLocalizationKey)
-                name = selectedReward.fallbackName ?? selectedReward.type.ToString();
-            rewardNameText.text = name;
+            rewardNameText.text = selectedReward.DisplayName;
         }
 
         // Punch animation

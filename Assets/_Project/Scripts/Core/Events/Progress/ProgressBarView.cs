@@ -70,7 +70,7 @@ public class ProgressBarView : MonoBehaviour
         if (rewardAmountText != null && def.reward != null)
         {
             rewardAmountText.text = def.rewardDurationMinutes > 0
-                ? $"+{def.rewardDurationMinutes}dk"
+                ? GameLocalization.GetFormat("progress_reward_minutes", def.rewardDurationMinutes)
                 : $"+{def.reward.amount}";
         }
         if (descriptionText != null) descriptionText.text   = def.fallbackDescription;

@@ -208,7 +208,7 @@ public sealed class TeamLifeInbox
         state.replies.Add(new Reply
         {
             id = Guid.NewGuid().ToString("N"),
-            sender = string.IsNullOrEmpty(sender) ? "Takım arkadaşın" : sender,
+            sender = string.IsNullOrEmpty(sender) ? GameLocalization.Get("team_teammate") : sender,
             sentTicks = sentAt.Ticks
         });
     }

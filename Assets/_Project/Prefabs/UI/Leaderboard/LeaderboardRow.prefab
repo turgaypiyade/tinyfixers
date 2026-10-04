@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 4714122385697265109}
   - component: {fileID: 1290855374524157960}
   - component: {fileID: 2915450489001027427}
+  - component: {fileID: 4300505941355126114}
   m_Layer: 5
   m_Name: ScoreLabel
   m_TagString: Untagged
@@ -1474,6 +1475,7 @@ GameObject:
   - component: {fileID: 9026541437553217149}
   - component: {fileID: 7815782682261913574}
   - component: {fileID: 5331771672020544178}
+  - component: {fileID: 2042158803054652458}
   m_Layer: 5
   m_Name: CapacityLabel
   m_TagString: Untagged
@@ -1811,3 +1813,31 @@ MonoBehaviour:
   capacityText: {fileID: 627794254379930183}
   scoreLabel: {fileID: 2915450489001027427}
   scoreText: {fileID: 8645148851562924792}
+--- !u!114 &2042158803054652458
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8735093366280456706}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 548bf4a7910af4aff9ee0bc016915643, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  target: {fileID: 5331771672020544178}
+  key: team_capacity
+--- !u!114 &4300505941355126114
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 353777087449630597}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 548bf4a7910af4aff9ee0bc016915643, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  target: {fileID: 2915450489001027427}
+  key: leaderboard_score

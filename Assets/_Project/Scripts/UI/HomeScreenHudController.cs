@@ -9,7 +9,8 @@ public class HomeScreenHudController : MonoBehaviour
 {
     [Header("Seviye")]
     [SerializeField] private TMP_Text levelText;
-    [SerializeField] private string levelPrefix = "Seviye ";
+    [Tooltip("Seviye etiketinin lokalizasyon anahtarı ({0} = seviye).")]
+    [SerializeField] private string levelFormatKey = "level_end_success_title_level";
     [SerializeField] private string prefsLevelKey = "current_level";
 
     [Header("Coin")]
@@ -46,7 +47,7 @@ public class HomeScreenHudController : MonoBehaviour
     {
         if (levelText == null) return;
         int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
-        levelText.text = levelPrefix + level;
+        levelText.text = GameLocalization.GetFormat(levelFormatKey, level);
     }
 
     private void RefreshCoins(int amount)

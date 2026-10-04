@@ -741,6 +741,22 @@
           "value": "Küçük Su Bidonu"
         },
         {
+          "key": "hint_obstacle_wall",
+          "value": "Duvarın her taşı kendi çatlağını taşır. Bir taş 5 kez vurulunca dinamit patlar ve bağlı duvarın tamamı yıkılır."
+        },
+        {
+          "key": "hint_obstacle_wall_name",
+          "value": "Taş Duvar"
+        },
+        {
+          "key": "hint_obstacle_metalwall",
+          "value": "Metal duvarı üst üste vurmalısın! Bir hamle boş geçersen çatlak kapanır. Aynı taşa 3 hamle art arda vur, duvar yıkılsın."
+        },
+        {
+          "key": "hint_obstacle_metalwall_name",
+          "value": "Metal Duvar"
+        },
+        {
           "key": "progress_timer_days_hours",
           "value": "{0}g {1}s"
         },
@@ -1095,6 +1111,1058 @@
         {
           "key": "shop_reward_timed",
           "value": "Süreli Ödül"
+        },
+        {
+          "key": "common_ok",
+          "value": "Tamam"
+        },
+        {
+          "key": "common_close",
+          "value": "Kapat"
+        },
+        {
+          "key": "common_cancel",
+          "value": "Vazgeç"
+        },
+        {
+          "key": "common_buy",
+          "value": "Satın Al"
+        },
+        {
+          "key": "common_buy_gold_sub",
+          "value": "Market'ten altın al"
+        },
+        {
+          "key": "common_watch_ad",
+          "value": "Reklam İzle"
+        },
+        {
+          "key": "common_gold_amount",
+          "value": "{0} altın"
+        },
+        {
+          "key": "common_tap_continue",
+          "value": "Devam etmek için dokun"
+        },
+        {
+          "key": "music_selected",
+          "value": "Seçili"
+        },
+        {
+          "key": "music_select",
+          "value": "Seç"
+        },
+        {
+          "key": "music_not_enough_gold",
+          "value": "Yetersiz altın"
+        },
+        {
+          "key": "music_popup_title",
+          "value": "Müzik Seç"
+        },
+        {
+          "key": "music_track_fallback",
+          "value": "Parça {0}"
+        },
+        {
+          "key": "joker_hint_single",
+          "value": "Kırmak istediğin objeye tıkla!"
+        },
+        {
+          "key": "joker_hint_row",
+          "value": "Yok etmek istediğin satıra tıkla!"
+        },
+        {
+          "key": "joker_hint_column",
+          "value": "Yok etmek istediğin sütuna tıkla!"
+        },
+        {
+          "key": "joker_hint_shuffle",
+          "value": "Karıştırmak için herhangi bir yere tıkla!"
+        },
+        {
+          "key": "joker_title_single",
+          "value": "Wonder Çekici!"
+        },
+        {
+          "key": "joker_title_row",
+          "value": "Wonder Roketi!"
+        },
+        {
+          "key": "joker_title_column",
+          "value": "Wonder Asansör!"
+        },
+        {
+          "key": "joker_title_shuffle",
+          "value": "Wonder Karıştırıcı!"
+        },
+        {
+          "key": "lives_offer_title",
+          "value": "Canın Bitti"
+        },
+        {
+          "key": "lives_offer_body",
+          "value": "Oynamaya devam etmek için can gerekli.\nŞu an {0} altının var."
+        },
+        {
+          "key": "lives_offer_buy_pack",
+          "value": "{0} Can Yükle"
+        },
+        {
+          "key": "lives_offer_ad_sub",
+          "value": "1 can kazan"
+        },
+        {
+          "key": "profile_no_team",
+          "value": "Takım yok"
+        },
+        {
+          "key": "level_end_coins_earned",
+          "value": "+{0} coin"
+        },
+        {
+          "key": "level_end_loss_fallback",
+          "value": "Vazgeçersen kaybedeceklerin:\n{0}"
+        },
+        {
+          "key": "level_end_no_gold_title",
+          "value": "Yetersiz Altın"
+        },
+        {
+          "key": "level_end_no_gold_body",
+          "value": "Devam için {0} altın gerekli.\nŞu an {1} altının var."
+        },
+        {
+          "key": "level_end_ad_used",
+          "value": "Bu seviyede kullanıldı"
+        },
+        {
+          "key": "level_end_ad_free_continue",
+          "value": "Bedava devam et"
+        },
+        {
+          "key": "shop_title",
+          "value": "Market"
+        },
+        {
+          "key": "shop_owned",
+          "value": "Alındı"
+        },
+        {
+          "key": "shop_purchased_toast",
+          "value": "{0} alındı!"
+        },
+        {
+          "key": "shop_balance_gold",
+          "value": "Altın: {0:N0}"
+        },
+        {
+          "key": "shop_section_special",
+          "value": "Özel Teklifler"
+        },
+        {
+          "key": "shop_section_coins",
+          "value": "Altınlar"
+        },
+        {
+          "key": "shop_offer_bundle_start",
+          "value": "Gezginci Çantası"
+        },
+        {
+          "key": "shop_offer_bundle_hunter_loot",
+          "value": "Avcı Ganimeti"
+        },
+        {
+          "key": "shop_offer_bundle_explorer_chest",
+          "value": "Kaşif Sandığı"
+        },
+        {
+          "key": "shop_offer_bundle_grand_safe",
+          "value": "Muhteşem Kasa"
+        },
+        {
+          "key": "shop_offer_bundle_legendary",
+          "value": "Efsanevi Hazine"
+        },
+        {
+          "key": "leaderboard_friend_list",
+          "value": "Arkadaş Listesi"
+        },
+        {
+          "key": "leaderboard_add_friend",
+          "value": "Arkadaş Ekle"
+        },
+        {
+          "key": "leaderboard_world",
+          "value": "Dünya"
+        },
+        {
+          "key": "leaderboard_you",
+          "value": "Sen"
+        },
+        {
+          "key": "leaderboard_your_team",
+          "value": "Senin takımın"
+        },
+        {
+          "key": "friend_mutual_count",
+          "value": "{0} ortak arkadaş"
+        },
+        {
+          "key": "friend_my_id",
+          "value": "ID'm: {0}"
+        },
+        {
+          "key": "friend_invite",
+          "value": "Davet Et"
+        },
+        {
+          "key": "friend_find_title",
+          "value": "Arkadaş Bul"
+        },
+        {
+          "key": "friend_add",
+          "value": "Ekle"
+        },
+        {
+          "key": "friend_added",
+          "value": "Eklendi"
+        },
+        {
+          "key": "friend_copied",
+          "value": "Kopyalandı!"
+        },
+        {
+          "key": "friend_invite_message",
+          "value": "Wonder Fixers'ta bana katıl! Arkadaş kodum: {0}"
+        },
+        {
+          "key": "journey_chapter",
+          "value": "Bölüm {0}"
+        },
+        {
+          "key": "journey_watch",
+          "value": "İzle"
+        },
+        {
+          "key": "team_info_title",
+          "value": "Takım Bilgisi"
+        },
+        {
+          "key": "team_create_button",
+          "value": "Oluştur  {0}"
+        },
+        {
+          "key": "team_name_empty",
+          "value": "Takım adı boş olamaz."
+        },
+        {
+          "key": "team_create_no_gold",
+          "value": "Yetersiz coin ({0} gerekiyor)."
+        },
+        {
+          "key": "team_life_request_tag",
+          "value": "Can İsteği!"
+        },
+        {
+          "key": "team_help",
+          "value": "Yardım"
+        },
+        {
+          "key": "team_help_out",
+          "value": "Yardım Et"
+        },
+        {
+          "key": "team_life_sent",
+          "value": "Gönderildi"
+        },
+        {
+          "key": "team_life_received",
+          "value": "Alındı"
+        },
+        {
+          "key": "team_lives_full_short",
+          "value": "Can Dolu"
+        },
+        {
+          "key": "team_accept",
+          "value": "Kabul Et"
+        },
+        {
+          "key": "team_request_life",
+          "value": "Can İste"
+        },
+        {
+          "key": "team_leave",
+          "value": "Ayrıl"
+        },
+        {
+          "key": "team_leave_title",
+          "value": "Takımdan Ayrıl"
+        },
+        {
+          "key": "team_leave_confirm",
+          "value": "Takımdan ayrılmak istiyor musun?"
+        },
+        {
+          "key": "team_chat_life_sent",
+          "value": "Sana 1 can gönderdim!"
+        },
+        {
+          "key": "team_chat_life_thanks",
+          "value": "Can için teşekkürler!"
+        },
+        {
+          "key": "team_chat_life_ask",
+          "value": "Can gönderebilir misin?"
+        },
+        {
+          "key": "team_lives_full",
+          "value": "Can Dolu ({0}/{0})"
+        },
+        {
+          "key": "team_lives_ready",
+          "value": "Canların Hazır"
+        },
+        {
+          "key": "team_lives_waiting",
+          "value": "Can Bekleniyor"
+        },
+        {
+          "key": "team_mission_start",
+          "value": "kazanmak için bir göreve BAŞLA"
+        },
+        {
+          "key": "common_coming_soon",
+          "value": "Yakında"
+        },
+        {
+          "key": "save_progress_title",
+          "value": "İlerlemeyi Kaydet"
+        },
+        {
+          "key": "save_progress_linked_provider",
+          "value": "Hesabın bağlandı ✓ ({0})"
+        },
+        {
+          "key": "save_progress_conflict",
+          "value": "Bu hesap başka bir kayda bağlı. O kayda geçilsin mi?"
+        },
+        {
+          "key": "save_progress_linked",
+          "value": "Hesabın bağlı ✓\nİlerlemen güvende."
+        },
+        {
+          "key": "save_progress_not_linked",
+          "value": "İlerlemeni korumak için\nhesabını bağla."
+        },
+        {
+          "key": "save_progress_switch",
+          "value": "Bu hesaba geç"
+        },
+        {
+          "key": "save_progress_connecting",
+          "value": "Bağlanıyor..."
+        },
+        {
+          "key": "save_progress_provider_continue",
+          "value": "ile devam et"
+        },
+        {
+          "key": "settings_instagram_body",
+          "value": "Tiny Fixers'ı Instagram'da takip et!"
+        },
+        {
+          "key": "settings_instagram_open",
+          "value": "Instagram'ı Aç"
+        },
+        {
+          "key": "auth_provider_inactive",
+          "value": "Bu giriş yöntemi henüz aktif değil."
+        },
+        {
+          "key": "auth_session_not_ready",
+          "value": "Oturum hazır değil, tekrar dene."
+        },
+        {
+          "key": "auth_link_error",
+          "value": "Bağlantı hatası."
+        },
+        {
+          "key": "auth_apple_unsupported",
+          "value": "Apple girişi bu cihazda desteklenmiyor."
+        },
+        {
+          "key": "auth_apple_failed",
+          "value": "Apple kimliği alınamadı, tekrar dene."
+        },
+        {
+          "key": "workshop_c1_stage_1",
+          "value": "Tamirata başla..."
+        },
+        {
+          "key": "workshop_c1_stage_2",
+          "value": "İskele kur..."
+        },
+        {
+          "key": "workshop_c1_stage_3",
+          "value": "Boya..."
+        },
+        {
+          "key": "workshop_c1_stage_4",
+          "value": "Meydan..."
+        },
+        {
+          "key": "workshop_c1_stage_5",
+          "value": "Tabelalar..."
+        },
+        {
+          "key": "workshop_c1_stage_6",
+          "value": "Havuz ve banklar."
+        },
+        {
+          "key": "workshop_c1_stage_7",
+          "value": "Fıskiye..."
+        },
+        {
+          "key": "workshop_c1_stage_8",
+          "value": "Hoşgeldin..."
+        },
+        {
+          "key": "workshop_c4_stage_1",
+          "value": "Yaza Merhaba..."
+        },
+        {
+          "key": "workshop_c4_stage_2",
+          "value": "Ağaçlar ..."
+        },
+        {
+          "key": "workshop_c4_stage_3",
+          "value": "Tabelalar..."
+        },
+        {
+          "key": "workshop_c4_stage_4",
+          "value": "İskele..."
+        },
+        {
+          "key": "workshop_c4_stage_5",
+          "value": "Tekne"
+        },
+        {
+          "key": "workshop_c4_stage_6",
+          "value": "Sörf..."
+        },
+        {
+          "key": "workshop_c4_stage_7",
+          "value": "Masa..."
+        },
+        {
+          "key": "workshop_c4_stage_8",
+          "value": "Şezlong ve Şemsiye"
+        },
+        {
+          "key": "praise_great",
+          "value": "GREAT!"
+        },
+        {
+          "key": "praise_wow",
+          "value": "WOW!"
+        },
+        {
+          "key": "praise_good",
+          "value": "GOOD!"
+        },
+        {
+          "key": "wheel_free_spin",
+          "value": "Free Spin"
+        },
+        {
+          "key": "wheel_paid_spin",
+          "value": "Spin"
+        },
+        {
+          "key": "progress_reward_minutes",
+          "value": "+{0}dk"
+        },
+        {
+          "key": "promo_safari_tagline",
+          "value": "Zirveye çık, {0:N0} altını paylaş!"
+        },
+        {
+          "key": "rising_intro_title",
+          "value": "SAFARİ BAŞLIYOR!"
+        },
+        {
+          "key": "rising_intro_ready",
+          "value": "ZİRVEYE HAZIR MISIN?\n<size=38>Devam etmek için dokun</size>"
+        },
+        {
+          "key": "safari_selecting_players",
+          "value": "Kullanıcılar seçiliyor..."
+        },
+        {
+          "key": "safari_tap_continue",
+          "value": "Devam etmek için dokunun"
+        },
+        {
+          "key": "safari_wait_retry",
+          "value": "Tekrar denemek için bekleyin"
+        },
+        {
+          "key": "safari_share_prize",
+          "value": "{0:N0} altını {1} kişi ile paylaşıyorsun"
+        },
+        {
+          "key": "safari_tap_add_wallet",
+          "value": "Cüzdana eklemek için dokun"
+        },
+        {
+          "key": "safari_retry_in",
+          "value": "Tekrar denemek için: {0}"
+        },
+        {
+          "key": "safari_status_start",
+          "value": "Başlangıç / {0}"
+        },
+        {
+          "key": "safari_status_pitstop",
+          "value": "Pitstop {0} / {1}"
+        },
+        {
+          "key": "safari_reward_event",
+          "value": "SAFARİ TAMAMLANDI"
+        },
+        {
+          "key": "safari_reward_title",
+          "value": "ZİRVE SENİN!"
+        },
+        {
+          "key": "safari_reward_caption",
+          "value": "KAZANDIĞIN ALTIN"
+        },
+        {
+          "key": "safari_reward_pool",
+          "value": "{0:N0} ALTINLIK BÜYÜK ÖDÜL"
+        },
+        {
+          "key": "safari_reward_winners",
+          "value": "{0} kazanan arasında paylaşıldı"
+        },
+        {
+          "key": "safari_reward_collecting",
+          "value": "ALTINLAR TOPLANIYOR"
+        },
+        {
+          "key": "safari_reward_hint_wait",
+          "value": "Ödülün birazdan hazır!"
+        },
+        {
+          "key": "safari_reward_hint_claim",
+          "value": "Altınlarını cüzdanına ekle"
+        },
+        {
+          "key": "safari_join_title",
+          "value": "SAFARİ"
+        },
+        {
+          "key": "safari_join_prize",
+          "value": "{0:N0} ALTIN"
+        },
+        {
+          "key": "safari_join_body",
+          "value": "<b>{0} KAT · BÜYÜK ÖDÜL</b>\nSeviyeleri ilk denemede geç,\nzirvedeki ödülü paylaş!"
+        },
+        {
+          "key": "rising_intro_preparing",
+          "value": "OYUNCULAR HAZIRLANIYOR"
+        },
+        {
+          "key": "rising_intro_race_starting",
+          "value": "YARIŞ BAŞLIYOR!"
+        },
+        {
+          "key": "team_bot_chat_1",
+          "value": "selam gençler"
+        },
+        {
+          "key": "team_bot_chat_2",
+          "value": "günaydın"
+        },
+        {
+          "key": "team_bot_chat_3",
+          "value": "bugün etkinlik var mı?"
+        },
+        {
+          "key": "team_bot_chat_4",
+          "value": "yardım lazım arkadaşlar"
+        },
+        {
+          "key": "team_bot_chat_5",
+          "value": "teşekkürler!"
+        },
+        {
+          "key": "team_bot_chat_6",
+          "value": "harika oynadınız"
+        },
+        {
+          "key": "team_bot_chat_7",
+          "value": "kim aktif?"
+        },
+        {
+          "key": "team_bot_chat_8",
+          "value": "bu level çok zor ya"
+        },
+        {
+          "key": "team_bot_chat_9",
+          "value": "can atabilecek var mı?"
+        },
+        {
+          "key": "team_bot_chat_10",
+          "value": "iyi oyunlar herkese"
+        },
+        {
+          "key": "team_bot_chat_11",
+          "value": "az kaldı, devam!"
+        },
+        {
+          "key": "team_bot_chat_12",
+          "value": "süpersiniz 💪"
+        },
+        {
+          "key": "team_teammates",
+          "value": "Takım arkadaşların"
+        },
+        {
+          "key": "team_teammate",
+          "value": "Takım arkadaşın"
+        },
+        {
+          "key": "team_player",
+          "value": "Oyuncu"
+        },
+        {
+          "key": "team_time_now",
+          "value": "şimdi"
+        },
+        {
+          "key": "team_chat_life_requested",
+          "value": "❤️ Can istedi!"
+        },
+        {
+          "key": "team_created_welcome",
+          "value": "Takımın kuruldu! Arkadaşlarını davet et, birlikte yarışın."
+        },
+        {
+          "key": "rising_icon_label",
+          "value": "YÜKSELİŞ"
+        },
+        {
+          "key": "prelevel_booster_select",
+          "value": "Güçlendirici Seç:"
+        },
+        {
+          "key": "shop_best_deal",
+          "value": "En İyi Fırsat"
+        },
+        {
+          "key": "shop_screen_title",
+          "value": "Mağaza"
+        },
+        {
+          "key": "team_capacity",
+          "value": "Kapasite"
+        },
+        {
+          "key": "leaderboard_score",
+          "value": "Puan"
+        },
+        {
+          "key": "hud_goal",
+          "value": "Hedef"
+        },
+        {
+          "key": "hud_moves",
+          "value": "Hamle"
+        },
+        {
+          "key": "tab_home",
+          "value": "Home"
+        },
+        {
+          "key": "tab_journey",
+          "value": "Journey"
+        },
+        {
+          "key": "tab_market",
+          "value": "Market"
+        },
+        {
+          "key": "tab_ranks",
+          "value": "Ranks"
+        },
+        {
+          "key": "tab_team",
+          "value": "Team"
+        },
+        {
+          "key": "wheel_come_tomorrow",
+          "value": "Yarın gel..."
+        },
+        {
+          "key": "wheel_title",
+          "value": "Daily Spin"
+        },
+        {
+          "key": "journey_title",
+          "value": "Yolculuk"
+        },
+        {
+          "key": "leaderboard_suggested_friends",
+          "value": "Önerilen Arkadaşlar"
+        },
+        {
+          "key": "leaderboard_tab_friends",
+          "value": "Arkadaşlar"
+        },
+        {
+          "key": "leaderboard_tab_players",
+          "value": "Oyuncular"
+        },
+        {
+          "key": "team_title",
+          "value": "Takım"
+        },
+        {
+          "key": "leaderboard_tab_weekly",
+          "value": "Haftalık"
+        },
+        {
+          "key": "common_copy",
+          "value": "Kopyala"
+        },
+        {
+          "key": "common_search",
+          "value": "Ara"
+        },
+        {
+          "key": "friend_not_found",
+          "value": "Oyuncu bulunamadı"
+        },
+        {
+          "key": "friend_id_placeholder",
+          "value": "Arkadaşının ID'si"
+        },
+        {
+          "key": "leaderboard_title",
+          "value": "Liderlik Panosu"
+        },
+        {
+          "key": "profile_edit_lock",
+          "value": "10. Seviye sonrası düzenleme yapabilirsin."
+        },
+        {
+          "key": "profile_level",
+          "value": "Seviye"
+        },
+        {
+          "key": "profile_music",
+          "value": "Music"
+        },
+        {
+          "key": "profile_title",
+          "value": "Profile"
+        },
+        {
+          "key": "profile_stats_title",
+          "value": "Genel İstatistikler"
+        },
+        {
+          "key": "profile_first_try_wins",
+          "value": "İlk Deneme Zaferi"
+        },
+        {
+          "key": "profile_longest_streak",
+          "value": "En Uzun Seri"
+        },
+        {
+          "key": "profile_weekly_cleared",
+          "value": "Haftalık Geçilen"
+        },
+        {
+          "key": "profile_name_placeholder",
+          "value": "User Name"
+        },
+        {
+          "key": "workshop_completed_message",
+          "value": "Atölye tamamlandı! 🎉"
+        },
+        {
+          "key": "tasks_title",
+          "value": "GÖREVLER"
+        },
+        {
+          "key": "repair_tasks_title",
+          "value": "Hoşgeldin"
+        },
+        {
+          "key": "main_missions",
+          "value": "MISSIONS"
+        },
+        {
+          "key": "settings_follow",
+          "value": "Follow"
+        },
+        {
+          "key": "settings_help",
+          "value": "Help&Support"
+        },
+        {
+          "key": "settings_save_progress",
+          "value": "Save Progress"
+        },
+        {
+          "key": "settings_saved",
+          "value": "Kaydedildi"
+        },
+        {
+          "key": "settings_terms",
+          "value": "Terms&Privacy"
+        },
+        {
+          "key": "settings_title",
+          "value": "Ayarlar"
+        },
+        {
+          "key": "settings_music",
+          "value": "Music"
+        },
+        {
+          "key": "settings_sound",
+          "value": "Sound"
+        },
+        {
+          "key": "settings_vibration",
+          "value": "Vibration"
+        },
+        {
+          "key": "settings_hint",
+          "value": "Hin"
+        },
+        {
+          "key": "settings_notifications",
+          "value": "Notifications"
+        },
+        {
+          "key": "settings_toggle_off",
+          "value": "Kapalı"
+        },
+        {
+          "key": "settings_toggle_on",
+          "value": "Açık"
+        },
+        {
+          "key": "settings_knob_on",
+          "value": "On"
+        },
+        {
+          "key": "settings_knob_off",
+          "value": "Off"
+        },
+        {
+          "key": "team_message",
+          "value": "Mesaj"
+        },
+        {
+          "key": "team_send",
+          "value": "Gönder"
+        },
+        {
+          "key": "team_message_placeholder",
+          "value": "Mesaj yaz..."
+        },
+        {
+          "key": "team_browse",
+          "value": "Gözat"
+        },
+        {
+          "key": "team_description_label",
+          "value": "Açıklama:"
+        },
+        {
+          "key": "team_required_level_label",
+          "value": "Gereken Seviye:"
+        },
+        {
+          "key": "team_name_label",
+          "value": "Takım Adı:"
+        },
+        {
+          "key": "team_emblem_label",
+          "value": "Takım Amblemi:"
+        },
+        {
+          "key": "team_desc_placeholder",
+          "value": "Takım açıklamasını yaz..."
+        },
+        {
+          "key": "team_name_placeholder",
+          "value": "Takım adını yaz..."
+        },
+        {
+          "key": "team_create_tab",
+          "value": "Oluştur"
+        },
+        {
+          "key": "wheel_claim",
+          "value": "Claim"
+        },
+        {
+          "key": "wonder_mis1_task_1",
+          "value": "Zemini Sağlamlaştır"
+        },
+        {
+          "key": "wonder_mis1_task_2",
+          "value": "İskeleyi Kur"
+        },
+        {
+          "key": "wonder_mis1_task_3",
+          "value": "Temel Taşlarını Onar"
+        },
+        {
+          "key": "wonder_mis1_task_4",
+          "value": "Sütunları Kaynakla"
+        },
+        {
+          "key": "wonder_mis1_task_5",
+          "value": "Kemerleri Yenile"
+        },
+        {
+          "key": "wonder_mis1_task_6",
+          "value": "Mermeri Parlat"
+        },
+        {
+          "key": "wonder_mis1_task_7",
+          "value": "Çan Katını Onar"
+        },
+        {
+          "key": "wonder_mis1_task_8",
+          "value": "Bayrağı Dik"
+        },
+        {
+          "key": "wonder_mis2_task_1",
+          "value": "Ayakları Güçlendir"
+        },
+        {
+          "key": "wonder_mis2_task_2",
+          "value": "Kuleleri Kaynakla"
+        },
+        {
+          "key": "wonder_mis2_task_3",
+          "value": "Çelik Halatları Ger"
+        },
+        {
+          "key": "wonder_mis2_task_4",
+          "value": "Askı Tellerini Bağla"
+        },
+        {
+          "key": "wonder_mis2_task_5",
+          "value": "Yolu Döşe"
+        },
+        {
+          "key": "wonder_mis2_task_6",
+          "value": "Perçinleri Sabitle"
+        },
+        {
+          "key": "wonder_mis2_task_7",
+          "value": "Turuncu Boyayı Sür"
+        },
+        {
+          "key": "wonder_mis2_task_8",
+          "value": "Işıkları Yak"
+        },
+        {
+          "key": "wonder_mis3_task_1",
+          "value": "Dört Ayağı Sabitle"
+        },
+        {
+          "key": "wonder_mis3_task_2",
+          "value": "İlk Katı Kaynakla"
+        },
+        {
+          "key": "wonder_mis3_task_3",
+          "value": "Demir Kafesi Ör"
+        },
+        {
+          "key": "wonder_mis3_task_4",
+          "value": "İkinci Katı Yükselt"
+        },
+        {
+          "key": "wonder_mis3_task_5",
+          "value": "Asansörleri Onar"
+        },
+        {
+          "key": "wonder_mis3_task_6",
+          "value": "Zirveyi Tamamla"
+        },
+        {
+          "key": "wonder_mis3_task_7",
+          "value": "Boyayı Yenile"
+        },
+        {
+          "key": "wonder_mis3_task_8",
+          "value": "Işık Şovunu Başlat"
+        },
+        {
+          "key": "wonder_mis4_task_1",
+          "value": "Kumu Temizle"
+        },
+        {
+          "key": "wonder_mis4_task_2",
+          "value": "Temeli Düzle"
+        },
+        {
+          "key": "wonder_mis4_task_3",
+          "value": "Rampayı Kur"
+        },
+        {
+          "key": "wonder_mis4_task_4",
+          "value": "Taş Blokları Taşı"
+        },
+        {
+          "key": "wonder_mis4_task_5",
+          "value": "Katları Diz"
+        },
+        {
+          "key": "wonder_mis4_task_6",
+          "value": "Geçitleri Aç"
+        },
+        {
+          "key": "wonder_mis4_task_7",
+          "value": "Kireç Taşını Parlat"
+        },
+        {
+          "key": "wonder_mis4_task_8",
+          "value": "Altın Tepeyi Yerleştir"
+        },
+        {
+          "key": "wonder_mis1_name",
+          "value": "Eğik Pati Kulesi"
+        },
+        {
+          "key": "wonder_mis2_name",
+          "value": "Altın Kuyruk Köprüsü"
+        },
+        {
+          "key": "wonder_mis3_name",
+          "value": "Eyfil Kulesi"
+        },
+        {
+          "key": "wonder_mis4_name",
+          "value": "Miyav Piramidi"
+        },
+        {
+          "key": "purchase_celebration_title",
+          "value": "HARİKA!"
         }
       ]
     },
@@ -1251,7 +2319,7 @@
         },
         {
           "key": "prelevel_popup_title_level",
-          "value": "Level {0}"
+          "value": "LEVEL {0}"
         },
         {
           "key": "prelevel_popup_continue",
@@ -1830,6 +2898,22 @@
           "value": "Small Water Tank"
         },
         {
+          "key": "hint_obstacle_wall",
+          "value": "Each block of the wall cracks on its own. Hit a block 5 times and the dynamite blows the whole connected wall."
+        },
+        {
+          "key": "hint_obstacle_wall_name",
+          "value": "Stone Wall"
+        },
+        {
+          "key": "hint_obstacle_metalwall",
+          "value": "Keep hitting the metal wall! If a move misses a block, its crack closes again. Hit the same block 3 moves in a row to bring it down."
+        },
+        {
+          "key": "hint_obstacle_metalwall_name",
+          "value": "Metal Wall"
+        },
+        {
           "key": "progress_timer_days_hours",
           "value": "{0}d {1}h"
         },
@@ -2184,6 +3268,1066 @@
         {
           "key": "shop_reward_timed",
           "value": "Timed Reward"
+        },
+        {
+          "key": "worldmap_robot_hall_area",
+          "value": "Amusement Center"
+        },
+        {
+          "key": "worldmap_robot_factory_area",
+          "value": "Unlock Factory Area"
+        },
+        {
+          "key": "common_ok",
+          "value": "OK"
+        },
+        {
+          "key": "common_close",
+          "value": "Close"
+        },
+        {
+          "key": "common_cancel",
+          "value": "Cancel"
+        },
+        {
+          "key": "common_buy",
+          "value": "Buy"
+        },
+        {
+          "key": "common_buy_gold_sub",
+          "value": "Get gold from the shop"
+        },
+        {
+          "key": "common_watch_ad",
+          "value": "Watch Ad"
+        },
+        {
+          "key": "common_gold_amount",
+          "value": "{0} gold"
+        },
+        {
+          "key": "common_tap_continue",
+          "value": "Tap to continue"
+        },
+        {
+          "key": "music_selected",
+          "value": "Selected"
+        },
+        {
+          "key": "music_select",
+          "value": "Select"
+        },
+        {
+          "key": "music_not_enough_gold",
+          "value": "Not enough gold"
+        },
+        {
+          "key": "music_popup_title",
+          "value": "Select Music"
+        },
+        {
+          "key": "music_track_fallback",
+          "value": "Track {0}"
+        },
+        {
+          "key": "joker_hint_single",
+          "value": "Tap the object you want to break!"
+        },
+        {
+          "key": "joker_hint_row",
+          "value": "Tap the row you want to clear!"
+        },
+        {
+          "key": "joker_hint_column",
+          "value": "Tap the column you want to clear!"
+        },
+        {
+          "key": "joker_hint_shuffle",
+          "value": "Tap anywhere to shuffle!"
+        },
+        {
+          "key": "joker_title_single",
+          "value": "Wonder Hammer!"
+        },
+        {
+          "key": "joker_title_row",
+          "value": "Wonder Rocket!"
+        },
+        {
+          "key": "joker_title_column",
+          "value": "Wonder Elevator!"
+        },
+        {
+          "key": "joker_title_shuffle",
+          "value": "Wonder Shuffler!"
+        },
+        {
+          "key": "lives_offer_title",
+          "value": "Out of Lives"
+        },
+        {
+          "key": "lives_offer_body",
+          "value": "You need lives to keep playing.\nYou have {0} gold."
+        },
+        {
+          "key": "lives_offer_buy_pack",
+          "value": "Refill {0} Lives"
+        },
+        {
+          "key": "lives_offer_ad_sub",
+          "value": "Get 1 life"
+        },
+        {
+          "key": "profile_no_team",
+          "value": "No team"
+        },
+        {
+          "key": "level_end_coins_earned",
+          "value": "+{0} coins"
+        },
+        {
+          "key": "level_end_loss_fallback",
+          "value": "If you give up, you'll lose:\n{0}"
+        },
+        {
+          "key": "level_end_no_gold_title",
+          "value": "Not Enough Gold"
+        },
+        {
+          "key": "level_end_no_gold_body",
+          "value": "You need {0} gold to continue.\nYou have {1} gold."
+        },
+        {
+          "key": "level_end_ad_used",
+          "value": "Used on this level"
+        },
+        {
+          "key": "level_end_ad_free_continue",
+          "value": "Continue for free"
+        },
+        {
+          "key": "shop_title",
+          "value": "Shop"
+        },
+        {
+          "key": "shop_owned",
+          "value": "Owned"
+        },
+        {
+          "key": "shop_purchased_toast",
+          "value": "{0} purchased!"
+        },
+        {
+          "key": "shop_balance_gold",
+          "value": "Gold: {0:N0}"
+        },
+        {
+          "key": "shop_section_special",
+          "value": "Special Offers"
+        },
+        {
+          "key": "shop_section_coins",
+          "value": "Gold"
+        },
+        {
+          "key": "shop_offer_bundle_start",
+          "value": "Wanderer's Bag"
+        },
+        {
+          "key": "shop_offer_bundle_hunter_loot",
+          "value": "Hunter's Loot"
+        },
+        {
+          "key": "shop_offer_bundle_explorer_chest",
+          "value": "Explorer's Chest"
+        },
+        {
+          "key": "shop_offer_bundle_grand_safe",
+          "value": "Grand Safe"
+        },
+        {
+          "key": "shop_offer_bundle_legendary",
+          "value": "Legendary Treasure"
+        },
+        {
+          "key": "leaderboard_friend_list",
+          "value": "Friend List"
+        },
+        {
+          "key": "leaderboard_add_friend",
+          "value": "Add Friend"
+        },
+        {
+          "key": "leaderboard_world",
+          "value": "World"
+        },
+        {
+          "key": "leaderboard_you",
+          "value": "You"
+        },
+        {
+          "key": "leaderboard_your_team",
+          "value": "Your team"
+        },
+        {
+          "key": "friend_mutual_count",
+          "value": "{0} mutual friends"
+        },
+        {
+          "key": "friend_my_id",
+          "value": "My ID: {0}"
+        },
+        {
+          "key": "friend_invite",
+          "value": "Invite"
+        },
+        {
+          "key": "friend_find_title",
+          "value": "Find Friends"
+        },
+        {
+          "key": "friend_add",
+          "value": "Add"
+        },
+        {
+          "key": "friend_added",
+          "value": "Added"
+        },
+        {
+          "key": "friend_copied",
+          "value": "Copied!"
+        },
+        {
+          "key": "friend_invite_message",
+          "value": "Join me in Wonder Fixers! My friend code: {0}"
+        },
+        {
+          "key": "journey_chapter",
+          "value": "Chapter {0}"
+        },
+        {
+          "key": "journey_watch",
+          "value": "Watch"
+        },
+        {
+          "key": "team_info_title",
+          "value": "Team Info"
+        },
+        {
+          "key": "team_create_button",
+          "value": "Create  {0}"
+        },
+        {
+          "key": "team_name_empty",
+          "value": "Team name can't be empty."
+        },
+        {
+          "key": "team_create_no_gold",
+          "value": "Not enough coins ({0} needed)."
+        },
+        {
+          "key": "team_life_request_tag",
+          "value": "Life Request!"
+        },
+        {
+          "key": "team_help",
+          "value": "Help"
+        },
+        {
+          "key": "team_help_out",
+          "value": "Help Out"
+        },
+        {
+          "key": "team_life_sent",
+          "value": "Sent"
+        },
+        {
+          "key": "team_life_received",
+          "value": "Received"
+        },
+        {
+          "key": "team_lives_full_short",
+          "value": "Lives Full"
+        },
+        {
+          "key": "team_accept",
+          "value": "Accept"
+        },
+        {
+          "key": "team_request_life",
+          "value": "Ask for Lives"
+        },
+        {
+          "key": "team_leave",
+          "value": "Leave"
+        },
+        {
+          "key": "team_leave_title",
+          "value": "Leave Team"
+        },
+        {
+          "key": "team_leave_confirm",
+          "value": "Do you want to leave the team?"
+        },
+        {
+          "key": "team_chat_life_sent",
+          "value": "I sent you 1 life!"
+        },
+        {
+          "key": "team_chat_life_thanks",
+          "value": "Thanks for the life!"
+        },
+        {
+          "key": "team_chat_life_ask",
+          "value": "Can you send a life?"
+        },
+        {
+          "key": "team_lives_full",
+          "value": "Lives Full ({0}/{0})"
+        },
+        {
+          "key": "team_lives_ready",
+          "value": "Your Lives Are Ready"
+        },
+        {
+          "key": "team_lives_waiting",
+          "value": "Waiting for Lives"
+        },
+        {
+          "key": "team_mission_start",
+          "value": "START a mission to win"
+        },
+        {
+          "key": "common_coming_soon",
+          "value": "Coming Soon"
+        },
+        {
+          "key": "save_progress_title",
+          "value": "Save Progress"
+        },
+        {
+          "key": "save_progress_linked_provider",
+          "value": "Account linked ✓ ({0})"
+        },
+        {
+          "key": "save_progress_conflict",
+          "value": "This account is linked to another save. Switch to that save?"
+        },
+        {
+          "key": "save_progress_linked",
+          "value": "Account linked ✓\nYour progress is safe."
+        },
+        {
+          "key": "save_progress_not_linked",
+          "value": "Link your account\nto protect your progress."
+        },
+        {
+          "key": "save_progress_switch",
+          "value": "Switch to this account"
+        },
+        {
+          "key": "save_progress_connecting",
+          "value": "Connecting..."
+        },
+        {
+          "key": "save_progress_provider_continue",
+          "value": "sign in"
+        },
+        {
+          "key": "settings_instagram_body",
+          "value": "Follow Tiny Fixers on Instagram!"
+        },
+        {
+          "key": "settings_instagram_open",
+          "value": "Open Instagram"
+        },
+        {
+          "key": "auth_provider_inactive",
+          "value": "This sign-in method isn't available yet."
+        },
+        {
+          "key": "auth_session_not_ready",
+          "value": "Session not ready, please try again."
+        },
+        {
+          "key": "auth_link_error",
+          "value": "Connection error."
+        },
+        {
+          "key": "auth_apple_unsupported",
+          "value": "Sign in with Apple isn't supported on this device."
+        },
+        {
+          "key": "auth_apple_failed",
+          "value": "Couldn't get your Apple ID, please try again."
+        },
+        {
+          "key": "workshop_c1_stage_1",
+          "value": "Start the repairs..."
+        },
+        {
+          "key": "workshop_c1_stage_2",
+          "value": "Set up the scaffolding..."
+        },
+        {
+          "key": "workshop_c1_stage_3",
+          "value": "Paint..."
+        },
+        {
+          "key": "workshop_c1_stage_4",
+          "value": "The square..."
+        },
+        {
+          "key": "workshop_c1_stage_5",
+          "value": "Signs..."
+        },
+        {
+          "key": "workshop_c1_stage_6",
+          "value": "Pool and benches."
+        },
+        {
+          "key": "workshop_c1_stage_7",
+          "value": "Fountain..."
+        },
+        {
+          "key": "workshop_c1_stage_8",
+          "value": "Welcome..."
+        },
+        {
+          "key": "workshop_c4_stage_1",
+          "value": "Hello Summer..."
+        },
+        {
+          "key": "workshop_c4_stage_2",
+          "value": "Trees ..."
+        },
+        {
+          "key": "workshop_c4_stage_3",
+          "value": "Signs..."
+        },
+        {
+          "key": "workshop_c4_stage_4",
+          "value": "Pier..."
+        },
+        {
+          "key": "workshop_c4_stage_5",
+          "value": "Boat"
+        },
+        {
+          "key": "workshop_c4_stage_6",
+          "value": "Surf..."
+        },
+        {
+          "key": "workshop_c4_stage_7",
+          "value": "Table..."
+        },
+        {
+          "key": "workshop_c4_stage_8",
+          "value": "Sunbed and Umbrella"
+        },
+        {
+          "key": "praise_great",
+          "value": "GREAT!"
+        },
+        {
+          "key": "praise_wow",
+          "value": "WOW!"
+        },
+        {
+          "key": "praise_good",
+          "value": "GOOD!"
+        },
+        {
+          "key": "wheel_free_spin",
+          "value": "Free Spin"
+        },
+        {
+          "key": "wheel_paid_spin",
+          "value": "Spin"
+        },
+        {
+          "key": "progress_reward_minutes",
+          "value": "+{0}m"
+        },
+        {
+          "key": "promo_safari_tagline",
+          "value": "Reach the top, share {0:N0} gold!"
+        },
+        {
+          "key": "rising_intro_title",
+          "value": "SAFARI IS STARTING!"
+        },
+        {
+          "key": "rising_intro_ready",
+          "value": "READY FOR THE TOP?\n<size=38>Tap to continue</size>"
+        },
+        {
+          "key": "safari_selecting_players",
+          "value": "Selecting players..."
+        },
+        {
+          "key": "safari_tap_continue",
+          "value": "Tap to continue"
+        },
+        {
+          "key": "safari_wait_retry",
+          "value": "Wait to try again"
+        },
+        {
+          "key": "safari_share_prize",
+          "value": "You're sharing {0:N0} gold with {1} players"
+        },
+        {
+          "key": "safari_tap_add_wallet",
+          "value": "Tap to add to your wallet"
+        },
+        {
+          "key": "safari_retry_in",
+          "value": "Try again in: {0}"
+        },
+        {
+          "key": "safari_status_start",
+          "value": "Start / {0}"
+        },
+        {
+          "key": "safari_status_pitstop",
+          "value": "Pitstop {0} / {1}"
+        },
+        {
+          "key": "safari_reward_event",
+          "value": "SAFARI COMPLETE"
+        },
+        {
+          "key": "safari_reward_title",
+          "value": "THE TOP IS YOURS!"
+        },
+        {
+          "key": "safari_reward_caption",
+          "value": "GOLD YOU WON"
+        },
+        {
+          "key": "safari_reward_pool",
+          "value": "{0:N0} GOLD GRAND PRIZE"
+        },
+        {
+          "key": "safari_reward_winners",
+          "value": "Shared among {0} winners"
+        },
+        {
+          "key": "safari_reward_collecting",
+          "value": "COLLECTING GOLD"
+        },
+        {
+          "key": "safari_reward_hint_wait",
+          "value": "Your reward is almost ready!"
+        },
+        {
+          "key": "safari_reward_hint_claim",
+          "value": "Add your gold to your wallet"
+        },
+        {
+          "key": "safari_join_title",
+          "value": "SAFARI"
+        },
+        {
+          "key": "safari_join_prize",
+          "value": "{0:N0} GOLD"
+        },
+        {
+          "key": "safari_join_body",
+          "value": "<b>{0} FLOORS · GRAND PRIZE</b>\nBeat levels on your first try,\nshare the prize at the top!"
+        },
+        {
+          "key": "rising_intro_preparing",
+          "value": "PREPARING PLAYERS"
+        },
+        {
+          "key": "rising_intro_race_starting",
+          "value": "THE RACE IS STARTING!"
+        },
+        {
+          "key": "team_bot_chat_1",
+          "value": "hi everyone"
+        },
+        {
+          "key": "team_bot_chat_2",
+          "value": "good morning"
+        },
+        {
+          "key": "team_bot_chat_3",
+          "value": "any events today?"
+        },
+        {
+          "key": "team_bot_chat_4",
+          "value": "need some help, guys"
+        },
+        {
+          "key": "team_bot_chat_5",
+          "value": "thanks!"
+        },
+        {
+          "key": "team_bot_chat_6",
+          "value": "you all played great"
+        },
+        {
+          "key": "team_bot_chat_7",
+          "value": "who's online?"
+        },
+        {
+          "key": "team_bot_chat_8",
+          "value": "this level is so hard"
+        },
+        {
+          "key": "team_bot_chat_9",
+          "value": "can anyone send a life?"
+        },
+        {
+          "key": "team_bot_chat_10",
+          "value": "have fun, everyone"
+        },
+        {
+          "key": "team_bot_chat_11",
+          "value": "almost there, keep going!"
+        },
+        {
+          "key": "team_bot_chat_12",
+          "value": "you're awesome 💪"
+        },
+        {
+          "key": "team_teammates",
+          "value": "Your teammates"
+        },
+        {
+          "key": "team_teammate",
+          "value": "Your teammate"
+        },
+        {
+          "key": "team_player",
+          "value": "Player"
+        },
+        {
+          "key": "team_time_now",
+          "value": "now"
+        },
+        {
+          "key": "team_chat_life_requested",
+          "value": "❤️ Asked for a life!"
+        },
+        {
+          "key": "team_created_welcome",
+          "value": "Your team is ready! Invite your friends and compete together."
+        },
+        {
+          "key": "rising_icon_label",
+          "value": "RISING"
+        },
+        {
+          "key": "prelevel_booster_select",
+          "value": "Choose a Booster:"
+        },
+        {
+          "key": "shop_best_deal",
+          "value": "Best Deal"
+        },
+        {
+          "key": "shop_screen_title",
+          "value": "Shop"
+        },
+        {
+          "key": "team_capacity",
+          "value": "Capacity"
+        },
+        {
+          "key": "leaderboard_score",
+          "value": "Score"
+        },
+        {
+          "key": "hud_goal",
+          "value": "Goal"
+        },
+        {
+          "key": "hud_moves",
+          "value": "Moves"
+        },
+        {
+          "key": "tab_home",
+          "value": "Home"
+        },
+        {
+          "key": "tab_journey",
+          "value": "Journey"
+        },
+        {
+          "key": "tab_market",
+          "value": "Shop"
+        },
+        {
+          "key": "tab_ranks",
+          "value": "Ranks"
+        },
+        {
+          "key": "tab_team",
+          "value": "Team"
+        },
+        {
+          "key": "wheel_come_tomorrow",
+          "value": "Come back tomorrow..."
+        },
+        {
+          "key": "wheel_title",
+          "value": "Daily Spin"
+        },
+        {
+          "key": "journey_title",
+          "value": "Journey"
+        },
+        {
+          "key": "leaderboard_suggested_friends",
+          "value": "Suggested Friends"
+        },
+        {
+          "key": "leaderboard_tab_friends",
+          "value": "Friends"
+        },
+        {
+          "key": "leaderboard_tab_players",
+          "value": "Players"
+        },
+        {
+          "key": "team_title",
+          "value": "Team"
+        },
+        {
+          "key": "leaderboard_tab_weekly",
+          "value": "Weekly"
+        },
+        {
+          "key": "common_copy",
+          "value": "Copy"
+        },
+        {
+          "key": "common_search",
+          "value": "Search"
+        },
+        {
+          "key": "friend_not_found",
+          "value": "Player not found"
+        },
+        {
+          "key": "friend_id_placeholder",
+          "value": "Your friend's ID"
+        },
+        {
+          "key": "leaderboard_title",
+          "value": "Leaderboard"
+        },
+        {
+          "key": "profile_edit_lock",
+          "value": "You can edit after Level 10."
+        },
+        {
+          "key": "profile_level",
+          "value": "Level"
+        },
+        {
+          "key": "profile_music",
+          "value": "Music"
+        },
+        {
+          "key": "profile_title",
+          "value": "Profile"
+        },
+        {
+          "key": "profile_stats_title",
+          "value": "General Stats"
+        },
+        {
+          "key": "profile_first_try_wins",
+          "value": "First Try Wins"
+        },
+        {
+          "key": "profile_longest_streak",
+          "value": "Longest Streak"
+        },
+        {
+          "key": "profile_weekly_cleared",
+          "value": "Cleared This Week"
+        },
+        {
+          "key": "profile_name_placeholder",
+          "value": "User Name"
+        },
+        {
+          "key": "workshop_completed_message",
+          "value": "Workshop complete! 🎉"
+        },
+        {
+          "key": "tasks_title",
+          "value": "TASKS"
+        },
+        {
+          "key": "repair_tasks_title",
+          "value": "Welcome"
+        },
+        {
+          "key": "main_missions",
+          "value": "MISSIONS"
+        },
+        {
+          "key": "settings_follow",
+          "value": "Follow"
+        },
+        {
+          "key": "settings_help",
+          "value": "Help&Support"
+        },
+        {
+          "key": "settings_save_progress",
+          "value": "Save Progress"
+        },
+        {
+          "key": "settings_saved",
+          "value": "Saved"
+        },
+        {
+          "key": "settings_terms",
+          "value": "Terms&Privacy"
+        },
+        {
+          "key": "settings_title",
+          "value": "Settings"
+        },
+        {
+          "key": "settings_music",
+          "value": "Music"
+        },
+        {
+          "key": "settings_sound",
+          "value": "Sound"
+        },
+        {
+          "key": "settings_vibration",
+          "value": "Vibration"
+        },
+        {
+          "key": "settings_hint",
+          "value": "Hints"
+        },
+        {
+          "key": "settings_notifications",
+          "value": "Notifications"
+        },
+        {
+          "key": "settings_toggle_off",
+          "value": "Off"
+        },
+        {
+          "key": "settings_toggle_on",
+          "value": "On"
+        },
+        {
+          "key": "settings_knob_on",
+          "value": "On"
+        },
+        {
+          "key": "settings_knob_off",
+          "value": "Off"
+        },
+        {
+          "key": "team_message",
+          "value": "Message"
+        },
+        {
+          "key": "team_send",
+          "value": "Send"
+        },
+        {
+          "key": "team_message_placeholder",
+          "value": "Write a message..."
+        },
+        {
+          "key": "team_browse",
+          "value": "Browse"
+        },
+        {
+          "key": "team_description_label",
+          "value": "Description:"
+        },
+        {
+          "key": "team_required_level_label",
+          "value": "Required Level:"
+        },
+        {
+          "key": "team_name_label",
+          "value": "Team Name:"
+        },
+        {
+          "key": "team_emblem_label",
+          "value": "Team Emblem:"
+        },
+        {
+          "key": "team_desc_placeholder",
+          "value": "Write a team description..."
+        },
+        {
+          "key": "team_name_placeholder",
+          "value": "Enter a team name..."
+        },
+        {
+          "key": "team_create_tab",
+          "value": "Create"
+        },
+        {
+          "key": "wheel_claim",
+          "value": "Claim"
+        },
+        {
+          "key": "wonder_mis1_task_1",
+          "value": "Reinforce the Ground"
+        },
+        {
+          "key": "wonder_mis1_task_2",
+          "value": "Set Up the Scaffolding"
+        },
+        {
+          "key": "wonder_mis1_task_3",
+          "value": "Repair the Foundation Stones"
+        },
+        {
+          "key": "wonder_mis1_task_4",
+          "value": "Weld the Columns"
+        },
+        {
+          "key": "wonder_mis1_task_5",
+          "value": "Restore the Arches"
+        },
+        {
+          "key": "wonder_mis1_task_6",
+          "value": "Polish the Marble"
+        },
+        {
+          "key": "wonder_mis1_task_7",
+          "value": "Fix the Bell Chamber"
+        },
+        {
+          "key": "wonder_mis1_task_8",
+          "value": "Raise the Flag"
+        },
+        {
+          "key": "wonder_mis2_task_1",
+          "value": "Strengthen the Piers"
+        },
+        {
+          "key": "wonder_mis2_task_2",
+          "value": "Weld the Towers"
+        },
+        {
+          "key": "wonder_mis2_task_3",
+          "value": "Tighten the Steel Cables"
+        },
+        {
+          "key": "wonder_mis2_task_4",
+          "value": "Attach the Suspenders"
+        },
+        {
+          "key": "wonder_mis2_task_5",
+          "value": "Lay the Road Deck"
+        },
+        {
+          "key": "wonder_mis2_task_6",
+          "value": "Secure the Rivets"
+        },
+        {
+          "key": "wonder_mis2_task_7",
+          "value": "Apply the Orange Paint"
+        },
+        {
+          "key": "wonder_mis2_task_8",
+          "value": "Turn On the Lights"
+        },
+        {
+          "key": "wonder_mis3_task_1",
+          "value": "Anchor the Four Legs"
+        },
+        {
+          "key": "wonder_mis3_task_2",
+          "value": "Weld the First Floor"
+        },
+        {
+          "key": "wonder_mis3_task_3",
+          "value": "Build the Iron Lattice"
+        },
+        {
+          "key": "wonder_mis3_task_4",
+          "value": "Raise the Second Floor"
+        },
+        {
+          "key": "wonder_mis3_task_5",
+          "value": "Fix the Elevators"
+        },
+        {
+          "key": "wonder_mis3_task_6",
+          "value": "Complete the Summit"
+        },
+        {
+          "key": "wonder_mis3_task_7",
+          "value": "Refresh the Paint"
+        },
+        {
+          "key": "wonder_mis3_task_8",
+          "value": "Start the Light Show"
+        },
+        {
+          "key": "wonder_mis4_task_1",
+          "value": "Clear the Sand"
+        },
+        {
+          "key": "wonder_mis4_task_2",
+          "value": "Level the Foundation"
+        },
+        {
+          "key": "wonder_mis4_task_3",
+          "value": "Build the Ramp"
+        },
+        {
+          "key": "wonder_mis4_task_4",
+          "value": "Haul the Stone Blocks"
+        },
+        {
+          "key": "wonder_mis4_task_5",
+          "value": "Stack the Layers"
+        },
+        {
+          "key": "wonder_mis4_task_6",
+          "value": "Open the Passages"
+        },
+        {
+          "key": "wonder_mis4_task_7",
+          "value": "Polish the Limestone"
+        },
+        {
+          "key": "wonder_mis4_task_8",
+          "value": "Place the Golden Capstone"
+        },
+        {
+          "key": "wonder_mis1_name",
+          "value": "Leaning Paw Tower"
+        },
+        {
+          "key": "wonder_mis2_name",
+          "value": "Golden Tail Bridge"
+        },
+        {
+          "key": "wonder_mis3_name",
+          "value": "Eiffur Tower"
+        },
+        {
+          "key": "wonder_mis4_name",
+          "value": "Purramid"
+        },
+        {
+          "key": "purchase_celebration_title",
+          "value": "AWESOME!"
         }
       ]
     }

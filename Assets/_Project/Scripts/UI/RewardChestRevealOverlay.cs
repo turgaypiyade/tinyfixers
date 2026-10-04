@@ -138,7 +138,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         tap.anchoredPosition = new Vector2(0f, 140f);
         tap.sizeDelta = new Vector2(800f, 70f);
         _tapText = tap.gameObject.AddComponent<TextMeshProUGUI>();
-        _tapText.text = "Devam etmek için dokun";
+        _tapText.text = GameLocalization.Get("common_tap_continue");
         if (_font != null) _tapText.font = _font;
         _tapText.fontSize = 34;
         _tapText.fontStyle = FontStyles.Bold;
@@ -314,7 +314,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         labelRt.sizeDelta = new Vector2(RewardItemWidth + 60f, RewardLabelSize * 1.3f);
         var label = labelRt.gameObject.AddComponent<TextMeshProUGUI>();
         int amount = reward != null ? Mathf.Max(1, reward.amount) : 1;
-        string name = reward != null && !string.IsNullOrEmpty(reward.fallbackName) ? reward.fallbackName : "";
+        string name = reward != null ? reward.DisplayName : "";
         label.text = resolvedIcon != null ? $"x{amount}" : $"{name} x{amount}";
         if (_font != null) label.font = _font;
         label.fontSize = 34;

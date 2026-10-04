@@ -1949,6 +1949,7 @@ public class BoardController : MonoBehaviour
             // coroutine'i sayacı sızdırırsa kapsam sıfırlaması kalıcı olarak kapanmasın.
             playerMovesInFlight = 0;
             gelCarriedBySwap.Clear();   // yarıda kalan swap coroutine'i taşıma kaydı sızdırmasın
+            gelCleanMatchTiles.Clear();
 
             // Per-move end pass for cage/lock owners. Runs once the board fully settles after a real
             // player move. Order matters: resolve EXISTING locks first (decrement windows → fire
@@ -2807,6 +2808,7 @@ public class BoardController : MonoBehaviour
             return;   // ÇİFT-RELEASE guard: zaten iade edilmiş (deaktif) → tekrar kuyruklama (bozulma önle)
 
         tile.PrepareForRelease();
+        gelCleanMatchTiles.Remove(tile);   // havuzdan dönen yeni taşa muafiyet sızmasın
         go.SetActive(false);
         if (parent != null)
             go.transform.SetParent(parent, false);   // deaktif, tilesRoot altında bekler
@@ -2854,7 +2856,7 @@ public class BoardController : MonoBehaviour
             // implant/zincir) varsa ya da taşın kendisi bulaşıksa. KOMŞULUK kuralı KALDIRILDI —
             // jelin üstünden geçen bir line/pulse, komşu hücreleri domino gibi jel yapıyordu.
             // (BoardAnimator ile temizlenenler live=False → oraya TryPaintGelForClearedTile bakar.)
-            if (spreadingGelService != null && (gelSpreadActiveThisMove || tile.GelContaminated))
+            if (spreadingGelService != null && ShouldPaintGelOnClear(tile))
                 SpreadGelToCell(x, y);
 
             ClearCell(x, y);
@@ -3442,8 +3444,18 @@ public class BoardController : MonoBehaviour
         if (spreadingGelService == null || tile == null) return;
         int x = tile.X, y = tile.Y;
         if (x < 0 || x >= width || y < 0 || y >= height) return;
-        if (gelSpreadActiveThisMove || tile.GelContaminated)
+        if (ShouldPaintGelOnClear(tile))
             SpreadGelToCell(x, y);
+    }
+
+    /// Kırılan taş hücresine jel bırakır mı? Bulaşık taş her zaman; hamle kapsamı ise YALNIZ
+    /// bulaşık olayın vurduğu taşlara — jelsiz bir match grubunun taşları (ör. yukarıdan düşen
+    /// taşların kurduğu cascade) kapsamdan muaftır: match'in kaynağı grubun kendisidir.
+    private bool ShouldPaintGelOnClear(TileView tile)
+    {
+        bool cleanMatch = gelCleanMatchTiles.Remove(tile);
+        if (tile.GelContaminated) return true;
+        return gelSpreadActiveThisMove && !cleanMatch;
     }
 
     // ── Jel BULAŞMA ──────────────────────────────────────────────────────────
@@ -3504,7 +3516,14 @@ public class BoardController : MonoBehaviour
         }
 
 
-        if (!touchesGel) return;
+        if (!touchesGel)
+        {
+            // Jelsiz grup: bulaşık bir special hamlesi sürüyor olsa bile bu match jel yaymaz.
+            foreach (var tile in participants)
+                if (tile != null && tile)
+                    gelCleanMatchTiles.Add(tile);
+            return;
+        }
 
         foreach (var tile in participants)
             if (tile != null && tile)
@@ -3517,6 +3536,10 @@ public class BoardController : MonoBehaviour
     /// bulaştırıyordu (special yokken uzak bir cascade'de jel çıkması). Eşleşirse grubu
     /// NoteGelSpreadParticipants bulaştırır; karar anında ForgetGelCarriedBySwap ile silinir.
     private readonly HashSet<TileView> gelCarriedBySwap = new HashSet<TileView>();
+
+    /// Jelsiz match gruplarının taşları: hamle kapsamı (gelSpreadActiveThisMove) açık olsa da kırılınca
+    /// jel bırakmaz. Kırılma anında (ShouldPaintGelOnClear), havuza iadede ve idle'da silinir.
+    private readonly HashSet<TileView> gelCleanMatchTiles = new HashSet<TileView>();
 
     private void NoteGelCarriedBySwap(TileView tile)
     {
@@ -3537,7 +3560,9 @@ public class BoardController : MonoBehaviour
     private void PaintGelUnderCreatedSpecial(TileView created)
     {
         if (spreadingGelService == null || created == null || !created) return;
-        if (gelSpreadActiveThisMove || created.GelContaminated)
+        // Jelsiz gruptan doğan special'ın hücresi de muaf (kayıt silinmez: special sonra bu hamlede
+        // patlarsa kendi kırılışında da muaf kalır).
+        if (created.GelContaminated || (gelSpreadActiveThisMove && !gelCleanMatchTiles.Contains(created)))
             SpreadGelToCell(created.X, created.Y);
     }
 

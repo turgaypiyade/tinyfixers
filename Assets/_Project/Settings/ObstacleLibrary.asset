@@ -2310,3 +2310,153 @@ MonoBehaviour:
     legacyStageDamageRules: 
     legacyBlocksCells: 1
     legacyBehavior: 1
+  - id: 55
+    stages:
+    - sprite: {fileID: 21300000, guid: 6c0ba6037bf64886943108e3d2b24c2c, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 6c0ba6037bf64886943108e3d2b24c2c, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 6c0ba6037bf64886943108e3d2b24c2c, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 6c0ba6037bf64886943108e3d2b24c2c, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 6c0ba6037bf64886943108e3d2b24c2c, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    auxiliarySprites: []
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 0
+    size: {x: 1, y: 1}
+    hits: 5
+    fullCellSprite: 1
+    exitAtBottom: 0
+    fillsShadowBeneath: 0
+    suppressHitParticles: 0
+    hitParticleSprites: []
+    breakParticleSprites: []
+    wardrobeItemSprites: []
+    hitSound: {fileID: 8300000, guid: 0e45cd62394af4a88bbe16ef3eace1a9, type: 3}
+    hitSoundVolume: 1
+    breakSound: {fileID: 8300000, guid: e6913ec322d3649e1b9ad3f90e1c0ce1, type: 3}
+    breakSoundVolume: 1
+    followUpBreakSound: {fileID: 8300000, guid: e91f72e32977e448585e291046016faf, type: 3}
+    followUpBreakSoundVolume: 1
+    flightLoopSound: {fileID: 0}
+    flightLoopSoundVolume: 0.75
+    impactSound: {fileID: 0}
+    impactSoundVolume: 1
+    drawUnderTiles: 0
+    legacySprite: {fileID: 21300000, guid: 6c0ba6037bf64886943108e3d2b24c2c, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules: 
+    legacyBlocksCells: 1
+    legacyBehavior: 1
+  - id: 56
+    stages:
+    - sprite: {fileID: 21300000, guid: fae664e412454e27b239ddb8cfd569c1, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: fae664e412454e27b239ddb8cfd569c1, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: fae664e412454e27b239ddb8cfd569c1, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    auxiliarySprites: []
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 0
+    size: {x: 1, y: 1}
+    hits: 3
+    fullCellSprite: 1
+    exitAtBottom: 0
+    fillsShadowBeneath: 0
+    suppressHitParticles: 0
+    hitParticleSprites: []
+    breakParticleSprites: []
+    wardrobeItemSprites: []
+    hitSound: {fileID: 8300000, guid: 0e45cd62394af4a88bbe16ef3eace1a9, type: 3}
+    hitSoundVolume: 1
+    breakSound: {fileID: 8300000, guid: e6913ec322d3649e1b9ad3f90e1c0ce1, type: 3}
+    breakSoundVolume: 1
+    followUpBreakSound: {fileID: 8300000, guid: e91f72e32977e448585e291046016faf, type: 3}
+    followUpBreakSoundVolume: 1
+    flightLoopSound: {fileID: 0}
+    flightLoopSoundVolume: 0.75
+    impactSound: {fileID: 0}
+    impactSoundVolume: 1
+    drawUnderTiles: 0
+    legacySprite: {fileID: 21300000, guid: fae664e412454e27b239ddb8cfd569c1, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules: 
+    legacyBlocksCells: 1
+    legacyBehavior: 1

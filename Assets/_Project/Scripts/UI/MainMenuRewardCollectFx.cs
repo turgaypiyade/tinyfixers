@@ -134,7 +134,7 @@ public sealed class MainMenuRewardCollectFx : MonoBehaviour
         labelRt.sizeDelta = new Vector2(360f, 60f);
         var label = labelGo.GetComponent<TextMeshProUGUI>();
         int amount = reward != null ? Mathf.Max(1, reward.amount) : 1;
-        string name = reward != null && !string.IsNullOrEmpty(reward.fallbackName) ? reward.fallbackName + " " : "";
+        string name = reward != null && !string.IsNullOrEmpty(reward.DisplayName) ? reward.DisplayName + " " : "";
         label.text = $"{name}x{amount}";
         label.fontSize = 44;
         label.fontStyle = FontStyles.Bold;

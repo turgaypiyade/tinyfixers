@@ -571,7 +571,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
                 var obs = board.ObstacleStateService;
                 var obsId = obs.GetObstacleIdAt(bot.targetX, bot.targetY);
                 int obsOrigin = obs.GetObstacleOriginAt(bot.targetX, bot.targetY);
-                if (obsId != ObstacleId.Magnet && obsOrigin >= 0 && !groupHitOrigins.Add(obsOrigin))
+                if (!obs.TakesPerCellHits(bot.targetX, bot.targetY) && obsOrigin >= 0 && !groupHitOrigins.Add(obsOrigin))
                 {
                     extraObstacleHits.Add((bot.targetX, bot.targetY, obsOrigin, obsId));
                     if (bot.intent != null)

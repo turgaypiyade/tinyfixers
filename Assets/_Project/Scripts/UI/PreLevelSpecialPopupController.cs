@@ -655,6 +655,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         {
             int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
             titleText.text = GameLocalization.GetFormat(titleLocalizationKey, level);
+            SingleLineText.FitWidth(titleText);   // "Seviye 101" iki satıra kaymasın
         }
 
         if (continueText != null)

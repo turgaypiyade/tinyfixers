@@ -424,13 +424,13 @@ public sealed class SafariMapScreen : SafariMapScreenBase
         coinImg.raycastTarget = false;
 
         var shareText = NewText("ShareText", overlay, 44, new Vector2(0f, 24f), new Vector2(820f, 120f));
-        shareText.text = $"{prizePool:N0} altını {winners} kişi ile paylaşıyorsun";
+        shareText.text = GameLocalization.GetFormat("safari_share_prize", prizePool, winners);
 
         var amountText = NewText("RewardAmount", overlay, 72, new Vector2(0f, -100f), new Vector2(720f, 120f));
         amountText.text = "+0";
 
         var tapText = NewText("TapText", overlay, 30, new Vector2(0f, -240f), new Vector2(720f, 80f));
-        tapText.text = "Cüzdana eklemek için dokun";
+        tapText.text = GameLocalization.Get("safari_tap_add_wallet");
 
         yield return AnimateRewardOverlay(coin, amountText, share);
         yield return null;
@@ -533,7 +533,7 @@ public sealed class SafariMapScreen : SafariMapScreenBase
         if (statusText != null)
         {
             statusText.color = promptTextColor;
-            statusText.text = "Kullanıcılar seçiliyor...";
+            statusText.text = GameLocalization.Get("safari_selecting_players");
         }
 
         float t = 0f;
@@ -598,7 +598,7 @@ public sealed class SafariMapScreen : SafariMapScreenBase
         if (continueLabel != null)
         {
             continueLabel.color = promptTextColor;
-            continueLabel.text = "Devam etmek için dokunun";
+            continueLabel.text = GameLocalization.Get("safari_tap_continue");
         }
 
         if (continueRoot != null)
@@ -657,8 +657,8 @@ public sealed class SafariMapScreen : SafariMapScreenBase
         if (continueLabel != null)
         {
             continueLabel.color = promptTextColor;
-            continueLabel.text = presentedFall ? "Ana menüye dönmek için dokunun"
-                : canContinue ? "Devam etmek için dokunun" : "Tekrar denemek için bekleyin";
+            continueLabel.text = GameLocalization.Get(presentedFall ? "safari_lost_tap"
+                : canContinue ? "safari_tap_continue" : "safari_wait_retry");
         }
         RefreshStatus();
     }
@@ -671,13 +671,13 @@ public sealed class SafariMapScreen : SafariMapScreenBase
 
         if (!controller.CanContinueNow(out var remaining))
         {
-            statusText.text = $"Tekrar denemek için: {FormatRemaining(remaining)}";
+            statusText.text = GameLocalization.GetFormat("safari_retry_in", FormatRemaining(remaining));
         }
         else
         {
             int n = controller.Config != null ? controller.Config.pitstopCount : 7;
             int pos = Mathf.Clamp(SafariState.CurrentPitstop, 0, n);
-            statusText.text = pos <= 0 ? $"Başlangıç / {n}" : $"Pitstop {pos} / {n}";
+            statusText.text = pos <= 0 ? GameLocalization.GetFormat("safari_status_start", n) : GameLocalization.GetFormat("safari_status_pitstop", pos, n);
         }
     }
 

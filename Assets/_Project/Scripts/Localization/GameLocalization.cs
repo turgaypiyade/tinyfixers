@@ -58,6 +58,20 @@ public static class GameLocalization
         return key;
     }
 
+    /// Veri asset'lerinden gelen metinler için (teklif adı, ödül adı…): anahtar id'den türetilir; çevirisi
+    /// yoksa asset'te yazan metin kalır. Eksik anahtar uyarısı basmaz — çevrilmemiş veri hatası değildir.
+    public static string GetOr(string key, string fallback)
+    {
+        EnsureLoaded();
+
+        if (!string.IsNullOrEmpty(key))
+        {
+            if (TryGetValue(currentLanguage, key, out var value)) return value;
+            if (TryGetValue(defaultLanguage, key, out value)) return value;
+        }
+        return fallback ?? string.Empty;
+    }
+
     public static string GetFormat(string key, params object[] args)
     {
         string format = Get(key);
@@ -127,9 +141,18 @@ public static class GameLocalization
         if (!tables.ContainsKey(defaultLanguage))
             tables[defaultLanguage] = new Dictionary<string, string>();
 
-        currentLanguage = PlayerPrefs.GetString(LanguagePrefsKey, defaultLanguage);
+        // Oyuncu dil seçmediyse cihaz dili: Türkçe cihaz → tr, diğer her dil → en (başka çeviri yok).
+        // Otomatik seçim kaydedilmez; yalnız SetLanguage (oyuncu tercihi) PlayerPrefs'e yazar.
+        currentLanguage = PlayerPrefs.HasKey(LanguagePrefsKey)
+            ? PlayerPrefs.GetString(LanguagePrefsKey, defaultLanguage)
+            : DetectDeviceLanguage();
         if (!tables.ContainsKey(currentLanguage))
             currentLanguage = defaultLanguage;
+    }
+
+    private static string DetectDeviceLanguage()
+    {
+        return Application.systemLanguage == SystemLanguage.Turkish ? "tr" : "en";
     }
 
     [Serializable]

@@ -235,7 +235,7 @@ public sealed class TeamBrowserController : MonoBehaviour
     {
         if (infoPopupView != null || infoPopupRoot == null) return;
         var oldCard = infoPopupRoot.transform.Find("Card");
-        infoPopupView = CommonPopupView.Create(infoPopupRoot.transform, "Takım Bilgisi",
+        infoPopupView = CommonPopupView.Create(infoPopupRoot.transform, GameLocalization.Get("team_info_title"),
             () => infoPopupRoot.SetActive(false));
         var color = CommonPopupSkin.Shared.bodyTextColor;
         if (infoNameText != null)
@@ -264,7 +264,7 @@ public sealed class TeamBrowserController : MonoBehaviour
     private void UpdateCreateVisuals()
     {
         if (minChapterText != null) minChapterText.text = minChapter.ToString();
-        if (createButtonLabel != null) createButtonLabel.text = $"Oluştur  {CreateCostCoins}";
+        if (createButtonLabel != null) createButtonLabel.text = GameLocalization.GetFormat("team_create_button", CreateCostCoins);
         if (createEmblemImage != null)
         {
             var s = emblemPool != null && emblemPool.Length > 0
@@ -281,13 +281,13 @@ public sealed class TeamBrowserController : MonoBehaviour
         string name = createNameInput != null ? createNameInput.text.Trim() : "";
         if (string.IsNullOrEmpty(name))
         {
-            SetFeedback("Takım adı boş olamaz.");
+            SetFeedback(GameLocalization.Get("team_name_empty"));
             return;
         }
 
         if (!PlayerWallet.SpendCoins(CreateCostCoins))
         {
-            SetFeedback($"Yetersiz coin ({CreateCostCoins} gerekiyor).");
+            SetFeedback(GameLocalization.GetFormat("team_create_no_gold", CreateCostCoins));
             return;
         }
 

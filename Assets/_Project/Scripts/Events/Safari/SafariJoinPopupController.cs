@@ -66,10 +66,10 @@ public sealed class SafariJoinPopupController : MonoBehaviour
     private void RefreshCopy()
     {
         var config = controller != null ? controller.Config : null;
-        if (titleText != null) titleText.text = "SAFARİ";
-        if (prizeText != null) prizeText.text = $"{(config != null ? config.prizePoolGold : 2000):N0} ALTIN";
+        if (titleText != null) titleText.text = GameLocalization.Get("safari_join_title");
+        if (prizeText != null) prizeText.text = GameLocalization.GetFormat("safari_join_prize", config != null ? config.prizePoolGold : 2000);
         if (bodyText != null)
-            bodyText.text = $"<b>{(config != null ? config.pitstopCount : 7)} KAT · BÜYÜK ÖDÜL</b>\nSeviyeleri ilk denemede geç,\nzirvedeki ödülü paylaş!";
+            bodyText.text = GameLocalization.GetFormat("safari_join_body", config != null ? config.pitstopCount : 7);
 
         // Buton: ortak event "Katıl" (lokalize, büyük harf değil — Köprü popup'ıyla aynı anahtar).
         var joinLabel = continueButton != null ? continueButton.GetComponentInChildren<TMP_Text>(true) : null;

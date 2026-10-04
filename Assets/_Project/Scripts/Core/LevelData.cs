@@ -219,6 +219,18 @@ public enum ObstacleId : int
     // WaterTank'ın 1x1 versiyonu: davranış birebir aynı (2 stage, kırılınca rastgele su +
     // ekran damlası); boyut ObstacleDef.size'tan okunur.
     WaterTankSmall = 54,
+
+    // Duvar (kiremit). Serbest şekilli PARÇALAR: bir parçanın tüm hücreleri aynı obstacleOrigins
+    // değerini paylaşır (çok-hücreli tek engel; hedef parça başına sayılır). Her hücre KENDİ aşamasını
+    // taşır (WallObstacleService): normal → çatlak1 (dinamit görünür) → çatlak2 (fitil yanar) → çatlak3 →
+    // çatlak4; son aşamadaki hücreye bir vuruş daha gelirse (5. vuruş) parçanın tamamı yıkılır. Taş gibi hücreyi kapatır (blocksCells).
+    // Görsel: WallObstacleService/WallPieceView (kenar/köşe autotile + rastgele kabartma).
+    Wall = 55,
+
+    // Metal duvar: Wall ile aynı parça sistemi/görünüm (metalik gri). Farkı: hücre vuruşları ARDIŞIK
+    // olmalı — bir hamle (zincirleri dahil) bitince o hamlede vurulmayan hücre aşama 0'a döner
+    // (kabartmalı duvar geri gelir). Aşamalar: 1. vuruş çatlak1, 2. vuruş çatlak3, 3. vuruş parça yıkılır.
+    MetalWall = 56,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
@@ -452,6 +464,10 @@ public class LevelData : ScriptableObject
              "obstacle için çalışan generic hâli. Runtime'da GridSpawner + ObstacleStateService işler.")]
     public StackedObstacleEntry[] stackedObstacles;
 
+    [Tooltip("Duvar (Wall) parça numarası, yalnız EDİTÖR içindir (numaralı fırça). Runtime parçayı " +
+             "obstacleOrigins'ten tanır: aynı numaralı bitişik duvar hücreleri tek origin paylaşır. 0 = duvar yok.")]
+    public int[] wallPieceIds;
+
     [Tooltip("Sabitlenmiş taş tipleri. 0 = rastgele (None), diğerleri TileType+1 değeri.\n" +
              "size = width*height. GridSpawner spawn sırasında simulation yerine bu değeri kullanır.")]
     public int[] pinnedTileTypes;
@@ -493,6 +509,9 @@ public class LevelData : ScriptableObject
             for (int i = 0; i < size; i++)
                 obstacleOrigins[i] = -1;
         }
+
+        if (wallPieceIds == null || wallPieceIds.Length != size)
+            wallPieceIds = new int[size];
 
         if (tubes == null)
             tubes = System.Array.Empty<TubeEntry>();

@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ShopCatalog
   sections:
   - title: "\xD6zel Teklifler"
+    titleKey: shop_section_special
     bandStyle: 1
     bandSprite: {fileID: 21300000, guid: 83afb5006eba84bdea92bf2aa60329cc, type: 3}
     offers:
@@ -427,6 +428,7 @@ MonoBehaviour:
       priceLabel: 4999.99 TL
       priceAmount: 0
   - title: "Alt\u0131nlar"
+    titleKey: shop_section_coins
     bandStyle: 0
     bandSprite: {fileID: 21300000, guid: dacecceb180224b269a6e3f3b0ec21b8, type: 3}
     offers:

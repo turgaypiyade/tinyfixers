@@ -1703,6 +1703,7 @@ GameObject:
   - component: {fileID: 214283126}
   - component: {fileID: 214283128}
   - component: {fileID: 214283127}
+  - component: {fileID: 1822868907876468095}
   m_Layer: 5
   m_Name: GoalChipHeader
   m_TagString: Untagged
@@ -9024,6 +9025,7 @@ GameObject:
   - component: {fileID: 1299973475}
   - component: {fileID: 1299973477}
   - component: {fileID: 1299973476}
+  - component: {fileID: 7520617088936803487}
   m_Layer: 5
   m_Name: MovesChipHeader
   m_TagString: Untagged
@@ -19823,3 +19825,31 @@ SceneRoots:
   - {fileID: 685255517}
   - {fileID: 1519012591}
   - {fileID: 2095271736}
+--- !u!114 &1822868907876468095
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 214283125}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 548bf4a7910af4aff9ee0bc016915643, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  target: {fileID: 214283127}
+  key: hud_goal
+--- !u!114 &7520617088936803487
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1299973474}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 548bf4a7910af4aff9ee0bc016915643, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  target: {fileID: 1299973476}
+  key: hud_moves

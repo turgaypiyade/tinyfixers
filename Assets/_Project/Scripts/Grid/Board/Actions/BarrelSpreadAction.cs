@@ -66,7 +66,12 @@ public sealed class BarrelSpreadAction : BoardAction
                 {
                     var c = targets[t];
                     if (obstacles.TrySpawnSingleCellObstacleAtOrBeneathOverTile(c.x, c.y, ObstacleId.Mud))
+                    {
                         committed.Add(c);
+                        // Açıkta doğan mud'ı, barrel'ı kıran etkinin süren vuruşlarından koru
+                        // (roket süpürmesi barrel'ı kırıp bir sonraki karede taze mud'ı siliyordu).
+                        if (obstacles.IsMudAt(c.x, c.y)) obstacles.GrantRevealGrace(c.x, c.y);
+                    }
                 }
 
                 void OnLand(Vector2Int cell)

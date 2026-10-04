@@ -82,6 +82,11 @@ public sealed class BottomTabController : MonoBehaviour
 
     public void Select(int index) => Select(index, force: false);
 
+    public int CurrentIndex => currentIndex;
+
+    /// Ana ekran (HOME) sekmesine geçer.
+    public void SelectHome() => Select(defaultIndex, force: false);
+
     private void Select(int index, bool force)
     {
         if (index < 0 || index >= tabs.Count) return;

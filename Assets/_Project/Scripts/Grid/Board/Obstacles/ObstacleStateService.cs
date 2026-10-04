@@ -10,6 +10,14 @@ public enum ObstacleHitContext
     Scripted = 3
 }
 
+/// Wall vuruşunun sonucu (WallObstacleService karar verir).
+public enum WallHitOutcome
+{
+    Ignored = 0,    // vuruş tüketilmedi (ör. parça zaten yıkılıyor)
+    Advanced = 1,   // vurulan hücrenin aşaması ilerledi, parça yerinde
+    Collapse = 2,   // son aşamadaki hücre tekrar vuruldu → parçanın tamamı yıkılır
+}
+
 public readonly struct ObstacleVisualChange
 {
     public readonly int originIndex;
@@ -221,6 +229,10 @@ public class ObstacleStateService : ISimObstacleQuery
     /// <summary>Safe: set by SafeObstacleService. Called with the safe's ORIGIN cell when any safe
     /// cell is hit. Lock state + break/reveal are owned by SafeObstacleService.</summary>
     public Func<int, ObstacleHitContext, TileType?, bool> SafeHitInterceptor;
+    /// <summary>Wall: set by WallObstacleService. Called with (piece ORIGIN, hit CELL index, context) when a
+    /// wall cell is hit. Per-cell stage state is owned by the service; it answers whether the hit only
+    /// advanced that cell's stage or must collapse the whole piece.</summary>
+    public Func<int, int, ObstacleHitContext, WallHitOutcome> WallHitInterceptor;
     /// <summary>RocketBasket: set by RocketBasketService. Called with (origin, context, sourceTileType)
     /// when a RocketBasket cell is hit. Returns true if a rocket launched → hit consumed. Normal match
     /// launches only the MATCHING color; special/combo/booster/scripted hits ALWAYS launch a remaining
@@ -565,6 +577,32 @@ public class ObstacleStateService : ISimObstacleQuery
             return new ObstacleHitResult(true, true, false, safeChange, safeTransition, safeAffectedCells);
         }
 
+        // Wall: parça = tek origin (çok-hücreli, serbest şekil); hücre aşamaları WallObstacleService'te.
+        // Advanced → yalnız vurulan hücrenin aşaması ilerledi, parça yerinde. Collapse → son aşamadaki (WallKind.CollapseStage)
+        // hücre tekrar vuruldu: parçanın TÜM hücreleri tek seferde temizlenir (OnObstacleDestroyed bir kez →
+        // hedef parça başına sayılır).
+        if (id == ObstacleId.Wall || id == ObstacleId.MetalWall)
+        {
+            if (WallHitInterceptor == null)
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            int[] wallCells = CollectCellsForOrigin(origin, id);
+            var wallOutcome = WallHitInterceptor.Invoke(origin, idx, context);
+            if (wallOutcome == WallHitOutcome.Ignored)
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            if (wallOutcome == WallHitOutcome.Collapse)
+            {
+                ClearObstacleFromLevel(origin, id);
+                change = new ObstacleVisualChange(origin, id, true, 0, null);
+                var wallTransition = new ObstacleStageTransition(true, origin, id, 0, true, default, default);
+                return new ObstacleHitResult(true, true, false, change, wallTransition, wallCells);
+            }
+
+            change = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+            return new ObstacleHitResult(true, true, false, change, default, wallCells);
+        }
+
         // STACK KURALI: bir CellAnchoredOverlay (Grass/Oil) bir movable'ın (Helmet) düştüğü hücrede
         // GÖRSEL olarak taşın ÜSTÜNDE durur (overlay en üstte çizilir), ama veri modelinde movable
         // primary olur ve overlay beneath store'a (_underTileBeneathMovable) iner. Bu ters dizilim
@@ -849,6 +887,18 @@ public class ObstacleStateService : ISimObstacleQuery
     }
 
     // Hücre Magnet ise ve GÜNCEL bir uç (A/B) ise true. Orta yol hücreleri inert → false.
+    /// Engelin her HÜCRESİ ayrı vuruş alır mı (origin-dedup muafiyeti)? Çok-hücreli engeller (sandık, kasa,
+    /// dolap...) bir etkiden origin başına TEK vuruş alır; şunlar hariç:
+    ///  - Magnet: tek origin altında iki bağımsız uç (A/B), her uç ayrı hedef.
+    ///  - Wall / MetalWall: parça tek origin ama her hücre kendi aşamasını taşır — eşleşme/special'ın
+    ///    değdiği her hücre ayrı ilerler.
+    /// Origin-dedup yapan her yer bu kuralı kullanmalı (tekrar "!= Magnet" yazma).
+    public bool TakesPerCellHits(int x, int y)
+    {
+        var id = GetObstacleIdAt(x, y);
+        return id == ObstacleId.Magnet || id == ObstacleId.Wall || id == ObstacleId.MetalWall;
+    }
+
     public bool IsMagnetEndpoint(int x, int y)
     {
         if (!IsValidCell(x, y)) return false;
@@ -985,6 +1035,14 @@ public class ObstacleStateService : ISimObstacleQuery
     // Süre kırıcı etkinin yayılımını kapsar; sonraki eşleşmeler normal kurallarla vurur.
     private const float RevealGraceSeconds = 0.6f;
     private readonly Dictionary<int, float> _revealGraceUntil = new();
+
+    /// Dinamik doğan katman (barrel'ın saçtığı mud) için aynı koruma: barrel'ı kıran etkinin (roket
+    /// süpürmesi, patlama dalgası) sonraki karelerdeki vuruşları taze mud'ı anında silmesin.
+    public void GrantRevealGrace(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return;
+        _revealGraceUntil[level.Index(x, y)] = Time.unscaledTime + RevealGraceSeconds;
+    }
 
     private bool IsInRevealGrace(int idx)
     {
@@ -2083,6 +2141,17 @@ public class ObstacleStateService : ISimObstacleQuery
             count++;
         }
 
+        // Dolabın gerçek dayanıklılığı item'larda: remainingHits hep 2 (kapalı/açık) kalırken açık dolap
+        // special vuruşu başına 2 item kırar, son item'la yıkılır. Bu olmadan hedefleme 8 item'lı dolabı
+        // "1-2 vuruşluk" sanıp ilk bottan sonra listeden düşürüyordu (Override+PatchBot'ta tek bot gidiyordu).
+        if (id == ObstacleId.Wardrobe && count > 0)
+        {
+            int origin = level.obstacleOrigins[idx];
+            int itemsLeft = _wardrobeItemCounts.TryGetValue(origin, out int items) ? items : 0;
+            int itemHits = Mathf.Max(1, (itemsLeft + 1) / 2);
+            return current >= 2 ? 1 + itemHits : itemHits;
+        }
+
         return count;
     }
 
@@ -2319,6 +2388,17 @@ public class ObstacleStateService : ISimObstacleQuery
             _chestColorStates[origin] = ChestColorMask.All;
     }
 
+    /// Wall: parçanın kalan "anlamlı" vuruşu = en ilerlemiş hücresinin parçayı yıkmasına kalan vuruş.
+    /// WallObstacleService her aşama değişiminde yazar (PatchBot kapasitesi / stage sorguları bunu okur).
+    public void SetWallRemainingHits(int origin, int remaining)
+    {
+        if (origin < 0 || origin >= remainingHitsByOrigin.Length) return;
+        if (level == null) return;
+        var originId = (ObstacleId)level.obstacles[origin];
+        if (originId != ObstacleId.Wall && originId != ObstacleId.MetalWall) return;
+        remainingHitsByOrigin[origin] = Mathf.Max(1, remaining);
+    }
+
     /// Safe kırıldı → goal (Obstacle/Safe) ilerlesin. NotifyTubeFullyDestroyed analoğu.
     public void NotifySafeBroken(int origin)
     {
@@ -2414,6 +2494,16 @@ public class ObstacleStateService : ISimObstacleQuery
         return TrySpawnSingleCellObstacleAtOrBeneathOverTile(x, y, ObstacleId.Oil);
     }
 
+    // Zemin örtüsü (Mud, su birikintisi, jel…): taşın ALTINDA kalan katman; yığının en altında durur.
+    private bool IsGroundLayer(ObstacleId id, int remaining)
+    {
+        if (id == ObstacleId.SpreadingGel) return true;
+        var def = library != null ? library.Get(id) : null;
+        if (def == null) return false;
+        var stage = def.GetStageRuleForRemainingHits(Mathf.Max(1, remaining));
+        return stage != null && stage.behavior == ObstacleBehaviorType.UnderTileLayered;
+    }
+
     public bool TrySpawnSingleCellObstacleAtOrBeneathOverTile(int x, int y, ObstacleId obstacleId)
     {
         if (obstacleId == ObstacleId.Oil && TryAddOilAt(x, y))
@@ -2436,8 +2526,25 @@ public class ObstacleStateService : ISimObstacleQuery
         if (!IsOverTileBlockerAt(x, y) || IsMovableObstacleAt(x, y))
             return false;
 
-        if (TryPeekStampedBeneathLayer(idx, out var existing) && existing.Id != ObstacleId.None)
-            return false;
+        // Yığın varsa (kaç katman olursa olsun) mud EN ALTA girer — Mud/Jel daima en alttadır.
+        // Liste sonu = üst katman (önce açılır), başı = en alt.
+        if (_stampedBeneathByCell.TryGetValue(idx, out var layers) && layers != null && layers.Count > 0)
+        {
+            var bottom = layers[0];
+            int hits = Mathf.Max(1, def.hits);
+            if (bottom.Id == ObstacleId.None)
+            {
+                // "Boş zemin" işareti: mud o zeminin yerine geçer (üstündeki engel aynı kalır).
+                layers[0] = new StampedBeneath(obstacleId, idx, bottom.OverOrigin, hits);
+            }
+            else
+            {
+                if (IsGroundLayer(bottom.Id, bottom.Remaining)) return false;   // zemin zaten örtülü
+                layers.Insert(0, new StampedBeneath(obstacleId, idx, bottom.Origin, hits));
+            }
+            Debug.Log($"[{obstacleId}] Added at the bottom of a {layers.Count}-layer stack at ({x},{y}).");
+            return true;
+        }
 
         int overOrigin = GetObstacleOriginAt(x, y);
         if (overOrigin < 0)

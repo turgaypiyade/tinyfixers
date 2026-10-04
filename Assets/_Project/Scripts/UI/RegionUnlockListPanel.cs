@@ -346,7 +346,7 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
     private static string RowTitle(WonderDefinition w, string taskName, bool prefixEventName)
     {
         if (!prefixEventName || w == null) return taskName;
-        string eventName = !string.IsNullOrEmpty(w.displayName) ? w.displayName : w.wonderId;
+        string eventName = w.LocalizedName;
         return string.IsNullOrEmpty(eventName) ? taskName : $"{eventName} · {taskName}";
     }
 

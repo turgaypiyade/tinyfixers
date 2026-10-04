@@ -109,13 +109,13 @@ public sealed class TeamChatRow : MonoBehaviour
         if (botRequest != null)
         {
             acceptLifeButton.interactable = !botRequest.helped;
-            acceptLifeLabel.text = botRequest.helped ? "Gönderildi" : "Yardım Et";
+            acceptLifeLabel.text = GameLocalization.Get(botRequest.helped ? "team_life_sent" : "team_help_out");
             return;
         }
         if (lifeReply == null) return;
         bool full = LivesManager.Current >= LivesManager.MaxLives;
         acceptLifeButton.interactable = !lifeReply.accepted && !full;
-        acceptLifeLabel.text = lifeReply.accepted ? "Alındı" : full ? "Can Dolu" : "Kabul Et";
+        acceptLifeLabel.text = GameLocalization.Get(lifeReply.accepted ? "team_life_received" : full ? "team_lives_full_short" : "team_accept");
     }
 
     public void Bind(TeamChatMessage m, UITheme theme)

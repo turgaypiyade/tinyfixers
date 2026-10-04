@@ -6,9 +6,9 @@ public class LevelRuntimeSelector : MonoBehaviour
     [SerializeField] private LevelCatalog levelCatalog;
 
     [Header("Test Progression")]
+    [Tooltip("Açık: oyuncunun ilerlemesindeki level (CurrentLevel.Global — ana menüyle AYNI kaynak, yeni " +
+             "kurulumda 1). Kapalı: aşağıdaki Input seçimi (yalnız test).")]
     [SerializeField] private bool usePlayerPrefsLevel = true;
-    [SerializeField] private string prefsLevelKey = "current_level";
-    [SerializeField, Min(1)] private int prefsDefaultLevel = 1;
 
     [Header("Input")]
     [SerializeField] private bool useLevelKey;
@@ -29,7 +29,10 @@ public class LevelRuntimeSelector : MonoBehaviour
 
         if (usePlayerPrefsLevel)
         {
-            int selectedLevel = Mathf.Max(1, PlayerPrefs.GetInt(prefsLevelKey, prefsDefaultLevel));
+            // Tek kaynak: ana menü / pre-level popup / hedef gösterimi de CurrentLevel.Global okur.
+            // Eskiden burada ayrı bir Inspector varsayılanı vardı (sahnede 22 kalmıştı) → yeni kurulumda
+            // ana menü "Seviye 1" gösterirken oyun 22. level'ı (LevelP_00240) açıyordu.
+            int selectedLevel = CurrentLevel.Global;
 
             Debug.Log($"[LevelRuntimeSelector] Loading from PlayerPrefs. Chapter={chapter}, Level={selectedLevel}");
 

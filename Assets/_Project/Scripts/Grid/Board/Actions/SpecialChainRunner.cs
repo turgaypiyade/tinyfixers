@@ -428,14 +428,15 @@ public sealed class SpecialChainRunner : BoardAction
             if (obstacles != null && obstacles.HasObstacleAt(x, y))
             {
                 bool magnet = obstacles.GetObstacleIdAt(x, y) == ObstacleId.Magnet;
+                bool perCell = obstacles.TakesPerCellHits(x, y);
                 int origin = obstacles.GetObstacleOriginAt(x, y);
                 if ((!magnet || obstacles.IsMagnetEndpoint(x, y))
-                    && (magnet || origin < 0 || !hitObstacleOrigins.Contains(origin)))
+                    && (perCell || origin < 0 || !hitObstacleOrigins.Contains(origin)))
                 {
                     var hit = board.ApplyObstacleDamageAt(x, y, ObstacleHitContext.Booster);
                     if (hit.didHit)
                     {
-                        if (!magnet && origin >= 0) hitObstacleOrigins.Add(origin);
+                        if (!perCell && origin >= 0) hitObstacleOrigins.Add(origin);
                         board.TriggerObstacleVisualChange(hit.visualChange);
                     }
                 }
@@ -581,13 +582,13 @@ public sealed class SpecialChainRunner : BoardAction
         // Çok hücreli obstacle (Wardrobe, ColorChest, Safe...) TEK parçadır: hücreleri farklı
         // halkalara düşünce her halka ayrı MatchClearAction olduğundan BoardAnimator'ın
         // action-içi origin dedup'ı aşılıyor ve obstacle iki hit alıyordu. Origin başına
-        // yalnız dalganın İLK vardığı hücre tutulur. Magnet muaf (iki ucu bağımsız vurulur).
+        // yalnız dalganın İLK vardığı hücre tutulur. Hücre başına vuruş alanlar muaf (TakesPerCellHits: magnet, duvar).
         var obstacles = board.ObstacleStateService;
         var originRing = new Dictionary<int, (int ring, Vector2Int cell)>();
         if (obstacles != null)
             foreach (var c in impactCells)
             {
-                if (obstacles.GetObstacleIdAt(c.x, c.y) == ObstacleId.Magnet) continue;
+                if (obstacles.TakesPerCellHits(c.x, c.y)) continue;
                 int origin = obstacles.GetObstacleOriginAt(c.x, c.y);
                 if (origin < 0) continue;
                 int d = Mathf.Max(0, ringOf(c));
@@ -598,7 +599,7 @@ public sealed class SpecialChainRunner : BoardAction
         var ringImpacts = new Dictionary<int, List<Vector2Int>>();
         foreach (var c in impactCells)
         {
-            if (obstacles != null && obstacles.GetObstacleIdAt(c.x, c.y) != ObstacleId.Magnet)
+            if (obstacles != null && !obstacles.TakesPerCellHits(c.x, c.y))
             {
                 int origin = obstacles.GetObstacleOriginAt(c.x, c.y);
                 if (origin >= 0 && originRing.TryGetValue(origin, out var owner) && owner.cell != c)
