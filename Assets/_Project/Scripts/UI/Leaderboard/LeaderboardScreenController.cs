@@ -82,6 +82,8 @@ public sealed class LeaderboardScreenController : MonoBehaviour
         service.OnChanged += Render;
         FriendState.OnChanged += OnFriendsChanged;
         WireTabs();
+        ScreenTitleStyle.ApplyToScreen(transform, theme != null ? theme.headingFont : null);
+        SocialBackdrop.ApplyToScreen(transform);
         Build(current);
     }
 
@@ -118,8 +120,32 @@ public sealed class LeaderboardScreenController : MonoBehaviour
 
         if (findFriendButton != null && findFriendPopup != null)
             findFriendButton.onClick.AddListener(findFriendPopup.Open);
+        UiButtons.Apply(findFriendButton, UiButtons.Kind.Green);
 
+        ApplyTogglePillLayout();
         wired = true;
+    }
+
+    // Alt-toggle hapları (Dünya/Ülke, Liste/Ekle) skin'deki boyuttan runtime'da kurulur — sahnedeki
+    // eski küçük haplar (mockup üretimi) yeniden üretim gerekmeden büyür; yazı büyük ve tek satır.
+    private void ApplyTogglePillLayout()
+    {
+        if (skin == null) return;
+        for (int i = 0; i < toggleButtons.Length; i++)
+        {
+            if (toggleButtons[i] == null) continue;
+            var rt = (RectTransform)toggleButtons[i].transform;
+            rt.sizeDelta = skin.togglePillSize;
+            rt.anchoredPosition = new Vector2(i == 0 ? -skin.togglePillSpread : skin.togglePillSpread,
+                rt.anchoredPosition.y);
+
+            var label = i < toggleLabels.Length ? toggleLabels[i] : null;
+            if (label == null) continue;
+            label.enableAutoSizing = true;
+            label.fontSizeMax = skin.togglePillFontSize;
+            label.fontSizeMin = skin.togglePillFontSize * 0.6f;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+        }
     }
 
     private int CurrentSubFilter
@@ -385,6 +411,15 @@ public sealed class LeaderboardScreenController : MonoBehaviour
             var bg = toggleBackgrounds[i];
             if (bg == null) continue;
 
+            // Ortak buton ailesi varsa: seçili turuncu, diğeri mor (yazı beyaz + konturlu).
+            if (UiButtons.SpriteOf(UiButtons.Kind.Orange) != null)
+            {
+                var kind = selected ? UiButtons.Kind.Orange : UiButtons.Kind.Purple;
+                UiButtons.Apply(bg, kind);
+                if (toggleLabels[i] != null) UiButtons.StyleLabel(toggleLabels[i], kind);
+                continue;
+            }
+
             Sprite s = selected
                 ? (skin != null ? skin.togglePillSelected : null)
                 : (skin != null ? skin.togglePillUnselected : null);
@@ -441,6 +476,13 @@ public sealed class LeaderboardScreenController : MonoBehaviour
     private void EnsureAvatar(LeaderboardEntry entry)
     {
         if (entry == null || entry.avatar != null) return;
+
+        // Takım sekmesi: hayvan avatarı değil, takım amblemi (kalkan).
+        if (current == LeaderboardTab.Team)
+        {
+            var emblem = TeamEmblemLibrary.ForName(entry.playerName);
+            if (emblem != null) { entry.avatar = emblem; return; }
+        }
 
         // Kendi satırın → ProfileScreen'de SEÇTİĞİN avatar (rastgele havuz değil).
         if (entry.isSelf)

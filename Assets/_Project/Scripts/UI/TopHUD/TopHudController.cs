@@ -268,7 +268,10 @@ public class TopHudController : MonoBehaviour
             return null;
 
         var slot = Instantiate(goalSlotPrefab, goalsRoot);
-        slot.Setup(ResolveGoalIcon(goal, goalIndex), goal.amount, ShouldUseLargeGoalIcon(goal));
+        bool large = ShouldUseLargeGoalIcon(goal);
+        slot.Setup(ResolveGoalIcon(goal, goalIndex), goal.amount, large);
+        // Oyun içi hedef: ikon ve sayı büyük, sayı net (prefab Level öncesi pencereyle ortak → orada değişmez).
+        slot.ApplyHudStyle(large ? new Vector2(100f, 100f) : new Vector2(90f, 90f), 46f);
         return slot;
     }
 

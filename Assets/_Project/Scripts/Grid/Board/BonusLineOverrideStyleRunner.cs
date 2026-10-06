@@ -27,7 +27,6 @@ public static class BonusLineOverrideStyleRunner
             yield break;
 
         var activations = CollectActivations(board, placements);
-        Debug.Log($"[BonusDebug] gate2 Run placements={placements.Count} activations={activations.Count}");
         if (activations.Count == 0)
             yield break;
 
@@ -237,7 +236,6 @@ public static class BonusLineOverrideStyleRunner
         if (impactDelta > 0)
             deltaImpacts = ctx.ImpactCells.GetRange(before.ImpactCount, impactDelta);
 
-        Debug.Log($"[BonusDebug] gate3 delta tiles={deltaTiles.Count} strikes={(deltaStrikes != null ? deltaStrikes.Count : 0)} ctxAffected={ctx.Affected.Count} ctxStrikes={ctx.LightningLineStrikes.Count}");
         if (deltaTiles.Count == 0)
             return new ClearPayload(null, null, null);
 

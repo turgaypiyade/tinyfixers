@@ -60,6 +60,8 @@ public sealed class TeamScreenController : MonoBehaviour
     private void OnEnable()
     {
         WireButtons();
+        ScreenTitleStyle.ApplyToScreen(transform, theme != null ? theme.headingFont : null);
+        SocialBackdrop.ApplyToScreen(transform);
         LivesTimerService.EnsureExists();
         LivesManager.OnLivesChanged += RefreshLifeControls;
         if (messageInputRoot != null) messageInputRoot.SetActive(false);
@@ -118,39 +120,64 @@ public sealed class TeamScreenController : MonoBehaviour
         if (messagePostButton != null) messagePostButton.onClick.AddListener(OnPostMessage);
         if (messageInput != null)      messageInput.onSubmit.AddListener(_ => OnPostMessage());
 
-        if (leaveButton == null) leaveButton = BuildLeaveButton();
-        if (leaveButton != null) leaveButton.onClick.AddListener(OnLeaveClicked);
+        // Ayrılmak gibi geri dönüşsüz işlem başlıkta kırmızı durmaz: başlıkta yalnız "Takım Bilgisi"
+        // (i) ikonu var; "Ayrıl" onun penceresinin içinde (RM düzeni).
+        if (leaveButton == null) leaveButton = BuildInfoButton();
+        if (leaveButton != null) leaveButton.onClick.AddListener(ShowTeamInfo);
+
+        StyleBottomButtons();
         wired = true;
     }
 
-    // Header sağ-üstüne runtime "Ayrıl" butonu (serialized leaveButton yoksa).
-    private Button BuildLeaveButton()
+    // Alt butonlar: büyük, ikonlu (kalp / konuşma balonu); geri sayım ikinci satırda küçük.
+    private void StyleBottomButtons()
+    {
+        UiButtons.Apply(requestLifeButton, UiButtons.Kind.Green);
+        UiButtons.Apply(messageButton, UiButtons.Kind.Blue);
+        UiButtons.Apply(messagePostButton, UiButtons.Kind.Green);
+        UiIcons.SetLeadingIcon(requestLifeButton, UiIcons.Heart);
+        UiIcons.SetLeadingIcon(messageButton, UiIcons.Chat);
+
+        var bar = requestLifeButton != null ? requestLifeButton.transform.parent : null;
+        if (bar != null && bar.TryGetComponent(out HorizontalLayoutGroup h))
+        {
+            h.padding = new RectOffset(24, 24, 6, 6);
+            h.spacing = 24f;
+            h.childControlWidth = h.childControlHeight = true;
+            h.childForceExpandWidth = h.childForceExpandHeight = true;
+        }
+    }
+
+    // Başlığın sağında yuvarlak (i) ikonu → takım bilgisi penceresi.
+    private Button BuildInfoButton()
     {
         var parent = inTeamRoot != null ? inTeamRoot.transform : transform;
-        var go = new GameObject("LeaveTeamButton", typeof(RectTransform));
+        var go = new GameObject("TeamInfoButton", typeof(RectTransform));
         go.transform.SetParent(parent, false);
         go.layer = gameObject.layer;
         var rt = (RectTransform)go.transform;
         rt.anchorMin = rt.anchorMax = new Vector2(1, 1); rt.pivot = new Vector2(1, 1);
-        rt.anchoredPosition = new Vector2(-16, -16); rt.sizeDelta = new Vector2(92, 92);
+        rt.anchoredPosition = new Vector2(-20, -18); rt.sizeDelta = new Vector2(88, 88);
         var img = go.AddComponent<Image>();
-        ApplyButtonImage(img, leaveRedSquareButtonSprite, new Color(0.75f, 0.25f, 0.25f));
+        img.sprite = UiIcons.Info;
+        img.preserveAspect = true;
+        if (img.sprite == null) ApplyButtonImage(img, leaveRedSquareButtonSprite, new Color(0.25f, 0.45f, 0.85f));
         var btn = go.AddComponent<Button>();
         btn.targetGraphic = img;
-        var txtGo = new GameObject("Label", typeof(RectTransform));
-        txtGo.transform.SetParent(go.transform, false);
-        txtGo.layer = gameObject.layer;
-        var trt = (RectTransform)txtGo.transform;
-        trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one; trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
-        var txt = txtGo.AddComponent<TextMeshProUGUI>();
-        txt.text = GameLocalization.Get("team_leave"); txt.fontSize = 24; txt.fontStyle = FontStyles.Bold;
-        txt.alignment = TextAlignmentOptions.Center; txt.color = Color.white;
         return btn;
     }
 
-    // ── Takımdan ayrıl (onaylı) ─────────────────────────────────────
+    private void ShowTeamInfo()
+    {
+        var info = service?.GetTeamInfo();
+        string title = info != null && !string.IsNullOrEmpty(info.teamName) ? info.teamName : GameLocalization.Get("team_info_title");
+        string body = info != null ? GameLocalization.Get("team_capacity") + ": " + info.MemberLabel : "";
+        RuntimeChoicePopup.Show(title, body,
+            new RuntimeChoicePopup.Choice(GameLocalization.Get("team_leave"), () => { if (this != null) ShowLeaveConfirm(); }),
+            new RuntimeChoicePopup.Choice(GameLocalization.Get("common_close"), null, primary: true));
+    }
 
-    private void OnLeaveClicked() => ShowLeaveConfirm();
+    // ── Takımdan ayrıl (onaylı) ─────────────────────────────────────
 
     private void ShowLeaveConfirm()
     {
@@ -298,7 +325,7 @@ public sealed class TeamScreenController : MonoBehaviour
                 : inbox != null && inbox.Pending > 0 ? GameLocalization.Get("team_lives_ready")
                 : inbox != null && inbox.IsWaiting ? GameLocalization.Get("team_lives_waiting")
                 : lockLeft > System.TimeSpan.Zero
-                    ? $"{defaultRequestLifeLabel} {(int)lockLeft.TotalHours:00}:{lockLeft.Minutes:00}:{lockLeft.Seconds:00}"
+                    ? $"{defaultRequestLifeLabel}\n<size=70%>{(int)lockLeft.TotalHours:00}:{lockLeft.Minutes:00}:{lockLeft.Seconds:00}</size>"
                 : defaultRequestLifeLabel;
         foreach (var row in lifeReplyRows)
             if (row != null) row.RefreshLifeReply();

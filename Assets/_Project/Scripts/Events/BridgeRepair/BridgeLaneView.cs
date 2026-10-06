@@ -180,29 +180,50 @@ public sealed class BridgeLaneView : MonoBehaviour
             : p0 + metrics.tagOffset;
 
         bool me = contestant.isPlayer;
-        var pill = BridgeRepairUI.Rect($"Tag{contestant.lane}", parent, new Vector2(230f, 62f), Vector2.zero);
-        pill.localPosition = local;
+        // Etiket büyütüldü (230x62 → 270x76); SOL kenar aynı yerde kalsın diye merkez sağa kayar
+        // (karakterin başıyla çakışmasın).
+        const float tagW = 270f, tagH = 76f;
+        var pill = BridgeRepairUI.Rect($"Tag{contestant.lane}", parent, new Vector2(tagW, tagH), Vector2.zero);
+        pill.localPosition = local + new Vector2((tagW - 230f) * 0.5f, 0f);
         var bg = pill.gameObject.AddComponent<Image>();
         bg.sprite = BridgeRepairUI.Pill();
         bg.type = Image.Type.Sliced;
-        bg.color = me ? new Color(1f, 0.78f, 0.2f, 0.96f) : new Color(0.06f, 0.16f, 0.3f, 0.82f);
+        // Oyuncunun balonu da botlarınkiyle AYNI (kullanıcı); kim olduğu "SEN" yazısından anlaşılır.
+        bg.color = new Color(0.06f, 0.16f, 0.3f, 0.88f);
         bg.raycastTarget = false;
 
-        BridgeRepairUI.Avatar("Avatar", pill, contestant.avatar, 58f, new Vector2(-84f, 0f),
-            me ? new Color(1f, 0.95f, 0.75f) : new Color(0.85f, 0.9f, 1f));
+        BridgeRepairUI.Avatar("Avatar", pill, contestant.avatar, 70f, new Vector2(-tagW * 0.5f + 42f, 0f),
+            new Color(0.85f, 0.9f, 1f));
 
+        float textX = -tagW * 0.5f + 84f + 92f;   // avatarın sağından başlayan 184px'lik yazı kutusunun merkezi
         string name = me ? BridgeRepairUI.L("bridge_you", "SEN") : contestant.displayName;
-        var nameText = BridgeRepairUI.Label("Name", pill, name, 22f, new Vector2(150f, 28f), new Vector2(26f, 12f),
-            me ? BridgeRepairUI.Ink : BridgeRepairUI.Cream, rewardStyle: false);
-        nameText.alignment = TextAlignmentOptions.Left;
-        nameText.outlineWidth = me ? 0f : 0.18f;
-        nameText.textWrappingMode = TextWrappingModes.NoWrap;
-        nameText.overflowMode = TextOverflowModes.Ellipsis;
+        TagText("Name", pill, name, 29f, new Vector2(184f, 36f), new Vector2(textX, 15f), BridgeRepairUI.Cream);
+        progressText = TagText("Progress", pill, "", 26f, new Vector2(184f, 30f), new Vector2(textX, -18f),
+            BridgeRepairUI.Gold);
+    }
 
-        progressText = BridgeRepairUI.Label("Progress", pill, "", 22f, new Vector2(150f, 26f), new Vector2(26f, -14f),
-            me ? new Color(0.35f, 0.16f, 0.02f) : BridgeRepairUI.Gold, rewardStyle: false);
-        progressText.alignment = TextAlignmentOptions.Left;
-        progressText.outlineWidth = me ? 0f : 0.18f;
+    // Etiket yazısı: oyunun kalın UI fontu + net materyal; koyu zeminde ince koyu kontur, sarı (benim)
+    // zeminde kontursuz. Yazı BAŞTAN doğru fontla kurulur: BridgeRepairUI.Label konturu hemen verdiği için
+    // TMP varsayılan fontuyla materyal kopyası oluşuyordu; font sonradan değişince kontur o eski kopyaya
+    // dönüp Inter harflerini yanlış atlastan çiziyordu (bozuk karakterler).
+    private static TMP_Text TagText(string name, RectTransform parent, string value, float size, Vector2 box,
+        Vector2 position, Color color)
+    {
+        var text = BridgeRepairUI.Rect(name, parent, box, position).gameObject.AddComponent<TextMeshProUGUI>();
+        var style = RewardTextStyle.Shared;
+        if (style != null && style.font != null) text.font = style.font;
+        CrispTextMaterial.Apply(text);
+        text.text = value;
+        text.raycastTarget = false;
+        text.color = color;
+        text.fontSize = text.fontSizeMax = size;
+        text.fontSizeMin = size * 0.6f;
+        text.enableAutoSizing = true;
+        text.alignment = TextAlignmentOptions.Left;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
+        text.overflowMode = TextOverflowModes.Ellipsis;
+        TmpOutline.Apply(text, 0.16f, BridgeRepairUI.Ink);
+        return text;
     }
 
     // ── İlerleme ─────────────────────────────────────────────────

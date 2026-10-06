@@ -74,6 +74,7 @@ public sealed class JourneyScreenController : MonoBehaviour
     private void OnEnable()
     {
         WonderProgress.OnBackgroundChanged += RefreshUseButtons;
+        ScreenTitleStyle.ApplyToScreen(transform, theme != null ? theme.headingFont : null);   // Journey / Ranks / Team başlıkları aynı font + konum
         Build();
     }
 

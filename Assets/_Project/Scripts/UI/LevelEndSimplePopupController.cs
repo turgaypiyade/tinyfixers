@@ -1294,6 +1294,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             failContinueText.text = LocalizedText("level_end_exit", "Çık");
             failContinueText.color = abandonExitTextColor;
         }
+        ApplyAbandonStyle();
 
         failSecondStage = true;   // buton dalları _abandonWarning ile zaten intercept ediyor
         transform.SetAsLastSibling();
@@ -1343,6 +1344,85 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         if (_failContinueColorCaptured && failContinueText != null)
             failContinueText.color = _failContinueOriginalColor;
+        RestoreAbandonStyle();
+    }
+
+    // ── "Oyundan Çık" uyarısının görünümü (yalnız bu modda; normal fail ekranı değişmez) ──
+    // Yıkıcı eylem → kırmızı buton; "Çık" büyük, beyaz, koyu konturlu; "Bir can kaybedeceksin" net
+    // (fontun yumuşak konturlu materyali buğulu duruyordu) ve biraz büyük.
+    private const float AbandonButtonTextScale = 1.4f;
+    private const float AbandonMessageTextScale = 1.2f;
+    private bool _abandonStyleCaptured;
+    private Image _continueBg;
+    private Sprite _continueBgSprite;
+    private Image.Type _continueBgType;
+    private Color _continueBgColor;
+    private float _continueBgPpu;
+    private float _continueFontSize, _messageFontSize;
+    private Material _continueTextMat, _messageTextMat;
+
+    private void ApplyAbandonStyle()
+    {
+        if (!_abandonStyleCaptured)
+        {
+            _continueBg = buyMovesButton != null ? buyMovesButton.targetGraphic as Image : null;
+            if (_continueBg != null)
+            {
+                _continueBgSprite = _continueBg.sprite;
+                _continueBgType = _continueBg.type;
+                _continueBgColor = _continueBg.color;
+                _continueBgPpu = _continueBg.pixelsPerUnitMultiplier;
+            }
+            if (failContinueText != null) { _continueFontSize = failContinueText.fontSize; _continueTextMat = failContinueText.fontSharedMaterial; }
+            if (failMessageText != null) { _messageFontSize = failMessageText.fontSize; _messageTextMat = failMessageText.fontSharedMaterial; }
+            _abandonStyleCaptured = true;
+        }
+
+        // Kırmızı çıkış butonu: yeşil butonla AYNI kalıp/oran (GreenButonwoStroke ↔ Btn_ExitRed) →
+        // yalnız sprite değişir, çizim tipi/ölçeği aynı kalır, altın çerçeveye birebir oturur.
+        var exitRed = Resources.Load<Sprite>("UIButtons/Btn_ExitRed");
+        if (_continueBg != null && exitRed != null)
+        {
+            _continueBg.sprite = exitRed;
+            _continueBg.color = Color.white;
+        }
+        if (failContinueText != null)
+        {
+            failContinueText.fontSize = _continueFontSize * AbandonButtonTextScale;
+            if (failContinueText.enableAutoSizing) failContinueText.fontSizeMax = failContinueText.fontSize;
+            UiButtons.StyleLabel(failContinueText, UiButtons.Kind.Red);
+        }
+        if (failMessageText != null)
+        {
+            CrispTextMaterial.Apply(failMessageText);
+            failMessageText.fontSize = _messageFontSize * AbandonMessageTextScale;
+            if (failMessageText.enableAutoSizing) failMessageText.fontSizeMax = failMessageText.fontSize;
+        }
+    }
+
+    private void RestoreAbandonStyle()
+    {
+        if (!_abandonStyleCaptured) return;
+        if (_continueBg != null)
+        {
+            _continueBg.sprite = _continueBgSprite;
+            _continueBg.type = _continueBgType;
+            _continueBg.color = _continueBgColor;
+            _continueBg.pixelsPerUnitMultiplier = _continueBgPpu;
+        }
+        if (failContinueText != null)
+        {
+            failContinueText.fontSize = _continueFontSize;
+            if (failContinueText.enableAutoSizing) failContinueText.fontSizeMax = _continueFontSize;
+            if (failContinueText.TryGetComponent(out TmpOutline o)) DestroyImmediate(o);
+            if (_continueTextMat != null) failContinueText.fontSharedMaterial = _continueTextMat;
+        }
+        if (failMessageText != null)
+        {
+            failMessageText.fontSize = _messageFontSize;
+            if (failMessageText.enableAutoSizing) failMessageText.fontSizeMax = _messageFontSize;
+            if (_messageTextMat != null) failMessageText.fontSharedMaterial = _messageTextMat;
+        }
     }
 
     // Abandon uyarısında büyütülen hamle-ikonunu (kırık kalp) orijinal ölçeğine döndür.
@@ -2182,7 +2262,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private void RefreshFailWalletBalance(int amount)
     {
         if (failWalletBalanceText != null && failWalletBalanceRoot != null && failWalletBalanceRoot.activeInHierarchy)
+        {
             failWalletBalanceText.text = amount.ToString();
+            LayoutFailWalletBalance();   // basamak sayısı değişince kutu genişliği güncellensin
+        }
     }
 
     private void EnsureFailWalletBalance()
@@ -2221,6 +2304,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
         ConfigureFailWalletBalanceVisuals();
     }
 
+    private const float FailWalletTextGap = 8f;        // ikon kenarı ile ilk rakam arası
+    private const float FailWalletTextRightPad = 20f;  // son rakam ile kutunun yuvarlak ucu arası
+
     private void LayoutFailWalletBalance()
     {
         if (failWalletBalanceRoot == null)
@@ -2230,6 +2316,17 @@ public class LevelEndSimplePopupController : MonoBehaviour
         float backgroundWidth = CalculateSpriteWidth(failWalletBalanceBackgroundSprite, backgroundHeight);
         float iconSize = Mathf.Max(1f, failWalletBalanceIconSize);
         float overlap = Mathf.Max(0f, failWalletBalanceIconOverlap);
+
+        // Yazı, kutunun ikonun ALTINDA kalan kısmından sonra başlar (altın bilerek kutunun üstüne
+        // biniyor); kutu sayının uzunluğuna göre sağa uzar → 34568 gibi büyük bakiye ikonun altına girmez.
+        float textLeft = overlap + FailWalletTextGap;
+        if (failWalletBalanceText != null)
+        {
+            float needed = textLeft + FailWalletTextRightPad
+                + failWalletBalanceText.GetPreferredValues(failWalletBalanceText.text,
+                    float.PositiveInfinity, backgroundHeight).x;
+            backgroundWidth = Mathf.Max(backgroundWidth, needed);
+        }
 
         var rootRect = failWalletBalanceRoot.GetComponent<RectTransform>();
         rootRect.anchorMin = new Vector2(0f, 1f);
@@ -2264,8 +2361,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
             var textRect = failWalletBalanceText.rectTransform;
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = new Vector2(14f, 8f);
-            textRect.offsetMax = new Vector2(-22f, -8f);
+            textRect.offsetMin = new Vector2(textLeft, 8f);
+            textRect.offsetMax = new Vector2(-FailWalletTextRightPad, -8f);
             textRect.pivot = new Vector2(0.5f, 0.5f);
         }
     }
@@ -2285,6 +2382,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
             failWalletBalanceBackground.sprite = failWalletBalanceBackgroundSprite;
             failWalletBalanceBackground.enabled = failWalletBalanceBackgroundSprite != null;
             failWalletBalanceBackground.preserveAspect = false;
+            // Uzayan kutu: yuvarlak uçlar korunsun (EndChipBG'de yatay 9-slice kenarı var).
+            failWalletBalanceBackground.type = failWalletBalanceBackgroundSprite != null
+                && failWalletBalanceBackgroundSprite.border.sqrMagnitude > 0f ? Image.Type.Sliced : Image.Type.Simple;
         }
 
         if (failWalletBalanceText != null)

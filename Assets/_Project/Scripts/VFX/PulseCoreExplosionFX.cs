@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -334,6 +335,21 @@ public class PulseCoreExplosionFX : MonoBehaviour
             ApplyRadialBlurShadows(sunburstRays, ref raysShadows, raysColor, raysBlurSpread);
     }
 
+    private static bool HasAllShadows(Shadow[] shadows, int count)
+    {
+        if (shadows == null || shadows.Length != count) return false;
+        for (int i = 0; i < shadows.Length; i++)
+            if (shadows[i] == null) return false;
+        return true;
+    }
+
+    private void DestroyShadows(Shadow[] shadows)
+    {
+        if (shadows == null) return;
+        for (int i = 0; i < shadows.Length; i++)
+            if (shadows[i] != null) Destroy(shadows[i]);
+    }
+
     private void RemoveOldOutline(Image img)
     {
         if (img == null) return;
@@ -346,17 +362,13 @@ public class PulseCoreExplosionFX : MonoBehaviour
         if (img == null)
             return;
 
-        // Eski shadow'ları temizle
-        if (shadows != null)
+        // Mevcut katmanları YENİDEN KULLAN (her patlamada 4 sil + 4 ekle yerine yalnız değerleri güncelle).
+        bool reuse = HasAllShadows(shadows, BlurLayerCount);
+        if (!reuse)
         {
-            for (int i = 0; i < shadows.Length; i++)
-            {
-                if (shadows[i] != null)
-                    Destroy(shadows[i]);
-            }
+            DestroyShadows(shadows);
+            shadows = new Shadow[BlurLayerCount];
         }
-
-        shadows = new Shadow[BlurLayerCount];
         Color shadowColor = WithAlpha(color, color.a * thicknessAlphaMultiplier);
 
         // Farklı açı ve mesafelerde shadow katmanları oluştur
@@ -366,7 +378,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
         for (int i = 0; i < BlurLayerCount; i++)
         {
-            var shadow = img.gameObject.AddComponent<Shadow>();
+            var shadow = reuse ? shadows[i] : img.gameObject.AddComponent<Shadow>();
             shadow.useGraphicAlpha = true;
 
             float angle = angles[i % angles.Length] * Mathf.Deg2Rad;
@@ -395,22 +407,18 @@ public class PulseCoreExplosionFX : MonoBehaviour
         if (img == null)
             return;
 
-        if (shadows != null)
-        {
-            for (int i = 0; i < shadows.Length; i++)
-            {
-                if (shadows[i] != null)
-                    Destroy(shadows[i]);
-            }
-        }
-
         int layers = Mathf.Max(4, raysBlurLayers);
-        shadows = new Shadow[layers];
+        bool reuse = HasAllShadows(shadows, layers);
+        if (!reuse)
+        {
+            DestroyShadows(shadows);
+            shadows = new Shadow[layers];
+        }
         Color shadowColor = WithAlpha(color, color.a * thicknessAlphaMultiplier);
 
         for (int i = 0; i < layers; i++)
         {
-            var shadow = img.gameObject.AddComponent<Shadow>();
+            var shadow = reuse ? shadows[i] : img.gameObject.AddComponent<Shadow>();
             shadow.useGraphicAlpha = true;
 
             // Her katman farklı açı; yarıçap içten dışa artar → yumuşak degrade
@@ -468,8 +476,32 @@ public class PulseCoreExplosionFX : MonoBehaviour
             Destroy(gameObject);
     }
 
-    private Texture2D noisyGlowTexture; // cleanup için referans
-    private Texture2D proceduralRaysTexture;
+    // ── Prosedürel doku önbelleği ─────────────────────────────────────────
+    // Eskiden HER patlama 256² ışın + 128² halka dokusunu CPU'da piksel piksel (Perlin/atan2/sqrt)
+    // üretip GPU'ya yükleyip sonunda siliyordu → patlama başına ~10-30 ms (iPhone'da kare atlar;
+    // Override+PulseCore'da 15-20 bomba = art arda takılma). Şimdi ayar seti başına birkaç varyant bir
+    // kez üretilir ve rastgele seçilir; ışınlar zaten her patlamada rastgele açıyla döndüğü için
+    // çeşitlilik korunur. İlk VariantsPerKey patlama yine üretir, sonrası bedava.
+    private const int VariantsPerKey = 3;
+    private static readonly Dictionary<string, List<Sprite>> variantCache = new();
+
+    private static Sprite GetOrCreateVariant(string key, System.Func<Texture2D> generate, int size)
+    {
+        if (!variantCache.TryGetValue(key, out var list))
+            variantCache[key] = list = new List<Sprite>(VariantsPerKey);
+        list.RemoveAll(sp => sp == null);   // sahne/oturum değişiminde yok olduysa
+
+        if (list.Count < VariantsPerKey)
+        {
+            var tex = generate();
+            tex.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            var sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+            sprite.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            list.Add(sprite);
+            return sprite;
+        }
+        return list[Random.Range(0, list.Count)];
+    }
 
     private IEnumerator CoPlayExplosion()
     {
@@ -500,17 +532,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
         if (rays != null) StopCoroutine(rays);
         if (ring != null) StopCoroutine(ring);
 
-        // Prosedürel texture temizliği
-        if (noisyGlowTexture != null)
-        {
-            Destroy(noisyGlowTexture);
-            noisyGlowTexture = null;
-        }
-        if (proceduralRaysTexture != null)
-        {
-            Destroy(proceduralRaysTexture);
-            proceduralRaysTexture = null;
-        }
+        // Prosedürel dokular paylaşılan önbellekte (GetOrCreateVariant) → burada SİLİNMEZ.
     }
 
     private void ApplySunburstSprite()
@@ -518,13 +540,8 @@ public class PulseCoreExplosionFX : MonoBehaviour
         if (sunburstRays == null) return;
 
         int size = Mathf.Max(64, rayTexSize);
-        proceduralRaysTexture = GenerateSunburstTexture(size);
-
-        var sprite = Sprite.Create(
-            proceduralRaysTexture,
-            new Rect(0, 0, size, size),
-            new Vector2(0.5f, 0.5f),
-            100f);
+        string key = $"rays:{size}:{rayCount}:{rayThinness}:{raySoftness}:{rayReach}:{rayIrregularity}:{rayIrregFreq}";
+        var sprite = GetOrCreateVariant(key, () => GenerateSunburstTexture(size), size);
 
         sunburstRays.sprite = sprite;
         sunburstRays.type = Image.Type.Simple;
@@ -601,15 +618,8 @@ public class PulseCoreExplosionFX : MonoBehaviour
         if (shockwaveRing == null) return;
 
         int size = Mathf.Max(32, noiseTexSize);
-        float seed = Random.Range(0f, 1000f);
-
-        noisyGlowTexture = GenerateNoisyRingTexture(size, seed);
-
-        var sprite = Sprite.Create(
-            noisyGlowTexture,
-            new Rect(0, 0, size, size),
-            new Vector2(0.5f, 0.5f),
-            100f);
+        string key = $"ring:{size}:{ringThickness}:{noiseAmplitude}:{noiseFrequency}:{edgeSoftness}";
+        var sprite = GetOrCreateVariant(key, () => GenerateNoisyRingTexture(size, Random.Range(0f, 1000f)), size);
 
         shockwaveRing.sprite = sprite;
         shockwaveRing.type = Image.Type.Simple;

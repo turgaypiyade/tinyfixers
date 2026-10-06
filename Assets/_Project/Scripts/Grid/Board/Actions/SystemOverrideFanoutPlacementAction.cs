@@ -992,9 +992,9 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         if (parent == null)
             yield break;
 
-        var rootGo = new GameObject("OverrideLaserSplash", typeof(RectTransform));
+        // Havuzdan (Override+Override combo'da ~70 hedef × 22 parça aynı anda doğup siliniyordu).
+        var rootGo = UiVfxPool.RentRect(LaserRootPoolKey, parent, "OverrideLaserSplash");
         var root = rootGo.GetComponent<RectTransform>();
-        root.SetParent(parent, false);
         root.anchorMin = root.anchorMax = new Vector2(0.5f, 0.5f);
         root.pivot = new Vector2(0.5f, 0.5f);
         root.sizeDelta = Vector2.zero;
@@ -1052,8 +1052,9 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             yield return null;
         }
 
-        if (rootGo != null)
-            Object.Destroy(rootGo);
+        for (int i = 0; i < drops.Count; i++)
+            if (drops[i].Image != null) UiVfxPool.Return(LaserPartPoolKey, drops[i].Image.gameObject, LaserPartPoolMax);
+        if (rootGo != null) UiVfxPool.Return(LaserRootPoolKey, rootGo, LaserRootPoolMax);
     }
 
     private IEnumerator CoPlayOverrideLaserImpact(RectTransform parent, Vector3 worldPos, Color edgeColor)
@@ -1061,9 +1062,8 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         if (parent == null)
             yield break;
 
-        var rootGo = new GameObject("OverrideLaserImpact", typeof(RectTransform));
+        var rootGo = UiVfxPool.RentRect(LaserRootPoolKey, parent, "OverrideLaserImpact");
         var root = rootGo.GetComponent<RectTransform>();
-        root.SetParent(parent, false);
         root.anchorMin = root.anchorMax = new Vector2(0.5f, 0.5f);
         root.pivot = new Vector2(0.5f, 0.5f);
         root.sizeDelta = Vector2.zero;
@@ -1143,22 +1143,29 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             yield return null;
         }
 
-        if (rootGo != null)
-            Object.Destroy(rootGo);
+        if (flash != null) UiVfxPool.Return(LaserPartPoolKey, flash.gameObject, LaserPartPoolMax);
+        if (core != null) UiVfxPool.Return(LaserPartPoolKey, core.gameObject, LaserPartPoolMax);
+        for (int i = 0; i < shards.Count; i++)
+            if (shards[i].Image != null) UiVfxPool.Return(LaserPartPoolKey, shards[i].Image.gameObject, LaserPartPoolMax);
+        if (rootGo != null) UiVfxPool.Return(LaserRootPoolKey, rootGo, LaserRootPoolMax);
     }
+
+    private const string LaserRootPoolKey = "OverrideLaserRoot";
+    private const string LaserPartPoolKey = "OverrideLaserPart";
+    private const int LaserRootPoolMax = 160;
+    private const int LaserPartPoolMax = 1024;   // combo'da tahta boyu hedef × ~20 parça
 
     private static Image CreateLaserImpactImage(RectTransform parent, string name, Color color, float size)
     {
-        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        var rt = go.GetComponent<RectTransform>();
-        rt.SetParent(parent, false);
+        var image = UiVfxPool.RentImage(LaserPartPoolKey, parent, name);
+        var rt = image.rectTransform;
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = Vector2.zero;
         rt.sizeDelta = new Vector2(size, size);
         rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
 
-        var image = go.GetComponent<Image>();
         image.sprite = GetLaserImpactSprite();
         image.color = color;
         image.raycastTarget = false;

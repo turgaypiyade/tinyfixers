@@ -62,6 +62,8 @@ public sealed class LeaderboardSkin : ScriptableObject
     public Sprite capacityChip;
     [Tooltip("Puan/kupa çipi arka planı (oyuncular sekmesi skoru).")]
     public Sprite trophyChip;
+    [Tooltip("Puanın solundaki kupa ikonu (atanınca 'Puan' etiketi yerine kupa + sayı).")]
+    public Sprite trophyIcon;
     [Tooltip("Haftalık 'Yarışma' başlık bandı (bordo).")]
     public Sprite weeklyHeaderBand;
 
@@ -113,11 +115,31 @@ public sealed class LeaderboardSkin : ScriptableObject
     [Tooltip("Toggle haplarının boyutu ve merkezlerinin ekran ortasından uzaklığı.")]
     public Vector2 togglePillSize = new Vector2(340f, 62f);
     public float togglePillSpread = 190f;
+    [Tooltip("Toggle hap yazısının en büyük boyutu (uzun ülke adlarında otomatik küçülür).")]
+    public float togglePillFontSize = 38f;
 
     [Header("Yerleşim — Satır (px)")]
     public float rowHeight = 120f;
-    [Tooltip("HAFTALIK sekmesinde top-3 kartlarının yüksekliği (RM'deki büyük kartlar).")]
+    [Tooltip("İlk 3 (kürsü) kartlarının yüksekliği — Haftalık, Oyuncular ve Takım sekmeleri.")]
     public float weeklyTopThreeRowHeight = 200f;
+    [Tooltip("Kürsü satırında madalya ve avatar boyutu.")]
+    public float podiumBadgeSize = 116f;
+    public float podiumAvatarSize = 140f;
+
+    [Header("Renkler (sprite ile ÇARPILIR — krem görsel bu tonlara boyanır)")]
+    [Tooltip("1., 2., 3. kürsü kartlarının tonu: altın sarısı / gümüş-mavi / bronz-şeftali.")]
+    public Color podiumTint1 = new Color(1.00f, 0.88f, 0.42f, 1f);
+    public Color podiumTint2 = new Color(0.80f, 0.90f, 1.00f, 1f);
+    public Color podiumTint3 = new Color(1.00f, 0.74f, 0.52f, 1f);
+    [Tooltip("4. ve sonraki satırların tonu (beyaz = görselin kendi rengi).")]
+    public Color rowTint = Color.white;
+
+    public Color PodiumTint(int rank) => rank switch
+    {
+        1 => podiumTint1,
+        2 => podiumTint2,
+        _ => podiumTint3,
+    };
     [Tooltip("Haftalık top-3 kartındaki hediye kutusu boyutu.")]
     public float giftIconSize = 96f;
     public float rankBadgeSize = 72f;

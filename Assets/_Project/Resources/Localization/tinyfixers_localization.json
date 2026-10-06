@@ -257,6 +257,10 @@
           "value": "Katıl"
         },
         {
+          "key": "team_view",
+          "value": "Göster"
+        },
+        {
           "key": "journey_background_in_use",
           "value": "Kullanılıyor"
         },
@@ -710,7 +714,7 @@
         },
         {
           "key": "hint_obstacle_spreadinggel",
-          "value": "Jelin üstündeki taşı kaydırınca veya orada özel taş patlatınca jel yayılır. Hedef: alanı jelle kapla."
+          "value": "Jel, üstündeki taşa bulaşır. Bulaşan taşla eşleşme yap: eşleşen tüm taşlar bulaşır ve kırıldıkları her yer jelle kaplanır. Jelin üstünde patlayan özel taş da kırdığı her yere jel yayar. Tüm alanı jelle kapla!"
         },
         {
           "key": "hint_obstacle_spreadinggel_name",
@@ -1383,6 +1387,10 @@
         {
           "key": "team_lives_full_short",
           "value": "Can Dolu"
+        },
+        {
+          "key": "lives_full",
+          "value": "Dolu"
         },
         {
           "key": "team_accept",
@@ -2271,6 +2279,22 @@
         {
           "key": "safari_join_rules",
           "value": "{0} kat · her seviyeyi ilk denemede geç"
+        },
+        {
+          "key": "hint_obstacle_toolthreat_name",
+          "value": "Alet Tehdidi"
+        },
+        {
+          "key": "hint_obstacle_toolthreat",
+          "value": "Düşman bu aleti tahtaya fırlatır! Üstündeki sayı her düşman turunda azalır. Sayı bitmeden özel taşla kır. Kıramazsan alet ekranına fırlar: 3 saniye hamle yapamazsın ve düşman yeniden saldırır."
+        },
+        {
+          "key": "hint_obstacle_toolthreat_color_name",
+          "value": "Renkli Alet Tehdidi"
+        },
+        {
+          "key": "hint_obstacle_toolthreat_color",
+          "value": "Düşman bu aleti tahtaya fırlatır! Yanında KENDİ RENGİNDEKİ taşlarla eşleşme yap ya da özel taş kullan. Üstündeki sayı her düşman turunda azalır. Sayı bitmeden kıramazsan alet ekranına fırlar: 3 saniye hamle yapamazsın ve düşman yeniden saldırır."
         }
       ]
     },
@@ -2528,6 +2552,10 @@
         {
           "key": "team_join",
           "value": "Join"
+        },
+        {
+          "key": "team_view",
+          "value": "View"
         },
         {
           "key": "journey_background_in_use",
@@ -2975,7 +3003,7 @@
         },
         {
           "key": "hint_obstacle_spreadinggel",
-          "value": "Moving a piece off the gel or blasting a special on it spreads the gel. Goal: cover the area with gel."
+          "value": "Gel sticks to the piece on top of it. Match with a gel-covered piece: every piece in the match gets covered and leaves gel wherever it breaks. A special blasted on gel spreads gel to everything it breaks. Cover the whole area with gel!"
         },
         {
           "key": "hint_obstacle_spreadinggel_name",
@@ -3656,6 +3684,10 @@
         {
           "key": "team_lives_full_short",
           "value": "Lives Full"
+        },
+        {
+          "key": "lives_full",
+          "value": "Full"
         },
         {
           "key": "team_accept",
@@ -4544,6 +4576,22 @@
         {
           "key": "safari_join_rules",
           "value": "{0} floors · beat each level on the first try"
+        },
+        {
+          "key": "hint_obstacle_toolthreat_name",
+          "value": "Tool Threat"
+        },
+        {
+          "key": "hint_obstacle_toolthreat",
+          "value": "The enemy throws this tool onto the board! The number drops every enemy turn. Break it with a special before it runs out. If you don't, the tool flies at your screen: you can't move for 3 seconds and the enemy attacks again."
+        },
+        {
+          "key": "hint_obstacle_toolthreat_color_name",
+          "value": "Colored Tool Threat"
+        },
+        {
+          "key": "hint_obstacle_toolthreat_color",
+          "value": "The enemy throws this tool onto the board! Match pieces of ITS COLOR next to it, or use a special. The number drops every enemy turn. If you don't break it in time, the tool flies at your screen: you can't move for 3 seconds and the enemy attacks again."
         }
       ]
     }

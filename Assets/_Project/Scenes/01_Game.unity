@@ -3555,7 +3555,7 @@ MonoBehaviour:
   m_ChildAlignment: 4
   m_StartCorner: 0
   m_StartAxis: 0
-  m_CellSize: {x: 100, y: 100}
+  m_CellSize: {x: 108, y: 100}
   m_Spacing: {x: 5, y: 2}
   m_Constraint: 1
   m_ConstraintCount: 4
@@ -17459,7 +17459,7 @@ MonoBehaviour:
   levelEndForceTimeoutSeconds: 5
   abandonHeartSprite: {fileID: 21300000, guid: 8c56b5e83511c4217920f6e6e9e164a8, type: 3}
   abandonExitTextColor: {r: 1, g: 1, b: 1, a: 1}
-  abandonHeartScale: 1.25
+  abandonHeartScale: 1.06
   inGameShop:
     panelPrefab: {fileID: 119199642, guid: dea3031cd2924dd593ac75cc6c55849a, type: 3}
     catalog: {fileID: 11400000, guid: 62a940afda3af46a58259ede45ba58c3, type: 2}

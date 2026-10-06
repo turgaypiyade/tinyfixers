@@ -432,4 +432,8 @@ MonoBehaviour:
   - chapter: 1
     level: 105
     levelKey: LevelCL_0105
+    levelData: {fileID: 11400000, guid: b31168b7aae23443f8812e3f90b78642, type: 2}
+  - chapter: 1
+    level: 106
+    levelKey: LevelCL_0106
     levelData: {fileID: 11400000, guid: c4d7ad83b044e4a16a88719faf111c01, type: 2}

@@ -678,9 +678,10 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     {
         if (parentBombRt == null) return;
 
-        var sparkGO = new GameObject("_FuseSpark", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        var sparkRt = sparkGO.GetComponent<RectTransform>();
-        sparkRt.SetParent(parentBombRt, false);
+        // Havuzdan: şarj boyunca ~0.018 sn'de bir kıvılcım doğuyor (bomba başına saniyede 55+);
+        // PulseCore combo/zincirinde birkaç bomba aynı anda → new GameObject/Destroy fırtınası olmasın.
+        var img = UiVfxPool.RentImage(FuseSparkPoolKey, parentBombRt, "_FuseSpark");
+        var sparkRt = img.rectTransform;
         sparkRt.SetAsLastSibling();
 
         float sizeBoost = Mathf.Lerp(1f, 1.4f, chargeProgress);
@@ -689,7 +690,6 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         sparkRt.anchoredPosition = basePos + Random.insideUnitCircle * (spreadRadius * sizeBoost);
         sparkRt.localScale = Vector3.one;
 
-        var img = sparkGO.GetComponent<Image>();
         img.sprite = sprite;
         img.raycastTarget = false;
 
@@ -739,8 +739,11 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         }
 
         if (sparkRt != null)
-            Destroy(sparkRt.gameObject);
+            UiVfxPool.Return(FuseSparkPoolKey, sparkRt.gameObject, FuseSparkPoolMax);
     }
+
+    private const string FuseSparkPoolKey = "PulseFuseSpark";
+    private const int FuseSparkPoolMax = 256;
 
     // ────────────────────────────────────────────────
     //  Utility

@@ -742,7 +742,7 @@ public class BoardController : MonoBehaviour
     private BoardAnimator boardAnimator;
     // Background-job accounting (typed handle/gate). One count slot per BoardJobKind; see BeginJob.
     // Level-end waits on the total (ActiveBackgroundJobs); resolve/input wait only on the Resolve slot.
-    private const int BoardJobKindCount = 10;
+    private const int BoardJobKindCount = 11;
     private readonly int[] _jobCounts = new int[BoardJobKindCount];
     private readonly Stack<System.IDisposable>[] _pairedFlowJobHandles = new Stack<System.IDisposable>[BoardJobKindCount];
     private int _jobEpoch = 0;
@@ -1540,7 +1540,11 @@ public class BoardController : MonoBehaviour
         PresentationFx = 6,  // async: clear-presentation visual effects
         EggBirdFlight = 7,   // async: hatch/split/dive; gravity and match/fall overlap continue
         DetachedFall = 8,    // overlap tail: refill continues, level-end still waits
-        FlowClear = 9        // BoardFlowPump group clear: runs beside other work, level-end waits
+        FlowClear = 9,       // BoardFlowPump group clear: runs beside other work, level-end waits
+        // async: duvar kontrollü yıkım görseli (~1-1.5 sn). Veri anında temizlenir, parça hücreleri
+        // HoldCells ile HÜCRE bazında tutulur (taş girmez) → girdi kapıları bunu SAYMAZ; yalnız
+        // level-end bekler. (ObstacleSpread kullanılıyordu → yıkım boyunca TÜM tahtada hamle reddediliyordu.)
+        ObstacleCollapse = 10
     }
 
     private sealed class BoardJobHandle : System.IDisposable

@@ -25,6 +25,21 @@ public class MainMenuLivesDisplay : MonoBehaviour
     [Tooltip("Kalp değişim animasyonu süresi (saniye).")]
     [SerializeField, Min(0.05f)] private float heartSwapDuration = 0.3f;
 
+    [Header("Yerleşim: kalpte sayı · sağında durum · köşede fazla can")]
+    [Tooltip("Açıkken LivesText kalbin içine, TimerText kalbin sağına taşınır (pozisyonlar aşağıdan, kalbe göre).")]
+    [SerializeField] private bool layoutAroundHeart = true;
+    [Tooltip("Kalp içindeki sayı (en fazla RegenCap = 5; tek hane).")]
+    [SerializeField, Min(8f)] private float heartNumberFontSize = 42f;
+    [SerializeField] private Vector2 heartNumberOffset = new Vector2(0f, 3f);
+    [SerializeField] private Color heartNumberOutline = new Color(0.42f, 0.04f, 0.07f, 1f);
+    [Tooltip("Durum yazısı (Dolu / geri sayım / sonsuz can süresi) merkezinin kalp merkezine göre konumu.")]
+    [SerializeField] private Vector2 statusOffset = new Vector2(100f, 0f);
+    [SerializeField] private Vector2 statusSize = new Vector2(120f, 56f);
+    [SerializeField, Min(8f)] private float statusFontSize = 30f;
+    [Tooltip("RegenCap üstündeki (bedava/hediye/satın alınan) can rozeti merkezinin kalp merkezine göre konumu.")]
+    [SerializeField] private Vector2 extraBadgeOffset = new Vector2(150f, 36f);
+    [SerializeField, Min(8f)] private float extraBadgeSize = 46f;
+
     [Header("Reklam")]
     [SerializeField] private bool simulateAdInEditor = true;
     [SerializeField, Min(0f)] private float simulatedAdDuration = 2f;
@@ -41,12 +56,67 @@ public class MainMenuLivesDisplay : MonoBehaviour
     private Sprite _normalHeartSprite;
     private bool _infiniteActive;
     private Coroutine _heartSwapRoutine;
+    private TMP_Text _extraBadgeText;
 
     private void Awake()
     {
         LivesTimerService.EnsureExists();
         if (heartImage != null)
             _normalHeartSprite = heartImage.sprite;
+        if (layoutAroundHeart)
+            LayoutAroundHeart();
+    }
+
+    // Kalp kutusu (Royal Match düzeni): kalbin içinde dolu can sayısı (en fazla 5 → hep tek hane),
+    // sağında okunur durum yazısı, kutunun sağ üst köşesinde 5'in üstündeki canlar için rozet.
+    private void LayoutAroundHeart()
+    {
+        if (heartImage == null) return;
+        var heart = heartImage.rectTransform;
+        var bar = heart.parent as RectTransform;
+        if (bar == null) return;
+
+        if (livesText != null)
+        {
+            var rt = livesText.rectTransform;
+            rt.SetParent(heart, false);   // kalp animasyonuyla birlikte ölçeklenir
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = heart.sizeDelta;
+            rt.anchoredPosition = heartNumberOffset;
+            livesText.fontSize = heartNumberFontSize;
+            livesText.enableAutoSizing = false;
+            livesText.alignment = TextAlignmentOptions.Center;
+            livesText.textWrappingMode = TextWrappingModes.NoWrap;
+            livesText.raycastTarget = false;
+            // Awake'te yazının TMP kurulumu henüz bitmemiş olabilir → güvenli kontur.
+            TmpOutline.Apply(livesText, 0.22f, heartNumberOutline);
+        }
+
+        if (timerText != null)
+        {
+            var rt = timerText.rectTransform;
+            rt.SetParent(bar, false);
+            rt.anchorMin = heart.anchorMin;
+            rt.anchorMax = heart.anchorMax;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = statusSize;
+            rt.anchoredPosition = heart.anchoredPosition + statusOffset;
+            timerText.enableAutoSizing = true;   // "Dolu" büyük; uzun sonsuz-can süresi sığana dek küçülür
+            timerText.fontSizeMax = statusFontSize;
+            timerText.fontSizeMin = statusFontSize * 0.6f;
+            timerText.alignment = TextAlignmentOptions.Center;
+            timerText.textWrappingMode = TextWrappingModes.NoWrap;
+            timerText.raycastTarget = false;
+        }
+
+        _extraBadgeText = UiBadge.CreateCount(bar, "ExtraLivesBadge", extraBadgeSize,
+            livesText != null ? livesText.font : null);
+        var badge = (RectTransform)_extraBadgeText.transform.parent.parent;
+        badge.anchorMin = heart.anchorMin;
+        badge.anchorMax = heart.anchorMax;
+        badge.anchoredPosition = heart.anchoredPosition + extraBadgeOffset;
+        badge.SetAsLastSibling();
+        badge.gameObject.SetActive(false);
     }
 
     private void OnEnable()
@@ -122,33 +192,44 @@ public class MainMenuLivesDisplay : MonoBehaviour
     private void RefreshDisplay()
     {
         bool livesFree = TimedRewardService.IsLivesFree();
+        int lives = LivesManager.Current;
+        int cap = LivesManager.RegenCapLives;
 
         if (livesText != null)
         {
             livesText.gameObject.SetActive(!livesFree);
+            // Yeni düzende kalp en fazla RegenCap'i gösterir; fazlası köşedeki rozette.
             if (!livesFree)
-                livesText.text = LivesManager.Current.ToString();
+                livesText.text = (layoutAroundHeart ? Mathf.Min(lives, cap) : lives).ToString();
+        }
+
+        if (_extraBadgeText != null)
+        {
+            int extra = lives - cap;
+            _extraBadgeText.transform.parent.parent.gameObject.SetActive(!livesFree && extra > 0);
+            if (extra > 0) _extraBadgeText.text = extra.ToString();
         }
 
         RefreshTimer();
         SyncInfiniteHeartState();
     }
 
+    // Her karede çağrılır: metin yalnız değişince yazılır (TMP her atamada yeniden mesh kurar).
     private void RefreshTimer()
     {
         if (timerText == null) return;
 
+        string status;
         if (TimedRewardService.IsLivesFree())
-        {
-            timerText.gameObject.SetActive(true);
-            timerText.text = FormatTimeSpan(TimedRewardService.GetRemaining(DailySlotRewardType.Lives));
-            return;
-        }
+            status = FormatTimeSpan(TimedRewardService.GetRemaining(DailySlotRewardType.Lives));
+        else if (!LivesManager.IsRegenFull)
+            status = FormatTimeSpan(LivesManager.TimeUntilNextLife);
+        else
+            status = layoutAroundHeart ? GameLocalization.Get("lives_full") : null;   // eski düzen: gizli
 
-        bool showTimer = !LivesManager.IsRegenFull;
-        timerText.gameObject.SetActive(showTimer);
-        if (showTimer)
-            timerText.text = FormatTimeSpan(LivesManager.TimeUntilNextLife);
+        bool show = status != null;
+        if (timerText.gameObject.activeSelf != show) timerText.gameObject.SetActive(show);
+        if (show && timerText.text != status) timerText.text = status;
     }
 
     // ── Infinite Heart ────────────────────────────────────────────────────────

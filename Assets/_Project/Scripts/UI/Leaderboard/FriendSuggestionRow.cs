@@ -43,6 +43,10 @@ public sealed class FriendSuggestionRow : MonoBehaviour
         if (wired) return;
         if (addButton != null) addButton.onClick.AddListener(() => onAdd?.Invoke());
         if (dismissButton != null) dismissButton.onClick.AddListener(() => onDismiss?.Invoke());
+        UiButtons.Apply(addButton, UiButtons.Kind.SquareGreen, styleLabel: false);
+        UiButtons.Apply(dismissButton, UiButtons.Kind.SquareRed, styleLabel: false);
+        UiIcons.SetIconOnly(addButton, UiIcons.AddFriend);
+        UiIcons.SetIconOnly(dismissButton, UiIcons.Close);
         wired = true;
     }
 }

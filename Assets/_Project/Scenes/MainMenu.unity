@@ -1238,9 +1238,19 @@ MonoBehaviour:
   messageInputRoot: {fileID: 865737000}
   messageInput: {fileID: 582710112}
   messagePostButton: {fileID: 1302370632}
-  defaultEmblem: {fileID: 21300000, guid: 22d6428168e0543a4a4882d7c5b218eb, type: 3}
+  defaultEmblem: {fileID: 21300000, guid: 575f4d2945de448999680817e3270327, type: 3}
   emblemPool:
-  - {fileID: 21300000, guid: 22d6428168e0543a4a4882d7c5b218eb, type: 3}
+  - {fileID: 21300000, guid: 575f4d2945de448999680817e3270327, type: 3}
+  - {fileID: 21300000, guid: b1048270708e4daebd0e9eac1d86ea1f, type: 3}
+  - {fileID: 21300000, guid: a6955e9fe5cc496e9d808e766ab21250, type: 3}
+  - {fileID: 21300000, guid: d38cff4d9a7042d2b35e2512360d1a7c, type: 3}
+  - {fileID: 21300000, guid: c5de51f39b234e05bc66b701f227c3ba, type: 3}
+  - {fileID: 21300000, guid: a71d76c595bc4c4ea9833a817364b972, type: 3}
+  - {fileID: 21300000, guid: 28b8485379084fa0ba35c7c87b92b41d, type: 3}
+  - {fileID: 21300000, guid: 5749d25e03a54fd994135ab136e69309, type: 3}
+  - {fileID: 21300000, guid: 713882a800e645bc88a9c31acddb67cd, type: 3}
+  - {fileID: 21300000, guid: dd0689f2e31045d79d6bd10e3e25e18f, type: 3}
+  - {fileID: 21300000, guid: 4dc64e8293394f7d8b2e6efa9b904a4b, type: 3}
   inTeamRoot: {fileID: 442452594}
   browser: {fileID: 1037514057}
 --- !u!114 &20691363
@@ -4797,7 +4807,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u25B6"
+  m_text: ">"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
   m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
@@ -8977,7 +8987,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u2715"
+  m_text: X
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
   m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
@@ -17734,11 +17744,11 @@ MonoBehaviour:
     deckAboveLedge: 150
     deckInsetX: 87
     endOverlap: 6
-    characterHeight: 118
+    characterHeight: 150
     characterFeetOffsetY: -42
     characterFrontGap: 0.3
     finishStandOffset: 62
-    tagOffset: {x: 120, y: -112}
+    tagOffset: {x: 200, y: -112}
     walkSpeed: 150
   bridgeLeftSprite: {fileID: 21300000, guid: aead80cd18da940f492a642d8c2a4cfe, type: 3}
   bridgeRightSprite: {fileID: 21300000, guid: 86a5b9d52bbb549a7bae4bf7b51bdb7a, type: 3}
@@ -30985,7 +30995,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u2715"
+  m_text: X
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
   m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
@@ -33478,7 +33488,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u25C0"
+  m_text: "<"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
   m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
@@ -39337,7 +39347,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 27ee2687f009441efaf3d666a1333909, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 2320fa16d6584028bac85aef0dabd0a0, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -42925,7 +42935,17 @@ MonoBehaviour:
   createButtonLabel: {fileID: 1824483575}
   createFeedbackText: {fileID: 9885992}
   emblemPool:
-  - {fileID: 21300000, guid: 22d6428168e0543a4a4882d7c5b218eb, type: 3}
+  - {fileID: 21300000, guid: 575f4d2945de448999680817e3270327, type: 3}
+  - {fileID: 21300000, guid: b1048270708e4daebd0e9eac1d86ea1f, type: 3}
+  - {fileID: 21300000, guid: a6955e9fe5cc496e9d808e766ab21250, type: 3}
+  - {fileID: 21300000, guid: d38cff4d9a7042d2b35e2512360d1a7c, type: 3}
+  - {fileID: 21300000, guid: c5de51f39b234e05bc66b701f227c3ba, type: 3}
+  - {fileID: 21300000, guid: a71d76c595bc4c4ea9833a817364b972, type: 3}
+  - {fileID: 21300000, guid: 28b8485379084fa0ba35c7c87b92b41d, type: 3}
+  - {fileID: 21300000, guid: 5749d25e03a54fd994135ab136e69309, type: 3}
+  - {fileID: 21300000, guid: 713882a800e645bc88a9c31acddb67cd, type: 3}
+  - {fileID: 21300000, guid: dd0689f2e31045d79d6bd10e3e25e18f, type: 3}
+  - {fileID: 21300000, guid: 4dc64e8293394f7d8b2e6efa9b904a4b, type: 3}
 --- !u!224 &1037514058
 RectTransform:
   m_ObjectHideFlags: 0
@@ -57643,7 +57663,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: -42}
-  m_SizeDelta: {x: 560, y: 52}
+  m_SizeDelta: {x: 500, y: 52}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1467177956
 CanvasRenderer:
@@ -57676,7 +57696,7 @@ MonoBehaviour:
   m_text: "15 seviye kazan, \xF6d\xFClleri kap!"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: b9df451b4e454578a4673c89e72c4774, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: b491b03bc03046638b8aabbee9828088, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -57700,12 +57720,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 32
+  m_fontSize: 28
   m_fontSizeBase: 32
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 17.6
-  m_fontSizeMax: 32
+  m_fontSizeMax: 28
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -75597,7 +75617,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 36}
-  m_SizeDelta: {x: 560, y: 92}
+  m_SizeDelta: {x: 500, y: 92}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1989888901
 MonoBehaviour:
@@ -75643,7 +75663,7 @@ MonoBehaviour:
   m_text: BRIDGE REPAIR
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: b9df451b4e454578a4673c89e72c4774, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: b491b03bc03046638b8aabbee9828088, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -75667,12 +75687,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 62
+  m_fontSize: 52
   m_fontSizeBase: 62
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 34.100002
-  m_fontSizeMax: 62
+  m_fontSizeMax: 52
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -83521,7 +83541,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   target: {fileID: 1907809692}
-  key: common_search
+  key: team_join
 --- !u!114 &8080832917904464533
 MonoBehaviour:
   m_ObjectHideFlags: 0

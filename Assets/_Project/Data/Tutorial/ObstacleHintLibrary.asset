@@ -265,3 +265,33 @@ MonoBehaviour:
     fallbackTitle: Metal Wall
     locKey: hint_obstacle_metalwall
     fallbackText:
+  - id: 47
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_toolthreat_name
+    fallbackTitle: Tool Threat
+    locKey: hint_obstacle_toolthreat
+    fallbackText: 
+  - id: 48
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_toolthreat_color_name
+    fallbackTitle: Colored Tool Threat
+    locKey: hint_obstacle_toolthreat_color
+    fallbackText: 
+  - id: 49
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_toolthreat_color_name
+    fallbackTitle: Colored Tool Threat
+    locKey: hint_obstacle_toolthreat_color
+    fallbackText: 
+  - id: 50
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_toolthreat_color_name
+    fallbackTitle: Colored Tool Threat
+    locKey: hint_obstacle_toolthreat_color
+    fallbackText: 
+  - id: 51
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_toolthreat_color_name
+    fallbackTitle: Colored Tool Threat
+    locKey: hint_obstacle_toolthreat_color
+    fallbackText: 

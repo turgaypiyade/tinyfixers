@@ -2,6 +2,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// UI VFX objeleri için TEK ortak depo (anahtar başına yığın). Kısa ömürlü efekt parçaları her seferinde
+/// new GameObject/Destroy yerine buradan alınıp geri verilir (taş kırma, PatchBot kıvılcımı, roket izi,
+/// Override lazer çarpması, PulseCore fitil kıvılcımı). Sönme sürücüsü gereken akışlar: UiFxPool.
+/// </summary>
 public static class UiVfxPool
 {
     private const int DefaultMaxPerKey = 96;
@@ -15,6 +20,15 @@ public static class UiVfxPool
             go = new GameObject(objectName, typeof(RectTransform));
 
         Prepare(go, parent, objectName);
+        return go;
+    }
+
+    /// <summary>Havuzda obje varsa hazırlayıp verir, yoksa null (çağıran prefab'tan kendisi üretir).</summary>
+    public static GameObject TryRent(string key, Transform parent, string objectName)
+    {
+        var go = Rent(key);
+        if (go != null)
+            Prepare(go, parent, objectName);
         return go;
     }
 

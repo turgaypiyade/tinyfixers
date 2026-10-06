@@ -257,12 +257,13 @@ public sealed class WallObstacleService : MonoBehaviour
         if (pieces.TryGetValue(origin, out var view) && view != null)
         {
             // Kontrollü yıkım ~1.5 sn sürer: bu sürede parçanın hücreleri TUTULUR (taş girmez, gövde
-            // görünür kalır) ve level-end bekler (ObstacleSpread işi). Board'un geri kalanı akmaya devam
-            // eder → oyuncu hamle yapabilir. Görünüm bitince (ya da erken yok edilince) ikisi de bırakılır.
+            // görünür kalır) ve level-end bekler (ObstacleCollapse işi — girdi kapılarına girmez; ObstacleSpread
+            // tüm tahtada hamleyi kilitliyordu). Board'un geri kalanı akar → oyuncu hamle yapabilir.
+            // Görünüm bitince (ya da erken yok edilince) ikisi de bırakılır.
             var held = new List<Vector2Int>(cells.Count);
             foreach (int c in cells) held.Add(new Vector2Int(c % width, c / width));
             var hold = board != null ? board.HoldCells(held) : null;
-            var job = board != null ? board.BeginJob(BoardController.BoardJobKind.ObstacleSpread) : null;
+            var job = board != null ? board.BeginJob(BoardController.BoardJobKind.ObstacleCollapse) : null;
 
             view.PlayCollapse(trigger,
                 onBlast: (cell, isTrigger) => OnBlast(id, isTrigger),

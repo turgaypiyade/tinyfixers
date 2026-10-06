@@ -89,6 +89,9 @@ public class ObstacleHintManager : MonoBehaviour
             if (!dismissed) yield break;
 
             MarkHintSeen(id);
+            // Renkli alet tehditleri (sarı/kırmızı/mavi/yeşil) TEK kural → biri anlatılınca hepsi görülmüş.
+            if (IsColoredToolThreat(id))
+                for (var c = ObstacleId.ToolThreatYellow; c <= ObstacleId.ToolThreatGreen; c++) MarkHintSeen(c);
             yield return HighlightObstacles(id);
         }
     }
@@ -202,6 +205,32 @@ public class ObstacleHintManager : MonoBehaviour
                 AddId(ObstacleId.Magnet);
         }
 
+        // Boss düellosu: düşmanın OYUN ORTASINDA fırlatacağı engeller tahtada başta yok → ilk oynayan
+        // oyuncuya level başında anlatılır (yağ/plastik vb. + alet tehdidi; renkliler tek ipucu).
+        if (levelData.levelKind == LevelKind.BossDuel)
+        {
+            foreach (var id in BossDuelObstaclePressure.GetPool(levelData))
+                AddId(id);
+
+            if (levelData.bossToolThreatEnabled)
+            {
+                bool anyColored = false;
+                if (levelData.bossToolThreatTypes != null)
+                    foreach (var t in levelData.bossToolThreatTypes)
+                    {
+                        if (!BossDuelToolThreat.IsToolThreat(t)) continue;
+                        if (IsColoredToolThreat(t))
+                        {
+                            if (anyColored) continue;   // renkliler tek ipucu: ilk renk örnek olarak gösterilir
+                            anyColored = true;
+                        }
+                        AddId(t);
+                    }
+                if (levelData.bossToolThreatTypes == null || levelData.bossToolThreatTypes.Length == 0)
+                    AddId(ObstacleId.ToolThreat);   // liste boş = gri alet tehdidi
+            }
+        }
+
         return result;
 
         void AddId(ObstacleId id)
@@ -211,6 +240,9 @@ public class ObstacleHintManager : MonoBehaviour
                 result.Add(id);
         }
     }
+
+    private static bool IsColoredToolThreat(ObstacleId id)
+        => id >= ObstacleId.ToolThreatYellow && id <= ObstacleId.ToolThreatGreen;
 
     public static bool IsHintSeen(ObstacleId id) =>
         PlayerPrefs.GetInt(PrefKeyPrefix + (int)id, 0) == 1;

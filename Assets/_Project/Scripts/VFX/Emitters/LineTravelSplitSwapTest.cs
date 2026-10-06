@@ -373,18 +373,17 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
             {
                 if (rightRt2 && HasTileAtStep(i, true))
                 {
-                    var goR = Instantiate(emittersImpactPrefab, impactSpace);
-                    var rtR = goR.GetComponent<RectTransform>();
+                    // Havuzdan (bonus turunda onlarca roket aynı anda → Instantiate/Destroy fırtınası olmasın).
+                    var goR = UiFxPool.RentTimed(emittersImpactPrefab, impactSpace, 0.15f);
+                    var rtR = goR ? goR.GetComponent<RectTransform>() : null;
                     if (rtR) rtR.anchoredPosition = rTarget;
-                    EnsureAutoDestroy(goR, 0.15f);
                 }
 
                 if (leftRt2 && HasTileAtStep(i, false))
                 {
-                    var goL = Instantiate(emittersImpactPrefab, impactSpace);
-                    var rtL = goL.GetComponent<RectTransform>();
+                    var goL = UiFxPool.RentTimed(emittersImpactPrefab, impactSpace, 0.15f);
+                    var rtL = goL ? goL.GetComponent<RectTransform>() : null;
                     if (rtL) rtL.anchoredPosition = lTarget;
-                    EnsureAutoDestroy(goL, 0.15f);
                 }
             }
 
@@ -650,28 +649,11 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         RectTransform parent = EnsureTrailLayer();
         if (!parent) return;
 
-        GameObject go;
-        if (rocketAfterImagePrefab)
-        {
-            go = Instantiate(rocketAfterImagePrefab, parent);
-        }
-        else
-        {
-            go = new GameObject("LineTravelAfterImage", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
-            go.transform.SetParent(parent, false);
-        }
+        // Havuzdan al: eskiden her ghost yeni GameObject + AddComponent + kendi coroutine'i ile doğup
+        // siliniyordu (bonus turunda binlerce). Sönme/büyüme UiFxPool'un tek Update döngüsünde, aynı eğriyle.
+        var go = UiFxPool.RentGhost(rocketAfterImagePrefab, parent, out var img, out var rt);
+        if (!go || !img || !rt) return;
 
-        go.SetActive(true);
-        EnsureAutoDestroy(go, afterImageLife + 0.05f);
-
-        var img = go.GetComponentInChildren<Image>(true);
-        if (!img)
-            img = go.AddComponent<Image>();
-
-        var rt = img ? SafeRect(img) : go.GetComponent<RectTransform>();
-        if (!img || !rt) return;
-
-        img.gameObject.SetActive(true);
         img.enabled = true;
         img.raycastTarget = false;
         img.sprite = ResolveTrailSprite(sourceImage);
@@ -687,54 +669,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         rt.localRotation = sourceRt.localRotation;
         rt.anchoredPosition = anchoredPos;
 
-        var cg = go.GetComponent<CanvasGroup>();
-        if (!cg) cg = go.AddComponent<CanvasGroup>();
-        cg.alpha = 1f;
-        cg.blocksRaycasts = false;
-        cg.interactable = false;
-
-        StartCoroutine(FadeOnly(img, rt, afterImageLife, afterImageScaleUp));
-    }
-
-    private void EnsureAutoDestroy(GameObject go, float lifetime)
-    {
-        if (!go) return;
-        var auto = go.GetComponent<AutoDestroyUnscaled>();
-        if (!auto) auto = go.AddComponent<AutoDestroyUnscaled>();
-        auto.lifetime = lifetime;
-    }
-
-    private IEnumerator FadeOnly(Image img, RectTransform rt, float life, float scaleUp)
-    {
-        float ft = 0f;
-        Color c0 = img ? img.color : Color.white;
-        Vector3 s0 = rt ? rt.localScale : Vector3.one;
-        Vector3 s1 = s0 * scaleUp;
-        float power = Mathf.Max(0.5f, afterImageFadePower);
-
-        while (ft < life)
-        {
-            ft += Time.deltaTime;
-            float u = Mathf.Clamp01(ft / life);
-            // Power > 1 → ghost yaşam başında hızla söner, sonunda yavaş → tail koyu, head canlı.
-            float k = Mathf.Pow(1f - u, power);
-
-            bool missingReference = false;
-            try
-            {
-                if (img) img.color = new Color(1f, 1f, 1f, c0.a * k);
-                if (rt) rt.localScale = Vector3.LerpUnclamped(s0, s1, u);
-            }
-            catch (MissingReferenceException)
-            {
-                missingReference = true;
-            }
-
-            if (missingReference)
-                yield break;
-
-            yield return null;
-        }
+        UiFxPool.TrackGhost(go, rocketAfterImagePrefab, img, rt, afterImageLife, afterImageScaleUp, afterImageFadePower);
     }
 
     private void PrepareRootForUiPlayback()

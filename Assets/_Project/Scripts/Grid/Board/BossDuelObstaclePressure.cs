@@ -6,6 +6,8 @@ using UnityEngine.UI;
 /// Small, breakable debris and overlays only. Never throw furniture, generators or rewards.
 public static class BossDuelObstaclePressure
 {
+    private enum LandResult { Placed, Retry, Drop }
+
     public static bool IsThrowable(LevelData level, ObstacleId id)
     {
         switch (id)
@@ -100,9 +102,12 @@ public static class BossDuelObstaclePressure
     /// Flight is visual-only; each destination is validated again at impact without locking input.
     public static IEnumerator Throw(BoardController board, RectTransform source, RectTransform effectsRoot,
         List<Vector2Int> targets, ObstacleId id, BossDuelCharacterView character = null,
-        System.Func<bool> cancelled = null, System.Action onRelease = null)
+        System.Func<bool> cancelled = null, System.Action onRelease = null, List<ObstacleId> capPool = null)
     {
         var def = board.ActiveLevelData.obstacleLibrary.Get(id);
+        // İniş sınırı, hedef SEÇERKEN kullanılan listeyle sayılmalı (alet tehdidi kendi sayısıyla; eskiden
+        // her zaman boss'un yağ havuzu sayılıyordu → tahtada yağ çoksa alet tehdidi hiç inemiyordu).
+        var landingPool = capPool ?? GetPool(board.ActiveLevelData);
         var root = effectsRoot != null ? effectsRoot : board.TilesRoot;
         var projectiles = new List<RectTransform>();
         var ends = new List<Vector3>();
@@ -152,40 +157,60 @@ public static class BossDuelObstaclePressure
                     }
                 }, Cancelled);
             }
+            // İniş: hücre GEÇİCİ olarak uygun değilse (taş düşüyor/sürükleniyor, tetiklenmeyi bekleyen
+            // special, rezerve hedef) mermi hücrede bekler ve oturunca yerleşir — eskiden engel sessizce
+            // atılıyordu (oyuncu aynı anda hamle yapınca boss'un attığı hiçbir şey tahtada kalmıyordu).
+            // KALICI ret (engel var, special/anahtar taş, sınır/oynanabilirlik) → vazgeç.
+            const float MaxLandingWait = 2f;
+            var pending = new List<int>();
+            for (int i = 0; i < targets.Count; i++) pending.Add(i);
             bool landed = false;
-            void Land()
+            float landingWait = 0f;
+
+            LandResult TryLand(Vector2Int cell)
             {
-                if (landed) return;
-                landed = true;
-                foreach (var cell in targets)
+                var tile = board.Tiles[cell.x, cell.y];
+                if (board.GridData[cell.x, cell.y] == null || tile == null) return LandResult.Retry;
+                if (board.ObstacleStateService.HasObstacleAt(cell.x, cell.y)
+                    || board.ObstacleStateService.IsInteractionLockedAt(cell.x, cell.y)) return LandResult.Drop;
+                if (!tile.IsRuntimeIdle || tile.WasDragging
+                    || board.IsPendingTriggeredSpecialCell(cell.x, cell.y)
+                    || board.IsReservedTileTargetCell(cell.x, cell.y)) return LandResult.Retry;
+                if (tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key) return LandResult.Drop;
+                if (!CanLandWithoutBlockingBoard(board, cell, landingPool)) return LandResult.Drop;
+                if (!board.ObstacleStateService.TrySpawnSingleCellObstacleAt(cell.x, cell.y, id)) return LandResult.Drop;
+
+                if (def.IsMovableObstacle)
                 {
-                    var tile = board.Tiles[cell.x, cell.y];
-                    if (tile == null || !tile.IsRuntimeIdle || tile.WasDragging
-                        || tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key
-                        || board.GridData[cell.x, cell.y] == null
-                        || board.IsPendingTriggeredSpecialCell(cell.x, cell.y)
-                        || board.IsReservedTileTargetCell(cell.x, cell.y)
-                        || board.ObstacleStateService.IsInteractionLockedAt(cell.x, cell.y)
-                        || board.ObstacleStateService.HasObstacleAt(cell.x, cell.y)) continue;
-                    var landingPool = GetPool(board.ActiveLevelData);
-                    if (!CanLandWithoutBlockingBoard(board, cell, landingPool)) continue;
-                    if (!board.ObstacleStateService.TrySpawnSingleCellObstacleAt(cell.x, cell.y, id)) continue;
-                    if (def.IsMovableObstacle)
-                    {
-                        // Convert in place: no tile-clear event, player power, goal credit or refill.
-                        tile.SetUseFullCellIcon(false);
-                        tile.SetMovableObstacleTile(true);
-                        tile.SetFullCellMovableSprite(def.fullCellSprite);
-                        tile.SetVisualLayout(TileView.TileVisualLayout.Centered);
-                        tile.SetMovableObstacleSprite(def.GetPreviewSprite());
-                        tile.ApplyTileSize(board.TileSize);
-                    }
-                    board.RaiseObstacleCreatedDynamic(cell.x, cell.y);
+                    // Convert in place: no tile-clear event, player power, goal credit or refill.
+                    tile.SetUseFullCellIcon(false);
+                    tile.SetMovableObstacleTile(true);
+                    tile.SetFullCellMovableSprite(def.fullCellSprite);
+                    tile.SetVisualLayout(TileView.TileVisualLayout.Centered);
+                    tile.SetMovableObstacleSprite(def.GetPreviewSprite());
+                    tile.ApplyTileSize(board.TileSize);
                 }
-                foreach (var projectile in projectiles)
-                    if (projectile != null) projectile.gameObject.SetActive(false);
-                board.RequestResolveAfterActionSequence();
+                board.RaiseObstacleCreatedDynamic(cell.x, cell.y);
+                return LandResult.Placed;
             }
+
+            // Her çağrıda bekleyen hücreleri dener; biten (yerleşen/vazgeçilen) mermi gizlenir.
+            void Land(bool giveUp)
+            {
+                bool anyPlaced = false;
+                for (int k = pending.Count - 1; k >= 0; k--)
+                {
+                    int i = pending[k];
+                    var result = TryLand(targets[i]);
+                    if (result == LandResult.Retry && !giveUp) continue;
+                    if (result == LandResult.Placed) anyPlaced = true;
+                    if (projectiles[i] != null) projectiles[i].gameObject.SetActive(false);
+                    pending.RemoveAt(k);
+                }
+                if (anyPlaced) board.RequestResolveAfterActionSequence();
+                if (pending.Count == 0) landed = true;
+            }
+
             const float duration = 0.38f;
             float flightTime = 0f;
             bool animationPlaying = animation != null;
@@ -205,12 +230,18 @@ public static class BossDuelObstaclePressure
                     float t = Mathf.Clamp01(flightTime / duration);
                     for (int i = 0; i < projectiles.Count; i++)
                     {
+                        if (projectiles[i] == null || !projectiles[i].gameObject.activeSelf) continue;
                         projectiles[i].localPosition = Vector3.Lerp(start, ends[i], t)
                             + Vector3.up * (Mathf.Sin(t * Mathf.PI) * 90f);
                         projectiles[i].localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * Mathf.PI) * 25f);
                         projectiles[i].sizeDelta = Vector2.one * Mathf.Lerp(heldSize, size, t);
                     }
-                    if (flightTime >= duration) Land();
+                    if (flightTime >= duration && !landed)
+                    {
+                        // Mermi hücreye vardı: oturmayı bekler (en fazla MaxLandingWait), sonra vazgeçer.
+                        Land(giveUp: landingWait >= MaxLandingWait);
+                        landingWait += Time.deltaTime;
+                    }
                     if (landed && !animationPlaying) break;
                     flightTime += Time.deltaTime;
                 }

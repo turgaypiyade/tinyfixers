@@ -64,6 +64,10 @@ public static class BridgeRepairUI
         return image;
     }
 
+    private static Material _crispGold;
+    private static Material CrispGold => _crispGold != null ? _crispGold
+        : (_crispGold = Resources.Load<Material>("TextMaterials/GoldOutlineCrisp"));
+
     /// Ödül yazısı stili (RewardTextStyle) — yoksa kalın krem + koyu outline.
     public static TMP_Text Label(string name, Transform parent, string value, float size, Vector2 box,
         Vector2 position, Color? color = null, bool rewardStyle = true)
@@ -74,6 +78,9 @@ public static class BridgeRepairUI
         if (rewardStyle && RewardTextStyle.Shared != null && RewardTextStyle.Shared.font != null)
         {
             RewardTextStyle.Apply(text, size);
+            // Sarı + altın kontur kalır; ortak materyalin geniş/yumuşak kahve gölgesi (çamurlu hale) yerine
+            // dar ve net alt gölgeli varyant (Resources/TextMaterials/GoldOutlineCrisp).
+            if (CrispGold != null) text.fontSharedMaterial = CrispGold;
             text.textWrappingMode = TextWrappingModes.Normal;
         }
         else

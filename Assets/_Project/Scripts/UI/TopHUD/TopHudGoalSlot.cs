@@ -10,6 +10,23 @@ public class TopHudGoalSlot : MonoBehaviour
     [SerializeField] private Vector2 defaultIconSize = new Vector2(70f, 70f);
     [SerializeField] private Vector2 largeIconSize = new Vector2(95f, 95f);
 
+    private static readonly Color CountOutline = new Color(0.20f, 0.08f, 0.10f, 1f);
+
+    /// <summary>
+    /// YALNIZ oyun içi HUD: büyük ikon + net, konturlu sayı. Prefab (GoalSlot) Level öncesi pencerede de
+    /// kullanıldığı için prefab değerleri değişmez; HUD bunu Setup'tan sonra çağırır.
+    /// </summary>
+    public void ApplyHudStyle(Vector2 iconSize, float countFontSize)
+    {
+        ApplyIconSize(iconSize);
+        if (countText == null) return;
+        countText.fontSize = countFontSize;
+        if (countText.enableAutoSizing) countText.fontSizeMax = countFontSize;
+        // Fontun yumuşak konturlu (buğulu) varsayılan materyali yerine net materyal + keskin koyu kontur.
+        CrispTextMaterial.Apply(countText);
+        TmpOutline.Apply(countText, 0.28f, CountOutline);
+    }
+
     public void Setup(Sprite sprite, int remaining, bool useLargeIcon = false)
     {
         if (icon != null)

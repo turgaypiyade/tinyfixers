@@ -28,6 +28,25 @@ public class BoosterSlotView : MonoBehaviour
     [SerializeField] private Image iconImage;
     [Tooltip("Kilitliyken ikona uygulanan gri tint (açılınca beyaza döner).")]
     [SerializeField] private Color lockedIconTint = new Color(0.55f, 0.55f, 0.55f, 1f);
+    [Tooltip("Kilitliyken buton gövdesine (yeşil zemin) uygulanan soluk tint — 'henüz açılmadı' hemen okunsun.")]
+    [SerializeField] private Color lockedFrameTint = new Color(0.58f, 0.62f, 0.66f, 1f);
+
+    [Header("Rozet yerleşimi (adet / Free / kilit AYNI YÜKSEKLİKTE)")]
+    [Tooltip("Açıkken üç rozet aynı y'de durur: adet ve kilit sağ alt köşede 'kulakçık' (bir kısmı " +
+             "butonun içinde), Free hapı alt ortada. Değerler slot merkezine göre px.")]
+    [SerializeField] private bool unifyBadges = true;
+    [SerializeField] private float badgeY = -70f;
+    [Tooltip("Adet rozetinin x'i (sahnedeki orijinal köşe konumu).")]
+    [SerializeField] private float countBadgeX = 70f;
+    [Tooltip("Kilidin x'i (sahnedeki orijinal köşe konumu).")]
+    [SerializeField] private float lockBadgeX = 50f;
+    [Tooltip("Adet dairesi — iki haneli sayı rahat sığsın diye orijinal 90px.")]
+    [SerializeField] private float countBadgeSize = 90f;
+    [SerializeField] private float countFontSize = 40f;
+    [SerializeField] private Vector2 lockSize = new Vector2(65f, 75f);
+    [SerializeField] private Vector2 freeBadgeSize = new Vector2(120f, 50f);
+
+    private Image frameImage;   // butonun yeşil gövdesi (Button.targetGraphic)
 
     private TMP_Text freeBadgeLabel;   // freeBadge altındaki text — lazily bulunur
     private int resolvedIndex = -1;
@@ -47,6 +66,48 @@ public class BoosterSlotView : MonoBehaviour
 
         AutoFindMissingRefs();
         ApplyBoosterIcon();
+        if (unifyBadges) ArrangeBadges();
+        if (countText != null)
+        {
+            CrispTextMaterial.Apply(countText);
+            TmpOutline.Apply(countText, 0.26f, new Color(0.35f, 0.04f, 0.06f, 1f));
+        }
+    }
+
+    // Üç rozet (birbirini dışlar) AYNI YÜKSEKLİKTE: adet + kilit sağ alt köşe kulakçığı, Free alt orta.
+    private void ArrangeBadges()
+    {
+        if (numberBG != null) PlaceBadge(numberBG.rectTransform, new Vector2(countBadgeSize, countBadgeSize), countBadgeX);
+        if (lockOverlay != null) PlaceBadge((RectTransform)lockOverlay.transform, lockSize, lockBadgeX);
+        if (freeBadge != null) PlaceBadge((RectTransform)freeBadge.transform, freeBadgeSize, 0f);
+
+        if (countText != null)
+        {
+            // Sayı rozet dairesini tam doldursun (prefab'ta sabit 90px köşe konumluydu).
+            var rt = countText.rectTransform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            countText.alignment = TextAlignmentOptions.Center;
+            countText.textWrappingMode = TextWrappingModes.NoWrap;
+            // 1-2 hane sabit 40pt; yalnız 3+ hane sığmazsa küçülür.
+            countText.fontSize = countFontSize;
+            countText.enableAutoSizing = true;
+            countText.fontSizeMax = countFontSize;
+            countText.fontSizeMin = countFontSize * 0.6f;
+        }
+        // Rozetler ikonun ÜSTÜNDE çizilsin (Unity nesnesinde ?. kullanılmaz — sahte-null tuzağı).
+        if (numberBG != null) numberBG.transform.SetAsLastSibling();
+        if (lockOverlay != null) lockOverlay.transform.SetAsLastSibling();
+        if (freeBadge != null) freeBadge.transform.SetAsLastSibling();
+    }
+
+    private void PlaceBadge(RectTransform rt, Vector2 size, float x)
+    {
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = size;
+        rt.anchoredPosition = new Vector2(x, badgeY);
     }
 
     // Booster ikonu tek kaynaktan: TileIconLibrary.Shared. Library'de sprite yoksa
@@ -103,6 +164,8 @@ public class BoosterSlotView : MonoBehaviour
         // İkon child'ı sahnede "Joker_1"/"Slot..." gibi adlanabiliyor → sadece "icon" adına güvenme.
         if (iconImage == null) iconImage = FindChild<Image>("icon", "joker", "special", "booster");
         if (iconImage == null) iconImage = FindIconFallback();
+        var button = GetComponentInChildren<Button>(true);
+        if (button != null) frameImage = button.targetGraphic as Image;
     }
 
     // Bilinen alt-parçalar (numberbg/lock/free/count/frame/glow) DIŞINDAKİ ilk child Image = ikon.
@@ -200,9 +263,12 @@ public class BoosterSlotView : MonoBehaviour
         if (lockOverlay != null)
             lockOverlay.SetActive(!unlocked);
 
-        // Kilitliyken ikon grileşir.
+        // Kilitliyken ikon grileşir + buton gövdesi soluklaşır (yalnız ikon griyken parlak yeşil
+        // gövde "açık" gibi duruyordu).
         if (iconImage != null)
             iconImage.color = unlocked ? Color.white : lockedIconTint;
+        if (frameImage != null)
+            frameImage.color = unlocked ? Color.white : lockedFrameTint;
 
         if (freeBadge != null)
             freeBadge.SetActive(free);

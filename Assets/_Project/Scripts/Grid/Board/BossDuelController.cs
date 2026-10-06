@@ -872,7 +872,7 @@ public sealed class BossDuelController : MonoBehaviour
         {
             yield return BossDuelObstaclePressure.Throw(board, enemyRobot, root, targets, id,
                 enemyCharacterView, () => !isActiveAndEnabled || waveTransitionActive || IsOver(),
-                () => PlaySfx(enemyObstacleThrowSfx, obstacleThrowVolume));
+                () => PlaySfx(enemyObstacleThrowSfx, obstacleThrowVolume), capPool: pool);
         }
         finally
         {

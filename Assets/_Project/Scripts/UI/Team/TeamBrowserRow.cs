@@ -24,6 +24,7 @@ public sealed class TeamBrowserRow : MonoBehaviour
         if (!wired)
         {
             if (infoButton != null) infoButton.onClick.AddListener(() => this.onInfo?.Invoke());
+            UiButtons.Apply(infoButton, UiButtons.Kind.Orange);
             wired = true;
         }
 

@@ -99,6 +99,12 @@ public sealed class TeamBrowserController : MonoBehaviour
 
         if (searchButton != null) searchButton.onClick.AddListener(OnSearch);
         if (searchInput != null) searchInput.onSubmit.AddListener(_ => OnSearch());
+        // Ortak buton ailesi: arama yeşil, temizle kırmızı kare (X ikonlu), oluştur yeşil.
+        UiButtons.Apply(searchClearButton, UiButtons.Kind.SquareRed, styleLabel: false);
+        UiIcons.SetIconOnly(searchClearButton, UiIcons.Close);
+        UiButtons.Apply(searchButton, UiButtons.Kind.Green);
+        UiButtons.Apply(createButton, UiButtons.Kind.Green);
+        UiButtons.Apply(browseEmblemButton, UiButtons.Kind.Green);
         if (searchClearButton != null) searchClearButton.onClick.AddListener(() =>
         {
             if (searchInput != null) searchInput.text = "";
@@ -138,8 +144,17 @@ public sealed class TeamBrowserController : MonoBehaviour
 
         if (theme != null)
         {
-            if (searchTabBg != null) searchTabBg.color = search ? theme.accentAmber : theme.screenBackground;
-            if (createTabBg != null) createTabBg.color = search ? theme.screenBackground : theme.accentAmber;
+            // Seçili sekme parlak mavi, diğeri mor (ortak buton ailesi); sprite yoksa eski renkler.
+            if (UiButtons.SpriteOf(UiButtons.Kind.Blue) != null)
+            {
+                UiButtons.Apply(searchTabBg, search ? UiButtons.Kind.Blue : UiButtons.Kind.Purple);
+                UiButtons.Apply(createTabBg, search ? UiButtons.Kind.Purple : UiButtons.Kind.Blue);
+            }
+            else
+            {
+                if (searchTabBg != null) searchTabBg.color = search ? theme.accentAmber : theme.screenBackground;
+                if (createTabBg != null) createTabBg.color = search ? theme.screenBackground : theme.accentAmber;
+            }
         }
     }
 

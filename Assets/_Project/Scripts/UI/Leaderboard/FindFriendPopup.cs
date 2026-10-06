@@ -99,6 +99,16 @@ public sealed class FindFriendPopup : MonoBehaviour
     {
         if (wired) return;
         if (closeButton != null) closeButton.onClick.AddListener(Close);
+        UiIcons.SetIconOnly(closeButton, UiIcons.Close);
+        // Küçük, kareye yakın butonlar: kare buton + ikon (kapsül görseli karede daireye dönüyordu).
+        UiButtons.Apply(searchButton, UiButtons.Kind.SquareGreen, styleLabel: false);
+        UiIcons.SetIconOnly(searchButton, UiIcons.Search, 0.7f);
+        UiButtons.Apply(resultAddButton, UiButtons.Kind.SquareGreen, styleLabel: false);
+        UiIcons.SetIconOnly(resultAddButton, UiIcons.AddFriend);
+        UiButtons.Apply(inviteButton, UiButtons.Kind.Orange);
+        // Yazılı küçük buton: kapsül oranına aç (genişlik ≥ yükseklik × 2.6) + okunur yazı.
+        UiButtons.Apply(copyButton, UiButtons.Kind.Blue);
+        UiButtons.EnsureCapsuleAspect(copyButton, 2.6f, 30f);
         if (searchButton != null) searchButton.onClick.AddListener(OnSearch);
         if (searchInput != null) searchInput.onSubmit.AddListener(_ => OnSearch());
         if (copyButton != null) copyButton.onClick.AddListener(() => GUIUtility.systemCopyBuffer = FriendState.MyCode);
