@@ -685,6 +685,9 @@ public class BoardController : MonoBehaviour
 
     public event Action<int, ObstacleStageSnapshot> OnObstacleStageChanged;
     public event Action<int, ObstacleId> OnObstacleDestroyed;
+    // Çiçekli çimin çiçekleri döküldü (hücre index'i). Görsel: GrassFlowerOverlayService.
+    // Hedef sayımı ayrıca OnObstacleDestroyed(cell, GrassFlower) ile akar.
+    public event Action<int> OnGrassFlowerShed;
     public event Action<int> OnCellUnlocked;
     public event Action<int, int> OnObstacleCreatedDynamic;
     // Stacked-beneath restore: authored bir obstacle (Mud, Stone...) üstteki kırılınca geri
@@ -1796,6 +1799,7 @@ public class BoardController : MonoBehaviour
         if (obstacleStateService == null) return;
         obstacleStateService.OnObstacleDestroyed -= HandleObstacleDestroyed;
         obstacleStateService.OnCellUnlocked -= HandleCellUnlocked;
+        obstacleStateService.OnGrassFlowerShed -= HandleGrassFlowerShed;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1829,6 +1833,7 @@ public class BoardController : MonoBehaviour
         {
             obstacleStateService.OnObstacleDestroyed -= HandleObstacleDestroyed;
             obstacleStateService.OnCellUnlocked -= HandleCellUnlocked;
+            obstacleStateService.OnGrassFlowerShed -= HandleGrassFlowerShed;
         }
 
         if (levelData == null) { obstacleStateService = null; oilSpreadService = null; return; }
@@ -5035,6 +5040,8 @@ public class BoardController : MonoBehaviour
         obstacleStateService.OnCellUnlocked -= HandleCellUnlocked;
         obstacleStateService.OnObstacleDestroyed += HandleObstacleDestroyed;
         obstacleStateService.OnCellUnlocked += HandleCellUnlocked;
+        obstacleStateService.OnGrassFlowerShed -= HandleGrassFlowerShed;
+        obstacleStateService.OnGrassFlowerShed += HandleGrassFlowerShed;
         obstacleStateService.OnChestOpened -= HandleChestOpened;
         obstacleStateService.OnChestColorRemoved -= HandleChestColorRemoved;
         obstacleStateService.OnChestOpened += HandleChestOpened;
@@ -5203,6 +5210,15 @@ public class BoardController : MonoBehaviour
             _obbDetonationsRunning = Mathf.Max(0, _obbDetonationsRunning - 1);
             flowActivity?.Dispose();
         }
+    }
+
+    // Çiçek katmanı bir "engel" gibi sayılır: önce görsel dökülür, sonra hedef (GrassFlower) düşer.
+    // HandleObstacleDestroyed'dan GEÇMEZ: hücredeki taş silinmesin, çim yerinde kalır (GridSpawner
+    // GrassFlower id'li bir view takip etmediği için çim görselini de silmez).
+    private void HandleGrassFlowerShed(int cell)
+    {
+        OnGrassFlowerShed?.Invoke(cell);
+        OnObstacleDestroyed?.Invoke(cell, ObstacleId.GrassFlower);
     }
 
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)

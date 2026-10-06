@@ -458,7 +458,11 @@ public class PatchBotTargetCoordinator
                     if (!obstacleUnitCells.TryGetValue(unitOrigin, out var unitCells))
                     {
                         obstacleUnitCells[unitOrigin] = unitCells = new List<(int x, int y, TileView tile)>();
-                        obstacleUnitIsGoal[unitOrigin] = activeObstacleGoals.Contains(obstacleId);
+                        // Çiçekli çim runtime'da Grass'tır; hedef GrassFlower ise çiçeği duran hücre hedef sayılır.
+                        obstacleUnitIsGoal[unitOrigin] = activeObstacleGoals.Contains(obstacleId)
+                            || (obstacleId == ObstacleId.Grass
+                                && activeObstacleGoals.Contains(ObstacleId.GrassFlower)
+                                && board.ObstacleStateService.HasGrassFlowerAt(unitOrigin));
                     }
                     unitCells.Add((x, y, tile));
                 }

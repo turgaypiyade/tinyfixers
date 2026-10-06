@@ -194,6 +194,11 @@ public class ObstacleStateService : ISimObstacleQuery
     }
     private readonly Dictionary<int, List<StampedBeneath>> _stampedBeneathByCell = new();
 
+    // Çiçekli çim (GrassFlower) hücreleri. Runtime'da bu hücrelerdeki Grass, def.hits + 1 vuruşla
+    // başlar; ilk tüketilen vuruş çiçekleri döker (OnGrassFlowerShed) ve hücre setten çıkar.
+    private readonly HashSet<int> _grassFlowerCells = new();
+    public event Action<int> OnGrassFlowerShed;
+
     /// Set by BoardController → RaiseObstacleCreatedDynamic. Restore edilen beneath obstacle'a
     /// (x,y) görselini oluşturmak için çağrılır.
     public Action<int, int> RequestObstacleViewCreate;
@@ -330,6 +335,7 @@ public class ObstacleStateService : ISimObstacleQuery
         _wardrobeItemCounts.Clear();
         _underTileBeneathMovable.Clear();
         _stampedBeneathByCell.Clear();
+        _grassFlowerCells.Clear();
         _revealGraceUntil.Clear();
 
         for (int idx = 0; idx < size; idx++)
@@ -750,6 +756,9 @@ public class ObstacleStateService : ISimObstacleQuery
 
         remaining--;
         remainingHitsByOrigin[origin] = remaining;
+
+        if (id == ObstacleId.Grass)
+            ShedGrassFlowerIfAny(origin);
 
         // Renk maskesini güncelle ve bildirimi gönder
         if (removedColor != ChestColorMask.None)
@@ -1348,6 +1357,10 @@ public class ObstacleStateService : ISimObstacleQuery
         if (originId == ObstacleId.Wardrobe)
             _wardrobeItemCounts.Remove(origin);
 
+        // Çim vuruş almadan tamamen silindiyse (ör. doğrudan temizleme) çiçekleri de dökülmüş say.
+        if (originId == ObstacleId.Grass)
+            ShedGrassFlowerIfAny(origin);
+
         OnObstacleDestroyed?.Invoke(origin, originId);
 
         // Cover view'ı OnObstacleDestroyed dinleyicilerinde temizlendikten sonra beneath view'ı
@@ -1430,8 +1443,62 @@ public class ObstacleStateService : ISimObstacleQuery
         return id != ObstacleId.None && IsBuriedAnywhere(id, level.obstacleOrigins[idx]);
     }
 
-    /// Saydam örtü: altındaki katman görünür kalır (Grass, Oil). Opak katmanın altı gizlidir.
-    public static bool IsSeeThroughLayer(ObstacleId id) => id == ObstacleId.Grass || id == ObstacleId.Oil;
+    /// Saydam örtü: altındaki katman görünür kalır (Grass, GrassFlower, Oil). Opak katmanın altı gizlidir.
+    public static bool IsSeeThroughLayer(ObstacleId id) =>
+        id == ObstacleId.Grass || id == ObstacleId.GrassFlower || id == ObstacleId.Oil;
+
+    // ── Çiçekli çim (GrassFlower) ────────────────────────────────────────────
+
+    /// Level kurulumu (stamp + beneath/örtü kayıtları SONRASI): hücredeki çimi çiçekli işaretler ve
+    /// kalan vuruşuna +1 ekler. Çim birincil ya da movable üstü örtü olabilir; yığın altındaysa
+    /// bonus, çim açığa çıkınca InitObstacleStateAt'te eklenir.
+    public void RegisterGrassFlowerCell(int cell)
+    {
+        if (level == null || level.obstacles == null || cell < 0 || cell >= level.obstacles.Length) return;
+        if (cell >= remainingHitsByOrigin.Length) return;
+        if (!_grassFlowerCells.Add(cell)) return;
+
+        if ((ObstacleId)level.obstacles[cell] == ObstacleId.Grass && level.obstacleOrigins[cell] == cell)
+        {
+            var def = library != null ? library.Get(ObstacleId.Grass) : null;
+            int current = remainingHitsByOrigin[cell];
+            int baseHits = current > 0 ? current : Mathf.Max(1, def != null ? def.hits : 1);
+            remainingHitsByOrigin[cell] = baseHits + 1;
+            return;
+        }
+
+        if (_underTileBeneathMovable.TryGetValue(cell, out var cover) && cover.Id == ObstacleId.Grass)
+            _underTileBeneathMovable[cell] = (cover.Id, Mathf.Max(1, cover.Remaining) + 1);
+    }
+
+    public bool HasGrassFlowerAt(int cell) => _grassFlowerCells.Contains(cell);
+
+    public void CollectGrassFlowerCells(ICollection<int> into)
+    {
+        if (into == null) return;
+        foreach (int cell in _grassFlowerCells)
+            into.Add(cell);
+    }
+
+    /// Çiçekli hücrenin çimi şu an görünür mü (birincil katman ya da movable üstü örtü)?
+    /// Üstüne başka bir engel yığılmışsa çim de çiçekler de gizlidir.
+    public bool IsGrassVisibleAt(int cell)
+    {
+        if (level == null || level.obstacles == null || cell < 0 || cell >= level.obstacles.Length) return false;
+        if ((ObstacleId)level.obstacles[cell] == ObstacleId.Grass) return true;
+        return _underTileBeneathMovable.TryGetValue(cell, out var cover)
+            && cover.Id == ObstacleId.Grass && cover.Remaining != 0;
+    }
+
+    private int GetGrassFlowerBonusHits(int origin, ObstacleId id) =>
+        id == ObstacleId.Grass && _grassFlowerCells.Contains(origin) ? 1 : 0;
+
+    // Çimin bir vuruşu tüketildi (ya da çim silindi): hücre çiçekliyse çiçekler dökülür.
+    private void ShedGrassFlowerIfAny(int cell)
+    {
+        if (_grassFlowerCells.Remove(cell))
+            OnGrassFlowerShed?.Invoke(cell);
+    }
 
     /// Hücrenin katmanları, en üstten alta doğru (id, origin). Görsel görünürlük kararı için.
     public void GetLayersTopDown(int cell, List<(ObstacleId id, int origin)> result)
@@ -1998,6 +2065,9 @@ public class ObstacleStateService : ISimObstacleQuery
 
         remaining--;
 
+        if (beneath.Id == ObstacleId.Grass)
+            ShedGrassFlowerIfAny(idx);
+
         if (remaining <= 0)
         {
             _underTileBeneathMovable.Remove(idx);
@@ -2420,7 +2490,8 @@ public class ObstacleStateService : ISimObstacleQuery
         }
         else
         {
-            hits = Mathf.Max(1, def != null ? def.hits : 1);
+            // Yığın altından açığa çıkan çiçekli çim: çiçek katmanının vuruşu da geri gelir.
+            hits = Mathf.Max(1, def != null ? def.hits : 1) + GetGrassFlowerBonusHits(origin, id);
         }
         remainingHitsByOrigin[origin] = remainingOverride > 0 ? remainingOverride : hits;
 
