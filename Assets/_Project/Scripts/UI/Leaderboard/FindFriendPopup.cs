@@ -34,9 +34,6 @@ public sealed class FindFriendPopup : MonoBehaviour
     [SerializeField] private Button inviteButton;
     [SerializeField] private TMP_Text inviteLabel;           // "Davet Et" → "Kopyalandı!"
 
-    [Header("Görsel")]
-    [SerializeField] private Sprite[] avatarPool;
-
     private FriendProfile found;
     private bool wired;
     private CommonPopupView popupView;
@@ -178,28 +175,5 @@ public sealed class FindFriendPopup : MonoBehaviour
         if (inviteLabel != null) inviteLabel.text = GameLocalization.Get("friend_copied");
     }
 
-    private Sprite PickAvatar(string name)
-    {
-        Sprite profileAvatar = PlayerAvatarProvider.PickForSeed(name);
-        if (profileAvatar != null)
-            return profileAvatar;
-
-        if (avatarPool == null || avatarPool.Length == 0) return null;
-        int hash = StableHash(name);
-        return avatarPool[hash % avatarPool.Length];
-    }
-
-    private static int StableHash(string value)
-    {
-        unchecked
-        {
-            int hash = 23;
-            if (!string.IsNullOrEmpty(value))
-            {
-                for (int i = 0; i < value.Length; i++)
-                    hash = hash * 31 + value[i];
-            }
-            return hash & int.MaxValue;
-        }
-    }
+    private static Sprite PickAvatar(string name) => PlayerAvatarProvider.PickForSeed(name);
 }

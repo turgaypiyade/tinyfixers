@@ -19,28 +19,28 @@ MonoBehaviour:
   totalStages: 10
   tasks:
   - name: "Ayaklar\u0131 G\xFC\xE7lendir"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
   - name: "Kuleleri Kaynakla"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 6b497708e5124ea79b4a79473300d4af, type: 3}
     starCost: 0
   - name: "\xC7elik Halatlar\u0131 Ger"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 94bb05b98c6f41c7a455018760fe4087, type: 3}
     starCost: 0
   - name: "Ask\u0131 Tellerini Ba\u011Fla"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 94bb05b98c6f41c7a455018760fe4087, type: 3}
     starCost: 0
   - name: "Yolu D\xF6\u015Fe"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: c66edef96c29464ab529d546c266276c, type: 3}
     starCost: 0
   - name: "Per\xE7inleri Sabitle"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 861895ed49f64747b1b994c9efd78928, type: 3}
     starCost: 0
   - name: "Turuncu Boyay\u0131 S\xFCr"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 602f822ec3b84f4e9f837f644784df19, type: 3}
     starCost: 0
   - name: "I\u015F\u0131klar\u0131 Yak"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 3b929942fbef4f1081d53ef3f7ed1084, type: 3}
     starCost: 0
   starCosts: 0300000003000000030000000200000003000000030000000200000005000000
   starCostBase: 5
@@ -66,7 +66,7 @@ MonoBehaviour:
     weight: 0
   - type: 12
     amount: 1
-    icon: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+    icon: {fileID: 21300000, guid: 8372e60e21b94daab02ea6e2d65dba7f, type: 3}
     nameLocalizationKey: 
     fallbackName: 
     weight: 0

@@ -363,6 +363,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         HideAllPopups();
         RegisterButtonListeners();
         PlayerWallet.OnCoinsChanged += HandleWalletCoinsChanged;
+        MarketNavigator.RegisterInGameShop(inGameShop);   // oyun sahnesinde market = level'dan çıkmadan
 
         if (skipBonusRoundButton != null)
             skipBonusRoundButton.gameObject.SetActive(false);
@@ -375,6 +376,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         Unsubscribe();
         UnregisterButtonListeners();
         PlayerWallet.OnCoinsChanged -= HandleWalletCoinsChanged;
+        ShopPurchaseService.OnPurchased -= HandleFailShopPurchased;
+        MarketNavigator.UnregisterInGameShop(inGameShop);
         StopMainScreenDimRoutine();
         SetMainScreenAlpha(1f);
         isBonusRoundRunning = false;
@@ -669,6 +672,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         _movesAtWin = board != null ? board.RemainingMoves : 0;
+        LevelAttemptStats.SetMovesLeftAtWin(_movesAtWin);
 
         // Snapshot goals BEFORE bonus round — bonus cascade must not cancel a win that already happened.
         bool goalsWereCompleted = topHud != null && topHud.AreAllGoalsCompleted;
@@ -1645,15 +1649,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (board == null)
             return;
 
-        ResolveCurrentFailOffer();
-
         // Yeterli coin varsa: normal akış (coin harca → devam).
-        if (PlayerWallet.HasEnoughCoins(currentCost))
-        {
-            PlayerWallet.SpendCoins(currentCost);
-            PerformContinue();
+        if (TryPayAndContinue())
             return;
-        }
 
         // Yeterli coin yok → reklam izle (bedava devam, level başına TEK hak) ya da satın al (market).
         // Alttaki "Kapat": hiçbir şey yapmadan vazgeçer — hak biter, level kaybedilmiş sayılır.
@@ -1669,6 +1667,19 @@ public class LevelEndSimplePopupController : MonoBehaviour
             },
             GameLocalization.Get("common_close"),
             GiveUpLevel);
+    }
+
+    // Cüzdan güncel devam bedelini karşılıyorsa düş ve oyunu kaldığı yerden sürdür. Fail'de altının
+    // geldiği HER yol (devam butonu, oyun içi market, fail carousel'i) buradan geçer.
+    private bool TryPayAndContinue()
+    {
+        if (board == null || _abandonWarning) return false;
+
+        ResolveCurrentFailOffer();
+        if (!PlayerWallet.SpendCoins(currentCost)) return false;
+
+        PerformContinue();
+        return true;
     }
 
     // Coin harcandıktan (veya reklam ödülünden) sonra ortak "devam" akışı.
@@ -1759,46 +1770,53 @@ public class LevelEndSimplePopupController : MonoBehaviour
         failOfferCarousel.Refresh(Mathf.Max(0, currentCost - PlayerWallet.Coins));
     }
 
-    // Carousel'deki fiyat butonu: mağazayla aynı tek satın alma yolu. Altın gelirse fail popup'ındaki
-    // "devam" butonu tıklandığı anda bakiyeyi zaten yeniden okur.
+    // Carousel'deki fiyat butonu: mağazayla aynı tek satın alma yolu. Alımla cüzdan devam bedelini
+    // karşılıyorsa bedel düşülür ve oyun hemen kaldığı yerden sürer (devam butonuna ayrıca basılmaz).
     private void HandleFailOfferPurchase(ShopOffer offer)
     {
         if (!ShopPurchaseService.TryPurchase(offer)) return;
+        if (TryPayAndContinue()) return;
         if (failOfferCarousel != null) failOfferCarousel.RefreshPrices();
     }
 
+    private InGameShopOverlay failShopOverlay;
+
+    // Fail'deki "Satın Al": market level'dan ÇIKMADAN açılır (asla ana menüye atmaz — oyuncunun
+    // niyeti devam etmek). Alımla altın yettiği an market kendiliğinden kapanır, bedel düşülür, oyun sürer.
     private void GoToMarketFromFail()
     {
-        // Level'dan ÇIKMADAN market: oyuncu satın aldığı her şeyi hemen alır, kapatınca
-        // altın yetiyorsa oyun kaldığı yerden sürer (level kaybolmaz).
-        if (inGameShop.IsValid)
+        if (!inGameShop.IsValid)
         {
-            InGameShopOverlay.Open(inGameShop, HandleInGameShopClosed);
+            Debug.LogError("[LevelEnd] inGameShop referansları eksik — oyun içi market açılamadı.");
+            HandleBuyMovesClicked();
             return;
         }
 
-        // 01_Game'de market yok → ana menüye dön, orada market otomatik açılsın.
-        // Devam reddedilip level'dan çıkılıyor → fail'i işaretle (streak kırılır).
-        // Devam reddedildiği için staged event item'ları da temizlenir.
-        PlayerStats.MarkCurrentLevelFailed();
-        ProgressEventService.Instance?.DiscardStagedGains();
-        MarketNavigator.PendingOpenMarket = true;
-        ReturnToMainMenuImmediate();
+        ShopPurchaseService.OnPurchased -= HandleFailShopPurchased;
+        ShopPurchaseService.OnPurchased += HandleFailShopPurchased;
+        failShopOverlay = InGameShopOverlay.Open(inGameShop, HandleInGameShopClosed);
+    }
+
+    // Market açıkken yapılan her alım: altın artık yetiyorsa marketi kapat → HandleInGameShopClosed
+    // bedeli düşüp devam ettirir. Satın alma kutlaması kendi (üst) katmanında oynamaya devam eder.
+    private void HandleFailShopPurchased(ShopOffer _)
+    {
+        if (failShopOverlay == null || board == null) return;
+
+        ResolveCurrentFailOffer();
+        if (PlayerWallet.HasEnoughCoins(currentCost))
+            failShopOverlay.Close();
     }
 
     // Market kapandı: altın artık yetiyorsa devam bedelini ödeyip oyunu sürdür; yetmiyorsa
     // "Yetersiz Altın" seçimine geri dön (reklam / tekrar market / kapat).
     private void HandleInGameShopClosed()
     {
+        ShopPurchaseService.OnPurchased -= HandleFailShopPurchased;
+        failShopOverlay = null;
         if (board == null) return;
 
-        ResolveCurrentFailOffer();
-        if (PlayerWallet.HasEnoughCoins(currentCost))
-        {
-            PlayerWallet.SpendCoins(currentCost);
-            PerformContinue();
-            return;
-        }
+        if (TryPayAndContinue()) return;
 
         HandleBuyMovesClicked();
     }

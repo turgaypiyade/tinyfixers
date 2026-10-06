@@ -265,7 +265,7 @@ public sealed class CommonPopupView : MonoBehaviour
     {
         var skin = CommonPopupSkin.Shared;
         if (sprite == null) return null;
-        if (sprite == skin.accountButton) return skin.blueButtonMaterial;
+        if (sprite == skin.accountButton || sprite == skin.secondaryButton) return skin.blueButtonMaterial;
         if (sprite == skin.continueButton || sprite == skin.saveProgressContinueButton) return skin.greenButtonMaterial;
         return null;
     }

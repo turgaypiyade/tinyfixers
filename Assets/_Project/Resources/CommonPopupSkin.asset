@@ -15,6 +15,7 @@ MonoBehaviour:
   background: {fileID: 21300000, guid: 1a990070d5b464ddaba99d098f0f0673, type: 3}
   continueButton: {fileID: 21300000, guid: 31a3eec15ec7e4edebed2e4bd6c22218, type: 3}
   accountButton: {fileID: 21300000, guid: a2c51820150f54881a72847cf98cce95, type: 3}
+  secondaryButton: {fileID: 21300000, guid: 1febb4121a35475594220c09dbecc2a7, type: 3}
   saveProgressBackgroundMaterial: {fileID: 2100000, guid: bb380a88a72e40ce877e774ad5ae4068, type: 2}
   saveProgressContinueButton: {fileID: 21300000, guid: 31a3eec15ec7e4edebed2e4bd6c22218, type: 3}
   closeButton: {fileID: 21300000, guid: 8fb720f1c5fe84fceaa7533ae6712d06, type: 3}

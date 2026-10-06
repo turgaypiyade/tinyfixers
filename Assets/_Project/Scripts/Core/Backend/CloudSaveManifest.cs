@@ -49,6 +49,10 @@ public static class CloudSaveManifest
         "tutorial_seen_workshop_repair",
         "real_users_seen_max",   // bot evreni azalma eğrisi cihazlar arası tutarlı kalsın
         "music_selected",        // seçili müzik parçası
+        // Level deneme sayacı (LevelAttemptStats) — gizli yardım kademesi cihaz değişince korunsun.
+        "level_attempt_level",
+        "level_attempt_count",
+        "level_attempt_fails",
         // Harika (wonder/event) ilerlemesi: en son tamamlanan event + model sürümü.
         // Event başına görev sırası "wonder_stage_" aile öneki ile taranır (aşağıda).
         // Eski tek-harika anahtarları migration kaynağı olarak taşınmaya devam eder.

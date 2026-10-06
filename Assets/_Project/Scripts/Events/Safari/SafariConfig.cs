@@ -60,7 +60,7 @@ public sealed class SafariConfig : ScriptableObject
     [Header("Ödül (kazananlar arasında paylaşılır)")]
     [Tooltip("Safari'yi tamamlayan (7 strike) TÜM kazananlar arasında paylaşılacak toplam altın. " +
              "Booster verilmez.")]
-    [Min(0)] public int prizePoolGold = 2000;
+    [Min(0)] public int prizePoolGold = 10000;
 
     [Tooltip("Ödülü paylaşan tahmini kazanan sayısı (oyuncu dahil). Canlıda bu sayı backend'den gelir; " +
              "oyuncunun payı = prizePoolGold / kazanan sayısı.")]

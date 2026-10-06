@@ -77,7 +77,7 @@ public static class SafariState
 
     // İkon event'in KENDİ config'inde (SafariConfig, Resources) — provider oradan okur.
     private static SafariConfig s_config;
-    private static SafariConfig Config =>
+    public static SafariConfig Config =>
         s_config != null ? s_config : (s_config = Resources.Load<SafariConfig>("Events/SafariConfig"));
 
     // Loss paneline "vazgeçersen safari ilk-hakkını (pitstop ilerlemesi) yakarsın" öğesini kaydeder.

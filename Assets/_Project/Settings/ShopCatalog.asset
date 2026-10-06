@@ -70,7 +70,7 @@ MonoBehaviour:
         icons:
         - {fileID: 21300000, guid: 7cc20196928fb40aaa2bef28661a9bc3, type: 3}
         - {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
-        - {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+        - {fileID: 21300000, guid: 8372e60e21b94daab02ea6e2d65dba7f, type: 3}
         labelMode: 2
         labelValue: 1
         showTimerIcon: 1
@@ -147,7 +147,7 @@ MonoBehaviour:
         icons:
         - {fileID: 21300000, guid: 7cc20196928fb40aaa2bef28661a9bc3, type: 3}
         - {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
-        - {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+        - {fileID: 21300000, guid: 8372e60e21b94daab02ea6e2d65dba7f, type: 3}
         labelMode: 2
         labelValue: 12
         showTimerIcon: 1
@@ -224,7 +224,7 @@ MonoBehaviour:
         icons:
         - {fileID: 21300000, guid: 7cc20196928fb40aaa2bef28661a9bc3, type: 3}
         - {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
-        - {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+        - {fileID: 21300000, guid: 8372e60e21b94daab02ea6e2d65dba7f, type: 3}
         labelMode: 2
         labelValue: 24
         showTimerIcon: 1
@@ -301,7 +301,7 @@ MonoBehaviour:
         icons:
         - {fileID: 21300000, guid: 7cc20196928fb40aaa2bef28661a9bc3, type: 3}
         - {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
-        - {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+        - {fileID: 21300000, guid: 8372e60e21b94daab02ea6e2d65dba7f, type: 3}
         labelMode: 2
         labelValue: 72
         showTimerIcon: 1
@@ -390,7 +390,7 @@ MonoBehaviour:
         icons:
         - {fileID: 21300000, guid: 7cc20196928fb40aaa2bef28661a9bc3, type: 3}
         - {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
-        - {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+        - {fileID: 21300000, guid: 8372e60e21b94daab02ea6e2d65dba7f, type: 3}
         labelMode: 2
         labelValue: 100
         showTimerIcon: 1

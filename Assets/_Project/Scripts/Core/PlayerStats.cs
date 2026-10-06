@@ -99,6 +99,7 @@ public static class PlayerStats
         PlayerPrefs.Save();
         OnChanged?.Invoke();
         OnLevelCleared?.Invoke();
+        LevelAttemptStats.RecordWin(CurrentLevel.Global);   // level+1 yazılmadan önce çağrılır
     }
 
     /// Mevcut level fail olunca çağrılır. Güncel seriyi sıfırlar ve "bu level fail oldu" bayrağını
@@ -110,6 +111,7 @@ public static class PlayerStats
         PlayerPrefs.SetInt(LevelFailCountKey, LevelFailCount + 1);   // kümülatif fail sayacı (event tespiti)
         PlayerPrefs.Save();
         OnChanged?.Invoke();
+        LevelAttemptStats.RecordGiveUp(CurrentLevel.Global);
     }
 
     // ── Haftalık tick yardımcıları ──────────────────────────────────────────────

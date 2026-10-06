@@ -19,28 +19,28 @@ MonoBehaviour:
   totalStages: 10
   tasks:
   - name: "Zemini Sa\u011Flamla\u015Ft\u0131r"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 15a70c3da3064945bb4bb74af25bb7e5, type: 3}
     starCost: 0
   - name: "\u0130skeleyi Kur"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 0149ac3d2ba142c49e79a8b44c7c4301, type: 3}
     starCost: 0
   - name: "Temel Ta\u015Flar\u0131n\u0131 Onar"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
   - name: "S\xFCtunlar\u0131 Kaynakla"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 6b497708e5124ea79b4a79473300d4af, type: 3}
     starCost: 0
   - name: "Kemerleri Yenile"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 1fb0f30def2d4caca47e0accfe5ab2ea, type: 3}
     starCost: 0
   - name: "Mermeri Parlat"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
   - name: "\xC7an Kat\u0131n\u0131 Onar"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: c379b8fd59ef4cefaa152197af4525a3, type: 3}
     starCost: 0
   - name: "Bayra\u011F\u0131 Dik"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 365a7eb126eb4ce5af2c91c86f6ad07d, type: 3}
     starCost: 0
   starCosts: 0300000003000000030000000200000003000000020000000300000005000000
   starCostBase: 5
@@ -66,7 +66,7 @@ MonoBehaviour:
     weight: 0
   - type: 12
     amount: 1
-    icon: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+    icon: {fileID: 21300000, guid: 8372e60e21b94daab02ea6e2d65dba7f, type: 3}
     nameLocalizationKey: 
     fallbackName: 
     weight: 0

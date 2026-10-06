@@ -127,13 +127,24 @@ public sealed class PreLevelEventPromoStrip : MonoBehaviour
         icon.preserveAspect = true;
         icon.enabled = promo.Icon != null;
         var iconRt = icon.rectTransform;
-        iconRt.anchorMin = iconRt.anchorMax = new Vector2(0.2f, 0.58f);
-        iconRt.sizeDelta = Vector2.one * h * 0.6f;
+        iconRt.anchorMin = iconRt.anchorMax = new Vector2(0.2f, 0.5f);
+        iconRt.sizeDelta = Vector2.one * h * 0.82f;
 
-        var timer = NewText("Timer", bgRt, "", 34f);
+        // Süre, ikon görselinin altındaki koyu mavi şeridin İÇİNE yazılır (event buton sprite'ında şerit
+        // alttan ~%14 yükseklikte, ortada). İkon yoksa eski yerinde, ikonun altında durur.
+        var timer = NewText("Timer", promo.Icon != null ? iconRt : bgRt, "", 30f);
         var timerRt = timer.rectTransform;
-        timerRt.anchorMin = timerRt.anchorMax = new Vector2(0.2f, 0.2f);
-        timerRt.sizeDelta = new Vector2(width * 0.34f, 50f);
+        if (promo.Icon != null)
+        {
+            float side = h * 0.82f;
+            timerRt.anchorMin = timerRt.anchorMax = new Vector2(0.5f, 0.135f);
+            timerRt.sizeDelta = new Vector2(side * 0.66f, side * 0.15f);
+        }
+        else
+        {
+            timerRt.anchorMin = timerRt.anchorMax = new Vector2(0.2f, 0.2f);
+            timerRt.sizeDelta = new Vector2(width * 0.34f, 50f);
+        }
         timers.Add((promo, timer));
 
         // Sağ: çağrı + Katıl.
@@ -244,11 +255,36 @@ public sealed class PreLevelEventPromoStrip : MonoBehaviour
         rt.pivot = new Vector2(0.5f, 0.5f);
         var text = go.AddComponent<TextMeshProUGUI>();
         RewardTextStyle.Apply(text, fontSize);   // Safari altın outline stili (projede ortak)
+        ApplyOnRedContrast(text);
         text.fontSize = fontSize;
         text.alignment = TextAlignmentOptions.Center;
         text.raycastTarget = false;
         text.text = value;
         return text;
+    }
+
+    // Kırmızı şerit üstünde altın outline zeminle karışıp yazıyı boğuyordu (kullanıcı 2026-10-05) → beyaz yüz +
+    // koyu bordo kalın kenar + aşağı gölge. Ortak RewardTextStyle'a dokunulmaz (koyu ödül ekranlarında iyi).
+    private static Material s_onRedMaterial;
+    private static void ApplyOnRedContrast(TMP_Text text)
+    {
+        if (text == null || text.fontSharedMaterial == null) return;
+        if (s_onRedMaterial == null || s_onRedMaterial.mainTexture != text.fontSharedMaterial.mainTexture)
+        {
+            s_onRedMaterial = new Material(text.fontSharedMaterial) { name = "PromoStrip_OnRed" };
+            var dark = new Color(0.30f, 0.03f, 0.05f, 1f);
+            s_onRedMaterial.SetColor(ShaderUtilities.ID_FaceColor, Color.white);
+            s_onRedMaterial.SetColor(ShaderUtilities.ID_OutlineColor, dark);
+            s_onRedMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.22f);
+            s_onRedMaterial.DisableKeyword(ShaderUtilities.Keyword_Glow);
+            s_onRedMaterial.EnableKeyword(ShaderUtilities.Keyword_Underlay);
+            s_onRedMaterial.SetColor(ShaderUtilities.ID_UnderlayColor, new Color(0.15f, 0f, 0f, 0.75f));
+            s_onRedMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0f);
+            s_onRedMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.8f);
+            s_onRedMaterial.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0.2f);
+        }
+        text.fontSharedMaterial = s_onRedMaterial;
+        text.color = Color.white;
     }
 
     private static void Stretch(RectTransform rt, Vector2 offsetMin, Vector2 offsetMax)

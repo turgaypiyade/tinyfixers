@@ -89,10 +89,10 @@ public static class MockupUI
             "Assets/_Project/Art/UI/TopHUD/Robot_excited.png",
             "Assets/_Project/Art/UI/TopHUD/Robot_idle.png",
             "Assets/_Project/Art/UI/TopHUD/Robot_sad.png",
-            "Assets/_Project/Art/UI/RoboCharacters/LoadWrenchBot.png",
-            "Assets/_Project/Art/UI/RoboCharacters/LoadBolt.png",
-            "Assets/_Project/Art/UI/RoboCharacters/LoadMediBot.png",
-            "Assets/_Project/Art/UI/RoboCharacters/LoadPatchbot.png",
+            "Assets/_Project/Art/UI/WonderCharacters/LoadWrenchBot.png",
+            "Assets/_Project/Art/UI/WonderCharacters/LoadBolt.png",
+            "Assets/_Project/Art/UI/WonderCharacters/LoadMediBot.png",
+            "Assets/_Project/Art/UI/WonderCharacters/LoadPatchbot.png",
         };
         var list = new System.Collections.Generic.List<Sprite>();
         foreach (var p in paths)

@@ -8,6 +8,8 @@ public sealed class CommonPopupSkin : ScriptableObject
     public Sprite background;
     public Sprite continueButton;
     public Sprite accountButton;
+    [Tooltip("Yeşil butonla aynı kalıpta mavi buton — iki seçenekli popup'larda ikincil seçenek (Hayır/İptal).")]
+    public Sprite secondaryButton;
     public Material saveProgressBackgroundMaterial;
     public Sprite saveProgressContinueButton;
     public Sprite closeButton;

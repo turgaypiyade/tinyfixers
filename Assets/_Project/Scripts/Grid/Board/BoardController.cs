@@ -188,6 +188,12 @@ public class BoardController : MonoBehaviour
              "Büyük = daha yavaş/belirgin zincir.")]
     [SerializeField, Range(0f, 0.5f)] private float overridePulseChainStagger = 0.12f;
 
+    [Header("Match Patlama Stili")]
+    [Tooltip("Açık: eşleşen taşlar swap hücresine toplanır, orada tek halka çıkar (eski stil).\n" +
+             "Kapalı (varsayılan, 2026-10-05 kullanıcı kararı): her taş kendi yerinde küçülüp kendi halkasıyla yok olur.\n" +
+             "Special doğuran eşleşmeler her iki durumda da toplanır.")]
+    [SerializeField] private bool implodeNormalMatches = false;
+
     [Header("Board VFX/SFX")]
     [FormerlySerializedAs("pulseCoreVfxPlayer")][SerializeField] private PulseCoreVfxPlayer boardVfxPlayer;
     [SerializeField] private LightningSpawner lightningSpawner;
@@ -3328,6 +3334,26 @@ public class BoardController : MonoBehaviour
         }
     }
 
+    // Eşleşme bulunduysa ama dinamik girişte reddedilecekse: ilk "kararsız" taşı ve sebebini döner; hepsi
+    // stabilse null. (AreDynamicMatchTilesStable ile aynı kurallar — swap reddinin nedenini loglamak için.)
+    private string DescribeUnstableMatchTile(IEnumerable<TileView> matches, CellHold swapHold)
+    {
+        foreach (var tile in matches)
+        {
+            if (tile == null || !tile) return "destroyed_tile";
+            string at = $"({tile.X},{tile.Y})";
+            if (!tile.IsRuntimeIdle) return "not_idle" + at;
+            if (GetTileViewAt(tile.X, tile.Y) != tile) return "grid_mismatch" + at;
+            if (fallMotion != null && fallMotion.HasPendingMotion(tile)) return "pending_fall" + at;
+            if (IsReservedTileTargetCell(tile.X, tile.Y)) return "fall_target_reserved" + at;
+            var cell = new Vector2Int(tile.X, tile.Y);
+            if (pendingTriggeredSpecialOwners.ContainsKey(cell)) return "special_anchor" + at;
+            int ownHold = swapHold != null && swapHold.Contains(cell, cellHoldEpoch) ? 1 : 0;
+            if (cellHolds.TryGetValue(cell, out int holds) && holds > ownHold) return $"cell_held{at}x{holds}";
+        }
+        return null;
+    }
+
     private bool AreDynamicMatchTilesStable(IEnumerable<TileView> matches, CellHold swapHold)
     {
         foreach (var tile in matches)
@@ -3808,7 +3834,9 @@ public class BoardController : MonoBehaviour
                             normalMatches,
                             doShake: false,
                             suppressPerTileClearVfx: createdTiles.Count > 0,
-                            implodeTargetCell: new Vector2Int(a.X, a.Y)));
+                            implodeTargetCell: implodeNormalMatches || createdTiles.Count > 0
+                                ? new Vector2Int(a.X, a.Y)
+                                : (Vector2Int?)null));
                         yield return AnimateQueuedActions();
                         FlowLog("normal_side_clear");
                     }
@@ -3858,7 +3886,9 @@ public class BoardController : MonoBehaviour
 
         // Only a match involving a swapped tile validates a normal move. A pending
         // match elsewhere (or a predicted gravity match) must not spend this move.
-        if (matches.Count == 0 || (dynamicInput && !AreDynamicMatchTilesStable(matches, swapHold)))
+        string rejectReason = matches.Count == 0 ? "no_match"
+            : dynamicInput ? DescribeUnstableMatchTile(matches, swapHold) : null;
+        if (rejectReason != null)
         {
             ForgetGelCarriedBySwap(a, b);   // geçersiz swap: taş jele geri döner, bulaş taşımaz
             // Obstacle state de geri alınsın. Stacked movable senaryosunda (örn. plastik
@@ -3885,7 +3915,7 @@ public class BoardController : MonoBehaviour
             FlowLog("swap_back");
             swapHold?.Dispose();
 
-            Debug.Log($"[Flow] ═══ SWAP END (no match) ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
+            Debug.Log($"[Flow] ═══ SWAP END (no match: {rejectReason}, matches={matches.Count}) ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
             EndBusy();
             yield break;
         }
@@ -3909,6 +3939,28 @@ public class BoardController : MonoBehaviour
     // ═══════════════════════════════════════════════════════════════
     //  Resolve Board
     // ═══════════════════════════════════════════════════════════════
+
+    /// Aç Hamster zıplaması: iki taşı VERİDE anında yer değiştirir (oyuncu swap'ının veri kısmı; animasyon,
+    /// eşleşme kontrolü, hamle harcaması YOK). Hareketli engel (hamster) taşla birlikte taşınır. Görsel konumu
+    /// çağıran yönetir; sonra RequestResolveAfterActionSequence ile oluşan eşleşmeler çözülür.
+    internal bool TeleportSwapTiles(int ax, int ay, int bx, int by)
+    {
+        if (ax < 0 || ay < 0 || bx < 0 || by < 0 || ax >= width || bx >= width || ay >= height || by >= height)
+            return false;
+        var a = tiles[ax, ay];
+        var b = tiles[bx, by];
+        if (a == null || b == null || a == b) return false;
+
+        tiles[ax, ay] = b;
+        tiles[bx, by] = a;
+        a.SetCoords(bx, by);
+        b.SetCoords(ax, ay);
+        TryApplyMovableObstacleSwapState(ax, ay, bx, by, out _, out _);
+        SyncTileData(ax, ay);
+        SyncTileData(bx, by);
+        RefreshAllSortingOrders();
+        return true;
+    }
 
     private void TryApplyMovableObstacleSwapState(
         int ax, int ay,
@@ -4558,7 +4610,9 @@ public class BoardController : MonoBehaviour
             isSpecialPhase: allowSpecialActivation && hasAnySpecialActivation,
             presentationPlan: presentationPlan,
             enqueueCascadeOnComplete: false,
-            implodeTargetCell: implodeCenter,
+            implodeTargetCell: implodeNormalMatches || createdSpecialTiles.Count > 0
+                ? implodeCenter
+                : (Vector2Int?)null,
             // Special DOĞURAN eşleşme de yeri bilinen temizliktir (ayak izi + doğan special tutulur):
             // roket oluşurken tahtanın geri kalanı oynanabilir kalır. Special PATLAMASI (isSpecialPhase)
             // bilinçli olarak genel kilitte kalır — kullanıcı: patlamayı izlemek keyifli.

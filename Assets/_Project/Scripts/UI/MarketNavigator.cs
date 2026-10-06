@@ -16,13 +16,36 @@ public static class MarketNavigator
     /// <summary>Ana menü yüklenince market sekmesine geçilsin mi (başka sahneden istendi).</summary>
     public static bool PendingOpenMarket { get; set; }
 
-    /// <summary>Marketi açar. Sekme bu sahnede yoksa ana menüye yönlendirir.</summary>
+    // Oyun sahnesinin market içeriği (LevelEndSimplePopupController kaydeder). Varken market
+    // sahneden ÇIKMADAN overlay olarak açılır — oyuncu oynadığı level'dan atılmaz.
+    private static InGameShopOverlay.Refs? _inGameShop;
+
+    public static void RegisterInGameShop(InGameShopOverlay.Refs refs)
+    {
+        if (refs.IsValid) _inGameShop = refs;
+    }
+
+    public static void UnregisterInGameShop(InGameShopOverlay.Refs refs)
+    {
+        if (_inGameShop.HasValue && _inGameShop.Value.catalog == refs.catalog
+            && _inGameShop.Value.panelPrefab == refs.panelPrefab)
+            _inGameShop = null;
+    }
+
+    /// <summary>Marketi açar: ana menüde sekmeye geçer, oyun sahnesinde overlay açar; ikisi de
+    /// yoksa ana menüye yönlendirir.</summary>
     public static void OpenMarket()
     {
         var tabs = Object.FindFirstObjectByType<BottomTabController>();
         if (tabs != null)
         {
             tabs.Select(MarketTabIndex);
+            return;
+        }
+
+        if (_inGameShop.HasValue)
+        {
+            InGameShopOverlay.Open(_inGameShop.Value, null);
             return;
         }
 

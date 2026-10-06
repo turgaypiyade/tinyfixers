@@ -3968,8 +3968,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.07538803}
-  m_AnchorMax: {x: 0.7763769, y: 1.767184}
+  m_AnchorMin: {x: 0, y: 0.95327103}
+  m_AnchorMax: {x: 2.9177058, y: 22.345795}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -6570,7 +6570,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 1e21f0c15fda74c6681363fecc8cd1c1, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -7941,7 +7941,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 25662b8d200f740eb91e9bce211762db, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -8996,7 +8996,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: d5f7bca17842648c183fcd6fc11e60de, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -10191,6 +10191,7 @@ MonoBehaviour:
   pulseImpactAnimTime: 0.1
   pulseChainCatchOverlap: 0.4
   overridePulseChainStagger: 0.12
+  implodeNormalMatches: 0
   boardVfxPlayer: {fileID: 874639811}
   lightningSpawner: {fileID: 1732843067}
   lineTravelPlayer: {fileID: 1244073440}
@@ -10337,8 +10338,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelRuntimeSelector
   levelCatalog: {fileID: 11400000, guid: 367d7d797cb5d4822954cf3848cac992, type: 2}
   usePlayerPrefsLevel: 1
-  prefsLevelKey: current_level
-  prefsDefaultLevel: 22
   useLevelKey: 0
   levelKey: 
   chapter: 2
@@ -12581,14 +12580,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   verboseDebugLogs: 1
-  singleTargetText: "K\u0131rmak istedi\u011Fin objeye t\u0131kla!"
-  rowTargetText: "Yok etmek istedi\u011Fin sat\u0131ra t\u0131kla!"
-  columnTargetText: "Yok etmek istedi\u011Fin s\xFCtuna t\u0131kla!"
-  shuffleText: "Kar\u0131\u015Ft\u0131rmak i\xE7in herhangi bir yere t\u0131kla!"
-  singleTitle: "Wonder \xC7ekici!"
-  rowTitle: Wonder Roketi!
-  columnTitle: "Wonder Asans\xF6r!"
-  shuffleTitle: "Wonder Kar\u0131\u015Ft\u0131r\u0131c\u0131!"
+  singleTargetKey: joker_hint_single
+  rowTargetKey: joker_hint_row
+  columnTargetKey: joker_hint_column
+  shuffleKey: joker_hint_shuffle
+  singleTitleKey: joker_title_single
+  rowTitleKey: joker_title_row
+  columnTitleKey: joker_title_column
+  shuffleTitleKey: joker_title_shuffle
   titleColor: {r: 1, g: 0.85, b: 0.2, a: 1}
   titleFont: {fileID: 11400000, guid: ac4355f13452b44afb3bcab168126b78, type: 2}
   titleMaterial: {fileID: 2100000, guid: 8d3588b6256b54c48b06f9364fdcac49, type: 2}
@@ -12663,7 +12662,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 709e31e07fd434ca2a65da9ee016fb42, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -16398,6 +16397,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2689818694253189451}
   m_CullTransparentMesh: 1
+--- !u!114 &1822868907876468095
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 214283125}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 548bf4a7910af4aff9ee0bc016915643, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  target: {fileID: 214283127}
+  key: hud_goal
 --- !u!222 &1866950688715871416
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -17429,8 +17442,7 @@ MonoBehaviour:
   - {fileID: 0}
   goalCheckMarkSprite: {fileID: 0}
   coinsEarnedText: {fileID: 0}
-  coinsPrefix: +
-  coinsSuffix: ' coin'
+  coinsEarnedKey: level_end_coins_earned
   star3Ratio: 0.5
   star2Ratio: 0.2
   baseCoins: 100
@@ -19042,6 +19054,20 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &7520617088936803487
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1299973474}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 548bf4a7910af4aff9ee0bc016915643, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  target: {fileID: 1299973476}
+  key: hud_moves
 --- !u!114 &7532393106421224793
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19825,31 +19851,3 @@ SceneRoots:
   - {fileID: 685255517}
   - {fileID: 1519012591}
   - {fileID: 2095271736}
---- !u!114 &1822868907876468095
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 214283125}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 548bf4a7910af4aff9ee0bc016915643, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
-  target: {fileID: 214283127}
-  key: hud_goal
---- !u!114 &7520617088936803487
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1299973474}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 548bf4a7910af4aff9ee0bc016915643, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
-  target: {fileID: 1299973476}
-  key: hud_moves

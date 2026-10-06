@@ -51,6 +51,12 @@ service cloud.firestore {
       }
     }
 
+    // ── Uzaktan oyun ayarı (LevelRemoteTuning): herkes okur, yalnız Console'dan yazılır ──
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Kalan her şey kapalı.
     match /{document=**} {
       allow read, write: if false;

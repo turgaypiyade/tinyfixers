@@ -12,6 +12,10 @@ public sealed class WallKind
     public string[] StageDetails;          // aşama → detay sprite'ı (0 = rastgele kabartma, null)
     public int CollapseStage;              // bu aşamadaki hücreye gelen vuruş parçayı yıkar
     public bool ResetUnhitOnMoveEnd;       // hamle bitince o hamlede vurulmayan hücre aşama 0'a döner
+    public bool PlainBase;                 // aşama 0'da kabartma YOK (düz yüzey); detay yalnız çatlak aşamalarında
+    public bool DetailFullCell;            // detay sprite'ı tüm hücreye yayılır (kendi çiziminde ortalanmış, iç-alan ölçeği yok)
+    public bool StepBackUnhit;             // ResetUnhitOnMoveEnd: vurulmayan hücre başa değil BİR aşama geri döner
+    public System.Collections.Generic.Dictionary<string, UnityEngine.Vector2[]> FuseTips;   // türe özel fitil uçları (uv, sol-üst)
 
     /// Kiremit duvar (bej): 1 çatlak1 → 2 çatlak2 (alev) → 3 çatlak3 (alev) → 4 çatlak4 (alev) → 5. vuruş yıkım.
     public static readonly WallKind Brick = new WallKind
@@ -28,9 +32,22 @@ public sealed class WallKind
     {
         Id = ObstacleId.MetalWall,
         SpritePrefix = "MetalWall",
-        StageDetails = new[] { null, "Crack1", "Crack3" },
-        CollapseStage = 2,
+        // Kullanıcı kararı 2026-10-05: düz başlar; 1. vuruş çatlak2 → 2. çatlak3 → 3. çatlak4 → 4. vuruş yıkım.
+        // Ardışık kural: hamlede vurulmayan hücre BİR aşama geri gelir. Çizimler (Resources/Wall/MetalWallDetail_*)
+        // düz metalin üstüne tam hücre oturur; renkleri son hali (yeniden boyanmaz).
+        StageDetails = new[] { null, "Crack2", "Crack3", "Crack4" },
+        CollapseStage = 3,
         ResetUnhitOnMoveEnd = true,
+        StepBackUnhit = true,
+        PlainBase = true,
+        DetailFullCell = true,
+        FuseTips = new System.Collections.Generic.Dictionary<string, UnityEngine.Vector2[]>
+        {
+            ["Crack2"] = new[] { new UnityEngine.Vector2(402f / 734f, 272f / 736f) },
+            ["Crack3"] = new[] { new UnityEngine.Vector2(430f / 734f, 237f / 736f), new UnityEngine.Vector2(517f / 734f, 376f / 736f) },
+            ["Crack4"] = new[] { new UnityEngine.Vector2(462f / 734f, 220f / 736f), new UnityEngine.Vector2(551f / 734f, 287f / 736f),
+                                 new UnityEngine.Vector2(577f / 734f, 408f / 736f) },
+        },
     };
 
     public static WallKind For(ObstacleId id) =>
@@ -206,7 +223,7 @@ public sealed class WallObstacleService : MonoBehaviour
             {
                 if (hitSinceMoveEnd.Contains(c)) continue;
                 if (stageByCell.TryGetValue(c, out int st) && st > 0)
-                    SetStage(kv.Key, c, 0);
+                    SetStage(kv.Key, c, kind.StepBackUnhit ? st - 1 : 0);
             }
         }
         hitSinceMoveEnd.Clear();

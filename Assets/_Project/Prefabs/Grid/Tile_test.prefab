@@ -477,9 +477,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7031deac10d45474caca7611e87a2155, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OverrideSpecialView
-  topHalfSprite: {fileID: 21300000, guid: a45a8eecabca543f88a70bb0a82c0b0a, type: 3}
-  bottomHalfSprite: {fileID: 21300000, guid: 75456fe601a5343efaa4d3dfcb146f70, type: 3}
-  fullSphereSprite: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+  topHalfSprite: {fileID: 21300000, guid: d567fdc25dad46ff872966bf34f5ba01, type: 3}
+  bottomHalfSprite: {fileID: 21300000, guid: f0e44ecb67e0455d9889334bba64270d, type: 3}
+  fullSphereSprite: {fileID: 21300000, guid: 8372e60e21b94daab02ea6e2d65dba7f, type: 3}
   spinTurns: 5
   spinDuration: 0.8
   spinSeparationRatio: 0.362

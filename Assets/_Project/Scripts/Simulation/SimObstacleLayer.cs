@@ -692,6 +692,7 @@ public sealed class SimObstacleLayer : ISimObstacleQuery
         {
             var entry = goals.GetEntry(i);
             if (entry.Kind != LevelGoalTargetType.Obstacle || entry.Met) continue;
+            if (entry.Obstacle == ObstacleId.Hamster) continue;   // hedef = doyum sayısı, spawn yok
 
             var rule = _rules?.Get(entry.Obstacle);
             if (rule == null || rule.IsFallback) continue;

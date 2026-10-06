@@ -174,8 +174,10 @@ public sealed class InGameShopOverlay : MonoBehaviour
         if (balanceText != null) balanceText.text = GameLocalization.GetFormat("shop_balance_gold", coins);
     }
 
-    private void Close()
+    /// <summary>Marketi kapatır ve onClosed'u çağırır (Kapat butonu ya da çağıranın kendisi).</summary>
+    public void Close()
     {
+        if (this == null) return;
         var callback = onClosed;
         onClosed = null;
         Destroy(gameObject);

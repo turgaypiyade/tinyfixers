@@ -21,14 +21,20 @@ public static class TileClearBurstVfx
     private const string SHARD_POOL_KEY = "TileClearBurst.Shard";
 
     // ===== AYARLANABİLİR PARAMETRELER =====
-    private const float RING_SIZE_APPEAR = 1.25f;   // Halka beliriş scale (büyük başlar)
-    private const float RING_SIZE_END = 0.35f;      // Halka bitiş scale (küçülerek yok olur)
+    // Halka referans videodan kare kare ölçüldü (60 fps): her taşta ayrı halka KÜÇÜK doğar ve DIŞA büyür.
+    // Parlak şeridin yarıçapı hücre oranında: ~0.15 → ~0.65 (komşu halkalar kenarda hafifçe kesişir),
+    // hafif ease-out; ~25 ms'de tepe parlaklık, ~170 ms'de tamamen sönmüş. Yıldız/shard'lar daha uzun yaşar.
+    private const float RING_RADIUS_START = 0.15f;  // Parlak şerit yarıçapı başlangıç (hücre oranı)
+    private const float RING_RADIUS_END = 0.65f;    // Parlak şerit yarıçapı bitiş (hücre oranı)
+    private const float RING_DURATION = 0.17f;      // Halkanın ömrü (sn) — burst süresinden bağımsız
+    private const float RING_BAND_RADIUS_IN_SPRITE = 0.41f; // Soft-circle sprite'ında şerit yarıçapı / sprite boyu
     private const int RING_STAR_COUNT = 5;          // Halka içinde kaç yıldız
     private const int SHARD_COUNT = 7;              // Radyal saçılan altın shard sayısı
     private const float SHARD_DISTANCE = 1.2f;      // Shard uçuş mesafesi (hücre boyutunun oranı)
     private const float SHARD_GRAVITY = 1.8f;       // Shard yerçekimi (hücre/s² oranı)
 
-    private static readonly Color RING_COLOR = new Color(1f, 1f, 1f, 0.6f);
+    // Referans oyunlarda halka göze batmıyor, taşın patlamasına eşlik eden silik bir parlama → düşük tavan.
+    private static readonly Color RING_COLOR = new Color(1f, 1f, 1f, 0.45f);
     private static readonly Color STAR_COLOR = new Color(1f, 1f, 0.9f, 1f);
     private static readonly Color SHARD_COLOR_A = new Color(1f, 0.82f, 0.18f, 1f); // altın
     private static readonly Color SHARD_COLOR_B = new Color(1f, 0.65f, 0.05f, 1f); // koyu altın
@@ -171,14 +177,17 @@ public static class TileClearBurstVfx
         }
 
         // === ANİMASYON ===
+        // Kısa süreyle çağrılsa da halka kendi ömrünü tamamlar (yarıda kesilip pat diye kaybolmasın);
+        // yıldız/shard'lar k=1'de zaten tamamen sönmüş olur.
+        float lifetime = Mathf.Max(duration, RING_DURATION);
         float t = 0f;
-        while (t < duration)
+        while (t < lifetime)
         {
             if (rootGo == null) yield break;
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / duration);
 
-            AnimateRing(ring, k, tileSize);
+            AnimateRing(ring, Mathf.Clamp01(t / RING_DURATION), tileSize);
             AnimateStars(stars, k);
             AnimateShards(shards, k, tileSize);
 
@@ -203,7 +212,7 @@ public static class TileClearBurstVfx
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = Vector2.zero;
-        float s = tileSize * RING_SIZE_APPEAR;
+        float s = tileSize * RING_RADIUS_START / RING_BAND_RADIUS_IN_SPRITE;
         rt.sizeDelta = new Vector2(s, s);
 
         img.color = new Color(RING_COLOR.r, RING_COLOR.g, RING_COLOR.b, 0f);
@@ -214,28 +223,24 @@ public static class TileClearBurstVfx
         return new RingInstance { rt = rt, image = img };
     }
 
+    // k = halka zamanı (0..1, RING_DURATION üzerinden).
     private static void AnimateRing(RingInstance ring, float k, int tileSize)
     {
         if (ring == null || ring.rt == null || ring.image == null) return;
 
-        // Scale: BÜYÜK belir, sonra küçülerek yok ol (parçalarla beraber).
-        // Hafif easeIn ile sona doğru daha hızlı küçülür.
-        float shrink = k * k;
-        float scale = Mathf.Lerp(RING_SIZE_APPEAR, RING_SIZE_END, shrink);
-
-        float pixelSize = tileSize * scale;
+        // Yarıçap: küçük doğ, dışa büyü (hafif ease-out — ölçümde ilk yarıda daha hızlı açılıyor).
+        float grow = 1f - Mathf.Pow(1f - k, 1.5f);
+        float bandRadius = Mathf.Lerp(RING_RADIUS_START, RING_RADIUS_END, grow);
+        float pixelSize = tileSize * bandRadius / RING_BAND_RADIUS_IN_SPRITE;
         ring.rt.sizeDelta = new Vector2(pixelSize, pixelSize);
 
-        // Alpha: çok hızlı belir (düşük tavan), sonra sonuna kadar solarak kaybol
-        float alpha;
-        if (k < 0.12f)
-            alpha = (k / 0.12f) * RING_COLOR.a;
-        else
-            alpha = RING_COLOR.a * (1f - (k - 0.12f) / 0.88f);
-        alpha = Mathf.Clamp01(alpha);
+        // Alpha: ~%15'te tepe (≈25 ms), büyürken parlak kal, sonda hızlıca sön.
+        float alpha = k < 0.15f
+            ? (k / 0.15f) * RING_COLOR.a
+            : RING_COLOR.a * Mathf.Pow(1f - (k - 0.15f) / 0.85f, 0.7f);   // referansta ~140 ms'ye kadar belirgin
 
         Color c = ring.image.color;
-        c.a = alpha;
+        c.a = Mathf.Clamp01(alpha);
         ring.image.color = c;
     }
 

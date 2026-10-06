@@ -48,6 +48,8 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         LivesTimerService.EnsureExists();
         currentLevel = PlayerPrefs.GetInt(prefsLevelKey, 1);
         UpdateVisual();
+        NotificationPermissionPrompt.TryShow(this);
+        StoreReviewService.TryRequestOnMainMenu();
     }
 
     private void OnEnable()

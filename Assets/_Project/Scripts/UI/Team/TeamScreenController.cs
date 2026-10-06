@@ -38,8 +38,6 @@ public sealed class TeamScreenController : MonoBehaviour
     [SerializeField] private Button messagePostButton;
 
     [Header("Görsel")]
-    [Tooltip("Avatarı olmayan mesajlara isme göre deterministik dağıtılan mock avatar havuzu.")]
-    [SerializeField] private Sprite[] avatarPool;
     [Tooltip("Takım amblemi yoksa kullanılacak varsayılan amblem.")]
     [SerializeField] private Sprite defaultEmblem;
     [Tooltip("Amblem havuzu — PlayerTeamState.EmblemIndex buradan sprite'a çevrilir.")]
@@ -313,31 +311,8 @@ public sealed class TeamScreenController : MonoBehaviour
         scrollRect.verticalNormalizedPosition = 0f;   // en yeni mesaj altta
     }
 
-    // İsme göre deterministik avatar (aynı isim her seferinde aynı robotu alır).
-    private Sprite PickAvatar(string name)
-    {
-        Sprite profileAvatar = PlayerAvatarProvider.PickForSeed(name);
-        if (profileAvatar != null)
-            return profileAvatar;
-
-        if (avatarPool == null || avatarPool.Length == 0) return null;
-        int hash = StableHash(name);
-        return avatarPool[hash % avatarPool.Length];
-    }
-
-    private static int StableHash(string value)
-    {
-        unchecked
-        {
-            int hash = 23;
-            if (!string.IsNullOrEmpty(value))
-            {
-                for (int i = 0; i < value.Length; i++)
-                    hash = hash * 31 + value[i];
-            }
-            return hash & int.MaxValue;
-        }
-    }
+    // İsme göre deterministik avatar (AvatarLibrary'deki hayvan avatarlarından; aynı isim her seferinde aynı avatarı alır).
+    private static Sprite PickAvatar(string name) => PlayerAvatarProvider.PickForSeed(name);
 
     // ── Aksiyonlar ──────────────────────────────────────────────────
 

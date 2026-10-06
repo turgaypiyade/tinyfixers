@@ -29,9 +29,16 @@ public readonly struct ObstacleVisualChange
     /// remainingHits değişmeden tekrar hit geldi (örn. Wardrobe item kırılması).
     /// Ses sistemi genel hitSound'a düşer; stage sesi çalmaz.
     public readonly bool isRepeatHit;
+    /// Gerçekten vurulan hücre (-1 = bilinmiyor). Çok hücreli engelde vuruş efekti origin'de (sol üst / ilk
+    /// konan hücre) değil vurulan yerde çıkmalı → FxCellIndex.
+    public readonly int hitCellIndex;
 
-    public ObstacleVisualChange(int originIndex, ObstacleId obstacleId, bool cleared, int remainingHits, Sprite sprite, ChestColorMask removedColor = ChestColorMask.None, bool isRepeatHit = false)
+    /// Vuruş/kırılma efektinin çıkacağı hücre: vurulan hücre biliniyorsa o, yoksa origin.
+    public int FxCellIndex => hitCellIndex >= 0 ? hitCellIndex : originIndex;
+
+    public ObstacleVisualChange(int originIndex, ObstacleId obstacleId, bool cleared, int remainingHits, Sprite sprite, ChestColorMask removedColor = ChestColorMask.None, bool isRepeatHit = false, int hitCellIndex = -1)
     {
+        this.hitCellIndex = hitCellIndex;
         this.originIndex = originIndex;
         this.obstacleId = obstacleId;
         this.cleared = cleared;
@@ -233,6 +240,10 @@ public class ObstacleStateService : ISimObstacleQuery
     /// wall cell is hit. Per-cell stage state is owned by the service; it answers whether the hit only
     /// advanced that cell's stage or must collapse the whole piece.</summary>
     public Func<int, int, ObstacleHitContext, WallHitOutcome> WallHitInterceptor;
+
+    /// Aç Hamster: HamsterObstacleService set eder (origin, vurulan hücre). Vuruş hamsteri BESLER, asla hasar
+    /// vermez. true → bu vuruş son doyumu tamamladı, hamster ayrılıyor (engel temizlenir); false → yerinde kalır.
+    public Func<int, int, ObstacleHitContext, bool> HamsterHitInterceptor;
     /// <summary>RocketBasket: set by RocketBasketService. Called with (origin, context, sourceTileType)
     /// when a RocketBasket cell is hit. Returns true if a rocket launched → hit consumed. Normal match
     /// launches only the MATCHING color; special/combo/booster/scripted hits ALWAYS launch a remaining
@@ -581,6 +592,26 @@ public class ObstacleStateService : ISimObstacleQuery
         // Advanced → yalnız vurulan hücrenin aşaması ilerledi, parça yerinde. Collapse → son aşamadaki (WallKind.CollapseStage)
         // hücre tekrar vuruldu: parçanın TÜM hücreleri tek seferde temizlenir (OnObstacleDestroyed bir kez →
         // hedef parça başına sayılır).
+        // Hamster: kırılmaz karakter. Her vuruş (bitişik eşleşme / special) bir lokma; hasar yok. Hedef
+        // tamamlanınca servis true döner → parça tek seferde temizlenir (OnObstacleDestroyed bir kez).
+        if (id == ObstacleId.Hamster)
+        {
+            if (HamsterHitInterceptor == null)
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            int[] hamsterCells = CollectCellsForOrigin(origin, id);
+            if (HamsterHitInterceptor.Invoke(origin, idx, context))
+            {
+                ClearObstacleFromLevel(origin, id);
+                change = new ObstacleVisualChange(origin, id, true, 0, null, hitCellIndex: idx);
+                var leaveTransition = new ObstacleStageTransition(true, origin, id, 0, true, default, default);
+                return new ObstacleHitResult(true, true, false, change, leaveTransition, hamsterCells);
+            }
+
+            change = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null, hitCellIndex: idx);
+            return new ObstacleHitResult(true, true, false, change, default, hamsterCells);
+        }
+
         if (id == ObstacleId.Wall || id == ObstacleId.MetalWall)
         {
             if (WallHitInterceptor == null)
@@ -594,12 +625,12 @@ public class ObstacleStateService : ISimObstacleQuery
             if (wallOutcome == WallHitOutcome.Collapse)
             {
                 ClearObstacleFromLevel(origin, id);
-                change = new ObstacleVisualChange(origin, id, true, 0, null);
+                change = new ObstacleVisualChange(origin, id, true, 0, null, hitCellIndex: idx);
                 var wallTransition = new ObstacleStageTransition(true, origin, id, 0, true, default, default);
                 return new ObstacleHitResult(true, true, false, change, wallTransition, wallCells);
             }
 
-            change = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+            change = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null, hitCellIndex: idx);
             return new ObstacleHitResult(true, true, false, change, default, wallCells);
         }
 
@@ -710,7 +741,7 @@ public class ObstacleStateService : ISimObstacleQuery
                 if (newCount > 0)
                 {
                     // Hâlâ item var: remaining sabit, erken dön
-                    change = new ObstacleVisualChange(origin, id, false, remaining, null, ChestColorMask.None, isRepeatHit: true);
+                    change = new ObstacleVisualChange(origin, id, false, remaining, null, ChestColorMask.None, isRepeatHit: true, hitCellIndex: idx);
                     return new ObstacleHitResult(true, true, false, change, default, affectedCells);
                 }
                 // newCount == 0: düş → remaining-- → obstacle yıkılır
@@ -777,7 +808,7 @@ public class ObstacleStateService : ISimObstacleQuery
 
         var currentStage = CreateSnapshot(def, id, remaining);
         var sprite = ResolveStageSprite(def, id, remaining);
-        change = new ObstacleVisualChange(origin, id, false, remaining, sprite, removedColor);
+        change = new ObstacleVisualChange(origin, id, false, remaining, sprite, removedColor, hitCellIndex: idx);
 
         var stageTransition = new ObstacleStageTransition(
             true,
@@ -896,7 +927,8 @@ public class ObstacleStateService : ISimObstacleQuery
     public bool TakesPerCellHits(int x, int y)
     {
         var id = GetObstacleIdAt(x, y);
-        return id == ObstacleId.Magnet || id == ObstacleId.Wall || id == ObstacleId.MetalWall;
+        return id == ObstacleId.Magnet || id == ObstacleId.Wall || id == ObstacleId.MetalWall
+            || id == ObstacleId.Hamster;
     }
 
     public bool IsMagnetEndpoint(int x, int y)
@@ -2111,6 +2143,11 @@ public class ObstacleStateService : ISimObstacleQuery
     /// ilk PatchBot'tan sonra kasayı hedef listesinden düşürüyordu.
     public Func<int, int> SafeRemainingHitsQuery;
 
+    /// KeyGenerator: KeyGeneratorService set eder. Makine bir vuruşla HÂLÂ anahtar üretebilir mi?
+    /// Kota tükenince (üretilen+uçan = hedef) false → engel vuruş tüketmez (aşaması hiç düşmediği için
+    /// stage kuralına bakmak "1 vuruş var" der ve PatchBot'lar bitmiş makineye gider).
+    public Func<bool> KeyGeneratorCanProduceQuery;
+
     public int GetActiveMeaningfulHitsAt(int x, int y)
     {
         if (!IsValidCell(x, y)) return 0;
@@ -2120,6 +2157,9 @@ public class ObstacleStateService : ISimObstacleQuery
         if (id == ObstacleId.None) return 0;
 
         if (id == ObstacleId.Tube) return 1;
+
+        if (id == ObstacleId.KeyGenerator)
+            return KeyGeneratorCanProduceQuery != null && KeyGeneratorCanProduceQuery() ? 1 : 0;
 
         if (id == ObstacleId.Safe)
         {

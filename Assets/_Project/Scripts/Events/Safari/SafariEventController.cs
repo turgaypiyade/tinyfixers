@@ -399,6 +399,7 @@ public sealed class SafariEventController : MonoBehaviour
         LastRewardShare = Mathf.Max(1, share);
         SafariState.MarkRewardClaimed();
         PlayerWallet.AddCoins(LastRewardShare);
+        StoreReviewService.MarkHappyMoment();
         int pool = config != null ? config.prizePoolGold : 0;
         Debug.Log($"[Safari] Ödül claim: {pool} altın / {winners} kazanan → oyuncu payı {LastRewardShare}.");
     }

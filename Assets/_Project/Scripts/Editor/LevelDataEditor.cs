@@ -160,6 +160,12 @@ public class LevelDataEditor : Editor
         EditorGUILayout.LabelField("Level Kind", EditorStyles.boldLabel);
         level.levelKind = (LevelKind)EditorGUILayout.EnumPopup("Kind", level.levelKind);
 
+        // Aç Hamster: level'da hamster varsa doyma eşiği (0 = ObstacleLibrary varsayılanı).
+        if (level.obstacles != null && System.Array.IndexOf(level.obstacles, (int)ObstacleId.Hamster) >= 0)
+            level.hamsterSatietyOverride = Mathf.Max(0, EditorGUILayout.IntField(
+                new GUIContent("Hamster Doyma (lokma)", "0 = ObstacleLibrary'deki varsayılan (hamsterSatiety)."),
+                level.hamsterSatietyOverride));
+
         // Boss düellosu kendi hayvan intro'sunu (BossDuelIntroArtwork) oynatır; sol/sağ sprite'lı
         // özel intro orada hiç okunmaz. Yalnız giriş süreleri kullanılır.
         if (level.levelKind == LevelKind.BossDuel)

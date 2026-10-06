@@ -21,7 +21,7 @@ public static class PreLevelSpecialInjectorBootstrapper
             return;
 
         var userSelected = PreLevelSpecialSelectionState.GetSelectionSnapshot();
-        var timedSpecials = GetTimedSpecials();
+        var timedSpecials = PreLevelAutoSpecials.Collect();
         var combined = new List<TileSpecial>(timedSpecials);
         combined.AddRange(userSelected);
 
@@ -31,18 +31,5 @@ public static class PreLevelSpecialInjectorBootstrapper
             SceneManager.MoveGameObjectToScene(go, activeScene);
 
         go.AddComponent<PreLevelSpecialRuntimeInjector>().Initialize(combined);
-    }
-
-    private static List<TileSpecial> GetTimedSpecials()
-    {
-        var list = new List<TileSpecial>();
-        if (TimedRewardService.IsActive(DailySlotRewardType.Joker_Line) ||
-            TimedRewardService.IsActive(DailySlotRewardType.Joker_LineH))
-            list.Add(TileSpecial.LineH);
-        if (TimedRewardService.IsActive(DailySlotRewardType.Joker_PulseCore))
-            list.Add(TileSpecial.PulseCore);
-        if (TimedRewardService.IsActive(DailySlotRewardType.Joker_SystemOverride))
-            list.Add(TileSpecial.SystemOverride);
-        return list;
     }
 }

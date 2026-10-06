@@ -276,7 +276,8 @@ public class TopHudController : MonoBehaviour
     {
         return goal != null
                && goal.targetType == LevelGoalTargetType.Collectible
-               && goal.collectibleId == CollectibleId.EnergyOrb;
+               && goal.collectibleId == CollectibleId.EnergyOrb
+               && goal.iconOverride == null;   // özel ikon diğer hedeflerle aynı boyda
     }
 
     private Sprite ResolveGoalIcon(LevelGoalDefinition goal, int goalIndex)
@@ -404,10 +405,45 @@ public class TopHudController : MonoBehaviour
             UpdateGoalsCompletionState();
     }
 
+    /// Aç Hamster: hedef "X kez doyur" — HamsterObstacleService her doyumda tamamlanan sayıyı yazar
+    /// (hamster ayrılırken gelen OnObstacleDestroyed hedefi ayrıca düşürmez).
+    public void SetHamsterFeedsCompleted(int completed)
+    {
+        bool anyGoalUpdated = false;
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var goal = runtimeGoals[i];
+            if (goal.definition == null || goal.definition.targetType != LevelGoalTargetType.Obstacle
+                || goal.definition.obstacleId != ObstacleId.Hamster)
+                continue;
+            int remaining = Mathf.Max(0, goal.definition.amount - Mathf.Max(0, completed));
+            if (goal.remaining == remaining) continue;
+            goal.remaining = remaining;
+            goal.slot?.SetRemaining(goal.remaining);
+            anyGoalUpdated = true;
+        }
+        if (anyGoalUpdated)
+            UpdateGoalsCompletionState();
+    }
+
+    /// Level'daki hamster hedef miktarı (yoksa 0).
+    public int GetHamsterGoalAmount()
+    {
+        int total = 0;
+        foreach (var goal in runtimeGoals)
+            if (goal.definition != null && goal.definition.targetType == LevelGoalTargetType.Obstacle
+                && goal.definition.obstacleId == ObstacleId.Hamster)
+                total += Mathf.Max(0, goal.definition.amount);
+        return total;
+    }
+
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
     {
         // BatteryBox goal'u per-hit (HandleBatteryHit) takip edilir, yıkılınca çift sayma olmasın.
         if (obstacleId == ObstacleId.BatteryBox)
+            return;
+        // Hamster hedefi doyum sayısıyla yürür (SetHamsterFeedsCompleted); ayrılış ayrıca sayılmaz.
+        if (obstacleId == ObstacleId.Hamster)
             return;
 
         bool anyGoalUpdated = false;

@@ -90,7 +90,10 @@ public sealed class KeyGeneratorService : MonoBehaviour
         }
 
         if (board?.ObstacleStateService != null)
+        {
             board.ObstacleStateService.KeyGeneratorHitInterceptor = null;
+            board.ObstacleStateService.KeyGeneratorCanProduceQuery = null;
+        }
 
         machineViewsByOrigin.Clear();
     }
@@ -121,6 +124,7 @@ public sealed class KeyGeneratorService : MonoBehaviour
         board.KeyGeneratorProductionComplete = completed;
 
         board.ObstacleStateService.KeyGeneratorHitInterceptor = completed ? null : HandleKeyGeneratorHit;
+        board.ObstacleStateService.KeyGeneratorCanProduceQuery = CanProduceMore;
 
         // A KeyGenerator hidden under a cover (Grass, Safe...) is not in level.obstacles[]
         // while covered, so CloseAllGenerators misses it. When it is later revealed we must
@@ -143,6 +147,14 @@ public sealed class KeyGeneratorService : MonoBehaviour
 
         if (logDebug)
             Debug.Log($"[KeyGenerator] Bound. capacity={ResolveKeyGoalAmount()} completed={completed}");
+    }
+
+    // Hedef havuzu (PatchBot vb.) için: bir vuruş daha anahtar doğurur mu? HandleKeyGeneratorHit'in kota koşulu.
+    private bool CanProduceMore()
+    {
+        if (completed || board == null) return false;
+        int capacity = ResolveKeyGoalAmount();
+        return capacity > 0 && committedKeys < capacity;
     }
 
     private bool HandleKeyGeneratorHit(int originIndex)

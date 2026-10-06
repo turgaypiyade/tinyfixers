@@ -750,7 +750,7 @@
         },
         {
           "key": "hint_obstacle_metalwall",
-          "value": "Metal duvarı üst üste vurmalısın! Bir hamle boş geçersen çatlak kapanır. Aynı taşa 3 hamle art arda vur, duvar yıkılsın."
+          "value": "Metal duvarı üst üste vurmalısın! Bir hamle boş geçersen çatlak bir adım kapanır. Aynı taşa 4 hamle art arda vur, duvar yıkılsın."
         },
         {
           "key": "hint_obstacle_metalwall_name",
@@ -2163,6 +2163,114 @@
         {
           "key": "purchase_celebration_title",
           "value": "HARİKA!"
+        },
+        {
+          "key": "notif_lives_full_title",
+          "value": "Canların full! ❤️❤️❤️"
+        },
+        {
+          "key": "notif_lives_full_body",
+          "value": "Tamirciler hazır, hadi bir level daha! 🔧🐷"
+        },
+        {
+          "key": "notif_event_rising_title",
+          "value": "Yükseliş başladı! 🎉"
+        },
+        {
+          "key": "notif_event_rising_body",
+          "value": "Zirve seni çağırıyor, ilk sen tırman! 🧗✨"
+        },
+        {
+          "key": "notif_event_bridge_title",
+          "value": "Köprü Tamiri başladı! 🌉"
+        },
+        {
+          "key": "notif_event_bridge_body",
+          "value": "Köprü tamir bekliyor, yarışa katıl! 🔨🏁"
+        },
+        {
+          "key": "notif_event_name_rising",
+          "value": "Yükseliş"
+        },
+        {
+          "key": "notif_event_name_bridge",
+          "value": "Köprü Tamiri"
+        },
+        {
+          "key": "notif_event_ending_title",
+          "value": "Son saatler! ⏰"
+        },
+        {
+          "key": "notif_event_ending_body",
+          "value": "{0} bitmek üzere, ödülünü kaçırma! 🎁"
+        },
+        {
+          "key": "notif_wheel_title",
+          "value": "Çarkın hazır! 🎡"
+        },
+        {
+          "key": "notif_wheel_body",
+          "value": "Günlük ücretsiz çevirme hakkın seni bekliyor 🍀"
+        },
+        {
+          "key": "notif_comeback_title",
+          "value": "Seni özledik! 🥺"
+        },
+        {
+          "key": "notif_comeback_body",
+          "value": "Tamir bekleyen yerler var, tamirciler seni bekliyor 🐷🔧"
+        },
+        {
+          "key": "notif_comeback2_title",
+          "value": "Ortalık karıştı! 😱"
+        },
+        {
+          "key": "notif_comeback2_body",
+          "value": "Hayvan dostların yardımını bekliyor, hadi geri dön! 🐾"
+        },
+        {
+          "key": "notif_channel_name",
+          "value": "Oyun Bildirimleri"
+        },
+        {
+          "key": "notif_channel_description",
+          "value": "Can dolumu, etkinlikler ve günlük ödüller"
+        },
+        {
+          "key": "notif_prompt_title",
+          "value": "Haber Verelim mi?"
+        },
+        {
+          "key": "notif_prompt_body",
+          "value": "Canların dolunca ve yeni etkinlikler başlayınca sana haber verelim mi?"
+        },
+        {
+          "key": "notif_prompt_yes",
+          "value": "Evet!"
+        },
+        {
+          "key": "notif_prompt_no",
+          "value": "Hayır"
+        },
+        {
+          "key": "settings_rate_us",
+          "value": "Bizi Değerlendir"
+        },
+        {
+          "key": "bridge_join_headline",
+          "value": "Köprüyü ilk sen tamamla!"
+        },
+        {
+          "key": "bridge_join_info",
+          "value": "{0} level · {1} kişilik yarış · ilk {2} ödül kazanır"
+        },
+        {
+          "key": "safari_join_headline",
+          "value": "Zirveye ilk sen ulaş!"
+        },
+        {
+          "key": "safari_join_rules",
+          "value": "{0} kat · her seviyeyi ilk denemede geç"
         }
       ]
     },
@@ -2907,7 +3015,7 @@
         },
         {
           "key": "hint_obstacle_metalwall",
-          "value": "Keep hitting the metal wall! If a move misses a block, its crack closes again. Hit the same block 3 moves in a row to bring it down."
+          "value": "Keep hitting the metal wall! If a move misses a block, its crack closes one step. Hit the same block 4 moves in a row to bring it down."
         },
         {
           "key": "hint_obstacle_metalwall_name",
@@ -4328,6 +4436,114 @@
         {
           "key": "purchase_celebration_title",
           "value": "AWESOME!"
+        },
+        {
+          "key": "notif_lives_full_title",
+          "value": "Lives refilled! ❤️❤️❤️"
+        },
+        {
+          "key": "notif_lives_full_body",
+          "value": "The fixers are ready, one more level? 🔧🐷"
+        },
+        {
+          "key": "notif_event_rising_title",
+          "value": "Rising has started! 🎉"
+        },
+        {
+          "key": "notif_event_rising_body",
+          "value": "The summit is calling, be the first to climb! 🧗✨"
+        },
+        {
+          "key": "notif_event_bridge_title",
+          "value": "Bridge Repair has started! 🌉"
+        },
+        {
+          "key": "notif_event_bridge_body",
+          "value": "The bridge needs fixing, join the race! 🔨🏁"
+        },
+        {
+          "key": "notif_event_name_rising",
+          "value": "Rising"
+        },
+        {
+          "key": "notif_event_name_bridge",
+          "value": "Bridge Repair"
+        },
+        {
+          "key": "notif_event_ending_title",
+          "value": "Final hours! ⏰"
+        },
+        {
+          "key": "notif_event_ending_body",
+          "value": "{0} is ending soon, don't miss your reward! 🎁"
+        },
+        {
+          "key": "notif_wheel_title",
+          "value": "Your wheel is ready! 🎡"
+        },
+        {
+          "key": "notif_wheel_body",
+          "value": "Your free daily spin is waiting 🍀"
+        },
+        {
+          "key": "notif_comeback_title",
+          "value": "We miss you! 🥺"
+        },
+        {
+          "key": "notif_comeback_body",
+          "value": "Things need fixing, the fixers are waiting for you 🐷🔧"
+        },
+        {
+          "key": "notif_comeback2_title",
+          "value": "Things are a mess! 😱"
+        },
+        {
+          "key": "notif_comeback2_body",
+          "value": "Your animal friends need your help, come back! 🐾"
+        },
+        {
+          "key": "notif_channel_name",
+          "value": "Game Notifications"
+        },
+        {
+          "key": "notif_channel_description",
+          "value": "Lives refills, events and daily rewards"
+        },
+        {
+          "key": "notif_prompt_title",
+          "value": "Stay in the Loop?"
+        },
+        {
+          "key": "notif_prompt_body",
+          "value": "Want us to let you know when your lives refill and new events start?"
+        },
+        {
+          "key": "notif_prompt_yes",
+          "value": "Yes!"
+        },
+        {
+          "key": "notif_prompt_no",
+          "value": "No"
+        },
+        {
+          "key": "settings_rate_us",
+          "value": "Rate Us"
+        },
+        {
+          "key": "bridge_join_headline",
+          "value": "Finish the bridge first!"
+        },
+        {
+          "key": "bridge_join_info",
+          "value": "{0} levels · {1}-player race · top {2} win prizes"
+        },
+        {
+          "key": "safari_join_headline",
+          "value": "Reach the top first!"
+        },
+        {
+          "key": "safari_join_rules",
+          "value": "{0} floors · beat each level on the first try"
         }
       ]
     }

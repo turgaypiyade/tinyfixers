@@ -78,7 +78,7 @@ Production boss HP, power and counter damage were retuned on 2026-09-21; see
   `weaponImpactPoint` is editable per character for differently cropped strike artwork.
 - Attacks are serialized so the two characters do not dash through each other.
   A winning attacker returns home before its victory hop and level-end hold are released.
-- Original PNGs are copied unchanged under `Art/UI/RoboCharacters/Ram/Duel` and `Badger`.
+- Original PNGs are copied unchanged under `Art/UI/WonderCharacters/Ram/Duel` and `Badger`.
 - Each pose has a height multiplier and ground pivot. These align differently cropped images
   without modifying their pixels. Final pose alignment still needs visual tuning in Play mode.
 - Cleared tiles, including cascades and special clears, accumulate

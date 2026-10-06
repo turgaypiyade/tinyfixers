@@ -24,6 +24,6 @@ MonoBehaviour:
   fallCooldownMinutes: 30
   participantVisualCount: 100
   avatarsOnScreen: 24
-  prizePoolGold: 2000
+  prizePoolGold: 10000
   simulatedWinnerCount: 20
   debugForceAvailable: 0

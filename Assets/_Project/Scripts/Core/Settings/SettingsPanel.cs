@@ -27,6 +27,8 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Button saveProgressButton;
     [SerializeField] private Button helpSupportButton;
     [SerializeField] private Button followInstagramButton;
+    [Tooltip("\"Bizi Değerlendir\" — mağazanın yorum sayfasını açar (StoreReviewService).")]
+    [SerializeField] private Button rateUsButton;
 
     [Header("Save Progress Feedback")]
     [Tooltip("Save sonrası kısa süreliğine görünür olacak \"Kaydedildi\" etiketi (opsiyonel).")]
@@ -65,6 +67,7 @@ public class SettingsPanel : MonoBehaviour
             helpSupportButton.interactable = false; // şimdilik devre dışı
         }
         if (followInstagramButton != null)   followInstagramButton.onClick.AddListener(OnFollowInstagramClicked);
+        if (rateUsButton != null)            rateUsButton.onClick.AddListener(StoreReviewService.OpenStorePage);
 
         if (savedConfirmationLabel != null) savedConfirmationLabel.SetActive(false);
     }

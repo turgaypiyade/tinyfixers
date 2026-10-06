@@ -65,7 +65,10 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     [SerializeField] private Transform goalsPreviewRoot;
     [SerializeField] private TopHudGoalSlot goalSlotPrefab;
     [SerializeField, Min(1)] private int maxPreviewGoals = 4;
-    [SerializeField, Min(0.1f)] private float goalPreviewScale = 2f;
+    [Tooltip("Hedef ikonlarının en büyük ölçeği (1–2 hedef). 3 hedefte %80'i, 4 hedefte %65'i kullanılır " +
+             "(kutuya sığsın).")]
+    [SerializeField, Min(0.1f)] private float goalPreviewScale = 2.6f;
+    private int previewGoalCount = 1;
     [SerializeField] private Sprite fallbackGoalIcon;
 
     [Header("Special Slots")]
@@ -312,6 +315,10 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
         int spawned = 0;
         int limit = Mathf.Max(1, maxPreviewGoals);
+        previewGoalCount = 0;
+        foreach (var g in levelData.goals)
+            if (g != null && g.amount > 0) previewGoalCount++;
+        previewGoalCount = Mathf.Clamp(previewGoalCount, 1, limit);
 
         for (int i = 0; i < levelData.goals.Length && spawned < limit; i++)
         {
@@ -345,7 +352,9 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         if (slot == null)
             return;
 
-        float scale = Mathf.Max(0.1f, goalPreviewScale);
+        // Az hedefte büyük ikon (kutu boş kalmasın), çok hedefte kutuya sığacak kadar.
+        float countFactor = previewGoalCount <= 2 ? 1f : previewGoalCount == 3 ? 0.8f : 0.65f;
+        float scale = Mathf.Max(0.1f, goalPreviewScale * countFactor);
 
         if (slot.transform is RectTransform rt)
         {
@@ -506,9 +515,12 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
     private static bool ShouldUseLargeGoalIcon(LevelGoalDefinition goal)
     {
+        // Büyük kutu yalnız varsayılan (küçük çizilmiş) enerji küresi ikonu içindir. Level özel ikon verdiyse
+        // (ör. çekiç) o ikon diğer hedeflerle aynı boyda olmalı — yoksa %36 büyük görünür.
         return goal != null
                && goal.targetType == LevelGoalTargetType.Collectible
-               && goal.collectibleId == CollectibleId.EnergyOrb;
+               && goal.collectibleId == CollectibleId.EnergyOrb
+               && goal.iconOverride == null;
     }
 
     private ChapterTheme ResolveTheme()
@@ -573,7 +585,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         }
 
         // Timed specials are auto-injected regardless of user selection.
-        var timedSpecials = CollectTimedSpecials();
+        var timedSpecials = PreLevelAutoSpecials.Collect();
         var combined = new List<TileSpecial>(timedSpecials);
         combined.AddRange(userSelected);
 
@@ -596,19 +608,6 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     {
         var data = ResolvePreviewLevelData();
         return CustomIntroLoadingManager.TryShow(data, gameSceneName);
-    }
-
-    private static List<TileSpecial> CollectTimedSpecials()
-    {
-        var list = new List<TileSpecial>();
-        if (TimedRewardService.IsActive(DailySlotRewardType.Joker_Line) ||
-            TimedRewardService.IsActive(DailySlotRewardType.Joker_LineH))
-            list.Add(TileSpecial.LineH);
-        if (TimedRewardService.IsActive(DailySlotRewardType.Joker_PulseCore))
-            list.Add(TileSpecial.PulseCore);
-        if (TimedRewardService.IsActive(DailySlotRewardType.Joker_SystemOverride))
-            list.Add(TileSpecial.SystemOverride);
-        return list;
     }
 
     private void ShowLoadingScreen()

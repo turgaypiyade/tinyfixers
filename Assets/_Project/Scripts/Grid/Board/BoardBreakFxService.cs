@@ -110,8 +110,10 @@ public class BoardBreakFxService
             return;
         }
 
-        int x = change.originIndex % board.Width;
-        int y = change.originIndex / board.Width;
+        // Çok hücreli engelde (duvar, 2x2...) efekt vurulan hücreden çıkar; bilinmiyorsa origin.
+        int fxCell = change.FxCellIndex;
+        int x = fxCell % board.Width;
+        int y = fxCell / board.Width;
 
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
         {
@@ -162,8 +164,10 @@ public class BoardBreakFxService
     {
         // KeyGenerator'ın kendi katmanlı üretim animasyonu var (kol + tarama + materialize);
         // generic hit/break particle'ları onun üstüne binmesin.
+        // Hamster kendi kare/zıplama/ayrılış animasyonunu oynar (HamsterObstacleService).
         return change.obstacleId == ObstacleId.ColorChest
-            || change.obstacleId == ObstacleId.KeyGenerator;
+            || change.obstacleId == ObstacleId.KeyGenerator
+            || change.obstacleId == ObstacleId.Hamster;
     }
 
     private static Color ResolveObstacleHitColor(ObstacleVisualChange change)

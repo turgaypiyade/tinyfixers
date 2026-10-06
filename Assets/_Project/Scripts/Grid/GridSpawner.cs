@@ -286,6 +286,7 @@ public class GridSpawner : MonoBehaviour
         // Event item'ları level boyunca staging'de bekler: kazanınca commit,
         // kaybetmeyi kabul edince discard (LevelEndSimplePopupController yönetir).
         ProgressEventService.Instance?.BeginLevelStaging();
+        LevelAttemptStats.BeginAttempt(CurrentLevel.Global, resolvedLevel.moves);
 
         board.Init(width, height, iconLibrary);
         board.SetLevelData(resolvedLevel);
@@ -621,6 +622,7 @@ public class GridSpawner : MonoBehaviour
             DrawMudOverlays();
             DrawSpreadingGelOverlays();
             DrawWallObstacles();
+            DrawHamsterObstacles();
             // DrawMudOverlays ClearAll() yapar; stamped-beneath mud'ları bundan SONRA çizilmeli.
             // Aksi halde LevelP_00540'ta plastic/movable altındaki mud ilk açılışta silinir,
             // movable ayrılınca restore path'i yeniden çizdiği için ancak sonradan görünür.
@@ -1064,6 +1066,12 @@ public class GridSpawner : MonoBehaviour
         sourceLevel ??= level;
         var runtimeClone = CloneLevelDataForRuntime(sourceLevel);
         ownsResolvedLevelInstance = runtimeClone != null;
+
+        // Merkezden (Firestore config/levels) ayarlanan hamle sayısı — kopyaya yazılır, asset kirlenmez;
+        // hamleyi okuyan her yer (HUD, yıldız, skor) aynı değeri görür.
+        if (runtimeClone != null && !RuntimeSimulationSession.IsActive)
+            runtimeClone.moves = LevelRemoteTuning.MovesFor(CurrentLevel.Global, runtimeClone.moves);
+
         return runtimeClone;
     }
 
@@ -1231,6 +1239,26 @@ public class GridSpawner : MonoBehaviour
         }
 
         WallObstacleService.Ensure(board).Build(resolvedLevel, overTilesObstaclesRoot, tileSize);
+    }
+
+    // Aç Hamster: tek hücre hareketli engel (TileView, kargo gibi); beslenme/kare değişimi/zıplama
+    // HamsterObstacleService'te (board'a runtime eklenir). Level'da hamster yoksa servis varsa temizlenir.
+    private void DrawHamsterObstacles()
+    {
+        if (board == null || resolvedLevel?.obstacles == null) return;
+
+        bool hasHamster = false;
+        for (int i = 0; i < resolvedLevel.obstacles.Length && !hasHamster; i++)
+            hasHamster = (ObstacleId)resolvedLevel.obstacles[i] == ObstacleId.Hamster;
+
+        if (!hasHamster)
+        {
+            if (board.TryGetComponent<HamsterObstacleService>(out var existing))
+                existing.Clear();
+            return;
+        }
+
+        HamsterObstacleService.Ensure(board).Build(resolvedLevel);
     }
 
     // Author'lanmış SpreadingGel seed hücrelerini çizer (runtime yayılma Faz 3'te SpreadingGelService).

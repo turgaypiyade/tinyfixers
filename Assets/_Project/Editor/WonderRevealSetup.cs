@@ -17,7 +17,7 @@ public static class WonderRevealSetup
     // Tam ekran (enhance edilmiş) arka plan — alttan üstten dolar.
     const string BgPath = "Assets/_Project/Art/UI/Missions/ND_M001/1/MIS1.png";
     const string ScenePath = "Assets/_Project/Scenes/WonderRevealTest.unity";
-    const string WelderDir = "Assets/_Project/Art/UI/RoboCharacters/WDImgs/";
+    const string WelderDir = "Assets/_Project/Art/UI/WonderCharacters/WDImgs/";
 
     [MenuItem("TinyFixers/Wonders/Setup Reveal Test")]
     public static void Setup()
@@ -183,7 +183,7 @@ public static class WonderRevealSetup
             return;
         }
         var placeholder = AssetDatabase.LoadAssetAtPath<Sprite>(
-            "Assets/_Project/Art/UI/RoboCharacters/LoadPatchbot.png");
+            "Assets/_Project/Art/UI/WonderCharacters/LoadPatchbot.png");
         int index = view != null ? (view.ambientAgents?.Length ?? 0) + 1 : parentRt.childCount + 1;
 
         // --- Preset (karakter tipine göre yol + ayar) ------------------

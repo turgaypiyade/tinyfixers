@@ -150,10 +150,12 @@ public sealed class WallPieceView : MonoBehaviour
             // Detay (kabartma)
             var (center, detailSize) = DetailRect();
             parts.detailRoot = MakeRect(parts.detailGroup, "DetailRoot", center, detailSize);
-            parts.kabartma = WallSprites.Detail(P, rng.NextDouble() < 0.5 ? "Kabartma1" : "Kabartma2");
+            bool pick1 = rng.NextDouble() < 0.5;          // rng sırası türden bağımsız kalsın
             parts.kabartmaFlipped = rng.NextDouble() < 0.5;
+            parts.kabartma = kind.PlainBase ? null : WallSprites.Detail(P, pick1 ? "Kabartma1" : "Kabartma2");
             parts.detail = MakeImage(parts.detailRoot, parts.kabartma, Vector2.zero, detailSize);
             parts.detail.name = "Detail";
+            parts.detail.enabled = parts.kabartma != null;   // düz duvar: aşama 0'da detay görünmez
             if (parts.kabartmaFlipped)
                 parts.detail.rectTransform.localScale = new Vector3(-1f, 1f, 1f);
         }
@@ -162,6 +164,7 @@ public sealed class WallPieceView : MonoBehaviour
     // Detay dikdörtgeni (hücre merkezine göre): kiremit iç düz alanının %85'i, alanın merkezinde.
     private (Vector2 center, Vector2 size) DetailRect()
     {
+        if (kind.DetailFullCell) return (Vector2.zero, new Vector2(ts, ts));
         float u0 = RimL / SrcCell, u1 = 1f - RimR / SrcCell;
         float v0 = RimT / SrcCell, v1 = 1f - RimB / SrcCell;
         var center = new Vector2(((u0 + u1) * 0.5f - 0.5f) * ts, (0.5f - (v0 + v1) * 0.5f) * ts);
@@ -181,12 +184,14 @@ public sealed class WallPieceView : MonoBehaviour
         if (crack != null)
         {
             parts.detail.sprite = crack;
+            parts.detail.enabled = true;
             parts.detail.rectTransform.localScale = Vector3.one;   // çatlaklar aynalanmaz (fitil uçları sabit)
         }
         else
         {
             // Aşama 0 (metal duvarda boş geçilen hamle sonrası): kabartmalı duvar geri gelir.
             parts.detail.sprite = parts.kabartma;
+            parts.detail.enabled = parts.kabartma != null;
             parts.detail.rectTransform.localScale = new Vector3(parts.kabartmaFlipped ? -1f : 1f, 1f, 1f);
         }
         SetFlames(parts, detailName);
@@ -201,7 +206,9 @@ public sealed class WallPieceView : MonoBehaviour
     // Fitili dışarıda olan çatlaklarda (Crack2/3/4) uçlarda alev; doku değişince uçlar yeniden kurulur.
     private void SetFlames(CellParts parts, string detailName)
     {
-        Vector2[] tips = detailName switch
+        Vector2[] tips = detailName != null && kind.FuseTips != null
+            ? (kind.FuseTips.TryGetValue(detailName, out var own) ? own : null)
+            : detailName switch
         {
             "Crack2" => FuseTipsCrack2,
             "Crack3" => FuseTipsCrack3,

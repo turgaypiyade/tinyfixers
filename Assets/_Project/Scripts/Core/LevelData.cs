@@ -231,6 +231,12 @@ public enum ObstacleId : int
     // olmalı — bir hamle (zincirleri dahil) bitince o hamlede vurulmayan hücre aşama 0'a döner
     // (kabartmalı duvar geri gelir). Aşamalar: 1. vuruş çatlak1, 2. vuruş çatlak3, 3. vuruş parça yıkılır.
     MetalWall = 56,
+
+    // Aç Hamster (tek hücre, hareketli engel — kargo gibi düşer, swap edilir), KIRILMAZ. 4-komşu eşleşme/special
+    // vuruşu = 1 lokma. Doyunca PatchBot hedefine yakın bir taşla yer değiştirerek zıplar, çevresi (3x3) vurulur;
+    // hedef "X kez doyur". Hedef bitince mutlu ayrılır (engel kalkar).
+    // Görsel/mantık: Grid/Hamster/HamsterObstacleService. Doyma eşiği: ObstacleDef.hamsterSatiety.
+    Hamster = 57,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
@@ -467,6 +473,9 @@ public class LevelData : ScriptableObject
     [Tooltip("Duvar (Wall) parça numarası, yalnız EDİTÖR içindir (numaralı fırça). Runtime parçayı " +
              "obstacleOrigins'ten tanır: aynı numaralı bitişik duvar hücreleri tek origin paylaşır. 0 = duvar yok.")]
     public int[] wallPieceIds;
+
+    [Tooltip("Aç Hamster doyma eşiği (lokma). 0 = ObstacleLibrary'deki hamsterSatiety varsayılanı.")]
+    [Min(0)] public int hamsterSatietyOverride = 0;
 
     [Tooltip("Sabitlenmiş taş tipleri. 0 = rastgele (None), diğerleri TileType+1 değeri.\n" +
              "size = width*height. GridSpawner spawn sırasında simulation yerine bu değeri kullanır.")]

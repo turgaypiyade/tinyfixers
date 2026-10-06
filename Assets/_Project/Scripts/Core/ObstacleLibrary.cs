@@ -88,6 +88,11 @@ public class ObstacleDef
              "hits = 1 (kapı açma) + bu liste uzunluğu olarak ayarlanmalı.")]
     public List<Sprite> wardrobeItemSprites = new();
 
+    [Header("Hamster")]
+    [Tooltip("Aç Hamster: doymak için gereken lokma (bitişik vuruş) sayısı. Level'da " +
+             "LevelData.hamsterSatietyOverride > 0 ise o kullanılır.")]
+    [Min(1)] public int hamsterSatiety = 7;
+
     [Header("Audio")]
     [Tooltip("Obstacle hasar aldığında (kırılmadan) çalınacak ses.")]
     public AudioClip hitSound;

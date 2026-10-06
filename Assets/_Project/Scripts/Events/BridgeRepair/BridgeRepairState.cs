@@ -122,6 +122,7 @@ public static class BridgeRepairState
     {
         PlayerPrefs.SetInt(KeyRewardClaimed, 1);
         PlayerPrefs.Save();
+        if (FinalRank == 1) StoreReviewService.MarkHappyMoment();
         OnChanged?.Invoke();
     }
 

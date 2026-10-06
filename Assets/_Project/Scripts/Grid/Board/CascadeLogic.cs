@@ -57,6 +57,13 @@ public partial class CascadeLogic
         if (pool == null || pool.Length == 0)
             return TileType.Gear;
 
+        // Gizli yardım (LevelAssist): takılan oyuncuda bazı taşlar alt/sol komşusunun renginde düşer
+        // → daha çok ikili/üçlü oluşur. 4+ run (bedava special) yine engelli.
+        float assistBias = LevelAssist.RefillBias;
+        if (assistBias > 0f && UnityEngine.Random.value < assistBias
+            && TryPickNeighborColor(vb, x, toY, out var helpful))
+            return helpful;
+
         for (int attempt = 0; attempt < 12; attempt++)
         {
             var cand = pool[UnityEngine.Random.Range(0, pool.Length)];
@@ -65,6 +72,25 @@ public partial class CascadeLogic
         }
 
         return pool[UnityEngine.Random.Range(0, pool.Length)];
+    }
+
+    private bool TryPickNeighborColor(VirtualTile[,] vb, int x, int toY, out TileType type)
+    {
+        // Yalnız level'ın renk havuzundaki tipler (koleksiyon/hedef taşı kopyalanmasın).
+        var pool = board.RandomPool;
+        bool hasBelow = TryGetVirtualColor(vb, x, toY + 1, out var below)
+            && System.Array.IndexOf(pool, below) >= 0 && !WouldExtendRunTooFar(vb, x, toY, below);
+        bool hasLeft = TryGetVirtualColor(vb, x - 1, toY, out var left)
+            && System.Array.IndexOf(pool, left) >= 0 && !WouldExtendRunTooFar(vb, x, toY, left);
+        if (hasBelow && hasLeft)
+            type = UnityEngine.Random.value < 0.5f ? below : left;
+        else if (hasBelow)
+            type = below;
+        else if (hasLeft)
+            type = left;
+        else
+            type = default;
+        return hasBelow || hasLeft;
     }
 
     private bool WouldExtendRunTooFar(VirtualTile[,] vb, int x, int toY, TileType cand)
@@ -1054,6 +1080,8 @@ public partial class CascadeLogic
             var goal = _activeGoalsBuffer[i];
             if (goal.targetType != LevelGoalTargetType.Obstacle) continue;
             if (goal.remaining <= 0) continue;
+            // Aç Hamster hedefi "X kez doyur"dur, "X hamster topla" değil → hedef için yenisi DOĞMAZ.
+            if (goal.obstacleId == ObstacleId.Hamster) continue;
 
             var def = board.ActiveLevelData.obstacleLibrary != null
                 ? board.ActiveLevelData.obstacleLibrary.Get(goal.obstacleId)

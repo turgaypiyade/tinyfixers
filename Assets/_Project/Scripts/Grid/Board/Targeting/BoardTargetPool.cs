@@ -42,7 +42,8 @@ public sealed class BoardTargetPool
         if (obs == null || x < 0 || y < 0 || x >= board.Width || y >= board.Height) return false;
 
         var id = obs.GetObstacleIdAt(x, y);
-        if (id == ObstacleId.None || id == ObstacleId.SpreadingGel) return false;
+        // Hamster bir karakter: hedeflenmez (PatchBot onu "kırmaya" gitmez; hamster da kendini hedef seçmez).
+        if (id == ObstacleId.None || id == ObstacleId.SpreadingGel || id == ObstacleId.Hamster) return false;
         if (obs.IsExitAtBottomAt(x, y)) return false;
         if (id == ObstacleId.Tube)
         {

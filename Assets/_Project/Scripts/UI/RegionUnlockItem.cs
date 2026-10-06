@@ -184,6 +184,18 @@ public sealed class RegionUnlockItem : MonoBehaviour
         if (activeHighlight != null) activeHighlight.SetActive(isActive);
         if (lockedOverlay   != null) lockedOverlay.SetActive(!isActive);
 
+        // Uzun adlar (ör. "Repair the Foundation Stones") iki satıra kaymasın: tek satır + otomatik küçülme.
+        FitNameToRow();
+
+        // Aktif (yapılabilir) görevin butonu hafifçe nabız atar.
+        if (button != null)
+        {
+            if (pulseRoutine != null) { StopCoroutine(pulseRoutine); pulseRoutine = null; }
+            button.transform.localScale = Vector3.one;
+            if (isActive && isActiveAndEnabled)
+                pulseRoutine = StartCoroutine(PulseButton(button.transform));
+        }
+
         if (button != null)
         {
             button.interactable = isActive;
@@ -198,6 +210,55 @@ public sealed class RegionUnlockItem : MonoBehaviour
                 }
                 else button.onClick.AddListener(panel.OnActiveItemClicked);
             }
+        }
+    }
+
+    private Coroutine pulseRoutine;
+
+    // Ad tek satırda kalır ve butondan ÖNCE biter: yazı alanı ikonun sağından butonun soluna kadar daraltılır,
+    // otomatik boyut ASIL puntoyu aşamaz (yalnız küçülür).
+    private float baseNameFontSize = -1f;
+    private void FitNameToRow()
+    {
+        if (nameText == null) return;
+        if (baseNameFontSize < 0f) baseNameFontSize = nameText.fontSize;
+        var rowRt = (RectTransform)transform;
+        var nameRt = nameText.rectTransform;
+        float rowW = rowRt.rect.width;
+        if (rowW > 0f && button != null)
+        {
+            var btnRt = (RectTransform)button.transform;
+            float btnLeft = rowRt.InverseTransformPoint(btnRt.TransformPoint(new Vector3(btnRt.rect.xMin, 0f, 0f))).x;
+            float left = -rowW * 0.5f + rowW * 0.16f;          // ikonun sağı
+            if (iconImage != null)
+            {
+                var iconRt = iconImage.rectTransform;
+                left = rowRt.InverseTransformPoint(iconRt.TransformPoint(new Vector3(iconRt.rect.xMax, 0f, 0f))).x + 10f;
+            }
+            float right = btnLeft - 10f;
+            if (right > left + 50f)
+            {
+                nameRt.anchorMin = nameRt.anchorMax = new Vector2(0.5f, 0.5f);
+                nameRt.pivot = new Vector2(0.5f, 0.5f);
+                nameRt.sizeDelta = new Vector2(right - left, nameRt.sizeDelta.y);
+                nameRt.anchoredPosition = new Vector2((left + right) * 0.5f, nameRt.anchoredPosition.y);
+            }
+        }
+        nameText.textWrappingMode = TextWrappingModes.NoWrap;
+        nameText.overflowMode = TextOverflowModes.Overflow;
+        nameText.enableAutoSizing = true;
+        nameText.fontSizeMax = baseNameFontSize;
+        nameText.fontSizeMin = baseNameFontSize * 0.6f;
+        nameText.horizontalAlignment = HorizontalAlignmentOptions.Left;
+    }
+
+    private static IEnumerator PulseButton(Transform t)
+    {
+        while (t != null)
+        {
+            float s = 1f + 0.05f * Mathf.Sin(Time.unscaledTime * 4f);
+            t.localScale = new Vector3(s, s, 1f);
+            yield return null;
         }
     }
 

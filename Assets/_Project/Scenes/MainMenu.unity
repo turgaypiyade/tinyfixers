@@ -1238,15 +1238,6 @@ MonoBehaviour:
   messageInputRoot: {fileID: 865737000}
   messageInput: {fileID: 582710112}
   messagePostButton: {fileID: 1302370632}
-  avatarPool:
-  - {fileID: 21300000, guid: 577eeab0d2e17461f90ca24036063f9a, type: 3}
-  - {fileID: 21300000, guid: 2da8818d9600244169478ff335a7d7f0, type: 3}
-  - {fileID: 21300000, guid: 4e6ba90499689482592a141a4698fd5f, type: 3}
-  - {fileID: 21300000, guid: 2fab2c402e0eb41119f190a74577b374, type: 3}
-  - {fileID: 21300000, guid: 2ffe2b14db1084a7182210ce7ae161d6, type: 3}
-  - {fileID: 21300000, guid: 195efa70a7541414a9d5f30ca5630078, type: 3}
-  - {fileID: 21300000, guid: e33a13330145a40e9b9c1307d4abe674, type: 3}
-  - {fileID: 21300000, guid: 1b84d161e03ef41329ba93986ee4f316, type: 3}
   defaultEmblem: {fileID: 21300000, guid: 22d6428168e0543a4a4882d7c5b218eb, type: 3}
   emblemPool:
   - {fileID: 21300000, guid: 22d6428168e0543a4a4882d7c5b218eb, type: 3}
@@ -9100,8 +9091,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: -50, y: 0}
-  m_SizeDelta: {x: 147, y: 120}
+  m_AnchoredPosition: {x: -22, y: 0}
+  m_SizeDelta: {x: 207, y: 207}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!114 &213028785
 MonoBehaviour:
@@ -9125,7 +9116,7 @@ MonoBehaviour:
       m_Calls: []
   m_Sprite: {fileID: 21300000, guid: 4158f6743c7c545678bc1ad5daed3817, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -10155,15 +10146,6 @@ MonoBehaviour:
   copyButton: {fileID: 789703241}
   inviteButton: {fileID: 444395980}
   inviteLabel: {fileID: 164178517}
-  avatarPool:
-  - {fileID: 21300000, guid: 577eeab0d2e17461f90ca24036063f9a, type: 3}
-  - {fileID: 21300000, guid: 2da8818d9600244169478ff335a7d7f0, type: 3}
-  - {fileID: 21300000, guid: 4e6ba90499689482592a141a4698fd5f, type: 3}
-  - {fileID: 21300000, guid: 2fab2c402e0eb41119f190a74577b374, type: 3}
-  - {fileID: 21300000, guid: 2ffe2b14db1084a7182210ce7ae161d6, type: 3}
-  - {fileID: 21300000, guid: 195efa70a7541414a9d5f30ca5630078, type: 3}
-  - {fileID: 21300000, guid: e33a13330145a40e9b9c1307d4abe674, type: 3}
-  - {fileID: 21300000, guid: 1b84d161e03ef41329ba93986ee4f316, type: 3}
 --- !u!224 &244791015
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10369,8 +10351,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: -50, y: 0}
-  m_SizeDelta: {x: 147, y: 120}
+  m_AnchoredPosition: {x: -22, y: 0}
+  m_SizeDelta: {x: 207, y: 207}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!114 &253690733
 MonoBehaviour:
@@ -10394,7 +10376,7 @@ MonoBehaviour:
       m_Calls: []
   m_Sprite: {fileID: 21300000, guid: 4158f6743c7c545678bc1ad5daed3817, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -16177,7 +16159,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 16c23991c2a34088aaa3a80e520084a6, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -23732,7 +23714,7 @@ MonoBehaviour:
   progressBar: {fileID: 892809113}
   visibleSlotCount: 3
   itemHeight: 160
-  itemSpacing: 12
+  itemSpacing: 26
   firstSlotY: 0
   slideDuration: 0.6
   completeDuration: 0.7
@@ -26411,15 +26393,6 @@ MonoBehaviour:
   timeChip: {fileID: 1020850670}
   panelBackground: {fileID: 642770231}
   titleBand: {fileID: 1006638197}
-  avatarPool:
-  - {fileID: 21300000, guid: 577eeab0d2e17461f90ca24036063f9a, type: 3}
-  - {fileID: 21300000, guid: 2da8818d9600244169478ff335a7d7f0, type: 3}
-  - {fileID: 21300000, guid: 4e6ba90499689482592a141a4698fd5f, type: 3}
-  - {fileID: 21300000, guid: 2fab2c402e0eb41119f190a74577b374, type: 3}
-  - {fileID: 21300000, guid: 2ffe2b14db1084a7182210ce7ae161d6, type: 3}
-  - {fileID: 21300000, guid: 195efa70a7541414a9d5f30ca5630078, type: 3}
-  - {fileID: 21300000, guid: e33a13330145a40e9b9c1307d4abe674, type: 3}
-  - {fileID: 21300000, guid: 1b84d161e03ef41329ba93986ee4f316, type: 3}
   addFriendsRoot: {fileID: 540417190}
   suggestionContainer: {fileID: 1572426857}
   suggestionRowPrefab: {fileID: 8567340808432817562, guid: 269efb2046dfc4d23aa001ae54f8b339, type: 3}
@@ -47131,7 +47104,7 @@ MonoBehaviour:
   chapterLockLocalizationKey: wonder_task_locked_chapter
   visibleSlotCount: 3
   itemHeight: 160
-  itemSpacing: 12
+  itemSpacing: 26
   firstSlotY: 0
   panelFadeDuration: 0.2
   starUIPrefab: {fileID: 0}
@@ -57878,7 +57851,7 @@ MonoBehaviour:
     weight: 0
   - type: 12
     amount: 3
-    icon: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+    icon: {fileID: 21300000, guid: 8372e60e21b94daab02ea6e2d65dba7f, type: 3}
     nameLocalizationKey: 
     fallbackName: 
     weight: 0

@@ -19,28 +19,28 @@ MonoBehaviour:
   totalStages: 10
   tasks:
   - name: "Kumu Temizle"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 15a70c3da3064945bb4bb74af25bb7e5, type: 3}
     starCost: 0
   - name: "Temeli D\xFCzle"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 15a70c3da3064945bb4bb74af25bb7e5, type: 3}
     starCost: 0
   - name: "Rampay\u0131 Kur"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 0149ac3d2ba142c49e79a8b44c7c4301, type: 3}
     starCost: 0
   - name: "Ta\u015F Bloklar\u0131 Ta\u015F\u0131"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
   - name: "Katlar\u0131 Diz"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
   - name: "Ge\xE7itleri A\xE7"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 1fb0f30def2d4caca47e0accfe5ab2ea, type: 3}
     starCost: 0
   - name: "Kire\xE7 Ta\u015F\u0131n\u0131 Parlat"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
   - name: "Alt\u0131n Tepeyi Yerle\u015Ftir"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 365a7eb126eb4ce5af2c91c86f6ad07d, type: 3}
     starCost: 0
   starCosts: 0300000003000000030000000200000003000000030000000200000005000000
   starCostBase: 5
@@ -66,7 +66,7 @@ MonoBehaviour:
     weight: 0
   - type: 12
     amount: 1
-    icon: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+    icon: {fileID: 21300000, guid: 8372e60e21b94daab02ea6e2d65dba7f, type: 3}
     nameLocalizationKey: 
     fallbackName: 
     weight: 0

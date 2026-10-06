@@ -59,10 +59,6 @@ public sealed class LeaderboardScreenController : MonoBehaviour
     [Tooltip("Üretilen başlık bandı — skin arka planı gömülü band içeriyorsa gizlenir.")]
     [SerializeField] private Image titleBand;
 
-    [Header("Görsel")]
-    [Tooltip("Avatarı olmayan girdilere isme göre deterministik dağıtılan mock avatar havuzu.")]
-    [SerializeField] private Sprite[] avatarPool;
-
     [Header("Arkadaş Ekle görünümü (Arkadaşlar sekmesi)")]
     [Tooltip("Liste yerine gösterilen 'Arkadaş Bul + Önerilen Arkadaşlar' kökü (başta kapalı).")]
     [SerializeField] private GameObject addFriendsRoot;
@@ -438,19 +434,10 @@ public sealed class LeaderboardScreenController : MonoBehaviour
         LayoutRebuilder.ForceRebuildLayoutImmediate(suggestionContainer);
     }
 
-    private Sprite PickPoolAvatar(string name)
-    {
-        Sprite profileAvatar = PlayerAvatarProvider.PickForSeed(name);
-        if (profileAvatar != null)
-            return profileAvatar;
+    private static Sprite PickPoolAvatar(string name) => PlayerAvatarProvider.PickForSeed(name);
 
-        if (avatarPool == null || avatarPool.Length == 0) return null;
-        int hash = StableHash(name);
-        return avatarPool[hash % avatarPool.Length];
-    }
-
-    // Avatarı olmayan girdiye havuzdan isme göre deterministik avatar ata
-    // (aynı isim her render'da aynı robotu alsın).
+    // Avatarı olmayan girdiye AvatarLibrary'den isme göre deterministik avatar ata
+    // (aynı isim her render'da aynı avatarı alsın).
     private void EnsureAvatar(LeaderboardEntry entry)
     {
         if (entry == null || entry.avatar != null) return;
@@ -463,19 +450,5 @@ public sealed class LeaderboardScreenController : MonoBehaviour
         }
 
         entry.avatar = PickPoolAvatar(entry.playerName);
-    }
-
-    private static int StableHash(string value)
-    {
-        unchecked
-        {
-            int hash = 23;
-            if (!string.IsNullOrEmpty(value))
-            {
-                for (int i = 0; i < value.Length; i++)
-                    hash = hash * 31 + value[i];
-            }
-            return hash & int.MaxValue;
-        }
     }
 }

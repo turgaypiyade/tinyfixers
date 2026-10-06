@@ -28,7 +28,9 @@ DETAIL_SCALE=0.85
 #  - MetalWall: metalik gri; parlamalar daha sert (0.9) → metal parlaklığı.
 KINDS=[
     ("Wall",      (205,186,160), 0.55, ["Crack1","Crack2","Crack3","Crack4"], "kiremit_bej.png"),
-    ("MetalWall", (148,154,163), 0.90, ["Crack1","Crack3"],          "kiremit_metal.png"),
+    # Metal: çatlak çizimleri (MetalWallDetail_Crack2/3/4) kullanıcıdan hazır gelir, kabartma yok → bake ETMEZ;
+    # ikon (kiremit_metal.png) düz metaldir. Yalnız kenar/köşe parçaları üretilir.
+    ("MetalWall", (148,154,163), 0.90, [],                          None),
 ]
 CRACK_SRC={"Crack1":"KiremitCatlak1.png","Crack2":"KiremitCatlak2.png","Crack3":"KiremitCatlak3.png",
            "Crack4":"Kiremitcatlak4.png"}
@@ -62,12 +64,14 @@ for prefix,color,slope,cracks,preview in KINDS:
         n=img.width; assert (vx,vy)==(n//2,n//2), (k,vx,vy,n)   # köşe noktası tam merkezde
         s=int(round(n*SC)); s+=s%2
         save(recolor(img,color,slope),prefix+"Concave_"+k,(s,s))
-    for src,name in [("kiremitkabartma1.png","Kabartma1"),("kiremitkabartma2.png","Kabartma2")]:
+    for src,name in ([] if preview is None else [("kiremitkabartma1.png","Kabartma1"),("kiremitkabartma2.png","Kabartma2")]):
         save(recolor(Image.open(ART+src),color,slope),prefix+"Detail_"+name,(CELL,CELL))
     for c in cracks:
         save(recolor(Image.open(ART+CRACK_SRC[c]),color,slope,CRACK_SRC[c]),prefix+"Detail_"+c,(CELL,CELL))
     # Editör paleti / hedef çubuğu / ipucu ikonu (ObstacleLibrary sprite'ı): oyundaki tek hücre gibi —
     # kenarlı kiremit + iç düz alanın %85'i boyutunda, alanın merkezinde kabartma (WallPieceView.DetailRect).
+    if preview is None:
+        print("baked",prefix); continue
     cell=recolor(Image.open(ART+"kiremit.png"),color,slope).resize((CELL,CELL),Image.LANCZOS)
     kab=recolor(Image.open(ART+"kiremitkabartma1.png"),color,slope)
     u0,u1=RIM_L/C,1-RIM_R/C; v0,v1=RIM_T/C,1-RIM_B/C

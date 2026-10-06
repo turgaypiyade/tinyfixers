@@ -1283,7 +1283,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 3e0aeb7652a264efc976c4cdc4c20f88, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 8372e60e21b94daab02ea6e2d65dba7f, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -3510,7 +3510,7 @@ MonoBehaviour:
   goalsPreviewRoot: {fileID: 3310771022297421038}
   goalSlotPrefab: {fileID: 8598178808890510351, guid: 5185880da700e4021a652744b8a70fe0, type: 3}
   maxPreviewGoals: 4
-  goalPreviewScale: 1.35
+  goalPreviewScale: 2.6
   fallbackGoalIcon: {fileID: 0}
   tileIconLibrary: {fileID: 11400000, guid: 44f21392c67a14dfbb8782561221acf8, type: 2}
   lineHSlot: {fileID: 336384351059755049}
