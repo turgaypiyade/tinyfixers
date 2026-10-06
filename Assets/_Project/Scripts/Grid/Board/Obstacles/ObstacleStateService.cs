@@ -32,13 +32,17 @@ public readonly struct ObstacleVisualChange
     /// Gerçekten vurulan hücre (-1 = bilinmiyor). Çok hücreli engelde vuruş efekti origin'de (sol üst / ilk
     /// konan hücre) değil vurulan yerde çıkmalı → FxCellIndex.
     public readonly int hitCellIndex;
+    /// Bu vuruş çiçekli çimin çiçeklerini döktü (çim yerinde kaldı). Çimin kendi hit efekti/sesi
+    /// çalmaz; dökülme görselini GrassFlowerOverlayService oynar.
+    public readonly bool isGrassFlowerShed;
 
     /// Vuruş/kırılma efektinin çıkacağı hücre: vurulan hücre biliniyorsa o, yoksa origin.
     public int FxCellIndex => hitCellIndex >= 0 ? hitCellIndex : originIndex;
 
-    public ObstacleVisualChange(int originIndex, ObstacleId obstacleId, bool cleared, int remainingHits, Sprite sprite, ChestColorMask removedColor = ChestColorMask.None, bool isRepeatHit = false, int hitCellIndex = -1)
+    public ObstacleVisualChange(int originIndex, ObstacleId obstacleId, bool cleared, int remainingHits, Sprite sprite, ChestColorMask removedColor = ChestColorMask.None, bool isRepeatHit = false, int hitCellIndex = -1, bool isGrassFlowerShed = false)
     {
         this.hitCellIndex = hitCellIndex;
+        this.isGrassFlowerShed = isGrassFlowerShed;
         this.originIndex = originIndex;
         this.obstacleId = obstacleId;
         this.cleared = cleared;
@@ -757,8 +761,7 @@ public class ObstacleStateService : ISimObstacleQuery
         remaining--;
         remainingHitsByOrigin[origin] = remaining;
 
-        if (id == ObstacleId.Grass)
-            ShedGrassFlowerIfAny(origin);
+        bool grassFlowerShed = id == ObstacleId.Grass && ShedGrassFlowerIfAny(origin);
 
         // Renk maskesini güncelle ve bildirimi gönder
         if (removedColor != ChestColorMask.None)
@@ -817,7 +820,8 @@ public class ObstacleStateService : ISimObstacleQuery
 
         var currentStage = CreateSnapshot(def, id, remaining);
         var sprite = ResolveStageSprite(def, id, remaining);
-        change = new ObstacleVisualChange(origin, id, false, remaining, sprite, removedColor, hitCellIndex: idx);
+        change = new ObstacleVisualChange(origin, id, false, remaining, sprite, removedColor, hitCellIndex: idx,
+            isGrassFlowerShed: grassFlowerShed);
 
         var stageTransition = new ObstacleStageTransition(
             true,
@@ -1494,10 +1498,11 @@ public class ObstacleStateService : ISimObstacleQuery
         id == ObstacleId.Grass && _grassFlowerCells.Contains(origin) ? 1 : 0;
 
     // Çimin bir vuruşu tüketildi (ya da çim silindi): hücre çiçekliyse çiçekler dökülür.
-    private void ShedGrassFlowerIfAny(int cell)
+    private bool ShedGrassFlowerIfAny(int cell)
     {
-        if (_grassFlowerCells.Remove(cell))
-            OnGrassFlowerShed?.Invoke(cell);
+        if (!_grassFlowerCells.Remove(cell)) return false;
+        OnGrassFlowerShed?.Invoke(cell);
+        return true;
     }
 
     /// Hücrenin katmanları, en üstten alta doğru (id, origin). Görsel görünürlük kararı için.
@@ -2065,8 +2070,7 @@ public class ObstacleStateService : ISimObstacleQuery
 
         remaining--;
 
-        if (beneath.Id == ObstacleId.Grass)
-            ShedGrassFlowerIfAny(idx);
+        bool grassFlowerShed = beneath.Id == ObstacleId.Grass && ShedGrassFlowerIfAny(idx);
 
         if (remaining <= 0)
         {
@@ -2078,7 +2082,8 @@ public class ObstacleStateService : ISimObstacleQuery
         else
         {
             _underTileBeneathMovable[idx] = (beneath.Id, remaining);
-            change = new ObstacleVisualChange(idx, beneath.Id, cleared: false, remainingHits: remaining, sprite: null);
+            change = new ObstacleVisualChange(idx, beneath.Id, cleared: false, remainingHits: remaining, sprite: null,
+                isGrassFlowerShed: grassFlowerShed);
         }
 
         return true;
