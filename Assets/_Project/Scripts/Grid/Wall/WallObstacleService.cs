@@ -127,7 +127,7 @@ public sealed class WallObstacleService : MonoBehaviour
         {
             var kind = kindByOrigin[kv.Key];
             pieces[kv.Key] = WallPieceView.Create(root, kv.Key, kv.Value, width, tileSize, kind);
-            boundState?.SetWallRemainingHits(kv.Key, kind.CollapseStage + 1);
+            boundState?.SetWallRemainingHits(kv.Key, kind.Id, kind.CollapseStage + 1);
         }
     }
 
@@ -191,18 +191,12 @@ public sealed class WallObstacleService : MonoBehaviour
         return false;
     }
 
-    // Örtüsü kalkan duvar (stacked-beneath restore): InitObstacleStateAt kalan vuruşu def'ten kurdu →
-    // aşama bazlı değeri geri yaz. Opak örtünün altından ilk kez çıkan parçayı şimdi kaydet + çiz.
+    // Örtüsü kalkan duvar: hücre aşamalarını koruyup kapasiteyi yenile. Opak örtünün
+    // altından çıkan yeni hücreleri de parçanın görünümüne ekle.
     private void HandleViewRestored(int x, int y)
     {
         if (boundState == null || root == null || width <= 0) return;
         int origin = y * width + x;
-        if (cellsByOrigin.ContainsKey(origin))
-        {
-            RefreshRemaining(origin);
-            return;
-        }
-
         var level = board != null ? board.LevelData : null;
         if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
 
@@ -216,10 +210,24 @@ public sealed class WallObstacleService : MonoBehaviour
         }
         if (pieceKind == null || cells.Count == 0) return;
 
+        // An opaque cover may reveal more cells of an already active piece. Rebuild
+        // its footprint without resetting cracks on cells that were already exposed.
+        if (cellsByOrigin.TryGetValue(origin, out var previousCells)
+            && previousCells.Count == cells.Count && previousCells.TrueForAll(cells.Contains))
+        {
+            RefreshRemaining(origin);
+            return;
+        }
+        if (pieces.TryGetValue(origin, out var previousView) && previousView != null)
+            Destroy(previousView.gameObject);
+
         cellsByOrigin[origin] = cells;
         kindByOrigin[origin] = pieceKind;
-        foreach (int c in cells) stageByCell[c] = 0;
+        foreach (int c in cells)
+            if (!stageByCell.ContainsKey(c)) stageByCell[c] = 0;
         pieces[origin] = WallPieceView.Create(root, origin, cells, width, tileSize, pieceKind);
+        foreach (int c in cells)
+            if (stageByCell[c] > 0) pieces[origin].SetCellStage(c, stageByCell[c]);
         RefreshRemaining(origin);
     }
 
@@ -276,7 +284,7 @@ public sealed class WallObstacleService : MonoBehaviour
         int maxStage = 0;
         foreach (int c in cells)
             if (stageByCell.TryGetValue(c, out int cs) && cs > maxStage) maxStage = cs;
-        boundState?.SetWallRemainingHits(origin, kind.CollapseStage + 1 - maxStage);
+        boundState?.SetWallRemainingHits(origin, kind.Id, kind.CollapseStage + 1 - maxStage);
     }
 
     // Oyuncu hamlesi (zincirleri dahil) bitti, board durdu: ardışık vuruş isteyen türlerde (metal) bu

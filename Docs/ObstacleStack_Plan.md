@@ -43,8 +43,15 @@ altına konmaz (kullanıcı: zaten yapmıyor).
 
 **Kural 4c — Kısmen örtülü çok-hücreli engel kilitli (kullanıcı 2026-09-26).** Çok-hücreli bir engelin HERHANGİ bir
 hücresinin üstünde katman varsa engel hiçbir hücresinden vuruş almaz (ör. 4x4 kasa + köşelerinde 4 grass → 4 grass
-gidene dek kasa kilitli). `ObstacleStateService.IsBuriedAnywhere` hasar girişinde. Saydam örtüler (Grass/Oil)
+gidene dek kasa kilitli). `ObstacleStateService.IsHitLockedAt` hasar ve hedefleme girişinde. Saydam örtüler (Grass/Oil)
 kısmen örtebilir (Kural 4b muafiyeti), altları görünür kalır; opak katman altı gizli (`IsHiddenUnderOpaqueLayer`).
+
+**Duvar istisnası (kullanıcı kararı 2026-10-06):** Wall / MetalWall hücre bazında hasar alır. Üstü açılan
+hücre, parçanın diğer hücreleri hâlâ örtülü olsa da vurulabilir ve hedef seçilebilir. Bir hücre yıkım
+aşamasına ulaşınca parçanın tamamı, örtü altındaki duvar kayıtları dahil, temizlenir. Grass/flower ve diğer
+üst katmanlar mevcut hit sayılarını korur; ayrı vuruşlarla temizlenir. Duvarın altındaki daha derin
+katmanlar korunur; kalan örtü kalkınca yıkılmış duvar geri gelmez. Kasa/sandık gibi tek gövdeli engellerde
+parçanın tamamını koruyan kural devam eder.
 
 **Kural 5 — Çok-hücreli engel** her hücresinde aynı origin'li bir katmandır; bir vuruş kaynağı origin başına bir kez
 vurur (bugünkü kural korunur).
@@ -70,6 +77,14 @@ vurur (bugünkü kural korunur).
 Safe + içerik · Chest/Wardrobe altında mud · Grass üstünde/altında magnet · Plastic/Helmet'in mud/grass/oil'e
 düşmesi · Kargonun grass/mud'dan geçmesi · Barrel mud'unun blocker altına düşmesi · Grass altında KeyGenerator ·
 Tube · Magnet uçları · Jel yayılımı · Yağ yayılımı · Hedef sayımları (mud/grass/oil) · Level editörü Overlay modu.
+
+Duvar hücre bazlı hasarı için Play Mode kontrolü (2026-10-06, henüz çalıştırılmadı):
+- Wall ve MetalWall: ana hücrede flower varken başka hücreyi aç; normal hit/special ile çatlak ilerlemeli,
+  PatchBot açık duvar hücresini hedefleyebilmeli. Örtülü hücrede hit yalnız örtüye gitmeli.
+- Flower'ın ilk hit'ini alıp başka hücreden duvarı yık; flower'ın kalan grass hit'i korunmalı.
+- Duvar hedefi yalnız bir kez sayılmalı; kalan flower/grass sonradan temizlenince duvar geri gelmemeli.
+- Mud → Wall → Grass → Safe gibi derin yığında duvar başka hücreden yıkılınca Safe/Grass/Mud sırası korunmalı.
+- Kısmen örtülü kasa/sandık kilitli kalmalı; metal duvarın boş hamlede bir aşama geri gelmesi sürmeli.
 
 ## 5. Kullanıcı kararları (2026-09-26, KİLİTLİ)
 
