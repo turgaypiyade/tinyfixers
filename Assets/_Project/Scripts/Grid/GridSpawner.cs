@@ -1237,6 +1237,14 @@ public class GridSpawner : MonoBehaviour
         bool hasWall = false;
         for (int i = 0; i < resolvedLevel.obstacles.Length && !hasWall; i++)
             hasWall = WallKind.For((ObstacleId)resolvedLevel.obstacles[i]) != null;
+        // Örtünün (Grass vb.) altında kalan duvarlar da servisi kurmalı.
+        if (!hasWall && board.ObstacleStateService != null)
+        {
+            var buried = new HashSet<ObstacleId>();
+            board.ObstacleStateService.CollectStampedBeneathIds(buried);
+            foreach (var id in buried)
+                if (WallKind.For(id) != null) { hasWall = true; break; }
+        }
 
         if (!hasWall)
         {
@@ -1903,9 +1911,11 @@ public class GridSpawner : MonoBehaviour
             // Diğer ayrı renderer'lı / özel tipler v1'de kapsam dışı. Grass da pre-draw EDİLMEZ:
             // grassOverlayRoot üstte çizdiğinden beneath grass cover'ın üstüne sızardı. Cover
             // kırılınca grass reveal dinamik yolla (HandleObstacleCreatedDynamic) taze çizilir.
+            // Duvar parçaları WallObstacleService'te (örtü altındakiler dahil) çizilir.
             if (p.beneathId == ObstacleId.Oil ||
                 p.beneathId == ObstacleId.Safe || p.beneathId == ObstacleId.Tube ||
-                p.beneathId == ObstacleId.Magnet || p.beneathId == ObstacleId.Grass)
+                p.beneathId == ObstacleId.Magnet || p.beneathId == ObstacleId.Grass ||
+                WallKind.For(p.beneathId) != null)
                 continue;
 
             var def = resolvedLevel.obstacleLibrary.Get(p.beneathId);
@@ -3541,6 +3551,11 @@ public class GridSpawner : MonoBehaviour
         // When a cover such as Grass reveals one cell, do not spawn a generic 1x1
         // obstacle image on top of that renderer; it has no path orientation and looks flipped.
         if (obsId == ObstacleId.Magnet || obsId == ObstacleId.Tube)
+            return;
+
+        // Duvar: parça görseli + kalan vuruş WallObstacleService'te (OnObstacleViewRestored'ı o da dinler);
+        // generic 1x1 image çizilmez.
+        if (WallKind.For(obsId) != null)
             return;
 
         // Oil ayrı bir overlay renderer'ı kullanır (obstacleViewsByOrigin değil). Bir cover'ın
