@@ -485,8 +485,9 @@ public sealed class SimObstacleLayer : ISimObstacleQuery
 
         if (rule.ExitAtBottom) return;              // Cargo: kırılmaz, yalnız tabandan çıkar
 
-        // Grass kendi hücresindeki match'ten HASAR ALMAZ; yalnız komşu match aşındırır.
-        if (id == ObstacleId.Grass && source == SimDamageSource.NormalMatch && !adjacent) return;
+        // Grass (ve çiçekli çim) kendi hücresindeki match'ten HASAR ALMAZ; yalnız komşu match aşındırır.
+        if ((id == ObstacleId.Grass || id == ObstacleId.GrassFlower)
+            && source == SimDamageSource.NormalMatch && !adjacent) return;
 
         // Komşuluk hasarı yalnız over-tile blocker'lara ve overlay'lere (Oil/Grass) gider;
         // taşın ALTINDAKİ katman (Mud) sadece kendi hücresindeki taş temizlenince hasar alır.

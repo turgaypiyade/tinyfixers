@@ -115,6 +115,7 @@ public sealed class SimGoalSet
             ObstacleId.RocketBasket    => SimGoalFidelity.NotSimulated,
             ObstacleId.SpreadingGel    => SimGoalFidelity.Approximate,  // yayılma modellenmiyor
             ObstacleId.Grass           => SimGoalFidelity.Approximate,
+            ObstacleId.GrassFlower     => SimGoalFidelity.Approximate,  // çiçek dökülünce kalan çim modellenmiyor
             ObstacleId.Tube            => SimGoalFidelity.Approximate,  // küçülme adımları yok
             _                          => SimGoalFidelity.Exact
         };

@@ -32,13 +32,17 @@ public readonly struct ObstacleVisualChange
     /// Gerçekten vurulan hücre (-1 = bilinmiyor). Çok hücreli engelde vuruş efekti origin'de (sol üst / ilk
     /// konan hücre) değil vurulan yerde çıkmalı → FxCellIndex.
     public readonly int hitCellIndex;
+    /// Bu vuruş çiçekli çimin çiçeklerini döktü (çim yerinde kaldı). Çimin kendi hit efekti/sesi
+    /// çalmaz; dökülme görselini GrassFlowerOverlayService oynar.
+    public readonly bool isGrassFlowerShed;
 
     /// Vuruş/kırılma efektinin çıkacağı hücre: vurulan hücre biliniyorsa o, yoksa origin.
     public int FxCellIndex => hitCellIndex >= 0 ? hitCellIndex : originIndex;
 
-    public ObstacleVisualChange(int originIndex, ObstacleId obstacleId, bool cleared, int remainingHits, Sprite sprite, ChestColorMask removedColor = ChestColorMask.None, bool isRepeatHit = false, int hitCellIndex = -1)
+    public ObstacleVisualChange(int originIndex, ObstacleId obstacleId, bool cleared, int remainingHits, Sprite sprite, ChestColorMask removedColor = ChestColorMask.None, bool isRepeatHit = false, int hitCellIndex = -1, bool isGrassFlowerShed = false)
     {
         this.hitCellIndex = hitCellIndex;
+        this.isGrassFlowerShed = isGrassFlowerShed;
         this.originIndex = originIndex;
         this.obstacleId = obstacleId;
         this.cleared = cleared;
@@ -154,6 +158,10 @@ public class ObstacleStateService : ISimObstacleQuery
     // Sadece origin hücre indexi anlamlıdır. -1 => obstacle yok.
     private int[] remainingHitsByOrigin = Array.Empty<int>();
 
+    // A wall can take hits while its origin cell still holds a live cover. Keep its
+    // capacity separate so neither the wall nor the cover overwrites the other's HP.
+    private readonly Dictionary<(ObstacleId id, int origin), int> wallRemainingHits = new();
+
     // ColorChest: origin index → kalan renk maskesi
     private readonly Dictionary<int, ChestColorMask> _chestColorStates = new();
 
@@ -193,6 +201,11 @@ public class ObstacleStateService : ISimObstacleQuery
 
     }
     private readonly Dictionary<int, List<StampedBeneath>> _stampedBeneathByCell = new();
+
+    // Çiçekli çim (GrassFlower) hücreleri. Runtime'da bu hücrelerdeki Grass, def.hits + 1 vuruşla
+    // başlar; ilk tüketilen vuruş çiçekleri döker (OnGrassFlowerShed) ve hücre setten çıkar.
+    private readonly HashSet<int> _grassFlowerCells = new();
+    public event Action<int> OnGrassFlowerShed;
 
     /// Set by BoardController → RaiseObstacleCreatedDynamic. Restore edilen beneath obstacle'a
     /// (x,y) görselini oluşturmak için çağrılır.
@@ -330,6 +343,8 @@ public class ObstacleStateService : ISimObstacleQuery
         _wardrobeItemCounts.Clear();
         _underTileBeneathMovable.Clear();
         _stampedBeneathByCell.Clear();
+        _grassFlowerCells.Clear();
+        wallRemainingHits.Clear();
         _revealGraceUntil.Clear();
 
         for (int idx = 0; idx < size; idx++)
@@ -434,7 +449,8 @@ public class ObstacleStateService : ISimObstacleQuery
         // YIĞIN KURALI (Docs/ObstacleStack_Plan.md): çok-hücreli bir engelin HERHANGİ bir hücresi hâlâ başka
         // bir katmanın altındaysa (ör. 4x4 kasanın 4 hücresinde grass), engel yok hükmündedir — açıkta kalan
         // hücrelerinden de vuruş ALMAZ. Üstündekiler bitince normal vurulur.
-        if (IsBuriedAnywhere(id, origin))
+        // Walls have independent cell stages: only the cover at the hit cell protects them.
+        if (IsHitLockedAt(x, y))
             return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
 
         // Az önce açığa çıkan katman: kırıcı etkinin kalan vuruşlarını almaz (bkz. RevealGraceSeconds).
@@ -617,7 +633,7 @@ public class ObstacleStateService : ISimObstacleQuery
             if (WallHitInterceptor == null)
                 return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
 
-            int[] wallCells = CollectCellsForOrigin(origin, id);
+            int[] wallCells = CollectCellsForOrigin(origin, id, includeBuried: true);
             var wallOutcome = WallHitInterceptor.Invoke(origin, idx, context);
             if (wallOutcome == WallHitOutcome.Ignored)
                 return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
@@ -630,7 +646,7 @@ public class ObstacleStateService : ISimObstacleQuery
                 return new ObstacleHitResult(true, true, false, change, wallTransition, wallCells);
             }
 
-            change = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null, hitCellIndex: idx);
+            change = new ObstacleVisualChange(origin, id, false, GetRemainingHitsAt(x, y), null, hitCellIndex: idx);
             return new ObstacleHitResult(true, true, false, change, default, wallCells);
         }
 
@@ -751,6 +767,8 @@ public class ObstacleStateService : ISimObstacleQuery
         remaining--;
         remainingHitsByOrigin[origin] = remaining;
 
+        bool grassFlowerShed = id == ObstacleId.Grass && ShedGrassFlowerIfAny(origin);
+
         // Renk maskesini güncelle ve bildirimi gönder
         if (removedColor != ChestColorMask.None)
         {
@@ -808,7 +826,8 @@ public class ObstacleStateService : ISimObstacleQuery
 
         var currentStage = CreateSnapshot(def, id, remaining);
         var sprite = ResolveStageSprite(def, id, remaining);
-        change = new ObstacleVisualChange(origin, id, false, remaining, sprite, removedColor, hitCellIndex: idx);
+        change = new ObstacleVisualChange(origin, id, false, remaining, sprite, removedColor, hitCellIndex: idx,
+            isGrassFlowerShed: grassFlowerShed);
 
         var stageTransition = new ObstacleStageTransition(
             true,
@@ -840,6 +859,9 @@ public class ObstacleStateService : ISimObstacleQuery
 
         int origin = level.obstacleOrigins[idx];
         if (origin < 0 || origin >= remainingHitsByOrigin.Length) return 0;
+
+        if (wallRemainingHits.TryGetValue((id, origin), out int wallRemaining))
+            return wallRemaining;
 
         int remaining = remainingHitsByOrigin[origin];
         if (remaining >= 0)
@@ -995,6 +1017,9 @@ public class ObstacleStateService : ISimObstacleQuery
         int origin = level.obstacleOrigins[idx];
         if (origin < 0 || origin >= remainingHitsByOrigin.Length)
             return Mathf.Max(1, def != null ? def.hits : 1);
+
+        if (wallRemainingHits.TryGetValue(((ObstacleId)level.obstacles[idx], origin), out int wallRemaining))
+            return wallRemaining;
 
         int remaining = remainingHitsByOrigin[origin];
         if (remaining >= 0)
@@ -1239,7 +1264,7 @@ public class ObstacleStateService : ISimObstacleQuery
             stage.sprite);
     }
 
-    private int[] CollectCellsForOrigin(int origin, ObstacleId originId)
+    private int[] CollectCellsForOrigin(int origin, ObstacleId originId, bool includeBuried = false)
     {
         if (level == null || level.obstacles == null || level.obstacleOrigins == null)
             return Array.Empty<int>();
@@ -1247,8 +1272,8 @@ public class ObstacleStateService : ISimObstacleQuery
         List<int> cells = null;
         for (int i = 0; i < level.obstacles.Length; i++)
         {
-            if ((ObstacleId)level.obstacles[i] != originId) continue;
-            if (level.obstacleOrigins[i] != origin) continue;
+            bool live = (ObstacleId)level.obstacles[i] == originId && level.obstacleOrigins[i] == origin;
+            if (!live && !(includeBuried && HasStampedObstacleAt(i, originId, origin))) continue;
 
             cells ??= new List<int>(4);
             cells.Add(i);
@@ -1283,9 +1308,20 @@ public class ObstacleStateService : ISimObstacleQuery
         if (origin < 0 || origin >= level.obstacleOrigins.Length)
             return;
 
-        HashSet<int> restoredBeneathOrigins = null;
+        HashSet<(int origin, ObstacleId id)> restoredBeneathOrigins = null;
         Dictionary<int, int> restoredMudRemainingByOrigin = null;
-        bool originCellRestored = false;
+        // Partially covered walls may collapse through a different cell. The live
+        // obstacle at their origin owns this HP slot and must keep its current damage.
+        bool originCellRestored = (ObstacleId)level.obstacles[origin] != originId
+            || level.obstacleOrigins[origin] != origin;
+
+        if (originId == ObstacleId.Wall || originId == ObstacleId.MetalWall)
+        {
+            for (int i = 0; i < level.obstacles.Length; i++)
+                if (RemoveStampedObstacleBeneath(i, originId, origin))
+                    OnCellUnlocked?.Invoke(i);
+            wallRemainingHits.Remove((originId, origin));
+        }
 
         for (int i = 0; i < level.obstacles.Length; i++)
         {
@@ -1314,7 +1350,7 @@ public class ObstacleStateService : ISimObstacleQuery
                 RestoreCellObstacle(i, stamped.Id, stamped.Origin);
                 if (stamped.Id != ObstacleId.None)
                 {
-                    (restoredBeneathOrigins ??= new HashSet<int>()).Add(stamped.Origin);
+                    (restoredBeneathOrigins ??= new HashSet<(int, ObstacleId)>()).Add((stamped.Origin, stamped.Id));
                     if (stamped.Id == ObstacleId.Mud && stamped.Remaining > 0)
                         (restoredMudRemainingByOrigin ??= new Dictionary<int, int>())[stamped.Origin] = stamped.Remaining;
                 }
@@ -1327,8 +1363,8 @@ public class ObstacleStateService : ISimObstacleQuery
             OnCellUnlocked?.Invoke(i);
         }
 
-        // Origin hücresine _underTileBeneathMovable'dan bir obstacle geri yüklendiyse onun
-        // remaining'i az önce yazıldı — ezme. (Stamped-beneath restore'u etkilenmez: onun
+        // Origin'de canlı bir örtü kaldıysa veya _underTileBeneathMovable'dan bir obstacle
+        // geri yüklendiyse onun remaining'ini koru. (Stamped-beneath restore'u etkilenmez: onun
         // remaining'i aşağıda ReinitRestoredBeneathOrigin ile bu satırdan SONRA kurulur.)
         if (!originCellRestored)
             remainingHitsByOrigin[origin] = -1;
@@ -1348,19 +1384,23 @@ public class ObstacleStateService : ISimObstacleQuery
         if (originId == ObstacleId.Wardrobe)
             _wardrobeItemCounts.Remove(origin);
 
+        // Çim vuruş almadan tamamen silindiyse (ör. doğrudan temizleme) çiçekleri de dökülmüş say.
+        if (originId == ObstacleId.Grass)
+            ShedGrassFlowerIfAny(origin);
+
         OnObstacleDestroyed?.Invoke(origin, originId);
 
         // Cover view'ı OnObstacleDestroyed dinleyicilerinde temizlendikten sonra beneath view'ı
         // oluştur. Aynı origin key'i hâlâ cover'a aitken dynamic create skip'leniyordu.
         if (restoredBeneathOrigins != null)
         {
-            foreach (var beneathOrigin in restoredBeneathOrigins)
+            foreach (var (beneathOrigin, beneathId) in restoredBeneathOrigins)
             {
                 int remainingOverride = -1;
                 if (restoredMudRemainingByOrigin != null
                     && restoredMudRemainingByOrigin.TryGetValue(beneathOrigin, out int restoredRemaining))
                     remainingOverride = restoredRemaining;
-                ReinitRestoredBeneathOrigin(beneathOrigin, remainingOverride);
+                ReinitRestoredBeneathOrigin(beneathOrigin, beneathId, remainingOverride);
             }
         }
     }
@@ -1421,17 +1461,82 @@ public class ObstacleStateService : ISimObstacleQuery
     }
 
     /// Hücrenin EN ÜST engeli, başka bir hücresi hâlâ örtülü olduğu için vuruşa kapalı mı (Kural 4c)?
+    /// Wall / MetalWall hücre bazında ilerler; açık hücreleri bu parça kilidinden muaftır.
     /// Hedef seçiciler (PatchBot, roket, EggBird) bu hücreleri aday listesine ALMAMALI — vuruş boşa gider.
     public bool IsHitLockedAt(int x, int y)
     {
         if (!IsValidCell(x, y)) return false;
         int idx = level.Index(x, y);
         var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.Wall || id == ObstacleId.MetalWall) return false;
         return id != ObstacleId.None && IsBuriedAnywhere(id, level.obstacleOrigins[idx]);
     }
 
-    /// Saydam örtü: altındaki katman görünür kalır (Grass, Oil). Opak katmanın altı gizlidir.
-    public static bool IsSeeThroughLayer(ObstacleId id) => id == ObstacleId.Grass || id == ObstacleId.Oil;
+    private bool HasStampedObstacleAt(int cell, ObstacleId id, int origin)
+    {
+        if (!_stampedBeneathByCell.TryGetValue(cell, out var layers) || layers == null) return false;
+        foreach (var layer in layers)
+            if (layer.Id == id && layer.Origin == origin) return true;
+        return false;
+    }
+
+    /// Saydam örtü: altındaki katman görünür kalır (Grass, GrassFlower, Oil). Opak katmanın altı gizlidir.
+    public static bool IsSeeThroughLayer(ObstacleId id) =>
+        id == ObstacleId.Grass || id == ObstacleId.GrassFlower || id == ObstacleId.Oil;
+
+    // ── Çiçekli çim (GrassFlower) ────────────────────────────────────────────
+
+    /// Level kurulumu (stamp + beneath/örtü kayıtları SONRASI): hücredeki çimi çiçekli işaretler ve
+    /// kalan vuruşuna +1 ekler. Çim birincil ya da movable üstü örtü olabilir; yığın altındaysa
+    /// bonus, çim açığa çıkınca InitObstacleStateAt'te eklenir.
+    public void RegisterGrassFlowerCell(int cell)
+    {
+        if (level == null || level.obstacles == null || cell < 0 || cell >= level.obstacles.Length) return;
+        if (cell >= remainingHitsByOrigin.Length) return;
+        if (!_grassFlowerCells.Add(cell)) return;
+
+        if ((ObstacleId)level.obstacles[cell] == ObstacleId.Grass && level.obstacleOrigins[cell] == cell)
+        {
+            var def = library != null ? library.Get(ObstacleId.Grass) : null;
+            int current = remainingHitsByOrigin[cell];
+            int baseHits = current > 0 ? current : Mathf.Max(1, def != null ? def.hits : 1);
+            remainingHitsByOrigin[cell] = baseHits + 1;
+            return;
+        }
+
+        if (_underTileBeneathMovable.TryGetValue(cell, out var cover) && cover.Id == ObstacleId.Grass)
+            _underTileBeneathMovable[cell] = (cover.Id, Mathf.Max(1, cover.Remaining) + 1);
+    }
+
+    public bool HasGrassFlowerAt(int cell) => _grassFlowerCells.Contains(cell);
+
+    public void CollectGrassFlowerCells(ICollection<int> into)
+    {
+        if (into == null) return;
+        foreach (int cell in _grassFlowerCells)
+            into.Add(cell);
+    }
+
+    /// Çiçekli hücrenin çimi şu an görünür mü (birincil katman ya da movable üstü örtü)?
+    /// Üstüne başka bir engel yığılmışsa çim de çiçekler de gizlidir.
+    public bool IsGrassVisibleAt(int cell)
+    {
+        if (level == null || level.obstacles == null || cell < 0 || cell >= level.obstacles.Length) return false;
+        if ((ObstacleId)level.obstacles[cell] == ObstacleId.Grass) return true;
+        return _underTileBeneathMovable.TryGetValue(cell, out var cover)
+            && cover.Id == ObstacleId.Grass && cover.Remaining != 0;
+    }
+
+    private int GetGrassFlowerBonusHits(int origin, ObstacleId id) =>
+        id == ObstacleId.Grass && _grassFlowerCells.Contains(origin) ? 1 : 0;
+
+    // Çimin bir vuruşu tüketildi (ya da çim silindi): hücre çiçekliyse çiçekler dökülür.
+    private bool ShedGrassFlowerIfAny(int cell)
+    {
+        if (!_grassFlowerCells.Remove(cell)) return false;
+        OnGrassFlowerShed?.Invoke(cell);
+        return true;
+    }
 
     /// Hücrenin katmanları, en üstten alta doğru (id, origin). Görsel görünürlük kararı için.
     public void GetLayersTopDown(int cell, List<(ObstacleId id, int origin)> result)
@@ -1563,7 +1668,7 @@ public class ObstacleStateService : ISimObstacleQuery
 
         if (cells == null) return;
 
-        HashSet<int> restoredBeneathOrigins = null;
+        HashSet<(int origin, ObstacleId id)> restoredBeneathOrigins = null;
         Dictionary<int, int> restoredMudRemainingByOrigin = null;
         foreach (var cell in cells)
         {
@@ -1571,7 +1676,7 @@ public class ObstacleStateService : ISimObstacleQuery
             RestoreCellObstacle(cell, stamped.Id, stamped.Origin);
             if (stamped.Id != ObstacleId.None)
             {
-                (restoredBeneathOrigins ??= new HashSet<int>()).Add(stamped.Origin);
+                (restoredBeneathOrigins ??= new HashSet<(int, ObstacleId)>()).Add((stamped.Origin, stamped.Id));
                 if (stamped.Id == ObstacleId.Mud && stamped.Remaining > 0)
                     (restoredMudRemainingByOrigin ??= new Dictionary<int, int>())[stamped.Origin] = stamped.Remaining;
             }
@@ -1579,28 +1684,33 @@ public class ObstacleStateService : ISimObstacleQuery
 
         if (restoredBeneathOrigins != null)
         {
-            foreach (var beneathOrigin in restoredBeneathOrigins)
+            foreach (var (beneathOrigin, beneathId) in restoredBeneathOrigins)
             {
                 int remainingOverride = -1;
                 if (restoredMudRemainingByOrigin != null
                     && restoredMudRemainingByOrigin.TryGetValue(beneathOrigin, out int restoredRemaining))
                     remainingOverride = restoredRemaining;
-                ReinitRestoredBeneathOrigin(beneathOrigin, remainingOverride);
+                ReinitRestoredBeneathOrigin(beneathOrigin, beneathId, remainingOverride);
             }
         }
     }
 
     // Geri yüklenen beneath obstacle'ın hit-state'ini def'ten taze kurar + görselini oluşturur.
-    private void ReinitRestoredBeneathOrigin(int beneathOrigin, int remainingOverride = -1)
+    private void ReinitRestoredBeneathOrigin(int beneathOrigin, ObstacleId beneathId, int remainingOverride = -1)
     {
-        InitObstacleStateAt(beneathOrigin, remainingOverride);
+        // Revealing a non-origin cell must not reset the still-covered origin's HP.
+        if (level != null && beneathOrigin >= 0 && beneathOrigin < level.obstacles.Length
+            && (ObstacleId)level.obstacles[beneathOrigin] == beneathId
+            && level.obstacleOrigins[beneathOrigin] == beneathOrigin)
+            InitObstacleStateAt(beneathOrigin, remainingOverride);
         if (level != null && level.width > 0)
             RequestObstacleViewCreate?.Invoke(beneathOrigin % level.width, beneathOrigin / level.width);
     }
 
-    private bool TryRestoreStampedBeneathCell(int cell, out int restoredOrigin, out int remainingOverride)
+    private bool TryRestoreStampedBeneathCell(int cell, out int restoredOrigin, out ObstacleId restoredId, out int remainingOverride)
     {
         restoredOrigin = -1;
+        restoredId = ObstacleId.None;
         remainingOverride = -1;
 
         if (!TryPopStampedBeneathLayer(cell, out var stamped))
@@ -1612,6 +1722,7 @@ public class ObstacleStateService : ISimObstacleQuery
             return true;
 
         restoredOrigin = stamped.Origin;
+        restoredId = stamped.Id;
         if (stamped.Id == ObstacleId.Mud && stamped.Remaining > 0)
             remainingOverride = stamped.Remaining;
 
@@ -1922,10 +2033,10 @@ public class ObstacleStateService : ISimObstacleQuery
                 remainingHitsByOrigin[fromIdx] = beneath.Remaining;
             _underTileBeneathMovable.Remove(fromIdx);
         }
-        else if (TryRestoreStampedBeneathCell(fromIdx, out int restoredOrigin, out int remainingOverride))
+        else if (TryRestoreStampedBeneathCell(fromIdx, out int restoredOrigin, out var restoredId, out int remainingOverride))
         {
             if (restoredOrigin >= 0)
-                ReinitRestoredBeneathOrigin(restoredOrigin, remainingOverride);
+                ReinitRestoredBeneathOrigin(restoredOrigin, restoredId, remainingOverride);
         }
         else
         {
@@ -1998,6 +2109,8 @@ public class ObstacleStateService : ISimObstacleQuery
 
         remaining--;
 
+        bool grassFlowerShed = beneath.Id == ObstacleId.Grass && ShedGrassFlowerIfAny(idx);
+
         if (remaining <= 0)
         {
             _underTileBeneathMovable.Remove(idx);
@@ -2008,7 +2121,8 @@ public class ObstacleStateService : ISimObstacleQuery
         else
         {
             _underTileBeneathMovable[idx] = (beneath.Id, remaining);
-            change = new ObstacleVisualChange(idx, beneath.Id, cleared: false, remainingHits: remaining, sprite: null);
+            change = new ObstacleVisualChange(idx, beneath.Id, cleared: false, remainingHits: remaining, sprite: null,
+                isGrassFlowerShed: grassFlowerShed);
         }
 
         return true;
@@ -2234,17 +2348,17 @@ public class ObstacleStateService : ISimObstacleQuery
         // the cover later restores an invisible, permanently blocked Magnet cell.
         if ((ObstacleId)level.obstacles[cellIndex] != ObstacleId.Magnet)
         {
-            if (RemoveRetiredMagnetBeneath(cellIndex))
+            if (RemoveStampedObstacleBeneath(cellIndex, ObstacleId.Magnet))
                 OnCellUnlocked?.Invoke(cellIndex);
             return;
         }
 
         // An exposed Magnet can itself cover authored content. Reveal that content
         // instead of erasing it when the endpoint leaves this cell.
-        if (TryRestoreStampedBeneathCell(cellIndex, out int restoredOrigin, out int remainingOverride))
+        if (TryRestoreStampedBeneathCell(cellIndex, out int restoredOrigin, out var restoredId, out int remainingOverride))
         {
             if (restoredOrigin >= 0)
-                ReinitRestoredBeneathOrigin(restoredOrigin, remainingOverride);
+                ReinitRestoredBeneathOrigin(restoredOrigin, restoredId, remainingOverride);
             OnCellUnlocked?.Invoke(cellIndex);
             return;
         }
@@ -2255,7 +2369,7 @@ public class ObstacleStateService : ISimObstacleQuery
         OnCellUnlocked?.Invoke(cellIndex);
     }
 
-    private bool RemoveRetiredMagnetBeneath(int cellIndex)
+    private bool RemoveStampedObstacleBeneath(int cellIndex, ObstacleId id, int origin = -1)
     {
         if (!_stampedBeneathByCell.TryGetValue(cellIndex, out var layers) || layers == null)
             return false;
@@ -2264,10 +2378,10 @@ public class ObstacleStateService : ISimObstacleQuery
         for (int i = layers.Count - 1; i >= 0; i--)
         {
             var retired = layers[i];
-            if (retired.Id != ObstacleId.Magnet) continue;
+            if (retired.Id != id || (origin >= 0 && retired.Origin != origin)) continue;
 
-            // Reconnect anything below Magnet to its surviving cover. This keeps
-            // Mud -> Magnet -> Grass (and deeper stacks) revealable in order.
+            // Reconnect lower layers to the surviving cover. Removing a wall from
+            // Mud -> Wall -> Grass -> Safe must preserve every other layer.
             if (i > 0)
             {
                 var beneath = layers[i - 1];
@@ -2332,10 +2446,10 @@ public class ObstacleStateService : ISimObstacleQuery
         if (cellIndex < 0 || cellIndex >= level.obstacles.Length) return;
 
         // RestoreCellObstacle hücre açılma olayını (OnCellUnlocked) kendisi gönderir.
-        if (TryRestoreStampedBeneathCell(cellIndex, out int restoredOrigin, out int remainingOverride))
+        if (TryRestoreStampedBeneathCell(cellIndex, out int restoredOrigin, out var restoredId, out int remainingOverride))
         {
             if (restoredOrigin >= 0)
-                ReinitRestoredBeneathOrigin(restoredOrigin, remainingOverride);
+                ReinitRestoredBeneathOrigin(restoredOrigin, restoredId, remainingOverride);
             return;
         }
 
@@ -2420,7 +2534,8 @@ public class ObstacleStateService : ISimObstacleQuery
         }
         else
         {
-            hits = Mathf.Max(1, def != null ? def.hits : 1);
+            // Yığın altından açığa çıkan çiçekli çim: çiçek katmanının vuruşu da geri gelir.
+            hits = Mathf.Max(1, def != null ? def.hits : 1) + GetGrassFlowerBonusHits(origin, id);
         }
         remainingHitsByOrigin[origin] = remainingOverride > 0 ? remainingOverride : hits;
 
@@ -2430,13 +2545,11 @@ public class ObstacleStateService : ISimObstacleQuery
 
     /// Wall: parçanın kalan "anlamlı" vuruşu = en ilerlemiş hücresinin parçayı yıkmasına kalan vuruş.
     /// WallObstacleService her aşama değişiminde yazar (PatchBot kapasitesi / stage sorguları bunu okur).
-    public void SetWallRemainingHits(int origin, int remaining)
+    public void SetWallRemainingHits(int origin, ObstacleId id, int remaining)
     {
         if (origin < 0 || origin >= remainingHitsByOrigin.Length) return;
-        if (level == null) return;
-        var originId = (ObstacleId)level.obstacles[origin];
-        if (originId != ObstacleId.Wall && originId != ObstacleId.MetalWall) return;
-        remainingHitsByOrigin[origin] = Mathf.Max(1, remaining);
+        if (id != ObstacleId.Wall && id != ObstacleId.MetalWall) return;
+        wallRemainingHits[(id, origin)] = Mathf.Max(1, remaining);
     }
 
     /// Safe kırıldı → goal (Obstacle/Safe) ilerlesin. NotifyTubeFullyDestroyed analoğu.

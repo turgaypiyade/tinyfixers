@@ -81,6 +81,14 @@ public class BoardBreakFxService
         if (board.BoardFlowTraceEnabled)
             Debug.Log($"[ObstacleFX] id={change.obstacleId} cleared={change.cleared} remaining={change.remainingHits} hitPrefab={(board.ObstacleHitFxPrefab != null ? board.ObstacleHitFxPrefab.name : "NULL")}");
 
+        // Çiçekli çimin ilk vuruşu: çim değil çiçekler dökülür (animasyonu GrassFlowerOverlayService
+        // oynar). Çimin hit parçacıkları/sesi çalmaz; GrassFlower def'inde ses varsa o çalar.
+        if (change.isGrassFlowerShed)
+        {
+            PlayObstacleSound(new ObstacleVisualChange(change.originIndex, ObstacleId.GrassFlower, false, 1, null));
+            return;
+        }
+
         // Sound is position-independent: play before origin validation so Tube (originIndex=-1) still gets audio.
         PlayObstacleSound(change);
 

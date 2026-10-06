@@ -143,6 +143,34 @@ public class PatchBotTargetCoordinator
         return PickIntentCore(patchBotTile, partnerTile, excluded, null, fromCell);
     }
 
+    // Aynı öncelik kovasındaki eşdeğer adaylardan kaynağa (fromCell) EN UZAK olanı seçer. Öncelik
+    // sırası değişmez; yalnız rastgele/eşit-skor kırılımı uzaklığa göre yapılır. Hamster zıplaması
+    // gibi gösterişli atlayışlar için (yakına zıplamasın, uçuş görünsün).
+    private Vector2Int? preferFarFrom;
+
+    public (PatchBotIntent intent, bool hasIntent) PickFarthestIntentFrom(Vector2Int fromCell)
+    {
+        preferFarFrom = fromCell;
+        try { return PickIntentCore(null, null, null, null, fromCell); }
+        finally { preferFarFrom = null; }
+    }
+
+    private int FarthestIndex(List<(int x, int y, TileView tile)> list, List<int> candidates = null)
+    {
+        var from = preferFarFrom ?? Vector2Int.zero;
+        int best = candidates != null && candidates.Count > 0 ? candidates[0] : 0;
+        int bestDist = -1;
+        int count = candidates != null && candidates.Count > 0 ? candidates.Count : list.Count;
+        for (int n = 0; n < count; n++)
+        {
+            int i = candidates != null && candidates.Count > 0 ? candidates[n] : n;
+            int dx = list[i].x - from.x, dy = list[i].y - from.y;
+            int d = dx * dx + dy * dy;
+            if (d > bestDist) { bestDist = d; best = i; }
+        }
+        return best;
+    }
+
     private (PatchBotIntent intent, bool hasIntent) PickIntentCore(
         TileView patchBotTile,
         TileView partnerTile,
@@ -458,7 +486,11 @@ public class PatchBotTargetCoordinator
                     if (!obstacleUnitCells.TryGetValue(unitOrigin, out var unitCells))
                     {
                         obstacleUnitCells[unitOrigin] = unitCells = new List<(int x, int y, TileView tile)>();
-                        obstacleUnitIsGoal[unitOrigin] = activeObstacleGoals.Contains(obstacleId);
+                        // Çiçekli çim runtime'da Grass'tır; hedef GrassFlower ise çiçeği duran hücre hedef sayılır.
+                        obstacleUnitIsGoal[unitOrigin] = activeObstacleGoals.Contains(obstacleId)
+                            || (obstacleId == ObstacleId.Grass
+                                && activeObstacleGoals.Contains(ObstacleId.GrassFlower)
+                                && board.ObstacleStateService.HasGrassFlowerAt(unitOrigin));
                     }
                     unitCells.Add((x, y, tile));
                 }
@@ -513,7 +545,8 @@ public class PatchBotTargetCoordinator
         // Engeller: kapasitesi (kalan vuruş − ortak rezervasyon) olan engellerden RASTGELE. Kapasite her
         // seçimde düştüğü için çok vuruşluk tek engele vuruşu kadar bot gider, birden çok engel varsa botlar
         // hepsine rastgele dağılır; kapasite bitince sıradaki kovaya (sonunda normal taşa) geçilir.
-        static int RandomIdx(List<(int x, int y, TileView tile)> list) => Random.Range(0, list.Count);
+        int RandomIdx(List<(int x, int y, TileView tile)> list) =>
+            preferFarFrom.HasValue ? FarthestIndex(list) : Random.Range(0, list.Count);
 
         // Cargo düşüş yolu en yüksek öncelik: cargo başka türlü kırılamadığı için,
         // altındaki taşı açmak hedefi ilerletmenin tek yolu.
@@ -629,8 +662,8 @@ public class PatchBotTargetCoordinator
             }
         }
 
-        return impactPickBuffer.Count > 0
-            ? impactPickBuffer[Random.Range(0, impactPickBuffer.Count)]
-            : 0;
+        if (impactPickBuffer.Count == 0) return 0;
+        if (preferFarFrom.HasValue) return FarthestIndex(list, impactPickBuffer);
+        return impactPickBuffer[Random.Range(0, impactPickBuffer.Count)];
     }
 }

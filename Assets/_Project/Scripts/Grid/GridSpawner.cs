@@ -123,6 +123,10 @@ public class GridSpawner : MonoBehaviour
     // hücrede taş/PatchBot + plastik) ve sonraki düşüşlerde yığında 2 movable oluşuyordu.
     private readonly System.Collections.Generic.List<(int cell, ObstacleId overlayId)> pendingCoveringOverlays = new();
     private readonly System.Collections.Generic.List<(int cell, ObstacleId overlayId)> coveringOverlayVisuals = new();
+    // Çiçekli çim (GrassFlower) hücreleri: stamp aşamasında Grass'a çevrilir, SetLevelData SONRASI
+    // ObstacleStateService'e çiçekli olarak kaydedilir (çimin kalan vuruşu +1).
+    private readonly List<int> pendingGrassFlowerCells = new();
+    private GrassFlowerOverlayService grassFlowerOverlayService;
     private readonly Dictionary<int, Image> beneathViewsByCell = new();
 
     [Header("Obstacle Visual (UI)")]
@@ -260,6 +264,7 @@ public class GridSpawner : MonoBehaviour
         ApplyResolvedLevelToConsumers(resolvedLevel);
         pendingStampedBeneath.Clear();
         pendingCoveringOverlays.Clear();
+        ConvertGrassFlowersToGrass(resolvedLevel); // must happen before stacking + SetLevelData
         StampTubeCellsIntoLevel(resolvedLevel);    // must happen before SetLevelData
         StampMagnetCellsIntoLevel(resolvedLevel);  // must happen before SetLevelData
         // Üst üste konan engeller (stackedObstacles + safes) TEK yığın sırasıyla (stackOrder) kurulur:
@@ -296,6 +301,7 @@ public class GridSpawner : MonoBehaviour
         // beneath kayıtlarını şimdi push et — init store'ları temizledikten SONRA.
         RegisterPendingStampedBeneath();
         RegisterPendingCoveringOverlays();
+        RegisterPendingGrassFlowers();   // çim katmanları yerleştikten SONRA (+1 vuruş doğru katmana)
 
         effectiveRandomPool = resolvedLevel.randomPool != null && resolvedLevel.randomPool.Length > 0
             ? resolvedLevel.randomPool
@@ -628,6 +634,7 @@ public class GridSpawner : MonoBehaviour
             // movable ayrılınca restore path'i yeniden çizdiği için ancak sonradan görünür.
             DrawStampedBeneathVisuals();   // overlay altındaki obstacle'ı arkada baştan göster
             DrawCoveringOverlayVisuals();  // movable üstündeki grass örtüsü
+            DrawGrassFlowerOverlays();     // çiçekli çimlerin menekşeleri (grass kökünde, en üstte)
             DrawTubeObstacles();
             DrawMagnetObstacles();
             DrawSafeObstacles();
@@ -1230,6 +1237,14 @@ public class GridSpawner : MonoBehaviour
         bool hasWall = false;
         for (int i = 0; i < resolvedLevel.obstacles.Length && !hasWall; i++)
             hasWall = WallKind.For((ObstacleId)resolvedLevel.obstacles[i]) != null;
+        // Örtünün (Grass vb.) altında kalan duvarlar da servisi kurmalı.
+        if (!hasWall && board.ObstacleStateService != null)
+        {
+            var buried = new HashSet<ObstacleId>();
+            board.ObstacleStateService.CollectStampedBeneathIds(buried);
+            foreach (var id in buried)
+                if (WallKind.For(id) != null) { hasWall = true; break; }
+        }
 
         if (!hasWall)
         {
@@ -1384,6 +1399,11 @@ public class GridSpawner : MonoBehaviour
         grassOverlayRoot.gameObject.layer = lyr;
         foreach (Transform ch in grassOverlayRoot)
             ch.gameObject.layer = lyr;
+
+        // Menekşe kökünün torunları (hücre kökü, çiçek/gölge görselleri) da aynı layer'a geçsin.
+        if (grassFlowerOverlayService != null)
+            foreach (var t in grassFlowerOverlayService.GetComponentsInChildren<Transform>(true))
+                t.gameObject.layer = lyr;
     }
 
     /// ObstacleVisualChanged üzerinden GrassOverlayService'e akar.
@@ -1691,6 +1711,60 @@ public class GridSpawner : MonoBehaviour
         }
     }
 
+    // Çiçekli çim: level verisinde GrassFlower id'siyle durur (editör paleti, hedef). Runtime'da hücre
+    // düz Grass olur — çimin bütün kuralları (kilit, komşu aşınma, yığın, movable üstü örtü) aynen
+    // çalışır; çiçek katmanı yalnızca +1 vuruş + görseldir (RegisterPendingGrassFlowers).
+    private void ConvertGrassFlowersToGrass(LevelData lvl)
+    {
+        pendingGrassFlowerCells.Clear();
+        if (lvl == null || lvl.obstacles == null || lvl.obstacleOrigins == null) return;
+
+        for (int i = 0; i < lvl.obstacles.Length && i < lvl.obstacleOrigins.Length; i++)
+        {
+            if ((ObstacleId)lvl.obstacles[i] != ObstacleId.GrassFlower) continue;
+            lvl.obstacles[i] = (int)ObstacleId.Grass;
+            lvl.obstacleOrigins[i] = i;   // çim 1x1
+            pendingGrassFlowerCells.Add(i);
+        }
+
+        if (lvl.stackedObstacles == null) return;
+        for (int i = 0; i < lvl.stackedObstacles.Length; i++)
+        {
+            var entry = lvl.stackedObstacles[i];
+            if (entry.obstacleId != ObstacleId.GrassFlower) continue;
+            entry.obstacleId = ObstacleId.Grass;
+            lvl.stackedObstacles[i] = entry;
+            int cell = entry.originCellIndex;
+            if (cell >= 0 && cell < lvl.obstacles.Length && !pendingGrassFlowerCells.Contains(cell))
+                pendingGrassFlowerCells.Add(cell);
+        }
+    }
+
+    private void RegisterPendingGrassFlowers()
+    {
+        var state = board != null ? board.ObstacleStateService : null;
+        if (state != null)
+            foreach (int cell in pendingGrassFlowerCells)
+                state.RegisterGrassFlowerCell(cell);
+        pendingGrassFlowerCells.Clear();
+    }
+
+    // Menekşeler grass kökünün çocuğu olan ayrı bir kökte çizilir: grass ile birlikte border'ın üstüne
+    // taşınır, kendi içinde hep son sırada kalır (komşu çimin taşan yaprakları çiçeği örtmez).
+    private void DrawGrassFlowerOverlays()
+    {
+        grassFlowerOverlayService = null;
+        if (grassOverlayRoot == null || board == null || board.ObstacleStateService == null) return;
+
+        var flowerRoot = CreateChildRoot(grassOverlayRoot, "GrassFlowerOverlay");
+        flowerRoot.gameObject.layer = grassOverlayRoot.gameObject.layer;
+        flowerRoot.SetAsLastSibling();
+
+        grassFlowerOverlayService = flowerRoot.gameObject.AddComponent<GrassFlowerOverlayService>();
+        grassFlowerOverlayService.Init(board, width, tileSize);
+        grassFlowerOverlayService.SpawnAll();
+    }
+
     // SetLevelData SONRASI (state store'ları temizlendikten sonra): örtüleri movable üstü yuvaya yaz.
     private void RegisterPendingCoveringOverlays()
     {
@@ -1837,9 +1911,11 @@ public class GridSpawner : MonoBehaviour
             // Diğer ayrı renderer'lı / özel tipler v1'de kapsam dışı. Grass da pre-draw EDİLMEZ:
             // grassOverlayRoot üstte çizdiğinden beneath grass cover'ın üstüne sızardı. Cover
             // kırılınca grass reveal dinamik yolla (HandleObstacleCreatedDynamic) taze çizilir.
+            // Duvar parçaları WallObstacleService'te (örtü altındakiler dahil) çizilir.
             if (p.beneathId == ObstacleId.Oil ||
                 p.beneathId == ObstacleId.Safe || p.beneathId == ObstacleId.Tube ||
-                p.beneathId == ObstacleId.Magnet || p.beneathId == ObstacleId.Grass)
+                p.beneathId == ObstacleId.Magnet || p.beneathId == ObstacleId.Grass ||
+                WallKind.For(p.beneathId) != null)
                 continue;
 
             var def = resolvedLevel.obstacleLibrary.Get(p.beneathId);
@@ -3475,6 +3551,11 @@ public class GridSpawner : MonoBehaviour
         // When a cover such as Grass reveals one cell, do not spawn a generic 1x1
         // obstacle image on top of that renderer; it has no path orientation and looks flipped.
         if (obsId == ObstacleId.Magnet || obsId == ObstacleId.Tube)
+            return;
+
+        // Duvar: parça görseli + kalan vuruş WallObstacleService'te (OnObstacleViewRestored'ı o da dinler);
+        // generic 1x1 image çizilmez.
+        if (WallKind.For(obsId) != null)
             return;
 
         // Oil ayrı bir overlay renderer'ı kullanır (obstacleViewsByOrigin değil). Bir cover'ın

@@ -237,6 +237,13 @@ public enum ObstacleId : int
     // hedef "X kez doyur". Hedef bitince mutlu ayrılır (engel kalkar).
     // Görsel/mantık: Grid/Hamster/HamsterObstacleService. Doyma eşiği: ObstacleDef.hamsterSatiety.
     Hamster = 57,
+
+    // Çiçekli çim: Grass + 1 vuruşluk süs katmanı. Yalnız editör/level verisinde bu id ile durur;
+    // runtime'da GridSpawner hücreyi Grass'a çevirir ve ObstacleStateService'e çiçekli hücre olarak
+    // kaydeder (çimin kalan vuruşu +1). İlk vuruş (çimle aynı kaynaklar) çiçekleri döker → hedef
+    // GrassFlower +1; hücre bundan sonra tamamen normal çimdir. Görsel: GrassFlowerOverlayService.
+    // Grass gibi başka engellerin üstüne yığılabilir (saydam örtü).
+    GrassFlower = 58,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }

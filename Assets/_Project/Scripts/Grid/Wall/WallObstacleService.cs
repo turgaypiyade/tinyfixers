@@ -79,6 +79,8 @@ public sealed class WallObstacleService : MonoBehaviour
     private readonly Dictionary<int, WallKind> kindByOrigin = new();
     private readonly Dictionary<int, int> collapseCellByOrigin = new();  // yıkımı tetikleyen hücre
     private readonly HashSet<int> hitSinceMoveEnd = new();               // son hamle sonundan beri vurulan hücreler
+    private readonly List<(ObstacleId id, int origin)> layerBuffer = new();
+    private int cellCount;
     private System.Func<int, int, ObstacleHitContext, WallHitOutcome> hitHandler;
 
     public static WallObstacleService Ensure(BoardController board)
@@ -88,6 +90,7 @@ public sealed class WallObstacleService : MonoBehaviour
         {
             service = board.gameObject.AddComponent<WallObstacleService>();
             board.OnPlayerMoveResolved += service.HandleMoveResolved;
+            board.OnObstacleViewRestored += service.HandleViewRestored;
         }
         service.board = board;
         return service;
@@ -103,14 +106,14 @@ public sealed class WallObstacleService : MonoBehaviour
         root = parent;
         width = level.width;
         tileSize = cellSize;
+        cellCount = level.obstacles.Length;
         Bind(board.ObstacleStateService);
 
         for (int i = 0; i < level.obstacles.Length; i++)
         {
-            var kind = WallKind.For((ObstacleId)level.obstacles[i]);
-            if (kind == null) continue;
-            int origin = level.obstacleOrigins[i];
-            if (origin < 0) continue;
+            // Saydam örtünün (Grass/GrassFlower/Oil) altındaki duvar hücreleri de baştan kaydedilip çizilir:
+            // örtü saydam olduğu için duvar görünür; örtü kalkınca altta boşluk kalmasın.
+            if (!TryGetVisibleWallLayer(level, i, out var kind, out int origin)) continue;
             if (!cellsByOrigin.TryGetValue(origin, out var list))
             {
                 cellsByOrigin[origin] = list = new List<int>();
@@ -124,7 +127,7 @@ public sealed class WallObstacleService : MonoBehaviour
         {
             var kind = kindByOrigin[kv.Key];
             pieces[kv.Key] = WallPieceView.Create(root, kv.Key, kv.Value, width, tileSize, kind);
-            boundState?.SetWallRemainingHits(kv.Key, kind.CollapseStage + 1);
+            boundState?.SetWallRemainingHits(kv.Key, kind.Id, kind.CollapseStage + 1);
         }
     }
 
@@ -153,7 +156,79 @@ public sealed class WallObstacleService : MonoBehaviour
     private void OnDestroy()
     {
         Bind(null);
-        if (board != null) board.OnPlayerMoveResolved -= HandleMoveResolved;
+        if (board != null)
+        {
+            board.OnPlayerMoveResolved -= HandleMoveResolved;
+            board.OnObstacleViewRestored -= HandleViewRestored;
+        }
+    }
+
+    // Hücrenin görünür duvar katmanı: en üst katman duvar ya da duvarın üstündeki her katman saydam
+    // örtüyse o duvar. Opak bir katmanın altındaki duvar henüz çizilmez (açığa çıkınca çizilir).
+    private bool TryGetVisibleWallLayer(LevelData level, int cell, out WallKind kind, out int origin)
+    {
+        kind = null;
+        origin = -1;
+        if (boundState == null)
+        {
+            kind = WallKind.For((ObstacleId)level.obstacles[cell]);
+            origin = level.obstacleOrigins[cell];
+            return kind != null && origin >= 0;
+        }
+
+        boundState.GetLayersTopDown(cell, layerBuffer);
+        foreach (var (id, layerOrigin) in layerBuffer)
+        {
+            var k = WallKind.For(id);
+            if (k != null)
+            {
+                kind = k;
+                origin = layerOrigin;
+                return origin >= 0;
+            }
+            if (!ObstacleStateService.IsSeeThroughLayer(id)) return false;
+        }
+        return false;
+    }
+
+    // Örtüsü kalkan duvar: hücre aşamalarını koruyup kapasiteyi yenile. Opak örtünün
+    // altından çıkan yeni hücreleri de parçanın görünümüne ekle.
+    private void HandleViewRestored(int x, int y)
+    {
+        if (boundState == null || root == null || width <= 0) return;
+        int origin = y * width + x;
+        var level = board != null ? board.LevelData : null;
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
+
+        WallKind pieceKind = null;
+        var cells = new List<int>();
+        for (int i = 0; i < Mathf.Min(cellCount, level.obstacles.Length); i++)
+        {
+            if (!TryGetVisibleWallLayer(level, i, out var kind, out int o) || o != origin) continue;
+            pieceKind ??= kind;
+            cells.Add(i);
+        }
+        if (pieceKind == null || cells.Count == 0) return;
+
+        // An opaque cover may reveal more cells of an already active piece. Rebuild
+        // its footprint without resetting cracks on cells that were already exposed.
+        if (cellsByOrigin.TryGetValue(origin, out var previousCells)
+            && previousCells.Count == cells.Count && previousCells.TrueForAll(cells.Contains))
+        {
+            RefreshRemaining(origin);
+            return;
+        }
+        if (pieces.TryGetValue(origin, out var previousView) && previousView != null)
+            Destroy(previousView.gameObject);
+
+        cellsByOrigin[origin] = cells;
+        kindByOrigin[origin] = pieceKind;
+        foreach (int c in cells)
+            if (!stageByCell.ContainsKey(c)) stageByCell[c] = 0;
+        pieces[origin] = WallPieceView.Create(root, origin, cells, width, tileSize, pieceKind);
+        foreach (int c in cells)
+            if (stageByCell[c] > 0) pieces[origin].SetCellStage(c, stageByCell[c]);
+        RefreshRemaining(origin);
     }
 
     private void Bind(ObstacleStateService state)
@@ -209,7 +284,7 @@ public sealed class WallObstacleService : MonoBehaviour
         int maxStage = 0;
         foreach (int c in cells)
             if (stageByCell.TryGetValue(c, out int cs) && cs > maxStage) maxStage = cs;
-        boundState?.SetWallRemainingHits(origin, kind.CollapseStage + 1 - maxStage);
+        boundState?.SetWallRemainingHits(origin, kind.Id, kind.CollapseStage + 1 - maxStage);
     }
 
     // Oyuncu hamlesi (zincirleri dahil) bitti, board durdu: ardışık vuruş isteyen türlerde (metal) bu

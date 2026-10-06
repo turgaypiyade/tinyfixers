@@ -27,6 +27,11 @@ public sealed class HamsterObstacleService : MonoBehaviour
     private const float LandHoldSeconds = 0.25f;
     private const float JumpHeightCells = 1.2f;
     private const float LeaveSeconds = 0.75f;
+    // Uçuşta hamster yükselirken bu kata kadar büyür, inerken aynı oranda küçülüp normale döner.
+    private const float FlightPeakScale = 3f;
+    // İniş tozu: yere çarpınca ayak hizasından iki yana saçılan küçük toz bulutları.
+    private const int LandingDustPuffs = 6;
+    private const float LandingDustSeconds = 0.5f;
 
     private sealed class HamsterState
     {
@@ -228,12 +233,26 @@ public sealed class HamsterObstacleService : MonoBehaviour
             tileRt.SetAsLastSibling();
             float height = Mathf.Max(JumpHeightCells * cell, delta.magnitude * 0.35f);
             float seconds = JumpSeconds + Mathf.Min(0.25f, delta.magnitude / Mathf.Max(1f, cell) * 0.04f);
+
+            // 3 katına büyüyen hamster çim/engel katmanlarının ALTINDA kalmasın: uçuş boyunca VFX
+            // köküne (PatchBot uçuşuyla aynı kök) taşınır; hareket o kökün yerel birimlerine çevrilir.
+            var flight = BeginFlight(tileRt, delta, height);
             for (float t = 0f; t < seconds; t += Time.deltaTime)
             {
                 if (tile == null) yield break;
                 float k = t / seconds;
                 float arc = Mathf.Sin(k * Mathf.PI);
-                tileRt.anchoredPosition = start + delta * k + Vector2.up * (arc * height);
+                float grow = 1f + (FlightPeakScale - 1f) * arc;   // tepeye kadar büyür, inişte aynı oranda küçülür
+                if (flight.lifted)
+                {
+                    tileRt.localPosition = flight.localStart + flight.localDelta * k + flight.localUp * arc;
+                    tileRt.localScale = flight.baseScale * grow;
+                }
+                else
+                {
+                    tileRt.anchoredPosition = start + delta * k + Vector2.up * (arc * height);
+                    tileRt.localScale = Vector3.one * grow;
+                }
                 if (swappedRt != null)
                 {
                     swappedRt.anchoredPosition = otherStart - delta * k;
@@ -241,13 +260,19 @@ public sealed class HamsterObstacleService : MonoBehaviour
                 }
                 yield return null;
             }
-            if (tile != null) tileRt.anchoredPosition = start + delta;
+            if (tile != null)
+            {
+                EndFlight(tileRt, flight);
+                tileRt.anchoredPosition = start + delta;
+                tileRt.localScale = Vector3.one;
+            }
             if (swappedRt != null)
             {
                 swappedRt.anchoredPosition = otherStart - delta;
                 swappedRt.localScale = Vector3.one;
             }
 
+            if (tile != null) SpawnLandingDust(tileRt, cell);
             SetFrame(tile, "Land");
             board.StartCoroutine(board.boardAnimatorRef.MicroShake(0.14f, board.ShakeStrength * 0.8f));
             EnqueueImpact(land);
@@ -263,6 +288,108 @@ public sealed class HamsterObstacleService : MonoBehaviour
         }
         if (tile != null) SetFrame(tile, CheekFrame(h.food));
         h.jumping = false;
+    }
+
+    private struct FlightState
+    {
+        public bool lifted;
+        public Transform homeParent;
+        public Vector3 localStart, localDelta, localUp, baseScale;
+        public Transform[] nodes;
+        public int[] layers;
+    }
+
+    private FlightState BeginFlight(RectTransform tileRt, Vector2 delta, float height)
+    {
+        var state = new FlightState { homeParent = tileRt.parent };
+        var root = FlightRoot();
+        if (root == null || state.homeParent == null || root == state.homeParent) return state;
+
+        // Tiles kökündeki hareket (anchored birimleri) → dünya → uçuş kökü yereli.
+        state.localDelta = root.InverseTransformVector(state.homeParent.TransformVector(delta));
+        state.localUp = root.InverseTransformVector(state.homeParent.TransformVector(Vector3.up * height));
+
+        state.nodes = tileRt.GetComponentsInChildren<Transform>(true);
+        state.layers = new int[state.nodes.Length];
+        for (int i = 0; i < state.nodes.Length; i++)
+        {
+            state.layers[i] = state.nodes[i].gameObject.layer;
+            state.nodes[i].gameObject.layer = root.gameObject.layer;   // Screen Space Camera culling'i önle
+        }
+
+        tileRt.SetParent(root, worldPositionStays: true);
+        tileRt.SetAsLastSibling();
+        state.localStart = tileRt.localPosition;
+        state.baseScale = tileRt.localScale;
+        state.lifted = true;
+        return state;
+    }
+
+    private static void EndFlight(RectTransform tileRt, FlightState state)
+    {
+        if (!state.lifted || tileRt == null || state.homeParent == null) return;
+        tileRt.SetParent(state.homeParent, worldPositionStays: false);
+        for (int i = 0; i < state.nodes.Length; i++)
+            if (state.nodes[i] != null) state.nodes[i].gameObject.layer = state.layers[i];
+    }
+
+    private RectTransform FlightRoot() =>
+        board != null && board.BoardVfxPlayer != null ? board.BoardVfxPlayer.VfxRoot : null;
+
+    // Yere çarpma: ayak hizasından iki yana yayılan, büyüyüp sönen küçük toz bulutları.
+    private void SpawnLandingDust(RectTransform tileRt, float cell)
+    {
+        var sprite = Frame("Dust");
+        if (sprite == null || tileRt == null) return;
+        var root = FlightRoot();
+        if (root == null) root = tileRt.parent as RectTransform;
+        if (root == null) return;
+
+        // Hücrenin alt kenarına yakın nokta (dünya) → toz kökü yereli; boyutlar da o köke ölçeklenir.
+        Vector3 feetWorld = tileRt.TransformPoint(new Vector3(0f, -cell * 0.3f, 0f) - (Vector3)RectCenterOffset(tileRt));
+        Vector3 feet = root.InverseTransformPoint(feetWorld);
+        float unit = root.InverseTransformVector(tileRt.parent.TransformVector(Vector3.right * cell)).magnitude;
+
+        for (int i = 0; i < LandingDustPuffs; i++)
+        {
+            var go = new GameObject("HamsterDust", typeof(RectTransform), typeof(Image));
+            go.layer = root.gameObject.layer;
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(root, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = sprite;
+            img.raycastTarget = false;
+
+            float side = i % 2 == 0 ? -1f : 1f;
+            float spread = Random.Range(0.35f, 0.75f);
+            var velocity = new Vector3(side * spread, Random.Range(0.05f, 0.3f), 0f) * unit;
+            float size = Random.Range(0.32f, 0.5f) * unit;
+            rt.sizeDelta = new Vector2(size, size);
+            rt.localPosition = feet + new Vector3(side * Random.Range(0f, 0.15f) * unit, 0f, 0f);
+            rt.localRotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+            StartCoroutine(CoDust(img, velocity));
+        }
+    }
+
+    // RectTransform pivot'u merkezde değilse (tile pivot'u) ayak noktasını merkeze göre hesapla.
+    private static Vector2 RectCenterOffset(RectTransform rt) =>
+        new Vector2((rt.pivot.x - 0.5f) * rt.rect.width, (rt.pivot.y - 0.5f) * rt.rect.height);
+
+    private static IEnumerator CoDust(Image img, Vector3 velocity)
+    {
+        var rt = img.rectTransform;
+        var start = rt.localPosition;
+        for (float t = 0f; t < LandingDustSeconds; t += Time.deltaTime)
+        {
+            if (img == null) yield break;
+            float k = t / LandingDustSeconds;
+            float ease = 1f - (1f - k) * (1f - k);              // hızlı çıkış, yavaşlayarak süzülme
+            rt.localPosition = start + velocity * ease;
+            rt.localScale = Vector3.one * Mathf.Lerp(0.6f, 1.4f, ease);
+            var c = img.color; c.a = 0.85f * (1f - k); img.color = c;
+            yield return null;
+        }
+        if (img != null) Destroy(img.gameObject);
     }
 
     // Engel verisini standart vuruş yolundan temizler (interceptor true döner → OnObstacleDestroyed →
@@ -339,7 +466,8 @@ public sealed class HamsterObstacleService : MonoBehaviour
         try
         {
             var coordinator = new PatchBotTargetCoordinator(board, new PatchbotComboService(board));
-            var (intent, ok) = coordinator.PickIntentFrom(from);
+            // Aynı öncelikteki adaylardan hamstera EN UZAK olan: yakına değil, uzağa uçsun (görsel şölen).
+            var (intent, ok) = coordinator.PickFarthestIntentFrom(from);
             if (!ok) return null;
             var cell = intent.CurrentCell(board);
             coordinator.ReleaseIntent(intent);
