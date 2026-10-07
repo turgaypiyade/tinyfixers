@@ -34,11 +34,16 @@ public class TopHudController : MonoBehaviour
     [SerializeField] private string movesPrefix = "MOVES";
     [SerializeField] private Sprite fallbackGoalIcon;
     [SerializeField] private Sprite tubeGoalFallbackIcon;
+    [Tooltip("4 hedef (tam satır) gösterilirken hedef ızgarasının yatay kaydırması. GoalsGrid çerçeveye göre " +
+             "tam ortalanmasın diye ince ayar; + değer sağa kaydırır.")]
+    [SerializeField] private float fourGoalsOffsetX = 4f;
 
     public RectTransform MovesTextRect => movesText != null ? movesText.rectTransform : null;
 
     private readonly List<RuntimeGoal> runtimeGoals = new();
     private bool initialized;
+    private bool goalsRootBaseCaptured;
+    private Vector2 goalsRootBasePosition;
 
     // Kırılmış ama saçılımı henüz bitmemiş kaynak sayısı, saçılan obstacle başına
     // (Mud ← Barrel, WaterPuddle ← WaterTank/WaterTankSmall). Saçılan-obstacle hedefinin placeholder'ı.
@@ -184,7 +189,23 @@ public class TopHudController : MonoBehaviour
             runtimeGoals.Add(runtime);
         }
 
+        ApplyGoalsRowOffset();
         UpdateGoalsCompletionState();
+    }
+
+    private void ApplyGoalsRowOffset()
+    {
+        if (goalsRoot is not RectTransform rt)
+            return;
+
+        if (!goalsRootBaseCaptured)
+        {
+            goalsRootBasePosition = rt.anchoredPosition;
+            goalsRootBaseCaptured = true;
+        }
+
+        float offsetX = runtimeGoals.Count == 4 ? fourGoalsOffsetX : 0f;
+        rt.anchoredPosition = goalsRootBasePosition + new Vector2(offsetX, 0f);
     }
 
     private RuntimeGoal FindRuntimeObstacleGoal(ObstacleId obstacleId)
@@ -224,6 +245,7 @@ public class TopHudController : MonoBehaviour
 
         runtime.slot?.SetRemaining(runtime.remaining);
         runtimeGoals.Add(runtime);
+        ApplyGoalsRowOffset();
         return runtime;
     }
 
