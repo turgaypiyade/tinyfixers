@@ -254,6 +254,11 @@ public enum ObstacleId : int
     GelLauncherDown = 60,
     GelLauncherLeft = 61,
     GelLauncherRight = 62,
+
+    // Boya kutusu piramidi (2x2, sabit, hücre kapatan). Kasada 4-3-2 dizili 9 boya kutusu; bitişik her
+    // eşleşme bir, her special vuruşu iki kutu düşürür (ObstacleStateService). Son kutu düşünce kasa kalkar.
+    // Görsel: Grid/PaintCanBoxView — vuruşta tüm kutular sallanır, düşenler takla atarak uçar.
+    PaintCanBox = 63,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }

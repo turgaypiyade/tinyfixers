@@ -764,7 +764,9 @@ public class ObstacleStateService : ISimObstacleQuery
             }
         }
 
-        remaining--;
+        // Boya kutusu piramidi: special vuruşu İKİ kutu düşürür (normal match bir).
+        int damage = id == ObstacleId.PaintCanBox && context == ObstacleHitContext.SpecialActivation ? 2 : 1;
+        remaining = Mathf.Max(0, remaining - damage);
         remainingHitsByOrigin[origin] = remaining;
 
         bool grassFlowerShed = id == ObstacleId.Grass && ShedGrassFlowerIfAny(origin);
@@ -2298,6 +2300,10 @@ public class ObstacleStateService : ISimObstacleQuery
         // Dolabın gerçek dayanıklılığı item'larda: remainingHits hep 2 (kapalı/açık) kalırken açık dolap
         // special vuruşu başına 2 item kırar, son item'la yıkılır. Bu olmadan hedefleme 8 item'lı dolabı
         // "1-2 vuruşluk" sanıp ilk bottan sonra listeden düşürüyordu (Override+PatchBot'ta tek bot gidiyordu).
+        // Boya kutusu piramidi: special vuruşu başına 2 kutu düşer.
+        if (id == ObstacleId.PaintCanBox)
+            return (count + 1) / 2;
+
         if (id == ObstacleId.Wardrobe && count > 0)
         {
             int origin = level.obstacleOrigins[idx];

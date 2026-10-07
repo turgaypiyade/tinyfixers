@@ -71,6 +71,7 @@ Vuruş sayıları mevcut library'den okunmuştur; özel servislerin renk, öğe,
 | Wall · 55 | 101 | Bağlı parça ortak origin taşır. Tek hücreye beş vuruş bütün parçayı yıkar; hedef hücre değil parça sayısıdır. |
 | GrassFlower · 58 | 105 | Çimin üzerinde ilave çiçek katmanı. GrassFlower hedefi çiçek dökümünü; Grass hedefi alttaki çimin temizlenmesini ister. |
 | GelLauncher · 59–62 | — | Jel fırlatıcı (kartuş). Up/Down 1×2, Left/Right 2×1; ağız yönü id'den. Yalnız special, 2 vuruş (kapalı → çatlak). Kırılınca kapak ağızdan tahta kenarına kadar uçar, yolundaki her hücrede engel kalmayana kadar vurur (kırılmazlarda durur), taşı kırar/special'ı tetikler; jel 2 hücre geriden yolu ve kartuşun kendi hücrelerini boyar. Hedef değil, yardımcı. Köşelere/kenarlara, ağız tahtanın içine bakacak şekilde konur; dik olanı üst köşeye koymak o sütunun üst girişini kapatır. |
+| PaintCanBox · 63 | Boya Piramidi | 2×2 sabit kasa, içinde 4-3-2 dizili 9 boya kutusu (sayılabilir içerik). Bitişik her eşleşme 1, her special 2 kutu düşürür; vuruşta tüm kutular sallanır, düşen takla atarak uçar. Son kutuyla kasa kalkar. Hedef olarak kullanılabilir (obstacleId 63). Wardrobe'un kapısız, hemen başlayan hâli: erken seviyelerde orta zorluk, yan yana 2 kasa güzel durur. |
 
 WaterPuddle (53), WaterTank'tan doğan tek vuruşlu alt zemindir; kendi hücresindeki taş temizlenince kurur. Dinamik olarak görülmesi, yalnız doğrudan yerleştirilmiş obstacle dizilerinin taranmasıyla bulunmayabilir.
 

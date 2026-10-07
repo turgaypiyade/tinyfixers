@@ -817,6 +817,14 @@
           "value": "Jel Kartuşu"
         },
         {
+          "key": "hint_obstacle_paintcanbox",
+          "value": "Yanında yaptığın her eşleşme bir boya kutusu, her special iki kutu düşürür. Tüm kutular düşünce kasa açılır!"
+        },
+        {
+          "key": "hint_obstacle_paintcanbox_name",
+          "value": "Boya Piramidi"
+        },
+        {
           "key": "progress_timer_days_hours",
           "value": "{0}g {1}s"
         },
@@ -3160,6 +3168,14 @@
         {
           "key": "hint_obstacle_gellauncher_name",
           "value": "Gel Cartridge"
+        },
+        {
+          "key": "hint_obstacle_paintcanbox",
+          "value": "Every match next to it knocks down one paint can, every special knocks down two. Clear all the cans to open the crate!"
+        },
+        {
+          "key": "hint_obstacle_paintcanbox_name",
+          "value": "Paint Can Pyramid"
         },
         {
           "key": "progress_timer_days_hours",

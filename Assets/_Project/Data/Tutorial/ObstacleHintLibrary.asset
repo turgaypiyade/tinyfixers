@@ -355,3 +355,9 @@ MonoBehaviour:
     fallbackTitle: Gel Cartridge
     locKey: hint_obstacle_gellauncher
     fallbackText:
+  - id: 63
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_paintcanbox_name
+    fallbackTitle: Paint Can Pyramid
+    locKey: hint_obstacle_paintcanbox
+    fallbackText:

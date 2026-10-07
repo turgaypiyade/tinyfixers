@@ -2306,7 +2306,9 @@ public class GridSpawner : MonoBehaviour
         if (ShouldLetEnergyContainerOwnVisual(originIndex))
             return;
 
-        if (nextStage.sprite != null)
+        // Boya kutusu: stage sprite'ları (dolu piramit) yalnız önizleme/hedef ikonu içindir; sahnede
+        // boş kasa + PaintCanBoxView kutuları durur.
+        if (nextStage.sprite != null && image.GetComponent<PaintCanBoxView>() == null)
             image.sprite = nextStage.sprite;
 
         MoveObstacleToBehaviorRoot(image.rectTransform, nextStage.behavior);
@@ -3469,7 +3471,30 @@ public class GridSpawner : MonoBehaviour
             clickProxy.Init(board, x, y, w, h, tileSize);
         }
 
+        // Boya kutusu piramidi: Image boş kasayı gösterir, kutular PaintCanBoxView child'larıdır.
+        if (def.id == ObstacleId.PaintCanBox)
+            AttachPaintCanBoxView(img, def, x, y);
+
         return img;
+    }
+
+    private void AttachPaintCanBoxView(Image img, ObstacleDef def, int x, int y)
+    {
+        if (def.auxiliarySprites != null && def.auxiliarySprites.Count > 0 && def.auxiliarySprites[0] != null)
+            img.sprite = def.auxiliarySprites[0];
+
+        var state = board != null ? board.ObstacleStateService : null;
+        int remaining = state != null ? state.GetRemainingHitsAt(x, y) : 0;
+        if (remaining <= 0) remaining = def.hits;
+        PaintCanBoxView.Ensure(img, remaining, tileSize);
+    }
+
+    private void UpdatePaintCanBoxView(Image image, int remaining)
+    {
+        var view = image != null ? image.GetComponent<PaintCanBoxView>() : null;
+        if (view == null) return;
+        var root = board != null && board.BoardVfxPlayer != null ? board.BoardVfxPlayer.VfxRoot : null;
+        view.SetCount(remaining, this, root);
     }
     private void HandleObstacleCreatedDynamic(int x, int y)
     {
@@ -3614,6 +3639,10 @@ public class GridSpawner : MonoBehaviour
                 obstacleDefsByOrigin.Remove(change.originIndex);
                 return;
             }
+            // Boya kutusu: kalan son kutu(lar) kasadan uçarak düşer, kasa hemen kalkar.
+            if (change.obstacleId == ObstacleId.PaintCanBox)
+                UpdatePaintCanBoxView(image, 0);
+
             if (change.obstacleId == ObstacleId.Wardrobe)
             {
                 float destroyDelay = WardrobeFinalItemDestroyDelay;
@@ -3638,6 +3667,13 @@ public class GridSpawner : MonoBehaviour
 
         // Grass: hit'te sprite'ı DEĞİŞTİRME — A/B checkerboard görseli (DrawObstacleImage'da
         // seçilen) tüm hit'ler boyunca korunmalı; stage sprite'ı doğal görünümü bozmasın.
+        // Boya kutusu: kasa sprite'ı sabit; kutular sallanır, eksilenler düşer.
+        if (change.obstacleId == ObstacleId.PaintCanBox)
+        {
+            UpdatePaintCanBoxView(image, change.remainingHits);
+            return;
+        }
+
         if (change.sprite != null && change.obstacleId != ObstacleId.Grass)
             image.sprite = change.sprite;
 
