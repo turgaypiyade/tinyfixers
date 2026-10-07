@@ -25,3 +25,7 @@ Her seviye sonrasında kullanıcıdan gelen görsel ve oynanış geri bildirimiy
 Engel seçmeden önce [engel tasarım rehberi](Obstacle-Design-Guide.md) ve gerektiğinde ilgili güncel servis incelenir. Jel gibi kaplama hedefleri, kırılma hedeflerinden ayrı değerlendirilir; tüm board hedefinde sonradan açılacak engel hücreleri de kapsanır.
 
 108 sonrası geri bildirim: kullanıcı leveli kolay geçti; EggBird ve RocketBasket yardımı belirgin biçimde kolaylaştırdı. 108 değiştirilmez. Sonraki tasarımlarda yardım yoğunluğu ve hedef yükü birlikte ayarlanır; zorluk yalnız hamle sayısından ibaret düşünülmez. Tam 9×11 dış çerçeve içinde hole şeritleri ve toplu engel desenleri de denenir.
+
+113–116 sonrası geri bildirim: çiçek/çim çok kullanıldı; sonraki levellarda başka örtü ve katmanlar (çamur, jel, taş) öne çıkarılır. Overlay/katmanlı engeller ekranı hem şık hem zor yapar; zor levellarda 3 katmanlı yığınlar kullanılabilir.
+
+MetalWall için: hamlede vurulmayan hücre geri gittiği için duvara ilk hamlelerde kolay ulaşılmamalı. Örnek: sağa dayalı 2 sütun genişliğinde dikey bir duvar şeridi ve solunda Wall, SculptingStone ya da 3 aşamalı bir engelle korunması. Tek parça büyük blok kolaylaştırır; parçalı (çok sayıda küçük) duvar blokları zorlaştırır.
