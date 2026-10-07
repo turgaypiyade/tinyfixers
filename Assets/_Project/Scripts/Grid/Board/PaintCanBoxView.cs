@@ -31,29 +31,49 @@ public sealed class PaintCanBoxView : MonoBehaviour
     private const float FallDelay = 0.12f;
     private const float FallSeconds = 0.75f;
 
-    private static Sprite canSprite;
+    private static readonly Dictionary<PaintCanColor, Sprite> canSprites = new();
 
     private readonly List<RectTransform> slots = new();
     private int count;
     private float cellSize;
+    private PaintCanColor color = PaintCanColor.Blue;
     private Coroutine wobble;
 
     public static int Capacity => RemovalOrder.Length;
 
-    public static PaintCanBoxView Ensure(Image boxImage, int canCount, float cellSize)
+    /// <param name="color">Kasadaki tüm kutuların rengi (Auto burada geçersiz; çağıran çözer).</param>
+    public static PaintCanBoxView Ensure(Image boxImage, int canCount, float cellSize, PaintCanColor color)
     {
         if (boxImage == null) return null;
         var view = boxImage.GetComponent<PaintCanBoxView>();
         if (view == null) view = boxImage.gameObject.AddComponent<PaintCanBoxView>();
         view.cellSize = cellSize;
+        view.color = color == PaintCanColor.Auto ? PaintCanColor.Blue : color;
         view.Build(canCount);
         return view;
     }
 
-    private static Sprite CanSprite()
+    /// Auto renk: kasanın satır bandına göre (her 2 satır bir renk) — yatayda kendiliğinden simetrik.
+    public static PaintCanColor AutoColorForRow(int originY)
     {
-        if (canSprite == null) canSprite = Resources.Load<Sprite>(CanSpritePath);
-        return canSprite;
+        switch ((originY / 2) % 4)
+        {
+            case 0: return PaintCanColor.Red;
+            case 1: return PaintCanColor.Yellow;
+            case 2: return PaintCanColor.Green;
+            default: return PaintCanColor.Blue;
+        }
+    }
+
+    private static Sprite CanSprite(PaintCanColor color)
+    {
+        if (!canSprites.TryGetValue(color, out var sprite) || sprite == null)
+        {
+            sprite = Resources.Load<Sprite>(CanSpritePath + color);
+            if (sprite == null) sprite = Resources.Load<Sprite>(CanSpritePath + PaintCanColor.Blue);
+            canSprites[color] = sprite;
+        }
+        return sprite;
     }
 
     private void Build(int canCount)
@@ -62,7 +82,7 @@ public sealed class PaintCanBoxView : MonoBehaviour
             if (rt != null) Destroy(rt.gameObject);
         slots.Clear();
 
-        var sprite = CanSprite();
+        var sprite = CanSprite(color);
         if (sprite == null) return;
 
         float aspect = sprite.rect.height / Mathf.Max(1f, sprite.rect.width);

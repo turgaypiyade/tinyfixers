@@ -3486,7 +3486,9 @@ public class GridSpawner : MonoBehaviour
         var state = board != null ? board.ObstacleStateService : null;
         int remaining = state != null ? state.GetRemainingHitsAt(x, y) : 0;
         if (remaining <= 0) remaining = def.hits;
-        PaintCanBoxView.Ensure(img, remaining, tileSize);
+        var color = resolvedLevel != null ? resolvedLevel.GetPaintCanBoxColor(resolvedLevel.Index(x, y)) : PaintCanColor.Auto;
+        if (color == PaintCanColor.Auto) color = PaintCanBoxView.AutoColorForRow(y);
+        PaintCanBoxView.Ensure(img, remaining, tileSize, color);
     }
 
     private void UpdatePaintCanBoxView(Image image, int remaining)

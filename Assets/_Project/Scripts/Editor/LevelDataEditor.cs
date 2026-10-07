@@ -166,6 +166,25 @@ public class LevelDataEditor : Editor
                 new GUIContent("Hamster Doyma (lokma)", "0 = ObstacleLibrary'deki varsayılan (hamsterSatiety)."),
                 level.hamsterSatietyOverride));
 
+        // Boya kutusu kasaları: her kasanın kutu rengi (Auto = satır bandına göre).
+        if (level.obstacles != null && level.obstacleOrigins != null && level.width > 0)
+        {
+            for (int i = 0; i < level.obstacles.Length && i < level.obstacleOrigins.Length; i++)
+            {
+                if (level.obstacles[i] != (int)ObstacleId.PaintCanBox || level.obstacleOrigins[i] != i) continue;
+                var current = level.GetPaintCanBoxColor(i);
+                var next = (PaintCanColor)EditorGUILayout.EnumPopup(
+                    new GUIContent($"Boya Kasası ({i % level.width},{i / level.width})",
+                        "Kutu rengi. Auto = kasanın satırına göre otomatik."), current);
+                if (next != current)
+                {
+                    Undo.RecordObject(level, "Boya Kasası Rengi");
+                    level.SetPaintCanBoxColor(i, next);
+                    EditorUtility.SetDirty(level);
+                }
+            }
+        }
+
         // Boss düellosu kendi hayvan intro'sunu (BossDuelIntroArtwork) oynatır; sol/sağ sprite'lı
         // özel intro orada hiç okunmaz. Yalnız giriş süreleri kullanılır.
         if (level.levelKind == LevelKind.BossDuel)
