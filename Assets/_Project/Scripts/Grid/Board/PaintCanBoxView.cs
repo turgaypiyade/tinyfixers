@@ -31,6 +31,12 @@ public sealed class PaintCanBoxView : MonoBehaviour
     private const float FallDelay = 0.12f;
     private const float FallSeconds = 0.75f;
 
+    // Kasa vuruş sarsıntısı: kısa "pof" büyümesi + sönümlenen yatay titreme.
+    private const float JoltSeconds = 0.32f;
+    private const float JoltCycles = 2.5f;
+    private const float JoltShake = 0.05f;    // hücre boyuna oranla
+    private const float JoltPop = 0.045f;
+
     private static readonly Dictionary<PaintCanColor, Sprite> canSprites = new();
 
     private readonly List<RectTransform> slots = new();
@@ -38,6 +44,9 @@ public sealed class PaintCanBoxView : MonoBehaviour
     private float cellSize;
     private PaintCanColor color = PaintCanColor.Blue;
     private Coroutine wobble;
+    private Coroutine jolt;
+    private Vector2 joltBasePos;
+    private Vector3 joltBaseScale;
 
     public static int Capacity => RemovalOrder.Length;
 
@@ -140,6 +149,7 @@ public sealed class PaintCanBoxView : MonoBehaviour
         if (slots.Count == 0) { count = newCount; return; }
         if (newCount > count) { Build(newCount); return; }   // geri yükleme (snapshot)
 
+        bool hit = newCount < count;
         for (int k = Capacity - count; k < Capacity - newCount; k++)
             DropSlot(RemovalOrder[k], host, fxRoot);
         count = Mathf.Min(count, newCount);
@@ -148,7 +158,43 @@ public sealed class PaintCanBoxView : MonoBehaviour
         {
             if (wobble != null) StopCoroutine(wobble);
             wobble = StartCoroutine(CoWobbleAll());
+            if (hit) StartJolt();
         }
+    }
+
+    private void StartJolt()
+    {
+        var rt = (RectTransform)transform;
+        if (jolt != null)
+            StopCoroutine(jolt);   // taban değerler ilk sarsıntıdan kalır
+        else
+        {
+            joltBasePos = rt.anchoredPosition;
+            joltBaseScale = rt.localScale;
+        }
+        jolt = StartCoroutine(CoJolt(rt));
+    }
+
+    private IEnumerator CoJolt(RectTransform rt)
+    {
+        Vector2 size = rt.rect.size;
+        // Pivot ne olursa olsun görsel merkez etrafında büyüt.
+        Vector2 pivotToCenter = new Vector2((0.5f - rt.pivot.x) * size.x, (0.5f - rt.pivot.y) * size.y);
+        float amp = (cellSize > 0f ? cellSize : size.x * 0.5f) * JoltShake;
+
+        for (float t = 0f; t < JoltSeconds; t += Time.deltaTime)
+        {
+            float k = t / JoltSeconds;
+            float damp = (1f - k) * (1f - k);
+            float x = Mathf.Sin(k * Mathf.PI * 2f * JoltCycles) * amp * damp;
+            float s = 1f + JoltPop * Mathf.Sin(Mathf.Min(1f, k * 3f) * Mathf.PI);
+            rt.localScale = new Vector3(joltBaseScale.x * s, joltBaseScale.y * s, joltBaseScale.z);
+            rt.anchoredPosition = joltBasePos + new Vector2(x, 0f) - pivotToCenter * (s - 1f);
+            yield return null;
+        }
+        rt.localScale = joltBaseScale;
+        rt.anchoredPosition = joltBasePos;
+        jolt = null;
     }
 
     private IEnumerator CoWobbleAll()
