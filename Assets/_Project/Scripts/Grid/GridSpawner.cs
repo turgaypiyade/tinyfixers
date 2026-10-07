@@ -3649,6 +3649,10 @@ public class GridSpawner : MonoBehaviour
         // Su deposu: çatlak kareleri (Bidon → Bidon2 → Bidon3) oynar + gövdeden parça sıçrar.
         if (BoardController.IsWaterTank(change.obstacleId))
             PlayWaterTankCrack(image, change.sprite);
+
+        // Jel fırlatıcı: çatlak hâlde ara ara şişip buhar çıkarır.
+        if (BoardController.IsGelLauncher(change.obstacleId))
+            GelLauncherIdleFx.Ensure(image, change.obstacleId, tileSize);
     }
 
     private void PlayWaterTankCrack(Image image, Sprite stageSprite)

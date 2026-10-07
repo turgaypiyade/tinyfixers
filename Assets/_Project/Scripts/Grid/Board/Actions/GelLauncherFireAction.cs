@@ -19,6 +19,8 @@ public sealed class GelLauncherFireAction : BoardAction
     private const int GelLagCells = 2;
     private const float CompletionTimeout = 6f;
     private const string CapSpritePath = "GelLauncher/GelLauncherCap";
+    private const float SquashScale = 0.76f;
+    private const float SquashSeconds = 0.2f;
 
     private readonly BoardController board;
     private readonly Vector2Int origin;
@@ -41,7 +43,7 @@ public sealed class GelLauncherFireAction : BoardAction
         RectTransform cap = null;
         try
         {
-            Vector2Int dir = Direction(launcherId);
+            Vector2Int dir = GelLauncherFx.Direction(launcherId);
             var footprint = Footprint(origin, launcherId);
             Vector2Int front = FrontCell(footprint, dir);
             var path = BuildPath(front, dir);
@@ -56,8 +58,34 @@ public sealed class GelLauncherFireAction : BoardAction
             if (footprint.Count < 2 || step.sqrMagnitude < 0.0001f)
                 step = CellStepFallback(dir);
 
-            cap = CreateCap(dir, step);
+            // Atış öncesi: gövde tabanı sabit kalarak boyuna sıkışır, sonra kapaksız gövdeye geçip esner.
+            Vector3 bodyCenter = (frontWorld + board.GetCellWorldCenterPosition(back.x, back.y)) * 0.5f;
+            if (footprint.Count < 2) bodyCenter = frontWorld;
+            var body = CreateBody(level, step, bodyCenter);
+            if (body != null)
+                yield return Squash(body, bodyCenter, step, 1f, SquashScale, SquashSeconds);
+            if (!IsCurrent(level))
+            {
+                if (body != null) Object.Destroy(body.gameObject);
+                yield break;
+            }
+
             Vector3 from = frontWorld + step * 0.5f;   // ağız
+            var parent = board.BreakFxParent;
+            if (parent != null)
+            {
+                float cellLocal = parent.InverseTransformVector(step).magnitude;
+                GelLauncherFx.SpawnSteam(board, parent, parent.InverseTransformPoint(from),
+                    GelLauncherFx.UiDirection(launcherId), cellLocal, 3, 0.7f);
+            }
+            if (body != null)
+            {
+                var openSprite = GelLauncherFx.LoadOpenSprite(launcherId);
+                if (openSprite != null) body.GetComponent<Image>().sprite = openSprite;
+                board.StartCoroutine(ReleaseAndFade(body, bodyCenter, step));
+            }
+
+            cap = CreateCap(dir, step);
             if (cap != null) cap.position = from;
 
             for (int i = 0; i < path.Count; i++)
@@ -133,21 +161,9 @@ public sealed class GelLauncherFireAction : BoardAction
 
     // ── Geometri ──────────────────────────────────────────────────────────────
 
-    // Grid'de y aşağı artar: Up = (0,-1).
-    private static Vector2Int Direction(ObstacleId id)
-    {
-        switch (id)
-        {
-            case ObstacleId.GelLauncherDown: return new Vector2Int(0, 1);
-            case ObstacleId.GelLauncherLeft: return new Vector2Int(-1, 0);
-            case ObstacleId.GelLauncherRight: return new Vector2Int(1, 0);
-            default: return new Vector2Int(0, -1);
-        }
-    }
-
     private static List<Vector2Int> Footprint(Vector2Int origin, ObstacleId id)
     {
-        bool vertical = id == ObstacleId.GelLauncherUp || id == ObstacleId.GelLauncherDown;
+        bool vertical = GelLauncherFx.IsVertical(id);
         return new List<Vector2Int> { origin, vertical ? origin + new Vector2Int(0, 1) : origin + new Vector2Int(1, 0) };
     }
 
@@ -169,6 +185,80 @@ public sealed class GelLauncherFireAction : BoardAction
         Vector3 bx = board.GetCellWorldCenterPosition(Mathf.Min(1, board.Width - 1), 0);
         Vector3 by = board.GetCellWorldCenterPosition(0, Mathf.Min(1, board.Height - 1));
         return (bx - a) * dir.x + (by - a) * dir.y;
+    }
+
+    // ── Gövde (atış animasyonu) ──────────────────────────────────────────────
+
+    // Gerçek engel görseli yıkıldığı anda yerine konan geçici gövde: çatlak sprite ile başlar.
+    private RectTransform CreateBody(LevelData level, Vector3 worldStep, Vector3 worldCenter)
+    {
+        var parent = board.BreakFxParent;
+        var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(launcherId) : null;
+        Sprite cracked = def != null && def.stages != null && def.stages.Count > 1 ? def.stages[1].sprite : null;
+        if (parent == null || cracked == null) return null;
+
+        var go = new GameObject("GelLauncherBody", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.layer = parent.gameObject.layer;
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(parent, false);
+        rt.SetAsLastSibling();
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+        float cell = parent.InverseTransformVector(worldStep).magnitude;
+        if (cell <= 0.01f) cell = board.TileSize;
+        rt.sizeDelta = GelLauncherFx.IsVertical(launcherId) ? new Vector2(cell, cell * 2f) : new Vector2(cell * 2f, cell);
+        rt.position = worldCenter;
+
+        var img = go.GetComponent<Image>();
+        img.sprite = cracked;
+        img.raycastTarget = false;
+        return rt;
+    }
+
+    // Eksen boyunca ölçekler; taban (ağzın tersi) sabit kalır, en hafifçe şişer.
+    private void SetAxisScale(RectTransform body, Vector3 center, Vector3 step, float s)
+    {
+        float perp = 1f + (1f - s) * 0.45f;
+        body.localScale = GelLauncherFx.IsVertical(launcherId) ? new Vector3(perp, s, 1f) : new Vector3(s, perp, 1f);
+        body.position = center - step * (1f - s);
+    }
+
+    private IEnumerator Squash(RectTransform body, Vector3 center, Vector3 step, float from, float to, float seconds)
+    {
+        for (float t = 0f; t < seconds; t += Time.deltaTime)
+        {
+            if (body == null) yield break;
+            float k = t / seconds;
+            SetAxisScale(body, center, step, Mathf.Lerp(from, to, k * k));
+            yield return null;
+        }
+        if (body != null) SetAxisScale(body, center, step, to);
+    }
+
+    private IEnumerator ReleaseAndFade(RectTransform body, Vector3 center, Vector3 step)
+    {
+        // Yay gibi bırak: sıkışıktan taşarak (1.1) normale.
+        const float release = 0.16f;
+        for (float t = 0f; t < release; t += Time.deltaTime)
+        {
+            if (body == null) yield break;
+            float k = t / release;
+            float s = k < 0.6f ? Mathf.Lerp(SquashScale, 1.1f, k / 0.6f) : Mathf.Lerp(1.1f, 1f, (k - 0.6f) / 0.4f);
+            SetAxisScale(body, center, step, s);
+            yield return null;
+        }
+        if (body == null) yield break;
+        SetAxisScale(body, center, step, 1f);
+
+        yield return new WaitForSeconds(0.3f);
+        var img = body != null ? body.GetComponent<Image>() : null;
+        const float fade = 0.25f;
+        for (float t = 0f; t < fade && body != null; t += Time.deltaTime)
+        {
+            if (img != null) { var c = img.color; c.a = 1f - t / fade; img.color = c; }
+            body.localScale = Vector3.one * Mathf.Lerp(1f, 0.85f, t / fade);
+            yield return null;
+        }
+        if (body != null) Object.Destroy(body.gameObject);
     }
 
     // ── Kapak görseli ────────────────────────────────────────────────────────
