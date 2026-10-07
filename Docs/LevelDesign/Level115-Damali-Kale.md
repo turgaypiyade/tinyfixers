@@ -1,35 +1,39 @@
-# Level 115 — Damalı Kale (zor)
+# Level 115 — Damalı Kale (zor, v2)
 
-`LevelCatalogPro` global 115 → `LevelP_001210.asset`. Zor normal level, tam 9×11 board, başlangıç ayarı 25 hamle. Çiçek/çim kullanılmadı.
+`LevelCatalogPro` global 115 → `LevelP_001210.asset`. Zor normal level, tam 9×11 board, başlangıç ayarı 24 hamle. Çiçek/çim kullanılmadı.
 
 ## Kompozisyon
 
-Ortada 7×5 dama: baykuş (HelmetPorcelain) ve turuncu (PlasticTwoStage) kareler; hepsinin altında iki katmanlı çamur. Yanlarda boydan boya MetalWall kuleler, altta orta sütunda kısa MetalWall; sütunun iki yanında RocketBasket.
+Ortada 5×5 dama: baykuş (HelmetPorcelain) ve turuncu (PlasticTwoStage) kareler; hepsinin altında iki katmanlı çamur. İki yanda **2 sütun genişliğinde, parçalı** MetalWall kuleleri (her yanda 2×2 + 2×1 + 2×2). Kulelerin üst ucu ve altı SculptingStone ile kapalı.
 
 ```text
 ooooooooo
 ooooooooo
-ooooooooo
-1HTHTHTH2
-1THTHTHT2
-1HTHTHTH2
-1THTHTHT2
-1HTHTHTH2
-1ooooooo2
-1ooo3ooo2
-1ook3koo2
+SSoooooSS
+11THTHT44
+11HTHTH44
+22THTHT55
+33HTHTH66
+33THTHT66
+SSoooooSS
+SSoooooSS
+SSoooooSS
 ```
 
-`o` normal taş, `H` HelmetPorcelain (30), `T` PlasticTwoStage (40), `k` RocketBasket (38), `1`/`2`/`3` MetalWall (56) parçaları (8, 8, 2 hücre). Dama hücrelerinde taban `obstacles[] = Mud (25)`, üst katman `stackedObstacles` kaydıdır (hareketli engel çamur üstünde).
+`o` normal taş, `H` HelmetPorcelain (30), `T` PlasticTwoStage (40) — ikisinin tabanı Mud (25), `S` SculptingStone (28, 3 vuruş, hedef değil), `1`–`6` MetalWall (56) parçaları.
 
-Önizleme: `Level115-Damali-Kale.png` (yerleşim şeması; çamur hücre zemininde gösterilir).
+Önizleme: `Level115-Damali-Kale.png`.
 
 ## Hedefler ve zorluk
 
-- 3 MetalWall, 18 HelmetPorcelain, 17 PlasticTwoStage, 35 Mud. Hücre başı 3–4 vuruş.
-- Dama yalnız üst ve alt sıradan açılır; hareketli engeller açıldıkça düşer, desen bozulur.
-- RocketBasket'ler hedef değildir; kale altından yardım verir. Duvarı/sepeti alta koymak üstten taş akışını açık bırakır.
+- 6 MetalWall, 12 HelmetPorcelain, 13 PlasticTwoStage, 25 Mud (4 hedef; HUD 4 sütun).
+- MetalWall'a başta yalnız kule uçlarındaki taş kalkanları kırarak ya da damayı yanlardan açarak ulaşılır. Ardışık vuruş kuralı nedeniyle her parçaya üst üste hamlelerde odaklanmak gerekir; parçalı yapı her parçayı ayrı iş yapar.
+- Yardımcı yok.
+
+## Revizyon
+
+v1 (7×5 dama, tek parça 1 sütunluk kuleler, 2 RocketBasket) kullanıcıya kolay geldi: duvar alt boşluktan kolay kırıldı. v2'de kuleler 2 sütun ve parçalı, uçları taşla korunuyor, roketler kaldırıldı.
 
 ## Statik kontrol
 
-Diziler, 3 duvar parçası/origin, 35 çamur tabanı + 35 üst katman kaydı, hedef adetleri ve katalog bağlantısı kontrol edildi. 44 açık taş sağ-sol simetrik sabitlendi; hazır üçlü/2×2 yok, 10 geçerli takas. Unity, bot, build veya simülasyon çalıştırılmadı; 25 hamle ilk tahmin.
+Diziler, 6 duvar parçası/origin, 25 çamur tabanı + 25 üst katman kaydı, hedef adetleri ve katalog bağlantısı (GUID korunarak) kontrol edildi. 38 açık taş sağ-sol simetrik ve bölgesel dengeli sabitlendi; hazır üçlü/2×2 yok, 9 geçerli takas (üst ve alt). Unity, bot, build veya simülasyon çalıştırılmadı.
