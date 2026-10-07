@@ -92,6 +92,9 @@ public class ObstacleHintManager : MonoBehaviour
             // Renkli alet tehditleri (sarı/kırmızı/mavi/yeşil) TEK kural → biri anlatılınca hepsi görülmüş.
             if (IsColoredToolThreat(id))
                 for (var c = ObstacleId.ToolThreatYellow; c <= ObstacleId.ToolThreatGreen; c++) MarkHintSeen(c);
+            // Jel kartuşunun 4 yönü tek engel → biri anlatılınca hepsi görülmüş.
+            if (BoardController.IsGelLauncher(id))
+                for (var c = ObstacleId.GelLauncherUp; c <= ObstacleId.GelLauncherRight; c++) MarkHintSeen(c);
             yield return HighlightObstacles(id);
         }
     }
@@ -164,6 +167,7 @@ public class ObstacleHintManager : MonoBehaviour
     {
         var seen = new HashSet<ObstacleId>();
         var result = new List<ObstacleId>();
+        bool anyGelLauncher = false;
 
         var levelData = board?.ActiveLevelData;
         if (levelData == null) return result;
@@ -236,6 +240,12 @@ public class ObstacleHintManager : MonoBehaviour
         void AddId(ObstacleId id)
         {
             if (id == ObstacleId.None) return;
+            // Jel kartuşu yönleri tek ipucu: ilk görülen yön örnek olarak gösterilir.
+            if (BoardController.IsGelLauncher(id))
+            {
+                if (anyGelLauncher) return;
+                anyGelLauncher = true;
+            }
             if (seen.Add(id))
                 result.Add(id);
         }

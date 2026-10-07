@@ -295,3 +295,63 @@ MonoBehaviour:
     fallbackTitle: Colored Tool Threat
     locKey: hint_obstacle_toolthreat_color
     fallbackText: 
+  - id: 42
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_grass_name
+    fallbackTitle: Grass
+    locKey: hint_obstacle_grass
+    fallbackText:
+  - id: 58
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_grassflower_name
+    fallbackTitle: Flower Grass
+    locKey: hint_obstacle_grassflower
+    fallbackText:
+  - id: 43
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_overridebattery_name
+    fallbackTitle: Override Battery
+    locKey: hint_obstacle_overridebattery
+    fallbackText:
+  - id: 44
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_keygenerator_name
+    fallbackTitle: Key Generator
+    locKey: hint_obstacle_keygenerator
+    fallbackText:
+  - id: 45
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_eggbird_name
+    fallbackTitle: Bird Egg
+    locKey: hint_obstacle_eggbird
+    fallbackText:
+  - id: 57
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_hamster_name
+    fallbackTitle: Hungry Hamster
+    locKey: hint_obstacle_hamster
+    fallbackText:
+  - id: 59
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_gellauncher_name
+    fallbackTitle: Gel Cartridge
+    locKey: hint_obstacle_gellauncher
+    fallbackText:
+  - id: 60
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_gellauncher_name
+    fallbackTitle: Gel Cartridge
+    locKey: hint_obstacle_gellauncher
+    fallbackText:
+  - id: 61
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_gellauncher_name
+    fallbackTitle: Gel Cartridge
+    locKey: hint_obstacle_gellauncher
+    fallbackText:
+  - id: 62
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_gellauncher_name
+    fallbackTitle: Gel Cartridge
+    locKey: hint_obstacle_gellauncher
+    fallbackText:

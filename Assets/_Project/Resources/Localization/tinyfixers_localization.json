@@ -761,6 +761,62 @@
           "value": "Metal Duvar"
         },
         {
+          "key": "hint_obstacle_grass",
+          "value": "Çim taşları örter. Yanında eşleşme yap ya da special kullan. Çiçekli çimde önce çiçekler dökülür, sonra çim kalkar."
+        },
+        {
+          "key": "hint_obstacle_grass_name",
+          "value": "Çim"
+        },
+        {
+          "key": "hint_obstacle_grassflower",
+          "value": "Çiçekli çim iki vuruşta temizlenir: ilk vuruş çiçekleri döker, ikincisi çimi kaldırır."
+        },
+        {
+          "key": "hint_obstacle_grassflower_name",
+          "value": "Çiçekli Çim"
+        },
+        {
+          "key": "hint_obstacle_overridebattery",
+          "value": "Yanında her renkten eşleşme yaparak bataryayı doldur. Dolunca bütün tahtaya güçlü bir dalga yayar!"
+        },
+        {
+          "key": "hint_obstacle_overridebattery_name",
+          "value": "Override Bataryası"
+        },
+        {
+          "key": "hint_obstacle_keygenerator",
+          "value": "Vurdukça anahtar üretir. Anahtarları eşleştirip topla!"
+        },
+        {
+          "key": "hint_obstacle_keygenerator_name",
+          "value": "Anahtar Makinesi"
+        },
+        {
+          "key": "hint_obstacle_eggbird",
+          "value": "Yumurta iki vuruşta çatlar. İçinden çıkan kuşlar tahtadaki üç hedefe uçup vurur!"
+        },
+        {
+          "key": "hint_obstacle_eggbird_name",
+          "value": "Kuş Yumurtası"
+        },
+        {
+          "key": "hint_obstacle_hamster",
+          "value": "Hamsterın yanında eşleşme yaparak onu besle. Doyunca hedeflerin yanına zıplar ve etrafını kırar!"
+        },
+        {
+          "key": "hint_obstacle_hamster_name",
+          "value": "Aç Hamster"
+        },
+        {
+          "key": "hint_obstacle_gellauncher",
+          "value": "Kartuş yalnız special ile kırılır. İkinci vuruşta kapağı fırlar, önündeki her şeyi kırar ve yolu jelle boyar!"
+        },
+        {
+          "key": "hint_obstacle_gellauncher_name",
+          "value": "Jel Kartuşu"
+        },
+        {
           "key": "progress_timer_days_hours",
           "value": "{0}g {1}s"
         },
@@ -3048,6 +3104,62 @@
         {
           "key": "hint_obstacle_metalwall_name",
           "value": "Metal Wall"
+        },
+        {
+          "key": "hint_obstacle_grass",
+          "value": "Grass covers the pieces. Match next to it or use a special. On flowered grass the flowers fall first, then the grass."
+        },
+        {
+          "key": "hint_obstacle_grass_name",
+          "value": "Grass"
+        },
+        {
+          "key": "hint_obstacle_grassflower",
+          "value": "Flower grass clears in two hits: the first knocks off the flowers, the second removes the grass."
+        },
+        {
+          "key": "hint_obstacle_grassflower_name",
+          "value": "Flower Grass"
+        },
+        {
+          "key": "hint_obstacle_overridebattery",
+          "value": "Charge the battery with matches of every color next to it. When full, it sends a powerful wave across the board!"
+        },
+        {
+          "key": "hint_obstacle_overridebattery_name",
+          "value": "Override Battery"
+        },
+        {
+          "key": "hint_obstacle_keygenerator",
+          "value": "Each hit makes a key. Match the keys to collect them!"
+        },
+        {
+          "key": "hint_obstacle_keygenerator_name",
+          "value": "Key Generator"
+        },
+        {
+          "key": "hint_obstacle_eggbird",
+          "value": "The egg cracks in two hits. The birds inside fly out and strike three targets on the board!"
+        },
+        {
+          "key": "hint_obstacle_eggbird_name",
+          "value": "Bird Egg"
+        },
+        {
+          "key": "hint_obstacle_hamster",
+          "value": "Feed the hamster by matching next to it. When it is full, it jumps next to your goals and smashes around!"
+        },
+        {
+          "key": "hint_obstacle_hamster_name",
+          "value": "Hungry Hamster"
+        },
+        {
+          "key": "hint_obstacle_gellauncher",
+          "value": "The cartridge breaks only with specials. On the second hit its cap shoots out, smashes everything ahead and paints the path with gel!"
+        },
+        {
+          "key": "hint_obstacle_gellauncher_name",
+          "value": "Gel Cartridge"
         },
         {
           "key": "progress_timer_days_hours",
