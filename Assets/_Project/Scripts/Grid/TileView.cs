@@ -619,6 +619,11 @@ public class TileView : MonoBehaviour,
             StartLineIdleSpin();
         else
             StopLineIdleSpin();
+
+        // Idle döngüsü normalde creation reveal'den sonra başlar; level'e yerleştirilen override'lar
+        // reveal oynamadığı için burada başlatılır.
+        if (model.special == TileSpecial.SystemOverride)
+            overrideSpecialView?.EnsureIdle();
     }
 
     public void SnapToGrid(int tileSize)

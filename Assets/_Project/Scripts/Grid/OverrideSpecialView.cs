@@ -57,6 +57,15 @@ public sealed class OverrideSpecialView : MonoBehaviour
         routine = StartCoroutine(CoCreation());
     }
 
+    /// Creation animasyonu oynamadan override olan taşlar (level'e yerleştirilmiş / pre-level inject)
+    /// için idle döngüsünü başlatır. Döngü zaten çalışıyorsa dokunmaz.
+    public void EnsureIdle()
+    {
+        if (routine != null || idleRoutine != null) return;
+        if (idleDelay <= 0f || !gameObject.activeInHierarchy) return;
+        idleRoutine = StartCoroutine(CoIdleWatch());
+    }
+
     public void Stop()
     {
         if (routine     != null) { StopCoroutine(routine);     routine     = null; }
