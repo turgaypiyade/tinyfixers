@@ -69,8 +69,9 @@ public sealed class PaintCanBoxView : MonoBehaviour
     {
         if (!canSprites.TryGetValue(color, out var sprite) || sprite == null)
         {
+            // Renge özel çizim (PaintCanRed, PaintCanGreen...) varsa o; yoksa varsayılan kova (PaintCan).
             sprite = Resources.Load<Sprite>(CanSpritePath + color);
-            if (sprite == null) sprite = Resources.Load<Sprite>(CanSpritePath + PaintCanColor.Blue);
+            if (sprite == null) sprite = Resources.Load<Sprite>(CanSpritePath);
             canSprites[color] = sprite;
         }
         return sprite;
