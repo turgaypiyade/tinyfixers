@@ -4,11 +4,12 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Kırılan jel fırlatıcının (ObstacleId.GelLauncherUp/Down/Left/Right) atışı. Kapak ağızdan fırlar ve
-/// tahta kenarına kadar hücre hücre uçar; vardığı her hücre için <see cref="GelLauncherBlastAction"/>
-/// sıraya girer (engel kalmayana kadar vurur, sonra taşı kırar / special'ı tetikler). Jel kapağın
-/// <see cref="GelLagCells"/> hücre gerisinden gelir: bir hücre ancak kendi patlaması bittikten sonra
-/// boyanır. Sonunda kartuşun kendi hücreleri de boyanır.
+/// Kırılan jel fırlatıcının (ObstacleId.GelLauncherUp/Down/Left/Right) atışı. Gövde sıkışıp esner, kapak
+/// ağızdan fırlar ve tahta kenarına kadar hücre hücre uçar; vardığı her hücre için
+/// <see cref="GelLauncherBlastAction"/> sıraya girer (engel kalmayana kadar vurur, sonra taşı kırar /
+/// special'ı tetikler). Kapak <see cref="GelLagCells"/> hücre çıkınca jel kartuşun TABANINDAN yola çıkar,
+/// önce kartuşun iki hücresini sonra yolu kapaktan biraz hızlı boyar; o an engelle kapalı hücreler
+/// patlamalar bitince boyanır. Tüp kaybolurken parçalar ve buhar saçılır.
 ///
 /// WaterTankSpreadAction kalıbı: BoardController.HandleObstacleDestroyed'dan coroutine olarak başlar,
 /// async ObstacleSpread job'u tutar (board akmaya devam eder, yalnız level-end bekler).
@@ -16,7 +17,8 @@ using UnityEngine.UI;
 public sealed class GelLauncherFireAction : BoardAction
 {
     private const float CellSeconds = 0.07f;
-    private const int GelLagCells = 2;
+    private const int GelLagCells = 2;              // jel, kapak bu kadar hücre çıkınca başlar
+    private const float GelCellFactor = 0.75f;      // jel kapaktan hızlı ilerler (11 hücrede onu geçmez)
     private const float CompletionTimeout = 6f;
     private const string CapSpritePath = "GelLauncher/GelLauncherCap";
     private const float SquashScale = 0.76f;
@@ -49,7 +51,8 @@ public sealed class GelLauncherFireAction : BoardAction
             var path = BuildPath(front, dir);
 
             var blasts = new GelLauncherBlastAction[path.Count];
-            int painted = 0;
+            var deferred = new List<Vector2Int>();
+            bool gelStarted = false, gelDone = false;
 
             // Hücreler arası dünya adımı (kartuşun iç hücresinden ağız hücresine).
             Vector3 frontWorld = board.GetCellWorldCenterPosition(front.x, front.y);
@@ -101,27 +104,33 @@ public sealed class GelLauncherFireAction : BoardAction
                     board.EnqueueBoardAction(blasts[i]);
                 }
 
-                painted = PaintReady(path, blasts, painted, i - GelLagCells);
+                // Kapak ağızdan GelLagCells hücre çıkınca jel tabandan yola çıkar.
+                if (!gelStarted && i + 1 >= GelLagCells)
+                {
+                    gelStarted = true;
+                    board.StartCoroutine(RunGel(level, GelCells(footprint, front, path), deferred, () => gelDone = true));
+                }
+            }
+            if (!gelStarted)
+            {
+                gelStarted = true;
+                board.StartCoroutine(RunGel(level, GelCells(footprint, front, path), deferred, () => gelDone = true));
             }
 
             // Kapak tahtadan çıkıp söner.
             yield return FlyOut(cap, from, from + step, CellSeconds * 1.5f);
             if (cap != null) { Object.Destroy(cap.gameObject); cap = null; }
 
-            // Kalan patlamaları bekle; biten hücreleri sırayla boya.
+            // Jel ve kapak patlamalarının bitmesini bekle; o an engel altında kalan hücreleri sonra boya.
             float waited = 0f;
-            while (painted < path.Count && waited < CompletionTimeout && IsCurrent(level))
+            while (waited < CompletionTimeout && IsCurrent(level) && (!gelDone || !AllCompleted(blasts)))
             {
-                painted = PaintReady(path, blasts, painted, path.Count - 1);
-                if (painted >= path.Count) break;
                 waited += Time.deltaTime;
                 yield return null;
             }
 
             if (!IsCurrent(level)) yield break;
-            for (int i = painted; i < path.Count; i++)
-                PaintIfOpen(path[i]);
-            foreach (var c in footprint)
+            foreach (var c in deferred)
                 PaintIfOpen(c);
         }
         finally
@@ -133,18 +142,47 @@ public sealed class GelLauncherFireAction : BoardAction
         }
     }
 
-    // Sırayı koruyarak: patlaması biten (ya da hole olan) hücreleri limit'e kadar boyar.
-    private int PaintReady(List<Vector2Int> path, GelLauncherBlastAction[] blasts, int painted, int limit)
+    // Jel sırası: kartuşun tabanı → ağız hücresi → yol.
+    private static List<Vector2Int> GelCells(List<Vector2Int> footprint, Vector2Int front, List<Vector2Int> path)
     {
-        while (painted <= limit && painted < path.Count)
+        var cells = new List<Vector2Int>();
+        foreach (var c in footprint)
+            if (c != front) cells.Add(c);
+        cells.Add(front);
+        cells.AddRange(path);
+        return cells;
+    }
+
+    // Jel kapak hızında ilerler; hücre o an hâlâ engelle kapalıysa sonra boyanmak üzere ayrılır.
+    private IEnumerator RunGel(LevelData level, List<Vector2Int> cells, List<Vector2Int> deferred, System.Action done)
+    {
+        try
         {
-            var blast = blasts[painted];
-            if (blast != null && !blast.Completed)
-                break;
-            PaintIfOpen(path[painted]);
-            painted++;
+            foreach (var c in cells)
+            {
+                if (!IsCurrent(level)) yield break;
+                if (!board.IsMaskHoleCell(c.x, c.y))
+                {
+                    var obstacles = board.ObstacleStateService;
+                    if (obstacles != null && obstacles.IsCellBlocked(c.x, c.y))
+                        deferred.Add(c);
+                    else
+                        board.PaintGelAt(c.x, c.y);
+                }
+                yield return new WaitForSeconds(CellSeconds * GelCellFactor);
+            }
         }
-        return painted;
+        finally
+        {
+            done?.Invoke();
+        }
+    }
+
+    private static bool AllCompleted(GelLauncherBlastAction[] blasts)
+    {
+        foreach (var b in blasts)
+            if (b != null && !b.Completed) return false;
+        return true;
     }
 
     private void PaintIfOpen(Vector2Int c)
@@ -251,6 +289,7 @@ public sealed class GelLauncherFireAction : BoardAction
 
         yield return new WaitForSeconds(0.3f);
         var img = body != null ? body.GetComponent<Image>() : null;
+        SpawnBreakShards(body, img != null ? img.sprite : null);
         const float fade = 0.25f;
         for (float t = 0f; t < fade && body != null; t += Time.deltaTime)
         {
@@ -259,6 +298,24 @@ public sealed class GelLauncherFireAction : BoardAction
             yield return null;
         }
         if (body != null) Object.Destroy(body.gameObject);
+    }
+
+    // Tüp kaybolurken gövdeden parçalar saçılır + son bir buhar (WaterTank parça efektiyle aynı).
+    private void SpawnBreakShards(RectTransform body, Sprite source)
+    {
+        if (body == null || source == null) return;
+        var root = board.BoardVfxPlayer != null && board.BoardVfxPlayer.VfxRoot != null
+            ? board.BoardVfxPlayer.VfxRoot : board.BreakFxParent;
+        if (root == null) return;
+
+        var corners = new Vector3[4];
+        body.GetWorldCorners(corners);
+        Vector2 a = WaterTankFx.WorldToLocal(corners[0], root);
+        Vector2 b = WaterTankFx.WorldToLocal(corners[2], root);
+        Vector2 center = (a + b) * 0.5f;
+        float size = Mathf.Max(Mathf.Abs(b.x - a.x), Mathf.Abs(b.y - a.y));
+        WaterTankFx.SpawnShards(board, root, center, size, source, 10);
+        GelLauncherFx.SpawnSteam(board, root, center, GelLauncherFx.UiDirection(launcherId), size * 0.5f, 2, 0.8f);
     }
 
     // ── Kapak görseli ────────────────────────────────────────────────────────
