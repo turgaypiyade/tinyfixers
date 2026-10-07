@@ -510,9 +510,6 @@ public class BoardController : MonoBehaviour
             int anchorIndex = parent.GetSiblingIndex();
             if (TilesTopOverlayAbove != null && TilesTopOverlayAbove.parent == parent.parent)
                 anchorIndex = Mathf.Max(anchorIndex, TilesTopOverlayAbove.GetSiblingIndex());
-            // Grass üstündeki special taşlar da special animasyonlarının ALTINDA kalmalı.
-            if (PlaceSpecialsAboveGrassRoot())
-                anchorIndex = Mathf.Max(anchorIndex, specialsAboveGrassRoot.GetSiblingIndex());
             int overlayIndex = tilesTopOverlayRoot.GetSiblingIndex();
             if (overlayIndex < anchorIndex)
                 tilesTopOverlayRoot.SetSiblingIndex(anchorIndex);        // öne alınınca anchor bir geri kayar
@@ -520,85 +517,6 @@ public class BoardController : MonoBehaviour
                 tilesTopOverlayRoot.SetSiblingIndex(anchorIndex + 1);
             return tilesTopOverlayRoot;
         }
-    }
-
-    // Grass hücresindeki SPECIAL taşlar: grass örtüsü normal taşları kapatır ama special'lar görünür
-    // kalmalı. Bu taşlar TilesRoot'un aynası olan bu köke alınır (aynı anchor/pozisyon → yerel
-    // koordinatlar birebir aynı, görsel sıçrama yok). Sıra: ... grass < SpecialsAboveGrass <
-    // TilesTopOverlay. Taşın hangi kökte durduğu RefreshAllSortingOrders'ta güncellenir.
-    private RectTransform specialsAboveGrassRoot;
-
-    private RectTransform GetOrCreateSpecialsAboveGrassRoot()
-    {
-        if (parent == null || parent.parent == null) return null;
-        if (specialsAboveGrassRoot == null)
-        {
-            var go = new GameObject("SpecialsAboveGrass", typeof(RectTransform));
-            go.layer = parent.gameObject.layer;
-            specialsAboveGrassRoot = go.GetComponent<RectTransform>();
-            specialsAboveGrassRoot.SetParent(parent.parent, false);
-        }
-        specialsAboveGrassRoot.anchorMin = parent.anchorMin;
-        specialsAboveGrassRoot.anchorMax = parent.anchorMax;
-        specialsAboveGrassRoot.pivot = parent.pivot;
-        specialsAboveGrassRoot.anchoredPosition = parent.anchoredPosition;
-        specialsAboveGrassRoot.sizeDelta = parent.sizeDelta;
-        specialsAboveGrassRoot.localScale = parent.localScale;
-        PlaceSpecialsAboveGrassRoot();
-        return specialsAboveGrassRoot;
-    }
-
-    // Kökü grass kökünün hemen arkasına yerleştirir. Grass kökü taşlarla aynı parent'ta değilse
-    // (sıra garanti edilemez) false döner.
-    private bool PlaceSpecialsAboveGrassRoot()
-    {
-        if (specialsAboveGrassRoot == null || parent == null) return false;
-        var grassRoot = TilesTopOverlayAbove;
-        if (grassRoot == null || grassRoot.parent != parent.parent || specialsAboveGrassRoot.parent != parent.parent)
-            return false;
-
-        int grassIndex = grassRoot.GetSiblingIndex();
-        int index = specialsAboveGrassRoot.GetSiblingIndex();
-        if (index < grassIndex)
-            specialsAboveGrassRoot.SetSiblingIndex(grassIndex);        // öne alınınca grass bir geri kayar
-        else if (index > grassIndex + 1)
-            specialsAboveGrassRoot.SetSiblingIndex(grassIndex + 1);
-        return true;
-    }
-
-    private bool ShouldDrawAboveGrass(TileView tile)
-    {
-        if (tile == null || tile.GetSpecial() == TileSpecial.None || tile.IsSpecialLocked) return false;
-        if (obstacleStateService == null || !obstacleStateService.IsGrassAt(tile.X, tile.Y)) return false;
-        var grassRoot = TilesTopOverlayAbove;
-        return grassRoot != null && parent != null && grassRoot.parent == parent.parent;
-    }
-
-    // Taşı TilesRoot ile SpecialsAboveGrass kökü arasında taşır. Başka bir köke (ghost/FX) geçici
-    // olarak alınmış taşlara dokunmaz.
-    private void SyncTileGrassLayer(TileView tile)
-    {
-        var t = tile.transform;
-        bool lift = ShouldDrawAboveGrass(tile);
-        if (lift)
-        {
-            if (t.parent != parent) return;
-            var root = GetOrCreateSpecialsAboveGrassRoot();
-            if (root != null && PlaceSpecialsAboveGrassRoot())
-                t.SetParent(root, false);
-        }
-        else if (specialsAboveGrassRoot != null && t.parent == specialsAboveGrassRoot)
-        {
-            t.SetParent(parent, false);
-        }
-    }
-
-    // Level teardown: bu köke alınmış taşlar TilesRoot temizliğine girmez → ayrıca yok et.
-    internal void DestroyTilesAboveGrass()
-    {
-        if (specialsAboveGrassRoot == null) return;
-        for (int i = specialsAboveGrassRoot.childCount - 1; i >= 0; i--)
-            Destroy(specialsAboveGrassRoot.GetChild(i).gameObject);
     }
     // Tahta başına TEK hedef havuzu (uygunluk + ortak rezervasyonlar). Tüm hedefleyiciler buradan seçer.
     private BoardTargetPool targetPool;
@@ -2796,10 +2714,7 @@ public class BoardController : MonoBehaviour
             for (int x = width - 1; x >= 0; x--)
             {
                 if (tiles[x, y] != null)
-                {
-                    SyncTileGrassLayer(tiles[x, y]);
                     tiles[x, y].transform.SetAsLastSibling();
-                }
             }
         }
 
