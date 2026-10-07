@@ -21,8 +21,9 @@ public sealed class PaintCanBoxView : MonoBehaviour
     private const float RowOverlap = 0.78f;   // üst sıra alttakinin ağzına oturur
     private static readonly int[] RowCounts = { 4, 3, 2 };
 
-    // Düşme sırası (slot index'i, alt sıradan yukarı soldan sağa): önce tepe, en son alt sıranın ortası.
-    private static readonly int[] RemovalOrder = { 8, 7, 6, 4, 5, 3, 0, 2, 1 };
+    // Düşme sırası (slot index'i, alt sıradan yukarı soldan sağa): önce tepe, sonra orta sıranın ortası
+    // (kalan iki kutu simetrik dursun), en son alt sıranın ortası.
+    private static readonly int[] RemovalOrder = { 8, 7, 5, 6, 4, 3, 0, 2, 1 };
 
     private const float WobbleSeconds = 0.45f;
     private const float WobbleDegrees = 7f;
