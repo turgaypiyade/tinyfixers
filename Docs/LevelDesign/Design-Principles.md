@@ -32,6 +32,6 @@ MetalWall için: hamlede vurulmayan hücre geri gittiği için duvara ilk hamlel
 
 ## Oyun teması (kullanıcı notu)
 
-Robot konsepti uzun süre önce bırakıldı. Güncel tema: **tamirci hayvanlar dünya efsanelerini (ünlü yapılar/efsanevi yerler) tamir ediyor ve inşa ediyor.** Yeni engel, görsel ve level fikirleri bu temaya göre önerilir; "robot" temalı öneri yapılmaz (eski asset adlarındaki RobotStyle klasörü yalnız tarihsel isimdir).
+Robot konsepti uzun süre önce bırakıldı. Güncel tema: **tamirci hayvanlar Dünya Harikalarını (World Wonders: Golden Gate, Büyük Kanyon, Piramitler, Eyfel, Kolezyum vb.) tamir ediyor ve inşa ediyor.** Yeni engel, görsel ve level fikirleri bu temaya göre önerilir; "robot" ya da mitoloji/efsane temalı öneri yapılmaz (eski asset adlarındaki RobotStyle klasörü yalnız tarihsel isimdir).
 
 Engel tasarımında oyuncunun ilerlemeyi görerek sayabilmesi önemlidir: ColorChest'te kapak açılınca ampullerin görünmesi gibi, içerik/kalan adım doğrudan görünür olmalı (ör. önden arkaya dizili eşyalar, silüetli eksik parçalar).
