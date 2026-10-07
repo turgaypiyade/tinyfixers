@@ -578,7 +578,7 @@ public sealed class HamsterObstacleService : MonoBehaviour
         var rt = (RectTransform)go.transform;
         rt.SetParent(parent, false);
         float cell = board.TileSize;
-        rt.sizeDelta = new Vector2(cell * 0.8f, cell * 0.5f);
+        rt.sizeDelta = new Vector2(cell * 1.2f, cell * 0.8f);
         rt.position = icon.position;
         rt.anchoredPosition += new Vector2(0f, cell * 0.25f);
         rt.SetAsLastSibling();
@@ -587,17 +587,21 @@ public sealed class HamsterObstacleService : MonoBehaviour
             text.font = CommonPopupSkin.Shared.font;
         text.text = value.ToString();
         text.alignment = TextAlignmentOptions.Center;
-        text.fontSize = cell * 0.42f;
-        text.color = Color.white;
-        text.outlineWidth = 0.3f;
-        text.outlineColor = new Color32(70, 30, 10, 255);
+        text.textWrappingMode = TextWrappingModes.NoWrap;
+        text.overflowMode = TextOverflowModes.Overflow;
+        text.fontSize = cell * 0.62f;
+        text.color = new Color32(255, 46, 46, 255);   // canlı kırmızı: taşların üstünde okunur
         text.raycastTarget = false;
+        // Fontun yumuşak/buğulu varsayılan materyali yerine net materyal + kalın koyu kontur
+        // (doğrudan outlineWidth setter'ı yeni yaratılan yazıda materyal yokken uygulanmıyordu).
+        CrispTextMaterial.Apply(text);
+        TmpOutline.Apply(text, 0.32f, new Color32(60, 0, 8, 255));
         StartCoroutine(CoFloat(text, cell));
     }
 
     private static IEnumerator CoFloat(TMP_Text text, float cell)
     {
-        const float seconds = 0.8f;
+        const float seconds = 1.0f;
         var rt = text.rectTransform;
         Vector2 start = rt.anchoredPosition;
         for (float t = 0f; t < seconds; t += Time.deltaTime)
@@ -607,7 +611,7 @@ public sealed class HamsterObstacleService : MonoBehaviour
             rt.anchoredPosition = start + Vector2.up * (cell * 0.9f * (1f - (1f - k) * (1f - k)));
             float pop = k < 0.15f ? Mathf.Lerp(0.6f, 1.2f, k / 0.15f) : Mathf.Lerp(1.2f, 1f, Mathf.Clamp01((k - 0.15f) / 0.2f));
             rt.localScale = Vector3.one * pop;
-            text.alpha = 1f - Mathf.Clamp01((k - 0.55f) / 0.45f);
+            text.alpha = 1f - Mathf.Clamp01((k - 0.65f) / 0.35f);
             yield return null;
         }
         if (text != null) Destroy(text.gameObject);
