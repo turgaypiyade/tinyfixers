@@ -319,6 +319,23 @@ public struct SafeEntry
     public int stackOrder;
 }
 
+public enum PaintCanColor
+{
+    Auto = 0,
+    Red = 1,
+    Yellow = 2,
+    Green = 3,
+    Blue = 4,
+}
+
+[System.Serializable]
+public struct PaintCanBoxColorEntry
+{
+    [Tooltip("Kasanın SOL-ÜST (origin) hücresinin flat index'i (y*width+x).")]
+    public int originCellIndex;
+    public PaintCanColor color;
+}
+
 [System.Serializable]
 public struct StackedObstacleEntry
 {
@@ -498,6 +515,28 @@ public class LevelData : ScriptableObject
 
     [Tooltip("Aç Hamster doyma eşiği (lokma). 0 = ObstacleLibrary'deki hamsterSatiety varsayılanı.")]
     [Min(0)] public int hamsterSatietyOverride = 0;
+
+    [Tooltip("Boya kutusu kasalarının (PaintCanBox) kutu rengi, kasa origin'ine göre. Listede olmayan kasa " +
+             "Auto'dur: rengi satır bandından gelir (PaintCanBoxView.AutoColorForRow).")]
+    public PaintCanBoxColorEntry[] paintCanBoxColors;
+
+    public PaintCanColor GetPaintCanBoxColor(int originCellIndex)
+    {
+        if (paintCanBoxColors != null)
+            foreach (var e in paintCanBoxColors)
+                if (e.originCellIndex == originCellIndex) return e.color;
+        return PaintCanColor.Auto;
+    }
+
+    public void SetPaintCanBoxColor(int originCellIndex, PaintCanColor color)
+    {
+        var list = new System.Collections.Generic.List<PaintCanBoxColorEntry>(
+            paintCanBoxColors ?? System.Array.Empty<PaintCanBoxColorEntry>());
+        list.RemoveAll(e => e.originCellIndex == originCellIndex);
+        if (color != PaintCanColor.Auto)
+            list.Add(new PaintCanBoxColorEntry { originCellIndex = originCellIndex, color = color });
+        paintCanBoxColors = list.ToArray();
+    }
 
     [Tooltip("Sabitlenmiş taş tipleri. 0 = rastgele (None), diğerleri TileType+1 değeri.\n" +
              "size = width*height. GridSpawner spawn sırasında simulation yerine bu değeri kullanır.")]
