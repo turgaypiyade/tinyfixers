@@ -1179,6 +1179,9 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         cg.alpha = 0f;
         cg.blocksRaycasts = false;
         cg.interactable = false;
+        // İki orbit taşı da SweepCross'ta tüketilir; o ana kadar gizli kalmalı.
+        tile.KeepHiddenForCombo = true;
+        tile.NoteHidden("linePulseOrbit");
     }
 
     private static void SetImageAlpha(UnityEngine.UI.Image image, float alpha)

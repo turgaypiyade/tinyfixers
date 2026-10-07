@@ -2021,6 +2021,7 @@ public class BoardController : MonoBehaviour
                 if (tiles[x, y] != null)
                 {
                     tiles[x, y].RefreshIcon();
+                    tiles[x, y].KeepHiddenForCombo = false;   // tam senkron: takılı kalmış gizlemeyi de aç
                     RestoreTilePresentation(tiles[x, y]);
                     SyncTileData(x, y);
                 }
@@ -2666,13 +2667,19 @@ public class BoardController : MonoBehaviour
             return;
 
         tile.ClearMovableObstaclePresentation();
-        tile.SetIconAlpha(1f);
 
-        if (tile.TryGetComponent<CanvasGroup>(out var cg))
+        // Combo'nun tükettiği taş temizlenene kadar gizli kalır (ör. Line+Pulse orbit intro'su
+        // sürerken paralel bir düşme tüm taşları yenilerse LineV hücresinde yeniden beliriyordu).
+        if (!tile.KeepHiddenForCombo)
         {
-            cg.alpha = 1f;
-            cg.blocksRaycasts = true;
-            cg.interactable = true;
+            tile.SetIconAlpha(1f);
+
+            if (tile.TryGetComponent<CanvasGroup>(out var cg))
+            {
+                cg.alpha = 1f;
+                cg.blocksRaycasts = true;
+                cg.interactable = true;
+            }
         }
 
         RectTransform rt = tile.RectTransform;

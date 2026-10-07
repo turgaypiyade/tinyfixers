@@ -519,9 +519,14 @@ public class TileView : MonoBehaviour,
         HiddenFrame = Time.frameCount;
     }
 
+    // Combo'nun tüketeceği kaynak taş (Line+Pulse orbit intro): temizlenene kadar gizli kalmalı.
+    // Paralel bir düşmenin RestoreTilePresentation'ı onu hücresinde yeniden görünür yapmasın.
+    internal bool KeepHiddenForCombo { get; set; }
+
     private void ResetVisualState()
     {
         HiddenBy = null;
+        KeepHiddenForCombo = false;
         CancelActiveSettle();   // pool'a dönen/yeniden kullanılan taşın eski detached settle'ı çalışmasın
         transform.localScale = Vector3.one;
         transform.localRotation = Quaternion.identity;
