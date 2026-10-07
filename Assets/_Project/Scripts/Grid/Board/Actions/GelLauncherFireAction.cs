@@ -16,13 +16,16 @@ using UnityEngine.UI;
 /// </summary>
 public sealed class GelLauncherFireAction : BoardAction
 {
-    private const float CellSeconds = 0.07f;
+    // Kapak giderek hızlanır: ilk hücre StartCellSeconds, her hücrede ×CellAccel, en hızlı MinCellSeconds.
+    private const float StartCellSeconds = 0.06f;
+    private const float CellAccel = 0.88f;
+    private const float MinCellSeconds = 0.03f;
     private const int GelLagCells = 2;              // jel, kapak bu kadar hücre çıkınca başlar
-    private const float GelCellFactor = 0.75f;      // jel kapaktan hızlı ilerler (11 hücrede onu geçmez)
+    private const float GelCellFactor = 0.7f;       // jel aynı eğriyle, kapaktan biraz hızlı (11 hücrede onu geçmez)
     private const float CompletionTimeout = 6f;
     private const string CapSpritePath = "GelLauncher/GelLauncherCap";
     private const float SquashScale = 0.76f;
-    private const float SquashSeconds = 0.2f;
+    private const float SquashSeconds = 0.16f;
 
     private readonly BoardController board;
     private readonly Vector2Int origin;
@@ -94,7 +97,7 @@ public sealed class GelLauncherFireAction : BoardAction
             for (int i = 0; i < path.Count; i++)
             {
                 Vector3 to = board.GetCellWorldCenterPosition(path[i].x, path[i].y);
-                yield return Fly(cap, from, to, CellSeconds, i == 0);
+                yield return Fly(cap, from, to, CellSeconds(i), i == 0);
                 if (!IsCurrent(level)) yield break;
                 from = to;
 
@@ -118,7 +121,7 @@ public sealed class GelLauncherFireAction : BoardAction
             }
 
             // Kapak tahtadan çıkıp söner.
-            yield return FlyOut(cap, from, from + step, CellSeconds * 1.5f);
+            yield return FlyOut(cap, from, from + step, MinCellSeconds * 1.5f);
             if (cap != null) { Object.Destroy(cap.gameObject); cap = null; }
 
             // Jel ve kapak patlamalarının bitmesini bekle; o an engel altında kalan hücreleri sonra boya.
@@ -158,8 +161,9 @@ public sealed class GelLauncherFireAction : BoardAction
     {
         try
         {
-            foreach (var c in cells)
+            for (int j = 0; j < cells.Count; j++)
             {
+                var c = cells[j];
                 if (!IsCurrent(level)) yield break;
                 if (!board.IsMaskHoleCell(c.x, c.y))
                 {
@@ -169,7 +173,7 @@ public sealed class GelLauncherFireAction : BoardAction
                     else
                         board.PaintGelAt(c.x, c.y);
                 }
-                yield return new WaitForSeconds(CellSeconds * GelCellFactor);
+                yield return new WaitForSeconds(CellSeconds(j) * GelCellFactor);
             }
         }
         finally
@@ -177,6 +181,9 @@ public sealed class GelLauncherFireAction : BoardAction
             done?.Invoke();
         }
     }
+
+    private static float CellSeconds(int index)
+        => Mathf.Max(MinCellSeconds, StartCellSeconds * Mathf.Pow(CellAccel, index));
 
     private static bool AllCompleted(GelLauncherBlastAction[] blasts)
     {
