@@ -15,8 +15,8 @@ public sealed class PaintCanBoxView : MonoBehaviour
     private const string CanSpritePath = "PaintCanBox/PaintCan";
 
     // Kasa sprite'ında (normalize, UI y yukarı) zemin çizgisi ve kutulara ayrılan alan.
-    private const float FloorY = 0.137f;
-    private const float MaxPyramidHeight = 0.72f;
+    private const float FloorY = 0.152f;
+    private const float MaxPyramidHeight = 0.66f;   // tepe kutu iç tavanın (~0.83) altında kalsın
     private const float CanWidth = 0.19f;
     private const float RowOverlap = 0.78f;   // üst sıra alttakinin ağzına oturur
     private static readonly int[] RowCounts = { 4, 3, 2 };
