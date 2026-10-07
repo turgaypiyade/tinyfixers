@@ -3642,7 +3642,8 @@ public class GridSpawner : MonoBehaviour
             image.sprite = change.sprite;
 
         // Barrell_v2 + su deposu: ara vuruşta (sprite değişimi) kısa sarsıntı — "çatladı" hissi.
-        if (change.obstacleId == ObstacleId.Barrell_v2 || BoardController.IsWaterTank(change.obstacleId))
+        if (change.obstacleId == ObstacleId.Barrell_v2 || BoardController.IsWaterTank(change.obstacleId)
+            || BoardController.IsGelLauncher(change.obstacleId))
             PlayObstacleHitShake(change.originIndex, image.rectTransform);
 
         // Su deposu: çatlak kareleri (Bidon → Bidon2 → Bidon3) oynar + gövdeden parça sıçrar.

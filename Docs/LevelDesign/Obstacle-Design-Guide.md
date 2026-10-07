@@ -70,6 +70,7 @@ Vuruş sayıları mevcut library'den okunmuştur; özel servislerin renk, öğe,
 | WaterTank · 52 | 93 | 2×2, iki vuruş ve güncel stage'lerde SpecialOnly; kırılınca WaterPuddle üretir. |
 | Wall · 55 | 101 | Bağlı parça ortak origin taşır. Tek hücreye beş vuruş bütün parçayı yıkar; hedef hücre değil parça sayısıdır. |
 | GrassFlower · 58 | 105 | Çimin üzerinde ilave çiçek katmanı. GrassFlower hedefi çiçek dökümünü; Grass hedefi alttaki çimin temizlenmesini ister. |
+| GelLauncher · 59–62 | — | Jel fırlatıcı (kartuş). Up/Down 1×2, Left/Right 2×1; ağız yönü id'den. Yalnız special, 2 vuruş (kapalı → çatlak). Kırılınca kapak ağızdan tahta kenarına kadar uçar, yolundaki her hücrede engel kalmayana kadar vurur (kırılmazlarda durur), taşı kırar/special'ı tetikler; jel 2 hücre geriden yolu ve kartuşun kendi hücrelerini boyar. Hedef değil, yardımcı. Köşelere/kenarlara, ağız tahtanın içine bakacak şekilde konur; dik olanı üst köşeye koymak o sütunun üst girişini kapatır. |
 
 WaterPuddle (53), WaterTank'tan doğan tek vuruşlu alt zemindir; kendi hücresindeki taş temizlenince kurur. Dinamik olarak görülmesi, yalnız doğrudan yerleştirilmiş obstacle dizilerinin taranmasıyla bulunmayabilir.
 

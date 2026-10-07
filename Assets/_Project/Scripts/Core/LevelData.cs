@@ -244,6 +244,16 @@ public enum ObstacleId : int
     // GrassFlower +1; hücre bundan sonra tamamen normal çimdir. Görsel: GrassFlowerOverlayService.
     // Grass gibi başka engellerin üstüne yığılabilir (saydam örtü).
     GrassFlower = 58,
+
+    // Jel fırlatıcı (kartuş): sabit, hücre kapatan, YALNIZ special hasarı alan 2 aşamalı engel. Ağzın baktığı
+    // yöne göre 4 ayrı id: Up/Down = 1x2 (dik), Left/Right = 2x1 (yatay). 2. vuruşta kırılınca kapak ağızdan
+    // tahta kenarına kadar uçar; yolundaki her hücrede engel kalmayana kadar vurur, taşı kırar/special'ı
+    // tetikler; jel 2 hücre geriden gelip yolu (ve kartuşun kendi hücrelerini) boyar.
+    // Görsel/mantık: BoardController.HandleObstacleDestroyed → GelLauncherFireAction.
+    GelLauncherUp = 59,
+    GelLauncherDown = 60,
+    GelLauncherLeft = 61,
+    GelLauncherRight = 62,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }

@@ -3478,6 +3478,13 @@ public class BoardController : MonoBehaviour
         spreadingGelService.AddGel(x, y);
     }
 
+    // Jel fırlatıcının izi: hücreyi doğrudan jelle boyar (bulaşma kuralından bağımsız).
+    internal void PaintGelAt(int x, int y)
+    {
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+        SpreadGelToCell(x, y);
+    }
+
     // BoardAnimator.ClearCellDataAfterDelay'den (per-tile, taşın görsel kırılma anında) çağrılır →
     // line/pulse/patchbot'un travel gecikmeli clear'ları için (o clear'lar ClearAndDestroyTile'a live=False
     // gelir). Kural ClearAndDestroyTile ile aynı: bulaşık taş veya hamle kapsamı (komşuluk YOK).
@@ -5257,6 +5264,10 @@ public class BoardController : MonoBehaviour
         if (IsWaterTank(obstacleId))
             StartCoroutine(CoSpreadWaterTankImmediate(new Vector2Int(ox, oy), obstacleId));
 
+        // Jel fırlatıcı: kapak ağızdan fırlar, yolunu kırarak açar; jel arkasından boyar.
+        if (IsGelLauncher(obstacleId))
+            StartCoroutine(new GelLauncherFireAction(this, new Vector2Int(ox, oy), obstacleId).ExecuteVisuals(null));
+
         if (obstacleId == ObstacleId.Oil)
         {
             if (useOilTileSet)
@@ -5336,6 +5347,14 @@ public class BoardController : MonoBehaviour
     {
         return obstacleId == ObstacleId.Barrel
             || obstacleId == ObstacleId.Barrell_v2;
+    }
+
+    internal static bool IsGelLauncher(ObstacleId obstacleId)
+    {
+        return obstacleId == ObstacleId.GelLauncherUp
+            || obstacleId == ObstacleId.GelLauncherDown
+            || obstacleId == ObstacleId.GelLauncherLeft
+            || obstacleId == ObstacleId.GelLauncherRight;
     }
 
     internal static bool IsWaterTank(ObstacleId obstacleId)
