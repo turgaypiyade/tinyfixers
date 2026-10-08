@@ -6,11 +6,11 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Kasa (Safe) görseli — "Piramit Mührü": lacivert taş gövde, ortada dönen lacivert disk ve diskteki üç
-/// renkli taş (kırmızı/sarı/yeşil kilit), üstteki kartuşta TEK sayaç. Mekanik SafeObstacleService'te;
+/// renkli taş (kırmızı/sarı/yeşil kilit), üstteki kartuşta TEK sayaç (beyaz). Mekanik SafeObstacleService'te;
 /// bu sınıf yalnız olaylarını oynatır:
 ///   • vuruş: sayaç "pop" + disk hafif titrer
 ///   • kilit kapandı: taş yuvasına gömülüp grileşir; Ordered modda disk döner, sıradaki taş tepeye
-///     gelir, kartuş yeni renge/sayıya döner
+///     gelir, kartuş yeni sayıya döner
 ///   • kasa kırıldı: disk hızla bir tur döner, ortadan ikiye ayrılıp yanlara kayar, gövde söner
 /// Sprite'lar Resources/SealSafe altında (gövde/disk tam kanvas — aşağıdaki oranlar o kanvasa göre).
 /// AnyColor modunda disk dönmez; kartuş açık kilitlerin toplam kalanını gösterir.
@@ -32,12 +32,10 @@ public sealed class SealSafeView : MonoBehaviour
     // (yuvalar 120° arayla); disk her adımda sıradaki slotu tepeye getirir.
     private static readonly float[] SlotAngles = { 90f, -30f, 210f };
 
-    private static readonly Color32[] LockColors =
-    {
-        new Color32(240, 48, 48, 255),    // kırmızı
-        new Color32(255, 206, 32, 255),   // sarı
-        new Color32(64, 204, 84, 255),    // yeşil
-    };
+    // Kartuş sayısı beyaz + kalın lacivert kontur: renkli rakam (kırmızı/yeşil) koyu lacivert kartuşla aynı
+    // parlaklıkta kalıp okunmuyordu. Aktif rengi zaten tepedeki taş gösterir.
+    private static readonly Color32 CounterColor = new Color32(255, 255, 255, 255);
+    private static readonly Color32 CounterOutline = new Color32(8, 14, 48, 255);
 
     private const float PopSeconds = 0.18f;
     private const float JiggleSeconds = 0.25f;
@@ -113,7 +111,8 @@ public sealed class SealSafeView : MonoBehaviour
         counter.overflowMode = TextOverflowModes.Overflow;
         counter.raycastTarget = false;
         CrispTextMaterial.Apply(counter);
-        TmpOutline.Apply(counter, 0.3f, new Color32(10, 18, 60, 255));
+        counter.color = CounterColor;
+        TmpOutline.Apply(counter, 0.36f, CounterOutline);
     }
 
     /// GridSpawner çağırır: kasayı NxN alana yerleştirir (kısa kenara göre kare, ortalı).
@@ -137,7 +136,7 @@ public sealed class SealSafeView : MonoBehaviour
         var crt = counter.rectTransform;
         crt.sizeDelta = new Vector2(side * CounterSize.x, side * CounterSize.y);
         crt.anchoredPosition = Vector2.zero;
-        counter.fontSize = side * 0.11f;
+        counter.fontSize = side * 0.15f;
     }
 
     /// GridSpawner çağırır: service'e bağla, kilit sırasını slotlara yerleştir, mevcut durumu çiz.
@@ -208,12 +207,10 @@ public sealed class SealSafeView : MonoBehaviour
             int active = service.GetActiveLock(origin);
             if (active < 0 || active >= SafeObstacleService.LockCount) { counter.text = ""; return; }
             counter.text = service.GetRemaining(origin, active).ToString();
-            counter.color = LockColors[active];
         }
         else
         {
             counter.text = service.GetRemainingTotal(origin).ToString();
-            counter.color = Color.white;
         }
     }
 
@@ -227,7 +224,7 @@ public sealed class SealSafeView : MonoBehaviour
         // Sayaç: aktif kilit (dönüş sırasında değişmesin diye yalnız gösterilen kilidin vuruşu yazılır).
         if (!Ordered || slotLock[Mathf.Clamp(shownStep, 0, 2)] == lockIdx)
         {
-            if (Ordered) { counter.text = remaining.ToString(); counter.color = LockColors[lockIdx]; }
+            if (Ordered) counter.text = remaining.ToString();
             else counter.text = service.GetRemainingTotal(origin).ToString();
         }
         if (popCo != null) StopCoroutine(popCo);
