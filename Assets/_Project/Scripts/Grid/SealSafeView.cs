@@ -9,7 +9,7 @@ using UnityEngine.UI;
 /// renkli taş (kırmızı/sarı/yeşil kilit), üstteki kartuşta TEK sayaç. Mekanik SafeObstacleService'te;
 /// bu sınıf yalnız olaylarını oynatır:
 ///   • vuruş: sayaç "pop" + disk hafif titrer
-///   • kilit kapandı: taş yuvasına gömülüp grileşir; Ordered modda disk 120° döner, sıradaki taş tepeye
+///   • kilit kapandı: taş yuvasına gömülüp grileşir; Ordered modda disk döner, sıradaki taş tepeye
 ///     gelir, kartuş yeni renge/sayıya döner
 ///   • kasa kırıldı: disk hızla bir tur döner, ortadan ikiye ayrılıp yanlara kayar, gövde söner
 /// Sprite'lar Resources/SealSafe altında (gövde/disk tam kanvas — aşağıdaki oranlar o kanvasa göre).
@@ -20,16 +20,18 @@ public sealed class SealSafeView : MonoBehaviour
     private const string ArtPath = "SealSafe/";
 
     // Gövde kanvasına göre (UI y yukarı): disk yuvası merkezi ve disk boyu, kartuş.
-    private static readonly Vector2 DiskCenter = new Vector2(0.4992f, 0.4833f);
-    private const float DiskSize = 0.5619f;
-    private static readonly Vector2 DiskPivot = new Vector2(0.4992f, 0.5016f);   // disk kanvasında dönme merkezi
-    private static readonly Vector2 CounterCenter = new Vector2(0.4833f, 0.8549f);
-    private static readonly Vector2 CounterSize = new Vector2(0.42f, 0.16f);
+    private static readonly Vector2 DiskCenter = new Vector2(0.5024f, 0.4880f);
+    private const float DiskSize = 0.6097f;
+    // Disk kanvasında dönme merkezi = üç yuvadan eşit uzak nokta (yuvalar tam 120° aralıklı değil).
+    private static readonly Vector2 DiskPivot = new Vector2(0.4996f, 0.4947f);
+    private static readonly Vector2 CounterCenter = new Vector2(0.4944f, 0.8684f);
+    private static readonly Vector2 CounterSize = new Vector2(0.44f, 0.13f);
     // Disk kanvasına göre: taş yuvası yarıçapı ve taş boyu.
-    private const float SocketRadius = 0.2855f;
-    private const float GemSize = 0.287f;
-    // Sıradaki slotların açısı (derece, UI): tepe, sağ-alt, sol-alt. Disk +120° dönünce sağ-alt tepeye gelir.
-    private static readonly float[] SlotAngles = { 90f, -30f, 210f };
+    private const float SocketRadius = 0.2844f;
+    private const float GemSize = 0.236f;
+    // Sıradaki slotların açısı (derece, UI): tepe, sağ-alt, sol-alt (çizimden ölçülü). Disk, sıradaki
+    // slot tam tepeye gelecek kadar döner (125°, sonra 110°).
+    private static readonly float[] SlotAngles = { 90f, -35f, 215f };
 
     private static readonly Color32[] LockColors =
     {
@@ -58,7 +60,7 @@ public sealed class SealSafeView : MonoBehaviour
     private readonly Image[] gemSpent = new Image[3];
     private readonly int[] slotLock = { 0, 1, 2 };                       // slot → kilit index'i
 
-    private float baseAngle;          // 120 * kapanan kilit adımı (Ordered)
+    private float baseAngle;          // gösterilen slotu tepeye getiren disk açısı (Ordered)
     private float jiggleAngle;
     private int shownStep;            // diskin şu an gösterdiği adım
     private bool broken;
@@ -136,7 +138,7 @@ public sealed class SealSafeView : MonoBehaviour
         var crt = counter.rectTransform;
         crt.sizeDelta = new Vector2(side * CounterSize.x, side * CounterSize.y);
         crt.anchoredPosition = Vector2.zero;
-        counter.fontSize = side * 0.13f;
+        counter.fontSize = side * 0.11f;
     }
 
     /// GridSpawner çağırır: service'e bağla, kilit sırasını slotlara yerleştir, mevcut durumu çiz.
@@ -193,7 +195,7 @@ public sealed class SealSafeView : MonoBehaviour
             SetGemSpent(i, closed ? 1f : 0f);
         }
         shownStep = Ordered ? Mathf.Min(ClosedSteps(), slotLock.Length - 1) : 0;
-        baseAngle = 120f * shownStep;
+        baseAngle = AngleForStep(shownStep);
         jiggleAngle = 0f;
         ApplyDiskAngle();
         RefreshCounter();
@@ -311,11 +313,11 @@ public sealed class SealSafeView : MonoBehaviour
         SetGemSpent(slot, 1f);
     }
 
-    // Disk 120° döner (taş sürtünmesi: sona doğru yavaşlar, hafif geri yaylanır); kartuş yarıda takla atar.
+    // Disk sıradaki taşı tepeye getirir (taş sürtünmesi: sona doğru yavaşlar, hafif geri yaylanır); kartuş yarıda takla atar.
     private IEnumerator CoTurnToNext()
     {
         yield return new WaitForSeconds(0.1f);
-        float from = baseAngle, to = baseAngle + 120f;
+        float from = baseAngle, to = AngleForStep(Mathf.Min(shownStep + 1, slotLock.Length - 1));
         bool flipped = false;
         var crt = counter.rectTransform;
         for (float t = 0f; t < TurnSeconds; t += Time.deltaTime)
@@ -344,15 +346,17 @@ public sealed class SealSafeView : MonoBehaviour
     private IEnumerator CoBreak()
     {
         counter.text = "";
+        // En az ~300° hızlanarak döner ve tam tura (0°) oturur: yarımlar disk sprite'ıyla aynı açıda doğar.
         float from = baseAngle;
+        float to = Mathf.Ceil((from + 300f) / 360f) * 360f;
         for (float t = 0f; t < SpinSeconds; t += Time.deltaTime)
         {
             float k = t / SpinSeconds;
-            baseAngle = from + 360f * k * k;
+            baseAngle = Mathf.Lerp(from, to, k * k);
             ApplyDiskAngle();
             yield return null;
         }
-        baseAngle = from + 360f;
+        baseAngle = to;
         jiggleAngle = 0f;
         ApplyDiskAngle();
 
@@ -379,8 +383,7 @@ public sealed class SealSafeView : MonoBehaviour
         Destroy(gameObject);
     }
 
-    // Diskin bir yarısı: aynı sprite, yatay doldurma %50. Disk sprite'ı 120° simetrik olduğundan açısı
-    // sıfırlanabilir (taşlar ayrıca taşınır).
+    // Diskin bir yarısı: aynı sprite, yatay doldurma %50 (disk o an 0°'de; taşlar ayrıca taşınır).
     private RectTransform MakeHalf(Image.OriginHorizontal side, out CanvasGroup group)
     {
         var rt = NewImage("DiskHalf", body, diskImage.sprite, out var img);
@@ -427,6 +430,15 @@ public sealed class SealSafeView : MonoBehaviour
         transform.SetAsLastSibling();
         foreach (var t in GetComponentsInChildren<Transform>(true))
             t.gameObject.layer = overlay.gameObject.layer;
+    }
+
+    // Adım k'daki slotu tepeye (90°) getiren açı; hep ileri (saat yönünün tersine) döner.
+    private static float AngleForStep(int step)
+    {
+        float a = 0f;
+        for (int i = 1; i <= step && i < SlotAngles.Length; i++)
+            a += Mathf.Repeat(SlotAngles[i - 1] - SlotAngles[i], 360f);
+        return a;
     }
 
     private static float EaseOutBack(float k)
