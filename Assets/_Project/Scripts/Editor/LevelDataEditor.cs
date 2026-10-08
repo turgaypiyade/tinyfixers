@@ -509,12 +509,17 @@ public class LevelDataEditor : Editor
     /// Bir obstacle hedefinin tahtadaki karşılığı — TopHUD sayımıyla aynı kural: her ORIGIN bir kez
     /// (duvar parçası, 2x2 kasa = 1), yığılmış (stackedObstacles) ve kasa (safes) girişleri dahil.
     /// Çiçekli çim aynı zamanda çimdir. BatteryBox pil vuruşu başına sayılır. Jel için oynanır hücre
-    /// sayısı döner (kaplama hedefi). -1 = sayılamaz (Hamster doyurma, KeyGenerator anahtar).
+    /// sayısı döner (kaplama hedefi). -1 = öneri yok: Hamster (doyurma), KeyGenerator (anahtar) ve
+    /// movable engeller (hedef sayısına göre üretilir).
     /// </summary>
     private static int CountGoalObstacles(LevelData level, ObstacleId id)
     {
         if (level == null || level.obstacles == null || level.obstacleOrigins == null) return -1;
         if (id == ObstacleId.Hamster || id == ObstacleId.KeyGenerator) return -1;
+        // Movable engeller (kargo, kask, plastik...) hedef sayısına göre üretilir: Amount tasarımcınındır.
+        var lib = level.obstacleLibrary;
+        var goalDef = lib != null ? lib.Get(id) : null;
+        if (goalDef != null && goalDef.IsMovableObstacle) return -1;
 
         if (id == ObstacleId.SpreadingGel)
         {
@@ -538,10 +543,7 @@ public class LevelDataEditor : Editor
             count += level.safes.Length;
 
         if (id == ObstacleId.BatteryBox)
-        {
-            var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(id) : null;
-            count *= Mathf.Max(1, def != null ? def.hits : 1) * 4;
-        }
+            count *= Mathf.Max(1, goalDef != null ? goalDef.hits : 1) * 4;
         return count;
     }
 
