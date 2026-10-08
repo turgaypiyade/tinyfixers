@@ -144,6 +144,10 @@ public sealed class SafeObstacleService : MonoBehaviour
     public int GetActiveLock(int origin)
         => _byOrigin.TryGetValue(origin, out var s) ? GetFirstOpenLockInOrder(s) : -1;
 
+    /// Ordered sıradaki <paramref name="step"/>. kilidin index'i (0..2); kasa yoksa -1.
+    public int GetLockAtStep(int origin, int step)
+        => _byOrigin.TryGetValue(origin, out var s) && step >= 0 && step < LockCount ? (int)s.order[step] : -1;
+
     public SafeLockHitMode GetHitMode(int origin)
         => _byOrigin.TryGetValue(origin, out var s) ? s.hitMode : SafeLockHitMode.Ordered;
 

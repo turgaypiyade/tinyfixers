@@ -101,7 +101,7 @@ public class GridSpawner : MonoBehaviour
     [Tooltip("Boşsa obstaclesRoot kullanılır.")]
     [SerializeField] private RectTransform safeRoot;
     // Kasa görselleri (origin → view): üstü kapalı kasa gizli başlar, açığa çıkınca etkinleşir.
-    private readonly Dictionary<int, SafeObstacleView> safeViewsByOrigin = new();
+    private readonly Dictionary<int, Component> safeViewsByOrigin = new();   // SealSafeView ya da prefab SafeObstacleView
     private SafeObstacleService safeObstacleService;   // StampLayeredEntriesIntoLevel'de bulunur
 
     // Generic stacked-obstacle + Safe beneath kayıtları. Stamp aşaması (SetLevelData ÖNCESİ)
@@ -1960,7 +1960,8 @@ public class GridSpawner : MonoBehaviour
     // service event'lerine bağla. Body NxN'e göre ölçeklenir, LockPanel prefab'da ortalı/sabit.
     private void DrawSafeObstacles()
     {
-        if (safeViewPrefab == null) return;
+        bool sealArt = SealSafeView.HasArt;   // Piramit Mührü görseli varsa prefab yerine o kurulur
+        if (!sealArt && safeViewPrefab == null) return;
         if (resolvedLevel?.safes == null || resolvedLevel.safes.Length == 0) return;
         if (safeObstacleService == null) safeObstacleService = FindFirstObjectByType<SafeObstacleService>();
         if (safeObstacleService == null) return;
@@ -1977,15 +1978,35 @@ public class GridSpawner : MonoBehaviour
             int ox = origin % W, oy = origin / W;
             int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
 
-            var view = Instantiate(safeViewPrefab, root);
-            var rt = (RectTransform)view.transform;
+            Component view;
+            RectTransform rt;
+            if (sealArt)
+            {
+                var seal = SealSafeView.Create(root);
+                rt = (RectTransform)seal.transform;
+                view = seal;
+            }
+            else
+            {
+                var prefabView = Instantiate(safeViewPrefab, root);
+                rt = (RectTransform)prefabView.transform;
+                view = prefabView;
+            }
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);   // top-left, tile'larla aynı
             rt.pivot = new Vector2(0f, 1f);
             rt.anchoredPosition = new Vector2(ox * tileSize, -oy * tileSize);
             rt.sizeDelta = new Vector2(w * tileSize, h * tileSize);
 
-            view.SetBodySize(w * tileSize, h * tileSize);
-            view.Setup(safeObstacleService, origin);
+            if (view is SealSafeView sealView)
+            {
+                sealView.SetBodySize(w * tileSize, h * tileSize);
+                sealView.Setup(safeObstacleService, origin);
+            }
+            else if (view is SafeObstacleView prefabSafe)
+            {
+                prefabSafe.SetBodySize(w * tileSize, h * tileSize);
+                prefabSafe.Setup(safeObstacleService, origin);
+            }
             safeViewsByOrigin[origin] = view;
 
             // Yığın kuralı: OPAK bir engelin altındaki kasa gizli başlar, tıklanmaz; üstündeki kırılıp kasa
