@@ -22,16 +22,15 @@ public sealed class SealSafeView : MonoBehaviour
     // Gövde kanvasına göre (UI y yukarı): disk yuvası merkezi ve disk boyu, kartuş.
     private static readonly Vector2 DiskCenter = new Vector2(0.5024f, 0.4880f);
     private const float DiskSize = 0.6097f;
-    // Disk kanvasında dönme merkezi = üç yuvadan eşit uzak nokta (yuvalar tam 120° aralıklı değil).
-    private static readonly Vector2 DiskPivot = new Vector2(0.4996f, 0.4947f);
+    private static readonly Vector2 DiskPivot = new Vector2(0.4976f, 0.5040f);   // disk kanvasında dönme merkezi
     private static readonly Vector2 CounterCenter = new Vector2(0.4944f, 0.8684f);
     private static readonly Vector2 CounterSize = new Vector2(0.44f, 0.13f);
     // Disk kanvasına göre: taş yuvası yarıçapı ve taş boyu.
-    private const float SocketRadius = 0.2844f;
+    private const float SocketRadius = 0.2751f;
     private const float GemSize = 0.236f;
-    // Sıradaki slotların açısı (derece, UI): tepe, sağ-alt, sol-alt (çizimden ölçülü). Disk, sıradaki
-    // slot tam tepeye gelecek kadar döner (125°, sonra 110°).
-    private static readonly float[] SlotAngles = { 90f, -35f, 215f };
+    // Sıradaki slotların açısı (derece, UI): tepe, sağ-alt, sol-alt. Disk sprite'ı 3 katlı simetrik
+    // (yuvalar 120° arayla); disk her adımda sıradaki slotu tepeye getirir.
+    private static readonly float[] SlotAngles = { 90f, -30f, 210f };
 
     private static readonly Color32[] LockColors =
     {
