@@ -939,6 +939,17 @@ public class LevelDataEditor : Editor
                     EditorGUI.DrawRect(sr, (c == 0 && r == 0) ? safeOriginColor : safeFillColor);
                 }
 
+                // Kasa görseli (Piramit Mührü ikonu) bölgenin üstüne; altındaki içerik seçilebilsin diye hafif saydam.
+                var safeDef = level.obstacleLibrary != null ? level.obstacleLibrary.Get(ObstacleId.Safe) : null;
+                if (safeDef != null && safeDef.GetPreviewSprite() != null)
+                {
+                    var prevColor = GUI.color;
+                    GUI.color = new Color(1f, 1f, 1f, 0.85f);
+                    DrawSpriteInRect(safeDef.GetPreviewSprite(),
+                        new Rect(ox + sox * cellPx, oy + soy * cellPx, sw * cellPx - 1, sh * cellPx - 1), 2);
+                    GUI.color = prevColor;
+                }
+
                 Rect lr = new Rect(ox + sox * cellPx, oy + soy * cellPx, cellPx - 1, cellPx - 1);
                 GUI.Label(lr, $"🔒{e.redHits}/{e.yellowHits}/{e.greenHits}", new GUIStyle(EditorStyles.boldLabel)
                 {
