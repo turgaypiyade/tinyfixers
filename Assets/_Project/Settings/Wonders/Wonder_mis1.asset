@@ -83,6 +83,7 @@ MonoBehaviour:
   welderHome: {x: 0, y: 0}
   characters:
   - name: AmbientRobot_1
+    active: 0
     facingMode: 0
     birdProfile: {fileID: 0}
     frontFrames:
@@ -106,6 +107,7 @@ MonoBehaviour:
     - {x: 136, y: -673}
     - {x: 134, y: -856}
   - name: AmbientRobotH_2
+    active: 0
     facingMode: 0
     birdProfile: {fileID: 0}
     frontFrames:
@@ -133,6 +135,7 @@ MonoBehaviour:
     - {x: 80, y: -562}
     - {x: 455, y: -517}
   - name: AmbientBird_3
+    active: 1
     facingMode: 1
     birdProfile: {fileID: 11400000, guid: d485cd392d5c4583ac65214fc4eb90f8, type: 2}
     frontFrames: []

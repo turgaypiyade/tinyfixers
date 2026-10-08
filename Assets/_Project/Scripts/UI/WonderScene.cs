@@ -69,7 +69,8 @@ public class WonderScene : MonoBehaviour
         var agents = new List<WonderAmbientAgent>();
         if (includeCharacters && def.characters != null)
             foreach (var c in def.characters)
-                agents.Add(BuildCharacter(bgRt, c));
+                if (c != null && c.active)
+                    agents.Add(BuildCharacter(bgRt, c));
         view.ambientAgents = agents.ToArray();
 
         View = view;

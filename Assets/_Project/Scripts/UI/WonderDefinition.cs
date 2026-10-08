@@ -98,6 +98,8 @@ public class WonderTask
 public class WonderCharacter
 {
     public string name = "robot";
+    [Tooltip("Kapalıysa karakter sahnede hiç kurulmaz (silmeden devre dışı bırakmak için).")]
+    public bool active = true;
     public WonderAmbientAgent.FacingMode facingMode = WonderAmbientAgent.FacingMode.DirectionalFrontBack;
     [Tooltip("Kuş gövde/kanat profili. Boşsa mevcut karakter kareleri kullanılır.")]
     public WonderBirdProfile birdProfile;
