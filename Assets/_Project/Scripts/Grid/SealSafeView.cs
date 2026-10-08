@@ -6,11 +6,11 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Kasa (Safe) görseli — "Piramit Mührü": lacivert taş gövde, ortada dönen lacivert disk ve diskteki üç
-/// renkli taş (kırmızı/sarı/yeşil kilit), üstteki kartuşta TEK sayaç (beyaz). Mekanik SafeObstacleService'te;
+/// renkli taş (kırmızı/sarı/yeşil kilit), üstteki kartuşta TEK sayaç (aktif taşın renginde). Mekanik SafeObstacleService'te;
 /// bu sınıf yalnız olaylarını oynatır:
 ///   • vuruş: sayaç "pop" + disk hafif titrer
 ///   • kilit kapandı: taş yuvasına gömülüp grileşir; Ordered modda disk döner, sıradaki taş tepeye
-///     gelir, kartuş yeni sayıya döner
+///     gelir, kartuş yeni renge/sayıya döner
 ///   • kasa kırıldı: disk hızla bir tur döner, ortadan ikiye ayrılıp yanlara kayar, gövde söner
 /// Sprite'lar Resources/SealSafe altında (gövde/disk tam kanvas — aşağıdaki oranlar o kanvasa göre).
 /// AnyColor modunda disk dönmez; kartuş açık kilitlerin toplam kalanını gösterir.
@@ -32,10 +32,18 @@ public sealed class SealSafeView : MonoBehaviour
     // (yuvalar 120° arayla); disk her adımda sıradaki slotu tepeye getirir.
     private static readonly float[] SlotAngles = { 90f, -30f, 210f };
 
-    // Kartuş sayısı beyaz + kalın lacivert kontur: renkli rakam (kırmızı/yeşil) koyu lacivert kartuşla aynı
-    // parlaklıkta kalıp okunmuyordu. Aktif rengi zaten tepedeki taş gösterir.
-    private static readonly Color32 CounterColor = new Color32(255, 255, 255, 255);
-    private static readonly Color32 CounterOutline = new Color32(8, 14, 48, 255);
+    // Kartuş sayısı aktif taşın renginde (açık tonlar), kartuş zemininin çok koyu laciverti kontur + gölge:
+    // renkli rakam koyu lacivert zeminde ancak kalın koyu konturla okunur. Gölge ayrı bir kopya yazıdır
+    // (TMP underlay keyword'ü build'de soyulabildiği için materyale güvenilmez).
+    private static readonly Color32[] LockColors =
+    {
+        new Color32(255, 72, 72, 255),    // kırmızı
+        new Color32(255, 214, 48, 255),   // sarı
+        new Color32(88, 226, 96, 255),    // yeşil
+    };
+    private static readonly Color32 CounterDark = new Color32(10, 22, 66, 255);
+    private const float CounterOutlineWidth = 0.4f;
+    private const float ShadowDrop = 0.012f;   // gövde boyuna oranla aşağı kayma
 
     private const float PopSeconds = 0.18f;
     private const float JiggleSeconds = 0.25f;
@@ -52,7 +60,9 @@ public sealed class SealSafeView : MonoBehaviour
     private Image bodyImage;
     private RectTransform disk;
     private Image diskImage;
+    private RectTransform counterRoot;          // pop/flip animasyonu bunu ölçekler (yazı + gölge birlikte)
     private TextMeshProUGUI counter;
+    private TextMeshProUGUI counterShadow;
     private readonly RectTransform[] gems = new RectTransform[3];       // slot sırasıyla
     private readonly Image[] gemSpent = new Image[3];
     private readonly int[] slotLock = { 0, 1, 2 };                       // slot → kilit index'i
@@ -98,21 +108,13 @@ public sealed class SealSafeView : MonoBehaviour
             gemSpent[i].color = new Color(1f, 1f, 1f, 0f);
         }
 
-        var counterGo = new GameObject("Counter", typeof(RectTransform));
-        counterGo.layer = gameObject.layer;
-        var crt = (RectTransform)counterGo.transform;
-        crt.SetParent(body, false);
-        crt.anchorMin = crt.anchorMax = CounterCenter;
-        counter = counterGo.AddComponent<TextMeshProUGUI>();
-        if (CommonPopupSkin.Shared != null && CommonPopupSkin.Shared.font != null)
-            counter.font = CommonPopupSkin.Shared.font;
-        counter.alignment = TextAlignmentOptions.Center;
-        counter.textWrappingMode = TextWrappingModes.NoWrap;
-        counter.overflowMode = TextOverflowModes.Overflow;
-        counter.raycastTarget = false;
-        CrispTextMaterial.Apply(counter);
-        counter.color = CounterColor;
-        TmpOutline.Apply(counter, 0.36f, CounterOutline);
+        var rootGo = new GameObject("Counter", typeof(RectTransform));
+        rootGo.layer = gameObject.layer;
+        counterRoot = (RectTransform)rootGo.transform;
+        counterRoot.SetParent(body, false);
+        counterRoot.anchorMin = counterRoot.anchorMax = CounterCenter;
+        counterShadow = NewCounterText("Shadow", CounterDark);   // önce: arkada kalır
+        counter = NewCounterText("Text", LockColors[0]);
     }
 
     /// GridSpawner çağırır: kasayı NxN alana yerleştirir (kısa kenara göre kare, ortalı).
@@ -133,10 +135,10 @@ public sealed class SealSafeView : MonoBehaviour
             gems[i].sizeDelta = new Vector2(d * GemSize, d * GemSize);
             gems[i].anchoredPosition = Vector2.zero;
         }
-        var crt = counter.rectTransform;
-        crt.sizeDelta = new Vector2(side * CounterSize.x, side * CounterSize.y);
-        crt.anchoredPosition = Vector2.zero;
-        counter.fontSize = side * 0.15f;
+        counterRoot.sizeDelta = new Vector2(side * CounterSize.x, side * CounterSize.y);
+        counterRoot.anchoredPosition = Vector2.zero;
+        counter.fontSize = counterShadow.fontSize = side * 0.15f;
+        counterShadow.rectTransform.anchoredPosition = new Vector2(0f, -side * ShadowDrop);
     }
 
     /// GridSpawner çağırır: service'e bağla, kilit sırasını slotlara yerleştir, mevcut durumu çiz.
@@ -205,12 +207,12 @@ public sealed class SealSafeView : MonoBehaviour
         if (Ordered)
         {
             int active = service.GetActiveLock(origin);
-            if (active < 0 || active >= SafeObstacleService.LockCount) { counter.text = ""; return; }
-            counter.text = service.GetRemaining(origin, active).ToString();
+            if (active < 0 || active >= SafeObstacleService.LockCount) { SetCounter("", 0); return; }
+            SetCounter(service.GetRemaining(origin, active).ToString(), active);
         }
         else
         {
-            counter.text = service.GetRemainingTotal(origin).ToString();
+            SetCounter(service.GetRemainingTotal(origin).ToString(), -1);
         }
     }
 
@@ -224,11 +226,11 @@ public sealed class SealSafeView : MonoBehaviour
         // Sayaç: aktif kilit (dönüş sırasında değişmesin diye yalnız gösterilen kilidin vuruşu yazılır).
         if (!Ordered || slotLock[Mathf.Clamp(shownStep, 0, 2)] == lockIdx)
         {
-            if (Ordered) counter.text = remaining.ToString();
-            else counter.text = service.GetRemainingTotal(origin).ToString();
+            if (Ordered) SetCounter(remaining.ToString(), lockIdx);
+            else SetCounter(service.GetRemainingTotal(origin).ToString(), -1);
         }
         if (popCo != null) StopCoroutine(popCo);
-        popCo = StartCoroutine(CoPop(counter.rectTransform));
+        popCo = StartCoroutine(CoPop(counterRoot));
         if (jiggleCo != null) StopCoroutine(jiggleCo);
         jiggleCo = StartCoroutine(CoJiggle());
     }
@@ -315,7 +317,7 @@ public sealed class SealSafeView : MonoBehaviour
         yield return new WaitForSeconds(0.1f);
         float from = baseAngle, to = AngleForStep(Mathf.Min(shownStep + 1, slotLock.Length - 1));
         bool flipped = false;
-        var crt = counter.rectTransform;
+        var crt = counterRoot;
         for (float t = 0f; t < TurnSeconds; t += Time.deltaTime)
         {
             float k = t / TurnSeconds;
@@ -341,7 +343,7 @@ public sealed class SealSafeView : MonoBehaviour
     // Disk hızla bir tur döner, ortadan ikiye ayrılıp yanlara kayar; gövde ve sayaç söner.
     private IEnumerator CoBreak()
     {
-        counter.text = "";
+        SetCounter("", -1);
         // En az ~300° hızlanarak döner ve tam tura (0°) oturur: yarımlar disk sprite'ıyla aynı açıda doğar.
         float from = baseAngle;
         float to = Mathf.Ceil((from + 300f) / 360f) * 360f;
@@ -396,6 +398,33 @@ public sealed class SealSafeView : MonoBehaviour
     }
 
     // ── Yardımcılar ─────────────────────────────────────────────────────────
+
+    private TextMeshProUGUI NewCounterText(string name, Color32 color)
+    {
+        var go = new GameObject(name, typeof(RectTransform));
+        go.layer = gameObject.layer;
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(counterRoot, false);
+        Stretch(rt);
+        var text = go.AddComponent<TextMeshProUGUI>();
+        if (CommonPopupSkin.Shared != null && CommonPopupSkin.Shared.font != null)
+            text.font = CommonPopupSkin.Shared.font;
+        text.alignment = TextAlignmentOptions.Center;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
+        text.overflowMode = TextOverflowModes.Overflow;
+        text.raycastTarget = false;
+        CrispTextMaterial.Apply(text);
+        text.color = color;
+        TmpOutline.Apply(text, CounterOutlineWidth, CounterDark);
+        return text;
+    }
+
+    /// Yazı + gölgesi; lockIdx < 0 → AnyColor toplamı (beyaz).
+    private void SetCounter(string value, int lockIdx)
+    {
+        counter.text = counterShadow.text = value;
+        counter.color = lockIdx >= 0 && lockIdx < LockColors.Length ? LockColors[lockIdx] : (Color32)Color.white;
+    }
 
     private void ApplyDiskAngle()
     {
