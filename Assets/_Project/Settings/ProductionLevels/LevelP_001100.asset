@@ -22,7 +22,7 @@ MonoBehaviour:
     obstacleId: 55
     collectibleId: 1
     iconOverride: {fileID: 0}
-    amount: 4
+    amount: 5
   - targetType: 1
     tileType: 0
     obstacleId: 46

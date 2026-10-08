@@ -441,6 +441,8 @@ public class LevelDataEditor : Editor
                 removeIndex = i;
             EditorGUILayout.EndHorizontal();
 
+            var prevTargetType = goal.targetType;
+            var prevObstacleId = goal.obstacleId;
             goal.targetType = (LevelGoalTargetType)EditorGUILayout.EnumPopup("Target Type", goal.targetType);
             switch (goal.targetType)
             {
@@ -455,8 +457,37 @@ public class LevelDataEditor : Editor
                     break;
             }
 
+            // Obstacle seçilince Amount'a tahtadaki sayı önerilir (sonra elle değiştirilebilir).
+            int boardCount = goal.targetType == LevelGoalTargetType.Obstacle
+                ? CountGoalObstacles(level, goal.obstacleId)
+                : -1;
+            bool obstaclePicked = goal.targetType == LevelGoalTargetType.Obstacle
+                                  && (prevTargetType != goal.targetType || prevObstacleId != goal.obstacleId);
+            if (obstaclePicked && boardCount > 0)
+                goal.amount = boardCount;
+
             goal.iconOverride = (Sprite)EditorGUILayout.ObjectField("Icon Override", goal.iconOverride, typeof(Sprite), false);
             goal.amount = Mathf.Max(1, EditorGUILayout.IntField("Amount", goal.amount));
+
+            if (boardCount >= 0)
+            {
+                EditorGUILayout.BeginHorizontal();
+                string hint = goal.obstacleId == ObstacleId.SpreadingGel
+                    ? $"Oynanır hücre: {boardCount}"
+                    : $"Tahtada: {boardCount}";
+                var style = boardCount != goal.amount ? EditorStyles.boldLabel : EditorStyles.miniLabel;
+                var prevColor = GUI.color;
+                if (boardCount != goal.amount && goal.obstacleId != ObstacleId.SpreadingGel)
+                    GUI.color = new Color(1f, 0.55f, 0.45f);
+                EditorGUILayout.LabelField(" ", hint, style);
+                GUI.color = prevColor;
+                using (new EditorGUI.DisabledScope(boardCount <= 0 || boardCount == goal.amount))
+                {
+                    if (GUILayout.Button("Eşitle", GUILayout.Width(60)))
+                        goal.amount = boardCount;
+                }
+                EditorGUILayout.EndHorizontal();
+            }
             EditorGUILayout.EndVertical();
         }
 
@@ -472,6 +503,46 @@ public class LevelDataEditor : Editor
             var list = new System.Collections.Generic.List<LevelGoalDefinition>(level.goals) { new LevelGoalDefinition() };
             level.goals = list.ToArray();
         }
+    }
+
+    /// <summary>
+    /// Bir obstacle hedefinin tahtadaki karşılığı — TopHUD sayımıyla aynı kural: her ORIGIN bir kez
+    /// (duvar parçası, 2x2 kasa = 1), yığılmış (stackedObstacles) ve kasa (safes) girişleri dahil.
+    /// Çiçekli çim aynı zamanda çimdir. BatteryBox pil vuruşu başına sayılır. Jel için oynanır hücre
+    /// sayısı döner (kaplama hedefi). -1 = sayılamaz (Hamster doyurma, KeyGenerator anahtar).
+    /// </summary>
+    private static int CountGoalObstacles(LevelData level, ObstacleId id)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return -1;
+        if (id == ObstacleId.Hamster || id == ObstacleId.KeyGenerator) return -1;
+
+        if (id == ObstacleId.SpreadingGel)
+        {
+            int playable = 0;
+            if (level.cells != null)
+                foreach (var c in level.cells) if (c != 0) playable++;
+            return playable;
+        }
+
+        bool Matches(int raw) => raw == (int)id || (id == ObstacleId.Grass && raw == (int)ObstacleId.GrassFlower);
+
+        int count = 0;
+        for (int i = 0; i < level.obstacles.Length && i < level.obstacleOrigins.Length; i++)
+            if (Matches(level.obstacles[i]) && level.obstacleOrigins[i] == i) count++;
+
+        if (level.stackedObstacles != null)
+            foreach (var e in level.stackedObstacles)
+                if (Matches((int)e.obstacleId)) count++;
+
+        if (id == ObstacleId.Safe && level.safes != null)
+            count += level.safes.Length;
+
+        if (id == ObstacleId.BatteryBox)
+        {
+            var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(id) : null;
+            count *= Mathf.Max(1, def != null ? def.hits : 1) * 4;
+        }
+        return count;
     }
 
     private void EnsureArrays(LevelData level)
