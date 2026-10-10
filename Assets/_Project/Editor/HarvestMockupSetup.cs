@@ -69,6 +69,7 @@ public static class HarvestMockupSetup
         var system = MockupUI.NewRect(SystemName, root);
         MockupUI.Stretch(system);
         var screen = BuildScreen(system, config, theme, style, out var screenRoot);
+        HarvestTitleStyle.ApplyLastChoice(screen);   // iki satırlı tabela başlığı (Baloo 2 / DynaPuff)
 
         var leftPanel = FindChildByName(root, "LeftEventPanel");
         BuildEventIcon(leftPanel != null ? leftPanel : system, screen);
@@ -206,6 +207,7 @@ public static class HarvestMockupSetup
         MockupUI.SetRef(screen, "cropsLayer", crops);
         MockupUI.SetRefArray(screen, "standSlots", slots);
         MockupUI.SetRef(screen, "bear", bear);
+        MockupUI.SetRef(screen, "topHud", hud);
         MockupUI.SetRef(screen, "titleText", title);
         MockupUI.SetRef(screen, "floorText", floor);
         MockupUI.SetRef(screen, "trowelText", trowelText);

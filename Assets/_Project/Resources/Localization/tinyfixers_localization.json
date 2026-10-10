@@ -153,6 +153,14 @@
           "value": "BOSTAN HASADI"
         },
         {
+          "key": "harvest_sign_top",
+          "value": "Bostan"
+        },
+        {
+          "key": "harvest_sign_bottom",
+          "value": "Hasadı"
+        },
+        {
           "key": "harvest_floor",
           "value": "Hasat {0}/{1}"
         },
@@ -2664,6 +2672,14 @@
         {
           "key": "harvest_title",
           "value": "GARDEN HARVEST"
+        },
+        {
+          "key": "harvest_sign_top",
+          "value": "Garden"
+        },
+        {
+          "key": "harvest_sign_bottom",
+          "value": "Harvest"
         },
         {
           "key": "harvest_floor",

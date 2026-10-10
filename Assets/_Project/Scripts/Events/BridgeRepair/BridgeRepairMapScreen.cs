@@ -79,6 +79,9 @@ public sealed class BridgeRepairMapScreen : MonoBehaviour
     private BridgeRepairScreenMotion screenMotion;
     private BridgeRepairRiverFlow riverFlow;
 
+    private EventScreenIris iris;
+    private RectTransform irisOrigin;
+
     public bool IsOpen => root != null ? root.activeInHierarchy : gameObject.activeInHierarchy;
 
     private void Awake()
@@ -94,7 +97,7 @@ public sealed class BridgeRepairMapScreen : MonoBehaviour
         if (wired) return;
         wired = true;
         if (tapArea != null)     tapArea.onClick.AddListener(OnTap);
-        if (closeButton != null) closeButton.onClick.AddListener(() => { if (!presenting) Hide(); });
+        if (closeButton != null) closeButton.onClick.AddListener(() => { if (!presenting) HideAnimated(); });
     }
 
     public void Open(BridgeRepairController owner, bool animate)
@@ -113,7 +116,20 @@ public sealed class BridgeRepairMapScreen : MonoBehaviour
         riverFlow.Tick(0f, animateRiver, riverFlowSpeed, riverFlowStrength);
         bannerOpen = false;
         EventSfx.StartAmbient();
+        // Daire geçişi: ikondan açılır. Sunum (board oturması, başlık düşmesi) aynı anda başlar.
+        Transform host = root != null ? root.transform : transform;
+        if (iris == null) iris = EventScreenIris.For((RectTransform)host);
+        irisOrigin = controller != null ? controller.IconRect : null;
+        iris.PlayOpen(irisOrigin);
+        EventSfx.Play(x => x.arrowWhoosh);
         StartCoroutine(Present(animate, entering: true));
+    }
+
+    // Oyuncu kapatınca daire ikona küçülür; Oyna/level geçişinde Hide() animasyonsuz kalır.
+    private void HideAnimated()
+    {
+        if (iris == null || !IsOpen) { Hide(); return; }
+        iris.PlayClose(irisOrigin, Hide);
     }
 
     private void OnTap()
@@ -121,7 +137,7 @@ public sealed class BridgeRepairMapScreen : MonoBehaviour
         if (presenting || bannerOpen || controller == null) return;
         EventSfx.Play(x => x.uiTap);
         if (controller.CanPlay) controller.RequestPlay();
-        else Hide();
+        else HideAnimated();
     }
 
     private void OnEnable() => BridgeRepairState.OnChanged += HandleStateChanged;
@@ -257,7 +273,7 @@ public sealed class BridgeRepairMapScreen : MonoBehaviour
             if (screenMotion == null)
                 screenMotion = new BridgeRepairScreenMotion(root != null ? root : gameObject,
                     board, titleText, timerText);
-            screenMotion.Begin(tagsLayer);
+            screenMotion.Begin(tagsLayer, fade: iris == null);
             // Eski sabit bekleme yerine açılış hareketi; ilerleme bunun hemen ardından başlar.
             // Sunum ile görsel aynı saate bağlı: uzun bir yükleme karesi girişi yutmasın.
             while (!screenMotion.EntranceComplete) yield return null;

@@ -116,3 +116,50 @@ A single small clump of dark brown soil with a tiny green leaf, simple shape, fo
 
 **Kullanılmayanlar:** piramit kazı arka planı, kum karesi, eser/alet prompt'ları (tema değişti).
 **Kontrol (ben):** 100×100 okunabilirlik, ürünlerin toprak üstünde ayrışması, ayı pozlarının hizası.
+
+---
+
+## 8. Üst HUD (kullanıcı referansı, 2026-10-10) — asılı tabela + 2 hap
+Referans: iplerle asılı ahşap tabela (yapraklar, papatyalar, sağda bahçe küreği), altında iki hap:
+fide ikonu + ilerleme, kronometre + kalan süre. **Yazılar görsele GÖMÜLMEZ** — başlık ve sayılar
+TMP ile yazılır (TR/EN yerelleştirme + sayaç canlı değişiyor). Hepsi saydam PNG; sona Stil bloğu
+(§0) eklenir, ama bu bölümde kamera **tam önden** (20° üstten değil).
+
+### 8a. Asılı tabela — `Harvest_HudSign.png` (1536×768)
+```
+Create a new image from scratch, no reference image. A wide hanging wooden sign for a cheerful garden
+event in a mobile game: one thick horizontal plank of warm honey-brown wood with soft rounded corners,
+gentle wood grain, a darker beveled rim and a clean front face. Two thick twisted jute ropes go straight
+up from the top-left and top-right of the plank and continue to the very top edge of the image, as if
+the sign hangs from above. Lush green leaves and a few small white daisies with yellow centers grow
+around the top-left corner and the right end of the plank; a small garden trowel with an orange wooden
+handle is tucked behind the right end, its metal blade pointing down-right, overlapping the plank edge.
+The central front face of the plank (about 70% of its width and height) is EMPTY and smooth, reserved
+for a two-line title. Plank fills about 85% of the image width. Front view, no perspective.
+```
+
+### 8b. Hap çerçevesi — `Harvest_HudPill.png` (1024×256)
+İki hap AYNI görsel; genişlik Unity'de 9-slice ile ayarlanır (ortası düz olmalı).
+```
+Create a new image from scratch, no reference image. A horizontal capsule-shaped UI badge for a mobile
+game: a thick cream / light-beige rounded outer rim with a soft bevel, and a recessed dark chocolate-
+brown inner field running along most of its length for white text. On the LEFT end, a large circular
+socket of the same cream rim overlapping the capsule (slightly taller than the capsule), with an empty
+light-cream inner circle reserved for an icon. The straight middle section is perfectly uniform from left
+to right (it will be stretched). No icon, no text. Front view, centered, fills the width.
+```
+
+### 8c. Fide ikonu — `Harvest_HudSprout.png` (512×512)
+```
+Create a new image from scratch, no reference image. A small mound of rich dark-brown garden soil with a
+fresh bright-green two-leaf sprout growing from its top, rounded friendly shapes, a cheerful game icon.
+Centered, fills about 85% of the canvas.
+```
+
+### 8d. Kronometre ikonu — `Harvest_HudTimer.png` (512×512)
+```
+Create a new image from scratch, no reference image. A round golden-orange stopwatch with a small top
+button and a side button, a clean cream clock face with a few hour ticks and two dark-blue hands, thick
+friendly outlines, a cheerful game icon. Centered, fills about 85% of the canvas.
+```
+(Kronometre başka event'lerde de kullanılabilir — `Art/UI/Shared/` altına koymak da olur.)

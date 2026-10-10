@@ -62,6 +62,9 @@ public sealed class SafariEventButton : MonoBehaviour
         if (controller != null) controller.OnIconClicked();
     }
 
+    /// Harita bu noktadan daireyle açılır / buraya kapanır.
+    public RectTransform IconRect => EventScreenIris.IconRect(this, visibilityRoot);
+
     public void SetVisible(bool visible)
     {
         if (visibilityRoot != null && visibilityRoot.activeSelf != visible)

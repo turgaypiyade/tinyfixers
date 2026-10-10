@@ -83,6 +83,7 @@ public sealed class BridgeRepairScreenMotion
     private bool entranceComplete;
     private float elapsed;
     private int startedFrame = -1;
+    private bool fadeIn = true;
 
     public float BoardScale { get; private set; } = 1f;
     public bool EntranceComplete => entranceComplete;
@@ -125,7 +126,8 @@ public sealed class BridgeRepairScreenMotion
     {
         if (text == null) return null;
         var holder = text.transform.parent as RectTransform;
-        if (holder == null || holder.gameObject == root || holder == board) holder = text.rectTransform;
+        if (holder == null || holder.gameObject == root || holder == board || EventScreenIris.IsContainer(holder))
+            holder = text.rectTransform;
         return new Reveal(holder, delay, offset, duration, startScale);
     }
 
@@ -145,9 +147,11 @@ public sealed class BridgeRepairScreenMotion
         });
     }
 
-    public void Begin(RectTransform tagsLayer)
+    /// fade: ekran solarak gelsin mi (daire geçişi varken gereksiz — daire zaten açıyor).
+    public void Begin(RectTransform tagsLayer, bool fade = true)
     {
         Reset();
+        fadeIn = fade;
         if (tagsLayer != null)
             for (int i = 0; i < tagsLayer.childCount; i++)
             {
@@ -174,7 +178,7 @@ public sealed class BridgeRepairScreenMotion
             float t = Mathf.Clamp01(elapsed / EntranceDuration);
             ease = 1f - Mathf.Pow(1f - t, 3f);
             BoardScale = Mathf.Lerp(BoardStartScale, 1f, ease);
-            screen.alpha = screenAlpha * BridgeRepairUI.Smooth01(elapsed / FadeDuration);
+            if (fadeIn) screen.alpha = screenAlpha * BridgeRepairUI.Smooth01(elapsed / FadeDuration);
             title?.Apply(elapsed);
             timer?.Apply(elapsed);
             foreach (var tag in tags) tag.Apply(elapsed);

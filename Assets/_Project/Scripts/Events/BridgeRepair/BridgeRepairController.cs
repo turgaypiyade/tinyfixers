@@ -50,6 +50,7 @@ public sealed class BridgeRepairController : MonoBehaviour
     private Coroutine pendingMapOpen;
 
     public BridgeRepairConfig Config => config;
+    public RectTransform IconRect => eventButton != null ? eventButton.IconRect : null;
     private static DateTime UtcNow => DateTime.UtcNow;
 
     public DateTime WindowEnd

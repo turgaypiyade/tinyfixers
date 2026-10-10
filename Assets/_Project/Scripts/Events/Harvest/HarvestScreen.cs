@@ -26,8 +26,14 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
     [SerializeField] private Image bear;
 
     [Header("HUD")]
+    [Tooltip("Üst tabela kökü (açılışta yukarıdan düşer). Boşsa \"TopHud\" adlı çocuk aranır.")]
+    [SerializeField] private RectTransform topHud;
     [SerializeField] private TMP_Text titleText;
+    [Tooltip("Tabelanın 2. satırı (\"Hasadı\"). Boşsa başlık tek satır harvest_title.")]
+    [SerializeField] private TMP_Text subtitleText;
     [SerializeField] private TMP_Text floorText;
+    [Tooltip("Sezon bitişine kalan süre (tabela altındaki hap).")]
+    [SerializeField] private TMP_Text timerText;
     [SerializeField] private TMP_Text trowelText;
     [SerializeField] private TMP_Text hintText;
     [SerializeField] private Button playButton;
@@ -41,6 +47,13 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
     [SerializeField, Min(0.05f)] private float cropFlyDuration = 0.45f;
     [SerializeField, Min(0f)] private float cheerHold = 0.9f;
 
+    [Header("Açılış (daire geçişi + sahne kurulumu)")]
+    [Tooltip("Daire açılırken sahne kurulumu bu kadar sonra başlar (dairenin sonuna doğru).")]
+    [SerializeField, Min(0f)] private float introDelay = 0.16f;
+    [SerializeField, Min(1f)] private float introBoardScale = 1.06f;
+    [Tooltip("Arkadan öne dalga: köşegen başına gecikme.")]
+    [SerializeField, Min(0f)] private float introTileStagger = 0.025f;
+
     private HarvestConfig cfg;
     private Image[] tiles;
     private Image[] peeks;                       // kazılmış ama ürünü henüz tamamlanmamış hücrede "uç" görünür
@@ -52,6 +65,11 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
     private readonly List<RectTransform> standPiles = new();
     private bool busy;
     private bool built;
+    private EventScreenIris iris;
+    private RectTransform origin;                // açılışın çıktığı ikon; kapanışta daire buraya döner
+    private float boardIntroScale = 1f;          // FitBoard ölçeğinin çarpanı (açılışta 1.06 → 1)
+    private Vector2 bearHome, hudHome;
+    private long shownTimerSecond = long.MinValue;
 
     public bool IsOpen => root != null && root.activeInHierarchy;
 
@@ -61,12 +79,18 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
         if (playButton != null) playButton.onClick.AddListener(OnPlay);
         if (helpButton != null) helpButton.onClick.AddListener(ShowHowToPlay);
         if (root != null && root != gameObject) root.SetActive(false);
+        if (topHud == null) topHud = transform.Find("TopHud") as RectTransform;   // eski kurulum (iris öncesi)
+        if (bear != null) bearHome = bear.rectTransform.anchoredPosition;
+        if (topHud != null) hudHome = topHud.anchoredPosition;
     }
 
     private void OnEnable()  => HarvestState.OnChanged += RefreshHud;
     private void OnDisable() => HarvestState.OnChanged -= RefreshHud;
 
-    public void Open()
+    public void Open() => Open(null);
+
+    /// from: tıklanan ikon — ekran o noktadan büyüyen daireyle açılır (null → ekran ortası).
+    public void Open(RectTransform from)
     {
         cfg = HarvestConfig.Shared;
         if (cfg == null) { Debug.LogWarning("[Harvest] HarvestConfig yok (Resources/Events)."); return; }
@@ -77,11 +101,84 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
         if (transform.parent != null) transform.parent.SetAsLastSibling();
         StopAllCoroutines();
         busy = false;
+        origin = from;
         BuildGrid();
         RebuildFloorVisuals();
         SetBear(cfg.bearIdle);
         RefreshHud();
+
+        if (iris == null && root != null) iris = EventScreenIris.For((RectTransform)root.transform);
+        busy = true;                             // açılış bitene kadar kazı/kapat yok
+        iris?.PlayOpen(origin);
+        EventSfx.Play(l => l.arrowWhoosh);
+        StartCoroutine(Intro());
+    }
+
+    // Sahne kendini kurar: board hafif yakından oturur, tabela düşer, kareler arkadan öne filizlenir,
+    // ayı zıplayarak girer, tezgâh yığınları en son pop. Tek döngü; kare başı ayırma yok.
+    private IEnumerator Intro()
+    {
+        const float boardDur = 0.5f, hudDelay = 0.1f, hudDur = 0.4f, tileDelay = 0.12f, tileDur = 0.22f;
+        const float bearDelay = 0.28f, bearDur = 0.36f, pileDelay = 0.42f, pileStagger = 0.04f, pileDur = 0.25f;
+        int n = cfg.gridSize;
+        float tilesEnd = tileDelay + introTileStagger * (2 * (n - 1)) + tileDur;
+        int piles = 0;
+        for (int i = 0; i < standPiles.Count; i++) if (standPiles[i].gameObject.activeSelf) piles++;
+        float total = Mathf.Max(boardDur, hudDelay + hudDur, tilesEnd, bearDelay + bearDur,
+            pileDelay + pileStagger * Mathf.Max(0, piles - 1) + pileDur);
+
+        var bearRt = bear != null ? bear.rectTransform : null;
+        float t = -introDelay;
+        while (true)
+        {
+            boardIntroScale = Mathf.Lerp(introBoardScale, 1f, OutCubic(Mathf.Clamp01(t / boardDur)));
+            if (topHud != null)
+                topHud.anchoredPosition = hudHome + Vector2.up * (320f * (1f - OutBack(Mathf.Clamp01((t - hudDelay) / hudDur))));
+            for (int cell = 0; cell < tiles.Length; cell++)
+            {
+                float k = Mathf.Clamp01((t - tileDelay - introTileStagger * (cell % n + cell / n)) / tileDur);
+                float sc = OutBack(k);
+                tiles[cell].rectTransform.localScale = new Vector3(sc, sc, 1f);
+            }
+            if (bearRt != null)
+            {
+                float k = Mathf.Clamp01((t - bearDelay) / bearDur);
+                bearRt.anchoredPosition = bearHome + Vector2.down * (260f * (1f - OutBack(k)));
+                bear.enabled = k > 0f;
+            }
+            for (int i = 0, p = 0; i < standPiles.Count; i++)
+            {
+                if (!standPiles[i].gameObject.activeSelf) continue;
+                float sc = OutBack(Mathf.Clamp01((t - pileDelay - pileStagger * p++) / pileDur));
+                standPiles[i].localScale = new Vector3(sc, sc, 1f);
+            }
+            if (t >= total) break;
+            yield return null;
+            t += Mathf.Min(Time.unscaledDeltaTime, 1f / 30f);
+        }
+
+        boardIntroScale = 1f;
+        busy = false;
         if (!HarvestHowToPlay.SeenThisCycle(cfg)) ShowHowToPlay();   // her sezonun ilk açılışında
+    }
+
+    private static float OutCubic(float k) { float x = 1f - k; return 1f - x * x * x; }
+
+    private static float OutBack(float k)
+    {
+        const float c1 = 1.70158f, c3 = c1 + 1f;
+        float x = k - 1f;
+        return 1f + c3 * x * x * x + c1 * x * x;
+    }
+
+    // Açılış yarıda kesilirse (OnPlay vb.) her şey son haline otursun.
+    private void SnapIntro()
+    {
+        boardIntroScale = 1f;
+        if (topHud != null) topHud.anchoredPosition = hudHome;
+        if (bear != null) { bear.rectTransform.anchoredPosition = bearHome; bear.enabled = true; }
+        if (tiles != null) foreach (var tile in tiles) tile.rectTransform.localScale = Vector3.one;
+        foreach (var pile in standPiles) pile.localScale = Vector3.one;
     }
 
     private void ShowHowToPlay()
@@ -97,7 +194,18 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
 
     public void Hide()
     {
-        if (busy) return;
+        if (busy || root == null || !root.activeSelf) return;
+        if (iris == null) { root.SetActive(false); return; }
+        busy = true;
+        iris.PlayClose(origin, () => { busy = false; root.SetActive(false); });
+    }
+
+    // Seviyeye geçiş: animasyonsuz kapan (sahne değişiyor).
+    private void HideImmediate()
+    {
+        StopAllCoroutines();
+        SnapIntro();
+        busy = false;
         if (root != null) root.SetActive(false);
     }
 
@@ -106,6 +214,19 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
         if (!IsOpen) return;
         FitBoard();
         PulseHints();
+        RefreshTimer();
+    }
+
+    // Kalan süre: metin yalnız saniye değişince yazılır (kare başı string üretimi yok).
+    private void RefreshTimer()
+    {
+        if (timerText == null || cfg == null) return;
+        var now = System.DateTime.UtcNow;
+        var remaining = HarvestState.WindowEnd(cfg, now) - now;
+        long second = remaining > System.TimeSpan.Zero ? (long)System.Math.Ceiling(remaining.TotalSeconds) : 0;
+        if (second == shownTimerSecond) return;
+        shownTimerSecond = second;
+        timerText.text = TimeFormat.Countdown(remaining);
     }
 
     // Yarısı kazılmış ama tamamlanmamış ürünlerin KAZILMAMIŞ kareleri ("burayı da kaz").
@@ -144,6 +265,7 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
         Rect area = viewport.rect;
         float s = area.width / size.x;
         if (size.y * s > area.height) s = area.height / size.y;
+        s *= boardIntroScale;
         if (Mathf.Abs(board.localScale.x - s) > 0.0001f)
             board.localScale = new Vector3(s, s, 1f);
     }
@@ -511,7 +633,12 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
         if (cfg == null) return;
         int floors = cfg.FloorCount;
         int floor = Mathf.Min(HarvestState.Floor + 1, floors);
-        if (titleText != null) titleText.text = L("harvest_title", "BOSTAN HASADI");
+        if (subtitleText != null)
+        {
+            if (titleText != null) titleText.text = L("harvest_sign_top", "Bostan");
+            subtitleText.text = L("harvest_sign_bottom", "Hasadı");
+        }
+        else if (titleText != null) titleText.text = L("harvest_title", "BOSTAN HASADI");
         if (floorText != null) floorText.text = string.Format(L("harvest_floor", "Hasat {0}/{1}"), floor, floors);
         if (trowelText != null) trowelText.text = $"x{HarvestState.Trowels}";
         bool none = HarvestState.Trowels <= 0 && !HarvestState.IsFinished(cfg);
@@ -534,8 +661,8 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
     {
         var launcher = FindFirstObjectByType<MainMenuLevelButtonController>(FindObjectsInactive.Include);
         if (launcher == null) { Debug.LogWarning("[Harvest] MainMenuLevelButtonController yok — Oyna iptal."); return; }
-        Hide();
-        if (launcher.StartLevel() == LevelStartResult.Suppressed) Open();
+        HideImmediate();
+        if (launcher.StartLevel() == LevelStartResult.Suppressed) Open(origin);
     }
 
     private void SetBear(Sprite s)

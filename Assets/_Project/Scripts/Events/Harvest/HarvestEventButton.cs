@@ -4,8 +4,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// LeftEventPanel'deki Bostan Hasadı ikonu. Event açıkken görünür (takvim + 25. seviye kapısı); logonun
-/// alt bandında sezon bitişine kalan süre, köşe rozetinde kullanılabilir kürek sayısı (kürek varsa).
+/// LeftEventPanel'deki Bostan Hasadı ikonu. 25. seviye kapısından sonra hep görünür; logonun
+/// alt bandında açıkken sezon bitişine, ara günlerde açılışa kalan süre, köşe rozetinde kullanılabilir kürek sayısı (kürek varsa).
 /// </summary>
 public sealed class HarvestEventButton : MonoBehaviour
 {
@@ -18,6 +18,7 @@ public sealed class HarvestEventButton : MonoBehaviour
     [SerializeField] private GameObject visibilityRoot;
 
     private int lastShownSecond = int.MinValue;
+    private bool live;
     private float nextCheck;
 
     private void Awake()
@@ -46,15 +47,21 @@ public sealed class HarvestEventButton : MonoBehaviour
     {
         var cfg = HarvestConfig.Shared;
         DateTime now = DateTime.UtcNow;
-        bool live = HarvestState.IsLive(cfg, now);
-        if (visibilityRoot != null && visibilityRoot.activeSelf != live)
+        // İkon level kapısından sonra hep görünür: açıkken sezon bitişine, ara günlerde açılışa geri sayar.
+        bool unlocked = HarvestState.IsUnlocked(cfg);
+        if (visibilityRoot != null && visibilityRoot.activeSelf != unlocked)
         {
-            visibilityRoot.SetActive(live);
-            if (live) { HarvestState.SyncCycle(cfg, now); force = true; }
+            visibilityRoot.SetActive(unlocked);
+            force = true;
         }
-        if (!live) return;
+        if (!unlocked) return;
 
-        TimeSpan remaining = HarvestState.WindowEnd(cfg, now) - now;
+        bool isLive = HarvestState.IsLive(cfg, now);
+        if (isLive != live) { live = isLive; force = true; }
+        if (force && live) HarvestState.SyncCycle(cfg, now);
+
+        DateTime target = live ? HarvestState.WindowEnd(cfg, now) : HarvestSchedule.GetNextStart(cfg, now);
+        TimeSpan remaining = target == DateTime.MinValue ? TimeSpan.Zero : target - now;
         if (remaining < TimeSpan.Zero) remaining = TimeSpan.Zero;
         int second = (int)Math.Ceiling(remaining.TotalSeconds);
         if (force || second != lastShownSecond)
@@ -67,14 +74,15 @@ public sealed class HarvestEventButton : MonoBehaviour
 
     private void RefreshBadge()
     {
-        int trowels = HarvestState.Trowels;
+        int trowels = live ? HarvestState.Trowels : 0;   // ara günlerde eski sezonun küreği gösterilmez
         if (badge != null) badge.SetActive(trowels > 0);
         if (badgeText != null) badgeText.text = trowels.ToString();
     }
 
     private void OnClick()
     {
+        if (!HarvestState.IsLive(HarvestConfig.Shared, DateTime.UtcNow)) return;   // ara gün: yalnız geri sayım
         HarvestState.SyncCycle(HarvestConfig.Shared, DateTime.UtcNow);
-        if (screen != null) screen.Open();
+        if (screen != null) screen.Open(EventScreenIris.IconRect(this, visibilityRoot));
     }
 }

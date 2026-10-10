@@ -35,6 +35,16 @@ public static class HarvestState
         return CurrentLevel.Global >= cfg.minLevelGate && HarvestSchedule.IsActiveNow(cfg, utcNow);
     }
 
+    /// Level kapısı geçildi mi — ikon bundan sonra hep görünür (açık değilse açılışa geri sayım).
+    public static bool IsUnlocked(HarvestConfig cfg)
+    {
+        if (cfg == null) return false;
+#if UNITY_EDITOR
+        if (cfg.debugForceAvailable) return true;
+#endif
+        return CurrentLevel.Global >= cfg.minLevelGate;
+    }
+
     public static DateTime WindowEnd(HarvestConfig cfg, DateTime utcNow)
     {
 #if UNITY_EDITOR

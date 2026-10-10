@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HarvestConfig
   minLevelGate: 26
   cycleDays: 7
-  activeDays: 5
+  activeDays: 7
   epochUtc: 2026-01-05
   debugForceAvailable: 0
   wonderCatalog: {fileID: 11400000, guid: 34474c506de9f46a2be88c1bd1801853, type: 2}

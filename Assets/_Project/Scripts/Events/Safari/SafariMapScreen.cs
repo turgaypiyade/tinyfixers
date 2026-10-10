@@ -87,7 +87,7 @@ public sealed class SafariMapScreen : SafariMapScreenBase
     private void Awake()
     {
         if (continueButton != null) continueButton.onClick.AddListener(OnContinueClicked);
-        if (closeButton != null)    closeButton.onClick.AddListener(Hide);
+        if (closeButton != null)    closeButton.onClick.AddListener(HideAnimated);
         PrepareContinuePrompt();
         ApplyPromptTextColor();
         // root == bu obje ise burada kapatma (lazy-Awake tuzağı, StartCoroutine ölür). Editör pasif author'lar.
@@ -105,6 +105,7 @@ public sealed class SafariMapScreen : SafariMapScreenBase
         BuildRoster();
 
         if (active != null) StopCoroutine(active);
+        PlayIrisOpen(root != null ? root.transform : transform, owner);   // EnsureCrowd'dan sonra (BG'yi Find ile arar)
         active = StartCoroutine(Present(outcome));
     }
 

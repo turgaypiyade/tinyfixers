@@ -29,6 +29,7 @@ public sealed class SafariEventController : MonoBehaviour
     [SerializeField] private float autoPopupDelaySeconds = 2f;
 
     public SafariConfig Config => config;
+    public RectTransform IconRect => eventButton != null ? eventButton.IconRect : null;
 
     /// <summary>Bu oturumda düşülmeden önce bulunulan pitstop (düşüş animasyonu buradan başlar). -1 = yok.</summary>
     public int FallFromPitstop { get; private set; } = -1;
