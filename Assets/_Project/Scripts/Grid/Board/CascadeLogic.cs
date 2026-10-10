@@ -45,11 +45,9 @@ public partial class CascadeLogic
     private int spawnSequence;
     private bool[,] diagonalFeedReachable;
 
-    // Refill'de spawn tipi seçimi: 4+ aynı-renk run (special eşiği) oluşturmayı önler.
-    // Aşağıdaki (toY+1..) ve soldaki (x-1..) hücreler bu noktada kesinleşmiş durumda
-    // (kolon x sırayla, taşlar altta oturmuş). Üstteki spawn'lar da bu run'ı görüp
-    // uzatmayı reddedeceği için dikey run doğal olarak MAX_REFILL_RUN'da kapanır.
-    private const int MAX_REFILL_RUN = 3; // 3'lü match serbest (cascade), 4+ (special) engelli
+    // Unassisted random refill discourages accidental 4+ runs using settled below/left cells.
+    // Mercy's scored color selection deliberately bypasses this limit to enable natural specials.
+    private const int MAX_REFILL_RUN = 3;
 
     private TileType PickRefillType(VirtualTile[,] vb, int x, int toY)
     {
@@ -57,11 +55,11 @@ public partial class CascadeLogic
         if (pool == null || pool.Length == 0)
             return TileType.Gear;
 
-        // Gizli yardım (LevelAssist): takılan oyuncuda bazı taşlar alt/sol komşusunun renginde düşer
-        // → daha çok ikili/üçlü oluşur. 4+ run (bedava special) yine engelli.
+        // Mercy chooses only the NEW stone's normal color from the level pool. Helpful picks
+        // may complete 4/5-runs, T/L or squares; the ordinary resolver creates any special.
         float assistBias = LevelAssist.RefillBias;
         if (assistBias > 0f && UnityEngine.Random.value < assistBias
-            && TryPickNeighborColor(vb, x, toY, out var helpful))
+            && TryPickHelpfulRefillColor(vb, x, toY, out var helpful))
             return helpful;
 
         for (int attempt = 0; attempt < 12; attempt++)
@@ -74,23 +72,49 @@ public partial class CascadeLogic
         return pool[UnityEngine.Random.Range(0, pool.Length)];
     }
 
-    private bool TryPickNeighborColor(VirtualTile[,] vb, int x, int toY, out TileType type)
+    private bool TryPickHelpfulRefillColor(VirtualTile[,] vb, int x, int y, out TileType type)
     {
-        // Yalnız level'ın renk havuzundaki tipler (koleksiyon/hedef taşı kopyalanmasın).
-        var pool = board.RandomPool;
-        bool hasBelow = TryGetVirtualColor(vb, x, toY + 1, out var below)
-            && System.Array.IndexOf(pool, below) >= 0 && !WouldExtendRunTooFar(vb, x, toY, below);
-        bool hasLeft = TryGetVirtualColor(vb, x - 1, toY, out var left)
-            && System.Array.IndexOf(pool, left) >= 0 && !WouldExtendRunTooFar(vb, x, toY, left);
-        if (hasBelow && hasLeft)
-            type = UnityEngine.Random.value < 0.5f ? below : left;
-        else if (hasBelow)
-            type = below;
-        else if (hasLeft)
-            type = left;
-        else
-            type = default;
-        return hasBelow || hasLeft;
+        type = default;
+        if (board.ObstacleStateService != null
+            && (board.ObstacleStateService.IsInteractionLockedAt(x, y) || board.ObstacleStateService.IsOilAt(x, y)))
+            return false;
+
+        System.Func<int, int, int?> colorAt = (cx, cy) =>
+            TryGetAssistColor(vb, cx, cy, out var color) ? (int?)color : null;
+        int bestScore = 0, tied = 0;
+        foreach (var candidate in board.RandomPool)
+        {
+            int score = RefillAssistScoring.Score((int)candidate, x, y, colorAt);
+            if (score <= 0 || score < bestScore) continue;
+            if (score > bestScore)
+            {
+                bestScore = score;
+                type = candidate;
+                tied = 1;
+            }
+            else if (UnityEngine.Random.Range(0, ++tied) == 0)
+                type = candidate;
+        }
+        return bestScore > 0;
+    }
+
+    private bool TryGetAssistColor(VirtualTile[,] vb, int x, int y, out TileType type)
+    {
+        type = default;
+        if (x < 0 || x >= board.Width || y < 0 || y >= board.Height || board.IsMaskHoleCell(x, y))
+            return false;
+        var tile = vb[x, y];
+        if (tile == null || tile.IsMovableObstacle) return false;
+        var obstacles = board.ObstacleStateService;
+        if (obstacles != null && (obstacles.IsInteractionLockedAt(x, y) || obstacles.IsOilAt(x, y)))
+            return false;
+        if (!tile.IsSpawned)
+        {
+            if (tile.View == null || tile.View.GetSpecial() != TileSpecial.None) return false;
+            // During planning a moved tile's View still has its original coordinates.
+            if (obstacles != null && obstacles.IsMovableObstacleAt(tile.View.X, tile.View.Y)) return false;
+        }
+        return TryGetVirtualColor(vb, x, y, out type);
     }
 
     private bool WouldExtendRunTooFar(VirtualTile[,] vb, int x, int toY, TileType cand)
@@ -613,9 +637,8 @@ public partial class CascadeLogic
                     }
                     else
                     {
-                        // Refill: 3'lü match'lere (cascade) İZİN VER ama 4+ (special) run
-                        // oluşturmayı önle → "yukarıdan 5 aynı taş gelip special çıkması"
-                        // gibi kazara fazla special'lar azalır, normal cascade'ler korunur.
+                        // Normal refill limits accidental 4+ runs. A mercy pick may deliberately
+                        // complete a special-producing match using normal colored stones.
                         newTile.SpawnType = PickRefillType(virtualBoard, x, toY);
                     }
 

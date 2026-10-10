@@ -51,12 +51,11 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
         }
     }
 
-    private static readonly Vector2Int[] HintDirections =
+    // Hint taraması her çifti bir kez dener: sağ ve aşağı komşu yeter.
+    private static readonly Vector2Int[] SwapDirections =
     {
         new Vector2Int(1, 0),
-        new Vector2Int(0, 1),
-        new Vector2Int(-1, 0),
-        new Vector2Int(0, -1)
+        new Vector2Int(0, 1)
     };
 
     private static readonly Vector2Int[] ComboDirections =
@@ -375,6 +374,9 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
         state.hintedOtherTile = null;
         state.idleTimer = 0f;
     }
+    // Tüm geçerli swap'ları puanlar, EN BÜYÜK eşleşmeyi gösterir (5'li/T-L > 4'lü/2x2 > 3'lü).
+    // Eşit puanlarda tarama lastHintStartIndex'ten döndüğü için ipucu her seferinde aynı yere takılmaz.
+    // Her çift bir kez denenir (yalnız sağ/aşağı komşu); 5 sn boşta kalınca bir kez çalışır.
     private static bool TryFindPossibleMatchMove(
         BoardController board,
         BoardFxState state,
@@ -386,6 +388,7 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
         if (cellCount <= 0) return false;
 
         int startIndex = Mathf.Abs(state.lastHintStartIndex) % cellCount;
+        int bestScore = 0, bestIndex = -1;
 
         for (int step = 0; step < cellCount; step++)
         {
@@ -396,25 +399,30 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
             if (!IsPlayableTile(board, x, y))
                 continue;
 
-            for (int i = 0; i < HintDirections.Length; i++)
+            for (int i = 0; i < SwapDirections.Length; i++)
             {
-                Vector2Int dir = HintDirections[i];
+                Vector2Int dir = SwapDirections[i];
                 int nx = x + dir.x;
                 int ny = y + dir.y;
 
                 if (!IsPlayableTile(board, nx, ny))
                     continue;
 
-                if (!WouldSwapCreateMatch(board, x, y, nx, ny))
+                int score = ScoreSwap(board, x, y, nx, ny);
+                if (score <= bestScore)
                     continue;
 
-                state.lastHintStartIndex = (index + 1) % cellCount;
+                bestScore = score;
+                bestIndex = index;
                 candidate = new HintCandidate(board.Tiles[x, y], board.Tiles[nx, ny], dir);
-                return true;
             }
         }
 
-        return false;
+        if (bestIndex < 0)
+            return false;
+
+        state.lastHintStartIndex = (bestIndex + 1) % cellCount;
+        return true;
     }
 
     private static bool IsPlayableTile(BoardController board, int x, int y)
@@ -439,29 +447,26 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
         return true;
     }
 
-    private static bool WouldSwapCreateMatch(BoardController board, int ax, int ay, int bx, int by)
+    // Swap'ın oluşturduğu eşleşmenin büyüklüğü (iki hücrenin toplamı). 0 = eşleşme yok.
+    private static int ScoreSwap(BoardController board, int ax, int ay, int bx, int by)
     {
         var a = board.Tiles[ax, ay];
         var b = board.Tiles[bx, by];
 
         if (a == null || b == null)
-            return false;
+            return 0;
 
         // Special + special combo ayrı glow ile gösterilecek.
         if (a.GetSpecial() != TileSpecial.None && b.GetSpecial() != TileSpecial.None)
-            return false;
+            return 0;
 
-        if (HasLineMatchAtAfterSwap(board, ax, ay, ax, ay, bx, by))
-            return true;
-
-        if (HasLineMatchAtAfterSwap(board, bx, by, ax, ay, bx, by))
-            return true;
-
-        return Has2x2MatchNearAfterSwap(board, ax, ay, ax, ay, bx, by)
-            || Has2x2MatchNearAfterSwap(board, bx, by, ax, ay, bx, by);
+        return MatchSizeAtAfterSwap(board, ax, ay, ax, ay, bx, by)
+             + MatchSizeAtAfterSwap(board, bx, by, ax, ay, bx, by);
     }
 
-    private static bool HasLineMatchAtAfterSwap(
+    // Hücrenin swap sonrası parçası olduğu eşleşmedeki taş sayısı: yatay + dikey çizgiler (kesişim bir kez),
+    // çizgi yoksa 2x2 = 4. Büyük sayı = büyük special (5'li, T/L, 4'lü).
+    private static int MatchSizeAtAfterSwap(
         BoardController board,
         int x,
         int y,
@@ -471,20 +476,20 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
         int by)
     {
         if (!TryGetTypeAfterSwap(board, x, y, ax, ay, bx, by, out var type))
-            return false;
+            return 0;
 
         int horizontal = 1
             + CountSameTypeAfterSwap(board, x, y, -1, 0, type, ax, ay, bx, by)
             + CountSameTypeAfterSwap(board, x, y, 1, 0, type, ax, ay, bx, by);
-
-        if (horizontal >= 3)
-            return true;
-
         int vertical = 1
             + CountSameTypeAfterSwap(board, x, y, 0, -1, type, ax, ay, bx, by)
             + CountSameTypeAfterSwap(board, x, y, 0, 1, type, ax, ay, bx, by);
 
-        return vertical >= 3;
+        int size = 0;
+        if (horizontal >= 3) size += horizontal;
+        if (vertical >= 3) size += size > 0 ? vertical - 1 : vertical;
+        if (size == 0 && Has2x2MatchNearAfterSwap(board, x, y, ax, ay, bx, by)) size = 4;
+        return size;
     }
 
     private static int CountSameTypeAfterSwap(

@@ -107,6 +107,7 @@ public sealed class SimGoalSet
             ObstacleId.WaterPuddle     => SimGoalFidelity.NotSimulated, // rastgele saçılım modellenmiyor
             ObstacleId.Wardrobe        => SimGoalFidelity.Approximate,
             ObstacleId.Magnet          => SimGoalFidelity.Approximate,  // uçlara yaklaşma yok
+            ObstacleId.AncientSeal     => SimGoalFidelity.NotSimulated,
             ObstacleId.Safe            => SimGoalFidelity.Approximate,  // 3 kilit tek sayaç
             ObstacleId.Wall            => SimGoalFidelity.Approximate,  // hücre aşamaları + parça yıkımı yok
             ObstacleId.MetalWall       => SimGoalFidelity.Approximate,  // ardışık vuruş sıfırlaması yok

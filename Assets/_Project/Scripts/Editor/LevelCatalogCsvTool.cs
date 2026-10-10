@@ -82,7 +82,7 @@ public static class LevelCatalogCsvTool
 
     /// Araya level sokma / sıra değiştirme için: chapter-level-levelKey kolonları
     /// YOK SAYILIR, girişler satır sırasına göre baştan numaralanır
-    /// (chapter=1, level=1..N, levelKey=LevelCL_001..). Excel'de sadece satır ekle/taşı yeter.
+    /// (level=1..N, chapter=levelsPerChapter'a göre, levelKey=LevelCL_001..). Excel'de sadece satır ekle/taşı yeter.
     [MenuItem("TinyFixers/Levels/Import Catalog CSV (Yeniden Numaralandır)")]
     public static void ImportRenumbered() => Import(autoRenumber: true);
 
@@ -155,9 +155,10 @@ public static class LevelCatalogCsvTool
 
             if (autoRenumber)
             {
-                // Satır sırası = yeni sıra: numaralar ve key'ler baştan üretilir.
-                chapter = 1;
+                // Satır sırası = yeni sıra: numaralar ve key'ler baştan üretilir. Chapter, oyunun
+                // kullandığı TEK kaynaktan (ChapterThemeLibrary.levelsPerChapter) türetilir.
                 level = newEntries.Count + 1;
+                chapter = ChapterProgress.ChapterOfLevel(level);
                 levelKey = $"LevelCL_{level:000}";
             }
             else

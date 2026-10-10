@@ -14,6 +14,7 @@ public sealed class SimLevel
     public readonly TubeEntry[] tubes;
     public readonly MagnetEntry[] magnets;
     public readonly SafeEntry[] safes;
+    public readonly AncientSealEntry[] ancientSeals;
     public readonly StackedObstacleEntry[] stackedObstacles;
     public readonly LevelGoalDefinition[] goals;
 
@@ -36,6 +37,7 @@ public sealed class SimLevel
         pinnedSpecialTypes = Copy(source.pinnedSpecialTypes);
         tubes = Copy(source.tubes);
         safes = Copy(source.safes);
+        ancientSeals = Copy(source.ancientSeals);
         stackedObstacles = Copy(source.stackedObstacles);
         magnets = Copy(source.magnets);
         for (int i = 0; i < magnets.Length; i++)

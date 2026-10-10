@@ -224,7 +224,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         panelRt.anchorMax = new Vector2(0.5f, 0.5f);
         panelRt.pivot = new Vector2(0.5f, 0.5f);
         panelRt.anchoredPosition = Vector2.zero;
-        panelRt.sizeDelta = new Vector2(460f, 330f);
+        panelRt.sizeDelta = new Vector2(460f, 460f);
 
         var panelImage = panel.AddComponent<Image>();
         panelImage.color = new Color(0.08f, 0.10f, 0.13f, 0.97f);
@@ -244,7 +244,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         debugLevelInput = CreateDebugInput(panel.transform);
         debugLevelInput.onSubmit.AddListener(_ => PlayDebugLevel());
 
-        debugStatusText = CreateDebugText(panel.transform, "Status", "", 17f, FontStyles.Normal, TextAlignmentOptions.Center, new Color(0.65f, 0.90f, 0.72f, 1f), 28f);
+        debugStatusText = CreateDebugText(panel.transform, "Status", "", 17f, FontStyles.Normal, TextAlignmentOptions.Center, new Color(0.65f, 0.90f, 0.72f, 1f), 48f);
 
         GameObject row = CreateUiObject("ButtonRow", panel.transform, out _);
         row.layer = panel.layer;
@@ -261,6 +261,10 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         CreateDebugButton(row.transform, "Kapat", new Color(0.22f, 0.25f, 0.30f, 1f), HideDebugLevelPanel);
         CreateDebugButton(row.transform, "Ayarla", new Color(0.18f, 0.38f, 0.58f, 1f), ApplyDebugLevelAndClose);
         CreateDebugButton(row.transform, "Oyna", new Color(0.30f, 0.62f, 0.32f, 1f), PlayDebugLevel);
+
+        CreateDebugButton(panel.transform, "İlerlemeyi Sıfırla", new Color(0.60f, 0.22f, 0.20f, 1f), ConfirmDebugProgressReset);
+        CreateDebugText(panel.transform, "ResetHint", "Altın ve yıldızların korunur.", 17f,
+            FontStyles.Normal, TextAlignmentOptions.Center, new Color(0.83f, 0.89f, 0.96f, 1f), 24f);
 
         debugPanelRoot.SetActive(false);
     }
@@ -376,6 +380,33 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         HideDebugLevelPanel();
     }
 
+    private void ConfirmDebugProgressReset()
+    {
+        debugLevelInput?.DeactivateInputField();
+        if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+        RuntimeChoicePopup.Show("İlerlemeyi sıfırla?",
+            "Seviye 1'e dönülür. Görevler, harikalar, etkinlik ilerlemesi ve öğreticiler sıfırlanır.\n\n"
+            + "Altın, yıldız, envanter ve hesap bilgilerin korunur. Bu işlem bulut kaydına da uygulanır.",
+            new RuntimeChoicePopup.Choice("Vazgeç", null),
+            new RuntimeChoicePopup.Choice("Sıfırla", ResetDebugProgress, true));
+    }
+
+    private void ResetDebugProgress()
+    {
+        if (this == null || !enableDebugLevelSelector) return;
+        int maxLevel = levelCatalog != null ? levelCatalog.MaximumGlobalLevel : currentLevel;
+        if (!FirebaseCloudSaveService.TryResetProgress(maxLevel, out string error))
+        {
+            SetDebugStatus(error, true);
+            return;
+        }
+        // Scene-owned menu/event views rebuild from cleared preferences; the persistent
+        // progress-event service is refreshed by TryResetProgress before this reload.
+        if (prefsLevelKey != CurrentLevel.PrefsKey) PlayerPrefs.SetInt(prefsLevelKey, 1);
+        PlayerPrefs.Save();
+        SceneManager.LoadScene(gameObject.scene.name);
+    }
+
     private void PlayDebugLevel()
     {
         if (!TryApplyDebugLevelFromInput())
@@ -402,6 +433,8 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
             return false;
         }
 
+        PlayerPrefs.SetInt(CloudSaveManifest.LevelHistoryMaxKey,
+            Mathf.Max(PlayerPrefs.GetInt(CloudSaveManifest.LevelHistoryMaxKey, 1), Mathf.Max(currentLevel, selectedLevel)));
         currentLevel = selectedLevel;
         PlayerPrefs.SetInt(prefsLevelKey, currentLevel);
         PlayerPrefs.Save();

@@ -11,7 +11,7 @@ public static class GelLauncherFx
 {
     private const string OpenPath = "GelLauncher/GelLauncherOpen";
     private const string SteamPath = "GelLauncher/GelSteam";
-    private static readonly Color SteamTint = new Color(0.97f, 0.9f, 1f, 0.9f);
+    private static readonly Color SteamTint = new Color(0.60f, 0.38f, 0.78f, 1f);
     private static Sprite[] steamSprites;
 
     // Grid'de y aşağı artar: Up = (0,-1).
@@ -72,10 +72,10 @@ public static class GelLauncherFx
             var sprite = RandomSteamSprite();
             if (sprite == null) return;
 
-            var go = new GameObject("GelSteam", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var img = UiVfxPool.RentImage(GelLauncherSteamFx.PoolKey, parent, "GelSteam");
+            var go = img.gameObject;
             go.layer = parent.gameObject.layer;
             var rt = (RectTransform)go.transform;
-            rt.SetParent(parent, false);
             rt.SetAsLastSibling();
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
@@ -83,7 +83,6 @@ public static class GelLauncherFx
             float size = cell * sizeScale * Random.Range(0.85f, 1.15f);
             rt.sizeDelta = new Vector2(size, size);
 
-            var img = go.GetComponent<Image>();
             img.sprite = sprite;
             img.preserveAspect = true;
             img.raycastTarget = false;
@@ -92,26 +91,10 @@ public static class GelLauncherFx
             // Sırayla sola / sağa (iki buluttan fazlası ileri doğru dağılır).
             float side = count == 1 ? Random.Range(-0.4f, 0.4f) : (i % 2 == 0 ? -1f : 1f) * Random.Range(0.7f, 1.1f);
             Vector2 drift = (uiDir * Random.Range(0.25f, 0.55f) + perp * side * 0.6f) * cell;
-            host.StartCoroutine(CoPuff(rt, img, drift, Random.Range(0.75f, 1f)));
+            // A shared driver outlives the emitter; no per-puff component or coroutine allocation.
+            float lifetime = Random.Range(0.75f, 1f);
+            GelLauncherSteamFx.Track(img, rt, drift, lifetime);
         }
-    }
-
-    private static IEnumerator CoPuff(RectTransform rt, Image img, Vector2 drift, float seconds)
-    {
-        Vector3 start = rt.localPosition;
-        for (float t = 0f; t < seconds; t += Time.deltaTime)
-        {
-            if (rt == null) yield break;
-            float k = t / seconds;
-            float ease = 1f - (1f - k) * (1f - k);
-            rt.localPosition = start + (Vector3)(drift * ease);
-            rt.localScale = Vector3.one * Mathf.Lerp(0.35f, 1.15f, ease);
-            var c = SteamTint;
-            c.a = SteamTint.a * (1f - k);
-            img.color = c;
-            yield return null;
-        }
-        if (rt != null) Object.Destroy(rt.gameObject);
     }
 }
 

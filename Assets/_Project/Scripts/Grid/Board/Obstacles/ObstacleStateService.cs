@@ -580,6 +580,10 @@ public class ObstacleStateService : ISimObstacleQuery
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
         }
 
+        // Ancient Seal only advances through tile collection, including for boosters.
+        if (id == ObstacleId.AncientSeal)
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
         // Safe: hits are fully managed by SafeObstacleService via the interceptor (lock state,
         // break + reveal). Hit is consumed; cells are NOT cleared here (safe stays until broken).
         if (id == ObstacleId.Safe)
@@ -1127,7 +1131,7 @@ public class ObstacleStateService : ISimObstacleQuery
     {
         if (id == ObstacleId.None) return false;
         if (id == ObstacleId.Tube) return true;
-        if (id == ObstacleId.Safe) return true;
+        if (id == ObstacleId.Safe || id == ObstacleId.AncientSeal) return true;
         // Magnet path/uç hücreleri MagnetObstacleService ile yönetilir (normal hit-stage'i yok).
         // Tüm magnet alanı işgal edilmiş sayılır → taş spawn olmaz. Uç hit alıp küçüldükçe
         // FreeMagnetCell o hücreyi None yapar → hücre açılır ve gravity ile dolar (alan "kapanır").
@@ -2264,6 +2268,9 @@ public class ObstacleStateService : ISimObstacleQuery
     /// stage kuralına bakmak "1 vuruş var" der ve PatchBot'lar bitmiş makineye gider).
     public Func<bool> KeyGeneratorCanProduceQuery;
 
+    // Producer quota/HUD eligibility is independent of the permanent obstacle stage.
+    public Func<bool> HatLauncherCanProduceQuery;
+
     public int GetActiveMeaningfulHitsAt(int x, int y)
     {
         if (!IsValidCell(x, y)) return 0;
@@ -2272,7 +2279,12 @@ public class ObstacleStateService : ISimObstacleQuery
         var id = (ObstacleId)level.obstacles[idx];
         if (id == ObstacleId.None) return 0;
 
+        if (id == ObstacleId.AncientSeal) return 0;
         if (id == ObstacleId.Tube) return 1;
+
+        if (id == ObstacleId.HatLauncher)
+            return HatLauncherHitInterceptor != null && HatLauncherCanProduceQuery != null
+                   && HatLauncherCanProduceQuery() ? 1 : 0;
 
         if (id == ObstacleId.KeyGenerator)
             return KeyGeneratorCanProduceQuery != null && KeyGeneratorCanProduceQuery() ? 1 : 0;
@@ -2556,6 +2568,12 @@ public class ObstacleStateService : ISimObstacleQuery
         if (origin < 0 || origin >= remainingHitsByOrigin.Length) return;
         if (id != ObstacleId.Wall && id != ObstacleId.MetalWall) return;
         wallRemainingHits[(id, origin)] = Mathf.Max(1, remaining);
+    }
+
+    /// All collection stages completed: count one Ancient Seal goal.
+    public void NotifyAncientSealBroken(int origin)
+    {
+        OnObstacleDestroyed?.Invoke(origin, ObstacleId.AncientSeal);
     }
 
     /// Safe kırıldı → goal (Obstacle/Safe) ilerlesin. NotifyTubeFullyDestroyed analoğu.

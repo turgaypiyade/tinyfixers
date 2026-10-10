@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// PatchBot intent — bot'un "neyi hedeflediğinin" hafızası.
-/// Cell index değil, asıl hedef referansı tutulur ki taş düşse de takip edilebilsin.
+/// Normal taş referansı takip edilir; jel yayma hedefi kaplanacak hücreye sabitlenir.
 /// </summary>
 public sealed class PatchBotIntent
 {
@@ -15,6 +15,11 @@ public sealed class PatchBotIntent
 
     /// <summary>Seçim anındaki cell — debug ve fallback için.</summary>
     public Vector2Int InitialCell;
+    private Vector2Int? cachedObstacleCell;
+
+    // Gel covers a board cell, not the falling tile that occupied it at takeoff.
+    public bool TargetsGelSpreadCell;
+    internal PatchbotComboService GelTargetService;
 
     public bool IsObstacle => ObstacleOriginIndex >= 0;
     public bool IsTile => TargetTile != null;
@@ -26,21 +31,15 @@ public sealed class PatchBotIntent
     {
         if (board == null) return false;
 
-        if (IsObstacle)
-        {
-            var obstacleService = board.ObstacleStateService;
-            if (obstacleService == null) return false;
+        if (TargetsGelSpreadCell)
+            return InitialCell.x >= 0 && InitialCell.x < board.Width
+                   && InitialCell.y >= 0 && InitialCell.y < board.Height
+                   && GelTargetService != null
+                   && GelTargetService.IsGelSpreadTarget(InitialCell.x, InitialCell.y,
+                       board.Tiles[InitialCell.x, InitialCell.y]);
 
-            // Origin'i tara — obstacle hâlâ o origin index'inde duruyor mu ve hit alabilir mi?
-            for (int x = 0; x < board.Width; x++)
-                for (int y = 0; y < board.Height; y++)
-                {
-                    if (obstacleService.GetObstacleOriginAt(x, y) == ObstacleOriginIndex
-                        && board.TargetPool.IsHittableObstacleCell(x, y))
-                        return true;
-                }
-            return false;
-        }
+        if (IsObstacle)
+            return TryGetObstacleCell(board, out _);
 
         if (TargetTile == null) return false;
 
@@ -61,23 +60,44 @@ public sealed class PatchBotIntent
     /// </summary>
     public Vector2Int CurrentCell(BoardController board)
     {
-        if (!IsAlive(board)) return new Vector2Int(-1, -1);
-
+        if (TargetsGelSpreadCell)
+            return IsAlive(board) ? InitialCell : new Vector2Int(-1, -1);
         if (IsObstacle)
+            return TryGetObstacleCell(board, out var cell) ? cell : new Vector2Int(-1, -1);
+        if (!IsAlive(board)) return new Vector2Int(-1, -1);
+        return new Vector2Int(TargetTile.X, TargetTile.Y);
+    }
+
+    private bool TryGetObstacleCell(BoardController board, out Vector2Int cell)
+    {
+        cell = new Vector2Int(-1, -1);
+        var obstacleService = board != null ? board.ObstacleStateService : null;
+        if (obstacleService == null) return false;
+
+        // Most obstacles stay in place. Validate one cached cell, not the entire board
+        // two or three times per bot per flight tick. Never cache hit eligibility itself.
+        var candidate = cachedObstacleCell ?? InitialCell;
+        if (candidate.x >= 0 && candidate.y >= 0 && candidate.x < board.Width && candidate.y < board.Height
+            && obstacleService.GetObstacleOriginAt(candidate.x, candidate.y) == ObstacleOriginIndex
+            && board.TargetPool.IsHittableObstacleCell(candidate.x, candidate.y))
         {
-            var obstacleService = board.ObstacleStateService;
-            // İlk bulduğun origin-eşleşen ve hit alabilir hücreyi döndür.
-            for (int x = 0; x < board.Width; x++)
-                for (int y = 0; y < board.Height; y++)
-                {
-                    if (obstacleService.GetObstacleOriginAt(x, y) == ObstacleOriginIndex
-                        && board.TargetPool.IsHittableObstacleCell(x, y))
-                        return new Vector2Int(x, y);
-                }
-            return new Vector2Int(-1, -1);
+            cell = candidate;
+            return true;
         }
 
-        return new Vector2Int(TargetTile.X, TargetTile.Y);
+        // A footprint can shrink or move; find a surviving cell only when the cached one fails.
+        for (int x = 0; x < board.Width; x++)
+            for (int y = 0; y < board.Height; y++)
+            {
+                if (obstacleService.GetObstacleOriginAt(x, y) == ObstacleOriginIndex
+                    && board.TargetPool.IsHittableObstacleCell(x, y))
+                {
+                    cell = new Vector2Int(x, y);
+                    cachedObstacleCell = cell;
+                    return true;
+                }
+            }
+        return false;
     }
 }
 
@@ -176,9 +196,10 @@ public class PatchBotTargetCoordinator
         TileView partnerTile,
         HashSet<TileView> excluded,
         TileView[] additionalExcluded,
-        Vector2Int fromCell)
+        Vector2Int fromCell,
+        bool preserveGelPreference = false)
     {
-        var pick = FindTargetWithReservations(patchBotTile, partnerTile, excluded, additionalExcluded, fromCell);
+        var pick = FindTargetWithReservations(patchBotTile, partnerTile, excluded, additionalExcluded, fromCell, preserveGelPreference);
         if (!pick.hasCell)
             return (null, false);
 
@@ -188,8 +209,9 @@ public class PatchBotTargetCoordinator
         };
 
         var obstacleService = board.ObstacleStateService;
-        bool isObstacle = obstacleService != null
-            && obstacleService.GetObstacleIdAt(pick.x, pick.y) != ObstacleId.None;
+        // A tile on unbreakable gel is still a tile target. Treating it as an obstacle
+        // creates a dead intent and prevents retargeting from an exhausted generator to that key.
+        bool isObstacle = !pick.gelSpread && Pool.IsHittableObstacleCell(pick.x, pick.y);
 
         if (isObstacle)
         {
@@ -204,7 +226,10 @@ public class PatchBotTargetCoordinator
             intent.ObstacleOriginIndex = -1;
             intent.TargetTile = pick.tile;
 
-            Pool.ReserveTile(pick.tile);
+            intent.TargetsGelSpreadCell = pick.gelSpread;
+            intent.GelTargetService = patchbotService;
+            if (intent.TargetsGelSpreadCell) Pool.ReserveCell(intent.InitialCell);
+            else Pool.ReserveTile(pick.tile);
         }
 
         activeBotCount++;
@@ -224,18 +249,21 @@ public class PatchBotTargetCoordinator
         HashSet<TileView> excluded,
         params TileView[] additionalExcluded)
     {
-        if (intent != null && intent.IsAlive(board))
+        if (intent != null)
         {
             var current = intent.CurrentCell(board);
             if (current.x >= 0)
                 return (current, intent, true);
         }
 
+        bool preserveGelPreference = intent != null && intent.TargetsGelSpreadCell;
         // Intent öldü — serbest bırak, yeni hedef ara.
         if (intent != null)
             ReleaseIntent(intent);
 
-        var (newIntent, hasNew) = PickIntent(patchBotTile, partnerTile, excluded, additionalExcluded);
+        var fromCell = patchBotTile != null ? new Vector2Int(patchBotTile.X, patchBotTile.Y) : Vector2Int.zero;
+        var (newIntent, hasNew) = PickIntentCore(patchBotTile, partnerTile, excluded, additionalExcluded,
+            fromCell, preserveGelPreference);
         if (!hasNew)
             return (new Vector2Int(-1, -1), null, false);
 
@@ -259,17 +287,19 @@ public class PatchBotTargetCoordinator
         TileView partnerTile = null,
         HashSet<TileView> excluded = null)
     {
-        if (intent != null && intent.IsAlive(board))
+        if (intent != null)
         {
             var current = intent.CurrentCell(board);
             if (current.x >= 0)
                 return (current, intent, true);
         }
 
+        bool preserveGelPreference = intent != null && intent.TargetsGelSpreadCell;
         if (intent != null)
             ReleaseIntent(intent);
 
-        var (newIntent, hasNew) = PickIntentFrom(fromCell, patchBotTile, partnerTile, excluded);
+        var (newIntent, hasNew) = PickIntentCore(patchBotTile, partnerTile, excluded, null,
+            fromCell, preserveGelPreference);
         if (!hasNew)
             return (new Vector2Int(-1, -1), null, false);
 
@@ -291,7 +321,9 @@ public class PatchBotTargetCoordinator
     {
         if (intent == null) return;
 
-        if (intent.IsObstacle)
+        if (intent.TargetsGelSpreadCell)
+            Pool.ReleaseCell(intent.InitialCell);
+        else if (intent.IsObstacle)
             Pool.ReleaseObstacle(intent.ObstacleOriginIndex);
         else if (intent.TargetTile != null)
             Pool.ReleaseTile(intent.TargetTile);
@@ -319,6 +351,13 @@ public class PatchBotTargetCoordinator
 
     public void ReleaseReservation(int x, int y)
     {
+        var cell = new Vector2Int(x, y);
+        if (Pool.IsCellReserved(cell))
+        {
+            Pool.ReleaseCell(cell);
+            activeBotCount = Mathf.Max(0, activeBotCount - 1);
+            return;
+        }
         var obstacleService = board.ObstacleStateService;
         if (obstacleService != null)
         {
@@ -350,12 +389,13 @@ public class PatchBotTargetCoordinator
 
     private readonly List<TopHudController.ActiveGoal> activeGoalsBuffer = new();
 
-    private (TileView tile, int x, int y, bool hasCell) FindTargetWithReservations(
+    private (TileView tile, int x, int y, bool hasCell, bool gelSpread) FindTargetWithReservations(
         TileView patchBotTile,
         TileView partnerTile,
         HashSet<TileView> excluded,
         TileView[] additionalExcluded,
-        Vector2Int fromCell)
+        Vector2Int fromCell,
+        bool preserveGelPreference)
     {
         var cargoDropPathCells = new List<(int x, int y, TileView tile)>();
         var obstacleGoalCells = new List<(int x, int y, TileView tile)>();
@@ -395,7 +435,7 @@ public class PatchBotTargetCoordinator
         // Jel kırılmaz → jelli hücre "goal obstacle" değildir; bot bulaş taşıyorsa jelsiz alana gider.
         bool gelGoalActive = activeObstacleGoals.Remove(ObstacleId.SpreadingGel);
         bool preferNonGel = patchbotService != null
-                            && patchbotService.ShouldPreferNonGelCells(patchBotTile, gelGoalActive);
+                            && (preserveGelPreference || patchbotService.ShouldPreferNonGelCells(patchBotTile, gelGoalActive));
 
         bool IsExcludedTile(TileView tile)
         {
@@ -442,7 +482,7 @@ public class PatchBotTargetCoordinator
                 var tile = board.Tiles[x, y];
 
                 if (preferNonGel && !IsSpecialTile(tile) && patchbotService.IsGelSpreadTarget(x, y, tile)
-                    && !IsExcludedTile(tile) && !IsTileReserved(tile))
+                    && !IsExcludedTile(tile) && !IsTileReserved(tile) && !Pool.IsCellReserved(new Vector2Int(x, y)))
                     gelSpreadCells.Add((x, y, tile));
 
                 bool hasObstacle = board.ObstacleStateService != null
@@ -470,7 +510,7 @@ public class PatchBotTargetCoordinator
                             && board.GridData[x, y] != null
                             && SpecialUtils.CanTargetTileContent(board, x, y)
                             && !IsExcludedTile(tile)
-                            && !IsTileReserved(tile))
+                            && !IsTileReserved(tile) && !Pool.IsCellReserved(new Vector2Int(x, y)))
                             AddTileCandidate(x, y, tile);
                         continue;
                     }
@@ -499,7 +539,7 @@ public class PatchBotTargetCoordinator
                          && SpecialUtils.CanTargetTileContent(board, x, y)
                          && !IsExcludedTile(tile))
                 {
-                    if (IsTileReserved(tile))
+                    if (IsTileReserved(tile) || Pool.IsCellReserved(new Vector2Int(x, y)))
                         continue;
 
                     AddTileCandidate(x, y, tile);
@@ -553,7 +593,7 @@ public class PatchBotTargetCoordinator
         if (cargoDropPathCells.Count > 0)
         {
             var pick = cargoDropPathCells[PickIdx(cargoDropPathCells)];
-            return (pick.tile, pick.x, pick.y, true);
+            return (pick.tile, pick.x, pick.y, true, false);
         }
 
         // Öncelik (kullanıcı kuralı 2026-10-03): ObstacleLibrary'de tanımlı her engel — hedefte olsun
@@ -561,31 +601,25 @@ public class PatchBotTargetCoordinator
         if (obstacleGoalCells.Count > 0)
         {
             var pick = obstacleGoalCells[RandomIdx(obstacleGoalCells)];
-            return (pick.tile, pick.x, pick.y, true);
+            return (pick.tile, pick.x, pick.y, true, false);
         }
 
         if (obstacleGoalUnderCells.Count > 0)
         {
             var pick = obstacleGoalUnderCells[RandomIdx(obstacleGoalUnderCells)];
-            return (pick.tile, pick.x, pick.y, true);
+            return (pick.tile, pick.x, pick.y, true, false);
         }
 
         if (otherObstacleCells.Count > 0)
         {
             var pick = otherObstacleCells[RandomIdx(otherObstacleCells)];
-            return (pick.tile, pick.x, pick.y, true);
+            return (pick.tile, pick.x, pick.y, true, false);
         }
 
         if (otherObstacleUnderCells.Count > 0)
         {
             var pick = otherObstacleUnderCells[RandomIdx(otherObstacleUnderCells)];
-            return (pick.tile, pick.x, pick.y, true);
-        }
-
-        if (tileGoalCells.Count > 0)
-        {
-            var pick = tileGoalCells[PickIdx(tileGoalCells)];
-            return (pick.tile, pick.x, pick.y, true);
+            return (pick.tile, pick.x, pick.y, true, false);
         }
 
         // Jel taşıyan bot (jel kaplama hedefi aktif): jelsiz bölgenin EN YOĞUN yerine. Rezervasyon
@@ -593,22 +627,28 @@ public class PatchBotTargetCoordinator
         if (gelSpreadCells.Count > 0)
         {
             var pick = gelSpreadCells[PickIdx(gelSpreadCells)];
-            return (pick.tile, pick.x, pick.y, true);
+            return (pick.tile, pick.x, pick.y, true, true);
+        }
+
+        if (tileGoalCells.Count > 0)
+        {
+            var pick = tileGoalCells[PickIdx(tileGoalCells)];
+            return (pick.tile, pick.x, pick.y, true, false);
         }
 
         if (normalCells.Count > 0)
         {
             var pick = normalCells[PickIdx(normalCells)];
-            return (pick.tile, pick.x, pick.y, true);
+            return (pick.tile, pick.x, pick.y, true, false);
         }
 
         if (specialFallbackCells.Count > 0)
         {
             var pick = specialFallbackCells[PickIdx(specialFallbackCells)];
-            return (pick.tile, pick.x, pick.y, true);
+            return (pick.tile, pick.x, pick.y, true, false);
         }
 
-        return (null, -1, -1, false);
+        return (null, -1, -1, false, false);
     }
 
     // Payload etki yarıçapı (PulseCore 5x5 ≈ 2; line/bomb için de yoğunluk iyi bir proxy).

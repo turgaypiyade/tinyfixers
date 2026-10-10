@@ -29,8 +29,21 @@ public sealed class OilSpreadAnimator : MonoBehaviour
         foreach (var pair in pairs)
             StartCoroutine(PlayOnePair(pair, () => done++));
 
+        // Takılma sigortası: bir çift coroutine'i hata/durdurma ile ölürse onDone hiç gelmez ve
+        // ResolveBoard sonsuza dek bekler (board donar). Oil verisi animasyondan ÖNCE yazıldığı için
+        // süre dolunca beklemeyi bırakmak oyunu bozmaz (kalıcı oil görseli RefreshOilOverlays ile çizilir).
+        float timeout = duration * 0.65f + Mathf.Max(duration * 0.35f, spreadFrameSequenceDuration) + 1.5f;
+        float waited = 0f;
         while (done < pairs.Count)
+        {
+            waited += Time.deltaTime;
+            if (waited > timeout)
+            {
+                Debug.LogWarning($"[OilAnim] Spread animation timed out ({done}/{pairs.Count}) — continuing.");
+                yield break;
+            }
             yield return null;
+        }
     }
 
     private IEnumerator PlayOnePair(OilSpreadPair pair, System.Action onDone)

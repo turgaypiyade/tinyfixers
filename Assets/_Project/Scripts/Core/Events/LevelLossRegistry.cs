@@ -29,6 +29,10 @@ public readonly struct LevelLossItem
 /// bir provider ile buraya kaydeder; UI yalnızca <see cref="Collect"/> ile toplayıp çizer.
 /// Yeni event = yeni provider + Register → UI'a HİÇ dokunulmaz (open/closed).
 ///
+/// KURAL (kullanıcı, 2026-10-10): oyuncunun bu level'da FİİLEN kazandığı ve vazgeçince silinecek her şey
+/// (yarım event ilerlemesi dahil) burada görünmeli — oyuncuyu tutmanın aracı budur. Level içinde kazanım
+/// biriktiren yeni bir sistem yazılırsa provider'ı da yazılır. Kaybı olmayan event (ör. Bridge) kaydedilmez.
+///
 /// Pull-based: provider O ANKİ canlı durumu okur (staging/commit/discard senkronu YOK).
 /// Keyed: aynı anahtar tekrar Register edilince ÜzerINE yazılır → sahne yeniden yüklense de
 /// çift kayıt olmaz.

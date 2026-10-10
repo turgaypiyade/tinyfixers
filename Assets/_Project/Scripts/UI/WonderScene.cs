@@ -48,13 +48,13 @@ public class WonderScene : MonoBehaviour
         var bgImg = bg.GetComponent<Image>();
         bgImg.sprite = def.backgroundSprite;
         bgImg.preserveAspect = false;
-        if (shader != null) bgImg.material = new Material(shader) { name = $"WonderReveal_{def.wonderId}" };
         var fitter = bg.GetComponent<AspectRatioFitter>();
         fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
         if (def.backgroundSprite != null)
             fitter.aspectRatio = (float)def.backgroundSprite.texture.width / def.backgroundSprite.texture.height;
 
         var view = bg.GetComponent<WonderRevealView>();
+        view.ConfigureShader(shader);
         view.wonderId = def.wonderId;
         view.totalStages = def.TaskCount;
         view.welderFrames = def.welderFrames;

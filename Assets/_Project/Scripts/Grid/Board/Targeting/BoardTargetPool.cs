@@ -25,6 +25,9 @@ public sealed class BoardTargetPool
     private readonly Dictionary<int, List<float>> obstacleReservations = new();   // origin → rezervasyon anları
     private readonly Dictionary<TileView, float> tileReservations = new();
 
+    private readonly Dictionary<Vector2Int, float> cellReservations = new();
+    private readonly List<Vector2Int> staleCellBuffer = new();
+
     public BoardTargetPool(BoardController board)
     {
         this.board = board;
@@ -44,6 +47,9 @@ public sealed class BoardTargetPool
         var id = obs.GetObstacleIdAt(x, y);
         // Hamster bir karakter: hedeflenmez (PatchBot onu "kırmaya" gitmez; hamster da kendini hedef seçmez).
         if (id == ObstacleId.None || id == ObstacleId.SpreadingGel || id == ObstacleId.Hamster) return false;
+        // The collection goal can remain active after every key has been produced.
+        // Completion invalidates both new picks and existing airborne intents immediately.
+        if (id == ObstacleId.KeyGenerator && board.KeyGeneratorProductionComplete) return false;
         if (obs.IsExitAtBottomAt(x, y)) return false;
         if (id == ObstacleId.Tube)
         {
@@ -116,6 +122,17 @@ public sealed class BoardTargetPool
         return list.Count;
     }
 
+    // Fixed cell reservations keep gel bots separated even while tiles fall/refill.
+    public void ReserveCell(Vector2Int cell) => cellReservations[cell] = Now;
+    public void ReleaseCell(Vector2Int cell) => cellReservations.Remove(cell);
+    public bool IsCellReserved(Vector2Int cell)
+    {
+        if (!cellReservations.TryGetValue(cell, out float at)) return false;
+        if (Now - at <= ReservationTtlSeconds) return true;
+        cellReservations.Remove(cell);
+        return false;
+    }
+
     public void ReserveTile(TileView tile)
     {
         if (tile != null) tileReservations[tile] = Now;
@@ -137,7 +154,14 @@ public sealed class BoardTargetPool
     /// Canlı rezervasyonların tahtadaki hücreleri (seçicilerin "botları farklı kümelere yay" cezası için).
     public List<Vector2Int> ReservedCells()
     {
-        var cells = new List<Vector2Int>(tileReservations.Count + obstacleReservations.Count);
+        var cells = new List<Vector2Int>(tileReservations.Count + obstacleReservations.Count + cellReservations.Count);
+        staleCellBuffer.Clear();
+        foreach (var kv in cellReservations)
+        {
+            if (Now - kv.Value > ReservationTtlSeconds) staleCellBuffer.Add(kv.Key);
+            else cells.Add(kv.Key);
+        }
+        foreach (var cell in staleCellBuffer) cellReservations.Remove(cell);
         var staleTiles = new List<TileView>();
         foreach (var kv in tileReservations)
         {

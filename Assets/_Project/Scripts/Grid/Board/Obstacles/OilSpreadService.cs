@@ -24,11 +24,35 @@ public sealed class OilSpreadService
 
     private readonly BoardController board;
     private readonly ObstacleStateService obstacles;
+    private readonly int initialOilCount;
+    private int spreadCap = -1;
 
     public OilSpreadService(BoardController board, ObstacleStateService obstacles)
     {
         this.board = board;
         this.obstacles = obstacles;
+        // Başlangıç oil'i servis kurulurken (level verisi taze) sayılır; tavan ise ilk yayılmada
+        // hesaplanır — kurulum anında hole haritası henüz dolmamış olabilir.
+        initialOilCount = obstacles != null ? obstacles.GetAllOilCells().Count : 0;
+    }
+
+    // Yayılma tavanı: oil board'u boğup oyunu kilitlemesin. Level'da açık değer yoksa oynanabilir
+    // hücrelerin dörtte biri; tasarımcının koyduğu başlangıç oil'i asla kısılmaz.
+    private int SpreadCap
+    {
+        get
+        {
+            if (spreadCap >= 0) return spreadCap;
+            var level = board.ActiveLevelData;
+            if (level != null && level.oilSpreadMaxCells > 0)
+                return spreadCap = level.oilSpreadMaxCells;
+
+            int usable = 0;
+            for (int y = 0; y < board.Height; y++)
+                for (int x = 0; x < board.Width; x++)
+                    if (!board.Holes[x, y]) usable++;
+            return spreadCap = Mathf.Max(initialOilCount, Mathf.Max(1, usable / 4));
+        }
     }
 
     public List<OilSpreadPair> CalculateSpread(IReadOnlyCollection<Vector2Int> oilHitCellsThisMove)
@@ -47,6 +71,12 @@ public sealed class OilSpreadService
         var oilCells = obstacles.GetAllOilCells();
         if (oilCells == null || oilCells.Count == 0)
             return result;
+
+        if (oilCells.Count >= SpreadCap)
+        {
+            Debug.Log($"[Oil] Spread skipped. Cap reached: {oilCells.Count}/{SpreadCap}");
+            return result;
+        }
 
         var reserved = new HashSet<Vector2Int>();
 
@@ -86,9 +116,8 @@ public sealed class OilSpreadService
 
     private bool CanSpreadTo(Vector2Int cell)
     {
-        if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height) return false;
-        if (board.Holes[cell.x, cell.y]) return false;
-        if (board.GetTileViewAt(cell.x, cell.y) == null) return false;
+        // Taş kuralı boss fırlatmasıyla ORTAK: special/anahtar kilitlenmez, sürüklenen/hareketli taşa girilmez.
+        if (!board.IsTileFreeForDynamicObstacle(cell.x, cell.y)) return false;
         return obstacles.CanOilSpreadTo(cell.x, cell.y);
     }
 

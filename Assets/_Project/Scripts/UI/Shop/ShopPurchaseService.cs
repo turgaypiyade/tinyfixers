@@ -16,6 +16,27 @@ public static class ShopPurchaseService
     /// <summary>Başarılı her alımda (içerik verildikten sonra) tetiklenir.</summary>
     public static event Action<ShopOffer> OnPurchased;
 
+    /// Receipt presentation: whether a separate +1 life thank-you was granted.
+    public static event Action<ShopOffer, bool> OnReceipt;
+
+    /// Integration hook for the future IAP adapter, AFTER store/server verification and
+    /// successful, idempotent fulfilment of the purchased contents. This method does NOT
+    /// verify receipts or deliver the main bundle. Pass a store-qualified transaction ID.
+    /// Replayed callbacks do not repeat the gift or its celebration on this saved profile.
+    public static bool NotifyVerifiedPurchaseFulfilled(ShopOffer offer, string transactionId)
+    {
+        if (offer == null || offer.priceType != ShopOffer.PriceType.RealMoney
+            || !LivesManager.GrantPurchaseThanks(transactionId)) return false;
+        PublishReceipt(offer, true);
+        return true;
+    }
+
+    private static void PublishReceipt(ShopOffer offer, bool thanks)
+    {
+        OnReceipt?.Invoke(offer, thanks);
+        OnPurchased?.Invoke(offer);
+    }
+
     /// <summary>Teklifi satın almayı dener. İçerik verildiyse true.</summary>
     public static bool TryPurchase(ShopOffer offer)
     {
@@ -45,7 +66,10 @@ public static class ShopPurchaseService
 
         ShopState.RecordPurchase(offer);
         ShopRewardGranter.Grant(offer);
-        OnPurchased?.Invoke(offer);
+        // Development preview only; production RealMoney clicks still return false above.
+        bool thanks = offer.priceType == ShopOffer.PriceType.RealMoney
+            && LivesManager.GrantPurchaseThanks("dev-simulation:" + Guid.NewGuid().ToString("N"));
+        PublishReceipt(offer, thanks);
         return true;
     }
 }

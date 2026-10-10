@@ -25,6 +25,7 @@ public class PatchbotDashUI : MonoBehaviour
         public Vector2? goal;
         public System.Func<Vector2?> resolve;
         public float resolveTimer;
+        public bool HasTarget => resolve == null || goal.HasValue;
     }
 
     [Header("Refs")]
@@ -419,14 +420,14 @@ public class PatchbotDashUI : MonoBehaviour
 
         if (spinCycler != null) StopCoroutine(spinCycler);
 
-        rt.anchoredPosition = live.target;
+        if (live.HasTarget) rt.anchoredPosition = live.target;
         rt.localRotation = Quaternion.identity;
         rt.localScale = Vector3.one;
 
         if (carryRt != null)
             carryRt.localRotation = Quaternion.identity;
 
-        SpawnImpactSparks(live.target, size, board, req.to);
+        if (live.HasTarget) SpawnImpactSparks(live.target, size, board, req.to);
 
         req.onArrived?.Invoke();
         yield return StopFlightAudioRoutine(flightSource);
@@ -520,8 +521,8 @@ public class PatchbotDashUI : MonoBehaviour
         {
             live.resolveTimer = 0f;
             var desired = live.resolve();
-            if (desired.HasValue)
-                live.goal = desired.Value;
+            // Null invalidates the previous cell; it must not keep attracting the bot.
+            live.goal = desired;
         }
 
         if (!live.goal.HasValue || live.goal.Value == live.target)
@@ -618,6 +619,7 @@ public class PatchbotDashUI : MonoBehaviour
         DashMotionState motion,
         Image spinnerImg = null)
     {
+        if (!live.HasTarget) yield break;
         Vector2 initialDelta = live.target - start;
         float arc = Mathf.Clamp(initialDelta.magnitude * Mathf.Max(0f, diveArcFactor), Mathf.Min(size.x, size.y) * 0.10f, Mathf.Min(size.x, size.y) * 0.45f);
 
@@ -631,6 +633,7 @@ public class PatchbotDashUI : MonoBehaviour
             // Hedef uçuş sırasında ölmüş olabilir — her tick mantıksal board'dan
             // doğrula; değiştiyse target yumuşakça yeni hücreye kayar (kavisli dönüş).
             TickLiveRetarget(live, dt);
+            if (!live.HasTarget) yield break;
 
             float t = Mathf.Clamp01(local / duration);
             // Ease-IN: hedefe doğru ivmelenen pike (smoothstep yerine).
@@ -652,7 +655,7 @@ public class PatchbotDashUI : MonoBehaviour
 
         // Hedef dalış sırasında değiştiyse süre dolduğunda hâlâ uzakta olabiliriz —
         // canlı hedefe kilitli düz uçuşla tamamla (süre sınırlı; hedef yine ölürse
-        // takip devam eder, son bilinen hücreye konar).
+        // geçerli hedef kalmazsa dalış iptal edilir).
         float homingElapsed = 0f;
         while ((rt.anchoredPosition - live.target).magnitude > arriveEps && homingElapsed < maxRetargetHomingDuration)
         {
@@ -661,6 +664,7 @@ public class PatchbotDashUI : MonoBehaviour
             motion.elapsed += dt;
 
             TickLiveRetarget(live, dt);
+            if (!live.HasTarget) yield break;
 
             rt.anchoredPosition = Vector2.MoveTowards(rt.anchoredPosition, live.target, Mathf.Max(1f, homingSpeed) * dt);
             rt.localRotation = Quaternion.identity;

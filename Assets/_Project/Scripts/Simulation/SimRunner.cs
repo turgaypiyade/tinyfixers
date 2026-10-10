@@ -365,6 +365,7 @@ public static class SimRunner
         if (level.tubes != null && level.tubes.Length > 0) ids.Add(ObstacleId.Tube);
         if (level.magnets != null && level.magnets.Length > 0) ids.Add(ObstacleId.Magnet);
         if (level.safes != null && level.safes.Length > 0) ids.Add(ObstacleId.Safe);
+        if (level.ancientSeals != null && level.ancientSeals.Length > 0) ids.Add(ObstacleId.AncientSeal);
         if (level.goals != null)
             foreach (var goal in level.goals)
                 if (goal.targetType == LevelGoalTargetType.Obstacle) ids.Add(goal.obstacleId);
@@ -379,6 +380,10 @@ public static class SimRunner
             }
             switch (id)
             {
+                case ObstacleId.AncientSeal:
+                    fidelity = SimGoalFidelity.NotSimulated;
+                    warnings.Add("AncientSeal: tahtadan renk sırasıyla taş toplama davranışı modellenmiyor.");
+                    break;
                 case ObstacleId.EnergyContainer:
                 case ObstacleId.HatLauncher:
                 case ObstacleId.KeyGenerator:

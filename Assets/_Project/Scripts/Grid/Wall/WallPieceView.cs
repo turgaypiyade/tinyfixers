@@ -15,7 +15,7 @@ using UnityEngine.UI;
 ///  - Detay: kiremit'in iç düz alanının %85'i boyutunda, alanın merkezinde; aşama 0'da rastgele
 ///    kabartma (+ayna), sonraki aşamalarda türün çatlak dokuları; fitili dışarıda olan çatlaklarda alev.
 /// Katman sırası: çeyrekler → iç köşeler → detaylar → efektler. Yıkılmada her hücrenin üç katmandaki
-/// grubu birlikte düşer (zincirleme patlama, sonra gövde yukarıdan aşağı çöker).
+/// grubu hücrenin patlama anında gizlenir; o hücre taş düşüşüne hemen açılır.
 /// </summary>
 public sealed class WallPieceView : MonoBehaviour
 {
@@ -61,7 +61,7 @@ public sealed class WallPieceView : MonoBehaviour
         public string flameKey;
         public RectTransform flames;
         public Coroutine punch;
-        public bool falling;                 // çöküş başladı → patlama sarsıntısı bırakır
+        public bool cellReleased;
     }
 
     private readonly Dictionary<int, CellParts> cells = new();
@@ -260,54 +260,64 @@ public sealed class WallPieceView : MonoBehaviour
 
     // ── Yıkılma ─────────────────────────────────────────────────────────
 
-    /// Parça veriden silindi: tetik hücrede büyük patlama → parça içinde halka halka zincirleme patlama →
-    /// taban çöker, üstündekiler neredeyse aynı anda aşağı inip tabandaki yığına basılır; tabanda toz
-    /// kalkar. Toplam ~0.5 sn (veri anında boşaldığı için taşlar hemen düşmeye başlar). Bitince yok olur.
-    /// onCollapseStart: patlamadan sonra yığılma başladığı an (yığılma sesi için).
-    /// onBlast(cellIndex, isTrigger): her patlama anı (ses/sarsıntı). onCollapseStart: zincir bitip çöküş
-    /// başladığı an (yığılma sesi). onFinished: görünüm tamamen bitti (hücre tutma/iş serbest) — görünüm erken
-    /// yok edilse de (level yeniden kurulumu) bir kez çağrılır.
+    /// Tetik hücreden yayılan zincir: her hücre kendi patlamasında görünümünü ve kilidini bırakır.
+    /// onCollapseStart ilk patlama anında, onFinished son hücre açıldığında çağrılır.
+    /// Erken iptal de onFinished'i bir kez çağırır; dekoratif döküntü hücreleri tutmaz.
     public void PlayCollapse(int triggerCell, System.Action<int, bool> onBlast = null,
-        System.Action onCollapseStart = null, System.Action onFinished = null)
+        System.Action onCollapseStart = null, System.Action onFinished = null,
+        System.Action<int> onCellVacated = null)
     {
         if (collapsing) return;
         collapsing = true;
         finishCallback = onFinished;
+        cellVacatedCallback = onCellVacated;
+        effects.Capacity = 128; // Büyük parçacık tamponunu yalnız yıkılacak duvara ayır.
         StartCoroutine(CollapseRoutine(triggerCell, onBlast, onCollapseStart));
     }
 
     private System.Action finishCallback;
+    private System.Action<int> cellVacatedCallback;
 
     private void Finish()
     {
         var cb = finishCallback;
         finishCallback = null;
+        cellVacatedCallback = null;
         cb?.Invoke();
     }
 
-    private void OnDestroy() => Finish();
+    private void OnDestroy()
+    {
+        ReleaseAllEffects();
+        Finish();
+    }
 
-    // Kontrollü yıkım (TV'deki bina yıkımı gibi): hücreler TEK TEK "pat pat" patlar, sonra gövde çöker.
-    // Süre parça boyutuyla orantılı: her patlama arası sabit; çok büyük parçada zincir WaveMax'a sıkışır.
-    private const float BlastInterval = 0.12f;
-    private const float WaveMax = 1.0f;
-    private const float BlastIntervalMin = 0.05f;
-    private const float WaveToFall = 0.12f;                     // son patlamadan çöküşe kadar
-    private const float RowDelay = 0.018f;                      // çöküşte sütunda bir üst hücrenin gecikmesi
-    private const float SquashTime = 0.22f;
-    private const float PileStep = 0.16f;                       // yığında her hücrenin bıraktığı yükseklik (hücre oranı)
+    private void OnDisable()
+    {
+        ReleaseAllEffects();
+        if (!collapsing) return;
+        StopAllCoroutines();
+        Finish();
+        Destroy(gameObject);
+    }
+
+    private const float CollapseTimeScale = 0.8f;
+    private const float BlastInterval = 0.12f * CollapseTimeScale;
+    private const float WaveMax = 1.0f * CollapseTimeScale;
+    private const float BlastIntervalMin = 0.05f * CollapseTimeScale;
     private const float TriggerBlastScale = 1.35f, CellBlastScale = 1f;
 
     private IEnumerator CollapseRoutine(int triggerCell, System.Action<int, bool> onBlast, System.Action onCollapseStart)
     {
-        // 1) Patlama sırası: tetik hücre önce, sonra parça içinde yayılarak (halka sırası, halka içi rastgele).
         var ring = RingDistances(triggerCell);
         var order = new List<int>(cells.Keys);
         var tieBreak = new Dictionary<int, float>();
         foreach (int c in order) tieBreak[c] = Random.value;
         order.Sort((a, b) =>
         {
-            int ra = ring.TryGetValue(a, out int x) ? x : 0, rb = ring.TryGetValue(b, out int y) ? y : 0;
+            if (a == b) return 0;
+            int ra = ring.TryGetValue(a, out int x) ? x : int.MaxValue;
+            int rb = ring.TryGetValue(b, out int y) ? y : int.MaxValue;
             if (a == triggerCell) return -1;
             if (b == triggerCell) return 1;
             return ra != rb ? ra.CompareTo(rb) : tieBreak[a].CompareTo(tieBreak[b]);
@@ -316,96 +326,40 @@ public sealed class WallPieceView : MonoBehaviour
         float interval = order.Count > 1
             ? Mathf.Max(BlastIntervalMin, Mathf.Min(BlastInterval, WaveMax / (order.Count - 1)))
             : 0f;
+        float elapsed = 0f;
+        onCollapseStart?.Invoke();
+        // Tek zamanlayıcı: bekleyen her hücre için coroutine / kare başına sütun taraması yok.
         for (int n = 0; n < order.Count; n++)
         {
-            bool isTrigger = n == 0;
-            StartCoroutine(CellBlast(cells[order[n]], order[n], n * interval, isTrigger, onBlast));
+            while (elapsed < n * interval)
+            {
+                yield return null;
+                elapsed += Time.unscaledDeltaTime;
+            }
+            int cell = order[n];
+            BlastCell(cells[cell], cell, n == 0, onBlast);
         }
-        float fallStart = (order.Count - 1) * interval + WaveToFall;
-
-        // 2) Çöküş: taban çöker, üstündekiler neredeyse aynı anda aşağı iner ve tabandaki yığına basılır.
-        var bottomByColumn = new Dictionary<int, int>();
-        foreach (var p in cells.Values)
-            if (!bottomByColumn.TryGetValue(p.x, out int b) || p.y > b) bottomByColumn[p.x] = p.y;
-
-        float longest = 0f;
-        foreach (var p in cells.Values)
-        {
-            int bottom = bottomByColumn[p.x];
-            int k = bottom - p.y;                                  // tabandan kaçıncı hücre
-            float delay = fallStart + k * RowDelay;
-            float fallDist = k * ts * (1f - PileStep);
-            float fallTime = k == 0 ? 0f : 0.09f + 0.07f * Mathf.Sqrt(k);
-            bool isBase = k == 0;
-            StartCoroutine(CollapseCell(p, delay, fallDist, fallTime, isBase, bottom));
-            longest = Mathf.Max(longest, delay + fallTime + SquashTime);
-        }
-
-        float t = 0f;
-        while (t < fallStart) { t += Time.unscaledDeltaTime; yield return null; }
-        onCollapseStart?.Invoke();
-
-        while (t < longest + 0.15f) { t += Time.unscaledDeltaTime; yield return null; }
-        Finish();                                   // hücreler serbest: taşlar dolabilir
-        while (t < longest + 0.8f) { t += Time.unscaledDeltaTime; yield return null; }   // duman/döküntü sönsün
+        Finish();
+        // Pooled efektlerin kendi ömürleri bitsin; son duman sabit bir timeout ile kesilmesin.
+        while (effects.Count > 0) yield return null;
         Destroy(gameObject);
     }
 
-    private IEnumerator CellBlast(CellParts parts, int cellIndex, float delay, bool isTrigger, System.Action<int, bool> onBlast)
+    private void BlastCell(CellParts parts, int cellIndex, bool isTrigger, System.Action<int, bool> onBlast)
     {
-        float t = 0f;
-        while (t < delay) { t += Time.unscaledDeltaTime; yield return null; }
+        if (parts.cellReleased) return;
+        parts.cellReleased = true;
+        if (parts.punch != null) { StopCoroutine(parts.punch); parts.punch = null; }
+        // Önce gerçek gövdeyi kaldır, sonra kilidi bırak. Komşu hücreler patlayana kadar yerinde kalır.
+        if (parts.baseGroup != null) parts.baseGroup.gameObject.SetActive(false);
+        if (parts.concaveGroup != null) parts.concaveGroup.gameObject.SetActive(false);
+        if (parts.detailGroup != null) parts.detailGroup.gameObject.SetActive(false);
+        if (parts.flames != null) parts.flames.gameObject.SetActive(false);
         Vector2 center = CellCenter(parts.x, parts.y);
-        float scale = isTrigger ? TriggerBlastScale : CellBlastScale;
-        SpawnBigBlast(center, scale);
+        SpawnBigBlast(center, isTrigger ? TriggerBlastScale : CellBlastScale);
         SpawnDebris(center, isTrigger ? 9 : 6);
+        cellVacatedCallback?.Invoke(cellIndex);
         onBlast?.Invoke(cellIndex, isTrigger);
-        if (parts.flames != null) { Destroy(parts.flames.gameObject); parts.flames = null; }
-        Char(parts);
-        yield return Kick(parts, isTrigger ? 0.18f : 0.12f);
-    }
-
-    // Patlayan hücre isle kararır (yanık), çöküşe kadar öyle kalır.
-    private static void Char(CellParts parts)
-    {
-        var tint = new Color(0.62f, 0.58f, 0.55f, 1f);
-        foreach (var g in new[] { parts.baseGroup, parts.concaveGroup, parts.detailGroup })
-        {
-            if (g == null) continue;
-            foreach (var img in g.GetComponentsInChildren<Image>(true))
-                if (img.GetComponent<WallFuseFlame>() == null) img.color = tint * new Color(1f, 1f, 1f, img.color.a);
-        }
-    }
-
-    // Patlama darbesi: hücre grubu kısa bir an şişip titrer (çöküş başlayınca CollapseCell devralır).
-    private IEnumerator Kick(CellParts parts, float amount)
-    {
-        const float dur = 0.12f;
-        var groups = new[] { parts.baseGroup, parts.concaveGroup, parts.detailGroup };
-        Vector2 home = CellCenter(parts.x, parts.y);
-        float t = 0f;
-        while (t < dur)
-        {
-            if (parts.falling) yield break;   // çöküş devraldı
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / dur);
-            float s = 1f + amount * Mathf.Sin(k * Mathf.PI);
-            var jitter = Random.insideUnitCircle * ts * 0.03f * (1f - k);
-            for (int i = 0; i < groups.Length; i++)
-            {
-                if (groups[i] == null) continue;
-                groups[i].localScale = new Vector3(s, s, 1f);
-                groups[i].anchoredPosition = home + jitter;
-            }
-            yield return null;
-        }
-        if (parts.falling) yield break;
-        for (int i = 0; i < groups.Length; i++)
-        {
-            if (groups[i] == null) continue;
-            groups[i].localScale = Vector3.one;
-            groups[i].anchoredPosition = home;
-        }
     }
 
     // Tetik hücreden parça içi BFS halka mesafesi (yalnız kenar komşuluğu).
@@ -421,12 +375,12 @@ public sealed class WallPieceView : MonoBehaviour
         {
             int c = queue.Dequeue();
             int cx = c % width, cy = c / width;
-            int[] nx = { cx - 1, cx + 1, cx, cx };
-            int[] ny = { cy, cy, cy - 1, cy + 1 };
             for (int i = 0; i < 4; i++)
             {
-                if (nx[i] < 0 || nx[i] >= width || ny[i] < 0) continue;
-                int n = ny[i] * width + nx[i];
+                int nx = cx + (i == 0 ? -1 : i == 1 ? 1 : 0);
+                int ny = cy + (i == 2 ? -1 : i == 3 ? 1 : 0);
+                if (nx < 0 || nx >= width || ny < 0) continue;
+                int n = ny * width + nx;
                 if (!cells.ContainsKey(n) || dist.ContainsKey(n)) continue;
                 dist[n] = dist[c] + 1;
                 queue.Enqueue(n);
@@ -435,103 +389,81 @@ public sealed class WallPieceView : MonoBehaviour
         return dist;
     }
 
-    private IEnumerator CollapseCell(CellParts parts, float delay, float fallDist, float fallTime, bool isBase, int bottomRow)
+    private const string FxPoolKey = "Wall.Collapse";
+    private enum FxKind { Blast, Dust, Debris }
+    private struct FxParticle
     {
-        float t = 0f;
-        while (t < delay) { t += Time.unscaledDeltaTime; yield return null; }
+        public Image image;
+        public RectTransform rect;
+        public Color tint;
+        public Vector2 velocity;
+        public float elapsed, life, from, to, spin;
+        public FxKind kind;
+    }
+    private readonly List<FxParticle> effects = new();
 
-        parts.falling = true;
-        var groups = new[] { parts.baseGroup, parts.concaveGroup, parts.detailGroup };
-        var fades = new CanvasGroup[groups.Length];
-        var starts = new Vector2[groups.Length];
-        Vector2 home = CellCenter(parts.x, parts.y);   // sarsıntı ofsetinden bağımsız gerçek merkez
-        for (int i = 0; i < groups.Length; i++)
-        {
-            if (groups[i] == null) continue;
-            fades[i] = groups[i].gameObject.AddComponent<CanvasGroup>();
-            fades[i].interactable = false;
-            fades[i].blocksRaycasts = false;
-            starts[i] = home;
-        }
+    private void TrackFx(Image image, FxKind kind, float life, Vector2 velocity = default,
+        float from = 1f, float to = 1f, float spin = 0f)
+    {
+        effects.Add(new FxParticle { image = image, rect = image.rectTransform, tint = image.color,
+            kind = kind, life = life, velocity = velocity, from = from, to = to, spin = spin });
+        if (kind == FxKind.Blast) image.rectTransform.localScale = new Vector3(from, from, 1f);
+    }
 
-        void Apply(Vector2 offset, float sx, float sy, float rot, float alpha)
+    // Bir duvarın tüm pooled parçacıkları tek döngüde; parçacık başına coroutine yok.
+    private void Update()
+    {
+        float dt = Time.unscaledDeltaTime;
+        for (int i = effects.Count - 1; i >= 0; i--)
         {
-            for (int i = 0; i < groups.Length; i++)
+            var fx = effects[i];
+            fx.elapsed += dt;
+            if (fx.image == null || fx.elapsed >= fx.life)
             {
-                if (groups[i] == null) continue;
-                groups[i].anchoredPosition = starts[i] + offset;
-                groups[i].localScale = new Vector3(sx, sy, 1f);
-                groups[i].localEulerAngles = new Vector3(0f, 0f, rot);
-                fades[i].alpha = alpha;
+                ReleaseEffect(fx);
+                int last = effects.Count - 1;
+                effects[i] = effects[last];
+                effects.RemoveAt(last);
+                continue;
             }
-        }
-
-        // Düşüş (taban hücre düşmez, yerinde ezilir): yerçekimi gibi hızlanır, hafif yalpalar.
-        float tilt = Random.Range(-7f, 7f);
-        t = 0f;
-        while (t < fallTime)
-        {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / fallTime);
-            Apply(new Vector2(0f, -fallDist * k * k), 1f, 1f, tilt * k, 1f);
-            yield return null;
-        }
-
-        // Çarpma anı: taban hücrede toz bulutu, her hücrede döküntü.
-        Vector2 land = CellCenter(parts.x, parts.y) + new Vector2(0f, -fallDist);
-        if (isBase) SpawnDust(new Vector2(land.x, -(bottomRow * ts + ts)));
-        SpawnDebris(land, isBase ? 5 : 3);
-
-        // Ezilme: alt kenarı sabit kalarak basıklaşır, yanlara yayılır, söner.
-        t = 0f;
-        while (t < SquashTime)
-        {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / SquashTime);
-            float e = 1f - (1f - k) * (1f - k);
-            float sy = Mathf.Lerp(1f, 0.22f, e);
-            float sx = Mathf.Lerp(1f, 1.22f, e);
-            float sink = (1f - sy) * ts * 0.5f;                  // pivot merkezde → alt kenarı yerinde tut
-            float alpha = 1f - Mathf.Clamp01((k - 0.35f) / 0.65f);
-            Apply(new Vector2(0f, -fallDist - sink), sx, sy, tilt * (1f - e), alpha);
-            yield return null;
-        }
-        foreach (var g in groups)
-            if (g != null) g.gameObject.SetActive(false);
-    }
-
-    // Taban hizasında yanlara açılan toz bulutu.
-    private void SpawnDust(Vector2 groundCenter)
-    {
-        for (int i = 0; i < 5; i++)
-        {
-            var puff = MakeImage(fxLayer, WallSprites.SoftCircle,
-                groundCenter + new Vector2(Random.Range(-0.35f, 0.35f) * ts, Random.Range(0f, 0.12f) * ts),
-                Vector2.one * ts * Random.Range(0.45f, 0.7f));
-            puff.color = new Color(0.86f, 0.8f, 0.7f, 0.75f);
-            float dir = i % 2 == 0 ? -1f : 1f;
-            StartCoroutine(Dust(puff, new Vector2(dir * Random.Range(0.4f, 0.9f) * ts, Random.Range(0.15f, 0.35f) * ts),
-                Random.Range(0.45f, 0.65f)));
+            float k = fx.elapsed / fx.life;
+            var color = fx.tint;
+            if (fx.kind == FxKind.Blast)
+            {
+                float s = Mathf.Lerp(fx.from, fx.to, 1f - (1f - k) * (1f - k));
+                fx.rect.localScale = new Vector3(s, s, 1f);
+                color.a *= 1f - k;
+            }
+            else if (fx.kind == FxKind.Dust)
+            {
+                fx.rect.anchoredPosition += fx.velocity * dt * (1f - k);
+                float s = 1f + 0.9f * k;
+                fx.rect.localScale = new Vector3(s, s * 0.8f, 1f);
+                color.a *= 1f - k;
+            }
+            else
+            {
+                fx.velocity.y -= ts * 9f * dt;
+                fx.rect.anchoredPosition += fx.velocity * dt;
+                fx.rect.localEulerAngles += new Vector3(0f, 0f, fx.spin * dt);
+                color.a *= 1f - Mathf.Clamp01((k - 0.5f) / 0.5f);
+            }
+            fx.image.color = color;
+            effects[i] = fx;
         }
     }
 
-    private static IEnumerator Dust(Image img, Vector2 vel, float life)
+    private static void ReleaseEffect(FxParticle fx)
     {
-        var rt = img.rectTransform;
-        Color c = img.color;
-        float t = 0f;
-        while (t < life && img != null)
-        {
-            float dt = Time.unscaledDeltaTime;
-            t += dt;
-            float k = t / life;
-            rt.anchoredPosition += vel * dt * (1f - k);
-            float s = 1f + 0.9f * k;
-            rt.localScale = new Vector3(s, s * 0.8f, 1f);
-            img.color = new Color(c.r, c.g, c.b, c.a * (1f - k));
-            yield return null;
-        }
-        if (img != null) Destroy(img.gameObject);
+        if (fx.image == null) return;
+        fx.image.sprite = null;
+        UiVfxPool.Return(FxPoolKey, fx.image.gameObject, 256);
+    }
+
+    private void ReleaseAllEffects()
+    {
+        foreach (var fx in effects) ReleaseEffect(fx);
+        effects.Clear();
     }
 
     // Görünür patlama: şok halkası + ateş topu + beyaz çekirdek + kıvılcımlar + yükselen duman.
@@ -539,15 +471,15 @@ public sealed class WallPieceView : MonoBehaviour
     {
         var ringImg = MakeImage(fxLayer, WallSprites.ShockRing, center, Vector2.one * ts * scale);
         ringImg.color = new Color(1f, 0.95f, 0.75f, 0.95f);
-        StartCoroutine(Blast(ringImg, 0.3f, 2.6f, 0.36f));
+        TrackFx(ringImg, FxKind.Blast, 0.36f, from: 0.3f, to: 2.6f);
 
         var fire = MakeImage(fxLayer, WallSprites.SoftCircle, center, Vector2.one * ts * scale);
         fire.color = new Color(1f, 0.55f, 0.12f, 1f);
-        StartCoroutine(Blast(fire, 0.35f, 1.9f, 0.42f));
+        TrackFx(fire, FxKind.Blast, 0.42f, from: 0.35f, to: 1.9f);
 
         var core = MakeImage(fxLayer, WallSprites.SoftCircle, center, Vector2.one * ts * 0.75f * scale);
         core.color = new Color(1f, 1f, 0.85f, 1f);
-        StartCoroutine(Blast(core, 0.25f, 1.4f, 0.24f));
+        TrackFx(core, FxKind.Blast, 0.24f, from: 0.25f, to: 1.4f);
 
         for (int i = 0; i < 8; i++)
         {
@@ -555,7 +487,7 @@ public sealed class WallPieceView : MonoBehaviour
             spark.color = new Color(1f, Random.Range(0.75f, 0.95f), 0.35f, 1f);
             float a = (i / 8f + Random.Range(-0.05f, 0.05f)) * Mathf.PI * 2f;
             var vel = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * ts * Random.Range(3.5f, 5.5f) * scale;
-            StartCoroutine(Debris(spark, vel, 0f, Random.Range(0.25f, 0.4f)));
+            TrackFx(spark, FxKind.Debris, Random.Range(0.25f, 0.4f), vel);
         }
 
         for (int i = 0; i < 4; i++)
@@ -563,26 +495,9 @@ public sealed class WallPieceView : MonoBehaviour
             var smoke = MakeImage(fxLayer, WallSprites.SoftCircle,
                 center + Random.insideUnitCircle * ts * 0.2f, Vector2.one * ts * Random.Range(0.55f, 0.8f) * scale);
             smoke.color = new Color(0.42f, 0.4f, 0.38f, 0.55f);
-            StartCoroutine(Dust(smoke, new Vector2(Random.Range(-0.3f, 0.3f), Random.Range(0.6f, 1.1f)) * ts,
-                Random.Range(0.7f, 0.95f)));
+            TrackFx(smoke, FxKind.Dust, Random.Range(0.7f, 0.95f),
+                new Vector2(Random.Range(-0.3f, 0.3f), Random.Range(0.6f, 1.1f)) * ts);
         }
-    }
-
-    private static IEnumerator Blast(Image img, float from, float to, float dur)
-    {
-        var rt = img.rectTransform;
-        Color c = img.color;
-        float t = 0f;
-        while (t < dur && img != null)
-        {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / dur);
-            float s = Mathf.Lerp(from, to, 1f - (1f - k) * (1f - k));
-            rt.localScale = new Vector3(s, s, 1f);
-            img.color = new Color(c.r, c.g, c.b, c.a * (1f - k));
-            yield return null;
-        }
-        if (img != null) Destroy(img.gameObject);
     }
 
     private void SpawnDebris(Vector2 center, int count)
@@ -593,27 +508,8 @@ public sealed class WallPieceView : MonoBehaviour
             var chip = MakeImage(fxLayer, WallSprites.Inner(P), center + Random.insideUnitCircle * ts * 0.25f, new Vector2(size, size * Random.Range(0.7f, 1.1f)));
             chip.color = Color.Lerp(Color.white, new Color(0.75f, 0.75f, 0.75f, 1f), Random.value);
             Vector2 vel = new Vector2(Random.Range(-1f, 1f), Random.Range(0.4f, 1.3f)) * ts * 2.4f;
-            StartCoroutine(Debris(chip, vel, Random.Range(-540f, 540f), Random.Range(0.45f, 0.65f)));
+            TrackFx(chip, FxKind.Debris, Random.Range(0.45f, 0.65f), vel, spin: Random.Range(-540f, 540f));
         }
-    }
-
-    private IEnumerator Debris(Image img, Vector2 vel, float spin, float life)
-    {
-        var rt = img.rectTransform;
-        float gravity = ts * 9f;
-        float t = 0f;
-        while (t < life && img != null)
-        {
-            float dt = Time.unscaledDeltaTime;
-            t += dt;
-            vel.y -= gravity * dt;
-            rt.anchoredPosition += vel * dt;
-            rt.localEulerAngles += new Vector3(0f, 0f, spin * dt);
-            var c = img.color;
-            img.color = new Color(c.r, c.g, c.b, 1f - Mathf.Clamp01((t - life * 0.5f) / (life * 0.5f)));
-            yield return null;
-        }
-        if (img != null) Destroy(img.gameObject);
     }
 
     // ── Yardımcılar ─────────────────────────────────────────────────────
@@ -632,7 +528,7 @@ public sealed class WallPieceView : MonoBehaviour
         return rt;
     }
 
-    // Hücre grubu: pivot hücre merkezinde (yıkılmada kendi merkezi etrafında döner/küçülür).
+    // Hücre grubu: pivot hücre merkezinde; patlamada üç katman birlikte gizlenir.
     private RectTransform MakeCellGroup(RectTransform layer, int x, int y)
     {
         var go = new GameObject($"C_{x}_{y}", typeof(RectTransform));
@@ -660,17 +556,23 @@ public sealed class WallPieceView : MonoBehaviour
 
     private Image MakeImage(RectTransform parent, Sprite sprite, Vector2 localCenter, Vector2 size)
     {
-        var go = new GameObject("Img", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        go.layer = gameObject.layer;
-        var rt = (RectTransform)go.transform;
-        rt.SetParent(parent, false);
+        Image img;
+        if (parent == fxLayer)
+            img = UiVfxPool.RentImage(FxPoolKey, parent, "WallFx");
+        else
+        {
+            var go = new GameObject("Img", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(parent, false);
+            img = go.GetComponent<Image>();
+        }
+        img.gameObject.layer = gameObject.layer;
+        var rt = img.rectTransform;
         // Hücre grubunda merkez-ankrajlı; katman köküne doğrudan konanlar (fx) sol-üst ankrajlı.
         bool inCell = parent != fxLayer;
         rt.anchorMin = rt.anchorMax = inCell ? new Vector2(0.5f, 0.5f) : new Vector2(0f, 1f);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = localCenter;
         rt.sizeDelta = size;
-        var img = go.GetComponent<Image>();
         img.sprite = sprite;
         img.raycastTarget = false;
         img.preserveAspect = false;

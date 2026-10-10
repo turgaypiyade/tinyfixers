@@ -121,6 +121,15 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [Tooltip("İlk cancel'da sağdan kayıp gelen kayıp paneli (RectTransform). Aşama 1'de gizli.")]
     [SerializeField] private RectTransform lossSlidePanel;
     [SerializeField, Min(0.05f)] private float lossSlideDuration = 0.35f;
+
+    [Header("Fail - Loss Speech Bubble (kahraman konuşma balonu)")]
+    [Tooltip("Balondaki cümle ('Vazgeçersen X ve Y elinden gidecek!'). Atanırsa isimler satır kartlarında " +
+             "değil bu cümlede yazılır; satırlar yalnız ikon + sayı + kayıp rozeti gösterir.")]
+    [SerializeField] private TMP_Text lossMessageText;
+    [Tooltip("Cümledeki kayıp isimlerinin rengi.")]
+    [SerializeField] private Color lossNameColor = new Color(0.86f, 0.16f, 0.16f, 1f);
+    [Tooltip("Event kaybı bu sayıdan FAZLAYSA altın ödülü listelenmez (altın zaten varsayılan; balon kalabalıklaşmasın).")]
+    [SerializeField, Min(0)] private int maxEventLossesWithCoin = 2;
     private readonly System.Collections.Generic.List<GameObject> _lossRows = new();
     private bool failSecondStage;   // false: ilk cancel kayıpları kaydırır; true: ikinci cancel → ana menü
     private bool _hasLosses;        // gösterilecek kayıp var mı (RefreshFailLossSummary set eder)
@@ -482,6 +491,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
             if (extraMovesIcon != null)
                 extraMovesIcon.enabled = false;
             SetExtraMovesBadgeTextVisible(false);
+            // Kayıp paneli krem kartın tamamını kullanır → "X hamle ile devam et" metni de kalkar.
+            if (failMessageText != null)
+                failMessageText.gameObject.SetActive(false);
             lossSlidePanel.gameObject.SetActive(true);
             StartCoroutine(SlideInFromRight(lossSlidePanel, lossSlideDuration));
             return;
@@ -1454,6 +1466,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (board != null)
             board.SetInputLocked(true);
 
+        // Mercy tracks effort independently from first-try/streak and give-up analytics.
+        LevelAttemptStats.RecordStruggle(CurrentLevel.Global);
+
         int livesBeforeFailure = LivesManager.Current;
         LivesManager.SpendLife();
         lifeDebitedForFailure = LivesManager.Current < livesBeforeFailure;
@@ -1464,6 +1479,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         // Aşama 1: kayıp paneli gizli; ilk cancel'da sağdan kaydırılır.
         failSecondStage = false;
         if (lossSlidePanel != null) lossSlidePanel.gameObject.SetActive(false);
+        if (failMessageText != null) failMessageText.gameObject.SetActive(true);
 
         transform.SetAsLastSibling();
 
@@ -1515,12 +1531,26 @@ public class LevelEndSimplePopupController : MonoBehaviour
                 lossTitleText.text = LocalizedText("level_end_loss_title", "Şunları kaybedeceksin");
         }
 
+        // Balon modu: isimler kahramanın cümlesinde; satırlar yalnız ikon + sayı + kayıp (X) rozeti.
+        bool bubble = lossMessageText != null;
+        if (bubble)
+        {
+            lossMessageText.gameObject.SetActive(any);
+            if (any)
+                lossMessageText.text = BuildLossSentence(items);
+            if (lossTitleText != null)
+                lossTitleText.gameObject.SetActive(false);
+        }
+
         if (lossRowPrefab != null && lossRowContainer != null)
         {
             foreach (var it in items)
             {
                 var row = Instantiate(lossRowPrefab, lossRowContainer);
-                row.Set(it.icon, it.label, it.amount, it.achieved ? achievedIcon : notAchievedIcon);
+                if (bubble)
+                    row.Set(it.icon, null, it.amount, notAchievedIcon != null ? notAchievedIcon : achievedIcon);
+                else
+                    row.Set(it.icon, it.label, it.amount, it.achieved ? achievedIcon : notAchievedIcon);
                 _lossRows.Add(row.gameObject);
             }
 
@@ -1549,21 +1579,46 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         var items = new System.Collections.Generic.List<(Sprite icon, string label, int amount, bool achieved)>();
 
-        // Altın (kazanılacak ödül) — base reward, UI'ın kendi config'i; bir "event" değil → burada kalır.
-        // Level KAZANILINCA verilir; fail ekranında henüz gerçekleşmedi → cancel.
-        var level = board != null ? board.ActiveLevelData : null;
-        int coinReward = useFlatCoinReward
-            ? Mathf.Max(0, flatCoinReward)
-            : (level != null ? Mathf.Max(0, level.baseCoinReward) : 0);
-        if (coinReward > 0)
-            items.Add((coinIcon, LocalizedText("level_end_loss_coin", "Ödül"), coinReward, false));
-
         // Event'ler DİNAMİK: her sistem kendi riskini LevelLossRegistry'ye kaydeder. UI hiçbir event'i
         // tanımaz — yeni event eklemek için buraya DOKUNULMAZ (bkz. LevelLossRegistry).
         foreach (var it in LevelLossRegistry.Collect())
             items.Add((it.Icon, it.Label, it.Amount, it.Achieved));
 
+        // Altın (kazanılacak ödül) — base reward, UI'ın kendi config'i; bir "event" değil → burada kalır.
+        // Level KAZANILINCA verilir; fail ekranında henüz gerçekleşmedi → cancel. Altın her level'da
+        // varsayılan olduğundan, çok sayıda event kaybı varken balonu kalabalıklaştırmasın diye atlanır.
+        var level = board != null ? board.ActiveLevelData : null;
+        int coinReward = useFlatCoinReward
+            ? Mathf.Max(0, flatCoinReward)
+            : (level != null ? Mathf.Max(0, level.baseCoinReward) : 0);
+        if (coinReward > 0 && items.Count <= maxEventLossesWithCoin)
+            items.Insert(0, (coinIcon, LocalizedText("level_end_loss_coin", "Altın"), coinReward, false));
+
         return items;
+    }
+
+    // Kahraman balonundaki cümle: "Vazgeçersen <Altın>, <Safari> ve <İttifak güçleri> elinden gidecek!"
+    // Aynı isim (ör. aynı event'in birden çok hedefi) bir kez yazılır; isimsiz öğeler cümleye girmez.
+    private string BuildLossSentence(System.Collections.Generic.List<(Sprite icon, string label, int amount, bool achieved)> items)
+    {
+        var names = new System.Collections.Generic.List<string>(items.Count);
+        foreach (var it in items)
+            if (!string.IsNullOrEmpty(it.label) && !names.Contains(it.label))
+                names.Add(it.label);
+
+        if (names.Count == 0)
+            return LocalizedText("level_end_loss_title", "Şunları kaybedeceksin") + "!";
+
+        string hex = ColorUtility.ToHtmlStringRGB(lossNameColor);
+        string and = LocalizedText("level_end_loss_and", " ve ");
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < names.Count; i++)
+        {
+            if (i > 0)
+                sb.Append(i == names.Count - 1 ? and : ", ");
+            sb.Append("<color=#").Append(hex).Append('>').Append(names[i]).Append("</color>");
+        }
+        return LocalizedFormat("level_end_loss_message", "Vazgeçersen {0} elinden gidecek!", sb.ToString());
     }
 
     private void ShowSuccessPopup()
@@ -1758,12 +1813,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
         ResolveCurrentFailOffer();
         if (!PlayerWallet.SpendCoins(currentCost)) return false;
 
-        PerformContinue();
+        PerformContinue(coinsSpent: currentCost);
         return true;
     }
 
     // Coin harcandıktan (veya reklam ödülünden) sonra ortak "devam" akışı.
-    private void PerformContinue()
+    private void PerformContinue(int coinsSpent = 0, bool rewardedAd = false)
     {
         if (board == null) return;
 
@@ -1771,6 +1826,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (lifeDebitedForFailure) LivesManager.AddLives(1);
         lifeDebitedForFailure = false;
 
+        LevelTelemetryStore.Continue(currentOfferAmount, coinsSpent, rewardedAd);
         board.ContinueWithExtraMoves(currentOfferAmount);
         board.SetInputLocked(false);
         extraMoveOfferAttempt++;
@@ -1807,7 +1863,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log("[LevelEnd] Reklam simülasyonu → bedava devam.");
         yield return new WaitForSecondsRealtime(1f);
-        PerformContinue();
+        PerformContinue(rewardedAd: true);
 #else
         Debug.LogWarning("[LevelEnd] Rewarded ad SDK bağlı değil; bedava devam verilemedi.");
         yield break;

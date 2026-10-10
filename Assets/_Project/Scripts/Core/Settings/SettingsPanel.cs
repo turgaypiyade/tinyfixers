@@ -22,6 +22,11 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Toggle vibrationToggle;
     [SerializeField] private Toggle hintToggle;
     [SerializeField] private Toggle notificationToggle;
+    [SerializeField] private Toggle hdrToggle;
+    [SerializeField] private TMP_Text hdrLabel;
+
+    private HdrDisplayTrial hdrTrial;
+    private SlideToggleAnimator hdrAnimator;
 
     [Header("Buttons")]
     [SerializeField] private Button saveProgressButton;
@@ -49,6 +54,12 @@ public class SettingsPanel : MonoBehaviour
 
     private void Awake()
     {
+        if (hdrToggle != null)
+        {
+            hdrTrial = HdrDisplayTrial.GetOrCreate();
+            hdrAnimator = hdrToggle.GetComponent<SlideToggleAnimator>();
+            hdrToggle.onValueChanged.AddListener(OnHdrToggleChanged);
+        }
         if (panelRoot != null) panelRoot.SetActive(false);
 
         if (closeButton != null) closeButton.onClick.AddListener(Close);
@@ -79,7 +90,9 @@ public class SettingsPanel : MonoBehaviour
         GameSettings.OnVibrationChanged    += OnSettingChanged;
         GameSettings.OnHintChanged         += OnSettingChanged;
         GameSettings.OnNotificationChanged += OnSettingChanged;
+        if (hdrTrial != null) hdrTrial.Changed += SyncHdrToggle;
         SyncTogglesFromSettings();
+        SyncHdrToggle();
     }
 
     private void OnDisable()
@@ -89,6 +102,37 @@ public class SettingsPanel : MonoBehaviour
         GameSettings.OnVibrationChanged    -= OnSettingChanged;
         GameSettings.OnHintChanged         -= OnSettingChanged;
         GameSettings.OnNotificationChanged -= OnSettingChanged;
+        if (hdrTrial != null) hdrTrial.Changed -= SyncHdrToggle;
+    }
+
+    private void OnDestroy()
+    {
+        if (hdrTrial != null) hdrTrial.Changed -= SyncHdrToggle;
+        if (hdrToggle != null) hdrToggle.onValueChanged.RemoveListener(OnHdrToggleChanged);
+    }
+
+    private void OnHdrToggleChanged(bool requested)
+    {
+        if (hdrTrial != null && hdrTrial.CanToggle && requested != hdrTrial.IsHdrActive)
+            hdrTrial.Toggle();
+        // Native switching is asynchronous; always show the actual output state.
+        SyncHdrToggle();
+    }
+
+    private void SyncHdrToggle()
+    {
+        if (hdrTrial == null || hdrToggle == null) return;
+        hdrToggle.SetIsOnWithoutNotify(hdrTrial.IsHdrActive);
+        if (hdrAnimator != null) hdrAnimator.SyncWithoutAnimation();
+        hdrToggle.interactable = hdrTrial.CanToggle;
+        if (hdrLabel == null) return;
+        switch (hdrTrial.State)
+        {
+            case HdrDisplayTrial.DisplayState.Unavailable: hdrLabel.text = "HDR (N/A)"; break;
+            case HdrDisplayTrial.DisplayState.Switching: hdrLabel.text = "HDR (...)"; break;
+            case HdrDisplayTrial.DisplayState.Failed: hdrLabel.text = "HDR (!)"; break;
+            default: hdrLabel.text = "HDR"; break;
+        }
     }
 
     private void OnSettingChanged(bool _) => SyncTogglesFromSettings();
@@ -103,6 +147,7 @@ public class SettingsPanel : MonoBehaviour
 
         SyncTogglesFromSettings();
         SyncInstagramButtonState();
+        SyncHdrToggle();
 
         if (panelGroup != null) panelGroup.alpha = 0f;
         StartCoroutine(FadePanel(0f, 1f));

@@ -137,6 +137,7 @@ public sealed class UfoImplantController : MonoBehaviour
         const float maxWait = 30f;  // güvenlik tavanı — asla sonsuza takılma
         float waited = 0f;
         float clearFor = 0f;
+        bool reasonLogged = false;
 
         while (waited < maxWait)
         {
@@ -153,6 +154,13 @@ public sealed class UfoImplantController : MonoBehaviour
             else
             {
                 clearFor = 0f;
+                // Teşhis (tek sefer): UFO 2 sn'den uzun bekliyorsa nedenini yaz.
+                if (!reasonLogged && waited > 2f)
+                {
+                    reasonLogged = true;
+                    Debug.LogWarning($"[UfoImplant] UFO bekliyor ({waited:0.0}s): tutorialOverlay={overlayActive} " +
+                                     $"boardBusy={(board != null && board.IsBusy)} boardLocked={(board != null && board.IsExplicitlyLocked)}");
+                }
             }
 
             waited += Time.deltaTime;

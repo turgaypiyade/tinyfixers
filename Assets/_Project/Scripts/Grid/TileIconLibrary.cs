@@ -33,6 +33,14 @@ public class TileIconLibrary : ScriptableObject
     [Tooltip("Shuffle booster (tahtayı karıştır).")]
     public Sprite boosterShuffle;
 
+    [Header("Currency Icons")]
+    [Tooltip("Altın ödülü (patili altın). Boşken ödül ekranları ikon yerine amber kare çizer.")]
+    public Sprite coin;
+    [Tooltip("Can ödülü (kalp).")]
+    public Sprite life;
+    [Tooltip("Yıldız ödülü.")]
+    public Sprite star;
+
     // ─────────────────────────────────────────────────────────────────
     // Global erişim: event/reward/menü UI'ları serialize ref olmadan ikon çözebilsin.
     // Asset Resources kökünde (TileIconLibrary_Main) → her sahnede güvenilir yüklenir.
@@ -160,6 +168,10 @@ public class TileIconLibrary : ScriptableObject
             case DailySlotRewardType.Booster_Column:       return boosterColumn;
             case DailySlotRewardType.Booster_Shuffle:      return boosterShuffle;
 
+            case DailySlotRewardType.Coins:                return coin;
+            case DailySlotRewardType.Lives:                return life;
+            case DailySlotRewardType.Stars:                return star;
+
             default:                                       return null;
         }
     }
@@ -177,6 +189,7 @@ public class TileIconLibrary : ScriptableObject
             case WorkshopRewardType.Booster_Row:          return boosterRow;
             case WorkshopRewardType.Booster_Column:       return boosterColumn;
             case WorkshopRewardType.Booster_Shuffle:      return boosterShuffle;
+            case WorkshopRewardType.Coins:                return coin;
 
             default:                                      return null;
         }

@@ -77,9 +77,17 @@ public static class PlayerStats
 
     /// Bir level kazanılıp ilerlenince çağrılır. İlk deneme miyse seri + ilk-deneme sayacı artar;
     /// her geçiş haftalık sayaca işlenir. "Current level failed" bayrağı temizlenir.
+    /// OnLevelCleared dinleyicileri için: az önce kazanılan level ilk denemede mi geçildi?
+    /// (Olay anında "fail" bayrağı zaten temizlendiği için dinleyici bunu kendisi okuyamaz.)
+    public static bool LastClearWasFirstTry { get; private set; }
+
+    /// Oynanmakta olan level henüz hiç kaybedilmedi mi (fail popup'ında "ilk deneme bonusu" riski için).
+    public static bool IsCurrentLevelFirstTry => PlayerPrefs.GetInt(LevelFailedKey, 0) == 0;
+
     public static void RecordLevelCleared()
     {
         bool firstTry = PlayerPrefs.GetInt(LevelFailedKey, 0) == 0;
+        LastClearWasFirstTry = firstTry;
 
         if (firstTry)
         {

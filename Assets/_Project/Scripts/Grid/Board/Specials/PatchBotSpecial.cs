@@ -241,6 +241,7 @@ public sealed class PatchBotSpecial
                 {
                     // Headless/no-VFX playback may invoke arrival without onStart.
                     dashStart?.Invoke();
+                    if (!IsInside(rt.Board, hitX, hitY)) return;
                     var arrivalCtx = new ResolutionContext();
                     var arrivalRt = new PatchBotExecutionRuntime
                     {
@@ -310,7 +311,7 @@ public sealed class PatchBotSpecial
                 finally
                 {
                     originHold?.Dispose();
-                    coordinator.ReleaseIntent(liveIntent ?? picked.intent);
+                    coordinator.ReleaseIntent(liveIntent);
                 }
             });
 

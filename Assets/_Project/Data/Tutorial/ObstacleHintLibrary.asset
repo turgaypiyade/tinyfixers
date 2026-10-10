@@ -361,3 +361,9 @@ MonoBehaviour:
     fallbackTitle: Paint Can Pyramid
     locKey: hint_obstacle_paintcanbox
     fallbackText:
+  - id: 64
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_ancientseal_name
+    fallbackTitle: Ancient Seal
+    locKey: hint_obstacle_ancientseal
+    fallbackText: Collect the displayed number of stones in the active color anywhere on the board. Each stone goes to only one seal. Complete all three colors to open it. Direct hits do not count.

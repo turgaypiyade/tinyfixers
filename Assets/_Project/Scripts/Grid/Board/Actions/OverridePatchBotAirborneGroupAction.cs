@@ -474,21 +474,26 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             var bot = bots[i];
             if (bot == null || bot.rect == null) continue;
 
-            var resolved = coordinator.ResolveIntentFrom(bot.intent, bot.sourceCell);
-            if (!resolved.hasCell)
+            if (!RefreshDiveTarget(bot, coordinator))
             {
                 bot.hasTarget = false;
                 Debug.Log($"[OverridePatchBotAirborne] no_target step={i} from={bot.sourceCell}");
                 continue;
             }
 
-            bot.intent = resolved.intent;
-            bot.targetX = resolved.cell.x;
-            bot.targetY = resolved.cell.y;
-            bot.hasTarget = true;
-
             Debug.Log($"[OverridePatchBotAirborne] target_resolved step={i} from={bot.sourceCell} target=({bot.targetX},{bot.targetY})");
         }
+    }
+
+    private bool RefreshDiveTarget(AirborneBot bot, PatchBotTargetCoordinator coordinator)
+    {
+        var resolved = coordinator.ResolveIntentFrom(bot.intent, bot.sourceCell);
+        // ResolveIntentFrom already releases an invalid intent, including when no replacement exists.
+        bot.intent = resolved.intent;
+        bot.hasTarget = resolved.hasCell;
+        bot.targetX = resolved.cell.x;
+        bot.targetY = resolved.cell.y;
+        return bot.hasTarget;
     }
 
     /// <summary>
@@ -519,7 +524,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             }
 
             diveCount++;
-            board.StartCoroutine(CoSynchronizedDive(bot));
+            board.StartCoroutine(CoSynchronizedDive(bot, coordinator));
         }
 
         Debug.Log($"[OverridePatchBotAirborne] sync_dive_start count={diveCount} duration={SYNC_DIVE_DURATION}");
@@ -539,6 +544,16 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         {
             var bot = bots[i];
             if (bot == null || !bot.hasTarget) continue;
+
+            // Another asynchronous hit can exhaust a generator on the last flight frame.
+            if (bot.intent == null || !bot.intent.IsAlive(board))
+            {
+                coordinator.ReleaseIntent(bot.intent);
+                bot.intent = null;
+                bot.hasTarget = false;
+                if (bot.ghost != null) bot.ghost.SetActive(false);
+                continue;
+            }
 
             if (bot.rect != null)
                 bot.rect.anchoredPosition = CellAnchored(bot.targetX, bot.targetY, bot.flightRoot, aimAtObstacleCenter: true);
@@ -782,7 +797,7 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
     /// Mesafe ne olursa olsun süre sabit — hız mesafeye göre kendi kendine ölçeklenir.
     /// Ghost burada DESTROY EDİLMEZ — toplu clear başlamadan önce merkez tarafından destroy edilir.
     /// </summary>
-    private IEnumerator CoSynchronizedDive(AirborneBot bot)
+    private IEnumerator CoSynchronizedDive(AirborneBot bot, PatchBotTargetCoordinator coordinator)
     {
         if (bot == null || bot.rect == null)
             yield break;
@@ -808,6 +823,18 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
                 bot.arrived = true;
                 yield break;
             }
+
+            // Keys can finish landing while a PulseCore+PatchBot is already diving.
+            // Re-evaluate the intent throughout flight, not only before takeoff.
+            if (!RefreshDiveTarget(bot, coordinator))
+            {
+                bot.arrived = true;
+                bot.ghost.SetActive(false);
+                yield break;
+            }
+            end = CellAnchored(bot.targetX, bot.targetY, bot.flightRoot, aimAtObstacleCenter: true);
+            delta = end - start;
+            normal = delta.sqrMagnitude > 0.001f ? new Vector2(-delta.y, delta.x).normalized : Vector2.up;
 
             elapsed += Time.deltaTime;
             float t = duration <= 0f ? 1f : Mathf.Clamp01(elapsed / duration);

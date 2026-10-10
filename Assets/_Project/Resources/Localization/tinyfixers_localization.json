@@ -5,6 +5,102 @@
       "code": "tr",
       "entries": [
         {
+          "key": "boss_howto_match",
+          "value": "Taşları eşleştir,\nsaldırını güçlendir!"
+        },
+        {
+          "key": "boss_howto_exchange",
+          "value": "Hamlen bitince vurursun.\nRakip de karşılık verir!"
+        },
+        {
+          "key": "boss_howto_finish",
+          "value": "Canın ve hamlen bitmeden\nrakipleri yen, hedefleri tamamla!"
+        },
+        {
+          "key": "boss_howto_header",
+          "value": "BOSS DÜELLOSU"
+        },
+        {
+          "key": "boss_howto_page",
+          "value": "{0} / 3"
+        },
+        {
+          "key": "boss_howto_you",
+          "value": "SEN"
+        },
+        {
+          "key": "boss_howto_enemy",
+          "value": "RAKİP"
+        },
+        {
+          "key": "boss_howto_start",
+          "value": "Düelloya başlamak için dokun"
+        },
+        {
+          "key": "boss_howto_next",
+          "value": "Devam etmek için dokun"
+        },
+        {
+          "key": "boss_howto_player_title",
+          "value": "Taşları kır, güç topla!"
+        },
+        {
+          "key": "boss_howto_player_body",
+          "value": "Soldaki karakter sensin. Taşları eşleştir; kırılan her taş saldırına güç katar. Hamlen bitince rakibe vurursun."
+        },
+        {
+          "key": "boss_howto_player_tip",
+          "value": "Özel taşları birleştir: daha çok taş kır, daha güçlü vur!"
+        },
+        {
+          "key": "boss_howto_enemy_title",
+          "value": "Rakip karşılık verir!"
+        },
+        {
+          "key": "boss_howto_enemy_body",
+          "value": "Sağdaki karakter rakibin. Saldırından sonra ayakta kalırsa sana bir kez vurur. Yeşil çubuk senin canın, mor çubuk rakibin canıdır."
+        },
+        {
+          "key": "boss_howto_enemy_tip",
+          "value": "Rakip tahtana engel de atabilir. Engelleri temizleyerek yer aç!"
+        },
+        {
+          "key": "boss_howto_enemy_tip_basic",
+          "value": "Güçlü hamlelerle rakibi daha az karşı saldırıda yen!"
+        },
+        {
+          "key": "boss_howto_win_title",
+          "value": "Canın ve hamlen bitmeden kazan!"
+        },
+        {
+          "key": "boss_howto_win_body",
+          "value": "Tüm rakipleri yen ve kalan seviye hedeflerini tamamla. Canın sıfıra iner ya da hamlelerin biterse düelloyu kaybedersin."
+        },
+        {
+          "key": "boss_howto_shields",
+          "value": "Yeşil kalkanı kırmak seni korur. Dikkat: mor kalkanı kırmak rakibe koruma verir!"
+        },
+        {
+          "key": "boss_howto_player_shield",
+          "value": "Yeşil kalkanı kır: gelen hasara karşı koruma kazan!"
+        },
+        {
+          "key": "boss_howto_enemy_shield",
+          "value": "Dikkat: mor kalkanı kırmak rakibe koruma verir!"
+        },
+        {
+          "key": "boss_howto_win_tip",
+          "value": "Her hamle değerli. Büyük eşleşmeler ve özel taşlarla gücünü artır!"
+        },
+        {
+          "key": "shop_purchase_thanks_life",
+          "value": "Teşekkür hediyesi: Can"
+        },
+        {
+          "key": "shop_purchase_thanks_pending",
+          "value": "Teşekkür hediyesi: Can\nYer açılınca sonraki denemende"
+        },
+        {
           "key": "bridge_tap_continue",
           "value": "Devam etmek için dokun"
         },
@@ -51,6 +147,46 @@
         {
           "key": "bridge_play",
           "value": "OYNA"
+        },
+        {
+          "key": "harvest_title",
+          "value": "BOSTAN HASADI"
+        },
+        {
+          "key": "harvest_floor",
+          "value": "Hasat {0}/{1}"
+        },
+        {
+          "key": "harvest_no_trowel",
+          "value": "Seviye geç, kürek kazan!"
+        },
+        {
+          "key": "harvest_finished",
+          "value": "Hasat tamam! Harika iş çıkardın."
+        },
+        {
+          "key": "harvest_play",
+          "value": "OYNA"
+        },
+        {
+          "key": "harvest_howto_title",
+          "value": "Nasıl oynanır?"
+        },
+        {
+          "key": "harvest_howto_step1",
+          "value": "Seviye geç, kürek kazan!"
+        },
+        {
+          "key": "harvest_howto_step2",
+          "value": "Kareleri kaz, gizli ürünleri bul!"
+        },
+        {
+          "key": "harvest_howto_step3",
+          "value": "{0} hasadı tamamla, ödülleri kap!"
+        },
+        {
+          "key": "harvest_loss_trowel",
+          "value": "Kürek"
         },
         {
           "key": "bridge_you",
@@ -215,6 +351,14 @@
         {
           "key": "level_end_loss_alliance",
           "value": "İttifak güçleri"
+        },
+        {
+          "key": "level_end_loss_message",
+          "value": "Vazgeçersen {0} elinden gidecek!"
+        },
+        {
+          "key": "level_end_loss_and",
+          "value": " ve "
         },
         {
           "key": "level_end_success_title_level",
@@ -647,6 +791,14 @@
         {
           "key": "hint_obstacle_safe_name",
           "value": "Kasa"
+        },
+        {
+          "key": "hint_obstacle_ancientseal_name",
+          "value": "Antik Mühür"
+        },
+        {
+          "key": "hint_obstacle_ancientseal",
+          "value": "Tahtanın herhangi bir yerinde, gösterilen renkten sayaçtaki sayı kadar taş topla. Her taş yalnızca bir mühre gider. Üç renk tamamlanınca mühür açılır. Doğrudan vuruşlar sayılmaz."
         },
         {
           "key": "hint_obstacle_cargo",
@@ -2018,7 +2170,7 @@
         },
         {
           "key": "settings_hint",
-          "value": "Hin"
+          "value": "Hint"
         },
         {
           "key": "settings_notifications",
@@ -2366,6 +2518,102 @@
       "code": "en",
       "entries": [
         {
+          "key": "boss_howto_match",
+          "value": "Match tiles\nto power up your attack!"
+        },
+        {
+          "key": "boss_howto_exchange",
+          "value": "You strike after your move.\nYour opponent strikes back!"
+        },
+        {
+          "key": "boss_howto_finish",
+          "value": "Beat every opponent and finish the goals\nbefore health or moves run out!"
+        },
+        {
+          "key": "boss_howto_header",
+          "value": "BOSS DUEL"
+        },
+        {
+          "key": "boss_howto_page",
+          "value": "{0} / 3"
+        },
+        {
+          "key": "boss_howto_you",
+          "value": "YOU"
+        },
+        {
+          "key": "boss_howto_enemy",
+          "value": "OPPONENT"
+        },
+        {
+          "key": "boss_howto_start",
+          "value": "Tap to start the duel"
+        },
+        {
+          "key": "boss_howto_next",
+          "value": "Tap to continue"
+        },
+        {
+          "key": "boss_howto_player_title",
+          "value": "Clear tiles, build power!"
+        },
+        {
+          "key": "boss_howto_player_body",
+          "value": "You are the character on the left. Match tiles: every tile you clear adds power to your attack. You strike when your move finishes."
+        },
+        {
+          "key": "boss_howto_player_tip",
+          "value": "Combine special tiles to clear more tiles and hit harder!"
+        },
+        {
+          "key": "boss_howto_enemy_title",
+          "value": "Your opponent strikes back!"
+        },
+        {
+          "key": "boss_howto_enemy_body",
+          "value": "Your opponent is on the right. If they survive your attack, they hit you once. The green bar is your health; the purple bar is theirs."
+        },
+        {
+          "key": "boss_howto_enemy_tip",
+          "value": "Your opponent can also throw obstacles onto your board. Clear them to make room!"
+        },
+        {
+          "key": "boss_howto_enemy_tip_basic",
+          "value": "Make powerful moves to win before your opponent lands too many hits!"
+        },
+        {
+          "key": "boss_howto_win_title",
+          "value": "Win before health or moves run out!"
+        },
+        {
+          "key": "boss_howto_win_body",
+          "value": "Defeat every opponent and complete the remaining level goals. You lose if your health reaches zero or you run out of moves."
+        },
+        {
+          "key": "boss_howto_shields",
+          "value": "Clearing a green shield protects you. Be careful: clearing a purple shield gives your opponent protection!"
+        },
+        {
+          "key": "boss_howto_player_shield",
+          "value": "Clear a green shield to gain protection from incoming damage!"
+        },
+        {
+          "key": "boss_howto_enemy_shield",
+          "value": "Be careful: clearing a purple shield gives your opponent protection!"
+        },
+        {
+          "key": "boss_howto_win_tip",
+          "value": "Every move counts. Build power with big matches and special tiles!"
+        },
+        {
+          "key": "shop_purchase_thanks_life",
+          "value": "Thank-you gift: Life"
+        },
+        {
+          "key": "shop_purchase_thanks_pending",
+          "value": "Thank-you gift: Life\nNext attempt with room"
+        },
+        {
           "key": "bridge_tap_continue",
           "value": "Tap to continue"
         },
@@ -2412,6 +2660,46 @@
         {
           "key": "bridge_play",
           "value": "PLAY"
+        },
+        {
+          "key": "harvest_title",
+          "value": "GARDEN HARVEST"
+        },
+        {
+          "key": "harvest_floor",
+          "value": "Harvest {0}/{1}"
+        },
+        {
+          "key": "harvest_no_trowel",
+          "value": "Win levels to earn trowels!"
+        },
+        {
+          "key": "harvest_finished",
+          "value": "Harvest complete! Great job."
+        },
+        {
+          "key": "harvest_play",
+          "value": "PLAY"
+        },
+        {
+          "key": "harvest_howto_title",
+          "value": "How to play?"
+        },
+        {
+          "key": "harvest_howto_step1",
+          "value": "Win levels to earn trowels!"
+        },
+        {
+          "key": "harvest_howto_step2",
+          "value": "Dig tiles to find hidden crops!"
+        },
+        {
+          "key": "harvest_howto_step3",
+          "value": "Complete {0} harvests, grab the rewards!"
+        },
+        {
+          "key": "harvest_loss_trowel",
+          "value": "Trowels"
         },
         {
           "key": "bridge_you",
@@ -2576,6 +2864,14 @@
         {
           "key": "level_end_loss_alliance",
           "value": "Alliance boosts"
+        },
+        {
+          "key": "level_end_loss_message",
+          "value": "Give up and you'll lose {0}!"
+        },
+        {
+          "key": "level_end_loss_and",
+          "value": " and "
         },
         {
           "key": "level_end_success_title_level",
@@ -3000,6 +3296,14 @@
         {
           "key": "hint_obstacle_safe_name",
           "value": "Safe"
+        },
+        {
+          "key": "hint_obstacle_ancientseal_name",
+          "value": "Ancient Seal"
+        },
+        {
+          "key": "hint_obstacle_ancientseal",
+          "value": "Collect the displayed number of stones in the active color anywhere on the board. Each stone goes to only one seal. Complete all three colors to open it. Direct hits do not count."
         },
         {
           "key": "hint_obstacle_cargo",

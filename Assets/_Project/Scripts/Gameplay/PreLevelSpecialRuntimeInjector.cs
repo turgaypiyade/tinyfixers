@@ -147,6 +147,8 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         while (pendingSelection.Count > 0)
         {
             bool roomReady = false;
+            float waitedForRoom = 0f;
+            bool waitReasonLogged = false;
             while (true)
             {
                 // Board (sahne objesi) yok olduysa level bitti/çıkıldı → bırak. Bu, DontDestroyOnLoad
@@ -159,6 +161,17 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
                 {
                     roomReady = true;
                     break;
+                }
+
+                // Teşhis (tek sefer): teslimat 2 sn'den uzun bekliyorsa NEDENİNİ yaz (level 74 vakası:
+                // yer varken special'lar ilk hamleden sonra geldi).
+                waitedForRoom += Time.unscaledDeltaTime;
+                if (!waitReasonLogged && waitedForRoom > 2f)
+                {
+                    waitReasonLogged = true;
+                    Debug.LogWarning($"[PreLevelSpecialRuntimeInjector] Teslimat bekliyor ({waitedForRoom:0.0}s): " +
+                                     $"busy={board.IsBusy} blockJobs={board.BlockingBackgroundJobs} " +
+                                     $"eligible={HasEligibleCandidate()} state={board.CurrentState} {GetBoardStatus()}");
                 }
 
                 yield return null;

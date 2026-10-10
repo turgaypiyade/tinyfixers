@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ccf9c1f5b8bab4124a7ecfe61a413be7, type: 3}
+  m_Name: ChapterTheme_6
+  m_EditorClassIdentifier: Assembly-CSharp::ChapterTheme
+  chapterIndex: 6
+  gameBackground: {fileID: 21300000, guid: bb7f6e6989e334e268ff2aa168a5897b, type: 3}
+  gameTopHud: {fileID: 21300000, guid: a613c7faccef449fc85b7943d52d4deb, type: 3}
+  gameBottomArea: {fileID: 21300000, guid: 43e44e3d560a74958bf1278d0c4e96a1, type: 3}
+  menuBackground: {fileID: 21300000, guid: 4521c033365614105b1d105bdfdbc8e7, type: 3}
+  menuTopHud: {fileID: 21300000, guid: ecd5971b231564baeb9a49ca052b5a88, type: 3}
+  menuBottomArea: {fileID: 21300000, guid: 8f47d89b0f7fe4435b5e176a1f531f13, type: 3}
+  menuLevelSelectorBtn: {fileID: 21300000, guid: c322b9cadec8b45aabd2f464edfc07e4, type: 3}
+  menuRepairBtn: {fileID: 21300000, guid: 618b39e0230a1406ebfba99542c755c5, type: 3}
+  borderColorId: 0
+  borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
+  successAnimationBackground: {fileID: 0}
+  preLevelPopupBackground: {fileID: 21300000, guid: c2cee371b18654473a7cf9bc0848606c, type: 3}
+  preLevelContinueButton: {fileID: 21300000, guid: 31a3eec15ec7e4edebed2e4bd6c22218, type: 3}
+  preLevelCancelButton: {fileID: 0}
+  preLevelCheckMark: {fileID: 21300000, guid: 4d7e3c1a8d2a049e7862849181984ab4, type: 3}
+  preLevelDimColor: {r: 0, g: 0, b: 0, a: 0.89411765}
+  preLevelSlotNormalTint: {r: 1, g: 1, b: 1, a: 1}
+  preLevelSlotSelectedTint: {r: 0.42745098, g: 1, b: 0.23921569, a: 0.6666667}
+  preLevelCountTextColor: {r: 1, g: 1, b: 1, a: 1}
+  preLevelButtonTextColor: {r: 1, g: 1, b: 1, a: 1}
+  workshopStages: {fileID: 11400000, guid: ee94cc6fba5bc40eb9422268cd24e711, type: 2}
+  loadingScreenImages:
+  - {fileID: 21300000, guid: 195efa70a7541414a9d5f30ca5630078, type: 3}
+  - {fileID: 21300000, guid: e33a13330145a40e9b9c1307d4abe674, type: 3}
+  - {fileID: 21300000, guid: 1b84d161e03ef41329ba93986ee4f316, type: 3}
+  - {fileID: 21300000, guid: 2ffe2b14db1084a7182210ce7ae161d6, type: 3}
+  - {fileID: 21300000, guid: c0da2777d4a5e4677bd10bd2d6980102, type: 3}
+  loadingHints:
+  - image: {fileID: 21300000, guid: 227f7f906fe094eb68e53870408ec840, type: 3}
+    titleLocalizationKey: loading_hint_3match_title
+    descriptionLocalizationKey: loading_hint_3match_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: 36fdba37bc1404ef4b078a00204c67e6, type: 3}
+    titleLocalizationKey: loading_hint_lineh_title
+    descriptionLocalizationKey: loading_hint_lineh_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: 25f2c7b5d9b5e4226867623aad291882, type: 3}
+    titleLocalizationKey: loading_hint_linev_title
+    descriptionLocalizationKey: loading_hint_linev_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: 42099cda2b9534be39dab5d576c965b5, type: 3}
+    titleLocalizationKey: loading_hint_pulse_title
+    descriptionLocalizationKey: loading_hint_pulse_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: 07b622adb22c449ca836ab6a419f1102, type: 3}
+    titleLocalizationKey: loading_hint_override_title
+    descriptionLocalizationKey: loading_hint_override_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: 0da3da42f460a490881f15202b8f7c18, type: 3}
+    titleLocalizationKey: loading_hint_patchbot_title
+    descriptionLocalizationKey: loading_hint_patchbot_desc
+    loadingLocalizationKey: loading_hint_loading
+  levelEndPopupBackground: {fileID: 21300000, guid: 1a990070d5b464ddaba99d098f0f0673, type: 3}
+  levelEndContinueButton: {fileID: 0}
+  levelEndCloseButton: {fileID: 0}
+  levelEndStarFilled: {fileID: 0}
+  levelEndStarEmpty: {fileID: 0}
+  levelEndGoalCheckMark: {fileID: 0}
+  levelEndExtraMoves5: {fileID: 0}
+  levelEndExtraMoves10: {fileID: 0}
+  levelEndExtraMoves15: {fileID: 0}

@@ -15,7 +15,7 @@ MonoBehaviour:
   gear: {fileID: 21300000, guid: eeecba4f60ec04d09965bf4d4c3a0a49, type: 3}
   core: {fileID: 21300000, guid: 08eff3596bce24d5d9f9f47a1e53c7ec, type: 3}
   bolt: {fileID: 21300000, guid: 61c7ba969b2154f14b32626e233396f0, type: 3}
-  plate: {fileID: 21300000, guid: 81161fe5f0a584d5cbb9707328b3a731, type: 3}
+  plate: {fileID: 21300000, guid: db27638c3082145f39319cecdb591da0, type: 3}
   key: {fileID: 21300000, guid: 38884719e46114284996c0d3e316e882, type: 3}
   lineH: {fileID: 21300000, guid: 2a754af4759b54bd3a1d36f710c306fb, type: 3}
   lineV: {fileID: 21300000, guid: 00ce8ec47914c4823a84bf22086d7f13, type: 3}
@@ -30,3 +30,6 @@ MonoBehaviour:
   boosterRow: {fileID: 21300000, guid: 30434a3e9715343989745b73a5f1e925, type: 3}
   boosterColumn: {fileID: 21300000, guid: 822cf0df638a3404399e3a61943aa8d4, type: 3}
   boosterShuffle: {fileID: 21300000, guid: 599a4c9b91d364a91bf5688d04ad08ac, type: 3}
+  coin: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
+  life: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
+  star: {fileID: 21300000, guid: 6cf1f4c3f7e1b4091b6e777688baf04e, type: 3}

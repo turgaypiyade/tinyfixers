@@ -185,6 +185,9 @@ public class ObstacleHintManager : MonoBehaviour
         foreach (var id in beneath)
             AddId(id);
 
+        if (levelData.ancientSeals != null && levelData.ancientSeals.Length > 0)
+            AddId(ObstacleId.AncientSeal);
+
         if (levelData.safes != null)
         {
             for (int i = 0; i < levelData.safes.Length; i++)

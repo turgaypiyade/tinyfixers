@@ -129,9 +129,11 @@ public class PatchbotComboService
 
         PatchBotIntent liveIntent = intent;
         Vector2Int liveTarget = initialTarget;
+        bool targetResolved = false;
 
-        PatchbotLiveDashTargetRegistry.Register(fromCell, initialTarget, () =>
+        Vector2Int? ResolveLiveTarget()
         {
+            targetResolved = true;
             var resolved = coordinator.ResolveIntentToCell(
                 liveIntent,
                 fromTile,
@@ -144,11 +146,16 @@ public class PatchbotComboService
             liveIntent = resolved.intent;
 
             if (!resolved.hasCell || !IsInside(resolved.cell.x, resolved.cell.y))
+            {
+                liveTarget = new Vector2Int(-1, -1);
                 return null;
+            }
 
             liveTarget = resolved.cell;
             return liveTarget;
-        });
+        }
+
+        PatchbotLiveDashTargetRegistry.Register(fromCell, initialTarget, ResolveLiveTarget);
 
         EnqueueDash(
             fromTile,
@@ -156,7 +163,16 @@ public class PatchbotComboService
             initialTarget.y,
             carriedTile,
             onDashStart,
-            () => onArrived?.Invoke(liveTarget.x, liveTarget.y, liveIntent));
+            () =>
+            {
+                // Headless playback may never acquire the visual resolver. Otherwise do not
+                // apply an impact to a target that died after the last visual retarget tick.
+                if (!targetResolved) ResolveLiveTarget();
+                if (liveIntent == null || !liveIntent.IsAlive(board))
+                    liveTarget = new Vector2Int(-1, -1);
+                // Invalid coordinates cancel the impact, but still run caller cleanup.
+                onArrived?.Invoke(liveTarget.x, liveTarget.y, liveIntent);
+            });
     }
 
     public void ConsumePatchBotOnly(HashSet<TileView> matches, TileView patchBotTile, System.Action<TileView> markAffectedCell)
@@ -260,7 +276,7 @@ public class PatchbotComboService
     public bool IsGelSpreadTarget(int x, int y, TileView tile)
     {
         var gel = board.SpreadingGelService;
-        if (gel == null || tile == null || !tile) return false;
+        if (gel == null || tile == null || !tile || tile.GetSpecial() != TileSpecial.None) return false;
         if (board.IsMaskHoleCell(x, y) || gel.IsGelAt(x, y)) return false;
         if (board.GridData[x, y] == null || !SpecialUtils.CanTargetTileContent(board, x, y)) return false;
         return board.ObstacleStateService == null || !board.ObstacleStateService.IsMovableObstacleAt(x, y);

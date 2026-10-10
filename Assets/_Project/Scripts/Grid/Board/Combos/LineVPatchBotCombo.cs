@@ -109,6 +109,7 @@ public sealed class LineVPatchBotCombo
         {
             try
             {
+                if (hitX < 0 || hitY < 0 || hitX >= rt.Board.Width || hitY >= rt.Board.Height) return;
                 // Varış hücresi = uçuş boyunca doğrulanan CANLI hedef (kırıldıysa yeni seçilen).
                 var targetCell = new Vector2Int(hitX, hitY);
                 List<BoardAction> deferredActions;
@@ -134,7 +135,7 @@ public sealed class LineVPatchBotCombo
             }
             finally
             {
-                coordinator.ReleaseIntent(liveIntent ?? picked.intent);
+                coordinator.ReleaseIntent(liveIntent);
                 rt.Board.EndPatchBotDashFlight();
                 // Blocking pencere kalktığı için varıştaki line-burst zincirini (Override dahil)
                 // resolve edecek bir pass'i açıkça planla; sequencer boşalınca çalışır.

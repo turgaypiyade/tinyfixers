@@ -259,6 +259,9 @@ public enum ObstacleId : int
     // eşleşme bir, her special vuruşu iki kutu düşürür (ObstacleStateService). Son kutu düşünce kasa kalkar.
     // Görsel: Grid/PaintCanBoxView — vuruşta tüm kutular sallanır, düşenler takla atarak uçar.
     PaintCanBox = 63,
+
+    // Collect the displayed color anywhere on the board; direct hits do not advance it.
+    AncientSeal = 64,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
@@ -316,6 +319,29 @@ public struct SafeEntry
     public SafeLockColor thirdLock;
     [Tooltip("Yığın sırası (Docs/ObstacleStack_Plan.md): üst üste konan engeller (stackedObstacles + safes) " +
              "bu sayıya göre alttan üste kurulur. Eşitse eski davranış: önce stackedObstacles, sonra kasalar.")]
+    public int stackOrder;
+}
+
+public enum AncientSealStartColor
+{
+    Auto = 0,
+    Red = 1,
+    Yellow = 2,
+    Green = 3
+}
+
+[System.Serializable]
+public struct AncientSealEntry
+{
+    public int originCellIndex;
+    [Min(2)] public int width;
+    [Min(2)] public int height;
+    [Tooltip("Başlangıç rengi; Auto mühürleri kırmızı, yeşil, sarı başlangıçlara dengeli dağıtır.")]
+    public AncientSealStartColor startColor;
+    [Tooltip("Her rengin toplama adedi. Başlangıçtan itibaren kırmızı → sarı → yeşil döngüsü izlenir.")]
+    [Min(1)] public int redCount;
+    [Min(1)] public int yellowCount;
+    [Min(1)] public int greenCount;
     public int stackOrder;
 }
 
@@ -457,6 +483,11 @@ public class LevelData : ScriptableObject
              "BossDifficulty.AutoWaveCount ile belirler (erken bosslar 1, sonra 2, sonra 3).")]
     [Min(0)] public int bossWaveCount = 0;
 
+    [Header("Oil")]
+    [Tooltip("Oil yayılmasının tavanı: board'daki toplam oil bu sayıya ulaşınca yayılma durur (boss'un attığı oil de sayılır). " +
+             "0 = otomatik: oynanabilir hücrelerin dörtte biri, ama level'ın başlangıç oil sayısından az değil.")]
+    [Min(0)] public int oilSpreadMaxCells = 0;
+
     [Header("Random Pool")]
     [Tooltip("Bu levelda random üretilecek taş tipleri. DOLUYSA GridSpawner'daki varsayılan " +
              "havuz hiç kullanılmaz, yalnızca buradakiler üretilir. Boşsa GridSpawner'daki geçerlidir.")]
@@ -502,6 +533,9 @@ public class LevelData : ScriptableObject
     [Tooltip("Safe (kasa) kapakları. Kapladıkları NxN bölgenin altındaki içerik dokunulmaz kalır; " +
              "kasa kırılınca açılır. Cells runtime'da SafeObstacleService ile işlenir.")]
     public SafeEntry[] safes;
+
+    [Tooltip("Ancient Mühür: sıradaki renkten belirtilen sayıda taş toplanınca açılır. Kenar/special vuruşu sayılmaz.")]
+    public AncientSealEntry[] ancientSeals;
 
     [Tooltip("Üst üste bindirilmiş obstacle'lar (generic stacking). Her entry, kapladığı hücrelerdeki " +
              "AUTHORED içeriği (Mud, Stone vb.) 'beneath' olarak saklayıp üstüne obstacleId'yi stamp eder; " +
@@ -591,6 +625,8 @@ public class LevelData : ScriptableObject
 
         if (safes == null)
             safes = System.Array.Empty<SafeEntry>();
+        if (ancientSeals == null)
+            ancientSeals = System.Array.Empty<AncientSealEntry>();
 
         if (stackedObstacles == null)
             stackedObstacles = System.Array.Empty<StackedObstacleEntry>();

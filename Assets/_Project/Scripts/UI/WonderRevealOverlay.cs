@@ -17,10 +17,44 @@ public class WonderRevealOverlay : MonoBehaviour
     [SerializeField] private float fadeDur = 0.25f;
     [SerializeField] private float holdAfterReveal = 1.1f;
     [Tooltip("Bir kademe kaynak animasyon süresi (yavaş = daha tatmin edici)")]
-    [SerializeField] private float revealDuration = 1.9f;
+    [SerializeField] private float revealDuration = 3.4f;
+    [Tooltip("Paslı ve solgun resmi eğri kenarlı bölgeler halinde onarır.")]
+    [SerializeField] private bool useRustRestoration = true;
 
     WonderScene _scene;
+    int _previewStage;
     public bool IsPlaying { get; private set; }
+
+    /// <summary>Editor preview uses the real overlay without spending stars or saving progress.</summary>
+    public void PreviewRustRestoration(WonderDefinition wonder)
+    {
+        if (!Application.isPlaying || IsPlaying || wonder == null) return;
+        if (group != null) group.alpha = 0f;
+        gameObject.SetActive(true);
+        StartCoroutine(PreviewRestorationRoutine(wonder));
+    }
+
+    IEnumerator PreviewRestorationRoutine(WonderDefinition wonder)
+    {
+        IsPlaying = true;
+        try
+        {
+            int stages = Mathf.Max(1, wonder.TaskCount);
+            float from = (_previewStage++ % stages) / (float)stages;
+            yield return PrepareReveal(wonder, from, true);
+            var view = _scene.View;
+            if (!view.isActiveAndEnabled) yield break;
+            yield return Fade(0f, 1f);
+            yield return view.PlayRevealRoutine(from + 1f / stages);
+            if (holdAfterReveal > 0f) yield return new WaitForSeconds(holdAfterReveal);
+            yield return Fade(1f, 0f);
+        }
+        finally
+        {
+            IsPlaying = false;
+            if (root != null) root.SetActive(false);
+        }
+    }
 
     /// <summary>
     /// wonderIndex = görevi yapılan EVENT indeksi; fromStage = harcamadan ÖNCEki kademe
@@ -36,28 +70,47 @@ public class WonderRevealOverlay : MonoBehaviour
         float fromN = w.TaskCount > 0 ? (float)fromStage / w.TaskCount : 0f;
         float toN = w.TaskCount > 0 ? (float)toStage / w.TaskCount : 1f;
 
-        EnsureScene();
-        if (root != null) root.SetActive(true);
-
-        var view = _scene.Build(w);
-        view.animateDuration = revealDuration;   // yavaş, tatmin edici kaynak
-        view.SetRevealImmediate(fromN);
-
-        yield return Fade(0f, 1f);
-        yield return view.PlayRevealRoutine(toN);   // kaynak animasyonu
-
-        // Bu event'in son görevi tamamlandıysa: sandık + event'i tamamlandı işaretle.
-        // (Diğer event'ler bundan etkilenmez; yeni event kilidi BÖLÜM ile açılır.)
-        if (WonderProgress.IsEventComplete(cat, wonderIndex))
+        try
         {
-            yield return PlayChest(w);
-            WonderProgress.MarkEventCompleted(cat, wonderIndex);
-        }
+            yield return PrepareReveal(w, fromN, useRustRestoration);
+            var view = _scene.View;
+            if (!view.isActiveAndEnabled) yield break;
+            yield return Fade(0f, 1f);
+            yield return view.PlayRevealRoutine(toN);
 
-        if (holdAfterReveal > 0f) yield return new WaitForSeconds(holdAfterReveal);
-        yield return Fade(1f, 0f);
-        if (root != null) root.SetActive(false);
-        IsPlaying = false;
+            // Complete only after the reveal has actually run.
+            if (!view.isActiveAndEnabled) yield break;
+            if (WonderProgress.IsEventComplete(cat, wonderIndex))
+            {
+                yield return PlayChest(w);
+                WonderProgress.MarkEventCompleted(cat, wonderIndex);
+            }
+
+            if (holdAfterReveal > 0f) yield return new WaitForSeconds(holdAfterReveal);
+            yield return Fade(1f, 0f);
+        }
+        finally
+        {
+            IsPlaying = false;
+            if (root != null) root.SetActive(false);
+        }
+    }
+
+    IEnumerator PrepareReveal(WonderDefinition wonder, float from, bool restoration)
+    {
+        // Activate before building. Cold-start Awake/OnEnable and the first canvas layout
+        // must finish before applying the explicit task progress and starting the reveal.
+        if (group != null) group.alpha = 0f;
+        gameObject.SetActive(true);
+        if (root != null) root.SetActive(true);
+        EnsureScene();
+        // Reuse the character, material and spark buffer on subsequent tasks.
+        var view = _scene.definition == wonder && _scene.View != null ? _scene.View : _scene.Build(wonder);
+        view.useRustRestoration = restoration;
+        view.animateDuration = revealDuration;
+        yield return null;
+        if (!view.isActiveAndEnabled) yield break;
+        view.SetRevealImmediate(from);
     }
 
     void EnsureScene()

@@ -1,0 +1,155 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9b6235bec5cd4a7a853155572d13368, type: 3}
+  m_Name: HarvestConfig
+  m_EditorClassIdentifier: Assembly-CSharp::HarvestConfig
+  minLevelGate: 26
+  cycleDays: 7
+  activeDays: 5
+  epochUtc: 2026-01-05
+  debugForceAvailable: 0
+  wonderCatalog: {fileID: 11400000, guid: 34474c506de9f46a2be88c1bd1801853, type: 2}
+  gridSize: 5
+  trowelsPerWin: 1
+  firstTryBonus: 1
+  bossWinTrowels: 3
+  crops:
+  - id: carrot
+    sprite: {fileID: 21300000, guid: a3a4a05510b34930b9ba2217b3b36ced, type: 3}
+    size: {x: 1, y: 2}
+  - id: potato
+    sprite: {fileID: 21300000, guid: c6410cc3161a45a29d23c47b3fcec4a5, type: 3}
+    size: {x: 1, y: 1}
+  - id: radish
+    sprite: {fileID: 21300000, guid: a2a72c953fcb487fb3baf7441794092e, type: 3}
+    size: {x: 1, y: 1}
+  - id: corn
+    sprite: {fileID: 21300000, guid: dbd8b3efe1f1497d9781ddc42409c340, type: 3}
+    size: {x: 1, y: 3}
+  - id: watermelon
+    sprite: {fileID: 21300000, guid: 93f1e9482a064c2cb7f8005cb55b2e82, type: 3}
+    size: {x: 2, y: 1}
+  - id: pumpkin
+    sprite: {fileID: 21300000, guid: 17b2ec3ffdb44d1aae301f5023bd30b1, type: 3}
+    size: {x: 2, y: 2}
+  - id: eggplant
+    sprite: {fileID: 21300000, guid: 4a58846bdb464efc9308760bd3ecf78c, type: 3}
+    size: {x: 2, y: 1}
+  - id: strawberry
+    sprite: {fileID: 21300000, guid: 532a97854990453aa4ccff5ca23f764b, type: 3}
+    size: {x: 1, y: 1}
+  floors:
+  - placements:
+    - crop: 0
+      origin: {x: 1, y: 1}
+    - crop: 1
+      origin: {x: 3, y: 3}
+    - crop: 2
+      origin: {x: 0, y: 4}
+    rewards:
+    - type: 0
+      amount: 100
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+  - placements:
+    - crop: 4
+      origin: {x: 2, y: 0}
+    - crop: 7
+      origin: {x: 0, y: 2}
+    - crop: 0
+      origin: {x: 4, y: 2}
+    rewards:
+    - type: 20
+      amount: 1
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 0
+      amount: 150
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+  - placements:
+    - crop: 5
+      origin: {x: 1, y: 1}
+    - crop: 3
+      origin: {x: 4, y: 1}
+    - crop: 1
+      origin: {x: 0, y: 4}
+    - crop: 6
+      origin: {x: 2, y: 4}
+    rewards:
+    - type: 13
+      amount: 2
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 0
+      amount: 200
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+  - placements:
+    - crop: 5
+      origin: {x: 3, y: 3}
+    - crop: 3
+      origin: {x: 0, y: 0}
+    - crop: 4
+      origin: {x: 2, y: 0}
+    - crop: 6
+      origin: {x: 1, y: 4}
+    - crop: 2
+      origin: {x: 2, y: 2}
+    rewards:
+    - type: 0
+      amount: 500
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 20
+      amount: 2
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 11
+      amount: 1
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+  sceneBackground: {fileID: 21300000, guid: 083512df3084457a90c5ebcec89e4bdc, type: 3}
+  bedTop: {x: 567, y: 714}
+  bedRight: {x: 1125, y: 1050}
+  bedBottom: {x: 600, y: 1395}
+  bedLeft: {x: 15, y: 1026}
+  soilTiles:
+  - {fileID: 21300000, guid: 8f815f823e1f412e9c5475a12e033a9c, type: 3}
+  - {fileID: 21300000, guid: 96bc953928d04544954f80198ecb7a38, type: 3}
+  - {fileID: 21300000, guid: 9488afa27c1043c680e2d989446d7ddd, type: 3}
+  dugTile: {fileID: 21300000, guid: dcbaef107d7947749c911ecc455011f5, type: 3}
+  hintGlow: {fileID: 0}
+  hintGlowColor: {r: 1, g: 0.93, b: 0.55, a: 0.75}
+  tileFill: 0.92
+  tileTopFaceCenter: {x: 0.511, y: 0.479}
+  tileTopFaceWidth: 0.956
+  bearIdle: {fileID: 21300000, guid: 1f6ac2c7b5a0416ba1a314b7aacdd768, type: 3}
+  bearDig: {fileID: 21300000, guid: 0575652f401f4aecbdc692468ebf49c9, type: 3}
+  bearCheer: {fileID: 21300000, guid: 83496661bd4847bf8a3a98eaaaf5c970, type: 3}
+  trowelIcon: {fileID: 21300000, guid: 152c933d49db4fa293025e8f3e30aa8a, type: 3}

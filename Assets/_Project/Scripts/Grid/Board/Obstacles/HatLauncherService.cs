@@ -40,7 +40,10 @@ public sealed class HatLauncherService : MonoBehaviour
     private void OnDisable()
     {
         if (board?.ObstacleStateService != null)
+        {
             board.ObstacleStateService.HatLauncherHitInterceptor = null;
+            board.ObstacleStateService.HatLauncherCanProduceQuery = null;
+        }
     }
 
     private void ResolveReferences()
@@ -69,8 +72,17 @@ public sealed class HatLauncherService : MonoBehaviour
 
         totalGroupReleased = 0;
         board.ObstacleStateService.HatLauncherHitInterceptor = HandleHit;
+        board.ObstacleStateService.HatLauncherCanProduceQuery = CanProduce;
 
         Debug.Log($"[HatLauncher] Bound. totalCapacity={TotalCapacity}");
+    }
+
+    private bool CanProduce()
+    {
+        if (totalGroupReleased >= TotalCapacity) return false;
+        var collectible = ResolveCollectibleId();
+        return collectible == CollectibleId.None || topHud == null
+               || topHud.HasGoalForCollectible(collectible);
     }
 
     private void HandleHit(int originIndex)
@@ -80,7 +92,7 @@ public sealed class HatLauncherService : MonoBehaviour
 
         int capacity = TotalCapacity;
 
-        if (totalGroupReleased >= capacity)
+        if (!CanProduce())
         {
             fx?.SetExhausted(originIndex, null);
             return;

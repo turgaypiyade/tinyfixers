@@ -301,7 +301,7 @@ public sealed class TeamScreenController : MonoBehaviour
         }
     }
 
-    // Zaman kilidi (yeni üye 24sa / istek sonrası 4sa) sürerken buton üstündeki
+    // Zaman kilidi (yeni üye 24sa / istek sonrası 24sa) sürerken buton üstündeki
     // geri sayım saniyede bir tazelenir; kilit bitince buton kendiliğinden açılır.
     private void Update()
     {
@@ -322,6 +322,7 @@ public sealed class TeamScreenController : MonoBehaviour
         if (requestLifeButton != null) requestLifeButton.interactable = inbox != null && inbox.CanRequest;
         if (requestLifeLabel != null)
             requestLifeLabel.text = full ? GameLocalization.GetFormat("team_lives_full", LivesManager.MaxLives)
+                : inbox != null && inbox.CanRequest ? defaultRequestLifeLabel
                 : inbox != null && inbox.Pending > 0 ? GameLocalization.Get("team_lives_ready")
                 : inbox != null && inbox.IsWaiting ? GameLocalization.Get("team_lives_waiting")
                 : lockLeft > System.TimeSpan.Zero

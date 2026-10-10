@@ -33,7 +33,11 @@ public static class GameAnalytics
             Log("level_end",
                 ("level", r.Level), ("attempt", r.Attempt), ("success", r.Won ? 1 : 0),
                 ("seconds", r.Seconds), ("moves_left", r.MovesLeft),
-                ("assist_tier", r.AssistTier), ("fails_before", r.FailsBefore), ("moves_total", r.MovesTotal));
+                ("assist_tier", r.AssistTier), ("fails_before", r.FailsBefore), ("moves_total", r.MovesTotal),
+                ("struggles_before", r.StrugglesBefore), ("struggled", r.Struggled ? 1 : 0),
+                ("continues", r.Continues), ("extra_moves", r.ExtraMoves),
+                ("continue_coins", r.ContinueCoinsSpent), ("ad_continues", r.AdContinues),
+                ("measurement_version", 2), ("is_development", Debug.isDebugBuild ? 1 : 0));
             if (r.Won) SetCurrentLevel(r.Level + 1);
         };
 #if TF_FIREBASE_ANALYTICS
@@ -46,6 +50,13 @@ public static class GameAnalytics
 #if TF_FIREBASE_ANALYTICS
         FirebaseAnalytics.SetUserProperty("current_level", level.ToString());
 #endif
+    }
+
+    /// Event'lerin (Bostan Hasadı vb.) kendi analytics olayları için ortak giriş.
+    public static void LogEvent(string eventName, params (string name, long value)[] parameters)
+    {
+        if (RuntimeSimulationSession.IsActive) return;
+        Log(eventName, parameters);
     }
 
     private static void Log(string eventName, params (string name, long value)[] parameters)

@@ -44,15 +44,12 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
             if (inst == null)
                 return null;
 
-            // Yalnızca bu level'da FİİLEN TAMAMLANAN hedefler kayıp sayılır (yarım ilerleme değil —
-            // "henüz kazanmadığın şeyi gösterme"). Her tamamlanan hedefin İKONU tek başına gösterilir.
+            // Bu level'da hedefe yazılan HER ilerleme kayıptır (kullanıcı kararı, 2026-10-10): oyuncu
+            // ör. 12 LineH/V topladıysa hedef dolmasa da vazgeçince o 12 silinir. Hedef başına ikon + sayı.
             List<LevelLossItem> result = null;
-            foreach (var goal in inst.GetStagedNewlyCompletedGoals())
-            {
-                if (goal == null) continue;
+            foreach (var (goal, gained) in inst.GetStagedGoalGains())
                 (result ??= new List<LevelLossItem>())
-                    .Add(new LevelLossItem(goal.DisplayIcon, null, 0, achieved: true));
-            }
+                    .Add(new LevelLossItem(goal.DisplayIcon, inst.EventName, gained, achieved: true));
             return result;
         });
     }
@@ -134,6 +131,24 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
     private void Update() => RefreshState();
 
+    /// The service survives menu scene reloads; discard cached goals/rewards after a save reset/restore.
+    public void ReloadFromPrefs()
+    {
+        DiscardStagedGains();
+        stagedSpacePerGoal = null;
+        sessionGains.Clear();
+        pendingRewardReveals.Clear();
+        pendingMenuRewardFx.Clear();
+        if (scheduler != null)
+        {
+            activeEvent = scheduler.GetActiveEvent();
+            config = activeEvent?.config;
+        }
+        BuildGoals();
+        LoadState();
+        RefreshState();
+    }
+
     // ── IProgressEventService ────────────────────────────────────
 
     public IReadOnlyList<SessionGainRecord> ConsumeSessionGains()
@@ -156,30 +171,29 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     private bool stagingActive;
     private readonly List<StagedTileEvent> stagedEvents = new();
     private int[] stagedSpacePerGoal;
+    private int[] stagedStartSpacePerGoal;   // level başındaki boşluk → (başlangıç − şimdiki) = bu level'ın kazancı
     private int stagedGainTotal;
 
     /// Fail popup'ının "X event puanı kaybolacak" uyarısı için.
     public int StagedGainTotal => stagingActive ? stagedGainTotal : 0;
 
     /// <summary>
-    /// Bu level'da (staged) YENİ tamamlanan hedefler. Vazgeçilirse bu tamamlamalar kaybolur.
-    /// Önceki level'larda zaten tamamlanmış (committed → <see cref="ProgressGoalRuntime.IsCompleted"/>)
-    /// veya yalnızca kısmen ilerlenen hedefler HARİÇ. Staging'de bir hedefin başlangıç boşluğu
-    /// (stagedSpacePerGoal) 0'a indiyse ama commit'li state hâlâ tamamlanmamışsa → bu level tamamladı.
+    /// Bu level'da (staged) ilerleme yazılan hedefler ve kazanılan miktar. Vazgeçilirse hepsi silinir.
+    /// Tamamlanan ve yarım kalan hedefler birlikte döner; ödülü alınmış / önceden dolmuş hedefler hariç.
     /// </summary>
-    public IEnumerable<ProgressGoalRuntime> GetStagedNewlyCompletedGoals()
+    public IEnumerable<(ProgressGoalRuntime goal, int gained)> GetStagedGoalGains()
     {
-        if (!stagingActive || stagedSpacePerGoal == null)
+        if (!stagingActive || stagedSpacePerGoal == null || stagedStartSpacePerGoal == null)
             yield break;
 
-        int n = Mathf.Min(goals.Count, stagedSpacePerGoal.Length);
+        int n = Mathf.Min(goals.Count, Mathf.Min(stagedSpacePerGoal.Length, stagedStartSpacePerGoal.Length));
         for (int i = 0; i < n; i++)
         {
             var g = goals[i];
-            if (g == null || g.IsRewardClaimed) continue;
-            if (g.IsCompleted) continue;            // committed olarak zaten tamam → kayıp değil
-            if (stagedSpacePerGoal[i] == 0)         // bu level'da staged olarak dolduruldu → risk
-                yield return g;
+            if (g == null || g.IsRewardClaimed || g.IsCompleted) continue;
+            int gained = stagedStartSpacePerGoal[i] - stagedSpacePerGoal[i];
+            if (gained > 0)
+                yield return (g, gained);
         }
     }
 
@@ -233,6 +247,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
                 ? 0
                 : Mathf.Max(0, goals[i].Definition.targetCount - goals[i].CurrentCount);
         }
+        stagedStartSpacePerGoal = (int[])stagedSpacePerGoal.Clone();
     }
 
     /// Level kazanılınca çağrılır: bekleyen kazanımları kalıcılaştırır (ödüller dahil).

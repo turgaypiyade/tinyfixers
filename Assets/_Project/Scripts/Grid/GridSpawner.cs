@@ -101,7 +101,10 @@ public class GridSpawner : MonoBehaviour
     [Tooltip("Boşsa obstaclesRoot kullanılır.")]
     [SerializeField] private RectTransform safeRoot;
     // Kasa görselleri (origin → view): üstü kapalı kasa gizli başlar, açığa çıkınca etkinleşir.
-    private readonly Dictionary<int, Component> safeViewsByOrigin = new();   // SealSafeView ya da prefab SafeObstacleView
+    private readonly Dictionary<int, SafeObstacleView> safeViewsByOrigin = new();
+    private readonly Dictionary<int, AncientSealView> ancientSealViewsByOrigin = new();
+    private readonly Dictionary<int, GameObject> ancientSealClickProxyByCell = new();
+    private AncientSealService ancientSealService;
     private SafeObstacleService safeObstacleService;   // StampLayeredEntriesIntoLevel'de bulunur
 
     // Generic stacked-obstacle + Safe beneath kayıtları. Stamp aşaması (SetLevelData ÖNCESİ)
@@ -291,6 +294,7 @@ public class GridSpawner : MonoBehaviour
         // Event item'ları level boyunca staging'de bekler: kazanınca commit,
         // kaybetmeyi kabul edince discard (LevelEndSimplePopupController yönetir).
         ProgressEventService.Instance?.BeginLevelStaging();
+        LivesManager.ClaimPendingPurchaseThanks();
         LevelAttemptStats.BeginAttempt(CurrentLevel.Global, resolvedLevel.moves);
 
         board.Init(width, height, iconLibrary);
@@ -611,6 +615,8 @@ public class GridSpawner : MonoBehaviour
         beneathViewsByCell.Clear();
         _chestViews.Clear();
         safeViewsByOrigin.Clear();
+        ancientSealViewsByOrigin.Clear();
+        ancientSealClickProxyByCell.Clear();
         cellBgByIndex.Clear();
         cellBgImageByIndex.Clear();
         baseCellBgColorByIndex.Clear();
@@ -638,6 +644,7 @@ public class GridSpawner : MonoBehaviour
             DrawTubeObstacles();
             DrawMagnetObstacles();
             DrawSafeObstacles();
+            DrawAncientSealObstacles();
             // Grass root'unu border'ın üstüne taşı (worldPositionStays: hücre hizası korunur) +
             // child layer'larını border'a eşle — yapraklar mask'a takılmaz, magnetin üstünde kalır.
             LiftGrassRootAboveBorder();
@@ -1183,7 +1190,7 @@ public class GridSpawner : MonoBehaviour
                 // Tube kendi TubeView renderer'ını kullanır.
                 if (obsId == ObstacleId.Tube) continue;
                 // Safe kendi SafeObstacleView renderer'ını kullanır.
-                if (obsId == ObstacleId.Safe) continue;
+                if (obsId == ObstacleId.Safe || obsId == ObstacleId.AncientSeal) continue;
                 // Magnet kendi MagnetView renderer'ını (DrawMagnetObstacles) kullanır; buradaki
                 // def yalnızca goal ikonu içindir, board görselini üretmez (çift-çizim olmasın).
                 if (obsId == ObstacleId.Magnet) continue;
@@ -1583,6 +1590,33 @@ public class GridSpawner : MonoBehaviour
             entry.thirdLock);
     }
 
+    private void StampAncientSealEntry(LevelData lvl, AncientSealEntry entry)
+    {
+        int W = lvl.width, H = lvl.height;
+        int origin = entry.originCellIndex;
+        if (origin < 0 || origin >= lvl.obstacles.Length) return;
+
+        int ox = origin % W, oy = origin / W;
+        int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
+
+        for (int r = 0; r < h; r++)
+            for (int c = 0; c < w; c++)
+            {
+                int cx = ox + c, cy = oy + r;
+                if (cx >= W || cy >= H) continue;
+                int cell = cy * W + cx;
+                if (cell < 0 || cell >= lvl.obstacles.Length) continue;
+
+                // 1) Altındaki mevcut içeriği generic beneath store için işaretle (kayıt SetLevelData sonrası).
+                pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], origin));
+                // 2) Mühür ile stamp et.
+                lvl.obstacles[cell]       = (int)ObstacleId.AncientSeal;
+                lvl.obstacleOrigins[cell] = origin;
+            }
+
+        ancientSealService?.RegisterSeal(entry);
+    }
+
     // Tüp/mıknatıs gibi yol engellerinin altındaki authored içerik (Grass, Mud...) yığında saklanır.
     // Boş hücre kaydedilmez (eski davranış korunur: yol bırakılınca hücre boşalır).
     private void RememberAuthoredBeneath(LevelData lvl, int cell, int overOrigin)
@@ -1599,9 +1633,13 @@ public class GridSpawner : MonoBehaviour
     {
         if (lvl == null || lvl.obstacles == null || lvl.obstacleOrigins == null) return;
 
+        if (ancientSealService == null && board != null)
+            ancientSealService = board.GetComponent<AncientSealService>() ?? board.gameObject.AddComponent<AncientSealService>();
+        ancientSealService?.Initialize(board, lvl.ancientSeals);
+        bool hasSeals = lvl.ancientSeals != null && lvl.ancientSeals.Length > 0;
         bool hasSafes = lvl.safes != null && lvl.safes.Length > 0;
         bool hasStacks = lvl.stackedObstacles != null && lvl.stackedObstacles.Length > 0;
-        if (!hasSafes && !hasStacks) return;
+        if (!hasSafes && !hasStacks && !hasSeals) return;
 
         SafeObstacleService safeService = null;
         if (hasSafes)
@@ -1618,6 +1656,9 @@ public class GridSpawner : MonoBehaviour
         if (hasSafes)
             for (int i = 0; i < lvl.safes.Length; i++)
                 order.Add((lvl.safes[i].stackOrder, 1, i));
+        if (hasSeals)
+            for (int i = 0; i < lvl.ancientSeals.Length; i++)
+                order.Add((lvl.ancientSeals[i].stackOrder, 2, i));
         order.Sort((a, b) => a.stackOrder != b.stackOrder ? a.stackOrder.CompareTo(b.stackOrder)
                            : a.kind != b.kind ? a.kind.CompareTo(b.kind)
                            : a.index.CompareTo(b.index));
@@ -1625,7 +1666,8 @@ public class GridSpawner : MonoBehaviour
         foreach (var o in order)
         {
             if (o.kind == 0) StampStackedEntry(lvl, lvl.stackedObstacles[o.index]);
-            else StampSafeEntry(lvl, lvl.safes[o.index], safeService);
+            else if (o.kind == 1) StampSafeEntry(lvl, lvl.safes[o.index], safeService);
+            else StampAncientSealEntry(lvl, lvl.ancientSeals[o.index]);
         }
     }
 
@@ -1870,7 +1912,7 @@ public class GridSpawner : MonoBehaviour
             // → RequestObstacleViewCreate) taze çizilir. Diğer stacked overlay'ler (Chest/Wardrobe...)
             // beneath'i eskisi gibi baştan gösterir.
             var overlayHere = (ObstacleId)resolvedLevel.obstacles[p.cell];
-            if (overlayHere == ObstacleId.Safe || overlayHere == ObstacleId.OverrideBatteryBox)
+            if (overlayHere == ObstacleId.Safe || overlayHere == ObstacleId.AncientSeal || overlayHere == ObstacleId.OverrideBatteryBox)
             {
                 if (mudTrace && isMud) Debug.Log($"[MudBeneath] SKIP cell={p.cell} reason=overlay={overlayHere}");
                 continue;
@@ -1913,7 +1955,7 @@ public class GridSpawner : MonoBehaviour
             // kırılınca grass reveal dinamik yolla (HandleObstacleCreatedDynamic) taze çizilir.
             // Duvar parçaları WallObstacleService'te (örtü altındakiler dahil) çizilir.
             if (p.beneathId == ObstacleId.Oil ||
-                p.beneathId == ObstacleId.Safe || p.beneathId == ObstacleId.Tube ||
+                p.beneathId == ObstacleId.Safe || p.beneathId == ObstacleId.AncientSeal || p.beneathId == ObstacleId.Tube ||
                 p.beneathId == ObstacleId.Magnet || p.beneathId == ObstacleId.Grass ||
                 WallKind.For(p.beneathId) != null)
                 continue;
@@ -1960,8 +2002,7 @@ public class GridSpawner : MonoBehaviour
     // service event'lerine bağla. Body NxN'e göre ölçeklenir, LockPanel prefab'da ortalı/sabit.
     private void DrawSafeObstacles()
     {
-        bool sealArt = SealSafeView.HasArt;   // Piramit Mührü görseli varsa prefab yerine o kurulur
-        if (!sealArt && safeViewPrefab == null) return;
+        if (safeViewPrefab == null) return;
         if (resolvedLevel?.safes == null || resolvedLevel.safes.Length == 0) return;
         if (safeObstacleService == null) safeObstacleService = FindFirstObjectByType<SafeObstacleService>();
         if (safeObstacleService == null) return;
@@ -1978,35 +2019,15 @@ public class GridSpawner : MonoBehaviour
             int ox = origin % W, oy = origin / W;
             int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
 
-            Component view;
-            RectTransform rt;
-            if (sealArt)
-            {
-                var seal = SealSafeView.Create(root);
-                rt = (RectTransform)seal.transform;
-                view = seal;
-            }
-            else
-            {
-                var prefabView = Instantiate(safeViewPrefab, root);
-                rt = (RectTransform)prefabView.transform;
-                view = prefabView;
-            }
+            var view = Instantiate(safeViewPrefab, root);
+            var rt = (RectTransform)view.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);   // top-left, tile'larla aynı
             rt.pivot = new Vector2(0f, 1f);
             rt.anchoredPosition = new Vector2(ox * tileSize, -oy * tileSize);
             rt.sizeDelta = new Vector2(w * tileSize, h * tileSize);
 
-            if (view is SealSafeView sealView)
-            {
-                sealView.SetBodySize(w * tileSize, h * tileSize);
-                sealView.Setup(safeObstacleService, origin);
-            }
-            else if (view is SafeObstacleView prefabSafe)
-            {
-                prefabSafe.SetBodySize(w * tileSize, h * tileSize);
-                prefabSafe.Setup(safeObstacleService, origin);
-            }
+            view.SetBodySize(w * tileSize, h * tileSize);
+            view.Setup(safeObstacleService, origin);
             safeViewsByOrigin[origin] = view;
 
             // Yığın kuralı: OPAK bir engelin altındaki kasa gizli başlar, tıklanmaz; üstündeki kırılıp kasa
@@ -2019,6 +2040,49 @@ public class GridSpawner : MonoBehaviour
             }
 
             AddSafeCellClickProxies(entry, root);
+        }
+    }
+
+    private void DrawAncientSealObstacles()
+    {
+        if (!AncientSealView.HasArt) return;
+        if (resolvedLevel?.ancientSeals == null || resolvedLevel.ancientSeals.Length == 0) return;
+        if (ancientSealService == null) ancientSealService = FindFirstObjectByType<AncientSealService>();
+        if (ancientSealService == null) return;
+
+        var root = safeRoot != null ? safeRoot : obstaclesRoot;
+        if (root == null) return;
+
+        int W = resolvedLevel.width, H = resolvedLevel.height;
+        foreach (var entry in resolvedLevel.ancientSeals)
+        {
+            int origin = entry.originCellIndex;
+            if (origin < 0 || origin >= W * H) continue;
+
+            int ox = origin % W, oy = origin / W;
+            int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
+
+            var view = AncientSealView.Create(root);
+            var rt = (RectTransform)view.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);   // top-left, tile'larla aynı
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(ox * tileSize, -oy * tileSize);
+            rt.sizeDelta = new Vector2(w * tileSize, h * tileSize);
+
+            view.SetBodySize(w * tileSize, h * tileSize, tileSize);
+            view.Setup(ancientSealService, origin);
+            ancientSealViewsByOrigin[origin] = view;
+
+            // Yığın kuralı: OPAK bir engelin altındaki kasa gizli başlar, tıklanmaz; üstündeki kırılıp kasa
+            // açığa çıkınca (HandleObstacleCreatedDynamic) görünür olur. Saydam örtü (Grass/Oil) altındaki
+            // kasa görünür kalır (vuruş kuralı ayrı: örtü tamamen gidene dek kasa hasar almaz).
+            if (IsHiddenUnderOpaqueLayer(origin, ObstacleId.AncientSeal))
+            {
+                view.gameObject.SetActive(false);
+                continue;
+            }
+
+            AddAncientSealCellClickProxies(entry, root);
         }
     }
 
@@ -2137,6 +2201,110 @@ public class GridSpawner : MonoBehaviour
                 if (clickGo != null)
                     Destroy(clickGo);
                 safeClickProxyByCell.Remove(cell);
+            }
+
+            return;
+        }
+    }
+
+    private void RevealCoveredAncientSealView(int origin)
+    {
+        if (!ancientSealViewsByOrigin.TryGetValue(origin, out var view) || view == null || view.gameObject.activeSelf)
+            return;
+        view.gameObject.SetActive(true);
+        view.transform.SetAsLastSibling();
+        if (resolvedLevel?.ancientSeals == null) return;
+        foreach (var entry in resolvedLevel.ancientSeals)
+            if (entry.originCellIndex == origin)
+            {
+                AddAncientSealCellClickProxies(entry, safeRoot != null ? safeRoot : obstaclesRoot);
+                break;
+            }
+    }
+
+    private void AddAncientSealCellClickProxies(AncientSealEntry entry, RectTransform root)
+    {
+        if (root == null || resolvedLevel == null) return;
+
+        int W = resolvedLevel.width;
+        int H = resolvedLevel.height;
+        int origin = entry.originCellIndex;
+        if (origin < 0 || origin >= W * H) return;
+
+        int ox = origin % W;
+        int oy = origin / W;
+        int w = Mathf.Max(1, entry.width);
+        int h = Mathf.Max(1, entry.height);
+
+        for (int r = 0; r < h; r++)
+        for (int c = 0; c < w; c++)
+        {
+            int cx = ox + c;
+            int cy = oy + r;
+            if (cx < 0 || cx >= W || cy < 0 || cy >= H) continue;
+
+            int cell = cy * W + cx;
+            if (ancientSealClickProxyByCell.ContainsKey(cell)) continue;
+
+            var clickGo = new GameObject(
+                $"AncientSealClick_{cx}_{cy}",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(ObstacleClickProxy));
+            clickGo.transform.SetParent(root, false);
+
+            var rt = clickGo.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(cx * tileSize, -cy * tileSize);
+            rt.sizeDelta = new Vector2(tileSize, tileSize);
+
+            var img = clickGo.GetComponent<Image>();
+            img.color = new Color(0f, 0f, 0f, 0f);
+            img.raycastTarget = true;
+
+            var proxy = clickGo.GetComponent<ObstacleClickProxy>();
+            proxy.Init(board, cx, cy);
+
+            clickGo.transform.SetAsLastSibling();
+            ancientSealClickProxyByCell[cell] = clickGo;
+        }
+    }
+
+    private void RemoveAncientSealCellClickProxiesForOrigin(int origin)
+    {
+        if (resolvedLevel?.ancientSeals == null || resolvedLevel.ancientSeals.Length == 0)
+            return;
+
+        int W = resolvedLevel.width;
+        int H = resolvedLevel.height;
+
+        foreach (var entry in resolvedLevel.ancientSeals)
+        {
+            if (entry.originCellIndex != origin)
+                continue;
+
+            int ox = origin % W;
+            int oy = origin / W;
+            int w = Mathf.Max(1, entry.width);
+            int h = Mathf.Max(1, entry.height);
+
+            for (int r = 0; r < h; r++)
+            for (int c = 0; c < w; c++)
+            {
+                int cx = ox + c;
+                int cy = oy + r;
+                if (cx < 0 || cx >= W || cy < 0 || cy >= H) continue;
+
+                int cell = cy * W + cx;
+                if (!ancientSealClickProxyByCell.TryGetValue(cell, out var clickGo))
+                    continue;
+
+                if (clickGo != null)
+                    Destroy(clickGo);
+                ancientSealClickProxyByCell.Remove(cell);
             }
 
             return;
@@ -2277,6 +2445,10 @@ public class GridSpawner : MonoBehaviour
                 foreach (var view in safeViewsByOrigin.Values)
                     if (view != null) AddRoot(view.transform);
                 break;
+            case ObstacleId.AncientSeal:
+                foreach (var view in ancientSealViewsByOrigin.Values)
+                    if (view != null) AddRoot(view.transform);
+                break;
             case ObstacleId.Tube: AddRoot(tubeRoot); break;
             case ObstacleId.Magnet: AddRoot(magnetRoot); break;
             case ObstacleId.Mud: AddRoot(mudOverlayRoot); break;
@@ -2340,6 +2512,8 @@ public class GridSpawner : MonoBehaviour
     {
         if (obstacleId == ObstacleId.Safe)
             RemoveSafeCellClickProxiesForOrigin(originIndex);
+        if (obstacleId == ObstacleId.AncientSeal)
+            RemoveAncientSealCellClickProxiesForOrigin(originIndex);
 
         if (obstacleId == ObstacleId.EnergyContainer)
         {
@@ -2401,6 +2575,12 @@ public class GridSpawner : MonoBehaviour
         {
             if (safeClickGo != null) Destroy(safeClickGo);
             safeClickProxyByCell.Remove(cellIndex);
+        }
+
+        if (ancientSealClickProxyByCell.TryGetValue(cellIndex, out var sealClickGo))
+        {
+            if (sealClickGo != null) Destroy(sealClickGo);
+            ancientSealClickProxyByCell.Remove(cellIndex);
         }
 
         TrySpawnPinnedTileRevealedAt(x, y, cellIndex);
@@ -3585,6 +3765,12 @@ public class GridSpawner : MonoBehaviour
         }
 
         if (obstacleViewsByOrigin.ContainsKey(idx)) return;
+
+        if (obsId == ObstacleId.AncientSeal)
+        {
+            RevealCoveredAncientSealView(idx);
+            return;
+        }
 
         if (obsId == ObstacleId.Safe)
         {

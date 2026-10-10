@@ -28,6 +28,9 @@ public sealed class BossDuelController : MonoBehaviour
     [Tooltip("Eski sahne intro referansı. BossDuel artık yeni VS görsellerini kullanır; yükleme sırasında oynadıysa sahnede tekrarlanmaz.")]
     [SerializeField] private BossDuelIntroController intro;
     private bool ownsIntro;
+    private BossDuelHowToPlay howToPlay;
+    private bool ownsOpeningInputLock;
+    private System.IDisposable openingFlowPause;
     [Tooltip("Arena arka plan Image'ı. LevelData.battlefieldBackground atanırsa sprite buna uygulanır; boşsa mevcut kalır.")]
     [SerializeField] private Image arenaBackground;
 
@@ -286,6 +289,8 @@ public sealed class BossDuelController : MonoBehaviour
         }
 
         bossModeActive = true;
+        ownsOpeningInputLock = true;
+        board.SetInputLocked(true);
         InitializeDuelSounds();
 
         bool introPlayedDuringLoading = CustomIntroLoadingManager.HasShownBossIntroFor(gameObject.scene);
@@ -330,19 +335,35 @@ public sealed class BossDuelController : MonoBehaviour
             toolThreatNumberOnPlate, toolThreatPlateCenter, toolThreatPlateSize);
         toolThreat.Sync(level.bossToolThreatCountdown);
 
-        // Açılış: iki parça soldan/sağdan gelip ortada birleşir; bu sırada board kilitli.
-        if (introPlayedDuringLoading)
+        // Keep one input lock across VS -> first-duel instructions -> gameplay.
+        // No unlocked frame for obstacle hints or a player move between the two overlays.
+        try
         {
-            board.SetInputLocked(true);
-            while (CustomIntroLoadingManager.IsBossIntroFor(gameObject.scene))
+            if (introPlayedDuringLoading)
+            {
+                while (CustomIntroLoadingManager.IsBossIntroFor(gameObject.scene))
+                    yield return null;
+            }
+            else if (intro != null && intro.HasIntro)
+                yield return intro.Play();
+
+            while (LoadingScreenManager.IsVisible || CustomIntroLoadingManager.IsVisible)
                 yield return null;
-            board.SetInputLocked(false);
+
+            if (BossDuelHowToPlay.ShouldShow)
+            {
+                board.SetInputLocked(true);
+                openingFlowPause = board.PauseFlowPump();
+                howToPlay = BossDuelHowToPlay.Show(transform,
+                    playerBodyImage != null ? playerBodyImage.sprite : null,
+                    enemyBodyImage != null ? enemyBodyImage.sprite : null);
+                while (howToPlay != null && !howToPlay.Completed)
+                    yield return null;
+            }
         }
-        else if (intro != null && intro.HasIntro)
+        finally
         {
-            board.SetInputLocked(true);
-            yield return intro.Play();
-            board.SetInputLocked(false);
+            ReleaseOpening();
         }
 
         board.OnTilesCleared += HandleTilesCleared;
@@ -360,6 +381,7 @@ public sealed class BossDuelController : MonoBehaviour
 
     private void OnDestroy()
     {
+        ReleaseOpening();
         toolThreat?.Clear();
         StopWaitingGoalsForVictory();
         if (ownsIntro && intro != null) Destroy(intro.gameObject);
@@ -368,6 +390,7 @@ public sealed class BossDuelController : MonoBehaviour
     private void OnDisable()
     {
         bossModeActive = false;
+        ReleaseOpening();
         StopWaitingGoalsForVictory();
         StopAllCoroutines();
         ReleasePressureInputLock();
@@ -391,6 +414,17 @@ public sealed class BossDuelController : MonoBehaviour
         board.OnPlayerMoveConsumed -= HandlePlayerMoveConsumed;
         board.OnMovesChanged -= HandleAnimalMovesChanged;
         board.OnLevelContinued -= HandleLevelContinued;
+    }
+
+    private void ReleaseOpening()
+    {
+        if (howToPlay != null) Destroy(howToPlay.gameObject);
+        howToPlay = null;
+        openingFlowPause?.Dispose();
+        openingFlowPause = null;
+        if (!ownsOpeningInputLock) return;
+        ownsOpeningInputLock = false;
+        if (board != null) board.SetInputLocked(false);
     }
 
     // BossDuel'de board'un görsel alt kenarını boardBottomAnchor'ın (BottomArea) üstüne hizalar.

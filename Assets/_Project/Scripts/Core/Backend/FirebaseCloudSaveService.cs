@@ -10,8 +10,7 @@ using UnityEngine;
 ///
 /// Akış:
 ///  1) Auth hazır olunca bulut dokümanı çekilir.
-///  2) Çakışma politikası v1: EN YÜKSEK İLERLEME KAZANIR — bulut level > yerel level ise
-///     bulut yerele yazılır (restore), değilse yerel buluta itilir.
+///  2) Yeni sıfırlama sürümü kazanır; aynı sürümde daha yüksek seviye geri yüklenir.
 ///  3) Restore kararı verilmeden HİÇBİR push yapılmaz (taze kurulumun default'ları
 ///     dolu bulutun üstüne yazılmasın). Fetch hata verirse backoff ile denenir.
 ///  4) Sonrası: değişim olaylarında (coin/yıldız/skor/arkadaş) + periyodik dirty-check +
@@ -71,6 +70,28 @@ public static class FirebaseCloudSaveService
     /// <summary>Kalıcı oyuncu verisi değişti — bir sonraki döngüde buluta yazılır.</summary>
     public static void MarkDirty() => dirty = true;
 
+    /// Hidden level-selector action. Initial restore and older writes must finish first.
+    public static bool TryResetProgress(int maxLevel, out string error)
+    {
+        error = null;
+        if (RuntimeSimulationSession.IsActive || !RestoreResolved || !FirebaseAuthService.IsReady)
+        {
+            error = "Bulut kaydı henüz hazır değil. İnternet bağlantısını kontrol edip tekrar dene.";
+            return false;
+        }
+        if (pushInFlight)
+        {
+            error = "Bulut kaydı sürüyor. Biraz bekleyip tekrar dene.";
+            return false;
+        }
+
+        CloudSaveManifest.BeginProgressReset(maxLevel);
+        ProgressEventService.Instance?.ReloadFromPrefs();
+        MarkDirty();
+        Push();
+        return true;
+    }
+
     // ── Restore ─────────────────────────────────────────────────────
 
     private static void StartRestore()
@@ -105,18 +126,20 @@ public static class FirebaseCloudSaveService
                 hasData = snap.TryGetValue<Dictionary<string, object>>("data", out cloudData);
             }
 
-            // force → level/editör-guard'a bakmadan bulut kazanır (admin canlı düzenleme).
-            bool levelWins = !forceLocalWins && cloudLevel > localLevel;
+            // A newer reset beats stale progress, then force/level decide within that revision.
+            bool restoreProgress = CloudSaveManifest.ShouldRestoreProgress(
+                cloudData, cloudLevel, localLevel, force, forceLocalWins);
 
-            if (hasData && (force || levelWins))
+            if (hasData && restoreProgress)
             {
                 CloudSaveManifest.Apply(cloudData);
+                ProgressEventService.Instance?.ReloadFromPrefs();
                 MusicState.ReloadFromPrefs();
                 // Altın/yıldız: level kararından BAĞIMSIZ olarak bulut-otoriter (base) + offline delta.
                 ReconcileCurrencyFromCloud(hasData, cloudData, forceLocalWins);
                 Debug.Log(force
                     ? $"[CloudSave] RESTORE (force) ✅ admin bulut düzenlemesi uygulandı ({cloudData.Count} anahtar)"
-                    : $"[CloudSave] RESTORE ✅ bulut level {cloudLevel} > yerel {localLevel} → uygulandı ({cloudData.Count} anahtar)");
+                    : $"[CloudSave] RESTORE ✅ bulut ilerlemesi/sıfırlama sürümü uygulandı (bulut level {cloudLevel}, yerel {localLevel}; {cloudData.Count} anahtar)");
                 RestoreResolved = true;
                 CurrencyLedger.OpenSyncGate();
                 if (force) ClearForceFlag();   // tek sefer uygulansın
@@ -125,6 +148,11 @@ public static class FirebaseCloudSaveService
             }
             else
             {
+                if (CloudSaveManifest.ProgressResetRevision > CloudSaveManifest.ReadProgressResetRevision(cloudData))
+                {
+                    PlayerPrefs.SetInt(CloudSaveManifest.PendingProgressResetKey, 1);
+                    PlayerPrefs.Save();
+                }
                 // Yerel ileride (veya bulut boş) → yereli buluta it. Coins/stars yine bulut-otoriter:
                 // bulutta değer varsa base=bulut+delta, yoksa yerel taban benimsenir.
                 Debug.Log($"[CloudSave] restore kararı: yerel kazandı (yerel {localLevel}, bulut {(snap.Exists ? "var" : "yok")}) → push");
@@ -177,6 +205,8 @@ public static class FirebaseCloudSaveService
 
         var data = CloudSaveManifest.Collect();
         int level = PlayerPrefs.GetInt("current_level", 1);
+        bool replaceResetSnapshot = PlayerPrefs.GetInt(CloudSaveManifest.PendingProgressResetKey, 0) == 1;
+        long resetRevision = CloudSaveManifest.ProgressResetRevision;
 
         var doc = new Dictionary<string, object>
         {
@@ -185,6 +215,12 @@ public static class FirebaseCloudSaveService
             { "ver", SaveVersion },
             { "updatedAt", FieldValue.ServerTimestamp },
         };
+        // MergeAll recursively retains deleted progress keys. Replace only the data map on
+        // reset, preserving unrelated document fields and Firebase configuration elsewhere.
+        if (replaceResetSnapshot) doc["force"] = false;
+        var options = replaceResetSnapshot
+            ? SetOptions.MergeFields("data", "level", "ver", "updatedAt", "force")
+            : SetOptions.MergeAll;
 
         dirty = false;
         lastPushedLevel = level;
@@ -193,7 +229,7 @@ public static class FirebaseCloudSaveService
         // Oyuncu dizini profili de aynı ritimde tazelenir (isim/bölüm/avatar değiştiyse).
         PlayerDirectoryService.UpsertIfChanged();
 
-        SaveDoc.SetAsync(doc, SetOptions.MergeAll).ContinueWithOnMainThread(task =>
+        SaveDoc.SetAsync(doc, options).ContinueWithOnMainThread(task =>
         {
             pushInFlight = false;
             if (task.IsFaulted || task.IsCanceled)
@@ -205,6 +241,11 @@ public static class FirebaseCloudSaveService
             {
                 // Buluta yazılan delta'yı tabana katla (delta'dan düş) — tekrar sayılmasın.
                 CurrencyLedger.FoldAfterPush(coinsDeltaSnap, starsDeltaSnap);
+                if (replaceResetSnapshot && CloudSaveManifest.ProgressResetRevision == resetRevision)
+                {
+                    PlayerPrefs.DeleteKey(CloudSaveManifest.PendingProgressResetKey);
+                    PlayerPrefs.Save();
+                }
             }
         });
     }

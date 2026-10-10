@@ -719,6 +719,8 @@ public class BoardController : MonoBehaviour
     // has processed existing locks. Cage/lock owners create new locks for this move's idle candidates here.
     public event Action OnPlayerMoveResolved;
     public event Action<TileType, int> OnTilesCleared;
+    // One scored stone, with its clear position captured before its view is pooled.
+    internal event Action<TileType, Vector3> OnTileCollectedAt;
     public event Action<int> OnMoveClearPraise;
     // Her tekil special aktivasyonu (zincirdekiler dahil) — BossDuel bonus hasarı dinler.
     public event Action<TileSpecial, Vector2Int> OnSpecialActivated;
@@ -950,6 +952,22 @@ public class BoardController : MonoBehaviour
         return matchFinder != null && matchFinder.HasAnyPlayableSwap(additionallyLockedCells);
     }
 
+    private bool IsLevelEndPendingForSpread()
+        => RemainingMoves <= 0 || IsExplicitlyLocked || (TopHud != null && TopHud.AreAllGoalsCompleted);
+
+    /// Dinamik engel (oil yayılması, boss fırlatması) bu hücredeki TAŞIN üstüne şu an inebilir mi?
+    /// Tek kural, iki kullanıcı: oyuncunun special'ı/anahtarı kilitlenmez, hareket eden, sürüklenen,
+    /// tetiklenmeyi bekleyen ya da rezerve taşın altına engel girmez. Engel-katmanı kontrolü çağırana aittir.
+    internal bool IsTileFreeForDynamicObstacle(int x, int y)
+    {
+        if (x < 0 || x >= Width || y < 0 || y >= Height || Holes[x, y]) return false;
+        var tile = Tiles[x, y];
+        return tile != null && GridData[x, y] != null
+            && tile.IsRuntimeIdle && !tile.WasDragging
+            && tile.GetSpecial() == TileSpecial.None && tile.GetTileType() != TileType.Key
+            && !IsPendingTriggeredSpecialCell(x, y) && !IsReservedTileTargetCell(x, y);
+    }
+
     // ── Event forwarders for LineSweepService ──
     internal void RaiseSpecialActivated(TileSpecial special, Vector2Int cell) => OnSpecialActivated?.Invoke(special, cell);
     internal void OnLineSweepStartedInternal(LightningLineStrike strike, float delay)
@@ -1013,7 +1031,11 @@ public class BoardController : MonoBehaviour
     internal void ReleaseHeldCell(Vector2Int cell, int epoch)
     {
         if (epoch != cellHoldEpoch || !cellHolds.TryGetValue(cell, out int count)) return;
-        if (count <= 1) cellHolds.Remove(cell);
+        if (count <= 1)
+        {
+            cellHolds.Remove(cell);
+            ClearedCellCount++; // Yeni açılan hücre için çapraz yerçekimini de yeniden dene.
+        }
         else cellHolds[cell] = count - 1;
     }
 
@@ -2898,6 +2920,7 @@ public class BoardController : MonoBehaviour
         {
             clearedByType.TryGetValue(fxType, out int c);
             clearedByType[fxType] = c + 1;
+            OnTileCollectedAt?.Invoke(fxType, tile.transform.position);
         }
 
         if (tile != null && tile)
@@ -2925,6 +2948,7 @@ public class BoardController : MonoBehaviour
     internal void ClearCellVisualOnly(Vector2Int c, TileType type, TileView t)
     {
         if (t == null || t.gameObject == null) return;
+        OnTileCollectedAt?.Invoke(type, t.transform.position);
         GameEventBus.EmitTileClearedAt(type, t.transform.position);   // "+1" FX pozisyonu
         ReleaseHoldsVacatedAt(c.x, c.y);
         Destroy(t.gameObject);
@@ -4352,6 +4376,11 @@ public class BoardController : MonoBehaviour
             // boşsa) yayılır. Önceden bu blok background-job idle kontrolünden ÖNCEydi; ekrandaki
             // cascade hâlâ koşarken spread tetikleniyor, o esnada kırılma oluşuyordu. Artık
             // yalnızca board tam idle iken çalışır.
+            // Level bittiyse (hedefler tamam / hamle kalmadı / popup kilidi) yayılma yok: kazanma anında
+            // oil sıçramasın, fail popup'ı yayılma animasyonunu beklemesin.
+            if (!oilSpreadResolvedThisMove && IsLevelEndPendingForSpread())
+                oilSpreadResolvedThisMove = true;
+
             if (!oilSpreadResolvedThisMove
                 && oilSpreadService != null)
             {
@@ -5277,7 +5306,7 @@ public class BoardController : MonoBehaviour
             return;
         }
 
-        if (obstacleId == ObstacleId.Safe)
+        if (obstacleId == ObstacleId.Safe || obstacleId == ObstacleId.AncientSeal)
         {
             // Kısa kısmi bekleme: kasa patlama+reveal'inin ilk anını, board resolve'a devam etmeden
             // oynat (taşlar açılan hücreye hemen dolup animasyonu kesmesin). Sonra bırak — kasanın
@@ -5297,7 +5326,9 @@ public class BoardController : MonoBehaviour
         if (tile != null)
         {
             var clearedType = tile.GetTileType();
+            var collectedPosition = tile.transform.position;
             ClearAndDestroyTile(tile);
+            OnTileCollectedAt?.Invoke(clearedType, collectedPosition);
             NotifyTilesCleared(clearedType, 1);
         }
     }

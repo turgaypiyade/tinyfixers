@@ -4,7 +4,7 @@ using UnityEngine;
 [CustomEditor(typeof(LevelData))]
 public class LevelDataEditor : Editor
 {
-    private enum PaintMode { Mask, Obstacle, Tube, Magnet, Tiles, Safe, Overlay, Erase }
+    private enum PaintMode { Mask, Obstacle, Tube, Magnet, Tiles, Safe, Overlay, Erase, AncientSeal }
 
     private PaintMode mode = PaintMode.Obstacle;
     private ObstacleId selectedObstacle = ObstacleId.Stone;
@@ -13,6 +13,9 @@ public class LevelDataEditor : Editor
     private bool showBossOilSettings;
 
     // Safe (kasa) settings — tıklanan hücre sol-üst origin; WxH bölgeyi kaplar.
+    private AncientSealStartColor selectedSealStartColor = AncientSealStartColor.Auto;
+    private int selectedSealW = 3, selectedSealH = 3;
+    private int selectedSealRed = 4, selectedSealYellow = 4, selectedSealGreen = 4;
     private int selectedSafeW = 2;
     private int selectedSafeH = 2;
     private int selectedSafeRed = 3;
@@ -84,7 +87,7 @@ public class LevelDataEditor : Editor
 
         EditorGUILayout.Space(6);
 
-        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Safe", "Overlay", "Erase" });
+        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Safe", "Overlay", "Erase", "Ancient Seal" });
 
         if (mode == PaintMode.Obstacle)
             DrawPalette(level);
@@ -96,6 +99,8 @@ public class LevelDataEditor : Editor
             DrawTilePinPalette(level);
         else if (mode == PaintMode.Safe)
             DrawSafePalette(level);
+        else if (mode == PaintMode.AncientSeal)
+            DrawAncientSealPalette(level);
         else if (mode == PaintMode.Overlay)
             DrawOverlayPalette(level);
         else
@@ -541,6 +546,8 @@ public class LevelDataEditor : Editor
 
         if (id == ObstacleId.Safe && level.safes != null)
             count += level.safes.Length;
+        if (id == ObstacleId.AncientSeal && level.ancientSeals != null)
+            count += level.ancientSeals.Length;
 
         if (id == ObstacleId.BatteryBox)
             count *= Mathf.Max(1, goalDef != null ? goalDef.hits : 1) * 4;
@@ -579,6 +586,8 @@ public class LevelDataEditor : Editor
 
         if (level.safes == null)
             level.safes = System.Array.Empty<SafeEntry>();
+        if (level.ancientSeals == null)
+            level.ancientSeals = System.Array.Empty<AncientSealEntry>();
 
         if (level.stackedObstacles == null)
             level.stackedObstacles = System.Array.Empty<StackedObstacleEntry>();
@@ -939,7 +948,7 @@ public class LevelDataEditor : Editor
                     EditorGUI.DrawRect(sr, (c == 0 && r == 0) ? safeOriginColor : safeFillColor);
                 }
 
-                // Kasa görseli (Piramit Mührü ikonu) bölgenin üstüne; altındaki içerik seçilebilsin diye hafif saydam.
+                // Engel ikonu bölgenin üstüne; altındaki içerik seçilebilsin diye hafif saydam.
                 var safeDef = level.obstacleLibrary != null ? level.obstacleLibrary.Get(ObstacleId.Safe) : null;
                 if (safeDef != null && safeDef.GetPreviewSprite() != null)
                 {
@@ -952,6 +961,46 @@ public class LevelDataEditor : Editor
 
                 Rect lr = new Rect(ox + sox * cellPx, oy + soy * cellPx, cellPx - 1, cellPx - 1);
                 GUI.Label(lr, $"🔒{e.redHits}/{e.yellowHits}/{e.greenHits}", new GUIStyle(EditorStyles.boldLabel)
+                {
+                    alignment = TextAnchor.UpperLeft,
+                    fontSize  = 8,
+                    normal    = { textColor = Color.white }
+                });
+            }
+        }
+
+        // Ancient Seal collection counts and its own icon.
+        if (level.ancientSeals != null)
+        {
+            for (int s = 0; s < level.ancientSeals.Length; s++)
+            {
+                var e = level.ancientSeals[s];
+                int sox = e.originCellIndex % level.width;
+                int soy = e.originCellIndex / level.width;
+                int sw = Mathf.Max(1, e.width), sh = Mathf.Max(1, e.height);
+
+                for (int r = 0; r < sh; r++)
+                for (int c = 0; c < sw; c++)
+                {
+                    int cx = sox + c, cy = soy + r;
+                    if (cx >= level.width || cy >= level.height) continue;
+                    Rect sr = new Rect(ox + cx * cellPx, oy + cy * cellPx, cellPx - 1, cellPx - 1);
+                    EditorGUI.DrawRect(sr, (c == 0 && r == 0) ? safeOriginColor : safeFillColor);
+                }
+
+                // Engel ikonu bölgenin üstüne; altındaki içerik seçilebilsin diye hafif saydam.
+                var safeDef = level.obstacleLibrary != null ? level.obstacleLibrary.Get(ObstacleId.AncientSeal) : null;
+                if (safeDef != null && safeDef.GetPreviewSprite() != null)
+                {
+                    var prevColor = GUI.color;
+                    GUI.color = new Color(1f, 1f, 1f, 0.85f);
+                    DrawSpriteInRect(safeDef.GetPreviewSprite(),
+                        new Rect(ox + sox * cellPx, oy + soy * cellPx, sw * cellPx - 1, sh * cellPx - 1), 2);
+                    GUI.color = prevColor;
+                }
+
+                Rect lr = new Rect(ox + sox * cellPx, oy + soy * cellPx, cellPx - 1, cellPx - 1);
+                GUI.Label(lr, $"🔒{e.redCount}/{e.yellowCount}/{e.greenCount}", new GUIStyle(EditorStyles.boldLabel)
                 {
                     alignment = TextAnchor.UpperLeft,
                     fontSize  = 8,
@@ -1119,6 +1168,7 @@ public class LevelDataEditor : Editor
                 RemoveTubeAtCell(level, idx);
                 RemoveMagnetAtCell(level, idx);
                 RemoveSafeAtCell(level, idx);
+                RemoveAncientSealAtCell(level, idx);
                 RemoveStackedAtCell(level, idx);
                 magnetPathBuilding.Clear();
                 ClearPinnedTile(level, idx);
@@ -1138,6 +1188,9 @@ public class LevelDataEditor : Editor
                 break;
             case PaintMode.Safe:
                 PlaceSafe(level, x, y);
+                break;
+            case PaintMode.AncientSeal:
+                PlaceAncientSeal(level, x, y);
                 break;
             case PaintMode.Overlay:
                 PlaceStackedObstacle(level, x, y);
@@ -1194,6 +1247,48 @@ public class LevelDataEditor : Editor
         level.safes = list.ToArray();
     }
 
+    private void PlaceAncientSeal(LevelData level, int bx, int by)
+    {
+        if (!level.InBounds(bx, by)) return;
+        int originIdx = level.Index(bx, by);
+
+        int w = Mathf.Max(2, selectedSealW);
+        int h = Mathf.Max(2, selectedSealH);
+        if (bx + w > level.width || by + h > level.height)
+        {
+            Debug.LogWarning($"[SealEditor] Ancient Seal at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
+            return;
+        }
+
+        // Aynı köşedeki mührü güncelle; Safe ve diğer katmanları koru.
+        int existing = System.Array.FindIndex(level.ancientSeals ?? System.Array.Empty<AncientSealEntry>(),
+            e => e.originCellIndex == originIdx);
+        if (!ValidateFullCover(level, RectCells(level, originIdx, w, h), ObstacleId.AncientSeal, -1, existing))
+            return;
+        int stackOrder = existing >= 0 ? level.ancientSeals[existing].stackOrder : NextStackOrder(level);
+        if (existing >= 0)
+        {
+            var kept = new System.Collections.Generic.List<AncientSealEntry>(level.ancientSeals);
+            kept.RemoveAt(existing);
+            level.ancientSeals = kept.ToArray();
+        }
+
+        var entry = new AncientSealEntry
+        {
+            originCellIndex = originIdx,
+            width           = w,
+            height          = h,
+            startColor      = selectedSealStartColor,
+            redCount        = Mathf.Max(1, selectedSealRed),
+            yellowCount     = Mathf.Max(1, selectedSealYellow),
+            greenCount      = Mathf.Max(1, selectedSealGreen),
+            stackOrder      = stackOrder
+        };
+
+        var list = new System.Collections.Generic.List<AncientSealEntry>(level.ancientSeals ?? System.Array.Empty<AncientSealEntry>()) { entry };
+        level.ancientSeals = list.ToArray();
+    }
+
     // ── Yığın kuralı: üstteki katman alttaki engeli TAMAMEN örtmeli (aynı ya da daha çok hücre) ──
     // Yarım örtme (ör. 1x1 sandık 2x2 kasanın tek köşesinde) kurulmaz: görsel sıra ve açılma bozulur.
     // Muaf: mıknatıs/tüp (yol engeli) ve saydam örtüler (Grass/Oil — kısmi örtebilir, altı görünür).
@@ -1211,7 +1306,7 @@ public class LevelDataEditor : Editor
     // Runtime kurulumuyla (GridSpawner.StampLayeredEntriesIntoLevel) aynı sırayla her hücrenin EN ÜST
     // katmanını ve o katmanın kapladığı hücreleri simüle eder. isPath = mıknatıs/tüp (kural dışı).
     private static System.Collections.Generic.Dictionary<int, (ObstacleId id, System.Collections.Generic.HashSet<int> cells, bool isPath)>
-        SimulateTopLayers(LevelData level, int excludeSafeIndex)
+        SimulateTopLayers(LevelData level, int excludeSafeIndex, int excludeSealIndex)
     {
         var top = new System.Collections.Generic.Dictionary<int, (ObstacleId, System.Collections.Generic.HashSet<int>, bool)>();
         int n = level.width * level.height;
@@ -1249,6 +1344,9 @@ public class LevelDataEditor : Editor
         if (level.safes != null)
             for (int i = 0; i < level.safes.Length; i++)
                 if (i != excludeSafeIndex) order.Add((level.safes[i].stackOrder, 1, i));
+        if (level.ancientSeals != null)
+            for (int i = 0; i < level.ancientSeals.Length; i++)
+                if (i != excludeSealIndex) order.Add((level.ancientSeals[i].stackOrder, 2, i));
         order.Sort((a, b) => a.stackOrder != b.stackOrder ? a.stackOrder.CompareTo(b.stackOrder)
                            : a.kind != b.kind ? a.kind.CompareTo(b.kind) : a.index.CompareTo(b.index));
 
@@ -1263,6 +1361,12 @@ public class LevelDataEditor : Editor
                 cells = RectCells(level, e.originCellIndex,
                     def != null ? Mathf.Max(1, def.size.x) : 1, def != null ? Mathf.Max(1, def.size.y) : 1);
             }
+            else if (o.kind == 2)
+            {
+                var e = level.ancientSeals[o.index];
+                id = ObstacleId.AncientSeal;
+                cells = RectCells(level, e.originCellIndex, Mathf.Max(1, e.width), Mathf.Max(1, e.height));
+            }
             else
             {
                 var e = level.safes[o.index];
@@ -1275,13 +1379,13 @@ public class LevelDataEditor : Editor
     }
 
     private static bool ValidateFullCover(LevelData level, System.Collections.Generic.HashSet<int> newCells,
-        ObstacleId newId, int excludeSafeIndex)
+        ObstacleId newId, int excludeSafeIndex, int excludeSealIndex = -1)
     {
         // Saydam örtüler (Grass/Oil) kısmen örtebilir: altı görünür kalır; çok-hücreli engel, üstündeki
         // tüm örtüler gidene dek vuruş almaz (ObstacleStateService.IsBuriedAnywhere). Örn. 4x4 kasa + 4 grass.
         if (ObstacleStateService.IsSeeThroughLayer(newId)) return true;
 
-        var top = SimulateTopLayers(level, excludeSafeIndex);
+        var top = SimulateTopLayers(level, excludeSafeIndex, excludeSealIndex);
         foreach (var c in newCells)
         {
             if (!top.TryGetValue(c, out var under) || under.isPath || under.id == ObstacleId.None) continue;
@@ -1298,6 +1402,8 @@ public class LevelDataEditor : Editor
     private static int NextStackOrder(LevelData level)
     {
         int max = 0;
+        if (level.ancientSeals != null)
+            foreach (var e in level.ancientSeals) max = Mathf.Max(max, e.stackOrder);
         if (level.safes != null)
             foreach (var e in level.safes) max = Mathf.Max(max, e.stackOrder);
         if (level.stackedObstacles != null)
@@ -1323,6 +1429,24 @@ public class LevelDataEditor : Editor
         level.safes = list.ToArray();
     }
 
+    private void RemoveAncientSealAtCell(LevelData level, int cellIndex)
+    {
+        if (level.ancientSeals == null || level.ancientSeals.Length == 0) return;
+
+        int W = level.width;
+        var list = new System.Collections.Generic.List<AncientSealEntry>(level.ancientSeals);
+        for (int s = list.Count - 1; s >= 0; s--)
+        {
+            var e = list[s];
+            int ox = e.originCellIndex % W, oy = e.originCellIndex / W;
+            int cx = cellIndex % W, cy = cellIndex / W;
+            if (cx >= ox && cx < ox + Mathf.Max(1, e.width) &&
+                cy >= oy && cy < oy + Mathf.Max(1, e.height))
+                list.RemoveAt(s);
+        }
+        level.ancientSeals = list.ToArray();
+    }
+
     private void DrawOverlayPalette(LevelData level)
     {
         EditorGUILayout.HelpBox(
@@ -1342,6 +1466,11 @@ public class LevelDataEditor : Editor
     {
         if (!level.InBounds(bx, by)) return;
         if (selectedObstacle == ObstacleId.None) return;
+        if (selectedObstacle == ObstacleId.AncientSeal)
+        {
+            Debug.LogWarning("Ancient Seal için kendi sekmesini kullan; toplama sayıları orada ayarlanır.");
+            return;
+        }
 
         // Zemin altı engeller (Mud, Jel, Su birikintisi) yığının daima EN ALTINDA — başka bir şeyin üstüne konamaz.
         if (selectedObstacle == ObstacleId.Mud || selectedObstacle == ObstacleId.SpreadingGel
@@ -1508,7 +1637,7 @@ public class LevelDataEditor : Editor
     {
         // Tube/Magnet/Safe ham obstacle olarak basılamaz: runtime yalnız LevelData.tubes/magnets/safes
         // girişlerinden kurar (GridSpawner generic görsel de çizmez) → görünmez, bozuk hücre olur.
-        if (id == ObstacleId.Tube || id == ObstacleId.Magnet || id == ObstacleId.Safe)
+        if (id == ObstacleId.Tube || id == ObstacleId.Magnet || id == ObstacleId.Safe || id == ObstacleId.AncientSeal)
         {
             Debug.LogWarning($"[LevelEditor] {id} Obstacle modunda yerleştirilemez — kendi sekmesini ({id}) kullan.");
             return;
@@ -1785,6 +1914,59 @@ public class LevelDataEditor : Editor
         {
             Undo.RecordObject(level, "Clear All Tubes");
             level.tubes = System.Array.Empty<TubeEntry>();
+            EditorUtility.SetDirty(level);
+        }
+    }
+
+    private void DrawAncientSealPalette(LevelData level)
+    {
+        EditorGUILayout.LabelField("Ancient Seal (Antik Mühür)", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox(
+            "Grid'e tıkla: sol üst hücreden başlayan mühür eklenir. Altındaki içerik korunur. " +
+            "Tahtanın herhangi bir yerinde, sayaçtaki renkten belirtilen sayıda taş topla. " +
+            "Auto başlangıçları kırmızı, yeşil, sarı olarak dağıtır; sonra renk döngüsü sürer. " +
+            "Her taş yalnız bir mühre gider; aynı rengi isteyenler taşları sırayla paylaşır. " +
+            "Kenardan veya special ile doğrudan vurmak sayılmaz; " +
+            "special'ın topladığı uygun renk taşlar sayılır. Erase mührü kaldırır.", MessageType.Info);
+        selectedSealStartColor = (AncientSealStartColor)EditorGUILayout.EnumPopup("Yeni mühür başlangıcı", selectedSealStartColor);
+        selectedSealW = EditorGUILayout.IntSlider("Genişlik (hücre)", selectedSealW, 2, 9);
+        selectedSealH = EditorGUILayout.IntSlider("Yükseklik (hücre)", selectedSealH, 2, 11);
+        selectedSealRed = EditorGUILayout.IntSlider("Kırmızı taş sayısı", selectedSealRed, 1, 100);
+        selectedSealYellow = EditorGUILayout.IntSlider("Sarı taş sayısı", selectedSealYellow, 1, 100);
+        selectedSealGreen = EditorGUILayout.IntSlider("Yeşil taş sayısı", selectedSealGreen, 1, 100);
+        EditorGUILayout.LabelField($"Mevcut mühürler: {level.ancientSeals?.Length ?? 0}");
+        if (level.ancientSeals == null || level.ancientSeals.Length == 0) return;
+        for (int i = 0; i < level.ancientSeals.Length; i++)
+        {
+            var entry = level.ancientSeals[i];
+            EditorGUI.BeginChangeCheck();
+            var startColor = (AncientSealStartColor)EditorGUILayout.EnumPopup(
+                $"Mühür ({entry.originCellIndex % level.width}, {entry.originCellIndex / level.width}) başlangıcı", entry.startColor);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(level, "Change Ancient Seal Start Color");
+                entry.startColor = startColor;
+                level.ancientSeals[i] = entry;
+                EditorUtility.SetDirty(level);
+            }
+        }
+        if (GUILayout.Button("Seçili taş sayılarını mevcut mühürlere uygula"))
+        {
+            Undo.RecordObject(level, "Update Ancient Seal Counts");
+            for (int i = 0; i < level.ancientSeals.Length; i++)
+            {
+                var entry = level.ancientSeals[i];
+                entry.redCount = selectedSealRed;
+                entry.yellowCount = selectedSealYellow;
+                entry.greenCount = selectedSealGreen;
+                level.ancientSeals[i] = entry;
+            }
+            EditorUtility.SetDirty(level);
+        }
+        if (GUILayout.Button("Tüm mühürleri temizle"))
+        {
+            Undo.RecordObject(level, "Clear Ancient Seals");
+            level.ancientSeals = System.Array.Empty<AncientSealEntry>();
             EditorUtility.SetDirty(level);
         }
     }
