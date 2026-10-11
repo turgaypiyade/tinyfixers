@@ -509,6 +509,7 @@ public class BoardAnimator
                 clearTile =
                     !board.ObstacleStateService.IsCellBlocked(tile.X, tile.Y) &&
                     !board.ObstacleStateService.IsInteractionLockedAt(tile.X, tile.Y) &&
+                    !tile.CageGrace &&   // kafesten bu hamlede çıkan special aynı geçişte kırılmaz
                     // Canlı movable obstacle tile'ı normal clear ile YOK EDİLMEZ — sadece
                     // obstacle hasarı alır; veri sıfırlanınca tile'ı HandleObstacleDestroyed
                     // söker. Aksi hâlde çok-hit movable'da (PlasticTwoStage) tile ölüp veri
@@ -1068,6 +1069,7 @@ public class BoardAnimator
                     : null;
 
             AddObstacleDamageCell(cell, sourceTileType);
+            board.NoteCageImpact(cell, damageContext);
 
             // Normal match komşu Oil/Grass'ı aşındırır. Line/special footprint ise sadece geçtiği
             // hücreyi vurmalı; includeAdjacentOverTileBlockerDamage=false olduğunda komşu Oil/Grass
@@ -1489,6 +1491,7 @@ public class BoardAnimator
                 sourceTileType);
 
             AddDamageRequest(request);
+            board.NoteCageImpact(cell, plan.ObstacleHitContext);
 
             // Normal match komşu Oil/Grass'ı aşındırır. Special/line planlarında bayrak false ise
             // sadece footprint hücreleri hasar alır.

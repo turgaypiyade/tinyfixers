@@ -13,6 +13,7 @@ public sealed class AncientSealService : MonoBehaviour
         public readonly int[] total = new int[LockCount];
         public readonly int[] inFlight = new int[LockCount];
         public int startColor, activeStep;
+        public int width = 2, height = 2;
         public int active => activeStep < LockCount ? (startColor + activeStep) % LockCount : LockCount;
     }
 
@@ -24,6 +25,20 @@ public sealed class AncientSealService : MonoBehaviour
         public AncientSealCollectFx fx;
         public bool arrived;
     }
+
+    /// Aynı karede aynı mühre giden taşlar (bir eşleşme) önce ortak noktada toplanır, sonra sırayla uçar.
+    internal sealed class GatherBatch
+    {
+        public Vector3 worldSum;
+        public int count;
+        public Vector3 WorldCenter => count > 0 ? worldSum / count : worldSum;
+    }
+
+    // Kırılan mührün ayak izi, kırılma görseli "kasa yok oldu" diyene dek tutulur (taş girmez) ve
+    // level-end bekler. Veri anında temizlenir (Wall yıkımıyla aynı kural).
+    private readonly Dictionary<int, (CellHold hold, IDisposable job)> breakHolds = new();
+    private readonly Dictionary<long, GatherBatch> gatherBatches = new();
+    private int gatherFrame = -1;
 
     private BoardController board;
     internal BoardController Board => board;
@@ -43,6 +58,7 @@ public sealed class AncientSealService : MonoBehaviour
     {
         Unbind();
         CancelFlights();
+        ReleaseAllBreakHolds();
         board = owner;
         seals.Clear();
         views.Clear();
@@ -61,6 +77,7 @@ public sealed class AncientSealService : MonoBehaviour
     {
         Unbind();
         CancelFlights();
+        ReleaseAllBreakHolds();
     }
     private void Unbind()
     {
@@ -112,6 +129,8 @@ public sealed class AncientSealService : MonoBehaviour
         state.remaining[0] = state.total[0] = Mathf.Max(1, entry.redCount);
         state.remaining[1] = state.total[1] = Mathf.Max(1, entry.yellowCount);
         state.remaining[2] = state.total[2] = Mathf.Max(1, entry.greenCount);
+        state.width = Mathf.Max(1, entry.width);
+        state.height = Mathf.Max(1, entry.height);
         seals[entry.originCellIndex] = state;
     }
 
@@ -151,7 +170,6 @@ public sealed class AncientSealService : MonoBehaviour
     private void LaunchCollection(int origin, int color, TileType type, Vector3 worldPosition)
     {
         var s = seals[origin];
-        float stagger = Mathf.Min(s.inFlight[color] * 0.045f, 0.27f);
         s.inFlight[color]++;
         var flight = new CollectionFlight { origin = origin, color = color, state = s };
         // Rendering can be disabled for board tooling; preserve its logical collection path.
@@ -164,7 +182,11 @@ public sealed class AncientSealService : MonoBehaviour
 
         // Flights let gravity continue, but keep win/lose evaluation waiting for arrivals.
         flight.job = board.BeginJob(BoardController.BoardJobKind.GoalOrbFlight);
-        flight.fx = new AncientSealCollectFx(this, flightRoot, board, view, type, color, worldPosition, stagger);
+        var batch = BatchFor(origin, color);
+        int order = batch.count;
+        batch.worldSum += worldPosition;
+        batch.count++;
+        flight.fx = new AncientSealCollectFx(this, flightRoot, board, view, type, color, worldPosition, batch, order);
         flights.Add(flight);
         StartCoroutine(Fly(flight));
     }
@@ -196,12 +218,55 @@ public sealed class AncientSealService : MonoBehaviour
         OnLockClosed?.Invoke(origin, color);
         if (s.activeStep < LockCount) return;
 
+        BeginBreakHold(origin, s);
         OnSealBroken?.Invoke(origin);
         var obstacles = board != null ? board.ObstacleStateService : null;
-        obstacles?.NotifyAncientSealBroken(origin);
+        // Önce altındakini aç, SONRA hedefi bildir (Safe ile aynı sıra): hedef tamamlanınca kazanma
+        // ertelemesi board'daki altını sayar — altın henüz gömülüyken sayı 0 çıkıp kazanma erken geliyordu.
         obstacles?.RevealStampedBeneathByOverOrigin(origin);
+        obstacles?.NotifyAncientSealBroken(origin);
         // The original clear may already have settled while the stones were flying.
         board?.RequestResolveAfterActionSequence();
+    }
+
+    private GatherBatch BatchFor(int origin, int color)
+    {
+        if (gatherFrame != Time.frameCount)
+        {
+            gatherFrame = Time.frameCount;
+            gatherBatches.Clear();   // önceki karelerin grupları uçuşlarda referansla yaşar
+        }
+        long key = ((long)origin << 2) | (uint)color;
+        if (!gatherBatches.TryGetValue(key, out var batch))
+            gatherBatches[key] = batch = new GatherBatch();
+        return batch;
+    }
+
+    private void BeginBreakHold(int origin, SealState s)
+    {
+        // Görsel yoksa (board aracı) bekletecek bir kırılma da yok.
+        if (board == null || !views.TryGetValue(origin, out var view) || view == null || !view.isActiveAndEnabled) return;
+        ReleaseBreakHold(origin);
+        int ox = origin % board.Width, oy = origin / board.Width;
+        var cells = new List<Vector2Int>(s.width * s.height);
+        for (int y = 0; y < s.height; y++)
+            for (int x = 0; x < s.width; x++)
+                cells.Add(new Vector2Int(ox + x, oy + y));
+        breakHolds[origin] = (board.HoldCells(cells), board.BeginJob(BoardController.BoardJobKind.ObstacleCollapse));
+    }
+
+    /// AncientSealView kırılma görseli mührü ekrandan kaldırınca (veya görünüm yok olunca) çağırır.
+    public void ReleaseBreakHold(int origin)
+    {
+        if (!breakHolds.Remove(origin, out var h)) return;
+        h.hold?.Dispose();
+        h.job?.Dispose();
+    }
+
+    private void ReleaseAllBreakHolds()
+    {
+        foreach (var h in breakHolds.Values) { h.hold?.Dispose(); h.job?.Dispose(); }
+        breakHolds.Clear();
     }
 
     private bool EnsureFlightRoot()

@@ -256,6 +256,9 @@ public class TileView : MonoBehaviour,
     // the tile as it drops. Reset on pool release (PrepareForRelease).
     public bool IsSpecialLocked { get; private set; }
     public void SetSpecialLocked(bool value) => IsSpecialLocked = value;
+    // Kafesten etki anında çıkan special: oyuncu yeni hamle yapana (ya da tahta durulana) dek etki alanları onu
+    // patlatmaz/kırmaz — aynı zincirin sonraki dalgası serbest kalanı tetiklemesin. Swap'ı KİLİTLEMEZ.
+    public bool CageGrace { get; set; }
     // Movable obstacle (plastik vb.) sprite'ı model.type DIŞINDA tutulur. Saklanmazsa
     // RefreshIcon/SetType ikonu model.type'a (dummy normal tip) döndürüp obstacle'ı
     // ekranda normal taş gibi gösterir (görsel/mantık desync).
@@ -2764,6 +2767,7 @@ public class TileView : MonoBehaviour,
         revealUsesCreationSorting = false;
         RestIconCanvas();
         IsSpecialLocked = false;             // cage lock is per-tile; never leak across pool reuse
+        CageGrace = false;
         GelContaminated = false;             // jel bulaşması da per-tile; havuz üzerinden sızmasın
         ResetVisualState();                  // scale/rotation/alpha/icon/propeller
     }

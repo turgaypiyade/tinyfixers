@@ -432,6 +432,10 @@ public class PatchBotTargetCoordinator
                 activeTileGoals.Add(goal.tileType);
         }
 
+        // Lazer topu hedef listesinde olmasa da hedef gibi aranır (kullanıcı kuralı): special'ları kafesleyen
+        // tehdit, botun öncelikli işi. Board'da yoksa küme etkisizdir.
+        activeObstacleGoals.Add(ObstacleId.LaserCannon);
+
         // Jel kırılmaz → jelli hücre "goal obstacle" değildir; bot bulaş taşıyorsa jelsiz alana gider.
         bool gelGoalActive = activeObstacleGoals.Remove(ObstacleId.SpreadingGel);
         bool preferNonGel = patchbotService != null

@@ -188,6 +188,7 @@ public sealed class SafariJoinPopupController : MonoBehaviour
     private void OnContinue()
     {
         EventSfx.Play(x => x.uiTap);
+        EventScreenIris.MarkLaunchPoint(continueButton);   // harita bu butondan açılsın
         Hide();
         if (controller != null) controller.OnJoinAccepted();
     }

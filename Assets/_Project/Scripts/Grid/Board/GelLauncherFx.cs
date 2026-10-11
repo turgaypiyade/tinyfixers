@@ -26,6 +26,29 @@ public static class GelLauncherFx
         }
     }
 
+    // Kırılan kartuşun GERÇEK görseli: GridSpawner yok etmek yerine buraya bırakır, GelLauncherFireAction
+    // devralıp sıkışma → ileri atılma → kapak animasyonunu onun üstünde oynatır (geçici kopya VFX katmanında
+    // düşen taşların/efektlerin arasında kayboluyordu). Devralınmazsa bırakan taraf kısa süre sonra siler.
+    private static readonly System.Collections.Generic.Dictionary<int, Image> pendingBodies = new();
+
+    public static void HandOverBody(int originIndex, Image view)
+    {
+        if (view == null) return;
+        if (pendingBodies.TryGetValue(originIndex, out var old) && old != null && old != view)
+            Object.Destroy(old.gameObject);
+        pendingBodies[originIndex] = view;
+    }
+
+    public static Image TakeBody(int originIndex)
+    {
+        if (!pendingBodies.TryGetValue(originIndex, out var view)) return null;
+        pendingBodies.Remove(originIndex);
+        return view;
+    }
+
+    public static bool IsBodyPending(int originIndex, Image view)
+        => pendingBodies.TryGetValue(originIndex, out var v) && v == view;
+
     public static bool IsVertical(ObstacleId id)
         => id == ObstacleId.GelLauncherUp || id == ObstacleId.GelLauncherDown;
 

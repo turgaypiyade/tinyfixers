@@ -53,6 +53,9 @@ public static class SpecialUtils
         var tile = board.Tiles[x, y];
         if (tile != null && tile && tile.RuntimeState == TileRuntimeState.Swapping)
             return false;
+        // Kafesten az önce çıkan special aynı zincirde patlamaz (TileView.CageGrace).
+        if (tile != null && tile && tile.CageGrace)
+            return false;
 
         return true;
     }

@@ -13,6 +13,9 @@ public static class HarvestState
     private const string KeyDug     = "harvest_dug";     // bu kattaki kazılmış hücreler (bit maskesi)
     private const string KeyFound   = "harvest_found";   // bu kattaki bulunmuş yerleşimler (bit maskesi)
     private const string KeyCycle   = "harvest_cycle";   // sezon kimliği; değişince ilerleme sıfırlanır
+    // Sezon sonu: altına çevrilen kürek/altın — ana menüde bir kez duyurulur (altın çevrildiği an verilir).
+    private const string KeyPendingTrowels = "harvest_pending_trowels";
+    private const string KeyPendingGold    = "harvest_pending_gold";
 
     public static event Action OnChanged;
 
@@ -59,12 +62,52 @@ public static class HarvestState
     {
         if (cfg == null) return;
         string current = HarvestSchedule.GetCycleKey(cfg, utcNow);
-        if (current == "idle") return;   // ara günlerde eski sezon bozulmaz (pencere dönünce yeni anahtar gelir)
-        if (PlayerPrefs.GetString(KeyCycle, "") == current) return;
+        string stored = PlayerPrefs.GetString(KeyCycle, "");
+        if (current == "idle")
+        {
+            // Pencere kapandı: sezon bitti → kalan kürekler altına (ilerleme yeni sezonda sıfırlanır).
+            if (stored.Length > 0 && Trowels > 0)
+            {
+                ConvertLeftoverTrowels(cfg);
+                PlayerPrefs.Save();
+                OnChanged?.Invoke();
+            }
+            return;
+        }
+        if (stored == current) return;
+        if (stored.Length > 0) ConvertLeftoverTrowels(cfg);   // önceki sezondan kalan kürekler altına
         foreach (var k in new[] { KeyTrowels, KeyFloor, KeyDug, KeyFound }) PlayerPrefs.DeleteKey(k);
         PlayerPrefs.SetString(KeyCycle, current);
         PlayerPrefs.Save();
         OnChanged?.Invoke();
+    }
+
+    /// Harcanmamış kürekleri altına çevirir (altın hemen verilir; duyuru ana menüde bir kez gösterilir).
+    /// Kaydetmeyi çağıran yapar.
+    private static void ConvertLeftoverTrowels(HarvestConfig cfg)
+    {
+        int trowels = Trowels;
+        if (trowels <= 0) return;
+        PlayerPrefs.SetInt(KeyTrowels, 0);
+        int gold = cfg != null ? trowels * cfg.trowelGoldValue : 0;
+        if (gold <= 0) return;
+        DailySlotRewardService.Grant(new DailySlotReward { type = DailySlotRewardType.Coins, amount = gold });
+        PlayerPrefs.SetInt(KeyPendingTrowels, PlayerPrefs.GetInt(KeyPendingTrowels, 0) + trowels);
+        PlayerPrefs.SetInt(KeyPendingGold, PlayerPrefs.GetInt(KeyPendingGold, 0) + gold);
+        GameAnalytics.LogEvent("harvest_trowels_to_gold", ("trowels", trowels), ("gold", gold));
+        Debug.Log($"[Harvest] Event bitti → {trowels} kürek = {gold} altın.");
+    }
+
+    /// Duyurulmamış sezon sonu dönüşümü varsa alır ve temizler (ana menü bir kez gösterir).
+    public static bool TryTakeLeftoverAnnouncement(out int trowels, out int gold)
+    {
+        trowels = PlayerPrefs.GetInt(KeyPendingTrowels, 0);
+        gold = PlayerPrefs.GetInt(KeyPendingGold, 0);
+        if (gold <= 0) return false;
+        PlayerPrefs.DeleteKey(KeyPendingTrowels);
+        PlayerPrefs.DeleteKey(KeyPendingGold);
+        PlayerPrefs.Save();
+        return true;
     }
 
     /// Bu level kazanılırsa verilecek kürek (fail balonunda "elinden gidecek" miktarı da budur).
@@ -179,6 +222,8 @@ public static class HarvestState
         PlayerPrefs.SetInt(KeyTrowels, Trowels - 1);
         PlayerPrefs.SetInt(KeyDug, dug);
         PlayerPrefs.SetInt(KeyFound, found);
+        // Son hasat da bitti: event bu oyuncu için tamam → kalan kürekler altına.
+        if (result.floorCompleted && IsFinished(cfg)) ConvertLeftoverTrowels(cfg);
         PlayerPrefs.Save();
         OnChanged?.Invoke();
         return true;
@@ -187,7 +232,8 @@ public static class HarvestState
 #if UNITY_EDITOR
     public static void DebugReset()
     {
-        foreach (var k in new[] { KeyTrowels, KeyFloor, KeyDug, KeyFound, KeyCycle }) PlayerPrefs.DeleteKey(k);
+        foreach (var k in new[] { KeyTrowels, KeyFloor, KeyDug, KeyFound, KeyCycle, KeyPendingTrowels, KeyPendingGold })
+            PlayerPrefs.DeleteKey(k);
         PlayerPrefs.Save();
         OnChanged?.Invoke();
     }

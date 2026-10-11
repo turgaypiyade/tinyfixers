@@ -15,6 +15,9 @@ using UnityEngine;
 ///    (SpecialChainRunner skips caged tiles; dispatcher paths skip via IsInteractionLocked).
 ///    ReleaseCoveredBy exists for an "AoE frees the cage" rule but is NOT wired (user rule 2026-09-25:
 ///    locked → no explosion, no break).
+///  • OPT-IN RELEASE: a lock created with releaseWhenCovered (Laser Cannon) is freed IMMEDIATELY by NoteCovered
+///    (adjacent match / special area). The freed tile gets TileView.CageGrace — AoE still skips it until the
+///    player's next move or the move-end pass — so a later wave of the same chain cannot explode it.
 ///  • TIMEOUT: each lock carries an unlock window in MOVES. If the window elapses without release,
 ///    the owner onTimeout fires (e.g. magnet pulls it through the tube). The owner is responsible for
 ///    disposing the tile/lock inside that callback.
@@ -31,12 +34,15 @@ public class SpecialLockCoordinator
         public Action<TileView> OnTimeout;
         public Action<TileView> OnReleased;
         public string Owner;
+        public bool ReleaseWhenCovered;
     }
 
     private readonly Dictionary<TileView, LockEntry> locks = new();
     // Reused scratch buffers so move-end / release passes don't allocate.
     private readonly List<LockEntry> timedOut = new();
     private readonly List<TileView> stale = new();
+    // Etki anında serbest kalan (CageGrace) taşlar; yeni hamlede / hamle sonunda grace kalkar.
+    private readonly List<TileView> graceTiles = new();
 
     public bool HasAnyLock => locks.Count > 0;
 
@@ -58,7 +64,8 @@ public class SpecialLockCoordinator
         int unlockWindowMoves,
         Action<TileView> onTimeout,
         Action<TileView> onReleased = null,
-        string owner = null)
+        string owner = null,
+        bool releaseWhenCovered = false)
     {
         if (tile == null || !tile)
             return;
@@ -74,6 +81,8 @@ public class SpecialLockCoordinator
         entry.OnTimeout = onTimeout;
         entry.OnReleased = onReleased;
         entry.Owner = owner;
+        entry.ReleaseWhenCovered = releaseWhenCovered;
+        tile.CageGrace = false;
 
         tile.SetSpecialLocked(true);
     }
@@ -129,6 +138,45 @@ public class SpecialLockCoordinator
     }
 
     /// <summary>
+    /// Adjacent match / special area reached this locked tile (BoardController.NoteCageImpact, SpecialChainRunner).
+    /// Only opt-in locks react: freed right now (cage visual breaks in sync), protected by CageGrace until
+    /// <see cref="ClearGrace"/>.
+    /// </summary>
+    public void NoteCovered(TileView tile)
+    {
+        if (tile == null || !tile || !locks.TryGetValue(tile, out var entry) || !entry.ReleaseWhenCovered)
+            return;
+        tile.CageGrace = true;
+        graceTiles.Add(tile);
+        ReleaseSpecial(tile);
+    }
+
+    /// Yeni oyuncu hamlesi başladı ya da tahta duruldu: serbest kalanlar artık normal special.
+    public void ClearGrace()
+    {
+        for (int i = 0; i < graceTiles.Count; i++)
+            if (graceTiles[i]) graceTiles[i].CageGrace = false;
+        graceTiles.Clear();
+    }
+
+    /// <summary>Release every lock owned by <paramref name="owner"/> (e.g. the owning obstacle was destroyed).</summary>
+    public void ReleaseOwnedBy(string owner)
+    {
+        if (locks.Count == 0 || owner == null)
+            return;
+        stale.Clear();
+        foreach (var kv in locks)
+            if (kv.Value.Owner == owner)
+                stale.Add(kv.Key);
+        for (int i = 0; i < stale.Count; i++)
+        {
+            var tile = stale[i];
+            ReleaseSpecial(tile, invokeReleasedCallback: tile && tile.IsSpecialLocked);
+        }
+        stale.Clear();
+    }
+
+    /// <summary>
     /// Call once per completed move (after that move's special AoE releases have been processed).
     /// Decrements every surviving lock's window; those that reach zero fire their owner onTimeout.
     /// IMPORTANT: invoke this BEFORE new locks are created for this same move-end, so a freshly
@@ -136,6 +184,7 @@ public class SpecialLockCoordinator
     /// </summary>
     public void OnMoveResolved()
     {
+        ClearGrace();
         if (locks.Count == 0)
             return;
 
@@ -183,5 +232,6 @@ public class SpecialLockCoordinator
                 kv.Key.SetSpecialLocked(false);
         }
         locks.Clear();
+        ClearGrace();
     }
 }

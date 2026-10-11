@@ -622,6 +622,9 @@ public class GridSpawner : MonoBehaviour
         baseCellBgColorByIndex.Clear();
         tubeClickProxyByCell.Clear();
         safeClickProxyByCell.Clear();
+        // Lazer topları DrawObstacleImage'dan yeniden kaydolur; önceki level'ın topları/kafesleri bırakılsın.
+        if (board != null && board.TryGetComponent<LaserCannonService>(out var laserCannons))
+            laserCannons.Clear();
 
         bool[] blocked = BuildBlockedMap();
 
@@ -2501,7 +2504,9 @@ public class GridSpawner : MonoBehaviour
 
         // Boya kutusu: stage sprite'ları (dolu piramit) yalnız önizleme/hedef ikonu içindir; sahnede
         // boş kasa + PaintCanBoxView kutuları durur.
-        if (nextStage.sprite != null && image.GetComponent<PaintCanBoxView>() == null)
+        // Lazer topu da aynı: stage sprite'ı kuleli ikon, sahnede taban + LaserCannonView kulesi.
+        if (nextStage.sprite != null && image.GetComponent<PaintCanBoxView>() == null
+            && image.GetComponent<LaserCannonView>() == null)
             image.sprite = nextStage.sprite;
 
         MoveObstacleToBehaviorRoot(image.rectTransform, nextStage.behavior);
@@ -3676,6 +3681,17 @@ public class GridSpawner : MonoBehaviour
         if (def.id == ObstacleId.PaintCanBox)
             AttachPaintCanBoxView(img, def, x, y);
 
+        // Lazer topu: Image tabanı gösterir; kule + cıvatalar LaserCannonView child'ları, davranış servisde.
+        if (def.id == ObstacleId.LaserCannon && board != null)
+        {
+            var state = board.ObstacleStateService;
+            // Örtü altında çizilirken hücrenin kalan vuruşu örtüye aittir → topu tam (gri cıvatalı) göster.
+            int remaining = state != null && state.GetObstacleIdAt(x, y) == ObstacleId.LaserCannon
+                ? state.GetRemainingHitsAt(x, y) : 0;
+            var view = LaserCannonView.Ensure(img, def, remaining > 0 ? remaining : def.hits);
+            LaserCannonService.Ensure(board).Register(y * width + x, view);
+        }
+
         return img;
     }
 
@@ -3829,6 +3845,16 @@ public class GridSpawner : MonoBehaviour
         }
     }
 
+    private IEnumerator DestroyGelBodyIfUnclaimed(int originIndex, Image image)
+    {
+        yield return new WaitForSeconds(2f);
+        if (image != null && GelLauncherFx.IsBodyPending(originIndex, image))
+        {
+            GelLauncherFx.TakeBody(originIndex);
+            Destroy(image.gameObject);
+        }
+    }
+
     private void HandleObstacleVisualChanged(ObstacleVisualChange change)
     {
         if (!obstacleViewsByOrigin.TryGetValue(change.originIndex, out var image) || image == null)
@@ -3852,7 +3878,18 @@ public class GridSpawner : MonoBehaviour
             if (change.obstacleId == ObstacleId.PaintCanBox)
                 UpdatePaintCanBoxView(image, 0);
 
-            if (change.obstacleId == ObstacleId.Wardrobe)
+            if (change.obstacleId == ObstacleId.LaserCannon
+                && LaserCannonService.TryPlayBreak(board, change.originIndex, image))
+            {
+                // 4. cıvata yanar, top parçalanır; görünümü servis yok eder.
+            }
+            else if (BoardController.IsGelLauncher(change.obstacleId))
+            {
+                // Ateşleme animasyonu gerçek görselde oynar (GelLauncherFireAction devralır).
+                GelLauncherFx.HandOverBody(change.originIndex, image);
+                StartCoroutine(DestroyGelBodyIfUnclaimed(change.originIndex, image));
+            }
+            else if (change.obstacleId == ObstacleId.Wardrobe)
             {
                 float destroyDelay = WardrobeFinalItemDestroyDelay;
                 if (_wardrobeViews.TryGetValue(change.originIndex, out var wardrobeView) && wardrobeView != null)
@@ -3880,6 +3917,18 @@ public class GridSpawner : MonoBehaviour
         if (change.obstacleId == ObstacleId.PaintCanBox)
         {
             UpdatePaintCanBoxView(image, change.remainingHits);
+            return;
+        }
+
+        // Lazer topu: taban sabit; vuruşta bir cıvata daha yanar + kısa sarsıntı.
+        if (change.obstacleId == ObstacleId.LaserCannon)
+        {
+            if (image.TryGetComponent<LaserCannonView>(out var laserView))
+            {
+                var def = obstacleDefsByOrigin.TryGetValue(change.originIndex, out var d) ? d : null;
+                laserView.SetLit((def != null ? def.hits : 4) - change.remainingHits);
+            }
+            PlayObstacleHitShake(change.originIndex, image.rectTransform);
             return;
         }
 

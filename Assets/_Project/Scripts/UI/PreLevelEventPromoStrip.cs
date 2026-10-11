@@ -171,7 +171,11 @@ public sealed class PreLevelEventPromoStrip : MonoBehaviour
 
         var button = image.gameObject.AddComponent<Button>();
         button.targetGraphic = image;
-        button.onClick.AddListener(() => onJoin?.Invoke(promo));
+        button.onClick.AddListener(() =>
+        {
+            EventScreenIris.MarkLaunchPoint(button);   // event ekranı bu butondan açılsın
+            onJoin?.Invoke(promo);
+        });
 
         var label = NewText("Label", rt, GameLocalizationText("event_join_button", "Katıl"), buttonHeight * 0.5f);
         Stretch(label.rectTransform, Vector2.zero, Vector2.zero);

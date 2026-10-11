@@ -20,6 +20,14 @@ public sealed class EventScreenIris : MonoBehaviour
     private static Sprite s_circle;
     private static Sprite s_ring;
 
+    // Katıl butonu (popup / PreLevel şeridi) tıklanınca dünya konumu saklanır; event ekranı kısa süre
+    // içinde açılırsa daire ikondan değil bu butondan çıkar. Buton o an kapanmış olabileceği için
+    // Transform değil konum tutulur. Süre dolarsa (ör. araya "nasıl oynanır" girdi) ikona düşülür.
+    private const float LaunchPointTtl = 1.5f;
+    private static Vector3 s_launchWorld;
+    private static float s_launchWorldSize;
+    private static float s_launchTime = float.NegativeInfinity;
+
     private RectTransform host;
     private RectTransform maskRt;
     private RectTransform contentRt;
@@ -39,6 +47,16 @@ public sealed class EventScreenIris : MonoBehaviour
     private Action onDone;
 
     public bool IsRunning => running;
+
+    /// Event'e götüren bir butona basıldı: sıradaki açılış dairesi buradan çıksın.
+    public static void MarkLaunchPoint(Component clicked)
+    {
+        if (clicked == null || clicked.transform is not RectTransform rt) return;
+        s_launchWorld = rt.TransformPoint(rt.rect.center);
+        Vector3 scale = rt.lossyScale;
+        s_launchWorldSize = Mathf.Min(rt.rect.width * Mathf.Abs(scale.x), rt.rect.height * Mathf.Abs(scale.y));
+        s_launchTime = Time.unscaledTime;
+    }
 
     /// Iris'in eklediği içerik kabı mı? "Ebeveyn = ekran kökü" varsayan kodlar (ör. başlık kabı arama)
     /// bu kabı ekranın kendisi gibi saymalı.
@@ -68,6 +86,14 @@ public sealed class EventScreenIris : MonoBehaviour
         Rect r = host.rect;
         center = OriginInHost(origin);
         startDiameter = origin != null ? Mathf.Max(60f, Mathf.Min(origin.rect.width, origin.rect.height)) : 60f;
+        if (open && Time.unscaledTime - s_launchTime <= LaunchPointTtl)
+        {
+            // Tıklanan katıl butonu ikondan önceliklidir; bir kez kullanılır.
+            center = (Vector2)host.InverseTransformPoint(s_launchWorld) - r.center;
+            float hostScale = Mathf.Max(0.0001f, Mathf.Abs(host.lossyScale.x));
+            startDiameter = Mathf.Max(60f, s_launchWorldSize / hostScale);
+            s_launchTime = float.NegativeInfinity;
+        }
         // En uzak köşeye kadar → daire bitişte tüm ekranı örter.
         float dx = r.width * 0.5f + Mathf.Abs(center.x), dy = r.height * 0.5f + Mathf.Abs(center.y);
         endDiameter = 2f * Mathf.Sqrt(dx * dx + dy * dy) + 8f;

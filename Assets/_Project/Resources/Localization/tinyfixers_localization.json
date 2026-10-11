@@ -2519,6 +2519,22 @@
         {
           "key": "hint_obstacle_toolthreat_color",
           "value": "Düşman bu aleti tahtaya fırlatır! Yanında KENDİ RENGİNDEKİ taşlarla eşleşme yap ya da özel taş kullan. Üstündeki sayı her düşman turunda azalır. Sayı bitmeden kıramazsan alet ekranına fırlar: 3 saniye hamle yapamazsın ve düşman yeniden saldırır."
+        },
+        {
+          "key": "hint_obstacle_lasercannon_name",
+          "value": "Lazer Topu"
+        },
+        {
+          "key": "hint_obstacle_lasercannon",
+          "value": "Top bir özel taşa nişan alır. Onu bir hamle içinde kullanmazsan kafese kapatır. Kafesli taşın yanında eşleşme yap ya da onu başka bir özel taşın etki alanına sok, kafes açılır. Topu yalnızca özel taşlar kırar: 4 vuruşta parçalanır."
+        },
+        {
+          "key": "harvest_leftover_title",
+          "value": "Hasat Bitti!"
+        },
+        {
+          "key": "harvest_leftover_msg",
+          "value": "Kalan {0} kürek altına dönüştü."
         }
       ]
     },
@@ -5040,6 +5056,22 @@
         {
           "key": "hint_obstacle_toolthreat_color",
           "value": "The enemy throws this tool onto the board! Match pieces of ITS COLOR next to it, or use a special. The number drops every enemy turn. If you don't break it in time, the tool flies at your screen: you can't move for 3 seconds and the enemy attacks again."
+        },
+        {
+          "key": "hint_obstacle_lasercannon_name",
+          "value": "Laser Cannon"
+        },
+        {
+          "key": "hint_obstacle_lasercannon",
+          "value": "The cannon locks onto a special stone. If you don't use it within one move, it gets caged. Make a match next to a caged stone or hit it with another special's blast to free it. Only specials damage the cannon: it breaks after 4 hits."
+        },
+        {
+          "key": "harvest_leftover_title",
+          "value": "Harvest Over!"
+        },
+        {
+          "key": "harvest_leftover_msg",
+          "value": "Your {0} leftover trowels turned into coins."
         }
       ]
     }

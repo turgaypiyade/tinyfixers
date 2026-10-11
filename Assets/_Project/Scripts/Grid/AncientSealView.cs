@@ -11,18 +11,25 @@ using UnityEngine.UI;
 ///   • taş toplandı: sayaç "pop" + disk hafif titrer
 ///   • kilit kapandı: taş yuvasına gömülüp grileşir; disk döner, sıradaki taş tepeye
 ///     gelir, kartuş yeni renge/sayıya döner
-///   • mühür açıldı: disk hızla bir tur döner, ortadan ikiye ayrılıp yanlara kayar, gövde söner
-/// Sprite'lar Resources/SealSafe altında; gövde 9-slice, disk ve sayaç hücre boyuna göre sabittir.
+///   • mühür açıldı: çark hızlanarak döner, sonra mühür (gövde + çark + taşlar) birçok parçaya ayrılıp savrulur
+/// Sprite'lar Resources/SealSafe altında; gövde 9-slice (köşeler hücre boyuna göre sabit). Çark ve sayaç iki
+/// standart ölçüde (SizeTiers): kısa kenarı 2 hücre olan mühür ve her kenarı en az 3 hücre olan mühür.
 /// </summary>
 public sealed class AncientSealView : MonoBehaviour
 {
     private const string ArtPath = "SealSafe/";
 
     private static readonly Vector2 DiskCenter = new Vector2(0.5f, 0.5f);
-    private const float DiskSizeCells = 1.08f;
     private const float BorderReferenceCells = 1.5f;
-    private const float CounterWidthCells = 1f;
-    private const float CounterTopInsetCells = 0.24f;
+    private const float CounterWidthCells = 0.95f;     // × tier.counterScale
+    private const float CounterTopInsetCells = 0.2f;   // × tier.counterScale
+
+    // Standart ölçüler (kullanıcı oyunda 105 px hücreyle ayarladı, 2026-10-11). Hücre birimi:
+    //   2×2:  çark 145 px, merkezin 6.75 px altında; sayaç taban boy.
+    //   3×9:  çark 228.4 px, merkezin 13.6 px altında; sayaç ×1.5.
+    private struct SizeTier { public float diskCells, diskDropCells, counterScale; }
+    private static readonly SizeTier SmallTier = new SizeTier { diskCells = 145f / 105f, diskDropCells = 6.75f / 105f, counterScale = 1f };
+    private static readonly SizeTier LargeTier = new SizeTier { diskCells = 228.375f / 105f, diskDropCells = 13.625f / 105f, counterScale = 1.5f };
     private static readonly Vector2 DiskPivot = new Vector2(0.5f, 0.5f);   // disk sprite'ı kendi merkezine kırpılı
     // Disk kanvasına göre: taş yuvası yarıçapı ve taş boyu.
     private const float SocketRadius = 0.3016f;
@@ -31,16 +38,14 @@ public sealed class AncientSealView : MonoBehaviour
     // (yuvalar 120° arayla); disk her adımda sıradaki slotu tepeye getirir.
     private static readonly float[] SlotAngles = { 90f, -30f, 210f };
 
-    // Kartuş sayısı aktif taşın renginde (açık tonlar), kartuş zemininin çok koyu laciverti kontur + gölge:
-    // renkli rakam koyu lacivert zeminde ancak kalın koyu konturla okunur. Gölge ayrı bir kopya yazıdır
-    // (TMP underlay keyword'ü build'de soyulabildiği için materyale güvenilmez).
-    private static readonly Color32[] LockColors =
-    {
-        new Color32(255, 72, 72, 255),    // kırmızı
-        new Color32(255, 214, 48, 255),   // sarı
-        new Color32(88, 226, 96, 255),    // yeşil
-    };
-    private static readonly Color32 CounterDark = new Color32(10, 22, 66, 255);
+    // Kartuş zemini toplanan rengin plakası (SealCounterPlateRed/Yellow/Green — mavi plakadan ton kaydırılmış
+    // kopyalar; tint çarptığı için mavi zemin boyanamaz), sayı net BEYAZ + çok koyu kontur ve gölge: her renkli
+    // zeminde aynı okunurluk. Gölge ayrı bir kopya yazıdır (TMP underlay keyword'ü build'de soyulabilir).
+    private static readonly string[] PlateNames =
+        { "SealCounterPlateRed", "SealCounterPlateYellow", "SealCounterPlateGreen" };
+    private static readonly Sprite[] plateSprites = new Sprite[3];
+    private static Sprite neutralPlate;
+    private static readonly Color32 CounterDark = new Color32(28, 14, 10, 255);
     private const float CounterOutlineWidth = 0.4f;
     private const float ShadowDrop = 0.012f;   // gövde boyuna oranla aşağı kayma
 
@@ -49,8 +54,13 @@ public sealed class AncientSealView : MonoBehaviour
     private const float JiggleDegrees = 3.5f;
     private const float SinkSeconds = 0.25f;
     private const float TurnSeconds = 0.5f;
-    private const float SpinSeconds = 0.4f;
-    private const float SplitSeconds = 0.4f;
+    // Kırılma: çark hızlanır (SpinSeconds sonunda ~MaxSpinDegPerSec), sonra parçalar ShatterSeconds boyunca savrulur.
+    private const float SpinSeconds = 0.5f;
+    private const float MaxSpinDegPerSec = 1600f;
+    private const float ShatterSeconds = 0.65f;
+    // Parçalar mühür alanından savrulup çıkınca taş akışı başlar (kullanıcı: "kasa yok olsun, sonra düşsün").
+    private const float ReleaseCellsAfterShatter = 0.3f;
+    private const int MaxShardAxis = 5;
 
     private AncientSealService service;
     private int origin = -1;
@@ -67,12 +77,15 @@ public sealed class AncientSealView : MonoBehaviour
     private readonly Image[] gemSpent = new Image[3];
     private readonly int[] slotLock = { 0, 1, 2 };                       // slot → kilit index'i
 
+    private float cellUnit = 1f;
     private float baseAngle;          // gösterilen slotu tepeye getiren disk açısı (Ordered)
     private float jiggleAngle;
     private int shownStep;            // diskin şu an gösterdiği adım
     private bool broken;
     private Coroutine jiggleCo;
     private Coroutine popCo;
+    private Coroutine gemPulseCo;
+    private int gemPulseSlot = -1;
     private readonly Queue<IEnumerator> sequence = new();
     private Coroutine sequenceCo;
 
@@ -118,10 +131,10 @@ public sealed class AncientSealView : MonoBehaviour
         var plate = NewImage("Plate", counterRoot, Load("SealCounterPlate"), out counterPlateImage);
         Stretch(plate);
         counterShadow = NewCounterText("Shadow", CounterDark);   // önce: arkada kalır
-        counter = NewCounterText("Text", LockColors[0]);
+        counter = NewCounterText("Text", Color.white);
     }
 
-    /// Gövde tüm dikdörtgeni doldurur; köşeler, disk ve sayaç hücre boyuna göre sabit kalır.
+    /// Gövde tüm dikdörtgeni doldurur; köşeler hücre boyuna göre sabit, çark + sayaç yer oldukça büyür.
     public void SetBodySize(float width, float height, float cellSize)
     {
         if (body == null) return;
@@ -137,21 +150,27 @@ public sealed class AncientSealView : MonoBehaviour
             bodyImage.pixelsPerUnitMultiplier = bodyImage.sprite.rect.width
                 / (bodyImage.pixelsPerUnit * unit * BorderReferenceCells);
 
-        float d = unit * DiskSizeCells;
+        var plateSprite = counterPlateImage.sprite;
+        float aspect = plateSprite != null ? plateSprite.rect.height / plateSprite.rect.width : 0.42f;
+
+        // Kısa kenar 3 hücre ve üstüyse büyük standart (3 hücre yükseklik büyük çarkı alır).
+        var tier = Mathf.Min(width, height) / unit >= 2.5f ? LargeTier : SmallTier;
+        float fu = unit * tier.counterScale;
+
+        cellUnit = unit;
+        float d = unit * tier.diskCells;
         disk.sizeDelta = new Vector2(d, d);
-        disk.anchoredPosition = Vector2.zero;
+        disk.anchoredPosition = new Vector2(0f, -unit * tier.diskDropCells);
         for (int i = 0; i < gems.Length; i++)
         {
             gems[i].sizeDelta = new Vector2(d * GemSize, d * GemSize);
             gems[i].anchoredPosition = Vector2.zero;
         }
-        float counterWidth = unit * CounterWidthCells;
-        var plateSprite = counterPlateImage.sprite;
-        float aspect = plateSprite != null ? plateSprite.rect.height / plateSprite.rect.width : 0.42f;
+        float counterWidth = fu * CounterWidthCells;
         counterRoot.sizeDelta = new Vector2(counterWidth, counterWidth * aspect);
-        counterRoot.anchoredPosition = new Vector2(0f, -unit * CounterTopInsetCells);
-        counter.fontSize = counterShadow.fontSize = unit * 0.24f;
-        counterShadow.rectTransform.anchoredPosition = new Vector2(0f, -unit * ShadowDrop);
+        counterRoot.anchoredPosition = new Vector2(0f, -fu * CounterTopInsetCells);
+        counter.fontSize = counterShadow.fontSize = fu * 0.24f;
+        counterShadow.rectTransform.anchoredPosition = new Vector2(0f, -fu * ShadowDrop);
     }
 
     /// GridSpawner çağırır: service'e bağla, kilit sırasını slotlara yerleştir, mevcut durumu çiz.
@@ -195,6 +214,7 @@ public sealed class AncientSealView : MonoBehaviour
     private void OnDestroy()
     {
         if (service == null) return;
+        if (broken) service.ReleaseBreakHold(origin);   // kırılma yarıda kesildiyse hücreler kilitli kalmasın
         service.UnregisterView(origin, this);
         service.OnCollected -= HandleCollected;
         service.OnLockClosed -= HandleLockClosed;
@@ -246,6 +266,37 @@ public sealed class AncientSealView : MonoBehaviour
         popCo = StartCoroutine(CoPop(counterRoot));
         if (jiggleCo != null) StopCoroutine(jiggleCo);
         jiggleCo = StartCoroutine(CoJiggle());
+        // Varış nabzı: taşı "yutan" aktif yuva kısa bir an şişer.
+        int slot = System.Array.IndexOf(slotLock, lockIdx);
+        if (slot >= 0 && gemSpent[slot].color.a <= 0f)
+        {
+            StopGemPulse();
+            gemPulseSlot = slot;
+            gemPulseCo = StartCoroutine(CoGemPulse(slot));
+        }
+    }
+
+    private void StopGemPulse()
+    {
+        if (gemPulseCo != null) StopCoroutine(gemPulseCo);
+        if (gemPulseSlot >= 0 && gemSpent[gemPulseSlot].color.a <= 0f) gems[gemPulseSlot].localScale = Vector3.one;
+        gemPulseCo = null;
+        gemPulseSlot = -1;
+    }
+
+    private IEnumerator CoGemPulse(int slot)
+    {
+        var rt = gems[slot];
+        const float seconds = 0.2f;
+        for (float t = 0f; t < seconds; t += Time.deltaTime)
+        {
+            if (gemSpent[slot].color.a > 0f) break;   // kilit kapandı: gömülme animasyonu ölçeği yönetir
+            rt.localScale = Vector3.one * (1f + 0.28f * Mathf.Sin(t / seconds * Mathf.PI));
+            yield return null;
+        }
+        if (gemSpent[slot].color.a <= 0f) rt.localScale = Vector3.one;
+        gemPulseCo = null;
+        gemPulseSlot = -1;
     }
 
     private void HandleLockClosed(int o, int lockIdx)
@@ -254,6 +305,7 @@ public sealed class AncientSealView : MonoBehaviour
         if (!isActiveAndEnabled) { ApplyStateInstant(); return; }
         int slot = System.Array.IndexOf(slotLock, lockIdx);
         if (slot < 0) return;
+        if (gemPulseSlot == slot) StopGemPulse();
         Enqueue(CoSink(slot));
         if (service != null && service.GetRemainingTotal(origin) > 0)
             Enqueue(CoTurnToNext());
@@ -353,62 +405,112 @@ public sealed class AncientSealView : MonoBehaviour
         if (!flipped) { shownStep = Mathf.Min(shownStep + 1, slotLock.Length - 1); RefreshCounter(); }
     }
 
-    // Disk hızla bir tur döner, ortadan ikiye ayrılıp yanlara kayar; gövde ve sayaç söner.
+    // Çark hızlanarak döner (gövde titrer, sayaç söner); sonra mühür birçok parçaya ayrılıp savrulur.
+    // Parça = dönebilen stencil pencere (Mask) + içinde o anki gövdenin kopyası → kesik kenarlar gerçek görsel.
+    // Kopyalar yalnız kırılma anında bir kez üretilir ve mühürle birlikte yok edilir.
     private IEnumerator CoBreak()
     {
         SetCounter("", -1);
-        // En az ~300° hızlanarak döner ve tam tura (0°) oturur: yarımlar disk sprite'ıyla aynı açıda doğar.
-        float from = baseAngle;
-        float to = Mathf.Ceil((from + 300f) / 360f) * 360f;
-        for (float t = 0f; t < SpinSeconds; t += Time.deltaTime)
+        Vector2 bodyHome = body.anchoredPosition;
+        float speed = 120f;
+        for (float t = 0f; t < SpinSeconds; t += Mathf.Min(Time.deltaTime, 1f / 30f))
         {
             float k = t / SpinSeconds;
-            baseAngle = Mathf.Lerp(from, to, k * k);
+            float dt = Mathf.Min(Time.deltaTime, 1f / 30f);
+            speed = Mathf.Lerp(120f, MaxSpinDegPerSec, k * k);
+            baseAngle += speed * dt;
+            jiggleAngle = 0f;
             ApplyDiskAngle();
+            float shake = cellUnit * 0.025f * k;
+            body.anchoredPosition = bodyHome + new Vector2(Random.Range(-shake, shake), Random.Range(-shake, shake));
+            counterRoot.localScale = Vector3.one * Mathf.Max(0f, 1f - k * 3f);
             yield return null;
         }
-        baseAngle = to;
-        jiggleAngle = 0f;
-        ApplyDiskAngle();
+        body.anchoredPosition = bodyHome;
+        counterRoot.gameObject.SetActive(false);
 
-        var left = MakeHalf(Image.OriginHorizontal.Left, out var leftGroup);
-        var right = MakeHalf(Image.OriginHorizontal.Right, out var rightGroup);
-        // Taşlar bulundukları yarımla birlikte kayar (tepe taşı sağa).
-        float centerX = disk.position.x;
-        foreach (var gem in gems)
-            gem.SetParent(gem.position.x < centerX - 0.01f ? left : right, worldPositionStays: true);
-        disk.gameObject.SetActive(false);
+        var shards = BuildShards(out var velocities, out var spins);
+        body.gameObject.SetActive(false);
 
-        float shift = disk.rect.width * 0.6f;
-        for (float t = 0f; t < SplitSeconds; t += Time.deltaTime)
+        float gravity = cellUnit * 9f;
+        bool released = false;
+        for (float t = 0f; t < ShatterSeconds; t += Mathf.Min(Time.deltaTime, 1f / 30f))
         {
-            float k = t / SplitSeconds;
-            float e = 1f - (1f - k) * (1f - k);
-            left.anchoredPosition = new Vector2(-shift * e, 0f);
-            right.anchoredPosition = new Vector2(shift * e, 0f);
-            leftGroup.alpha = rightGroup.alpha = 1f - k;
-            body.localScale = Vector3.one * (1f + 0.08f * e);
-            bodyImage.color = Fade(1f - k);
-            counterPlateImage.color = Fade(1f - k);
+            if (!released && t >= ReleaseCellsAfterShatter) { released = true; ReleaseCells(); }
+            float dt = Mathf.Min(Time.deltaTime, 1f / 30f);
+            float k = t / ShatterSeconds;
+            for (int i = 0; i < shards.Count; i++)
+            {
+                velocities[i] += Vector2.down * (gravity * dt);
+                var rt = shards[i].rect;
+                rt.anchoredPosition += velocities[i] * dt;
+                rt.localRotation = Quaternion.Euler(0f, 0f, rt.localEulerAngles.z + spins[i] * dt);
+                rt.localScale = Vector3.one * Mathf.Lerp(1f, 0.8f, k);
+                shards[i].group.alpha = k < 0.45f ? 1f : 1f - (k - 0.45f) / 0.55f;
+            }
             yield return null;
         }
+        ReleaseCells();
         Destroy(gameObject);
     }
 
-    // Diskin bir yarısı: aynı sprite, yatay doldurma %50 (disk o an 0°'de; taşlar ayrıca taşınır).
-    private RectTransform MakeHalf(Image.OriginHorizontal side, out CanvasGroup group)
+    private void ReleaseCells() => service?.ReleaseBreakHold(origin);
+
+    private struct Shard { public RectTransform rect; public CanvasGroup group; }
+
+    private List<Shard> BuildShards(out List<Vector2> velocities, out List<float> spins)
     {
-        var rt = NewImage("DiskHalf", body, diskImage.sprite, out var img);
-        rt.anchorMin = rt.anchorMax = DiskCenter;
-        rt.pivot = DiskPivot;
-        rt.sizeDelta = disk.sizeDelta;
-        img.type = Image.Type.Filled;
-        img.fillMethod = Image.FillMethod.Horizontal;
-        img.fillOrigin = (int)side;
-        img.fillAmount = 0.5f;
-        group = rt.gameObject.AddComponent<CanvasGroup>();
-        group.interactable = group.blocksRaycasts = false;
-        return rt;
+        Vector2 size = body.rect.size;
+        int cols = Mathf.Clamp(Mathf.RoundToInt(size.x / cellUnit * 1.5f), 3, MaxShardAxis);
+        int rows = Mathf.Clamp(Mathf.RoundToInt(size.y / cellUnit * 1.5f), 3, MaxShardAxis);
+        float[] xs = Cuts(cols), ys = Cuts(rows);
+        var list = new List<Shard>(cols * rows);
+        velocities = new List<Vector2>(cols * rows);
+        spins = new List<float>(cols * rows);
+        Vector2 half = size * 0.5f;
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < cols; c++)
+            {
+                // Parça dikdörtgeni (gövde merkezli, y yukarı).
+                float x0 = xs[c] * size.x - half.x, x1 = xs[c + 1] * size.x - half.x;
+                float y1 = half.y - ys[r] * size.y, y0 = half.y - ys[r + 1] * size.y;
+                var center = new Vector2((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
+
+                var go = new GameObject("SealShard", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image),
+                    typeof(Mask), typeof(CanvasGroup));
+                go.layer = gameObject.layer;
+                var rt = (RectTransform)go.transform;
+                rt.SetParent(transform, false);
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.sizeDelta = new Vector2(x1 - x0, y1 - y0);
+                rt.anchoredPosition = body.anchoredPosition + center;
+                go.GetComponent<Image>().raycastTarget = false;
+                go.GetComponent<Mask>().showMaskGraphic = false;
+                var group = go.GetComponent<CanvasGroup>();
+                group.interactable = group.blocksRaycasts = false;
+
+                var copy = (RectTransform)Instantiate(body.gameObject, rt, false).transform;
+                copy.anchorMin = copy.anchorMax = copy.pivot = new Vector2(0.5f, 0.5f);
+                copy.sizeDelta = size;
+                copy.anchoredPosition = -center;
+                copy.localScale = Vector3.one;
+
+                Vector2 dir = center.sqrMagnitude > 1f ? center.normalized : Random.insideUnitCircle.normalized;
+                velocities.Add(dir * (cellUnit * Random.Range(2.2f, 3.6f)) + Vector2.up * (cellUnit * Random.Range(1.5f, 2.6f)));
+                spins.Add(Random.Range(220f, 520f) * (Random.value < 0.5f ? -1f : 1f));
+                list.Add(new Shard { rect = rt, group = group });
+            }
+        return list;
+    }
+
+    // 0..1 arası düzensiz kesimler (eşit ızgara "kare kare" görünmesin).
+    private static float[] Cuts(int n)
+    {
+        var cuts = new float[n + 1];
+        cuts[n] = 1f;
+        for (int i = 1; i < n; i++)
+            cuts[i] = (i + Random.Range(-0.22f, 0.22f)) / n;
+        return cuts;
     }
 
     // ── Yardımcılar ─────────────────────────────────────────────────────────
@@ -433,11 +535,20 @@ public sealed class AncientSealView : MonoBehaviour
         return text;
     }
 
-    /// Yazı + gölgesi; lockIdx < 0 → AnyColor toplamı (beyaz).
+    /// Yazı + gölgesi beyaz; plaka toplanan rengin plakası (lockIdx < 0 → mavi plaka).
     private void SetCounter(string value, int lockIdx)
     {
         counter.text = counterShadow.text = value;
-        counter.color = lockIdx >= 0 && lockIdx < LockColors.Length ? LockColors[lockIdx] : (Color32)Color.white;
+        var plate = PlateFor(lockIdx);
+        if (plate != null && counterPlateImage.sprite != plate) counterPlateImage.sprite = plate;
+    }
+
+    private static Sprite PlateFor(int lockIdx)
+    {
+        if (lockIdx < 0 || lockIdx >= PlateNames.Length)
+            return neutralPlate != null ? neutralPlate : (neutralPlate = Load("SealCounterPlate"));
+        if (plateSprites[lockIdx] == null) plateSprites[lockIdx] = Load(PlateNames[lockIdx]);
+        return plateSprites[lockIdx] != null ? plateSprites[lockIdx] : PlateFor(-1);
     }
 
     private void ApplyDiskAngle()
@@ -486,8 +597,6 @@ public sealed class AncientSealView : MonoBehaviour
         float x = k - 1f;
         return 1f + c3 * x * x * x + c1 * x * x;
     }
-
-    private static Color Fade(float a) => new Color(1f, 1f, 1f, Mathf.Clamp01(a));
 
     private static string GemName(int lockIdx)
         => lockIdx == 0 ? "SealGemRed" : lockIdx == 1 ? "SealGemYellow" : "SealGemGreen";

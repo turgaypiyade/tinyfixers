@@ -142,7 +142,15 @@ public sealed class SpecialChainRunner : BoardAction
 
     // Kafesli (kilitli) special hiçbir etki alanında patlamaz ve kırılmaz: zincire alınmaz, temizlenmez.
     // (Dispatcher yolları aynı kuralı IsInteractionLocked ile uyguluyor; motor da artık uyar.)
-    private static bool IsCaged(TileView tile) => tile != null && tile && tile.IsSpecialLocked;
+    // Etki alanı kafese ulaştı: "alanda kalınca açılan" kilitler (Lazer topu) not edilir, hamle sonunda açılır.
+    private bool IsCaged(TileView tile)
+    {
+        if (tile == null || !tile) return false;
+        if (tile.CageGrace) return true;   // kafesten bu hamlede çıktı: zincir onu tetiklemez
+        if (!tile.IsSpecialLocked) return false;
+        board.SpecialLocks?.NoteCovered(tile);   // kafes açılır (special serbest, patlamaz)
+        return true;
+    }
 
     // Hücre çok hücreli (dikdörtgen) bir obstacle'a aitse, footprint'in ortasına en yakın hücreyi verir.
     // Yalnız origin üyeliğine bakılır (Safe gibi interceptor'lı obstacle'larda hit sorguları köşeyi döndürür).

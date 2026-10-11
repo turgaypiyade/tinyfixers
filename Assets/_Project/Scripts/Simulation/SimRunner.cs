@@ -384,6 +384,10 @@ public static class SimRunner
                     fidelity = SimGoalFidelity.NotSimulated;
                     warnings.Add("AncientSeal: tahtadan renk sırasıyla taş toplama davranışı modellenmiyor.");
                     break;
+                case ObstacleId.LaserCannon:
+                    fidelity = SimGoalFidelity.NotSimulated;
+                    warnings.Add("LaserCannon: special nişan/kafes döngüsü modellenmiyor.");
+                    break;
                 case ObstacleId.EnergyContainer:
                 case ObstacleId.HatLauncher:
                 case ObstacleId.KeyGenerator:

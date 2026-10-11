@@ -367,3 +367,9 @@ MonoBehaviour:
     fallbackTitle: Ancient Seal
     locKey: hint_obstacle_ancientseal
     fallbackText: Collect the displayed number of stones in the active color anywhere on the board. Each stone goes to only one seal. Complete all three colors to open it. Direct hits do not count.
+  - id: 65
+    iconOverride: {fileID: 21300000, guid: 9a14a1432fa3499a9b853be205ef44c8, type: 3}
+    titleLocKey: hint_obstacle_lasercannon_name
+    fallbackTitle: Laser Cannon
+    locKey: hint_obstacle_lasercannon
+    fallbackText: The cannon locks onto a special stone. If you don't use it within one move, it gets caged. Make a match next to the cage or hit it with another special's blast to free it. Only specials damage the cannon.

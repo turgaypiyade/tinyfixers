@@ -931,6 +931,33 @@ public class BoardController : MonoBehaviour
     internal ObstacleStateService ObstacleStateService => obstacleStateService;
     internal SpecialLockCoordinator SpecialLocks => specialLockCoordinator;
 
+    // Kafes açma kuralı (Lazer topu, releaseWhenCovered kilitleri): normal eşleşme kafesli special'ın 4 komşusundan
+    // birinde patlarsa, ya da special'ın etki alanı kafesli hücreyi kapsarsa kafes O ANDA açılır. Tüm eşleşme ve
+    // special temizlikleri engel hasarı için BoardAnimator'dan buraya geçer — tek giriş noktası.
+    internal void NoteCageImpact(Vector2Int cell, ObstacleHitContext context)
+    {
+        if (specialLockCoordinator == null || !specialLockCoordinator.HasAnyLock || Tiles == null)
+            return;
+        if (context == ObstacleHitContext.SpecialActivation)
+        {
+            NoteCagedAt(cell.x, cell.y);
+        }
+        else if (context == ObstacleHitContext.NormalMatch)
+        {
+            NoteCagedAt(cell.x + 1, cell.y);
+            NoteCagedAt(cell.x - 1, cell.y);
+            NoteCagedAt(cell.x, cell.y + 1);
+            NoteCagedAt(cell.x, cell.y - 1);
+        }
+    }
+
+    private void NoteCagedAt(int x, int y)
+    {
+        if (x < 0 || x >= Width || y < 0 || y >= Height) return;
+        var tile = Tiles[x, y];
+        if (tile != null && tile.IsSpecialLocked) specialLockCoordinator.NoteCovered(tile);
+    }
+
     // Cell-indexed view of the per-tile cage flag; used by ObstacleStateService's interaction-lock hook.
     private bool IsSpecialLockedAtCell(int x, int y)
     {
@@ -5833,6 +5860,7 @@ public class BoardController : MonoBehaviour
         // art arda ateşlenmesin.
         if (!bonusMove || movesConsumedSinceIdle == 0)
             movesConsumedSinceIdle++;
+        specialLockCoordinator?.ClearGrace();   // kafesten çıkan special artık oyuncunun
         OnPlayerMoveConsumed?.Invoke();
     }
     public void AddMoves(int amount) { if (amount <= 0) return; RemainingMoves += amount; OnMovesChanged?.Invoke(RemainingMoves); }

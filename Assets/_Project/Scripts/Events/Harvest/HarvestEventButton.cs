@@ -58,7 +58,9 @@ public sealed class HarvestEventButton : MonoBehaviour
 
         bool isLive = HarvestState.IsLive(cfg, now);
         if (isLive != live) { live = isLive; force = true; }
-        if (force && live) HarvestState.SyncCycle(cfg, now);
+        // Kapalıyken de: pencere kapandıysa sezon sonu dönüşümü (kalan kürek → altın) burada olur.
+        if (force) HarvestState.SyncCycle(cfg, now);
+        if (force) AnnounceLeftoverGold();
 
         DateTime target = live ? HarvestState.WindowEnd(cfg, now) : HarvestSchedule.GetNextStart(cfg, now);
         TimeSpan remaining = target == DateTime.MinValue ? TimeSpan.Zero : target - now;
@@ -70,6 +72,20 @@ public sealed class HarvestEventButton : MonoBehaviour
             if (labelText != null) labelText.text = TimeFormat.Countdown(remaining);
         }
         if (force) RefreshBadge();
+    }
+
+    // Event bitince harcanmamış kürekler altına döndü (altın zaten verildi) → ana menüde bir kez söyle.
+    private static void AnnounceLeftoverGold()
+    {
+        if (!HarvestState.TryTakeLeftoverAnnouncement(out int trowels, out int gold)) return;
+        var cfg = HarvestConfig.Shared;
+        var coinIcon = TileIconLibrary.Shared != null ? TileIconLibrary.Shared.GetRewardIcon(DailySlotRewardType.Coins) : null;
+        string title = GameLocalization.GetOr("harvest_leftover_title", "Hasat Bitti!");
+        string message = string.Format(GameLocalization.GetOr("harvest_leftover_msg", "Kalan {0} kürek altına dönüştü."), trowels);
+        RuntimeChoicePopup.ShowRewards(title, message, new[]
+        {
+            new RuntimeChoicePopup.RewardItem(coinIcon, gold.ToString(), GameLocalization.GetOr("shop_reward_coins", "Altın")),
+        }, GameLocalization.GetOr("common_ok", "Tamam"));
     }
 
     private void RefreshBadge()

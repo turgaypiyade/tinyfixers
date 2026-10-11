@@ -262,6 +262,12 @@ public enum ObstacleId : int
 
     // Collect the displayed color anywhere on the board; direct hits do not advance it.
     AncientSeal = 64,
+
+    // Lazer topu (2x2, sabit, hücre kapatan; yalnız special ile vurulur). Kule serbestçe döner; hamle sonunda
+    // bir special'a kilitlenip lazerle işaretler, oyuncu bir hamle daha kullanmazsa kafese alır. Kafesli special
+    // başka bir special'ın etki alanına girerse serbest kalır (patlamaz). 4 vuruşta (4 cıvata) parçalanır.
+    // Mantık + görsel: Grid/LaserCannon/LaserCannonService + LaserCannonView.
+    LaserCannon = 65,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
@@ -547,8 +553,12 @@ public class LevelData : ScriptableObject
              "obstacleOrigins'ten tanır: aynı numaralı bitişik duvar hücreleri tek origin paylaşır. 0 = duvar yok.")]
     public int[] wallPieceIds;
 
-    [Tooltip("Aç Hamster doyma eşiği (lokma). 0 = ObstacleLibrary'deki hamsterSatiety varsayılanı.")]
+    [Tooltip("Aç Hamster doyma eşiği (lokma), level varsayılanı. 0 = ObstacleLibrary'deki hamsterSatiety. " +
+             "Hamster başına değer (hamsterSatietyByCell) varsa o geçerlidir.")]
     [Min(0)] public int hamsterSatietyOverride = 0;
+    [Tooltip("Hamster başına lokma (doyma) sayısı — hamsterin KONDUĞU hücrenin index'inde. 0 = level/kütüphane varsayılanı. " +
+             "Editörde hamster yerleştirirken yazılır.")]
+    public int[] hamsterSatietyByCell;
 
     [Tooltip("Boya kutusu kasalarının (PaintCanBox) kutu rengi, kasa origin'ine göre. Listede olmayan kasa " +
              "Auto'dur: rengi satır bandından gelir (PaintCanBoxView.AutoColorForRow).")]
@@ -633,6 +643,9 @@ public class LevelData : ScriptableObject
 
         if (pinnedTileTypes == null || pinnedTileTypes.Length != size)
             pinnedTileTypes = new int[size];
+
+        if (hamsterSatietyByCell == null || hamsterSatietyByCell.Length != size)
+            hamsterSatietyByCell = new int[size];
 
         if (pinnedSpecialTypes == null || pinnedSpecialTypes.Length != size)
             pinnedSpecialTypes = new int[size];

@@ -430,7 +430,7 @@ public class TopHudController : MonoBehaviour
             UpdateGoalsCompletionState();
     }
 
-    /// Aç Hamster: hedef "X kez doyur" — HamsterObstacleService her doyumda tamamlanan sayıyı yazar
+    /// Aç Hamster: hedef = tahtadaki hamster sayısı — HamsterObstacleService her hamster doyduğunda tamamlanan sayıyı yazar
     /// (hamster ayrılırken gelen OnObstacleDestroyed hedefi ayrıca düşürmez).
     public void SetHamsterFeedsCompleted(int completed)
     {

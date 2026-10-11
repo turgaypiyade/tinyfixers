@@ -8,6 +8,7 @@ public class LevelDataEditor : Editor
 
     private PaintMode mode = PaintMode.Obstacle;
     private ObstacleId selectedObstacle = ObstacleId.Stone;
+    private int selectedHamsterSatiety = 7;   // yerleştirilecek hamsterin lokma sayısı
     // Duvar (Wall) numaralı fırça: aynı numaralı BİTİŞİK duvar hücreleri tek parça (tek origin).
     private int selectedWallPiece = 1;
     private bool showBossOilSettings;
@@ -168,7 +169,7 @@ public class LevelDataEditor : Editor
         // Aç Hamster: level'da hamster varsa doyma eşiği (0 = ObstacleLibrary varsayılanı).
         if (level.obstacles != null && System.Array.IndexOf(level.obstacles, (int)ObstacleId.Hamster) >= 0)
             level.hamsterSatietyOverride = Mathf.Max(0, EditorGUILayout.IntField(
-                new GUIContent("Hamster Doyma (lokma)", "0 = ObstacleLibrary'deki varsayılan (hamsterSatiety)."),
+                new GUIContent("Hamster Varsayılan Lokma", "Hücresinde kendi sayısı olmayan hamsterler için. 0 = ObstacleLibrary'deki varsayılan (hamsterSatiety)."),
                 level.hamsterSatietyOverride));
 
         // Boya kutusu kasaları: her kasanın kutu rengi (Auto = satır bandına göre).
@@ -514,13 +515,21 @@ public class LevelDataEditor : Editor
     /// Bir obstacle hedefinin tahtadaki karşılığı — TopHUD sayımıyla aynı kural: her ORIGIN bir kez
     /// (duvar parçası, 2x2 kasa = 1), yığılmış (stackedObstacles) ve kasa (safes) girişleri dahil.
     /// Çiçekli çim aynı zamanda çimdir. BatteryBox pil vuruşu başına sayılır. Jel için oynanır hücre
-    /// sayısı döner (kaplama hedefi). -1 = öneri yok: Hamster (doyurma), KeyGenerator (anahtar) ve
+    /// sayısı döner (kaplama hedefi). Hamster = tahtadaki hamster sayısı. -1 = öneri yok: KeyGenerator (anahtar) ve
     /// movable engeller (hedef sayısına göre üretilir).
     /// </summary>
     private static int CountGoalObstacles(LevelData level, ObstacleId id)
     {
         if (level == null || level.obstacles == null || level.obstacleOrigins == null) return -1;
-        if (id == ObstacleId.Hamster || id == ObstacleId.KeyGenerator) return -1;
+        if (id == ObstacleId.KeyGenerator) return -1;
+        // Hamster hedefi = tahtadaki hamster sayısı (her biri doyup ayrılınca 1 sayılır).
+        if (id == ObstacleId.Hamster)
+        {
+            int hamsters = 0;
+            for (int i = 0; i < level.obstacles.Length && i < level.obstacleOrigins.Length; i++)
+                if (level.obstacles[i] == (int)ObstacleId.Hamster && level.obstacleOrigins[i] == i) hamsters++;
+            return hamsters;
+        }
         // Movable engeller (kargo, kask, plastik...) hedef sayısına göre üretilir: Amount tasarımcınındır.
         var lib = level.obstacleLibrary;
         var goalDef = lib != null ? lib.Get(id) : null;
@@ -665,6 +674,14 @@ public class LevelDataEditor : Editor
         }
 
         EditorGUILayout.Space(4);
+        if (selectedObstacle == ObstacleId.Hamster)
+        {
+            selectedHamsterSatiety = Mathf.Max(1, EditorGUILayout.IntField(
+                new GUIContent("Lokma (bu hamster)", "Yerleştirilen hamsterin doyması için gereken lokma. Hücrede sayı olarak görünür. " +
+                    "Var olan hamsterin sayısını değiştirmek için aynı hücreye yeniden yerleştir."),
+                selectedHamsterSatiety));
+            EditorGUILayout.HelpBox("Hamster hedefi = tahtadaki hamster sayısı. Her hamster kendi lokmasıyla doyar, bir kez zıplar (3x3) ve ayrılır.", MessageType.None);
+        }
         var selDef = library.Get(selectedObstacle);
         if (selDef != null)
         {
@@ -800,6 +817,16 @@ public class LevelDataEditor : Editor
             int h = Mathf.Max(1, def.size.y);
             Rect big = new Rect(ox + x * cellPx, oy + y * cellPx, w * cellPx - 1, h * cellPx - 1);
             DrawSpriteInRect(def.GetPreviewSprite(), big, 2);
+            if (obs == ObstacleId.Hamster)
+            {
+                int bites = level.hamsterSatietyByCell != null && idx < level.hamsterSatietyByCell.Length
+                    ? level.hamsterSatietyByCell[idx] : 0;
+                string label = bites > 0 ? bites.ToString() : "~";   // ~ = level/kütüphane varsayılanı
+                var badge = new Rect(big.xMax - cellPx * 0.42f, big.yMax - cellPx * 0.36f, cellPx * 0.42f, cellPx * 0.36f);
+                EditorGUI.DrawRect(badge, new Color(0.15f, 0.1f, 0.05f, 0.85f));
+                GUI.Label(badge, label, new GUIStyle(EditorStyles.boldLabel)
+                    { alignment = TextAnchor.MiddleCenter, fontSize = 10, normal = { textColor = Color.white } });
+            }
         }
 
         // Draw pinned tile overlays
@@ -813,6 +840,14 @@ public class LevelDataEditor : Editor
 
                 bool hasPin     = level.pinnedTileTypes   != null && idx < level.pinnedTileTypes.Length   && level.pinnedTileTypes[idx]   > 0;
                 bool hasSpecial = level.pinnedSpecialTypes != null && idx < level.pinnedSpecialTypes.Length && level.pinnedSpecialTypes[idx] > 0;
+
+                // Hücrede taban engel (çim, yağ…) varsa sabitleme hücreyi kaplamasın: sol-alt köşede
+                // küçük rozet olur, engel görünür kalır (126'da çimler pinli taşların altında kayboluyordu).
+                if ((hasPin || hasSpecial) && idx < level.obstacles.Length && level.obstacles[idx] != (int)ObstacleId.None)
+                {
+                    float badge = r.width * 0.45f;
+                    r = new Rect(r.x, r.yMax - badge, badge, badge);
+                }
 
                 if (hasSpecial)
                     EditorGUI.DrawRect(r, pinnedSpecialColor);
@@ -1472,9 +1507,10 @@ public class LevelDataEditor : Editor
             return;
         }
 
-        // Zemin altı engeller (Mud, Jel, Su birikintisi) yığının daima EN ALTINDA — başka bir şeyin üstüne konamaz.
+        // Zemin altı engeller (Mud, Jel, Su birikintisi) ve Lazer topu yığının daima EN ALTINDA — başka bir
+        // şeyin üstüne konamaz (topun üstüne örtü gelebilir, altına hiçbir şey konmaz).
         if (selectedObstacle == ObstacleId.Mud || selectedObstacle == ObstacleId.SpreadingGel
-            || selectedObstacle == ObstacleId.WaterPuddle)
+            || selectedObstacle == ObstacleId.WaterPuddle || selectedObstacle == ObstacleId.LaserCannon)
         {
             Debug.LogWarning($"[OverlayEditor] {selectedObstacle} üst katman olamaz (daima en altta). " +
                              "Obstacle modunda taban katmana boya.");
@@ -1625,8 +1661,21 @@ public class LevelDataEditor : Editor
         return false;
     }
 
+    private static void EnsureHamsterSatietyArray(LevelData level)
+    {
+        int size = level.width * level.height;
+        if (level.hamsterSatietyByCell == null || level.hamsterSatietyByCell.Length != size)
+        {
+            var old = level.hamsterSatietyByCell;
+            level.hamsterSatietyByCell = new int[size];
+            if (old != null) System.Array.Copy(old, level.hamsterSatietyByCell, Mathf.Min(size, old.Length));
+        }
+    }
+
     private void ClearCell(LevelData level, int idx)
     {
+        if (level.hamsterSatietyByCell != null && idx < level.hamsterSatietyByCell.Length)
+            level.hamsterSatietyByCell[idx] = 0;
         bool wasWall = IsWallId((ObstacleId)level.obstacles[idx]);
         level.obstacles[idx] = (int)ObstacleId.None;
         level.obstacleOrigins[idx] = -1;
@@ -1677,6 +1726,12 @@ public class LevelDataEditor : Editor
             level.obstacleOrigins[idx] = originIdx;
         }
         level.obstacleOrigins[originIdx] = originIdx;
+        EnsureHamsterSatietyArray(level);
+        for (int y = ay; y < ay + h; y++)
+        for (int x = ax; x < ax + w; x++)
+            level.hamsterSatietyByCell[level.Index(x, y)] = 0;
+        if (id == ObstacleId.Hamster)
+            level.hamsterSatietyByCell[originIdx] = Mathf.Max(1, selectedHamsterSatiety);
         // Başka engel duvar hücrelerinin üstüne basıldıysa kalan duvar parçalarını yeniden kur.
         if (level.wallPieceIds != null && System.Array.Exists(level.wallPieceIds, p => p > 0))
             RecomputeWallOrigins(level);

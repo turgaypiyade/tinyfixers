@@ -1,4 +1,6 @@
-# Level 126 — Piramit Mührü
+# Level 127 — Piramit Mührü
+
+> **2026-10-11:** Bu level 126'dan 127'ye taşındı (`LevelCatalogPro` `level: 127`, asset aynı: `LevelP_001310`). Kullanıcı board'u editörde yeniden tasarladı; aşağıdaki kompozisyon/hedef anlatımı ilk taslağa aittir ve güncel asset'i yansıtmayabilir. Ancient Seal tanıtımı artık 126'da (`Level126-Antik-Muhur.md`).
 
 `LevelCatalogPro` global 126 → `LevelP_001310.asset`. 9×11, 26 hamle. Safe’ten ayrı Ancient Seal (Antik Mühür) engelinin tanıtım levelı: zor değil, eğlenceli.
 

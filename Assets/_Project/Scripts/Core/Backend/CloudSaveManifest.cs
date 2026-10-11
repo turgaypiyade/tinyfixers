@@ -42,6 +42,8 @@ public static class CloudSaveManifest
         "harvest_floor",
         "harvest_dug",
         "harvest_found",
+        "harvest_pending_trowels",
+        "harvest_pending_gold",
         "bridge_run_seed",
         "bridge_wins",
         "bridge_final_rank",

@@ -16,7 +16,8 @@ var path="Assets/_Project/Scripts/Grid/AncientSealView.cs";
 var tree=CSharpSyntaxTree.ParseText(File.ReadAllText(path)).GetRoot();
 var layout=tree.DescendantNodes().OfType<MethodDeclarationSyntax>().Single(m=>m.Identifier.ValueText=="SetBodySize").ToFullString();
 var constants=string.Join("\n",tree.DescendantNodes().OfType<FieldDeclarationSyntax>().Where(f=>f.Declaration.Variables.Any(v=>
- new[]{"DiskSizeCells","BorderReferenceCells","CounterWidthCells","CounterTopInsetCells","GemSize","ShadowDrop"}.Contains(v.Identifier.ValueText))).Select(f=>f.ToFullString()));
+ new[]{"cellUnit","BorderReferenceCells","CounterWidthCells","CounterTopInsetCells","SmallTier","LargeTier","GemSize","ShadowDrop"}.Contains(v.Identifier.ValueText))).Select(f=>f.ToFullString()))
+ +tree.DescendantNodes().OfType<StructDeclarationSyntax>().Single(t=>t.Identifier.ValueText=="SizeTier").ToFullString();
 var harness=@"
 using System;
 public struct Vector2 {public float x,y;public Vector2(float x,float y){this.x=x;this.y=y;}public static Vector2 zero=>new Vector2();}
@@ -37,21 +38,26 @@ public static class Checks {
  static int count;static void Check(bool ok,string name){count++;if(!ok)throw new Exception(name);}
  static bool Near(float a,float b)=>Math.Abs(a-b)<.001f;
  public static int Run(){
-  var v=new View();float referenceBorder=0,referenceDisk=0,referenceCounter=0;
-  foreach(var size in new[]{new Vector2(2,2),new Vector2(3,5),new Vector2(6,7),new Vector2(4,4),new Vector2(5,3)}){
+  var v=new View();float referenceBorder=0;
+  foreach(var size in new[]{new Vector2(2,2),new Vector2(3,5),new Vector2(6,7),new Vector2(4,4),new Vector2(5,3),new Vector2(9,3),new Vector2(2,4),new Vector2(6,2)}){
    v.SetBodySize(size.x*100,size.y*100,100);
    Check(v.body.sizeDelta.x==size.x*100&&v.body.sizeDelta.y==size.y*100,""Body fills entire footprint"");
    Check(Near(v.disk.sizeDelta.x,v.disk.sizeDelta.y),""Disk remains circular"");
    float border=290/(v.bodyImage.pixelsPerUnit*v.bodyImage.pixelsPerUnitMultiplier);
-   if(referenceBorder==0){referenceBorder=border;referenceDisk=v.disk.sizeDelta.x;referenceCounter=v.counterRoot.sizeDelta.x;}
-   Check(Near(border,referenceBorder)&&Near(v.disk.sizeDelta.x,referenceDisk)&&Near(v.counterRoot.sizeDelta.x,referenceCounter),""Corners, disk and plaque remain fixed across footprints"");
+   if(referenceBorder==0)referenceBorder=border;
+   Check(Near(border,referenceBorder),""Corners remain fixed across footprints"");
    Check(Near(v.counterRoot.sizeDelta.y/v.counterRoot.sizeDelta.x,814f/1933f),""Counter plate retains source aspect ratio"");
+   bool large=Math.Min(size.x,size.y)>=3;
+   Check(Near(v.disk.sizeDelta.x,large?228.375f/105f*100:145f/105f*100),""Disk uses the standard size of its tier"");
+   Check(Near(-v.disk.anchoredPosition.y,large?13.625f/105f*100:6.75f/105f*100),""Disk uses the standard offset of its tier"");
+   float diskCenter=size.y*50+v.disk.anchoredPosition.y;   // gövde altından
    float plaqueBottom=size.y*100+v.counterRoot.anchoredPosition.y-v.counterRoot.sizeDelta.y*.5f;
-   Check(plaqueBottom>=size.y*50+v.disk.sizeDelta.y*.5f,""Plaque clears disk even at minimum 2x2"");
+   Check(diskCenter+v.disk.sizeDelta.y*.5f-plaqueBottom<=8f,""Plaque overlaps the disk rim by at most a few pixels (approved)"");
+   Check(diskCenter-v.disk.sizeDelta.y*.5f>=0&&v.disk.sizeDelta.x<=size.x*100,""Disk stays inside the body"");
   }
   v.bodyImage.sprite=new Sprite(1024,1024);v.bodyImage.pixelsPerUnit=2;v.SetBodySize(300,500,100);
   Check(Near((290f*1024/1254)/(v.bodyImage.pixelsPerUnit*v.bodyImage.pixelsPerUnitMultiplier),referenceBorder),""Texture import and Canvas PPU changes preserve corner thickness"");
-  v.SetBodySize(180,300,60);Check(Near(v.disk.sizeDelta.x,referenceDisk*.6f),""Fixed sizes follow cell size on smaller screens"");
+  v.SetBodySize(120,120,60);Check(Near(v.disk.sizeDelta.x,145f/105f*60),""Sizes follow cell size on smaller screens"");
   return count;
  }
 }

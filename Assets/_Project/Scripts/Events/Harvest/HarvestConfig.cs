@@ -42,7 +42,11 @@ public sealed class HarvestConfig : ScriptableObject
     [Tooltip("İlk denemede kazanınca EK kürek.")]
     [Min(0)] public int firstTryBonus = 1;
     [Tooltip("Boss düellosu kazanınca verilen kürek (normal + ilk deneme yerine).")]
-    [Min(0)] public int bossWinTrowels = 3;
+    [Min(0)] public int bossWinTrowels = 2;
+
+    [Header("Sezon sonu")]
+    [Tooltip("Event bitince (sezon kapandı ya da tüm hasatlar tamamlandı) harcanmamış her kürek bu kadar altına döner.")]
+    [Min(0)] public int trowelGoldValue = 10;
 
     [Header("Ürünler ve katlar")]
     public HarvestCropDef[] crops = Array.Empty<HarvestCropDef>();
