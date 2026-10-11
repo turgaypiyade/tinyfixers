@@ -24,9 +24,11 @@ public static class BoardTutorialScanner
             TutorialId.BasicMatch       => TryFindByRunLength(board, 3, false, out opp),
             TutorialId.LineHCreated     => TryFindByRunLength(board, 4, false, out opp),
             TutorialId.PatchBotCreated  => TryFindPatchBot(board, out opp),
-            TutorialId.LineHActivated   => TryFindSpecialOnBoard(board, TileSpecial.LineH, out opp),
+            TutorialId.LineHActivated   => TryFindSpecialOnBoard(board, TileSpecial.LineH, out opp)
+                                           || TryFindSpecialOnBoard(board, TileSpecial.LineV, out opp),
             TutorialId.PulseCoreCreated => TryFindLTShape(board, out opp),
             TutorialId.OverrideCreated  => TryFindByRunLength(board, 5, true, out opp),
+            TutorialId.SpecialCombo     => TryFindAdjacentSpecials(board, out opp),
             _                           => false,
         };
     }
@@ -138,6 +140,31 @@ public static class BoardTutorialScanner
             }
         }
 
+        return false;
+    }
+
+    // ── two specials side by side → combo ──
+
+    private static bool TryFindAdjacentSpecials(BoardController board, out Opportunity opp)
+    {
+        opp = default;
+        int w = board.Width, h = board.Height;
+        for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
+        {
+            var a = board.Tiles[x, y];
+            if (a == null || a.GetSpecial() == TileSpecial.None || a.IsSpecialLocked) continue;
+            // Yalnız sağ ve alt komşu: her çift bir kez.
+            for (int d = 0; d < 2; d++)
+            {
+                int nx = x + (d == 0 ? 1 : 0), ny = y + (d == 0 ? 0 : 1);
+                if (!IsPlayable(board, nx, ny)) continue;
+                var b = board.Tiles[nx, ny];
+                if (b.GetSpecial() == TileSpecial.None || b.IsSpecialLocked) continue;
+                opp = new Opportunity { From = a, To = b };
+                return true;
+            }
+        }
         return false;
     }
 

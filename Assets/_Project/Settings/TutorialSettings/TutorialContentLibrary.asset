@@ -31,3 +31,6 @@ MonoBehaviour:
   - id: 5
     locKey: tutorial_override_created_desc
     illustrationSprite: {fileID: 0}
+  - id: 6
+    locKey: tutorial_combo_desc
+    illustrationSprite: {fileID: 0}

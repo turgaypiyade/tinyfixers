@@ -299,6 +299,7 @@ public class GridSpawner : MonoBehaviour
 
         board.Init(width, height, iconLibrary);
         board.SetLevelData(resolvedLevel);
+        ScriptedTutorial.Begin(board, resolvedLevel, CurrentLevel.Global);
         EnsureKeyGeneratorService();
 
         // ObstacleStateService artık var (SetLevelData onu init etti). Stamp aşamasında toplanan

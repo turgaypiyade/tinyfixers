@@ -273,6 +273,17 @@ public enum ObstacleId : int
 public enum TubeDirection { Up, Down, Left, Right }
 
 [System.Serializable]
+public struct TutorialStep
+{
+    [Tooltip("Gösterilecek metin (öğretici türü).")]
+    public TutorialId id;
+    [Tooltip("Değiştirilecek ilk hücre (y*width+x). -1 = tahtadaki special'ı kendisi bulur (oluşan roketi patlatma adımı).")]
+    public int fromCell;
+    [Tooltip("Değiştirilecek ikinci hücre (y*width+x). fromCell -1 ise yok sayılır (komşu kendisi seçilir).")]
+    public int toCell;
+}
+
+[System.Serializable]
 public struct TubeEntry
 {
     [Tooltip("Flat cell index (y*width+x) of the BASE cell (socket end).")]
@@ -512,6 +523,10 @@ public class LevelData : ScriptableObject
     [Header("Tutorial")]
     [Tooltip("Bu level açılınca board'a inject edilecek combo tutorial. None = normal level.")]
     public ComboTutorialId comboTutorial = ComboTutorialId.None;
+
+    [Tooltip("Önceden tanımlı öğretici adımları (sırayla). Tahta pinli taşlarla bu hamlelere göre hazırlanır; " +
+             "oyuncu yalnız gösterilen değişimi yapabilir. Şansa bağlı değildir (ScriptedTutorial).")]
+    public TutorialStep[] tutorialSteps;
 
     [Header("Audio")]
     public AudioClip musicClip;

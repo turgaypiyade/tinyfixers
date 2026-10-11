@@ -365,6 +365,10 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
 
     private bool IsEligible(TileView tile, int x, int y)
     {
+        // Önceden tanımlı öğreticinin pinli taşları: hazır hamle bozulmasın.
+        if (ScriptedTutorial.IsReservedCell(x, y))
+            return false;
+
         if (tile == null)
             return false;
 

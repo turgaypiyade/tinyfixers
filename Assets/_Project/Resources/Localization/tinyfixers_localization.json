@@ -482,23 +482,23 @@
         },
         {
           "key": "tutorial_emitter_created_desc",
-          "value": "Rocket oluştu! Aktive etmek için sürükle."
+          "value": "4 taşı yan yana getir, Roket oluştur!"
         },
         {
           "key": "tutorial_patchbot_created_desc",
-          "value": "PatchBot oluştu! Aktive etmek için sürükle."
+          "value": "4 taşı kare yap, PatchBot oluştur! Uçup hedefe çarpar."
         },
         {
           "key": "tutorial_emitter_activated_desc",
-          "value": "Rocket tüm bir satırı temizler. Herhangi bir taşla değiştir!"
+          "value": "Roketi kaydır: bütün bir sırayı temizler!"
         },
         {
           "key": "tutorial_pulsecore_created_desc",
-          "value": "PulseCore oluştu! Çevresini patlatır, aktive etmek için sürükle."
+          "value": "Taşları L ya da T şeklinde birleştir, PulseCore oluştur! Çevresini patlatır."
         },
         {
           "key": "tutorial_override_created_desc",
-          "value": "Spark Orb oluştu! Aynı renkteki tüm taşları temizler."
+          "value": "5 taşı düz bir sırada birleştir, Spark Orb oluştur! Aynı renkteki tüm taşları temizler."
         },
         {
           "key": "workshop_repair_button",
@@ -2535,6 +2535,30 @@
         {
           "key": "harvest_leftover_msg",
           "value": "Kalan {0} kürek altına dönüştü."
+        },
+        {
+          "key": "tutorial_combo_desc",
+          "value": "İki özel taşı birleştir: süper güçlü patlama!"
+        },
+        {
+          "key": "tutorial_rocket_h_activated_desc",
+          "value": "Roketi kaydır: bütün satırı temizler!"
+        },
+        {
+          "key": "tutorial_rocket_v_activated_desc",
+          "value": "Roketi kaydır: bütün sütunu temizler!"
+        },
+        {
+          "key": "tutorial_pulsecore_activated_desc",
+          "value": "PulseCore'u kaydır: çevresindeki her şeyi patlatır!"
+        },
+        {
+          "key": "tutorial_patchbot_activated_desc",
+          "value": "PatchBot'u kaydır: uçup hedefini vurur!"
+        },
+        {
+          "key": "tutorial_override_activated_desc",
+          "value": "Spark Orb'u bir taşla değiştir: o renkteki tüm taşları temizler!"
         }
       ]
     },
@@ -3019,23 +3043,23 @@
         },
         {
           "key": "tutorial_emitter_created_desc",
-          "value": "Rocket created! Swipe it to activate."
+          "value": "Line up 4 tiles to make a Rocket!"
         },
         {
           "key": "tutorial_patchbot_created_desc",
-          "value": "PatchBot created! Swipe it to activate."
+          "value": "Make a square of 4 tiles to create a PatchBot! It flies to a target."
         },
         {
           "key": "tutorial_emitter_activated_desc",
-          "value": "The Rocket clears an entire row. Swap it with any tile!"
+          "value": "Swipe the Rocket: it clears a whole line!"
         },
         {
           "key": "tutorial_pulsecore_created_desc",
-          "value": "PulseCore created! Explodes the surrounding area. Swipe to activate."
+          "value": "Match tiles in an L or T shape to make a PulseCore! It blasts everything around it."
         },
         {
           "key": "tutorial_override_created_desc",
-          "value": "Spark Orb created! Clears all tiles of the same color."
+          "value": "Line up 5 tiles to make a Spark Orb! It clears every tile of one color."
         },
         {
           "key": "workshop_repair_button",
@@ -5072,6 +5096,30 @@
         {
           "key": "harvest_leftover_msg",
           "value": "Your {0} leftover trowels turned into coins."
+        },
+        {
+          "key": "tutorial_combo_desc",
+          "value": "Swap two special tiles together for a super blast!"
+        },
+        {
+          "key": "tutorial_rocket_h_activated_desc",
+          "value": "Swipe the Rocket: it clears the whole row!"
+        },
+        {
+          "key": "tutorial_rocket_v_activated_desc",
+          "value": "Swipe the Rocket: it clears the whole column!"
+        },
+        {
+          "key": "tutorial_pulsecore_activated_desc",
+          "value": "Swipe the PulseCore: it blasts everything around it!"
+        },
+        {
+          "key": "tutorial_patchbot_activated_desc",
+          "value": "Swipe the PatchBot: it flies off and hits its target!"
+        },
+        {
+          "key": "tutorial_override_activated_desc",
+          "value": "Swap the Spark Orb with a tile: it clears every tile of that color!"
         }
       ]
     }

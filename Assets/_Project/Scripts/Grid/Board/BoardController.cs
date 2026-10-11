@@ -1977,20 +1977,31 @@ public class BoardController : MonoBehaviour
     public TileType[,] SimulateInitialTypes(bool[,] unreachableCells = null)
     {
         var lockedMask = new bool[width, height];
+        // Pinli taşlar (önceden tanımlı öğretici vb.) simülasyonda SABİT ve görünür: rastgele komşular onlarla
+        // hazır eşleşme kurmaz. Çağıranın "dokunma" maskesi (unreachable/keep) pinli hücreyi delik yapmaz.
+        int[,] pinned = null;
+        var pins = levelData != null ? levelData.pinnedTileTypes : null;
+        bool hasPins = pins != null && pins.Length == width * height;
 
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
-                lockedMask[x, y] = holes[x, y] ||
+                bool baseLocked = holes[x, y] ||
                     (obstacleStateService != null &&
                      (obstacleStateService.IsMovableObstacleAt(x, y) ||
-                      obstacleStateService.IsInteractionLockedAt(x, y))) ||
-                    (unreachableCells != null && unreachableCells[x, y]);
+                      obstacleStateService.IsInteractionLockedAt(x, y)));
+                int pin = hasPins && !baseLocked ? pins[y * width + x] : 0;
+                if (pin > 0)
+                {
+                    pinned ??= new int[width, height];
+                    pinned[x, y] = pin;
+                }
+                lockedMask[x, y] = baseLocked || (pin <= 0 && unreachableCells != null && unreachableCells[x, y]);
             }
         }
 
-        return boardInitService.SimulateInitialTypes(width, height, lockedMask, randomPool);
+        return boardInitService.SimulateInitialTypes(width, height, lockedMask, randomPool, pinned);
     }
     // ═══════════════════════════════════════════════════════════════
     //  Busy / State
