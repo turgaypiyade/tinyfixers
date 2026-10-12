@@ -7,22 +7,29 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:65499812126:android:d4ab2b73674bd01158f90f",
+        "mobilesdk_app_id": "1:65499812126:ios:1aa1fe5a4e4f72c358f90f",
         "android_client_info": {
           "package_name": "com.yigefep.tinyfixers"
         }
       },
-      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAfmbMldOXYlk1t8P7paRfWU6d4yz0hd0A"
+          "current_key": "AIzaSyCww_GmZ6mKRqAFdfNg9iNqOAv75IJ76cw"
         }
       ],
       "services": {
+        "analytics_service": {
+          "status": 1
+        },
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "status": 1
         }
-      }
+      },
+      "oauth_client": [
+        {
+          "client_id": "65499812126-placeholder.apps.googleusercontent.com"
+        }
+      ]
     }
   ],
   "configuration_version": "1"
