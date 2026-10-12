@@ -31,6 +31,21 @@ public static class ShopPurchaseService
         return true;
     }
 
+    /// Mağaza bir gerçek para alımını bildirdi (StoreIap, onaydan ÖNCE): içerik + kayıt + teşekkür + makbuz.
+    /// Tekrar teslimi StoreIap işlem kimliğiyle engeller; burası her işlem için bir kez çağrılır.
+    public static void FulfillStorePurchase(ShopOffer offer, string transactionId)
+    {
+        if (offer == null) return;
+        ShopState.RecordPurchase(offer);
+        ShopRewardGranter.Grant(offer);
+        bool thanks = LivesManager.GrantPurchaseThanks(transactionId);
+        PublishReceipt(offer, thanks);
+        Debug.Log($"[Shop] Mağaza alımı teslim edildi: '{offer.id}' tx={transactionId}");
+    }
+
+    /// Arayan için: false dönen TryPurchase bir mağaza penceresi başlattıysa true ("yakında" ipucu gösterilmesin).
+    public static bool IsStorePurchasePending => StoreIap.IsPurchasing;
+
     private static void PublishReceipt(ShopOffer offer, bool thanks)
     {
         OnReceipt?.Invoke(offer, thanks);
@@ -56,6 +71,13 @@ public static class ShopPurchaseService
                 break;
 
             case ShopOffer.PriceType.RealMoney:
+                // Mağaza bağlıysa (TF_IAP): pencere açılır, içerik mağaza onayında FulfillStorePurchase ile verilir.
+                // Bu çağrı false döner; arayanlar sonucu OnPurchased / StoreIap.OnPurchaseFailed ile alır.
+                if (StoreIap.IsAvailable)
+                {
+                    StoreIap.BeginPurchase(offer);
+                    return false;
+                }
                 if (!SimulateRealMoneyPurchases) return false;
                 Debug.Log($"[Shop] IAP simülasyonu: '{offer.displayName}' satın alındı sayıldı.");
                 break;

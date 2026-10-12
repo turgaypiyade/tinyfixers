@@ -54,6 +54,8 @@ public sealed class ShopScreenController : MonoBehaviour
     {
         PlayerWallet.OnCoinsChanged      += RefreshCoins;
         PlayerWallet.OnTotalStarsChanged += RefreshStars;
+        ShopPurchaseService.OnPurchased  += HandleAsyncPurchased;
+        StoreIap.OnPricesUpdated         += Build;
         if (purchaseToast != null) purchaseToast.SetActive(false);
         Build();
         RefreshBalances();
@@ -63,6 +65,20 @@ public sealed class ShopScreenController : MonoBehaviour
     {
         PlayerWallet.OnCoinsChanged      -= RefreshCoins;
         PlayerWallet.OnTotalStarsChanged -= RefreshStars;
+        ShopPurchaseService.OnPurchased  -= HandleAsyncPurchased;
+        StoreIap.OnPricesUpdated         -= Build;
+    }
+
+    private bool inSyncPurchase;
+
+    // Mağaza alımı (gerçek para) onayı sonradan gelir: kartları/bakiyeyi o an tazele. Senkron alımlar (altın/yıldız)
+    // HandlePurchase içinde zaten işlendiği için burada tekrar edilmez.
+    private void HandleAsyncPurchased(ShopOffer offer)
+    {
+        if (inSyncPurchase || offer == null) return;
+        ShowToast(GameLocalization.GetFormat("shop_purchased_toast", offer.LocalizedName));
+        Build();
+        RefreshBalances();
     }
 
     // ------------------------------------------------------------------
@@ -124,14 +140,20 @@ public sealed class ShopScreenController : MonoBehaviour
         if (offer.priceType == ShopOffer.PriceType.RealMoney)
             onRealMoneyPurchaseRequested?.Invoke(offer.id);   // IAP kancası
 
-        if (ShopPurchaseService.TryPurchase(offer))
+        inSyncPurchase = true;
+        bool bought;
+        try { bought = ShopPurchaseService.TryPurchase(offer); }
+        finally { inSyncPurchase = false; }
+
+        if (bought)
         {
             ShowToast(GameLocalization.GetFormat("shop_purchased_toast", offer.LocalizedName));
             // Bakiye + uygunluk değişti → kartları tazele.
             Build();
             RefreshBalances();
         }
-        else if (offer.priceType == ShopOffer.PriceType.RealMoney && comingSoonHint != null)
+        else if (offer.priceType == ShopOffer.PriceType.RealMoney && comingSoonHint != null
+                 && !ShopPurchaseService.IsStorePurchasePending && !StoreIap.IsAvailable)
         {
             comingSoonHint.SetActive(true);
         }

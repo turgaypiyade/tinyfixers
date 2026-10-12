@@ -11,7 +11,6 @@ public static class LivesRefillOffer
 {
     public const int DefaultPackAmount = 5;
     public const int DefaultPackCost = 900;
-    private const float SimulatedAdSeconds = 1f;
 
     /// <param name="host">Reklam beklemesi için coroutine sahibi (popup kapansa da yaşayan bir obje).</param>
     public static void Show(MonoBehaviour host, Action onLivesAdded,
@@ -53,21 +52,13 @@ public static class LivesRefillOffer
 
     private static void WatchAd(MonoBehaviour host, Action onLivesAdded)
     {
-        if (host == null || !LevelAdRight.TryConsume()) return;
-        host.StartCoroutine(CoWatchAd(onLivesAdded));
-    }
-
-    private static IEnumerator CoWatchAd(Action onLivesAdded)
-    {
-        // TODO: Gerçek rewarded-ad SDK bağlanınca burada gösterilecek (LevelEnd reklamıyla aynı kanca).
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log("[LivesRefillOffer] Reklam simülasyonu → +1 can.");
-        yield return new WaitForSecondsRealtime(SimulatedAdSeconds);
-        LivesManager.AddLives(1);
-        onLivesAdded?.Invoke();
-#else
-        Debug.LogWarning("[LivesRefillOffer] Rewarded ad SDK bağlı değil; can verilemedi.");
-        yield break;
-#endif
+        if (host == null || LevelAdRight.IsUsed || AdService.IsShowing) return;
+        // Hak yalnız reklam gerçekten izlenince harcanır.
+        AdService.ShowRewarded(earned =>
+        {
+            if (!earned || !LevelAdRight.TryConsume()) return;
+            LivesManager.AddLives(1);
+            onLivesAdded?.Invoke();
+        });
     }
 }

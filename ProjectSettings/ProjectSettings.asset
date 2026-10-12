@@ -167,6 +167,7 @@ PlayerSettings:
   androidMaxAspectRatio: 2.4
   androidMinAspectRatio: 1
   applicationIdentifier:
+    Android: com.yigefep.tinyfixers
     Standalone: com.DefaultCompany.2D-URP
     iPhone: com.yigefep.tinyfixers
   buildNumber:
@@ -703,8 +704,8 @@ PlayerSettings:
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Android: TF_FIREBASE_ANALYTICS
-    iPhone: TF_FIREBASE_ANALYTICS
+    Android: TF_FIREBASE_ANALYTICS;TF_IAP
+    iPhone: TF_FIREBASE_ANALYTICS;TF_IAP
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

@@ -13,6 +13,22 @@ using UnityEngine;
 public sealed class ShopCatalog : ScriptableObject
 {
     public List<ShopSection> sections = new();
+
+    private static ShopCatalog s_shared;
+    /// Resources/ShopCatalog — mağaza bağlantısı (StoreIap) sahneden bağımsız, açılışta ürünleri buradan okur.
+    public static ShopCatalog Shared => s_shared != null ? s_shared : (s_shared = Resources.Load<ShopCatalog>("ShopCatalog"));
+
+    /// Gerçek parayla satılan tüm teklifler (mağaza ürünleri).
+    public IEnumerable<ShopOffer> RealMoneyOffers()
+    {
+        foreach (var section in sections)
+        {
+            if (section?.offers == null) continue;
+            foreach (var offer in section.offers)
+                if (offer != null && offer.priceType == ShopOffer.PriceType.RealMoney)
+                    yield return offer;
+        }
+    }
 }
 
 /// <summary>Mağaza bölümü — başlık + altındaki teklifler. Stil banner rengini seçer.</summary>
@@ -82,8 +98,16 @@ public sealed class ShopOffer
     [Header("Fiyat")]
     public PriceType priceType = PriceType.RealMoney;
 
-    [Tooltip("RealMoney için gösterilecek etiket (örn '3999.99 TL'). Diğer türlerde yok sayılır.")]
+    [Tooltip("RealMoney için YEDEK etiket (örn '3999.99 TL'). Mağaza bağlıyken fiyat mağazadan, oyuncunun ülkesine " +
+             "ve para birimine göre gelir (StoreIap); bu yalnız editörde / mağaza cevap vermezken görünür.")]
     public string priceLabel = "99,99 TL";
+
+    [Tooltip("App Store / Google Play ürün kimliği. Boşsa 'com.yigefep.tinyfixers.' + id kullanılır. " +
+             "Mağaza konsolunda ürün bu kimlikle (tüketilebilir / consumable) oluşturulmalı.")]
+    public string storeProductId;
+
+    public const string StoreProductPrefix = "com.yigefep.tinyfixers.";
+    public string StoreProductId => string.IsNullOrEmpty(storeProductId) ? StoreProductPrefix + id : storeProductId;
 
     [Tooltip("Coins / Stars fiyat türünde harcanacak miktar.")]
     public int priceAmount = 0;

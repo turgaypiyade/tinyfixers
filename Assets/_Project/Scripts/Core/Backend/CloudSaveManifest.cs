@@ -101,6 +101,7 @@ public static class CloudSaveManifest
         "safari_fall_until_ticks",
         "bridge_cycle",
         "harvest_cycle",
+        "iap_processed_transactions",
         "bridge_join_ticks",
         "bridge_lastask_ticks",
         "bridge_finish_ticks",

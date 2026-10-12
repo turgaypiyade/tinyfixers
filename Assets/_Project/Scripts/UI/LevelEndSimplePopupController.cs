@@ -386,6 +386,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         UnregisterButtonListeners();
         PlayerWallet.OnCoinsChanged -= HandleWalletCoinsChanged;
         ShopPurchaseService.OnPurchased -= HandleFailShopPurchased;
+        UnhookFailCarouselStore();
         MarketNavigator.UnregisterInGameShop(inGameShop);
         StopMainScreenDimRoutine();
         SetMainScreenAlpha(1f);
@@ -1852,22 +1853,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void WatchAdThenContinue()
     {
-        if (!LevelAdRight.TryConsume()) return;
-        StartCoroutine(CoWatchAdThenContinue());
-    }
-
-    private System.Collections.IEnumerator CoWatchAdThenContinue()
-    {
-        // TODO: Gerçek rewarded-ad SDK bağlanınca burada gösterilecek. Şimdilik
-        // editör/dev-build'de kısa bir bekleme ile ödül verilir (bedava devam).
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log("[LevelEnd] Reklam simülasyonu → bedava devam.");
-        yield return new WaitForSecondsRealtime(1f);
-        PerformContinue(rewardedAd: true);
-#else
-        Debug.LogWarning("[LevelEnd] Rewarded ad SDK bağlı değil; bedava devam verilemedi.");
-        yield break;
-#endif
+        if (LevelAdRight.IsUsed || AdService.IsShowing) return;
+        // Hak yalnız reklam gerçekten izlenince harcanır (yüklenemediyse ya da yarıda kapandıysa hak kalır).
+        AdService.ShowRewarded(earned =>
+        {
+            if (!earned || this == null || !LevelAdRight.TryConsume()) return;
+            PerformContinue(rewardedAd: true);
+        });
     }
 
     [Header("Oyun içi market (fail'de altın alıp kaldığı yerden devam)")]
@@ -1910,9 +1902,36 @@ public class LevelEndSimplePopupController : MonoBehaviour
     // karşılıyorsa bedel düşülür ve oyun hemen kaldığı yerden sürer (devam butonuna ayrıca basılmaz).
     private void HandleFailOfferPurchase(ShopOffer offer)
     {
-        if (!ShopPurchaseService.TryPurchase(offer)) return;
+        if (!ShopPurchaseService.TryPurchase(offer))
+        {
+            // Gerçek para: mağaza penceresi açıldı, içerik onayla sonra gelir → o an devam et.
+            if (ShopPurchaseService.IsStorePurchasePending)
+            {
+                ShopPurchaseService.OnPurchased -= HandleFailCarouselStorePurchased;
+                ShopPurchaseService.OnPurchased += HandleFailCarouselStorePurchased;
+                StoreIap.OnPurchaseFailed -= HandleFailCarouselStoreFailed;
+                StoreIap.OnPurchaseFailed += HandleFailCarouselStoreFailed;
+            }
+            return;
+        }
         if (TryPayAndContinue()) return;
         if (failOfferCarousel != null) failOfferCarousel.RefreshPrices();
+    }
+
+    private void HandleFailCarouselStorePurchased(ShopOffer _)
+    {
+        UnhookFailCarouselStore();
+        if (board == null) return;
+        if (TryPayAndContinue()) return;
+        if (failOfferCarousel != null) failOfferCarousel.RefreshPrices();
+    }
+
+    private void HandleFailCarouselStoreFailed(ShopOffer _, bool __) => UnhookFailCarouselStore();
+
+    private void UnhookFailCarouselStore()
+    {
+        ShopPurchaseService.OnPurchased -= HandleFailCarouselStorePurchased;
+        StoreIap.OnPurchaseFailed -= HandleFailCarouselStoreFailed;
     }
 
     private InGameShopOverlay failShopOverlay;

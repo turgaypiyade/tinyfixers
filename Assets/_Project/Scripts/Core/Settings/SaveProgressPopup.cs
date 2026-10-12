@@ -111,9 +111,15 @@ public sealed class SaveProgressPopup : MonoBehaviour
 
         providerChoices = CommonPopupView.NewRect(view.Body, "Providers", Vector2.zero).gameObject;
         CommonPopupView.Region((RectTransform)providerChoices.transform, new Rect(0, 0, 1, 0.76f));
+#if UNITY_ANDROID
+        // Android'de Apple ile giriş yok (eklenti iOS'a özel) → iki buton, aralıklı ortalanır.
+        MakeProviderButton(providerChoices.transform, "Facebook", AuthLinkService.Provider.Facebook, 0.52f);
+        MakeProviderButton(providerChoices.transform, "Google", AuthLinkService.Provider.Google, 0.16f);
+#else
         MakeProviderButton(providerChoices.transform, "Facebook", AuthLinkService.Provider.Facebook, 0.68f);
         MakeProviderButton(providerChoices.transform, "Google", AuthLinkService.Provider.Google, 0.34f);
         MakeProviderButton(providerChoices.transform, "Apple", AuthLinkService.Provider.Apple, 0);
+#endif
 
         confirmRow = CommonPopupView.NewRect(view.Body, "ConfirmRow", Vector2.zero).gameObject;
         CommonPopupView.Region((RectTransform)confirmRow.transform, new Rect(0, 0, 1, 0.76f));
