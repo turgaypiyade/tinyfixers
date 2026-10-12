@@ -56,6 +56,10 @@ public static class StoreIap
             store.OnPurchaseFailed += HandlePurchaseFailed;
             store.OnPurchaseDeferred += _ => { purchasingOffer = null; Debug.Log("[IAP] Satın alma ertelendi (onay bekliyor)."); };
             store.OnStoreDisconnected += d => Debug.LogWarning($"[IAP] Mağaza bağlantısı koptu: {d.Message}");
+            store.OnStoreConnected += () => Debug.Log("[IAP] Mağazaya bağlanıldı.");
+            // Geçmiş alımlar: onaylanmamış olanlar OnPurchasePending ile gelir; burada yalnız kayıt.
+            store.OnPurchasesFetched += _ => { };
+            store.OnPurchasesFetchFailed += f => Debug.LogWarning($"[IAP] Geçmiş alımlar alınamadı: {f.message}");
 
             await store.Connect();
 
