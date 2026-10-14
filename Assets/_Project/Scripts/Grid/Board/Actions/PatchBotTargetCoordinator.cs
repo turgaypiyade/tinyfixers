@@ -499,7 +499,7 @@ public class PatchBotTargetCoordinator
                     // Cargo (exitAtBottom) KIRILMAZ; üstüne konmak faydasız. Bunun yerine
                     // düşüş yolunu açmak için ALTINDAKI normal taşı hedefle → cargo aşağı
                     // düşüp tabandan çıkar (hedef ilerler).
-                    if (board.ObstacleStateService.IsExitAtBottomAt(x, y))
+                    if (board.ObstacleStateService.IsUnbreakableMovableAt(x, y))
                     {
                         patchbotService.AddCargoDropPathTarget(x, y, partnerTile, cargoDropPathCells,
                             t => IsExcludedTile(t) || IsTileReserved(t));

@@ -297,7 +297,8 @@ public class SpecialResolver
             // Önce orbit intro (ghost iki ikon Y-orbit + şimşek bağ), 0.75 sn — sadece gösteri.
             var pulseTile = originalSaIsPulse ? a : b;
             var lineTile = originalSaIsPulse ? b : a;
-            actions.Add(new LineVHPulseCoreComboAction(board, lineTile, pulseTile, 0.75f));
+            // Gösteri merkezi = cross merkezi = oyuncunun taşı sürüklediği hücre (a).
+            actions.Add(new LineVHPulseCoreComboAction(board, lineTile, pulseTile, 0.75f, new Vector2Int(a.X, a.Y)));
 
             // Line+Pulse artık TEK gerçek-yayılım motorundan (SpecialChainRunner) geçer:
             // fused 3x3 cross süpürülür, yol üstündeki her special VARDIĞI AN gerçek sınıfıyla

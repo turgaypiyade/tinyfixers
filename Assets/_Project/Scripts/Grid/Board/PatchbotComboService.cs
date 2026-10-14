@@ -307,7 +307,7 @@ public class PatchbotComboService
         if (obs == null) return;
 
         int top = cargoY + 1;
-        while (top < board.Height && obs.IsExitAtBottomAt(cargoX, top))
+        while (top < board.Height && obs.IsUnbreakableMovableAt(cargoX, top))
             top++;                                  // üst üste cargo → yığının altından başla
         if (top >= board.Height) return;            // cargo zaten tabanda; sıradaki resolve toplar
 

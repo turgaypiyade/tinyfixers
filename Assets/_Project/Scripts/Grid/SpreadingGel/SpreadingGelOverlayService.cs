@@ -58,6 +58,9 @@ public class SpreadingGelOverlayService : MonoBehaviour
     private readonly Dictionary<int, MudCellView> viewsByCellIndex = new();
     // Overlay (stacked cover) altında bekleyen, henüz açılmamış jel hücreleri.
     private readonly HashSet<int> sealedCellIndices = new();
+    // Tam kapatan örtü (ObstacleDef.coversCellFully) altındaki mühürlü jel: görseli gizli, kenar/köşe hesabında
+    // jel sayılmaz (oyun mantığı — IsGelAt/yayılma/sayım — etkilenmez). Mühür açılınca görünür.
+    private readonly HashSet<int> hiddenCells = new();
     private readonly Dictionary<Vector3Int, RawImage> cornerPatches = new();
 
     private int gridWidth, gridHeight, tileSize;
@@ -97,18 +100,29 @@ public class SpreadingGelOverlayService : MonoBehaviour
     /// Yayılma kaynağı olabilecek jel: var VE mühürlü değil.
     public bool IsSpreadSourceAt(int x, int y) => IsGelAt(x, y) && !IsSealedAt(x, y);
 
-    /// Kapak altındaki seed'i mühürler (GridSpawner stacked-beneath çizimi).
-    public void SealCell(int x, int y)
+    /// Kapak altındaki seed'i mühürler (GridSpawner stacked-beneath çizimi). hideVisual: kapak hücreyi tam
+    /// kapatıyorsa jel kenarlarından sızmasın diye görsel de gizlenir.
+    public void SealCell(int x, int y, bool hideVisual = false)
     {
         if (!IsGelAt(x, y)) return;
-        sealedCellIndices.Add(CellIndex(x, y));
+        int idx = CellIndex(x, y);
+        sealedCellIndices.Add(idx);
+        if (!hideVisual || !hiddenCells.Add(idx)) return;
+        if (viewsByCellIndex.TryGetValue(idx, out var view) && view != null) view.SetVisible(false);
+        QueueRefreshAllBorders();
     }
 
     /// Kapak kırılıp jel açığa çıkınca mührü kaldırır → artık yayılma kaynağı.
     public void UnsealCell(int x, int y)
     {
         if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return;
-        if (!sealedCellIndices.Remove(CellIndex(x, y))) return;
+        int idx = CellIndex(x, y);
+        if (!sealedCellIndices.Remove(idx)) return;
+        if (hiddenCells.Remove(idx))
+        {
+            if (viewsByCellIndex.TryGetValue(idx, out var view) && view != null) view.SetVisible(true);
+            QueueRefreshAllBorders();
+        }
         OnGelChanged?.Invoke();   // hedef sayacı açığa çıkan hücreyi şimdi görsün
     }
 
@@ -192,15 +206,18 @@ public class SpreadingGelOverlayService : MonoBehaviour
 
         // Grid Y aşağı artar: y-1 görsel üst, y+1 görsel alt.
         view.SetExposed(
-            top:    !IsGelAt(x,     y - 1),
-            right:  !IsGelAt(x + 1, y    ),
-            bottom: !IsGelAt(x,     y + 1),
-            left:   !IsGelAt(x - 1, y    ),
-            mudTL:   IsGelAt(x - 1, y - 1),
-            mudTR:   IsGelAt(x + 1, y - 1),
-            mudBL:   IsGelAt(x - 1, y + 1),
-            mudBR:   IsGelAt(x + 1, y + 1));
+            top:    !IsVisibleGelAt(x,     y - 1),
+            right:  !IsVisibleGelAt(x + 1, y    ),
+            bottom: !IsVisibleGelAt(x,     y + 1),
+            left:   !IsVisibleGelAt(x - 1, y    ),
+            mudTL:   IsVisibleGelAt(x - 1, y - 1),
+            mudTR:   IsVisibleGelAt(x + 1, y - 1),
+            mudBL:   IsVisibleGelAt(x - 1, y + 1),
+            mudBR:   IsVisibleGelAt(x + 1, y + 1));
     }
+
+    // Görsel kenar/köşe hesabı: gizli (tam örtü altındaki) jel yok sayılır. Oyun mantığı IsGelAt'i kullanır.
+    private bool IsVisibleGelAt(int x, int y) => IsGelAt(x, y) && !hiddenCells.Contains(CellIndex(x, y));
 
     public void RefreshAllBorders()
     {
@@ -247,6 +264,7 @@ public class SpreadingGelOverlayService : MonoBehaviour
         }
         viewsByCellIndex.Clear();
         sealedCellIndices.Clear();
+        hiddenCells.Clear();
 
         foreach (var kv in cornerPatches)
             if (kv.Value != null) Destroy(kv.Value.gameObject);
@@ -264,10 +282,10 @@ public class SpreadingGelOverlayService : MonoBehaviour
         for (int cy = 1; cy < gridHeight; cy++)
         for (int cx = 1; cx < gridWidth; cx++)
         {
-            bool nw = IsGelAt(cx - 1, cy - 1);
-            bool ne = IsGelAt(cx,     cy - 1);
-            bool sw = IsGelAt(cx - 1, cy);
-            bool se = IsGelAt(cx,     cy);
+            bool nw = IsVisibleGelAt(cx - 1, cy - 1);
+            bool ne = IsVisibleGelAt(cx,     cy - 1);
+            bool sw = IsVisibleGelAt(cx - 1, cy);
+            bool se = IsVisibleGelAt(cx,     cy);
 
             int count = (nw ? 1 : 0) + (ne ? 1 : 0) + (sw ? 1 : 0) + (se ? 1 : 0);
             if (count != 3) continue;

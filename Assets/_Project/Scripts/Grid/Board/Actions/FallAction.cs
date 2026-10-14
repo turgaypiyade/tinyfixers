@@ -421,7 +421,8 @@ public class FallAction : BoardAction
         if (board != null && board.UseContinuousFallMotion)
         {
             // Spatial spacing and the column follower rule supply the waterfall rhythm.
-            // Per-pass stagger would repeatedly pause tiles joining an existing stream.
+            // Sıralı kalkış TileFallMotionSystem'de (yerel kural): plan sayısından ve yeniden
+            // planlamadan bağımsız işlesin diye burada gecikme verilmez.
             foreach (var r in fallRecords)
             {
                 r.phaseDelay = 0f;

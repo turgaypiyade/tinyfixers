@@ -183,14 +183,19 @@ public partial class CascadeLogic
                     {
                         View = view,
                         IsSpawned = false,
+                        // Kargo yalnız düz düşer; bilardo topunun çapraz/yan hareketi RollBilliardBalls'ta.
                         IsStraightFallOnly = board.ObstacleStateService != null
-                                             && board.ObstacleStateService.IsExitAtBottomAt(x, y),
+                                             && (board.ObstacleStateService.IsExitAtBottomAt(x, y)
+                                                 || board.ObstacleStateService.IsBilliardBallAt(x, y)),
                         Path = new List<Vector2Int> { new Vector2Int(x, y) }
                     };
                     board.Tiles[x, y] = null; // Clear actual board, we will re-assign at the end
                 }
             }
         }
+
+        // Bilardo topu boşluğu taşlardan ÖNCE alır (kural 4) → simülasyondan önce yuvarlanır.
+        RollBilliardBalls(virtualBoard);
 
         HashSet<Vector2Int> verticalOnlyGaps = new HashSet<Vector2Int>();
 
@@ -242,6 +247,7 @@ public partial class CascadeLogic
 
         // COMPILE ACTION
         var action = new FallAction();
+        CollectPocketedBallData();
 
         // Step 3a: Movable obstacle VERİ hareketlerini önce topla ve TEK batch'te uygula.
         // Compile döngüsü içinde tek tek MoveObstacle çağırmak kolon işleme sırasına
@@ -401,6 +407,7 @@ public partial class CascadeLogic
         }
 
         board.RefreshAllTileObstacleVisuals();
+        StartPocketedBallVisuals();
 #if UNITY_EDITOR
         DiagonalFlowTrace.EndPlan(board);
 #endif
@@ -1104,7 +1111,8 @@ public partial class CascadeLogic
             if (goal.targetType != LevelGoalTargetType.Obstacle) continue;
             if (goal.remaining <= 0) continue;
             // Aç Hamster hedefi "X kez doyur"dur, "X hamster topla" değil → hedef için yenisi DOĞMAZ.
-            if (goal.obstacleId == ObstacleId.Hamster) continue;
+            // Bilardo topu yalnız level'da konur; üstten yeni top gelmez.
+            if (goal.obstacleId == ObstacleId.Hamster || goal.obstacleId == ObstacleId.BilliardBall) continue;
 
             var def = board.ActiveLevelData.obstacleLibrary != null
                 ? board.ActiveLevelData.obstacleLibrary.Get(goal.obstacleId)

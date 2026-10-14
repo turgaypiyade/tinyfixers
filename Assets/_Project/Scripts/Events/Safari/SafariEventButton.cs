@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Ana ekran Tiny Safari event ikonu (diğer event ikonları gibi). Görünürlüğü controller yönetir
+/// Ana ekran TIRMANIŞ event ikonu (diğer event ikonları gibi). Görünürlüğü controller yönetir
 /// (level kapısı + aktif gün). Tık → controller.OnIconClicked (katılmadıysa popup, katıldıysa harita).
 ///
 /// İdle animasyon için aynı objeye <see cref="EventIconAnimator"/> eklenebilir.
@@ -19,7 +19,7 @@ public sealed class SafariEventButton : MonoBehaviour
     [Tooltip("Geri sayım yokken ikonda gösterilecek etiketin lokalizasyon anahtarı.")]
     [SerializeField] private string labelKey = "rising_icon_label";
 
-    private string defaultLabel = "SAFARI";
+    private string defaultLabel = "TIRMANIŞ";
     private int lastShownSeconds = int.MinValue;
 
     private void Awake()

@@ -268,6 +268,22 @@ public enum ObstacleId : int
     // başka bir special'ın etki alanına girerse serbest kalır (patlamaz). 4 vuruşta (4 cıvata) parçalanır.
     // Mantık + görsel: Grid/LaserCannon/LaserCannonService + LaserCannonView.
     LaserCannon = 65,
+
+    // Bilardo topu (tek hücre, hareketli, KIRILMAZ, swap'lanamaz). Kargo gibi düşer; ayrıca boşalan komşu hücreye
+    // yuvarlanır (aşağı → çapraz aşağı → yana, yukarı asla) ve boşluğu taşlardan önce alır. Cebe girince hedef +1.
+    // Yalnız level'da konur (üstten yeni top gelmez). Kurallar: Docs/BilliardBall_Plan.md.
+    // Mantık: Grid/Board/CascadeLogic.Billiard.cs + BilliardBallService; görsel: BilliardBallRoll.
+    BilliardBall = 66,
+
+    // Bilardo cebi (tek hücre, sabit, kırılmaz). Taşa kapalı engel: taşlar yanından çapraz akar; yalnız top girer.
+    // Sınırsız top alır.
+    BilliardPocket = 67,
+
+    // Brandalı heykel (2x2, sabit, hücre kapatan). Önce branda: etiketteki renkten N taş tahtanın HERHANGİ bir
+    // yerinde temizlenince branda soyulur (o sırada vuruş almaz). Sonra 3 taş aşaması (YALNIZ special — normal
+    // eşleşme vurmaz, SculptingSpecial kuralı), her vuruşta parça düşer; son vuruşta bitmiş heykel hedefe uçar, çerçeve parçalanır.
+    // Renk/sayı engel başına: LevelData.tarpStatues. Mantık + görsel: Grid/TarpStatue/. Docs/TarpStatue_Plan.md.
+    TarpStatue = 68,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
@@ -369,6 +385,30 @@ public enum PaintCanColor
     Yellow = 2,
     Green = 3,
     Blue = 4,
+}
+
+public enum TarpStatueColor
+{
+    Red = 0,      // TileType.Core
+    Yellow = 1,   // TileType.Gear
+    Blue = 2,     // TileType.Bolt
+    Green = 3,    // TileType.Plate
+}
+
+[System.Serializable]
+public struct TarpStatueEntry
+{
+    [Tooltip("Heykelin SOL-ÜST (origin) hücresinin flat index'i (y*width+x).")]
+    public int originCellIndex;
+    [Tooltip("Etiket rengi: brandanın kalkması için toplanacak taş rengi.")]
+    public TarpStatueColor color;
+    [Tooltip("Toplanacak taş sayısı (etikette geri sayar).")]
+    [Min(1)] public int count;
+    [Tooltip("Kare boyut: 2 = 2x2, 3 = 3x3, 4 = 4x4 (0 = 2x2).")]
+    public int size;
+
+    public int Size => size >= TarpStatueMinSize ? Mathf.Min(size, TarpStatueMaxSize) : TarpStatueMinSize;
+    public const int TarpStatueMinSize = 2, TarpStatueMaxSize = 4;
 }
 
 [System.Serializable]
@@ -578,6 +618,70 @@ public class LevelData : ScriptableObject
     [Tooltip("Boya kutusu kasalarının (PaintCanBox) kutu rengi, kasa origin'ine göre. Listede olmayan kasa " +
              "Auto'dur: rengi satır bandından gelir (PaintCanBoxView.AutoColorForRow).")]
     public PaintCanBoxColorEntry[] paintCanBoxColors;
+
+    [Tooltip("Brandalı heykellerin etiket rengi + toplama sayısı, heykel origin'ine göre. Listede olmayan heykel " +
+             "varsayılanı kullanır (kırmızı, TarpStatueDefaultCount).")]
+    public TarpStatueEntry[] tarpStatues;
+
+    public const int TarpStatueDefaultCount = 30;
+
+    public TarpStatueEntry GetTarpStatue(int originCellIndex)
+    {
+        if (tarpStatues != null)
+            foreach (var e in tarpStatues)
+                if (e.originCellIndex == originCellIndex) return e;
+        return new TarpStatueEntry { originCellIndex = originCellIndex, color = TarpStatueColor.Red, count = TarpStatueDefaultCount };
+    }
+
+    public void SetTarpStatue(int originCellIndex, TarpStatueColor color, int count, int size)
+    {
+        var list = new System.Collections.Generic.List<TarpStatueEntry>(
+            tarpStatues ?? System.Array.Empty<TarpStatueEntry>());
+        list.RemoveAll(e => e.originCellIndex == originCellIndex);
+        list.Add(new TarpStatueEntry { originCellIndex = originCellIndex, color = color, count = Mathf.Max(1, count), size = size });
+        tarpStatues = list.ToArray();
+    }
+
+    /// Engelin kapladığı alan. Brandalı heykel tek engel, boyutu heykel başına (2x2/3x3/4x4); diğerleri def.size.
+    /// Çok-hücreli engelin ayak izini okuyan her yer bunu kullanmalı (doğrudan def.size değil).
+    public Vector2Int GetObstacleFootprint(ObstacleId id, int originCellIndex, ObstacleDef def)
+    {
+        if (id == ObstacleId.TarpStatue)
+        {
+            int n = GetTarpStatue(originCellIndex).Size;
+            return new Vector2Int(n, n);
+        }
+        return def != null ? new Vector2Int(Mathf.Max(1, def.size.x), Mathf.Max(1, def.size.y)) : Vector2Int.one;
+    }
+
+    public void RemoveTarpStatue(int originCellIndex)
+    {
+        if (tarpStatues == null) return;
+        var list = new System.Collections.Generic.List<TarpStatueEntry>(tarpStatues);
+        if (list.RemoveAll(e => e.originCellIndex == originCellIndex) > 0) tarpStatues = list.ToArray();
+    }
+
+    /// Tahtada (taban ya da yığın katmanı olarak) heykeli kalmayan girdileri siler — silgi, üstüne boyama, maske
+    /// hangisi heykeli kaldırırsa kaldırsın ayar listesi tahtayla aynı kalır.
+    public void PruneTarpStatues()
+    {
+        if (tarpStatues == null || tarpStatues.Length == 0) return;
+        var list = new System.Collections.Generic.List<TarpStatueEntry>(tarpStatues);
+        int removed = list.RemoveAll(e => !HasTarpStatueAt(e.originCellIndex));
+        if (removed > 0) tarpStatues = list.ToArray();
+    }
+
+    private bool HasTarpStatueAt(int origin)
+    {
+        if (obstacles != null && origin >= 0 && origin < obstacles.Length &&
+            obstacles[origin] == (int)ObstacleId.TarpStatue &&
+            (obstacleOrigins == null || origin >= obstacleOrigins.Length || obstacleOrigins[origin] == origin))
+            return true;
+        if (stackedObstacles != null)
+            foreach (var s in stackedObstacles)
+                if (s.obstacleId == ObstacleId.TarpStatue && s.originCellIndex == origin) return true;
+        return false;
+    }
 
     public PaintCanColor GetPaintCanBoxColor(int originCellIndex)
     {

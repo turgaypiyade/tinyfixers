@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: ProgressEventConfig
   m_EditorClassIdentifier: Assembly-CSharp::ProgressEventConfig
   eventName: "Haftal\u0131k G\xF6revler"
-  durationHours: 48
+  durationHours: 72
   goals:
   - goalType: 3
-    targetCount: 600
+    targetCount: 150
     reward:
       type: 1
       amount: 1
@@ -29,7 +29,7 @@ MonoBehaviour:
     fallbackDescription: 
     goalIcon: {fileID: 21300000, guid: 6a12756c63b26574bb12b794a8e4dca2, type: 3}
   - goalType: 2
-    targetCount: 800
+    targetCount: 25
     reward:
       type: 11
       amount: 1
@@ -42,7 +42,7 @@ MonoBehaviour:
     fallbackDescription: 
     goalIcon: {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
   - goalType: 5
-    targetCount: 800
+    targetCount: 250
     reward:
       type: 2
       amount: 10
@@ -55,7 +55,7 @@ MonoBehaviour:
     fallbackDescription: 
     goalIcon: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
   - goalType: 4
-    targetCount: 800
+    targetCount: 250
     reward:
       type: 20
       amount: 1
@@ -68,10 +68,10 @@ MonoBehaviour:
     fallbackDescription: 
     goalIcon: {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
   - goalType: 2
-    targetCount: 450
+    targetCount: 20
     reward:
       type: 11
-      amount: 0
+      amount: 1
       icon: {fileID: 21300000, guid: 7cc20196928fb40aaa2bef28661a9bc3, type: 3}
       nameLocalizationKey: 
       fallbackName: 

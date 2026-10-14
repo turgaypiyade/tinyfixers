@@ -113,6 +113,8 @@ public sealed class SimGoalSet
             ObstacleId.MetalWall       => SimGoalFidelity.Approximate,  // ardışık vuruş sıfırlaması yok
             ObstacleId.KeyGenerator    => SimGoalFidelity.NotSimulated,
             ObstacleId.Hamster         => SimGoalFidelity.NotSimulated, // beslenme/zıplama modellenmiyor
+            ObstacleId.BilliardBall    => SimGoalFidelity.NotSimulated, // yuvarlanma/cep modellenmiyor
+            ObstacleId.TarpStatue      => SimGoalFidelity.Approximate,  // branda renk toplaması modellenmiyor
             ObstacleId.RocketBasket    => SimGoalFidelity.NotSimulated,
             ObstacleId.SpreadingGel    => SimGoalFidelity.Approximate,  // yayılma modellenmiyor
             ObstacleId.Grass           => SimGoalFidelity.Approximate,

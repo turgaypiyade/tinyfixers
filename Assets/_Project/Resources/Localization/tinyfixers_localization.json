@@ -270,7 +270,7 @@
         },
         {
           "key": "rising_title",
-          "value": "Yükseliş"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "safari_lost_title",
@@ -345,6 +345,18 @@
           "value": "Devam Et <space=0.5em><sprite name=\"goldmoney\">{0}"
         },
         {
+          "key": "level_end_billiard_stuck_title",
+          "value": "Top Takıldı!"
+        },
+        {
+          "key": "level_end_billiard_stuck_text",
+          "value": "Top cebe ulaşamıyor. Topu taşı ve devam et."
+        },
+        {
+          "key": "level_end_billiard_rescue_cost",
+          "value": "Topu Taşı <space=0.5em><sprite name=\"goldmoney\">{0}"
+        },
+        {
           "key": "level_end_loss_title",
           "value": "Şunları kaybedeceksin"
         },
@@ -354,7 +366,7 @@
         },
         {
           "key": "level_end_loss_safari",
-          "value": "Safari"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "level_end_loss_alliance",
@@ -1822,7 +1834,7 @@
         },
         {
           "key": "rising_intro_title",
-          "value": "SAFARİ BAŞLIYOR!"
+          "value": "TIRMANIŞ BAŞLIYOR!"
         },
         {
           "key": "rising_intro_ready",
@@ -1862,7 +1874,7 @@
         },
         {
           "key": "safari_reward_event",
-          "value": "SAFARİ TAMAMLANDI"
+          "value": "TIRMANIŞ TAMAMLANDI"
         },
         {
           "key": "safari_reward_title",
@@ -1894,7 +1906,7 @@
         },
         {
           "key": "safari_join_title",
-          "value": "SAFARİ"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "safari_join_prize",
@@ -1986,7 +1998,7 @@
         },
         {
           "key": "rising_icon_label",
-          "value": "YÜKSELİŞ"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "prelevel_booster_select",
@@ -2406,7 +2418,7 @@
         },
         {
           "key": "notif_event_rising_title",
-          "value": "Yükseliş başladı! 🎉"
+          "value": "TIRMANIŞ başladı! 🎉"
         },
         {
           "key": "notif_event_rising_body",
@@ -2422,7 +2434,7 @@
         },
         {
           "key": "notif_event_name_rising",
-          "value": "Yükseliş"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "notif_event_name_bridge",
@@ -2527,6 +2539,22 @@
         {
           "key": "hint_obstacle_lasercannon",
           "value": "Top bir özel taşa nişan alır. Onu bir hamle içinde kullanmazsan kafese kapatır. Kafesli taşın yanında eşleşme yap ya da onu başka bir özel taşın etki alanına sok, kafes açılır. Topu yalnızca özel taşlar kırar: 4 vuruşta parçalanır."
+        },
+        {
+          "key": "hint_obstacle_billiard_name",
+          "value": "Bilardo Topu"
+        },
+        {
+          "key": "hint_obstacle_billiard",
+          "value": "Top kırılmaz ve kaydırılamaz. Yanındaki taşları temizle; top boşluğa aşağı, çapraz ya da yana yuvarlanır, asla yukarı çıkmaz. Topu cebe ulaştır!"
+        },
+        {
+          "key": "hint_obstacle_tarpstatue_name",
+          "value": "Brandalı Heykel"
+        },
+        {
+          "key": "hint_obstacle_tarpstatue",
+          "value": "Etiketteki renkte taşları tahtanın herhangi bir yerinde topla; sayı bitince branda kalkar. Sonra yalnız special'lar vurabilir: her vuruşta heykel biraz daha ortaya çıkar."
         },
         {
           "key": "harvest_leftover_title",
@@ -2843,7 +2871,7 @@
         },
         {
           "key": "rising_title",
-          "value": "Rising"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "rising_level",
@@ -2906,6 +2934,18 @@
           "value": "Continue <space=0.5em><sprite name=\"goldmoney\">{0}"
         },
         {
+          "key": "level_end_billiard_stuck_title",
+          "value": "Ball Stuck!"
+        },
+        {
+          "key": "level_end_billiard_stuck_text",
+          "value": "The ball can't reach a pocket. Move it and keep playing."
+        },
+        {
+          "key": "level_end_billiard_rescue_cost",
+          "value": "Move Ball <space=0.5em><sprite name=\"goldmoney\">{0}"
+        },
+        {
           "key": "level_end_loss_title",
           "value": "You'll lose these"
         },
@@ -2915,7 +2955,7 @@
         },
         {
           "key": "level_end_loss_safari",
-          "value": "Safari"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "level_end_loss_alliance",
@@ -4383,7 +4423,7 @@
         },
         {
           "key": "rising_intro_title",
-          "value": "SAFARI IS STARTING!"
+          "value": "TIRMANIŞ IS STARTING!"
         },
         {
           "key": "rising_intro_ready",
@@ -4423,7 +4463,7 @@
         },
         {
           "key": "safari_reward_event",
-          "value": "SAFARI COMPLETE"
+          "value": "TIRMANIŞ COMPLETE"
         },
         {
           "key": "safari_reward_title",
@@ -4455,7 +4495,7 @@
         },
         {
           "key": "safari_join_title",
-          "value": "SAFARI"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "safari_join_prize",
@@ -4547,7 +4587,7 @@
         },
         {
           "key": "rising_icon_label",
-          "value": "RISING"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "prelevel_booster_select",
@@ -4967,7 +5007,7 @@
         },
         {
           "key": "notif_event_rising_title",
-          "value": "Rising has started! 🎉"
+          "value": "TIRMANIŞ has started! 🎉"
         },
         {
           "key": "notif_event_rising_body",
@@ -4983,7 +5023,7 @@
         },
         {
           "key": "notif_event_name_rising",
-          "value": "Rising"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "notif_event_name_bridge",
@@ -5088,6 +5128,22 @@
         {
           "key": "hint_obstacle_lasercannon",
           "value": "The cannon locks onto a special stone. If you don't use it within one move, it gets caged. Make a match next to a caged stone or hit it with another special's blast to free it. Only specials damage the cannon: it breaks after 4 hits."
+        },
+        {
+          "key": "hint_obstacle_billiard_name",
+          "value": "Billiard Ball"
+        },
+        {
+          "key": "hint_obstacle_billiard",
+          "value": "The ball can't be broken or swapped. Clear the stones around it and it rolls into the gap - down, diagonally or sideways, never up. Get it into a pocket!"
+        },
+        {
+          "key": "hint_obstacle_tarpstatue_name",
+          "value": "Covered Statue"
+        },
+        {
+          "key": "hint_obstacle_tarpstatue",
+          "value": "Collect stones of the tag's color anywhere on the board. When the number runs out, the tarp comes off. Then only specials can hit it - each hit carves the statue a little more."
         },
         {
           "key": "harvest_leftover_title",

@@ -401,6 +401,8 @@ public static class SimRunner
                 case ObstacleId.OverrideBatteryBox:
                 case ObstacleId.SpreadingGel:
                 case ObstacleId.Oil:
+                case ObstacleId.BilliardBall:
+                case ObstacleId.BilliardPocket:
                     fidelity = SimGoalFidelity.NotSimulated;
                     warnings.Add($"{id}: üretim/yayılma/özel servis davranışı eksik; hedef olmasa da sonucu etkiler.");
                     break;
@@ -411,6 +413,7 @@ public static class SimRunner
                 case ObstacleId.Tube:
                 case ObstacleId.Wardrobe:
                 case ObstacleId.Cargo:
+                case ObstacleId.TarpStatue:   // taş evresi kütüphaneden doğru; branda toplaması modellenmiyor
                     warnings.Add($"{id}: servis zamanlaması/özel durumları yaklaşık modelleniyor.");
                     break;
             }

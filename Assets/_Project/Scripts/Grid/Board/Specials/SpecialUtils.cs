@@ -15,10 +15,10 @@ public static class SpecialUtils
         if (x < 0 || x >= board.Width || y < 0 || y >= board.Height)
             return false;
 
-        // Cargo (exitAtBottom) KIRILMAZ: hiçbir special/line onu etkileyemez/temizleyemez.
+        // Kırılmaz hareketli engel (kargo/bilardo topu): hiçbir special/line onu etkileyemez/temizleyemez.
         // Yalnızca en alta inip board'dan çıkınca toplanır. Line/pulse onu ATLAR; etrafındaki
         // hücreler temizlenir, cargo sağ kalıp sonraki gravity'de düşer.
-        if (board.ObstacleStateService != null && board.ObstacleStateService.IsExitAtBottomAt(x, y))
+        if (board.ObstacleStateService != null && board.ObstacleStateService.IsUnbreakableMovableAt(x, y))
             return false;
 
         if (!board.Holes[x, y])

@@ -73,6 +73,7 @@ public sealed class LaserCannonService : MonoBehaviour
     private static Sprite beamSprite;
     private static Sprite reticleSprite;
     private static Sprite cageSprite;
+    private static Sprite fallbackCageSprite;
     private static bool triedCageSprite;
     private static readonly Dictionary<Texture, Sprite[]> shardCache = new();
 
@@ -705,12 +706,12 @@ public sealed class LaserCannonService : MonoBehaviour
         }
         if (baseShards != null)
             for (int i = 0; i < baseShards.Length; i++)
-                Add(baseShards[i], (ShardCenters[i] - new Vector2(0.5f, 0.5f)) * footprint, footprint * 0.28f,
+                Add(baseShards[i], (ShardCenters[i] - new Vector2(0.5f, 0.5f)) * footprint, footprint * 0.42f,
                     Color.white, Random.Range(1.5f, 2.3f), 0.7f);
         if (turretShards != null)
             for (int i = 0; i < turretShards.Length; i++)
                 Add(turretShards[i], (Vector2)(Quaternion.Euler(0f, 0f, turretAngle) * new Vector3(0f, (i == 0 ? 0.3f : -0.02f) * footprint, 0f)),
-                    footprint * (i == 0 ? 0.3f : 0.4f), Color.white, Random.Range(1.2f, 1.8f), 0.75f);
+                    footprint * (i == 0 ? 0.45f : 0.6f), Color.white, Random.Range(1.2f, 1.8f), 0.75f);
         if (boltSprite != null)
             for (int i = 0; i < 4; i++)
             {
@@ -779,7 +780,7 @@ public sealed class LaserCannonService : MonoBehaviour
         Sprite[] result;
         if (!turret)
         {
-            float side = Mathf.Min(r.width, r.height) * 0.26f;
+            float side = Mathf.Min(r.width, r.height) * 0.39f;   // 2026-10-13: parçalar %50 büyük (0.26 → 0.39)
             result = new Sprite[ShardCenters.Length];
             for (int i = 0; i < ShardCenters.Length; i++)
             {
@@ -854,13 +855,19 @@ public sealed class LaserCannonService : MonoBehaviour
         return reticleSprite;
     }
 
+    // Kafes = mıknatısın kullandığı kafes görseli (MagnetObstacleService Inspector'ı, zincirli çerçeve) — iki engel aynı
+    // "special kafeslendi" dilini konuşur. Mıknatıs servisi sahnede yoksa eski Resources görseline düşer.
     private static Sprite CageSprite()
     {
+        if (cageSprite != null) return cageSprite;
+        var magnet = Object.FindFirstObjectByType<MagnetObstacleService>(FindObjectsInactive.Include);
+        if (magnet != null) cageSprite = magnet.CageSprite;   // bulununca önbelleğe alınır
+        if (cageSprite != null) return cageSprite;
         if (!triedCageSprite)
         {
             triedCageSprite = true;
-            cageSprite = Resources.Load<Sprite>(CageSpritePath);
+            fallbackCageSprite = Resources.Load<Sprite>(CageSpritePath);
         }
-        return cageSprite;
+        return fallbackCageSprite;
     }
 }

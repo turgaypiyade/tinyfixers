@@ -55,6 +55,7 @@ Hareketli engeli (plastik, kask, altın) bir yığına yalnız bir kez koy.
 ## 5. Kompozisyon notları
 
 - Tam 9×11 veya 9×10 çerçeve + hole şeritleri ya da simetrik siluet; bölgesel renk blokları.
+- **Boss Duel yüksekliği en fazla 10 satır:** karakterin ekrana sığması için 11 satır kullanılmaz (kullanıcı, 150 tasarımı).
 - Kalıcı engeller (HatLauncher, KeyGenerator, EnergyContainer, RocketBasket): tam boy sütun yaparsan **yatay eşleşme imkânsızlaşır** (125 dersi). Şerit genişliği ≥3 bırak ya da kalıcıları alta yerleştir.
 - Kalıcı engelin **altında** hücre kalırsa oraya dikey dolum olmaz → kalıcıları alt kenara veya tam sütun olarak koy.
 - Az renk havuzu (randomPool) kaskadı çok artırır: 125'te 2 renk "çok rahat", 3 renk "geçilemiyor". Havuz da bir zorluk düğmesi.
@@ -93,9 +94,14 @@ Akış: aşağı **daralan** (taç→gövde, kâse→ayak, kalkan) ve **alta otu
 (piramit, çan, Eyfel) kısa tutulmalı — genişleyen kısım yalnız çaprazla dolar.
 
 - Kullanıldı: kelebek 106 · madalyon 107 · elmas 108 · kemer 110 · kale 111/115/117 · uçurtma 113 · petek 114 · kalp 116 ·
-  taç 120 · piramit 127 · **elma ağacı 128 · kupa 129 · kalkan 130** · soyut: gözcü adaları 131 · deney tüpü rafı 132 (Tube+Magnet dönüşü) · Roma tapınağı 133 (Tube sütun + Wall basamak + Mud alınlık) · Roma tapınağı II 134 (Wall çatı + Tube sütun + Wall zemin)
+  taç 120 · piramit 127 · **elma ağacı 128 · kupa 129 · kalkan 130** · soyut: gözcü adaları 131 · deney tüpü rafı 132 (Tube+Magnet dönüşü) · Roma tapınağı 133 (Tube sütun + Wall basamak + Mud alınlık) · Roma tapınağı II 134 (Wall çatı + Tube sütun + Wall zemin) · tamir aleti: **yağlı anahtar 146** (Oil örtülü chest2 çene + Mud üstünde fener sapı + hole halka)
 - Bahçe/doğa: ev, lale, mantar, kaktüs-saksı, ayçiçeği, yaprak, armut, çilek, havuç
 - Tamir/alet (oyun teması): anahtar, çekiç, vida, dişli (halka), ampul, musluk, kova, el feneri
 - Harika/yapı: Kolezyum kemerleri, deniz feneri, yel değirmeni, köprü, saat kulesi, kubbe, (kısa) Eyfel
 - Nesne/sembol: çan, kum saati, şemsiye, balon (ada + ip), yelkenli, roket, çapa, zarf, hediye kutusu
 - Soyut: halka, çapraz, dama, zikzak şeritler, iç içe çerçeveler, ayna simetrik adalar
+
+- Yeni kullanım: **Su Feneri 147** — basamaklı başlık, ColorChest/WaterTank çiftleri, alt köşelerde LaserCannon ve alt sırada toplu KeyGenerator.
+- Yeni kullanım: **Çiçekli Yonca 148** — dört lob ve çiçekli çim çerçeve, üstte Wardrobe çifti, altta PaintCanBox çifti, ortada 3×3 TarpStatue.
+- Yeni kullanım: **Mühürlü Dört Kule 149** — soyut dört 3×3 kule ve merkez koridoru; Gel → EggBird → SculptingStone → AncientSeal, dört tür/üç hedef; EggBird yardımıyla 30 hamle (ilk ayar).
+- Yeni kullanım: **Onarım Kapısı 150 (Boss Duel)** — 9×10 simetrik kapı silueti; iki PaintCanBox, iki çim ayağı ve en altta altı kalkan saklayan 3×3 TarpStatue. 30 hamle, üç rakip/520 toplam can (ilk ayar).

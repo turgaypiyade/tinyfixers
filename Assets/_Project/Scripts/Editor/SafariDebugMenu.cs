@@ -4,7 +4,7 @@ using UnityEngine;
 // Safari/Yükseliş kazanma ekranını Play modunda ödül vermeden açar (tasarım önizlemesi).
 public static class SafariDebugMenu
 {
-    [MenuItem("TinyFixers/Debug/Safari Kazanma Ekranını Göster (Play)")]
+    [MenuItem("TinyFixers/Debug/TIRMANIŞ Kazanma Ekranını Göster (Play)")]
     private static void PreviewWinScreen()
     {
         var screen = Object.FindFirstObjectByType<RisingMapScreen>(FindObjectsInactive.Include);
@@ -16,6 +16,6 @@ public static class SafariDebugMenu
         screen.PreviewFinalReward();
     }
 
-    [MenuItem("TinyFixers/Debug/Safari Kazanma Ekranını Göster (Play)", true)]
+    [MenuItem("TinyFixers/Debug/TIRMANIŞ Kazanma Ekranını Göster (Play)", true)]
     private static bool PreviewWinScreenValidate() => Application.isPlaying;
 }

@@ -1598,7 +1598,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         return items;
     }
 
-    // Kahraman balonundaki cümle: "Vazgeçersen <Altın>, <Safari> ve <İttifak güçleri> elinden gidecek!"
+    // Kahraman balonundaki cümle: "Vazgeçersen <Altın>, <TIRMANIŞ> ve <İttifak güçleri> elinden gidecek!"
     // Aynı isim (ör. aynı event'in birden çok hedefi) bir kez yazılır; isimsiz öğeler cümleye girmez.
     private string BuildLossSentence(System.Collections.Generic.List<(Sprite icon, string label, int amount, bool achieved)> items)
     {
@@ -1828,7 +1828,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
         lifeDebitedForFailure = false;
 
         LevelTelemetryStore.Continue(currentOfferAmount, coinsSpent, rewardedAd);
-        board.ContinueWithExtraMoves(currentOfferAmount);
+        if (board.IsBilliardStuckFail)
+            board.ContinueWithBilliardRescue(currentOfferAmount);
+        else
+            board.ContinueWithExtraMoves(currentOfferAmount);
         board.SetInputLocked(false);
         extraMoveOfferAttempt++;
 
@@ -2049,6 +2052,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         ResolveCurrentFailOffer();
 
+        if (board != null && board.IsBilliardStuckFail)
+        {
+            RefreshBilliardStuckOfferVisuals();
+            return;
+        }
+
         if (failTitleText != null)
             failTitleText.text = LocalizedText("level_end_fail_title", "Hamle Kalmadi!");
 
@@ -2077,6 +2086,32 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
 
         RefreshExtraMovesAmountVisual(animateIncrease);
+    }
+
+    // Top cebe ulaşamıyor: hamle eklemek işe yaramaz → devam = topu yukarı taşı (hamle bittiyse hamle de eklenir).
+    private void RefreshBilliardStuckOfferVisuals()
+    {
+        if (failTitleText != null)
+            failTitleText.text = LocalizedText("level_end_billiard_stuck_title", "Top Takıldı!");
+
+        string message = LocalizedText("level_end_billiard_stuck_text", "Top cebe ulaşamıyor. Topu taşı ve devam et.");
+        if (failMessageText != null)
+            failMessageText.text = message;
+        if (failDescriptionText != null && failDescriptionText != failMessageText)
+            failDescriptionText.text = message;
+
+        if (failContinueText != null)
+            failContinueText.text = LocalizedFormat("level_end_billiard_rescue_cost", "Topu Taşı {0}", currentCost);
+
+        if (extraMovesIcon != null)
+        {
+            var lib = board.ActiveLevelData != null ? board.ActiveLevelData.obstacleLibrary : null;
+            var ballSprite = lib != null ? lib.Get(ObstacleId.BilliardBall)?.GetPreviewSprite() : null;
+            if (ballSprite != null)
+                extraMovesIcon.sprite = ballSprite;
+            extraMovesIcon.enabled = ballSprite != null;
+        }
+        SetExtraMovesBadgeTextVisible(false);
     }
 
     private void RefreshExtraMovesAmountVisual(bool animateIncrease)
@@ -2774,7 +2809,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
                 ? levelData.obstacleLibrary.Get(goal.obstacleId)
                 : null;
 
-            return obstacleDef != null ? obstacleDef.GetPreviewSprite() : null;
+            return obstacleDef != null ? obstacleDef.GetGoalIconSprite() : null;
         }
 
         return null;

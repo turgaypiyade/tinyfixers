@@ -41,7 +41,8 @@ public class BoosterService
             if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
                 yield break;
 
-            board.NoteGelSpreadOrigin(cell.x, cell.y);
+            // Jel: joker kaynak şartı olmadan vurduğu her hücreye jel bırakır (SpecialChainRunner.HitCell →
+            // BoardController.MarkBoosterGelHit); hamle kapsamı açılmaz — sonraki cascade'ler normal kurala tabi.
 
             // Booster görseli hücrelere konumla varır: vuruş bitene dek hattı/hücreyi akışa kapat
             // (ör. alttan kalkan asansörün üstündeki taşlar vurulmadan aşağı akmasın).
@@ -1833,9 +1834,9 @@ public class BoosterService
                 matches.Add(board.Tiles[x, y]);
     }
 
-    // Cargo (exitAtBottom) KIRILMAZ — booster da onu temizleyemez; etrafından geçer, cargo düşer.
+    // Kırılmaz hareketli engel (kargo/top) — booster da onu temizleyemez; etrafından geçer, cargo düşer.
     private bool IsUnbreakableCargo(int x, int y)
-        => board.ObstacleStateService != null && board.ObstacleStateService.IsExitAtBottomAt(x, y);
+        => board.ObstacleStateService != null && board.ObstacleStateService.IsUnbreakableMovableAt(x, y);
 
     public void AddRowCells(HashSet<Vector2Int> affectedCells, int y)
     {

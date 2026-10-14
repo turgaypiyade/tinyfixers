@@ -38,6 +38,10 @@ public sealed class CellsImpactAction : BoardAction
             foreach (var cell in new HashSet<Vector2Int>(targets))
             {
                 // Resolve here, after any queued falls/clears, never against stale TileViews.
+                if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                    continue;
+                if (TryHandleSpecialImpact(context, cell))
+                    continue;
                 service.ResolveTargetImpact(dataMatches, cell.x, cell.y,
                     service.HasObstacleAt(cell.x, cell.y),
                     (x, y) => SpecialCellUtils.MarkPatchBotImpactCell(context, board, x, y),
@@ -71,5 +75,37 @@ public sealed class CellsImpactAction : BoardAction
             if (IsCurrentBoard(board, level))
                 board.RequestResolveAfterActionSequence();
         }
+    }
+
+    private bool TryHandleSpecialImpact(ResolutionContext context, Vector2Int cell)
+    {
+        var tile = board.Tiles[cell.x, cell.y];
+        if (tile == null || tile.GetSpecial() == TileSpecial.None)
+            return false;
+
+        var obstacles = board.ObstacleStateService;
+        // Movable obstacles own their tile: keep the existing obstacle-only impact route.
+        if (obstacles != null && obstacles.IsMovableObstacleAt(cell.x, cell.y))
+            return false;
+
+        // A covered/caged special survives this hit. Only its covering obstacle receives
+        // damage; revealing the special must not also consume it with the same impact.
+        if (tile.IsSpecialLocked || !SpecialUtils.CanTargetTileContent(board, cell.x, cell.y))
+        {
+            if (tile.IsSpecialLocked)
+                board.SpecialLocks?.NoteCovered(tile);
+            if (obstacles != null && obstacles.HasObstacleAt(cell.x, cell.y))
+            {
+                board.MarkPatchBotForcedObstacleHit(cell.x, cell.y);
+                SpecialCellUtils.MarkPatchBotImpactCell(context, board, cell.x, cell.y);
+            }
+            return true;
+        }
+
+        // Another chain may already own this special. Never send it to MatchClearAction,
+        // which consumes specials without activating their effect.
+        if (!board.IsPendingTriggeredSpecialCell(cell.x, cell.y))
+            board.TriggerSpecialTileFromBoardEffect(tile);
+        return true;
     }
 }

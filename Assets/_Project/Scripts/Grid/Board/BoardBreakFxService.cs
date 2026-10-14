@@ -175,7 +175,8 @@ public class BoardBreakFxService
         // Hamster kendi kare/zıplama/ayrılış animasyonunu oynar (HamsterObstacleService).
         return change.obstacleId == ObstacleId.ColorChest
             || change.obstacleId == ObstacleId.KeyGenerator
-            || change.obstacleId == ObstacleId.Hamster;
+            || change.obstacleId == ObstacleId.Hamster
+            || change.obstacleId == ObstacleId.TarpStatue;   // taş parçaları + parçalanma TarpStatueView'da
     }
 
     private static Color ResolveObstacleHitColor(ObstacleVisualChange change)

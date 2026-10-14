@@ -23,7 +23,7 @@ public static class SafariMockupSetup
     private const string LogTag = "SafariMockupSetup";
     private const string SystemName = "SafariEventSystem";
 
-    [MenuItem("TinyFixers/Mockup/Safari Event")]
+    [MenuItem("TinyFixers/Mockup/TIRMANIŞ Legacy Event")]
     public static void Setup()
     {
         MockupUI.EnsureFolder(ResDir);
@@ -37,7 +37,7 @@ public static class SafariMockupSetup
         var canvas = Object.FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
-            EditorUtility.DisplayDialog("Safari Setup", "MainMenu sahnesini aç ve tekrar dene.", "Tamam");
+            EditorUtility.DisplayDialog("TIRMANIŞ Kurulumu", "MainMenu sahnesini aç ve tekrar dene.", "Tamam");
             return;
         }
         var root = canvas.rootCanvas.transform;
@@ -74,8 +74,8 @@ public static class SafariMockupSetup
 
         EditorSceneManager.MarkSceneDirty(canvas.gameObject.scene);
         AssetDatabase.SaveAssets();
-        EditorUtility.DisplayDialog("Safari Setup",
-            "Tiny Safari kuruldu (ikon + popup + harita). Sahneyi kaydet (Cmd+S).", "Tamam");
+        EditorUtility.DisplayDialog("TIRMANIŞ Kurulumu",
+            "TIRMANIŞ kuruldu (ikon + popup + harita). Sahneyi kaydet (Cmd+S).", "Tamam");
     }
 
     // ── Map screen ───────────────────────────────────────────────
@@ -276,7 +276,7 @@ public static class SafariMockupSetup
         btn.targetGraphic = icon;
         icon.gameObject.AddComponent<EventIconAnimator>();
 
-        var label = MockupUI.NewText("Label", rt, "SAFARI", 22,
+        var label = MockupUI.NewText("Label", rt, "TIRMANIŞ", 22,
             Color.white, TextAlignmentOptions.Bottom, theme.headingFont);
         MockupUI.AnchorBottom(label.rectTransform, 34, 4);
 

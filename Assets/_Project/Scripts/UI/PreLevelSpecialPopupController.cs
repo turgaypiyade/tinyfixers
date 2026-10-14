@@ -506,7 +506,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
                 ? levelData.obstacleLibrary.Get(goal.obstacleId)
                 : null;
 
-            Sprite preview = obstacleDef != null ? obstacleDef.GetPreviewSprite() : null;
+            Sprite preview = obstacleDef != null ? obstacleDef.GetGoalIconSprite() : null;
             return preview != null ? preview : fallbackGoalIcon;
         }
 

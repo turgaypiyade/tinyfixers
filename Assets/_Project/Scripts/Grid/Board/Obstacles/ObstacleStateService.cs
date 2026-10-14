@@ -463,7 +463,14 @@ public class ObstacleStateService : ISimObstacleQuery
         // üstte durur) vuruşu alır: aşağıdaki STACK KURALI bu erken dönüşün arkasında kaldığı için
         // kargo'nun geçtiği grass hiç kırılmıyordu (L61 Override+Override: dalga 1. satıra varmadan
         // tepedeki kargolar grass hücrelerine indi, 3 grass sağ kaldı).
-        if (IsExitAtBottomObstacle(id))
+        // Brandalı heykel: branda kalkana (renk toplaması bitene) dek hiçbir vuruş ilerletmez.
+        if (id == ObstacleId.TarpStatue && IsTarpStatueCoveredAt(x, y))
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        // Bilardo topu da aynı kuralda (kırılmaz hareketli); cep sabit ve tamamen kırılmaz.
+        if (id == ObstacleId.BilliardPocket)
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+        if (IsUnbreakableMovableObstacle(id))
         {
             if (TryConsumeCoveringOverlayHit(idx, context, out var coverChange))
                 return new ObstacleHitResult(true, true, false, coverChange, default, Array.Empty<int>());
@@ -911,6 +918,40 @@ public class ObstacleStateService : ISimObstacleQuery
         return false;
     }
 
+    /// Zemin katmanı mı (çamur, jel, su birikintisi — taşın altında çizilen UnderTileLayered)?
+    public bool IsGroundLayer(ObstacleId id)
+    {
+        if (id == ObstacleId.None) return false;
+        if (id == ObstacleId.Mud || id == ObstacleId.SpreadingGel) return true;
+        var def = library != null ? library.Get(id) : null;
+        return def != null && def.IsUnderTileBehavior;
+    }
+
+    /// Hücrenin en üst katmanının ALTINDA saklı duran ilk zemin katmanı (hareketli engelin altındaki ya da yığında
+    /// saklı). Örtü açılınca ortaya çıkan katmanın altındaki zeminin görünümünü kurmak için.
+    public bool TryGetGroundBeneathTopAt(int x, int y, out ObstacleId id, out int origin)
+    {
+        id = ObstacleId.None;
+        origin = -1;
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        if (_underTileBeneathMovable.TryGetValue(idx, out var beneath) && IsGroundLayer(beneath.Id) && beneath.Remaining != 0)
+        {
+            id = beneath.Id;
+            origin = idx;
+            return true;
+        }
+        if (_stampedBeneathByCell.TryGetValue(idx, out var layers) && layers != null)
+            for (int i = layers.Count - 1; i >= 0; i--)
+                if (IsGroundLayer(layers[i].Id) && layers[i].Remaining != 0)
+                {
+                    id = layers[i].Id;
+                    origin = layers[i].Origin;
+                    return true;
+                }
+        return false;
+    }
+
     public ObstacleId GetObstacleIdAt(int x, int y)
     {
         if (!IsValidCell(x, y)) return ObstacleId.None;
@@ -1179,6 +1220,10 @@ public class ObstacleStateService : ISimObstacleQuery
             return true;
 
         if (IsCoveredByLockingOverlay(level.Index(x, y)))
+            return true;
+
+        // Bilardo topu swap'lanamaz; yalnız kendi kuralıyla yuvarlanır (CascadeLogic.Billiard).
+        if (level.obstacles[level.Index(x, y)] == (int)ObstacleId.BilliardBall)
             return true;
 
         // Yalnızca sabit OverTileBlocker (Stone vb.) altındaki tile'ı kilitler.
@@ -1839,11 +1884,44 @@ public class ObstacleStateService : ISimObstacleQuery
         return def != null && def.exitAtBottom;
     }
 
-    /// Kırılmaz kargo (exitAtBottom) bir Grass/Oil hücresine girmiş ve örtü onun altında saklanıyor mu?
-    /// Special'lar kargo hücresini etkileyemez sayar (CanAffectCell), ama örtü vuruş almalı.
-    public bool HasCoveringOverlayOnCargoAt(int x, int y)
+    // Kırılmaz HAREKETLİ engel: kargo (exitAtBottom) + bilardo topu. Hiçbir match/special/booster/kombo onu
+    // temizleyemez ya da hasar veremez; yalnız kendi çıkış yolu (taban / cep) toplar. Kırılmazlık kontrolü
+    // yapan her yer bunu kullanmalı (tekrar "IsExitAtBottomAt" yazma — o yalnız kargoya özgü davranış içindir).
+    private bool IsUnbreakableMovableObstacle(ObstacleId id)
+        => id == ObstacleId.BilliardBall || IsExitAtBottomObstacle(id);
+
+    public bool IsUnbreakableMovableAt(int x, int y)
     {
-        if (!IsValidCell(x, y) || !IsExitAtBottomAt(x, y)) return false;
+        if (!IsValidCell(x, y)) return false;
+        return IsUnbreakableMovableObstacle((ObstacleId)level.obstacles[level.Index(x, y)]);
+    }
+
+    /// Hücredeki engel hiçbir vuruşla ilerlemez mi (kırılmaz hareketli engel ya da bilardo cebi)?
+    /// Hedefleyiciler (PatchBot, kuş vb.) bu hücreyi engel hedefi saymamalı.
+    public bool IsUnbreakableObstacleAt(int x, int y)
+        => IsUnbreakableMovableAt(x, y) || GetObstacleIdAt(x, y) == ObstacleId.BilliardPocket;
+
+    /// Brandalı heykel origin'i hâlâ brandalı mı (TarpStatueService bağlar). Bağlı değilse brandasız sayılır.
+    public Func<int, bool> TarpStatueCoveredQuery;
+
+    public bool IsTarpStatueCoveredAt(int x, int y)
+    {
+        if (!IsValidCell(x, y) || TarpStatueCoveredQuery == null) return false;
+        int idx = level.Index(x, y);
+        return level.obstacles[idx] == (int)ObstacleId.TarpStatue && TarpStatueCoveredQuery(level.obstacleOrigins[idx]);
+    }
+
+    public bool IsBilliardBallAt(int x, int y)
+        => IsValidCell(x, y) && level.obstacles[level.Index(x, y)] == (int)ObstacleId.BilliardBall;
+
+    public bool IsBilliardPocketAt(int x, int y)
+        => IsValidCell(x, y) && level.obstacles[level.Index(x, y)] == (int)ObstacleId.BilliardPocket;
+
+    /// Kırılmaz hareketli engel (kargo/top) bir Grass/Oil hücresine girmiş ve örtü onun altında saklanıyor mu?
+    /// Special'lar o hücreyi etkileyemez sayar (CanAffectCell), ama örtü vuruş almalı.
+    public bool HasCoveringOverlayOnUnbreakableMovableAt(int x, int y)
+    {
+        if (!IsValidCell(x, y) || !IsUnbreakableMovableAt(x, y)) return false;
         return _underTileBeneathMovable.TryGetValue(level.Index(x, y), out var beneath)
             && (beneath.Id == ObstacleId.Grass || beneath.Id == ObstacleId.Oil)
             && beneath.Remaining != 0;
@@ -1871,6 +1949,18 @@ public class ObstacleStateService : ISimObstacleQuery
 
         ClearObstacleFromLevel(origin, id);
         return id;
+    }
+
+    // Bilardo topu cebe girdi: hücre verisini temizler (altındaki örtü geri açılır) ve OnObstacleDestroyed
+    // tetikler (hedef +1). Tile görseli BilliardBallService'te ayrıca animasyonla çıkarılır.
+    public bool CollectBilliardBallAt(int x, int y)
+    {
+        if (!IsBilliardBallAt(x, y)) return false;
+        int origin = level.obstacleOrigins[level.Index(x, y)];
+        if (origin < 0 || origin >= remainingHitsByOrigin.Length) return false;
+
+        ClearObstacleFromLevel(origin, ObstacleId.BilliardBall);
+        return true;
     }
 
     public void MoveObstacle(int fromX, int fromY, int toX, int toY)

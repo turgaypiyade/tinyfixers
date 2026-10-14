@@ -43,8 +43,9 @@ public static class WaterTankFx
     }
 
     /// <param name="footprint">Deponun genişliği, root uzayında (piksel). Parça boyu/menzili buna göre.</param>
+    /// sizeScale: parça boyu çarpanı (1 = WaterTank varsayılanı; iri parça isteyen engel büyütür).
     public static void SpawnShards(MonoBehaviour host, RectTransform root, Vector2 center, float footprint,
-        Sprite source, int count)
+        Sprite source, int count, float sizeScale = 1f)
     {
         if (host == null || root == null || source == null || count <= 0 || footprint <= 0f)
             return;
@@ -58,7 +59,7 @@ public static class WaterTankFx
         {
             float angle = (360f / count) * i + Random.Range(-25f, 25f);
             host.StartCoroutine(FlyShard(root, center, shards[(offset + i) % shards.Length],
-                footprint * Random.Range(0.16f, 0.26f), angle,
+                footprint * Random.Range(0.16f, 0.26f) * sizeScale, angle,
                 footprint * Random.Range(0.45f, 0.95f),
                 footprint * Random.Range(0.35f, 0.7f),
                 Random.Range(0.42f, 0.58f)));

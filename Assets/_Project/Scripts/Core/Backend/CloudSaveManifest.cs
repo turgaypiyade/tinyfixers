@@ -110,6 +110,7 @@ public static class CloudSaveManifest
         "bridge_howto_cycle",
         "progress_event_v1_goals",
         "progress_event_v1_cycle_key",
+        "progress_event_v1_round",       // basamak turu (sunucu sezonu)
         "progress_event_v1_start_time",
         "event_start_time",
         "event_participants",

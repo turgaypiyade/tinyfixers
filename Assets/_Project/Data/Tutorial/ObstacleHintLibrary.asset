@@ -373,3 +373,15 @@ MonoBehaviour:
     fallbackTitle: Laser Cannon
     locKey: hint_obstacle_lasercannon
     fallbackText: The cannon locks onto a special stone. If you don't use it within one move, it gets caged. Make a match next to the cage or hit it with another special's blast to free it. Only specials damage the cannon.
+  - id: 66
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_billiard_name
+    fallbackTitle: Billiard Ball
+    locKey: hint_obstacle_billiard
+    fallbackText: The ball can't be broken or swapped. Clear the stones around it and it rolls into the gap - down, diagonally or sideways, never up. Get it into a pocket!
+  - id: 68
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_tarpstatue_name
+    fallbackTitle: Covered Statue
+    locKey: hint_obstacle_tarpstatue
+    fallbackText: Collect stones of the tag's color anywhere on the board. When the number runs out, the tarp comes off. Then only specials can hit it - each hit carves the statue a little more.

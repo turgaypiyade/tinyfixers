@@ -86,6 +86,9 @@ public class MudOverlayService : MonoBehaviour
     private BoardController board;
     private int gridWidth, gridHeight, tileSize;
     private Coroutine pendingBorderRefresh;
+    // Hücreyi tam kapatan örtünün (ObstacleDef.coversCellFully) altındaki çamur: kayıtlı ama çizilmez ve komşu
+    // kenar/köşe hesabında "çamur yok" sayılır (yan çamur taşın kenarında bevel ile biter). Örtü kalkınca açılır.
+    private readonly HashSet<int> hiddenCells = new();
     private RectTransform overlayRoot;
 
     public void Init(BoardController board, int width, int height, int tileSize = 0)
@@ -133,13 +136,30 @@ public class MudOverlayService : MonoBehaviour
             view.Build(tileSize, borderThicknessRatio, edgeJoinOverlapPixels, interiorBleedPixels, underBevelFillRatio, cornerJoinPixels, edgeJoinExtendPixels, edgeStraightCropPixels,
                 sourceBorderPixels: 99f);
 
-        ApplyToView(view, remaining);
+        ApplyToView(idx, view, remaining);
         QueueRefreshAllBorders();
     }
 
-    private void ApplyToView(MudCellView view, int remaining)
+    /// Tam kapatan örtü altında gizle / örtü kalkınca göster.
+    public void SetCellHidden(int x, int y, bool hidden)
     {
-        if (remaining <= 0) { view.SetVisible(false); return; }
+        int idx = CellIndex(x, y);
+        bool changed = hidden ? hiddenCells.Add(idx) : hiddenCells.Remove(idx);
+        if (!changed || !viewsByCellIndex.TryGetValue(idx, out var view) || view == null) return;
+        if (hidden) view.SetVisible(false);
+        else
+        {
+            var state = board != null ? board.ObstacleStateService : null;
+            int remaining = view.MaxHits;
+            if (state != null && !state.TryGetMudRemainingHitsAt(x, y, out remaining)) remaining = 0;
+            ApplyToView(idx, view, remaining);
+        }
+        QueueRefreshAllBorders();
+    }
+
+    private void ApplyToView(int idx, MudCellView view, int remaining)
+    {
+        if (remaining <= 0 || hiddenCells.Contains(idx)) { view.SetVisible(false); return; }
 
         int damageTaken = view.MaxHits - remaining;
         view.SetDamaged(damageTaken > 0);
@@ -162,7 +182,7 @@ public class MudOverlayService : MonoBehaviour
         }
         if (!viewsByCellIndex.TryGetValue(idx, out var view) || view == null) return;
         view.SetMaxHits(max);
-        ApplyToView(view, remaining);
+        ApplyToView(idx, view, remaining);
         QueueRefreshAllBorders();
     }
 
@@ -171,6 +191,7 @@ public class MudOverlayService : MonoBehaviour
         if (!viewsByCellIndex.TryGetValue(idx, out var view)) return;
         if (view != null) view.Clear();
         viewsByCellIndex.Remove(idx);
+        hiddenCells.Remove(idx);
         // Recompute neighboring borders after the topology change, once per frame.
         QueueRefreshAllBorders();
     }
@@ -196,7 +217,7 @@ public class MudOverlayService : MonoBehaviour
             if (state.TryGetMudRemainingHitsAt(
                 change.originIndex % gridWidth, change.originIndex / gridWidth, out int remaining))
             {
-                ApplyToView(view, remaining);
+                ApplyToView(change.originIndex, view, remaining);
                 QueueRefreshAllBorders();
             }
             else
@@ -209,7 +230,7 @@ public class MudOverlayService : MonoBehaviour
             return;
         }
 
-        ApplyToView(view, change.remainingHits);
+        ApplyToView(change.originIndex, view, change.remainingHits);
 
         // stage1→stage2 geçişi overlay topolojisini değiştirir (bu hücre artık overlay değil):
         // komşu overlay'lerin kenar/köşesini yeniden hesapla. Deferred + coalesced olduğu için
@@ -252,7 +273,7 @@ public class MudOverlayService : MonoBehaviour
     {
         if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return false;
         int idx = CellIndex(x, y);
-        return viewsByCellIndex.TryGetValue(idx, out var v) && v != null;
+        return viewsByCellIndex.TryGetValue(idx, out var v) && v != null && !hiddenCells.Contains(idx);
     }
 
     // stage1 (overlay, hasarsız) mud hücresi mi? Köşe/kenar birleşimi yalnız bunları sayar.
@@ -260,7 +281,7 @@ public class MudOverlayService : MonoBehaviour
     {
         if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return false;
         int idx = CellIndex(x, y);
-        return viewsByCellIndex.TryGetValue(idx, out var v) && v != null && !v.IsDamaged;
+        return viewsByCellIndex.TryGetValue(idx, out var v) && v != null && !v.IsDamaged && !hiddenCells.Contains(idx);
     }
 
     // Tüm kayıtlı mud hücrelerinin bevel exposure'ını, TÜM komşular kesinleştikten sonra
@@ -317,6 +338,7 @@ public class MudOverlayService : MonoBehaviour
         }
 
         viewsByCellIndex.Clear();
+        hiddenCells.Clear();
         foreach (var kv in cornerPatches)
         {
             if (kv.Value != null)

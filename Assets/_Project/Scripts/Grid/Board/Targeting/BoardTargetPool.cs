@@ -50,7 +50,8 @@ public sealed class BoardTargetPool
         // The collection goal can remain active after every key has been produced.
         // Completion invalidates both new picks and existing airborne intents immediately.
         if (id == ObstacleId.KeyGenerator && board.KeyGeneratorProductionComplete) return false;
-        if (obs.IsExitAtBottomAt(x, y)) return false;
+        if (obs.IsUnbreakableObstacleAt(x, y)) return false;
+        if (obs.IsTarpStatueCoveredAt(x, y)) return false;   // branda kalkana dek vuruş almaz
         if (id == ObstacleId.Tube)
         {
             int origin = obs.GetObstacleOriginAt(x, y);

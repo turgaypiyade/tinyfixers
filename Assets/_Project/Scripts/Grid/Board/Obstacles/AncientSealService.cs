@@ -44,9 +44,8 @@ public sealed class AncientSealService : MonoBehaviour
     internal BoardController Board => board;
     private readonly Dictionary<int, SealState> seals = new();
     private readonly Dictionary<int, AncientSealView> views = new();
-    private readonly List<int> eligibleOrigins = new();
     private readonly Dictionary<int, int> startingColors = new();
-    private readonly int[] lastAssignedOrigin = { -1, -1, -1 };
+    private readonly int[] focusedOrigin = { -1, -1, -1 };
     private readonly HashSet<CollectionFlight> flights = new();
     private RectTransform flightRoot;
     public event Action<int, int, int, int> OnCollected;
@@ -63,7 +62,6 @@ public sealed class AncientSealService : MonoBehaviour
         seals.Clear();
         views.Clear();
         ConfigureStartingColors(entries);
-        for (int i = 0; i < LockCount; i++) lastAssignedOrigin[i] = -1;
         if (isActiveAndEnabled && board != null) board.OnTileCollectedAt += HandleTileCollectedAt;
     }
 
@@ -146,26 +144,35 @@ public sealed class AncientSealService : MonoBehaviour
         var obstacles = board != null ? board.ObstacleStateService : null;
         if (color < 0 || obstacles == null) return;
 
-        // Reserve only the missing stones. A 3-match with two remaining launches two flights.
-        eligibleOrigins.Clear();
-        foreach (var pair in seals)
-        {
-            int origin = pair.Key;
-            var s = pair.Value;
-            if (s.active != color || s.remaining[color] <= s.inFlight[color]
-                || obstacles.IsBuriedAnywhere(ObstacleId.AncientSeal, origin)) continue;
-            if (obstacles.GetObstacleIdAt(origin % board.Width, origin / board.Width) == ObstacleId.AncientSeal)
-                eligibleOrigins.Add(origin);
-        }
-        if (eligibleOrigins.Count == 0) return;
-        eligibleOrigins.Sort();
-        // Each cleared stone has ONE destination. Equal-color seals take turns, including
-        // reservations still in flight, so a single match cannot credit every seal.
-        int selected = eligibleOrigins.FindIndex(origin => origin > lastAssignedOrigin[color]);
-        int targetOrigin = eligibleOrigins[selected >= 0 ? selected : 0];
-        lastAssignedOrigin[color] = targetOrigin;
+        int targetOrigin = SelectCollectionTarget(color, obstacles);
+        if (targetOrigin < 0) return;
         LaunchCollection(targetOrigin, color, type, worldPosition);
     }
+
+    private int SelectCollectionTarget(int color, ObstacleStateService obstacles)
+    {
+        // Finish one same-color counter before funding the next. Keep this target even if
+        // a lower-origin seal becomes available later (e.g. after its previous lock closes).
+        int origin = focusedOrigin[color];
+        if (seals.TryGetValue(origin, out var focused) && CanCollectAt(origin, focused, color, obstacles))
+            return origin;
+
+        // In-flight stones already reserve their slots: once the focused counter is fully
+        // funded, excess stones can go to the next seal without overfilling either counter.
+        int nextOrigin = int.MaxValue;
+        foreach (var pair in seals)
+        {
+            if (pair.Key < nextOrigin && CanCollectAt(pair.Key, pair.Value, color, obstacles))
+                nextOrigin = pair.Key;
+        }
+        focusedOrigin[color] = nextOrigin == int.MaxValue ? -1 : nextOrigin;
+        return focusedOrigin[color];
+    }
+
+    private bool CanCollectAt(int origin, SealState s, int color, ObstacleStateService obstacles)
+        => s.active == color && s.remaining[color] > s.inFlight[color]
+            && !obstacles.IsBuriedAnywhere(ObstacleId.AncientSeal, origin)
+            && obstacles.GetObstacleIdAt(origin % board.Width, origin / board.Width) == ObstacleId.AncientSeal;
 
     private void LaunchCollection(int origin, int color, TileType type, Vector3 worldPosition)
     {
@@ -301,5 +308,8 @@ public sealed class AncientSealService : MonoBehaviour
         foreach (var flight in new List<CollectionFlight>(flights)) ReleaseFlight(flight);
         if (flightRoot != null) Destroy(flightRoot.gameObject);
         flightRoot = null;
+        for (int i = 0; i < LockCount; i++) focusedOrigin[i] = -1;
+        gatherBatches.Clear();
+        gatherFrame = -1;
     }
 }

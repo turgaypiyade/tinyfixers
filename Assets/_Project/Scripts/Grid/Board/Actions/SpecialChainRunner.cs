@@ -401,7 +401,7 @@ public sealed class SpecialChainRunner : BoardAction
                 || !reachedCells.Add(cell)) return;
 
             var obstacles = board.ObstacleStateService;
-            if (obstacles != null && obstacles.IsExitAtBottomAt(x, y)) return;
+            if (obstacles != null && obstacles.IsUnbreakableMovableAt(x, y)) return;
             if (board.Holes[x, y] && (obstacles == null || !obstacles.HasObstacleAt(x, y))) return;
 
             // Capture eligibility before damage: breaking a covering obstacle must
@@ -414,6 +414,7 @@ public sealed class SpecialChainRunner : BoardAction
             TileView chainedSpecial = null;
             if (canClear)
             {
+                board.MarkBoosterGelHit(tile);   // joker her vurduğu taşın hücresine jel bırakır
                 if (tile.GetSpecial() != TileSpecial.None)
                 {
                     if (!root.anchoredCells.ContainsKey(tile)
@@ -448,6 +449,10 @@ public sealed class SpecialChainRunner : BoardAction
                         board.TriggerObstacleVisualChange(hit.visualChange);
                     }
                 }
+
+                // Taşsız engel hücresi: vuruş engeli tamamen kaldırdıysa açılan hücre de jel olur.
+                if (tile == null && !obstacles.HasObstacleAt(x, y) && board.Tiles[x, y] == null)
+                    board.PaintGelForBoosterCell(x, y);
             }
 
             // Launch after this impact is applied; the special owns its own clear
@@ -532,6 +537,14 @@ public sealed class SpecialChainRunner : BoardAction
 
                 clearTiles.Add(tile);
             }
+        }
+
+        // Jel bulaşması (kaynak kuralı): zincirde patlayan bu pulse jel üstündeyse / bulaşıksa
+        // kırdığı her taş jel bırakır, yakaladığı special'lar bulaşı kendi patlamalarına taşır.
+        if (board.IsGelSpreadSourceTile(pulse))
+        {
+            board.MarkGelContaminated(clearTiles);
+            foreach (var ring in ringArrivals.Values) board.MarkGelContaminated(ring);
         }
 
         // 3) HALKA-BAZLI ARRIVAL CLEAR (kullanıcı direktifi): dalga animasyonu halkaya
@@ -755,6 +768,13 @@ public sealed class SpecialChainRunner : BoardAction
         }
 
         clearTiles.Add(line);
+
+        // Jel bulaşması (kaynak kuralı): jelli/bulaşık roket yolunda kırdığı her taşa jel bırakır.
+        if (board.IsGelSpreadSourceTile(line))
+        {
+            board.MarkGelContaminated(clearTiles);
+            board.MarkGelContaminated(arrivalSpecials);
+        }
 
         // 2) Immediate clear with the line's lightning-strike presentation
         //    (same visuals the inline/combined line path uses).

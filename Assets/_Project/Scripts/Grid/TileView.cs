@@ -378,6 +378,7 @@ public class TileView : MonoBehaviour,
             rt.anchorMax = new Vector2(0, 1);
             rt.pivot = new Vector2(0, 1);
         }
+        ClearLandingPose();
         if (iconImage != null) iconImage.rectTransform.localScale = Vector3.one;
         return ++activeMoveToken;
     }
@@ -400,6 +401,47 @@ public class TileView : MonoBehaviour,
     internal void ResetFallStretch()
     {
         if (iconImage != null) ResetVisualScale(iconImage.rectTransform, Vector3.one);
+    }
+
+    // ── İniş tepkisi (TileFallMotionSystem tek döngüden sürer) ──
+    // Yalnız ikon esner/batar; taşın kendi (mantıksal) pozisyonu hücrede kalır → eşleşme/akış etkilenmez.
+    // Sürüm: ikona başka biri dokunmadan önce ClearLandingPose çağırır → döngü bu taşı bırakır.
+    private float landingOffsetY;           // ikona şu an uygulanmış dikey kayma (px)
+    private int landingPoseVersion;
+    private bool landingPoseApplied;
+
+    internal int BeginLandingPose() => landingPoseVersion;
+
+    /// squash: boy kısalma oranı, widen: en genişleme oranı, sinkPx: tabanın hücre altına inişi.
+    internal bool ApplyLandingPose(int version, float squash, float widen, float sinkPx)
+    {
+        if (version != landingPoseVersion || iconImage == null) return false;
+        var irt = iconImage.rectTransform;
+        irt.localScale = new Vector3(1f + widen, 1f - squash, 1f);
+        // Taban sabit: pivot tabanda değilse ölçek tabanı yukarı çeker → o kadar aşağı it; üstüne batma.
+        float offset = -irt.pivot.y * irt.rect.height * squash - sinkPx;
+        var p = irt.anchoredPosition;
+        p.y += offset - landingOffsetY;
+        irt.anchoredPosition = p;
+        landingOffsetY = offset;
+        landingPoseApplied = true;
+        return true;
+    }
+
+    internal void ClearLandingPose()
+    {
+        landingPoseVersion++;
+        if (!landingPoseApplied) return;
+        landingPoseApplied = false;
+        if (iconImage != null)
+        {
+            var irt = iconImage.rectTransform;
+            irt.localScale = Vector3.one;
+            var p = irt.anchoredPosition;
+            p.y -= landingOffsetY;
+            irt.anchoredPosition = p;
+        }
+        landingOffsetY = 0f;
     }
 
     internal void PlayLandingSettle(int tileSize, float settleDuration, float settleStrength)
@@ -531,6 +573,7 @@ public class TileView : MonoBehaviour,
         HiddenBy = null;
         KeepHiddenForCombo = false;
         CancelActiveSettle();   // pool'a dönen/yeniden kullanılan taşın eski detached settle'ı çalışmasın
+        ClearLandingPose();
         transform.localScale = Vector3.one;
         transform.localRotation = Quaternion.identity;
 
@@ -664,6 +707,7 @@ public class TileView : MonoBehaviour,
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
         int myMoveToken = ++activeMoveToken;   // bu taşın tek-sahip hareket kilidi
         CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
+        ClearLandingPose();
 
         if (rt == null || !rt)
             yield break;
@@ -1138,6 +1182,7 @@ public class TileView : MonoBehaviour,
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
         int myMoveToken = ++activeMoveToken;   // bu taşın tek-sahip hareket kilidi
         CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
+        ClearLandingPose();
 
         if (this == null || !this)
             yield break;
@@ -1410,6 +1455,7 @@ public class TileView : MonoBehaviour,
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
         int myMoveToken = ++activeMoveToken;   // bu taşın tek-sahip hareket kilidi
         CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
+        ClearLandingPose();
 
         if (this == null || !this)
             yield break;
@@ -1529,6 +1575,7 @@ public class TileView : MonoBehaviour,
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
         int myMoveToken = ++activeMoveToken;   // bu taşın tek-sahip hareket kilidi
         CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
+        ClearLandingPose();
 
         if (this == null || !this)
             yield break;
@@ -1738,6 +1785,7 @@ public class TileView : MonoBehaviour,
 
         bool useFlipbook = flipFrames != null;
         Sprite originalSprite = iconImage.sprite;
+        ClearLandingPose();   // ezik ikon "taban ölçek" diye okunup kalıcılaşmasın
         RectTransform iconRt = iconImage.rectTransform;
         Quaternion baseRot = iconRt != null ? iconRt.localRotation : Quaternion.identity;
         Vector3 baseScale = iconRt != null ? iconRt.localScale : Vector3.one;
@@ -1862,6 +1910,7 @@ public class TileView : MonoBehaviour,
 
         bool useFlipbook = flipFrames != null;
         Sprite originalSprite = board != null ? board.GetSpecialIcon(sp) : iconImage.sprite;
+        ClearLandingPose();   // ezik ikon "taban ölçek" diye okunup kalıcılaşmasın
         RectTransform iconRt = iconImage.rectTransform;
         Quaternion baseRot = iconRt != null ? iconRt.localRotation : Quaternion.identity;
         Vector3 baseScale = iconRt != null ? iconRt.localScale : Vector3.one;
@@ -2832,6 +2881,10 @@ public class TileView : MonoBehaviour,
     public void ApplyTileSize(int tileSize)
     {
         lastAppliedTileSize = tileSize;
+        // Yerleşim ikonu mutlak konumlar; yarım kalan iniş kayması bayatlar.
+        landingPoseVersion++;
+        landingPoseApplied = false;
+        landingOffsetY = 0f;
 
         if (rt == null)
             rt = GetComponent<RectTransform>();

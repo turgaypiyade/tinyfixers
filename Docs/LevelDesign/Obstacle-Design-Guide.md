@@ -21,6 +21,12 @@ Kaynaklar: [BoardController](../../Assets/_Project/Scripts/Grid/Board/BoardContr
 
 `LevelData.cs` jel açıklamasındaki eski swap özeti güncel eşleşme/zincir kurallarını bütünüyle açıklamıyor. Rehber yukarıdaki çalışan metotlara dayanır.
 
+## AncientSeal — ID 64
+
+Aynı aktif rengi bekleyen mühürler taşları eşit paylaşmaz: önce bir mührün o renk sayacı doldurulur, sonra sıradakine geçilir. İlk seçim origin indeksine göre yapılır; sonradan aynı renge geçen veya örtüsü açılan başka bir mühür mevcut hedefin önüne geçmez. Renklerin hedefleri birbirinden bağımsızdır.
+
+Uçuştaki taşlar ihtiyaçtan düşülerek rezerve edilir; bir mührün ihtiyacı tamamen karşılanınca aynı eşleşmenin fazlası sıradakine gidebilir. Görünen sayaç yalnız taş vardığında azalır, bu yüzden son uçuşlar kısa süreli örtüşebilir. Örtülü mühürler toplamaz. Kural, bir mührün üç renginin tamamını bitirmeyi beklemek değildir; o anda istenen renk sayacını sırayla bitirmektir.
+
 ## Yardımcı engeller
 
 Kullanıcının hedef politikası: **RocketBasket ve OverrideBatteryBox doğrudan goal yapılmaz.** EggBird yardımcı rolündeyse hedef zorunluluğu yoktur; tüm yumurtalar kırılmadan level tamamlanabilir. EggBird ancak özel olarak temizleme amacı seçildiğinde goal olur. Yardımcılar mümkün olduğunda bitişik bir grup halinde düzenlenir. Tam-board jel gibi ayrı hedefler, yardımcıların kapladığı hücrelere erişimi yine gerektirebilir; doğrudan yardımcı goal'ü olmaması bu dolaylı gereksinimi kaldırmaz.
@@ -76,5 +82,17 @@ Vuruş sayıları mevcut library'den okunmuştur; özel servislerin renk, öğe,
 WaterPuddle (53), WaterTank'tan doğan tek vuruşlu alt zemindir; kendi hücresindeki taş temizlenince kurur. Dinamik olarak görülmesi, yalnız doğrudan yerleştirilmiş obstacle dizilerinin taranmasıyla bulunmayabilir.
 
 Listede bulunmayan bir ID yalnız kodda mevcut diye yeni levele eklenmez. Katalog, üretici/katman verileri ve tanıtım sırası ayrıca incelenir.
+
+## Diyagonal köşe geçişi — 148 geri bildirimi
+
+Wardrobe (27), PaintCanBox (63) ve TarpStatue (68) için **bütün stage'lerde `allowDiagonal = 1`**.
+148'in şekli korunarak kullanıcı isteğiyle ortak `ObstacleLibrary` ayarı açıldı; diğer levellarda da geçerlidir.
+Sonraki kullanıcı isteğiyle **OverrideBatteryBox (43), LaserCannon (65), KeyGenerator (44) ve SculptingStone (28)**
+için de bütün stage'lerde `allowDiagonal = 1` yapıldı. Üretim, hasar, vuruş sayıları ve `blocksCells` ayarları korunur;
+değişiklik yalnız köşe geçişini açar. Bu engellerin çevresindeki dolum kolaylaşabileceği için mevcut level dengeleri
+oynanarak değerlendirilmelidir; canlı oyun testi yapılmadı. Hareketli engeller ve diğer engel türleri değiştirilmedi.
+Bu ayar, taşın engelin köşesinden komşu alt hücreye çapraz kaymasını sağlar; engelin kapladığı hücreye taş yerleştirmez.
+Çapraz hedef ve kaynak oynanabilir olmalı; iki yan köşeden en az biri geçişe izin vermelidir.
+Dolum incelemesinde yalnız kaynak/hedef boşluğuna bakılmaz, `BoardCellStateQuery` ve `FindSlideSource` köşe kuralı da kontrol edilir.
 
 Temel kaynaklar: [LevelData](../../Assets/_Project/Scripts/Core/LevelData.cs), [ObstacleLibrary](../../Assets/_Project/Settings/ObstacleLibrary.asset), [LevelCatalogPro](../../Assets/_Project/Settings/LevelCatalogPro.asset). [Eski akış envanteri](../ObstacleFlow_Inventory.md) zamanlama geçmişi için faydalıdır; güncel gameplay ayarı olarak tek başına kullanılmaz.

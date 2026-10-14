@@ -10271,10 +10271,10 @@ MonoBehaviour:
   KeyGeneratorProductionComplete: 0
   activeFallProfile:
     enabled: 1
-    fps: 35
-    initialSpeedCellsPerFrame: 0.3
-    accelerationCellsPerFrameSquared: 0.01
-    maxSpeedCellsPerFrame: 0.45
+    fps: 58.3
+    initialSpeedCellsPerFrame: 0.07
+    accelerationCellsPerFrameSquared: 0.0113
+    maxSpeedCellsPerFrame: 0.3
 --- !u!114 &1410826447
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15804,7 +15804,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Vazge\xE7ersen <color=#DB2929>Alt\u0131n</color> ve <color=#DB2929>Safari</color> elinden gidecek!"
+  m_text: "Vazge\xE7ersen <color=#DB2929>Alt\u0131n</color> ve <color=#DB2929>TIRMANI\u015E</color> elinden gidecek!"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: c75d24c5d517942c99a0981c7d30fafb, type: 2}
   m_sharedMaterial: {fileID: 2100000, guid: 10ed6c0276a5c44e0b4e173d5705b4c0, type: 2}

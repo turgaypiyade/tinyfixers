@@ -337,7 +337,7 @@ public class TopHudController : MonoBehaviour
             ? levelData.obstacleLibrary.Get(goal.obstacleId)
             : null;
 
-        var preview = obstacleDef != null ? obstacleDef.GetPreviewSprite() : null;
+        var preview = obstacleDef != null ? obstacleDef.GetGoalIconSprite() : null;
         if (preview == null && goal.obstacleId == ObstacleId.Tube)
             preview = tubeGoalFallbackIcon;
 

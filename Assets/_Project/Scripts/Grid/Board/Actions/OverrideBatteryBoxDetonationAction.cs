@@ -81,7 +81,7 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
                 var obstacles = activeBoard.ObstacleStateService;
                 if (obstacles != null
                     && obstacles.HasObstacleAt(x, y)
-                    && !obstacles.IsExitAtBottomAt(x, y))
+                    && !obstacles.IsUnbreakableObstacleAt(x, y))
                 {
                     int obstacleOrigin = obstacles.GetObstacleOriginAt(x, y);
                     if (obstacleOrigin >= 0 && obstacleOrigin != originIndex && impactedOrigins.Add(obstacleOrigin))
@@ -207,7 +207,7 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
             && cell.y >= 0 && cell.y < b.Height
             && b.ObstacleStateService != null
             && b.ObstacleStateService.HasObstacleAt(cell.x, cell.y)
-            && !b.ObstacleStateService.IsExitAtBottomAt(cell.x, cell.y))
+            && !b.ObstacleStateService.IsUnbreakableObstacleAt(cell.x, cell.y))
         {
             var hit = b.ApplyObstacleDamageAt(cell.x, cell.y, ObstacleHitContext.SpecialActivation, null);
             if (hit.didHit)

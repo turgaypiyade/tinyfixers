@@ -9,7 +9,7 @@ using UnityEngine;
 public readonly struct LevelLossItem
 {
     public readonly Sprite Icon;     // opsiyonel (null → ikon gizlenir)
-    public readonly string Label;    // localized isim ("Safari ilerlemesi")
+    public readonly string Label;    // localized isim ("TIRMANIŞ ilerlemesi")
     public readonly int Amount;
     public readonly bool Achieved;   // true → checkmark, false → cancel rozeti
 

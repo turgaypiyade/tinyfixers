@@ -73,7 +73,7 @@ public static class NotificationPlanner
             "notif_lives_full_title", "notif_lives_full_body");
     }
 
-    // Safari takvimi ana menüde "Yükseliş" görünümüyle oynanıyor (RisingMapScreen) → metinler Yükseliş adını kullanır.
+    // Safari takvimini kullanan TIRMANIŞ etkinliği (RisingMapScreen); bildirim adı lokalizasyondan gelir.
     private static void AddRising(List<PlannedNotification> list, DateTime utcNow)
     {
         var config = SafariState.Config;

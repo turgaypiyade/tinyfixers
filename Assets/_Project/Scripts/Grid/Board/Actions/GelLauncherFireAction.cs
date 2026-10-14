@@ -24,11 +24,11 @@ public sealed class GelLauncherFireAction : BoardAction
     private const float GelCellFactor = 0.7f;       // jel aynı eğriyle, kapaktan biraz hızlı (11 hücrede onu geçmez)
     private const float CompletionTimeout = 6f;
     private const string CapSpritePath = "GelLauncher/GelLauncherCap";
-    // Basınç: kapaklı çatlak gövde içinde gaz birikmiş gibi yana şişer (+%16), boyca hafif kısalır ve
-    // giderek titrer; sonra kapak fırlar, kapaksız gövde yaylanarak (aşıp geri) normale döner.
+    // Basınç: kapaklı gövde yay gibi boyca %40 sıkışır (taban sabit, ağız tarafı içeri çekilir), yanlardan
+    // %20 şişer ve giderek titrer; sonra serbest kalır → ileri atılır, kapak fırlar, gövde geri seker.
     private const float PressureSeconds = 0.4f;
-    private const float PressureBulge = 0.22f;
-    private const float PressureShorten = 0.05f;
+    private const float PressureBulge = 0.20f;
+    private const float PressureShorten = 0.40f;
     private const float PressureTremorDeg = 3f;
     private const float ReleaseSeconds = 0.18f;
     // İleri atılma: sıkışmadan bir anda ağız yönüne fırlar (kapak bu anın tepesinde kopar), sonra geri seker.
@@ -435,7 +435,8 @@ public sealed class GelLauncherFireAction : BoardAction
         Vector2 b = WaterTankFx.WorldToLocal(corners[2], root);
         Vector2 center = (a + b) * 0.5f;
         float size = Mathf.Max(Mathf.Abs(b.x - a.x), Mathf.Abs(b.y - a.y));
-        WaterTankFx.SpawnShards(board, root, center, size, source, 10);
+        // Kullanıcı: parçalar iri olsun → varsayılanın ~1.8 katı, daha az ama tok parça.
+        WaterTankFx.SpawnShards(board, root, center, size, source, 8, 1.8f);
         GelLauncherFx.SpawnSteam(board, root, center, GelLauncherFx.UiDirection(launcherId), size * 0.5f, 2, 0.8f);
     }
 

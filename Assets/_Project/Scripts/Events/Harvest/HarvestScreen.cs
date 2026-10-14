@@ -47,6 +47,16 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
     [SerializeField, Min(0.05f)] private float cropFlyDuration = 0.45f;
     [SerializeField, Min(0f)] private float cheerHold = 0.9f;
 
+    [Header("Kürek (kazı) — 3 duruş: 45° saat tersi → orijinal → 30° saat yönü")]
+    [Tooltip("1. duruş: kürek hücrede belirir, saat yönünün tersine yatık (geri çekilmiş).")]
+    [SerializeField, Min(0.01f)] private float trowelRaiseDuration = 0.08f;
+    [Tooltip("2. duruş: orijinal açıya döner = toprağa saplanır (kare bu anda toprağa döner).")]
+    [SerializeField, Min(0.01f)] private float trowelStabDuration = 0.07f;
+    [Tooltip("3. duruş: saat yönünde döner = toprağı kaldırır, sonra söner.")]
+    [SerializeField, Min(0.05f)] private float trowelScoopDuration = 0.14f;
+    [SerializeField] private float trowelRaiseAngle = 45f;     // saat yönünün tersi (+z)
+    [SerializeField] private float trowelScoopAngle = -30f;    // saat yönü (−z)
+
     [Header("Açılış (daire geçişi + sahne kurulumu)")]
     [Tooltip("Daire açılırken sahne kurulumu bu kadar sonra başlar (dairenin sonuna doğru).")]
     [SerializeField, Min(0f)] private float introDelay = 0.16f;
@@ -70,6 +80,14 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
     private float boardIntroScale = 1f;          // FitBoard ölçeğinin çarpanı (açılışta 1.06 → 1)
     private Vector2 bearHome, hudHome;
     private long shownTimerSecond = long.MinValue;
+
+    // Kazı efekti: tek kürek + sabit sayıda toprak parçası, ilk kazıda kurulur, sonra hep yeniden kullanılır.
+    private const int DirtChipCount = 6;
+    private static readonly Vector2 TrowelTipPivot = new Vector2(0.06f, 0.10f);   // görselde kürek ucu (sol alt)
+    private Image trowelFx;
+    private readonly Image[] dirtChips = new Image[DirtChipCount];
+    private readonly Vector2[] dirtVelocity = new Vector2[DirtChipCount];
+    private Coroutine scoopCo;
 
     public bool IsOpen => root != null && root.activeInHierarchy;
 
@@ -100,6 +118,7 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
         transform.SetAsLastSibling();
         if (transform.parent != null) transform.parent.SetAsLastSibling();
         StopAllCoroutines();
+        HideDigFx();
         busy = false;
         origin = from;
         BuildGrid();
@@ -204,6 +223,7 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
     private void HideImmediate()
     {
         StopAllCoroutines();
+        HideDigFx();
         SnapIntro();
         busy = false;
         if (root != null) root.SetActive(false);
@@ -526,10 +546,13 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
     {
         busy = true;
         SetBear(cfg.bearDig);
-        EventSfx.Play(l => l.stepPop);
 
         var tile = tiles[r.cell];
         var rt = tile.rectTransform;
+
+        // Kürek sayaçtan uçar, hücreye saplanır; kare çarpma anında toprağa döner.
+        yield return TrowelStrike(rt);
+        EventSfx.Play(l => l.stepPop);
         float t = 0f, half = digDuration * 0.5f;
         bool swapped = false;
         while (t < digDuration)
@@ -562,6 +585,165 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
             yield return CompleteFloor(floor);
 
         busy = false;
+    }
+
+    // ── Kürek ──────────────────────────────────────────────────────────────────────
+
+    private RectTransform FxParent => root != null ? (RectTransform)root.transform : (RectTransform)transform;
+
+    private bool EnsureDigFx()
+    {
+        if (cfg == null || cfg.trowelIcon == null) return false;
+        var parent = FxParent;
+        if (trowelFx == null)
+        {
+            trowelFx = NewImage("DigTrowel", parent);
+            var rt = trowelFx.rectTransform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = TrowelTipPivot;
+            trowelFx.preserveAspect = true;
+            trowelFx.gameObject.SetActive(false);
+        }
+        trowelFx.sprite = cfg.trowelIcon;
+        for (int i = 0; i < DirtChipCount; i++)
+        {
+            if (dirtChips[i] == null)
+            {
+                dirtChips[i] = NewImage("DigDirt", parent);
+                var rt = dirtChips[i].rectTransform;
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+                dirtChips[i].preserveAspect = true;
+                dirtChips[i].gameObject.SetActive(false);
+            }
+            dirtChips[i].sprite = cfg.dugTile;
+        }
+        return true;
+    }
+
+    private void HideDigFx()
+    {
+        scoopCo = null;
+        if (trowelFx != null) trowelFx.gameObject.SetActive(false);
+        for (int i = 0; i < DirtChipCount; i++)
+            if (dirtChips[i] != null) dirtChips[i].gameObject.SetActive(false);
+    }
+
+    private Vector2 ToFx(Vector3 world) => FxParent.InverseTransformPoint(world);
+
+    // Kazma: kürek ucu hücrenin ortasında, uç etrafında döner. 1) 45° saat tersi yatık belirir,
+    // 2) orijinal açıya saplanır (çarpma — burada döner), 3) arka planda 30° saat yönüne kaldırıp söner.
+    private IEnumerator TrowelStrike(RectTransform cellRt)
+    {
+        if (!EnsureDigFx()) yield break;
+        if (scoopCo != null) { StopCoroutine(scoopCo); scoopCo = null; }
+
+        var parent = FxParent;
+        float cellW = cellRt.TransformVector(new Vector3(cellRt.rect.width, 0f, 0f)).magnitude
+                      / Mathf.Max(0.0001f, parent.lossyScale.x);
+        Vector2 hit = ToFx(cellRt.TransformPoint(cellRt.rect.center));
+        Vector2 raised = hit + Vector2.up * (cellW * 0.12f);
+
+        var trt = trowelFx.rectTransform;
+        trt.sizeDelta = new Vector2(cellW, cellW);
+        trt.localScale = Vector3.one;
+        trowelFx.gameObject.SetActive(true);
+        trt.SetAsLastSibling();
+
+        // 1) Belirir: hafif yukarıda, 45° saat tersi yatık.
+        float t = 0f;
+        while (t < trowelRaiseDuration)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / trowelRaiseDuration);
+            float e = 1f - (1f - k) * (1f - k);
+            trt.localPosition = raised;
+            trt.localRotation = Quaternion.Euler(0f, 0f, trowelRaiseAngle * e);
+            trowelFx.color = new Color(1f, 1f, 1f, e);
+            float s = Mathf.Lerp(0.8f, 1f, e);
+            trt.localScale = new Vector3(s, s, 1f);
+            yield return null;
+        }
+        trowelFx.color = Color.white;
+        trt.localScale = Vector3.one;
+
+        // 2) Orijinal açıya saplanır (hızlanarak), uç toprağa iner.
+        t = 0f;
+        while (t < trowelStabDuration)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / trowelStabDuration);
+            float e = k * k;
+            trt.localPosition = Vector2.LerpUnclamped(raised, hit, e);
+            trt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(trowelRaiseAngle, 0f, e));
+            yield return null;
+        }
+        trt.localPosition = hit;
+        trt.localRotation = Quaternion.identity;
+
+        scoopCo = StartCoroutine(TrowelScoop(hit, cellW));
+    }
+
+    // 3) Kaldırma: 30° saat yönüne döner, hafif yükselip söner; toprak parçaları savrulup düşer.
+    private IEnumerator TrowelScoop(Vector2 hit, float cellW)
+    {
+        var trt = trowelFx.rectTransform;
+        for (int i = 0; i < DirtChipCount; i++)
+        {
+            var chip = dirtChips[i];
+            var crt = chip.rectTransform;
+            float size = cellW * Random.Range(0.16f, 0.26f);
+            crt.sizeDelta = new Vector2(size, size * 0.6f);
+            crt.localPosition = hit + new Vector2(Random.Range(-0.12f, 0.12f) * cellW, Random.Range(0f, 0.08f) * cellW);
+            crt.localRotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+            crt.localScale = Vector3.one;
+            float shade = Random.Range(0.78f, 1f);
+            chip.color = new Color(shade, shade, shade, 1f);
+            float ang = Random.Range(60f, 120f) * Mathf.Deg2Rad;   // ağırlık yukarı, hafif iki yana
+            dirtVelocity[i] = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * cellW * Random.Range(3.0f, 4.4f);
+            chip.gameObject.SetActive(true);
+            crt.SetAsLastSibling();
+        }
+        trt.SetAsLastSibling();
+
+        const float chipLife = 0.4f;
+        const float holdAfterScoop = 0.06f;   // kaldırılmış hâlde kısa bir an görünsün
+        const float fadeTime = 0.1f;
+        float gravity = cellW * 16f;
+        float trowelTotal = trowelScoopDuration + holdAfterScoop + fadeTime;
+        float total = Mathf.Max(trowelTotal, chipLife);
+        Vector2 lifted = hit + Vector2.up * (cellW * 0.15f);
+        float t = 0f;
+        while (t < total)
+        {
+            float dt = Time.unscaledDeltaTime;
+            t += dt;
+
+            if (trowelFx.gameObject.activeSelf)
+            {
+                float k = Mathf.Clamp01(t / trowelScoopDuration);
+                float e = 1f - (1f - k) * (1f - k);
+                trt.localPosition = Vector2.LerpUnclamped(hit, lifted, e);
+                trt.localRotation = Quaternion.Euler(0f, 0f, trowelScoopAngle * e);
+                float fadeStart = trowelScoopDuration + holdAfterScoop;
+                float a = t <= fadeStart ? 1f : 1f - Mathf.Clamp01((t - fadeStart) / fadeTime);
+                trowelFx.color = new Color(1f, 1f, 1f, a);
+                if (t >= trowelTotal) trowelFx.gameObject.SetActive(false);
+            }
+
+            float ck = Mathf.Clamp01(t / chipLife);
+            float alpha = ck < 0.6f ? 1f : 1f - (ck - 0.6f) / 0.4f;
+            for (int i = 0; i < DirtChipCount; i++)
+            {
+                var crt = dirtChips[i].rectTransform;
+                dirtVelocity[i].y -= gravity * dt;
+                crt.localPosition += (Vector3)(dirtVelocity[i] * dt);
+                var c = dirtChips[i].color;
+                c.a = alpha;
+                dirtChips[i].color = c;
+            }
+            yield return null;
+        }
+        HideDigFx();
     }
 
     private IEnumerator RevealCrop(HarvestFloorDef floor, int placement)

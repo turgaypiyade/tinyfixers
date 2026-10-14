@@ -10,6 +10,14 @@ using UnityEngine.UI;
 ///   3) fırlama — sırayla (order) hafif geri çekilip kavisle mühürdeki yuvaya uçar, renkli iz bırakır,
 ///   4) varış — renkli flaş + halka dalgası + kıvılcımlar; gameplay sayacı YALNIZ burada düşer.
 /// </summary>
+/// <summary>Toplama uçuşunun hedefi (AncientSealView, TarpStatueView): renk başına varış noktası.</summary>
+public interface ICollectionFxTarget
+{
+    bool IsCollectionAlive { get; }
+    Vector3 GetCollectionTarget(int color);
+    bool IsCollectionTargetReady(int color);
+}
+
 public sealed class AncientSealCollectFx : IDisposable
 {
     private const float PopTime = 0.12f;
@@ -21,7 +29,7 @@ public sealed class AncientSealCollectFx : IDisposable
 
     private static Sprite ringSprite;
 
-    private readonly AncientSealView target;
+    private readonly ICollectionFxTarget target;
     private readonly int color;
     private readonly AncientSealService.GatherBatch batch;
     private readonly int order;
@@ -37,16 +45,16 @@ public sealed class AncientSealCollectFx : IDisposable
     private readonly MonoBehaviour host;
 
     internal AncientSealCollectFx(MonoBehaviour host, RectTransform overlay, BoardController board,
-        AncientSealView target, TileType type, int color, Vector3 worldStart,
-        AncientSealService.GatherBatch batch, int order)
+        ICollectionFxTarget target, TileType type, int color, Vector3 worldStart,
+        AncientSealService.GatherBatch batch, int order, Color? tintOverride = null)
     {
         this.host = host;
         this.target = target;
         this.color = color;
         this.batch = batch;
         this.order = order;
-        tint = color == 0 ? new Color(1f, 0.25f, 0.3f)
-            : color == 1 ? new Color(1f, 0.82f, 0.2f) : new Color(0.3f, 1f, 0.45f);
+        tint = tintOverride ?? (color == 0 ? new Color(1f, 0.25f, 0.3f)
+            : color == 1 ? new Color(1f, 0.82f, 0.2f) : new Color(0.3f, 1f, 0.45f));
 
         var go = new GameObject("SealStoneFlight", typeof(RectTransform));
         go.layer = overlay.gameObject.layer;
@@ -70,7 +78,7 @@ public sealed class AncientSealCollectFx : IDisposable
         stone.anchoredPosition = start;
     }
 
-    private bool HasTarget => root != null && stone != null && target != null && target.isActiveAndEnabled;
+    private bool HasTarget => root != null && stone != null && target != null && target.IsCollectionAlive;
 
     public IEnumerator Play(Action onArrival)
     {

@@ -111,6 +111,35 @@ public class BoardController : MonoBehaviour
     [Tooltip("Çarpma anında hedefin altına inme oranı (hücre boyuna göre). 0.02 = hücre yüksekliğinin %2'si kadar aşağı taşar.")]
     [SerializeField, Range(0f, 0.4f)] private float fallSettleOvershoot = 0.02f;
 
+    [Header("İniş Tepkisi (formül) — kesintisiz düşüş motoru")]
+    // Referans (Royal): taş KENDİ TABANINA basıp yerinde küçülür — hiçbir taş başka taşın hücresine
+    // girmez (batma 0), yanlara şişmez (widen 0). Sıkışma sütunda alttan üste SIRAYLA olur: üstteki
+    // inerken alttaki yeniden ezilmez (yankı 0). Çarpmadan ~17 ms sonra en ezik (boy −%8), oradan düz
+    // çizgiyle normale. Eğriler TileFallMotionSystem SquashCurve/SinkCurve. Genlik çarpma hızıyla
+    // ölçeklenir (v/vmax): kısa düşüşte hafif, uzunda tam.
+    [Tooltip("İniş esnemesi (sıkışma + genişleme) açık mı. Varsayılan KAPALI: düşüş aynen sürer, taş inince esnemez.")]
+    [SerializeField] private bool landingResponseEnabled = false;
+    [Tooltip("Esnemenin toplam süresi (sn).")]
+    [SerializeField, Min(0.02f)] private float landingResponseDuration = 0.10f;
+    [Tooltip("Sıkışma: boyun en fazla kısalma oranı (0.08 = %8). Taban sabit.")]
+    [SerializeField, Range(0f, 0.3f)] private float landingSquash = 0.08f;
+    [Tooltip("Genişleme: enin en fazla artma oranı (0.04 = %4). 0 = yanlara şişmez.")]
+    [SerializeField, Range(0f, 0.3f)] private float landingWiden = 0f;
+    [Tooltip("Çarpmada tabanın hücre altına inişi (hücre boyuna oran).")]
+    [SerializeField, Range(0f, 0.15f)] private float landingSinkCells = 0f;
+    [Tooltip("Üstüne taş inince, kendi tepkisi süren alttaki taşa giden yankı oranı (toplamla değil, en büyüğüyle birleşir).")]
+    [SerializeField, Range(0f, 1f)] private float landingEchoRatio = 0f;
+    [Tooltip("Sütunda yerinde duran taşların alttan yukarı kat başına kalkış gecikmesi (sn). Referans ~2 kare = 0.034. 0 = hepsi aynı anda (tren).")]
+    [SerializeField, Range(0f, 0.1f)] private float fallRiseStagger = 0.034f;
+    internal float FallRiseStagger => fallRiseStagger;
+
+    internal bool LandingResponseEnabled => landingResponseEnabled;
+    internal float LandingResponseDuration => Mathf.Max(0.02f, landingResponseDuration);
+    internal float LandingSquash => landingSquash;
+    internal float LandingWiden => landingWiden;
+    internal float LandingSinkCells => landingSinkCells;
+    internal float LandingEchoRatio => landingEchoRatio;
+
     [Header("Fall Stretch (düşüş sırasında esneme)")]
     [Tooltip("Düşerken taşın dikeyde uzama oranı (squash&stretch). 0 = kapalı, 0.10 = %10 uzar; " +
              "yatay bunun ~yarısı kadar incelir. Hedefe yaklaşınca normale döner, inişte settle squash devralır.")]
@@ -323,6 +352,10 @@ public class BoardController : MonoBehaviour
 
     private TileFallMotionSystem fallMotion;
     internal TileFallMotionSystem FallMotion => fallMotion ??= new TileFallMotionSystem(this);
+
+    // Bilardo topu + cep (Docs/BilliardBall_Plan.md): uzaklık haritası, cebe giriş, takılma/kurtarma.
+    private BilliardBallService billiard;
+    internal BilliardBallService Billiard => billiard ??= new BilliardBallService(this);
     internal bool HasContinuousFallWork => fallMotion != null && fallMotion.HasWork;
 
     internal bool IsTileReadyForContinuousMatch(TileView tile)
@@ -539,6 +572,20 @@ public class BoardController : MonoBehaviour
     {
         if (amount <= 0) return;
         AddMoves(amount);
+        OnLevelContinued?.Invoke();
+    }
+
+    /// Bilardo topu cebe artık ulaşamadığı için açılan erken fail mi? (Fail ekranı "topu kurtar" devamı gösterir.)
+    public bool IsBilliardStuckFail => billiard != null && billiard.StuckFailActive;
+
+    /// "Topu kurtar" devamı: takılı top(lar) cebe ulaşabilen en yakın hücreye uçar. Hamle bittiyse hamle de eklenir
+    /// (yalnız kurtarma, hamlesiz tahtada işe yaramaz).
+    public void ContinueWithBilliardRescue(int extraMovesIfOut)
+    {
+        // Bir kare sonra: devam akışının ForceFullBoardSync'i taş sunumunu sıfırlar, kurtarma animasyonunu ezmesin.
+        StartCoroutine(Billiard.RescueNextFrame());
+        if (RemainingMoves <= 0 && extraMovesIfOut > 0)
+            AddMoves(extraMovesIfOut);
         OnLevelContinued?.Invoke();
     }
 
@@ -1891,6 +1938,7 @@ public class BoardController : MonoBehaviour
         obstacleStateService.Initialize(levelData);
         oilSpreadService = new OilSpreadService(this, obstacleStateService);
         RebuildMaskHoleMap();
+        Billiard.ResetForLevel(levelData);
         BindObstacleEvents();
         RefreshOilOverlays();
     }
@@ -2037,6 +2085,8 @@ public class BoardController : MonoBehaviour
                 for (int i = 0; i < resolvedMoves; i++)
                     specialLockCoordinator?.OnMoveResolved();
                 OnPlayerMoveResolved?.Invoke();
+                // Top cebe artık ulaşamıyorsa hamleler bitmeden fail (kurtarma devamı fail ekranında).
+                billiard?.CheckStuckAfterMove();
 
                 // Kafes (special lock) hamle BİTTİKTEN sonra kuruluyor; resolve'un deadlock kontrolü o an
                 // çoktan geçti. Kilitli special artık hamle sayılmadığından tahtayı yeniden değerlendir →
@@ -2627,34 +2677,41 @@ public class BoardController : MonoBehaviour
         EnsureMovableIdleFx(tile, id, def);
     }
 
-    // Idle juice (coin dönme / cargo salınım) yaşam döngüsü: DOĞRU olanı ekle (yoksa), YANLIŞ olanı
-    // kaldır. Her refresh'te yeniden yaratma YOK — churn CoinIdleWobble'ın gecikme döngüsünü sıfırlar,
-    // coin hiç dönmezdi. Idempotent olduğu için sık çağrılması güvenli.
+    // Idle juice (coin dönme / cargo salınım / bilardo yuvarlanması) yaşam döngüsü: DOĞRU olanı aç (yoksa ekle),
+    // YANLIŞ olanı kapat. Her refresh'te yeniden yaratma YOK — churn CoinIdleWobble'ın gecikme döngüsünü sıfırlar.
+    // Destroy DEĞİL enable/disable: Destroy kare sonuna ertelenir; aynı karede kaldır→ekle sırası ölmekte olan
+    // bileşeni "var" görüp eklemeyi atlıyor, bileşen kare sonunda yok oluyordu (top hiç dönmüyordu, parlama yoktu).
     private void EnsureMovableIdleFx(TileView tile, ObstacleId id, ObstacleDef def)
     {
         if (tile == null || tile.IconImage == null) return;
         var go = tile.IconImage.gameObject;
 
-        bool wantWobble = id == ObstacleId.GoldMoney;
-        bool wantSway = def != null && def.exitAtBottom;
-
-        var wobble = go.GetComponent<CoinIdleWobble>();
-        if (wantWobble && wobble == null) go.AddComponent<CoinIdleWobble>();
-        else if (!wantWobble && wobble != null) Destroy(wobble);
-
-        var sway = go.GetComponent<CargoFloatSway>();
-        if (wantSway && sway == null) go.AddComponent<CargoFloatSway>();
-        else if (!wantSway && sway != null) Destroy(sway);
+        SetMovableIdleFx<CoinIdleWobble>(go, id == ObstacleId.GoldMoney);
+        SetMovableIdleFx<CargoFloatSway>(go, def != null && def.exitAtBottom);
+        var roll = SetMovableIdleFx<BilliardBallRoll>(go, id == ObstacleId.BilliardBall);
+        if (roll != null)   // aux: 0 parlama, 1 numarasız gövde, 2 numara çıkartması
+            roll.Setup(AuxSprite(def, 1), AuxSprite(def, 2), AuxSprite(def, 0));
     }
+
+    private static Sprite AuxSprite(ObstacleDef def, int index)
+        => def != null && def.auxiliarySprites != null && def.auxiliarySprites.Count > index ? def.auxiliarySprites[index] : null;
 
     private void RemoveMovableIdleFx(TileView tile)
     {
         if (tile == null || tile.IconImage == null) return;
         var go = tile.IconImage.gameObject;
-        var wobble = go.GetComponent<CoinIdleWobble>();
-        if (wobble != null) Destroy(wobble);
-        var sway = go.GetComponent<CargoFloatSway>();
-        if (sway != null) Destroy(sway);
+        SetMovableIdleFx<CoinIdleWobble>(go, false);
+        SetMovableIdleFx<CargoFloatSway>(go, false);
+        SetMovableIdleFx<BilliardBallRoll>(go, false);
+    }
+
+    // İstenirse bileşeni ekler/açar, istenmezse kapatır (OnDisable görseli sıfırlar). Açık bileşeni döner.
+    private static T SetMovableIdleFx<T>(GameObject go, bool want) where T : Behaviour
+    {
+        bool has = go.TryGetComponent<T>(out var fx);   // eksikse editörde fake-null tahsisi yok
+        if (want && !has) fx = go.AddComponent<T>();
+        if (fx != null && fx.enabled != want) fx.enabled = want;
+        return want ? fx : null;
     }
 
     private void RefreshSwapObstacleVisuals(TileView a, TileView b)
@@ -2970,12 +3027,16 @@ public class BoardController : MonoBehaviour
         }
     }
 
-    internal void ClearCellDataOnly(Vector2Int c)
+    internal void ClearCellDataOnly(Vector2Int c) => ClearCellDataOnly(c, damageObstacle: true);
+
+    // damageObstacle=false: hücredeki engelin vuruşunu çağıranın geçişi (impact döngüsü) verir — burada vurulursa
+    // aynı etki iki vuruş sayılır (normal eşleşmede çamur tek hamlede bitiyordu).
+    internal void ClearCellDataOnly(Vector2Int c, bool damageObstacle)
     {
         int x = c.x, y = c.y;
         if (x < 0 || x >= width || y < 0 || y >= height) return;
         if (IsMaskHoleCell(x, y)) return;
-        if (obstacleStateService != null && obstacleStateService.HasObstacleAt(x, y))
+        if (damageObstacle && obstacleStateService != null && obstacleStateService.HasObstacleAt(x, y))
         {
             var hit = ApplyObstacleDamageAt(x, y, ObstacleHitContext.SpecialActivation);
             if (hit.didHit) TriggerObstacleVisualChange(hit.visualChange);
@@ -3322,6 +3383,25 @@ public class BoardController : MonoBehaviour
         return TryUseBoosterAtCell(tile.X, tile.Y);
     }
 
+    /// Board kökündeki tıklama yakalayıcısından (BoardBoosterTapCatcher): kendi tıklama yakalayıcısı
+    /// olmayan engel görselleri ve boş hücre alanı. Joker hakkı boşa gitmesin diye hedef doğrulanır:
+    /// tekli joker vurulabilir hücre ister, satır/sütun jokeri hatta en az bir vurulabilir hücre.
+    public bool TryUseBoosterAtBoardCell(int x, int y)
+    {
+        if (activeBooster == BoosterMode.None || activeBooster == BoosterMode.Shuffle) return false;
+        if (x < 0 || x >= width || y < 0 || y >= height) return false;
+
+        bool any = false;
+        if (activeBooster == BoosterMode.Row)
+            for (int i = 0; i < width && !any; i++) any = boosterService.IsCellBoosterAffectable(i, y);
+        else if (activeBooster == BoosterMode.Column)
+            for (int j = 0; j < height && !any; j++) any = boosterService.IsCellBoosterAffectable(x, j);
+        else
+            any = boosterService.IsCellBoosterAffectable(x, y);
+
+        return any && TryUseBoosterAtCell(x, y);
+    }
+
     public bool TryUseBoosterAtCell(int x, int y)
     {
         Debug.Log($"[Booster] TryUseBoosterAtCell ({x},{y}) mode={activeBooster} busy={IsBusy} inputLocked={InputLocked}");
@@ -3547,6 +3627,24 @@ public class BoardController : MonoBehaviour
         SpreadGelToCell(x, y);
     }
 
+    // ── Joker (booster) jel kuralı ───────────────────────────────────────────
+    // Kullanıcı kuralı: joker vurduğu HER hücreye jel bırakır — kaynak/bulaşma şartı yok (jel görevi olan
+    // level'da jokerin açtığı hücre görevi de ilerletmeli). Yalnız tahtada jel varsa (jel görevi level'ı).
+    internal bool BoardHasGel => spreadingGelService != null && spreadingGelService.Count > 0;
+
+    /// Jokerin kıracağı taş: kırılınca hücresine jel düşer (special'sa bulaşı kendi patlamasına taşır).
+    internal void MarkBoosterGelHit(TileView tile)
+    {
+        if (tile != null && tile && BoardHasGel) tile.GelContaminated = true;
+    }
+
+    /// Jokerin taşsız (yalnız engel) hücreye vuruşu engeli tamamen kaldırdıysa açılan hücre jel olur.
+    internal void PaintGelForBoosterCell(int x, int y)
+    {
+        if (!BoardHasGel || x < 0 || x >= width || y < 0 || y >= height) return;
+        SpreadGelToCell(x, y);
+    }
+
     // BoardAnimator.ClearCellDataAfterDelay'den (per-tile, taşın görsel kırılma anında) çağrılır →
     // line/pulse/patchbot'un travel gecikmeli clear'ları için (o clear'lar ClearAndDestroyTile'a live=False
     // gelir). Kural ClearAndDestroyTile ile aynı: bulaşık taş veya hamle kapsamı (komşuluk YOK).
@@ -3577,7 +3675,8 @@ public class BoardController : MonoBehaviour
     //              bulaşı taşır (aynı TileView).
     //   • Combo  → combo'yu oluşturan İKİ taş (SpecialBehaviorDispatcher.ApplyComboEffect).
     //   • Special→ aktive edilen special + swap partner'ı; zincirde tetiklenen special için kendi
-    //              hücresi (ApplySpecialActivation). Booster'da kaynak = dokunulan hücre.
+    //              hücresi (ApplySpecialActivation). Joker (booster) İSTİSNA: kaynak şartı yok, vurduğu her
+    //              hücre jel olur (MarkBoosterGelHit / PaintGelForBoosterCell).
     // Kaynak bulaşlıysa hamle kapsamı (gelSpreadActiveThisMove) açılır: o hamlede kırılan her taş
     // jel bırakır — implant edilen special'lar, zincirler ve travel gecikmeli clear'lar dahil.
     // Kaynak temizse olay jelin ÜZERİNDEN geçse bile bulaştırmaz; ama etki alanındaki bir special
@@ -3677,24 +3776,22 @@ public class BoardController : MonoBehaviour
             SpreadGelToCell(created.X, created.Y);
     }
 
-    /// Bir special/combo JEL ÜSTÜNDE tetiklendiyse hamle kapsamını açar: bu hamlede kırılan her taş
-    /// jel bırakır (implant edilen special'lar, zincirler ve travel gecikmeli clear'lar dahil).
-    public void NoteGelSpreadOrigin(int x, int y)
+    /// Zincir motoru (SpecialChainRunner) için: bu special jel yayma KAYNAĞI mı (jel üstünde ya da bulaşık)?
+    /// Zincirde patlayan special'lar ApplySpecialActivation'dan geçmez; kaynak kontrolü orada yapılır.
+    internal bool IsGelSpreadSourceTile(TileView tile)
     {
-        if (spreadingGelService == null || gelSpreadActiveThisMove) return;
+        if (spreadingGelService == null || tile == null || !tile) return false;
+        return tile.GelContaminated || spreadingGelService.IsSpreadSourceAt(tile.X, tile.Y);
+    }
 
-        if (spreadingGelService.IsSpreadSourceAt(x, y))
-        {
-            gelSpreadActiveThisMove = true;
-            return;
-        }
-
-        // Jel üstünde OLMAYAN ama bulaşık bir taş (jele değen bir match'ten doğan / override'ın
-        // implant ettiği special) tetiklendiyse de kapsam açılır — bulaşma zincirle taşınır.
-        if (x < 0 || x >= width || y < 0 || y >= height) return;
-        var originTile = tiles[x, y];
-        if (originTile != null && originTile && originTile.GelContaminated)
-            gelSpreadActiveThisMove = true;
+    /// Bulaşık bir olayın VURDUĞU taşlar: kırılınca hücreleri jel olur (ShouldPaintGelOnClear),
+    /// special'sa bulaşı kendi patlamasına taşır. Yalnız kırılacağı kesin taşlara çağrılır.
+    internal void MarkGelContaminated(IEnumerable<TileView> hitTiles)
+    {
+        if (spreadingGelService == null || hitTiles == null) return;
+        foreach (var t in hitTiles)
+            if (t != null && t)
+                t.GelContaminated = true;
     }
 
     /// Kaynak taş üzerinden: special/combo'yu OLUŞTURAN taşlar (swap'lanan iki taş, combo'nun iki
@@ -3888,6 +3985,7 @@ public class BoardController : MonoBehaviour
 
                             createdTiles.Add(created);
                             PaintGelUnderCreatedSpecial(created);
+                            GameEventBus.EmitSpecialCreated(created.GetSpecial());
 
                             // Bu hücreyi PulseCore'dan koru — winner normalPartner olmayabilir.
                             (swapProtectedCells ??= new HashSet<Vector2Int>())
@@ -4612,6 +4710,7 @@ public class BoardController : MonoBehaviour
 
                 createdSpecialTiles.Add(created);
                 PaintGelUnderCreatedSpecial(created);
+                GameEventBus.EmitSpecialCreated(created.GetSpecial());
 
                 var groupContributors = new List<TileView>();
                 if (consumedGroup != null)
@@ -5314,6 +5413,7 @@ public class BoardController : MonoBehaviour
         }
 
         OnObstacleDestroyed?.Invoke(originIndex, obstacleId);
+        GameEventBus.EmitObstacleCleared(obstacleId);
 
         int ox = originIndex % width;
         int oy = originIndex / width;
@@ -5539,13 +5639,15 @@ public class BoardController : MonoBehaviour
     public class ActiveFallProfileSettings
     {
         public bool enabled = true;
-        // Tempo ana düğmesi: formu (v0/a/vmax oranlarını) bozmadan tüm zamanlamayı ölçekler.
-        // Büyük değer = hızlı akış. 60 = ham ölçüm temposu; kullanıcı gözle kıyaslayıp
-        // 32'de karar kıldı (2026-07-22). 1 hücre ≈ 0.122s, 8 hücre ≈ 0.74s (ort ~10.8 hücre/s).
-        [Min(1f)] public float fps = 35.2f;
-        [Min(0f)] public float initialSpeedCellsPerFrame = 0.24f;
-        [Min(0f)] public float accelerationCellsPerFrameSquared = 0.010f;
-        [Min(0.001f)] public float maxSpeedCellsPerFrame = 0.38f;
+        // Formül: yol(t) = v0·t + ½·a·t², hız vmax'ta kesilir (t kare cinsinden, fps ile saniyeye çevrilir).
+        // Değerler referans kaydın kare kare ölçümü (2026-10-12, 58.3 fps, hücre = 142 px): yavaş kalkış
+        // (~4 hücre/sn), güçlü ivme (~38 hücre/sn²), tavan ~17 hücre/sn; taş fren yapmadan çarpar,
+        // darbeyi iniş tepkisi (landingSquash…) karşılar. 1 hücre ≈ 0.15s, 4 hücre ≈ 0.36s, 8 hücre ≈ 0.6s.
+        // Tempo ana düğmesi fps: formu bozmadan tüm zamanlamayı ölçekler (büyük = hızlı).
+        [Min(1f)] public float fps = 58.3f;
+        [Min(0f)] public float initialSpeedCellsPerFrame = 0.07f;
+        [Min(0f)] public float accelerationCellsPerFrameSquared = 0.0113f;
+        [Min(0.001f)] public float maxSpeedCellsPerFrame = 0.30f;
 
         public float FallSeconds(float distanceCells)
         {
@@ -6071,11 +6173,17 @@ public class BoardController : MonoBehaviour
 
     private void EnsureGoalFlyFx()
     {
-        var canvas = FindFirstObjectByType<Canvas>(); if (canvas == null) return;
+        // Board'u çizen KÖK canvas: FindFirstObjectByType<Canvas> keyfi canvas döndürür — taş ikonlarındaki
+        // sıralama canvas'ları dahil. Overlay bir taşın altına kurulunca o taş gizlenince uçuş da görünmez
+        // oluyordu (cargo çıkışı kayboldu). Board'un kendi kök canvas'ı HUD ile aynı uzaydadır.
+        var own = GetComponentInParent<Canvas>(true);
+        var canvas = own != null ? own.rootCanvas : FindFirstObjectByType<Canvas>();
+        if (canvas == null) return;
         var overlay = canvas.transform.Find("GoalFlyOverlayRoot") as RectTransform;
         if (overlay == null)
         {
             var go = new GameObject("GoalFlyOverlayRoot", typeof(RectTransform));
+            go.layer = canvas.gameObject.layer;   // runtime UI: layer 0'da doğarsa kamera çizmez
             overlay = go.GetComponent<RectTransform>(); overlay.SetParent(canvas.transform, false);
             overlay.anchorMin = Vector2.zero; overlay.anchorMax = Vector2.one;
             overlay.offsetMin = Vector2.zero; overlay.offsetMax = Vector2.zero; overlay.localScale = Vector3.one;
@@ -6086,7 +6194,7 @@ public class BoardController : MonoBehaviour
         {
             var fxTr = canvas.transform.Find("GoalFlyFx");
             if (fxTr != null) goalFlyFx = fxTr.GetComponent<GoalFlyFx>();
-            if (goalFlyFx == null) { var fxGo = new GameObject("GoalFlyFx", typeof(RectTransform), typeof(GoalFlyFx)); fxGo.transform.SetParent(canvas.transform, false); goalFlyFx = fxGo.GetComponent<GoalFlyFx>(); }
+            if (goalFlyFx == null) { var fxGo = new GameObject("GoalFlyFx", typeof(RectTransform), typeof(GoalFlyFx)); fxGo.layer = canvas.gameObject.layer; fxGo.transform.SetParent(canvas.transform, false); goalFlyFx = fxGo.GetComponent<GoalFlyFx>(); }
         }
         if (goalFlyFx != null) goalFlyFx.gameObject.SendMessage("SetOverlayRoot", overlay, SendMessageOptions.DontRequireReceiver);
     }

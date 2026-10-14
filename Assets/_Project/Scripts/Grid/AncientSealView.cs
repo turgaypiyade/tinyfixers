@@ -15,7 +15,7 @@ using UnityEngine.UI;
 /// Sprite'lar Resources/SealSafe altında; gövde 9-slice (köşeler hücre boyuna göre sabit). Çark ve sayaç iki
 /// standart ölçüde (SizeTiers): kısa kenarı 2 hücre olan mühür ve her kenarı en az 3 hücre olan mühür.
 /// </summary>
-public sealed class AncientSealView : MonoBehaviour
+public sealed class AncientSealView : MonoBehaviour, ICollectionFxTarget
 {
     private const string ArtPath = "SealSafe/";
 
@@ -205,6 +205,9 @@ public sealed class AncientSealView : MonoBehaviour
 
     public bool IsCollectionTargetReady(int color)
         => !broken && slotLock[Mathf.Clamp(shownStep, 0, 2)] == color && sequenceCo == null;
+
+    // Arayüz üzerinden null kontrolü Unity'nin yok-edilmiş kontrolünü atlar → burada `this != null` (Unity ==).
+    public bool IsCollectionAlive => this != null && isActiveAndEnabled;
 
     private void OnEnable()
     {

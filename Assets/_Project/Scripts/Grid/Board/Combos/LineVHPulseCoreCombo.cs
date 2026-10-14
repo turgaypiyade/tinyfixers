@@ -378,6 +378,7 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
 
     // Sadece orbit intro'yu oynatıp duran mod (combo'nun gerçek temizliği SpecialChainRunner'da).
     private readonly bool introOnly;
+    private readonly Vector2Int? orbitCenterCell;
 
     // Orbit intro animasyon ayarları
     private const float OrbitRiseHeight = 36f;          // ghost ikonların yukarı kalkma yüksekliği (pixel)
@@ -419,13 +420,17 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
     }
 
     // Sadece orbit intro: gerçek temizlik artık SpecialChainRunner (cross) tarafından yapılıyor.
+    // orbitCenterCell: oyuncunun taşı sürüklediği hedef hücre (cross'un merkezi). Gösteri orada döner — Pulse hangi
+    // hücrede kalmış olursa olsun (Line Pulse'a sürüklendiyse Pulse bir önceki hücrededir).
     public LineVHPulseCoreComboAction(
         BoardController board,
         TileView orbitLineTile,
         TileView orbitPulseTile,
-        float orbitSpinDuration)
+        float orbitSpinDuration,
+        Vector2Int? orbitCenterCell = null)
     {
         this.board = board;
+        this.orbitCenterCell = orbitCenterCell;
         this.orbitLineTile = orbitLineTile;
         this.orbitPulseTile = orbitPulseTile;
         this.orbitSpinDuration = Mathf.Max(0.01f, orbitSpinDuration);
@@ -801,6 +806,11 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
 
         Vector2 emitterStart = GetTileCenterAnchoredPosition(parent, orbitLineTile);
         Vector2 pulseStart = GetTileCenterAnchoredPosition(parent, orbitPulseTile);
+        // Merkez = hedef hücrenin SABİT ızgara konumu (taşın o anki görsel yeri değil: düşey swap'ta taş henüz
+        // oturmamış olabiliyordu → gösteri başka yerde dönüyordu). Pulse hayaleti oraya kayar, roket etrafında döner.
+        Vector2 center = orbitCenterCell.HasValue
+            ? board.WorldToAnchoredIn(parent, board.GetCellWorldCenterPosition(orbitCenterCell.Value.x, orbitCenterCell.Value.y))
+            : pulseStart;
 
         var orbitGo = new GameObject("LinePulseYOrbitIntroGhost", typeof(RectTransform), typeof(CanvasGroup));
         var orbitRt = orbitGo.GetComponent<RectTransform>();
@@ -810,7 +820,7 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         orbitRt.anchorMax = new Vector2(0.5f, 0.5f);
         orbitRt.pivot = new Vector2(0.5f, 0.5f);
         orbitRt.sizeDelta = new Vector2(board.TileSize * 3.80f, board.TileSize * 3.80f);
-        orbitRt.anchoredPosition = pulseStart;
+        orbitRt.anchoredPosition = center;
         orbitRt.localScale = Vector3.one;
         orbitRt.localRotation = Quaternion.identity;
 
@@ -826,7 +836,8 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         var pulseImage = CreateOrbitGhostImage(orbitRt, "PulseCoreGhost", pulseSprite, iconSize);
         var emitterImage = CreateOrbitGhostImage(orbitRt, "EmitterGhost", emitterSprite, iconSize);
 
-        pulseImage.rectTransform.anchoredPosition = Vector2.zero;
+        Vector2 pulseLocalStart = pulseStart - center;   // merkez Pulse'ın hücresiyse sıfır
+        pulseImage.rectTransform.anchoredPosition = pulseLocalStart;
         emitterImage.rectTransform.anchoredPosition = Vector2.right * orbitRadius;
 
         // Combo pulse ghost'una idle fitili ÖLÇEKLİ bas: doğru koordinat = fuseLocalOffset * (iconSize/TileSize).
@@ -840,13 +851,11 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
 
         // Kısa sahneye alma: PulseCore merkezine taşınıp biraz yukarı alınır.
         float t = 0f;
-        Vector2 sceneStart = pulseStart;
-        Vector2 sceneEnd = pulseStart + new Vector2(0f, OrbitRiseHeight);
-        Vector2 emitterLocalStart = emitterStart - pulseStart;
+        Vector2 sceneStart = center;
+        Vector2 sceneEnd = center + new Vector2(0f, OrbitRiseHeight);
+        Vector2 emitterLocalStart = emitterStart - center;
         if (emitterLocalStart.sqrMagnitude < 0.0001f)
             emitterLocalStart = Vector2.right * orbitRadius;
-        else
-            emitterLocalStart = emitterLocalStart.normalized * orbitRadius;
 
         while (t < OrbitRiseDuration)
         {
@@ -858,9 +867,10 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             orbitRt.localScale = Vector3.one * Mathf.LerpUnclamped(0.96f, 1.04f, eased);
 
             Vector2 emitterPos = Vector2.LerpUnclamped(emitterLocalStart, Vector2.right * orbitRadius, eased);
-            pulseImage.rectTransform.anchoredPosition = Vector2.zero;
+            Vector2 pulsePos = Vector2.LerpUnclamped(pulseLocalStart, Vector2.zero, eased);
+            pulseImage.rectTransform.anchoredPosition = pulsePos;
             emitterImage.rectTransform.anchoredPosition = emitterPos;
-            UpdateLightningSegments(lightningSegments, Vector2.zero, emitterPos, 1f, 0f);
+            UpdateLightningSegments(lightningSegments, pulsePos, emitterPos, 1f, 0f);
 
             yield return null;
         }

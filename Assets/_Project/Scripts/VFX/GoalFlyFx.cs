@@ -35,6 +35,7 @@ public class GoalFlyFx : MonoBehaviour
 
         // Ghost GO
         var go = new GameObject("GoalFlyGhost", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+        go.layer = overlayRoot.gameObject.layer;   // runtime UI: layer 0'da doğarsa kamera çizmez
         var rt = (RectTransform)go.transform;
         rt.SetParent(overlayRoot, worldPositionStays: false);
         rt.localScale = Vector3.one;
@@ -164,6 +165,7 @@ public class GoalFlyFx : MonoBehaviour
             yield break;
 
         var go = new GameObject("CargoExitGhost", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+        go.layer = overlayRoot.gameObject.layer;   // runtime UI: layer 0'da doğarsa kamera çizmez
         var rt = (RectTransform)go.transform;
         rt.SetParent(overlayRoot, worldPositionStays: false);
         rt.SetAsLastSibling();
@@ -250,6 +252,154 @@ public class GoalFlyFx : MonoBehaviour
             }
             Destroy(go);
         }
+    }
+
+    // Bilardo topu cebe: worldPath (hücre merkezleri, son nokta = cep) boyunca yuvarlanır → cebin ağzından
+    // halka ghost'unun ARKASINA geçip ağın içine batar (küçülür, kararır, parlama söner) → hedef slotuna uçar.
+    // Halka ghost'u tahtadaki cebin görseline (pocketRect) birebir hizalanır; ağ tahtada altta kalır.
+    // StartCoroutine ilk yield'e kadar sprite'ları + konumu senkron yakalar (çağıran sonra taşı havuza verir).
+    public IEnumerator PlayBilliardPocket(TileView fromTile, Vector3[] worldPath, Sprite bodySprite, Sprite numberSprite,
+        Sprite shineSprite, Sprite ringSprite, RectTransform pocketRect, RectTransform targetSlot)
+    {
+        if (fromTile == null || overlayRoot == null || worldPath == null || worldPath.Length < 2)
+            yield break;
+        if (bodySprite == null) bodySprite = fromTile.GetIconSprite();
+        if (bodySprite == null)
+            yield break;
+
+        var srcRt = fromTile.RectTransform != null ? fromTile.RectTransform : (RectTransform)fromTile.transform;
+        Vector2 cellSize = srcRt.rect.size;
+
+        // Ghost = tahtadaki topun aynısı: numarasız gövde + 3B yuvarlanan yüz (aynı yönelimden devam eder).
+        var ball = NewGhostImage("BilliardBallGhost", bodySprite, cellSize);
+        var ballRt = ball.rectTransform;
+        var face = ball.gameObject.AddComponent<BilliardBallFace>();
+        face.Init(numberSprite, shineSprite);
+        if (fromTile.IconImage != null && fromTile.IconImage.TryGetComponent<BilliardBallFace>(out var boardFace))
+            face.Orientation = boardFace.Orientation;
+
+        var points = new Vector2[worldPath.Length];
+        for (int i = 0; i < worldPath.Length; i++)
+            points[i] = overlayRoot.InverseTransformPoint(worldPath[i]);
+        ballRt.anchoredPosition = points[0];
+
+        Vector2 lastDir = (points[points.Length - 1] - points[0]).normalized;
+        void Roll(Vector2 from, Vector2 to)
+        {
+            var d = to - from;
+            if (d.sqrMagnitude > 0.01f) lastDir = d.normalized;
+            face.Roll(d);
+        }
+
+        // 1) Yol boyunca yuvarlan (cebin ağzına kadar). Hücre başı ~0.11 sn, hafif hızlanarak.
+        const float secondsPerCell = 0.11f;
+        int last = points.Length - 1;
+        for (int i = 0; i < last - 1; i++)
+        {
+            float dur = secondsPerCell * Vector2.Distance(points[i], points[i + 1]) / Mathf.Max(1f, cellSize.y);
+            Vector2 prev = points[i];
+            for (float t = 0f; t < dur; t += Time.deltaTime)
+            {
+                Vector2 p = Vector2.LerpUnclamped(points[i], points[i + 1], EaseIn(Mathf.Clamp01(t / dur)) * 0.35f
+                                                                          + Mathf.Clamp01(t / dur) * 0.65f);
+                Roll(prev, p);
+                ballRt.anchoredPosition = prev = p;
+                yield return null;
+            }
+            Roll(prev, points[i + 1]);
+            ballRt.anchoredPosition = points[i + 1];
+        }
+
+        // 2) Halka ghost'u topun ÖNÜNE: top cebin ağzından içeri girer.
+        Image ring = null;
+        if (ringSprite != null)
+        {
+            ring = NewGhostImage("BilliardRingGhost", ringSprite, pocketRect != null ? pocketRect.rect.size : cellSize);
+            ring.preserveAspect = false;
+            ring.rectTransform.anchoredPosition = pocketRect != null ? WorldToLocalIn(overlayRoot, pocketRect) : points[last];
+            ring.rectTransform.SetAsLastSibling();
+        }
+
+        Vector2 mouth = points[last - 1], center = points[last];
+        const float enterDur = 0.14f;
+        for (float t = 0f; t < enterDur; t += Time.deltaTime)
+        {
+            Vector2 p = Vector2.LerpUnclamped(mouth, center, EaseIn(Mathf.Clamp01(t / enterDur)));
+            Roll(ballRt.anchoredPosition, p);
+            ballRt.anchoredPosition = p;
+            ballRt.localScale = Vector3.one * Mathf.Lerp(1f, 0.85f, t / enterDur);
+            yield return null;
+        }
+        ballRt.anchoredPosition = center;
+
+        // 3) Ağın içine bat: küçül, karar, parlama sönsün; halka hafifçe nabız atar (swish).
+        const float sinkDur = 0.3f;
+        for (float t = 0f; t < sinkDur; t += Time.deltaTime)
+        {
+            float k = Mathf.Clamp01(t / sinkDur);
+            float e = EaseIn(k);
+            ballRt.localScale = Vector3.one * Mathf.Lerp(0.85f, 0.3f, e);
+            // Ağa yuvarlanarak batar: geliş yönünde dönmeyi sürdürür, hız söner.
+            face.Spin(lastDir, 9f * (1f - k) * Time.deltaTime);
+            float shade = Mathf.Lerp(1f, 0.4f, e);
+            ball.color = new Color(shade, shade, shade, 1f);
+            face.SetShade(shade, 1f - k);
+            if (ring != null) ring.rectTransform.localScale = Vector3.one * (1f + 0.05f * Mathf.Sin(k * Mathf.PI));
+            yield return null;
+        }
+        if (ring != null) Destroy(ring.gameObject);   // tahtadaki cep aynı halkayı zaten çiziyor
+
+        // 4) Hedefe uç: top cepten küçük bir pop ile çıkar, yay çizip HUD slotuna gider + punch.
+        ball.color = Color.white;
+        face.SetShade(1f, 1f);
+        if (targetSlot == null)
+        {
+            Destroy(ball.gameObject);
+            yield break;
+        }
+
+        const float popDur = 0.12f;
+        for (float t = 0f; t < popDur; t += Time.deltaTime)
+        {
+            ballRt.localScale = Vector3.one * Mathf.Lerp(0.3f, 0.6f, EaseOut(Mathf.Clamp01(t / popDur)));
+            yield return null;
+        }
+
+        Vector2 end = WorldToLocalIn(overlayRoot, targetSlot);
+        float dir = end.x >= center.x ? 1f : -1f;
+        Vector2 control = (center + end) * 0.5f + new Vector2(sideOffset * dir, arcHeight);
+        var cg = ball.gameObject.AddComponent<CanvasGroup>();
+        const float flyDur = 0.42f;
+        for (float t = 0f; t < flyDur; t += Time.deltaTime)
+        {
+            float k = Mathf.Clamp01(t / flyDur);
+            ballRt.anchoredPosition = Bezier2(center, control, end, EaseInOut(k));
+            ballRt.localScale = Vector3.one * Mathf.Lerp(0.6f, 0.35f, EaseIn(k));
+            float fadeStart = 1f - Mathf.Clamp01(fadeOutPortion);
+            if (k >= fadeStart) cg.alpha = 1f - Mathf.InverseLerp(fadeStart, 1f, k);
+            yield return null;
+        }
+        Destroy(ball.gameObject);
+
+        var punchTarget = (targetSlot.parent as RectTransform) ?? targetSlot;
+        yield return PunchSafe(punchTarget);
+    }
+
+    private Image NewGhostImage(string name, Sprite sprite, Vector2 size)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.layer = overlayRoot.gameObject.layer;   // runtime UI: layer 0'da doğarsa kamera çizmez
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(overlayRoot, worldPositionStays: false);
+        rt.SetAsLastSibling();
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.localScale = Vector3.one;
+        rt.sizeDelta = size;
+        var img = go.GetComponent<Image>();
+        img.sprite = sprite;
+        img.raycastTarget = false;
+        img.preserveAspect = true;
+        return img;
     }
 
     private IEnumerator KneeBendLanding(RectTransform rt, Vector2 footPos, float cell)

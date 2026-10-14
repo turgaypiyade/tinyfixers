@@ -74,6 +74,13 @@ public class ObstacleDef
              "KAPALI (varsayılan): gölge boş kalır (chest altı gibi). Bir hücrenin dolması için " +
              "üstündeki kolondaki TÜM blocker'lar bu bayrağa sahip olmalıdır.")]
     public bool fillsShadowBeneath = false;
+    [Tooltip("Hedef ikonu (HUD, PreLevel, LevelEnd). Boşsa önizleme (ilk aşama) sprite'ı. Önizlemesi tahtadaki görünümü " +
+             "anlatmayan engeller için: çamur → kenarlı (bevel) overlay, kasa → arka + ön panel birleşik, heykel → aslan.")]
+    public Sprite goalIconSprite;
+    [Tooltip("Engel hücreyi TAM kapatır (kare form: taş, sandık, dolap...). AÇIK: altındaki zemin örtüsü (çamur, jel, su) " +
+             "çizilmez — yuvarlak köşelerinden sızmasın; engel kırılınca açığa çıkar. KAPALI (yuvarlak/boşluklu: porselen, " +
+             "altın, mıknatıs...): örtü engelin kenar boşluklarından görünür.")]
+    public bool coversCellFully = false;
     [Header("Particle Sprites")]
     [Tooltip("Açık ise tüm stage'lerde hit particle efekti kapatılır. Stage düzeyinde ayrıca override edilebilir.")]
     public bool suppressHitParticles = false;
@@ -106,6 +113,11 @@ public class ObstacleDef
              "Ne zaman çalacağını engelin kendi görünümü belirler.")]
     public AudioClip followUpBreakSound;
     [Range(0f, 1f)] public float followUpBreakSoundVolume = 1f;
+
+    [Tooltip("Engelin örtüsü kalkınca (Brandalı heykel: branda soyulurken) çalan ses. Ne zaman çalacağını " +
+             "engelin kendi servisi belirler.")]
+    public AudioClip coverRemovedSound;
+    [Range(0f, 1f)] public float coverRemovedSoundVolume = 1f;
 
     [Header("Flight Audio")]
     [Tooltip("Uçan obstacle'ın kalkıştan çarpışmaya kadar döngüde çalacağı ses (EggBird).")]
@@ -270,6 +282,9 @@ public class ObstacleDef
         var preview = GetPreviewSprite();
         return preview != null ? preview : legacySprite;
     }
+
+    /// Hedef ikonu: goalIconSprite atanmışsa o, yoksa önizleme. Hedef gösteren her ekran (HUD/PreLevel/LevelEnd) bunu kullanır.
+    public Sprite GetGoalIconSprite() => goalIconSprite != null ? goalIconSprite : GetPreviewSprite();
 
     public Sprite GetPreviewSprite()
     {

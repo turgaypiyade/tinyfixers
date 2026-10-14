@@ -9,6 +9,9 @@ public class LevelDataEditor : Editor
     private PaintMode mode = PaintMode.Obstacle;
     private ObstacleId selectedObstacle = ObstacleId.Stone;
     private int selectedHamsterSatiety = 7;   // yerleştirilecek hamsterin lokma sayısı
+    private TarpStatueColor selectedTarpColor = TarpStatueColor.Red;          // yerleştirilecek heykelin etiket rengi
+    private int selectedTarpCount = LevelData.TarpStatueDefaultCount;         // brandanın kalkması için toplanacak taş
+    private int selectedTarpSize = TarpStatueEntry.TarpStatueMinSize;         // kare boyut (2/3/4)
     // Duvar (Wall) numaralı fırça: aynı numaralı BİTİŞİK duvar hücreleri tek parça (tek origin).
     private int selectedWallPiece = 1;
     private bool showBossOilSettings;
@@ -494,6 +497,8 @@ public class LevelDataEditor : Editor
                 }
                 EditorGUILayout.EndHorizontal();
             }
+            if (goal.targetType == LevelGoalTargetType.Obstacle && goal.obstacleId == ObstacleId.BilliardBall)
+                DrawBilliardReachWarning(level, goal.amount);
             EditorGUILayout.EndVertical();
         }
 
@@ -511,6 +516,139 @@ public class LevelDataEditor : Editor
         }
     }
 
+    private static readonly string[] TarpSizeLabels = { "2x2", "3x3", "4x4" };
+
+    // Yeni heykel ayarları + tahtadaki her heykelin rengi/sayısı/boyutu (sonradan da değişir; aynı engel, boyut ayarlı).
+    private void DrawTarpStatuePalette(LevelData level)
+    {
+        EditorGUILayout.LabelField("Yeni heykel", EditorStyles.boldLabel);
+        selectedTarpSize = TarpStatueEntry.TarpStatueMinSize + GUILayout.Toolbar(
+            Mathf.Clamp(selectedTarpSize - TarpStatueEntry.TarpStatueMinSize, 0, 2), TarpSizeLabels);
+        selectedTarpColor = (TarpStatueColor)EditorGUILayout.EnumPopup(
+            new GUIContent("Etiket rengi", "Brandanın kalkması için tahtanın herhangi bir yerinde toplanacak taş rengi."),
+            selectedTarpColor);
+        selectedTarpCount = Mathf.Max(1, EditorGUILayout.IntField(
+            new GUIContent("Toplanacak taş", "Etikette geri sayan sayı."), selectedTarpCount));
+        EditorGUILayout.HelpBox("Brandalı heykel: önce renk toplanır → branda kalkar; sonra 3 taş vuruşu (yalnız " +
+                                "special) → heykel hedefe uçar. Hedef = heykel sayısı (boyuttan bağımsız).", MessageType.None);
+
+        // Tahtadaki heykeller (taban katman + yığın) — düzenlenebilir.
+        var origins = new System.Collections.Generic.List<int>();
+        if (level.obstacles != null && level.obstacleOrigins != null)
+            for (int i = 0; i < level.obstacles.Length; i++)
+                if (level.obstacles[i] == (int)ObstacleId.TarpStatue && level.obstacleOrigins[i] == i) origins.Add(i);
+        if (level.stackedObstacles != null)
+            foreach (var e in level.stackedObstacles)
+                if (e.obstacleId == ObstacleId.TarpStatue && !origins.Contains(e.originCellIndex)) origins.Add(e.originCellIndex);
+        if (origins.Count == 0) return;
+
+        EditorGUILayout.Space(2);
+        EditorGUILayout.LabelField("Tahtadaki heykeller", EditorStyles.boldLabel);
+        foreach (int o in origins)
+        {
+            var t = level.GetTarpStatue(o);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField($"({o % level.width},{o / level.width})", GUILayout.Width(52));
+            int size = TarpStatueEntry.TarpStatueMinSize + EditorGUILayout.Popup(t.Size - TarpStatueEntry.TarpStatueMinSize,
+                TarpSizeLabels, GUILayout.Width(52));
+            var color = (TarpStatueColor)EditorGUILayout.EnumPopup(t.color, GUILayout.Width(70));
+            int count = Mathf.Max(1, EditorGUILayout.IntField(t.count, GUILayout.Width(44)));
+            EditorGUILayout.EndHorizontal();
+            if (color == t.color && count == t.count && size == t.Size) continue;
+
+            Undo.RecordObject(level, "Brandalı heykel düzenle");
+            if (size != t.Size && !TryResizeTarpStatue(level, o, t.Size, size))
+                size = t.Size;
+            level.SetTarpStatue(o, color, count, size);
+            EditorUtility.SetDirty(level);
+        }
+    }
+
+    // Taban katmandaki heykeli yeni kare boyuta basar. Yeni alan tahta dışına taşar ya da başka engel/hole'a değerse vazgeçer.
+    private static bool TryResizeTarpStatue(LevelData level, int origin, int oldSize, int newSize)
+    {
+        int ox = origin % level.width, oy = origin / level.width;
+        if (level.obstacles[origin] != (int)ObstacleId.TarpStatue)
+            return true;   // yığındaki heykel: hücre basılmaz, boyut yalnız girişte
+        if (!level.InBounds(ox + newSize - 1, oy + newSize - 1))
+        {
+            Debug.LogWarning($"[LevelEditor] Heykel {newSize}x{newSize} tahtaya sığmıyor.");
+            return false;
+        }
+        for (int y = oy; y < oy + newSize; y++)
+            for (int x = ox; x < ox + newSize; x++)
+            {
+                int i = level.Index(x, y);
+                bool ownCell = level.obstacles[i] == (int)ObstacleId.TarpStatue && level.obstacleOrigins[i] == origin;
+                if (level.cells[i] != (int)CellType.Normal || (!ownCell && level.obstacles[i] != (int)ObstacleId.None))
+                {
+                    Debug.LogWarning($"[LevelEditor] Heykel {newSize}x{newSize}: ({x},{y}) dolu ya da hole.");
+                    return false;
+                }
+            }
+        for (int y = oy; y < oy + oldSize; y++)
+            for (int x = ox; x < ox + oldSize; x++)
+            {
+                int i = level.Index(x, y);
+                if (level.obstacles[i] != (int)ObstacleId.TarpStatue || level.obstacleOrigins[i] != origin) continue;
+                level.obstacles[i] = (int)ObstacleId.None;
+                level.obstacleOrigins[i] = -1;
+            }
+        for (int y = oy; y < oy + newSize; y++)
+            for (int x = ox; x < ox + newSize; x++)
+            {
+                int i = level.Index(x, y);
+                level.obstacles[i] = (int)ObstacleId.TarpStatue;
+                level.obstacleOrigins[i] = origin;
+            }
+        return true;
+    }
+
+    // Yerleştirilecek engelin ayak izi: brandalı heykelde seçili kare boyut, diğerlerinde def.size.
+    private Vector2Int PlacementFootprint(ObstacleId id, ObstacleDef def)
+    {
+        if (id == ObstacleId.TarpStatue) return new Vector2Int(selectedTarpSize, selectedTarpSize);
+        return def != null ? new Vector2Int(Mathf.Max(1, def.size.x), Mathf.Max(1, def.size.y)) : Vector2Int.one;
+    }
+
+    private static Color TarpEditorColor(TarpStatueColor c) => c switch
+    {
+        TarpStatueColor.Yellow => new Color(0.85f, 0.65f, 0.05f, 0.9f),
+        TarpStatueColor.Blue => new Color(0.15f, 0.35f, 0.9f, 0.9f),
+        TarpStatueColor.Green => new Color(0.1f, 0.6f, 0.2f, 0.9f),
+        _ => new Color(0.8f, 0.1f, 0.12f, 0.9f),
+    };
+
+    // Bilardo: tasarım anında, cebe hiçbir zaman ulaşamayacak topları uyar (runtime takılma kuralıyla aynı hesap).
+    private static void DrawBilliardReachWarning(LevelData level, int goalAmount)
+    {
+        if (level.obstacles == null || level.cells == null || level.width <= 0 || level.height <= 0) return;
+        int w = level.width, h = level.height;
+        bool IsHole(int x, int y) => level.cells[y * w + x] == (int)CellType.Empty;
+        bool IsPocket(int x, int y) => level.obstacles[y * w + x] == (int)ObstacleId.BilliardPocket;
+
+        var dist = new int[w, h];
+        BilliardReach.ComputePocketDistances(w, h, IsHole, IsPocket, dist, new System.Collections.Generic.Queue<(int x, int y)>());
+
+        int balls = 0, reachable = 0, pockets = 0;
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                if (IsPocket(x, y)) pockets++;
+                if (level.obstacles[y * w + x] != (int)ObstacleId.BilliardBall) continue;
+                balls++;
+                if (dist[x, y] != BilliardReach.Unreachable) reachable++;
+            }
+
+        if (pockets == 0)
+            EditorGUILayout.HelpBox("Tahtada bilardo cebi yok — top hedefi tamamlanamaz.", MessageType.Error);
+        else if (reachable < goalAmount)
+            EditorGUILayout.HelpBox($"{balls - reachable} top hiçbir cebe ulaşamıyor (yalnız aşağı/çapraz/yana yuvarlanır). " +
+                                    $"Ulaşabilen {reachable} top < hedef {goalAmount}: level başta takılı sayılır.", MessageType.Error);
+        else if (reachable < balls)
+            EditorGUILayout.HelpBox($"{balls - reachable} top hiçbir cebe ulaşamıyor (süs olarak kalır).", MessageType.Warning);
+    }
+
     /// <summary>
     /// Bir obstacle hedefinin tahtadaki karşılığı — TopHUD sayımıyla aynı kural: her ORIGIN bir kez
     /// (duvar parçası, 2x2 kasa = 1), yığılmış (stackedObstacles) ve kasa (safes) girişleri dahil.
@@ -522,13 +660,14 @@ public class LevelDataEditor : Editor
     {
         if (level == null || level.obstacles == null || level.obstacleOrigins == null) return -1;
         if (id == ObstacleId.KeyGenerator) return -1;
-        // Hamster hedefi = tahtadaki hamster sayısı (her biri doyup ayrılınca 1 sayılır).
-        if (id == ObstacleId.Hamster)
+        // Hamster hedefi = tahtadaki hamster sayısı (her biri doyup ayrılınca 1 sayılır). Bilardo topu da yalnız
+        // level'da konur (üstten gelmez) → hedef = tahtadaki top sayısı.
+        if (id == ObstacleId.Hamster || id == ObstacleId.BilliardBall)
         {
-            int hamsters = 0;
+            int placed = 0;
             for (int i = 0; i < level.obstacles.Length && i < level.obstacleOrigins.Length; i++)
-                if (level.obstacles[i] == (int)ObstacleId.Hamster && level.obstacleOrigins[i] == i) hamsters++;
-            return hamsters;
+                if (level.obstacles[i] == (int)id && level.obstacleOrigins[i] == i) placed++;
+            return placed;
         }
         // Movable engeller (kargo, kask, plastik...) hedef sayısına göre üretilir: Amount tasarımcınındır.
         var lib = level.obstacleLibrary;
@@ -674,6 +813,8 @@ public class LevelDataEditor : Editor
         }
 
         EditorGUILayout.Space(4);
+        if (selectedObstacle == ObstacleId.TarpStatue)
+            DrawTarpStatuePalette(level);
         if (selectedObstacle == ObstacleId.Hamster)
         {
             selectedHamsterSatiety = Mathf.Max(1, EditorGUILayout.IntField(
@@ -813,10 +954,18 @@ public class LevelDataEditor : Editor
             if (IsWallId(obs)) continue;   // DrawWallPieces hücre hücre çizer
             var def = library != null ? library.Get(obs) : null;
             if (def == null || def.GetPreviewSprite() == null) continue;
-            int w = Mathf.Max(1, def.size.x);
-            int h = Mathf.Max(1, def.size.y);
+            var foot = level.GetObstacleFootprint(obs, idx, def);
+            int w = foot.x, h = foot.y;
             Rect big = new Rect(ox + x * cellPx, oy + y * cellPx, w * cellPx - 1, h * cellPx - 1);
             DrawSpriteInRect(def.GetPreviewSprite(), big, 2);
+            if (obs == ObstacleId.TarpStatue)
+            {
+                var tarp = level.GetTarpStatue(idx);
+                var badge = new Rect(big.center.x - cellPx * 0.4f, big.center.y - cellPx * 0.25f, cellPx * 0.8f, cellPx * 0.5f);
+                EditorGUI.DrawRect(badge, TarpEditorColor(tarp.color));
+                GUI.Label(badge, tarp.count.ToString(), new GUIStyle(EditorStyles.boldLabel)
+                    { alignment = TextAnchor.MiddleCenter, fontSize = 12, normal = { textColor = Color.white } });
+            }
             if (obs == ObstacleId.Hamster)
             {
                 int bites = level.hamsterSatietyByCell != null && idx < level.hamsterSatietyByCell.Length
@@ -1057,8 +1206,8 @@ public class LevelDataEditor : Editor
                 var def = lib != null ? lib.Get(e.obstacleId) : null;
                 int sox = e.originCellIndex % level.width;
                 int soy = e.originCellIndex / level.width;
-                int sw = def != null ? Mathf.Max(1, def.size.x) : 1;
-                int sh = def != null ? Mathf.Max(1, def.size.y) : 1;
+                var sfoot = level.GetObstacleFootprint(e.obstacleId, e.originCellIndex, def);
+                int sw = sfoot.x, sh = sfoot.y;
 
                 float band = cellPx * 0.40f;
                 for (int r = 0; r < sh; r++)
@@ -1231,6 +1380,7 @@ public class LevelDataEditor : Editor
                 PlaceStackedObstacle(level, x, y);
                 break;
         }
+        level.PruneTarpStatues();
     }
 
     // Model (a): içerik AYRI yerleştirilir (Obstacle/Tiles/Mask modu); Safe sadece bir overlay
@@ -1393,8 +1543,8 @@ public class LevelDataEditor : Editor
                 var e = level.stackedObstacles[o.index];
                 var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(e.obstacleId) : null;
                 id = e.obstacleId;
-                cells = RectCells(level, e.originCellIndex,
-                    def != null ? Mathf.Max(1, def.size.x) : 1, def != null ? Mathf.Max(1, def.size.y) : 1);
+                var efoot = level.GetObstacleFootprint(e.obstacleId, e.originCellIndex, def);
+                cells = RectCells(level, e.originCellIndex, efoot.x, efoot.y);
             }
             else if (o.kind == 2)
             {
@@ -1510,7 +1660,8 @@ public class LevelDataEditor : Editor
         // Zemin altı engeller (Mud, Jel, Su birikintisi) ve Lazer topu yığının daima EN ALTINDA — başka bir
         // şeyin üstüne konamaz (topun üstüne örtü gelebilir, altına hiçbir şey konmaz).
         if (selectedObstacle == ObstacleId.Mud || selectedObstacle == ObstacleId.SpreadingGel
-            || selectedObstacle == ObstacleId.WaterPuddle || selectedObstacle == ObstacleId.LaserCannon)
+            || selectedObstacle == ObstacleId.WaterPuddle || selectedObstacle == ObstacleId.LaserCannon
+            || selectedObstacle == ObstacleId.BilliardPocket)
         {
             Debug.LogWarning($"[OverlayEditor] {selectedObstacle} üst katman olamaz (daima en altta). " +
                              "Obstacle modunda taban katmana boya.");
@@ -1518,9 +1669,15 @@ public class LevelDataEditor : Editor
         }
 
         int originIdx = level.Index(bx, by);
+        // Bilardo cebi yığına girmez: üstüne de bir şey konmaz (top cebe düşebilmeli).
+        if (level.obstacles != null && level.obstacles[originIdx] == (int)ObstacleId.BilliardPocket)
+        {
+            Debug.LogWarning("[OverlayEditor] Bilardo cebinin üstüne katman konamaz.");
+            return;
+        }
         var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(selectedObstacle) : null;
-        int w = def != null ? Mathf.Max(1, def.size.x) : 1;
-        int h = def != null ? Mathf.Max(1, def.size.y) : 1;
+        var pfoot = PlacementFootprint(selectedObstacle, def);
+        int w = pfoot.x, h = pfoot.y;
         if (bx + w > level.width || by + h > level.height)
         {
             Debug.LogWarning($"[OverlayEditor] Stacked {selectedObstacle} at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
@@ -1545,6 +1702,8 @@ public class LevelDataEditor : Editor
         var list = new System.Collections.Generic.List<StackedObstacleEntry>(
             level.stackedObstacles ?? System.Array.Empty<StackedObstacleEntry>()) { entry };
         level.stackedObstacles = list.ToArray();
+        if (selectedObstacle == ObstacleId.TarpStatue)
+            level.SetTarpStatue(originIdx, selectedTarpColor, selectedTarpCount, selectedTarpSize);
     }
 
     private void RemoveStackedAtCell(LevelData level, int cellIndex)
@@ -1559,8 +1718,8 @@ public class LevelDataEditor : Editor
             var e = list[s];
             var def = lib != null ? lib.Get(e.obstacleId) : null;
             int ox = e.originCellIndex % W, oy = e.originCellIndex / W;
-            int w = def != null ? Mathf.Max(1, def.size.x) : 1;
-            int h = def != null ? Mathf.Max(1, def.size.y) : 1;
+            var rfoot = level.GetObstacleFootprint(e.obstacleId, e.originCellIndex, def);
+            int w = rfoot.x, h = rfoot.y;
             int cx = cellIndex % W, cy = cellIndex / W;
             if (cx >= ox && cx < ox + w && cy >= oy && cy < oy + h)
                 list.RemoveAt(s);
@@ -1707,7 +1866,7 @@ public class LevelDataEditor : Editor
 
         var library = level.obstacleLibrary;
         var def = library != null ? library.Get(id) : null;
-        Vector2Int size = def != null ? def.size : Vector2Int.one;
+        Vector2Int size = PlacementFootprint(id, def);
         int w = Mathf.Max(1, size.x);
         int h = Mathf.Max(1, size.y);
         if (!level.InBounds(ax, ay) || !level.InBounds(ax + w - 1, ay + h - 1)) return;
@@ -1732,6 +1891,8 @@ public class LevelDataEditor : Editor
             level.hamsterSatietyByCell[level.Index(x, y)] = 0;
         if (id == ObstacleId.Hamster)
             level.hamsterSatietyByCell[originIdx] = Mathf.Max(1, selectedHamsterSatiety);
+        if (id == ObstacleId.TarpStatue)
+            level.SetTarpStatue(originIdx, selectedTarpColor, selectedTarpCount, selectedTarpSize);
         // Başka engel duvar hücrelerinin üstüne basıldıysa kalan duvar parçalarını yeniden kur.
         if (level.wallPieceIds != null && System.Array.Exists(level.wallPieceIds, p => p > 0))
             RecomputeWallOrigins(level);

@@ -94,7 +94,7 @@ public static class SafariState
 
             string label = GameLocalization.Get("level_end_loss_safari");
             if (string.IsNullOrEmpty(label) || label == "level_end_loss_safari")
-                label = "Safari ilerlemesi";
+                label = "TIRMANIŞ ilerlemesi";
 
             return new[] { new LevelLossItem(Config != null ? Config.lossIcon : null, label, CurrentPitstop, true) };
         });

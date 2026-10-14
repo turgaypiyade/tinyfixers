@@ -43,6 +43,7 @@ internal sealed class TileFallMotionSystem
         public readonly List<Vector2> points = new();
         public float velocity;          // hücre/sn
         public float delay;             // başlangıç stagger'ı (yalnız ilk kalkışta)
+        public bool restStart;          // yerinde dururken kalktı: altındaki taş FallRiseStagger kadar akmadan kalkmaz
         public float elapsed;
         public float stretchEnv;
         public bool stationary;         // yalnız bu karelik engel: planlı/park etmiş, kıpırdamayan taş
@@ -155,6 +156,17 @@ internal sealed class TileFallMotionSystem
     // A corner decision can start a new route immediately after Land. Keep its
     // speed briefly without treating a settled tile as pending work or owning it.
     private readonly Dictionary<TileView, Parked> recentLandings = new();
+
+    // ── İniş tepkisi: tek liste, tek döngü (taş başına coroutine yok). Yalnız kozmetik: HasWork'e sayılmaz. ──
+    private struct LandingPose
+    {
+        public TileView tile;
+        public int lifetime;
+        public int version;
+        public float t, amp;            // kendi çarpması
+        public float echoT, echoAmp;    // üstüne inen taştan gelen yankı
+    }
+    private readonly List<LandingPose> landings = new();
     private readonly List<Motion> order = new();
     private readonly List<TileView> parkedScratch = new();
     private readonly Dictionary<int, Motion> belowInColumn = new();
@@ -206,6 +218,10 @@ internal sealed class TileFallMotionSystem
         active.Clear();
         parked.Clear();
         recentLandings.Clear();
+        for (int i = 0; i < landings.Count; i++)
+            if (landings[i].tile != null && landings[i].tile.IsCurrentLifetime(landings[i].lifetime))
+                landings[i].tile.ClearLandingPose();
+        landings.Clear();
         planned.Clear();
         kicked.Clear();
         diagonalTransits.Clear();
@@ -316,6 +332,7 @@ internal sealed class TileFallMotionSystem
                 sequence = nextSequence++,
                 velocity = Mathf.Max(v0, landingVelocity),
                 delay = continuesLanding ? 0f : Mathf.Max(0f, delay),
+                restStart = !continuesLanding && !isSpawn,
             };
 
             // Board üzerindeki taş görsel konumundan başlar (sıralama dışı gelen eski planlar
@@ -330,6 +347,7 @@ internal sealed class TileFallMotionSystem
                 {
                     m.velocity = Mathf.Max(v0, p.velocity);
                     m.delay = 0f;
+                    m.restStart = false;   // momentumla devam eden taş beklemez
                 }
             }
 
@@ -416,6 +434,9 @@ internal sealed class TileFallMotionSystem
         if (planned.Count > 0)
             StartOrphanedPlans();
 
+        if (landings.Count > 0)
+            TickLandings(dt);
+
         if (active.Count == 0)
             return;
 
@@ -423,6 +444,7 @@ internal sealed class TileFallMotionSystem
         int tileSize = board.TileSize;
         float gap = tileSize * ColumnGapCells;
         float lead = board.FallArrivalLeadCells * tileSize;
+        float rise = board.FallRiseStagger;
 
         order.Clear();
         foreach (var m in active.Values)
@@ -466,6 +488,23 @@ internal sealed class TileFallMotionSystem
                     belowInColumn[column] = m;
                     continue;
                 }
+            }
+
+            // Sıralı kalkış (Royal ölçümü, ~2 kare): yerinde duran taş, hemen altında akan taş
+            // FallRiseStagger kadar yol almadan kalkmaz. Kural yerel → büyük patlamada pompanın her
+            // kare yeniden planlaması ya da havada yeniden hedefleme sırayı bozmaz; bekleyen taşın
+            // üstündeki de onu bekler (zincir). Akan/momentumlu/spawn taş beklemez.
+            if (m.restStart)
+            {
+                if (rise > 0f && belowInColumn.TryGetValue(column, out var leader) && leader != null
+                    && !leader.stationary && leader.elapsed < rise
+                    && m.pos.y - leader.pos.y <= tileSize * 1.5f)
+                {
+                    m.velocity = v0;
+                    belowInColumn[column] = m;
+                    continue;
+                }
+                m.restStart = false;
             }
 
             m.elapsed += moveDt;
@@ -771,9 +810,12 @@ internal sealed class TileFallMotionSystem
 #if UNITY_EDITOR
             DiagonalFlowTrace.Motion(board, "LAND", tile, m.generation, m.pos, m.pos, m.target, m.velocity);
 #endif
-            if (m.settle && tile.RuntimeState == TileRuntimeState.Falling)
+            bool wasFalling = tile.RuntimeState == TileRuntimeState.Falling;
+            if (wasFalling && board.LandingResponseEnabled)
+                StartLanding(tile, m.lifetime, m.target, m.velocity);
+            else if (wasFalling && m.settle)
                 tile.PlayLandingSettle(board.TileSize, m.settleDuration, m.settleStrength);
-            if (tile.RuntimeState == TileRuntimeState.Falling)
+            if (wasFalling)
                 tile.SetRuntimeState(TileRuntimeState.Idle);
             // Event handlers may immediately start another motion or recycle this tile.
             // No writes to the old lifetime/owner are allowed after notification.
@@ -791,6 +833,89 @@ internal sealed class TileFallMotionSystem
             velocity = m.velocity,
             time = Time.time,
         };
+    }
+
+    // İniş eğrileri — Royal kare ölçümü (58 fps): çarpmadan 1 kare (~17 ms) sonra en ezik, oradan
+    // düz çizgiyle süre sonunda sıfır. Batma ise ezilme boyunca SABİT tutulur, sonda bırakılır.
+    private const float LandingAttack = 0.14f;        // zirveye varış (sürenin oranı)
+    private const float SinkReleaseStart = 0.58f;     // batmanın bırakılmaya başladığı an
+    private const float SinkReleaseEnd = 0.85f;
+
+    private static float SquashCurve(float u)
+    {
+        if (u <= 0f || u >= 1f) return 0f;
+        if (u < LandingAttack) return u / LandingAttack;
+        return 1f - (u - LandingAttack) / (1f - LandingAttack);
+    }
+
+    private static float SinkCurve(float u)
+    {
+        if (u <= 0f || u >= SinkReleaseEnd) return 0f;
+        if (u < LandingAttack) return u / LandingAttack;
+        if (u <= SinkReleaseStart) return 1f;
+        float x = (u - SinkReleaseStart) / (SinkReleaseEnd - SinkReleaseStart);
+        return 1f - x * x * (3f - 2f * x);
+    }
+
+    private void StartLanding(TileView tile, int lifetime, Vector2Int cell, float velocity)
+    {
+        board.GetFallKinematics(out _, out _, out float vmax);
+        float amp = Mathf.Clamp01(velocity / Mathf.Max(0.0001f, vmax));
+        if (amp <= 0.01f) return;
+        float dur = board.LandingResponseDuration;
+
+        // Yankı: alttaki taş kendi tepkisini hâlâ yaşıyorsa üstüne binen yükle bir kez daha basılır.
+        float echo = amp * board.LandingEchoRatio;
+        var below = echo > 0.01f ? board.GetTileViewAt(cell.x, cell.y + 1) : null;
+        int self = -1;
+        for (int i = 0; i < landings.Count; i++)
+        {
+            var l = landings[i];
+            if (l.tile == tile) { self = i; continue; }
+            if (below == null || l.tile != below) continue;
+            if (l.echoT >= dur) { l.echoT = 0f; l.echoAmp = echo; }
+            else l.echoAmp = Mathf.Max(l.echoAmp, echo);   // süren yankıyı sıfırlayıp zıplatma
+            landings[i] = l;
+        }
+
+        var entry = new LandingPose
+        {
+            tile = tile, lifetime = lifetime, version = tile.BeginLandingPose(),
+            t = 0f, amp = amp, echoT = dur, echoAmp = 0f,
+        };
+        if (self >= 0) landings[self] = entry;
+        else landings.Add(entry);
+    }
+
+    private void TickLandings(float dt)
+    {
+        float dur = board.LandingResponseDuration;
+        float squash = board.LandingSquash;
+        float widen = board.LandingWiden;
+        float sinkPx = board.LandingSinkCells * board.TileSize;
+        for (int i = landings.Count - 1; i >= 0; i--)
+        {
+            var l = landings[i];
+            var tile = l.tile;
+            bool alive = tile != null && tile.IsCurrentLifetime(l.lifetime);
+            l.t += dt;
+            l.echoT += dt;
+            // En büyüğü: yankı kendi darbesinin ÜSTÜNE eklenmez (toplanınca sütun jöle gibi ezilir).
+            float k = Mathf.Max(l.amp * SquashCurve(l.t / dur), l.echoAmp * SquashCurve(l.echoT / dur));
+            float ks = l.amp * SinkCurve(l.t / dur);   // batma yalnız kendi çarpmasından
+            bool done = l.t >= dur && l.echoT >= dur;
+            // Taş başka işe geçtiyse (eşleşme, swap, yeni düşüş) ya da ikona başkası dokunduysa bırak.
+            if (!alive || done || tile.RuntimeState != TileRuntimeState.Idle
+                || !tile.ApplyLandingPose(l.version, squash * k, widen * k, sinkPx * ks))
+            {
+                if (alive) tile.ClearLandingPose();
+                int last = landings.Count - 1;
+                landings[i] = landings[last];
+                landings.RemoveAt(last);
+                continue;
+            }
+            landings[i] = l;
+        }
     }
 
     private void Drop(Motion m)

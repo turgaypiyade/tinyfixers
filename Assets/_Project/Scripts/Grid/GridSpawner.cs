@@ -626,6 +626,9 @@ public class GridSpawner : MonoBehaviour
         // Lazer topları DrawObstacleImage'dan yeniden kaydolur; önceki level'ın topları/kafesleri bırakılsın.
         if (board != null && board.TryGetComponent<LaserCannonService>(out var laserCannons))
             laserCannons.Clear();
+        // Brandalı heykeller de DrawObstacleImage'dan yeniden kaydolur.
+        if (board != null && board.TryGetComponent<TarpStatueService>(out var tarpStatues))
+            tarpStatues.Clear();
 
         bool[] blocked = BuildBlockedMap();
 
@@ -1061,6 +1064,10 @@ public class GridSpawner : MonoBehaviour
             : TileType.Gear;
         view.SetType(dummyType);
         board.SyncTileData(x, y);
+
+        // Bilardo topu: yuvarlanma dönüşü + sabit parlama katmanı (BoardController.EnsureMovableIdleFx).
+        if (obsId == ObstacleId.BilliardBall)
+            board.RefreshTileObstacleVisual(view);
     }
     private void ApplyResolvedLevelToConsumers(LevelData activeLevel)
     {
@@ -1331,6 +1338,8 @@ public class GridSpawner : MonoBehaviour
             return;
 
         mudOverlayService.Init(board, width, height, tileSize);
+        // Örtü kırılıp çamur açığa çıktı (reveal) ya da yeni çizim: tam-örtü gizlemesi kalkar.
+        mudOverlayService.SetCellHidden(x, y, false);
 
         int mudMaxHits = Mathf.Max(1, resolvedLevel.obstacleLibrary?.Get(ObstacleId.Mud)?.hits ?? 1);
         int remaining = mudMaxHits;
@@ -1698,8 +1707,8 @@ public class GridSpawner : MonoBehaviour
 
         var lib = lvl.obstacleLibrary;
         var def = lib != null ? lib.Get(overId) : null;
-        int w = def != null ? Mathf.Max(1, def.size.x) : 1;
-        int h = def != null ? Mathf.Max(1, def.size.y) : 1;
+        var foot = lvl.GetObstacleFootprint(overId, origin, def);
+        int w = foot.x, h = foot.y;
         int ox = origin % W, oy = origin / W;
 
         for (int r = 0; r < h; r++)
@@ -1925,6 +1934,11 @@ public class GridSpawner : MonoBehaviour
             int bx = p.cell % resolvedLevel.width;
             int by = p.cell / resolvedLevel.width;
 
+            // Hücreyi TAM kapatan örtü (kare form: taş, sandık…) altındaki zemin örtüsü görünmez — yuvarlak köşelerinden
+            // sızmasın. Yuvarlak/boşluklu örtülerin (mıknatıs, roket sepeti…) altındaki ise kenar boşluklarından görünür.
+            var coverDef = resolvedLevel.obstacleLibrary.Get(overlayHere);
+            bool coverHidesGround = coverDef != null && coverDef.coversCellFully;
+
             // Örtülü mud'ı DÜZ kare (MudUnder) yerine GERÇEK bir seamless MudOverlay hücresi olarak
             // kaydet — sanki üstünde cover yokmuş gibi. Böylece bevel + köşe + komşu-birleşim + mask
             // (grid çizgisi kapatma) hepsi normal mud gibi çalışır; üstteki cover (EnergyContainer,
@@ -1934,6 +1948,7 @@ public class GridSpawner : MonoBehaviour
             if (p.beneathId == ObstacleId.Mud)
             {
                 SpawnMudOverlayCell(bx, by);
+                if (coverHidesGround) mudOverlayService.SetCellHidden(bx, by, true);
                 mudSpawned++;
                 continue;
             }
@@ -1948,8 +1963,8 @@ public class GridSpawner : MonoBehaviour
                 {
                     if (spreadingGelOverlayService.AddGelImmediate(bx, by))
                         gelSpawned++;
-                    // Kapak altındaki jel MÜHÜRLÜ: kapak kırılana kadar komşusuna yayılmaz.
-                    spreadingGelOverlayService.SealCell(bx, by);
+                    // Kapak altındaki jel MÜHÜRLÜ: kapak kırılana kadar komşusuna yayılmaz (tam kapatan kapakta görünmez de).
+                    spreadingGelOverlayService.SealCell(bx, by, hideVisual: coverHidesGround);
                 }
                 continue;
             }
@@ -1966,6 +1981,8 @@ public class GridSpawner : MonoBehaviour
 
             var def = resolvedLevel.obstacleLibrary.Get(p.beneathId);
             if (def == null || def.IsMovableObstacle) continue;
+            // Su birikintisi vb. zemin katmanı tam kapatan örtünün altında çizilmez; örtü kırılınca reveal çizer (Safe gibi).
+            if (coverHidesGround && def.IsUnderTileBehavior) continue;
 
             // DrawObstacleImage level state'ini (obstacles/origins) beneath'e göre okusun diye
             // hücreyi geçici olarak beneath'e çevir, çiz, sonra overlay'e geri al.
@@ -2507,7 +2524,7 @@ public class GridSpawner : MonoBehaviour
         // boş kasa + PaintCanBoxView kutuları durur.
         // Lazer topu da aynı: stage sprite'ı kuleli ikon, sahnede taban + LaserCannonView kulesi.
         if (nextStage.sprite != null && image.GetComponent<PaintCanBoxView>() == null
-            && image.GetComponent<LaserCannonView>() == null)
+            && image.GetComponent<LaserCannonView>() == null && image.GetComponent<TarpStatueView>() == null)
             image.sprite = nextStage.sprite;
 
         MoveObstacleToBehaviorRoot(image.rectTransform, nextStage.behavior);
@@ -2544,6 +2561,35 @@ public class GridSpawner : MonoBehaviour
             obstacleViewsByOrigin.Remove(originIndex);
             obstacleDefsByOrigin.Remove(originIndex);
             _overrideBatteryBoxViews.Remove(originIndex);
+            ApplyUnderTileCellBgTint();
+            return;
+        }
+
+        // Jel fırlatıcı: görseli SİLME — ateşleme animasyonu (sıkışma → atılma → kapak) gerçek görselde
+        // oynar. Bu olay görsel-değişim olayından ÖNCE gelir; burada silinince devir hiç olmuyor,
+        // sıkışma görünmüyordu. Devri burada yap (BoardController aksiyonu bu olaydan SONRA başlatır).
+        if (BoardController.IsGelLauncher(obstacleId) && IsTrackedObstacleViewFor(originIndex, obstacleId))
+        {
+            if (obstacleViewsByOrigin.TryGetValue(originIndex, out var gelImage) && gelImage != null)
+            {
+                StopObstacleHitShake(originIndex, gelImage.rectTransform);
+                GelLauncherFx.HandOverBody(originIndex, gelImage);
+                StartCoroutine(DestroyGelBodyIfUnclaimed(originIndex, gelImage));
+            }
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+            ApplyUnderTileCellBgTint();
+            return;
+        }
+
+        // Brandalı heykel: hangi olay önce gelirse (yok edildi / görsel temizlendi) görseli finale devreder.
+        if (obstacleId == ObstacleId.TarpStatue && IsTrackedObstacleViewFor(originIndex, obstacleId)
+            && obstacleViewsByOrigin.TryGetValue(originIndex, out var tarpImage) && tarpImage != null
+            && TarpStatueService.TryPlayFinale(board, originIndex, tarpImage))
+        {
+            StopObstacleHitShake(originIndex, tarpImage.rectTransform);
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
             ApplyUnderTileCellBgTint();
             return;
         }
@@ -2684,6 +2730,9 @@ public class GridSpawner : MonoBehaviour
         // grass çiziminden önce border yerinde olmalı (grass yine en üstte kalır).
         if (borderDrawer != null)
             EnsureBorderRootInBoardContent(borderDrawer.borderRoot);
+
+        // Joker hedeflemesi: tıklama vekili olmayan engel görselleri / taşsız hücreler de hücreye çözülsün.
+        BoardBoosterTapCatcher.Install(root, board, tilesRoot);
     }
 
     private RectTransform GetOrCreateChildRoot(RectTransform parent, string name)
@@ -3550,8 +3599,10 @@ public class GridSpawner : MonoBehaviour
         }
         if (sprite == null) return null;
 
-        int w = Mathf.Max(1, def.size.x);
-        int h = Mathf.Max(1, def.size.y);
+        var foot = resolvedLevel != null
+            ? resolvedLevel.GetObstacleFootprint(def.id, resolvedLevel.Index(x, y), def)
+            : new Vector2Int(Mathf.Max(1, def.size.x), Mathf.Max(1, def.size.y));
+        int w = foot.x, h = foot.y;
 
         var go = new GameObject($"Obs_{def.id}_{x}_{y}",
             typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -3693,6 +3744,10 @@ public class GridSpawner : MonoBehaviour
             LaserCannonService.Ensure(board).Register(y * width + x, view);
         }
 
+        // Brandalı heykel: Image iç zemini gösterir; taş/branda/çerçeve/etiket TarpStatueView child'ları.
+        if (def.id == ObstacleId.TarpStatue && board != null)
+            TarpStatueService.Ensure(board).Register(y * width + x, img);
+
         return img;
     }
 
@@ -3724,6 +3779,18 @@ public class GridSpawner : MonoBehaviour
 
         var obsId = (ObstacleId)resolvedLevel.obstacles[idx];
         if (obsId == ObstacleId.None) return;
+
+        // Açığa çıkan katmanın ALTINDAKİ zemin (çamur/jel/su) de çizilir — örtü altında hiç kurulmamış olabilir
+        // (ör. mühür > porselen > çamur: mühür açılınca porselen çıkıyor, çamur görünmüyordu).
+        if (board?.ObstacleStateService != null && !board.ObstacleStateService.IsGroundLayer(obsId))
+        {
+            // Olay yalnız origin için gelir: çok hücreli cover'ın her hücresinin altına bak.
+            var foot = resolvedLevel.GetObstacleFootprint(obsId, idx, resolvedLevel.obstacleLibrary.Get(obsId));
+            for (int fy = y; fy < y + foot.y && fy < height; fy++)
+                for (int fx = x; fx < x + foot.x && fx < width; fx++)
+                    if (resolvedLevel.obstacleOrigins[resolvedLevel.Index(fx, fy)] == idx)
+                        EnsureGroundBeneath(fx, fy, obsId);
+        }
 
         // Beneath baştan çizildiyse (overlay altında görünüyordu): yeni view çizme, mevcut olanı
         // öne al ve obstacleViewsByOrigin'e promote et — böylece damage/visual event'leri çalışır.
@@ -3856,6 +3923,70 @@ public class GridSpawner : MonoBehaviour
         }
     }
 
+    // Hücrede ortaya çıkan katmanın (cover) altındaki zemin katmanının görünümünü kurar. Cover hücreyi tam kapatıyorsa
+    // (ObstacleDef.coversCellFully) zemin gizli kalır; yuvarlak/boşluklu ya da hareketli cover'da görünür.
+    // Jel: sabit cover altında MÜHÜRLÜ kalır (yayılmaz, sayılmaz — cover kırılınca açılır); hareketli cover (porselen…)
+    // altında açıktır (porselen düşerek jele girdiğinde de böyle).
+    private void EnsureGroundBeneath(int x, int y, ObstacleId coverId)
+    {
+        var state = board.ObstacleStateService;
+        if (!state.TryGetGroundBeneathTopAt(x, y, out var groundId, out int groundOrigin)) return;
+        var coverDef = resolvedLevel.obstacleLibrary.Get(coverId);
+        bool hide = coverDef != null && coverDef.coversCellFully;
+        bool movableCover = coverDef != null && coverDef.IsMovableObstacle;
+        int idx = resolvedLevel.Index(x, y);
+
+        if (groundId == ObstacleId.Mud)
+        {
+            SpawnMudOverlayCell(x, y);
+            if (hide) mudOverlayService?.SetCellHidden(x, y, true);
+            return;
+        }
+
+        if (groundId == ObstacleId.SpreadingGel)
+        {
+            if (spreadingGelOverlayService == null) return;
+            if (movableCover) { RevealGelCell(x, y); return; }
+            spreadingGelOverlayService.AddGelImmediate(x, y);
+            spreadingGelOverlayService.SealCell(x, y, hideVisual: hide);
+            return;
+        }
+
+        // Su birikintisi vb.: cover'ın arkasına generic görsel (cover kalkınca HandleObstacleCreatedDynamic onu terfi ettirir).
+        if (hide || groundOrigin != idx || beneathViewsByCell.ContainsKey(idx)) return;
+        var groundDef = resolvedLevel.obstacleLibrary.Get(groundId);
+        if (groundDef == null) return;
+        int savedObs = resolvedLevel.obstacles[idx], savedOrg = resolvedLevel.obstacleOrigins[idx];
+        resolvedLevel.obstacles[idx] = (int)groundId;
+        resolvedLevel.obstacleOrigins[idx] = groundOrigin;
+        var image = DrawObstacleImage(groundDef, x, y);
+        resolvedLevel.obstacles[idx] = savedObs;
+        resolvedLevel.obstacleOrigins[idx] = savedOrg;
+        if (image == null) return;
+        image.rectTransform.SetAsFirstSibling();
+        image.raycastTarget = false;
+        beneathViewsByCell[idx] = image;
+    }
+
+    // Kırılan sabit engel kendi son görseliyle parçalanır (boyuna oranlı parçalar). Örtüler (çim) ve kendi kırılma
+    // animasyonu olanlar (yukarıdaki özel dallar + kutuları uçan PaintCanBox) hariç.
+    private void PlayObstacleShatter(ObstacleVisualChange change, Image image)
+    {
+        if (image == null || image.sprite == null || board == null) return;
+        if (change.obstacleId == ObstacleId.Grass || change.obstacleId == ObstacleId.GrassFlower
+            || change.obstacleId == ObstacleId.PaintCanBox)
+            return;
+        var def = obstacleDefsByOrigin.TryGetValue(change.originIndex, out var d) ? d
+            : resolvedLevel?.obstacleLibrary?.Get(change.obstacleId);
+        if (def == null || def.IsUnderTileBehavior) return;
+        var root = board.BoardVfxPlayer != null && board.BoardVfxPlayer.VfxRoot != null
+            ? (RectTransform)board.BoardVfxPlayer.VfxRoot : board.BreakFxParent;
+        int cells = resolvedLevel != null
+            ? resolvedLevel.GetObstacleFootprint(change.obstacleId, change.originIndex, def).x
+            : Mathf.Max(1, def.size.x);
+        ObstacleShatterFx.Play(this, root, image, cells);
+    }
+
     private void HandleObstacleVisualChanged(ObstacleVisualChange change)
     {
         if (!obstacleViewsByOrigin.TryGetValue(change.originIndex, out var image) || image == null)
@@ -3884,6 +4015,11 @@ public class GridSpawner : MonoBehaviour
             {
                 // 4. cıvata yanar, top parçalanır; görünümü servis yok eder.
             }
+            else if (change.obstacleId == ObstacleId.TarpStatue
+                && TarpStatueService.TryPlayFinale(board, change.originIndex, image))
+            {
+                // Heykel hedefe uçar, çerçeve parçalanır; görünümü servis yok eder.
+            }
             else if (BoardController.IsGelLauncher(change.obstacleId))
             {
                 // Ateşleme animasyonu gerçek görselde oynar (GelLauncherFireAction devralır).
@@ -3900,6 +4036,7 @@ public class GridSpawner : MonoBehaviour
             }
             else
             {
+                PlayObstacleShatter(change, image);
                 Destroy(image.gameObject);
             }
 
@@ -3918,6 +4055,14 @@ public class GridSpawner : MonoBehaviour
         if (change.obstacleId == ObstacleId.PaintCanBox)
         {
             UpdatePaintCanBoxView(image, change.remainingHits);
+            return;
+        }
+
+        // Brandalı heykel: taş aşaması değişir, parçalar kopar + kısa sarsıntı.
+        if (change.obstacleId == ObstacleId.TarpStatue)
+        {
+            TarpStatueService.TryPlayHit(board, image, change.remainingHits);
+            PlayObstacleHitShake(change.originIndex, image.rectTransform);
             return;
         }
 
