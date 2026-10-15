@@ -2405,6 +2405,78 @@
           "value": "Miyav Piramidi"
         },
         {
+          "key": "wonder_mis5_name",
+          "value": "Büyük Pati Seddi"
+        },
+        {
+          "key": "wonder_mis6_name",
+          "value": "Kuyruk Kanyonu"
+        },
+        {
+          "key": "wonder_mis5_task_1",
+          "value": "Zemini Hazırla"
+        },
+        {
+          "key": "wonder_mis5_task_2",
+          "value": "Temeli Güçlendir"
+        },
+        {
+          "key": "wonder_mis5_task_3",
+          "value": "Duvarları Yükselt"
+        },
+        {
+          "key": "wonder_mis5_task_4",
+          "value": "Merdivenleri Onar"
+        },
+        {
+          "key": "wonder_mis5_task_5",
+          "value": "Geçitleri Aç"
+        },
+        {
+          "key": "wonder_mis5_task_6",
+          "value": "Gözetleme Kulelerini Onar"
+        },
+        {
+          "key": "wonder_mis5_task_7",
+          "value": "Çatıları Yenile"
+        },
+        {
+          "key": "wonder_mis5_task_8",
+          "value": "Pati Bayraklarını Dik"
+        },
+        {
+          "key": "wonder_mis6_task_1",
+          "value": "Patikayı Temizle"
+        },
+        {
+          "key": "wonder_mis6_task_2",
+          "value": "Basamakları Sağlamlaştır"
+        },
+        {
+          "key": "wonder_mis6_task_3",
+          "value": "Seyir Alanını Düzenle"
+        },
+        {
+          "key": "wonder_mis6_task_4",
+          "value": "Ahşap Direkleri Sabitle"
+        },
+        {
+          "key": "wonder_mis6_task_5",
+          "value": "Korkulukları Onar"
+        },
+        {
+          "key": "wonder_mis6_task_6",
+          "value": "Yön Tabelasını Yerleştir"
+        },
+        {
+          "key": "wonder_mis6_task_7",
+          "value": "Alet Kutusunu Hazırla"
+        },
+        {
+          "key": "wonder_mis6_task_8",
+          "value": "Manzara Noktasını Tamamla"
+        },
+        {
           "key": "purchase_celebration_title",
           "value": "HARİKA!"
         },
@@ -4992,6 +5064,78 @@
         {
           "key": "wonder_mis4_name",
           "value": "Purramid"
+        },
+        {
+          "key": "wonder_mis5_name",
+          "value": "Great Paw Wall"
+        },
+        {
+          "key": "wonder_mis6_name",
+          "value": "Tail Canyon"
+        },
+        {
+          "key": "wonder_mis5_task_1",
+          "value": "Prepare the Ground"
+        },
+        {
+          "key": "wonder_mis5_task_2",
+          "value": "Reinforce the Foundation"
+        },
+        {
+          "key": "wonder_mis5_task_3",
+          "value": "Raise the Walls"
+        },
+        {
+          "key": "wonder_mis5_task_4",
+          "value": "Repair the Stairs"
+        },
+        {
+          "key": "wonder_mis5_task_5",
+          "value": "Open the Passages"
+        },
+        {
+          "key": "wonder_mis5_task_6",
+          "value": "Repair the Watchtowers"
+        },
+        {
+          "key": "wonder_mis5_task_7",
+          "value": "Restore the Roofs"
+        },
+        {
+          "key": "wonder_mis5_task_8",
+          "value": "Raise the Paw Flags"
+        },
+        {
+          "key": "wonder_mis6_task_1",
+          "value": "Clear the Trail"
+        },
+        {
+          "key": "wonder_mis6_task_2",
+          "value": "Reinforce the Steps"
+        },
+        {
+          "key": "wonder_mis6_task_3",
+          "value": "Restore the Lookout"
+        },
+        {
+          "key": "wonder_mis6_task_4",
+          "value": "Secure the Wooden Posts"
+        },
+        {
+          "key": "wonder_mis6_task_5",
+          "value": "Repair the Railings"
+        },
+        {
+          "key": "wonder_mis6_task_6",
+          "value": "Put Up the Trail Sign"
+        },
+        {
+          "key": "wonder_mis6_task_7",
+          "value": "Prepare the Toolbox"
+        },
+        {
+          "key": "wonder_mis6_task_8",
+          "value": "Complete the Scenic Lookout"
         },
         {
           "key": "purchase_celebration_title",
